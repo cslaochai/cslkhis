@@ -1,0 +1,63 @@
+package com.his.common.enums;
+
+import lombok.Getter;
+
+/**
+ * 排班变更类型枚举（sql/200，字典 {@code his_schedule_change_type}）
+ *
+ * <p>变更留痕统一收在这里，取代原先两种土办法：值班侧在换班字段里存「原定谁 + 实际谁」，
+ * 门诊侧把加减号写进备注字符串。两种都查不了「这个人这个月换过几次班」。
+ *
+ * <p>{@link #SUBSTITUTE}（代班）与 {@link #SWAP}（换班）的区别是<b>单向还是双向</b>：
+ * 换班是 A 的班给 B、B 的班给 A（两行互改），代班是 A 的班临时换人而 A 原本休息（只写一行）。
+ * 混用会让「谁欠谁一个班」算不出来。
+ */
+@Getter
+public enum ScheduleChangeTypeEnum {
+
+    /** 换班：两人互换班次 */
+    SWAP(1, "换班"),
+    /** 代班：临时换人顶班，原班归属不变 */
+    SUBSTITUTE(2, "代班"),
+    /** 停班：整班取消（抽调查封、科室停摆） */
+    SUSPEND(3, "停班"),
+    /** 加号：在已排班上新增号源 */
+    ADD_SOURCE(4, "加号"),
+    /** 减号：收回未发出的号源 */
+    REDUCE_SOURCE(5, "减号"),
+    /** 出诊变更：改诊室/时段/班别等出诊属性 */
+    CLINIC_CHANGE(6, "出诊变更");
+
+    private final int code;
+    private final String label;
+
+    ScheduleChangeTypeEnum(int code, String label) {
+        this.code = code;
+        this.label = label;
+    }
+
+    public static ScheduleChangeTypeEnum fromCode(Integer code) {
+        if (code == null) {
+            return null;
+        }
+        for (ScheduleChangeTypeEnum type : values()) {
+            if (type.code == code) {
+                return type;
+            }
+        }
+        return null;
+    }
+
+    public static String labelOf(Integer code) {
+        ScheduleChangeTypeEnum type = fromCode(code);
+        return type == null ? "未知(" + code + ")" : type.getLabel();
+    }
+
+    public static String whitelistText() {
+        StringBuilder sb = new StringBuilder();
+        for (ScheduleChangeTypeEnum type : values()) {
+            sb.append(sb.length() == 0 ? "" : " / ").append(type.code).append("-").append(type.label);
+        }
+        return sb.toString();
+    }
+}

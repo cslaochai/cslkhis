@@ -1,0 +1,55 @@
+<view class="report-page">
+  <!-- 标签页 -->
+  <view class="tabs">
+    <view class="tab {{activeTab === 'lab' ? 'active' : ''}}" bindtap="onTabChange" data-tab="lab">
+      <text>检验报告</text>
+    </view>
+    <view class="tab {{activeTab === 'imaging' ? 'active' : ''}}" bindtap="onTabChange" data-tab="imaging">
+      <text>检查报告</text>
+    </view>
+  </view>
+
+  <!-- 检验报告列表 -->
+  <view class="report-list" wx:if="{{activeTab === 'lab'}}">
+    <view class="report-item" wx:for="{{labReports}}" wx:key="id" bindtap="onReportTap" data-report="{{item}}">
+      <view class="report-header">
+        <text class="report-no">{{item.reportNo}}</text>
+        <text class="report-status {{item.published ? 'published' : ''}}">{{item.statusText}}</text>
+      </view>
+      <view class="report-body">
+        <text class="report-item-name">{{item.itemName || '检验报告'}}</text>
+        <text class="report-date">{{item.visitDate}}</text>
+      </view>
+      <view class="report-foot">
+        <text class="report-dept">{{item.examDeptName}}</text>
+      </view>
+    </view>
+    <view class="empty" wx:if="{{labReports.length === 0 && !loading}}">
+      <text>暂无检验报告</text>
+    </view>
+  </view>
+
+  <!-- 影像报告列表 -->
+  <view class="report-list" wx:if="{{activeTab === 'imaging'}}">
+    <view class="report-item" wx:for="{{imagingReports}}" wx:key="id" bindtap="onReportTap" data-report="{{item}}">
+      <view class="report-header">
+        <text class="report-no">{{item.reportNo}}</text>
+        <text class="report-status {{item.published ? 'published' : ''}}">{{item.statusText}}</text>
+      </view>
+      <view class="report-body">
+        <text class="report-item-name">{{item.itemName || '检查报告'}}</text>
+        <text class="report-date">{{item.visitDate}}</text>
+      </view>
+      <view class="report-foot">
+        <text class="report-dept">{{item.examDeptName}}</text>
+      </view>
+    </view>
+    <view class="empty" wx:if="{{imagingReports.length === 0 && !loading}}">
+      <text>暂无检查报告</text>
+    </view>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+  </view>
+</view>

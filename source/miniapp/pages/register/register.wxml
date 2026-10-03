@@ -1,0 +1,132 @@
+<view class="register-page">
+  <view class="hero">
+    <view class="brand-badge">
+      <image class="brand-icon" src="/images/logo.png" mode="aspectFit"/>
+    </view>
+    <text class="brand-name">长沙市麓康医院</text>
+    <text class="brand-slogan">注册就诊人账号 · 在线建档</text>
+  </view>
+
+  <view class="card">
+    <text class="card-title">患者注册</text>
+    <text class="card-desc">信息用于实名建档，请填写本人证件号</text>
+
+    <view class="field">
+      <image class="field-icon" src="/images/icons/user.svg" mode="aspectFit"/>
+      <input
+        class="field-input"
+        placeholder="请输入真实姓名"
+        placeholder-class="field-ph"
+        value="{{patientName}}"
+        data-field="patientName"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="field">
+      <image class="field-icon" src="/images/icons/users.svg" mode="aspectFit"/>
+      <text class="field-fixed">性别</text>
+      <view class="chips">
+        <text class="chip {{gender === 1 ? 'on' : ''}}" data-gender="1" bindtap="selectGender">男</text>
+        <text class="chip {{gender === 2 ? 'on' : ''}}" data-gender="2" bindtap="selectGender">女</text>
+      </view>
+    </view>
+
+    <view class="field">
+      <image class="field-icon" src="/images/icons/shield.svg" mode="aspectFit"/>
+      <input
+        class="field-input"
+        placeholder="请输入身份证号"
+        placeholder-class="field-ph"
+        maxlength="18"
+        value="{{idCard}}"
+        data-field="idCard"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="field">
+      <image class="field-icon" src="/images/icons/smartphone.svg" mode="aspectFit"/>
+      <input
+        class="field-input"
+        type="number"
+        maxlength="11"
+        placeholder="请输入手机号（登录账号）"
+        placeholder-class="field-ph"
+        value="{{phone}}"
+        data-field="phone"
+        bindinput="onInput"
+      />
+    </view>
+
+    <view class="field">
+      <image class="field-icon" src="/images/icons/sms.svg" mode="aspectFit"/>
+      <input
+        class="field-input"
+        type="number"
+        maxlength="6"
+        placeholder="请输入短信验证码"
+        placeholder-class="field-ph"
+        value="{{smsCode}}"
+        data-field="smsCode"
+        bindinput="onInput"
+      />
+      <view class="code-btn {{countdown > 0 ? 'disabled' : ''}}" bindtap="sendCode">
+        <text wx:if="{{countdown > 0}}">{{countdown}}s 后重发</text>
+        <text wx:elif="{{sendingCode}}">发送中</text>
+        <text wx:else>获取验证码</text>
+      </view>
+    </view>
+
+    <view class="field">
+      <image class="field-icon" src="/images/icons/lock.svg" mode="aspectFit"/>
+      <input
+        class="field-input"
+        placeholder="设置登录密码（至少 6 位）"
+        placeholder-class="field-ph"
+        password="{{!showPassword}}"
+        value="{{password}}"
+        data-field="password"
+        bindinput="onInput"
+      />
+      <image
+        class="field-eye"
+        src="{{showPassword ? '/images/icons/eyeoff.svg' : '/images/icons/eye.svg'}}"
+        mode="aspectFit"
+        bindtap="togglePassword"
+      />
+    </view>
+
+    <view class="field">
+      <image class="field-icon" src="/images/icons/lock.svg" mode="aspectFit"/>
+      <input
+        class="field-input"
+        placeholder="再次输入密码"
+        placeholder-class="field-ph"
+        password="{{!showPassword}}"
+        value="{{confirmPassword}}"
+        data-field="confirmPassword"
+        bindinput="onInput"
+        confirm-type="done"
+        bindconfirm="handleRegister"
+      />
+    </view>
+
+    <view class="error" wx:if="{{errorMsg}}">
+      <image class="error-icon" src="/images/icons/alert.svg" mode="aspectFit"/>
+      <text class="error-text">{{errorMsg}}</text>
+    </view>
+
+    <button
+      class="submit"
+      loading="{{loading}}"
+      disabled="{{loading}}"
+      bindtap="handleRegister"
+    >{{loading ? '提交中' : '注册并建档'}}</button>
+
+    <view class="foot">
+      <text class="foot-label">已有账号？</text>
+      <text class="foot-link" bindtap="goLogin">返回登录 ›</text>
+    </view>
+  </view>
+</view>

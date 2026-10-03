@@ -1,0 +1,65 @@
+.page {
+  min-height: 100vh;
+  background: #f7f8fa;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.head { padding: 8rpx 8rpx 24rpx; }
+.head-title { display: block; font-size: 40rpx; font-weight: 600; color: #1a1a1a; }
+.head-sub { display: block; margin-top: 8rpx; font-size: 24rpx; color: #999; }
+
+.empty { padding: 120rpx 0; text-align: center; }
+.empty-text { font-size: 26rpx; color: #bbb; }
+
+.adm-bar { white-space: nowrap; margin-bottom: 20rpx; }
+.adm-chip {
+  display: inline-block;
+  margin-right: 16rpx;
+  padding: 12rpx 24rpx;
+  background: #fff;
+  border-radius: 32rpx;
+  font-size: 24rpx;
+  color: #666;
+}
+.adm-chip.active { background: #2b6cb0; color: #fff; }
+
+.card {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.balance-card { background: #2b6cb0; color: #fff; }
+.bal-line { display: flex; justify-content: space-between; font-size: 24rpx; opacity: 0.85; margin-bottom: 8rpx; }
+.bal-main { margin-top: 20rpx; }
+.bal-label { display: block; font-size: 24rpx; opacity: 0.85; }
+.bal-amount { display: block; font-size: 64rpx; font-weight: 600; margin: 8rpx 0 12rpx; }
+.bal-row { display: flex; gap: 32rpx; }
+.bal-minor { font-size: 22rpx; opacity: 0.75; }
+
+.recharge { display: flex; gap: 16rpx; margin-top: 28rpx; }
+.recharge-btn {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 26rpx;
+  border-radius: 12rpx;
+  line-height: 2.4;
+}
+
+.sec-title { display: block; font-size: 28rpx; font-weight: 600; color: #1a1a1a; margin-bottom: 16rpx; }
+
+.rec { display: flex; justify-content: space-between; padding: 20rpx 0; border-bottom: 1rpx solid #f0f0f0; }
+.rec:last-child { border-bottom: none; }
+.rec-left { display: flex; flex-direction: column; gap: 6rpx; }
+.rec-type { font-size: 28rpx; font-weight: 600; }
+.rec-type.in { color: #e65100; }
+.rec-type.out { color: #2e7d32; }
+.rec-no { font-size: 22rpx; color: #999; }
+.rec-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6rpx; }
+.rec-amount { font-size: 28rpx; font-weight: 600; }
+.rec-amount.in { color: #e65100; }
+.rec-amount.out { color: #2e7d32; }
+.rec-time { font-size: 22rpx; color: #999; }

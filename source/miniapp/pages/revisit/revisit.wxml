@@ -1,0 +1,225 @@
+<view class="page">
+  <!-- 顶部：标题常驻，日期条从第二步起出现（号源按日期加载） -->
+  <view class="header">
+    <view class="head-row">
+      <text class="head-title">复诊预约</text>
+      <text class="head-link" bindtap="goMyAppointments">我的预约 ›</text>
+    </view>
+    <scroll-view class="date-strip" wx:if="{{step === 2 || step === 3}}" scroll-x show-scrollbar="{{false}}" enhanced>
+      <view class="date-inner">
+        <view
+          wx:for="{{dates}}"
+          wx:key="value"
+          class="date-item {{selectedDate === item.value ? 'active' : ''}}"
+          bindtap="onDateTap"
+          data-date="{{item.value}}"
+        >
+          <text class="date-label">{{item.label}}</text>
+          <text class="date-day">{{item.day}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 步骤条：点已完成的步骤可回退 -->
+  <view class="steps" wx:if="{{step < 4}}">
+    <view class="step {{step >= 1 ? 'on' : ''}}" bindtap="goStep" data-step="1">
+      <text class="step-no">1</text>
+      <text class="step-name">选上次就诊</text>
+    </view>
+    <view class="step-line {{step >= 2 ? 'on' : ''}}"></view>
+    <view class="step {{step >= 2 ? 'on' : ''}}" bindtap="goStep" data-step="2">
+      <text class="step-no">2</text>
+      <text class="step-name">选号源</text>
+    </view>
+    <view class="step-line {{step >= 3 ? 'on' : ''}}"></view>
+    <view class="step {{step >= 3 ? 'on' : ''}}" bindtap="goStep" data-step="3">
+      <text class="step-no">3</text>
+      <text class="step-name">确认预约</text>
+    </view>
+  </view>
+
+  <view class="load-error" wx:if="{{loadError}}">
+    <text class="load-error-text">{{loadError}}</text>
+    <text class="load-error-btn" bindtap="onRetry">重试</text>
+  </view>
+
+  <!-- 第一步：上次就诊（原病历）。复诊必须引用它——间隔天数和同医生/同科室都按它判 -->
+  <view class="body" wx:if="{{step === 1}}">
+    <view class="tip">选择最近一次就诊，系统按「复诊收费策略」判断这张号收多少钱</view>
+
+    <view class="list">
+      <view class="row" wx:for="{{records}}" wx:key="id" bindtap="onRecordTap" data-record="{{item}}">
+        <view class="row-icon dept-icon">
+          <image class="row-icon-img" src="/images/icons/clipboard.svg" mode="aspectFit"/>
+        </view>
+        <view class="row-main">
+          <view class="row-title-line">
+            <text class="row-title">{{item.visitDate}} {{item.deptName}}</text>
+            <text class="badge expert" wx:if="{{item.visitType === 2}}">上次是复诊</text>
+          </view>
+          <text class="row-sub">{{item.doctorName || '医师未记录'}} · {{item.recordNo}}</text>
+          <text class="row-desc" wx:if="{{item.diagnosisName}}">诊断：{{item.diagnosisName}}</text>
+        </view>
+        <view class="row-right">
+          <text class="remain">{{item.daysAgo}}</text>
+          <text class="chevron">›</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{records.length === 0 && !recordsLoading && !loadError}}">
+      <image class="empty-icon" src="/images/icons/clipboard.svg" mode="aspectFit"/>
+      <text class="empty-text">还没有可关联的就诊记录</text>
+      <text class="empty-sub">复诊要接上之前那一次门诊，请先挂普通号就诊</text>
+      <view class="again" bindtap="goAppointment">去预约挂号</view>
+    </view>
+  </view>
+
+  <!-- 第二步：号源（默认只看原医生的号） -->
+  <view class="body" wx:if="{{step === 2}}">
+    <view class="card record-card">
+      <view class="crumb">
+        <text class="crumb-name">{{selectedRecord.visitDate}} {{selectedRecord.deptName}}</text>
+        <text class="crumb-change" bindtap="goStep" data-step="1">更换</text>
+      </view>
+      <text class="card-sub">
+        原就诊医生 {{selectedRecord.doctorName || '未记录'}}<text wx:if="{{selectedRecord.diagnosisName}}"> · {{selectedRecord.diagnosisName}}</text>
+      </text>
+    </view>
+
+    <view class="chips scope-chips">
+      <text class="chip {{scope === 'doctor' ? 'on' : ''}}" bindtap="onScopeTap" data-scope="doctor">
+        原医生 {{scopeCounts.doctor}}</text>
+      <text class="chip {{scope === 'dept' ? 'on' : ''}}" bindtap="onScopeTap" data-scope="dept">
+        同科室 {{scopeCounts.dept}}</text>
+      <text class="chip {{scope === 'all' ? 'on' : ''}}" bindtap="onScopeTap" data-scope="all">
+        全部 {{scopeCounts.all}}</text>
+    </view>
+
+    <view class="list">
+      <view class="row doctor-row" wx:for="{{schedules}}" wx:key="id" bindtap="onScheduleTap" data-schedule="{{item}}">
+        <view class="avatar">
+          <text class="avatar-text">{{item.doctorName[0]}}</text>
+        </view>
+        <view class="row-main">
+          <view class="row-title-line">
+            <text class="row-title">{{item.deptName}} · {{item.doctorName}}</text>
+            <text class="badge expert" wx:if="{{item.isExpert === 1}}">专家</text>
+          </view>
+          <text class="row-sub">{{selectedDate}} {{item.timeText}}</text>
+        </view>
+        <view class="row-right">
+          <view class="col-right">
+            <text class="remain">余 {{item.remain}}</text>
+            <text class="row-fee">¥{{item.feeText}}</text>
+          </view>
+          <text class="chevron">›</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{schedules.length === 0 && !loading && !loadError}}">
+      <image class="empty-icon" src="/images/icons/clock.svg" mode="aspectFit"/>
+      <text class="empty-text">该日期暂无可约号源</text>
+      <text class="empty-sub">换个日期，或切到「全部」看其他科室</text>
+    </view>
+  </view>
+
+  <!-- 第三步：费用预估 + 就诊信息 + 提交 -->
+  <view class="body" wx:if="{{step === 3}}">
+    <view class="card">
+      <view class="crumb">
+        <text class="crumb-name">{{selectedSchedule.deptName}} · {{selectedSchedule.doctorName}}</text>
+        <text class="crumb-change" bindtap="goStep" data-step="2">更换号源</text>
+      </view>
+      <text class="card-sub">{{selectedDate}} {{selectedSchedule.timeText}} · 余 {{selectedSchedule.remain}} 号</text>
+      <text class="card-sub origin">原就诊 {{selectedRecord.visitDate}} {{selectedRecord.deptName}}</text>
+    </view>
+
+    <view class="card">
+      <view class="form-row" bindtap="goPatients">
+        <text class="form-label">就诊人</text>
+        <text class="form-value {{patientName ? '' : 'placeholder'}}">
+          {{patientName || '请选择就诊人'}}
+        </text>
+        <text class="chevron dark">›</text>
+      </view>
+
+      <view class="form-row">
+        <text class="form-label">结算方式</text>
+        <view class="chips">
+          <text class="chip {{settlementType === 1 ? 'on' : ''}}" bindtap="onSettlementTap" data-type="1">自费</text>
+          <text class="chip {{settlementType === 2 ? 'on' : ''}}" bindtap="onSettlementTap" data-type="2">职工医保</text>
+          <text class="chip {{settlementType === 3 ? 'on' : ''}}" bindtap="onSettlementTap" data-type="3">居民医保</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 费用预估：与院内实收同一判定，命中哪条策略、为什么免收都写出来 -->
+    <view class="card fee-card" wx:if="{{preview}}">
+      <view class="fee-row">
+        <text class="fee-name">挂号费</text>
+        <text class="fee-num">¥{{preview.registFeeText}}</text>
+      </view>
+      <view class="fee-row">
+        <text class="fee-name">诊查费</text>
+        <text class="fee-num">¥{{preview.diagnosisFeeText}}</text>
+      </view>
+      <view class="fee-row total">
+        <text class="fee-name">本次应收</text>
+        <text class="fee-num">¥{{preview.totalFeeText}}</text>
+      </view>
+      <view class="policy-note {{preview.waived ? 'waived' : ''}}">
+        <text class="policy-name">{{preview.policyName || '未命中减免策略（按全额收取）'}}</text>
+        <text class="policy-reason" wx:if="{{preview.reason}}">{{preview.reason}}</text>
+      </view>
+      <text class="fee-tip" wx:if="{{preview.waived}}">本次复诊免收，到院后可直接签到候诊</text>
+      <text class="fee-tip" wx:else>到院后在自助机或收费窗口缴费，诊室候诊以现场叫号为准</text>
+    </view>
+
+    <view class="card fee-card" wx:elif="{{previewLoading}}">
+      <text class="fee-tip">正在按复诊收费策略计算费用…</text>
+    </view>
+
+    <view class="submit-bar">
+      <button
+        class="submit"
+        loading="{{submitting}}"
+        disabled="{{submitting || !selectedSchedule || !preview}}"
+        bindtap="onConfirm"
+      >{{submitting ? '提交中' : (preview && preview.waived ? '确认预约（本次免收）' : '确认预约' + (preview ? ' ¥' + preview.totalFeeText : ''))}}</button>
+    </view>
+  </view>
+
+  <!-- 第四步：结果 -->
+  <view class="body" wx:if="{{step === 4}}">
+    <view class="result">
+      <view class="result-icon">
+        <image class="result-icon-img" src="/images/icons/check.svg" mode="aspectFit"/>
+      </view>
+      <text class="result-title">复诊预约成功</text>
+      <text class="result-no">就诊序号 {{result.registNo || '-'}}</text>
+
+      <view class="card result-card">
+        <view class="kv"><text class="kv-k">科室</text><text class="kv-v">{{result.deptName}}</text></view>
+        <view class="kv"><text class="kv-k">医生</text><text class="kv-v">{{result.doctorName}}</text></view>
+        <view class="kv"><text class="kv-k">就诊时间</text><text class="kv-v">{{result.visitDate}} {{result.timeText}}</text></view>
+        <view class="kv"><text class="kv-k">就诊人</text><text class="kv-v">{{result.patientName}}</text></view>
+        <view class="kv"><text class="kv-k">复诊费</text><text class="kv-v">￥{{result.feeText}}{{result.waived ? '（免收）' : (result.payStatus === 1 ? '（已缴）' : '')}}</text></view>
+        <view class="kv" wx:if="{{result.policyName}}"><text class="kv-k">收费依据</text><text class="kv-v">{{result.policyName}}</text></view>
+      </view>
+
+      <button class="submit" wx:if="{{!result.waived && result.payStatus !== 1}}" bindtap="payRegFee" loading="{{paying}}">
+        支付挂号费 ￥{{result.feeText}}</button>
+      <button class="submit" bindtap="goMyAppointments">查看我的预约</button>
+      <view class="again" bindtap="restart">再约一次复诊</view>
+    </view>
+  </view>
+
+  <view class="loading-bar" wx:if="{{loading || recordsLoading}}">
+    <view class="loading-dot"></view>
+    <view class="loading-dot"></view>
+    <view class="loading-dot"></view>
+  </view>
+</view>

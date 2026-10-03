@@ -1,0 +1,46 @@
+<view class="emr-page">
+  <view class="banner">
+    <view>
+      <text class="banner-title">门诊病历</text>
+      <text class="banner-sub" bindtap="goPatients">{{patientName || '未选择就诊人'}} · 切换 ›</text>
+    </view>
+    <text class="banner-refresh" bindtap="loadRecords">刷新</text>
+  </view>
+
+  <view class="list" wx:if="{{list.length > 0}}">
+    <view class="emr-card" wx:for="{{list}}" wx:key="key">
+      <view class="emr-head" bindtap="onToggle" data-index="{{index}}">
+        <view class="emr-title">
+          <text class="emr-dept">{{item.deptName}}</text>
+          <text class="emr-status">{{item.recordStatusText}}</text>
+        </view>
+        <text class="emr-more">{{item.expanded ? '收起' : '展开'}}</text>
+      </view>
+
+      <view class="emr-meta">{{item.visitDate}} · {{item.doctorName}} · 病历号 {{item.recordNo}}</view>
+      <view class="emr-chief" wx:if="{{item.chiefComplaint}}">主诉：{{item.chiefComplaint}}</view>
+      <view class="emr-diagnosis" wx:if="{{item.diagnosis}}">诊断：{{item.diagnosis}}</view>
+
+      <!-- 复诊入口放在卡片上而不是详情里：患者看完病历顺手约下次，不用再去首页找 -->
+      <view class="emr-actions">
+        <text class="emr-action" bindtap="goRevisit" data-id="{{item.id}}">预约复诊 ›</text>
+      </view>
+
+      <view class="emr-body" wx:if="{{item.expanded}}">
+        <view class="emr-row" wx:for="{{item.sections}}" wx:for-item="sec" wx:key="label">
+          <text class="row-label">{{sec.label}}</text>
+          <text class="row-value">{{sec.value}}</text>
+        </view>
+        <view class="emr-none" wx:if="{{item.sections.length === 0}}">该病历暂无正文内容</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">
+    <text class="empty-text">暂无门诊病历</text>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+  </view>
+</view>

@@ -1,0 +1,125 @@
+<view class="chat-page">
+  <!-- 顶部导航栏：左侧返回、右侧回首页，保证任何进入路径都能退出 -->
+  <view class="nav-bar">
+    <view class="nav-back" bindtap="goBack">
+      <text class="nav-back-arrow">‹</text>
+      <text class="nav-back-text">返回</text>
+    </view>
+    <text class="nav-title">智能助手</text>
+    <view class="nav-home" bindtap="goHome">
+      <text>首页</text>
+    </view>
+  </view>
+
+  <!-- 中间消息列表 -->
+  <scroll-view
+    class="message-list"
+    scroll-y
+    scroll-into-view="{{scrollToId}}"
+    scroll-with-animation
+    enhanced
+    show-scrollbar="{{false}}"
+  >
+    <!-- 欢迎消息 -->
+    <view class="welcome" wx:if="{{messages.length === 0}}">
+      <view class="welcome-avatar">
+        <image class="welcome-avatar-img" src="/images/icons/robot-w.svg" mode="aspectFit"/>
+      </view>
+      <text class="welcome-title">你好，我是麓康智能助手</text>
+      <text class="welcome-desc">医疗健康AI助手，可以帮您查询患者档案、解读检查报告、了解医保政策等</text>
+      <view class="quick-questions">
+        <view class="quick-item" wx:for="{{quickQuestions}}" wx:key="index" bindtap="onQuickQuestion" data-q="{{item}}">
+          <text>{{item}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 消息气泡 -->
+    <view
+      wx:for="{{messages}}"
+      wx:key="id"
+      id="msg-{{item.id}}"
+      class="message-item {{item.role}}"
+    >
+      <!-- AI 头像 -->
+      <view class="avatar" wx:if="{{item.role === 'assistant'}}">
+        <text>AI</text>
+      </view>
+
+      <!-- 消息内容 -->
+      <view class="bubble {{item.role}} {{item.role === 'assistant' && item.isTransfer ? 'transfer' : ''}} {{item.role === 'assistant' && item.emergencyLevel >= 3 ? 'high-risk' : ''}}">
+        <text class="bubble-text" wx:if="{{item.content}}" user-select>{{item.content}}</text>
+
+        <!-- 加载动画 -->
+        <view class="loading-dots" wx:if="{{item.role === 'assistant' && !item.content && sending}}">
+          <view class="dot"></view>
+          <view class="dot"></view>
+          <view class="dot"></view>
+        </view>
+
+        <!-- 转人工（仅 AI 消息） -->
+        <block wx:if="{{item.role === 'assistant'}}">
+          <view class="transfer-tip" wx:if="{{item.needTransfer && !item.transferred}}">
+            <view class="transfer-alert">
+              <image class="tip-icon" src="/images/icons/alert.svg" mode="aspectFit"/>
+              <text>{{item.transferTip || '检测到您的描述可能涉及紧急情况'}}</text>
+            </view>
+            <button class="transfer-btn" size="mini" bindtap="handleTransfer" data-msg="{{item}}">转接人工客服</button>
+          </view>
+          <view class="transfer-done" wx:if="{{item.transferred}}">
+            <image class="tip-icon" src="/images/icons/check.svg" mode="aspectFit"/>
+            <text>已为您转接人工客服，请稍候...</text>
+          </view>
+
+          <!-- 紧急标签 -->
+          <view class="emergency-tag" wx:if="{{item.emergencyLevel > 0}}">
+            <text class="tag {{item.emergencyLevel >= 3 ? 'tag-danger' : 'tag-info'}}">
+              {{item.emergencyLevel === 3 ? '高危' : item.emergencyLevel === 2 ? '中危' : '低危'}}
+            </text>
+          </view>
+        </block>
+
+        <text class="bubble-time" wx:if="{{item.time}}">{{item.time}}</text>
+      </view>
+
+      <!-- 用户头像 -->
+      <view class="avatar user-avatar" wx:if="{{item.role === 'user'}}">
+        <text>我</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 右侧问题定位点 -->
+  <view class="question-dots" wx:if="{{userQuestions.length > 1}}">
+    <view
+      wx:for="{{userQuestions}}"
+      wx:key="id"
+      class="dot-item {{currentDotIndex === index ? 'active' : ''}}"
+      bindtap="scrollToQuestion"
+      data-id="{{item.id}}"
+      data-index="{{index}}"
+    >
+      <text class="dot-num">{{index + 1}}</text>
+    </view>
+  </view>
+
+  <!-- 底部输入区域 -->
+  <view class="input-bar">
+    <input
+      class="input"
+      placeholder="输入您的问题..."
+      value="{{inputValue}}"
+      bindinput="onInput"
+      bindconfirm="sendMessage"
+      confirm-type="send"
+      disabled="{{sending}}"
+    />
+    <button
+      class="send-btn"
+      disabled="{{sending}}"
+      bindtap="sendMessage"
+    >
+      发送
+    </button>
+  </view>
+</view>

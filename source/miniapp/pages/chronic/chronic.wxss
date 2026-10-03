@@ -1,0 +1,105 @@
+.page {
+  min-height: 100vh;
+  background: #f5f6f8;
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.tip {
+  background: #e8f5e9;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 24rpx;
+}
+
+.tip.off {
+  background: #f2f3f5;
+}
+
+.tip-text {
+  font-size: 24rpx;
+  color: #2e7d32;
+}
+
+.tip.off .tip-text {
+  color: #888;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.card.active {
+  border-left: 6rpx solid #43a047;
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8rpx;
+}
+
+.disease {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #222;
+}
+
+.status {
+  font-size: 22rpx;
+  border-radius: 8rpx;
+  padding: 4rpx 12rpx;
+}
+
+.s1 {
+  color: #f57c00;
+  background: #fff3e0;
+}
+
+.s2 {
+  color: #2e7d32;
+  background: #e8f5e9;
+}
+
+.s3 {
+  color: #999;
+  background: #f2f3f5;
+}
+
+.code {
+  display: block;
+  font-size: 22rpx;
+  color: #999;
+  margin-bottom: 16rpx;
+}
+
+.card-row {
+  display: flex;
+  margin-bottom: 8rpx;
+}
+
+.label {
+  width: 140rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.value {
+  font-size: 24rpx;
+  color: #444;
+  flex: 1;
+}
+
+.empty {
+  padding-top: 200rpx;
+  text-align: center;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+}

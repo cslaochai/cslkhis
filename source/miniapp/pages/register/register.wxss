@@ -1,0 +1,235 @@
+.register-page {
+  min-height: 100vh;
+  padding: 40rpx 36rpx calc(60rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background:
+    radial-gradient(110% 45% at 50% 0%, rgba(18, 105, 181, 0.18) 0%, rgba(18, 105, 181, 0) 60%),
+    linear-gradient(180deg, #EAF2F9 0%, #DDEAF4 100%);
+}
+
+/* ---------- 品牌区 ---------- */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 36rpx;
+}
+
+.brand-badge {
+  width: 108rpx;
+  height: 108rpx;
+  border-radius: 30rpx;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10rpx 26rpx rgba(18, 105, 181, 0.14);
+  overflow: hidden;
+}
+
+.brand-icon {
+  width: 90rpx;
+  height: 90rpx;
+}
+
+.brand-name {
+  font-size: 38rpx;
+  font-weight: 700;
+  color: #16324f;
+  margin-top: 20rpx;
+}
+
+.brand-slogan {
+  font-size: 24rpx;
+  color: #6b7f97;
+  margin-top: 10rpx;
+}
+
+/* ---------- 表单卡 ---------- */
+.card {
+  background: #fff;
+  border-radius: 28rpx;
+  padding: 40rpx 34rpx 34rpx;
+  box-shadow: 0 16rpx 44rpx rgba(18, 105, 181, 0.12);
+}
+
+.card-title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1a2233;
+  text-align: center;
+}
+
+.card-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #98a2b3;
+  text-align: center;
+  margin: 10rpx 0 34rpx;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  height: 96rpx;
+  padding: 0 24rpx;
+  margin-bottom: 24rpx;
+  background: #f5f7fa;
+  border: 2rpx solid transparent;
+  border-radius: 18rpx;
+}
+
+.field:focus-within {
+  background: #fff;
+  border-color: #1269B5;
+  box-shadow: 0 0 0 6rpx rgba(18, 105, 181, 0.08);
+}
+
+.field-icon {
+  width: 34rpx;
+  height: 34rpx;
+  margin-right: 18rpx;
+  flex-shrink: 0;
+}
+
+.field-input {
+  flex: 1;
+  min-width: 0;
+  height: 96rpx;
+  font-size: 29rpx;
+  color: #1a2233;
+}
+
+.field-ph {
+  color: #b0b8c4;
+}
+
+.field-fixed {
+  flex: 1;
+  font-size: 27rpx;
+  color: #3d4757;
+}
+
+.field-eye {
+  width: 40rpx;
+  height: 40rpx;
+  padding: 8rpx;
+  flex-shrink: 0;
+}
+
+.chips {
+  display: flex;
+  gap: 14rpx;
+}
+
+.chip {
+  padding: 10rpx 34rpx;
+  border-radius: 30rpx;
+  border: 2rpx solid #e6ebf2;
+  background: #fff;
+  font-size: 26rpx;
+  color: #3d4757;
+}
+
+.chip.on {
+  border-color: #1269B5;
+  background: #f0f7ff;
+  color: #1269B5;
+  font-weight: 600;
+}
+
+/* ---------- 验证码按钮 ---------- */
+.code-btn {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+  padding: 0 24rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  border-radius: 32rpx;
+  background: #eaf2fb;
+  color: #1269B5;
+  font-size: 25rpx;
+  font-weight: 600;
+}
+
+.code-btn:active {
+  background: #dbe8f7;
+}
+
+.code-btn.disabled {
+  background: #f0f2f5;
+  color: #a3adbb;
+  font-weight: 400;
+}
+
+/* ---------- 错误提示 ---------- */
+.error {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 14rpx 20rpx;
+  margin-bottom: 10rpx;
+  background: #fef1f0;
+  border-radius: 14rpx;
+}
+
+.error-icon {
+  width: 30rpx;
+  height: 30rpx;
+  flex-shrink: 0;
+}
+
+.error-text {
+  font-size: 25rpx;
+  color: #e0544a;
+  line-height: 1.4;
+}
+
+/* ---------- 主按钮 ---------- */
+.submit {
+  width: 100%;
+  height: 96rpx;
+  line-height: 96rpx;
+  margin-top: 14rpx;
+  border-radius: 48rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  letter-spacing: 3rpx;
+  color: #fff;
+  background: linear-gradient(96deg, #1269B5 0%, #0E9488 118%);
+  border: none;
+  box-shadow: 0 12rpx 26rpx rgba(18, 105, 181, 0.24);
+}
+
+.submit::after {
+  border: none;
+}
+
+.submit[disabled] {
+  color: rgba(255, 255, 255, 0.88);
+  background: linear-gradient(96deg, #8fb0cb 0%, #8fc0bb 100%);
+  box-shadow: none;
+}
+
+/* ---------- 返回登录 ---------- */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 30rpx;
+  padding-top: 26rpx;
+  border-top: 1rpx solid #eef1f5;
+}
+
+.foot-label {
+  font-size: 26rpx;
+  color: #98a2b3;
+}
+
+.foot-link {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1269B5;
+  padding-left: 8rpx;
+}

@@ -1,0 +1,256 @@
+/* 就诊人管理（当前选中项 = 全站业务接口使用的 patientId） */
+.patients-page {
+  min-height: 100vh;
+  background: #f7f8fa;
+  padding: 0 32rpx 200rpx;
+  box-sizing: border-box;
+}
+
+.header {
+  padding: 40rpx 0 24rpx;
+}
+
+.title {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.subtitle {
+  display: block;
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 12rpx;
+  line-height: 1.6;
+}
+
+.list {
+  margin-top: 8rpx;
+}
+
+.p-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 28rpx 28rpx 16rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  border: 2rpx solid transparent;
+}
+
+.p-card.selected {
+  border-color: #2b6cb0;
+}
+
+.p-main {
+  display: flex;
+  align-items: flex-start;
+}
+
+.p-radio {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  border: 3rpx solid #ccc;
+  margin: 6rpx 20rpx 0 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.p-radio.on {
+  border-color: #2b6cb0;
+  border-width: 10rpx;
+}
+
+.p-info {
+  flex: 1;
+}
+
+.p-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.p-name {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.p-tag {
+  font-size: 20rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+}
+
+.p-tag.rel {
+  color: #2b6cb0;
+  background: #e8f4fd;
+}
+
+.p-tag.def {
+  color: #0e9488;
+  background: #e6faf8;
+}
+
+.p-tag.self {
+  color: #b7791f;
+  background: #fef3e2;
+}
+
+.p-sub {
+  font-size: 24rpx;
+  color: #888;
+  margin-top: 10rpx;
+}
+
+.p-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 32rpx;
+  border-top: 1rpx solid #f0f0f0;
+  padding-top: 16rpx;
+  margin-top: 20rpx;
+}
+
+.p-op {
+  font-size: 24rpx;
+  color: #2b6cb0;
+}
+
+.p-op.danger {
+  color: #e53e3e;
+}
+
+.empty {
+  text-align: center;
+  padding: 120rpx 0;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.bottom-btns {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  gap: 24rpx;
+  padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+
+.btn {
+  flex: 1;
+  font-size: 28rpx;
+  border-radius: 12rpx;
+  line-height: 84rpx;
+  padding: 0;
+}
+
+.btn.primary {
+  background: #2b6cb0;
+  color: #fff;
+}
+
+.btn.ghost {
+  background: #e8f4fd;
+  color: #2b6cb0;
+}
+
+.mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.modal {
+  width: 620rpx;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 40rpx 36rpx;
+}
+
+.m-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.m-sub {
+  font-size: 24rpx;
+  color: #999;
+  margin: 12rpx 0 24rpx;
+}
+
+.m-item {
+  display: flex;
+  align-items: center;
+  min-height: 92rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.m-label {
+  width: 180rpx;
+  font-size: 28rpx;
+  color: #333;
+  flex-shrink: 0;
+}
+
+.m-input {
+  flex: 1;
+  font-size: 28rpx;
+}
+
+.m-input-code {
+  min-width: 0;
+}
+
+.code-btn {
+  flex-shrink: 0;
+  width: 200rpx;
+  margin-left: 16rpx;
+  padding: 0;
+  height: 60rpx;
+  line-height: 60rpx;
+  font-size: 24rpx;
+  border-radius: 12rpx;
+  background: #e8f4fd;
+  color: #1269b5;
+  border: none;
+}
+
+.code-btn[disabled] {
+  background: #f1f3f5;
+  color: #98a2b3;
+}
+
+.m-picker {
+  flex: 1;
+}
+
+.m-picker-val {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.m-picker-val.placeholder {
+  color: #bbb;
+}
+
+.m-btns {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 40rpx;
+}

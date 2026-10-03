@@ -1,0 +1,30 @@
+<view class="page">
+  <view class="tip" wx:if="{{longRxEligible}}">
+    <text class="tip-text">您存在已认定的慢病档案，复诊时医生可为您开具慢病长处方（最长 90 天用药量）</text>
+  </view>
+  <view class="tip off" wx:else>
+    <text class="tip-text">暂无已认定的慢病档案。请到门诊由医生评估后建档认定</text>
+  </view>
+
+  <view class="list" wx:if="{{records.length > 0}}">
+    <view class="card {{item.active ? 'active' : ''}}" wx:for="{{records}}" wx:key="id">
+      <view class="card-top">
+        <text class="disease">{{item.diseaseName}}</text>
+        <text class="status s{{item.confirmStatus}}">{{item.statusText}}</text>
+      </view>
+      <text class="code">{{item.diseaseCode}}</text>
+      <view class="card-row" wx:if="{{item.doctorName}}">
+        <text class="label">认定医生</text>
+        <text class="value">{{item.doctorName}}{{item.deptName ? ' · ' + item.deptName : ''}}</text>
+      </view>
+      <view class="card-row" wx:if="{{item.confirmTime}}">
+        <text class="label">认定时间</text>
+        <text class="value">{{item.confirmTime}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && records.length === 0}}">
+    <text class="empty-text">暂无慢病档案</text>
+  </view>
+</view>

@@ -1,0 +1,48 @@
+<view class="rx-page">
+  <view class="banner">
+    <view>
+      <text class="banner-title">处方取药</text>
+      <text class="banner-sub" bindtap="goPatients">{{patientName || '未选择就诊人'}} · 切换 ›</text>
+    </view>
+    <text class="banner-refresh" bindtap="loadList">刷新</text>
+  </view>
+
+  <view class="list" wx:if="{{list.length > 0}}">
+    <view class="rx-card" wx:for="{{list}}" wx:key="key">
+      <view class="rx-head" bindtap="onToggle" data-index="{{index}}">
+        <view class="rx-title">
+          <text class="rx-type">{{item.prescriptionTypeText || '处方'}}</text>
+          <text class="rx-status {{item.prescriptionStatus === 4 ? 'done' : ''}}">{{item.statusText}}</text>
+        </view>
+        <text class="rx-more">{{item.expanded ? '收起' : '展开'}}</text>
+      </view>
+
+      <view class="rx-meta">{{item.visitDate}} · {{item.deptName}} · {{item.doctorName}}</view>
+      <view class="rx-no">处方号 {{item.prescriptionNo}}</view>
+
+      <view class="rx-drugs" wx:if="{{item.expanded}}">
+        <view class="rx-drug" wx:for="{{item.drugs}}" wx:for-item="drug" wx:key="index">
+          <view class="drug-name">{{drug.name}}<text class="drug-spec" wx:if="{{drug.spec}}">{{drug.spec}}</text></view>
+          <view class="drug-usage">{{drug.usage}}{{drug.qty ? ' · ' + drug.qty : ''}}</view>
+        </view>
+        <view class="rx-empty" wx:if="{{item.drugs.length === 0}}">暂无药品明细</view>
+        <view class="rx-usage" wx:if="{{item.usageInstruction}}">用法用量：{{item.usageInstruction}}</view>
+      </view>
+
+      <view class="rx-tip" wx:if="{{item.tip}}">{{item.tip}}</view>
+
+      <view class="rx-foot">
+        <text class="rx-amount" wx:if="{{item.amountText}}">合计 ¥{{item.amountText}}</text>
+        <button class="pay-btn" wx:if="{{item.canPay}}" size="mini" bindtap="goPayment">去缴费</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">
+    <text class="empty-text">暂无处方记录</text>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+  </view>
+</view>

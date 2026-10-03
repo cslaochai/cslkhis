@@ -1,0 +1,273 @@
+<script setup lang="ts">
+/**
+ * 病区床位图（护士站总览）
+ *
+ * 一张床一张卡，空床也画出来 —— 护士要的正是「哪几张床是空的」，
+ * 只渲染占床的图等于把这张图最有用的那半边裁掉了。
+ *
+ * 数据只有一个来源：`/patient/inpatient/bedMap`。科室边界由服务端按登录岗位收口，
+ * 前端的科室下拉读的是接口返回的 `deptOptions`（已按授权过滤），不拉全院科室表。
+ *
+ * 顶偏移实测后定高，卡片在自己的面板里滚（见 lib 里的工作站老规矩）；
+ * 卡片左边条 = 护理等级色标，无护理记录时是灰色「未评估」，**不等于「不需要护理」**。
+ */
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Refresh, WarningFilled } from '@element-plus/icons-vue'
+import { getBedMap } from '@/api/inpatient'
+import { patientGenderText, patientAgeText } from '@/lib/patientGender'
+import PatientDetailDialog from '@/components/his/PatientDetailDialog.vue'
+
+const loading = ref(false)
+const rootRef = ref<HTMLElement | null>(null)
+const workspaceH = ref(0)
+
+const deptId = ref<string>('')
+const wardId = ref<string>('')
+const data = ref<any>({ summary: {}, beds: [], deptOptions: [], wardOptions: [] })
+
+const measureWorkspace = () => {
+  const el = rootRef.value
+  if (!el) return
+  // 24 = main 的下内边距（p-6）；480 兜底：视口太矮时宁可整页滚，也不把卡片压成一条缝
+  workspaceH.value = Math.max(480, window.innerHeight - el.getBoundingClientRect().top - 24)
+}
+
+const load = async () => {
+  loading.value = true
+  try {
+    const res: any = await getBedMap({
+      deptId: deptId.value || undefined,
+      wardId: wardId.value || undefined,
+    })
+    if (res.code !== 200) {
+      ElMessage.error(res.message || '床位图加载失败')
+      return
+    }
+    data.value = res.data || data.value
+    // 首屏后端会把自己落在主岗位科室，回填到下拉，否则切走就切不回来
+    if (!deptId.value && res.data?.deptId) deptId.value = String(res.data.deptId)
+  } catch (e: any) {
+    ElMessage.error(e?.message || '床位图加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+watch(deptId, () => {
+  wardId.value = ''
+  load()
+})
+watch(wardId, () => load())
+
+const beds = computed<any[]>(() => data.value?.beds || [])
+const summary = computed<any>(() => data.value?.summary || {})
+const deptOptions = computed<any[]>(() => data.value?.deptOptions || [])
+const wardOptions = computed<any[]>(() => data.value?.wardOptions || [])
+
+/** 按病区分组：同科多病区时混排看不出「哪张床在哪个病区」 */
+const groups = computed(() => {
+  const map = new Map<string, any[]>()
+  for (const bed of beds.value) {
+    const key = String(bed.wardId ?? '0')
+    if (!map.has(key)) map.set(key, [])
+    map.get(key)!.push(bed)
+  }
+  return [...map.entries()].map(([wardKey, list]) => ({
+    wardKey,
+    wardName: list[0]?.wardName || '未分配病区',
+    occupied: list.filter((b) => b.bedStatus === 2).length,
+    total: list.length,
+    beds: list,
+  }))
+})
+
+const NURSING_COLORS: Record<number, string> = {
+  1: '#DC2626',
+  2: '#EA580C',
+  3: '#0E9488',
+  4: '#1269B5',
+}
+const UNKNOWN_NURSING_COLOR = '#94A3B8'
+
+const nursingColor = (bed: any) =>
+  bed.bedStatus !== 2 ? UNKNOWN_NURSING_COLOR : NURSING_COLORS[bed.nursingLevel] || UNKNOWN_NURSING_COLOR
+
+const bedClass = (bed: any) => {
+  if (bed.bedStatus === 2) return 'bg-white border-slate-200 hover:border-[#1269B5] cursor-pointer'
+  if (bed.bedStatus === 0) return 'bg-amber-50 border-amber-200'
+  if (bed.bedStatus === 3) return 'bg-slate-100 border-slate-300'
+  return 'bg-slate-50/70 border-dashed border-slate-300'
+}
+
+const bedTypeText = (type: string) => {
+  if (type === 'ICU') return '重症'
+  if (type === 'VIP') return '特需'
+  if (type === 'normal') return '普通'
+  return type || '普通'
+}
+
+const detailVisible = ref(false)
+const detailPatientId = ref<string>('')
+const openPatient = (bed: any) => {
+  if (bed.bedStatus !== 2 || !bed.patientId) return
+  detailPatientId.value = String(bed.patientId)
+  detailVisible.value = true
+}
+
+onMounted(async () => {
+  await nextTick()
+  measureWorkspace()
+  window.addEventListener('resize', measureWorkspace)
+  await load()
+  // 下拉首屏为空时高度还没最终稳定，测量一次即可
+  await nextTick()
+  measureWorkspace()
+})
+onBeforeUnmount(() => window.removeEventListener('resize', measureWorkspace))
+</script>
+
+<template>
+  <div
+    ref="rootRef"
+    class="flex flex-col gap-3"
+    :style="workspaceH ? { height: `${workspaceH}px` } : undefined"
+    data-testid="bed-map"
+  >
+    <!-- 工具条 -->
+    <div class="flex flex-wrap items-center gap-3 shrink-0">
+      <!-- 不受限账号的下拉是「所有有床位的科室」，几十条起步，不能靠翻页找 -->
+      <el-select v-model="deptId" class="!w-52" placeholder="科室" filterable data-testid="bed-map-dept">
+        <el-option
+          v-for="d in deptOptions"
+          :key="d.deptId"
+          :label="`${d.deptName}（${d.occupied}/${d.total}）`"
+          :value="String(d.deptId)"
+        />
+      </el-select>
+      <el-select v-model="wardId" class="!w-52" placeholder="病区" data-testid="bed-map-ward">
+        <el-option label="全部病区" value="" />
+        <el-option
+          v-for="w in wardOptions"
+          :key="w.wardId"
+          :label="`${w.wardName}（${w.occupied}/${w.total}）`"
+          :value="String(w.wardId)"
+        />
+      </el-select>
+      <el-button :loading="loading" data-testid="bed-map-refresh" @click="load">
+        <el-icon class="mr-1"><Refresh /></el-icon>刷新
+      </el-button>
+      <div class="ml-auto flex flex-wrap items-center gap-3 text-xs text-slate-600">
+        <span v-for="lv in [[1, '特级'], [2, '一级'], [3, '二级'], [4, '三级']]" :key="lv[0]" class="flex items-center gap-1">
+          <i class="inline-block w-2.5 h-4 rounded-sm" :style="{ background: NURSING_COLORS[lv[0] as number] }"></i>{{ lv[1] }}护理
+        </span>
+        <span class="flex items-center gap-1">
+          <i class="inline-block w-2.5 h-4 rounded-sm" :style="{ background: UNKNOWN_NURSING_COLOR }"></i>未评估
+        </span>
+      </div>
+    </div>
+
+    <!-- 统计条 -->
+    <div class="grid shrink-0 grid-cols-4 md:grid-cols-8 gap-2" data-testid="bed-map-stats">
+      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
+        <div class="text-xs text-slate-500">床位总数</div>
+        <div class="text-xl font-semibold text-slate-800">{{ summary.totalBeds ?? 0 }}</div>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
+        <div class="text-xs text-slate-500">占用</div>
+        <div class="text-xl font-semibold text-[#1269B5]">{{ summary.occupied ?? 0 }}</div>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
+        <div class="text-xs text-slate-500">空闲</div>
+        <div class="text-xl font-semibold text-slate-800">{{ summary.free ?? 0 }}</div>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
+        <div class="text-xs text-slate-500">维修 / 锁定</div>
+        <div class="text-xl font-semibold text-slate-800">{{ summary.repair ?? 0 }} / {{ summary.locked ?? 0 }}</div>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
+        <div class="text-xs text-slate-500">使用率</div>
+        <div class="text-xl font-semibold text-[#0E9488]">{{ summary.usageRate ?? 0 }}%</div>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
+        <div class="text-xs text-slate-500">今日新入</div>
+        <div class="text-xl font-semibold text-slate-800">{{ summary.newToday ?? 0 }}</div>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
+        <div class="text-xs text-slate-500">术后 / 危重</div>
+        <div class="text-xl font-semibold text-slate-800">{{ summary.postOpCount ?? 0 }} / {{ summary.criticalCount ?? 0 }}</div>
+      </div>
+      <div class="rounded-lg border border-slate-200 bg-white px-3 py-2">
+        <div class="text-xs text-slate-500">过敏 / 未评估</div>
+        <div class="text-xl font-semibold text-slate-800">{{ summary.allergyCount ?? 0 }} / {{ summary.levelUnknown ?? 0 }}</div>
+      </div>
+    </div>
+
+    <!-- 卡片区：整页不滚，病区与床位在面板内滚 -->
+    <div class="min-h-0 flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+      <div v-if="!beds.length && !loading" class="py-16 text-center text-sm text-slate-500">
+        该科室暂无床位数据
+      </div>
+      <section v-for="g in groups" :key="g.wardKey" class="mb-4 last:mb-0">
+        <h3 class="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-700">
+          {{ g.wardName }}
+          <span class="text-xs font-normal text-slate-500">占 {{ g.occupied }} / 共 {{ g.total }} 床</span>
+        </h3>
+        <div class="grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(168px, 1fr))">
+          <div
+            v-for="bed in g.beds"
+            :key="bed.bedId"
+            class="bed-card rounded-lg border p-2 transition-colors"
+            :class="bedClass(bed)"
+            :style="{ borderLeft: `4px solid ${nursingColor(bed)}` }"
+            :title="bed.bedStatus === 2 ? bed.allergyHistory || '' : bed.bedStatusText"
+            data-testid="bed-card"
+            @click="openPatient(bed)"
+          >
+            <div class="flex items-baseline justify-between">
+              <span class="text-lg font-semibold text-slate-800">{{ bed.bedNo }}</span>
+              <span class="rounded px-1 text-[11px]" :class="bed.bedType === 'normal' ? 'text-slate-500' : 'bg-[#1269B5]/10 text-[#1269B5]'">
+                {{ bedTypeText(bed.bedType) }}
+              </span>
+            </div>
+
+            <template v-if="bed.bedStatus === 2">
+              <div class="mt-1 truncate text-[15px] font-semibold text-slate-900" data-testid="bed-card-name">
+                {{ bed.patientName || '未登记姓名' }}
+              </div>
+              <div class="text-xs text-slate-600">
+                {{ patientGenderText(bed.gender) }} · {{ patientAgeText(bed.age) }} · 入院{{ bed.admitDays ?? 0 }}天
+              </div>
+              <div class="truncate text-xs text-slate-600">主治 {{ bed.doctorName || '未指定' }}</div>
+              <div class="mt-1 flex flex-wrap gap-1 text-[11px] leading-4">
+                <span class="rounded bg-slate-100 px-1 text-slate-700">{{ bed.nursingLevelText }}</span>
+                <span
+                  v-if="bed.allergyHistory"
+                  class="flex items-center gap-0.5 rounded bg-red-50 px-1 text-red-700"
+                  data-testid="bed-card-allergy"
+                >
+                  <el-icon class="text-[11px]"><WarningFilled /></el-icon>过敏
+                </span>
+                <span v-if="bed.postOpDays !== null && bed.postOpDays !== undefined" class="rounded bg-[#0E9488]/10 px-1 text-[#0B6B63]">
+                  术后{{ bed.postOpDays }}天
+                </span>
+                <span v-if="bed.critical" class="rounded bg-red-600 px-1 text-white">危重</span>
+                <span v-if="bed.newToday" class="rounded bg-[#1269B5] px-1 text-white">新入</span>
+                <span v-if="bed.activeOrderCount" class="rounded bg-slate-100 px-1 text-slate-700">医嘱{{ bed.activeOrderCount }}</span>
+              </div>
+            </template>
+            <div v-else class="mt-1 text-sm text-slate-500">{{ bed.bedStatusText }}</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <PatientDetailDialog v-model="detailVisible" :patient-id="detailPatientId" />
+  </div>
+</template>
+
+<style scoped>
+.bed-card {
+  min-height: 104px;
+}
+</style>

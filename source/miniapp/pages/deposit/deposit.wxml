@@ -1,0 +1,58 @@
+<view class="page">
+  <view class="head">
+    <text class="head-title">住院押金</text>
+    <text class="head-sub">{{patientName}} · 就诊人切换在「我的-就诊人管理」</text>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && admissions.length === 0}}">
+    <text class="empty-text">名下就诊人暂无住院记录</text>
+  </view>
+
+  <block wx:if="{{admissions.length > 0}}">
+    <scroll-view scroll-x class="adm-bar" wx:if="{{admissions.length > 1}}">
+      <view
+        wx:for="{{admissions}}"
+        wx:key="admissionId"
+        class="adm-chip {{current && current.admissionId === item.admissionId ? 'active' : ''}}"
+        data-id="{{item.admissionId}}"
+        bindtap="onAdmissionTap"
+      >{{item.admissionNo}} · {{item.statusText}}</view>
+    </scroll-view>
+
+    <view class="card balance-card" wx:if="{{current}}">
+      <view class="bal-line"><text class="bal-k">住院号</text><text class="bal-v">{{current.admissionNo}}</text></view>
+      <view class="bal-line"><text class="bal-k">入院日期</text><text class="bal-v">{{current.admitTime}}</text></view>
+      <view class="bal-main">
+        <text class="bal-label">押金余额（元）</text>
+        <text class="bal-amount">{{balance ? balance.balance : '0.00'}}</text>
+      </view>
+      <view class="bal-row">
+        <text class="bal-minor">累计充值 ￥{{balance ? balance.total : '0.00'}}</text>
+        <text class="bal-minor">累计退款 ￥{{balance ? balance.refunded : '0.00'}}</text>
+      </view>
+      <view class="recharge">
+        <button class="recharge-btn" data-amount="500" bindtap="onRecharge" loading="{{paying}}">充 500</button>
+        <button class="recharge-btn" data-amount="1000" bindtap="onRecharge" loading="{{paying}}">充 1000</button>
+        <button class="recharge-btn" data-amount="2000" bindtap="onRecharge" loading="{{paying}}">充 2000</button>
+      </view>
+    </view>
+
+    <view class="card">
+      <text class="sec-title">押金流水</text>
+      <view class="empty" wx:if="{{records.length === 0}}">
+        <text class="empty-text">暂无流水</text>
+      </view>
+      <view class="rec" wx:for="{{records}}" wx:key="prepayNo">
+        <view class="rec-left">
+          <text class="rec-type {{item.prepayType === 1 ? 'in' : 'out'}}">{{item.typeText}}</text>
+          <text class="rec-no">{{item.prepayNo}} · {{item.payMethodText}}</text>
+        </view>
+        <view class="rec-right">
+          <text class="rec-amount {{item.prepayType === 1 ? 'in' : 'out'}}">
+            {{item.prepayType === 1 ? '+' : '-'}}￥{{item.amount}}</text>
+          <text class="rec-time">{{item.payTime}}</text>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

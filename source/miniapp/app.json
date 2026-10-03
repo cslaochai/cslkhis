@@ -1,0 +1,66 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/search/search",
+    "pages/appointment/appointment",
+    "pages/revisit/revisit",
+    "pages/appointmentList/appointmentList",
+    "pages/report/report",
+    "pages/reportDetail/reportDetail",
+    "pages/message/message",
+    "pages/chronic/chronic",
+    "pages/payment/payment",
+    "pages/queue/queue",
+    "pages/deposit/deposit",
+    "pages/prescription/prescription",
+    "pages/emr/emr",
+    "pages/profile/profile",
+    "pages/patients/patients",
+    "pages/login/login",
+    "pages/register/register",
+    "pages/triage/triage",
+    "pages/chat/chat"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#2b6cb0",
+    "navigationBarTitleText": "长沙市麓康医院",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f7f8fa"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#2b6cb0",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页",
+        "iconPath": "images/tabbar/home.png",
+        "selectedIconPath": "images/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/appointment/appointment",
+        "text": "挂号",
+        "iconPath": "images/tabbar/appointment.png",
+        "selectedIconPath": "images/tabbar/appointment-active.png"
+      },
+      {
+        "pagePath": "pages/report/report",
+        "text": "报告",
+        "iconPath": "images/tabbar/report.png",
+        "selectedIconPath": "images/tabbar/report-active.png"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的",
+        "iconPath": "images/tabbar/profile.png",
+        "selectedIconPath": "images/tabbar/profile-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

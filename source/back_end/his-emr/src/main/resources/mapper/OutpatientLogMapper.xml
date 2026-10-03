@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  门诊日志（法规台账）：基表是**门诊病历**，一行 = 一次有诊断事实的接诊。
+
+  三条设计要点，改动前务必先读：
+
+  1) 只出 record_status IN (2 已提交, 3 已归档)。草稿（1）没有诊断事实，作废（4）不是事实，
+     出现在日志里等于把"还没发生/已否认"的接诊上报给疾控抽查。
+
+  2) 「可报/已报」不落新列、不建第二套状态机。可报 = 诊断 ICD 前缀命中
+     sys_infectious_disease（前缀正则由服务层从字典现拼，经 #{regex} 传入）；
+     已报 = biz_infectious_report 存在该挂号的卡（取 MAX(id)，与报卡模块"退报重报"
+     递增次数的事实一致：最新一张说了算）。报告卡本身的状态以报卡表为唯一权威，
+     这里只带出 report_no/report_status 供核查页展示，**不参与统计口径**。
+
+  3) 自定义 SQL 不受 @TableLogic 影响，三张表的 del_flag 全部显式写。
+     LEFT JOIN 条件写在 ON/子查询里，不写进 WHERE（写进 WHERE 会整批丢掉未报行，
+     而未报行恰恰是这页存在的理由）。
+-->
+<mapper namespace="com.his.emr.mapper.OutpatientLogMapper">
+
+    <sql id="logBase">
+        FROM biz_medical_record r
+        LEFT JOIN biz_patient p ON p.id = r.patient_id AND p.del_flag = 0
+        LEFT JOIN biz_infectious_report ir ON ir.id = (
+            SELECT MAX(ir2.id) FROM biz_infectious_report ir2
+            WHERE ir2.regist_id = r.regist_id AND ir2.del_flag = 0
+        )
+        WHERE r.del_flag = 0
+          AND r.record_status IN (2, 3)
+    </sql>
+
+    <!-- 体温是 varchar：不可解析的值不算发热，也不报错（比硬转炸 500 诚实） -->
+    <sql id="feverExpr">
+        CASE WHEN r.temperature REGEXP '^[0-9]+([.][0-9]+)?$'
+             AND CAST(r.temperature AS DECIMAL(4,1)) &gt;= 37.3
+        THEN 1 ELSE 0 END
+    </sql>
+
+    <!-- 可报：诊断编码以法定目录任一 ICD 前缀开头。regex 为空目录时服务层传 '^$'（永不命中） -->
+    <sql id="reportableExpr">
+        CASE WHEN r.diagnosis_code IS NOT NULL AND r.diagnosis_code &lt;&gt; ''
+             AND r.diagnosis_code REGEXP CONCAT('^(', #{regex}, ')')
+        THEN 1 ELSE 0 END
+    </sql>
+
+    <sql id="reportedExpr">
+        CASE WHEN ir.id IS NOT NULL THEN 1 ELSE 0 END
+    </sql>
+
+    <sql id="logWhere">
+        <if test="q.startDate != null and q.startDate != ''">
+            AND r.visit_date &gt;= #{q.startDate}
+        </if>
+        <if test="q.endDate != null and q.endDate != ''">
+            AND r.visit_date &lt;= #{q.endDate}
+        </if>
+        <if test="q.deptId != null">
+            AND r.dept_id = #{q.deptId}
+        </if>
+        <if test="q.doctorId != null">
+            AND r.doctor_id = #{q.doctorId}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (r.patient_name LIKE CONCAT('%', #{q.keyword}, '%')
+                 OR r.record_no LIKE CONCAT('%', #{q.keyword}, '%')
+                 OR r.diagnosis_name LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+        <if test="q.feverOnly != null and q.feverOnly">
+            AND <include refid="feverExpr"/> = 1
+        </if>
+        <if test="q.reportableOnly != null and q.reportableOnly">
+            AND <include refid="reportableExpr"/> = 1
+            <if test="q.reportedFilter != null and q.reportedFilter == 1">
+                AND <include refid="reportedExpr"/> = 0
+            </if>
+            <if test="q.reportedFilter != null and q.reportedFilter == 2">
+                AND <include refid="reportedExpr"/> = 1
+            </if>
+        </if>
+    </sql>
+
+    <select id="selectLogPage" resultType="com.his.emr.vo.OutpatientLogListVO">
+        SELECT
+            r.id AS recordId,
+            r.record_no AS recordNo,
+            r.regist_id AS registId,
+            DATE_FORMAT(r.visit_date, '%Y-%m-%d') AS visitDate,
+            r.patient_id AS patientId,
+            r.patient_no AS patientNo,
+            r.patient_name AS patientName,
+            r.gender,
+            r.age,
+            p.phone,
+            r.dept_name AS deptName,
+            r.doctor_name AS doctorName,
+            r.diagnosis_name AS diagnosisName,
+            r.diagnosis_code AS diagnosisCode,
+            r.temperature,
+            <include refid="feverExpr"/> AS fever,
+            <include refid="reportableExpr"/> AS reportable,
+            <include refid="reportedExpr"/> AS reported,
+            ir.report_no AS reportNo,
+            ir.report_status AS reportStatus,
+            ir.disease_name AS reportDiseaseName,
+            r.record_status AS recordStatus,
+            r.sign_status AS signStatus
+        <include refid="logBase"/>
+        <include refid="logWhere"/>
+        ORDER BY r.visit_date DESC, r.id DESC
+    </select>
+
+    <select id="selectLogStats" resultType="com.his.emr.vo.OutpatientLogStatsVO">
+        SELECT
+            COUNT(*) AS totalCount,
+            SUM(<include refid="feverExpr"/> = 1) AS feverCount,
+            SUM(<include refid="reportableExpr"/> = 1) AS reportableCount,
+            SUM(<include refid="reportableExpr"/> = 1 AND <include refid="reportedExpr"/> = 0) AS pendingCount,
+            SUM(<include refid="reportableExpr"/> = 1 AND <include refid="reportedExpr"/> = 1) AS reportedCount
+        <include refid="logBase"/>
+        <include refid="logWhere"/>
+    </select>
+</mapper>

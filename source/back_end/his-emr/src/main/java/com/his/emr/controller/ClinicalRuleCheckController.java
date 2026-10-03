@@ -1,0 +1,57 @@
+package com.his.emr.controller;
+
+import com.his.common.base.PageResult;
+import com.his.common.base.Result;
+import com.his.emr.dto.RuleCheckExecuteDTO;
+import com.his.emr.dto.RuleCheckHandleDTO;
+import com.his.emr.dto.RuleCheckQueryPageDTO;
+import com.his.emr.service.ClinicalRuleCheckService;
+import com.his.emr.vo.BizClinicalRuleCheckVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+import org.springframework.security.access.prepost.PreAuthorize;
+
+/**
+ * 临床规则校验控制器
+ */
+@Tag(name = "临床规则校验")
+@RestController
+@RequestMapping("/charge/ruleCheck")
+@RequiredArgsConstructor
+@PreAuthorize("isAuthenticated()")
+public class ClinicalRuleCheckController {
+
+    private final ClinicalRuleCheckService ruleCheckService;
+
+    @Operation(summary = "分页查询校验记录")
+    @PostMapping("/listPage")
+    public Result<PageResult<BizClinicalRuleCheckVO>> listPage(@RequestBody RuleCheckQueryPageDTO queryDTO) {
+        return Result.success(ruleCheckService.selectCheckPage(queryDTO.getPatientId(), queryDTO.getRuleType(),
+                queryDTO.getCheckStatus(), queryDTO.getPageNum(), queryDTO.getPageSize()));
+    }
+
+    @Operation(summary = "获取校验详情")
+    @GetMapping("/getById")
+    public Result<BizClinicalRuleCheckVO> getById(@RequestParam Long id) {
+        return Result.success(ruleCheckService.getCheckDetail(id));
+    }
+
+    @PreAuthorize("hasAuthority('emr:medicalReview:edit')")
+    @Operation(summary = "执行临床规则校验")
+    @PostMapping("/executeCheck")
+    public Result<BizClinicalRuleCheckVO> executeCheck(@RequestBody RuleCheckExecuteDTO actionDTO) {
+        return Result.success(ruleCheckService.executeCheck(actionDTO.getRecordId(), actionDTO.getRuleType(),
+                actionDTO.getCheckBy()));
+    }
+
+    @PreAuthorize("hasAuthority('emr:medicalReview:edit')")
+    @Operation(summary = "处理校验问题")
+    @PostMapping("/handleCheck")
+    public Result<Void> handleCheck(@RequestBody RuleCheckHandleDTO actionDTO) {
+        boolean success = ruleCheckService.handleCheck(actionDTO.getId(), actionDTO.getIgnore(), actionDTO.getRemark());
+        return success ? Result.success("处理成功", null) : Result.error("处理失败");
+    }
+}

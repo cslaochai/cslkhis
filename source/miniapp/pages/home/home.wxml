@@ -1,0 +1,94 @@
+<view class="home-page">
+  <!-- 顶部 Banner -->
+  <view class="header-bg" style="padding-top: {{bannerTop}}rpx">
+    <view class="deco deco-a"></view>
+    <view class="deco deco-b"></view>
+
+    <view class="header-content">
+      <view class="hospital-info">
+        <view class="logo-badge">
+          <image class="logo-img" src="/images/logo.png" mode="aspectFit"/>
+        </view>
+        <view class="hospital-text">
+          <text class="hospital-name">{{hospitalInfo.hospitalName || '长沙麓康医院'}}</text>
+          <text class="hospital-slogan">{{user ? greeting + '，' + (user.realName || user.username) : greeting + '，欢迎使用'}}</text>
+        </view>
+      </view>
+      <view class="action-item" bindtap="onNotify">
+        <image class="action-icon" src="/images/icons/bell-w.svg" mode="aspectFit"/>
+      </view>
+    </view>
+
+    <!-- 医院地址与电话（参数设置-基础配置维护），各占一行：点地址复制、点电话拨打 -->
+    <view class="contact-bar" wx:if="{{hospitalInfo.hospitalAddress || hospitalInfo.hospitalPhone}}">
+      <view class="contact-item" wx:if="{{hospitalInfo.hospitalAddress}}" bindtap="onCopyAddress">
+        <image class="contact-icon" src="/images/icons/mappin-w.svg" mode="aspectFit"/>
+        <text class="contact-text">{{hospitalInfo.hospitalAddress}}</text>
+      </view>
+      <view class="contact-item" wx:if="{{hospitalInfo.hospitalPhone}}" bindtap="onCallHospital">
+        <image class="contact-icon" src="/images/icons/phone-w.svg" mode="aspectFit"/>
+        <text class="contact-text">{{hospitalInfo.hospitalPhone}}</text>
+      </view>
+    </view>
+
+    <!-- 当前就诊人：挂号/缴费/报告等全部业务以此为准，用白底主卡片与渐变 banner 拉开层级 -->
+    <view class="patient-card" bindtap="goPatients">
+      <view class="p-avatar">{{currentPatient.initial || '就'}}</view>
+      <view class="p-main">
+        <view class="p-name-row">
+          <text class="p-name">{{currentPatient.patientName || '未选择就诊人'}}</text>
+          <text class="p-chip" wx:if="{{currentPatient.relationText}}">{{currentPatient.relationText}}</text>
+        </view>
+        <text class="p-desc">{{currentPatient.descText || '点击添加或绑定，可代家人挂号缴费'}}</text>
+      </view>
+      <text class="p-switch">切换 ›</text>
+    </view>
+  </view>
+
+  <!-- 快捷入口 -->
+  <view class="quick-entry">
+    <view class="entry-item" wx:for="{{quickEntries}}" wx:key="id" bindtap="onEntryTap" data-entry="{{item}}">
+      <view class="entry-icon" style="background: {{item.bg}}">
+        <image class="entry-icon-img" src="{{item.icon}}" mode="aspectFit"/>
+      </view>
+      <text class="entry-name">{{item.name}}</text>
+    </view>
+  </view>
+
+  <!-- 我的预约 -->
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">我的预约</text>
+      <text class="section-more" bindtap="goAppointmentList">全部 ›</text>
+    </view>
+    <view class="appointment-card" wx:if="{{nextAppointment}}" bindtap="goAppointmentList">
+      <view class="appt-left">
+        <text class="appt-dept">{{nextAppointment.dept}}</text>
+        <text class="appt-doctor">{{nextAppointment.doctor}}</text>
+      </view>
+      <view class="appt-right">
+        <text class="appt-date">{{nextAppointment.date}}</text>
+        <text class="appt-time" wx:if="{{nextAppointment.time}}">{{nextAppointment.time}}</text>
+        <text class="appt-status {{nextAppointment.statusClass}}">{{nextAppointment.status}}</text>
+      </view>
+    </view>
+    <view class="empty-tip" wx:else bindtap="goAppointmentList">
+      <text>暂无预约，点击去挂号</text>
+    </view>
+  </view>
+
+  <!-- 功能模块 -->
+  <view class="section">
+    <view class="section-header">
+      <text class="section-title">就诊服务</text>
+    </view>
+    <view class="service-grid">
+      <view class="service-card" wx:for="{{services}}" wx:key="id" bindtap="onServiceTap" data-service="{{item}}">
+        <view class="service-icon-wrap" style="background: {{item.bg}}">
+          <image class="service-icon" src="{{item.icon}}" mode="aspectFit"/>
+        </view>
+        <text class="service-name">{{item.name}}</text>
+      </view>
+    </view>
+  </view>
+</view>

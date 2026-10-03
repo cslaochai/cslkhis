@@ -1,0 +1,34 @@
+<view class="profile-page">
+  <!-- 用户信息卡 -->
+  <view class="user-card">
+    <view class="avatar">{{patient.patientName[0] || user.realName[0] || '患'}}</view>
+    <view class="user-info">
+      <text class="name">{{patient.patientName || user.realName || '未登录'}}</text>
+      <text class="sub" wx:if="{{patient.idCardMasked}}">证件号 {{patient.idCardMasked}}</text>
+      <text class="sub" wx:if="{{patient}}">档案号 {{patient.patientNo}} · {{patient.genderText}}</text>
+    </view>
+  </view>
+
+  <!-- 资产/就诊概览 -->
+  <view class="overview" wx:if="{{patient}}">
+    <view class="ov-item">
+      <text class="ov-num">{{patient.balance}}</text>
+      <text class="ov-label">账户余额</text>
+    </view>
+    <view class="ov-item">
+      <text class="ov-num">{{patient.visitCount}}</text>
+      <text class="ov-label">就诊次数</text>
+    </view>
+  </view>
+
+  <!-- 功能菜单 -->
+  <view class="menu">
+    <view class="menu-item" wx:for="{{menus}}" wx:key="id" bindtap="onMenuTap" data-menu="{{item}}">
+      <image class="menu-icon" src="{{item.icon}}" mode="aspectFit"/>
+      <text class="menu-name">{{item.name}}</text>
+      <text class="menu-arrow">›</text>
+    </view>
+  </view>
+
+  <button class="logout-btn" bindtap="onLogout">退出登录</button>
+</view>

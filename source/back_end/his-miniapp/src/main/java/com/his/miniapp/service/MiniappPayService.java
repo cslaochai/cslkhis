@@ -1,0 +1,42 @@
+package com.his.miniapp.service;
+
+import com.his.miniapp.dto.WxLoginDTO;
+import com.his.miniapp.vo.WxLoginVO;
+import com.his.miniapp.dto.PayUpsertDTO;
+import com.his.miniapp.dto.PayRefundDTO;
+import com.his.miniapp.vo.PayOrderListVO;
+import com.his.miniapp.vo.PayOrderVO;
+import com.his.miniapp.vo.PendingBillListVO;
+
+import java.util.List;
+
+/**
+ * 患者端聚合服务：微信登录 + 统一支付单。
+ */
+public interface MiniappPayService {
+
+    // 微信登录口子
+
+    /** wx.login code 换 openid 登录：已绑定 → 发 token；未绑定 → bound=false */
+    WxLoginVO wxLogin(WxLoginDTO dto);
+
+    // 统一支付单
+
+    /**
+     * 下单支付。桩模式直接推进支付成功并触发业务推进（门诊缴费走收费执行器、
+     * 押金走预交金充值、挂号费打印入账）；真收银台模式返回 payParams 由前端拉起。
+     */
+    PayOrderVO createOrder(PayUpsertDTO dto);
+
+    /** 我的支付单（患者维度，最近 50 条） */
+    List<PayOrderListVO> myOrders();
+
+    /**
+     * 我的待缴账单（含明细，四层结算账单口径）：已取代旧的 /miniapp/charge/pendingPage。
+     * 返回 patientId 下未付清（待支付 / 部分支付）的结算账单，按出账倒序。
+     */
+    List<PendingBillListVO> pendingBills();
+
+    /** 按业务单退款（已支付 → 已退款，打印原路退回） */
+    void refundByBiz(PayRefundDTO dto);
+}

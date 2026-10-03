@@ -1,0 +1,107 @@
+package com.his.emr.controller;
+
+import com.his.common.base.PageResult;
+import com.his.common.base.Result;
+import com.his.emr.dto.FollowupCancelDTO;
+import com.his.emr.dto.FollowupCompleteDTO;
+import com.his.emr.dto.FollowupQueryDTO;
+import com.his.emr.dto.FollowupStartDTO;
+import com.his.emr.dto.FollowupTaskDTO;
+import com.his.emr.service.FollowupTaskService;
+import com.his.emr.vo.BizFollowupTaskVO;
+import com.his.emr.vo.FollowupStatVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 随访任务控制器。
+ *
+ * <p>@PreAuthorize 全部标到方法：类级注解会静默覆盖没写自己注解的方法，
+ * 曾经把 /userMenus 一罩，非管理岗一进就被踢回登录页。
+ *
+ * <p>手机号：列表只出 phoneMasked，明文仅 getById（编辑回显）返回 ——
+ * 前端 Object.assign 后整对象回写，回显给星号就等于把真号洗成星号（不可逆）。
+ */
+@Tag(name = "随访任务")
+@RestController
+@RequestMapping("/charge/followup")
+@RequiredArgsConstructor
+public class FollowupTaskController {
+
+    private final FollowupTaskService followupTaskService;
+
+    @PreAuthorize("hasAuthority('inpatient:followup:list')")
+    @Operation(summary = "分页查询随访任务（科室按登录岗位收口）")
+    @PostMapping("/listPage")
+    public Result<PageResult<BizFollowupTaskVO>> listPage(@RequestBody(required = false) FollowupQueryDTO queryDTO) {
+        return Result.success(followupTaskService.listPage(queryDTO));
+    }
+
+    @PreAuthorize("hasAuthority('inpatient:followup:list')")
+    @Operation(summary = "出院随访任务看板（今日应访/逾期/完成率/科室待办，服务端聚合）")
+    @GetMapping("/stat")
+    public Result<FollowupStatVO> stat() {
+        return Result.success(followupTaskService.stat());
+    }
+
+    @PreAuthorize("hasAuthority('inpatient:followup:add')")
+    @Operation(summary = "新建 / 修改随访任务（修改仅待随访可改）")
+    @PostMapping("/upsert")
+    public Result<BizFollowupTaskVO> upsert(@Valid @RequestBody FollowupTaskDTO.Upsert dto) {
+        return Result.success("随访任务已保存", followupTaskService.upsertTask(dto));
+    }
+
+    @PreAuthorize("hasAuthority('inpatient:followup:add')")
+    @Operation(summary = "按出院记录一键生成随访计划（幂等）")
+    @PostMapping("/createFromDischarge")
+    public Result<BizFollowupTaskVO> createFromDischarge(@Valid @RequestBody FollowupTaskDTO.FromDischarge dto) {
+        return Result.success("随访计划已生成", followupTaskService.createTaskFromDischarge(dto));
+    }
+
+    @PreAuthorize("hasAuthority('inpatient:followup:list')")
+    @Operation(summary = "获取随访任务详情（编辑回显，返回明文手机号）")
+    @GetMapping("/getById")
+    public Result<BizFollowupTaskVO> getById(@RequestParam Long id) {
+        return Result.success(followupTaskService.getFollowupTaskDetail(id));
+    }
+
+    @PreAuthorize("hasAuthority('inpatient:followup:edit')")
+    @Operation(summary = "开始随访")
+    @PostMapping("/startFollowup")
+    public Result<Void> startFollowup(@RequestBody FollowupStartDTO actionDTO) {
+        followupTaskService.startFollowup(actionDTO.getId(), actionDTO.getExecutorId(), actionDTO.getExecutorName());
+        return Result.success("开始随访", null);
+    }
+
+    @PreAuthorize("hasAuthority('inpatient:followup:edit')")
+    @Operation(summary = "完成随访（同时自动发放满意度问卷）")
+    @PostMapping("/completeFollowup")
+    public Result<Void> completeFollowup(@RequestBody FollowupCompleteDTO actionDTO) {
+        followupTaskService.completeFollowup(actionDTO.getId(), actionDTO.getResult());
+        return Result.success("随访完成", null);
+    }
+
+    @PreAuthorize("hasAuthority('inpatient:followup:edit')")
+    @Operation(summary = "由随访任务生成复诊号（复诊来源 4-随访计划复诊）")
+    @PostMapping("/createRevisitAppoint")
+    public Result<BizFollowupTaskVO> createRevisitAppoint(@Valid @RequestBody FollowupTaskDTO.CreateRevisit dto) {
+        return Result.success("复诊号已生成", followupTaskService.createRevisitAppoint(dto));
+    }
+
+    @PreAuthorize("hasAuthority('inpatient:followup:delete')")
+    @Operation(summary = "取消随访")
+    @PostMapping("/cancelFollowup")
+    public Result<Void> cancelFollowup(@RequestBody FollowupCancelDTO actionDTO) {
+        followupTaskService.cancelFollowup(actionDTO.getId(), actionDTO.getReason());
+        return Result.success("已取消", null);
+    }
+}

@@ -1,0 +1,109 @@
+<view class="patients-page">
+  <view class="header">
+    <text class="title">就诊人管理</text>
+    <text class="subtitle">绑定家人后，可代其挂号、缴费、查报告；挂号缴费等操作只对当前选中的就诊人生效</text>
+  </view>
+
+  <view class="list">
+    <view class="p-card {{item.patientId === currentId ? 'selected' : ''}}" wx:for="{{patients}}" wx:key="patientId">
+      <view class="p-main" bindtap="onSelect" data-patient="{{item}}">
+        <view class="p-radio {{item.patientId === currentId ? 'on' : ''}}"></view>
+        <view class="p-info">
+          <view class="p-name-row">
+            <text class="p-name">{{item.patientName}}</text>
+            <text class="p-tag rel">{{item.relationText}}</text>
+            <text class="p-tag def" wx:if="{{item.isDefault === 1}}">默认</text>
+            <text class="p-tag self" wx:if="{{item.self}}">本人</text>
+          </view>
+          <view class="p-sub">{{item.genderText}} · {{item.age != null ? item.age + '岁' : '年龄未知'}} · {{item.idCardMasked}}</view>
+          <view class="p-sub">{{item.phoneText}} · 档案号 {{item.patientNo}}</view>
+        </view>
+      </view>
+      <view class="p-actions">
+        <text class="p-op" wx:if="{{item.isDefault !== 1}}" bindtap="onSetDefault" data-id="{{item.patientId}}">设为默认</text>
+        <text class="p-op danger" wx:if="{{!item.self}}" bindtap="onUnbind" data-patient="{{item}}">解绑</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:if="{{!loading && patients.length === 0}}">
+    <text class="empty-text">还没有绑定就诊人</text>
+  </view>
+
+  <view class="bottom-btns">
+    <button class="btn primary" bindtap="openAdd">添加新就诊人</button>
+    <button class="btn ghost" bindtap="openBind">绑定已建档就诊人</button>
+  </view>
+</view>
+
+<!-- 新增就诊人 -->
+<view class="mask" wx:if="{{addVisible}}" bindtap="closeAdd">
+  <view class="modal" catchtap="noop">
+    <view class="m-title">添加新就诊人</view>
+    <view class="m-sub">为其新建就诊档案并绑定到当前账号</view>
+    <view class="m-item">
+      <text class="m-label">姓名</text>
+      <input class="m-input" placeholder="请输入姓名" value="{{addForm.patientName}}" data-field="patientName" bindinput="onAddInput"/>
+    </view>
+    <view class="m-item">
+      <text class="m-label">性别</text>
+      <picker class="m-picker" range="{{genders}}" range-key="label" value="{{addForm.genderIndex}}" bindchange="onAddGender">
+        <view class="m-picker-val {{addForm.genderIndex < 0 ? 'placeholder' : ''}}">{{addForm.genderIndex >= 0 ? genders[addForm.genderIndex].label : '请选择性别'}}</view>
+      </picker>
+    </view>
+    <view class="m-item">
+      <text class="m-label">身份证号</text>
+      <input class="m-input" placeholder="18位身份证号" value="{{addForm.idCard}}" data-field="idCard" bindinput="onAddInput"/>
+    </view>
+    <view class="m-item">
+      <text class="m-label">手机号</text>
+      <input class="m-input m-input-code" placeholder="接收验证码的手机号" value="{{addForm.phone}}" data-field="phone" bindinput="onAddInput"/>
+      <button class="btn code-btn" disabled="{{addCountdown > 0}}" bindtap="onAddSendCode">{{addCountdown > 0 ? addCountdown + 's' : '获取验证码'}}</button>
+    </view>
+    <view class="m-item">
+      <text class="m-label">验证码</text>
+      <input class="m-input" placeholder="6位短信验证码" type="number" maxlength="6" value="{{addForm.smsCode}}" data-field="smsCode" bindinput="onAddInput"/>
+    </view>
+    <view class="m-item">
+      <text class="m-label">与我的关系</text>
+      <picker class="m-picker" range="{{relations}}" range-key="label" value="{{addForm.relationIndex}}" bindchange="onAddRelation">
+        <view class="m-picker-val {{addForm.relationIndex < 0 ? 'placeholder' : ''}}">{{addForm.relationIndex >= 0 ? relations[addForm.relationIndex].label : '请选择关系'}}</view>
+      </picker>
+    </view>
+    <view class="m-btns">
+      <button class="btn ghost" bindtap="closeAdd">取消</button>
+      <button class="btn primary" bindtap="submitAdd">保存</button>
+    </view>
+  </view>
+</view>
+
+<!-- 绑定已建档就诊人 -->
+<view class="mask" wx:if="{{bindVisible}}" bindtap="closeBind">
+  <view class="modal" catchtap="noop">
+    <view class="m-title">绑定已建档就诊人</view>
+    <view class="m-sub">需与建档时的姓名、身份证号完全一致，验证码将发送至建档预留手机号</view>
+    <view class="m-item">
+      <text class="m-label">姓名</text>
+      <input class="m-input" placeholder="建档时姓名" value="{{bindForm.patientName}}" data-field="patientName" bindinput="onBindInput"/>
+    </view>
+    <view class="m-item">
+      <text class="m-label">身份证号</text>
+      <input class="m-input" placeholder="18位身份证号" value="{{bindForm.idCard}}" data-field="idCard" bindinput="onBindInput"/>
+    </view>
+    <view class="m-item">
+      <text class="m-label">验证码</text>
+      <input class="m-input m-input-code" placeholder="{{bindPhoneMask ? '已发至 ' + bindPhoneMask : '6位短信验证码'}}" type="number" maxlength="6" value="{{bindForm.smsCode}}" data-field="smsCode" bindinput="onBindInput"/>
+      <button class="btn code-btn" disabled="{{bindCountdown > 0}}" bindtap="onBindSendCode">{{bindCountdown > 0 ? bindCountdown + 's' : '获取验证码'}}</button>
+    </view>
+    <view class="m-item">
+      <text class="m-label">与我的关系</text>
+      <picker class="m-picker" range="{{relations}}" range-key="label" value="{{bindForm.relationIndex}}" bindchange="onBindRelation">
+        <view class="m-picker-val {{bindForm.relationIndex < 0 ? 'placeholder' : ''}}">{{bindForm.relationIndex >= 0 ? relations[bindForm.relationIndex].label : '请选择关系'}}</view>
+      </picker>
+    </view>
+    <view class="m-btns">
+      <button class="btn ghost" bindtap="closeBind">取消</button>
+      <button class="btn primary" bindtap="submitBind">绑定</button>
+    </view>
+  </view>
+</view>

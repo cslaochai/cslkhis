@@ -1,0 +1,438 @@
+.home-page {
+  background: #f4f6f9;
+  padding-bottom: 16rpx;
+}
+
+/* ---------- 顶部 ---------- */
+.header-bg {
+  position: relative;
+  overflow: hidden;
+  /* padding-top 由 home.js 的 bannerInsetTop() 内联下发（env() 在简写里不解析），这里只留兜底值 */
+  padding: 64rpx 32rpx 60rpx;
+  background: linear-gradient(155deg, #1b5488 0%, #2b6cb0 52%, #0E9488 132%);
+  border-radius: 0 0 40rpx 40rpx;
+}
+
+.deco {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.deco-a {
+  width: 320rpx;
+  height: 320rpx;
+  top: -120rpx;
+  right: -90rpx;
+}
+
+.deco-b {
+  width: 200rpx;
+  height: 200rpx;
+  bottom: -70rpx;
+  left: -60rpx;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.header-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hospital-info {
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+  /* 医院名过长时省略而不是换行——banner 多一行就可能超出一屏出现滚动条 */
+  flex: 1;
+  min-width: 0;
+}
+
+.logo-badge {
+  width: 84rpx;
+  height: 84rpx;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6rpx 18rpx rgba(13, 55, 90, 0.22);
+  overflow: hidden;
+}
+
+.logo-img {
+  width: 72rpx;
+  height: 72rpx;
+}
+
+.hospital-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  min-width: 0;
+}
+
+.hospital-name {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hospital-slogan {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.78);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action-item {
+  width: 68rpx;
+  height: 68rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+}
+
+.action-icon {
+  width: 34rpx;
+  height: 34rpx;
+}
+
+/* ---------- 当前就诊人（banner 内白底主卡片） ---------- */
+.patient-card {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-top: 16rpx;
+  padding: 14rpx 20rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  box-shadow: 0 8rpx 26rpx rgba(13, 55, 90, 0.20);
+}
+
+.patient-card:active {
+  background: #f2f7fc;
+}
+
+.p-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1b5488;
+  background: linear-gradient(135deg, #dcecfb 0%, #d9f2ee 100%);
+}
+
+.p-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.p-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.p-name {
+  max-width: 300rpx;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1f2937;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.p-chip {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  line-height: 1.5;
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
+  color: #1b5488;
+  background: #eaf3fc;
+}
+
+.p-desc {
+  font-size: 23rpx;
+  line-height: 1.2;
+  color: #6b7280;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.p-switch {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #1b5488;
+}
+/* ---------- Banner 内联系信息（点地址复制、点电话拨打） ---------- */
+/* 地址与电话各占一行（一行放不下长地址），高度靠下方各区块的间距补回来 */
+.contact-bar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  margin-top: 16rpx;
+}
+
+.contact-item {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.contact-item:active {
+  opacity: 0.65;
+}
+
+.contact-icon {
+  width: 24rpx;
+  height: 24rpx;
+  flex-shrink: 0;
+}
+
+.contact-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 23rpx;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.88);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---------- 快捷入口 ---------- */
+.quick-entry {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-around;
+  padding: 14rpx 16rpx;
+  /* 与上方就诊人卡拉开 24rpx（渐变区只咬合 36rpx）；省出的高度由下方分区间距补回，
+     保证仍是一屏内不出滚动条 */
+  margin: -36rpx 24rpx 0;
+  background: #fff;
+  border-radius: 24rpx;
+  box-shadow: 0 10rpx 30rpx rgba(27, 84, 136, 0.08);
+}
+
+.entry-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.entry-item:active .entry-icon {
+  transform: scale(0.94);
+}
+
+.entry-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 20rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+}
+
+.entry-icon-img {
+  width: 38rpx;
+  height: 38rpx;
+}
+
+.entry-name {
+  font-size: 24rpx;
+  color: #3d4757;
+}
+
+/* ---------- 分区 ---------- */
+.section {
+  margin: 12rpx 24rpx 0;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+  padding: 0 6rpx;
+}
+
+.section-title {
+  position: relative;
+  padding-left: 20rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.section-title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6rpx;
+  height: 28rpx;
+  border-radius: 3rpx;
+  background: linear-gradient(180deg, #2b6cb0 0%, #0E9488 100%);
+}
+
+.section-more {
+  font-size: 24rpx;
+  color: #98a2b3;
+}
+
+/* ---------- 我的预约 ---------- */
+.appointment-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 22rpx 24rpx;
+  box-shadow: 0 6rpx 20rpx rgba(27, 84, 136, 0.06);
+}
+
+.appt-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.appt-dept {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.appt-doctor {
+  font-size: 24rpx;
+  color: #6b7280;
+}
+
+.appt-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8rpx;
+}
+
+.appt-date {
+  font-size: 26rpx;
+  color: #3d4757;
+}
+
+.appt-time {
+  font-size: 22rpx;
+  color: #6b7280;
+}
+
+.appt-status {
+  font-size: 20rpx;
+  padding: 6rpx 16rpx;
+  border-radius: 999rpx;
+}
+
+.appt-status.confirmed {
+  background: #e8f5e9;
+  color: #2f9e44;
+}
+
+.appt-status.pending {
+  background: #fff3e0;
+  color: #e8890c;
+}
+
+.appt-status.cancelled {
+  background: #f1f3f5;
+  color: #98a2b3;
+}
+
+.empty-tip {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 36rpx;
+  text-align: center;
+  box-shadow: 0 6rpx 20rpx rgba(27, 84, 136, 0.06);
+}
+
+.empty-tip text {
+  font-size: 26rpx;
+  color: #98a2b3;
+}
+
+/* ---------- 服务宫格 ---------- */
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14rpx;
+}
+
+.service-card {
+  background: #fff;
+  border-radius: 22rpx;
+  padding: 12rpx 10rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+  box-shadow: 0 6rpx 20rpx rgba(27, 84, 136, 0.06);
+}
+
+.service-card:active {
+  background: #f7fafc;
+}
+
+.service-icon-wrap {
+  width: 60rpx;
+  height: 60rpx;
+  flex-shrink: 0;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.service-icon {
+  width: 34rpx;
+  height: 34rpx;
+}
+
+.service-name {
+  font-size: 25rpx;
+  color: #3d4757;
+}

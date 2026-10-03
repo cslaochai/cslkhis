@@ -1,0 +1,52 @@
+<view class="queue-page">
+  <view class="banner">
+    <view>
+      <text class="banner-title">排队叫号</text>
+      <text class="banner-date">{{today}}{{patientName ? ' · ' + patientName : ''}}</text>
+    </view>
+    <text class="banner-refresh" bindtap="loadQueue">刷新</text>
+  </view>
+
+  <view class="list" wx:if="{{queues.length > 0}}">
+    <view class="queue-card" wx:for="{{queues}}" wx:key="key">
+      <view class="q-head">
+        <text class="q-dept">{{item.deptName}}</text>
+        <text class="q-status {{item.step >= 4 ? 'done' : ''}}">{{item.queueStatusText}}</text>
+      </view>
+      <view class="q-doctor">{{item.doctorName}}{{item.slotText ? ' · ' + item.slotText : ''}}{{item.roomName ? ' · ' + item.roomName : ''}}</view>
+
+      <!-- 位次/签到提示 -->
+      <view class="q-ahead" wx:if="{{item.aheadText}}">{{item.aheadText}}</view>
+      <button class="checkin-btn" wx:if="{{item.canCheckIn}}" loading="{{checking}}" data-regist-id="{{item.registId}}" bindtap="onCheckIn">到院签到</button>
+
+      <!-- 进度条 -->
+      <view class="steps">
+        <view class="step-item {{item.step >= 1 ? 'active' : ''}}">
+          <view class="dot"></view><text>{{item.checkedIn ? '已挂号' : '待签到'}}</text>
+        </view>
+        <view class="line {{item.step >= 2 ? 'active' : ''}}"></view>
+        <view class="step-item {{item.step >= 2 ? 'active' : ''}}">
+          <view class="dot"></view><text>候诊</text>
+        </view>
+        <view class="line {{item.step >= 3 ? 'active' : ''}}"></view>
+        <view class="step-item {{item.step >= 3 ? 'active' : ''}}">
+          <view class="dot"></view><text>就诊中</text>
+        </view>
+        <view class="line {{item.step >= 4 ? 'active' : ''}}"></view>
+        <view class="step-item {{item.step >= 4 ? 'active' : ''}}">
+          <view class="dot"></view><text>完成</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:else>
+    <text class="empty-icon">⏳</text>
+    <text class="empty-text">近 3 日暂无排队记录</text>
+    <button class="go-btn" bindtap="goAppointment">去挂号</button>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+  </view>
+</view>

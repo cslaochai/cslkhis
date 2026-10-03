@@ -1,0 +1,196 @@
+package com.his.operation.controller;
+
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.his.common.base.Result;
+import com.his.operation.dto.AnesthesiaActionDTO;
+import com.his.operation.dto.AnesthesiaMedUpsertDTO;
+import com.his.operation.dto.AnesthesiaRecordUpsertDTO;
+import com.his.operation.dto.AnesthesiaRecordQueryPageDTO;
+import com.his.operation.dto.AnesthesiaRecordUpdateUpsertDTO;
+import com.his.operation.dto.AnesthesiaVitalUpsertDTO;
+import com.his.operation.dto.AnesthesiaVisitFinishDTO;
+import com.his.operation.dto.AnesthesiaVisitQueryPageDTO;
+import com.his.operation.dto.AnesthesiaVisitUpsertDTO;
+import com.his.operation.service.AnesthesiaRecordService;
+import com.his.operation.service.AnesthesiaVisitService;
+import com.his.operation.vo.AnesthesiaMedVO;
+import com.his.operation.vo.AnesthesiaRecordVO;
+import com.his.operation.vo.AnesthesiaVitalVO;
+import com.his.operation.vo.AnesthesiaVisitVO;
+import com.his.operation.vo.OperationChargeItemVO;
+import com.his.operation.vo.OperationChargeSummaryVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import org.springframework.security.access.prepost.PreAuthorize;
+
+/**
+ * 手术麻醉链端点（G15：术前访视 → 麻醉记录单 → 计费联动）。
+ *
+ * <p>路径与会诊/转科/输血保持同一套命名：查询一律 {@code GET} + 驼峰 URL，
+ * 写操作一律 {@code POST}，只返回一个单号用 {@code Result<String>}。
+ *
+ * <p>PACU 单独挂 {@code /patient/inpatient/pacu}：它是独立的工作岗位（复苏室），
+ * 混在一个前缀里会让"谁的按钮"这件事变模糊。
+ */
+@Tag(name = "手术麻醉")
+@RestController
+@RequestMapping("/patient/inpatient/anesthesia")
+@RequiredArgsConstructor
+@PreAuthorize("hasAuthority('ipd:anesthesia:list')")
+public class OperationAnesthesiaController {
+
+    private final AnesthesiaVisitService visitService;
+    private final AnesthesiaRecordService recordService;
+
+    // 一、术前访视
+
+    @Operation(summary = "术前访视分页（住院/手术/结论/关键字）")
+    @GetMapping("/visitListPage")
+    public Result<IPage<AnesthesiaVisitVO>> visitListPage(AnesthesiaVisitQueryPageDTO query) {
+        return Result.success(visitService.listPage(query));
+    }
+
+    @Operation(summary = "术前访视详情")
+    @GetMapping("/visitGetDetailById")
+    public Result<AnesthesiaVisitVO> visitGetDetailById(@RequestParam Long visitId) {
+        return Result.success(visitService.getDetailById(visitId));
+    }
+
+    @Operation(summary = "某台手术的术前访视（没有则 data 为 null）")
+    @GetMapping("/visitGetByApply")
+    public Result<AnesthesiaVisitVO> visitGetByApply(@RequestParam Long applyId) {
+        return Result.success(visitService.getByApply(applyId));
+    }
+
+    @PreAuthorize("hasAuthority('ipd:anesthesia:add')")
+    @Operation(summary = "保存术前访视（新增/修改草稿），返回访视单号")
+    @PostMapping("/visitSave")
+    public Result<String> visitSave(@RequestBody @Valid AnesthesiaVisitUpsertDTO dto) {
+        return Result.success("术前访视已保存（尚未给出结论，不能作为麻醉依据）", visitService.save(dto));
+    }
+
+    @PreAuthorize("hasAuthority('ipd:anesthesia:edit')")
+    @Operation(summary = "完成术前访视（结论出账；结论非「可施行麻醉」必须写说明）")
+    @PostMapping("/visitFinish")
+    public Result<Void> visitFinish(@RequestBody @Valid AnesthesiaVisitFinishDTO dto) {
+        visitService.finish(dto);
+        return Result.success("术前访视已完成", null);
+    }
+
+    @Operation(summary = "已完成但没有合格术前访视的手术台数（急诊超前麻醉的待补账）")
+    @GetMapping("/countFinishedWithoutVisit")
+    public Result<Long> countFinishedWithoutVisit() {
+        return Result.success(visitService.countFinishedWithoutVisit());
+    }
+
+    // 二、麻醉记录单
+
+    @Operation(summary = "麻醉记录单分页（住院/手术/麻醉医师/状态/关键字/未计费）")
+    @GetMapping("/recordListPage")
+    public Result<IPage<AnesthesiaRecordVO>> recordListPage(AnesthesiaRecordQueryPageDTO query) {
+        return Result.success(recordService.listPage(query));
+    }
+
+    @Operation(summary = "麻醉记录单详情（含生命体征与用药）")
+    @GetMapping("/recordGetDetailById")
+    public Result<AnesthesiaRecordVO> recordGetDetailById(@RequestParam Long recordId) {
+        return Result.success(recordService.getDetailById(recordId));
+    }
+
+    @Operation(summary = "某台手术的麻醉记录单（没有则 data 为 null）")
+    @GetMapping("/recordGetByApply")
+    public Result<AnesthesiaRecordVO> recordGetByApply(@RequestParam Long applyId) {
+        return Result.success(recordService.getByApply(applyId));
+    }
+
+    @PreAuthorize("hasAuthority('ipd:anesthesia:add')")
+    @Operation(summary = "开立麻醉记录单（需先有「可施行麻醉」的术前访视），返回麻醉记录单号")
+    @PostMapping("/recordCreate")
+    public Result<String> recordCreate(@RequestBody @Valid AnesthesiaRecordUpsertDTO dto) {
+        return Result.success("麻醉记录单已开立（记录中）", recordService.create(dto));
+    }
+
+    @PreAuthorize("hasAuthority('ipd:anesthesia:edit')")
+    @Operation(summary = "更新麻醉记录单（仅「记录中」可改）")
+    @PostMapping("/recordUpdate")
+    public Result<Void> recordUpdate(@RequestBody @Valid AnesthesiaRecordUpdateUpsertDTO dto) {
+        recordService.update(dto);
+        return Result.success("麻醉记录已更新", null);
+    }
+
+    @PreAuthorize("hasAuthority('ipd:anesthesia:add')")
+    @Operation(summary = "追加一条生命体征（仅「记录中」可加；同一时刻不允许两条）")
+    @PostMapping("/addVital")
+    public Result<Void> addVital(@RequestBody @Valid AnesthesiaVitalUpsertDTO dto) {
+        recordService.addVital(dto);
+        return Result.success("生命体征已记录", null);
+    }
+
+    @Operation(summary = "麻醉生命体征列表（按采样时刻升序）")
+    @GetMapping("/listVitals")
+    public Result<List<AnesthesiaVitalVO>> listVitals(@RequestParam Long recordId) {
+        return Result.success(recordService.listVitals(recordId));
+    }
+
+    @PreAuthorize("hasAuthority('ipd:anesthesia:add')")
+    @Operation(summary = "追加一条麻醉用药（仅「记录中」可加）")
+    @PostMapping("/addMed")
+    public Result<Void> addMed(@RequestBody @Valid AnesthesiaMedUpsertDTO dto) {
+        recordService.addMed(dto);
+        return Result.success("麻醉用药已记录", null);
+    }
+
+    @Operation(summary = "麻醉用药列表（按给药时刻升序）")
+    @GetMapping("/listMeds")
+    public Result<List<AnesthesiaMedVO>> listMeds(@RequestParam Long recordId) {
+        return Result.success(recordService.listMeds(recordId));
+    }
+
+    @PreAuthorize("hasAuthority('ipd:anesthesia:add')")
+    @Operation(summary = "提交麻醉记录（记录中→已提交；体征与用药之后锁死；自动联动计费）")
+    @PostMapping("/recordSubmit")
+    public Result<OperationChargeSummaryVO> recordSubmit(@RequestBody @Valid AnesthesiaActionDTO dto) {
+        OperationChargeSummaryVO summary = recordService.submit(dto);
+        return Result.success(summary.hasFailure()
+                        ? "麻醉记录已提交，但计费存在失败项（详见 messages）"
+                        : "麻醉记录已提交",
+                summary);
+    }
+
+    @PreAuthorize("hasAuthority('ipd:anesthesia:edit')")
+    @Operation(summary = "审核麻醉记录（已提交→已审核）")
+    @PostMapping("/recordAudit")
+    public Result<Void> recordAudit(@RequestBody @Valid AnesthesiaActionDTO dto) {
+        recordService.audit(dto);
+        return Result.success("麻醉记录已审核", null);
+    }
+
+    @PreAuthorize("hasAuthority('ipd:anesthesia:edit')")
+    @Operation(summary = "麻醉计费（失败项重试；已成功的项幂等跳过）")
+    @PostMapping("/recordCharge")
+    public Result<OperationChargeSummaryVO> recordCharge(@RequestBody @Valid AnesthesiaActionDTO dto) {
+        return Result.success(recordService.charge(dto));
+    }
+
+    @Operation(summary = "尚未计费的麻醉记录单数（收费对账入口）")
+    @GetMapping("/countUncharged")
+    public Result<Long> countUncharged() {
+        return Result.success(recordService.countUncharged());
+    }
+
+    @Operation(summary = "某台手术的计费明细（每项一行；status=2 的行就是「该收但没计上」）")
+    @GetMapping("/listChargeItems")
+    public Result<List<OperationChargeItemVO>> listChargeItems(@RequestParam Long applyId) {
+        return Result.success(recordService.listChargeItems(applyId));
+    }
+}

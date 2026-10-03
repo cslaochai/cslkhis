@@ -1,0 +1,192 @@
+.rx-page {
+  min-height: 100vh;
+  background: #f7f8fa;
+  padding: 20rpx;
+}
+
+.banner {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 12rpx 8rpx 24rpx;
+}
+
+.banner-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.banner-sub {
+  display: block;
+  font-size: 26rpx;
+  color: #2b6cb0;
+  margin-top: 6rpx;
+}
+
+.banner-refresh {
+  font-size: 26rpx;
+  color: #2b6cb0;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.rx-card {
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 26rpx 24rpx;
+  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+}
+
+.rx-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rx-title {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.rx-type {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.rx-status {
+  font-size: 24rpx;
+  color: #ff9800;
+  background: #fff3e2;
+  padding: 4rpx 14rpx;
+  border-radius: 6rpx;
+}
+
+.rx-status.done {
+  color: #4caf50;
+  background: #e8f5e9;
+}
+
+.rx-more {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.rx-meta {
+  font-size: 25rpx;
+  color: #666;
+  margin-top: 12rpx;
+}
+
+.rx-no {
+  font-size: 23rpx;
+  color: #999;
+  margin-top: 6rpx;
+}
+
+.rx-drugs {
+  margin-top: 18rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid #f0f0f0;
+}
+
+.rx-drug {
+  padding: 10rpx 0;
+}
+
+.drug-name {
+  font-size: 27rpx;
+  color: #333;
+}
+
+.drug-spec {
+  font-size: 23rpx;
+  color: #999;
+  margin-left: 12rpx;
+}
+
+.drug-usage {
+  font-size: 24rpx;
+  color: #888;
+  margin-top: 4rpx;
+}
+
+.rx-usage {
+  font-size: 24rpx;
+  color: #666;
+  margin-top: 12rpx;
+  line-height: 1.5;
+}
+
+.rx-empty {
+  font-size: 24rpx;
+  color: #bbb;
+  padding: 10rpx 0;
+}
+
+.rx-tip {
+  font-size: 24rpx;
+  color: #2b6cb0;
+  background: #e8f4fd;
+  border-radius: 8rpx;
+  padding: 12rpx 16rpx;
+  margin-top: 16rpx;
+  line-height: 1.5;
+}
+
+.rx-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18rpx;
+}
+
+.rx-amount {
+  font-size: 28rpx;
+  color: #e6a23c;
+  font-weight: 600;
+}
+
+.pay-btn {
+  margin: 0;
+  font-size: 26rpx;
+  color: #fff;
+  background: #1269B5;
+  border-radius: 30rpx;
+  padding: 0 28rpx;
+}
+
+.empty {
+  text-align: center;
+  padding: 120rpx 0;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 40rpx 0;
+}
+
+.loading-spinner {
+  width: 44rpx;
+  height: 44rpx;
+  border: 4rpx solid #e5e5e5;
+  border-top-color: #2b6cb0;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

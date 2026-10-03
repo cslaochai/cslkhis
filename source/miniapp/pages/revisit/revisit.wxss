@@ -1,0 +1,55 @@
+/* 复诊页的视觉与预约挂号完全同源（同一套卡片/步骤条/费用表），
+   直接 import 而不是复制一份，否则两边会慢慢长得不一样。 */
+@import "../appointment/appointment.wxss";
+
+/* 原病历摘要卡：把「接的是哪一次就诊」固定在视野里 */
+.card-sub.origin {
+  display: block;
+  margin-top: 8rpx;
+  color: #8b97a8;
+}
+
+/* 号源筛选档 */
+.scope-chips {
+  margin: 20rpx 24rpx 4rpx;
+}
+
+.col-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6rpx;
+}
+
+.row-fee {
+  font-size: 24rpx;
+  color: #1269B5;
+  font-weight: 600;
+}
+
+/* 收费依据：命中哪条策略、为什么免收。免钱必须留得下说明 */
+.policy-note {
+  margin-top: 14rpx;
+  padding: 16rpx 18rpx;
+  border-radius: 16rpx;
+  background: #f2f6fb;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.policy-note.waived {
+  background: #e6f6f2;
+}
+
+.policy-name {
+  font-size: 25rpx;
+  font-weight: 600;
+  color: #1f2d3d;
+}
+
+.policy-reason {
+  font-size: 23rpx;
+  color: #6b7787;
+  line-height: 1.5;
+}

@@ -1,0 +1,72 @@
+<view class="login-page">
+  <!-- 品牌区：logo 与医院名整体水平居中 -->
+  <view class="hero">
+    <view class="brand-badge">
+      <image class="brand-icon" src="/images/logo.png" mode="aspectFit"/>
+    </view>
+    <text class="brand-name">长沙市麓康医院</text>
+    <text class="brand-slogan">预约挂号 · 门诊缴费 · 报告查询</text>
+  </view>
+
+  <!-- 登录区：卡片在剩余空间里垂直居中 -->
+  <view class="card-wrap">
+    <view class="card">
+      <text class="card-title">账号登录</text>
+      <text class="card-desc">请使用就诊人手机号账号登录</text>
+
+      <view class="field">
+        <image class="field-icon" src="/images/icons/user.svg" mode="aspectFit"/>
+        <input
+          class="field-input"
+          placeholder="请输入用户名"
+          placeholder-class="field-ph"
+          value="{{username}}"
+          confirm-type="next"
+          bindinput="onUsernameInput"
+          bindconfirm="handleLogin"
+        />
+      </view>
+
+      <view class="field">
+        <image class="field-icon" src="/images/icons/lock.svg" mode="aspectFit"/>
+        <input
+          class="field-input"
+          placeholder="请输入密码"
+          placeholder-class="field-ph"
+          password="{{!showPassword}}"
+          value="{{password}}"
+          confirm-type="done"
+          bindinput="onPasswordInput"
+          bindconfirm="handleLogin"
+        />
+        <image
+          class="field-eye"
+          src="{{showPassword ? '/images/icons/eyeoff.svg' : '/images/icons/eye.svg'}}"
+          mode="aspectFit"
+          bindtap="togglePassword"
+        />
+      </view>
+
+      <view class="error" wx:if="{{errorMsg}}">
+        <image class="error-icon" src="/images/icons/alert.svg" mode="aspectFit"/>
+        <text class="error-text">{{errorMsg}}</text>
+      </view>
+
+      <button
+        class="submit"
+        loading="{{loading}}"
+        disabled="{{loading}}"
+        bindtap="handleLogin"
+      >{{loading ? '登录中' : '登 录'}}</button>
+
+      <view class="foot">
+        <text class="foot-label">还没有账号？</text>
+        <text class="foot-link" bindtap="goRegister">注册就诊人账号</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="hint">
+    <text class="hint-text">忘记密码请到门诊导诊台或信息科办理重置</text>
+  </view>
+</view>

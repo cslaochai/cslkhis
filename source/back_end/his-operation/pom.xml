@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.his</groupId>
+        <artifactId>his-backend</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>his-operation</artifactId>
+    <packaging>jar</packaging>
+    <name>his-operation</name>
+    <description>手术麻醉与日间手术：手术申请排台、麻醉记录、复苏、清点与三方核查、术次统计、日间手术</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-fee</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-system</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-patient</artifactId>
+        </dependency>
+    </dependencies>
+</project>

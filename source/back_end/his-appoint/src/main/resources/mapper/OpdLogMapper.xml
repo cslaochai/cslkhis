@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  门诊日志（跨科室查询分析页）。
+
+  这是本工程第一个 XML mapper，原因是「列表」与「统计条」必须共用同一套口径：
+  ① 同一段 WHERE（统计条的价值就在于跟着筛选走，条件写两份迟早漂移）；
+  ② 同一个「就诊状态」推导表达式（见 <sql id="logStatusExpr">）；
+  注解 @Select 没法共享片段。
+  （mybatis-plus.mapper-locations = classpath:mapper/**/*.xml 已配好）
+
+  两条设计要点，改动前务必先读：
+
+  1) 基表是 biz_appoint_info（原 biz_regist_info，2026-09-21 改名；一次就诊 = 一条挂号），队列行取 MAX(id) 后 1:1 关联。
+     不能直接 LEFT JOIN biz_queue：库里存在一个挂号挂 3 条队列行的数据，
+     直接 JOIN 会让同一就诊在列表里出现多行、统计条总数虚高。
+     LEFT JOIN 的关联条件必须写在 ON 里，写进 WHERE 会退化成 INNER JOIN，
+     「已挂号未签到」的行会整批消失。自定义 SQL 不受 @TableLogic 影响，del_flag 必须显式写。
+
+  2) 就诊状态以【挂号状态】为主干，队列状态只在「已签到入队」后才优先。
+     踩过的坑：只看「有没有队列行」的话，164 条 regist_status=5（已退号、退号未收费、
+     没有队列行）会被当成「待签到」——把已退号说成待签到，比显示未知更危险。
+-->
+<mapper namespace="com.his.appoint.mapper.OpdLogMapper">
+
+    <sql id="logBase">
+        FROM biz_appoint_info r
+        LEFT JOIN biz_queue q ON q.id = (
+        SELECT MAX(q2.id) FROM biz_queue q2 WHERE q2.regist_id = r.id AND q2.del_flag = 0
+        )
+        WHERE r.del_flag = 0
+    </sql>
+
+    <!--
+      就诊状态推导（码值见 OpdLogStatusEnum）：
+        已入队 → 队列状态说了算；队列 7「已失效」在就诊状态里读作 7「未就诊」（签到过没看上）
+                 队列状态不在枚举内（历史脏数据 1）→ NULL，前端显示「未知(n)」
+        未入队 → 回落到挂号状态：5 已退号 / 6 已过号 / 4 已就诊 / 3 就诊中 / 2 待签到
+                          1 已挂号 → 已开收费单则待签到，否则未缴费
+                          7 爽约 / 8 未就诊（日终结转落的两个终态）
+      返回 NULL 表示「两种口径都认不出」，绝不回落到某个合法文案。
+
+      注意 7 的读法：队列域 7=已失效、就诊状态域 7=未就诊，是**刻意对齐的同一个数**
+      （同一个事实：签到了没看上）。别在这行写成 8，也别把 8 爽约塞进队列分支。
+    -->
+    <sql id="logStatusExpr">
+        CASE
+        WHEN q.id IS NOT NULL AND q.queue_status IN (2, 3, 4, 5, 6) THEN q.queue_status
+        WHEN q.id IS NOT NULL AND q.queue_status = 7 THEN 7
+        WHEN q.id IS NOT NULL THEN NULL
+        WHEN r.regist_status = 8 THEN 7
+        WHEN r.regist_status = 7 THEN 8
+        WHEN r.regist_status = 6 THEN 6
+        WHEN r.regist_status = 5 THEN 5
+        WHEN r.regist_status = 4 THEN 4
+        WHEN r.regist_status = 3 THEN 3
+        WHEN r.regist_status = 2 THEN 1
+        WHEN r.regist_status = 1 THEN (CASE WHEN r.charge_id IS NULL THEN 0 ELSE 1 END)
+        ELSE NULL
+        END
+    </sql>
+
+    <!-- 常规筛选（不含就诊状态——那一条要筛派生值，见 logStatusWhere） -->
+    <sql id="logCommonWhere">
+        <if test="q.startDate != null and q.startDate != ''">
+            AND r.visit_date &gt;= #{q.startDate}
+        </if>
+        <if test="q.endDate != null and q.endDate != ''">
+            AND r.visit_date &lt;= #{q.endDate}
+        </if>
+        <if test="q.deptId != null or (q.deptIds != null and q.deptIds.size() &gt; 0)">
+            AND r.dept_id IN (
+            <if test="q.deptId != null">#{q.deptId}</if>
+            <if test="q.deptId != null and q.deptIds != null and q.deptIds.size() &gt; 0">,</if>
+            <foreach collection="q.deptIds" item="d" separator=",">#{d}</foreach>
+            )
+        </if>
+        <if test="q.doctorId != null">
+            AND r.doctor_id = #{q.doctorId}
+        </if>
+        <if test="q.registType != null">
+            AND r.regist_type = #{q.registType}
+        </if>
+        <if test="q.settlementType != null">
+            AND r.settlement_type = #{q.settlementType}
+        </if>
+        <!--
+          就诊类型（1 初诊 / 2 复诊）取自 r.visit_type。
+          踩过的坑：本表另有 revisit_type 列，口径注释一模一样，但**全表 444 行都是 NULL**
+          （写侧 AppointServiceImpl 一直只写 visit_type）。原来这里筛 r.revisit_type，
+          结果是「选了初诊/复诊一律筛空」，而列表号别列也永远显「未标注」——
+          筛选和展示同时静默失效，不报错。同语义两列只认 visit_type。
+        -->
+        <if test="q.revisitType != null">
+            AND r.visit_type = #{q.revisitType}
+        </if>
+        <if test="q.keyword != null and q.keyword != ''">
+            AND (r.patient_name LIKE CONCAT('%', #{q.keyword}, '%')
+            OR r.regist_no LIKE CONCAT('%', #{q.keyword}, '%')
+            OR r.patient_no LIKE CONCAT('%', #{q.keyword}, '%')
+            OR q.queue_no LIKE CONCAT('%', #{q.keyword}, '%')
+            OR r.medical_insurance_no LIKE CONCAT('%', #{q.keyword}, '%'))
+        </if>
+    </sql>
+
+    <!--
+      就诊状态筛选：筛的是**推导出来的**状态（外层 t.log_status），不是原始 queue_status。
+      这样「筛已退号」才会把 164 条没有队列行的退号也带出来 —— 筛选结果必须和状态列显示的一致。
+      不认识的码走 IN (99) 自然查空，不需要额外兜底：宁可 0 条，也不能静默地「当没传」。
+    -->
+    <sql id="logStatusWhere">
+        <if test="q.statusCodes != null and q.statusCodes.size() &gt; 0">
+            WHERE t.log_status IN (
+            <foreach collection="q.statusCodes" item="c" separator=",">#{c}</foreach>
+            )
+        </if>
+    </sql>
+
+    <select id="selectOpdLogPage" resultType="com.his.appoint.vo.OpdLogListVO">
+        SELECT t.* FROM (
+        SELECT
+        r.id AS regist_id,
+        r.regist_no, r.visit_date, r.regist_time, r.regist_status,
+        (r.charge_id IS NOT NULL) AS charged,
+        r.patient_id, r.patient_no, r.patient_name, r.gender, r.age,
+        r.dept_id, r.dept_name, r.room_id, r.room_name, r.doctor_id, r.doctor_name,
+        r.regist_type, r.regist_source, r.slot_time,
+        r.settlement_type, r.medical_insurance_type,
+        <!-- 列名对齐用别名：出参字段仍是 revisitType，取值列是 visit_type（同语义两列只认这列） -->
+        r.visit_type AS revisit_type,
+        q.id AS queue_id, q.queue_no, q.queue_status, q.queue_type,
+        q.sequence_no, q.call_count, q.call_time,
+        q.arrive_time, q.start_time, q.end_time,
+        q.is_overdue, q.overdue_time, q.overdue_reason,
+        TIMESTAMPDIFF(MINUTE, q.arrive_time, q.start_time) AS wait_minutes,
+        TIMESTAMPDIFF(MINUTE, q.start_time, q.end_time) AS visit_minutes,
+        <include refid="logStatusExpr"/> AS log_status
+        <include refid="logBase"/>
+        <include refid="logCommonWhere"/>
+        ) t
+        <include refid="logStatusWhere"/>
+        ORDER BY t.visit_date DESC, t.arrive_time DESC, t.regist_time DESC
+    </select>
+
+    <select id="selectOpdLogStats" resultType="com.his.appoint.vo.OpdLogStatsVO">
+        SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN t.log_status = 0 THEN 1 ELSE 0 END) AS unpaid,
+        SUM(CASE WHEN t.log_status = 1 THEN 1 ELSE 0 END) AS wait_check_in,
+        SUM(CASE WHEN t.log_status = 2 THEN 1 ELSE 0 END) AS waiting,
+        SUM(CASE WHEN t.log_status = 3 THEN 1 ELSE 0 END) AS consulting,
+        SUM(CASE WHEN t.log_status = 4 THEN 1 ELSE 0 END) AS completed,
+        SUM(CASE WHEN t.log_status = 5 THEN 1 ELSE 0 END) AS cancelled,
+        SUM(CASE WHEN t.log_status = 6 THEN 1 ELSE 0 END) AS overdue,
+        SUM(CASE WHEN t.log_status = 7 THEN 1 ELSE 0 END) AS unvisited,
+        SUM(CASE WHEN t.log_status = 8 THEN 1 ELSE 0 END) AS no_show,
+        SUM(CASE WHEN t.log_status IS NULL THEN 1 ELSE 0 END) AS unrecognized,
+        ROUND(AVG(CASE WHEN TIMESTAMPDIFF(MINUTE, t.arrive_time, t.start_time) BETWEEN 0 AND 720
+        THEN TIMESTAMPDIFF(MINUTE, t.arrive_time, t.start_time) END)) AS avg_wait_minutes,
+        ROUND(AVG(CASE WHEN TIMESTAMPDIFF(MINUTE, t.start_time, t.end_time) BETWEEN 1 AND 720
+        THEN TIMESTAMPDIFF(MINUTE, t.start_time, t.end_time) END)) AS avg_visit_minutes
+        FROM (
+        SELECT
+        <include refid="logStatusExpr"/> AS log_status,
+        q.arrive_time, q.start_time, q.end_time
+        <include refid="logBase"/>
+        <include refid="logCommonWhere"/>
+        ) t
+        <include refid="logStatusWhere"/>
+    </select>
+
+</mapper>

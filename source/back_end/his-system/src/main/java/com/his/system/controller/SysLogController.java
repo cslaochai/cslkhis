@@ -1,0 +1,105 @@
+package com.his.system.controller;
+
+import com.his.common.base.PageResult;
+import com.his.common.base.Result;
+import com.his.system.dto.LogQueryPageDTO;
+import com.his.system.service.SysLogService;
+import com.his.system.vo.AuditLogVO;
+import com.his.system.vo.FieldChangeVO;
+import com.his.system.vo.LogStatVO;
+import com.his.system.vo.LoginLogVO;
+import com.his.system.vo.OperLogDetailVO;
+import com.his.system.vo.OperLogListVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+/**
+ * 日志审计（操作日志 / 登录日志 / 审计日志 / 字段级修改日志）查看控制器。
+ *
+ * <p><b>只有读和导出，没有删</b>：审计记录不允许应用侧删改（等保三级 8.1.4.3），
+ * 谁要求"清空日志"就请他走 DBA 按时间转储，别在这里开接口。
+ *
+ * <p>权限：整页走 {@code system:log:list}，导出单独走 {@code system:log:export}
+ * （能把审计记录带出院内是高敏动作，要能单独收权）。
+ */
+@Tag(name = "日志审计")
+@RestController
+@RequestMapping("/system/log")
+@RequiredArgsConstructor
+public class SysLogController {
+
+    private final SysLogService logService;
+
+    @Operation(summary = "操作日志分页")
+    @PreAuthorize("hasAuthority('system:log:list')")
+    @PostMapping("/operLogListPage")
+    public Result<PageResult<OperLogListVO>> operLogListPage(@RequestBody LogQueryPageDTO query) {
+        return Result.success(logService.operLogListPage(query));
+    }
+
+    @Operation(summary = "操作日志详情（含请求参数与返回内容）")
+    @PreAuthorize("hasAuthority('system:log:list')")
+    @GetMapping("/operLogDetail")
+    public Result<OperLogDetailVO> operLogDetail(@RequestParam Long id) {
+        return Result.success(logService.operLogDetail(id));
+    }
+
+    @Operation(summary = "登录日志分页（成功失败同表，靠 loginStatus 区分）")
+    @PreAuthorize("hasAuthority('system:log:list')")
+    @PostMapping("/loginLogListPage")
+    public Result<PageResult<LoginLogVO>> loginLogListPage(@RequestBody LogQueryPageDTO query) {
+        return Result.success(logService.loginLogListPage(query));
+    }
+
+    @Operation(summary = "审计日志分页")
+    @PreAuthorize("hasAuthority('system:log:list')")
+    @PostMapping("/auditLogListPage")
+    public Result<PageResult<AuditLogVO>> auditLogListPage(@RequestBody LogQueryPageDTO query) {
+        return Result.success(logService.auditLogListPage(query));
+    }
+
+    @Operation(summary = "审计日志详情")
+    @PreAuthorize("hasAuthority('system:log:list')")
+    @GetMapping("/auditLogDetail")
+    public Result<AuditLogVO> auditLogDetail(@RequestParam Long id) {
+        return Result.success(logService.auditLogDetail(id));
+    }
+
+    @Operation(summary = "字段级修改日志分页（哪个字段从什么值改成了什么值）")
+    @PreAuthorize("hasAuthority('system:log:list')")
+    @PostMapping("/fieldChangeListPage")
+    public Result<PageResult<FieldChangeVO>> fieldChangeListPage(@RequestBody LogQueryPageDTO query) {
+        return Result.success(logService.fieldChangeListPage(query));
+    }
+
+    @Operation(summary = "字段级修改日志同批次明细（一次保存改了哪些字段）")
+    @PreAuthorize("hasAuthority('system:log:list')")
+    @GetMapping("/fieldChangeBatch")
+    public Result<List<FieldChangeVO>> fieldChangeBatch(@RequestParam String batchNo) {
+        return Result.success(logService.fieldChangeBatch(batchNo));
+    }
+
+    @Operation(summary = "四本账统计（含近24小时口令爆破嫌疑账号）")
+    @PreAuthorize("hasAuthority('system:log:list')")
+    @GetMapping("/stat")
+    public Result<LogStatVO> stat() {
+        return Result.success(logService.stat());
+    }
+
+    @Operation(summary = "导出 CSV（logType 1-操作 2-登录 3-审计 4-字段变更，最多 5000 行）")
+    @PreAuthorize("hasAuthority('system:log:export')")
+    @PostMapping("/exportCsv")
+    public Result<String> exportCsv(@RequestBody LogQueryPageDTO query) {
+        return Result.success(logService.exportCsv(query));
+    }
+}

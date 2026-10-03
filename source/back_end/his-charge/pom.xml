@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.his</groupId>
+        <artifactId>his-backend</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>his-charge</artifactId>
+    <packaging>jar</packaging>
+    <name>his-charge</name>
+    <description>收费与结算：收费单、收款、发票、退费、医保结算清单、DRG、规则校验、质控、随访、公卫上报、病案归档、医技执行</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-fee</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-system</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-patient</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-operation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-appoint</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-pharmacy</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-medicaltech</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-supplies</artifactId>
+        </dependency>
+        <!-- 支付二维码生成 -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+        </dependency>
+    </dependencies>
+</project>

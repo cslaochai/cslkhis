@@ -1,0 +1,62 @@
+<view class="triage-page">
+  <view class="banner">
+    <text class="banner-title">智能导诊</text>
+    <text class="banner-sub">描述您的不适，帮您判断该挂哪个科</text>
+  </view>
+
+  <view class="card">
+    <textarea
+      class="desc-input"
+      placeholder="例如：最近三天头疼，还有点头晕"
+      value="{{description}}"
+      bindinput="onInput"
+      maxlength="200"
+      auto-height
+    />
+    <button class="primary-btn" bindtap="recommend" disabled="{{loading}}">
+      {{loading ? '分析中...' : '开始导诊'}}
+    </button>
+  </view>
+
+  <view class="card" wx:if="{{symptoms.length}}">
+    <text class="section-title">常见不适</text>
+    <view class="tag-list">
+      <view class="tag" wx:for="{{symptoms}}" wx:key="symptomCode" bindtap="onSymptom" data-name="{{item.symptomName}}">
+        {{item.symptomName}}
+      </view>
+    </view>
+  </view>
+
+  <block wx:if="{{searched}}">
+    <view class="card" wx:if="{{results.length}}">
+      <text class="section-title">推荐科室</text>
+      <view
+        class="dept-row {{item.urgent ? 'urgent' : ''}}"
+        wx:for="{{results}}"
+        wx:key="deptId"
+        bindtap="goAppoint"
+        data-dept-id="{{item.deptId}}"
+      >
+        <view class="dept-main">
+          <view class="dept-name-line">
+            <text class="dept-name">{{item.deptName}}</text>
+            <text class="urgent-tag" wx:if="{{item.urgent}}">急</text>
+          </view>
+          <text class="dept-reason">依据：{{item.symptomName}}</text>
+          <text class="dept-slots" wx:if="{{item.bookableCount > 0}}">可约 {{item.bookableCount}} 个号源</text>
+          <text class="dept-slots none" wx:elif="{{item.bookableCount === 0}}">近期暂无可约号源</text>
+          <text class="dept-advice" wx:if="{{item.advice}}">{{item.advice}}</text>
+        </view>
+        <text class="go">去挂号 ›</text>
+      </view>
+    </view>
+
+    <view class="card empty-result" wx:else>
+      <text class="empty-title">没有匹配到科室</text>
+      <text class="empty-desc">换个说法再试一次，或直接在挂号页按科室选择</text>
+      <button class="ghost-btn" bindtap="goAppointFallback">去挂号页选科室</button>
+    </view>
+  </block>
+
+  <view class="disclaimer">导诊结果仅供参考，不替代医生诊断。急症请直接前往急诊或拨打 120。</view>
+</view>

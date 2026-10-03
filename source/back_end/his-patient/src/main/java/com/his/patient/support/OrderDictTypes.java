@@ -1,0 +1,61 @@
+package com.his.patient.support;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 医嘱基础字典的三类口径（sql/142）：给药途径 / 用药频次 / 剂量单位。
+ *
+ * <p>单点定义的目的：值域、中文名、以及「这个字典落在医嘱表的哪一列」三件事必须一起定义 ——
+ * 分开写就会出现「字典加了值、使用量统计却查错列」这种静默失效（统计永远 0，页面看不出毛病）。
+ *
+ * <p><b>值域口径（不要各写一份）</b>：
+ * 途径存中文（历史医嘱 route 列就是中文，改成码会让存量数据渲染成「未知」），
+ * 频次存英文缩写（qd/bid…，与医嘱单书写习惯一致），剂量单位是字面单位（g/mg/ml/片…）。
+ */
+public final class OrderDictTypes {
+
+    private OrderDictTypes() {
+    }
+
+    /** 给药途径 */
+    public static final String ROUTE = "his_order_route";
+    /** 用药频次 */
+    public static final String FREQ = "his_order_freq";
+    /** 剂量单位 */
+    public static final String DOSE_UNIT = "his_dose_unit";
+
+    private static final Map<String, String> NAME = Map.of(
+            ROUTE, "给药途径",
+            FREQ, "用药频次",
+            DOSE_UNIT, "剂量单位");
+
+    /**
+     * 字典类型 → 医嘱表里对应的列（统计「这个值有多少条医嘱在用」用）
+     */
+    private static final Map<String, String> ORDER_COLUMN = Map.of(
+            ROUTE, "route",
+            FREQ, "frequency",
+            DOSE_UNIT, "dosage_unit");
+
+    public static final List<String> ALL = List.of(ROUTE, FREQ, DOSE_UNIT);
+
+    /** 类型中文名；不在三类之内返回「未知(type)」，不回落成看似合法的值 */
+    public static String text(String dictType) {
+        if (dictType == null) {
+            return "—";
+        }
+        String name = NAME.get(dictType);
+        return name != null ? name : "未知(" + dictType + ")";
+    }
+
+    /** 是否为受管的医嘱字典类型（决定能不能从这个口子写库） */
+    public static boolean isManaged(String dictType) {
+        return dictType != null && NAME.containsKey(dictType);
+    }
+
+    /** 医嘱表里对应的列名（只可能是三列之一，调用方不可传外部输入） */
+    public static String orderColumn(String dictType) {
+        return ORDER_COLUMN.get(dictType);
+    }
+}

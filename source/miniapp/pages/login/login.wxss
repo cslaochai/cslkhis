@@ -1,0 +1,213 @@
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  /* 底色与 PC 端登录页同源（#EAF2F9 → #DDEAF4），顶部叠一层主色光晕 */
+  background:
+    radial-gradient(110% 55% at 50% 0%, rgba(18, 105, 181, 0.18) 0%, rgba(18, 105, 181, 0) 62%),
+    radial-gradient(85% 45% at 100% 100%, rgba(14, 148, 136, 0.14) 0%, rgba(14, 148, 136, 0) 60%),
+    linear-gradient(180deg, #EAF2F9 0%, #DDEAF4 100%);
+}
+
+/* ---------- 品牌区 ---------- */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: calc(96rpx + env(safe-area-inset-top)) 40rpx 0;
+}
+
+.brand-badge {
+  width: 132rpx;
+  height: 132rpx;
+  border-radius: 34rpx;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10rpx 26rpx rgba(18, 105, 181, 0.14);
+  overflow: hidden;
+}
+
+.brand-icon {
+  width: 110rpx;
+  height: 110rpx;
+}
+
+.brand-name {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #16324f;
+  letter-spacing: 1rpx;
+  margin-top: 28rpx;
+  text-align: center;
+}
+
+.brand-slogan {
+  font-size: 25rpx;
+  color: #6b7f97;
+  margin-top: 14rpx;
+  letter-spacing: 0.5rpx;
+  text-align: center;
+}
+
+/* ---------- 登录卡片 ---------- */
+.card-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 44rpx 42rpx 0;
+}
+
+.card {
+  width: 100%;
+  padding: 44rpx 36rpx 36rpx;
+  background: #fff;
+  border-radius: 28rpx;
+  box-shadow: 0 16rpx 44rpx rgba(18, 105, 181, 0.1);
+  box-sizing: border-box;
+}
+
+.card-title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1a2233;
+  text-align: center;
+}
+
+.card-desc {
+  display: block;
+  font-size: 25rpx;
+  color: #98a2b3;
+  margin: 12rpx 0 36rpx;
+  text-align: center;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  height: 96rpx;
+  padding: 0 26rpx;
+  margin-bottom: 26rpx;
+  background: #f5f7fa;
+  border: 2rpx solid transparent;
+  border-radius: 18rpx;
+}
+
+.field:focus-within {
+  background: #fff;
+  border-color: #1269B5;
+  box-shadow: 0 0 0 6rpx rgba(43, 108, 176, 0.08);
+}
+
+.field-icon {
+  width: 34rpx;
+  height: 34rpx;
+  margin-right: 18rpx;
+  flex-shrink: 0;
+}
+
+.field-input {
+  flex: 1;
+  height: 96rpx;
+  font-size: 29rpx;
+  color: #1a2233;
+}
+
+.field-ph {
+  color: #b0b8c4;
+}
+
+.field-eye {
+  width: 40rpx;
+  height: 40rpx;
+  padding: 8rpx;
+  flex-shrink: 0;
+}
+
+/* ---------- 错误提示 ---------- */
+.error {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 14rpx 20rpx;
+  margin-bottom: 8rpx;
+  background: #fef1f0;
+  border-radius: 14rpx;
+}
+
+.error-icon {
+  width: 30rpx;
+  height: 30rpx;
+  flex-shrink: 0;
+}
+
+.error-text {
+  font-size: 25rpx;
+  color: #e0544a;
+  line-height: 1.4;
+}
+
+/* ---------- 主按钮 ---------- */
+.submit {
+  width: 100%;
+  height: 96rpx;
+  line-height: 96rpx;
+  margin-top: 18rpx;
+  border-radius: 48rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  letter-spacing: 4rpx;
+  color: #fff;
+  background: linear-gradient(96deg, #1269B5 0%, #0E9488 118%);
+  border: none;
+  box-shadow: 0 12rpx 26rpx rgba(43, 108, 176, 0.24);
+}
+
+.submit::after {
+  border: none;
+}
+
+.submit[disabled] {
+  color: rgba(255, 255, 255, 0.85);
+  background: linear-gradient(96deg, #7fa8c6 0%, #86bdb8 100%);
+  box-shadow: none;
+}
+
+/* ---------- 注册入口 ---------- */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 36rpx;
+  padding-top: 30rpx;
+  border-top: 1rpx solid #eef1f5;
+}
+
+.foot-label {
+  font-size: 26rpx;
+  color: #98a2b3;
+}
+
+.foot-link {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1269B5;
+  padding: 6rpx 0 6rpx 8rpx;
+}
+
+/* ---------- 页脚提示 ---------- */
+.hint {
+  display: flex;
+  justify-content: center;
+  padding: 40rpx 60rpx calc(44rpx + env(safe-area-inset-bottom));
+}
+
+.hint-text {
+  font-size: 23rpx;
+  color: #a3adbb;
+  text-align: center;
+}
+

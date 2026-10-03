@@ -1,0 +1,59 @@
+<view class="payment-page">
+  <view class="summary" wx:if="{{list.length > 0}}">
+    <text class="summary-label">待缴费合计</text>
+    <text class="summary-amount">¥{{totalAmount}}</text>
+  </view>
+
+  <view class="list" wx:if="{{list.length > 0}}">
+    <view class="pay-card" wx:for="{{list}}" wx:key="id">
+      <view class="card-top">
+        <text class="dept">{{item.deptName || '门诊'}}</text>
+        <text class="amount">¥{{item.totalAmount}}</text>
+      </view>
+      <view class="card-sub">
+        <text>单号 {{item.billNo}}</text>
+        <text wx:if="{{item.encounterNo}}">就诊 {{item.encounterNo}}</text>
+      </view>
+      <view class="card-time">{{item.createTime}}</view>
+
+      <!-- 账单级医保拆分：患者在缴费前就能看到「医保报多少、自己掏多少」 -->
+      <view class="card-insurance" wx:if="{{item.hasInsurance}}">
+        <text class="ins-tag">医保统筹 ¥{{item.poolAmount}}</text>
+        <text class="ins-tag" wx:if="{{item.accountAmount !== '0.00'}}">个账 ¥{{item.accountAmount}}</text>
+        <text class="ins-tag self">个人自付 ¥{{item.selfAmount}}</text>
+      </view>
+
+      <view class="detail-toggle" bindtap="toggleDetail" data-id="{{item.id}}">
+        <text>{{item.expanded ? '收起明细' : '查看明细'}}</text>
+      </view>
+      <view class="detail-list" wx:if="{{item.expanded}}">
+        <view class="detail-item" wx:for="{{item.details}}" wx:for-item="d" wx:key="index">
+          <view class="d-line">
+            <text class="d-name">{{d.itemName}}</text>
+            <text class="d-amount">¥{{d.amount}}</text>
+          </view>
+          <view class="d-sub">
+            <text class="d-catalog" wx:if="{{d.catalogTypeText}}">{{d.catalogTypeText}}</text>
+            <text wx:if="{{d.quantity}}">{{d.quantity}}{{d.unit || ''}} × ¥{{d.price}}</text>
+            <text class="d-split" wx:if="{{d.hasSplit}}">医保 ¥{{d.poolAmount}} · 自付 ¥{{d.selfAmount}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="card-actions">
+        <button class="pay-btn" size="mini" data-id="{{item.id}}" bindtap="onPay" disabled="{{payingId === item.id}}">
+          {{payingId === item.id ? '支付中...' : '去缴费'}}
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:else>
+    <image class="empty-icon" src="/images/icons/payment.svg" mode="aspectFit"/>
+    <text class="empty-text">暂无待缴费项目</text>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+  </view>
+</view>

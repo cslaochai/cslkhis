@@ -1,0 +1,35 @@
+<view class="appt-list-page">
+  <view class="list" wx:if="{{list.length > 0}}">
+    <view class="appt-card" wx:for="{{list}}" wx:key="id">
+      <view class="card-top">
+        <text class="dept">{{item.deptName}}</text>
+        <text class="status {{item.statusClass}}">{{item.statusText}}</text>
+      </view>
+      <view class="card-row">
+        <text class="label">医生</text>
+        <text class="value">{{item.doctorName}}</text>
+      </view>
+      <view class="card-row">
+        <text class="label">就诊日期</text>
+        <text class="value">{{item.visitDate}} {{item.slotStart}}{{item.slotEnd ? ' - ' + item.slotEnd : ''}}</text>
+      </view>
+      <view class="card-row">
+        <text class="label">挂号单号</text>
+        <text class="value">{{item.registNo}}</text>
+      </view>
+      <view class="card-actions" wx:if="{{item.canCancel}}">
+        <button class="cancel-btn" size="mini" data-id="{{item.id}}" bindtap="onCancel">退号</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty" wx:else>
+    <image class="empty-icon" src="/images/icons/filetext.svg" mode="aspectFit"/>
+    <text class="empty-text">您还没有挂号记录</text>
+    <button class="go-btn" bindtap="goAppointment">去挂号</button>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+  </view>
+</view>

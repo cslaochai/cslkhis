@@ -1,0 +1,715 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+/* ============================================================
+   医院风设计令牌（Hospital Design Tokens）
+   主色：医疗蓝  #1269B5   辅色：青绿 #0E9488（护理/健康）
+   ============================================================ */
+:root {
+  /* Element Plus 主题色 */
+  --el-color-primary: #1269B5;
+  --el-color-primary-light-3: #4A92C9;
+  --el-color-primary-light-5: #79ABDB;
+  --el-color-primary-light-7: #A7C5EC;
+  --el-color-primary-light-8: #BCD3F2;
+  --el-color-primary-light-9: #E8F1FA;
+  --el-color-primary-dark-2: #0E528F;
+
+  /* 医院风语义色 */
+  --his-primary: #1269B5;
+  --his-primary-deep: #0B4F8A;
+  --his-teal: #0E9488;
+  --his-bg: #F2F7FB;
+  --his-card-border: #E3ECF5;
+  --his-shadow-sm: 0 1px 3px rgba(11, 79, 138, 0.06), 0 1px 2px rgba(11, 79, 138, 0.04);
+  --his-shadow-md: 0 4px 14px rgba(11, 79, 138, 0.08), 0 2px 4px rgba(11, 79, 138, 0.04);
+  --his-radius: 10px;
+
+  /* Element Plus 圆角统一 */
+  --el-border-radius-base: 6px;
+  --el-border-radius-small: 4px;
+  --el-border-radius-round: 18px;
+
+  /* ---------- 页面高度令牌（页面容器高度统一，别再写 magic number）----------
+     Header 64px + DashboardLayout 的 <main class="p-6">（上下各 24px）。
+     原来三页各写一套：100vh-8rem（医生站）/ 100vh-120px（分诊台）/
+     100vh-20rem（病历 Tab）/ 100vh-16rem（收费 Tab）—— Header 高度一改就全部错位。 */
+  --his-header-h: 64px;
+  --his-page-pad: 24px;
+  --his-page-h: calc(100vh - var(--his-header-h) - var(--his-page-pad) * 2);
+
+  /* 门诊工作台固定尺寸 */
+  --his-briefbar-h: 48px;      /* 患者条 1 行 */
+  --his-actionbar-h: 56px;     /* 底部动作条 */
+  --his-queue-col-w: 300px;    /* 候诊队列常驻窄列（264 时急诊短号+姓名+状态徽章同排被截字，2026-09-26 加宽） */
+  --his-order-col-w: 420px;    /* 医嘱面板（2026-09-21 由 380 放宽：医嘱里是处方/检查/检验三节，字段多，380 太挤） */
+}
+
+html,
+body {
+  font-family: var(--font-sans);
+  margin: 0;
+  padding: 0;
+  background-color: var(--his-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   全局滚动条（医院蓝细滚动条）
+   ============================================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #C3D6E8;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9FBEDB;
+}
+
+/* ============================================================
+   Element Plus 组件精修
+   ============================================================ */
+
+/* ---------- 卡片：圆角 + 柔和阴影 + 标题条 ---------- */
+.el-card {
+  border: 1px solid var(--his-card-border);
+  border-radius: var(--his-radius);
+  box-shadow: var(--his-shadow-sm);
+  transition: box-shadow 0.25s ease, transform 0.25s ease;
+}
+.el-card:hover {
+  box-shadow: var(--his-shadow-md);
+}
+.el-card__header {
+  border-bottom: 1px solid var(--his-card-border);
+  background: linear-gradient(180deg, #FAFDFF, #F4F9FD);
+  border-radius: var(--his-radius) var(--his-radius) 0 0;
+  font-weight: 600;
+  color: #134B77;
+}
+
+/* ---------- 表格：医院蓝表头 + 斑马纹 ---------- */
+.el-table {
+  --el-table-header-bg-color: #EAF3FB;
+  --el-table-header-text-color: #10517F;
+  --el-table-row-hover-bg-color: #F0F7FD;
+  --el-table-border-color: #E4EEF7;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.el-table th.el-table__cell {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.el-table th.el-table__cell > .cell {
+  line-height: 1.5;
+}
+/* 表头左侧强调线 */
+.el-table--border th.el-table__cell:first-child::before,
+.el-table::before {
+  display: none;
+}
+
+/* ---------- 按钮 ---------- */
+.el-button {
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.el-button--primary {
+  background: linear-gradient(135deg, #1B77C4, #1269B5);
+  border: none;
+  box-shadow: 0 2px 6px rgba(18, 105, 181, 0.3);
+}
+.el-button--primary:hover,
+.el-button--primary:focus {
+  background: linear-gradient(135deg, #2B86D2, #1B77C4);
+  box-shadow: 0 4px 10px rgba(18, 105, 181, 0.35);
+}
+.el-button--primary:active {
+  background: #0E528F;
+}
+/* plain 变体必须盖回浅色底：上面的渐变是 background-image，会垫在 plain 浅色底之上，
+   叠成「蓝底 + plain 蓝字」导致文字隐形（G22 设备/CSSD/医废页登记按钮踩中） */
+.el-button--primary.is-plain {
+  background: var(--el-color-primary-light-9);
+  border: 1px solid var(--el-color-primary-light-5);
+  box-shadow: none;
+  color: var(--el-color-primary);
+}
+.el-button--primary.is-plain:hover,
+.el-button--primary.is-plain:focus {
+  background: var(--el-color-primary);
+  border-color: var(--el-color-primary);
+  color: #fff;
+}
+.el-button--success.is-plain {
+  background: var(--el-color-success-light-9);
+  border: 1px solid var(--el-color-success-light-5);
+  box-shadow: none;
+  color: var(--el-color-success);
+}
+.el-button--success.is-plain:hover,
+.el-button--success.is-plain:focus {
+  background: var(--el-color-success);
+  border-color: var(--el-color-success);
+  color: #fff;
+}
+.el-button--success {
+  background: linear-gradient(135deg, #16A394, #0E9488);
+  border: none;
+  box-shadow: 0 2px 6px rgba(14, 148, 136, 0.3);
+}
+.el-button--success:hover,
+.el-button--success:focus {
+  background: linear-gradient(135deg, #1BB5A5, #16A394);
+}
+
+/* ---------- 输入框 / 选择器 ---------- */
+.el-input__wrapper,
+.el-textarea__inner,
+.el-select__wrapper {
+  border-radius: 6px;
+}
+.el-input__wrapper:hover,
+.el-select__wrapper:hover {
+  box-shadow: 0 0 0 1px #7FB2DF inset;
+}
+.el-input__wrapper.is-focus,
+.el-select__wrapper.is-focused {
+  box-shadow: 0 0 0 1.5px var(--his-primary) inset !important;
+}
+
+/* ---------- 弹窗 ---------- */
+.el-dialog {
+  border-radius: 14px;
+  box-shadow: 0 18px 50px rgba(9, 47, 84, 0.22);
+  overflow: hidden;
+  /* padding 交给 header/body/footer 各自控制，避免标题条无法贴边 */
+  padding: 0;
+}
+.el-dialog__header {
+  background: #F6FAFE;
+  border-bottom: 1px solid var(--his-card-border);
+  border-radius: 14px 14px 0 0;
+  padding: 13px 52px 13px 22px;
+  margin-right: 0;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+/* 标题左侧蓝绿竖线：放在 header 层，普通标题与自定义 #header slot 都能吃到 */
+.el-dialog__header::before {
+  content: '';
+  width: 4px;
+  height: 15px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--his-primary), var(--his-teal));
+  flex: none;
+  margin-right: 9px;
+}
+.el-dialog__title {
+  color: #134B77;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  line-height: 1.4;
+}
+/* 自定义 #header slot 的内容要撑满剩余宽度，否则内部的 justify-between 会塌缩 */
+.el-dialog__header > *:not(.el-dialog__headerbtn) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.el-dialog__headerbtn {
+  top: 10px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+}
+.el-dialog__headerbtn .el-dialog__close {
+  color: #93A9BC;
+  font-size: 17px;
+}
+.el-dialog__headerbtn:hover {
+  background: #E5EFF9;
+}
+.el-dialog__headerbtn:hover .el-dialog__close {
+  color: var(--his-primary);
+}
+.el-dialog__body {
+  padding: 20px 24px;
+  color: #33546E;
+}
+.el-dialog__footer {
+  border-top: 1px solid var(--his-card-border);
+  padding: 14px 24px;
+  background: #FAFCFE;
+}
+
+/* ---------- 患者详情弹框：整框限高，内容区独占滚动 ----------
+   为什么必须写在全局：`class` 落在 el-dialog 的根元素上，而根元素（含 __header/__body/__footer）
+   由 Element Plus 渲染，不在使用方组件的 template 里 → 没有该组件的 data-v 属性，
+   组件内 `<style scoped>` 写的规则**静默不命中**（现象是"样式写了没用"）。
+
+   为什么要把高度链一路接通：身份卡 + 概览卡 + tabs 头 + footer 都是固定高，弹窗总高会随内容长高，
+   内容一多就顶出视口（`.el-overlay-dialog` 出滚动条 = 「浏览器右侧又多一条」）。
+   早先的修法是给内容区一个算出来的 max-height + 给 __body 加 overflow 兜底 —— 结果**两处各滚一条**
+   （内容区一条、弹框一条），因为算出来的高度大于 __body 实际剩余空间。
+   现在改成 flex 分配：内容区吃掉剩余高度，只有它滚。
+   链路：.el-dialog → __body → .patient-detail-shell → .el-tabs → .el-tabs__content
+        → .el-tab-pane(height:100%) → .dialog-scroll(height:100%, overflow-y:auto)
+   **少接一环就会退化成两处各滚**，改这段时务必照上面链路一起核对。
+   __body 的 overflow-y:auto 只作兜底：高度链正常时它 scrollHeight == clientHeight，不会出滚动条。 */
+.patient-detail-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  margin-bottom: 0;
+}
+
+.patient-detail-dialog .el-dialog__header,
+.patient-detail-dialog .el-dialog__footer {
+  flex: none;
+}
+
+.patient-detail-dialog .el-dialog__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* body 里的第一层包裹：吃掉剩余高度，并把高度继续传下去 */
+.patient-detail-dialog .patient-detail-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* 身份卡 / 概览卡 / 提示条：固定高度，不参与压缩（要压缩的是内容区） */
+.patient-detail-dialog .patient-detail-fixed {
+  flex: none;
+}
+
+.patient-detail-dialog .el-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.patient-detail-dialog .el-tabs__header {
+  flex: none;
+}
+
+.patient-detail-dialog .el-tabs__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ⚠ 这里不能写 height:100%：__content 的高度是 flex 分配出来的 used value，
+   Chromium 不把它当 definite 高度，子元素的百分比高度会退化成 auto（实测 pane 高 15513px = 内容高）。
+   全部用 flex 传递：pane 列向 flex item → 再拉伸到自己的滚动子元素。 */
+.patient-detail-dialog .el-tab-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ---------- 标签页 ---------- */
+.el-tabs__item {
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+.el-tabs__item.is-active {
+  font-weight: 600;
+}
+.el-tabs--card > .el-tabs__header .el-tabs__item.is-active {
+  border-bottom-color: transparent;
+  background: var(--el-color-primary-light-9);
+  border-top: 2px solid var(--his-primary);
+}
+
+/* ---------- 标签 ---------- */
+.el-tag {
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+/* ---------- 分页 ---------- */
+.el-pagination.is-background .el-pager li,
+.el-pagination.is-background .btn-prev,
+.el-pagination.is-background .btn-next {
+  border-radius: 6px;
+}
+.el-pagination.is-background .el-pager li.is-active {
+  background: var(--his-primary);
+}
+
+/* ---------- 标准两卡式列表页（口径参照 views/system/user/UserView.vue）----------
+   查询卡与表格卡分离（卡间距 mb-3）；表格卡 body 置 0 内边距让表格全幅贴边；
+   查询卡是单行工具条，表单项不要默认下边距（否则卡片被撑高一截）；
+   分页在流内紧跟表格底。类名是全站约定：页面模板直接挂 query-card / table-card / list-footer，
+   不再各自写 scoped 副本；表格限高用 lib/useTableMaxHeight.js。 */
+.query-card .el-form-item {
+  margin-bottom: 0;
+}
+.table-card .el-card__body {
+  padding: 0;
+}
+.list-footer {
+  padding: 12px 20px;
+}
+
+/* ---------- 描述列表 / 表单标题 ---------- */
+.el-descriptions__header {
+  margin-bottom: 12px;
+}
+.el-descriptions__title {
+  font-weight: 600;
+  color: #134B77;
+  position: relative;
+  padding-left: 10px;
+}
+.el-descriptions__title::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--his-primary), var(--his-teal));
+}
+.el-form-item__label {
+  color: #33546E;
+  font-weight: 500;
+}
+
+/* ---------- 菜单/抽屉/消息 ---------- */
+.el-drawer__header {
+  color: #134B77;
+  font-weight: 600;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--his-card-border);
+  padding-bottom: 12px;
+}
+.el-message-box {
+  border-radius: 12px;
+}
+
+/* ---------- 页面标题通用强调（配合各页面 h1/h2/p） ---------- */
+main p, main span, main div {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ===================================================================
+   全局患者搜索下拉（Header.vue el-select 的患者卡片）
+   注意：整个 popper 会被 teleport 到 body 下，Vue 单文件组件的 scoped
+   样式 + :deep() 编译成 [data-v-x] .xxx 后挂在 body 上没有祖先命中，
+   所以这里必须写全局样式，不能写在组件的 <style scoped> 里。
+   =================================================================== */
+.patient-search-popper.el-popper {
+  /* 下拉要比输入框宽（:fit-input-width="false" 才生效），否则富信息卡片被压成一行 */
+  min-width: 520px !important;
+  width: 520px !important;
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(9, 47, 84, 0.18);
+  border: 1px solid var(--his-card-border);
+}
+.patient-search-popper .el-select-dropdown__list {
+  padding: 6px !important;
+}
+.patient-search-popper .el-select-dropdown__item {
+  height: auto !important;
+  line-height: normal !important;
+  min-height: 92px !important;
+  padding: 9px 10px !important;
+  border-radius: 9px;
+  margin-bottom: 2px;
+}
+.patient-search-popper .el-select-dropdown__item:last-child {
+  margin-bottom: 0;
+}
+.patient-search-popper .el-select-dropdown__item.is-hovering,
+.patient-search-popper .el-select-dropdown__item:hover {
+  background: #EAF3FB;
+}
+.patient-search-popper .el-select-dropdown__item.is-selected {
+  background: #DCEBF9;
+  font-weight: inherit;
+}
+.patient-search-popper .el-select-dropdown__empty {
+  padding: 22px 0;
+  color: #8CA6BD;
+  font-size: 13px;
+}
+
+/* --- 输入框内的放大镜（PatientSelect 的 #prefix 插槽） --- */
+.patient-select .ps-prefix-icon {
+  color: #93A9BD;
+  font-size: 15px;
+  margin-right: 2px;
+}
+.patient-select .el-select__wrapper.is-focused .ps-prefix-icon {
+  color: var(--his-primary, #1269B5);
+}
+
+/* --- 分组标题（今日就诊 / 全院档案）---
+   样式必须写全局：下拉 popper teleport 到 body，组件内 scoped 的 :deep 编译后带 [data-v-x]
+   前缀，body 下没有祖先命中，规则会被静默丢弃。 */
+.patient-search-popper .el-select-group__title {
+  padding: 5px 16px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  color: #64748B;
+  background: #F8FAFC;
+}
+/* 只有一组时不打标题 —— 渲染出的空标题元素要彻底收起，否则留一条空白带 */
+.patient-search-popper .el-select-group__title:empty {
+  display: none;
+}
+.patient-search-popper .el-select-group + .el-select-group {
+  border-top: 1px solid #EEF2F7;
+}
+
+/* --- 今日就诊标注 --- */
+.ps-today {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  margin-bottom: 4px;
+  padding: 1px 8px 1px 6px;
+  border-radius: 999px;
+  background: #EEF4FB;
+  color: #1269B5;
+  font-size: 11px;
+  line-height: 18px;
+}
+/* 本人/本科室的患者用辅色青绿区分：一眼看出「今天这个是我的患者」 */
+.ps-today-mine {
+  background: #E6F5F3;
+  color: #0E9488;
+}
+.ps-today-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.ps-today-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* --- 卡片本体 --- */
+.ps-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+}
+.ps-avatar {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0;
+}
+/* 患者头像性别配色：下拉项（.ps-avatar-*）与详情弹框（.patient-avatar-*）共用同一组色值。
+   写两份必然写出分歧 —— 详情头像曾用统一主题色，同一个患者在搜索下拉里是粉色、点开详情变蓝色。 */
+.ps-avatar-male,
+.patient-avatar-male {
+  background: linear-gradient(135deg, #2B86CF, #1269B5);
+}
+.ps-avatar-female,
+.patient-avatar-female {
+  background: linear-gradient(135deg, #F087AC, #E35D87);
+}
+/* 性别未知 / 码值异常：中性灰，不要用粉蓝暗示一个不存在的性别 */
+.ps-avatar-unknown,
+.patient-avatar-unknown {
+  background: linear-gradient(135deg, #94A3B8, #64748B);
+}
+.ps-avatar-disabled {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+.ps-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ps-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ps-line + .ps-line {
+  margin-top: 5px;
+}
+.ps-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #10314F;
+  letter-spacing: 0.3px;
+}
+.ps-hit {
+  color: #C9521E;
+  font-style: normal;
+  background: #FFF1E4;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+.ps-gender {
+  font-size: 13px;
+  font-weight: 700;
+}
+.ps-gender.male {
+  color: #1269B5;
+}
+.ps-gender.female {
+  color: #E35D87;
+}
+.ps-gender.unknown {
+  color: #94A3B8;
+}
+.ps-age {
+  font-size: 12.5px;
+  color: #5B7794;
+}
+.ps-chip {
+  font-size: 11px;
+  line-height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.ps-chip-code {
+  background: #EFF4F9;
+  color: #4A6E90;
+  border-color: #D9E4EF;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.ps-chip-insurance {
+  background: #E6F6F4;
+  color: #0E9488;
+  border-color: #B9E4DF;
+}
+.ps-chip-plain {
+  background: #F1F5F9;
+  color: #64748B;
+  border-color: #E2E8F0;
+}
+.ps-chip-off {
+  background: #FDECEC;
+  color: #C0392B;
+  border-color: #F6CFCB;
+}
+.ps-tags {
+  gap: 5px;
+  min-height: 20px;
+}
+.ps-tag {
+  font-size: 11px;
+  line-height: 18px;
+  padding: 0 6px;
+  border-radius: 10px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.ps-tag-danger {
+  background: #FDECEC;
+  color: #C0392B;
+  border-color: #F6CFCB;
+}
+.ps-empty-tip {
+  font-size: 11px;
+  color: #A9BCCE;
+}
+.ps-meta {
+  font-size: 11.5px;
+  color: #5B7794;
+  gap: 5px;
+}
+.ps-meta-key {
+  color: #9CB2C7;
+  margin-right: 3px;
+}
+.ps-meta-sep {
+  color: #D3DFEA;
+}
+.ps-address {
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ps-stats {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #6B85A0;
+  white-space: nowrap;
+}
+.ps-stat b {
+  color: var(--his-primary);
+  font-weight: 700;
+  margin-right: 2px;
+}
+
+/* ===================================================================
+   排班管理 · 科室/医生筛选下拉
+   医生选项标签形如「任永星（全科医学科）」「压测医生丁（看板压测科（夹具））」，
+   按输入框宽度（44~52 × 4px）渲染会把科室名截成「看板压测科（夹…」——
+   筛选下拉截断比表格截断更严重：用户是"靠这个列表选人"的，看不全等于选不对。
+   同样必须写全局：popper teleport 到 body，scoped :deep 命中不到。
+   配合 :fit-input-width="false" 才生效。
+   =================================================================== */
+.schedule-filter-popper.el-popper {
+  min-width: 260px !important;
+  width: auto !important;
+  border-radius: 10px;
+}
+.schedule-filter-popper .el-select-dropdown__item {
+  /* 标签不换行、不截断：宁可下拉变宽，也不让「医生名（科室）」显示不全 */
+  height: 32px !important;
+  line-height: 32px !important;
+  white-space: nowrap;
+}

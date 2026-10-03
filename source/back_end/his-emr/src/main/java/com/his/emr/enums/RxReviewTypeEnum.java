@@ -1,0 +1,34 @@
+package com.his.emr.enums;
+
+import lombok.Getter;
+
+/**
+ * 处方点评类型枚举
+ */
+@Getter
+public enum RxReviewTypeEnum {
+
+    ROUTINE(1, "常规点评"),
+    SPECIAL(2, "专项点评");
+
+    private final int code;
+    private final String label;
+
+    RxReviewTypeEnum(int code, String label) {
+        this.code = code;
+        this.label = label;
+    }
+
+    public static RxReviewTypeEnum fromCode(int code) {
+        for (RxReviewTypeEnum item : values()) {
+            if (item.code == code) return item;
+        }
+        return null;
+    }
+
+    /** 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案，不能回落到合法文案。 */
+    public static String labelOf(Integer code) {
+        RxReviewTypeEnum item = code == null ? null : fromCode(code);
+        return item == null ? null : item.label;
+    }
+}

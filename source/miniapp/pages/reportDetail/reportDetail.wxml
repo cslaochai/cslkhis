@@ -1,0 +1,76 @@
+<view class="report-detail" wx:if="{{report}}">
+  <view class="card">
+    <view class="card-head">
+      <text class="title">{{report.typeText}}</text>
+      <text class="urgent" wx:if="{{report.isUrgent === 1}}">加急</text>
+    </view>
+    <view class="kv"><text class="k">报告单号</text><text class="v">{{report.reportNo}}</text></view>
+    <view class="kv"><text class="k">检查/检验项目</text><text class="v">{{report.itemName}}</text></view>
+    <view class="kv"><text class="k">报告科室</text><text class="v">{{report.examDeptName || '-'}}</text></view>
+    <view class="kv"><text class="k">申请医生</text><text class="v">{{report.applyDoctorName || '-'}}</text></view>
+    <view class="kv"><text class="k">就诊日期</text><text class="v">{{report.visitDate || '-'}}</text></view>
+    <view class="kv"><text class="k">报告状态</text><text class="v">{{report.statusText}}</text></view>
+    <view class="kv"><text class="k">发布时间</text><text class="v">{{report.publishTime || '-'}}</text></view>
+  </view>
+
+  <!-- 检验结果明细：逐项结果值/参考区间/异常判定，患者最关心「哪一项要紧」 -->
+  <view class="card" wx:if="{{labItems.length}}">
+    <view class="section-head">
+      <text class="section-title">检验结果</text>
+      <text class="abnormal-count" wx:if="{{abnormalCount}}">{{abnormalCount}} 项异常</text>
+    </view>
+    <view class="lab-table">
+      <view class="lab-row lab-head">
+        <text class="lab-c1">项目</text>
+        <text class="lab-c2">结果</text>
+        <text class="lab-c3">参考区间</text>
+      </view>
+      <view class="lab-row {{item.abnormal ? 'abnormal' : ''}}" wx:for="{{labItems}}" wx:key="index">
+        <text class="lab-c1">{{item.itemName}}</text>
+        <text class="lab-c2"><text class="lab-value">{{item.resultValue}}</text><text class="lab-unit" wx:if="{{item.resultUnit}}">{{item.resultUnit}}</text><text class="lab-arrow" wx:if="{{item.arrow}}">{{item.arrow}}</text><text class="lab-flag" wx:if="{{item.abnormalFlagText && item.abnormalFlagText !== '正常'}}">{{item.abnormalFlagText}}</text></text>
+        <text class="lab-c3">{{item.referenceRange || '-'}}</text>
+      </view>
+    </view>
+    <view class="lab-tip" wx:if="{{abnormalCount}}">带箭头的项目超出参考区间，单项异常不等于患病，请以医生诊断为准</view>
+  </view>
+
+  <view class="card" wx:if="{{report.clinicalDiagnosis}}">
+    <text class="section-title">临床诊断</text>
+    <text class="paragraph">{{report.clinicalDiagnosis}}</text>
+  </view>
+
+  <view class="card">
+    <text class="section-title">报告描述</text>
+    <text class="paragraph">{{report.reportContent || '暂无'}}</text>
+  </view>
+
+  <view class="card">
+    <text class="section-title">诊断结论</text>
+    <text class="paragraph conclusion">{{report.conclusion || '暂无'}}</text>
+  </view>
+
+  <!-- 影像（sql/137 简化 PACS）：缩略图两列，点开全屏预览可双指缩放 -->
+  <view class="card" wx:if="{{images.length}}">
+    <text class="section-title">检查影像（{{images.length}} 帧）</text>
+    <view class="img-grid">
+      <view class="img-cell" wx:for="{{images}}" wx:key="id" data-url="{{item.absUrl}}" bindtap="previewImage">
+        <image class="img-thumb" src="{{item.absUrl}}" mode="aspectFit" lazy-load/>
+        <text class="img-tag">#{{item.seq}}</text>
+        <text class="img-modality">{{item.modalityText || '未标模态'}}</text>
+      </view>
+    </view>
+    <text class="img-tip">图片由医院影像系统随报告一并出具，如需放大对比请在医院工作站阅片</text>
+  </view>
+
+  <view class="card" wx:if="{{report.suggestions}}">
+    <text class="section-title">建议</text>
+    <text class="paragraph">{{report.suggestions}}</text>
+  </view>
+
+  <button class="copy-btn" bindtap="copyContent">复制报告要点</button>
+  <button class="copy-btn pdf-btn" bindtap="openPdf">查看报告原文</button>
+</view>
+
+<view class="loading" wx:if="{{loading}}">
+  <view class="loading-spinner"></view>
+</view>

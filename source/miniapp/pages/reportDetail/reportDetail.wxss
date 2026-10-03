@@ -1,0 +1,244 @@
+.report-detail {
+  min-height: 100vh;
+  background: #f7f8fa;
+  padding: 20rpx;
+}
+
+.card {
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 28rpx 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+.title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.urgent {
+  font-size: 22rpx;
+  color: #f56c6c;
+  background: #fde8e8;
+  padding: 4rpx 14rpx;
+  border-radius: 6rpx;
+}
+
+.kv {
+  display: flex;
+  font-size: 26rpx;
+  margin-bottom: 14rpx;
+}
+
+.k {
+  width: 180rpx;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.v {
+  color: #333;
+  flex: 1;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2b6cb0;
+  margin-bottom: 14rpx;
+}
+
+/* 检验结果明细：三列表格，异常行整行高亮 + 箭头 */
+.abnormal-count {
+  font-size: 22rpx;
+  color: #d0021b;
+  background: #fde8e8;
+  padding: 4rpx 14rpx;
+  border-radius: 6rpx;
+  margin-bottom: 14rpx;
+}
+
+.lab-table {
+  border: 1rpx solid #eee;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.lab-row {
+  display: flex;
+  align-items: center;
+  padding: 14rpx 16rpx;
+  font-size: 24rpx;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.lab-row:last-child {
+  border-bottom: none;
+}
+
+.lab-row.lab-head {
+  background: #f7f8fa;
+  color: #999;
+  font-size: 22rpx;
+}
+
+.lab-row.abnormal {
+  background: #fff8f5;
+}
+
+.lab-c1 {
+  width: 34%;
+  color: #333;
+  padding-right: 12rpx;
+}
+
+.lab-c2 {
+  width: 33%;
+  color: #333;
+  padding-right: 12rpx;
+}
+
+.lab-c3 {
+  flex: 1;
+  color: #999;
+}
+
+.lab-value {
+  font-weight: 500;
+}
+
+.lab-unit {
+  color: #999;
+  margin-left: 4rpx;
+}
+
+.lab-arrow {
+  color: #d0021b;
+  font-weight: 600;
+  margin-left: 6rpx;
+}
+
+.lab-flag {
+  font-size: 20rpx;
+  color: #d0021b;
+  margin-left: 8rpx;
+}
+
+.lab-tip {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  color: #999;
+}
+
+.paragraph {
+  display: block;
+  font-size: 27rpx;
+  color: #333;
+  line-height: 1.7;
+}
+
+.paragraph.conclusion {
+  color: #d0021b;
+  font-weight: 500;
+}
+
+.copy-btn {
+  background: #2b6cb0;
+  color: #fff;
+  border-radius: 10rpx;
+  font-size: 28rpx;
+  margin-top: 20rpx;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 120rpx 0;
+}
+
+.loading-spinner {
+  width: 56rpx;
+  height: 56rpx;
+  border: 6rpx solid #e0e0e0;
+  border-top-color: #2b6cb0;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* 报告原文 PDF（打印桩） */
+.pdf-btn {
+  margin-top: 16rpx;
+  background: #eef4fb;
+  color: #2b6cb0;
+}
+
+/* 影像卡片（sql/137 简化 PACS）：两列缩略图，点开全屏预览 */
+.img-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.img-cell {
+  position: relative;
+  width: calc(50% - 8rpx);
+  height: 240rpx;
+  background: #000;
+  border-radius: 8rpx;
+  overflow: hidden;
+}
+
+.img-thumb {
+  width: 100%;
+  height: 100%;
+}
+
+.img-tag {
+  position: absolute;
+  left: 10rpx;
+  top: 10rpx;
+  padding: 2rpx 12rpx;
+  font-size: 20rpx;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 6rpx;
+}
+
+.img-modality {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 6rpx 12rpx;
+  font-size: 20rpx;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.img-tip {
+  display: block;
+  margin-top: 14rpx;
+  font-size: 22rpx;
+  color: #999;
+}

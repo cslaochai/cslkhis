@@ -1,0 +1,66 @@
+<view class="search-page">
+  <view class="bar">
+    <view class="bar-input">
+      <image class="bar-icon" src="/images/icons/search.svg" mode="aspectFit"/>
+      <input class="bar-field" placeholder="搜索科室、医生" placeholder-class="bar-ph"
+             value="{{keyword}}" focus="{{true}}" confirm-type="search" bindinput="onKeywordInput"/>
+      <view wx:if="{{keyword}}" class="bar-clear" bindtap="clearKeyword">✕</view>
+    </view>
+    <text class="bar-cancel" bindtap="onCancel">取消</text>
+  </view>
+
+  <!-- 未输入关键词 -->
+  <view class="guide" wx:if="{{!keyword}}">
+    <text class="guide-tip">输入科室名称或医生姓名开始搜索</text>
+    <view class="ai-card" bindtap="goChat">
+      <view class="ai-icon-wrap">
+        <image class="ai-icon" src="/images/icons/robot.svg" mode="aspectFit"/>
+      </view>
+      <view class="ai-text">
+        <text class="ai-title">不知道挂哪个科？</text>
+        <text class="ai-desc">描述症状，AI 导诊帮你推荐科室</text>
+      </view>
+      <text class="ai-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 搜索结果 -->
+  <block wx:if="{{keyword}}">
+    <view class="section" wx:if="{{depts.length}}">
+      <view class="section-header"><text class="section-title">科室</text></view>
+      <view class="list">
+        <view class="row" wx:for="{{depts}}" wx:key="id" bindtap="onDeptTap" data-dept="{{item}}">
+          <view class="row-icon"><image class="row-icon-img" src="/images/icons/hospital.svg" mode="aspectFit"/></view>
+          <view class="row-main">
+            <text class="row-name">{{item.deptName}}</text>
+            <text class="row-sub">{{item.deptCode}}</text>
+          </view>
+          <text class="row-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section" wx:if="{{doctors.length}}">
+      <view class="section-header"><text class="section-title">医生</text></view>
+      <view class="list">
+        <view class="row" wx:for="{{doctors}}" wx:key="id" bindtap="onDoctorTap" data-doctor="{{item}}">
+          <view class="row-icon"><image class="row-icon-img" src="/images/icons/user.svg" mode="aspectFit"/></view>
+          <view class="row-main">
+            <text class="row-name">{{item.empName}}<text class="row-title" wx:if="{{item.title}}">{{item.title}}</text></text>
+            <text class="row-sub">{{item.deptName || '未绑定科室'}}</text>
+          </view>
+          <text class="row-arrow">›</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="empty" wx:if="{{searched && !loading && !depts.length && !doctors.length}}">
+      <text class="empty-text">没有找到「{{keyword}}」相关的科室或医生</text>
+      <view class="empty-ai" bindtap="goChat">试试 AI 智能导诊 ›</view>
+    </view>
+
+    <view class="loading" wx:if="{{loading}}">
+      <text class="loading-text">搜索中…</text>
+    </view>
+  </block>
+</view>

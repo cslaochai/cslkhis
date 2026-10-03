@@ -1,0 +1,762 @@
+-- 领域：17-药房药库（采购·库存·发药·调拨·盘点·静配）
+-- 库：hn_biz_his    表数：22
+-- 说明：DDL 快照（由线上库 SHOW CREATE TABLE 导出，无 DROP / 无数据）。建表语句彼此独立，不含外键约束。
+
+-- ----------------------------
+-- biz_purchase_order  药品采购订单
+-- ----------------------------
+CREATE TABLE `biz_purchase_order` (
+  `order_id` bigint NOT NULL COMMENT '采购订单ID',
+  `order_no` varchar(32) NOT NULL COMMENT '采购订单号',
+  `supplier_id` bigint NOT NULL COMMENT '供应商ID',
+  `order_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '下单时间',
+  `total_amount` decimal(12,2) DEFAULT '0.00' COMMENT '订单总金额',
+  `approval_status` tinyint NOT NULL DEFAULT '0' COMMENT '审批状态（0-待审批 1-已通过 2-已驳回）',
+  `approver_id` bigint DEFAULT NULL COMMENT '审批人ID',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  PRIMARY KEY (`order_id`),
+  UNIQUE KEY `uk_order_no` (`order_no`),
+  KEY `idx_supplier_id` (`supplier_id`),
+  KEY `idx_order_time` (`order_time`),
+  KEY `idx_supplier_time` (`supplier_id`,`order_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品采购订单';
+
+-- ----------------------------
+-- biz_purchase_order_detail  药品采购订单明细
+-- ----------------------------
+CREATE TABLE `biz_purchase_order_detail` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `order_id` bigint NOT NULL COMMENT '采购订单ID',
+  `drug_id` bigint NOT NULL COMMENT '药品ID',
+  `quantity` decimal(10,2) NOT NULL COMMENT '采购数量',
+  `unit_price` decimal(12,2) NOT NULL COMMENT '采购单价',
+  `amount` decimal(14,2) NOT NULL COMMENT '金额 = 数量 × 单价',
+  `batch_no` varchar(50) NOT NULL COMMENT '批号',
+  `production_date` date DEFAULT NULL COMMENT '生产日期',
+  `expiry_date` date NOT NULL COMMENT '有效期',
+  `create_by` varchar(64) DEFAULT NULL,
+  `create_time` datetime DEFAULT NULL,
+  `update_by` varchar(64) DEFAULT NULL,
+  `update_time` datetime DEFAULT NULL,
+  `del_flag` tinyint NOT NULL DEFAULT '0',
+  `remark` varchar(500) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_order_drug_batch` (`order_id`,`drug_id`,`batch_no`),
+  KEY `idx_order_id` (`order_id`),
+  KEY `idx_drug_id` (`drug_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品采购订单明细';
+
+-- ----------------------------
+-- biz_drug_inbound  药品入库单
+-- ----------------------------
+CREATE TABLE `biz_drug_inbound` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `inbound_no` varchar(32) NOT NULL COMMENT '入库单号（唯一）',
+  `inbound_type` tinyint NOT NULL DEFAULT '1' COMMENT '入库类型（1-采购入库 2-退货入库 3-盘盈入库 4-其他入库）',
+  `purchase_order_id` bigint DEFAULT NULL COMMENT '来源采购订单ID',
+  `purchase_order_no` varchar(32) DEFAULT NULL COMMENT '来源采购订单号',
+  `supplier` varchar(200) DEFAULT NULL COMMENT '供应商',
+  `total_amount` decimal(10,2) DEFAULT '0.00' COMMENT '总金额',
+  `total_quantity` decimal(10,2) DEFAULT '0.00' COMMENT '总数量',
+  `inbound_status` tinyint DEFAULT '1' COMMENT '入库状态（1-待审核 2-已审核 3-已入库 4-已取消）',
+  `audit_by` varchar(64) DEFAULT NULL COMMENT '审核人',
+  `audit_time` datetime DEFAULT NULL COMMENT '审核时间',
+  `inbound_by` varchar(64) DEFAULT NULL COMMENT '入库人',
+  `inbound_time` datetime DEFAULT NULL COMMENT '入库时间',
+  `cancel_by` varchar(64) DEFAULT NULL COMMENT '取消人',
+  `cancel_time` datetime DEFAULT NULL COMMENT '取消时间',
+  `cancel_reason` varchar(200) DEFAULT NULL COMMENT '取消原因',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_inbound_no` (`inbound_no`),
+  KEY `idx_inbound_type` (`inbound_type`),
+  KEY `idx_inbound_status` (`inbound_status`),
+  KEY `idx_purchase_order` (`purchase_order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品入库单';
+
+-- ----------------------------
+-- biz_drug_inbound_detail  药品入库明细
+-- ----------------------------
+CREATE TABLE `biz_drug_inbound_detail` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `inbound_id` bigint NOT NULL COMMENT '入库单ID',
+  `inbound_no` varchar(32) NOT NULL COMMENT '入库单号',
+  `drug_id` bigint NOT NULL COMMENT '药品ID',
+  `drug_code` varchar(32) NOT NULL COMMENT '药品编码',
+  `drug_name` varchar(200) NOT NULL COMMENT '药品名称',
+  `specification` varchar(100) DEFAULT NULL COMMENT '规格',
+  `unit` varchar(20) NOT NULL COMMENT '单位',
+  `batch_no` varchar(50) NOT NULL COMMENT '批号',
+  `production_date` date DEFAULT NULL COMMENT '生产日期',
+  `expiry_date` date NOT NULL COMMENT '有效期',
+  `quantity` decimal(10,2) NOT NULL COMMENT '入库数量',
+  `cost_price` decimal(10,2) NOT NULL COMMENT '成本价',
+  `amount` decimal(10,2) NOT NULL COMMENT '金额',
+  `detail_status` tinyint DEFAULT '1' COMMENT '明细状态（1-正常 2-已入库 3-已取消）',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  KEY `idx_inbound_id` (`inbound_id`),
+  KEY `idx_drug_id` (`drug_id`),
+  KEY `idx_batch_no` (`batch_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品入库明细';
+
+-- ----------------------------
+-- biz_drug_stock  药品批次库存
+-- ----------------------------
+CREATE TABLE `biz_drug_stock` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `drug_id` bigint NOT NULL COMMENT '药品ID',
+  `batch_no` varchar(50) NOT NULL COMMENT '批号',
+  `production_date` date DEFAULT NULL COMMENT '生产日期',
+  `expiry_date` date NOT NULL COMMENT '有效期',
+  `quantity` decimal(10,2) DEFAULT '0.00' COMMENT '库存数量',
+  `locked_quantity` decimal(10,2) DEFAULT '0.00' COMMENT '锁定数量',
+  `available_quantity` decimal(10,2) DEFAULT '0.00' COMMENT '可用数量',
+  `cost_price` decimal(10,2) DEFAULT '0.00' COMMENT '成本价',
+  `total_amount` decimal(10,2) DEFAULT '0.00' COMMENT '库存金额',
+  `location` varchar(100) DEFAULT NULL COMMENT '存放位置',
+  `stock_room` tinyint NOT NULL DEFAULT '2' COMMENT '库存地点（1-药库 2-药房）',
+  `supplier` varchar(200) DEFAULT NULL COMMENT '供应商',
+  `supplier_id` bigint DEFAULT NULL COMMENT '供应商ID',
+  `stock_status` tinyint DEFAULT '1' COMMENT '库存状态（1-正常 2-预警 3-缺货 4-过期）',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  KEY `idx_drug_id` (`drug_id`),
+  KEY `idx_batch_no` (`batch_no`),
+  KEY `idx_expiry_date` (`expiry_date`),
+  KEY `idx_stock_status` (`stock_status`),
+  KEY `idx_room_drug_expiry` (`stock_room`,`drug_id`,`expiry_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品批次库存';
+
+-- ----------------------------
+-- biz_drug_stock_log  药品库存流水
+-- ----------------------------
+CREATE TABLE `biz_drug_stock_log` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `stock_id` bigint NOT NULL COMMENT '库存批次ID',
+  `drug_id` bigint NOT NULL COMMENT '药品ID',
+  `batch_no` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '批号',
+  `change_type` tinyint NOT NULL COMMENT '变动类型（1-入库 2-发药出库 3-退药回库 4-其他出库 5-盘盈 6-盘亏）',
+  `change_quantity` decimal(10,2) NOT NULL COMMENT '变动数量',
+  `quantity_before` decimal(10,2) NOT NULL COMMENT '变动前批次数量',
+  `quantity_after` decimal(10,2) NOT NULL COMMENT '变动后批次数量',
+  `source_type` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '来源类型',
+  `source_id` bigint DEFAULT NULL COMMENT '来源单据ID',
+  `source_no` varchar(64) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '来源单据号',
+  `operator_name` varchar(50) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '操作人',
+  `create_by` varchar(64) COLLATE utf8mb4_general_ci DEFAULT '' COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) COLLATE utf8mb4_general_ci DEFAULT '' COMMENT '更新人',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) COLLATE utf8mb4_general_ci DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  KEY `idx_dslog_drug` (`drug_id`),
+  KEY `idx_dslog_stock` (`stock_id`),
+  KEY `idx_dslog_source` (`source_id`),
+  KEY `idx_dslog_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='药品库存流水';
+
+-- ----------------------------
+-- biz_drug_outbound  药品出库单
+-- ----------------------------
+CREATE TABLE `biz_drug_outbound` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `outbound_no` varchar(32) NOT NULL COMMENT '出库单号（唯一）',
+  `outbound_type` tinyint NOT NULL DEFAULT '1' COMMENT '出库类型（1-发药出库 2-报损出库 3-退药出库 4-调拨出库 5-其他出库）',
+  `total_amount` decimal(10,2) DEFAULT '0.00' COMMENT '总金额',
+  `total_quantity` decimal(10,2) DEFAULT '0.00' COMMENT '总数量',
+  `outbound_status` tinyint DEFAULT '1' COMMENT '出库状态（1-待审核 2-已审核 3-已出库 4-已取消）',
+  `audit_by` varchar(64) DEFAULT NULL COMMENT '审核人',
+  `audit_time` datetime DEFAULT NULL COMMENT '审核时间',
+  `outbound_by` varchar(64) DEFAULT NULL COMMENT '出库人',
+  `outbound_time` datetime DEFAULT NULL COMMENT '出库时间',
+  `cancel_by` varchar(64) DEFAULT NULL COMMENT '取消人',
+  `cancel_time` datetime DEFAULT NULL COMMENT '取消时间',
+  `cancel_reason` varchar(200) DEFAULT NULL COMMENT '取消原因',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_outbound_no` (`outbound_no`),
+  KEY `idx_outbound_type` (`outbound_type`),
+  KEY `idx_outbound_status` (`outbound_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品出库单';
+
+-- ----------------------------
+-- biz_drug_outbound_detail  药品出库明细
+-- ----------------------------
+CREATE TABLE `biz_drug_outbound_detail` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `outbound_id` bigint NOT NULL COMMENT '出库单ID',
+  `outbound_no` varchar(32) NOT NULL COMMENT '出库单号',
+  `drug_id` bigint NOT NULL COMMENT '药品ID',
+  `drug_code` varchar(32) NOT NULL COMMENT '药品编码',
+  `drug_name` varchar(200) NOT NULL COMMENT '药品名称',
+  `specification` varchar(100) DEFAULT NULL COMMENT '规格',
+  `unit` varchar(20) NOT NULL COMMENT '单位',
+  `batch_no` varchar(50) NOT NULL COMMENT '批号',
+  `quantity` decimal(10,2) NOT NULL COMMENT '出库数量',
+  `cost_price` decimal(10,2) NOT NULL COMMENT '成本价',
+  `amount` decimal(10,2) NOT NULL COMMENT '金额',
+  `detail_status` tinyint DEFAULT '1' COMMENT '明细状态（1-正常 2-已出库 3-已取消）',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  KEY `idx_outbound_id` (`outbound_id`),
+  KEY `idx_drug_id` (`drug_id`),
+  KEY `idx_batch_no` (`batch_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品出库明细';
+
+-- ----------------------------
+-- biz_drug_dispensing  药品发药记录
+-- ----------------------------
+CREATE TABLE `biz_drug_dispensing` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `dispensing_no` varchar(32) NOT NULL COMMENT '发药单号',
+  `prescription_id` bigint NOT NULL COMMENT '处方ID',
+  `prescription_no` varchar(32) DEFAULT NULL COMMENT '处方号',
+  `patient_id` bigint NOT NULL COMMENT '患者ID',
+  `patient_no` varchar(32) DEFAULT NULL COMMENT '患者号',
+  `patient_name` varchar(50) DEFAULT NULL COMMENT '患者姓名',
+  `drug_id` bigint NOT NULL COMMENT '药品ID',
+  `drug_code` varchar(32) DEFAULT NULL COMMENT '药品编码',
+  `drug_name` varchar(100) NOT NULL COMMENT '药品名称',
+  `specification` varchar(100) DEFAULT NULL COMMENT '规格',
+  `unit` varchar(20) DEFAULT NULL COMMENT '单位',
+  `quantity` decimal(10,2) NOT NULL COMMENT '发药数量',
+  `price` decimal(10,4) DEFAULT NULL COMMENT '单价',
+  `amount` decimal(10,2) NOT NULL COMMENT '金额',
+  `dispensing_status` tinyint NOT NULL DEFAULT '1' COMMENT '发药状态（1-待发药 2-已发药 3-已退药）',
+  `pharmacist_id` bigint DEFAULT NULL COMMENT '发药药师ID',
+  `pharmacist_name` varchar(50) DEFAULT NULL COMMENT '发药药师姓名',
+  `dispensing_time` datetime DEFAULT NULL COMMENT '发药时间',
+  `stock_before` decimal(10,2) DEFAULT NULL COMMENT '发药前库存',
+  `stock_after` decimal(10,2) DEFAULT NULL COMMENT '发药后库存',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `prescription_detail_id` bigint DEFAULT NULL COMMENT '处方明细ID',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_dispensing_no` (`dispensing_no`),
+  KEY `idx_prescription_id` (`prescription_id`),
+  KEY `idx_patient_id` (`patient_id`),
+  KEY `idx_drug_id` (`drug_id`),
+  KEY `idx_dispensing_status` (`dispensing_status`),
+  KEY `idx_bdisp_detail` (`prescription_detail_id`,`dispensing_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品发药记录';
+
+-- ----------------------------
+-- biz_ward_dispense  住院摆药单
+-- ----------------------------
+CREATE TABLE `biz_ward_dispense` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `dispense_no` varchar(32) NOT NULL COMMENT '摆药单号 WD+yyyyMMdd+4位',
+  `dispense_date` date NOT NULL COMMENT '摆药日期',
+  `admission_id` bigint NOT NULL COMMENT '入院ID',
+  `patient_id` bigint NOT NULL COMMENT '患者ID',
+  `patient_no` varchar(64) DEFAULT NULL COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) DEFAULT NULL COMMENT '患者姓名（快照）',
+  `ward_id` bigint NOT NULL COMMENT '病区ID（快照）',
+  `ward_name` varchar(128) DEFAULT NULL COMMENT '病区名称（快照）',
+  `dept_id` bigint DEFAULT NULL COMMENT '入院科室ID（快照）',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '主单状态（1-待配药 2-配药中 3-已配药 4-已核对 5-已退药）',
+  `generate_by` varchar(64) DEFAULT NULL COMMENT '生成人（药房）',
+  `generate_time` datetime DEFAULT NULL COMMENT '生成时间',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(512) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_dispense_no` (`dispense_no`),
+  KEY `idx_adm_date` (`admission_id`,`dispense_date`),
+  KEY `idx_ward_date` (`ward_id`,`dispense_date`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='住院摆药单';
+
+-- ----------------------------
+-- biz_ward_dispense_item  住院摆药明细
+-- ----------------------------
+CREATE TABLE `biz_ward_dispense_item` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `dispense_id` bigint NOT NULL COMMENT '摆药单ID',
+  `dispense_no` varchar(32) DEFAULT NULL COMMENT '摆药单号（冗余）',
+  `dispense_date` date NOT NULL COMMENT '摆药日期',
+  `dispense_seq` int NOT NULL DEFAULT '1' COMMENT '重摆序号',
+  `order_id` bigint NOT NULL COMMENT '住院医嘱ID',
+  `order_no` varchar(32) DEFAULT NULL COMMENT '医嘱号（快照）',
+  `admission_id` bigint NOT NULL COMMENT '入院ID（冗余）',
+  `patient_id` bigint NOT NULL COMMENT '患者ID（冗余）',
+  `patient_no` varchar(64) DEFAULT NULL COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) DEFAULT NULL COMMENT '患者姓名（快照）',
+  `ward_id` bigint DEFAULT NULL COMMENT '病区ID（快照）',
+  `drug_id` bigint NOT NULL COMMENT '药品ID',
+  `drug_name` varchar(128) DEFAULT NULL COMMENT '药品名称（快照）',
+  `item_code` varchar(64) DEFAULT NULL COMMENT '医嘱项目编码（快照）',
+  `item_name` varchar(128) DEFAULT NULL COMMENT '医嘱项目名称（快照）',
+  `spec` varchar(64) DEFAULT NULL COMMENT '规格（快照）',
+  `unit` varchar(32) DEFAULT NULL COMMENT '单位（快照）',
+  `quantity` decimal(12,2) NOT NULL COMMENT '摆药数量',
+  `price` decimal(12,4) NOT NULL DEFAULT '0.0000' COMMENT '单价',
+  `amount` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '金额 = quantity × price',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '明细状态（1-待配药 2-已配药 3-已核对 4-已退药）',
+  `stock_before` decimal(12,2) DEFAULT NULL COMMENT '配药前库存',
+  `stock_after` decimal(12,2) DEFAULT NULL COMMENT '配药后库存',
+  `fee_record_id` bigint DEFAULT NULL COMMENT '记账行ID',
+  `fee_no` varchar(32) DEFAULT NULL COMMENT '记账单号',
+  `dispenser_id` bigint DEFAULT NULL COMMENT '配药人ID',
+  `dispenser_name` varchar(64) DEFAULT NULL COMMENT '配药人姓名',
+  `dispense_time` datetime DEFAULT NULL COMMENT '配药时间',
+  `checker_id` bigint DEFAULT NULL COMMENT '核对人ID（员工ID）',
+  `checker_name` varchar(64) DEFAULT NULL COMMENT '核对人姓名',
+  `check_time` datetime DEFAULT NULL COMMENT '核对时间',
+  `return_by` varchar(64) DEFAULT NULL COMMENT '退药操作人',
+  `return_time` datetime DEFAULT NULL COMMENT '退药时间',
+  `return_reason` varchar(255) DEFAULT NULL COMMENT '退药原因（必填）',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(512) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_order_date_seq` (`order_id`,`dispense_date`,`dispense_seq`),
+  KEY `idx_dispense` (`dispense_id`),
+  KEY `idx_admission` (`admission_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_drug` (`drug_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='住院摆药明细';
+
+-- ----------------------------
+-- biz_drug_transfer  药品调拨单
+-- ----------------------------
+CREATE TABLE `biz_drug_transfer` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `transfer_no` varchar(64) NOT NULL COMMENT '调拨单号',
+  `transfer_type` tinyint NOT NULL COMMENT '方向（1-药库下拨药房 2-药房退回药库）',
+  `from_room` tinyint NOT NULL COMMENT '发出库位（1-药库 2-药房）',
+  `to_room` tinyint NOT NULL COMMENT '接收库位',
+  `reason` varchar(200) NOT NULL COMMENT '事由',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1-待发出 2-待接收 3-已完成 4-已作废）',
+  `total_items` int NOT NULL DEFAULT '0' COMMENT '批次数',
+  `total_quantity` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '申请合计数量',
+  `out_quantity` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '已发出合计数量',
+  `in_quantity` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '已接收合计数量',
+  `total_amount` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '合计金额',
+  `out_by` varchar(64) DEFAULT NULL COMMENT '发出人',
+  `out_time` datetime DEFAULT NULL COMMENT '发出时间',
+  `in_by` varchar(64) DEFAULT NULL COMMENT '接收人',
+  `in_time` datetime DEFAULT NULL COMMENT '接收时间',
+  `cancel_by` varchar(64) DEFAULT NULL COMMENT '作废操作人',
+  `cancel_time` datetime DEFAULT NULL COMMENT '作废时间',
+  `cancel_reason` varchar(200) DEFAULT NULL COMMENT '作废原因',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_transfer_no` (`transfer_no`),
+  KEY `idx_transfer_status` (`transfer_type`,`status`,`create_time`),
+  KEY `idx_transfer_create` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品调拨单';
+
+-- ----------------------------
+-- biz_drug_transfer_item  药品调拨明细
+-- ----------------------------
+CREATE TABLE `biz_drug_transfer_item` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `transfer_id` bigint NOT NULL COMMENT '调拨单ID',
+  `stock_id` bigint NOT NULL COMMENT '发出方库存批次ID',
+  `in_stock_id` bigint DEFAULT NULL COMMENT '接收方库存批次ID',
+  `drug_id` bigint NOT NULL COMMENT '药品ID',
+  `drug_code` varchar(32) DEFAULT NULL COMMENT '药品编码（快照）',
+  `drug_name` varchar(200) DEFAULT NULL COMMENT '药品名称（快照）',
+  `specification` varchar(100) DEFAULT NULL COMMENT '规格（快照）',
+  `unit` varchar(20) DEFAULT NULL COMMENT '单位（快照）',
+  `batch_no` varchar(50) DEFAULT NULL COMMENT '批号',
+  `production_date` date DEFAULT NULL COMMENT '生产日期（快照）',
+  `expiry_date` date DEFAULT NULL COMMENT '有效期（快照）',
+  `cost_price` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '批次成本价',
+  `apply_quantity` decimal(10,2) NOT NULL COMMENT '调拨数量',
+  `locked_quantity` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '建单时该批次已锁定量',
+  `out_flag` tinyint NOT NULL DEFAULT '0' COMMENT '发出标记（0-未发出 1-已发出）',
+  `in_flag` tinyint NOT NULL DEFAULT '0' COMMENT '接收标记（0-未接收 1-已接收）',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_transfer_stock` (`transfer_id`,`stock_id`),
+  KEY `idx_transfer_item_drug` (`drug_id`),
+  KEY `idx_transfer_item_flag` (`transfer_id`,`out_flag`,`in_flag`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品调拨明细';
+
+-- ----------------------------
+-- biz_drug_supplier_return  药品供应商退货单
+-- ----------------------------
+CREATE TABLE `biz_drug_supplier_return` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `return_no` varchar(64) NOT NULL COMMENT '退货单号',
+  `supplier_id` bigint NOT NULL COMMENT '供应商ID',
+  `supplier_name` varchar(128) NOT NULL COMMENT '供应商名称',
+  `return_reason` varchar(200) NOT NULL COMMENT '退货原因（近效期 / 质量问题 / 冷链断链 / 采购让价退货…，必填）',
+  `src_ref_no` varchar(64) DEFAULT NULL COMMENT '原入库单号或采购单号',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1-待退货 2-已退货 3-已作废）',
+  `total_items` int NOT NULL DEFAULT '0' COMMENT '批次数',
+  `total_quantity` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '退货合计数量',
+  `total_amount` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '退货合计金额',
+  `return_by` varchar(64) DEFAULT NULL COMMENT '退货经办人',
+  `return_time` datetime DEFAULT NULL COMMENT '退货时间',
+  `cancel_by` varchar(64) DEFAULT NULL COMMENT '作废操作人',
+  `cancel_time` datetime DEFAULT NULL COMMENT '作废时间',
+  `cancel_reason` varchar(200) DEFAULT NULL COMMENT '作废原因',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_supplier_return_no` (`return_no`),
+  KEY `idx_supplier_return_sup` (`supplier_id`,`status`),
+  KEY `idx_supplier_return_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品供应商退货单';
+
+-- ----------------------------
+-- biz_drug_supplier_return_item  药品供应商退货明细
+-- ----------------------------
+CREATE TABLE `biz_drug_supplier_return_item` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `return_id` bigint NOT NULL COMMENT '退货单ID',
+  `stock_id` bigint NOT NULL COMMENT '库存批次ID',
+  `drug_id` bigint NOT NULL COMMENT '药品ID',
+  `drug_code` varchar(32) DEFAULT NULL COMMENT '药品编码（快照）',
+  `drug_name` varchar(200) DEFAULT NULL COMMENT '药品名称（快照）',
+  `specification` varchar(100) DEFAULT NULL COMMENT '规格（快照）',
+  `unit` varchar(20) DEFAULT NULL COMMENT '单位（快照）',
+  `batch_no` varchar(50) DEFAULT NULL COMMENT '批号（快照）',
+  `expiry_date` date DEFAULT NULL COMMENT '有效期',
+  `stock_room` tinyint NOT NULL DEFAULT '1' COMMENT '退货库位（1-药库 2-药房）',
+  `supplier_id` bigint DEFAULT NULL COMMENT '批次所属供应商ID',
+  `cost_price` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '批次成本价',
+  `quantity` decimal(10,2) NOT NULL COMMENT '退货数量',
+  `amount` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '退货金额',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_sreturn_stock` (`return_id`,`stock_id`),
+  KEY `idx_sreturn_item_drug` (`drug_id`),
+  KEY `idx_sreturn_item_sup` (`supplier_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品供应商退货明细';
+
+-- ----------------------------
+-- biz_drug_trace  药品追溯码台账
+-- ----------------------------
+CREATE TABLE `biz_drug_trace` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `trace_no` varchar(32) NOT NULL COMMENT '院内追溯流水号',
+  `trace_code` varchar(128) NOT NULL COMMENT '追溯码原文',
+  `code_type` tinyint NOT NULL DEFAULT '1' COMMENT '码制（1-GS1 2-中国药品追溯码20位 3-其他）',
+  `drug_di` varchar(32) DEFAULT NULL COMMENT '解析-产品标识',
+  `serial_no` varchar(64) DEFAULT NULL COMMENT '解析-生产序列号',
+  `code_batch_no` varchar(64) DEFAULT NULL COMMENT '解析-码内批号',
+  `code_expiry_date` date DEFAULT NULL COMMENT '解析-码内有效期',
+  `drug_id` bigint NOT NULL COMMENT '药品ID',
+  `drug_code` varchar(32) DEFAULT NULL COMMENT '药品编码（快照）',
+  `drug_name` varchar(100) DEFAULT NULL COMMENT '药品名称（快照）',
+  `generic_name` varchar(100) DEFAULT NULL COMMENT '通用名（快照）',
+  `specification` varchar(100) DEFAULT NULL COMMENT '规格（快照）',
+  `dosage_form` varchar(50) DEFAULT NULL COMMENT '剂型（快照）',
+  `unit` varchar(20) DEFAULT NULL COMMENT '单位（快照）',
+  `manufacturer` varchar(200) DEFAULT NULL COMMENT '生产厂家（快照）',
+  `approval_number` varchar(100) DEFAULT NULL COMMENT '批准文号',
+  `stock_id` bigint DEFAULT NULL COMMENT '采集挂靠批次ID',
+  `stock_batch_no` varchar(50) DEFAULT NULL COMMENT '库存批号（快照）',
+  `supplier` varchar(200) DEFAULT NULL COMMENT '供应商（快照）',
+  `supplier_id` bigint DEFAULT NULL COMMENT '供应商ID',
+  `source_type` tinyint NOT NULL DEFAULT '1' COMMENT '采集来源（1-入库采集 2-存量补采）',
+  `inbound_id` bigint DEFAULT NULL COMMENT '来源入库单ID',
+  `inbound_no` varchar(64) DEFAULT NULL COMMENT '来源入库单号（快照）',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '码状态（1-在库 2-已发药核销 3-已作废）',
+  `scan_time` datetime DEFAULT NULL COMMENT '采集扫码时间',
+  `operator_name` varchar(50) DEFAULT NULL COMMENT '采集人',
+  `dispensing_id` bigint DEFAULT NULL COMMENT '发药单ID',
+  `dispensing_no` varchar(64) DEFAULT NULL COMMENT '发药单号（快照）',
+  `patient_id` bigint DEFAULT NULL COMMENT '患者ID',
+  `patient_no` varchar(32) DEFAULT NULL COMMENT '患者编号（快照）',
+  `patient_name` varchar(50) DEFAULT NULL COMMENT '患者姓名（快照）',
+  `visit_type` tinyint DEFAULT NULL COMMENT '就诊类型（1-门诊 2-住院）',
+  `regist_id` bigint DEFAULT NULL COMMENT '门诊挂号ID（快照）',
+  `admission_id` bigint DEFAULT NULL COMMENT '住院ID（快照）',
+  `dept_id` bigint DEFAULT NULL COMMENT '发药科室ID（快照）',
+  `dept_name` varchar(100) DEFAULT NULL COMMENT '发药科室名称（快照）',
+  `dispense_time` datetime DEFAULT NULL COMMENT '发药核销时间',
+  `dispense_operator` varchar(50) DEFAULT NULL COMMENT '发药核销人',
+  `upload_status` tinyint NOT NULL DEFAULT '0' COMMENT '上传状态（0-待上传 1-已上传 2-上传失败）',
+  `upload_batch_no` varchar(32) DEFAULT NULL COMMENT '上传批次号',
+  `upload_time` datetime DEFAULT NULL COMMENT '上传时间',
+  `upload_fail_reason` varchar(500) DEFAULT NULL COMMENT '上传失败原因',
+  `void_type` tinyint DEFAULT NULL COMMENT '作废类型（1-退药 2-报损 3-召回）',
+  `void_time` datetime DEFAULT NULL COMMENT '作废时间',
+  `void_reason` varchar(200) DEFAULT NULL COMMENT '作废原因',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_drug_trace_no` (`trace_no`),
+  UNIQUE KEY `uk_drug_trace_code` (`trace_code`),
+  KEY `idx_dtrace_di` (`drug_di`),
+  KEY `idx_dtrace_drug` (`drug_id`),
+  KEY `idx_dtrace_stock` (`stock_id`),
+  KEY `idx_dtrace_status` (`status`),
+  KEY `idx_dtrace_upload` (`upload_status`),
+  KEY `idx_dtrace_patient` (`patient_id`),
+  KEY `idx_dtrace_dispensing` (`dispensing_id`),
+  KEY `idx_dtrace_scan_time` (`scan_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品追溯码台账';
+
+-- ----------------------------
+-- biz_stocktake  药房盘点单
+-- ----------------------------
+CREATE TABLE `biz_stocktake` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `stocktake_no` varchar(64) NOT NULL COMMENT '盘点单号',
+  `stocktake_title` varchar(200) NOT NULL COMMENT '盘点主题',
+  `scope_drug_type` tinyint DEFAULT NULL COMMENT '范围-药品类型（1-西药 2-中成药 3-中药饮片）',
+  `scope_keyword` varchar(100) DEFAULT NULL COMMENT '范围-药品名称关键字',
+  `scope_desc` varchar(200) NOT NULL COMMENT '范围的人读描述',
+  `snapshot_time` datetime NOT NULL COMMENT '账面快照时点',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '状态（1-盘点中 2-待复核 3-已过账 4-已关单）',
+  `total_items` int NOT NULL DEFAULT '0' COMMENT '参与盘点批次数',
+  `counted_items` int NOT NULL DEFAULT '0' COMMENT '已录入实盘数批次数',
+  `diff_items` int NOT NULL DEFAULT '0' COMMENT '有差异批次数',
+  `profit_items` int NOT NULL DEFAULT '0' COMMENT '盘盈批次数',
+  `loss_items` int NOT NULL DEFAULT '0' COMMENT '盘亏批次数',
+  `diff_quantity` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '净差数量',
+  `diff_amount` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '净差金额',
+  `submit_by` varchar(64) DEFAULT NULL COMMENT '提交人',
+  `submit_time` datetime DEFAULT NULL COMMENT '提交时间',
+  `audit_by` varchar(64) DEFAULT NULL COMMENT '复核人',
+  `audit_time` datetime DEFAULT NULL COMMENT '复核时间',
+  `audit_remark` varchar(500) DEFAULT NULL COMMENT '复核意见 / 退回原因',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_stocktake_no` (`stocktake_no`),
+  KEY `idx_stocktake_status` (`status`,`snapshot_time`),
+  KEY `idx_stocktake_create` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药房盘点单';
+
+-- ----------------------------
+-- biz_stocktake_item  药房盘点明细
+-- ----------------------------
+CREATE TABLE `biz_stocktake_item` (
+  `id` bigint NOT NULL COMMENT '主键',
+  `stocktake_id` bigint NOT NULL COMMENT '盘点单ID',
+  `stock_id` bigint NOT NULL COMMENT '库存批次ID',
+  `drug_id` bigint NOT NULL COMMENT '药品ID',
+  `drug_code` varchar(32) DEFAULT NULL COMMENT '药品编码（快照）',
+  `drug_name` varchar(200) DEFAULT NULL COMMENT '药品名称（快照）',
+  `specification` varchar(100) DEFAULT NULL COMMENT '规格（快照）',
+  `unit` varchar(20) DEFAULT NULL COMMENT '单位（快照）',
+  `batch_no` varchar(50) DEFAULT NULL COMMENT '批号（快照）',
+  `production_date` date DEFAULT NULL COMMENT '生产日期（快照）',
+  `expiry_date` date DEFAULT NULL COMMENT '有效期（快照）',
+  `location` varchar(100) DEFAULT NULL COMMENT '库位',
+  `cost_price` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '成本价',
+  `locked_quantity` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '快照时已锁定数量',
+  `book_quantity` decimal(10,2) NOT NULL COMMENT '账面数量',
+  `counted_quantity` decimal(10,2) DEFAULT NULL COMMENT '实盘数量',
+  `diff_quantity` decimal(10,2) NOT NULL DEFAULT '0.00' COMMENT '差异数量',
+  `diff_amount` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '差异金额',
+  `posted` tinyint NOT NULL DEFAULT '0' COMMENT '过账标记（0-未过账 1-已盘盈亏过账 2-无差异免过账）',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '差异说明',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_stocktake_stock` (`stocktake_id`,`stock_id`),
+  KEY `idx_stocktake_item_drug` (`drug_id`),
+  KEY `idx_stocktake_item_diff` (`stocktake_id`,`diff_quantity`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药房盘点明细';
+
+-- ----------------------------
+-- biz_drug_package  药品耗材套餐
+-- ----------------------------
+CREATE TABLE `biz_drug_package` (
+  `id` bigint NOT NULL,
+  `doctor_id` bigint NOT NULL COMMENT '医生ID',
+  `package_name` varchar(100) NOT NULL COMMENT '套餐名称',
+  `package_type` tinyint DEFAULT '1' COMMENT '套餐类型（1-药品套餐 2-检查套餐 3-综合套餐）',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  KEY `idx_doctor_id` (`doctor_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品耗材套餐';
+
+-- ----------------------------
+-- biz_drug_package_detail  药品耗材套餐明细
+-- ----------------------------
+CREATE TABLE `biz_drug_package_detail` (
+  `id` bigint NOT NULL,
+  `package_id` bigint NOT NULL COMMENT '套餐ID',
+  `item_type` tinyint NOT NULL COMMENT '项目类型（1-药品 2-检查 3-检验）',
+  `item_id` bigint NOT NULL COMMENT '项目ID',
+  `item_code` varchar(32) NOT NULL COMMENT '项目编码',
+  `item_name` varchar(200) NOT NULL COMMENT '项目名称',
+  `specification` varchar(100) DEFAULT NULL COMMENT '规格',
+  `unit` varchar(20) DEFAULT NULL COMMENT '单位',
+  `quantity` decimal(10,2) DEFAULT '1.00' COMMENT '数量',
+  `price` decimal(10,2) DEFAULT '0.00' COMMENT '单价',
+  `usage_dosage` varchar(100) DEFAULT NULL COMMENT '用法用量',
+  `frequency` varchar(50) DEFAULT NULL COMMENT '用药频次',
+  `route` varchar(50) DEFAULT NULL COMMENT '用药途径',
+  `duration` int DEFAULT NULL COMMENT '疗程天数',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  KEY `idx_package_id` (`package_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='药品耗材套餐明细';
+
+-- ----------------------------
+-- biz_pivas_batch  静配中心主单
+-- ----------------------------
+CREATE TABLE `biz_pivas_batch` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `pivas_no` varchar(32) NOT NULL COMMENT '静配单号',
+  `admix_date` date NOT NULL COMMENT '调配日期',
+  `admission_id` bigint NOT NULL COMMENT '入院ID',
+  `patient_id` bigint NOT NULL COMMENT '患者ID',
+  `patient_no` varchar(64) DEFAULT NULL COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) DEFAULT NULL COMMENT '患者姓名（快照）',
+  `ward_id` bigint NOT NULL COMMENT '病区ID（快照）',
+  `ward_name` varchar(128) DEFAULT NULL COMMENT '病区名称（快照）',
+  `dept_id` bigint DEFAULT NULL COMMENT '入院科室ID（快照）',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '主单状态（1-待审方 2-待排队 3-待调配 4-待核对 5-已完成 6-全拒配）',
+  `item_count` int NOT NULL DEFAULT '0' COMMENT '明细条数',
+  `generate_by` varchar(64) DEFAULT NULL COMMENT '生成人',
+  `generate_time` datetime DEFAULT NULL COMMENT '生成时间',
+  `label_by` varchar(64) DEFAULT NULL COMMENT '打标签（排队）',
+  `label_time` datetime DEFAULT NULL COMMENT '打标签时间',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(512) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_pivas_no` (`pivas_no`),
+  UNIQUE KEY `uk_adm_date` (`admission_id`,`admix_date`),
+  KEY `idx_pivas_ward_date` (`ward_id`,`admix_date`),
+  KEY `idx_pivas_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='静配中心主单';
+
+-- ----------------------------
+-- biz_pivas_item  静配中心调配明细
+-- ----------------------------
+CREATE TABLE `biz_pivas_item` (
+  `id` bigint NOT NULL COMMENT '主键ID',
+  `pivas_id` bigint NOT NULL COMMENT '主单ID',
+  `pivas_no` varchar(32) DEFAULT NULL COMMENT '静配单号（冗余）',
+  `admix_date` date NOT NULL COMMENT '调配日期',
+  `pivas_seq` int NOT NULL DEFAULT '1' COMMENT '重生成序号',
+  `order_id` bigint NOT NULL COMMENT '住院医嘱ID',
+  `order_no` varchar(32) DEFAULT NULL COMMENT '医嘱号（快照）',
+  `admission_id` bigint NOT NULL COMMENT '入院ID（冗余）',
+  `patient_id` bigint NOT NULL COMMENT '患者ID（冗余）',
+  `patient_no` varchar(64) DEFAULT NULL COMMENT '患者编号（快照）',
+  `patient_name` varchar(128) DEFAULT NULL COMMENT '患者姓名（快照）',
+  `ward_id` bigint DEFAULT NULL COMMENT '病区ID（快照）',
+  `drug_id` bigint NOT NULL COMMENT '药品ID',
+  `drug_name` varchar(128) DEFAULT NULL COMMENT '药品名称（快照）',
+  `item_code` varchar(64) DEFAULT NULL COMMENT '医嘱项目编码（快照）',
+  `item_name` varchar(128) DEFAULT NULL COMMENT '医嘱项目名称（快照）',
+  `spec` varchar(64) DEFAULT NULL COMMENT '规格（快照）',
+  `unit` varchar(32) DEFAULT NULL COMMENT '单位（快照）',
+  `quantity` decimal(12,2) NOT NULL COMMENT '当日调配数量',
+  `price` decimal(12,4) NOT NULL DEFAULT '0.0000' COMMENT '单价',
+  `amount` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '金额 = quantity × price',
+  `route` varchar(64) DEFAULT NULL COMMENT '给药途径（快照，中文原文：静滴/静推/泵入…）',
+  `frequency` varchar(32) DEFAULT NULL COMMENT '频次（快照，qd/bid/tid…）',
+  `status` tinyint NOT NULL DEFAULT '1' COMMENT '明细状态（0-已拒配 1-待审方 2-已审方 3-已排队 4-已调配 5-已核对发放）',
+  `queue_no` int DEFAULT NULL COMMENT '排队号',
+  `auditor_id` bigint DEFAULT NULL COMMENT '审方药师ID（员工ID）',
+  `auditor_name` varchar(64) DEFAULT NULL COMMENT '审方药师姓名',
+  `audit_time` datetime DEFAULT NULL COMMENT '审方时间',
+  `reject_reason` varchar(255) DEFAULT NULL COMMENT '审方退回原因',
+  `compounder_id` bigint DEFAULT NULL COMMENT '调配人ID',
+  `compounder_name` varchar(64) DEFAULT NULL COMMENT '调配人姓名',
+  `compound_time` datetime DEFAULT NULL COMMENT '调配时间',
+  `verifier_id` bigint DEFAULT NULL COMMENT '成品核对人ID',
+  `verifier_name` varchar(64) DEFAULT NULL COMMENT '成品核对人姓名',
+  `verify_time` datetime DEFAULT NULL COMMENT '核对发放时间',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+  `update_by` varchar(64) DEFAULT NULL COMMENT '更新人',
+  `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+  `del_flag` tinyint NOT NULL DEFAULT '0' COMMENT '删除标志（0-正常 1-删除）',
+  `remark` varchar(512) DEFAULT NULL COMMENT '备注',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_pivas_order_date_seq` (`order_id`,`admix_date`,`pivas_seq`),
+  KEY `idx_pivas_batch` (`pivas_id`),
+  KEY `idx_pivas_admission` (`admission_id`),
+  KEY `idx_pivas_status` (`status`),
+  KEY `idx_pivas_queue` (`admix_date`,`queue_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='静配中心调配明细';

@@ -1,0 +1,134 @@
+package com.his.system.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.his.system.entity.BizShift;
+import com.his.system.entity.BizStaffAttendance;
+import com.his.system.entity.BizStaffSchedule;
+import com.his.system.vo.CalibrationAdviceVO;
+import com.his.system.vo.StaffWorktimeVO;
+import com.his.system.vo.WorktimeSummaryVO;
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+
+import java.time.LocalDate;
+import java.util.List;
+
+/**
+ * 实际出勤 Mapper。
+ *
+ * <p>本类里几条 {@code @Select} 会直接读 {@code biz_staff_schedule}（计划）与
+ * {@code biz_shift}（班次），是<b>刻意的只读跨层访问</b>：出勤层的核心职责就是
+ * 「拿实际去对照计划」，把对照所需的读口放在这里，读和被读在同一处看得见。
+ * 反过来写操作一律不跨层 —— 实际不会去改计划。
+ */
+@Mapper
+public interface BizStaffAttendanceMapper extends BaseMapper<BizStaffAttendance> {
+
+    /**
+     * 按唯一键取一条出勤（人 × 日 × 单元 × 班次）。
+     * <br>命中即幂等：重复签到是同一次出勤的再次刷卡，不该生成第二条记录。
+     */
+    @Select("SELECT * FROM biz_staff_attendance WHERE del_flag = 0 "
+            + "AND employee_id = #{employeeId} AND schedule_date = #{date} "
+            + "AND org_type = #{orgType} AND org_id = #{orgId} AND shift_id = #{shiftId} LIMIT 1")
+    BizStaffAttendance selectOneAttend(@Param("employeeId") Long employeeId,
+                                       @Param("date") LocalDate date,
+                                       @Param("orgType") Integer orgType,
+                                       @Param("orgId") Long orgId,
+                                       @Param("shiftId") Long shiftId);
+
+    /**
+     * 物理删单行。
+     * <br>与 {@code biz_staff_schedule} 同一个坑：本表唯一键「人 × 日 × 单元 × 班次」
+     * 不含删除标志，软删留下的行继续占键，于是「撤掉这条登记、再重新签一次」必然撞重复键。
+     * 出勤登记本身不是留档对象（留档的是它喂出来的工时与归因），错了就该让它彻底消失。
+     */
+    @Delete("DELETE FROM biz_staff_attendance WHERE id = #{id}")
+    int purgeById(@Param("id") Long id);
+
+    /** 这个人当天的全部出勤（一个单元一行，跨两个单元支援就是两行） */
+    @Select("SELECT * FROM biz_staff_attendance WHERE del_flag = 0 "
+            + "AND employee_id = #{employeeId} AND schedule_date = #{date}")
+    List<BizStaffAttendance> selectDayOfEmployee(@Param("employeeId") Long employeeId,
+                                                 @Param("date") LocalDate date);
+
+    /**
+     * 这个人当天"应上班"的计划行（只读对照用）。
+     * <br>为什么限定 {@code duty_status = 1}：休息/请假/培训本来就不用来，
+     * 拿它们跟"有没有出勤"对照会凭空制造出一堆伪差异。
+     */
+    @Select("SELECT * FROM biz_staff_schedule WHERE del_flag = 0 "
+            + "AND employee_id = #{employeeId} AND schedule_date = #{date} AND duty_status = 1")
+    List<BizStaffSchedule> selectDayPlanOfEmployee(@Param("employeeId") Long employeeId,
+                                                   @Param("date") LocalDate date);
+
+    /** 按 id 取一条计划事实（签退时要把这条记录放回它自己的班，才知道几点该下班） */
+    @Select("SELECT * FROM biz_staff_schedule WHERE del_flag = 0 AND id = #{id}")
+    BizStaffSchedule selectPlanById(@Param("id") Long id);
+
+    /** 迟到宽限（分钟）—— 判定参数存在班次字典里，不写死在代码里 */
+    @Select("SELECT late_grace_minutes FROM biz_shift WHERE id = #{shiftId} AND del_flag = 0")
+    Integer selectLateGrace(@Param("shiftId") Long shiftId);
+
+    /** 班次快照（含起止时间与迟到宽限） */
+    @Select("SELECT id, shift_name, start_time, end_time, cross_day, is_night, duration_minutes, late_grace_minutes "
+            + "FROM biz_shift WHERE id = #{shiftId} AND del_flag = 0")
+    BizShift selectShift(@Param("shiftId") Long shiftId);
+
+    // -------------------------------------------------------------------------
+    // 以下三条读的是 sql/214 建的视图。NOTE：视图的判定口径（尤其是 diff_type）
+    // 必须与这里保持一致 —— 判定逻辑只存在一处（视图），前端/报表/脚本读出来都一样。
+    // -------------------------------------------------------------------------
+
+    @Select("""
+            <script>
+            SELECT * FROM v_staff_worktime
+            WHERE work_date BETWEEN #{startDate} AND #{endDate}
+              <if test="orgType != null">AND org_type = #{orgType}</if>
+              <if test="orgId != null">AND org_id = #{orgId}</if>
+              <if test="staffType != null">AND staff_type = #{staffType}</if>
+              <if test="employeeId != null">AND employee_id = #{employeeId}</if>
+              <if test="diffType != null">AND diff_type = #{diffType}</if>
+            ORDER BY work_date, org_type, org_id, employee_id
+            </script>
+            """)
+    List<StaffWorktimeVO> selectComparison(@Param("startDate") LocalDate startDate,
+                                           @Param("endDate") LocalDate endDate,
+                                           @Param("orgType") Integer orgType,
+                                           @Param("orgId") Long orgId,
+                                           @Param("staffType") Integer staffType,
+                                           @Param("employeeId") Long employeeId,
+                                           @Param("diffType") Integer diffType);
+
+    @Select("""
+            <script>
+            SELECT * FROM v_staff_worktime_summary
+            WHERE work_date BETWEEN #{startDate} AND #{endDate}
+              <if test="orgType != null">AND org_type = #{orgType}</if>
+              <if test="orgId != null">AND org_id = #{orgId}</if>
+              <if test="staffType != null">AND staff_type = #{staffType}</if>
+            ORDER BY work_date, org_type, org_id
+            </script>
+            """)
+    List<WorktimeSummaryVO> selectSummary(@Param("startDate") LocalDate startDate,
+                                          @Param("endDate") LocalDate endDate,
+                                          @Param("orgType") Integer orgType,
+                                          @Param("orgId") Long orgId,
+                                          @Param("staffType") Integer staffType);
+
+    @Select("""
+            <script>
+            SELECT * FROM v_staff_calibration_advice
+            WHERE 1 = 1
+              <if test="orgType != null">AND org_type = #{orgType}</if>
+              <if test="orgId != null">AND org_id = #{orgId}</if>
+              <if test="staffType != null">AND staff_type = #{staffType}</if>
+            ORDER BY FIELD(advice_type, 1, 3, 4, 2), unrecorded_head_days DESC
+            </script>
+            """)
+    List<CalibrationAdviceVO> selectAdvice(@Param("orgType") Integer orgType,
+                                           @Param("orgId") Long orgId,
+                                           @Param("staffType") Integer staffType);
+}

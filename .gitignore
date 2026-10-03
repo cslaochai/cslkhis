@@ -1,0 +1,64 @@
+# ============ 白名单模式 ============
+# 默认忽略仓库根目录下的**一切**（含 . 开头的目录），只显式放行需要进版本库的内容。
+# 注意：本文件只对「未跟踪」文件生效；历史上已入库的路径需先用
+#   git rm -r --cached <path>
+# 从索引剔除，规则才会真正生效。
+/*
+
+# 放行：项目源码 + 全部 SQL（source/back_end/sql/）
+!/source/
+
+# 放行：文档
+!/README.md
+!/AGENTS.md
+!/docs/
+
+# 放行：各级 .gitignore / .gitattributes（曾因穷举忽略规则被漏掉，属工程配置，应入库）
+!.gitignore
+!**/.gitignore
+!.gitattributes
+!**/.gitattributes
+
+# ============ 放行范围内的排除项 ============
+# Maven / Node 构建产物
+# 注意：target/ 与 node_modules/ 不能带前导斜杠，否则只匹配仓库根级，
+# source/front/node_modules(330M) 与 source/back_end/*/target(760M) 会被漏进库。
+target/
+node_modules/
+build/
+dist/
+dist-*/
+*.class
+*.jar
+*.war
+
+# 日志与本地临时文件
+*.log
+logs/
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+
+# 运行时上传产物（导诊单 PDF 等，由后端写入，不属源码）
+uploads/
+
+# 本地 IDE / 环境覆盖配置（项目内也属个人配置，不进库）
+.idea/
+*.iml
+*.ipr
+*.iws
+.env.local
+*.local
+
+# ============ 敏感信息：严禁入库 ============
+# 测试账号与数据库连接口令（曾误入库，已由历史清理移除）
+verify-credentials.json
+credentials.json
+*_credentials.json
+secrets*
+*.pem
+*.p12
+*.jks
+application-local.yml
+application-private.yml

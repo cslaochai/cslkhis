@@ -1,0 +1,86 @@
+:root {
+  --brand: #1269B5;
+  --teal: #0E9488;
+  --ink: #14303f;
+  --muted: #6b8494;
+  --line: #dbe6ee;
+  --bg: #f4f8fb;
+  --panel: #ffffff;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  display: flex; flex-direction: column;
+  font: 13px/1.5 "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+  color: var(--ink); background: var(--bg);
+}
+.top {
+  display: flex; align-items: center; gap: 18px;
+  height: 52px; padding: 0 16px; background: var(--panel);
+  border-bottom: 1px solid var(--line); flex: none;
+}
+.brand { display: flex; flex-direction: column; line-height: 1.25; }
+.brand b { color: var(--brand); font-size: 15px; letter-spacing: .5px; }
+.brand span { color: var(--muted); font-size: 11px; }
+.tabs { display: flex; gap: 4px; }
+.tabs button {
+  border: 1px solid transparent; background: none; color: var(--muted);
+  padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.tabs button:hover { background: #eef5fa; color: var(--brand); }
+.tabs button.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+.tools { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.tools input[type=text], #search {
+  width: 260px; padding: 6px 10px; border: 1px solid var(--line);
+  border-radius: 6px; color: var(--ink); background: #fbfdfe;
+}
+#search:focus { outline: none; border-color: var(--brand); }
+.sw { display: flex; align-items: center; gap: 6px; color: var(--muted); white-space: nowrap; }
+.tools button {
+  border: 1px solid var(--line); background: #fbfdfe; color: var(--ink);
+  padding: 5px 10px; border-radius: 6px; cursor: pointer;
+}
+.tools button:hover { border-color: var(--brand); color: var(--brand); }
+.body { flex: 1; display: flex; min-height: 0; }
+#side {
+  width: 320px; flex: none; overflow-y: auto; background: var(--panel);
+  border-right: 1px solid var(--line); padding: 10px 0 30px;
+}
+.side-h {
+  padding: 8px 14px 6px; color: var(--muted); font-size: 11px;
+  letter-spacing: 1px; text-transform: uppercase;
+}
+.item {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 7px 14px; border: 0; border-left: 3px solid transparent;
+  background: none; text-align: left; cursor: pointer; color: var(--ink); font-size: 13px;
+}
+.item:hover { background: #f0f7fc; }
+.item.on { background: #e8f2fa; border-left-color: var(--brand); font-weight: 600; }
+.item .no { color: var(--muted); font-variant-numeric: tabular-nums; width: 20px; flex: none; }
+.item .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .ct { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; flex: none; }
+.item.mono .nm { font-family: Consolas, "Courier New", monospace; font-size: 12px; }
+.item .nm b { display: block; font-weight: 600; }
+.item .nm i {
+  display: block; font-style: normal; color: var(--muted);
+  font-family: Consolas, "Courier New", monospace; font-size: 11px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#stage {
+  flex: 1; overflow: hidden; position: relative; cursor: grab;
+  background: var(--bg) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='22' height='22'><circle cx='1' cy='1' r='1' fill='%23d9e6ef'/></svg>");
+}
+#stage.drag { cursor: grabbing; }
+#canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; will-change: transform; }
+#canvas svg { background: #fff; box-shadow: 0 2px 14px rgba(18, 105, 181, .12); border-radius: 4px; }
+.flash { outline: 3px solid #e0592b; outline-offset: 2px; border-radius: 3px; }
+#status {
+  flex: none; height: 26px; display: flex; align-items: center; gap: 16px;
+  padding: 0 14px; background: var(--panel); border-top: 1px solid var(--line);
+  color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden;
+}
+#status b { color: var(--ink); }
+.legend { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.legend i { font-style: normal; font-family: Consolas, monospace; color: var(--ink); }
+.err { padding: 26px; color: #b3261e; background: #fdf1f0; border: 1px solid #f3c7c3; margin: 20px; border-radius: 6px; }

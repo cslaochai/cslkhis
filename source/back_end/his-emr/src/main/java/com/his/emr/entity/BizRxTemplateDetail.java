@@ -1,0 +1,54 @@
+package com.his.emr.entity;
+
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.common.base.BaseEntity;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.math.BigDecimal;
+
+/** 处方模板明细 */
+@Data
+@EqualsAndHashCode(callSuper = true)
+@TableName("biz_rx_template_detail")
+public class BizRxTemplateDetail extends BaseEntity {
+
+    /** 模板ID */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long templateId;
+    /** 药品ID */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long drugId;
+    /** 药品编码 */
+    private String drugCode;
+    /** 药品名称 */
+    private String drugName;
+    /** 通用名 */
+    private String genericName;
+    /** 规格 */
+    private String specification;
+    /** 剂型 */
+    private String dosageForm;
+    /** 生产厂家 */
+    private String manufacturer;
+    /** 单位 */
+    private String unit;
+    /** 数量 */
+    private BigDecimal quantity;
+    /** 单价 */
+    private BigDecimal price;
+    /** 金额 */
+    private BigDecimal amount;
+    /** 用法用量 */
+    private String usageDosage;
+    /** 用药频次 */
+    private String frequency;
+    /** 用药途径 */
+    private String route;
+    /** 疗程天数 */
+    private Integer duration;
+    /** 单次剂量 */
+    private String singleDosage;
+}

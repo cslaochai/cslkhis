@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.his</groupId>
+        <artifactId>his-backend</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>his-patient</artifactId>
+    <packaging>jar</packaging>
+    <name>his-patient</name>
+    <description>患者与住院：患者主索引与健康档案、入出转与医嘱、床位与病区调度、护理文书评估质控排班、病案首页与住院病历、危急值、营养膳食、VTE、死亡登记、转诊</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-common</artifactId>
+        </dependency>
+        <!-- 医嘱执行即产生应收：一次执行落一条记账行 -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-fee</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-system</artifactId>
+        </dependency>    </dependencies>
+</project>

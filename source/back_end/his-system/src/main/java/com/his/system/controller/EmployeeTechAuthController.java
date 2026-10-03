@@ -1,0 +1,118 @@
+package com.his.system.controller;
+
+import com.his.common.base.PageResult;
+import com.his.common.base.Result;
+import com.his.system.dto.TechAuthApproveDTO;
+import com.his.system.dto.TechAuthOverrideConfirmDTO;
+import com.his.system.dto.TechAuthOverrideQueryPageDTO;
+import com.his.system.dto.TechAuthQueryPageDTO;
+import com.his.system.dto.TechAuthRevokeDTO;
+import com.his.system.dto.TechAuthUpsertDTO;
+import com.his.system.service.EmployeeTechAuthService;
+import com.his.system.vo.EmployeeTechAuthVO;
+import com.his.system.vo.TechAuthOverrideVO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+/**
+ * 医疗技术临床应用授权控制器（台账见 sql/155，页面 805 技术授权）。
+ *
+ * <p>鉴权口径：台账的增/审/删是本页面独有数据，走 {@code org:techAuth:*} 三个按钮码；
+ * 而「看某个人的授权」与「看我自己的授权」是开单提示的依赖数据，跨岗位复用，
+ * 只要求登录（AGENTS §4：参照数据挂上权限码，非管理岗一进页面就 403）。
+ */
+@Tag(name = "医疗技术授权")
+@RestController
+@RequestMapping("/system/techAuth")
+@RequiredArgsConstructor
+public class EmployeeTechAuthController {
+
+    private final EmployeeTechAuthService techAuthService;
+
+    @Operation(summary = "分页查询授权台账")
+    @PreAuthorize("hasAuthority('org:techAuth:list')")
+    @PostMapping("/listPage")
+    public Result<PageResult<EmployeeTechAuthVO>> listPage(@RequestBody TechAuthQueryPageDTO query) {
+        return Result.success(techAuthService.listPage(query));
+    }
+
+    @Operation(summary = "授权详情")
+    @PreAuthorize("hasAuthority('org:techAuth:list')")
+    @GetMapping("/getById")
+    public Result<EmployeeTechAuthVO> getById(@RequestParam Long id) {
+        return Result.success(techAuthService.getById(id));
+    }
+
+    @Operation(summary = "按人查授权（员工档案与开单提示共用）")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/listByEmployee")
+    public Result<List<EmployeeTechAuthVO>> listByEmployee(@RequestParam Long employeeId) {
+        return Result.success(techAuthService.listByEmployee(employeeId));
+    }
+
+    @Operation(summary = "当前登录人的授权")
+    @PreAuthorize("isAuthenticated()")
+    @GetMapping("/mine")
+    public Result<List<EmployeeTechAuthVO>> mine() {
+        return Result.success(techAuthService.mine());
+    }
+
+    @Operation(summary = "登记或修改授权（仅待审批/已驳回可改）")
+    @PreAuthorize("hasAuthority('org:techAuth:add')")
+    @PostMapping("/techAuthUpsert")
+    public Result<Void> techAuthUpsert(@RequestBody @Valid TechAuthUpsertDTO dto) {
+        techAuthService.upsert(dto);
+        return Result.success(dto.getId() == null ? "登记成功，待委员会审批" : "修改成功", null);
+    }
+
+    @Operation(summary = "审批（通过/驳回）")
+    @PreAuthorize("hasAuthority('org:techAuth:edit')")
+    @PostMapping("/approve")
+    public Result<Void> approve(@RequestBody @Valid TechAuthApproveDTO dto) {
+        techAuthService.approve(dto);
+        return Result.success(Boolean.TRUE.equals(dto.getApproved()) ? "已授权" : "已驳回", null);
+    }
+
+    @Operation(summary = "收回授权（动态调整）")
+    @PreAuthorize("hasAuthority('org:techAuth:edit')")
+    @PostMapping("/revoke")
+    public Result<Void> revoke(@RequestBody @Valid TechAuthRevokeDTO dto) {
+        techAuthService.revoke(dto);
+        return Result.success("已收回", null);
+    }
+
+    @Operation(summary = "删除授权记录（仅待审批/已驳回，物理删）")
+    @PreAuthorize("hasAuthority('org:techAuth:delete')")
+    @DeleteMapping("/deleteById")
+    public Result<Void> deleteById(@RequestParam Long id) {
+        techAuthService.deleteById(id);
+        return Result.success("删除成功", null);
+    }
+
+    @Operation(summary = "分页查询急诊越权登记")
+    @PreAuthorize("hasAuthority('org:techAuth:list')")
+    @PostMapping("/overrideListPage")
+    public Result<PageResult<TechAuthOverrideVO>> overrideListPage(@RequestBody TechAuthOverrideQueryPageDTO query) {
+        return Result.success(techAuthService.overrideListPage(query));
+    }
+
+    @Operation(summary = "越权登记上级确认")
+    @PreAuthorize("hasAuthority('org:techAuth:override')")
+    @PostMapping("/overrideConfirm")
+    public Result<Void> overrideConfirm(@RequestBody @Valid TechAuthOverrideConfirmDTO dto) {
+        techAuthService.confirmOverride(dto);
+        return Result.success("已确认", null);
+    }
+}

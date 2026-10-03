@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.his</groupId>
+        <artifactId>his-backend</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>his-pharmacy</artifactId>
+    <packaging>jar</packaging>
+    <name>his-pharmacy</name>
+    <description>药房药库：药品库存、锁定/扣减、发药、静配、麻精与用药权限管控、抗菌药物分级</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-common</artifactId>
+        </dependency>
+        <!-- 采购/入库等写接口的操作人必须服务端从登录态取（UserUtils），不信前端传的身份 -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-security</artifactId>
+        </dependency>
+        <!-- 摆药即产生应收：配药写一条记账行、退药红冲那一行 -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-fee</artifactId>
+        </dependency>
+    </dependencies>
+</project>

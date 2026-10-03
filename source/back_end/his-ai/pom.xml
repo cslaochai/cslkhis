@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.his</groupId>
+        <artifactId>his-backend</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>his-ai</artifactId>
+    <packaging>jar</packaging>
+    <name>his-ai</name>
+    <description>AI 能力层：模型接入、提示词、结构化输出、降级熔断、调用审计</description>
+
+    <!--
+        依赖方向说明（勿反向）：
+        his-ai 位于业务模块【之上】，可以读取病历/处方/字典数据。
+        任何业务模块都【不得】依赖 his-ai —— 否则形成循环依赖，Maven 直接构建失败。
+        因此 his-emr 等模块内的同名空壳 Service（executeCheck / executeQc）暂不改造，
+        AI 能力统一由 his-ai 暴露 /ai/** 接口。
+    -->
+    <dependencies>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-system</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-patient</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-emr</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-medicaltech</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-emergency</artifactId>
+        </dependency>
+    </dependencies>
+</project>
