@@ -52,5 +52,10 @@
             <groupId>com.his</groupId>
             <artifactId>his-emergency</artifactId>
         </dependency>
+        <!-- 患者端费用解释要读结算单/结算明细/医保结算（com.his.charge.entity|mapper） -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-charge</artifactId>
+        </dependency>
     </dependencies>
 </project>

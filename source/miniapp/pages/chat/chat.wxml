@@ -5,121 +5,229 @@
       <text class="nav-back-arrow">‹</text>
       <text class="nav-back-text">返回</text>
     </view>
-    <text class="nav-title">智能助手</text>
-    <view class="nav-home" bindtap="goHome">
-      <text>首页</text>
+    <text class="nav-title">客服中心</text>
+    <view class="nav-home" bindtap="goMyMessages">
+      <text>我的留言</text>
     </view>
   </view>
 
-  <!-- 中间消息列表 -->
-  <scroll-view
-    class="message-list"
-    scroll-y
-    scroll-into-view="{{scrollToId}}"
-    scroll-with-animation
-    enhanced
-    show-scrollbar="{{false}}"
-  >
-    <!-- 欢迎消息 -->
-    <view class="welcome" wx:if="{{messages.length === 0}}">
-      <view class="welcome-avatar">
-        <image class="welcome-avatar-img" src="/images/icons/robot-w.svg" mode="aspectFit"/>
-      </view>
-      <text class="welcome-title">你好，我是麓康智能助手</text>
-      <text class="welcome-desc">医疗健康AI助手，可以帮您查询患者档案、解读检查报告、了解医保政策等</text>
-      <view class="quick-questions">
-        <view class="quick-item" wx:for="{{quickQuestions}}" wx:key="index" bindtap="onQuickQuestion" data-q="{{item}}">
-          <text>{{item}}</text>
+  <scroll-view class="body" scroll-y enhanced show-scrollbar="{{false}}">
+    <!-- 搜索：患者不会用医院术语提问，所以吃口语 -->
+    <view class="search-bar">
+      <input
+        class="search-input"
+        placeholder="搜索您的问题，如：报告多久出"
+        value="{{keyword}}"
+        bindinput="onKeywordInput"
+        bindconfirm="onSearch"
+        confirm-type="search"
+      />
+      <view class="search-clear" wx:if="{{keyword}}" bindtap="onClearSearch">×</view>
+      <view class="search-btn" bindtap="onSearch">搜索</view>
+    </view>
+
+    <!-- 快捷服务：跳真实业务页，不是"智能回答" -->
+    <view class="card-section" wx:if="{{!searched}}">
+      <view class="section-title">快捷办理</view>
+      <view class="service-grid">
+        <view
+          class="service-card"
+          wx:for="{{serviceCards}}"
+          wx:key="id"
+          bindtap="onCardTap"
+          data-card="{{item}}"
+        >
+          <view class="service-icon-wrap" style="background: {{item.bg}}">
+            <image class="service-icon" src="{{item.icon}}" mode="aspectFit"/>
+          </view>
+          <text class="service-name">{{item.name}}</text>
         </view>
       </view>
     </view>
 
-    <!-- 消息气泡 -->
-    <view
-      wx:for="{{messages}}"
-      wx:key="id"
-      id="msg-{{item.id}}"
-      class="message-item {{item.role}}"
-    >
-      <!-- AI 头像 -->
-      <view class="avatar" wx:if="{{item.role === 'assistant'}}">
-        <text>AI</text>
+    <!-- 常见问题 -->
+    <view class="card-section">
+      <view class="section-title">
+        {{searched ? '搜索结果' : '常见问题'}}
+        <text class="section-count" wx:if="{{searched}}">共 {{faqs.length}} 条</text>
       </view>
 
-      <!-- 消息内容 -->
-      <view class="bubble {{item.role}} {{item.role === 'assistant' && item.isTransfer ? 'transfer' : ''}} {{item.role === 'assistant' && item.emergencyLevel >= 3 ? 'high-risk' : ''}}">
-        <text class="bubble-text" wx:if="{{item.content}}" user-select>{{item.content}}</text>
-
-        <!-- 加载动画 -->
-        <view class="loading-dots" wx:if="{{item.role === 'assistant' && !item.content && sending}}">
-          <view class="dot"></view>
-          <view class="dot"></view>
-          <view class="dot"></view>
+      <scroll-view class="cat-tabs" scroll-x wx:if="{{!searched}}">
+        <view
+          class="cat-tab {{activeCategory === item.categoryCode ? 'active' : ''}}"
+          wx:for="{{categories}}"
+          wx:key="categoryCode"
+          bindtap="onCategoryTap"
+          data-code="{{item.categoryCode}}"
+        >
+          <text>{{item.categoryName}}</text>
         </view>
+      </scroll-view>
 
-        <!-- 转人工（仅 AI 消息） -->
-        <block wx:if="{{item.role === 'assistant'}}">
-          <view class="transfer-tip" wx:if="{{item.needTransfer && !item.transferred}}">
-            <view class="transfer-alert">
-              <image class="tip-icon" src="/images/icons/alert.svg" mode="aspectFit"/>
-              <text>{{item.transferTip || '检测到您的描述可能涉及紧急情况'}}</text>
+      <view class="faq-item" wx:for="{{faqs}}" wx:key="id" bindtap="onFaqTap" data-id="{{item.id}}">
+        <view class="faq-q">
+          <text class="faq-q-tag">问</text>
+          <text class="faq-q-text">{{item.question}}</text>
+          <text class="faq-arrow">{{item.expanded ? '−' : '+'}}</text>
+        </view>
+        <block wx:if="{{item.expanded}}">
+          <view class="faq-a">
+            <text class="faq-a-tag">答</text>
+            <text class="faq-a-text" user-select>{{item.answer}}</text>
+          </view>
+          <view class="faq-feedback">
+            <text class="faq-feedback-tip">这条有帮助吗？</text>
+            <view class="faq-btn" catchtap="onFeedback" data-id="{{item.id}}" data-helpful="{{1}}">
+              <text>有帮助</text>
             </view>
-            <button class="transfer-btn" size="mini" bindtap="handleTransfer" data-msg="{{item}}">转接人工客服</button>
-          </view>
-          <view class="transfer-done" wx:if="{{item.transferred}}">
-            <image class="tip-icon" src="/images/icons/check.svg" mode="aspectFit"/>
-            <text>已为您转接人工客服，请稍候...</text>
-          </view>
-
-          <!-- 紧急标签 -->
-          <view class="emergency-tag" wx:if="{{item.emergencyLevel > 0}}">
-            <text class="tag {{item.emergencyLevel >= 3 ? 'tag-danger' : 'tag-info'}}">
-              {{item.emergencyLevel === 3 ? '高危' : item.emergencyLevel === 2 ? '中危' : '低危'}}
-            </text>
+            <view class="faq-btn" catchtap="onFeedback" data-id="{{item.id}}" data-helpful="{{0}}">
+              <text>没帮助</text>
+            </view>
           </view>
         </block>
-
-        <text class="bubble-time" wx:if="{{item.time}}">{{item.time}}</text>
       </view>
 
-      <!-- 用户头像 -->
-      <view class="avatar user-avatar" wx:if="{{item.role === 'user'}}">
-        <text>我</text>
+      <view class="empty-tip" wx:if="{{faqs.length === 0}}">
+        <text>{{searched ? '没找到相关问题，您可以直接留言或拨打医院电话' : '暂无常见问题'}}</text>
       </view>
     </view>
   </scroll-view>
 
-  <!-- 右侧问题定位点 -->
-  <view class="question-dots" wx:if="{{userQuestions.length > 1}}">
-    <view
-      wx:for="{{userQuestions}}"
-      wx:key="id"
-      class="dot-item {{currentDotIndex === index ? 'active' : ''}}"
-      bindtap="scrollToQuestion"
-      data-id="{{item.id}}"
-      data-index="{{index}}"
-    >
-      <text class="dot-num">{{index + 1}}</text>
+  <!-- 底部转人工：电话 + 留言。不做工单——没有客服岗之前工单表只是死数据 -->
+  <view class="transfer-bar">
+    <view class="transfer-btn-item" bindtap="onCallHospital">
+      <text class="transfer-btn-text">拨打医院电话</text>
+    </view>
+    <view class="transfer-btn-item primary" bindtap="onOpenMessage">
+      <text class="transfer-btn-text light">在线留言</text>
     </view>
   </view>
 
-  <!-- 底部输入区域 -->
-  <view class="input-bar">
-    <input
-      class="input"
-      placeholder="输入您的问题..."
-      value="{{inputValue}}"
-      bindinput="onInput"
-      bindconfirm="sendMessage"
-      confirm-type="send"
-      disabled="{{sending}}"
-    />
-    <button
-      class="send-btn"
-      disabled="{{sending}}"
-      bindtap="sendMessage"
-    >
-      发送
-    </button>
+  <!-- 留言弹窗：表单态 / 我的留言列表态 -->
+  <view class="mask" wx:if="{{showMessage}}" bindtap="onCloseMessage"></view>
+  <view class="msg-dialog" wx:if="{{showMessage}}">
+    <block wx:if="{{messageView === 'form'}}">
+      <view class="msg-dialog-title">在线留言</view>
+      <textarea
+        class="msg-textarea"
+        placeholder="请描述您遇到的问题，我们会尽快处理"
+        value="{{messageContent}}"
+        bindinput="onMessageInput"
+        maxlength="500"
+        show-confirm-bar="{{false}}"
+      />
+      <input
+        class="msg-phone"
+        placeholder="联系电话（选填，默认用建档手机号）"
+        value="{{contactPhone}}"
+        bindinput="onPhoneInput"
+        type="number"
+        maxlength="11"
+      />
+      <view class="msg-actions">
+        <view class="msg-btn" bindtap="onCloseMessage">取消</view>
+        <view class="msg-btn primary" bindtap="onSubmitMessage">提交</view>
+      </view>
+      <view class="msg-history-link" bindtap="goMyMessages">查看我的留言 ›</view>
+    </block>
+
+    <block wx:elif="{{messageView === 'list'}}">
+      <view class="msg-dialog-title">我的留言</view>
+      <scroll-view class="msg-list" scroll-y>
+        <view
+          class="msg-record"
+          wx:for="{{myMessages}}"
+          wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="openTicket"
+        >
+          <view class="msg-record-head">
+            <text class="msg-record-no">{{item.messageNo}}</text>
+            <text class="msg-status {{item.status === 2 ? 'done' : ''}}">{{item.statusText}}</text>
+          </view>
+          <text class="msg-record-content">{{item.content}}</text>
+          <view class="msg-record-meta" wx:if="{{item.acceptByName || item.replyCount}}">
+            <text wx:if="{{item.acceptByName}}">{{item.acceptByName}} 受理</text>
+            <text wx:if="{{item.replyCount}}">· 已回复 {{item.replyCount}} 次</text>
+          </view>
+          <text class="msg-record-result" wx:if="{{item.handleResult}}">处理结果：{{item.handleResult}}</text>
+          <text class="msg-record-time">{{item.createTime}} ›</text>
+        </view>
+        <view class="empty-tip" wx:if="{{myMessages.length === 0}}">
+          <text>还没有留言记录</text>
+        </view>
+      </scroll-view>
+      <view class="msg-actions">
+        <view class="msg-btn" bindtap="onCloseMessage">关闭</view>
+        <view class="msg-btn primary" bindtap="onOpenMessage">再留一条</view>
+      </view>
+    </block>
+
+    <!-- 工单详情：进展时间轴 + 患者可执行动作 -->
+    <block wx:else>
+      <view class="msg-dialog-title">
+        <text wx:if="{{ticket}}">工单 {{ticket.messageNo}}</text>
+      </view>
+      <scroll-view class="msg-list" scroll-y wx:if="{{ticket}}">
+        <view class="tk-head">
+          <text class="tk-status {{ticket.status === 2 ? 'done' : ''}}">{{ticket.statusText}}</text>
+          <text class="tk-accept" wx:if="{{ticket.acceptByName}}">受理人：{{ticket.acceptByName}}</text>
+          <text class="tk-accept" wx:else>还没人受理，我们已收到您的问题</text>
+        </view>
+        <view class="tk-question">{{ticket.content}}</view>
+        <text class="tk-close-reason" wx:if="{{ticket.closeReason}}">关闭原因：{{ticket.closeReason}}</text>
+
+        <view class="tk-timeline-title">处理进展</view>
+        <view class="tk-timeline">
+          <view class="tk-node" wx:for="{{ticket.logs}}" wx:key="index">
+            <view class="tk-dot"></view>
+            <view class="tk-node-body">
+              <view class="tk-node-head">
+                <text class="tk-node-action">{{item.actionText}}</text>
+                <text class="tk-node-time">{{item.createTime}}</text>
+              </view>
+              <text class="tk-node-content">{{item.content}}</text>
+              <text class="tk-node-operator">{{item.operatorName}}</text>
+            </view>
+          </view>
+          <view class="empty-tip" wx:if="{{ticket.logs.length === 0}}">
+            <text>暂无进展记录</text>
+          </view>
+        </view>
+
+        <view class="tk-append" wx:if="{{ticket.canAppend}}">
+          <view class="tk-append-title">补充说明</view>
+          <textarea
+            class="tk-textarea"
+            placeholder="还有要补充的？写在这里，客服会看到"
+            value="{{appendContent}}"
+            bindinput="onAppendInput"
+            maxlength="500"
+            show-confirm-bar="{{false}}"
+          />
+          <view class="msg-btn primary tk-submit" bindtap="submitAppend">提交补充</view>
+        </view>
+
+        <view class="tk-append" wx:if="{{ticket.canCancel || ticket.canConfirm}}">
+          <view class="tk-append-title">原因（撤单或重开时填写）</view>
+          <input
+            class="tk-input"
+            placeholder="选填"
+            value="{{actionReason}}"
+            bindinput="onReasonInput"
+            maxlength="100"
+          />
+          <view class="tk-action-row">
+            <view class="msg-btn" wx:if="{{ticket.canCancel}}" data-action="cancel" bindtap="doTicketAction">撤回工单</view>
+            <view class="msg-btn primary" wx:if="{{ticket.canConfirm}}" data-action="confirm" bindtap="doTicketAction">确认已解决</view>
+            <view class="msg-btn" wx:if="{{ticket.canConfirm}}" data-action="reopen" bindtap="doTicketAction">问题没解决</view>
+          </view>
+        </view>
+      </scroll-view>
+      <view class="msg-actions">
+        <view class="msg-btn" bindtap="backToTicketList">返回列表</view>
+        <view class="msg-btn primary" bindtap="onOpenMessage">再留一条</view>
+      </view>
+    </block>
   </view>
 </view>

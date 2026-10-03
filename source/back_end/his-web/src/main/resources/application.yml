@@ -71,13 +71,14 @@ ai:
   # 总开关。false 时全链路直接降级，业务走原有逻辑（不改任何业务流程）
   enabled: true
   provider: openai-compatible
-  # 内网私有化部署改这里，例如 http://10.0.0.5:8000
-  base-url: https://api.deepseek.com
-  # 只从环境变量取；不要把真实密钥写进本文件（会进 Git）
+  # 阿里云百炼（OpenAI 兼容模式）。填到 /v1 为止，客户端会自动补 /chat/completions
+  base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  # 只从环境变量取 —— 不要把真实密钥写进本文件（本文件在 .gitignore 白名单里，会进 Git）。
+  # 本地跑：HIS_AI_API_KEY=sk-xxx java -jar his-backend.jar
   api-key: ${HIS_AI_API_KEY:}
-  model: deepseek-chat
+  model: deepseek-v4.1-flash
   # 简单分类任务分流用，留空则回落 model
-  model-lite: deepseek-chat
+  model-lite: deepseek-v4.1-flash
   # 全局超时（毫秒）
   timeout-ms: 8000
   # 失败重试次数
@@ -98,6 +99,9 @@ ai:
     emergency_triage: true
     emr_extract: true
     emr_draft: true
+    # 患者端（小程序）：这两个能力的事实层不依赖模型，关掉也只是措辞变朴素
+    patient_report_explain: true
+    patient_fee_explain: true
   # 单能力超时覆盖（毫秒），未配置的回落 timeout-ms
   timeouts:
     icd10: 8000        # 同步路径，医生在等
@@ -106,6 +110,10 @@ ai:
     emergency_triage: 5000
     emr_extract: 8000  # 医生粘贴文本后当场等结果
     emr_draft: 8000
+    # 患者端：只润色一句话，但报告解读的 prompt 要带上全部明细项（患者要看的是逐项解释），
+    # 首次调用还要算上模型冷启动，实测 4s 会超时。给不出就回落规则文案，不会卡住页面。
+    patient_report_explain: 9000
+    patient_fee_explain: 6000
 
 # ============================================================
 # 微信小程序（患者端订阅消息出站通道，一期骨架）

@@ -148,6 +148,46 @@ export const messageApi = {
   markRead: (messageIds) => post('/miniapp/message/markRead', { messageIds })
 }
 
+// ========== 客服台（常见问题 / 留言 / 埋点） ==========
+export const faqApi = {
+  // 常见问题分类（带条数）
+  categories: () => get('/miniapp/faq/categories'),
+  // 检索（关键词切词匹配 + 分类过滤，分页）
+  listPage: (data) => post('/miniapp/faq/listPage', data),
+  // 详情（累计查看次数）；faqId 全程字符串，按 JSON 数字传会丢精度
+  getById: (faqId) => get('/miniapp/faq/getById', { faqId }),
+  // 热门问题（客服页首屏）
+  hotList: (limit) => get('/miniapp/faq/hotList', { limit }),
+  // 有用反馈：helpful 1-有帮助 0-没帮助
+  feedback: (data) => post('/miniapp/faq/feedback', data)
+}
+
+export const serviceApi = {
+  // 提交工单（归属由登录态决定，不传 patientId）
+  messageUpsert: (data) => post('/miniapp/service/messageUpsert', data),
+  // 我的工单（含处理状态、受理人、回复次数、可执行动作）
+  myMessages: (data) => post('/miniapp/service/myMessages', data),
+  // 工单详情（含流转时间轴；内部备注后端已过滤）
+  ticketDetail: (id) => get('/miniapp/service/ticketDetail', { id }),
+  // 补充留言（已办结的补充会自动重开）
+  ticketAppend: (data) => post('/miniapp/service/ticketAppend', data),
+  // 患者动作：cancel 撤单 / confirm 确认解决 / reopen 重开
+  ticketAction: (data) => post('/miniapp/service/ticketAction', data),
+  // 客服页行为埋点（失败不影响业务）
+  trace: (data) => post('/miniapp/service/trace', data)
+}
+
+// ========== 患者端 AI 能力（报告解读 / 费用解释） ==========
+// 这两个接口的事实层（哪些项异常、费用怎么拆）由后端规则算，
+// 模型只润色一句话；模型不可用时接口照常返回，只是 source=rule。
+// 所以前端**不要**因为 degraded=true 就弹「服务不可用」，那会劝退本来就焦虑的患者。
+export const aiApi = {
+  // 报告解读（患者版大白话）；reportId 全程字符串
+  reportExplain: (data) => post('/ai/patient/reportExplain', data),
+  // 费用解释（这笔钱怎么算的）
+  feeExplain: (data) => post('/ai/patient/feeExplain', data)
+}
+
 // ========== 住院押金（复用院内预交金口径） ==========
 export const depositApi = {
   // 我的住院记录（押金页选择入院单）

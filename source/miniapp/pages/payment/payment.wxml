@@ -40,6 +40,46 @@
         </view>
       </view>
 
+      <!-- 费用解释：患者问「医保不是报 85% 吗，为什么我掏这么多」，这里自己能答 -->
+      <view class="explain-row">
+        <text class="explain-link" wx:if="{{!feeExplains[item.id]}}"
+              data-id="{{item.id}}" bindtap="loadFeeExplain">
+          {{feeExplainingId === item.id ? '计算中...' : '这笔钱怎么算的？'}}
+        </text>
+        <text class="explain-link close" wx:else data-id="{{item.id}}" bindtap="closeFeeExplain">收起说明</text>
+      </view>
+
+      <view class="fee-explain" wx:if="{{feeExplains[item.id]}}">
+        <view class="fe-summary">{{feeExplains[item.id].summary}}</view>
+
+        <view class="fe-block">
+          <text class="fe-title">为什么自付这么多</text>
+          <text class="fe-reason">{{feeExplains[item.id].reasonText}}</text>
+        </view>
+
+        <view class="fe-block" wx:if="{{feeExplains[item.id].catalogGroups.length}}">
+          <text class="fe-title">按医保目录类别</text>
+          <view class="fe-line" wx:for="{{feeExplains[item.id].catalogGroups}}" wx:for-item="g" wx:key="index">
+            <text class="fe-name">{{g.catalogText}}</text>
+            <text class="fe-amt">¥{{g.amount}}（{{g.ratio}}%）</text>
+          </view>
+          <view class="fe-rule" wx:for="{{feeExplains[item.id].catalogGroups}}" wx:for-item="g" wx:key="index">
+            <text class="fe-cat">{{g.catalogText}}：</text>
+            <text>{{g.ruleText}}</text>
+          </view>
+        </view>
+
+        <view class="fe-block" wx:if="{{feeExplains[item.id].topSelfItems.length}}">
+          <text class="fe-title">自付最多的项目</text>
+          <view class="fe-line" wx:for="{{feeExplains[item.id].topSelfItems}}" wx:for-item="t" wx:key="index">
+            <text class="fe-name">{{t.itemName}}（{{t.catalogText}}）</text>
+            <text class="fe-amt">¥{{t.amount}}</text>
+          </view>
+        </view>
+
+        <view class="fe-advice">{{feeExplains[item.id].advice}}</view>
+      </view>
+
       <view class="card-actions">
         <button class="pay-btn" size="mini" data-id="{{item.id}}" bindtap="onPay" disabled="{{payingId === item.id}}">
           {{payingId === item.id ? '支付中...' : '去缴费'}}

@@ -295,6 +295,10 @@ const routes = [
             { path: 'system/dict', name: 'SystemDict', component: () => import('@/views/system/dict/DictView.vue') },
             { path: 'system/config', name: 'SystemConfig', component: () => import('@/views/system/config/ConfigView.vue') },
             { path: 'system/patientTag', name: 'SystemPatientTag', component: () => import('@/views/system/tag/PatientTagView.vue') },
+            // 患者端常见问题维护（菜单 1108，sql/217）：path 必须与 sys_menu.path 一字不差
+            { path: 'system/patientFaq', name: 'SystemPatientFaq', component: () => import('@/views/system/faq/FaqView.vue'), meta: { title: '患者常见问题' } },
+            { path: 'system/labPlain', name: 'SystemLabPlain', component: () => import('@/views/system/faq/LabPlainItemView.vue'), meta: { title: '检验项目白话词典' } },
+            { path: 'system/serviceTicket', name: 'SystemServiceTicket', component: () => import('@/views/system/service/ServiceTicketView.vue'), meta: { title: '工单受理' } },
             // 工作台配置（菜单 1106，见 sql/105）：path 必须与 sys_menu.path 一字不差
             { path: 'system/workbench', name: 'SystemWorkbench', component: () => import('@/views/system/workbench/WorkbenchConfigView.vue') },
             // 合理用药知识库（菜单 1107，见 sql/130）：path 与 menu.path 一字不差

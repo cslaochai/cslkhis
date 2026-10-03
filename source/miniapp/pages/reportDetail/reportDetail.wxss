@@ -242,3 +242,146 @@
   font-size: 22rpx;
   color: #999;
 }
+
+/* ========== 大白话解读 ========== */
+.explain-entry {
+  margin-top: 18rpx;
+}
+
+.explain-btn {
+  width: 100%;
+  height: 72rpx;
+  line-height: 72rpx;
+  font-size: 26rpx;
+  color: #2b6cb0;
+  background: #f2f7fd;
+  border: 1rpx solid #cfe0f5;
+  border-radius: 8rpx;
+}
+
+.explain-card {
+  margin: 20rpx 24rpx;
+  padding: 24rpx;
+  background: #fff;
+  border-radius: 12rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+
+.explain-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.explain-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #222;
+}
+
+.explain-tag {
+  margin-left: 12rpx;
+  padding: 2rpx 10rpx;
+  font-size: 20rpx;
+  color: #2b6cb0;
+  background: #eef4fb;
+  border-radius: 4rpx;
+}
+
+.explain-close {
+  margin-left: auto;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.explain-critical {
+  padding: 16rpx 18rpx;
+  margin-bottom: 16rpx;
+  font-size: 26rpx;
+  color: #d0021b;
+  background: #fff1ee;
+  border-left: 6rpx solid #d0021b;
+  border-radius: 6rpx;
+}
+
+.explain-summary {
+  font-size: 27rpx;
+  line-height: 1.6;
+  color: #333;
+  margin-bottom: 18rpx;
+}
+
+.explain-item {
+  padding: 16rpx 18rpx;
+  margin-bottom: 14rpx;
+  background: #fafbfc;
+  border-left: 6rpx solid #d8dde3;
+  border-radius: 6rpx;
+}
+
+.explain-item.ok {
+  border-left-color: #00b578;
+}
+
+.explain-item.warn {
+  border-left-color: #d0021b;
+  background: #fffaf8;
+}
+
+.explain-item.unknown {
+  border-left-color: #c8a45c;
+}
+
+.ei-top {
+  display: flex;
+  align-items: center;
+}
+
+.ei-name {
+  font-size: 27rpx;
+  font-weight: 600;
+  color: #222;
+}
+
+.ei-status {
+  margin-left: auto;
+  font-size: 22rpx;
+  color: #666;
+}
+
+.explain-item.ok .ei-status {
+  color: #00b578;
+}
+
+.explain-item.warn .ei-status {
+  color: #d0021b;
+}
+
+.explain-item.unknown .ei-status {
+  color: #c8a45c;
+}
+
+.ei-value {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  color: #888;
+}
+
+.ei-plain {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #444;
+}
+
+.explain-advice {
+  display: block;
+  margin-top: 18rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx dashed #e3e6ea;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #999;
+}

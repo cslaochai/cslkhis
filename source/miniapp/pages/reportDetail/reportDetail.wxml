@@ -32,6 +32,33 @@
       </view>
     </view>
     <view class="lab-tip" wx:if="{{abnormalCount}}">带箭头的项目超出参考区间，单项异常不等于患病，请以医生诊断为准</view>
+
+    <!-- 大白话解读：患者看不懂「HCT 0.32 ↓」是什么意思，这才是真需求 -->
+    <view class="explain-entry" wx:if="{{report.reportType === 2}}">
+      <button class="explain-btn" bindtap="loadExplain" loading="{{explaining}}" disabled="{{explaining}}">
+        {{explain ? '重新解读' : '看不懂？用大白话讲给我听'}}
+      </button>
+    </view>
+  </view>
+
+  <view class="explain-card" wx:if="{{explain}}">
+    <view class="explain-head">
+      <text class="explain-title">大白话解读</text>
+      <text class="explain-tag" wx:if="{{explain.source === 'model'}}">AI 润色</text>
+      <text class="explain-close" bindtap="closeExplain">收起</text>
+    </view>
+    <view class="explain-critical" wx:if="{{explain.criticalAlert}}">{{explain.criticalAlert}}</view>
+    <view class="explain-summary">{{explain.summary}}</view>
+    <view class="explain-item {{item.status === 1 ? 'ok' : (item.status === 4 ? 'unknown' : 'warn')}}"
+          wx:for="{{explain.items}}" wx:key="index">
+      <view class="ei-top">
+        <text class="ei-name">{{item.plainName || item.itemName}}</text>
+        <text class="ei-status">{{item.statusText}}</text>
+      </view>
+      <view class="ei-value">结果 {{item.resultValue}}<text wx:if="{{item.unit}}"> {{item.unit}}</text><text wx:if="{{item.arrow}}"> {{item.arrow}}</text> · 参考 {{item.referenceRange || '-'}}</view>
+      <view class="ei-plain">{{item.plainText}}</view>
+    </view>
+    <view class="explain-advice">{{explain.advice}}</view>
   </view>
 
   <view class="card" wx:if="{{report.clinicalDiagnosis}}">

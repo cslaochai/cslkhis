@@ -53,6 +53,27 @@ public final class AiCapabilityKeys {
     public static final String EMR_DRAFT = "emr_draft";
 
     /**
+     * 患者端报告解读（大白话版）
+     * <p>
+     * 与 {@link #LAB_INTERPRET} 的区别：<b>读者不同，纪律不同</b>。
+     * lab_interpret 的读者是检验技师/医生，输出结论草稿；本能力的读者是患者本人，
+     * 只允许输出「这项查什么 + 你的值 + 参考范围 + 高/低通常意味着什么」，
+     * <b>禁止给诊断、禁止给用药建议、禁止给分级处置</b>。
+     * 事实层（哪些项异常、是否危急值）由代码算，白话层由 {@code sys_lab_plain_item} 词典给，
+     * 模型只负责把这两者串成一段通顺的话 —— 所以模型不可用时本能力照样可用。
+     */
+    public static final String PATIENT_REPORT_EXPLAIN = "patient_report_explain";
+
+    /**
+     * 患者端费用解释
+     * <p>
+     * 回答「为什么我要自付这么多」。答案完全来自账单明细的医保目录类别拆分
+     * （甲类全额纳入、乙类先自付一部分、丙类/自费全额自付），是确定性计算，
+     * 模型只负责把数字串成一句话。模型不可用时照常返回拆分表。
+     */
+    public static final String PATIENT_FEE_EXPLAIN = "patient_fee_explain";
+
+    /**
      * 连通性自检
      */
     public static final String HEALTH_CHECK = "health_check";

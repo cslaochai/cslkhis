@@ -1,5 +1,5 @@
 import { getPatientId } from '../../utils/auth'
-import { chargeApi, payApi } from '../../utils/api'
+import { chargeApi, payApi, aiApi } from '../../utils/api'
 import { askSubscribe } from '../../utils/wechat'
 
 Page({
@@ -7,7 +7,11 @@ Page({
     list: [],
     totalAmount: '0.00',
     loading: false,
-    payingId: null
+    payingId: null,
+    // 费用解释：按账单存，key 是 billId。患者问「医保不是报 85% 吗为什么我掏这么多」，
+    // 答案是账里有医保不承担的自费/丙类项目 —— 这是确定性计算，不是 AI 猜的
+    feeExplains: {},
+    feeExplainingId: null
   },
 
   onShow() {
@@ -81,6 +85,30 @@ Page({
     const id = e.currentTarget.dataset.id
     const list = this.data.list.map(c => c.id === id ? { ...c, expanded: !c.expanded } : c)
     this.setData({ list })
+  },
+
+  async loadFeeExplain(e) {
+    const id = String(e.currentTarget.dataset.id)
+    if (this.data.feeExplainingId) return
+    this.setData({ feeExplainingId: id })
+    try {
+      const res = await aiApi.feeExplain({ billId: id })
+      if (res.code === 200 && res.data) {
+        this.setData({ [`feeExplains.${id}`]: res.data })
+      } else {
+        wx.showToast({ title: res.message || '暂无法解释', icon: 'none' })
+      }
+    } catch (err) {
+      console.error('费用解释失败', err)
+      wx.showToast({ title: '暂无法解释', icon: 'none' })
+    } finally {
+      this.setData({ feeExplainingId: null })
+    }
+  },
+
+  closeFeeExplain(e) {
+    const id = String(e.currentTarget.dataset.id)
+    this.setData({ [`feeExplains.${id}`]: null })
   },
 
   async onPay(e) {

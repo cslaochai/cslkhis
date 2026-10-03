@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { DataLine, User, Lock, FirstAidKit, Tickets, CircleCheck } from '@element-plus/icons-vue'
+import { DataLine, User, Lock, FirstAidKit, Tickets, CircleCheck, Service } from '@element-plus/icons-vue'
 import { login } from '@/api/system'
 import { useCurrentPatientStore } from '@/stores/currentPatient'
 import { clearSessionCaches } from '@/lib/session-cache'
@@ -19,6 +19,8 @@ const roles = [
   { key: 'doctor', label: '医生', icon: FirstAidKit, desc: '门诊/住院诊疗', roleCode: '10013' },
   { key: 'nurse', label: '护士', icon: DataLine, desc: '护理执行工作站', roleCode: '10014' },
   { key: 'pharmacist', label: '药剂师', icon: Tickets, desc: '审方调配发药', roleCode: '10016' },
+  // 客服岗（sql/223）：接患者转人工工单 + 维护客服台语料，归客户服务中心
+  { key: 'service', label: '客服', icon: Service, desc: '工单受理与患者服务', roleCode: '10034' },
   { key: 'admin', label: '系统管理员', icon: CircleCheck, desc: '系统配置管理', roleCode: '10012' },
 ]
 

@@ -1,4 +1,4 @@
-import { reportApi } from '../../utils/api'
+import { reportApi, aiApi } from '../../utils/api'
 import { getToken } from '../../utils/auth'
 import { BASE_URL } from '../../utils/request'
 
@@ -18,7 +18,11 @@ Page({
     images: [],
     labItems: [],
     abnormalCount: 0,
-    loading: true
+    loading: true,
+    // 大白话解读结果。reportType===2（检验）才展示入口 —— 检查报告是影像描述文本，
+    // 拿词典去改写成白话只会丢信息，看不懂应该去找医生
+    explain: null,
+    explaining: false
   },
 
   onLoad(options) {
@@ -83,6 +87,31 @@ Page({
     } finally {
       this.setData({ loading: false })
     }
+  },
+
+  // 大白话解读：事实（哪些项异常、是否危急值）由后端规则算，白话来自医院维护的词典，
+  // 模型只润色一句话。所以模型不可用（degraded=true）时照样有完整解读，
+  // 这里刻意不弹失败提示 —— 弹「AI 服务不可用」只会让本来就焦虑的患者更慌。
+  async loadExplain() {
+    if (this.data.explaining) return
+    this.setData({ explaining: true })
+    try {
+      const res = await aiApi.reportExplain({ reportId: String(this.data.id) })
+      if (res.code === 200 && res.data) {
+        this.setData({ explain: res.data })
+      } else {
+        wx.showToast({ title: res.message || '暂无法解读', icon: 'none' })
+      }
+    } catch (e) {
+      console.error('报告解读失败', e)
+      wx.showToast({ title: '暂无法解读', icon: 'none' })
+    } finally {
+      this.setData({ explaining: false })
+    }
+  },
+
+  closeExplain() {
+    this.setData({ explain: null })
   },
 
   // 影像全屏预览（wx.previewImage 自带双指缩放，患者端不需要窗宽窗位）

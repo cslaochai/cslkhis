@@ -28,7 +28,7 @@ Page({
       { id: 2, name: '排队叫号', icon: '/images/icons/clock.svg', bg: '#fef3e2', page: '/pages/queue/queue' },
       { id: 3, name: '检查报告', icon: '/images/icons/filetext.svg', bg: '#e8f5e9', page: '/pages/report/report' },
       { id: 4, name: '处方查询', icon: '/images/icons/pill.svg', bg: '#fce4ec', page: '/pages/prescription/prescription' },
-      { id: 5, name: '医保查询', icon: '/images/icons/shield.svg', bg: '#f3e5f5', page: '' },
+      { id: 5, name: '在线客服', icon: '/images/icons/sms.svg', bg: '#f3e5f5', page: '/pages/chat/chat' },
       { id: 6, name: '费用明细', icon: '/images/icons/money.svg', bg: '#e0f2f1', page: '/pages/payment/payment' }
     ],
     nextAppointment: null,

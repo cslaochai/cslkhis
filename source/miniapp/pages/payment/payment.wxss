@@ -203,3 +203,87 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* ========== 费用解释 ========== */
+.explain-row {
+  margin-top: 14rpx;
+}
+
+.explain-link {
+  font-size: 25rpx;
+  color: #2b6cb0;
+}
+
+.explain-link.close {
+  color: #999;
+}
+
+.fee-explain {
+  margin-top: 16rpx;
+  padding: 20rpx;
+  background: #f8fafd;
+  border-radius: 10rpx;
+}
+
+.fe-summary {
+  display: block;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #333;
+}
+
+.fe-block {
+  margin-top: 18rpx;
+}
+
+.fe-title {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 10rpx;
+}
+
+.fe-reason {
+  display: block;
+  font-size: 25rpx;
+  line-height: 1.6;
+  color: #444;
+}
+
+.fe-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 25rpx;
+  color: #333;
+  padding: 6rpx 0;
+}
+
+.fe-name {
+  flex: 1;
+  padding-right: 16rpx;
+}
+
+.fe-amt {
+  color: #d0021b;
+}
+
+.fe-rule {
+  font-size: 22rpx;
+  color: #888;
+  padding: 4rpx 0;
+}
+
+.fe-cat {
+  color: #666;
+}
+
+.fe-advice {
+  display: block;
+  margin-top: 18rpx;
+  padding-top: 14rpx;
+  border-top: 1rpx dashed #e0e4ea;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: #999;
+}
