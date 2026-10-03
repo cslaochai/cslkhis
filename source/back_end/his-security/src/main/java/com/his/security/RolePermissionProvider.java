@@ -2,22 +2,6 @@ package com.his.security;
 
 import java.util.List;
 
-/**
- * 「某个角色拥有哪些权限」的提供方（SPI）。
- *
- * <p>为什么需要它：{@code UserDetailsServiceImpl} 里装的 permissions 是
- * {@code selectPermissionsByEmployeeId(empId)} —— <b>员工级、全部角色的并集</b>，
- * 里面没有"当前角色"这个概念。而一个账号可以绑多个角色（演示账号 renyongx 绑了全部 18 个），
- * 于是"医生切到收费员"之后 {@code hasAuthority('emr:records:list')} 依然通过，
- * 想拦的场景恰恰拦不住。所以必须能按 <b>当前角色</b> 单独取一次权限。
- *
- * <p>放在 his-security（叶子模块）而不是 his-system：过滤器在这里，
- * 而 his-system 依赖 his-security，反向依赖会成环。实现由 his-system 提供
- * （见 {@code RolePermissionProviderImpl}）。
- *
- * <p>口径：权限码复用菜单上配置的权限标识，角色配菜单即配权限 ——
- * 不另建"角色→权限"映射表（手工维护的映射表一定会和菜单配置漂移）。
- */
 public interface RolePermissionProvider {
 
     /**

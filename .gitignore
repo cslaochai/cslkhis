@@ -52,10 +52,17 @@ uploads/
 *.local
 
 # ============ 敏感信息：严禁入库 ============
-# 测试账号与数据库连接口令（曾误入库，已由历史清理移除）
+# 口径：**系统登录账号密码**可入库（docs/测试账号与凭据.md，密码是 123456 测试口令）；
+#       **环境凭据**（MySQL / Redis / Gitea / 工具链口令）一律不入库。
+# 环境凭据当前落点：workspace/环境凭据.md（白名单模式下 workspace/ 天然不入库，以下规则为双保险）。
 verify-credentials.json
 credentials.json
 *_credentials.json
+verify-*.json
+# 环境凭据文件（只匹配「环境凭据」这个文件名，勿用 *凭据*.md —— 会误伤
+# 可入库的 docs/测试账号与凭据.md，那份只含 123456 测试口令）
+环境凭据.md
+*环境凭据*
 secrets*
 *.pem
 *.p12

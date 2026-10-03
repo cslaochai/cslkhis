@@ -6,18 +6,19 @@ server:
 spring:
   application:
     name: his-backend
+  # 环境凭据（数据库/Redis 口令）只落在 application-local.yml，该文件已由 .gitignore 排除、不入库。
+  # 换机器或部署时：复制一份填入口令，或改用环境变量 HIS_DB_PASSWORD / HIS_REDIS_PASSWORD。
+  config:
+    import: optional:classpath:application-local.yml
   servlet:
     multipart:
-      # 影像上传（sql/137 简化 PACS）：Spring 默认单文件 1MB，一张 CT 截图就能撞上去，
-      # 而且撞限后抛的是 MultipartException（前端只看到 500），业务侧那句「不能超过 10MB」永远跑不到。
-      # 容器限 20MB（比业务限大一倍）＝ 超限由业务给明确提示，容器只兜真正离谱的请求。
       max-file-size: 20MB
       max-request-size: 60MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://192.168.88.132:3306/hn_biz_his?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: xz_feng
-    password: Feng123456!
+    username: ${HIS_DB_USERNAME:xz_feng}
+    password: ${HIS_DB_PASSWORD:}
     hikari:
       connection-timeout: 30000
       idle-timeout: 600000
@@ -29,7 +30,7 @@ spring:
     redis:
       host: 192.168.88.132
       port: 6379
-      password: 123456
+      password: ${HIS_REDIS_PASSWORD:}
       database: 0
       timeout: 5000
   jackson:
@@ -39,8 +40,6 @@ spring:
       write-dates-as-timestamps: false
 
 mybatis-plus:
-  # classpath*: 而不是 classpath:：mapper/ 目录同时存在于多个模块 jar 里，
-  # 单 root 的 classpath: 只会扫到 classpath 顺序最靠前的那一个，其余模块的 XML 语句全部失效
   mapper-locations: classpath*:mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: true
@@ -53,31 +52,16 @@ mybatis-plus:
       logic-not-delete-value: 0
 
 jwt:
-  secret: his-system-jwt-secret-key-2026-very-long-secret-key-for-security
+  # 签名密钥属敏感项，只落 application-local.yml / 环境变量（值见 workspace/环境凭据.md）
+  secret: ${HIS_JWT_SECRET:}
   expiration: 86400000  # 24小时
 
-# ============================================================
-# AI 能力配置
-# 为什么放在这里而不是 sys_config：
-#   1) 这些是「部署期配置」——服务地址、模型名、超时、熔断、密钥来源，
-#      同一套代码在不同环境取值不同，属于配置即代码，应当跟代码一起评审、随发布走；
-#   2) 密钥绝不能落库（DB 一旦被备份/导出就等于泄露），只从环境变量 HIS_AI_API_KEY 取；
-#   3) AI 开关不再依赖 DB：空库、DB 短暂不可用都不影响服务启动与降级判断。
-# 代价：改这些值需要重启服务，不支持在线热改（原先 sys_config + 60s TTL 缓存的能力随之取消）。
-# 注意：业务运营口径的配置（如 lab.critical_value_deadline_minutes、危急值兜底接收人）
-#      仍留在 sys_config —— 那些是医院要自己调的，不是部署参数。
-# ============================================================
 ai:
-  # 总开关。false 时全链路直接降级，业务走原有逻辑（不改任何业务流程）
   enabled: true
   provider: openai-compatible
-  # 阿里云百炼（OpenAI 兼容模式）。填到 /v1 为止，客户端会自动补 /chat/completions
   base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-  # 只从环境变量取 —— 不要把真实密钥写进本文件（本文件在 .gitignore 白名单里，会进 Git）。
-  # 本地跑：HIS_AI_API_KEY=sk-xxx java -jar his-backend.jar
   api-key: ${HIS_AI_API_KEY:}
   model: deepseek-v4.1-flash
-  # 简单分类任务分流用，留空则回落 model
   model-lite: deepseek-v4.1-flash
   # 全局超时（毫秒）
   timeout-ms: 8000
@@ -110,35 +94,17 @@ ai:
     emergency_triage: 5000
     emr_extract: 8000  # 医生粘贴文本后当场等结果
     emr_draft: 8000
-    # 患者端：只润色一句话，但报告解读的 prompt 要带上全部明细项（患者要看的是逐项解释），
     # 首次调用还要算上模型冷启动，实测 4s 会超时。给不出就回落规则文案，不会卡住页面。
     patient_report_explain: 9000
     patient_fee_explain: 6000
 
-# ============================================================
-# 微信小程序（患者端订阅消息出站通道，一期骨架）
-# 与 ai.* 同理：appid/secret 是部署期配置，密钥只从环境变量取，不落库、不进仓库。
-# enabled=false 或缺密钥时发送侧整体静默降级（返回失败原因留痕 sys_message，不阻断业务）。
-# templates 的 key 是业务场景码，value 是微信公众平台申请的订阅消息模板ID；
-# 二期接入业务事件（挂号成功/报告出具/叫号提醒）时在这里补对应模板即可。
-# ============================================================
 wechat:
   miniapp:
     enabled: false
     app-id: ${HIS_WX_MINIAPP_APPID:}
     app-secret: ${HIS_WX_MINIAPP_SECRET:}
     templates: {}
-      # test: ""             # 通道自测（/patient/guardian/testNotify）
-      # regist_success: ""   # 挂号成功通知
-      # report_ready: ""     # 报告出具通知
-      # queue_called: ""     # 叫号提醒
 
-# ============================================================
-# 短信验证码（患者端注册）
-# 本仓库未接短信网关：mock=false 时发码直接失败（失败关闭，不假装已发送）。
-# 联调注册功能请设环境变量 HIS_SMS_MOCK=true —— 此时验证码写日志并随
-# /patient/sms/sendCode 回显，等于公开，绝不能带到生产。
-# ============================================================
 sms:
   code:
     mock: ${HIS_SMS_MOCK:false}
@@ -146,13 +112,6 @@ sms:
     resend-seconds: 60
     length: 6
 
-# ============================================================
-# 医保合规审核（防止高编高套 / 低编入组）
-# 与 ai.* 同理：阈值属于「部署期配置」，跟代码一起评审、随发布走，不写 sys_config。
-# 改这些值需要重启服务。
-# 注意：DRG 分组方案/权重/支付标准不属于配置，属于业务数据 ——
-#       那是医保局下发的，要进 sys_drg_group 表（当前为空，D 组规则因此返回「不适用」）。
-# ============================================================
 insurance:
   compliance:
     # 总开关。false 时审核接口直接报错拒绝，不会给出误导性的「全部通过」
@@ -168,20 +127,9 @@ insurance:
     # 单条依据文本落库上限（evidence 字段长度限制）
     max-evidence-quote: 300
 
-# ============================================================
-# 电子签名与时间戳（P5.5）
-# 与 ai.* / insurance.compliance.* 同一惯例：算法与密钥属于「部署期配置」，
-# 跟代码一起评审、随发布走，不写 sys_config。
-# 注意：有效期天数、是否自动发证、时间来源这三项属于「医院自己调」的运营口径，
-#      放在 sys_config（sign.cert.valid_days / sign.cert.auto_issue / sign.time_source），
-#      本文件只提供它们取不到时的兜底默认值。
-# ============================================================
 his:
   sign:
-    # 私钥加密主口令。**生产必须用环境变量 HIS_SIGN_SECRET 覆盖**；
-    # 这里留默认值只是因为本仓库的数据库口令同样是明文配置 ——
-    # 但默认值不是安全配置，上线前必须换掉。未配置时签名能力会拒绝签发证书。
-    master-secret: ${HIS_SIGN_SECRET:WnHis@Sign#2026!DevOnly}
+    master-secret: ${HIS_SIGN_SECRET:CslkHis@Sign#2026!DevOnly}
     # PBKDF2 迭代次数（新证书使用；老证书用自己行里存的值，调大不会让老证书解不开）
     iterations: 120000
     # 证书默认有效期（天）

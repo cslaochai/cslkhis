@@ -123,16 +123,16 @@ VALUES
   `del_flag` = 0;
 
 -- -----------------------------------------------------------------------------
--- 4. 登录账号：cs01 / cs02，密码与 admin 一致（直接取 admin 的哈希，不自造 bcrypt）
+-- 4. 登录账号：kefuzhangjing / kefulina，密码与 admin 一致（直接取 admin 的哈希，不自造 bcrypt）
 --    user_type=1（系统用户，院内员工；患者小程序是 3，由 sys_user.user_type 判定）
 -- -----------------------------------------------------------------------------
 INSERT INTO `sys_user`
   (`id`,`user_name`,`password`,`real_name`,`emp_id`,`user_type`,`status`,
    `create_by`,`create_time`,`del_flag`,`remark`)
 VALUES
-  (8900000000000070001,'cs01',(SELECT p.`password` FROM (SELECT `password` FROM `sys_user` WHERE `user_name`='admin') p),
+  (8900000000000070001,'kefuzhangjing',(SELECT p.`password` FROM (SELECT `password` FROM `sys_user` WHERE `user_name`='admin') p),
    '客服-张静',8900000000000070001,1,1,'sql223',NOW(),0,'sql/223 客服岗种子账号（密码同 admin）'),
-  (8900000000000070002,'cs02',(SELECT p.`password` FROM (SELECT `password` FROM `sys_user` WHERE `user_name`='admin') p),
+  (8900000000000070002,'kefulina',(SELECT p.`password` FROM (SELECT `password` FROM `sys_user` WHERE `user_name`='admin') p),
    '客服-李娜',8900000000000070002,1,1,'sql223',NOW(),0,'sql/223 客服岗种子账号（密码同 admin）')
   AS new ON DUPLICATE KEY UPDATE
   `real_name` = new.`real_name`,
@@ -193,7 +193,7 @@ UNION ALL
 SELECT 'V5 账号启用且 emp_id 与员工对得上',
        COUNT(*), '2'
 FROM `sys_user` u JOIN `sys_employee` e ON e.`id`=u.`emp_id`
-WHERE u.`user_name` IN ('cs01','cs02') AND u.`status`=1 AND u.`user_type`=1
+WHERE u.`user_name` IN ('kefuzhangjing','kefulina') AND u.`status`=1 AND u.`user_type`=1
 UNION ALL
 SELECT 'V6 岗位绑定数（is_primary=1）',
        COUNT(*), '2'

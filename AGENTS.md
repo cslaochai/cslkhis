@@ -454,3 +454,30 @@
 - 机械判据：
   `grep -rn "static final int" --include=*.java source/back_end` 里只剩技术阈值常量（逐条核对，业务码值为 0）；
   `grep -rnE "set[A-Z]\w*\(\s*[0-9]+\s*\)|Objects\.equals\(\s*[0-9]+," --include=*.java source/back_end` 结果为 0。
+
+## 8. 凭据分流：登录口令可入库，环境口令一律不入库
+
+口径一句话：**「谁能拿这个口令登录系统」可入库；「能连上这台机器/这个中间件」不可入库。**
+
+| 类别 | 例子 | 落点 | 入库 |
+|---|---|---|---|
+| 系统登录账号 | `sys_user` 的 480 个账号（`admin` / `shennan` / `13899000001` …，口令统一 `123456`） | `docs/测试账号与凭据.md` | ✅ |
+| 环境凭据 | MySQL `xz_feng`、Redis `123456`、Gitea `laochai`、JWT secret、构建工具链口令 | `workspace/环境凭据.md` + `application-local.yml` | ❌ |
+
+- **`application.yml` 只放占位**：`password: ${HIS_DB_PASSWORD:}` / `${HIS_REDIS_PASSWORD:}` / `${HIS_JWT_SECRET:}`。
+  真值落 `application-local.yml`（`spring.config.import: optional:classpath:application-local.yml` 加载，
+  `.gitignore` 已排除该文件名，仓库内不落盘）。
+  **新增任何数据源/中间件凭据都照抄这个口径**，不要在 `application.yml` 里直接写字面口令。
+- `.gitignore` 是白名单模式（`/*` + 放行 `source/`·`docs/`），`workspace/` 天然不入库；
+  但 `docs/` 是放行的，**新增带凭据的文档必须显式加排除规则**。
+  ⚠ 排除规则别写 `*凭据*.md` —— 会误伤可入库的 `docs/测试账号与凭据.md`；
+  环境凭据只按文件名精确匹配（`环境凭据.md` / `*环境凭据*`）。
+- **提交前必扫**（口令曾明文躺在已入库的 `application.yml` 里，2026-10-03 才清掉）：
+  ```bash
+  git grep -n -I -E "Feng123456!|his-system-jwt-secret|laochai:" --cached -- .
+  ```
+  无输出才算干净。`docs/er/vendor/mermaid.min.js` 里的 `"0123456789"` 是误报，人工看上下文。
+- **改了 `application.yml` 的凭据配置必须重启实测**：`mvn -o -DskipTests install` → 停旧 JVM →
+  `java -jar his-web/target/his-backend.jar` → 探 `/api/auth/info`（期望 401）→ 跑登录脚本。
+  端点 401 只说明进程活着，**还要跑一次 `POST /auth/login` + `POST /system/dict/refreshCache`**
+  才证明 DB 口令（登录）与 Redis 口令（缓存刷新）都真的读到了。
