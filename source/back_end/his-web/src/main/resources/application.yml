@@ -86,6 +86,9 @@ ai:
     # 患者端（小程序）：这两个能力的事实层不依赖模型，关掉也只是措辞变朴素
     patient_report_explain: true
     patient_fee_explain: true
+    # 患者端导诊口语归一：只做「口语→症状词+追问」，不推荐科室。
+    # 关掉后用患者原话查规则表，导诊功能本身不退化，只是命中率略低。
+    patient_triage_normalize: true
   # 单能力超时覆盖（毫秒），未配置的回落 timeout-ms
   timeouts:
     icd10: 8000        # 同步路径，医生在等
@@ -97,6 +100,8 @@ ai:
     # 首次调用还要算上模型冷启动，实测 4s 会超时。给不出就回落规则文案，不会卡住页面。
     patient_report_explain: 9000
     patient_fee_explain: 6000
+    # 患者点完「看看挂什么科」就等着，超过 5 秒直接用原话查
+    patient_triage_normalize: 5000
 
 wechat:
   miniapp:

@@ -190,3 +190,104 @@
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.rx-guide-entry {
+  padding-top: 12rpx;
+}
+
+.guide-link {
+  font-size: 26rpx;
+  color: #1269b5;
+}
+
+.guide-link.close {
+  color: #999;
+}
+
+.med-guide {
+  margin-top: 16rpx;
+  padding: 24rpx;
+  background: #f7fafd;
+  border-radius: 12rpx;
+}
+
+.mg-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mg-title {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #333;
+}
+
+.mg-dispensed {
+  font-size: 22rpx;
+  color: #c0781a;
+}
+
+.mg-item {
+  margin-top: 20rpx;
+  padding-bottom: 16rpx;
+  border-bottom: 1rpx dashed #e3e8ef;
+}
+
+.mg-item:last-of-type {
+  border-bottom: none;
+}
+
+.mg-name {
+  font-size: 27rpx;
+  color: #222;
+}
+
+.mg-spec {
+  margin-left: 10rpx;
+  font-size: 22rpx;
+  color: #888;
+}
+
+.mg-line {
+  margin-top: 8rpx;
+}
+
+.mg-kv {
+  display: inline-block;
+  margin-right: 14rpx;
+  padding: 4rpx 12rpx;
+  background: #e8f4fd;
+  border-radius: 6rpx;
+  font-size: 24rpx;
+  color: #1269b5;
+}
+
+.mg-qty {
+  margin-top: 8rpx;
+  font-size: 23rpx;
+  color: #888;
+}
+
+.mg-caution {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: #a05a00;
+  line-height: 1.6;
+}
+
+.mg-spec-text {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #999;
+  line-height: 1.6;
+}
+
+.mg-advice {
+  margin-top: 16rpx;
+  padding-top: 16rpx;
+  border-top: 1rpx solid #e3e8ef;
+  font-size: 23rpx;
+  color: #888;
+  line-height: 1.6;
+}

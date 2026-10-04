@@ -7,6 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.SensitiveMaskUtils;
+import com.his.security.PasswordCipher;
 import com.his.patient.dto.PatientQueryPageDTO;
 import com.his.patient.dto.PatientRegisterDTO;
 import com.his.patient.dto.PatientSearchScopeDTO;
@@ -80,6 +81,11 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
      */
     private final SysUserService sysUserService;
     private final PasswordEncoder passwordEncoder;
+    /**
+     * 注册口令传输加密：前端提交的是 SM2 密文（与登录同一对公钥），这里还原成明文再交 BCrypt 落库。
+     * 注册是初始口令第一次上网的场合，和登录一样不能收明文 —— 留明文口子等于登录加密白做。
+     */
+    private final PasswordCipher passwordCipher;
     /**
      * 注册验证码校验：手机号所有权由它证明，未通过则不建档、不开账号。
      */
@@ -709,7 +715,9 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
         if (dto.getPhone() == null || !dto.getPhone().matches("^1[3-9]\\d{9}$")) {
             throw new BusinessException("手机号格式不正确");
         }
-        if (dto.getPassword() == null || dto.getPassword().length() < 6) {
+        // 口令在客户端已用 SM2 公钥加密，先还原再验长度；明文一律拒收（与 /auth/login 同一口径）
+        String rawPassword = passwordCipher.decrypt(dto.getPassword());
+        if (rawPassword.length() < 6) {
             throw new BusinessException("密码至少 6 位");
         }
 
@@ -754,7 +762,7 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
         // 2) 登录账号（患者类型）
         SysUser user = new SysUser();
         user.setUserName(dto.getPhone());
-        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        user.setPassword(passwordEncoder.encode(rawPassword));
         user.setRealName(dto.getPatientName());
         user.setUserType(3);
         user.setPatientId(patient.getId());

@@ -33,7 +33,8 @@ public class AiHealthServiceImpl implements AiHealthService {
     private static final List<String> TRACKED_CAPABILITIES = List.of(
             AiCapabilityKeys.ICD10, AiCapabilityKeys.DRUG_AUDIT, AiCapabilityKeys.EMR_QC,
             AiCapabilityKeys.LAB_INTERPRET, AiCapabilityKeys.EMERGENCY_TRIAGE,
-            AiCapabilityKeys.EMR_EXTRACT, AiCapabilityKeys.EMR_DRAFT);
+            AiCapabilityKeys.EMR_EXTRACT, AiCapabilityKeys.EMR_DRAFT,
+            AiCapabilityKeys.PATIENT_TRIAGE_NORMALIZE);
 
     private final AiConfigProvider configProvider;
 

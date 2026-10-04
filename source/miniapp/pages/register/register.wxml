@@ -1,12 +1,4 @@
 <view class="register-page">
-  <view class="hero">
-    <view class="brand-badge">
-      <image class="brand-icon" src="/images/logo.png" mode="aspectFit"/>
-    </view>
-    <text class="brand-name">长沙市麓康医院</text>
-    <text class="brand-slogan">注册就诊人账号 · 在线建档</text>
-  </view>
-
   <view class="card">
     <text class="card-title">患者注册</text>
     <text class="card-desc">信息用于实名建档，请填写本人证件号</text>

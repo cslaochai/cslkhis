@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.his.common.exception.BusinessException;
 import com.his.security.CurrentUser;
 import com.his.security.JwtUtils;
+import com.his.security.PasswordCipher;
 import com.his.security.UserUtils;
 import com.his.system.dto.ChangePasswordDTO;
 import com.his.system.dto.LoginRequestDTO;
@@ -13,6 +14,7 @@ import com.his.system.mapper.SysUserMapper;
 import com.his.system.service.AuthService;
 import com.his.system.service.SysUserService;
 import com.his.system.vo.LoginVO;
+import com.his.system.vo.PublicKeyVO;
 import com.his.system.vo.UserLoginVO;
 import com.his.system.vo.UserRolesVO;
 import com.his.system.service.EmployeePostService;
@@ -42,14 +44,28 @@ public class AuthServiceImpl implements AuthService {
     private final EmployeePostService employeePostService;
     private final SysUserMapper userMapper;
     private final SysLoginLogService loginLogService;
+    private final PasswordCipher passwordCipher;
 
     @Override
     public LoginVO login(LoginRequestDTO loginRequestDTO, HttpServletRequest request) {
         String username = loginRequestDTO == null ? null : loginRequestDTO.getUsername();
+
+        // 口令在浏览器里就用 SM2 公钥加密了，这里还原成明文再交给 Spring Security 去比 BCrypt。
+        // 「还原失败」必须落登录日志：拿明文口令直接撞接口本身就是要留痕的行为，
+        // 不加这条的话，有人在扫描器里灌 123456 试探，登录日志里什么都不会留下。
+        String cipherPassword = loginRequestDTO == null ? null : loginRequestDTO.getPassword();
+        String password;
+        try {
+            password = passwordCipher.decrypt(cipherPassword);
+        } catch (RuntimeException e) {
+            loginLogService.record(username, request, false, "口令密文非法：" + e.getMessage());
+            throw e;
+        }
+
         CurrentUser currentUser;
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(username, loginRequestDTO.getPassword())
+                    new UsernamePasswordAuthenticationToken(username, password)
             );
             currentUser = (CurrentUser) authentication.getPrincipal();
         } catch (AuthenticationException e) {
@@ -148,15 +164,24 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    public PublicKeyVO publicKey() {
+        PublicKeyVO vo = new PublicKeyVO();
+        vo.setKeyId(passwordCipher.getKeyId());
+        vo.setPublicKey(passwordCipher.getPublicKeyHex());
+        return vo;
+    }
+
+    @Override
     public void updatePassword(ChangePasswordDTO changePasswordDTO) {
         CurrentUser currentUser = requireLogin();
         Long userId = currentUser.getUserId();
 
-        boolean success = userService.changePassword(
-                userId,
-                changePasswordDTO.getOldPassword(),
-                changePasswordDTO.getNewPassword()
-        );
+        // 改密码是「新口令第一次上网」的场合，与登录同一对 SM2 公钥加密，明文一律拒收；
+        // 不收口的话，登录加密就只拦了半条链路 —— 新口令照样在网络上裸奔。
+        String oldPassword = passwordCipher.decrypt(changePasswordDTO == null ? null : changePasswordDTO.getOldPassword());
+        String newPassword = passwordCipher.decrypt(changePasswordDTO == null ? null : changePasswordDTO.getNewPassword());
+
+        boolean success = userService.changePassword(userId, oldPassword, newPassword);
 
         if (!success) {
             throw new BusinessException("旧密码错误");

@@ -177,15 +177,20 @@ export const serviceApi = {
   trace: (data) => post('/miniapp/service/trace', data)
 }
 
-// ========== 患者端 AI 能力（报告解读 / 费用解释） ==========
-// 这两个接口的事实层（哪些项异常、费用怎么拆）由后端规则算，
+// ========== 患者端 AI 能力 ==========
+// 报告解读 / 费用解释的事实层（哪些项异常、费用怎么拆）由后端规则算，
 // 模型只润色一句话；模型不可用时接口照常返回，只是 source=rule。
 // 所以前端**不要**因为 degraded=true 就弹「服务不可用」，那会劝退本来就焦虑的患者。
+// 用药说明是规则型能力（剂量逐字来自医嘱，模型不参与）；导诊归一失败时用原话查即可。
 export const aiApi = {
   // 报告解读（患者版大白话）；reportId 全程字符串
   reportExplain: (data) => post('/ai/patient/reportExplain', data),
   // 费用解释（这笔钱怎么算的）
-  feeExplain: (data) => post('/ai/patient/feeExplain', data)
+  feeExplain: (data) => post('/ai/patient/feeExplain', data),
+  // 用药说明（这盒药怎么吃）；prescriptionId 全程字符串
+  medicationGuide: (data) => post('/ai/patient/medicationGuide', data),
+  // 导诊口语归一：口语 → 症状词 + 追问 + 检索文本。不推荐科室，科室仍由规则表给
+  triageNormalize: (data) => post('/ai/patient/triageNormalize', data)
 }
 
 // ========== 住院押金（复用院内预交金口径） ==========

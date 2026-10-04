@@ -5,6 +5,7 @@ import com.his.system.dto.ChangePasswordDTO;
 import com.his.system.dto.LoginRequestDTO;
 import com.his.system.service.AuthService;
 import com.his.system.vo.LoginVO;
+import com.his.system.vo.PublicKeyVO;
 import com.his.system.vo.UserLoginVO;
 import com.his.system.vo.UserRolesVO;
 import com.his.system.dto.SwitchPostDTO;
@@ -31,6 +32,12 @@ import java.util.List;
 public class LoginController {
 
     private final AuthService authService;
+
+    @Operation(summary = "获取登录口令加密公钥（SM2，匿名可取）")
+    @GetMapping("/publicKey")
+    public Result<PublicKeyVO> publicKey() {
+        return Result.success("获取成功", authService.publicKey());
+    }
 
     @Operation(summary = "用户登录")
     @PostMapping("/login")

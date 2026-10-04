@@ -51,6 +51,28 @@
       </view>
     </view>
 
+    <!-- 归一结果：只在后端真的整理过（source=model）时出现，降级时页面外观与原来一致 -->
+    <view class="card normalize-card" wx:if="{{normalized && terms.length}}">
+      <text class="section-title">按你说的整理成</text>
+      <view class="tag-list">
+        <view class="tag" wx:for="{{terms}}" wx:key="*this">{{item}}</view>
+      </view>
+    </view>
+
+    <view class="card followup-card" wx:if="{{followUps.length}}">
+      <text class="section-title">医生可能还会问</text>
+      <view
+        class="followup-row"
+        wx:for="{{followUps}}"
+        wx:key="*this"
+        data-q="{{item}}"
+        bindtap="onFollowUp"
+      >
+        <text class="fu-q">{{item}}</text>
+        <text class="fu-go">补充 ›</text>
+      </view>
+    </view>
+
     <view class="card empty-result" wx:else>
       <text class="empty-title">没有匹配到科室</text>
       <text class="empty-desc">换个说法再试一次，或直接在挂号页按科室选择</text>

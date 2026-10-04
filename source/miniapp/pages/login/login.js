@@ -1,5 +1,6 @@
 import { authApi } from '../../utils/api'
 import { saveLogin } from '../../utils/auth'
+import { encryptPassword } from '../../utils/password'
 
 Page({
   data: {
@@ -41,10 +42,13 @@ Page({
 
     this.setData({ loading: true, errorMsg: '' })
     try {
-      const res = await authApi.login({
-        username: username.trim(),
-        password: password.trim()
-      })
+      const plain = password.trim()
+      // 口令不出手机：提交前先用后端公钥做 SM2 加密。
+      // 后端若换过密钥会报「密文解析失败」，这时丢掉缓存公钥重拉一次再试。
+      let res = await authApi.login({ username: username.trim(), password: await encryptPassword(plain) })
+      if (res && res.code !== 200 && String(res.message || '').indexOf('密文') >= 0) {
+        res = await authApi.login({ username: username.trim(), password: await encryptPassword(plain, true) })
+      }
       if (res.code === 200 && res.data) {
         saveLogin(res.data)
         wx.reLaunch({ url: '/pages/home/home' })

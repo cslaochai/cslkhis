@@ -73,6 +73,11 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
     }
 
     @Override
+    public List<String> selectGroupNames() {
+        return plainMapper.selectGroupNames();
+    }
+
+    @Override
     public LabPlainItemAdminVO adminGetById(Long id) {
         SysLabPlainItem e = plainMapper.selectById(id);
         if (e == null || !Objects.equals(e.getDelFlag(), 0)) {

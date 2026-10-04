@@ -1,5 +1,5 @@
 import { getPatientId, getCurrentPatient } from '../../utils/auth'
-import { prescriptionApi } from '../../utils/api'
+import { prescriptionApi, aiApi } from '../../utils/api'
 
 /** 取药指引：状态码口径见后端 PrescriptionStatusEnum，缴费码见 PrescriptionPayStatusEnum */
 function tipOf(rx) {
@@ -19,7 +19,10 @@ Page({
   data: {
     patientName: '',
     list: [],
-    loading: false
+    loading: false,
+    // 用药说明按处方ID缓存；剂量/频次全部来自后端照抄的医嘱，前端不做任何加工
+    guides: {},
+    guideLoadingId: null
   },
 
   onShow() {
@@ -67,6 +70,32 @@ Page({
     const index = e.currentTarget.dataset.index
     const key = `list[${index}].expanded`
     this.setData({ [key]: !this.data.list[index].expanded })
+  },
+
+  // 用药说明：这盒药到底怎么吃。剂量/频次/疗程全部由后端照抄医嘱给出，
+  // 前端只负责排版 —— 任何"帮他算一下"的加工都会让患者吃到与医嘱不一致的量。
+  async loadGuide(e) {
+    const id = e.currentTarget.dataset.id
+    if (!id || this.data.guideLoadingId) return
+    this.setData({ guideLoadingId: id })
+    try {
+      const res = await aiApi.medicationGuide({ prescriptionId: String(id) })
+      if (res && res.code === 200 && res.data) {
+        this.setData({ [`guides.${id}`]: res.data })
+      } else {
+        wx.showToast({ title: (res && res.message) || '暂无法生成用药说明', icon: 'none' })
+      }
+    } catch (err) {
+      console.error('加载用药说明失败', err)
+      wx.showToast({ title: '加载失败，请重试', icon: 'none' })
+    } finally {
+      this.setData({ guideLoadingId: null })
+    }
+  },
+
+  closeGuide(e) {
+    const id = e.currentTarget.dataset.id
+    this.setData({ [`guides.${id}`]: null })
   },
 
   goPayment() {

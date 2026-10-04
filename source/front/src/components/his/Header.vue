@@ -31,6 +31,7 @@ import {
   getSelfProfile
 } from '@/api/system'
 import {openMessageStream} from '@/api/messageStream'
+import { encryptPassword } from '@/lib/password'
 import {loadDictDataMap} from '@/lib/dict-cache'
 import {loadMenuTree, findMenuByPath} from '@/lib/menu-cache'
 import {loadWorkbenchConfig} from '@/lib/workbench-config'
@@ -773,9 +774,10 @@ const submitChangePassword = async () => {
 
   passwordLoading.value = true
   try {
+    // 新旧口令都走 SM2 加密提交（与登录同一对公钥）：改密码是新口令第一次上网，不能明文。
     const res = await changePassword({
-      oldPassword: passwordForm.oldPassword,
-      newPassword: passwordForm.newPassword,
+      oldPassword: await encryptPassword(passwordForm.oldPassword),
+      newPassword: await encryptPassword(passwordForm.newPassword),
     })
     if (res.code === 200) {
       ElMessage.success('密码修改成功')

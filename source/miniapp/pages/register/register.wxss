@@ -1,48 +1,10 @@
 .register-page {
   min-height: 100vh;
-  padding: 40rpx 36rpx calc(60rpx + env(safe-area-inset-bottom));
+  padding: 72rpx 36rpx calc(60rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
   background:
     radial-gradient(110% 45% at 50% 0%, rgba(18, 105, 181, 0.18) 0%, rgba(18, 105, 181, 0) 60%),
     linear-gradient(180deg, #EAF2F9 0%, #DDEAF4 100%);
-}
-
-/* ---------- 品牌区 ---------- */
-.hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-bottom: 36rpx;
-}
-
-.brand-badge {
-  width: 108rpx;
-  height: 108rpx;
-  border-radius: 30rpx;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10rpx 26rpx rgba(18, 105, 181, 0.14);
-  overflow: hidden;
-}
-
-.brand-icon {
-  width: 90rpx;
-  height: 90rpx;
-}
-
-.brand-name {
-  font-size: 38rpx;
-  font-weight: 700;
-  color: #16324f;
-  margin-top: 20rpx;
-}
-
-.brand-slogan {
-  font-size: 24rpx;
-  color: #6b7f97;
-  margin-top: 10rpx;
 }
 
 /* ---------- 表单卡 ---------- */

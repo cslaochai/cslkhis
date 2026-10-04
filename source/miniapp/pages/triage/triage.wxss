@@ -183,3 +183,33 @@
   line-height: 1.6;
   text-align: center;
 }
+
+.followup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+
+.followup-row:last-child {
+  border-bottom: none;
+}
+
+.fu-q {
+  flex: 1;
+  font-size: 26rpx;
+  color: #333;
+  line-height: 1.5;
+}
+
+.fu-go {
+  font-size: 24rpx;
+  color: #1269b5;
+  padding-left: 16rpx;
+}
+
+.normalize-card .tag {
+  background: #e8f4fd;
+  color: #1269b5;
+}

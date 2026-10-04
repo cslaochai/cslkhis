@@ -4,6 +4,7 @@ import com.his.system.dto.ChangePasswordDTO;
 import com.his.system.dto.LoginRequestDTO;
 import com.his.system.dto.SwitchPostDTO;
 import com.his.system.vo.LoginVO;
+import com.his.system.vo.PublicKeyVO;
 import com.his.system.vo.UserLoginVO;
 import com.his.system.vo.UserRolesVO;
 import com.his.system.vo.EmployeePostVO;
@@ -21,6 +22,11 @@ public interface AuthService {
      * 这类「账号存在但进不去」同样是要留痕的安全事件。
      */
     LoginVO login(LoginRequestDTO loginRequestDTO, HttpServletRequest request);
+
+    /**
+     * 取登录口令加密用的 SM2 公钥。匿名可取，给登录页和小程序的登录页用。
+     */
+    PublicKeyVO publicKey();
 
     UserLoginVO currentUserInfo();
 

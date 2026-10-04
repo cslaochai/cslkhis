@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { DataLine, User, Lock, FirstAidKit, Tickets, CircleCheck, Service } from '@element-plus/icons-vue'
 import { login } from '@/api/system'
+import { encryptPassword } from '@/lib/password'
 import { useCurrentPatientStore } from '@/stores/currentPatient'
 import { clearSessionCaches } from '@/lib/session-cache'
 
@@ -121,9 +122,12 @@ const handleLogin = async () => {
 
   loading.value = true
   try {
+    // 口令在提交前先 SM2 加密：HTTP 链路上只能看到密文。
+    // 加密失败（多半是后端换了密钥）直接抛出去，不要退化成明文重试 —— 那等于白做。
+    const password = await encryptPassword(loginForm.password)
     const res = await login({
       username: loginForm.username,
-      password: loginForm.password,
+      password: password,
       roleCode: roleCode,
     })
 

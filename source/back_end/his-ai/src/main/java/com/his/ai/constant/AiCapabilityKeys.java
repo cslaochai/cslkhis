@@ -74,6 +74,18 @@ public final class AiCapabilityKeys {
     public static final String PATIENT_FEE_EXPLAIN = "patient_fee_explain";
 
     /**
+     * 患者端导诊口语归一（P2-患者端）
+     * <p>
+     * 这是患者端<b>唯一允许模型参与的导诊环节</b>，位置由 {@code MiniappTriageServiceImpl}
+     * 的注释点死：模型只做两件事 —— 把口语主诉归一成症状词、生成补充追问，
+     * <b>不得决定推荐哪个科室</b>。科室推荐始终由 {@code biz_triage_rule} 关键词规则给出。
+     * <p>
+     * 模型不可用时本能力返回原始主诉（{@code source=rule}），患者侧无感：
+     * 关键词命中本来就是按原始文本走的，归一只是提高命中率的增益项。
+     */
+    public static final String PATIENT_TRIAGE_NORMALIZE = "patient_triage_normalize";
+
+    /**
      * 连通性自检
      */
     public static final String HEALTH_CHECK = "health_check";

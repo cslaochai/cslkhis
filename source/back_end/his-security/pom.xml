@@ -22,6 +22,22 @@
             <artifactId>his-common</artifactId>
         </dependency>
         <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+        </dependency>
+        <!--
+          SM2 国密底座（登录口令传输加密）：
+          hutool 的 cn.hutool.crypto.asymmetric.SM2 只是对 BouncyCastle 的包装，
+          hutool-all 里 **不带** org.bouncycastle 的任何类（README 里不写这点很容易被坑：
+          编译全通过，运行到 new SM2() 才 NoClassDefFoundError）。
+          项目里原有的电子签名用的是 JDK 原生 RSA/SHA256，不需要 BC，所以此前没人引过。
+        -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
+        <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
         </dependency>

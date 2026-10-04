@@ -29,7 +29,9 @@ public class PatientRegisterDTO implements Serializable {
     private String phone;
 
     /**
-     * 登录密码（明文入参，落库前 BCrypt 加密）
+     * 登录密码：SM2 公钥加密后的十六进制密文（C1C3C2，不带 04 前缀）。
+     *
+     * <p>公钥从 {@code GET /auth/publicKey} 取，与登录共用一对密钥；明文一律拒收。
      */
     private String password;
 

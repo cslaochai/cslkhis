@@ -1,11 +1,11 @@
 <script setup lang="js">
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Edit, Delete, Refresh, WarningFilled, CircleCheck } from '@element-plus/icons-vue'
+import { Plus, Search, Edit, Delete, Refresh } from '@element-plus/icons-vue'
 import {
   getLabPlainList,
   getLabPlainDetail,
-  getLabPlainCoverage,
+  getLabPlainGroupNames,
   labPlainUpsert,
   labPlainDelete,
 } from '@/api/labPlain'
@@ -27,11 +27,6 @@ const pagination = ref({
 
 // 两卡式列表页：表格只设最大高度，超高内部滚动（口径参照 views/system/user/UserView.vue）
 const { queryCardRef, footerRef, tableMaxHeight } = useTableMaxHeight()
-
-// 覆盖率自检 —— 这个页面真正的用处：不知道该补什么，词典就会停在建库那天
-const coverage = ref(null)
-const coverageLoading = ref(false)
-const showMissing = ref(false)
 
 const groupOptions = ref([])
 
@@ -57,7 +52,7 @@ const rules = {
 }
 
 onMounted(() => {
-  loadCoverage()
+  loadGroupNames()
   loadData()
 })
 
@@ -80,19 +75,15 @@ const loadData = async () => {
   }
 }
 
-const loadCoverage = async () => {
-  coverageLoading.value = true
+const loadGroupNames = async () => {
   try {
-    const res = await getLabPlainCoverage()
+    const res = await getLabPlainGroupNames()
     if (res.code === 200) {
-      coverage.value = res.data
-      groupOptions.value = res.data.groupNames || []
+      groupOptions.value = res.data || []
     }
   } catch (error) {
-    // 自检失败不影响增删改查，静默即可
-    console.warn('覆盖率自检失败', error)
-  } finally {
-    coverageLoading.value = false
+    // 下拉拉不到分组不影响增删改查，静默即可（仍能按项目名/状态筛）
+    console.warn('分组清单加载失败', error)
   }
 }
 
@@ -128,14 +119,6 @@ const handleAdd = () => {
   dialogVisible.value = true
 }
 
-// 从未收录清单直接补：项目名预填好，运营只需要写白话
-const handleAddFor = (itemName) => {
-  resetForm()
-  formData.itemName = itemName
-  dialogTitle.value = `补白话：${itemName}`
-  dialogVisible.value = true
-}
-
 const handleEdit = async (row) => {
   resetForm()
   dialogTitle.value = '编辑白话词条'
@@ -164,7 +147,7 @@ const handleSubmit = async () => {
       ElMessage.success(formData.id ? '修改成功' : '新增成功')
       dialogVisible.value = false
       loadData()
-      loadCoverage()
+      loadGroupNames()
     } else {
       ElMessage.error(res.message || '操作失败')
     }
@@ -184,7 +167,7 @@ const handleDelete = async (row) => {
     if (res.code === 200) {
       ElMessage.success('删除成功')
       loadData()
-      loadCoverage()
+      loadGroupNames()
     } else {
       ElMessage.error(res.message || '删除失败')
     }
@@ -238,56 +221,6 @@ const handleCurrentChange = (val) => {
         <div class="flex shrink-0 items-start gap-3">
           <el-button v-perm="'lab:plain:upsert'" type="primary" :icon="Plus" @click="handleAdd">新增词条</el-button>
         </div>
-      </div>
-    </el-card>
-
-    <!-- 覆盖率自检 -->
-    <el-card v-if="coverage" class="mb-3" shadow="never">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <el-icon :size="20" :class="coverage.missingCount > 0 ? 'text-orange-500' : 'text-green-600'">
-            <WarningFilled v-if="coverage.missingCount > 0" />
-            <CircleCheck v-else />
-          </el-icon>
-          <div>
-            <div class="text-sm">
-              库内出现过 <b>{{ coverage.totalItemName }}</b> 个检验项目，已配白话 <b>{{ coverage.coveredCount }}</b> 个，
-              覆盖率 <b :class="coverage.missingCount > 0 ? 'text-orange-500' : 'text-green-600'">{{ coverage.coverageRate }}%</b>
-              <span v-if="coverage.missingCount > 0" class="text-orange-500">
-                —— 还有 {{ coverage.missingCount }} 个项目的报告解读只剩数值，没有白话
-              </span>
-            </div>
-            <div class="text-xs text-gray-500 mt-1">
-              分母是 biz_lab_result 里实际出现过的项目名；停用或已删除的词条不算已配
-            </div>
-          </div>
-        </div>
-        <el-button
-          v-if="coverage.missingCount > 0"
-          link
-          type="primary"
-          @click="showMissing = !showMissing"
-        >
-          {{ showMissing ? '收起' : '查看缺哪些' }}
-        </el-button>
-      </div>
-
-      <div v-if="showMissing && coverage.missingCount > 0" class="mt-3 pt-3 border-t">
-        <div class="text-xs text-gray-500 mb-2">按出现次数倒序，先补高频的：</div>
-        <div class="flex flex-wrap gap-2">
-          <el-tag
-            v-for="m in coverage.missingList"
-            :key="m.itemName"
-            :type="m.disabledOnly ? 'warning' : 'danger'"
-            size="small"
-            class="cursor-pointer"
-            @click="handleAddFor(m.itemName)"
-          >
-            {{ m.itemName }} · {{ m.refCount }} 次
-            <span v-if="m.disabledOnly" class="text-xs">（词典有但停用）</span>
-          </el-tag>
-        </div>
-        <div class="text-xs text-gray-400 mt-2">点标签直接补这一条</div>
       </div>
     </el-card>
 

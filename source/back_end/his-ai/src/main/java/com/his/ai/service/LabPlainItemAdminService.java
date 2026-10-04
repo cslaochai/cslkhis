@@ -6,12 +6,13 @@ import com.his.ai.vo.LabPlainCoverageVO;
 import com.his.ai.vo.LabPlainItemAdminVO;
 import com.his.common.base.PageResult;
 
+import java.util.List;
+
 /**
  * 检验项目白话词典 · 院内维护。
  *
  * <p>患者端报告解读的白话全靠这张表。表建完不维护就会烂：
- * 检验科一加新项目，患者端就多一个「只给数值、不给解释」的条目，
- * 而运营没有任何途径知道该补哪一条 —— {@link #coverage()} 就是解决这个的。
+ * 检验科一加新项目，患者端就多一个「只给数值、不给解释」的条目。
  */
 public interface LabPlainItemAdminService {
 
@@ -19,6 +20,11 @@ public interface LabPlainItemAdminService {
      * 分页列表（含停用条目）。
      */
     PageResult<LabPlainItemAdminVO> adminPage(LabPlainItemSearchDTO dto);
+
+    /**
+     * 现有分组清单（维护页筛选下拉）。分组随词条增删变化，不算字典。
+     */
+    List<String> selectGroupNames();
 
     /**
      * 详情。

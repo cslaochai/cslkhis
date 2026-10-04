@@ -31,6 +31,41 @@
 
       <view class="rx-tip" wx:if="{{item.tip}}">{{item.tip}}</view>
 
+      <view class="rx-guide-entry">
+        <text
+          class="guide-link"
+          wx:if="{{!guides[item.id]}}"
+          data-id="{{item.id}}"
+          bindtap="loadGuide"
+        >{{guideLoadingId === item.id ? '整理中...' : '这盒药怎么吃？'}}</text>
+        <text class="guide-link close" wx:else data-id="{{item.id}}" bindtap="closeGuide">收起用药说明</text>
+      </view>
+
+      <view class="med-guide" wx:if="{{guides[item.id]}}">
+        <view class="mg-head">
+          <text class="mg-title">用药说明</text>
+          <text class="mg-dispensed" wx:if="{{!guides[item.id].dispensed}}">该处方尚未发药，以下为医生开具的用法</text>
+        </view>
+
+        <view class="mg-item" wx:for="{{guides[item.id].items}}" wx:for-item="g" wx:key="index">
+          <view class="mg-name">
+            {{g.drugName}}
+            <text class="mg-spec" wx:if="{{g.specification}}">{{g.specification}}</text>
+          </view>
+          <view class="mg-line">
+            <text class="mg-kv" wx:if="{{g.dosageText}}">{{g.dosageText}}</text>
+            <text class="mg-kv" wx:if="{{g.frequencyText}}">{{g.frequencyText}}</text>
+            <text class="mg-kv" wx:if="{{g.routeText}}">{{g.routeText}}</text>
+            <text class="mg-kv" wx:if="{{g.courseText}}">{{g.courseText}}</text>
+          </view>
+          <view class="mg-qty" wx:if="{{g.quantityText}}">本次发药：{{g.quantityText}}</view>
+          <view class="mg-caution" wx:for="{{g.cautions}}" wx:for-item="c" wx:key="index">{{c}}</view>
+          <view class="mg-spec-text" wx:if="{{g.specText}}">说明书常规用法（成人，供参考，以本次医生开的为准）：{{g.specText}}</view>
+        </view>
+
+        <view class="mg-advice">{{guides[item.id].advice}}</view>
+      </view>
+
       <view class="rx-foot">
         <text class="rx-amount" wx:if="{{item.amountText}}">合计 ¥{{item.amountText}}</text>
         <button class="pay-btn" wx:if="{{item.canPay}}" size="mini" bindtap="goPayment">去缴费</button>

@@ -1,0 +1,301 @@
+package com.his.ai.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.ai.entity.SysDrugGuide;
+import com.his.ai.mapper.SysDrugGuideMapper;
+import com.his.ai.dto.PatientMedicationGuideDTO;
+import com.his.ai.service.PatientMedicationGuideCapability;
+import com.his.ai.vo.PatientMedicationGuideVO;
+import com.his.ai.vo.PatientMedicationItemVO;
+import com.his.common.exception.BusinessException;
+import com.his.emr.entity.BizPrescription;
+import com.his.emr.entity.BizPrescriptionDetail;
+import com.his.emr.mapper.BizPrescriptionDetailMapper;
+import com.his.emr.mapper.BizPrescriptionMapper;
+import com.his.patient.service.PatientGuardianService;
+import com.his.security.CurrentUser;
+import com.his.security.UserUtils;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 患者端用药说明实现。
+ *
+ * <p><b>刻意不接模型。</b>两个理由：
+ * <ol>
+ *   <li>剂量是这个能力里最不能出错的部分，它必须逐字来自处方医嘱。一旦让模型"组织语言"，
+ *       它就有概率把「每次 1 片」写成「每次 2 片」，而这类错误在页面上完全看不出来。</li>
+ *   <li>{@code PatientTextGuard} 的患者文案闸会拦掉任何含「服用/剂量/每次X片」的表述 ——
+ *       也就是模型在这个场景下<b>根本没有合规的输出空间</b>，硬接只会得到"输出全部被丢弃"。</li>
+ * </ol>
+ * 所以它与智能导诊同级：<b>AI 能力集里的规则型能力</b>，事实全部由代码和字典给出，
+ * 模型挂与不挂，患者拿到的内容完全一致。
+ *
+ * <p><b>剂量一律照抄医嘱，不换算。</b>医嘱写「1」就是每次 1（最小单位），
+ * 系统不去补单位、不去折算克数 —— 患者拿到的剂量一旦和医生口头交代的不一致，
+ * 被质疑的是医院。
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGuideCapability {
+
+    /** 处方状态：已发药 */
+    private static final int STATUS_DISPENSED = 4;
+
+    /** 处方类型：3-中药饮片处方 */
+    private static final int TYPE_HERB = 3;
+
+    /** 煎服方式：1-代煎 2-自煎 */
+    private static final int DECOCT_BY_HOSPITAL = 1;
+
+    /** 医嘱没写单次剂量时的兜底：不猜，交给医生/药师 */
+    private static final String DOSAGE_UNKNOWN = "按医生交代服用";
+
+    /**
+     * 固定免责提示。
+     * <p>
+     * 少了这段，「连服 7 天」会被读成"吃完 7 天就一定好了"。
+     * 与报告解读同理：这句话是这个能力能上线的<b>前提条件</b>，不是形式主义。
+     */
+    private static final String ADVICE =
+            "以上是按医生这次处方整理的服用方法，不能代替医生和药师的交代。"
+                    + "服药后如果出现皮疹、恶心呕吐、腹泻等不舒服，请先停药并及时联系医生或药师。";
+
+    /** 漏服处理：通用安全科普，与具体药品无关，所以放在公共位置而不是按药品判定 */
+    private static final String CAUTION_MISSED =
+            "漏服时：想起来就补一次；如果已经快到下一次吃药的时间，就跳过这次，不要一次吃两份。";
+
+    /** 频次词典：处方上既写「一日三次」也写「tid」，这里只做同义改写，不做任何推断 */
+    private static final Map<String, String> FREQUENCY_DICT = frequencyDict();
+
+    private final BizPrescriptionMapper prescriptionMapper;
+
+    private final BizPrescriptionDetailMapper detailMapper;
+
+    private final SysDrugGuideMapper drugGuideMapper;
+
+    private final PatientGuardianService patientGuardianService;
+
+    @Override
+    public PatientMedicationGuideVO execute(PatientMedicationGuideDTO dto) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null || user.getPatientId() == null) {
+            throw new BusinessException("未获取到就诊人身份，请重新登录");
+        }
+
+        BizPrescription prescription = prescriptionMapper.selectById(dto.getPrescriptionId());
+        if (prescription == null) {
+            throw new BusinessException("处方不存在：" + dto.getPrescriptionId());
+        }
+        if (patientGuardianService.patientScopeViolated(prescription.getPatientId())) {
+            // 不区分「不存在」和「无权查看」，避免被用来探测处方是否存在
+            throw new BusinessException("处方不存在或无权查看：" + dto.getPrescriptionId());
+        }
+
+        List<BizPrescriptionDetail> details = detailMapper.selectList(
+                new LambdaQueryWrapper<BizPrescriptionDetail>()
+                        .eq(BizPrescriptionDetail::getPrescriptionId, prescription.getId())
+                        .orderByAsc(BizPrescriptionDetail::getId));
+        if (details == null || details.isEmpty()) {
+            throw new BusinessException("该处方没有药品明细，无法生成用药说明");
+        }
+
+        PatientMedicationGuideVO vo = new PatientMedicationGuideVO();
+        vo.setPrescriptionId(String.valueOf(prescription.getId()));
+        vo.setPrescriptionNo(prescription.getPrescriptionNo());
+        vo.setVisitDate(prescription.getVisitDate());
+        vo.setDeptName(prescription.getDeptName());
+        vo.setDoctorName(prescription.getDoctorName());
+        vo.setPrescriptionTypeText(prescriptionTypeText(prescription.getPrescriptionType()));
+        vo.setDispensed(Integer.valueOf(STATUS_DISPENSED).equals(prescription.getPrescriptionStatus()));
+
+        boolean herb = Integer.valueOf(TYPE_HERB).equals(prescription.getPrescriptionType());
+        List<PatientMedicationItemVO> items = new ArrayList<>();
+        for (BizPrescriptionDetail detail : details) {
+            items.add(toItem(detail, drugOf(detail), herb, prescription));
+        }
+        vo.setItems(items);
+        vo.setAdvice(ADVICE);
+        return vo;
+    }
+
+    // ---------------------------------------------------------------- 组装层
+
+    private PatientMedicationItemVO toItem(BizPrescriptionDetail detail, SysDrugGuide drug,
+                                           boolean herb, BizPrescription prescription) {
+        PatientMedicationItemVO item = new PatientMedicationItemVO();
+        item.setDrugName(detail.getDrugName());
+        item.setSpecification(detail.getSpecification());
+        item.setDosageForm(detail.getDosageForm());
+        item.setQuantityText(quantityText(detail, herb));
+        item.setDosageText(dosageText(detail, herb));
+        item.setFrequencyText(frequencyText(detail.getFrequency()));
+        item.setRouteText(StringUtils.hasText(detail.getRoute()) ? detail.getRoute().trim() : null);
+        item.setCourseText(courseText(detail, herb, prescription));
+        List<String> cautions = cautions(detail, drug);
+        if (herb && Integer.valueOf(DECOCT_BY_HOSPITAL).equals(prescription.getDecoctFlag())) {
+            // 代煎的中药是真空袋装好的，患者最容易犯的错是拿回家再煮一遍
+            cautions.add(0, "这副药由医院代煎，拿到的是可以直接喝的袋装药液，不用再自己煮。");
+        }
+        item.setCautions(cautions);
+        item.setSpecText(drug == null || !StringUtils.hasText(drug.getUsageDosage())
+                ? null : drug.getUsageDosage().trim());
+        return item;
+    }
+
+    private SysDrugGuide drugOf(BizPrescriptionDetail detail) {
+        if (detail.getDrugId() != null) {
+            SysDrugGuide byId = drugGuideMapper.selectGuideById(detail.getDrugId());
+            if (byId != null) {
+                return byId;
+            }
+        }
+        return StringUtils.hasText(detail.getDrugCode())
+                ? drugGuideMapper.selectGuideByCode(detail.getDrugCode().trim()) : null;
+    }
+
+    /**
+     * 单次剂量：优先用法用量原句，其次单次剂量，都没有就直说不知道。
+     * <p>
+     * 用法用量（{@code usage_dosage}）在库里常见的是「每次0.5g」这类完整表述，
+     * 比单列的单次剂量更不容易断章取义，所以它优先。
+     */
+    private static String dosageText(BizPrescriptionDetail detail, boolean herb) {
+        if (herb) {
+            return "一剂";
+        }
+        if (StringUtils.hasText(detail.getUsageDosage())) {
+            return detail.getUsageDosage().trim();
+        }
+        if (StringUtils.hasText(detail.getSingleDosage())) {
+            return "每次 " + detail.getSingleDosage().trim();
+        }
+        return DOSAGE_UNKNOWN;
+    }
+
+    private static String quantityText(BizPrescriptionDetail detail, boolean herb) {
+        BigDecimal quantity = detail.getQuantity();
+        if (quantity == null) {
+            return null;
+        }
+        String unit = StringUtils.hasText(detail.getUnit()) ? detail.getUnit().trim() : "";
+        // 中药按剂：处方主表的剂数才是"几副药"，明细 quantity 是每味的克数，不能混着显示
+        return herb ? null : quantity.stripTrailingZeros().toPlainString() + unit;
+    }
+
+    /** 疗程：长处方取长处方天数，中药取剂数，其余取疗程天数 */
+    private static String courseText(BizPrescriptionDetail detail, boolean herb, BizPrescription prescription) {
+        if (herb) {
+            Integer doses = prescription.getDoseCount();
+            if (doses != null && doses > 0) {
+                return "共 " + doses + " 剂";
+            }
+            return null;
+        }
+        Integer longDays = prescription.getLongPrescriptionDays();
+        if (Integer.valueOf(1).equals(prescription.getIsLongPrescription()) && longDays != null && longDays > 0) {
+            return "长处方，共 " + longDays + " 天用量";
+        }
+        Integer duration = detail.getDuration();
+        return duration != null && duration > 0 ? "连服 " + duration + " 天" : null;
+    }
+
+    /**
+     * 注意事项：全部由药品字典的客观属性 + 处方医嘱判定，逐条列、不合并、不推断。
+     */
+    private static List<String> cautions(BizPrescriptionDetail detail, SysDrugGuide drug) {
+        List<String> cautions = new ArrayList<>();
+        if (Integer.valueOf(1).equals(detail.getIsSkinTest())) {
+            cautions.add("这个药需要先做皮试，请配合护士完成皮试后再用药。");
+        }
+        if (drug != null) {
+            if (Integer.valueOf(1).equals(drug.getIsColdChain())) {
+                cautions.add("需要冷藏（2~8℃）：取药后请尽快放进冰箱冷藏室，不要冷冻，也不要贴在冰箱壁上。");
+            } else if (StringUtils.hasText(drug.getStorageCondition())) {
+                cautions.add("储存要求：" + drug.getStorageCondition().trim());
+            }
+            if (drug.getSpecialFlag() != null && drug.getSpecialFlag() > 0) {
+                cautions.add("这是特殊管理药品，请严格按医生交代服用，不要转给他人。");
+            }
+            if (drug.getAntibioticLevel() != null && drug.getAntibioticLevel() > 0) {
+                cautions.add("这是抗菌药，请按医生开的疗程服完，不要觉得好转就自行停药。");
+            }
+        }
+        cautions.add(CAUTION_MISSED);
+        return cautions;
+    }
+
+    // ---------------------------------------------------------------- 词典层
+
+    /**
+     * 频次白话化。
+     * <p>
+     * 库里实测值混着中文（「一日三次」「每日2次」）和英文缩写（「qd」），
+     * 患者看缩写只会去百度。这里只做同义改写与汉字数字转阿拉伯数字，
+     * <b>查不到就原样返回</b> —— 猜错频次等于告诉患者多吃一倍。
+     */
+    private static String frequencyText(String frequency) {
+        if (!StringUtils.hasText(frequency)) {
+            return null;
+        }
+        String raw = frequency.trim();
+        String hit = FREQUENCY_DICT.get(raw.toLowerCase());
+        if (StringUtils.hasText(hit)) {
+            return hit;
+        }
+        String text = raw.replace("一日", "每天").replace("每日", "每天");
+        text = cnDigitsToArabic(text);
+        // 「每天3次」读起来像一串字符，汉字与数字之间两侧都补空格
+        return text.replaceAll("(?<=[\\u4e00-\\u9fa5])(?=\\d)", " ")
+                .replaceAll("(?<=\\d)(?=[\\u4e00-\\u9fa5])", " ");
+    }
+
+    private static String cnDigitsToArabic(String text) {
+        String result = text;
+        String[] cn = {"零", "一", "二", "三", "四", "五", "六", "七", "八", "九"};
+        for (int i = 1; i < cn.length; i++) {
+            result = result.replace(cn[i], String.valueOf(i));
+        }
+        return result;
+    }
+
+    private static Map<String, String> frequencyDict() {
+        Map<String, String> dict = new LinkedHashMap<>();
+        dict.put("qd", "每天 1 次");
+        dict.put("bid", "每天 2 次");
+        dict.put("tid", "每天 3 次");
+        dict.put("qid", "每天 4 次");
+        dict.put("qn", "每晚 1 次");
+        dict.put("hs", "睡前 1 次");
+        dict.put("qod", "隔天 1 次");
+        dict.put("biw", "每周 2 次");
+        dict.put("q4h", "每 4 小时 1 次");
+        dict.put("q6h", "每 6 小时 1 次");
+        dict.put("q8h", "每 8 小时 1 次");
+        dict.put("q12h", "每 12 小时 1 次");
+        dict.put("prn", "不舒服时按需使用");
+        dict.put("st", "立即使用 1 次");
+        return dict;
+    }
+
+    private static String prescriptionTypeText(Integer type) {
+        if (type == null) {
+            return "";
+        }
+        return switch (type) {
+            case 1 -> "西药处方";
+            case 2 -> "中成药处方";
+            case 3 -> "中药饮片处方";
+            default -> "";
+        };
+    }
+}

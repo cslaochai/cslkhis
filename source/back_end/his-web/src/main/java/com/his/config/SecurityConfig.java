@@ -33,6 +33,9 @@ public class SecurityConfig {
     private static final String[] WHITE_LIST = {
             // 登录注册
             "/auth/login",
+            // 登录口令加密公钥（SM2）：登录前必须先匿名拿到它才能把口令加密，
+            // 不放行的话登录页拿不到公钥，反而只能退回明文 —— 等于没做。
+            "/auth/publicKey",
             "/auth/register",
             // 小程序端患者自助注册（建档并开通账号，匿名可访问，否则新患者无法注册）
             "/patient/register",

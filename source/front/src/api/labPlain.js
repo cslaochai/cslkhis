@@ -3,8 +3,8 @@ import request from './request'
 // ==================== 检验项目白话词典维护（sql/218 建表 / sql/219 菜单） ====================
 // 患者端报告解读的每一句白话都来自这张表。表建完不维护就会烂：
 // 检验科一加新项目，患者端就多一个只有数值、没有解释的条目。
-// /coverage 就是解决这个的 —— 列出「库里出现过、但词典没配」的项目名。
 // 权限码与患者端分开：患者端只认 PATIENT，这里只认 lab:plain:*。
+// 后端 /coverage（未配白话的项目清单）仍在，但维护页不再展示这块 —— 有需要可单独取。
 
 // 后台列表（含停用）
 export function getLabPlainList(params) {
@@ -15,9 +15,9 @@ export function getLabPlainDetail(id) {
     return request.get('/ai/admin/labPlain/getById', { params: { id } })
 }
 
-// 覆盖率自检：库内出现过的检验项目还有哪些没配白话（按出现次数倒序）
-export function getLabPlainCoverage() {
-    return request.post('/ai/admin/labPlain/coverage', {})
+// 现有分组清单（筛选下拉，随词条增删变化）
+export function getLabPlainGroupNames() {
+    return request.get('/ai/admin/labPlain/groupNameSelectList')
 }
 
 export function labPlainUpsert(data) {

@@ -1,4 +1,5 @@
 import { patientApi, smsApi } from '../../utils/api'
+import { encryptPassword } from '../../utils/password'
 
 const RESEND_SECONDS = 60
 
@@ -101,12 +102,13 @@ Page({
     }
     this.setData({ loading: true, errorMsg: '' })
     try {
+      // 初始口令在提交前先 SM2 加密（与登录同一对公钥）：建档口令同样不能明文上网
       const res = await patientApi.register({
         patientName: this.data.patientName.trim(),
         idCard: this.data.idCard.trim().toUpperCase(),
         phone: this.data.phone.trim(),
         gender: this.data.gender,
-        password: this.data.password,
+        password: await encryptPassword(this.data.password),
         smsCode: this.data.smsCode.trim()
       })
       if (res.code === 200) {

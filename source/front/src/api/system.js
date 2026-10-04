@@ -218,6 +218,11 @@ export function deleteDictData(id) {
 
 // ========== 用户管理 ==========
 
+// 获取登录口令加密公钥（SM2，匿名接口）
+export function getPublicKey() {
+    return request.get('/auth/publicKey')
+}
+
 // 用户登录
 export function login(data) {
     return request.post('/auth/login', data)

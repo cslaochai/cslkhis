@@ -17,16 +17,11 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * 检验项目白话词典 · 院内维护入口。
  *
- * <p><b>为什么必须配这个入口</b>：患者端报告解读的每一句白话都来自这张表。
- * 它建完不维护就会烂 —— 检验科一加新项目，患者端就多一个只有数值、没有解释的条目，
- * 而运营没有任何途径知道该补哪一条。{@code /coverage} 就是解决这个的：
- * 直接列出「库里出现过、但词典没配」的项目名，按出现次数倒序。
- *
- * <p>落 his-ai 而不是业务模块：表属于 AI 的规则层地基，实体与 Mapper 都在这里，
- * 挪到别处会让 his-ai 反过来依赖业务模块（依赖方向不允许）。
  */
 @Tag(name = "院内-检验项目白话词典维护")
 @RestController
@@ -43,6 +38,13 @@ public class AiLabPlainAdminController {
         return Result.success(labPlainItemAdminService.adminPage(dto == null ? new LabPlainItemSearchDTO() : dto));
     }
 
+    @Operation(summary = "现有分组清单（筛选下拉）")
+    @GetMapping("/groupNameSelectList")
+    @PreAuthorize("hasAuthority('lab:plain:list')")
+    public Result<List<String>> groupNameSelectList() {
+        return Result.success(labPlainItemAdminService.selectGroupNames());
+    }
+
     @Operation(summary = "词典详情")
     @GetMapping("/getById")
     @PreAuthorize("hasAuthority('lab:plain:list')")
@@ -50,7 +52,7 @@ public class AiLabPlainAdminController {
         return Result.success(labPlainItemAdminService.adminGetById(parseId(id)));
     }
 
-    @Operation(summary = "覆盖率自检：库内出现过的检验项目还有哪些没配白话")
+    @Operation(summary = "覆盖率自检：库内出现过的检验项目还有哪些没配白话（前端维护页已不展示，供巡检/脚本直接取）")
     @PostMapping("/coverage")
     @PreAuthorize("hasAuthority('lab:plain:list')")
     public Result<LabPlainCoverageVO> coverage() {
