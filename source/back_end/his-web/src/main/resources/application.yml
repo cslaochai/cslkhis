@@ -89,6 +89,8 @@ ai:
     # 患者端导诊口语归一：只做「口语→症状词+追问」，不推荐科室。
     # 关掉后用患者原话查规则表，导诊功能本身不退化，只是命中率略低。
     patient_triage_normalize: true
+    # 知识库问答（RAG）：基于院内知识库检索增强生成，只做解释科普，不做判定
+    knowledge_qa: true
   # 单能力超时覆盖（毫秒），未配置的回落 timeout-ms
   timeouts:
     icd10: 8000        # 同步路径，医生在等
@@ -102,6 +104,23 @@ ai:
     patient_fee_explain: 6000
     # 患者点完「看看挂什么科」就等着，超过 5 秒直接用原话查
     patient_triage_normalize: 5000
+    # 知识库问答（同步路径，模型基于检索材料作答，超时回落原文片段）
+    knowledge_qa: 8000
+
+  # RAG 知识库问答
+  # 开发环境默认 local-tf（本地 TF 向量，零依赖）；院内部署了 embedding 服务后，
+  # 把 embedding-provider 改为 remote 即用语义向量，Milvus 存储需此（FloatVector）。
+  rag:
+    embedding-provider: local-tf
+    chunk-size: 500
+    chunk-overlap: 80
+    top-k: 4
+    auto-seed: true
+    corpus-paths: rag-corpus
+    # 远程 embedding（可选；配置后切 remote 即用语义向量）
+    # embed-base-url: http://host:port
+    # embed-api-key: ${HIS_AI_API_KEY:}
+    # embed-model: bge-m3
 
 wechat:
   miniapp:

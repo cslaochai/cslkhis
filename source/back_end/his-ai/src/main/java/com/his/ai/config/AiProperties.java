@@ -84,6 +84,33 @@ public class AiProperties {
     private int retrieveTopN = 50;
 
     /**
+     * RAG 配置（开发环境用本地 TF 向量 + 内存库，将来可换 Milvus 2.5 / Ollama embedding）
+     */
+    private Rag rag = new Rag();
+
+    @Data
+    public static class Rag {
+        /** embedding 提供方：local-tf（默认，零依赖）/ ollama（将来） */
+        private String embeddingProvider = "local-tf";
+        /** 切块大小（字符） */
+        private int chunkSize = 500;
+        /** 切块重叠（字符） */
+        private int chunkOverlap = 80;
+        /** 召回条数 */
+        private int topK = 4;
+        /** 启动时若知识库为空，是否自动灌入内置示例语料 */
+        private boolean autoSeed = true;
+        /** 内置语料目录（classpath 下），多个用逗号分隔 */
+        private String corpusPaths = "rag-corpus";
+        /** 远程 embedding 服务地址（OpenAI 兼容 /v1/embeddings），未配则回落 ai.base-url */
+        private String embedBaseUrl = "";
+        /** 远程 embedding 访问密钥，未配则回落 ai.apiKey（环境变量 HIS_AI_API_KEY） */
+        private String embedApiKey = "";
+        /** 远程 embedding 模型名，未配则回落 ai.model */
+        private String embedModel = "";
+    }
+
+    /**
      * 能力开关，来自 {@code ai.features.*}，key 为 {@link AiCapabilityKeys} 的能力标识
      */
     private Map<String, Boolean> features = new HashMap<>();

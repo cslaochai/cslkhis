@@ -34,7 +34,7 @@ public class AiHealthServiceImpl implements AiHealthService {
             AiCapabilityKeys.ICD10, AiCapabilityKeys.DRUG_AUDIT, AiCapabilityKeys.EMR_QC,
             AiCapabilityKeys.LAB_INTERPRET, AiCapabilityKeys.EMERGENCY_TRIAGE,
             AiCapabilityKeys.EMR_EXTRACT, AiCapabilityKeys.EMR_DRAFT,
-            AiCapabilityKeys.PATIENT_TRIAGE_NORMALIZE);
+            AiCapabilityKeys.PATIENT_TRIAGE_NORMALIZE, AiCapabilityKeys.KNOWLEDGE_QA);
 
     private final AiConfigProvider configProvider;
 

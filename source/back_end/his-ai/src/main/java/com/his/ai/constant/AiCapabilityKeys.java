@@ -86,6 +86,15 @@ public final class AiCapabilityKeys {
     public static final String PATIENT_TRIAGE_NORMALIZE = "patient_triage_normalize";
 
     /**
+     * 知识库问答（RAG）。
+     * <p>纯检索增强生成：从院内知识库（就诊须知/科室介绍/检查注意事项/药品说明书等）切块召回 top-k，
+     * 拼进提示词让模型基于真实文档作答。<b>只做解释与科普，不做任何医疗判定</b>——
+     * 判定类（危急值/用药禁忌/分诊级别）走硬规则，不在本能力范围。
+     * 模型不可用时降级为「直接返回检索到的原文片段」。
+     */
+    public static final String KNOWLEDGE_QA = "knowledge_qa";
+
+    /**
      * 连通性自检
      */
     public static final String HEALTH_CHECK = "health_check";
