@@ -112,3 +112,21 @@ export function extractEmrText(params) {
 export function draftEmrText(params) {
   return request.post('/ai/emrText/draft', params)
 }
+
+// ========== AI 运营问数（NL2SQL） ==========
+
+// 自然语言问数（白名单表受控 SELECT，只读）
+// params: { question, withSummary? }
+//
+// 铁律（后端强制，前端不要绕过）：
+//   1. data.degraded=true 时 rows 一定为空 —— 降级原因必须展示，不要拿空表格糊弄管理者；
+//   2. data.sql 是实际执行的 SELECT，界面要能展开查看（透明可查）；
+//   3. 行数据 cells 与 columns 按下标对应，渲染前要按列拼成对象。
+export function askOperationQa(params) {
+  return request.post('/ai/operationQa/ask', params)
+}
+
+// 可查询的数据域（白名单表清单，纯配置展示，不调用模型）
+export function getOperationSchema() {
+  return request.get('/ai/operationQa/schema')
+}

@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li>Spring AI Alibaba 的核心增量是 Graph 多智能体编排，而本方案明确定调不做 Agent 编排；</li>
  *   <li>裸调 OpenAI 兼容协议可以一套代码切换 DeepSeek / 通义 / 内网 vLLM，不被 SDK 绑定。</li>
  * </ol>
- * 详见 docs/AI能力接入方案.md §4.1。
+ * 详见 docs/AI能力施工手册.md §2.1。
  */
 @Slf4j
 @Component

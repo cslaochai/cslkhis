@@ -6,8 +6,8 @@ server:
 spring:
   application:
     name: his-backend
-  # 环境凭据（数据库/Redis 口令）只落在 application-local.yml，该文件已由 .gitignore 排除、不入库。
-  # 换机器或部署时：复制一份填入口令，或改用环境变量 HIS_DB_PASSWORD / HIS_REDIS_PASSWORD。
+  # 环境相关项（连接串、IP、口令、密钥）只落在 application-local.yml，该文件已由 .gitignore 排除、不入库。
+  # 换机器或部署时：复制一份 application-local.yml 填值，或改用对应环境变量（见各占位符）。
   config:
     import: optional:classpath:application-local.yml
   servlet:
@@ -16,8 +16,8 @@ spring:
       max-request-size: 60MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://192.168.88.132:3306/hn_biz_his?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: ${HIS_DB_USERNAME:xz_feng}
+    url: ${HIS_DB_URL:}
+    username: ${HIS_DB_USERNAME:}
     password: ${HIS_DB_PASSWORD:}
     hikari:
       connection-timeout: 30000
@@ -28,7 +28,7 @@ spring:
       connection-test-query: SELECT 1
   data:
     redis:
-      host: 192.168.88.132
+      host: ${HIS_REDIS_HOST:}
       port: 6379
       password: ${HIS_REDIS_PASSWORD:}
       database: 0
@@ -60,6 +60,7 @@ ai:
   enabled: true
   provider: openai-compatible
   base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  # 模型访问密钥属敏感项，真值只落 application-local.yml（不入库）
   api-key: ${HIS_AI_API_KEY:}
   model: deepseek-v4.1-flash
   model-lite: deepseek-v4.1-flash
@@ -91,6 +92,8 @@ ai:
     patient_triage_normalize: true
     # 知识库问答（RAG）：基于院内知识库检索增强生成，只做解释科普，不做判定
     knowledge_qa: true
+    # AI 运营问数（NL2SQL）：模型只生成 SELECT，必须过 OperationSqlGuard 白名单闸门才执行
+    operation_qa: true
   # 单能力超时覆盖（毫秒），未配置的回落 timeout-ms
   timeouts:
     icd10: 8000        # 同步路径，医生在等
@@ -106,21 +109,20 @@ ai:
     patient_triage_normalize: 5000
     # 知识库问答（同步路径，模型基于检索材料作答，超时回落原文片段）
     knowledge_qa: 8000
+    # 运营问数：管理者在等（SQL 生成 + 结果摘要两次模型调用共用该预算）
+    operation_qa: 10000
 
-  # RAG 知识库问答
-  # 开发环境默认 local-tf（本地 TF 向量，零依赖）；院内部署了 embedding 服务后，
-  # 把 embedding-provider 改为 remote 即用语义向量，Milvus 存储需此（FloatVector）。
   rag:
-    embedding-provider: local-tf
+    embedding-provider: remote
     chunk-size: 500
     chunk-overlap: 80
     top-k: 4
     auto-seed: true
     corpus-paths: rag-corpus
-    # 远程 embedding（可选；配置后切 remote 即用语义向量）
-    # embed-base-url: http://host:port
-    # embed-api-key: ${HIS_AI_API_KEY:}
-    # embed-model: bge-m3
+    embed-base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    # 与 ai.api-key 同源：application-local.yml 里配一处即可
+    embed-api-key: ${ai.api-key:}
+    embed-model: text-embedding-v3
 
 wechat:
   miniapp:

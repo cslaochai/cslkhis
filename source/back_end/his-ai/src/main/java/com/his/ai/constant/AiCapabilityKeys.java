@@ -5,7 +5,7 @@ package com.his.ai.constant;
  * <p>
  * 这些常量由业务代码显式传给执行器，<b>绝不允许由模型输出来决定调用哪个能力</b>。
  * 一旦改成模型自主选择，系统就从「工作流」退化成了「Agent」，
- * 可审计性与延迟预算同时失效（详见 docs/AI能力接入方案.md §3.0.4）。
+ * 可审计性与延迟预算同时失效（详见 docs/AI能力施工手册.md §1.2）。
  * <p>
  * 命名需与 application.yml 的 {@code ai.features.<key>}、{@code ai.timeouts.<key>} 保持一致。
  */
@@ -84,6 +84,16 @@ public final class AiCapabilityKeys {
      * 关键词命中本来就是按原始文本走的，归一只是提高命中率的增益项。
      */
     public static final String PATIENT_TRIAGE_NORMALIZE = "patient_triage_normalize";
+
+    /**
+     * AI 运营问数（NL2SQL）。
+     * <p>
+     * 模型只做一件事：把管理者的自然语言问题翻译成一条受控 SELECT。
+     * 生成结果必须过 {@code OperationSqlGuard} 白名单闸门才能执行，
+     * 执行、截断、呈现全部由代码完成。这是「事实层代码算」纪律的受控例外，
+     * 相关安全设计与验收见 docs/AI能力施工手册.md §6。
+     */
+    public static final String OPERATION_QA = "operation_qa";
 
     /**
      * 知识库问答（RAG）。

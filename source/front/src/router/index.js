@@ -307,6 +307,8 @@ const routes = [
             { path: 'system/log', name: 'SystemLog', component: () => import('@/views/system/LogView.vue') },
             // 运营统计报表（菜单 1201，sql/188 由「报表统计」更名；上级目录 1200 同步由「报表与审计」改为「报表统计」）
             { path: 'reports', name: 'Reports', component: () => import('@/views/reports/ReportsView.vue'), meta: { title: '运营统计报表' } },
+            // AI 运营问数（菜单 2940，见 sql/224）：path 与 menu.path 一字不差
+            { path: 'ai-operation-qa', name: 'AiOperationQa', component: () => import('@/views/ai/OperationQaView.vue'), meta: { title: 'AI 运营问数' } },
         ],
     },
 ];
