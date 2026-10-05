@@ -34,9 +34,9 @@ public class PatientUpsertDTO {
     @NotBlank(message = "患者姓名不能为空")
     private String patientName;
     /**
-     * 性别：1-男 2-女 3-未知（必选，不允许留空靠默认值兜底）
+     * 性别（1-男 2-女 9-未知）（必选，不允许留空靠默认值兜底）
      */
-    @NotNull(message = "性别不能为空（1-男 2-女 3-未知）")
+    @NotNull(message = "性别不能为空（1-男 2-女 9-未知）")
     private Integer gender;
     /**
      * 出生日期
@@ -63,7 +63,9 @@ public class PatientUpsertDTO {
      * 紧急联系人电话
      */
     private String contactPhone;
-    /** 联系人关系（父母、配偶、子女等） */
+    /**
+     * 联系人关系（父母、配偶、子女等）
+     */
     private String contactRelation;
     /**
      * 家庭住址
@@ -107,7 +109,9 @@ public class PatientUpsertDTO {
      * 医保类型（如：职工医保、居民医保）
      */
     private String medicalInsuranceType;
-    /** 卡片类型（1-就诊卡 2-身份证 3-医保卡） */
+    /**
+     * 卡片类型（1-就诊卡 2-身份证 3-医保卡）
+     */
     private Integer cardType;
     /**
      * 证件号码

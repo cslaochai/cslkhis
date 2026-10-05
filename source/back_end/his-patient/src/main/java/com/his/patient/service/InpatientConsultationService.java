@@ -1,11 +1,7 @@
 package com.his.patient.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.ConsultationAcceptDTO;
-import com.his.patient.dto.ConsultationCancelDTO;
-import com.his.patient.dto.ConsultationFinishDTO;
-import com.his.patient.dto.ConsultationQueryPageDTO;
-import com.his.patient.dto.ConsultationUpsertDTO;
+import com.his.patient.dto.*;
 import com.his.patient.vo.ConsultationVO;
 
 /**

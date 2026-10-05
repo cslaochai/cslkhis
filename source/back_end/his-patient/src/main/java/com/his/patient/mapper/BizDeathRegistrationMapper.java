@@ -29,7 +29,9 @@ public interface BizDeathRegistrationMapper extends BaseMapper<BizDeathRegistrat
             (SELECT c.cert_no FROM biz_death_certificate c WHERE c.id = r.cert_id) AS certNo
             """;
 
-    /** SELECT 后必须换行：文本块剥行尾空白，同行拼接会编译成 SELECTr.id（见 BizDeathCertificateMapper 同注释） */
+    /**
+     * SELECT 后必须换行：文本块剥行尾空白，同行拼接会编译成 SELECTr.id（见 BizDeathCertificateMapper 同注释）
+     */
     @Select("""
             <script>
             SELECT
@@ -52,13 +54,13 @@ public interface BizDeathRegistrationMapper extends BaseMapper<BizDeathRegistrat
             </script>
             """)
     List<DeathRegisterVO.Row> selectRegisterPage(IPage<DeathRegisterVO.Row> page,
-                                                @Param("keyword") String keyword,
-                                                @Param("registerStatus") Integer registerStatus,
-                                                @Param("deathType") Integer deathType,
-                                                @Param("policeFlag") Integer policeFlag,
-                                                @Param("disputeFlag") Integer disputeFlag,
-                                                @Param("startDateTime") LocalDateTime startDateTime,
-                                                @Param("endDateTime") LocalDateTime endDateTime);
+                                                 @Param("keyword") String keyword,
+                                                 @Param("registerStatus") Integer registerStatus,
+                                                 @Param("deathType") Integer deathType,
+                                                 @Param("policeFlag") Integer policeFlag,
+                                                 @Param("disputeFlag") Integer disputeFlag,
+                                                 @Param("startDateTime") LocalDateTime startDateTime,
+                                                 @Param("endDateTime") LocalDateTime endDateTime);
 
     /**
      * 详情＝编辑回显：办理人电话出明文（整对象回写 upsert，出掩码会洗掉真号）。
@@ -126,7 +128,9 @@ public interface BizDeathRegistrationMapper extends BaseMapper<BizDeathRegistrat
             """)
     DeathRegisterVO.Base selectRegisterBase(@Param("admissionId") Long admissionId);
 
-    /** 新建登记时的候选：已办死亡离院的住院（死亡登记的前提是死亡事实已确认） */
+    /**
+     * 新建登记时的候选：已办死亡离院的住院（死亡登记的前提是死亡事实已确认）
+     */
     @Select("""
             <script>
             SELECT a.admission_id  AS admissionId,

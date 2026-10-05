@@ -78,7 +78,9 @@ public interface BizAdmissionMapper extends BaseMapper<BizAdmission> {
             """)
     IPage<InpatientVO> selectInpatientPage(IPage<InpatientVO> page, @Param("q") InpatientQueryPageDTO query);
 
-    /** 今日入院数（scopeDeptIds 非空时按科室数据权限集合收敛，M6） */
+    /**
+     * 今日入院数（scopeDeptIds 非空时按科室数据权限集合收敛，M6）
+     */
     @Select("""
             <script>
             SELECT COUNT(*) FROM biz_admission WHERE del_flag = 0 AND DATE(admit_time) = CURDATE()
@@ -89,7 +91,9 @@ public interface BizAdmissionMapper extends BaseMapper<BizAdmission> {
             """)
     long countTodayAdmitted(@Param("scopeDeptIds") java.util.List<Long> scopeDeptIds);
 
-    /** 今日出院数（scopeDeptIds 非空时按科室数据权限集合收敛，M6） */
+    /**
+     * 今日出院数（scopeDeptIds 非空时按科室数据权限集合收敛，M6）
+     */
     @Select("""
             <script>
             SELECT COUNT(*) FROM biz_admission
@@ -101,15 +105,21 @@ public interface BizAdmissionMapper extends BaseMapper<BizAdmission> {
             """)
     long countTodayDischarged(@Param("scopeDeptIds") java.util.List<Long> scopeDeptIds);
 
-    /** 同一患者当前是否在院（入院重复校验） */
+    /**
+     * 同一患者当前是否在院（入院重复校验）
+     */
     @Select("SELECT COUNT(*) FROM biz_admission WHERE del_flag = 0 AND admit_status = 1 AND patient_id = #{patientId}")
     long countInHospitalByPatient(@Param("patientId") Long patientId);
 
-    /** 当天已生成的住院号条数（用于序号） */
+    /**
+     * 当天已生成的住院号条数（用于序号）
+     */
     @Select("SELECT COUNT(*) FROM biz_admission WHERE del_flag = 0 AND admission_no LIKE CONCAT(#{prefix}, '%')")
     long countByAdmissionNoPrefix(@Param("prefix") String prefix);
 
-    /** 该患者 31 日内是否还有其他出院记录（再入院判定，DRG 绩效指标） */
+    /**
+     * 该患者 31 日内是否还有其他出院记录（再入院判定，DRG 绩效指标）
+     */
     @Select("""
             SELECT COUNT(*)
             FROM biz_admission a
@@ -122,10 +132,12 @@ public interface BizAdmissionMapper extends BaseMapper<BizAdmission> {
               AND a.discharge_time <= #{dischargeTime}
             """)
     long countReadmitWithin31d(@Param("patientId") Long patientId,
-                              @Param("excludeAdmissionId") Long excludeAdmissionId,
-                              @Param("dischargeTime") LocalDateTime dischargeTime);
+                               @Param("excludeAdmissionId") Long excludeAdmissionId,
+                               @Param("dischargeTime") LocalDateTime dischargeTime);
 
-    /** 单条入院的完整展示信息（详情页用，一次 JOIN 取全） */
+    /**
+     * 单条入院的完整展示信息（详情页用，一次 JOIN 取全）
+     */
     @Select("""
             SELECT a.admission_id     AS admissionId,
                    a.admission_no     AS admissionNo,

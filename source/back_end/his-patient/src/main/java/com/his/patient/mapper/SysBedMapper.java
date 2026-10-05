@@ -19,7 +19,9 @@ import java.util.List;
 @Mapper
 public interface SysBedMapper extends BaseMapper<SysBed> {
 
-    /** 床位列表（可按病区 / 科室 / 状态过滤） */
+    /**
+     * 床位列表（可按病区 / 科室 / 状态过滤）
+     */
     @Select("""
             SELECT b.bed_id     AS bedId,
                    b.bed_no     AS bedNo,
@@ -68,11 +70,15 @@ public interface SysBedMapper extends BaseMapper<SysBed> {
             """)
     List<WardVO> selectWardList();
 
-    /** 按状态统计床位（统计卡片用） */
+    /**
+     * 按状态统计床位（统计卡片用）
+     */
     @Select("SELECT COUNT(*) FROM sys_bed WHERE del_flag = 0 AND bed_status = #{bedStatus}")
     long countByStatus(@Param("bedStatus") Integer bedStatus);
 
-    /** 单个病区（含所属科室），用于入院时推导科室与病区名 */
+    /**
+     * 单个病区（含所属科室），用于入院时推导科室与病区名
+     */
     @Select("""
             SELECT w.ward_id   AS wardId,
                    w.ward_code AS wardCode,

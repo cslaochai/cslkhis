@@ -21,7 +21,9 @@ import java.util.List;
 @Mapper
 public interface BizCriticalNoticeMapper extends BaseMapper<BizCriticalNotice> {
 
-    /** 台账行：不拖 signer_signature（MEDIUMTEXT 手写图），身份证/电话列表根本不选 */
+    /**
+     * 台账行：不拖 signer_signature（MEDIUMTEXT 手写图），身份证/电话列表根本不选
+     */
     String ROW_COLUMNS = """
             c.id, c.notice_no, c.admission_id, c.patient_id, c.patient_name, c.admission_no,
             c.notice_type, c.consciousness_status, c.clinical_diagnosis, c.notify_time,
@@ -98,7 +100,9 @@ public interface BizCriticalNoticeMapper extends BaseMapper<BizCriticalNotice> {
             """)
     CriticalNoticeVO.Detail selectNoticeDetail(@Param("id") Long id);
 
-    /** 开单底稿：住院＋患者一般项目（科室/病区/床位取入院现值） */
+    /**
+     * 开单底稿：住院＋患者一般项目（科室/病区/床位取入院现值）
+     */
     @Select("""
             SELECT a.admission_id   AS admissionId,
                    a.admission_no   AS admissionNo,
@@ -120,7 +124,9 @@ public interface BizCriticalNoticeMapper extends BaseMapper<BizCriticalNotice> {
             """)
     CriticalNoticeVO.Base selectAdmissionBase(@Param("admissionId") Long admissionId);
 
-    /** 在院患者候选（含每人历史通知张数，医生站横幅数据源） */
+    /**
+     * 在院患者候选（含每人历史通知张数，医生站横幅数据源）
+     */
     @Select("""
             <script>
             SELECT a.admission_id   AS admissionId,
@@ -147,10 +153,12 @@ public interface BizCriticalNoticeMapper extends BaseMapper<BizCriticalNotice> {
             </script>
             """)
     List<CriticalNoticeVO.Inpatient> selectInpatientCandidates(@Param("keyword") String keyword,
-                                                                @Param("deptIds") List<Long> deptIds,
-                                                                @Param("limit") int limit);
+                                                               @Param("deptIds") List<Long> deptIds,
+                                                               @Param("limit") int limit);
 
-    /** 医师候选（有医生角色的在职员工，告知/见证医师下拉） */
+    /**
+     * 医师候选（有医生角色的在职员工，告知/见证医师下拉）
+     */
     @Select("""
             SELECT e.id AS employeeId, e.emp_name AS empName, e.dept_name AS deptName
               FROM sys_employee e
@@ -163,11 +171,15 @@ public interface BizCriticalNoticeMapper extends BaseMapper<BizCriticalNotice> {
             """)
     List<CriticalNoticeVO.DoctorOption> selectDoctorOptions();
 
-    /** 员工职称码（签名人 signerTitle，电子签名证据留档） */
+    /**
+     * 员工职称码（签名人 signerTitle，电子签名证据留档）
+     */
     @Select("SELECT title FROM sys_employee WHERE id = #{employeeId} AND del_flag = 0")
     String selectEmployeeTitle(@Param("employeeId") Long employeeId);
 
-    /** 四状态计数（统计卡） */
+    /**
+     * 四状态计数（统计卡）
+     */
     @Select("""
             <script>
               SELECT
@@ -184,7 +196,9 @@ public interface BizCriticalNoticeMapper extends BaseMapper<BizCriticalNotice> {
             """)
     CriticalNoticeVO.Stats selectStats(@Param("deptIds") List<Long> deptIds);
 
-    /** 该住院当前「已签发待签收」张数（同一在院患者可多次告知，不设唯一闸） */
+    /**
+     * 该住院当前「已签发待签收」张数（同一在院患者可多次告知，不设唯一闸）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_critical_notice
              WHERE del_flag = 0 AND notice_status = 2 AND admission_id = #{admissionId}

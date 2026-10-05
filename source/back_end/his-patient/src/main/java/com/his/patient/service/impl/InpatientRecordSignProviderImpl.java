@@ -1,14 +1,14 @@
 package com.his.patient.service.impl;
 
-import com.his.patient.service.InpatientRecordSignProvider;
-import com.his.common.util.SignCrypto;
+import com.his.common.entity.SignSubject;
+import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
-import com.his.common.entity.SignSubject;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.mapper.BizInpatientRecordMapper;
+import com.his.patient.service.InpatientRecordSignProvider;
 import com.his.patient.support.InpatientRecordLabels;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,8 +17,6 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
-
-import com.his.common.enums.RecordStatusEnum;
 
 /**
  * 住院病历文书的签名内容提供者（业务类型=1）。

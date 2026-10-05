@@ -32,7 +32,9 @@ public final class PatientDataTables {
         return Collections.unmodifiableMap(m);
     }
 
-    /** 未知标识原样报出，不回落成"其他" —— 静默回落会让新加的表永远显示不出问题 */
+    /**
+     * 未知标识原样报出，不回落成"其他" —— 静默回落会让新加的表永远显示不出问题
+     */
     public static String label(String key) {
         return LABELS.getOrDefault(key, "未知(" + key + ")");
     }

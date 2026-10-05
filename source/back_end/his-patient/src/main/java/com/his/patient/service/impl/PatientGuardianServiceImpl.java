@@ -2,27 +2,28 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.his.common.enums.UserTypeEnum;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.dto.GuardianUpsertDTO;
 import com.his.patient.dto.GuardianBindDTO;
 import com.his.patient.dto.GuardianSendAddCodeDTO;
 import com.his.patient.dto.GuardianSendBindCodeDTO;
+import com.his.patient.dto.GuardianUpsertDTO;
+import com.his.patient.entity.BizPatient;
 import com.his.patient.entity.BizPatientGuardian;
 import com.his.patient.enums.GuardianRelationEnum;
 import com.his.patient.mapper.BizPatientGuardianMapper;
-import com.his.patient.service.PatientGuardianService;
-import com.his.patient.vo.GuardianPatientVO;
 import com.his.patient.mapper.BizPatientMapper;
+import com.his.patient.service.PatientGuardianService;
 import com.his.patient.service.PatientService;
+import com.his.patient.vo.GuardianPatientVO;
 import com.his.patient.vo.SmsSendVO;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
-import com.his.system.service.SysAuditLogService;
+import com.his.security.entity.CurrentUser;
 import com.his.system.entity.SysUser;
 import com.his.system.mapper.SysUserMapper;
-import com.his.system.service.SysMessageService;
 import com.his.system.service.SmsCodeService;
+import com.his.system.service.SysAuditLogService;
+import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,22 +34,20 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
-import com.his.common.enums.UserTypeEnum;
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class PatientGuardianServiceImpl implements PatientGuardianService {
 
-    /** 1 个账号最多绑定的就诊人数（风控上限） */
+    /**
+     * 1 个账号最多绑定的就诊人数（风控上限）
+     */
     private static final int MAX_BINDINGS_PER_USER = 5;
-    /** 1 个就诊人最多被多少个账号绑定（防多人窥探同一档案） */
+    /**
+     * 1 个就诊人最多被多少个账号绑定（防多人窥探同一档案）
+     */
     private static final int MAX_BINDERS_PER_PATIENT = 3;
 
     private final BizPatientGuardianMapper guardianMapper;
@@ -58,6 +57,45 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
     private final SysMessageService sysMessageService;
     private final SmsCodeService smsCodeService;
     private final SysAuditLogService auditLogService;
+
+    private static String normalizeIdCard(String idCard) {
+        String s = idCard == null ? "" : idCard.trim().toUpperCase();
+        if (!s.matches("^\\d{17}[\\dX]$")) {
+            throw new BusinessException("身份证号格式不正确");
+        }
+        return s;
+    }
+
+    private static LocalDate parseBirthDate(String idCard) {
+        if (idCard == null || idCard.length() < 14) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(idCard.substring(6, 14), DateTimeFormatter.BASIC_ISO_DATE);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * 后端出参一律打码（前端脱敏挡不住抓包），格式：前6 + ******** + 后4
+     */
+    private static String maskIdCard(String idCard) {
+        if (idCard == null || idCard.length() < 15) {
+            return idCard == null || idCard.isEmpty() ? null : "***";
+        }
+        return idCard.substring(0, 6) + "********" + idCard.substring(idCard.length() - 4);
+    }
+
+    /**
+     * 手机号打码：138****8888
+     */
+    private static String maskPhone(String phone) {
+        if (phone == null || phone.length() < 7) {
+            return phone == null || phone.isEmpty() ? null : "***";
+        }
+        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
+    }
 
     @Override
     public List<Long> accessiblePatientIds(CurrentUser user) {
@@ -252,6 +290,8 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
         return toVO(patient, g.getRelation(), g.getIsDefault(), false);
     }
 
+    // 私有
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void unbindPatient(Long patientId) {
@@ -320,8 +360,6 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
         return ok ? "发送成功（详见 sys_message channel=wechat 留痕）"
                 : "发送失败（原因见 sys_message channel=wechat 最新一条 remark：未启用/未配模板/未绑openid 都会落在这里）";
     }
-
-    // 私有
 
     private CurrentUser requirePatientUser() {
         CurrentUser user = UserUtils.getCurrentUser();
@@ -409,41 +447,6 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
             fallback.setIsDefault(1);
             guardianMapper.updateById(fallback);
         }
-    }
-
-    private static String normalizeIdCard(String idCard) {
-        String s = idCard == null ? "" : idCard.trim().toUpperCase();
-        if (!s.matches("^\\d{17}[\\dX]$")) {
-            throw new BusinessException("身份证号格式不正确");
-        }
-        return s;
-    }
-
-    private static LocalDate parseBirthDate(String idCard) {
-        if (idCard == null || idCard.length() < 14) {
-            return null;
-        }
-        try {
-            return LocalDate.parse(idCard.substring(6, 14), DateTimeFormatter.BASIC_ISO_DATE);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /** 后端出参一律打码（前端脱敏挡不住抓包），格式：前6 + ******** + 后4 */
-    private static String maskIdCard(String idCard) {
-        if (idCard == null || idCard.length() < 15) {
-            return idCard == null || idCard.isEmpty() ? null : "***";
-        }
-        return idCard.substring(0, 6) + "********" + idCard.substring(idCard.length() - 4);
-    }
-
-    /** 手机号打码：138****8888 */
-    private static String maskPhone(String phone) {
-        if (phone == null || phone.length() < 7) {
-            return phone == null || phone.isEmpty() ? null : "***";
-        }
-        return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
     }
 
     private GuardianPatientVO toVO(BizPatient p, Integer relation, Integer isDefault, boolean self) {

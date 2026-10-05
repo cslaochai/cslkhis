@@ -1,7 +1,5 @@
 package com.his.patient.support;
 
-import com.his.patient.support.PatientGenderText;
-
 /**
  * 住院枚举文案
  * <p><b>铁律：未知码值一律渲染成「未知(码值)」，绝不回落成某个合法值。</b>
@@ -12,7 +10,9 @@ public final class InpatientLabels {
     private InpatientLabels() {
     }
 
-    /** 床位状态：0-维修 1-空闲 2-占用 3-锁定 */
+    /**
+     * 床位状态：0-维修 1-空闲 2-占用 3-锁定
+     */
     public static String bedStatusText(Integer code) {
         if (code == null) {
             return "未知";
@@ -26,7 +26,9 @@ public final class InpatientLabels {
         };
     }
 
-    /** 入院状态：0-已出院 1-在院 */
+    /**
+     * 入院状态：0-已出院 1-在院
+     */
     public static String admissionStatusText(Integer code) {
         if (code == null) {
             return "未知";
@@ -38,7 +40,9 @@ public final class InpatientLabels {
         };
     }
 
-    /** 病案首页状态：1-草稿 2-已提交 3-已归档 */
+    /**
+     * 病案首页状态：1-草稿 2-已提交 3-已归档
+     */
     public static String summaryStatusText(Integer code) {
         if (code == null) {
             return "未生成";
@@ -51,7 +55,9 @@ public final class InpatientLabels {
         };
     }
 
-    /** 入院途径：1-门诊 2-急诊 3-转院 4-其他。<b>null 表示既有数据未填，不是"门诊"。</b> */
+    /**
+     * 入院途径：1-门诊 2-急诊 3-转院 4-其他。<b>null 表示既有数据未填，不是"门诊"。</b>
+     */
     public static String admitWayText(Integer code) {
         if (code == null) {
             return "—";
@@ -65,7 +71,9 @@ public final class InpatientLabels {
         };
     }
 
-    /** 离院方式：1-医嘱离院 2-医嘱转院 3-医嘱转社区 4-非医嘱离院 5-死亡 9-其他 */
+    /**
+     * 离院方式：1-医嘱离院 2-医嘱转院 3-医嘱转社区 4-非医嘱离院 5-死亡 9-其他
+     */
     public static String dischargeWayText(Integer code) {
         if (code == null) {
             return "—";
@@ -81,7 +89,9 @@ public final class InpatientLabels {
         };
     }
 
-    /** 诊断类型：1-主要诊断 2-其他诊断 */
+    /**
+     * 诊断类型：1-主要诊断 2-其他诊断
+     */
     public static String diagTypeText(Integer code) {
         if (code == null) {
             return "—";
@@ -93,7 +103,9 @@ public final class InpatientLabels {
         };
     }
 
-    /** 入院病情：1-有 2-临床未确定 3-情况不明 4-无 */
+    /**
+     * 入院病情：1-有 2-临床未确定 3-情况不明 4-无
+     */
     public static String admitConditionText(Integer code) {
         if (code == null) {
             return "—";
@@ -107,19 +119,23 @@ public final class InpatientLabels {
         };
     }
 
-    /** 离院方式合法值校验 */
+    /**
+     * 离院方式合法值校验
+     */
     public static boolean isValidDischargeWay(Integer code) {
         return code != null && (code == 1 || code == 2 || code == 3 || code == 4 || code == 5 || code == 9);
     }
 
-    /** 入院途径合法值校验 */
+    /**
+     * 入院途径合法值校验
+     */
     public static boolean isValidAdmitWay(Integer code) {
         return code != null && code >= 1 && code <= 4;
     }
 
     /**
      * 性别：住院证上的 gender 是建档时从患者基本信息原样快照过来的，
-     * 所以口径必须跟主档一致 —— <b>1-男 2-女 3-未知</b>，直接复用 {@link PatientGenderText}。
+     * 所以口径必须跟主档一致 —— <b>1-男 2-女 9-未知</b>，直接复用 {@link PatientGenderText}。
      *
      * <p>这里原先写的是「0-女 1-男」，与主档口径相反。后果不是"显示成另一种性别"那么轻：
      * 女性患者（gender=2）会落进 default 分支被渲染成「未知(2)」，脏值 0 反而被说成「女」。

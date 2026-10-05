@@ -17,10 +17,13 @@ import {getDepartmentSelectList } from '@/api/system'
 import {
   PATIENT_GENDER_OPTIONS,
   patientGenderSymbol,
+  patientAvatarTone,
   isPatientGenderCollected,
   isIdCardFormatLegal,
   isPhoneLegal
 } from '@/lib/patientGender'
+
+const GENDER_DOT = { male: 'bg-blue-500', female: 'bg-pink-500', unknown: 'bg-slate-400' }
 import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
 
 const loading = ref(false)
@@ -868,7 +871,7 @@ onMounted(() => {
             <div class="flex items-center gap-2">
               <span
                   :class="['inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white',
-                           row.gender === 1 ? 'bg-blue-500' : row.gender === 2 ? 'bg-pink-500' : 'bg-slate-400']">
+                           GENDER_DOT[patientAvatarTone(row.gender)]]">
                 {{ patientGenderSymbol(row.gender) }}
               </span>
               <div>
@@ -1040,7 +1043,7 @@ onMounted(() => {
           <div v-if="addForm.patientId" class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
             <div class="flex items-center gap-3 text-sm">
               <span :class="['inline-flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold text-white',
-                addForm.gender === 1 ? 'bg-blue-500' : addForm.gender === 2 ? 'bg-pink-500' : 'bg-slate-400']">
+                GENDER_DOT[patientAvatarTone(addForm.gender)]]">
                 {{ patientGenderSymbol(addForm.gender) }}
               </span>
               <div>

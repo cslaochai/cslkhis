@@ -3,11 +3,7 @@ package com.his.patient.support;
 import com.his.patient.entity.BizPatient;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 患者档案关键字段清单与完整度评分（P5.1 EMPI / P5.3 数据质量共用）
@@ -19,8 +15,22 @@ import java.util.Set;
  */
 public final class PatientProfileFields {
 
-    /** 字段名（前端字段名）→ 中文名。顺序即展示顺序 */
+    /**
+     * 字段名（前端字段名）→ 中文名。顺序即展示顺序
+     */
     public static final Map<String, String> FIELDS = build();
+    /**
+     * 档案分组键 → 关键字段中文名。
+     *
+     * <p>只列**同时有两份存储**的字段：`过敏史`、`既往病史` 在患者基本信息里是文本字段，
+     * 同时又有结构化表（药物过敏史 / 既往疾病史）；
+     * `联系人` 也一样（患者基本信息.contact_name vs 患者联系方式）。
+     * 手术史/家族史/用药史没有对应的患者基本信息文本字段，不在此表。
+     */
+    private static final Map<String, String> PROFILE_KEY_TO_LABEL = Map.of(
+            "allergy", "过敏史",
+            "pastDisease", "既往病史",
+            "contact", "联系人");
 
     private PatientProfileFields() {
     }
@@ -48,24 +58,8 @@ public final class PatientProfileFields {
     }
 
     /**
-     * 评分结果。
-     *
-     * @param completeCount 已填字段数
-     * @param totalCount    关键字段总数
-     * @param missingFields 缺失字段的**中文名**列表（直接给页面显示与定位用）
+     * 对一份患者档案评分
      */
-    public record ProfileScore(int completeCount, int totalCount, List<String> missingFields) {
-
-        /** 完整度百分比，保留一位小数 */
-        public double rate() {
-            if (totalCount <= 0) {
-                return 0D;
-            }
-            return Math.round(completeCount * 1000D / totalCount) / 10D;
-        }
-    }
-
-    /** 对一份患者档案评分 */
     public static ProfileScore score(BizPatient p) {
         List<String> missing = new ArrayList<>();
         int filled = 0;
@@ -73,36 +67,38 @@ public final class PatientProfileFields {
             missing.addAll(FIELDS.values());
             return new ProfileScore(0, FIELDS.size(), missing);
         }
-        if (hasText(p.getPatientName())) filled++; else missing.add(FIELDS.get("patientName"));
-        if (p.getGender() != null) filled++; else missing.add(FIELDS.get("gender"));
-        if (p.getBirthDate() != null) filled++; else missing.add(FIELDS.get("birthDate"));
-        if (hasText(p.getIdCard())) filled++; else missing.add(FIELDS.get("idCard"));
-        if (hasText(p.getPhone())) filled++; else missing.add(FIELDS.get("phone"));
-        if (hasText(p.getAddress())) filled++; else missing.add(FIELDS.get("address"));
-        if (hasText(p.getNation())) filled++; else missing.add(FIELDS.get("nation"));
-        if (hasText(p.getOccupation())) filled++; else missing.add(FIELDS.get("occupation"));
-        if (p.getMaritalStatus() != null) filled++; else missing.add(FIELDS.get("maritalStatus"));
-        if (hasText(p.getBloodType())) filled++; else missing.add(FIELDS.get("bloodType"));
-        if (hasText(p.getContactName())) filled++; else missing.add(FIELDS.get("contactName"));
-        if (hasText(p.getContactPhone())) filled++; else missing.add(FIELDS.get("contactPhone"));
-        if (hasText(p.getAllergyHistory())) filled++; else missing.add(FIELDS.get("allergyHistory"));
-        if (hasText(p.getMedicalHistory())) filled++; else missing.add(FIELDS.get("medicalHistory"));
-        if (hasText(p.getMedicalInsuranceType())) filled++; else missing.add(FIELDS.get("medicalInsuranceType"));
+        if (hasText(p.getPatientName())) filled++;
+        else missing.add(FIELDS.get("patientName"));
+        if (p.getGender() != null) filled++;
+        else missing.add(FIELDS.get("gender"));
+        if (p.getBirthDate() != null) filled++;
+        else missing.add(FIELDS.get("birthDate"));
+        if (hasText(p.getIdCard())) filled++;
+        else missing.add(FIELDS.get("idCard"));
+        if (hasText(p.getPhone())) filled++;
+        else missing.add(FIELDS.get("phone"));
+        if (hasText(p.getAddress())) filled++;
+        else missing.add(FIELDS.get("address"));
+        if (hasText(p.getNation())) filled++;
+        else missing.add(FIELDS.get("nation"));
+        if (hasText(p.getOccupation())) filled++;
+        else missing.add(FIELDS.get("occupation"));
+        if (p.getMaritalStatus() != null) filled++;
+        else missing.add(FIELDS.get("maritalStatus"));
+        if (hasText(p.getBloodType())) filled++;
+        else missing.add(FIELDS.get("bloodType"));
+        if (hasText(p.getContactName())) filled++;
+        else missing.add(FIELDS.get("contactName"));
+        if (hasText(p.getContactPhone())) filled++;
+        else missing.add(FIELDS.get("contactPhone"));
+        if (hasText(p.getAllergyHistory())) filled++;
+        else missing.add(FIELDS.get("allergyHistory"));
+        if (hasText(p.getMedicalHistory())) filled++;
+        else missing.add(FIELDS.get("medicalHistory"));
+        if (hasText(p.getMedicalInsuranceType())) filled++;
+        else missing.add(FIELDS.get("medicalInsuranceType"));
         return new ProfileScore(filled, FIELDS.size(), missing);
     }
-
-    /**
-     * 档案分组键 → 关键字段中文名。
-     *
-     * <p>只列**同时有两份存储**的字段：`过敏史`、`既往病史` 在患者基本信息里是文本字段，
-     * 同时又有结构化表（药物过敏史 / 既往疾病史）；
-     * `联系人` 也一样（患者基本信息.contact_name vs 患者联系方式）。
-     * 手术史/家族史/用药史没有对应的患者基本信息文本字段，不在此表。
-     */
-    private static final Map<String, String> PROFILE_KEY_TO_LABEL = Map.of(
-            "allergy", "过敏史",
-            "pastDisease", "既往病史",
-            "contact", "联系人");
 
     /**
      * 用结构化档案表的实际数据，修正完整度的缺失判据。
@@ -138,5 +134,25 @@ public final class PatientProfileFields {
 
     private static boolean hasText(String s) {
         return StringUtils.hasText(s);
+    }
+
+    /**
+     * 评分结果。
+     *
+     * @param completeCount 已填字段数
+     * @param totalCount    关键字段总数
+     * @param missingFields 缺失字段的**中文名**列表（直接给页面显示与定位用）
+     */
+    public record ProfileScore(int completeCount, int totalCount, List<String> missingFields) {
+
+        /**
+         * 完整度百分比，保留一位小数
+         */
+        public double rate() {
+            if (totalCount <= 0) {
+                return 0D;
+            }
+            return Math.round(completeCount * 1000D / totalCount) / 10D;
+        }
     }
 }

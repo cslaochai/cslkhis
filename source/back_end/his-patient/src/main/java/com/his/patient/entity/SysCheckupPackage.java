@@ -17,44 +17,70 @@ import java.time.LocalDateTime;
 @TableName("sys_checkup_package")
 public class SysCheckupPackage {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 套餐名称 */
+    /**
+     * 套餐名称
+     */
     private String packageName;
 
-    /** 套餐编码 */
+    /**
+     * 套餐编码
+     */
     private String packageCode;
 
-    /** 适用性别:0-不限 1-男 2-女（性别字典口径） */
+    /**
+     * 适用性别:0-不限 1-男 2-女（性别字典口径）
+     */
     private Integer genderLimit;
 
-    /** 套餐价格（元） */
+    /**
+     * 套餐价格（元）
+     */
     private BigDecimal price;
 
-    /** 套餐说明 */
+    /**
+     * 套餐说明
+     */
     private String description;
 
-    /** his_enable_status:0-禁用 1-启用 */
+    /**
+     * his_enable_status:0-禁用 1-启用
+     */
     private Integer status;
 
-    /** 创建人 */
+    /**
+     * 创建人
+     */
     private String createBy;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
 
-    /** 更新人 */
+    /**
+     * 更新人
+     */
     private String updateBy;
 
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     private LocalDateTime updateTime;
 
-    /** 删除标志（0-正常 1-删除） */
+    /**
+     * 删除标志（0-正常 1-删除）
+     */
     private Integer delFlag;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

@@ -30,7 +30,9 @@ public class PatientAllergyVO {
      * 过敏原名称
      */
     private String allergenName;
-    /** 过敏严重程度（轻度/中度/重度/危及生命） */
+    /**
+     * 过敏严重程度（轻度/中度/重度/危及生命）
+     */
     private String allergySeverity;
     /**
      * 过敏症状描述

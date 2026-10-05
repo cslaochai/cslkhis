@@ -34,6 +34,7 @@ import {getDepartmentSelectList, getEmployeeList, getUserInfo} from '@/api/syste
 import {QUEUE_STATUS, TRIAGE_LEVEL, REGIST_TYPE, statusOf} from '@/lib/statusColor'
 import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
 import {shortQueueNo} from '@/lib/utils'
+import { patientGenderText } from '@/lib/patientGender'
 
 const loading = ref(false)
 const rows = ref<any[]>([])
@@ -66,7 +67,7 @@ function localDate(): string {
 
 const showUnknown = (code: any) => code === null || code === undefined
 
-const genderText = (g: any) => (g === 1 ? '男' : g === 2 ? '女' : '未知')
+const genderText = (g: any) => patientGenderText(g)
 
 /**
  * 时间解析（全站唯一入口）。

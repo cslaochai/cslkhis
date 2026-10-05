@@ -1,8 +1,8 @@
 package com.his.patient.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.his.common.base.BaseEntity;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -29,37 +29,69 @@ import java.time.LocalDateTime;
 @TableName("biz_nursing_qc_indicator")
 public class BizNursingQcIndicator extends BaseEntity {
 
-    /** 病区ID */
+    /**
+     * 病区ID
+     */
     private Long wardId;
-    /** 病区名称（快照） */
+    /**
+     * 病区名称（快照）
+     */
     private String wardName;
-    /** 病区所属科室：数据范围按它收口 */
+    /**
+     * 病区所属科室：数据范围按它收口
+     */
     private Long deptId;
-    /** 科室名称（快照） */
+    /**
+     * 科室名称（快照）
+     */
     private String deptName;
-    /** 统计月份 yyyy-MM */
+    /**
+     * 统计月份 yyyy-MM
+     */
     private String statMonth;
-    /** NursingIndicatorEnum#getCode */
+    /**
+     * NursingIndicatorEnum#getCode
+     */
     private String indicatorCode;
-    /** 指标名称（快照） */
+    /**
+     * 指标名称（快照）
+     */
     private String indicatorName;
-    /** {@code %} 或例/千床日 */
+    /**
+     * {@code %} 或例/千床日
+     */
     private String unit;
-    /** 分子 */
+    /**
+     * 分子
+     */
     private BigDecimal numerator;
-    /** 抽查例数（合格率类）或实际占用床日数（千床日类） */
+    /**
+     * 抽查例数（合格率类）或实际占用床日数（千床日类）
+     */
     private BigDecimal denominator;
-    /** 指标值 */
+    /**
+     * 指标值
+     */
     private BigDecimal rateValue;
-    /** 目标值，千床日类为 NULL（不硬拍常数） */
+    /**
+     * 目标值，千床日类为 NULL（不硬拍常数）
+     */
     private BigDecimal targetValue;
-    /** 1-达标 0-未达标 NULL-无目标 */
+    /**
+     * 1-达标 0-未达标 NULL-无目标
+     */
     private Integer reachedFlag;
-    /** 事实来源（1-检查表 2-不良事件+住院事实） */
+    /**
+     * 事实来源（1-检查表 2-不良事件+住院事实）
+     */
     private Integer sourceType;
-    /** NursingQcReportEnum：1-未上报 2-已上报 */
+    /**
+     * NursingQcReportEnum：1-未上报 2-已上报
+     */
     private Integer reportStatus;
-    /** 最近一次重算时间 */
+    /**
+     * 最近一次重算时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime calcTime;
 }

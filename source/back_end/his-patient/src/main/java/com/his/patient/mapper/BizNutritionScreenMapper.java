@@ -28,7 +28,9 @@ import java.util.List;
 @Mapper
 public interface BizNutritionScreenMapper extends BaseMapper<BizNutritionScreen> {
 
-    /** 列表与历史共用同一投影，避免两套口径 */
+    /**
+     * 列表与历史共用同一投影，避免两套口径
+     */
     String PROJECTION = """
             <script>
             SELECT s.*,
@@ -77,7 +79,9 @@ public interface BizNutritionScreenMapper extends BaseMapper<BizNutritionScreen>
     IPage<NutritionScreenVO> selectScreenPage(Page<NutritionScreenVO> page,
                                               @Param("q") NutritionScreenQueryPageDTO query);
 
-    /** 某次住院的筛查历史（膳食方案弹框里看"这个人的筛查轨迹"） */
+    /**
+     * 某次住院的筛查历史（膳食方案弹框里看"这个人的筛查轨迹"）
+     */
     @Select(PROJECTION + """
             AND s.admission_id = #{admissionId}
              ORDER BY s.screen_time DESC, s.id DESC
@@ -86,7 +90,9 @@ public interface BizNutritionScreenMapper extends BaseMapper<BizNutritionScreen>
             """)
     List<NutritionScreenVO> selectByAdmission(@Param("admissionId") Long admissionId);
 
-    /** 单条详情（保存后回给出参用，与列表同一投影） */
+    /**
+     * 单条详情（保存后回给出参用，与列表同一投影）
+     */
     @Select(PROJECTION + """
             AND s.id = #{id}
              LIMIT 1
@@ -94,7 +100,9 @@ public interface BizNutritionScreenMapper extends BaseMapper<BizNutritionScreen>
             """)
     NutritionScreenVO selectVoById(@Param("id") Long id);
 
-    /** 单号前缀当日已用最大序号（NS+yyyyMMdd+4位）—— 取 MAX 不取 COUNT，删过一条也不会撞号 */
+    /**
+     * 单号前缀当日已用最大序号（NS+yyyyMMdd+4位）—— 取 MAX 不取 COUNT，删过一条也不会撞号
+     */
     @Select("SELECT COALESCE(MAX(CAST(RIGHT(screen_no, 4) AS UNSIGNED)), 0) "
             + "FROM biz_nutrition_screen WHERE screen_no LIKE CONCAT(#{prefix}, '%')")
     long maxScreenSeq(@Param("prefix") String prefix);

@@ -23,7 +23,7 @@
 import {ref, computed, watch} from 'vue'
 import {Search} from '@element-plus/icons-vue'
 import {getPatientDetail, getPatientList} from '@/api/patient'
-import {patientGenderSymbol} from '@/lib/patientGender'
+import {patientGenderSymbol, patientAvatarTone} from '@/lib/patientGender'
 import {patientTypeText} from '@/lib/patientType'
 import {tagChipText} from '@/lib/patientTag'
 
@@ -277,8 +277,7 @@ const highlight = (text) => {
           <div
               :class="[
             'ps-avatar',
-            p.gender === 1 ? 'ps-avatar-male'
-                : p.gender === 2 ? 'ps-avatar-female' : 'ps-avatar-unknown',
+            'ps-avatar-' + patientAvatarTone(p.gender),
             p.status === 0 ? 'ps-avatar-disabled' : '',
           ]"
           >
@@ -300,7 +299,7 @@ const highlight = (text) => {
             <!-- 第一行：姓名 + 性别 + 年龄 + 患者号 + 医保 -->
             <div class="ps-line ps-line-title">
               <span class="ps-name" v-html="highlight(p.patientName)"></span>
-              <span :class="['ps-gender', p.gender === 1 ? 'male' : p.gender === 2 ? 'female' : 'unknown']">
+              <span :class="['ps-gender', patientAvatarTone(p.gender)]">
               {{ patientGenderSymbol(p.gender) }}
             </span>
               <span class="ps-age">{{ patientAge(p) }}岁</span>

@@ -1,20 +1,10 @@
 package com.his.patient.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.BedMapQueryDTO;
-import com.his.patient.dto.InpatientAdmitDTO;
-import com.his.patient.dto.InpatientDischargeDTO;
-import com.his.patient.dto.InpatientQueryPageDTO;
-import com.his.patient.dto.InpatientSummaryUpsertDTO;
-import com.his.patient.entity.BizInpatientOperation;
-import com.his.patient.dto.InpatientTransferDTO;
+import com.his.patient.dto.*;
 import com.his.patient.entity.BizAdmission;
-import com.his.patient.vo.BedMapVO;
-import com.his.patient.vo.BedVO;
-import com.his.patient.vo.InpatientDetailVO;
-import com.his.patient.vo.InpatientStatsVO;
-import com.his.patient.vo.InpatientVO;
-import com.his.patient.vo.WardVO;
+import com.his.patient.entity.BizInpatientOperation;
+import com.his.patient.vo.*;
 
 import java.util.List;
 
@@ -23,7 +13,9 @@ import java.util.List;
  */
 public interface InpatientService {
 
-    /** 住院列表分页（在院 / 已出院） */
+    /**
+     * 住院列表分页（在院 / 已出院）
+     */
     IPage<InpatientVO> listPage(InpatientQueryPageDTO query);
 
     /**
@@ -33,28 +25,44 @@ public interface InpatientService {
      */
     IPage<InpatientVO> listMyDeptPage(InpatientQueryPageDTO query);
 
-    /** 住院详情（入院信息 + 病案首页 + 诊断明细 + 手术明细） */
+    /**
+     * 住院详情（入院信息 + 病案首页 + 诊断明细 + 手术明细）
+     */
     InpatientDetailVO detail(Long admissionId);
 
-    /** 入院登记（分床 + 占床 + 生成住院号 + 初始化首页草稿），返回入院ID */
+    /**
+     * 入院登记（分床 + 占床 + 生成住院号 + 初始化首页草稿），返回入院ID
+     */
     Long admit(InpatientAdmitDTO dto);
 
-    /** 换床（限同一科室内部） */
+    /**
+     * 换床（限同一科室内部）
+     */
     void transfer(InpatientTransferDTO dto);
 
-    /** 出院办理（写出院记录 + 释放床位 + 回写病案首页） */
+    /**
+     * 出院办理（写出院记录 + 释放床位 + 回写病案首页）
+     */
     void discharge(InpatientDischargeDTO dto);
 
-    /** 保存病案首页（含诊断 / 手术明细，整表替换） */
+    /**
+     * 保存病案首页（含诊断 / 手术明细，整表替换）
+     */
     InpatientDetailVO saveSummary(InpatientSummaryUpsertDTO dto);
 
-    /** 住院统计卡片 */
+    /**
+     * 住院统计卡片
+     */
     InpatientStatsVO stats();
 
-    /** 病区列表（床位数实时取自床位） */
+    /**
+     * 病区列表（床位数实时取自床位）
+     */
     List<WardVO> listWards();
 
-    /** 床位列表（可选床位图 / 选床） */
+    /**
+     * 床位列表（可选床位图 / 选床）
+     */
     List<BedVO> listBeds(Long wardId, Long deptId, Integer bedStatus);
 
     /**
@@ -72,16 +80,24 @@ public interface InpatientService {
      */
     void occupyBedForObservation(Long bedId, Long patientId);
 
-    /** 急诊留观释放床位；床位已挂在别人名下（如已转住院）时静默不动，绝不释放别人的床 */
+    /**
+     * 急诊留观释放床位；床位已挂在别人名下（如已转住院）时静默不动，绝不释放别人的床
+     */
     void releaseBedForObservation(Long bedId, Long patientId);
 
-    /** 入院单快照（住院状态与就诊科室/病区/床位归属）；不存在返回 {@code null} */
+    /**
+     * 入院单快照（住院状态与就诊科室/病区/床位归属）；不存在返回 {@code null}
+     */
     BizAdmission getAdmissionById(Long admissionId);
 
-    /** 病区（含所属科室快照）；不存在返回 {@code null} */
+    /**
+     * 病区（含所属科室快照）；不存在返回 {@code null}
+     */
     WardVO getWardById(Long wardId);
 
-    /** 床位号；床位不存在返回 {@code null} */
+    /**
+     * 床位号；床位不存在返回 {@code null}
+     */
     String getBedNoById(Long bedId);
 
     /**

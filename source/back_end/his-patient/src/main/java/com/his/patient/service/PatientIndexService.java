@@ -4,11 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.patient.dto.PatientIndexQueryDTO;
 import com.his.patient.dto.PatientMergeDTO;
 import com.his.patient.dto.PatientMergeRevertDTO;
-import com.his.patient.vo.PatientDuplicateGroupVO;
-import com.his.patient.vo.PatientIndexDictVO;
-import com.his.patient.vo.PatientIndexStatVO;
-import com.his.patient.vo.PatientIndexVO;
-import com.his.patient.vo.PatientMergeLogVO;
+import com.his.patient.vo.*;
 
 import java.util.List;
 
@@ -20,13 +16,19 @@ import java.util.List;
  */
 public interface PatientIndexService {
 
-    /** 患者主索引分页（含完整度、业务数据量、主档归属） */
+    /**
+     * 患者主索引分页（含完整度、业务数据量、主档归属）
+     */
     PageResult<PatientIndexVO> selectIndexPage(PatientIndexQueryDTO dto);
 
-    /** 疑似重复档案检测（分级成组；返回的是"值得看一眼"，不是"应该合并"） */
+    /**
+     * 疑似重复档案检测（分级成组；返回的是"值得看一眼"，不是"应该合并"）
+     */
     List<PatientDuplicateGroupVO> detectDuplicates(PatientIndexQueryDTO dto);
 
-    /** 单份档案的主索引详情（含同主档下的其他档案） */
+    /**
+     * 单份档案的主索引详情（含同主档下的其他档案）
+     */
     PatientIndexVO getIndexDetail(Long patientId);
 
     /**
@@ -36,10 +38,14 @@ public interface PatientIndexService {
      */
     PatientMergeLogVO merge(PatientMergeDTO dto);
 
-    /** 撤销合并（靠审计快照还原，不靠猜） */
+    /**
+     * 撤销合并（靠审计快照还原，不靠猜）
+     */
     PatientMergeLogVO revert(PatientMergeRevertDTO dto);
 
-    /** 合并历史分页 */
+    /**
+     * 合并历史分页
+     */
     PageResult<PatientMergeLogVO> selectMergeLogPage(PatientIndexQueryDTO dto);
 
     /**
@@ -51,7 +57,9 @@ public interface PatientIndexService {
      */
     List<Long> resolvePatientIds(Long patientId);
 
-    /** EMPI 概览指标（唯一性 / 完整性，供 P5.3 数据质量报表） */
+    /**
+     * EMPI 概览指标（唯一性 / 完整性，供 P5.3 数据质量报表）
+     */
     PatientIndexStatVO stats();
 
     /**

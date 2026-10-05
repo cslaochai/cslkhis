@@ -81,7 +81,9 @@ public interface BizAdmissionOrderMapper extends BaseMapper<BizAdmissionOrder> {
     IPage<AdmissionOrderVO> selectOrderPage(IPage<AdmissionOrderVO> page,
                                             @Param("q") AdmissionOrderQueryPageDTO query);
 
-    /** 单证详情（同分页的字段集） */
+    /**
+     * 单证详情（同分页的字段集）
+     */
     @Select("""
             SELECT o.id                  AS id,
                    o.order_no            AS orderNo,
@@ -124,7 +126,9 @@ public interface BizAdmissionOrderMapper extends BaseMapper<BizAdmissionOrder> {
             """)
     AdmissionOrderVO selectOrderDetail(@Param("id") Long id);
 
-    /** 当天已生成的住院证号条数（用于序号） */
+    /**
+     * 当天已生成的住院证号条数（用于序号）
+     */
     @Select("SELECT COUNT(*) FROM biz_admission_order WHERE del_flag = 0 AND order_no LIKE CONCAT(#{prefix}, '%')")
     long countByOrderNoPrefix(@Param("prefix") String prefix);
 
@@ -145,7 +149,9 @@ public interface BizAdmissionOrderMapper extends BaseMapper<BizAdmissionOrder> {
             """)
     long countActiveByRegist(@Param("registId") Long registId);
 
-    /** 待收治且未过期的证数量（住院处首页卡片） */
+    /**
+     * 待收治且未过期的证数量（住院处首页卡片）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_admission_order
             WHERE del_flag = 0 AND order_status = 1 AND (valid_until IS NULL OR valid_until > NOW())

@@ -5,15 +5,11 @@ import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.patient.dto.IcuMonitorQueryPageDTO;
-import com.his.patient.dto.IcuMonitorUpsertDTO;
-import com.his.patient.dto.IcuStayOutDTO;
-import com.his.patient.dto.IcuStayQueryPageDTO;
-import com.his.patient.dto.IcuStayUpsertDTO;
-import com.his.patient.enums.IcuOutDestEnum;
-import com.his.patient.enums.IcuStayStatusEnum;
+import com.his.patient.dto.*;
 import com.his.patient.entity.BizIcuMonitor;
 import com.his.patient.entity.BizIcuStay;
+import com.his.patient.enums.IcuOutDestEnum;
+import com.his.patient.enums.IcuStayStatusEnum;
 import com.his.patient.mapper.BizIcuMonitorMapper;
 import com.his.patient.mapper.BizIcuStayMapper;
 import com.his.patient.service.IcuService;
@@ -61,6 +57,47 @@ public class IcuServiceImpl implements IcuService {
     private final BizIcuMonitorMapper monitorMapper;
     private final RedisSequenceService redisSequenceService;
 
+    private static void assertGcs(Integer gcs) {
+        if (gcs != null && (gcs < 3 || gcs > 15)) {
+            throw new BusinessException("GCS 总分应在 3~15 之间");
+        }
+    }
+
+    private static BigDecimal balance(BigDecimal intake, BigDecimal output) {
+        if (intake == null && output == null) {
+            return null;
+        }
+        return nvl(intake).subtract(nvl(output)).setScale(1, RoundingMode.HALF_UP);
+    }
+
+    private static Integer flag(Integer value) {
+        return value == null ? 0 : (value == 1 ? 1 : 0);
+    }
+
+    private static BigDecimal nvl(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private static int nvl(Integer value, int fallback) {
+        return value == null ? fallback : value;
+    }
+
+    private static String trimToNull(String text) {
+        return StringUtils.hasText(text) ? text.trim() : null;
+    }
+
+    private static String cutToNull(String text, int max) {
+        return StringUtils.hasText(text) ? cut(text.trim(), max) : null;
+    }
+
+    private static String cut(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max);
+    }
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
     @Override
     public PageResult<IcuVO.StayVO> stayListPage(IcuStayQueryPageDTO query) {
         Page<IcuVO.StayVO> page = new Page<>(nvl(query.getPageNum(), 1), nvl(query.getPageSize(), 10));
@@ -70,6 +107,8 @@ public class IcuServiceImpl implements IcuService {
                 query.getCareLevel(), query.getStatus());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
+
+    // 内部工具
 
     @Override
     public IcuVO.StayVO stayGetById(Long id) {
@@ -302,12 +341,12 @@ public class IcuServiceImpl implements IcuService {
         stats.setBedTotal(bedTotal);
         stats.setBedUseRate(bedTotal == 0 ? null
                 : BigDecimal.valueOf(inCount).multiply(BigDecimal.valueOf(100))
-                        .divide(BigDecimal.valueOf(bedTotal), 1, RoundingMode.HALF_UP));
+                .divide(BigDecimal.valueOf(bedTotal), 1, RoundingMode.HALF_UP));
         stats.setMonitorTotalRange(monitorMapper.countRange(start.atStartOfDay(), end.atTime(23, 59, 59)));
         int stays = nvl(stats.getInCountRange(), 0) + nvl(stats.getOutCountRange(), 0);
         stats.setMonitorsPerStay(stays == 0 ? null
                 : BigDecimal.valueOf(nvl(stats.getMonitorTotalRange(), 0))
-                        .divide(BigDecimal.valueOf(stays), 2, RoundingMode.HALF_UP));
+                .divide(BigDecimal.valueOf(stays), 2, RoundingMode.HALF_UP));
         stats.setCareLevels(stayMapper.selectCareLevelBoard());
         stats.setVentModes(monitorMapper.selectLatestVentModes());
         IcuVO.StatsVO tubes = monitorMapper.selectTubeSummary();
@@ -324,8 +363,6 @@ public class IcuServiceImpl implements IcuService {
         stats.setMonitorLagCount(stayMapper.countMonitorLag(lagHours == null || lagHours <= 0 ? 6 : lagHours));
         return stats;
     }
-
-    // 内部工具
 
     private IcuVO.BedVO requireIcuBed(Long bedId) {
         IcuVO.BedVO bed = stayMapper.selectBedSnapshot(bedId);
@@ -391,47 +428,6 @@ public class IcuServiceImpl implements IcuService {
             throw new BusinessException("GCS 分项超出范围（睁眼1~4、语言1~5、运动1~6）");
         }
         return dto.getGcsEye() + dto.getGcsVerbal() + dto.getGcsMotor();
-    }
-
-    private static void assertGcs(Integer gcs) {
-        if (gcs != null && (gcs < 3 || gcs > 15)) {
-            throw new BusinessException("GCS 总分应在 3~15 之间");
-        }
-    }
-
-    private static BigDecimal balance(BigDecimal intake, BigDecimal output) {
-        if (intake == null && output == null) {
-            return null;
-        }
-        return nvl(intake).subtract(nvl(output)).setScale(1, RoundingMode.HALF_UP);
-    }
-
-    private static Integer flag(Integer value) {
-        return value == null ? 0 : (value == 1 ? 1 : 0);
-    }
-
-    private static BigDecimal nvl(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
-
-    private static int nvl(Integer value, int fallback) {
-        return value == null ? fallback : value;
-    }
-
-    private static String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
-    private static String cutToNull(String text, int max) {
-        return StringUtils.hasText(text) ? cut(text.trim(), max) : null;
-    }
-
-    private static String cut(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
     private String currentOperator() {

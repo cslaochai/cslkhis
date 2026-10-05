@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.his.common.enums.SysGenderEnum;
+
 /**
  * B 组：逻辑排他。
  *
@@ -76,6 +78,7 @@ public class LogicExclusionRule implements ComplianceRule {
             return;
         }
         Integer gender = ctx.getEvidence().gender();
+        SysGenderEnum g = SysGenderEnum.fromCode(gender);
         if (gender == null) {
             findings.add(RuleFinding.na(RuleCatalog.B01,
                     "患者性别未知（档案与清单均未填），无法做性别排他判定"));
@@ -89,14 +92,14 @@ public class LogicExclusionRule implements ComplianceRule {
                 continue;
             }
             String conflict = null;
-            if (gender == 1 && EvidenceKeywordMatcher.hits(name, FEMALE_ONLY)) {
+            if (g == SysGenderEnum.MALE && EvidenceKeywordMatcher.hits(name, FEMALE_ONLY)) {
                 conflict = "该诊断仅见于女性";
-            } else if (gender == 2 && EvidenceKeywordMatcher.hits(name, MALE_ONLY)) {
+            } else if (g == SysGenderEnum.FEMALE && EvidenceKeywordMatcher.hits(name, MALE_ONLY)) {
                 conflict = "该诊断仅见于男性";
             }
             if (conflict != null) {
                 findings.add(RuleFinding.hit(RuleCatalog.B01,
-                                "患者性别为" + (gender == 1 ? "男" : "女") + "，但诊断「" + name + "」"
+                                "患者性别为" + g.getLabel() + "，但诊断「" + name + "」"
                                         + conflict)
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
             } else {

@@ -11,8 +11,8 @@ import com.his.patient.mapper.SysOrderDictDataMapper;
 import com.his.patient.service.OrderDictService;
 import com.his.patient.support.OrderDictTypes;
 import com.his.patient.vo.OrderDictListVO;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,11 +20,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * 医嘱基础字典服务实现（sql/142）。
@@ -192,7 +188,9 @@ public class OrderDictServiceImpl implements OrderDictService {
         return dictType;
     }
 
-    /** 字典数据没有 (dict_type, dict_value) 唯一键，重复值只能服务端拦 */
+    /**
+     * 字典数据没有 (dict_type, dict_value) 唯一键，重复值只能服务端拦
+     */
     private void assertValueNotDuplicated(String dictType, String value, Long excludeId) {
         Long hits = dictMapper.selectCount(new LambdaQueryWrapper<SysOrderDictData>()
                 .eq(SysOrderDictData::getDictType, dictType)
@@ -203,7 +201,9 @@ public class OrderDictServiceImpl implements OrderDictService {
         }
     }
 
-    /** 不传排序就排到最后（max+1），避免新加的项插在最前面把常用项挤下去 */
+    /**
+     * 不传排序就排到最后（max+1），避免新加的项插在最前面把常用项挤下去
+     */
     private int nextSort(String dictType, Integer sort) {
         if (sort != null && sort > 0) {
             return sort;
@@ -216,7 +216,9 @@ public class OrderDictServiceImpl implements OrderDictService {
         return max + 1;
     }
 
-    /** 使用量：按类型对应的医嘱列 GROUP BY 一次拿全，不在列表里逐行数 */
+    /**
+     * 使用量：按类型对应的医嘱列 GROUP BY 一次拿全，不在列表里逐行数
+     */
     private Map<String, Long> loadUsage(String dictType) {
         String column = OrderDictTypes.orderColumn(dictType);
         Map<String, Long> usage = new HashMap<>();
@@ -245,7 +247,9 @@ public class OrderDictServiceImpl implements OrderDictService {
         return usage;
     }
 
-    /** 写完必须刷缓存：医生站下拉走 sys:dict:* 缓存（24h），不刷当天看不到新值 */
+    /**
+     * 写完必须刷缓存：医生站下拉走 sys:dict:* 缓存（24h），不刷当天看不到新值
+     */
     private void refreshCache(String dictType) {
         try {
             dictCacheService.refreshDictCache(dictType);

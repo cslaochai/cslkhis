@@ -1,38 +1,28 @@
 package com.his.patient.service.impl;
 
-import com.his.patient.service.CheckupService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.CheckupDTO;
-import com.his.patient.entity.BizCheckupRecord;
-import com.his.patient.entity.BizCheckupResult;
-import com.his.patient.entity.SysCheckupPackage;
-import com.his.patient.entity.SysCheckupPackageItem;
-import com.his.patient.mapper.BizCheckupRecordMapper;
-import com.his.patient.mapper.BizCheckupResultMapper;
-import com.his.patient.mapper.SysCheckupPackageItemMapper;
-import com.his.patient.mapper.SysCheckupPackageMapper;
-import com.his.patient.vo.CheckupVO;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.mapper.BizPatientMapper;
+import com.his.patient.entity.*;
+import com.his.patient.enums.CheckupStatusEnum;
+import com.his.patient.mapper.*;
+import com.his.patient.service.CheckupService;
 import com.his.patient.support.DictText;
+import com.his.patient.vo.CheckupVO;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
-
-import com.his.patient.enums.CheckupStatusEnum;
 
 /**
  * 体检服务（套餐 / 登记 / 结果 / 总检）。
@@ -52,6 +42,10 @@ public class CheckupServiceImpl implements CheckupService {
     private final DictText dictText;
 
     // 套餐
+
+    private static String tr(String s) {
+        return s == null ? "" : s.trim();
+    }
 
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.PackageVO savePackage(CheckupDTO.PackageSave dto) {
@@ -130,7 +124,11 @@ public class CheckupServiceImpl implements CheckupService {
         return toPackageVo(p);
     }
 
-    /** 停用套餐：已停用不可再用于新登记 */
+    // 登记 / 结果 / 总检
+
+    /**
+     * 停用套餐：已停用不可再用于新登记
+     */
     @Transactional(rollbackFor = Exception.class)
     public void disablePackage(Long id) {
         SysCheckupPackage p = packageMapper.selectById(id);
@@ -141,8 +139,6 @@ public class CheckupServiceImpl implements CheckupService {
         p.setUpdateBy(UserUtils.getCurrentUser().getUsername());
         packageMapper.updateById(p);
     }
-
-    // 登记 / 结果 / 总检
 
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.RecordVO createRecord(CheckupDTO.RecordCreate dto) {
@@ -223,7 +219,9 @@ public class CheckupServiceImpl implements CheckupService {
         return toRecordVo(r, true);
     }
 
-    /** 单项结果录入：已出报告（4）禁改；录入时状态 1/2 → 2 */
+    /**
+     * 单项结果录入：已出报告（4）禁改；录入时状态 1/2 → 2
+     */
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.ResultVO saveResult(CheckupDTO.ResultSave dto) {
         BizCheckupResult res = resultMapper.selectById(dto.getResultId());
@@ -252,7 +250,9 @@ public class CheckupServiceImpl implements CheckupService {
         return toResultVo(res);
     }
 
-    /** 总检出报告：要求状态 3 已完成（全部明细已录）且结论必填；4 为终态 */
+    /**
+     * 总检出报告：要求状态 3 已完成（全部明细已录）且结论必填；4 为终态
+     */
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.RecordVO conclude(CheckupDTO.Conclusion dto) {
         BizCheckupRecord r = recordMapper.selectById(dto.getRecordId());
@@ -274,7 +274,9 @@ public class CheckupServiceImpl implements CheckupService {
         return toRecordVo(r, true);
     }
 
-    /** 开始体检：1 → 2（仅推进状态） */
+    /**
+     * 开始体检：1 → 2（仅推进状态）
+     */
     @Transactional(rollbackFor = Exception.class)
     public void startCheckup(Long recordId) {
         BizCheckupRecord r = recordMapper.selectById(recordId);
@@ -289,7 +291,11 @@ public class CheckupServiceImpl implements CheckupService {
         recordMapper.updateById(r);
     }
 
-    /** 删除登记：仅 1 已登记可删；软删 */
+    // 转换
+
+    /**
+     * 删除登记：仅 1 已登记可删；软删
+     */
     @Transactional(rollbackFor = Exception.class)
     public void deleteRecord(Long recordId) {
         BizCheckupRecord r = recordMapper.selectById(recordId);
@@ -303,8 +309,6 @@ public class CheckupServiceImpl implements CheckupService {
         r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
         recordMapper.updateById(r);
     }
-
-    // 转换
 
     private CheckupVO.PackageVO toPackageVo(SysCheckupPackage p) {
         CheckupVO.PackageVO vo = new CheckupVO.PackageVO();
@@ -377,7 +381,9 @@ public class CheckupServiceImpl implements CheckupService {
         return vo;
     }
 
-    /** 总检前置校验复用：全部明细已录（resultValue 非空）才算 3 已完成 —— 在读接口里顺带判定并落状态 */
+    /**
+     * 总检前置校验复用：全部明细已录（resultValue 非空）才算 3 已完成 —— 在读接口里顺带判定并落状态
+     */
     public CheckupVO.RecordVO refreshFinishStatus(Long recordId) {
         BizCheckupRecord r = recordMapper.selectById(recordId);
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
@@ -396,9 +402,5 @@ public class CheckupServiceImpl implements CheckupService {
             }
         }
         return toRecordVo(r, true);
-    }
-
-    private static String tr(String s) {
-        return s == null ? "" : s.trim();
     }
 }

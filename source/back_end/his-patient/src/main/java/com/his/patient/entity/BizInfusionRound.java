@@ -21,50 +21,80 @@ import java.time.LocalDateTime;
 @TableName("biz_infusion_round")
 public class BizInfusionRound {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @TableId(type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 执行行ID（医嘱执行记录的ID） */
+    /**
+     * 执行行ID（医嘱执行记录的ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long execId;
 
-    /** 医嘱ID（冗余） */
+    /**
+     * 医嘱ID（冗余）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long orderId;
 
-    /** 入院ID（冗余） */
+    /**
+     * 入院ID（冗余）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
-    /** 巡视时间 */
+    /**
+     * 巡视时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime roundTime;
 
-    /** 滴速（滴/分） */
+    /**
+     * 滴速（滴/分）
+     */
     private Integer dripRate;
 
-    /** 余量（ml） */
+    /**
+     * 余量（ml）
+     */
     private Integer remainingVolume;
 
-    /** 巡视护士ID（员工ID） */
+    /**
+     * 巡视护士ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long roundNurseId;
 
-    /** 巡视护士姓名 */
+    /**
+     * 巡视护士姓名
+     */
     private String roundNurseName;
 
-    /** 创建人 */
+    /**
+     * 创建人
+     */
     private String createBy;
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
-    /** 更新人 */
+    /**
+     * 更新人
+     */
     private String updateBy;
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     private LocalDateTime updateTime;
-    /** 删除标志（0-正常 1-删除） */
+    /**
+     * 删除标志（0-正常 1-删除）
+     */
     private Integer delFlag;
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

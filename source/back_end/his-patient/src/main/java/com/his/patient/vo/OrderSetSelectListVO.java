@@ -21,22 +21,32 @@ public class OrderSetSelectListVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 模板名称 */
+    /**
+     * 模板名称
+     */
     private String templateName;
 
-    /** 共享范围（1-个人 2-科室 3-全院） */
+    /**
+     * 共享范围（1-个人 2-科室 3-全院）
+     */
     private Integer scope;
 
     private String scopeText;
 
-    /** 默认医嘱类型（1-长期 2-临时） */
+    /**
+     * 默认医嘱类型（1-长期 2-临时）
+     */
     private Integer orderType;
 
     private String orderTypeText;
 
-    /** 明细条数 */
+    /**
+     * 明细条数
+     */
     private Integer itemCount;
 
-    /** 科室名称 */
+    /**
+     * 科室名称
+     */
     private String deptName;
 }

@@ -11,13 +11,17 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** 患者基本信息 */
+/**
+ * 患者基本信息
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_patient")
 public class BizPatient extends BaseEntity {
 
-    /** 患者号 */
+    /**
+     * 患者号
+     */
     private String patientNo;
 
     /**
@@ -31,62 +35,112 @@ public class BizPatient extends BaseEntity {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long masterId;
 
-    /** 主索引状态：0-正常 1-已并入主档（本档案失效，只在追溯时可见） */
+    /**
+     * 主索引状态：0-正常 1-已并入主档（本档案失效，只在追溯时可见）
+     */
     private Integer mergeStatus;
 
-    /** 并入主档的时间 */
+    /**
+     * 并入主档的时间
+     */
     private LocalDateTime mergeTime;
 
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     private String patientName;
-    /** 性别（1-男 2-女 9-未知） */
+    /**
+     * 性别（1-男 2-女 9-未知）
+     */
     private Integer gender;
-    /** 出生日期 */
+    /**
+     * 出生日期
+     */
     private LocalDate birthDate;
-    /** 年龄 */
+    /**
+     * 年龄
+     */
     private Integer age;
-    /** 身份证号 */
+    /**
+     * 身份证号
+     */
     private String idCard;
-    /** 手机号码 */
+    /**
+     * 手机号码
+     */
     private String phone;
-    /** 联系人姓名 */
+    /**
+     * 联系人姓名
+     */
     private String contactName;
-    /** 联系人电话 */
+    /**
+     * 联系人电话
+     */
     private String contactPhone;
-    /** 联系人关系（父母、配偶、子女等） */
+    /**
+     * 联系人关系（父母、配偶、子女等）
+     */
     private String contactRelation;
-    /** 家庭住址 */
+    /**
+     * 家庭住址
+     */
     private String address;
-    /** 民族 */
+    /**
+     * 民族
+     */
     private String nation;
-    /** 职业 */
+    /**
+     * 职业
+     */
     private String occupation;
-    /** 婚姻状况（0-未婚 1-已婚 2-离异 3-丧偶） */
+    /**
+     * 婚姻状况（0-未婚 1-已婚 2-离异 3-丧偶）
+     */
     private Integer maritalStatus;
-    /** 血型（A/B/O/AB） */
+    /**
+     * 血型（A/B/O/AB）
+     */
     private String bloodType;
-    /** 过敏史 */
+    /**
+     * 过敏史
+     */
     private String allergyHistory;
-    /** 既往病史 */
+    /**
+     * 既往病史
+     */
     private String medicalHistory;
     /**
      * 患者类型（参保性质）：1-自费 2-城镇职工医保 3-城乡居民医保 4-公费 5-其他
      * （与列注释、字典数据(his_patient_type) 三方一致）
      */
     private Integer patientType;
-    /** 医保卡号 */
+    /**
+     * 医保卡号
+     */
     private String medicalInsuranceNo;
-    /** 医保类型 */
+    /**
+     * 医保类型
+     */
     private String medicalInsuranceType;
-    /** 卡片类型（1-就诊卡 2-身份证 3-医保卡） */
+    /**
+     * 卡片类型（1-就诊卡 2-身份证 3-医保卡）
+     */
     private Integer cardType;
-    /** 卡片号码 */
+    /**
+     * 卡片号码
+     */
     private String cardNo;
-    /** 账户余额 */
+    /**
+     * 账户余额
+     */
     private BigDecimal balance;
-    /** 累计消费金额 */
+    /**
+     * 累计消费金额
+     */
     private BigDecimal totalExpense;
-    /** 就诊次数 */
+    /**
+     * 就诊次数
+     */
     private Integer visitCount;
 
     /**
@@ -143,8 +197,12 @@ public class BizPatient extends BaseEntity {
      */
     private String firstVisitDoctorName;
 
-    /** 患者照片 */
+    /**
+     * 患者照片
+     */
     private String photo;
-    /** 状态（0-停用 1-启用） */
+    /**
+     * 状态（0-停用 1-启用）
+     */
     private Integer status;
 }

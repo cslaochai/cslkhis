@@ -1,7 +1,7 @@
 package com.his.patient.support;
 
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import org.springframework.stereotype.Component;
 
 import java.util.Set;
@@ -41,7 +41,9 @@ import java.util.Set;
 @Component
 public class PatientSearchScopeResolver {
 
-    /** 有门诊今日业务的角色编码（见类注释；口径 = 「岗位有没有门诊今日业务」） */
+    /**
+     * 有门诊今日业务的角色编码（见类注释；口径 = 「岗位有没有门诊今日业务」）
+     */
     private static final Set<String> OUTPATIENT_TODAY_ROLES = Set.of("10013", "10018", "10019", "10020");
 
     /**
@@ -65,7 +67,9 @@ public class PatientSearchScopeResolver {
                 : PatientSearchScopeMode.ARCHIVE_ONLY;
     }
 
-    /** 当前用户是不是门诊岗位（供调用方按需使用，与 {@link #resolve()} 同一份白名单） */
+    /**
+     * 当前用户是不是门诊岗位（供调用方按需使用，与 {@link #resolve()} 同一份白名单）
+     */
     public boolean isOutpatientRole() {
         return resolve() == PatientSearchScopeMode.TODAY_FIRST;
     }

@@ -14,19 +14,33 @@ import java.util.List;
 @Data
 public class PatientDuplicateGroupVO {
 
-    /** 组的匹配级别：1-身份证相同 2-姓名+性别+生日 3-姓名+手机号 4-仅同名 */
+    /**
+     * 组的匹配级别：1-身份证相同 2-姓名+性别+生日 3-姓名+手机号 4-仅同名
+     */
     private Integer matchLevel;
     private String matchLevelText;
-    /** 命中依据快照，如 "id_card=430726199102122257" */
+    /**
+     * 命中依据快照，如 "id_card=430726199102122257"
+     */
     private String matchEvidence;
-    /** 成组键（同一组内一致，用于前端区分） */
+    /**
+     * 成组键（同一组内一致，用于前端区分）
+     */
     private String groupKey;
-    /** 是否强依据（仅身份证相同为 true） */
+    /**
+     * 是否强依据（仅身份证相同为 true）
+     */
     private Boolean strong;
-    /** 本组合并时要求的理由最小长度 */
+    /**
+     * 本组合并时要求的理由最小长度
+     */
     private Integer minReasonLength;
-    /** 一句话提示：告诉操作者这个级别**不足**以认定同一人 */
+    /**
+     * 一句话提示：告诉操作者这个级别**不足**以认定同一人
+     */
     private String tip;
-    /** 组内档案（按业务数据量倒序，数据多的更适合当主档） */
+    /**
+     * 组内档案（按业务数据量倒序，数据多的更适合当主档）
+     */
     private List<PatientIndexVO> members;
 }

@@ -15,16 +15,19 @@ import java.util.Map;
  */
 public final class OrderDictTypes {
 
-    private OrderDictTypes() {
-    }
-
-    /** 给药途径 */
+    /**
+     * 给药途径
+     */
     public static final String ROUTE = "his_order_route";
-    /** 用药频次 */
+    /**
+     * 用药频次
+     */
     public static final String FREQ = "his_order_freq";
-    /** 剂量单位 */
+    /**
+     * 剂量单位
+     */
     public static final String DOSE_UNIT = "his_dose_unit";
-
+    public static final List<String> ALL = List.of(ROUTE, FREQ, DOSE_UNIT);
     private static final Map<String, String> NAME = Map.of(
             ROUTE, "给药途径",
             FREQ, "用药频次",
@@ -38,9 +41,12 @@ public final class OrderDictTypes {
             FREQ, "frequency",
             DOSE_UNIT, "dosage_unit");
 
-    public static final List<String> ALL = List.of(ROUTE, FREQ, DOSE_UNIT);
+    private OrderDictTypes() {
+    }
 
-    /** 类型中文名；不在三类之内返回「未知(type)」，不回落成看似合法的值 */
+    /**
+     * 类型中文名；不在三类之内返回「未知(type)」，不回落成看似合法的值
+     */
     public static String text(String dictType) {
         if (dictType == null) {
             return "—";
@@ -49,12 +55,16 @@ public final class OrderDictTypes {
         return name != null ? name : "未知(" + dictType + ")";
     }
 
-    /** 是否为受管的医嘱字典类型（决定能不能从这个口子写库） */
+    /**
+     * 是否为受管的医嘱字典类型（决定能不能从这个口子写库）
+     */
     public static boolean isManaged(String dictType) {
         return dictType != null && NAME.containsKey(dictType);
     }
 
-    /** 医嘱表里对应的列名（只可能是三列之一，调用方不可传外部输入） */
+    /**
+     * 医嘱表里对应的列名（只可能是三列之一，调用方不可传外部输入）
+     */
     public static String orderColumn(String dictType) {
         return ORDER_COLUMN.get(dictType);
     }

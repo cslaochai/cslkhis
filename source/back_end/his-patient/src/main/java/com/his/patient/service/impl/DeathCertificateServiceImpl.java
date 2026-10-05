@@ -31,13 +31,7 @@ import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 死亡证明服务实现。
@@ -67,7 +61,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class DeathCertificateServiceImpl implements DeathCertificateService {
 
-    /** 上报时限天数（院内口径，见类注释第 7 条） */
+    /**
+     * 上报时限天数（院内口径，见类注释第 7 条）
+     */
     private static final int REPORT_DEADLINE_DAYS = 10;
 
     private static final int DIAG_MAX = 500;
@@ -77,19 +73,27 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     private static final int REASON_MAX = 500;
     private static final int UNIT_MAX = 100;
 
-    /** 死因链Ⅰ部分最多 (a)(b)(c)(d) 四行 */
+    /**
+     * 死因链Ⅰ部分最多 (a)(b)(c)(d) 四行
+     */
     private static final int CHAIN_MAX_ROWS = 4;
 
-    /** 死亡地点合法码值（字典 his_death_place：1医院 2来院途中 3家中 4民政管理机构 5其他机构 9未指明） */
+    /**
+     * 死亡地点合法码值（字典 his_death_place：1医院 2来院途中 3家中 4民政管理机构 5其他机构 9未指明）
+     */
     private static final Set<Integer> DEATH_PLACES = Set.of(
             DeathPlaceEnum.HOSPITAL.getCode(), DeathPlaceEnum.TRANSFER.getCode(), DeathPlaceEnum.HOME.getCode(),
             DeathPlaceEnum.CIVIL_AGENCY.getCode(), DeathPlaceEnum.OTHER_INSTITUTION.getCode(),
             DeathPlaceEnum.UNSPECIFIED.getCode());
 
-    /** 单次催报扫描上限（同传染病报卡，防止一次拉爆内存） */
+    /**
+     * 单次催报扫描上限（同传染病报卡，防止一次拉爆内存）
+     */
     private static final int NOTIFY_BATCH = 200;
 
-    /** 上报报文里的时间统一空格分隔（全项目入参与展示同一口径，不留 ISO 的 T 分隔去二次转义） */
+    /**
+     * 上报报文里的时间统一空格分隔（全项目入参与展示同一口径，不留 ISO 的 T 分隔去二次转义）
+     */
     private static final DateTimeFormatter PAYLOAD_TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final BizDeathCertificateMapper certMapper;
@@ -98,6 +102,169 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     private final SysMessageService sysMessageService;
 
     // 查询
+
+    private static boolean editable(Integer status) {
+        return Objects.equals(status, DeathCertStatusEnum.DRAFT.getCode())
+                || Objects.equals(status, DeathCertStatusEnum.AUDITED.getCode());
+    }
+
+    private static String statusText(Integer status) {
+        if (status == null) {
+            return "未知";
+        }
+        String label = DeathCertStatusEnum.labelOf(status);
+        return label == null ? "未知(" + status + ")" : label;
+    }
+
+    /**
+     * 死因链入参校验：part 只能是 1/2，行序不能重复，Ⅰ部分最多 4 行且必须从 1 连续。
+     * 全部在服务端拦——撞 uk_cert_part_seq 会直接 Duplicate entry 变成 500，用户看不出是哪里填错。
+     */
+    private static List<DeathCertificateDTO.CauseRow> normalizeCauses(List<DeathCertificateDTO.CauseRow> input) {
+        List<DeathCertificateDTO.CauseRow> rows = input == null ? List.of() : input;
+        if (rows.size() > 30) {
+            throw new BusinessException("死因链行数过多（Ⅰ部分最多 4 行，Ⅱ部分按需填写）");
+        }
+        List<DeathCertificateDTO.CauseRow> chain = new ArrayList<>();
+        List<DeathCertificateDTO.CauseRow> other = new ArrayList<>();
+        Set<String> keys = new HashSet<>();
+        for (DeathCertificateDTO.CauseRow row : rows) {
+            Integer part = row.getPart() == null ? DeathCausePartEnum.CHAIN.getCode() : row.getPart();
+            if (part != DeathCausePartEnum.CHAIN.getCode() && part != DeathCausePartEnum.OTHER.getCode()) {
+                throw new BusinessException("死因链部分只能是Ⅰ部分或Ⅱ部分");
+            }
+            if (row.getSeqNo() == null || row.getSeqNo() < 1) {
+                throw new BusinessException("死因链行序必须从 1 开始");
+            }
+            if (!keys.add(part + ":" + row.getSeqNo())) {
+                throw new BusinessException("死因链同一部分里行序重复（" + part + "-" + row.getSeqNo() + "）");
+            }
+            (part == DeathCausePartEnum.CHAIN.getCode() ? chain : other).add(row);
+        }
+        if (chain.size() > CHAIN_MAX_ROWS) {
+            throw new BusinessException("死因链Ⅰ部分最多 (a)(b)(c)(d) 四行");
+        }
+        for (DeathCertificateDTO.CauseRow row : chain) {
+            if (row.getSeqNo() > chain.size()) {
+                throw new BusinessException("死因链Ⅰ部分行序必须连续（a→b→c→d），不能空跳");
+            }
+        }
+        List<DeathCertificateDTO.CauseRow> sorted = new ArrayList<>(chain);
+        sorted.sort((a, b) -> Integer.compare(a.getSeqNo(), b.getSeqNo()));
+        sorted.addAll(other);
+        return sorted;
+    }
+
+    /**
+     * 根本死因＝死因链Ⅰ部分链尾那行（ICD-10 选择规则）。
+     * 前端没填就自动按链尾带出；填了不一致直接拒——这一列是死因统计的唯一归口，容不得各写一套。
+     */
+    private static void applyUnderlying(BizDeathCertificate cert, List<DeathCertificateDTO.CauseRow> chainTailFirst) {
+        DeathCertificateDTO.CauseRow tail = null;
+        for (DeathCertificateDTO.CauseRow row : chainTailFirst) {
+            if (Objects.equals(row.getPart(), DeathCausePartEnum.CHAIN.getCode())) {
+                tail = row;
+            }
+        }
+        if (tail == null) {
+            return;
+        }
+        String tailCode = trimToNull(tail.getIcdCode());
+        if (!StringUtils.hasText(cert.getUnderlyingIcdCode())) {
+            cert.setUnderlyingIcdCode(cutToNull(tailCode, ICD_CODE_MAX));
+            cert.setUnderlyingIcdName(cutToNull(tail.getIcdName(), ICD_NAME_MAX));
+            return;
+        }
+        if (tailCode != null && !tailCode.equals(cert.getUnderlyingIcdCode())) {
+            throw new BusinessException("根本死因必须等于死因链Ⅰ部分最后一行（链尾是 " + tailCode
+                    + " " + tail.getIcdName() + "）；若链填错了请调整顺序，不要把根本死因单独改成别的编码");
+        }
+        cert.setUnderlyingIcdName(cutToNull(tail.getIcdName(), ICD_NAME_MAX));
+    }
+
+    /**
+     * 时限派生值由服务端算好，前端只渲染不自己比时间
+     */
+    private static void fillDeadline(DeathCertificateVO.Row row) {
+        LocalDateTime deadline = row.getReportDeadline();
+        boolean issued = Objects.equals(row.getCertStatus(), DeathCertStatusEnum.ISSUED.getCode());
+        boolean reported = Objects.equals(row.getReportStatus(), DeathCertReportEnum.DONE.getCode());
+        row.setOverdue(issued && !reported && deadline != null && deadline.isBefore(LocalDateTime.now()));
+        row.setRemainHours(deadline == null ? null : ChronoUnit.HOURS.between(LocalDateTime.now(), deadline));
+    }
+
+    // 填写 / 审核 / 签发 / 作废 / 重开 / 打印
+
+    /**
+     * 时间序列化成报文体里的固定格式，null 保持 null（不写 "null" 字符串）
+     */
+    private static String ts(LocalDateTime time) {
+        return time == null ? null : time.format(PAYLOAD_TS);
+    }
+
+    private static String nullToEmpty(String text) {
+        return text == null ? "" : text;
+    }
+
+    private static Integer ageAt(LocalDate birthDate, LocalDateTime deathTime) {
+        if (birthDate == null || deathTime == null) {
+            return null;
+        }
+        int years = Period.between(birthDate, deathTime.toLocalDate()).getYears();
+        return years < 0 ? null : years;
+    }
+
+    private static String requireText(String text, String message) {
+        if (!StringUtils.hasText(text)) {
+            throw new BusinessException(message);
+        }
+        return text.trim();
+    }
+
+    private static LocalDateTime atStart(LocalDate date) {
+        return date == null ? null : date.atStartOfDay();
+    }
+
+    /**
+     * 按日期过滤必须补全天边界：datetime 恒大于当日 00:00:00 字符串，直接用 'yyyy-MM-dd' 会把当天全滤掉
+     */
+    private static LocalDateTime atEnd(LocalDate date) {
+        return date == null ? null : date.atTime(23, 59, 59);
+    }
+
+    // 死因监测上报（外发段预留：当前组装报文落库留痕）
+
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    // 出院流程前置校验（反向约束）
+
+    private static Integer flag(Integer value) {
+        return value == null ? 0 : (Objects.equals(value, 1) ? 1 : 0);
+    }
+
+    // 内部
+
+    private static int nvl(Integer value, int fallback) {
+        return value == null ? fallback : value;
+    }
+
+    private static String trimToNull(String text) {
+        return StringUtils.hasText(text) ? text.trim() : null;
+    }
+
+    private static String cutToNull(String text, int max) {
+        return StringUtils.hasText(text) ? cut(text.trim(), max) : null;
+    }
+
+    private static String cut(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max);
+    }
 
     @Override
     public PageResult<DeathCertificateVO.Row> listPage(DeathCertificateDTO.QueryPage query) {
@@ -143,8 +310,6 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         DeathCertificateVO.Stats stats = certMapper.selectStats();
         return stats == null ? new DeathCertificateVO.Stats() : stats;
     }
-
-    // 填写 / 审核 / 签发 / 作废 / 重开 / 打印
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -400,8 +565,6 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         saveCert(cert);
     }
 
-    // 死因监测上报（外发段预留：当前组装报文落库留痕）
-
     /**
      * 上报：组装标准报文落 {@code report_payload} 并置已上报。
      * 真实对接时本方法是唯一替换点——把「落 payload」换成「http 客户端发送 + 回执落 report_no」，接口面与报文结构不变。
@@ -462,8 +625,6 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         return sent;
     }
 
-    // 出院流程前置校验（反向约束）
-
     @Override
     public void assertDischargeConsistent(Long admissionId, LocalDateTime dischargeTime) {
         Long certId = certMapper.selectActiveIdByAdmission(admissionId);
@@ -477,8 +638,6 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         }
     }
 
-    // 内部
-
     private BizDeathCertificate requireCert(Long id) {
         BizDeathCertificate cert = id == null ? null : certMapper.selectById(id);
         if (cert == null) {
@@ -487,20 +646,9 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         return cert;
     }
 
-    private static boolean editable(Integer status) {
-        return Objects.equals(status, DeathCertStatusEnum.DRAFT.getCode())
-                || Objects.equals(status, DeathCertStatusEnum.AUDITED.getCode());
-    }
-
-    private static String statusText(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-        String label = DeathCertStatusEnum.labelOf(status);
-        return label == null ? "未知(" + status + ")" : label;
-    }
-
-    /** 医院内死亡记科室/病区/床位（快照优先取病案首页留档）；院外死亡不编院内科室 */
+    /**
+     * 医院内死亡记科室/病区/床位（快照优先取病案首页留档）；院外死亡不编院内科室
+     */
     private void applyDeathDept(BizDeathCertificate cert, Integer deathPlace, Long deptId,
                                 DeathCertificateVO.PatientSnapshot snapshot) {
         if (deathPlace != DeathPlaceEnum.HOSPITAL.getCode()) {
@@ -523,87 +671,12 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         cert.setDeathBedNo(cutToNull(snapshot.getBedNo(), 16));
     }
 
-    /**
-     * 死因链入参校验：part 只能是 1/2，行序不能重复，Ⅰ部分最多 4 行且必须从 1 连续。
-     * 全部在服务端拦——撞 uk_cert_part_seq 会直接 Duplicate entry 变成 500，用户看不出是哪里填错。
-     */
-    private static List<DeathCertificateDTO.CauseRow> normalizeCauses(List<DeathCertificateDTO.CauseRow> input) {
-        List<DeathCertificateDTO.CauseRow> rows = input == null ? List.of() : input;
-        if (rows.size() > 30) {
-            throw new BusinessException("死因链行数过多（Ⅰ部分最多 4 行，Ⅱ部分按需填写）");
-        }
-        List<DeathCertificateDTO.CauseRow> chain = new ArrayList<>();
-        List<DeathCertificateDTO.CauseRow> other = new ArrayList<>();
-        Set<String> keys = new HashSet<>();
-        for (DeathCertificateDTO.CauseRow row : rows) {
-            Integer part = row.getPart() == null ? DeathCausePartEnum.CHAIN.getCode() : row.getPart();
-            if (part != DeathCausePartEnum.CHAIN.getCode() && part != DeathCausePartEnum.OTHER.getCode()) {
-                throw new BusinessException("死因链部分只能是Ⅰ部分或Ⅱ部分");
-            }
-            if (row.getSeqNo() == null || row.getSeqNo() < 1) {
-                throw new BusinessException("死因链行序必须从 1 开始");
-            }
-            if (!keys.add(part + ":" + row.getSeqNo())) {
-                throw new BusinessException("死因链同一部分里行序重复（" + part + "-" + row.getSeqNo() + "）");
-            }
-            (part == DeathCausePartEnum.CHAIN.getCode() ? chain : other).add(row);
-        }
-        if (chain.size() > CHAIN_MAX_ROWS) {
-            throw new BusinessException("死因链Ⅰ部分最多 (a)(b)(c)(d) 四行");
-        }
-        for (DeathCertificateDTO.CauseRow row : chain) {
-            if (row.getSeqNo() > chain.size()) {
-                throw new BusinessException("死因链Ⅰ部分行序必须连续（a→b→c→d），不能空跳");
-            }
-        }
-        List<DeathCertificateDTO.CauseRow> sorted = new ArrayList<>(chain);
-        sorted.sort((a, b) -> Integer.compare(a.getSeqNo(), b.getSeqNo()));
-        sorted.addAll(other);
-        return sorted;
-    }
-
-    /**
-     * 根本死因＝死因链Ⅰ部分链尾那行（ICD-10 选择规则）。
-     * 前端没填就自动按链尾带出；填了不一致直接拒——这一列是死因统计的唯一归口，容不得各写一套。
-     */
-    private static void applyUnderlying(BizDeathCertificate cert, List<DeathCertificateDTO.CauseRow> chainTailFirst) {
-        DeathCertificateDTO.CauseRow tail = null;
-        for (DeathCertificateDTO.CauseRow row : chainTailFirst) {
-            if (Objects.equals(row.getPart(), DeathCausePartEnum.CHAIN.getCode())) {
-                tail = row;
-            }
-        }
-        if (tail == null) {
-            return;
-        }
-        String tailCode = trimToNull(tail.getIcdCode());
-        if (!StringUtils.hasText(cert.getUnderlyingIcdCode())) {
-            cert.setUnderlyingIcdCode(cutToNull(tailCode, ICD_CODE_MAX));
-            cert.setUnderlyingIcdName(cutToNull(tail.getIcdName(), ICD_NAME_MAX));
-            return;
-        }
-        if (tailCode != null && !tailCode.equals(cert.getUnderlyingIcdCode())) {
-            throw new BusinessException("根本死因必须等于死因链Ⅰ部分最后一行（链尾是 " + tailCode
-                    + " " + tail.getIcdName() + "）；若链填错了请调整顺序，不要把根本死因单独改成别的编码");
-        }
-        cert.setUnderlyingIcdName(cutToNull(tail.getIcdName(), ICD_NAME_MAX));
-    }
-
     private void saveCert(BizDeathCertificate cert) {
         if (cert.getId() == null) {
             certMapper.insert(cert);
         } else if (certMapper.updateById(cert) <= 0) {
             throw new BusinessException("死亡证明保存失败，请重试");
         }
-    }
-
-    /** 时限派生值由服务端算好，前端只渲染不自己比时间 */
-    private static void fillDeadline(DeathCertificateVO.Row row) {
-        LocalDateTime deadline = row.getReportDeadline();
-        boolean issued = Objects.equals(row.getCertStatus(), DeathCertStatusEnum.ISSUED.getCode());
-        boolean reported = Objects.equals(row.getReportStatus(), DeathCertReportEnum.DONE.getCode());
-        row.setOverdue(issued && !reported && deadline != null && deadline.isBefore(LocalDateTime.now()));
-        row.setRemainHours(deadline == null ? null : ChronoUnit.HOURS.between(LocalDateTime.now(), deadline));
     }
 
     /**
@@ -652,69 +725,8 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         return JSONUtil.toJsonStr(payload);
     }
 
-    /** 时间序列化成报文体里的固定格式，null 保持 null（不写 "null" 字符串） */
-    private static String ts(LocalDateTime time) {
-        return time == null ? null : time.format(PAYLOAD_TS);
-    }
-
-    private static String nullToEmpty(String text) {
-        return text == null ? "" : text;
-    }
-
-    private static Integer ageAt(LocalDate birthDate, LocalDateTime deathTime) {
-        if (birthDate == null || deathTime == null) {
-            return null;
-        }
-        int years = Period.between(birthDate, deathTime.toLocalDate()).getYears();
-        return years < 0 ? null : years;
-    }
-
     private String currentOperator() {
         String name = UserUtils.getCurrentEmployeeName();
         return StringUtils.hasText(name) ? name : "system";
-    }
-
-    private static String requireText(String text, String message) {
-        if (!StringUtils.hasText(text)) {
-            throw new BusinessException(message);
-        }
-        return text.trim();
-    }
-
-    private static LocalDateTime atStart(LocalDate date) {
-        return date == null ? null : date.atStartOfDay();
-    }
-
-    /** 按日期过滤必须补全天边界：datetime 恒大于当日 00:00:00 字符串，直接用 'yyyy-MM-dd' 会把当天全滤掉 */
-    private static LocalDateTime atEnd(LocalDate date) {
-        return date == null ? null : date.atTime(23, 59, 59);
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static Integer flag(Integer value) {
-        return value == null ? 0 : (Objects.equals(value, 1) ? 1 : 0);
-    }
-
-    private static int nvl(Integer value, int fallback) {
-        return value == null ? fallback : value;
-    }
-
-    private static String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
-    private static String cutToNull(String text, int max) {
-        return StringUtils.hasText(text) ? cut(text.trim(), max) : null;
-    }
-
-    private static String cut(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max);
     }
 }

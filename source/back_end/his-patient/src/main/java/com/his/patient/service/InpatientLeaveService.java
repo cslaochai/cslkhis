@@ -25,24 +25,38 @@ public interface InpatientLeaveService {
 
     InpatientLeaveVO.Stats stats();
 
-    /** 填写/修改申请单（仅待审批可改；一般项目服务端重查快照） */
+    /**
+     * 填写/修改申请单（仅待审批可改；一般项目服务端重查快照）
+     */
     Long upsert(InpatientLeaveDTO.Upsert dto);
 
-    /** 审批：allow=true 批准（当前登录医师电子签名锁定）；allow=false 拒绝（必填理由） */
+    /**
+     * 审批：allow=true 批准（当前登录医师电子签名锁定）；allow=false 拒绝（必填理由）
+     */
     void approve(InpatientLeaveDTO.Approve dto);
 
-    /** 登记离院 = 患方签署承诺书三要素（姓名/关系/手写签名）+ 实际离院时间 */
+    /**
+     * 登记离院 = 患方签署承诺书三要素（姓名/关系/手写签名）+ 实际离院时间
+     */
     void confirmLeave(InpatientLeaveDTO.Confirm dto);
 
-    /** 返回销假（登记实际返回时间） */
+    /**
+     * 返回销假（登记实际返回时间）
+     */
     void confirmBack(InpatientLeaveDTO.Back dto);
 
-    /** 取消（仅待审批/已批准；已离院的单不许取消 —— 人已经出去了，事实不能蒸发） */
+    /**
+     * 取消（仅待审批/已批准；已离院的单不许取消 —— 人已经出去了，事实不能蒸发）
+     */
     void cancel(InpatientLeaveDTO.Cancel dto);
 
-    /** 超期处置记录（仅已离院且超期的单可记；联系不上必须升级上报） */
+    /**
+     * 超期处置记录（仅已离院且超期的单可记；联系不上必须升级上报）
+     */
     void recordContact(InpatientLeaveDTO.Contact dto);
 
-    /** 承诺书打印计数（已离院/已返回可打印） */
+    /**
+     * 承诺书打印计数（已离院/已返回可打印）
+     */
     void print(InpatientLeaveDTO.Print dto);
 }

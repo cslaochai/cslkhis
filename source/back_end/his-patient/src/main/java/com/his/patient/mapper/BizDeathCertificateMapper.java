@@ -22,7 +22,9 @@ import java.util.List;
 @Mapper
 public interface BizDeathCertificateMapper extends BaseMapper<BizDeathCertificate> {
 
-    /** 台账行的显式列：不选 report_payload（TEXT，整页拖报文）也不选身份证（列表不渲染） */
+    /**
+     * 台账行的显式列：不选 report_payload（TEXT，整页拖报文）也不选身份证（列表不渲染）
+     */
     String ROW_COLUMNS = """
             c.id, c.cert_no, c.admission_id, c.discharge_id, c.patient_id, c.patient_name,
             c.gender, c.age, c.death_time, c.death_place, c.death_dept_id, c.death_dept_name,
@@ -189,7 +191,9 @@ public interface BizDeathCertificateMapper extends BaseMapper<BizDeathCertificat
             """)
     int countActiveByAdmission(@Param("admissionId") Long admissionId, @Param("excludeId") Long excludeId);
 
-    /** 该住院是否已有有效证明（待开证榜点「开证」时给前端提示用） */
+    /**
+     * 该住院是否已有有效证明（待开证榜点「开证」时给前端提示用）
+     */
     @Select("""
             SELECT id FROM biz_death_certificate
              WHERE del_flag = 0 AND cert_status <> 4 AND admission_id = #{admissionId}

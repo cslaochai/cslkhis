@@ -33,9 +33,11 @@
 import { ref, onMounted } from 'vue'
 import { Refresh, Search } from '@element-plus/icons-vue'
 import { getRecordDetail, getRecordListPage } from '@/api/emr'
-import { patientGenderText, patientGenderSymbol } from '@/lib/patientGender'
+import { patientGenderText, patientGenderSymbol, patientAvatarTone } from '@/lib/patientGender'
 import { recordStatusText, recordStatusTagType } from '@/lib/recordStatus'
 import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
+
+const GENDER_DOT = { male: 'bg-blue-500', female: 'bg-pink-500', unknown: 'bg-slate-400' }
 
 const loading = ref(false)
 const records = ref<any[]>([])
@@ -177,7 +179,7 @@ onMounted(() => {
             <div class="flex items-center gap-2">
               <span
                   :class="['inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white',
-                           row.gender === 1 ? 'bg-blue-500' : row.gender === 2 ? 'bg-pink-500' : 'bg-slate-400']">
+                           GENDER_DOT[patientAvatarTone(row.gender)]]">
                 {{ patientGenderSymbol(row.gender) }}
               </span>
               <div>
@@ -256,8 +258,7 @@ onMounted(() => {
             <div class="mb-3 flex items-center gap-3">
               <span
                   :class="['inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-lg font-bold text-white',
-                           detailData.record.gender === 1 ? 'bg-blue-500'
-                               : detailData.record.gender === 2 ? 'bg-pink-500' : 'bg-slate-400']">
+                           GENDER_DOT[patientAvatarTone(detailData.record.gender)]]">
                 {{ patientGenderSymbol(detailData.record.gender) }}
               </span>
               <div>

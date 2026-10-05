@@ -26,14 +26,6 @@ import java.util.List;
 @Mapper
 public interface BizDietPlanMapper extends BaseMapper<BizDietPlan> {
 
-    @Delete("DELETE FROM biz_diet_plan WHERE id = #{id}")
-    int purgeById(@Param("id") Long id);
-
-    /** 单号前缀当日已用最大序号（DP+yyyyMMdd+4位） */
-    @Select("SELECT COALESCE(MAX(CAST(RIGHT(diet_no, 4) AS UNSIGNED)), 0) "
-            + "FROM biz_diet_plan WHERE diet_no LIKE CONCAT(#{prefix}, '%')")
-    long maxDietSeq(@Param("prefix") String prefix);
-
     String PROJECTION = """
             <script>
             SELECT v.*,
@@ -54,6 +46,16 @@ public interface BizDietPlanMapper extends BaseMapper<BizDietPlan> {
               LEFT JOIN biz_admission a ON a.admission_id = v.admission_id AND a.del_flag = 0
               LEFT JOIN biz_patient p ON p.id = v.patient_id AND p.del_flag = 0
             """;
+
+    @Delete("DELETE FROM biz_diet_plan WHERE id = #{id}")
+    int purgeById(@Param("id") Long id);
+
+    /**
+     * 单号前缀当日已用最大序号（DP+yyyyMMdd+4位）
+     */
+    @Select("SELECT COALESCE(MAX(CAST(RIGHT(diet_no, 4) AS UNSIGNED)), 0) "
+            + "FROM biz_diet_plan WHERE diet_no LIKE CONCAT(#{prefix}, '%')")
+    long maxDietSeq(@Param("prefix") String prefix);
 
     @Select(PROJECTION + """
              WHERE v.del_flag = 0
@@ -83,7 +85,9 @@ public interface BizDietPlanMapper extends BaseMapper<BizDietPlan> {
             """)
     IPage<DietPlanVO> selectPlanPage(Page<DietPlanVO> page, @Param("q") DietPlanQueryPageDTO query);
 
-    /** 某次住院的方案（含已停止/作废，营养科看历史） */
+    /**
+     * 某次住院的方案（含已停止/作废，营养科看历史）
+     */
     @Select(PROJECTION + """
              WHERE v.del_flag = 0 AND v.admission_id = #{admissionId}
              ORDER BY v.plan_status ASC, v.start_time DESC, v.id DESC
@@ -91,7 +95,9 @@ public interface BizDietPlanMapper extends BaseMapper<BizDietPlan> {
             """)
     List<DietPlanVO> selectByAdmission(@Param("admissionId") Long admissionId);
 
-    /** 单条详情（保存/接收后回给出参用） */
+    /**
+     * 单条详情（保存/接收后回给出参用）
+     */
     @Select(PROJECTION + """
              WHERE v.del_flag = 0 AND v.id = #{id}
              LIMIT 1

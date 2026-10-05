@@ -10,10 +10,10 @@ import com.his.patient.mapper.BizInfusionRoundMapper;
 import com.his.patient.mapper.BizInpatientOrderExecMapper;
 import com.his.patient.mapper.BizInpatientOrderMapper;
 import com.his.patient.service.InpatientInfusionService;
-import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.patient.vo.InfusionRoundVO;
-import com.his.security.entity.CurrentUser;
+import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,7 +43,9 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class InpatientInfusionServiceImpl implements InpatientInfusionService {
 
-    /** 静脉类给药途径关键词（口径单点：VO 的 infusion 布尔与闭环校验共用本方法） */
+    /**
+     * 静脉类给药途径关键词（口径单点：VO 的 infusion 布尔与闭环校验共用本方法）
+     */
     private static final String[] INFUSION_KEYWORDS = {"静滴", "静注", "静推", "静脉", "泵入"};
 
     private final BizInpatientOrderExecMapper execMapper;
@@ -63,6 +65,10 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
             }
         }
         return false;
+    }
+
+    private static LocalDateTime nowSeconds() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
     @Override
@@ -144,6 +150,8 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         return toVO(exec);
     }
 
+    // 校验与私有
+
     @Override
     public List<InfusionRoundVO> rounds(Long execId) {
         // ②非web入口：service 方法参数判空，没有 DTO 字段可挂注解（HTTP 侧 @RequestParam 已必填）
@@ -152,8 +160,6 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         }
         return roundMapper.selectRoundsByExecId(execId);
     }
-
-    // 校验与私有
 
     private BizInpatientOrderExec requireExec(Long execId) {
         // 非空已由三处入参 DTO 的 @NotNull + @Valid 收口（仅 start/round/finish 调用），此处不重复判空
@@ -265,9 +271,5 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private static LocalDateTime nowSeconds() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 }

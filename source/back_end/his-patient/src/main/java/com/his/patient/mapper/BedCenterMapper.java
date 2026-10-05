@@ -1,8 +1,6 @@
 package com.his.patient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.patient.entity.BizBedAllocate;
 import com.his.patient.vo.BedMatchVO;
 import com.his.patient.vo.BedOverviewVO;
@@ -85,7 +83,9 @@ public interface BedCenterMapper extends BaseMapper<BizBedAllocate> {
                                          @Param("offset") long offset,
                                          @Param("size") long size);
 
-    /** 床位池分页版（游标用 IPage 时 MP 自己在上面套 count，这里只提供取数） */
+    /**
+     * 床位池分页版（游标用 IPage 时 MP 自己在上面套 count，这里只提供取数）
+     */
     @Select("""
             SELECT COUNT(*) FROM sys_bed b
                      LEFT JOIN biz_admission a ON a.admission_id = (
@@ -123,7 +123,9 @@ public interface BedCenterMapper extends BaseMapper<BizBedAllocate> {
             """)
     BedOverviewVO.Summary selectHospitalSummary();
 
-    /** 科室床位排行（含空闲/预留/占用），只列有床位的科室 */
+    /**
+     * 科室床位排行（含空闲/预留/占用），只列有床位的科室
+     */
     @Select("""
             SELECT b.dept_id AS deptId,
                    IFNULL(d.dept_name, CONCAT('科室#', b.dept_id)) AS deptName,
@@ -144,7 +146,9 @@ public interface BedCenterMapper extends BaseMapper<BizBedAllocate> {
     @Select("SELECT COUNT(*) FROM biz_bed_allocate WHERE del_flag = 0 AND allocate_no LIKE CONCAT(#{prefix}, '%')")
     long countByAllocateNoPrefix(@Param("prefix") String prefix);
 
-    /** 科室名称（科室主键是 id，不是 dept_id —— 与床位的科室ID 的映射在这里做） */
+    /**
+     * 科室名称（科室主键是 id，不是 dept_id —— 与床位的科室ID 的映射在这里做）
+     */
     @Select("SELECT dept_name FROM sys_department WHERE id = #{deptId} AND del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 

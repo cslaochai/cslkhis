@@ -31,6 +31,7 @@ import {
   ampouleStatusTagType,
   AMPOULE_STATUS_OPTIONS,
 } from '@/lib/drugSpecialFlag'
+import { patientGenderText } from '@/lib/patientGender'
 
 interface NarcoRow {
   id: string
@@ -318,7 +319,7 @@ onMounted(async () => { await loadDicts(); await reloadAll() })
         <el-table-column prop="patientName" label="患者" width="110" show-overflow-tooltip>
           <template #default="{ row }">
             {{ row.patientName || '—' }}
-            <span class="text-slate-400">{{ row.gender === 1 ? '男' : row.gender === 2 ? '女' : '' }}</span>
+            <span class="text-slate-400">{{ patientGenderText(row.gender) }}</span>
           </template>
         </el-table-column>
         <el-table-column prop="drugName" label="药品" min-width="180" show-overflow-tooltip>
@@ -404,7 +405,7 @@ onMounted(async () => { await loadDicts(); await reloadAll() })
           <el-descriptions :column="2" border size="small">
             <el-descriptions-item label="姓名">{{ detail.patientName || '—' }}</el-descriptions-item>
             <el-descriptions-item label="患者号">{{ detail.patientNo || '—' }}</el-descriptions-item>
-            <el-descriptions-item label="性别">{{ detail.gender === 1 ? '男' : detail.gender === 2 ? '女' : '未知' }}</el-descriptions-item>
+            <el-descriptions-item label="性别">{{ patientGenderText(detail.gender) }}</el-descriptions-item>
             <el-descriptions-item label="年龄">{{ detail.age ?? '—' }}</el-descriptions-item>
             <el-descriptions-item label="身份证号" :span="2">{{ detail.idCard || '—' }}</el-descriptions-item>
           </el-descriptions>

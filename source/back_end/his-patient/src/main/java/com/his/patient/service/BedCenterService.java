@@ -1,20 +1,9 @@
 package com.his.patient.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.BedAssignUpsertDTO;
-import com.his.patient.dto.BedMapQueryDTO;
-import com.his.patient.dto.BedPoolQueryPageDTO;
-import com.his.patient.dto.BedWaitAdmitDTO;
-import com.his.patient.dto.BedWaitOperateDTO;
-import com.his.patient.dto.BedWaitQueryPageDTO;
-import com.his.patient.dto.BedWaitUpsertDTO;
+import com.his.patient.dto.*;
 import com.his.patient.entity.BizAdmissionOrder;
-import com.his.patient.vo.BedMapVO;
-import com.his.patient.vo.BedMatchVO;
-import com.his.patient.vo.BedOverviewVO;
-import com.his.patient.vo.BedPoolVO;
-import com.his.patient.vo.BedWaitStatsVO;
-import com.his.patient.vo.BedWaitVO;
+import com.his.patient.vo.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -36,13 +25,19 @@ import java.util.List;
  */
 public interface BedCenterService {
 
-    /** 等床队列分页（排序服务端钉死） */
+    /**
+     * 等床队列分页（排序服务端钉死）
+     */
     IPage<BedWaitVO> queuePage(BedWaitQueryPageDTO query);
 
-    /** 队列条目详情 */
+    /**
+     * 队列条目详情
+     */
     BedWaitVO queueDetail(Long waitId);
 
-    /** 登记/修改排队，返回排队记录ID */
+    /**
+     * 登记/修改排队，返回排队记录ID
+     */
     Long upsertWait(BedWaitUpsertDTO dto);
 
     /**
@@ -51,19 +46,29 @@ public interface BedCenterService {
      */
     void assignBed(BedAssignUpsertDTO dto);
 
-    /** 退回队列：释放已锁定的床位，队列从「已安排床位」回到「等待中」 */
+    /**
+     * 退回队列：释放已锁定的床位，队列从「已安排床位」回到「等待中」
+     */
     void releaseBed(BedWaitOperateDTO dto);
 
-    /** 取消排队：已安排床位的一并释放；已收治的绝对不可取消（人已经在院里了） */
+    /**
+     * 取消排队：已安排床位的一并释放；已收治的绝对不可取消（人已经在院里了）
+     */
     void cancelWait(BedWaitOperateDTO dto);
 
-    /** 按已安排床位办理入院登记，返回入院ID（字符串，防雪花ID精度丢失） */
+    /**
+     * 按已安排床位办理入院登记，返回入院ID（字符串，防雪花ID精度丢失）
+     */
     String admit(BedWaitAdmitDTO dto);
 
-    /** 队列概览 */
+    /**
+     * 队列概览
+     */
     BedWaitStatsVO queueStats();
 
-    /** 等待中的人数（角标） */
+    /**
+     * 等待中的人数（角标）
+     */
     long countWaiting();
 
     /**
@@ -72,7 +77,9 @@ public interface BedCenterService {
      */
     List<BedMatchVO> matchBeds(Long waitId);
 
-    /** 全院床位池（分页，含占用者与预留去向） */
+    /**
+     * 全院床位池（分页，含占用者与预留去向）
+     */
     BedPoolVO bedPool(BedPoolQueryPageDTO query);
 
     /**
@@ -89,10 +96,14 @@ public interface BedCenterService {
      */
     BedMapVO bedMap(BedMapQueryDTO query);
 
-    /** 全院床位总览 */
+    /**
+     * 全院床位总览
+     */
     BedOverviewVO overview();
 
-    /** 开住院证自动入队（由 AdmissionOrderService 事后调用，同事务） */
+    /**
+     * 开住院证自动入队（由 AdmissionOrderService 事后调用，同事务）
+     */
     void syncFromOrder(BizAdmissionOrder order);
 
     /**

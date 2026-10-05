@@ -27,7 +27,9 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface BizConsultationMapper extends BaseMapper<BizConsultation> {
 
-    /** 会诊列表公共投影（列表 / 详情共用，避免两套口径） */
+    /**
+     * 会诊列表公共投影（列表 / 详情共用，避免两套口径）
+     */
     String PROJECTION = """
             SELECT c.*,
                    p.patient_name,

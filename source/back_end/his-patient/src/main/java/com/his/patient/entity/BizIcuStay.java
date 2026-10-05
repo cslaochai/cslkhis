@@ -25,79 +25,125 @@ import java.time.LocalDateTime;
 @TableName("biz_icu_stay")
 public class BizIcuStay extends BaseEntity implements Serializable {
 
-    /** 入科单号（ICU + yyyyMMdd + 4位流水号） */
+    /**
+     * 入科单号（ICU + yyyyMMdd + 4位流水号）
+     */
     private String stayNo;
 
-    /** 入院ID */
+    /**
+     * 入院ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者编号（快照） */
+    /**
+     * 患者编号（快照）
+     */
     private String patientNo;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
-    /** 入科来源科室ID（快照） */
+    /**
+     * 入科来源科室ID（快照）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long fromDeptId;
 
-    /** 入科来源科室名称（快照） */
+    /**
+     * 入科来源科室名称（快照）
+     */
     private String fromDeptName;
 
-    /** ICU 病区ID */
+    /**
+     * ICU 病区ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
 
-    /** ICU 病区名称（快照） */
+    /**
+     * ICU 病区名称（快照）
+     */
     private String wardName;
 
-    /** ICU 床位ID */
+    /**
+     * ICU 床位ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long bedId;
 
-    /** ICU 床位号（快照） */
+    /**
+     * ICU 床位号（快照）
+     */
     private String bedNo;
 
-    /** 监护等级（1-特级 2-I级 3-II级） */
+    /**
+     * 监护等级（1-特级 2-I级 3-II级）
+     */
     private Integer careLevel;
 
-    /** 入科时间 */
+    /**
+     * 入科时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime inTime;
 
-    /** 入科诊断/原因 */
+    /**
+     * 入科诊断/原因
+     */
     private String inDiag;
 
-    /** 入科 GCS（3~15） */
+    /**
+     * 入科 GCS（3~15）
+     */
     private Integer inGcs;
 
-    /** 入科登记人 */
+    /**
+     * 入科登记人
+     */
     private String inBy;
 
-    /** 状态（1-在科 2-已出科） */
+    /**
+     * 状态（1-在科 2-已出科）
+     */
     private Integer status;
 
-    /** 出科时间 */
+    /**
+     * 出科时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime outTime;
 
-    /** 转出去向：1-普通病房 2-专科病房 3-手术室 4-转院 5-死亡 6-自动离院 */
+    /**
+     * 转出去向：1-普通病房 2-专科病房 3-手术室 4-转院 5-死亡 6-自动离院
+     */
     private Integer outDest;
 
-    /** 出科情况/转归说明 */
+    /**
+     * 出科情况/转归说明
+     */
     private String outReason;
 
-    /** 出科 GCS 评分 */
+    /**
+     * 出科 GCS 评分
+     */
     private Integer outGcs;
 
-    /** 出科登记人 */
+    /**
+     * 出科登记人
+     */
     private String outBy;
 
-    /** 监护记录条数（冗余派生值） */
+    /**
+     * 监护记录条数（冗余派生值）
+     */
     private Integer monitorCount;
 }

@@ -3,12 +3,12 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
-import com.his.common.exception.BusinessException;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.ObjectSignStatus;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
+import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.vo.SignatureVO;
 import com.his.patient.dto.CriticalNoticeDTO;
@@ -60,15 +60,23 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
     private static final int REASON_MAX = 500;
     private static final int NAME_MAX = 50;
     private static final int PHONE_MAX = 20;
-    /** 手写签名 dataURL 上限 512KB（canvas PNG 正常几十 KB，兜住恶意大串） */
+    /**
+     * 手写签名 dataURL 上限 512KB（canvas PNG 正常几十 KB，兜住恶意大串）
+     */
     private static final int SIGNATURE_MAX = 512 * 1024;
 
-    /** 通知类别合法码（字典 his_notice_type） */
+    /**
+     * 通知类别合法码（字典 his_notice_type）
+     */
     private static final Set<Integer> NOTICE_TYPES = Set.of(
             NoticeTypeEnum.CRITICAL.getCode(), NoticeTypeEnum.SERIOUS.getCode());
-    /** 神志合法码（字典 his_notice_consciousness） */
+    /**
+     * 神志合法码（字典 his_notice_consciousness）
+     */
     private static final Set<Integer> CONSCIOUSNESS = Set.of(1, 2, 3, 4, 9);
-    /** 签收人关系合法码（字典 his_notice_relation） */
+    /**
+     * 签收人关系合法码（字典 his_notice_relation）
+     */
     private static final Set<Integer> RELATIONS = Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 99);
 
     private final BizCriticalNoticeMapper noticeMapper;
@@ -76,6 +84,58 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
     private final EmrSignatureService signatureService;
 
     // 查询
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static LocalDateTime toSeconds(LocalDateTime t) {
+        return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static LocalDateTime atStart(java.time.LocalDate date) {
+        return date == null ? null : date.atStartOfDay();
+    }
+
+    /**
+     * 按日期过滤必须补全天边界（AGENTS §3：datetime 恒大于当日 00:00 字符串）
+     */
+    private static LocalDateTime atEnd(java.time.LocalDate date) {
+        return date == null ? null : date.atTime(23, 59, 59);
+    }
+
+    private static Integer nvl(Integer v, int d) {
+        return v == null ? d : v;
+    }
+
+    private static String requireText(String text, String message) {
+        String t = trimToNull(text);
+        if (t == null) {
+            throw new BusinessException(message);
+        }
+        return t;
+    }
+
+    // 填写 / 签发 / 签收 / 作废 / 打印
+
+    private static String trimToNull(String text) {
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        return text.trim();
+    }
+
+    private static String cut(String text, int max) {
+        if (text == null) {
+            return null;
+        }
+        return text.length() <= max ? text : text.substring(0, max);
+    }
+
+    private static String cutToNull(String text, int max) {
+        String t = trimToNull(text);
+        return t == null ? null : cut(t, max);
+    }
 
     @Override
     public PageResult<CriticalNoticeVO.Row> listPage(CriticalNoticeDTO.QueryPage query) {
@@ -96,6 +156,8 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         }
         return detail;
     }
+
+    // 内部
 
     @Override
     public CriticalNoticeVO.Base base(Long admissionId) {
@@ -122,8 +184,6 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         CriticalNoticeVO.Stats stats = noticeMapper.selectStats(scopedDeptIds(null));
         return stats == null ? new CriticalNoticeVO.Stats() : stats;
     }
-
-    // 填写 / 签发 / 签收 / 作废 / 打印
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -331,8 +391,6 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         saveNotice(notice, false);
     }
 
-    // 内部
-
     private void applyWitness(BizCriticalNotice notice, Long witnessId, String witnessNameArg) {
         String name = trimToNull(witnessNameArg);
         if (witnessId == null && name == null) {
@@ -356,7 +414,9 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         return notice;
     }
 
-    /** 签名即锁定：有效签名挂着就不许改内容（同申请单口径） */
+    /**
+     * 签名即锁定：有效签名挂着就不许改内容（同申请单口径）
+     */
     private void requireUnsigned(BizCriticalNotice notice) {
         if (Objects.equals(ObjectSignStatus.SIGNED.getCode(), notice.getSignStatus())) {
             throw new BusinessException("通知单 " + notice.getNoticeNo() + " 已电子签名（签名即锁定），不允许直接修改；"
@@ -370,7 +430,9 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         }
     }
 
-    /** 返回 null=不受限；非空=收口科室集合（显式 deptId 由 DeptScopeGuard 校验越权） */
+    /**
+     * 返回 null=不受限；非空=收口科室集合（显式 deptId 由 DeptScopeGuard 校验越权）
+     */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
         Long resolved = DeptScopeGuard.resolveDeptId(requestedDeptId);
         if (resolved != null) {
@@ -391,53 +453,5 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
     private String currentOperator() {
         String name = UserUtils.getCurrentEmployeeName();
         return StringUtils.hasText(name) ? name : "system";
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime t) {
-        return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime atStart(java.time.LocalDate date) {
-        return date == null ? null : date.atStartOfDay();
-    }
-
-    /** 按日期过滤必须补全天边界（AGENTS §3：datetime 恒大于当日 00:00 字符串） */
-    private static LocalDateTime atEnd(java.time.LocalDate date) {
-        return date == null ? null : date.atTime(23, 59, 59);
-    }
-
-    private static Integer nvl(Integer v, int d) {
-        return v == null ? d : v;
-    }
-
-    private static String requireText(String text, String message) {
-        String t = trimToNull(text);
-        if (t == null) {
-            throw new BusinessException(message);
-        }
-        return t;
-    }
-
-    private static String trimToNull(String text) {
-        if (!StringUtils.hasText(text)) {
-            return null;
-        }
-        return text.trim();
-    }
-
-    private static String cut(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
-    private static String cutToNull(String text, int max) {
-        String t = trimToNull(text);
-        return t == null ? null : cut(t, max);
     }
 }

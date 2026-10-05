@@ -16,20 +16,28 @@ import java.util.List;
 @Data
 public class BedPoolVO {
 
-    /** 本次筛选命中的床位数 */
+    /**
+     * 本次筛选命中的床位数
+     */
     private long total;
 
-    /** 一床一行 */
+    /**
+     * 一床一行
+     */
     private List<BedRow> rows;
 
     @Data
     public static class BedRow {
 
-        /** 床位ID */
+        /**
+         * 床位ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long bedId;
 
-        /** 床位号 */
+        /**
+         * 床位号
+         */
         private String bedNo;
 
         private String bedType;
@@ -40,35 +48,53 @@ public class BedPoolVO {
 
         private String bedStatusText;
 
-        /** 病区ID */
+        /**
+         * 病区ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long wardId;
 
-        /** 病区名称（快照） */
+        /**
+         * 病区名称（快照）
+         */
         private String wardName;
 
-        /** 科室ID */
+        /**
+         * 科室ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long deptId;
 
-        /** 科室名称 */
+        /**
+         * 科室名称
+         */
         private String deptName;
 
-        /** 占用者（bed_status=2 时有值） */
+        /**
+         * 占用者（bed_status=2 时有值）
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long admissionId;
 
-        /** 患者ID */
+        /**
+         * 患者ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long patientId;
 
-        /** 患者姓名 */
+        /**
+         * 患者姓名
+         */
         private String patientName;
 
-        /** 入院时间 */
+        /**
+         * 入院时间
+         */
         private String admitTime;
 
-        /** 预留去向（bed_status=3 时有值） */
+        /**
+         * 预留去向（bed_status=3 时有值）
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long allocateId;
 
@@ -84,7 +110,9 @@ public class BedPoolVO {
 
         private String reservedTime;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
     }
 }

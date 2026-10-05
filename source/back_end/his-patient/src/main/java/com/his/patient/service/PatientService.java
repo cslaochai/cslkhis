@@ -58,7 +58,9 @@ public interface PatientService extends IService<BizPatient> {
      */
     boolean addPatient(BizPatient patient);
 
-    /** 批量取「患者 → 挂号（预约）次数」映射；入参为空返回空 Map */
+    /**
+     * 批量取「患者 → 挂号（预约）次数」映射；入参为空返回空 Map
+     */
     Map<Long, Integer> mapAppointCount(List<Long> patientIds);
 
     /**

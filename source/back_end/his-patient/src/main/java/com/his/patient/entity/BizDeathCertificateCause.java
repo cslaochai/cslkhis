@@ -1,10 +1,6 @@
 package com.his.patient.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
@@ -26,34 +22,52 @@ import java.time.LocalDateTime;
 @TableName("biz_death_certificate_cause")
 public class BizDeathCertificateCause implements Serializable {
 
-    /** 主键（雪花ID） */
+    /**
+     * 主键（雪花ID）
+     */
     @TableId(type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 死亡证明ID */
+    /**
+     * 死亡证明ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long certId;
 
-    /** 部分（1-Ⅰ部分死因链 2-Ⅱ部分其他疾病） */
+    /**
+     * 部分（1-Ⅰ部分死因链 2-Ⅱ部分其他疾病）
+     */
     private Integer part;
 
-    /** 行序：Ⅰ部分 1=a(直接死因) … 4=d(根本死因)，Ⅱ部分从 1 递增 */
+    /**
+     * 行序：Ⅰ部分 1=a(直接死因) … 4=d(根本死因)，Ⅱ部分从 1 递增
+     */
     private Integer seqNo;
 
-    /** ICD-10编码 */
+    /**
+     * ICD-10编码
+     */
     private String icdCode;
 
-    /** 疾病或情况名称 */
+    /**
+     * 疾病或情况名称
+     */
     private String icdName;
 
-    /** 发病至死亡间隔（文本） */
+    /**
+     * 发病至死亡间隔（文本）
+     */
     private String intervalText;
 
-    /** 创建人 */
+    /**
+     * 创建人
+     */
     private String createBy;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

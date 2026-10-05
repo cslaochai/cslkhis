@@ -31,16 +31,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Predicate;
 
 
@@ -73,14 +64,22 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
 
     private static final int REMARK_MAX = 500;
     private static final int NURSE_LIMIT = 500;
-    /** 夜班口径：开始时刻早于 08:00（后夜班）或不早于 16:00（前夜班/大夜） */
+    /**
+     * 夜班口径：开始时刻早于 08:00（后夜班）或不早于 16:00（前夜班/大夜）
+     */
     private static final String NIGHT_LATEST_MORNING = "08:00";
     private static final String NIGHT_FROM_AFTERNOON = "16:00";
-    /** 病区级规则行的 shift_id（与 sql/166 一致） */
+    /**
+     * 病区级规则行的 shift_id（与 sql/166 一致）
+     */
     private static final long WARD_LEVEL_SHIFT = 0L;
-    /** 排班单元类型：1-病区（sql/209） */
+    /**
+     * 排班单元类型：1-病区（sql/209）
+     */
     private static final int UNIT_WARD = 1;
-    /** 排班单元类型：2-门诊科室（sql/209） */
+    /**
+     * 排班单元类型：2-门诊科室（sql/209）
+     */
     private static final int UNIT_CLINIC = 2;
 
     private final BizNurseScheduleMapper scheduleMapper;
@@ -92,6 +91,107 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
     private final StaffPlanRuleService planRuleService;
 
     // 参照数据
+
+    private static int unitTypeOf(NurseScheduleVO.Ward ward) {
+        return ward.getUnitType() == null || ward.getUnitType() == 0 ? UNIT_WARD : ward.getUnitType();
+    }
+
+    /**
+     * 这个护理单元在出勤底座里落的排班单元类型：病区→2，门诊科室→1
+     */
+    private static Integer coreOrgTypeOf(NurseScheduleVO.Ward ward) {
+        return unitTypeOf(ward) == UNIT_CLINIC ? OrgUnitTypeEnum.DEPT.getCode() : OrgUnitTypeEnum.WARD.getCode();
+    }
+
+    private static Integer coreOrgTypeOfByType(Integer unitType) {
+        return unitType != null && unitType == UNIT_CLINIC
+                ? OrgUnitTypeEnum.DEPT.getCode() : OrgUnitTypeEnum.WARD.getCode();
+    }
+
+    // 周矩阵 / 台账
+
+    private static boolean isNightShift(String startTime) {
+        if (startTime == null || startTime.length() < 5) {
+            return false;
+        }
+        return startTime.compareTo(NIGHT_LATEST_MORNING) < 0 || startTime.compareTo(NIGHT_FROM_AFTERNOON) >= 0;
+    }
+
+    /**
+     * 周一为周首：排班周、周工时上限都按它算（不按周日起始的美式口径）
+     */
+    private static LocalDate mondayOf(LocalDate date) {
+        return date.minusDays(date.getDayOfWeek().getValue() - 1L);
+    }
+
+    // 点格 / 删除 / 复制上周
+
+    /**
+     * 日期字符串（yyyy-MM-dd）在该周里的第几天：1-周一 ... 7-周日
+     */
+    private static int weekdayOf(String scheduleDate) {
+        return LocalDate.parse(scheduleDate).getDayOfWeek().getValue();
+    }
+
+    private static BigDecimal hours(Integer minutes) {
+        return BigDecimal.valueOf(minutes == null ? 0 : minutes)
+                .divide(BigDecimal.valueOf(60), 1, RoundingMode.HALF_UP);
+    }
+
+    private static YearMonth parseMonth(String month) {
+        if (month == null || month.trim().isEmpty()) {
+            return YearMonth.now();
+        }
+        try {
+            return YearMonth.parse(month.trim());
+        } catch (DateTimeParseException e) {
+            throw new BusinessException("月份格式必须为 yyyy-MM");
+        }
+    }
+
+    // 规则校验 / 工时
+
+    private static void zeroFill(NurseScheduleVO.Workload w) {
+        w.setWorkDays(nvlInt(w.getWorkDays()));
+        w.setRestDays(nvlInt(w.getRestDays()));
+        w.setLeaveDays(nvlInt(w.getLeaveDays()));
+        w.setTrainingDays(nvlInt(w.getTrainingDays()));
+        w.setSuspendedDays(nvlInt(w.getSuspendedDays()));
+        w.setNightDays(nvlInt(w.getNightDays()));
+        w.setWorkMinutes(nvlInt(w.getWorkMinutes()));
+        if (w.getWorkHours() == null) {
+            w.setWorkHours(BigDecimal.ZERO);
+        }
+    }
+
+    private static int countLevel(List<NurseScheduleVO.Warning> warnings, int level) {
+        return (int) warnings.stream().filter(w -> w.getLevel() != null && w.getLevel() == level).count();
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String cut(String value, int max) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() <= max ? value : value.substring(0, max);
+    }
+
+    private static int nvl(Integer value, int fallback) {
+        return value == null ? fallback : value;
+    }
+
+    // 人力配置标准
+
+    private static int nvlInt(Integer value) {
+        return value == null ? 0 : value;
+    }
 
     @Override
     public List<NurseScheduleVO.Ward> wardSelectList(String keyword) {
@@ -111,8 +211,6 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         NurseScheduleVO.Ward ward = requireUnit(unitType, unitId);
         return scheduleMapper.selectNurses(ward.getDeptId(), trimToNull(keyword), NURSE_LIMIT);
     }
-
-    // 周矩阵 / 台账
 
     @Override
     public NurseScheduleVO.Matrix weekMatrix(NurseScheduleDTO.MatrixQuery query) {
@@ -163,8 +261,6 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         }
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
-
-    // 点格 / 删除 / 复制上周
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -288,6 +384,8 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         return result;
     }
 
+    // 内部：校验与工具
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NurseScheduleVO.CopyResult copyWeek(NurseScheduleDTO.CopyWeek dto) {
@@ -381,14 +479,12 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         return result;
     }
 
-    // 规则校验 / 工时
-
     /**
      * 一格同步一条在岗事实（覆盖语义）。班次、岗位类别、起止时间、工时都由事实层按人事与班次字典重算，
      * 这里只递交「哪个病区、哪个人、哪天、什么状态、哪个班」。
      *
      * @return 底座那条事实的ID —— 格子必须回指它（sql/205），否则「改了护理格子，底座的行在哪」
-     *         只能靠 (人,日,病区) 反查，而这个反查在多单元场景下会指到别的单元那一条上去。
+     * 只能靠 (人,日,病区) 反查，而这个反查在多单元场景下会指到别的单元那一条上去。
      */
     private Long syncDayAttendance(NurseScheduleVO.Ward ward, Long employeeId, LocalDate date,
                                    StaffDutyStatusEnum status, Long shiftId, String remark,
@@ -439,7 +535,9 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         return warningsOf(requireUnit(null, wardId), startDate, endDate);
     }
 
-    /** 已收过权限的病区直接算告警（省掉一次重复的病区回查） */
+    /**
+     * 已收过权限的病区直接算告警（省掉一次重复的病区回查）
+     */
     private List<NurseScheduleVO.Warning> warningsOf(NurseScheduleVO.Ward ward, LocalDate startDate, LocalDate endDate) {
         List<NurseScheduleVO.Cell> cells = selectCells(ward, startDate, endDate);
         List<NurseScheduleVO.Nurse> nurses = scheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
@@ -498,8 +596,6 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         return result;
     }
 
-    // 人力配置标准
-
     @Override
     public List<NurseScheduleVO.Rule> ruleList(Long wardId) {
         return ruleList(null, wardId);
@@ -523,7 +619,9 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
                 StaffTypeEnum.NURSE.getCode()));
     }
 
-    /** 只看启用的那几条（告警比对不用停用值的标准） */
+    /**
+     * 只看启用的那几条（告警比对不用停用值的标准）
+     */
     private List<NurseScheduleVO.Rule> enabledRulesOfWard(Long wardId) {
         List<NurseScheduleVO.Rule> out = new ArrayList<>();
         for (NurseScheduleVO.Rule r : rulesOfWard(wardId)) {
@@ -557,7 +655,9 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         return out;
     }
 
-    /** 班次名按「今天仍可用的护理班次」现取：新表里没有冗余 shift_name，字典改名不该让历史标准带着旧名 */
+    /**
+     * 班次名按「今天仍可用的护理班次」现取：新表里没有冗余 shift_name，字典改名不该让历史标准带着旧名
+     */
     private String shiftLabelOf(Long shiftId) {
         if (shiftId == null || shiftId == WARD_LEVEL_SHIFT) {
             return "病区合计";
@@ -643,8 +743,6 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         }
         planRuleService.deleteById(id);
     }
-
-    // 内部：校验与工具
 
     /**
      * 区间告警（一次取数、纯内存判定）：
@@ -787,7 +885,9 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         return out;
     }
 
-    /** 每日在岗人数明细（矩阵底部「N 人 / 应 M 人」） */
+    /**
+     * 每日在岗人数明细（矩阵底部「N 人 / 应 M 人」）
+     */
     private List<NurseScheduleVO.Staffing> buildStaffing(NurseScheduleVO.Ward ward, LocalDate start, LocalDate end,
                                                          List<NurseScheduleVO.Cell> cells) {
         List<NurseScheduleVO.Rule> rules = selectEnabledRules(ward.getWardId());
@@ -901,7 +1001,9 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         }
     }
 
-    /** 病区合计那一行规则（工时/连班上限的唯一来源） */
+    /**
+     * 病区合计那一行规则（工时/连班上限的唯一来源）
+     */
     private Optional<NurseScheduleVO.Rule> wardRule(Long wardId) {
         return enabledRulesOfWard(wardId).stream()
                 .filter(r -> r.getShiftId() != null && r.getShiftId() == WARD_LEVEL_SHIFT)
@@ -936,23 +1038,11 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         return unit;
     }
 
-    /** 单元矩阵取格：类型 + id 一起给，避免只认 id 造成的串单元 */
+    /**
+     * 单元矩阵取格：类型 + id 一起给，避免只认 id 造成的串单元
+     */
     private List<NurseScheduleVO.Cell> selectCells(NurseScheduleVO.Ward ward, LocalDate startDate, LocalDate endDate) {
         return scheduleMapper.selectCells(unitTypeOf(ward), ward.getWardId(), startDate, endDate);
-    }
-
-    private static int unitTypeOf(NurseScheduleVO.Ward ward) {
-        return ward.getUnitType() == null || ward.getUnitType() == 0 ? UNIT_WARD : ward.getUnitType();
-    }
-
-    /** 这个护理单元在出勤底座里落的排班单元类型：病区→2，门诊科室→1 */
-    private static Integer coreOrgTypeOf(NurseScheduleVO.Ward ward) {
-        return unitTypeOf(ward) == UNIT_CLINIC ? OrgUnitTypeEnum.DEPT.getCode() : OrgUnitTypeEnum.WARD.getCode();
-    }
-
-    private static Integer coreOrgTypeOfByType(Integer unitType) {
-        return unitType != null && unitType == UNIT_CLINIC
-                ? OrgUnitTypeEnum.DEPT.getCode() : OrgUnitTypeEnum.WARD.getCode();
     }
 
     private NurseScheduleVO.Ward requireWard(Long wardId) {
@@ -996,57 +1086,9 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         row.setRemark(remark);
     }
 
-    private static boolean isNightShift(String startTime) {
-        if (startTime == null || startTime.length() < 5) {
-            return false;
-        }
-        return startTime.compareTo(NIGHT_LATEST_MORNING) < 0 || startTime.compareTo(NIGHT_FROM_AFTERNOON) >= 0;
-    }
-
-    /** 周一为周首：排班周、周工时上限都按它算（不按周日起始的美式口径） */
-    private static LocalDate mondayOf(LocalDate date) {
-        return date.minusDays(date.getDayOfWeek().getValue() - 1L);
-    }
-
-    /** 日期字符串（yyyy-MM-dd）在该周里的第几天：1-周一 ... 7-周日 */
-    private static int weekdayOf(String scheduleDate) {
-        return LocalDate.parse(scheduleDate).getDayOfWeek().getValue();
-    }
-
-    private static BigDecimal hours(Integer minutes) {
-        return BigDecimal.valueOf(minutes == null ? 0 : minutes)
-                .divide(BigDecimal.valueOf(60), 1, RoundingMode.HALF_UP);
-    }
-
-    private static YearMonth parseMonth(String month) {
-        if (month == null || month.trim().isEmpty()) {
-            return YearMonth.now();
-        }
-        try {
-            return YearMonth.parse(month.trim());
-        } catch (DateTimeParseException e) {
-            throw new BusinessException("月份格式必须为 yyyy-MM");
-        }
-    }
-
-    private static void zeroFill(NurseScheduleVO.Workload w) {
-        w.setWorkDays(nvlInt(w.getWorkDays()));
-        w.setRestDays(nvlInt(w.getRestDays()));
-        w.setLeaveDays(nvlInt(w.getLeaveDays()));
-        w.setTrainingDays(nvlInt(w.getTrainingDays()));
-        w.setSuspendedDays(nvlInt(w.getSuspendedDays()));
-        w.setNightDays(nvlInt(w.getNightDays()));
-        w.setWorkMinutes(nvlInt(w.getWorkMinutes()));
-        if (w.getWorkHours() == null) {
-            w.setWorkHours(BigDecimal.ZERO);
-        }
-    }
-
-    private static int countLevel(List<NurseScheduleVO.Warning> warnings, int level) {
-        return (int) warnings.stream().filter(w -> w.getLevel() != null && w.getLevel() == level).count();
-    }
-
-    /** 当前岗位可见科室；null=不收口（全院），空集合用 -1 兜住，避免 IN () 语法错 */
+    /**
+     * 当前岗位可见科室；null=不收口（全院），空集合用 -1 兜住，避免 IN () 语法错
+     */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
         Long resolved = DeptScopeGuard.resolveDeptId(requestedDeptId);
         if (resolved != null) {
@@ -1057,28 +1099,5 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
             return null;
         }
         return allowed.isEmpty() ? List.of(-1L) : List.copyOf(allowed);
-    }
-
-    private static String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() <= max ? value : value.substring(0, max);
-    }
-
-    private static int nvl(Integer value, int fallback) {
-        return value == null ? fallback : value;
-    }
-
-    private static int nvlInt(Integer value) {
-        return value == null ? 0 : value;
     }
 }

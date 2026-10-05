@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.PatientTagBatchUpsertDTO;
-import com.his.patient.dto.PatientTagUpsertDTO;
 import com.his.patient.dto.PatientTagDelDTO;
+import com.his.patient.dto.PatientTagUpsertDTO;
 import com.his.patient.entity.BizPatientTagRelation;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
 import com.his.patient.service.BizPatientTagRelationService;
@@ -16,11 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service

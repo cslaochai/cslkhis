@@ -12,7 +12,9 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface SysCheckupPackageMapper extends BaseMapper<SysCheckupPackage> {
 
-    /** 含软删行查重（唯一键 uk_package_name 不看 del_flag） */
+    /**
+     * 含软删行查重（唯一键 uk_package_name 不看 del_flag）
+     */
     @Select("SELECT id FROM sys_checkup_package WHERE package_name = #{name} LIMIT 1")
     Long selectIdByNameIncludeDeleted(@Param("name") String name);
 }

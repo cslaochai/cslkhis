@@ -42,10 +42,14 @@ public class InpatientOrderVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者编号（快照） */
+    /**
+     * 患者编号（快照）
+     */
     private String patientNo;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
     /**
@@ -54,7 +58,9 @@ public class InpatientOrderVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 开立科室名称（快照） */
+    /**
+     * 开立科室名称（快照）
+     */
     private String deptName;
 
     /**
@@ -63,10 +69,14 @@ public class InpatientOrderVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
 
-    /** 病区名称（快照） */
+    /**
+     * 病区名称（快照）
+     */
     private String wardName;
 
-    /** 床号（快照） */
+    /**
+     * 床号（快照）
+     */
     private String bedNo;
 
     /**
@@ -94,7 +104,9 @@ public class InpatientOrderVO implements Serializable {
      */
     private String orderClassText;
 
-    /** 项目编码（药品/检查/检验字典码） */
+    /**
+     * 项目编码（药品/检查/检验字典码）
+     */
     private String itemCode;
 
     /**
@@ -122,10 +134,14 @@ public class InpatientOrderVO implements Serializable {
      */
     private String dosageUnit;
 
-    /** 给药途径（口服/静滴/肌注…） */
+    /**
+     * 给药途径（口服/静滴/肌注…）
+     */
     private String route;
 
-    /** 频次（qd/bid/tid/q8h…） */
+    /**
+     * 频次（qd/bid/tid/q8h…）
+     */
     private String frequency;
 
     /**

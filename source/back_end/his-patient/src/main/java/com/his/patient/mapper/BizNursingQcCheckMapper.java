@@ -34,7 +34,9 @@ public interface BizNursingQcCheckMapper extends BaseMapper<BizNursingQcCheck> {
             c.total_score AS totalScore, c.score_rate AS scoreRate, c.status, c.summary,
             DATE_FORMAT(c.create_time, '%Y-%m-%d %H:%i:%s') AS createTime""";
 
-    /** 病区下拉（护理质控页的病区筛选：只列当前岗位可见科室下的启用病区，附床位看得到规模） */
+    /**
+     * 病区下拉（护理质控页的病区筛选：只列当前岗位可见科室下的启用病区，附床位看得到规模）
+     */
     @Select("""
             <script>
             SELECT w.ward_id AS wardId, w.ward_code AS wardCode, w.ward_name AS wardName,
@@ -55,7 +57,9 @@ public interface BizNursingQcCheckMapper extends BaseMapper<BizNursingQcCheck> {
     List<NurseQcVO.Ward> selectWardOptions(@Param("deptIds") List<Long> deptIds,
                                            @Param("keyword") String keyword);
 
-    /** 病区快照（写检查单前必查：存在且启用，并用它的 dept 做数据范围收口） */
+    /**
+     * 病区快照（写检查单前必查：存在且启用，并用它的 dept 做数据范围收口）
+     */
     @Select("""
             SELECT w.ward_id AS wardId, w.ward_code AS wardCode, w.ward_name AS wardName,
                    w.dept_id AS deptId, d.dept_name AS deptName,
@@ -88,7 +92,9 @@ public interface BizNursingQcCheckMapper extends BaseMapper<BizNursingQcCheck> {
                                                @Param("keyword") String keyword,
                                                @Param("limit") int limit);
 
-    /** 单个在职检查人快照（保存时重查，前端传的 id 只当定位用，姓名一律取库里的） */
+    /**
+     * 单个在职检查人快照（保存时重查，前端传的 id 只当定位用，姓名一律取库里的）
+     */
     @Select("""
             SELECT e.id AS employeeId, e.emp_code AS empCode, e.emp_name AS empName,
                    e.title AS title, e.dept_id AS deptId, e.dept_name AS deptName
@@ -97,7 +103,9 @@ public interface BizNursingQcCheckMapper extends BaseMapper<BizNursingQcCheck> {
             """)
     NurseQcVO.Inspector selectInspector(@Param("employeeId") Long employeeId);
 
-    /** 检查单分页（keyword 命中单号/病区/检查人；月份按 yyyy-MM 字符串比较，字典序即时间序） */
+    /**
+     * 检查单分页（keyword 命中单号/病区/检查人；月份按 yyyy-MM 字符串比较，字典序即时间序）
+     */
     @Select("""
             <script>
             """ + "SELECT " + CHECK_COLUMNS + """
@@ -136,7 +144,9 @@ public interface BizNursingQcCheckMapper extends BaseMapper<BizNursingQcCheck> {
             """)
     NurseQcVO.CheckRow selectCheckById(@Param("id") Long id);
 
-    /** 唯一键 {@code uk_check_ward_month_cat} 定位：同病区同月同类只能有一张单 */
+    /**
+     * 唯一键 {@code uk_check_ward_month_cat} 定位：同病区同月同类只能有一张单
+     */
     @Select("SELECT " + CHECK_COLUMNS + """
               FROM biz_nursing_qc_check c
              WHERE c.del_flag = 0 AND c.ward_id = #{wardId}

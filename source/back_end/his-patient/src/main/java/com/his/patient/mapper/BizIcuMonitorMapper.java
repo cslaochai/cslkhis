@@ -54,8 +54,8 @@ public interface BizIcuMonitorMapper extends BaseMapper<BizIcuMonitor> {
             </script>
             """)
     List<IcuVO.MonitorVO> selectMonitorTrend(@Param("stayId") Long stayId,
-                                            @Param("since") LocalDateTime since,
-                                            @Param("limit") Integer limit);
+                                             @Param("since") LocalDateTime since,
+                                             @Param("limit") Integer limit);
 
     @Select("""
             SELECT """ + MONITOR_COLUMNS + """

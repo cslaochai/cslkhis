@@ -9,7 +9,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** 患者标签关联 */
+/**
+ * 患者标签关联
+ */
 @Data
 @TableName("biz_patient_tag_relation")
 public class BizPatientTagRelation {

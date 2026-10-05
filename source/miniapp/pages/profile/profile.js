@@ -1,6 +1,7 @@
 import { getUser, getPatientId, logout } from '../../utils/auth'
 import { patientApi, authApi } from '../../utils/api'
 import { bindOpenidSilently } from '../../utils/wechat'
+import { genderText } from '../../utils/gender'
 
 Page({
   data: {
@@ -32,7 +33,7 @@ Page({
           patient: {
             patientName: p.patientName,
             patientNo: p.patientNo,
-            genderText: p.gender === 1 ? '男' : p.gender === 2 ? '女' : '未知',
+            genderText: genderText(p.gender),
             phone: p.phone,
             idCardMasked: p.idCard ? p.idCard.replace(/^(.{6}).*(.{4})$/, '$1********$2') : '',
             balance: p.balance != null ? p.balance.toFixed(2) : '0.00',

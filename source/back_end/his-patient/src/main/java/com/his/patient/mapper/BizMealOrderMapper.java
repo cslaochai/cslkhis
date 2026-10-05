@@ -25,27 +25,6 @@ import java.util.List;
 @Mapper
 public interface BizMealOrderMapper extends BaseMapper<BizMealOrder> {
 
-    @Delete("DELETE FROM biz_meal_order WHERE id = #{id}")
-    int purgeById(@Param("id") Long id);
-
-    /** 覆盖重生成用：物理清掉指定日期、指定人范围内「还没配送」的餐行 */
-    @Delete("""
-            <script>
-            DELETE FROM biz_meal_order
-             WHERE meal_date = #{mealDate}
-               AND deliver_status IN (0, 1)
-               AND admission_id IN
-              <foreach collection="admissionIds" item="ad" open="(" separator="," close=")">#{ad}</foreach>
-            </script>
-            """)
-    int purgePendingByDate(@Param("mealDate") LocalDate mealDate,
-                           @Param("admissionIds") List<Long> admissionIds);
-
-    /** 单号前缀当日已用最大序号（MO+yyyyMMdd+4位） */
-    @Select("SELECT COALESCE(MAX(CAST(RIGHT(meal_no, 4) AS UNSIGNED)), 0) "
-            + "FROM biz_meal_order WHERE meal_no LIKE CONCAT(#{prefix}, '%')")
-    long maxMealSeq(@Param("prefix") String prefix);
-
     String PROJECTION = """
             <script>
             SELECT m.*,
@@ -58,6 +37,31 @@ public interface BizMealOrderMapper extends BaseMapper<BizMealOrder> {
               FROM biz_meal_order m
               LEFT JOIN biz_admission a ON a.admission_id = m.admission_id AND a.del_flag = 0
             """;
+
+    @Delete("DELETE FROM biz_meal_order WHERE id = #{id}")
+    int purgeById(@Param("id") Long id);
+
+    /**
+     * 覆盖重生成用：物理清掉指定日期、指定人范围内「还没配送」的餐行
+     */
+    @Delete("""
+            <script>
+            DELETE FROM biz_meal_order
+             WHERE meal_date = #{mealDate}
+               AND deliver_status IN (0, 1)
+               AND admission_id IN
+              <foreach collection="admissionIds" item="ad" open="(" separator="," close=")">#{ad}</foreach>
+            </script>
+            """)
+    int purgePendingByDate(@Param("mealDate") LocalDate mealDate,
+                           @Param("admissionIds") List<Long> admissionIds);
+
+    /**
+     * 单号前缀当日已用最大序号（MO+yyyyMMdd+4位）
+     */
+    @Select("SELECT COALESCE(MAX(CAST(RIGHT(meal_no, 4) AS UNSIGNED)), 0) "
+            + "FROM biz_meal_order WHERE meal_no LIKE CONCAT(#{prefix}, '%')")
+    long maxMealSeq(@Param("prefix") String prefix);
 
     @Select(PROJECTION + """
              WHERE m.del_flag = 0
@@ -85,7 +89,9 @@ public interface BizMealOrderMapper extends BaseMapper<BizMealOrder> {
             """)
     IPage<MealOrderVO> selectMealPage(Page<MealOrderVO> page, @Param("q") MealOrderQueryPageDTO query);
 
-    /** 某膳食方案名下的餐行（方案详情看"这个人订了哪些餐"） */
+    /**
+     * 某膳食方案名下的餐行（方案详情看"这个人订了哪些餐"）
+     */
     @Select(PROJECTION + """
              WHERE m.del_flag = 0 AND m.diet_plan_id = #{dietPlanId}
              ORDER BY m.meal_date DESC, m.meal_type ASC
@@ -94,7 +100,9 @@ public interface BizMealOrderMapper extends BaseMapper<BizMealOrder> {
             """)
     List<MealOrderVO> selectByPlan(@Param("dietPlanId") Long dietPlanId);
 
-    /** 单条详情（状态推进后回给出参用） */
+    /**
+     * 单条详情（状态推进后回给出参用）
+     */
     @Select(PROJECTION + """
              WHERE m.del_flag = 0 AND m.id = #{id}
              LIMIT 1

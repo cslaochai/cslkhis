@@ -23,7 +23,9 @@ import java.util.List;
 @Mapper
 public interface VteStatMapper {
 
-    /** 同期出院患者数（所有比率的分母） */
+    /**
+     * 同期出院患者数（所有比率的分母）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_admission a
              WHERE a.del_flag = 0
@@ -32,7 +34,9 @@ public interface VteStatMapper {
             """)
     long countDischarge(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to, @Param("deptId") Long deptId);
 
-    /** 出院患者中做过 Caprini 评估（assess_type=4）的人数 */
+    /**
+     * 出院患者中做过 Caprini 评估（assess_type=4）的人数
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_admission a
              WHERE a.del_flag = 0
@@ -62,7 +66,9 @@ public interface VteStatMapper {
             """)
     long countHighRisk(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to, @Param("deptId") Long deptId);
 
-    /** 中高危患者中至少落实一条措施（execute_status=1）的人数 —— 落实率分子 */
+    /**
+     * 中高危患者中至少落实一条措施（execute_status=1）的人数 —— 落实率分子
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_admission a
              WHERE a.del_flag = 0
@@ -96,7 +102,9 @@ public interface VteStatMapper {
             """)
     long countVteEvent(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to, @Param("deptId") Long deptId);
 
-    /** 预防相关出血患者数（提示性指标，不计入 VTE 发生率） */
+    /**
+     * 预防相关出血患者数（提示性指标，不计入 VTE 发生率）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_admission a
              WHERE a.del_flag = 0
@@ -107,7 +115,9 @@ public interface VteStatMapper {
             """)
     long countBleed(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to, @Param("deptId") Long deptId);
 
-    /** 按科室生成快照时枚举有出院患者的科室 */
+    /**
+     * 按科室生成快照时枚举有出院患者的科室
+     */
     @Select("""
             SELECT a.dept_id AS dept_id, MAX(d.dept_name) AS dept_name, COUNT(*) AS patient_count
               FROM biz_admission a
@@ -119,7 +129,9 @@ public interface VteStatMapper {
             """)
     List<DeptCountRowVO> selectDischargeDepts(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-    /** 科室名（快照用；科室是 his-system 的表，裸 SQL 取，不建反向依赖） */
+    /**
+     * 科室名（快照用；科室是 his-system 的表，裸 SQL 取，不建反向依赖）
+     */
     @Select("SELECT dept_name FROM sys_department WHERE id = #{deptId} AND del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
@@ -150,7 +162,9 @@ public interface VteStatMapper {
             """)
     long countInHospitalHighRisk();
 
-    /** 在院中高危且一条措施都没落实的人数（今天要干的事） */
+    /**
+     * 在院中高危且一条措施都没落实的人数（今天要干的事）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_admission a
              WHERE a.del_flag = 0 AND a.admit_status = 1
@@ -167,7 +181,9 @@ public interface VteStatMapper {
             """)
     long countHighRiskPending();
 
-    /** 自然月内院内新发 VTE 患者数（按确诊日期归月） */
+    /**
+     * 自然月内院内新发 VTE 患者数（按确诊日期归月）
+     */
     @Select("""
             SELECT COUNT(DISTINCT e.admission_id) FROM biz_vte_event e
              WHERE e.del_flag = 0 AND e.event_type IN (1, 2) AND e.onset_type = 1

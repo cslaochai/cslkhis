@@ -5,17 +5,19 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.patient.support.NutritionRules;
 import com.his.patient.dto.MealGenerateDTO;
 import com.his.patient.dto.MealOrderQueryPageDTO;
 import com.his.patient.dto.MealStatusDTO;
 import com.his.patient.entity.BizDietPlan;
 import com.his.patient.entity.BizMealOrder;
+import com.his.patient.enums.DietRouteEnum;
 import com.his.patient.enums.MealDeliverStatusEnum;
 import com.his.patient.enums.MealOrderSourceEnum;
+import com.his.patient.enums.PlanStatusEnum;
 import com.his.patient.mapper.BizDietPlanMapper;
 import com.his.patient.mapper.BizMealOrderMapper;
 import com.his.patient.service.MealOrderService;
+import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.MealGenerateVO;
 import com.his.patient.vo.MealOrderVO;
 import com.his.security.DeptScopeGuard;
@@ -31,14 +33,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-
-import com.his.patient.enums.DietRouteEnum;
-import com.his.patient.enums.PlanStatusEnum;
+import java.util.*;
 
 /**
  * 订餐配送实现。
@@ -64,6 +59,23 @@ public class MealOrderServiceImpl implements MealOrderService {
     private final BizMealOrderMapper mealMapper;
     private final BizDietPlanMapper planMapper;
 
+    private static String trim(String v) {
+        return v == null ? null : v.trim();
+    }
+
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static String cut(String v, int max) {
+        if (v == null) {
+            return null;
+        }
+        return v.length() <= max ? v : v.substring(0, max);
+    }
+
+    // 批量生成
+
     @Override
     public PageResult<MealOrderVO> mealListPage(MealOrderQueryPageDTO query) {
         query.setKeyword(trim(query.getKeyword()));
@@ -79,6 +91,8 @@ public class MealOrderServiceImpl implements MealOrderService {
                 result.getRecords());
     }
 
+    // 状态推进 / 退订 / 删除
+
     @Override
     public List<MealOrderVO> mealListByPlan(Long dietPlanId) {
         // ②非web入口：service 方法参数判空，没有 DTO 字段可挂注解（HTTP 侧 @RequestParam 已必填）
@@ -90,7 +104,9 @@ public class MealOrderServiceImpl implements MealOrderService {
         return rows;
     }
 
-    /** 下一步与按钮可用性由状态机现算（前端不自己判） */
+    /**
+     * 下一步与按钮可用性由状态机现算（前端不自己判）
+     */
     private void decorate(MealOrderVO vo) {
         Integer status = vo.getDeliverStatus();
         Integer next = NutritionRules.mealNextStatus(status);
@@ -102,7 +118,7 @@ public class MealOrderServiceImpl implements MealOrderService {
                 ? YesOrNoEnum.YES.getCode() : YesOrNoEnum.NO.getCode());
     }
 
-    // 批量生成
+    // 工具
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -219,13 +235,11 @@ public class MealOrderServiceImpl implements MealOrderService {
         vo.setMessage(generated == 0
                 ? "没有新增餐单（可能全部已生成，或方案未指定供应餐次）"
                 : "已生成 " + generated + " 条餐单" + (lockedAdmissions.isEmpty() ? ""
-                        : "，跳过 " + lockedAdmissions.size() + " 人（当日餐已配送或已签收）"));
+                : "，跳过 " + lockedAdmissions.size() + " 人（当日餐已配送或已签收）"));
         log.info("订餐生成 日期={} 方案={} 生成={} 跳过={} 覆盖={} 操作人={}", mealDate, plans.size(),
                 generated, lockedAdmissions.size(), overwrite, operator);
         return vo;
     }
-
-    // 状态推进 / 退订 / 删除
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -324,8 +338,6 @@ public class MealOrderServiceImpl implements MealOrderService {
         return mealMapper.purgeById(id);
     }
 
-    // 工具
-
     private String currentName() {
         String name = UserUtils.getCurrentEmployeeName();
         if (StringUtils.hasText(name)) {
@@ -333,20 +345,5 @@ public class MealOrderServiceImpl implements MealOrderService {
         }
         Long empId = UserUtils.getCurrentEmployeeId();
         return empId == null ? "system" : String.valueOf(empId);
-    }
-
-    private static String trim(String v) {
-        return v == null ? null : v.trim();
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        return v.length() <= max ? v : v.substring(0, max);
     }
 }

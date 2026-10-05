@@ -21,7 +21,9 @@ public class NursingRecordVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 护理文书号 */
+    /**
+     * 护理文书号
+     */
     private String recordNo;
 
     /**
@@ -36,16 +38,24 @@ public class NursingRecordVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
-    /** 病区名称（快照） */
+    /**
+     * 病区名称（快照）
+     */
     private String wardName;
 
-    /** 床号（快照） */
+    /**
+     * 床号（快照）
+     */
     private String bedNo;
 
-    /** 文书类型（1-三测单 2-护理记录单 3-生命体征监测） */
+    /**
+     * 文书类型（1-三测单 2-护理记录单 3-生命体征监测）
+     */
     private Integer nursingType;
 
     /**
@@ -69,7 +79,9 @@ public class NursingRecordVO implements Serializable {
      */
     private String measureClock;
 
-    /** 班次（1-白班 2-小夜班 3-大夜班） */
+    /**
+     * 班次（1-白班 2-小夜班 3-大夜班）
+     */
     private Integer shift;
 
     /**
@@ -112,7 +124,9 @@ public class NursingRecordVO implements Serializable {
      */
     private Integer spo2;
 
-    /** 大便次数（次/日） */
+    /**
+     * 大便次数（次/日）
+     */
     private Integer stoolCount;
 
     /**
@@ -130,7 +144,9 @@ public class NursingRecordVO implements Serializable {
      */
     private Integer outputVolume;
 
-    /** 护理级别（1-特级护理 2-一级护理 3-二级护理 4-三级护理） */
+    /**
+     * 护理级别（1-特级护理 2-一级护理 3-二级护理 4-三级护理）
+     */
     private Integer nursingLevel;
 
     /**
@@ -138,10 +154,14 @@ public class NursingRecordVO implements Serializable {
      */
     private String nursingLevelText;
 
-    /** 护理措施与病情观察记录正文 */
+    /**
+     * 护理措施与病情观察记录正文
+     */
     private String nursingContent;
 
-    /** 记录护士ID（员工ID） */
+    /**
+     * 记录护士ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long nurseId;
 
@@ -150,7 +170,9 @@ public class NursingRecordVO implements Serializable {
      */
     private String nurseName;
 
-    /** 文书状态（1-草稿 2-已提交 3-已归档） */
+    /**
+     * 文书状态（1-草稿 2-已提交 3-已归档）
+     */
     private Integer recordStatus;
 
     /**

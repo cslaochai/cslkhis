@@ -1,17 +1,9 @@
 package com.his.patient.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.patient.dto.InpatientRecordArchiveDTO;
-import com.his.patient.dto.InpatientRecordLogQueryPageDTO;
-import com.his.patient.dto.InpatientRecordQueryPageDTO;
-import com.his.patient.dto.InpatientRecordSubmitDTO;
-import com.his.patient.dto.InpatientRecordUpsertDTO;
+import com.his.patient.dto.*;
 import com.his.patient.entity.BizInpatientRecord;
-import com.his.patient.vo.CodeOptionVO;
-import com.his.patient.vo.InpatientRecordDetailVO;
-import com.his.patient.vo.InpatientRecordLogVO;
-import com.his.patient.vo.InpatientRecordVO;
-import com.his.patient.vo.RecordQualityStatVO;
+import com.his.patient.vo.*;
 
 import java.util.List;
 

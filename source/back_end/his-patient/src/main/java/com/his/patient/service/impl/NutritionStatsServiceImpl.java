@@ -3,13 +3,14 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.patient.support.NutritionRules;
 import com.his.patient.dto.NutritionStatsGenerateDTO;
 import com.his.patient.dto.NutritionStatsQueryPageDTO;
 import com.his.patient.entity.BizNutritionStats;
+import com.his.patient.enums.StatsScopeEnum;
 import com.his.patient.mapper.BizNutritionStatsMapper;
 import com.his.patient.mapper.NutritionStatMapper;
 import com.his.patient.service.NutritionStatsService;
+import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.DeptStatRowVO;
 import com.his.patient.vo.NutritionOverviewVO;
 import com.his.patient.vo.NutritionStatsVO;
@@ -29,8 +30,6 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.his.patient.enums.StatsScopeEnum;
 
 /**
  * 营养膳食指标与看板实现（sql/168 §4）。
@@ -158,7 +157,9 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
         return sb.toString();
     }
 
-    /** 指标复算（试算与落库共用，保证两处口径一致） */
+    /**
+     * 指标复算（试算与落库共用，保证两处口径一致）
+     */
     private BizNutritionStats compute(YearMonth ym, String statMonth, int scopeType, Long deptId, String deptName) {
         LocalDateTime from = from(ym);
         LocalDateTime to = to(ym);
@@ -200,7 +201,9 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
         return row;
     }
 
-    /** 同月同范围覆盖（唯一键 uk_nutrition_stats，本表无 del_flag，重算只更新同一行） */
+    /**
+     * 同月同范围覆盖（唯一键 uk_nutrition_stats，本表无 del_flag，重算只更新同一行）
+     */
     private BizNutritionStats upsertRow(BizNutritionStats row, String operator) {
         BizNutritionStats exist = statsMapper.selectOneSnapshot(row.getStatMonth(), row.getScopeType(),
                 row.getDeptId());
@@ -246,7 +249,9 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
         return applyTargets(vo);
     }
 
-    /** 目标值随每行带出：阈值是评审口径，不该由前端写死一份 */
+    /**
+     * 目标值随每行带出：阈值是评审口径，不该由前端写死一份
+     */
     private NutritionStatsVO applyTargets(NutritionStatsVO vo) {
         vo.setScreenRateTarget(NutritionRules.TARGET_SCREEN_RATE);
         vo.setDietConfirmRateTarget(NutritionRules.TARGET_DIET_CONFIRM_RATE);
@@ -278,7 +283,9 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
         }
     }
 
-    /** 百分比（分母为 0 返回 0.00，不返回 NaN —— 空表跑出 NaN 会让人以为系统坏了） */
+    /**
+     * 百分比（分母为 0 返回 0.00，不返回 NaN —— 空表跑出 NaN 会让人以为系统坏了）
+     */
     private BigDecimal rate(long num, long den) {
         if (den <= 0) {
             return BigDecimal.ZERO.setScale(2);

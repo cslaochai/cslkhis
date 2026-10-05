@@ -20,7 +20,9 @@ public interface BizBedWaitMapper extends BaseMapper<BizBedWait> {
     @Select("SELECT COUNT(*) FROM biz_bed_wait WHERE del_flag = 0 AND wait_no LIKE CONCAT(#{prefix}, '%')")
     long countByWaitNoPrefix(@Param("prefix") String prefix);
 
-    /** 等待中的记录：用于算全局排队位次（seq），不含分页 */
+    /**
+     * 等待中的记录：用于算全局排队位次（seq），不含分页
+     */
     @Select("""
             SELECT id FROM biz_bed_wait
              WHERE del_flag = 0 AND wait_status = 0

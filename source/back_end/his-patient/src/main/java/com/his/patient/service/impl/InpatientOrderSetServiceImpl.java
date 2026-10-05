@@ -9,6 +9,8 @@ import com.his.patient.dto.OrderSetQueryPageDTO;
 import com.his.patient.dto.OrderSetUpsertDTO;
 import com.his.patient.entity.BizInpatientOrderTemplate;
 import com.his.patient.entity.BizInpatientOrderTemplateItem;
+import com.his.patient.enums.OrderTypeEnum;
+import com.his.patient.enums.TemplateScopeEnum;
 import com.his.patient.mapper.BizInpatientOrderTemplateItemMapper;
 import com.his.patient.mapper.BizInpatientOrderTemplateMapper;
 import com.his.patient.service.InpatientOrderSetService;
@@ -18,8 +20,8 @@ import com.his.patient.vo.InpatientOrderTemplateItemVO;
 import com.his.patient.vo.OrderSetDetailVO;
 import com.his.patient.vo.OrderSetListVO;
 import com.his.patient.vo.OrderSetSelectListVO;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -28,14 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
-import com.his.patient.enums.OrderTypeEnum;
-import com.his.patient.enums.TemplateScopeEnum;
+import java.util.*;
 
 /**
  * 医嘱组套模板服务实现（sql/142）。
@@ -58,7 +53,9 @@ import com.his.patient.enums.TemplateScopeEnum;
 @RequiredArgsConstructor
 public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
 
-    /** 下拉候选上限：开立弹窗要一屏能扫完，翻找走管理页分页 */
+    /**
+     * 下拉候选上限：开立弹窗要一屏能扫完，翻找走管理页分页
+     */
     private static final int SELECT_LIMIT = 50;
 
     private final BizInpatientOrderTemplateMapper templateMapper;
@@ -256,7 +253,9 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
                 });
     }
 
-    /** 取组套并校验可见（不可见的与不存在的回同一句话，避免泄露「这个 id 存在但你看不到」） */
+    /**
+     * 取组套并校验可见（不可见的与不存在的回同一句话，避免泄露「这个 id 存在但你看不到」）
+     */
     private BizInpatientOrderTemplate requireVisible(Long id) {
         // 保留（类别②）：入参是普通 Long（GET @RequestParam / 修改路径复用同一私有校验），
         // 无对应 request DTO 字段可挂注解
@@ -271,7 +270,9 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         return template;
     }
 
-    /** 取组套并校验可写：全院级凭权限码（能进这页即有码），科室级限本科室，个人级限本人 */
+    /**
+     * 取组套并校验可写：全院级凭权限码（能进这页即有码），科室级限本科室，个人级限本人
+     */
     private BizInpatientOrderTemplate requireWritable(Long id) {
         BizInpatientOrderTemplate template = requireVisible(id);
         if (Boolean.FALSE.equals(editable(template, currentUserOrNull()))) {
@@ -297,7 +298,9 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         return false;
     }
 
-    /** 归属一律服务端定：个人→本人，科室→当前科室，全院→不归属任何个人/科室 */
+    /**
+     * 归属一律服务端定：个人→本人，科室→当前科室，全院→不归属任何个人/科室
+     */
     private void applyOwner(BizInpatientOrderTemplate template, Integer scope, Long fallbackEmpId, Long fallbackDeptId) {
         if (Objects.equals(TemplateScopeEnum.PERSONAL.getCode(), scope)) {
             Long empId = fallbackEmpId != null ? fallbackEmpId : currentEmpId(requireUser());
@@ -323,7 +326,9 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         }
     }
 
-    /** 同名校验按「归属范围」算：全院看全表，科室看本科室，个人看本人 */
+    /**
+     * 同名校验按「归属范围」算：全院看全表，科室看本科室，个人看本人
+     */
     private void assertNameNotDuplicated(String templateName, Long excludeId, Integer scope, Long empId, Long deptId) {
         LambdaQueryWrapper<BizInpatientOrderTemplate> wrapper = new LambdaQueryWrapper<BizInpatientOrderTemplate>()
                 .eq(BizInpatientOrderTemplate::getScope, scope)
@@ -365,7 +370,9 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         return entity;
     }
 
-    /** 备注列宽 500，超长直接写库会报 Data too long，把「保存失败」升级成 500 */
+    /**
+     * 备注列宽 500，超长直接写库会报 Data too long，把「保存失败」升级成 500
+     */
     private String trimRemark(String remark) {
         if (remark == null) {
             return null;
@@ -390,7 +397,9 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         }
     }
 
-    /** 组套归属一律用**员工ID**（不是用户的ID），与医嘱行 doctor_id 同一口径 */
+    /**
+     * 组套归属一律用**员工ID**（不是用户的ID），与医嘱行 doctor_id 同一口径
+     */
     private Long currentEmpId(CurrentUser user) {
         return user.getEmployeeId() != null ? user.getEmployeeId() : user.getUserId();
     }

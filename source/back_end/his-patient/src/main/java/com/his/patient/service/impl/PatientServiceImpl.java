@@ -7,7 +7,6 @@ import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.SensitiveMaskUtils;
-import com.his.security.PasswordCipher;
 import com.his.patient.dto.PatientQueryPageDTO;
 import com.his.patient.dto.PatientRegisterDTO;
 import com.his.patient.dto.PatientSearchScopeDTO;
@@ -16,10 +15,7 @@ import com.his.patient.entity.BizPatient;
 import com.his.patient.entity.BizPatientTagRelation;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
-import com.his.patient.service.PatientHealthProfileService;
-import com.his.patient.service.PatientService;
-import com.his.patient.service.PatientTodayVisit;
-import com.his.patient.service.PatientTodayVisitProvider;
+import com.his.patient.service.*;
 import com.his.patient.support.PatientProfileValidator;
 import com.his.patient.support.PatientSearchScopeMode;
 import com.his.patient.support.PatientSearchScopeResolver;
@@ -27,19 +23,19 @@ import com.his.patient.vo.PatientDetailVO;
 import com.his.patient.vo.PatientHealthProfileVO;
 import com.his.patient.vo.PatientRegisterVO;
 import com.his.patient.vo.PatientVO;
-import com.his.patient.service.BizPatientTagRelationService;
-import com.his.security.entity.CurrentUser;
+import com.his.security.PasswordCipher;
 import com.his.security.UserUtils;
-import com.his.system.entity.SysUser;
-import com.his.system.service.SysUserService;
+import com.his.security.entity.CurrentUser;
 import com.his.system.entity.SysPatientTag;
+import com.his.system.entity.SysUser;
 import com.his.system.service.PatientTagService;
-import com.his.system.vo.SysPatientTagVO;
+import com.his.system.service.SmsCodeService;
+import com.his.system.service.SysUserService;
 import com.his.system.support.CodeText;
 import com.his.system.support.FieldChangeRecorder;
 import com.his.system.support.FieldSpec;
 import com.his.system.support.Mask;
-import com.his.system.service.SmsCodeService;
+import com.his.system.vo.SysPatientTagVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -53,11 +49,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -68,6 +60,44 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> implements PatientService {
 
+    /**
+     * 对象类型：患者主档
+     */
+    private static final String PATIENT = "PATIENT";
+    /**
+     * 患者主档参与字段级留痕的字段清单。
+     *
+     * <p><b>刻意不记余额 / 总费用 / 就诊次数与首末就诊冗余组</b>：
+     * 那是收费与就诊链路回写的派生字段，不是人在表单里改的。每次挂号都会刷一遍
+     * 最近就诊时间，把它们记进来，日志会被"系统自己改自己"刷爆，真正的人工修改反而找不着。
+     *
+     * <p><b>打码只打直接标识符</b>（身份证 / 手机号 / 住址 / 医保卡号），姓名、性别、
+     * 过敏史这些业务字段原样留 —— 全打码的日志在检查时答不出"过敏史什么时候被改过"。
+     */
+    private static final List<FieldSpec> PATIENT_FIELDS = FieldSpec.list(
+            FieldSpec.of("patientName", "姓名"),
+            FieldSpec.render("gender", "性别", v -> CodeText.of(v, "男", "女", "未知")),
+            FieldSpec.of("birthDate", "出生日期"),
+            FieldSpec.masked("idCard", "身份证号", Mask.ID_CARD),
+            FieldSpec.masked("phone", "联系电话", Mask.PHONE),
+            FieldSpec.of("contactName", "紧急联系人"),
+            FieldSpec.masked("contactPhone", "联系人电话", Mask.PHONE),
+            FieldSpec.of("contactRelation", "与患者关系"),
+            FieldSpec.masked("address", "家庭住址", Mask.ADDRESS),
+            FieldSpec.of("nation", "民族"),
+            FieldSpec.of("occupation", "职业"),
+            FieldSpec.render("maritalStatus", "婚姻状况", v -> CodeText.of(v, "未婚", "已婚", "离异", "丧偶")),
+            FieldSpec.of("bloodType", "血型"),
+            FieldSpec.of("allergyHistory", "过敏史"),
+            FieldSpec.of("medicalHistory", "既往病史"),
+            FieldSpec.render("patientType", "患者类型",
+                    v -> CodeText.of(v, "自费", "城镇职工医保", "城乡居民医保", "公费", "其他")),
+            FieldSpec.masked("medicalInsuranceNo", "医保卡号", Mask.BANK_NO),
+            FieldSpec.of("medicalInsuranceType", "医保类型"),
+            FieldSpec.render("cardType", "证件类型", v -> CodeText.of(v, "身份证", "护照", "军官证")),
+            FieldSpec.masked("cardNo", "证件号码", Mask.BANK_NO),
+            FieldSpec.render("status", "状态", CodeText::enable)
+    );
     private final RedisSequenceService redisSequenceService;
     private final BizPatientTagRelationMapper tagRelationMapper;
     private final PatientTagService patientTagService;
@@ -116,43 +146,38 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
      */
     private final FieldChangeRecorder fieldChangeRecorder;
 
-    /** 对象类型：患者主档 */
-    private static final String PATIENT = "PATIENT";
+    /**
+     * 联系电话脱敏：11 位手机号保留前 3 后 4（138****5678）；
+     * 其他长度（座机/历史脏数据）≥7 位保留前 2 后 2，更短全遮。
+     */
+    private static String maskPhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        String s = phone.trim();
+        int n = s.length();
+        if (n == 11) {
+            return s.substring(0, 3) + "****" + s.substring(n - 4);
+        }
+        if (n >= 7) {
+            return s.substring(0, 2) + "****" + s.substring(n - 2);
+        }
+        return "****";
+    }
 
     /**
-     * 患者主档参与字段级留痕的字段清单。
-     *
-     * <p><b>刻意不记余额 / 总费用 / 就诊次数与首末就诊冗余组</b>：
-     * 那是收费与就诊链路回写的派生字段，不是人在表单里改的。每次挂号都会刷一遍
-     * 最近就诊时间，把它们记进来，日志会被"系统自己改自己"刷爆，真正的人工修改反而找不着。
-     *
-     * <p><b>打码只打直接标识符</b>（身份证 / 手机号 / 住址 / 医保卡号），姓名、性别、
-     * 过敏史这些业务字段原样留 —— 全打码的日志在检查时答不出"过敏史什么时候被改过"。
+     * 从身份证号解析出生日期（第 7~14 位 yyyyMMdd）。解析失败返回 null（不阻断建档）。
      */
-    private static final List<FieldSpec> PATIENT_FIELDS = FieldSpec.list(
-            FieldSpec.of("patientName", "姓名"),
-            FieldSpec.render("gender", "性别", v -> CodeText.of(v, "男", "女", "未知")),
-            FieldSpec.of("birthDate", "出生日期"),
-            FieldSpec.masked("idCard", "身份证号", Mask.ID_CARD),
-            FieldSpec.masked("phone", "联系电话", Mask.PHONE),
-            FieldSpec.of("contactName", "紧急联系人"),
-            FieldSpec.masked("contactPhone", "联系人电话", Mask.PHONE),
-            FieldSpec.of("contactRelation", "与患者关系"),
-            FieldSpec.masked("address", "家庭住址", Mask.ADDRESS),
-            FieldSpec.of("nation", "民族"),
-            FieldSpec.of("occupation", "职业"),
-            FieldSpec.render("maritalStatus", "婚姻状况", v -> CodeText.of(v, "未婚", "已婚", "离异", "丧偶")),
-            FieldSpec.of("bloodType", "血型"),
-            FieldSpec.of("allergyHistory", "过敏史"),
-            FieldSpec.of("medicalHistory", "既往病史"),
-            FieldSpec.render("patientType", "患者类型",
-                    v -> CodeText.of(v, "自费", "城镇职工医保", "城乡居民医保", "公费", "其他")),
-            FieldSpec.masked("medicalInsuranceNo", "医保卡号", Mask.BANK_NO),
-            FieldSpec.of("medicalInsuranceType", "医保类型"),
-            FieldSpec.render("cardType", "证件类型", v -> CodeText.of(v, "身份证", "护照", "军官证")),
-            FieldSpec.masked("cardNo", "证件号码", Mask.BANK_NO),
-            FieldSpec.render("status", "状态", CodeText::enable)
-    );
+    private static LocalDate parseBirthDate(String idCard) {
+        if (idCard == null || idCard.length() < 14) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(idCard.substring(6, 14), DateTimeFormatter.BASIC_ISO_DATE);
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     @Override
     public PageResult<BizPatient> selectPatientPage(String patientName, String phone, String patientNo,
@@ -219,7 +244,9 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
 
-    /** 拼 id 列表：来源是 Long 主键，非用户输入，无注入面 */
+    /**
+     * 拼 id 列表：来源是 Long 主键，非用户输入，无注入面
+     */
     private String joinIds(List<Long> ids) {
         return ids.stream().map(String::valueOf).collect(Collectors.joining(","));
     }
@@ -597,25 +624,6 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
     }
 
     /**
-     * 联系电话脱敏：11 位手机号保留前 3 后 4（138****5678）；
-     * 其他长度（座机/历史脏数据）≥7 位保留前 2 后 2，更短全遮。
-     */
-    private static String maskPhone(String phone) {
-        if (phone == null || phone.isBlank()) {
-            return null;
-        }
-        String s = phone.trim();
-        int n = s.length();
-        if (n == 11) {
-            return s.substring(0, 3) + "****" + s.substring(n - 4);
-        }
-        if (n >= 7) {
-            return s.substring(0, 2) + "****" + s.substring(n - 2);
-        }
-        return "****";
-    }
-
-    /**
      * 批量回填「患者标签」与「预约次数」。
      *
      * <p>必须批量查询：列表页每页最多几十条，若逐条查标签/计数会退化成 N+1
@@ -777,20 +785,6 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
         vo.setPatientNo(patient.getPatientNo());
         vo.setUsername(user.getUserName());
         return vo;
-    }
-
-    /**
-     * 从身份证号解析出生日期（第 7~14 位 yyyyMMdd）。解析失败返回 null（不阻断建档）。
-     */
-    private static LocalDate parseBirthDate(String idCard) {
-        if (idCard == null || idCard.length() < 14) {
-            return null;
-        }
-        try {
-            return LocalDate.parse(idCard.substring(6, 14), DateTimeFormatter.BASIC_ISO_DATE);
-        } catch (Exception e) {
-            return null;
-        }
     }
 
 }

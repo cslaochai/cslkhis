@@ -12,7 +12,9 @@ import java.io.Serializable;
 @Data
 public class PatientRegisterVO implements Serializable {
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 

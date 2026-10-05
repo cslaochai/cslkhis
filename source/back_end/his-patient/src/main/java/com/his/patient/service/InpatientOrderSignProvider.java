@@ -1,17 +1,20 @@
 package com.his.patient.service;
 
-import com.his.common.service.SignableContentProvider;
+import com.his.common.entity.SignSubject;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
-import com.his.common.entity.SignSubject;
+import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.patient.entity.BizInpatientOrder;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public interface InpatientOrderSignProvider extends SignableContentProvider {
 
-    /** 规范化文本：只含"开立时刻的医嘱内容" */
+    /**
+     * 规范化文本：只含"开立时刻的医嘱内容"
+     */
     public static String canonical(BizInpatientOrder o) {
         return CanonicalText.create("INPATIENT_ORDER")
                 .put("orderNo", o.getOrderNo())
@@ -42,6 +45,13 @@ public interface InpatientOrderSignProvider extends SignableContentProvider {
                 .build();
     }
 
+    /**
+     * BigDecimal 去尾零：金额 `10.00` 与 `10.0` 必须算出同一个摘要
+     */
+    static String plain(BigDecimal v) {
+        return v == null ? null : v.stripTrailingZeros().toPlainString();
+    }
+
     SignBizType bizType();
 
     SignSubject load(Long bizId);
@@ -51,9 +61,4 @@ public interface InpatientOrderSignProvider extends SignableContentProvider {
     void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime);
 
     void revokeSignAnchor(Long bizId, Long signId);
-
-    /** BigDecimal 去尾零：金额 `10.00` 与 `10.0` 必须算出同一个摘要 */
-    static String plain(BigDecimal v) {
-        return v == null ? null : v.stripTrailingZeros().toPlainString();
-    }
 }

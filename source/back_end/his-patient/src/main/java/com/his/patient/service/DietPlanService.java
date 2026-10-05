@@ -1,11 +1,11 @@
 package com.his.patient.service;
 
 import com.his.common.base.PageResult;
-import com.his.patient.entity.BizInpatientOrder;
 import com.his.patient.dto.DietConfirmDTO;
 import com.his.patient.dto.DietPlanQueryPageDTO;
 import com.his.patient.dto.DietPlanStopDTO;
 import com.his.patient.dto.DietPlanUpsertDTO;
+import com.his.patient.entity.BizInpatientOrder;
 import com.his.patient.vo.DietPlanVO;
 import com.his.patient.vo.DietTypeOptionVO;
 import com.his.patient.vo.WardVO;
@@ -22,7 +22,9 @@ import java.util.List;
  */
 public interface DietPlanService {
 
-    /** 饮食类型下拉（不含 TO_DETERMINE 占位档） */
+    /**
+     * 饮食类型下拉（不含 TO_DETERMINE 占位档）
+     */
     List<DietTypeOptionVO> dietTypeOptions();
 
     /**
@@ -35,16 +37,24 @@ public interface DietPlanService {
 
     List<DietPlanVO> planListByAdmission(Long admissionId);
 
-    /** 手工登记 / 修改方案（类别、途径、默认餐次由服务端按饮食码带出） */
+    /**
+     * 手工登记 / 修改方案（类别、途径、默认餐次由服务端按饮食码带出）
+     */
     DietPlanVO planUpsert(DietPlanUpsertDTO dto);
 
-    /** 营养科批量接收或退回（全成功或全不生效） */
+    /**
+     * 营养科批量接收或退回（全成功或全不生效）
+     */
     int planConfirm(DietConfirmDTO dto);
 
-    /** 手工停餐 */
+    /**
+     * 手工停餐
+     */
     DietPlanVO planStop(DietPlanStopDTO dto);
 
-    /** 删除误录方案（物理删，撞 uk_diet_plan_order） */
+    /**
+     * 删除误录方案（物理删，撞 uk_diet_plan_order）
+     */
     int planDeleteById(Long id);
 
     // 医嘱链钩子（由 InpatientOrderService 同事务调用）
@@ -59,9 +69,13 @@ public interface DietPlanService {
      */
     Long deriveFromOrder(BizInpatientOrder order);
 
-    /** 医嘱停止 → 方案停止 */
+    /**
+     * 医嘱停止 → 方案停止
+     */
     void stopFromOrder(Long orderId, LocalDateTime stopTime, String reason);
 
-    /** 医嘱作废（撤销）→ 方案作废 */
+    /**
+     * 医嘱作废（撤销）→ 方案作废
+     */
     void cancelFromOrder(Long orderId);
 }

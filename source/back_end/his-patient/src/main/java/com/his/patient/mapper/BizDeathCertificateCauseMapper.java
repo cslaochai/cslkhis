@@ -28,15 +28,21 @@ public interface BizDeathCertificateCauseMapper extends BaseMapper<BizDeathCerti
             """)
     List<DeathCertificateVO.CauseVO> selectByCertId(@Param("certId") Long certId);
 
-    /** 物理删除某张证明的全部死因链行（撞的是 uk_cert_part_seq） */
+    /**
+     * 物理删除某张证明的全部死因链行（撞的是 uk_cert_part_seq）
+     */
     @Delete("DELETE FROM biz_death_certificate_cause WHERE cert_id = #{certId}")
     int purgeByCertId(@Param("certId") Long certId);
 
-    /** 死因链Ⅰ部分行数（签发前必须至少一行，国标「直接死因」必填） */
+    /**
+     * 死因链Ⅰ部分行数（签发前必须至少一行，国标「直接死因」必填）
+     */
     @Select("SELECT COUNT(*) FROM biz_death_certificate_cause WHERE cert_id = #{certId} AND part = 1")
     int countChainRows(@Param("certId") Long certId);
 
-    /** Ⅰ部分未补全 ICD-10 编码的行数（签发门禁：编码是死因统计的唯一归口） */
+    /**
+     * Ⅰ部分未补全 ICD-10 编码的行数（签发门禁：编码是死因统计的唯一归口）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_death_certificate_cause
              WHERE cert_id = #{certId} AND part = 1 AND (icd_code IS NULL OR icd_code = '')

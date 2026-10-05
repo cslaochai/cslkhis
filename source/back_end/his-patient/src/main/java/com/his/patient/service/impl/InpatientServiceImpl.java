@@ -1,55 +1,30 @@
 package com.his.patient.service.impl;
 
+import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.patient.service.DeathCertificateService;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.dto.BedMapQueryDTO;
-import com.his.patient.dto.InpatientAdmitDTO;
-import com.his.patient.dto.InpatientDischargeDTO;
-import com.his.patient.dto.InpatientQueryPageDTO;
-import com.his.patient.dto.InpatientSummaryUpsertDTO;
-import com.his.patient.dto.InpatientTransferDTO;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.entity.BizAdmissionOrder;
-import com.his.patient.entity.BizDischarge;
-import com.his.patient.entity.BizInpatientDiagnosis;
-import com.his.patient.entity.BizInpatientOperation;
-import com.his.patient.entity.BizInpatientSummary;
-import com.his.patient.entity.BizVisit;
-import com.his.patient.entity.SysBed;
-import com.his.patient.mapper.BedMapMapper;
-import com.his.patient.mapper.BizAdmissionMapper;
-import com.his.patient.mapper.BizDischargeMapper;
-import com.his.patient.mapper.BizInpatientDiagnosisMapper;
-import com.his.patient.mapper.BizInpatientOperationMapper;
-import com.his.patient.mapper.BizInpatientSummaryMapper;
-import com.his.patient.mapper.BizVisitMapper;
-import com.his.patient.mapper.SysBedMapper;
-import com.his.patient.service.AdmissionOrderService;
-import com.his.patient.service.BedCenterService;
-import com.his.patient.service.InpatientService;
+import com.his.patient.dto.*;
+import com.his.patient.entity.*;
+import com.his.patient.enums.BedStatusEnum;
+import com.his.patient.enums.DischargeWayEnum;
+import com.his.patient.enums.SummaryStatusEnum;
+import com.his.patient.enums.VisitStatusEnum;
+import com.his.patient.mapper.*;
+import com.his.patient.service.*;
 import com.his.patient.support.InpatientLabels;
 import com.his.patient.support.InpatientRecordLabels;
 import com.his.patient.support.SettlementGate;
 import com.his.patient.support.SummaryOperationSeq;
-import com.his.patient.service.InpatientSettlementGateway;
-import com.his.security.entity.CurrentUser;
+import com.his.patient.vo.*;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
-import com.his.patient.vo.BedMapVO;
-import com.his.patient.vo.BedVO;
-import com.his.patient.vo.InpatientDetailVO;
-import com.his.patient.vo.InpatientStatsVO;
-import com.his.patient.vo.InpatientVO;
-import com.his.patient.vo.WardVO;
-import com.his.patient.mapper.BizPatientMapper;
+import com.his.security.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;
-import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -64,18 +39,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-
-import com.his.common.enums.AdmitStatusEnum;
-import com.his.patient.enums.BedStatusEnum;
-import com.his.patient.enums.DischargeWayEnum;
-import com.his.patient.enums.SummaryStatusEnum;
-import com.his.patient.enums.VisitStatusEnum;
 
 /**
  * 住院管理实现（第 1 期）
@@ -100,36 +65,29 @@ import com.his.patient.enums.VisitStatusEnum;
 public class InpatientServiceImpl implements InpatientService {
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-
-    /**
-     * 时间精度统一到「秒」。
-     *
-     * <p>库表的时间列是 {@code DATETIME(0)}，MySQL 存进去时会<b>四舍五入</b>（不是截断）：
-     * 写 {@code 21:52:44.824}，读出来是 {@code 21:52:45}。后果有两个，都是真踩过的：
-     * <ol>
-     *   <li>「出院时间不能早于入院时间」会误报——内存里 now() 还停在 44.8 秒，库里的入院时间却已经是 45 秒；</li>
-     *   <li>住院天数在跨日边界上会多算一天（23:59:59.7 的入院被存成次日 00:00:00）。</li>
-     * </ol>
-     * 所以凡是会落库、又会被拿来比较的时间，一律先截到秒，保证「写进去的 = 读回来的」。
-     */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
     private final BizAdmissionMapper admissionMapper;
     private final BizDischargeMapper dischargeMapper;
     private final SysBedMapper bedMapper;
-    /** 床位图聚合（一床一卡，跨在院/护理/手术/医嘱取数） */
+    /**
+     * 床位图聚合（一床一卡，跨在院/护理/手术/医嘱取数）
+     */
     private final BedMapMapper bedMapMapper;
     private final BizPatientMapper patientMapper;
     private final BizInpatientSummaryMapper summaryMapper;
     private final BizInpatientDiagnosisMapper diagnosisMapper;
     private final BizInpatientOperationMapper operationMapper;
     private final BizVisitMapper visitMapper;
-    /** 住院证服务：门诊转住院时用来取「可收治的证」并回填收治结果 */
+    /**
+     * 住院证服务：门诊转住院时用来取「可收治的证」并回填收治结果
+     */
     private final AdmissionOrderService admissionOrderService;
-    /** 出院结算闸门：出院前必须已结算（结清或欠费结算都算），由 his-charge 提供实现 */
+    /**
+     * 出院结算闸门：出院前必须已结算（结清或欠费结算都算），由 his-charge 提供实现
+     */
     private final SettlementGate settlementGate;
-    /** 站内信服务：收治完成通知开证医生 */
+    /**
+     * 站内信服务：收治完成通知开证医生
+     */
     private final SysMessageService sysMessageService;
     /**
      * 死亡证明服务：办「死亡」离院前，若这张证明已经填好，出院时间必须等于证明的死亡时间
@@ -147,7 +105,35 @@ public class InpatientServiceImpl implements InpatientService {
      */
     private final ObjectProvider<BedCenterService> bedCenterProvider;
 
+    /**
+     * 时间精度统一到「秒」。
+     *
+     * <p>库表的时间列是 {@code DATETIME(0)}，MySQL 存进去时会<b>四舍五入</b>（不是截断）：
+     * 写 {@code 21:52:44.824}，读出来是 {@code 21:52:45}。后果有两个，都是真踩过的：
+     * <ol>
+     *   <li>「出院时间不能早于入院时间」会误报——内存里 now() 还停在 44.8 秒，库里的入院时间却已经是 45 秒；</li>
+     *   <li>住院天数在跨日边界上会多算一天（23:59:59.7 的入院被存成次日 00:00:00）。</li>
+     * </ol>
+     * 所以凡是会落库、又会被拿来比较的时间，一律先截到秒，保证「写进去的 = 读回来的」。
+     */
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
+
     // 查询
+
+    /**
+     * 把系统侧的校验结论并进备注（原有备注在前，系统留痕在后，用「 | 」分隔）
+     */
+    private static String mergeRemark(String original, String note) {
+        if (!StringUtils.hasText(note)) {
+            return original;
+        }
+        if (!StringUtils.hasText(original)) {
+            return note;
+        }
+        return original + " | " + note;
+    }
 
     @Override
     public IPage<InpatientVO> listPage(InpatientQueryPageDTO query) {
@@ -187,6 +173,8 @@ public class InpatientServiceImpl implements InpatientService {
         query.setWardId(null);
         return listPage(query);
     }
+
+    // 入院登记
 
     @Override
     public InpatientDetailVO detail(Long admissionId) {
@@ -243,8 +231,6 @@ public class InpatientServiceImpl implements InpatientService {
         vo.setOperations(operations);
         return vo;
     }
-
-    // 入院登记
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -386,6 +372,8 @@ public class InpatientServiceImpl implements InpatientService {
         return admission.getAdmissionId();
     }
 
+    // 换床
+
     /**
      * 收治完成 → 站内信通知开证医生（bizType=admit，通知型：read_status 即闭环）。
      * <p>
@@ -421,7 +409,7 @@ public class InpatientServiceImpl implements InpatientService {
         }
     }
 
-    // 换床
+    // 出院办理
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -466,7 +454,7 @@ public class InpatientServiceImpl implements InpatientService {
         log.info("换床成功 admissionId={} bedId {} -> {}", dto.getAdmissionId(), oldBedId, dto.getNewBedId());
     }
 
-    // 出院办理
+    // 病案首页
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -564,7 +552,7 @@ public class InpatientServiceImpl implements InpatientService {
                 admission.getAdmissionId(), discharge.getDischargeNo(), days, dto.getDischargeWay(), readmit31d);
     }
 
-    // 病案首页
+    // 统计 / 床位
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -708,8 +696,6 @@ public class InpatientServiceImpl implements InpatientService {
         return detail(dto.getAdmissionId());
     }
 
-    // 统计 / 床位
-
     @Override
     public InpatientStatsVO stats() {
         InpatientStatsVO vo = new InpatientStatsVO();
@@ -804,7 +790,9 @@ public class InpatientServiceImpl implements InpatientService {
         return result;
     }
 
-    /** 顶部统计：全部由本次返回的床位现算，保证"卡片数 = 统计数"自洽 */
+    /**
+     * 顶部统计：全部由本次返回的床位现算，保证"卡片数 = 统计数"自洽
+     */
     private BedMapVO.Summary summarize(List<BedMapVO.BedCard> beds) {
         BedMapVO.Summary s = new BedMapVO.Summary();
         for (BedMapVO.BedCard bed : beds) {
@@ -857,7 +845,11 @@ public class InpatientServiceImpl implements InpatientService {
         return s;
     }
 
-    /** 科室下拉：按授权范围收口，且只保留真的有床位的科室 */
+    // 内部方法
+
+    /**
+     * 科室下拉：按授权范围收口，且只保留真的有床位的科室
+     */
     private List<BedMapVO.DeptOption> resolveDeptOptions(Long currentDeptId, String currentDeptName) {
         Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
         List<BedMapVO.DeptOption> options = new ArrayList<>();
@@ -875,8 +867,6 @@ public class InpatientServiceImpl implements InpatientService {
         }
         return options;
     }
-
-    // 内部方法
 
     /**
      * 床位占用：状态置占用 + 记患者 + 同步病区冗余计数
@@ -1017,7 +1007,9 @@ public class InpatientServiceImpl implements InpatientService {
         return prefix + String.format("%03d", seq);
     }
 
-    /** regist_ids 是逗号分隔的字符串列；按整段比对，避免 "1" 命中 "11" 这种子串误判 */
+    /**
+     * regist_ids 是逗号分隔的字符串列；按整段比对，避免 "1" 命中 "11" 这种子串误判
+     */
     private boolean containsRegistId(String registIds, Long registId) {
         if (!StringUtils.hasText(registIds) || registId == null) {
             return false;
@@ -1142,19 +1134,6 @@ public class InpatientServiceImpl implements InpatientService {
         if (dto.getRemark() != null) {
             summary.setRemark(dto.getRemark());
         }
-    }
-
-    /**
-     * 把系统侧的校验结论并进备注（原有备注在前，系统留痕在后，用「 | 」分隔）
-     */
-    private static String mergeRemark(String original, String note) {
-        if (!StringUtils.hasText(note)) {
-            return original;
-        }
-        if (!StringUtils.hasText(original)) {
-            return note;
-        }
-        return original + " | " + note;
     }
 
     private BigDecimal percent(long part, long total) {

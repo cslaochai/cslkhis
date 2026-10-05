@@ -1,20 +1,9 @@
 package com.his.patient.support;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import com.his.patient.enums.*;
 
-import com.his.patient.enums.DietCategoryEnum;
-import com.his.patient.enums.DietRouteEnum;
-import com.his.patient.enums.MealDeliverStatusEnum;
-import com.his.patient.enums.MealTypeEnum;
-import com.his.patient.enums.NutritionScreenTypeEnum;
+import java.util.*;
 
-import com.his.patient.enums.DietConfirmStatusEnum;
-import com.his.patient.enums.NutritionScreenSourceEnum;
-import com.his.patient.enums.PlanStatusEnum;
 /**
  * 营养膳食口径（sql/168）。前端 lib/nutrition.js 与本类逐字对齐，页面不得另写一份映射。
  *
@@ -30,15 +19,95 @@ import com.his.patient.enums.PlanStatusEnum;
  */
 public final class NutritionRules {
 
-    private NutritionRules() {
-    }
+    /**
+     * NRS2002 营养风险阈值：总分 ≥3 为有营养风险
+     */
+    public static final int NRS_RISK_CUTOFF = 3;
 
     // 筛查
-
-    /** NRS2002 营养风险阈值：总分 ≥3 为有营养风险 */
-    public static final int NRS_RISK_CUTOFF = 3;
-    /** NRS2002 阴性者复筛间隔（天）—— "每周复筛"落成一列日期，不靠人记 */
+    /**
+     * NRS2002 阴性者复筛间隔（天）—— "每周复筛"落成一列日期，不靠人记
+     */
     public static final int RE_SCREEN_DAYS = 7;
+    /**
+     * 待指定饮食：医嘱文本认不出饮食类型时派生方案用的占位码。
+     *
+     * <p>必须有这一档 —— 膳食方案的 diet_code 列 NOT NULL，更重要的是"认不出就不建方案"等于
+     * 让这条膳食医嘱从营养科的待接收队列里**静默消失**，患者一顿饭都吃不上且没人知道。
+     * 占位方案进待接收列表，但 {@code TO_DETERMINE} 不许被"接收"（见 DietServiceImpl.planConfirm）：
+     * 先改成真实饮食类型再接，饮食类型决定食堂做什么饭。
+     */
+    public static final String CODE_TO_DETERMINE = "TO_DETERMINE";
+    /**
+     * 目录与字典 his_diet_type 逐字对齐（sql/168 §6）
+     */
+    public static final List<Diet> DIETS = List.of(
+            new Diet("NORMAL", "普食", DietCategoryEnum.BASIC.getCode(), DietRouteEnum.ORAL.getCode(), 2000, 70, "1,2,3", "无发热、无吞咽困难、消化功能正常"),
+            new Diet("SOFT", "软食", DietCategoryEnum.BASIC.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 65, "1,2,3", "老年、咀嚼困难、低热或术后恢复期"),
+            new Diet("HALF_LIQUID", "半流质", DietCategoryEnum.BASIC.getCode(), DietRouteEnum.ORAL.getCode(), 1500, 55, "1,2,3,4", "发热、吞咽困难、口腔及胃肠道术后过渡"),
+            new Diet("LIQUID", "流质", DietCategoryEnum.BASIC.getCode(), DietRouteEnum.ORAL.getCode(), 1000, 45, "1,2,3,4", "急性重症、口腔食道手术后，短期使用"),
+            new Diet("DIABETES", "糖尿病饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 1600, 75, "1,2,3,4",
+                    "按理想体重 25~30kcal/kg，碳水占 45~60%，定时定量分餐"),
+            new Diet("LOW_SALT", "低盐低脂饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 65, "1,2,3",
+                    "钠 <2~3g/日、胆固醇 <300mg；高血压、心衰、肾病"),
+            new Diet("HIGH_PROTEIN", "高蛋白饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 2200, 100, "1,2,3",
+                    "蛋白 1.2~1.5g/kg；消耗性疾病、术前纠正低蛋白血症"),
+            new Diet("LOW_PROTEIN", "低蛋白饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 40, "1,2,3",
+                    "蛋白 0.5~0.8g/kg；慢性肾功能不全非透析期"),
+            new Diet("KIDNEY", "肾病饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 35, "1,2,3",
+                    "低盐 + 限钾限磷 + 优质低蛋白，按透析与否调整"),
+            new Diet("GOUT", "痛风饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 50, "1,2,3",
+                    "嘌呤 <150mg/日，禁动物内脏、海鲜与酒"),
+            new Diet("LOW_FIBER", "少渣饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 60, "1,2,3",
+                    "腹泻、肠道手术前、痔疮及消化道出血恢复期"),
+            new Diet("OCCULT_BLOOD", "隐血试验饮食", DietCategoryEnum.TEST.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 60, "1,2,3",
+                    "便隐血检查前 3 天禁铁剂、动物血、绿叶菜"),
+            new Diet("CHOLYCYST", "胆囊造影饮食", DietCategoryEnum.TEST.getCode(), DietRouteEnum.ORAL.getCode(), 1600, 55, "1,2",
+                    "前一日少渣晚餐，次日高脂肪餐诱发胆囊收缩"),
+            new Diet("ENT", "肠内营养", DietCategoryEnum.SUPPORT.getCode(), DietRouteEnum.TUBE.getCode(), 1500, 75, null,
+                    "整蛋白/短肽/疾病特异型制剂，管饲或口服，25~30kcal/kg；管饲不发食堂餐"),
+            new Diet("PN", "肠外营养", DietCategoryEnum.SUPPORT.getCode(), DietRouteEnum.IV.getCode(), 1800, 80, null,
+                    "经中心静脉/PICC 输注三腔袋，由静配中心配制，走医嘱执行链"),
+            new Diet("ONS", "口服营养补充", DietCategoryEnum.SUPPORT.getCode(), DietRouteEnum.ORAL.getCode(), 2000, 80, "1,2,3,4",
+                    "在常规饮食外加用特殊医学用途配方食品 400~600kcal/日"),
+            // 占位档：不进下拉选项（见 DietServiceImpl.dietTypeOptions 的过滤），只用于医嘱派生时认不出类型
+            new Diet(CODE_TO_DETERMINE, "待指定饮食", DietCategoryEnum.BASIC.getCode(), DietRouteEnum.ORAL.getCode(), null, null, null,
+                    "医嘱文本认不出饮食类型的占位，营养科必须先改成真实饮食类型才能接收"));
+    /**
+     * 常用阈值：营养筛查率目标（等级评审口径，只作提示不判定）
+     */
+    public static final java.math.BigDecimal TARGET_SCREEN_RATE = new java.math.BigDecimal("90.00");
+    /**
+     * 膳食医嘱执行率目标
+     */
+    public static final java.math.BigDecimal TARGET_DIET_CONFIRM_RATE = new java.math.BigDecimal("95.00");
+    /**
+     * 营养会诊及时应答率目标
+     */
+    public static final java.math.BigDecimal TARGET_CONSULT_ONTIME_RATE = new java.math.BigDecimal("90.00");
+    /**
+     * 订餐签收率目标
+     */
+    public static final java.math.BigDecimal TARGET_MEAL_SIGN_RATE = new java.math.BigDecimal("95.00");
+
+    // 饮食类型目录
+    private static final Map<String, Diet> BY_CODE = new LinkedHashMap<>();
+    /**
+     * 状态机：待配餐→已配餐→已配送→已签收，只许一级推进；4-已取消是旁路
+     */
+    private static final Map<Integer, Integer> MEAL_NEXT = Map.of(
+            MealDeliverStatusEnum.PENDING.getCode(), MealDeliverStatusEnum.PREPARED.getCode(),
+            MealDeliverStatusEnum.PREPARED.getCode(), MealDeliverStatusEnum.DELIVERED.getCode(),
+            MealDeliverStatusEnum.DELIVERED.getCode(), MealDeliverStatusEnum.SIGNED.getCode());
+
+    static {
+        for (Diet d : DIETS) {
+            BY_CODE.put(d.code(), d);
+        }
+    }
+
+    private NutritionRules() {
+    }
 
     public static String screenTypeText(Integer type) {
         NutritionScreenTypeEnum item = type == null ? null : NutritionScreenTypeEnum.fromCode(type);
@@ -80,7 +149,9 @@ public final class NutritionRules {
         return total >= NRS_RISK_CUTOFF ? 1 : 0;
     }
 
-    /** BMI 服务端算，前端不传（身高 cm、体重 kg） */
+    /**
+     * BMI 服务端算，前端不传（身高 cm、体重 kg）
+     */
     public static java.math.BigDecimal bmiOf(java.math.BigDecimal heightCm, java.math.BigDecimal weightKg) {
         if (heightCm == null || weightKg == null || heightCm.signum() <= 0) {
             return null;
@@ -88,76 +159,6 @@ public final class NutritionRules {
         double m = heightCm.doubleValue() / 100D;
         return java.math.BigDecimal.valueOf(weightKg.doubleValue() / (m * m))
                 .setScale(2, java.math.RoundingMode.HALF_UP);
-    }
-
-    // 饮食类型目录
-
-    /**
-     * 待指定饮食：医嘱文本认不出饮食类型时派生方案用的占位码。
-     *
-     * <p>必须有这一档 —— 膳食方案的 diet_code 列 NOT NULL，更重要的是"认不出就不建方案"等于
-     * 让这条膳食医嘱从营养科的待接收队列里**静默消失**，患者一顿饭都吃不上且没人知道。
-     * 占位方案进待接收列表，但 {@code TO_DETERMINE} 不许被"接收"（见 DietServiceImpl.planConfirm）：
-     * 先改成真实饮食类型再接，饮食类型决定食堂做什么饭。
-     */
-    public static final String CODE_TO_DETERMINE = "TO_DETERMINE";
-
-    /**
-     * 饮食类型。
-     *
-     * @param code      饮食码（字典 his_diet_type）
-     * @param name      饮食名称
-     * @param category  饮食类别（1-基本 2-治疗 3-诊断试验 4-营养支持）
-     * @param route     默认给食途径（1-口服 2-管饲 3-静脉）
-     * @param calorie   默认每日热量目标 kcal
-     * @param protein   默认每日蛋白目标 g
-     * @param mealTypes 默认供应餐次（his_meal_type 值，逗号分隔；null 表示不走订餐）
-     * @param desc      配方/适用说明
-     */
-    public record Diet(String code, String name, int category, int route, Integer calorie, Integer protein,
-                       String mealTypes, String desc) {
-    }
-
-    /** 目录与字典 his_diet_type 逐字对齐（sql/168 §6） */
-    public static final List<Diet> DIETS = List.of(
-            new Diet("NORMAL", "普食", DietCategoryEnum.BASIC.getCode(), DietRouteEnum.ORAL.getCode(), 2000, 70, "1,2,3", "无发热、无吞咽困难、消化功能正常"),
-            new Diet("SOFT", "软食", DietCategoryEnum.BASIC.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 65, "1,2,3", "老年、咀嚼困难、低热或术后恢复期"),
-            new Diet("HALF_LIQUID", "半流质", DietCategoryEnum.BASIC.getCode(), DietRouteEnum.ORAL.getCode(), 1500, 55, "1,2,3,4", "发热、吞咽困难、口腔及胃肠道术后过渡"),
-            new Diet("LIQUID", "流质", DietCategoryEnum.BASIC.getCode(), DietRouteEnum.ORAL.getCode(), 1000, 45, "1,2,3,4", "急性重症、口腔食道手术后，短期使用"),
-            new Diet("DIABETES", "糖尿病饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 1600, 75, "1,2,3,4",
-                    "按理想体重 25~30kcal/kg，碳水占 45~60%，定时定量分餐"),
-            new Diet("LOW_SALT", "低盐低脂饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 65, "1,2,3",
-                    "钠 <2~3g/日、胆固醇 <300mg；高血压、心衰、肾病"),
-            new Diet("HIGH_PROTEIN", "高蛋白饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 2200, 100, "1,2,3",
-                    "蛋白 1.2~1.5g/kg；消耗性疾病、术前纠正低蛋白血症"),
-            new Diet("LOW_PROTEIN", "低蛋白饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 40, "1,2,3",
-                    "蛋白 0.5~0.8g/kg；慢性肾功能不全非透析期"),
-            new Diet("KIDNEY", "肾病饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 35, "1,2,3",
-                    "低盐 + 限钾限磷 + 优质低蛋白，按透析与否调整"),
-            new Diet("GOUT", "痛风饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 50, "1,2,3",
-                    "嘌呤 <150mg/日，禁动物内脏、海鲜与酒"),
-            new Diet("LOW_FIBER", "少渣饮食", DietCategoryEnum.THERAPY.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 60, "1,2,3",
-                    "腹泻、肠道手术前、痔疮及消化道出血恢复期"),
-            new Diet("OCCULT_BLOOD", "隐血试验饮食", DietCategoryEnum.TEST.getCode(), DietRouteEnum.ORAL.getCode(), 1800, 60, "1,2,3",
-                    "便隐血检查前 3 天禁铁剂、动物血、绿叶菜"),
-            new Diet("CHOLYCYST", "胆囊造影饮食", DietCategoryEnum.TEST.getCode(), DietRouteEnum.ORAL.getCode(), 1600, 55, "1,2",
-                    "前一日少渣晚餐，次日高脂肪餐诱发胆囊收缩"),
-            new Diet("ENT", "肠内营养", DietCategoryEnum.SUPPORT.getCode(), DietRouteEnum.TUBE.getCode(), 1500, 75, null,
-                    "整蛋白/短肽/疾病特异型制剂，管饲或口服，25~30kcal/kg；管饲不发食堂餐"),
-            new Diet("PN", "肠外营养", DietCategoryEnum.SUPPORT.getCode(), DietRouteEnum.IV.getCode(), 1800, 80, null,
-                    "经中心静脉/PICC 输注三腔袋，由静配中心配制，走医嘱执行链"),
-            new Diet("ONS", "口服营养补充", DietCategoryEnum.SUPPORT.getCode(), DietRouteEnum.ORAL.getCode(), 2000, 80, "1,2,3,4",
-                    "在常规饮食外加用特殊医学用途配方食品 400~600kcal/日"),
-            // 占位档：不进下拉选项（见 DietServiceImpl.dietTypeOptions 的过滤），只用于医嘱派生时认不出类型
-            new Diet(CODE_TO_DETERMINE, "待指定饮食", DietCategoryEnum.BASIC.getCode(), DietRouteEnum.ORAL.getCode(), null, null, null,
-                    "医嘱文本认不出饮食类型的占位，营养科必须先改成真实饮食类型才能接收"));
-
-    private static final Map<String, Diet> BY_CODE = new LinkedHashMap<>();
-
-    static {
-        for (Diet d : DIETS) {
-            BY_CODE.put(d.code(), d);
-        }
     }
 
     public static Diet dietOf(String code) {
@@ -174,12 +175,18 @@ public final class NutritionRules {
         return label == null ? "未知" : label;
     }
 
-    /** 该给食途径是否需要食堂按餐配送（只有口服要） */
+    // 订餐
+
+    /**
+     * 该给食途径是否需要食堂按餐配送（只有口服要）
+     */
     public static boolean needsMealDelivery(Integer route) {
         return route != null && route == DietRouteEnum.ORAL.getCode();
     }
 
-    /** 订餐拆行用的餐次列表；mealTypes 为空则返回空表（该方案不订餐） */
+    /**
+     * 订餐拆行用的餐次列表；mealTypes 为空则返回空表（该方案不订餐）
+     */
     public static List<Integer> mealTypesOf(String mealTypes) {
         if (mealTypes == null || mealTypes.isBlank()) {
             return List.of();
@@ -274,34 +281,33 @@ public final class NutritionRules {
         return null;
     }
 
-    // 订餐
-
-    /** 状态机：待配餐→已配餐→已配送→已签收，只许一级推进；4-已取消是旁路 */
-    private static final Map<Integer, Integer> MEAL_NEXT = Map.of(
-            MealDeliverStatusEnum.PENDING.getCode(), MealDeliverStatusEnum.PREPARED.getCode(),
-            MealDeliverStatusEnum.PREPARED.getCode(), MealDeliverStatusEnum.DELIVERED.getCode(),
-            MealDeliverStatusEnum.DELIVERED.getCode(), MealDeliverStatusEnum.SIGNED.getCode());
-
     public static String mealTypeText(Integer mealType) {
         String label = MealTypeEnum.labelOf(mealType);
         return label == null ? "未知" : label;
     }
+
+    // 膳食方案
 
     public static String mealStatusText(Integer status) {
         String label = MealDeliverStatusEnum.labelOf(status);
         return label == null ? "未知" : label;
     }
 
-    /** 允许的下一个状态（null 表示没有下一步，即已签收或已取消） */
+    /**
+     * 允许的下一个状态（null 表示没有下一步，即已签收或已取消）
+     */
     public static Integer mealNextStatus(Integer status) {
         return status == null ? null : MEAL_NEXT.get(status);
     }
 
+    // 会诊类别
+    // 会诊是会诊申请记录域的东西，类别码值与时限的唯一口径在
+    // com.his.patient.support.ConsultationLabels（CATEGORY_NUTRITION / onTime），
+    // 这里不再抄一份 —— 抄了就会漂移。
+
     public static boolean isMealStatus(Integer status) {
         return status != null && status >= MealDeliverStatusEnum.PENDING.getCode() && status <= MealDeliverStatusEnum.CANCELED.getCode();
     }
-
-    // 膳食方案
 
     public static String planStatusText(Integer status) {
         String label = PlanStatusEnum.labelOf(status);
@@ -313,21 +319,23 @@ public final class NutritionRules {
         return label == null ? "未知" : label;
     }
 
-    // 会诊类别
-    // 会诊是会诊申请记录域的东西，类别码值与时限的唯一口径在
-    // com.his.patient.support.ConsultationLabels（CATEGORY_NUTRITION / onTime），
-    // 这里不再抄一份 —— 抄了就会漂移。
-
-    /** 常用阈值：营养筛查率目标（等级评审口径，只作提示不判定） */
-    public static final java.math.BigDecimal TARGET_SCREEN_RATE = new java.math.BigDecimal("90.00");
-    /** 膳食医嘱执行率目标 */
-    public static final java.math.BigDecimal TARGET_DIET_CONFIRM_RATE = new java.math.BigDecimal("95.00");
-    /** 营养会诊及时应答率目标 */
-    public static final java.math.BigDecimal TARGET_CONSULT_ONTIME_RATE = new java.math.BigDecimal("90.00");
-    /** 订餐签收率目标 */
-    public static final java.math.BigDecimal TARGET_MEAL_SIGN_RATE = new java.math.BigDecimal("95.00");
-
     private static int nz(Integer v) {
         return v == null ? 0 : v;
+    }
+
+    /**
+     * 饮食类型。
+     *
+     * @param code      饮食码（字典 his_diet_type）
+     * @param name      饮食名称
+     * @param category  饮食类别（1-基本 2-治疗 3-诊断试验 4-营养支持）
+     * @param route     默认给食途径（1-口服 2-管饲 3-静脉）
+     * @param calorie   默认每日热量目标 kcal
+     * @param protein   默认每日蛋白目标 g
+     * @param mealTypes 默认供应餐次（his_meal_type 值，逗号分隔；null 表示不走订餐）
+     * @param desc      配方/适用说明
+     */
+    public record Diet(String code, String name, int category, int route, Integer calorie, Integer protein,
+                       String mealTypes, String desc) {
     }
 }

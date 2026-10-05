@@ -8,6 +8,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.his.common.enums.SysGenderEnum;
+
 /**
  * 参考区间解析器：把人工维护的自由文本区间解析为 {@link LabReferenceRange}。
  * <p>
@@ -128,10 +130,11 @@ public final class LabReferenceRangeParser {
         }
 
         // 性别未知时不做任何猜测：取男取女都可能漏诊
-        if (gender == null || (gender != 1 && gender != 2)) {
+        SysGenderEnum g = SysGenderEnum.fromCode(gender);
+        if (g == null) {
             return LabReferenceRange.unparsable(rawRange);
         }
-        String chosen = gender == 1 ? malePart : femalePart;
+        String chosen = g == SysGenderEnum.MALE ? malePart : femalePart;
         if (!StringUtils.hasText(chosen)) {
             return LabReferenceRange.unparsable(rawRange);
         }

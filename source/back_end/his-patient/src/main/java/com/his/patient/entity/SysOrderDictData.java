@@ -1,11 +1,6 @@
 package com.his.patient.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
@@ -29,27 +24,41 @@ import java.time.LocalDateTime;
 @TableName("sys_dict_data")
 public class SysOrderDictData implements Serializable {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 字典类型 */
+    /**
+     * 字典类型
+     */
     private String dictType;
 
-    /** 字典标签 */
+    /**
+     * 字典标签
+     */
     private String dictLabel;
 
-    /** 字典值 */
+    /**
+     * 字典值
+     */
     private String dictValue;
 
-    /** 排序号 */
+    /**
+     * 排序号
+     */
     private Integer dictSort;
 
-    /** 表格回显样式 */
+    /**
+     * 表格回显样式
+     */
     private String listClass;
 
-    /** 是否默认（0-否 1-是） */
+    /**
+     * 是否默认（0-否 1-是）
+     */
     private Integer isDefault;
 
     /**
@@ -57,7 +66,9 @@ public class SysOrderDictData implements Serializable {
      */
     private Integer status;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 
     /**
@@ -65,21 +76,31 @@ public class SysOrderDictData implements Serializable {
      */
     private Integer dictSource;
 
-    /** 创建人 */
+    /**
+     * 创建人
+     */
     private String createBy;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    /** 更新人 */
+    /**
+     * 更新人
+     */
     private String updateBy;
 
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-    /** 删除标志（0-正常 1-删除） */
+    /**
+     * 删除标志（0-正常 1-删除）
+     */
     @TableLogic
     @TableField(fill = FieldFill.INSERT)
     private Integer delFlag;

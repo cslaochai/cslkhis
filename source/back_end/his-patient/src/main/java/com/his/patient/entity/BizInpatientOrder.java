@@ -98,7 +98,9 @@ public class BizInpatientOrder extends BaseEntity implements Serializable {
      */
     private Integer orderClass;
 
-    /** 项目编码（药品/检查/检验字典码） */
+    /**
+     * 项目编码（药品/检查/检验字典码）
+     */
     private String itemCode;
 
     /**
@@ -126,10 +128,14 @@ public class BizInpatientOrder extends BaseEntity implements Serializable {
      */
     private String dosageUnit;
 
-    /** 给药途径（口服/静滴/肌注…） */
+    /**
+     * 给药途径（口服/静滴/肌注…）
+     */
     private String route;
 
-    /** 频次（qd/bid/tid/q8h…） */
+    /**
+     * 频次（qd/bid/tid/q8h…）
+     */
     private String frequency;
 
     /**

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
 import {useRoute} from 'vue-router'
-import {patientGenderText} from '@/lib/patientGender'
+import {patientGenderText, patientAvatarTone} from '@/lib/patientGender'
+
+const GENDER_TONE_CLASS = { male: 'bg-blue-50 text-blue-600', female: 'bg-pink-50 text-pink-600', unknown: 'bg-slate-100 text-slate-500' }
 import {
   ArrowDown,
   ArrowLeft,
@@ -3568,8 +3570,7 @@ const arriveText = computed(() => {
             <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs">
               <span
                   :class="['rounded px-1.5 py-0.5 font-medium',
-                           row.gender === 1 ? 'bg-blue-50 text-blue-600'
-                               : row.gender === 2 ? 'bg-pink-50 text-pink-600' : 'bg-slate-100 text-slate-500']">
+                           GENDER_TONE_CLASS[patientAvatarTone(row.gender)]]">
                 {{ patientGenderText(row.gender) }} {{ row.age }}岁
               </span>
               <span v-if="row.age && row.age >= 60" class="rounded bg-amber-50 px-1.5 py-0.5 text-amber-600">老年</span>

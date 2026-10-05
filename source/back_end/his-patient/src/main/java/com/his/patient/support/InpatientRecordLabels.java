@@ -1,7 +1,5 @@
 package com.his.patient.support;
 
-import com.his.patient.support.PatientGenderText;
-
 /**
  * 住院<b>文书</b>枚举文案（病历文书 + 护理文书 + 修改日志）。
  *
@@ -10,6 +8,28 @@ import com.his.patient.support.PatientGenderText;
  * 和检验「未判定 ≠ 正常」、医嘱「未知状态不能显示成已完成」是同一条原则。
  */
 public final class InpatientRecordLabels {
+
+    /**
+     * 护理文书字段中文名（日志里的 fieldLabel 用；码 = 库列名）
+     */
+    private static final java.util.Map<String, String> NURSING_FIELD_LABELS = java.util.Map.ofEntries(
+            java.util.Map.entry("nursing_type", "文书类型"),
+            java.util.Map.entry("measure_time", "测量/记录时间"),
+            java.util.Map.entry("shift", "班次"),
+            java.util.Map.entry("temperature", "体温"),
+            java.util.Map.entry("pulse", "脉搏"),
+            java.util.Map.entry("respiration", "呼吸"),
+            java.util.Map.entry("systolic_pressure", "收缩压"),
+            java.util.Map.entry("diastolic_pressure", "舒张压"),
+            java.util.Map.entry("spo2", "血氧饱和度"),
+            java.util.Map.entry("stool_count", "大便次数"),
+            java.util.Map.entry("urine_volume", "尿量"),
+            java.util.Map.entry("intake_volume", "入量"),
+            java.util.Map.entry("output_volume", "出量"),
+            java.util.Map.entry("nursing_level", "护理级别"),
+            java.util.Map.entry("nursing_content", "护理记录正文"),
+            java.util.Map.entry("remark", "备注")
+    );
 
     private InpatientRecordLabels() {
     }
@@ -43,7 +63,9 @@ public final class InpatientRecordLabels {
         };
     }
 
-    /** 文书状态：1-草稿 2-已提交 3-已归档（沿用病案首页 summary_status 的同一套口径） */
+    /**
+     * 文书状态：1-草稿 2-已提交 3-已归档（沿用病案首页 summary_status 的同一套口径）
+     */
     public static String recordStatusText(Integer code) {
         if (code == null) {
             return "—";
@@ -56,7 +78,9 @@ public final class InpatientRecordLabels {
         };
     }
 
-    /** 护理文书类型：1-三测单 2-护理记录单 3-生命体征监测 */
+    /**
+     * 护理文书类型：1-三测单 2-护理记录单 3-生命体征监测
+     */
     public static String nursingTypeText(Integer code) {
         if (code == null) {
             return "—";
@@ -69,7 +93,9 @@ public final class InpatientRecordLabels {
         };
     }
 
-    /** 护理级别：1-特级护理 2-一级护理 3-二级护理 4-三级护理 */
+    /**
+     * 护理级别：1-特级护理 2-一级护理 3-二级护理 4-三级护理
+     */
     public static String nursingLevelText(Integer code) {
         if (code == null) {
             return "—";
@@ -83,7 +109,9 @@ public final class InpatientRecordLabels {
         };
     }
 
-    /** 班次：1-白班 2-小夜班 3-大夜班 */
+    /**
+     * 班次：1-白班 2-小夜班 3-大夜班
+     */
     public static String shiftText(Integer code) {
         if (code == null) {
             return "—";
@@ -96,7 +124,9 @@ public final class InpatientRecordLabels {
         };
     }
 
-    /** 日志单据类型：1-住院病历文书 2-护理文书 */
+    /**
+     * 日志单据类型：1-住院病历文书 2-护理文书
+     */
     public static String docTypeText(Integer code) {
         if (code == null) {
             return "—";
@@ -110,14 +140,16 @@ public final class InpatientRecordLabels {
 
     /**
      * 性别：文书上的 gender 是建档时从患者基本信息快照过来的，口径同主档
-     * （1-男 2-女 3-未知），直接复用 {@link PatientGenderText}。
+     * （1-男 2-女 9-未知），直接复用 {@link PatientGenderText}。
      * 原先这里没写 3，新增的「未知」会被渲染成「未知(3)」——同一码值在两个词典里说法不一致。
      */
     public static String genderText(Integer code) {
         return PatientGenderText.of(code);
     }
 
-    /** 年龄单位：1-岁 2-月 3-天 */
+    /**
+     * 年龄单位：1-岁 2-月 3-天
+     */
     public static String ageUnitText(Integer code) {
         if (code == null) {
             return "—";
@@ -130,35 +162,19 @@ public final class InpatientRecordLabels {
         };
     }
 
-    /** 病历文书状态：已归档后禁止修改 */
+    /**
+     * 病历文书状态：已归档后禁止修改
+     */
     public static boolean isArchived(Integer status) {
         return status != null && status == 3;
     }
 
-    /** 病历文书状态：草稿（可随意改） */
+    /**
+     * 病历文书状态：草稿（可随意改）
+     */
     public static boolean isDraft(Integer status) {
         return status != null && status == 1;
     }
-
-    /** 护理文书字段中文名（日志里的 fieldLabel 用；码 = 库列名） */
-    private static final java.util.Map<String, String> NURSING_FIELD_LABELS = java.util.Map.ofEntries(
-            java.util.Map.entry("nursing_type", "文书类型"),
-            java.util.Map.entry("measure_time", "测量/记录时间"),
-            java.util.Map.entry("shift", "班次"),
-            java.util.Map.entry("temperature", "体温"),
-            java.util.Map.entry("pulse", "脉搏"),
-            java.util.Map.entry("respiration", "呼吸"),
-            java.util.Map.entry("systolic_pressure", "收缩压"),
-            java.util.Map.entry("diastolic_pressure", "舒张压"),
-            java.util.Map.entry("spo2", "血氧饱和度"),
-            java.util.Map.entry("stool_count", "大便次数"),
-            java.util.Map.entry("urine_volume", "尿量"),
-            java.util.Map.entry("intake_volume", "入量"),
-            java.util.Map.entry("output_volume", "出量"),
-            java.util.Map.entry("nursing_level", "护理级别"),
-            java.util.Map.entry("nursing_content", "护理记录正文"),
-            java.util.Map.entry("remark", "备注")
-    );
 
     /**
      * 护理文书变更字段的中文名。未知列名**原样返回，不猜** —— 猜错一个列名，
@@ -180,12 +196,16 @@ public final class InpatientRecordLabels {
         return recordType != null && (recordType == 1 || recordType == 7 || recordType == 8);
     }
 
-    /** 是否为"病程类"文书（正文写在 courseNote） */
+    /**
+     * 是否为"病程类"文书（正文写在 courseNote）
+     */
     public static boolean isCourseRecord(Integer recordType) {
         return recordType != null && (recordType == 2 || recordType == 3 || recordType == 6);
     }
 
-    /** 是否为「会诊记录」（P4.1 由会诊完成时系统回写，走自己的结构化要素清单） */
+    /**
+     * 是否为「会诊记录」（P4.1 由会诊完成时系统回写，走自己的结构化要素清单）
+     */
     public static boolean isConsultRecord(Integer recordType) {
         return recordType != null && recordType == 9;
     }

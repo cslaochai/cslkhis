@@ -12,21 +12,29 @@ import lombok.Data;
 @Schema(description = "患者联系人")
 public class PatientContactVO {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @Schema(description = "联系人ID")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @Schema(description = "患者ID")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 联系人姓名 */
+    /**
+     * 联系人姓名
+     */
     @Schema(description = "联系人姓名")
     private String contactName;
 
-    /** 与患者关系（如：父母、配偶、子女、朋友等） */
+    /**
+     * 与患者关系（如：父母、配偶、子女、朋友等）
+     */
     @Schema(description = "与患者关系码值（字典 sys_patient_relation）")
     private Integer relationship;
 
@@ -42,23 +50,33 @@ public class PatientContactVO {
     @Schema(description = "与患者关系文案（字典翻译，未知码值渲染 未知(n)）")
     private String relationshipText;
 
-    /** 联系电话 */
+    /**
+     * 联系电话
+     */
     @Schema(description = "联系电话")
     private String phone;
 
-    /** 是否主要联系人（0-否 1-是） */
+    /**
+     * 是否主要联系人（0-否 1-是）
+     */
     @Schema(description = "是否主要联系人：0-否 1-是")
     private Integer isPrimary;
 
-    /** 联系地址 */
+    /**
+     * 联系地址
+     */
     @Schema(description = "联系地址")
     private String address;
 
-    /** 状态（0-停用 1-启用） */
+    /**
+     * 状态（0-停用 1-启用）
+     */
     @Schema(description = "状态：0-停用 1-启用")
     private Integer status;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     @Schema(description = "备注")
     private String remark;
 }

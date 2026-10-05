@@ -1,25 +1,22 @@
 package com.his.patient.service.impl;
 
-import com.his.patient.service.InpatientOrderSignProvider;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.his.common.entity.SignSubject;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
-import com.his.common.entity.SignSubject;
 import com.his.common.service.SignableContentProvider;
-import com.his.common.support.CanonicalText;
 import com.his.patient.entity.BizInpatientOrder;
+import com.his.patient.enums.InpatientOrderStatusEnum;
 import com.his.patient.mapper.BizInpatientOrderMapper;
+import com.his.patient.service.InpatientOrderSignProvider;
 import com.his.patient.support.InpatientOrderLabels;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
-
-import com.his.patient.enums.InpatientOrderStatusEnum;
 
 /**
  * 住院医嘱的签名内容提供者（业务类型=3）——**双签**。

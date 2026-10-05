@@ -5,18 +5,14 @@ import com.his.common.base.Constants;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.mapper.BizPatientMapper;
-import com.his.patient.dto.OnlineApplyDTO;
-import com.his.patient.dto.OnlineQueryPageDTO;
-import com.his.patient.dto.OnlineReplyDTO;
-import com.his.patient.dto.TeleActionDTO;
-import com.his.patient.dto.TeleArrangeDTO;
-import com.his.patient.dto.TeleConsultQueryPageDTO;
-import com.his.patient.dto.TeleConsultUpsertDTO;
+import com.his.patient.dto.*;
 import com.his.patient.entity.BizOnlineConsult;
+import com.his.patient.entity.BizPatient;
 import com.his.patient.entity.BizTeleConsult;
+import com.his.patient.enums.OnlineConsultStatusEnum;
+import com.his.patient.enums.TeleConsultStatusEnum;
 import com.his.patient.mapper.BizOnlineConsultMapper;
+import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizTeleConsultMapper;
 import com.his.patient.service.TeleConsultService;
 import com.his.patient.vo.OnlineConsultVO;
@@ -37,9 +33,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import com.his.patient.enums.OnlineConsultStatusEnum;
-import com.his.patient.enums.TeleConsultStatusEnum;
 
 /**
  * 互联网医院 / 远程会诊服务实现。
@@ -69,6 +62,46 @@ public class TeleConsultServiceImpl implements TeleConsultService {
 
     // 远程会诊
 
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static String currentName() {
+        String name = UserUtils.getCurrentEmployeeName();
+        return name == null ? "系统" : name;
+    }
+
+    private static long toLong(Object v) {
+        if (v == null) {
+            return 0L;
+        }
+        return new BigDecimal(String.valueOf(v)).longValue();
+    }
+
+    private static LocalDateTime parseDateTime(String v) {
+        String s = trimToNull(v);
+        if (s == null) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(s.replace(' ', 'T'));
+        } catch (Exception e) {
+            throw new BusinessException("时间格式不正确，应为 yyyy-MM-dd HH:mm:ss");
+        }
+    }
+
+    private static String cut(String v, int max) {
+        if (v == null) {
+            return null;
+        }
+        String s = v.trim();
+        return s.length() <= max ? s : s.substring(0, max);
+    }
+
+    private static String trimToNull(String v) {
+        return StringUtils.hasText(v) ? v.trim() : null;
+    }
+
     @Override
     public PageResult<TeleConsultVO> teleListPage(TeleConsultQueryPageDTO dto) {
         int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
@@ -80,6 +113,8 @@ public class TeleConsultServiceImpl implements TeleConsultService {
         records.forEach(this::decorateTele);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
+
+    // 线上问诊
 
     @Override
     public TeleConsultVO teleGetDetailById(Long id) {
@@ -198,8 +233,6 @@ public class TeleConsultServiceImpl implements TeleConsultService {
         return teleMapper.deleteById(id) > 0;
     }
 
-    // 线上问诊
-
     @Override
     public PageResult<OnlineConsultVO> onlineListPage(OnlineQueryPageDTO dto) {
         int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
@@ -215,6 +248,8 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     public OnlineConsultVO onlineGetDetailById(Long id) {
         return requireOnlineVo(id);
     }
+
+    // 内部
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -312,7 +347,8 @@ public class TeleConsultServiceImpl implements TeleConsultService {
                 case 2 -> ta = c;
                 case 3 -> td = c;
                 case 4 -> tc = c;
-                default -> { }
+                default -> {
+                }
             }
         }
         vo.setTelePending(tp);
@@ -329,7 +365,8 @@ public class TeleConsultServiceImpl implements TeleConsultService {
                 case 2 -> oa = c;
                 case 3 -> od = c;
                 case 4 -> orj = c;
-                default -> { }
+                default -> {
+                }
             }
         }
         vo.setOnlineWaiting(ow);
@@ -339,8 +376,6 @@ public class TeleConsultServiceImpl implements TeleConsultService {
         vo.setOnlineTotal(ow + oa + od + orj);
         return vo;
     }
-
-    // 内部
 
     private void decorateTele(TeleConsultVO vo) {
         Integer st = vo.getStatus();
@@ -428,45 +463,5 @@ public class TeleConsultServiceImpl implements TeleConsultService {
 
     private String nextNo(String prefix, String module) {
         return prefix + LocalDate.now().format(NO_DATE) + String.format("%04d", sequenceService.next(module));
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static String currentName() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return name == null ? "系统" : name;
-    }
-
-    private static long toLong(Object v) {
-        if (v == null) {
-            return 0L;
-        }
-        return new BigDecimal(String.valueOf(v)).longValue();
-    }
-
-    private static LocalDateTime parseDateTime(String v) {
-        String s = trimToNull(v);
-        if (s == null) {
-            return null;
-        }
-        try {
-            return LocalDateTime.parse(s.replace(' ', 'T'));
-        } catch (Exception e) {
-            throw new BusinessException("时间格式不正确，应为 yyyy-MM-dd HH:mm:ss");
-        }
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        String s = v.trim();
-        return s.length() <= max ? s : s.substring(0, max);
-    }
-
-    private static String trimToNull(String v) {
-        return StringUtils.hasText(v) ? v.trim() : null;
     }
 }

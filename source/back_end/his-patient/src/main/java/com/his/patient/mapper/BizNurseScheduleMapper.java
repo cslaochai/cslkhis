@@ -47,7 +47,9 @@ public interface BizNurseScheduleMapper extends BaseMapper<BizNurseSchedule> {
             + "              WHERE p.employee_id = e.id AND r.del_flag = 0 AND r.status = 1 "
             + "                AND r.staff_type = 2) ";
 
-    /** 病区候选：只列启用病区；nurseCount=0 的病区排不了班，但要在下拉里看得见原因 */
+    /**
+     * 病区候选：只列启用病区；nurseCount=0 的病区排不了班，但要在下拉里看得见原因
+     */
     @Select("""
             <script>
             SELECT 1 AS unitType, w.ward_id AS wardId, w.ward_code AS wardCode, w.ward_name AS wardName,
@@ -70,7 +72,9 @@ public interface BizNurseScheduleMapper extends BaseMapper<BizNurseSchedule> {
     List<NurseScheduleVO.Ward> selectWardOptions(@Param("deptIds") List<Long> deptIds,
                                                  @Param("keyword") String keyword);
 
-    /** 病区快照（写排班前必查：病区存在且启用，并用它的 dept 做数据范围与护士归属判定） */
+    /**
+     * 病区快照（写排班前必查：病区存在且启用，并用它的 dept 做数据范围与护士归属判定）
+     */
     @Select("""
             SELECT 1 AS unitType, w.ward_id AS wardId, w.ward_code AS wardCode, w.ward_name AS wardName,
                    w.dept_id AS deptId, d.dept_name AS deptName, 0 AS nurseCount
@@ -130,7 +134,9 @@ public interface BizNurseScheduleMapper extends BaseMapper<BizNurseSchedule> {
     List<NurseScheduleVO.Ward> selectDeptOptions(@Param("deptIds") List<Long> deptIds,
                                                  @Param("keyword") String keyword);
 
-    /** 护士候选（矩阵的行轴）：按工号定序，行序稳定，复制上周才认得出「同一个人」 */
+    /**
+     * 护士候选（矩阵的行轴）：按工号定序，行序稳定，复制上周才认得出「同一个人」
+     */
     @Select("""
             <script>
             SELECT e.id AS employeeId, e.emp_code AS empCode, e.emp_name AS nurseName,
@@ -162,7 +168,9 @@ public interface BizNurseScheduleMapper extends BaseMapper<BizNurseSchedule> {
             """)
     NurseScheduleVO.Nurse selectNurse(@Param("employeeId") Long employeeId);
 
-    /** 护理班次（use_scope=2 且启用）：矩阵格子唯一可选的班次来源 */
+    /**
+     * 护理班次（use_scope=2 且启用）：矩阵格子唯一可选的班次来源
+     */
     @Select("""
             SELECT s.id AS shiftId, s.shift_name AS shiftName, s.start_time AS startTime,
                    s.end_time AS endTime, s.duration_minutes AS durationMinutes
@@ -172,7 +180,9 @@ public interface BizNurseScheduleMapper extends BaseMapper<BizNurseSchedule> {
             """)
     List<NurseScheduleVO.ShiftOption> selectNursingShifts();
 
-    /** 单个可用护理班次（起止时间/时长的唯一来源，前端传什么都不认） */
+    /**
+     * 单个可用护理班次（起止时间/时长的唯一来源，前端传什么都不认）
+     */
     @Select("""
             SELECT s.id AS shiftId, s.shift_name AS shiftName, s.start_time AS startTime,
                    s.end_time AS endTime, s.duration_minutes AS durationMinutes
@@ -181,7 +191,9 @@ public interface BizNurseScheduleMapper extends BaseMapper<BizNurseSchedule> {
             """)
     NurseScheduleVO.ShiftOption selectNursingShift(@Param("shiftId") Long shiftId);
 
-    /** 矩阵格子：区间内本病区全部行（休息/请假也渲染，否则看不出「这人这天的走向」） */
+    /**
+     * 矩阵格子：区间内本病区全部行（休息/请假也渲染，否则看不出「这人这天的走向」）
+     */
     @Select("""
             SELECT id, employee_id AS employeeId,
                    DATE_FORMAT(schedule_date, '%Y-%m-%d') AS scheduleDate,
@@ -198,7 +210,9 @@ public interface BizNurseScheduleMapper extends BaseMapper<BizNurseSchedule> {
                                            @Param("startDate") LocalDate startDate,
                                            @Param("endDate") LocalDate endDate);
 
-    /** 某护士在一段日期内的合计工时（分钟）：单周工时上限判定的取数口径 */
+    /**
+     * 某护士在一段日期内的合计工时（分钟）：单周工时上限判定的取数口径
+     */
     @Select("""
             SELECT COALESCE(SUM(work_minutes), 0)
               FROM biz_nurse_schedule
@@ -239,7 +253,9 @@ public interface BizNurseScheduleMapper extends BaseMapper<BizNurseSchedule> {
                                                   @Param("startDate") LocalDate startDate,
                                                   @Param("endDate") LocalDate endDate);
 
-    /** 排班台账分页（护理部跨病区回看；列全是快照，不需要 JOIN） */
+    /**
+     * 排班台账分页（护理部跨病区回看；列全是快照，不需要 JOIN）
+     */
     @Select("""
             <script>
             SELECT l.id, l.ward_id AS wardId, l.ward_name AS wardName, l.dept_id AS deptId, l.dept_name AS deptName,
@@ -275,7 +291,9 @@ public interface BizNurseScheduleMapper extends BaseMapper<BizNurseSchedule> {
                                                  @Param("endDate") LocalDate endDate,
                                                  @Param("deptIds") List<Long> deptIds);
 
-    /** 点格定位（唯一键 uk_nurse_date 命中，最多一行） */
+    /**
+     * 点格定位（唯一键 uk_nurse_date 命中，最多一行）
+     */
     @Select("""
             SELECT id, employee_id AS employeeId, DATE_FORMAT(schedule_date, '%Y-%m-%d') AS scheduleDate,
                    shift_id AS shiftId, work_minutes AS workMinutes, schedule_status AS scheduleStatus

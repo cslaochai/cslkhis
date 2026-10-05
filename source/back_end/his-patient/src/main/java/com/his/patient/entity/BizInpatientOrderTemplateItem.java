@@ -24,12 +24,16 @@ import java.time.LocalDateTime;
 @TableName("biz_inpatient_order_template_item")
 public class BizInpatientOrderTemplateItem implements Serializable {
 
-    /** 明细ID */
+    /**
+     * 明细ID
+     */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 模板主表ID */
+    /**
+     * 模板主表ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long templateId;
 
@@ -48,33 +52,53 @@ public class BizInpatientOrderTemplateItem implements Serializable {
      */
     private String itemCode;
 
-    /** 项目名称 */
+    /**
+     * 项目名称
+     */
     private String itemName;
 
-    /** 规格 */
+    /**
+     * 规格
+     */
     private String spec;
 
-    /** 单位 */
+    /**
+     * 单位
+     */
     private String unit;
 
-    /** 单次剂量 */
+    /**
+     * 单次剂量
+     */
     private BigDecimal dosage;
 
-    /** 剂量单位 */
+    /**
+     * 剂量单位
+     */
     private String dosageUnit;
 
-    /** 给药途径 */
+    /**
+     * 给药途径
+     */
     private String route;
 
-    /** 频次 */
+    /**
+     * 频次
+     */
     private String frequency;
 
-    /** 数量 */
+    /**
+     * 数量
+     */
     private BigDecimal quantity;
 
-    /** 录入时单价 */
+    /**
+     * 录入时单价
+     */
     private BigDecimal price;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
 }

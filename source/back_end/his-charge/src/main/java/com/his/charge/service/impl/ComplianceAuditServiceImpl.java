@@ -14,6 +14,8 @@ import com.his.charge.support.*;
 import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+
+import com.his.common.enums.SysGenderEnum;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
@@ -367,7 +369,8 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     private String buildPatientTag(SettlementEvidence evidence) {
         Integer gender = evidence.gender();
         Integer age = evidence.age();
-        String genderText = gender == null ? "性别未知" : (gender == 1 ? "男" : "女");
+        SysGenderEnum g = SysGenderEnum.fromCode(gender);
+        String genderText = g == null ? "性别未知" : g.getLabel();
         return age == null ? genderText : genderText + "，" + age + "岁";
     }
 

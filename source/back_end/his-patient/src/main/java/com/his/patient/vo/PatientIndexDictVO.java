@@ -15,7 +15,9 @@ import java.util.Map;
 @Data
 public class PatientIndexDictVO implements Serializable {
 
-    /** 匹配级别清单 */
+    /**
+     * 匹配级别清单
+     */
     private List<PatientMatchLevelSelectListVO> matchLevels;
 
     /**

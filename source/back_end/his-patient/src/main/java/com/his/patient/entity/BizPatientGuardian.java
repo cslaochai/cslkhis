@@ -15,11 +15,15 @@ import lombok.EqualsAndHashCode;
 @TableName("biz_patient_guardian")
 public class BizPatientGuardian extends BaseEntity {
 
-    /** 登录账号ID */
+    /**
+     * 登录账号ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 
-    /** 就诊人ID */
+    /**
+     * 就诊人ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
@@ -28,9 +32,13 @@ public class BizPatientGuardian extends BaseEntity {
      */
     private Integer relation;
 
-    /** 是否默认就诊人（0-否 1-是） */
+    /**
+     * 是否默认就诊人（0-否 1-是）
+     */
     private Integer isDefault;
 
-    /** 状态（0-停用 1-启用） */
+    /**
+     * 状态（0-停用 1-启用）
+     */
     private Integer status;
 }

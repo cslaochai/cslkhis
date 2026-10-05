@@ -23,7 +23,9 @@ import java.util.List;
 @Mapper
 public interface NutritionStatMapper {
 
-    /** 同期出院患者数（筛查率/会诊率的分母） */
+    /**
+     * 同期出院患者数（筛查率/会诊率的分母）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_admission a
              WHERE a.del_flag = 0
@@ -33,7 +35,9 @@ public interface NutritionStatMapper {
     long countDischarge(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
                         @Param("deptId") Long deptId);
 
-    /** 出院患者中做过 NRS2002 筛查的人数（筛查率分子） */
+    /**
+     * 出院患者中做过 NRS2002 筛查的人数（筛查率分子）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_admission a
              WHERE a.del_flag = 0
@@ -45,7 +49,9 @@ public interface NutritionStatMapper {
     long countScreened(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
                        @Param("deptId") Long deptId);
 
-    /** 出院患者中最新一次 NRS2002 判为有营养风险（总分≥3）的人数 */
+    /**
+     * 出院患者中最新一次 NRS2002 判为有营养风险（总分≥3）的人数
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_admission a
              WHERE a.del_flag = 0
@@ -62,7 +68,9 @@ public interface NutritionStatMapper {
     long countRisk(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
                    @Param("deptId") Long deptId);
 
-    /** 统计期内开始执行的膳食方案数 */
+    /**
+     * 统计期内开始执行的膳食方案数
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_diet_plan v
              WHERE v.del_flag = 0
@@ -72,7 +80,9 @@ public interface NutritionStatMapper {
     long countDietPlan(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
                        @Param("deptId") Long deptId);
 
-    /** 其中营养科已接收的方案数（膳食医嘱执行率分子） */
+    /**
+     * 其中营养科已接收的方案数（膳食医嘱执行率分子）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_diet_plan v
              WHERE v.del_flag = 0
@@ -83,7 +93,9 @@ public interface NutritionStatMapper {
     long countDietConfirm(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
                           @Param("deptId") Long deptId);
 
-    /** 统计期内申请的营养会诊数（consult_category=2，按申请科室归口） */
+    /**
+     * 统计期内申请的营养会诊数（consult_category=2，按申请科室归口）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_consultation c
              WHERE c.del_flag = 0
@@ -94,7 +106,9 @@ public interface NutritionStatMapper {
     long countConsult(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
                       @Param("deptId") Long deptId);
 
-    /** 按时应答的营养会诊数（急≤10 分钟、普通≤24 小时；未应答不计） */
+    /**
+     * 按时应答的营养会诊数（急≤10 分钟、普通≤24 小时；未应答不计）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_consultation c
              WHERE c.del_flag = 0
@@ -107,7 +121,9 @@ public interface NutritionStatMapper {
     long countConsultOnTime(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to,
                             @Param("deptId") Long deptId);
 
-    /** 统计期内订餐明细数（不含已取消，签收率分母） */
+    /**
+     * 统计期内订餐明细数（不含已取消，签收率分母）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_meal_order m
              WHERE m.del_flag = 0
@@ -118,7 +134,9 @@ public interface NutritionStatMapper {
     long countMeal(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate,
                    @Param("deptId") Long deptId);
 
-    /** 已签收的订餐明细数（签收率分子） */
+    /**
+     * 已签收的订餐明细数（签收率分子）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_meal_order m
              WHERE m.del_flag = 0
@@ -129,7 +147,9 @@ public interface NutritionStatMapper {
     long countMealSigned(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate,
                          @Param("deptId") Long deptId);
 
-    /** 退订明细数（提示性指标，不进签收率分母） */
+    /**
+     * 退订明细数（提示性指标，不进签收率分母）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_meal_order m
              WHERE m.del_flag = 0
@@ -140,7 +160,9 @@ public interface NutritionStatMapper {
     long countMealCancel(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate,
                          @Param("deptId") Long deptId);
 
-    /** 按科室生成快照时枚举有出院患者的科室 */
+    /**
+     * 按科室生成快照时枚举有出院患者的科室
+     */
     @Select("""
             SELECT a.dept_id AS dept_id, MAX(d.dept_name) AS dept_name, COUNT(*) AS patient_count
               FROM biz_admission a
@@ -152,7 +174,9 @@ public interface NutritionStatMapper {
             """)
     List<DeptStatRowVO> selectDischargeDepts(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-    /** 科室名（科室是 his-system 的表，裸 SQL 取，不建反向依赖） */
+    /**
+     * 科室名（科室是 his-system 的表，裸 SQL 取，不建反向依赖）
+     */
     @Select("SELECT dept_name FROM sys_department WHERE id = #{deptId} AND del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
@@ -169,7 +193,9 @@ public interface NutritionStatMapper {
             """)
     long countInHospitalScreened();
 
-    /** 在院中最新一次 NRS2002 有营养风险（总分≥3）的人数 */
+    /**
+     * 在院中最新一次 NRS2002 有营养风险（总分≥3）的人数
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_admission a
              WHERE a.del_flag = 0 AND a.admit_status = 1
@@ -183,7 +209,9 @@ public interface NutritionStatMapper {
             """)
     long countInHospitalRisk();
 
-    /** 到期未复筛人数（留了下次筛查日期且已到/已过，且仍在院） */
+    /**
+     * 到期未复筛人数（留了下次筛查日期且已到/已过，且仍在院）
+     */
     @Select("""
             SELECT COUNT(DISTINCT a.admission_id) FROM biz_admission a
               JOIN biz_nutrition_screen s ON s.admission_id = a.admission_id
@@ -193,7 +221,9 @@ public interface NutritionStatMapper {
             """)
     long countReScreenDue();
 
-    /** 执行中但营养科还没接收的膳食方案数 */
+    /**
+     * 执行中但营养科还没接收的膳食方案数
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_diet_plan v
              WHERE v.del_flag = 0 AND v.plan_status = 1 AND v.confirm_status = 0
@@ -218,14 +248,18 @@ public interface NutritionStatMapper {
             """)
     long countMealPendingOfDay(@Param("mealDate") LocalDate mealDate);
 
-    /** 营养会诊未完成数（待应答 + 已应答） */
+    /**
+     * 营养会诊未完成数（待应答 + 已应答）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_consultation c
              WHERE c.del_flag = 0 AND c.consult_category = 2 AND c.consult_status IN (0, 3)
             """)
     long countConsultUnfinished();
 
-    /** 营养会诊超时未应答数（待应答且已过时限：急 10 分钟、普通 24 小时） */
+    /**
+     * 营养会诊超时未应答数（待应答且已过时限：急 10 分钟、普通 24 小时）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_consultation c
              WHERE c.del_flag = 0 AND c.consult_category = 2 AND c.consult_status = 0

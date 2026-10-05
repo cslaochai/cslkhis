@@ -28,13 +28,21 @@ import java.time.LocalDate;
 @TableName("biz_nurse_schedule")
 public class BizNurseSchedule extends BaseEntity {
 
-    /** 病区ID（兼容列：unit_type=1 时等于 unit_id；=2 门诊场景时冗余写科室ID，供台账/渲染继续用） */
+    /**
+     * 病区ID（兼容列：unit_type=1 时等于 unit_id；=2 门诊场景时冗余写科室ID，供台账/渲染继续用）
+     */
     private Long wardId;
-    /** 病区名称（快照，门诊场景写科室名） */
+    /**
+     * 病区名称（快照，门诊场景写科室名）
+     */
     private String wardName;
-    /** 病区所属科室：数据范围（岗位可见科室）按它收口 */
+    /**
+     * 病区所属科室：数据范围（岗位可见科室）按它收口
+     */
     private Long deptId;
-    /** 科室名称（快照） */
+    /**
+     * 科室名称（快照）
+     */
     private String deptName;
 
     /**
@@ -46,36 +54,64 @@ public class BizNurseSchedule extends BaseEntity {
      */
     private Integer unitType;
 
-    /** 排班单元ID（unit_type=1 → sys_ward.ward_id；=2 → sys_department.id） */
+    /**
+     * 排班单元ID（unit_type=1 → sys_ward.ward_id；=2 → sys_department.id）
+     */
     private Long unitId;
 
-    /** 排班日期 */
+    /**
+     * 排班日期
+     */
     private LocalDate scheduleDate;
-    /** 1-周一 ... 7-周日，冗余给矩阵渲染 */
+    /**
+     * 1-周一 ... 7-周日，冗余给矩阵渲染
+     */
     private Integer weekDay;
 
-    /** 护士ID */
+    /**
+     * 护士ID
+     */
     private Long employeeId;
-    /** 工号（快照） */
+    /**
+     * 工号（快照）
+     */
     private String empCode;
-    /** 护士姓名（快照） */
+    /**
+     * 护士姓名（快照）
+     */
     private String nurseName;
-    /** 职称 */
+    /**
+     * 职称
+     */
     private String nurseTitle;
 
-    /** 班次ID */
+    /**
+     * 班次ID
+     */
     private Long shiftId;
-    /** 班次名称（快照） */
+    /**
+     * 班次名称（快照）
+     */
     private String shiftName;
-    /** 开始时间 HH（快照） */
+    /**
+     * 开始时间 HH（快照）
+     */
     private String startTime;
-    /** 结束时间 HH（快照） */
+    /**
+     * 结束时间 HH（快照）
+     */
     private String endTime;
-    /** 工时 */
+    /**
+     * 工时
+     */
     private Integer workMinutes;
-    /** StaffDutyStatusEnum：1-上班 2-休息 3-请假 4-培训 5-停班 */
+    /**
+     * StaffDutyStatusEnum：1-上班 2-休息 3-请假 4-培训 5-停班
+     */
     private Integer scheduleStatus;
-    /** 生成来源（1-手工 2-模板 3-复制周期 4-换班） */
+    /**
+     * 生成来源（1-手工 2-模板 3-复制周期 4-换班）
+     */
     private Integer scheduleSource;
 
     /**

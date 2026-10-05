@@ -1,40 +1,24 @@
 package com.his.patient.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.his.common.enums.AdmitStatusEnum;
+import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.dto.NursingAssessmentQueryPageDTO;
-import com.his.patient.dto.NursingAssessmentUpsertDTO;
-import com.his.patient.dto.NursingRecordBatchUpsertDTO;
-import com.his.patient.dto.NursingRecordQueryPageDTO;
-import com.his.patient.dto.NursingRecordUpsertDTO;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.entity.BizInpatientRecordLog;
-import com.his.patient.entity.BizNursingAssessment;
-import com.his.patient.entity.BizNursingRecord;
-import com.his.patient.entity.SysBed;
-import com.his.patient.mapper.BizAdmissionMapper;
-import com.his.patient.mapper.BizInpatientRecordLogMapper;
-import com.his.patient.mapper.BizNursingAssessmentMapper;
-import com.his.patient.mapper.BizNursingRecordMapper;
-import com.his.patient.mapper.SysBedMapper;
+import com.his.patient.dto.*;
+import com.his.patient.entity.*;
+import com.his.patient.enums.NursingDocTypeEnum;
+import com.his.patient.enums.RecordDocTypeEnum;
+import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientNursingService;
 import com.his.patient.support.InpatientRecordLabels;
-import com.his.patient.vo.CodeOptionVO;
-import com.his.patient.vo.IntakeOutputSummaryVO;
-import com.his.patient.vo.NursingAssessmentVO;
-import com.his.patient.vo.NursingRecordVO;
-import com.his.patient.vo.NursingVitalFactVO;
-import com.his.patient.vo.TempSheetVO;
-import com.his.patient.vo.WardNursingFactsVO;
-import com.his.patient.vo.WardVO;
-import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.entity.CurrentUser;
+import com.his.patient.vo.*;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -47,20 +31,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
-
-import com.his.patient.enums.NursingDocTypeEnum;
-import com.his.patient.enums.RecordDocTypeEnum;
-import com.his.common.enums.AdmitStatusEnum;
-import com.his.common.enums.RecordStatusEnum;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import java.util.*;
 
 /**
  * 护理文书服务实现（三测单 / 护理记录单 / 生命体征监测）。
@@ -88,7 +59,9 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
 
-    /** 体温可信范围（℃）：超出就是录入事故或单位写错，必须拦下 */
+    /**
+     * 体温可信范围（℃）：超出就是录入事故或单位写错，必须拦下
+     */
     private static final BigDecimal MIN_TEMP = new BigDecimal("34");
     private static final BigDecimal MAX_TEMP = new BigDecimal("43");
 
@@ -101,6 +74,39 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     private final ObjectMapper objectMapper;
 
     // 录入 / 修改
+
+    /**
+     * 量表分数段 → 风险等级（唯一口径；前端 lib/nursingAssessment.js 与此一致，冲突以后端为准）
+     */
+    private static int riskLevelOf(int assessType, int score) {
+        return switch (assessType) {
+            // Braden 6~23：分数越低压疮风险越高
+            case 1 -> score <= 9 ? 4 : score <= 12 ? 3 : score <= 14 ? 2 : 1;
+            // Morse 0~125：≥45 高风险（无极高档）
+            case 2 -> score >= 45 ? 3 : score >= 25 ? 2 : 1;
+            // NRS 0~10：0~3 轻度 / 4~6 中度 / 7~10 重度
+            case 3 -> score >= 7 ? 3 : score >= 4 ? 2 : 1;
+            // Caprini 0~58（全部勾选理论上限，年龄三档临床互斥）：0~2 低 / 3~4 中 / 5~6 高 / ≥7 极高（sql/159）
+            case 4 -> score >= 7 ? 4 : score >= 5 ? 3 : score >= 3 ? 2 : 1;
+            // 管路滑脱 0~24：0~3 低 / 4~7 中 / 8~11 高 / ≥12 极高（sql/159）
+            case 5 -> score >= 12 ? 4 : score >= 8 ? 3 : score >= 4 ? 2 : 1;
+            default -> throw new BusinessException("评估类型取值不合法");
+        };
+    }
+
+    private static String asText(Object v) {
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof BigDecimal bd) {
+            return bd.stripTrailingZeros().toPlainString();
+        }
+        return String.valueOf(v);
+    }
+
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -192,6 +198,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         return toVO(record);
     }
 
+    // 查询
+
     private NursingRecordVO update(NursingRecordUpsertDTO dto) {
         BizNursingRecord record = nursingMapper.selectById(dto.getId());
         if (record == null) {
@@ -282,8 +290,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         }
     }
 
-    // 查询
-
     @Override
     public NursingRecordVO detail(Long id) {
         BizNursingRecord record = nursingMapper.selectById(id);
@@ -292,6 +298,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         }
         return toVO(record);
     }
+
+    // G14-1 体温单批量录入
 
     @Override
     public IPage<NursingRecordVO> listPage(NursingRecordQueryPageDTO query) {
@@ -309,6 +317,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         result.setRecords(rows);
         return result;
     }
+
+    // G14-2 护理评估单（压疮 / 跌倒 / 疼痛）
 
     @Override
     public TempSheetVO tempSheet(Long admissionId, String beginDate, String endDate) {
@@ -377,8 +387,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         return list;
     }
 
-    // G14-1 体温单批量录入
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int saveBatch(NursingRecordBatchUpsertDTO dto) {
@@ -429,8 +437,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
                 toSeconds(dto.getMeasureTime()), currentName());
         return prepared.size();
     }
-
-    // G14-2 护理评估单（压疮 / 跌倒 / 疼痛）
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -529,23 +535,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         return assessmentMapper.selectLatestByAdmission(admissionId);
     }
 
-    /** 量表分数段 → 风险等级（唯一口径；前端 lib/nursingAssessment.js 与此一致，冲突以后端为准） */
-    private static int riskLevelOf(int assessType, int score) {
-        return switch (assessType) {
-            // Braden 6~23：分数越低压疮风险越高
-            case 1 -> score <= 9 ? 4 : score <= 12 ? 3 : score <= 14 ? 2 : 1;
-            // Morse 0~125：≥45 高风险（无极高档）
-            case 2 -> score >= 45 ? 3 : score >= 25 ? 2 : 1;
-            // NRS 0~10：0~3 轻度 / 4~6 中度 / 7~10 重度
-            case 3 -> score >= 7 ? 3 : score >= 4 ? 2 : 1;
-            // Caprini 0~58（全部勾选理论上限，年龄三档临床互斥）：0~2 低 / 3~4 中 / 5~6 高 / ≥7 极高（sql/159）
-            case 4 -> score >= 7 ? 4 : score >= 5 ? 3 : score >= 3 ? 2 : 1;
-            // 管路滑脱 0~24：0~3 低 / 4~7 中 / 8~11 高 / ≥12 极高（sql/159）
-            case 5 -> score >= 12 ? 4 : score >= 8 ? 3 : score >= 4 ? 2 : 1;
-            default -> throw new BusinessException("评估类型取值不合法");
-        };
-    }
-
     /**
      * 对 itemsJson 里每个对象的 score 求和（量表明细是唯一事实，总分必须能被推导）。
      *
@@ -606,6 +595,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         }
     }
 
+    // G14-3 出入量小结
+
     private NursingAssessmentVO toAssessVO(BizNursingAssessment row) {
         NursingAssessmentVO vo = new NursingAssessmentVO();
         vo.setId(row.getId());
@@ -642,13 +633,13 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         return vo;
     }
 
+    // 跨模块事实面（只聚事实不判异常 —— 阈值口径留在消费方）
+
     private String nextAssessNo() {
         String prefix = "AS" + LocalDate.now().format(NO_DATE);
         long seq = assessmentMapper.countByAssessNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
-
-    // G14-3 出入量小结
 
     @Override
     public IntakeOutputSummaryVO intakeOutputSummary(Long admissionId, String beginDate, String endDate) {
@@ -729,8 +720,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setDays(new ArrayList<>(byDay.values()));
         return vo;
     }
-
-    // 跨模块事实面（只聚事实不判异常 —— 阈值口径留在消费方）
 
     @Override
     public List<NursingVitalFactVO> latestVitalsByWard(Long wardId, LocalDateTime since) {
@@ -841,6 +830,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         return vo;
     }
 
+    // diff 留痕
+
     private NursingVitalFactVO toVitalFact(BizNursingRecord r) {
         NursingVitalFactVO vo = new NursingVitalFactVO();
         vo.setAdmissionId(r.getAdmissionId());
@@ -902,8 +893,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         return vo;
     }
 
-    // diff 留痕
-
     private List<BizInpatientRecordLog> diffContent(BizNursingRecord oldRecord, NursingRecordUpsertDTO dto) {
         List<Object[]> pairs = new ArrayList<>();
         if (dto.getMeasureTime() != null) {
@@ -943,16 +932,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         return changes;
     }
 
-    private static String asText(Object v) {
-        if (v == null) {
-            return null;
-        }
-        if (v instanceof BigDecimal bd) {
-            return bd.stripTrailingZeros().toPlainString();
-        }
-        return String.valueOf(v);
-    }
-
     private BizInpatientRecordLog actionLog(BizNursingRecord record, String operation) {
         BizInpatientRecordLog row = new BizInpatientRecordLog();
         row.setDocType(RecordDocTypeEnum.NURSING.getCode());
@@ -965,11 +944,11 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         return row;
     }
 
+    // 私有辅助
+
     private void writeActionLog(BizNursingRecord record, String operation) {
         logMapper.insert(actionLog(record, operation));
     }
-
-    // 私有辅助
 
     private String patientNameOf(Long patientId) {
         BizPatient p = patientMapper.selectById(patientId);
@@ -987,7 +966,9 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         return prefix + String.format("%04d", seq);
     }
 
-    /** 护理文书的护士留痕一律用**员工ID**（不是用户的ID） */
+    /**
+     * 护理文书的护士留痕一律用**员工ID**（不是用户的ID）
+     */
     private Long currentEmpId() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();
@@ -1016,9 +997,5 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
     }
 }

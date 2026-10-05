@@ -3,11 +3,7 @@ package com.his.patient.support;
 import com.his.patient.entity.BizInpatientRecord;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Function;
 
 /**
@@ -32,13 +28,21 @@ import java.util.function.Function;
  */
 public final class RecordStructuredFields {
 
-    /** 分组：病史 */
+    /**
+     * 分组：病史
+     */
     public static final String GROUP_HISTORY = "history";
-    /** 分组：生命体征 */
+    /**
+     * 分组：生命体征
+     */
     public static final String GROUP_VITAL = "vital";
-    /** 分组：体格检查 */
+    /**
+     * 分组：体格检查
+     */
     public static final String GROUP_EXAM = "exam";
-    /** 分组：诊疗过程与结论 */
+    /**
+     * 分组：诊疗过程与结论
+     */
     public static final String GROUP_CONCLUSION = "conclusion";
     /**
      * 分组：会诊要素。
@@ -57,7 +61,9 @@ public final class RecordStructuredFields {
      */
     public static final String GROUP_TRANSFER = "transfer";
 
-    /** 手术记录要素（P4.3） */
+    /**
+     * 手术记录要素（P4.3）
+     */
     public static final String GROUP_OPERATION = "operation";
 
     /**
@@ -68,26 +74,9 @@ public final class RecordStructuredFields {
     public static final String GROUP_TRANSFUSION = "transfusion";
 
     private static final Map<String, String> GROUP_LABELS = new LinkedHashMap<>();
-
-    static {
-        GROUP_LABELS.put(GROUP_HISTORY, "病史要素");
-        GROUP_LABELS.put(GROUP_VITAL, "生命体征");
-        GROUP_LABELS.put(GROUP_EXAM, "体格检查");
-        GROUP_LABELS.put(GROUP_CONCLUSION, "诊疗过程与结论");
-        GROUP_LABELS.put(GROUP_CONSULT, "会诊要素");
-        GROUP_LABELS.put(GROUP_TRANSFER, "转科要素");
-        GROUP_LABELS.put(GROUP_OPERATION, "手术要素");
-        GROUP_LABELS.put(GROUP_TRANSFUSION, "输血要素");
-    }
-
     /**
-     * 一个结构化要素：编码（= 库列名，前后端与脚本共用）、中文名、所属分组、取值函数。
+     * 所有文书都计入的要素（26 项）
      */
-    public record KeyElement(String code, String label, String group,
-                             Function<BizInpatientRecord, Object> getter) {
-    }
-
-    /** 所有文书都计入的要素（26 项） */
     private static final List<KeyElement> BASE_ELEMENTS = List.of(
             // 病史（6）
             new KeyElement("chief_complaint", "主诉", GROUP_HISTORY, BizInpatientRecord::getChiefComplaint),
@@ -120,11 +109,11 @@ public final class RecordStructuredFields {
             new KeyElement("diagnosis_code", "诊断编码", GROUP_CONCLUSION, BizInpatientRecord::getDiagnosisCode),
             new KeyElement("treatment_plan", "诊疗计划", GROUP_CONCLUSION, BizInpatientRecord::getTreatmentPlan)
     );
-
-    /** 仅病程类文书（首次病程 / 日常病程 / 术后首次病程）计入 */
+    /**
+     * 仅病程类文书（首次病程 / 日常病程 / 术后首次病程）计入
+     */
     private static final KeyElement COURSE_NOTE_ELEMENT =
             new KeyElement("course_note", "病程正文", GROUP_CONCLUSION, BizInpatientRecord::getCourseNote);
-
     /**
      * 会诊记录（record_type=9）的要素清单：只有"会诊理由"与"会诊结论"两项。
      *
@@ -136,7 +125,6 @@ public final class RecordStructuredFields {
             new KeyElement("reason", "会诊理由", GROUP_CONSULT, BizInpatientRecord::getRemark),
             new KeyElement("course_note", "会诊结论", GROUP_CONSULT, BizInpatientRecord::getCourseNote)
     );
-
     /**
      * 转科记录（record_type=10）的要素清单：只有"转科原因"与"交接与医嘱处置"两项。
      *
@@ -147,7 +135,6 @@ public final class RecordStructuredFields {
             new KeyElement("reason", "转科原因", GROUP_TRANSFER, BizInpatientRecord::getRemark),
             new KeyElement("course_note", "交接与医嘱处置", GROUP_TRANSFER, BizInpatientRecord::getCourseNote)
     );
-
     /**
      * 手术记录（record_type=5）的要素清单：术前诊断 + 手术经过 + 来源申请单与术者。
      *
@@ -164,7 +151,6 @@ public final class RecordStructuredFields {
             new KeyElement("course_note", "手术经过", GROUP_OPERATION, BizInpatientRecord::getCourseNote),
             new KeyElement("reason", "来源申请单与术者", GROUP_OPERATION, BizInpatientRecord::getRemark)
     );
-
     /**
      * 输血记录（record_type=11）的要素清单：输血成分与量 + 输血经过 + 疗效评估与反应处理。
      *
@@ -180,6 +166,17 @@ public final class RecordStructuredFields {
             new KeyElement("course_note", "输血经过", GROUP_TRANSFUSION, BizInpatientRecord::getCourseNote),
             new KeyElement("efficacy", "疗效评估与反应处理", GROUP_TRANSFUSION, BizInpatientRecord::getTreatmentPlan)
     );
+
+    static {
+        GROUP_LABELS.put(GROUP_HISTORY, "病史要素");
+        GROUP_LABELS.put(GROUP_VITAL, "生命体征");
+        GROUP_LABELS.put(GROUP_EXAM, "体格检查");
+        GROUP_LABELS.put(GROUP_CONCLUSION, "诊疗过程与结论");
+        GROUP_LABELS.put(GROUP_CONSULT, "会诊要素");
+        GROUP_LABELS.put(GROUP_TRANSFER, "转科要素");
+        GROUP_LABELS.put(GROUP_OPERATION, "手术要素");
+        GROUP_LABELS.put(GROUP_TRANSFUSION, "输血要素");
+    }
 
     private RecordStructuredFields() {
     }
@@ -208,7 +205,9 @@ public final class RecordStructuredFields {
         return list;
     }
 
-    /** 全部要素（含 course_note），供前端展示"要素字典"用 */
+    /**
+     * 全部要素（含 course_note），供前端展示"要素字典"用
+     */
     public static List<KeyElement> allElements() {
         return elementsFor(3);
     }
@@ -230,14 +229,18 @@ public final class RecordStructuredFields {
         return true;
     }
 
-    /** 该文书已填的要素数 */
+    /**
+     * 该文书已填的要素数
+     */
     public static int filledCount(BizInpatientRecord record) {
         return (int) elementsFor(record.getRecordType()).stream()
                 .filter(e -> isFilled(e.getter().apply(record)))
                 .count();
     }
 
-    /** 该文书应填的要素总数（分母） */
+    /**
+     * 该文书应填的要素总数（分母）
+     */
     public static int totalCount(BizInpatientRecord record) {
         return elementsFor(record.getRecordType()).size();
     }
@@ -267,7 +270,9 @@ public final class RecordStructuredFields {
                 .divide(java.math.BigDecimal.valueOf(total), 2, java.math.RoundingMode.HALF_UP);
     }
 
-    /** 分组聚合：某分组下已填 / 应填 */
+    /**
+     * 分组聚合：某分组下已填 / 应填
+     */
     public static String groupOf(String code) {
         for (KeyElement e : allElements()) {
             if (Objects.equals(e.code(), code)) {
@@ -275,5 +280,12 @@ public final class RecordStructuredFields {
             }
         }
         return null;
+    }
+
+    /**
+     * 一个结构化要素：编码（= 库列名，前后端与脚本共用）、中文名、所属分组、取值函数。
+     */
+    public record KeyElement(String code, String label, String group,
+                             Function<BizInpatientRecord, Object> getter) {
     }
 }

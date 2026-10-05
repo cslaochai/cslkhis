@@ -21,7 +21,9 @@ import java.util.List;
 @Mapper
 public interface BedMapMapper {
 
-    /** 床位占用者：优先患者ID与床位一致的那条在院记录，其次最近入院的一条 */
+    /**
+     * 床位占用者：优先患者ID与床位一致的那条在院记录，其次最近入院的一条
+     */
     String OCCUPANT_JOIN = "LEFT JOIN biz_admission a ON a.admission_id = ("
             + "SELECT a2.admission_id FROM biz_admission a2 "
             + "WHERE a2.bed_id = b.bed_id AND a2.del_flag = 0 AND a2.admit_status = 1 "
@@ -102,7 +104,9 @@ public interface BedMapMapper {
             """)
     List<BedMapVO.BedCard> selectBedCards(@Param("deptId") Long deptId, @Param("wardId") Long wardId);
 
-    /** 有床位的科室（授权收口在服务层做，这里不带权限语义） */
+    /**
+     * 有床位的科室（授权收口在服务层做，这里不带权限语义）
+     */
     @Select("""
             SELECT b.dept_id AS deptId,
                    IFNULL(d.dept_name, CONCAT('科室#', b.dept_id)) AS deptName,
@@ -117,7 +121,9 @@ public interface BedMapMapper {
             """)
     List<BedMapVO.DeptOption> selectDeptOptions();
 
-    /** 当前科室下真正有床位的病区 */
+    /**
+     * 当前科室下真正有床位的病区
+     */
     @Select("""
             SELECT b.ward_id AS wardId,
                    IFNULL(w.ward_name, CONCAT('病区#', b.ward_id)) AS wardName,
@@ -133,7 +139,9 @@ public interface BedMapMapper {
             """)
     List<BedMapVO.WardOption> selectWardOptions(@Param("deptId") Long deptId);
 
-    /** 病区归属（校验传入 wardId 是否落在已收口的科室内，防止跨科窥探） */
+    /**
+     * 病区归属（校验传入 wardId 是否落在已收口的科室内，防止跨科窥探）
+     */
     @Select("SELECT ward_id AS wardId, ward_name AS wardName, dept_id AS deptId "
             + "FROM sys_ward WHERE ward_id = #{wardId}")
     BedMapVO.WardOption selectWardOwner(@Param("wardId") Long wardId);

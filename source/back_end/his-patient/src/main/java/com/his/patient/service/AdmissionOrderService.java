@@ -2,8 +2,8 @@ package com.his.patient.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.patient.dto.AdmissionOrderCancelDTO;
-import com.his.patient.dto.AdmissionOrderUpsertDTO;
 import com.his.patient.dto.AdmissionOrderQueryPageDTO;
+import com.his.patient.dto.AdmissionOrderUpsertDTO;
 import com.his.patient.entity.BizAdmissionOrder;
 import com.his.patient.vo.AdmissionOrderVO;
 
@@ -14,19 +14,29 @@ import java.time.LocalDateTime;
  */
 public interface AdmissionOrderService {
 
-    /** 开住院证（门诊医生站），返回住院证ID */
+    /**
+     * 开住院证（门诊医生站），返回住院证ID
+     */
     Long create(AdmissionOrderUpsertDTO dto);
 
-    /** 住院证分页（住院处待收治看板 / 按患者反查） */
+    /**
+     * 住院证分页（住院处待收治看板 / 按患者反查）
+     */
     IPage<AdmissionOrderVO> listPage(AdmissionOrderQueryPageDTO query);
 
-    /** 住院证详情 */
+    /**
+     * 住院证详情
+     */
     AdmissionOrderVO detail(Long id);
 
-    /** 作废住院证（仅「待收治」可作废） */
+    /**
+     * 作废住院证（仅「待收治」可作废）
+     */
     void cancel(AdmissionOrderCancelDTO dto);
 
-    /** 待收治且未过期的证数量 */
+    /**
+     * 待收治且未过期的证数量
+     */
     long countPending();
 
     // 供住院收治流程调用
@@ -39,6 +49,8 @@ public interface AdmissionOrderService {
      */
     BizAdmissionOrder requireAdmittable(Long orderId);
 
-    /** 收治成功后回填：状态置「已收治」+ 回写入院ID / 实际科室 / 收治时间 */
+    /**
+     * 收治成功后回填：状态置「已收治」+ 回写入院ID / 实际科室 / 收治时间
+     */
     void markAdmitted(BizAdmissionOrder order, Long admissionId, Long admitDeptId, LocalDateTime admitTime);
 }

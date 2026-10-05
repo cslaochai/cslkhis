@@ -4,18 +4,19 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
 import com.his.patient.dto.AdmissionOrderCancelDTO;
-import com.his.patient.dto.AdmissionOrderUpsertDTO;
 import com.his.patient.dto.AdmissionOrderQueryPageDTO;
+import com.his.patient.dto.AdmissionOrderUpsertDTO;
 import com.his.patient.entity.BizAdmissionOrder;
+import com.his.patient.entity.BizPatient;
+import com.his.patient.enums.AdmissionOrderStatusEnum;
 import com.his.patient.mapper.BizAdmissionMapper;
 import com.his.patient.mapper.BizAdmissionOrderMapper;
+import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.AdmissionOrderService;
 import com.his.patient.service.BedCenterService;
 import com.his.patient.support.InpatientLabels;
 import com.his.patient.vo.AdmissionOrderVO;
-import com.his.patient.mapper.BizPatientMapper;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
 import lombok.RequiredArgsConstructor;
@@ -30,8 +31,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
-
-import com.his.patient.enums.AdmissionOrderStatusEnum;
 
 /**
  * 住院证服务实现
@@ -55,7 +54,9 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
 
     private static final String VALID_DAYS_CONFIG_KEY = "admission_order.valid_days";
 
-    /** 配置缺失时的兜底有效期（天）。宁可给一个保守值，也不让证永久有效。 */
+    /**
+     * 配置缺失时的兜底有效期（天）。宁可给一个保守值，也不让证永久有效。
+     */
     private static final int VALID_DAYS_FALLBACK = 7;
 
     private final BizAdmissionOrderMapper orderMapper;
@@ -76,6 +77,15 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
     private final ObjectProvider<BedCenterService> bedCenterProvider;
 
     // 开证
+
+    /**
+     * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
+     */
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    // 查询
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -180,8 +190,6 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
         return order.getId();
     }
 
-    // 查询
-
     @Override
     public IPage<AdmissionOrderVO> listPage(AdmissionOrderQueryPageDTO query) {
         Page<AdmissionOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
@@ -204,12 +212,14 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
         return vo;
     }
 
+    // 作废
+
     @Override
     public long countPending() {
         return orderMapper.countPending();
     }
 
-    // 作废
+    // 收治流程回调
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -243,8 +253,6 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
         log.info("住院证作废 orderNo={} 原因={}", order.getOrderNo(), dto.getCancelReason());
     }
 
-    // 收治流程回调
-
     @Override
     public BizAdmissionOrder requireAdmittable(Long orderId) {
         // 保留（类别②非 web 入口）：按证收治时由住院主流程直接传参调用，不经 HTTP 参数绑定，注解跑不到这一层
@@ -266,6 +274,8 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
         return order;
     }
 
+    // 内部
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void markAdmitted(BizAdmissionOrder order, Long admissionId, Long admitDeptId, LocalDateTime admitTime) {
@@ -285,8 +295,6 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
         log.info("住院证已收治 orderNo={} admissionId={} admitDeptId={}",
                 latest.getOrderNo(), admissionId, admitDeptId);
     }
-
-    // 内部
 
     /**
      * 补充展示态：文案、是否过期、是否调过科。
@@ -310,7 +318,9 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
         }
     }
 
-    /** 有效期天数：读系统参数，缺失或非法一律回落 7 天（不回落成"永久有效"） */
+    /**
+     * 有效期天数：读系统参数，缺失或非法一律回落 7 天（不回落成"永久有效"）
+     */
     private int validDays() {
         SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
                 .eq(SysConfig::getConfigKey, VALID_DAYS_CONFIG_KEY));
@@ -337,10 +347,5 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
         String prefix = "RZ" + LocalDate.now().format(NO_DATE);
         long seq = orderMapper.countByOrderNoPrefix(prefix) + 1;
         return prefix + String.format("%03d", seq);
-    }
-
-    /** 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入） */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
     }
 }

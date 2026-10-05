@@ -24,27 +24,37 @@ import java.util.List;
 @Schema(description = "患者健康档案（六组）")
 public class PatientHealthProfileVO {
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @Schema(description = "患者ID")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者编号 */
+    /**
+     * 患者编号
+     */
     @Schema(description = "患者号")
     private String patientNo;
 
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     @Schema(description = "患者姓名")
     private String patientName;
 
-    /** 性别（1-男 2-女 9-未知） */
-    @Schema(description = "性别：1-男 2-女 3-未知")
+    /**
+     * 性别（1-男 2-女 9-未知）
+     */
+    @Schema(description = "性别：1-男 2-女 9-未知")
     private Integer gender;
 
     @Schema(description = "出生日期")
     private LocalDate birthDate;
 
-    /** 年龄 */
+    /**
+     * 年龄
+     */
     @Schema(description = "年龄（岁）")
     private Integer age;
 

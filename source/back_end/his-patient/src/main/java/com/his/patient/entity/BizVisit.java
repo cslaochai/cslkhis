@@ -26,35 +26,53 @@ import java.time.LocalDateTime;
 @TableName("biz_visit")
 public class BizVisit implements Serializable {
 
-    /** 就诊次ID */
+    /**
+     * 就诊次ID
+     */
     @TableId(value = "visit_id", type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long visitId;
 
-    /** 就诊次编号（VISIT + yyyyMMdd + 3位序号） */
+    /**
+     * 就诊次编号（VISIT + yyyyMMdd + 3位序号）
+     */
     private String visitNo;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 就诊开始时间 */
+    /**
+     * 就诊开始时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime startTime;
 
-    /** 就诊结束时间（未结束为 null） */
+    /**
+     * 就诊结束时间（未结束为 null）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime endTime;
 
-    /** 本次就诊总费用 */
+    /**
+     * 本次就诊总费用
+     */
     private BigDecimal totalAmount;
 
-    /** 就诊状态（0-已取消 1-进行中 2-已完成） */
+    /**
+     * 就诊状态（0-已取消 1-进行中 2-已完成）
+     */
     private Integer visitStatus;
 
-    /** 关联的挂号ID列表（逗号分隔） */
+    /**
+     * 关联的挂号ID列表（逗号分隔）
+     */
     private String registIds;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

@@ -5,6 +5,7 @@ import { Search, Refresh, View, Switch, Edit } from '@element-plus/icons-vue'
 import { getEmployeeList, getEmployeeDetail, updateEmployee, getDepartmentTree, getDictDataMapList } from '@/api/system'
 import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
 import { useTableMaxHeight } from '@/lib/useTableMaxHeight'
+import { patientGenderText } from '@/lib/patientGender'
 
 const loading = ref(false)
 const searchForm = ref({
@@ -251,7 +252,7 @@ const handleEditSubmit = async () => {
         <el-table-column prop="empName" label="姓名" width="100" />
         <el-table-column prop="gender" label="性别" width="60">
           <template #default="{ row }">
-            {{ row.gender === 1 ? '男' : row.gender === 2 ? '女' : '-' }}
+            {{ patientGenderText(row.gender) }}
           </template>
         </el-table-column>
         <el-table-column prop="deptName" label="科室" min-width="120" />
@@ -343,7 +344,7 @@ const handleEditSubmit = async () => {
           <!-- 详细信息 -->
           <div class="grid grid-cols-2 gap-4 py-2 text-sm">
             <div><span class="text-slate-400">工号：</span><span class="font-medium text-slate-700">{{ detailData.empCode  }}</span></div>
-            <div><span class="text-slate-400">性别：</span><span class="font-medium text-slate-700">{{ detailData.gender === 1 ? '男' : detailData.gender ===2 ? '女' : '-' }}</span></div>
+            <div><span class="text-slate-400">性别：</span><span class="font-medium text-slate-700">{{ patientGenderText(detailData.gender) }}</span></div>
             <div><span class="text-slate-400">联系电话：</span><span class="font-medium text-slate-700">{{ detailData.phone  }}</span></div>
             <div><span class="text-slate-400">邮箱：</span><span class="font-medium text-slate-700">{{ detailData.email  }}</span></div>
             <div><span class="text-slate-400">学历：</span><span class="font-medium text-slate-700">{{ getDictLabelByValue(educationOptions, detailData.education) }}</span></div>

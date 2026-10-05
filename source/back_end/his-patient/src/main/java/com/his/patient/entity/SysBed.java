@@ -1,11 +1,6 @@
 package com.his.patient.entity;
 
-import com.baomidou.mybatisplus.annotation.FieldFill;
-import com.baomidou.mybatisplus.annotation.IdType;
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
+import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
@@ -24,54 +19,80 @@ import java.time.LocalDateTime;
 @TableName("sys_bed")
 public class SysBed implements Serializable {
 
-    /** 床位ID */
+    /**
+     * 床位ID
+     */
     @TableId(value = "bed_id", type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long bedId;
 
-    /** 床位号 */
+    /**
+     * 床位号
+     */
     private String bedNo;
 
-    /** 病区ID */
+    /**
+     * 病区ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
 
-    /** 科室ID */
+    /**
+     * 科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 床位类型：normal-普通 ICU-重症 VIP-特需 */
+    /**
+     * 床位类型：normal-普通 ICU-重症 VIP-特需
+     */
     private String bedType;
 
-    /** 床位状态（0-维修 1-空闲 2-占用 3-锁定） */
+    /**
+     * 床位状态（0-维修 1-空闲 2-占用 3-锁定）
+     */
     private Integer bedStatus;
 
-    /** 当前占用患者ID */
+    /**
+     * 当前占用患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 创建人 */
+    /**
+     * 创建人
+     */
     @TableField(fill = FieldFill.INSERT)
     private String createBy;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 
-    /** 更新人 */
+    /**
+     * 更新人
+     */
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private String updateBy;
 
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
 
-    /** 删除标志（0-正常 1-删除） */
+    /**
+     * 删除标志（0-正常 1-删除）
+     */
     @TableLogic
     private Integer delFlag;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

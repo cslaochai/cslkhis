@@ -12,34 +12,54 @@ import lombok.Data;
 @Data
 public class WardVO {
 
-    /** 病区ID */
+    /**
+     * 病区ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
 
-    /** 病区编码 */
+    /**
+     * 病区编码
+     */
     private String wardCode;
-    /** 病区名称 */
+    /**
+     * 病区名称
+     */
     private String wardName;
 
-    /** 所属科室ID */
+    /**
+     * 所属科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 科室名称 */
+    /**
+     * 科室名称
+     */
     private String deptName;
 
-    /** 床位总数（实时取自床位） */
+    /**
+     * 床位总数（实时取自床位）
+     */
     private Integer totalBeds;
 
-    /** 空闲床位数 */
+    /**
+     * 空闲床位数
+     */
     private Integer freeBeds;
 
-    /** 已占用床位数 */
+    /**
+     * 已占用床位数
+     */
     private Integer occupiedBeds;
 
-    /** 维修床位数 */
+    /**
+     * 维修床位数
+     */
     private Integer brokenBeds;
 
-    /** 使用率（%），保留一位小数 */
+    /**
+     * 使用率（%），保留一位小数
+     */
     private java.math.BigDecimal usageRate;
 }

@@ -9,7 +9,9 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 
-/** 既往疾病史 */
+/**
+ * 既往疾病史
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_patient_past_disease")

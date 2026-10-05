@@ -1,16 +1,19 @@
 package com.his.patient.service;
 
-import com.his.common.service.SignableContentProvider;
+import com.his.common.entity.SignSubject;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
-import com.his.common.entity.SignSubject;
+import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.patient.entity.BizCriticalNotice;
+
 import java.time.LocalDateTime;
 
 public interface CriticalNoticeSignProvider extends SignableContentProvider {
 
-    /** 规范化文本：只含告知内容＋签收人法定要素，按固定顺序 */
+    /**
+     * 规范化文本：只含告知内容＋签收人法定要素，按固定顺序
+     */
     public static String canonical(BizCriticalNotice n) {
         return CanonicalText.create("CRITICAL_NOTICE")
                 .put("noticeNo", n.getNoticeNo())

@@ -20,7 +20,9 @@ import java.time.LocalDateTime;
 @TableName("biz_inpatient_operation")
 public class BizInpatientOperation extends BaseEntity {
 
-    /** 入院ID */
+    /**
+     * 入院ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
@@ -34,41 +36,65 @@ public class BizInpatientOperation extends BaseEntity {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long applyId;
 
-    /** 序号（主要手术固定为 1） */
+    /**
+     * 序号（主要手术固定为 1）
+     */
     private Integer seqNo;
 
-    /** 是否主要手术（0-否 1-是） */
+    /**
+     * 是否主要手术（0-否 1-是）
+     */
     private Integer isMain;
 
-    /** 手术操作编码（ICD-9-CM-3） */
+    /**
+     * 手术操作编码（ICD-9-CM-3）
+     */
     private String operationCode;
 
-    /** 手术操作名称 */
+    /**
+     * 手术操作名称
+     */
     private String operationName;
 
-    /** 手术日期 */
+    /**
+     * 手术日期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime operationDate;
 
-    /** 手术级别（1-一级 2-二级 3-三级 4-四级） */
+    /**
+     * 手术级别（1-一级 2-二级 3-三级 4-四级）
+     */
     private Integer operationLevel;
 
-    /** 切口等级（0-0类 1-Ⅰ类 2-Ⅱ类 3-Ⅲ类） */
+    /**
+     * 切口等级（0-0类 1-Ⅰ类 2-Ⅱ类 3-Ⅲ类）
+     */
     private Integer incisionLevel;
 
-    /** 麻醉方式（1-全麻 2-椎管内 3-神经阻滞 4-局麻 5-其他） */
+    /**
+     * 麻醉方式（1-全麻 2-椎管内 3-神经阻滞 4-局麻 5-其他）
+     */
     private Integer anesthesiaType;
 
-    /** 主刀医师ID */
+    /**
+     * 主刀医师ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long surgeonId;
 
-    /** 主刀医师姓名 */
+    /**
+     * 主刀医师姓名
+     */
     private String surgeonName;
 
-    /** 助手姓名（多人逗号分隔） */
+    /**
+     * 助手姓名（多人逗号分隔）
+     */
     private String assistantName;
 
-    /** 手术依据（手术记录中的支持性描述） */
+    /**
+     * 手术依据（手术记录中的支持性描述）
+     */
     private String operationBasis;
 }

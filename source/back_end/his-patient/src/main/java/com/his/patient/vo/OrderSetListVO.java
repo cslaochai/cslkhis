@@ -21,7 +21,9 @@ public class OrderSetListVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 模板名称 */
+    /**
+     * 模板名称
+     */
     private String templateName;
 
     /**
@@ -37,7 +39,9 @@ public class OrderSetListVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 科室名称 */
+    /**
+     * 科室名称
+     */
     private String deptName;
 
     /**
@@ -46,7 +50,9 @@ public class OrderSetListVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;
 
-    /** 医生姓名（快照） */
+    /**
+     * 医生姓名（快照）
+     */
     private String doctorName;
 
     /**
@@ -56,10 +62,14 @@ public class OrderSetListVO implements Serializable {
 
     private String orderTypeText;
 
-    /** 明细条数 */
+    /**
+     * 明细条数
+     */
     private Integer itemCount;
 
-    /** 备注/适用场景说明 */
+    /**
+     * 备注/适用场景说明
+     */
     private String remark;
 
     /**
@@ -67,11 +77,15 @@ public class OrderSetListVO implements Serializable {
      */
     private Boolean editable;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
 }

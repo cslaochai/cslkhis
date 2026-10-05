@@ -64,7 +64,9 @@ public class InpatientRecordLogVO implements Serializable {
      */
     private String operation;
 
-    /** 操作人ID（员工ID） */
+    /**
+     * 操作人ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 

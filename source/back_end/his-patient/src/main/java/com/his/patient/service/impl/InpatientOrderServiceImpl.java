@@ -3,35 +3,21 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.enums.EncounterTypeEnum;
-import com.his.common.enums.FeeSourceTypeEnum;
-import com.his.common.enums.TechAuthCategoryEnum;
-import com.his.common.exception.BusinessException;
 import com.his.common.dto.SignCommandDTO;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.*;
+import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.vo.SignatureVO;
 import com.his.fee.dto.FeeBookDTO;
 import com.his.fee.entity.BizFeeRecord;
 import com.his.fee.support.FeeCatalogResolver;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.dto.InpatientOrderCancelDTO;
-import com.his.patient.dto.InpatientOrderItemDTO;
-import com.his.patient.dto.InpatientOrderQueryPageDTO;
-import com.his.patient.dto.InpatientOrderStopDTO;
-import com.his.patient.dto.InpatientOrderUpsertDTO;
-import com.his.patient.dto.InpatientOrderVerifyDTO;
-import com.his.patient.dto.OrderExecCompleteDTO;
-import com.his.patient.dto.OrderExecQueryPageDTO;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.entity.BizInpatientOrder;
-import com.his.patient.entity.BizInpatientOrderExec;
-import com.his.patient.entity.SysBed;
-import com.his.patient.mapper.BizAdmissionMapper;
-import com.his.patient.mapper.BizInpatientOrderExecMapper;
-import com.his.patient.mapper.BizInpatientOrderMapper;
-import com.his.patient.mapper.SysBedMapper;
+import com.his.patient.dto.*;
+import com.his.patient.entity.*;
+import com.his.patient.enums.InpatientOrderStatusEnum;
+import com.his.patient.enums.OrderClassEnum;
+import com.his.patient.enums.OrderTypeEnum;
+import com.his.patient.mapper.*;
+import com.his.patient.service.ArrearsControlGate;
 import com.his.patient.service.DietPlanService;
 import com.his.patient.service.InpatientOrderService;
 import com.his.patient.support.InpatientOrderItemRules;
@@ -40,13 +26,11 @@ import com.his.patient.support.OrderChargeInvoker;
 import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.patient.vo.InpatientOrderVO;
 import com.his.patient.vo.WardVO;
-import com.his.patient.mapper.BizPatientMapper;
-import com.his.patient.service.ArrearsControlGate;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import com.his.system.dto.TechAuthGateDTO;
-import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,20 +46,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
-import com.his.common.enums.AdmitStatusEnum;
-import com.his.common.enums.ExecStatusEnum;
-import com.his.patient.enums.InpatientOrderStatusEnum;
-import com.his.patient.enums.OrderClassEnum;
-import com.his.patient.enums.OrderTypeEnum;
+import java.util.*;
 
 /**
  * 住院医嘱服务实现（P1：医嘱 → 校对 → 执行 → 计费）。
@@ -125,18 +96,47 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     private final BizPatientMapper patientMapper;
     private final SysBedMapper bedMapper;
     private final OrderChargeInvoker chargeInvoker;
-    /** 膳食方案（sql/168）：临床营养医嘱校对即派生、停/作废即同步停/废 */
+    /**
+     * 膳食方案（sql/168）：临床营养医嘱校对即派生、停/作废即同步停/废
+     */
     private final DietPlanService dietPlanService;
-    /** 电子签名（P5.5）：开立签名 + 校对签名双签 */
+    /**
+     * 电子签名（P5.5）：开立签名 + 校对签名双签
+     */
     private final EmrSignatureService signatureService;
-    /** 站内信（inpat-order 发送方）：医嘱校对完成 → 通知开嘱医生 */
+    /**
+     * 站内信（inpat-order 发送方）：医嘱校对完成 → 通知开嘱医生
+     */
     private final SysMessageService sysMessageService;
-    /** 欠费管控（G20）：SPI 由 his-charge 提供；缺席 fail-open 放行，只拦新增的择期类医嘱 */
+    /**
+     * 欠费管控（G20）：SPI 由 his-charge 提供；缺席 fail-open 放行，只拦新增的择期类医嘱
+     */
     private final ObjectProvider<ArrearsControlGate> arrearsControlGate;
-    /** 技术授权准入闸（sql/155）：无手术资质的人不能开手术医嘱 */
+    /**
+     * 技术授权准入闸（sql/155）：无手术资质的人不能开手术医嘱
+     */
     private final EmployeeTechAuthService techAuthService;
 
     // 开立 / 修改
+
+    private static String orderClassDesc(Integer orderClass) {
+        String text = InpatientOrderLabels.orderClassText(orderClass);
+        return "—".equals(text) ? "" : text;
+    }
+
+    private static String appendNote(String origin, String extra) {
+        if (!StringUtils.hasText(origin)) {
+            return extra;
+        }
+        return origin + "；" + extra;
+    }
+
+    /**
+     * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
+     */
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -295,6 +295,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         return orderGroup;
     }
 
+    // 护士校对
+
     /**
      * 修改一条「待校对」的医嘱。
      *
@@ -362,7 +364,9 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         return order.getOrderGroup();
     }
 
-    /** 作废该医嘱上的开立签名（没有就什么也不做）；不吞异常 */
+    /**
+     * 作废该医嘱上的开立签名（没有就什么也不做）；不吞异常
+     */
     private void invalidateDoctorSignIfAny(BizInpatientOrder order, String reason) {
         if (order.getDoctorSignId() == null) {
             return;
@@ -372,7 +376,11 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         order.setDoctorSignedTime(null);
     }
 
-    /** 给一条医嘱签名；失败直接抛（不吞），由调用方的业务事务整体回滚 */
+    // 停止 / 作废
+
+    /**
+     * 给一条医嘱签名；失败直接抛（不吞），由调用方的业务事务整体回滚
+     */
     private void signOrder(BizInpatientOrder order, SignScene scene, String actionLabel) {
         SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(SignBizType.INPATIENT_ORDER.getCode());
@@ -395,8 +403,6 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             throw new BusinessException(actionLabel + "失败（医嘱 " + order.getOrderNo() + "）：" + e.getMessage());
         }
     }
-
-    // 护士校对
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -475,7 +481,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
                 String orderNosText = group.size() <= 3
                         ? group.stream().map(BizInpatientOrder::getOrderNo).reduce((a, b) -> a + "、" + b).orElse("")
                         : group.stream().limit(3).map(BizInpatientOrder::getOrderNo).reduce((a, b) -> a + "、" + b).orElse("")
-                                + " 等 " + group.size() + " 条";
+                        + " 等 " + group.size() + " 条";
                 String content = String.format("您为患者 %s（%s）开立的医嘱 %s 已由护士 %s 校对完成，进入执行队列。",
                         first.getPatientName(),
                         first.getBedNo() == null ? "在院" : first.getBedNo() + "床",
@@ -496,8 +502,6 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             log.warn("[医嘱校对] 校对完成通知发送失败 护士={} 条数={}", nurseName, orders.size(), ex);
         }
     }
-
-    // 停止 / 作废
 
     /**
      * 批量停止某次住院的长期医嘱（转科用）。
@@ -560,6 +564,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
                 admissionId, affected, failed, reason);
         return affected;
     }
+
+    // 查询
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -707,8 +713,6 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         }
     }
 
-    // 查询
-
     @Override
     public IPage<InpatientOrderVO> listPage(InpatientOrderQueryPageDTO query) {
         Page<InpatientOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
@@ -726,6 +730,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         result.getRecords().forEach(this::decorateExec);
         return result;
     }
+
+    // 执行
 
     @Override
     public IPage<InpatientOrderExecVO> execList(OrderExecQueryPageDTO query) {
@@ -747,7 +753,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         return execMapper.countPendingByAdmission(admissionId);
     }
 
-    // 执行
+    // 计划行（按天生成 / 查询补当天）
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -908,13 +914,6 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         return dto;
     }
 
-    private static String orderClassDesc(Integer orderClass) {
-        String text = InpatientOrderLabels.orderClassText(orderClass);
-        return "—".equals(text) ? "" : text;
-    }
-
-    // 计划行（按天生成 / 查询补当天）
-
     /**
      * 补当天计划行 —— 本项目刻意<b>不引入定时任务</b>。
      *
@@ -955,6 +954,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             log.info("补生成当天医嘱计划 条数={}（admissionId={} patientId={}）", created, admissionId, patientId);
         }
     }
+
+    // 展示态
 
     /**
      * 幂等地生成「今天」的计划行。
@@ -1009,7 +1010,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         return now.toLocalDate().atTime(start.toLocalTime());
     }
 
-    // 展示态
+    // 编号 / 当前用户 / 时间
 
     private void decorateOrder(InpatientOrderVO vo) {
         vo.setOrderTypeText(InpatientOrderLabels.orderTypeText(vo.getOrderType()));
@@ -1055,8 +1056,6 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         vo.setInfusion(InpatientInfusionServiceImpl.isInfusionRoute(vo.getRoute()));
     }
 
-    // 编号 / 当前用户 / 时间
-
     private String nextOrderNo() {
         String prefix = "YZ" + LocalDate.now().format(NO_DATE);
         long seq = orderMapper.countByOrderNoPrefix(prefix) + 1;
@@ -1069,8 +1068,11 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         return prefix + String.format("%04d", seq);
     }
 
-    /** 医嘱的医生/护士留痕一律用**员工ID**（不是用户的ID），与站内信收件人同一口径 */
-    private Long currentEmpId() {        try {
+    /**
+     * 医嘱的医生/护士留痕一律用**员工ID**（不是用户的ID），与站内信收件人同一口径
+     */
+    private Long currentEmpId() {
+        try {
             CurrentUser user = UserUtils.getCurrentUser();
             if (user == null) {
                 return null;
@@ -1100,7 +1102,9 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         }
     }
 
-    /** 签名人的科室快照（人的科室会变，签名行必须记"签的那一刻在哪个科室"） */
+    /**
+     * 签名人的科室快照（人的科室会变，签名行必须记"签的那一刻在哪个科室"）
+     */
     private Long currentDeptId() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();
@@ -1117,17 +1121,5 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private static String appendNote(String origin, String extra) {
-        if (!StringUtils.hasText(origin)) {
-            return extra;
-        }
-        return origin + "；" + extra;
-    }
-
-    /** 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入） */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
     }
 }

@@ -14,7 +14,9 @@ import java.util.Map;
 @Mapper
 public interface BizReferralMapper extends BaseMapper<BizReferral> {
 
-    /** 全量科室名映射（科室数量少，一次性取全，service 里组 Map 回填 VO） */
+    /**
+     * 全量科室名映射（科室数量少，一次性取全，service 里组 Map 回填 VO）
+     */
     @Select("SELECT id, dept_name AS deptName FROM sys_department WHERE del_flag = 0")
     List<Map<String, Object>> selectDeptMap();
 

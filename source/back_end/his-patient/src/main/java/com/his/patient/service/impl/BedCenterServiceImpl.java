@@ -5,39 +5,19 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.dto.BedAssignUpsertDTO;
-import com.his.patient.dto.BedMapQueryDTO;
-import com.his.patient.dto.BedPoolQueryPageDTO;
-import com.his.patient.dto.BedWaitAdmitDTO;
-import com.his.patient.dto.BedWaitOperateDTO;
-import com.his.patient.dto.BedWaitQueryPageDTO;
-import com.his.patient.dto.BedWaitUpsertDTO;
-import com.his.patient.dto.InpatientAdmitDTO;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.entity.BizAdmissionOrder;
-import com.his.patient.entity.BizBedAllocate;
-import com.his.patient.entity.BizBedWait;
-import com.his.patient.entity.SysBed;
-import com.his.patient.mapper.BedCenterMapper;
-import com.his.patient.mapper.BedMapMapper;
-import com.his.patient.mapper.BizAdmissionMapper;
-import com.his.patient.mapper.BizAdmissionOrderMapper;
-import com.his.patient.mapper.BizBedWaitMapper;
-import com.his.patient.mapper.SysBedMapper;
+import com.his.patient.dto.*;
+import com.his.patient.entity.*;
+import com.his.patient.enums.BedAllocateStatusEnum;
+import com.his.patient.enums.BedStatusEnum;
+import com.his.patient.enums.BedWaitStatusEnum;
+import com.his.patient.mapper.*;
 import com.his.patient.service.BedCenterService;
 import com.his.patient.service.InpatientService;
 import com.his.patient.support.BedCenterLabels;
 import com.his.patient.support.InpatientLabels;
-import com.his.patient.vo.BedMapVO;
-import com.his.patient.vo.BedMatchVO;
-import com.his.patient.vo.BedOverviewVO;
-import com.his.patient.vo.BedPoolVO;
-import com.his.patient.vo.BedWaitStatsVO;
-import com.his.patient.vo.BedWaitVO;
-import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.entity.CurrentUser;
+import com.his.patient.vo.*;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysConfigMapper;
@@ -58,16 +38,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
-
-import com.his.patient.enums.BedAllocateStatusEnum;
-import com.his.patient.enums.BedStatusEnum;
-import com.his.patient.enums.BedWaitStatusEnum;
 
 /**
  * 床位服务中心实现
@@ -96,35 +68,75 @@ import com.his.patient.enums.BedWaitStatusEnum;
 @RequiredArgsConstructor
 public class BedCenterServiceImpl implements BedCenterService {
 
-    /** 等待超时的最长天数；缺失或非法一律回落 7 天（不回落成"永不超时"） */
+    /**
+     * 等待超时的最长天数；缺失或非法一律回落 7 天（不回落成"永不超时"）
+     */
     private static final String MAX_WAIT_DAYS_KEY = "bed.wait.max_days";
     private static final int MAX_WAIT_DAYS_FALLBACK = 7;
 
-    /** 匹配候选的数量上限：全院上千张床全列出来等于没列 */
+    /**
+     * 匹配候选的数量上限：全院上千张床全列出来等于没列
+     */
     private static final int MATCH_LIMIT = 30;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-
+    /**
+     * 等床多久没安排就找总值班（系统参数：duty.coord.bed_wait_hours，缺失/非法回落 24）
+     */
+    private static final String DUTY_BED_WAIT_HOURS_KEY = "duty.coord.bed_wait_hours";
+    private static final int DUTY_BED_WAIT_HOURS_FALLBACK = 24;
     private final BizBedWaitMapper waitMapper;
     private final BedCenterMapper allocateMapper;
     private final SysBedMapper bedMapper;
-    /** 床位图聚合（与护士站共用，护士看在院患者，这里看可调配性） */
+    /**
+     * 床位图聚合（与护士站共用，护士看在院患者，这里看可调配性）
+     */
     private final BedMapMapper bedMapMapper;
     private final BizPatientMapper patientMapper;
     private final BizAdmissionOrderMapper orderMapper;
     private final BizAdmissionMapper admissionMapper;
     private final SysConfigMapper sysConfigMapper;
-    /** 收治复写入院主流程：不重写一套 admit，否则两条入口各推进一步就会打架 */
+    /**
+     * 收治复写入院主流程：不重写一套 admit，否则两条入口各推进一步就会打架
+     */
     private final InpatientService inpatientService;
-    /** 全院当天谁负责：跨科调配与等床超时的兜底收口人（sql/169） */
+    /**
+     * 全院当天谁负责：跨科调配与等床超时的兜底收口人（sql/169）
+     */
     private final DutyRosterService dutyRosterService;
     private final SysMessageService sysMessageService;
 
-    /** 等床多久没安排就找总值班（系统参数：duty.coord.bed_wait_hours，缺失/非法回落 24） */
-    private static final String DUTY_BED_WAIT_HOURS_KEY = "duty.coord.bed_wait_hours";
-    private static final int DUTY_BED_WAIT_HOURS_FALLBACK = 24;
-
     // 等床队列
+
+    private static int indexOf(List<Long> ids, Long id) {
+        if (ids == null || ids.isEmpty() || id == null) {
+            return 0;
+        }
+        for (int i = 0; i < ids.size(); i++) {
+            if (Objects.equals(ids.get(i), id)) {
+                return i + 1;
+            }
+        }
+        return 0;
+    }
+
+    private static String defaultStr(String value, String fallback) {
+        return StringUtils.hasText(value) ? value : fallback;
+    }
+
+    private static long hoursBetween(LocalDateTime from, LocalDateTime to) {
+        if (from == null || to == null) {
+            return 0;
+        }
+        return Math.max(0, Duration.between(toSeconds(from), toSeconds(to)).toHours());
+    }
+
+    /**
+     * 时间统一截到秒：库表是 DATETIME(0)，写进去会被四舍五入，不截会导致"写进去的 ≠ 读回来的"
+     */
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
 
     @Override
     public IPage<BedWaitVO> queuePage(BedWaitQueryPageDTO query) {
@@ -164,6 +176,8 @@ public class BedCenterServiceImpl implements BedCenterService {
                 .collect(Collectors.toList()));
         return voPage;
     }
+
+    // 安排 / 释放 / 取消 / 收治
 
     @Override
     public BedWaitVO queueDetail(Long waitId) {
@@ -284,8 +298,6 @@ public class BedCenterServiceImpl implements BedCenterService {
                 upd.getPriority(), upd.getBedType());
         return wait.getId();
     }
-
-    // 安排 / 释放 / 取消 / 收治
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -501,7 +513,11 @@ public class BedCenterServiceImpl implements BedCenterService {
         }
     }
 
-    /** 等床催总值班阈值；缺失/非法一律回落 24 小时（不回落成"永不催"） */
+    // 统计 / 床位池 / 匹配
+
+    /**
+     * 等床催总值班阈值；缺失/非法一律回落 24 小时（不回落成"永不催"）
+     */
     private int dutyBedWaitHours() {
         try {
             SysConfig cfg = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
@@ -614,8 +630,6 @@ public class BedCenterServiceImpl implements BedCenterService {
         return String.valueOf(admissionId);
     }
 
-    // 统计 / 床位池 / 匹配
-
     @Override
     public BedWaitStatsVO queueStats() {
         BedWaitStatsVO vo = new BedWaitStatsVO();
@@ -712,6 +726,8 @@ public class BedCenterServiceImpl implements BedCenterService {
                         Comparator.comparingInt(String::length).thenComparing(Comparator.naturalOrder()))));
         return result.size() > MATCH_LIMIT ? result.subList(0, MATCH_LIMIT) : result;
     }
+
+    // 与住院证 / 入院的联动
 
     @Override
     public BedPoolVO bedPool(BedPoolQueryPageDTO query) {
@@ -838,9 +854,11 @@ public class BedCenterServiceImpl implements BedCenterService {
         int usable = s.getTotalBeds() - s.getRepair() - s.getLocked();
         s.setUsageRate(usable <= 0 ? BigDecimal.ZERO
                 : BigDecimal.valueOf(s.getOccupied()).multiply(BigDecimal.valueOf(100L))
-                        .divide(BigDecimal.valueOf(usable), 1, RoundingMode.HALF_UP));
+                .divide(BigDecimal.valueOf(usable), 1, RoundingMode.HALF_UP));
         return s;
     }
+
+    // 内部
 
     @Override
     public BedOverviewVO overview() {
@@ -849,8 +867,8 @@ public class BedCenterServiceImpl implements BedCenterService {
         summary.setUsableBeds(summary.getTotalBeds() - summary.getRepairBeds());
         summary.setUsageRate(summary.getUsableBeds() <= 0 ? BigDecimal.ZERO
                 : BigDecimal.valueOf(summary.getOccupiedBeds())
-                        .multiply(BigDecimal.valueOf(100))
-                        .divide(BigDecimal.valueOf(summary.getUsableBeds()), 1, RoundingMode.HALF_UP));
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(summary.getUsableBeds()), 1, RoundingMode.HALF_UP));
         summary.setLentOutBeds(allocateMapper.selectCount(new LambdaQueryWrapper<BizBedAllocate>()
                 .eq(BizBedAllocate::getDelFlag, 0)
                 .eq(BizBedAllocate::getAllocStatus, BedAllocateStatusEnum.RESERVED.getCode())));
@@ -858,8 +876,6 @@ public class BedCenterServiceImpl implements BedCenterService {
         vo.setDeptRows(allocateMapper.selectDeptRows());
         return vo;
     }
-
-    // 与住院证 / 入院的联动
 
     @Override
     public void syncFromOrder(BizAdmissionOrder order) {
@@ -979,8 +995,6 @@ public class BedCenterServiceImpl implements BedCenterService {
         log.info("入院回填队列：patientId={} 收治={} 条，admissionId={}", patientId, rows.size(), admissionId);
     }
 
-    // 内部
-
     /**
      * 释放当前锁定的床位，并按结局收敛台账：
      * 改派用 4-已作废（那张床确实被拿走过，只是没用上），退回/取消用 3-已释放。
@@ -1075,7 +1089,9 @@ public class BedCenterServiceImpl implements BedCenterService {
         return wait;
     }
 
-    /** 该住院证是否已经在队列里（返回重复记录的等待号） */
+    /**
+     * 该住院证是否已经在队列里（返回重复记录的等待号）
+     */
     private String existsByOrder(Long orderId, Long excludeWaitId) {
         LambdaQueryWrapper<BizBedWait> w = new LambdaQueryWrapper<>();
         w.eq(BizBedWait::getDelFlag, 0).eq(BizBedWait::getAdmissionOrderId, orderId);
@@ -1086,7 +1102,9 @@ public class BedCenterServiceImpl implements BedCenterService {
         return dup == null ? null : dup.getWaitNo();
     }
 
-    /** 该床位是否已有在途预留（返回调配单号） */
+    /**
+     * 该床位是否已有在途预留（返回调配单号）
+     */
     private String existReservedAllocate(Long bedId) {
         BizBedAllocate alloc = allocateMapper.selectOne(new LambdaQueryWrapper<BizBedAllocate>()
                 .eq(BizBedAllocate::getDelFlag, 0)
@@ -1205,7 +1223,9 @@ public class BedCenterServiceImpl implements BedCenterService {
         return prefix + String.format("%03d", allocateMapper.countByAllocateNoPrefix(prefix) + 1);
     }
 
-    /** 最长等待天数：读不到或非法一律回落 7 天（不回落成"永不超时"） */
+    /**
+     * 最长等待天数：读不到或非法一律回落 7 天（不回落成"永不超时"）
+     */
     private int maxWaitDays() {
         try {
             SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
@@ -1221,7 +1241,9 @@ public class BedCenterServiceImpl implements BedCenterService {
         }
     }
 
-    /** 留痕一律用员工ID（不是用户的ID），与医嘱/站内信同一口径 */
+    /**
+     * 留痕一律用员工ID（不是用户的ID），与医嘱/站内信同一口径
+     */
     private Long currentEmpId() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();
@@ -1250,33 +1272,5 @@ public class BedCenterServiceImpl implements BedCenterService {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private static int indexOf(List<Long> ids, Long id) {
-        if (ids == null || ids.isEmpty() || id == null) {
-            return 0;
-        }
-        for (int i = 0; i < ids.size(); i++) {
-            if (Objects.equals(ids.get(i), id)) {
-                return i + 1;
-            }
-        }
-        return 0;
-    }
-
-    private static String defaultStr(String value, String fallback) {
-        return StringUtils.hasText(value) ? value : fallback;
-    }
-
-    private static long hoursBetween(LocalDateTime from, LocalDateTime to) {
-        if (from == null || to == null) {
-            return 0;
-        }
-        return Math.max(0, Duration.between(toSeconds(from), toSeconds(to)).toHours());
-    }
-
-    /** 时间统一截到秒：库表是 DATETIME(0)，写进去会被四舍五入，不截会导致"写进去的 ≠ 读回来的" */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
     }
 }

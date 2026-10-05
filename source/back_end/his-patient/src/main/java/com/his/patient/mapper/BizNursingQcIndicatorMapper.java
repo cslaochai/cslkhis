@@ -4,12 +4,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.patient.entity.BizNursingQcIndicator;
 import com.his.patient.vo.NurseQcVO;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -41,13 +36,17 @@ public interface BizNursingQcIndicatorMapper extends BaseMapper<BizNursingQcIndi
             i.reached_flag AS reachedFlag, i.source_type AS sourceType, i.report_status AS reportStatus,
             DATE_FORMAT(i.calc_time, '%Y-%m-%d %H:%i:%s') AS calcTime, i.remark""";
 
-    /** 指标值放大倍数：{@code %} 类乘 100，例/千床日类乘 1000（跟台账 unit 列同源，不再传参） */
+    /**
+     * 指标值放大倍数：{@code %} 类乘 100，例/千床日类乘 1000（跟台账 unit 列同源，不再传参）
+     */
     String RATE_EXPR = """
             ROUND(SUM(numerator) * IF(MAX(unit) = '%', 100, 1000) / NULLIF(SUM(denominator), 0), 2)""";
 
     // 事实取数（重算的分子分母来源）
 
-    /** 某病区某月的<b>实际占用床日数</b>（口径见类注释，与 sql/168 铺底逐字一致） */
+    /**
+     * 某病区某月的<b>实际占用床日数</b>（口径见类注释，与 sql/168 铺底逐字一致）
+     */
     @Select("""
             SELECT COALESCE(SUM(GREATEST(DATEDIFF(
                      LEAST(COALESCE(DATE(a.discharge_time), #{statEnd}), #{statEnd}),
@@ -83,7 +82,9 @@ public interface BizNursingQcIndicatorMapper extends BaseMapper<BizNursingQcIndi
                          @Param("eventType") Integer eventType,
                          @Param("acquiredFlag") Integer acquiredFlag);
 
-    /** 当月有台账的病区（重算「全部病区」时的候选：只列启用了质控指标口径的病区，即病区启用行） */
+    /**
+     * 当月有台账的病区（重算「全部病区」时的候选：只列启用了质控指标口径的病区，即病区启用行）
+     */
     @Select("""
             <script>
             SELECT w.ward_id AS wardId, w.ward_name AS wardName, w.dept_id AS deptId, d.dept_name AS deptName
@@ -169,10 +170,10 @@ public interface BizNursingQcIndicatorMapper extends BaseMapper<BizNursingQcIndi
             </script>
             """)
     int updateReportStatus(@Param("statMonth") String statMonth,
-                          @Param("wardId") Long wardId,
-                          @Param("reportStatus") Integer reportStatus,
-                          @Param("deptIds") List<Long> deptIds,
-                          @Param("operator") String operator);
+                           @Param("wardId") Long wardId,
+                           @Param("reportStatus") Integer reportStatus,
+                           @Param("deptIds") List<Long> deptIds,
+                           @Param("operator") String operator);
 
     // 看板取数
 
@@ -206,7 +207,9 @@ public interface BizNursingQcIndicatorMapper extends BaseMapper<BizNursingQcIndi
                                        @Param("wardId") Long wardId,
                                        @Param("deptIds") List<Long> deptIds);
 
-    /** 趋势：一条指标按月一行（月份区间空=全部有台账的月份，前端折线直接用） */
+    /**
+     * 趋势：一条指标按月一行（月份区间空=全部有台账的月份，前端折线直接用）
+     */
     @Select("""
             <script>
             SELECT stat_month AS statMonth, indicator_code AS indicatorCode, MAX(indicator_name) AS indicatorName,
@@ -233,7 +236,9 @@ public interface BizNursingQcIndicatorMapper extends BaseMapper<BizNursingQcIndi
                                     @Param("endMonth") String endMonth,
                                     @Param("deptIds") List<Long> deptIds);
 
-    /** 病区对比：一条指标在当月各病区的落点（按指标值倒序，页面上「最差的那个病区」永远在最上面） */
+    /**
+     * 病区对比：一条指标在当月各病区的落点（按指标值倒序，页面上「最差的那个病区」永远在最上面）
+     */
     @Select("""
             <script>
             SELECT i.ward_id AS wardId, i.ward_name AS wardName, i.dept_id AS deptId, i.dept_name AS deptName,
@@ -252,7 +257,9 @@ public interface BizNursingQcIndicatorMapper extends BaseMapper<BizNursingQcIndi
                                                 @Param("indicatorCode") String indicatorCode,
                                                 @Param("deptIds") List<Long> deptIds);
 
-    /** 台账分页（护理部回看某月/跨月的分子分母明细，每一行都要能回答「这个数从哪来」） */
+    /**
+     * 台账分页（护理部回看某月/跨月的分子分母明细，每一行都要能回答「这个数从哪来」）
+     */
     @Select("""
             <script>
             """ + "SELECT " + LEDGER_COLUMNS + """

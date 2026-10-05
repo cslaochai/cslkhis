@@ -1,15 +1,17 @@
 package com.his.patient.service.impl;
 
-import com.his.patient.service.ReferralService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.ReferralDTO;
 import com.his.patient.entity.BizReferral;
+import com.his.patient.enums.ReferralDirectionEnum;
+import com.his.patient.enums.ReferralStatusEnum;
 import com.his.patient.mapper.BizReferralMapper;
-import com.his.patient.vo.ReferralVO;
+import com.his.patient.service.ReferralService;
 import com.his.patient.support.DictText;
+import com.his.patient.vo.ReferralVO;
 import com.his.security.UserUtils;
 import com.his.system.entity.SysConfig;
 import com.his.system.entity.SysMessage;
@@ -33,9 +35,6 @@ import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
-import com.his.patient.enums.ReferralDirectionEnum;
-import com.his.patient.enums.ReferralStatusEnum;
-
 /**
  * 双向转诊服务。
  *
@@ -49,17 +48,19 @@ public class ReferralServiceImpl implements ReferralService {
 
     private static final String DICT_DIRECTION = "his_referral_direction";
     private static final String DICT_STATUS = "his_referral_status";
-
+    /**
+     * 待确认多久就找总值班（系统参数：duty.coord.referral_pending_hours，缺失/非法回落 2 小时）
+     */
+    private static final String DUTY_REFERRAL_HOURS_KEY = "duty.coord.referral_pending_hours";
+    private static final int DUTY_REFERRAL_HOURS_FALLBACK = 2;
     private final BizReferralMapper referralMapper;
     private final DictText dictText;
-    /** 全院当天谁负责：转诊挂住没人接时的兜底收口人（sql/169） */
+    /**
+     * 全院当天谁负责：转诊挂住没人接时的兜底收口人（sql/169）
+     */
     private final DutyRosterService dutyRosterService;
     private final SysMessageService sysMessageService;
     private final SysConfigMapper sysConfigMapper;
-
-    /** 待确认多久就找总值班（系统参数：duty.coord.referral_pending_hours，缺失/非法回落 2 小时） */
-    private static final String DUTY_REFERRAL_HOURS_KEY = "duty.coord.referral_pending_hours";
-    private static final int DUTY_REFERRAL_HOURS_FALLBACK = 2;
 
     @Transactional(rollbackFor = Exception.class)
     public ReferralVO create(ReferralDTO.Create dto) {
@@ -310,7 +311,9 @@ public class ReferralServiceImpl implements ReferralService {
         return dictText.text(DICT_STATUS, r.getReferralStatus());
     }
 
-    /** 单号 REF + yyyyMMddHHmmss + 3 位随机，唯一索引兜底 */
+    /**
+     * 单号 REF + yyyyMMddHHmmss + 3 位随机，唯一索引兜底
+     */
     private String nextReferralNo() {
         return "REF" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())
                 + ThreadLocalRandom.current().nextInt(100, 1000);

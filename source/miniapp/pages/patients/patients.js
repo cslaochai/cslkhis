@@ -1,6 +1,7 @@
 import { getCurrentPatient, setCurrentPatient } from '../../utils/auth'
 import { guardianApi } from '../../utils/api'
 import { restoreCurrentPatient } from '../../utils/patientSync'
+import { genderText } from '../../utils/gender'
 
 const GENDERS = [
   { value: 1, label: '男' },
@@ -75,7 +76,7 @@ Page({
         let current = getCurrentPatient()
         const list = (res.data || []).map(p => ({
           ...p,
-          genderText: p.gender === 1 ? '男' : p.gender === 2 ? '女' : '未知',
+          genderText: genderText(p.gender),
           // 后端已打码（前6后4），前端不再二次处理明文
           idCardMasked: p.idCard || '未登记',
           phoneText: p.phone || '未留电话'

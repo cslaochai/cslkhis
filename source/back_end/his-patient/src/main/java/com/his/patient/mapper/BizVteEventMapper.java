@@ -12,11 +12,15 @@ import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
-/** VTE 事件 Mapper（排序：确诊日期倒序，最新发生的事在最上面） */
+/**
+ * VTE 事件 Mapper（排序：确诊日期倒序，最新发生的事在最上面）
+ */
 @Mapper
 public interface BizVteEventMapper extends BaseMapper<BizVteEvent> {
 
-    /** 单号前缀当日已用最大序号（VE+yyyyMMdd+4位） */
+    /**
+     * 单号前缀当日已用最大序号（VE+yyyyMMdd+4位）
+     */
     @Select("SELECT COALESCE(MAX(CAST(RIGHT(event_no, 4) AS UNSIGNED)), 0) "
             + "FROM biz_vte_event WHERE event_no LIKE CONCAT(#{prefix}, '%')")
     long maxEventSeq(@Param("prefix") String prefix);

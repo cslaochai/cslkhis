@@ -100,7 +100,7 @@ public class SettlementEvidence {
     }
 
     /**
-     * 患者性别：1-男 2-女，null 表示未知
+     * 患者性别（1-男 2-女 9-未知）
      */
     public Integer gender() {
         if (patient != null && patient.getGender() != null) {

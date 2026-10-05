@@ -21,7 +21,9 @@ import java.time.LocalDateTime;
 @Data
 public class InpatientTransferVO implements Serializable {
 
-    /** 转科记录ID */
+    /**
+     * 转科记录ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -36,7 +38,9 @@ public class InpatientTransferVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
-    /** 入院号（快照） */
+    /**
+     * 入院号（快照）
+     */
     private String admissionNo;
 
     /**
@@ -45,7 +49,9 @@ public class InpatientTransferVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
     // 转出侧
@@ -56,7 +62,9 @@ public class InpatientTransferVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long fromDeptId;
 
-    /** 转出科室名称（快照） */
+    /**
+     * 转出科室名称（快照）
+     */
     private String fromDeptName;
 
     /**
@@ -65,7 +73,9 @@ public class InpatientTransferVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long fromWardId;
 
-    /** 转出病区名称（快照） */
+    /**
+     * 转出病区名称（快照）
+     */
     private String fromWardName;
 
     /**
@@ -74,7 +84,9 @@ public class InpatientTransferVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long fromBedId;
 
-    /** 转出床位号（快照） */
+    /**
+     * 转出床位号（快照）
+     */
     private String fromBedNo;
 
     // 转入侧
@@ -85,7 +97,9 @@ public class InpatientTransferVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long toDeptId;
 
-    /** 转入科室名称（快照） */
+    /**
+     * 转入科室名称（快照）
+     */
     private String toDeptName;
 
     /**
@@ -94,7 +108,9 @@ public class InpatientTransferVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long toWardId;
 
-    /** 转入病区名称（快照） */
+    /**
+     * 转入病区名称（快照）
+     */
     private String toWardName;
 
     /**
@@ -103,7 +119,9 @@ public class InpatientTransferVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long toBedId;
 
-    /** 转入床位号（快照） */
+    /**
+     * 转入床位号（快照）
+     */
     private String toBedNo;
 
     // 业务字段
@@ -123,7 +141,9 @@ public class InpatientTransferVO implements Serializable {
      */
     private String transferReason;
 
-    /** 发起转科时该次住院的已住院天数 */
+    /**
+     * 发起转科时该次住院的已住院天数
+     */
     private Integer hospitalDays;
 
     /**
@@ -142,14 +162,20 @@ public class InpatientTransferVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long applyDoctorId;
 
-    /** 转出方发起医生姓名（快照） */
+    /**
+     * 转出方发起医生姓名（快照）
+     */
     private String applyDoctorName;
 
-    /** 转入方接收医生ID（员工ID） */
+    /**
+     * 转入方接收医生ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long receiveDoctorId;
 
-    /** 转入方接收医生姓名（快照） */
+    /**
+     * 转入方接收医生姓名（快照）
+     */
     private String receiveDoctorName;
 
     /**

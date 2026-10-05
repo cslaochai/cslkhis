@@ -22,13 +22,17 @@ public class AttendingRelationVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long employeeId;
 
-    /** 医生姓名（快照） */
+    /**
+     * 医生姓名（快照）
+     */
     private String employeeName;
 
     @JsonSerialize(using = ToStringSerializer.class)
@@ -45,7 +49,9 @@ public class AttendingRelationVO {
     private Integer relationType;
     private String relationTypeText;
 
-    /** 状态（1-有效 0-已结束） */
+    /**
+     * 状态（1-有效 0-已结束）
+     */
     private Integer status;
     private String statusText;
 

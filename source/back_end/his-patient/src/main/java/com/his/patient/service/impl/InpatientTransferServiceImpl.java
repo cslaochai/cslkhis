@@ -4,32 +4,23 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.enums.AdmitStatusEnum;
+import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
 import com.his.patient.dto.InpatientTransferAcceptDTO;
 import com.his.patient.dto.InpatientTransferCancelDTO;
 import com.his.patient.dto.InpatientTransferQueryPageDTO;
 import com.his.patient.dto.InpatientTransferUpsertDTO;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.entity.BizInpatientOrder;
-import com.his.patient.entity.BizInpatientRecord;
-import com.his.patient.entity.BizInpatientSummary;
-import com.his.patient.entity.BizInpatientTransfer;
-import com.his.patient.entity.SysBed;
-import com.his.patient.mapper.BizAdmissionMapper;
-import com.his.patient.mapper.BizInpatientOrderMapper;
-import com.his.patient.mapper.BizInpatientRecordMapper;
-import com.his.patient.mapper.BizInpatientSummaryMapper;
-import com.his.patient.mapper.BizInpatientTransferMapper;
-import com.his.patient.mapper.SysBedMapper;
+import com.his.patient.entity.*;
+import com.his.patient.enums.*;
+import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientOrderService;
 import com.his.patient.service.InpatientTransferService;
 import com.his.patient.support.InpatientTransferLabels;
 import com.his.patient.vo.InpatientTransferVO;
 import com.his.patient.vo.WardVO;
-import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -41,23 +32,8 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-
-import com.his.common.enums.AdmitStatusEnum;
-import com.his.patient.enums.BedStatusEnum;
-import com.his.patient.enums.InpatientOrderStatusEnum;
-import com.his.patient.enums.InpatientRecordTypeEnum;
-import com.his.patient.enums.OrderTypeEnum;
-import com.his.common.enums.RecordStatusEnum;
-import com.his.patient.enums.SummaryStatusEnum;
-import com.his.patient.enums.TransferStatusEnum;
 
 /**
  * 住院转科实现（P4.2：发起 → 转入科室接收 → 停原医嘱 + 换科室换床 + 回写病历）。
@@ -394,7 +370,9 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         return sb.toString();
     }
 
-    /** 从 order_remark 文案里取回"已停止 N 条"的 N —— 只解析自己写的那一种句式，取不到就当 0 */
+    /**
+     * 从 order_remark 文案里取回"已停止 N 条"的 N —— 只解析自己写的那一种句式，取不到就当 0
+     */
     private int countStoppedFromRemark(String remark) {
         if (!StringUtils.hasText(remark)) {
             return 0;
@@ -422,7 +400,9 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
 
     // 内部：床位
 
-    /** 目标床位校验：必须空闲，且确实属于目标科室与目标病区 */
+    /**
+     * 目标床位校验：必须空闲，且确实属于目标科室与目标病区
+     */
     private void checkTargetBed(SysBed bed, Long toDeptId, Long toWardId) {
         if (!Objects.equals(BedStatusEnum.FREE.getCode(), bed.getBedStatus())) {
             throw new BusinessException("转入床位「" + bed.getBedNo() + "」当前不可用（"
@@ -596,7 +576,9 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         return time == null ? null : time.truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
     }
 
-    /** 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径 */
+    /**
+     * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
+     */
     private Long currentEmpId() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();

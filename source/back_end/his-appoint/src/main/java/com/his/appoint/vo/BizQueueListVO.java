@@ -54,7 +54,7 @@ public class BizQueueListVO {
     private String patientName;
 
     /**
-     * 性别（0-未知 1-男 2-女）
+     * 性别（1-男 2-女 9-未知）
      */
     private Integer gender;
 

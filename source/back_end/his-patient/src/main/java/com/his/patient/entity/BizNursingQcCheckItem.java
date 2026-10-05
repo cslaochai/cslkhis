@@ -25,28 +25,52 @@ import java.math.BigDecimal;
 @TableName("biz_nursing_qc_check_item")
 public class BizNursingQcCheckItem extends BaseEntity {
 
-    /** 检查单ID */
+    /**
+     * 检查单ID
+     */
     private Long checkId;
-    /** 检查项ID */
+    /**
+     * 检查项ID
+     */
     private Long itemId;
-    /** 项目编码（快照） */
+    /**
+     * 项目编码（快照）
+     */
     private String itemCode;
-    /** 项目名称 */
+    /**
+     * 项目名称
+     */
     private String itemName;
-    /** 类别快照：按类别聚合台账指标时不用再回 JOIN 标准目录 */
+    /**
+     * 类别快照：按类别聚合台账指标时不用再回 JOIN 标准目录
+     */
     private Integer category;
-    /** 抽查例数 */
+    /**
+     * 抽查例数
+     */
     private Integer checkedNum;
-    /** 合格例数，不得大于 {@code checkedNum}（服务层校验） */
+    /**
+     * 合格例数，不得大于 {@code checkedNum}（服务层校验）
+     */
     private Integer qualifiedNum;
-    /** 本项应得分（快照） */
+    /**
+     * 本项应得分（快照）
+     */
     private BigDecimal fullScore;
-    /** 实得分 = 应得分 × 合格/抽查，由服务端算，不接受前端传 */
+    /**
+     * 实得分 = 应得分 × 合格/抽查，由服务端算，不接受前端传
+     */
     private BigDecimal score;
-    /** 存在问题 */
+    /**
+     * 存在问题
+     */
     private String problem;
-    /** 原因分析 */
+    /**
+     * 原因分析
+     */
     private String causeAnalysis;
-    /** 整改措施 */
+    /**
+     * 整改措施
+     */
     private String rectifyMeasure;
 }

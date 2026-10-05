@@ -28,7 +28,9 @@ public class PatientVO {
      * 患者姓名
      */
     private String patientName;
-    /** 性别（1-男 2-女 9-未知） */
+    /**
+     * 性别（1-男 2-女 9-未知）
+     */
     private Integer gender;
     /**
      * 出生日期
@@ -69,7 +71,9 @@ public class PatientVO {
      * 紧急联系人电话
      */
     private String contactPhone;
-    /** 联系人关系（父母、配偶、子女等） */
+    /**
+     * 联系人关系（父母、配偶、子女等）
+     */
     private String contactRelation;
     /**
      * 家庭住址
@@ -119,7 +123,9 @@ public class PatientVO {
      * 医保类型（如：职工医保、居民医保）
      */
     private String medicalInsuranceType;
-    /** 卡片类型（1-就诊卡 2-身份证 3-医保卡） */
+    /**
+     * 卡片类型（1-就诊卡 2-身份证 3-医保卡）
+     */
     private Integer cardType;
     /**
      * 证件号码

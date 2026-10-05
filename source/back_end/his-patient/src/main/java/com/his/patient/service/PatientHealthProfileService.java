@@ -1,19 +1,8 @@
 package com.his.patient.service;
 
-import com.his.patient.dto.PatientAllergyUpsertDTO;
-import com.his.patient.dto.PatientContactUpsertDTO;
-import com.his.patient.dto.PatientFamilyHistoryUpsertDTO;
-import com.his.patient.dto.PatientMedicationHistoryUpsertDTO;
-import com.his.patient.dto.PatientPastDiseaseUpsertDTO;
-import com.his.patient.dto.PatientSurgeryHistoryUpsertDTO;
+import com.his.patient.dto.*;
 import com.his.patient.entity.BizPatient;
-import com.his.patient.vo.PatientAllergyVO;
-import com.his.patient.vo.PatientContactVO;
-import com.his.patient.vo.PatientFamilyHistoryVO;
-import com.his.patient.vo.PatientMedicationHistoryVO;
-import com.his.patient.vo.PatientPastDiseaseVO;
-import com.his.patient.vo.PatientSurgeryHistoryVO;
-import com.his.patient.vo.PatientHealthProfileVO;
+import com.his.patient.vo.*;
 
 /**
  * 患者健康档案（六组）业务闭环 —— 唯一的写入口。
@@ -45,7 +34,9 @@ import com.his.patient.vo.PatientHealthProfileVO;
  */
 public interface PatientHealthProfileService {
 
-    /** 一次带回六组明细 + 主档文本投影快照 + 分叉标记 */
+    /**
+     * 一次带回六组明细 + 主档文本投影快照 + 分叉标记
+     */
     PatientHealthProfileVO getProfile(Long patientId);
 
     PatientAllergyVO saveAllergy(PatientAllergyUpsertDTO dto);
@@ -70,18 +61,26 @@ public interface PatientHealthProfileService {
 
     PatientContactVO saveContact(PatientContactUpsertDTO dto);
 
-    /** 按联系人ID查单条（出参带字典翻译好的 relationshipText） */
+    /**
+     * 按联系人ID查单条（出参带字典翻译好的 relationshipText）
+     */
     PatientContactVO getContact(Long contactId);
 
     void deleteContact(Long id);
 
-    /** 重算主档 {@code allergy_history}（按过敏明细） */
+    /**
+     * 重算主档 {@code allergy_history}（按过敏明细）
+     */
     void syncAllergyProjection(Long patientId);
 
-    /** 重算主档 {@code medical_history}（按既往疾病明细） */
+    /**
+     * 重算主档 {@code medical_history}（按既往疾病明细）
+     */
     void syncPastDiseaseProjection(Long patientId);
 
-    /** 重算主档 {@code contact_name / contact_phone / contact_relation}（按联系人明细） */
+    /**
+     * 重算主档 {@code contact_name / contact_phone / contact_relation}（按联系人明细）
+     */
     void syncContactProjection(Long patientId);
 
     /**

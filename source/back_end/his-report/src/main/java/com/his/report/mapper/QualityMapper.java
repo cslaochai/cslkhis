@@ -632,7 +632,7 @@ public interface QualityMapper {
                    ''                   AS deptName,
                    ''                   AS doctorName,
                    CONCAT('患者性别码 = ', p.gender,
-                       '，不在枚举 {1-男 2-女 3-未知} 内，前端会渲染为「未知(', p.gender, ')」') AS detail,
+                       '，不在枚举 {1-男 2-女 9-未知} 内，前端会渲染为「未知(', p.gender, ')」') AS detail,
                    IFNULL(DATE_FORMAT(p.update_time, '%Y-%m-%d %H:%i:%s'), '') AS occurredTime
             FROM biz_patient p
             WHERE p.del_flag = 0 AND p.gender NOT IN (1, 2, 3)

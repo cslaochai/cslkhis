@@ -13,6 +13,8 @@ import java.util.List;
 @EqualsAndHashCode(callSuper = true)
 public class OrderSetDetailVO extends OrderSetListVO implements Serializable {
 
-    /** 核查项码值 */
+    /**
+     * 核查项码值
+     */
     private List<InpatientOrderTemplateItemVO> items;
 }

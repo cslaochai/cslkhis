@@ -35,7 +35,9 @@ public interface BizNutritionStatsMapper extends BaseMapper<BizNutritionStats> {
     IPage<NutritionStatsVO> selectStatsPage(Page<NutritionStatsVO> page,
                                             @Param("q") NutritionStatsQueryPageDTO query);
 
-    /** 导出用（不分页，上限由服务层控制） */
+    /**
+     * 导出用（不分页，上限由服务层控制）
+     */
     @Select("""
             <script>
             SELECT t.*,
@@ -51,7 +53,9 @@ public interface BizNutritionStatsMapper extends BaseMapper<BizNutritionStats> {
             """)
     List<NutritionStatsVO> selectStatsForExport(@Param("q") NutritionStatsQueryPageDTO query);
 
-    /** 某月某范围的已有快照行（覆盖式 upsert 前定位用） */
+    /**
+     * 某月某范围的已有快照行（覆盖式 upsert 前定位用）
+     */
     @Select("""
             SELECT * FROM biz_nutrition_stats
              WHERE stat_month = #{statMonth} AND scope_type = #{scopeType}

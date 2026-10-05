@@ -13,22 +13,18 @@ import com.his.patient.dto.PatientMergeDTO;
 import com.his.patient.dto.PatientMergeRevertDTO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.entity.BizPatientMergeLog;
+import com.his.patient.enums.PatientMatchLevelEnum;
+import com.his.patient.enums.PatientMergeStatusEnum;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizPatientMergeLogMapper;
 import com.his.patient.mapper.PatientIndexMapper;
 import com.his.patient.service.PatientIndexService;
 import com.his.patient.support.PatientDataTables;
 import com.his.patient.support.PatientGenderText;
-import com.his.patient.enums.PatientMatchLevelEnum;
 import com.his.patient.support.PatientProfileFields;
-import com.his.patient.vo.PatientDuplicateGroupVO;
-import com.his.patient.vo.PatientIndexDictVO;
-import com.his.patient.vo.PatientIndexStatVO;
-import com.his.patient.vo.PatientIndexVO;
-import com.his.patient.vo.PatientMatchLevelSelectListVO;
-import com.his.patient.vo.PatientMergeLogVO;
-import com.his.security.entity.CurrentUser;
+import com.his.patient.vo.*;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -38,18 +34,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
-import com.his.patient.enums.PatientMergeStatusEnum;
+import java.util.*;
 
 /**
  * 患者主索引服务实现（P5.1 EMPI）
@@ -69,6 +54,43 @@ public class PatientIndexServiceImpl implements PatientIndexService {
     private final ObjectMapper objectMapper;
 
     // 列表 / 详情
+
+    private static double rate(long hit, long total) {
+        if (total <= 0) {
+            return 0D;
+        }
+        return Math.round(hit * 1000D / total) / 10D;
+    }
+
+    private static long toLong(Object o) {
+        if (o == null) {
+            return 0L;
+        }
+        if (o instanceof Number n) {
+            return n.longValue();
+        }
+        try {
+            return Long.parseLong(o.toString());
+        } catch (NumberFormatException e) {
+            return 0L;
+        }
+    }
+
+    private static Long toNullableLong(Object o) {
+        if (o == null) {
+            return null;
+        }
+        if (o instanceof Number n) {
+            return n.longValue();
+        }
+        try {
+            return Long.parseLong(o.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    // 重复检测
 
     @Override
     public PageResult<PatientIndexVO> selectIndexPage(PatientIndexQueryDTO dto) {
@@ -107,7 +129,11 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         return vo;
     }
 
-    /** 详情页用的轻量条目（只要认得出是哪份档案） */
+    // 合并
+
+    /**
+     * 详情页用的轻量条目（只要认得出是哪份档案）
+     */
     private Map<String, Object> briefOf(BizPatient p) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", String.valueOf(p.getId()));
@@ -120,8 +146,6 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         m.put("mergeTime", p.getMergeTime() == null ? null : p.getMergeTime().toString());
         return m;
     }
-
-    // 重复检测
 
     @Override
     public List<PatientDuplicateGroupVO> detectDuplicates(PatientIndexQueryDTO dto) {
@@ -193,7 +217,11 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         return groups;
     }
 
-    /** 每个级别的操作提示。措辞直接反映实测结论，不给"应该可以合并"的错觉 */
+    // 归并（CDR 等按患者聚合的地方必须走这里）
+
+    /**
+     * 每个级别的操作提示。措辞直接反映实测结论，不给"应该可以合并"的错觉
+     */
     private String tipOf(Integer level) {
         if (level == null) {
             return "—";
@@ -201,21 +229,17 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         PatientMatchLevelEnum item = PatientMatchLevelEnum.fromCode(level);
         // 脏码值按最可疑的人工判定档处理，不允许被升成可信档
         return switch (item == null ? PatientMatchLevelEnum.MANUAL : item) {
-            case ID_CARD ->
-                    "身份证号完全一致，基本可确认是同一人。合并前请确认两条记录都不是他人证件误录。";
-            case NAME_GENDER_BIRTH ->
-                    "姓名、性别、出生日期一致，但**没有身份证号佐证**。同名同生日在真实人群里并不罕见，"
-                            + "请核对证件原件后再决定是否合并。";
-            case NAME_PHONE ->
-                    "仅凭姓名 + 手机号不足以认定同一人：实测本院存在多人共用同一手机号建档的情况"
-                            + "（一个号码下挂 10 个患者）。默认不应合并。";
-            case MANUAL ->
-                    "仅姓名相同，其余关键字段均不一致。默认**不应合并** —— 除非已核对证件确认"
-                            + "是同一人的重复建档，否则这很可能是两个同名的人。";
+            case ID_CARD -> "身份证号完全一致，基本可确认是同一人。合并前请确认两条记录都不是他人证件误录。";
+            case NAME_GENDER_BIRTH -> "姓名、性别、出生日期一致，但**没有身份证号佐证**。同名同生日在真实人群里并不罕见，"
+                    + "请核对证件原件后再决定是否合并。";
+            case NAME_PHONE -> "仅凭姓名 + 手机号不足以认定同一人：实测本院存在多人共用同一手机号建档的情况"
+                    + "（一个号码下挂 10 个患者）。默认不应合并。";
+            case MANUAL -> "仅姓名相同，其余关键字段均不一致。默认**不应合并** —— 除非已核对证件确认"
+                    + "是同一人的重复建档，否则这很可能是两个同名的人。";
         };
     }
 
-    // 合并
+    // 合并历史 / 概览
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -349,7 +373,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         return toLogVO(logEntity, false);
     }
 
-    // 归并（CDR 等按患者聚合的地方必须走这里）
+    // 内部工具
 
     @Override
     public List<Long> resolvePatientIds(Long patientId) {
@@ -369,8 +393,6 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         all.forEach(x -> ids.add(x.getId()));
         return new ArrayList<>(ids);
     }
-
-    // 合并历史 / 概览
 
     @Override
     public PageResult<PatientMergeLogVO> selectMergeLogPage(PatientIndexQueryDTO dto) {
@@ -417,9 +439,9 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         return vo;
     }
 
-    // 内部工具
-
-    /** 批量补齐完整度 / 数据量 / 主档信息（禁止逐条查，列表页会退化成 N+1） */
+    /**
+     * 批量补齐完整度 / 数据量 / 主档信息（禁止逐条查，列表页会退化成 N+1）
+     */
     private List<PatientIndexVO> enrich(List<BizPatient> patients) {
         if (patients == null || patients.isEmpty()) {
             return new ArrayList<>();
@@ -521,7 +543,9 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         return p != null && Objects.equals(p.getMergeStatus(), PatientMergeStatusEnum.MERGED.getCode());
     }
 
-    /** 合并时可选把被并档的字段补进主档空位；返回补了哪些字段（中文名） */
+    /**
+     * 合并时可选把被并档的字段补进主档空位；返回补了哪些字段（中文名）
+     */
     private List<String> fillBlankFields(BizPatient master, BizPatient merged) {
         List<String> filled = new ArrayList<>();
         if (!StringUtils.hasText(master.getIdCard()) && StringUtils.hasText(merged.getIdCard())) {
@@ -559,7 +583,9 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         return filled;
     }
 
-    /** 档案关键字段快照（撤销时靠它还原，不靠猜） */
+    /**
+     * 档案关键字段快照（撤销时靠它还原，不靠猜）
+     */
     private Map<String, Object> snapshot(BizPatient p) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", String.valueOf(p.getId()));
@@ -627,41 +653,6 @@ public class PatientIndexServiceImpl implements PatientIndexService {
             return objectMapper.writeValueAsString(o);
         } catch (Exception ex) {
             throw new BusinessException("生成审计快照失败，已中止操作（审计不完整不允许落库）");
-        }
-    }
-
-    private static double rate(long hit, long total) {
-        if (total <= 0) {
-            return 0D;
-        }
-        return Math.round(hit * 1000D / total) / 10D;
-    }
-
-    private static long toLong(Object o) {
-        if (o == null) {
-            return 0L;
-        }
-        if (o instanceof Number n) {
-            return n.longValue();
-        }
-        try {
-            return Long.parseLong(o.toString());
-        } catch (NumberFormatException e) {
-            return 0L;
-        }
-    }
-
-    private static Long toNullableLong(Object o) {
-        if (o == null) {
-            return null;
-        }
-        if (o instanceof Number n) {
-            return n.longValue();
-        }
-        try {
-            return Long.parseLong(o.toString());
-        } catch (NumberFormatException e) {
-            return null;
         }
     }
 

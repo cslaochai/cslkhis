@@ -40,7 +40,7 @@ public class BizAppointInfo extends BaseEntity {
     private String patientName;
 
     /**
-     * 性别（1-男 2-女 3-未知）
+     * 性别（1-男 2-女 9-未知）
      */
     private Integer gender;
 

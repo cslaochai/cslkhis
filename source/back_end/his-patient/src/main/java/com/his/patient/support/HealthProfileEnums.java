@@ -20,26 +20,40 @@ import java.util.Set;
  */
 public final class HealthProfileEnums {
 
-    /** 过敏类型 */
+    /**
+     * 过敏类型
+     */
     public static final Set<String> ALLERGY_TYPE = ordered("药物", "食物", "其他");
 
-    /** 过敏严重程度（比列注释多「未评估」，理由见类注释） */
+    /**
+     * 过敏严重程度（比列注释多「未评估」，理由见类注释）
+     */
     public static final Set<String> ALLERGY_SEVERITY = ordered("轻度", "中度", "重度", "危及生命", "未评估");
 
-    /** 手术类型 */
+    /**
+     * 手术类型
+     */
     public static final Set<String> SURGERY_TYPE = ordered("择期", "紧急", "急诊");
 
-    /** 手术恢复情况 */
+    /**
+     * 手术恢复情况
+     */
     public static final Set<String> RECOVERY_STATUS = ordered("良好", "一般", "差", "死亡");
 
-    /** 既往疾病当前控制情况 */
+    /**
+     * 既往疾病当前控制情况
+     */
     public static final Set<String> DISEASE_CURRENT_STATUS =
             ordered("已治愈", "控制良好", "未控制", "随访中");
 
-    /** 用药史：药物类型 */
+    /**
+     * 用药史：药物类型
+     */
     public static final Set<String> DRUG_TYPE = ordered("处方药", "非处方药", "中药", "保健品");
 
-    /** 用药史：给药途径 */
+    /**
+     * 用药史：给药途径
+     */
     public static final Set<String> DRUG_ROUTE = ordered("口服", "注射", "外用", "吸入");
 
     /**
@@ -49,10 +63,14 @@ public final class HealthProfileEnums {
      */
     public static final Set<String> MEDICATION_STATUS = ordered("进行中", "已停用", "已换药", "已减量");
 
-    /** 新增用药史且未指定状态时的默认值 */
+    /**
+     * 新增用药史且未指定状态时的默认值
+     */
     public static final String DEFAULT_MEDICATION_STATUS = "进行中";
 
-    /** 迁移生成、无法判断严重程度时的显式取值 */
+    /**
+     * 迁移生成、无法判断严重程度时的显式取值
+     */
     public static final String SEVERITY_UNKNOWN = "未评估";
 
     private HealthProfileEnums() {

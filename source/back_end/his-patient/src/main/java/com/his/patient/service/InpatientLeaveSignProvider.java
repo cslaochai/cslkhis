@@ -1,16 +1,19 @@
 package com.his.patient.service;
 
-import com.his.common.service.SignableContentProvider;
+import com.his.common.entity.SignSubject;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
-import com.his.common.entity.SignSubject;
+import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.patient.entity.BizInpatientLeave;
+
 import java.time.LocalDateTime;
 
 public interface InpatientLeaveSignProvider extends SignableContentProvider {
 
-    /** 规范化文本：只含申请内容＋患方承诺要素＋审批落款，按固定顺序（与打印承诺书对齐） */
+    /**
+     * 规范化文本：只含申请内容＋患方承诺要素＋审批落款，按固定顺序（与打印承诺书对齐）
+     */
     public static String canonical(BizInpatientLeave l) {
         return CanonicalText.create("INPATIENT_LEAVE")
                 .put("leaveNo", l.getLeaveNo())

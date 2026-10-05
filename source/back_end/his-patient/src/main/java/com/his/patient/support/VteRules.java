@@ -1,9 +1,9 @@
 package com.his.patient.support;
 
+import com.his.patient.enums.VteMeasureTypeEnum;
+
 import java.util.Arrays;
 import java.util.List;
-
-import com.his.patient.enums.VteMeasureTypeEnum;
 
 /**
  * VTE 防控的口径常量（措施项 / 推荐矩阵 / 枚举文案）—— 前后端唯一事实源，
@@ -15,24 +15,25 @@ import com.his.patient.enums.VteMeasureTypeEnum;
  */
 public final class VteRules {
 
-    /** 措施码：基础预防 */
+    /**
+     * 措施码：基础预防
+     */
     public static final String CODE_BASIC = "BASIC";
-    /** 措施码：物理预防 */
+    /**
+     * 措施码：物理预防
+     */
     public static final String CODE_PHYSICAL = "PHYSICAL";
-    /** 措施码：药物预防 */
+    /**
+     * 措施码：药物预防
+     */
     public static final String CODE_DRUG = "DRUG";
-
-    private VteRules() {
-    }
-
-    /** 措施项定义（顺序即页面展示顺序） */
-    public record Measure(String code, int type, String name, String desc) {
-    }
-
     public static final List<Measure> MEASURES = List.of(
             new Measure(CODE_BASIC, VteMeasureTypeEnum.BASIC.getCode(), "基础预防", "健康教育、早期活动/踝泵运动、避免脱水、慎用止血药"),
             new Measure(CODE_PHYSICAL, VteMeasureTypeEnum.PHYSICAL.getCode(), "物理预防", "梯度压力袜（GCS）/间歇充气加压装置（IPC）/足底静脉泵（VFP）"),
             new Measure(CODE_DRUG, VteMeasureTypeEnum.DRUG.getCode(), "药物预防", "低分子肝素/普通肝素/利伐沙班等；有活动性出血等禁忌者禁用"));
+
+    private VteRules() {
+    }
 
     /**
      * 按风险等级推荐应落实的措施码。
@@ -57,7 +58,9 @@ public final class VteRules {
         return null;
     }
 
-    /** 中高危 = 中风险及以上（Caprini ≥3 分） */
+    /**
+     * 中高危 = 中风险及以上（Caprini ≥3 分）
+     */
     public static boolean isHighRisk(Integer riskLevel) {
         return riskLevel != null && riskLevel >= 2;
     }
@@ -124,17 +127,27 @@ public final class VteRules {
         };
     }
 
-    /** 逗号分隔的码串是否在合法集合内 */
+    /**
+     * 逗号分隔的码串是否在合法集合内
+     */
     public static boolean allCodesValid(List<String> codes) {
         return codes != null && !codes.isEmpty()
                 && codes.stream().allMatch(c -> measureOf(c) != null);
     }
 
-    /** 解析前端传入的措施码串（空返回空列表） */
+    /**
+     * 解析前端传入的措施码串（空返回空列表）
+     */
     public static List<String> parseCodes(String raw) {
         if (raw == null || raw.isBlank()) {
             return List.of();
         }
         return Arrays.stream(raw.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
+    }
+
+    /**
+     * 措施项定义（顺序即页面展示顺序）
+     */
+    public record Measure(String code, int type, String name, String desc) {
     }
 }

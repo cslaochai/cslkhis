@@ -1,9 +1,9 @@
 package com.his.patient.service;
 
-import com.his.patient.dto.GuardianUpsertDTO;
 import com.his.patient.dto.GuardianBindDTO;
 import com.his.patient.dto.GuardianSendAddCodeDTO;
 import com.his.patient.dto.GuardianSendBindCodeDTO;
+import com.his.patient.dto.GuardianUpsertDTO;
 import com.his.patient.vo.GuardianPatientVO;
 import com.his.patient.vo.SmsSendVO;
 import com.his.security.entity.CurrentUser;
@@ -41,30 +41,48 @@ public interface PatientGuardianService {
      */
     boolean patientScopeViolated(Long patientId);
 
-    /** 我的就诊人列表（含关系文案、默认标记） */
+    /**
+     * 我的就诊人列表（含关系文案、默认标记）
+     */
     List<GuardianPatientVO> myPatients();
 
-    /** 绑定场景发码：按姓名+身份证定位档案，验证码发往建档预留手机号 */
+    /**
+     * 绑定场景发码：按姓名+身份证定位档案，验证码发往建档预留手机号
+     */
     SmsSendVO sendBindCode(GuardianSendBindCodeDTO dto);
 
-    /** 绑定已有档案：姓名 + 身份证 + 建档预留手机号 + 短信码四因子，匹配不上不建任何数据 */
+    /**
+     * 绑定已有档案：姓名 + 身份证 + 建档预留手机号 + 短信码四因子，匹配不上不建任何数据
+     */
     GuardianPatientVO bindPatient(GuardianBindDTO dto);
 
-    /** 新增建档场景发码：验证码发往 dto.phone（操作人手机） */
+    /**
+     * 新增建档场景发码：验证码发往 dto.phone（操作人手机）
+     */
     SmsSendVO sendAddCode(GuardianSendAddCodeDTO dto);
 
-    /** 新建档并自动绑定（需短信验证；身份证已建档时提示改用绑定） */
+    /**
+     * 新建档并自动绑定（需短信验证；身份证已建档时提示改用绑定）
+     */
     GuardianPatientVO addPatient(GuardianUpsertDTO dto);
 
-    /** 解绑（软删）。账号本人（用户的患者ID）不可解绑 */
+    /**
+     * 解绑（软删）。账号本人（用户的患者ID）不可解绑
+     */
     void unbindPatient(Long patientId);
 
-    /** 设为默认就诊人 */
+    /**
+     * 设为默认就诊人
+     */
     void setDefault(Long patientId);
 
-    /** 绑定当前账号的微信 openid（订阅消息发送用，一账号一个，重复绑定以最新为准） */
+    /**
+     * 绑定当前账号的微信 openid（订阅消息发送用，一账号一个，重复绑定以最新为准）
+     */
     void bindOpenid(String openid);
 
-    /** 通道自测：给当前账号发一条测试订阅消息，返回发送结果文案 */
+    /**
+     * 通道自测：给当前账号发一条测试订阅消息，返回发送结果文案
+     */
     String testNotify();
 }

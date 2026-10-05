@@ -1,6 +1,8 @@
 package com.his.emr.support;
 
 import com.his.common.support.ClinicalTextMatcher;
+
+import com.his.common.enums.SysGenderEnum;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -405,6 +407,7 @@ public class QcRuleEngine {
                 // 性别码值按被查表本身的口径：住院病历文书 / 门诊病历是 1-男 2-女
                 // （患者基本信息才是 0-女 1-男，两套约定不同，这里吃的不是 patient.gender）。
                 // 落在 1/2 之外一律不判 —— 码值本身不可信时，任何"矛盾"结论都不可信。
+                SysGenderEnum g = SysGenderEnum.fromCode(s.getGender());
                 List<String> words = switch (s.getGender()) {
                     case 1 -> FEMALE_ONLY_WORDS;
                     case 2 -> MALE_ONLY_WORDS;
@@ -415,7 +418,7 @@ public class QcRuleEngine {
                         .findFirst();
                 yield conflict.map(word -> QcIssue.of(rule,
                         String.format("患者性别为%s，诊断却出现%s专属表述「%s」",
-                                s.getGender() == 1 ? "男" : "女", s.getGender() == 1 ? "女性" : "男性", word),
+                                g == null ? "未知" : g.getLabel(), g == SysGenderEnum.MALE ? "男性" : (g == SysGenderEnum.FEMALE ? "女性" : "未知"), word),
                         evidenceOf(s.getDiagnosisText())));
             }
 

@@ -4,39 +4,16 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.entity.SysBed;
-import com.his.patient.mapper.BizAdmissionMapper;
-import com.his.patient.mapper.BizNursingAssessmentMapper;
-import com.his.patient.mapper.SysBedMapper;
-import com.his.patient.vo.NursingAssessmentVO;
-import com.his.patient.vo.WardVO;
-import com.his.patient.support.VteRules;
-import com.his.patient.dto.VteEventQueryPageDTO;
-import com.his.patient.dto.VteEventUpsertDTO;
-import com.his.patient.dto.VtePreventQueryPageDTO;
-import com.his.patient.dto.VtePreventUpsertDTO;
-import com.his.patient.dto.VteRiskQueryPageDTO;
-import com.his.patient.dto.VteStatsGenerateDTO;
-import com.his.patient.dto.VteStatsQueryPageDTO;
-import com.his.patient.entity.BizVteEvent;
-import com.his.patient.entity.BizVtePrevent;
-import com.his.patient.entity.BizVteStats;
-import com.his.patient.mapper.BizVteEventMapper;
-import com.his.patient.mapper.BizVtePreventMapper;
-import com.his.patient.mapper.BizVteStatsMapper;
-import com.his.patient.mapper.VteStatMapper;
+import com.his.patient.dto.*;
+import com.his.patient.entity.*;
+import com.his.patient.enums.StatsScopeEnum;
+import com.his.patient.enums.VteEventTypeEnum;
+import com.his.patient.enums.VteOnsetEnum;
+import com.his.patient.enums.VtePreventStatusEnum;
+import com.his.patient.mapper.*;
 import com.his.patient.service.VteService;
-import com.his.patient.vo.DeptCountRowVO;
-import com.his.patient.vo.VteEventVO;
-import com.his.patient.vo.VteMeasureOptionVO;
-import com.his.patient.vo.VteMeasureStateVO;
-import com.his.patient.vo.VteOverviewVO;
-import com.his.patient.vo.VtePreventVO;
-import com.his.patient.vo.VteRiskListVO;
-import com.his.patient.vo.VteStatsVO;
-import com.his.patient.mapper.BizPatientMapper;
+import com.his.patient.support.VteRules;
+import com.his.patient.vo.*;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,17 +29,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
-import com.his.patient.enums.StatsScopeEnum;
-import com.his.patient.enums.VteEventTypeEnum;
-import com.his.patient.enums.VteOnsetEnum;
-import com.his.patient.enums.VtePreventStatusEnum;
+import java.util.*;
 
 /**
  * VTE 防控服务实现。
@@ -85,7 +52,9 @@ public class VteServiceImpl implements VteService {
     private static final DateTimeFormatter CSV_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int EXPORT_MAX = 5000;
 
-    /** 评审/VTE 防治中心建设常用阈值，只作提示不判定 */
+    /**
+     * 评审/VTE 防治中心建设常用阈值，只作提示不判定
+     */
     private static final BigDecimal TARGET_ASSESS_RATE = new BigDecimal("90.00");
     private static final BigDecimal TARGET_PREVENT_RATE = new BigDecimal("90.00");
 
@@ -154,7 +123,9 @@ public class VteServiceImpl implements VteService {
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(), records);
     }
 
-    /** 补算推荐措施、落实状态（推荐条数由 SQL 带出，这里只做拼装与文案） */
+    /**
+     * 补算推荐措施、落实状态（推荐条数由 SQL 带出，这里只做拼装与文案）
+     */
     private void decorate(VteRiskListVO row, List<VteMeasureStateVO> states) {
         List<String> codes = VteRules.codesOf(row.getRiskLevel());
         row.setRecommendCodes(codes);
@@ -546,7 +517,9 @@ public class VteServiceImpl implements VteService {
         return row;
     }
 
-    /** 同月同范围覆盖（唯一键 uk_vte_stats，不含 del_flag，不走软删） */
+    /**
+     * 同月同范围覆盖（唯一键 uk_vte_stats，不含 del_flag，不走软删）
+     */
     private BizVteStats upsertRow(BizVteStats row, String operator, String remark) {
         BizVteStats exist = statsMapper.selectOne(new LambdaQueryWrapper<BizVteStats>()
                 .eq(BizVteStats::getStatMonth, row.getStatMonth())
@@ -581,7 +554,9 @@ public class VteServiceImpl implements VteService {
         }
     }
 
-    /** 百分比（分母为 0 返回 0.00，不返回 NaN —— 空表跑出 NaN 会让人以为系统坏了） */
+    /**
+     * 百分比（分母为 0 返回 0.00，不返回 NaN —— 空表跑出 NaN 会让人以为系统坏了）
+     */
     private BigDecimal rate(long num, long den) {
         if (den <= 0) {
             return BigDecimal.ZERO.setScale(2);
@@ -590,7 +565,9 @@ public class VteServiceImpl implements VteService {
                 .divide(BigDecimal.valueOf(den), 2, RoundingMode.HALF_UP);
     }
 
-    /** 单号：前缀 + 当日已用最大序号 +1（不是 count+1 —— 删过一条序号会回退撞唯一键） */
+    /**
+     * 单号：前缀 + 当日已用最大序号 +1（不是 count+1 —— 删过一条序号会回退撞唯一键）
+     */
     private String nextNo(String prefix, long maxSeq) {
         return prefix + LocalDate.now().format(DAY_FMT) + String.format("%04d", maxSeq + 1);
     }

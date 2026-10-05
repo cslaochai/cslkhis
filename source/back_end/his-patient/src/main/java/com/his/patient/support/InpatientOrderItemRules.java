@@ -13,7 +13,9 @@ import org.springframework.util.StringUtils;
  */
 public final class InpatientOrderItemRules {
 
-    /** 医嘱类别合法区间（与字典 his_order_class、{@link InpatientOrderLabels#orderClassText} 同源） */
+    /**
+     * 医嘱类别合法区间（与字典 his_order_class、{@link InpatientOrderLabels#orderClassText} 同源）
+     */
     public static final int ORDER_CLASS_MIN = 1;
     public static final int ORDER_CLASS_MAX = 10;
 

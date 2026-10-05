@@ -29,7 +29,9 @@ public class InpatientRecordVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 病历文书号 */
+    /**
+     * 病历文书号
+     */
     private String recordNo;
 
     /**
@@ -49,10 +51,14 @@ public class InpatientRecordVO implements Serializable {
      */
     private String patientName;
 
-    /** 病区名称（快照） */
+    /**
+     * 病区名称（快照）
+     */
     private String wardName;
 
-    /** 床号（快照） */
+    /**
+     * 床号（快照）
+     */
     private String bedNo;
 
     /**
@@ -76,7 +82,9 @@ public class InpatientRecordVO implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime recordTime;
 
-    /** 文书状态（1-草稿 2-已提交 3-已归档） */
+    /**
+     * 文书状态（1-草稿 2-已提交 3-已归档）
+     */
     private Integer recordStatus;
 
     /**

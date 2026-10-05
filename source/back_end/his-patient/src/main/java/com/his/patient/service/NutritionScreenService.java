@@ -19,7 +19,9 @@ public interface NutritionScreenService {
 
     List<NutritionScreenVO> screenListByAdmission(Long admissionId);
 
-    /** 登记/修改筛查（总分、判定、BMI、复筛日期一律服务端算） */
+    /**
+     * 登记/修改筛查（总分、判定、BMI、复筛日期一律服务端算）
+     */
     NutritionScreenVO screenUpsert(NutritionScreenUpsertDTO dto);
 
     int screenDeleteById(Long id);

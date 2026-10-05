@@ -60,7 +60,7 @@ public class BizInpatientRecord extends BaseEntity implements Serializable {
     private String patientName;
 
     /**
-     * 性别（快照）：1-男 2-女
+     * 性别（快照）：1-男 2-女 9-未知
      */
     private Integer gender;
 
@@ -119,91 +119,145 @@ public class BizInpatientRecord extends BaseEntity implements Serializable {
 
     // 结构化要素：病史
 
-    /** 主诉（症状 + 持续时间） */
+    /**
+     * 主诉（症状 + 持续时间）
+     */
     private String chiefComplaint;
 
-    /** 现病史 */
+    /**
+     * 现病史
+     */
     private String presentIllness;
 
-    /** 既往史 */
+    /**
+     * 既往史
+     */
     private String pastHistory;
 
-    /** 个人史（含婚育、烟酒、职业） */
+    /**
+     * 个人史（含婚育、烟酒、职业）
+     */
     private String personalHistory;
 
-    /** 家族史 */
+    /**
+     * 家族史
+     */
     private String familyHistory;
 
-    /** 过敏史（无过敏史也必须显式写"否认"，不允许留空代替否认） */
+    /**
+     * 过敏史（无过敏史也必须显式写"否认"，不允许留空代替否认）
+     */
     private String allergyHistory;
 
     // 结构化要素：生命体征（数值列）
 
-    /** 体温（℃） */
+    /**
+     * 体温（℃）
+     */
     private BigDecimal temperature;
 
-    /** 脉搏（次/分） */
+    /**
+     * 脉搏（次/分）
+     */
     private Integer pulse;
 
-    /** 呼吸（次/分） */
+    /**
+     * 呼吸（次/分）
+     */
     private Integer respiration;
 
-    /** 收缩压（mmHg） */
+    /**
+     * 收缩压（mmHg）
+     */
     private Integer systolicPressure;
 
-    /** 舒张压（mmHg） */
+    /**
+     * 舒张压（mmHg）
+     */
     private Integer diastolicPressure;
 
-    /** 身高（cm） */
+    /**
+     * 身高（cm）
+     */
     private BigDecimal height;
 
-    /** 体重（kg） */
+    /**
+     * 体重（kg）
+     */
     private BigDecimal weight;
 
     // 结构化要素：体格检查（按系统拆列）
 
-    /** 一般情况（神志/发育/营养/体位/面容） */
+    /**
+     * 一般情况（神志/发育/营养/体位/面容）
+     */
     private String generalCondition;
 
-    /** 皮肤黏膜 */
+    /**
+     * 皮肤黏膜
+     */
     private String skinMucosa;
 
-    /** 头颈部 */
+    /**
+     * 头颈部
+     */
     private String headNeck;
 
-    /** 胸部及肺 */
+    /**
+     * 胸部及肺
+     */
     private String chestLung;
 
-    /** 心脏 */
+    /**
+     * 心脏
+     */
     private String heart;
 
-    /** 腹部 */
+    /**
+     * 腹部
+     */
     private String abdomen;
 
-    /** 脊柱四肢 */
+    /**
+     * 脊柱四肢
+     */
     private String spineLimbs;
 
-    /** 神经系统 */
+    /**
+     * 神经系统
+     */
     private String nervousSystem;
 
-    /** 专科检查 */
+    /**
+     * 专科检查
+     */
     private String specialistExam;
 
     // 结构化要素：诊疗过程与结论
 
-    /** 辅助检查 */
+    /**
+     * 辅助检查
+     */
     private String auxiliaryExam;
 
-    /** 诊断名称（多诊断用分号分隔） */
+    /**
+     * 诊断名称（多诊断用分号分隔）
+     */
     private String diagnosisName;
 
-    /** 诊断编码（ICD-10） */
+    /**
+     * 诊断编码（ICD-10）
+     */
     private String diagnosisCode;
 
-    /** 诊疗计划 / 处理意见 */
+    /**
+     * 诊疗计划 / 处理意见
+     */
     private String treatmentPlan;
 
-    /** 病程记录正文（仅病程类文书使用） */
+    /**
+     * 病程记录正文（仅病程类文书使用）
+     */
     private String courseNote;
 
     // 状态与留痕

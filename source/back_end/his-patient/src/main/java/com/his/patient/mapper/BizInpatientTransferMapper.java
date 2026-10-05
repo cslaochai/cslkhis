@@ -39,7 +39,7 @@ public interface BizInpatientTransferMapper extends BaseMapper<BizInpatientTrans
             ORDER BY t.apply_time DESC, t.id DESC
             """)
     IPage<BizInpatientTransfer> selectTransferPage(IPage<BizInpatientTransfer> page,
-                                                  @Param("q") InpatientTransferQueryPageDTO query);
+                                                   @Param("q") InpatientTransferQueryPageDTO query);
 
     /**
      * 某次住院的全部转科轨迹（按发生顺序升序：第一条的 from_dept 就是入院科室）

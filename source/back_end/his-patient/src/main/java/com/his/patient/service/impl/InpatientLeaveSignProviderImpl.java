@@ -1,16 +1,15 @@
 package com.his.patient.service.impl;
 
-import com.his.patient.service.InpatientLeaveSignProvider;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.his.common.entity.SignSubject;
 import com.his.common.enums.ObjectSignStatus;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
-import com.his.common.entity.SignSubject;
 import com.his.common.service.SignableContentProvider;
-import com.his.common.support.CanonicalText;
 import com.his.patient.entity.BizInpatientLeave;
 import com.his.patient.enums.LeaveStatusEnum;
 import com.his.patient.mapper.BizInpatientLeaveMapper;
+import com.his.patient.service.InpatientLeaveSignProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

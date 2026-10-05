@@ -12,15 +12,23 @@ import java.io.Serializable;
 @Data
 public class PatientMatchLevelSelectListVO implements Serializable {
 
-    /** 级别码 */
+    /**
+     * 级别码
+     */
     private Integer code;
 
-    /** 级别文案 */
+    /**
+     * 级别文案
+     */
     private String text;
 
-    /** 是否强依据 */
+    /**
+     * 是否强依据
+     */
     private Boolean strong;
 
-    /** 合并理由长度下限 */
+    /**
+     * 合并理由长度下限
+     */
     private Integer minReasonLength;
 }

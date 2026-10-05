@@ -4,21 +4,18 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.entity.SysBed;
-import com.his.patient.mapper.BizAdmissionMapper;
-import com.his.patient.mapper.SysBedMapper;
-import com.his.patient.support.NutritionRules;
 import com.his.patient.dto.NutritionScreenQueryPageDTO;
 import com.his.patient.dto.NutritionScreenUpsertDTO;
+import com.his.patient.entity.BizAdmission;
 import com.his.patient.entity.BizNutritionScreen;
-import com.his.patient.mapper.BizNutritionScreenMapper;
-import com.his.patient.mapper.NutritionStatMapper;
+import com.his.patient.entity.BizPatient;
+import com.his.patient.entity.SysBed;
+import com.his.patient.enums.NutritionScreenTypeEnum;
+import com.his.patient.mapper.*;
 import com.his.patient.service.NutritionScreenService;
+import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.NutritionScreenVO;
 import com.his.patient.vo.WardVO;
-import com.his.patient.mapper.BizPatientMapper;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -34,8 +31,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-
-import com.his.patient.enums.NutritionScreenTypeEnum;
 
 /**
  * 营养风险筛查实现。
@@ -62,6 +57,24 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
     private final SysBedMapper bedMapper;
     private final NutritionStatMapper statMapper;
 
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static String trim(String v) {
+        return v == null ? null : v.trim();
+    }
+
+    /**
+     * 入库前截到列宽：超长文本让 insert 报 Data too long 会把"备注太长"升级成 500
+     */
+    private static String cut(String v, int max) {
+        if (v == null) {
+            return null;
+        }
+        return v.length() <= max ? v : v.substring(0, max);
+    }
+
     @Override
     public PageResult<NutritionScreenVO> screenListPage(NutritionScreenQueryPageDTO query) {
         query.setKeyword(trim(query.getKeyword()));
@@ -71,6 +84,8 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
                 result.getRecords());
     }
+
+    // 内部
 
     @Override
     public List<NutritionScreenVO> screenListByAdmission(Long admissionId) {
@@ -178,8 +193,6 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         return screenMapper.deleteById(id);
     }
 
-    // 内部
-
     /**
      * 复筛日期：NRS2002 判阳性 → 不再排复筛（走干预：膳食医嘱/营养会诊）；
      * 判阴性 → 提交值优先，否则筛查日 +7 天。PG-SGA/MNA 是评定不是筛查，沿用提交值。
@@ -198,7 +211,9 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         return base.plusDays(NutritionRules.RE_SCREEN_DAYS);
     }
 
-    /** 科室数据权限收口：受限岗位只看得到授权科室的筛查（营养师 data_scope=1 全院，不受限） */
+    /**
+     * 科室数据权限收口：受限岗位只看得到授权科室的筛查（营养师 data_scope=1 全院，不受限）
+     */
     private void applyDeptScope(NutritionScreenQueryPageDTO query) {
         Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
         if (allowed != null) {
@@ -233,21 +248,5 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
 
     private String nextNo(String prefix, long maxSeq) {
         return prefix + LocalDate.now().format(DAY_FMT) + String.format("%04d", maxSeq + 1);
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static String trim(String v) {
-        return v == null ? null : v.trim();
-    }
-
-    /** 入库前截到列宽：超长文本让 insert 报 Data too long 会把"备注太长"升级成 500 */
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        return v.length() <= max ? v : v.substring(0, max);
     }
 }

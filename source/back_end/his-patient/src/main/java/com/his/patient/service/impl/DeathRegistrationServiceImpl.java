@@ -50,6 +50,91 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
     private final BizDeathRegistrationMapper registerMapper;
     private final RedisSequenceService redisSequenceService;
 
+    /**
+     * 前端没选证明时自动挂该住院当前有效证明；选了别张证明必须属于本次住院
+     */
+    private static Long resolveCertId(Long certId, DeathRegisterVO.Base base) {
+        if (certId == null) {
+            return base.getCertId();
+        }
+        if (Objects.equals(certId, base.getCertId())) {
+            return certId;
+        }
+        throw new BusinessException("所选死亡证明不属于本次住院（或已作废）");
+    }
+
+    /**
+     * 领取联次：只留 1~4 的码值、去重、按升序，前端多选传法不一也不用担心
+     */
+    private static String normalizeCopies(String copies) {
+        if (!StringUtils.hasText(copies)) {
+            return null;
+        }
+        java.util.TreeSet<String> set = new java.util.TreeSet<>();
+        for (String part : copies.split(",")) {
+            String v = part.trim();
+            if (v.isEmpty()) {
+                continue;
+            }
+            if (!"1".equals(v) && !"2".equals(v) && !"3".equals(v) && !"4".equals(v)) {
+                throw new BusinessException("联次取值不合法（1-记录联 2-户籍联 3-殡葬联 4-家属联）");
+            }
+            set.add(v);
+        }
+        return set.isEmpty() ? null : String.join(",", set);
+    }
+
+    private static String statusText(Integer status) {
+        if (status == null) {
+            return "未知";
+        }
+        String label = DeathRegisterStatusEnum.labelOf(status);
+        return label == null ? "未知(" + status + ")" : label;
+    }
+
+    private static String operator() {
+        String name = UserUtils.getCurrentEmployeeName();
+        return StringUtils.hasText(name) ? name : "system";
+    }
+
+    private static LocalDateTime atStart(LocalDate date) {
+        return date == null ? null : date.atStartOfDay();
+    }
+
+    private static LocalDateTime atEnd(LocalDate date) {
+        return date == null ? null : date.atTime(23, 59, 59);
+    }
+
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    // 内部
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static Integer flag(Integer value) {
+        return value == null ? 0 : (Objects.equals(value, 1) ? 1 : 0);
+    }
+
+    private static int nvl(Integer value, int fallback) {
+        return value == null ? fallback : value;
+    }
+
+    private static String trimToNull(String text) {
+        return StringUtils.hasText(text) ? text.trim() : null;
+    }
+
+    private static String cutToNull(String text, int max) {
+        return StringUtils.hasText(text) ? cut(text.trim(), max) : null;
+    }
+
+    private static String cut(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max);
+    }
+
     @Override
     public PageResult<DeathRegisterVO.Row> listPage(DeathRegistrationDTO.QueryPage query) {
         DeathRegistrationDTO.QueryPage q = query == null ? new DeathRegistrationDTO.QueryPage() : query;
@@ -69,7 +154,9 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
         return detail;
     }
 
-    /** 登记底稿/候选（新建时服务端带出死者与证明摘要，前端不必自己拼） */
+    /**
+     * 登记底稿/候选（新建时服务端带出死者与证明摘要，前端不必自己拼）
+     */
     @Override
     public DeathRegisterVO.Base base(Long admissionId) {
         DeathRegisterVO.Base base = registerMapper.selectRegisterBase(admissionId);
@@ -190,8 +277,6 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
         save(register);
     }
 
-    // 内部
-
     private BizDeathRegistration requireRegister(Long id) {
         BizDeathRegistration register = id == null ? null : registerMapper.selectById(id);
         if (register == null) {
@@ -200,90 +285,11 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
         return register;
     }
 
-    /** 前端没选证明时自动挂该住院当前有效证明；选了别张证明必须属于本次住院 */
-    private static Long resolveCertId(Long certId, DeathRegisterVO.Base base) {
-        if (certId == null) {
-            return base.getCertId();
-        }
-        if (Objects.equals(certId, base.getCertId())) {
-            return certId;
-        }
-        throw new BusinessException("所选死亡证明不属于本次住院（或已作废）");
-    }
-
-    /** 领取联次：只留 1~4 的码值、去重、按升序，前端多选传法不一也不用担心 */
-    private static String normalizeCopies(String copies) {
-        if (!StringUtils.hasText(copies)) {
-            return null;
-        }
-        java.util.TreeSet<String> set = new java.util.TreeSet<>();
-        for (String part : copies.split(",")) {
-            String v = part.trim();
-            if (v.isEmpty()) {
-                continue;
-            }
-            if (!"1".equals(v) && !"2".equals(v) && !"3".equals(v) && !"4".equals(v)) {
-                throw new BusinessException("联次取值不合法（1-记录联 2-户籍联 3-殡葬联 4-家属联）");
-            }
-            set.add(v);
-        }
-        return set.isEmpty() ? null : String.join(",", set);
-    }
-
     private void save(BizDeathRegistration register) {
         if (register.getId() == null) {
             registerMapper.insert(register);
         } else if (registerMapper.updateById(register) <= 0) {
             throw new BusinessException("死亡登记保存失败，请重试");
         }
-    }
-
-    private static String statusText(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-        String label = DeathRegisterStatusEnum.labelOf(status);
-        return label == null ? "未知(" + status + ")" : label;
-    }
-
-    private static String operator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(name) ? name : "system";
-    }
-
-    private static LocalDateTime atStart(LocalDate date) {
-        return date == null ? null : date.atStartOfDay();
-    }
-
-    private static LocalDateTime atEnd(LocalDate date) {
-        return date == null ? null : date.atTime(23, 59, 59);
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static Integer flag(Integer value) {
-        return value == null ? 0 : (Objects.equals(value, 1) ? 1 : 0);
-    }
-
-    private static int nvl(Integer value, int fallback) {
-        return value == null ? fallback : value;
-    }
-
-    private static String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
-    private static String cutToNull(String text, int max) {
-        return StringUtils.hasText(text) ? cut(text.trim(), max) : null;
-    }
-
-    private static String cut(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max);
     }
 }

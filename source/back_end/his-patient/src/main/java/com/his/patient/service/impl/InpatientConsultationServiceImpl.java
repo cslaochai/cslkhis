@@ -8,31 +8,19 @@ import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.patient.dto.*;
+import com.his.patient.entity.*;
 import com.his.patient.enums.AgeUnitEnum;
 import com.his.patient.enums.ConsultScopeEnum;
 import com.his.patient.enums.ConsultationStatusEnum;
 import com.his.patient.enums.InpatientRecordTypeEnum;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.dto.ConsultationAcceptDTO;
-import com.his.patient.dto.ConsultationCancelDTO;
-import com.his.patient.dto.ConsultationFinishDTO;
-import com.his.patient.dto.ConsultationQueryPageDTO;
-import com.his.patient.dto.ConsultationUpsertDTO;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.entity.BizConsultation;
-import com.his.patient.entity.BizInpatientRecord;
-import com.his.patient.entity.SysBed;
-import com.his.patient.mapper.BizAdmissionMapper;
-import com.his.patient.mapper.BizConsultationMapper;
-import com.his.patient.mapper.BizInpatientRecordMapper;
-import com.his.patient.mapper.SysBedMapper;
+import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientConsultationService;
 import com.his.patient.support.ConsultationLabels;
 import com.his.patient.vo.ConsultationVO;
 import com.his.patient.vo.WardVO;
-import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysMessage;
 import com.his.system.enums.BizTypeEnum;
@@ -80,7 +68,9 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class InpatientConsultationServiceImpl implements InpatientConsultationService {
 
-    /** 申请时未指定会诊医生：既有列 doctor_id 是 NOT NULL，用 0 表示"未指定" */
+    /**
+     * 申请时未指定会诊医生：既有列 doctor_id 是 NOT NULL，用 0 表示"未指定"
+     */
     private static final long DOCTOR_UNSPECIFIED = 0L;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -90,11 +80,27 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
     private final BizPatientMapper patientMapper;
     private final BizInpatientRecordMapper recordMapper;
     private final SysBedMapper bedMapper;
-    /** 站内信（consult 发送方 + accept/cancel 待办闭环） */
+    /**
+     * 站内信（consult 发送方 + accept/cancel 待办闭环）
+     */
     private final SysMessageService sysMessageService;
     private final SysEmployeeMapper sysEmployeeMapper;
 
     // 申请 / 修改
+
+    private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
+        if (from == null || to == null) {
+            return null;
+        }
+        return Duration.between(from, to).toMinutes();
+    }
+
+    /**
+     * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
+     */
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -237,6 +243,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
     }
 
+    // 应答
+
     /**
      * 修改「待应答」的申请。
      *
@@ -281,6 +289,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         return entity.getConsultationNo();
     }
 
+    // 完成（回写病历）
+
     private void validateConsultType(Integer consultType) {
         // ③业务规则：码值合法性；"不能为空"已收口到 DTO @NotNull
         if (!Objects.equals(ConsultScopeEnum.IN_DEPT.getCode(), consultType)
@@ -289,8 +299,6 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
             throw new BusinessException("会诊范围取值不合法（应为 1-科内 2-科间 3-全院）");
         }
     }
-
-    // 应答
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -339,7 +347,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         log.info("会诊应答 consultationNo={} 接诊医生={} 等待分钟={}", entity.getConsultationNo(), doctorName, waitMinutes);
     }
 
-    // 完成（回写病历）
+    // 取消
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -451,7 +459,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         return record;
     }
 
-    // 取消
+    // 查询
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -480,7 +488,9 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
                 entity.getConsultationNo(), dto.getCancelReason(), currentName());
     }
 
-    /** 会诊待办消息闭环：handle_status 0 → {@code targetStatus}（1 已处理 / 2 已关闭） */
+    /**
+     * 会诊待办消息闭环：handle_status 0 → {@code targetStatus}（1 已处理 / 2 已关闭）
+     */
     private void closeConsultTodo(Long consultationId, int targetStatus) {
         try {
             sysMessageService.update(new LambdaUpdateWrapper<SysMessage>()
@@ -494,8 +504,6 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
     }
 
-    // 查询
-
     @Override
     public IPage<ConsultationVO> listPage(ConsultationQueryPageDTO query) {
         Page<ConsultationVO> page = new Page<>(query.getPageNum(), query.getPageSize());
@@ -503,6 +511,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         result.getRecords().forEach(this::decorate);
         return result;
     }
+
+    // 展示态
 
     @Override
     public ConsultationVO getDetailById(Long consultationId) {
@@ -518,12 +528,12 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         return vo;
     }
 
+    // 工具
+
     @Override
     public long countUnfinished(Long toDeptId, Long admissionId) {
         return consultationMapper.countUnfinished(toDeptId, admissionId);
     }
-
-    // 展示态
 
     private void decorate(ConsultationVO vo) {
         vo.setConsultTypeText(ConsultationLabels.typeText(vo.getConsultType()));
@@ -556,8 +566,6 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
     }
 
-    // 工具
-
     private BizConsultation mustGet(Long consultationId) {
         BizConsultation entity = consultationMapper.selectById(consultationId);
         if (entity == null) {
@@ -566,7 +574,9 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         return entity;
     }
 
-    /** 申请科室取入院科室；入院科室为空时从病区推导（病区必有科室） */
+    /**
+     * 申请科室取入院科室；入院科室为空时从病区推导（病区必有科室）
+     */
     private Long resolveAdmissionDeptId(BizAdmission admission) {
         if (admission.getDeptId() != null) {
             return admission.getDeptId();
@@ -580,7 +590,9 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         return null;
     }
 
-    /** 科室名（取不到就返回原文案"ID=xx"，绝不编一个科室名） */
+    /**
+     * 科室名（取不到就返回原文案"ID=xx"，绝不编一个科室名）
+     */
     private String deptNameOf(Long deptId) {
         if (deptId == null) {
             return "未知科室";
@@ -601,7 +613,9 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         return prefix + String.format("%04d", seq);
     }
 
-    /** 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径 */
+    /**
+     * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
+     */
     private Long currentEmpId() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();
@@ -630,17 +644,5 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
-        if (from == null || to == null) {
-            return null;
-        }
-        return Duration.between(from, to).toMinutes();
-    }
-
-    /** 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入） */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
     }
 }

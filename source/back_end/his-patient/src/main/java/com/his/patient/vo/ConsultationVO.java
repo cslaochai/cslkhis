@@ -134,7 +134,9 @@ public class ConsultationVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long applyDoctorId;
 
-    /** 申请医生姓名（快照） */
+    /**
+     * 申请医生姓名（快照）
+     */
     private String applyDoctorName;
 
     /**
@@ -153,7 +155,9 @@ public class ConsultationVO implements Serializable {
      */
     private String consultStatusText;
 
-    /** 会诊方接诊时间 */
+    /**
+     * 会诊方接诊时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime acceptTime;
 
@@ -163,7 +167,9 @@ public class ConsultationVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long acceptDoctorId;
 
-    /** 接诊医生姓名（快照） */
+    /**
+     * 接诊医生姓名（快照）
+     */
     private String acceptDoctorName;
 
     /**

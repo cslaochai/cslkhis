@@ -1,16 +1,17 @@
 package com.his.patient.service.impl;
 
-import com.his.patient.service.DischargeDrugService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.DischargeDrugDTO;
 import com.his.patient.entity.BizDischargeDrug;
+import com.his.patient.enums.DischargeDrugStatusEnum;
 import com.his.patient.mapper.BizDischargeDrugMapper;
+import com.his.patient.service.DischargeDrugService;
+import com.his.patient.support.DictText;
 import com.his.patient.vo.DischargeDrugSelectListVO;
 import com.his.patient.vo.DischargeDrugVO;
-import com.his.patient.support.DictText;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,8 +23,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
-
-import com.his.patient.enums.DischargeDrugStatusEnum;
 
 /**
  * 出院带药服务。
@@ -92,7 +91,9 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
         return page.convert(this::toVo);
     }
 
-    /** 按入院次列全部带药单（出院带药页选药下拉用） */
+    /**
+     * 按入院次列全部带药单（出院带药页选药下拉用）
+     */
     public List<DischargeDrugSelectListVO> listByAdmission(Long admissionId) {
         return drugMapper.selectList(new LambdaQueryWrapper<BizDischargeDrug>()
                         .eq(BizDischargeDrug::getAdmissionId, admissionId)
@@ -108,7 +109,9 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
         return toVo(d);
     }
 
-    /** 批量发药（药房岗）：只有待发药的单能发；部分单已发则整体失败，避免半批状态难对账 */
+    /**
+     * 批量发药（药房岗）：只有待发药的单能发；部分单已发则整体失败，避免半批状态难对账
+     */
     @Transactional(rollbackFor = Exception.class)
     public List<DischargeDrugVO> dispense(DischargeDrugDTO.Dispense dto) {
         // 「请选择要发药的带药单」已收口到 DTO @NotEmpty + Controller @Valid
@@ -152,7 +155,9 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
         drugMapper.deleteById(id);
     }
 
-    /** MP 全局逻辑删除下 deleteById 自动走软删，这里只需要查活单时对齐 del_flag=0 */
+    /**
+     * MP 全局逻辑删除下 deleteById 自动走软删，这里只需要查活单时对齐 del_flag=0
+     */
     private String tr(String s) {
         return s == null ? null : s.trim();
     }
@@ -177,7 +182,9 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
         }
     }
 
-    /** 单号 DDA + yyyyMMddHHmmss + 3 位随机，撞库概率忽略；唯一索引兜底 */
+    /**
+     * 单号 DDA + yyyyMMddHHmmss + 3 位随机，撞库概率忽略；唯一索引兜底
+     */
     private String nextOrderNo() {
         return "DDA" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())
                 + ThreadLocalRandom.current().nextInt(100, 1000);

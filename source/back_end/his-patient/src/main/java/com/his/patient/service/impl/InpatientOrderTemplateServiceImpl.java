@@ -9,6 +9,7 @@ import com.his.patient.dto.InpatientOrderTemplateQueryPageDTO;
 import com.his.patient.dto.InpatientOrderTemplateUpsertDTO;
 import com.his.patient.entity.BizInpatientOrderTemplate;
 import com.his.patient.entity.BizInpatientOrderTemplateItem;
+import com.his.patient.enums.OrderTypeEnum;
 import com.his.patient.mapper.BizInpatientOrderTemplateItemMapper;
 import com.his.patient.mapper.BizInpatientOrderTemplateMapper;
 import com.his.patient.service.InpatientOrderTemplateService;
@@ -18,8 +19,8 @@ import com.his.patient.vo.InpatientOrderTemplateDetailVO;
 import com.his.patient.vo.InpatientOrderTemplateItemVO;
 import com.his.patient.vo.InpatientOrderTemplateListVO;
 import com.his.patient.vo.InpatientOrderTemplateSelectListVO;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -31,8 +32,6 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-
-import com.his.patient.enums.OrderTypeEnum;
 
 /**
  * 住院医嘱模板服务实现。
@@ -258,7 +257,9 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         return entity;
     }
 
-    /** 备注列宽 500，超长直接写库会报 Data too long，把"保存失败"升级成 500 */
+    /**
+     * 备注列宽 500，超长直接写库会报 Data too long，把"保存失败"升级成 500
+     */
     private String trimRemark(String remark) {
         if (remark == null) {
             return null;
@@ -267,7 +268,9 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         return trimmed.length() > 500 ? trimmed.substring(0, 500) : trimmed;
     }
 
-    /** 模板归属一律用**员工ID**（不是用户的ID），与医嘱行 doctor_id 同一口径 */
+    /**
+     * 模板归属一律用**员工ID**（不是用户的ID），与医嘱行 doctor_id 同一口径
+     */
     private Long currentEmpId() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();

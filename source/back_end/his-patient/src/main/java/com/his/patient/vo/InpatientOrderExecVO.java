@@ -43,7 +43,9 @@ public class InpatientOrderExecVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
-    /** 患者ID（冗余） */
+    /**
+     * 患者ID（冗余）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
@@ -157,7 +159,9 @@ public class InpatientOrderExecVO implements Serializable {
      */
     private String orderStatusText;
 
-    /** 本条医嘱的第几次执行 */
+    /**
+     * 本条医嘱的第几次执行
+     */
     private Integer execSeq;
 
     /**

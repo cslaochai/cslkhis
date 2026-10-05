@@ -4,25 +4,22 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.enums.AdverseAcquiredEnum;
-import com.his.common.enums.NursingIndicatorEnum;
-import com.his.common.enums.NursingQcCategoryEnum;
-import com.his.common.enums.NursingQcReportEnum;
-import com.his.common.enums.NursingQcStatusEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.NursingQcDTO;
 import com.his.patient.entity.BizNursingQcCheck;
 import com.his.patient.entity.BizNursingQcCheckItem;
 import com.his.patient.entity.BizNursingQcIndicator;
+import com.his.patient.enums.QcIndicatorSourceEnum;
 import com.his.patient.mapper.BizNursingQcCheckItemMapper;
 import com.his.patient.mapper.BizNursingQcCheckMapper;
 import com.his.patient.mapper.BizNursingQcIndicatorMapper;
 import com.his.patient.mapper.SysNursingQcItemMapper;
 import com.his.patient.service.NursingQcService;
 import com.his.patient.vo.NurseQcVO;
-import com.his.security.entity.CurrentUser;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,14 +31,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import com.his.patient.enums.QcIndicatorSourceEnum;
+import java.util.*;
 
 /**
  * 护理质控服务实现（sql/168）。
@@ -83,6 +73,113 @@ public class NursingQcServiceImpl implements NursingQcService {
 
     // 参照数据
 
+    private static String requireMonth(String month, String label) {
+        // ②非web入口：共用守卫，主要职责是 yyyy-MM 解析；HTTP 侧非空已由 DTO @NotNull + @Valid 收口
+        String value = trimToNull(month);
+        if (value == null) {
+            throw new BusinessException("请选择" + label);
+        }
+        parseMonthWithLabel(value, label);
+        return value;
+    }
+
+    private static YearMonth parseMonth(String month) {
+        return parseMonthWithLabel(month, "统计月份");
+    }
+
+    private static YearMonth parseMonthWithLabel(String month, String label) {
+        try {
+            return YearMonth.parse(month);
+        } catch (DateTimeParseException e) {
+            throw new BusinessException(label + "格式必须为 yyyy-MM");
+        }
+    }
+
+    // 检查单
+
+    /**
+     * 单号：QC + yyyyMM + 两位类别 + 病区ID 后五位（唯一键已保证三元组唯一，所以号码不会重复）
+     */
+    private static String buildCheckNo(String checkMonth, int category, Long wardId) {
+        long tail = wardId == null ? 0L : Math.floorMod(wardId, 100000L);
+        return "QC" + checkMonth.replace("-", "") + String.format("%02d", category) + String.format("%05d", tail);
+    }
+
+    private static String autoSummary(int category, int sampleCount, int qualifiedCount, BigDecimal qualifiedRate,
+                                      BigDecimal scoreRate, List<BizNursingQcCheckItem> rows) {
+        long badItems = rows.stream()
+                .filter(r -> r.getQualifiedNum() != null && r.getCheckedNum() != null
+                        && r.getQualifiedNum() < r.getCheckedNum())
+                .count();
+        return "本轮" + NursingQcCategoryEnum.labelOf(category) + "抽查 " + sampleCount + " 例，合格 "
+                + qualifiedCount + " 例，合格率 " + qualifiedRate.toPlainString() + "%，得分率 "
+                + scoreRate.toPlainString() + "%；重点问题 " + badItems + " 项";
+    }
+
+    /**
+     * 达标判定：分母 0 或无目标 → NULL（页面上显示「—」，不是「未达标」）
+     */
+    private static Integer reachedFlag(NursingIndicatorEnum e, BigDecimal rate, BigDecimal target) {
+        if (e == null || rate == null) {
+            return null;
+        }
+        BigDecimal t = target != null ? target : e.targetDecimal();
+        if (t == null) {
+            return null;
+        }
+        return (e.higherIsBetter() ? rate.compareTo(t) >= 0 : rate.compareTo(t) <= 0) ? 1 : 0;
+    }
+
+    private static String reachedText(Integer flag) {
+        if (flag == null) {
+            return "无目标或无数据";
+        }
+        return flag == 1 ? "达标" : "未达标";
+    }
+
+    /**
+     * 百分数：分子/分母×100 保留两位；分母 0 返回 0（检查单没有明细根本存不进来）
+     */
+    private static BigDecimal percent(BigDecimal numerator, BigDecimal denominator) {
+        if (denominator == null || denominator.signum() == 0) {
+            return BigDecimal.ZERO;
+        }
+        return numerator.multiply(HUNDRED).divide(denominator, 2, RoundingMode.HALF_UP);
+    }
+
+    // 台账与看板
+
+    private static String operator() {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            return "system";
+        }
+        if (user.getUsername() != null && !user.getUsername().isBlank()) {
+            return user.getUsername();
+        }
+        String name = UserUtils.getCurrentEmployeeName();
+        return name == null || name.isBlank() ? "system" : name;
+    }
+
+    private static String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String cut(String value, int max) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() <= max ? value : value.substring(0, max);
+    }
+
+    private static int nvl(Integer value, int fallback) {
+        return value == null ? fallback : value;
+    }
+
     @Override
     public List<NurseQcVO.Ward> wardSelectList(String keyword) {
         return checkMapper.selectWardOptions(scopedDeptIds(null), trimToNull(keyword));
@@ -103,7 +200,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         return items;
     }
 
-    // 检查单
+    // 台账行构建（口径 a/b/c/d 的 Java 侧唯一实现）
 
     @Override
     public PageResult<NurseQcVO.CheckRow> checkListPage(NursingQcDTO.CheckQueryPage query) {
@@ -115,6 +212,8 @@ public class NursingQcServiceImpl implements NursingQcService {
         records.forEach(this::fillCheckText);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
+
+    // 校验与文本填充
 
     @Override
     public NurseQcVO.CheckDetail getDetailById(Long id) {
@@ -175,7 +274,7 @@ public class NursingQcServiceImpl implements NursingQcService {
             }
             BigDecimal score = checked <= 0 ? BigDecimal.ZERO
                     : def.getFullScore().multiply(BigDecimal.valueOf(qualified))
-                            .divide(BigDecimal.valueOf(checked), 1, RoundingMode.HALF_UP);
+                    .divide(BigDecimal.valueOf(checked), 1, RoundingMode.HALF_UP);
             BizNursingQcCheckItem item = new BizNursingQcCheckItem();
             item.setItemId(def.getItemId());
             item.setItemCode(def.getItemCode());
@@ -305,8 +404,6 @@ public class NursingQcServiceImpl implements NursingQcService {
         checkItemMapper.purgeByCheckId(row.getId());
         checkMapper.purgeById(row.getId());
     }
-
-    // 台账与看板
 
     @Override
     public PageResult<NurseQcVO.LedgerRow> ledgerListPage(NursingQcDTO.LedgerQueryPage query) {
@@ -484,9 +581,9 @@ public class NursingQcServiceImpl implements NursingQcService {
         result.setReportStatusText(target.getLabel());
         result.setMessage(affected == 0
                 ? statMonth + " 没有需要" + (target == NursingQcReportEnum.REPORTED ? "上报" : "退回")
-                        + "的台账行（先重算再上报）"
+                + "的台账行（先重算再上报）"
                 : statMonth + "：" + affected + " 行台账已" + target.getLabel()
-                        + (target == NursingQcReportEnum.REPORTED ? "，重算不再覆盖这些行" : "，可以重算了"));
+                + (target == NursingQcReportEnum.REPORTED ? "，重算不再覆盖这些行" : "，可以重算了"));
         return result;
     }
 
@@ -505,8 +602,6 @@ public class NursingQcServiceImpl implements NursingQcService {
         }
         indicatorMapper.purgeById(id);
     }
-
-    // 台账行构建（口径 a/b/c/d 的 Java 侧唯一实现）
 
     /**
      * 一条指标在一个病区一个月的台账行；返回 null 表示本月不写行（合格率类且没有检查单）。
@@ -535,8 +630,8 @@ public class NursingQcServiceImpl implements NursingQcService {
             denominator = BigDecimal.valueOf(bedDays);
             remark = "分母=该病区 " + statMonth + " 实际占用床日 " + bedDays + "（统计末日 " + statEnd + "）；分子="
                     + (e == NursingIndicatorEnum.FALL_RATE
-                        ? "跌倒/坠床 " + count + " 例"
-                        : "院内获得压疮 " + count + " 例（入院带入留档但不进分子）");
+                    ? "跌倒/坠床 " + count + " 例"
+                    : "院内获得压疮 " + count + " 例（入院带入留档但不进分子）");
         }
         BigDecimal rate = e.rate(numerator, denominator);
         BigDecimal target = e.targetDecimal();
@@ -566,8 +661,6 @@ public class NursingQcServiceImpl implements NursingQcService {
         return row;
     }
 
-    // 校验与文本填充
-
     private NurseQcVO.CheckRow requireCheck(Long id) {
         // ②非web入口：多个 service 方法共用的参数守卫，HTTP 必填已由 DTO @NotNull + @Valid / @RequestParam 收口
         if (id == null) {
@@ -596,7 +689,9 @@ public class NursingQcServiceImpl implements NursingQcService {
         return ward;
     }
 
-    /** 可操作的病区：存在、启用，且在当前岗位数据范围内 */
+    /**
+     * 可操作的病区：存在、启用，且在当前岗位数据范围内
+     */
     private NurseQcVO.Ward requireVisibleWard(Long wardId) {
         NurseQcVO.Ward ward = requireWard(wardId);
         if (!DeptScopeGuard.canAccessDept(ward.getDeptId())) {
@@ -642,45 +737,6 @@ public class NursingQcServiceImpl implements NursingQcService {
         return e;
     }
 
-    private static String requireMonth(String month, String label) {
-        // ②非web入口：共用守卫，主要职责是 yyyy-MM 解析；HTTP 侧非空已由 DTO @NotNull + @Valid 收口
-        String value = trimToNull(month);
-        if (value == null) {
-            throw new BusinessException("请选择" + label);
-        }
-        parseMonthWithLabel(value, label);
-        return value;
-    }
-
-    private static YearMonth parseMonth(String month) {
-        return parseMonthWithLabel(month, "统计月份");
-    }
-
-    private static YearMonth parseMonthWithLabel(String month, String label) {
-        try {
-            return YearMonth.parse(month);
-        } catch (DateTimeParseException e) {
-            throw new BusinessException(label + "格式必须为 yyyy-MM");
-        }
-    }
-
-    /** 单号：QC + yyyyMM + 两位类别 + 病区ID 后五位（唯一键已保证三元组唯一，所以号码不会重复） */
-    private static String buildCheckNo(String checkMonth, int category, Long wardId) {
-        long tail = wardId == null ? 0L : Math.floorMod(wardId, 100000L);
-        return "QC" + checkMonth.replace("-", "") + String.format("%02d", category) + String.format("%05d", tail);
-    }
-
-    private static String autoSummary(int category, int sampleCount, int qualifiedCount, BigDecimal qualifiedRate,
-                                      BigDecimal scoreRate, List<BizNursingQcCheckItem> rows) {
-        long badItems = rows.stream()
-                .filter(r -> r.getQualifiedNum() != null && r.getCheckedNum() != null
-                        && r.getQualifiedNum() < r.getCheckedNum())
-                .count();
-        return "本轮" + NursingQcCategoryEnum.labelOf(category) + "抽查 " + sampleCount + " 例，合格 "
-                + qualifiedCount + " 例，合格率 " + qualifiedRate.toPlainString() + "%，得分率 "
-                + scoreRate.toPlainString() + "%；重点问题 " + badItems + " 项";
-    }
-
     private void fillItemDefText(NurseQcVO.ItemDef item) {
         item.setCategoryName(NursingQcCategoryEnum.labelOf(item.getCategory()));
     }
@@ -714,34 +770,9 @@ public class NursingQcServiceImpl implements NursingQcService {
         kpi.setReachedText(reachedText(kpi.getReachedFlag()));
     }
 
-    /** 达标判定：分母 0 或无目标 → NULL（页面上显示「—」，不是「未达标」） */
-    private static Integer reachedFlag(NursingIndicatorEnum e, BigDecimal rate, BigDecimal target) {
-        if (e == null || rate == null) {
-            return null;
-        }
-        BigDecimal t = target != null ? target : e.targetDecimal();
-        if (t == null) {
-            return null;
-        }
-        return (e.higherIsBetter() ? rate.compareTo(t) >= 0 : rate.compareTo(t) <= 0) ? 1 : 0;
-    }
-
-    private static String reachedText(Integer flag) {
-        if (flag == null) {
-            return "无目标或无数据";
-        }
-        return flag == 1 ? "达标" : "未达标";
-    }
-
-    /** 百分数：分子/分母×100 保留两位；分母 0 返回 0（检查单没有明细根本存不进来） */
-    private static BigDecimal percent(BigDecimal numerator, BigDecimal denominator) {
-        if (denominator == null || denominator.signum() == 0) {
-            return BigDecimal.ZERO;
-        }
-        return numerator.multiply(HUNDRED).divide(denominator, 2, RoundingMode.HALF_UP);
-    }
-
-    /** 当前岗位可见科室；null=不收口（全院），空集合用 -1 兜住，避免 IN () 语法错 */
+    /**
+     * 当前岗位可见科室；null=不收口（全院），空集合用 -1 兜住，避免 IN () 语法错
+     */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
         Long resolved = DeptScopeGuard.resolveDeptId(requestedDeptId);
         if (resolved != null) {
@@ -752,36 +783,5 @@ public class NursingQcServiceImpl implements NursingQcService {
             return null;
         }
         return allowed.isEmpty() ? List.of(-1L) : List.copyOf(allowed);
-    }
-
-    private static String operator() {
-        CurrentUser user = UserUtils.getCurrentUser();
-        if (user == null) {
-            return "system";
-        }
-        if (user.getUsername() != null && !user.getUsername().isBlank()) {
-            return user.getUsername();
-        }
-        String name = UserUtils.getCurrentEmployeeName();
-        return name == null || name.isBlank() ? "system" : name;
-    }
-
-    private static String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() <= max ? value : value.substring(0, max);
-    }
-
-    private static int nvl(Integer value, int fallback) {
-        return value == null ? fallback : value;
     }
 }

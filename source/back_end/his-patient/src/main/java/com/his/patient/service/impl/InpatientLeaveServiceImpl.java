@@ -4,16 +4,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
-import com.his.common.exception.BusinessException;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.ObjectSignStatus;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
+import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.vo.SignatureVO;
 import com.his.patient.dto.InpatientLeaveDTO;
 import com.his.patient.entity.BizInpatientLeave;
+import com.his.patient.enums.InpatientLeaveTypeEnum;
 import com.his.patient.enums.LeaveStatusEnum;
 import com.his.patient.mapper.BizInpatientLeaveMapper;
 import com.his.patient.service.InpatientLeaveService;
@@ -34,8 +35,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-
-import com.his.patient.enums.InpatientLeaveTypeEnum;
 
 /**
  * 住院请假/离院服务实现（sql/162）。
@@ -67,21 +66,33 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     private static final int NAME_MAX = 50;
     private static final int PHONE_MAX = 20;
     private static final int ADVICE_MAX = 1000;
-    /** 手写签名 dataURL 上限 512KB（canvas PNG 正常几十 KB，兜住恶意大串） */
+    /**
+     * 手写签名 dataURL 上限 512KB（canvas PNG 正常几十 KB，兜住恶意大串）
+     */
     private static final int SIGNATURE_MAX = 512 * 1024;
 
-    /** 请假类别合法码（字典 his_leave_type） */
+    /**
+     * 请假类别合法码（字典 his_leave_type）
+     */
     private static final Set<Integer> LEAVE_TYPES = Set.of(
             InpatientLeaveTypeEnum.DAY_TRIP.getCode(), InpatientLeaveTypeEnum.OVERNIGHT.getCode(), InpatientLeaveTypeEnum.OTHER.getCode());
-    /** 与患者关系合法码（字典 his_notice_relation，与病危重通知同一码表） */
+    /**
+     * 与患者关系合法码（字典 his_notice_relation，与病危重通知同一码表）
+     */
     private static final Set<Integer> RELATIONS = Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 99);
-    /** 超期联系结果合法码（字典 his_leave_contact） */
+    /**
+     * 超期联系结果合法码（字典 his_leave_contact）
+     */
     private static final Set<Integer> CONTACT_RESULTS = Set.of(1, 2, 3);
-    /** 上报对象合法码（字典 his_leave_report） */
+    /**
+     * 上报对象合法码（字典 his_leave_report）
+     */
     private static final Set<Integer> REPORT_TOS = Set.of(1, 2, 3);
 
     private static final String MAX_HOURS_CONFIG_KEY = "inpatient.leave.max_hours";
-    /** 配置缺失时的兜底上限（小时）。宁可保守，也不回落成「无上限」。 */
+    /**
+     * 配置缺失时的兜底上限（小时）。宁可保守，也不回落成「无上限」。
+     */
     private static final int MAX_HOURS_FALLBACK = 72;
 
     private final BizInpatientLeaveMapper leaveMapper;
@@ -90,6 +101,66 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     private final SysConfigMapper sysConfigMapper;
 
     // 查询
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static LocalDateTime toSeconds(LocalDateTime t) {
+        return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static LocalDateTime parse(String text) {
+        if (text == null || text.isEmpty()) {
+            return LocalDateTime.MIN;
+        }
+        return LocalDateTime.parse(text.length() > 19 ? text.substring(0, 19) : text,
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
+
+    private static LocalDateTime atStart(java.time.LocalDate date) {
+        return date == null ? null : date.atStartOfDay();
+    }
+
+    /**
+     * 按日期过滤必须补全天边界（AGENTS §3：datetime 恒大于当日 00:00 字符串）
+     */
+    private static LocalDateTime atEnd(java.time.LocalDate date) {
+        return date == null ? null : date.atTime(23, 59, 59);
+    }
+
+    // 填写 / 审批 / 离院 / 销假 / 取消 / 超期处置 / 打印
+
+    private static Integer nvl(Integer v, int d) {
+        return v == null ? d : v;
+    }
+
+    private static String requireText(String text, String message) {
+        String t = trimToNull(text);
+        if (t == null) {
+            throw new BusinessException(message);
+        }
+        return t;
+    }
+
+    private static String trimToNull(String text) {
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        return text.trim();
+    }
+
+    private static String cut(String text, int max) {
+        if (text == null) {
+            return null;
+        }
+        return text.length() <= max ? text : text.substring(0, max);
+    }
+
+    private static String cutToNull(String text, int max) {
+        String t = trimToNull(text);
+        return t == null ? null : cut(t, max);
+    }
 
     @Override
     public PageResult<InpatientLeaveVO.Row> listPage(InpatientLeaveDTO.QueryPage query) {
@@ -117,6 +188,8 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         return detail;
     }
 
+    // 内部
+
     @Override
     public InpatientLeaveVO.Base base(Long admissionId) {
         InpatientLeaveVO.Base base = leaveMapper.selectAdmissionBase(admissionId);
@@ -137,8 +210,6 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         InpatientLeaveVO.Stats stats = leaveMapper.selectStats(scopedDeptIds(null));
         return stats == null ? new InpatientLeaveVO.Stats() : stats;
     }
-
-    // 填写 / 审批 / 离院 / 销假 / 取消 / 超期处置 / 打印
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -439,8 +510,6 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         saveLeave(leave, false);
     }
 
-    // 内部
-
     private List<BizInpatientLeave> selectActiveLeaves(Long admissionId) {
         return leaveMapper.selectList(new LambdaQueryWrapper<BizInpatientLeave>()
                 .eq(BizInpatientLeave::getAdmissionId, admissionId)
@@ -458,7 +527,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         return leave;
     }
 
-    /** 单次请假时长上限：系统参数缺失/非法回落 72，不回落成「无上限」 */
+    /**
+     * 单次请假时长上限：系统参数缺失/非法回落 72，不回落成「无上限」
+     */
     private long resolveMaxHours() {
         SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
                 .eq(SysConfig::getConfigKey, MAX_HOURS_CONFIG_KEY));
@@ -479,14 +550,18 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         }
     }
 
-    /** 超期未归：expectedReturnTime 已过且状态=已离院（查询时算，不落状态列） */
+    /**
+     * 超期未归：expectedReturnTime 已过且状态=已离院（查询时算，不落状态列）
+     */
     private boolean isOverdue(BizInpatientLeave leave) {
         return Objects.equals(LeaveStatusEnum.LEFT.getCode(), leave.getLeaveStatus())
                 && leave.getExpectedReturnTime() != null
                 && leave.getExpectedReturnTime().isBefore(LocalDateTime.now());
     }
 
-    /** 台账/详情行的超期展示态（时间字段在 SQL 已格式化为字符串，这里现算） */
+    /**
+     * 台账/详情行的超期展示态（时间字段在 SQL 已格式化为字符串，这里现算）
+     */
     private void applyOverdue(InpatientLeaveVO.Row row) {
         boolean overdue = Objects.equals(LeaveStatusEnum.LEFT.getCode(), row.getLeaveStatus())
                 && row.getExpectedReturnTime() != null
@@ -507,7 +582,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
                 : 0L);
     }
 
-    /** 动作可用性全部由后端给出，前端不自判状态（同转科/输血口径） */
+    /**
+     * 动作可用性全部由后端给出，前端不自判状态（同转科/输血口径）
+     */
     private void applyActions(InpatientLeaveVO.Detail d) {
         Integer st = d.getLeaveStatus();
         boolean pending = Objects.equals(LeaveStatusEnum.PENDING.getCode(), st);
@@ -557,61 +634,5 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     private String currentOperator() {
         String name = UserUtils.getCurrentEmployeeName();
         return StringUtils.hasText(name) ? name : "system";
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime t) {
-        return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime parse(String text) {
-        if (text == null || text.isEmpty()) {
-            return LocalDateTime.MIN;
-        }
-        return LocalDateTime.parse(text.length() > 19 ? text.substring(0, 19) : text,
-                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-    }
-
-    private static LocalDateTime atStart(java.time.LocalDate date) {
-        return date == null ? null : date.atStartOfDay();
-    }
-
-    /** 按日期过滤必须补全天边界（AGENTS §3：datetime 恒大于当日 00:00 字符串） */
-    private static LocalDateTime atEnd(java.time.LocalDate date) {
-        return date == null ? null : date.atTime(23, 59, 59);
-    }
-
-    private static Integer nvl(Integer v, int d) {
-        return v == null ? d : v;
-    }
-
-    private static String requireText(String text, String message) {
-        String t = trimToNull(text);
-        if (t == null) {
-            throw new BusinessException(message);
-        }
-        return t;
-    }
-
-    private static String trimToNull(String text) {
-        if (!StringUtils.hasText(text)) {
-            return null;
-        }
-        return text.trim();
-    }
-
-    private static String cut(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
-    private static String cutToNull(String text, int max) {
-        String t = trimToNull(text);
-        return t == null ? null : cut(t, max);
     }
 }

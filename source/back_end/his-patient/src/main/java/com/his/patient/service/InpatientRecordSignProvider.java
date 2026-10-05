@@ -1,12 +1,13 @@
 package com.his.patient.service;
 
-import com.his.common.service.SignableContentProvider;
-import com.his.common.util.SignCrypto;
+import com.his.common.entity.SignSubject;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
-import com.his.common.entity.SignSubject;
+import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
+import com.his.common.util.SignCrypto;
 import com.his.patient.entity.BizInpatientRecord;
+
 import java.time.LocalDateTime;
 
 public interface InpatientRecordSignProvider extends SignableContentProvider {
@@ -58,9 +59,18 @@ public interface InpatientRecordSignProvider extends SignableContentProvider {
                 .build();
     }
 
-    /** 供外部（如签名详情页）按当前内容重算摘要用 */
+    /**
+     * 供外部（如签名详情页）按当前内容重算摘要用
+     */
     public static String digestOf(BizInpatientRecord r) {
         return SignCrypto.sha256Hex(canonical(r));
+    }
+
+    /**
+     * BigDecimal 一律去掉尾部零再转字符串：{@code 36.50} 与 {@code 36.5} 是同一个值，摘要必须一致
+     */
+    static String plain(java.math.BigDecimal v) {
+        return v == null ? null : v.stripTrailingZeros().toPlainString();
     }
 
     SignBizType bizType();
@@ -72,9 +82,4 @@ public interface InpatientRecordSignProvider extends SignableContentProvider {
     void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime);
 
     void revokeSignAnchor(Long bizId, Long signId);
-
-    /** BigDecimal 一律去掉尾部零再转字符串：{@code 36.50} 与 {@code 36.5} 是同一个值，摘要必须一致 */
-    static String plain(java.math.BigDecimal v) {
-        return v == null ? null : v.stripTrailingZeros().toPlainString();
-    }
 }

@@ -16,49 +16,77 @@ import java.math.BigDecimal;
 @Data
 public class InpatientOrderTemplateItemVO implements Serializable {
 
-    /** 明细ID */
+    /**
+     * 明细ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 模板主表ID */
+    /**
+     * 模板主表ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long templateId;
 
-    /** 排序 */
+    /**
+     * 排序
+     */
     private Integer sortNo;
 
-    /** 医嘱类别 */
+    /**
+     * 医嘱类别
+     */
     private Integer orderClass;
 
     private String orderClassText;
 
-    /** 项目编码（药品/检查/检验字典码，套用时按它回查现价与下拉选中态） */
+    /**
+     * 项目编码（药品/检查/检验字典码，套用时按它回查现价与下拉选中态）
+     */
     private String itemCode;
 
-    /** 项目名称 */
+    /**
+     * 项目名称
+     */
     private String itemName;
 
-    /** 规格 */
+    /**
+     * 规格
+     */
     private String spec;
 
-    /** 单位 */
+    /**
+     * 单位
+     */
     private String unit;
 
-    /** 单次剂量 */
+    /**
+     * 单次剂量
+     */
     private BigDecimal dosage;
 
-    /** 剂量单位 */
+    /**
+     * 剂量单位
+     */
     private String dosageUnit;
 
-    /** 给药途径 */
+    /**
+     * 给药途径
+     */
     private String route;
 
-    /** 频次 */
+    /**
+     * 频次
+     */
     private String frequency;
 
-    /** 数量 */
+    /**
+     * 数量
+     */
     private BigDecimal quantity;
 
-    /** 录入时单价 */
+    /**
+     * 录入时单价
+     */
     private BigDecimal price;
 }

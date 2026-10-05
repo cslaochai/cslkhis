@@ -34,7 +34,9 @@ public interface BizNurseScheduleRuleMapper extends BaseMapper<BizNurseScheduleR
             """)
     List<NurseScheduleVO.Rule> selectRulesByWard(@Param("wardId") Long wardId);
 
-    /** 全部病区规则（按病区聚合的校验用，一次捞完避免逐病区 N 次查询） */
+    /**
+     * 全部病区规则（按病区聚合的校验用，一次捞完避免逐病区 N 次查询）
+     */
     @Select("""
             <script>
             SELECT id, ward_id AS wardId, ward_name AS wardName, shift_id AS shiftId, shift_name AS shiftName,

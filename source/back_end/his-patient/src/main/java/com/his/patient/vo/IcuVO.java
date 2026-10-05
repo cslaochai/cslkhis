@@ -18,7 +18,9 @@ import java.util.List;
  */
 public class IcuVO {
 
-    /** 入出科记录 */
+    /**
+     * 入出科记录
+     */
     @Data
     public static class StayVO {
         @JsonSerialize(using = ToStringSerializer.class)
@@ -26,18 +28,26 @@ public class IcuVO {
 
         private String stayNo;
 
-        /** 入院ID */
+        /**
+         * 入院ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long admissionId;
 
-        /** 患者ID */
+        /**
+         * 患者ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long patientId;
 
-        /** 患者编号 */
+        /**
+         * 患者编号
+         */
         private String patientNo;
 
-        /** 患者姓名 */
+        /**
+         * 患者姓名
+         */
         private String patientName;
 
         @JsonSerialize(using = ToStringSerializer.class)
@@ -45,18 +55,26 @@ public class IcuVO {
 
         private String fromDeptName;
 
-        /** 病区ID */
+        /**
+         * 病区ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long wardId;
 
-        /** 病区名称（快照） */
+        /**
+         * 病区名称（快照）
+         */
         private String wardName;
 
-        /** 床位ID */
+        /**
+         * 床位ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long bedId;
 
-        /** 床位号 */
+        /**
+         * 床位号
+         */
         private String bedNo;
 
         private Integer careLevel;
@@ -85,18 +103,26 @@ public class IcuVO {
 
         private Integer monitorCount;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
 
-        /** 最近一次监护记录时刻（派生，用于「漏记」提醒） */
+        /**
+         * 最近一次监护记录时刻（派生，用于「漏记」提醒）
+         */
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime lastMonitorTime;
 
-        /** 滞留小时数（在科=到现在，已出科=出科-入科） */
+        /**
+         * 滞留小时数（在科=到现在，已出科=出科-入科）
+         */
         private Integer stayHours;
     }
 
-    /** 监护记录 */
+    /**
+     * 监护记录
+     */
     @Data
     public static class MonitorVO {
         @JsonSerialize(using = ToStringSerializer.class)
@@ -107,13 +133,19 @@ public class IcuVO {
 
         private String stayNo;
 
-        /** 患者姓名 */
+        /**
+         * 患者姓名
+         */
         private String patientName;
 
-        /** 床位号 */
+        /**
+         * 床位号
+         */
         private String bedNo;
 
-        /** 所属入科记录状态（1在科/2已出科）：出科即封账，前端据此隐藏「修改」 */
+        /**
+         * 所属入科记录状态（1在科/2已出科）：出科即封账，前端据此隐藏「修改」
+         */
         private Integer stayStatus;
 
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
@@ -180,27 +212,41 @@ public class IcuVO {
         private LocalDate recordDate;
     }
 
-    /** ICU 床位一览（含在科患者） */
+    /**
+     * ICU 床位一览（含在科患者）
+     */
     @Data
     public static class BedVO {
-        /** 床位ID */
+        /**
+         * 床位ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long bedId;
 
-        /** 床位号 */
+        /**
+         * 床位号
+         */
         private String bedNo;
 
-        /** 病区ID */
+        /**
+         * 病区ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long wardId;
 
-        /** 病区名称（快照） */
+        /**
+         * 病区名称（快照）
+         */
         private String wardName;
 
-        /** 床位字典状态：0-停用 1-空闲 2-占用（ICU 不反向改写此列，仅展示） */
+        /**
+         * 床位字典状态：0-停用 1-空闲 2-占用（ICU 不反向改写此列，仅展示）
+         */
         private Integer bedStatus;
 
-        /** 床位类型（本域只认 'ICU' 床） */
+        /**
+         * 床位类型（本域只认 'ICU' 床）
+         */
         private String bedType;
 
         @JsonSerialize(using = ToStringSerializer.class)
@@ -208,14 +254,20 @@ public class IcuVO {
 
         private String stayNo;
 
-        /** 患者ID */
+        /**
+         * 患者ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long patientId;
 
-        /** 患者编号 */
+        /**
+         * 患者编号
+         */
         private String patientNo;
 
-        /** 患者姓名 */
+        /**
+         * 患者姓名
+         */
         private String patientName;
 
         private Integer careLevel;
@@ -243,53 +295,81 @@ public class IcuVO {
         private Integer lastGcsTotal;
     }
 
-    /** 可入科候选（在院、无在科记录） */
+    /**
+     * 可入科候选（在院、无在科记录）
+     */
     @Data
     public static class AdmissionVO {
-        /** 入院ID */
+        /**
+         * 入院ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long admissionId;
 
         private String admissionNo;
 
-        /** 患者ID */
+        /**
+         * 患者ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long patientId;
 
-        /** 患者编号 */
+        /**
+         * 患者编号
+         */
         private String patientNo;
 
-        /** 患者姓名 */
+        /**
+         * 患者姓名
+         */
         private String patientName;
 
-        /** 性别（1-男 2-女 9-未知） */
+        /**
+         * 性别（1-男 2-女 9-未知）
+         */
         private Integer gender;
 
-        /** 年龄 */
+        /**
+         * 年龄
+         */
         private Integer age;
 
-        /** 科室ID */
+        /**
+         * 科室ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long deptId;
 
-        /** 科室名称 */
+        /**
+         * 科室名称
+         */
         private String deptName;
 
-        /** 床位号 */
+        /**
+         * 床位号
+         */
         private String bedNo;
 
-        /** 诊断 */
+        /**
+         * 诊断
+         */
         private String diagnosis;
 
-        /** 入院状态：1-在院（候选查询已过滤，快照校验用） */
+        /**
+         * 入院状态：1-在院（候选查询已过滤，快照校验用）
+         */
         private Integer admitStatus;
 
-        /** 入院时间 */
+        /**
+         * 入院时间
+         */
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime admitTime;
     }
 
-    /** 分布计数（监护等级、呼吸支持方式等） */
+    /**
+     * 分布计数（监护等级、呼吸支持方式等）
+     */
     @Data
     public static class TypeCount {
         private Integer type;
@@ -297,24 +377,36 @@ public class IcuVO {
         private Integer count;
     }
 
-    /** 科室工作量与质量安全指标 */
+    /**
+     * 科室工作量与质量安全指标
+     */
     @Data
     public static class StatsVO {
-        /** 开始日期 */
+        /**
+         * 开始日期
+         */
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate startDate;
 
-        /** 结束日期 */
+        /**
+         * 结束日期
+         */
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate endDate;
 
-        /** 当前在科人数 */
+        /**
+         * 当前在科人数
+         */
         private Integer inCount;
 
-        /** ICU 床位数（可用口径，不含停用） */
+        /**
+         * ICU 床位数（可用口径，不含停用）
+         */
         private Integer bedTotal;
 
-        /** 床位使用率 % = 在科/开放床位 */
+        /**
+         * 床位使用率 % = 在科/开放床位
+         */
         private BigDecimal bedUseRate;
 
         private Integer inCountRange;
@@ -323,21 +415,31 @@ public class IcuVO {
 
         private Integer monitorTotalRange;
 
-        /** 人均监护记录条数（分母=区间入科+出科记录数） */
+        /**
+         * 人均监护记录条数（分母=区间入科+出科记录数）
+         */
         private BigDecimal monitorsPerStay;
 
-        /** 死亡人数（出科去向=5） */
+        /**
+         * 死亡人数（出科去向=5）
+         */
         private Integer deathCount;
 
-        /** 平均滞留小时（区间内出科者） */
+        /**
+         * 平均滞留小时（区间内出科者）
+         */
         private BigDecimal avgStayHours;
 
         private List<TypeCount> careLevels;
 
-        /** 最近一条监护记录的呼吸支持方式分布 */
+        /**
+         * 最近一条监护记录的呼吸支持方式分布
+         */
         private List<TypeCount> ventModes;
 
-        /** 五类导管现带管人数：人工气道/中心静脉/动脉/导尿管/引流管 */
+        /**
+         * 五类导管现带管人数：人工气道/中心静脉/动脉/导尿管/引流管
+         */
         private Integer airwayCount;
 
         private Integer cvcCount;
@@ -348,7 +450,9 @@ public class IcuVO {
 
         private Integer drainCount;
 
-        /** 超过 N 小时无监护记录的在科人数（护理质量预警） */
+        /**
+         * 超过 N 小时无监护记录的在科人数（护理质量预警）
+         */
         private Integer monitorLagCount;
     }
 }

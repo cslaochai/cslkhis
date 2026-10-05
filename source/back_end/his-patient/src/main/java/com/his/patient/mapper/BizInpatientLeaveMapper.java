@@ -21,7 +21,9 @@ import java.util.List;
 @Mapper
 public interface BizInpatientLeaveMapper extends BaseMapper<BizInpatientLeave> {
 
-    /** 台账行：不拖 confirm_signature（MEDIUMTEXT 手写图），电话列表根本不选 */
+    /**
+     * 台账行：不拖 confirm_signature（MEDIUMTEXT 手写图），电话列表根本不选
+     */
     String ROW_COLUMNS = """
             l.id, l.leave_no, l.admission_id, l.patient_id, l.patient_name, l.admission_no,
             l.dept_name, l.ward_name, l.bed_no, l.leave_type, l.reason, l.destination,
@@ -126,7 +128,9 @@ public interface BizInpatientLeaveMapper extends BaseMapper<BizInpatientLeave> {
             """)
     InpatientLeaveVO.Detail selectLeaveDetail(@Param("id") Long id, @Param("deptIds") List<Long> deptIds);
 
-    /** 开单底稿：住院 + 患者一般项目 + 该住院在途请假单张数 */
+    /**
+     * 开单底稿：住院 + 患者一般项目 + 该住院在途请假单张数
+     */
     @Select("""
             SELECT a.admission_id   AS admissionId,
                    a.admission_no   AS admissionNo,
@@ -151,7 +155,9 @@ public interface BizInpatientLeaveMapper extends BaseMapper<BizInpatientLeave> {
             """)
     InpatientLeaveVO.Base selectAdmissionBase(@Param("admissionId") Long admissionId);
 
-    /** 在院患者候选（护士站/医生站横幅数据源，含在途请假单张数与在途状态） */
+    /**
+     * 在院患者候选（护士站/医生站横幅数据源，含在途请假单张数与在途状态）
+     */
     @Select("""
             <script>
             SELECT a.admission_id   AS admissionId,
@@ -184,7 +190,9 @@ public interface BizInpatientLeaveMapper extends BaseMapper<BizInpatientLeave> {
                                                                @Param("deptIds") List<Long> deptIds,
                                                                @Param("limit") int limit);
 
-    /** 五项统计（超期未归 = status=3 且 expected_return_time 已过，查询时算） */
+    /**
+     * 五项统计（超期未归 = status=3 且 expected_return_time 已过，查询时算）
+     */
     @Select("""
             <script>
               SELECT
@@ -203,7 +211,9 @@ public interface BizInpatientLeaveMapper extends BaseMapper<BizInpatientLeave> {
             """)
     InpatientLeaveVO.Stats selectStats(@Param("deptIds") List<Long> deptIds);
 
-    /** 员工职称码（签名人 signerTitle，电子签名证据留档） */
+    /**
+     * 员工职称码（签名人 signerTitle，电子签名证据留档）
+     */
     @Select("SELECT title FROM sys_employee WHERE id = #{employeeId} AND del_flag = 0")
     String selectEmployeeTitle(@Param("employeeId") Long employeeId);
 }

@@ -17,56 +17,86 @@ import java.util.List;
 @Data
 public class VteRiskListVO {
 
-    /** 入院ID */
+    /**
+     * 入院ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
     private String admissionNo;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     private String patientName;
 
-    /** 患者编号 */
+    /**
+     * 患者编号
+     */
     private String patientNo;
 
-    /** 性别（1-男 2-女 9-未知） */
+    /**
+     * 性别（1-男 2-女 9-未知）
+     */
     private Integer gender;
 
-    /** 年龄 */
+    /**
+     * 年龄
+     */
     private Integer age;
 
-    /** 科室ID */
+    /**
+     * 科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 科室名称 */
+    /**
+     * 科室名称
+     */
     private String deptName;
 
-    /** 病区ID */
+    /**
+     * 病区ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
 
-    /** 病区名称（快照） */
+    /**
+     * 病区名称（快照）
+     */
     private String wardName;
 
-    /** 床位号 */
+    /**
+     * 床位号
+     */
     private String bedNo;
 
-    /** 入院时间 */
+    /**
+     * 入院时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime admitTime;
 
-    /** 在院状态：1-在院 0-已出院 */
+    /**
+     * 在院状态：1-在院 0-已出院
+     */
     private Integer admitStatus;
 
-    /** 诊断 */
+    /**
+     * 诊断
+     */
     private String diagnosis;
 
-    /** 来源评估单（最新一条 Caprini） */
+    /**
+     * 来源评估单（最新一条 Caprini）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long assessmentId;
 
@@ -81,21 +111,31 @@ public class VteRiskListVO {
 
     private String assessNurseName;
 
-    /** 按风险等级应落实的措施码 */
+    /**
+     * 按风险等级应落实的措施码
+     */
     private List<String> recommendCodes;
 
     private String recommendText;
 
-    /** 三条措施各自的当前状态（没登记的类型不出，前端按 recommendCodes 对齐展示） */
+    /**
+     * 三条措施各自的当前状态（没登记的类型不出，前端按 recommendCodes 对齐展示）
+     */
     private List<VteMeasureStateVO> measures;
 
-    /** 已落实条数 */
+    /**
+     * 已落实条数
+     */
     private Integer doneCount;
 
-    /** 应落实条数 */
+    /**
+     * 应落实条数
+     */
     private Integer recommendCount;
 
-    /** 0-未登记 1-部分落实 2-已落实 */
+    /**
+     * 0-未登记 1-部分落实 2-已落实
+     */
     private Integer preventStatus;
 
     private String preventStatusText;

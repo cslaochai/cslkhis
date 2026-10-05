@@ -20,23 +20,33 @@ public class OrderDictListVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 字典类型 */
+    /**
+     * 字典类型
+     */
     private String dictType;
 
     private String dictTypeText;
 
-    /** 字典值 */
+    /**
+     * 字典值
+     */
     private String dictValue;
 
-    /** 字典标签 */
+    /**
+     * 字典标签
+     */
     private String dictLabel;
 
-    /** 排序号 */
+    /**
+     * 排序号
+     */
     private Integer dictSort;
 
     private Integer status;
 
-    /** 状态文本 */
+    /**
+     * 状态文本
+     */
     private String statusText;
 
     /**
@@ -49,14 +59,20 @@ public class OrderDictListVO implements Serializable {
      */
     private Boolean builtIn;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
 }

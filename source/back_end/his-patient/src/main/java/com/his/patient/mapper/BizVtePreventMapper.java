@@ -29,7 +29,9 @@ public interface BizVtePreventMapper extends BaseMapper<BizVtePrevent> {
     @org.apache.ibatis.annotations.Delete("DELETE FROM biz_vte_prevent WHERE id = #{id}")
     int purgeById(@Param("id") Long id);
 
-    /** 单号前缀当日已用最大序号（VP+yyyyMMdd+4位）—— 按 MAX 不是 COUNT，删过一条也不会撞号 */
+    /**
+     * 单号前缀当日已用最大序号（VP+yyyyMMdd+4位）—— 按 MAX 不是 COUNT，删过一条也不会撞号
+     */
     @Select("SELECT COALESCE(MAX(CAST(RIGHT(prevent_no, 4) AS UNSIGNED)), 0) "
             + "FROM biz_vte_prevent WHERE prevent_no LIKE CONCAT(#{prefix}, '%')")
     long maxPreventSeq(@Param("prefix") String prefix);
@@ -59,7 +61,9 @@ public interface BizVtePreventMapper extends BaseMapper<BizVtePrevent> {
     IPage<VtePreventVO> selectPreventPage(Page<VtePreventVO> page,
                                           @Param("q") VtePreventQueryPageDTO query);
 
-    /** 某次住院名下全部措施记录（按措施码顺序：基础→物理→药物） */
+    /**
+     * 某次住院名下全部措施记录（按措施码顺序：基础→物理→药物）
+     */
     @Select("""
             SELECT v.*,
                    CASE v.measure_code WHEN 'BASIC' THEN '基础预防' WHEN 'PHYSICAL' THEN '物理预防'
@@ -76,7 +80,9 @@ public interface BizVtePreventMapper extends BaseMapper<BizVtePrevent> {
             """)
     List<VtePreventVO> selectByAdmission(@Param("admissionId") Long admissionId);
 
-    /** 中高危名单（风险来自每次住院最新一条 Caprini 评估 + 措施落实聚合） */
+    /**
+     * 中高危名单（风险来自每次住院最新一条 Caprini 评估 + 措施落实聚合）
+     */
     @Select("""
             <script>
             SELECT a.admission_id, a.admission_no, a.patient_id, p.patient_name, p.patient_no, p.gender, p.age,
@@ -133,7 +139,9 @@ public interface BizVtePreventMapper extends BaseMapper<BizVtePrevent> {
     IPage<VteRiskListVO> selectRiskPage(Page<VteRiskListVO> page,
                                         @Param("q") com.his.patient.dto.VteRiskQueryPageDTO query);
 
-    /** 名单行的措施状态明细（一次查回多行，服务端拼到对应 admission 上） */
+    /**
+     * 名单行的措施状态明细（一次查回多行，服务端拼到对应 admission 上）
+     */
     @Select("""
             <script>
             SELECT v.admission_id, v.measure_code, v.measure_name, v.measure_type,

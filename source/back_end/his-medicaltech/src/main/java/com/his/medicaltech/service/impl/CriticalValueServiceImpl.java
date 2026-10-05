@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.EmpTitleCode;
 import com.his.common.exception.BusinessException;
+
+import com.his.common.enums.SysGenderEnum;
 import com.his.medicaltech.dto.CriticalValueHandleDTO;
 import com.his.medicaltech.dto.CriticalValueQueryPageDTO;
 import com.his.medicaltech.dto.CriticalValueReceiveDTO;
@@ -669,7 +671,8 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         if (gender == null) {
             return "性别不详";
         }
-        return gender == 1 ? "男" : gender == 2 ? "女" : "性别不详";
+        SysGenderEnum g = SysGenderEnum.fromCode(gender);
+        return g == null ? "性别不详" : g.getLabel();
     }
 
     private static LocalDateTime startOfDay(String text) {

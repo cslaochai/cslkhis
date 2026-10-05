@@ -16,55 +16,87 @@ import java.time.LocalDateTime;
 @Data
 public class NursingVitalFactVO implements Serializable {
 
-    /** 入院ID */
+    /**
+     * 入院ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
-    /** 床号（快照） */
+    /**
+     * 床号（快照）
+     */
     private String bedNo;
 
-    /** 病区ID */
+    /**
+     * 病区ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
 
-    /** 病区名称（快照） */
+    /**
+     * 病区名称（快照）
+     */
     private String wardName;
 
-    /** 测量 / 记录时间 */
+    /**
+     * 测量 / 记录时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime measureTime;
 
-    /** 班次（1-白班 2-小夜班 3-大夜班） */
+    /**
+     * 班次（1-白班 2-小夜班 3-大夜班）
+     */
     private Integer shift;
 
-    /** 体温（℃） */
+    /**
+     * 体温（℃）
+     */
     private BigDecimal temperature;
 
-    /** 脉搏（次/分） */
+    /**
+     * 脉搏（次/分）
+     */
     private Integer pulse;
 
-    /** 呼吸（次/分） */
+    /**
+     * 呼吸（次/分）
+     */
     private Integer respiration;
 
-    /** 收缩压（mmHg） */
+    /**
+     * 收缩压（mmHg）
+     */
     private Integer systolicPressure;
 
-    /** 舒张压（mmHg） */
+    /**
+     * 舒张压（mmHg）
+     */
     private Integer diastolicPressure;
 
-    /** 血氧饱和度（%） */
+    /**
+     * 血氧饱和度（%）
+     */
     private Integer spo2;
 
-    /** 护理级别（1-特级护理 2-一级护理 3-二级护理 4-三级护理） */
+    /**
+     * 护理级别（1-特级护理 2-一级护理 3-二级护理 4-三级护理）
+     */
     private Integer nursingLevel;
 
-    /** 护理措施与病情观察记录正文 */
+    /**
+     * 护理措施与病情观察记录正文
+     */
     private String nursingContent;
 }

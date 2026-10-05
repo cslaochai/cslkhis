@@ -14,7 +14,9 @@ public final class BedCenterLabels {
     private BedCenterLabels() {
     }
 
-    /** 等待状态：0-等待中 1-已安排床位 2-已收治 3-已取消 */
+    /**
+     * 等待状态：0-等待中 1-已安排床位 2-已收治 3-已取消
+     */
     public static String waitStatusText(Integer status) {
         return switch (status == null ? -1 : status) {
             case 0 -> "等待中";
@@ -25,7 +27,9 @@ public final class BedCenterLabels {
         };
     }
 
-    /** 优先级：1-普通 2-急 3-危重 */
+    /**
+     * 优先级：1-普通 2-急 3-危重
+     */
     public static String priorityText(Integer priority) {
         return switch (priority == null ? -1 : priority) {
             case 1 -> "普通";
@@ -35,7 +39,9 @@ public final class BedCenterLabels {
         };
     }
 
-    /** 床位类型：与床位的床位类型同口径 */
+    /**
+     * 床位类型：与床位的床位类型同口径
+     */
     public static String bedTypeText(String type) {
         if (type == null || type.isBlank()) {
             return "未分类";
@@ -48,7 +54,9 @@ public final class BedCenterLabels {
         };
     }
 
-    /** 性别限制：0-不限 1-限男床 2-限女床 */
+    /**
+     * 性别限制：0-不限 1-限男床 2-限女床
+     */
     public static String genderLimitText(Integer limit) {
         return switch (limit == null ? -1 : limit) {
             case 0 -> "不限";
@@ -58,7 +66,9 @@ public final class BedCenterLabels {
         };
     }
 
-    /** 调配类型：1-本科室预留 2-跨科调配 3-急诊占床 */
+    /**
+     * 调配类型：1-本科室预留 2-跨科调配 3-急诊占床
+     */
     public static String allocTypeText(Integer type) {
         return switch (type == null ? -1 : type) {
             case 1 -> "本科室预留";
@@ -68,7 +78,9 @@ public final class BedCenterLabels {
         };
     }
 
-    /** 调配状态：1-已预留 2-已转入院 3-已释放 4-已作废 */
+    /**
+     * 调配状态：1-已预留 2-已转入院 3-已释放 4-已作废
+     */
     public static String allocStatusText(Integer status) {
         return switch (status == null ? -1 : status) {
             case 1 -> "已预留";

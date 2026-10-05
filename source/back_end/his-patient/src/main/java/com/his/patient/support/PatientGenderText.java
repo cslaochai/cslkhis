@@ -11,7 +11,9 @@ public final class PatientGenderText {
     private PatientGenderText() {
     }
 
-    /** 合法码值走枚举；null 与脏码值是展示层兜底，脏值带原值暴露（如 0 报"未知(0)"而非"女"） */
+    /**
+     * 合法码值走枚举；null 与脏码值是展示层兜底，脏值带原值暴露（如 0 报"未知(0)"而非"女"）
+     */
     public static String of(Integer gender) {
         if (gender == null) {
             return "—";

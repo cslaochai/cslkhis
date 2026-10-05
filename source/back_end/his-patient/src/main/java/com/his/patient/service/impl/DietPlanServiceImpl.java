@@ -5,28 +5,18 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.entity.BizInpatientOrder;
-import com.his.patient.entity.SysBed;
-import com.his.patient.mapper.BizAdmissionMapper;
-import com.his.patient.mapper.SysBedMapper;
-import com.his.patient.support.NutritionRules;
 import com.his.patient.dto.DietConfirmDTO;
 import com.his.patient.dto.DietPlanQueryPageDTO;
 import com.his.patient.dto.DietPlanStopDTO;
 import com.his.patient.dto.DietPlanUpsertDTO;
-import com.his.patient.entity.BizDietPlan;
-import com.his.patient.entity.BizMealOrder;
-import com.his.patient.enums.MealDeliverStatusEnum;
-import com.his.patient.mapper.BizDietPlanMapper;
-import com.his.patient.mapper.BizMealOrderMapper;
-import com.his.patient.mapper.NutritionStatMapper;
+import com.his.patient.entity.*;
+import com.his.patient.enums.*;
+import com.his.patient.mapper.*;
 import com.his.patient.service.DietPlanService;
+import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.DietPlanVO;
 import com.his.patient.vo.DietTypeOptionVO;
 import com.his.patient.vo.WardVO;
-import com.his.patient.mapper.BizPatientMapper;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -44,12 +34,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-
-import com.his.patient.enums.DietCategoryEnum;
-import com.his.patient.enums.DietConfirmStatusEnum;
-import com.his.patient.enums.DietPlanSourceEnum;
-import com.his.patient.enums.DietRouteEnum;
-import com.his.patient.enums.PlanStatusEnum;
 
 /**
  * 膳食方案实现。
@@ -83,6 +67,28 @@ public class DietPlanServiceImpl implements DietPlanService {
 
     // 下拉 / 查询
 
+    private static String appendRemark(String origin, String add) {
+        if (!StringUtils.hasText(origin)) {
+            return add;
+        }
+        return origin.trim() + "；" + add;
+    }
+
+    private static String trim(String v) {
+        return v == null ? null : v.trim();
+    }
+
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static String cut(String v, int max) {
+        if (v == null) {
+            return null;
+        }
+        return v.length() <= max ? v : v.substring(0, max);
+    }
+
     @Override
     public List<DietTypeOptionVO> dietTypeOptions() {
         List<DietTypeOptionVO> list = new ArrayList<>();
@@ -108,6 +114,8 @@ public class DietPlanServiceImpl implements DietPlanService {
         return list;
     }
 
+    // 登记 / 修改
+
     @Override
     public List<WardVO> wardOptions() {
         return bedMapper.selectWardList();
@@ -125,6 +133,8 @@ public class DietPlanServiceImpl implements DietPlanService {
                 result.getRecords());
     }
 
+    // 营养科接收 / 退回
+
     @Override
     public List<DietPlanVO> planListByAdmission(Long admissionId) {
         // ②非web入口：service 方法参数判空，没有 DTO 字段可挂注解（HTTP 侧 @RequestParam 已必填）
@@ -136,12 +146,14 @@ public class DietPlanServiceImpl implements DietPlanService {
         return rows;
     }
 
-    /** 餐次文案由规则表算（SQL 里再抄一份映射迟早和 NutritionRules 漂移） */
+    // 停餐 / 删除
+
+    /**
+     * 餐次文案由规则表算（SQL 里再抄一份映射迟早和 NutritionRules 漂移）
+     */
     private void decorate(DietPlanVO vo) {
         vo.setMealTypesText(NutritionRules.mealTypesText(vo.getMealTypes()));
     }
-
-    // 登记 / 修改
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -223,7 +235,11 @@ public class DietPlanServiceImpl implements DietPlanService {
         return planMapper.selectVoById(row.getId());
     }
 
-    /** 餐次：提交值优先但必须落在 1~4 且去重；不合法一律回退目录默认（订餐据此拆行，脏值会让整批生成漏餐） */
+    // 医嘱链钩子
+
+    /**
+     * 餐次：提交值优先但必须落在 1~4 且去重；不合法一律回退目录默认（订餐据此拆行，脏值会让整批生成漏餐）
+     */
     private String normalizeMealTypes(String submitted, NutritionRules.Diet diet) {
         String base = StringUtils.hasText(submitted) ? submitted : diet.mealTypes();
         List<Integer> types = NutritionRules.mealTypesOf(base);
@@ -232,8 +248,6 @@ public class DietPlanServiceImpl implements DietPlanService {
         }
         return types.stream().map(String::valueOf).reduce((a, b) -> a + "," + b).orElse(null);
     }
-
-    // 营养科接收 / 退回
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -288,8 +302,6 @@ public class DietPlanServiceImpl implements DietPlanService {
         return rows.size();
     }
 
-    // 停餐 / 删除
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DietPlanVO planStop(DietPlanStopDTO dto) {
@@ -306,6 +318,8 @@ public class DietPlanServiceImpl implements DietPlanService {
         return planMapper.selectVoById(row.getId());
     }
 
+    // 内部
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int planDeleteById(Long id) {
@@ -316,8 +330,6 @@ public class DietPlanServiceImpl implements DietPlanService {
         // 物理删：uk_diet_plan_order 不含 del_flag，软删会占住这条医嘱的键位
         return planMapper.purgeById(id);
     }
-
-    // 医嘱链钩子
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -405,8 +417,6 @@ public class DietPlanServiceImpl implements DietPlanService {
         log.info("膳食方案作废 方案={} 医嘱ID={}", row.getDietNo(), orderId);
     }
 
-    // 内部
-
     private BizDietPlan findPlanByOrderId(Long orderId) {
         if (orderId == null) {
             return null;
@@ -415,7 +425,9 @@ public class DietPlanServiceImpl implements DietPlanService {
                 .eq(BizDietPlan::getOrderId, orderId).last("LIMIT 1"));
     }
 
-    /** 停止方案 + 退订未送出的未来餐（已配送/已签收的既成事实不动） */
+    /**
+     * 停止方案 + 退订未送出的未来餐（已配送/已签收的既成事实不动）
+     */
     private void applyStop(BizDietPlan row, LocalDateTime stopTime, String reason) {
         row.setPlanStatus(PlanStatusEnum.STOPPED.getCode());
         row.setStopTime(stopTime);
@@ -487,27 +499,5 @@ public class DietPlanServiceImpl implements DietPlanService {
 
     private String nextNo(String prefix, long maxSeq) {
         return prefix + LocalDate.now().format(DAY_FMT) + String.format("%04d", maxSeq + 1);
-    }
-
-    private static String appendRemark(String origin, String add) {
-        if (!StringUtils.hasText(origin)) {
-            return add;
-        }
-        return origin.trim() + "；" + add;
-    }
-
-    private static String trim(String v) {
-        return v == null ? null : v.trim();
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        return v.length() <= max ? v : v.substring(0, max);
     }
 }

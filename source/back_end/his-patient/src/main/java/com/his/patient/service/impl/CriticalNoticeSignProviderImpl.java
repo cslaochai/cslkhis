@@ -1,16 +1,15 @@
 package com.his.patient.service.impl;
 
-import com.his.patient.service.CriticalNoticeSignProvider;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.his.common.entity.SignSubject;
 import com.his.common.enums.ObjectSignStatus;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
-import com.his.common.entity.SignSubject;
 import com.his.common.service.SignableContentProvider;
-import com.his.common.support.CanonicalText;
 import com.his.patient.entity.BizCriticalNotice;
 import com.his.patient.enums.NoticeStatusEnum;
 import com.his.patient.mapper.BizCriticalNoticeMapper;
+import com.his.patient.service.CriticalNoticeSignProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

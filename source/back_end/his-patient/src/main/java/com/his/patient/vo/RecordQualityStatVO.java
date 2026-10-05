@@ -82,22 +82,34 @@ public class RecordQualityStatVO implements Serializable {
     @Data
     public static class GroupStatVO implements Serializable {
 
-        /** 分组编码 */
+        /**
+         * 分组编码
+         */
         private String group;
 
-        /** 分组中文名 */
+        /**
+         * 分组中文名
+         */
         private String groupLabel;
 
-        /** 应填数 */
+        /**
+         * 应填数
+         */
         private Integer elementTotal;
 
-        /** 已填数 */
+        /**
+         * 已填数
+         */
         private Integer elementFilled;
 
-        /** 分组填充率（百分数，2 位） */
+        /**
+         * 分组填充率（百分数，2 位）
+         */
         private BigDecimal rate;
 
-        /** 分组填充率文案 */
+        /**
+         * 分组填充率文案
+         */
         private String rateText;
     }
 
@@ -107,28 +119,44 @@ public class RecordQualityStatVO implements Serializable {
     @Data
     public static class ElementStatVO implements Serializable {
 
-        /** 要素编码（= 库列名） */
+        /**
+         * 要素编码（= 库列名）
+         */
         private String code;
 
-        /** 要素中文名 */
+        /**
+         * 要素中文名
+         */
         private String label;
 
-        /** 分组编码 */
+        /**
+         * 分组编码
+         */
         private String group;
 
-        /** 分组中文名 */
+        /**
+         * 分组中文名
+         */
         private String groupLabel;
 
-        /** 已填文书数 */
+        /**
+         * 已填文书数
+         */
         private Integer filledCount;
 
-        /** 缺失文书数 */
+        /**
+         * 缺失文书数
+         */
         private Integer missingCount;
 
-        /** 填充率（百分数，2 位） */
+        /**
+         * 填充率（百分数，2 位）
+         */
         private BigDecimal rate;
 
-        /** 填充率文案 */
+        /**
+         * 填充率文案
+         */
         private String rateText;
     }
 
@@ -138,35 +166,55 @@ public class RecordQualityStatVO implements Serializable {
     @Data
     public static class RecordStatVO implements Serializable {
 
-        /** 文书ID */
+        /**
+         * 文书ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long recordId;
 
-        /** 文书号 */
+        /**
+         * 文书号
+         */
         private String recordNo;
 
-        /** 文书类型码 */
+        /**
+         * 文书类型码
+         */
         private Integer recordType;
 
-        /** 文书类型文案 */
+        /**
+         * 文书类型文案
+         */
         private String recordTypeText;
 
-        /** 文书状态文案 */
+        /**
+         * 文书状态文案
+         */
         private String recordStatusText;
 
-        /** 已填数 */
+        /**
+         * 已填数
+         */
         private Integer filled;
 
-        /** 总条数 */
+        /**
+         * 总条数
+         */
         private Integer total;
 
-        /** 结构化率（百分数，2 位） */
+        /**
+         * 结构化率（百分数，2 位）
+         */
         private BigDecimal rate;
 
-        /** 结构化率文案 */
+        /**
+         * 结构化率文案
+         */
         private String rateText;
 
-        /** 缺失要素中文名 */
+        /**
+         * 缺失要素中文名
+         */
         private List<String> missingLabels;
     }
 }

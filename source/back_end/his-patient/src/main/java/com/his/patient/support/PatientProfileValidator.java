@@ -12,34 +12,17 @@ import java.util.Set;
 /**
  * 患者主档建档 / 修改的<b>写入口校验</b>。
  *
- * <p>为什么必须有这一层：前端标个「必填」只是 UX，绕过页面直接调
- * {@code POST /patient/patientUpsert} 一样能写出空姓名、无性别的档案。
- * 患者主档是 EMPI 去重和下游所有性别 / 年龄判断的源头 —— 脏档案一旦落库，
- * 会在挂号、病历、检验参考区间等一串地方显形，而且追不到是谁造的。
- *
- * <p><b>三档强度是刻意的，不是漏改</b>：
- * <ul>
- *   <li>{@link #validateForCreate} 主档建档：姓名 + 性别 + 身份证都必填，身份证要过<b>校验位</b>；</li>
- *   <li>{@link #validateForUpdate} 主档修改：身份证只验 18 位格式 —— P5.7 开工前实测，
- *       存量 42 条有身份证的档案里只有 10 条校验位成立（其余是造数时编的），卡校验位会让
- *       那 32 个老档再也保存不回去；</li>
- *   <li>{@link #validateForEmergency} 急诊建档：三无患者拿不到身份证，只要求姓名 + 性别。</li>
- * </ul>
- *
- * <p>手机号统一「填了就必须合法、空着放行」：老年患者没有手机号是常态，
- * 硬拦只会逼工作人员随手编一个 —— 而手机号正是 EMPI 的匹配键之一，编出来的号比空号危害大得多。
- *
- * <p>性别的合法码值统一为性别字典口径（1-男 2-女 9-未知，见 {@link com.his.common.enums.SysGenderEnum}），
- * 「9-未知」用于「确实没问到」的场景，见 {@link PatientGenderText}（原 3-未知已于 2026-09-23 迁移为 9，见 sql/75）。
- * 注意本库患者基本信息.gender 的列注释一度写成「0-女 1-男 2-未知」，
- * 那条注释与数据、与全库代码都矛盾 —— 不要按它实现。
  */
 public final class PatientProfileValidator {
 
-    /** 性别合法码值：1-男 2-女 9-未知（性别字典口径，与员工性别同套） */
+    /**
+     * 性别合法码值：1-男 2-女 9-未知（性别字典口径，与员工性别同套）
+     */
     public static final Set<Integer> GENDER_CODES = Set.of(1, 2, 9);
 
-    /** 性别码值说明（拼进报错消息里，省得调用方去翻文档） */
+    /**
+     * 性别码值说明（拼进报错消息里，省得调用方去翻文档）
+     */
     public static final String GENDER_HINT = "1-男 2-女 9-未知";
 
     private static final DateTimeFormatter BIRTH_FORMAT =
@@ -135,7 +118,9 @@ public final class PatientProfileValidator {
         }
     }
 
-    /** 18 位格式：前 17 位数字，末位数字或 X/x */
+    /**
+     * 18 位格式：前 17 位数字，末位数字或 X/x
+     */
     public static boolean isFormatLegalIdCard(String idCard) {
         return idCard != null && idCard.matches("^[0-9]{17}[0-9Xx]$");
     }
@@ -172,7 +157,9 @@ public final class PatientProfileValidator {
         return CHECK_CODES[sum % 11] == Character.toUpperCase(idCard.charAt(17));
     }
 
-    /** 11 位手机号（1 开头，第二位 3-9） */
+    /**
+     * 11 位手机号（1 开头，第二位 3-9）
+     */
     public static boolean isLegalPhone(String phone) {
         return phone != null && phone.matches("^1[3-9]\\d{9}$");
     }

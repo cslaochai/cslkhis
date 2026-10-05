@@ -3,36 +3,13 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.his.common.exception.BusinessException;
-import com.his.patient.dto.PatientAllergyUpsertDTO;
-import com.his.patient.dto.PatientContactUpsertDTO;
-import com.his.patient.dto.PatientFamilyHistoryUpsertDTO;
-import com.his.patient.dto.PatientMedicationHistoryUpsertDTO;
-import com.his.patient.dto.PatientPastDiseaseUpsertDTO;
-import com.his.patient.dto.PatientSurgeryHistoryUpsertDTO;
-import com.his.patient.entity.BizPatientAllergy;
-import com.his.patient.entity.BizPatientContact;
-import com.his.patient.entity.BizPatientFamilyHistory;
-import com.his.patient.entity.BizPatientMedicationHistory;
-import com.his.patient.entity.BizPatientPastDisease;
-import com.his.patient.entity.BizPatientSurgeryHistory;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.mapper.BizPatientAllergyMapper;
-import com.his.patient.mapper.BizPatientContactMapper;
-import com.his.patient.mapper.BizPatientFamilyHistoryMapper;
-import com.his.patient.mapper.BizPatientMedicationHistoryMapper;
-import com.his.patient.mapper.BizPatientPastDiseaseMapper;
-import com.his.patient.mapper.BizPatientSurgeryHistoryMapper;
-import com.his.patient.mapper.BizPatientMapper;
+import com.his.patient.dto.*;
+import com.his.patient.entity.*;
+import com.his.patient.mapper.*;
 import com.his.patient.service.PatientHealthProfileService;
 import com.his.patient.support.HealthProfileEnums;
 import com.his.patient.support.PatientProfileValidator;
-import com.his.patient.vo.PatientAllergyVO;
-import com.his.patient.vo.PatientContactVO;
-import com.his.patient.vo.PatientFamilyHistoryVO;
-import com.his.patient.vo.PatientMedicationHistoryVO;
-import com.his.patient.vo.PatientPastDiseaseVO;
-import com.his.patient.vo.PatientSurgeryHistoryVO;
-import com.his.patient.vo.PatientHealthProfileVO;
+import com.his.patient.vo.*;
 import com.his.security.UserUtils;
 import com.his.system.entity.SysDictData;
 import com.his.system.service.DictCacheService;
@@ -43,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -55,13 +31,19 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PatientHealthProfileServiceImpl implements PatientHealthProfileService {
 
-    /** 与患者关系字典（患者联系方式.relationship 的码值来源） */
+    /**
+     * 与患者关系字典（患者联系方式.relationship 的码值来源）
+     */
     public static final String RELATION_DICT = "sys_patient_relation";
 
-    /** 拼摘要时的分隔符：与 CDR 健康档案卡片、页面上的多值展示同一口径 */
+    /**
+     * 拼摘要时的分隔符：与 CDR 健康档案卡片、页面上的多值展示同一口径
+     */
     private static final String JOINER = "、";
 
-    /** 迁移来源标记：写进明细行的 remark，页面上能分辨这一行是怎么来的 */
+    /**
+     * 迁移来源标记：写进明细行的 remark，页面上能分辨这一行是怎么来的
+     */
     private static final String MIGRATED_NOTE = "由主档自由文本迁移生成";
 
     private final BizPatientMapper patientMapper;
@@ -596,7 +578,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
 
     /* ==================== 公共工具 ==================== */
 
-    /** 主档文本投影的统一写入口：必须用 LambdaUpdateWrapper.set，才能把值真正置成 null */
+    /**
+     * 主档文本投影的统一写入口：必须用 LambdaUpdateWrapper.set，才能把值真正置成 null
+     */
     private void writePatientText(Long patientId, String column, String value) {
         String text = StringUtils.hasText(value) ? value : null;
         LambdaUpdateWrapper<BizPatient> wrapper = new LambdaUpdateWrapper<BizPatient>()
@@ -660,7 +644,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         return ownerOf.apply(row);
     }
 
-    /** 新增/修改二选一：判据是**入参有没有 id**，不是实体有没有 */
+    /**
+     * 新增/修改二选一：判据是**入参有没有 id**，不是实体有没有
+     */
     private <T> void persist(T entity, Long id,
                              java.util.function.Function<T, Integer> inserter,
                              java.util.function.Function<T, Integer> updater) {
@@ -691,7 +677,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         }
     }
 
-    /** 操作人一律服务端取，不信前端传的身份；取不到时留 null 而不是编一个名字 */
+    /**
+     * 操作人一律服务端取，不信前端传的身份；取不到时留 null 而不是编一个名字
+     */
     private String currentOperator() {
         return UserUtils.getCurrentEmployeeName();
     }
@@ -720,7 +708,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         return dictCacheService.getDictDataByType(RELATION_DICT);
     }
 
-    /** 码值 → 文案；命中不了就渲染「未知(n)」，不回落成看似合法的值 */
+    /**
+     * 码值 → 文案；命中不了就渲染「未知(n)」，不回落成看似合法的值
+     */
     private String relationLabel(Integer code) {
         if (code == null) {
             return null;

@@ -15,18 +15,26 @@ import java.io.Serializable;
 @Data
 public class InpatientOrderTemplateSelectListVO implements Serializable {
 
-    /** 模板ID */
+    /**
+     * 模板ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 模板名称 */
+    /**
+     * 模板名称
+     */
     private String templateName;
 
-    /** 默认医嘱类型（1-长期 2-临时） */
+    /**
+     * 默认医嘱类型（1-长期 2-临时）
+     */
     private Integer orderType;
 
     private String orderTypeText;
 
-    /** 明细条数 */
+    /**
+     * 明细条数
+     */
     private Integer itemCount;
 }

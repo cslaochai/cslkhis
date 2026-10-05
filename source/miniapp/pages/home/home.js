@@ -1,6 +1,7 @@
 import { getUser, getPatientId, getCurrentPatient } from '../../utils/auth'
 import { appointApi, hospitalApi } from '../../utils/api'
 import { ensurePatient } from '../../utils/patientSync'
+import { genderText } from '../../utils/gender'
 
 /** 不在 tabBar 里的页面：只能 navigateTo 进入 */
 const NON_TAB_PAGES = ['/pages/chat/chat', '/pages/triage/triage', '/pages/followup/followup']
@@ -62,9 +63,9 @@ Page({
   // WXML 里不能调方法，展示字段一次算好；VO 的 idCard/phone 服务端已打码，这里只做拼接
   formatPatient(p) {
     if (!p) return null
-    const genderText = p.gender === 1 ? '男' : p.gender === 2 ? '女' : ''
+    const genderLabel = genderText(p.gender)
     const descText = [
-      genderText,
+      genderLabel,
       p.age != null ? p.age + '岁' : '',
       p.idCard ? '证件尾号 ' + String(p.idCard).slice(-4) : ''
     ].filter(Boolean).join(' · ')

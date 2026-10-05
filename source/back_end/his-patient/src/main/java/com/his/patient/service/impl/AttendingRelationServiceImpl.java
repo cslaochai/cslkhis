@@ -36,9 +36,13 @@ import java.util.List;
 public class AttendingRelationServiceImpl
         extends ServiceImpl<BizAttendingRelationMapper, BizAttendingRelation> implements AttendingRelationService {
 
-    /** 状态：有效 */
+    /**
+     * 状态：有效
+     */
     private static final int STATUS_ACTIVE = 1;
-    /** 状态：已结束 */
+    /**
+     * 状态：已结束
+     */
     private static final int STATUS_ENDED = 0;
 
     private static final DateTimeFormatter FULL = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -218,7 +222,9 @@ public class AttendingRelationServiceImpl
         return dept == null ? "" : dept.getDeptName();
     }
 
-    /** 时间解析：兼容「yyyy-MM-dd HH:mm:ss」与「yyyy-MM-dd HH:mm」，都解析不了才报错 */
+    /**
+     * 时间解析：兼容「yyyy-MM-dd HH:mm:ss」与「yyyy-MM-dd HH:mm」，都解析不了才报错
+     */
     private LocalDateTime parseTime(String text) {
         if (!StringUtils.hasText(text)) {
             return null;

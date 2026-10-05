@@ -3,35 +3,19 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.dto.InpatientRecordArchiveDTO;
-import com.his.patient.dto.InpatientRecordLogQueryPageDTO;
-import com.his.patient.dto.InpatientRecordQueryPageDTO;
-import com.his.patient.dto.InpatientRecordSubmitDTO;
-import com.his.patient.dto.InpatientRecordUpsertDTO;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.entity.BizInpatientRecord;
-import com.his.patient.entity.BizInpatientRecordLog;
-import com.his.patient.entity.SysBed;
-import com.his.patient.mapper.BizAdmissionMapper;
-import com.his.patient.mapper.BizInpatientRecordLogMapper;
-import com.his.patient.mapper.BizInpatientRecordMapper;
-import com.his.patient.mapper.BizNursingRecordMapper;
-import com.his.patient.mapper.SysBedMapper;
+import com.his.patient.dto.*;
+import com.his.patient.entity.*;
+import com.his.patient.enums.RecordDocTypeEnum;
+import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientRecordService;
 import com.his.patient.support.InpatientRecordLabels;
 import com.his.patient.support.RecordStructuredFields;
-import com.his.patient.vo.CodeOptionVO;
-import com.his.patient.vo.InpatientRecordDetailVO;
-import com.his.patient.vo.InpatientRecordLogVO;
-import com.his.patient.vo.InpatientRecordVO;
-import com.his.patient.vo.RecordQualityStatVO;
-import com.his.patient.vo.WardVO;
-import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.entity.CurrentUser;
+import com.his.patient.vo.*;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,14 +28,7 @@ import java.time.LocalDateTime;
 import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-
-import com.his.patient.enums.RecordDocTypeEnum;
-import com.his.common.enums.RecordStatusEnum;
+import java.util.*;
 
 /**
  * 住院病历文书服务实现（P2）。
@@ -86,10 +63,52 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
     private final BizAdmissionMapper admissionMapper;
     private final BizPatientMapper patientMapper;
     private final SysBedMapper bedMapper;
-    /** 电子签名（P5.5）：提交即签名、归档补签、签名即锁定 */
+    /**
+     * 电子签名（P5.5）：提交即签名、归档补签、签名即锁定
+     */
     private final com.his.common.service.EmrSignatureService signatureService;
 
     // 保存（新增 / 修改）
+
+    /**
+     * 签名状态文案：未知码值渲染成「未知(n)」，不回落成"未签名" —— 那是两次不同的事实
+     */
+    private static String signStatusText(Integer signStatus) {
+        return com.his.common.enums.ObjectSignStatus.textOf(signStatus);
+    }
+
+    /**
+     * 已签名时给前端一句能照做的话；没锁死时返回 null（前端不显示提示条）
+     */
+    private static String signLockHint(BizInpatientRecord r) {
+        if (!Objects.equals(1, r.getSignStatus())) {
+            return null;
+        }
+        return "本文书已于 " + r.getSignedTime() + " 完成电子签名（签名即锁定），内容不可再修改；"
+                + "如确需更正，请先在「签名中心」作废该签名，再修改并重新提交";
+    }
+
+    private static String asText(Object v) {
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof BigDecimal bd) {
+            return bd.stripTrailingZeros().toPlainString();
+        }
+        return String.valueOf(v);
+    }
+
+    private static String rateText(BigDecimal rate) {
+        return rate == null ? "—" : rate.toPlainString() + "%";
+    }
+
+    // 校验
+
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    // 查询
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -245,7 +264,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         return detail(record.getId());
     }
 
-    /** 把入参内容拷到实体（"传什么覆盖什么"，不传 = 置空，配合逐字段 diff 才留得住"医生删掉了主诉"） */
+    /**
+     * 把入参内容拷到实体（"传什么覆盖什么"，不传 = 置空，配合逐字段 diff 才留得住"医生删掉了主诉"）
+     */
     private void applyContent(BizInpatientRecord record, InpatientRecordUpsertDTO dto) {
         record.setChiefComplaint(dto.getChiefComplaint());
         record.setPresentIllness(dto.getPresentIllness());
@@ -275,8 +296,6 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         record.setTreatmentPlan(dto.getTreatmentPlan());
         record.setCourseNote(dto.getCourseNote());
     }
-
-    // 校验
 
     /**
      * 内容校验。入院记录的必填要素是**服务层强制**的（不是前端提醒）：
@@ -360,8 +379,6 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         }
     }
 
-    // 查询
-
     @Override
     public InpatientRecordDetailVO detail(Long id) {
         BizInpatientRecord record = recordMapper.selectById(id);
@@ -417,6 +434,8 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         fillButtons(vo::setCanEdit, vo::setCanSubmit, vo::setCanArchive, r.getRecordStatus(), r.getSignStatus());
         return vo;
     }
+
+    // 提交 / 归档
 
     private InpatientRecordDetailVO toDetail(BizInpatientRecord r) {
         InpatientRecordDetailVO vo = new InpatientRecordDetailVO();
@@ -486,20 +505,6 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         return vo;
     }
 
-    /** 签名状态文案：未知码值渲染成「未知(n)」，不回落成"未签名" —— 那是两次不同的事实 */
-    private static String signStatusText(Integer signStatus) {
-        return com.his.common.enums.ObjectSignStatus.textOf(signStatus);
-    }
-
-    /** 已签名时给前端一句能照做的话；没锁死时返回 null（前端不显示提示条） */
-    private static String signLockHint(BizInpatientRecord r) {
-        if (!Objects.equals(1, r.getSignStatus())) {
-            return null;
-        }
-        return "本文书已于 " + r.getSignedTime() + " 完成电子签名（签名即锁定），内容不可再修改；"
-                + "如确需更正，请先在「签名中心」作废该签名，再修改并重新提交";
-    }
-
     private String vitalText(BizInpatientRecord r) {
         if (r.getTemperature() == null && r.getPulse() == null && r.getRespiration() == null
                 && r.getSystolicPressure() == null) {
@@ -537,8 +542,6 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         }
         return list;
     }
-
-    // 提交 / 归档
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -589,6 +592,8 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
                 records.stream().map(BizInpatientRecord::getRecordNo).toList());
         return records.size();
     }
+
+    // 修改日志
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -646,8 +651,8 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
      * 代价远小于留下无法追溯的缺口。
      */
     private com.his.common.vo.SignatureVO signOrFail(BizInpatientRecord r,
-                                                          com.his.common.enums.SignScene scene,
-                                                          String actionLabel) {
+                                                     com.his.common.enums.SignScene scene,
+                                                     String actionLabel) {
         com.his.common.dto.SignCommandDTO cmd = new com.his.common.dto.SignCommandDTO();
         cmd.setBizType(com.his.common.enums.SignBizType.INPATIENT_RECORD.getCode());
         cmd.setBizId(r.getId());
@@ -664,7 +669,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         }
     }
 
-    /** 批量加载（保持入参顺序），逐个确认存在 */
+    /**
+     * 批量加载（保持入参顺序），逐个确认存在
+     */
     private List<BizInpatientRecord> loadForBatch(List<Long> ids) {
         List<BizInpatientRecord> records = new ArrayList<>(ids.size());
         for (Long id : ids) {
@@ -676,8 +683,6 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         }
         return records;
     }
-
-    // 修改日志
 
     @Override
     public IPage<InpatientRecordLogVO> logPage(InpatientRecordLogQueryPageDTO query) {
@@ -714,6 +719,8 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         return result;
     }
 
+    // 结构化率统计
+
     @Override
     public List<InpatientRecordLogVO> logList(Integer docType, Long recordId) {
         // 保留（类别②）：入参是普通 Integer/Long（GET @RequestParam 绑定，非 request DTO 字段），注解无处安放
@@ -727,6 +734,8 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         }
         return rows;
     }
+
+    // 下拉
 
     private InpatientRecordLogVO toLogVO(BizInpatientRecordLog l) {
         InpatientRecordLogVO vo = new InpatientRecordLogVO();
@@ -748,7 +757,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         return vo;
     }
 
-    /** 字段中文名：病历走结构化要素清单，护理走护理字段表；查不到**原样返回不猜** */
+    /**
+     * 字段中文名：病历走结构化要素清单，护理走护理字段表；查不到**原样返回不猜**
+     */
     private String fieldLabel(Integer docType, String code) {
         if (code == null) {
             return "—";
@@ -772,8 +783,6 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         }
         return InpatientRecordLabels.nursingFieldLabel(code);
     }
-
-    // 结构化率统计
 
     @Override
     public RecordQualityStatVO qualityStat(Long admissionId) {
@@ -883,7 +892,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         return stat;
     }
 
-    // 下拉
+    // diff 留痕
 
     @Override
     public List<CodeOptionVO> typeOptions() {
@@ -910,8 +919,6 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         recordMapper.insert(record);
         return record;
     }
-
-    // diff 留痕
 
     /**
      * 逐字段 diff：只对「值真的变了」的字段生成日志行。
@@ -973,17 +980,11 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         return changes;
     }
 
-    private static String asText(Object v) {
-        if (v == null) {
-            return null;
-        }
-        if (v instanceof BigDecimal bd) {
-            return bd.stripTrailingZeros().toPlainString();
-        }
-        return String.valueOf(v);
-    }
+    // 私有辅助
 
-    /** 动作日志（创建/提交/归档）：不带字段三件套，靠 operation 表达 */
+    /**
+     * 动作日志（创建/提交/归档）：不带字段三件套，靠 operation 表达
+     */
     private BizInpatientRecordLog actionLog(BizInpatientRecord record, String operation) {
         BizInpatientRecordLog row = new BizInpatientRecordLog();
         row.setDocType(RecordDocTypeEnum.MEDICAL.getCode());
@@ -999,8 +1000,6 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
     private void writeActionLog(BizInpatientRecord record, String operation) {
         logMapper.insert(actionLog(record, operation));
     }
-
-    // 私有辅助
 
     private void fillStructured(BizInpatientRecord r,
                                 java.util.function.Consumer<Integer> filledSetter,
@@ -1035,7 +1034,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         return p == null ? null : p.getPatientName();
     }
 
-    /** 年龄：档案里有 age 用 age（单位=岁）；没有则按出生日期算（算不出就留空，不猜） */
+    /**
+     * 年龄：档案里有 age 用 age（单位=岁）；没有则按出生日期算（算不出就留空，不猜）
+     */
     private void fillAge(BizInpatientRecord record, BizPatient patient) {
         if (patient.getAge() != null) {
             record.setAge(patient.getAge());
@@ -1061,11 +1062,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         return prefix + String.format("%04d", seq);
     }
 
-    private static String rateText(BigDecimal rate) {
-        return rate == null ? "—" : rate.toPlainString() + "%";
-    }
-
-    /** 文书的医生留痕一律用**员工ID**（不是用户的ID），与 P1 医嘱同一口径 */
+    /**
+     * 文书的医生留痕一律用**员工ID**（不是用户的ID），与 P1 医嘱同一口径
+     */
     private Long currentEmpId() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();
@@ -1096,7 +1095,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         }
     }
 
-    /** 签名人的科室快照：证书与签名行上都要记"签名当时在哪个科室"（人可能转科） */
+    /**
+     * 签名人的科室快照：证书与签名行上都要记"签名当时在哪个科室"（人可能转科）
+     */
     private Long currentDeptId() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();
@@ -1113,9 +1114,5 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
     }
 }

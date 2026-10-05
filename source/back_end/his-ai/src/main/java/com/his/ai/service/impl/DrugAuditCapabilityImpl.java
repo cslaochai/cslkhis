@@ -1,5 +1,7 @@
 package com.his.ai.service.impl;
 
+import com.his.common.enums.SysGenderEnum;
+
 import com.his.ai.service.DrugAuditCapability;
 import com.his.ai.service.AiExecutionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -277,7 +279,8 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         if (gender == null) {
             return "（未填写）";
         }
-        return gender == 1 ? "男" : gender == 2 ? "女" : "未知";
+        SysGenderEnum g = SysGenderEnum.fromCode(gender);
+        return g == null ? "未知" : g.getLabel();
     }
 
     private static String currentOperator() {
