@@ -13,11 +13,17 @@ import lombok.Getter;
 @Getter
 public enum TechAuthCategoryEnum {
 
-    /** 手术：排台主刀、手术医嘱、日间手术的准入按此类别 */
+    /**
+     * 手术：排台主刀、手术医嘱、日间手术的准入按此类别
+     */
     SURGERY(1, "手术"),
-    /** 麻醉：按所伴手术同级授权，排台麻醉医师按此类别 */
+    /**
+     * 麻醉：按所伴手术同级授权，排台麻醉医师按此类别
+     */
     ANESTHESIA(2, "麻醉"),
-    /** 内镜与介入：内镜/介入操作者按此类别（ERCP 等按四级） */
+    /**
+     * 内镜与介入：内镜/介入操作者按此类别（ERCP 等按四级）
+     */
     ENDOSCOPY(3, "内镜与介入");
 
     private final int code;

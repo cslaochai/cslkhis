@@ -3,8 +3,8 @@ package com.his.common.service;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.dto.TsaTokenQueryPageDTO;
 import com.his.common.vo.TsaStatusVO;
-import com.his.common.vo.TsaTokenVerifyVO;
 import com.his.common.vo.TsaTokenVO;
+import com.his.common.vo.TsaTokenVerifyVO;
 
 /**
  * 可信时间戳（TSA）运维：状态、令牌台账与运维操作（G6b）。
@@ -15,10 +15,14 @@ import com.his.common.vo.TsaTokenVO;
  */
 public interface TsaService {
 
-    /** TSA 服务状态（适配器在线情况 / 配置与生效的时间来源 / 台账计数） */
+    /**
+     * TSA 服务状态（适配器在线情况 / 配置与生效的时间来源 / 台账计数）
+     */
     TsaStatusVO status();
 
-    /** 令牌台账分页（只增不改的签发流水） */
+    /**
+     * 令牌台账分页（只增不改的签发流水）
+     */
     IPage<TsaTokenVO> listPage(TsaTokenQueryPageDTO query);
 
     /**

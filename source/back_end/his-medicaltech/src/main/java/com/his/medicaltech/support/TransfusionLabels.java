@@ -1,5 +1,6 @@
 package com.his.medicaltech.support;
 
+import com.his.medicaltech.enums.TransfusionStatusEnum;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -13,7 +14,7 @@ import java.util.Set;
 /**
  * 输血闭环枚举文案与<b>输血相容性规则</b>。
  *
- * <p><b>铁律：未知码值一律渲染成「未知(码值)」，绝不回落成某个合法值。</b>
+ * <p><b>展示用码值 → 文案：未知码值一律返回空串，不再伪装成某个合法值（脏数据交由数据治理修复）。异常 / 审计场景如需保留原始码值，须改用对应枚举的 labelOrUnknown。</b>
  * 状态回落成"已完成"、品种回落成"红细胞悬液"，等于把没核实的事记成核实了 ——
  * 与手术/会诊/转科、检验「未判定 ≠ 正常」是同一条原则。
  *
@@ -28,42 +29,30 @@ public final class TransfusionLabels {
     private TransfusionLabels() {
     }
 
-    // 一、流程状态（与 sql/39 注释、前端筛选值必须逐一对齐）
+    // 一、流程状态（与 sql/39 注释、前端筛选值必须逐一对齐；唯一口径 TransfusionStatusEnum）
 
-    public static final int ST_PENDING_CROSSMATCH = 0;
-    public static final int ST_CROSSMATCHED = 1;
-    public static final int ST_ISSUED = 2;
-    public static final int ST_INFUSING = 3;
-    public static final int ST_FINISHED = 4;
-    public static final int ST_CANCELLED = 5;
-
-    /** 状态文案：0-待配血 1-已配血 2-已发血 3-输注中 4-已完成 5-已取消 */
+    /** 状态文案（码值唯一口径 TransfusionStatusEnum）：未知码值渲染「未知(码值)」，绝不回落成合法值 */
     public static String statusText(Integer code) {
         if (code == null) {
             return "—";
         }
-        return switch (code) {
-            case ST_PENDING_CROSSMATCH -> "待配血";
-            case ST_CROSSMATCHED -> "已配血";
-            case ST_ISSUED -> "已发血";
-            case ST_INFUSING -> "输注中";
-            case ST_FINISHED -> "已完成";
-            case ST_CANCELLED -> "已取消";
-            default -> "未知(" + code + ")";
-        };
+        TransfusionStatusEnum e = TransfusionStatusEnum.fromCode(code);
+        return e == null ? "" : e.getLabel();
     }
 
     /** 是否"未完成"（待配血 / 已配血 / 已发血 / 输注中）—— 工作台角标用 */
     public static boolean isUnfinished(Integer status) {
-        return status != null
-                && (status == ST_PENDING_CROSSMATCH || status == ST_CROSSMATCHED
-                || status == ST_ISSUED || status == ST_INFUSING);
+        return TransfusionStatusEnum.PENDING_CROSSMATCH.is(status)
+                || TransfusionStatusEnum.CROSSMATCHED.is(status)
+                || TransfusionStatusEnum.ISSUED.is(status)
+                || TransfusionStatusEnum.INFUSING.is(status);
     }
 
     /** 是否"在途"（已配血 / 已发血 / 输注中）—— 防重复申请用 */
     public static boolean isActive(Integer status) {
-        return status != null
-                && (status == ST_CROSSMATCHED || status == ST_ISSUED || status == ST_INFUSING);
+        return TransfusionStatusEnum.CROSSMATCHED.is(status)
+                || TransfusionStatusEnum.ISSUED.is(status)
+                || TransfusionStatusEnum.INFUSING.is(status);
     }
 
     // 一·五、用血分级审批（sql/93；《医疗机构临床用血管理办法》）
@@ -91,7 +80,7 @@ public final class TransfusionLabels {
             case AP_APPROVED -> "已通过";
             case AP_REJECTED -> "已驳回";
             case AP_MAKEUP_PENDING -> "急诊待补审";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -103,7 +92,7 @@ public final class TransfusionLabels {
             case 1 -> "上级医师（主治及以上）";
             case 2 -> "科主任";
             case 3 -> "医务科";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -160,7 +149,7 @@ public final class TransfusionLabels {
             case CM_PARTIAL -> "配血中（未配齐）";
             case CM_ALL_MATCHED -> "全部相合";
             case CM_INCOMPATIBLE -> "存在配血不合";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -192,7 +181,7 @@ public final class TransfusionLabels {
         if (code == null) {
             return "—";
         }
-        return COMPONENTS.getOrDefault(code, "未知(" + code + ")");
+        return COMPONENTS.getOrDefault(code, "");
     }
 
     public static boolean isValidComponent(Integer code) {
@@ -389,7 +378,7 @@ public final class TransfusionLabels {
             case BAG_CROSSMATCHED -> "已配血";
             case BAG_ISSUED -> "已发血";
             case BAG_INFUSED -> "已输注";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -401,7 +390,7 @@ public final class TransfusionLabels {
         return switch (code) {
             case 1 -> "相合";
             case 2 -> "不合";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 

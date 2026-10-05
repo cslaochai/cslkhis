@@ -17,7 +17,7 @@ import com.his.medicaltech.mapper.BizExamDeviceMapper;
 import com.his.medicaltech.mapper.BizExamSlotMapper;
 import com.his.medicaltech.support.ExamGrid;
 import com.his.medicaltech.vo.ExamApptVO;
-import com.his.medicaltech.support.SubDictText;
+import com.his.system.service.DictCacheService;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.mapper.SysInspectionItemMapper;
 import lombok.RequiredArgsConstructor;
@@ -59,7 +59,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
     private final BizExamSlotMapper slotMapper;
     private final BizExamAppointmentMapper appointmentMapper;
     private final SysInspectionItemMapper inspectionItemMapper;
-    private final SubDictText dictText;
+    private final DictCacheService dictText;
 
     // 查询
 
@@ -103,7 +103,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         for (BizExamDevice d : deviceMapper.selectList(w)) {
             ExamApptVO.DeviceSelectListVO v = new ExamApptVO.DeviceSelectListVO();
             BeanUtils.copyProperties(d, v);
-            v.setDeviceTypeText(dictText.text(DICT_DEVICE_TYPE, d.getDeviceType()));
+            v.setDeviceTypeText(dictText.getDicDataLabel(DICT_DEVICE_TYPE, d.getDeviceType()));
             out.add(v);
         }
         return out;
@@ -347,8 +347,8 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
                                            Map<Long, String> equipmentNames) {
         ExamApptVO.DeviceVO v = new ExamApptVO.DeviceVO();
         BeanUtils.copyProperties(d, v);
-        v.setDeviceTypeText(dictText.text(DICT_DEVICE_TYPE, d.getDeviceType()));
-        v.setStatusText(dictText.text(DICT_DEVICE_STATUS, d.getStatus()));
+        v.setDeviceTypeText(dictText.getDicDataLabel(DICT_DEVICE_TYPE, d.getDeviceType()));
+        v.setStatusText(dictText.getDicDataLabel(DICT_DEVICE_STATUS, d.getStatus()));
         v.setItemCount(itemCounts.getOrDefault(d.getId(), 0));
         v.setEquipmentName(d.getEquipmentId() == null ? null : equipmentNames.get(d.getEquipmentId()));
         v.setOpenRangeText(openRangeText(d));

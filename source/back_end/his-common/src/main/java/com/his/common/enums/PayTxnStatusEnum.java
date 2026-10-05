@@ -19,14 +19,6 @@ public enum PayTxnStatusEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
     public static PayTxnStatusEnum fromCode(Integer code) {
         if (code == null) {
             return null;
@@ -42,5 +34,13 @@ public enum PayTxnStatusEnum {
     public static String descOf(Integer code) {
         PayTxnStatusEnum item = fromCode(code);
         return item == null ? "未知状态" : item.desc;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
     }
 }

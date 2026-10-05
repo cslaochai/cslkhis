@@ -31,19 +31,6 @@ public enum PaymentMethodEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
-    /** 是否走第三方渠道（原路退回必须找回渠道那笔钱，现金/余额/医保个账各走各的出口） */
-    public boolean channelBacked() {
-        return this == WECHAT || this == ALIPAY || this == BANK;
-    }
-
     /**
      * 按 code 取枚举；未知/为空返回 null（调用方按"渠道不明"兜底成现金退回，不抛错）
      */
@@ -57,5 +44,20 @@ public enum PaymentMethodEnum {
             }
         }
         return null;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
+
+    /**
+     * 是否走第三方渠道（原路退回必须找回渠道那笔钱，现金/余额/医保个账各走各的出口）
+     */
+    public boolean channelBacked() {
+        return this == WECHAT || this == ALIPAY || this == BANK;
     }
 }

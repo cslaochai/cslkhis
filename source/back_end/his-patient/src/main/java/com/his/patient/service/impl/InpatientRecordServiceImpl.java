@@ -1,9 +1,13 @@
 package com.his.patient.service.impl;
+import com.his.patient.enums.AgeUnitEnum;
+import com.his.patient.enums.InpatientRecordTypeEnum;
+import com.his.patient.enums.SummaryStatusEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.enums.RecordStatusEnum;
+import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -194,7 +198,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
 
         record.setRecordType(dto.getRecordType());
         record.setRecordTitle(StringUtils.hasText(dto.getRecordTitle())
-                ? dto.getRecordTitle() : InpatientRecordLabels.recordTypeText(dto.getRecordType()));
+                ? dto.getRecordTitle() : InpatientRecordTypeEnum.labelOf(dto.getRecordType()));
         record.setRecordTime(toSeconds(dto.getRecordTime() != null ? dto.getRecordTime() : LocalDateTime.now()));
 
         applyContent(record, dto);
@@ -216,7 +220,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         writeActionLog(record, "创建");
         log.info("新建病历文书 recordNo={} admissionId={} type={} 医生={}",
                 record.getRecordNo(), record.getAdmissionId(),
-                InpatientRecordLabels.recordTypeText(record.getRecordType()), record.getDoctorName());
+                InpatientRecordTypeEnum.labelOf(record.getRecordType()), record.getDoctorName());
         return detail(record.getId());
     }
 
@@ -357,7 +361,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
 
         // 保留（类别①条件必填）：诊断名称只对「要求诊断的文书类型」必填，是否必填取决于同批内容
         if (InpatientRecordLabels.requiresDiagnosis(type) && !StringUtils.hasText(record.getDiagnosisName())) {
-            throw new BusinessException(InpatientRecordLabels.recordTypeText(type) + "必须填写诊断名称");
+            throw new BusinessException(InpatientRecordTypeEnum.labelOrUnknown(type) + "必须填写诊断名称");
         }
 
         // 保留（类别③）：体征值域与「收缩压>舒张压」是临床取值合理性规则，注解（@Max 一类）表达不了成对比较
@@ -415,11 +419,11 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         vo.setWardName(r.getWardName());
         vo.setBedNo(r.getBedNo());
         vo.setRecordType(r.getRecordType());
-        vo.setRecordTypeText(InpatientRecordLabels.recordTypeText(r.getRecordType()));
+        vo.setRecordTypeText(InpatientRecordTypeEnum.labelOf(r.getRecordType()));
         vo.setRecordTitle(r.getRecordTitle());
         vo.setRecordTime(r.getRecordTime());
         vo.setRecordStatus(r.getRecordStatus());
-        vo.setRecordStatusText(InpatientRecordLabels.recordStatusText(r.getRecordStatus()));
+        vo.setRecordStatusText(SummaryStatusEnum.labelOf(r.getRecordStatus()));
         vo.setDoctorName(r.getDoctorName());
         vo.setChiefComplaint(r.getChiefComplaint());
         vo.setDiagnosisName(r.getDiagnosisName());
@@ -446,16 +450,16 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         vo.setPatientNo(r.getPatientNo());
         vo.setPatientName(r.getPatientName());
         vo.setGender(r.getGender());
-        vo.setGenderText(InpatientRecordLabels.genderText(r.getGender()));
+        vo.setGenderText(SysGenderEnum.getText(r.getGender()));
         vo.setAge(r.getAge());
         vo.setAgeUnit(r.getAgeUnit());
-        vo.setAgeUnitText(InpatientRecordLabels.ageUnitText(r.getAgeUnit()));
-        vo.setAgeText(r.getAge() == null ? "—" : r.getAge() + InpatientRecordLabels.ageUnitText(r.getAgeUnit()));
+        vo.setAgeUnitText(AgeUnitEnum.labelOf(r.getAgeUnit()));
+        vo.setAgeText(r.getAge() == null ? "—" : r.getAge() + AgeUnitEnum.labelOf(r.getAgeUnit()));
         vo.setDeptName(r.getDeptName());
         vo.setWardName(r.getWardName());
         vo.setBedNo(r.getBedNo());
         vo.setRecordType(r.getRecordType());
-        vo.setRecordTypeText(InpatientRecordLabels.recordTypeText(r.getRecordType()));
+        vo.setRecordTypeText(InpatientRecordTypeEnum.labelOf(r.getRecordType()));
         vo.setRecordTitle(r.getRecordTitle());
         vo.setRecordTime(r.getRecordTime());
         vo.setChiefComplaint(r.getChiefComplaint());
@@ -487,7 +491,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         vo.setTreatmentPlan(r.getTreatmentPlan());
         vo.setCourseNote(r.getCourseNote());
         vo.setRecordStatus(r.getRecordStatus());
-        vo.setRecordStatusText(InpatientRecordLabels.recordStatusText(r.getRecordStatus()));
+        vo.setRecordStatusText(SummaryStatusEnum.labelOf(r.getRecordStatus()));
         vo.setDoctorName(r.getDoctorName());
         vo.setSubmitTime(r.getSubmitTime());
         vo.setArchiveTime(r.getArchiveTime());
@@ -556,7 +560,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         for (BizInpatientRecord r : records) {
             if (!Objects.equals(RecordStatusEnum.DRAFT.getCode(), r.getRecordStatus())) {
                 throw new BusinessException("文书 " + r.getRecordNo() + " 当前状态为「"
-                        + InpatientRecordLabels.recordStatusText(r.getRecordStatus())
+                        + SummaryStatusEnum.labelOrUnknown(r.getRecordStatus())
                         + "」，只有「草稿」可以提交");
             }
         }
@@ -607,7 +611,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         for (BizInpatientRecord r : records) {
             if (!Objects.equals(RecordStatusEnum.SUBMITTED.getCode(), r.getRecordStatus())) {
                 throw new BusinessException("文书 " + r.getRecordNo() + " 当前状态为「"
-                        + InpatientRecordLabels.recordStatusText(r.getRecordStatus())
+                        + SummaryStatusEnum.labelOrUnknown(r.getRecordStatus())
                         + "」，只有「已提交」可以归档（草稿请先提交）");
             }
         }
@@ -741,7 +745,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         InpatientRecordLogVO vo = new InpatientRecordLogVO();
         vo.setId(l.getId());
         vo.setDocType(l.getDocType());
-        vo.setDocTypeText(InpatientRecordLabels.docTypeText(l.getDocType()));
+        vo.setDocTypeText(RecordDocTypeEnum.labelOf(l.getDocType()));
         vo.setRecordId(l.getRecordId());
         vo.setRecordNo(l.getRecordNo());
         vo.setRecordType(l.getRecordType());
@@ -846,8 +850,8 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
             rs.setRecordId(r.getId());
             rs.setRecordNo(r.getRecordNo());
             rs.setRecordType(r.getRecordType());
-            rs.setRecordTypeText(InpatientRecordLabels.recordTypeText(r.getRecordType()));
-            rs.setRecordStatusText(InpatientRecordLabels.recordStatusText(r.getRecordStatus()));
+            rs.setRecordTypeText(InpatientRecordTypeEnum.labelOf(r.getRecordType()));
+            rs.setRecordStatusText(SummaryStatusEnum.labelOf(r.getRecordStatus()));
             rs.setFilled(filled);
             rs.setTotal(elements.size());
             rs.setRate(RecordStructuredFields.rate(filled, elements.size()));
@@ -898,7 +902,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
     public List<CodeOptionVO> typeOptions() {
         List<CodeOptionVO> list = new ArrayList<>();
         for (int i = 1; i <= 8; i++) {
-            list.add(new CodeOptionVO(i, InpatientRecordLabels.recordTypeText(i)));
+            list.add(new CodeOptionVO(i, InpatientRecordTypeEnum.labelOf(i)));
         }
         return list;
     }
@@ -906,9 +910,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
     @Override
     public List<CodeOptionVO> statusOptions() {
         List<CodeOptionVO> list = new ArrayList<>();
-        list.add(new CodeOptionVO(RecordStatusEnum.DRAFT.getCode(), InpatientRecordLabels.recordStatusText(RecordStatusEnum.DRAFT.getCode())));
-        list.add(new CodeOptionVO(RecordStatusEnum.SUBMITTED.getCode(), InpatientRecordLabels.recordStatusText(RecordStatusEnum.SUBMITTED.getCode())));
-        list.add(new CodeOptionVO(RecordStatusEnum.ARCHIVED.getCode(), InpatientRecordLabels.recordStatusText(RecordStatusEnum.ARCHIVED.getCode())));
+        list.add(new CodeOptionVO(RecordStatusEnum.DRAFT.getCode(), SummaryStatusEnum.labelOf(RecordStatusEnum.DRAFT.getCode())));
+        list.add(new CodeOptionVO(RecordStatusEnum.SUBMITTED.getCode(), SummaryStatusEnum.labelOf(RecordStatusEnum.SUBMITTED.getCode())));
+        list.add(new CodeOptionVO(RecordStatusEnum.ARCHIVED.getCode(), SummaryStatusEnum.labelOf(RecordStatusEnum.ARCHIVED.getCode())));
         return list;
     }
 

@@ -12,9 +12,13 @@ import lombok.Getter;
 @Getter
 public enum StockRoomEnum {
 
-    /** 药库：整件存放，采购收货与供应商退货发生的库位 */
+    /**
+     * 药库：整件存放，采购收货与供应商退货发生的库位
+     */
     WAREHOUSE(1, "药库"),
-    /** 药房：在架发药，患者退药回到这里 */
+    /**
+     * 药房：在架发药，患者退药回到这里
+     */
     PHARMACY(2, "药房");
 
     private final int code;

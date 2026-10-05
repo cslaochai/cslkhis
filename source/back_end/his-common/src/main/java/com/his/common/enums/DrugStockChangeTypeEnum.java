@@ -25,7 +25,9 @@ public enum DrugStockChangeTypeEnum {
 
     private final int code;
     private final String label;
-    /** 数量方向：1=入库（流水为正）、-1=出库（流水为负） */
+    /**
+     * 数量方向：1=入库（流水为正）、-1=出库（流水为负）
+     */
     private final int sign;
 
     DrugStockChangeTypeEnum(int code, String label, int sign) {
@@ -51,7 +53,9 @@ public enum DrugStockChangeTypeEnum {
         return type == null ? "未知(" + code + ")" : type.getLabel();
     }
 
-    /** 本类型是不是出库（落流水时 change_quantity 取负） */
+    /**
+     * 本类型是不是出库（落流水时 change_quantity 取负）
+     */
     public boolean outbound() {
         return sign < 0;
     }

@@ -12,13 +12,21 @@ import lombok.Getter;
 @Getter
 public enum StaffScheduleSourceEnum {
 
-    /** 手工排班（排班员逐条录入） */
+    /**
+     * 手工排班（排班员逐条录入）
+     */
     MANUAL(1, "手工"),
-    /** 周模板批量生成 */
+    /**
+     * 周模板批量生成
+     */
     TEMPLATE(2, "模板"),
-    /** 从既有周期复制（复制上周/上月） */
+    /**
+     * 从既有周期复制（复制上周/上月）
+     */
     COPY(3, "复制周期"),
-    /** 换班/代班产生的行 */
+    /**
+     * 换班/代班产生的行
+     */
     SWAP(4, "换班");
 
     private final int code;

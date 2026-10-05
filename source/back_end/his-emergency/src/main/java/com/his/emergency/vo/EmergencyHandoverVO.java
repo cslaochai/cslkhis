@@ -30,7 +30,9 @@ public class EmergencyHandoverVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 交班科室名称（快照） */
+    /**
+     * 交班科室名称（快照）
+     */
     private String deptName;
 
     /**
@@ -39,7 +41,9 @@ public class EmergencyHandoverVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long fromEmpId;
 
-    /** 交出人姓名（快照） */
+    /**
+     * 交出人姓名（快照）
+     */
     private String fromEmpName;
 
     /**

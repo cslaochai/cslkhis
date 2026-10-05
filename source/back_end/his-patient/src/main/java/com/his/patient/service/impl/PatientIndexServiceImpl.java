@@ -20,7 +20,7 @@ import com.his.patient.mapper.BizPatientMergeLogMapper;
 import com.his.patient.mapper.PatientIndexMapper;
 import com.his.patient.service.PatientIndexService;
 import com.his.patient.support.PatientDataTables;
-import com.his.patient.support.PatientGenderText;
+import com.his.common.enums.SysGenderEnum;
 import com.his.patient.support.PatientProfileFields;
 import com.his.patient.vo.*;
 import com.his.security.UserUtils;
@@ -139,7 +139,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         m.put("id", String.valueOf(p.getId()));
         m.put("patientNo", p.getPatientNo());
         m.put("patientName", p.getPatientName());
-        m.put("genderText", PatientGenderText.of(p.getGender()));
+        m.put("genderText", SysGenderEnum.getText(p.getGender()));
         m.put("idCard", p.getIdCard());
         m.put("phone", p.getPhone());
         m.put("mergeStatus", p.getMergeStatus());
@@ -455,7 +455,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         for (BizPatient p : patients) {
             PatientIndexVO vo = new PatientIndexVO();
             BeanUtils.copyProperties(p, vo);
-            vo.setGenderText(PatientGenderText.of(p.getGender()));
+            vo.setGenderText(SysGenderEnum.getText(p.getGender()));
 
             PatientProfileFields.ProfileScore sc = PatientProfileFields.score(p);
             vo.setCompleteCount(sc.completeCount());

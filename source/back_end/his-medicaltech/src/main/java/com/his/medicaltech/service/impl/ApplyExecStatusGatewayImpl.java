@@ -137,15 +137,18 @@ public class ApplyExecStatusGatewayImpl implements ApplyExecStatusGateway {
         if (status == null) {
             return "已缴费待执行";
         }
-        return switch (status) {
-            case 1 -> "已缴费待执行";
-            case 2 -> "已到检";
-            case 3 -> "检查中";
-            case 4 -> "已出结果";
-            case 5 -> "已审核";
-            case 6 -> "已发布";
-            case 7 -> "已取消";
-            default -> "未知(" + status + ")";
+        InsRecordStatusEnum e = InsRecordStatusEnum.getByCode(status);
+        if (e == null) {
+            return "未知(" + status + ")";
+        }
+        return switch (e) {
+            case REGISTERED -> "已缴费待执行";
+            case SIGNED_IN -> "已到检";
+            case CHECKING -> "检查中";
+            case RESULTED -> "已出结果";
+            case REVIEWED -> "已审核";
+            case PUBLISHED -> "已发布";
+            case CANCELLED -> "已取消";
         };
     }
 
@@ -159,16 +162,19 @@ public class ApplyExecStatusGatewayImpl implements ApplyExecStatusGateway {
         if (status == null) {
             return "已缴费待执行";
         }
-        return switch (status) {
-            case 1 -> "已缴费待执行";
-            case 2 -> "已采样";
-            case 3 -> "已接收";
-            case 4 -> "检测中";
-            case 5 -> "已出结果";
-            case 6 -> "已审核";
-            case 7 -> "已发布";
-            case 8 -> "已取消";
-            default -> "未知(" + status + ")";
+        LabRecordStatusEnum e = LabRecordStatusEnum.getByCode(status);
+        if (e == null) {
+            return "未知(" + status + ")";
+        }
+        return switch (e) {
+            case REGISTERED -> "已缴费待执行";
+            case SAMPLED -> "已采样";
+            case RECEIVED -> "已接收";
+            case TESTING -> "检测中";
+            case RESULTED -> "已出结果";
+            case REVIEWED -> "已审核";
+            case RELEASED -> "已发布";
+            case CANCELLED -> "已取消";
         };
     }
 }

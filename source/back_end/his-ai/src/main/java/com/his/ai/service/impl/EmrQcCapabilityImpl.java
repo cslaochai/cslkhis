@@ -216,14 +216,6 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
         return prefix + timestamp + tail;
     }
 
-    private static String genderText(Integer gender) {
-        if (gender == null) {
-            return "（未填写）";
-        }
-        SysGenderEnum g = SysGenderEnum.fromCode(gender);
-        return g == null ? "未知" : g.getLabel();
-    }
-
     private static String truncate(String text, int maxLength, String fallback) {
         if (!StringUtils.hasText(text)) {
             return fallback;
@@ -311,7 +303,7 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
 
     private Optional<EmrQcLlmOutputDTO> callModel(BizMedicalRecord record) {
         Map<String, Object> variables = new HashMap<>();
-        variables.put("gender", genderText(record.getGender()));
+        variables.put("gender", SysGenderEnum.getText(record.getGender()));
         variables.put("age", record.getAge() == null ? "（未填写）" : record.getAge() + "岁");
         variables.put("chiefComplaint", nullToDash(record.getChiefComplaint()));
         variables.put("presentIllness", nullToDash(record.getPresentIllness()));

@@ -17,10 +17,14 @@ import java.math.RoundingMode;
  */
 public final class TcmGramUnits {
 
-    /** 每克单价的精度：饮片档案价多为「几十~几百元/kg」，除以 1000 后需要 3~4 位才不会把 0.105 截成 0.11 */
+    /**
+     * 每克单价的精度：饮片档案价多为「几十~几百元/kg」，除以 1000 后需要 3~4 位才不会把 0.105 截成 0.11
+     */
     private static final int PRICE_SCALE = 4;
 
-    /** 库存列是 decimal(10,2)，扣减量只能精确到 0.01 档案单位 */
+    /**
+     * 库存列是 decimal(10,2)，扣减量只能精确到 0.01 档案单位
+     */
     private static final int STOCK_SCALE = 2;
 
     private TcmGramUnits() {

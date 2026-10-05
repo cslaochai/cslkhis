@@ -1,4 +1,7 @@
 package com.his.patient.service.impl;
+import com.his.patient.enums.NursingLevelEnum;
+import com.his.patient.enums.NursingShiftEnum;
+import com.his.patient.enums.SummaryStatusEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -193,7 +196,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         writeActionLog(record, "创建");
         log.info("录入护理文书 recordNo={} admissionId={} type={} 护士={} 时点={}",
                 record.getRecordNo(), record.getAdmissionId(),
-                InpatientRecordLabels.nursingTypeText(record.getNursingType()),
+                NursingDocTypeEnum.labelOf(record.getNursingType()),
                 record.getNurseName(), record.getMeasureTime());
         return toVO(record);
     }
@@ -262,7 +265,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
                     || dto.getRespiration() != null || dto.getSystolicPressure() != null
                     || dto.getDiastolicPressure() != null || dto.getSpo2() != null;
             if (!any) {
-                throw new BusinessException(InpatientRecordLabels.nursingTypeText(type)
+                throw new BusinessException(NursingDocTypeEnum.labelOrUnknown(type)
                         + "至少要录一个体征值（体温/脉搏/呼吸/血压/血氧任选其一）");
             }
         }
@@ -351,7 +354,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             p.setMeasureTime(r.getMeasureTime());
             p.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DATE));
             p.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(CLOCK));
-            p.setShiftText(InpatientRecordLabels.shiftText(r.getShift()));
+            p.setShiftText(NursingShiftEnum.labelOf(r.getShift()));
             p.setTemperature(r.getTemperature());
             p.setPulse(r.getPulse());
             p.setRespiration(r.getRespiration());
@@ -381,9 +384,9 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     @Override
     public List<CodeOptionVO> typeOptions() {
         List<CodeOptionVO> list = new ArrayList<>();
-        list.add(new CodeOptionVO(NursingDocTypeEnum.TEMP.getCode(), InpatientRecordLabels.nursingTypeText(NursingDocTypeEnum.TEMP.getCode())));
-        list.add(new CodeOptionVO(NursingDocTypeEnum.NOTE.getCode(), InpatientRecordLabels.nursingTypeText(NursingDocTypeEnum.NOTE.getCode())));
-        list.add(new CodeOptionVO(NursingDocTypeEnum.VITAL.getCode(), InpatientRecordLabels.nursingTypeText(NursingDocTypeEnum.VITAL.getCode())));
+        list.add(new CodeOptionVO(NursingDocTypeEnum.TEMP.getCode(), NursingDocTypeEnum.labelOf(NursingDocTypeEnum.TEMP.getCode())));
+        list.add(new CodeOptionVO(NursingDocTypeEnum.NOTE.getCode(), NursingDocTypeEnum.labelOf(NursingDocTypeEnum.NOTE.getCode())));
+        list.add(new CodeOptionVO(NursingDocTypeEnum.VITAL.getCode(), NursingDocTypeEnum.labelOf(NursingDocTypeEnum.VITAL.getCode())));
         return list;
     }
 
@@ -785,7 +788,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         WardVO ward = bedMapper.selectWardById(wardId);
         vo.setWardName(ward == null ? null : ward.getWardName());
         vo.setShift(shift);
-        vo.setShiftText(InpatientRecordLabels.shiftText(shift));
+        vo.setShiftText(NursingShiftEnum.labelOf(shift));
         vo.setWindowBegin(begin);
         vo.setWindowEnd(end);
 
@@ -863,12 +866,12 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setWardName(r.getWardName());
         vo.setBedNo(r.getBedNo());
         vo.setNursingType(r.getNursingType());
-        vo.setNursingTypeText(InpatientRecordLabels.nursingTypeText(r.getNursingType()));
+        vo.setNursingTypeText(NursingDocTypeEnum.labelOf(r.getNursingType()));
         vo.setMeasureTime(r.getMeasureTime());
         vo.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DATE));
         vo.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(CLOCK));
         vo.setShift(r.getShift());
-        vo.setShiftText(InpatientRecordLabels.shiftText(r.getShift()));
+        vo.setShiftText(NursingShiftEnum.labelOf(r.getShift()));
         vo.setTemperature(r.getTemperature());
         vo.setPulse(r.getPulse());
         vo.setRespiration(r.getRespiration());
@@ -882,12 +885,12 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setIntakeVolume(r.getIntakeVolume());
         vo.setOutputVolume(r.getOutputVolume());
         vo.setNursingLevel(r.getNursingLevel());
-        vo.setNursingLevelText(InpatientRecordLabels.nursingLevelText(r.getNursingLevel()));
+        vo.setNursingLevelText(NursingLevelEnum.labelOf(r.getNursingLevel()));
         vo.setNursingContent(r.getNursingContent());
         vo.setNurseId(r.getNurseId());
         vo.setNurseName(r.getNurseName());
         vo.setRecordStatus(r.getRecordStatus());
-        vo.setRecordStatusText(InpatientRecordLabels.recordStatusText(r.getRecordStatus()));
+        vo.setRecordStatusText(SummaryStatusEnum.labelOf(r.getRecordStatus()));
         vo.setCanEdit(!InpatientRecordLabels.isArchived(r.getRecordStatus()));
         vo.setRemark(r.getRemark());
         return vo;

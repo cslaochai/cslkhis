@@ -12,11 +12,10 @@ import com.his.medicaltech.mapper.BizExamDeviceMapper;
 import com.his.medicaltech.mapper.BizExamSlotMapper;
 import com.his.medicaltech.support.ExamGrid;
 import com.his.medicaltech.vo.ExamApptVO;
-import com.his.medicaltech.support.SubDictText;
+import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -53,7 +52,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
     private final BizExamDeviceMapper deviceMapper;
     private final BizExamSlotMapper slotMapper;
     private final BizExamAppointmentMapper appointmentMapper;
-    private final SubDictText dictText;
+    private final DictCacheService dictText;
 
     // 生成 / 看板
 
@@ -112,7 +111,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
         vo.setDeptName(device.getDeptName());
         vo.setRoomName(device.getRoomName());
         vo.setDeviceStatus(device.getStatus());
-        vo.setDeviceStatusText(dictText.text(DICT_DEVICE_STATUS, device.getStatus()));
+        vo.setDeviceStatusText(dictText.getDicDataLabel(DICT_DEVICE_STATUS, device.getStatus()));
         vo.setSlotDate(dto.getSlotDate());
         vo.setSlotMinutes(device.getSlotMinutes());
         vo.setParallelCount(device.getParallelCount());
@@ -135,7 +134,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
             List<String> names = new ArrayList<>();
             for (BizExamAppointment a : occupants) {
                 if (overlaps(cell, a)) {
-                    nos.add(a.getApptNo() + "(" + dictText.text("his_exam_appoint_status", a.getStatus()) + ")");
+                    nos.add(a.getApptNo() + "(" + dictText.getDicDataLabel("his_exam_appoint_status", a.getStatus()) + ")");
                     names.add(a.getPatientName());
                 }
             }

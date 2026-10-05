@@ -12,6 +12,8 @@ import com.his.pharmacy.dto.StocktakeQueryPageDTO;
 import com.his.pharmacy.dto.StocktakeUpsertDTO;
 import com.his.pharmacy.entity.BizStocktake;
 import com.his.pharmacy.entity.BizStocktakeItem;
+import com.his.pharmacy.enums.StocktakePostFlagEnum;
+import com.his.pharmacy.enums.StocktakeStatusEnum;
 import com.his.pharmacy.mapper.BizDrugStockLogMapper;
 import com.his.pharmacy.mapper.BizStocktakeItemMapper;
 import com.his.pharmacy.mapper.BizStocktakeMapper;
@@ -51,16 +53,8 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class StocktakeServiceImpl implements StocktakeService {
 
-    /** 状态：1-盘点中 2-待复核 3-已过账 4-已关单（无差异） */
-    private static final int ST_COUNTING = 1;
-    private static final int ST_AUDITING = 2;
-    private static final int ST_POSTED = 3;
-    private static final int ST_CLOSED = 4;
-
-    /** 明细过账标记：0-未过账 1-已盘盈亏过账 2-无差异免过账 */
-    private static final int POST_NONE = 0;
-    private static final int POST_DONE = 1;
-    private static final int POST_NO_DIFF = 2;
+    /** 状态：1-盘点中 2-待复核 3-已过账 4-已关单（唯一口径 StocktakeStatusEnum） */
+    /** 明细过账标记：0-未过账 1-已盘盈亏过账 2-无差异免过账（唯一口径 StocktakePostFlagEnum） */
 
     private final BizStocktakeMapper stocktakeMapper;
     private final BizStocktakeItemMapper itemMapper;
@@ -115,7 +109,7 @@ public class StocktakeServiceImpl implements StocktakeService {
             head.setScopeKeyword(keyword);
             head.setScopeDesc(scopeDesc(drugType, keyword));
             head.setSnapshotTime(now);
-            head.setStatus(ST_COUNTING);
+            head.setStatus(StocktakeStatusEnum.COUNTING.getCode());
             head.setTotalItems(0);
             head.setCountedItems(0);
             head.setDiffItems(0);
@@ -136,7 +130,7 @@ public class StocktakeServiceImpl implements StocktakeService {
         }
 
         BizStocktake cur = lock(dto.getId());
-        requireStatus(cur, ST_COUNTING, "修改盘点范围");
+        requireStatus(cur, StocktakeStatusEnum.COUNTING.getCode(), "修改盘点范围");
         boolean scopeChanged = !Objects.equals(cur.getScopeDrugType(), drugType)
                 || !Objects.equals(trimToNull(cur.getScopeKeyword()), keyword);
 
@@ -169,7 +163,7 @@ public class StocktakeServiceImpl implements StocktakeService {
     @Transactional(rollbackFor = Exception.class)
     public StocktakeVO saveCount(StocktakeCountUpsertDTO dto) {
         BizStocktake head = lock(dto.getId());
-        requireStatus(head, ST_COUNTING, "录入实盘数");
+        requireStatus(head, StocktakeStatusEnum.COUNTING.getCode(), "录入实盘数");
         String operator = UserUtils.getCurrentEmployeeName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
 
@@ -187,7 +181,7 @@ public class StocktakeServiceImpl implements StocktakeService {
                     .set(BizStocktakeItem::getCountedQuantity, counted)
                     .set(BizStocktakeItem::getDiffQuantity, diff)
                     .set(BizStocktakeItem::getDiffAmount, diff.multiply(cost).setScale(2, RoundingMode.HALF_UP))
-                    .set(BizStocktakeItem::getPosted, POST_NONE)
+                    .set(BizStocktakeItem::getPosted, StocktakePostFlagEnum.NONE.getCode())
                     .set(BizStocktakeItem::getRemark, cut(row.getRemark(), 500))
                     .set(BizStocktakeItem::getUpdateBy, operator)
                     .set(BizStocktakeItem::getUpdateTime, now));
@@ -200,7 +194,7 @@ public class StocktakeServiceImpl implements StocktakeService {
     @Transactional(rollbackFor = Exception.class)
     public StocktakeVO submit(StocktakeIdDTO dto) {
         BizStocktake head = lock(dto.getId());
-        requireStatus(head, ST_COUNTING, "提交盘点");
+        requireStatus(head, StocktakeStatusEnum.COUNTING.getCode(), "提交盘点");
         String operator = UserUtils.getCurrentEmployeeName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
 
@@ -211,8 +205,8 @@ public class StocktakeServiceImpl implements StocktakeService {
         }
         refreshSummary(head.getId(), operator, now);
         BizStocktake sum = itemMapper.selectSummary(head.getId());
-        int status = sum.getDiffItems() == 0 ? ST_CLOSED : ST_AUDITING;
-        if (status == ST_CLOSED) {
+        int status = sum.getDiffItems() == 0 ? StocktakeStatusEnum.CLOSED.getCode() : StocktakeStatusEnum.AUDITING.getCode();
+        if (status == StocktakeStatusEnum.CLOSED.getCode()) {
             itemMapper.markNoDiff(head.getId(), operator, now);
         }
         stocktakeMapper.update(null, Wrappers.<BizStocktake>lambdaUpdate()
@@ -229,7 +223,7 @@ public class StocktakeServiceImpl implements StocktakeService {
     @Transactional(rollbackFor = Exception.class)
     public StocktakeVO audit(StocktakeAuditDTO dto) {
         BizStocktake head = lock(dto.getId());
-        requireStatus(head, ST_AUDITING, "复核盘点单");
+        requireStatus(head, StocktakeStatusEnum.AUDITING.getCode(), "复核盘点单");
         String operator = UserUtils.getCurrentEmployeeName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         String remark = cut(dto.getRemark(), 500);
@@ -238,7 +232,7 @@ public class StocktakeServiceImpl implements StocktakeService {
             // 退回：状态回盘点中，实盘数原样留着（重录只需要改有争议的那几条）；流水一行都没发生
             stocktakeMapper.update(null, Wrappers.<BizStocktake>lambdaUpdate()
                     .eq(BizStocktake::getId, head.getId())
-                    .set(BizStocktake::getStatus, ST_COUNTING)
+                    .set(BizStocktake::getStatus, StocktakeStatusEnum.COUNTING.getCode())
                     .set(BizStocktake::getAuditBy, operator)
                     .set(BizStocktake::getAuditTime, now)
                     .set(BizStocktake::getAuditRemark, remark)
@@ -263,14 +257,14 @@ public class StocktakeServiceImpl implements StocktakeService {
                     head.getId(), head.getStocktakeNo(), operator, diffReason(item));
             itemMapper.update(null, Wrappers.<BizStocktakeItem>lambdaUpdate()
                     .eq(BizStocktakeItem::getId, item.getId())
-                    .set(BizStocktakeItem::getPosted, POST_DONE)
+                    .set(BizStocktakeItem::getPosted, StocktakePostFlagEnum.POSTED.getCode())
                     .set(BizStocktakeItem::getUpdateBy, operator)
                     .set(BizStocktakeItem::getUpdateTime, now));
         }
         itemMapper.markNoDiff(head.getId(), operator, now);
         stocktakeMapper.update(null, Wrappers.<BizStocktake>lambdaUpdate()
                 .eq(BizStocktake::getId, head.getId())
-                .set(BizStocktake::getStatus, ST_POSTED)
+                .set(BizStocktake::getStatus, StocktakeStatusEnum.POSTED.getCode())
                 .set(BizStocktake::getAuditBy, operator)
                 .set(BizStocktake::getAuditTime, now)
                 .set(BizStocktake::getAuditRemark, remark)
@@ -283,7 +277,7 @@ public class StocktakeServiceImpl implements StocktakeService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
         BizStocktake head = lock(id);
-        if (!Objects.equals(head.getStatus(), ST_COUNTING)) {
+        if (!Objects.equals(head.getStatus(), StocktakeStatusEnum.COUNTING.getCode())) {
             throw new BusinessException("只有「盘点中」的盘点单可以删除（当前：" + statusText(head.getStatus())
                     + "）；待复核请复核人退回，已过账/已关单是留档凭证不能抹");
         }
@@ -321,7 +315,7 @@ public class StocktakeServiceImpl implements StocktakeService {
             item.setCountedQuantity(null);
             item.setDiffQuantity(BigDecimal.ZERO);
             item.setDiffAmount(BigDecimal.ZERO);
-            item.setPosted(POST_NONE);
+            item.setPosted(StocktakePostFlagEnum.NONE.getCode());
             item.setCreateBy(operator);
             item.setUpdateBy(operator);
             item.setCreateTime(now);
@@ -381,13 +375,7 @@ public class StocktakeServiceImpl implements StocktakeService {
         if (status == null) {
             return "未知";
         }
-        return switch (status) {
-            case ST_COUNTING -> "盘点中";
-            case ST_AUDITING -> "待复核";
-            case ST_POSTED -> "已过账";
-            case ST_CLOSED -> "已关单";
-            default -> "未知(" + status + ")";
-        };
+        return StocktakeStatusEnum.labelOf(status);
     }
 
     private static String diffText(BigDecimal counted, BigDecimal diff) {

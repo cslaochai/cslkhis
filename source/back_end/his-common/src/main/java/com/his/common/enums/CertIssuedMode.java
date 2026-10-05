@@ -24,14 +24,6 @@ public enum CertIssuedMode {
         this.text = text;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public String getText() {
-        return text;
-    }
-
     public static CertIssuedMode parse(Integer code) {
         if (code == null) {
             return null;
@@ -50,5 +42,13 @@ public enum CertIssuedMode {
             return m.text;
         }
         return code == null ? "—" : "未知(" + code + ")";
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getText() {
+        return text;
     }
 }

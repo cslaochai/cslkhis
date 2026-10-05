@@ -4,7 +4,7 @@ import com.his.common.exception.BusinessException;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.PatientIndexService;
-import com.his.patient.support.PatientGenderText;
+import com.his.common.enums.SysGenderEnum;
 import com.his.patient.support.PatientProfileFields;
 import com.his.report.dto.CdrQueryDTO;
 import com.his.report.mapper.CdrMapper;
@@ -434,7 +434,7 @@ public class CdrServiceImpl implements CdrService {
         vo.setPatientId(p.getId());
         vo.setPatientNo(p.getPatientNo());
         vo.setPatientName(p.getPatientName());
-        vo.setGenderText(PatientGenderText.of(p.getGender()));
+        vo.setGenderText(SysGenderEnum.getText(p.getGender()));
         vo.setAge(p.getAge());
         vo.setBirthDate(p.getBirthDate() == null ? null : p.getBirthDate().format(DATE_FMT));
         vo.setIdCard(p.getIdCard());

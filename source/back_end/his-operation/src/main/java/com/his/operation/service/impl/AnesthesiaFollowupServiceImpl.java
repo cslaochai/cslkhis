@@ -3,10 +3,12 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.common.enums.SysGenderEnum;
 import com.his.operation.dto.AnesthesiaFollowupQueryPageDTO;
 import com.his.operation.dto.AnesthesiaFollowupUpsertDTO;
 import com.his.operation.entity.BizAnesthesiaFollowup;
 import com.his.operation.entity.BizAnesthesiaRecord;
+import com.his.operation.enums.AnesthesiaFollowupStatusEnum;
 import com.his.operation.mapper.BizAnesthesiaFollowupMapper;
 import com.his.operation.mapper.BizAnesthesiaRecordMapper;
 import com.his.operation.service.AnesthesiaFollowupService;
@@ -55,9 +57,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     /** 麻醉记录状态：已审核 */
     private static final int RECORD_AUDITED = 2;
 
-    /** 随访状态 */
-    private static final int ST_DRAFT = 0;
-    private static final int ST_DONE = 1;
+    /** 随访状态：唯一口径 AnesthesiaFollowupStatusEnum（0草稿 1已完成） */
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
@@ -147,7 +147,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
             entity.setAge(record.getAge());
             entity.setRoundNo(followupMapper.maxRoundOf(record.getId()) + 1);
             entity.setFollowupNo(nextFollowupNo());
-            entity.setFollowupStatus(ST_DRAFT);
+            entity.setFollowupStatus(AnesthesiaFollowupStatusEnum.DRAFT.getCode());
             entity.setFollowupDoctorId(currentEmpId());
             entity.setFollowupDoctorName(currentName());
         } else {
@@ -209,7 +209,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         }
         validateTimeAgainstAnesthesia(entity.getFollowupTime(), entity.getRecordId());
 
-        entity.setFollowupStatus(ST_DONE);
+        entity.setFollowupStatus(AnesthesiaFollowupStatusEnum.DONE.getCode());
         entity.setFinishTime(now());
         if (entity.getFollowupDoctorId() == null) {
             entity.setFollowupDoctorId(currentEmpId());
@@ -272,7 +272,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         if (entity == null) {
             throw new BusinessException("随访单不存在");
         }
-        if (!Objects.equals(ST_DRAFT, entity.getFollowupStatus())) {
+        if (!AnesthesiaFollowupStatusEnum.DRAFT.is(entity.getFollowupStatus())) {
             throw new BusinessException("随访单 " + entity.getFollowupNo()
                     + " 已完成，不能修改或删除（完成即锁死 —— 随访的价值是「当时看到的是什么样」）");
         }
@@ -280,7 +280,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     }
 
     private void decorate(AnesthesiaFollowupVO vo) {
-        vo.setGenderText(InpatientRecordLabels.genderText(vo.getGender()));
+        vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
         vo.setRecoveryText(FollowupAdverseItems.recoveryText(vo.getRecovery()));
         vo.setFollowupStatusText(FollowupAdverseItems.statusText(vo.getFollowupStatus()));
         vo.setRoundText(FollowupAdverseItems.roundText(vo.getRoundNo()));
@@ -290,7 +290,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
             // 存量脏码不能把整个列表打挂：原样带出，让「未知(n)」显形
             vo.setAdverseItemsText(vo.getAdverseItems());
         }
-        boolean draft = Objects.equals(ST_DRAFT, vo.getFollowupStatus());
+        boolean draft = AnesthesiaFollowupStatusEnum.DRAFT.is(vo.getFollowupStatus());
         vo.setCanEdit(draft);
         vo.setCanFinish(draft);
         vo.setCanDelete(draft);

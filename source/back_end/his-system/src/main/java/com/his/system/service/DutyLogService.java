@@ -9,20 +9,6 @@ import java.util.List;
 
 public interface DutyLogService {
 
-    public static final int TYPE_EVENT = 1;
-
-    public static final int TYPE_LEFTOVER = 2;
-
-    public static final int TYPE_PATROL = 3;
-
-    public static final int ST_PENDING = 0;
-
-    public static final int ST_DONE = 1;
-
-    public static final int ST_HANDED = 2;
-
-    public static final int ST_ACKED = 3;
-
     PageResult<DutyLogVO> listPage(DutyLogQueryPageDTO q);
 
     List<DutyLogVO> pendingMine();

@@ -9,11 +9,15 @@ import lombok.Data;
 @Data
 public class SignatureVerifyByBizDTO {
 
-    /** 签名对象类型 */
+    /**
+     * 签名对象类型
+     */
     @NotNull(message = "签名对象类型不能为空")
     private Integer bizType;
 
-    /** 签名对象ID */
+    /**
+     * 签名对象ID
+     */
     @NotNull(message = "签名对象ID不能为空")
     private Long bizId;
 }

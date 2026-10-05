@@ -7,6 +7,9 @@ import com.his.common.exception.BusinessException;
 import com.his.security.UserUtils;
 import com.his.supplies.dto.CssdDTO;
 import com.his.supplies.entity.BizCssdPack;
+import com.his.supplies.enums.CssdCheckResultEnum;
+import com.his.supplies.enums.CssdNodeStatusEnum;
+import com.his.supplies.enums.CssdSterilizeMethodEnum;
 import com.his.supplies.entity.BizCssdTrace;
 import com.his.supplies.mapper.BizCssdPackMapper;
 import com.his.supplies.mapper.BizCssdTraceMapper;
@@ -38,24 +41,6 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class CssdServiceImpl implements CssdService {
 
-    private static final int NODE_RECEIVE = 1;
-    private static final int NODE_WASH = 2;
-    private static final int NODE_PACK = 3;
-    private static final int NODE_STERILIZE = 4;
-    private static final int NODE_STORE = 5;
-    private static final int NODE_ISSUE = 6;
-
-    private static final int RESULT_OK = 1;
-    private static final int RESULT_NG = 2;
-
-    private static final Map<Integer, String> NODE_NAME = Map.of(
-            1, "回收", 2, "清洗", 3, "打包", 4, "灭菌", 5, "储存", 6, "发放");
-    private static final Map<Integer, String> STATUS_NAME = Map.of(
-            1, "已回收", 2, "清洗中", 3, "已打包", 4, "灭菌中", 5, "待发放", 6, "已发放");
-    private static final Map<Integer, String> METHOD_NAME = Map.of(
-            1, "高压蒸汽", 2, "环氧乙烷", 3, "低温等离子");
-    private static final Map<Integer, String> RESULT_NAME = Map.of(1, "合格", 2, "不合格");
-
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizCssdPackMapper packMapper;
@@ -78,7 +63,7 @@ public class CssdServiceImpl implements CssdService {
     @Transactional(rollbackFor = Exception.class)
     public CssdPackVO receive(CssdDTO.Receive dto) {
         int method = dto.getSterilizeMethod() == null ? 1 : dto.getSterilizeMethod();
-        if (!METHOD_NAME.containsKey(method)) {
+        if (CssdSterilizeMethodEnum.fromCode(method) == null) {
             throw new BusinessException("灭菌方式取值不合法（1-高压蒸汽 2-环氧乙烷 3-低温等离子）");
         }
         BizCssdPack p = new BizCssdPack();
@@ -90,12 +75,12 @@ public class CssdServiceImpl implements CssdService {
         p.setDeptId(dto.getDeptId());
         p.setDeptName(tr(dto.getDeptName()));
         p.setSterilizeMethod(method);
-        p.setStatus(NODE_RECEIVE);
+        p.setStatus(CssdNodeStatusEnum.RECEIVED.getCode());
         p.setLastNodeTime(nowSeconds());
         p.setCreateBy(UserUtils.getCurrentEmployeeName());
         packMapper.insert(p);
 
-        insertTrace(p, NODE_RECEIVE, dto.getRemark(), null, null, RESULT_OK,
+        insertTrace(p, CssdNodeStatusEnum.RECEIVED.getCode(), dto.getRemark(), null, null, CssdCheckResultEnum.OK.getCode(),
                 StringUtils.hasText(dto.getOperatorName()) ? dto.getOperatorName().trim()
                         : UserUtils.getCurrentEmployeeName());
         return toVo(p, loadTraces(p.getId()));
@@ -105,18 +90,18 @@ public class CssdServiceImpl implements CssdService {
     public CssdPackVO advance(CssdDTO.Advance dto) {
         BizCssdPack p = requirePack(dto.getPackId());
         int from = p.getStatus();
-        if (from < NODE_RECEIVE || from >= NODE_ISSUE) {
-            throw new BusinessException("当前状态【" + STATUS_NAME.get(from) + "】不允许流转（流程已完结或异常）");
+        if (from < CssdNodeStatusEnum.RECEIVED.getCode() || from >= CssdNodeStatusEnum.ISSUED.getCode()) {
+            throw new BusinessException("当前状态【" + CssdNodeStatusEnum.labelOf(from) + "】不允许流转（流程已完结或异常）");
         }
         int target = from + 1;
-        int result = dto.getResult() == null ? RESULT_OK : dto.getResult();
-        if (!RESULT_NAME.containsKey(result)) {
+        int result = dto.getResult() == null ? CssdCheckResultEnum.OK.getCode() : dto.getResult();
+        if (CssdCheckResultEnum.fromCode(result) == null) {
             throw new BusinessException("节点结果取值不合法（1-合格 2-不合格）");
         }
         String operator = StringUtils.hasText(dto.getOperatorName()) ? dto.getOperatorName().trim()
                 : UserUtils.getCurrentEmployeeName();
 
-        if (target == NODE_STERILIZE) {
+        if (CssdNodeStatusEnum.STERILIZING.is(target)) {
             // ① 条件必填：锅次/批次只在推进到灭菌节点时必填（同一接口服务全部节点），DTO 注解一刀切会挡掉其他节点的合法请求
             if (!StringUtils.hasText(dto.getSterilizerNo()) || !StringUtils.hasText(dto.getBatchNo())) {
                 throw new BusinessException("推进到灭菌节点必须填灭菌锅次与批次号");
@@ -124,7 +109,7 @@ public class CssdServiceImpl implements CssdService {
             p.setSterilizerNo(dto.getSterilizerNo().trim());
             p.setBatchNo(dto.getBatchNo().trim());
         }
-        if (target == NODE_ISSUE) {
+        if (CssdNodeStatusEnum.ISSUED.is(target)) {
             if (dto.getDeptId() != null) {
                 p.setDeptId(dto.getDeptId());
             }
@@ -143,8 +128,8 @@ public class CssdServiceImpl implements CssdService {
         packMapper.updateById(p);
 
         // 灭菌完成判不合格 → 包退回清洗（重新打包灭菌），追溯节点如实记录不合格
-        if (target == NODE_STORE && result == RESULT_NG) {
-            p.setStatus(NODE_WASH);
+        if (CssdNodeStatusEnum.STORED.is(target) && CssdCheckResultEnum.NG.is(result)) {
+            p.setStatus(CssdNodeStatusEnum.WASHING.getCode());
             p.setLastNodeTime(nowSeconds());
             packMapper.updateById(p);
         }
@@ -228,9 +213,9 @@ public class CssdServiceImpl implements CssdService {
         vo.setDeptId(p.getDeptId());
         vo.setDeptName(p.getDeptName());
         vo.setSterilizeMethod(p.getSterilizeMethod());
-        vo.setSterilizeMethodText(METHOD_NAME.get(p.getSterilizeMethod()));
+        vo.setSterilizeMethodText(CssdSterilizeMethodEnum.labelOf(p.getSterilizeMethod()));
         vo.setStatus(p.getStatus());
-        vo.setStatusText(STATUS_NAME.get(p.getStatus()));
+        vo.setStatusText(CssdNodeStatusEnum.labelOf(p.getStatus()));
         vo.setSterilizerNo(p.getSterilizerNo());
         vo.setBatchNo(p.getBatchNo());
         vo.setLastNodeTime(p.getLastNodeTime());
@@ -246,13 +231,13 @@ public class CssdServiceImpl implements CssdService {
         vo.setPackId(t.getPackId());
         vo.setPackNo(t.getPackNo());
         vo.setNodeType(t.getNodeType());
-        vo.setNodeTypeText(NODE_NAME.get(t.getNodeType()));
+        vo.setNodeTypeText(CssdNodeStatusEnum.actionLabelOf(t.getNodeType()));
         vo.setNodeTime(t.getNodeTime());
         vo.setOperatorName(t.getOperatorName());
         vo.setSterilizerNo(t.getSterilizerNo());
         vo.setBatchNo(t.getBatchNo());
         vo.setResult(t.getResult());
-        vo.setResultText(RESULT_NAME.get(t.getResult()));
+        vo.setResultText(CssdCheckResultEnum.labelOf(t.getResult()));
         vo.setRemark(t.getRemark());
         return vo;
     }

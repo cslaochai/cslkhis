@@ -9,17 +9,25 @@ import lombok.Data;
 @Data
 public class SignatureSignDTO {
 
-    /** 签名对象类型（1-住院病历 2-门诊病历 3-住院医嘱） */
+    /**
+     * 签名对象类型（1-住院病历 2-门诊病历 3-住院医嘱）
+     */
     @NotNull(message = "签名对象类型不能为空")
     private Integer bizType;
 
-    /** 签名对象ID */
+    /**
+     * 签名对象ID
+     */
     @NotNull(message = "签名对象ID不能为空")
     private Long bizId;
 
-    /** 签名场景，缺省为 5-补签 */
+    /**
+     * 签名场景，缺省为 5-补签
+     */
     private Integer signScene;
 
-    /** 补签原因（补签必填，写进 remark） */
+    /**
+     * 补签原因（补签必填，写进 remark）
+     */
     private String remark;
 }

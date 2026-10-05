@@ -23,14 +23,6 @@ public enum RefundApplyStatusEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
     public static RefundApplyStatusEnum getByCode(Integer code) {
         if (code == null) {
             return null;
@@ -43,8 +35,18 @@ public enum RefundApplyStatusEnum {
         return null;
     }
 
-    /** 还"活着"的申请（未被执行、未被驳回、未被作废）：同一张收费单只允许有一条，且作废只允许作用在这两态 */
+    /**
+     * 还"活着"的申请（未被执行、未被驳回、未被作废）：同一张收费单只允许有一条，且作废只允许作用在这两态
+     */
     public static boolean isInflight(Integer code) {
         return PENDING_AUDIT.getCode().equals(code) || AUDIT_PASSED.getCode().equals(code);
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
     }
 }

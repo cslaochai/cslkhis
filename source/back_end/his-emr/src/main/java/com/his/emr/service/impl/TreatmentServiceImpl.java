@@ -19,7 +19,7 @@ import com.his.emr.mapper.BizTreatmentRecordMapper;
 import com.his.emr.mapper.SysTreatmentItemMapper;
 import com.his.emr.service.TreatmentService;
 import com.his.emr.support.TreatmentChargeInvoker;
-import com.his.emr.support.TreatmentDictText;
+import com.his.system.service.DictCacheService;
 import com.his.emr.vo.TreatmentVO;
 import com.his.fee.dto.FeeBookDTO;
 import com.his.fee.entity.BizFeeRecord;
@@ -70,11 +70,18 @@ public class TreatmentServiceImpl implements TreatmentService {
     private static final int BACK_DAYS = 31;
     private static final int AHEAD_DAYS = 365;
 
+    /** 治疗站字典类型（原 TreatmentDictText 常量，文案统一走 DictCacheService.text） */
+    private static final String DICT_ITEM_TYPE = "his_treatment_item_type";
+    private static final String DICT_APPLY_STATUS = "his_treatment_apply_status";
+    private static final String DICT_RECORD_STATUS = "his_treatment_record_status";
+    private static final String DICT_EXEC_STATUS = "his_treatment_exec_status";
+    private static final String DICT_CHARGE_STATUS = "his_treatment_charge_status";
+
     private final BizTreatmentApplyMapper applyMapper;
     private final BizTreatmentRecordMapper execMapper;
     private final SysTreatmentItemMapper itemMapper;
     private final RedisSequenceService sequenceService;
-    private final TreatmentDictText dictText;
+    private final DictCacheService dictText;
     /**
      * 记账经 Invoker 走 REQUIRES_NEW 独立事务：记账失败不拖垮打卡，留痕与补记入口都在流水行上
      */
@@ -193,14 +200,14 @@ public class TreatmentServiceImpl implements TreatmentService {
         for (int s = 0; s <= 2; s++) {
             TreatmentDTO.ExecQuery one = copy(ex);
             one.setExecStatus(s);
-            out.add(countVo("exec-" + s, dictText.text(TreatmentDictText.DICT_EXEC_STATUS, s), execPage(one, 1, 1).getTotal()));
+            out.add(countVo("exec-" + s, dictText.getDicDataLabel(DICT_EXEC_STATUS, s), execPage(one, 1, 1).getTotal()));
         }
         TreatmentDTO.ExecQuery ch = copy(q);
         ch.setChargeStatus(null);
         for (int s = 0; s <= 3; s++) {
             TreatmentDTO.ExecQuery one = copy(ch);
             one.setChargeStatus(s);
-            out.add(countVo("charge-" + s, dictText.text(TreatmentDictText.DICT_CHARGE_STATUS, s), execPage(one, 1, 1).getTotal()));
+            out.add(countVo("charge-" + s, dictText.getDicDataLabel(DICT_CHARGE_STATUS, s), execPage(one, 1, 1).getTotal()));
         }
         return out;
     }
@@ -238,7 +245,7 @@ public class TreatmentServiceImpl implements TreatmentService {
             v.setItemCode(str(row.get("itemCode")));
             v.setItemName(str(row.get("itemName")));
             v.setItemType(toInt(row.get("itemType")));
-            v.setItemTypeText(dictText.text(TreatmentDictText.DICT_ITEM_TYPE, v.getItemType()));
+            v.setItemTypeText(dictText.getDicDataLabel(DICT_ITEM_TYPE, v.getItemType()));
             v.setPrice(toDecimal(row.get("price")));
             v.setDuration(toInt(row.get("duration")));
             v.setUsageMethod(str(row.get("usageMethod")));
@@ -612,8 +619,8 @@ public class TreatmentServiceImpl implements TreatmentService {
     private TreatmentVO.ApplyVO toApplyVo(BizTreatmentApply a) {
         TreatmentVO.ApplyVO v = new TreatmentVO.ApplyVO();
         BeanUtils.copyProperties(a, v);
-        v.setItemTypeText(dictText.text(TreatmentDictText.DICT_ITEM_TYPE, a.getItemType()));
-        v.setApplyStatusText(dictText.text(TreatmentDictText.DICT_APPLY_STATUS, a.getApplyStatus()));
+        v.setItemTypeText(dictText.getDicDataLabel(DICT_ITEM_TYPE, a.getItemType()));
+        v.setApplyStatusText(dictText.getDicDataLabel(DICT_APPLY_STATUS, a.getApplyStatus()));
         int total = nz(a.getTotalTimes(), 1);
         int done = nz(a.getDoneTimes(), 0);
         v.setDoneTimes(done);
@@ -636,14 +643,14 @@ public class TreatmentServiceImpl implements TreatmentService {
     private TreatmentVO.ExecVO toExecVo(BizTreatmentRecord r, BizTreatmentApply apply) {
         TreatmentVO.ExecVO v = new TreatmentVO.ExecVO();
         BeanUtils.copyProperties(r, v);
-        v.setExecStatusText(dictText.text(TreatmentDictText.DICT_EXEC_STATUS, r.getExecStatus()));
-        v.setChargeStatusText(dictText.text(TreatmentDictText.DICT_CHARGE_STATUS, r.getChargeStatus()));
+        v.setExecStatusText(dictText.getDicDataLabel(DICT_EXEC_STATUS, r.getExecStatus()));
+        v.setChargeStatusText(dictText.getDicDataLabel(DICT_CHARGE_STATUS, r.getChargeStatus()));
         // execute_time / record_status 在老库是 NOT NULL 带默认值，未执行的行上是 MySQL 填的默认值，
         // 只有真的打过卡才有意义 —— 不按时机清空就会把"排期"显示成"已做"。
         boolean done = Integer.valueOf(TreatmentExecStatusEnum.DONE.getCode()).equals(r.getExecStatus());
         v.setExecuteTime(done ? r.getExecuteTime() : null);
         v.setRecordStatus(done ? r.getRecordStatus() : null);
-        v.setRecordStatusText(done ? dictText.text(TreatmentDictText.DICT_RECORD_STATUS, r.getRecordStatus()) : null);
+        v.setRecordStatusText(done ? dictText.getDicDataLabel(DICT_RECORD_STATUS, r.getRecordStatus()) : null);
         LocalDate plan = r.getPlanDate();
         v.setOverdue(!done && plan != null && plan.isBefore(LocalDate.now()));
         if (apply != null) {
@@ -653,7 +660,7 @@ public class TreatmentServiceImpl implements TreatmentService {
             v.setPatientName(apply.getPatientName());
             v.setItemName(apply.getItemName());
             v.setItemType(apply.getItemType());
-            v.setItemTypeText(dictText.text(TreatmentDictText.DICT_ITEM_TYPE, apply.getItemType()));
+            v.setItemTypeText(dictText.getDicDataLabel(DICT_ITEM_TYPE, apply.getItemType()));
             v.setPrice(apply.getPrice());
             v.setDeptId(apply.getDeptId());
             v.setDeptName(apply.getDeptName());
@@ -806,6 +813,6 @@ public class TreatmentServiceImpl implements TreatmentService {
     }
 
     private String execStatusText(Integer status) {
-        return dictText.text(TreatmentDictText.DICT_EXEC_STATUS, status);
+        return dictText.getDicDataLabel(DICT_EXEC_STATUS, status);
     }
 }

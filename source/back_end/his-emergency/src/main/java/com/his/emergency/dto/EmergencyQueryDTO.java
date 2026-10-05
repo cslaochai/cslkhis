@@ -10,10 +10,14 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class EmergencyQueryDTO extends PageParam {
-    /** 分诊级别（1-I级濒危 2-II级危重 3-III级急症 4-IV级非急症） */
+    /**
+     * 分诊级别（1-I级濒危 2-II级危重 3-III级急症 4-IV级非急症）
+     */
     private Integer triageLevel;
 
-    /** 急诊状态（1-候诊 2-诊治中 3-留观 4-转住院 5-离院 6-死亡） */
+    /**
+     * 急诊状态（1-候诊 2-诊治中 3-留观 4-转住院 5-离院 6-死亡）
+     */
     private Integer emergencyStatus;
 
     /**

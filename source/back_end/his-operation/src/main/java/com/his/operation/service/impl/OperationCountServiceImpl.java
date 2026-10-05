@@ -15,6 +15,7 @@ import com.his.operation.mapper.BizOperationCountItemMapper;
 import com.his.operation.mapper.BizOperationCountMapper;
 import com.his.operation.service.OperationCountService;
 import com.his.operation.support.AnesthesiaLabels;
+import com.his.operation.enums.OperationApplyStatusEnum;
 import com.his.operation.support.OperationApplyLabels;
 import com.his.operation.vo.CountItemVO;
 import com.his.operation.vo.OperationCountVO;
@@ -97,7 +98,7 @@ public class OperationCountServiceImpl implements OperationCountService {
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
         }
-        if (Integer.valueOf(OperationApplyLabels.ST_CANCELLED).equals(apply.getOperationStatus())) {
+        if (Integer.valueOf(OperationApplyStatusEnum.CANCELLED.getCode()).equals(apply.getOperationStatus())) {
             throw new BusinessException("手术单 " + apply.getApplyNo() + " 已取消，不需要清点");
         }
         if (countMapper.selectCount(new LambdaQueryWrapper<BizOperationCount>()

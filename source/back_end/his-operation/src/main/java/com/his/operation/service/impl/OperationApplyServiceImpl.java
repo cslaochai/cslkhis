@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
+import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.entity.BizPatient;
 import com.his.operation.dto.OperationApplyQueryPageDTO;
@@ -26,6 +27,7 @@ import com.his.operation.mapper.BizOperationSafetyCheckMapper;
 import com.his.operation.mapper.SysOperationRoomMapper;
 import com.his.operation.service.OperationApplyService;
 import com.his.patient.support.InpatientRecordLabels;
+import com.his.operation.enums.OperationApplyStatusEnum;
 import com.his.operation.support.OperationApplyLabels;
 import com.his.operation.support.OperationCheckItems;
 import com.his.operation.support.SafetyCheckItems;
@@ -319,10 +321,10 @@ public class OperationApplyServiceImpl implements OperationApplyService {
             entity.setApplyDoctorName(currentName());
             entity.setApplyTime(now());
             entity.setApplyNo(nextApplyNo());
-            entity.setOperationStatus(OperationApplyLabels.ST_PENDING_SCHEDULE);
+            entity.setOperationStatus(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode());
         } else {
             entity = mustGet(dto.getId());
-            if (!Objects.equals(OperationApplyLabels.ST_PENDING_SCHEDULE, entity.getOperationStatus())) {
+            if (!Objects.equals(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode(), entity.getOperationStatus())) {
                 throw new BusinessException("手术单 " + entity.getApplyNo() + " 当前状态为「"
                         + OperationApplyLabels.statusText(entity.getOperationStatus())
                         + "」，只有「待排期」可以修改申请内容（排台后术式已对外承诺，改请先取消或走停手术）");
@@ -385,13 +387,13 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
 
         BizOperationApply entity = mustGet(dto.getApplyId());
-        if (Objects.equals(OperationApplyLabels.ST_FINISHED, entity.getOperationStatus())) {
+        if (Objects.equals(OperationApplyStatusEnum.FINISHED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 已完成，不能改排台信息");
         }
-        if (Objects.equals(OperationApplyLabels.ST_CANCELLED, entity.getOperationStatus())) {
+        if (Objects.equals(OperationApplyStatusEnum.CANCELLED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 已取消，不能排台");
         }
-        if (Objects.equals(OperationApplyLabels.ST_PREOP_CHECKED, entity.getOperationStatus())) {
+        if (Objects.equals(OperationApplyStatusEnum.PREOP_CHECKED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo()
                     + " 已完成术前核对，改时段需要重新核对，请先与手术室确认后再停台重排");
         }
@@ -420,7 +422,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         entity.setScheduleDoctorName(currentName());
         entity.setScheduleTime(now());
         entity.setScheduleRemark(dto.getScheduleRemark());
-        entity.setOperationStatus(OperationApplyLabels.ST_SCHEDULED);
+        entity.setOperationStatus(OperationApplyStatusEnum.SCHEDULED.getCode());
         applyMapper.updateById(entity);
         // 分级授权闸（sql/155）：排台是"这台手术由谁来做"的唯一事实来源，所以级别闸落在这里。
         // 主刀按手术级别要求「手术类」授权，麻醉医师按同级要求「麻醉类」授权。
@@ -441,11 +443,11 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     @Transactional(rollbackFor = Exception.class)
     public void preopCheck(OperationPreopCheckDTO dto) {
         BizOperationApply entity = mustGet(dto.getApplyId());
-        if (Objects.equals(OperationApplyLabels.ST_PENDING_SCHEDULE, entity.getOperationStatus())) {
+        if (Objects.equals(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo()
                     + " 尚未排台，不能做术前核对（手术间/时段/主刀都还没定，核对的是一个不存在的手术）");
         }
-        if (!Objects.equals(OperationApplyLabels.ST_SCHEDULED, entity.getOperationStatus())) {
+        if (!Objects.equals(OperationApplyStatusEnum.SCHEDULED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 当前状态为「"
                     + OperationApplyLabels.statusText(entity.getOperationStatus())
                     + "」，只有「已排期」可以做术前核对");
@@ -468,7 +470,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         entity.setPreopCheckDoctorId(currentEmpId());
         entity.setPreopCheckDoctorName(currentName());
         entity.setPreopCheckTime(now());
-        entity.setOperationStatus(OperationApplyLabels.ST_PREOP_CHECKED);
+        entity.setOperationStatus(OperationApplyStatusEnum.PREOP_CHECKED.getCode());
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
@@ -484,14 +486,14 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     @Transactional(rollbackFor = Exception.class)
     public void finish(OperationFinishDTO dto) {
         BizOperationApply entity = mustGet(dto.getApplyId());
-        if (Objects.equals(OperationApplyLabels.ST_CANCELLED, entity.getOperationStatus())) {
+        if (Objects.equals(OperationApplyStatusEnum.CANCELLED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 已取消，不能完成");
         }
-        if (Objects.equals(OperationApplyLabels.ST_FINISHED, entity.getOperationStatus())) {
+        if (Objects.equals(OperationApplyStatusEnum.FINISHED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 已完成，不能重复回写"
                     + "（重复执行会产生第二份手术记录与第二条首页手术明细）");
         }
-        if (!Objects.equals(OperationApplyLabels.ST_PREOP_CHECKED, entity.getOperationStatus())) {
+        if (!Objects.equals(OperationApplyStatusEnum.PREOP_CHECKED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 当前状态为「"
                     + OperationApplyLabels.statusText(entity.getOperationStatus())
                     + "」，未完成术前核对不能登记完成（术后补一条核对记录属于伪造，必须先把核对做完）");
@@ -569,7 +571,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         entity.setFinishTime(now);
         entity.setOperationId(op.getId());
         entity.setRecordId(record.getId());
-        entity.setOperationStatus(OperationApplyLabels.ST_FINISHED);
+        entity.setOperationStatus(OperationApplyStatusEnum.FINISHED.getCode());
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
@@ -586,18 +588,18 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     @Transactional(rollbackFor = Exception.class)
     public void cancel(OperationCancelDTO dto) {
         BizOperationApply entity = mustGet(dto.getApplyId());
-        if (Objects.equals(OperationApplyLabels.ST_CANCELLED, entity.getOperationStatus())) {
+        if (Objects.equals(OperationApplyStatusEnum.CANCELLED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 已取消，不能重复取消");
         }
-        if (Objects.equals(OperationApplyLabels.ST_FINISHED, entity.getOperationStatus())) {
+        if (Objects.equals(OperationApplyStatusEnum.FINISHED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo()
                     + " 已完成，不能取消；已完成的手术已经写进首页和病历，取消它就是销毁证据");
         }
-        if (Objects.equals(OperationApplyLabels.ST_PREOP_CHECKED, entity.getOperationStatus())) {
+        if (Objects.equals(OperationApplyStatusEnum.PREOP_CHECKED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo()
                     + " 已完成术前核对，不能取消（患者已进入手术区流程）；要停台请由手术室登记停手术并写明原因");
         }
-        entity.setOperationStatus(OperationApplyLabels.ST_CANCELLED);
+        entity.setOperationStatus(OperationApplyStatusEnum.CANCELLED.getCode());
         entity.setCancelReason(dto.getCancelReason());
         entity.setCancelDoctorId(currentEmpId());
         entity.setCancelDoctorName(currentName());
@@ -744,7 +746,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         vo.setAnesthesiaTypeText(OperationApplyLabels.anesthesiaText(vo.getAnesthesiaType()));
         vo.setIsEmergencyText(OperationApplyLabels.emergencyText(vo.getIsEmergency()));
         vo.setIsMainText(vo.getIsMain() == null ? "—" : (vo.getIsMain() == 1 ? "主要手术" : "次要手术"));
-        vo.setGenderText(InpatientRecordLabels.genderText(vo.getGender()));
+        vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
         vo.setAdmitStatusText(vo.getAdmitStatus() == null ? "—"
                 : switch (vo.getAdmitStatus()) {
             case 1 -> "在院";
@@ -754,11 +756,11 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         vo.setPreopCheckItemsText(OperationCheckItems.summaryText(vo.getPreopCheckItems()));
         vo.setCheckItemOptions(checkItems());
 
-        boolean pending = Objects.equals(OperationApplyLabels.ST_PENDING_SCHEDULE, vo.getOperationStatus());
-        boolean scheduled = Objects.equals(OperationApplyLabels.ST_SCHEDULED, vo.getOperationStatus());
-        boolean checked = Objects.equals(OperationApplyLabels.ST_PREOP_CHECKED, vo.getOperationStatus());
-        boolean finished = Objects.equals(OperationApplyLabels.ST_FINISHED, vo.getOperationStatus());
-        boolean cancelled = Objects.equals(OperationApplyLabels.ST_CANCELLED, vo.getOperationStatus());
+        boolean pending = Objects.equals(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode(), vo.getOperationStatus());
+        boolean scheduled = Objects.equals(OperationApplyStatusEnum.SCHEDULED.getCode(), vo.getOperationStatus());
+        boolean checked = Objects.equals(OperationApplyStatusEnum.PREOP_CHECKED.getCode(), vo.getOperationStatus());
+        boolean finished = Objects.equals(OperationApplyStatusEnum.FINISHED.getCode(), vo.getOperationStatus());
+        boolean cancelled = Objects.equals(OperationApplyStatusEnum.CANCELLED.getCode(), vo.getOperationStatus());
 
         vo.setCanEdit(pending);
         vo.setCanSchedule(pending || scheduled);

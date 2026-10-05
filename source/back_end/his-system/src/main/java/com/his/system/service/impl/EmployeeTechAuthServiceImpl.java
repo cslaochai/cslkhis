@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechAuthStatusEnum;
+import com.his.common.enums.TechAuthTypeEnum;
 import com.his.common.enums.TechLevelEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
@@ -56,12 +57,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
 
-    /** 授权状态：1-待审批 2-已授权 3-已驳回 4-已收回（见 TechAuthStatusEnum） */
-    private static final int ST_PENDING = TechAuthStatusEnum.PENDING.getCode();
-    private static final int ST_GRANTED = TechAuthStatusEnum.GRANTED.getCode();
-    private static final int ST_REJECTED = TechAuthStatusEnum.REJECTED.getCode();
-    private static final int ST_REVOKED = TechAuthStatusEnum.REVOKED.getCode();
-
+    /** 授权状态：1-待审批 2-已授权 3-已驳回 4-已收回（唯一口径 TechAuthStatusEnum） */
     /** 越权登记状态：1-待上级确认 2-已确认 */
     private static final int OV_PENDING = 1;
     private static final int OV_CONFIRMED = 2;
@@ -142,7 +138,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         boolean create = dto.getId() == null;
         SysEmployeeTechAuth entity = create ? new SysEmployeeTechAuth() : mustGet(dto.getId());
         if (!create) {
-            if (!Objects.equals(ST_PENDING, entity.getAuthStatus()) && !Objects.equals(ST_REJECTED, entity.getAuthStatus())) {
+            if (!Objects.equals(TechAuthStatusEnum.PENDING.getCode(), entity.getAuthStatus()) && !Objects.equals(TechAuthStatusEnum.REJECTED.getCode(), entity.getAuthStatus())) {
                 throw new BusinessException(emp.getEmpName() + " 的「"
                         + TechAuthCategoryEnum.labelOf(entity.getAuthCategory()) + "」授权当前为「"
                         + TechAuthStatusEnum.labelOf(entity.getAuthStatus())
@@ -183,7 +179,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         entity.setValidUntil(dto.getValidUntil());
         entity.setRemark(clip(dto.getRemark(), REASON_MAX));
         if (create) {
-            entity.setAuthStatus(ST_PENDING);
+            entity.setAuthStatus(TechAuthStatusEnum.PENDING.getCode());
             entity.setApplyBy(UserUtils.getCurrentEmployeeName());
             entity.setApplyTime(LocalDateTime.now());
             authMapper.insert(entity);
@@ -200,11 +196,11 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
     @Transactional(rollbackFor = Exception.class)
     public void approve(TechAuthApproveDTO dto) {
         SysEmployeeTechAuth entity = mustGet(dto.getId());
-        if (!Objects.equals(ST_PENDING, entity.getAuthStatus())) {
+        if (!Objects.equals(TechAuthStatusEnum.PENDING.getCode(), entity.getAuthStatus())) {
             throw new BusinessException("该授权记录当前为「" + TechAuthStatusEnum.labelOf(entity.getAuthStatus())
                     + "」，只有「待审批」可以审批");
         }
-        entity.setAuthStatus(Boolean.TRUE.equals(dto.getApproved()) ? ST_GRANTED : ST_REJECTED);
+        entity.setAuthStatus(Boolean.TRUE.equals(dto.getApproved()) ? TechAuthStatusEnum.GRANTED.getCode() : TechAuthStatusEnum.REJECTED.getCode());
         entity.setApproverId(UserUtils.getCurrentEmployeeId());
         entity.setApproverName(UserUtils.getCurrentEmployeeName());
         entity.setApproveTime(LocalDateTime.now());
@@ -219,11 +215,11 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
     @Transactional(rollbackFor = Exception.class)
     public void revoke(TechAuthRevokeDTO dto) {
         SysEmployeeTechAuth entity = mustGet(dto.getId());
-        if (!Objects.equals(ST_GRANTED, entity.getAuthStatus())) {
+        if (!Objects.equals(TechAuthStatusEnum.GRANTED.getCode(), entity.getAuthStatus())) {
             throw new BusinessException("只有「已授权」的记录可以收回，当前为「"
                     + TechAuthStatusEnum.labelOf(entity.getAuthStatus()) + "」");
         }
-        entity.setAuthStatus(ST_REVOKED);
+        entity.setAuthStatus(TechAuthStatusEnum.REVOKED.getCode());
         entity.setRevokeBy(UserUtils.getCurrentEmployeeName());
         entity.setRevokeTime(LocalDateTime.now());
         entity.setRevokeReason(clip(dto.getRevokeReason(), REASON_MAX));
@@ -236,7 +232,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
         SysEmployeeTechAuth entity = mustGet(id);
-        if (!Objects.equals(ST_PENDING, entity.getAuthStatus()) && !Objects.equals(ST_REJECTED, entity.getAuthStatus())) {
+        if (!Objects.equals(TechAuthStatusEnum.PENDING.getCode(), entity.getAuthStatus()) && !Objects.equals(TechAuthStatusEnum.REJECTED.getCode(), entity.getAuthStatus())) {
             throw new BusinessException("已授权/已收回的授权记录不许删除（台账留痕），请走「收回」");
         }
         // 本表无 del_flag，deleteById 即物理删，不会占着 uk_emp_cat_from
@@ -254,7 +250,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         LambdaQueryWrapper<SysEmployeeTechAuth> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysEmployeeTechAuth::getEmployeeId, employeeId)
                 .eq(SysEmployeeTechAuth::getAuthCategory, authCategory)
-                .eq(SysEmployeeTechAuth::getAuthStatus, ST_GRANTED);
+                .eq(SysEmployeeTechAuth::getAuthStatus, TechAuthStatusEnum.GRANTED.getCode());
         applyEffective(wrapper, date);
         wrapper.orderByDesc(SysEmployeeTechAuth::getTechLevel).last("LIMIT 1");
         return authMapper.selectOne(wrapper);
@@ -475,12 +471,12 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         vo.setAuthStatus(entity.getAuthStatus());
         vo.setAuthStatusText(TechAuthStatusEnum.labelOf(entity.getAuthStatus()));
         LocalDate today = LocalDate.now();
-        vo.setEffective(Objects.equals(ST_GRANTED, entity.getAuthStatus())
+        vo.setEffective(Objects.equals(TechAuthStatusEnum.GRANTED.getCode(), entity.getAuthStatus())
                 && !entity.getValidFrom().isAfter(today)
                 && (entity.getValidUntil() == null || !entity.getValidUntil().isBefore(today)));
-        vo.setCanApprove(Objects.equals(ST_PENDING, entity.getAuthStatus()));
-        vo.setCanRevoke(Objects.equals(ST_GRANTED, entity.getAuthStatus()));
-        vo.setCanEdit(Objects.equals(ST_PENDING, entity.getAuthStatus()) || Objects.equals(ST_REJECTED, entity.getAuthStatus()));
+        vo.setCanApprove(Objects.equals(TechAuthStatusEnum.PENDING.getCode(), entity.getAuthStatus()));
+        vo.setCanRevoke(Objects.equals(TechAuthStatusEnum.GRANTED.getCode(), entity.getAuthStatus()));
+        vo.setCanEdit(Objects.equals(TechAuthStatusEnum.PENDING.getCode(), entity.getAuthStatus()) || Objects.equals(TechAuthStatusEnum.REJECTED.getCode(), entity.getAuthStatus()));
         vo.setApplyBy(entity.getApplyBy());
         vo.setApplyTime(entity.getApplyTime());
         vo.setApproverId(entity.getApproverId());
@@ -529,12 +525,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         if (type == null) {
             return "—";
         }
-        return switch (type) {
-            case 1 -> "独立授权";
-            case 2 -> "上级指导下";
-            case 3 -> "限制授权";
-            default -> "未知(" + type + ")";
-        };
+        return TechAuthTypeEnum.labelOf(type);
     }
 
     private static String trim(String value) {

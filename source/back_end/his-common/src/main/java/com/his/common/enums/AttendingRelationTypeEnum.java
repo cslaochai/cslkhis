@@ -17,11 +17,17 @@ import lombok.Getter;
 @Getter
 public enum AttendingRelationTypeEnum {
 
-    /** 主管（管床医生） */
+    /**
+     * 主管（管床医生）
+     */
     ATTENDING(1, "主管"),
-    /** 主诊组长 */
+    /**
+     * 主诊组长
+     */
     GROUP_LEADER(2, "主诊组长"),
-    /** 协作（会诊/参与治疗） */
+    /**
+     * 协作（会诊/参与治疗）
+     */
     ASSIST(3, "协作");
 
     private final int code;

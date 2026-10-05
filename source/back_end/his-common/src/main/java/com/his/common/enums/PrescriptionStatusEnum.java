@@ -14,7 +14,9 @@ public enum PrescriptionStatusEnum {
     DISPENSED(4, "已发药"),
     CANCELLED(5, "已作废"),
     RETURNED(6, "已退药"),
-    /** L7 审方退回重开闭环：药师审方不通过退回医生（区别于 6-已退药 = 发药后退货） */
+    /**
+     * L7 审方退回重开闭环：药师审方不通过退回医生（区别于 6-已退药 = 发药后退货）
+     */
     RETURNED_AUDIT(7, "审方退回");
 
     private final int code;
@@ -37,7 +39,9 @@ public enum PrescriptionStatusEnum {
         return null;
     }
 
-    /** 码值不在枚举内（脏数据）返回 null，由前端渲染「未知(n)」，不能回落到合法文案。 */
+    /**
+     * 码值不在枚举内（脏数据）返回 null，由前端渲染「未知(n)」，不能回落到合法文案。
+     */
     public static String labelOf(Integer code) {
         PrescriptionStatusEnum status = fromCode(code);
         return status == null ? null : status.getLabel();

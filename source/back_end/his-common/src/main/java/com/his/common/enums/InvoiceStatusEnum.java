@@ -21,19 +21,6 @@ public enum InvoiceStatusEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
-    /** 还算是一张有效票（能被日结计成"已开票"） */
-    public boolean live() {
-        return this == ISSUED || this == PRINTED;
-    }
-
     public static InvoiceStatusEnum fromCode(Integer code) {
         if (code == null) {
             return null;
@@ -49,5 +36,20 @@ public enum InvoiceStatusEnum {
     public static String descOf(Integer code) {
         InvoiceStatusEnum item = fromCode(code);
         return item == null ? "未知状态" : item.desc;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
+
+    /**
+     * 还算是一张有效票（能被日结计成"已开票"）
+     */
+    public boolean live() {
+        return this == ISSUED || this == PRINTED;
     }
 }

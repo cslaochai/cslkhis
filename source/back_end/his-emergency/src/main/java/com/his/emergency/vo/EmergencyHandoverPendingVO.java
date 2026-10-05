@@ -40,7 +40,9 @@ public class EmergencyHandoverPendingVO {
      */
     private String patientName;
 
-    /** 性别（1-男 2-女 9-未知） */
+    /**
+     * 性别（1-男 2-女 9-未知）
+     */
     private Integer gender;
 
     /**
@@ -48,7 +50,9 @@ public class EmergencyHandoverPendingVO {
      */
     private Integer age;
 
-    /** 分诊级别（1-I级濒危 2-II级危重 3-III级急症 4-IV级非急症） */
+    /**
+     * 分诊级别（1-I级濒危 2-II级危重 3-III级急症 4-IV级非急症）
+     */
     private Integer triageLevel;
 
     /**
@@ -56,7 +60,9 @@ public class EmergencyHandoverPendingVO {
      */
     private String triageLevelText;
 
-    /** 急诊状态（1-候诊 2-诊治中 3-留观 4-转住院 5-离院 6-死亡） */
+    /**
+     * 急诊状态（1-候诊 2-诊治中 3-留观 4-转住院 5-离院 6-死亡）
+     */
     private Integer emergencyStatus;
 
     /**

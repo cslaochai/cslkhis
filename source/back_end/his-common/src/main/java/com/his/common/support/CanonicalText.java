@@ -36,10 +36,14 @@ import java.util.Map;
  */
 public final class CanonicalText {
 
-    /** 规范化格式版本。改动 put 规则/转义规则时必须 +1 */
+    /**
+     * 规范化格式版本。改动 put 规则/转义规则时必须 +1
+     */
     public static final String FORMAT_VERSION = "WN-HIS-SIGN-V1";
 
-    /** 时间统一渲染格式（见 {@link #normalize} 说明） */
+    /**
+     * 时间统一渲染格式（见 {@link #normalize} 说明）
+     */
     public static final DateTimeFormatter TS_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     public static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -52,21 +56,6 @@ public final class CanonicalText {
 
     public static CanonicalText create(String bizTag) {
         return new CanonicalText(bizTag == null ? "UNKNOWN" : bizTag);
-    }
-
-    public CanonicalText put(String key, Object value) {
-        fields.put(key, normalize(value));
-        return this;
-    }
-
-    public String build() {
-        StringBuilder sb = new StringBuilder(256);
-        sb.append(FORMAT_VERSION).append('\n');
-        sb.append("bizTag=").append(bizTag).append('\n');
-        for (Map.Entry<String, String> e : fields.entrySet()) {
-            sb.append(e.getKey()).append('=').append(e.getValue()).append('\n');
-        }
-        return sb.toString();
     }
 
     /**
@@ -97,5 +86,20 @@ public final class CanonicalText {
         s = s.replace("\r\n", "\n").replace('\r', '\n');
         s = s.replace("\n", "\\n");
         return s.trim();
+    }
+
+    public CanonicalText put(String key, Object value) {
+        fields.put(key, normalize(value));
+        return this;
+    }
+
+    public String build() {
+        StringBuilder sb = new StringBuilder(256);
+        sb.append(FORMAT_VERSION).append('\n');
+        sb.append("bizTag=").append(bizTag).append('\n');
+        for (Map.Entry<String, String> e : fields.entrySet()) {
+            sb.append(e.getKey()).append('=').append(e.getValue()).append('\n');
+        }
+        return sb.toString();
     }
 }

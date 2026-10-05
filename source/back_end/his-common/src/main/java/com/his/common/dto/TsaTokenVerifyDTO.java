@@ -9,7 +9,9 @@ import lombok.Data;
 @Data
 public class TsaTokenVerifyDTO {
 
-    /** 台账行 ID（时间戳令牌台账主键） */
+    /**
+     * 台账行 ID（时间戳令牌台账主键）
+     */
     @NotNull(message = "令牌 ID 不能为空")
     private Long id;
 }

@@ -10,7 +10,9 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
-/** 急诊记录 */
+/**
+ * 急诊记录
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_emergency")
@@ -36,7 +38,9 @@ public class BizEmergency extends BaseEntity {
      */
     private String patientName;
 
-    /** 性别（1-男 2-女 9-未知） */
+    /**
+     * 性别（1-男 2-女 9-未知）
+     */
     private Integer gender;
 
     /**

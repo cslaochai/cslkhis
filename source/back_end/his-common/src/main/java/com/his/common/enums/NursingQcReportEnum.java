@@ -13,9 +13,13 @@ import lombok.Getter;
 @Getter
 public enum NursingQcReportEnum {
 
-    /** 未上报：可被重算覆盖 */
+    /**
+     * 未上报：可被重算覆盖
+     */
     UNREPORTED(1, "未上报"),
-    /** 已上报：重算跳过，只能先退回 */
+    /**
+     * 已上报：重算跳过，只能先退回
+     */
     REPORTED(2, "已上报");
 
     private final int code;

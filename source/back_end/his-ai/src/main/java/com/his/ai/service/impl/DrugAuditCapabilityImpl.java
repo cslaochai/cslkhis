@@ -275,14 +275,6 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         return finding.getErrorLevel() == null ? 0 : finding.getErrorLevel();
     }
 
-    private static String genderText(Integer gender) {
-        if (gender == null) {
-            return "（未填写）";
-        }
-        SysGenderEnum g = SysGenderEnum.fromCode(gender);
-        return g == null ? "未知" : g.getLabel();
-    }
-
     private static String currentOperator() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();
@@ -448,7 +440,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     private Optional<DrugAuditLlmOutputDTO> callModel(BizPrescription prescription, DrugAuditContextDTO context,
                                                    List<DrugAuditFindingVO> hardRuleFindings) {
         Map<String, Object> variables = new HashMap<>();
-        variables.put("gender", genderText(context.gender()));
+        variables.put("gender", SysGenderEnum.getText(context.gender()));
         variables.put("age", context.age() == null ? "（未填写）" : context.age() + "岁");
         variables.put("allergyHistory", StringUtils.hasText(context.allergyText())
                 ? context.allergyText() : "（无已知过敏史记录）");

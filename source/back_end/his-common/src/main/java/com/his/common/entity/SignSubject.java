@@ -1,7 +1,5 @@
 package com.his.common.entity;
 
-import java.time.LocalDateTime;
-
 /**
  * 被签对象在"签名这一刻"的投影。
  *
@@ -30,7 +28,9 @@ public record SignSubject(
         String bizStatusText,
         String canonicalContent) {
 
-    /** 内容摘要（SHA-256 十六进制小写） */
+    /**
+     * 内容摘要（SHA-256 十六进制小写）
+     */
     public String digest() {
         return com.his.common.util.SignCrypto.sha256Hex(canonicalContent);
     }
@@ -46,7 +46,9 @@ public record SignSubject(
         return canonicalContent + "prevDigest=" + (prevDigest == null ? "" : prevDigest) + "\n";
     }
 
-    /** 便捷：带链的摘要 */
+    /**
+     * 便捷：带链的摘要
+     */
     public String digestWithPrev(String prevDigest) {
         return com.his.common.util.SignCrypto.sha256Hex(contentWithPrev(prevDigest));
     }

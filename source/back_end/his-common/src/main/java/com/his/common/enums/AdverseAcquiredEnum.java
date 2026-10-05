@@ -16,9 +16,13 @@ import lombok.Getter;
 @Getter
 public enum AdverseAcquiredEnum {
 
-    /** 院内获得（进发生率分子） */
+    /**
+     * 院内获得（进发生率分子）
+     */
     HOSPITAL_ACQUIRED(1, "院内获得"),
-    /** 入院带入（留档不进分子） */
+    /**
+     * 入院带入（留档不进分子）
+     */
     ADMITTED_WITH(2, "入院带入");
 
     private final int code;

@@ -13,9 +13,13 @@ import lombok.Getter;
 @Getter
 public enum DutyShiftTypeEnum {
 
-    /** 白段：白天接管全院应急协调 */
+    /**
+     * 白段：白天接管全院应急协调
+     */
     DAY(1, "白班"),
-    /** 夜段：跨零点，归开始日 */
+    /**
+     * 夜段：跨零点，归开始日
+     */
     NIGHT(2, "夜班");
 
     private final int code;
@@ -38,7 +42,9 @@ public enum DutyShiftTypeEnum {
         return null;
     }
 
-    /** 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案，不能回落到合法文案。 */
+    /**
+     * 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案，不能回落到合法文案。
+     */
     public static String labelOf(Integer code) {
         DutyShiftTypeEnum shift = fromCode(code);
         return shift == null ? null : shift.getLabel();

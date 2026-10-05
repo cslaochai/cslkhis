@@ -27,7 +27,9 @@ import java.time.LocalDateTime;
  */
 public interface SignableContentProvider {
 
-    /** 本实现负责的对象类型 */
+    /**
+     * 本实现负责的对象类型
+     */
     SignBizType bizType();
 
     /**

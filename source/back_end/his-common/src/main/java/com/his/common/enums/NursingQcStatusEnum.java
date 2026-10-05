@@ -13,9 +13,13 @@ import lombok.Getter;
 @Getter
 public enum NursingQcStatusEnum {
 
-    /** 草稿：可改明细 */
+    /**
+     * 草稿：可改明细
+     */
     DRAFT(1, "草稿"),
-    /** 已确认：明细冻结，只能退回草稿后再改 */
+    /**
+     * 已确认：明细冻结，只能退回草稿后再改
+     */
     CONFIRMED(2, "已确认");
 
     private final int code;

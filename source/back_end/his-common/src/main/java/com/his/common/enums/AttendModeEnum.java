@@ -16,11 +16,17 @@ import lombok.Getter;
 @Getter
 public enum AttendModeEnum {
 
-    /** 坐班：正常到岗在单元内工作 */
+    /**
+     * 坐班：正常到岗在单元内工作
+     */
     ON_SITE(1, "坐班"),
-    /** 听班：待命响应，呼叫到岗（二线/三线） */
+    /**
+     * 听班：待命响应，呼叫到岗（二线/三线）
+     */
     ON_CALL(2, "听班"),
-    /** 留院值班：在院住宿舍，负责夜间与节假日 */
+    /**
+     * 留院值班：在院住宿舍，负责夜间与节假日
+     */
     IN_HOSPITAL(3, "留院值班");
 
     private final int code;

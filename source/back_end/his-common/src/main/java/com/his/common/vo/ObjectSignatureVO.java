@@ -13,7 +13,9 @@ import java.util.List;
 @Data
 public class ObjectSignatureVO {
 
-    /** 业务类型 */
+    /**
+     * 业务类型
+     */
     private Integer bizType;
     private String bizTypeText;
 
@@ -29,31 +31,47 @@ public class ObjectSignatureVO {
     private Long bizId;
 
     private String bizNo;
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     private String patientName;
 
-    /** 该对象当前锚点状态（0-未签名 1-已签名 2-签名已失效），由业务侧提供 */
+    /**
+     * 该对象当前锚点状态（0-未签名 1-已签名 2-签名已失效），由业务侧提供
+     */
     private Integer objectSignStatus;
     private String objectSignStatusText;
 
-    /** 该对象的业务状态文案 */
+    /**
+     * 该对象的业务状态文案
+     */
     private Integer bizStatus;
     private String bizStatusText;
 
-    /** 当前有效签名ID（为空表示没有有效签名） */
+    /**
+     * 当前有效签名ID（为空表示没有有效签名）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long currentSignId;
     private String currentSignNo;
 
-    /** 最近一次签名时刻 */
+    /**
+     * 最近一次签名时刻
+     */
     private LocalDateTime lastSignedTime;
 
-    /** 能否立刻补签 */
+    /**
+     * 能否立刻补签
+     */
     private Boolean canSign;
 
-    /** 不能补签的原因 */
+    /**
+     * 不能补签的原因
+     */
     private String blockReason;
 
-    /** 签名链（按 chain_no 升序，含已作废的） */
+    /**
+     * 签名链（按 chain_no 升序，含已作废的）
+     */
     private List<SignatureVO> chain;
 }

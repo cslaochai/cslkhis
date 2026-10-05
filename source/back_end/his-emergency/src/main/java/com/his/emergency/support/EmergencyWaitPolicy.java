@@ -26,27 +26,56 @@ import java.util.concurrent.atomic.AtomicLong;
 @RequiredArgsConstructor
 public class EmergencyWaitPolicy {
 
-    /** 级别 → 兜底时限（分钟），系统参数读不到时用 */
+    /**
+     * 级别 → 兜底时限（分钟），系统参数读不到时用
+     */
     private static final Map<Integer, Integer> DEFAULT_MINUTES = Map.of(
             EmergencyTriageRules.LEVEL_CRITICAL, 0,
             EmergencyTriageRules.LEVEL_SEVERE, 10,
             EmergencyTriageRules.LEVEL_URGENT, 30,
             EmergencyTriageRules.LEVEL_NON_URGENT, 120);
 
-    /** 未定级按 Ⅲ级（30 分钟）收口：宁可早报警，不要因为漏填级别而永远不超时 */
+    /**
+     * 未定级按 Ⅲ级（30 分钟）收口：宁可早报警，不要因为漏填级别而永远不超时
+     */
     private static final int DEFAULT_WHEN_NO_LEVEL = 30;
 
     private static final String CONFIG_KEY_PREFIX = "emergency.wait_deadline_level";
 
     private static final long CONFIG_CACHE_TTL_MS = 60_000L;
 
-    /** 超过时限多少算「严重超时」：2 倍时限与「时限+30 分钟」取大者，避免 Ⅰ级 0 分钟时 2 倍仍是 0 */
+    /**
+     * 超过时限多少算「严重超时」：2 倍时限与「时限+30 分钟」取大者，避免 Ⅰ级 0 分钟时 2 倍仍是 0
+     */
     private static final int SEVERE_EXTRA_MINUTES = 30;
 
     private final SysConfigMapper sysConfigMapper;
 
     private final Map<Integer, Integer> cache = new ConcurrentHashMap<>();
     private final AtomicLong cacheLoadedAt = new AtomicLong(0L);
+
+    /**
+     * 超时档位：0-未超时 1-超时 2-严重超时。
+     *
+     * @param waitMinutes   已候诊分钟数
+     * @param targetMinutes 登记时刻快照的时限（null 时按未定级 30 分钟）
+     */
+    public static int overdueLevelOf(long waitMinutes, Integer targetMinutes) {
+        int target = targetMinutes == null ? DEFAULT_WHEN_NO_LEVEL : Math.max(targetMinutes, 0);
+        if (waitMinutes <= target) {
+            return 0;
+        }
+        long severeAfter = Math.max(2L * target, (long) target + SEVERE_EXTRA_MINUTES);
+        return waitMinutes > severeAfter ? 2 : 1;
+    }
+
+    public static String overdueText(int overdueLevel) {
+        return switch (overdueLevel) {
+            case 1 -> "超时";
+            case 2 -> "严重超时";
+            default -> "";
+        };
+    }
 
     /**
      * 该分诊级别的应接诊时限（分钟）。0 表示"即刻"。
@@ -89,28 +118,5 @@ public class EmergencyWaitPolicy {
         } catch (NumberFormatException ex) {
             return null;
         }
-    }
-
-    /**
-     * 超时档位：0-未超时 1-超时 2-严重超时。
-     *
-     * @param waitMinutes    已候诊分钟数
-     * @param targetMinutes  登记时刻快照的时限（null 时按未定级 30 分钟）
-     */
-    public static int overdueLevelOf(long waitMinutes, Integer targetMinutes) {
-        int target = targetMinutes == null ? DEFAULT_WHEN_NO_LEVEL : Math.max(targetMinutes, 0);
-        if (waitMinutes <= target) {
-            return 0;
-        }
-        long severeAfter = Math.max(2L * target, (long) target + SEVERE_EXTRA_MINUTES);
-        return waitMinutes > severeAfter ? 2 : 1;
-    }
-
-    public static String overdueText(int overdueLevel) {
-        return switch (overdueLevel) {
-            case 1 -> "超时";
-            case 2 -> "严重超时";
-            default -> "";
-        };
     }
 }

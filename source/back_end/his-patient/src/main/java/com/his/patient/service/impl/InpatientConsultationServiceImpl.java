@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.patient.enums.ConsultUrgentEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -134,7 +135,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
             throw new BusinessException("「科内会诊」的会诊科室必须与申请科室一致（当前申请科室 ID=" + fromDeptId + "）");
         }
         if (!Objects.equals(ConsultScopeEnum.IN_DEPT.getCode(), dto.getConsultType()) && sameDept) {
-            throw new BusinessException("「" + ConsultationLabels.typeText(dto.getConsultType())
+            throw new BusinessException("「" + ConsultScopeEnum.labelOrUnknown(dto.getConsultType())
                     + "」必须请到别的科室；本科室内部的请会诊请选「科内会诊」");
         }
 
@@ -179,7 +180,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         notifyNewConsultation(entity, admission);
         log.info("申请会诊 consultationNo={} admissionId={} 申请科室={} 会诊科室={} 范围={} 急={} 申请医生={}",
                 entity.getConsultationNo(), admission.getAdmissionId(), fromDeptId, dto.getToDeptId(),
-                ConsultationLabels.typeText(dto.getConsultType()), isUrgent, entity.getApplyDoctorName());
+                ConsultScopeEnum.labelOf(dto.getConsultType()), isUrgent, entity.getApplyDoctorName());
         return entity.getConsultationNo();
     }
 
@@ -221,7 +222,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
                     entity.getApplyDoctorName() == null ? "未知" : entity.getApplyDoctorName(),
                     patientName,
                     urgent ? "急" : "",
-                    ConsultationLabels.typeText(entity.getConsultType()),
+                    ConsultScopeEnum.labelOf(entity.getConsultType()),
                     entity.getReason());
             String payload = cn.hutool.json.JSONUtil.toJsonStr(new java.util.LinkedHashMap<String, Object>() {{
                 put("patientName", patientName);
@@ -261,7 +262,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
         if (!Objects.equals(ConsultationStatusEnum.PENDING.getCode(), entity.getConsultStatus())) {
             throw new BusinessException("会诊 " + entity.getConsultationNo() + " 当前状态为「"
-                    + ConsultationLabels.statusText(entity.getConsultStatus())
+                    + ConsultationStatusEnum.labelOrUnknown(entity.getConsultStatus())
                     + "」，只有「待应答」的会诊申请可以修改；已应答的请直接完成会诊");
         }
         long unfinished = consultationMapper.selectCount(new LambdaQueryWrapper<BizConsultation>()
@@ -285,7 +286,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         consultationMapper.updateById(entity);
         log.info("修改会诊申请 consultationNo={} 会诊科室={} 范围={} 急={} 操作人={}",
                 entity.getConsultationNo(), dto.getToDeptId(),
-                ConsultationLabels.typeText(dto.getConsultType()), isUrgent, currentName());
+                ConsultScopeEnum.labelOf(dto.getConsultType()), isUrgent, currentName());
         return entity.getConsultationNo();
     }
 
@@ -310,7 +311,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         BizConsultation entity = mustGet(dto.getConsultationId());
         if (!Objects.equals(ConsultationStatusEnum.PENDING.getCode(), entity.getConsultStatus())) {
             throw new BusinessException("会诊 " + entity.getConsultationNo() + " 当前状态为「"
-                    + ConsultationLabels.statusText(entity.getConsultStatus()) + "」，不能应答");
+                    + ConsultationStatusEnum.labelOrUnknown(entity.getConsultStatus()) + "」，不能应答");
         }
         Long doctorId = currentEmpId();
         if (doctorId == null) {
@@ -365,7 +366,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
         if (!Objects.equals(ConsultationStatusEnum.ACCEPTED.getCode(), entity.getConsultStatus())) {
             throw new BusinessException("会诊 " + entity.getConsultationNo() + " 当前状态为「"
-                    + ConsultationLabels.statusText(entity.getConsultStatus()) + "」，不能重复完成");
+                    + ConsultationStatusEnum.labelOrUnknown(entity.getConsultStatus()) + "」，不能重复完成");
         }
 
         LocalDateTime now = toSeconds(LocalDateTime.now());
@@ -474,7 +475,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
         if (!Objects.equals(ConsultationStatusEnum.PENDING.getCode(), entity.getConsultStatus())) {
             throw new BusinessException("会诊 " + entity.getConsultationNo() + " 当前状态为「"
-                    + ConsultationLabels.statusText(entity.getConsultStatus())
+                    + ConsultationStatusEnum.labelOrUnknown(entity.getConsultStatus())
                     + "」，不能取消；会诊科室已接诊的会诊必须走「完成」");
         }
         entity.setConsultStatus(ConsultationStatusEnum.CANCELLED.getCode());
@@ -536,9 +537,9 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
     }
 
     private void decorate(ConsultationVO vo) {
-        vo.setConsultTypeText(ConsultationLabels.typeText(vo.getConsultType()));
-        vo.setConsultStatusText(ConsultationLabels.statusText(vo.getConsultStatus()));
-        vo.setIsUrgentText(ConsultationLabels.urgentText(vo.getIsUrgent()));
+        vo.setConsultTypeText(ConsultScopeEnum.labelOf(vo.getConsultType()));
+        vo.setConsultStatusText(ConsultationStatusEnum.labelOf(vo.getConsultStatus()));
+        vo.setIsUrgentText(ConsultUrgentEnum.labelOf(vo.getIsUrgent()));
         vo.setConsultCategoryText(ConsultationLabels.categoryText(vo.getConsultCategory()));
         // 是否按时应答：营养会诊及时应答率的行级依据；未应答一律按超时计
         vo.setOnTime(ConsultationLabels.onTime(vo.getIsUrgent(), vo.getApplyTime(), vo.getAcceptTime()));

@@ -29,19 +29,6 @@ public enum TxnSourceEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
-    /** 是否退款类来源（决定要不要带 orig_txn_id 与 refund_method） */
-    public boolean refundKind() {
-        return this == REFUND_APPLY || this == DIRECT_REFUND || this == CANCEL_REGIST || this == DISCHARGE_DIFF;
-    }
-
     public static TxnSourceEnum fromCode(Integer code) {
         if (code == null) {
             return null;
@@ -57,5 +44,20 @@ public enum TxnSourceEnum {
     public static String descOf(Integer code) {
         TxnSourceEnum item = fromCode(code);
         return item == null ? "未知来源" : item.desc;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
+
+    /**
+     * 是否退款类来源（决定要不要带 orig_txn_id 与 refund_method）
+     */
+    public boolean refundKind() {
+        return this == REFUND_APPLY || this == DIRECT_REFUND || this == CANCEL_REGIST || this == DISCHARGE_DIFF;
     }
 }

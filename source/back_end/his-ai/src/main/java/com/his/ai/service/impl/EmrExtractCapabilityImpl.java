@@ -312,14 +312,6 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
         return false;
     }
 
-    private static String genderText(Integer gender) {
-        if (gender == null) {
-            return "（未填写）";
-        }
-        SysGenderEnum g = SysGenderEnum.fromCode(gender);
-        return g == null ? "未知" : g.getLabel();
-    }
-
     private static String truncate(String text, int maxLength, String fallback) {
         if (!StringUtils.hasText(text)) {
             return fallback;
@@ -385,7 +377,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
         }
 
         Map<String, Object> variables = new HashMap<>();
-        variables.put("gender", genderText(gender));
+        variables.put("gender", SysGenderEnum.getText(gender));
         variables.put("age", age == null ? "（未填写）" : age + "岁");
         variables.put("fieldCatalog", EmrFieldCatalog.writableFieldPrompt());
         variables.put("rawText", promptText);

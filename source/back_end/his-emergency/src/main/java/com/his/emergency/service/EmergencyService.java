@@ -2,20 +2,9 @@ package com.his.emergency.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
-import com.his.emergency.dto.BizEmergencyUpsertDTO;
-import com.his.emergency.dto.EmergencyAdmitDTO;
-import com.his.emergency.dto.EmergencyHandoverQueryPageDTO;
-import com.his.emergency.dto.EmergencyHandoverUpsertDTO;
-import com.his.emergency.dto.EmergencyQueryDTO;
-import com.his.emergency.dto.EmergencyStatusUpsertDTO;
+import com.his.emergency.dto.*;
 import com.his.emergency.entity.BizEmergency;
-import com.his.emergency.vo.BizEmergencyVO;
-import com.his.emergency.vo.EmergencyDutyVO;
-import com.his.emergency.vo.EmergencyHandoverDetailVO;
-import com.his.emergency.vo.EmergencyHandoverPendingVO;
-import com.his.emergency.vo.EmergencyHandoverVO;
-import com.his.emergency.vo.EmergencyStatsVO;
-import com.his.emergency.vo.EmergencyTakeCandidateVO;
+import com.his.emergency.vo.*;
 import com.his.patient.vo.BedVO;
 import com.his.patient.vo.WardVO;
 

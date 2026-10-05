@@ -71,7 +71,9 @@ public class BizEmergencyVO {
      */
     private String patientName;
 
-    /** 性别（1-男 2-女 9-未知） */
+    /**
+     * 性别（1-男 2-女 9-未知）
+     */
     private Integer gender;
 
     /**
@@ -99,7 +101,9 @@ public class BizEmergencyVO {
      */
     private String zone;
 
-    /** 绿色通道（胸痛中心/卒中中心/创伤中心/无） */
+    /**
+     * 绿色通道（胸痛中心/卒中中心/创伤中心/无）
+     */
     private String greenChannel;
 
     /**
@@ -164,7 +168,9 @@ public class BizEmergencyVO {
      */
     private String vitalSigns;
 
-    /** 初步诊断 */
+    /**
+     * 初步诊断
+     */
     private String diagnosis;
 
     /**
@@ -172,7 +178,9 @@ public class BizEmergencyVO {
      */
     private String treatment;
 
-    /** 急诊状态（1-候诊 2-诊治中 3-留观 4-转住院 5-离院 6-死亡） */
+    /**
+     * 急诊状态（1-候诊 2-诊治中 3-留观 4-转住院 5-离院 6-死亡）
+     */
     private Integer emergencyStatus;
 
     /**
@@ -198,7 +206,9 @@ public class BizEmergencyVO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime observationStartTime;
 
-    /** 结束留观时间（转住院/离院/死亡时写入） */
+    /**
+     * 结束留观时间（转住院/离院/死亡时写入）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime observationEndTime;
 
@@ -229,7 +239,9 @@ public class BizEmergencyVO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime admissionTime;
 
-    /** 开始诊治时间 */
+    /**
+     * 开始诊治时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime diagnosisTime;
 

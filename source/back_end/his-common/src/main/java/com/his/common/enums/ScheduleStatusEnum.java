@@ -12,13 +12,21 @@ import lombok.Getter;
 @Getter
 public enum ScheduleStatusEnum {
 
-    /** 停诊：号源池与时间段全停，不可再挂 */
+    /**
+     * 停诊：号源池与时间段全停，不可再挂
+     */
     STOPPED(0, "停诊"),
-    /** 正常：可挂号 */
+    /**
+     * 正常：可挂号
+     */
     NORMAL(1, "正常"),
-    /** 已满：号源挂完 */
+    /**
+     * 已满：号源挂完
+     */
     FULL(2, "已满"),
-    /** 已过期：排班日期已过 */
+    /**
+     * 已过期：排班日期已过
+     */
     EXPIRED(3, "已过期");
 
     private final int code;

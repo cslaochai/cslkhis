@@ -15,7 +15,7 @@ import java.util.function.Function;
  * <pre>{@code
  *   of("patientName", "姓名")                       // 原样记
  *   masked("idCard", "身份证号", Mask.ID_CARD)       // 打码后记
- *   render("gender", "性别", v -> genderText(v))     // 1/2/3 → 男/女/未知，翻成人话再记
+ *   render("gender", "性别", v -> SysGenderEnum.getText((Integer) v))     // 1/2/9 → 男/女/未知，翻成人话再记
  *   render("status", "状态", v -> statusText(v), Mask.NONE)
  * }</pre>
  *

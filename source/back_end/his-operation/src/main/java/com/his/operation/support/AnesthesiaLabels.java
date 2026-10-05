@@ -6,7 +6,7 @@ import java.util.List;
 /**
  * 手术麻醉链枚举文案（ASA / 气道 / 访视结论 / 记录状态 / PACU / 清点等）。
  *
- * <p><b>铁律：未知码值一律渲染成「未知(码值)」，绝不回落成某个合法值。</b>
+ * <p><b>展示用码值 → 文案：未知码值一律返回空串，不再伪装成某个合法值（脏数据交由数据治理修复）。异常 / 审计场景如需保留原始码值，须改用对应枚举的 labelOrUnknown。</b>
  * 未知 ASA 显示成"Ⅱ级"、未知清点结果显示成"一致"，
  * 等于把没核实的事记成核实了 —— 与检验「未判定 ≠ 正常」是同一条原则。
  *
@@ -32,7 +32,7 @@ public final class AnesthesiaLabels {
             case 3 -> "Ⅲ级";
             case 4 -> "Ⅳ级";
             case 5 -> "Ⅴ级";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -61,7 +61,7 @@ public final class AnesthesiaLabels {
             case 2 -> "Ⅱ级（可见软腭/咽峡弓）";
             case 3 -> "Ⅲ级（仅见软腭）";
             case 4 -> "Ⅳ级（仅见硬腭）";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -78,7 +78,7 @@ public final class AnesthesiaLabels {
             case 1 -> "正常";
             case 2 -> "受限";
             case 3 -> "强直";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -91,7 +91,7 @@ public final class AnesthesiaLabels {
             case 0 -> "未禁食";
             case 1 -> "已按要求禁食";
             case 2 -> "急诊饱胃（返流误吸高危）";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -113,7 +113,7 @@ public final class AnesthesiaLabels {
             case 1 -> "可施行麻醉";
             case 2 -> "暂缓手术";
             case 3 -> "需会诊/进一步评估";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -129,7 +129,7 @@ public final class AnesthesiaLabels {
         return switch (code) {
             case 0 -> "草稿";
             case 1 -> "已完成";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -147,7 +147,7 @@ public final class AnesthesiaLabels {
             case 0 -> "记录中";
             case 1 -> "已提交";
             case 2 -> "已审核";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -162,7 +162,7 @@ public final class AnesthesiaLabels {
             case 2 -> "喉罩";
             case 3 -> "面罩";
             case 4 -> "其他";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -179,7 +179,7 @@ public final class AnesthesiaLabels {
             case 1 -> "自主呼吸";
             case 2 -> "辅助通气";
             case 3 -> "控制通气";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -192,7 +192,7 @@ public final class AnesthesiaLabels {
             case 1 -> "满意";
             case 2 -> "欠佳";
             case 3 -> "失败改麻醉方式";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -205,7 +205,7 @@ public final class AnesthesiaLabels {
             case 1 -> "回病房";
             case 2 -> "入PACU";
             case 3 -> "入ICU";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -224,7 +224,7 @@ public final class AnesthesiaLabels {
             case 1 -> "诱导";
             case 2 -> "维持";
             case 3 -> "苏醒";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -242,7 +242,7 @@ public final class AnesthesiaLabels {
             case 6 -> "椎管内";
             case 7 -> "局麻浸润";
             case 8 -> "其他";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -265,7 +265,7 @@ public final class AnesthesiaLabels {
         return switch (code) {
             case 0 -> "在室观察";
             case 1 -> "已出室";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -278,7 +278,7 @@ public final class AnesthesiaLabels {
             case 1 -> "完全清醒";
             case 2 -> "嗜睡可唤醒";
             case 3 -> "未清醒";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -291,7 +291,7 @@ public final class AnesthesiaLabels {
             case 1 -> "回病房";
             case 2 -> "转ICU";
             case 3 -> "继续留观";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -341,7 +341,7 @@ public final class AnesthesiaLabels {
             case 1 -> "术前清点完成";
             case 2 -> "关体前清点完成";
             case 3 -> "关体后清点完成";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -354,7 +354,7 @@ public final class AnesthesiaLabels {
             case 1 -> "三轮一致，清点完成";
             case 2 -> "存在清点差异";
             case 3 -> "异常终止";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -366,7 +366,7 @@ public final class AnesthesiaLabels {
         return switch (code) {
             case 1 -> "一致";
             case 2 -> "不一致";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -381,7 +381,7 @@ public final class AnesthesiaLabels {
             case 3 -> "缝针";
             case 4 -> "刀片";
             case 5 -> "其他";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -403,7 +403,7 @@ public final class AnesthesiaLabels {
             case 0 -> "未计费";
             case 1 -> "已计费";
             case 2 -> "计费失败";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -416,7 +416,7 @@ public final class AnesthesiaLabels {
             case 1 -> "麻醉记录";
             case 2 -> "PACU复苏";
             case 3 -> "手术";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 
@@ -430,7 +430,7 @@ public final class AnesthesiaLabels {
         return switch (code) {
             case 0 -> "否";
             case 1 -> "是";
-            default -> "未知(" + code + ")";
+            default -> "";
         };
     }
 

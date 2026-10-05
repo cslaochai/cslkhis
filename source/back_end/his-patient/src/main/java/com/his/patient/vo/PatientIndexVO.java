@@ -36,7 +36,7 @@ public class PatientIndexVO {
      */
     private Integer gender;
     /**
-     * 性别文案（口径见 PatientGenderText，0 报"未知(0)"而不是"女"）
+     * 性别文案（口径见 SysGenderEnum.getText，null→"未知"，脏值报"未知(0)"而不是"女"）
      */
     private String genderText;
     private LocalDate birthDate;

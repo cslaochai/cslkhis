@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.common.enums.SysGenderEnum;
 import com.his.patient.dto.AdmissionOrderCancelDTO;
 import com.his.patient.dto.AdmissionOrderQueryPageDTO;
 import com.his.patient.dto.AdmissionOrderUpsertDTO;
@@ -266,7 +267,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
         if (!Objects.equals(AdmissionOrderStatusEnum.PENDING.getCode(), order.getOrderStatus())) {
             // 已收治 / 已作废都要说清是哪种，别只说一句"状态不对"
             throw new BusinessException("住院证当前状态为「"
-                    + InpatientLabels.orderStatusText(order.getOrderStatus()) + "」，不能收治");
+                    + AdmissionOrderStatusEnum.labelOrUnknown(order.getOrderStatus()) + "」，不能收治");
         }
         if (order.getValidUntil() != null && order.getValidUntil().isBefore(toSeconds(LocalDateTime.now()))) {
             throw new BusinessException("住院证已于 " + order.getValidUntil() + " 过期，不能再收治，请重新开证");
@@ -302,8 +303,8 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
      * 前端要同时看到"待收治"和"已过期"两件事，才不会把过期证当成能用的证。
      */
     private void decorate(AdmissionOrderVO vo) {
-        vo.setGenderText(InpatientLabels.genderText(vo.getGender()));
-        vo.setOrderStatusText(InpatientLabels.orderStatusText(vo.getOrderStatus()));
+        vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
+        vo.setOrderStatusText(AdmissionOrderStatusEnum.labelOf(vo.getOrderStatus()));
 
         boolean pending = Objects.equals(AdmissionOrderStatusEnum.PENDING.getCode(), vo.getOrderStatus());
         boolean expired = pending && vo.getValidUntil() != null

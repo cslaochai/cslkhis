@@ -31,7 +31,9 @@ public class EmergencyHandoverItemVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long emergencyId;
 
-    /** 急诊号（快照） */
+    /**
+     * 急诊号（快照）
+     */
     private String emergencyNo;
 
     /**
@@ -40,7 +42,9 @@ public class EmergencyHandoverItemVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
     /**
@@ -53,7 +57,9 @@ public class EmergencyHandoverItemVO {
      */
     private String triageLevelText;
 
-    /** 交班时该患者的急诊状态（1-候诊 2-诊治中 3-留观） */
+    /**
+     * 交班时该患者的急诊状态（1-候诊 2-诊治中 3-留观）
+     */
     private Integer emergencyStatus;
 
     /**
@@ -67,7 +73,9 @@ public class EmergencyHandoverItemVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long fromDoctorId;
 
-    /** 交班时的负责医生姓名（快照） */
+    /**
+     * 交班时的负责医生姓名（快照）
+     */
     private String fromDoctorName;
 
     /**
@@ -76,7 +84,9 @@ public class EmergencyHandoverItemVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long takeDoctorId;
 
-    /** 接续责任人姓名（快照） */
+    /**
+     * 接续责任人姓名（快照）
+     */
     private String takeDoctorName;
 
     /**
@@ -84,7 +94,9 @@ public class EmergencyHandoverItemVO {
      */
     private String disposition;
 
-    /** 逐条补充交代（过敏史/管路/家属联系方式等，截到 300） */
+    /**
+     * 逐条补充交代（过敏史/管路/家属联系方式等，截到 300）
+     */
     private String handoverNote;
 
     /**
@@ -97,7 +109,9 @@ public class EmergencyHandoverItemVO {
      */
     private Long obsHours;
 
-    /** 超时档位定格（0-未超时 1-超时 2-严重超时） */
+    /**
+     * 超时档位定格（0-未超时 1-超时 2-严重超时）
+     */
     private Integer overdueLevel;
 
     /**

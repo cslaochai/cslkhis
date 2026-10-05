@@ -16,15 +16,25 @@ import lombok.Getter;
 @Getter
 public enum NursingQcCategoryEnum {
 
-    /** 基础护理（8 项 ×12.5 分） */
+    /**
+     * 基础护理（8 项 ×12.5 分）
+     */
     BASIC_NURSING(1, "基础护理"),
-    /** 专科护理（5 项 ×20 分） */
+    /**
+     * 专科护理（5 项 ×20 分）
+     */
     SPECIALTY(2, "专科护理"),
-    /** 安全管理（5 项 ×20 分，含跌倒/压疮防范措施，与不良事件互为因果） */
+    /**
+     * 安全管理（5 项 ×20 分，含跌倒/压疮防范措施，与不良事件互为因果）
+     */
     SAFETY(3, "安全管理"),
-    /** 护理文书（4 项 ×25 分） */
+    /**
+     * 护理文书（4 项 ×25 分）
+     */
     DOC(4, "护理文书"),
-    /** 院感防控（4 项 ×25 分） */
+    /**
+     * 院感防控（4 项 ×25 分）
+     */
     INFECTION(5, "院感防控");
 
     private final int code;
@@ -52,7 +62,9 @@ public enum NursingQcCategoryEnum {
         return e == null ? "未知(" + code + ")" : e.getLabel();
     }
 
-    /** 白名单文案：入参非法时直接回给页面「该选哪个」，比只说「参数错误」少一轮来回 */
+    /**
+     * 白名单文案：入参非法时直接回给页面「该选哪个」，比只说「参数错误」少一轮来回
+     */
     public static String whitelistText() {
         StringBuilder sb = new StringBuilder();
         for (NursingQcCategoryEnum e : values()) {

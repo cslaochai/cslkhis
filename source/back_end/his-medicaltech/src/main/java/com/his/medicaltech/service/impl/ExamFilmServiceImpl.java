@@ -25,7 +25,7 @@ import com.his.medicaltech.service.ExamFilmService;
 import com.his.medicaltech.vo.ExamFilmVO;
 import com.his.medicaltech.vo.FilmSpecSelectListVO;
 import com.his.medicaltech.mapper.BizInspectionRecordMapper;
-import com.his.medicaltech.support.SubDictText;
+import com.his.system.service.DictCacheService;
 import com.his.security.UserUtils;
 import com.his.system.service.SysAuditLogService;
 import lombok.RequiredArgsConstructor;
@@ -68,7 +68,7 @@ public class ExamFilmServiceImpl implements ExamFilmService {
     private final BizFilmSpecMapper specMapper;
     private final BizInspectionRecordMapper recordMapper;
     private final BizInspectionApplyMapper applyMapper;
-    private final SubDictText subDictText;
+    private final DictCacheService subDictText;
     private final SysAuditLogService sysAuditLogService;
     private final FeeRecordService feeRecordService;
 
@@ -389,9 +389,9 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         if (vo == null) {
             return null;
         }
-        vo.setFilmStatusText(subDictText.text("his_film_status", vo.getFilmStatus()));
+        vo.setFilmStatusText(subDictText.getDicDataLabel("his_film_status", vo.getFilmStatus()));
         vo.setModalityText(vo.getModality() == null ? null
-                : subDictText.text("his_exam_device_type", vo.getModality()));
+                : subDictText.getDicDataLabel("his_exam_device_type", vo.getModality()));
         return vo;
     }
 

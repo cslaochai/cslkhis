@@ -22,17 +22,16 @@ import java.util.List;
  */
 public final class EmpTitleCode {
 
-    private EmpTitleCode() {
-    }
-
-    /** 正高：401 主任医师 / 402 主任药师 / 403 主任护师 / 404 主任技师 */
+    /**
+     * 正高：401 主任医师 / 402 主任药师 / 403 主任护师 / 404 主任技师
+     */
     public static final List<String> FULL_SENIOR =
             Collections.unmodifiableList(Arrays.asList("401", "402", "403", "404"));
-
-    /** 副高：301 副主任医师 / 302 副主任药师 / 303 副主任护师 / 304 副主任技师 */
+    /**
+     * 副高：301 副主任医师 / 302 副主任药师 / 303 副主任护师 / 304 副主任技师
+     */
     public static final List<String> ASSOCIATE_SENIOR =
             Collections.unmodifiableList(Arrays.asList("301", "302", "303", "304"));
-
     /**
      * 副高及以上（301~304 + 401~404）——「同科室上级」的判定口径。
      *
@@ -44,7 +43,12 @@ public final class EmpTitleCode {
             Collections.unmodifiableList(Arrays.asList(
                     "301", "302", "303", "304", "401", "402", "403", "404"));
 
-    /** 职称码是否为副高及以上（3xx/4xx）。null / 空 / 非卫技系列（5xx 及以上）一律 false。 */
+    private EmpTitleCode() {
+    }
+
+    /**
+     * 职称码是否为副高及以上（3xx/4xx）。null / 空 / 非卫技系列（5xx 及以上）一律 false。
+     */
     public static boolean isSenior(String titleCode) {
         if (titleCode == null || titleCode.isBlank()) {
             return false;

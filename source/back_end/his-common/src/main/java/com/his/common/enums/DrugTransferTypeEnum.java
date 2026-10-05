@@ -12,9 +12,13 @@ import lombok.Getter;
 @Getter
 public enum DrugTransferTypeEnum {
 
-    /** 药库下拨药房：补充药房在架量 */
+    /**
+     * 药库下拨药房：补充药房在架量
+     */
     DOWN(1, "药库下拨药房", StockRoomEnum.WAREHOUSE, StockRoomEnum.PHARMACY),
-    /** 药房退回药库：滞销/近效期批次退回药库 */
+    /**
+     * 药房退回药库：滞销/近效期批次退回药库
+     */
     RETURN(2, "药房退回药库", StockRoomEnum.PHARMACY, StockRoomEnum.WAREHOUSE);
 
     private final int code;

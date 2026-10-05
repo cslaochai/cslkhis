@@ -1,11 +1,11 @@
 package com.his.system.service.impl;
 
-import com.his.system.service.DictCacheService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.system.entity.SysDictData;
 import com.his.system.mapper.SysDictDataMapper;
+import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -131,6 +131,26 @@ public class DictCacheServiceImpl implements CommandLineRunner, DictCacheService
                     .orderByAsc(SysDictData::getDictSort);
             return dictDataMapper.selectList(wrapper);
         }
+    }
+
+    /**
+     * 字典码值 → 文案。取不到渲染「未知(n)」，绝不回落成看似合法的值。
+     */
+    @Override
+    public String getDicDataLabel(String dictType, Object value) {
+        if (value == null) {
+            return null;
+        }
+        String v = String.valueOf(value);
+        List<SysDictData> list = getDictDataByType(dictType);
+        if (list == null || list.isEmpty()) {
+            return StringUtils.EMPTY;
+        }
+        return list.stream()
+                .filter(d -> d != null && v.equals(String.valueOf(d.getDictValue())))
+                .map(SysDictData::getDictLabel)
+                .findFirst()
+                .orElse(StringUtils.EMPTY);
     }
 
     /**

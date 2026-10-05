@@ -41,7 +41,7 @@ import com.his.medicaltech.enums.ReportTypeEnum;
 import com.his.medicaltech.mapper.BizInspectionRecordMapper;
 import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.medicaltech.mapper.RadioReportMapper;
-import com.his.medicaltech.support.SubDictText;
+import com.his.system.service.DictCacheService;
 import com.his.security.UserUtils;
 import com.his.system.service.SysAuditLogService;
 import com.his.system.enums.BizTypeEnum;
@@ -79,7 +79,7 @@ public class EcgServiceImpl implements EcgService {
     private final BizReportMapper reportMapper;
     private final BizInspectionRecordMapper inspectionRecordMapper;
     private final EmrSignatureService signatureService;
-    private final SubDictText subDictText;
+    private final DictCacheService subDictText;
     private final SysAuditLogService sysAuditLogService;
     private final SysMessageService sysMessageService;
     private final BizEcgWaveformMapper waveformMapper;
@@ -123,7 +123,7 @@ public class EcgServiceImpl implements EcgService {
         BizInspectionRecord record = loadEcgRecord(recordId);
         if (!Objects.equals(InsRecordStatusEnum.REGISTERED.getCode(), record.getRecordStatus())) {
             throw new BusinessException("只有「已登记」的检查能签到（当前："
-                    + subDictText.text("his_inspection_record_status", record.getRecordStatus()) + "）");
+                    + subDictText.getDicDataLabel("his_inspection_record_status", record.getRecordStatus()) + "）");
         }
         record.setRecordStatus(InsRecordStatusEnum.SIGNED_IN.getCode());
         record.setCheckInTime(LocalDateTime.now());
@@ -338,7 +338,7 @@ public class EcgServiceImpl implements EcgService {
         if (record.getRecordStatus() == null
                 || record.getRecordStatus() < InsRecordStatusEnum.RESULTED.getCode()) {
             throw new BusinessException("该检查还没完成波形采集（当前状态："
-                    + subDictText.text("his_inspection_record_status", record.getRecordStatus()) + "）");
+                    + subDictText.getDicDataLabel("his_inspection_record_status", record.getRecordStatus()) + "）");
         }
 
         if (record.getReportSignId() != null) {
@@ -375,7 +375,7 @@ public class EcgServiceImpl implements EcgService {
         BizInspectionRecord record = loadEcgRecord(report.getRecordId());
         if (!Objects.equals(ReportStatusEnum.PENDING_REVIEW.getCode(), report.getReportStatus())) {
             throw new BusinessException("只有「待审核」的报告能审核（当前："
-                    + subDictText.text("his_report_status", report.getReportStatus()) + "）");
+                    + subDictText.getDicDataLabel("his_report_status", report.getReportStatus()) + "）");
         }
         Long current = UserUtils.getCurrentEmployeeId();
         if (Objects.equals(report.getWriteById(), current)) {
@@ -416,7 +416,7 @@ public class EcgServiceImpl implements EcgService {
         BizInspectionRecord record = loadEcgRecord(report.getRecordId());
         if (!Objects.equals(ReportStatusEnum.PENDING_REVIEW.getCode(), report.getReportStatus())) {
             throw new BusinessException("只有「待审核」的报告能退回（当前："
-                    + subDictText.text("his_report_status", report.getReportStatus()) + "）");
+                    + subDictText.getDicDataLabel("his_report_status", report.getReportStatus()) + "）");
         }
         if (!StringUtils.hasText(dto.getReason())) {
             throw new BusinessException("退回必须写明原因：医师要照着这个原因改报告");
@@ -454,7 +454,7 @@ public class EcgServiceImpl implements EcgService {
         BizInspectionRecord record = loadEcgRecord(report.getRecordId());
         if (!Objects.equals(ReportStatusEnum.REVIEWED.getCode(), report.getReportStatus())) {
             throw new BusinessException("只有「已审核」的报告能发布（当前："
-                    + subDictText.text("his_report_status", report.getReportStatus()) + "）：请先完成审核");
+                    + subDictText.getDicDataLabel("his_report_status", report.getReportStatus()) + "）：请先完成审核");
         }
         LocalDateTime now = LocalDateTime.now();
         report.setReportStatus(ReportStatusEnum.PUBLISHED.getCode());
@@ -532,7 +532,7 @@ public class EcgServiceImpl implements EcgService {
         if (Objects.equals(ReportStatusEnum.PUBLISHED.getCode(), st)
                 || Objects.equals(ReportStatusEnum.INVALID.getCode(), st)) {
             throw new BusinessException("报告已"
-                    + subDictText.text("his_report_status", st) + "，不能再修改");
+                    + subDictText.getDicDataLabel("his_report_status", st) + "，不能再修改");
         }
     }
 
@@ -610,13 +610,13 @@ public class EcgServiceImpl implements EcgService {
             return;
         }
         for (EcgListVO v : list) {
-            v.setRecordStatusText(subDictText.text("his_inspection_record_status", v.getRecordStatus()));
+            v.setRecordStatusText(subDictText.getDicDataLabel("his_inspection_record_status", v.getRecordStatus()));
             v.setReportStatusText(v.getReportStatus() == null ? "未写报告"
-                    : subDictText.text("his_report_status", v.getReportStatus()));
+                    : subDictText.getDicDataLabel("his_report_status", v.getReportStatus()));
             v.setPositiveFlagText(v.getPositiveFlag() == null ? null
-                    : subDictText.text("his_positive_flag", v.getPositiveFlag()));
+                    : subDictText.getDicDataLabel("his_positive_flag", v.getPositiveFlag()));
             v.setEcgTypeText(v.getEcgType() == null ? null
-                    : subDictText.text("his_ecg_type", v.getEcgType()));
+                    : subDictText.getDicDataLabel("his_ecg_type", v.getEcgType()));
         }
     }
 
@@ -631,7 +631,7 @@ public class EcgServiceImpl implements EcgService {
         vo.setPatientNo(row.getPatientNo());
         vo.setPatientName(row.getPatientName());
         vo.setGender(row.getGender());
-        vo.setGenderText(row.getGender() == null ? null : subDictText.text("sys_gender", row.getGender()));
+        vo.setGenderText(row.getGender() == null ? null : subDictText.getDicDataLabel("sys_gender", row.getGender()));
         vo.setAge(row.getAge());
         vo.setVisitDate(row.getVisitDate());
         vo.setItemCode(row.getItemCode());
@@ -641,7 +641,7 @@ public class EcgServiceImpl implements EcgService {
         vo.setApplyDoctorName(row.getApplyDoctorName());
         vo.setClinicalDiagnosis(row.getClinicalDiagnosis());
         vo.setRecordStatus(row.getRecordStatus());
-        vo.setRecordStatusText(subDictText.text("his_inspection_record_status", row.getRecordStatus()));
+        vo.setRecordStatusText(subDictText.getDicDataLabel("his_inspection_record_status", row.getRecordStatus()));
         BizInspectionRecord rec = inspectionRecordMapper.selectById(row.getRecordId());
         if (rec != null) {
             vo.setCheckInTime(rec.getCheckInTime());
@@ -653,7 +653,7 @@ public class EcgServiceImpl implements EcgService {
             vo.setWaveId(wave.getId());
             vo.setWaveNo(wave.getWaveNo());
             vo.setEcgType(wave.getEcgType());
-            vo.setEcgTypeText(subDictText.text("his_ecg_type", wave.getEcgType()));
+            vo.setEcgTypeText(subDictText.getDicDataLabel("his_ecg_type", wave.getEcgType()));
             vo.setDeviceNo(wave.getDeviceNo());
             vo.setCollectBy(wave.getCollectBy());
             vo.setCollectTime(wave.getCollectTime());
@@ -699,14 +699,14 @@ public class EcgServiceImpl implements EcgService {
             vo.setReportId(report.getId());
             vo.setReportNo(report.getReportNo());
             vo.setReportStatus(report.getReportStatus());
-            vo.setReportStatusText(subDictText.text("his_report_status", report.getReportStatus()));
+            vo.setReportStatusText(subDictText.getDicDataLabel("his_report_status", report.getReportStatus()));
             vo.setTemplateId(report.getTemplateId());
             vo.setReportContent(report.getReportContent());
             vo.setConclusion(report.getConclusion());
             vo.setSuggestions(report.getSuggestions());
             vo.setPositiveFlag(report.getPositiveFlag());
             vo.setPositiveFlagText(report.getPositiveFlag() == null ? null
-                    : subDictText.text("his_positive_flag", report.getPositiveFlag()));
+                    : subDictText.getDicDataLabel("his_positive_flag", report.getPositiveFlag()));
             vo.setIsCritical(report.getIsCritical());
             vo.setWriteBy(report.getWriteBy());
             vo.setWriteTime(report.getWriteTime());
@@ -784,7 +784,7 @@ public class EcgServiceImpl implements EcgService {
         EcgTemplateVO vo = new EcgTemplateVO();
         BeanUtils.copyProperties(e, vo);
         vo.setEcgTypeText(e.getEcgType() == null ? null
-                : subDictText.text("his_ecg_type", e.getEcgType()));
+                : subDictText.getDicDataLabel("his_ecg_type", e.getEcgType()));
         if (vo.getTemplateName() == null || vo.getTemplateName().isEmpty()) {
             vo.setTemplateName(e.getTemplateCode());
         }

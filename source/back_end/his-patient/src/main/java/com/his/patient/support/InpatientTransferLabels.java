@@ -1,49 +1,17 @@
 package com.his.patient.support;
 
 /**
- * 转科枚举文案（P4.2）。
+ * 转科域纯校验工具。
  *
- * <p><b>铁律：未知码值一律渲染成「未知(码值)」，绝不回落成某个合法值。</b>
- * 转科状态回落成"已完成"等于把一次没接手的转科记成完成了 ——
- * 与「未判定 ≠ 正常」「医嘱未知状态不能显示成已完成」是同一条线。
+ * <p><b>码值 → 文案的映射已下沉到对应枚举</b>（{@code labelOf} 展示用、{@code labelOrUnknown} 异常 / 审计用），
+ * 本类仅保留转科类型 / 状态的合法性校验。
  */
 public final class InpatientTransferLabels {
 
     private InpatientTransferLabels() {
     }
 
-    /**
-     * 转科类型：1-普通转科 2-急诊转科 3-转入ICU 4-ICU转出
-     */
-    public static String typeText(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        return switch (code) {
-            case 1 -> "普通转科";
-            case 2 -> "急诊转科";
-            case 3 -> "转入ICU";
-            case 4 -> "ICU转出";
-            default -> "未知(" + code + ")";
-        };
-    }
-
     public static boolean isValidType(Integer code) {
         return code != null && code >= 1 && code <= 4;
-    }
-
-    /**
-     * 转科状态：0-待接收 1-已完成 2-已取消
-     */
-    public static String statusText(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        return switch (code) {
-            case 0 -> "待接收";
-            case 1 -> "已完成";
-            case 2 -> "已取消";
-            default -> "未知(" + code + ")";
-        };
     }
 }

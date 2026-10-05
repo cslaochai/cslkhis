@@ -24,22 +24,6 @@ public enum AccountTxnTypeEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
-    /**
-     * 扣用类（钱从账户走出去：余额支付、预交金退给患者），流水记负；
-     * 其余为入账类记正。手工调整是唯一允许调用方自带符号的类型。
-     */
-    public boolean debit() {
-        return this == BALANCE_PAY || this == PREPAY_REFUND;
-    }
-
     public static AccountTxnTypeEnum fromCode(Integer code) {
         if (code == null) {
             return null;
@@ -55,5 +39,21 @@ public enum AccountTxnTypeEnum {
     public static String descOf(Integer code) {
         AccountTxnTypeEnum item = fromCode(code);
         return item == null ? "未知类型" : item.desc;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
+
+    /**
+     * 扣用类（钱从账户走出去：余额支付、预交金退给患者），流水记负；
+     * 其余为入账类记正。手工调整是唯一允许调用方自带符号的类型。
+     */
+    public boolean debit() {
+        return this == BALANCE_PAY || this == PREPAY_REFUND;
     }
 }

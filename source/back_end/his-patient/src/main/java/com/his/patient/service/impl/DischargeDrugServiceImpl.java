@@ -9,7 +9,7 @@ import com.his.patient.entity.BizDischargeDrug;
 import com.his.patient.enums.DischargeDrugStatusEnum;
 import com.his.patient.mapper.BizDischargeDrugMapper;
 import com.his.patient.service.DischargeDrugService;
-import com.his.patient.support.DictText;
+import com.his.system.service.DictCacheService;
 import com.his.patient.vo.DischargeDrugSelectListVO;
 import com.his.patient.vo.DischargeDrugVO;
 import com.his.security.UserUtils;
@@ -37,7 +37,7 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
     private static final String DICT_STATUS = "his_discharge_drug_status";
 
     private final BizDischargeDrugMapper drugMapper;
-    private final DictText dictText;
+    private final DictCacheService dictText;
 
     @Transactional(rollbackFor = Exception.class)
     public DischargeDrugVO upsert(DischargeDrugDTO.Upsert dto) {
@@ -193,7 +193,7 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
     private DischargeDrugVO toVo(BizDischargeDrug d) {
         DischargeDrugVO vo = new DischargeDrugVO();
         org.springframework.beans.BeanUtils.copyProperties(d, vo);
-        vo.setDispenseStatusText(dictText.text(DICT_STATUS, d.getDispenseStatus()));
+        vo.setDispenseStatusText(dictText.getDicDataLabel(DICT_STATUS, d.getDispenseStatus()));
         return vo;
     }
 

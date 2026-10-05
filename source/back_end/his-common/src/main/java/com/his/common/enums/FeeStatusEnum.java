@@ -8,13 +8,21 @@ package com.his.common.enums;
  */
 public enum FeeStatusEnum {
 
-    /** 可被结算账单锁定 */
+    /**
+     * 可被结算账单锁定
+     */
     PENDING(1, "待结算"),
-    /** 已被某张账单捞走（bill_id 非空），不能进第二张账单 */
+    /**
+     * 已被某张账单捞走（bill_id 非空），不能进第二张账单
+     */
     LOCKED(2, "已锁定"),
-    /** 随账单结清，费用生命周期结束 */
+    /**
+     * 随账单结清，费用生命周期结束
+     */
     SETTLED(3, "已结算"),
-    /** 被红冲行冲销，本行不再计入应收 */
+    /**
+     * 被红冲行冲销，本行不再计入应收
+     */
     REVERSED(4, "已红冲");
 
     private final Integer code;
@@ -23,14 +31,6 @@ public enum FeeStatusEnum {
     FeeStatusEnum(Integer code, String desc) {
         this.code = code;
         this.desc = desc;
-    }
-
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
     }
 
     public static FeeStatusEnum fromCode(Integer code) {
@@ -48,5 +48,13 @@ public enum FeeStatusEnum {
     public static String descOf(Integer code) {
         FeeStatusEnum item = fromCode(code);
         return item == null ? "未知状态" : item.desc;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
     }
 }

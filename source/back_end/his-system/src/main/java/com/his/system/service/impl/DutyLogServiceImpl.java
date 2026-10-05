@@ -16,6 +16,8 @@ import com.his.system.dto.DutyLogUpsertDTO;
 import com.his.system.entity.BizDutyLog;
 import com.his.system.entity.SysEmployee;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.enums.DutyLogStatusEnum;
+import com.his.system.enums.DutyLogTypeEnum;
 import com.his.system.mapper.BizDutyLogMapper;
 import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.vo.DutyLogVO;
@@ -92,7 +94,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         }
         List<BizDutyLog> rows = logMapper.selectList(new LambdaQueryWrapper<BizDutyLog>()
                 .eq(BizDutyLog::getHandoverEmpId, empId)
-                .eq(BizDutyLog::getStatus, ST_HANDED)
+                .eq(BizDutyLog::getStatus, DutyLogStatusEnum.HANDED.getCode())
                 .orderByAsc(BizDutyLog::getDutyDate)
                 .orderByAsc(BizDutyLog::getId));
         return rows.stream().map(this::toVO).toList();
@@ -106,16 +108,17 @@ public class DutyLogServiceImpl implements DutyLogService {
                 && dto.getShiftType() != DutyShiftTypeEnum.NIGHT.getCode())) {
             throw new BusinessException("班次取值不合法（1-白班 2-夜班）");
         }
-        if (dto.getLogType() == null || dto.getLogType() < TYPE_EVENT || dto.getLogType() > TYPE_PATROL) {
+        if (dto.getLogType() == null || dto.getLogType() < DutyLogTypeEnum.EVENT.getCode()
+                || dto.getLogType() > DutyLogTypeEnum.PATROL.getCode()) {
             throw new BusinessException("记录类型取值不合法（1-值班事件 2-遗留事项 3-巡查记录）");
         }
-        int status = dto.getStatus() == null ? ST_PENDING : dto.getStatus();
-        if (status != ST_PENDING && status != ST_DONE) {
+        int status = dto.getStatus() == null ? DutyLogStatusEnum.PENDING.getCode() : dto.getStatus();
+        if (status != DutyLogStatusEnum.PENDING.getCode() && status != DutyLogStatusEnum.DONE.getCode()) {
             // 交班本最容易被绕过的地方：登记时直接写"已签收"，等于自己给自己签字交接。
             throw new BusinessException("状态只能登记为待处理或已处理（已交班/已签收须走交班与签收动作）");
         }
         // B 类保留（条件必填）：只有标记为已处理时才要求填写，一刀切的 @NotBlank 会把待处理的登记挡成 400
-        if (status == ST_DONE && !StringUtils.hasText(dto.getHandleResult())) {
+        if (status == DutyLogStatusEnum.DONE.getCode() && !StringUtils.hasText(dto.getHandleResult())) {
             throw new BusinessException("标记为已处理时必须填写处理情况");
         }
 
@@ -142,7 +145,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         boolean insert = row == null;
         if (insert) {
             row = new BizDutyLog();
-        } else if (row.getStatus() != null && row.getStatus() >= ST_HANDED) {
+        } else if (row.getStatus() != null && row.getStatus() >= DutyLogStatusEnum.HANDED.getCode()) {
             throw new BusinessException("已交班/已签收的记录不能再修改（交接完成后改内容 = 篡改交班本）");
         }
         row.setDutyDate(dto.getDutyDate());
@@ -181,7 +184,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         if (row == null) {
             throw new BusinessException("值班日志记录不存在");
         }
-        if (row.getStatus() != null && row.getStatus() == ST_ACKED) {
+        if (row.getStatus() != null && row.getStatus() == DutyLogStatusEnum.ACKED.getCode()) {
             throw new BusinessException("已签收的记录不能删除（交接已完成，删除等于抹掉交接凭据）");
         }
         logMapper.deleteById(id);
@@ -200,7 +203,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         if (row == null) {
             throw new BusinessException("值班日志记录不存在");
         }
-        if (row.getStatus() != null && row.getStatus() >= ST_HANDED) {
+        if (row.getStatus() != null && row.getStatus() >= DutyLogStatusEnum.HANDED.getCode()) {
             throw new BusinessException("该记录已交班，不能重复交班");
         }
 
@@ -227,7 +230,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         // ⚠ UpdateWrapper 显式 set：updateById 走 NOT_NULL 策略，把 ack_time 之类从有值改回 null 会被跳过
         logMapper.update(null, new LambdaUpdateWrapper<BizDutyLog>()
                 .eq(BizDutyLog::getId, row.getId())
-                .set(BizDutyLog::getStatus, ST_HANDED)
+                .set(BizDutyLog::getStatus, DutyLogStatusEnum.HANDED.getCode())
                 .set(BizDutyLog::getHandoverEmpId, nextEmpId)
                 .set(BizDutyLog::getHandoverEmpName, nextEmpName)
                 .set(BizDutyLog::getHandoverTime, now)
@@ -249,7 +252,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         if (row == null) {
             throw new BusinessException("值班日志记录不存在");
         }
-        if (!Objects.equals(ST_HANDED, row.getStatus())) {
+        if (!Objects.equals(DutyLogStatusEnum.HANDED.getCode(), row.getStatus())) {
             throw new BusinessException("只有已交班的记录才能签收（当前状态：" + statusText(row.getStatus()) + "）");
         }
         Long me = UserUtils.getCurrentEmployeeId();
@@ -258,7 +261,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         }
         logMapper.update(null, new LambdaUpdateWrapper<BizDutyLog>()
                 .eq(BizDutyLog::getId, row.getId())
-                .set(BizDutyLog::getStatus, ST_ACKED)
+                .set(BizDutyLog::getStatus, DutyLogStatusEnum.ACKED.getCode())
                 .set(BizDutyLog::getAckTime, LocalDateTime.now()));
         log.info("值班交班签收 id={} 接班人={}", row.getId(), row.getHandoverEmpName());
     }
@@ -289,7 +292,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         vo.setAckTime(r.getAckTime());
         vo.setCreateBy(r.getCreateBy());
         vo.setCreateTime(r.getCreateTime());
-        vo.setCanAck(me != null && me.equals(r.getHandoverEmpId()) && Objects.equals(ST_HANDED, r.getStatus()) ? 1 : 0);
+        vo.setCanAck(me != null && me.equals(r.getHandoverEmpId()) && Objects.equals(DutyLogStatusEnum.HANDED.getCode(), r.getStatus()) ? 1 : 0);
         vo.setRemark(r.getRemark());
         return vo;
     }
@@ -302,22 +305,13 @@ public class DutyLogServiceImpl implements DutyLogService {
         if (t == null) {
             return "-";
         }
-        return switch (t) {
-            case TYPE_LEFTOVER -> "遗留事项";
-            case TYPE_PATROL -> "巡查记录";
-            default -> "值班事件";
-        };
+        return DutyLogTypeEnum.labelOf(t);
     }
 
     private String statusText(Integer s) {
         if (s == null) {
             return "-";
         }
-        return switch (s) {
-            case ST_DONE -> "已处理";
-            case ST_HANDED -> "已交班";
-            case ST_ACKED -> "已签收";
-            default -> "待处理";
-        };
+        return DutyLogStatusEnum.labelOf(s);
     }
 }

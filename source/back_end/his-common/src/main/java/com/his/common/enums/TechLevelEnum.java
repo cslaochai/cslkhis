@@ -38,7 +38,9 @@ public enum TechLevelEnum {
         return null;
     }
 
-    /** 未知码值渲染成「未知(码值)」，绝不回落成某个合法级别 */
+    /**
+     * 未知码值渲染成「未知(码值)」，绝不回落成某个合法级别
+     */
     public static String labelOf(Integer code) {
         TechLevelEnum level = fromCode(code);
         return level == null ? "未知(" + code + ")" : level.getLabel();

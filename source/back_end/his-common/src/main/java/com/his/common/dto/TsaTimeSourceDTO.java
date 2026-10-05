@@ -12,7 +12,9 @@ import lombok.Data;
 @Data
 public class TsaTimeSourceDTO {
 
-    /** 时间来源（1-本机时钟 2-院内授时服务器 3-第三方TSA） */
+    /**
+     * 时间来源（1-本机时钟 2-院内授时服务器 3-第三方TSA）
+     */
     @NotNull(message = "时间来源不能为空")
     private Integer timeSource;
 }

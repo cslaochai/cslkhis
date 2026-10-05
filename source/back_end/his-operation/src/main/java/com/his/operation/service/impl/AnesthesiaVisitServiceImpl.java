@@ -12,6 +12,7 @@ import com.his.operation.mapper.BizAnesthesiaVisitMapper;
 import com.his.operation.mapper.BizOperationApplyMapper;
 import com.his.operation.service.AnesthesiaVisitService;
 import com.his.operation.support.AnesthesiaLabels;
+import com.his.operation.enums.OperationApplyStatusEnum;
 import com.his.operation.support.OperationApplyLabels;
 import com.his.operation.vo.AnesthesiaVisitVO;
 import com.his.security.entity.CurrentUser;
@@ -115,7 +116,7 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
         }
-        if (Integer.valueOf(OperationApplyLabels.ST_CANCELLED).equals(apply.getOperationStatus())) {
+        if (Integer.valueOf(OperationApplyStatusEnum.CANCELLED.getCode()).equals(apply.getOperationStatus())) {
             throw new BusinessException("手术单 " + apply.getApplyNo() + " 已取消，不需要再访视");
         }
 

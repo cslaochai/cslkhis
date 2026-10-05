@@ -24,6 +24,7 @@ import com.his.operation.mapper.BizOperationChargeItemMapper;
 import com.his.operation.service.AnesthesiaRecordService;
 import com.his.operation.service.AnesthesiaVisitService;
 import com.his.operation.support.AnesthesiaLabels;
+import com.his.operation.enums.OperationApplyStatusEnum;
 import com.his.operation.support.OperationApplyLabels;
 import com.his.operation.support.OperationChargeBiller;
 import com.his.operation.vo.AnesthesiaMedVO;
@@ -134,7 +135,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
         }
-        if (Integer.valueOf(OperationApplyLabels.ST_CANCELLED).equals(apply.getOperationStatus())) {
+        if (Integer.valueOf(OperationApplyStatusEnum.CANCELLED.getCode()).equals(apply.getOperationStatus())) {
             throw new BusinessException("手术单 " + apply.getApplyNo() + " 已取消，不能开立麻醉记录");
         }
         if (recordMapper.selectVOByApply(apply.getId()) != null) {

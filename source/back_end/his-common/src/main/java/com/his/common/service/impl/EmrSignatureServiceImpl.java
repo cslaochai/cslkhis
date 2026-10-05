@@ -4,29 +4,19 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.RedisSequenceService;
-import com.his.common.exception.BusinessException;
 import com.his.common.config.SignProperties;
-import com.his.common.util.SignCrypto;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.dto.SignatureQueryPageDTO;
 import com.his.common.entity.BizEmrSignature;
+import com.his.common.entity.SignSubject;
 import com.his.common.entity.SysSignCert;
-import com.his.common.enums.ObjectSignStatus;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
-import com.his.common.enums.SignStatus;
-import com.his.common.enums.SignVerifyStatus;
-import com.his.common.enums.TimeSource;
+import com.his.common.enums.*;
+import com.his.common.exception.BusinessException;
 import com.his.common.mapper.BizEmrSignatureMapper;
 import com.his.common.mapper.SignConfigMapper;
 import com.his.common.mapper.SysSignCertMapper;
-import com.his.common.service.EmrSignatureService;
-import com.his.common.service.SignCertService;
-import com.his.common.service.SignCoverageProvider;
-import com.his.common.entity.SignSubject;
-import com.his.common.service.SignableContentProvider;
-import com.his.common.service.SignatureStoreService;
-import com.his.common.service.TsaChannelService;
+import com.his.common.service.*;
+import com.his.common.util.SignCrypto;
 import com.his.common.vo.ObjectSignatureVO;
 import com.his.common.vo.SignVerifyVO;
 import com.his.common.vo.SignatureSummaryVO;
@@ -73,7 +63,9 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String SIGN_NO_PREFIX = "SIG";
     private static final String CFG_TIME_SOURCE = "sign.time_source";
-    /** 单号冲突重试次数（与质控单同口径） */
+    /**
+     * 单号冲突重试次数（与质控单同口径）
+     */
     private static final int MAX_RETRY = 3;
 
     private final BizEmrSignatureMapper signMapper;
@@ -89,6 +81,63 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     private final ObjectProvider<SignCoverageProvider> coverageProviders;
 
     // 签名
+
+    private static long longValue(String s) {
+        if (!StringUtils.hasText(s)) {
+            return 1L;
+        }
+        try {
+            return Long.parseLong(s.trim());
+        } catch (NumberFormatException e) {
+            return 1L;
+        }
+    }
+
+    private static LocalDateTime seconds(LocalDateTime t) {
+        return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    // 验签
+
+    private static Integer intValue(String s) {
+        if (!StringUtils.hasText(s)) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(s.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 支持 "yyyy-MM-dd" 与 "yyyy-MM-dd HH:mm:ss"；只给日期时，起始补 00:00:00、结束补 23:59:59
+     */
+    private static LocalDateTime parseTime(String s, boolean endOfDay) {
+        if (!StringUtils.hasText(s)) {
+            return null;
+        }
+        String v = s.trim();
+        try {
+            if (v.length() == 10) {
+                LocalDate d = LocalDate.parse(v);
+                return endOfDay ? d.atTime(23, 59, 59) : d.atStartOfDay();
+            }
+            String norm = v.replace('T', ' ');
+            if (norm.length() == 16) {
+                norm = norm + ":00";
+            }
+            return LocalDateTime.parse(norm.replace(' ', 'T'));
+        } catch (Exception e) {
+            throw new BusinessException("时间格式不正确（应为 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss）：" + s);
+        }
+    }
+
+    private static String shortDigest(String digest) {
+        return digest == null ? null : digest.substring(0, Math.min(16, digest.length()));
+    }
+
+    // 作废
 
     @Override
     public SignatureVO sign(SignCommandDTO cmd) {
@@ -132,8 +181,10 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         throw new BusinessException("签名失败");
     }
 
+    // 查询
+
     private BizEmrSignature buildSignature(SignCommandDTO cmd, SignScene scene, SignSubject subject,
-                                          SysSignCert cert, String privatePem) {
+                                           SysSignCert cert, String privatePem) {
         BizEmrSignature prev = signMapper.selectLastByBiz(cmd.getBizType(), cmd.getBizId());
         String prevDigest = prev == null ? null : prev.getContentDigest();
 
@@ -191,8 +242,6 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         e.setRemark(cmd.getRemark());
         return e;
     }
-
-    // 验签
 
     @Override
     public SignVerifyVO verify(Long signId) {
@@ -357,8 +406,6 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         return list;
     }
 
-    // 作废
-
     @Override
     public SignatureVO invalidate(Long signId, String reason, Long operatorId, String operatorName) {
         // C 类保留：本方法既被签名中心的 service 转发（reason 来自他模块 DTO），也被医嘱作废等内部流程直接调用，
@@ -397,8 +444,6 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         return toVO(after, true);
     }
 
-    // 查询
-
     @Override
     public SignatureVO getById(Long id) {
         BizEmrSignature sig = signMapper.selectById(id);
@@ -407,6 +452,8 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         }
         return toVO(sig, true);
     }
+
+    // 私有辅助
 
     @Override
     public IPage<SignatureVO> listPage(SignatureQueryPageDTO q) {
@@ -619,8 +666,6 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         return ts.getCode();
     }
 
-    // 私有辅助
-
     // C 类保留：签名指令由各业务模块的 service 现场构造（定时任务/批处理里也调），从不经 HTTP 参数绑定，注解一句都不生效
     private void validateCommand(SignCommandDTO cmd) {
         if (cmd == null) {
@@ -687,58 +732,6 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             log.warn("签名号取号失败，回落为计数方式（{}）", e.getMessage());
             return prefix + String.format("%06d", signMapper.countBySignNoPrefix(prefix) + 1);
         }
-    }
-
-    private static long longValue(String s) {
-        if (!StringUtils.hasText(s)) {
-            return 1L;
-        }
-        try {
-            return Long.parseLong(s.trim());
-        } catch (NumberFormatException e) {
-            return 1L;
-        }
-    }
-
-
-    private static LocalDateTime seconds(LocalDateTime t) {
-        return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static Integer intValue(String s) {
-        if (!StringUtils.hasText(s)) {
-            return null;
-        }
-        try {
-            return Integer.valueOf(s.trim());
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    /** 支持 "yyyy-MM-dd" 与 "yyyy-MM-dd HH:mm:ss"；只给日期时，起始补 00:00:00、结束补 23:59:59 */
-    private static LocalDateTime parseTime(String s, boolean endOfDay) {
-        if (!StringUtils.hasText(s)) {
-            return null;
-        }
-        String v = s.trim();
-        try {
-            if (v.length() == 10) {
-                LocalDate d = LocalDate.parse(v);
-                return endOfDay ? d.atTime(23, 59, 59) : d.atStartOfDay();
-            }
-            String norm = v.replace('T', ' ');
-            if (norm.length() == 16) {
-                norm = norm + ":00";
-            }
-            return LocalDateTime.parse(norm.replace(' ', 'T'));
-        } catch (Exception e) {
-            throw new BusinessException("时间格式不正确（应为 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss）：" + s);
-        }
-    }
-
-    private static String shortDigest(String digest) {
-        return digest == null ? null : digest.substring(0, Math.min(16, digest.length()));
     }
 
     private SignatureVO toVO(BizEmrSignature s, boolean withSnapshot) {

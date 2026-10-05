@@ -15,7 +15,9 @@ public final class KeyPairFactory {
     private KeyPairFactory() {
     }
 
-    /** 生成一对 RSA 密钥，返回 PEM 文本（公钥 X.509 / 私钥 PKCS#8） */
+    /**
+     * 生成一对 RSA 密钥，返回 PEM 文本（公钥 X.509 / 私钥 PKCS#8）
+     */
     public static KeyPairPem generate() {
         try {
             KeyPairGenerator gen = KeyPairGenerator.getInstance(SignCrypto.KEY_ALGO);

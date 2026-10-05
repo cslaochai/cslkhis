@@ -10,10 +10,14 @@ import lombok.Data;
 @Data
 public class SignatureInvalidateDTO {
 
-    /** 当前有效签名ID */
+    /**
+     * 当前有效签名ID
+     */
     @NotNull(message = "签名ID不能为空")
     private Long signId;
 
-    /** 作废原因（必填） */
+    /**
+     * 作废原因（必填）
+     */
     private String reason;
 }

@@ -59,7 +59,7 @@ public class InpatientOrderSignProviderImpl implements SignableContentProvider, 
                 o.getDeptId(),
                 o.getDeptName(),
                 o.getOrderStatus(),
-                InpatientOrderLabels.orderStatusText(o.getOrderStatus()),
+                InpatientOrderStatusEnum.labelOf(o.getOrderStatus()),
                 InpatientOrderSignProvider.canonical(o));
     }
 

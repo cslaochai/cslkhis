@@ -12,6 +12,8 @@ public class SignCertRevokeDTO {
     @NotNull(message = "证书ID不能为空")
     private Long certId;
 
-    /** 吊销原因（必填） */
+    /**
+     * 吊销原因（必填）
+     */
     private String reason;
 }

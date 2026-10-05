@@ -24,19 +24,6 @@ public enum InsuranceSettlementStatusEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
-    /** 报盘在医保侧还挂着账：这类清单要退钱，必须先用 2305 把它撤回来，不能直接作废 */
-    public boolean uploaded() {
-        return this == UPLOADED || this == AUDITED;
-    }
-
     public static InsuranceSettlementStatusEnum fromCode(Integer code) {
         if (code == null) {
             return null;
@@ -52,5 +39,20 @@ public enum InsuranceSettlementStatusEnum {
     public static String descOf(Integer code) {
         InsuranceSettlementStatusEnum item = fromCode(code);
         return item == null ? "未知状态" : item.desc;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
+
+    /**
+     * 报盘在医保侧还挂着账：这类清单要退钱，必须先用 2305 把它撤回来，不能直接作废
+     */
+    public boolean uploaded() {
+        return this == UPLOADED || this == AUDITED;
     }
 }

@@ -1,7 +1,7 @@
 package com.his.common.service.impl;
 
-import com.his.common.service.ExternalCaChannelService;
 import com.his.common.config.SignProperties;
+import com.his.common.service.ExternalCaChannelService;
 import com.his.common.util.SignCrypto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,12 +36,16 @@ public class ExternalCaChannelServiceImpl implements ExternalCaChannelService {
 
     private final SignProperties properties;
 
-    /** 通道名称（状态接口展示） */
+    /**
+     * 通道名称（状态接口展示）
+     */
     public String name() {
         return "外部CA控制台打印桩（M8留口子，未接入真CA）";
     }
 
-    /** 是否就绪（配置为 external）。未就绪时签发直接走院内自签，不降级冒充真 CA */
+    /**
+     * 是否就绪（配置为 external）。未就绪时签发直接走院内自签，不降级冒充真 CA
+     */
     public boolean available() {
         return "external".equalsIgnoreCase(properties.getCaMode());
     }

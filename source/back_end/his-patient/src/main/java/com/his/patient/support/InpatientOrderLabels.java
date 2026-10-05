@@ -1,134 +1,14 @@
 package com.his.patient.support;
 
 /**
- * 住院<b>医嘱</b>枚举文案（注意与 {@link InpatientLabels} 区分：那个是「住院证」的文案）。
+ * 住院<b>医嘱</b>域纯计算 / 判定工具（注意与 {@link InpatientLabels} 区分：那个是「住院证」的校验）。
  *
- * <p><b>铁律：未知码值一律渲染成「未知(码值)」，绝不回落成某个合法值。</b>
- * 医嘱状态回落成"已完成"、执行状态回落成"已执行"，等于把没做的事记成做了，
- * 直接污染"医嘱-收费-病历"四核对（同检验「未判定 ≠ 正常」是同一个坑）。
+ * <p><b>码值 → 文案的映射已下沉到对应枚举</b>（{@code labelOf} 展示用、{@code labelOrUnknown} 异常 / 审计用），
+ * 本类只保留与码值无关的记账项目类型折算、药品判定等纯计算。
  */
 public final class InpatientOrderLabels {
 
     private InpatientOrderLabels() {
-    }
-
-    /**
-     * 医嘱类型：1-长期 2-临时
-     * <p>两者的生命周期完全不同：长期医嘱只能"停止"（已执行次数不可回退），临时医嘱执行一次即完结。
-     */
-    public static String orderTypeText(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        return switch (code) {
-            case 1 -> "长期";
-            case 2 -> "临时";
-            default -> "未知(" + code + ")";
-        };
-    }
-
-    /**
-     * 医嘱模板/组套共享范围：1-个人 2-科室 3-全院（sql/142）
-     * <p>决定「谁能看见、谁能改」：个人只有本人，科室是本 dept 内，全院所有人可见。
-     */
-    public static String templateScopeText(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        return switch (code) {
-            case 1 -> "个人";
-            case 2 -> "科室";
-            case 3 -> "全院";
-            default -> "未知(" + code + ")";
-        };
-    }
-
-    /**
-     * 医嘱类别：1-药品 2-检查 3-检验 4-治疗 5-护理 6-手术 7-输血 8-监护 9-其他 10-临床营养
-     */
-    public static String orderClassText(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        return switch (code) {
-            case 1 -> "药品";
-            case 2 -> "检查";
-            case 3 -> "检验";
-            case 4 -> "治疗";
-            case 5 -> "护理";
-            case 6 -> "手术";
-            case 7 -> "输血";
-            case 8 -> "监护";
-            case 9 -> "其他";
-            case 10 -> "临床营养";
-            default -> "未知(" + code + ")";
-        };
-    }
-
-    /**
-     * 医嘱状态：1-待校对 2-已校对 3-执行中 4-已完成 5-已停止 6-已作废 7-已退回
-     * <p>7-已退回本期只保留文案映射（护士退回流程属 P2 护理工作站），保留它是为了给出明确的渲染出口。
-     */
-    public static String orderStatusText(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        return switch (code) {
-            case 1 -> "待校对";
-            case 2 -> "已校对";
-            case 3 -> "执行中";
-            case 4 -> "已完成";
-            case 5 -> "已停止";
-            case 6 -> "已作废";
-            case 7 -> "已退回";
-            default -> "未知(" + code + ")";
-        };
-    }
-
-    /**
-     * 执行状态：1-待执行 2-已执行 3-已跳过 4-已退回
-     */
-    public static String execStatusText(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        return switch (code) {
-            case 1 -> "待执行";
-            case 2 -> "已执行";
-            case 3 -> "已跳过";
-            case 4 -> "已退回";
-            default -> "未知(" + code + ")";
-        };
-    }
-
-    /**
-     * 医嘱来源：1-医生 2-模板 3-组套
-     */
-    public static String sourceText(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        return switch (code) {
-            case 1 -> "医生";
-            case 2 -> "模板";
-            case 3 -> "组套";
-            default -> "未知(" + code + ")";
-        };
-    }
-
-    /**
-     * 是否加急：0-否 1-是
-     * <p>这是执行队列的**第一排序键**，文案错了会直接影响护士先做谁。
-     */
-    public static String isUrgentText(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        return switch (code) {
-            case 0 -> "普通";
-            case 1 -> "加急";
-            default -> "未知(" + code + ")";
-        };
     }
 
     /**

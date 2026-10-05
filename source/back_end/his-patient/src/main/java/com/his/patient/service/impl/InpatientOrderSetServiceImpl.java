@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.patient.enums.OrderClassEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -152,7 +153,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         for (BizInpatientOrderTemplateItem item : items) {
             InpatientOrderTemplateItemVO itemVO = new InpatientOrderTemplateItemVO();
             BeanUtils.copyProperties(item, itemVO);
-            itemVO.setOrderClassText(InpatientOrderLabels.orderClassText(item.getOrderClass()));
+            itemVO.setOrderClassText(OrderClassEnum.labelOf(item.getOrderClass()));
             itemVOs.add(itemVO);
         }
         vo.setItems(itemVOs);
@@ -203,8 +204,8 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         for (BizInpatientOrderTemplate entity : list) {
             OrderSetSelectListVO vo = new OrderSetSelectListVO();
             BeanUtils.copyProperties(entity, vo);
-            vo.setScopeText(InpatientOrderLabels.templateScopeText(entity.getScope()));
-            vo.setOrderTypeText(InpatientOrderLabels.orderTypeText(entity.getOrderType()));
+            vo.setScopeText(TemplateScopeEnum.labelOf(entity.getScope()));
+            vo.setOrderTypeText(OrderTypeEnum.labelOf(entity.getOrderType()));
             if (entity.getDeptId() != null) {
                 try {
                     vo.setDeptName(templateMapper.selectDeptName(entity.getDeptId()));
@@ -347,8 +348,8 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
 
     private void fill(OrderSetListVO vo, BizInpatientOrderTemplate entity) {
         BeanUtils.copyProperties(entity, vo);
-        vo.setScopeText(InpatientOrderLabels.templateScopeText(entity.getScope()));
-        vo.setOrderTypeText(InpatientOrderLabels.orderTypeText(entity.getOrderType()));
+        vo.setScopeText(TemplateScopeEnum.labelOf(entity.getScope()));
+        vo.setOrderTypeText(OrderTypeEnum.labelOf(entity.getOrderType()));
         vo.setEditable(editable(entity, currentUserOrNull()));
     }
 

@@ -32,4 +32,9 @@ public enum InsRecordStatusEnum {
         }
         return null;
     }
+
+    /** Integer 码值判定：null 安全，语义同 == 比较 int 常量 */
+    public boolean is(Integer code) {
+        return code != null && code.equals(this.code);
+    }
 }

@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.patient.enums.OrderClassEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -139,12 +140,12 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
 
         InpatientOrderTemplateDetailVO vo = new InpatientOrderTemplateDetailVO();
         BeanUtils.copyProperties(template, vo);
-        vo.setOrderTypeText(InpatientOrderLabels.orderTypeText(template.getOrderType()));
+        vo.setOrderTypeText(OrderTypeEnum.labelOf(template.getOrderType()));
         List<InpatientOrderTemplateItemVO> itemVOs = new ArrayList<>(items.size());
         for (BizInpatientOrderTemplateItem item : items) {
             InpatientOrderTemplateItemVO itemVO = new InpatientOrderTemplateItemVO();
             BeanUtils.copyProperties(item, itemVO);
-            itemVO.setOrderClassText(InpatientOrderLabels.orderClassText(item.getOrderClass()));
+            itemVO.setOrderClassText(OrderClassEnum.labelOf(item.getOrderClass()));
             itemVOs.add(itemVO);
         }
         vo.setItems(itemVOs);
@@ -170,7 +171,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
                 .convert(entity -> {
                     InpatientOrderTemplateListVO vo = new InpatientOrderTemplateListVO();
                     BeanUtils.copyProperties(entity, vo);
-                    vo.setOrderTypeText(InpatientOrderLabels.orderTypeText(entity.getOrderType()));
+                    vo.setOrderTypeText(OrderTypeEnum.labelOf(entity.getOrderType()));
                     return vo;
                 });
     }
@@ -190,7 +191,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         for (BizInpatientOrderTemplate entity : list) {
             InpatientOrderTemplateSelectListVO vo = new InpatientOrderTemplateSelectListVO();
             BeanUtils.copyProperties(entity, vo);
-            vo.setOrderTypeText(InpatientOrderLabels.orderTypeText(entity.getOrderType()));
+            vo.setOrderTypeText(OrderTypeEnum.labelOf(entity.getOrderType()));
             vos.add(vo);
         }
         return vos;

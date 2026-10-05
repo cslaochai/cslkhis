@@ -10,7 +10,7 @@ import com.his.patient.enums.ReferralDirectionEnum;
 import com.his.patient.enums.ReferralStatusEnum;
 import com.his.patient.mapper.BizReferralMapper;
 import com.his.patient.service.ReferralService;
-import com.his.patient.support.DictText;
+import com.his.system.service.DictCacheService;
 import com.his.patient.vo.ReferralVO;
 import com.his.security.UserUtils;
 import com.his.system.entity.SysConfig;
@@ -54,7 +54,7 @@ public class ReferralServiceImpl implements ReferralService {
     private static final String DUTY_REFERRAL_HOURS_KEY = "duty.coord.referral_pending_hours";
     private static final int DUTY_REFERRAL_HOURS_FALLBACK = 2;
     private final BizReferralMapper referralMapper;
-    private final DictText dictText;
+    private final DictCacheService dictText;
     /**
      * 全院当天谁负责：转诊挂住没人接时的兜底收口人（sql/169）
      */
@@ -308,7 +308,7 @@ public class ReferralServiceImpl implements ReferralService {
     }
 
     private String statusText(BizReferral r) {
-        return dictText.text(DICT_STATUS, r.getReferralStatus());
+        return dictText.getDicDataLabel(DICT_STATUS, r.getReferralStatus());
     }
 
     /**
@@ -330,8 +330,8 @@ public class ReferralServiceImpl implements ReferralService {
     private ReferralVO toVo(BizReferral r, Map<Long, String> deptNames) {
         ReferralVO vo = new ReferralVO();
         org.springframework.beans.BeanUtils.copyProperties(r, vo);
-        vo.setDirectionText(dictText.text(DICT_DIRECTION, r.getDirection()));
-        vo.setReferralStatusText(dictText.text(DICT_STATUS, r.getReferralStatus()));
+        vo.setDirectionText(dictText.getDicDataLabel(DICT_DIRECTION, r.getDirection()));
+        vo.setReferralStatusText(dictText.getDicDataLabel(DICT_STATUS, r.getReferralStatus()));
         vo.setFromDeptName(r.getFromDeptId() == null ? null : deptNames.get(r.getFromDeptId()));
         vo.setToDeptName(r.getToDeptId() == null ? null : deptNames.get(r.getToDeptId()));
         // 患者快照现查（患者基本信息 / 入院记录属本域，量级单条）

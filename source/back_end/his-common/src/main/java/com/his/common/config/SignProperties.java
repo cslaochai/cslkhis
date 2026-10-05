@@ -29,16 +29,24 @@ public class SignProperties {
      */
     private String masterSecret;
 
-    /** PBKDF2 迭代次数（新证书用；老证书用自己行里存的值） */
+    /**
+     * PBKDF2 迭代次数（新证书用；老证书用自己行里存的值）
+     */
     private int iterations = 120000;
 
-    /** 默认证书有效期（天），可被系统参数的 sign.cert.valid_days 覆盖 */
+    /**
+     * 默认证书有效期（天），可被系统参数的 sign.cert.valid_days 覆盖
+     */
     private int defaultValidDays = 365;
 
-    /** 缺证书时是否自动签发（可被系统参数的 sign.cert.auto_issue 覆盖） */
+    /**
+     * 缺证书时是否自动签发（可被系统参数的 sign.cert.auto_issue 覆盖）
+     */
     private boolean autoIssueCert = true;
 
-    /** 默认时间来源（可被系统参数的 sign.time_source 覆盖），1-本机时钟 */
+    /**
+     * 默认时间来源（可被系统参数的 sign.time_source 覆盖），1-本机时钟
+     */
     private int timeSource = 1;
 
     /**
@@ -48,7 +56,9 @@ public class SignProperties {
      */
     private String caMode = "internal";
 
-    /** 概要：拿最终生效的口令（配置项为空时读环境变量） */
+    /**
+     * 概要：拿最终生效的口令（配置项为空时读环境变量）
+     */
     public String effectiveSecret() {
         if (StringUtils.hasText(masterSecret)) {
             return masterSecret;

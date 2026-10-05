@@ -27,22 +27,36 @@ import lombok.Getter;
 @Getter
 public enum StaffTypeEnum {
 
-    /** 医生（含急诊/放射诊断/公卫医师）：唯一有号源的类别 */
+    /**
+     * 医生（含急诊/放射诊断/公卫医师）：唯一有号源的类别
+     */
     DOCTOR(1, "医生", true),
-    /** 护理（护士、分诊护士、护士长） */
+    /**
+     * 护理（护士、分诊护士、护士长）
+     */
     NURSE(2, "护理", false),
-    /** 医技（检验技师、检查技师、营养师等） */
+    /**
+     * 医技（检验技师、检查技师、营养师等）
+     */
     MEDICAL_TECH(3, "医技", false),
-    /** 药学（药剂师、临床药师） */
+    /**
+     * 药学（药剂师、临床药师）
+     */
     PHARMACY(4, "药学", false),
-    /** 收费/财务（收费员、医保结算员） */
+    /**
+     * 收费/财务（收费员、医保结算员）
+     */
     CASHIER(5, "收费", false),
-    /** 行政/其他（管理员、导诊、病案、审计、院领导、患者） */
+    /**
+     * 行政/其他（管理员、导诊、病案、审计、院领导、患者）
+     */
     ADMIN(6, "行政其他", false);
 
     private final int code;
     private final String label;
-    /** 该岗位的排班是否承载号源（决定诊室/挂号费/时间片段/加号/停诊退号是否适用） */
+    /**
+     * 该岗位的排班是否承载号源（决定诊室/挂号费/时间片段/加号/停诊退号是否适用）
+     */
     private final boolean source;
 
     StaffTypeEnum(int code, String label, boolean source) {

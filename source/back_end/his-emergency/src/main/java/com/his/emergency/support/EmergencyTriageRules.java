@@ -93,71 +93,6 @@ public final class EmergencyTriageRules {
     }
 
     /**
-     * 生命体征
-     */
-    public record VitalSigns(Double temperature,
-                             Integer pulse,
-                             Integer respiratory,
-                             Integer systolic,
-                             Integer diastolic,
-                             Integer spo2,
-                             Integer gcs,
-                             Integer painScore) {
-
-        public boolean isEmpty() {
-            return temperature == null && pulse == null && respiratory == null
-                    && systolic == null && diastolic == null && spo2 == null
-                    && gcs == null && painScore == null;
-        }
-
-        public String describe() {
-            if (isEmpty()) {
-                return "（未采集生命体征）";
-            }
-            StringBuilder builder = new StringBuilder();
-            if (temperature != null) {
-                builder.append("体温").append(temperature).append("℃ ");
-            }
-            if (pulse != null) {
-                builder.append("脉搏").append(pulse).append("次/分 ");
-            }
-            if (respiratory != null) {
-                builder.append("呼吸").append(respiratory).append("次/分 ");
-            }
-            if (systolic != null) {
-                builder.append("血压").append(systolic).append('/')
-                        .append(diastolic == null ? '-' : diastolic).append(" mmHg ");
-            }
-            if (spo2 != null) {
-                builder.append("血氧").append(spo2).append("% ");
-            }
-            if (gcs != null) {
-                builder.append("GCS ").append(gcs).append(' ');
-            }
-            if (painScore != null) {
-                builder.append("疼痛评分").append(painScore).append(' ');
-            }
-            return builder.toString().trim();
-        }
-    }
-
-    /**
-     * 红旗征象。<b>每条红旗都自带处置建议</b>，而不是只报一个级别 ——
-     * 分诊护士真正需要的是「接下来做什么」，只给级别的提示几乎不会被采纳。
-     *
-     * @param label    征象描述
-     * @param minLevel 该征象对应的最低严重级别（数值越小越严重）
-     * @param action   对应的处置建议
-     */
-    public record RedFlag(String label, int minLevel, String action) {
-    }
-
-    private record ChannelRule(String channel, List<String> keywords, List<String> actions) {
-    }
-
-    // 解析
-
-    /**
      * 解析生命体征。同时支持 JSON 与「T39.5 P130 BP80/50」这类文本 ——
      * 库里 {@code vital_signs} 是 TEXT 字段且实测为空，无法确定前端会写哪种格式，
      * 两种都认比要求改前端更现实。
@@ -204,6 +139,8 @@ public final class EmergencyTriageRules {
         Matcher matcher = Pattern.compile("\\d+(?:\\.\\d+)?").matcher(value.asText(""));
         return matcher.find() ? Double.parseDouble(matcher.group()) : null;
     }
+
+    // 解析
 
     private static Integer integer(JsonNode node, String... keys) {
         Double value = number(node, keys);
@@ -253,8 +190,6 @@ public final class EmergencyTriageRules {
             return null;
         }
     }
-
-    // 红旗判定
 
     /**
      * 依据生命体征给出红旗征象。{@code minLevel} 的最小值即「硬性最低级别」。
@@ -377,7 +312,7 @@ public final class EmergencyTriageRules {
         return level;
     }
 
-    // 绿色通道
+    // 红旗判定
 
     /**
      * 依据主诉文本识别绿色通道，识别不到返回无
@@ -425,6 +360,8 @@ public final class EmergencyTriageRules {
         return CHANNEL_RULES.stream().anyMatch(rule -> rule.channel().equals(channel.trim()));
     }
 
+    // 绿色通道
+
     public static String levelText(Integer level) {
         if (level == null) {
             return "未定级";
@@ -451,5 +388,68 @@ public final class EmergencyTriageRules {
             case LEVEL_URGENT -> "黄区";
             default -> "绿区";
         };
+    }
+
+    /**
+     * 生命体征
+     */
+    public record VitalSigns(Double temperature,
+                             Integer pulse,
+                             Integer respiratory,
+                             Integer systolic,
+                             Integer diastolic,
+                             Integer spo2,
+                             Integer gcs,
+                             Integer painScore) {
+
+        public boolean isEmpty() {
+            return temperature == null && pulse == null && respiratory == null
+                    && systolic == null && diastolic == null && spo2 == null
+                    && gcs == null && painScore == null;
+        }
+
+        public String describe() {
+            if (isEmpty()) {
+                return "（未采集生命体征）";
+            }
+            StringBuilder builder = new StringBuilder();
+            if (temperature != null) {
+                builder.append("体温").append(temperature).append("℃ ");
+            }
+            if (pulse != null) {
+                builder.append("脉搏").append(pulse).append("次/分 ");
+            }
+            if (respiratory != null) {
+                builder.append("呼吸").append(respiratory).append("次/分 ");
+            }
+            if (systolic != null) {
+                builder.append("血压").append(systolic).append('/')
+                        .append(diastolic == null ? '-' : diastolic).append(" mmHg ");
+            }
+            if (spo2 != null) {
+                builder.append("血氧").append(spo2).append("% ");
+            }
+            if (gcs != null) {
+                builder.append("GCS ").append(gcs).append(' ');
+            }
+            if (painScore != null) {
+                builder.append("疼痛评分").append(painScore).append(' ');
+            }
+            return builder.toString().trim();
+        }
+    }
+
+    /**
+     * 红旗征象。<b>每条红旗都自带处置建议</b>，而不是只报一个级别 ——
+     * 分诊护士真正需要的是「接下来做什么」，只给级别的提示几乎不会被采纳。
+     *
+     * @param label    征象描述
+     * @param minLevel 该征象对应的最低严重级别（数值越小越严重）
+     * @param action   对应的处置建议
+     */
+    public record RedFlag(String label, int minLevel, String action) {
+    }
+
+    private record ChannelRule(String channel, List<String> keywords, List<String> actions) {
     }
 }

@@ -5,21 +5,21 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.RedisSequenceService;
-import com.his.common.exception.BusinessException;
-import com.his.common.util.SignCrypto;
 import com.his.common.dto.TsaTokenQueryPageDTO;
 import com.his.common.entity.BizTsaToken;
 import com.his.common.entity.SysTsaServer;
 import com.his.common.enums.TimeSource;
+import com.his.common.exception.BusinessException;
 import com.his.common.mapper.BizTsaTokenMapper;
 import com.his.common.mapper.SignConfigMapper;
 import com.his.common.mapper.SysTsaServerMapper;
 import com.his.common.service.EmrSignatureService;
-import com.his.common.service.TsaService;
 import com.his.common.service.TsaChannelService;
+import com.his.common.service.TsaService;
+import com.his.common.util.SignCrypto;
 import com.his.common.vo.TsaStatusVO;
-import com.his.common.vo.TsaTokenVerifyVO;
 import com.his.common.vo.TsaTokenVO;
+import com.his.common.vo.TsaTokenVerifyVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -50,6 +50,17 @@ public class TsaServiceImpl implements TsaService {
     private final SignConfigMapper configMapper;
     private final EmrSignatureService signatureService;
     private final RedisSequenceService sequenceService;
+
+    private static Integer parseCfg(String v) {
+        if (!StringUtils.hasText(v)) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(v.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
 
     @Override
     public TsaStatusVO status() {
@@ -130,17 +141,6 @@ public class TsaServiceImpl implements TsaService {
         }
         result.setRecords(rows);
         return result;
-    }
-
-    private static Integer parseCfg(String v) {
-        if (!StringUtils.hasText(v)) {
-            return null;
-        }
-        try {
-            return Integer.valueOf(v.trim());
-        } catch (NumberFormatException e) {
-            return null;
-        }
     }
 
     // G6b 运维操作：启停 / 时间来源 / 令牌复验

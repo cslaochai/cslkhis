@@ -12,11 +12,17 @@ import lombok.Getter;
 @Getter
 public enum ConsultStatusEnum {
 
-    /** 待开始：班次尚未开诊 */
+    /**
+     * 待开始：班次尚未开诊
+     */
     NOT_STARTED(0, "待开始"),
-    /** 接诊中：正在看诊 */
+    /**
+     * 接诊中：正在看诊
+     */
     CONSULTING(1, "接诊中"),
-    /** 暂停：临时停接（医生离岗），恢复后继续 */
+    /**
+     * 暂停：临时停接（医生离岗），恢复后继续
+     */
     PAUSED(2, "暂停");
 
     private final int code;

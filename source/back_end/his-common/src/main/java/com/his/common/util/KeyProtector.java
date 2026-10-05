@@ -1,7 +1,7 @@
 package com.his.common.util;
 
-import com.his.common.exception.BusinessException;
 import com.his.common.config.SignProperties;
+import com.his.common.exception.BusinessException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -34,9 +34,13 @@ import java.util.Base64;
 @Component
 public class KeyProtector {
 
-    /** GCM 标准 IV 长度 */
+    /**
+     * GCM 标准 IV 长度
+     */
     private static final int IV_LENGTH = 12;
-    /** GCM 认证标签长度（位） */
+    /**
+     * GCM 认证标签长度（位）
+     */
     private static final int TAG_BITS = 128;
     private static final int SALT_LENGTH = 16;
     private static final int KEY_BITS = 256;
@@ -48,7 +52,9 @@ public class KeyProtector {
         this.properties = properties;
     }
 
-    /** 主口令缺失时不允许签发 —— 由调用方在签发入口先调，报错信息直指环境变量名 */
+    /**
+     * 主口令缺失时不允许签发 —— 由调用方在签发入口先调，报错信息直指环境变量名
+     */
     public void requireSecret() {
         if (!StringUtils.hasText(properties.getMasterSecret())) {
             throw new BusinessException("未配置签名主口令（环境变量 HIS_SIGN_SECRET），"
@@ -62,7 +68,9 @@ public class KeyProtector {
         return Base64.getEncoder().encodeToString(salt);
     }
 
-    /** 加密私钥 PEM，返回 Base64(iv||cipher) */
+    /**
+     * 加密私钥 PEM，返回 Base64(iv||cipher)
+     */
     public String protect(String privatePem, String saltBase64, int iterations) {
         requireSecret();
         try {
@@ -81,7 +89,9 @@ public class KeyProtector {
         }
     }
 
-    /** 解密私钥 PEM。口令不对或密文被改 → GCM 校验失败抛异常（不会被静默吞掉） */
+    /**
+     * 解密私钥 PEM。口令不对或密文被改 → GCM 校验失败抛异常（不会被静默吞掉）
+     */
     public String unprotect(String protectedBase64, String saltBase64, int iterations) {
         requireSecret();
         try {

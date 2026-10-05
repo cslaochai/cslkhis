@@ -19,14 +19,6 @@ public enum EncounterTypeEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
     public static EncounterTypeEnum fromCode(Integer code) {
         if (code == null) {
             return null;
@@ -42,5 +34,13 @@ public enum EncounterTypeEnum {
     public static String descOf(Integer code) {
         EncounterTypeEnum item = fromCode(code);
         return item == null ? "未知" : item.desc;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
     }
 }

@@ -21,14 +21,6 @@ public enum BillTypeEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
     public static BillTypeEnum fromCode(Integer code) {
         if (code == null) {
             return null;
@@ -44,5 +36,13 @@ public enum BillTypeEnum {
     public static String descOf(Integer code) {
         BillTypeEnum item = fromCode(code);
         return item == null ? "未知类型" : item.desc;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
     }
 }

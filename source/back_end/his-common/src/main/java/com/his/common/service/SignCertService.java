@@ -22,7 +22,9 @@ public interface SignCertService {
      */
     SysSignCert ensureActiveCert(Long empId, String empName, Long deptId, String deptName);
 
-    /** 人工签发（已有有效证书时拒绝，必须先吊销） */
+    /**
+     * 人工签发（已有有效证书时拒绝，必须先吊销）
+     */
     SignCertVO issue(SignCertIssueDTO dto, Long operatorId, String operatorName);
 
     SignCertVO revoke(SignCertRevokeDTO dto, Long operatorId, String operatorName);
@@ -31,17 +33,25 @@ public interface SignCertService {
 
     IPage<SignCertVO> listPage(SignCertQueryPageDTO query);
 
-    /** 下拉：按员工姓名/证书号模糊查有效证书 */
+    /**
+     * 下拉：按员工姓名/证书号模糊查有效证书
+     */
     List<SignCertVO> selectList(String keyword);
 
-    /** 证书私钥（解密后 PEM）。**仅供签名服务内部使用**，不对外暴露端点 */
+    /**
+     * 证书私钥（解密后 PEM）。**仅供签名服务内部使用**，不对外暴露端点
+     */
     String privatePemOf(SysSignCert cert);
 
-    /** 有效证书总数 / 自动签发数等统计给概览用 */
+    /**
+     * 有效证书总数 / 自动签发数等统计给概览用
+     */
     long countByStatus(Integer certStatus);
 
     long countAutoIssued();
 
-    /** 已有有效证书的员工数 */
+    /**
+     * 已有有效证书的员工数
+     */
     long countActiveEmployees();
 }

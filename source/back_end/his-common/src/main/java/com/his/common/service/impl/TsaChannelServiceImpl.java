@@ -1,15 +1,15 @@
 package com.his.common.service.impl;
 
-import com.his.common.service.TsaChannelService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.base.RedisSequenceService;
-import com.his.common.util.KeyPairFactory;
-import com.his.common.util.KeyProtector;
-import com.his.common.util.SignCrypto;
 import com.his.common.entity.BizTsaToken;
 import com.his.common.entity.SysTsaServer;
 import com.his.common.mapper.BizTsaTokenMapper;
 import com.his.common.mapper.SysTsaServerMapper;
+import com.his.common.service.TsaChannelService;
+import com.his.common.util.KeyPairFactory;
+import com.his.common.util.KeyProtector;
+import com.his.common.util.SignCrypto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -52,7 +52,9 @@ import java.time.temporal.ChronoUnit;
 @Slf4j
 @Service
 public class TsaChannelServiceImpl implements TsaChannelService {
-    /** 令牌规范化串版本前缀（改格式必须换版本号，否则历史令牌验不过） */
+    /**
+     * 令牌规范化串版本前缀（改格式必须换版本号，否则历史令牌验不过）
+     */
     private static final String CANONICAL_PREFIX = "HIS-TSA-V1";
     private static final String SERIAL_PREFIX = "TSA";
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -64,19 +66,31 @@ public class TsaChannelServiceImpl implements TsaChannelService {
     private final KeyProtector keyProtector;
     private final RedisSequenceService sequenceService;
 
-    /** 就绪的服务行缓存（密钥轮换不在本期范围；重启进程即重读） */
+    /**
+     * 就绪的服务行缓存（密钥轮换不在本期范围；重启进程即重读）
+     */
     private volatile SysTsaServer cachedServer;
     private volatile String cachedPrivatePem;
 
     public TsaChannelServiceImpl(SysTsaServerMapper serverMapper, BizTsaTokenMapper tokenMapper,
-                             KeyProtector keyProtector, RedisSequenceService sequenceService) {
+                                 KeyProtector keyProtector, RedisSequenceService sequenceService) {
         this.serverMapper = serverMapper;
         this.tokenMapper = tokenMapper;
         this.keyProtector = keyProtector;
         this.sequenceService = sequenceService;
     }
 
-    /** 通道名称（页面展示，如"本地内置TSA（演示信任根）"） */
+    /**
+     * 令牌规范化串（与验签共用，两处必须同一实现）
+     */
+    private static String canonical(String serial, String digestHex, LocalDateTime tsaTime) {
+        return CANONICAL_PREFIX + "|" + serial + "|" + digestHex.toLowerCase()
+                + "|" + TS_FORMAT.format(tsaTime);
+    }
+
+    /**
+     * 通道名称（页面展示，如"本地内置TSA（演示信任根）"）
+     */
     public String name() {
         SysTsaServer s = peekServer();
         return s != null ? s.getTsaName() : "本地内置TSA";
@@ -91,7 +105,9 @@ public class TsaChannelServiceImpl implements TsaChannelService {
         }
     }
 
-    /** 就绪时的通道名称，未就绪返回 null（页面按"未接入"展示） */
+    /**
+     * 就绪时的通道名称，未就绪返回 null（页面按"未接入"展示）
+     */
     public String readyName() {
         return available() ? name() : null;
     }
@@ -114,7 +130,9 @@ public class TsaChannelServiceImpl implements TsaChannelService {
         }
     }
 
-    /** 校验一枚令牌是否由本 TSA 签发、且与摘要 / 时刻一致（异常一律按"校验失败"处理） */
+    /**
+     * 校验一枚令牌是否由本 TSA 签发、且与摘要 / 时刻一致（异常一律按"校验失败"处理）
+     */
     public boolean verifyToken(String serial, String digestHex, LocalDateTime tsaTime, String tokenValue) {
         try {
             return doVerifyToken(serial, digestHex, tsaTime, tokenValue);
@@ -124,7 +142,9 @@ public class TsaChannelServiceImpl implements TsaChannelService {
         }
     }
 
-    /** 失效内部缓存（运维接口启停/配置变更后调用，下次读取重新查库，操作即时生效） */
+    /**
+     * 失效内部缓存（运维接口启停/配置变更后调用，下次读取重新查库，操作即时生效）
+     */
     public void invalidate() {
         cachedServer = null;
         cachedPrivatePem = null;
@@ -143,7 +163,7 @@ public class TsaChannelServiceImpl implements TsaChannelService {
             } catch (Exception e) {
                 serial = SERIAL_PREFIX + LocalDate.now().format(NO_DATE)
                         + String.format("%06d", tokenMapper.countBySerialPrefix(
-                                SERIAL_PREFIX + LocalDate.now().format(NO_DATE)) + 1);
+                        SERIAL_PREFIX + LocalDate.now().format(NO_DATE)) + 1);
             }
             String token = SignCrypto.sign(privatePem, canonical(serial, digestHex, tsaTime));
 
@@ -205,7 +225,9 @@ public class TsaChannelServiceImpl implements TsaChannelService {
         }
     }
 
-    /** 取可用服务行：无则自举生成；停用视为未就绪 */
+    /**
+     * 取可用服务行：无则自举生成；停用视为未就绪
+     */
     private synchronized SysTsaServer readyServer() {
         SysTsaServer s = cachedServer;
         if (s != null) {
@@ -263,11 +285,5 @@ public class TsaChannelServiceImpl implements TsaChannelService {
                 server.getKeyIterations());
         cachedPrivatePem = pem;
         return pem;
-    }
-
-    /** 令牌规范化串（与验签共用，两处必须同一实现） */
-    private static String canonical(String serial, String digestHex, LocalDateTime tsaTime) {
-        return CANONICAL_PREFIX + "|" + serial + "|" + digestHex.toLowerCase()
-                + "|" + TS_FORMAT.format(tsaTime);
     }
 }

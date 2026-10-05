@@ -7,6 +7,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
 import com.his.equipment.dto.WasteDTO;
 import com.his.equipment.entity.BizMedicalWaste;
+import com.his.equipment.enums.WasteStatusEnum;
+import com.his.equipment.enums.WasteTypeEnum;
 import com.his.equipment.mapper.BizMedicalWasteMapper;
 import com.his.equipment.vo.WasteVO;
 import com.his.security.UserUtils;
@@ -32,21 +34,13 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class WasteServiceImpl implements WasteService {
 
-    private static final int ST_REGISTERED = 1;
-    private static final int ST_HANDOVER = 2;
-    private static final int ST_DISPOSED = 3;
-
-    private static final Map<Integer, String> WASTE_TYPE = Map.of(
-            1, "感染性废物", 2, "损伤性废物", 3, "病理性废物", 4, "药物性废物", 5, "化学性废物");
-    private static final Map<Integer, String> STATUS_NAME = Map.of(1, "已登记", 2, "已交接", 3, "已处置");
-
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizMedicalWasteMapper wasteMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public WasteVO create(WasteDTO.Create dto) {
-        if (!WASTE_TYPE.containsKey(dto.getWasteType())) {
+        if (WasteTypeEnum.fromCode(dto.getWasteType()) == null) {
             throw new BusinessException("医废类别取值不合法（1-感染性 2-损伤性 3-病理性 4-药物性 5-化学性）");
         }
         // ① 条件必填：科室ID与科室名称二选一即可（前端可只传名称），单字段加 @NotNull 会把合法请求挡成 400
@@ -62,7 +56,7 @@ public class WasteServiceImpl implements WasteService {
         w.setCollectTime(dto.getCollectTime().truncatedTo(ChronoUnit.SECONDS));
         w.setCollectorName(StringUtils.hasText(dto.getCollectorName()) ? dto.getCollectorName().trim()
                 : UserUtils.getCurrentEmployeeName());
-        w.setStatus(ST_REGISTERED);
+        w.setStatus(WasteStatusEnum.REGISTERED.getCode());
         w.setCreateBy(UserUtils.getCurrentEmployeeName());
         wasteMapper.insert(w);
         return toVo(w);
@@ -71,10 +65,10 @@ public class WasteServiceImpl implements WasteService {
     @Transactional(rollbackFor = Exception.class)
     public WasteVO handover(WasteDTO.Handover dto) {
         BizMedicalWaste w = requireWaste(dto.getId());
-        if (!Objects.equals(w.getStatus(), ST_REGISTERED)) {
-            throw new BusinessException("只有已登记的医废可以交接（当前：" + STATUS_NAME.get(w.getStatus()) + "）");
+        if (!WasteStatusEnum.REGISTERED.is(w.getStatus())) {
+            throw new BusinessException("只有已登记的医废可以交接（当前：" + WasteStatusEnum.labelOf(w.getStatus()) + "）");
         }
-        w.setStatus(ST_HANDOVER);
+        w.setStatus(WasteStatusEnum.HANDED_OVER.getCode());
         w.setHandoverName(dto.getHandoverName().trim());
         w.setHandoverTime(nowSeconds());
         w.setUpdateBy(UserUtils.getCurrentEmployeeName());
@@ -86,10 +80,10 @@ public class WasteServiceImpl implements WasteService {
     @Transactional(rollbackFor = Exception.class)
     public WasteVO dispose(WasteDTO.Dispose dto) {
         BizMedicalWaste w = requireWaste(dto.getId());
-        if (!Objects.equals(w.getStatus(), ST_HANDOVER)) {
-            throw new BusinessException("只有已交接的医废可以确认处置（当前：" + STATUS_NAME.get(w.getStatus()) + "）");
+        if (!WasteStatusEnum.HANDED_OVER.is(w.getStatus())) {
+            throw new BusinessException("只有已交接的医废可以确认处置（当前：" + WasteStatusEnum.labelOf(w.getStatus()) + "）");
         }
-        w.setStatus(ST_DISPOSED);
+        w.setStatus(WasteStatusEnum.DISPOSED.getCode());
         w.setDisposalCompany(dto.getDisposalCompany().trim());
         w.setDisposalTime(nowSeconds());
         w.setUpdateBy(UserUtils.getCurrentEmployeeName());
@@ -101,7 +95,7 @@ public class WasteServiceImpl implements WasteService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
         BizMedicalWaste w = requireWaste(id);
-        if (!Objects.equals(w.getStatus(), ST_REGISTERED)) {
+        if (!WasteStatusEnum.REGISTERED.is(w.getStatus())) {
             throw new BusinessException("已交接/已处置的医废记录不可删除（交接单是对外凭证）");
         }
         wasteMapper.deleteById(id);
@@ -155,14 +149,14 @@ public class WasteServiceImpl implements WasteService {
         vo.setId(w.getId());
         vo.setWasteNo(w.getWasteNo());
         vo.setWasteType(w.getWasteType());
-        vo.setWasteTypeText(WASTE_TYPE.get(w.getWasteType()));
+        vo.setWasteTypeText(WasteTypeEnum.labelOf(w.getWasteType()));
         vo.setWeightKg(w.getWeightKg());
         vo.setDeptId(w.getDeptId());
         vo.setDeptName(w.getDeptName());
         vo.setCollectTime(w.getCollectTime());
         vo.setCollectorName(w.getCollectorName());
         vo.setStatus(w.getStatus());
-        vo.setStatusText(STATUS_NAME.get(w.getStatus()));
+        vo.setStatusText(WasteStatusEnum.labelOf(w.getStatus()));
         vo.setHandoverName(w.getHandoverName());
         vo.setHandoverTime(w.getHandoverTime());
         vo.setDisposalCompany(w.getDisposalCompany());

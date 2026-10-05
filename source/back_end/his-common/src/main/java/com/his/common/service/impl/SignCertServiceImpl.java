@@ -1,26 +1,25 @@
 package com.his.common.service.impl;
 
-import com.his.common.exception.BusinessException;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.RedisSequenceService;
-import com.his.common.util.KeyPairFactory;
-import com.his.common.util.KeyProtector;
-import com.his.common.util.PemCodec;
-import com.his.common.util.SignCrypto;
+import com.his.common.config.SignProperties;
 import com.his.common.dto.SignCertIssueDTO;
 import com.his.common.dto.SignCertQueryPageDTO;
 import com.his.common.dto.SignCertRevokeDTO;
 import com.his.common.entity.SysSignCert;
 import com.his.common.enums.CertIssuedMode;
 import com.his.common.enums.CertStatus;
+import com.his.common.exception.BusinessException;
 import com.his.common.mapper.SignConfigMapper;
 import com.his.common.mapper.SysSignCertMapper;
-import com.his.common.config.SignProperties;
-import com.his.common.service.SignCertService;
 import com.his.common.service.ExternalCaChannelService;
+import com.his.common.service.SignCertService;
+import com.his.common.util.KeyPairFactory;
+import com.his.common.util.KeyProtector;
+import com.his.common.util.SignCrypto;
 import com.his.common.vo.SignCertVO;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -65,10 +64,27 @@ public class SignCertServiceImpl implements SignCertService {
     private final KeyProtector keyProtector;
     private final SignProperties properties;
     private final RedisSequenceService sequenceService;
-    /** 外部 CA 适配器（M8 留口子）：无实现/未配置 external 时为 null，走院内自签 */
+    /**
+     * 外部 CA 适配器（M8 留口子）：无实现/未配置 external 时为 null，走院内自签
+     */
     private final ExternalCaChannelService externalCaChannel;
 
     // 取证书 / 自动签发
+
+    private static Integer intValue(String s) {
+        if (!StringUtils.hasText(s)) {
+            return null;
+        }
+        try {
+            return Integer.valueOf(s.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static LocalDateTime seconds(LocalDateTime t) {
+        return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -173,6 +189,8 @@ public class SignCertServiceImpl implements SignCertService {
         throw new BusinessException("证书签发失败");
     }
 
+    // 查询
+
     /**
      * 外部 CA 签发路径（M8 留口子）：本地生成密钥对 → 提交 CSR。
      * 桩实现会在打印后返回 null → 抛异常中断；接入真 CA 后，在 TODO 处
@@ -223,8 +241,6 @@ public class SignCertServiceImpl implements SignCertService {
                 cert.getCertNo(), cert.getEmpId(), dto.getReason(), operatorName);
         return toVO(cert, true);
     }
-
-    // 查询
 
     @Override
     public SignCertVO getById(Long id) {
@@ -299,6 +315,8 @@ public class SignCertServiceImpl implements SignCertService {
                 .eq(SysSignCert::getCertStatus, certStatus));
     }
 
+    // 私有辅助
+
     @Override
     public long countAutoIssued() {
         return certMapper.selectCount(new LambdaQueryWrapper<SysSignCert>()
@@ -313,9 +331,9 @@ public class SignCertServiceImpl implements SignCertService {
         return list.stream().map(SysSignCert::getEmpId).filter(Objects::nonNull).distinct().count();
     }
 
-    // 私有辅助
-
-    /** 系统参数优先，其次 yml，最后兜底 365 */
+    /**
+     * 系统参数优先，其次 yml，最后兜底 365
+     */
     private int effectiveValidDays(Integer fromDto) {
         if (fromDto != null && fromDto > 0) {
             return fromDto;
@@ -335,24 +353,9 @@ public class SignCertServiceImpl implements SignCertService {
         return properties.isAutoIssueCert();
     }
 
-    private static Integer intValue(String s) {
-        if (!StringUtils.hasText(s)) {
-            return null;
-        }
-        try {
-            return Integer.valueOf(s.trim());
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
     private String nextCertNo() {
         String prefix = CERT_NO_PREFIX + LocalDate.now().format(NO_DATE);
         return prefix + String.format("%04d", certMapper.countByCertNoPrefix(prefix) + 1);
-    }
-
-    private static LocalDateTime seconds(LocalDateTime t) {
-        return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS);
     }
 
     private SignCertVO toVO(SysSignCert c, boolean withPublicKey) {

@@ -3,11 +3,7 @@ package com.his.appoint.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.appoint.dto.AppointBoardQueryDTO;
-import com.his.appoint.dto.AppointCancelDTO;
-import com.his.appoint.dto.AppointQueryDTO;
-import com.his.appoint.dto.AppointUpsertDTO;
-import com.his.appoint.dto.RevisitFeePreviewDTO;
+import com.his.appoint.dto.*;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.entity.BizQueue;
 import com.his.appoint.entity.BizSchedule;
@@ -20,13 +16,10 @@ import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
 import com.his.appoint.mapper.BizScheduleMapper;
 import com.his.appoint.mapper.BizScheduleSlotMapper;
-import com.his.appoint.service.AppointService;
-import com.his.appoint.service.RevisitFeePolicyService;
-import com.his.system.entity.BizStaffSchedule;
-import com.his.system.service.ShiftService;
-import com.his.system.service.StaffScheduleService;
 import com.his.appoint.service.AppointChargeGateway;
+import com.his.appoint.service.AppointService;
 import com.his.appoint.service.MedicalRecordRefGateway;
+import com.his.appoint.service.RevisitFeePolicyService;
 import com.his.appoint.support.DayEndSettleTrigger;
 import com.his.appoint.support.PatientVisitSummaryUpdater;
 import com.his.appoint.vo.AppointStatusCountVO;
@@ -39,12 +32,15 @@ import com.his.common.enums.AttendModeEnum;
 import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
-import com.his.patient.service.PatientGuardianService;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.entity.CurrentUser;
+import com.his.patient.service.PatientGuardianService;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
+import com.his.system.entity.BizStaffSchedule;
+import com.his.system.service.ShiftService;
+import com.his.system.service.StaffScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -106,10 +102,6 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
 
     /**
      * 日终结转的懒触发：挂号的三个读接口（列表/统计/看板）在取数前顺手把「昨天及更早」的遗留收掉。
-     *
-     * <p>为什么挂在这里：00:10 的定时任务只在进程活着的那晚才跑（{@code @Scheduled} 不补跑），
-     * 开发环境夜里关机 → 第二天满屏「已挂号」的昨天号，退号/改约按钮全冒出来
-     * （而它们对应的日期根本已经过去了）。原来这条懒触发只挂在队列页，挂号页是漏的。
      */
     private final DayEndSettleTrigger dayEndSettleTrigger;
 
@@ -494,8 +486,8 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
                     throw new BusinessException(core == null
                             ? "该号源对应的岗位排班已不存在，请到「全院排班」重新排班后再挂号"
                             : "「" + core.getEmployeeName() + "」在 " + core.getScheduleDate() + " 的排班是"
-                                    + StaffDutyStatusEnum.labelOf(core.getDutyStatus()) + "·"
-                                    + AttendModeEnum.labelOf(core.getAttendMode()) + "，不出诊、不对外放号");
+                            + StaffDutyStatusEnum.labelOf(core.getDutyStatus()) + "·"
+                            + AttendModeEnum.labelOf(core.getAttendMode()) + "，不出诊、不对外放号");
                 }
             }
             if (schedule.getAvailableSource() <= 0) {

@@ -25,19 +25,6 @@ public enum TimeSource {
         this.text = text;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    /** 是否属于"可信时间"（可对外声称具备时间戳效力） */
-    public boolean trusted() {
-        return this == HOSPITAL_NTP || this == TSA;
-    }
-
     public static TimeSource parse(Integer code) {
         if (code == null) {
             return null;
@@ -56,5 +43,20 @@ public enum TimeSource {
             return t.text;
         }
         return code == null ? "—" : "未知(" + code + ")";
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    /**
+     * 是否属于"可信时间"（可对外声称具备时间戳效力）
+     */
+    public boolean trusted() {
+        return this == HOSPITAL_NTP || this == TSA;
     }
 }

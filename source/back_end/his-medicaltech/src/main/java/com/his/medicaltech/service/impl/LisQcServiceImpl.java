@@ -3,7 +3,6 @@ package com.his.medicaltech.service.impl;
 import com.his.medicaltech.service.LisQcService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.dto.LisQcDTO;
@@ -13,7 +12,7 @@ import com.his.medicaltech.mapper.BizLisQcPlanMapper;
 import com.his.medicaltech.mapper.BizLisQcRecordMapper;
 import com.his.medicaltech.support.WestgardRuleEngine;
 import com.his.medicaltech.vo.LisQcVO;
-import com.his.medicaltech.support.SubDictText;
+import com.his.system.service.DictCacheService;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -25,7 +24,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,7 +48,7 @@ public class LisQcServiceImpl implements LisQcService {
 
     private final BizLisQcPlanMapper planMapper;
     private final BizLisQcRecordMapper recordMapper;
-    private final SubDictText dictText;
+    private final DictCacheService dictText;
 
     // 计划
 
@@ -72,7 +70,7 @@ public class LisQcServiceImpl implements LisQcService {
     private LisQcVO.PlanVO toPlanVo(BizLisQcPlan p) {
         LisQcVO.PlanVO vo = new LisQcVO.PlanVO();
         BeanUtils.copyProperties(p, vo);
-        vo.setQcLevelText(dictText.text(DICT_LEVEL, p.getQcLevel()));
+        vo.setQcLevelText(dictText.getDicDataLabel(DICT_LEVEL, p.getQcLevel()));
         vo.setStatusText(p.getStatus() != null && p.getStatus() == 1 ? "启用" : "停用");
         if (p.getMeanValue() != null && p.getSdValue() != null && p.getMeanValue().compareTo(BigDecimal.ZERO) != 0) {
             vo.setCvActual(p.getSdValue().divide(p.getMeanValue().abs(), 4, RoundingMode.HALF_UP)
@@ -236,10 +234,10 @@ public class LisQcServiceImpl implements LisQcService {
     private LisQcVO.RecordVO toRecordVo(BizLisQcRecord r) {
         LisQcVO.RecordVO vo = new LisQcVO.RecordVO();
         BeanUtils.copyProperties(r, vo);
-        vo.setQcLevelText(dictText.text(DICT_LEVEL, r.getQcLevel()));
+        vo.setQcLevelText(dictText.getDicDataLabel(DICT_LEVEL, r.getQcLevel()));
         vo.setStatusText(r.getStatus() == null || r.getStatus() == 0 ? "未判定"
-                : dictText.text(DICT_STATUS, r.getStatus()));
-        vo.setHandleStatusText(dictText.text(DICT_HANDLE, r.getHandleStatus()));
+                : dictText.getDicDataLabel(DICT_STATUS, r.getStatus()));
+        vo.setHandleStatusText(dictText.getDicDataLabel(DICT_HANDLE, r.getHandleStatus()));
         return vo;
     }
 
@@ -267,7 +265,7 @@ public class LisQcServiceImpl implements LisQcService {
             throw new BusinessException("仅「失控」记录需要复核");
         }
         if (r.getHandleStatus() == null || r.getHandleStatus() != 2) {
-            throw new BusinessException("复核前必须先完成处理（当前：" + dictText.text(DICT_HANDLE, r.getHandleStatus()) + "）");
+            throw new BusinessException("复核前必须先完成处理（当前：" + dictText.getDicDataLabel(DICT_HANDLE, r.getHandleStatus()) + "）");
         }
         String who = currentName();
         if (who != null && who.equals(r.getHandleBy())) {
@@ -331,7 +329,7 @@ public class LisQcServiceImpl implements LisQcService {
     }
 
     private String voStatusText(Integer status) {
-        return status == null || status == 0 ? "未判定" : dictText.text(DICT_STATUS, status);
+        return status == null || status == 0 ? "未判定" : dictText.getDicDataLabel(DICT_STATUS, status);
     }
 
     /** null 安全 trim：查询条件的 value 参数是急切求值的，直接 x.trim() 会在 x 为 null 时 NPE */

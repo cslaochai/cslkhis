@@ -10,7 +10,7 @@ public enum BedWaitStatusEnum {
 
     PENDING(0, "等待中"),
     ARRANGED(1, "已安排床位"),
-    ADMITTED(2, "已收治"),
+    ADMITTED(2, "已收治入院"),
     CANCELLED(3, "已取消");
 
     private final int code;

@@ -185,14 +185,6 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         return new ArrayList<>(values.subList(0, max));
     }
 
-    private static String genderText(Integer gender) {
-        if (gender == null) {
-            return "（未填写）";
-        }
-        SysGenderEnum g = SysGenderEnum.fromCode(gender);
-        return g == null ? "未知" : g.getLabel();
-    }
-
     private static String truncate(String text, int maxLength) {
         if (!StringUtils.hasText(text)) {
             return text;
@@ -230,7 +222,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         vo.setPatientName(entity == null ? null : entity.getPatientName());
         Integer gender = dto.getGender() != null ? dto.getGender() : (entity == null ? null : entity.getGender());
         Integer age = dto.getAge() != null ? dto.getAge() : (entity == null ? null : entity.getAge());
-        vo.setGenderText(genderText(gender));
+        vo.setGenderText(SysGenderEnum.getText(gender));
         vo.setAge(age);
         vo.setChiefComplaint(chiefComplaint);
         vo.setVitalSignsText(vitals.describe());

@@ -8,9 +8,13 @@ import lombok.Data;
 @Data
 public class PageParam {
 
-    /** 页码 */
+    /**
+     * 页码
+     */
     private int pageNum = 1;
 
-    /** 每页条数 */
+    /**
+     * 每页条数
+     */
     private int pageSize = 10;
 }

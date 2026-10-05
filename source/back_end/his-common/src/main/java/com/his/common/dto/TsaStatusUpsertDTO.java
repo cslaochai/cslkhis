@@ -12,7 +12,9 @@ import lombok.Data;
 @Data
 public class TsaStatusUpsertDTO {
 
-    /** 目标状态（0-停用 1-启用，his_enable_status） */
+    /**
+     * 目标状态（0-停用 1-启用，his_enable_status）
+     */
     @NotNull(message = "目标状态不能为空")
     private Integer tsaStatus;
 }

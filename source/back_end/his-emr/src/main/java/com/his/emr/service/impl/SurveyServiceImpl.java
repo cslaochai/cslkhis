@@ -71,11 +71,6 @@ public class SurveyServiceImpl implements SurveyService {
      */
     private static final Map<Integer, String> CHANNEL_NAMES = Map.of(
             1, "电话代填", 2, "短信", 3, "微信/互联网", 4, "现场扫码");
-    /**
-     * 回收状态名（字典 his_survey_dispatch_status）
-     */
-    private static final Map<Integer, String> DISPATCH_STATUS_NAMES = Map.of(
-            1, "待推送", 2, "已推送待回收", 3, "已回收", 4, "已过期", 5, "已拒答");
 
     private final BizSurveyDispatchMapper dispatchMapper;
     private final BizSurveyAnswerMapper answerMapper;
@@ -231,7 +226,7 @@ public class SurveyServiceImpl implements SurveyService {
         if (Objects.equals(dto.getAction(), 1)) {
             if (!Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.PENDING_PUSH.getCode())) {
                 throw new BusinessException("仅「待推送」的发放单可标记已推送（当前："
-                        + DISPATCH_STATUS_NAMES.get(entity.getDispatchStatus()) + "）");
+                        + SurveyDispatchStatusEnum.labelOf(entity.getDispatchStatus()) + "）");
             }
             entity.setDispatchStatus(SurveyDispatchStatusEnum.PUSHED.getCode());
             entity.setPushTime(now());
@@ -242,7 +237,7 @@ public class SurveyServiceImpl implements SurveyService {
             if (!Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.PENDING_PUSH.getCode())
                     && !Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.PUSHED.getCode())) {
                 throw new BusinessException("仅未回收的发放单可标记拒答（当前："
-                        + DISPATCH_STATUS_NAMES.get(entity.getDispatchStatus()) + "）");
+                        + SurveyDispatchStatusEnum.labelOf(entity.getDispatchStatus()) + "）");
             }
             entity.setDispatchStatus(SurveyDispatchStatusEnum.REFUSED.getCode());
         } else {

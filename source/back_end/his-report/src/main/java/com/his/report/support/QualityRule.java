@@ -15,7 +15,7 @@ package com.his.report.support;
  * </ol>
  *
  * <p>码值口径以<b>后端枚举</b>为准，不以表注释为准：性别统一按
- * 1-男 2-女（{@code com.his.patient.support.PatientGenderText}），
+ * 1-男 2-女（{@code com.his.common.enums.SysGenderEnum}），
  * 表注释里写的"0-女"与本库数据事实相反。
  */
 public enum QualityRule {

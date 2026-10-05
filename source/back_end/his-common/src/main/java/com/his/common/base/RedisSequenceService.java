@@ -211,121 +211,159 @@ public class RedisSequenceService {
         return Constants.TREATMENT_APPLY_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** 待发药记录编号：DSP + yyyyMMdd + 4 位序号（原先是「DP + 时间戳 + 进程内 AtomicInteger」，多实例会撞号） */
+    /**
+     * 待发药记录编号：DSP + yyyyMMdd + 4 位序号（原先是「DP + 时间戳 + 进程内 AtomicInteger」，多实例会撞号）
+     */
     public String generateDispensingNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
         long seq = this.next(Constants.DISPENSING_NO_KEY_PREFIX);
         return Constants.DISPENSING_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** 传染病报卡编号：INF + yyyyMMdd + 4 位序号 */
+    /**
+     * 传染病报卡编号：INF + yyyyMMdd + 4 位序号
+     */
     public String generateInfectiousReportNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
         long seq = this.next(Constants.INFECTIOUS_REPORT_NO_KEY_PREFIX);
         return Constants.INFECTIOUS_REPORT_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** 院感病例编号：ICASE + yyyyMMdd + 4 位序号 */
+    /**
+     * 院感病例编号：ICASE + yyyyMMdd + 4 位序号
+     */
     public String generateInfectionCaseNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
         long seq = this.next(Constants.INFECTION_CASE_NO_KEY_PREFIX);
         return Constants.INFECTION_CASE_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** 死亡证明编号：DC + yyyyMMdd + 4 位序号（sql/157） */
+    /**
+     * 死亡证明编号：DC + yyyyMMdd + 4 位序号（sql/157）
+     */
     public String generateDeathCertNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
         long seq = this.next(Constants.DEATH_CERT_NO_KEY_PREFIX);
         return Constants.DEATH_CERT_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** 死亡登记号：RG + yyyyMMdd + 4 位序号（sql/157） */
+    /**
+     * 死亡登记号：RG + yyyyMMdd + 4 位序号（sql/157）
+     */
     public String generateDeathRegisterNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
         long seq = this.next(Constants.DEATH_REGISTER_NO_KEY_PREFIX);
         return Constants.DEATH_REGISTER_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** 病危重通知单号：BT + yyyyMMdd + 4 位序号（sql/161） */
+    /**
+     * 病危重通知单号：BT + yyyyMMdd + 4 位序号（sql/161）
+     */
     public String generateCriticalNoticeNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
         long seq = this.next(Constants.CRITICAL_NOTICE_NO_KEY_PREFIX);
         return Constants.CRITICAL_NOTICE_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** 住院请假单号：LV + yyyyMMdd + 4 位序号（sql/162） */
+    /**
+     * 住院请假单号：LV + yyyyMMdd + 4 位序号（sql/162）
+     */
     public String generateInpatientLeaveNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
         long seq = this.next(Constants.LEAVE_RECORD_NO_KEY_PREFIX);
         return Constants.LEAVE_RECORD_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** 临床路径入径单号：LP + yyyyMMdd + 4 位序号 */
+    /**
+     * 临床路径入径单号：LP + yyyyMMdd + 4 位序号
+     */
     public String generatePathwayNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
         long seq = this.next(Constants.PATHWAY_NO_KEY_PREFIX);
         return Constants.PATHWAY_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** 透析号：DP + yyyyMMdd + 4 位序号 */
+    /**
+     * 透析号：DP + yyyyMMdd + 4 位序号
+     */
     public String generateDialysisPatientNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
         long seq = this.next(Constants.DIALYSIS_PATIENT_NO_KEY_PREFIX);
         return Constants.DIALYSIS_PATIENT_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** 透析单号：HD + yyyyMMdd + 4 位序号 */
+    /**
+     * 透析单号：HD + yyyyMMdd + 4 位序号
+     */
     public String generateDialysisSessionNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
         long seq = this.next(Constants.DIALYSIS_SESSION_NO_KEY_PREFIX);
         return Constants.DIALYSIS_SESSION_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** ICU 入科单号：ICU + yyyyMMdd + 4 位序号 */
+    /**
+     * ICU 入科单号：ICU + yyyyMMdd + 4 位序号
+     */
     public String generateIcuStayNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
         long seq = this.next(Constants.ICU_STAY_NO_KEY_PREFIX);
         return Constants.ICU_STAY_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** 目标性监测编号：IMON + yyyyMMdd + 4 位序号 */
+    /**
+     * 目标性监测编号：IMON + yyyyMMdd + 4 位序号
+     */
     public String generateInfectionMonitorNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
         long seq = this.next(Constants.INFECTION_MONITOR_NO_KEY_PREFIX);
         return Constants.INFECTION_MONITOR_NO_PREFIX + dateStr + String.format("%04d", seq);
     }
 
-    /** 费用记账流水号：FR + yyyyMMdd + 5 位序号 */
+    /**
+     * 费用记账流水号：FR + yyyyMMdd + 5 位序号
+     */
     public String generateFeeNo() {
         return dated(Constants.FEE_NO_PREFIX, Constants.FEE_NO_KEY_PREFIX);
     }
 
-    /** 结算账单号：SB + yyyyMMdd + 5 位序号 */
+    /**
+     * 结算账单号：SB + yyyyMMdd + 5 位序号
+     */
     public String generateBillNo() {
         return dated(Constants.BILL_NO_PREFIX, Constants.BILL_NO_KEY_PREFIX);
     }
 
-    /** 收款流水号：PT + yyyyMMdd + 5 位序号 */
+    /**
+     * 收款流水号：PT + yyyyMMdd + 5 位序号
+     */
     public String generatePayTxnNo() {
         return dated(Constants.PAY_TXN_NO_PREFIX, Constants.PAY_TXN_NO_KEY_PREFIX);
     }
 
-    /** 退款流水号：RT + yyyyMMdd + 5 位序号 */
+    /**
+     * 退款流水号：RT + yyyyMMdd + 5 位序号
+     */
     public String generateRefundTxnNo() {
         return dated(Constants.REFUND_TXN_NO_PREFIX, Constants.REFUND_TXN_NO_KEY_PREFIX);
     }
 
-    /** 资金账户流水号：AT + yyyyMMdd + 5 位序号 */
+    /**
+     * 资金账户流水号：AT + yyyyMMdd + 5 位序号
+     */
     public String generateFundTxnNo() {
         return dated(Constants.FUND_TXN_NO_PREFIX, Constants.FUND_TXN_NO_KEY_PREFIX);
     }
 
-    /** 发票号：IV + yyyyMMdd + 5 位序号（旧口径用时间戳+随机数，同秒并发会撞号且对账页无法判重） */
+    /**
+     * 发票号：IV + yyyyMMdd + 5 位序号（旧口径用时间戳+随机数，同秒并发会撞号且对账页无法判重）
+     */
     public String generateInvoiceNo() {
         return dated(Constants.INVOICE_NO_PREFIX, Constants.INVOICE_NO_KEY_PREFIX);
     }
 
-    /** 医保结算清单号：IS + yyyyMMdd + 5 位序号（与发票号同因：旧的时间戳+随机数会撞号） */
+    /**
+     * 医保结算清单号：IS + yyyyMMdd + 5 位序号（与发票号同因：旧的时间戳+随机数会撞号）
+     */
     public String generateInsuranceSettlementNo() {
         return dated(Constants.ISB_NO_PREFIX, Constants.ISB_NO_KEY_PREFIX);
     }
@@ -335,17 +373,23 @@ public class RedisSequenceService {
         return prefix + dateStr + String.format("%05d", this.next(module));
     }
 
-    /** 飞检批次号：FI + yyyyMMdd + 4 位序号 */
+    /**
+     * 飞检批次号：FI + yyyyMMdd + 4 位序号
+     */
     public String generateYbInspectNo() {
         return datedShort(Constants.YB_INSPECT_NO_PREFIX, Constants.YB_INSPECT_NO_KEY_PREFIX);
     }
 
-    /** 扣款通知单号：DK + yyyyMMdd + 4 位序号 */
+    /**
+     * 扣款通知单号：DK + yyyyMMdd + 4 位序号
+     */
     public String generateYbDeductNo() {
         return datedShort(Constants.YB_DEDUCT_NO_PREFIX, Constants.YB_DEDUCT_NO_KEY_PREFIX);
     }
 
-    /** 慢特病备案单号：MT + yyyyMMdd + 4 位序号 */
+    /**
+     * 慢特病备案单号：MT + yyyyMMdd + 4 位序号
+     */
     public String generateChronicRegNo() {
         return datedShort(Constants.CHRONIC_REG_NO_PREFIX, Constants.CHRONIC_REG_NO_KEY_PREFIX);
     }

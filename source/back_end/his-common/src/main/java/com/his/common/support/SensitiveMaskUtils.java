@@ -15,7 +15,9 @@ public final class SensitiveMaskUtils {
     private SensitiveMaskUtils() {
     }
 
-    /** 手机号：18878885878 → 188****5878；带区号固话保住区号 0731-****6666 */
+    /**
+     * 手机号：18878885878 → 188****5878；带区号固话保住区号 0731-****6666
+     */
     public static String maskPhone(String v) {
         String s = trimToEmpty(v);
         if (s.isEmpty()) {
@@ -28,13 +30,17 @@ public final class SensitiveMaskUtils {
         return maskMiddle(s, 3, 4);
     }
 
-    /** 身份证号：430726199709180511 → 4307**********0511（前 4 是省市，后 4 足以核对是否同一张证） */
+    /**
+     * 身份证号：430726199709180511 → 4307**********0511（前 4 是省市，后 4 足以核对是否同一张证）
+     */
     public static String maskIdCard(String v) {
         String s = trimToEmpty(v);
         return s.isEmpty() ? null : maskMiddle(s, 4, 4);
     }
 
-    /** 邮箱：1688888@qq.com → 168****8@qq.com（域名保留，用户名打码） */
+    /**
+     * 邮箱：1688888@qq.com → 168****8@qq.com（域名保留，用户名打码）
+     */
     public static String maskEmail(String v) {
         String s = trimToEmpty(v);
         if (s.isEmpty()) {

@@ -9,7 +9,7 @@ import com.his.patient.entity.*;
 import com.his.patient.enums.CheckupStatusEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.CheckupService;
-import com.his.patient.support.DictText;
+import com.his.system.service.DictCacheService;
 import com.his.patient.vo.CheckupVO;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +39,7 @@ public class CheckupServiceImpl implements CheckupService {
     private final BizCheckupRecordMapper recordMapper;
     private final BizCheckupResultMapper resultMapper;
     private final BizPatientMapper patientMapper;
-    private final DictText dictText;
+    private final DictCacheService dictText;
 
     // 套餐
 
@@ -155,7 +155,7 @@ public class CheckupServiceImpl implements CheckupService {
         }
         if (p.getGenderLimit() != null && p.getGenderLimit() > 0
                 && patient.getGender() != null && !patient.getGender().equals(p.getGenderLimit())) {
-            throw new BusinessException("套餐性别限制：该套餐仅适用于" + dictText.text("sys_gender", p.getGenderLimit()));
+            throw new BusinessException("套餐性别限制：该套餐仅适用于" + dictText.getDicDataLabel("sys_gender", p.getGenderLimit()));
         }
         BizCheckupRecord r = new BizCheckupRecord();
         r.setRecordNo("CU" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())

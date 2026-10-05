@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
 import com.his.report.dto.DrgSimDTO;
 import com.his.report.entity.DrgSimResult;
+import com.his.report.enums.DrgSimStatusEnum;
 import com.his.report.mapper.DrgSimMapper;
 import com.his.report.support.DrgGrouper;
 import com.his.report.vo.DrgSimVO;
@@ -34,9 +35,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class DrgSimServiceImpl implements DrgSimService {
-
-    private static final int ST_GROUPED = 1;
-    private static final int ST_UNGROUPED = 2;
 
     private final DrgSimMapper simMapper;
     private final DrgGrouper grouper;
@@ -98,7 +96,7 @@ public class DrgSimServiceImpl implements DrgSimService {
         r.setPayStandard(pay);
         r.setActualAmount(actual);
         r.setProfitAmount(profit);
-        r.setSimStatus(grouped ? ST_GROUPED : ST_UNGROUPED);
+        r.setSimStatus(grouped ? DrgSimStatusEnum.GROUPED.getCode() : DrgSimStatusEnum.UNGROUPED.getCode());
         r.setRuleNote(g.ruleNote());
         r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
         if (create) {
@@ -172,8 +170,8 @@ public class DrgSimServiceImpl implements DrgSimService {
                 .eq(DrgSimResult::getDelFlag, 0));
         DrgSimVO.SimStat stat = new DrgSimVO.SimStat();
         stat.setTotal((long) all.size());
-        stat.setGrouped(all.stream().filter(x -> x.getSimStatus() == ST_GROUPED).count());
-        stat.setUngrouped(all.stream().filter(x -> x.getSimStatus() == ST_UNGROUPED).count());
+        stat.setGrouped(all.stream().filter(x -> DrgSimStatusEnum.GROUPED.is(x.getSimStatus())).count());
+        stat.setUngrouped(all.stream().filter(x -> DrgSimStatusEnum.UNGROUPED.is(x.getSimStatus())).count());
         stat.setTotalProfit(all.stream()
                 .filter(x -> x.getProfitAmount() != null && x.getProfitAmount().signum() > 0)
                 .map(DrgSimResult::getProfitAmount)

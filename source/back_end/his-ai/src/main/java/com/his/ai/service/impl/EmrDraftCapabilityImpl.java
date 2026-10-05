@@ -129,14 +129,6 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
         return StringUtils.hasText(value) ? value + unit : "（未填写）";
     }
 
-    private static String genderText(Integer gender) {
-        if (gender == null) {
-            return "（未填写）";
-        }
-        SysGenderEnum g = SysGenderEnum.fromCode(gender);
-        return g == null ? "未知" : g.getLabel();
-    }
-
     private static String nullToDash(String text) {
         return StringUtils.hasText(text) ? text : "（未填写）";
     }
@@ -226,7 +218,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
 
     private Optional<EmrDraftLlmOutputDTO> callModel(EmrDraftDTO dto, DraftInput input) {
         Map<String, Object> variables = new HashMap<>();
-        variables.put("gender", genderText(input.gender()));
+        variables.put("gender", SysGenderEnum.getText(input.gender()));
         variables.put("age", input.age() == null ? "（未填写）" : input.age() + "岁");
         variables.put("chiefComplaint", nullToDash(input.chiefComplaint()));
         variables.put("presentIllness", nullToDash(input.presentIllness()));

@@ -22,10 +22,14 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class EmergencyObservationPolicy {
 
-    /** 留观预警档（小时），系统参数读不到时用 */
+    /**
+     * 留观预警档（小时），系统参数读不到时用
+     */
     public static final int DEFAULT_WARN_HOURS = 48;
 
-    /** 留观上限档（小时），系统参数读不到时用 */
+    /**
+     * 留观上限档（小时），系统参数读不到时用
+     */
     public static final int DEFAULT_MAX_HOURS = 72;
 
     public static final String WARN_CONFIG_KEY = "emergency.observation_warn_hours";
@@ -39,13 +43,28 @@ public class EmergencyObservationPolicy {
     private volatile int maxHours = DEFAULT_MAX_HOURS;
     private volatile long loadedAt = 0L;
 
-    /** 留观预警时限（小时） */
+    /**
+     * 档位文案不带具体小时数：阈值在系统参数里可改，写死的数字会和配置漂移
+     */
+    public static String levelText(int level) {
+        return switch (level) {
+            case 1 -> "超预警";
+            case 2 -> "超上限";
+            default -> "";
+        };
+    }
+
+    /**
+     * 留观预警时限（小时）
+     */
     public int warnHours() {
         refreshIfStale();
         return warnHours;
     }
 
-    /** 留观上限时限（小时） */
+    /**
+     * 留观上限时限（小时）
+     */
     public int maxHours() {
         refreshIfStale();
         return maxHours;
@@ -89,14 +108,5 @@ public class EmergencyObservationPolicy {
             return 2;
         }
         return obsHours >= warn ? 1 : 0;
-    }
-
-    /** 档位文案不带具体小时数：阈值在系统参数里可改，写死的数字会和配置漂移 */
-    public static String levelText(int level) {
-        return switch (level) {
-            case 1 -> "超预警";
-            case 2 -> "超上限";
-            default -> "";
-        };
     }
 }

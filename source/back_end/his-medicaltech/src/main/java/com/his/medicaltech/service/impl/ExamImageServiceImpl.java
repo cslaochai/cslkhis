@@ -21,7 +21,7 @@ import com.his.medicaltech.vo.ExamImageVO;
 import com.his.medicaltech.mapper.BizInspectionRecordMapper;
 import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
 import com.his.medicaltech.mapper.BizReportMapper;
-import com.his.medicaltech.support.SubDictText;
+import com.his.system.service.DictCacheService;
 import com.his.security.UserUtils;
 import com.his.system.service.SysAuditLogService;
 import lombok.RequiredArgsConstructor;
@@ -68,7 +68,7 @@ public class ExamImageServiceImpl implements ExamImageService {
     private final BizInspectionApplyMapper inspectionApplyMapper;
     private final BizLaboratoryApplyMapper laboratoryApplyMapper;
     private final MockExamImageSource mockExamImageSource;
-    private final SubDictText subDictText;
+    private final DictCacheService subDictText;
     private final SysAuditLogService sysAuditLogService;
 
     @Override
@@ -110,7 +110,7 @@ public class ExamImageServiceImpl implements ExamImageService {
                 ? DEFAULT_FRAME_COUNT : Math.min(importDTO.getFrameCount(), MAX_FRAME_COUNT);
         int startSeq = nextSeq(importDTO.getBizType(), importDTO.getApplyId());
         String modalityText = importDTO.getModality() == null ? null
-                : subDictText.text("his_exam_device_type", importDTO.getModality());
+                : subDictText.getDicDataLabel("his_exam_device_type", importDTO.getModality());
 
         List<ExamImageVO> created = new ArrayList<>();
         try {
@@ -307,7 +307,7 @@ public class ExamImageServiceImpl implements ExamImageService {
         ExamImageVO vo = new ExamImageVO();
         BeanUtils.copyProperties(row, vo);
         vo.setModalityText(row.getModality() == null ? null
-                : subDictText.text("his_exam_device_type", row.getModality()));
+                : subDictText.getDicDataLabel("his_exam_device_type", row.getModality()));
         vo.setSourceText(ExamImageSourceEnum.textOf(row.getSource()));
         return vo;
     }

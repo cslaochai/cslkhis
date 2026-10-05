@@ -6,7 +6,9 @@ import com.his.common.enums.SignScene;
 
 import java.time.LocalDateTime;
 
-/** 签名落库的事务边界：写签名行 → 回写业务锚点 → 更新证书使用计数 */
+/**
+ * 签名落库的事务边界：写签名行 → 回写业务锚点 → 更新证书使用计数
+ */
 public interface SignatureStoreService {
 
     void insertAndAnchor(BizEmrSignature entity, SignableContentProvider provider, SignScene scene, SysSignCert cert);

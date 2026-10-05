@@ -32,7 +32,7 @@ public final class InpatientAccountLabels {
         return switch (type) {
             case 1 -> "充值";
             case 2 -> "退款";
-            default -> "未知(" + type + ")";
+            default -> "";
         };
     }
 
@@ -44,7 +44,7 @@ public final class InpatientAccountLabels {
             return "—";
         }
         PaymentMethodEnum e = PaymentMethodEnum.getByCode(method);
-        return e == null ? "未知(" + method + ")" : e.getDesc();
+        return e == null ? "" : e.getDesc();
     }
 
     /**
@@ -57,7 +57,7 @@ public final class InpatientAccountLabels {
         return switch (status) {
             case 1 -> "已结清";
             case 2 -> "欠费";
-            default -> "未知(" + status + ")";
+            default -> "";
         };
     }
 
@@ -69,7 +69,7 @@ public final class InpatientAccountLabels {
             return "—";
         }
         SettlementModeEnum e = SettlementModeEnum.getByCode(mode);
-        return e == null ? "未知(" + mode + ")" : e.getDesc();
+        return e == null ? "" : e.getDesc();
     }
 
     /**
@@ -80,6 +80,6 @@ public final class InpatientAccountLabels {
         if (e != null) {
             return e.getDesc();
         }
-        return itemType == null ? "—" : "未知(" + itemType + ")";
+        return itemType == null ? "—" : "";
     }
 }

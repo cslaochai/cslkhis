@@ -21,14 +21,6 @@ public enum RefundMethodEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
     /**
      * 原支付方式 → 退费方式。
      *
@@ -56,5 +48,13 @@ public enum RefundMethodEnum {
     public static boolean viaChannel(Integer payMethodCode) {
         PaymentMethodEnum payMethod = PaymentMethodEnum.getByCode(payMethodCode);
         return payMethod != null && payMethod.channelBacked();
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
     }
 }

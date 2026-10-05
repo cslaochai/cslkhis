@@ -1,4 +1,11 @@
 package com.his.patient.service.impl;
+import com.his.patient.enums.BedStatusEnum;
+import com.his.patient.enums.InpatientOrderStatusEnum;
+import com.his.patient.enums.InpatientRecordTypeEnum;
+import com.his.patient.enums.OrderTypeEnum;
+import com.his.patient.enums.SummaryStatusEnum;
+import com.his.patient.enums.TransferStatusEnum;
+import com.his.patient.enums.TransferTypeEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -240,7 +247,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         }
         if (!Objects.equals(TransferStatusEnum.PENDING.getCode(), entity.getTransferStatus())) {
             throw new BusinessException("该转科申请当前状态为「"
-                    + InpatientTransferLabels.statusText(entity.getTransferStatus())
+                    + TransferStatusEnum.labelOrUnknown(entity.getTransferStatus())
                     + "」，只有「待接收」可以接收");
         }
 
@@ -324,7 +331,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         }
         if (!Objects.equals(TransferStatusEnum.PENDING.getCode(), entity.getTransferStatus())) {
             throw new BusinessException("该转科申请当前状态为「"
-                    + InpatientTransferLabels.statusText(entity.getTransferStatus())
+                    + TransferStatusEnum.labelOrUnknown(entity.getTransferStatus())
                     + "」，只有「待接收」可以取消；已接收的转科要转回去，请再发起一次转科");
         }
         entity.setTransferStatus(TransferStatusEnum.CANCELLED.getCode());
@@ -534,7 +541,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         body.append("转入：").append(nvl(entity.getToDeptName()))
                 .append(" ").append(nvl(entity.getToWardName()))
                 .append(" ").append(nvl(entity.getToBedNo())).append("床\n");
-        body.append("转科类型：").append(InpatientTransferLabels.typeText(entity.getTransferType()))
+        body.append("转科类型：").append(TransferTypeEnum.labelOf(entity.getTransferType()))
                 .append("；发起时已住院 ").append(entity.getHospitalDays() == null ? "—" : entity.getHospitalDays()).append(" 天\n");
         body.append("医嘱处置：").append(nvl(orderRemark));
         record.setCourseNote(body.toString());
@@ -672,8 +679,8 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     private InpatientTransferVO toVO(BizInpatientTransfer e, String recordNo, Integer admitStatus) {
         InpatientTransferVO vo = new InpatientTransferVO();
         BeanUtils.copyProperties(e, vo);
-        vo.setTransferTypeText(InpatientTransferLabels.typeText(e.getTransferType()));
-        vo.setTransferStatusText(InpatientTransferLabels.statusText(e.getTransferStatus()));
+        vo.setTransferTypeText(TransferTypeEnum.labelOf(e.getTransferType()));
+        vo.setTransferStatusText(TransferStatusEnum.labelOf(e.getTransferStatus()));
         vo.setRecordNo(recordNo);
 
         boolean pending = Objects.equals(TransferStatusEnum.PENDING.getCode(), e.getTransferStatus());

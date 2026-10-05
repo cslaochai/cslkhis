@@ -15,16 +15,24 @@ import java.util.List;
  */
 public interface EmrSignatureService {
 
-    /** 签名（业务动作自动触发，或管理员补签） */
+    /**
+     * 签名（业务动作自动触发，或管理员补签）
+     */
     SignatureVO sign(SignCommandDTO command);
 
-    /** 按签名ID验签 */
+    /**
+     * 按签名ID验签
+     */
     SignVerifyVO verify(Long signId);
 
-    /** 按对象验签（验该对象全部签名，含已作废的） */
+    /**
+     * 按对象验签（验该对象全部签名，含已作废的）
+     */
     List<SignVerifyVO> verifyByBiz(Integer bizType, Long bizId);
 
-    /** 作废签名（必须写理由；不改历史行，只追加作废信息） */
+    /**
+     * 作废签名（必须写理由；不改历史行，只追加作废信息）
+     */
     SignatureVO invalidate(Long signId, String reason, Long operatorId, String operatorName);
 
     SignatureVO getById(Long id);
@@ -33,7 +41,9 @@ public interface EmrSignatureService {
 
     List<SignatureVO> listByBiz(Integer bizType, Long bizId);
 
-    /** 某对象的签名情况（含签名链、能否补签） */
+    /**
+     * 某对象的签名情况（含签名链、能否补签）
+     */
     ObjectSignatureVO objectStatus(Integer bizType, Long bizId);
 
     SignatureSummaryVO summary();

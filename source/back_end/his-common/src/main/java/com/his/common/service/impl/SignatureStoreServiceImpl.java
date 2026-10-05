@@ -61,7 +61,9 @@ public class SignatureStoreServiceImpl implements SignatureStoreService {
         signMapper.updateById(patch);
     }
 
-    /** 作废：只追加作废信息，签名证据列一行不动 */
+    /**
+     * 作废：只追加作废信息，签名证据列一行不动
+     */
     @Transactional(rollbackFor = Exception.class)
     public void updateInvalidate(Long signId, String reason, java.time.LocalDateTime time,
                                  Long operatorId, String operatorName) {

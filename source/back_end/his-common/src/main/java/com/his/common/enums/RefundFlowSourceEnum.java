@@ -22,14 +22,6 @@ public enum RefundFlowSourceEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
     public static RefundFlowSourceEnum getByCode(Integer code) {
         if (code == null) {
             return null;
@@ -40,5 +32,13 @@ public enum RefundFlowSourceEnum {
             }
         }
         return null;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
     }
 }

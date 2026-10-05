@@ -28,7 +28,9 @@ public enum RecordStatusEnum {
         return null;
     }
 
-    /** 码值不在枚举内（脏数据）返回 null，前端渲染「未知(n)」，不能回落到合法文案。 */
+    /**
+     * 码值不在枚举内（脏数据）返回 null，前端渲染「未知(n)」，不能回落到合法文案。
+     */
     public static String labelOf(Integer code) {
         RecordStatusEnum status = code == null ? null : fromCode(code);
         return status == null ? null : status.label;

@@ -22,19 +22,6 @@ public enum BillStatusEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
-    /** 已收回的钱还能不能再收（作废/退完的单一率拒收，防止重复收同一笔钱） */
-    public boolean payable() {
-        return this == UNPAID || this == PARTIAL_PAID;
-    }
-
     public static BillStatusEnum fromCode(Integer code) {
         if (code == null) {
             return null;
@@ -50,5 +37,20 @@ public enum BillStatusEnum {
     public static String descOf(Integer code) {
         BillStatusEnum item = fromCode(code);
         return item == null ? "未知状态" : item.desc;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
+
+    /**
+     * 已收回的钱还能不能再收（作废/退完的单一率拒收，防止重复收同一笔钱）
+     */
+    public boolean payable() {
+        return this == UNPAID || this == PARTIAL_PAID;
     }
 }

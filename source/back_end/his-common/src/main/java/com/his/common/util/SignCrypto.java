@@ -30,7 +30,9 @@ public final class SignCrypto {
     private SignCrypto() {
     }
 
-    /** SHA-256 摘要（十六进制小写） */
+    /**
+     * SHA-256 摘要（十六进制小写）
+     */
     public static String sha256Hex(String text) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -41,7 +43,9 @@ public final class SignCrypto {
         }
     }
 
-    /** 用私钥签名，返回 Base64 签名值 */
+    /**
+     * 用私钥签名，返回 Base64 签名值
+     */
     public static String sign(String privateKeyPem, String content) {
         try {
             Signature sig = Signature.getInstance(SIGN_ALGO);
@@ -75,7 +79,9 @@ public final class SignCrypto {
         }
     }
 
-    /** 公钥指纹：对公钥 DER 做 SHA-256，用于人工核对"两处看到的是不是同一把公钥" */
+    /**
+     * 公钥指纹：对公钥 DER 做 SHA-256，用于人工核对"两处看到的是不是同一把公钥"
+     */
     public static String fingerprint(String publicKeyPem) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
@@ -86,7 +92,9 @@ public final class SignCrypto {
         }
     }
 
-    /** 指纹的分组展示（每 4 位一组，便于电话核对） */
+    /**
+     * 指纹的分组展示（每 4 位一组，便于电话核对）
+     */
     public static String fingerprintGroups(String fingerprint) {
         if (fingerprint == null || fingerprint.length() < 8) {
             return fingerprint;
@@ -101,7 +109,9 @@ public final class SignCrypto {
         return sb.toString();
     }
 
-    /** 签名层统一异常：任何"密钥/算法/编码坏了"的情况都走这里，不与业务异常混在一起 */
+    /**
+     * 签名层统一异常：任何"密钥/算法/编码坏了"的情况都走这里，不与业务异常混在一起
+     */
     public static class SignException extends RuntimeException {
         public SignException(String message, Throwable cause) {
             super(message, cause);

@@ -38,4 +38,18 @@ public enum SysGenderEnum {
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
     }
+
+    /**
+     * 码值→展示文案（全系统性别文案唯一出口）。
+     *
+     * <p>语义：null 与未填写一律渲染为「未知」；合法码值取 label；脏值（越界码值）暴露原值「未知(n)」，
+     * 绝不悄悄回落到某个合法性别 —— 把看不懂的码值说成「女」比没有文案更危险。
+     */
+    public static String getText(Integer code) {
+        if (code == null) {
+            return "未知";
+        }
+        SysGenderEnum g = fromCode(code);
+        return g != null ? g.label : "未知(" + code + ")";
+    }
 }

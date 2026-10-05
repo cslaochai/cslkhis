@@ -209,7 +209,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             String content = String.format(
                     "患者 %s（%s）的检验项目「%s」出现危急值：%s。请立即查看并处置，处置时限 %d 分钟。危急值号 %s。",
                     entity.getPatientName(),
-                    genderText(entity.getGender()),
+                    SysGenderEnum.getText(entity.getGender()),
                     entity.getItemName(),
                     entity.getCriticalDesc(),
                     deadlineMinutes(),
@@ -617,7 +617,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     private BizCriticalValueVO toVO(BizCriticalValue entity) {
         BizCriticalValueVO vo = new BizCriticalValueVO();
         BeanUtils.copyProperties(entity, vo);
-        vo.setGenderText(genderText(entity.getGender()));
+        vo.setGenderText(SysGenderEnum.getText(entity.getGender()));
         vo.setStatusText(statusText(entity.getStatus()));
         vo.setCriticalTypeText(criticalTypeText(entity.getCriticalType()));
         vo.setResultText(buildResultText(entity));
@@ -665,14 +665,6 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             return "未知";
         }
         return type == CriticalTypeEnum.HIGH.getCode() ? "偏高" : "偏低";
-    }
-
-    private static String genderText(Integer gender) {
-        if (gender == null) {
-            return "性别不详";
-        }
-        SysGenderEnum g = SysGenderEnum.fromCode(gender);
-        return g == null ? "性别不详" : g.getLabel();
     }
 
     private static LocalDateTime startOfDay(String text) {

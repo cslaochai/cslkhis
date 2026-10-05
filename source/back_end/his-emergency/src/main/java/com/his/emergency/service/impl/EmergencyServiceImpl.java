@@ -8,15 +8,9 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.entity.BizQueue;
 import com.his.appoint.entity.BizSchedule;
-import com.his.system.entity.BizShift;
-import com.his.appoint.enums.AppointStatusEnum;
-import com.his.appoint.enums.QueueStatusEnum;
-import com.his.appoint.enums.QueueTypeEnum;
-import com.his.appoint.enums.RegistTypeEnum;
-import com.his.appoint.enums.VisitTypeEnum;
+import com.his.appoint.enums.*;
 import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
-import com.his.system.mapper.BizShiftMapper;
 import com.his.appoint.service.ScheduleService;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
@@ -26,13 +20,7 @@ import com.his.common.enums.EmpTitleCode;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
-import com.his.emergency.dto.BizEmergencyUpsertDTO;
-import com.his.emergency.dto.EmergencyAdmitDTO;
-import com.his.emergency.dto.EmergencyHandoverItemDTO;
-import com.his.emergency.dto.EmergencyHandoverQueryPageDTO;
-import com.his.emergency.dto.EmergencyHandoverUpsertDTO;
-import com.his.emergency.dto.EmergencyQueryDTO;
-import com.his.emergency.dto.EmergencyStatusUpsertDTO;
+import com.his.emergency.dto.*;
 import com.his.emergency.entity.BizEmergency;
 import com.his.emergency.entity.BizEmergencyHandover;
 import com.his.emergency.entity.BizEmergencyHandoverItem;
@@ -43,31 +31,18 @@ import com.his.emergency.service.EmergencyService;
 import com.his.emergency.support.EmergencyObservationPolicy;
 import com.his.emergency.support.EmergencyTriageRules;
 import com.his.emergency.support.EmergencyWaitPolicy;
-import com.his.emergency.vo.BizEmergencyVO;
-import com.his.emergency.vo.EmergencyDutyVO;
-import com.his.emergency.vo.EmergencyHandoverDetailVO;
-import com.his.emergency.vo.EmergencyHandoverItemVO;
-import com.his.emergency.vo.EmergencyHandoverPendingVO;
-import com.his.emergency.vo.EmergencyHandoverVO;
-import com.his.emergency.vo.EmergencyStatsVO;
-import com.his.emergency.vo.EmergencyTakeCandidateVO;
-import com.his.patient.entity.BizPatient;
+import com.his.emergency.vo.*;
 import com.his.patient.dto.InpatientAdmitDTO;
+import com.his.patient.entity.BizPatient;
+import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.InpatientService;
+import com.his.patient.support.PatientProfileValidator;
 import com.his.patient.vo.BedVO;
 import com.his.patient.vo.WardVO;
-import com.his.patient.mapper.BizPatientMapper;
-import com.his.patient.support.PatientProfileValidator;
 import com.his.security.UserUtils;
-import com.his.system.entity.SysConfig;
-import com.his.system.entity.SysDepartment;
-import com.his.system.entity.SysEmployee;
-import com.his.system.entity.SysUser;
+import com.his.system.entity.*;
 import com.his.system.enums.BizTypeEnum;
-import com.his.system.mapper.SysConfigMapper;
-import com.his.system.mapper.SysDepartmentMapper;
-import com.his.system.mapper.SysEmployeeMapper;
-import com.his.system.mapper.SysUserMapper;
+import com.his.system.mapper.*;
 import com.his.system.service.DutyRosterService;
 import com.his.system.service.SysMessageService;
 import com.his.system.vo.DutyOfficerVO;
@@ -78,19 +53,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.Duration;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.Period;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.time.*;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -98,15 +62,21 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEmergency> implements EmergencyService {
 
-    /** 候诊是否超时的判定式（读时算，不落列）。target_see_minutes 为 NULL 的存量行按未定级时限收口。 */
+    /**
+     * 候诊是否超时的判定式（读时算，不落列）。target_see_minutes 为 NULL 的存量行按未定级时限收口。
+     */
     private static final String OVERDUE_SQL =
             "admission_time IS NOT NULL AND TIMESTAMPDIFF(MINUTE, admission_time, NOW()) > IFNULL(target_see_minutes, {0})";
 
-    /** 留观已超该小时数（读时算，不落列）；状态=3 的收口写在各处 wrapper 里，本式只管时间 */
+    /**
+     * 留观已超该小时数（读时算，不落列）；状态=3 的收口写在各处 wrapper 里，本式只管时间
+     */
     private static final String OBS_OVER_SQL =
             "TIMESTAMPDIFF(HOUR, observation_start_time, NOW()) >= {0}";
 
-    /** 无人可发待办时的兜底接收人（用户名或员工ID），口径同 lab.critical_value_fallback_receiver */
+    /**
+     * 无人可发待办时的兜底接收人（用户名或员工ID），口径同 lab.critical_value_fallback_receiver
+     */
     private static final String FALLBACK_RECEIVER_CONFIG_KEY = "emergency.wait_fallback_receiver";
 
     private final BizQueueMapper queueMapper;
@@ -122,7 +92,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
     private final SysUserMapper sysUserMapper;
     private final SysConfigMapper sysConfigMapper;
     private final SysDepartmentMapper sysDepartmentMapper;
-    /** 全院当天谁负责（总值班）：科室阶梯走完后的兜底收口人，见 sql/169 */
+    /**
+     * 全院当天谁负责（总值班）：科室阶梯走完后的兜底收口人，见 sql/169
+     */
     private final DutyRosterService dutyRosterService;
     private final BizShiftMapper bizShiftMapper;
     private final BizEmergencyHandoverMapper handoverMapper;
@@ -176,7 +148,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
-    /** 实体 → 出参，候诊时长与超时档位在这里现算 */
+    /**
+     * 实体 → 出参，候诊时长与超时档位在这里现算
+     */
     private BizEmergencyVO toVO(BizEmergency entity) {
         BizEmergencyVO vo = new BizEmergencyVO();
         BeanUtils.copyProperties(entity, vo);
@@ -390,7 +364,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                 .orElse(null);
     }
 
-    /** 该科室此刻在岗（有医生）的当日排班；deptId 为空或时间不可解析一律排除 */
+    /**
+     * 该科室此刻在岗（有医生）的当日排班；deptId 为空或时间不可解析一律排除
+     */
     private List<BizSchedule> onDutySchedules(Long deptId) {
         if (deptId == null) {
             return List.of();
@@ -565,7 +541,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         }).collect(Collectors.toList());
     }
 
-    /** 结束留观：写结束时间并把占着的床位还给病区（必须在 emergencyStatus 被改写之前调用） */
+    /**
+     * 结束留观：写结束时间并把占着的床位还给病区（必须在 emergencyStatus 被改写之前调用）
+     */
     private void endObservation(BizEmergency emergency) {
         Integer status = emergency.getEmergencyStatus();
         if (status != null && status == 3 && emergency.getObservationBedId() != null) {
@@ -620,7 +598,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         }
     }
 
-    /** 该患者最近一条急诊号挂号单（急诊直录产生，可能不存在——铺底数据没有挂号线索） */
+    /**
+     * 该患者最近一条急诊号挂号单（急诊直录产生，可能不存在——铺底数据没有挂号线索）
+     */
     private BizAppointInfo findEmergencyAppoint(Long patientId) {
         LambdaQueryWrapper<BizAppointInfo> appointWrapper = new LambdaQueryWrapper<>();
         appointWrapper.eq(BizAppointInfo::getPatientId, patientId)
@@ -688,7 +668,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         return stats;
     }
 
-    /** 留观中且已超该小时数（与列表的「留观榜」过滤同一式子，卡片数字点开必须就是这些人） */
+    /**
+     * 留观中且已超该小时数（与列表的「留观榜」过滤同一式子，卡片数字点开必须就是这些人）
+     */
     private long countObservationOver(int hours) {
         LambdaQueryWrapper<BizEmergency> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizEmergency::getEmergencyStatus, EmergencyStatusEnum.OBSERVATION.getCode())
@@ -697,7 +679,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         return this.count(wrapper);
     }
 
-    /** 候诊中（status=1）的基础条件：超时数与池子数都只数"还在等的" */
+    /**
+     * 候诊中（status=1）的基础条件：超时数与池子数都只数"还在等的"
+     */
     private LambdaQueryWrapper<BizEmergency> waitingBase() {
         LambdaQueryWrapper<BizEmergency> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizEmergency::getEmergencyStatus, EmergencyStatusEnum.WAITING.getCode());
@@ -811,7 +795,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         return sent;
     }
 
-    /** 催办文本里的时长用「3小时12分钟」而不是 192 分钟 —— 收消息的人要在两秒内感到严重性 */
+    /**
+     * 催办文本里的时长用「3小时12分钟」而不是 192 分钟 —— 收消息的人要在两秒内感到严重性
+     */
     private String humanWait(long minutes) {
         if (minutes < 60) {
             return minutes + " 分钟";
@@ -819,7 +805,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         return minutes / 60 + " 小时 " + minutes % 60 + " 分钟";
     }
 
-    /** 发一条待办。收件人名取自员工档案，查不到档案也要发（收件人 ID 才是事实，名字只是显示） */
+    /**
+     * 发一条待办。收件人名取自员工档案，查不到档案也要发（收件人 ID 才是事实，名字只是显示）
+     */
     private boolean sendWaitTodo(Long receiverId, String title, String content, BizEmergency emergency,
                                  long waitMinutes, int targetMinutes, String levelText) {
         String receiverName = "站内用户";
@@ -895,10 +883,6 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         }
     }
 
-    /** 兜底接收人（员工ID + 姓名） */
-    private record Receiver(Long employeeId, String name) {
-    }
-
     private String getZoneByLevel(Integer level) {
         if (level == null) return "绿区";
         return switch (level) {
@@ -907,8 +891,6 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
             default -> "绿区";
         };
     }
-
-    // 留观时限（sql/153）：读时算两档，不落列
 
     /**
      * 交班弹框里的「待交班清单」口径：本科室未闭环（候诊/诊治中/留观）里
@@ -930,6 +912,8 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                 .last("ORDER BY (doctor_id IS NULL) DESC, admission_time ASC");
         return wrapper;
     }
+
+    // 留观时限（sql/153）：读时算两档，不落列
 
     @Override
     public List<EmergencyHandoverPendingVO> handoverPendingList(Long deptId) {
@@ -1189,7 +1173,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         }
     }
 
-    /** 本次急诊对应的叫号队列行（按「急+急诊号后 5 位」+ 患者定位，不是"该患者最近一张号"） */
+    /**
+     * 本次急诊对应的叫号队列行（按「急+急诊号后 5 位」+ 患者定位，不是"该患者最近一张号"）
+     */
     private BizQueue findEmergencyQueueOf(BizEmergency emergency) {
         String erNo = emergency.getEmergencyNo();
         if (!StringUtils.hasText(erNo) || erNo.length() < 5) {
@@ -1202,7 +1188,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                 .last("LIMIT 1"));
     }
 
-    /** 每位接续医生一条待办（同一人接手多条不刷屏）：交班的闭环点是"他知道有人被交给他了" */
+    /**
+     * 每位接续医生一条待办（同一人接手多条不刷屏）：交班的闭环点是"他知道有人被交给他了"
+     */
     private void notifyTakers(BizEmergencyHandover handover, LinkedHashMap<Long, BizEmergency> scope,
                               LinkedHashMap<Long, EmergencyHandoverItemDTO> submitted,
                               LinkedHashMap<Long, Long> takeOf, LinkedHashMap<Long, SysEmployee> takers) {
@@ -1250,15 +1238,15 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                         .or().like(BizEmergencyHandover::getTakeEmpName, queryDTO.getKeyword())
                         // 交过的患者也要能搜到：台账最常见的用法是"这个人上次是谁交的"
                         .or().apply("EXISTS (SELECT 1 FROM biz_emergency_handover_item i "
-                                + "WHERE i.handover_id = biz_emergency_handover.id AND i.del_flag = 0 "
-                                + "AND (i.patient_name LIKE CONCAT('%', {0}, '%') OR i.emergency_no LIKE CONCAT('%', {0}, '%')))",
+                                        + "WHERE i.handover_id = biz_emergency_handover.id AND i.del_flag = 0 "
+                                        + "AND (i.patient_name LIKE CONCAT('%', {0}, '%') OR i.emergency_no LIKE CONCAT('%', {0}, '%')))",
                                 queryDTO.getKeyword()))
                 .orderByDesc(BizEmergencyHandover::getPeriodEnd);
         Page<BizEmergencyHandover> page = handoverMapper.selectPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         List<EmergencyHandoverVO> records = page.getRecords() == null ? List.of()
                 : page.getRecords().stream().map(h -> BeanUtil.copyProperties(h, EmergencyHandoverVO.class))
-                        .collect(Collectors.toList());
+                .collect(Collectors.toList());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
@@ -1285,8 +1273,6 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         vo.setOverdueText(EmergencyWaitPolicy.overdueText(item.getOverdueLevel() == null ? 0 : item.getOverdueLevel()));
         return vo;
     }
-
-    // 留观超时限升级（第 3 步的另一半：让长期占用留观床的人被追问去向）
 
     /**
      * 扫描「留观中且已超过上限档」的急诊，向该负责的人写站内信待办。
@@ -1316,6 +1302,8 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         }
         return sent;
     }
+
+    // 留观超时限升级（第 3 步的另一半：让长期占用留观床的人被追问去向）
 
     private int escalateObservationOne(BizEmergency emergency) {
         Long obsHours = obsHoursOf(emergency);
@@ -1377,9 +1365,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         return emp != null && StringUtils.hasText(emp.getEmpName()) ? emp.getEmpName() : "站内用户";
     }
 
-    // 留观/候诊时长的现算入口（列表、清单、台账共用）
-
-    /** 已留观小时数（向下取整）；不在留观态且没有结束时间时返回 null（不编造时长） */
+    /**
+     * 已留观小时数（向下取整）；不在留观态且没有结束时间时返回 null（不编造时长）
+     */
     private Long obsHoursOf(BizEmergency entity) {
         if (entity.getObservationStartTime() == null) {
             return null;
@@ -1392,7 +1380,11 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         return Math.max(0, Duration.between(entity.getObservationStartTime(), endAt).toHours());
     }
 
-    /** 留观档位：只有"还在观"的行才报警，已经离院的人挂在榜上是骗人 */
+    // 留观/候诊时长的现算入口（列表、清单、台账共用）
+
+    /**
+     * 留观档位：只有"还在观"的行才报警，已经离院的人挂在榜上是骗人
+     */
     private int obsLevelOf(BizEmergency entity) {
         if (!Objects.equals(entity.getEmergencyStatus(), EmergencyStatusEnum.OBSERVATION.getCode())) {
             return 0;
@@ -1411,12 +1403,12 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         return level == null ? 0 : level;
     }
 
-    /** 上限档与预警档的较大者：配置被写反时判定仍然单调（同 {@link EmergencyObservationPolicy#levelOf}） */
+    /**
+     * 上限档与预警档的较大者：配置被写反时判定仍然单调（同 {@link EmergencyObservationPolicy#levelOf}）
+     */
     private int obsThresholdOfMax() {
         return Math.max(obsPolicy.maxHours(), obsPolicy.warnHours());
     }
-
-    // 交班小工具
 
     private Long requireCurrentEmployee() {
         Long empId = UserUtils.getCurrentEmployeeId();
@@ -1426,7 +1418,11 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         return empId;
     }
 
-    /** 交班科室：不传则用当前登录岗位所在科室；两者都没有就拒，绝不"默认全院" */
+    // 交班小工具
+
+    /**
+     * 交班科室：不传则用当前登录岗位所在科室；两者都没有就拒，绝不"默认全院"
+     */
     private Long resolveHandoverDeptId(Long deptId) {
         if (deptId != null) {
             return deptId;
@@ -1454,7 +1450,9 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         return emp;
     }
 
-    /** 交出人此刻所在班次名（台账上"白班交的班"要能看出来）；查不到就留空，不编 */
+    /**
+     * 交出人此刻所在班次名（台账上"白班交的班"要能看出来）；查不到就留空，不编
+     */
     private String currentShiftName(Long deptId, Long empId) {
         LocalTime now = LocalTime.now();
         for (BizSchedule schedule : scheduleService.getTodaySchedule(deptId)) {
@@ -1491,5 +1489,11 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         }
         String trimmed = text.trim();
         return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
+    }
+
+    /**
+     * 兜底接收人（员工ID + 姓名）
+     */
+    private record Receiver(Long employeeId, String name) {
     }
 }

@@ -24,28 +24,48 @@ import java.math.RoundingMode;
 @Getter
 public enum NursingIndicatorEnum {
 
-    /** 基础护理合格率（检查类别 1） */
+    /**
+     * 基础护理合格率（检查类别 1）
+     */
     BASIC_NURSING("BASIC_NURSING", "基础护理合格率", "%", 100, "90", 1, 1, null),
-    /** 护理文书书写合格率（检查类别 4） */
+    /**
+     * 护理文书书写合格率（检查类别 4）
+     */
     NURSING_DOC("NURSING_DOC", "护理文书书写合格率", "%", 100, "95", 1, 4, null),
-    /** 跌倒/坠床发生率（不良事件 event_type=2） */
+    /**
+     * 跌倒/坠床发生率（不良事件 event_type=2）
+     */
     FALL_RATE("FALL_RATE", "跌倒/坠床发生率", "例/千床日", 1000, null, 2, null, 2),
-    /** 院内压力性损伤发生率（不良事件 event_type=3 且 acquired_flag=1） */
+    /**
+     * 院内压力性损伤发生率（不良事件 event_type=3 且 acquired_flag=1）
+     */
     UPPR_RATE("UPPR_RATE", "院内压力性损伤发生率", "例/千床日", 1000, null, 2, null, 3);
 
     private final String code;
     private final String label;
-    /** 单位：{@code %} 或例/千床日，直接落台账 unit 列 */
+    /**
+     * 单位：{@code %} 或例/千床日，直接落台账 unit 列
+     */
     private final String unit;
-    /** 分子/分母的放大倍数：合格率 100，千床日率 1000 */
+    /**
+     * 分子/分母的放大倍数：合格率 100，千床日率 1000
+     */
     private final int multiplier;
-    /** 目标值字符串，null 表示不硬设目标 */
+    /**
+     * 目标值字符串，null 表示不硬设目标
+     */
     private final String target;
-    /** 事实来源：1-检查表 2-不良事件+住院事实 */
+    /**
+     * 事实来源：1-检查表 2-不良事件+住院事实
+     */
     private final int sourceType;
-    /** 合格率类对应的检查类别，千床日类为 null */
+    /**
+     * 合格率类对应的检查类别，千床日类为 null
+     */
     private final Integer checkCategory;
-    /** 千床日类对应的不良事件类型（不良事件上报的事件类型列），检查表类为 null */
+    /**
+     * 千床日类对应的不良事件类型（不良事件上报的事件类型列），检查表类为 null
+     */
     private final Integer adverseEventType;
 
     NursingIndicatorEnum(String code, String label, String unit, int multiplier, String target,
@@ -99,12 +119,16 @@ public enum NursingIndicatorEnum {
         return num.multiply(BigDecimal.valueOf(multiplier)).divide(denominator, 2, RoundingMode.HALF_UP);
     }
 
-    /** 目标值（{@code %} 类有，千床日类为 null=不硬设目标） */
+    /**
+     * 目标值（{@code %} 类有，千床日类为 null=不硬设目标）
+     */
     public BigDecimal targetDecimal() {
         return target == null ? null : new BigDecimal(target);
     }
 
-    /** 指标方向：true=越高越好（合格率），false=越低越好（发生率） */
+    /**
+     * 指标方向：true=越高越好（合格率），false=越低越好（发生率）
+     */
     public boolean higherIsBetter() {
         return multiplier == 100;
     }

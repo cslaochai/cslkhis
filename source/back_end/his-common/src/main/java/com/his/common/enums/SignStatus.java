@@ -19,14 +19,6 @@ public enum SignStatus {
         this.text = text;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public String getText() {
-        return text;
-    }
-
     public static SignStatus parse(Integer code) {
         if (code == null) {
             return null;
@@ -45,5 +37,13 @@ public enum SignStatus {
             return s.text;
         }
         return code == null ? "—" : "未知(" + code + ")";
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getText() {
+        return text;
     }
 }

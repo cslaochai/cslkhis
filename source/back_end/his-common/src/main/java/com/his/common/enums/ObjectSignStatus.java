@@ -24,14 +24,6 @@ public enum ObjectSignStatus {
         this.text = text;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public String getText() {
-        return text;
-    }
-
     public static ObjectSignStatus parse(Integer code) {
         if (code == null) {
             return null;
@@ -50,5 +42,13 @@ public enum ObjectSignStatus {
             return s.text;
         }
         return code == null ? "—" : "未知(" + code + ")";
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getText() {
+        return text;
     }
 }

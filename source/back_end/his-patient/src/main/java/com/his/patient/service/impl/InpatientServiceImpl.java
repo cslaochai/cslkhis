@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.patient.enums.NursingLevelEnum;
 
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -200,13 +201,13 @@ public class InpatientServiceImpl implements InpatientService {
             InpatientDetailVO.SummaryInfo si = new InpatientDetailVO.SummaryInfo();
             BeanUtils.copyProperties(summary, si);
             vo.setSummary(si);
-            vo.setSummaryStatusText(InpatientLabels.summaryStatusText(summary.getSummaryStatus()));
+            vo.setSummaryStatusText(SummaryStatusEnum.labelOf(summary.getSummaryStatus()));
             if (info.getInpatientDays() == null) {
                 info.setInpatientDays(summary.getInpatientDays());
             }
         } else {
             // 未生成首页不是「正常」，要如实说
-            vo.setSummaryStatusText(InpatientLabels.summaryStatusText(null));
+            vo.setSummaryStatusText(SummaryStatusEnum.labelOf(null));
         }
 
         List<InpatientDetailVO.DiagnosisInfo> diagnoses = new ArrayList<>();
@@ -299,7 +300,7 @@ public class InpatientServiceImpl implements InpatientService {
         boolean reservedForSelf = Objects.equals(BedStatusEnum.LOCKED.getCode(), bed.getBedStatus())
                 && Objects.equals(dto.getPatientId(), bed.getPatientId());
         if (!Objects.equals(BedStatusEnum.FREE.getCode(), bed.getBedStatus()) && !reservedForSelf) {
-            throw new BusinessException("床位当前不可用（" + InpatientLabels.bedStatusText(bed.getBedStatus()) + "），请选择空闲床位");
+            throw new BusinessException("床位当前不可用（" + BedStatusEnum.labelOrUnknown(bed.getBedStatus()) + "），请选择空闲床位");
         }
 
         WardVO ward = bedMapper.selectWardById(dto.getWardId());
@@ -429,7 +430,7 @@ public class InpatientServiceImpl implements InpatientService {
             throw new BusinessException("目标床位不存在");
         }
         if (!Objects.equals(BedStatusEnum.FREE.getCode(), newBed.getBedStatus())) {
-            throw new BusinessException("目标床位当前不可用（" + InpatientLabels.bedStatusText(newBed.getBedStatus()) + "）");
+            throw new BusinessException("目标床位当前不可用（" + BedStatusEnum.labelOrUnknown(newBed.getBedStatus()) + "）");
         }
         if (!Objects.equals(newBed.getDeptId(), admission.getDeptId())) {
             throw new BusinessException("只能在本病区内换床；跨科室请走转科流程");
@@ -738,7 +739,7 @@ public class InpatientServiceImpl implements InpatientService {
     public List<BedVO> listBeds(Long wardId, Long deptId, Integer bedStatus) {
         List<BedVO> beds = bedMapper.selectBedList(wardId, deptId, bedStatus);
         for (BedVO b : beds) {
-            b.setBedStatusText(InpatientLabels.bedStatusText(b.getBedStatus()));
+            b.setBedStatusText(BedStatusEnum.labelOf(b.getBedStatus()));
         }
         return beds;
     }
@@ -776,9 +777,9 @@ public class InpatientServiceImpl implements InpatientService {
 
         List<BedMapVO.BedCard> beds = bedMapMapper.selectBedCards(deptId, wardId);
         for (BedMapVO.BedCard bed : beds) {
-            bed.setBedStatusText(InpatientLabels.bedStatusText(bed.getBedStatus()));
+            bed.setBedStatusText(BedStatusEnum.labelOf(bed.getBedStatus()));
             bed.setNursingLevelText(bed.getNursingLevel() == null
-                    ? "未评估" : InpatientRecordLabels.nursingLevelText(bed.getNursingLevel()));
+                    ? "未评估" : NursingLevelEnum.labelOf(bed.getNursingLevel()));
         }
         result.setBeds(beds);
         if (!beds.isEmpty()) {
@@ -882,7 +883,7 @@ public class InpatientServiceImpl implements InpatientService {
             throw new BusinessException("床位不存在");
         }
         if (!Objects.equals(BedStatusEnum.FREE.getCode(), bed.getBedStatus())) {
-            throw new BusinessException("床位当前不可用（" + InpatientLabels.bedStatusText(bed.getBedStatus()) + "），请选择空闲床位");
+            throw new BusinessException("床位当前不可用（" + BedStatusEnum.labelOrUnknown(bed.getBedStatus()) + "），请选择空闲床位");
         }
         occupyBed(bed, patientId, bed.getWardId());
     }

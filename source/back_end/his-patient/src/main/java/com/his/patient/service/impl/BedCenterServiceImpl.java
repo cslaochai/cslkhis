@@ -5,11 +5,16 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.common.enums.SysGenderEnum;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.BedAllocateStatusEnum;
 import com.his.patient.enums.BedStatusEnum;
 import com.his.patient.enums.BedWaitStatusEnum;
+import com.his.patient.enums.BedPriorityEnum;
+import com.his.patient.enums.BedTypeEnum;
+import com.his.patient.enums.BedGenderLimitEnum;
+import com.his.patient.enums.BedAllocTypeEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.BedCenterService;
 import com.his.patient.service.InpatientService;
@@ -202,10 +207,10 @@ public class BedCenterServiceImpl implements BedCenterService {
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
-        if (!BedCenterLabels.isValidPriority(dto.getPriority() == null ? 1 : dto.getPriority())) {
+        if (BedPriorityEnum.labelOf(dto.getPriority() == null ? 1 : dto.getPriority()) == null) {
             throw new BusinessException("优先级取值不合法（应为 1-普通 2-急 3-危重）");
         }
-        if (!BedCenterLabels.isValidGenderLimit(dto.getGenderLimit() == null ? 0 : dto.getGenderLimit())) {
+        if (BedGenderLimitEnum.labelOf(dto.getGenderLimit() == null ? 0 : dto.getGenderLimit()) == null) {
             throw new BusinessException("性别限制取值不合法（应为 0-不限 1-限男床 2-限女床）");
         }
 
@@ -315,7 +320,7 @@ public class BedCenterServiceImpl implements BedCenterService {
             throw new BusinessException("床位不存在");
         }
         if (!Objects.equals(BedStatusEnum.FREE.getCode(), bed.getBedStatus())) {
-            throw new BusinessException("床位当前不可用（" + InpatientLabels.bedStatusText(bed.getBedStatus()) + "），请选择空闲床位");
+            throw new BusinessException("床位当前不可用（" + BedStatusEnum.labelOrUnknown(bed.getBedStatus()) + "），请选择空闲床位");
         }
         if (bed.getPatientId() != null) {
             throw new BusinessException("床位仍挂着其他患者，不能安排");
@@ -538,7 +543,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         BizBedWait wait = requireWait(dto.getWaitId());
         if (!Objects.equals(BedWaitStatusEnum.ARRANGED.getCode(), wait.getWaitStatus())) {
             throw new BusinessException("只有「已安排床位」的排队记录可以退回队列（当前："
-                    + BedCenterLabels.waitStatusText(wait.getWaitStatus()) + "）");
+                    + Objects.toString(BedWaitStatusEnum.labelOf(wait.getWaitStatus()), "未知(" + wait.getWaitStatus() + ")") + "）");
         }
         String reason = StringUtils.hasText(dto.getReason()) ? dto.getReason() : "床位中心退回队列";
         doRelease(wait, reason, BedAllocateStatusEnum.RELEASED.getCode());
@@ -579,7 +584,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         BizBedWait wait = requireWait(dto.getWaitId());
         if (!Objects.equals(BedWaitStatusEnum.ARRANGED.getCode(), wait.getWaitStatus())) {
             throw new BusinessException("只有「已安排床位」的排队记录可以办理入院（当前："
-                    + BedCenterLabels.waitStatusText(wait.getWaitStatus()) + "）");
+                    + Objects.toString(BedWaitStatusEnum.labelOf(wait.getWaitStatus()), "未知(" + wait.getWaitStatus() + ")") + "）");
         }
         if (wait.getAssignedBedId() == null || wait.getAssignedWardId() == null) {
             throw new BusinessException("该排队记录没有已安排的床位，请先在床位池安排床位");
@@ -687,7 +692,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         BizBedWait wait = requireWait(waitId);
         if (Objects.equals(BedWaitStatusEnum.ADMITTED.getCode(), wait.getWaitStatus()) || Objects.equals(BedWaitStatusEnum.CANCELLED.getCode(), wait.getWaitStatus())) {
             throw new BusinessException("该排队记录已结束（"
-                    + BedCenterLabels.waitStatusText(wait.getWaitStatus()) + "），不需要再匹配床位");
+                    + Objects.toString(BedWaitStatusEnum.labelOf(wait.getWaitStatus()), "未知(" + wait.getWaitStatus() + ")") + "），不需要再匹配床位");
         }
         String need = defaultStr(wait.getBedType(), "normal");
         List<BedMatchVO> candidates = allocateMapper.selectMatchableBeds();
@@ -712,7 +717,7 @@ public class BedCenterServiceImpl implements BedCenterService {
             b.setMatchLevel(level);
             b.setMatchLevelText(matchLevelText(level));
             b.setMatchScore(score);
-            b.setBedTypeText(BedCenterLabels.bedTypeText(b.getBedType()));
+            b.setBedTypeText(BedTypeEnum.labelOf(b.getBedType()));
             b.setExpectWardMatched(expectMatched);
             b.setGenderHint(wait.getGenderLimit() != null && !Objects.equals(0, wait.getGenderLimit()));
             b.setIsolationHint(Objects.equals(1, wait.getIsolationFlag()));
@@ -749,8 +754,8 @@ public class BedCenterServiceImpl implements BedCenterService {
         List<BedPoolVO.BedRow> rows = allocateMapper.selectBedPool(deptId, wardId, bedStatus, bedType,
                 keyword, offset, Math.max(1L, query.getPageSize()));
         for (BedPoolVO.BedRow row : rows) {
-            row.setBedStatusText(InpatientLabels.bedStatusText(row.getBedStatus()));
-            row.setBedTypeText(BedCenterLabels.bedTypeText(row.getBedType()));
+            row.setBedStatusText(BedStatusEnum.labelOf(row.getBedStatus()));
+            row.setBedTypeText(BedTypeEnum.labelOf(row.getBedType()));
         }
         vo.setRows(rows);
         return vo;
@@ -801,14 +806,14 @@ public class BedCenterServiceImpl implements BedCenterService {
 
         List<BedMapVO.BedCard> beds = bedMapMapper.selectBedCards(deptId, wardId);
         for (BedMapVO.BedCard bed : beds) {
-            bed.setBedStatusText(InpatientLabels.bedStatusText(bed.getBedStatus()));
+            bed.setBedStatusText(BedStatusEnum.labelOf(bed.getBedStatus()));
             // 预留去向：锁定床必须说得出"留给谁、多急"。否则护士站看到的就是一张
             // 点开什么都没有的死床，床位中心也没法在图上直接放人。
             if (bed.getReservedPriority() != null) {
-                bed.setReservedPriorityText(BedCenterLabels.priorityText(bed.getReservedPriority()));
+                bed.setReservedPriorityText(BedPriorityEnum.labelOf(bed.getReservedPriority()));
             }
             if (bed.getAllocType() != null) {
-                bed.setAllocTypeText(BedCenterLabels.allocTypeText(bed.getAllocType()));
+                bed.setAllocTypeText(BedAllocTypeEnum.labelOf(bed.getAllocType()));
             }
             // 动作可用性一律服务端算：前端不自判状态机，避免"页面说能点、接口说不行"
             Integer st = bed.getBedStatus();
@@ -1040,11 +1045,11 @@ public class BedCenterServiceImpl implements BedCenterService {
     private BedWaitVO decorate(BizBedWait wait, List<Long> waitingIds) {
         BedWaitVO vo = new BedWaitVO();
         BeanUtils.copyProperties(wait, vo);
-        vo.setGenderText(InpatientLabels.genderText(wait.getGender()));
-        vo.setBedTypeText(BedCenterLabels.bedTypeText(wait.getBedType()));
-        vo.setPriorityText(BedCenterLabels.priorityText(wait.getPriority()));
-        vo.setGenderLimitText(BedCenterLabels.genderLimitText(wait.getGenderLimit()));
-        vo.setWaitStatusText(BedCenterLabels.waitStatusText(wait.getWaitStatus()));
+        vo.setGenderText(SysGenderEnum.getText(wait.getGender()));
+        vo.setBedTypeText(BedTypeEnum.labelOf(wait.getBedType()));
+        vo.setPriorityText(BedPriorityEnum.labelOf(wait.getPriority()));
+        vo.setGenderLimitText(BedGenderLimitEnum.labelOf(wait.getGenderLimit()));
+        vo.setWaitStatusText(Objects.toString(BedWaitStatusEnum.labelOf(wait.getWaitStatus()), "未知(" + wait.getWaitStatus() + ")"));
 
         long hours = hoursBetween(wait.getRegisterTime(), LocalDateTime.now());
         vo.setWaitHours(hours);

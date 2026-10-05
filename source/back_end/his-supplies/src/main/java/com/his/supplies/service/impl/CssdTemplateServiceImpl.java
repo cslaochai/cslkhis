@@ -8,6 +8,7 @@ import com.his.security.UserUtils;
 import com.his.supplies.dto.CssdDTO;
 import com.his.supplies.entity.BizCssdPackTemplate;
 import com.his.supplies.entity.BizCssdPackTemplateItem;
+import com.his.supplies.enums.CssdSterilizeMethodEnum;
 import com.his.supplies.mapper.BizCssdPackTemplateItemMapper;
 import com.his.supplies.mapper.BizCssdPackTemplateMapper;
 import com.his.supplies.service.CssdTemplateService;
@@ -35,9 +36,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class CssdTemplateServiceImpl implements CssdTemplateService {
-
-    private static final Map<Integer, String> METHOD_NAME = Map.of(
-            1, "高压蒸汽", 2, "环氧乙烷", 3, "低温等离子");
 
     private final BizCssdPackTemplateMapper templateMapper;
     private final BizCssdPackTemplateItemMapper itemMapper;
@@ -106,7 +104,7 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
 
     @Transactional(rollbackFor = Exception.class)
     public CssdPackTemplateVO upsert(CssdDTO.TemplateUpsert dto) {
-        if (!METHOD_NAME.containsKey(dto.getSterilizeMethod())) {
+        if (CssdSterilizeMethodEnum.fromCode(dto.getSterilizeMethod()) == null) {
             throw new BusinessException("灭菌方式取值不合法（1-高压蒸汽 2-环氧乙烷 3-低温等离子）");
         }
         String code = tr(dto.getTemplateCode());
@@ -196,7 +194,7 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
         vo.setTemplateCode(t.getTemplateCode());
         vo.setPackName(t.getPackName());
         vo.setSterilizeMethod(t.getSterilizeMethod());
-        vo.setSterilizeMethodText(METHOD_NAME.get(t.getSterilizeMethod()));
+        vo.setSterilizeMethodText(CssdSterilizeMethodEnum.labelOf(t.getSterilizeMethod()));
         vo.setStatus(t.getStatus());
         vo.setRemark(t.getRemark());
         vo.setItems(items);

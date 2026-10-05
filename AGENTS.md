@@ -436,12 +436,28 @@
   `his-common/enums`；同名字段在不同表里表达不同含义时是两个不同枚举，各自带业务主语
   （`BedWaitStatusEnum` / `BedAllocateStatusEnum`，不是一个 `StatusEnum` 通吃）。
   **禁止**按表名造 `BizXxxStatusEnum`，**禁止**无主语的 `StatusEnum`/`TypeEnum`/`ResultEnum`。
-- **文案差异不产生新枚举**：码值相同、中文叫法不同时**复用枚举**，各模块的叫法留在自己的
-  `XxxLabels`（如 `InpatientRecordLabels.recordTypeText`）里；不许为一句话的措辞复制出一个枚举，
-  也不许为改文案去动公共枚举的 `label`。
-- **枚举的唯一模板**（`@Getter` + `code`/`label` + `fromCode` + `labelOf`）：新建与本轮改造到的枚举一律照此写。
-  `labelOf(Integer)` 对**不在枚举内的码值返回 null**（脏数据由调用侧决定兜底文案），
-  不许回落到某个合法文案 —— 否则「未知 9」会渲染成「草稿」，把数据问题读成业务状态。
+- **码值 → 文案的映射一律进枚举，禁止 `*Labels` 文案壳类**：集中写 `switch` + `未知(code)` 兜底的
+  `XxxLabels` / `XxxText` 壳类是反模式（本次重构已把 patient 模块的 5 个纯文案壳类下沉枚举、调用方直调枚举）。
+  新建码值时直接在枚举里写 `label`，**不要再开一个壳类**把码值翻译成文案。
+  唯一例外：含**临床判定 / 计算口径**（如 Aldrete 评分、相容性判定、记账折算、时长格式化）的
+  `support` 类可保留，但里面不得再写 `未知(code)` 兜底——未知码值一律返回空串。
+- **双方法口径**：每个枚举提供两个静态翻译方法，语义严格区分：
+  - `labelOf(Integer)`——**展示用**：`null` 或不在枚举内（脏数据）一律返回空串 `""`，
+    不回落到某个合法文案、也不暴露「未知(n)」。**绝不返回 null**（返回 null 会把 NPE 风险甩给调用方，
+    而返回 `""` 是界面最安全的「无此文案」）。
+  - `labelOrUnknown(Integer)`——**异常 / 审计 / 合规用**：`null` 或不在枚举内返回「未知(n)」
+    （`null` 本身渲染成「未知」），**保留原始码值**以便排查脏数据。业务异常消息、审计日志、
+    合规报表里需要让人看到「到底是哪个脏值」时才用，绝不用它喂前端展示。
+  - 机械判据：`grep -rn "未知(" --include=*.java` 命中的，必须只是 `labelOrUnknown` 的方法体、
+    或显式 `Objects.toString(xxxEnum.labelOf(...), "未知(n)")` 这类手写等价物；纯展示路径出现「未知(n)」即违规。
+  - 迁移进度：patient 模块的 5 个纯文案壳类与背靠的 26 个枚举已下沉（含 `his-common` 的 `AdmitStatusEnum` 等）；
+    其余模块（emr / system / supplies / pharmacy / medicaltech / operation / report / miniapp 及 common 其余枚举）
+    仍用旧 `未知(code)` 兜底，属待迁移项——新代码一律按双方法写，存量按此口径逐步收口。
+- **文案差异不产生新枚举**：码值相同、中文叫法不同时**复用枚举**（文案以枚举 `label` 为唯一来源），
+  不同模块若确有不可调和的措辞差异，差异放在调用侧局部常量 / 方法，且仍调枚举 `labelOf` 做兜底；
+  不许为一句话的措辞复制出一个枚举，也不许为改文案去动公共枚举的 `label`。
+- **枚举的唯一模板**（`@Getter` + `code`/`label` + `fromCode` + `labelOf` + `labelOrUnknown`）：
+  新建与改造到的枚举一律照此写；`labelOf` 必返回 `""`、不得返回 null，异常路径统一走 `labelOrUnknown`。
 - **0/1 三兄弟按列注释的含义选，不按字段名前缀选**：`是否 xxx` → `YesOrNoEnum`（YES=1 是 / NO=0 否），
   启用停用 → `EnableStatusEnum`，删除标志 → `DelFlagEnum`。
 - **技术阈值不是码值**，继续用 `static final int`：列宽（`W_*`、`*_MAX_LENGTH`）、小数位（`*_SCALE`）、

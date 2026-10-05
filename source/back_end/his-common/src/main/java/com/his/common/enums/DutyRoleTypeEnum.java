@@ -12,9 +12,13 @@ import lombok.Getter;
 @Getter
 public enum DutyRoleTypeEnum {
 
-    /** 主班：该点位当天的第一责任人 */
+    /**
+     * 主班：该点位当天的第一责任人
+     */
     PRIMARY(1, "主班"),
-    /** 副班：主班不可用时顶上 */
+    /**
+     * 副班：主班不可用时顶上
+     */
     SECONDARY(2, "副班");
 
     private final int code;

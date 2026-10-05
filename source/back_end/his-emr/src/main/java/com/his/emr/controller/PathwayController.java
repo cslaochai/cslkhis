@@ -28,8 +28,6 @@ public class PathwayController {
 
     private final PathwayService pathwayService;
 
-    // 模板
-
     @PreAuthorize("hasAuthority('qc:clinicalPath:list')")
     @Operation(summary = "模板分页")
     @PostMapping("/listPage")

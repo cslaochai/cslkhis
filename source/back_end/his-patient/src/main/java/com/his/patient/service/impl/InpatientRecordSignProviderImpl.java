@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.patient.enums.SummaryStatusEnum;
 
 import com.his.common.entity.SignSubject;
 import com.his.common.enums.RecordStatusEnum;
@@ -62,7 +63,7 @@ public class InpatientRecordSignProviderImpl implements SignableContentProvider,
                 r.getDeptId(),
                 r.getDeptName(),
                 r.getRecordStatus(),
-                InpatientRecordLabels.recordStatusText(r.getRecordStatus()),
+                SummaryStatusEnum.labelOf(r.getRecordStatus()),
                 InpatientRecordSignProvider.canonical(r));
     }
 

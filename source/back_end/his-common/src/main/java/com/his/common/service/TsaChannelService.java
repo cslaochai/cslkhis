@@ -6,10 +6,6 @@ public interface TsaChannelService {
 
     public static final String TSA_CODE = "LOCAL";
 
-    /** 一次盖章的结果（三列缺一不可：签名行 time_source=3 时都要落库） */
-    public record Stamp(String serial, LocalDateTime tsaTime, String tokenValue) {
-    }
-
     String name();
 
     boolean available();
@@ -21,4 +17,10 @@ public interface TsaChannelService {
     boolean verifyToken(String serial, String digestHex, LocalDateTime tsaTime, String tokenValue);
 
     void invalidate();
+
+    /**
+     * 一次盖章的结果（三列缺一不可：签名行 time_source=3 时都要落库）
+     */
+    public record Stamp(String serial, LocalDateTime tsaTime, String tokenValue) {
+    }
 }

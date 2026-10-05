@@ -12,30 +12,50 @@ import lombok.Data;
 @Data
 public class SignCommandDTO {
 
-    /** 签名对象类型（码值权威见 {@link com.his.common.enums.SignBizType}） */
+    /**
+     * 签名对象类型（码值权威见 {@link com.his.common.enums.SignBizType}）
+     */
     private Integer bizType;
 
-    /** 签名对象ID */
+    /**
+     * 签名对象ID
+     */
     private Long bizId;
 
-    /** 签名场景（码值权威见 {@link com.his.common.enums.SignScene}） */
+    /**
+     * 签名场景（码值权威见 {@link com.his.common.enums.SignScene}）
+     */
     private Integer signScene;
 
-    /** 签名人员工ID（员工档案主键） */
+    /**
+     * 签名人员工ID（员工档案主键）
+     */
     private Long signerId;
 
-    /** 签名人姓名（快照） */
+    /**
+     * 签名人姓名（快照）
+     */
     private String signerName;
-    /** 签名人科室ID（快照） */
+    /**
+     * 签名人科室ID（快照）
+     */
     private Long signerDeptId;
-    /** 签名人科室名称（快照） */
+    /**
+     * 签名人科室名称（快照）
+     */
     private String signerDeptName;
-    /** 签名人职称 */
+    /**
+     * 签名人职称
+     */
     private String signerTitle;
 
-    /** 来源 IP（留痕，可为空） */
+    /**
+     * 来源 IP（留痕，可为空）
+     */
     private String clientIp;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

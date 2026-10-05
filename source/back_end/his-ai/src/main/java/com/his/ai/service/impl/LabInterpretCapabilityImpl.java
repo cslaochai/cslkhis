@@ -289,14 +289,6 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
         return result;
     }
 
-    private static String genderText(Integer gender) {
-        if (gender == null) {
-            return "（未填写）";
-        }
-        SysGenderEnum g = SysGenderEnum.fromCode(gender);
-        return g == null ? "未知" : g.getLabel();
-    }
-
     private static String truncate(String text, int maxLength) {
         if (!StringUtils.hasText(text)) {
             return text;
@@ -326,7 +318,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
         vo.setRecordId(record.getId());
         vo.setRecordNo(record.getRecordNo());
         vo.setPatientName(record.getPatientName());
-        vo.setGenderText(genderText(record.getGender()));
+        vo.setGenderText(SysGenderEnum.getText(record.getGender()));
         vo.setAge(record.getAge());
         vo.setLaboratoryItemName(record.getLaboratoryItemName());
         vo.setReportTime(record.getExecuteTime());
@@ -521,7 +513,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
                                                       List<LabItemOverviewVO> items,
                                                       List<LabTrendVO> trends) {
         Map<String, Object> variables = new HashMap<>();
-        variables.put("gender", genderText(record.getGender()));
+        variables.put("gender", SysGenderEnum.getText(record.getGender()));
         variables.put("age", record.getAge() == null ? "（未填写）" : record.getAge() + "岁");
         variables.put("itemName", nullToDash(record.getLaboratoryItemName()));
         variables.put("diagnosis", nullToDash(record.getDiagnosis()));

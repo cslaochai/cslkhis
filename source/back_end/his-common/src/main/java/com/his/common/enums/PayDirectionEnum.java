@@ -21,19 +21,6 @@ public enum PayDirectionEnum {
         this.desc = desc;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
-    /** 该方向在金额上该带的符号（收款为正、退款为负） */
-    public int sign() {
-        return this == CHARGE ? 1 : -1;
-    }
-
     public static PayDirectionEnum fromCode(Integer code) {
         if (code == null) {
             return null;
@@ -49,5 +36,20 @@ public enum PayDirectionEnum {
     public static String descOf(Integer code) {
         PayDirectionEnum item = fromCode(code);
         return item == null ? "未知方向" : item.desc;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
+    }
+
+    /**
+     * 该方向在金额上该带的符号（收款为正、退款为负）
+     */
+    public int sign() {
+        return this == CHARGE ? 1 : -1;
     }
 }

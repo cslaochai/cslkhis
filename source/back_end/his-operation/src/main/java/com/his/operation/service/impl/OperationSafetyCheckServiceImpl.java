@@ -7,6 +7,7 @@ import com.his.operation.entity.BizOperationSafetyCheck;
 import com.his.operation.mapper.BizOperationApplyMapper;
 import com.his.operation.mapper.BizOperationSafetyCheckMapper;
 import com.his.operation.service.OperationSafetyCheckService;
+import com.his.operation.enums.OperationApplyStatusEnum;
 import com.his.operation.support.OperationApplyLabels;
 import com.his.operation.support.SafetyCheckItems;
 import com.his.security.entity.CurrentUser;
@@ -102,14 +103,14 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
             throw new BusinessException("手术申请单不存在");
         }
         Integer status = apply.getOperationStatus();
-        if (Objects.equals(OperationApplyLabels.ST_PENDING_SCHEDULE, status)) {
+        if (Objects.equals(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode(), status)) {
             throw new BusinessException("手术单 " + apply.getApplyNo()
                     + " 尚未排台，不能做安全核查（手术间/时段/主刀都没定，三方核对的是一个不存在的手术）");
         }
-        if (Objects.equals(OperationApplyLabels.ST_CANCELLED, status)) {
+        if (Objects.equals(OperationApplyStatusEnum.CANCELLED.getCode(), status)) {
             throw new BusinessException("手术单 " + apply.getApplyNo() + " 已取消，不存在要核查的手术");
         }
-        if (Objects.equals(OperationApplyLabels.ST_FINISHED, status)) {
+        if (Objects.equals(OperationApplyStatusEnum.FINISHED.getCode(), status)) {
             throw new BusinessException("手术单 " + apply.getApplyNo()
                     + " 已完成，不能再补签安全核查 —— 术后补一条核查记录是伪造，核查的价值就在「在切皮之前核过」");
         }
@@ -194,8 +195,8 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
     private void fillCanSign(SafetyCheckVO.PhaseCard card, BizOperationApply apply,
                              Map<Integer, SafetyCheckVO> signedByPhase) {
         Integer status = apply.getOperationStatus();
-        boolean inFlow = Objects.equals(OperationApplyLabels.ST_SCHEDULED, status)
-                || Objects.equals(OperationApplyLabels.ST_PREOP_CHECKED, status);
+        boolean inFlow = Objects.equals(OperationApplyStatusEnum.SCHEDULED.getCode(), status)
+                || Objects.equals(OperationApplyStatusEnum.PREOP_CHECKED.getCode(), status);
         int maxPhase = signedByPhase.keySet().stream().mapToInt(Integer::intValue).max().orElse(0);
         int phase = card.getPhase();
         if (signedByPhase.containsKey(phase)) {

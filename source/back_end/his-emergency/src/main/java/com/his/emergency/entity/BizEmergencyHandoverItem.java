@@ -86,7 +86,9 @@ public class BizEmergencyHandoverItem extends BaseEntity {
      */
     private String disposition;
 
-    /** 逐条补充交代（过敏史/管路/家属联系方式等，截到 300） */
+    /**
+     * 逐条补充交代（过敏史/管路/家属联系方式等，截到 300）
+     */
     private String handoverNote;
 
     /**
