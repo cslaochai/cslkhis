@@ -66,7 +66,7 @@
 | `AiConfigProvider` | `ai.*` 配置快照 + 能力开关/超时/模型分流 |
 | `AiHealthService` | `/ai/healthCheck` 配置快照（不产生费用） |
 
-### 2.2 能力清单（17 个，key ↔ yml `ai.features.<key>`）
+### 2.2 能力清单（18 个，key ↔ yml `ai.features.<key>`）
 
 | key | 能力 | 触达端 | 降级语义 |
 |---|---|---|---|
@@ -78,6 +78,7 @@
 | `emr_extract` | 病历自由文本结构化抽取（不写库，逐字段确认） | 医生工作站 | 标签逐字切分 |
 | `emr_draft` | 病历现病史草拟（只草拟现病史） | 医生工作站 | 无草稿可给，如实说 |
 | `patient_report_explain` | 患者端报告大白话解读（事实+词典，模型串话） | 患者端 | 朴素文案 |
+| `patient_imaging_explain` | 患者端影像报告解读（**只解读不做诊断结论**，NMPA 三类证红线：阴阳性/危急/发布状态代码算；检查介绍/注意来自 `sys_imaging_plain_item` 词典（可穷举禁走模型），模型只把描述/结论原文串成白话、逐段过 `PatientTextGuard`，P6 起） | 患者端小程序报告详情 | 词典与事实照常，白话段落缺位（`degraded=true` + 原因），绝不编白话 |
 | `patient_triage_normalize` | 导诊口语归一（口语→症状词，不推荐科室） | 患者端 | 原话直查规则表 |
 | `knowledge_qa` | 知识库问答 RAG（向量召回 + 生成，只科普不判定） | 院内/患者端 | 返回召回原文片段 |
 | `previsit_summary` | 预问诊病史摘要（量表结构由代码版本化下发，模型只把结构化作答凝成就诊用摘要，P2 起） | 患者端（生成）→ 医生工作站（只读报告卡） | 规则模板拼接（`source=rule`），摘要不缺位 |
@@ -100,11 +101,12 @@
 - P3 实测口径：P2 记录的「偶发空 content」在 `insurance_evidence` 上定位出一个**自伤放大因子**——`maxTokens=1024` 时推理模型的思考过程就可能把输出额度烧光，content 恒空（同一审核连续两轮复现）。对齐 lab_interpret 等能力的 house 值 2048 后消除；跨能力统一 `OUTPUT_TOKEN_LIMIT=2048`，其余偶发空仍按降级处理。
 - P4 实测口径（G-11 收口后）：`output_digest` 不再落模型输出原文，由 `AiAuditDigestSupport` 统一组装——LLM 输出 DTO 标 `@AiAuditPlain` 的 String 字段过 `SensitiveMaskUtils` 脱敏后明文（截 60 字符），未标注 String 字段落「字段名=SHA-256 前 12 位」指纹，`List<String>`（如交接班 focus）整体明文截 60，总长超 480 截断加 `...`。保住 AI 管理台「白名单字段排障可读」与「非白名单临床文本不入库」两条。存量能力（icd10/drug_audit/emr_draft 等 16 键）经执行器统一组装自动生效，无需逐能力改造。
 - P5 实测口径（`voice_transcribe`）：① DashScope qwen3-asr-flash 契约——`input_audio.data` 必须是 **data URI**（`data:audio/{format};base64,...`，裸 base64 被当 URL 解析报 `provided URL does not appear to be valid`），且 content **只允许 audio part**（混入 text part 整个输入被拒 `asr task does not support this input`）；② RestClient 读上游 400 错误体必须用 `retrieve().body(String)`——`exchange()` + SimpleClientHttpRequestFactory 读错误流抛 IOException，把 400 的真实原因包成 `I/O error` 丢失；③ 前端 `transcribeVoice` 必须请求级显式 `Content-Type: multipart/form-data`——`request.js` axios 实例默认 `application/json`，axios 1.x 对「FormData + JSON 头」会走 `formDataToJSON` 把文件序列化成 JSON 体，后端 `MultipartException`（接口脚本用 node fetch 测不出这个坑，只有真浏览器暴露）；④ `stopVoiceRecord` 不在 stop() 后同步复位录音态——stop() 到 onstop 之间按钮若恢复可点，转写还没开始用户就能再点一次；复位交给 onstop 内 `closeVoiceDialog`，与 `voiceTranscribing` 同步块内切换无中间态。
+- P6 实测口径（`patient_imaging_explain`）：① **词典命中 + source=model 必然 degraded=true 的自伤 bug**——词典命中时 examIntro 由词典提供、模型的 examIntro 本地变量恒 null，降级判断若把它计入缺段，模型四段全过闸也会误报「部分白话段落未通过患者文案安全闸」；修复口径=缺段判断按「词典是否接管 examIntro」分开算（`plain != null || examIntro != null`）。② 验收脚本登录必须走 SM2（`GET /auth/publicKey` → `sm2.doEncrypt(password, pub, 1)`）——登录接口已强制加密，明文密码被拒「登录密码未加密传输」。③ 影像白话段落缺位与检验解读「词典填满」**不对称是设计内行为**：影像词典只管「这项检查查什么/注意什么」，描述与结论的白话只能靠模型转述，模型缺席时缺位、绝不编白话（`source=rule`）。④ biz_report.id 无自增（MP ASSIGN_ID 雪花），验收脚本插种子必须手工造唯一 id；患者端无浏览器 UI，P6 UI 口径=接口级断言 + 小程序代码审读（wxml 渲染 criticalAlert 置顶 / degraded 说明条 / 5 段白话，degraded 照常渲染不弹失败）。
 
 ### 2.4 前端接线实测
 
 - `src/api/ai.js` 已备 19 组函数（P3 增 `judgeInsuranceEvidence`；P4 增 `scanWardDeterioration` / `explainDeterioration` / `composeNursingHandover`；P5 增 `transcribeVoice`，FormData 上传、请求级 multipart 头见 §2.3）；`getAiAuditLogPage` 与知识库管理、草稿留痕 diff 查询由 **`views/ai/AiAdminView.vue`**（菜单 2942「AI 管理台」：调用审计 + 知识库问答/维护 + 草稿留痕四签页）消费，维护入口挂 `ai:knowledge:manage`，diff 查询复用 `ai:admin:list` 不新增菜单；医保证据判定由 **`views/insurance/ComplianceAuditView.vue`** 详情抽屉内嵌消费（P3 起）；危重预警由 **`components/his/BedMapWorkspace.vue`**（床位图占床卡 MEWS 角标 + 预警弹窗，护士工作站/床位中心共用）消费、交接班摘要由 **`components/his/NursingHandoverWorkspace.vue`**（护士工作站第四视图）消费（P4 起，均无新菜单）；语音口述由 **`views/doctor-workstation/DoctorWorkstationView.vue`** 病历编辑区「语音口述」弹窗消费（MediaRecorder 录音 → 转写 → 可编辑 → 填入现病史/拟草稿，P5 起）；随访电话外呼登记由 **`views/followup/FollowupView.vue`** 行内「电话外呼」弹窗消费（明文电话供拨号 + 话术稿带出 + AI 拟话术 + 接通/未接通回填，P5 起）。
-- 小程序（`source/miniapp`，P2 起）：`utils/api.js` 增 `previsitApi`（量表/提交/回显）与 `followupApi`（我的随访/反馈回写）；新增 `pages/previsit`（候诊页「预问诊」按钮进入）与 `pages/followup`（首页「我的随访」进入，微信站内信跳转路径即 `pages/followup/followup`），均已注册 `app.json`。
+- 小程序（`source/miniapp`，P2 起）：`utils/api.js` 增 `previsitApi`（量表/提交/回显）与 `followupApi`（我的随访/反馈回写）；新增 `pages/previsit`（候诊页「预问诊」按钮进入）与 `pages/followup`（首页「我的随访」进入，微信站内信跳转路径即 `pages/followup/followup`），均已注册 `app.json`；P6 起 `aiApi` 增 `imagingExplain`，由 `pages/reportDetail` 消费（type 1 报告头卡「AI 解读」按钮 + 解读卡：criticalAlert 置顶、degraded 说明条、检查介绍/描述白话/结论白话/建议白话/免责 5 段）。
 - AI 能力散落在各业务页内嵌使用；`report:bi:list`（BI 驾驶舱，菜单 906，父级 1200 报表统计）与「AI 运营问数」（菜单 2940）是运营层两个数据页。
 
 ---
@@ -131,6 +133,7 @@
 | G-14 | 病历现病史靠医生打字：问诊时双手被占用（查体/操作），文书负担是行业公认最痛的缺口 | §8 对标（卫宁/讯飞语音病历均为旗舰能力） | 现病史书写耗时，是 AI 省时的最大单点 | **P5 完成**（`voice_transcribe`：医生工作站「语音口述」弹窗 MediaRecorder 录音 → qwen3-asr-flash 转写 → 医生改 → 填入现病史或喂既有 `emr_draft` 拟草稿，G-10 留痕自动接上；审计 capability_key='voice_transcribe'，output_digest=text+SHA256 前 12 位；失败如实报错不造文本；权限复用 `opd:doctorWorkstation:edit`） |
 | G-15 | 随访电话外呼通道缺位（G-06 遗留决策项）：站内信已通，电话触达无登记无留痕 | P2 收尾记录 | 电话随访是否打过、打了几次、接没接通无处可查 | **P5 完成**（sql/231 `biz_followup_task` 加外呼登记 4 列 + `FollowupCallChannelService` 配置分支 `followup.call-channel`（mock=只登记待呼不假装接通）+ 登记→人工拨号→回填结果状态机（attempts 累计、callStatus 1待呼/2随访中/3未接通等）+ 随访工作台「电话外呼」弹窗；权限复用 `inpatient:followup:edit` 零新菜单；真实外呼通道接入属后续决策项） |
 | G-16 | 全部能力共用一个模型：`model`/`modelLite` 两档全局值，无法按能力分模型（问数用轻量、文书用重模型） | `AiConfigProvider.modelOf(boolean)` 单一签名 | 模型升级/降本只能一刀切，动一发牵全身 | **P5 完成**（per-capability 覆盖 map `ai.models.<key>`，`modelOf(capability, lite)`：覆盖命中→用之，否则默认；healthCheck 按能力带模型快照；`operation_qa`/`emr_draft` 已配 `deepseek-v4.1-flash` 作为覆盖样例） |
+| G-17 | 检查报告（CT/B超/放射/心电）患者端零解读：P1 决策是「词典改写专业文本只会丢信息」，reportDetail 对 type 1 明确拒绝，患者拿到的只有放射科专业文本 + 一句「去问医生」 | §8.3 候选（行业参照：讯飞影像报告生成已达实用门槛）；**NMPA 三类证红线：只做报告解读、不做诊断结论** | 影像报告服务闭环断在最后一米：患者看不懂结论，又没有可用的辅助解释入口 | **P6 完成**（`patient_imaging_explain`：sql/232 `sys_imaging_plain_item` 词典（19 条种子）先行「这项检查是查什么」，模型白话串讲描述/结论，逐段过 `PatientTextGuard`；推翻 P1 的拒绝边界，但换的是模型白话而非词典改写——P1 反对的「词典改写影像文本」仍然不碰。接口验收 25/25 PASS） |
 
 ---
 
@@ -167,6 +170,7 @@
 | **P3（已完成）** | G-07 医保审核证据判定：`insurance_evidence` 能力（prompts/insurance-evidence.md + DTO/VO 契约 + 能力实现 + Controller，复用 `finance:complianceAudit:list` 无新菜单/SQL）+ his-charge `getAiEvidenceNarrative` 证据叙事面 + 合规审核台账详情抽屉 AI 判定区 | G-07 |
 | **P4（已完成）** | ① G-11 审计收口：`AiAuditDigestSupport`（`@AiAuditPlain` 白名单 + 未标注 String 字段 SHA-256 指纹），执行器统一组装、16 能力全部生效；② G-12 `deterioration_alert` 危重预警（his-patient 体征事实面 `latestVitalsByWard`/`latestVitalByAdmission` + `DeteriorationScoreRules` MEWS+SpO2 代码评分 + 床位图角标/预警弹窗，达标才调模型）；③ G-13 `nursing_handover` 护理交接班摘要（病区×班次事实聚合 + SBAR 摘要 + 护士编辑终审）。零 SQL、零新菜单（复用 `ipd:nurse:list` / `ipd:bedCenter:list`） | G-11、G-12、G-13 |
 | **P5（已完成）** | ① G-14 `voice_transcribe` 语音口述转写（DashScope qwen3-asr-flash 同步 ASR，非 LLM 能力、独立 `SpeechTranscribeService` 不走执行器；转写文本医生改后喂既有 `emr_draft`）；② G-15 随访电话外呼通道（sql/231 外呼登记列 + `FollowupCallChannelService` 配置分支，人工登记不假装接通）；③ G-16 多模型路由（`ai.models.<key>` per-capability 覆盖 + healthCheck 按能力带模型）；④ 数据飞轮只记观察不施工 | G-14、G-15、G-16 |
+| **P6（已完成）** | ① G-17 `patient_imaging_explain` 影像报告解读（患者端检查报告大白话：`sys_imaging_plain_item` 词典先行「这项检查是查什么」（sql/232，19 条种子）+ 模型串话描述/结论（逐段过 `PatientTextGuard`）+ 阴阳性/危急值代码事实置顶；只解读不做诊断结论，NMPA 红线不越界；词典降级时事实与引导照常可见）；② G-15 外呼通道框架占位（`followup.call-channel` 分支保留 mock 人工登记，yml 落 `followup.channel.aliyun-vms` 占位段（`${HIS_CALL_*}` 环境变量，凭据待提供），fail-fast 文案指向人工拨打；真实拨号分支待凭据到位后施工） | G-17；G-15 框架 |
 
 > 数据飞轮观察口径（P5-4，只记不施工）：G-10 的 `biz_ai_draft_diff` 已在持续产出医生修改 diff；不为此建任何新表/任务/看板。观察方法一句话——每隔一段时间在 AI 管理台留痕签页看「有 diff 的会话数」与「diff 段数分布」，当样本量与语义质量足以支撑训练讨论（SFT/LoRA 判据见 §8.6）时再立项，届时原料直接从 `biz_ai_draft_diff` 导出。
 
@@ -281,6 +285,10 @@
 | 2026-10-04 | P5 | G-15/G-16：sql/231 `biz_followup_task` 加外呼登记 4 列（call_channel/call_status/call_attempts/call_last_time）+ `FollowupCallChannelService`（`followup.call-channel` 配置分支，mock=只登记待呼）+ 登记未接通/接通回填接口（attempts 累计状态机）+ `FollowupView.vue`「电话外呼」弹窗（明文电话供拨号、话术稿带出、AI 拟话术、结果回填；列表电话仍脱敏）；`AiConfigProvider.modelOf(capability, lite)` per-capability 覆盖 map `ai.models.<key>` + healthCheck 按能力带模型快照（`operation_qa`/`emr_draft` 配 `deepseek-v4.1-flash` 为样例）。零新菜单/按钮码（权限复用 `inpatient:followup:edit`） | 完成 |
 | 2026-10-04 | P5 | P5 接口验收 `workspace/_verify_p5.mjs`（验收 jar `workspace/_p5_jar/p5-backend.jar` 跑 8082，8081 另一会话锁 `his-backend.jar` → his-web finalName 临时切 `p5-backend` 出包即还原）：A healthCheck 17 项含 models 快照；B TTS wav 真转写命中关键词（latency 731ms，model=qwen3-asr-flash）；C digest 口径正则（output=text+sha256 前 12 位、input 只含音频元数据）；D 伪音频拒 + FAILED 审计留痕带 model；E 外呼全闭环（登记→重复登记拒→未接通→再登记 attempts=2→接通转随访中→清场）；F operation_qa 审计行 model=路由真值（上游偶发空 content，重试 3 次口径） | **25/25 PASS** |
 | 2026-10-04 | P5 | P5 前端真浏览器断言 `workspace/_verify_p5_ui.mjs`（playwright-core + Edge fake 麦克风 `--use-fake-device-for-media-stream`，vite 5299 → 8082）：随访种子任务（API 建 + 从库反查 task_no 定位行）→「电话外呼」弹窗（已登记待外呼·第 1 次/明文电话/话术稿带出/AI 拟话术）→ 未接通回填 callStatus=3 → 列表电话脱敏；医生工作站（环境今日无队列，种一条就诊中 `biz_queue` 行模板复制 + admin 身份，自动选中后病历表单出现）→「语音口述」弹窗 → fake 音轨录音 → 失败路径可见提示且不造文本（textarea 空 + 填入禁用）→ 控制台零报错（按文案排除故意失败探针的预期噪音）；finally 双清场（cancelFollowup + `DELETE biz_queue WHERE queue_no LIKE 'AI-TEST-P5-%'`）。截图 `_p5_ui_call/_p5_ui_voice.png`。**multipart 坑只有真浏览器暴露**：接口脚本 node fetch 的 FormData 天然正确，axios 实例默认 JSON 头把文件序列化成 JSON 体（§2.3-③），前三跑假绿由它造成 | **16/16 PASS**；`vite build` 通过（3.70s） |
+| 2026-10-05 | P6 | G-17 能力实现：sql/232 建 `sys_imaging_plain_item` 影像白话词典（19 条种子，已应用 dev 库；itemName 关键词唯一键）；`AiCapabilityKeys.PATIENT_IMAGING_EXPLAIN`（javadoc 含 NMPA 红线）+ `application-pro.yml` 开关/超时 + `prompts/patient-imaging-explain.md`（v1.0.0，转述纪律 + 四段 JSON 契约 + `hasDictIntro` 控制）+ `PositiveFlagEnum`（his-common）+ DTO/VO 契约 + `PatientImagingExplainCapabilityImpl`（词典最长命中匹配 + 四段独立过 `PatientTextGuard` + 阴阳性/危急/发布状态代码事实 + 越权同「不存在」文案防探测）；`AiPatientController` 增 `/ai/patient/imagingExplain`（PATIENT） | 完成 |
+| 2026-10-05 | P6 | G-17 前端：小程序 `utils/api.js` 增 `aiApi.imagingExplain`；`pages/reportDetail` 增 type 1 解读入口按钮 + 影像解读卡（criticalAlert 置顶、degraded 说明条、5 段白话、免责）；degraded 照常渲染不弹失败 | 完成 |
+| 2026-10-05 | P6 | G-15 外呼框架占位：`application-pro.yml` 增 `followup.channel.aliyun-vms` 占位段（`${HIS_CALL_ACCESS_KEY_ID:}`/`HIS_CALL_ACCESS_KEY_SECRET`/`HIS_CALL_SHOW_NUMBER`/`HIS_CALL_TTS_CODE`，注释写明当前无消费方、施工口径见 G-15）；`FollowupCallChannelServiceImpl` fail-fast 文案改为指向人工拨打（配非 mock 值拒绝登记，绝不假装已呼出） | 完成（凭据待提供，真实拨号分支待施工） |
+| 2026-10-05 | P6 | P6 接口验收 `workspace/_verify_p6.mjs`（8080 验收 jar；SM2 登录；种子 5 条 `AI-TEST-P6-` 前缀手工雪花 id，finally 物理删清场）：主路径（词典「胸部CT」what_it_does/notice_text 全等命中、source=model、degraded=false、三段白话无越界词、免责置底）/ 危急置顶（代码事实）/ 未发布拒 / 检验报告走影像入口拒 / 越权不泄露存在性 / 空 reportId 400。期间修一处**能力实现缺陷**：词典命中时模型 examIntro 恒 null 被降级判断计入缺段 → 词典命中+source=model 必误报 degraded=true，修复为按「词典是否接管 examIntro」分开算（§2.3-P6） | **25/25 PASS** |
 
 ---
 
@@ -312,7 +320,7 @@
 | 语音转写（问诊录音→现病史草稿） | 各厂商 Copilot 标配输入 | 需录音采集终端与院内 ASR 选型；产出走 `emr_draft` 同款"草稿 + 医生确认"契约 |
 | 危重预警/病情恶化评分 | 卫宁"鲲鹏"重症、讯飞危重预警 | **P4 已立项（G-12）**：体征/护理数据已具备（`biz_nursing_record`）；事实层评分代码先行，模型只解释——纪律 2 |
 | AI 护理交接班 | 卫宁与东莞一院四大落地应用之一 | **P4 已立项（G-13）**：护理记录结构化程度满足（体征字段 + 评估单 + 班次） |
-| 影像报告解读 | 讯飞影像报告生成已达实用门槛 | **涉 NMPA 三类证**：只做"报告/指标解读"（同患者端纪律），不做诊断结论 |
+| 影像报告解读 | 讯飞影像报告生成已达实用门槛 | **P6 已施工（G-17 完成）**：**涉 NMPA 三类证**，只做「报告解读」（同患者端纪律），不做诊断结论 |
 
 ### 8.4 对标结论
 

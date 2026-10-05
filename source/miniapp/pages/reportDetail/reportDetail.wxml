@@ -13,6 +13,13 @@
     <view class="kv"><text class="k">发布时间</text><text class="v">{{report.publishTime || '-'}}</text></view>
   </view>
 
+  <!-- 影像白话解读入口（G-17）：检查报告的描述/结论是专业文本，白话由后端模型转述+硬闸把关 -->
+  <view class="explain-entry" wx:if="{{report.reportType === 1}}">
+    <button class="explain-btn" bindtap="loadImagingExplain" loading="{{imagingExplaining}}" disabled="{{imagingExplaining}}">
+      {{imagingExplain ? '重新解读' : '看不懂？用大白话讲给我听'}}
+    </button>
+  </view>
+
   <!-- 检验结果明细：逐项结果值/参考区间/异常判定，患者最关心「哪一项要紧」 -->
   <view class="card" wx:if="{{labItems.length}}">
     <view class="section-head">
@@ -59,6 +66,39 @@
       <view class="ei-plain">{{item.plainText}}</view>
     </view>
     <view class="explain-advice">{{explain.advice}}</view>
+  </view>
+
+  <!-- 影像白话解读卡（G-17）：危急置顶是代码事实；白话段落来自模型转述，
+       缺哪段就不渲染哪段（degraded 时给降级说明，不弹失败提示） -->
+  <view class="explain-card" wx:if="{{imagingExplain}}">
+    <view class="explain-head">
+      <text class="explain-title">大白话解读</text>
+      <text class="explain-tag" wx:if="{{imagingExplain.source === 'model'}}">AI 转述</text>
+      <text class="explain-close" bindtap="closeImagingExplain">收起</text>
+    </view>
+    <view class="explain-critical" wx:if="{{imagingExplain.criticalAlert}}">{{imagingExplain.criticalAlert}}</view>
+    <view class="explain-degraded" wx:if="{{imagingExplain.degraded}}">AI 白话暂不完整：{{imagingExplain.degradeReason || '请直接阅读下方报告原文'}}</view>
+    <view class="explain-section" wx:if="{{imagingExplain.examIntro}}">
+      <view class="explain-section-title">这项检查是查什么的</view>
+      <view class="explain-section-body">{{imagingExplain.examIntro}}</view>
+    </view>
+    <view class="explain-section" wx:if="{{imagingExplain.examNotice}}">
+      <view class="explain-section-title">检查前后的注意</view>
+      <view class="explain-section-body">{{imagingExplain.examNotice}}</view>
+    </view>
+    <view class="explain-section" wx:if="{{imagingExplain.findingsPlain}}">
+      <view class="explain-section-title">报告描述在说什么</view>
+      <view class="explain-section-body">{{imagingExplain.findingsPlain}}</view>
+    </view>
+    <view class="explain-section" wx:if="{{imagingExplain.conclusionsPlain}}">
+      <view class="explain-section-title">结论怎么说</view>
+      <view class="explain-section-body">{{imagingExplain.conclusionsPlain}}</view>
+    </view>
+    <view class="explain-section" wx:if="{{imagingExplain.advicePlain}}">
+      <view class="explain-section-title">医生建议怎么说</view>
+      <view class="explain-section-body">{{imagingExplain.advicePlain}}</view>
+    </view>
+    <view class="explain-advice">{{imagingExplain.advice}}</view>
   </view>
 
   <view class="card" wx:if="{{report.clinicalDiagnosis}}">

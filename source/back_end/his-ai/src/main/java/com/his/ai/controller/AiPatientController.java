@@ -1,16 +1,19 @@
 package com.his.ai.controller;
 
 import com.his.ai.dto.PatientFeeExplainDTO;
+import com.his.ai.dto.PatientImagingExplainDTO;
 import com.his.ai.dto.PatientMedicationGuideDTO;
 import com.his.ai.dto.PatientReportExplainDTO;
 import com.his.ai.dto.PatientTriageNormalizeDTO;
 import com.his.ai.dto.PrevisitSummaryDTO;
 import com.his.ai.service.PatientFeeExplainCapability;
+import com.his.ai.service.PatientImagingExplainCapability;
 import com.his.ai.service.PatientMedicationGuideCapability;
 import com.his.ai.service.PatientReportExplainCapability;
 import com.his.ai.service.PatientTriageNormalizeCapability;
 import com.his.ai.service.PrevisitSummaryCapability;
 import com.his.ai.vo.PatientFeeExplainVO;
+import com.his.ai.vo.PatientImagingExplainVO;
 import com.his.ai.vo.PatientMedicationGuideVO;
 import com.his.ai.vo.PatientReportExplainVO;
 import com.his.ai.vo.PatientTriageNormalizeVO;
@@ -37,6 +40,8 @@ public class AiPatientController {
 
     private final PatientReportExplainCapability reportExplainCapability;
 
+    private final PatientImagingExplainCapability imagingExplainCapability;
+
     private final PatientFeeExplainCapability feeExplainCapability;
 
     private final PatientMedicationGuideCapability medicationGuideCapability;
@@ -50,6 +55,13 @@ public class AiPatientController {
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<PatientReportExplainVO> reportExplain(@Valid @RequestBody PatientReportExplainDTO dto) {
         return Result.success(reportExplainCapability.execute(dto));
+    }
+
+    @Operation(summary = "影像报告解读（患者版大白话，只解读不做诊断）")
+    @PostMapping("/imagingExplain")
+    @PreAuthorize("hasAuthority('PATIENT')")
+    public Result<PatientImagingExplainVO> imagingExplain(@Valid @RequestBody PatientImagingExplainDTO dto) {
+        return Result.success(imagingExplainCapability.execute(dto));
     }
 
     @Operation(summary = "费用解释（这笔钱怎么算的）")

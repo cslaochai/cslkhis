@@ -65,6 +65,20 @@ public final class AiCapabilityKeys {
     public static final String PATIENT_REPORT_EXPLAIN = "patient_report_explain";
 
     /**
+     * 患者端影像报告解读（G-17，P6 起）。
+     * <p>
+     * 检查报告（CT/B超/放射/心电）的大白话解读，与 {@link #PATIENT_REPORT_EXPLAIN}
+     * 分开建能力：读者同为患者，但数据形态完全不同（逐项数值 vs 叙事文本），
+     * 提示词与输出契约不共用（纪律 8）。
+     * <p>
+     * <b>NMPA 三类证红线：只解读、不做诊断结论</b>——阴阳性/危急值是代码事实，
+     * 检查介绍来自 {@code sys_imaging_plain_item} 词典（可穷举禁走模型），
+     * 模型只把描述/结论原文串成白话，逐段过 {@code PatientTextGuard}；
+     * 模型不可用时白话段落缺位、词典与事实照常返回，绝不编白话。
+     */
+    public static final String PATIENT_IMAGING_EXPLAIN = "patient_imaging_explain";
+
+    /**
      * 患者端导诊口语归一（P2-患者端）
      * <p>
      * 这是患者端<b>唯一允许模型参与的导诊环节</b>，位置由 {@code MiniappTriageServiceImpl}

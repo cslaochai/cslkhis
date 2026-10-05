@@ -19,10 +19,13 @@ Page({
     labItems: [],
     abnormalCount: 0,
     loading: true,
-    // 大白话解读结果。reportType===2（检验）才展示入口 —— 检查报告是影像描述文本，
-    // 拿词典去改写成白话只会丢信息，看不懂应该去找医生
+    // 大白话解读结果。检验（type 2）走词典逐项；检查（type 1）走影像白话串话
+    // （G-17：词典只讲「这项检查查什么」，描述/结论的白话由模型转述、后端硬闸把关，
+    //  模型不可用时白话缺位但事实与原文引导照常 —— 前端照常渲染，不弹失败）
     explain: null,
-    explaining: false
+    explaining: false,
+    imagingExplain: null,
+    imagingExplaining: false
   },
 
   onLoad(options) {
@@ -112,6 +115,31 @@ Page({
 
   closeExplain() {
     this.setData({ explain: null })
+  },
+
+  // 影像白话解读（检查报告）：事实（阴阳性/危急）由后端代码给，检查介绍来自院内词典，
+  // 描述/结论的白话是模型转述且逐段过了患者文案硬闸。所以模型不可用（degraded=true）
+  // 时照样渲染卡片 —— 白话段落缺位、检查介绍与原文引导照常，刻意不弹失败提示
+  async loadImagingExplain() {
+    if (this.data.imagingExplaining) return
+    this.setData({ imagingExplaining: true })
+    try {
+      const res = await aiApi.imagingExplain({ reportId: String(this.data.id) })
+      if (res.code === 200 && res.data) {
+        this.setData({ imagingExplain: res.data })
+      } else {
+        wx.showToast({ title: res.message || '暂无法解读', icon: 'none' })
+      }
+    } catch (e) {
+      console.error('影像报告解读失败', e)
+      wx.showToast({ title: '暂无法解读', icon: 'none' })
+    } finally {
+      this.setData({ imagingExplaining: false })
+    }
+  },
+
+  closeImagingExplain() {
+    this.setData({ imagingExplain: null })
   },
 
   // 影像全屏预览（wx.previewImage 自带双指缩放，患者端不需要窗宽窗位）

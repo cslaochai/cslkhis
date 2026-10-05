@@ -24,7 +24,8 @@ public class FollowupCallChannelServiceImpl implements FollowupCallChannelServic
     @Override
     public FollowupCallChannelEnum dial(BizFollowupTask task) {
         if (!CHANNEL_MOCK.equalsIgnoreCase(StringUtils.hasText(callChannel) ? callChannel.trim() : CHANNEL_MOCK)) {
-            throw new BusinessException("自动外呼通道未接入（followup.call-channel=" + callChannel + "），请走人工电话拨打");
+            throw new BusinessException("自动外呼通道（followup.call-channel=" + callChannel
+                    + "）尚未对接真实线路：拨号分支待线路凭据到位后按手册 G-15 施工，当前请走人工电话拨打");
         }
         return FollowupCallChannelEnum.MANUAL;
     }

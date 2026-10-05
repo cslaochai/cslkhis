@@ -87,6 +87,9 @@ ai:
     # 患者端（小程序）：报告解读的事实层不依赖模型，关掉也只是措辞变朴素。
     # 费用解释曾是模型能力，P1 起裁撤模型环节转纯计算（纪律 9），不再是 AI 能力。
     patient_report_explain: true
+    # 患者端影像报告解读（G-17）：只解读不做诊断结论（NMPA 红线）。检查介绍走词典，
+    # 描述/结论白话走模型；关掉后小程序检查报告解读入口直接报错拒绝
+    patient_imaging_explain: true
     # 患者端导诊口语归一：只做「口语→症状词+追问」，不推荐科室。
     # 关掉后用患者原话查规则表，导诊功能本身不退化，只是命中率略低。
     patient_triage_normalize: true
@@ -119,6 +122,8 @@ ai:
     emr_draft: 8000
     # 首次调用还要算上模型冷启动，实测 4s 会超时。给不出就回落规则文案，不会卡住页面。
     patient_report_explain: 9000
+    # 影像解读：报告文本比检验长（描述+结论+建议三段输出），患者当场等
+    patient_imaging_explain: 9000
     # 患者点完「看看挂什么科」就等着，超过 5 秒直接用原话查
     patient_triage_normalize: 5000
     # 知识库问答（同步路径，模型基于检索材料作答，超时回落原文片段）
@@ -182,6 +187,16 @@ sms:
 # 接入真实外呼线路后改配置分支，登记成功却假装「已呼出」是造假
 followup:
   call-channel: mock
+  # 真实外呼线路配置占位（G-15 后续决策项，P6 只落框架）：当前无消费方——
+  # call-channel 配了 mock 以外的值会 fail-fast 拒绝登记。
+  # 线路凭据到位后的施工口径见手册 G-15：实现拨号分支（HTTP 签名直调、不引 SDK，
+  # 保 mvn -o 离线打包）+ 状态回填，凭据真值填 application-local.yml / 环境变量，绝不入库。
+  channel:
+    aliyun-vms:
+      access-key-id: ${HIS_CALL_ACCESS_KEY_ID:}
+      access-key-secret: ${HIS_CALL_ACCESS_KEY_SECRET:}
+      called-show-number: ${HIS_CALL_SHOW_NUMBER:}
+      tts-code: ${HIS_CALL_TTS_CODE:}
 
 insurance:
   compliance:

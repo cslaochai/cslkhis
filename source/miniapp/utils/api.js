@@ -186,6 +186,8 @@ export const serviceApi = {
 export const aiApi = {
   // 报告解读（患者版大白话）；reportId 全程字符串
   reportExplain: (data) => post('/ai/patient/reportExplain', data),
+  // 影像报告解读（检查报告大白话，只解读不做诊断结论）；reportId 全程字符串
+  imagingExplain: (data) => post('/ai/patient/imagingExplain', data),
   // 费用解释（这笔钱怎么算的）
   feeExplain: (data) => post('/ai/patient/feeExplain', data),
   // 用药说明（这盒药怎么吃）；prescriptionId 全程字符串
