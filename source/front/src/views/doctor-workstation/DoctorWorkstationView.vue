@@ -61,7 +61,7 @@ import {
 import { DICT_TYPE } from '@/lib/dict-cache'
 import {getByRegistId, getEmrRecordList} from '@/api/emr'
 import {createAdmissionOrder} from '@/api/admissionOrder'
-import {draftEmrText, extractEmrText} from '@/api/ai'
+import {draftEmrText, extractEmrText, transcribeVoice} from '@/api/ai'
 import {localDateStr, shortQueueNo} from '@/lib/utils'
 // 「号别」「队列状态」一律走 lib/statusColor 这一份口径：
 // 原来队列行只凭 `visitType` 各写一套兜底 —— 列表 `===1 ? 初诊 : 复诊`、患者条 `===2 ? 复诊 : 初诊`，
@@ -82,6 +82,7 @@ import {
   getInspectionTemplates,
   getLaboratoryApplyList,
   getLaboratoryTemplates,
+  getPrevisitByRegist,
   getPrescriptionList,
   getRxTemplateDetail,
   getRxTemplates,
@@ -1514,6 +1515,9 @@ const applyAllExtractFields = () => {
 const draftDialogVisible = ref(false)
 const draftLoading = ref(false)
 const draftResult = ref<any>(null)
+// G-10 diff 留痕：本会话 applyDraft 填入的 AI 草稿原文。保存时若终稿与其不同，
+// 把草稿原文带给后端算 diff（AI 写了什么 vs 医生留了什么）；保存成功即清空，一次草稿会话只留一条。
+const aiDraftAppliedText = ref('')
 
 const runDraft = async () => {
   if (!recordForm.chiefComplaint) {
@@ -1564,8 +1568,158 @@ const applyDraft = () => {
     return
   }
   recordForm.presentIllness = text
+  aiDraftAppliedText.value = text
   draftDialogVisible.value = false
   ElMessage.success('草稿已填入现病史，请逐字核对后修改')
+}
+
+// ========== 语音口述（G-14） ==========
+// MediaRecorder 录音 → ASR 转写 → 文本可编辑 → 喂既有 emr_draft 整理。
+// 转写是确定性转换：失败如实报错、不造文本（语音没有规则兜底文本，造文本即造假病历）。
+const VOICE_MAX_SECONDS = 60
+const voiceDialogVisible = ref(false)
+const voiceRecording = ref(false)
+const voiceSeconds = ref(0)
+const voiceTranscribing = ref(false)
+const voiceText = ref('')
+let voiceRecorder: any = null
+let voiceStream: MediaStream | null = null
+let voiceChunks: Blob[] = []
+let voiceTimer: any = null
+let voiceMime = ''
+
+const voiceSecondsText = computed(() => {
+  const s = voiceSeconds.value
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+})
+
+const openVoiceDialog = () => {
+  voiceText.value = ''
+  voiceSeconds.value = 0
+  voiceTranscribing.value = false
+  voiceDialogVisible.value = true
+}
+
+// 弹窗关闭/录音丢弃时统一回收：停计时器、断麦克风、弃录音块
+const closeVoiceDialog = () => {
+  if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null }
+  if (voiceRecorder && voiceRecorder.state !== 'inactive') {
+    voiceRecorder.onstop = null
+    try { voiceRecorder.stop() } catch (e) { /* 媒体流已释放 */ }
+  }
+  voiceRecorder = null
+  if (voiceStream) {
+    voiceStream.getTracks().forEach((t: MediaStreamTrack) => t.stop())
+    voiceStream = null
+  }
+  voiceChunks = []
+  voiceRecording.value = false
+}
+
+const startVoiceRecord = async () => {
+  if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+    ElMessage.error('当前浏览器不支持录音，请使用 Edge/Chrome')
+    return
+  }
+  try {
+    voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  } catch (e) {
+    ElMessage.error('无法访问麦克风，请检查浏览器权限设置')
+    return
+  }
+  voiceMime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
+    .find(t => MediaRecorder.isTypeSupported(t)) || ''
+  voiceChunks = []
+  voiceRecorder = new MediaRecorder(voiceStream, voiceMime ? { mimeType: voiceMime } : undefined)
+  voiceRecorder.ondataavailable = (e: any) => { if (e.data.size > 0) voiceChunks.push(e.data) }
+  voiceRecorder.start()
+  voiceRecording.value = true
+  voiceSeconds.value = 0
+  voiceTimer = setInterval(() => {
+    voiceSeconds.value++
+    if (voiceSeconds.value >= VOICE_MAX_SECONDS) stopVoiceRecord()
+  }, 1000)
+}
+
+const stopVoiceRecord = () => {
+  if (!voiceRecorder || voiceRecorder.state === 'inactive') return
+  if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null }
+  // 不在这里复位 voiceRecording：stop() 到 onstop 之间若把按钮恢复成「开始录音」，
+  // 转写还没开始就出现可点按钮（再点一次会造出两段录音），转写中状态也会被吞掉；
+  // 复位交给 onstop 里的 closeVoiceDialog，与 voiceTranscribing 同步块内切换，无中间态
+  const duration = voiceSeconds.value
+  const recorder = voiceRecorder
+  recorder.onstop = async () => {
+    const blob = new Blob(voiceChunks, { type: voiceMime || 'audio/webm' })
+    closeVoiceDialog()
+    if (blob.size > 0) await doTranscribe(blob, duration)
+  }
+  recorder.stop()
+}
+
+const doTranscribe = async (blob: Blob, durationSeconds: number) => {
+  voiceTranscribing.value = true
+  voiceText.value = ''
+  try {
+    const fd = new FormData()
+    const ext = voiceMime.includes('mp4') ? 'mp4' : 'webm'
+    fd.append('file', blob, `voice.${ext}`)
+    if (durationSeconds > 0) fd.append('durationSeconds', String(durationSeconds))
+    const res: any = await transcribeVoice(fd)
+    voiceText.value = res.data?.text || ''
+    if (!voiceText.value) ElMessage.warning('未能从音频中识别出语音内容')
+  } catch (e: any) {
+    // 失败必须可见：ASR 拒识别/上游异常时医生要看到原因（request.js 对 500 只 console 不 toast），
+    // 「点了没反应」会让医生以为录音功能坏了
+    const msg = e?.response?.data?.message || e?.message || '语音转写失败，请重试'
+    ElMessage.error(msg)
+    console.error('语音转写失败:', e)
+  } finally {
+    voiceTranscribing.value = false
+  }
+}
+
+// 转写文本原文直填现病史（追加，不覆盖医生已写内容）
+const fillVoiceText = (): boolean => {
+  const text = voiceText.value.trim()
+  if (!text) {
+    ElMessage.warning('没有可填入的转写文本')
+    return false
+  }
+  recordForm.presentIllness = recordForm.presentIllness
+    ? `${recordForm.presentIllness}\n${text}` : text
+  return true
+}
+
+const applyVoiceToField = () => {
+  if (fillVoiceText()) {
+    voiceDialogVisible.value = false
+    ElMessage.success('转写文本已填入现病史，请逐字核对后修改')
+  }
+}
+
+// 填入现病史后走既有草拟：口述文本作为「医生已写的部分」喂 emr_draft，
+// 模型整理成现病史草稿 → 复用草稿弹窗医生确认（G-10 留痕自动接上）
+const draftFromVoice = () => {
+  if (!fillVoiceText()) return
+  voiceDialogVisible.value = false
+  runDraft()
+}
+
+// ========== 预问诊报告卡（G-05） ==========
+// 患者在小程序提交的问卷 + AI 凝摘要；没做过预问诊时 data=null，卡片不渲染。
+// 只读展示 —— 医生参考后再自己写现病史，AI 不代填。
+const previsitInfo = ref<any>(null)
+const previsitSourceText = (v: any) => (v === 1 ? '模型凝摘要' : '规则摘要')
+const loadPrevisit = async (registId: any) => {
+  previsitInfo.value = null
+  if (!registId) return
+  try {
+    const res: any = await getPrevisitByRegist(registId)
+    if (res.code === 200) previsitInfo.value = res.data || null
+  } catch (e) {
+    console.error('预问诊记录加载失败', e)
+  }
 }
 
 // ========== AI辅助诊疗 ==========
@@ -1853,6 +2007,10 @@ const selectPatient = async (row: any) => {
   patientDetail.value = null
   patientTags.value = []
   insuranceInfo.value = null
+  // G-05/G-10：换患者时清掉上一位的预问诊卡与 AI 草稿会话
+  previsitInfo.value = null
+  aiDraftAppliedText.value = ''
+  loadPrevisit(row.registId)
 
   // 重置所有表单
   const baseInfo = {
@@ -2483,6 +2641,9 @@ const handleSaveRecord = async () => {
       recordId: recordForm.id || null,
       chiefComplaint: recordForm.chiefComplaint,
       presentIllness: recordForm.presentIllness,
+      // G-10：仅当本会话用过 AI 草稿且终稿已与其不同才带草稿原文（后端据此算 diff 留痕）
+      aiDraftPresentIllness: (aiDraftAppliedText.value && recordForm.presentIllness !== aiDraftAppliedText.value)
+        ? aiDraftAppliedText.value : undefined,
       allergyHistory: recordForm.allergyHistory,
       pastHistory: recordForm.pastHistory,
       personalHistory: recordForm.personalHistory,
@@ -2520,6 +2681,8 @@ const handleSaveRecord = async () => {
       recordForm.id = res.data
     }
     recordSaved.value = true
+    // 草稿会话结束：本次保存已产生 diff 留痕，下次保存不再重复带
+    aiDraftAppliedText.value = ''
     ElMessage.success('病历保存成功')
   } catch (error: any) {
     ElMessage.error(error.message || '保存失败')
@@ -3536,6 +3699,27 @@ const arriveText = computed(() => {
                     </el-button>
                   </div>
                   <div class="space-y-3">
+                    <!-- G-05 预问诊报告卡：患者小程序问卷 + AI 凝摘要，只读参考 -->
+                    <div v-if="previsitInfo" class="rounded-md border border-sky-200 bg-sky-50/60 p-3">
+                      <div class="mb-2 flex items-center justify-between">
+                        <span class="text-sm font-bold text-sky-800">预问诊报告</span>
+                        <span class="text-xs text-slate-500">
+                          {{ previsitSourceText(previsitInfo.summarySource) }}
+                          <template v-if="previsitInfo.createTime"> · {{ String(previsitInfo.createTime).slice(0, 16).replace('T', ' ') }}</template>
+                        </span>
+                      </div>
+                      <div class="space-y-1.5 text-sm leading-6 text-slate-800">
+                        <p v-if="previsitInfo.summaryAi">
+                          <span class="font-medium text-slate-600">AI 摘要：</span>{{ previsitInfo.summaryAi }}
+                        </p>
+                        <p v-if="previsitInfo.mainSymptom">
+                          <span class="font-medium text-slate-600">主症状：</span>{{ previsitInfo.mainSymptom }}
+                        </p>
+                        <p v-if="previsitInfo.freeText">
+                          <span class="font-medium text-slate-600">患者补充：</span>{{ previsitInfo.freeText }}
+                        </p>
+                      </div>
+                    </div>
                     <div>
                       <label class="mb-1 block text-sm font-medium text-slate-600">主诉 <span
                           class="text-red-500">*</span></label>
@@ -3548,6 +3732,9 @@ const arriveText = computed(() => {
                         <div class="flex items-center gap-1">
                           <el-button type="primary" link :loading="draftLoading" @click="runDraft">
                             AI 草拟
+                          </el-button>
+                          <el-button type="primary" link @click="openVoiceDialog">
+                            语音口述
                           </el-button>
                           <el-button v-if="!recordForm.presentIllness" type="primary" link
                                      @click="recordForm.presentIllness = '无'">填写「无」
@@ -5401,6 +5588,38 @@ const arriveText = computed(() => {
       <el-button @click="draftDialogVisible = false">关闭</el-button>
       <el-button type="primary" :disabled="!draftResult?.presentIllness" @click="applyDraft">
         填入现病史
+      </el-button>
+    </template>
+  </el-dialog>
+
+  <!-- 语音口述（G-14）：录音 → ASR 转写 → 可编辑 → 喂 emr_draft 整理 -->
+  <el-dialog v-model="voiceDialogVisible" title="语音口述现病史" width="560px" destroy-on-close
+             @closed="closeVoiceDialog">
+    <div class="space-y-3">
+      <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+        录下口述内容（单次最长 {{ VOICE_MAX_SECONDS }} 秒，到时自动停止），转写文本可修改后再填入。
+        转写只是语音转文字，不会补写没说到的内容；最终现病史由医生逐字确认。
+      </div>
+      <div class="flex items-center gap-3">
+        <el-button v-if="!voiceRecording" type="danger" :disabled="voiceTranscribing" @click="startVoiceRecord">
+          开始录音
+        </el-button>
+        <el-button v-else type="warning" @click="stopVoiceRecord">
+          停止录音（{{ voiceSecondsText }}）
+        </el-button>
+        <span v-if="voiceRecording" class="text-sm text-red-600">录音中…最长 {{ VOICE_MAX_SECONDS }} 秒</span>
+        <span v-else-if="voiceTranscribing" class="text-sm text-slate-500">正在转写，请稍候…</span>
+      </div>
+      <el-input v-model="voiceText" type="textarea" :rows="6" :disabled="voiceTranscribing"
+                placeholder="录音停止后转写文本显示在此，也可手动修改"/>
+    </div>
+    <template #footer>
+      <el-button @click="voiceDialogVisible = false">关闭</el-button>
+      <el-button plain :disabled="!voiceText.trim() || voiceTranscribing" @click="applyVoiceToField">
+        填入现病史
+      </el-button>
+      <el-button type="primary" :disabled="!voiceText.trim() || voiceTranscribing" @click="draftFromVoice">
+        AI 整理为现病史
       </el-button>
     </template>
   </el-dialog>

@@ -10,8 +10,11 @@ import com.his.patient.vo.CodeOptionVO;
 import com.his.patient.vo.IntakeOutputSummaryVO;
 import com.his.patient.vo.NursingAssessmentVO;
 import com.his.patient.vo.NursingRecordVO;
+import com.his.patient.vo.NursingVitalFactVO;
 import com.his.patient.vo.TempSheetVO;
+import com.his.patient.vo.WardNursingFactsVO;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -88,4 +91,24 @@ public interface InpatientNursingService {
      * 出入量小结：从护理文书原始测量行按日复算（不是另存统计表）
      */
     IntakeOutputSummaryVO intakeOutputSummary(Long admissionId, String beginDate, String endDate);
+
+    // 跨模块事实面（供 AI 能力消费，只聚事实不判异常 —— 阈值口径留在消费方）
+
+    /**
+     * 病区在窗内有体征的患者各取最新一条体征行（measure_time 降序）。
+     * 没有任何体征记录的患者不出现在结果里（调用方按 admissionId 匹配，匹配不到就是"无数据"）。
+     */
+    List<NursingVitalFactVO> latestVitalsByWard(Long wardId, LocalDateTime since);
+
+    /**
+     * 单个入院记录在窗内的最新一条体征行，没有返回 null
+     */
+    NursingVitalFactVO latestVitalByAdmission(Long admissionId, LocalDateTime since);
+
+    /**
+     * 病区×时间窗的护理事实聚合（在院/新入/出院统计 + 窗内护理文书行 + 窗内评估单）。
+     * <b>窗即班次</b>：以 measure_time/assess_time 落窗为准，不按行上的 shift 字段二次过滤
+     * （跨班补录的行 shift 与窗不一致，按 shift 过滤会漏）。
+     */
+    WardNursingFactsVO wardShiftFacts(Long wardId, LocalDateTime begin, LocalDateTime end, Integer shift);
 }

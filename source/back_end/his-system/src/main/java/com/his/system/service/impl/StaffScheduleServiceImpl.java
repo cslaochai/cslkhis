@@ -38,6 +38,8 @@ import com.his.system.service.StaffPlanRuleService;
 import com.his.system.service.StaffScheduleService;
 import com.his.system.vo.StaffOnDutyVO;
 import com.his.system.vo.StaffScheduleVO;
+import com.his.system.vo.StaffTypeDayWorkingVO;
+import com.his.system.vo.UnitDayWorkingVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +51,7 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -567,6 +570,50 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
                 && StaffDutyStatusEnum.isWorking(schedule.getDutyStatus())
                 && AttendModeEnum.releasesSource(schedule.getAttendMode())
                 && Objects.equals(YesOrNoEnum.YES.getCode(), schedule.getClinicFlag());
+    }
+
+    @Override
+    public List<UnitDayWorkingVO> listUnitDayWorking(LocalDate begin, LocalDate end) {
+        // 单元 × 日 = 聚合行再按 (date, org) 折叠（班次与岗位两个维度在这里合掉）
+        Map<String, UnitDayWorkingVO> merged = new LinkedHashMap<>();
+        for (Map<String, Object> row : baseMapper.groupWorkingByUnitShift(begin, end)) {
+            LocalDate date = LocalDate.parse(String.valueOf(row.get("scheduleDate")));
+            Integer orgType = (Integer) row.get("orgType");
+            Long orgId = ((Number) row.get("orgId")).longValue();
+            String key = date + "|" + orgType + "|" + orgId;
+            UnitDayWorkingVO vo = merged.get(key);
+            if (vo == null) {
+                vo = new UnitDayWorkingVO();
+                vo.setOrgType(orgType);
+                vo.setOrgId(orgId);
+                vo.setOrgName((String) row.get("orgName"));
+                vo.setScheduleDate(date);
+                vo.setWorkingCount(0L);
+                merged.put(key, vo);
+            }
+            vo.setWorkingCount(vo.getWorkingCount() + ((Number) row.get("cnt")).longValue());
+        }
+        return new ArrayList<>(merged.values());
+    }
+
+    @Override
+    public List<StaffTypeDayWorkingVO> listStaffTypeDayWorking(LocalDate begin, LocalDate end) {
+        Map<String, StaffTypeDayWorkingVO> merged = new LinkedHashMap<>();
+        for (Map<String, Object> row : baseMapper.groupWorkingByUnitShift(begin, end)) {
+            LocalDate date = LocalDate.parse(String.valueOf(row.get("scheduleDate")));
+            Integer staffType = (Integer) row.get("staffType");
+            String key = date + "|" + staffType;
+            StaffTypeDayWorkingVO vo = merged.get(key);
+            if (vo == null) {
+                vo = new StaffTypeDayWorkingVO();
+                vo.setStaffType(staffType);
+                vo.setScheduleDate(date);
+                vo.setWorkingCount(0L);
+                merged.put(key, vo);
+            }
+            vo.setWorkingCount(vo.getWorkingCount() + ((Number) row.get("cnt")).longValue());
+        }
+        return new ArrayList<>(merged.values());
     }
 
     // 写入口的内部收口：单元 / 人 / 班 三段快照全部服务端重查

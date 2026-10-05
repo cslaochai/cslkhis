@@ -101,6 +101,12 @@ Page({
     }
   },
 
+  goPrevisit(e) {
+    const registId = e.currentTarget.dataset.registId
+    if (!registId) return
+    wx.navigateTo({ url: `/pages/previsit/previsit?registId=${registId}` })
+  },
+
   goAppointment() {
     wx.switchTab({ url: '/pages/appointment/appointment' })
   }

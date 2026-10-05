@@ -1,6 +1,7 @@
 package com.his.appoint.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.his.appoint.dto.ScheduleSlotUpsertDTO;
 import com.his.appoint.entity.BizSchedule;
 import com.his.appoint.entity.BizScheduleSlot;
 import com.his.appoint.entity.BizScheduleSlotTemplate;
@@ -49,6 +50,13 @@ public interface ScheduleSlotService extends IService<BizScheduleSlot> {
      * 加号均摊到段（余数给前面的段）：段 total/available/added 同加，不动预约池；Σ段写回主表。
      */
     void spreadAddSource(Long scheduleId, int addNum);
+
+    /**
+     * 段级号源编辑（号源密度按需调整的唯一写入口）：
+     * 逐段改号源总数/预约预留/停用状态，段的时间窗不接受编辑。
+     * 整批校验整批生效（任何一段不合法都不动库），成功后 Σ段写回主表并留痕备注。
+     */
+    void updateSlotSources(ScheduleSlotUpsertDTO dto);
 
     /**
      * Σ段写回主表 6 个号源字段（available = Σtotal - Σused）。

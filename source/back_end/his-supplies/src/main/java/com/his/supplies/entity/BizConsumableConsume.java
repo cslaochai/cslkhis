@@ -10,7 +10,9 @@ import lombok.EqualsAndHashCode;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/** 耗材科室领用台账（耗材科室领用台账） */
+/**
+ * 耗材科室领用台账（耗材科室领用台账）
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_consumable_consume")

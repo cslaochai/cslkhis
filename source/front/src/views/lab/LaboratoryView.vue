@@ -624,24 +624,32 @@ onMounted(() => {
             </div>
 
             <div v-if="interpret" class="mt-3 space-y-3">
-              <!-- 降级提示：必须让医生知道这条结论是谁给的 -->
+              <!-- 结论来源必须让医生知道：degraded=组合异常但模型失败；source=model=模型连贯解读；
+                   其余=规则解读（异常项未达组合阈值，设计内路径，不是降级） -->
               <el-alert
                 v-if="interpret.degraded"
                 type="warning"
                 :closable="false"
                 show-icon
-                title="本次未经过大模型，结论来自确定性规则"
+                title="组合异常需模型解读，但本次模型调用失败，结论来自确定性规则"
               >
                 <template #default>
                   <span class="text-xs">{{ interpret.degradeReason }}</span>
                 </template>
               </el-alert>
               <el-alert
-                v-else
+                v-else-if="interpret.source === 'model'"
                 type="success"
                 :closable="false"
                 show-icon
-                title="已由大模型解读"
+                title="多项异常组合，已由大模型连贯解读"
+              />
+              <el-alert
+                v-else
+                type="info"
+                :closable="false"
+                show-icon
+                title="规则解读：异常项未达组合解读阈值，结论由确定性规则生成"
               />
 
               <!-- 计数 -->

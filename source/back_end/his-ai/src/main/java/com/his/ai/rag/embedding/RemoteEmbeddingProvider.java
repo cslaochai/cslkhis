@@ -53,7 +53,9 @@ public class RemoteEmbeddingProvider implements EmbeddingProvider {
             throw new IllegalStateException(
                     "remote embedding 未配置（ai.rag.embedding-base-url / embedding-api-key / embedding-model，或回落 ai.base-url/api-key/model）");
         }
-        String url = base.replaceAll("/+$", "") + "/v1/embeddings";
+        String normalized = base.replaceAll("/+$", "");
+        // 与 RestClientLlmClientImpl.chatPath 同口径：base 已以 /v1 结尾时不再重复拼，否则 /v1/v1/embeddings 必 404
+        String url = normalized.endsWith("/v1") ? normalized + "/embeddings" : normalized + "/v1/embeddings";
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

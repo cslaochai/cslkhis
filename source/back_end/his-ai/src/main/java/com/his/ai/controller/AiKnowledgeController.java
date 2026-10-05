@@ -30,7 +30,7 @@ import org.springframework.util.StringUtils;
  * 前端若要做患者端智能咨询，调 {@code /ai/knowledge/ask} 即可。
  *
  * <p><b>权限：</b> ask 任何登录用户可用（患者/医护都可能需要）；维护类接口（录入/列表/删除/重建/种子）
- * 限定 {@code opd:doctorWorkstation:add}，与既有 AI 控制器保持一致。
+ * 限定 {@code ai:knowledge:manage}（sys_menu 按钮码，见 sql/225），与 AI 管理台页面的维护签页同源。
  */
 @Tag(name = "AI 能力-知识库问答(RAG)")
 @RestController
@@ -48,7 +48,7 @@ public class AiKnowledgeController {
         return Result.success(qaCapability.ask(dto));
     }
 
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/ingest")
     @Operation(summary = "录入/更新知识文档（手工或文件导入；自动切块建索引）")
     public Result<Long> ingest(@RequestBody KnowledgeIngestDTO dto) {
@@ -60,21 +60,21 @@ public class AiKnowledgeController {
         return Result.success(storeService.ingest(doc));
     }
 
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/listPage")
     @Operation(summary = "知识文档分页列表")
     public Result<IPage<KnowledgeDocListVO>> listPage(@RequestBody KnowledgeDocQueryPageDTO dto) {
         return Result.success(storeService.listPage(dto));
     }
 
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/getById")
     @Operation(summary = "知识文档详情（含原文）")
     public Result<KnowledgeDocVO> getById(@Valid @RequestBody KnowledgeIdDTO dto) {
         return Result.success(storeService.getById(dto.getId()));
     }
 
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/deleteById")
     @Operation(summary = "删除知识文档（同步删除切块与索引）")
     public Result<Void> deleteById(@Valid @RequestBody KnowledgeIdDTO dto) {
@@ -82,7 +82,7 @@ public class AiKnowledgeController {
         return Result.success("已删除", null);
     }
 
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/rebuild")
     @Operation(summary = "重建向量索引（从 chunk 表全量重载）")
     public Result<Void> rebuild() {
@@ -90,7 +90,7 @@ public class AiKnowledgeController {
         return Result.success("索引已重建", null);
     }
 
-    @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
+    @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/seed")
     @Operation(summary = "灌入内置示例语料（若库为空）")
     public Result<Integer> seed() {

@@ -39,6 +39,8 @@ public interface ScheduleTemplateService extends IService<BizScheduleTemplate> {
 
     /**
      * 新增/修改模板（入参即前端表单）：落库失败按新增/修改分别报错。
+     * 段级号源配置随单提交：null=不动 / []=清空（回退半小时均分）/ 非空=整批替换，
+     * 与主表同事务生效。
      */
     void upsertTemplate(ScheduleTemplateUpsertDTO dto);
 

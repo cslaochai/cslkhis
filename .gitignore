@@ -67,5 +67,5 @@ secrets*
 *.pem
 *.p12
 *.jks
-application-local.yml
-application-private.yml
+# 开发环境配置：含本机/个人覆盖，不进库；生产用 application-pro.yml（可入库）
+source/back_end/his-web/src/main/resources/application-dev.yml

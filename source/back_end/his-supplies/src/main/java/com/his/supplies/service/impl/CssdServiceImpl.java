@@ -1,18 +1,18 @@
 package com.his.supplies.service.impl;
 
-import com.his.supplies.service.CssdService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.security.UserUtils;
 import com.his.supplies.dto.CssdDTO;
 import com.his.supplies.entity.BizCssdPack;
 import com.his.supplies.entity.BizCssdTrace;
 import com.his.supplies.mapper.BizCssdPackMapper;
 import com.his.supplies.mapper.BizCssdTraceMapper;
+import com.his.supplies.service.CssdService;
 import com.his.supplies.vo.CssdPackVO;
 import com.his.supplies.vo.CssdTraceVO;
-import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -63,6 +63,18 @@ public class CssdServiceImpl implements CssdService {
 
     // 回收登记
 
+    private static String tr(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    // 流转
+
+    private static LocalDateTime nowSeconds() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    // 查询
+
     @Transactional(rollbackFor = Exception.class)
     public CssdPackVO receive(CssdDTO.Receive dto) {
         int method = dto.getSterilizeMethod() == null ? 1 : dto.getSterilizeMethod();
@@ -88,8 +100,6 @@ public class CssdServiceImpl implements CssdService {
                         : UserUtils.getCurrentEmployeeName());
         return toVo(p, loadTraces(p.getId()));
     }
-
-    // 流转
 
     @Transactional(rollbackFor = Exception.class)
     public CssdPackVO advance(CssdDTO.Advance dto) {
@@ -142,7 +152,7 @@ public class CssdServiceImpl implements CssdService {
         return toVo(p, loadTraces(p.getId()));
     }
 
-    // 查询
+    // 私有
 
     public IPage<CssdPackVO> listPage(CssdDTO.QueryPage q) {
         String kw = tr(q.getKeyword());
@@ -162,8 +172,6 @@ public class CssdServiceImpl implements CssdService {
         BizCssdPack p = requirePack(packId);
         return toVo(p, loadTraces(packId));
     }
-
-    // 私有
 
     private BizCssdPack requirePack(Long packId) {
         BizCssdPack p = packMapper.selectById(packId);
@@ -196,7 +204,9 @@ public class CssdServiceImpl implements CssdService {
                 .stream().map(this::toTraceVo).toList();
     }
 
-    /** 条码自动生成：CSSD + yyyyMMdd + 顺延序号（查重含软删行，防唯一键冲突） */
+    /**
+     * 条码自动生成：CSSD + yyyyMMdd + 顺延序号（查重含软删行，防唯一键冲突）
+     */
     private String nextPackNo() {
         String date = LocalDate.now().format(NO_FMT);
         long seq = 1;
@@ -245,13 +255,5 @@ public class CssdServiceImpl implements CssdService {
         vo.setResultText(RESULT_NAME.get(t.getResult()));
         vo.setRemark(t.getRemark());
         return vo;
-    }
-
-    private static String tr(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static LocalDateTime nowSeconds() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 }

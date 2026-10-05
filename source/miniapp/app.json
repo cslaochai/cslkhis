@@ -19,7 +19,9 @@
     "pages/login/login",
     "pages/register/register",
     "pages/triage/triage",
-    "pages/chat/chat"
+    "pages/chat/chat",
+    "pages/previsit/previsit",
+    "pages/followup/followup"
   ],
   "window": {
     "backgroundTextStyle": "light",

@@ -6,6 +6,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 排班模板 VO
@@ -151,6 +152,11 @@ public class ScheduleTemplateVO {
      * 备注
      */
     private String remark;
+
+    /**
+     * 段级号源配置（医生岗可配；null/空=该模板未按段细化，生成排班时按半小时均分）
+     */
+    private List<ScheduleTemplateSlotVO> slots;
 
     /**
      * 创建时间

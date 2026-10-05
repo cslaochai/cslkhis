@@ -19,7 +19,10 @@ import java.util.List;
 public class LabInterpretResultVO {
 
     /**
-     * 是否降级（模型未参与）
+     * 是否降级（模型本应参与 —— 组合异常场景 —— 但未成功）。
+     * <p>
+     * 异常项不足 {@code MODEL_MIN_ABNORMAL} 时默认不调模型走规则结论，
+     * 那是设计内路径，不是降级；此时 degraded=false、source=rule。
      */
     private boolean degraded;
 
@@ -27,6 +30,11 @@ public class LabInterpretResultVO {
      * 降级原因
      */
     private String degradeReason;
+
+    /**
+     * 表达层来源：rule-规则解读 model-模型连贯解读（仅组合异常时出现）
+     */
+    private String source;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;

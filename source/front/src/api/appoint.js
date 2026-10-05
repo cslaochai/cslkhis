@@ -274,6 +274,11 @@ export function addScheduleSource(scheduleId, addNum, reason) {
     return request.post('/schedule/addSource', {scheduleId, addNum, reason})
 }
 
+// 段级号源编辑（每段号源/预约池/停用状态，Σ段写回主表并留痕）
+export function saveScheduleSlots(scheduleId, slots) {
+    return request.post('/schedule/slotUpsert', {scheduleId, slots})
+}
+
 // 过号处理
 export function overdueQueue(id, reason) {
     return request.post('/queue/overdueQueue', {id, reason})

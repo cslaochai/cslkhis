@@ -10,6 +10,8 @@ import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.BizStaffSchedule;
 import com.his.system.vo.StaffOnDutyVO;
 import com.his.system.vo.StaffScheduleVO;
+import com.his.system.vo.StaffTypeDayWorkingVO;
+import com.his.system.vo.UnitDayWorkingVO;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -118,4 +120,14 @@ public interface StaffScheduleService extends IService<BizStaffSchedule> {
      * 这条排班是否该产出出诊计划与号源（岗位有号源属性 + 出勤 + 非听班 + 标记出诊）。
      */
     boolean releasesClinicSource(BizStaffSchedule schedule);
+
+    /**
+     * 排班单元 × 日期的在岗人次（总览矩阵格子）。
+     */
+    List<UnitDayWorkingVO> listUnitDayWorking(LocalDate begin, LocalDate end);
+
+    /**
+     * 岗位类别 × 日期的在岗人次（总览卡片）。
+     */
+    List<StaffTypeDayWorkingVO> listStaffTypeDayWorking(LocalDate begin, LocalDate end);
 }

@@ -3,6 +3,8 @@ package com.his.emr.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.FollowupCancelDTO;
+import com.his.emr.dto.FollowupCallRegisterDTO;
+import com.his.emr.dto.FollowupCallResultDTO;
 import com.his.emr.dto.FollowupCompleteDTO;
 import com.his.emr.dto.FollowupQueryDTO;
 import com.his.emr.dto.FollowupStartDTO;
@@ -103,5 +105,20 @@ public class FollowupTaskController {
     public Result<Void> cancelFollowup(@RequestBody FollowupCancelDTO actionDTO) {
         followupTaskService.cancelFollowup(actionDTO.getId(), actionDTO.getReason());
         return Result.success("已取消", null);
+    }
+
+    @PreAuthorize("hasAuthority('inpatient:followup:edit')")
+    @Operation(summary = "登记电话外呼（返回明文电话供拨号；mock 通道=人工登记待呼）")
+    @PostMapping("/callRegister")
+    public Result<BizFollowupTaskVO> callRegister(@Valid @RequestBody FollowupCallRegisterDTO dto) {
+        return Result.success("外呼已登记", followupTaskService.registerCall(dto.getId()));
+    }
+
+    @PreAuthorize("hasAuthority('inpatient:followup:edit')")
+    @Operation(summary = "回填电话外呼结果（接通且任务待随访时自动转随访中）")
+    @PostMapping("/callResult")
+    public Result<Void> callResult(@Valid @RequestBody FollowupCallResultDTO dto) {
+        followupTaskService.recordCallResult(dto);
+        return Result.success("外呼结果已回填", null);
     }
 }

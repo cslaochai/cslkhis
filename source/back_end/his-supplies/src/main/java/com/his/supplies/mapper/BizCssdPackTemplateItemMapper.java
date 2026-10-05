@@ -14,7 +14,9 @@ import java.util.List;
 @Mapper
 public interface BizCssdPackTemplateItemMapper extends BaseMapper<BizCssdPackTemplateItem> {
 
-    /** 启用模板下按名称去重的器械汇总（名称/单位/规格取任意一条），供模板编辑器下拉带出规格 */
+    /**
+     * 启用模板下按名称去重的器械汇总（名称/单位/规格取任意一条），供模板编辑器下拉带出规格
+     */
     @Select("SELECT item_name AS itemName, MAX(spec) AS spec, MAX(unit) AS unit " +
             "FROM biz_cssd_pack_template_item i " +
             "JOIN biz_cssd_pack_template t ON t.id = i.template_id AND t.del_flag = 0 " +

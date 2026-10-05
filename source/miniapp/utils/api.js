@@ -178,9 +178,10 @@ export const serviceApi = {
 }
 
 // ========== 患者端 AI 能力 ==========
-// 报告解读 / 费用解释的事实层（哪些项异常、费用怎么拆）由后端规则算，
-// 模型只润色一句话；模型不可用时接口照常返回，只是 source=rule。
+// 报告解读的事实层（哪些项异常）由后端规则算，模型只润色串话；
+// 模型不可用时接口照常返回，只是 source=rule、degraded=true。
 // 所以前端**不要**因为 degraded=true 就弹「服务不可用」，那会劝退本来就焦虑的患者。
+// 费用解释 P1 起转纯计算（不经过模型，无 degraded/source 语义）；
 // 用药说明是规则型能力（剂量逐字来自医嘱，模型不参与）；导诊归一失败时用原话查即可。
 export const aiApi = {
   // 报告解读（患者版大白话）；reportId 全程字符串
@@ -216,6 +217,24 @@ export const guardianApi = {
   setDefault: (data) => post('/patient/guardian/setDefault', data),
   bindOpenid: (data) => post('/patient/guardian/bindOpenid', data),
   testNotify: () => post('/patient/guardian/testNotify')
+}
+
+// ========== 预问诊（G-05，患者端，/miniapp/previsit PATIENT 鉴权） ==========
+export const previsitApi = {
+  // 预问诊量表（主症状 + 通用问 + 主症状追问组，题目结构由后端下发）
+  questionnaire: () => get('/miniapp/previsit/questionnaire'),
+  // 提交问卷（按挂号 upsert，重复提交覆盖更新）
+  submit: (data) => post('/miniapp/previsit/submit', data),
+  // 按挂号查已提交的问卷（回显）
+  getByRegist: (registId) => get('/miniapp/previsit/getByRegist', { registId })
+}
+
+// ========== 我的随访（G-06，患者端，/miniapp/followup PATIENT 鉴权） ==========
+export const followupApi = {
+  // 我的随访任务（只含本人名下，按计划时间倒序）
+  myList: (patientId) => get('/miniapp/followup/myList', { patientId }),
+  // 提交随访反馈（写回任务的患者反馈列）
+  reply: (data) => post('/miniapp/followup/reply', data)
 }
 
 // ========== 通用：带患者ID 的便捷封装 ==========

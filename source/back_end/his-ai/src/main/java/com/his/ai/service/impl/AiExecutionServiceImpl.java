@@ -95,7 +95,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
         messages.add(AiMessageDTO.user(prompt.getUserText()));
 
         int timeoutMs = configProvider.timeoutOf(capabilityKey);
-        String model = configProvider.modelOf(call.isUseLiteModel());
+        String model = configProvider.modelOf(capabilityKey, call.isUseLiteModel());
         long start = System.currentTimeMillis();
 
         try {
@@ -125,7 +125,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
             entity.setModel(result.getModel());
             entity.setPromptTokens(result.getPromptTokens());
             entity.setCompletionTokens(result.getCompletionTokens());
-            entity.setOutputDigest(AiMaskUtils.digest(content));
+            entity.setOutputDigest(AiAuditDigestSupport.buildDigest(parsed));
             auditService.record(entity);
 
             return Optional.ofNullable(parsed);
@@ -134,7 +134,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
             degradeGuard.recordDegrade(capabilityKey);
             degradeGuard.recordFailureReason(capabilityKey, ex.getMessage());
             int latency = (int) (System.currentTimeMillis() - start);
-            record(call, operator, prompt.getVersion(),
+            record(call, operator, prompt.getVersion(), model,
                     ex.isTimeout() ? AiCallStatus.TIMEOUT : AiCallStatus.FAILED, latency, ex.getMessage());
             log.warn("[AI] {} 调用未成功，已降级：{}", capabilityKey, ex.getMessage());
             return Optional.empty();
@@ -144,7 +144,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
             degradeGuard.recordFailureReason(capabilityKey,
                     ex.getClass().getSimpleName() + ": " + ex.getMessage());
             int latency = (int) (System.currentTimeMillis() - start);
-            record(call, operator, prompt.getVersion(), AiCallStatus.FAILED, latency,
+            record(call, operator, prompt.getVersion(), model, AiCallStatus.FAILED, latency,
                     ex.getClass().getSimpleName() + ": " + ex.getMessage());
             log.error("[AI] {} 出现未预期异常，已降级", capabilityKey, ex);
             return Optional.empty();
@@ -176,9 +176,16 @@ public class AiExecutionServiceImpl implements AiExecutionService {
 
     private void record(AiCallDTO call, String operator, String promptVersion,
                         AiCallStatus status, int latencyMs, String errorMsg) {
+        record(call, operator, promptVersion, null, status, latencyMs, errorMsg);
+    }
+
+    /** 已进入模型调用阶段的失败要带上 model —— 超时/失败行没有 model 就说不清是哪个模型挂的 */
+    private void record(AiCallDTO call, String operator, String promptVersion, String model,
+                        AiCallStatus status, int latencyMs, String errorMsg) {
         SysAiCallLog entity = baseLog(call, operator, promptVersion);
         entity.setStatus(status.getCode());
         entity.setLatencyMs(latencyMs);
+        entity.setModel(model);
         entity.setErrorMsg(AiMaskUtils.digest(errorMsg, 480));
         auditService.record(entity);
     }

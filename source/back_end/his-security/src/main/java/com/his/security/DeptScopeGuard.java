@@ -4,35 +4,14 @@ import com.his.common.exception.BusinessException;
 
 import java.util.Set;
 
-/**
- * 科室数据权限的**调用侧门面** —— 业务模块只用这一类，不直接碰 SPI。
- *
- * <p><b>为什么要有门面</b>：只有 SPI 的话，每个调用方都要自己写一遍
- * 「取当前用户 → 取授权集合 → 判断是否受限 → 校验入参 deptId 是否越权」，
- * 这段逻辑写五遍就会出现五种松紧。收成一个静态入口后，
- * 「怎么判」只有一处，「要不要判」由调用方决定但**判的成本极低**。
- *
- * <p><b>典型用法</b>（业务 Service 里）：
- * <pre>{@code
- * // 1) 让范围收口：显式传了 deptId 就校验，没传则返回 null 表示"不限科室"
- * Long scoped = DeptScopeGuard.resolveDeptId(queryDTO.getDeptId());
- * if (scoped != null) {
- *     wrapper.eq(BizAppointInfo::getDeptId, scoped);
- * } else if (DeptScopeGuard.isScoped()) {
- *     wrapper.in(BizAppointInfo::getDeptId, DeptScopeGuard.allowedDeptIds());
- * }
- * }</pre>
- *
- * <p><b>故意不做成 AOP / MyBatis 拦截器</b>：本仓库还没有任何拦截器基建，
- * 而"哪类数据的科室字段该收口"是业务判断（例如排班信息的科室要收，
- * 但科室本身是全量字典不能收）。硬套拦截器会把字典数据也一起锁死。
- */
 public final class DeptScopeGuard {
 
     private DeptScopeGuard() {
     }
 
-    /** 由 Spring 启动时注入（{@code DeptScopeProviderImpl}），未装配时为 null → 视为不受限 */
+    /**
+     * 由 Spring 启动时注入（{@code DeptScopeProviderImpl}），未装配时为 null → 视为不受限
+     */
     private static DeptScopeProvider provider;
 
     /**

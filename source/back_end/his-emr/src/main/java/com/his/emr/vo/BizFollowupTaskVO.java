@@ -114,6 +114,38 @@ public class BizFollowupTaskVO {
     private String executeResult;
 
     /**
+     * 患者反馈内容（小程序回写）
+     */
+    private String patientReply;
+
+    /**
+     * 患者反馈时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime patientReplyTime;
+
+    /**
+     * 外呼通道（1-人工 2-自动）
+     */
+    private Integer callChannel;
+
+    /**
+     * 外呼状态（0-未外呼 1-待外呼 2-已接通 3-未接通）
+     */
+    private Integer callStatus;
+
+    /**
+     * 最近一次外呼登记时间
+     */
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime callTime;
+
+    /**
+     * 累计外呼登记次数
+     */
+    private Integer callAttempts;
+
+    /**
      * 复诊引用的原病历ID（由本任务生成复诊号时写入；雪花 → 字符串避免前端精度丢失）
      */
     @JsonSerialize(using = ToStringSerializer.class)

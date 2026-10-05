@@ -1,13 +1,8 @@
 package com.his.ai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.ai.constant.AiCapabilityKeys;
-import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.PatientFeeExplainDTO;
-import com.his.ai.dto.PatientFeeLlmOutputDTO;
-import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.PatientFeeExplainCapability;
-import com.his.ai.support.PatientTextGuard;
 import com.his.ai.vo.FeeCatalogGroupVO;
 import com.his.ai.vo.PatientFeeExplainVO;
 import com.his.charge.entity.BizInsuranceSettlement;
@@ -29,11 +24,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /**
  * 患者端费用解释。
@@ -50,16 +43,14 @@ import java.util.Optional;
  * 唯一例外是账单上已落库的 {@code coverage_ratio}（结算时真实使用的比例），
  * 那是事实不是政策解释。
  * <p>
- * 模型只参与最后 {@code summary} 的措辞，且必须过 {@link PatientTextGuard}。
+ * <b>不走模型</b>（施工手册纪律 9）：拆分是确定性计算、逐类说明是固定文案，
+ * 输入与答案都能穷举成一张表；且解释的是钱，模型幻觉不可接受。
+ * {@code summary} 由规则拼接，本能力不产生模型调用与审计行。
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapability {
-
-    private static final String TEMPLATE_NAME = "patient-fee-explain";
-
-    private static final String BIZ_TYPE = "settlement_bill";
 
     /** 目录类别：0-自费 1-甲类 2-乙类 3-丙类 */
     private static final int CATALOG_SELF = 0;
@@ -78,10 +69,6 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
     /** 自付 Top 明细条数 */
     private static final int TOP_SELF_LIMIT = 5;
 
-    private static final int OUTPUT_TOKEN_LIMIT = 512;
-
-    private static final int SUMMARY_MAX_LENGTH = 120;
-
     private static final String ADVICE =
             "以上是本账单的费用构成说明，实际报销以医保经办和收费窗口的解释为准；"
                     + "对某项收费有疑问，可在收费窗口打印明细清单核对。";
@@ -91,10 +78,6 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
     private final BizSettlementBillItemMapper billItemMapper;
 
     private final BizInsuranceSettlementMapper insuranceSettlementMapper;
-
-    private final AiExecutionService aiExecutionService;
-
-    private final PatientTextGuard textGuard;
 
     private final PatientGuardianService patientGuardianService;
 
@@ -145,26 +128,6 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
 
         String ruleSummary = buildRuleSummary(vo, catalogGroups);
         vo.setSummary(ruleSummary);
-
-        Optional<PatientFeeLlmOutputDTO> llmOutput = callModel(vo, catalogGroups, ruleSummary);
-        if (llmOutput.isPresent()) {
-            String guarded = textGuard.guard(llmOutput.get().getSummary(),
-                    AiCapabilityKeys.PATIENT_FEE_EXPLAIN);
-            if (StringUtils.hasText(guarded)) {
-                vo.setSummary(truncate(guarded, SUMMARY_MAX_LENGTH));
-                vo.setSource("model");
-                vo.setDegraded(false);
-            } else {
-                vo.setSource("rule");
-                vo.setDegraded(true);
-                vo.setDegradeReason("模型输出未通过患者文案安全闸，已回落到规则文案");
-            }
-        } else {
-            vo.setSource("rule");
-            vo.setDegraded(true);
-            vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.PATIENT_FEE_EXPLAIN)
-                    + "；以下构成为账单实际拆分结果，不受影响");
-        }
 
         vo.setAdvice(ADVICE);
         return vo;
@@ -316,49 +279,6 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
                 top.getCatalogText(), nz(top.getAmount()));
     }
 
-    // ---------------------------------------------------------------- 模型层
-
-    private Optional<PatientFeeLlmOutputDTO> callModel(PatientFeeExplainVO vo,
-                                                        List<FeeCatalogGroupVO> groups,
-                                                        String ruleSummary) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("totalAmount", nz(vo.getTotalAmount()).toPlainString());
-        variables.put("poolAmount", nz(vo.getPoolAmount()).toPlainString());
-        variables.put("accountAmount", nz(vo.getAccountAmount()).toPlainString());
-        variables.put("selfAmount", nz(vo.getSelfAmount()).toPlainString());
-        variables.put("insuranceType", nullToDash(vo.getInsuranceType()));
-        variables.put("coverageRatio", vo.getCoverageRatio() == null ? "（未记录）"
-                : vo.getCoverageRatio().toPlainString() + "%");
-        variables.put("catalogGroups", renderCatalogGroups(groups));
-        variables.put("ruleSummary", ruleSummary);
-
-        AiCallDTO call = AiCallDTO.builder()
-                .capabilityKey(AiCapabilityKeys.PATIENT_FEE_EXPLAIN)
-                .templateName(TEMPLATE_NAME)
-                .variables(variables)
-                .bizType(BIZ_TYPE)
-                .bizId(StringUtils.hasText(vo.getBillId()) ? Long.valueOf(vo.getBillId()) : null)
-                .inputDigest(nullToDash(vo.getBillNo()) + " | 总额 "
-                        + nz(vo.getTotalAmount()).toPlainString())
-                .maxTokens(OUTPUT_TOKEN_LIMIT)
-                .build();
-
-        return aiExecutionService.call(call, PatientFeeLlmOutputDTO.class);
-    }
-
-    private String renderCatalogGroups(List<FeeCatalogGroupVO> groups) {
-        if (groups.isEmpty()) {
-            return "（暂无明细）";
-        }
-        StringBuilder builder = new StringBuilder();
-        for (FeeCatalogGroupVO group : groups) {
-            builder.append(String.format("- %s：%.2f 元（占 %.1f%%），%d 项，医保口径：%s\n",
-                    group.getCatalogText(), nz(group.getAmount()), nz(group.getRatio()),
-                    group.getItemCount() == null ? 0 : group.getItemCount(), group.getRuleText()));
-        }
-        return builder.toString();
-    }
-
     // ---------------------------------------------------------------- 工具
 
     private static String catalogText(Integer catalogType) {
@@ -418,17 +338,5 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         }
         return nz(part).multiply(BigDecimal.valueOf(100))
                 .divide(total, 1, RoundingMode.HALF_UP);
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return text;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
-    private static String nullToDash(String text) {
-        return StringUtils.hasText(text) ? text : "（未填写）";
     }
 }

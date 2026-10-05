@@ -1,11 +1,13 @@
 package com.his.appoint.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * 排班模板新增/修改入参
@@ -147,4 +149,12 @@ public class ScheduleTemplateUpsertDTO {
      * 备注
      */
     private String remark;
+
+    /**
+     * 段级号源配置（可选，只对医生岗有意义）：
+     * null=本次不动（保留已有段配置）；[]=清空段配置（生成排班时回退半小时均分）；
+     * 非空=整批替换（无缝铺满班次时间窗 + 半小时网格 + Σ段=主表，保存侧校验，非法整批拒绝）。
+     */
+    @Valid
+    private List<ScheduleTemplateSlotItemDTO> slots;
 }

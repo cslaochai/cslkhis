@@ -1,20 +1,20 @@
 package com.his.supplies.service.impl;
 
-import com.his.supplies.service.CssdTemplateService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.security.UserUtils;
 import com.his.supplies.dto.CssdDTO;
 import com.his.supplies.entity.BizCssdPackTemplate;
 import com.his.supplies.entity.BizCssdPackTemplateItem;
 import com.his.supplies.mapper.BizCssdPackTemplateItemMapper;
 import com.his.supplies.mapper.BizCssdPackTemplateMapper;
+import com.his.supplies.service.CssdTemplateService;
 import com.his.supplies.vo.CssdPackTemplateItemSelectListVO;
 import com.his.supplies.vo.CssdPackTemplateItemVO;
 import com.his.supplies.vo.CssdPackTemplateSelectListVO;
 import com.his.supplies.vo.CssdPackTemplateVO;
-import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -44,7 +44,13 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
 
     // 查询
 
-    /** 回收登记下拉数据源：仅启用模板 */
+    private static String tr(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    /**
+     * 回收登记下拉数据源：仅启用模板
+     */
     public List<CssdPackTemplateSelectListVO> selectList() {
         return templateMapper.selectList(new LambdaQueryWrapper<BizCssdPackTemplate>()
                         .eq(BizCssdPackTemplate::getDelFlag, 0)
@@ -85,7 +91,11 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
         return toVo(t, loadItems(templateId));
     }
 
-    /** 模板编辑器组成明细下拉：启用模板下的器械名称去重汇总（带出规格/单位） */
+    // 写
+
+    /**
+     * 模板编辑器组成明细下拉：启用模板下的器械名称去重汇总（带出规格/单位）
+     */
     public List<CssdPackTemplateItemSelectListVO> itemSelectList() {
         return itemMapper.selectDistinctItemSummary().stream().map(i -> {
             CssdPackTemplateItemSelectListVO vo = new CssdPackTemplateItemSelectListVO();
@@ -93,8 +103,6 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
             return vo;
         }).toList();
     }
-
-    // 写
 
     @Transactional(rollbackFor = Exception.class)
     public CssdPackTemplateVO upsert(CssdDTO.TemplateUpsert dto) {
@@ -153,6 +161,8 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
         return toVo(t, loadItems(t.getId()));
     }
 
+    // 私有
+
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long templateId) {
         requireTemplate(templateId);
@@ -163,8 +173,6 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
         t.setUpdateBy(UserUtils.getCurrentEmployeeName());
         templateMapper.updateById(t);
     }
-
-    // 私有
 
     private BizCssdPackTemplate requireTemplate(Long templateId) {
         BizCssdPackTemplate t = templateMapper.selectById(templateId);
@@ -207,9 +215,5 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
         vo.setQuantity(i.getQuantity());
         vo.setSortNo(i.getSortNo());
         return vo;
-    }
-
-    private static String tr(String s) {
-        return s == null ? null : s.trim();
     }
 }

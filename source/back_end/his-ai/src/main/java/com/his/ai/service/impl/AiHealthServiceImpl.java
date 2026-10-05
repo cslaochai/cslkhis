@@ -34,7 +34,12 @@ public class AiHealthServiceImpl implements AiHealthService {
             AiCapabilityKeys.ICD10, AiCapabilityKeys.DRUG_AUDIT, AiCapabilityKeys.EMR_QC,
             AiCapabilityKeys.LAB_INTERPRET, AiCapabilityKeys.EMERGENCY_TRIAGE,
             AiCapabilityKeys.EMR_EXTRACT, AiCapabilityKeys.EMR_DRAFT,
-            AiCapabilityKeys.PATIENT_TRIAGE_NORMALIZE, AiCapabilityKeys.KNOWLEDGE_QA);
+            AiCapabilityKeys.PATIENT_REPORT_EXPLAIN, AiCapabilityKeys.PATIENT_TRIAGE_NORMALIZE,
+            AiCapabilityKeys.OPERATION_QA, AiCapabilityKeys.KNOWLEDGE_QA,
+            AiCapabilityKeys.PREVISIT_SUMMARY, AiCapabilityKeys.FOLLOWUP_COMPOSE,
+            AiCapabilityKeys.INSURANCE_EVIDENCE,
+            AiCapabilityKeys.DETERIORATION_ALERT, AiCapabilityKeys.NURSING_HANDOVER,
+            AiCapabilityKeys.VOICE_TRANSCRIBE);
 
     private final AiConfigProvider configProvider;
 
@@ -63,6 +68,7 @@ public class AiHealthServiceImpl implements AiHealthService {
 
         Map<String, Boolean> features = new LinkedHashMap<>();
         Map<String, Integer> timeouts = new LinkedHashMap<>();
+        Map<String, String> models = new LinkedHashMap<>();
         Map<String, Boolean> circuitOpen = new LinkedHashMap<>();
         Map<String, Long> degradedCount = new LinkedHashMap<>();
         Map<String, String> lastFailureReason = new LinkedHashMap<>();
@@ -71,12 +77,14 @@ public class AiHealthServiceImpl implements AiHealthService {
             // 是否真能用还要看上面顶层的 ready / notReadyReason。
             features.put(capability, configProvider.switchedOn(capability));
             timeouts.put(capability, configProvider.timeoutOf(capability));
+            models.put(capability, configProvider.modelOf(capability, false));
             circuitOpen.put(capability, degradeGuard.isOpen(capability));
             degradedCount.put(capability, degradeGuard.degradedCountOf(capability));
             lastFailureReason.put(capability, degradeGuard.lastFailureReason(capability));
         }
         vo.setFeatures(features);
         vo.setTimeouts(timeouts);
+        vo.setModels(models);
         vo.setCircuitOpen(circuitOpen);
         vo.setDegradedCount(degradedCount);
         vo.setLastFailureReason(lastFailureReason);

@@ -8,7 +8,9 @@ import lombok.Data;
  */
 @Data
 public class UdiScanDTO {
-    /** UDI 原文（扫码枪整串） */
+    /**
+     * UDI 原文（扫码枪整串）
+     */
     @NotBlank(message = "UDI码不能为空，请扫码或粘贴完整码串")
     private String udiCode;
 }

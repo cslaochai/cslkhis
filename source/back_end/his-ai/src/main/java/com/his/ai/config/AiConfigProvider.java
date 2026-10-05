@@ -123,12 +123,33 @@ public class AiConfigProvider {
     }
 
     /**
-     * 取模型：lite=true 时用轻量模型，未配置则回落主模型
+     * 取某能力实际生效的模型（G-16 多模型路由）：
+     * {@code ai.models.<capabilityKey>} 覆盖命中 → 用之（该能力整体换模型，lite 分流同样被覆盖）；
+     * 否则 lite=true 且配了轻量模型 → 轻量模型；再否则回落主模型。
      */
-    public String modelOf(boolean lite) {
+    public String modelOf(String capabilityKey, boolean lite) {
+        String override = properties.getModels().get(capabilityKey);
+        if (StringUtils.hasText(override)) {
+            return override;
+        }
         if (lite && StringUtils.hasText(properties.getModelLite())) {
             return properties.getModelLite();
         }
         return properties.getModel();
+    }
+
+    /**
+     * ASR 模型名（语音转写与 chat 模型分属两个端点，不允许混用）
+     */
+    public String asrModel() {
+        return properties.getAsr().getModel();
+    }
+
+    /**
+     * ASR 访问密钥：未单独配置时回落 chat 密钥（同一把 HIS_AI_API_KEY）
+     */
+    public String asrApiKey() {
+        String key = properties.getAsr().getApiKey();
+        return StringUtils.hasText(key) ? key : properties.getApiKey();
     }
 }

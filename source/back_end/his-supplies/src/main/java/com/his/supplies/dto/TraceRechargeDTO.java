@@ -8,7 +8,9 @@ import lombok.Data;
  */
 @Data
 public class TraceRechargeDTO {
-    /** 台账ID */
+    /**
+     * 台账ID
+     */
     @NotNull(message = "缺少台账ID")
     private Long traceId;
 }

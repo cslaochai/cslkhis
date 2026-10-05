@@ -3,7 +3,7 @@ import { appointApi, hospitalApi } from '../../utils/api'
 import { ensurePatient } from '../../utils/patientSync'
 
 /** 不在 tabBar 里的页面：只能 navigateTo 进入 */
-const NON_TAB_PAGES = ['/pages/chat/chat', '/pages/triage/triage']
+const NON_TAB_PAGES = ['/pages/chat/chat', '/pages/triage/triage', '/pages/followup/followup']
 
 // slot_start/slot_end 是 char(5) 的 HH:mm 快照，不是 datetime，不能按日期串 slice
 function slotText(start, end) {
@@ -29,7 +29,8 @@ Page({
       { id: 3, name: '检查报告', icon: '/images/icons/filetext.svg', bg: '#e8f5e9', page: '/pages/report/report' },
       { id: 4, name: '处方查询', icon: '/images/icons/pill.svg', bg: '#fce4ec', page: '/pages/prescription/prescription' },
       { id: 5, name: '在线客服', icon: '/images/icons/sms.svg', bg: '#f3e5f5', page: '/pages/chat/chat' },
-      { id: 6, name: '费用明细', icon: '/images/icons/money.svg', bg: '#e0f2f1', page: '/pages/payment/payment' }
+      { id: 6, name: '费用明细', icon: '/images/icons/money.svg', bg: '#e0f2f1', page: '/pages/payment/payment' },
+      { id: 7, name: '我的随访', icon: '/images/icons/clipboard.svg', bg: '#e8f5e9', page: '/pages/followup/followup' }
     ],
     nextAppointment: null,
     hospitalInfo: wx.getStorageSync('hospitalInfo') || {},

@@ -216,6 +216,12 @@ public class MedicalRecordSaveDTO {
      */
     private String treatmentPlan;
 
+    /**
+     * AI 草稿原文（G-10 留痕）：医生点「填入草稿」时前端记住的现病史草稿原文。
+     * 保存时携带，后端与终稿做 diff 落留痕表；未用草稿不传，保存后前端即清空。
+     */
+    private String aiDraftPresentIllness;
+
     // 处方信息
 
     /**

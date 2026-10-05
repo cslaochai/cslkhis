@@ -10,22 +10,36 @@ import lombok.Data;
 @Data
 public class CssdPackTemplateItemVO {
 
-    /** 明细ID */
+    /**
+     * 明细ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 模板ID */
+    /**
+     * 模板ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long templateId;
 
-    /** 器械/耗材名称 */
+    /**
+     * 器械/耗材名称
+     */
     private String itemName;
-    /** 规格 */
+    /**
+     * 规格
+     */
     private String spec;
-    /** 计量单位 */
+    /**
+     * 计量单位
+     */
     private String unit;
-    /** 基数（数量） */
+    /**
+     * 基数（数量）
+     */
     private Integer quantity;
-    /** 排序 */
+    /**
+     * 排序
+     */
     private Integer sortNo;
 }

@@ -17,6 +17,7 @@
 
       <!-- 位次/签到提示 -->
       <view class="q-ahead" wx:if="{{item.aheadText}}">{{item.aheadText}}</view>
+      <button class="checkin-btn previsit" data-regist-id="{{item.registId}}" bindtap="goPrevisit">预问诊</button>
       <button class="checkin-btn" wx:if="{{item.canCheckIn}}" loading="{{checking}}" data-regist-id="{{item.registId}}" bindtap="onCheckIn">到院签到</button>
 
       <!-- 进度条 -->

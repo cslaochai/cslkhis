@@ -22,8 +22,10 @@ import {
   getFollowupList, getFollowupDetail, getFollowupStat,
   startFollowup, completeFollowup, cancelFollowup,
   followupUpsert, followupCreateFromDischarge, followupCreateRevisitAppoint,
+  followupCallRegister, followupCallResult,
 } from '@/api/followup'
 import { issueDispatch } from '@/api/survey'
+import { composeFollowup } from '@/api/ai'
 import { getDictDataMapList } from '@/api/system'
 import { DICT_TYPE } from '@/lib/dict-cache'
 import { dictLabelText } from '@/lib/utils'
@@ -112,11 +114,12 @@ const editLoading = ref(false)
 const editForm = reactive({
   id: null as string | number | null, patientId: null as string | number | null, patientName: '',
   followupType: 1, followupTime: '', followupContent: '', phone: '', remark: '',
+  diagnosis: '',
 })
 const openCreate = () => {
   Object.assign(editForm, {
     id: null, patientId: null, patientName: '', followupType: 1,
-    followupTime: '', followupContent: '', phone: '', remark: '',
+    followupTime: '', followupContent: '', phone: '', remark: '', diagnosis: '',
   })
   editVisible.value = true
 }
@@ -133,6 +136,7 @@ const openEdit = async (row: any) => {
       id: t.id, patientId: t.patientId, patientName: t.patientName, followupType: t.followupType,
       followupTime: fmtTime(t.followupTime),
       followupContent: t.followupContent || '', phone: t.phone || '', remark: t.remark || '',
+      diagnosis: t.diagnosis || '',
     })
     editVisible.value = true
   } catch (e) { console.error(e); ElMessage.error('加载任务失败') }
@@ -140,6 +144,28 @@ const openEdit = async (row: any) => {
 const onPatientSelect = (p: any) => {
   editForm.patientName = p?.patientName || p?.name || ''
   if (p?.phone && !editForm.phone) editForm.phone = p.phone
+}
+
+/**
+ * G-06 AI 拟话术：按随访类型 + 患者慢病档案让模型草拟话术，医生核对改完再保存。
+ * degraded=true 表示落到了类型模板（模型不可用或文案越界被闸），必须说人话告知，不许当模型产出展示。
+ */
+const composing = ref(false)
+const composeAiContent = async () => {
+  if (!editForm.patientId) { ElMessage.warning('请先选择患者'); return }
+  composing.value = true
+  try {
+    const res: any = await composeFollowup({
+      patientId: editForm.patientId,
+      followupType: editForm.followupType,
+      diagnosis: editForm.diagnosis || undefined,
+    })
+    if (res.code === 200 && res.data?.content) {
+      editForm.followupContent = res.data.content
+      if (res.data.degraded) ElMessage.warning(`AI 暂不可用（${res.data.degradeReason || '原因未知'}），已按随访类型模板生成`)
+      else ElMessage.success('AI 话术已填入，请核对修改后保存')
+    } else ElMessage.error(res.message || 'AI 未生成话术')
+  } catch (e) { console.error(e); ElMessage.error('AI 拟话术失败') } finally { composing.value = false }
 }
 const submitEdit = async () => {
   if (!editForm.patientId || !editForm.followupTime || !editForm.followupContent.trim()) {
@@ -196,6 +222,73 @@ const cancel = async (row: any) => {
     const res: any = await cancelFollowup(row.id, { reason: '页面手动取消' })
     if (res.code === 200) { ElMessage.success('已取消'); loadList(); loadStat() } else ElMessage.error(res.message || '操作失败')
   } catch (e) { console.error(e); ElMessage.error('操作失败') }
+}
+
+// ---------------- 电话外呼（G-15，mock 通道=人工登记待呼） ----------------
+const callVisible = ref(false)
+const callTask = ref<any>(null)
+const callScript = ref('')
+const callRemark = ref('')
+const callResultLoading = ref(false)
+
+// 首次外呼：登记待外呼，返回明文电话供护士拨打
+const openCall = async (row: any) => {
+  try {
+    const res: any = await followupCallRegister(row.id)
+    if (res.code === 200 && res.data) {
+      callTask.value = res.data
+      callScript.value = res.data.followupContent || ''
+      callRemark.value = ''
+      callVisible.value = true
+    } else ElMessage.error(res.message || '外呼登记失败')
+  } catch (e) { console.error(e); ElMessage.error('外呼登记失败') }
+}
+
+// 已登记待外呼的行：不再重复登记，直接取详情（明文电话）回弹窗回填结果
+const openCallResume = async (row: any) => {
+  try {
+    const res: any = await getFollowupDetail(row.id)
+    if (res.code === 200 && res.data) {
+      callTask.value = res.data
+      callScript.value = res.data.followupContent || ''
+      callRemark.value = ''
+      callVisible.value = true
+    } else ElMessage.error(res.message || '加载任务失败')
+  } catch (e) { console.error(e); ElMessage.error('加载任务失败') }
+}
+
+// AI 拟话术：与编辑弹窗同一能力（followup_compose），产物仍是护士终审的初稿
+const composeCallScript = async () => {
+  const t = callTask.value
+  if (!t?.patientId) { ElMessage.warning('缺少患者信息，无法拟话术'); return }
+  try {
+    const res: any = await composeFollowup({
+      patientId: t.patientId,
+      followupType: t.followupType,
+      diagnosis: t.diagnosis || undefined,
+    })
+    if (res.code === 200 && res.data?.content) {
+      callScript.value = res.data.content
+      if (res.data.degraded) ElMessage.warning(`AI 暂不可用（${res.data.degradeReason || '原因未知'}），已按随访类型模板生成`)
+      else ElMessage.success('AI 话术已填入，请核对后拨打')
+    } else ElMessage.error(res.message || 'AI 未生成话术')
+  } catch (e) { console.error(e); ElMessage.error('AI 拟话术失败') }
+}
+
+const submitCallResult = async (connected: boolean) => {
+  callResultLoading.value = true
+  try {
+    const res: any = await followupCallResult({
+      id: callTask.value.id,
+      connected,
+      remark: callRemark.value.trim() || undefined,
+    })
+    if (res.code === 200) {
+      ElMessage.success(connected ? '已接通，任务已转随访中' : '已登记未接通，可稍后再次外呼')
+      callVisible.value = false
+      loadList(); loadStat()
+    } else ElMessage.error(res.message || '操作失败')
+  } catch (e) { console.error(e); ElMessage.error('操作失败') } finally { callResultLoading.value = false }
 }
 
 /**
@@ -388,6 +481,15 @@ onMounted(() => { loadDicts(); loadList(); loadStat() })
                 <el-tag :type="statusTag(row.followupStatus)">{{ statusText(row.followupStatus) }}</el-tag>
               </template>
             </el-table-column>
+            <el-table-column label="患者反馈" min-width="160" show-overflow-tooltip>
+              <template #default="{ row }">
+                <template v-if="row.patientReply">
+                  <span>{{ row.patientReply }}</span>
+                  <span class="text-gray-400 text-xs ml-1">{{ fmtTime(row.patientReplyTime) }}</span>
+                </template>
+                <span v-else class="text-gray-400 text-xs">—</span>
+              </template>
+            </el-table-column>
             <el-table-column prop="executorName" label="执行人" width="90">
               <template #default="{ row }">{{ row.executorName || '—' }}</template>
             </el-table-column>
@@ -407,12 +509,22 @@ onMounted(() => { loadDicts(); loadList(); loadStat() })
                 <template v-if="row.followupStatus === 1">
                   <el-button v-perm="'inpatient:followup:edit'" link type="primary" size="small"
                              @click.stop="openEdit(row)">编辑</el-button>
+                  <el-button v-if="row.callStatus === 1" v-perm="'inpatient:followup:edit'" link type="primary"
+                             size="small" @click.stop="openCallResume(row)">回填外呼结果</el-button>
+                  <el-button v-else v-perm="'inpatient:followup:edit'" link type="primary"
+                             size="small" @click.stop="openCall(row)">电话外呼</el-button>
                   <el-button link type="success" size="small" @click.stop="start(row)">开始</el-button>
                   <el-button v-perm="'inpatient:followup:delete'" link type="danger" size="small"
                              @click.stop="cancel(row)">取消</el-button>
                 </template>
-                <el-button v-else-if="row.followupStatus === 2" link type="success" size="small"
-                           @click.stop="openComplete(row)">完成随访</el-button>
+                <template v-else-if="row.followupStatus === 2">
+                  <el-button v-if="row.callStatus === 1" v-perm="'inpatient:followup:edit'" link type="primary"
+                             size="small" @click.stop="openCallResume(row)">回填外呼结果</el-button>
+                  <el-button v-else v-perm="'inpatient:followup:edit'" link type="primary"
+                             size="small" @click.stop="openCall(row)">电话外呼</el-button>
+                  <el-button link type="success" size="small"
+                             @click.stop="openComplete(row)">完成随访</el-button>
+                </template>
                 <!-- 补发问卷：完成随访时没有启用模板会被后端跳过，这里给一条人工兜底 -->
                 <el-button v-else-if="row.followupStatus === 3" v-perm="'qc:survey:add'"
                            link type="primary" size="small" @click.stop="openIssue(row)">补发问卷</el-button>
@@ -507,6 +619,8 @@ onMounted(() => { loadDicts(); loadList(); loadStat() })
         </el-form-item>
         <el-form-item label="随访内容" required>
           <el-input v-model="editForm.followupContent" type="textarea" :rows="3" />
+          <el-button link type="primary" :loading="composing" class="mt-1 self-start"
+                     @click="composeAiContent">AI 拟话术</el-button>
         </el-form-item>
         <el-form-item label="联系电话">
           <el-input v-model="editForm.phone" placeholder="不填自动取患者档案电话" style="width: 220px" />
@@ -580,6 +694,36 @@ onMounted(() => { loadDicts(); loadList(); loadStat() })
       <template #footer>
         <el-button @click="issueVisible = false">取消</el-button>
         <el-button type="primary" :loading="issueLoading" @click="submitIssue">发放</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 电话外呼（G-15）：mock 通道=登记待呼，护士按明文电话拨打后回填结果 -->
+    <el-dialog v-model="callVisible" title="电话外呼" width="560px">
+      <div v-if="callTask" class="space-y-3">
+        <div class="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+          已登记待外呼（第 {{ callTask.callAttempts || 1 }} 次，人工通道）。请拨打以下电话，通话结束后回填结果。
+        </div>
+        <el-form label-width="90px">
+          <el-form-item label="患者">
+            <el-input :model-value="`${callTask.patientName || ''}（${callTask.patientNo || '—'}）`" disabled />
+          </el-form-item>
+          <el-form-item label="联系电话">
+            <el-input :model-value="callTask.phone || '—'" disabled />
+          </el-form-item>
+          <el-form-item label="话术稿">
+            <el-input v-model="callScript" type="textarea" :rows="5" placeholder="按随访内容通话，可修改" />
+          </el-form-item>
+          <el-form-item label="外呼备注">
+            <el-input v-model="callRemark" type="textarea" :rows="2"
+                      placeholder="未接通原因、患者反馈摘要等（选填）" />
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <el-button :disabled="!callTask?.patientId" @click="composeCallScript">AI 拟话术</el-button>
+        <el-button @click="callVisible = false">关闭</el-button>
+        <el-button type="warning" :loading="callResultLoading" @click="submitCallResult(false)">未接通</el-button>
+        <el-button type="primary" :loading="callResultLoading" @click="submitCallResult(true)">已接通</el-button>
       </template>
     </el-dialog>
 

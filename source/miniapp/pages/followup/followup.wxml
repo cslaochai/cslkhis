@@ -1,0 +1,58 @@
+<view class="page">
+  <view class="banner">
+    <text class="banner-title">我的随访</text>
+    <text class="banner-sub">{{patientName ? patientName + ' 的随访任务' : '医生的随访任务与您的反馈'}}</text>
+  </view>
+
+  <view class="list" wx:if="{{list.length > 0}}">
+    <view class="fu-card" wx:for="{{list}}" wx:key="taskId">
+      <view class="fu-head">
+        <text class="fu-type">{{item.typeText}}</text>
+        <text class="fu-status {{item.statusClass}}">{{item.statusText}}</text>
+      </view>
+      <view class="fu-content" wx:if="{{item.followupContent}}">{{item.followupContent}}</view>
+      <view class="fu-row">
+        <text class="fu-label">计划时间</text>
+        <text class="fu-value">{{item.timeText || '—'}}</text>
+      </view>
+
+      <view class="fu-reply" wx:if="{{item.patientReply}}">
+        <text class="fu-reply-text">我的反馈：{{item.patientReply}}</text>
+        <text class="fu-reply-time" wx:if="{{item.replyTimeText}}">{{item.replyTimeText}}</text>
+      </view>
+
+      <block wx:if="{{item.canReply}}">
+        <button
+          class="fu-btn"
+          wx:if="{{activeTaskId !== item.taskId}}"
+          bindtap="toggleReply"
+          data-task-id="{{item.taskId}}"
+        >提交反馈</button>
+        <view class="reply-box" wx:else>
+          <textarea
+            class="reply-input"
+            value="{{replyText}}"
+            bindinput="onReplyInput"
+            maxlength="200"
+            auto-height
+            placeholder="填写您的反馈（如症状变化、用药情况等）"
+            placeholder-class="reply-ph"
+          />
+          <view class="reply-actions">
+            <button class="fu-btn ghost" bindtap="toggleReply" data-task-id="{{item.taskId}}">取消</button>
+            <button class="fu-btn" loading="{{replying}}" bindtap="submitReply" data-task-id="{{item.taskId}}">确认提交</button>
+          </view>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="empty" wx:elif="{{!loading}}">
+    <text class="empty-icon">📋</text>
+    <text class="empty-text">暂无随访任务</text>
+  </view>
+
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+  </view>
+</view>

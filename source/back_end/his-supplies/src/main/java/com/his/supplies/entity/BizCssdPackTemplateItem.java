@@ -18,25 +18,41 @@ import java.time.LocalDateTime;
 @TableName("biz_cssd_pack_template_item")
 public class BizCssdPackTemplateItem {
 
-    /** 明细ID */
+    /**
+     * 明细ID
+     */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 模板ID */
+    /**
+     * 模板ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long templateId;
 
-    /** 器械/耗材名称 */
+    /**
+     * 器械/耗材名称
+     */
     private String itemName;
-    /** 规格 */
+    /**
+     * 规格
+     */
     private String spec;
-    /** 计量单位 */
+    /**
+     * 计量单位
+     */
     private String unit;
-    /** 基数（数量） */
+    /**
+     * 基数（数量）
+     */
     private Integer quantity;
-    /** 排序 */
+    /**
+     * 排序
+     */
     private Integer sortNo;
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
 }

@@ -24,6 +24,7 @@ import com.his.appoint.vo.ScheduleDetailVO;
 import com.his.appoint.vo.ScheduleSelectListVO;
 import com.his.appoint.vo.StopImpactItemVO;
 import com.his.common.enums.AttendModeEnum;
+import com.his.common.enums.ConsultStatusEnum;
 import com.his.common.enums.OrgUnitTypeEnum;
 import com.his.common.enums.ScheduleStatusEnum;
 import com.his.common.enums.StaffDutyStatusEnum;
@@ -38,6 +39,7 @@ import com.his.security.UserUtils;
 import com.his.system.service.SysClinicRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -320,8 +322,8 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
             throw new BusinessException("该排班已有挂号记录，无法删除");
         }
         assertNotPast(existing.getScheduleDate(), "删除");
-        // 物理删（段与主表）：uk_schedule_window / uk_slot 都不含 del_flag（铁律），
-        // BaseEntity 的 @TableLogic 逻辑删会留下继续占用唯一键的行，同窗口新排班插不进去
+        // 物理删（段与主表）：uk_schedule_window 与段的唯一键都不含 del_flag（铁律），BaseEntity 的 @TableLogic
+        // 逻辑删会留下继续占用唯一键的行，「删了重排同一窗口」必然撞重复键
         slotService.physicalDeleteByScheduleId(id);
         boolean ok = scheduleMapper.physicalDeleteById(id) > 0;
         if (ok) {
@@ -458,11 +460,18 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
     @Transactional(rollbackFor = Exception.class)
     public void scheduleUpsert(ScheduleUpsertDTO upsertDTO) {
         BizSchedule schedule = convertToScheduleEntity(upsertDTO);
-        boolean success = upsertDTO.getId() == null
-                ? addSchedule(schedule)
-                : updateSchedule(schedule);
-        if (!success) {
-            throw new BusinessException(upsertDTO.getId() == null ? "新增失败" : "修改失败");
+        try {
+            boolean success = upsertDTO.getId() == null
+                    ? addSchedule(schedule)
+                    : updateSchedule(schedule);
+            if (!success) {
+                throw new BusinessException(upsertDTO.getId() == null ? "新增失败" : "修改失败");
+            }
+        } catch (DuplicateKeyException e) {
+            // 并发兜底：checkScheduleOverlap 是先查后插，两个并发请求互相看不见对方，双双落库时
+            // 由 uk_schedule_window(dept_id,doctor_id,schedule_date,start_time,end_time)
+            // 或事实层 uk_emp_date_shift 兜住。把底层 500「系统内部错误」转成与业务校验同文案的 400。
+            throw new BusinessException("该医生在此时间段已有排班，时间冲突");
         }
     }
 
@@ -585,6 +594,10 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
 
     @Override
     public boolean updateConsultStatus(Long scheduleId, Integer consultStatus) {
+        // 值域在服务端收口：码值只允许 0/1/2，越界值（如 99）不能落库
+        if (ConsultStatusEnum.fromCode(consultStatus) == null) {
+            throw new BusinessException("就诊状态只允许 " + ConsultStatusEnum.whitelistText());
+        }
         BizSchedule schedule = scheduleMapper.selectById(scheduleId);
         if (schedule == null) {
             throw new BusinessException("排班记录不存在");

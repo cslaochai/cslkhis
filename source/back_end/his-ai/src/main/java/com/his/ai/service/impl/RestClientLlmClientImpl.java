@@ -16,10 +16,14 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -42,6 +46,10 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
     private static final String CHAT_PATH = "/v1/chat/completions";
     private static final int MAX_CONNECT_TIMEOUT_MS = 5_000;
     private static final int MAX_ERROR_BODY_LENGTH = 500;
+    // 手动解析替代按 Content-Type 转换；与 Spring Boot 自动配置的 ObjectMapper 同口径，未知字段不报错
+    // （推理模型会在 message 里多带 reasoning_content，FAIL_ON_UNKNOWN_PROPERTIES 默认开会把正常响应拒掉）
+    private static final ObjectMapper RESPONSE_MAPPER = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private final AiConfigProvider configProvider;
 
@@ -78,16 +86,25 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             long start = System.currentTimeMillis();
             try {
-                OpenAiChatResponseDTO response = client.post()
+                // 不依赖响应 Content-Type：部分兼容端点偶发把 JSON 标成 application/octet-stream，
+                // 按 content-type 走 Jackson 转换器会直接抛 UnknownContentType；这里取原始字节按 UTF-8 自行解析
+                String raw = client.post()
                         .uri(chatPath(baseUrl))
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + properties.getApiKey())
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .body(body)
-                        .retrieve()
-                        .body(OpenAiChatResponseDTO.class);
+                        .exchange((req, resp) -> {
+                            byte[] bytes = resp.getBody().readAllBytes();
+                            if (resp.getStatusCode().isError()) {
+                                throw new RestClientResponseException("HTTP " + resp.getStatusCode().value(),
+                                        resp.getStatusCode(), resp.getStatusText(), null, bytes, StandardCharsets.UTF_8);
+                            }
+                            return new String(bytes, StandardCharsets.UTF_8);
+                        });
 
-                String content = response == null ? null : response.firstContent();
+                OpenAiChatResponseDTO response = RESPONSE_MAPPER.readValue(raw, OpenAiChatResponseDTO.class);
+                String content = response.firstContent();
                 if (!StringUtils.hasText(content)) {
                     throw new LlmException("模型返回内容为空");
                 }
@@ -109,6 +126,9 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
             } catch (LlmException ex) {
                 // 语义性问题（如内容为空），重试无意义
                 lastError = ex;
+                break;
+            } catch (JsonProcessingException ex) {
+                lastError = new LlmException("模型返回解析失败：" + ex.getOriginalMessage(), ex);
                 break;
             } catch (RestClientException ex) {
                 lastError = toLlmException(ex);

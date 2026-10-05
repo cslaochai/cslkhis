@@ -23,8 +23,10 @@ import com.his.system.mapper.SysWardMapper;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffPlanRuleService;
 import com.his.system.vo.StaffPlanRuleVO;
+import com.his.system.vo.StaffShortfallVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -32,13 +34,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -457,6 +457,69 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         }
         SysDepartment dept = departmentMapper.selectById(orgId);
         return dept == null ? null : dept.getDeptName();
+    }
+
+    @Override
+    public List<StaffShortfallVO> listShortfalls(LocalDate begin, LocalDate end) {
+        List<BizStaffPlanRule> rules = this.list(new LambdaQueryWrapper<BizStaffPlanRule>()
+                .eq(BizStaffPlanRule::getStatus, EnableStatusEnum.ENABLED.getCode())
+                .gt(BizStaffPlanRule::getMinStaff, 0));
+        if (rules.isEmpty()) {
+            return List.of();
+        }
+        // 一次扫描建两份在岗索引：标准行指明班次的按 (日|单元|岗位|班次) 查，
+        // shiftId=0 全班次共用的按 (日|单元|岗位) 跨班次合计。COUNT(*) 按班次行数，
+        // 同一人同日两班算两份人力 —— 最低在岗本来就是「每个班要几个人」。
+        Map<String, Long> byShift = new HashMap<>();
+        Map<String, Long> byUnit = new HashMap<>();
+        Map<String, String> orgNames = new HashMap<>();
+        for (Map<String, Object> row : scheduleMapper.groupWorkingByUnitShift(begin, end)) {
+            LocalDate date = LocalDate.parse(String.valueOf(row.get("scheduleDate")));
+            Integer orgType = (Integer) row.get("orgType");
+            Long orgId = ((Number) row.get("orgId")).longValue();
+            Object shiftRaw = row.get("shiftId");
+            Long shiftId = shiftRaw == null ? null : ((Number) shiftRaw).longValue();
+            Integer staffType = (Integer) row.get("staffType");
+            long cnt = ((Number) row.get("cnt")).longValue();
+            String unitKey = date + "|" + orgType + "|" + orgId + "|" + staffType;
+            byUnit.merge(unitKey, cnt, Long::sum);
+            if (shiftId != null) {
+                byShift.merge(unitKey + "|" + shiftId, cnt, Long::sum);
+            }
+            orgNames.putIfAbsent(orgType + "|" + orgId, (String) row.get("orgName"));
+        }
+        List<Long> namedShiftIds = rules.stream()
+                .map(BizStaffPlanRule::getShiftId)
+                .filter(id -> id != null && id != SHIFT_ANY).distinct().toList();
+        Map<Long, BizShift> shifts = namedShiftIds.isEmpty()
+                ? Map.of() : shiftService.mapByIds(namedShiftIds);
+        List<StaffShortfallVO> vos = new ArrayList<>();
+        for (BizStaffPlanRule rule : rules) {
+            String orgKey = rule.getOrgType() + "|" + rule.getOrgId();
+            for (LocalDate date = begin; !date.isAfter(end); date = date.plusDays(1)) {
+                String unitKey = date + "|" + orgKey + "|" + rule.getStaffType();
+                Long actual = rule.getShiftId() == null || rule.getShiftId() == SHIFT_ANY
+                        ? byUnit.get(unitKey) : byShift.get(unitKey + "|" + rule.getShiftId());
+                long actualCount = actual == null ? 0L : actual;
+                if (actualCount >= rule.getMinStaff()) {
+                    continue;
+                }
+                StaffShortfallVO vo = new StaffShortfallVO();
+                vo.setScheduleDate(date);
+                vo.setOrgType(rule.getOrgType());
+                vo.setOrgId(rule.getOrgId());
+                vo.setOrgName(StringUtils.hasText(rule.getOrgName())
+                        ? rule.getOrgName() : orgNames.getOrDefault(orgKey, unitNameOf(rule.getOrgType(), rule.getOrgId())));
+                vo.setShiftId(rule.getShiftId());
+                vo.setShiftName(shiftNameOf(rule.getShiftId(), shifts.get(rule.getShiftId())));
+                vo.setStaffType(rule.getStaffType());
+                vo.setMinStaff(rule.getMinStaff());
+                vo.setActualCount(actualCount);
+                vo.setShortfall(rule.getMinStaff() - (int) actualCount);
+                vos.add(vo);
+            }
+        }
+        return vos;
     }
 
     /** 班次名：0 表示全部班次共用，出参要能看出来是「整册标准」而不是某个班 */

@@ -12,15 +12,23 @@ import java.math.BigDecimal;
  */
 @Data
 public class ConsumableConsumeDTO {
-    /** 耗材ID */
+    /**
+     * 耗材ID
+     */
     @NotNull(message = "耗材ID不能为空")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long consumableId;
-    /** 领用数量（>0） */
+    /**
+     * 领用数量（>0）
+     */
     private BigDecimal quantity;
-    /** 领用科室ID */
+    /**
+     * 领用科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
-    /** 用途 */
+    /**
+     * 用途
+     */
     private String purpose;
 }

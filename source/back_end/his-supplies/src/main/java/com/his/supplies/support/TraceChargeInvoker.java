@@ -23,7 +23,9 @@ public class TraceChargeInvoker {
 
     private final FeeRecordService feeRecordService;
 
-    /** 一件一笔记账（独立事务，失败不回滚使用登记） */
+    /**
+     * 一件一笔记账（独立事务，失败不回滚使用登记）
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public BizFeeRecord book(FeeBookDTO dto) {
         return feeRecordService.book(dto);

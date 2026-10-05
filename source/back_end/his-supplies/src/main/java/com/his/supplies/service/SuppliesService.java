@@ -4,12 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.supplies.dto.ConsumableUpsertDTO;
 import com.his.supplies.entity.BizConsumableStock;
-import com.his.supplies.entity.SysConsumable;
-import com.his.supplies.vo.BizConsumableConsumeVO;
-import com.his.supplies.vo.BizConsumableStockLogVO;
-import com.his.supplies.vo.BizConsumableStockVO;
-import com.his.supplies.vo.ConsumableSelectListVO;
-import com.his.supplies.vo.SysConsumableVO;
+import com.his.supplies.vo.*;
 
 import java.math.BigDecimal;
 import java.util.List;

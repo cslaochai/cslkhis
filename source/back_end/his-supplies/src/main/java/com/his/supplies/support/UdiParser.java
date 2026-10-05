@@ -9,11 +9,6 @@ import java.util.regex.Pattern;
 /**
  * GS1 UDI 解析器（高值耗材扫码串 → DI/序列号/批号/有效期）。
  *
- * <p>只承诺带括号的 HRI 格式（扫码枪默认输出），如：
- * {@code (01)06941234567890(21)SN2026090001(17)290301(10)LOT20260901}。
- * 不带括号的裸串里 21/10 是变长 AI，没有 FNC1 分隔符无法可靠切段 —— 解析不出 DI 就明确报失败，
- * 不猜（猜错 DI 会把费用记到别的耗材头上）。兼容个别扫码枪吞掉括号的写法：
- * 裸串以 "01" 开头且后面是 14 位数字时，DI 定长可安全切出，其余变长段放弃。
  */
 public final class UdiParser {
 
@@ -21,16 +16,6 @@ public final class UdiParser {
     private static final Pattern BARE_DI = Pattern.compile("^01(\\d{14})");
 
     private UdiParser() {
-    }
-
-    @Data
-    public static class UdiParts {
-        private String di;
-        private String serial;
-        private String batch;
-        private LocalDate expiryDate;
-        /** 括号格式是否完整解析出 DI */
-        private boolean parsed;
     }
 
     /**
@@ -54,7 +39,8 @@ public final class UdiParser {
                 case "21" -> parts.serial = value;
                 case "10" -> parts.batch = value;
                 case "17" -> parts.expiryDate = parseYymmdd(value);
-                default -> { }
+                default -> {
+                }
             }
         }
         if (!hasBrackets) {
@@ -67,7 +53,9 @@ public final class UdiParser {
         return parts;
     }
 
-    /** GS1 (17)：YYMMDD；日给 00 表示当月最后一天 */
+    /**
+     * GS1 (17)：YYMMDD；日给 00 表示当月最后一天
+     */
     private static LocalDate parseYymmdd(String value) {
         if (value == null || value.length() < 4 || !value.chars().allMatch(Character::isDigit)) {
             return null;
@@ -84,5 +72,17 @@ public final class UdiParser {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    @Data
+    public static class UdiParts {
+        private String di;
+        private String serial;
+        private String batch;
+        private LocalDate expiryDate;
+        /**
+         * 括号格式是否完整解析出 DI
+         */
+        private boolean parsed;
     }
 }

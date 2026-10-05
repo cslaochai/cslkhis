@@ -49,7 +49,9 @@ import java.util.concurrent.ThreadLocalRandom;
 public class HighValueTraceServiceImpl implements HighValueTraceService {
 
     private static final BigDecimal ONE = BigDecimal.ONE;
-    /** charge_fail_reason 列宽 VARCHAR(500)：超长会把"补记"升级成 500，先截断 */
+    /**
+     * charge_fail_reason 列宽 VARCHAR(500)：超长会把"补记"升级成 500，先截断
+     */
     private static final int FAIL_REASON_MAX = 500;
     private static final int VOID_REASON_MAX = 200;
 
@@ -58,6 +60,25 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
     private final BizConsumableStockMapper stockMapper;
     private final BizConsumableStockLogMapper stockLogMapper;
     private final TraceChargeInvoker chargeInvoker;
+
+    private static String str(Object v) {
+        return v == null ? null : String.valueOf(v);
+    }
+
+    private static BigDecimal nz(BigDecimal v) {
+        return v == null ? BigDecimal.ZERO : v;
+    }
+
+    private static String cut(String v, int max) {
+        if (v == null) {
+            return null;
+        }
+        return v.length() <= max ? v : v.substring(0, max);
+    }
+
+    private static String blankToNull(String v) {
+        return StringUtils.hasText(v) ? v.trim() : null;
+    }
 
     @Override
     public UdiScanVO scanUdi(String udiCode) {
@@ -192,6 +213,8 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         return toVo(traceMapper.selectById(trace.getId()));
     }
 
+    // 私有
+
     @Override
     public PageResult<BizConsumableTraceVO> selectTracePage(ConsumableTraceQueryPageDTO q) {
         Page<BizConsumableTraceVO> page = traceMapper.selectTracePage(
@@ -277,8 +300,6 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         traceMapper.updateById(trace);
         return toVo(traceMapper.selectById(traceId));
     }
-
-    // 私有
 
     private void deductBatch(BizConsumableStock stock, BizConsumableTrace trace, String operatorName) {
         BigDecimal before = stock.getQuantity();
@@ -376,24 +397,5 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
     private String nextTraceNo() {
         return "HV" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
                 + String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
-    }
-
-    private static String str(Object v) {
-        return v == null ? null : String.valueOf(v);
-    }
-
-    private static BigDecimal nz(BigDecimal v) {
-        return v == null ? BigDecimal.ZERO : v;
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        return v.length() <= max ? v : v.substring(0, max);
-    }
-
-    private static String blankToNull(String v) {
-        return StringUtils.hasText(v) ? v.trim() : null;
     }
 }

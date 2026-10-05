@@ -5,6 +5,7 @@ import com.his.charge.dto.ComplianceBatchAuditDTO;
 import com.his.charge.dto.SettlementCodingUpsertDTO;
 import com.his.charge.vo.ComplianceAuditDetailVO;
 import com.his.charge.vo.ComplianceAuditVO;
+import com.his.charge.vo.ComplianceEvidenceNarrativeVO;
 import com.his.charge.vo.SettlementCodingVO;
 import com.his.common.base.PageResult;
 
@@ -49,4 +50,10 @@ public interface ComplianceAuditService {
      * 查询审核详情（含全部规则判定明细）
      */
     ComplianceAuditDetailVO getAuditDetail(Long auditId);
+
+    /**
+     * 证据叙事包：把一次审核的依据包压平成模型可读的事实文本块（G-07）。
+     * 只读产物，供 his-ai 的医保证据判定能力拼提示词；不写库、不改规则结论。
+     */
+    ComplianceEvidenceNarrativeVO getAiEvidenceNarrative(Long auditId);
 }

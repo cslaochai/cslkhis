@@ -1,0 +1,114 @@
+<view class="page">
+  <view class="banner">
+    <text class="banner-title">预问诊</text>
+    <text class="banner-sub">提前告诉医生您的情况，接诊时医生可直接查看</text>
+  </view>
+
+  <block wx:if="{{!loading}}">
+    <!-- 主症状 + 该症状的追问组 -->
+    <view class="card" wx:if="{{mainSymptoms.length > 0}}">
+      <view class="q-title-row">
+        <text class="card-title">主要症状</text>
+        <text class="q-required">*</text>
+      </view>
+      <view class="tag-list">
+        <view
+          class="tag {{mainSymptomCode === item.code ? 'on' : ''}}"
+          wx:for="{{mainSymptoms}}"
+          wx:key="code"
+          data-code="{{item.code}}"
+          bindtap="onPickMain"
+        >{{item.label}}</view>
+      </view>
+
+      <block wx:for="{{symptomQuestions[mainSymptomCode]}}" wx:key="key" wx:for-item="q">
+        <view class="q-block">
+          <view class="q-title-row">
+            <text class="q-label">{{q.label}}</text>
+          </view>
+          <view class="tag-list" wx:if="{{q.type === 'choice'}}">
+            <view
+              class="tag {{answers[q.key] === opt.value ? 'on' : ''}}"
+              wx:for="{{q.optionList}}"
+              wx:for-item="opt"
+              wx:key="*this"
+              data-key="{{q.key}}"
+              data-value="{{opt.value}}"
+              bindtap="onPickChoice"
+            >{{opt.label}}</view>
+          </view>
+          <textarea
+            wx:else
+            class="q-textarea"
+            value="{{answers[q.key]}}"
+            data-key="{{q.key}}"
+            bindinput="onTextInput"
+            maxlength="200"
+            auto-height
+            placeholder="选填"
+            placeholder-class="q-ph"
+          />
+        </view>
+      </block>
+    </view>
+
+    <!-- 通用问 -->
+    <view class="card" wx:if="{{commonQuestions.length > 0}}">
+      <text class="card-title">基本情况</text>
+      <view class="q-block" wx:for="{{commonQuestions}}" wx:key="key" wx:for-item="q">
+        <view class="q-title-row">
+          <text class="q-label">{{q.label}}</text>
+          <text class="q-required" wx:if="{{q.required}}">*</text>
+        </view>
+        <view class="tag-list" wx:if="{{q.type === 'choice'}}">
+          <view
+            class="tag {{answers[q.key] === opt.value ? 'on' : ''}}"
+            wx:for="{{q.optionList}}"
+            wx:for-item="opt"
+            wx:key="*this"
+            data-key="{{q.key}}"
+            data-value="{{opt.value}}"
+            bindtap="onPickChoice"
+          >{{opt.label}}</view>
+        </view>
+        <textarea
+          wx:else
+          class="q-textarea"
+          value="{{answers[q.key]}}"
+          data-key="{{q.key}}"
+          bindinput="onTextInput"
+          maxlength="200"
+          auto-height
+          placeholder="选填"
+          placeholder-class="q-ph"
+        />
+      </view>
+    </view>
+
+    <view class="card empty-card" wx:if="{{mainSymptoms.length === 0 && commonQuestions.length === 0}}">
+      <text class="empty-text">暂无预问诊量表</text>
+    </view>
+
+    <!-- 补充描述 -->
+    <view class="card">
+      <text class="card-title">补充描述</text>
+      <textarea
+        class="q-textarea free"
+        value="{{freeText}}"
+        bindinput="onFreeInput"
+        maxlength="500"
+        auto-height
+        placeholder="其他想告诉医生的情况（选填）"
+        placeholder-class="q-ph"
+      />
+    </view>
+
+    <button class="primary-btn" loading="{{submitting}}" bindtap="onSubmit">
+      {{submitted ? '更新答卷' : '提交问卷'}}
+    </button>
+  </block>
+
+  <view class="loading" wx:if="{{loading}}">
+    <view class="loading-spinner"></view>
+  </view>
+</view>

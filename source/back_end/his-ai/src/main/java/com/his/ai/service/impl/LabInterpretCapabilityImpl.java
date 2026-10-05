@@ -77,6 +77,15 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
 
     private static final int MAX_SUGGESTIONS = 5;
 
+    /**
+     * 触发模型连贯解读的最少异常项数。
+     * <p>
+     * 逐项检验意义是静态词典（ALT 高是什么意思不需要模型），1~2 项异常时
+     * 规则结论（项名+方向+参考区间）已完整覆盖，调模型只买到幻觉风险 ——
+     * 只有 ≥3 项异常「组合起来意味着什么」才是规则写不完的长尾（施工手册 G-09）。
+     */
+    private static final int MODEL_MIN_ABNORMAL = 3;
+
     private static final int OUTPUT_TOKEN_LIMIT = 2048;
 
     private static final int CONCLUSION_MAX_LENGTH = 500;
@@ -340,18 +349,30 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
         List<LabTrendVO> trends = includeTrend ? buildTrends(record, results) : List.of();
         vo.setTrends(trends);
 
-        // 模型层
-        Optional<LabInterpretLlmOutputDTO> llmOutput = callModel(record, items, trends);
-        if (llmOutput.isPresent()) {
-            LabInterpretLlmOutputDTO output = llmOutput.get();
-            vo.setTrendSummary(truncate(output.getTrendSummary(), 300));
-            vo.setConclusion(truncate(output.getConclusion(), CONCLUSION_MAX_LENGTH));
-            vo.setSuggestions(limitStrings(output.getSuggestions(), MAX_SUGGESTIONS, 120));
-            vo.setAttentionPoints(toAttentionPoints(output, items));
+        // 模型层：默认关模型（G-09），仅组合异常时调模型做连贯解读。
+        // 未达阈值走规则结论是设计内路径，不算降级 —— degraded 只表示
+        // 「模型本应参与却没成功」。
+        boolean modelNeeded = vo.getAbnormalCount() != null && vo.getAbnormalCount() >= MODEL_MIN_ABNORMAL;
+        if (modelNeeded) {
+            Optional<LabInterpretLlmOutputDTO> llmOutput = callModel(record, items, trends);
+            if (llmOutput.isPresent()) {
+                LabInterpretLlmOutputDTO output = llmOutput.get();
+                vo.setSource("model");
+                vo.setTrendSummary(truncate(output.getTrendSummary(), 300));
+                vo.setConclusion(truncate(output.getConclusion(), CONCLUSION_MAX_LENGTH));
+                vo.setSuggestions(limitStrings(output.getSuggestions(), MAX_SUGGESTIONS, 120));
+                vo.setAttentionPoints(toAttentionPoints(output, items));
+            } else {
+                vo.setSource("rule");
+                vo.setDegraded(true);
+                vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.LAB_INTERPRET)
+                        + "；本次仅返回异常项与趋势的规则分析结果");
+                vo.setConclusion(buildRuleConclusion(vo));
+                vo.setSuggestions(buildRuleSuggestions(vo));
+                vo.setAttentionPoints(buildRuleAttention(vo));
+            }
         } else {
-            vo.setDegraded(true);
-            vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.LAB_INTERPRET)
-                    + "；本次仅返回异常项与趋势的规则分析结果");
+            vo.setSource("rule");
             vo.setConclusion(buildRuleConclusion(vo));
             vo.setSuggestions(buildRuleSuggestions(vo));
             vo.setAttentionPoints(buildRuleAttention(vo));

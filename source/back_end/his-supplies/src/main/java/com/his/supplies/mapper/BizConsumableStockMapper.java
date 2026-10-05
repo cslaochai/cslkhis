@@ -18,10 +18,10 @@ public interface BizConsumableStockMapper extends BaseMapper<BizConsumableStock>
 
     String STOCK_JOIN_COLS =
             "s.id, s.create_by, s.create_time, s.update_by, s.update_time, s.del_flag, s.remark, " +
-            "       s.consumable_id, c.consumable_code, c.consumable_name, c.category, c.specification, c.unit, " +
-            "       c.retail_price, c.manufacturer, " +
-            "       s.batch_no, s.production_date, s.expiry_date, s.quantity, s.cost_price, s.total_amount, " +
-            "       s.location, s.supplier, s.stock_status ";
+                    "       s.consumable_id, c.consumable_code, c.consumable_name, c.category, c.specification, c.unit, " +
+                    "       c.retail_price, c.manufacturer, " +
+                    "       s.batch_no, s.production_date, s.expiry_date, s.quantity, s.cost_price, s.total_amount, " +
+                    "       s.location, s.supplier, s.stock_status ";
 
     /**
      * 库存分页（耗材名/编码模糊 + 类别 + 状态过滤）

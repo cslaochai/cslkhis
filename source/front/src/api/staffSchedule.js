@@ -16,6 +16,11 @@ export function getStaffScheduleListPage(data) {
   return request.post('/system/staffSchedule/listPage', data)
 }
 
+/** 排班周总览（只读驾驶舱：门诊号源 / 在岗人次 / 人力缺口 / 每日总值班一屏聚合） */
+export function getScheduleOverviewWeek(beginDate) {
+  return request.get('/schedule/overviewWeek', { params: { beginDate } })
+}
+
 /** 新增/修改排班（时间与工时由班次带出，超出人力上限只提示不拦） */
 export function staffScheduleUpsert(data) {
   return request.post('/system/staffSchedule/staffScheduleUpsert', data)

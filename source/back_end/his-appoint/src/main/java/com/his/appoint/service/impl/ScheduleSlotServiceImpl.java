@@ -3,6 +3,8 @@ package com.his.appoint.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.appoint.dto.ScheduleSlotItemUpsertDTO;
+import com.his.appoint.dto.ScheduleSlotUpsertDTO;
 import com.his.appoint.entity.BizSchedule;
 import com.his.appoint.entity.BizScheduleSlot;
 import com.his.appoint.entity.BizScheduleSlotTemplate;
@@ -10,13 +12,21 @@ import com.his.appoint.mapper.BizScheduleMapper;
 import com.his.appoint.mapper.BizScheduleSlotMapper;
 import com.his.appoint.service.ScheduleSlotService;
 import com.his.appoint.vo.ScheduleSlotVO;
+import com.his.common.enums.EnableStatusEnum;
+import com.his.common.enums.ScheduleStatusEnum;
+import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -189,6 +199,95 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
             slotMapper.updateById(up);
         }
         syncSumToSchedule(scheduleId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateSlotSources(ScheduleSlotUpsertDTO dto) {
+        BizSchedule schedule = scheduleMapper.selectById(dto.getScheduleId());
+        if (schedule == null) {
+            throw new BusinessException("排班记录不存在");
+        }
+        if (schedule.getScheduleDate().isBefore(LocalDate.now())) {
+            throw new BusinessException("已过期的班次不允许调整号源");
+        }
+        if (ScheduleStatusEnum.stopped(schedule.getStatus())) {
+            throw new BusinessException("停诊中的班次不允许调整号源，请先启用");
+        }
+        // 段号源只对医生出诊班有意义：出勤岗没有号源池（sql/195），与加号同一道闸
+        if (!StaffTypeEnum.hasSource(schedule.getStaffType())) {
+            throw new BusinessException("只有医生出诊排班能调整号源："
+                    + StaffTypeEnum.labelOf(schedule.getStaffType()) + "岗位是出勤排班，不对外放号");
+        }
+
+        Map<Long, BizScheduleSlot> byId = new HashMap<>();
+        for (BizScheduleSlot s : listByScheduleId(dto.getScheduleId())) {
+            byId.put(s.getId(), s);
+        }
+        // 整批校验整批生效：部分成功会打破「Σ段=主表」的总量约束，中途状态比全拒绝更糟
+        for (ScheduleSlotItemUpsertDTO item : dto.getSlots()) {
+            BizScheduleSlot slot = byId.get(item.getId());
+            if (slot == null) {
+                throw new BusinessException("时间段不存在或不属于该排班");
+            }
+            if (EnableStatusEnum.fromCode(item.getStatus()) == null) {
+                throw new BusinessException("段状态只允许 0-停用 / 1-正常");
+            }
+            int used = nz(slot.getUsedSource());
+            if (item.getTotalSource() < used) {
+                throw new BusinessException(slot.getStartTime() + " 段号源不能小于已挂号数（" + used + "）");
+            }
+            int appt = item.getAppointmentSource() == null ? 0 : item.getAppointmentSource();
+            if (appt > item.getTotalSource()) {
+                throw new BusinessException(slot.getStartTime() + " 段预约预留不能大于段号源");
+            }
+            int usedAppt = nz(slot.getUsedAppointmentSource());
+            if (appt < usedAppt) {
+                throw new BusinessException(slot.getStartTime() + " 段预约预留不能小于预约已用（" + usedAppt + "）");
+            }
+        }
+        // 逐段落库：available 同步重算（used 是已发生的事实，不动）
+        for (ScheduleSlotItemUpsertDTO item : dto.getSlots()) {
+            BizScheduleSlot slot = byId.get(item.getId());
+            BizScheduleSlot up = new BizScheduleSlot();
+            up.setId(slot.getId());
+            up.setTotalSource(item.getTotalSource());
+            up.setAvailableSource(item.getTotalSource() - nz(slot.getUsedSource()));
+            up.setAppointmentSource(item.getAppointmentSource() == null ? 0 : item.getAppointmentSource());
+            up.setStatus(item.getStatus());
+            slotMapper.updateById(up);
+        }
+        syncSumToSchedule(dto.getScheduleId());
+
+        // 留痕与加号同口径：往排班备注追加摘要。只记有变化的段，摘要截断防备注列撑爆
+        List<String> changes = new ArrayList<>();
+        for (ScheduleSlotItemUpsertDTO item : dto.getSlots()) {
+            BizScheduleSlot slot = byId.get(item.getId());
+            if (!Objects.equals(nz(slot.getTotalSource()), item.getTotalSource())) {
+                changes.add(slot.getStartTime() + " 号源" + slot.getTotalSource() + "→" + item.getTotalSource());
+            }
+            int oldAppt = nz(slot.getAppointmentSource());
+            int newAppt = item.getAppointmentSource() == null ? 0 : item.getAppointmentSource();
+            if (oldAppt != newAppt) {
+                changes.add(slot.getStartTime() + " 预约池" + oldAppt + "→" + newAppt);
+            }
+            if (!Objects.equals(slot.getStatus(), item.getStatus())) {
+                changes.add(slot.getStartTime() + (item.getStatus() == 0 ? " 停用" : " 恢复"));
+            }
+        }
+        if (!changes.isEmpty()) {
+            String summary = String.join("、", changes);
+            if (summary.length() > 120) {
+                summary = summary.substring(0, 120) + "…";
+            }
+            String stamp = LocalDate.now() + " 段级号源调整（" + summary + "）";
+            String newRemark = StringUtils.hasText(schedule.getRemark())
+                    ? schedule.getRemark() + "；" + stamp : stamp;
+            BizSchedule up = new BizSchedule();
+            up.setId(schedule.getId());
+            up.setRemark(newRemark);
+            scheduleMapper.updateById(up);
+        }
     }
 
     @Override

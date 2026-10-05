@@ -51,6 +51,13 @@ export function deleteLaboratoryApply(id) {
     return request.delete('/laboratory/deleteById', {params: {id}})
 }
 
+// ========== 预问诊（G-05） ==========
+
+// 按挂号取预问诊记录（患者小程序提交的问卷 + AI 凝摘要）；无记录返回 data=null
+export function getPrevisitByRegist(registId) {
+    return request.get('/previsit/getByRegist', {params: {registId}})
+}
+
 // ========== 统一保存接口 ==========
 
 // 保存病历（临时保存）

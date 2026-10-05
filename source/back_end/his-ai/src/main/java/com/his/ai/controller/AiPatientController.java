@@ -4,14 +4,17 @@ import com.his.ai.dto.PatientFeeExplainDTO;
 import com.his.ai.dto.PatientMedicationGuideDTO;
 import com.his.ai.dto.PatientReportExplainDTO;
 import com.his.ai.dto.PatientTriageNormalizeDTO;
+import com.his.ai.dto.PrevisitSummaryDTO;
 import com.his.ai.service.PatientFeeExplainCapability;
 import com.his.ai.service.PatientMedicationGuideCapability;
 import com.his.ai.service.PatientReportExplainCapability;
 import com.his.ai.service.PatientTriageNormalizeCapability;
+import com.his.ai.service.PrevisitSummaryCapability;
 import com.his.ai.vo.PatientFeeExplainVO;
 import com.his.ai.vo.PatientMedicationGuideVO;
 import com.his.ai.vo.PatientReportExplainVO;
 import com.his.ai.vo.PatientTriageNormalizeVO;
+import com.his.ai.vo.PrevisitSummaryVO;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,6 +43,8 @@ public class AiPatientController {
 
     private final PatientTriageNormalizeCapability triageNormalizeCapability;
 
+    private final PrevisitSummaryCapability previsitSummaryCapability;
+
     @Operation(summary = "报告解读（患者版大白话）")
     @PostMapping("/reportExplain")
     @PreAuthorize("hasAuthority('PATIENT')")
@@ -66,5 +71,12 @@ public class AiPatientController {
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<PatientTriageNormalizeVO> triageNormalize(@Valid @RequestBody PatientTriageNormalizeDTO dto) {
         return Result.success(triageNormalizeCapability.execute(dto));
+    }
+
+    @Operation(summary = "预问诊病史摘要（提交问卷后凝练，写回医生站报告卡）")
+    @PostMapping("/previsitSummary")
+    @PreAuthorize("hasAuthority('PATIENT')")
+    public Result<PrevisitSummaryVO> previsitSummary(@Valid @RequestBody PrevisitSummaryDTO dto) {
+        return Result.success(previsitSummaryCapability.execute(dto));
     }
 }

@@ -57,3 +57,15 @@ export function followupCreateFromDischarge(data) {
 export function followupCreateRevisitAppoint(data) {
   return request.post('/charge/followup/createRevisitAppoint', data)
 }
+
+// ============ G-15：电话外呼（mock 通道=人工登记待呼，护士拨打后回填结果） ============
+
+// 登记电话外呼（返回任务 VO，含明文手机号供拨号）
+export function followupCallRegister(id) {
+  return request.post('/charge/followup/callRegister', { id })
+}
+
+// 回填外呼结果 data: { id, connected, remark? }；接通且任务待随访时自动转随访中
+export function followupCallResult(data) {
+  return request.post('/charge/followup/callResult', data)
+}

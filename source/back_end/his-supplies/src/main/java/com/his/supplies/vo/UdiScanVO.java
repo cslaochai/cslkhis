@@ -14,62 +14,96 @@ import java.util.List;
  */
 @Data
 public class UdiScanVO {
-    /** UDI 原文 */
+    // 该耗材有货批次候选（FEFO 序）
+    List<BatchOption> batches;
+    /**
+     * UDI 原文
+     */
     private String udiCode;
-    /** 解析-产品标识 */
+    /**
+     * 解析-产品标识
+     */
     private String udiDi;
-    /** 解析-序列号 */
+    /**
+     * 解析-序列号
+     */
     private String udiSerial;
-    /** 解析-批号 */
+    /**
+     * 解析-批号
+     */
     private String udiBatch;
-    /** 解析-有效期 */
+    /**
+     * 解析-有效期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate udiExpiryDate;
-    /** 是否成功解析出 DI（false=前端提示人工选耗材，登记仍可继续） */
+    /**
+     * 是否成功解析出 DI（false=前端提示人工选耗材，登记仍可继续）
+     */
     private boolean parsed;
-
     // 字典命中（按 udi_di 精确匹配）
     private boolean matched;
-    /** 耗材ID */
+    /**
+     * 耗材ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long consumableId;
-    /** 耗材编码（快照） */
+    /**
+     * 耗材编码（快照）
+     */
     private String consumableCode;
-    /** 耗材名称（快照） */
+    /**
+     * 耗材名称（快照）
+     */
     private String consumableName;
-    /** 规格（快照） */
+    /**
+     * 规格（快照）
+     */
     private String specification;
-    /** 单位 */
+    /**
+     * 单位
+     */
     private String unit;
     private String manufacturer;
-    /** 注册证号（快照） */
+    /**
+     * 注册证号（快照）
+     */
     private String regCertNo;
-    /** 计费单价快照 */
+    /**
+     * 计费单价快照
+     */
     private BigDecimal retailPrice;
     private Integer isHighValue;
     private Integer consumableStatus;
-    /** 命中但非高值/已停用时的提示 */
+    /**
+     * 命中但非高值/已停用时的提示
+     */
     private String tip;
-
-    // 该耗材有货批次候选（FEFO 序）
-    List<BatchOption> batches;
 
     /**
      * 出库批次候选
      */
     @Data
     public static class BatchOption {
-        /** 出库批次ID */
+        /**
+         * 出库批次ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long stockId;
-        /** 批号（快照） */
+        /**
+         * 批号（快照）
+         */
         private String batchNo;
-        /** 有效期 */
+        /**
+         * 有效期
+         */
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate expiryDate;
         private BigDecimal quantity;
         private String location;
-        /** 供应商 */
+        /**
+         * 供应商
+         */
         private String supplier;
     }
 }

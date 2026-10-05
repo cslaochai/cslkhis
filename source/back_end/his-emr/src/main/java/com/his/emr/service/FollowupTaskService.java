@@ -8,6 +8,8 @@ import com.his.emr.entity.BizFollowupTask;
 import com.his.emr.vo.BizFollowupTaskVO;
 import com.his.emr.vo.FollowupStatVO;
 
+import java.util.List;
+
 /**
  * 随访任务服务接口
  */
@@ -77,4 +79,26 @@ public interface FollowupTaskService extends IService<BizFollowupTask> {
      * 除非上一次那张号已经作废（退号/爽约/过号）—— 那种情况下患者确实还需要复诊。
      */
     BizFollowupTaskVO createRevisitAppoint(FollowupTaskDTO.CreateRevisit dto);
+
+    /**
+     * 患者端「我的随访」：只查患者本人名下的任务，不走科室收口（患者没有科室岗位）。
+     */
+    List<BizFollowupTaskVO> listForPatient(Long patientId);
+
+    /**
+     * 患者提交反馈（小程序回写 patient_reply）。
+     * 归属两道闸：任务必须属于该患者；任务未被取消才允许反馈。
+     */
+    boolean replyFromPatient(Long taskId, Long patientId, String replyText);
+
+    /**
+     * 登记电话外呼：通道闸后置「待外呼」并返回任务（明文电话供护士拨号）。
+     * 已取消/已完成拒呼；已在待外呼中拒重复登记。
+     */
+    BizFollowupTaskVO registerCall(Long taskId);
+
+    /**
+     * 回填外呼结果：仅待外呼可回填；接通且任务还在待随访时转随访中。
+     */
+    boolean recordCallResult(com.his.emr.dto.FollowupCallResultDTO dto);
 }

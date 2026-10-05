@@ -11,9 +11,13 @@ import java.math.BigDecimal;
  */
 @Data
 public class ConsumableStockChangeDTO {
-    /** 库存批次ID */
+    /**
+     * 库存批次ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long stockId;
-    /** 数量（>0） */
+    /**
+     * 数量（>0）
+     */
     private BigDecimal quantity;
 }

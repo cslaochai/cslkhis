@@ -244,6 +244,9 @@ const routes = [
             // 与 /schedule（门诊出诊计划）是两件事：出诊计划挂号源，这张核心表管出勤 ——
             // 同一个人以前可以在三张排班表里各排一次且时间重叠都不报错，收敛到这里之后事实只有一条。
             { path: 'staff-schedule', name: 'StaffSchedule', component: () => import('@/views/schedule/StaffScheduleView.vue'), meta: { title: '全院岗位排班' } },
+            // 排班总览（菜单 2938，sql/229）：门诊号源 / 在岗 / 缺口 / 总值班一屏只读聚合，
+            // 回答「全院排班统一看」—— 编辑仍走各自工作台，这里不放任何写入口。
+            { path: 'schedule-overview', name: 'ScheduleOverview', component: () => import('@/views/schedule/ScheduleOverview.vue'), meta: { title: '排班总览' } },
             // 人力配置标准（菜单 2937，sql/200）：一个单元×一个班次×一个岗位该配多少人。
             // 它是排班保存的闸门（低于最低在岗会拦），不是报表，所以单独成页而不是塞进排班页的页签。
             { path: 'staff-plan-rule', name: 'StaffPlanRule', component: () => import('@/views/schedule/StaffPlanRuleView.vue'), meta: { title: '人力配置标准' } },
@@ -309,6 +312,8 @@ const routes = [
             { path: 'reports', name: 'Reports', component: () => import('@/views/reports/ReportsView.vue'), meta: { title: '运营统计报表' } },
             // AI 运营问数（菜单 2940，见 sql/224）：path 与 menu.path 一字不差
             { path: 'ai-operation-qa', name: 'AiOperationQa', component: () => import('@/views/ai/OperationQaView.vue'), meta: { title: 'AI 运营问数' } },
+            // AI 管理台（菜单 2942，见 sql/225）：调用审计 + 知识库问答/维护，path 与 menu.path 一字不差
+            { path: 'ai-admin', name: 'AiAdmin', component: () => import('@/views/ai/AiAdminView.vue'), meta: { title: 'AI 管理台' } },
         ],
     },
 ];

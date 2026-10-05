@@ -55,6 +55,9 @@ public class AiHealthVO {
     @Schema(description = "各能力超时覆盖（毫秒）")
     private Map<String, Integer> timeouts = new LinkedHashMap<>();
 
+    @Schema(description = "各能力实际生效的模型（含按能力覆盖，未覆盖的回落主/轻量模型）")
+    private Map<String, String> models = new LinkedHashMap<>();
+
     @Schema(description = "各能力当前是否处于熔断状态")
     private Map<String, Boolean> circuitOpen = new LinkedHashMap<>();
 

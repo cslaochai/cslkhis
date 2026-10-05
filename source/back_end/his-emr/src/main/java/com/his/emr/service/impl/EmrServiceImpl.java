@@ -58,6 +58,7 @@ import com.his.emr.mapper.BizFollowupTaskMapper;
 import com.his.emr.support.QcRecordSource;
 import com.his.appoint.service.DoctorStatusCacheService;
 import com.his.emr.service.EmrService;
+import com.his.emr.service.AiDraftDiffService;
 import com.his.emr.service.QualityControlService;
 import com.his.emr.service.ApplyExecStatusGateway;
 import com.his.fee.dto.FeeBookDTO;
@@ -166,6 +167,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      * 而不是让整个医生站起不来。
      */
     private final ObjectProvider<ApplyExecStatusGateway> applyExecStatusGatewayProvider;
+    /**
+     * AI 草稿留痕（G-10）：医生点「填入草稿」后保存病历，把 AI 原稿与终稿的 diff 落一行。
+     */
+    private final AiDraftDiffService aiDraftDiffService;
 
     @Override
     public List<BizMedicalRecordVO> getByPatientId(MedicalRecordQueryDTO queryDTO) {
@@ -1421,6 +1426,19 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             this.save(bizMedicalRecord);
         }
         Long recordId = bizMedicalRecord.getId();
+
+        // AI 草稿留痕（G-10）：前端只在「本次填过草稿」时携带原文，保存成功后即清空，
+        // 所以正常不会重复落行；医生一字未改也落（changed=0，「模型零修改率」同样是训练信号）。
+        // 留痕失败只记日志不回滚 —— 病历保存是主业务，不能让审计旁路把它拖垮。
+        try {
+            aiDraftDiffService.record(recordId, recordSaveDTO.getRegistId(),
+                    patientInfo.getId(), patientInfo.getPatientNo(), patientInfo.getPatientName(),
+                    appointInfo.getDeptId(), appointInfo.getDeptName(),
+                    currentUser.getEmployeeId(), currentUser.getRealName(),
+                    recordSaveDTO.getAiDraftPresentIllness(), recordSaveDTO.getPresentIllness());
+        } catch (Exception e) {
+            log.warn("AI 草稿留痕失败 recordId={}：{}", recordId, e.getMessage());
+        }
 
         // 2. 保存处方（先删后增）。L7 审方退回重开闭环：删除前先看该病历下被退回（7）的旧单 ——
         // 医生改方重新保存 = 重提，新处方继承历史退回次数，并落一条「退回后重提」流水（record_id 串轮次）

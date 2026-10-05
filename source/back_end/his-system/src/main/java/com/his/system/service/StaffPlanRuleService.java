@@ -5,6 +5,7 @@ import com.his.system.dto.StaffPlanRuleQueryPageDTO;
 import com.his.system.dto.StaffPlanRuleUpsertDTO;
 import com.his.system.entity.BizStaffPlanRule;
 import com.his.system.vo.StaffPlanRuleVO;
+import com.his.system.vo.StaffShortfallVO;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -76,4 +77,10 @@ public interface StaffPlanRuleService {
      */
     String reviewEmployee(Long currentScheduleId, Long employeeId, Integer orgType, Long orgId,
                           Integer staffType, LocalDate date);
+
+    /**
+     * 时间窗内的人力缺口清单（只报告，不拦截）：启用中、最低在岗 &gt; 0 的标准行 × 窗口内每一天，
+     * 实际在岗人次低于 min_staff 的组合。总览驾驶舱用。
+     */
+    List<StaffShortfallVO> listShortfalls(LocalDate begin, LocalDate end);
 }

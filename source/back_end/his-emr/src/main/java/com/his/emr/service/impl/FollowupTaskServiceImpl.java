@@ -46,6 +46,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import com.his.emr.enums.FollowupTaskStatusEnum;
+import com.his.emr.enums.FollowupCallStatusEnum;
+import com.his.emr.enums.FollowupCallChannelEnum;
 import com.his.emr.enums.SurveySourceEnum;
 
 import com.his.appoint.enums.AppointSourceEnum;
@@ -79,6 +81,12 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
 
     /** 满意度评价：随访完成时自动发一张卷（方向单向，评价侧不回依赖本服务，见 FollowupTaskSnapshot） */
     private final SurveyService surveyService;
+
+    /** 患者触达（G-06）：站内信通道常通，微信订阅消息未启用时内部静默降级 */
+    private final com.his.system.service.SysMessageService sysMessageService;
+
+    /** 电话外呼通道（G-15）：mock=人工登记待呼，真实线路接入前绝不假装已呼出 */
+    private final com.his.emr.service.FollowupCallChannelService followupCallChannelService;
 
     @Override
     public PageResult<BizFollowupTaskVO> listPage(FollowupQueryDTO dto) {
@@ -304,7 +312,23 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         task.setFollowupStatus(FollowupTaskStatusEnum.DOING.getCode());
         task.setExecutorId(executorId == null ? UserUtils.getCurrentEmployeeId() : executorId);
         task.setExecutorName(StringUtils.hasText(executorName) ? executorName : UserUtils.getCurrentEmployeeName());
-        return this.updateById(task);
+        boolean updated = this.updateById(task);
+        if (updated) {
+            // 患者触达（G-06）：开始随访即把随访内容推给患者，患者可在小程序「我的随访」反馈。
+            // 发信失败不影响随访推进（旁路），与满意度问卷同一个姿态。
+            try {
+                sysMessageService.sendWechatToPatient(task.getPatientId(), "followup_started",
+                        "pages/followup/followup",
+                        Map.of("随访类型", TYPE_NAMES.getOrDefault(task.getFollowupType(), "随访")),
+                        "随访通知",
+                        StringUtils.hasText(task.getFollowupContent())
+                                ? task.getFollowupContent() : "您有一份随访计划，请查看详情并反馈近况",
+                        "followup", task.getId());
+            } catch (Exception e) {
+                log.warn("[随访] 任务 {} 患者触达发送失败（不影响随访）：{}", task.getTaskNo(), e.getMessage());
+            }
+        }
+        return updated;
     }
 
     /**
@@ -345,6 +369,88 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         task.setFollowupStatus(FollowupTaskStatusEnum.CANCELLED.getCode());
         task.setRemark(StringUtils.hasText(reason) ? cut(reason, 512) : "已取消");
         return this.updateById(task);
+    }
+
+    @Override
+    public List<BizFollowupTaskVO> listForPatient(Long patientId) {
+        // 患者端只按任务上的 patientId 收窄：没有科室岗位概念，不做科室收口
+        List<BizFollowupTask> tasks = this.list(new LambdaQueryWrapper<BizFollowupTask>()
+                .eq(BizFollowupTask::getPatientId, patientId)
+                .orderByDesc(BizFollowupTask::getFollowupTime)
+                .orderByDesc(BizFollowupTask::getId));
+        return tasks.stream().map(t -> toVo(t, false)).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean replyFromPatient(Long taskId, Long patientId, String replyText) {
+        if (!StringUtils.hasText(replyText)) {
+            throw new BusinessException("反馈内容不能为空");
+        }
+        BizFollowupTask task = this.getById(taskId);
+        // 归属第一道闸：任务必须真的属于该患者，改 taskId 就能替别人写反馈是事故
+        if (task == null || !Objects.equals(task.getPatientId(), patientId)) {
+            throw new BusinessException("随访任务不存在");
+        }
+        if (Integer.valueOf(FollowupTaskStatusEnum.CANCELLED.getCode()).equals(task.getFollowupStatus())) {
+            throw new BusinessException("已取消的随访任务不再收集反馈");
+        }
+        task.setPatientReply(cut(replyText, 500));
+        task.setPatientReplyTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        return this.updateById(task);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BizFollowupTaskVO registerCall(Long taskId) {
+        BizFollowupTask task = loadTask(taskId);
+        if (Integer.valueOf(FollowupTaskStatusEnum.CANCELLED.getCode()).equals(task.getFollowupStatus())
+                || Integer.valueOf(FollowupTaskStatusEnum.DONE.getCode()).equals(task.getFollowupStatus())) {
+            throw new BusinessException("已取消或已完成的随访任务不再外呼");
+        }
+        if (Integer.valueOf(FollowupCallStatusEnum.WAITING.getCode()).equals(task.getCallStatus())) {
+            throw new BusinessException("该任务已登记待外呼，请拨打后回填结果");
+        }
+        FollowupCallChannelEnum channel = followupCallChannelService.dial(task);
+        task.setCallChannel(channel.getCode());
+        task.setCallStatus(FollowupCallStatusEnum.WAITING.getCode());
+        task.setCallTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        task.setCallAttempts(task.getCallAttempts() == null ? 1 : task.getCallAttempts() + 1);
+        touch(task);
+        this.updateById(task);
+        return toVo(task, true);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean recordCallResult(com.his.emr.dto.FollowupCallResultDTO dto) {
+        BizFollowupTask task = loadTask(dto.getId());
+        if (!Integer.valueOf(FollowupCallStatusEnum.WAITING.getCode()).equals(task.getCallStatus())) {
+            throw new BusinessException("只有待外呼的任务可以回填外呼结果");
+        }
+        boolean connected = Boolean.TRUE.equals(dto.getConnected());
+        task.setCallStatus(connected ? FollowupCallStatusEnum.CONNECTED.getCode()
+                : FollowupCallStatusEnum.NO_ANSWER.getCode());
+        task.setCallTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        // 追加不覆盖：出院自动生成的任务靠 remark 前缀锚定幂等，整列覆写会把锚洗掉
+        if (StringUtils.hasText(dto.getRemark())) {
+            String extra = "[外呼" + (connected ? "已接通" : "未接通") + "] " + cut(dto.getRemark(), 200);
+            task.setRemark(cut(StringUtils.hasText(task.getRemark())
+                    ? task.getRemark() + "\n" + extra : extra, 512));
+        }
+        touch(task);
+        boolean updated = this.updateById(task);
+        // 接通 = 电话里确认了随访事实 → 任务转随访中，走既有 startFollowup（执行人 + 患者触达链路同口径）
+        if (updated && connected
+                && Integer.valueOf(FollowupTaskStatusEnum.PENDING.getCode()).equals(task.getFollowupStatus())) {
+            startFollowup(task.getId(), null, null);
+        }
+        return updated;
+    }
+
+    private void touch(BizFollowupTask task) {
+        task.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        task.setUpdateTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
     }
 
     /**

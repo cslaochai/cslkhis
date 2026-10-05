@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.ScheduleTemplateQueryPageDTO;
+import com.his.appoint.dto.ScheduleTemplateSlotItemDTO;
 import com.his.appoint.dto.ScheduleTemplateUpsertDTO;
 import com.his.appoint.entity.BizSchedule;
 import com.his.appoint.entity.BizScheduleSlotTemplate;
@@ -17,6 +18,7 @@ import com.his.appoint.service.ScheduleSlotService;
 import com.his.appoint.service.ScheduleTemplateService;
 import com.his.system.service.ShiftService;
 import com.his.appoint.vo.ScheduleTemplatePreviewVO;
+import com.his.appoint.vo.ScheduleTemplateSlotVO;
 import com.his.appoint.vo.ScheduleTemplateVO;
 import com.his.common.base.PageResult;
 import com.his.common.enums.ScheduleStatusEnum;
@@ -26,14 +28,17 @@ import com.his.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 排班模板服务实现
@@ -93,6 +98,7 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
         List<ScheduleTemplateVO> voList = listTemplates(deptId, staffType, weekDay, status).stream()
                 .map(this::convertToVO).toList();
         fillShiftDisplay(voList);
+        fillSlotConfigs(voList);
         return voList;
     }
 
@@ -116,14 +122,25 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
                 new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
         List<ScheduleTemplateVO> voList = page.getRecords().stream().map(this::convertToVO).toList();
         fillShiftDisplay(voList);
+        fillSlotConfigs(voList);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);
     }
 
+    /**
+     * 段配置与模板主表同事务落库：主表成功而段配置失败时必须整体回滚，
+     * 否则「Σ段=主表」的不变量会留在一半（旧段配新总量，或主表新而段丢失）。
+     */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void upsertTemplate(ScheduleTemplateUpsertDTO dto) {
-        boolean success = saveTemplate(convertToEntity(dto));
+        BizScheduleTemplate template = convertToEntity(dto);
+        boolean success = saveTemplate(template);
         if (!success) {
             throw new BusinessException(dto.getId() == null ? "新增失败" : "修改失败");
+        }
+        // slots 语义：null=本次不动；[]=清空（回退半小时均分）；非空=整批替换
+        if (dto.getSlots() != null) {
+            persistSlotConfig(template, dto.getSlots());
         }
     }
 
@@ -258,12 +275,146 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
         template.setRoomName(null);
     }
 
+    /**
+     * 段级号源配置整批落库：先校验后替换，非法整批拒绝。
+     *
+     * <p>不变量（消费端 {@code ScheduleSlotService#generateFromTemplate} 原样复制段窗与配额，
+     * 不做二次校验，所以 Σ约束、无缝铺满都必须在这里守住）：
+     * 段无缝铺满班次时间窗 + 半小时网格；每段预约池 ≤ 段号源；
+     * Σ段号源=模板号源总数、Σ段预约池=模板预约号源数。
+     */
+    private void persistSlotConfig(BizScheduleTemplate template, List<ScheduleTemplateSlotItemDTO> slots) {
+        if (!StaffTypeEnum.hasSource(template.getStaffType())) {
+            throw new BusinessException("出勤模板不放号源，不需要按段细化");
+        }
+        if (slots.isEmpty()) {
+            slotTemplateMapper.purgeByTemplateId(template.getId());
+            return;
+        }
+        int winStart = minuteOf(template.getStartTime(), "班次开始时间");
+        int winEnd = minuteOf(template.getEndTime(), "班次结束时间");
+        // 班次窗不在半小时整点上时，无缝铺满+半小时网格无解，提前说清楚而不是让用户猜哪段不合法
+        if (winStart % 30 != 0 || winEnd % 30 != 0) {
+            throw new BusinessException("班次时间窗 " + template.getStartTime() + "-" + template.getEndTime()
+                    + " 不是半小时整点，无法按段细化");
+        }
+
+        int sumTotal = 0;
+        int sumAppt = 0;
+        int prevEnd = -1;
+        List<BizScheduleSlotTemplate> rows = new ArrayList<>(slots.size());
+        for (int i = 0; i < slots.size(); i++) {
+            ScheduleTemplateSlotItemDTO item = slots.get(i);
+            String what = "第" + (i + 1) + "段";
+            int start = minuteOf(item.getStartTime(), what + "开始时间");
+            int end = minuteOf(item.getEndTime(), what + "结束时间");
+            if (start % 30 != 0 || end % 30 != 0) {
+                throw new BusinessException(what + "起止必须落在半小时整点上");
+            }
+            if (end <= start) {
+                throw new BusinessException(what + "结束时间必须晚于开始时间");
+            }
+            if (prevEnd >= 0 && start != prevEnd) {
+                throw new BusinessException(what + "与上一段必须无缝衔接（上一段结束 " + toHHmm(prevEnd)
+                        + "，本段开始 " + toHHmm(start) + "）");
+            }
+            int segTotal = item.getTotalSource() == null ? 0 : item.getTotalSource();
+            int segAppt = item.getAppointmentSource() == null ? 0 : item.getAppointmentSource();
+            if (segAppt > segTotal) {
+                throw new BusinessException(what + "预约池不能大于该段号源数");
+            }
+            BizScheduleSlotTemplate row = new BizScheduleSlotTemplate();
+            row.setTemplateId(template.getId());
+            row.setSeq(i + 1);
+            row.setStartTime(toHHmm(start));
+            row.setEndTime(toHHmm(end));
+            row.setTotalSource(segTotal);
+            row.setAppointmentSource(segAppt);
+            rows.add(row);
+            prevEnd = end;
+            sumTotal += segTotal;
+            sumAppt += segAppt;
+        }
+        if (rows.get(0).getStartTime().compareTo(toHHmm(winStart)) != 0
+                || rows.get(rows.size() - 1).getEndTime().compareTo(toHHmm(winEnd)) != 0) {
+            throw new BusinessException("段必须铺满班次时间窗 " + template.getStartTime() + "-" + template.getEndTime()
+                    + "（首段从 " + template.getStartTime() + " 开始、末段到 " + template.getEndTime() + " 结束）");
+        }
+        if (sumTotal != template.getTotalSource()) {
+            throw new BusinessException("各段号源合计 " + sumTotal + " 与号源总数 " + template.getTotalSource() + " 不一致");
+        }
+        int tplAppt = template.getAppointmentSource() == null ? 0 : template.getAppointmentSource();
+        if (sumAppt != tplAppt) {
+            throw new BusinessException("各段预约池合计 " + sumAppt + " 与预约号源数 " + tplAppt + " 不一致");
+        }
+
+        // 校验全过才替换：物理删（uk_tpl_slot 不含 del_flag，软删行会撞唯一键）再按新段插入
+        slotTemplateMapper.purgeByTemplateId(template.getId());
+        for (BizScheduleSlotTemplate row : rows) {
+            slotTemplateMapper.insert(row);
+        }
+    }
+
+    /** "HH:mm" → 当日分钟数；段表是 char(5) 的定式存储，格式不在保存侧拦住就会漂进生成链路 */
+    private int minuteOf(String hhmm, String what) {
+        if (hhmm == null || !hhmm.matches("^([01]\\d|2[0-3]):[0-5]\\d$")) {
+            throw new BusinessException(what + "格式必须是 HH:mm");
+        }
+        return Integer.parseInt(hhmm.substring(0, 2)) * 60 + Integer.parseInt(hhmm.substring(3, 5));
+    }
+
+    private String toHHmm(int minuteOfDay) {
+        return String.format("%02d:%02d", minuteOfDay / 60, minuteOfDay % 60);
+    }
+
+    /**
+     * 列表/分页出参回填段配置：一次 in 查询带全，无段配置的模板 slots 置空数组
+     * （区分「没配过」与「配了空段」无业务含义，前端统一按未细化处理）
+     */
+    private void fillSlotConfigs(List<ScheduleTemplateVO> voList) {
+        if (voList == null || voList.isEmpty()) {
+            return;
+        }
+        List<BizScheduleSlotTemplate> rows = slotTemplateMapper.selectList(
+                new LambdaQueryWrapper<BizScheduleSlotTemplate>()
+                        .in(BizScheduleSlotTemplate::getTemplateId,
+                                voList.stream().map(ScheduleTemplateVO::getId).toList())
+                        .orderByAsc(BizScheduleSlotTemplate::getTemplateId)
+                        .orderByAsc(BizScheduleSlotTemplate::getSeq));
+        if (rows.isEmpty()) {
+            return;
+        }
+        Map<Long, List<ScheduleTemplateSlotVO>> byTemplate = rows.stream()
+                .collect(Collectors.groupingBy(BizScheduleSlotTemplate::getTemplateId,
+                        Collectors.mapping(this::convertSlotVO, Collectors.toList())));
+        for (ScheduleTemplateVO vo : voList) {
+            vo.setSlots(byTemplate.get(vo.getId()));
+        }
+    }
+
+    private ScheduleTemplateSlotVO convertSlotVO(BizScheduleSlotTemplate r) {
+        ScheduleTemplateSlotVO v = new ScheduleTemplateSlotVO();
+        v.setId(r.getId());
+        v.setSeq(r.getSeq());
+        v.setStartTime(r.getStartTime());
+        v.setEndTime(r.getEndTime());
+        v.setTotalSource(r.getTotalSource());
+        v.setAppointmentSource(r.getAppointmentSource());
+        return v;
+    }
+
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean deleteTemplate(Long id) {
         if (templateMapper.selectById(id) == null) {
             throw new BusinessException("模板不存在");
         }
-        return templateMapper.deleteById(id) > 0;
+        boolean ok = templateMapper.deleteById(id) > 0;
+        if (ok) {
+            // 模板已逻辑删、不会再生成排班，段配置留着只会被误读成有效配置 → 跟着清掉
+            slotTemplateMapper.purgeByTemplateId(id);
+        }
+        return ok;
     }
 
     @Override

@@ -3,37 +3,18 @@ package com.his.supplies.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.security.UserUtils;
-import com.his.supplies.dto.ConsumableConsumeDTO;
-import com.his.supplies.dto.ConsumableConsumeQueryPageDTO;
-import com.his.supplies.dto.ConsumableQueryPageDTO;
-import com.his.supplies.dto.ConsumableStockChangeDTO;
-import com.his.supplies.dto.ConsumableStockLogQueryPageDTO;
-import com.his.supplies.dto.ConsumableStockQueryPageDTO;
-import com.his.supplies.dto.ConsumableStockUpsertDTO;
-import com.his.supplies.dto.ConsumableTraceQueryPageDTO;
-import com.his.supplies.dto.ConsumableUpsertDTO;
-import com.his.supplies.dto.HighValueUseDTO;
-import com.his.supplies.dto.TraceRechargeDTO;
-import com.his.supplies.dto.TraceVoidDTO;
-import com.his.supplies.dto.UdiScanDTO;
+import com.his.supplies.dto.*;
 import com.his.supplies.service.HighValueTraceService;
 import com.his.supplies.service.SuppliesService;
-import com.his.supplies.vo.BizConsumableConsumeVO;
-import com.his.supplies.vo.BizConsumableStockLogVO;
-import com.his.supplies.vo.BizConsumableStockVO;
-import com.his.supplies.vo.BizConsumableTraceVO;
-import com.his.supplies.vo.ConsumableSelectListVO;
-import com.his.supplies.vo.ConsumableTraceDetailVO;
-import com.his.supplies.vo.SysConsumableVO;
-import com.his.supplies.vo.UdiScanVO;
+import com.his.supplies.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 物资耗材控制器

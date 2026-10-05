@@ -121,6 +121,27 @@ public class AiProperties {
     private Map<String, Integer> timeouts = new HashMap<>();
 
     /**
+     * 按能力覆盖模型，来自 {@code ai.models.<capabilityKey>}（G-16 多模型路由）。
+     * 命中即整能力生效（含 lite 分流调用）；未配的能力回落 {@link #model}。
+     */
+    private Map<String, String> models = new HashMap<>();
+
+    /**
+     * 语音识别（ASR）配置。ASR 走语音端点而非 LLM 端点，模型与密钥允许与 chat 分开配。
+     */
+    private Asr asr = new Asr();
+
+    @Data
+    public static class Asr {
+        /** ASR 模型（同步转写） */
+        private String model = "qwen3-asr-flash";
+        /** ASR 访问密钥，未配则回落 ai.apiKey */
+        private String apiKey = "";
+        /** 单条音频大小上限（MB），医生口述通常几十秒，超限直接拒收 */
+        private int maxAudioMb = 15;
+    }
+
+    /**
      * 是否具备真正发起调用的条件（开关打开且地址、密钥、模型都已配置）
      */
     public boolean isReady() {

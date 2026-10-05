@@ -4,8 +4,10 @@ import com.his.ai.dto.EmrDraftDTO;
 import com.his.ai.dto.EmrExtractDTO;
 import com.his.ai.service.EmrDraftCapability;
 import com.his.ai.service.EmrExtractCapability;
+import com.his.ai.service.SpeechTranscribeService;
 import com.his.ai.vo.EmrDraftResultVO;
 import com.his.ai.vo.EmrExtractResultVO;
+import com.his.ai.vo.VoiceTranscribeResultVO;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,7 +17,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 病历文本辅助接口（P1-3）。
@@ -39,6 +43,8 @@ public class AiEmrTextController {
 
     private final EmrDraftCapability emrDraftCapability;
 
+    private final SpeechTranscribeService speechTranscribeService;
+
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:edit')")
     @Operation(summary = "病历文本结构化抽取（字段标签切分 + 模型搬运，带原文依据校验，不写库）")
     @PostMapping("/extract")
@@ -51,5 +57,14 @@ public class AiEmrTextController {
     @PostMapping("/draft")
     public Result<EmrDraftResultVO> draft(@RequestBody @Valid EmrDraftDTO draftDTO) {
         return Result.success(emrDraftCapability.execute(draftDTO));
+    }
+
+    @PreAuthorize("hasAuthority('opd:doctorWorkstation:edit')")
+    @Operation(summary = "语音口述转写（音频→文本，不写库；失败如实报错不造文本）")
+    @PostMapping("/transcribe")
+    public Result<VoiceTranscribeResultVO> transcribe(
+            @RequestParam("file") MultipartFile audioFile,
+            @RequestParam(value = "durationSeconds", required = false) Integer durationSeconds) {
+        return Result.success(speechTranscribeService.transcribe(audioFile, durationSeconds));
     }
 }

@@ -11,8 +11,9 @@ import java.util.List;
  * 患者端费用解释结果。
  * <p>
  * 回答一个问题：「这笔钱是怎么算出来的，为什么我要自己掏这么多」。
- * 全部字段都是确定性计算（账单金额、明细按目录类别与项目类型汇总），
- * 模型只参与 {@code summary} 的措辞。
+ * 全部字段都是确定性计算（账单金额、明细按目录类别与项目类型汇总、summary 规则拼接），
+ * <b>不经过大模型</b> —— 拆分与说明可穷举成对照表（纪律 9），且解释的是钱，幻觉不可接受，
+ * 因此没有 degraded/degradeReason 语义。
  * <p>
  * <b>不解释医保政策</b>：统筹比例、起付线、封顶线各地各险种都不同，
  * 且会变。系统只说账单上实际发生了什么（甲类多少、乙类多少、自费多少），
@@ -67,20 +68,11 @@ public class PatientFeeExplainVO {
     @Schema(description = "核心结论：为什么自付这么多（规则生成）")
     private String reasonText;
 
-    @Schema(description = "一句话总结（模型润色，过文案闸后采用）")
+    @Schema(description = "一句话总结（规则拼接：总额/统筹/自付/占比最高的目录类别）")
     private String summary;
 
     @Schema(description = "固定提示：以窗口/医保经办解释为准")
     private String advice;
-
-    @Schema(description = "表达层来源：rule-规则文案 model-模型润色")
-    private String source;
-
-    @Schema(description = "是否处于降级态")
-    private Boolean degraded;
-
-    @Schema(description = "降级原因")
-    private String degradeReason;
 
     /**
      * 按项目类型分组。

@@ -20,42 +20,72 @@ import java.time.LocalDateTime;
 @TableName("biz_cssd_pack")
 public class BizCssdPack {
 
-    /** 器械包ID */
+    /**
+     * 器械包ID
+     */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 器械包条码 */
+    /**
+     * 器械包条码
+     */
     private String packNo;
-    /** 器械包名称 */
+    /**
+     * 器械包名称
+     */
     private String packName;
 
-    /** 申领/归属科室ID */
+    /**
+     * 申领/归属科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
-    /** 申领/归属科室名称 */
+    /**
+     * 申领/归属科室名称
+     */
     private String deptName;
 
-    /** 灭菌方式（1-高压蒸汽 2-环氧乙烷 3-低温等离子） */
+    /**
+     * 灭菌方式（1-高压蒸汽 2-环氧乙烷 3-低温等离子）
+     */
     private Integer sterilizeMethod;
 
-    /** 包状态（1-已回收 2-清洗中 3-已打包 4-灭菌中 5-待发放 6-已发放） */
+    /**
+     * 包状态（1-已回收 2-清洗中 3-已打包 4-灭菌中 5-待发放 6-已发放）
+     */
     private Integer status;
 
-    /** 最近灭菌锅次 */
+    /**
+     * 最近灭菌锅次
+     */
     private String sterilizerNo;
-    /** 灭菌批次号 */
+    /**
+     * 灭菌批次号
+     */
     private String batchNo;
-    /** 最近流转时间 */
+    /**
+     * 最近流转时间
+     */
     private LocalDateTime lastNodeTime;
-    /** 创建人 */
+    /**
+     * 创建人
+     */
     private String createBy;
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
-    /** 更新人 */
+    /**
+     * 更新人
+     */
     private String updateBy;
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     private LocalDateTime updateTime;
-    /** 删除标志（0-正常 1-删除） */
+    /**
+     * 删除标志（0-正常 1-删除）
+     */
     private Integer delFlag;
 }

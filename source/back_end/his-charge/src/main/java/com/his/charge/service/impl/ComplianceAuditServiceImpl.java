@@ -14,6 +14,7 @@ import com.his.charge.support.*;
 import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.medicaltech.entity.BizLabResult;
 import com.his.security.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.entity.SysIcd10;
@@ -336,6 +337,78 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         vo.setOperations(loadOperations(audit.getSettlementId()).stream().map(this::toOperationVO)
                 .collect(Collectors.toList()));
         return vo;
+    }
+
+    @Override
+    public ComplianceEvidenceNarrativeVO getAiEvidenceNarrative(Long auditId) {
+        BizComplianceAudit audit = auditMapper.selectById(auditId);
+        if (audit == null) {
+            throw new BusinessException("审核记录不存在");
+        }
+        BizInsuranceSettlement settlement = requireSettlement(audit.getSettlementId());
+        SettlementEvidence evidence = evidenceService.aggregate(settlement);
+
+        ComplianceEvidenceNarrativeVO vo = new ComplianceEvidenceNarrativeVO();
+        vo.setSettlementId(settlement.getId());
+        vo.setSettlementNo(settlement.getSettlementNo());
+        vo.setDrgCode(settlement.getDrgCode());
+        vo.setPatientTag(buildPatientTag(evidence));
+        vo.setDiagnosisText(buildDiagnosisText(settlement));
+        // 送模型前截断：病历叙述是事实主体放宽到 1500，项目名与检验摘要 800，
+        // 提示词总长可控，超长部分不是判定命中规则的关键依据
+        vo.setRecordNarrative(truncate(evidence.recordNarrative(), 1500));
+        vo.setOrderNames(truncate(evidence.allOrderNames(), 800));
+        vo.setLabSummary(buildLabSummary(evidence));
+        vo.setMissingList(new ArrayList<>(evidence.getMissing()));
+        return vo;
+    }
+
+    /** 患者标识只到「性别 + 年龄」：模型判证据够用，姓名/证件号不出模块 */
+    private String buildPatientTag(SettlementEvidence evidence) {
+        Integer gender = evidence.gender();
+        Integer age = evidence.age();
+        String genderText = gender == null ? "性别未知" : (gender == 1 ? "男" : "女");
+        return age == null ? genderText : genderText + "，" + age + "岁";
+    }
+
+    private String buildDiagnosisText(BizInsuranceSettlement settlement) {
+        String name = StringUtils.hasText(settlement.getDiagnosisName())
+                ? settlement.getDiagnosisName() : settlement.getDiagnosis();
+        if (!StringUtils.hasText(name)) {
+            return "未填写";
+        }
+        return StringUtils.hasText(settlement.getDiagnosisCode())
+                ? name + "（" + settlement.getDiagnosisCode() + "）" : name;
+    }
+
+    /** 检验摘要只摆事实：项名：结果值单位（参考范围），最多 30 条防提示词失控 */
+    private String buildLabSummary(SettlementEvidence evidence) {
+        List<BizLabResult> results = evidence.getLabResults();
+        if (CollectionUtils.isEmpty(results)) {
+            return "无";
+        }
+        StringBuilder sb = new StringBuilder();
+        int count = 0;
+        for (BizLabResult r : results) {
+            if (count >= 30) {
+                break;
+            }
+            if (!StringUtils.hasText(r.getLaboratoryItemName())) {
+                continue;
+            }
+            sb.append(r.getLaboratoryItemName()).append("：")
+                    .append(StringUtils.hasText(r.getResultValue()) ? r.getResultValue() : "无结果");
+            if (StringUtils.hasText(r.getResultUnit())) {
+                sb.append(r.getResultUnit());
+            }
+            if (StringUtils.hasText(r.getReferenceRange())) {
+                sb.append("（参考 ").append(r.getReferenceRange()).append("）");
+            }
+            sb.append("；");
+            count++;
+        }
+        String text = sb.toString();
+        return !StringUtils.hasText(text) ? "无" : truncate(text, 800);
     }
 
     // 内部方法

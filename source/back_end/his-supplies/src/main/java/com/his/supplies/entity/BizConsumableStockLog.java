@@ -9,7 +9,9 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 
-/** 耗材出入库流水（耗材出入库流水） */
+/**
+ * 耗材出入库流水（耗材出入库流水）
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_consumable_stock_log")

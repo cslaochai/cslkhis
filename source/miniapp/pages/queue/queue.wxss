@@ -199,3 +199,8 @@
 .checkin-btn::after {
   border: none;
 }
+
+.checkin-btn.previsit {
+  color: #1269b5;
+  background: #eef4fb;
+}

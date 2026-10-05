@@ -79,9 +79,6 @@ public class SecurityConfig {
                         .requestMatchers(WHITE_LIST).permitAll()
                         .anyRequest().authenticated()
                 )
-                // 未认证 / 无权限也必须走统一 Result 报文。
-                // 不配这两个 handler 时 Spring Security 默认返回 <b>HTTP 403 且响应体为空</b>：
-                // 一是语义错（没登录应该是 401），二是前端拿不到 message，只能看到「未知错误」。
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) ->
                                 writeJson(response, HttpStatus.UNAUTHORIZED, Result.error(401, "未登录或登录已过期")))

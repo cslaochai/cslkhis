@@ -27,7 +27,9 @@ import com.his.patient.vo.CodeOptionVO;
 import com.his.patient.vo.IntakeOutputSummaryVO;
 import com.his.patient.vo.NursingAssessmentVO;
 import com.his.patient.vo.NursingRecordVO;
+import com.his.patient.vo.NursingVitalFactVO;
 import com.his.patient.vo.TempSheetVO;
+import com.his.patient.vo.WardNursingFactsVO;
 import com.his.patient.vo.WardVO;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.security.CurrentUser;
@@ -46,15 +48,19 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
 import com.his.patient.enums.NursingDocTypeEnum;
 import com.his.patient.enums.RecordDocTypeEnum;
+import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 
 /**
  * 护理文书服务实现（三测单 / 护理记录单 / 生命体征监测）。
@@ -721,6 +727,138 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setTotals(totals);
         vo.setNetBalance(BigDecimal.valueOf(totalIntake - totalOutput));
         vo.setDays(new ArrayList<>(byDay.values()));
+        return vo;
+    }
+
+    // 跨模块事实面（只聚事实不判异常 —— 阈值口径留在消费方）
+
+    @Override
+    public List<NursingVitalFactVO> latestVitalsByWard(Long wardId, LocalDateTime since) {
+        // 保留（类别②）：入参是普通 Long（跨模块 service 调用，不过 HTTP 绑定），注解无处安放
+        if (wardId == null) {
+            throw new BusinessException("病区ID不能为空");
+        }
+        List<BizNursingRecord> rows = nursingMapper.selectList(new LambdaQueryWrapper<BizNursingRecord>()
+                .eq(BizNursingRecord::getWardId, wardId)
+                .ge(since != null, BizNursingRecord::getMeasureTime, since)
+                .and(w -> w.isNotNull(BizNursingRecord::getTemperature)
+                        .or().isNotNull(BizNursingRecord::getPulse)
+                        .or().isNotNull(BizNursingRecord::getRespiration)
+                        .or().isNotNull(BizNursingRecord::getSystolicPressure)
+                        .or().isNotNull(BizNursingRecord::getDiastolicPressure)
+                        .or().isNotNull(BizNursingRecord::getSpo2)));
+        Map<Long, BizNursingRecord> latest = new HashMap<>();
+        for (BizNursingRecord r : rows) {
+            if (r.getAdmissionId() == null || r.getMeasureTime() == null) {
+                continue;
+            }
+            BizNursingRecord kept = latest.get(r.getAdmissionId());
+            if (kept == null || r.getMeasureTime().isAfter(kept.getMeasureTime())) {
+                latest.put(r.getAdmissionId(), r);
+            }
+        }
+        List<NursingVitalFactVO> result = new ArrayList<>(latest.size());
+        for (BizNursingRecord r : latest.values()) {
+            result.add(toVitalFact(r));
+        }
+        result.sort((a, b) -> b.getMeasureTime().compareTo(a.getMeasureTime()));
+        return result;
+    }
+
+    @Override
+    public NursingVitalFactVO latestVitalByAdmission(Long admissionId, LocalDateTime since) {
+        // 保留（类别②）：同上，跨模块 service 调用
+        if (admissionId == null) {
+            throw new BusinessException("入院ID不能为空");
+        }
+        List<BizNursingRecord> rows = nursingMapper.selectList(new LambdaQueryWrapper<BizNursingRecord>()
+                .eq(BizNursingRecord::getAdmissionId, admissionId)
+                .ge(since != null, BizNursingRecord::getMeasureTime, since)
+                .and(w -> w.isNotNull(BizNursingRecord::getTemperature)
+                        .or().isNotNull(BizNursingRecord::getPulse)
+                        .or().isNotNull(BizNursingRecord::getRespiration)
+                        .or().isNotNull(BizNursingRecord::getSystolicPressure)
+                        .or().isNotNull(BizNursingRecord::getDiastolicPressure)
+                        .or().isNotNull(BizNursingRecord::getSpo2))
+                .orderByDesc(BizNursingRecord::getMeasureTime)
+                .last("LIMIT 1"));
+        return rows.isEmpty() ? null : toVitalFact(rows.get(0));
+    }
+
+    @Override
+    public WardNursingFactsVO wardShiftFacts(Long wardId, LocalDateTime begin, LocalDateTime end, Integer shift) {
+        // 保留（类别②）：同上，跨模块 service 调用
+        if (wardId == null || begin == null || end == null) {
+            throw new BusinessException("病区ID与时间窗不能为空");
+        }
+        WardNursingFactsVO vo = new WardNursingFactsVO();
+        vo.setWardId(wardId);
+        WardVO ward = bedMapper.selectWardById(wardId);
+        vo.setWardName(ward == null ? null : ward.getWardName());
+        vo.setShift(shift);
+        vo.setShiftText(InpatientRecordLabels.shiftText(shift));
+        vo.setWindowBegin(begin);
+        vo.setWindowEnd(end);
+
+        vo.setVitalRows(nursingMapper.selectList(new LambdaQueryWrapper<BizNursingRecord>()
+                        .eq(BizNursingRecord::getWardId, wardId)
+                        .ge(BizNursingRecord::getMeasureTime, begin)
+                        .lt(BizNursingRecord::getMeasureTime, end)
+                        .orderByAsc(BizNursingRecord::getMeasureTime))
+                .stream().map(this::toVitalFact).collect(java.util.stream.Collectors.toList()));
+
+        vo.setAssessmentRows(assessmentMapper.selectList(new LambdaQueryWrapper<BizNursingAssessment>()
+                        .eq(BizNursingAssessment::getWardId, wardId)
+                        .ge(BizNursingAssessment::getAssessTime, begin)
+                        .lt(BizNursingAssessment::getAssessTime, end)
+                        .orderByAsc(BizNursingAssessment::getAssessTime))
+                .stream().map(this::toAssessVO).collect(java.util.stream.Collectors.toList()));
+
+        WardNursingFactsVO.Census census = new WardNursingFactsVO.Census();
+        census.setInHospitalCount(Math.toIntExact(admissionMapper.selectCount(new LambdaQueryWrapper<BizAdmission>()
+                .eq(BizAdmission::getWardId, wardId)
+                .eq(BizAdmission::getAdmitStatus, AdmitStatusEnum.IN_HOSPITAL.getCode()))));
+        census.setDischargeCount(Math.toIntExact(admissionMapper.selectCount(new LambdaQueryWrapper<BizAdmission>()
+                .eq(BizAdmission::getWardId, wardId)
+                .eq(BizAdmission::getAdmitStatus, AdmitStatusEnum.DISCHARGED.getCode())
+                .ge(BizAdmission::getDischargeTime, begin)
+                .lt(BizAdmission::getDischargeTime, end))));
+        List<BizAdmission> newAdmissions = admissionMapper.selectList(new LambdaQueryWrapper<BizAdmission>()
+                .eq(BizAdmission::getWardId, wardId)
+                .ge(BizAdmission::getAdmitTime, begin)
+                .lt(BizAdmission::getAdmitTime, end)
+                .orderByAsc(BizAdmission::getAdmitTime));
+        for (BizAdmission a : newAdmissions) {
+            WardNursingFactsVO.AdmissionBrief brief = new WardNursingFactsVO.AdmissionBrief();
+            brief.setAdmissionId(a.getAdmissionId());
+            brief.setPatientName(patientNameOf(a.getPatientId()));
+            brief.setBedNo(bedNoOf(a.getBedId()));
+            brief.setAdmitTime(a.getAdmitTime());
+            brief.setAdmitDiagnosisName(a.getAdmitDiagnosisName());
+            census.getNewAdmissions().add(brief);
+        }
+        vo.setCensus(census);
+        return vo;
+    }
+
+    private NursingVitalFactVO toVitalFact(BizNursingRecord r) {
+        NursingVitalFactVO vo = new NursingVitalFactVO();
+        vo.setAdmissionId(r.getAdmissionId());
+        vo.setPatientId(r.getPatientId());
+        vo.setPatientName(r.getPatientName());
+        vo.setBedNo(r.getBedNo());
+        vo.setWardId(r.getWardId());
+        vo.setWardName(r.getWardName());
+        vo.setMeasureTime(r.getMeasureTime());
+        vo.setShift(r.getShift());
+        vo.setTemperature(r.getTemperature());
+        vo.setPulse(r.getPulse());
+        vo.setRespiration(r.getRespiration());
+        vo.setSystolicPressure(r.getSystolicPressure());
+        vo.setDiastolicPressure(r.getDiastolicPressure());
+        vo.setSpo2(r.getSpo2());
+        vo.setNursingLevel(r.getNursingLevel());
+        vo.setNursingContent(r.getNursingContent());
         return vo;
     }
 

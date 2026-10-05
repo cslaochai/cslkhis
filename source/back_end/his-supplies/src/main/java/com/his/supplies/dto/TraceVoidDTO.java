@@ -9,10 +9,14 @@ import lombok.Data;
  */
 @Data
 public class TraceVoidDTO {
-    /** 台账ID */
+    /**
+     * 台账ID
+     */
     @NotNull(message = "缺少台账ID")
     private Long traceId;
-    /** 作废原因 */
+    /**
+     * 作废原因
+     */
     @NotBlank(message = "作废原因不能为空")
     private String reason;
 }

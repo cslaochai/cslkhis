@@ -13,7 +13,7 @@
  *     把「不适用（缺依据未评估）」显示成「通过」是最危险的错：它让结论看起来比实际可信。
  *  3. 本页只读。执行审核（跑规则）在「医保结算清单」里按键触发，这里只回看结果。
  */
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, View } from '@element-plus/icons-vue'
 import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
@@ -21,6 +21,7 @@ import { getDictDataMapList } from '@/api/system'
 import { DICT_TYPE } from '@/lib/dict-cache'
 import { dictLabelText } from '@/lib/utils'
 import { getComplianceAuditList, getComplianceAuditDetail } from '@/api/compliance'
+import { judgeInsuranceEvidence } from '@/api/ai'
 import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 
 const fmtTime = (t) => (t ? String(t).replace('T', ' ').slice(0, 16) : '—')
@@ -80,6 +81,7 @@ const items = ref([])
 const openDetail = async (row) => {
   detail.value = row
   items.value = []
+  aiEvidence.value = null
   detailVisible.value = true
   detailLoading.value = true
   try {
@@ -90,6 +92,26 @@ const openDetail = async (row) => {
     } else ElMessage.error(res.message || '加载审核详情失败')
   } catch (e) { console.error(e); ElMessage.error('加载审核详情失败') } finally { detailLoading.value = false }
 }
+
+// ---------------- AI 证据判定（G-07） ----------------
+// 模型逐条读病历证据，判「支持/反驳/证据不足」；只读计算不写库，不改规则结论。
+// degraded=true 时judgments 为空 —— 规则判定依据照常可见，警示必显，不许把「无判定」当「无风险」。
+const hitItems = computed(() => items.value.filter(i => i.result === 1))
+const aiEvidence = ref(null)
+const aiEvidenceLoading = ref(false)
+const runAiEvidence = async () => {
+  if (!detail.value?.id) return
+  aiEvidenceLoading.value = true
+  aiEvidence.value = null
+  try {
+    const res = await judgeInsuranceEvidence({ auditId: detail.value.id })
+    if (res.code === 200) {
+      aiEvidence.value = res.data
+      if (res.data?.degraded) ElMessage.warning(`AI 证据判定暂不可用（${res.data.degradeReason || '原因未知'}），请人工核对证据`)
+    } else ElMessage.error(res.message || 'AI 证据判定失败')
+  } catch (e) { console.error(e); ElMessage.error('AI 证据判定失败') } finally { aiEvidenceLoading.value = false }
+}
+const verdictTagType = (v) => (v === 1 ? 'danger' : v === 2 ? 'success' : 'info')
 
 onMounted(async () => {
   await loadDicts()
@@ -193,6 +215,34 @@ onMounted(async () => {
           <el-table-column prop="suggestion" label="整改建议" min-width="200" show-overflow-tooltip />
         </el-table>
         <p class="muted mt">「不适用」= 缺依据没法评估，不是「没 problem」，凑数当通过会让结论虚高。</p>
+
+        <h4 class="sec">AI 证据判定</h4>
+        <div v-if="hitItems.length" class="flex items-center gap-3 mb-2">
+          <el-button type="primary" size="small" :loading="aiEvidenceLoading" data-testid="ca-ai-evidence-btn" @click="runAiEvidence">
+            AI 证据判定
+          </el-button>
+          <span class="muted">模型逐条阅读病历证据判「支持 / 反驳 / 证据不足」，仅提示人工复核，不改变规则结论</span>
+        </div>
+        <el-alert
+          v-if="aiEvidence?.degraded"
+          type="warning" :closable="false" show-icon class="mb-2"
+          :title="`AI 证据判定暂不可用：${aiEvidence.degradeReason || '原因未知'}，规则结论以人工核对为准`"
+          data-testid="ca-ai-evidence-degraded" />
+        <el-table
+          v-if="aiEvidence && !aiEvidence.degraded"
+          :data="aiEvidence.judgments" border size="small" max-height="300" data-testid="ca-ai-evidence-table">
+          <el-table-column prop="ruleCode" label="规则" width="70" />
+          <el-table-column prop="ruleName" label="规则名称" min-width="160" show-overflow-tooltip />
+          <el-table-column label="证据判定" width="110">
+            <template #default="{ row }">
+              <el-tag :type="verdictTagType(row.verdict)" size="small">{{ row.verdictText }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="reason" label="理由" min-width="240" show-overflow-tooltip />
+          <el-table-column prop="quote" label="原文引用" min-width="200" show-overflow-tooltip />
+          <template #empty><span class="muted">模型未给出判定</span></template>
+        </el-table>
+        <p v-if="aiEvidence && !aiEvidence.degraded && aiEvidence.overall" class="muted mt">总评：{{ aiEvidence.overall }}</p>
       </div>
     </el-drawer>
   </div>

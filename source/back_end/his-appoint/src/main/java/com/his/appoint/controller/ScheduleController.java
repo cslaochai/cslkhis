@@ -122,4 +122,12 @@ public class ScheduleController {
         return success ? Result.success() : Result.error("加号失败");
     }
 
+    @PreAuthorize("hasAuthority('org:schedule:add')")
+    @Operation(summary = "段级号源编辑（每段号源/预约池/停用状态，Σ段写回主表并留痕）")
+    @PostMapping("/slotUpsert")
+    public Result<Void> slotUpsert(@Valid @RequestBody ScheduleSlotUpsertDTO dto) {
+        slotService.updateSlotSources(dto);
+        return Result.success();
+    }
+
 }

@@ -5,7 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getScheduleList, createSchedule, updateSchedule, deleteSchedule, updateScheduleStatus,
          getScheduleTemplateListPage, saveScheduleTemplate, deleteScheduleTemplate, updateScheduleTemplateStatus,
          generateScheduleFromTemplate, previewScheduleTemplate, getStopImpact, batchCancelRegist,
-         addScheduleSource, getScheduleSlots, getShiftSelectList, getShiftListPage, renameShift, updateShiftStatus, createShift,
+         addScheduleSource, getScheduleSlots, saveScheduleSlots, getShiftSelectList, getShiftListPage, renameShift, updateShiftStatus, createShift,
          getOnDutyStaff } from '@/api/appoint'
 import { getDepartmentSelectList, getEmployeeList, getClinicRoomListAll, getUserInfo } from '@/api/system'
 import { loadDictDataList, DICT_TYPE } from '@/lib/dict-cache'
@@ -53,6 +53,8 @@ const tplFormData = ref({
   appointmentSource: 0,
   status: 1,
   remark: '',
+  // 段级号源配置：null=未启用细化（提交后端原样保留）；[]=清空待提交；[...]=整批替换
+  slots: null as any[] | null,
 })
 
 const weekParityMap: Record<number, string> = { 0: '每周', 1: '单周', 2: '双周' }
@@ -116,7 +118,7 @@ const resetTplForm = () => {
     weekDay: 1, weekParity: 0, validFrom: '', validUntil: '',
     shiftId: null, startTime: '', endTime: '', totalSource: 20,
     roomId: null, roomName: '', registFee: 0, diagnosisFee: 0, isExpert: 0, expertFee: 0,
-    isAppointment: 1, appointmentSource: 0, status: 1, remark: '',
+    isAppointment: 1, appointmentSource: 0, status: 1, remark: '', slots: null,
   }
 }
 
@@ -144,8 +146,78 @@ const handleTplDoctorChange = (id: any) => {
 const handleTplStaffTypeChange = () => {
   tplFormData.value.doctorId = null
   tplFormData.value.doctorName = ''
+  tplFormData.value.slots = null
   if (tplFormData.value.deptId) loadEmployees(Number(tplFormData.value.deptId), tplFormData.value.staffType)
 }
+
+// ========== 模板段级号源（按段细化号源，可选） ==========
+// 与后端生成侧同口径：半小时切窗；均分「base 给所有段，余数补给前面的段」；
+// 预约池先同口径均分，超出段号源的部分顺延到后面有空余的段。
+
+const tplToMinute = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
+const tplToHHmm = (m: number) =>
+    `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+
+const generateTplSlots = () => {
+  const f = tplFormData.value
+  if (!f.startTime || !f.endTime) { ElMessage.warning('请先选择班次'); return }
+  const s0 = tplToMinute(f.startTime)
+  const e0 = tplToMinute(f.endTime)
+  if (s0 % 30 !== 0 || e0 % 30 !== 0 || e0 <= s0) {
+    ElMessage.warning('该班次时间窗不是半小时整点，无法按段细化')
+    return
+  }
+  const segs: number[][] = []
+  let cursor = s0
+  while (cursor < e0) {
+    const next = Math.min(cursor + 30, e0)
+    segs.push([cursor, next])
+    cursor = next
+  }
+  const n = segs.length
+  const total = Number(f.totalSource) || 0
+  const appt = f.isAppointment === 1 ? (Number(f.appointmentSource) || 0) : 0
+  if (appt > total) { ElMessage.warning('预约号源数不能大于号源总数'); return }
+  const spread = (amount: number) => {
+    const base = Math.floor(amount / n)
+    let rem = amount % n
+    return segs.map(() => base + (rem-- > 0 ? 1 : 0))
+  }
+  const totals = spread(total)
+  const appts = spread(appt)
+  for (let i = 0; i < n; i++) {
+    if (appts[i] > totals[i]) {
+      let overflow = appts[i] - totals[i]
+      appts[i] = totals[i]
+      for (let j = n - 1; j >= 0 && overflow > 0; j--) {
+        const move = Math.min(totals[j] - appts[j], overflow)
+        appts[j] += move
+        overflow -= move
+      }
+    }
+  }
+  f.slots = segs.map((seg, i) => ({
+    startTime: tplToHHmm(seg[0]), endTime: tplToHHmm(seg[1]),
+    totalSource: totals[i], appointmentSource: appts[i],
+  }))
+}
+
+/** Σ段实时对账：后端硬校验「Σ段=主表」，前端提前显示差在哪、拦下必失败的提交 */
+const tplSlotSum = computed(() => {
+  const rows = tplFormData.value.slots
+  if (!Array.isArray(rows) || rows.length === 0) return { total: 0, appt: 0 }
+  return {
+    total: rows.reduce((s: number, r: any) => s + (Number(r.totalSource) || 0), 0),
+    appt: rows.reduce((s: number, r: any) => s + (Number(r.appointmentSource) || 0), 0),
+  }
+})
+const tplSlotExpected = computed(() => ({
+  total: Number(tplFormData.value.totalSource) || 0,
+  appt: tplFormData.value.isAppointment === 1 ? (Number(tplFormData.value.appointmentSource) || 0) : 0,
+}))
+const tplSlotMismatch = computed(() =>
+    tplSlotSum.value.total !== tplSlotExpected.value.total
+    || tplSlotSum.value.appt !== tplSlotExpected.value.appt)
 
 const handleTplEdit = (row: any) => {
   tplFormData.value = {
@@ -174,6 +246,13 @@ const handleTplEdit = (row: any) => {
     appointmentSource: row.appointmentSource || 0,
     status: row.status,
     remark: row.remark || '',
+    // 已细化的模板把段配置带进表单（整批替换口径）；未细化保持 null，提交时不动后端现状
+    slots: Array.isArray(row.slots) && row.slots.length > 0
+        ? row.slots.map((s: any) => ({
+            startTime: s.startTime, endTime: s.endTime,
+            totalSource: s.totalSource, appointmentSource: s.appointmentSource,
+          }))
+        : (Array.isArray(row.slots) ? [] : null),
   }
   tplDialogTitle.value = '修改模板'
   if (row.deptId) {
@@ -208,6 +287,12 @@ const handleTplSubmit = async () => {
   if (staffTypeHasSource(tplFormData.value.staffType)
       && tplFormData.value.isAppointment === 1 && tplFormData.value.appointmentSource > tplFormData.value.totalSource) {
     ElMessage.warning('预约号源数不能大于号源总数')
+    return
+  }
+  // 段级号源提交前对账：Σ段=主表是后端硬校验，不一致时提交必失败，前端先拦一次省一次往返
+  if (staffTypeHasSource(tplFormData.value.staffType)
+      && Array.isArray(tplFormData.value.slots) && tplFormData.value.slots.length > 0 && tplSlotMismatch.value) {
+    ElMessage.warning('各段号源/预约池合计与总数不一致，请调整后再保存')
     return
   }
   const dept = departments.value.find((d: any) => d.id === tplFormData.value.deptId)
@@ -430,8 +515,14 @@ const applyShiftDict = (target: 'schedule' | 'template', shiftId: any) => {
     return
   }
   form.shiftId = String(hit.id)
+  const winChanged = form.startTime !== hit.startTime || form.endTime !== hit.endTime
   form.startTime = hit.startTime
   form.endTime = hit.endTime
+  // 模板换班次=换时间窗：已细化的段配置不再铺满新窗，留着保存必失败 → 就地清空（生成时回退半小时均分）
+  if (target === 'template' && winChanged && Array.isArray(tplFormData.value.slots) && tplFormData.value.slots.length > 0) {
+    tplFormData.value.slots = []
+    ElMessage.info('班次已变更，原按段细化号源配置已清空')
+  }
 }
 
 // ========== 班次字典维护（查询/分页/新增/编辑） ==========
@@ -806,8 +897,6 @@ const panelStats = computed(() => {
     total,
     shifts,
     stopped,
-    // 系统暂无替诊/调班记录载体（biz_schedule 无对应字段），当前恒为 0；后端补字段后在这里接入
-    swapCount: 0,
     avgPerShift: shifts ? Math.round(total / shifts) : 0,
   }
 })
@@ -1399,21 +1488,71 @@ const handleAdd = () => {
   dialogVisible.value = true
 }
 
-// ========== 时间片段明细（编辑弹窗只读展示：号源与占用的事实都在段上） ==========
+// ========== 时间片段明细（编辑弹窗：号源与占用的事实都在段上，可逐段调号源/预约池/停用） ==========
 const slotDetailRows = ref<any[]>([])
 const slotDetailLoading = ref(false)
+const slotSaving = ref(false)
+// 载入时的段快照：与当前值逐段比对出「有没有改过」，没改就禁用保存
+const slotSnapshot = ref('')
+
+const slotEditableFields = (rows: any[]) =>
+  JSON.stringify(rows.map((s: any) => [s.id, s.totalSource, s.appointmentSource || 0, s.status]))
+
+const slotEditEnabled = computed(() =>
+  isEdit.value && formData.value.id && staffTypeHasSource(formData.value.staffType)
+  && formData.value.status === 1
+  // 过期与停诊后端拒收（历史班次以门诊日志为准），前端直接只读
+  && !!formData.value.scheduleDate && formData.value.scheduleDate >= fmtISO(new Date())
+)
+const slotDirty = computed(() => !!slotDetailRows.value.length && slotEditableFields(slotDetailRows.value) !== slotSnapshot.value)
 
 const loadSlotDetail = async (scheduleId: any) => {
   slotDetailRows.value = []
+  slotSnapshot.value = ''
   if (!scheduleId) return
   slotDetailLoading.value = true
   try {
     const res = await getScheduleSlots(scheduleId)
     slotDetailRows.value = res.data || []
+    slotSnapshot.value = slotEditableFields(slotDetailRows.value)
   } catch (error) {
     console.error('加载时间片段失败:', error)
   } finally {
     slotDetailLoading.value = false
+  }
+}
+
+// 段级号源编辑：整批校验整批提交，Σ段由后端写回主表；used 系是事实，前端同样不许改
+const handleSaveSlots = async () => {
+  for (const s of slotDetailRows.value) {
+    if (s.totalSource < (s.usedSource || 0)) {
+      ElMessage.warning(`${s.startTime} 段号源不能小于已挂号数（${s.usedSource || 0}）`)
+      return
+    }
+    if ((s.appointmentSource || 0) > s.totalSource) {
+      ElMessage.warning(`${s.startTime} 段预约号源不能大于号源总数`)
+      return
+    }
+    if ((s.appointmentSource || 0) < (s.usedAppointmentSource || 0)) {
+      ElMessage.warning(`${s.startTime} 段预约号源不能小于已约数（${s.usedAppointmentSource || 0}）`)
+      return
+    }
+  }
+  slotSaving.value = true
+  try {
+    await saveScheduleSlots(formData.value.id, slotDetailRows.value.map((s: any) => ({
+      id: s.id, totalSource: s.totalSource, appointmentSource: s.appointmentSource || 0, status: s.status,
+    })))
+    ElMessage.success('号源调整已保存')
+    // Σ段变了：重拉段明细 + 面板（主表的号源总数/剩余是汇总冗余），表单里的汇总值同步对齐
+    await loadSlotDetail(formData.value.id)
+    formData.value.totalSource = slotDetailRows.value.reduce((a: number, s: any) => a + (s.totalSource || 0), 0)
+    formData.value.appointmentSource = slotDetailRows.value.reduce((a: number, s: any) => a + (s.appointmentSource || 0), 0)
+    await loadPanel()
+  } catch (error: any) {
+    ElMessage.error(error.message || '号源调整失败')
+  } finally {
+    slotSaving.value = false
   }
 }
 
@@ -1812,7 +1951,7 @@ onUnmounted(() => {
 <template>
   <div class="w-full">
     <!-- 周统计总览：页面顶部白底卡片行，与下方 tab 分离；口径 = 当前科室筛选 × 面板所在周，随上周/下周切换联动 -->
-    <div class="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6" data-testid="panel-stats">
+    <div class="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5" data-testid="panel-stats">
       <div class="rounded-md border border-slate-200 bg-white px-4 py-1.5 text-center transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md cursor-default"
            data-testid="stat-coverage"
            :title="`实排 ${panelStats.served} / 应排 ${panelStats.expected}：本周有班次的医生占在岗名册的比例，实排少于应排说明有医生漏排`">
@@ -1837,11 +1976,6 @@ onUnmounted(() => {
           {{ panelStats.stopped }}
         </p>
         <p class="text-xs text-slate-400">停诊班次数</p>
-      </div>
-      <div class="rounded-md border border-slate-200 bg-white px-4 py-1.5 text-center transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md cursor-default"
-           data-testid="stat-swap" title="本周临时替诊/调班频次；系统暂无替诊/调班记录，当前恒为 0">
-        <p class="text-xl font-semibold text-slate-800">{{ panelStats.swapCount }}</p>
-        <p class="text-xs text-slate-400">替诊/调班人次</p>
       </div>
       <div class="rounded-md border border-slate-200 bg-white px-4 py-1.5 text-center transition duration-200 hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-md cursor-default"
            data-testid="stat-avg-source" title="总号源 ÷ 班次数：横向对比不同医生、不同科室的排班负荷">
@@ -2589,14 +2723,22 @@ onUnmounted(() => {
         </el-form-item>
       </el-form>
 
-      <!-- 时间片段明细（只读展示）：号源与占用的事实落在段上，主表只是 Σ段 汇总 -->
+      <!-- 时间片段明细：号源与占用的事实落在段上，主表只是 Σ段 汇总；可编辑时逐段调号源/预约池/停用 -->
       <div class="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-3" data-testid="slot-detail">
         <div class="mb-2 flex items-center justify-between">
           <span class="text-sm font-medium text-slate-700">时间片段（半小时一档）</span>
-          <span v-if="slotDetailRows.length" class="text-xs text-slate-400">
-            共 {{ slotDetailRows.length }} 段 · 余 {{ slotDetailRows.reduce((a: number, s: any) => a + (s.availableSource || 0), 0) }} / {{ slotDetailRows.reduce((a: number, s: any) => a + (s.totalSource || 0), 0) }}
-          </span>
+          <div class="flex items-center gap-2">
+            <span v-if="slotDetailRows.length" class="text-xs text-slate-400">
+              共 {{ slotDetailRows.length }} 段 · 余 {{ slotDetailRows.reduce((a: number, s: any) => a + (s.availableSource || 0), 0) }} / {{ slotDetailRows.reduce((a: number, s: any) => a + (s.totalSource || 0), 0) }}
+            </span>
+            <el-button v-if="slotEditEnabled" size="small" type="primary" plain
+                       :disabled="!slotDirty" :loading="slotSaving"
+                       data-testid="slot-save" @click="handleSaveSlots">保存号源调整</el-button>
+          </div>
         </div>
+        <p v-if="slotEditEnabled && slotDetailRows.length" class="mb-1 text-xs text-slate-400">
+          逐段调整号源/预约池/停用，整批保存生效；已挂数与已约数是事实，不能改小
+        </p>
         <p v-if="slotDetailLoading" class="py-2 text-center text-xs text-slate-400">加载中…</p>
         <p v-else-if="!slotDetailRows.length" class="py-2 text-center text-xs text-slate-400">
           {{ staffTypeHasSource(formData.staffType) ? '该排班暂无片段明细（保存后自动按半小时切分生成）' : '出勤排班不放号，不切分时间段' }}
@@ -2609,19 +2751,31 @@ onUnmounted(() => {
                 <th class="py-1.5 pr-2 font-medium">总号</th>
                 <th class="py-1.5 pr-2 font-medium">已挂</th>
                 <th class="py-1.5 pr-2 font-medium">剩余</th>
+                <th class="py-1.5 pr-2 font-medium">预约池</th>
                 <th class="py-1.5 pr-2 font-medium">约余</th>
-                <th class="py-1.5 font-medium">状态</th>
+                <th class="py-1.5 font-medium">{{ slotEditEnabled ? '停用' : '状态' }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="s in slotDetailRows" :key="s.id" class="border-t border-slate-200 text-slate-700">
                 <td class="py-1.5 pr-2 font-mono">{{ s.startTime }} ~ {{ s.endTime }}</td>
-                <td class="py-1.5 pr-2">{{ s.totalSource }}</td>
+                <td class="py-1.5 pr-2">
+                  <el-input-number v-if="slotEditEnabled" v-model="s.totalSource" size="small"
+                                   :min="s.usedSource || 0" :max="999" controls-position="right" class="!w-20" />
+                  <template v-else>{{ s.totalSource }}</template>
+                </td>
                 <td class="py-1.5 pr-2">{{ s.usedSource }}</td>
                 <td class="py-1.5 pr-2" :class="s.availableSource <= 0 ? 'text-red-500 font-medium' : 'text-emerald-600'">{{ s.availableSource }}</td>
+                <td class="py-1.5 pr-2">
+                  <el-input-number v-if="slotEditEnabled" v-model="s.appointmentSource" size="small"
+                                   :min="s.usedAppointmentSource || 0" :max="s.totalSource" controls-position="right" class="!w-20" />
+                  <template v-else>{{ (s.appointmentSource || 0) > 0 ? s.appointmentSource : '—' }}</template>
+                </td>
                 <td class="py-1.5 pr-2">{{ (s.appointmentSource || 0) > 0 ? Math.max((s.appointmentSource || 0) - (s.usedAppointmentSource || 0), 0) : '—' }}</td>
                 <td class="py-1.5">
-                  <span :class="s.status === 1 ? 'text-emerald-600' : 'text-red-500'">{{ s.status === 1 ? '正常' : '停用' }}</span>
+                  <el-switch v-if="slotEditEnabled" v-model="s.status" :active-value="1" :inactive-value="0"
+                             inline-prompt active-text="用" inactive-text="停" />
+                  <span v-else :class="s.status === 1 ? 'text-emerald-600' : 'text-red-500'">{{ s.status === 1 ? '正常' : '停用' }}</span>
                 </td>
               </tr>
             </tbody>
@@ -2725,6 +2879,48 @@ onUnmounted(() => {
           <el-form-item label="预约号源数" v-if="tplFormData.isAppointment === 1">
             <el-input-number v-model="tplFormData.appointmentSource" :min="0" :max="tplFormData.totalSource" class="w-full" />
           </el-form-item>
+        </div>
+        <!-- 段级号源细化（可选）：改的是「生成的排班各半小时段各放几个号」，不改模板自身时间窗 -->
+        <div class="rounded border border-slate-200 p-3 mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-slate-700">按段细化号源（可选）</span>
+            <div class="flex gap-2">
+              <el-button size="small" data-testid="tpl-slot-generate" :disabled="!tplFormData.startTime"
+                         @click="generateTplSlots">按半小时均分生成段</el-button>
+              <el-button v-if="Array.isArray(tplFormData.slots)" size="small" data-testid="tpl-slot-clear"
+                         @click="tplFormData.slots = []">清空细分</el-button>
+            </div>
+          </div>
+          <p class="text-xs text-slate-500 mb-2">
+            未细化时生成的排班按半小时均分号源；细化后按每段配置放号。
+            段必须铺满班次时间窗{{ tplTimeRange ? `（${tplTimeRange}）` : '' }}，各段合计须等于号源总数与预约号源数；清空并保存后回退均分。
+          </p>
+          <template v-if="Array.isArray(tplFormData.slots) && tplFormData.slots.length > 0">
+            <el-table :data="tplFormData.slots" size="small" max-height="260">
+              <el-table-column type="index" label="#" width="48" />
+              <el-table-column label="时间段" width="130">
+                <template #default="{ row }">{{ row.startTime }} ~ {{ row.endTime }}</template>
+              </el-table-column>
+              <el-table-column label="段号源" min-width="130">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.totalSource" :min="0" :max="999" size="small"
+                                   class="!w-full" data-testid="tpl-slot-total" />
+                </template>
+              </el-table-column>
+              <el-table-column label="段预约池" min-width="130">
+                <template #default="{ row }">
+                  <el-input-number v-model="row.appointmentSource" :min="0" :max="999" size="small"
+                                   class="!w-full" :disabled="tplFormData.isAppointment !== 1" />
+                </template>
+              </el-table-column>
+            </el-table>
+            <p class="mt-2 text-xs" :class="tplSlotMismatch ? 'text-red-500' : 'text-emerald-600'"
+               data-testid="tpl-slot-sum">
+              合计：号源 {{ tplSlotSum.total }} / 期望 {{ tplSlotExpected.total }}，
+              预约池 {{ tplSlotSum.appt }} / 期望 {{ tplSlotExpected.appt }}
+              <span v-if="tplSlotMismatch">（不一致，无法保存）</span>
+            </p>
+          </template>
         </div>
         </template>
         <p v-else class="mb-3 text-xs text-slate-500">

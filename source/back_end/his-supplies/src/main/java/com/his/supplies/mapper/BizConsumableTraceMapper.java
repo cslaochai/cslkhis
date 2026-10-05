@@ -17,11 +17,11 @@ public interface BizConsumableTraceMapper extends BaseMapper<BizConsumableTrace>
 
     String TRACE_COLS =
             "t.id, t.create_time, t.trace_no, t.udi_code, t.udi_di, t.udi_serial, t.udi_batch, t.udi_expiry_date, " +
-            "t.consumable_id, t.consumable_code, t.consumable_name, t.specification, t.unit, t.reg_cert_no, t.retail_price, " +
-            "t.stock_id, t.batch_no, t.supplier, t.patient_id, t.patient_no, t.patient_name, " +
-            "t.visit_type, t.regist_id, t.admission_id, t.dept_id, t.dept_name, t.usage_time, t.operator_name, " +
-            "t.charge_status, t.fee_no, t.fee_record_id, t.charge_fail_reason, " +
-            "t.status, t.void_time, t.void_reason, t.remark ";
+                    "t.consumable_id, t.consumable_code, t.consumable_name, t.specification, t.unit, t.reg_cert_no, t.retail_price, " +
+                    "t.stock_id, t.batch_no, t.supplier, t.patient_id, t.patient_no, t.patient_name, " +
+                    "t.visit_type, t.regist_id, t.admission_id, t.dept_id, t.dept_name, t.usage_time, t.operator_name, " +
+                    "t.charge_status, t.fee_no, t.fee_record_id, t.charge_fail_reason, " +
+                    "t.status, t.void_time, t.void_reason, t.remark ";
 
     /**
      * 溯源台账分页（正/反向追溯同一入口：keyword 覆盖追溯码/UDI/患者/耗材）

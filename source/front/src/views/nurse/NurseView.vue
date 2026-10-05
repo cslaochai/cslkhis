@@ -13,12 +13,13 @@
  * 自动化验证与"默认落在待校对页签"这个口径都会被外层抢走。
  */
 import { ref } from 'vue'
-import { FirstAidKit, EditPen, Grid } from '@element-plus/icons-vue'
+import { FirstAidKit, EditPen, Grid, ChatDotRound } from '@element-plus/icons-vue'
 import InpatientOrderWorkspace from '@/components/his/InpatientOrderWorkspace.vue'
 import NursingRecordWorkspace from '@/components/his/NursingRecordWorkspace.vue'
 import BedMapWorkspace from '@/components/his/BedMapWorkspace.vue'
+import NursingHandoverWorkspace from '@/components/his/NursingHandoverWorkspace.vue'
 
-const view = ref<'order' | 'nursing' | 'bedmap'>('order')
+const view = ref<'order' | 'nursing' | 'bedmap' | 'handover'>('order')
 </script>
 
 <template>
@@ -33,9 +34,13 @@ const view = ref<'order' | 'nursing' | 'bedmap'>('order')
       <el-radio-button value="bedmap">
         <el-icon class="mr-1"><Grid /></el-icon>床位图
       </el-radio-button>
+      <el-radio-button value="handover">
+        <el-icon class="mr-1"><ChatDotRound /></el-icon>交接班摘要
+      </el-radio-button>
     </el-radio-group>
     <InpatientOrderWorkspace v-if="view === 'order'" mode="nurse" />
     <NursingRecordWorkspace v-else-if="view === 'nursing'" />
-    <BedMapWorkspace v-else />
+    <BedMapWorkspace v-else-if="view === 'bedmap'" />
+    <NursingHandoverWorkspace v-else />
   </div>
 </template>

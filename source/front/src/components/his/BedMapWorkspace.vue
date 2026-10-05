@@ -15,6 +15,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Refresh, WarningFilled } from '@element-plus/icons-vue'
 import { getBedMap } from '@/api/inpatient'
+import { scanWardDeterioration, explainDeterioration } from '@/api/ai'
 import { patientGenderText, patientAgeText } from '@/lib/patientGender'
 import PatientDetailDialog from '@/components/his/PatientDetailDialog.vue'
 
@@ -47,12 +48,36 @@ const load = async () => {
     data.value = res.data || data.value
     // 首屏后端会把自己落在主岗位科室，回填到下拉，否则切走就切不回来
     if (!deptId.value && res.data?.deptId) deptId.value = String(res.data.deptId)
+    await loadAlerts()
   } catch (e: any) {
     ElMessage.error(e?.message || '床位图加载失败')
   } finally {
     loading.value = false
   }
 }
+
+/** G-12 危重预警角标：按床位图里出现的病区逐个扫描（纯代码评分，无模型调用）。
+ * 扫描失败不影响床位图本身 —— 角标缺席不等于「无预警」，床位图必须先能用。 */
+const alertMap = ref<Record<string, any>>({})
+const loadAlerts = async () => {
+  alertMap.value = {}
+  const wardIds = new Set<string>(
+    beds.value.filter((b) => b.bedStatus === 2 && b.wardId != null).map((b) => String(b.wardId)),
+  )
+  if (!wardIds.size) return
+  const results = await Promise.allSettled(
+    [...wardIds].map((id) => scanWardDeterioration({ wardId: id })),
+  )
+  const map: Record<string, any> = {}
+  for (const r of results) {
+    if (r.status !== 'fulfilled' || r.value?.code !== 200) continue
+    for (const row of r.value.data || []) {
+      if (row?.admissionId != null && row.alertLevel >= 1) map[String(row.admissionId)] = row
+    }
+  }
+  alertMap.value = map
+}
+const alertOf = (bed: any) => (bed.bedStatus === 2 && bed.admissionId != null ? alertMap.value[String(bed.admissionId)] : null)
 
 watch(deptId, () => {
   wardId.value = ''
@@ -113,6 +138,30 @@ const openPatient = (bed: any) => {
   if (bed.bedStatus !== 2 || !bed.patientId) return
   detailPatientId.value = String(bed.patientId)
   detailVisible.value = true
+}
+
+/** 预警详情：评分是代码事实先展示，advice 由 /explain 现拉（仅预警级≥1 才有模型参与）。 */
+const alertVisible = ref(false)
+const alertDetail = ref<any>(null)
+const alertLoading = ref(false)
+const openAlert = async (row: any) => {
+  alertVisible.value = true
+  alertDetail.value = row
+  alertLoading.value = true
+  try {
+    const res: any = await explainDeterioration({ admissionId: row.admissionId })
+    if (res.code !== 200) {
+      ElMessage.error(res.message || '预警详情加载失败')
+      alertVisible.value = false
+      return
+    }
+    alertDetail.value = res.data
+  } catch (e: any) {
+    ElMessage.error(e?.message || '预警详情加载失败')
+    alertVisible.value = false
+  } finally {
+    alertLoading.value = false
+  }
 }
 
 onMounted(async () => {
@@ -252,6 +301,14 @@ onBeforeUnmount(() => window.removeEventListener('resize', measureWorkspace))
                   术后{{ bed.postOpDays }}天
                 </span>
                 <span v-if="bed.critical" class="rounded bg-red-600 px-1 text-white">危重</span>
+                <span
+                  v-if="alertOf(bed)"
+                  class="cursor-pointer rounded px-1 font-medium"
+                  :class="alertOf(bed).alertLevel === 2 ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800'"
+                  data-testid="bed-card-mews"
+                  title="点击查看危重预警详情"
+                  @click.stop="openAlert(alertOf(bed))"
+                >MEWS {{ alertOf(bed).totalScore }}</span>
                 <span v-if="bed.newToday" class="rounded bg-[#1269B5] px-1 text-white">新入</span>
                 <span v-if="bed.activeOrderCount" class="rounded bg-slate-100 px-1 text-slate-700">医嘱{{ bed.activeOrderCount }}</span>
               </div>
@@ -263,6 +320,70 @@ onBeforeUnmount(() => window.removeEventListener('resize', measureWorkspace))
     </div>
 
     <PatientDetailDialog v-model="detailVisible" :patient-id="detailPatientId" />
+
+    <!-- 危重预警详情：只读信息弹框，点遮罩可关 -->
+    <el-dialog v-model="alertVisible" title="危重预警详情" width="560px" data-testid="mews-dialog">
+      <div v-loading="alertLoading">
+        <template v-if="alertDetail">
+          <div class="flex flex-wrap items-baseline justify-between gap-2">
+            <div class="text-base font-semibold text-slate-900">
+              {{ alertDetail.bedNo }}床 {{ alertDetail.patientName }}
+              <span class="ml-1 text-sm font-normal text-slate-500">{{ alertDetail.wardName }}</span>
+            </div>
+            <span
+              class="rounded px-2 py-0.5 text-sm font-semibold"
+              :class="alertDetail.alertLevel === 2 ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800'"
+              data-testid="mews-level"
+            >{{ alertDetail.alertText }}（{{ alertDetail.totalScore }} 分）</span>
+          </div>
+          <div class="mt-1 text-xs text-slate-500">体征时点：{{ alertDetail.measureTime }}</div>
+
+          <el-alert
+            v-if="alertDetail.degraded"
+            class="mt-3"
+            type="warning"
+            :closable="false"
+            show-icon
+            data-testid="mews-degraded"
+            :title="`模型观察建议本次不可用：${alertDetail.degradeReason || '模型未返回'}。评分与体征事实照常，建议为空。`"
+          />
+
+          <h4 class="mt-4 mb-1 text-sm font-semibold text-slate-700">评分明细（MEWS+SpO2）</h4>
+          <table class="w-full text-sm" data-testid="mews-items">
+            <thead>
+              <tr class="border-b border-slate-200 text-xs text-slate-500">
+                <th class="py-1 text-left font-normal">项目</th>
+                <th class="py-1 text-center font-normal">测量值</th>
+                <th class="py-1 text-center font-normal">得分</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="it in alertDetail.items || []" :key="it.name" class="border-b border-slate-100">
+                <td class="py-1">{{ it.name }}</td>
+                <td class="py-1 text-center">{{ it.valueText }}</td>
+                <td class="py-1 text-center font-semibold" :class="it.score > 0 ? 'text-red-600' : 'text-slate-500'">{{ it.score }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <template v-if="(alertDetail.triggeredFacts || []).length">
+            <h4 class="mt-4 mb-1 text-sm font-semibold text-slate-700">触发依据</h4>
+            <ul class="list-disc pl-5 text-sm text-slate-700">
+              <li v-for="(f, i) in alertDetail.triggeredFacts" :key="i">{{ f }}</li>
+            </ul>
+          </template>
+
+          <h4 class="mt-4 mb-1 text-sm font-semibold text-slate-700">观察建议</h4>
+          <div v-if="alertDetail.advice" class="rounded-lg bg-slate-50 p-3 text-sm text-slate-700" data-testid="mews-advice">
+            {{ alertDetail.advice }}
+            <div class="mt-1 text-xs text-slate-400">观察建议由模型生成，仅供参考，不构成医嘱；处置由医护决定。</div>
+          </div>
+          <div v-else class="text-sm text-slate-500" data-testid="mews-no-advice">
+            {{ alertDetail.degraded ? '本次没有可用的模型建议。' : '总分未达观察阈值，暂无模型建议。' }}
+          </div>
+        </template>
+      </div>
+    </el-dialog>
   </div>
 </template>
 

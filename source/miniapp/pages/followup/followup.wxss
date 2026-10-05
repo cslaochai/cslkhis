@@ -1,0 +1,199 @@
+.page {
+  min-height: 100vh;
+  background: #f7f8fa;
+  padding: 20rpx;
+  box-sizing: border-box;
+}
+
+.banner {
+  background: #1269b5;
+  border-radius: 12rpx;
+  padding: 32rpx 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.banner-title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 600;
+  color: #fff;
+}
+
+.banner-sub {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 25rpx;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.fu-card {
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 28rpx 24rpx;
+  box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.04);
+}
+
+.fu-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fu-type {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.fu-status {
+  font-size: 24rpx;
+  color: #ff9800;
+  background: #fff3e2;
+  padding: 4rpx 14rpx;
+  border-radius: 6rpx;
+}
+
+.fu-status.done {
+  color: #4caf50;
+  background: #e8f5e9;
+}
+
+.fu-status.cancel {
+  color: #999;
+  background: #f2f3f5;
+}
+
+.fu-content {
+  font-size: 27rpx;
+  color: #555;
+  line-height: 1.6;
+  margin: 16rpx 0;
+}
+
+.fu-row {
+  display: flex;
+  margin-bottom: 8rpx;
+}
+
+.fu-label {
+  width: 140rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.fu-value {
+  font-size: 24rpx;
+  color: #444;
+  flex: 1;
+}
+
+.fu-reply {
+  background: #eef4fb;
+  border-radius: 8rpx;
+  padding: 16rpx 18rpx;
+  margin-top: 16rpx;
+}
+
+.fu-reply-text {
+  display: block;
+  font-size: 24rpx;
+  color: #1269b5;
+  line-height: 1.6;
+}
+
+.fu-reply-time {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  color: #8aa4c0;
+}
+
+.fu-btn {
+  margin-top: 16rpx;
+  height: 68rpx;
+  line-height: 68rpx;
+  font-size: 26rpx;
+  color: #fff;
+  background: #1269b5;
+  border-radius: 34rpx;
+}
+
+.fu-btn::after {
+  border: none;
+}
+
+.fu-btn.ghost {
+  color: #1269b5;
+  background: #eef4fb;
+}
+
+.reply-box {
+  margin-top: 16rpx;
+}
+
+.reply-input {
+  width: 100%;
+  min-height: 110rpx;
+  font-size: 26rpx;
+  line-height: 1.6;
+  color: #333;
+  background: #f7f8fa;
+  border-radius: 8rpx;
+  padding: 18rpx;
+  box-sizing: border-box;
+}
+
+.reply-ph {
+  color: #bbb;
+}
+
+.reply-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.reply-actions .fu-btn {
+  flex: 1;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 120rpx 0;
+}
+
+.empty-icon {
+  font-size: 80rpx;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: #999;
+  margin-top: 20rpx;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: 40rpx;
+}
+
+.loading-spinner {
+  width: 48rpx;
+  height: 48rpx;
+  border: 6rpx solid #e0e0e0;
+  border-top-color: #1269b5;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
