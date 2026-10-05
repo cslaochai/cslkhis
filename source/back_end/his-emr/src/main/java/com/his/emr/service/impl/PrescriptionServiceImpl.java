@@ -105,9 +105,9 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         return prescriptions.stream().map(rx -> {
             MyPrescriptionVO vo = new MyPrescriptionVO();
             BeanUtils.copyProperties(rx, vo);
-            vo.setPrescriptionTypeText(PrescriptionTypeEnum.labelOf(rx.getPrescriptionType()));
-            vo.setStatusText(PrescriptionStatusEnum.labelOf(rx.getPrescriptionStatus()));
-            vo.setPaymentStatusText(PrescriptionPayStatusEnum.labelOf(rx.getPaymentStatus()));
+            vo.setPrescriptionTypeText(PrescriptionTypeEnum.getText(rx.getPrescriptionType()));
+            vo.setStatusText(PrescriptionStatusEnum.getText(rx.getPrescriptionStatus()));
+            vo.setPaymentStatusText(PrescriptionPayStatusEnum.getText(rx.getPaymentStatus()));
             vo.setDetails(BeanUtil.copyToList(detailMap.getOrDefault(rx.getId(), Collections.emptyList()),
                     MyPrescriptionDetailVO.class));
             return vo;
@@ -174,7 +174,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
             throw new BusinessException(cur == PrescriptionStatusEnum.RETURNED_AUDIT.getCode()
                     ? "处方 " + p.getPrescriptionNo() + " 已被审方退回，等待医生修改后重新提交，不能直接再次审核"
                     : "处方 " + p.getPrescriptionNo() + " 当前状态（"
-                    + PrescriptionStatusEnum.labelOf(cur) + "）不允许审核");
+                    + PrescriptionStatusEnum.getText(cur) + "）不允许审核");
         }
         boolean pass = Integer.valueOf(1).equals(dto.getAuditResult());
         String opinion = dto.getAuditOpinion();

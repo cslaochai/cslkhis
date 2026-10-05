@@ -15,7 +15,9 @@ import java.time.LocalDateTime;
 @Data
 public class BizCriticalValueVO {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -65,7 +67,9 @@ public class BizCriticalValueVO {
      */
     private String itemName;
 
-    /** 危急值结果值 */
+    /**
+     * 危急值结果值
+     */
     private String resultValue;
 
     /**

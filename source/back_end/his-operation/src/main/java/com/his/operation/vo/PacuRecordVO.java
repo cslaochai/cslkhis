@@ -1,7 +1,5 @@
 package com.his.operation.vo;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.his.operation.entity.BizAnesthesiaPacu;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -20,7 +18,9 @@ public class PacuRecordVO extends BizAnesthesiaPacu {
 
     private String admissionNo;
 
-    /** 来源麻醉记录的状态 / 麻醉方式（判断 Aldrete 语境用） */
+    /**
+     * 来源麻醉记录的状态 / 麻醉方式（判断 Aldrete 语境用）
+     */
     private Integer recordStatus;
 
     private String recordStatusText;
@@ -39,29 +39,43 @@ public class PacuRecordVO extends BizAnesthesiaPacu {
     private String actualOperationName;
 
     // 文案
-    /** 状态文本 */
+    /**
+     * 状态文本
+     */
     private String statusText;
     private String awarenessText;
     private String dispositionText;
     private String chargeStatusText;
 
-    /** 驻留时长（分钟，入室→出室；未出室则算到当前） */
+    /**
+     * 驻留时长（分钟，入室→出室；未出室则算到当前）
+     */
     private Long stayMinutes;
 
     private String stayDurationText;
 
-    /** 计费用的驻留小时数（不足 1 小时按 1 小时） */
+    /**
+     * 计费用的驻留小时数（不足 1 小时按 1 小时）
+     */
     private BigDecimal billHours;
 
     // 能力位
-    /** 在室：可登记 Aldrete 评分 */
+    /**
+     * 在室：可登记 Aldrete 评分
+     */
     private Boolean canScore;
-    /** 在室且已评分：可出室 */
+    /**
+     * 在室且已评分：可出室
+     */
     private Boolean canLeave;
-    /** 已出室且未计费：可计费 */
+    /**
+     * 已出室且未计费：可计费
+     */
     private Boolean canCharge;
 
-    /** 是否满足出室标准（Aldrete ≥ 9） */
+    /**
+     * 是否满足出室标准（Aldrete ≥ 9）
+     */
     private Boolean criteriaMet;
 
     private String warningText;

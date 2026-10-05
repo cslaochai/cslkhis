@@ -161,7 +161,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
 
         BizInfectionCase exists = requireCase(dto.getId());
         if (exists.getCaseStatus() != InfectionCaseStatusEnum.PENDING.getCode()) {
-            throw new BusinessException(statusText(exists.getCaseStatus()) + "的病例不能修改（核实结论错了请建新卡订正，留痕不覆盖）");
+            throw new BusinessException(InfectionCaseStatusEnum.labelOrUnknown(exists.getCaseStatus()) + "的病例不能修改（核实结论错了请建新卡订正，留痕不覆盖）");
         }
         fillCase(exists, dto, patient, exists.getReportBy(), exists.getReportName());
         if (Integer.valueOf(1).equals(dto.getLeakFlag())) {
@@ -177,7 +177,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     public void caseAudit(InfectionMonitorDTO.CaseAudit dto) {
         BizInfectionCase c = requireCase(dto.getId());
         if (c.getCaseStatus() != InfectionCaseStatusEnum.PENDING.getCode()) {
-            throw new BusinessException(statusText(c.getCaseStatus()) + "的病例不能核实（仅待核实可审）");
+            throw new BusinessException(InfectionCaseStatusEnum.labelOrUnknown(c.getCaseStatus()) + "的病例不能核实（仅待核实可审）");
         }
         c.setCaseStatus(dto.getAuditResult());
         c.setAuditName(UserUtils.getCurrentEmployeeName());
@@ -539,15 +539,11 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     }
 
     private String statusText(Integer s) {
-        if (s == null) return "未知(0)";
-        String label = InfectionCaseStatusEnum.labelOf(s);
-        return label == null ? "未知(" + s + ")" : label;
+        return InfectionCaseStatusEnum.getText(s);
     }
 
     private String monitorTypeText(Integer t) {
-        if (t == null) return "未知(0)";
-        String label = InfectionMonitorTypeEnum.labelOf(t);
-        return label == null ? "未知(" + t + ")" : label;
+        return InfectionMonitorTypeEnum.getText(t);
     }
 
     private String infectionSiteText(String site) {
@@ -561,17 +557,17 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
             case "6" -> "皮肤软组织";
             case "7" -> "腹腔内";
             case "9" -> "其他";
-            default -> "未知(" + site + ")";
+            default -> "";
         };
     }
 
     private String obsObjectText(Integer o) {
-        if (o == null) return "未知(0)";
+        if (o == null) return "";
         return switch (o) {
             case 1 -> "医生";
             case 2 -> "护士";
             case 3 -> "工勤/其他";
-            default -> "未知(" + o + ")";
+            default -> "";
         };
     }
 

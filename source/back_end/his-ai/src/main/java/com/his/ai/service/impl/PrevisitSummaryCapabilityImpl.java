@@ -18,11 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * 预问诊病史摘要实现。
@@ -41,10 +37,14 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
 
     private static final String BIZ_TYPE = "previsit";
 
-    /** 摘要落库上限（与列表提示词的 ≤200 字纪律一致） */
+    /**
+     * 摘要落库上限（与列表提示词的 ≤200 字纪律一致）
+     */
     private static final int SUMMARY_MAX = 200;
 
-    /** 问答明细拼入提示词的上限：超了按顺序丢尾段 */
+    /**
+     * 问答明细拼入提示词的上限：超了按顺序丢尾段
+     */
     private static final int ANSWERS_TEXT_MAX = 800;
 
     private final AiExecutionService aiExecutionService;
@@ -52,6 +52,16 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
     private final PrevisitRecordService previsitRecordService;
 
     private final ObjectMapper objectMapper;
+
+    private static String truncate(String text, int maxLength) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        String value = text.trim();
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    // ---------------------------------------------------------------- 模型层
 
     @Override
     public PrevisitSummaryVO execute(PrevisitSummaryDTO dto) {
@@ -88,7 +98,7 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
         return vo;
     }
 
-    // ---------------------------------------------------------------- 模型层
+    // ---------------------------------------------------------------- 清洗层
 
     private Optional<PrevisitSummaryLlmOutputDTO> callModel(String mainSymptom, String answersText, String freeText) {
         Map<String, Object> variables = new HashMap<>();
@@ -108,8 +118,6 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
 
         return aiExecutionService.call(call, PrevisitSummaryLlmOutputDTO.class);
     }
-
-    // ---------------------------------------------------------------- 清洗层
 
     /**
      * 问答明细是提交时的 JSON 快照，按「label：value」拼成一行行事实。
@@ -138,7 +146,9 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
         return truncate(String.join("；", parts), ANSWERS_TEXT_MAX);
     }
 
-    /** 规则模板：不加任何模型措辞，只把患者自述按顺序摆好 */
+    /**
+     * 规则模板：不加任何模型措辞，只把患者自述按顺序摆好
+     */
     private String buildRuleSummary(String mainSymptom, String answersText, String freeText) {
         StringBuilder builder = new StringBuilder();
         if (StringUtils.hasText(mainSymptom)) {
@@ -151,13 +161,5 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
             builder.append("患者补充：").append(freeText.trim()).append("。");
         }
         return truncate(builder.toString(), SUMMARY_MAX);
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 }

@@ -28,7 +28,8 @@ import com.his.system.vo.SysUserListVO;
 import com.his.system.vo.EmployeePostVO;
 import com.his.system.vo.RoleNameVO;
 import com.his.system.vo.UserDetailVO;
-import com.his.system.support.CodeText;
+import com.his.common.enums.EnableStatusEnum;
+import com.his.common.enums.UserTypeEnum;
 import com.his.system.support.FieldChangeRecorder;
 import com.his.system.support.FieldSpec;
 import lombok.RequiredArgsConstructor;
@@ -71,9 +72,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private static final List<FieldSpec> USER_FIELDS = FieldSpec.list(
             FieldSpec.of("userName", "登录账号"),
             FieldSpec.of("realName", "姓名"),
-            FieldSpec.render("userType", "用户类型",
-                    v -> CodeText.of(v, "普通用户", "管理员", "患者", "其他")),
-            FieldSpec.render("status", "状态", CodeText::enable)
+            FieldSpec.render("userType", "用户类型", v -> UserTypeEnum.getText((Integer) v)),
+            FieldSpec.render("status", "状态", v -> EnableStatusEnum.getText((Integer) v))
     );
 
     private final PasswordEncoder passwordEncoder;

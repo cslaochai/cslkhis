@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
  * <ol>
  *   <li>金额字段是 {@code BigDecimal}，时间字段落库前必须 truncate 到秒（库表是 DATETIME(0)，会四舍五入）。</li>
  *   <li>{@code orderGroup} 是组套号，同一组的医嘱**必须同起同停**（服务层强制）。</li>
- *   <li>{@code orderStatus} 见 {@link com.his.patient.support.InpatientOrderLabels}，未知码值一律渲染"未知(码值)"。</li>
+ *   <li>{@code orderStatus} 见 {@link com.his.patient.enums.InpatientOrderStatusEnum}，未知码值一律渲染空串。</li>
  * </ol>
  */
 @Data

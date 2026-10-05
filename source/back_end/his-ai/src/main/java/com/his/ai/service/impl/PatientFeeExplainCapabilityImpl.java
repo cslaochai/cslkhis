@@ -13,8 +13,8 @@ import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.common.exception.BusinessException;
 import com.his.patient.service.PatientGuardianService;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,11 +22,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 患者端费用解释。
@@ -52,21 +48,29 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapability {
 
-    /** 目录类别：0-自费 1-甲类 2-乙类 3-丙类 */
+    /**
+     * 目录类别：0-自费 1-甲类 2-乙类 3-丙类
+     */
     private static final int CATALOG_SELF = 0;
     private static final int CATALOG_A = 1;
     private static final int CATALOG_B = 2;
     private static final int CATALOG_C = 3;
 
-    /** 项目类型：1-挂号费 2-西药 3-中成药 4-中药饮片 5-检查 6-检验 7-治疗 8-耗材 */
+    /**
+     * 项目类型：1-挂号费 2-西药 3-中成药 4-中药饮片 5-检查 6-检验 7-治疗 8-耗材
+     */
     private static final Map<Integer, String> ITEM_TYPE_TEXT = Map.of(
             1, "挂号费", 2, "西药", 3, "中成药", 4, "中药饮片",
             5, "检查", 6, "检验", 7, "治疗", 8, "耗材");
 
-    /** 每个分组最多列出的项目名数量：列太长患者反而不看 */
+    /**
+     * 每个分组最多列出的项目名数量：列太长患者反而不看
+     */
     private static final int MAX_ITEM_NAMES = 8;
 
-    /** 自付 Top 明细条数 */
+    /**
+     * 自付 Top 明细条数
+     */
     private static final int TOP_SELF_LIMIT = 5;
 
     private static final String ADVICE =
@@ -80,6 +84,67 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
     private final BizInsuranceSettlementMapper insuranceSettlementMapper;
 
     private final PatientGuardianService patientGuardianService;
+
+    private static String catalogText(Integer catalogType) {
+        if (catalogType == null) {
+            return "自费";
+        }
+        return switch (catalogType) {
+            case CATALOG_A -> "甲类";
+            case CATALOG_B -> "乙类";
+            case CATALOG_C -> "丙类";
+            default -> "自费";
+        };
+    }
+
+    // ---------------------------------------------------------------- 规则层
+
+    /**
+     * 各类别的医保口径说明。
+     * <p>
+     * 只说「医保承不承担」这件事本身，不写任何比例数字 ——
+     * 乙类先自付多少、甲类报多少，各地各险种不同，写死就是错的。
+     */
+    private static String ruleText(Integer catalogType) {
+        if (catalogType == null) {
+            return "医保不承担，全额由个人支付";
+        }
+        return switch (catalogType) {
+            case CATALOG_A -> "全额纳入医保报销范围";
+            case CATALOG_B -> "个人先负担一部分，剩余部分纳入报销";
+            case CATALOG_C -> "医保不承担，全额由个人支付";
+            default -> "医保不承担，全额由个人支付";
+        };
+    }
+
+    /**
+     * 单项的个人负担金额。
+     * <p>
+     * 优先用落库的 selfAmount；它为 0 时按「金额 - 统筹 - 个账」倒推 ——
+     * 部分场景结算时只写了统筹与个账，selfAmount 留空，此时倒推比显示 0 更接近事实。
+     */
+    private static BigDecimal selfPartOf(BizSettlementBillItem item) {
+        BigDecimal self = nz(item.getSelfAmount());
+        if (self.compareTo(BigDecimal.ZERO) > 0) {
+            return self;
+        }
+        return nz(item.getAmount()).subtract(nz(item.getPoolAmount())).subtract(nz(item.getAccountAmount()));
+    }
+
+    private static BigDecimal nz(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    /**
+     * 占比（百分数，保留 1 位）。分母为 0 时返回 0，不做除零。
+     */
+    private static BigDecimal ratio(BigDecimal part, BigDecimal total) {
+        if (total == null || total.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(1);
+        }
+        return nz(part).multiply(BigDecimal.valueOf(100))
+                .divide(total, 1, RoundingMode.HALF_UP);
+    }
 
     public PatientFeeExplainVO execute(PatientFeeExplainDTO dto) {
         CurrentUser user = UserUtils.getCurrentUser();
@@ -133,8 +198,6 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         return vo;
     }
 
-    // ---------------------------------------------------------------- 规则层
-
     private BizInsuranceSettlement loadInsurance(Long billId) {
         List<BizInsuranceSettlement> list = insuranceSettlementMapper.selectList(
                 new LambdaQueryWrapper<BizInsuranceSettlement>()
@@ -143,6 +206,8 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
                         .last("LIMIT 1"));
         return list == null || list.isEmpty() ? null : list.get(0);
     }
+
+    // ---------------------------------------------------------------- 工具
 
     /**
      * 按医保目录类别分组 —— 这是「为什么自付这么多」的答案所在。
@@ -277,66 +342,5 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
                         + "其中%s %.2f 元，占比最高。",
                 nz(vo.getTotalAmount()), nz(vo.getPoolAmount()), nz(vo.getSelfAmount()),
                 top.getCatalogText(), nz(top.getAmount()));
-    }
-
-    // ---------------------------------------------------------------- 工具
-
-    private static String catalogText(Integer catalogType) {
-        if (catalogType == null) {
-            return "自费";
-        }
-        return switch (catalogType) {
-            case CATALOG_A -> "甲类";
-            case CATALOG_B -> "乙类";
-            case CATALOG_C -> "丙类";
-            default -> "自费";
-        };
-    }
-
-    /**
-     * 各类别的医保口径说明。
-     * <p>
-     * 只说「医保承不承担」这件事本身，不写任何比例数字 ——
-     * 乙类先自付多少、甲类报多少，各地各险种不同，写死就是错的。
-     */
-    private static String ruleText(Integer catalogType) {
-        if (catalogType == null) {
-            return "医保不承担，全额由个人支付";
-        }
-        return switch (catalogType) {
-            case CATALOG_A -> "全额纳入医保报销范围";
-            case CATALOG_B -> "个人先负担一部分，剩余部分纳入报销";
-            case CATALOG_C -> "医保不承担，全额由个人支付";
-            default -> "医保不承担，全额由个人支付";
-        };
-    }
-
-    /**
-     * 单项的个人负担金额。
-     * <p>
-     * 优先用落库的 selfAmount；它为 0 时按「金额 - 统筹 - 个账」倒推 ——
-     * 部分场景结算时只写了统筹与个账，selfAmount 留空，此时倒推比显示 0 更接近事实。
-     */
-    private static BigDecimal selfPartOf(BizSettlementBillItem item) {
-        BigDecimal self = nz(item.getSelfAmount());
-        if (self.compareTo(BigDecimal.ZERO) > 0) {
-            return self;
-        }
-        return nz(item.getAmount()).subtract(nz(item.getPoolAmount())).subtract(nz(item.getAccountAmount()));
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
-
-    /**
-     * 占比（百分数，保留 1 位）。分母为 0 时返回 0，不做除零。
-     */
-    private static BigDecimal ratio(BigDecimal part, BigDecimal total) {
-        if (total == null || total.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO.setScale(1);
-        }
-        return nz(part).multiply(BigDecimal.valueOf(100))
-                .divide(total, 1, RoundingMode.HALF_UP);
     }
 }

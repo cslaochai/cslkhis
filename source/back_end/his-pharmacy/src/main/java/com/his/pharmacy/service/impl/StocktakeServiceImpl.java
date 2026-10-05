@@ -69,7 +69,7 @@ public class StocktakeServiceImpl implements StocktakeService {
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 trimToNull(q.getStocktakeNo()), trimToNull(q.getStocktakeTitle()),
                 q.getStatus(), trimToNull(q.getDateStart()), trimToNull(q.getDateEnd()));
-        page.getRecords().forEach(v -> v.setStatusText(statusText(v.getStatus())));
+        page.getRecords().forEach(v -> v.setStatusText(StocktakeStatusEnum.getText(v.getStatus())));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
 
@@ -79,7 +79,7 @@ public class StocktakeServiceImpl implements StocktakeService {
         if (vo == null) {
             throw new BusinessException("盘点单不存在或已删除");
         }
-        vo.setStatusText(statusText(vo.getStatus()));
+        vo.setStatusText(StocktakeStatusEnum.getText(vo.getStatus()));
         List<StocktakeItemVO> items = itemMapper.selectByStocktakeId(id);
         items.forEach(i -> i.setDiffTypeText(diffText(i.getCountedQuantity(), i.getDiffQuantity())));
         vo.setItems(items);
@@ -278,7 +278,7 @@ public class StocktakeServiceImpl implements StocktakeService {
     public void deleteById(Long id) {
         BizStocktake head = lock(id);
         if (!Objects.equals(head.getStatus(), StocktakeStatusEnum.COUNTING.getCode())) {
-            throw new BusinessException("只有「盘点中」的盘点单可以删除（当前：" + statusText(head.getStatus())
+            throw new BusinessException("只有「盘点中」的盘点单可以删除（当前：" + StocktakeStatusEnum.labelOrUnknown(head.getStatus())
                     + "）；待复核请复核人退回，已过账/已关单是留档凭证不能抹");
         }
         itemMapper.purgeByStocktakeId(head.getId());
@@ -351,7 +351,7 @@ public class StocktakeServiceImpl implements StocktakeService {
 
     private void requireStatus(BizStocktake head, int expected, String action) {
         if (!Objects.equals(head.getStatus(), expected)) {
-            throw new BusinessException("当前状态不能" + action + "（现在：" + statusText(head.getStatus()) + "）");
+            throw new BusinessException("当前状态不能" + action + "（现在：" + StocktakeStatusEnum.labelOrUnknown(head.getStatus()) + "）");
         }
     }
 
@@ -369,13 +369,6 @@ public class StocktakeServiceImpl implements StocktakeService {
     /** 数量显示：5.00 → 5，2.50 → 2.5（报错文案里不想看到一串尾零） */
     private static String plain(BigDecimal value) {
         return value == null ? "0" : value.stripTrailingZeros().toPlainString();
-    }
-
-    private static String statusText(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-        return StocktakeStatusEnum.labelOf(status);
     }
 
     private static String diffText(BigDecimal counted, BigDecimal diff) {

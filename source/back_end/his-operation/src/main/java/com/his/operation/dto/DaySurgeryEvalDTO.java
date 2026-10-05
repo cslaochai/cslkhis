@@ -18,11 +18,15 @@ public class DaySurgeryEvalDTO implements Serializable {
     @NotNull(message = "登记单ID不能为空")
     private Long id;
 
-    /** 术前评估结论（1-通过 2-不通过） */
+    /**
+     * 术前评估结论（1-通过 2-不通过）
+     */
     @NotNull(message = "评估结论不能为空")
     private Integer evalResult;
 
-    /** 评估意见/禁忌筛查结果 */
+    /**
+     * 评估意见/禁忌筛查结果
+     */
     @NotBlank(message = "评估意见不能为空（禁忌筛查结论要留痕）")
     private String evalRemark;
 }

@@ -2,7 +2,6 @@ package com.his.ai.service;
 
 import com.his.ai.dto.Icd10PredictDTO;
 import com.his.ai.vo.Icd10PredictVO;
-import java.util.*;
 
 public interface Icd10Capability {
 

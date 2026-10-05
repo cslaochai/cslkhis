@@ -81,7 +81,9 @@ public class PatientFeeExplainVO {
     @Schema(description = "费用解释-项目类型分组")
     public static class FeeItemGroupVO {
 
-        /** 1-挂号费 2-西药 3-中成药 4-中药饮片 5-检查 6-检验 7-治疗 8-耗材 */
+        /**
+         * 1-挂号费 2-西药 3-中成药 4-中药饮片 5-检查 6-检验 7-治疗 8-耗材
+         */
         @Schema(description = "项目类型")
         private Integer itemType;
 

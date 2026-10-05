@@ -1,14 +1,13 @@
 package com.his.ai.service.impl;
 
-import com.his.common.enums.SysGenderEnum;
-
-import com.his.ai.service.EmrDraftCapability;
-import com.his.ai.service.AiExecutionService;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.EmrDraftDTO;
 import com.his.ai.dto.EmrDraftLlmOutputDTO;
+import com.his.ai.service.AiExecutionService;
+import com.his.ai.service.EmrDraftCapability;
 import com.his.ai.vo.EmrDraftResultVO;
+import com.his.common.enums.SysGenderEnum;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import lombok.RequiredArgsConstructor;

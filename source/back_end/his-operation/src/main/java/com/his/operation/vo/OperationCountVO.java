@@ -1,8 +1,6 @@
 package com.his.operation.vo;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.his.operation.entity.BizOperationCount;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -22,7 +20,9 @@ public class OperationCountVO extends BizOperationCount {
 
     private String admissionNo;
 
-    /** 患者编号 */
+    /**
+     * 患者编号
+     */
     private String patientNo;
 
     private String surgeonName;
@@ -36,18 +36,24 @@ public class OperationCountVO extends BizOperationCount {
 
     // 文案
     private String phaseText;
-    /** 状态文本 */
+    /**
+     * 状态文本
+     */
     private String statusText;
     private String beforeResultText;
     private String closureResultText;
     private String finalResultText;
 
-    /** 明细项集合 */
+    /**
+     * 明细项集合
+     */
     private List<CountItemVO> items;
 
     private Integer itemCount;
 
-    /** 术前总数（各明细术前数量之和，服务端复算，不累加存储列） */
+    /**
+     * 术前总数（各明细术前数量之和，服务端复算，不累加存储列）
+     */
     private Integer totalBefore;
 
     private Integer totalClosure;

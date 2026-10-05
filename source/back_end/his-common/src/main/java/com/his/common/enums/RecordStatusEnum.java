@@ -29,10 +29,18 @@ public enum RecordStatusEnum {
     }
 
     /**
-     * 码值不在枚举内（脏数据）返回 null，前端渲染「未知(n)」，不能回落到合法文案。
+     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
      */
-    public static String labelOf(Integer code) {
+    public static String getText(Integer code) {
         RecordStatusEnum status = code == null ? null : fromCode(code);
-        return status == null ? null : status.label;
+        return status == null ? "" : status.label;
+    }
+
+    /**
+     * 异常 / 审计 / 合规用码值 → 文案。null 或不在枚举内返回「未知(n)」，保留原始码值便于排查。
+     */
+    public static String labelOrUnknown(Integer code) {
+        RecordStatusEnum status = code == null ? null : fromCode(code);
+        return status == null ? (code == null ? "未知" : "未知(" + code + ")") : status.label;
     }
 }

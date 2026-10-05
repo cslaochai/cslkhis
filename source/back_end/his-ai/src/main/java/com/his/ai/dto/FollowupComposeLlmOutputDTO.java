@@ -8,6 +8,8 @@ import lombok.Data;
 @Data
 public class FollowupComposeLlmOutputDTO {
 
-    /** 随访话术草稿（60~150 字，无诊断无剂量） */
+    /**
+     * 随访话术草稿（60~150 字，无诊断无剂量）
+     */
     private String content;
 }

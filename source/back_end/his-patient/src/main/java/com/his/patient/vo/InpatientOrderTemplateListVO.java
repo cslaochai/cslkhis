@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 /**
  * 医嘱模板列表行（模板管理弹窗）。
  *
- * <p>{@code orderTypeText} 由服务端按 {@code InpatientOrderLabels} 出参，前端不自己 switch 码值。
+ * <p>{@code orderTypeText} 由服务端按 {@code OrderTypeEnum} 出参，前端不自己 switch 码值。
  */
 @Data
 public class InpatientOrderTemplateListVO implements Serializable {

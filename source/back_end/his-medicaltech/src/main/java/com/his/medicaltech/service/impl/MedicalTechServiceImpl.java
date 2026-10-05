@@ -415,7 +415,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         }
         BizLabResultVO vo = new BizLabResultVO();
         BeanUtils.copyProperties(result, vo);
-        vo.setAbnormalFlagText(LabAbnormalJudge.labelOf(result.getAbnormalFlag(), result.getJudgeNote()));
+        vo.setAbnormalFlagText(LabAbnormalJudge.getText(result.getAbnormalFlag(), result.getJudgeNote()));
         return vo;
     }
 

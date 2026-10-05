@@ -28,23 +28,33 @@ public class PatientMedicationItemVO {
     @Schema(description = "发药数量（含单位）")
     private String quantityText;
 
-    /** 每次吃多少，例如「每次 1 袋」；医嘱没写时为 null，前端显示「按医生交代服用」 */
+    /**
+     * 每次吃多少，例如「每次 1 袋」；医嘱没写时为 null，前端显示「按医生交代服用」
+     */
     @Schema(description = "单次剂量")
     private String dosageText;
 
-    /** 频次白话，例如「每天 3 次」 */
+    /**
+     * 频次白话，例如「每天 3 次」
+     */
     @Schema(description = "用药频次")
     private String frequencyText;
 
-    /** 用药途径，例如「口服」 */
+    /**
+     * 用药途径，例如「口服」
+     */
     @Schema(description = "用药途径")
     private String routeText;
 
-    /** 疗程，例如「连服 7 天」 */
+    /**
+     * 疗程，例如「连服 7 天」
+     */
     @Schema(description = "疗程")
     private String courseText;
 
-    /** 注意事项（代码按药品属性判定，逐条列，不做合并） */
+    /**
+     * 注意事项（代码按药品属性判定，逐条列，不做合并）
+     */
     @Schema(description = "注意事项")
     private List<String> cautions;
 

@@ -45,14 +45,25 @@ public final class OrderDictTypes {
     }
 
     /**
-     * 类型中文名；不在三类之内返回「未知(type)」，不回落成看似合法的值
+     * 类型中文名（<b>展示用</b>）。null 给「—」；不在三类之内返回空串，
+     * 不回落到看似合法的类型名，也不暴露「未知(type)」—— 界面只说"没有文案"，脏值交由数据治理发现。
      */
     public static String text(String dictType) {
         if (dictType == null) {
             return "—";
         }
-        String name = NAME.get(dictType);
-        return name != null ? name : "未知(" + dictType + ")";
+        return NAME.getOrDefault(dictType, "");
+    }
+
+    /**
+     * 类型中文名（<b>异常 / 审计用</b>）：不在三类之内返回「未知(type)」，保留原始值便于排查。
+     * 绝不用于前端展示。
+     */
+    public static String labelOrUnknown(String dictType) {
+        if (dictType == null) {
+            return "未知";
+        }
+        return NAME.getOrDefault(dictType, "未知(" + dictType + ")");
     }
 
     /**

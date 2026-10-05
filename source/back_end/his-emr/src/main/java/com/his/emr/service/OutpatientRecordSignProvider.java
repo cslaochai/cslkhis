@@ -1,6 +1,7 @@
 package com.his.emr.service;
 
 import com.his.common.entity.SignSubject;
+import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
 import com.his.common.service.SignableContentProvider;
@@ -15,16 +16,7 @@ public interface OutpatientRecordSignProvider extends SignableContentProvider {
      * 门诊病历状态文案（与前端 1草稿/2已提交/3已归档/4已作废一致）；未知码值不回落
      */
     static String recordStatusText(Integer status) {
-        if (status == null) {
-            return "—";
-        }
-        return switch (status) {
-            case 1 -> "草稿";
-            case 2 -> "已提交";
-            case 3 -> "已归档";
-            case 4 -> "已作废";
-            default -> "未知(" + status + ")";
-        };
+        return status == null ? "—" : RecordStatusEnum.labelOrUnknown(status);
     }
 
     /**

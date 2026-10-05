@@ -111,7 +111,7 @@ public class NursingQcServiceImpl implements NursingQcService {
                 .filter(r -> r.getQualifiedNum() != null && r.getCheckedNum() != null
                         && r.getQualifiedNum() < r.getCheckedNum())
                 .count();
-        return "本轮" + NursingQcCategoryEnum.labelOf(category) + "抽查 " + sampleCount + " 例，合格 "
+        return "本轮" + NursingQcCategoryEnum.getText(category) + "抽查 " + sampleCount + " 例，合格 "
                 + qualifiedCount + " 例，合格率 " + qualifiedRate.toPlainString() + "%，得分率 "
                 + scoreRate.toPlainString() + "%；重点问题 " + badItems + " 项";
     }
@@ -245,7 +245,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         NurseQcVO.CheckRow existing = checkMapper.selectCheckByUk(ward.getWardId(), checkMonth, category);
         if (existing != null && NursingQcStatusEnum.CONFIRMED.getCode() == nvl(existing.getStatus(), 1)) {
             throw new BusinessException("「" + ward.getWardName() + "」" + checkMonth + " 的"
-                    + NursingQcCategoryEnum.labelOf(category) + "检查单已确认，请先退回草稿再修改");
+                    + NursingQcCategoryEnum.getText(category) + "检查单已确认，请先退回草稿再修改");
         }
 
         Map<Long, NurseQcVO.ItemDef> catalog = new LinkedHashMap<>();
@@ -261,7 +261,7 @@ public class NursingQcServiceImpl implements NursingQcService {
             NurseQcVO.ItemDef def = catalog.get(input.getItemId());
             if (def == null) {
                 throw new BusinessException("检查项目不存在、已停用或不属于「"
-                        + NursingQcCategoryEnum.labelOf(category) + "」类别，请刷新后重选");
+                        + NursingQcCategoryEnum.getText(category) + "」类别，请刷新后重选");
             }
             if (!used.add(def.getItemId())) {
                 throw new BusinessException("「" + def.getItemName() + "」重复录入，同一项目一行只能记一次");
@@ -355,7 +355,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         result.setTotalScore(totalScore);
         result.setScoreRate(scoreRate);
         result.setStatus(entity.getStatus());
-        result.setStatusText(NursingQcStatusEnum.labelOf(entity.getStatus()));
+        result.setStatusText(NursingQcStatusEnum.getText(entity.getStatus()));
         result.setMessage((existing == null ? "检查单已创建：" : "检查单已更新：") + entity.getCheckNo()
                 + "（抽查 " + sampleCount + " 例，合格率 " + qualifiedRate.toPlainString() + "%）"
                 + "；台账需在" + checkMonth + "重算后更新");
@@ -621,7 +621,7 @@ public class NursingQcServiceImpl implements NursingQcService {
             numerator = BigDecimal.valueOf(nvl(check.getQualifiedCount(), 0));
             denominator = BigDecimal.valueOf(nvl(check.getSampleCount(), 0));
             remark = "来源：检查单 " + check.getCheckNo() + "（类别 " + check.getCategory()
-                    + "、" + NursingQcStatusEnum.labelOf(check.getStatus()) + "）由明细求和";
+                    + "、" + NursingQcStatusEnum.getText(check.getStatus()) + "）由明细求和";
         } else {
             int count = indicatorMapper.selectEventCount(ward.getWardId(), monthStart, statEnd,
                     e.getAdverseEventType(),
@@ -738,12 +738,12 @@ public class NursingQcServiceImpl implements NursingQcService {
     }
 
     private void fillItemDefText(NurseQcVO.ItemDef item) {
-        item.setCategoryName(NursingQcCategoryEnum.labelOf(item.getCategory()));
+        item.setCategoryName(NursingQcCategoryEnum.getText(item.getCategory()));
     }
 
     private void fillCheckText(NurseQcVO.CheckRow row) {
-        row.setCategoryName(NursingQcCategoryEnum.labelOf(row.getCategory()));
-        row.setStatusText(NursingQcStatusEnum.labelOf(row.getStatus()));
+        row.setCategoryName(NursingQcCategoryEnum.getText(row.getCategory()));
+        row.setStatusText(NursingQcStatusEnum.getText(row.getStatus()));
     }
 
     private void fillLedgerText(NurseQcVO.LedgerRow row) {
@@ -755,7 +755,7 @@ public class NursingQcServiceImpl implements NursingQcService {
             row.setReachedFlag(reachedFlag(e, row.getRateValue(), row.getTargetValue()));
         }
         row.setReachedText(reachedText(row.getReachedFlag()));
-        row.setReportStatusText(NursingQcReportEnum.labelOf(row.getReportStatus()));
+        row.setReportStatusText(NursingQcReportEnum.getText(row.getReportStatus()));
     }
 
     private void fillKpiText(NurseQcVO.Kpi kpi) {

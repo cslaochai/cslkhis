@@ -26,32 +26,44 @@ import java.util.function.Function;
  */
 public record FieldSpec(String name, String label, MaskEnum maskEnum, Function<Object, String> renderer) {
 
-    /** 原样记录（mask 按字段名嗅探兜底） */
+    /**
+     * 原样记录（mask 按字段名嗅探兜底）
+     */
     public static FieldSpec of(String name, String label) {
         return new FieldSpec(name, label, null, null);
     }
 
-    /** 指定打码方式 */
+    /**
+     * 指定打码方式
+     */
     public static FieldSpec masked(String name, String label, MaskEnum maskEnum) {
         return new FieldSpec(name, label, maskEnum, null);
     }
 
-    /** 码值渲染成人读文本（如 1 → 男） */
+    /**
+     * 码值渲染成人读文本（如 1 → 男）
+     */
     public static FieldSpec render(String name, String label, Function<Object, String> renderer) {
         return new FieldSpec(name, label, null, renderer);
     }
 
-    /** 变长参数收成 List，业务侧声明常量用 */
+    /**
+     * 变长参数收成 List，业务侧声明常量用
+     */
     public static List<FieldSpec> list(FieldSpec... specs) {
         return List.of(specs);
     }
 
-    /** 变长参数收成 List（Arrays.asList 版本，允许后续修改，一般不需要） */
+    /**
+     * 变长参数收成 List（Arrays.asList 版本，允许后续修改，一般不需要）
+     */
     public static List<FieldSpec> listOf(FieldSpec... specs) {
         return Arrays.asList(specs);
     }
 
-    /** 实际生效的打码方式：显式优先，未指定则按字段名嗅探 */
+    /**
+     * 实际生效的打码方式：显式优先，未指定则按字段名嗅探
+     */
     MaskEnum effectiveMask() {
         return maskEnum != null ? maskEnum : FieldChangeRecorder.sniffMask(name);
     }

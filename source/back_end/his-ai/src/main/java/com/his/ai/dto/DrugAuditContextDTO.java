@@ -1,8 +1,8 @@
 package com.his.ai.dto;
 
+import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
-import com.his.emr.entity.BizMedicalRecord;
 import com.his.system.entity.SysDrug;
 
 import java.util.List;
@@ -23,11 +23,11 @@ import java.util.Map;
  * @param conditionText 既往史 + 诊断文本，用于禁忌人群比对
  */
 public record DrugAuditContextDTO(BizPrescription prescription,
-                               List<BizPrescriptionDetail> details,
-                               Map<Long, SysDrug> drugIndex,
-                               BizMedicalRecord record,
-                               String allergyText,
-                               String conditionText) {
+                                  List<BizPrescriptionDetail> details,
+                                  Map<Long, SysDrug> drugIndex,
+                                  BizMedicalRecord record,
+                                  String allergyText,
+                                  String conditionText) {
 
     /**
      * 过敏史是否具备可比对的内容。全是「无」「未见」这类占位词时视为无过敏史。

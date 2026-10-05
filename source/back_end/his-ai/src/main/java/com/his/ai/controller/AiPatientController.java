@@ -1,23 +1,8 @@
 package com.his.ai.controller;
 
-import com.his.ai.dto.PatientFeeExplainDTO;
-import com.his.ai.dto.PatientImagingExplainDTO;
-import com.his.ai.dto.PatientMedicationGuideDTO;
-import com.his.ai.dto.PatientReportExplainDTO;
-import com.his.ai.dto.PatientTriageNormalizeDTO;
-import com.his.ai.dto.PrevisitSummaryDTO;
-import com.his.ai.service.PatientFeeExplainCapability;
-import com.his.ai.service.PatientImagingExplainCapability;
-import com.his.ai.service.PatientMedicationGuideCapability;
-import com.his.ai.service.PatientReportExplainCapability;
-import com.his.ai.service.PatientTriageNormalizeCapability;
-import com.his.ai.service.PrevisitSummaryCapability;
-import com.his.ai.vo.PatientFeeExplainVO;
-import com.his.ai.vo.PatientImagingExplainVO;
-import com.his.ai.vo.PatientMedicationGuideVO;
-import com.his.ai.vo.PatientReportExplainVO;
-import com.his.ai.vo.PatientTriageNormalizeVO;
-import com.his.ai.vo.PrevisitSummaryVO;
+import com.his.ai.dto.*;
+import com.his.ai.service.*;
+import com.his.ai.vo.*;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

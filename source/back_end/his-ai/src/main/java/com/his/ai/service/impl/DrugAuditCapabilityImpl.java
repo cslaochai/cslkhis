@@ -1,34 +1,33 @@
 package com.his.ai.service.impl;
 
-import com.his.common.enums.SysGenderEnum;
-
-import com.his.ai.service.DrugAuditCapability;
-import com.his.ai.service.AiExecutionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.DrugAuditContextDTO;
 import com.his.ai.dto.DrugAuditExecuteDTO;
 import com.his.ai.dto.DrugAuditLlmOutputDTO;
+import com.his.ai.service.AiExecutionService;
+import com.his.ai.service.DrugAuditCapability;
 import com.his.ai.support.DrugHardRuleChecker;
 import com.his.ai.vo.DrugAuditFindingVO;
 import com.his.ai.vo.DrugAuditResultVO;
+import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.ClinicalTextMatcher;
+import com.his.emr.entity.BizClinicalRuleCheck;
+import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
+import com.his.emr.mapper.BizClinicalRuleCheckMapper;
+import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
-import com.his.emr.entity.BizMedicalRecord;
-import com.his.emr.mapper.BizMedicalRecordMapper;
-import com.his.emr.entity.BizClinicalRuleCheck;
-import com.his.emr.mapper.BizClinicalRuleCheckMapper;
+import com.his.patient.entity.BizPatient;
 import com.his.patient.entity.BizPatientAllergy;
 import com.his.patient.mapper.BizPatientAllergyMapper;
-import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import com.his.system.entity.SysDrug;
 import com.his.system.mapper.SysDrugMapper;
 import lombok.RequiredArgsConstructor;
@@ -438,7 +437,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     }
 
     private Optional<DrugAuditLlmOutputDTO> callModel(BizPrescription prescription, DrugAuditContextDTO context,
-                                                   List<DrugAuditFindingVO> hardRuleFindings) {
+                                                      List<DrugAuditFindingVO> hardRuleFindings) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("gender", SysGenderEnum.getText(context.gender()));
         variables.put("age", context.age() == null ? "（未填写）" : context.age() + "岁");

@@ -4,13 +4,17 @@ import com.his.common.exception.BusinessException;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.PatientIndexService;
+import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.patient.support.PatientProfileFields;
 import com.his.report.dto.CdrQueryDTO;
+import com.his.report.enums.CdrEmergencyStatusEnum;
+import com.his.report.enums.CdrEmergencyTriageEnum;
+import com.his.report.enums.CdrRegistStatusEnum;
+import com.his.report.enums.CdrVisitStatusEnum;
 import com.his.report.mapper.CdrMapper;
 import com.his.report.support.CdrEventType;
 import com.his.report.support.CdrNodeType;
-import com.his.report.support.CdrStatusTexts;
 import com.his.report.vo.CdrArchiveVO;
 import com.his.report.vo.CdrCountVO;
 import com.his.report.vo.CdrEventTypeSelectListVO;
@@ -43,7 +47,7 @@ import java.util.stream.Collectors;
  * 其余全在内存里按锚点归位 —— 一个患者几十次就诊、上千条事件也不会变成查询风暴。
  *
  * <p>三个"不做就会错"的点，代码里都标了注释：
- * ① 患者ID必须经 EMPI 归并；② 码值翻译只在 {@link CdrStatusTexts}；
+ * ① 患者ID必须经 EMPI 归并；② 码值翻译只走枚举的 getText；
  * ③ 归属不到就诊次的事件单列，不丢。
  */
 @Service
@@ -110,7 +114,7 @@ public class CdrServiceImpl implements CdrService {
             node.setAnchorNo(str(v.get("visit_no")));
             node.setStartTime(fmt(ldt(v.get("start_time"))));
             node.setEndTime(fmt(ldt(v.get("end_time"))));
-            node.setStatusText(CdrStatusTexts.visitStatus(intVal(v.get("visit_status"))));
+            node.setStatusText(CdrVisitStatusEnum.getText(intVal(v.get("visit_status"))));
             node.setTotalAmount(dec(v.get("total_amount")));
             node.setTitle(node.getNodeTypeText());
 
@@ -161,7 +165,7 @@ public class CdrServiceImpl implements CdrService {
             node.setStartTime(fmt(ldt(r.get("regist_time"), ldt(r.get("visit_date")))));
             node.setDeptName(str(r.get("dept_name")));
             node.setOperatorName(str(r.get("doctor_name")));
-            node.setStatusText(CdrStatusTexts.registStatus(intVal(r.get("regist_status"))));
+            node.setStatusText(CdrRegistStatusEnum.getText(intVal(r.get("regist_status"))));
             node.setTitle(composeTitle(node.getNodeTypeText(), node.getDeptName(), node.getOperatorName()));
             node.setSubtitle("该挂号未被就诊次收录");
             node.setFromShadow(isShadow(r.get("owner_pid"), pid));
@@ -182,7 +186,7 @@ public class CdrServiceImpl implements CdrService {
             node.setStartTime(fmt(admit));
             node.setEndTime(fmt(dis));
             node.setDeptName(str(a.get("dept_name")));
-            node.setStatusText(CdrStatusTexts.admitStatus(intVal(a.get("admit_status"))));
+            node.setStatusText(AdmitStatusEnum.getText(intVal(a.get("admit_status"))));
             String ward = str(a.get("ward_name"));
             String bed = str(a.get("bed_no"));
             node.setSubtitle(StringUtils.hasText(ward) || StringUtils.hasText(bed)
@@ -211,8 +215,8 @@ public class CdrServiceImpl implements CdrService {
             node.setEndTime(fmt(ldt(e.get("finish_time"))));
             node.setDeptName(str(e.get("dept_name")));
             node.setOperatorName(str(e.get("doctor_name")));
-            node.setStatusText(CdrStatusTexts.emergencyStatus(intVal(e.get("emergency_status"))));
-            String triage = CdrStatusTexts.emergencyTriage(intVal(e.get("triage_level")));
+            node.setStatusText(CdrEmergencyStatusEnum.getText(intVal(e.get("emergency_status"))));
+            String triage = CdrEmergencyTriageEnum.getText(intVal(e.get("triage_level")));
             String zone = str(e.get("zone"));
             node.setSubtitle(StringUtils.hasText(triage) || StringUtils.hasText(zone)
                     ? ((triage == null ? "" : triage) + " " + (zone == null ? "" : zone)).trim() : null);
@@ -415,7 +419,7 @@ public class CdrServiceImpl implements CdrService {
         ev.setStatusCode(status);
         ev.setSecondaryCode(second);
         if (type != null) {
-            // ② 码值翻译只在这里，未知码值给未知(n)，不回落
+            // ② 码值翻译只在这里，展示口径走枚举 getText，未知码值给空串不回落
             ev.setStatusText(type.statusText(status));
             ev.setSecondaryText(type.secondaryText(second));
             ev.setSecondaryLabel(type.getSecondaryLabel());

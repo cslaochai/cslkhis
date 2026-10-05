@@ -1,5 +1,6 @@
 package com.his.miniapp.service.impl;
 
+import com.his.miniapp.enums.PayBizTypeEnum;
 import com.his.miniapp.service.WxPayChannelService;
 import com.his.miniapp.entity.BizPayOrder;
 import lombok.extern.slf4j.Slf4j;
@@ -29,22 +30,11 @@ public class WxPayChannelServiceImpl implements WxPayChannelService {
     public PayUnifiedResult unifiedOrder(BizPayOrder order) {
         log.info("[微信支付口子] ===== 模拟调微信统一下单（V3 transactions/jsapi）=====");
         log.info("[微信支付口子] 商户单号={} 业务类型={} 业务单ID={} 金额=￥{} 描述={}",
-                order.getPayNo(), bizName(order.getBizType()), order.getBizId(), order.getAmount(), bizName(order.getBizType()));
+                order.getPayNo(), PayBizTypeEnum.labelOrUnknown(order.getBizType()), order.getBizId(),
+                order.getAmount(), PayBizTypeEnum.labelOrUnknown(order.getBizType()));
         log.info("[微信支付口子] ===== 模拟支付回调（notify 验签通过）=====");
         log.info("[微信支付口子] out_trade_no={} trade_state=SUCCESS transaction_id=MOCK_{}",
                 order.getPayNo(), System.currentTimeMillis());
         return PayUnifiedResult.mock();
-    }
-
-    private static String bizName(Integer bizType) {
-        if (bizType == null) {
-            return "未知";
-        }
-        return switch (bizType) {
-            case 1 -> "门诊缴费";
-            case 2 -> "挂号费";
-            case 3 -> "住院押金";
-            default -> "未知(" + bizType + ")";
-        };
     }
 }

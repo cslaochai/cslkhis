@@ -58,7 +58,9 @@ public interface BizDaySurgeryApplyMapper extends BaseMapper<BizDaySurgeryApply>
     @Select("SELECT d.dept_name FROM sys_department d WHERE d.id = #{deptId} AND d.del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
-    /** 转住院号是否存在（入院记录同模块，但不落实体依赖，用裸 SQL 计数） */
+    /**
+     * 转住院号是否存在（入院记录同模块，但不落实体依赖，用裸 SQL 计数）
+     */
     @Select("SELECT COUNT(*) FROM biz_admission m WHERE m.admission_id = #{admissionId} AND m.del_flag = 0")
     int countAdmission(@Param("admissionId") Long admissionId);
 
@@ -67,13 +69,17 @@ public interface BizDaySurgeryApplyMapper extends BaseMapper<BizDaySurgeryApply>
     @Select("SELECT a.status AS k, COUNT(*) AS c FROM biz_day_surgery_apply a WHERE a.del_flag = 0 GROUP BY a.status")
     List<Map<String, Object>> countByStatus();
 
-    /** 术后滞留超期：术后观察中且滞留小时数超过该术式上限 */
+    /**
+     * 术后滞留超期：术后观察中且滞留小时数超过该术式上限
+     */
     @Select("SELECT COUNT(*) FROM biz_day_surgery_apply a WHERE a.del_flag = 0 AND a.status = 4 " +
             "  AND a.surgery_end_time IS NOT NULL " +
             "  AND TIMESTAMPDIFF(HOUR, a.surgery_end_time, NOW()) > a.max_stay_hours")
     long countOverdue();
 
-    /** 应随访未随访：已离院（含转住院）超 24h 且随访次数为 0 */
+    /**
+     * 应随访未随访：已离院（含转住院）超 24h 且随访次数为 0
+     */
     @Select("SELECT COUNT(*) FROM biz_day_surgery_apply a WHERE a.del_flag = 0 AND a.status IN (5, 7) " +
             "  AND a.discharge_time IS NOT NULL AND a.follow_count = 0 " +
             "  AND TIMESTAMPDIFF(HOUR, a.discharge_time, NOW()) > 24")

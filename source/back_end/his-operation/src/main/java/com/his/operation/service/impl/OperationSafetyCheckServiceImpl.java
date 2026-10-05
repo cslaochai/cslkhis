@@ -4,15 +4,14 @@ import com.his.common.exception.BusinessException;
 import com.his.operation.dto.SafetyCheckSignDTO;
 import com.his.operation.entity.BizOperationApply;
 import com.his.operation.entity.BizOperationSafetyCheck;
+import com.his.operation.enums.OperationApplyStatusEnum;
 import com.his.operation.mapper.BizOperationApplyMapper;
 import com.his.operation.mapper.BizOperationSafetyCheckMapper;
 import com.his.operation.service.OperationSafetyCheckService;
-import com.his.operation.enums.OperationApplyStatusEnum;
-import com.his.operation.support.OperationApplyLabels;
 import com.his.operation.support.SafetyCheckItems;
-import com.his.security.entity.CurrentUser;
-import com.his.security.UserUtils;
 import com.his.operation.vo.SafetyCheckVO;
+import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,12 +22,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 手术安全核查服务实现（sql/134）。
@@ -54,6 +48,10 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
 
     private final BizOperationSafetyCheckMapper checkMapper;
     private final BizOperationApplyMapper applyMapper;
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
 
     @Override
     public List<SafetyCheckVO.PhaseCard> cardsByApply(Long applyId) {
@@ -88,6 +86,8 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
         }
         return cards;
     }
+
+    // 判定与工具
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -189,9 +189,9 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
         return entity.getCheckNo();
     }
 
-    // 判定与工具
-
-    /** 某时段能否签：状态机（1/2）+ 顺序（maxPhase+1）+ 未签过。不可签必须给出原因。 */
+    /**
+     * 某时段能否签：状态机（1/2）+ 顺序（maxPhase+1）+ 未签过。不可签必须给出原因。
+     */
     private void fillCanSign(SafetyCheckVO.PhaseCard card, BizOperationApply apply,
                              Map<Integer, SafetyCheckVO> signedByPhase) {
         Integer status = apply.getOperationStatus();
@@ -206,7 +206,7 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
         }
         if (!inFlow) {
             card.setCanSign(false);
-            card.setCannotSignReason("手术当前状态为「" + OperationApplyLabels.statusText(status)
+            card.setCannotSignReason("手术当前状态为「" + OperationApplyStatusEnum.labelOrUnknown(status)
                     + "」，只有在途手术可以签核查");
             return;
         }
@@ -266,10 +266,6 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
     private SafetyCheckVO toVO(BizOperationSafetyCheck row) {

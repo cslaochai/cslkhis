@@ -25,7 +25,6 @@ import com.his.patient.service.ArrearsControlGate;
 import com.his.patient.service.DietPlanService;
 import com.his.patient.service.InpatientOrderService;
 import com.his.patient.support.InpatientOrderItemRules;
-import com.his.patient.support.InpatientOrderLabels;
 import com.his.patient.support.OrderChargeInvoker;
 import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.patient.vo.InpatientOrderVO;
@@ -124,7 +123,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     // 开立 / 修改
 
     private static String orderClassDesc(Integer orderClass) {
-        String text = OrderClassEnum.labelOf(orderClass);
+        String text = OrderClassEnum.getText(orderClass);
         return "—".equals(text) ? "" : text;
     }
 
@@ -294,7 +293,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         }
 
         log.info("开立医嘱 admissionId={} 组套={} 类型={} 条数={} 医嘱号={} 医生={}",
-                admission.getAdmissionId(), orderGroup, OrderTypeEnum.labelOf(dto.getOrderType()),
+                admission.getAdmissionId(), orderGroup, OrderTypeEnum.getText(dto.getOrderType()),
                 orderNos.size(), orderNos, doctorName);
         return orderGroup;
     }
@@ -858,7 +857,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             processed++;
         }
         log.info("医嘱执行处理完成 条数={} 结果={} 护士={}", processed,
-                OrderExecStatusEnum.labelOf(status), nurseName);
+                OrderExecStatusEnum.getText(status), nurseName);
         return processed;
     }
 
@@ -893,7 +892,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         dto.setDeptName(order.getDeptName());
         dto.setDoctorId(order.getDoctorId());
         dto.setDoctorName(order.getDoctorName());
-        int itemType = InpatientOrderLabels.chargeItemTypeOf(order.getOrderClass());
+        int itemType = InpatientOrderItemRules.chargeItemTypeOf(order.getOrderClass());
         BigDecimal quantity = order.getQuantity() == null ? BigDecimal.ONE : order.getQuantity();
         BigDecimal price = order.getPrice() == null ? BigDecimal.ZERO : order.getPrice();
         BigDecimal computed = price.multiply(quantity);
@@ -1017,11 +1016,11 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     // 编号 / 当前用户 / 时间
 
     private void decorateOrder(InpatientOrderVO vo) {
-        vo.setOrderTypeText(OrderTypeEnum.labelOf(vo.getOrderType()));
-        vo.setOrderClassText(OrderClassEnum.labelOf(vo.getOrderClass()));
-        vo.setOrderStatusText(InpatientOrderStatusEnum.labelOf(vo.getOrderStatus()));
-        vo.setSourceText(OrderSourceEnum.labelOf(vo.getSource()));
-        vo.setIsUrgentText(OrderUrgentEnum.labelOf(vo.getIsUrgent()));
+        vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
+        vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
+        vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
+        vo.setSourceText(OrderSourceEnum.getText(vo.getSource()));
+        vo.setIsUrgentText(OrderUrgentEnum.getText(vo.getIsUrgent()));
 
         boolean pendingVerify = Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), vo.getOrderStatus());
         vo.setCanVerify(pendingVerify);
@@ -1052,10 +1051,10 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     }
 
     private void decorateExec(InpatientOrderExecVO vo) {
-        vo.setOrderTypeText(OrderTypeEnum.labelOf(vo.getOrderType()));
-        vo.setOrderClassText(OrderClassEnum.labelOf(vo.getOrderClass()));
-        vo.setOrderStatusText(InpatientOrderStatusEnum.labelOf(vo.getOrderStatus()));
-        vo.setExecStatusText(OrderExecStatusEnum.labelOf(vo.getExecStatus()));
+        vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
+        vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
+        vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
+        vo.setExecStatusText(OrderExecStatusEnum.getText(vo.getExecStatus()));
         vo.setCharged(vo.getFeeRecordId() != null);
         vo.setInfusion(InpatientInfusionServiceImpl.isInfusionRoute(vo.getRoute()));
     }

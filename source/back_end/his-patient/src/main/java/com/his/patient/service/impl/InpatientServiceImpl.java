@@ -10,14 +10,13 @@ import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
+import com.his.patient.enums.AdmitWayEnum;
 import com.his.patient.enums.BedStatusEnum;
 import com.his.patient.enums.DischargeWayEnum;
 import com.his.patient.enums.SummaryStatusEnum;
 import com.his.patient.enums.VisitStatusEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.*;
-import com.his.patient.support.InpatientLabels;
-import com.his.patient.support.InpatientRecordLabels;
 import com.his.patient.support.SettlementGate;
 import com.his.patient.support.SummaryOperationSeq;
 import com.his.patient.vo.*;
@@ -201,13 +200,13 @@ public class InpatientServiceImpl implements InpatientService {
             InpatientDetailVO.SummaryInfo si = new InpatientDetailVO.SummaryInfo();
             BeanUtils.copyProperties(summary, si);
             vo.setSummary(si);
-            vo.setSummaryStatusText(SummaryStatusEnum.labelOf(summary.getSummaryStatus()));
+            vo.setSummaryStatusText(SummaryStatusEnum.getText(summary.getSummaryStatus()));
             if (info.getInpatientDays() == null) {
                 info.setInpatientDays(summary.getInpatientDays());
             }
         } else {
             // 未生成首页不是「正常」，要如实说
-            vo.setSummaryStatusText(SummaryStatusEnum.labelOf(null));
+            vo.setSummaryStatusText(SummaryStatusEnum.getText(null));
         }
 
         List<InpatientDetailVO.DiagnosisInfo> diagnoses = new ArrayList<>();
@@ -272,7 +271,7 @@ public class InpatientServiceImpl implements InpatientService {
             if (dto.getAdmitWay() == null) {
                 throw new BusinessException("入院途径不能为空（病案首页必填项）");
             }
-            if (!InpatientLabels.isValidAdmitWay(dto.getAdmitWay())) {
+            if (!AdmitWayEnum.isValid(dto.getAdmitWay())) {
                 throw new BusinessException("入院途径取值不合法（应为 1-门诊 2-急诊 3-转院 4-其他）");
             }
         }
@@ -460,7 +459,7 @@ public class InpatientServiceImpl implements InpatientService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void discharge(InpatientDischargeDTO dto) {
-        if (!InpatientLabels.isValidDischargeWay(dto.getDischargeWay())) {
+        if (!DischargeWayEnum.isValid(dto.getDischargeWay())) {
             throw new BusinessException("离院方式取值不合法");
         }
         BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
@@ -739,7 +738,7 @@ public class InpatientServiceImpl implements InpatientService {
     public List<BedVO> listBeds(Long wardId, Long deptId, Integer bedStatus) {
         List<BedVO> beds = bedMapper.selectBedList(wardId, deptId, bedStatus);
         for (BedVO b : beds) {
-            b.setBedStatusText(BedStatusEnum.labelOf(b.getBedStatus()));
+            b.setBedStatusText(BedStatusEnum.getText(b.getBedStatus()));
         }
         return beds;
     }
@@ -777,9 +776,9 @@ public class InpatientServiceImpl implements InpatientService {
 
         List<BedMapVO.BedCard> beds = bedMapMapper.selectBedCards(deptId, wardId);
         for (BedMapVO.BedCard bed : beds) {
-            bed.setBedStatusText(BedStatusEnum.labelOf(bed.getBedStatus()));
+            bed.setBedStatusText(BedStatusEnum.getText(bed.getBedStatus()));
             bed.setNursingLevelText(bed.getNursingLevel() == null
-                    ? "未评估" : NursingLevelEnum.labelOf(bed.getNursingLevel()));
+                    ? "未评估" : NursingLevelEnum.getText(bed.getNursingLevel()));
         }
         result.setBeds(beds);
         if (!beds.isEmpty()) {

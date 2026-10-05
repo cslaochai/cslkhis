@@ -23,7 +23,9 @@ import java.util.List;
 @Schema(description = "费用解释-医保目录类别分组")
 public class FeeCatalogGroupVO {
 
-    /** 0-自费 1-甲类 2-乙类 3-丙类 */
+    /**
+     * 0-自费 1-甲类 2-乙类 3-丙类
+     */
     @Schema(description = "医保目录类别：0-自费 1-甲类 2-乙类 3-丙类")
     private Integer catalogType;
 

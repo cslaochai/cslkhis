@@ -88,8 +88,7 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
         if (status == null) {
             return "未知";
         }
-        String label = DeathRegisterStatusEnum.labelOf(status);
-        return label == null ? "未知(" + status + ")" : label;
+        return DeathRegisterStatusEnum.labelOrUnknown(status);
     }
 
     private static String operator() {

@@ -131,7 +131,7 @@ public final class LabAbnormalJudge {
     /**
      * 枚举名，用于日志与前端展示
      */
-    public static String labelOf(Integer flag) {
+    public static String getText(Integer flag) {
         if (flag == null) {
             return "未知";
         }
@@ -156,13 +156,13 @@ public final class LabAbnormalJudge {
     /**
      * 带留痕的展示文案。
      * <p>
-     * <b>必须用这个重载而不是 {@link #labelOf(Integer)}：</b> 未判定时
+     * <b>必须用这个重载而不是 {@link #getText(Integer)}：</b> 未判定时
      * {@code abnormal_flag} 也是 0，只传 flag 会把「未判定」显示成「正常」。
      *
      * @param flag      异常标志
      * @param judgeNote 判定留痕，可为 null（历史数据没有留痕）
      */
-    public static String labelOf(Integer flag, String judgeNote) {
-        return isUnjudged(judgeNote) ? "未判定" : labelOf(flag);
+    public static String getText(Integer flag, String judgeNote) {
+        return isUnjudged(judgeNote) ? "未判定" : getText(flag);
     }
 }

@@ -69,12 +69,9 @@ public class QcStoreServiceImpl implements QcStoreService {
      * 检查内容：跑的是哪几个维度由 qcType 决定，写成文字供列表页直接读
      */
     private static String describe(Integer qcType, QcResult result) {
-        String label = QcTexts.qcType(qcType == null ? 0 : qcType);
+        String label = RecordQcTypeEnum.getText(qcType == null ? 0 : qcType);
         String dimensions = result.getDimensions().stream()
-                .map(code -> {
-                    QcDimensionEnum dimension = QcDimensionEnum.ofCode(code);
-                    return dimension == null ? "未知(" + code + ")" : dimension.getText();
-                })
+                .map(QcDimensionEnum::getText)
                 .reduce((a, b) -> a + "+" + b)
                 .orElse("（无适用规则）");
         return String.format("%s（%s）", label, dimensions);

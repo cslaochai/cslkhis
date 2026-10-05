@@ -32,6 +32,10 @@ public class LocalTfEmbeddingProvider implements EmbeddingProvider {
 
     private static final Pattern TOKEN_EN = Pattern.compile("[a-zA-Z0-9]+");
 
+    private static boolean isCjk(char c) {
+        return c >= 0x4E00 && c <= 0x9FFF;
+    }
+
     @Override
     public String name() {
         return "local-tf";
@@ -88,9 +92,5 @@ public class LocalTfEmbeddingProvider implements EmbeddingProvider {
             }
         }
         return vec;
-    }
-
-    private static boolean isCjk(char c) {
-        return c >= 0x4E00 && c <= 0x9FFF;
     }
 }

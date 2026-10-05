@@ -83,13 +83,9 @@ public class RxReviewServiceImpl implements RxReviewService {
         if (result == null) {
             return "未点评";
         }
-        return switch (result) {
-            case 1 -> "合理处方";
-            case 2 -> "不规范处方";
-            case 3 -> "用药不适宜处方";
-            case 4 -> "超常处方";
-            default -> "未知(" + result + ")";
-        };
+        // 文案差异：本报表把「合理」显示为「合理处方」，其余沿用枚举 label，兜底走枚举 getText
+        return Objects.equals(RxReviewResultEnum.REASONABLE.getCode(), result)
+                ? "合理处方" : RxReviewResultEnum.getText(result);
     }
 
     private static String csv(String v) {

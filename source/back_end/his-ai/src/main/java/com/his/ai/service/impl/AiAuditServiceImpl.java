@@ -1,8 +1,8 @@
 package com.his.ai.service.impl;
 
-import com.his.ai.service.AiAuditService;
 import com.his.ai.entity.SysAiCallLog;
 import com.his.ai.mapper.SysAiCallLogMapper;
+import com.his.ai.service.AiAuditService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

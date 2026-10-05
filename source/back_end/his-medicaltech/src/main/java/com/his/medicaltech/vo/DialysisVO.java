@@ -18,7 +18,9 @@ import java.util.List;
  */
 public class DialysisVO {
 
-    /** 透析患者档案 */
+    /**
+     * 透析患者档案
+     */
     @Data
     public static class ArchiveVO {
         @JsonSerialize(using = ToStringSerializer.class)
@@ -26,20 +28,30 @@ public class DialysisVO {
 
         private String dialysisNo;
 
-        /** 患者ID */
+        /**
+         * 患者ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long patientId;
 
-        /** 患者编号 */
+        /**
+         * 患者编号
+         */
         private String patientNo;
 
-        /** 患者姓名 */
+        /**
+         * 患者姓名
+         */
         private String patientName;
 
-        /** 明文电话，仅编辑回显接口（archiveGetById）返回 */
+        /**
+         * 明文电话，仅编辑回显接口（archiveGetById）返回
+         */
         private String phone;
 
-        /** 展示用脱敏电话，列表接口返回；明文侧置 null */
+        /**
+         * 展示用脱敏电话，列表接口返回；明文侧置 null
+         */
         private String phoneMasked;
 
         @JsonFormat(pattern = "yyyy-MM-dd")
@@ -57,19 +69,27 @@ public class DialysisVO {
 
         private String exitReason;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
 
-        /** 累计透析例次（派生） */
+        /**
+         * 累计透析例次（派生）
+         */
         private Integer sessionTotal;
 
-        /** 已完成例次（派生） */
+        /**
+         * 已完成例次（派生）
+         */
         private Integer sessionDone;
 
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate lastSessionDate;
 
-        /** 当前有效处方ID（无有效处方时为 null，排班会被挡） */
+        /**
+         * 当前有效处方ID（无有效处方时为 null，排班会被挡）
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long activePrescriptionId;
 
@@ -83,12 +103,16 @@ public class DialysisVO {
 
         private Integer anticoagulant;
 
-        /** 创建时间 */
+        /**
+         * 创建时间
+         */
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime createTime;
     }
 
-    /** 透析处方 */
+    /**
+     * 透析处方
+     */
     @Data
     public static class PrescriptionVO {
         @JsonSerialize(using = ToStringSerializer.class)
@@ -97,7 +121,9 @@ public class DialysisVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long archiveId;
 
-        /** 患者姓名 */
+        /**
+         * 患者姓名
+         */
         private String patientName;
 
         private BigDecimal dryWeight;
@@ -114,34 +140,48 @@ public class DialysisVO {
 
         private BigDecimal targetUltraMl;
 
-        /** 开始日期 */
+        /**
+         * 开始日期
+         */
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate startDate;
 
-        /** 结束日期 */
+        /**
+         * 结束日期
+         */
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate endDate;
 
         private Integer status;
 
-        /** 医生ID */
+        /**
+         * 医生ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long doctorId;
 
-        /** 医生姓名 */
+        /**
+         * 医生姓名
+         */
         private String doctorName;
 
         private String stopReason;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
 
-        /** 创建时间 */
+        /**
+         * 创建时间
+         */
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime createTime;
     }
 
-    /** 透析机位 */
+    /**
+     * 透析机位
+     */
     @Data
     public static class MachineVO {
         @JsonSerialize(using = ToStringSerializer.class)
@@ -153,14 +193,20 @@ public class DialysisVO {
 
         private Integer status;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
 
-        /** 占用例次（台账用，派生） */
+        /**
+         * 占用例次（台账用，派生）
+         */
         private Integer sessionTotal;
     }
 
-    /** 透析单（排班 + 治疗记录） */
+    /**
+     * 透析单（排班 + 治疗记录）
+     */
     @Data
     public static class SessionVO {
         @JsonSerialize(using = ToStringSerializer.class)
@@ -183,17 +229,25 @@ public class DialysisVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long archiveId;
 
-        /** 患者ID */
+        /**
+         * 患者ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long patientId;
 
-        /** 患者编号 */
+        /**
+         * 患者编号
+         */
         private String patientNo;
 
-        /** 患者姓名 */
+        /**
+         * 患者姓名
+         */
         private String patientName;
 
-        /** 处方ID */
+        /**
+         * 处方ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long prescriptionId;
 
@@ -233,18 +287,26 @@ public class DialysisVO {
 
         private String adverseDesc;
 
-        /** 取消原因 */
+        /**
+         * 取消原因
+         */
         private String cancelReason;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
 
-        /** 创建时间 */
+        /**
+         * 创建时间
+         */
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime createTime;
     }
 
-    /** 机位时段看板的一格 */
+    /**
+     * 机位时段看板的一格
+     */
     @Data
     public static class BoardCellVO {
         @JsonSerialize(using = ToStringSerializer.class)
@@ -254,7 +316,9 @@ public class DialysisVO {
 
         private String roomName;
 
-        /** 机位状态（2维修/3停用的机位不允许排班，看板上仍要看得见） */
+        /**
+         * 机位状态（2维修/3停用的机位不允许排班，看板上仍要看得见）
+         */
         private Integer machineStatus;
 
         @JsonSerialize(using = ToStringSerializer.class)
@@ -264,14 +328,20 @@ public class DialysisVO {
 
         private Integer sessionStatus;
 
-        /** 患者ID */
+        /**
+         * 患者ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long patientId;
 
-        /** 患者编号 */
+        /**
+         * 患者编号
+         */
         private String patientNo;
 
-        /** 患者姓名 */
+        /**
+         * 患者姓名
+         */
         private String patientName;
 
         private BigDecimal beforeWeight;
@@ -283,7 +353,9 @@ public class DialysisVO {
         private Integer adverseType;
     }
 
-    /** 日看板（一次返回三个时段 × 全部机位） */
+    /**
+     * 日看板（一次返回三个时段 × 全部机位）
+     */
     @Data
     public static class BoardVO {
         @JsonFormat(pattern = "yyyy-MM-dd")
@@ -295,14 +367,20 @@ public class DialysisVO {
 
         private List<BoardCellVO> slot3;
 
-        /** 当日已排例次（不含取消） */
+        /**
+         * 当日已排例次（不含取消）
+         */
         private Integer sessionCount;
 
-        /** 当日完成例次 */
+        /**
+         * 当日完成例次
+         */
         private Integer doneCount;
     }
 
-    /** 分布计数（不良反应类型等） */
+    /**
+     * 分布计数（不良反应类型等）
+     */
     @Data
     public static class TypeCount {
         private Integer type;
@@ -310,7 +388,9 @@ public class DialysisVO {
         private Integer count;
     }
 
-    /** 机位/时段负荷 */
+    /**
+     * 机位/时段负荷
+     */
     @Data
     public static class MachineLoad {
         private String machineNo;
@@ -318,14 +398,20 @@ public class DialysisVO {
         private Integer count;
     }
 
-    /** 透析工作量统计 */
+    /**
+     * 透析工作量统计
+     */
     @Data
     public static class StatsVO {
-        /** 开始日期 */
+        /**
+         * 开始日期
+         */
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate startDate;
 
-        /** 结束日期 */
+        /**
+         * 结束日期
+         */
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate endDate;
 
@@ -343,7 +429,9 @@ public class DialysisVO {
 
         private Integer adverseCount;
 
-        /** 例次/在透患者（三甲口径的粗略治疗密度） */
+        /**
+         * 例次/在透患者（三甲口径的粗略治疗密度）
+         */
         private BigDecimal sessionsPerPatient;
 
         private BigDecimal avgUltraMl;

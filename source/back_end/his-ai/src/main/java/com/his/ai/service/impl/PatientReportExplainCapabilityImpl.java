@@ -22,18 +22,14 @@ import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.medicaltech.support.LabAbnormalJudge;
 import com.his.medicaltech.support.LabCriticalValueRules;
 import com.his.patient.service.PatientGuardianService;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * 患者端报告解读（大白话版）。
@@ -69,15 +65,25 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
      */
     private static final int REPORT_TYPE_LABORATORY = 2;
 
-    /** 结果状态：正常 */
+    /**
+     * 结果状态：正常
+     */
     private static final int STATUS_NORMAL = 1;
-    /** 结果状态：偏高 */
+    /**
+     * 结果状态：偏高
+     */
     private static final int STATUS_HIGH = 2;
-    /** 结果状态：偏低 */
+    /**
+     * 结果状态：偏低
+     */
     private static final int STATUS_LOW = 3;
-    /** 结果状态：未判定 */
+    /**
+     * 结果状态：未判定
+     */
     private static final int STATUS_UNJUDGED = 4;
-    /** 结果状态：异常（方向不明确） */
+    /**
+     * 结果状态：异常（方向不明确）
+     */
     private static final int STATUS_ABNORMAL = 5;
 
     private static final int OUTPUT_TOKEN_LIMIT = 512;
@@ -117,6 +123,104 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
     private final PatientTextGuard textGuard;
 
     private final PatientGuardianService patientGuardianService;
+
+    private static int toStatus(Integer flag, boolean unjudged) {
+        if (unjudged) {
+            return STATUS_UNJUDGED;
+        }
+        if (flag == null) {
+            return STATUS_NORMAL;
+        }
+        return switch (flag) {
+            case LabAbnormalJudge.HIGH -> STATUS_HIGH;
+            case LabAbnormalJudge.LOW -> STATUS_LOW;
+            case LabAbnormalJudge.ABNORMAL -> STATUS_ABNORMAL;
+            default -> STATUS_NORMAL;
+        };
+    }
+
+    // ---------------------------------------------------------------- 规则层
+
+    private static String statusText(int status) {
+        return switch (status) {
+            case STATUS_HIGH -> "偏高";
+            case STATUS_LOW -> "偏低";
+            case STATUS_UNJUDGED -> "待核对";
+            case STATUS_ABNORMAL -> "异常";
+            default -> "正常";
+        };
+    }
+
+    /**
+     * 单项白话说明。
+     * <p>
+     * 危急值优先级最高：不管词典有没有，先把「立即联系医生」说在前面。
+     * 这是代码判定的事实，不是措辞选择。
+     */
+    private static String buildPlainText(int status, boolean unjudged, SysLabPlainItem plain,
+                                         String criticalDesc) {
+        if (StringUtils.hasText(criticalDesc)) {
+            return "【需要尽快处理】" + criticalDesc + "。请立即联系接诊医生或前往急诊。";
+        }
+        if (unjudged) {
+            return FALLBACK_UNJUDGED;
+        }
+        if (status == STATUS_HIGH) {
+            return plain == null ? FALLBACK_ABNORMAL : plain.getHighText();
+        }
+        if (status == STATUS_LOW) {
+            return plain == null ? FALLBACK_ABNORMAL : plain.getLowText();
+        }
+        if (status == STATUS_ABNORMAL) {
+            return plain == null ? FALLBACK_ABNORMAL : plain.getHighText();
+        }
+        // 正常：说清这项是查什么的，比说「一切正常」有用；也不必加任何判断
+        if (plain != null && StringUtils.hasText(plain.getWhatIsIt())) {
+            return "你的结果在参考范围内。这项是" + plain.getWhatIsIt() + "。";
+        }
+        return "你的结果在参考范围内。";
+    }
+
+    private static String buildCriticalAlert(int criticalCount, List<String> criticalNames) {
+        StringBuilder builder = new StringBuilder("本次");
+        for (String name : criticalNames) {
+            builder.append('「').append(name).append('」');
+        }
+        builder.append(criticalCount > 1 ? " 共 " + criticalCount + " 项" : "");
+        builder.append("达到危急值，请立即联系接诊医生或前往急诊。");
+        return builder.toString();
+    }
+
+    private static String buildRuleSummary(int total, int abnormal, int unjudged) {
+        StringBuilder builder = new StringBuilder();
+        if (abnormal == 0 && unjudged == 0) {
+            builder.append(String.format("这份报告共 %d 项，结果都在参考范围内。", total));
+            return builder.toString();
+        }
+        builder.append(String.format("这份报告共 %d 项", total));
+        if (abnormal > 0) {
+            builder.append(String.format("，其中 %d 项不在参考范围内", abnormal));
+        }
+        if (unjudged > 0) {
+            builder.append(String.format("，另有 %d 项需要医生核对", unjudged));
+        }
+        builder.append("。下面逐项说明每一项查的是什么、你的结果意味着什么。");
+        return builder.toString();
+    }
+
+    private static String truncate(String text, int maxLength) {
+        if (!StringUtils.hasText(text)) {
+            return text;
+        }
+        String value = text.trim();
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    private static String nullToDash(String text) {
+        return StringUtils.hasText(text) ? text : "（未填写）";
+    }
+
+    // ---------------------------------------------------------------- 模型层
 
     public PatientReportExplainVO execute(PatientReportExplainDTO dto) {
         CurrentUser user = UserUtils.getCurrentUser();
@@ -244,8 +348,6 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
         return vo;
     }
 
-    // ---------------------------------------------------------------- 规则层
-
     private Map<String, SysLabPlainItem> loadDictionary() {
         List<SysLabPlainItem> all = plainItemMapper.selectList(
                 new LambdaQueryWrapper<SysLabPlainItem>()
@@ -260,90 +362,6 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
         }
         return map;
     }
-
-    private static int toStatus(Integer flag, boolean unjudged) {
-        if (unjudged) {
-            return STATUS_UNJUDGED;
-        }
-        if (flag == null) {
-            return STATUS_NORMAL;
-        }
-        return switch (flag) {
-            case LabAbnormalJudge.HIGH -> STATUS_HIGH;
-            case LabAbnormalJudge.LOW -> STATUS_LOW;
-            case LabAbnormalJudge.ABNORMAL -> STATUS_ABNORMAL;
-            default -> STATUS_NORMAL;
-        };
-    }
-
-    private static String statusText(int status) {
-        return switch (status) {
-            case STATUS_HIGH -> "偏高";
-            case STATUS_LOW -> "偏低";
-            case STATUS_UNJUDGED -> "待核对";
-            case STATUS_ABNORMAL -> "异常";
-            default -> "正常";
-        };
-    }
-
-    /**
-     * 单项白话说明。
-     * <p>
-     * 危急值优先级最高：不管词典有没有，先把「立即联系医生」说在前面。
-     * 这是代码判定的事实，不是措辞选择。
-     */
-    private static String buildPlainText(int status, boolean unjudged, SysLabPlainItem plain,
-                                         String criticalDesc) {
-        if (StringUtils.hasText(criticalDesc)) {
-            return "【需要尽快处理】" + criticalDesc + "。请立即联系接诊医生或前往急诊。";
-        }
-        if (unjudged) {
-            return FALLBACK_UNJUDGED;
-        }
-        if (status == STATUS_HIGH) {
-            return plain == null ? FALLBACK_ABNORMAL : plain.getHighText();
-        }
-        if (status == STATUS_LOW) {
-            return plain == null ? FALLBACK_ABNORMAL : plain.getLowText();
-        }
-        if (status == STATUS_ABNORMAL) {
-            return plain == null ? FALLBACK_ABNORMAL : plain.getHighText();
-        }
-        // 正常：说清这项是查什么的，比说「一切正常」有用；也不必加任何判断
-        if (plain != null && StringUtils.hasText(plain.getWhatIsIt())) {
-            return "你的结果在参考范围内。这项是" + plain.getWhatIsIt() + "。";
-        }
-        return "你的结果在参考范围内。";
-    }
-
-    private static String buildCriticalAlert(int criticalCount, List<String> criticalNames) {
-        StringBuilder builder = new StringBuilder("本次");
-        for (String name : criticalNames) {
-            builder.append('「').append(name).append('」');
-        }
-        builder.append(criticalCount > 1 ? " 共 " + criticalCount + " 项" : "");
-        builder.append("达到危急值，请立即联系接诊医生或前往急诊。");
-        return builder.toString();
-    }
-
-    private static String buildRuleSummary(int total, int abnormal, int unjudged) {
-        StringBuilder builder = new StringBuilder();
-        if (abnormal == 0 && unjudged == 0) {
-            builder.append(String.format("这份报告共 %d 项，结果都在参考范围内。", total));
-            return builder.toString();
-        }
-        builder.append(String.format("这份报告共 %d 项", total));
-        if (abnormal > 0) {
-            builder.append(String.format("，其中 %d 项不在参考范围内", abnormal));
-        }
-        if (unjudged > 0) {
-            builder.append(String.format("，另有 %d 项需要医生核对", unjudged));
-        }
-        builder.append("。下面逐项说明每一项查的是什么、你的结果意味着什么。");
-        return builder.toString();
-    }
-
-    // ---------------------------------------------------------------- 模型层
 
     private Optional<PatientReportLlmOutputDTO> callModel(BizLaboratoryRecord record,
                                                           List<PatientLabItemPlainVO> items,
@@ -386,17 +404,5 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
             builder.append('\n');
         }
         return builder.length() == 0 ? "（无）" : builder.toString();
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return text;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
-    private static String nullToDash(String text) {
-        return StringUtils.hasText(text) ? text : "（未填写）";
     }
 }

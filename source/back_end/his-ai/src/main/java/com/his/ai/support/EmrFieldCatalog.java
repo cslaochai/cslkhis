@@ -164,7 +164,7 @@ public final class EmrFieldCatalog {
                 || VITAL_FIELDS.stream().anyMatch(field -> field.key().equals(value));
     }
 
-    public static String labelOf(String key) {
+    public static String getText(String key) {
         if (!StringUtils.hasText(key)) {
             return "";
         }

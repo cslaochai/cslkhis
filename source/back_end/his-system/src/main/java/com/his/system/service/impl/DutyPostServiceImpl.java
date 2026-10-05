@@ -64,13 +64,13 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
             vo.setPostCode(row.getPostCode());
             vo.setPostName(row.getPostName());
             vo.setDutyScope(row.getDutyScope());
-            vo.setDutyScopeText(DutyScopeEnum.labelOf(row.getDutyScope()));
+            vo.setDutyScopeText(DutyScopeEnum.getText(row.getDutyScope()));
             vo.setRoleType(row.getRoleType());
-            vo.setRoleTypeText(DutyRoleTypeEnum.labelOf(row.getRoleType()));
+            vo.setRoleTypeText(DutyRoleTypeEnum.getText(row.getRoleType()));
             vo.setDutyLevel(row.getDutyLevel());
-            vo.setDutyLevelText(DutyLevelEnum.labelOf(row.getDutyLevel()));
+            vo.setDutyLevelText(DutyLevelEnum.getText(row.getDutyLevel()));
             vo.setAttendMode(row.getAttendMode());
-            vo.setAttendModeText(AttendModeEnum.labelOf(row.getAttendMode()));
+            vo.setAttendModeText(AttendModeEnum.getText(row.getAttendMode()));
             vo.setShiftId(row.getShiftId());
             vo.setShiftName(shift == null ? null : shift.getShiftName());
             vo.setStartTime(shift == null ? null : shift.getStartTime());
@@ -105,24 +105,24 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
             vo.setPostCode(row.getPostCode());
             vo.setPostName(row.getPostName());
             vo.setDutyScope(row.getDutyScope());
-            vo.setDutyScopeText(DutyScopeEnum.labelOf(row.getDutyScope()));
+            vo.setDutyScopeText(DutyScopeEnum.getText(row.getDutyScope()));
             vo.setOrgType(row.getOrgType());
-            vo.setOrgTypeText(OrgUnitTypeEnum.labelOf(row.getOrgType()));
+            vo.setOrgTypeText(OrgUnitTypeEnum.getText(row.getOrgType()));
             vo.setOrgId(row.getOrgId());
             vo.setOrgName(row.getOrgId() == null || row.getOrgId() == 0L
                     ? OrgUnitTypeEnum.HOSPITAL.getLabel() : unitNameOf(row.getOrgType(), row.getOrgId()));
             vo.setRoleType(row.getRoleType());
-            vo.setRoleTypeText(DutyRoleTypeEnum.labelOf(row.getRoleType()));
+            vo.setRoleTypeText(DutyRoleTypeEnum.getText(row.getRoleType()));
             vo.setDutyLevel(row.getDutyLevel());
-            vo.setDutyLevelText(DutyLevelEnum.labelOf(row.getDutyLevel()));
+            vo.setDutyLevelText(DutyLevelEnum.getText(row.getDutyLevel()));
             vo.setAttendMode(row.getAttendMode());
-            vo.setAttendModeText(AttendModeEnum.labelOf(row.getAttendMode()));
+            vo.setAttendModeText(AttendModeEnum.getText(row.getAttendMode()));
             vo.setShiftId(row.getShiftId());
             vo.setShiftName(shift == null ? null : shift.getShiftName());
             vo.setStartTime(shift == null ? null : shift.getStartTime());
             vo.setEndTime(shift == null ? null : shift.getEndTime());
             vo.setRequiredStaffType(row.getRequiredStaffType());
-            vo.setRequiredStaffTypeName(StaffTypeEnum.labelOf(row.getRequiredStaffType()));
+            vo.setRequiredStaffTypeName(StaffTypeEnum.getText(row.getRequiredStaffType()));
             vo.setPhone(row.getPhone());
             vo.setSortNo(row.getSortNo());
             vo.setStatus(row.getStatus());
@@ -234,7 +234,7 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
             return;
         }
         if (post.getOrgId() == null || post.getOrgId() == 0L) {
-            throw new BusinessException("请选择值守点位所属的" + OrgUnitTypeEnum.labelOf(post.getOrgType()));
+            throw new BusinessException("请选择值守点位所属的" + OrgUnitTypeEnum.getText(post.getOrgType()));
         }
         if (OrgUnitTypeEnum.WARD.getCode() == post.getOrgType()) {
             SysWard ward = wardMapper.selectById(post.getOrgId());

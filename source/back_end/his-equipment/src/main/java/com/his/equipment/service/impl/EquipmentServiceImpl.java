@@ -1,6 +1,5 @@
 package com.his.equipment.service.impl;
 
-import com.his.equipment.service.EquipmentService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -12,6 +11,7 @@ import com.his.equipment.entity.SysEquipment;
 import com.his.equipment.mapper.BizEquipmentMaintainMapper;
 import com.his.equipment.mapper.BizEquipmentMeteringMapper;
 import com.his.equipment.mapper.SysEquipmentMapper;
+import com.his.equipment.service.EquipmentService;
 import com.his.equipment.vo.EquipmentVO;
 import com.his.equipment.vo.MaintainVO;
 import com.his.equipment.vo.MeteringVO;
@@ -54,6 +54,16 @@ public class EquipmentServiceImpl implements EquipmentService {
 
     // 设备台账
 
+    private static String tr(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private static LocalDateTime nowSeconds() {
+        return LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+    }
+
+    // 维保
+
     public IPage<EquipmentVO> listPage(EquipmentDTO.QueryPage q) {
         String kw = tr(q.getKeyword());
         LambdaQueryWrapper<SysEquipment> w = new LambdaQueryWrapper<SysEquipment>()
@@ -89,8 +99,6 @@ public class EquipmentServiceImpl implements EquipmentService {
         return vo;
     }
 
-    // 维保
-
     public IPage<MaintainVO> maintainListPage(EquipmentDTO.MaintainQueryPage q) {
         requireEquipment(q.getEquipmentId());
         LambdaQueryWrapper<BizEquipmentMaintain> w = new LambdaQueryWrapper<BizEquipmentMaintain>()
@@ -101,6 +109,8 @@ public class EquipmentServiceImpl implements EquipmentService {
         return maintainMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
                 .convert(this::toMaintainVo);
     }
+
+    // 计量
 
     @Transactional(rollbackFor = Exception.class)
     public MaintainVO maintainCreate(EquipmentDTO.MaintainCreate dto) {
@@ -166,8 +176,6 @@ public class EquipmentServiceImpl implements EquipmentService {
         }
     }
 
-    // 计量
-
     public IPage<MeteringVO> meteringListPage(EquipmentDTO.MeteringQueryPage q) {
         requireEquipment(q.getEquipmentId());
         LambdaQueryWrapper<BizEquipmentMetering> w = new LambdaQueryWrapper<BizEquipmentMetering>()
@@ -178,6 +186,8 @@ public class EquipmentServiceImpl implements EquipmentService {
         return meteringMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
                 .convert(this::toMeteringVo);
     }
+
+    // 私有
 
     @Transactional(rollbackFor = Exception.class)
     public MeteringVO meteringCreate(EquipmentDTO.MeteringCreate dto) {
@@ -217,8 +227,6 @@ public class EquipmentServiceImpl implements EquipmentService {
         meteringMapper.deleteById(id);
     }
 
-    // 私有
-
     private SysEquipment requireEquipment(Long equipmentId) {
         SysEquipment e = equipmentMapper.selectById(equipmentId);
         if (e == null || Objects.equals(e.getDelFlag(), 1)) {
@@ -227,7 +235,9 @@ public class EquipmentServiceImpl implements EquipmentService {
         return e;
     }
 
-    /** 设备 → 最近一次计量有效期至 */
+    /**
+     * 设备 → 最近一次计量有效期至
+     */
     private Map<Long, LocalDate> latestMeteringValidMap(List<Long> equipmentIds) {
         if (equipmentIds.isEmpty()) {
             return Map.of();
@@ -305,13 +315,5 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setCreateBy(m.getCreateBy());
         vo.setCreateTime(m.getCreateTime());
         return vo;
-    }
-
-    private static String tr(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static LocalDateTime nowSeconds() {
-        return LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
     }
 }

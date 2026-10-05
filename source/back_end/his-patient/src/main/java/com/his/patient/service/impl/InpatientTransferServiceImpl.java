@@ -23,7 +23,6 @@ import com.his.patient.enums.*;
 import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientOrderService;
 import com.his.patient.service.InpatientTransferService;
-import com.his.patient.support.InpatientTransferLabels;
 import com.his.patient.vo.InpatientTransferVO;
 import com.his.patient.vo.WardVO;
 import com.his.security.UserUtils;
@@ -152,7 +151,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     @Transactional(rollbackFor = Exception.class)
     public String save(InpatientTransferUpsertDTO dto) {
         int type = dto.getTransferType() == null ? 1 : dto.getTransferType();
-        if (!InpatientTransferLabels.isValidType(type)) {
+        if (!TransferTypeEnum.isValid(type)) {
             throw new BusinessException("转科类型取值不合法（应为 1~4）");
         }
 
@@ -370,7 +369,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (!left.isEmpty()) {
             sb.append("；仍有 ").append(left.size()).append(" 条长期医嘱未停（状态：");
             sb.append(left.stream()
-                    .map(o -> o.getOrderNo() + "/" + orderStatusText(o.getOrderStatus()))
+                    .map(o -> o.getOrderNo() + "/" + InpatientOrderStatusEnum.labelOrUnknown(o.getOrderStatus()))
                     .collect(Collectors.joining("、")));
             sb.append("），需由原科室医生处理");
         }
@@ -389,22 +388,6 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         return m.find() ? Integer.parseInt(m.group(1)) : 0;
     }
 
-    private String orderStatusText(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-        return switch (status) {
-            case 1 -> "待校对";
-            case 2 -> "已校对";
-            case 3 -> "执行中";
-            case 4 -> "已完成";
-            case 5 -> "已停止";
-            case 6 -> "已作废";
-            case 7 -> "已退回";
-            default -> "未知(" + status + ")";
-        };
-    }
-
     // 内部：床位
 
     /**
@@ -413,7 +396,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     private void checkTargetBed(SysBed bed, Long toDeptId, Long toWardId) {
         if (!Objects.equals(BedStatusEnum.FREE.getCode(), bed.getBedStatus())) {
             throw new BusinessException("转入床位「" + bed.getBedNo() + "」当前不可用（"
-                    + bedStatusText(bed.getBedStatus()) + "）");
+                    + BedStatusEnum.labelOrUnknown(bed.getBedStatus()) + "）");
         }
         if (!Objects.equals(bed.getDeptId(), toDeptId)) {
             throw new BusinessException("转入床位「" + bed.getBedNo() + "」不属于目标科室");
@@ -421,18 +404,6 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (!Objects.equals(bed.getWardId(), toWardId)) {
             throw new BusinessException("转入床位「" + bed.getBedNo() + "」不属于目标病区");
         }
-    }
-
-    private String bedStatusText(Integer status) {
-        if (status == null) {
-            return "状态未知";
-        }
-        return switch (status) {
-            case 0 -> "维修中";
-            case 1 -> "空闲";
-            case 2 -> "已占用";
-            default -> "未知(" + status + ")";
-        };
     }
 
     /**
@@ -541,7 +512,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         body.append("转入：").append(nvl(entity.getToDeptName()))
                 .append(" ").append(nvl(entity.getToWardName()))
                 .append(" ").append(nvl(entity.getToBedNo())).append("床\n");
-        body.append("转科类型：").append(TransferTypeEnum.labelOf(entity.getTransferType()))
+        body.append("转科类型：").append(TransferTypeEnum.getText(entity.getTransferType()))
                 .append("；发起时已住院 ").append(entity.getHospitalDays() == null ? "—" : entity.getHospitalDays()).append(" 天\n");
         body.append("医嘱处置：").append(nvl(orderRemark));
         record.setCourseNote(body.toString());
@@ -679,8 +650,8 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     private InpatientTransferVO toVO(BizInpatientTransfer e, String recordNo, Integer admitStatus) {
         InpatientTransferVO vo = new InpatientTransferVO();
         BeanUtils.copyProperties(e, vo);
-        vo.setTransferTypeText(TransferTypeEnum.labelOf(e.getTransferType()));
-        vo.setTransferStatusText(TransferStatusEnum.labelOf(e.getTransferStatus()));
+        vo.setTransferTypeText(TransferTypeEnum.getText(e.getTransferType()));
+        vo.setTransferStatusText(TransferStatusEnum.getText(e.getTransferStatus()));
         vo.setRecordNo(recordNo);
 
         boolean pending = Objects.equals(TransferStatusEnum.PENDING.getCode(), e.getTransferStatus());

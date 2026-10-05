@@ -10,7 +10,6 @@ import com.his.common.support.CanonicalText;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.mapper.BizInpatientRecordMapper;
 import com.his.patient.service.InpatientRecordSignProvider;
-import com.his.patient.support.InpatientRecordLabels;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -63,7 +62,7 @@ public class InpatientRecordSignProviderImpl implements SignableContentProvider,
                 r.getDeptId(),
                 r.getDeptName(),
                 r.getRecordStatus(),
-                SummaryStatusEnum.labelOf(r.getRecordStatus()),
+                SummaryStatusEnum.getText(r.getRecordStatus()),
                 InpatientRecordSignProvider.canonical(r));
     }
 

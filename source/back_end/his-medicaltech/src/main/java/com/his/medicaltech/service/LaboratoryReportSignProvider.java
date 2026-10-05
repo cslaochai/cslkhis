@@ -16,13 +16,14 @@ import java.math.BigDecimal;
 
 public interface LaboratoryReportSignProvider extends SignableContentProvider {
 
-    /** 检验记录状态文案；**未知码值渲染成未知(n)，不回落成"已登记"这类合法值** */
+    /**
+     * 检验记录状态文案（签名规范化文本用，脏值必须暴露原码值）。
+     *
+     * <p>走 {@link LabRecordStatusEnum#labelOrUnknown(Integer)}：签名要能看出签的是哪个版本的码值，
+     * 脏值不能悄悄变成「已登记」这类合法值。
+     */
     public static String statusText(Integer status) {
-        if (status == null) {
-            return "—";
-        }
-        LabRecordStatusEnum e = LabRecordStatusEnum.getByCode(status);
-        return e == null ? "未知(" + status + ")" : e.getDescription();
+        return status == null ? "—" : LabRecordStatusEnum.labelOrUnknown(status);
     }
 
     /** 规范化文本：报告头 + **结果明细**，不含任何流程字段 */

@@ -14,118 +14,186 @@ import java.time.LocalDateTime;
 @Data
 public class ExamFilmVO {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 胶片单号 */
+    /**
+     * 胶片单号
+     */
     private String filmNo;
 
-    /** 检查记录ID */
+    /**
+     * 检查记录ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
-    /** 检查记录号（快照） */
+    /**
+     * 检查记录号（快照）
+     */
     private String recordNo;
 
-    /** 检查申请单ID */
+    /**
+     * 检查申请单ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long applyId;
 
-    /** 申请单号（快照） */
+    /**
+     * 申请单号（快照）
+     */
     private String applyNo;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者号（快照） */
+    /**
+     * 患者号（快照）
+     */
     private String patientNo;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
-    /** 就诊日期（快照） */
+    /**
+     * 就诊日期（快照）
+     */
     private LocalDate visitDate;
 
-    /** 检查项目编码（快照） */
+    /**
+     * 检查项目编码（快照）
+     */
     private String itemCode;
 
-    /** 检查项目名称（快照） */
+    /**
+     * 检查项目名称（快照）
+     */
     private String itemName;
 
-    /** 检查部位（快照） */
+    /**
+     * 检查部位（快照）
+     */
     private String bodyPart;
 
-    /** 影像模态（，快照） */
+    /**
+     * 影像模态（，快照）
+     */
     private Integer modality;
 
     private String modalityText;
 
-    /** 胶片规格ID */
+    /**
+     * 胶片规格ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long specId;
 
-    /** 规格编码（快照） */
+    /**
+     * 规格编码（快照）
+     */
     private String specCode;
 
-    /** 规格名称 */
+    /**
+     * 规格名称
+     */
     private String specName;
 
-    /** 单价 */
+    /**
+     * 单价
+     */
     private BigDecimal unitPrice;
 
-    /** 计价单位（快照） */
+    /**
+     * 计价单位（快照）
+     */
     private String unit;
 
-    /** 胶片张数 */
+    /**
+     * 胶片张数
+     */
     private Integer quantity;
 
-    /** 金额（服务端单价×张数现算） */
+    /**
+     * 金额（服务端单价×张数现算）
+     */
     private BigDecimal amount;
 
-    /** 胶片状态（1-已登记 2-已打印 3-已发放 4-已作废） */
+    /**
+     * 胶片状态（1-已登记 2-已打印 3-已发放 4-已作废）
+     */
     private Integer filmStatus;
 
     private String filmStatusText;
 
-    /** 是否已记账（0-未记账 1-已记账） */
+    /**
+     * 是否已记账（0-未记账 1-已记账）
+     */
     private Integer chargeFlag;
 
-    /** 记账流水ID */
+    /**
+     * 记账流水ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long feeId;
 
-    /** 记账流水号（快照） */
+    /**
+     * 记账流水号（快照）
+     */
     private String feeNo;
 
-    /** 打印人 */
+    /**
+     * 打印人
+     */
     private String printBy;
 
-    /** 打印时间 */
+    /**
+     * 打印时间
+     */
     private LocalDateTime printTime;
 
-    /** 发放人 */
+    /**
+     * 发放人
+     */
     private String deliverBy;
 
-    /** 发放时间 */
+    /**
+     * 发放时间
+     */
     private LocalDateTime deliverTime;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 
-    /** 创建人 */
+    /**
+     * 创建人
+     */
     private String createBy;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
 
-    /** 顶部统计卡（只有 stats 接口会填这几列） */
+    /**
+     * 顶部统计卡（只有 stats 接口会填这几列）
+     */
     @Data
     public static class FilmStats {
         private Integer rowCount;
         private Integer totalQuantity;
-        /** 合计金额 */
+        /**
+         * 合计金额
+         */
         private BigDecimal totalAmount;
         private BigDecimal chargedAmount;
     }

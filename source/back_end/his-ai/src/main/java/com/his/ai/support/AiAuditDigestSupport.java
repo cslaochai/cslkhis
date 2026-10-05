@@ -22,14 +22,18 @@ import java.util.Map;
  */
 public final class AiAuditDigestSupport {
 
-    /** 单个白名单字段的明文上限：码值/判定结果足够，临床文本本就不许标注 */
+    /**
+     * 单个白名单字段的明文上限：码值/判定结果足够，临床文本本就不许标注
+     */
     private static final int PLAIN_FIELD_MAX = 60;
 
     private static final int DIGEST_MAX = 480;
 
     private static final int FINGERPRINT_CHARS = 12;
 
-    /** 集合内 POJO 元素的递归层数：封顶 1，覆盖「judgments/焦点列表」这类一层嵌套契约 */
+    /**
+     * 集合内 POJO 元素的递归层数：封顶 1，覆盖「judgments/焦点列表」这类一层嵌套契约
+     */
     private static final int MAX_DEPTH = 1;
 
     private AiAuditDigestSupport() {
@@ -106,7 +110,9 @@ public final class AiAuditDigestSupport {
         sb.append(value);
     }
 
-    /** String 与数字等基础类型不按 POJO 递归（String 列表直接落 size，避免整串进摘要） */
+    /**
+     * String 与数字等基础类型不按 POJO 递归（String 列表直接落 size，避免整串进摘要）
+     */
     private static boolean isPlainPojo(Object value) {
         return value != null
                 && !(value instanceof String)

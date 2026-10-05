@@ -9,21 +9,17 @@ import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.InsuranceEvidenceCapability;
 import com.his.ai.vo.InsuranceEvidenceJudgmentVO;
 import com.his.ai.vo.InsuranceEvidenceVO;
+import com.his.charge.service.ComplianceAuditService;
 import com.his.charge.vo.ComplianceAuditDetailVO;
 import com.his.charge.vo.ComplianceAuditItemVO;
 import com.his.charge.vo.ComplianceEvidenceNarrativeVO;
-import com.his.charge.service.ComplianceAuditService;
 import com.his.common.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * 医保审核证据判定实现。
@@ -43,21 +39,39 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
 
     private static final String BIZ_TYPE = "insurance_audit";
 
-    /** 理由上限（与提示词的 ≤80 字纪律一致，模型超写就截） */
+    /**
+     * 理由上限（与提示词的 ≤80 字纪律一致，模型超写就截）
+     */
     private static final int REASON_MAX = 100;
 
-    /** 原文引用上限（提示词 ≤60 字） */
+    /**
+     * 原文引用上限（提示词 ≤60 字）
+     */
     private static final int QUOTE_MAX = 80;
 
-    /** 总评上限（提示词 ≤120 字） */
+    /**
+     * 总评上限（提示词 ≤120 字）
+     */
     private static final int OVERALL_MAX = 160;
 
-    /** 输出 token 上限：与 lab_interpret 等推理模型能力对齐，1024 会偶发被思考过程烧光导致 content 为空 */
+    /**
+     * 输出 token 上限：与 lab_interpret 等推理模型能力对齐，1024 会偶发被思考过程烧光导致 content 为空
+     */
     private static final int OUTPUT_TOKEN_LIMIT = 2048;
 
     private final AiExecutionService aiExecutionService;
 
     private final ComplianceAuditService complianceAuditService;
+
+    private static String truncate(String text, int maxLength) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        String value = text.trim();
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    // ---------------------------------------------------------------- 模型层
 
     @Override
     public InsuranceEvidenceVO execute(InsuranceEvidenceDTO dto) {
@@ -92,8 +106,6 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
         return vo;
     }
 
-    // ---------------------------------------------------------------- 模型层
-
     private Optional<InsuranceEvidenceLlmOutputDTO> callModel(List<ComplianceAuditItemVO> hits,
                                                               ComplianceEvidenceNarrativeVO narrative,
                                                               String auditNo) {
@@ -107,6 +119,8 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
                 .build();
         return aiExecutionService.call(call, InsuranceEvidenceLlmOutputDTO.class);
     }
+
+    // ---------------------------------------------------------------- 清洗层
 
     private Map<String, Object> buildVariables(List<ComplianceAuditItemVO> hits,
                                                ComplianceEvidenceNarrativeVO narrative) {
@@ -138,8 +152,6 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
                 ? "无" : String.join("；", narrative.getMissingList()));
         return variables;
     }
-
-    // ---------------------------------------------------------------- 清洗层
 
     private List<ComplianceAuditItemVO> hitItems(ComplianceAuditDetailVO detail) {
         if (detail.getItems() == null) {
@@ -185,13 +197,5 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
             judgments.add(jv);
         }
         return judgments;
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 }

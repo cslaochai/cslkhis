@@ -1,6 +1,7 @@
 package com.his.emr.enums;
 
 import com.his.common.exception.BusinessException;
+import lombok.Getter;
 
 /**
  * 质控对象来自哪张表。
@@ -10,6 +11,7 @@ import com.his.common.exception.BusinessException;
  * 所以新增记录来源明确来源，并把旧的默认值定为 OUTPATIENT ——
  * 历史上真正可用的那几行确实指向门诊病历。
  */
+@Getter
 public enum QcRecordSourceEnum {
 
     /**
@@ -24,13 +26,13 @@ public enum QcRecordSourceEnum {
 
     private final String code;
 
-    private final String text;
+    private final String label;
 
     private final String tableName;
 
-    QcRecordSourceEnum(String code, String text, String tableName) {
+    QcRecordSourceEnum(String code, String label, String tableName) {
         this.code = code;
-        this.text = text;
+        this.label = label;
         this.tableName = tableName;
     }
 
@@ -54,15 +56,36 @@ public enum QcRecordSourceEnum {
         throw new BusinessException("未知的病历来源：" + code + "（可选 OUTPATIENT-门诊病历 / INPATIENT-住院文书）");
     }
 
-    public String getCode() {
-        return code;
+    /**
+     * 纯解析：不兜默认值、不抛异常。null / 空白 / 不在枚举内（脏数据）返回 null。
+     */
+    public static QcRecordSourceEnum fromCode(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        String value = code.trim().toUpperCase();
+        for (QcRecordSourceEnum source : values()) {
+            if (source.code.equals(value)) {
+                return source;
+            }
+        }
+        return null;
     }
 
-    public String getText() {
-        return text;
+    /**
+     * 展示用码值 → 文案（record_source 列文案唯一出口）。
+     * null / 空白 / 不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
+     */
+    public static String getText(String code) {
+        QcRecordSourceEnum source = fromCode(code);
+        return source == null ? "" : source.label;
     }
 
-    public String getTableName() {
-        return tableName;
+    /**
+     * 异常 / 审计 / 合规用码值 → 文案。null / 空白 / 不在枚举内返回「未知(原始码)」，保留原始码值便于排查。
+     */
+    public static String labelOrUnknown(String code) {
+        QcRecordSourceEnum source = fromCode(code);
+        return source == null ? (code == null ? "未知" : "未知(" + code + ")") : source.label;
     }
 }

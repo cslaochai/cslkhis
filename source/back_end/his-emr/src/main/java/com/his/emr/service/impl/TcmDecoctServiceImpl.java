@@ -173,7 +173,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
         }
         if (target != from + 1) {
             throw new BusinessException("状态只能逐级推进（当前 "
-                    + TcmDecoctStatusEnum.labelOf(from) + "，不能直接到 " + TcmDecoctStatusEnum.labelOf(target) + "）");
+                    + TcmDecoctStatusEnum.getText(from) + "，不能直接到 " + TcmDecoctStatusEnum.getText(target) + "）");
         }
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         row.setDecoctStatus(target);
@@ -191,7 +191,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
         sysAuditLogService.record(UserUtils.getCurrentEmployeeId(), UserUtils.getCurrentEmployeeName(),
                 "中药代煎", target == 2 ? "标记已煎" : "标记已取", "biz_tcm_decoct", row.getId(),
                 "decoctNo=" + row.getDecoctNo() + " prescription=" + row.getPrescriptionNo()
-                        + " " + TcmDecoctStatusEnum.labelOf(from) + "→" + TcmDecoctStatusEnum.labelOf(target),
+                        + " " + TcmDecoctStatusEnum.getText(from) + "→" + TcmDecoctStatusEnum.getText(target),
                 true, null);
         return toDetailVO(row);
     }
@@ -219,7 +219,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
         }
         sysAuditLogService.record(UserUtils.getCurrentEmployeeId(), UserUtils.getCurrentEmployeeName(),
                 "中药代煎", "作废代煎单", "biz_tcm_decoct", row.getId(),
-                "decoctNo=" + row.getDecoctNo() + " 原状态=" + TcmDecoctStatusEnum.labelOf(from) + " 原因=" + reason,
+                "decoctNo=" + row.getDecoctNo() + " 原状态=" + TcmDecoctStatusEnum.getText(from) + " 原因=" + reason,
                 true, null);
         return toDetailVO(row);
     }
@@ -251,7 +251,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
         int from = row.getDecoctStatus() == null ? TcmDecoctStatusEnum.PENDING.getCode() : row.getDecoctStatus();
         if (from != TcmDecoctStatusEnum.PENDING.getCode()) {
             // 已煎/已取的汤液是做出来了的东西，退不回架上；静默作废等于把实物从账上抹掉
-            log.info("代煎单 {} 当前为 {}，退药不自动作废（需药房判断）", row.getDecoctNo(), TcmDecoctStatusEnum.labelOf(from));
+            log.info("代煎单 {} 当前为 {}，退药不自动作废（需药房判断）", row.getDecoctNo(), TcmDecoctStatusEnum.getText(from));
             return;
         }
         row.setDecoctStatus(TcmDecoctStatusEnum.CANCELLED.getCode());
@@ -316,7 +316,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
     private TcmDecoctVO toVO(BizTcmDecoct row) {
         TcmDecoctVO vo = new TcmDecoctVO();
         BeanUtils.copyProperties(row, vo);
-        vo.setDecoctStatusLabel(TcmDecoctStatusEnum.labelOf(row.getDecoctStatus()));
+        vo.setDecoctStatusLabel(TcmDecoctStatusEnum.getText(row.getDecoctStatus()));
         vo.setGramsPerDose(perDoseGrams(row));
         return vo;
     }
@@ -324,7 +324,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
     private TcmDecoctDetailVO toDetailVO(BizTcmDecoct row) {
         TcmDecoctDetailVO vo = new TcmDecoctDetailVO();
         BeanUtils.copyProperties(row, vo);
-        vo.setDecoctStatusLabel(TcmDecoctStatusEnum.labelOf(row.getDecoctStatus()));
+        vo.setDecoctStatusLabel(TcmDecoctStatusEnum.getText(row.getDecoctStatus()));
         vo.setGramsPerDose(perDoseGrams(row));
         List<TcmDecoctDetailVO.HerbLine> herbs = listDetails(row.getPrescriptionId()).stream().map(d -> {
             TcmDecoctDetailVO.HerbLine line = new TcmDecoctDetailVO.HerbLine();

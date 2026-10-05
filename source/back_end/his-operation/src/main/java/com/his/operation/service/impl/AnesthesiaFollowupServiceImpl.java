@@ -2,8 +2,8 @@ package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.exception.BusinessException;
 import com.his.common.enums.SysGenderEnum;
+import com.his.common.exception.BusinessException;
 import com.his.operation.dto.AnesthesiaFollowupQueryPageDTO;
 import com.his.operation.dto.AnesthesiaFollowupUpsertDTO;
 import com.his.operation.entity.BizAnesthesiaFollowup;
@@ -13,11 +13,10 @@ import com.his.operation.mapper.BizAnesthesiaFollowupMapper;
 import com.his.operation.mapper.BizAnesthesiaRecordMapper;
 import com.his.operation.service.AnesthesiaFollowupService;
 import com.his.operation.support.FollowupAdverseItems;
-import com.his.patient.support.InpatientRecordLabels;
 import com.his.operation.vo.AnesthesiaFollowupVO;
 import com.his.operation.vo.OperationApplyVO;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -51,13 +50,19 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService {
 
-    /** 麻醉记录状态：已提交 */
+    /**
+     * 麻醉记录状态：已提交
+     */
     private static final int RECORD_SUBMITTED = 1;
 
-    /** 麻醉记录状态：已审核 */
+    /**
+     * 麻醉记录状态：已审核
+     */
     private static final int RECORD_AUDITED = 2;
 
-    /** 随访状态：唯一口径 AnesthesiaFollowupStatusEnum（0草稿 1已完成） */
+    /**
+     * 随访状态：唯一口径 AnesthesiaFollowupStatusEnum（0草稿 1已完成）
+     */
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
@@ -65,6 +70,28 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     private final BizAnesthesiaRecordMapper recordMapper;
 
     // 查询
+
+    /**
+     * 写库长文本一律先截到列宽（超长 insert 失败会让用户连草稿都存不下）
+     */
+    private static String cut(String value, int max) {
+        if (value == null) {
+            return null;
+        }
+        String s = value.trim();
+        return s.length() <= max ? s : s.substring(0, max - 1) + "…";
+    }
+
+    private static LocalDateTime now() {
+        return toSeconds(LocalDateTime.now());
+    }
+
+    /**
+     * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)）
+     */
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
 
     @Override
     public IPage<AnesthesiaFollowupVO> listPage(AnesthesiaFollowupQueryPageDTO query) {
@@ -91,6 +118,8 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         vo.setAdverseItemOptions(adverseItems());
         return vo;
     }
+
+    // 写
 
     @Override
     public List<AnesthesiaFollowupVO> listByRecord(Long recordId) {
@@ -121,7 +150,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         return list;
     }
 
-    // 写
+    // 校验与展示态
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -229,9 +258,9 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         log.info("删除麻醉随访草稿 followupNo={} 操作人={}", entity.getFollowupNo(), currentName());
     }
 
-    // 校验与展示态
-
-    /** 麻醉记录必须存在且已提交/已审核（未定稿的麻醉过程没有"术后"可言） */
+    /**
+     * 麻醉记录必须存在且已提交/已审核（未定稿的麻醉过程没有"术后"可言）
+     */
     private BizAnesthesiaRecord followableRecord(Long recordId) {
         BizAnesthesiaRecord record = recordMapper.selectById(recordId);
         if (record == null) {
@@ -247,7 +276,9 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         return record;
     }
 
-    /** 随访时间不得早于麻醉结束时间（时间轴上的自相矛盾必须拦） */
+    /**
+     * 随访时间不得早于麻醉结束时间（时间轴上的自相矛盾必须拦）
+     */
     private void validateTimeAgainstAnesthesia(LocalDateTime followupTime, Long recordId) {
         BizAnesthesiaRecord record = recordMapper.selectById(recordId);
         if (record == null) {
@@ -302,7 +333,9 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         return prefix + String.format("%04d", seq);
     }
 
-    /** 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径 */
+    /**
+     * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
+     */
     private Long currentEmpId() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();
@@ -331,23 +364,5 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         } catch (Exception e) {
             return null;
         }
-    }
-
-    /** 写库长文本一律先截到列宽（超长 insert 失败会让用户连草稿都存不下） */
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        String s = value.trim();
-        return s.length() <= max ? s : s.substring(0, max - 1) + "…";
-    }
-
-    private static LocalDateTime now() {
-        return toSeconds(LocalDateTime.now());
-    }
-
-    /** 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)） */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
     }
 }

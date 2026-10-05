@@ -305,13 +305,13 @@ public class DutyLogServiceImpl implements DutyLogService {
         if (t == null) {
             return "-";
         }
-        return DutyLogTypeEnum.labelOf(t);
+        return DutyLogTypeEnum.getText(t);
     }
 
     private String statusText(Integer s) {
         if (s == null) {
             return "-";
         }
-        return DutyLogStatusEnum.labelOf(s);
+        return DutyLogStatusEnum.getText(s);
     }
 }

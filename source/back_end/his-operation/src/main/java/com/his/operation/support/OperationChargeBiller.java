@@ -6,9 +6,13 @@ import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.fee.dto.FeeBookDTO;
 import com.his.fee.entity.BizFeeRecord;
 import com.his.fee.support.FeeCatalogResolver;
+import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.entity.BizAnesthesiaPacu;
 import com.his.operation.entity.BizAnesthesiaRecord;
 import com.his.operation.entity.BizOperationChargeItem;
+import com.his.operation.enums.AirwayDeviceEnum;
+import com.his.operation.enums.AnesthesiaChargeStatusEnum;
+import com.his.operation.enums.ChargeSourceEnum;
 import com.his.operation.mapper.BizOperationChargeItemMapper;
 import com.his.operation.vo.OperationChargeSummaryVO;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +27,6 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import com.his.operation.support.AnesthesiaLabels;
 
 /**
  * 手术麻醉计费：把"麻醉/复苏做了什么"翻译成"这几项该收多少钱"，并把每一项的落地结果留痕。
@@ -48,10 +51,14 @@ import com.his.operation.support.AnesthesiaLabels;
 @RequiredArgsConstructor
 public class OperationChargeBiller {
 
-    /** 金额统一两位小数（元） */
+    /**
+     * 金额统一两位小数（元）
+     */
     private static final int AMOUNT_SCALE = 2;
 
-    /** 麻醉方式 → 麻醉费项目编码（1-全麻 2-椎管内 3-神经阻滞 4-局麻 5-其他） */
+    /**
+     * 麻醉方式 → 麻醉费项目编码（1-全麻 2-椎管内 3-神经阻滞 4-局麻 5-其他）
+     */
     private static final Map<Integer, String> ANESTHESIA_ITEM = Map.of(
             1, "AN001", 2, "AN002", 3, "AN003", 4, "AN004", 5, "AN005");
 
@@ -59,11 +66,32 @@ public class OperationChargeBiller {
     private static final String ITEM_INTUBATION = "AN007";
     private static final String ITEM_PACU = "AN008";
 
-    private static final int SOURCE_RECORD = 1;
-    private static final int SOURCE_PACU = 2;
-
     private final BizOperationChargeItemMapper chargeItemMapper;
     private final OperationChargeInvoker invoker;
+
+    /**
+     * 分钟差（两端都要有值；顺序反了或为负 → null，不替业务圆回来）
+     */
+    private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
+        if (from == null || to == null) {
+            return null;
+        }
+        long m = Duration.between(from, to).toMinutes();
+        return m < 0 ? null : m;
+    }
+
+    private static BigDecimal toDecimal(Object value) {
+        if (value == null) {
+            return BigDecimal.ZERO;
+        }
+        return new BigDecimal(String.valueOf(value));
+    }
+
+    // 内部：单项计费（幂等 + 落痕）
+
+    private static BigDecimal nz(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
 
     /**
      * 按麻醉记录单计费（麻醉费 + 麻醉监护 + 气管插管）。
@@ -84,7 +112,7 @@ public class OperationChargeBiller {
             fail(summary, record, null, "未登记麻醉方式，无法确定麻醉费项目", basis, record.getRecordNo());
         } else {
             billOne(summary, record.getAdmissionId(), record.getPatientId(), patientNo, record.getPatientName(),
-                    record.getApplyId(), record.getApplyNo(), SOURCE_RECORD, record.getId(), record.getRecordNo(),
+                    record.getApplyId(), record.getApplyNo(), ChargeSourceEnum.RECORD.getCode(), record.getId(), record.getRecordNo(),
                     anesthesiaItem, BigDecimal.ONE, basis + " 麻醉费");
         }
 
@@ -97,15 +125,15 @@ public class OperationChargeBiller {
             fail(summary, record, ITEM_MONITOR, "无麻醉/手术起止时间，算不出监护时长", basis, record.getRecordNo());
         } else {
             billOne(summary, record.getAdmissionId(), record.getPatientId(), patientNo, record.getPatientName(),
-                    record.getApplyId(), record.getApplyNo(), SOURCE_RECORD, record.getId(), record.getRecordNo(),
-                    ITEM_MONITOR, AnesthesiaLabels.billHours(minutes),
-                    basis + " 麻醉监护 " + AnesthesiaLabels.durationText(minutes));
+                    record.getApplyId(), record.getApplyNo(), ChargeSourceEnum.RECORD.getCode(), record.getId(), record.getRecordNo(),
+                    ITEM_MONITOR, AnesthesiaCalcs.billHours(minutes),
+                    basis + " 麻醉监护 " + AnesthesiaCalcs.durationText(minutes));
         }
 
         // ③ 气管插管（只有 flag 明确是插管才收；不确定（null）不收也不报错）
-        if (Integer.valueOf(1).equals(record.getAirwayDevice())) {
+        if (Integer.valueOf(AirwayDeviceEnum.ENDOTRACHEAL_TUBE.getCode()).equals(record.getAirwayDevice())) {
             billOne(summary, record.getAdmissionId(), record.getPatientId(), patientNo, record.getPatientName(),
-                    record.getApplyId(), record.getApplyNo(), SOURCE_RECORD, record.getId(), record.getRecordNo(),
+                    record.getApplyId(), record.getApplyNo(), ChargeSourceEnum.RECORD.getCode(), record.getId(), record.getRecordNo(),
                     ITEM_INTUBATION, BigDecimal.ONE, basis + " 气管插管");
         }
         return summary;
@@ -127,13 +155,11 @@ public class OperationChargeBiller {
             return summary;
         }
         billOne(summary, pacu.getAdmissionId(), pacu.getPatientId(), null, pacu.getPatientName(),
-                pacu.getApplyId(), null, SOURCE_PACU, pacu.getId(), pacu.getPacuNo(),
-                ITEM_PACU, AnesthesiaLabels.billHours(minutes),
-                "PACU 复苏 " + pacu.getPacuNo() + " " + AnesthesiaLabels.durationText(minutes));
+                pacu.getApplyId(), null, ChargeSourceEnum.PACU.getCode(), pacu.getId(), pacu.getPacuNo(),
+                ITEM_PACU, AnesthesiaCalcs.billHours(minutes),
+                "PACU 复苏 " + pacu.getPacuNo() + " " + AnesthesiaCalcs.durationText(minutes));
         return summary;
     }
-
-    // 内部：单项计费（幂等 + 落痕）
 
     private void billOne(OperationChargeSummaryVO summary, Long admissionId, Long patientId, String patientNo,
                          String patientName, Long applyId, String applyNo,
@@ -225,7 +251,7 @@ public class OperationChargeBiller {
             return;
         }
 
-        row.setChargeStatus(AnesthesiaLabels.CHARGE_DONE);
+        row.setChargeStatus(AnesthesiaChargeStatusEnum.DONE.getCode());
         // fee_record_id / fee_no：L1 记账行的指针（sql/141 之前是 charge_id + charge_detail_id 两列同值）；
         // 补计/红冲要按它找回那一行，不留旧行号的悬空值。
         row.setFeeRecordId(booked.getId());
@@ -257,7 +283,7 @@ public class OperationChargeBiller {
                 .toList();
         if (!existing.isEmpty()) {
             BizOperationChargeItem row = existing.get(0);
-            if (Integer.valueOf(AnesthesiaLabels.CHARGE_DONE).equals(row.getChargeStatus())) {
+            if (Integer.valueOf(AnesthesiaChargeStatusEnum.DONE.getCode()).equals(row.getChargeStatus())) {
                 return null;
             }
             return row;
@@ -274,19 +300,21 @@ public class OperationChargeBiller {
         row.setSourceNo(sourceNo);
         row.setItemCode(itemCode);
         row.setItemType(7);
-        row.setChargeStatus(AnesthesiaLabels.CHARGE_PENDING);
+        row.setChargeStatus(AnesthesiaChargeStatusEnum.PENDING.getCode());
         chargeItemMapper.insert(row);
         return row;
     }
+
+    // 工具
 
     private void markFail(OperationChargeSummaryVO summary, BizOperationChargeItem row, String reason, String itemCode) {
         summary.setFailedItems(summary.getFailedItems() + 1);
         summary.getMessages().add(itemCode + " 计费失败：" + reason);
         if (row != null) {
-            row.setChargeStatus(AnesthesiaLabels.CHARGE_FAILED);
+            row.setChargeStatus(AnesthesiaChargeStatusEnum.FAILED.getCode());
             // ★ 截到列宽：失败原因里带着原始 SQL 异常文本，超长会把这次 update 打成
             //   Data too long → "记账失败"升级成 500，反而看不到失败原因了
-            row.setFailReason(AnesthesiaLabels.clipReason(reason));
+            row.setFailReason(AnesthesiaCalcs.clipReason(reason));
             chargeItemMapper.updateById(row);
         }
         log.warn("手术麻醉计费失败：{}", reason);
@@ -309,27 +337,5 @@ public class OperationChargeBiller {
         summary.setFailedItems(summary.getFailedItems() + 1);
         summary.getMessages().add("AN008 计费失败：" + reason);
         log.warn("PACU {}：{}", pacu.getPacuNo(), reason);
-    }
-
-    // 工具
-
-    /** 分钟差（两端都要有值；顺序反了或为负 → null，不替业务圆回来） */
-    private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
-        if (from == null || to == null) {
-            return null;
-        }
-        long m = Duration.between(from, to).toMinutes();
-        return m < 0 ? null : m;
-    }
-
-    private static BigDecimal toDecimal(Object value) {
-        if (value == null) {
-            return BigDecimal.ZERO;
-        }
-        return new BigDecimal(String.valueOf(value));
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
     }
 }

@@ -121,6 +121,31 @@ public enum OpdLogStatusEnum {
         return null;
     }
 
+    /** 码值是否合法（写入侧校验用；null 不合法） */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
+    /**
+     * 码值→展示文案。null 或不在枚举内（脏数据）返回空串 ""，绝不返回 null、不回落合法文案
+     *（脏数据行由前端依据 {@code queueStatus}/logStatus 原值渲染「未知(n)」）。
+     */
+    public static String getText(Integer code) {
+        OpdLogStatusEnum status = fromCode(code);
+        return status != null ? status.label : "";
+    }
+
+    /**
+     * 码值→异常/审计文案。null 或不在枚举内返回「未知(n)」，保留原始码值以便排查脏数据。
+     */
+    public static String labelOrUnknown(Integer code) {
+        if (code == null) {
+            return "未知";
+        }
+        OpdLogStatusEnum status = fromCode(code);
+        return status != null ? status.label : "未知(" + code + ")";
+    }
+
     /**
      * 入队后的状态码，用于拼 SQL 的 {@code queue_status IN (...)}。
      *

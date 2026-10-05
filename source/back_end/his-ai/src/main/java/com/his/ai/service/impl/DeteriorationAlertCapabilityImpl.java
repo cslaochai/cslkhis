@@ -5,6 +5,7 @@ import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.DeteriorationLlmOutputDTO;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.DeteriorationAlertCapability;
+import com.his.ai.enums.DeteriorationAlertLevelEnum;
 import com.his.ai.support.DeteriorationScoreRules;
 import com.his.ai.vo.DeteriorationExplainVO;
 import com.his.ai.vo.DeteriorationScanVO;
@@ -17,11 +18,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * 危重预警实现（G-12）。
@@ -40,15 +37,27 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
 
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    /** 评分窗口：取最近 24h 的最新体征（更早的体征不代表当前状态） */
+    /**
+     * 评分窗口：取最近 24h 的最新体征（更早的体征不代表当前状态）
+     */
     private static final int LOOKBACK_HOURS = 24;
 
-    /** 建议上限（与提示词 ≤150 字纪律一致） */
+    /**
+     * 建议上限（与提示词 ≤150 字纪律一致）
+     */
     private static final int ADVICE_MAX = 200;
 
     private final AiExecutionService aiExecutionService;
 
     private final InpatientNursingService inpatientNursingService;
+
+    private static String truncate(String text, int maxLength) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        String value = text.trim();
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
 
     @Override
     public List<DeteriorationScanVO> wardScan(Long wardId) {
@@ -66,7 +75,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
             row.setTotalScore(score.getTotalScore());
             int level = DeteriorationScoreRules.alertLevel(score.getTotalScore());
             row.setAlertLevel(level);
-            row.setAlertText(DeteriorationScoreRules.alertText(level));
+            row.setAlertText(DeteriorationAlertLevelEnum.getText(level));
             result.add(row);
         }
         // 预警级降序、同级按分数降序 —— 值班护士从最差的看起
@@ -76,6 +85,8 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
         });
         return result;
     }
+
+    // ---------------------------------------------------------------- 模型层
 
     @Override
     public DeteriorationExplainVO explain(Long admissionId) {
@@ -102,7 +113,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
         vo.setTotalScore(score.getTotalScore());
         int level = DeteriorationScoreRules.alertLevel(score.getTotalScore());
         vo.setAlertLevel(level);
-        vo.setAlertText(DeteriorationScoreRules.alertText(level));
+        vo.setAlertText(DeteriorationAlertLevelEnum.getText(level));
         vo.setTriggeredFacts(triggeredFacts(vital));
         if (level == 0) {
             // 未达预警阈值不调模型：模型只服务预警情形（纪律 2 / 纪律 9 的反向裁剪）
@@ -120,7 +131,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
         return vo;
     }
 
-    // ---------------------------------------------------------------- 模型层
+    // ---------------------------------------------------------------- 事实文本
 
     private Optional<DeteriorationLlmOutputDTO> callModel(NursingVitalFactVO vital,
                                                           DeteriorationScoreRules.DeteriorationScore score,
@@ -131,7 +142,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
         variables.put("vitalText", vitalText(vital));
         variables.put("totalScore", String.valueOf(score.getTotalScore()));
         variables.put("alertLevel", String.valueOf(level));
-        variables.put("alertText", DeteriorationScoreRules.alertText(level));
+        variables.put("alertText", DeteriorationAlertLevelEnum.getText(level));
         variables.put("itemsText", itemsText(vital));
 
         AiCallDTO call = AiCallDTO.builder()
@@ -146,8 +157,6 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
                 .build();
         return aiExecutionService.call(call, DeteriorationLlmOutputDTO.class);
     }
-
-    // ---------------------------------------------------------------- 事实文本
 
     private List<String> triggeredFacts(NursingVitalFactVO vital) {
         List<String> facts = new ArrayList<>();
@@ -201,13 +210,5 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
             sb.append("；");
         }
         sb.append(label).append(" ").append(value);
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 }

@@ -13,11 +13,7 @@ import java.time.LocalDateTime;
 public interface InspectionApplySignProvider extends SignableContentProvider {
 
     static String statusText(Integer status) {
-        if (status == null) {
-            return "—";
-        }
-        ApplyStatusEnum e = ApplyStatusEnum.fromCode(status);
-        return e.getCode() == status ? e.getLabel() : "未知(" + status + ")";
+        return status == null ? "—" : ApplyStatusEnum.labelOrUnknown(status);
     }
 
     /**

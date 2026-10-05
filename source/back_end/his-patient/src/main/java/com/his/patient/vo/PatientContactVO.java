@@ -45,9 +45,9 @@ public class PatientContactVO {
      * 结构化表患者联系方式.relationship 是 tinyint 码值，
      * 主档患者基本信息.contact_relation 是 varchar 标签。若让前端各查一次字典，
      * 就会出现两处渲染口径；历史上主档那一列正因为没人翻译，把码值 "2" 当成关系名显示了出来。
-     * 命中不了字典的码值渲染成未知(n)，**不回落**成「其他」这类看似合法的值。
+     * 命中不了字典的码值返回空串，**不回落**成「其他」这类看似合法的值。
      */
-    @Schema(description = "与患者关系文案（字典翻译，未知码值渲染 未知(n)）")
+    @Schema(description = "与患者关系文案（字典翻译，未知码值返回空串）")
     private String relationshipText;
 
     /**

@@ -3,8 +3,8 @@ package com.his.patient.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
 import com.his.patient.dto.*;
+import com.his.patient.enums.ConsultCategoryEnum;
 import com.his.patient.service.InpatientConsultationService;
-import com.his.patient.support.ConsultationLabels;
 import com.his.patient.vo.ConsultationVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,7 +47,7 @@ public class InpatientConsultationController {
     @PostMapping("/save")
     public Result<String> save(@RequestBody @Valid ConsultationUpsertDTO dto) {
         // 本接口只发起普通科间会诊；营养会诊走 /patient/inpatient/nutrition/consultApply
-        dto.setConsultCategory(ConsultationLabels.CATEGORY_NORMAL);
+        dto.setConsultCategory(ConsultCategoryEnum.NORMAL.getCode());
         return Result.success("会诊申请已提交", consultationService.save(dto));
     }
 

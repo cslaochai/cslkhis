@@ -1,7 +1,5 @@
 package com.his.operation.vo;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.his.operation.entity.BizAnesthesiaMed;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

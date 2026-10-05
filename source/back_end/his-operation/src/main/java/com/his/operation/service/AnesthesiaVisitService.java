@@ -18,18 +18,28 @@ public interface AnesthesiaVisitService {
 
     AnesthesiaVisitVO getDetailById(Long visitId);
 
-    /** 某台手术的访视单（没有则返回 null —— 由调用方决定是提示还是报错） */
+    /**
+     * 某台手术的访视单（没有则返回 null —— 由调用方决定是提示还是报错）
+     */
     AnesthesiaVisitVO getByApply(Long applyId);
 
-    /** 保存（新增 / 修改草稿），返回访视单号 */
+    /**
+     * 保存（新增 / 修改草稿），返回访视单号
+     */
     String save(AnesthesiaVisitUpsertDTO dto);
 
-    /** 完成访视（草稿 → 已完成，结论出账） */
+    /**
+     * 完成访视（草稿 → 已完成，结论出账）
+     */
     void finish(AnesthesiaVisitFinishDTO dto);
 
-    /** 该申请是否已存在"可作为麻醉依据"的访视（conclusion=1 且已完成） */
+    /**
+     * 该申请是否已存在"可作为麻醉依据"的访视（conclusion=1 且已完成）
+     */
     boolean hasApprovedVisit(Long applyId);
 
-    /** 已完成但没有合格访视的手术台数（工作台角标：急诊超前麻醉的欠账） */
+    /**
+     * 已完成但没有合格访视的手术台数（工作台角标：急诊超前麻醉的欠账）
+     */
     long countFinishedWithoutVisit();
 }

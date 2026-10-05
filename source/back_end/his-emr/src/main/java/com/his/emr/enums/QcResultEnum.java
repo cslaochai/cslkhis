@@ -31,7 +31,7 @@ public enum QcResultEnum {
     /**
      * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
      */
-    public static String labelOf(Integer code) {
+    public static String getText(Integer code) {
         QcResultEnum item = code == null ? null : fromCode(code);
         return item == null ? "" : item.label;
     }

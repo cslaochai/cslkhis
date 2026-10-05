@@ -1,6 +1,7 @@
 package com.his.charge.support;
 
 import com.his.charge.entity.BizInsuranceSettlement;
+import com.his.charge.enums.RuleCatalogEnum;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -49,11 +50,11 @@ public class AdmissionIndicationRule implements ComplianceRule {
         // 本系统未记录入出院时间，无法计算住院天数 —— 这是数据缺口，不是「通过」
         boolean hasOperation = !ctx.getOperations().isEmpty();
         if (hasOperation) {
-            findings.add(RuleFinding.na(RuleCatalog.C01,
+            findings.add(RuleFinding.na(RuleCatalogEnum.C01,
                     "清单含手术操作，不属低标入院可疑范围（且本系统无住院管理模块，无法计算住院天数）"));
             return;
         }
-        findings.add(RuleFinding.na(RuleCatalog.C01,
+        findings.add(RuleFinding.na(RuleCatalogEnum.C01,
                         "本系统未记录入院/出院时间（无住院管理模块），无法计算住院天数，"
                                 + "该规则暂不可评估；需接入住院管理系统后方可启用")
                 .withSuggestion("接入住院管理（入院/出院时间、床日）后，本规则可自动评估低标入院与低编入组"));
@@ -68,7 +69,7 @@ public class AdmissionIndicationRule implements ComplianceRule {
                 && ev.getPrescriptions().isEmpty()
                 && !ev.hasAnyLabOrInspection();
         if (noData) {
-            findings.add(RuleFinding.na(RuleCatalog.C02,
+            findings.add(RuleFinding.na(RuleCatalogEnum.C02,
                     "无收费、处方、检验检查数据，无法评估诊疗行为强度"));
             return;
         }
@@ -80,12 +81,12 @@ public class AdmissionIndicationRule implements ComplianceRule {
                     .filter(StringUtils::hasText)
                     .limit(5)
                     .collect(Collectors.toList());
-            findings.add(RuleFinding.hit(RuleCatalog.C02,
+            findings.add(RuleFinding.hit(RuleCatalogEnum.C02,
                     "未见手术、检验、检查及治疗性收费，仅有药品/挂号费类项目："
                             + (names.isEmpty() ? "（无项目名）" : String.join("、", names))));
             return;
         }
-        findings.add(RuleFinding.pass(RuleCatalog.C02,
+        findings.add(RuleFinding.pass(RuleCatalogEnum.C02,
                 "存在住院级别诊疗行为（治疗性收费=" + hasTreatment + "，检验检查=" + hasLabOrInspection + "）"));
     }
 
@@ -96,16 +97,16 @@ public class AdmissionIndicationRule implements ComplianceRule {
         BizInsuranceSettlement settlement = ctx.getSettlement();
         Long patientId = settlement == null ? null : settlement.getPatientId();
         if (patientId == null) {
-            findings.add(RuleFinding.na(RuleCatalog.C03, "清单未填患者ID，无法比对历史住院"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.C03, "清单未填患者ID，无法比对历史住院"));
             return;
         }
         String diagCode = currentMainDiagCode(ctx);
         if (!StringUtils.hasText(diagCode)) {
-            findings.add(RuleFinding.na(RuleCatalog.C03, "主诊断编码为空，无法比对是否分解住院"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.C03, "主诊断编码为空，无法比对是否分解住院"));
             return;
         }
         if (CollectionUtils.isEmpty(ctx.getRecentSettlements())) {
-            findings.add(RuleFinding.pass(RuleCatalog.C03,
+            findings.add(RuleFinding.pass(RuleCatalogEnum.C03,
                     "窗口期内无同患者其他结算清单（窗口 " + windowDays(ctx) + " 天）"));
             return;
         }
@@ -119,11 +120,11 @@ public class AdmissionIndicationRule implements ComplianceRule {
             }
         }
         if (dups.isEmpty()) {
-            findings.add(RuleFinding.pass(RuleCatalog.C03,
+            findings.add(RuleFinding.pass(RuleCatalogEnum.C03,
                     "窗口期内 " + ctx.getRecentSettlements().size() + " 条同患者结算清单，主诊断均不同"));
             return;
         }
-        findings.add(RuleFinding.hit(RuleCatalog.C03,
+        findings.add(RuleFinding.hit(RuleCatalogEnum.C03,
                 "窗口 " + windowDays(ctx) + " 天内该患者以相同主诊断 " + diagCode + " 再次结算："
                         + String.join("、", dups)));
     }

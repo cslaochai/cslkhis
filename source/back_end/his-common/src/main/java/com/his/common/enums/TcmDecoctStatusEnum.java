@@ -37,15 +37,31 @@ public enum TcmDecoctStatusEnum {
     private final Integer code;
     private final String label;
 
-    public static String labelOf(Integer code) {
+    public static TcmDecoctStatusEnum fromCode(Integer code) {
         if (code == null) {
             return null;
         }
         for (TcmDecoctStatusEnum item : values()) {
             if (item.code.equals(code)) {
-                return item.label;
+                return item;
             }
         }
-        return String.valueOf(code);
+        return null;
+    }
+
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
+    /** 展示用码值 → 文案。null / 越界码值返回空串（绝不返回 null，也不回落成某个合法状态）。 */
+    public static String getText(Integer code) {
+        TcmDecoctStatusEnum item = fromCode(code);
+        return item == null ? "" : item.label;
+    }
+
+    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
+    public static String labelOrUnknown(Integer code) {
+        TcmDecoctStatusEnum item = code == null ? null : fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

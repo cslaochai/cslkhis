@@ -182,8 +182,8 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
         if (staffType != null && shift.getApplyStaffType() != null
                 && !shift.getApplyStaffType().equals(staffType)) {
             throw new BusinessException("班次「" + shift.getShiftName() + "」是"
-                    + StaffTypeEnum.labelOf(shift.getApplyStaffType()) + "适用的班次，不能排给"
-                    + StaffTypeEnum.labelOf(staffType) + "岗位");
+                    + StaffTypeEnum.getText(shift.getApplyStaffType()) + "适用的班次，不能排给"
+                    + StaffTypeEnum.getText(staffType) + "岗位");
         }
         return shift;
     }

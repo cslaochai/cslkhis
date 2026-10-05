@@ -18,20 +18,30 @@ import java.util.List;
 @Data
 public class OperationCountUpsertDTO implements Serializable {
 
-    /** 手术申请单ID */
+    /**
+     * 手术申请单ID
+     */
     @NotNull(message = "手术申请单ID不能为空")
     private Long applyId;
 
-    /** 器械（洗手）护士ID（员工ID） */
+    /**
+     * 器械（洗手）护士ID（员工ID）
+     */
     private Long instrumentNurseId;
 
-    /** 巡回护士ID（员工ID） */
+    /**
+     * 巡回护士ID（员工ID）
+     */
     private Long circulateNurseId;
 
-    /** 明细项集合 */
+    /**
+     * 明细项集合
+     */
     @Valid
     private List<CountItemInputUpsertDTO> items;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

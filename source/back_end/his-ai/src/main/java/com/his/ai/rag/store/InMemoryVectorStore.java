@@ -21,16 +21,26 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class InMemoryVectorStore implements VectorStore {
 
-    private record Entry(long chunkId, long docId, String content, String docTitle,
-                         String category, float[] vector) {
-    }
-
     private final Map<Long, Entry> store = new ConcurrentHashMap<>();
     private final Map<Long, Set<Long>> docIndex = new ConcurrentHashMap<>();
 
+    /**
+     * 余弦相似度（两向量均已 L2 归一，点积即余弦）。
+     */
+    private static double cosine(float[] a, float[] b) {
+        if (a.length != b.length) {
+            return 0;
+        }
+        double dot = 0.0;
+        for (int i = 0; i < a.length; i++) {
+            dot += a[i] * b[i];
+        }
+        return dot;
+    }
+
     @Override
     public void upsert(long chunkId, long docId, String content, String docTitle,
-                      String category, float[] vector) {
+                       String category, float[] vector) {
         store.put(chunkId, new Entry(chunkId, docId, content, docTitle, category, vector));
         docIndex.computeIfAbsent(docId, k -> ConcurrentHashMap.newKeySet()).add(chunkId);
     }
@@ -66,17 +76,7 @@ public class InMemoryVectorStore implements VectorStore {
         return scored.size() > topK ? scored.subList(0, topK) : scored;
     }
 
-    /**
-     * 余弦相似度（两向量均已 L2 归一，点积即余弦）。
-     */
-    private static double cosine(float[] a, float[] b) {
-        if (a.length != b.length) {
-            return 0;
-        }
-        double dot = 0.0;
-        for (int i = 0; i < a.length; i++) {
-            dot += a[i] * b[i];
-        }
-        return dot;
+    private record Entry(long chunkId, long docId, String content, String docTitle,
+                         String category, float[] vector) {
     }
 }

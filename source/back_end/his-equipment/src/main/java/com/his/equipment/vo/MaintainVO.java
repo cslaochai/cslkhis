@@ -18,44 +18,70 @@ public class MaintainVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 设备ID */
+    /**
+     * 设备ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long equipmentId;
 
-    /** 设备编码（快照） */
+    /**
+     * 设备编码（快照）
+     */
     private String equipmentCode;
-    /** 设备名称（快照） */
+    /**
+     * 设备名称（快照）
+     */
     private String equipmentName;
 
-    /** 维保类型（1-保养 2-维修 3-巡检） */
+    /**
+     * 维保类型（1-保养 2-维修 3-巡检）
+     */
     private Integer maintainType;
     private String maintainTypeText;
 
-    /** 维保日期 */
+    /**
+     * 维保日期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate maintainDate;
 
-    /** 下次维保日期 */
+    /**
+     * 下次维保日期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate nextMaintainDate;
 
-    /** 费用（元） */
+    /**
+     * 费用（元）
+     */
     private BigDecimal cost;
-    /** 故障描述 */
+    /**
+     * 故障描述
+     */
     private String faultDesc;
-    /** 处理结果 */
+    /**
+     * 处理结果
+     */
     private String handleResult;
 
-    /** 维保结果（1-正常 2-异常） */
+    /**
+     * 维保结果（1-正常 2-异常）
+     */
     private Integer maintainResult;
     private String maintainResultText;
 
-    /** 维保人 */
+    /**
+     * 维保人
+     */
     private String handlerName;
-    /** 创建人 */
+    /**
+     * 创建人
+     */
     private String createBy;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 }

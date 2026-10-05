@@ -49,9 +49,20 @@ public enum StaffScheduleSourceEnum {
         return null;
     }
 
-    public static String labelOf(Integer code) {
+    /** 码值是否合法（写入侧校验用；null 不合法） */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
+    public static String getText(Integer code) {
         StaffScheduleSourceEnum source = fromCode(code);
         return source == null ? "未知(" + code + ")" : source.getLabel();
+    }
+
+    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
+    public static String labelOrUnknown(Integer code) {
+        StaffScheduleSourceEnum item = code == null ? null : fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     public static String whitelistText() {

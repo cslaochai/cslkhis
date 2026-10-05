@@ -4,38 +4,32 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
-import com.his.operation.dto.AnesthesiaActionDTO;
-import com.his.operation.dto.AnesthesiaMedUpsertDTO;
-import com.his.operation.dto.AnesthesiaRecordUpsertDTO;
-import com.his.operation.dto.AnesthesiaRecordQueryPageDTO;
-import com.his.operation.dto.AnesthesiaRecordUpdateUpsertDTO;
-import com.his.operation.dto.AnesthesiaVitalUpsertDTO;
-import com.his.operation.entity.BizAnesthesiaMed;
-import com.his.operation.entity.BizAnesthesiaRecord;
-import com.his.operation.entity.BizAnesthesiaVital;
-import com.his.operation.entity.BizOperationApply;
-import com.his.operation.entity.BizOperationChargeItem;
-import com.his.patient.entity.BizPatient;
-import com.his.operation.mapper.BizAnesthesiaMedMapper;
-import com.his.operation.mapper.BizAnesthesiaRecordMapper;
-import com.his.operation.mapper.BizAnesthesiaVitalMapper;
-import com.his.operation.mapper.BizOperationApplyMapper;
-import com.his.operation.mapper.BizOperationChargeItemMapper;
+import com.his.operation.dto.*;
+import com.his.operation.entity.*;
+import com.his.operation.enums.AirwayDeviceEnum;
+import com.his.operation.enums.AnesthesiaChargeStatusEnum;
+import com.his.operation.enums.AnesthesiaEffectEnum;
+import com.his.operation.enums.AnesthesiaRecordStatusEnum;
+import com.his.operation.enums.AsaGradeEnum;
+import com.his.operation.enums.ChargeSourceEnum;
+import com.his.operation.enums.MedPhaseEnum;
+import com.his.operation.enums.MedRouteEnum;
+import com.his.operation.enums.OperationAnesthesiaMethodEnum;
+import com.his.operation.enums.OperationApplyStatusEnum;
+import com.his.operation.enums.OperationEmergencyEnum;
+import com.his.operation.enums.PostopDispositionEnum;
+import com.his.operation.enums.VentilationModeEnum;
+import com.his.operation.enums.VisitConclusionEnum;
+import com.his.operation.mapper.*;
 import com.his.operation.service.AnesthesiaRecordService;
 import com.his.operation.service.AnesthesiaVisitService;
-import com.his.operation.support.AnesthesiaLabels;
-import com.his.operation.enums.OperationApplyStatusEnum;
-import com.his.operation.support.OperationApplyLabels;
+import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.support.OperationChargeBiller;
-import com.his.operation.vo.AnesthesiaMedVO;
-import com.his.operation.vo.AnesthesiaRecordVO;
-import com.his.operation.vo.AnesthesiaVitalVO;
-import com.his.operation.vo.AnesthesiaVisitVO;
-import com.his.operation.vo.OperationChargeItemVO;
-import com.his.operation.vo.OperationChargeSummaryVO;
+import com.his.operation.vo.*;
+import com.his.patient.entity.BizPatient;
 import com.his.patient.service.PatientService;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -88,6 +82,37 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
 
     // 查询
 
+    private static <T> T pick(T existing, T incoming) {
+        return incoming != null ? incoming : existing;
+    }
+
+    private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
+        if (from == null || to == null) {
+            return null;
+        }
+        long m = Duration.between(from, to).toMinutes();
+        return m < 0 ? null : m;
+    }
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    // 开立 / 更新
+
+    /**
+     * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
+     */
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static BigDecimal nz(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    // 生命体征 / 用药（只增不改，且仅"记录中"可增）
+
     @Override
     public IPage<AnesthesiaRecordVO> listPage(AnesthesiaRecordQueryPageDTO query) {
         if (query == null) {
@@ -126,8 +151,6 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         return vo;
     }
 
-    // 开立 / 更新
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String create(AnesthesiaRecordUpsertDTO dto) {
@@ -161,12 +184,12 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
                         + "请先把手术单标记为急诊手术，系统会在本单上留「待补访视」的标记）");
             }
             visitPending = true;
-        } else if (!Integer.valueOf(AnesthesiaLabels.VISIT_CONCLUSION_OK).equals(existingVisit.getConclusion())
+        } else if (!Integer.valueOf(VisitConclusionEnum.OK.getCode()).equals(existingVisit.getConclusion())
                 || !Integer.valueOf(1).equals(existingVisit.getVisitStatus())) {
             // 已经明确下了"暂缓/需会诊"结论的，连急诊也不允许越过 ——
             // 让急诊绕过一条明写着的禁忌，比让急诊绕过"还没写"，危险得多。
             throw new BusinessException("该手术的麻醉术前访视结论为「"
-                    + AnesthesiaLabels.visitConclusionText(existingVisit.getConclusion())
+                    + VisitConclusionEnum.labelOrUnknown(existingVisit.getConclusion())
                     + "」，不能开立麻醉记录");
         } else {
             visitId = existingVisit.getId();
@@ -191,8 +214,8 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         entity.setAnesthetistName(employeeNameOf(entity.getAnesthetistId()));
         entity.setAssistantAnesthetistName(dto.getAssistantAnesthetistName());
         entity.setEnterRoomTime(toSeconds(dto.getEnterRoomTime() == null ? now() : dto.getEnterRoomTime()));
-        entity.setRecordStatus(AnesthesiaLabels.RECORD_DRAFT);
-        entity.setChargeStatus(AnesthesiaLabels.CHARGE_PENDING);
+        entity.setRecordStatus(AnesthesiaRecordStatusEnum.DRAFT.getCode());
+        entity.setChargeStatus(AnesthesiaChargeStatusEnum.PENDING.getCode());
         // 「急诊超前麻醉」的状态靠 visit_id 为空来表达，不额外加一列：
         // 加列就会出现"visit_id 有值但 pending=1"这种自相矛盾的行
         if (StringUtils.hasText(dto.getRemark())) {
@@ -202,16 +225,18 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
 
         log.info("开立麻醉记录 recordNo={} applyNo={} 麻醉方式={} 急诊={} 访视ID={} 待补访视={} 开立人={}",
                 entity.getRecordNo(), apply.getApplyNo(),
-                OperationApplyLabels.anesthesiaText(entity.getAnesthesiaType()),
+                OperationAnesthesiaMethodEnum.labelOrUnknown(entity.getAnesthesiaType()),
                 emergency, visitId, visitPending, currentName());
         return entity.getRecordNo();
     }
+
+    // 提交 / 审核 / 计费
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void update(AnesthesiaRecordUpdateUpsertDTO dto) {
         BizAnesthesiaRecord entity = mustEditable(dto == null ? null : dto.getRecordId());
-        if (!AnesthesiaLabels.isValidDisposition(dto.getPostopDisposition()) && dto.getPostopDisposition() != null) {
+        if (!PostopDispositionEnum.isValid(dto.getPostopDisposition()) && dto.getPostopDisposition() != null) {
             throw new BusinessException("术后去向取值不合法（应为 1-回病房 2-入PACU 3-入ICU）");
         }
         // B-条件必填：标记发生麻醉不良事件时才要求经过与处理，跨字段条件，DTO 注解无法表达，保留
@@ -221,8 +246,6 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         copyNotNullIgnoring(dto, entity);
         recordMapper.updateById(entity);
     }
-
-    // 生命体征 / 用药（只增不改，且仅"记录中"可增）
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -272,7 +295,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     @Transactional(rollbackFor = Exception.class)
     public void addMed(AnesthesiaMedUpsertDTO dto) {
         BizAnesthesiaRecord record = mustEditable(dto == null ? null : dto.getRecordId());
-        if (dto.getMedPhase() != null && !AnesthesiaLabels.isValidMedPhase(dto.getMedPhase())) {
+        if (dto.getMedPhase() != null && !MedPhaseEnum.isValid(dto.getMedPhase())) {
             throw new BusinessException("用药阶段取值不合法（应为 1-诱导 2-维持 3-苏醒）");
         }
         BizAnesthesiaMed med = new BizAnesthesiaMed();
@@ -303,8 +326,8 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         for (BizAnesthesiaMed m : list) {
             AnesthesiaMedVO vo = new AnesthesiaMedVO();
             BeanUtils.copyProperties(m, vo);
-            vo.setMedPhaseText(AnesthesiaLabels.medPhaseText(m.getMedPhase()));
-            vo.setRouteText(AnesthesiaLabels.medRouteText(m.getRoute()));
+            vo.setMedPhaseText(MedPhaseEnum.getText(m.getMedPhase()));
+            vo.setRouteText(MedRouteEnum.getText(m.getRoute()));
             vo.setDoseText(m.getDose() == null ? null
                     : m.getDose().stripTrailingZeros().toPlainString()
                     + (StringUtils.hasText(m.getUnit()) ? " " + m.getUnit() : ""));
@@ -313,15 +336,15 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         return vos;
     }
 
-    // 提交 / 审核 / 计费
+    // 内部
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OperationChargeSummaryVO submit(AnesthesiaActionDTO dto) {
         BizAnesthesiaRecord entity = mustGet(dto == null ? null : dto.getId());
-        if (!Integer.valueOf(AnesthesiaLabels.RECORD_DRAFT).equals(entity.getRecordStatus())) {
+        if (!Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
-                    + AnesthesiaLabels.recordStatusText(entity.getRecordStatus()) + "」，只有「记录中」可以提交");
+                    + AnesthesiaRecordStatusEnum.labelOrUnknown(entity.getRecordStatus()) + "」，只有「记录中」可以提交");
         }
         if (entity.getAnesthesiaType() == null) {
             throw new BusinessException("未登记麻醉方式，不能提交（不知道做的是什么麻醉）");
@@ -340,7 +363,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
             throw new BusinessException("已标记发生麻醉不良事件，请先补写经过与处理再提交");
         }
 
-        entity.setRecordStatus(AnesthesiaLabels.RECORD_SUBMITTED);
+        entity.setRecordStatus(AnesthesiaRecordStatusEnum.SUBMITTED.getCode());
         entity.setSubmitDoctorId(currentEmpId());
         entity.setSubmitDoctorName(currentName());
         entity.setSubmitTime(now());
@@ -369,11 +392,11 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     @Transactional(rollbackFor = Exception.class)
     public void audit(AnesthesiaActionDTO dto) {
         BizAnesthesiaRecord entity = mustGet(dto == null ? null : dto.getId());
-        if (!Integer.valueOf(AnesthesiaLabels.RECORD_SUBMITTED).equals(entity.getRecordStatus())) {
+        if (!Integer.valueOf(AnesthesiaRecordStatusEnum.SUBMITTED.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
-                    + AnesthesiaLabels.recordStatusText(entity.getRecordStatus()) + "」，只有「已提交」可以审核");
+                    + AnesthesiaRecordStatusEnum.labelOrUnknown(entity.getRecordStatus()) + "」，只有「已提交」可以审核");
         }
-        entity.setRecordStatus(AnesthesiaLabels.RECORD_AUDITED);
+        entity.setRecordStatus(AnesthesiaRecordStatusEnum.AUDITED.getCode());
         entity.setAuditDoctorId(currentEmpId());
         entity.setAuditDoctorName(currentName());
         entity.setAuditTime(now());
@@ -388,7 +411,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     @Transactional(rollbackFor = Exception.class)
     public OperationChargeSummaryVO charge(AnesthesiaActionDTO dto) {
         BizAnesthesiaRecord entity = mustGet(dto == null ? null : dto.getId());
-        if (Integer.valueOf(AnesthesiaLabels.RECORD_DRAFT).equals(entity.getRecordStatus())) {
+        if (Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo()
                     + " 还在「记录中」，先在提交时统一计费（或改完内容再提交）");
         }
@@ -409,7 +432,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     @Override
     public long countUncharged() {
         return recordMapper.selectCount(new LambdaQueryWrapper<BizAnesthesiaRecord>()
-                .ne(BizAnesthesiaRecord::getChargeStatus, AnesthesiaLabels.CHARGE_DONE));
+                .ne(BizAnesthesiaRecord::getChargeStatus, AnesthesiaChargeStatusEnum.DONE.getCode()));
     }
 
     @Override
@@ -422,27 +445,25 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         for (BizOperationChargeItem row : chargeItemMapper.selectByApply(applyId)) {
             OperationChargeItemVO vo = new OperationChargeItemVO();
             BeanUtils.copyProperties(row, vo);
-            vo.setChargeStatusText(AnesthesiaLabels.chargeStatusText(row.getChargeStatus()));
-            vo.setSourceTypeText(AnesthesiaLabels.chargeSourceText(row.getSourceType()));
+            vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(row.getChargeStatus()));
+            vo.setSourceTypeText(ChargeSourceEnum.getText(row.getSourceType()));
             vos.add(vo);
         }
         return vos;
     }
 
-    // 内部
-
     private void applyChargeResult(BizAnesthesiaRecord entity, OperationChargeSummaryVO summary) {
         if (summary == null || summary.getTotalItems() == 0) {
-            entity.setChargeStatus(AnesthesiaLabels.CHARGE_PENDING);
+            entity.setChargeStatus(AnesthesiaChargeStatusEnum.PENDING.getCode());
             entity.setChargeFailReason("本次没有可计费项目");
             return;
         }
         entity.setChargedAmount(nz(entity.getChargedAmount()).add(summary.getAmount()));
         if (summary.hasFailure()) {
-            entity.setChargeStatus(AnesthesiaLabels.CHARGE_FAILED);
-            entity.setChargeFailReason(AnesthesiaLabels.clipReason(String.join("；", summary.getMessages())));
+            entity.setChargeStatus(AnesthesiaChargeStatusEnum.FAILED.getCode());
+            entity.setChargeFailReason(AnesthesiaCalcs.clipReason(String.join("；", summary.getMessages())));
         } else {
-            entity.setChargeStatus(AnesthesiaLabels.CHARGE_DONE);
+            entity.setChargeStatus(AnesthesiaChargeStatusEnum.DONE.getCode());
             entity.setFeeNo(summary.getFeeNo());
             entity.setChargeFailReason(null);
         }
@@ -468,16 +489,20 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         return entity;
     }
 
-    /** 取"仍可编辑"的记录：已提交/已审核一律拒绝（不允许术后改记载） */
+    /**
+     * 取"仍可编辑"的记录：已提交/已审核一律拒绝（不允许术后改记载）
+     */
     private BizAnesthesiaRecord mustEditable(Long recordId) {
         BizAnesthesiaRecord entity = mustGet(recordId);
-        if (!Integer.valueOf(AnesthesiaLabels.RECORD_DRAFT).equals(entity.getRecordStatus())) {
+        if (!Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
-                    + AnesthesiaLabels.recordStatusText(entity.getRecordStatus())
+                    + AnesthesiaRecordStatusEnum.labelOrUnknown(entity.getRecordStatus())
                     + "」，已固化的麻醉记录不能再改内容（术后补一条记载属于伪造）");
         }
         return entity;
     }
+
+    // 展示态
 
     /**
      * 把 DTO 里非空的值拷进实体；ID / 状态 / 时间留痕列一概不拷。
@@ -529,11 +554,9 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         }
     }
 
-    private static <T> T pick(T existing, T incoming) {
-        return incoming != null ? incoming : existing;
-    }
-
-    /** 生命体征常识边界（成人）—— 只做标记，不下结论 */
+    /**
+     * 生命体征常识边界（成人）—— 只做标记，不下结论
+     */
     private String abnormalText(BizAnesthesiaVital v) {
         StringBuilder sb = new StringBuilder();
         if (v.getSystolic() != null && (v.getSystolic() < 90 || v.getSystolic() >= 180)) {
@@ -565,34 +588,32 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         return prefix + String.format("%04d", seq);
     }
 
-    // 展示态
-
     private void decorate(AnesthesiaRecordVO vo) {
-        vo.setRecordStatusText(AnesthesiaLabels.recordStatusText(vo.getRecordStatus()));
-        vo.setAnesthesiaTypeText(OperationApplyLabels.anesthesiaText(vo.getAnesthesiaType()));
-        vo.setApplyAnesthesiaTypeText(OperationApplyLabels.anesthesiaText(vo.getApplyAnesthesiaType()));
-        vo.setAsaText(AnesthesiaLabels.asaText(vo.getAsaGrade()));
-        vo.setAirwayDeviceText(AnesthesiaLabels.airwayDeviceText(vo.getAirwayDevice()));
-        vo.setVentilationText(AnesthesiaLabels.ventilationText(vo.getVentilationMode()));
-        vo.setEffectText(AnesthesiaLabels.effectText(vo.getAnesthesiaEffect()));
-        vo.setDispositionText(AnesthesiaLabels.dispositionText(vo.getPostopDisposition()));
-        vo.setChargeStatusText(AnesthesiaLabels.chargeStatusText(vo.getChargeStatus()));
-        vo.setVisitConclusionText(AnesthesiaLabels.visitConclusionText(vo.getVisitConclusion()));
-        vo.setEmergencyText(OperationApplyLabels.emergencyText(vo.getIsEmergency()));
-        vo.setOperationStatusText(OperationApplyLabels.statusText(vo.getOperationStatus()));
+        vo.setRecordStatusText(AnesthesiaRecordStatusEnum.getText(vo.getRecordStatus()));
+        vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
+        vo.setApplyAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getApplyAnesthesiaType()));
+        vo.setAsaText(AsaGradeEnum.getText(vo.getAsaGrade()));
+        vo.setAirwayDeviceText(AirwayDeviceEnum.getText(vo.getAirwayDevice()));
+        vo.setVentilationText(VentilationModeEnum.getText(vo.getVentilationMode()));
+        vo.setEffectText(AnesthesiaEffectEnum.getText(vo.getAnesthesiaEffect()));
+        vo.setDispositionText(PostopDispositionEnum.getText(vo.getPostopDisposition()));
+        vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(vo.getChargeStatus()));
+        vo.setVisitConclusionText(VisitConclusionEnum.getText(vo.getVisitConclusion()));
+        vo.setEmergencyText(OperationEmergencyEnum.getText(vo.getIsEmergency()));
+        vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
 
         Long anesthesiaMinutes = minutesBetween(vo.getAnesthesiaStartTime(), vo.getAnesthesiaEndTime());
         vo.setAnesthesiaMinutes(anesthesiaMinutes);
-        vo.setAnesthesiaDurationText(AnesthesiaLabels.durationText(anesthesiaMinutes));
+        vo.setAnesthesiaDurationText(AnesthesiaCalcs.durationText(anesthesiaMinutes));
         Long operationMinutes = minutesBetween(vo.getOperationStartTime(), vo.getOperationEndTime());
         vo.setOperationMinutes(operationMinutes);
-        vo.setOperationDurationText(AnesthesiaLabels.durationText(operationMinutes));
+        vo.setOperationDurationText(AnesthesiaCalcs.durationText(operationMinutes));
         Long billBase = anesthesiaMinutes != null ? anesthesiaMinutes : operationMinutes;
-        vo.setBillHours(AnesthesiaLabels.billHours(billBase));
+        vo.setBillHours(AnesthesiaCalcs.billHours(billBase));
 
-        boolean draft = Integer.valueOf(AnesthesiaLabels.RECORD_DRAFT).equals(vo.getRecordStatus());
-        boolean submitted = Integer.valueOf(AnesthesiaLabels.RECORD_SUBMITTED).equals(vo.getRecordStatus());
-        boolean audited = Integer.valueOf(AnesthesiaLabels.RECORD_AUDITED).equals(vo.getRecordStatus());
+        boolean draft = Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(vo.getRecordStatus());
+        boolean submitted = Integer.valueOf(AnesthesiaRecordStatusEnum.SUBMITTED.getCode()).equals(vo.getRecordStatus());
+        boolean audited = Integer.valueOf(AnesthesiaRecordStatusEnum.AUDITED.getCode()).equals(vo.getRecordStatus());
 
         vo.setCanEditVitals(draft);
         vo.setCanSubmit(draft);
@@ -615,11 +636,11 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (vo.getVisitId() == null) {
             return "急诊超前麻醉：尚未登记术前访视（必须补录）";
         }
-        if (Integer.valueOf(AnesthesiaLabels.CHARGE_FAILED).equals(vo.getChargeStatus())) {
+        if (Integer.valueOf(AnesthesiaChargeStatusEnum.FAILED.getCode()).equals(vo.getChargeStatus())) {
             return "计费异常：" + vo.getChargeFailReason();
         }
-        if (Integer.valueOf(AnesthesiaLabels.CHARGE_PENDING).equals(vo.getChargeStatus())
-                && !Integer.valueOf(AnesthesiaLabels.RECORD_DRAFT).equals(vo.getRecordStatus())) {
+        if (Integer.valueOf(AnesthesiaChargeStatusEnum.PENDING.getCode()).equals(vo.getChargeStatus())
+                && !Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(vo.getRecordStatus())) {
             return "已固化但尚未计费";
         }
         if (minutes == null) {
@@ -628,15 +649,9 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         return null;
     }
 
-    private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
-        if (from == null || to == null) {
-            return null;
-        }
-        long m = Duration.between(from, to).toMinutes();
-        return m < 0 ? null : m;
-    }
-
-    /** 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径 */
+    /**
+     * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
+     */
     private Long currentEmpId() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();
@@ -665,18 +680,5 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    /** 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入） */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
     }
 }

@@ -21,18 +21,26 @@ import java.util.regex.Pattern;
  */
 public final class DosageTextParser {
 
-    /** 质量记法（拉丁单位按长度优先排列，否则 'mg' 会被 'g' 抢走前半段） */
+    /**
+     * 质量记法（拉丁单位按长度优先排列，否则 'mg' 会被 'g' 抢走前半段）
+     */
     private static final Pattern MASS = Pattern.compile(
             "(\\d+(?:\\.\\d+)?)\\s*(mcg|μg|ug|mg|g|微克|毫克|克)(?![A-Za-z])", Pattern.CASE_INSENSITIVE);
 
-    /** 只出现拉丁单位以外还带体积/长度等干扰记法的规格视为不可比 */
+    /**
+     * 只出现拉丁单位以外还带体积/长度等干扰记法的规格视为不可比
+     */
     private static final List<String> SKIP_SPEC_MARKS = List.of("复方", "复合");
     private static final Pattern SKIP_SPEC_UNITS = Pattern.compile("(?i)\\biu\\b|iu/|[0-9]iu|单位");
 
-    /** 规格里「按件计」的线索，没有它就无法断定那个质量值是单件含量 */
+    /**
+     * 规格里「按件计」的线索，没有它就无法断定那个质量值是单件含量
+     */
     private static final Pattern PIECE_HINT = Pattern.compile("(片|粒|袋|支|瓶|板|枚|贴|帖|丸|胶囊)");
 
-    /** 单次剂量文本里可以当作「个数」的单位 */
+    /**
+     * 单次剂量文本里可以当作「个数」的单位
+     */
     private static final List<String> PIECE_UNITS = List.of(
             "片", "粒", "袋", "支", "瓶", "板", "枚", "贴", "帖", "丸", "胶囊", "包");
 
@@ -182,7 +190,9 @@ public final class DosageTextParser {
         return null;
     }
 
-    /** 取数值后面的首个单位词（只截字母/中文，其余视为分隔符） */
+    /**
+     * 取数值后面的首个单位词（只截字母/中文，其余视为分隔符）
+     */
     private static String leadingUnit(String rest) {
         Matcher m = Pattern.compile("^([A-Za-z\\u4e00-\\u9fa5μ]+)").matcher(rest);
         if (!m.find()) {

@@ -52,7 +52,7 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
 
     @Override
     public FollowupComposeVO execute(FollowupComposeDTO dto) {
-        String typeLabel = FollowupTypeEnum.labelOf(dto.getFollowupType());
+        String typeLabel = FollowupTypeEnum.getText(dto.getFollowupType());
         if (typeLabel == null) {
             throw new com.his.common.exception.BusinessException("随访类型不合法");
         }

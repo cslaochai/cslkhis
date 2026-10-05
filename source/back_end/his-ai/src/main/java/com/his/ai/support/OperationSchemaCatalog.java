@@ -14,14 +14,6 @@ import java.util.stream.Collectors;
  */
 public final class OperationSchemaCatalog {
 
-    /**
-     * @param tableName 表名（白名单判定的键）
-     * @param usage     用途说明（人读）
-     * @param columns   可用列与码值口径（模型读，列名必须与库一致）
-     */
-    public record TableDef(String tableName, String usage, String columns) {
-    }
-
     private static final List<TableDef> TABLES = List.of(
             new TableDef("sys_department", "科室字典",
                     "dept_id(科室ID), dept_code(科室编码), dept_name(科室名称), dept_type(科室类型), is_open(是否开诊), status(状态)"),
@@ -55,7 +47,6 @@ public final class OperationSchemaCatalog {
             new TableDef("biz_operation_apply", "手术申请",
                     "operation_status(0-待排期…3-已完成 4-已取消), operation_level(1~4级手术), "
                             + "anesthesia_type(1~5), is_emergency(是否急诊), apply_time(申请时间)"));
-
     private static final Set<String> TABLE_NAMES = TABLES.stream()
             .map(TableDef::tableName)
             .collect(Collectors.toUnmodifiableSet());
@@ -81,5 +72,13 @@ public final class OperationSchemaCatalog {
                     .append(table.columns()).append('\n');
         }
         return text.toString().trim();
+    }
+
+    /**
+     * @param tableName 表名（白名单判定的键）
+     * @param usage     用途说明（人读）
+     * @param columns   可用列与码值口径（模型读，列名必须与库一致）
+     */
+    public record TableDef(String tableName, String usage, String columns) {
     }
 }

@@ -1,9 +1,9 @@
 package com.his.ai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.ai.dto.PatientMedicationGuideDTO;
 import com.his.ai.entity.SysDrugGuide;
 import com.his.ai.mapper.SysDrugGuideMapper;
-import com.his.ai.dto.PatientMedicationGuideDTO;
 import com.his.ai.service.PatientMedicationGuideCapability;
 import com.his.ai.vo.PatientMedicationGuideVO;
 import com.his.ai.vo.PatientMedicationItemVO;
@@ -13,8 +13,8 @@ import com.his.emr.entity.BizPrescriptionDetail;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
 import com.his.patient.service.PatientGuardianService;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,16 +48,24 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGuideCapability {
 
-    /** 处方状态：已发药 */
+    /**
+     * 处方状态：已发药
+     */
     private static final int STATUS_DISPENSED = 4;
 
-    /** 处方类型：3-中药饮片处方 */
+    /**
+     * 处方类型：3-中药饮片处方
+     */
     private static final int TYPE_HERB = 3;
 
-    /** 煎服方式：1-代煎 2-自煎 */
+    /**
+     * 煎服方式：1-代煎 2-自煎
+     */
     private static final int DECOCT_BY_HOSPITAL = 1;
 
-    /** 医嘱没写单次剂量时的兜底：不猜，交给医生/药师 */
+    /**
+     * 医嘱没写单次剂量时的兜底：不猜，交给医生/药师
+     */
     private static final String DOSAGE_UNKNOWN = "按医生交代服用";
 
     /**
@@ -70,11 +78,15 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
             "以上是按医生这次处方整理的服用方法，不能代替医生和药师的交代。"
                     + "服药后如果出现皮疹、恶心呕吐、腹泻等不舒服，请先停药并及时联系医生或药师。";
 
-    /** 漏服处理：通用安全科普，与具体药品无关，所以放在公共位置而不是按药品判定 */
+    /**
+     * 漏服处理：通用安全科普，与具体药品无关，所以放在公共位置而不是按药品判定
+     */
     private static final String CAUTION_MISSED =
             "漏服时：想起来就补一次；如果已经快到下一次吃药的时间，就跳过这次，不要一次吃两份。";
 
-    /** 频次词典：处方上既写「一日三次」也写「tid」，这里只做同义改写，不做任何推断 */
+    /**
+     * 频次词典：处方上既写「一日三次」也写「tid」，这里只做同义改写，不做任何推断
+     */
     private static final Map<String, String> FREQUENCY_DICT = frequencyDict();
 
     private final BizPrescriptionMapper prescriptionMapper;
@@ -84,84 +96,6 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
     private final SysDrugGuideMapper drugGuideMapper;
 
     private final PatientGuardianService patientGuardianService;
-
-    @Override
-    public PatientMedicationGuideVO execute(PatientMedicationGuideDTO dto) {
-        CurrentUser user = UserUtils.getCurrentUser();
-        if (user == null || user.getPatientId() == null) {
-            throw new BusinessException("未获取到就诊人身份，请重新登录");
-        }
-
-        BizPrescription prescription = prescriptionMapper.selectById(dto.getPrescriptionId());
-        if (prescription == null) {
-            throw new BusinessException("处方不存在：" + dto.getPrescriptionId());
-        }
-        if (patientGuardianService.patientScopeViolated(prescription.getPatientId())) {
-            // 不区分「不存在」和「无权查看」，避免被用来探测处方是否存在
-            throw new BusinessException("处方不存在或无权查看：" + dto.getPrescriptionId());
-        }
-
-        List<BizPrescriptionDetail> details = detailMapper.selectList(
-                new LambdaQueryWrapper<BizPrescriptionDetail>()
-                        .eq(BizPrescriptionDetail::getPrescriptionId, prescription.getId())
-                        .orderByAsc(BizPrescriptionDetail::getId));
-        if (details == null || details.isEmpty()) {
-            throw new BusinessException("该处方没有药品明细，无法生成用药说明");
-        }
-
-        PatientMedicationGuideVO vo = new PatientMedicationGuideVO();
-        vo.setPrescriptionId(String.valueOf(prescription.getId()));
-        vo.setPrescriptionNo(prescription.getPrescriptionNo());
-        vo.setVisitDate(prescription.getVisitDate());
-        vo.setDeptName(prescription.getDeptName());
-        vo.setDoctorName(prescription.getDoctorName());
-        vo.setPrescriptionTypeText(prescriptionTypeText(prescription.getPrescriptionType()));
-        vo.setDispensed(Integer.valueOf(STATUS_DISPENSED).equals(prescription.getPrescriptionStatus()));
-
-        boolean herb = Integer.valueOf(TYPE_HERB).equals(prescription.getPrescriptionType());
-        List<PatientMedicationItemVO> items = new ArrayList<>();
-        for (BizPrescriptionDetail detail : details) {
-            items.add(toItem(detail, drugOf(detail), herb, prescription));
-        }
-        vo.setItems(items);
-        vo.setAdvice(ADVICE);
-        return vo;
-    }
-
-    // ---------------------------------------------------------------- 组装层
-
-    private PatientMedicationItemVO toItem(BizPrescriptionDetail detail, SysDrugGuide drug,
-                                           boolean herb, BizPrescription prescription) {
-        PatientMedicationItemVO item = new PatientMedicationItemVO();
-        item.setDrugName(detail.getDrugName());
-        item.setSpecification(detail.getSpecification());
-        item.setDosageForm(detail.getDosageForm());
-        item.setQuantityText(quantityText(detail, herb));
-        item.setDosageText(dosageText(detail, herb));
-        item.setFrequencyText(frequencyText(detail.getFrequency()));
-        item.setRouteText(StringUtils.hasText(detail.getRoute()) ? detail.getRoute().trim() : null);
-        item.setCourseText(courseText(detail, herb, prescription));
-        List<String> cautions = cautions(detail, drug);
-        if (herb && Integer.valueOf(DECOCT_BY_HOSPITAL).equals(prescription.getDecoctFlag())) {
-            // 代煎的中药是真空袋装好的，患者最容易犯的错是拿回家再煮一遍
-            cautions.add(0, "这副药由医院代煎，拿到的是可以直接喝的袋装药液，不用再自己煮。");
-        }
-        item.setCautions(cautions);
-        item.setSpecText(drug == null || !StringUtils.hasText(drug.getUsageDosage())
-                ? null : drug.getUsageDosage().trim());
-        return item;
-    }
-
-    private SysDrugGuide drugOf(BizPrescriptionDetail detail) {
-        if (detail.getDrugId() != null) {
-            SysDrugGuide byId = drugGuideMapper.selectGuideById(detail.getDrugId());
-            if (byId != null) {
-                return byId;
-            }
-        }
-        return StringUtils.hasText(detail.getDrugCode())
-                ? drugGuideMapper.selectGuideByCode(detail.getDrugCode().trim()) : null;
-    }
 
     /**
      * 单次剂量：优先用法用量原句，其次单次剂量，都没有就直说不知道。
@@ -182,6 +116,8 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
         return DOSAGE_UNKNOWN;
     }
 
+    // ---------------------------------------------------------------- 组装层
+
     private static String quantityText(BizPrescriptionDetail detail, boolean herb) {
         BigDecimal quantity = detail.getQuantity();
         if (quantity == null) {
@@ -192,7 +128,9 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
         return herb ? null : quantity.stripTrailingZeros().toPlainString() + unit;
     }
 
-    /** 疗程：长处方取长处方天数，中药取剂数，其余取疗程天数 */
+    /**
+     * 疗程：长处方取长处方天数，中药取剂数，其余取疗程天数
+     */
     private static String courseText(BizPrescriptionDetail detail, boolean herb, BizPrescription prescription) {
         if (herb) {
             Integer doses = prescription.getDoseCount();
@@ -233,8 +171,6 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
         cautions.add(CAUTION_MISSED);
         return cautions;
     }
-
-    // ---------------------------------------------------------------- 词典层
 
     /**
      * 频次白话化。
@@ -287,6 +223,8 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
         return dict;
     }
 
+    // ---------------------------------------------------------------- 词典层
+
     private static String prescriptionTypeText(Integer type) {
         if (type == null) {
             return "";
@@ -297,5 +235,81 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
             case 3 -> "中药饮片处方";
             default -> "";
         };
+    }
+
+    @Override
+    public PatientMedicationGuideVO execute(PatientMedicationGuideDTO dto) {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null || user.getPatientId() == null) {
+            throw new BusinessException("未获取到就诊人身份，请重新登录");
+        }
+
+        BizPrescription prescription = prescriptionMapper.selectById(dto.getPrescriptionId());
+        if (prescription == null) {
+            throw new BusinessException("处方不存在：" + dto.getPrescriptionId());
+        }
+        if (patientGuardianService.patientScopeViolated(prescription.getPatientId())) {
+            // 不区分「不存在」和「无权查看」，避免被用来探测处方是否存在
+            throw new BusinessException("处方不存在或无权查看：" + dto.getPrescriptionId());
+        }
+
+        List<BizPrescriptionDetail> details = detailMapper.selectList(
+                new LambdaQueryWrapper<BizPrescriptionDetail>()
+                        .eq(BizPrescriptionDetail::getPrescriptionId, prescription.getId())
+                        .orderByAsc(BizPrescriptionDetail::getId));
+        if (details == null || details.isEmpty()) {
+            throw new BusinessException("该处方没有药品明细，无法生成用药说明");
+        }
+
+        PatientMedicationGuideVO vo = new PatientMedicationGuideVO();
+        vo.setPrescriptionId(String.valueOf(prescription.getId()));
+        vo.setPrescriptionNo(prescription.getPrescriptionNo());
+        vo.setVisitDate(prescription.getVisitDate());
+        vo.setDeptName(prescription.getDeptName());
+        vo.setDoctorName(prescription.getDoctorName());
+        vo.setPrescriptionTypeText(prescriptionTypeText(prescription.getPrescriptionType()));
+        vo.setDispensed(Integer.valueOf(STATUS_DISPENSED).equals(prescription.getPrescriptionStatus()));
+
+        boolean herb = Integer.valueOf(TYPE_HERB).equals(prescription.getPrescriptionType());
+        List<PatientMedicationItemVO> items = new ArrayList<>();
+        for (BizPrescriptionDetail detail : details) {
+            items.add(toItem(detail, drugOf(detail), herb, prescription));
+        }
+        vo.setItems(items);
+        vo.setAdvice(ADVICE);
+        return vo;
+    }
+
+    private PatientMedicationItemVO toItem(BizPrescriptionDetail detail, SysDrugGuide drug,
+                                           boolean herb, BizPrescription prescription) {
+        PatientMedicationItemVO item = new PatientMedicationItemVO();
+        item.setDrugName(detail.getDrugName());
+        item.setSpecification(detail.getSpecification());
+        item.setDosageForm(detail.getDosageForm());
+        item.setQuantityText(quantityText(detail, herb));
+        item.setDosageText(dosageText(detail, herb));
+        item.setFrequencyText(frequencyText(detail.getFrequency()));
+        item.setRouteText(StringUtils.hasText(detail.getRoute()) ? detail.getRoute().trim() : null);
+        item.setCourseText(courseText(detail, herb, prescription));
+        List<String> cautions = cautions(detail, drug);
+        if (herb && Integer.valueOf(DECOCT_BY_HOSPITAL).equals(prescription.getDecoctFlag())) {
+            // 代煎的中药是真空袋装好的，患者最容易犯的错是拿回家再煮一遍
+            cautions.add(0, "这副药由医院代煎，拿到的是可以直接喝的袋装药液，不用再自己煮。");
+        }
+        item.setCautions(cautions);
+        item.setSpecText(drug == null || !StringUtils.hasText(drug.getUsageDosage())
+                ? null : drug.getUsageDosage().trim());
+        return item;
+    }
+
+    private SysDrugGuide drugOf(BizPrescriptionDetail detail) {
+        if (detail.getDrugId() != null) {
+            SysDrugGuide byId = drugGuideMapper.selectGuideById(detail.getDrugId());
+            if (byId != null) {
+                return byId;
+            }
+        }
+        return StringUtils.hasText(detail.getDrugCode())
+                ? drugGuideMapper.selectGuideByCode(detail.getDrugCode().trim()) : null;
     }
 }

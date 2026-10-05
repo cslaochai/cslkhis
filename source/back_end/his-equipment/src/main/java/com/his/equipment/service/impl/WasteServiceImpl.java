@@ -1,6 +1,5 @@
 package com.his.equipment.service.impl;
 
-import com.his.equipment.service.WasteService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -10,6 +9,7 @@ import com.his.equipment.entity.BizMedicalWaste;
 import com.his.equipment.enums.WasteStatusEnum;
 import com.his.equipment.enums.WasteTypeEnum;
 import com.his.equipment.mapper.BizMedicalWasteMapper;
+import com.his.equipment.service.WasteService;
 import com.his.equipment.vo.WasteVO;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -37,6 +36,14 @@ public class WasteServiceImpl implements WasteService {
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizMedicalWasteMapper wasteMapper;
+
+    private static String tr(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private static LocalDateTime nowSeconds() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
 
     @Transactional(rollbackFor = Exception.class)
     public WasteVO create(WasteDTO.Create dto) {
@@ -66,7 +73,7 @@ public class WasteServiceImpl implements WasteService {
     public WasteVO handover(WasteDTO.Handover dto) {
         BizMedicalWaste w = requireWaste(dto.getId());
         if (!WasteStatusEnum.REGISTERED.is(w.getStatus())) {
-            throw new BusinessException("只有已登记的医废可以交接（当前：" + WasteStatusEnum.labelOf(w.getStatus()) + "）");
+            throw new BusinessException("只有已登记的医废可以交接（当前：" + WasteStatusEnum.getText(w.getStatus()) + "）");
         }
         w.setStatus(WasteStatusEnum.HANDED_OVER.getCode());
         w.setHandoverName(dto.getHandoverName().trim());
@@ -81,7 +88,7 @@ public class WasteServiceImpl implements WasteService {
     public WasteVO dispose(WasteDTO.Dispose dto) {
         BizMedicalWaste w = requireWaste(dto.getId());
         if (!WasteStatusEnum.HANDED_OVER.is(w.getStatus())) {
-            throw new BusinessException("只有已交接的医废可以确认处置（当前：" + WasteStatusEnum.labelOf(w.getStatus()) + "）");
+            throw new BusinessException("只有已交接的医废可以确认处置（当前：" + WasteStatusEnum.getText(w.getStatus()) + "）");
         }
         w.setStatus(WasteStatusEnum.DISPOSED.getCode());
         w.setDisposalCompany(dto.getDisposalCompany().trim());
@@ -91,6 +98,8 @@ public class WasteServiceImpl implements WasteService {
         wasteMapper.updateById(w);
         return toVo(w);
     }
+
+    // 私有
 
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
@@ -120,8 +129,6 @@ public class WasteServiceImpl implements WasteService {
                 .convert(this::toVo);
     }
 
-    // 私有
-
     private BizMedicalWaste requireWaste(Long id) {
         BizMedicalWaste w = wasteMapper.selectById(id);
         if (w == null || Objects.equals(w.getDelFlag(), 1)) {
@@ -130,7 +137,9 @@ public class WasteServiceImpl implements WasteService {
         return w;
     }
 
-    /** 交接单号自动生成：MW + yyyyMMdd + 顺延序号（查重含软删行，防唯一键冲突） */
+    /**
+     * 交接单号自动生成：MW + yyyyMMdd + 顺延序号（查重含软删行，防唯一键冲突）
+     */
     private String nextWasteNo() {
         String date = LocalDate.now().format(NO_FMT);
         long seq = 1;
@@ -149,14 +158,14 @@ public class WasteServiceImpl implements WasteService {
         vo.setId(w.getId());
         vo.setWasteNo(w.getWasteNo());
         vo.setWasteType(w.getWasteType());
-        vo.setWasteTypeText(WasteTypeEnum.labelOf(w.getWasteType()));
+        vo.setWasteTypeText(WasteTypeEnum.getText(w.getWasteType()));
         vo.setWeightKg(w.getWeightKg());
         vo.setDeptId(w.getDeptId());
         vo.setDeptName(w.getDeptName());
         vo.setCollectTime(w.getCollectTime());
         vo.setCollectorName(w.getCollectorName());
         vo.setStatus(w.getStatus());
-        vo.setStatusText(WasteStatusEnum.labelOf(w.getStatus()));
+        vo.setStatusText(WasteStatusEnum.getText(w.getStatus()));
         vo.setHandoverName(w.getHandoverName());
         vo.setHandoverTime(w.getHandoverTime());
         vo.setDisposalCompany(w.getDisposalCompany());
@@ -164,13 +173,5 @@ public class WasteServiceImpl implements WasteService {
         vo.setCreateBy(w.getCreateBy());
         vo.setCreateTime(w.getCreateTime());
         return vo;
-    }
-
-    private static String tr(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static LocalDateTime nowSeconds() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 }

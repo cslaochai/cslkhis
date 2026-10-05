@@ -18,30 +18,46 @@ import java.math.BigDecimal;
 @Data
 public class DaySurgeryItemUpsertDTO implements Serializable {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     private Long id;
 
-    /** 术式编码 */
+    /**
+     * 术式编码
+     */
     @NotBlank(message = "术式编码不能为空")
     private String itemCode;
 
-    /** 术式名称 */
+    /**
+     * 术式名称
+     */
     @NotBlank(message = "术式名称不能为空")
     private String itemName;
 
-    /** 适用科室ID */
+    /**
+     * 适用科室ID
+     */
     private Long deptId;
 
-    /** 最长滞留小时数（默认 48） */
+    /**
+     * 最长滞留小时数（默认 48）
+     */
     private Integer maxStayHours;
 
-    /** 麻醉方式（1-局部麻醉 2-椎管内麻醉 3-全身麻醉 4-神经阻滞 5-其他） */
+    /**
+     * 麻醉方式（1-局部麻醉 2-椎管内麻醉 3-全身麻醉 4-神经阻滞 5-其他）
+     */
     private Integer anesthesiaType;
 
-    /** 标准费用 */
+    /**
+     * 标准费用
+     */
     private BigDecimal standardFee;
 
-    /** 状态（1-启用 0-停用） */
+    /**
+     * 状态（1-启用 0-停用）
+     */
     private Integer status;
 
     /**
@@ -54,6 +70,8 @@ public class DaySurgeryItemUpsertDTO implements Serializable {
     @Max(value = 4, message = "手术分级只能为 1~4")
     private Integer operationLevel;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

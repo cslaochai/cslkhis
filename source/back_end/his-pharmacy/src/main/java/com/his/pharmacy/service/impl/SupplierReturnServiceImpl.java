@@ -88,7 +88,7 @@ public class SupplierReturnServiceImpl implements SupplierReturnService {
         }
         fillText(vo);
         List<SupplierReturnItemVO> items = itemMapper.selectByReturnId(id);
-        items.forEach(i -> i.setStockRoomText(StockRoomEnum.labelOf(i.getStockRoom())));
+        items.forEach(i -> i.setStockRoomText(StockRoomEnum.getText(i.getStockRoom())));
         vo.setItems(items);
         List<BizDrugStockLogVO> logs = stockLogMapper.selectBySource(SOURCE_TYPE, id);
         logs.forEach(BizDrugStockLogVO::fillTexts);
@@ -218,7 +218,7 @@ public class SupplierReturnServiceImpl implements SupplierReturnService {
         SupplierReturnStatusEnum status = SupplierReturnStatusEnum.fromCode(head.getStatus());
         if (status != SupplierReturnStatusEnum.PENDING && status != SupplierReturnStatusEnum.CANCELLED) {
             throw new BusinessException("只有「待退货」或「已作废」的退货单可以删除（当前："
-                    + SupplierReturnStatusEnum.labelOf(head.getStatus()) + "）；已退货药已出库，是留档凭证不能抹");
+                    + SupplierReturnStatusEnum.getText(head.getStatus()) + "）；已退货药已出库，是留档凭证不能抹");
         }
         itemMapper.purgeByReturnId(head.getId());
         if (returnMapper.purgeById(head.getId()) != 1) {
@@ -315,11 +315,11 @@ public class SupplierReturnServiceImpl implements SupplierReturnService {
         String hint = Objects.equals(head.getStatus(), SupplierReturnStatusEnum.DONE.getCode())
                 ? "；药已出库，只能按正常采购入库把货补回来" : "";
         throw new BusinessException("当前状态不能" + action + "（现在："
-                + SupplierReturnStatusEnum.labelOf(head.getStatus()) + "）" + hint);
+                + SupplierReturnStatusEnum.getText(head.getStatus()) + "）" + hint);
     }
 
     private void fillText(SupplierReturnVO vo) {
-        vo.setStatusText(SupplierReturnStatusEnum.labelOf(vo.getStatus()));
+        vo.setStatusText(SupplierReturnStatusEnum.getText(vo.getStatus()));
     }
 
     private static String batchLabel(BizDrugStockVO batch) {

@@ -7,6 +7,9 @@ import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.charge.config.ComplianceProperties;
 import com.his.charge.dto.*;
 import com.his.charge.entity.*;
+import com.his.charge.enums.AuditResultStateEnum;
+import com.his.charge.enums.ComplianceAuditTypeEnum;
+import com.his.charge.enums.RuleCatalogEnum;
 import com.his.charge.mapper.*;
 import com.his.charge.service.ComplianceAuditService;
 import com.his.charge.service.SettlementEvidenceService;
@@ -17,6 +20,7 @@ import com.his.common.exception.BusinessException;
 
 import com.his.common.enums.SysGenderEnum;
 import com.his.medicaltech.entity.BizLabResult;
+import com.his.patient.enums.AdmitConditionEnum;
 import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.entity.SysIcd10;
@@ -173,17 +177,17 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         }
 
         // 5. 三态统计
-        Map<RuleCatalog, AuditResultState> ruleStates = mergeByRule(findings);
+        Map<RuleCatalogEnum, AuditResultStateEnum> ruleStates = mergeByRule(findings);
         int hitCount = 0;
         int passCount = 0;
         int naCount = 0;
         int riskScore = 0;
         int maxHitRisk = 0;
-        for (Map.Entry<RuleCatalog, AuditResultState> e : ruleStates.entrySet()) {
+        for (Map.Entry<RuleCatalogEnum, AuditResultStateEnum> e : ruleStates.entrySet()) {
             switch (e.getValue()) {
                 case HIT:
                     hitCount++;
-                    riskScore += RuleCatalog.scoreOf(e.getKey().getRisk());
+                    riskScore += RuleCatalogEnum.scoreOf(e.getKey().getRisk());
                     maxHitRisk = Math.max(maxHitRisk, e.getKey().getRisk());
                     break;
                 case PASS:
@@ -419,10 +423,10 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     /**
      * 同一规则的多个判定合并成规则级结论：HIT > PASS > 不适用
      */
-    private Map<RuleCatalog, AuditResultState> mergeByRule(List<RuleFinding> findings) {
-        Map<RuleCatalog, AuditResultState> states = new LinkedHashMap<>();
+    private Map<RuleCatalogEnum, AuditResultStateEnum> mergeByRule(List<RuleFinding> findings) {
+        Map<RuleCatalogEnum, AuditResultStateEnum> states = new LinkedHashMap<>();
         for (RuleFinding f : findings) {
-            AuditResultState current = states.get(f.getRule());
+            AuditResultStateEnum current = states.get(f.getRule());
             if (current == null || rank(f.getResult()) > rank(current)) {
                 states.put(f.getRule(), f.getResult());
             }
@@ -430,7 +434,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         return states;
     }
 
-    private int rank(AuditResultState state) {
+    private int rank(AuditResultStateEnum state) {
         switch (state) {
             case HIT:
                 return 3;
@@ -466,7 +470,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
             update.setId(d.getId());
             if (CollectionUtils.isEmpty(list)) {
                 // 一条规则都没落到这条诊断上 —— 也是「未评估」，不能留空被读成正常
-                update.setEvidenceStatus(AuditResultState.NOT_APPLICABLE.getCode());
+                update.setEvidenceStatus(AuditResultStateEnum.NOT_APPLICABLE.getCode());
                 update.setEvidenceNote("无规则覆盖该诊断，未评估");
             } else {
                 update.setEvidenceStatus(worst(list).getCode());
@@ -480,7 +484,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
             BizSettlementOperation update = new BizSettlementOperation();
             update.setId(o.getId());
             if (CollectionUtils.isEmpty(list)) {
-                update.setEvidenceStatus(AuditResultState.NOT_APPLICABLE.getCode());
+                update.setEvidenceStatus(AuditResultStateEnum.NOT_APPLICABLE.getCode());
                 update.setEvidenceNote("无规则覆盖该手术操作，未评估");
             } else {
                 update.setEvidenceStatus(worst(list).getCode());
@@ -490,8 +494,8 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         }
     }
 
-    private AuditResultState worst(List<RuleFinding> list) {
-        AuditResultState worst = AuditResultState.NOT_APPLICABLE;
+    private AuditResultStateEnum worst(List<RuleFinding> list) {
+        AuditResultStateEnum worst = AuditResultStateEnum.NOT_APPLICABLE;
         for (RuleFinding f : list) {
             if (rank(f.getResult()) > rank(worst)) {
                 worst = f.getResult();
@@ -505,7 +509,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
      */
     private String buildNote(List<RuleFinding> list) {
         List<RuleFinding> hits = list.stream()
-                .filter(f -> f.getResult() == AuditResultState.HIT)
+                .filter(f -> f.getResult() == AuditResultStateEnum.HIT)
                 .collect(Collectors.toList());
         List<RuleFinding> source = hits.isEmpty() ? list : hits;
         return source.stream()
@@ -521,30 +525,14 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         if (hitCount == 0) {
             return "未发现违规，但有 " + naCount + " 条规则因缺少依据未能评估（见「不适用」明细），结论不完整，请补齐数据后复查。";
         }
-        String level = RuleCatalog.riskLabel(maxHitRisk);
+        String level = RuleCatalogEnum.riskLabel(maxHitRisk);
         String tail = naCount == 0 ? "" : "；另有 " + naCount + " 条规则未评估，结论不完整。";
         return "命中 " + hitCount + " 条风险规则，最高风险等级「" + level + "」，风险分 " + riskScore + tail;
     }
 
     private void fillAuditText(ComplianceAuditVO vo) {
-        vo.setRiskLevelText(RuleCatalog.riskLabel(vo.getRiskLevel()));
-        vo.setAuditTypeText(auditTypeLabel(vo.getAuditType()));
-    }
-
-    private String auditTypeLabel(Integer type) {
-        if (type == null) {
-            return "";
-        }
-        switch (type) {
-            case 1:
-                return "结算前自查";
-            case 2:
-                return "批量筛查";
-            case 3:
-                return "医保反馈复核";
-            default:
-                return "未知(" + type + ")";
-        }
+        vo.setRiskLevelText(RuleCatalogEnum.riskLabel(vo.getRiskLevel()));
+        vo.setAuditTypeText(ComplianceAuditTypeEnum.getText(vo.getAuditType()));
     }
 
     private Set<String> loadEnabledIcdCodes() {
@@ -646,44 +634,26 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         BeanUtils.copyProperties(entity, vo);
         vo.setDiagTypeText(entity.getDiagType() == null ? ""
                 : (entity.getDiagType() == 1 ? "主要诊断" : "其他诊断"));
-        vo.setAdmitConditionText(admitConditionLabel(entity.getAdmitCondition()));
-        // 三态中文一律走 labelOf，禁止在这里拼「通过」
-        vo.setEvidenceStatusText(AuditResultState.labelOf(entity.getEvidenceStatus()));
+        vo.setAdmitConditionText(AdmitConditionEnum.getText(entity.getAdmitCondition()));
+        // 三态中文一律走 getText，禁止在这里拼「通过」
+        vo.setEvidenceStatusText(AuditResultStateEnum.getText(entity.getEvidenceStatus()));
         return vo;
     }
 
     private SettlementOperationVO toOperationVO(BizSettlementOperation entity) {
         SettlementOperationVO vo = new SettlementOperationVO();
         BeanUtils.copyProperties(entity, vo);
-        vo.setEvidenceStatusText(AuditResultState.labelOf(entity.getEvidenceStatus()));
+        vo.setEvidenceStatusText(AuditResultStateEnum.getText(entity.getEvidenceStatus()));
         return vo;
     }
 
     private ComplianceAuditItemVO toItemVO(BizComplianceAuditItem entity) {
         ComplianceAuditItemVO vo = new ComplianceAuditItemVO();
         BeanUtils.copyProperties(entity, vo);
-        vo.setRuleGroupText(RuleCatalog.groupLabel(entity.getRuleGroup()));
-        vo.setResultText(AuditResultState.labelOf(entity.getResult()));
-        vo.setRiskLevelText(RuleCatalog.riskLabel(entity.getRiskLevel()));
+        vo.setRuleGroupText(RuleCatalogEnum.groupLabel(entity.getRuleGroup()));
+        vo.setResultText(AuditResultStateEnum.getText(entity.getResult()));
+        vo.setRiskLevelText(RuleCatalogEnum.riskLabel(entity.getRiskLevel()));
         return vo;
-    }
-
-    private String admitConditionLabel(Integer cond) {
-        if (cond == null) {
-            return "";
-        }
-        switch (cond) {
-            case 1:
-                return "有";
-            case 2:
-                return "临床未确定";
-            case 3:
-                return "情况不明";
-            case 4:
-                return "无";
-            default:
-                return "未知(" + cond + ")";
-        }
     }
 
     private String truncate(String text, int max) {

@@ -1,10 +1,10 @@
 package com.his.ai.service.impl;
 
-import com.his.ai.service.AiHealthService;
-import com.his.ai.service.Icd10RecallService;
 import com.his.ai.config.AiConfigProvider;
 import com.his.ai.config.AiProperties;
 import com.his.ai.constant.AiCapabilityKeys;
+import com.his.ai.service.AiHealthService;
+import com.his.ai.service.Icd10RecallService;
 import com.his.ai.support.AiDegradeGuard;
 import com.his.ai.vo.AiHealthVO;
 import lombok.RequiredArgsConstructor;

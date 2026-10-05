@@ -51,7 +51,9 @@ public class BizReportVO {
      */
     private String remark;
 
-    /** 报告编号（唯一） */
+    /**
+     * 报告编号（唯一）
+     */
     private String reportNo;
 
     /**
@@ -65,7 +67,9 @@ public class BizReportVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
-    /** 检查/检验记录号 */
+    /**
+     * 检查/检验记录号
+     */
     private String recordNo;
 
     /**
@@ -140,10 +144,14 @@ public class BizReportVO {
      */
     private String suggestions;
 
-    /** 报告状态（1-待审核 2-初审通过 3-已审核 4-已发布 5-已作废） */
+    /**
+     * 报告状态（1-待审核 2-初审通过 3-已审核 4-已发布 5-已作废）
+     */
     private Integer reportStatus;
 
-    /** 审核人（初审） */
+    /**
+     * 审核人（初审）
+     */
     private String auditBy;
 
     /**

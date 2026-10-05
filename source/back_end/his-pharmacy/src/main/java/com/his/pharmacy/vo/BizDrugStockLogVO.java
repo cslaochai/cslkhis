@@ -99,8 +99,8 @@ public class BizDrugStockLogVO extends BaseEntity {
      * 前端再抄一次 1/2→药库/药房迟早和枚举漂移。
      */
     public BizDrugStockLogVO fillTexts() {
-        this.changeTypeText = DrugStockChangeTypeEnum.labelOf(this.changeType);
-        this.stockRoomText = StockRoomEnum.labelOf(this.stockRoom);
+        this.changeTypeText = DrugStockChangeTypeEnum.getText(this.changeType);
+        this.stockRoomText = StockRoomEnum.getText(this.stockRoom);
         return this;
     }
 }

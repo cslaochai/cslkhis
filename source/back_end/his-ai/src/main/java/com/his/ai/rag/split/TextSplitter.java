@@ -19,7 +19,7 @@ public class TextSplitter {
     /**
      * 将长文切成若干重叠窗口。
      *
-     * @param text     原文
+     * @param text      原文
      * @param chunkSize 单块最大字符数
      * @param overlap   相邻块重叠字符数（建议 chunkSize 的 10%~20%）
      * @return 切块列表（每块已 trim，空块已剔除）

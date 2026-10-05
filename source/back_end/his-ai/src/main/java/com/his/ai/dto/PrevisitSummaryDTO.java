@@ -9,7 +9,9 @@ import lombok.Data;
 @Data
 public class PrevisitSummaryDTO {
 
-    /** 挂号ID */
+    /**
+     * 挂号ID
+     */
     @NotNull(message = "挂号ID不能为空")
     private Long registId;
 }

@@ -87,59 +87,23 @@ public class AiProperties {
      * RAG 配置（开发环境用本地 TF 向量 + 内存库，将来可换 Milvus 2.5 / Ollama embedding）
      */
     private Rag rag = new Rag();
-
-    @Data
-    public static class Rag {
-        /** embedding 提供方：local-tf（默认，零依赖）/ ollama（将来） */
-        private String embeddingProvider = "local-tf";
-        /** 切块大小（字符） */
-        private int chunkSize = 500;
-        /** 切块重叠（字符） */
-        private int chunkOverlap = 80;
-        /** 召回条数 */
-        private int topK = 4;
-        /** 启动时若知识库为空，是否自动灌入内置示例语料 */
-        private boolean autoSeed = true;
-        /** 内置语料目录（classpath 下），多个用逗号分隔 */
-        private String corpusPaths = "rag-corpus";
-        /** 远程 embedding 服务地址（OpenAI 兼容 /v1/embeddings），未配则回落 ai.base-url */
-        private String embedBaseUrl = "";
-        /** 远程 embedding 访问密钥，未配则回落 ai.apiKey（环境变量 HIS_AI_API_KEY） */
-        private String embedApiKey = "";
-        /** 远程 embedding 模型名，未配则回落 ai.model */
-        private String embedModel = "";
-    }
-
     /**
      * 能力开关，来自 {@code ai.features.*}，key 为 {@link AiCapabilityKeys} 的能力标识
      */
     private Map<String, Boolean> features = new HashMap<>();
-
     /**
      * 单能力超时覆盖，来自 {@code ai.timeouts.*}（毫秒），未配的回落 {@link #timeoutMs}
      */
     private Map<String, Integer> timeouts = new HashMap<>();
-
     /**
      * 按能力覆盖模型，来自 {@code ai.models.<capabilityKey>}（G-16 多模型路由）。
      * 命中即整能力生效（含 lite 分流调用）；未配的能力回落 {@link #model}。
      */
     private Map<String, String> models = new HashMap<>();
-
     /**
      * 语音识别（ASR）配置。ASR 走语音端点而非 LLM 端点，模型与密钥允许与 chat 分开配。
      */
     private Asr asr = new Asr();
-
-    @Data
-    public static class Asr {
-        /** ASR 模型（同步转写） */
-        private String model = "qwen3-asr-flash";
-        /** ASR 访问密钥，未配则回落 ai.apiKey */
-        private String apiKey = "";
-        /** 单条音频大小上限（MB），医生口述通常几十秒，超限直接拒收 */
-        private int maxAudioMb = 15;
-    }
 
     /**
      * 是否具备真正发起调用的条件（开关打开且地址、密钥、模型都已配置）
@@ -149,5 +113,61 @@ public class AiProperties {
                 && StringUtils.hasText(baseUrl)
                 && StringUtils.hasText(apiKey)
                 && StringUtils.hasText(model);
+    }
+
+    @Data
+    public static class Rag {
+        /**
+         * embedding 提供方：local-tf（默认，零依赖）/ ollama（将来）
+         */
+        private String embeddingProvider = "local-tf";
+        /**
+         * 切块大小（字符）
+         */
+        private int chunkSize = 500;
+        /**
+         * 切块重叠（字符）
+         */
+        private int chunkOverlap = 80;
+        /**
+         * 召回条数
+         */
+        private int topK = 4;
+        /**
+         * 启动时若知识库为空，是否自动灌入内置示例语料
+         */
+        private boolean autoSeed = true;
+        /**
+         * 内置语料目录（classpath 下），多个用逗号分隔
+         */
+        private String corpusPaths = "rag-corpus";
+        /**
+         * 远程 embedding 服务地址（OpenAI 兼容 /v1/embeddings），未配则回落 ai.base-url
+         */
+        private String embedBaseUrl = "";
+        /**
+         * 远程 embedding 访问密钥，未配则回落 ai.apiKey（环境变量 HIS_AI_API_KEY）
+         */
+        private String embedApiKey = "";
+        /**
+         * 远程 embedding 模型名，未配则回落 ai.model
+         */
+        private String embedModel = "";
+    }
+
+    @Data
+    public static class Asr {
+        /**
+         * ASR 模型（同步转写）
+         */
+        private String model = "qwen3-asr-flash";
+        /**
+         * ASR 访问密钥，未配则回落 ai.apiKey
+         */
+        private String apiKey = "";
+        /**
+         * 单条音频大小上限（MB），医生口述通常几十秒，超限直接拒收
+         */
+        private int maxAudioMb = 15;
     }
 }

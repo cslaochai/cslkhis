@@ -3,6 +3,7 @@ package com.his.charge.support;
 import com.his.charge.entity.BizSettlementBillItem;
 import com.his.charge.entity.BizSettlementDiagnosis;
 import com.his.charge.entity.BizSettlementOperation;
+import com.his.charge.enums.RuleCatalogEnum;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLabResult;
@@ -65,16 +66,16 @@ public class CodingEvidenceRule implements ComplianceRule {
      */
     private void evaluateA01(RuleContext ctx, BizSettlementDiagnosis main, List<RuleFinding> findings) {
         if (main == null) {
-            findings.add(RuleFinding.na(RuleCatalog.A01, "清单无诊断明细，无法评估主诊断编码"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.A01, "清单无诊断明细，无法评估主诊断编码"));
             return;
         }
         if (!StringUtils.hasText(main.getIcdCode())) {
-            findings.add(RuleFinding.hit(RuleCatalog.A01,
+            findings.add(RuleFinding.hit(RuleCatalogEnum.A01,
                             "主要诊断「" + safe(main.getIcdName()) + "」未填 ICD-10 编码")
                     .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
             return;
         }
-        findings.add(RuleFinding.pass(RuleCatalog.A01,
+        findings.add(RuleFinding.pass(RuleCatalogEnum.A01,
                         "主要诊断已编码：" + main.getIcdCode() + " " + safe(main.getIcdName()))
                 .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
     }
@@ -84,23 +85,23 @@ public class CodingEvidenceRule implements ComplianceRule {
      */
     private void evaluateA02(RuleContext ctx, BizSettlementDiagnosis main, List<RuleFinding> findings) {
         if (main == null || !StringUtils.hasText(main.getIcdCode())) {
-            findings.add(RuleFinding.na(RuleCatalog.A02, "主诊断未编码，无从校验目录归属"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.A02, "主诊断未编码，无从校验目录归属"));
             return;
         }
         if (CollectionUtils.isEmpty(ctx.getEnabledIcdCodes())) {
-            findings.add(RuleFinding.na(RuleCatalog.A02,
+            findings.add(RuleFinding.na(RuleCatalogEnum.A02,
                             "本院启用的医保 ICD-10 目录为空，无法校验编码合法性（目录未启用时不得默认判过）")
                     .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
             return;
         }
         if (!ctx.getEnabledIcdCodes().contains(main.getIcdCode())) {
-            findings.add(RuleFinding.hit(RuleCatalog.A02,
+            findings.add(RuleFinding.hit(RuleCatalogEnum.A02,
                             "主诊断编码 " + main.getIcdCode() + " 不在本院启用的医保目录（共 "
                                     + ctx.getEnabledIcdCodes().size() + " 条）中")
                     .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
             return;
         }
-        findings.add(RuleFinding.pass(RuleCatalog.A02, "主诊断编码在医保目录内")
+        findings.add(RuleFinding.pass(RuleCatalogEnum.A02, "主诊断编码在医保目录内")
                 .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
     }
 
@@ -110,26 +111,26 @@ public class CodingEvidenceRule implements ComplianceRule {
     private void evaluateA03(RuleContext ctx, BizSettlementDiagnosis main, List<RuleFinding> findings) {
         BizMedicalRecord record = ctx.getEvidence().getMedicalRecord();
         if (record == null) {
-            findings.add(RuleFinding.na(RuleCatalog.A03, "查无病历记录，无法比对清单与病历诊断"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.A03, "查无病历记录，无法比对清单与病历诊断"));
             return;
         }
         if (main == null || !StringUtils.hasText(main.getIcdCode())) {
-            findings.add(RuleFinding.na(RuleCatalog.A03, "清单主诊断未编码，无从比对"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.A03, "清单主诊断未编码，无从比对"));
             return;
         }
         if (!StringUtils.hasText(record.getDiagnosisCode())) {
-            findings.add(RuleFinding.na(RuleCatalog.A03,
+            findings.add(RuleFinding.na(RuleCatalogEnum.A03,
                             "病历（" + safe(record.getRecordNo()) + "）未填诊断编码，无法比对")
                     .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
             return;
         }
         if (!main.getIcdCode().equalsIgnoreCase(record.getDiagnosisCode())) {
-            findings.add(RuleFinding.hit(RuleCatalog.A03,
+            findings.add(RuleFinding.hit(RuleCatalogEnum.A03,
                             "清单主诊断为 " + main.getIcdCode() + "，病历诊断为 " + record.getDiagnosisCode())
                     .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
             return;
         }
-        findings.add(RuleFinding.pass(RuleCatalog.A03, "清单主诊断与病历诊断一致（" + record.getDiagnosisCode() + "）")
+        findings.add(RuleFinding.pass(RuleCatalogEnum.A03, "清单主诊断与病历诊断一致（" + record.getDiagnosisCode() + "）")
                 .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
     }
 
@@ -141,16 +142,16 @@ public class CodingEvidenceRule implements ComplianceRule {
                 .filter(d -> d.getDiagType() != null && d.getDiagType() == 2)
                 .collect(Collectors.toList());
         if (others.isEmpty()) {
-            findings.add(RuleFinding.na(RuleCatalog.A04, "清单无其他诊断，无需评估"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.A04, "清单无其他诊断，无需评估"));
             return;
         }
         for (BizSettlementDiagnosis d : others) {
             if (!StringUtils.hasText(d.getIcdCode())) {
-                findings.add(RuleFinding.hit(RuleCatalog.A04,
+                findings.add(RuleFinding.hit(RuleCatalogEnum.A04,
                                 "其他诊断「" + safe(d.getIcdName()) + "」未填 ICD-10 编码")
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
             } else {
-                findings.add(RuleFinding.pass(RuleCatalog.A04, "其他诊断已编码：" + d.getIcdCode())
+                findings.add(RuleFinding.pass(RuleCatalogEnum.A04, "其他诊断已编码：" + d.getIcdCode())
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
             }
         }
@@ -161,16 +162,16 @@ public class CodingEvidenceRule implements ComplianceRule {
      */
     private void evaluateA05(RuleContext ctx, List<RuleFinding> findings) {
         if (ctx.getOperations().isEmpty()) {
-            findings.add(RuleFinding.na(RuleCatalog.A05, "清单无手术操作明细，无需评估"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.A05, "清单无手术操作明细，无需评估"));
             return;
         }
         for (BizSettlementOperation o : ctx.getOperations()) {
             if (!StringUtils.hasText(o.getOperCode())) {
-                findings.add(RuleFinding.hit(RuleCatalog.A05,
+                findings.add(RuleFinding.hit(RuleCatalogEnum.A05,
                                 "手术操作「" + safe(o.getOperName()) + "」未填 ICD-9-CM-3 编码")
                         .on(2, o.getId(), o.getOperCode(), o.getOperName()));
             } else {
-                findings.add(RuleFinding.pass(RuleCatalog.A05, "手术操作已编码：" + o.getOperCode())
+                findings.add(RuleFinding.pass(RuleCatalogEnum.A05, "手术操作已编码：" + o.getOperCode())
                         .on(2, o.getId(), o.getOperCode(), o.getOperName()));
             }
         }
@@ -181,13 +182,13 @@ public class CodingEvidenceRule implements ComplianceRule {
      */
     private void evaluateA06(RuleContext ctx, List<RuleFinding> findings) {
         if (ctx.getOperations().isEmpty()) {
-            findings.add(RuleFinding.na(RuleCatalog.A06, "清单无手术操作明细，无需评估"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.A06, "清单无手术操作明细，无需评估"));
             return;
         }
         SettlementEvidence ev = ctx.getEvidence();
         String text = ev.surgicalEvidenceText();
         if (!StringUtils.hasText(text)) {
-            findings.add(RuleFinding.na(RuleCatalog.A06,
+            findings.add(RuleFinding.na(RuleCatalogEnum.A06,
                     "本次就诊无病历与收费/诊疗项目数据，无法核对手术依据"));
             return;
         }
@@ -196,7 +197,7 @@ public class CodingEvidenceRule implements ComplianceRule {
             String name = o.getOperName();
             if (!StringUtils.hasText(name)) {
                 if (!StringUtils.hasText(o.getOperCode())) {
-                    findings.add(RuleFinding.na(RuleCatalog.A06, "手术操作无名称无编码，无法核对依据")
+                    findings.add(RuleFinding.na(RuleCatalogEnum.A06, "手术操作无名称无编码，无法核对依据")
                             .on(2, o.getId(), o.getOperCode(), o.getOperName()));
                     continue;
                 }
@@ -209,15 +210,15 @@ public class CodingEvidenceRule implements ComplianceRule {
             boolean action = !exact && EvidenceKeywordMatcher.hits(text, SURGERY_ACTIONS);
 
             if (exact) {
-                findings.add(RuleFinding.pass(RuleCatalog.A06,
+                findings.add(RuleFinding.pass(RuleCatalogEnum.A06,
                                 "在病历或诊疗项目中匹配到「" + name + "」")
                         .on(2, o.getId(), o.getOperCode(), o.getOperName()));
             } else if (action) {
-                findings.add(RuleFinding.pass(RuleCatalog.A06,
+                findings.add(RuleFinding.pass(RuleCatalogEnum.A06,
                                 "未精确匹配到「" + name + "」，但存在手术行为描述，建议人工复核")
                         .on(2, o.getId(), o.getOperCode(), o.getOperName()));
             } else {
-                findings.add(RuleFinding.hit(RuleCatalog.A06,
+                findings.add(RuleFinding.hit(RuleCatalogEnum.A06,
                                 "病历、处方、检查检验及收费明细中均未找到「" + name + "」的任何记载")
                         .on(2, o.getId(), o.getOperCode(), o.getOperName()));
             }
@@ -232,24 +233,24 @@ public class CodingEvidenceRule implements ComplianceRule {
         boolean anyCoded = ctx.getOperations().stream()
                 .anyMatch(o -> StringUtils.hasText(o.getOperCode()));
         if (anyCoded) {
-            findings.add(RuleFinding.pass(RuleCatalog.A07,
+            findings.add(RuleFinding.pass(RuleCatalogEnum.A07,
                     "已编 " + ctx.getOperations().size() + " 条手术操作，费用与编码齐备"));
             return;
         }
         if (ev.getBillItems().isEmpty()) {
-            findings.add(RuleFinding.na(RuleCatalog.A07, "无账单行，无法核对手术性费用"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.A07, "无账单行，无法核对手术性费用"));
             return;
         }
         List<BizSettlementBillItem> surgical = ev.surgicalTreatmentCharges(SURGERY_ACTIONS);
         if (surgical.isEmpty()) {
-            findings.add(RuleFinding.pass(RuleCatalog.A07, "账单行中未发现手术性治疗项目"));
+            findings.add(RuleFinding.pass(RuleCatalogEnum.A07, "账单行中未发现手术性治疗项目"));
             return;
         }
         String names = surgical.stream()
                 .map(d -> safe(d.getItemName()) + "(" + d.getAmount() + "元)")
                 .limit(5)
                 .collect(Collectors.joining("、"));
-        findings.add(RuleFinding.hit(RuleCatalog.A07,
+        findings.add(RuleFinding.hit(RuleCatalogEnum.A07,
                 "存在 " + surgical.size() + " 项手术性治疗收费但无任何手术操作编码：" + names));
     }
 
@@ -260,7 +261,7 @@ public class CodingEvidenceRule implements ComplianceRule {
         SettlementEvidence ev = ctx.getEvidence();
         String evidenceText = labInspectionText(ev);
         if (!StringUtils.hasText(evidenceText)) {
-            findings.add(RuleFinding.na(RuleCatalog.A08,
+            findings.add(RuleFinding.na(RuleCatalogEnum.A08,
                     "本次就诊无检验检查数据，无法评估是否存在漏编诊断"));
             return;
         }
@@ -278,7 +279,7 @@ public class CodingEvidenceRule implements ComplianceRule {
             if (!coded) {
                 hitDetails.add(entry.getEvidenceKeyword() + "→" + entry.getHintDiagnosis()
                         + "(" + entry.getIcdPrefix() + "*)");
-                RuleFinding f = RuleFinding.hit(RuleCatalog.A08,
+                RuleFinding f = RuleFinding.hit(RuleCatalogEnum.A08,
                                 "检验/检查证据提示 " + entry.getHintDiagnosis() + "，但清单未编该诊断"
                                         + "（命中依据：" + entry.getEvidenceKeyword() + "，建议编码前缀 "
                                         + entry.getIcdPrefix() + "）")
@@ -289,7 +290,7 @@ public class CodingEvidenceRule implements ComplianceRule {
         }
 
         if (hits.isEmpty()) {
-            findings.add(RuleFinding.pass(RuleCatalog.A08,
+            findings.add(RuleFinding.pass(RuleCatalogEnum.A08,
                     "检验/检查证据中未发现「有依据但未编码」的诊断"));
         } else {
             findings.addAll(hits);

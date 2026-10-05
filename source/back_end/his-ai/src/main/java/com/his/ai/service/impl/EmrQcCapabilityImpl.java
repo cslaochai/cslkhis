@@ -1,23 +1,22 @@
 package com.his.ai.service.impl;
 
-import com.his.common.enums.SysGenderEnum;
-
-import com.his.ai.service.EmrQcCapability;
-import com.his.ai.service.AiExecutionService;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.EmrQcExecuteDTO;
 import com.his.ai.dto.EmrQcLlmOutputDTO;
+import com.his.ai.service.AiExecutionService;
+import com.his.ai.service.EmrQcCapability;
 import com.his.ai.vo.EmrQcIssueVO;
 import com.his.ai.vo.EmrQcResultVO;
+import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.ClinicalTextMatcher;
-import com.his.emr.entity.BizQualityControl;
-import com.his.emr.mapper.BizQualityControlMapper;
 import com.his.emr.entity.BizMedicalRecord;
+import com.his.emr.entity.BizQualityControl;
 import com.his.emr.mapper.BizMedicalRecordMapper;
-import com.his.security.entity.CurrentUser;
+import com.his.emr.mapper.BizQualityControlMapper;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

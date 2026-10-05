@@ -109,24 +109,6 @@ public final class NutritionRules {
     private NutritionRules() {
     }
 
-    public static String screenTypeText(Integer type) {
-        NutritionScreenTypeEnum item = type == null ? null : NutritionScreenTypeEnum.fromCode(type);
-        if (item == null) {
-            return "未知";
-        }
-        // PG-SGA 在营养科表单里的叫法比枚举全名短，保留科室口径
-        return switch (item) {
-            case NRS2002 -> "NRS2002 营养风险筛查";
-            case PG_SGA -> "PG-SGA 主观整体评估";
-            case MNA -> "MNA 老年微型营养评估";
-        };
-    }
-
-    public static String screenSourceText(Integer source) {
-        String label = NutritionScreenSourceEnum.labelOf(source);
-        return label == null ? "未知" : label;
-    }
-
     /**
      * NRS2002 总分 = 受损 + 严重度 + 年龄项；非 NRS2002 量表由营养师直接给总分。
      */
@@ -165,16 +147,6 @@ public final class NutritionRules {
         return code == null ? null : BY_CODE.get(code);
     }
 
-    public static String dietCategoryText(Integer category) {
-        String label = DietCategoryEnum.labelOf(category);
-        return label == null ? "未知" : label;
-    }
-
-    public static String routeText(Integer route) {
-        String label = DietRouteEnum.labelOf(route);
-        return label == null ? "未知" : label;
-    }
-
     // 订餐
 
     /**
@@ -210,7 +182,7 @@ public final class NutritionRules {
         if (list.isEmpty()) {
             return "不订餐";
         }
-        return list.stream().map(NutritionRules::mealTypeText).reduce((a, b) -> a + "、" + b).orElse("-");
+        return list.stream().map(MealTypeEnum::getText).reduce((a, b) -> a + "、" + b).orElse("-");
     }
 
     /**
@@ -281,17 +253,7 @@ public final class NutritionRules {
         return null;
     }
 
-    public static String mealTypeText(Integer mealType) {
-        String label = MealTypeEnum.labelOf(mealType);
-        return label == null ? "未知" : label;
-    }
-
     // 膳食方案
-
-    public static String mealStatusText(Integer status) {
-        String label = MealDeliverStatusEnum.labelOf(status);
-        return label == null ? "未知" : label;
-    }
 
     /**
      * 允许的下一个状态（null 表示没有下一步，即已签收或已取消）
@@ -301,22 +263,12 @@ public final class NutritionRules {
     }
 
     // 会诊类别
-    // 会诊是会诊申请记录域的东西，类别码值与时限的唯一口径在
-    // com.his.patient.support.ConsultationLabels（CATEGORY_NUTRITION / onTime），
+    // 会诊是会诊申请记录域的东西，类别码值口径在 ConsultCategoryEnum，
+    // 营养会诊的发起与展示口径在 NutritionController / InpatientConsultationServiceImpl，
     // 这里不再抄一份 —— 抄了就会漂移。
 
     public static boolean isMealStatus(Integer status) {
         return status != null && status >= MealDeliverStatusEnum.PENDING.getCode() && status <= MealDeliverStatusEnum.CANCELED.getCode();
-    }
-
-    public static String planStatusText(Integer status) {
-        String label = PlanStatusEnum.labelOf(status);
-        return label == null ? "未知" : label;
-    }
-
-    public static String confirmStatusText(Integer status) {
-        String label = DietConfirmStatusEnum.labelOf(status);
-        return label == null ? "未知" : label;
     }
 
     private static int nz(Integer v) {

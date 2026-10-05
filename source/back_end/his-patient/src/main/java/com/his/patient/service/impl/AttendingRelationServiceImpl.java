@@ -195,7 +195,7 @@ public class AttendingRelationServiceImpl
             vo.setWardId(row.getWardId());
             vo.setBedId(row.getBedId());
             vo.setRelationType(row.getRelationType());
-            vo.setRelationTypeText(AttendingRelationTypeEnum.labelOf(row.getRelationType()));
+            vo.setRelationTypeText(AttendingRelationTypeEnum.getText(row.getRelationType()));
             vo.setStatus(row.getStatus());
             vo.setStatusText(row.getStatus() != null && row.getStatus() == STATUS_ACTIVE ? "有效" : "已结束");
             vo.setEffectiveTime(row.getEffectiveTime());

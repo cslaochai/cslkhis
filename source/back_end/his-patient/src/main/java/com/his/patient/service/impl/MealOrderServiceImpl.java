@@ -110,7 +110,7 @@ public class MealOrderServiceImpl implements MealOrderService {
     private void decorate(MealOrderVO vo) {
         Integer status = vo.getDeliverStatus();
         Integer next = NutritionRules.mealNextStatus(status);
-        vo.setNextStatusText(next == null ? null : NutritionRules.mealStatusText(next));
+        vo.setNextStatusText(next == null ? null : MealDeliverStatusEnum.getText(next));
         vo.setCanAdvance(next == null ? YesOrNoEnum.NO.getCode() : YesOrNoEnum.YES.getCode());
         vo.setCanCancel(Objects.equals(MealDeliverStatusEnum.PENDING.getCode(), status)
                 || Objects.equals(MealDeliverStatusEnum.PREPARED.getCode(), status)
@@ -287,8 +287,8 @@ public class MealOrderServiceImpl implements MealOrderService {
                 Integer next = NutritionRules.mealNextStatus(current);
                 if (next == null || !next.equals(target)) {
                     throw new BusinessException("订餐 " + row.getMealNo() + " 当前为「"
-                            + NutritionRules.mealStatusText(current) + "」，只能推进到「"
-                            + (next == null ? "无（已是终态）" : NutritionRules.mealStatusText(next)) + "」");
+                            + MealDeliverStatusEnum.labelOrUnknown(current) + "」，只能推进到「"
+                            + (next == null ? "无（已是终态）" : MealDeliverStatusEnum.getText(next)) + "」");
                 }
             }
             rows.add(row);
@@ -331,7 +331,7 @@ public class MealOrderServiceImpl implements MealOrderService {
         // 删除是「这行从来没生成过」，退订才是「饭送出去了但不算数」。
         // 已配送/已签收的行删掉，食堂的份数与患者的吃饭记录同时对不上。
         if (row.getDeliverStatus() != null && row.getDeliverStatus() >= MealDeliverStatusEnum.DELIVERED.getCode()) {
-            String st = NutritionRules.mealStatusText(row.getDeliverStatus());
+            String st = MealDeliverStatusEnum.getText(row.getDeliverStatus());
             throw new BusinessException("该餐已" + st + "，不能删除；删除只用于误生成的行（" + row.getMealNo() + "）");
         }
         // 物理删：uk_meal_order 不含 del_flag，软删会占住"一人一天一餐"的键位

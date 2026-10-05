@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.ai.dto.AiAuditLogQueryPageDTO;
 import com.his.ai.entity.SysAiCallLog;
 import com.his.ai.mapper.SysAiCallLogMapper;
-import com.his.ai.support.AiCallStatus;
+import com.his.ai.enums.AiCallStatusEnum;
 import com.his.ai.vo.AiAuditLogVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
@@ -37,7 +37,7 @@ public class AiAuditQueryServiceImpl implements AiAuditQueryService {
     private static AiAuditLogVO toVO(SysAiCallLog entity) {
         AiAuditLogVO vo = new AiAuditLogVO();
         BeanUtils.copyProperties(entity, vo);
-        vo.setStatusText(AiCallStatus.labelOf(entity.getStatus()));
+        vo.setStatusText(AiCallStatusEnum.getText(entity.getStatus()));
         return vo;
     }
 

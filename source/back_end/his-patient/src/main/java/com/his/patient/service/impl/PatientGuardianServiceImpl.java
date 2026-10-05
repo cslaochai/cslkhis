@@ -460,7 +460,7 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
         vo.setPhone(maskPhone(p.getPhone()));
         vo.setIdCard(maskIdCard(p.getIdCard()));
         vo.setRelation(relation);
-        vo.setRelationText(GuardianRelationEnum.labelOf(relation));
+        vo.setRelationText(GuardianRelationEnum.getText(relation));
         vo.setIsDefault(isDefault == null ? 0 : isDefault);
         vo.setSelf(self);
         return vo;

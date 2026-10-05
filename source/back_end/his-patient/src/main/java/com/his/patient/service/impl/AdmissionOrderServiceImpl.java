@@ -16,7 +16,6 @@ import com.his.patient.mapper.BizAdmissionOrderMapper;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.AdmissionOrderService;
 import com.his.patient.service.BedCenterService;
-import com.his.patient.support.InpatientLabels;
 import com.his.patient.vo.AdmissionOrderVO;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
@@ -304,7 +303,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
      */
     private void decorate(AdmissionOrderVO vo) {
         vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
-        vo.setOrderStatusText(AdmissionOrderStatusEnum.labelOf(vo.getOrderStatus()));
+        vo.setOrderStatusText(AdmissionOrderStatusEnum.getText(vo.getOrderStatus()));
 
         boolean pending = Objects.equals(AdmissionOrderStatusEnum.PENDING.getCode(), vo.getOrderStatus());
         boolean expired = pending && vo.getValidUntil() != null

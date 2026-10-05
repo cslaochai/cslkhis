@@ -1,6 +1,7 @@
 package com.his.charge.support;
 
 import com.his.charge.entity.BizSettlementDiagnosis;
+import com.his.charge.enums.RuleCatalogEnum;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -74,20 +75,20 @@ public class LogicExclusionRule implements ComplianceRule {
      */
     private void evaluateB01(RuleContext ctx, List<RuleFinding> findings) {
         if (ctx.getDiagnoses().isEmpty()) {
-            findings.add(RuleFinding.na(RuleCatalog.B01, "清单无诊断明细，无需评估"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.B01, "清单无诊断明细，无需评估"));
             return;
         }
         Integer gender = ctx.getEvidence().gender();
         SysGenderEnum g = SysGenderEnum.fromCode(gender);
         if (gender == null) {
-            findings.add(RuleFinding.na(RuleCatalog.B01,
+            findings.add(RuleFinding.na(RuleCatalogEnum.B01,
                     "患者性别未知（档案与清单均未填），无法做性别排他判定"));
             return;
         }
         for (BizSettlementDiagnosis d : ctx.getDiagnoses()) {
             String name = d.getIcdName();
             if (!StringUtils.hasText(name)) {
-                findings.add(RuleFinding.na(RuleCatalog.B01, "诊断名称为空，无法做性别排他判定")
+                findings.add(RuleFinding.na(RuleCatalogEnum.B01, "诊断名称为空，无法做性别排他判定")
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
                 continue;
             }
@@ -98,12 +99,12 @@ public class LogicExclusionRule implements ComplianceRule {
                 conflict = "该诊断仅见于男性";
             }
             if (conflict != null) {
-                findings.add(RuleFinding.hit(RuleCatalog.B01,
+                findings.add(RuleFinding.hit(RuleCatalogEnum.B01,
                                 "患者性别为" + g.getLabel() + "，但诊断「" + name + "」"
                                         + conflict)
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
             } else {
-                findings.add(RuleFinding.pass(RuleCatalog.B01, "诊断「" + name + "」与性别无冲突")
+                findings.add(RuleFinding.pass(RuleCatalogEnum.B01, "诊断「" + name + "」与性别无冲突")
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
             }
         }
@@ -114,19 +115,19 @@ public class LogicExclusionRule implements ComplianceRule {
      */
     private void evaluateB02(RuleContext ctx, List<RuleFinding> findings) {
         if (ctx.getDiagnoses().isEmpty()) {
-            findings.add(RuleFinding.na(RuleCatalog.B02, "清单无诊断明细，无需评估"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.B02, "清单无诊断明细，无需评估"));
             return;
         }
         Integer age = ctx.getEvidence().age();
         if (age == null) {
-            findings.add(RuleFinding.na(RuleCatalog.B02,
+            findings.add(RuleFinding.na(RuleCatalogEnum.B02,
                     "患者年龄未知（档案与清单均未填），无法做年龄排他判定"));
             return;
         }
         for (BizSettlementDiagnosis d : ctx.getDiagnoses()) {
             String name = d.getIcdName();
             if (!StringUtils.hasText(name)) {
-                findings.add(RuleFinding.na(RuleCatalog.B02, "诊断名称为空，无法做年龄排他判定")
+                findings.add(RuleFinding.na(RuleCatalogEnum.B02, "诊断名称为空，无法做年龄排他判定")
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
                 continue;
             }
@@ -137,11 +138,11 @@ public class LogicExclusionRule implements ComplianceRule {
                 conflict = "该诊断仅见于老年患者（≥" + ELDERLY_MIN_AGE + "岁）";
             }
             if (conflict != null) {
-                findings.add(RuleFinding.hit(RuleCatalog.B02,
+                findings.add(RuleFinding.hit(RuleCatalogEnum.B02,
                                 "患者年龄 " + age + " 岁，但诊断「" + name + "」" + conflict)
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
             } else {
-                findings.add(RuleFinding.pass(RuleCatalog.B02, "诊断「" + name + "」与年龄无冲突")
+                findings.add(RuleFinding.pass(RuleCatalogEnum.B02, "诊断「" + name + "」与年龄无冲突")
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
             }
         }
@@ -152,7 +153,7 @@ public class LogicExclusionRule implements ComplianceRule {
      */
     private void evaluateB03(RuleContext ctx, List<RuleFinding> findings) {
         if (ctx.getDiagnoses().isEmpty()) {
-            findings.add(RuleFinding.na(RuleCatalog.B03, "清单无诊断明细，无需评估"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.B03, "清单无诊断明细，无需评估"));
             return;
         }
         Map<String, Integer> counter = new HashMap<>();
@@ -162,7 +163,7 @@ public class LogicExclusionRule implements ComplianceRule {
             }
         }
         if (counter.isEmpty()) {
-            findings.add(RuleFinding.na(RuleCatalog.B03, "清单诊断均未编码，无法查重"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.B03, "清单诊断均未编码，无法查重"));
             return;
         }
         List<String> dups = new ArrayList<>();
@@ -172,9 +173,9 @@ public class LogicExclusionRule implements ComplianceRule {
             }
         }
         if (dups.isEmpty()) {
-            findings.add(RuleFinding.pass(RuleCatalog.B03, "诊断编码无重复（共 " + counter.size() + " 个不同编码）"));
+            findings.add(RuleFinding.pass(RuleCatalogEnum.B03, "诊断编码无重复（共 " + counter.size() + " 个不同编码）"));
         } else {
-            findings.add(RuleFinding.hit(RuleCatalog.B03, "诊断编码重复上报：" + String.join("、", dups)));
+            findings.add(RuleFinding.hit(RuleCatalogEnum.B03, "诊断编码重复上报：" + String.join("、", dups)));
         }
     }
 
@@ -184,24 +185,24 @@ public class LogicExclusionRule implements ComplianceRule {
     private void evaluateB04(RuleContext ctx, List<RuleFinding> findings) {
         BizSettlementDiagnosis main = ctx.mainDiagnosis();
         if (main == null) {
-            findings.add(RuleFinding.na(RuleCatalog.B04, "清单无诊断明细，无需评估"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.B04, "清单无诊断明细，无需评估"));
             return;
         }
         Integer cond = main.getAdmitCondition();
         if (cond == null) {
-            findings.add(RuleFinding.na(RuleCatalog.B04,
+            findings.add(RuleFinding.na(RuleCatalogEnum.B04,
                             "主诊断未填入院病情，无法评估（入院病情是主诊断选择的核心依据）")
                     .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
             return;
         }
         if (cond == 4) {
-            findings.add(RuleFinding.hit(RuleCatalog.B04,
+            findings.add(RuleFinding.hit(RuleCatalogEnum.B04,
                             "主要诊断「" + safe(main.getIcdName()) + "」入院病情为「无」，"
                                     + "表示入院时并不存在该情况，不能作为主要诊断")
                     .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
             return;
         }
-        findings.add(RuleFinding.pass(RuleCatalog.B04, "主诊断入院病情为 " + cond + "，非「无」")
+        findings.add(RuleFinding.pass(RuleCatalogEnum.B04, "主诊断入院病情为 " + cond + "，非「无」")
                 .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
     }
 
@@ -217,7 +218,7 @@ public class LogicExclusionRule implements ComplianceRule {
             }
         }
         if (ccDiags.isEmpty()) {
-            findings.add(RuleFinding.na(RuleCatalog.B05, "清单未标注 CC/MCC 级别，无需评估升级依据"));
+            findings.add(RuleFinding.na(RuleCatalogEnum.B05, "清单未标注 CC/MCC 级别，无需评估升级依据"));
             return;
         }
         long otherCount = ctx.getDiagnoses().stream()
@@ -225,7 +226,7 @@ public class LogicExclusionRule implements ComplianceRule {
                 .count();
         if (otherCount == 0) {
             for (BizSettlementDiagnosis d : ccDiags) {
-                findings.add(RuleFinding.hit(RuleCatalog.B05,
+                findings.add(RuleFinding.hit(RuleCatalogEnum.B05,
                                 "诊断「" + safe(d.getIcdName()) + "」标注为 " + d.getCcLevel()
                                         + "（会提升病组权重），但清单无任何其他诊断作为并发症/合并症依据")
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
@@ -233,7 +234,7 @@ public class LogicExclusionRule implements ComplianceRule {
             return;
         }
         for (BizSettlementDiagnosis d : ccDiags) {
-            findings.add(RuleFinding.pass(RuleCatalog.B05,
+            findings.add(RuleFinding.pass(RuleCatalogEnum.B05,
                             "标注 " + d.getCcLevel() + "，清单含 " + otherCount + " 条其他诊断可作为依据")
                     .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
         }

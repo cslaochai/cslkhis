@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.enums.EnableStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.OrderDictQueryPageDTO;
 import com.his.patient.dto.OrderDictUpsertDTO;
@@ -63,7 +64,7 @@ public class OrderDictServiceImpl implements OrderDictService {
                     OrderDictListVO vo = new OrderDictListVO();
                     BeanUtils.copyProperties(entity, vo);
                     vo.setDictTypeText(OrderDictTypes.text(entity.getDictType()));
-                    vo.setStatusText(statusText(entity.getStatus()));
+                    vo.setStatusText(EnableStatusEnum.getText(entity.getStatus()));
                     vo.setBuiltIn(Objects.equals(1, entity.getDictSource()));
                     Long cnt = usage.get(entity.getDictValue());
                     vo.setUsageCount(cnt == null ? 0L : cnt);
@@ -85,7 +86,7 @@ public class OrderDictServiceImpl implements OrderDictService {
             OrderDictListVO vo = new OrderDictListVO();
             BeanUtils.copyProperties(entity, vo);
             vo.setDictTypeText(OrderDictTypes.text(entity.getDictType()));
-            vo.setStatusText(statusText(entity.getStatus()));
+            vo.setStatusText(EnableStatusEnum.getText(entity.getStatus()));
             vo.setBuiltIn(Objects.equals(1, entity.getDictSource()));
             Long cnt = usage.get(entity.getDictValue());
             vo.setUsageCount(cnt == null ? 0L : cnt);
@@ -258,16 +259,6 @@ public class OrderDictServiceImpl implements OrderDictService {
         }
     }
 
-    private String statusText(Integer status) {
-        if (status == null) {
-            return "—";
-        }
-        return switch (status) {
-            case 1 -> "启用";
-            case 0 -> "停用";
-            default -> "未知(" + status + ")";
-        };
-    }
 
     private String trimRemark(String remark) {
         if (remark == null) {

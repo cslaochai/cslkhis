@@ -241,15 +241,13 @@ public class BizInpatientLeave extends BaseEntity {
         if (status == null) {
             return "—";
         }
-        String label = LeaveStatusEnum.labelOf(status);
-        return label == null ? "未知(" + status + ")" : label;
+        return LeaveStatusEnum.getText(status);
     }
 
     public static String typeText(Integer type) {
         if (type == null) {
             return "—";
         }
-        String label = InpatientLeaveTypeEnum.labelOf(type);
-        return label == null ? "未知(" + type + ")" : label;
+        return InpatientLeaveTypeEnum.getText(type);
     }
 }

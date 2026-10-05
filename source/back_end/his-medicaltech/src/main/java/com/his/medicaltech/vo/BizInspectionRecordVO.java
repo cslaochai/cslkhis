@@ -52,7 +52,9 @@ public class BizInspectionRecordVO {
      */
     private String remark;
 
-    /** 检查记录号（唯一） */
+    /**
+     * 检查记录号（唯一）
+     */
     private String recordNo;
 
     /**
@@ -204,7 +206,9 @@ public class BizInspectionRecordVO {
      */
     private Integer recordStatus;
 
-    /** 审核人（初审） */
+    /**
+     * 审核人（初审）
+     */
     private String auditBy;
 
     /**
@@ -230,7 +234,9 @@ public class BizInspectionRecordVO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime reportTime;
 
-    /** 报告发布人 */
+    /**
+     * 报告发布人
+     */
     private String reportBy;
 
     /**

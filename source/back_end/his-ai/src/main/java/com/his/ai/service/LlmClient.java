@@ -2,7 +2,7 @@ package com.his.ai.service;
 
 import com.his.ai.dto.AiChatRequestDTO;
 import com.his.ai.dto.LlmResultDTO;
-import com.his.ai.support.LlmException;
+import com.his.ai.exception.LlmException;
 
 /**
  * 大模型接入层。

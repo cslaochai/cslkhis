@@ -37,4 +37,23 @@ public enum InsRecordStatusEnum {
     public boolean is(Integer code) {
         return code != null && code.equals(this.code);
     }
+
+    public static boolean isValid(Integer code) {
+        return getByCode(code) != null;
+    }
+
+    /**
+     * 展示用码值 → 文案。null / 越界码值返回空串 ——
+     * 「已登记」在医生站另有说法（已缴费待执行），那种措辞差异由调用侧按语境处理，不改这里的 label。
+     */
+    public static String getText(Integer code) {
+        InsRecordStatusEnum e = getByCode(code);
+        return e == null ? "" : e.desc;
+    }
+
+    /** 异常 / 审计用：null 或越界码值返回「未知(n)」（null 本身渲染成「未知」）。 */
+    public static String labelOrUnknown(Integer code) {
+        InsRecordStatusEnum e = getByCode(code);
+        return e == null ? (code == null ? "未知" : "未知(" + code + ")") : e.desc;
+    }
 }

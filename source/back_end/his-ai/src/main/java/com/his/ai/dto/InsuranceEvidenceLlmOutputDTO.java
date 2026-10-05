@@ -17,24 +17,34 @@ public class InsuranceEvidenceLlmOutputDTO {
 
     private List<LlmJudgment> judgments;
 
-    /** 总评（≤120 字，禁止处置建议） */
+    /**
+     * 总评（≤120 字，禁止处置建议）
+     */
     private String overall;
 
     @Data
     public static class LlmJudgment {
 
-        /** 命中规则码 */
+        /**
+         * 命中规则码
+         */
         @AiAuditPlain
         private String ruleCode;
 
-        /** supported / refuted / insufficient */
+        /**
+         * supported / refuted / insufficient
+         */
         @AiAuditPlain
         private String verdict;
 
-        /** 理由（≤80 字） */
+        /**
+         * 理由（≤80 字）
+         */
         private String reason;
 
-        /** 原文引用（≤60 字，逐字摘自证据） */
+        /**
+         * 原文引用（≤60 字，逐字摘自证据）
+         */
         private String quote;
     }
 }

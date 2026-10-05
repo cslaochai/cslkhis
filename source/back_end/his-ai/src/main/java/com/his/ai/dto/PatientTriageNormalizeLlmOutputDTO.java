@@ -16,12 +16,18 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PatientTriageNormalizeLlmOutputDTO {
 
-    /** 归一后的标准症状词，顿号分隔 */
+    /**
+     * 归一后的标准症状词，顿号分隔
+     */
     private String terms;
 
-    /** 拿去查规则表的检索文本 */
+    /**
+     * 拿去查规则表的检索文本
+     */
     private String searchText;
 
-    /** 补充追问 */
+    /**
+     * 补充追问
+     */
     private List<String> followUps;
 }

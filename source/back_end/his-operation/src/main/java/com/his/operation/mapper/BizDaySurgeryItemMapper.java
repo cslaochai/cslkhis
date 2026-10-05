@@ -37,7 +37,9 @@ public interface BizDaySurgeryItemMapper extends BaseMapper<BizDaySurgeryItem> {
     @Select("SELECT i.* FROM biz_day_surgery_item i WHERE i.id = #{id} AND i.del_flag = 0")
     DaySurgeryItemVO selectItemById(@Param("id") Long id);
 
-    /** 预约下拉：只给启用中的术式（停用术式不可新预约，存量单不受影响） */
+    /**
+     * 预约下拉：只给启用中的术式（停用术式不可新预约，存量单不受影响）
+     */
     @Select("""
             <script>
             SELECT i.* FROM biz_day_surgery_item i
@@ -51,7 +53,9 @@ public interface BizDaySurgeryItemMapper extends BaseMapper<BizDaySurgeryItem> {
     @Select("SELECT d.dept_name FROM sys_department d WHERE d.id = #{deptId} AND d.del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
-    /** 同编码是否已存在（新增/改编码时校验，excludeId 为自己） */
+    /**
+     * 同编码是否已存在（新增/改编码时校验，excludeId 为自己）
+     */
     @Select("SELECT COUNT(*) FROM biz_day_surgery_item WHERE del_flag = 0 AND item_code = #{code} AND id <> #{excludeId}")
     int countByCode(@Param("code") String code, @Param("excludeId") Long excludeId);
 }

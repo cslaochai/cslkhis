@@ -1,17 +1,19 @@
 package com.his.ai.service.impl;
 
-import com.his.ai.service.AiExecutionService;
-import com.his.ai.service.AiAuditService;
-import com.his.ai.service.LlmClient;
 import com.his.ai.config.AiConfigProvider;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.AiChatRequestDTO;
 import com.his.ai.dto.AiMessageDTO;
 import com.his.ai.dto.LlmResultDTO;
 import com.his.ai.entity.SysAiCallLog;
+import com.his.ai.enums.AiCallStatusEnum;
+import com.his.ai.exception.LlmException;
+import com.his.ai.service.AiAuditService;
+import com.his.ai.service.AiExecutionService;
+import com.his.ai.service.LlmClient;
 import com.his.ai.support.*;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -67,14 +69,14 @@ public class AiExecutionServiceImpl implements AiExecutionService {
         String operator = currentOperator();
 
         if (!configProvider.isCapabilityEnabled(capabilityKey)) {
-            record(call, operator, null, AiCallStatus.DEGRADED, 0,
+            record(call, operator, null, AiCallStatusEnum.DEGRADED, 0,
                     configProvider.capabilityDisabledReason(capabilityKey));
             degradeGuard.recordDegrade(capabilityKey);
             return Optional.empty();
         }
 
         if (!degradeGuard.isAvailable(capabilityKey)) {
-            record(call, operator, null, AiCallStatus.CIRCUIT_OPEN, 0, "熔断中，本次跳过调用");
+            record(call, operator, null, AiCallStatusEnum.CIRCUIT_OPEN, 0, "熔断中，本次跳过调用");
             degradeGuard.recordDegrade(capabilityKey);
             return Optional.empty();
         }
@@ -85,7 +87,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
         } catch (Exception ex) {
             degradeGuard.recordFailure(capabilityKey);
             degradeGuard.recordDegrade(capabilityKey);
-            record(call, operator, null, AiCallStatus.FAILED, 0, "提示词渲染失败：" + ex.getMessage());
+            record(call, operator, null, AiCallStatusEnum.FAILED, 0, "提示词渲染失败：" + ex.getMessage());
             log.error("[AI] {} 提示词渲染失败", capabilityKey, ex);
             return Optional.empty();
         }
@@ -120,7 +122,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
             degradeGuard.recordSuccess(capabilityKey);
 
             SysAiCallLog entity = baseLog(call, operator, prompt.getVersion());
-            entity.setStatus(AiCallStatus.SUCCESS.getCode());
+            entity.setStatus(AiCallStatusEnum.SUCCESS.getCode());
             entity.setLatencyMs(latency);
             entity.setModel(result.getModel());
             entity.setPromptTokens(result.getPromptTokens());
@@ -135,7 +137,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
             degradeGuard.recordFailureReason(capabilityKey, ex.getMessage());
             int latency = (int) (System.currentTimeMillis() - start);
             record(call, operator, prompt.getVersion(), model,
-                    ex.isTimeout() ? AiCallStatus.TIMEOUT : AiCallStatus.FAILED, latency, ex.getMessage());
+                    ex.isTimeout() ? AiCallStatusEnum.TIMEOUT : AiCallStatusEnum.FAILED, latency, ex.getMessage());
             log.warn("[AI] {} 调用未成功，已降级：{}", capabilityKey, ex.getMessage());
             return Optional.empty();
         } catch (Exception ex) {
@@ -144,7 +146,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
             degradeGuard.recordFailureReason(capabilityKey,
                     ex.getClass().getSimpleName() + ": " + ex.getMessage());
             int latency = (int) (System.currentTimeMillis() - start);
-            record(call, operator, prompt.getVersion(), model, AiCallStatus.FAILED, latency,
+            record(call, operator, prompt.getVersion(), model, AiCallStatusEnum.FAILED, latency,
                     ex.getClass().getSimpleName() + ": " + ex.getMessage());
             log.error("[AI] {} 出现未预期异常，已降级", capabilityKey, ex);
             return Optional.empty();
@@ -175,13 +177,15 @@ public class AiExecutionServiceImpl implements AiExecutionService {
     }
 
     private void record(AiCallDTO call, String operator, String promptVersion,
-                        AiCallStatus status, int latencyMs, String errorMsg) {
+                        AiCallStatusEnum status, int latencyMs, String errorMsg) {
         record(call, operator, promptVersion, null, status, latencyMs, errorMsg);
     }
 
-    /** 已进入模型调用阶段的失败要带上 model —— 超时/失败行没有 model 就说不清是哪个模型挂的 */
+    /**
+     * 已进入模型调用阶段的失败要带上 model —— 超时/失败行没有 model 就说不清是哪个模型挂的
+     */
     private void record(AiCallDTO call, String operator, String promptVersion, String model,
-                        AiCallStatus status, int latencyMs, String errorMsg) {
+                        AiCallStatusEnum status, int latencyMs, String errorMsg) {
         SysAiCallLog entity = baseLog(call, operator, promptVersion);
         entity.setStatus(status.getCode());
         entity.setLatencyMs(latencyMs);

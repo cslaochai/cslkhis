@@ -1,11 +1,6 @@
 package com.his.operation.support;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 手术安全核查单（三方 × 三时段）的核查项口径（sql/134）。
@@ -20,21 +15,21 @@ import java.util.Set;
  */
 public final class SafetyCheckItems {
 
-    private SafetyCheckItems() {
-    }
-
-    /** 时段：1-麻醉诱导前(Sign In) 2-手术开始前(Time Out) 3-患者离开手术室前(Sign Out) */
+    /**
+     * 时段：1-麻醉诱导前(Sign In) 2-手术开始前(Time Out) 3-患者离开手术室前(Sign Out)
+     */
     public static final int PHASE_SIGN_IN = 1;
     public static final int PHASE_TIME_OUT = 2;
     public static final int PHASE_SIGN_OUT = 3;
     public static final List<Integer> ALL_PHASES = List.of(PHASE_SIGN_IN, PHASE_TIME_OUT, PHASE_SIGN_OUT);
-
     private static final Map<Integer, String> PHASE_LABELS = new LinkedHashMap<>();
-
-    /** 每时段的核查项：phase → (码 → 文案) */
+    /**
+     * 每时段的核查项：phase → (码 → 文案)
+     */
     private static final Map<Integer, Map<Integer, String>> PHASE_ITEMS = new LinkedHashMap<>();
-
-    /** 每时段的必核项：缺任何一项拒收 */
+    /**
+     * 每时段的必核项：缺任何一项拒收
+     */
     private static final Map<Integer, List<Integer>> PHASE_REQUIRED = new LinkedHashMap<>();
 
     static {
@@ -74,18 +69,23 @@ public final class SafetyCheckItems {
         PHASE_REQUIRED.put(PHASE_SIGN_OUT, List.of(1, 2, 4, 5));
     }
 
+    private SafetyCheckItems() {
+    }
+
     public static String phaseText(Integer phase) {
         if (phase == null) {
             return "—";
         }
-        return PHASE_LABELS.getOrDefault(phase, "未知(" + phase + ")");
+        return PHASE_LABELS.getOrDefault(phase, "");
     }
 
     public static boolean isValidPhase(Integer phase) {
         return phase != null && PHASE_ITEMS.containsKey(phase);
     }
 
-    /** 某时段的全部核查项（码 → 文案），供前端渲染三张核查卡 */
+    /**
+     * 某时段的全部核查项（码 → 文案），供前端渲染三张核查卡
+     */
     public static Map<Integer, String> itemsOf(int phase) {
         Map<Integer, String> items = PHASE_ITEMS.get(phase);
         if (items == null) {
@@ -137,7 +137,9 @@ public final class SafetyCheckItems {
         return set;
     }
 
-    /** 序列化为逗号分隔串（按码值升序，保证同一组勾选写出的字符串稳定可比） */
+    /**
+     * 序列化为逗号分隔串（按码值升序，保证同一组勾选写出的字符串稳定可比）
+     */
     public static String serialize(Set<Integer> codes) {
         if (codes == null || codes.isEmpty()) {
             return null;
@@ -154,7 +156,9 @@ public final class SafetyCheckItems {
         return sb.toString();
     }
 
-    /** 未核的必核项文案（拒绝时的可执行提示） */
+    /**
+     * 未核的必核项文案（拒绝时的可执行提示）
+     */
     public static List<String> missingRequired(int phase, Set<Integer> codes) {
         List<String> missing = new ArrayList<>();
         Map<Integer, String> items = itemsOf(phase);
@@ -166,7 +170,9 @@ public final class SafetyCheckItems {
         return missing;
     }
 
-    /** 核查结果的完整文案（详情展示用；未知码值渲染为「未知(n)」不静默） */
+    /**
+     * 核查结果的完整文案（详情展示用；未知码值返回空串，不伪装成某一项）
+     */
     public static String summaryText(int phase, String items) {
         Map<Integer, String> labels = itemsOf(phase);
         List<String> texts = new ArrayList<>();
@@ -177,9 +183,9 @@ public final class SafetyCheckItems {
             }
             try {
                 int code = Integer.parseInt(s);
-                texts.add(labels.getOrDefault(code, "未知(" + code + ")"));
+                texts.add(labels.getOrDefault(code, ""));
             } catch (NumberFormatException e) {
-                texts.add("未知(" + s + ")");
+                texts.add(s);
             }
         }
         return String.join("；", texts);

@@ -15,7 +15,7 @@ public final class PrevisitQuestionnaireSupport {
     /**
      * 量表版本：题目结构或选项有实质变化时递增
      */
-    public static final String VERSION = "2026.10";
+    public static final String VERSION = "2026.07";
 
     /**
      * 题型：单选

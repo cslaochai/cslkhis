@@ -21,9 +21,6 @@ public interface BizPatientMapper extends BaseMapper<BizPatient> {
     /**
      * 就诊结诊 → 回写患者主档「最近就诊」冗余组（last_visit_time + 科室/医生 ID与名）。
      *
-     * <p>只在晚于已存时间时覆盖（幂等 + 并发结诊时后完成的算最近）。
-     * 由 his-appoint 在挂号单置为「已就诊」时调用；历史数据不回填。
-     *
      * @return 实际更新的行数（0 = 该次结诊不改变最近就诊）
      */
     @Update("UPDATE biz_patient SET last_visit_time = #{visitTime}, " +
@@ -38,9 +35,6 @@ public interface BizPatientMapper extends BaseMapper<BizPatient> {
     /**
      * 就诊结诊 → 回写患者主档「首次就诊」冗余组（first_visit_time + 科室/医生 ID与名）。
      *
-     * <p>只在早于已存时间（或首次为空）时写入，保证始终是最早那次结诊的快照；
-     * 同日并发结诊不互相覆盖（严格小于）。
-     *
      * @return 实际更新的行数（0 = 已有更早的首次就诊，不覆盖）
      */
     @Update("UPDATE biz_patient SET first_visit_time = #{visitTime}, " +
@@ -54,10 +48,6 @@ public interface BizPatientMapper extends BaseMapper<BizPatient> {
 
     /**
      * 批量统计患者的挂号（预约）次数。
-     *
-     * <p>挂号记录表挂号信息（原挂号单，2026-09-21 改名）属于 his-appoint 模块，
-     * his-patient 不依赖该模块，
-     * 这里用轻量 SQL 只取聚合结果，避免为一个计数引入跨模块实体依赖。
      *
      * @param ids 患者ID集合
      * @return [{patientId=xx, cnt=n}, ...]；从未挂过号的患者不会出现在结果里

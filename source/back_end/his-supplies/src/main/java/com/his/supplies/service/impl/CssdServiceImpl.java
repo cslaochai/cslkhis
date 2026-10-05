@@ -91,7 +91,7 @@ public class CssdServiceImpl implements CssdService {
         BizCssdPack p = requirePack(dto.getPackId());
         int from = p.getStatus();
         if (from < CssdNodeStatusEnum.RECEIVED.getCode() || from >= CssdNodeStatusEnum.ISSUED.getCode()) {
-            throw new BusinessException("当前状态【" + CssdNodeStatusEnum.labelOf(from) + "】不允许流转（流程已完结或异常）");
+            throw new BusinessException("当前状态【" + CssdNodeStatusEnum.getText(from) + "】不允许流转（流程已完结或异常）");
         }
         int target = from + 1;
         int result = dto.getResult() == null ? CssdCheckResultEnum.OK.getCode() : dto.getResult();
@@ -213,9 +213,9 @@ public class CssdServiceImpl implements CssdService {
         vo.setDeptId(p.getDeptId());
         vo.setDeptName(p.getDeptName());
         vo.setSterilizeMethod(p.getSterilizeMethod());
-        vo.setSterilizeMethodText(CssdSterilizeMethodEnum.labelOf(p.getSterilizeMethod()));
+        vo.setSterilizeMethodText(CssdSterilizeMethodEnum.getText(p.getSterilizeMethod()));
         vo.setStatus(p.getStatus());
-        vo.setStatusText(CssdNodeStatusEnum.labelOf(p.getStatus()));
+        vo.setStatusText(CssdNodeStatusEnum.getText(p.getStatus()));
         vo.setSterilizerNo(p.getSterilizerNo());
         vo.setBatchNo(p.getBatchNo());
         vo.setLastNodeTime(p.getLastNodeTime());
@@ -237,7 +237,7 @@ public class CssdServiceImpl implements CssdService {
         vo.setSterilizerNo(t.getSterilizerNo());
         vo.setBatchNo(t.getBatchNo());
         vo.setResult(t.getResult());
-        vo.setResultText(CssdCheckResultEnum.labelOf(t.getResult()));
+        vo.setResultText(CssdCheckResultEnum.getText(t.getResult()));
         vo.setRemark(t.getRemark());
         return vo;
     }

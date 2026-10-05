@@ -21,11 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * 白话词典维护实现。
@@ -42,6 +38,56 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
     private final SysLabPlainItemMapper plainMapper;
     private final BizLabResultMapper labResultMapper;
     private final PatientTextGuard patientTextGuard;
+
+    private static LabPlainItemAdminVO toVO(SysLabPlainItem e) {
+        LabPlainItemAdminVO vo = new LabPlainItemAdminVO();
+        vo.setId(String.valueOf(e.getId()));
+        vo.setGroupName(e.getGroupName());
+        vo.setItemName(e.getItemName());
+        vo.setPlainName(e.getPlainName());
+        vo.setWhatIsIt(e.getWhatIsIt());
+        vo.setHighText(e.getHighText());
+        vo.setLowText(e.getLowText());
+        vo.setStatus(e.getStatus());
+        vo.setSortOrder(e.getSortOrder());
+        vo.setRemark(e.getRemark());
+        return vo;
+    }
+
+    private static Long parseId(String value) {
+        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
+            return null;
+        }
+        return Long.parseLong(value);
+    }
+
+    private static String trim(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    /**
+     * 写库前先截列宽：Data too long 会把业务失败升级成 500
+     */
+    private static String cut(String value, int max) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() <= max ? value : value.substring(0, max);
+    }
+
+    private static int toInt(Object value) {
+        if (value == null) {
+            return 0;
+        }
+        if (value instanceof Number n) {
+            return n.intValue();
+        }
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException ex) {
+            return 0;
+        }
+    }
 
     @Override
     public PageResult<LabPlainItemAdminVO> adminPage(LabPlainItemSearchDTO dto) {
@@ -71,6 +117,8 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
         long pages = (total + pageSize - 1) / pageSize;
         return PageResult.of(total, pageNum, pageSize, pages, records);
     }
+
+    // 私有
 
     @Override
     public List<String> selectGroupNames() {
@@ -208,8 +256,6 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
         return vo;
     }
 
-    // 私有
-
     private void checkPatientText(String itemName, String text) {
         if (!StringUtils.hasText(text)) {
             return;
@@ -217,54 +263,6 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
         if (!patientTextGuard.isSafe(text)) {
             throw new BusinessException("「" + itemName + "」的说明出现诊断或用药类措辞，"
                     + "白话词典只解释指标含义，不给诊断和用药建议：" + text);
-        }
-    }
-
-    private static LabPlainItemAdminVO toVO(SysLabPlainItem e) {
-        LabPlainItemAdminVO vo = new LabPlainItemAdminVO();
-        vo.setId(String.valueOf(e.getId()));
-        vo.setGroupName(e.getGroupName());
-        vo.setItemName(e.getItemName());
-        vo.setPlainName(e.getPlainName());
-        vo.setWhatIsIt(e.getWhatIsIt());
-        vo.setHighText(e.getHighText());
-        vo.setLowText(e.getLowText());
-        vo.setStatus(e.getStatus());
-        vo.setSortOrder(e.getSortOrder());
-        vo.setRemark(e.getRemark());
-        return vo;
-    }
-
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
-    }
-
-    private static String trim(String value) {
-        return value == null ? null : value.trim();
-    }
-
-    /** 写库前先截列宽：Data too long 会把业务失败升级成 500 */
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() <= max ? value : value.substring(0, max);
-    }
-
-    private static int toInt(Object value) {
-        if (value == null) {
-            return 0;
-        }
-        if (value instanceof Number n) {
-            return n.intValue();
-        }
-        try {
-            return Integer.parseInt(value.toString());
-        } catch (NumberFormatException ex) {
-            return 0;
         }
     }
 }

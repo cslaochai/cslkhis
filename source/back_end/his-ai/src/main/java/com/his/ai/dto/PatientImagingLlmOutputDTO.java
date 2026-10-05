@@ -15,15 +15,23 @@ import lombok.Data;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class PatientImagingLlmOutputDTO {
 
-    /** 检查介绍的白话补充（仅当词典未收录该项目时采用） */
+    /**
+     * 检查介绍的白话补充（仅当词典未收录该项目时采用）
+     */
     private String examIntro;
 
-    /** 报告「描述」部分的白话串讲 */
+    /**
+     * 报告「描述」部分的白话串讲
+     */
     private String findingsPlain;
 
-    /** 报告「结论」部分的白话串讲 */
+    /**
+     * 报告「结论」部分的白话串讲
+     */
     private String conclusionsPlain;
 
-    /** 报告「建议」部分的白话串讲 */
+    /**
+     * 报告「建议」部分的白话串讲
+     */
     private String advicePlain;
 }

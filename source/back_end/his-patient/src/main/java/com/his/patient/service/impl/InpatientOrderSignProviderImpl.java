@@ -9,7 +9,6 @@ import com.his.patient.entity.BizInpatientOrder;
 import com.his.patient.enums.InpatientOrderStatusEnum;
 import com.his.patient.mapper.BizInpatientOrderMapper;
 import com.his.patient.service.InpatientOrderSignProvider;
-import com.his.patient.support.InpatientOrderLabels;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -59,7 +58,7 @@ public class InpatientOrderSignProviderImpl implements SignableContentProvider, 
                 o.getDeptId(),
                 o.getDeptName(),
                 o.getOrderStatus(),
-                InpatientOrderStatusEnum.labelOf(o.getOrderStatus()),
+                InpatientOrderStatusEnum.getText(o.getOrderStatus()),
                 InpatientOrderSignProvider.canonical(o));
     }
 

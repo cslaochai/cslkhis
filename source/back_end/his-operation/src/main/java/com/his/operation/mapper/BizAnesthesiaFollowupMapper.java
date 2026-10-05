@@ -25,7 +25,9 @@ public interface BizAnesthesiaFollowupMapper extends BaseMapper<BizAnesthesiaFol
                      LEFT JOIN biz_patient p ON p.id = f.patient_id AND p.del_flag = 0
             """;
 
-    /** 随访分页（麻醉随访工作台） */
+    /**
+     * 随访分页（麻醉随访工作台）
+     */
     @Select(PROJECTION + """
              WHERE f.del_flag = 0
                AND (#{q.recordId} IS NULL OR f.record_id = #{q.recordId})
@@ -41,11 +43,15 @@ public interface BizAnesthesiaFollowupMapper extends BaseMapper<BizAnesthesiaFol
     IPage<AnesthesiaFollowupVO> selectFollowupPage(IPage<AnesthesiaFollowupVO> page,
                                                    @Param("q") AnesthesiaFollowupQueryPageDTO query);
 
-    /** 随访详情 */
+    /**
+     * 随访详情
+     */
     @Select(PROJECTION + " WHERE f.del_flag = 0 AND f.id = #{id}")
     AnesthesiaFollowupVO selectFollowupById(@Param("id") Long id);
 
-    /** 某条麻醉记录的全部随访（按轮次升序 = 这条链的发生顺序） */
+    /**
+     * 某条麻醉记录的全部随访（按轮次升序 = 这条链的发生顺序）
+     */
     @Select(PROJECTION + """
              WHERE f.del_flag = 0 AND f.record_id = #{recordId}
              ORDER BY f.round_no ASC, f.id ASC
@@ -62,7 +68,9 @@ public interface BizAnesthesiaFollowupMapper extends BaseMapper<BizAnesthesiaFol
     @Select("SELECT COUNT(*) FROM biz_anesthesia_followup WHERE followup_no LIKE CONCAT(#{prefix}, '%')")
     long countByNoPrefix(@Param("prefix") String prefix);
 
-    /** 某条麻醉记录已有的最大轮次（新随访 = max+1；无行返回 0） */
+    /**
+     * 某条麻醉记录已有的最大轮次（新随访 = max+1；无行返回 0）
+     */
     @Select("SELECT IFNULL(MAX(round_no), 0) FROM biz_anesthesia_followup WHERE del_flag = 0 AND record_id = #{recordId}")
     int maxRoundOf(@Param("recordId") Long recordId);
 

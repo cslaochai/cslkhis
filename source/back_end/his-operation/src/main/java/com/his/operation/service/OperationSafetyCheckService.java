@@ -10,9 +10,13 @@ import java.util.List;
  */
 public interface OperationSafetyCheckService {
 
-    /** 某台手术的三张核查卡（含核查项字典、已签行、能否签与不可签原因） */
+    /**
+     * 某台手术的三张核查卡（含核查项字典、已签行、能否签与不可签原因）
+     */
     List<SafetyCheckVO.PhaseCard> cardsByApply(Long applyId);
 
-    /** 签某一阶段（三方签名齐 + 必核项齐 + 时段顺序对），返回核查单号 */
+    /**
+     * 签某一阶段（三方签名齐 + 必核项齐 + 时段顺序对），返回核查单号
+     */
     String sign(SafetyCheckSignDTO dto);
 }

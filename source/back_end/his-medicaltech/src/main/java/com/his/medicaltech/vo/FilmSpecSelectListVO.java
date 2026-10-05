@@ -15,19 +15,29 @@ import java.math.BigDecimal;
 @Data
 public class FilmSpecSelectListVO {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 规格编码 */
+    /**
+     * 规格编码
+     */
     private String specCode;
 
-    /** 规格名称 */
+    /**
+     * 规格名称
+     */
     private String specName;
 
-    /** 单价 */
+    /**
+     * 单价
+     */
     private BigDecimal unitPrice;
 
-    /** 计价单位 */
+    /**
+     * 计价单位
+     */
     private String unit;
 }

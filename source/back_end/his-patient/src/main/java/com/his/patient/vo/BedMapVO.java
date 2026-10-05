@@ -332,7 +332,7 @@ public class BedMapVO {
         private String reservedPatientName;
 
         /**
-         * 优先级 1普通 2急 3危重，文案走 BedCenterLabels 唯一口径
+         * 优先级 1普通 2急 3危重，文案走 BedPriorityEnum 唯一口径
          */
         private Integer reservedPriority;
 

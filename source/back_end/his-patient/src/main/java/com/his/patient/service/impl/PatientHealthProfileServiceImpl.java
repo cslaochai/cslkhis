@@ -709,7 +709,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     }
 
     /**
-     * 码值 → 文案；命中不了就渲染「未知(n)」，不回落成看似合法的值
+     * 码值 → 文案（走字典翻译）；命中不了返回空串，不回落成看似合法的值
      */
     private String relationLabel(Integer code) {
         if (code == null) {
@@ -719,7 +719,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
                 .filter(d -> String.valueOf(code).equals(d.getDictValue()))
                 .map(SysDictData::getDictLabel)
                 .findFirst()
-                .orElse("未知(" + code + ")");
+                .orElse("");
     }
 
     private java.util.Set<Integer> relationCodes() {

@@ -26,10 +26,20 @@ import com.his.medicaltech.mapper.BizTransfusionApproveMapper;
 import com.his.medicaltech.mapper.BizTransfusionApplyMapper;
 import com.his.medicaltech.mapper.BizTransfusionBagMapper;
 import com.his.medicaltech.service.TransfusionApplyService;
+import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.medicaltech.support.TransfusionCheckItems;
 import com.his.medicaltech.enums.TransfusionStatusEnum;
-import com.his.medicaltech.support.TransfusionLabels;
+import com.his.medicaltech.enums.BloodBagStatusEnum;
+import com.his.medicaltech.enums.BloodComponentEnum;
+import com.his.medicaltech.enums.BloodTypeEnum;
+import com.his.medicaltech.enums.CrossmatchResultEnum;
+import com.his.medicaltech.enums.RhTypeEnum;
+import com.his.medicaltech.enums.TransfusionApproveLevelEnum;
+import com.his.medicaltech.enums.TransfusionApproveStatusEnum;
+import com.his.medicaltech.enums.TransfusionCrossmatchStatusEnum;
+import com.his.medicaltech.enums.TransfusionReactionTypeEnum;
+import com.his.medicaltech.support.TransfusionRules;
 import com.his.patient.vo.CodeOptionVO;
 import com.his.medicaltech.vo.TransfusionApplyVO;
 import com.his.medicaltech.vo.TransfusionBagVO;
@@ -65,7 +75,7 @@ import java.util.Set;
  *
  * <ol>
  *   <li><b>ABO 相容性按品种分流，红细胞与血浆方向相反</b>
- *       （{@code TransfusionLabels.isAboCompatible}）：把两张表混成一张，
+ *       （{@code TransfusionRules.isAboCompatible}）：把两张表混成一张，
  *       就会把 O 型血浆发给 A 型患者 —— 溶血。这是本类最不能出错的一段。</li>
  *   <li><b>Rh 阴性受血者必须输 Rh 阴性血</b>，对所有品种生效（血小板不做 ABO 硬拦，
  *       但 Rh 一律硬拦）。</li>
@@ -123,7 +133,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
         query.setApplyDateFrom(normalizeFrom(query.getApplyDateFrom()));
         query.setApplyDateTo(normalizeTo(query.getApplyDateTo()));
-        query.setPatientAbo(TransfusionLabels.normalizeAbo(query.getPatientAbo()));
+        query.setPatientAbo(BloodTypeEnum.normalizeAbo(query.getPatientAbo()));
         IPage<TransfusionApplyVO> page = applyMapper.selectApplyPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         // 列表不逐行查血袋（N+1），只算进度；血袋明细在详情接口给
@@ -165,7 +175,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     @Override
     public List<CodeOptionVO> componentOptions() {
         List<CodeOptionVO> list = new ArrayList<>();
-        TransfusionLabels.components().forEach((code, label) -> list.add(new CodeOptionVO(code, label)));
+        BloodComponentEnum.options().forEach((code, label) -> list.add(new CodeOptionVO(code, label)));
         return list;
     }
 
@@ -184,7 +194,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
 
     @Override
     public List<String> reactionTypes() {
-        return TransfusionLabels.reactionTypes();
+        return TransfusionReactionTypeEnum.options();
     }
 
     // 一、申请（待配血）
@@ -193,15 +203,15 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     @Transactional(rollbackFor = Exception.class)
     public String save(TransfusionApplyUpsertDTO dto) {
         // D类：码值合法性（空值与非 A/B/O/AB 一并拒绝），不是单纯「没填」，DTO 注解放不下
-        if (!TransfusionLabels.isValidAbo(dto.getPatientAbo())) {
+        if (!BloodTypeEnum.isValidAbo(dto.getPatientAbo())) {
             throw new BusinessException("受血者 ABO 血型不能为空且必须是 A/B/O/AB 之一（当前="
                     + dto.getPatientAbo() + "）");
         }
         // D类：码值合法性（阳/阴归一校验，空值与非法值同文案拒绝），DTO 注解放不下
-        if (!TransfusionLabels.isValidRh(dto.getPatientRh())) {
+        if (!RhTypeEnum.isValidRh(dto.getPatientRh())) {
             throw new BusinessException("受血者 Rh 血型不能为空（阳/阴）——Rh 阴性属稀有血型，直接决定备血方案");
         }
-        if (!TransfusionLabels.isValidComponent(dto.getBloodComponent())) {
+        if (!BloodComponentEnum.isValid(dto.getBloodComponent())) {
             throw new BusinessException("血液品种取值不合法（应为 1~6：红细胞悬液/血浆/血小板/冷沉淀/全血/其他），当前="
                     + dto.getBloodComponent());
         }
@@ -225,8 +235,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             throw new BusinessException("患者不存在");
         }
 
-        String abo = TransfusionLabels.normalizeAbo(dto.getPatientAbo());
-        String rh = TransfusionLabels.normalizeRh(dto.getPatientRh());
+        String abo = BloodTypeEnum.normalizeAbo(dto.getPatientAbo());
+        String rh = RhTypeEnum.normalizeRh(dto.getPatientRh());
 
         boolean create = dto.getId() == null;
         // 修改分支的旧审批状态/旧折算量（字段覆盖前必须先捕获，否则"量变了要重审"永远判不出来）
@@ -252,7 +262,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             entity.setApplyTime(now());
             entity.setApplyNo(nextApplyNo());
             entity.setTransfusionStatus(TransfusionStatusEnum.PENDING_CROSSMATCH.getCode());
-            entity.setCrossmatchStatus(TransfusionLabels.CM_PENDING);
+            entity.setCrossmatchStatus(TransfusionCrossmatchStatusEnum.PENDING.getCode());
             entity.setHasReaction(0);
         } else {
             entity = mustGet(dto.getId());
@@ -260,7 +270,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             oldAmountMl = entity.getAmountMl();
             if (!Objects.equals(TransfusionStatusEnum.PENDING_CROSSMATCH.getCode(), entity.getTransfusionStatus())) {
                 throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
-                        + TransfusionLabels.statusText(entity.getTransfusionStatus())
+                        + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
                         + "」，只有「待配血」可以修改申请内容（已配血后血袋已定型，改请先取消）");
             }
             if (!Objects.equals(entity.getAdmissionId(), dto.getAdmissionId())) {
@@ -281,7 +291,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         if (applyMapper.countUnfinishedSameComponent(dto.getAdmissionId(), dto.getBloodComponent(),
                 entity.getId()) > 0) {
             throw new BusinessException("该住院已有一条未完成的「"
-                    + TransfusionLabels.componentText(dto.getBloodComponent())
+                    + BloodComponentEnum.labelOrUnknown(dto.getBloodComponent())
                     + "」用血申请，请先完成或取消后再发起（同一种血申请两次属于重复）");
         }
 
@@ -306,26 +316,26 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         // 修改重提的规则：已通过(1) 的单子，申请量变了必须重审（防"审的 400ml 发的 1200ml"）；
         // 已驳回(2)的单子修改重提视为重新申请（清驳回原因、回到待审批）；
         // 急诊单的初始/重置状态是"急诊待补审"(3) —— 可以先配血发血，事后必须补办手续。
-        Integer amountMl = TransfusionLabels.amountToMl(dto.getPlannedAmount(), dto.getAmountUnit());
-        entity.setApproveLevel(TransfusionLabels.approveLevelOf(amountMl));
+        Integer amountMl = TransfusionRules.amountToMl(dto.getPlannedAmount(), dto.getAmountUnit());
+        entity.setApproveLevel(TransfusionRules.approveLevelOf(amountMl));
         boolean emergency = Objects.equals(1, entity.getIsEmergency());
         if (create) {
             entity.setAmountMl(amountMl);
             entity.setApproveStatus(emergency
-                    ? TransfusionLabels.AP_MAKEUP_PENDING : TransfusionLabels.AP_PENDING);
+                    ? TransfusionApproveStatusEnum.MAKEUP_PENDING.getCode() : TransfusionApproveStatusEnum.PENDING.getCode());
             entity.setApproveMakeup(0);
         } else {
             Integer oldStatus = oldApproveStatus;
             boolean amountChanged = !Objects.equals(amountMl, oldAmountMl);
-            if (Objects.equals(TransfusionLabels.AP_REJECTED, oldStatus)) {
+            if (Objects.equals(TransfusionApproveStatusEnum.REJECTED.getCode(), oldStatus)) {
                 entity.setAmountMl(amountMl);
                 entity.setApproveStatus(emergency
-                        ? TransfusionLabels.AP_MAKEUP_PENDING : TransfusionLabels.AP_PENDING);
+                        ? TransfusionApproveStatusEnum.MAKEUP_PENDING.getCode() : TransfusionApproveStatusEnum.PENDING.getCode());
                 entity.setApproveRejectReason(null);
-            } else if (Objects.equals(TransfusionLabels.AP_APPROVED, oldStatus) && amountChanged) {
+            } else if (Objects.equals(TransfusionApproveStatusEnum.APPROVED.getCode(), oldStatus) && amountChanged) {
                 entity.setAmountMl(amountMl);
                 entity.setApproveStatus(emergency
-                        ? TransfusionLabels.AP_MAKEUP_PENDING : TransfusionLabels.AP_PENDING);
+                        ? TransfusionApproveStatusEnum.MAKEUP_PENDING.getCode() : TransfusionApproveStatusEnum.PENDING.getCode());
                 entity.setApproveTime(null);
                 entity.setApproveMakeup(0);
             } else {
@@ -335,7 +345,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
 
         // 与患者档案血型不一致：**不阻断**（档案常是旧的/未查的），但必须让人看见
-        String archiveAbo = TransfusionLabels.normalizeAbo(patient.getBloodType());
+        String archiveAbo = BloodTypeEnum.normalizeAbo(patient.getBloodType());
         String warn = null;
         if (archiveAbo != null && !archiveAbo.equals(abo)) {
             warn = "⚠ 与患者档案血型(" + archiveAbo + ")不一致，以本次鉴定为准，请核实";
@@ -354,9 +364,9 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             applyMapper.updateById(entity);
             // MP updateById 默认忽略 null 字段 —— "清空驳回原因/通过时间"落不进库，
             // 必须用 UpdateWrapper 显式 set null（否则重提的单子还挂着旧驳回原因）
-            boolean wasRejected = Objects.equals(TransfusionLabels.AP_REJECTED, oldApproveStatus);
+            boolean wasRejected = Objects.equals(TransfusionApproveStatusEnum.REJECTED.getCode(), oldApproveStatus);
             boolean reApproveNeeded = !wasRejected
-                    && Objects.equals(TransfusionLabels.AP_APPROVED, oldApproveStatus)
+                    && Objects.equals(TransfusionApproveStatusEnum.APPROVED.getCode(), oldApproveStatus)
                     && !Objects.equals(amountMl, oldAmountMl);
             if (wasRejected || reApproveNeeded) {
                 applyMapper.update(null, new LambdaUpdateWrapper<BizTransfusionApply>()
@@ -367,8 +377,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
         log.info("{}输血申请 applyNo={} admissionId={} 血型={} 品种={} 袋数={} 紧急={} 申请人={}",
                 create ? "发起" : "修改", entity.getApplyNo(), entity.getAdmissionId(),
-                TransfusionLabels.bloodTypeText(abo, rh),
-                TransfusionLabels.componentText(entity.getBloodComponent()),
+                TransfusionRules.bloodTypeText(abo, rh),
+                BloodComponentEnum.getText(entity.getBloodComponent()),
                 entity.getBagCount(), entity.getIsEmergency(), currentName());
         return entity.getApplyNo();
     }
@@ -384,10 +394,10 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         Integer status = entity.getApproveStatus();
-        if (!Objects.equals(TransfusionLabels.AP_PENDING, status)
-                && !Objects.equals(TransfusionLabels.AP_MAKEUP_PENDING, status)) {
+        if (!Objects.equals(TransfusionApproveStatusEnum.PENDING.getCode(), status)
+                && !Objects.equals(TransfusionApproveStatusEnum.MAKEUP_PENDING.getCode(), status)) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 的审批状态为「"
-                    + TransfusionLabels.approveStatusText(status)
+                    + TransfusionApproveStatusEnum.labelOrUnknown(status)
                     + "」，只有「待审批」或「急诊待补审」可以提交审批结论");
         }
         if (dto.getApproveResult() == 2 && !StringUtils.hasText(dto.getOpinion())) {
@@ -398,7 +408,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         Long approverId = currentEmpId();
         // 职称快照：审批那一刻的职称定格（事后升职称不改历史记录）
         String approverTitle = approveRecordMapper.selectEmpTitle(approverId);
-        boolean makeup = Objects.equals(TransfusionLabels.AP_MAKEUP_PENDING, status);
+        boolean makeup = Objects.equals(TransfusionApproveStatusEnum.MAKEUP_PENDING.getCode(), status);
 
         BizTransfusionApprove record = new BizTransfusionApprove();
         record.setApplyId(entity.getId());
@@ -414,12 +424,12 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         approveRecordMapper.insert(record);
 
         if (dto.getApproveResult() == 1) {
-            entity.setApproveStatus(TransfusionLabels.AP_APPROVED);
+            entity.setApproveStatus(TransfusionApproveStatusEnum.APPROVED.getCode());
             entity.setApproveTime(now.truncatedTo(ChronoUnit.SECONDS));
             entity.setApproveMakeup(makeup ? 1 : 0);
             entity.setApproveRejectReason(null);
         } else {
-            entity.setApproveStatus(TransfusionLabels.AP_REJECTED);
+            entity.setApproveStatus(TransfusionApproveStatusEnum.REJECTED.getCode());
             entity.setApproveRejectReason(dto.getOpinion().trim());
         }
         applyMapper.updateById(entity);
@@ -447,7 +457,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             TransfusionApplyVO.ApproveRecord row = new TransfusionApplyVO.ApproveRecord();
             row.setId(r.getId());
             row.setApproveLevel(r.getApproveLevel());
-            row.setApproveLevelText(TransfusionLabels.approveLevelText(r.getApproveLevel()));
+            row.setApproveLevelText(TransfusionApproveLevelEnum.getText(r.getApproveLevel()));
             row.setApproveResult(r.getApproveResult());
             row.setApproveResultText(Objects.equals(1, r.getApproveResult()) ? "通过" : "驳回");
             row.setApproverId(r.getApproverId());
@@ -466,24 +476,24 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         TransfusionApplyVO.ApproveStats stats = new TransfusionApplyVO.ApproveStats();
         stats.setPending(applyMapper.selectCount(
                 new LambdaQueryWrapper<BizTransfusionApply>()
-                        .eq(BizTransfusionApply::getApproveStatus, TransfusionLabels.AP_PENDING)));
+                        .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.PENDING.getCode())));
         stats.setApproved(applyMapper.selectCount(
                 new LambdaQueryWrapper<BizTransfusionApply>()
-                        .eq(BizTransfusionApply::getApproveStatus, TransfusionLabels.AP_APPROVED)));
+                        .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.APPROVED.getCode())));
         stats.setRejected(applyMapper.selectCount(
                 new LambdaQueryWrapper<BizTransfusionApply>()
-                        .eq(BizTransfusionApply::getApproveStatus, TransfusionLabels.AP_REJECTED)));
+                        .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.REJECTED.getCode())));
         stats.setMakeupPending(applyMapper.selectCount(
                 new LambdaQueryWrapper<BizTransfusionApply>()
-                        .eq(BizTransfusionApply::getApproveStatus, TransfusionLabels.AP_MAKEUP_PENDING)));
+                        .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.MAKEUP_PENDING.getCode())));
         List<TransfusionApplyVO.LevelCount> byLevel = new ArrayList<>();
         for (int level = 1; level <= 3; level++) {
             TransfusionApplyVO.LevelCount lc = new TransfusionApplyVO.LevelCount();
             lc.setApproveLevel(level);
-            lc.setApproveLevelText(TransfusionLabels.approveLevelText(level));
+            lc.setApproveLevelText(TransfusionApproveLevelEnum.getText(level));
             lc.setCount(applyMapper.selectCount(
                     new LambdaQueryWrapper<BizTransfusionApply>()
-                            .eq(BizTransfusionApply::getApproveStatus, TransfusionLabels.AP_APPROVED)
+                            .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.APPROVED.getCode())
                             .eq(BizTransfusionApply::getApproveLevel, level)));
             byLevel.add(lc);
         }
@@ -499,16 +509,16 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         if (!Objects.equals(TransfusionStatusEnum.PENDING_CROSSMATCH.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
-                    + TransfusionLabels.statusText(entity.getTransfusionStatus())
+                    + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
                     + "」，只有「待配血」可以录入配血结果");
         }
         // 用血分级审批闸门（sql/93）：已通过才放行；急诊补审中可以先配（事后必须补办手续）
-        if (!TransfusionLabels.approveGateOpen(entity.getApproveStatus(), entity.getIsEmergency())) {
+        if (!TransfusionRules.approveGateOpen(entity.getApproveStatus(), entity.getIsEmergency())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 的用血审批为「"
-                    + TransfusionLabels.approveStatusText(entity.getApproveStatus())
+                    + TransfusionApproveStatusEnum.labelOrUnknown(entity.getApproveStatus())
                     + "」，未通过审批不能配血（申请量 "
                     + (entity.getAmountMl() == null ? "待折算" : entity.getAmountMl() + "ml")
-                    + "，属「" + TransfusionLabels.approveLevelText(entity.getApproveLevel()) + "」审核签发范围）");
+                    + "，属「" + TransfusionApproveLevelEnum.labelOrUnknown(entity.getApproveLevel()) + "」审核签发范围）");
         }
         BizAdmission admission = inpatientService.getAdmissionById(entity.getAdmissionId());
         if (admission == null || !Objects.equals(ADMITTED, admission.getAdmitStatus())) {
@@ -535,10 +545,10 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             if (!submittedNos.add(bagNo)) {
                 throw new BusinessException("本次提交的血袋号「" + bagNo + "」重复");
             }
-            if (!TransfusionLabels.isValidAbo(bag.getBagAbo())) {
+            if (!BloodTypeEnum.isValidAbo(bag.getBagAbo())) {
                 throw new BusinessException("血袋 " + bagNo + " 的 ABO 血型不合法（应为 A/B/O/AB）");
             }
-            if (!TransfusionLabels.isValidRh(bag.getBagRh())) {
+            if (!RhTypeEnum.isValidRh(bag.getBagRh())) {
                 throw new BusinessException("血袋 " + bagNo + " 的 Rh 血型不合法（应为 阳/阴）");
             }
             if (bag.getCrossmatchResult() == null
@@ -555,8 +565,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             if (bag.getBloodComponent() != null
                     && !Objects.equals(entity.getBloodComponent(), bag.getBloodComponent())) {
                 throw new BusinessException("血袋 " + bagNo + " 的血液品种（"
-                        + TransfusionLabels.componentText(bag.getBloodComponent())
-                        + "）与申请单（" + TransfusionLabels.componentText(entity.getBloodComponent())
+                        + BloodComponentEnum.labelOrUnknown(bag.getBloodComponent())
+                        + "）与申请单（" + BloodComponentEnum.labelOrUnknown(entity.getBloodComponent())
                         + "）不一致，不允许发不同品种的血");
             }
             // 一袋血只能给一个人（跨申请单校验）
@@ -565,7 +575,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
                 continue;
             }
             // **ABO / Rh 相容性硬拦**（本闭环最要紧的一条）
-            String reason = TransfusionLabels.incompatibleReason(
+            String reason = TransfusionRules.incompatibleReason(
                     entity.getBloodComponent(), entity.getPatientAbo(), entity.getPatientRh(),
                     bagNo, bag.getBagAbo(), bag.getBagRh());
             if (reason != null) {
@@ -596,8 +606,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
                 row.setBagNo(bagNo);
             }
             row.setDonorNo(bag.getDonorNo());
-            row.setBagAbo(TransfusionLabels.normalizeAbo(bag.getBagAbo()));
-            row.setBagRh(TransfusionLabels.normalizeRh(bag.getBagRh()));
+            row.setBagAbo(BloodTypeEnum.normalizeAbo(bag.getBagAbo()));
+            row.setBagRh(RhTypeEnum.normalizeRh(bag.getBagRh()));
             row.setBloodComponent(bag.getBloodComponent() == null
                     ? entity.getBloodComponent() : bag.getBloodComponent());
             row.setSpec(bag.getSpec());
@@ -614,7 +624,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             row.setCrossmatchDoctorName(empName);
             // 配血结论相合才置"已配血"；不合的袋停在"待配血"，等换血源重配
             row.setBagStatus(Objects.equals(1, bag.getCrossmatchResult())
-                    ? TransfusionLabels.BAG_CROSSMATCHED : TransfusionLabels.BAG_PENDING);
+                    ? BloodBagStatusEnum.CROSSMATCHED.getCode() : BloodBagStatusEnum.PENDING.getCode());
             if (StringUtils.hasText(bag.getRemark())) {
                 row.setRemark(bag.getRemark());
             }
@@ -637,7 +647,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             // 抛异常会触发事务回滚，把刚录的血袋行一起抹掉，
             // 于是"配了但不合"变成"看起来根本没配过"，安全隐患被自己藏起来。
             // ABO/Rh 不相容则相反：那是操作错误，在入口整批回滚，不留痕。
-            entity.setCrossmatchStatus(TransfusionLabels.CM_INCOMPATIBLE);
+            entity.setCrossmatchStatus(TransfusionCrossmatchStatusEnum.INCOMPATIBLE.getCode());
             if (StringUtils.hasText(dto.getCrossmatchNote())) {
                 entity.setRemark(mergeRemark(entity.getRemark(), dto.getCrossmatchNote()));
             }
@@ -648,7 +658,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
 
         if (total >= entity.getBagCount()) {
-            entity.setCrossmatchStatus(TransfusionLabels.CM_ALL_MATCHED);
+            entity.setCrossmatchStatus(TransfusionCrossmatchStatusEnum.ALL_MATCHED.getCode());
             entity.setCrossmatchDoctorId(empId);
             entity.setCrossmatchDoctorName(empName);
             entity.setCrossmatchTime(now);
@@ -663,7 +673,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
 
         // 只配了一部分：等血站后续到货再配，流程停在「待配血」
-        entity.setCrossmatchStatus(TransfusionLabels.CM_PARTIAL);
+        entity.setCrossmatchStatus(TransfusionCrossmatchStatusEnum.PARTIAL.getCode());
         if (StringUtils.hasText(dto.getCrossmatchNote())) {
             entity.setRemark(mergeRemark(entity.getRemark(), dto.getCrossmatchNote()));
         }
@@ -684,7 +694,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             // 同是「待配血」，原因可能完全不同：一次都还没配 vs 配了但结论是不合。
             // 对发血的人来说后者是更硬的结论（血源已经取来过、结果相斥），文案必须分开 ——
             // 否则会让人以为"还没配，再等等就好"，而实际上这批血永远不能发给这个患者。
-            if (Objects.equals(TransfusionLabels.CM_INCOMPATIBLE, entity.getCrossmatchStatus())) {
+            if (Objects.equals(TransfusionCrossmatchStatusEnum.INCOMPATIBLE.getCode(), entity.getCrossmatchStatus())) {
                 throw new BusinessException("输血单 " + entity.getApplyNo()
                         + " 存在交叉配血不合的血袋，不能发血（血源与受血者相斥，"
                         + "请更换血源重新配血，或取消本单）");
@@ -694,18 +704,18 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
         if (!Objects.equals(TransfusionStatusEnum.CROSSMATCHED.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
-                    + TransfusionLabels.statusText(entity.getTransfusionStatus())
+                    + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
                     + "」，只有「已配血」可以发血");
         }
-        if (!Objects.equals(TransfusionLabels.CM_ALL_MATCHED, entity.getCrossmatchStatus())) {
+        if (!Objects.equals(TransfusionCrossmatchStatusEnum.ALL_MATCHED.getCode(), entity.getCrossmatchStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 的配血状态为「"
-                    + TransfusionLabels.crossmatchStatusText(entity.getCrossmatchStatus())
+                    + TransfusionCrossmatchStatusEnum.labelOrUnknown(entity.getCrossmatchStatus())
                     + "」，不允许发血（必须全部相合且配齐）");
         }
         // 用血分级审批闸门（sql/93）第二道：配血口放行过急诊补审的单子，发血口同样要拦常规未批
-        if (!TransfusionLabels.approveGateOpen(entity.getApproveStatus(), entity.getIsEmergency())) {
+        if (!TransfusionRules.approveGateOpen(entity.getApproveStatus(), entity.getIsEmergency())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 的用血审批为「"
-                    + TransfusionLabels.approveStatusText(entity.getApproveStatus())
+                    + TransfusionApproveStatusEnum.labelOrUnknown(entity.getApproveStatus())
                     + "」，未通过审批不能发血");
         }
         BizAdmission admission = inpatientService.getAdmissionById(entity.getAdmissionId());
@@ -717,7 +727,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         String note = dto.getIssueRemark();
         List<BizTransfusionBag> bags = bagMapper.selectByApply(entity.getId());
         for (BizTransfusionBag bag : bags) {
-            bag.setBagStatus(TransfusionLabels.BAG_ISSUED);
+            bag.setBagStatus(BloodBagStatusEnum.ISSUED.getCode());
             bag.setIssueTime(now);
             if (StringUtils.hasText(note)) {
                 bag.setRemark(mergeRemark(bag.getRemark(), note));
@@ -743,7 +753,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         if (!Objects.equals(TransfusionStatusEnum.ISSUED.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
-                    + TransfusionLabels.statusText(entity.getTransfusionStatus())
+                    + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
                     + "」，只有「已发血」可以开始输注"
                     + (Objects.equals(TransfusionStatusEnum.CROSSMATCHED.getCode(), entity.getTransfusionStatus())
                     ? "（血还没发出来，输注的是什么无从追溯）" : ""));
@@ -776,7 +786,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
 
         List<BizTransfusionBag> bags = bagMapper.selectByApply(entity.getId());
         for (BizTransfusionBag bag : bags) {
-            bag.setBagStatus(TransfusionLabels.BAG_INFUSED);
+            bag.setBagStatus(BloodBagStatusEnum.INFUSED.getCode());
             bagMapper.updateById(bag);
         }
 
@@ -814,7 +824,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
         if (!Objects.equals(TransfusionStatusEnum.INFUSING.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
-                    + TransfusionLabels.statusText(entity.getTransfusionStatus())
+                    + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
                     + "」，未开始输注不能登记完成");
         }
         LocalDateTime end = toSeconds(dto.getInfusionEndTime());
@@ -878,7 +888,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         if (!Objects.equals(TransfusionStatusEnum.FINISHED.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
-                    + TransfusionLabels.statusText(entity.getTransfusionStatus())
+                    + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
                     + "」，只有「已完成」的输血单可以补报输血反应"
                     + "（这样不会为了记反应而把已完成的单改回输注中 —— 那是改历史）");
         }
@@ -886,9 +896,9 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 已上报过输血反应（"
                     + entity.getReactionType() + "），不能重复上报");
         }
-        if (!TransfusionLabels.isValidReactionType(dto.getReactionType())) {
+        if (!TransfusionReactionTypeEnum.isValid(dto.getReactionType())) {
             throw new BusinessException("输血反应类型不合法（应从字典选择：" 
-                    + String.join("/", TransfusionLabels.reactionTypes()) + "），当前="
+                    + String.join("/", TransfusionReactionTypeEnum.options()) + "），当前="
                     + dto.getReactionType());
         }
 
@@ -957,20 +967,20 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
 
         StringBuilder course = new StringBuilder();
         course.append("输血成分：")
-                .append(TransfusionLabels.componentText(entity.getBloodComponent()));
+                .append(BloodComponentEnum.labelOrUnknown(entity.getBloodComponent()));
         if (StringUtils.hasText(entity.getComponentSpec())) {
             course.append("（").append(entity.getComponentSpec()).append("）");
         }
         course.append("，共 ").append(bags.size()).append(" 袋\n");
         course.append("受血者血型：")
-                .append(TransfusionLabels.bloodTypeText(entity.getPatientAbo(), entity.getPatientRh()))
+                .append(TransfusionRules.bloodTypeText(entity.getPatientAbo(), entity.getPatientRh()))
                 .append('\n');
         if (!bags.isEmpty()) {
             course.append("血袋：");
             List<String> nos = new ArrayList<>();
             for (BizTransfusionBag b : bags) {
                 nos.add(b.getBagNo() + "（"
-                        + TransfusionLabels.bloodTypeText(b.getBagAbo(), b.getBagRh()) + "）");
+                        + TransfusionRules.bloodTypeText(b.getBagAbo(), b.getBagRh()) + "）");
             }
             course.append(String.join("、", nos)).append('\n');
         }
@@ -978,7 +988,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             long minutes = Math.max(0, Duration.between(entity.getInfusionStartTime(), end).toMinutes());
             course.append("输注时间：").append(entity.getInfusionStartTime().format(FULL_TIME))
                     .append(" ~ ").append(end.format(FULL_TIME))
-                    .append("（").append(TransfusionLabels.durationText(minutes)).append("）\n");
+                    .append("（").append(TransfusionRules.durationText(minutes)).append("）\n");
         }
         if (StringUtils.hasText(entity.getInfusionSpeed())) {
             course.append("滴速：").append(entity.getInfusionSpeed()).append('\n');
@@ -1038,13 +1048,13 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         record.setTreatmentPlan(plan.toString());
         // remark 承载"输血成分与量"这个结构化要素（同时保留来源单号，便于倒查）
         record.setRemark("系统回写：输血申请单号 " + entity.getApplyNo()
-                + "，输血成分 " + TransfusionLabels.componentText(entity.getBloodComponent())
+                + "，输血成分 " + BloodComponentEnum.getText(entity.getBloodComponent())
                 + "，共 " + bags.size() + " 袋"
                 + (entity.getPlannedAmount() == null ? "" :
                 "，申请总量 " + entity.getPlannedAmount()
                         + textOr(entity.getAmountUnit(), ""))
                 + "，受血者血型 "
-                + TransfusionLabels.bloodTypeText(entity.getPatientAbo(), entity.getPatientRh())
+                + TransfusionRules.bloodTypeText(entity.getPatientAbo(), entity.getPatientRh())
                 + (Objects.equals(1, entity.getIsEmergency()) ? "，紧急用血" : ""));
         record.setRecordStatus(RECORD_STATUS_SUBMITTED);
         // 签名 = 申请输血的经治医师；缺失才回落到录入人（宁可记"谁录的"，也不留空签名）
@@ -1062,31 +1072,26 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
      * @param withBags 是否加载血袋明细（详情接口 true、列表 false —— 列表逐行查血袋就是 N+1）
      */
     private void decorate(TransfusionApplyVO vo, boolean withBags) {
-        vo.setTransfusionStatusText(TransfusionLabels.statusText(vo.getTransfusionStatus()));
-        vo.setCrossmatchStatusText(TransfusionLabels.crossmatchStatusText(vo.getCrossmatchStatus()));
-        vo.setBloodComponentText(TransfusionLabels.componentText(vo.getBloodComponent()));
-        vo.setBloodTypeText(TransfusionLabels.bloodTypeText(vo.getPatientAbo(), vo.getPatientRh()));
+        vo.setTransfusionStatusText(TransfusionStatusEnum.getText(vo.getTransfusionStatus()));
+        vo.setCrossmatchStatusText(TransfusionCrossmatchStatusEnum.getText(vo.getCrossmatchStatus()));
+        vo.setBloodComponentText(BloodComponentEnum.getText(vo.getBloodComponent()));
+        vo.setBloodTypeText(TransfusionRules.bloodTypeText(vo.getPatientAbo(), vo.getPatientRh()));
         vo.setIsEmergencyText(vo.getIsEmergency() == null ? "—" : (vo.getIsEmergency() == 1 ? "紧急" : "常规"));
         vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
-        vo.setAdmitStatusText(vo.getAdmitStatus() == null ? "—"
-                : switch (vo.getAdmitStatus()) {
-            case 1 -> "在院";
-            case 0 -> "已出院";
-            default -> "未知(" + vo.getAdmitStatus() + ")";
-        });
+        vo.setAdmitStatusText(AdmitStatusEnum.getText(vo.getAdmitStatus()));
         vo.setHasReactionText(Objects.equals(1, vo.getHasReaction()) ? "有反应（已上报）" : "未上报反应");
-        vo.setApproveStatusText(TransfusionLabels.approveStatusText(vo.getApproveStatus()));
-        vo.setApproveLevelText(TransfusionLabels.approveLevelText(vo.getApproveLevel()));
+        vo.setApproveStatusText(TransfusionApproveStatusEnum.getText(vo.getApproveStatus()));
+        vo.setApproveLevelText(TransfusionApproveLevelEnum.getText(vo.getApproveLevel()));
         vo.setCheckItemsText(TransfusionCheckItems.summaryText(vo.getCheckItems()));
         vo.setCheckItemOptions(checkItems());
-        vo.setReactionTypeOptions(TransfusionLabels.reactionTypes());
+        vo.setReactionTypeOptions(TransfusionReactionTypeEnum.options());
 
         // 已配袋数来自投影里的子查询（列表逐行查血袋就是 N+1）
         int matched = vo.getMatchedBagCount() == null ? 0 : vo.getMatchedBagCount();
         vo.setMatchedBagCount(matched);
         if (vo.getBagCount() == null) {
             vo.setBagProgressText("—");
-        } else if (Objects.equals(TransfusionLabels.CM_INCOMPATIBLE, vo.getCrossmatchStatus())) {
+        } else if (Objects.equals(TransfusionCrossmatchStatusEnum.INCOMPATIBLE.getCode(), vo.getCrossmatchStatus())) {
             vo.setBagProgressText("已配 " + matched + "/" + vo.getBagCount() + " 袋，存在配血不合");
         } else if (matched >= vo.getBagCount()) {
             vo.setBagProgressText("全部相合 " + matched + "/" + vo.getBagCount());
@@ -1103,11 +1108,11 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         vo.setCanEdit(pending);
         vo.setCanCrossmatch(pending);
         boolean approvable = pending
-                && (Objects.equals(TransfusionLabels.AP_PENDING, vo.getApproveStatus())
-                || Objects.equals(TransfusionLabels.AP_MAKEUP_PENDING, vo.getApproveStatus()));
+                && (Objects.equals(TransfusionApproveStatusEnum.PENDING.getCode(), vo.getApproveStatus())
+                || Objects.equals(TransfusionApproveStatusEnum.MAKEUP_PENDING.getCode(), vo.getApproveStatus()));
         vo.setCanApprove(approvable);
         vo.setCanIssue(crossmatched
-                && Objects.equals(TransfusionLabels.CM_ALL_MATCHED, vo.getCrossmatchStatus()));
+                && Objects.equals(TransfusionCrossmatchStatusEnum.ALL_MATCHED.getCode(), vo.getCrossmatchStatus()));
         vo.setCanStart(issued);
         vo.setCanFinish(infusing);
         // 输注中(3)与已完成(4)不可取消：血已经进入患者体内，取消它是销毁证据
@@ -1118,7 +1123,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             long minutes = Math.max(0, Duration.between(
                     vo.getInfusionStartTime(), vo.getInfusionEndTime()).toMinutes());
             vo.setDurationMinutes(minutes);
-            vo.setDurationText(TransfusionLabels.durationText(minutes));
+            vo.setDurationText(TransfusionRules.durationText(minutes));
         }
         vo.setWaitText(waitText(vo, pending, crossmatched, issued, infusing));
 
@@ -1160,9 +1165,9 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         vo.setDonorNo(b.getDonorNo());
         vo.setBagAbo(b.getBagAbo());
         vo.setBagRh(b.getBagRh());
-        vo.setBloodTypeText(TransfusionLabels.bloodTypeText(b.getBagAbo(), b.getBagRh()));
+        vo.setBloodTypeText(TransfusionRules.bloodTypeText(b.getBagAbo(), b.getBagRh()));
         vo.setBloodComponent(b.getBloodComponent());
-        vo.setBloodComponentText(TransfusionLabels.componentText(b.getBloodComponent()));
+        vo.setBloodComponentText(BloodComponentEnum.getText(b.getBloodComponent()));
         vo.setSpec(b.getSpec());
         vo.setAmount(b.getAmount());
         vo.setAmountUnit(b.getAmountUnit());
@@ -1174,11 +1179,11 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         vo.setCrossmatchMain(b.getCrossmatchMain());
         vo.setCrossmatchSide(b.getCrossmatchSide());
         vo.setCrossmatchResult(b.getCrossmatchResult());
-        vo.setCrossmatchResultText(TransfusionLabels.crossmatchResultText(b.getCrossmatchResult()));
+        vo.setCrossmatchResultText(CrossmatchResultEnum.getText(b.getCrossmatchResult()));
         vo.setCrossmatchTime(b.getCrossmatchTime());
         vo.setCrossmatchDoctorName(b.getCrossmatchDoctorName());
         vo.setBagStatus(b.getBagStatus());
-        vo.setBagStatusText(TransfusionLabels.bagStatusText(b.getBagStatus()));
+        vo.setBagStatusText(BloodBagStatusEnum.getText(b.getBagStatus()));
         vo.setIssueTime(b.getIssueTime());
         vo.setRemark(b.getRemark());
         return vo;
@@ -1189,18 +1194,18 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         LocalDateTime now = now();
         if (pending && vo.getApplyTime() != null) {
             long m = Math.max(0, Duration.between(vo.getApplyTime(), now).toMinutes());
-            return "申请后已等待 " + TransfusionLabels.durationText(m) + " 未完成配血";
+            return "申请后已等待 " + TransfusionRules.durationText(m) + " 未完成配血";
         }
         if (crossmatched && vo.getCrossmatchTime() != null) {
-            return "配血完成已 " + TransfusionLabels.durationText(
+            return "配血完成已 " + TransfusionRules.durationText(
                     Duration.between(vo.getCrossmatchTime(), now).toMinutes()) + "，尚未发血";
         }
         if (issued && vo.getIssueTime() != null) {
-            return "已发血 " + TransfusionLabels.durationText(
+            return "已发血 " + TransfusionRules.durationText(
                     Duration.between(vo.getIssueTime(), now).toMinutes()) + "，尚未开始输注";
         }
         if (infusing && vo.getInfusionStartTime() != null) {
-            return "输注中，已进行 " + TransfusionLabels.durationText(
+            return "输注中，已进行 " + TransfusionRules.durationText(
                     Duration.between(vo.getInfusionStartTime(), now).toMinutes());
         }
         return null;

@@ -12,12 +12,12 @@ import com.his.common.exception.BusinessException;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.AgeUnitEnum;
+import com.his.patient.enums.ConsultCategoryEnum;
 import com.his.patient.enums.ConsultScopeEnum;
 import com.his.patient.enums.ConsultationStatusEnum;
 import com.his.patient.enums.InpatientRecordTypeEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientConsultationService;
-import com.his.patient.support.ConsultationLabels;
 import com.his.patient.vo.ConsultationVO;
 import com.his.patient.vo.WardVO;
 import com.his.security.UserUtils;
@@ -74,6 +74,12 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
      */
     private static final long DOCTOR_UNSPECIFIED = 0L;
 
+    /**
+     * 急会诊响应时限（分钟）。
+     * <p>只作为**查询时判定**超时的依据，不落状态列 —— 与"危急值超时是查询时算的"同一口径。
+     */
+    private static final int URGENT_RESPONSE_MINUTES = 10;
+
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizConsultationMapper consultationMapper;
@@ -112,8 +118,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
         validateConsultType(dto.getConsultType());
         Integer category = dto.getConsultCategory() == null
-                ? ConsultationLabels.CATEGORY_NORMAL : dto.getConsultCategory();
-        if (category < ConsultationLabels.CATEGORY_NORMAL || category > ConsultationLabels.CATEGORY_OTHER) {
+                ? ConsultCategoryEnum.NORMAL.getCode() : dto.getConsultCategory();
+        if (ConsultCategoryEnum.fromCode(category) == null) {
             throw new BusinessException("会诊类别取值不合法（1-普通科间 2-营养 3-药学 4-其他专科）");
         }
 
@@ -180,7 +186,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         notifyNewConsultation(entity, admission);
         log.info("申请会诊 consultationNo={} admissionId={} 申请科室={} 会诊科室={} 范围={} 急={} 申请医生={}",
                 entity.getConsultationNo(), admission.getAdmissionId(), fromDeptId, dto.getToDeptId(),
-                ConsultScopeEnum.labelOf(dto.getConsultType()), isUrgent, entity.getApplyDoctorName());
+                ConsultScopeEnum.getText(dto.getConsultType()), isUrgent, entity.getApplyDoctorName());
         return entity.getConsultationNo();
     }
 
@@ -222,7 +228,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
                     entity.getApplyDoctorName() == null ? "未知" : entity.getApplyDoctorName(),
                     patientName,
                     urgent ? "急" : "",
-                    ConsultScopeEnum.labelOf(entity.getConsultType()),
+                    ConsultScopeEnum.getText(entity.getConsultType()),
                     entity.getReason());
             String payload = cn.hutool.json.JSONUtil.toJsonStr(new java.util.LinkedHashMap<String, Object>() {{
                 put("patientName", patientName);
@@ -286,7 +292,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         consultationMapper.updateById(entity);
         log.info("修改会诊申请 consultationNo={} 会诊科室={} 范围={} 急={} 操作人={}",
                 entity.getConsultationNo(), dto.getToDeptId(),
-                ConsultScopeEnum.labelOf(dto.getConsultType()), isUrgent, currentName());
+                ConsultScopeEnum.getText(dto.getConsultType()), isUrgent, currentName());
         return entity.getConsultationNo();
     }
 
@@ -339,11 +345,11 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         // 急会诊超时只提醒、不阻断：临床已经接诊了，再拒绝反而是把病人放下
         Long waitMinutes = minutesBetween(entity.getApplyTime(), now);
         boolean overdue = Objects.equals(YesOrNoEnum.YES.getCode(), entity.getIsUrgent()) && waitMinutes != null
-                && waitMinutes > ConsultationLabels.URGENT_RESPONSE_MINUTES;
+                && waitMinutes > URGENT_RESPONSE_MINUTES;
         if (overdue) {
             log.warn("急会诊 {} 应答超时：申请时间={} 接诊时间={} 等待 {} 分钟（时限 {} 分钟），接诊医生={}",
                     entity.getConsultationNo(), entity.getApplyTime(), now, waitMinutes,
-                    ConsultationLabels.URGENT_RESPONSE_MINUTES, doctorName);
+                    URGENT_RESPONSE_MINUTES, doctorName);
         }
         log.info("会诊应答 consultationNo={} 接诊医生={} 等待分钟={}", entity.getConsultationNo(), doctorName, waitMinutes);
     }
@@ -537,12 +543,14 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
     }
 
     private void decorate(ConsultationVO vo) {
-        vo.setConsultTypeText(ConsultScopeEnum.labelOf(vo.getConsultType()));
-        vo.setConsultStatusText(ConsultationStatusEnum.labelOf(vo.getConsultStatus()));
-        vo.setIsUrgentText(ConsultUrgentEnum.labelOf(vo.getIsUrgent()));
-        vo.setConsultCategoryText(ConsultationLabels.categoryText(vo.getConsultCategory()));
+        vo.setConsultTypeText(ConsultScopeEnum.getText(vo.getConsultType()));
+        vo.setConsultStatusText(ConsultationStatusEnum.getText(vo.getConsultStatus()));
+        vo.setIsUrgentText(ConsultUrgentEnum.getText(vo.getIsUrgent()));
+        // 类别 null（存量行未填）→ 一律按"普通科间会诊"显示；非 null 脏数据 → 空串，由数据治理修复，不伪装
+        vo.setConsultCategoryText(vo.getConsultCategory() == null
+                ? ConsultCategoryEnum.NORMAL.getLabel() : ConsultCategoryEnum.getText(vo.getConsultCategory()));
         // 是否按时应答：营养会诊及时应答率的行级依据；未应答一律按超时计
-        vo.setOnTime(ConsultationLabels.onTime(vo.getIsUrgent(), vo.getApplyTime(), vo.getAcceptTime()));
+        vo.setOnTime(onTime(vo.getIsUrgent(), vo.getApplyTime(), vo.getAcceptTime()));
 
         boolean pending = Objects.equals(ConsultationStatusEnum.PENDING.getCode(), vo.getConsultStatus());
         boolean accepted = Objects.equals(ConsultationStatusEnum.ACCEPTED.getCode(), vo.getConsultStatus());
@@ -559,12 +567,28 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         // 急会诊超时**查询时算**：只看"还没应答的急会诊"
         boolean overdue = Objects.equals(YesOrNoEnum.YES.getCode(), vo.getIsUrgent()) && pending
                 && vo.getApplyTime() != null
-                && now.isAfter(vo.getApplyTime().plusMinutes(ConsultationLabels.URGENT_RESPONSE_MINUTES));
+                && now.isAfter(vo.getApplyTime().plusMinutes(URGENT_RESPONSE_MINUTES));
         vo.setOverdue(overdue);
         if (overdue) {
             vo.setOverdueText("急会诊已等待 " + minutesBetween(vo.getApplyTime(), now) + " 分钟未应答（时限 "
-                    + ConsultationLabels.URGENT_RESPONSE_MINUTES + " 分钟）");
+                    + URGENT_RESPONSE_MINUTES + " 分钟）");
         }
+    }
+
+    /**
+     * 会诊是否按时应答：急会诊 ≤10 分钟、普通 ≤24 小时；未应答按超时计。
+     */
+    private static boolean onTime(Integer urgent, LocalDateTime applyTime, LocalDateTime acceptTime) {
+        if (applyTime == null || acceptTime == null) {
+            return false;
+        }
+        long minutes = Duration.between(applyTime, acceptTime).toMinutes();
+        if (minutes < 0) {
+            return false;
+        }
+        return urgent != null && urgent == YesOrNoEnum.YES.getCode()
+                ? minutes <= URGENT_RESPONSE_MINUTES
+                : minutes <= 24 * 60L;
     }
 
     private BizConsultation mustGet(Long consultationId) {

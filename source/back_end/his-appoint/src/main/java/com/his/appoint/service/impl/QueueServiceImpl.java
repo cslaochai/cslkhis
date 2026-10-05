@@ -265,7 +265,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
      */
     private BizQueueListVO toListVO(BizQueue queue) {
         BizQueueListVO vo = BeanUtil.copyProperties(queue, BizQueueListVO.class);
-        vo.setTriageLevelText(levelText(queue.getTriageLevel()));
+        vo.setTriageLevelText(TriageLevelEnum.getText(queue.getTriageLevel()));
         BizAppointInfo registInfo = queue.getRegistId() != null
                 ? bizAppointInfoMapper.selectById(queue.getRegistId()) : null;
         if (registInfo != null) {
@@ -281,15 +281,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
         }
         fillRoomFromSchedule(vo, registInfo);
         return vo;
-    }
-
-    /**
-     * 分诊等级文案。码值不在枚举内（脏数据）返回 null，前端渲染「未知(n)」——
-     * 不能回落到「4级·非急」这种合法文案，那会把危重患者说成非急。
-     */
-    private String levelText(Integer level) {
-        TriageLevelEnum levelEnum = TriageLevelEnum.parse(level);
-        return levelEnum == null ? null : levelEnum.getDesc();
     }
 
     @Override
@@ -567,7 +558,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
             if (!criticals.isEmpty()) {
                 BizQueue critical = criticals.get(0);
                 throw new BusinessException("队列中有危重患者 " + critical.getPatientName()
-                        + "（" + levelText(critical.getTriageLevel()) + " · " + critical.getQueueNo()
+                        + "（" + TriageLevelEnum.labelOrUnknown(critical.getTriageLevel()) + " · " + critical.getQueueNo()
                         + "）尚未接诊，请先处置危重患者");
             }
         }
@@ -1198,8 +1189,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
      * 静默贴一个合法文案比显示未知更危险。
      */
     private void fillLogStatus(OpdLogListVO vo) {
-        OpdLogStatusEnum status = OpdLogStatusEnum.fromCode(vo.getLogStatus());
-        vo.setLogStatusLabel(status == null ? null : status.getLabel());
+        vo.setLogStatusLabel(OpdLogStatusEnum.getText(vo.getLogStatus()));
     }
 
     @Override
@@ -1323,7 +1313,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
 
     private TriageRecordVO toTriageVO(BizTriageRecord record) {
         TriageRecordVO vo = BeanUtil.copyProperties(record, TriageRecordVO.class);
-        vo.setTriageLevelText(levelText(record.getTriageLevel()));
+        vo.setTriageLevelText(TriageLevelEnum.getText(record.getTriageLevel()));
         return vo;
     }
 
@@ -1410,7 +1400,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
                 vo.setCheckedIn(true);
                 vo.setQueueId(queue.getId());
                 vo.setQueueStatus(queue.getQueueStatus());
-                vo.setQueueStatusText(QueueStatusEnum.labelOf(queue.getQueueStatus()));
+                vo.setQueueStatusText(QueueStatusEnum.getText(queue.getQueueStatus()));
                 vo.setSequenceNo(queue.getSequenceNo());
                 vo.setRoomName(queue.getRoomName());
                 vo.setArriveTime(queue.getArriveTime());

@@ -583,7 +583,7 @@ public class DialysisServiceImpl implements DialysisService {
     }
 
     private static String slotText(int slot) {
-        String label = DialysisTimeSlotEnum.labelOf(slot);
+        String label = DialysisTimeSlotEnum.getText(slot);
         return label == null ? DialysisTimeSlotEnum.MORNING.getLabel() : label;
     }
 

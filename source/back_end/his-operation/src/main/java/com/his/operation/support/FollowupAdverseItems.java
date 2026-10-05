@@ -1,26 +1,20 @@
 package com.his.operation.support;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.stream.Collectors;
-import com.his.operation.support.SafetyCheckItems;
 
 /**
  * 麻醉随访并发症要点字典（P134.3）+ 恢复情况/状态文案单点。
  *
- * <p>与 {@link SafetyCheckItems} 同口径：<b>不建字典</b>，后端 AnesthesiaLabels/
- * 本文件与前端 {@code lib/anesthesia.js} 各一份单点。未知码值一律「未知(n)」，
+ * <p>与 {@link SafetyCheckItems} 同口径：<b>不建字典</b>，后端本文件/
+ * 与前端 {@code lib/anesthesia.js} 各一份单点。未知码值一律返回空串，
  * 绝不回落成某个看起来合法的值。
  */
 public final class FollowupAdverseItems {
 
-    private FollowupAdverseItems() {
-    }
-
-    /** 码值 → 文案（顺序即渲染顺序） */
+    /**
+     * 码值 → 文案（顺序即渲染顺序）
+     */
     private static final Map<Integer, String> ALL = new LinkedHashMap<>();
 
     static {
@@ -35,7 +29,12 @@ public final class FollowupAdverseItems {
         ALL.put(9, "其他");
     }
 
-    /** 恢复情况：1-良好 2-一般 3-差 */
+    private FollowupAdverseItems() {
+    }
+
+    /**
+     * 恢复情况：1-良好 2-一般 3-差
+     */
     public static String recoveryText(Integer recovery) {
         if (recovery == null) {
             return "—";
@@ -44,11 +43,13 @@ public final class FollowupAdverseItems {
             case 1 -> "良好";
             case 2 -> "一般";
             case 3 -> "差";
-            default -> "未知(" + recovery + ")";
+            default -> "";
         };
     }
 
-    /** 状态：0-草稿 1-已完成 */
+    /**
+     * 状态：0-草稿 1-已完成
+     */
     public static String statusText(Integer status) {
         if (status == null) {
             return "—";
@@ -56,7 +57,7 @@ public final class FollowupAdverseItems {
         return switch (status) {
             case 0 -> "草稿";
             case 1 -> "已完成";
-            default -> "未知(" + status + ")";
+            default -> "";
         };
     }
 
@@ -68,7 +69,9 @@ public final class FollowupAdverseItems {
         return ALL.containsKey(code);
     }
 
-    /** "1,3,9" → {1,3,9}；非法/未知码直接抛 IllegalArgumentException（调用方转 BusinessException） */
+    /**
+     * "1,3,9" → {1,3,9}；非法/未知码直接抛 IllegalArgumentException（调用方转 BusinessException）
+     */
     public static Set<Integer> parse(String raw) {
         Set<Integer> set = new TreeSet<>();
         if (raw == null || raw.isBlank()) {
@@ -97,17 +100,21 @@ public final class FollowupAdverseItems {
                 : codes.stream().map(String::valueOf).collect(Collectors.joining(","));
     }
 
-    /** 列表展示文案："恶心呕吐、尿潴留"；空 → null（渲染侧按"无并发症"处理） */
+    /**
+     * 列表展示文案："恶心呕吐、尿潴留"；空 → null（渲染侧按"无并发症"处理）
+     */
     public static String summaryText(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
         }
         return parse(raw).stream()
-                .map(code -> ALL.getOrDefault(code, "未知(" + code + ")"))
+                .map(code -> ALL.getOrDefault(code, ""))
                 .collect(Collectors.joining("、"));
     }
 
-    /** 随访轮次建议文案 */
+    /**
+     * 随访轮次建议文案
+     */
     public static String roundText(Integer roundNo) {
         if (roundNo == null) {
             return "—";

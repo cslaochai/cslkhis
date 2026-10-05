@@ -272,7 +272,7 @@ public class DrugTransferServiceImpl implements DrugTransferService {
         DrugTransferStatusEnum status = DrugTransferStatusEnum.fromCode(head.getStatus());
         if (status != DrugTransferStatusEnum.PENDING_OUT && status != DrugTransferStatusEnum.CANCELLED) {
             throw new BusinessException("只有「待发出」或「已作废」的调拨单可以删除（当前："
-                    + DrugTransferStatusEnum.labelOf(head.getStatus()) + "）；已发出请先完成接收，"
+                    + DrugTransferStatusEnum.getText(head.getStatus()) + "）；已发出请先完成接收，"
                     + "已完成是留档凭证不能抹");
         }
         itemMapper.purgeByTransferId(head.getId());
@@ -307,7 +307,7 @@ public class DrugTransferServiceImpl implements DrugTransferService {
                 throw new BusinessException("库存批次不存在或已被删除（批次#" + row.getStockId() + "）");
             }
             if (!Objects.equals(batch.getStockRoom(), type.getFromRoom().getCode())) {
-                throw new BusinessException(batchLabel(batch) + " 实际在「" + StockRoomEnum.labelOf(batch.getStockRoom())
+                throw new BusinessException(batchLabel(batch) + " 实际在「" + StockRoomEnum.getText(batch.getStockRoom())
                         + "」，与本单方向「" + type.getLabel() + "」的发出库位不符，请重新选择批次");
             }
             BigDecimal quantity = scale(row.getApplyQuantity());
@@ -379,12 +379,12 @@ public class DrugTransferServiceImpl implements DrugTransferService {
         String hint = Objects.equals(head.getStatus(), DrugTransferStatusEnum.PENDING_IN.getCode())
                 ? "；货已在途，只能继续接收，要收回来请开一张反向调拨单" : "";
         throw new BusinessException("当前状态不能" + action + "（现在："
-                + DrugTransferStatusEnum.labelOf(head.getStatus()) + "）" + hint);
+                + DrugTransferStatusEnum.getText(head.getStatus()) + "）" + hint);
     }
 
     /** 方向、单号、批次、数量都写进流水备注：只写「调拨」两字，事后对着流水想不起来搬的是什么 */
     private String transferLabel(BizDrugTransfer head, BizDrugTransferItem item, String stage) {
-        return DrugTransferTypeEnum.labelOf(head.getTransferType()) + stage + "：" + head.getTransferNo()
+        return DrugTransferTypeEnum.getText(head.getTransferType()) + stage + "：" + head.getTransferNo()
                 + " " + item.getDrugName() + " 批号" + item.getBatchNo()
                 + " 数量" + plain(item.getApplyQuantity()) + "；事由：" + head.getReason();
     }
@@ -395,10 +395,10 @@ public class DrugTransferServiceImpl implements DrugTransferService {
         return logs;
     }
 
-    private void fillText(DrugTransferVO vo) {        vo.setTransferTypeText(DrugTransferTypeEnum.labelOf(vo.getTransferType()));
-        vo.setFromRoomText(StockRoomEnum.labelOf(vo.getFromRoom()));
-        vo.setToRoomText(StockRoomEnum.labelOf(vo.getToRoom()));
-        vo.setStatusText(DrugTransferStatusEnum.labelOf(vo.getStatus()));
+    private void fillText(DrugTransferVO vo) {        vo.setTransferTypeText(DrugTransferTypeEnum.getText(vo.getTransferType()));
+        vo.setFromRoomText(StockRoomEnum.getText(vo.getFromRoom()));
+        vo.setToRoomText(StockRoomEnum.getText(vo.getToRoom()));
+        vo.setStatusText(DrugTransferStatusEnum.getText(vo.getStatus()));
     }
 
     private static String batchLabel(BizDrugStockVO batch) {

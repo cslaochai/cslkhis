@@ -11,6 +11,7 @@ import com.his.pharmacy.dto.DrugTraceUploadDTO;
 import com.his.pharmacy.dto.DrugTraceVoidDTO;
 import com.his.pharmacy.entity.BizDrugStock;
 import com.his.pharmacy.entity.BizDrugTrace;
+import com.his.pharmacy.enums.DrugTraceStatusEnum;
 import com.his.pharmacy.mapper.BizDrugStockMapper;
 import com.his.pharmacy.mapper.BizDrugTraceMapper;
 import com.his.pharmacy.service.DrugTraceService;
@@ -55,11 +56,6 @@ public class DrugTraceServiceImpl implements DrugTraceService {
     /** 采集场景 / 核销场景 */
     private static final int SCENE_COLLECT = 1;
     private static final int SCENE_DISPENSE = 2;
-
-    /** 码状态 */
-    private static final int STATUS_IN_STOCK = 1;
-    private static final int STATUS_DISPENSED = 2;
-    private static final int STATUS_VOID = 3;
 
     /** 上传状态 */
     private static final int UPLOAD_PENDING = 0;
@@ -147,14 +143,14 @@ public class DrugTraceServiceImpl implements DrugTraceService {
                     vo.setDispensingPatientName(str(dp.get("patient_name")));
                     int dpStatus = toInt(dp.get("dispensing_status"));
                     boolean ok;
-                    if (dpStatus != STATUS_DISPENSED) {
+                    if (dpStatus != DrugTraceStatusEnum.DISPENSED.getCode()) {
                         vo.setTip("该发药记录当前状态不是「已发药」，不能核销追溯码");
                         ok = false;
                     } else if (!vo.isExists()) {
                         vo.setTip("该追溯码尚未入库采集，不能核销（请先完成入库采集）");
                         ok = false;
-                    } else if (vo.getExistStatus() != null && vo.getExistStatus() != STATUS_IN_STOCK) {
-                        vo.setTip(vo.getExistStatus() == STATUS_DISPENSED
+                    } else if (vo.getExistStatus() != null && vo.getExistStatus() != DrugTraceStatusEnum.IN_STOCK.getCode()) {
+                        vo.setTip(vo.getExistStatus() == DrugTraceStatusEnum.DISPENSED.getCode()
                                 ? "该追溯码已核销过，同一码不允许重复发药（疑似回流药）"
                                 : "该追溯码已作废（退药/报损/召回），不能核销");
                         ok = false;
@@ -250,7 +246,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
             }
         }
 
-        t.setStatus(STATUS_IN_STOCK);
+        t.setStatus(DrugTraceStatusEnum.IN_STOCK.getCode());
         t.setScanTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         t.setOperatorName(operatorName);
         t.setUploadStatus(UPLOAD_PENDING);
@@ -268,15 +264,15 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         if (dp == null) {
             throw new BusinessException("发药记录不存在");
         }
-        if (toInt(dp.get("dispensing_status")) != STATUS_DISPENSED) {
+        if (toInt(dp.get("dispensing_status")) != DrugTraceStatusEnum.DISPENSED.getCode()) {
             throw new BusinessException("仅「已发药」的记录可以核销追溯码");
         }
         DrugTraceVO exist = traceMapper.selectByTraceCode(code);
         if (exist == null) {
             throw new BusinessException("该追溯码尚未入库采集，不能核销（请先完成入库采集）");
         }
-        if (exist.getStatus() == null || exist.getStatus() != STATUS_IN_STOCK) {
-            throw new BusinessException(exist.getStatus() != null && exist.getStatus() == STATUS_DISPENSED
+        if (exist.getStatus() == null || exist.getStatus() != DrugTraceStatusEnum.IN_STOCK.getCode()) {
+            throw new BusinessException(exist.getStatus() != null && exist.getStatus() == DrugTraceStatusEnum.DISPENSED.getCode()
                     ? "该追溯码已核销过，同一码不允许重复发药（疑似回流药）"
                     : "该追溯码已作废（退药/报损/召回），不能核销");
         }
@@ -287,7 +283,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
 
         BizDrugTrace t = new BizDrugTrace();
         t.setId(exist.getId());
-        t.setStatus(STATUS_DISPENSED);
+        t.setStatus(DrugTraceStatusEnum.DISPENSED.getCode());
         t.setDispensingId(toLong(dp.get("id")));
         t.setDispensingNo(str(dp.get("dispensing_no")));
         t.setPatientId(toLong(dp.get("patient_id")));
@@ -311,12 +307,12 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         if (exist == null) {
             throw new BusinessException("追溯码记录不存在");
         }
-        if (exist.getStatus() != null && exist.getStatus() == STATUS_VOID) {
+        if (exist.getStatus() != null && exist.getStatus() == DrugTraceStatusEnum.VOID.getCode()) {
             throw new BusinessException("该追溯码已作废，请勿重复操作");
         }
         BizDrugTrace t = new BizDrugTrace();
         t.setId(exist.getId());
-        t.setStatus(STATUS_VOID);
+        t.setStatus(DrugTraceStatusEnum.VOID.getCode());
         t.setVoidType(dto.getVoidType());
         t.setVoidTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         t.setVoidReason(cut(StringUtils.hasText(dto.getReason()) ? dto.getReason() : "未填写原因", VOID_REASON_MAX));
@@ -371,7 +367,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
             line.setApprovalNumber(t.getApprovalNumber());
             line.setBatchNo(StringUtils.hasText(t.getStockBatchNo()) ? t.getStockBatchNo() : t.getCodeBatchNo());
             line.setEventType(t.getStatus() == null ? 1 : t.getStatus());
-            line.setEventTime(t.getStatus() != null && t.getStatus() == STATUS_DISPENSED ? t.getDispenseTime() : t.getScanTime());
+            line.setEventTime(t.getStatus() != null && t.getStatus() == DrugTraceStatusEnum.DISPENSED.getCode() ? t.getDispenseTime() : t.getScanTime());
             line.setPatientName(t.getPatientName());
             lines.add(line);
         }
@@ -505,24 +501,12 @@ public class DrugTraceServiceImpl implements DrugTraceService {
             return "药品「" + vo.getDrugName() + "」已停用，不能采集";
         }
         if (vo.isExists()) {
-            return "该追溯码已采集过（" + statusName(vo.getExistStatus()) + "），同一码不允许重复采集";
+            return "该追溯码已采集过（" + DrugTraceStatusEnum.labelOrUnknown(vo.getExistStatus()) + "），同一码不允许重复采集";
         }
         if (vo.getBatches() == null || vo.getBatches().isEmpty()) {
             return "该药品暂无库存批次，请先入库再采集";
         }
         return null;
-    }
-
-    private String statusName(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-        return switch (status) {
-            case STATUS_IN_STOCK -> "在库";
-            case STATUS_DISPENSED -> "已发药核销";
-            case STATUS_VOID -> "已作废";
-            default -> "未知(" + status + ")";
-        };
     }
 
     private String nextTraceNo() {

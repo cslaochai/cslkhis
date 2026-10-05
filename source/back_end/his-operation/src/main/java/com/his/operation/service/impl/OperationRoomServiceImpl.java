@@ -31,6 +31,15 @@ public class OperationRoomServiceImpl implements OperationRoomService {
 
     private final SysOperationRoomMapper roomMapper;
 
+    // C-非 DTO 字段校验：既校验必填又做 trim 归一化，返回值参与编码/名称唯一性比对与落库，
+    // 若下沉为纯 @NotBlank 会丢失 trim，保留（@Valid 已挡 null，此处负责归一化）
+    private static String trimRequired(String value, String message) {
+        if (!StringUtils.hasText(value)) {
+            throw new BusinessException(message);
+        }
+        return value.trim();
+    }
+
     @Override
     public List<OperationRoomVO> listAll() {
         return roomMapper.selectList(new LambdaQueryWrapper<SysOperationRoom>()
@@ -129,14 +138,5 @@ public class OperationRoomServiceImpl implements OperationRoomService {
         vo.setStatusText(Objects.equals(STATUS_ENABLED, entity.getStatus()) ? "启用" : "停用");
         vo.setRemark(entity.getRemark());
         return vo;
-    }
-
-    // C-非 DTO 字段校验：既校验必填又做 trim 归一化，返回值参与编码/名称唯一性比对与落库，
-    // 若下沉为纯 @NotBlank 会丢失 trim，保留（@Valid 已挡 null，此处负责归一化）
-    private static String trimRequired(String value, String message) {
-        if (!StringUtils.hasText(value)) {
-            throw new BusinessException(message);
-        }
-        return value.trim();
     }
 }

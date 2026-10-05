@@ -10,6 +10,9 @@ import com.his.pharmacy.dto.IncisionReviewQueryPageDTO;
 import com.his.pharmacy.dto.IncisionReviewUpsertDTO;
 import com.his.pharmacy.entity.BizAntibioticIncisionReview;
 import com.his.pharmacy.entity.BizAntibioticStats;
+import com.his.pharmacy.enums.AntibioticLevelEnum;
+import com.his.pharmacy.enums.AntibioticProblemTypeEnum;
+import com.his.pharmacy.enums.AntibioticTimingEnum;
 import com.his.pharmacy.mapper.AntibioticCatalogMapper;
 import com.his.pharmacy.mapper.AntibioticStatMapper;
 import com.his.pharmacy.mapper.BizAntibioticIncisionReviewMapper;
@@ -64,11 +67,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     private static final BigDecimal TARGET_MICRO_RATE = new BigDecimal("50.00");
 
     /** 结论=不合理时允许的问题码（41~48） */
-    private static final Set<String> PROBLEM_CODES = Set.of("41", "42", "43", "44", "45", "46", "47", "48");
-
-    private static final String[] LEVEL_TEXT = {"非抗菌药物", "非限制使用级", "限制使用级", "特殊使用级"};
-    private static final String[] TIMING_TEXT = {"", "术前0.5~1小时", "术前>1小时", "术前<0.5小时",
-            "术中追加", "术后才开始", "未使用"};
+    private static final Set<String> PROBLEM_CODES = AntibioticProblemTypeEnum.allCodes();
 
     private final AntibioticStatMapper statMapper;
     private final BizAntibioticStatsMapper statsMapper;
@@ -242,7 +241,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                 List<IncisionDrugCandidateVO> drugs = statMapper.selectPeriopAntibioticOrders(
                         vo.getAdmissionId(), vo.getOperationTime());
                 for (IncisionDrugCandidateVO d : drugs) {
-                    d.setAntibioticLevelText(levelText(d.getAntibioticLevel()));
+                    d.setAntibioticLevelText(AntibioticLevelEnum.getText(d.getAntibioticLevel()));
                     d.setMinutesFromIncision(d.getStartTime() == null ? null
                             : java.time.Duration.between(vo.getOperationTime(), d.getStartTime()).toMinutes());
                 }
@@ -364,7 +363,8 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         // 一致性兜底：用了特殊使用级却没会诊同意 → 问题码必须挂 47
         if (unreasonable && entity.getAntibioticLevel() != null && entity.getAntibioticLevel() == 3
                 && entity.getConsultFlag() != null && entity.getConsultFlag() == 0
-                && (entity.getProblemTypes() == null || !entity.getProblemTypes().contains("47"))) {
+                && (entity.getProblemTypes() == null
+                || !entity.getProblemTypes().contains(AntibioticProblemTypeEnum.SPECIAL_USE_NO_CONSULT.getCode()))) {
             throw new BusinessException("使用特殊使用级抗菌药物且未经会诊同意时，问题码必须包含「47 特殊使用级无会诊」");
         }
 
@@ -472,10 +472,10 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         vo.setDrugId(e.getDrugId());
         vo.setDrugName(e.getDrugName());
         vo.setAntibioticLevel(e.getAntibioticLevel());
-        vo.setAntibioticLevelText(e.getAntibioticLevel() == null ? null : levelText(e.getAntibioticLevel()));
+        vo.setAntibioticLevelText(AntibioticLevelEnum.getText(e.getAntibioticLevel()));
         vo.setIndicationFlag(e.getIndicationFlag());
         vo.setTimingType(e.getTimingType());
-        vo.setTimingTypeText(timingText(e.getTimingType()));
+        vo.setTimingTypeText(AntibioticTimingEnum.getText(e.getTimingType()));
         vo.setCourseHours(e.getCourseHours());
         vo.setComboFlag(e.getComboFlag());
         vo.setComboReason(e.getComboReason());
@@ -495,20 +495,6 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         return vo;
     }
 
-    private String levelText(Integer level) {
-        if (level == null || level < 0 || level >= LEVEL_TEXT.length) {
-            return "未知(" + level + ")";
-        }
-        return LEVEL_TEXT[level];
-    }
-
-    private String timingText(Integer timing) {
-        if (timing == null || timing < 1 || timing >= TIMING_TEXT.length) {
-            return timing == null ? null : "未知(" + timing + ")";
-        }
-        return TIMING_TEXT[timing];
-    }
-
     private String problemText(String codes) {
         if (!StringUtils.hasText(codes)) {
             return null;
@@ -516,17 +502,8 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         return Arrays.stream(codes.split(","))
                 .map(String::trim)
                 .filter(StringUtils::hasText)
-                .map(c -> switch (c) {
-                    case "41" -> "无预防用药指征";
-                    case "42" -> "品种选择不合理";
-                    case "43" -> "给药时机不合理";
-                    case "44" -> "疗程过长";
-                    case "45" -> "无指征联合用药";
-                    case "46" -> "剂量不合理";
-                    case "47" -> "特殊使用级无会诊";
-                    case "48" -> "术后用药起点不明";
-                    default -> c;
-                })
+                .map(AntibioticProblemTypeEnum::getText)
+                .filter(StringUtils::hasText)
                 .reduce((a, b) -> a + "、" + b).orElse(null);
     }
 

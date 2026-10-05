@@ -118,7 +118,9 @@ public class BizLabResultVO {
      */
     private String abnormalFlagText;
 
-    /** 结果类型（1-定量 2-定性 3-文字描述） */
+    /**
+     * 结果类型（1-定量 2-定性 3-文字描述）
+     */
     private Integer resultType;
 
     /**

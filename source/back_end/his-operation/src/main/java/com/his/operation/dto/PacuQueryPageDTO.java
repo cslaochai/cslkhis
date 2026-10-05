@@ -13,19 +13,29 @@ import java.io.Serializable;
 @EqualsAndHashCode(callSuper = true)
 public class PacuQueryPageDTO extends PageParam implements Serializable {
 
-    /** 入院ID */
+    /**
+     * 入院ID
+     */
     private Long admissionId;
 
-    /** 手术申请单ID */
+    /**
+     * 手术申请单ID
+     */
     private Long applyId;
 
-    /** 麻醉记录ID */
+    /**
+     * 麻醉记录ID
+     */
     private Long recordId;
 
-    /** 状态：0-在室 1-已出室 */
+    /**
+     * 状态：0-在室 1-已出室
+     */
     private Integer status;
 
-    /** 关键字 */
+    /**
+     * 关键字
+     */
     private String keyword;
 
     private Integer unchargedOnly;

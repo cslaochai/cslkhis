@@ -13,11 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * 患者端导诊口语归一实现。
@@ -39,24 +35,66 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
 
     private static final String BIZ_TYPE = "triage";
 
-    /** 检索文本上限：超了说明模型在写作文，截断直接用 */
+    /**
+     * 检索文本上限：超了说明模型在写作文，截断直接用
+     */
     private static final int SEARCH_TEXT_MAX = 100;
 
-    /** 症状词个数上限 */
+    /**
+     * 症状词个数上限
+     */
     private static final int MAX_TERMS = 8;
 
-    /** 单个症状词长度上限 */
+    /**
+     * 单个症状词长度上限
+     */
     private static final int TERM_MAX_LENGTH = 12;
 
-    /** 追问条数上限 */
+    /**
+     * 追问条数上限
+     */
     private static final int MAX_FOLLOW_UPS = 3;
 
-    /** 单条追问长度上限 */
+    /**
+     * 单条追问长度上限
+     */
     private static final int FOLLOW_UP_MAX_LENGTH = 40;
 
     private final AiExecutionService aiExecutionService;
 
     private final PatientTextGuard textGuard;
+
+    private static List<String> splitTerms(String terms) {
+        if (!StringUtils.hasText(terms)) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        for (String part : terms.split("[、,，;；\\s]+")) {
+            String term = part.trim();
+            if (!StringUtils.hasText(term) || term.length() > TERM_MAX_LENGTH) {
+                continue;
+            }
+            if (!result.contains(term)) {
+                result.add(term);
+            }
+            if (result.size() >= MAX_TERMS) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    // ---------------------------------------------------------------- 模型层
+
+    private static String truncate(String text, int maxLength) {
+        if (!StringUtils.hasText(text)) {
+            return text == null ? "" : text;
+        }
+        String value = text.trim();
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    // ---------------------------------------------------------------- 清洗层
 
     @Override
     public PatientTriageNormalizeVO execute(PatientTriageNormalizeDTO dto) {
@@ -90,8 +128,6 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
         return vo;
     }
 
-    // ---------------------------------------------------------------- 模型层
-
     private Optional<PatientTriageNormalizeLlmOutputDTO> callModel(String description) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("description", description);
@@ -108,8 +144,6 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
 
         return aiExecutionService.call(call, PatientTriageNormalizeLlmOutputDTO.class);
     }
-
-    // ---------------------------------------------------------------- 清洗层
 
     /**
      * 检索文本：优先用模型给的，但<b>必须仍包含患者原话</b>。
@@ -131,26 +165,6 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
             }
         }
         return truncate(builder.toString(), SEARCH_TEXT_MAX * 2);
-    }
-
-    private static List<String> splitTerms(String terms) {
-        if (!StringUtils.hasText(terms)) {
-            return List.of();
-        }
-        List<String> result = new ArrayList<>();
-        for (String part : terms.split("[、,，;；\\s]+")) {
-            String term = part.trim();
-            if (!StringUtils.hasText(term) || term.length() > TERM_MAX_LENGTH) {
-                continue;
-            }
-            if (!result.contains(term)) {
-                result.add(term);
-            }
-            if (result.size() >= MAX_TERMS) {
-                break;
-            }
-        }
-        return result;
     }
 
     /**
@@ -178,13 +192,5 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
             }
         }
         return result;
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return text == null ? "" : text;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 }

@@ -45,9 +45,18 @@ public final class TransfusionCheckItems {
         return LABELS;
     }
 
+    /** 核对项文案（<b>展示用</b>）。null 给「—」；非法码值返回空串，不伪装成某一项。 */
     public static String text(Integer code) {
         if (code == null) {
             return "—";
+        }
+        return LABELS.getOrDefault(code, "");
+    }
+
+    /** 核对项文案（<b>异常 / 审计用</b>）：非法码值返回「未知(n)」，保留原值便于排查。 */
+    public static String labelOrUnknown(Integer code) {
+        if (code == null) {
+            return "未知";
         }
         return LABELS.getOrDefault(code, "未知(" + code + ")");
     }
@@ -120,7 +129,7 @@ public final class TransfusionCheckItems {
         try {
             codes = parse(items);
         } catch (IllegalArgumentException e) {
-            return "未知核对结果(" + items + ")";
+            return "";
         }
         if (codes.isEmpty()) {
             return "—";

@@ -151,7 +151,7 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
     }
 
     @Override
- public void rebuild() {
+    public void rebuild() {
         vectorStore.clear();
         List<SysKnowledgeChunk> all = chunkMapper.selectList(null); // del_flag=0 自动生效
         int count = 0;

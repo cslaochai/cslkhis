@@ -412,7 +412,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
             item.setResultUnit(result.getResultUnit());
             item.setReferenceRange(result.getReferenceRange());
             item.setAbnormalFlag(result.getAbnormalFlag());
-            item.setAbnormalFlagText(LabAbnormalJudge.labelOf(result.getAbnormalFlag(), result.getJudgeNote()));
+            item.setAbnormalFlagText(LabAbnormalJudge.getText(result.getAbnormalFlag(), result.getJudgeNote()));
             item.setJudgeNote(result.getJudgeNote());
 
             Optional<LabCriticalValueRules.Hit> critical = LabCriticalValueRules.check(

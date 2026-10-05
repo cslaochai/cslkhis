@@ -1,8 +1,8 @@
 package com.his.ai.service.impl;
 
-import com.his.ai.service.Icd10RecallService;
 import com.his.ai.config.AiConfigProvider;
 import com.his.ai.dto.Icd10SelectListDTO;
+import com.his.ai.service.Icd10RecallService;
 import com.his.ai.vo.Icd10SelectListVO;
 import com.his.system.entity.SysIcd10;
 import com.his.system.service.Icd10Service;
@@ -12,7 +12,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 

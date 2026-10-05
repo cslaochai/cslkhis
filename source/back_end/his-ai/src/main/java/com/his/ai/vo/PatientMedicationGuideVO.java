@@ -47,7 +47,9 @@ public class PatientMedicationGuideVO {
     @Schema(description = "药品明细")
     private List<PatientMedicationItemVO> items;
 
-    /** 固定免责提示，患者端每一份用药说明都必须带 */
+    /**
+     * 固定免责提示，患者端每一份用药说明都必须带
+     */
     @Schema(description = "免责提示")
     private String advice;
 }

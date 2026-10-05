@@ -92,7 +92,7 @@ public enum NursingIndicatorEnum {
         return null;
     }
 
-    public static String labelOf(String code) {
+    public static String getText(String code) {
         NursingIndicatorEnum e = fromCode(code);
         return e == null ? "未知(" + code + ")" : e.label;
     }

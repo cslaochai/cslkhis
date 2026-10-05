@@ -30,7 +30,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Component
 public class MessagePushService {
 
-    /** 0L = 不超时，连接生命周期由心跳与显式清理管理 */
+    /**
+     * 0L = 不超时，连接生命周期由心跳与显式清理管理
+     */
     private static final long TIMEOUT_MILLIS = 0L;
 
     private final Map<Long, CopyOnWriteArrayList<SseEmitter>> emitters = new ConcurrentHashMap<>();
@@ -93,7 +95,9 @@ public class MessagePushService {
         }
     }
 
-    /** 心跳：30 秒一次注释帧，防代理/浏览器静默掐掉空闲连接 */
+    /**
+     * 心跳：30 秒一次注释帧，防代理/浏览器静默掐掉空闲连接
+     */
     @Scheduled(fixedDelay = 30_000)
     public void heartbeat() {
         for (Map.Entry<Long, CopyOnWriteArrayList<SseEmitter>> entry : emitters.entrySet()) {
@@ -107,7 +111,9 @@ public class MessagePushService {
         }
     }
 
-    /** 供运维观察在线连接数 */
+    /**
+     * 供运维观察在线连接数
+     */
     public int onlineCount() {
         return emitters.values().stream().mapToInt(List::size).sum();
     }

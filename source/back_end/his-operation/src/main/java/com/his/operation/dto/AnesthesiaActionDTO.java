@@ -14,10 +14,14 @@ import java.io.Serializable;
 @Data
 public class AnesthesiaActionDTO implements Serializable {
 
-    /** 麻醉记录单ID / PACU 记录ID（按动作语义取用） */
+    /**
+     * 麻醉记录单ID / PACU 记录ID（按动作语义取用）
+     */
     @NotNull(message = "记录ID不能为空")
     private Long id;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

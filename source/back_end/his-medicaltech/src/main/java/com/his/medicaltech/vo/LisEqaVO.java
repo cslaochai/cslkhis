@@ -45,27 +45,37 @@ public class LisEqaVO {
 
         private Integer status;
 
-        /** 状态文本 */
+        /**
+         * 状态文本
+         */
         private String statusText;
 
-        /** PT 得分（%），服务端算 */
+        /**
+         * PT 得分（%），服务端算
+         */
         private BigDecimal ptScore;
 
-        /** 1-合格 0-不合格（PT ≥ 80%） */
+        /**
+         * 1-合格 0-不合格（PT ≥ 80%）
+         */
         private Integer passFlag;
 
         private String passFlagText;
 
         private Integer failCount;
 
-        /** 未回报成绩的盲样项数（>0 说明 PT 得分还是暂定值） */
+        /**
+         * 未回报成绩的盲样项数（>0 说明 PT 得分还是暂定值）
+         */
         private Integer pendingCount;
 
         private String archiveBy;
 
         private LocalDateTime archiveTime;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
     }
 
@@ -88,7 +98,9 @@ public class LisEqaVO {
 
         private String itemCode;
 
-        /** 项目名称 */
+        /**
+         * 项目名称
+         */
         private String itemName;
 
         private String instrumentName;
@@ -134,7 +146,9 @@ public class LisEqaVO {
 
         private Integer status;
 
-        /** 状态文本 */
+        /**
+         * 状态文本
+         */
         private String statusText;
 
         private Integer handleStatus;
@@ -153,7 +167,9 @@ public class LisEqaVO {
 
         private LocalDateTime reviewTime;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
     }
 
@@ -169,7 +185,9 @@ public class LisEqaVO {
 
         private String itemCode;
 
-        /** 项目名称 */
+        /**
+         * 项目名称
+         */
         private String itemName;
 
         private Integer sampleSeq;
@@ -200,11 +218,15 @@ public class LisEqaVO {
 
         private Integer status;
 
-        /** 状态文本 */
+        /**
+         * 状态文本
+         */
         private String statusText;
     }
 
-    /** 成绩回报后回给前端的汇总（值即结论，页面不用再算一遍） */
+    /**
+     * 成绩回报后回给前端的汇总（值即结论，页面不用再算一遍）
+     */
     @Data
     public static class JudgeVO {
         private String planNo;
@@ -228,25 +250,39 @@ public class LisEqaVO {
 
     @Data
     public static class StatsVO {
-        /** 在评批次（状态 1~4，未归档） */
+        /**
+         * 在评批次（状态 1~4，未归档）
+         */
         private long activePlanCount;
 
-        /** 已上报、等组织方回成绩的批次 */
+        /**
+         * 已上报、等组织方回成绩的批次
+         */
         private long pendingReturnCount;
 
-        /** 待整改的不合格项 */
+        /**
+         * 待整改的不合格项
+         */
         private long pendingRectifyCount;
 
-        /** 7 天内截止（含已逾期）尚未上报的批次 */
+        /**
+         * 7 天内截止（含已逾期）尚未上报的批次
+         */
         private long dueSoonCount;
 
-        /** 本年度不合格项数 */
+        /**
+         * 本年度不合格项数
+         */
         private long yearFailCount;
 
-        /** 本年度各批次 PT 平均分 */
+        /**
+         * 本年度各批次 PT 平均分
+         */
         private BigDecimal yearAvgScore;
 
-        /** 本年度已出成绩的批次数（yearAvgScore 的分母） */
+        /**
+         * 本年度已出成绩的批次数（yearAvgScore 的分母）
+         */
         private long yearScoredCount;
 
         private Integer thisYear;

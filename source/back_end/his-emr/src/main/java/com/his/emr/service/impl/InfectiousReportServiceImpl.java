@@ -429,25 +429,14 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
     }
 
     private String classText(Integer c) {
-        if (c == null) return "未知(0)";
-        String label = InfectiousClassEnum.labelOf(c);
-        return label == null ? "未知(" + c + ")" : label;
+        return InfectiousClassEnum.getText(c);
     }
 
     private String statusText(Integer s) {
-        if (s == null) return "未知(0)";
-        if (Objects.equals(InfectiousReportStatusEnum.PENDING.getCode(), s)) {
-            return "待审核";
-        }
+        // 文案差异：本模块界面口径把「已审核待直报」叫「已审核」，其余沿用枚举 label，兜底走枚举 getText
         if (Objects.equals(InfectiousReportStatusEnum.AUDITED.getCode(), s)) {
             return "已审核";
         }
-        if (Objects.equals(InfectiousReportStatusEnum.DIRECT.getCode(), s)) {
-            return "已直报";
-        }
-        if (Objects.equals(InfectiousReportStatusEnum.RETURNED.getCode(), s)) {
-            return "已退报";
-        }
-        return "未知(" + s + ")";
+        return InfectiousReportStatusEnum.getText(s);
     }
 }

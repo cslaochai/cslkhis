@@ -3,6 +3,7 @@ package com.his.emr.support;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.enums.QcRecordSourceEnum;
 import com.his.patient.entity.BizInpatientRecord;
+import com.his.patient.enums.InpatientRecordTypeEnum;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -228,6 +229,6 @@ public class QcSnapshot {
         if (source == QcRecordSourceEnum.OUTPATIENT) {
             return "门诊病历";
         }
-        return recordType == null ? "住院文书" : QcTexts.recordType(recordType);
+        return recordType == null ? "住院文书" : InpatientRecordTypeEnum.getText(recordType);
     }
 }

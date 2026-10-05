@@ -9,6 +9,8 @@ import com.his.emr.dto.*;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizRecordQcFlow;
 import com.his.emr.entity.BizRecordQcFlowAction;
+import com.his.emr.enums.QcGradeEnum;
+import com.his.emr.enums.QcRecordSourceEnum;
 import com.his.emr.enums.RecordQcActionEnum;
 import com.his.emr.enums.RecordQcFlowStatusEnum;
 import com.his.emr.enums.RecordQcLevelEnum;
@@ -16,7 +18,6 @@ import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.mapper.BizRecordQcFlowActionMapper;
 import com.his.emr.mapper.BizRecordQcFlowMapper;
 import com.his.emr.service.RecordQcFlowService;
-import com.his.emr.support.QcTexts;
 import com.his.emr.vo.RecordQcFlowActionVO;
 import com.his.emr.vo.RecordQcFlowVO;
 import com.his.security.entity.CurrentUser;
@@ -135,7 +136,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
     public void resubmit(RecordQcFlowOpinionDTO dto) {
         BizRecordQcFlow flow = lockAndCheck(dto.getFlowId());
         if (flow.getFlowStatus() != RecordQcFlowStatusEnum.REWORKING.getCode()) {
-            throw new BusinessException("当前状态（" + QcTexts.qcFlowStatus(flow.getFlowStatus())
+            throw new BusinessException("当前状态（" + RecordQcFlowStatusEnum.labelOrUnknown(flow.getFlowStatus())
                     + "）不是整改中，无需整改提交");
         }
         CurrentUser user = UserUtils.getCurrentUser();
@@ -154,7 +155,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         BizRecordQcFlow flow = lockAndCheck(dto.getFlowId());
         requireReviewStage(flow);
         if (flow.getCurrentLevel() != RecordQcLevelEnum.MEDAFFAIRS.getCode()) {
-            throw new BusinessException("当前停留级（" + QcTexts.qcFlowLevel(flow.getCurrentLevel())
+            throw new BusinessException("当前停留级（" + RecordQcLevelEnum.labelOrUnknown(flow.getCurrentLevel())
                     + "）不是医务处，不能终审");
         }
         CurrentUser user = UserUtils.getCurrentUser();
@@ -240,7 +241,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
     private void requireReviewStage(BizRecordQcFlow flow) {
         int s = flow.getFlowStatus();
         if (s != RecordQcFlowStatusEnum.DEPT_PENDING.getCode() && s != RecordQcFlowStatusEnum.ARCHIVE_PENDING.getCode() && s != RecordQcFlowStatusEnum.MEDAFFAIRS_PENDING.getCode()) {
-            throw new BusinessException("当前状态（" + QcTexts.qcFlowStatus(s) + "）不允许该操作");
+            throw new BusinessException("当前状态（" + RecordQcFlowStatusEnum.labelOrUnknown(s) + "）不允许该操作");
         }
     }
 
@@ -282,8 +283,8 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         vo.setOperatorId(a.getOperatorId());
         vo.setOperatorName(a.getOperatorName());
         vo.setActionTime(a.getActionTime());
-        vo.setLevelText(QcTexts.qcFlowLevel(a.getLevel()));
-        vo.setActionText(QcTexts.qcFlowAction(a.getAction()));
+        vo.setLevelText(RecordQcLevelEnum.getText(a.getLevel()));
+        vo.setActionText(RecordQcActionEnum.getText(a.getAction()));
         return vo;
     }
 
@@ -291,11 +292,11 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         if (vo == null) {
             return null;
         }
-        vo.setFlowStatusText(QcTexts.qcFlowStatus(vo.getFlowStatus()));
-        vo.setCurrentLevelText(QcTexts.qcFlowLevel(vo.getCurrentLevel()));
-        vo.setReturnLevelText(QcTexts.qcFlowLevel(vo.getReturnLevel()));
-        vo.setGradeText(QcTexts.qcGrade(vo.getGrade()));
-        vo.setRecordSourceText("INPATIENT".equals(vo.getRecordSource()) ? "住院" : "门诊");
+        vo.setFlowStatusText(RecordQcFlowStatusEnum.getText(vo.getFlowStatus()));
+        vo.setCurrentLevelText(RecordQcLevelEnum.getText(vo.getCurrentLevel()));
+        vo.setReturnLevelText(RecordQcLevelEnum.getText(vo.getReturnLevel()));
+        vo.setGradeText(QcGradeEnum.getText(vo.getGrade()));
+        vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
         return vo;
     }
 }

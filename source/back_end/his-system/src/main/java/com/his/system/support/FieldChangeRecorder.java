@@ -1,7 +1,7 @@
 package com.his.system.support;
 
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import com.his.system.entity.SysFieldChangeLog;
 import com.his.system.enums.MaskEnum;
 import com.his.system.mapper.SysFieldChangeLogMapper;
@@ -53,29 +53,150 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class FieldChangeRecorder {
 
-    /** 变更类型：建档（只有新值） */
+    /**
+     * 变更类型：建档（只有新值）
+     */
     public static final String TYPE_INSERT = "INSERT";
 
-    /** 变更类型：修改（新旧都有） */
+    /**
+     * 变更类型：修改（新旧都有）
+     */
     public static final String TYPE_UPDATE = "UPDATE";
 
-    /** 变更类型：操作留痕（没有字段级新旧值，只记"做了什么"） */
+    /**
+     * 变更类型：操作留痕（没有字段级新旧值，只记"做了什么"）
+     */
     public static final String TYPE_ACTION = "ACTION";
 
-    /** 单次最多落多少条：防"整对象反射"式误用把表撑爆 */
+    /**
+     * 单次最多落多少条：防"整对象反射"式误用把表撑爆
+     */
     private static final int MAX_ROWS = 60;
 
-    /** 值列宽（与表 VARCHAR(500) 对齐） */
+    /**
+     * 值列宽（与表 VARCHAR(500) 对齐）
+     */
     private static final int VALUE_MAX = 500;
 
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    /** 类 → (属性名 → getter)，反射一次缓存住，别每次保存都 Introspector 一遍 */
+    /**
+     * 类 → (属性名 → getter)，反射一次缓存住，别每次保存都 Introspector 一遍
+     */
     private static final Map<Class<?>, Map<String, Method>> GETTER_CACHE = new ConcurrentHashMap<>();
 
     private final SysFieldChangeLogMapper fieldChangeLogMapper;
+
+    private static Object readProperty(Object bean, String name) {
+        Method getter = GETTER_CACHE
+                .computeIfAbsent(bean.getClass(), FieldChangeRecorder::descriptors)
+                .get(name);
+        if (getter == null) {
+            log.warn("字段变更留痕：{} 上没有可读属性 {}，请检查 FieldSpec 拼写", bean.getClass().getSimpleName(), name);
+            return null;
+        }
+        try {
+            return getter.invoke(bean);
+        } catch (Exception e) {
+            log.warn("字段变更留痕：读取 {}.{} 失败", bean.getClass().getSimpleName(), name, e);
+            return null;
+        }
+    }
+
+    private static Map<String, Method> descriptors(Class<?> clazz) {
+        Map<String, Method> map = new ConcurrentHashMap<>();
+        try {
+            for (PropertyDescriptor pd : Introspector.getBeanInfo(clazz).getPropertyDescriptors()) {
+                Method read = pd.getReadMethod();
+                if (read != null && !"class".equals(pd.getName())) {
+                    map.put(pd.getName(), read);
+                }
+            }
+        } catch (Exception e) {
+            log.error("字段变更留痕：解析 {} 的属性失败", clazz, e);
+        }
+        return map;
+    }
+
+    // 内部实现
+
+    /**
+     * 值 → 文本。null / 空白一律归一化成 null（空白不是"有值"）。
+     */
+    private static String toText(Object v) {
+        if (v == null) {
+            return null;
+        }
+        if (v instanceof LocalDateTime t) {
+            return t.format(TS);
+        }
+        if (v instanceof LocalDate d) {
+            return d.toString();
+        }
+        if (v instanceof BigDecimal b) {
+            // 100.00 直接 toString 是 "100.00"，stripTrailingZeros 后出现科学计数法，必须 toPlainString
+            return b.stripTrailingZeros().toPlainString();
+        }
+        String s = String.valueOf(v).trim();
+        return s.isEmpty() ? null : s;
+    }
+
+    private static String mask(String s, MaskEnum maskEnum) {
+        if (s == null || maskEnum == null || maskEnum == MaskEnum.NONE) {
+            return s;
+        }
+        return switch (maskEnum) {
+            case ID_CARD -> keepHeadTail(s, 6, 4);
+            // 手机号固定 11 位，取前 3（号段）后 4；座机/其它长度退化为前 2 后 2
+            case PHONE -> s.length() == 11 ? keepHeadTail(s, 3, 4) : keepHeadTail(s, 2, 2);
+            case BANK_NO -> keepHeadTail(s, 4, 4);
+            case NAME -> s.length() <= 1 ? "*" : s.charAt(0) + "*".repeat(s.length() - 1);
+            case ADDRESS -> s.length() <= 6 ? "***" : s.substring(0, 6) + "***";
+            case NONE -> s;
+        };
+    }
+
+    /**
+     * 保留头尾各若干位，中间全打星；值本身比 head+tail 还短时全部打星（留头尾等于没打码）。
+     */
+    private static String keepHeadTail(String s, int head, int tail) {
+        if (s.length() <= head + tail) {
+            return "*".repeat(s.length());
+        }
+        return s.substring(0, head) + "*".repeat(s.length() - head - tail) + s.substring(s.length() - tail);
+    }
+
+    /**
+     * 按字段名兜底嗅探打码方式：新增字段忘了标 mask 时，靠名字也能挡住最要命的那几类。
+     * （护照/军官证/医保卡号都落在 BANK_NO 这一档 —— 都是"前 4 后 4"的证件号口径。）
+     */
+    static MaskEnum sniffMask(String fieldName) {
+        String f = fieldName.toLowerCase();
+        if (f.contains("idcard")) {
+            return MaskEnum.ID_CARD;
+        }
+        if (f.contains("phone") || f.contains("mobile") || f.contains("tel")) {
+            return MaskEnum.PHONE;
+        }
+        if (f.contains("bank") || f.contains("cardno") || f.contains("insuranceno") || f.contains("cardno")) {
+            return MaskEnum.BANK_NO;
+        }
+        return MaskEnum.NONE;
+    }
+
+    /**
+     * 批次号：FC + 年月日时分秒 + 6 位随机 —— 同一毫秒内两次保存靠随机位区分，且人能念出来。
+     */
+    private static String newBatchNo() {
+        return "FC" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                + String.format("%06d", RANDOM.nextInt(1_000_000));
+    }
+
+    private static String cut(String s, int max) {
+        return s == null || s.length() <= max ? s : s.substring(0, max);
+    }
 
     /**
      * 比对两个对象快照并落库。
@@ -144,8 +265,6 @@ public class FieldChangeRecorder {
         }
     }
 
-    // 内部实现
-
     private SysFieldChangeLog build(String bizType, Object bizId, String bizNo, String bizName,
                                     FieldSpec spec, String oldText, String newText,
                                     String changeType, String remark) {
@@ -174,7 +293,9 @@ public class FieldChangeRecorder {
         return row;
     }
 
-    /** 取值 → 渲染码值 → 打码 → 归一化。三步顺序不能反：先翻成人话再打码，否则打码的是 1/2/3。 */
+    /**
+     * 取值 → 渲染码值 → 打码 → 归一化。三步顺序不能反：先翻成人话再打码，否则打码的是 1/2/3。
+     */
     private String render(Object bean, FieldSpec spec) {
         if (bean == null) {
             return null;
@@ -182,106 +303,5 @@ public class FieldChangeRecorder {
         Object raw = readProperty(bean, spec.name());
         String text = spec.renderer() != null ? spec.renderer().apply(raw) : toText(raw);
         return mask(text, spec.effectiveMask());
-    }
-
-    private static Object readProperty(Object bean, String name) {
-        Method getter = GETTER_CACHE
-                .computeIfAbsent(bean.getClass(), FieldChangeRecorder::descriptors)
-                .get(name);
-        if (getter == null) {
-            log.warn("字段变更留痕：{} 上没有可读属性 {}，请检查 FieldSpec 拼写", bean.getClass().getSimpleName(), name);
-            return null;
-        }
-        try {
-            return getter.invoke(bean);
-        } catch (Exception e) {
-            log.warn("字段变更留痕：读取 {}.{} 失败", bean.getClass().getSimpleName(), name, e);
-            return null;
-        }
-    }
-
-    private static Map<String, Method> descriptors(Class<?> clazz) {
-        Map<String, Method> map = new ConcurrentHashMap<>();
-        try {
-            for (PropertyDescriptor pd : Introspector.getBeanInfo(clazz).getPropertyDescriptors()) {
-                Method read = pd.getReadMethod();
-                if (read != null && !"class".equals(pd.getName())) {
-                    map.put(pd.getName(), read);
-                }
-            }
-        } catch (Exception e) {
-            log.error("字段变更留痕：解析 {} 的属性失败", clazz, e);
-        }
-        return map;
-    }
-
-    /** 值 → 文本。null / 空白一律归一化成 null（空白不是"有值"）。 */
-    private static String toText(Object v) {
-        if (v == null) {
-            return null;
-        }
-        if (v instanceof LocalDateTime t) {
-            return t.format(TS);
-        }
-        if (v instanceof LocalDate d) {
-            return d.toString();
-        }
-        if (v instanceof BigDecimal b) {
-            // 100.00 直接 toString 是 "100.00"，stripTrailingZeros 后出现科学计数法，必须 toPlainString
-            return b.stripTrailingZeros().toPlainString();
-        }
-        String s = String.valueOf(v).trim();
-        return s.isEmpty() ? null : s;
-    }
-
-    private static String mask(String s, MaskEnum maskEnum) {
-        if (s == null || maskEnum == null || maskEnum == MaskEnum.NONE) {
-            return s;
-        }
-        return switch (maskEnum) {
-            case ID_CARD -> keepHeadTail(s, 6, 4);
-            // 手机号固定 11 位，取前 3（号段）后 4；座机/其它长度退化为前 2 后 2
-            case PHONE -> s.length() == 11 ? keepHeadTail(s, 3, 4) : keepHeadTail(s, 2, 2);
-            case BANK_NO -> keepHeadTail(s, 4, 4);
-            case NAME -> s.length() <= 1 ? "*" : s.charAt(0) + "*".repeat(s.length() - 1);
-            case ADDRESS -> s.length() <= 6 ? "***" : s.substring(0, 6) + "***";
-            case NONE -> s;
-        };
-    }
-
-    /** 保留头尾各若干位，中间全打星；值本身比 head+tail 还短时全部打星（留头尾等于没打码）。 */
-    private static String keepHeadTail(String s, int head, int tail) {
-        if (s.length() <= head + tail) {
-            return "*".repeat(s.length());
-        }
-        return s.substring(0, head) + "*".repeat(s.length() - head - tail) + s.substring(s.length() - tail);
-    }
-
-    /**
-     * 按字段名兜底嗅探打码方式：新增字段忘了标 mask 时，靠名字也能挡住最要命的那几类。
-     * （护照/军官证/医保卡号都落在 BANK_NO 这一档 —— 都是"前 4 后 4"的证件号口径。）
-     */
-    static MaskEnum sniffMask(String fieldName) {
-        String f = fieldName.toLowerCase();
-        if (f.contains("idcard")) {
-            return MaskEnum.ID_CARD;
-        }
-        if (f.contains("phone") || f.contains("mobile") || f.contains("tel")) {
-            return MaskEnum.PHONE;
-        }
-        if (f.contains("bank") || f.contains("cardno") || f.contains("insuranceno") || f.contains("cardno")) {
-            return MaskEnum.BANK_NO;
-        }
-        return MaskEnum.NONE;
-    }
-
-    /** 批次号：FC + 年月日时分秒 + 6 位随机 —— 同一毫秒内两次保存靠随机位区分，且人能念出来。 */
-    private static String newBatchNo() {
-        return "FC" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
-                + String.format("%06d", RANDOM.nextInt(1_000_000));
-    }
-
-    private static String cut(String s, int max) {
-        return s == null || s.length() <= max ? s : s.substring(0, max);
     }
 }

@@ -14,15 +14,21 @@ import lombok.Data;
 @Schema(description = "CDR 查询条件")
 public class CdrQueryDTO {
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @Schema(description = "患者ID（主档或影子档案都可以，服务端按 EMPI 口径归并）")
     private String patientId;
 
-    /** 开始日期 */
+    /**
+     * 开始日期
+     */
     @Schema(description = "起始日期 yyyy-MM-dd（按就诊开始时间过滤，可空）")
     private String startDate;
 
-    /** 结束日期 */
+    /**
+     * 结束日期
+     */
     @Schema(description = "截止日期 yyyy-MM-dd（可空）")
     private String endDate;
 

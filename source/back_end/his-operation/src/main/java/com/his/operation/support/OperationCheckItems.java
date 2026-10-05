@@ -1,11 +1,6 @@
 package com.his.operation.support;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 术前核对要点（手术安全核查单的可核对部分）。
@@ -20,12 +15,10 @@ import java.util.Set;
  */
 public final class OperationCheckItems {
 
-    private OperationCheckItems() {
-    }
-
-    /** 必核项：这 4 项缺任何一项都不允许进入"术前核对完成" */
+    /**
+     * 必核项：这 4 项缺任何一项都不允许进入"术前核对完成"
+     */
     public static final List<Integer> REQUIRED = List.of(1, 2, 3, 4);
-
     private static final Map<Integer, String> LABELS = new LinkedHashMap<>();
 
     static {
@@ -37,7 +30,12 @@ public final class OperationCheckItems {
         LABELS.put(6, "影像资料与化验结果已确认");
     }
 
-    /** 全部核对项（码 → 文案），供前端渲染勾选框 */
+    private OperationCheckItems() {
+    }
+
+    /**
+     * 全部核对项（码 → 文案），供前端渲染勾选框
+     */
     public static Map<Integer, String> all() {
         return LABELS;
     }
@@ -46,7 +44,7 @@ public final class OperationCheckItems {
         if (code == null) {
             return "—";
         }
-        return LABELS.getOrDefault(code, "未知(" + code + ")");
+        return LABELS.getOrDefault(code, "");
     }
 
     public static boolean isValid(Integer code) {
@@ -83,7 +81,9 @@ public final class OperationCheckItems {
         return set;
     }
 
-    /** 序列化为逗号分隔串（按码值升序，保证同一组勾选写出来的字符串稳定可比） */
+    /**
+     * 序列化为逗号分隔串（按码值升序，保证同一组勾选写出来的字符串稳定可比）
+     */
     public static String serialize(Set<Integer> codes) {
         if (codes == null || codes.isEmpty()) {
             return null;
@@ -100,7 +100,9 @@ public final class OperationCheckItems {
         return sb.toString();
     }
 
-    /** 未核的必核项文案（用于拒绝时的可执行提示） */
+    /**
+     * 未核的必核项文案（用于拒绝时的可执行提示）
+     */
     public static List<String> missingRequired(Set<Integer> codes) {
         List<String> missing = new ArrayList<>();
         for (Integer req : REQUIRED) {
@@ -111,7 +113,9 @@ public final class OperationCheckItems {
         return missing;
     }
 
-    /** 核对结果的完整文案（列表展示用） */
+    /**
+     * 核对结果的完整文案（列表展示用）
+     */
     public static String summaryText(String items) {
         Set<Integer> codes;
         try {

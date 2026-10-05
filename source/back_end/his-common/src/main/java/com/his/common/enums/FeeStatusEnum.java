@@ -45,6 +45,11 @@ public enum FeeStatusEnum {
         return null;
     }
 
+    /** 码值是否合法（写入侧校验用；null 不合法） */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
     public static String descOf(Integer code) {
         FeeStatusEnum item = fromCode(code);
         return item == null ? "未知状态" : item.desc;

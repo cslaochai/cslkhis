@@ -17,54 +17,86 @@ import java.time.LocalDateTime;
 @TableName("biz_dept_cost_month")
 public class BizDeptCostMonth {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 科室ID */
+    /**
+     * 科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 科室名称（快照） */
+    /**
+     * 科室名称（快照）
+     */
     private String deptName;
 
-    /** yyyy-MM */
+    /**
+     * yyyy-MM
+     */
     private String costMonth;
 
-    /** 人力成本（元） */
+    /**
+     * 人力成本（元）
+     */
     private BigDecimal laborCost;
 
-    /** 药品成本（元） */
+    /**
+     * 药品成本（元）
+     */
     private BigDecimal drugCost;
 
-    /** 耗材成本（元） */
+    /**
+     * 耗材成本（元）
+     */
     private BigDecimal materialCost;
 
-    /** 设备折旧（元） */
+    /**
+     * 设备折旧（元）
+     */
     private BigDecimal depreciation;
 
-    /** 其他成本（元） */
+    /**
+     * 其他成本（元）
+     */
     private BigDecimal otherCost;
 
-    /** 写入时计算 */
+    /**
+     * 写入时计算
+     */
     private BigDecimal totalCost;
 
-    /** 创建人 */
+    /**
+     * 创建人
+     */
     private String createBy;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
 
-    /** 更新人 */
+    /**
+     * 更新人
+     */
     private String updateBy;
 
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     private LocalDateTime updateTime;
 
-    /** 删除标志（0-正常 1-删除） */
+    /**
+     * 删除标志（0-正常 1-删除）
+     */
     private Integer delFlag;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

@@ -110,7 +110,7 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
             throw new BusinessException("NRS2002 必须填写营养状态受损评分与疾病严重程度评分");
         }
         if (type != NutritionScreenTypeEnum.NRS2002.getCode() && dto.getTotalScore() == null) {
-            throw new BusinessException(NutritionRules.screenTypeText(type) + " 需提交评定总分");
+            throw new BusinessException(NutritionScreenTypeEnum.labelOrUnknown(type) + " 需提交评定总分");
         }
 
         BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());

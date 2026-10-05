@@ -429,11 +429,7 @@ public class BloodServiceImpl implements BloodService {
     }
 
     private String logTypeText(Integer t) {
-        if (t == null) {
-            return "未知(n)";
-        }
-        String label = BloodStockLogBizTypeEnum.labelOf(t);
-        return label == null ? "未知(" + t + ")" : label;
+        return BloodStockLogBizTypeEnum.labelOrUnknown(t);
     }
 
     private BizBloodInventory requireBag(Long id) {

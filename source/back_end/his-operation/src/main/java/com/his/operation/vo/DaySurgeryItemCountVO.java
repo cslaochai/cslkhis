@@ -19,7 +19,9 @@ public class DaySurgeryItemCountVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long itemId;
 
-    /** 名称 */
+    /**
+     * 名称
+     */
     private String name;
 
     private Long count;

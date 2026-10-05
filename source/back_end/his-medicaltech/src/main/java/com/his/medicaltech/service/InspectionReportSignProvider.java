@@ -13,13 +13,14 @@ import java.math.BigDecimal;
 
 public interface InspectionReportSignProvider extends SignableContentProvider {
 
-    /** 检查记录状态文案；**未知码值渲染成未知(n)，不回落成"已登记"这类合法值** */
+    /**
+     * 检查记录状态文案（签名规范化文本用，脏值必须暴露原码值）。
+     *
+     * <p>走 {@link InsRecordStatusEnum#labelOrUnknown(Integer)}：签名要能看出签的是哪个版本的码值，
+     * 脏值不能悄悄变成「已登记」这类合法值 —— 签错一份报告的责任是落在这行文本上的。
+     */
     public static String statusText(Integer status) {
-        InsRecordStatusEnum e = InsRecordStatusEnum.getByCode(status);
-        if (e != null) {
-            return e.getDesc();
-        }
-        return status == null ? "—" : "未知(" + status + ")";
+        return status == null ? "—" : InsRecordStatusEnum.labelOrUnknown(status);
     }
 
     /** 规范化文本：只含"检查报告内容"，按固定顺序 */

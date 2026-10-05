@@ -16,72 +16,114 @@ import java.util.List;
 @Data
 public class SafetyCheckVO implements Serializable {
 
-    /** 核查记录ID */
+    /**
+     * 核查记录ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 核查单号 */
+    /**
+     * 核查单号
+     */
     private String checkNo;
 
-    /** 手术申请单ID */
+    /**
+     * 手术申请单ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long applyId;
 
-    /** 手术申请单号（快照） */
+    /**
+     * 手术申请单号（快照）
+     */
     private String applyNo;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
-    /** 手术名称（快照，拟施） */
+    /**
+     * 手术名称（快照，拟施）
+     */
     private String operationName;
 
-    /** 手术间（快照） */
+    /**
+     * 手术间（快照）
+     */
     private String operationRoom;
 
-    /** 核查时段码 */
+    /**
+     * 核查时段码
+     */
     private Integer phase;
 
-    /** 核查时段文案 */
+    /**
+     * 核查时段文案
+     */
     private String phaseText;
 
-    /** 核查项码值（逗号分隔原始值） */
+    /**
+     * 核查项码值（逗号分隔原始值）
+     */
     private String items;
 
-    /** 核查项完整文案（分号拼接） */
+    /**
+     * 核查项完整文案（分号拼接）
+     */
     private String itemsText;
 
-    /** 异常说明 */
+    /**
+     * 异常说明
+     */
     private String note;
 
-    /** 手术医师ID */
+    /**
+     * 手术医师ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long surgeonId;
 
-    /** 手术医师姓名（快照） */
+    /**
+     * 手术医师姓名（快照）
+     */
     private String surgeonName;
 
-    /** 麻醉医师员工ID */
+    /**
+     * 麻醉医师员工ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long anesthetistId;
 
-    /** 麻醉医师姓名（快照） */
+    /**
+     * 麻醉医师姓名（快照）
+     */
     private String anesthetistName;
 
-    /** 手术室护士（器械/巡回） */
+    /**
+     * 手术室护士（器械/巡回）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long nurseId;
 
-    /** 手术室护士姓名（快照） */
+    /**
+     * 手术室护士姓名（快照）
+     */
     private String nurseName;
 
-    /** 录入人姓名（快照） */
+    /**
+     * 录入人姓名（快照）
+     */
     private String recorderName;
 
-    /** 核查完成时间（原文本，避免时区/格式歧义） */
+    /**
+     * 核查完成时间（原文本，避免时区/格式歧义）
+     */
     private String checkTime;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 
     /**
@@ -90,36 +132,56 @@ public class SafetyCheckVO implements Serializable {
     @Data
     public static class PhaseCard implements Serializable {
 
-        /** 时段码 1~3 */
+        /**
+         * 时段码 1~3
+         */
         private Integer phase;
 
-        /** 时段文案 */
+        /**
+         * 时段文案
+         */
         private String phaseText;
 
-        /** 该时段核查项（含 required 标识） */
+        /**
+         * 该时段核查项（含 required 标识）
+         */
         private List<CheckItem> items;
 
-        /** 已签的核查行；null = 尚未签 */
+        /**
+         * 已签的核查行；null = 尚未签
+         */
         private SafetyCheckVO signed;
 
-        /** 该时段是否可签（服务端按状态机与时段顺序判定） */
+        /**
+         * 该时段是否可签（服务端按状态机与时段顺序判定）
+         */
         private Boolean canSign;
 
-        /** 不可签原因（可签时为 null） */
+        /**
+         * 不可签原因（可签时为 null）
+         */
         private String cannotSignReason;
     }
 
-    /** 核查项（与 OperationApplyVO.CheckItem 同形，但带时段上下文） */
+    /**
+     * 核查项（与 OperationApplyVO.CheckItem 同形，但带时段上下文）
+     */
     @Data
     public static class CheckItem implements Serializable {
 
-        /** 核查项码值 */
+        /**
+         * 核查项码值
+         */
         private Integer code;
 
-        /** 核查项文案 */
+        /**
+         * 核查项文案
+         */
         private String label;
 
-        /** 是否必核项 */
+        /**
+         * 是否必核项
+         */
         private Boolean required;
     }
 }

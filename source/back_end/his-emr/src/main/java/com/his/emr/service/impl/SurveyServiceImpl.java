@@ -226,7 +226,7 @@ public class SurveyServiceImpl implements SurveyService {
         if (Objects.equals(dto.getAction(), 1)) {
             if (!Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.PENDING_PUSH.getCode())) {
                 throw new BusinessException("仅「待推送」的发放单可标记已推送（当前："
-                        + SurveyDispatchStatusEnum.labelOf(entity.getDispatchStatus()) + "）");
+                        + SurveyDispatchStatusEnum.getText(entity.getDispatchStatus()) + "）");
             }
             entity.setDispatchStatus(SurveyDispatchStatusEnum.PUSHED.getCode());
             entity.setPushTime(now());
@@ -237,7 +237,7 @@ public class SurveyServiceImpl implements SurveyService {
             if (!Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.PENDING_PUSH.getCode())
                     && !Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.PUSHED.getCode())) {
                 throw new BusinessException("仅未回收的发放单可标记拒答（当前："
-                        + SurveyDispatchStatusEnum.labelOf(entity.getDispatchStatus()) + "）");
+                        + SurveyDispatchStatusEnum.getText(entity.getDispatchStatus()) + "）");
             }
             entity.setDispatchStatus(SurveyDispatchStatusEnum.REFUSED.getCode());
         } else {

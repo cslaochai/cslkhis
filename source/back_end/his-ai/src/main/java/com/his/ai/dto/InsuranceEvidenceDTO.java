@@ -10,7 +10,9 @@ import lombok.Data;
 @Data
 public class InsuranceEvidenceDTO {
 
-    /** 合规审核记录ID */
+    /**
+     * 合规审核记录ID
+     */
     @NotNull(message = "审核记录ID不能为空")
     private Long auditId;
 }

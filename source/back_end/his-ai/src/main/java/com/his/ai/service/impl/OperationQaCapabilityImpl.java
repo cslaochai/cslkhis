@@ -22,16 +22,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * AI 运营问数能力：把管理者的自然语言问题翻译成一条受控 SELECT 并执行。
@@ -87,6 +83,29 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
      * 不复用全局共享的 JdbcTemplate（避免把限值带到别的业务路径上）
      */
     private JdbcTemplate queryTemplate;
+
+    private static Object formatValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        // DATETIME/DATE 列经 JDBC 出来是时间对象，直接 toString 会变成 ISO 带秒带 T 的形态
+        if (value instanceof LocalDateTime dateTime) {
+            return DATETIME_FORMATTER.format(dateTime);
+        }
+        if (value instanceof LocalDate date) {
+            return DATE_FORMATTER.format(date);
+        }
+        if (value instanceof LocalTime time) {
+            return time.toString();
+        }
+        if (value instanceof Timestamp timestamp) {
+            return DATETIME_FORMATTER.format(timestamp.toLocalDateTime());
+        }
+        if (value instanceof java.sql.Date date) {
+            return DATE_FORMATTER.format(date.toLocalDate());
+        }
+        return value;
+    }
 
     @PostConstruct
     void initQueryTemplate() {
@@ -246,29 +265,6 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
             text.append(String.join(" | ", line)).append('\n');
         }
         return text.toString().trim();
-    }
-
-    private static Object formatValue(Object value) {
-        if (value == null) {
-            return null;
-        }
-        // DATETIME/DATE 列经 JDBC 出来是时间对象，直接 toString 会变成 ISO 带秒带 T 的形态
-        if (value instanceof LocalDateTime dateTime) {
-            return DATETIME_FORMATTER.format(dateTime);
-        }
-        if (value instanceof LocalDate date) {
-            return DATE_FORMATTER.format(date);
-        }
-        if (value instanceof LocalTime time) {
-            return time.toString();
-        }
-        if (value instanceof Timestamp timestamp) {
-            return DATETIME_FORMATTER.format(timestamp.toLocalDateTime());
-        }
-        if (value instanceof java.sql.Date date) {
-            return DATE_FORMATTER.format(date.toLocalDate());
-        }
-        return value;
     }
 
     private OperationQaResultVO degrade(OperationQaResultVO vo, String reason, long start) {

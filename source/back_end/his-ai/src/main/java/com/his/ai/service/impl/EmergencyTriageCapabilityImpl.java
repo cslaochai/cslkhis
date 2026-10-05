@@ -1,14 +1,13 @@
 package com.his.ai.service.impl;
 
-import com.his.common.enums.SysGenderEnum;
-
-import com.his.ai.service.EmergencyTriageCapability;
-import com.his.ai.service.AiExecutionService;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.EmergencyTriageDTO;
 import com.his.ai.dto.EmergencyTriageLlmOutputDTO;
+import com.his.ai.service.AiExecutionService;
+import com.his.ai.service.EmergencyTriageCapability;
 import com.his.ai.vo.EmergencyTriageResultVO;
+import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emergency.entity.BizEmergency;
 import com.his.emergency.mapper.BizEmergencyMapper;
@@ -302,9 +301,9 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
     }
 
     private Optional<EmergencyTriageLlmOutputDTO> callModel(EmergencyTriageResultVO vo,
-                                                         VitalSigns vitals,
-                                                         List<RedFlag> flags,
-                                                         String channelByKeyword) {
+                                                            VitalSigns vitals,
+                                                            List<RedFlag> flags,
+                                                            String channelByKeyword) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("gender", vo.getGenderText());
         variables.put("age", vo.getAge() == null ? "（未填写）" : vo.getAge() + "岁");

@@ -14,7 +14,7 @@ import java.io.Serializable;
  * <b>不回改历史状态</b> —— 把一条已完成的输血单改回"输注中"来记反应，
  * 就是在改历史，而且会破坏"完成=已回写病历"的一致性。
  *
- * <p>{@code reactionType} 走受控字典（{@code TransfusionLabels.reactionTypes()}），
+ * <p>{@code reactionType} 走受控字典（{@code TransfusionReactionTypeEnum.options()}），
  * 不接受自由文本：写成"发热"和"发热反应"两种，统计时永远凑不到一起。
  */
 @Data

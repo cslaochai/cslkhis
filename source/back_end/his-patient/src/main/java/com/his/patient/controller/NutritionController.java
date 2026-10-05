@@ -4,10 +4,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.patient.dto.*;
+import com.his.patient.enums.ConsultCategoryEnum;
 import com.his.patient.service.InpatientConsultationService;
 import com.his.patient.service.NutritionScreenService;
 import com.his.patient.service.NutritionStatsService;
-import com.his.patient.support.ConsultationLabels;
 import com.his.patient.vo.ConsultationVO;
 import com.his.patient.vo.NutritionOverviewVO;
 import com.his.patient.vo.NutritionScreenVO;
@@ -89,7 +89,7 @@ public class NutritionController {
     @PreAuthorize("hasAuthority('ipd:nutrition:consult')")
     @PostMapping("/consultListPage")
     public Result<PageResult<ConsultationVO>> consultListPage(@Valid @RequestBody ConsultationQueryPageDTO query) {
-        query.setConsultCategory(ConsultationLabels.CATEGORY_NUTRITION);
+        query.setConsultCategory(ConsultCategoryEnum.NUTRITION.getCode());
         IPage<ConsultationVO> page = consultationService.listPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
@@ -107,7 +107,7 @@ public class NutritionController {
     @PostMapping("/consultApply")
     public Result<String> consultApply(@RequestBody @Valid ConsultationUpsertDTO dto) {
         dto.setId(null);
-        dto.setConsultCategory(ConsultationLabels.CATEGORY_NUTRITION);
+        dto.setConsultCategory(ConsultCategoryEnum.NUTRITION.getCode());
         return Result.success("营养会诊已申请", consultationService.save(dto));
     }
 

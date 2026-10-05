@@ -135,7 +135,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
                 reject(notes, String.format("字段「%s」不在可写白名单内", truncate(key, 20, "（空）")));
                 continue;
             }
-            String label = EmrFieldCatalog.labelOf(key);
+            String label = EmrFieldCatalog.getText(key);
             // 诊疗决策字段不接受模型产出（诊断权在医生；处理意见是法律文书）
             if (!EmrFieldCatalog.isLlmWritable(key)) {
                 rejected++;
@@ -242,7 +242,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
     private static void addVital(EmrExtractResultVO vo, Map<String, String> vitals, String key) {
         String value = vitals.get(key);
         if (StringUtils.hasText(value)) {
-            vo.getFields().add(build(key, EmrFieldCatalog.labelOf(key), value, SOURCE_HARD_RULE, value));
+            vo.getFields().add(build(key, EmrFieldCatalog.getText(key), value, SOURCE_HARD_RULE, value));
         }
     }
 

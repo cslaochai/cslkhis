@@ -139,7 +139,7 @@ public class ApplyExecStatusGatewayImpl implements ApplyExecStatusGateway {
         }
         InsRecordStatusEnum e = InsRecordStatusEnum.getByCode(status);
         if (e == null) {
-            return "未知(" + status + ")";
+            return InsRecordStatusEnum.labelOrUnknown(status);
         }
         return switch (e) {
             case REGISTERED -> "已缴费待执行";
@@ -164,7 +164,7 @@ public class ApplyExecStatusGatewayImpl implements ApplyExecStatusGateway {
         }
         LabRecordStatusEnum e = LabRecordStatusEnum.getByCode(status);
         if (e == null) {
-            return "未知(" + status + ")";
+            return LabRecordStatusEnum.labelOrUnknown(status);
         }
         return switch (e) {
             case REGISTERED -> "已缴费待执行";

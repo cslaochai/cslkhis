@@ -17,36 +17,56 @@ import java.time.LocalDateTime;
 @Data
 public class AnesthesiaVitalUpsertDTO implements Serializable {
 
-    /** 麻醉记录ID */
+    /**
+     * 麻醉记录ID
+     */
     @NotNull(message = "麻醉记录单ID不能为空")
     private Long recordId;
 
-    /** 采样时刻 */
+    /**
+     * 采样时刻
+     */
     @NotNull(message = "采样时刻不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime sampleTime;
 
-    /** 收缩压（mmHg） */
+    /**
+     * 收缩压（mmHg）
+     */
     private Integer systolic;
 
-    /** 舒张压（mmHg） */
+    /**
+     * 舒张压（mmHg）
+     */
     private Integer diastolic;
 
-    /** 心率（次/分） */
+    /**
+     * 心率（次/分）
+     */
     private Integer heartRate;
 
-    /** 呼吸频率（次/分） */
+    /**
+     * 呼吸频率（次/分）
+     */
     private Integer respiration;
 
-    /** 体温（℃） */
+    /**
+     * 体温（℃）
+     */
     private BigDecimal temperature;
 
-    /** 脉搏血氧饱和度（%） */
+    /**
+     * 脉搏血氧饱和度（%）
+     */
     private Integer spo2;
 
-    /** 呼气末二氧化碳分压（mmHg） */
+    /**
+     * 呼气末二氧化碳分压（mmHg）
+     */
     private Integer etco2;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

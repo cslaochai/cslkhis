@@ -47,7 +47,7 @@ public interface BizAnesthesiaVisitMapper extends BaseMapper<BizAnesthesiaVisit>
             ORDER BY v.conclusion IS NULL DESC, v.visit_time DESC, v.id DESC
             """)
     IPage<AnesthesiaVisitVO> selectVisitPage(IPage<AnesthesiaVisitVO> page,
-                                            @Param("q") AnesthesiaVisitQueryPageDTO query);
+                                             @Param("q") AnesthesiaVisitQueryPageDTO query);
 
     @Select(PROJECTION + " WHERE v.del_flag = 0 AND v.id = #{visitId}")
     AnesthesiaVisitVO selectVOById(@Param("visitId") Long visitId);
@@ -55,7 +55,9 @@ public interface BizAnesthesiaVisitMapper extends BaseMapper<BizAnesthesiaVisit>
     @Select(PROJECTION + " WHERE v.del_flag = 0 AND v.apply_id = #{applyId}")
     AnesthesiaVisitVO selectVOByApply(@Param("applyId") Long applyId);
 
-    /** 当天已生成的访视单号条数（单号序号用） */
+    /**
+     * 当天已生成的访视单号条数（单号序号用）
+     */
     @Select("SELECT COUNT(*) FROM biz_anesthesia_visit WHERE del_flag = 0 AND visit_no LIKE CONCAT(#{prefix}, '%')")
     long countByNoPrefix(@Param("prefix") String prefix);
 

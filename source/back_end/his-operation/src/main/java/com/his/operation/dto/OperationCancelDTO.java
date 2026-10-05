@@ -17,11 +17,15 @@ import java.io.Serializable;
 @Data
 public class OperationCancelDTO implements Serializable {
 
-    /** 手术申请单ID（必填） */
+    /**
+     * 手术申请单ID（必填）
+     */
     @NotNull(message = "手术申请单ID不能为空")
     private Long applyId;
 
-    /** 取消原因（必填：停台是一个临床决定，必须有人负责） */
+    /**
+     * 取消原因（必填：停台是一个临床决定，必须有人负责）
+     */
     @NotBlank(message = "取消原因不能为空（停台是一个临床决定，必须有人负责）")
     private String cancelReason;
 }

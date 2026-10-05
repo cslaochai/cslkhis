@@ -19,11 +19,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * 护理交接班摘要实现（G-13）。
@@ -43,18 +39,34 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
 
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    /** 高风险评估口径：风险等级 3-高风险 4-极高风险 */
+    /**
+     * 高风险评估口径：风险等级 3-高风险 4-极高风险
+     */
     private static final int RISK_LEVEL_HIGH = 3;
 
-    /** 摘要上限（与提示词 ≤400 字纪律一致，超写截断） */
+    /**
+     * 摘要上限（与提示词 ≤400 字纪律一致，超写截断）
+     */
     private static final int SUMMARY_MAX = 500;
 
-    /** 事件文本上限（单条护理记录正文不再进事件，防止提示词被长文本撑爆） */
+    /**
+     * 事件文本上限（单条护理记录正文不再进事件，防止提示词被长文本撑爆）
+     */
     private static final int EVENT_MAX = 120;
 
     private final AiExecutionService aiExecutionService;
 
     private final InpatientNursingService inpatientNursingService;
+
+    private static String truncate(String text, int maxLength) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        String value = text.trim();
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    // ---------------------------------------------------------------- 事实文本
 
     @Override
     public WardHandoverVO compose(NursingHandoverDTO dto) {
@@ -62,9 +74,18 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
         LocalDateTime begin;
         LocalDateTime end;
         switch (dto.getShift()) {
-            case 1 -> { begin = date.atTime(8, 0); end = date.atTime(16, 0); }
-            case 2 -> { begin = date.atTime(16, 0); end = date.plusDays(1).atStartOfDay(); }
-            default -> { begin = date.atStartOfDay(); end = date.atTime(8, 0); }
+            case 1 -> {
+                begin = date.atTime(8, 0);
+                end = date.atTime(16, 0);
+            }
+            case 2 -> {
+                begin = date.atTime(16, 0);
+                end = date.plusDays(1).atStartOfDay();
+            }
+            default -> {
+                begin = date.atStartOfDay();
+                end = date.atTime(8, 0);
+            }
         }
         WardNursingFactsVO facts = inpatientNursingService.wardShiftFacts(
                 dto.getWardId(), begin, end, dto.getShift());
@@ -108,8 +129,6 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
         vo.setSummary(truncate(output.get().getSummary(), SUMMARY_MAX));
         return vo;
     }
-
-    // ---------------------------------------------------------------- 事实文本
 
     private List<String> newAdmissionLines(WardNursingFactsVO facts) {
         List<String> lines = new ArrayList<>();
@@ -162,7 +181,9 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
         return sb.toString();
     }
 
-    /** 降级摘要：同一份事实按固定句式拼，读者拿到的是事实清单而不是空白 */
+    /**
+     * 降级摘要：同一份事实按固定句式拼，读者拿到的是事实清单而不是空白
+     */
     private String ruleSummary(WardHandoverVO vo) {
         StringBuilder sb = new StringBuilder();
         sb.append("【现状】").append(vo.getWardName()).append(" ").append(vo.getShiftText())
@@ -186,13 +207,5 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
         }
         sb.append("（本摘要由规则模板拼接，请结合交班本核对）");
         return sb.toString();
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 }

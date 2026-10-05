@@ -33,19 +33,27 @@ public class PatientImagingExplainVO {
     @Schema(description = "报告发布时间")
     private LocalDateTime reportTime;
 
-    /** 代码事实：来自 biz_report.positive_flag（PositiveFlagEnum），模型不得改写 */
+    /**
+     * 代码事实：来自 biz_report.positive_flag（PositiveFlagEnum），模型不得改写
+     */
     @Schema(description = "阴阳性（未判定/阴性/阳性/未见异常），报告未判定时为 null")
     private String positiveText;
 
-    /** 代码事实：来自 biz_report.is_critical，唯一允许「催促」的字段 */
+    /**
+     * 代码事实：来自 biz_report.is_critical，唯一允许「催促」的字段
+     */
     @Schema(description = "危急置顶提示；报告未标注危急时为 null")
     private String criticalAlert;
 
-    /** 词典层：sys_imaging_plain_item 命中即给，模型挂了也照常 */
+    /**
+     * 词典层：sys_imaging_plain_item 命中即给，模型挂了也照常
+     */
     @Schema(description = "这项检查是查什么的（白话）；词典未收录且模型不可用时为 null")
     private String examIntro;
 
-    /** 词典层：检查前后的注意，与 examIntro 同源 */
+    /**
+     * 词典层：检查前后的注意，与 examIntro 同源
+     */
     @Schema(description = "检查前后的注意事项（白话）；词典未命中时为 null")
     private String examNotice;
 
@@ -58,7 +66,9 @@ public class PatientImagingExplainVO {
     @Schema(description = "报告「建议」部分的白话串讲；模型不可用时为 null")
     private String advicePlain;
 
-    /** 固定免责与引导：每份解读必带，是这个能力能上线的条件 */
+    /**
+     * 固定免责与引导：每份解读必带，是这个能力能上线的条件
+     */
     @Schema(description = "固定免责与引导提示")
     private String advice;
 

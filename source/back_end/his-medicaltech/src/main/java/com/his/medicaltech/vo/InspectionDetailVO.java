@@ -3,7 +3,6 @@ package com.his.medicaltech.vo;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.his.medicaltech.vo.ExamImageVO;
 import lombok.Data;
 
 import java.time.LocalDateTime;

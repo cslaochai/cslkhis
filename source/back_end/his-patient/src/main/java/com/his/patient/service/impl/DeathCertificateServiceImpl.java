@@ -112,8 +112,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         if (status == null) {
             return "未知";
         }
-        String label = DeathCertStatusEnum.labelOf(status);
-        return label == null ? "未知(" + status + ")" : label;
+        return DeathCertStatusEnum.labelOrUnknown(status);
     }
 
     /**

@@ -36,7 +36,9 @@ public class OpenAiAsrRequestDTO {
     @Builder
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class ContentPart {
-        /** 固定 input_audio */
+        /**
+         * 固定 input_audio
+         */
         private String type;
         @JsonProperty("input_audio")
         private InputAudio inputAudio;
@@ -46,9 +48,13 @@ public class OpenAiAsrRequestDTO {
     @Builder
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class InputAudio {
-        /** base64 音频数据（不带 data: 前缀） */
+        /**
+         * base64 音频数据（不带 data: 前缀）
+         */
         private String data;
-        /** 音频格式：wav / mp3 / webm / ogg / opus 等 */
+        /**
+         * 音频格式：wav / mp3 / webm / ogg / opus 等
+         */
         private String format;
     }
 }

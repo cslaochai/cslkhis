@@ -8,6 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.common.exception.BusinessException;
 import com.his.report.dto.StatReportDTO;
 import com.his.report.entity.BizStatReport;
+import com.his.report.enums.StatReportStatusEnum;
+import com.his.report.enums.StatReportTypeEnum;
 import com.his.report.mapper.BizStatReportMapper;
 import com.his.report.mapper.StatReportAggMapper;
 import com.his.report.vo.StatReportVO;
@@ -108,7 +110,7 @@ public class StatReportServiceImpl implements StatReportService {
         List<Map<String, Object>> topDx = aggMapper.topDiagnoses(startStr, endStr, deptFilter);
         List<Map<String, Object>> cases = aggMapper.cohortCases(startStr, endStr, deptFilter);
 
-        String typeName = reportTypeName(dto.getReportType());
+        String typeName = StatReportTypeEnum.getText(dto.getReportType());
         String title = (deptName == null ? "" : deptName) + typeName + "（" + period + "）";
         String operator = operatorName();
         LocalDateTime now = LocalDateTime.now();
@@ -224,7 +226,7 @@ public class StatReportServiceImpl implements StatReportService {
     public StatReportVO.Row submit(Long id) {
         BizStatReport r = mustGet(id);
         if (r.getStatus() != 0) {
-            throw new BusinessException("只有草稿可报出（当前状态：" + statusName(r.getStatus()) + "）");
+            throw new BusinessException("只有草稿可报出（当前状态：" + StatReportStatusEnum.labelOrUnknown(r.getStatus()) + "）");
         }
         r.setStatus(1);
         r.setSubmitTime(LocalDateTime.now());
@@ -320,26 +322,6 @@ public class StatReportServiceImpl implements StatReportService {
         v.setSubmitByName(r.getSubmitByName());
         v.setVoidReason(r.getVoidReason());
         v.setRemark(r.getRemark());
-    }
-
-    private static String reportTypeName(Integer type) {
-        if (type == null) return "未知类型";
-        return switch (type) {
-            case 1 -> "卫统年报";
-            case 2 -> "出院患者统计月报";
-            case 3 -> "手术工作量专项报表";
-            default -> "未知类型(" + type + ")";
-        };
-    }
-
-    private static String statusName(Integer status) {
-        if (status == null) return "未知";
-        return switch (status) {
-            case 0 -> "草稿";
-            case 1 -> "已报出";
-            case 2 -> "已作废";
-            default -> "未知(" + status + ")";
-        };
     }
 
     private static long toLong(Object v) {

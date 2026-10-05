@@ -20,51 +20,89 @@ import java.time.LocalDateTime;
 @TableName("sys_equipment")
 public class SysEquipment {
 
-    /** 主键 */
+    /**
+     * 主键
+     */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 设备编码 */
+    /**
+     * 设备编码
+     */
     private String equipmentCode;
-    /** 设备名称 */
+    /**
+     * 设备名称
+     */
     private String equipmentName;
 
-    /** 设备类别（字典 his_equipment_category，1~7） */
+    /**
+     * 设备类别（字典 his_equipment_category，1~7）
+     */
     private Integer category;
 
-    /** 使用科室ID */
+    /**
+     * 使用科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
-    /** 使用科室名称 */
+    /**
+     * 使用科室名称
+     */
     private String deptName;
-    /** 品牌 */
+    /**
+     * 品牌
+     */
     private String brand;
-    /** 型号 */
+    /**
+     * 型号
+     */
     private String model;
-    /** 购置日期 */
+    /**
+     * 购置日期
+     */
     private LocalDate purchaseDate;
-    /** 购置价格(元) */
+    /**
+     * 购置价格(元)
+     */
     private BigDecimal purchasePrice;
 
-    /** 状态（字典 his_equipment_status）:1-在用 2-停用 3-维修中 4-报废 */
+    /**
+     * 状态（字典 his_equipment_status）:1-在用 2-停用 3-维修中 4-报废
+     */
     private Integer status;
 
-    /** 维保周期(天) */
+    /**
+     * 维保周期(天)
+     */
     private Integer maintainCycleDays;
-    /** 最近维保日期 */
+    /**
+     * 最近维保日期
+     */
     private LocalDate lastMaintainDate;
 
-    /** 创建人 */
+    /**
+     * 创建人
+     */
     private String createBy;
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
-    /** 更新人 */
+    /**
+     * 更新人
+     */
     private String updateBy;
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     private LocalDateTime updateTime;
-    /** 删除标志（0-正常 1-删除） */
+    /**
+     * 删除标志（0-正常 1-删除）
+     */
     private Integer delFlag;
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

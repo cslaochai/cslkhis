@@ -14,6 +14,8 @@ public class DaySurgeryFinishDTO implements Serializable {
     @NotNull(message = "登记单ID不能为空")
     private Long id;
 
-    /** 手术结束时间 yyyy-MM-dd HH:mm:ss（不传取当前时间） */
+    /**
+     * 手术结束时间 yyyy-MM-dd HH:mm:ss（不传取当前时间）
+     */
     private String surgeryEndTime;
 }

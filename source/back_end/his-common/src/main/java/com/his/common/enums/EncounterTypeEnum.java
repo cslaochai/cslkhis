@@ -31,6 +31,11 @@ public enum EncounterTypeEnum {
         return null;
     }
 
+    /** 码值是否合法（写入侧校验用；null 不合法） */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
     public static String descOf(Integer code) {
         EncounterTypeEnum item = fromCode(code);
         return item == null ? "未知" : item.desc;

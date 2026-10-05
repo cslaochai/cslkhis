@@ -49,7 +49,9 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
                      LEFT JOIN biz_inpatient_record r ON r.id = c.record_id AND r.del_flag = 0
             """;
 
-    /** 手术申请分页（手术室排台工作台 / 病区申请方工作台共用） */
+    /**
+     * 手术申请分页（手术室排台工作台 / 病区申请方工作台共用）
+     */
     @Select(PROJECTION + """
             WHERE c.del_flag = 0
               AND (#{q.admissionId} IS NULL OR c.admission_id = #{q.admissionId})
@@ -77,22 +79,30 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
     IPage<OperationApplyVO> selectApplyPage(IPage<OperationApplyVO> page,
                                             @Param("q") OperationApplyQueryPageDTO query);
 
-    /** 手术申请详情 */
+    /**
+     * 手术申请详情
+     */
     @Select(PROJECTION + " WHERE c.del_flag = 0 AND c.id = #{applyId}")
     OperationApplyVO selectApplyById(@Param("applyId") Long applyId);
 
-    /** 某次住院的全部手术申请（病案首页/病程里回看这条链用） */
+    /**
+     * 某次住院的全部手术申请（病案首页/病程里回看这条链用）
+     */
     @Select(PROJECTION + """
              WHERE c.del_flag = 0 AND c.admission_id = #{admissionId}
              ORDER BY c.apply_time ASC, c.id ASC
             """)
     List<OperationApplyVO> selectByAdmission(@Param("admissionId") Long admissionId);
 
-    /** 当天已生成的手术单号条数（单号序号用） */
+    /**
+     * 当天已生成的手术单号条数（单号序号用）
+     */
     @Select("SELECT COUNT(*) FROM biz_operation_apply WHERE del_flag = 0 AND apply_no LIKE CONCAT(#{prefix}, '%')")
     long countByNoPrefix(@Param("prefix") String prefix);
 
-    /** 未完成手术数（待排期 + 已排期 + 术前核对完成）：工作台角标用 */
+    /**
+     * 未完成手术数（待排期 + 已排期 + 术前核对完成）：工作台角标用
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_operation_apply
             WHERE del_flag = 0 AND operation_status IN (0, 1, 2)
@@ -194,14 +204,18 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
     List<OperationApplyVO> selectScheduledBetween(@Param("from") LocalDateTime from,
                                                   @Param("to") LocalDateTime to);
 
-    /** 排台总表：待排期申请（矩阵底部「待排期」暂存区，拖进手术间列才算排台） */
+    /**
+     * 排台总表：待排期申请（矩阵底部「待排期」暂存区，拖进手术间列才算排台）
+     */
     @Select(PROJECTION + """
              WHERE c.del_flag = 0 AND c.operation_status = 0
              ORDER BY c.is_emergency DESC, c.apply_time ASC, c.id ASC
             """)
     List<OperationApplyVO> selectUnscheduled();
 
-    /** 已用过的手术间（下拉候选；取不到就返回空列表，由前端允许自由输入） */
+    /**
+     * 已用过的手术间（下拉候选；取不到就返回空列表，由前端允许自由输入）
+     */
     @Select("""
             SELECT DISTINCT operation_room FROM biz_operation_apply
             WHERE del_flag = 0 AND operation_room IS NOT NULL AND operation_room <> ''
@@ -209,11 +223,15 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
             """)
     List<String> selectRoomList();
 
-    /** 科室名（取不到返回 null，由调用方渲染「未知科室(ID=x)」，绝不编一个名字） */
+    /**
+     * 科室名（取不到返回 null，由调用方渲染「未知科室(ID=x)」，绝不编一个名字）
+     */
     @Select("SELECT dept_name FROM sys_department WHERE id = #{deptId} AND del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
-    /** 员工姓名（主刀/麻醉/助手/核对人一律服务端查名，不信任前端传来的姓名） */
+    /**
+     * 员工姓名（主刀/麻醉/助手/核对人一律服务端查名，不信任前端传来的姓名）
+     */
     @Select("SELECT emp_name FROM sys_employee WHERE id = #{empId} AND del_flag = 0")
     String selectEmployeeName(@Param("empId") Long empId);
 }

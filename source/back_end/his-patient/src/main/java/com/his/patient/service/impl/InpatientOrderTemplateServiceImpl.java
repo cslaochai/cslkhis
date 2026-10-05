@@ -15,7 +15,6 @@ import com.his.patient.mapper.BizInpatientOrderTemplateItemMapper;
 import com.his.patient.mapper.BizInpatientOrderTemplateMapper;
 import com.his.patient.service.InpatientOrderTemplateService;
 import com.his.patient.support.InpatientOrderItemRules;
-import com.his.patient.support.InpatientOrderLabels;
 import com.his.patient.vo.InpatientOrderTemplateDetailVO;
 import com.his.patient.vo.InpatientOrderTemplateItemVO;
 import com.his.patient.vo.InpatientOrderTemplateListVO;
@@ -140,12 +139,12 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
 
         InpatientOrderTemplateDetailVO vo = new InpatientOrderTemplateDetailVO();
         BeanUtils.copyProperties(template, vo);
-        vo.setOrderTypeText(OrderTypeEnum.labelOf(template.getOrderType()));
+        vo.setOrderTypeText(OrderTypeEnum.getText(template.getOrderType()));
         List<InpatientOrderTemplateItemVO> itemVOs = new ArrayList<>(items.size());
         for (BizInpatientOrderTemplateItem item : items) {
             InpatientOrderTemplateItemVO itemVO = new InpatientOrderTemplateItemVO();
             BeanUtils.copyProperties(item, itemVO);
-            itemVO.setOrderClassText(OrderClassEnum.labelOf(item.getOrderClass()));
+            itemVO.setOrderClassText(OrderClassEnum.getText(item.getOrderClass()));
             itemVOs.add(itemVO);
         }
         vo.setItems(itemVOs);
@@ -171,7 +170,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
                 .convert(entity -> {
                     InpatientOrderTemplateListVO vo = new InpatientOrderTemplateListVO();
                     BeanUtils.copyProperties(entity, vo);
-                    vo.setOrderTypeText(OrderTypeEnum.labelOf(entity.getOrderType()));
+                    vo.setOrderTypeText(OrderTypeEnum.getText(entity.getOrderType()));
                     return vo;
                 });
     }
@@ -191,7 +190,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         for (BizInpatientOrderTemplate entity : list) {
             InpatientOrderTemplateSelectListVO vo = new InpatientOrderTemplateSelectListVO();
             BeanUtils.copyProperties(entity, vo);
-            vo.setOrderTypeText(OrderTypeEnum.labelOf(entity.getOrderType()));
+            vo.setOrderTypeText(OrderTypeEnum.getText(entity.getOrderType()));
             vos.add(vo);
         }
         return vos;

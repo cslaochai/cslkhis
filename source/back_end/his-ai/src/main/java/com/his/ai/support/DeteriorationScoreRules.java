@@ -19,16 +19,19 @@ import java.util.List;
  */
 public final class DeteriorationScoreRules {
 
-    private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
-
-    /** 关注阈值：≥4 提示关注（MEWS 常用预警线） */
+    /**
+     * 关注阈值：≥4 提示关注（MEWS 常用预警线）
+     */
     public static final int WATCH_SCORE = 4;
-
-    /** 高危阈值：≥6 提示高危（MEWS ≥5~6 常对应需评估升级处置） */
+    /**
+     * 高危阈值：≥6 提示高危（MEWS ≥5~6 常对应需评估升级处置）
+     */
     public static final int CRITICAL_SCORE = 6;
-
-    /** 无体征数据时的占位总分 */
+    /**
+     * 无体征数据时的占位总分
+     */
     public static final int NO_DATA_SCORE = -1;
+    private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
 
     private DeteriorationScoreRules() {
     }
@@ -60,7 +63,9 @@ public final class DeteriorationScoreRules {
         return s;
     }
 
-    /** 预警级：0-未触发 1-关注 2-高危 */
+    /**
+     * 预警级：0-未触发 1-关注 2-高危
+     */
     public static int alertLevel(int totalScore) {
         if (totalScore >= CRITICAL_SCORE) {
             return 2;
@@ -69,14 +74,6 @@ public final class DeteriorationScoreRules {
             return 1;
         }
         return 0;
-    }
-
-    public static String alertText(int level) {
-        return switch (level) {
-            case 2 -> "高危（MEWS ≥6，建议立即评估）";
-            case 1 -> "关注（MEWS ≥4，建议加测观察）";
-            default -> "未触发";
-        };
     }
 
     /**
@@ -181,7 +178,9 @@ public final class DeteriorationScoreRules {
         return 2;
     }
 
-    /** SpO2 沿用 NEWS 分档（MEWS 原版无此项，血氧是护理监测的常规项） */
+    /**
+     * SpO2 沿用 NEWS 分档（MEWS 原版无此项，血氧是护理监测的常规项）
+     */
     private static Integer spo2Score(Integer spo2) {
         if (spo2 == null) return null;
         if (spo2 < 91) return 3;
@@ -194,7 +193,9 @@ public final class DeteriorationScoreRules {
         return v == null ? 0 : v;
     }
 
-    /** 单患者评分结果（分项 + 总分 + 预警级），由 VO 透传给前端与提示词 */
+    /**
+     * 单患者评分结果（分项 + 总分 + 预警级），由 VO 透传给前端与提示词
+     */
     @Getter
     @Setter
     public static class DeteriorationScore {
@@ -207,7 +208,9 @@ public final class DeteriorationScoreRules {
         private boolean noData;
     }
 
-    /** 分项明细行 */
+    /**
+     * 分项明细行
+     */
     public record ScoreItem(String name, String valueText, int score) {
     }
 }

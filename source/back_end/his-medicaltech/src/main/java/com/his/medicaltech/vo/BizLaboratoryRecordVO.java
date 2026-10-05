@@ -52,7 +52,9 @@ public class BizLaboratoryRecordVO {
      */
     private String remark;
 
-    /** 检验记录号（唯一） */
+    /**
+     * 检验记录号（唯一）
+     */
     private String recordNo;
 
     /**
@@ -151,7 +153,9 @@ public class BizLaboratoryRecordVO {
      */
     private String specimenNo;
 
-    /** 标本状态（1-待采集 2-已采集 3-已接收 4-检测中 5-已完成 6-已退回） */
+    /**
+     * 标本状态（1-待采集 2-已采集 3-已接收 4-检测中 5-已完成 6-已退回）
+     */
     private Integer specimenStatus;
 
     /**
@@ -192,7 +196,9 @@ public class BizLaboratoryRecordVO {
      */
     private BigDecimal price;
 
-    /** 检验结论/诊断 */
+    /**
+     * 检验结论/诊断
+     */
     private String diagnosis;
 
     /**
@@ -205,7 +211,9 @@ public class BizLaboratoryRecordVO {
      */
     private Integer recordStatus;
 
-    /** 审核人（初审） */
+    /**
+     * 审核人（初审）
+     */
     private String auditBy;
 
     /**
@@ -231,7 +239,9 @@ public class BizLaboratoryRecordVO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime reportTime;
 
-    /** 报告发布人 */
+    /**
+     * 报告发布人
+     */
     private String reportBy;
 
     /**

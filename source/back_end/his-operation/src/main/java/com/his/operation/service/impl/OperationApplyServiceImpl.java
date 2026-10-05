@@ -3,42 +3,43 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.enums.AdmitStatusEnum;
+import com.his.common.enums.RecordStatusEnum;
+import com.his.common.enums.SysGenderEnum;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
-import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
-import com.his.operation.dto.OperationApplyQueryPageDTO;
-import com.his.operation.dto.OperationApplyUpsertDTO;
-import com.his.operation.dto.OperationCancelDTO;
-import com.his.operation.dto.OperationFinishDTO;
-import com.his.operation.dto.OperationPreopCheckDTO;
-import com.his.operation.dto.OperationScheduleDTO;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.entity.BizInpatientOperation;
-import com.his.patient.entity.BizInpatientRecord;
+import com.his.operation.dto.*;
 import com.his.operation.entity.BizOperationApply;
 import com.his.operation.entity.BizOperationCount;
 import com.his.operation.entity.BizOperationSafetyCheck;
 import com.his.operation.entity.SysOperationRoom;
+import com.his.operation.enums.OperationAnesthesiaMethodEnum;
+import com.his.operation.enums.OperationApplyStatusEnum;
+import com.his.operation.enums.OperationEmergencyEnum;
+import com.his.operation.enums.OperationIncisionEnum;
+import com.his.operation.enums.OperationLevelEnum;
 import com.his.operation.mapper.BizOperationApplyMapper;
 import com.his.operation.mapper.BizOperationCountMapper;
 import com.his.operation.mapper.BizOperationSafetyCheckMapper;
 import com.his.operation.mapper.SysOperationRoomMapper;
 import com.his.operation.service.OperationApplyService;
-import com.his.patient.support.InpatientRecordLabels;
-import com.his.operation.enums.OperationApplyStatusEnum;
-import com.his.operation.support.OperationApplyLabels;
+import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.support.OperationCheckItems;
 import com.his.operation.support.SafetyCheckItems;
-import com.his.patient.service.InpatientService;
-import com.his.patient.service.InpatientRecordService;
-import com.his.patient.service.PatientService;
 import com.his.operation.vo.OperationApplyVO;
 import com.his.operation.vo.OperationScheduleMatrixVO;
+import com.his.patient.entity.BizAdmission;
+import com.his.patient.entity.BizInpatientOperation;
+import com.his.patient.entity.BizInpatientRecord;
+import com.his.patient.entity.BizPatient;
+import com.his.patient.enums.InpatientRecordTypeEnum;
+import com.his.patient.service.InpatientRecordService;
+import com.his.patient.service.InpatientService;
+import com.his.patient.service.PatientService;
 import com.his.patient.vo.WardVO;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.service.EmployeeTechAuthService;
 import lombok.RequiredArgsConstructor;
@@ -53,14 +54,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 住院手术闭环服务实现（P4.3）。
@@ -88,16 +82,9 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class OperationApplyServiceImpl implements OperationApplyService {
 
-    /** 入院状态：在院 */
-    private static final int ADMITTED = 1;
-
-    /** 病历文书类型：5-手术记录（P2 就已存在的码值，本闭环完成时由系统回写一份） */
-    private static final int RECORD_TYPE_OPERATION = 5;
-
-    /** 文书状态：已提交（手术记录一落库就是正式文书，不留在草稿箱） */
-    private static final int RECORD_STATUS_SUBMITTED = 2;
-
-    /** 术前核对完成后多久没结束算"卡住"（查询时算，不落状态列） */
+    /**
+     * 术前核对完成后多久没结束算"卡住"（查询时算，不落状态列）
+     */
     private static final long STALLED_HOURS = 24;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -114,6 +101,57 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     private final BizOperationSafetyCheckMapper safetyCheckMapper;
 
     // 查询
+
+    private static String textOr(String value, String fallback) {
+        return StringUtils.hasText(value) ? value : fallback;
+    }
+
+    private static LocalDateTime now() {
+        return toSeconds(LocalDateTime.now());
+    }
+
+    /**
+     * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
+     */
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    /**
+     * 下界宽松解析：{@code yyyy-MM-dd} → 当天 00:00:00；带时分秒则原样使用（含）。
+     */
+    private static String normalizeFrom(String raw) {
+        Parsed p = parse(raw);
+        return p == null ? null : p.from;
+    }
+
+    /**
+     * 上界宽松解析：{@code yyyy-MM-dd} → <b>次日</b> 00:00:00（不含，这样能覆盖当天最后一秒）；
+     * 带时分秒则原样使用（不含）。
+     */
+    private static String normalizeTo(String raw) {
+        Parsed p = parse(raw);
+        return p == null ? null : p.to;
+    }
+
+    private static Parsed parse(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        String s = raw.trim();
+        try {
+            if (s.length() == 10) {
+                LocalDate d = LocalDate.parse(s);
+                return new Parsed(d.atStartOfDay().format(FULL_TIME),
+                        d.plusDays(1).atStartOfDay().format(FULL_TIME));
+            }
+            LocalDateTime t = LocalDateTime.parse(s, FULL_TIME);
+            return new Parsed(t.format(FULL_TIME), t.format(FULL_TIME));
+        } catch (DateTimeParseException e) {
+            // 明确报格式问题，不静默忽略、也不让它变成 500
+            throw new BusinessException("时间格式不正确：" + raw + "（应为 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss）");
+        }
+    }
 
     @Override
     public IPage<OperationApplyVO> listPage(OperationApplyQueryPageDTO query) {
@@ -142,6 +180,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         return vo;
     }
 
+    // 一、申请（待排期）
+
     @Override
     public List<OperationApplyVO> listByAdmission(Long admissionId) {
         // C-非 DTO 入参：校验对象是 @RequestParam 标量参数，Bean Validation 不覆盖，保留
@@ -153,10 +193,14 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         return list;
     }
 
+    // 二、排台（待排期 → 已排期；已排期可改期）
+
     @Override
     public long countUnfinished(Long admissionId) {
         return applyMapper.countUnfinished(admissionId);
     }
+
+    // 三、术前核对（已排期 → 术前核对完成）
 
     @Override
     public List<String> roomList() {
@@ -175,6 +219,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
         return rooms;
     }
+
+    // 四、完成（术前核对完成 → 已完成；回写首页明细 + 手术记录病历）
 
     @Override
     public OperationScheduleMatrixVO scheduleMatrix(String date) {
@@ -243,7 +289,11 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         return matrix;
     }
 
-    /** 批量取多张申请单的已签核查轮数（一次 IN 查询；唯一键 uk_check_apply_phase 保证一申请一时段一行，行数即轮数） */
+    // 五、取消（仅待排期 / 已排期 → 已取消）
+
+    /**
+     * 批量取多张申请单的已签核查轮数（一次 IN 查询；唯一键 uk_check_apply_phase 保证一申请一时段一行，行数即轮数）
+     */
     private Map<Long, Long> phaseCountsOf(List<OperationApplyVO>... groups) {
         List<Long> ids = new ArrayList<>();
         for (List<OperationApplyVO> group : groups) {
@@ -267,6 +317,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         return result;
     }
 
+    // 回写：手术记录病历
+
     @Override
     public List<OperationApplyVO.CheckItem> checkItems() {
         List<OperationApplyVO.CheckItem> list = new ArrayList<>();
@@ -280,8 +332,6 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         return list;
     }
 
-    // 一、申请（待排期）
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(OperationApplyUpsertDTO dto) {
@@ -293,7 +343,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
-        if (!Objects.equals(ADMITTED, admission.getAdmitStatus())) {
+        if (!Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
             throw new BusinessException("该患者当前不是「在院」状态，不能申请手术（已出院的住院不能开手术单）");
         }
         BizPatient patient = patientService.getById(admission.getPatientId());
@@ -326,7 +376,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
             entity = mustGet(dto.getId());
             if (!Objects.equals(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode(), entity.getOperationStatus())) {
                 throw new BusinessException("手术单 " + entity.getApplyNo() + " 当前状态为「"
-                        + OperationApplyLabels.statusText(entity.getOperationStatus())
+                        + OperationApplyStatusEnum.labelOrUnknown(entity.getOperationStatus())
                         + "」，只有「待排期」可以修改申请内容（排台后术式已对外承诺，改请先取消或走停手术）");
             }
             if (!Objects.equals(entity.getAdmissionId(), dto.getAdmissionId())) {
@@ -373,8 +423,6 @@ public class OperationApplyServiceImpl implements OperationApplyService {
                 entity.getPlannedOperationName(), entity.getIsEmergency(), entity.getIsMain(), currentName());
         return entity.getApplyNo();
     }
-
-    // 二、排台（待排期 → 已排期；已排期可改期）
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -437,8 +485,6 @@ public class OperationApplyServiceImpl implements OperationApplyService {
                 start.format(FULL_TIME), end.format(FULL_TIME), surgeonName, currentName());
     }
 
-    // 三、术前核对（已排期 → 术前核对完成）
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void preopCheck(OperationPreopCheckDTO dto) {
@@ -449,7 +495,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
         if (!Objects.equals(OperationApplyStatusEnum.SCHEDULED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 当前状态为「"
-                    + OperationApplyLabels.statusText(entity.getOperationStatus())
+                    + OperationApplyStatusEnum.labelOrUnknown(entity.getOperationStatus())
                     + "」，只有「已排期」可以做术前核对");
         }
 
@@ -480,7 +526,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
                 StringUtils.hasText(dto.getPreopNote()) ? dto.getPreopNote() : "无", currentName());
     }
 
-    // 四、完成（术前核对完成 → 已完成；回写首页明细 + 手术记录病历）
+    // 展示态
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -495,7 +541,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
         if (!Objects.equals(OperationApplyStatusEnum.PREOP_CHECKED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 当前状态为「"
-                    + OperationApplyLabels.statusText(entity.getOperationStatus())
+                    + OperationApplyStatusEnum.labelOrUnknown(entity.getOperationStatus())
                     + "」，未完成术前核对不能登记完成（术后补一条核对记录属于伪造，必须先把核对做完）");
         }
 
@@ -510,7 +556,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         if (admission == null) {
             throw new BusinessException("入院记录不存在，无法回写（admissionId=" + entity.getAdmissionId() + "）");
         }
-        if (!Objects.equals(ADMITTED, admission.getAdmitStatus())) {
+        if (!Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
             throw new BusinessException("该患者已出院，不能再登记手术完成（手术是住院期间发生的事件；"
                     + "出院后发现漏登记，请走病案质控缺陷流程补记，而不是直接改已结算的住院）");
         }
@@ -550,7 +596,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         op.setOperationBasis(basis);
         op.setRemark("系统回写：手术申请单号 " + entity.getApplyNo()
                 + "，主刀 " + textOr(entity.getSurgeonName(), "未指定")
-                + "，麻醉方式 " + OperationApplyLabels.anesthesiaText(entity.getAnesthesiaType()));
+                + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getText(entity.getAnesthesiaType()));
         // 首页明细的重复闸、序号重排、is_surgery 置位都在首页写入方里做（它才是这张表的所有者）
         op = inpatientService.appendSurgeryOperation(op);
 
@@ -582,8 +628,6 @@ public class OperationApplyServiceImpl implements OperationApplyService {
                 op.getId(), record.getRecordNo(), currentName());
     }
 
-    // 五、取消（仅待排期 / 已排期 → 已取消）
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(OperationCancelDTO dto) {
@@ -609,7 +653,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
                 entity.getApplyNo(), dto.getCancelReason(), currentName());
     }
 
-    // 回写：手术记录病历
+    // 工具
 
     /**
      * 把这次手术回写成一份住院病历（record_type=5 手术记录，状态直接「已提交」）。
@@ -637,7 +681,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         StringBuilder course = new StringBuilder();
         course.append("手术名称：").append(dto.getActualOperationName()).append('\n');
         course.append("手术时间：").append(start.format(FULL_TIME)).append(" ~ ").append(end.format(FULL_TIME))
-                .append("（").append(OperationApplyLabels.durationText(
+                .append("（").append(AnesthesiaCalcs.durationText(
                         Duration.between(start, end).toMinutes())).append("）\n");
         course.append("术中所见：").append(dto.getIntraopFindings()).append('\n');
         course.append("手术经过：").append(dto.getIntraopProcedure()).append('\n');
@@ -666,7 +710,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         record.setWardId(admission.getWardId());
         record.setWardName(wardName);
         record.setBedNo(bedNo);
-        record.setRecordType(RECORD_TYPE_OPERATION);
+        record.setRecordType(InpatientRecordTypeEnum.OPERATION_RECORD.getCode());
         record.setRecordTitle("手术记录");
         record.setRecordTime(end);
         // 术前诊断 → diagnosisName 列（手术记录的结构化"术前诊断"要素取这一列）
@@ -674,10 +718,10 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         record.setCourseNote(course.toString());
         record.setRemark("系统回写：手术申请单号 " + entity.getApplyNo()
                 + "，主刀 " + textOr(entity.getSurgeonName(), "未指定")
-                + "，麻醉方式 " + OperationApplyLabels.anesthesiaText(entity.getAnesthesiaType())
-                + "，手术级别 " + OperationApplyLabels.levelText(entity.getOperationLevel())
-                + "，切口等级 " + OperationApplyLabels.incisionText(entity.getIncisionLevel()));
-        record.setRecordStatus(RECORD_STATUS_SUBMITTED);
+                + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getText(entity.getAnesthesiaType())
+                + "，手术级别 " + OperationLevelEnum.getText(entity.getOperationLevel())
+                + "，切口等级 " + OperationIncisionEnum.getText(entity.getIncisionLevel()));
+        record.setRecordStatus(RecordStatusEnum.SUBMITTED.getCode());
         // 签名 = 主刀医师；主刀缺失才回落到录入人（宁可记"谁录的"，也不留空签名）
         record.setDoctorId(entity.getSurgeonId() != null ? entity.getSurgeonId() : currentEmpId());
         record.setDoctorName(StringUtils.hasText(entity.getSurgeonName())
@@ -737,22 +781,15 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         return basis.length() > 490 ? basis.substring(0, 490) + "…" : basis;
     }
 
-    // 展示态
-
     private void decorate(OperationApplyVO vo) {
-        vo.setOperationStatusText(OperationApplyLabels.statusText(vo.getOperationStatus()));
-        vo.setOperationLevelText(OperationApplyLabels.levelText(vo.getOperationLevel()));
-        vo.setIncisionLevelText(OperationApplyLabels.incisionText(vo.getIncisionLevel()));
-        vo.setAnesthesiaTypeText(OperationApplyLabels.anesthesiaText(vo.getAnesthesiaType()));
-        vo.setIsEmergencyText(OperationApplyLabels.emergencyText(vo.getIsEmergency()));
+        vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
+        vo.setOperationLevelText(OperationLevelEnum.getText(vo.getOperationLevel()));
+        vo.setIncisionLevelText(OperationIncisionEnum.getText(vo.getIncisionLevel()));
+        vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
+        vo.setIsEmergencyText(OperationEmergencyEnum.getText(vo.getIsEmergency()));
         vo.setIsMainText(vo.getIsMain() == null ? "—" : (vo.getIsMain() == 1 ? "主要手术" : "次要手术"));
         vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
-        vo.setAdmitStatusText(vo.getAdmitStatus() == null ? "—"
-                : switch (vo.getAdmitStatus()) {
-            case 1 -> "在院";
-            case 0 -> "已出院";
-            default -> "未知(" + vo.getAdmitStatus() + ")";
-        });
+        vo.setAdmitStatusText(AdmitStatusEnum.getText(vo.getAdmitStatus()));
         vo.setPreopCheckItemsText(OperationCheckItems.summaryText(vo.getPreopCheckItems()));
         vo.setCheckItemOptions(checkItems());
 
@@ -776,7 +813,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
             long minutes = Math.max(0, Duration.between(
                     vo.getOperationStartTime(), vo.getOperationEndTime()).toMinutes());
             vo.setDurationMinutes(minutes);
-            vo.setDurationText(OperationApplyLabels.durationText(minutes));
+            vo.setDurationText(AnesthesiaCalcs.durationText(minutes));
         }
         vo.setWaitText(waitText(vo, pending, scheduled, checked));
 
@@ -801,24 +838,22 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         LocalDateTime now = now();
         if (pending && vo.getApplyTime() != null) {
             long m = Math.max(0, Duration.between(vo.getApplyTime(), now).toMinutes());
-            return "申请后已等待 " + OperationApplyLabels.durationText(m) + " 未排台";
+            return "申请后已等待 " + AnesthesiaCalcs.durationText(m) + " 未排台";
         }
         if (scheduled && vo.getPlannedStartTime() != null) {
             if (now.isBefore(vo.getPlannedStartTime())) {
-                return "距计划开始 " + OperationApplyLabels.durationText(
+                return "距计划开始 " + AnesthesiaCalcs.durationText(
                         Duration.between(now, vo.getPlannedStartTime()).toMinutes());
             }
-            return "已过计划开始时间 " + OperationApplyLabels.durationText(
+            return "已过计划开始时间 " + AnesthesiaCalcs.durationText(
                     Duration.between(vo.getPlannedStartTime(), now).toMinutes());
         }
         if (checked && vo.getPreopCheckTime() != null) {
-            return "核对完成已 " + OperationApplyLabels.durationText(
+            return "核对完成已 " + AnesthesiaCalcs.durationText(
                     Duration.between(vo.getPreopCheckTime(), now).toMinutes()) + "，尚未结束";
         }
         return null;
     }
-
-    // 工具
 
     private BizOperationApply mustGet(Long applyId) {
         BizOperationApply entity = applyMapper.selectById(applyId);
@@ -829,25 +864,27 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     }
 
     private void validateLevel(Integer level) {
-        if (level != null && !OperationApplyLabels.isValidLevel(level)) {
+        if (level != null && !OperationLevelEnum.isValid(level)) {
             throw new BusinessException("手术级别取值不合法（应为 1~4：一级~四级），当前=" + level);
         }
     }
 
     private void validateIncision(Integer level) {
         // 注意是 0~3：0 类切口（如经自然腔道）是合法值，用 1~3 校验会把它判成非法
-        if (level != null && !OperationApplyLabels.isValidIncision(level)) {
+        if (level != null && !OperationIncisionEnum.isValid(level)) {
             throw new BusinessException("切口等级取值不合法（应为 0~3：0类/Ⅰ类/Ⅱ类/Ⅲ类），当前=" + level);
         }
     }
 
     private void validateAnesthesia(Integer type) {
-        if (type != null && !OperationApplyLabels.isValidAnesthesia(type)) {
+        if (type != null && !OperationAnesthesiaMethodEnum.isValid(type)) {
             throw new BusinessException("麻醉方式取值不合法（应为 1~5：全麻/椎管内/神经阻滞/局麻/其他），当前=" + type);
         }
     }
 
-    /** 科室名（取不到就返回原文案"未知科室(ID=x)"，绝不编一个科室名） */
+    /**
+     * 科室名（取不到就返回原文案"未知科室(ID=x)"，绝不编一个科室名）
+     */
     private String deptNameOf(Long deptId) {
         if (deptId == null) {
             return null;
@@ -868,7 +905,9 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         return inpatientService.getBedNoById(bedId);
     }
 
-    /** 员工姓名（服务端查名，不信任前端传来的姓名 —— 姓名是可以随便伪造的字符串） */
+    /**
+     * 员工姓名（服务端查名，不信任前端传来的姓名 —— 姓名是可以随便伪造的字符串）
+     */
     private String employeeNameOf(Long empId) {
         if (empId == null) {
             return null;
@@ -908,7 +947,9 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
     }
 
-    /** 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径 */
+    /**
+     * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
+     */
     private Long currentEmpId() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();
@@ -936,55 +977,6 @@ public class OperationApplyServiceImpl implements OperationApplyService {
             return user.getUsername();
         } catch (Exception e) {
             return null;
-        }
-    }
-
-    private static String textOr(String value, String fallback) {
-        return StringUtils.hasText(value) ? value : fallback;
-    }
-
-    private static LocalDateTime now() {
-        return toSeconds(LocalDateTime.now());
-    }
-
-    /** 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入） */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    /**
-     * 下界宽松解析：{@code yyyy-MM-dd} → 当天 00:00:00；带时分秒则原样使用（含）。
-     */
-    private static String normalizeFrom(String raw) {
-        Parsed p = parse(raw);
-        return p == null ? null : p.from;
-    }
-
-    /**
-     * 上界宽松解析：{@code yyyy-MM-dd} → <b>次日</b> 00:00:00（不含，这样能覆盖当天最后一秒）；
-     * 带时分秒则原样使用（不含）。
-     */
-    private static String normalizeTo(String raw) {
-        Parsed p = parse(raw);
-        return p == null ? null : p.to;
-    }
-
-    private static Parsed parse(String raw) {
-        if (!StringUtils.hasText(raw)) {
-            return null;
-        }
-        String s = raw.trim();
-        try {
-            if (s.length() == 10) {
-                LocalDate d = LocalDate.parse(s);
-                return new Parsed(d.atStartOfDay().format(FULL_TIME),
-                        d.plusDays(1).atStartOfDay().format(FULL_TIME));
-            }
-            LocalDateTime t = LocalDateTime.parse(s, FULL_TIME);
-            return new Parsed(t.format(FULL_TIME), t.format(FULL_TIME));
-        } catch (DateTimeParseException e) {
-            // 明确报格式问题，不静默忽略、也不让它变成 500
-            throw new BusinessException("时间格式不正确：" + raw + "（应为 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss）");
         }
     }
 

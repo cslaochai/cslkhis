@@ -59,7 +59,7 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
 
     /** 库位文字在服务端算：前端再抄一份 1/2→药库/药房的映射迟早和枚举漂移 */
     private void fillRoomText(BizDrugStockVO vo) {
-        vo.setStockRoomText(StockRoomEnum.labelOf(vo.getStockRoom()));
+        vo.setStockRoomText(StockRoomEnum.getText(vo.getStockRoom()));
     }
 
     @Override
@@ -464,8 +464,8 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
         if (move.getStockRoom() != null && !move.getStockRoom().equals(stock.getStockRoom())) {
             // 库位闸门：调拨单写着"从药房退回药库"，点到的批次却在药库，说明单据和现实已经不一致，
             // 硬扣下去就是把另一层的账搬空——这种不一致必须当场响，不能静默按批次的实际库位扣。
-            throw new BusinessException(label + " 实际在「" + StockRoomEnum.labelOf(stock.getStockRoom())
-                    + "」，与本单指定的「" + StockRoomEnum.labelOf(move.getStockRoom()) + "」不符，请重新选择批次");
+            throw new BusinessException(label + " 实际在「" + StockRoomEnum.getText(stock.getStockRoom())
+                    + "」，与本单指定的「" + StockRoomEnum.getText(move.getStockRoom()) + "」不符，请重新选择批次");
         }
         BigDecimal available = nvl(stock.getAvailableQuantity());
         if (available.compareTo(quantity) < 0) {
@@ -575,7 +575,7 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
         if (StringUtils.hasText(stock.getBatchNo())) {
             sb.append("（批号 ").append(stock.getBatchNo()).append("）");
         }
-        sb.append("，库位 ").append(StockRoomEnum.labelOf(stock.getStockRoom()));
+        sb.append("，库位 ").append(StockRoomEnum.getText(stock.getStockRoom()));
         return sb.toString();
     }
 

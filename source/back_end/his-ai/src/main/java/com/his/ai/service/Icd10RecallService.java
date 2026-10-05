@@ -3,7 +3,9 @@ package com.his.ai.service;
 import com.his.ai.dto.Icd10SelectListDTO;
 import com.his.ai.vo.Icd10SelectListVO;
 import com.his.system.entity.SysIcd10;
-import java.util.*;
+
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public interface Icd10RecallService {
@@ -19,15 +21,6 @@ public interface Icd10RecallService {
         return index;
     }
 
-    /**
-     * 一次召回命中
-     *
-     * @param code  ICD 编码
-     * @param score 字面重合得分，0 表示与本次病历文本无字面关联
-     */
-    public record RecallHit(SysIcd10 code, int score) {
-    }
-
     List<RecallHit> recall(String noteText, Integer topNOverride);
 
     List<SysIcd10> activeCodes();
@@ -37,4 +30,13 @@ public interface Icd10RecallService {
     List<SysIcd10> search(String keyword, int limit);
 
     List<Icd10SelectListVO> selectOptions(Icd10SelectListDTO selectListDTO);
+
+    /**
+     * 一次召回命中
+     *
+     * @param code  ICD 编码
+     * @param score 字面重合得分，0 表示与本次病历文本无字面关联
+     */
+    public record RecallHit(SysIcd10 code, int score) {
+    }
 }

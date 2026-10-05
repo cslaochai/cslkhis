@@ -55,6 +55,11 @@ public enum RevisitSourceEnum {
         return UNKNOWN;
     }
 
+    /** 码值是否合法（写入侧校验用；null 不合法） */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
     /**
      * 是否为「不占号源」的复诊：只有当日回诊。
      * 其余三种都是新的一次就诊，必须选排班、扣号源，否则医生排班数与门诊日志会对不上。

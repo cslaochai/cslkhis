@@ -7,17 +7,7 @@ import com.his.common.base.RedisSequenceService;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
-import com.his.operation.dto.DaySurgeryActionDTO;
-import com.his.operation.dto.DaySurgeryApplyUpsertDTO;
-import com.his.operation.dto.DaySurgeryArrangeDTO;
-import com.his.operation.dto.DaySurgeryDischargeDTO;
-import com.his.operation.dto.DaySurgeryEvalDTO;
-import com.his.operation.dto.DaySurgeryFinishDTO;
-import com.his.operation.dto.DaySurgeryFollowDTO;
-import com.his.operation.dto.DaySurgeryItemQueryPageDTO;
-import com.his.operation.dto.DaySurgeryItemUpsertDTO;
-import com.his.operation.dto.DaySurgeryQueryPageDTO;
-import com.his.operation.dto.DaySurgeryTransferDTO;
+import com.his.operation.dto.*;
 import com.his.operation.entity.BizDaySurgeryApply;
 import com.his.operation.entity.BizDaySurgeryFollow;
 import com.his.operation.entity.BizDaySurgeryItem;
@@ -76,10 +66,66 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     private final BizDaySurgeryFollowMapper followMapper;
     private final PatientService patientService;
     private final RedisSequenceService sequenceService;
-    /** 手术分级授权闸门（G21）：his-system 提供，择期手术不够级别直接拒单 */
+    /**
+     * 手术分级授权闸门（G21）：his-system 提供，择期手术不够级别直接拒单
+     */
     private final EmployeeTechAuthService techAuthService;
 
     // 准入目录
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static String currentName() {
+        String name = UserUtils.getCurrentEmployeeName();
+        return name == null ? "系统" : name;
+    }
+
+    private static long toLong(Object v) {
+        if (v == null) {
+            return 0L;
+        }
+        return new BigDecimal(String.valueOf(v)).longValue();
+    }
+
+    private static LocalDate parseDate(String v) {
+        String s = trimToNull(v);
+        if (s == null) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(s.trim());
+        } catch (Exception e) {
+            throw new BusinessException("日期格式不正确，应为 yyyy-MM-dd");
+        }
+    }
+
+    // 登记单
+
+    private static LocalDateTime parseDateTime(String v) {
+        String s = trimToNull(v);
+        if (s == null) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(s.replace(' ', 'T'));
+        } catch (Exception e) {
+            throw new BusinessException("时间格式不正确，应为 yyyy-MM-dd HH:mm:ss");
+        }
+    }
+
+    private static String cut(String v, int max) {
+        if (v == null) {
+            return null;
+        }
+        String s = v.trim();
+        return s.length() <= max ? s : s.substring(0, max);
+    }
+
+    private static String trimToNull(String v) {
+        return StringUtils.hasText(v) ? v.trim() : null;
+    }
 
     @Override
     public PageResult<DaySurgeryItemVO> itemListPage(DaySurgeryItemQueryPageDTO dto) {
@@ -150,8 +196,6 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         itemMapper.updateById(entity);
         return requireItemVo(entity.getId());
     }
-
-    // 登记单
 
     @Override
     public PageResult<DaySurgeryApplyVO> listPage(DaySurgeryQueryPageDTO dto) {
@@ -259,6 +303,8 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         applyMapper.updateById(entity);
         return requireApplyVo(entity.getId());
     }
+
+    // 内部
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -378,7 +424,8 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
                 case 5 -> d = cnt;
                 case 6 -> c = cnt;
                 case 7 -> t = cnt;
-                default -> { }
+                default -> {
+                }
             }
         }
         vo.setWaitEvalCount(w);
@@ -407,9 +454,9 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         return vo;
     }
 
-    // 内部
-
-    /** 超期 / 随访时限 / 按钮可用性一律服务端派生，不落库 */
+    /**
+     * 超期 / 随访时限 / 按钮可用性一律服务端派生，不落库
+     */
     private void decorate(DaySurgeryApplyVO vo) {
         Integer st = vo.getStatus();
         boolean waitEval = Objects.equals(st, BizDaySurgeryApply.STATUS_WAIT_EVAL);
@@ -471,7 +518,8 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         }
     }
 
-    private BizDaySurgeryItem requireItem(Long id) {        BizDaySurgeryItem item = itemMapper.selectById(id);
+    private BizDaySurgeryItem requireItem(Long id) {
+        BizDaySurgeryItem item = itemMapper.selectById(id);
         if (item == null || !Objects.equals(item.getDelFlag(), 0)) {
             throw new BusinessException("日间手术准入术式不存在或已删除");
         }
@@ -533,57 +581,5 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     private String nextApplyNo() {
         return Constants.DAY_SURGERY_NO_PREFIX + LocalDate.now().format(NO_DATE)
                 + String.format("%04d", sequenceService.next("DAY_SURGERY"));
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static String currentName() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return name == null ? "系统" : name;
-    }
-
-    private static long toLong(Object v) {
-        if (v == null) {
-            return 0L;
-        }
-        return new BigDecimal(String.valueOf(v)).longValue();
-    }
-
-    private static LocalDate parseDate(String v) {
-        String s = trimToNull(v);
-        if (s == null) {
-            return null;
-        }
-        try {
-            return LocalDate.parse(s.trim());
-        } catch (Exception e) {
-            throw new BusinessException("日期格式不正确，应为 yyyy-MM-dd");
-        }
-    }
-
-    private static LocalDateTime parseDateTime(String v) {
-        String s = trimToNull(v);
-        if (s == null) {
-            return null;
-        }
-        try {
-            return LocalDateTime.parse(s.replace(' ', 'T'));
-        } catch (Exception e) {
-            throw new BusinessException("时间格式不正确，应为 yyyy-MM-dd HH:mm:ss");
-        }
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        String s = v.trim();
-        return s.length() <= max ? s : s.substring(0, max);
-    }
-
-    private static String trimToNull(String v) {
-        return StringUtils.hasText(v) ? v.trim() : null;
     }
 }

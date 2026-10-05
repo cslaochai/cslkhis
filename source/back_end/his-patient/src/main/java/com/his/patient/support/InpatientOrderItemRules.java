@@ -2,6 +2,7 @@ package com.his.patient.support;
 
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.InpatientOrderItemDTO;
+import com.his.patient.enums.OrderClassEnum;
 import org.springframework.util.StringUtils;
 
 /**
@@ -14,12 +15,33 @@ import org.springframework.util.StringUtils;
 public final class InpatientOrderItemRules {
 
     /**
-     * 医嘱类别合法区间（与字典 his_order_class、{@link InpatientOrderLabels#orderClassText} 同源）
+     * 医嘱类别合法区间（与字典 his_order_class、{@link OrderClassEnum} 同源）
      */
     public static final int ORDER_CLASS_MIN = 1;
     public static final int ORDER_CLASS_MAX = 10;
 
     private InpatientOrderItemRules() {
+    }
+
+    /**
+     * 医嘱类别 → 记账项目类型（`费用记账流水的项目类型`）。
+     *
+     * <p><b>这是一处既有限制，不是设计选择</b>：本项目 `item_type` 只有
+     * 「1挂号费 2西药 3中成药 4中药饮片 5检查 6检验 7治疗」七类，
+     * <b>没有护理/床位/手术/输血/监护/临床营养类目</b>，所以 5~10 一律归到 7（治疗）。
+     * 后果：靠 `item_type` 区分不了"护理费"和"治疗费"。真实 HIS 会有完整的收费项目类别字典，
+     * 本项目要到补价表/项目类别字典（P3 日清单范围）时才能细化。
+     */
+    public static int chargeItemTypeOf(Integer orderClass) {
+        if (orderClass == null) {
+            return 7;
+        }
+        return switch (orderClass) {
+            case 1 -> 2;
+            case 2 -> 5;
+            case 3 -> 6;
+            default -> 7;
+        };
     }
 
     /**
@@ -51,7 +73,7 @@ public final class InpatientOrderItemRules {
             throw new BusinessException("医嘱类别不合法（应为 1~10，见「医嘱类别」字典）："
                     + item.getItemName() + "，当前值 " + item.getOrderClass());
         }
-        if (InpatientOrderLabels.isDrug(item.getOrderClass())) {
+        if (OrderClassEnum.isDrug(item.getOrderClass())) {
             if (item.getDosage() == null) {
                 throw new BusinessException("药品医嘱必须填写单次剂量：" + item.getItemName());
             }

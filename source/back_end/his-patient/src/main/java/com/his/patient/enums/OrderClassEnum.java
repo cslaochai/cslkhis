@@ -37,10 +37,17 @@ public enum OrderClassEnum {
     }
 
     /**
+     * 是否为「药品」类别（药品才受用药安全 CDSS 约束、才要求剂量 / 途径齐全）
+     */
+    public static boolean isDrug(Integer code) {
+        return code != null && code == DRUG.code;
+    }
+
+    /**
      * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」——
      * 脏数据应由数据治理流程修复，而非界面伪装。
      */
-    public static String labelOf(Integer code) {
+    public static String getText(Integer code) {
         OrderClassEnum item = code == null ? null : fromCode(code);
         return item == null ? "" : item.label;
     }

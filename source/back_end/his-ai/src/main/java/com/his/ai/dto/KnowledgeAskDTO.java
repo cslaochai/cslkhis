@@ -1,8 +1,7 @@
 package com.his.ai.dto;
 
-import lombok.Data;
-
 import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
 
 /**
  * 知识库问答请求。

@@ -1,20 +1,20 @@
 package com.his.ai.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.ai.config.AiConfigProvider;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.OpenAiAsrRequestDTO;
 import com.his.ai.dto.OpenAiChatResponseDTO;
 import com.his.ai.entity.SysAiCallLog;
+import com.his.ai.enums.AiCallStatusEnum;
 import com.his.ai.service.AiAuditService;
 import com.his.ai.service.SpeechTranscribeService;
 import com.his.ai.support.AiAuditDigestSupport;
-import com.his.ai.support.AiCallStatus;
 import com.his.ai.support.AiMaskUtils;
 import com.his.ai.vo.VoiceTranscribeResultVO;
 import com.his.common.exception.BusinessException;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -63,7 +63,9 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
 
     private final AiAuditService auditService;
 
-    /** 按「地址 + 超时」缓存连接工厂，与 LlmClient 同口径 */
+    /**
+     * 按「地址 + 超时」缓存连接工厂，与 LlmClient 同口径
+     */
     private final Map<String, RestClient> clientCache = new ConcurrentHashMap<>();
 
     @Override
@@ -91,7 +93,7 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
             }
 
             int latency = (int) (System.currentTimeMillis() - start);
-            recordAudit(capabilityKey, AiCallStatus.SUCCESS, latency, model, null,
+            recordAudit(capabilityKey, AiCallStatusEnum.SUCCESS, latency, model, null,
                     audioMeta(audioFile, format, durationSeconds), "text=" + AiAuditDigestSupport.sha256Short(content));
 
             VoiceTranscribeResultVO vo = new VoiceTranscribeResultVO();
@@ -101,13 +103,13 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
             vo.setElapsedMs(latency);
             return vo;
         } catch (BusinessException ex) {
-            recordAudit(capabilityKey, AiCallStatus.FAILED,
+            recordAudit(capabilityKey, AiCallStatusEnum.FAILED,
                     (int) (System.currentTimeMillis() - start), configProvider.asrModel(), ex.getMessage(),
                     audioFile == null ? "audioFile=empty" : audioMeta(audioFile, null, durationSeconds), null);
             throw ex;
         } catch (IOException ex) {
             String reason = "读取音频失败：" + ex.getMessage();
-            recordAudit(capabilityKey, AiCallStatus.FAILED,
+            recordAudit(capabilityKey, AiCallStatusEnum.FAILED,
                     (int) (System.currentTimeMillis() - start), configProvider.asrModel(), reason, null, null);
             throw new BusinessException(reason);
         }
@@ -189,7 +191,7 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
                 + (durationSeconds == null ? "" : ",duration=" + durationSeconds + "s");
     }
 
-    private void recordAudit(String capabilityKey, AiCallStatus status, int latencyMs, String model,
+    private void recordAudit(String capabilityKey, AiCallStatusEnum status, int latencyMs, String model,
                              String errorMsg, String inputMeta, String outputDigest) {
         try {
             SysAiCallLog entity = new SysAiCallLog();

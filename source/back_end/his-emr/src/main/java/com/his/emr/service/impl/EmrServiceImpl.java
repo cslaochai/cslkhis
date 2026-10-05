@@ -270,7 +270,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     private MyMedicalRecordVO toMyRecordVO(BizMedicalRecord record) {
         MyMedicalRecordVO vo = new MyMedicalRecordVO();
         BeanUtils.copyProperties(record, vo);
-        vo.setRecordStatusText(RecordStatusEnum.labelOf(record.getRecordStatus()));
+        vo.setRecordStatusText(RecordStatusEnum.getText(record.getRecordStatus()));
         return vo;
     }
 
@@ -852,7 +852,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     private void requireApplyEditable(String applyNo, Integer applyStatus) {
         if (!Objects.equals(ApplyStatusEnum.SUBMITTED.getCode(), applyStatus)) {
             throw new BusinessException("申请单 " + applyNo + " 当前状态为「"
-                    + applyStatusText(applyStatus) + "」，不允许修改；已缴费请先走退费流程");
+                    + ApplyStatusEnum.labelOrUnknown(applyStatus) + "」，不允许修改；已缴费请先走退费流程");
         }
     }
 
@@ -908,13 +908,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         } catch (BusinessException e) {
             throw new BusinessException("检验申请开单失败（" + apply.getApplyNo() + "）：" + e.getMessage());
         }
-    }
-
-    private String applyStatusText(Integer status) {
-        if (Objects.equals(ApplyStatusEnum.SUBMITTED.getCode(), status)) return "已提交";
-        if (Objects.equals(ApplyStatusEnum.PAID.getCode(), status)) return "已缴费";
-        if (Objects.equals(ApplyStatusEnum.CANCELLED.getCode(), status)) return "已取消";
-        return status == null ? "未知" : "未知(" + status + ")";
     }
 
     private String genApplyNo(String prefix) {

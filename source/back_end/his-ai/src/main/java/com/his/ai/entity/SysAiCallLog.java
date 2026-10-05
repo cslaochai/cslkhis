@@ -2,7 +2,7 @@ package com.his.ai.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.his.ai.constant.AiCapabilityKeys;
-import com.his.ai.support.AiCallStatus;
+import com.his.ai.enums.AiCallStatusEnum;
 import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -75,7 +75,7 @@ public class SysAiCallLog extends BaseEntity {
     private Integer latencyMs;
 
     /**
-     * 状态，见 {@link AiCallStatus}
+     * 状态，见 {@link AiCallStatusEnum}
      */
     private Integer status;
 

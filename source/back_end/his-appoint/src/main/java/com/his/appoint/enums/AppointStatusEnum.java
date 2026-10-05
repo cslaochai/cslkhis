@@ -96,10 +96,15 @@ public enum AppointStatusEnum {
         return UNKNOWN;
     }
 
+    /** 码值是否合法（写入侧校验用；null 不合法） */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
     /**
      * 文案；不在枚举内返回 null（与 fromCode 的 UNKNOWN 兜底分开，别把脏值说成「未知状态」以外的东西）
      */
-    public static String labelOf(Integer code) {
+    public static String getText(Integer code) {
         if (code == null) {
             return null;
         }
@@ -107,6 +112,12 @@ public enum AppointStatusEnum {
             if (status.code == code) return status.label;
         }
         return null;
+    }
+
+    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
+    public static String labelOrUnknown(Integer code) {
+        AppointStatusEnum item = code == null ? null : fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     /**

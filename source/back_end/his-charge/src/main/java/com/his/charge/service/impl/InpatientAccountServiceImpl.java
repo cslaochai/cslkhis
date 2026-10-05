@@ -8,11 +8,12 @@ import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizAlertMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
+import com.his.charge.enums.InpatientSettleResultEnum;
+import com.his.charge.enums.PrepayTypeEnum;
 import com.his.charge.service.FundAccountService;
 import com.his.charge.service.InpatientAccountService;
 import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
-import com.his.charge.support.InpatientAccountLabels;
 import com.his.charge.vo.*;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -168,8 +169,8 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         IPage<PrepayVO> raw = paymentTxnMapper.selectPrepayPage(page, q);
         // 文案由后端给：前端判码值就会有第二套口径（支付方式码值前端就抄错过一次，把 4 当银行卡）
         for (PrepayVO vo : raw.getRecords()) {
-            vo.setPrepayTypeText(InpatientAccountLabels.prepayTypeText(vo.getPrepayType()));
-            vo.setPayMethodText(InpatientAccountLabels.payMethodText(vo.getPayMethod()));
+            vo.setPrepayTypeText(PrepayTypeEnum.getText(vo.getPrepayType()));
+            vo.setPayMethodText(PaymentMethodEnum.getText(vo.getPayMethod()));
         }
         return raw;
     }
@@ -404,7 +405,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         vo.setArrearsAmount(arrearsAmount);
         vo.setSettled(discharge != null);
         vo.setSettlementNo(discharge != null ? discharge.getBillNo() : null);
-        vo.setSettleStatusText(InpatientAccountLabels.settleStatusText(settleStatus));
+        vo.setSettleStatusText(InpatientSettleResultEnum.getText(settleStatus));
         vo.setHintText(arrears
                 ? "住院费用已发生 " + total.toPlainString() + " 元，已收 " + state.collected().toPlainString()
                 + " 元（住院账户余额 " + balance.toPlainString() + " 元），欠费 "
@@ -599,11 +600,11 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         vo.setPatientNo(t.getPatientNo());
         vo.setPatientName(t.getPatientName());
         vo.setPrepayType(prepayType);
-        vo.setPrepayTypeText(InpatientAccountLabels.prepayTypeText(prepayType));
+        vo.setPrepayTypeText(PrepayTypeEnum.getText(prepayType));
         vo.setAmount(t.getAmount());
         vo.setBalanceAfter(balanceAfter);
         vo.setPayMethod(t.getPayMethod());
-        vo.setPayMethodText(InpatientAccountLabels.payMethodText(t.getPayMethod()));
+        vo.setPayMethodText(PaymentMethodEnum.getText(t.getPayMethod()));
         vo.setReceiptNo(t.getReceiptNo());
         vo.setPayTime(t.getTxnTime());
         vo.setOperatorId(t.getCashierId());
@@ -624,7 +625,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         DailyBillItemVO item = new DailyBillItemVO();
         item.setFeeNo(row.getFeeNo());
         item.setItemType(row.getItemType());
-        item.setItemTypeName(InpatientAccountLabels.itemTypeText(row.getItemType()));
+        item.setItemTypeName(PaymentItemTypeEnum.getText(row.getItemType()));
         item.setItemCode(row.getItemCode());
         item.setItemName(row.getItemName());
         item.setSpecification(row.getSpecification());
@@ -662,9 +663,9 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         vo.setRefundAmount(scale(refund));
         vo.setArrearsAmount(scale(arrears));
         vo.setSettleStatus(arrears.signum() > 0 ? SETTLE_ARREARS : SETTLE_CLEARED);
-        vo.setSettleStatusText(InpatientAccountLabels.settleStatusText(vo.getSettleStatus()));
+        vo.setSettleStatusText(InpatientSettleResultEnum.getText(vo.getSettleStatus()));
         vo.setSettleMode(bill.getSettlementMode());
-        vo.setSettleModeText(InpatientAccountLabels.settleModeText(bill.getSettlementMode()));
+        vo.setSettleModeText(SettlementModeEnum.getText(bill.getSettlementMode()));
         vo.setInsuranceType(bill.getInsuranceType());
         vo.setSettleTime(bill.getBillTime());
         vo.setSettleBy(bill.getBillById());

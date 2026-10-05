@@ -2,7 +2,6 @@ package com.his.ai.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.ai.dto.KnowledgeDocQueryPageDTO;
-import com.his.ai.dto.KnowledgeIdDTO;
 import com.his.ai.entity.SysKnowledgeDoc;
 import com.his.ai.vo.KnowledgeDocListVO;
 import com.his.ai.vo.KnowledgeDocVO;

@@ -440,37 +440,47 @@
   `switch` / `Map` / `getOrDefault` + `未知(code)` 兜底，**无论它叫什么名字**
   （`XxxLabels` / `XxxText` / `XxxTexts` / `XxxItems` / `XxxRules`，还是 service impl 里的一段内联 `switch`、
   实体上的一个 `getXxxText` 方法），都属于反模式 —— 映射逻辑必须下沉到**枚举**或**字典**，
-  调用侧只调 `枚举.labelOf(...)`（展示）或 `DictCacheService.getDicDataLabel(dictType, code)`（字典项）。
+  调用侧只调 `枚举.getText(...)`（展示）或 `DictCacheService.getDicDataLabel(dictType, code)`（字典项）。
+  **严禁存在任何「集中式文案壳类」**（`QcTexts` / `XxxLabels` / `XxxTexts` 这类一层包装）：壳类的每个方法
+  只是把调用转发给枚举，多一层没有信息量，只会让「码值→文案唯一出口」变成两个地方
+  （2026-10-05 已全量删除 12 个壳类，禁止再建——哪怕它自称「唯一映射处」）。
   唯一例外：含**临床判定 / 计算口径**（如 Aldrete 评分、相容性判定、记账折算、时长格式化、
-  手术安全核查项注册表）的 `support` 类可保留为「内部注册表」，但里面不得再写 `未知(code)` 兜底——
-  未知码值一律返回空串。
+  手术安全核查项注册表）的 `support` 类可保留业务计算逻辑，但**不得承载码值→文案映射**
+  （文案方法一律删掉、调用点直接走枚举 getText），且里面不得再写 `未知(code)` 兜底。
 - **枚举还是字典（落点选取口径）**：按"是否稳定、后端是否拿码值做逻辑判断"决定落点 ——
   ① **变化小、后端要用码值做判断**（状态机流转、权限/分支、计算口径）的封闭集合 → **枚举**
      （全仓通用放 `his-common/enums`，否则放所属模块 `enums`）；
   ② **变化大、由操作员在后台字典维护**（机构自定的类型 / 项目 / 选项）的 → **字典**，走
      `DictCacheService.getDicDataLabel(dictType, code)`，不进 Java 枚举；
-  ③ 既有的"集中式大字典"类（`QcTexts` / `CdrStatusTexts` / `SafetyCheckItems` 等）本身就是某域的码值字典，
-     按上述口径逐方法下沉到枚举或字典，类可保留为"字典层"，但每个方法只做"调枚举/字典"这一件事。
-- **双方法口径**：每个枚举提供两个静态翻译方法，语义严格区分：
-  - `labelOf(Integer)`——**展示用**：`null` 或不在枚举内（脏数据）一律返回空串 `""`，
+  ③ 既有的"集中式大字典"壳类（`QcTexts` / `CdrStatusTexts` / `XxxLabels` 等）**已于 2026-10-05 全部删除**：
+     每个方法下沉到对应枚举（或字典）后删类，调用点直接调枚举方法。**禁止再建任何壳类。**
+- **双方法口径**：每个枚举提供两个静态翻译方法，语义严格区分（**展示口径的标准方法名是 `getText`**，
+  2026-10-05 由 `labelOf` 全局更名而来，别再写 `labelOf`）：
+  - `getText(Integer|String)`——**展示用**：合法码值→`label`；`null` 或不在枚举内（脏数据）一律返回
+    空串 `""`（个别枚举可显式声明缺省文案，如 `SysGenderEnum.getText` 性别 null→「未知」，必须在 javadoc 写明），
     不回落到某个合法文案、也不暴露「未知(n)」。**绝不返回 null**（返回 null 会把 NPE 风险甩给调用方，
     而返回 `""` 是界面最安全的「无此文案」）。
   - `labelOrUnknown(Integer)`——**异常 / 审计 / 合规用**：`null` 或不在枚举内返回「未知(n)」
     （`null` 本身渲染成「未知」），**保留原始码值**以便排查脏数据。业务异常消息、审计日志、
     合规报表里需要让人看到「到底是哪个脏值」时才用，绝不用它喂前端展示。
-  - 机械判据：`grep -rn "未知(" --include=*.java` 命中的，必须只是 `labelOrUnknown` 的方法体、
-    或显式 `Objects.toString(xxxEnum.labelOf(...), "未知(n)")` 这类手写等价物，以及 `DictCacheService`
-    内部翻译；纯展示路径、独立 `XxxText(s)` 壳类、service 内联 `switch` 里出现「未知(code)」即违规。
-  - 迁移进度：patient 模块 5 个纯文案壳类 + 26 个枚举已下沉；VTE 域 `VteRules` 7 个方法全委托枚举、
-    4 个 VTE 枚举升级双方法、新增 `VteDiagnosisBasisEnum`/`VteOutcomeEnum`/`VteRiskLevelEnum`；
-    emr 的 `QcTexts` 14 个方法全委托枚举（新增 `QcStatusEnum`/`QcResultEnum`/`QcGradeEnum`）。
-    其余模块（system / supplies / pharmacy / medicaltech / operation / report / miniapp 及 common 其余枚举）
-    仍用旧 `未知(code)` 兜底，属待迁移项——新代码一律按双方法写，存量按此口径逐步收口。
+  - 机械判据：`grep -rn "未知(" --include=*.java` 命中的，必须只是 `labelOrUnknown` / 少数显式声明
+    缺省文案的 `getText`（如 SysGenderEnum）的方法体、或显式 `Objects.toString(xxxEnum.getText(...), "未知(n)")`
+    这类手写等价物，以及 `DictCacheService` 内部翻译与纯注释；纯展示路径、service 内联 `switch`、
+    任何 `XxxLabels`/`XxxTexts` 壳类里出现「未知(code)」即违规。
+  - 迁移进度（2026-10-05 全量收口完成）：12 个文案壳类全部删除 ——
+    emr `QcTexts`、report `CdrStatusTexts`、patient `BedCenterLabels`/`InpatientLabels`/
+    `InpatientTransferLabels`/`InpatientOrderLabels`/`InpatientRecordLabels`/`ConsultationLabels`、
+    operation `AnesthesiaLabels`（改名 `AnesthesiaCalcs`，只剩纯计算）、`OperationApplyLabels`、
+    charge `InpatientAccountLabels`、medicaltech `TransfusionLabels`（改名 `TransfusionRules`）、
+    system `CodeText`；全仓 220 个枚举的 `labelOf` 已更名为 `getText` 并补 `isValid`；
+    service 层内联码值 switch（SysLog 四处、PayChannel、床位匹配级别、医技执行状态）已下沉枚举。
+    验收判据：`grep -rnE "class \w+(Labels|Texts)" --include=*.java source/back_end` 结果为 0。
 - **文案差异不产生新枚举**：码值相同、中文叫法不同时**复用枚举**（文案以枚举 `label` 为唯一来源），
-  不同模块若确有不可调和的措辞差异，差异放在调用侧局部常量 / 方法，且仍调枚举 `labelOf` 做兜底；
+  不同模块若确有不可调和的措辞差异，差异放在调用侧局部常量 / 方法，且仍调枚举 `getText` 做兜底；
   不许为一句话的措辞复制出一个枚举，也不许为改文案去动公共枚举的 `label`。
-- **枚举的唯一模板**（`@Getter` + `code`/`label` + `fromCode` + `labelOf` + `labelOrUnknown`）：
-  新建与改造到的枚举一律照此写；`labelOf` 必返回 `""`、不得返回 null，异常路径统一走 `labelOrUnknown`。
+- **枚举的唯一模板**（`@Getter` + `code`/`label` + `fromCode` + `getText` + `labelOrUnknown`）：
+  新建与改造到的枚举一律照此写；`getText` 必返回 `""`（或显式声明的缺省文案）、不得返回 null，
+  异常路径统一走 `labelOrUnknown`。
 - **0/1 三兄弟按列注释的含义选，不按字段名前缀选**：`是否 xxx` → `YesOrNoEnum`（YES=1 是 / NO=0 否），
   启用停用 → `EnableStatusEnum`，删除标志 → `DelFlagEnum`。
 - **技术阈值不是码值**，继续用 `static final int`：列宽（`W_*`、`*_MAX_LENGTH`）、小数位（`*_SCALE`）、

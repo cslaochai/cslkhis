@@ -17,11 +17,15 @@ public class DaySurgeryTransferDTO implements Serializable {
     @NotNull(message = "登记单ID不能为空")
     private Long id;
 
-    /** 转住院的住院ID */
+    /**
+     * 转住院的住院ID
+     */
     @NotNull(message = "转住院的住院ID不能为空")
     private Long transferAdmissionId;
 
-    /** 转住院原因 */
+    /**
+     * 转住院原因
+     */
     @NotNull(message = "转住院原因不能为空")
     private String transferRemark;
 }

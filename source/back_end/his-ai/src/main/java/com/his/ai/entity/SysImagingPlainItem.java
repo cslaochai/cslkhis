@@ -21,24 +21,38 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_imaging_plain_item")
 public class SysImagingPlainItem extends BaseEntity {
 
-    /** 所属分组（放射 / 超声 / 心电 / 内镜） */
+    /**
+     * 所属分组（放射 / 超声 / 心电 / 内镜）
+     */
     private String groupName;
 
-    /** 匹配关键词（报告项目名包含即命中，取最长命中） */
+    /**
+     * 匹配关键词（报告项目名包含即命中，取最长命中）
+     */
     private String itemName;
 
-    /** 白话名（胸部CT / B超 / 心电图 …） */
+    /**
+     * 白话名（胸部CT / B超 / 心电图 …）
+     */
     private String plainName;
 
-    /** 这项检查是查什么的（给患者看的一句话） */
+    /**
+     * 这项检查是查什么的（给患者看的一句话）
+     */
     private String whatItDoes;
 
-    /** 检查前后的注意事项（白话，可为空） */
+    /**
+     * 检查前后的注意事项（白话，可为空）
+     */
     private String noticeText;
 
-    /** 状态（0-停用 1-启用） */
+    /**
+     * 状态（0-停用 1-启用）
+     */
     private Integer status;
 
-    /** 排序号 */
+    /**
+     * 排序号
+     */
     private Integer sortOrder;
 }

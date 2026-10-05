@@ -8,6 +8,8 @@ import lombok.Data;
 @Data
 public class PrevisitSummaryLlmOutputDTO {
 
-    /** 病史摘要（≤200 字，只陈述患者自述内容） */
+    /**
+     * 病史摘要（≤200 字，只陈述患者自述内容）
+     */
     private String summary;
 }

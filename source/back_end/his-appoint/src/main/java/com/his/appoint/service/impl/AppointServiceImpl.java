@@ -141,7 +141,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
      * （与前端 {@code AppointmentsView.sourceLockReason} 是同一套口径，两边一起改。）
      */
     private static String notAllowedReason(Integer registStatus, String action) {
-        String label = AppointStatusEnum.labelOf(registStatus);
+        String label = AppointStatusEnum.getText(registStatus);
         String who = label == null ? "当前状态(" + registStatus + ")" : label;
         if (AppointStatusEnum.isFinal(registStatus)) {
             return who + " 不允许" + action + "：诊疗已结束，号源属过去（或已作废），不可再变更";
@@ -475,7 +475,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
             // 挂到他们名下等于开出一张「有医生姓名、没有医生在场」的号。
             if (!StaffTypeEnum.isDoctor(schedule.getStaffType())) {
                 throw new BusinessException("只能挂医生出诊号源：该排班是「"
-                        + StaffTypeEnum.labelOf(schedule.getStaffType()) + "」岗位出勤，不对外放号");
+                        + StaffTypeEnum.getText(schedule.getStaffType()) + "」岗位出勤，不对外放号");
             }
             // 号源闸：投影行说「这个班放号」，人在不在场由岗位排班事实说了算。
             // 事实被删或改成请假/停班/听班而投影还活着时，必须停挂——否则开出一张「有医生姓名、医生不在场」的号。
@@ -486,8 +486,8 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
                     throw new BusinessException(core == null
                             ? "该号源对应的岗位排班已不存在，请到「全院排班」重新排班后再挂号"
                             : "「" + core.getEmployeeName() + "」在 " + core.getScheduleDate() + " 的排班是"
-                            + StaffDutyStatusEnum.labelOf(core.getDutyStatus()) + "·"
-                            + AttendModeEnum.labelOf(core.getAttendMode()) + "，不出诊、不对外放号");
+                            + StaffDutyStatusEnum.getText(core.getDutyStatus()) + "·"
+                            + AttendModeEnum.getText(core.getAttendMode()) + "，不出诊、不对外放号");
                 }
             }
             if (schedule.getAvailableSource() <= 0) {

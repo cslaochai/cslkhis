@@ -23,7 +23,9 @@ public final class DrugComponentPair {
     private DrugComponentPair() {
     }
 
-    /** 归一化：去空白、同成分拒绝、按二进制序排定后拼接 */
+    /**
+     * 归一化：去空白、同成分拒绝、按二进制序排定后拼接
+     */
     public static String buildKey(String componentA, String componentB) {
         String a = normalize(componentA, "成分A");
         String b = normalize(componentB, "成分B");
@@ -33,7 +35,9 @@ public final class DrugComponentPair {
         return a.compareTo(b) <= 0 ? a + SEP + b : b + SEP + a;
     }
 
-    /** 键拆回两个成分（[a, b]），解析失败返回空列表 */
+    /**
+     * 键拆回两个成分（[a, b]），解析失败返回空列表
+     */
     public static List<String> parts(String pairKey) {
         if (!StringUtils.hasText(pairKey) || !pairKey.contains(SEP)) {
             return List.of();

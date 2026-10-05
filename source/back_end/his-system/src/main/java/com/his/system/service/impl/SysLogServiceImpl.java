@@ -8,6 +8,10 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.system.dto.LogQueryPageDTO;
 import com.his.system.entity.SysAuditLog;
+import com.his.system.enums.AuditLogStatusEnum;
+import com.his.system.enums.LoginStatusEnum;
+import com.his.system.enums.OperBusinessTypeEnum;
+import com.his.system.enums.OperStatusEnum;
 import com.his.system.entity.SysFieldChangeLog;
 import com.his.system.entity.SysLoginLog;
 import com.his.system.entity.SysOperLog;
@@ -53,7 +57,6 @@ public class SysLogServiceImpl implements SysLogService {
     /** 口令爆破嫌疑阈值（近24小时失败次数） */
     private static final int BRUTE_FORCE_THRESHOLD = 5;
 
-    private static final String[] BUSINESS_TYPE_TEXT = {"其他", "新增", "修改", "删除", "授权", "导出", "导入", "清空"};
 
     private final SysOperLogMapper operLogMapper;
     private final SysLoginLogMapper loginLogMapper;
@@ -101,7 +104,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setId(row.getId());
         vo.setTitle(row.getTitle());
         vo.setBusinessType(row.getBusinessType());
-        vo.setBusinessTypeText(businessTypeText(row.getBusinessType()));
+        vo.setBusinessTypeText(OperBusinessTypeEnum.getText(row.getBusinessType()));
         vo.setMethod(row.getMethod());
         vo.setRequestMethod(row.getRequestMethod());
         vo.setOperName(row.getOperName());
@@ -114,7 +117,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setOperParam(row.getOperParam());
         vo.setJsonResult(row.getJsonResult());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(operStatusText(row.getStatus()));
+        vo.setStatusText(OperStatusEnum.getText(row.getStatus()));
         vo.setErrorMsg(row.getErrorMsg());
         vo.setOperTime(row.getOperTime());
         vo.setCostTime(row.getCostTime());
@@ -424,7 +427,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setId(row.getId());
         vo.setTitle(row.getTitle());
         vo.setBusinessType(row.getBusinessType());
-        vo.setBusinessTypeText(businessTypeText(row.getBusinessType()));
+        vo.setBusinessTypeText(OperBusinessTypeEnum.getText(row.getBusinessType()));
         vo.setMethod(row.getMethod());
         vo.setRequestMethod(row.getRequestMethod());
         vo.setOperName(row.getOperName());
@@ -434,7 +437,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setOperIp(row.getOperIp());
         vo.setOperLocation(row.getOperLocation());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(operStatusText(row.getStatus()));
+        vo.setStatusText(OperStatusEnum.getText(row.getStatus()));
         vo.setOperTime(row.getOperTime());
         vo.setCostTime(row.getCostTime());
         vo.setErrorMsg(row.getErrorMsg() == null ? null : cut(row.getErrorMsg(), 200));
@@ -452,7 +455,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setBrowser(row.getBrowser());
         vo.setOs(row.getOs());
         vo.setLoginStatus(row.getLoginStatus());
-        vo.setLoginStatusText(loginStatusText(row.getLoginStatus()));
+        vo.setLoginStatusText(LoginStatusEnum.getText(row.getLoginStatus()));
         vo.setMsg(row.getMsg());
         vo.setLoginTime(row.getLoginTime());
         vo.setUserAgent(row.getUserAgent());
@@ -471,7 +474,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setContent(row.getContent());
         vo.setIp(row.getIp());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(auditStatusText(row.getStatus()));
+        vo.setStatusText(AuditLogStatusEnum.getText(row.getStatus()));
         vo.setErrorMsg(row.getErrorMsg());
         vo.setCreateTime(row.getCreateTime());
         return vo;
@@ -542,37 +545,6 @@ public class SysLogServiceImpl implements SysLogService {
         } catch (DateTimeParseException e) {
             throw new BusinessException("日期格式不正确，应为 yyyy-MM-dd：" + day);
         }
-    }
-
-    static String businessTypeText(Integer v) {
-        return v == null || v < 0 || v >= BUSINESS_TYPE_TEXT.length ? "未知" : BUSINESS_TYPE_TEXT[v];
-    }
-
-    static String operStatusText(Integer v) {
-        if (v == null) {
-            return "未知";
-        }
-        return switch (v) {
-            case 0 -> "正常";
-            case 1 -> "异常";
-            default -> "未知(" + v + ")";
-        };
-    }
-
-    static String loginStatusText(Integer v) {
-        if (v == null) {
-            return "未知";
-        }
-        return switch (v) {
-            case 0 -> "成功";
-            case 1 -> "失败";
-            default -> "未知(" + v + ")";
-        };
-    }
-
-    /** 审计日志 status：1-成功 0-失败。 */
-    static String auditStatusText(Integer v) {
-        return v == null ? "未知" : (v == 1 ? "成功" : (v == 0 ? "失败" : "未知(" + v + ")"));
     }
 
     /**

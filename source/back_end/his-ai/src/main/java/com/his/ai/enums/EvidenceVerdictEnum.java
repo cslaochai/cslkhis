@@ -5,7 +5,7 @@ import lombok.Getter;
 /**
  * 医保审核证据判定结论（G-07）。
  * <p>判的是「证据与规则怀疑的关系」，不是违规裁决；
- * {@link #labelOf(Integer)} 对不在枚举内的码值返回 null，脏数据由调用侧决定兜底，不许回落合法文案。</p>
+ * {@link #getText(Integer)} 对不在枚举内的码值返回 null，脏数据由调用侧决定兜底，不许回落合法文案。</p>
  */
 @Getter
 public enum EvidenceVerdictEnum {
@@ -39,6 +39,11 @@ public enum EvidenceVerdictEnum {
         return null;
     }
 
+    /** 码值是否合法（写入侧校验用；null 不合法） */
+    public static boolean isValid(Integer code) {
+        return fromCode(code) != null;
+    }
+
     /**
      * 模型输出按 verdict 字面匹配；大小写不敏感，匹配不上返回 null（调用侧丢弃该条）
      */
@@ -54,8 +59,14 @@ public enum EvidenceVerdictEnum {
         return null;
     }
 
-    public static String labelOf(Integer code) {
+    public static String getText(Integer code) {
         EvidenceVerdictEnum e = fromCode(code);
         return e == null ? null : e.label;
+    }
+
+    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
+    public static String labelOrUnknown(Integer code) {
+        EvidenceVerdictEnum item = code == null ? null : fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

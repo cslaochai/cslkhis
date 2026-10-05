@@ -7,8 +7,11 @@ import com.his.common.exception.BusinessException;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.StatsScopeEnum;
+import com.his.patient.enums.VteDiagnosisBasisEnum;
 import com.his.patient.enums.VteEventTypeEnum;
+import com.his.patient.enums.VteMeasureTypeEnum;
 import com.his.patient.enums.VteOnsetEnum;
+import com.his.patient.enums.VteOutcomeEnum;
 import com.his.patient.enums.VtePreventStatusEnum;
 import com.his.patient.enums.VteRiskLevelEnum;
 import com.his.patient.mapper.*;
@@ -625,15 +628,15 @@ public class VteServiceImpl implements VteService {
         vo.setAssessmentId(r.getAssessmentId());
         vo.setCapriniScore(r.getCapriniScore());
         vo.setRiskLevel(r.getRiskLevel());
-        vo.setRiskLevelText(r.getRiskLevel() == null ? "未评" : riskText(r.getRiskLevel()));
+        vo.setRiskLevelText(r.getRiskLevel() == null ? "未评" : VteRiskLevelEnum.getText(r.getRiskLevel()));
         vo.setMeasureCode(r.getMeasureCode());
         vo.setMeasureCodeText(VteRules.measureCodeText(r.getMeasureCode()));
         vo.setMeasureType(r.getMeasureType());
-        vo.setMeasureTypeText(VteRules.measureTypeText(r.getMeasureType()));
+        vo.setMeasureTypeText(VteMeasureTypeEnum.getText(r.getMeasureType()));
         vo.setMeasureName(r.getMeasureName());
         vo.setPlanDate(r.getPlanDate());
         vo.setExecuteStatus(r.getExecuteStatus());
-        vo.setExecuteStatusText(VteRules.executeStatusText(r.getExecuteStatus()));
+        vo.setExecuteStatusText(VtePreventStatusEnum.getText(r.getExecuteStatus()));
         vo.setExecuteTime(r.getExecuteTime());
         vo.setExecutorName(r.getExecutorName());
         vo.setReason(r.getReason());
@@ -652,15 +655,15 @@ public class VteServiceImpl implements VteService {
         vo.setDeptName(r.getDeptName());
         vo.setWardName(r.getWardName());
         vo.setEventType(r.getEventType());
-        vo.setEventTypeText(VteRules.eventTypeText(r.getEventType()));
+        vo.setEventTypeText(VteEventTypeEnum.getText(r.getEventType()));
         vo.setOnsetType(r.getOnsetType());
-        vo.setOnsetTypeText(VteRules.onsetTypeText(r.getOnsetType()));
+        vo.setOnsetTypeText(VteOnsetEnum.getText(r.getOnsetType()));
         vo.setDiagnoseDate(r.getDiagnoseDate());
         vo.setDiagnosisBasis(r.getDiagnosisBasis());
-        vo.setDiagnosisBasisText(VteRules.basisText(r.getDiagnosisBasis()));
+        vo.setDiagnosisBasisText(VteDiagnosisBasisEnum.getText(r.getDiagnosisBasis()));
         vo.setThrombusSite(r.getThrombusSite());
         vo.setOutcome(r.getOutcome());
-        vo.setOutcomeText(VteRules.outcomeText(r.getOutcome()));
+        vo.setOutcomeText(VteOutcomeEnum.getText(r.getOutcome()));
         vo.setDrugPreventFlag(r.getDrugPreventFlag());
         vo.setReporterName(r.getReporterName());
         vo.setReportTime(r.getReportTime());
@@ -702,10 +705,6 @@ public class VteServiceImpl implements VteService {
     private boolean counted(BizVteEvent r) {
         return r.getEventType() != null && r.getEventType() != VteEventTypeEnum.BLEED.getCode()
                 && r.getOnsetType() != null && r.getOnsetType() == VteOnsetEnum.IN_HOSPITAL.getCode();
-    }
-
-    private String riskText(int level) {
-        return VteRiskLevelEnum.labelOf(level);
     }
 
     private String csv(String v) {

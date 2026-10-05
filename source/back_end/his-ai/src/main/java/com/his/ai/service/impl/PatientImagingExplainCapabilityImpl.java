@@ -107,7 +107,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
         vo.setItemName(report.getItemName());
         vo.setExamMethod(report.getExamMethod());
         vo.setReportTime(report.getPublishTime());
-        vo.setPositiveText(PositiveFlagEnum.labelOf(report.getPositiveFlag()));
+        vo.setPositiveText(PositiveFlagEnum.getText(report.getPositiveFlag()));
         // 危急是代码事实，置顶提示不经过模型——这是整个 VO 里唯一允许「催促」的字段
         if (Integer.valueOf(1).equals(report.getIsCritical())) {
             vo.setCriticalAlert("报告已由诊断医生标注为危急，请立即联系接诊医生或前往急诊。");
@@ -207,7 +207,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
         Map<String, Object> variables = new HashMap<>();
         variables.put("itemName", nullToDash(report.getItemName()));
         variables.put("examMethod", nullToDash(report.getExamMethod()));
-        variables.put("positiveText", nullToDash(PositiveFlagEnum.labelOf(report.getPositiveFlag())));
+        variables.put("positiveText", nullToDash(PositiveFlagEnum.getText(report.getPositiveFlag())));
         variables.put("hasDictIntro", plain != null);
         variables.put("findings", nullToDash(report.getReportContent()));
         variables.put("conclusions", nullToDash(report.getConclusion()));

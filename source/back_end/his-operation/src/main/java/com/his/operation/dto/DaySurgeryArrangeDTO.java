@@ -15,22 +15,32 @@ public class DaySurgeryArrangeDTO implements Serializable {
     @NotNull(message = "登记单ID不能为空")
     private Long id;
 
-    /** 手术开始时间 yyyy-MM-dd HH:mm:ss */
+    /**
+     * 手术开始时间 yyyy-MM-dd HH:mm:ss
+     */
     @NotNull(message = "手术时间不能为空")
     private String surgeryTime;
 
-    /** 手术间 */
+    /**
+     * 手术间
+     */
     @NotBlank(message = "手术间不能为空")
     private String operatingRoom;
 
-    /** 台次 */
+    /**
+     * 台次
+     */
     private Integer seqNo;
 
-    /** 实际麻醉方式 */
+    /**
+     * 实际麻醉方式
+     */
     @NotNull(message = "麻醉方式不能为空")
     private Integer anesthesiaType;
 
-    /** 主刀医生姓名 */
+    /**
+     * 主刀医生姓名
+     */
     @NotBlank(message = "主刀医生不能为空")
     private String surgeon;
 }

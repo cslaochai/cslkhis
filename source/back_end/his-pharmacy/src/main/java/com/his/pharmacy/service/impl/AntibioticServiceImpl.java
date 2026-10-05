@@ -11,6 +11,8 @@ import com.his.pharmacy.dto.AntibioticCatalogLevelUpsertDTO;
 import com.his.pharmacy.dto.AntibioticCatalogQueryPageDTO;
 import com.his.pharmacy.entity.BizAntibioticAlias;
 import com.his.pharmacy.entity.BizAntibioticAuth;
+import com.his.pharmacy.enums.AntibioticAuthStatusEnum;
+import com.his.pharmacy.enums.AntibioticLevelEnum;
 import com.his.pharmacy.mapper.AntibioticCatalogMapper;
 import com.his.pharmacy.mapper.AntibioticEmployeeMapper;
 import com.his.pharmacy.mapper.BizAntibioticAliasMapper;
@@ -40,7 +42,7 @@ import java.util.List;
  * 抗菌药物分级目录与处方权授权。
  *
  * <p>口径见 sql/161 头注释与 {@link AntibioticService} 接口注释；这里只写实现层面的要点：
- * ① 分级文案与"需要什么级别"的判定在同一处（LEVEL_TEXT / levelText），前端不自己翻译；
+ * ① 分级文案唯一出口是 {@link AntibioticLevelEnum}，前端不自己翻译；
  * ② 开方闸 {@link #assertCanPrescribe} 抛异常让整张处方回滚，而不是返回错误码让调用方忘判；
  * ③ 授权唯一键 (doctor_id, auth_level) 撞了要给人话提示，不能抛出 Duplicat entry 让用户看不懂。
  */
@@ -49,9 +51,6 @@ import java.util.List;
 public class AntibioticServiceImpl implements AntibioticService {
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
-
-    private static final String[] LEVEL_TEXT = {"非抗菌药物", "非限制使用级", "限制使用级", "特殊使用级"};
-    private static final String[] STATUS_TEXT = {"", "有效", "暂停", "取消"};
 
     private final AntibioticCatalogMapper catalogMapper;
     private final AntibioticEmployeeMapper employeeMapper;
@@ -159,7 +158,7 @@ public class AntibioticServiceImpl implements AntibioticService {
     public List<AntibioticDrugSelectListVO> antibioticDrugSelectList() {
         List<AntibioticDrugSelectListVO> list = catalogMapper.selectAntibioticDrugs();
         for (AntibioticDrugSelectListVO vo : list) {
-            vo.setAntibioticLevelText(levelText(vo.getAntibioticLevel()));
+            vo.setAntibioticLevelText(AntibioticLevelEnum.getText(vo.getAntibioticLevel()));
         }
         return list;
     }
@@ -227,7 +226,7 @@ public class AntibioticServiceImpl implements AntibioticService {
                     .eq(BizAntibioticAuth::getDoctorId, dto.getDoctorId())
                     .eq(BizAntibioticAuth::getAuthLevel, dto.getAuthLevel()));
             if (exist != null) {
-                throw new BusinessException("该医师已有" + levelText(dto.getAuthLevel())
+                throw new BusinessException("该医师已有" + AntibioticLevelEnum.labelOrUnknown(dto.getAuthLevel())
                         + "的授权记录（" + exist.getAuthNo() + "），请直接修改那条而不是重复新增");
             }
             auth = new BizAntibioticAuth();
@@ -270,7 +269,7 @@ public class AntibioticServiceImpl implements AntibioticService {
         }
         Integer authLevel = maxValidLevel(doctorId);
         vo.setAuthLevel(authLevel);
-        vo.setAuthLevelText(authLevel == null ? "无有效授权" : levelText(authLevel));
+        vo.setAuthLevelText(authLevel == null ? "无有效授权" : AntibioticLevelEnum.getText(authLevel));
 
         List<AntibioticDrugSelectListVO> drugs = catalogMapper.selectAntibioticByIds(drugIds);
         for (AntibioticDrugSelectListVO drug : drugs) {
@@ -278,9 +277,9 @@ public class AntibioticServiceImpl implements AntibioticService {
                 AntibioticAuthCheckVO.BlockedDrug b = new AntibioticAuthCheckVO.BlockedDrug();
                 b.setDrugName(drug.getDrugName());
                 b.setAntibioticLevel(drug.getAntibioticLevel());
-                b.setAntibioticLevelText(levelText(drug.getAntibioticLevel()));
+                b.setAntibioticLevelText(AntibioticLevelEnum.getText(drug.getAntibioticLevel()));
                 b.setRequiredLevel(drug.getAntibioticLevel());
-                b.setRequiredLevelText(levelText(drug.getAntibioticLevel()));
+                b.setRequiredLevelText(AntibioticLevelEnum.getText(drug.getAntibioticLevel()));
                 vo.getBlockedDrugs().add(b);
             }
         }
@@ -295,7 +294,7 @@ public class AntibioticServiceImpl implements AntibioticService {
                     .reduce((a, b) -> a + "、" + b).orElse("");
             vo.setTip(authLevel == null
                     ? "您没有有效的抗菌药物处方权授权，不能开具：" + names
-                    : "您当前的抗菌药物处方权为" + levelText(authLevel) + "，不能开具：" + names
+                    : "您当前的抗菌药物处方权为" + AntibioticLevelEnum.getText(authLevel) + "，不能开具：" + names
                       + "。请改用同级可开品种，或由具有相应处方权的医师开具。");
         }
         return vo;
@@ -337,16 +336,8 @@ public class AntibioticServiceImpl implements AntibioticService {
     }
 
     private void fillLevelText(AntibioticCatalogVO vo) {
-        vo.setAntibioticLevelText(levelText(vo.getAntibioticLevel()));
+        vo.setAntibioticLevelText(AntibioticLevelEnum.getText(vo.getAntibioticLevel()));
         vo.setInCatalog(vo.getAntibioticLevel() != null && vo.getAntibioticLevel() > 0);
-    }
-
-    /** 分级文案唯一口径（0~3） —— 前端不自己翻译码值 */
-    private String levelText(Integer level) {
-        if (level == null || level < 0 || level >= LEVEL_TEXT.length) {
-            return "未知(" + level + ")";
-        }
-        return LEVEL_TEXT[level];
     }
 
     private AntibioticAuthVO toAuthVO(BizAntibioticAuth e) {
@@ -359,12 +350,12 @@ public class AntibioticServiceImpl implements AntibioticService {
         vo.setDeptName(e.getDeptName());
         vo.setTitle(e.getTitle());
         vo.setAuthLevel(e.getAuthLevel());
-        vo.setAuthLevelText(levelText(e.getAuthLevel()));
+        vo.setAuthLevelText(AntibioticLevelEnum.getText(e.getAuthLevel()));
         vo.setAuthBasis(e.getAuthBasis());
         vo.setAuthDate(e.getAuthDate());
         vo.setExpireDate(e.getExpireDate());
         vo.setStatus(e.getStatus());
-        vo.setStatusText(statusText(e.getStatus()));
+        vo.setStatusText(AntibioticAuthStatusEnum.getText(e.getStatus()));
         vo.setEffective(e.getStatus() != null
                 && e.getStatus() == BizAntibioticAuth.STATUS_VALID
                 && e.getExpireDate() != null
@@ -390,12 +381,5 @@ public class AntibioticServiceImpl implements AntibioticService {
         vo.setCreateTime(e.getCreateTime());
         vo.setRemark(e.getRemark());
         return vo;
-    }
-
-    private String statusText(Integer status) {
-        if (status == null || status < 1 || status >= STATUS_TEXT.length) {
-            return "未知(" + status + ")";
-        }
-        return STATUS_TEXT[status];
     }
 }

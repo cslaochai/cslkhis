@@ -9,11 +9,15 @@ import lombok.Data;
 @Data
 public class StatsQueryDTO {
 
-    /** 开始日期 */
+    /**
+     * 开始日期
+     */
     @Pattern(regexp = "^$|^\\d{4}-\\d{2}-\\d{2}$", message = "开始日期格式应为 yyyy-MM-dd")
     private String startDate;
 
-    /** 结束日期 */
+    /**
+     * 结束日期
+     */
     @Pattern(regexp = "^$|^\\d{4}-\\d{2}-\\d{2}$", message = "结束日期格式应为 yyyy-MM-dd")
     private String endDate;
 }

@@ -1,6 +1,7 @@
 package com.his.patient.support;
 
 import com.his.patient.entity.BizInpatientRecord;
+import com.his.patient.enums.InpatientRecordTypeEnum;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -185,19 +186,19 @@ public final class RecordStructuredFields {
      * 该文书类型应具备的结构化要素清单（分母）。
      */
     public static List<KeyElement> elementsFor(Integer recordType) {
-        if (InpatientRecordLabels.isConsultRecord(recordType)) {
+        if (InpatientRecordTypeEnum.isConsultRecord(recordType)) {
             return CONSULT_ELEMENTS;
         }
-        if (InpatientRecordLabels.isTransferRecord(recordType)) {
+        if (InpatientRecordTypeEnum.isTransferRecord(recordType)) {
             return TRANSFER_ELEMENTS;
         }
-        if (InpatientRecordLabels.isOperationRecord(recordType)) {
+        if (InpatientRecordTypeEnum.isOperationRecord(recordType)) {
             return OPERATION_ELEMENTS;
         }
-        if (InpatientRecordLabels.isTransfusionRecord(recordType)) {
+        if (InpatientRecordTypeEnum.isTransfusionRecord(recordType)) {
             return TRANSFUSION_ELEMENTS;
         }
-        if (!InpatientRecordLabels.isCourseRecord(recordType)) {
+        if (!InpatientRecordTypeEnum.isCourseRecord(recordType)) {
             return BASE_ELEMENTS;
         }
         List<KeyElement> list = new ArrayList<>(BASE_ELEMENTS);

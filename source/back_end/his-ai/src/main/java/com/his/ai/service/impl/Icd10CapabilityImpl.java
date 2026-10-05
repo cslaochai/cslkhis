@@ -1,12 +1,12 @@
 package com.his.ai.service.impl;
 
-import com.his.ai.service.Icd10Capability;
-import com.his.ai.service.AiExecutionService;
-import com.his.ai.service.Icd10RecallService;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.Icd10LlmOutputDTO;
 import com.his.ai.dto.Icd10PredictDTO;
+import com.his.ai.service.AiExecutionService;
+import com.his.ai.service.Icd10Capability;
+import com.his.ai.service.Icd10RecallService;
 import com.his.ai.vo.Icd10PredictItemVO;
 import com.his.ai.vo.Icd10PredictVO;
 import com.his.emr.entity.BizMedicalRecord;
@@ -208,7 +208,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
     }
 
     private Optional<Icd10LlmOutputDTO> callModel(Icd10PredictDTO dto, NoteText note,
-                                               List<Icd10RecallService.RecallHit> hits) {
+                                                  List<Icd10RecallService.RecallHit> hits) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("candidateCount", hits.size());
         variables.put("candidates", formatCandidates(hits));

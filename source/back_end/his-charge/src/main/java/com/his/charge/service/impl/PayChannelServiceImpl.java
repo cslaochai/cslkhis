@@ -48,10 +48,6 @@ public class PayChannelServiceImpl implements PayChannelService {
 
     private final BizPaymentTxnMapper paymentTxnMapper;
 
-    private static String channelText(Integer channel) {
-        PaymentMethodEnum method = PaymentMethodEnum.getByCode(channel);
-        return method == null ? "未知(" + channel + ")" : method.getDesc();
-    }
 
     /**
      * 拉取指定渠道、指定账单日的渠道侧流水。
@@ -60,7 +56,7 @@ public class PayChannelServiceImpl implements PayChannelService {
     public List<ChannelTrade> fetchChannelBill(Integer channel, LocalDate billDate) {
         // —— M7 留口子：这一段打印就是"调渠道接口"的占位，真渠道接入后整块替换 ——
         log.info("[M7支付渠道口子] ===== 模拟调商户平台拉取账单 ===== 渠道={} 账单日={}",
-                channelText(channel), billDate);
+                PaymentMethodEnum.labelOrUnknown(channel), billDate);
 
         // 反造口径：本地当日、该渠道、成功状态的支付流水，逐笔生成渠道流水。
         // 已冲正流水（txn_status=2）不进账单 —— 真渠道也不会为它出一笔钱。
@@ -82,7 +78,7 @@ public class PayChannelServiceImpl implements PayChannelService {
             log.info("[M7支付渠道口子] 渠道流水 tradeNo={} amount={}（对应本地支付流水 {}）",
                     tradeNo, txn.getAmount(), txn.getTxnNo());
         }
-        log.info("[M7支付渠道口子] ===== 拉取完成 ===== 渠道={} 账单日={} 共 {} 笔", channelText(channel), billDate, trades.size());
+        log.info("[M7支付渠道口子] ===== 拉取完成 ===== 渠道={} 账单日={} 共 {} 笔", PaymentMethodEnum.labelOrUnknown(channel), billDate, trades.size());
         return trades;
     }
 }

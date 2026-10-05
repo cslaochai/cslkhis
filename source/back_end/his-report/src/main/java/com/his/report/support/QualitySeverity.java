@@ -44,6 +44,6 @@ public enum QualitySeverity {
                 return s.text;
             }
         }
-        return "未知(" + level + ")";
+        return "";
     }
 }

@@ -85,8 +85,7 @@ public class TsaServiceImpl implements TsaService {
         vo.setConfigTimeSource(cfg);
         int effective = signatureService.effectiveTimeSource();
         vo.setEffectiveTimeSource(effective);
-        TimeSource ts = TimeSource.parse(effective);
-        vo.setEffectiveTimeSourceText(ts != null ? ts.getText() : "未知(" + effective + ")");
+        vo.setEffectiveTimeSourceText(TimeSource.textOf(effective));
 
         vo.setTokenCount(tokenMapper.selectCount(null));
         BizTsaToken last = tokenMapper.selectOne(new LambdaQueryWrapper<BizTsaToken>()

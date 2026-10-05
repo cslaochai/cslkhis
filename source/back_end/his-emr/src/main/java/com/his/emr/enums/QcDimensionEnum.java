@@ -66,4 +66,20 @@ public enum QcDimensionEnum {
     public String getDescription() {
         return description;
     }
+
+    /**
+     * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
+     */
+    public static String getText(Integer code) {
+        QcDimensionEnum dimension = ofCode(code);
+        return dimension == null ? "" : dimension.text;
+    }
+
+    /**
+     * 异常 / 审计 / 合规用码值 → 文案。null 或不在枚举内返回「未知(n)」，保留原始码值便于排查。
+     */
+    public static String labelOrUnknown(Integer code) {
+        QcDimensionEnum dimension = ofCode(code);
+        return dimension == null ? (code == null ? "未知" : "未知(" + code + ")") : dimension.text;
+    }
 }

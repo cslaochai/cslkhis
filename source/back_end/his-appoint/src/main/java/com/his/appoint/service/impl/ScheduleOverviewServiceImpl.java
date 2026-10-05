@@ -107,7 +107,7 @@ public class ScheduleOverviewServiceImpl implements ScheduleOverviewService {
             vo.setOrgId(row.getOrgId());
             vo.setOrgName(row.getOrgName());
             vo.setShiftName(row.getShiftName());
-            vo.setStaffTypeName(com.his.common.enums.StaffTypeEnum.labelOf(row.getStaffType()));
+            vo.setStaffTypeName(com.his.common.enums.StaffTypeEnum.getText(row.getStaffType()));
             vo.setMinStaff(row.getMinStaff());
             vo.setActualCount(row.getActualCount());
             vo.setShortfall(row.getShortfall());

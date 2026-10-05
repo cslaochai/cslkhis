@@ -19,42 +19,72 @@ import java.time.LocalDateTime;
 @TableName("biz_equipment_metering")
 public class BizEquipmentMetering {
 
-    /** 计量记录ID */
+    /**
+     * 计量记录ID
+     */
     @TableId(value = "id", type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 设备ID */
+    /**
+     * 设备ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long equipmentId;
-    /** 设备编码（快照） */
+    /**
+     * 设备编码（快照）
+     */
     private String equipmentCode;
-    /** 设备名称（快照） */
+    /**
+     * 设备名称（快照）
+     */
     private String equipmentName;
 
-    /** 计量类型（1-强检 2-校准） */
+    /**
+     * 计量类型（1-强检 2-校准）
+     */
     private Integer meteringType;
-    /** 计量日期 */
+    /**
+     * 计量日期
+     */
     private LocalDate meteringDate;
 
-    /** 有效期至 */
+    /**
+     * 有效期至
+     */
     private LocalDate validUntil;
 
-    /** 计量结果（1-合格 2-不合格） */
+    /**
+     * 计量结果（1-合格 2-不合格）
+     */
     private Integer meteringResult;
 
-    /** 证书编号 */
+    /**
+     * 证书编号
+     */
     private String certNo;
-    /** 检定/校准机构 */
+    /**
+     * 检定/校准机构
+     */
     private String agency;
-    /** 创建人 */
+    /**
+     * 创建人
+     */
     private String createBy;
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
-    /** 更新人 */
+    /**
+     * 更新人
+     */
     private String updateBy;
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     private LocalDateTime updateTime;
-    /** 删除标志（0-正常 1-删除） */
+    /**
+     * 删除标志（0-正常 1-删除）
+     */
     private Integer delFlag;
 }

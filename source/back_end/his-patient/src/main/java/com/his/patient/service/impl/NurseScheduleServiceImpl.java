@@ -224,7 +224,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
 
         List<NurseScheduleVO.Nurse> nurses = scheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
         List<NurseScheduleVO.Cell> cells = selectCells(ward, start, end);
-        cells.forEach(c -> c.setScheduleStatusText(StaffDutyStatusEnum.labelOf(c.getScheduleStatus())));
+        cells.forEach(c -> c.setScheduleStatusText(StaffDutyStatusEnum.getText(c.getScheduleStatus())));
         List<NurseScheduleVO.ShiftOption> shifts = scheduleMapper.selectNursingShifts();
         shifts.forEach(s -> s.setNight(isNightShift(s.getStartTime())));
 
@@ -257,7 +257,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         List<NurseScheduleVO.Row> records = scheduleMapper.selectSchedulePage(page, trimToNull(q.getKeyword()),
                 q.getWardId(), deptId, q.getScheduleStatus(), q.getStartDate(), q.getEndDate(), deptIds);
         for (NurseScheduleVO.Row row : records) {
-            row.setScheduleStatusText(StaffDutyStatusEnum.labelOf(row.getScheduleStatus()));
+            row.setScheduleStatusText(StaffDutyStatusEnum.getText(row.getScheduleStatus()));
         }
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -818,7 +818,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
                         && c.getShiftId() != null) {
                     out.add(personWarning(1, "SHIFT_ON_NON_WORK", c.getScheduleDate(), null,
                             employeeId, nurseName, "「" + nurseName + "」" + c.getScheduleDate()
-                                    + " 状态是" + StaffDutyStatusEnum.labelOf(c.getScheduleStatus())
+                                    + " 状态是" + StaffDutyStatusEnum.getText(c.getScheduleStatus())
                                     + "却仍挂着「" + c.getShiftName() + "」，请重新点格修正"));
                 }
             }

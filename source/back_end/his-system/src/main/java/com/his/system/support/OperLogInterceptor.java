@@ -1,8 +1,8 @@
 package com.his.system.support;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import com.his.system.entity.SysOperLog;
 import com.his.system.mapper.SysOperLogMapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -46,11 +46,17 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class OperLogInterceptor implements HandlerInterceptor {
 
-    /** 待落库的日志骨架（preHandle 存、afterCompletion 用） */
+    /**
+     * 待落库的日志骨架（preHandle 存、afterCompletion 用）
+     */
     public static final String ATTR_PENDING = "his.operLog.pending";
-    /** 开始时间 */
+    /**
+     * 开始时间
+     */
     public static final String ATTR_START = "his.operLog.start";
-    /** 异常标记（由 OperLogExceptionMarker 写入） */
+    /**
+     * 异常标记（由 OperLogExceptionMarker 写入）
+     */
     public static final String ATTR_EXCEPTION = "his.operLog.exception";
 
     /**
@@ -70,7 +76,9 @@ public class OperLogInterceptor implements HandlerInterceptor {
     private static final String[] READ_SUFFIX = {
             "List", "Page", "Tree", "Options", "Summary", "Stat", "Stats", "Overview"};
 
-    /** 凭据类字段一律打码：日志里出现明文口令比没有日志更糟。 */
+    /**
+     * 凭据类字段一律打码：日志里出现明文口令比没有日志更糟。
+     */
     private static final Pattern SECRET_PATTERN = Pattern.compile(
             "\"(password|oldPassword|newPassword|confirmPassword|payPassword|token|accessToken|refreshToken"
                     + "|secret|smsCode|captcha|verificationCode)\"\\s*:\\s*\"[^\"]*\"",
@@ -79,6 +87,139 @@ public class OperLogInterceptor implements HandlerInterceptor {
     private static final int PARAM_MAX = 2000;
 
     private final SysOperLogMapper operLogMapper;
+
+    private static String tail(String uri) {
+        if (uri == null) {
+            return "";
+        }
+        int i = uri.lastIndexOf('/');
+        return i < 0 ? uri : uri.substring(i + 1);
+    }
+
+    /**
+     * 读动作判定：末段整名命中死表，或以读前缀开头 / 读后缀结尾。
+     */
+    static boolean isReadAction(String tail) {
+        if (tail == null || tail.isEmpty()) {
+            return true;
+        }
+        String lower = tail.toLowerCase(Locale.ROOT);
+        if (READ_TAIL_EXACT.contains(lower)) {
+            return true;
+        }
+        for (String p : READ_PREFIX) {
+            if (lower.startsWith(p)) {
+                return true;
+            }
+        }
+        for (String s : READ_SUFFIX) {
+            if (tail.endsWith(s)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // 判定辅助
+
+    /**
+     * 业务类型（0-其他 1-新增 2-修改 3-删除 4-授权 5-导出 6-导入 7-清空）。
+     * 顺序即优先级：deleteById 先判删除，techAuthUpsert 落到修改。
+     */
+    static int resolveBusinessType(String tail) {
+        String k = tail.toLowerCase(Locale.ROOT);
+        if (containsAny(k, "delete", "remove", "purge")) {
+            return 3;
+        }
+        if (containsAny(k, "export", "download", "print")) {
+            return 5;
+        }
+        if (containsAny(k, "import", "upload")) {
+            return 6;
+        }
+        if (containsAny(k, "grant", "authorize", "rolemenu", "bindrole", "techauth", "assign")) {
+            return 4;
+        }
+        if (containsAny(k, "clear", "reset", "truncate")) {
+            return 7;
+        }
+        if (containsAny(k, "upsert", "update", "edit", "modify", "change", "cancel", "void", "revoke",
+                "submit", "approve", "reject", "confirm", "execute", "settle", "charge", "refund",
+                "switch", "bind", "unbind", "sign", "verify")) {
+            return 2;
+        }
+        if (containsAny(k, "add", "create", "save", "insert", "register", "collect")) {
+            return 1;
+        }
+        return 0;
+    }
+
+    private static boolean containsAny(String src, String... keys) {
+        for (String k : keys) {
+            if (src.contains(k)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 操作模块：Controller 上的 @Tag（没有就退回类名去掉 Controller 后缀）。
+     */
+    private static String resolveTitle(Object handler) {
+        if (handler instanceof HandlerMethod hm) {
+            Tag tag = AnnotationUtils.findAnnotation(hm.getBeanType(), Tag.class);
+            if (tag != null && tag.name() != null && !tag.name().isBlank()) {
+                return cut(tag.name(), 100);
+            }
+            String simple = hm.getBeanType().getSimpleName();
+            return cut(simple.endsWith("Controller") ? simple.substring(0, simple.length() - 10) : simple, 100);
+        }
+        return "系统";
+    }
+
+    private static String resolveMethodName(Object handler) {
+        return handler instanceof HandlerMethod hm ? cut(hm.getMethod().getName(), 200) : null;
+    }
+
+    /**
+     * 请求参数：queryString + 请求体（体由 OperLogCachingFilter 包装后缓存）。
+     */
+    private static String readParam(HttpServletRequest request) {
+        StringBuilder sb = new StringBuilder();
+        String qs = request.getQueryString();
+        if (org.springframework.util.StringUtils.hasText(qs)) {
+            sb.append(qs);
+        }
+        ContentCachingRequestWrapper wrapper = null;
+        Object cached = request.getAttribute(OperLogCachingFilter.ATTR_CACHED);
+        if (cached instanceof ContentCachingRequestWrapper w1) {
+            wrapper = w1;
+        } else if (request instanceof ContentCachingRequestWrapper w2) {
+            wrapper = w2;
+        }
+        if (wrapper != null) {
+            byte[] buf = wrapper.getContentAsByteArray();
+            if (buf.length > 0) {
+                if (sb.length() > 0) {
+                    sb.append('&');
+                }
+                sb.append(new String(buf, StandardCharsets.UTF_8));
+            }
+        }
+        return sb.toString();
+    }
+
+    static String mask(String json) {
+        if (json == null || json.isEmpty()) {
+            return json;
+        }
+        return SECRET_PATTERN.matcher(json).replaceAll("\"$1\":\"******\"");
+    }
+
+    private static String cut(String s, int max) {
+        return s == null || s.length() <= max ? s : s.substring(0, max);
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
@@ -148,132 +289,5 @@ public class OperLogInterceptor implements HandlerInterceptor {
             request.removeAttribute(OperLogResultMarker.ATTR_FAILED);
             request.removeAttribute(OperLogResultMarker.ATTR_FAIL_MSG);
         }
-    }
-
-    // 判定辅助
-
-    private static String tail(String uri) {
-        if (uri == null) {
-            return "";
-        }
-        int i = uri.lastIndexOf('/');
-        return i < 0 ? uri : uri.substring(i + 1);
-    }
-
-    /** 读动作判定：末段整名命中死表，或以读前缀开头 / 读后缀结尾。 */
-    static boolean isReadAction(String tail) {
-        if (tail == null || tail.isEmpty()) {
-            return true;
-        }
-        String lower = tail.toLowerCase(Locale.ROOT);
-        if (READ_TAIL_EXACT.contains(lower)) {
-            return true;
-        }
-        for (String p : READ_PREFIX) {
-            if (lower.startsWith(p)) {
-                return true;
-            }
-        }
-        for (String s : READ_SUFFIX) {
-            if (tail.endsWith(s)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * 业务类型（0-其他 1-新增 2-修改 3-删除 4-授权 5-导出 6-导入 7-清空）。
-     * 顺序即优先级：deleteById 先判删除，techAuthUpsert 落到修改。
-     */
-    static int resolveBusinessType(String tail) {
-        String k = tail.toLowerCase(Locale.ROOT);
-        if (containsAny(k, "delete", "remove", "purge")) {
-            return 3;
-        }
-        if (containsAny(k, "export", "download", "print")) {
-            return 5;
-        }
-        if (containsAny(k, "import", "upload")) {
-            return 6;
-        }
-        if (containsAny(k, "grant", "authorize", "rolemenu", "bindrole", "techauth", "assign")) {
-            return 4;
-        }
-        if (containsAny(k, "clear", "reset", "truncate")) {
-            return 7;
-        }
-        if (containsAny(k, "upsert", "update", "edit", "modify", "change", "cancel", "void", "revoke",
-                "submit", "approve", "reject", "confirm", "execute", "settle", "charge", "refund",
-                "switch", "bind", "unbind", "sign", "verify")) {
-            return 2;
-        }
-        if (containsAny(k, "add", "create", "save", "insert", "register", "collect")) {
-            return 1;
-        }
-        return 0;
-    }
-
-    private static boolean containsAny(String src, String... keys) {
-        for (String k : keys) {
-            if (src.contains(k)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /** 操作模块：Controller 上的 @Tag（没有就退回类名去掉 Controller 后缀）。 */
-    private static String resolveTitle(Object handler) {
-        if (handler instanceof HandlerMethod hm) {
-            Tag tag = AnnotationUtils.findAnnotation(hm.getBeanType(), Tag.class);
-            if (tag != null && tag.name() != null && !tag.name().isBlank()) {
-                return cut(tag.name(), 100);
-            }
-            String simple = hm.getBeanType().getSimpleName();
-            return cut(simple.endsWith("Controller") ? simple.substring(0, simple.length() - 10) : simple, 100);
-        }
-        return "系统";
-    }
-
-    private static String resolveMethodName(Object handler) {
-        return handler instanceof HandlerMethod hm ? cut(hm.getMethod().getName(), 200) : null;
-    }
-
-    /** 请求参数：queryString + 请求体（体由 OperLogCachingFilter 包装后缓存）。 */
-    private static String readParam(HttpServletRequest request) {
-        StringBuilder sb = new StringBuilder();
-        String qs = request.getQueryString();
-        if (org.springframework.util.StringUtils.hasText(qs)) {
-            sb.append(qs);
-        }
-        ContentCachingRequestWrapper wrapper = null;
-        Object cached = request.getAttribute(OperLogCachingFilter.ATTR_CACHED);
-        if (cached instanceof ContentCachingRequestWrapper w1) {
-            wrapper = w1;
-        } else if (request instanceof ContentCachingRequestWrapper w2) {
-            wrapper = w2;
-        }
-        if (wrapper != null) {
-            byte[] buf = wrapper.getContentAsByteArray();
-            if (buf.length > 0) {
-                if (sb.length() > 0) {
-                    sb.append('&');
-                }
-                sb.append(new String(buf, StandardCharsets.UTF_8));
-            }
-        }
-        return sb.toString();
-    }
-
-    static String mask(String json) {
-        if (json == null || json.isEmpty()) {
-            return json;
-        }
-        return SECRET_PATTERN.matcher(json).replaceAll("\"$1\":\"******\"");
-    }
-
-    private static String cut(String s, int max) {
-        return s == null || s.length() <= max ? s : s.substring(0, max);
     }
 }

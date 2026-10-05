@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
+import com.his.common.enums.EnableStatusEnum;
+import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.SensitiveMaskUtils;
 import com.his.patient.dto.PatientQueryPageDTO;
@@ -13,6 +15,9 @@ import com.his.patient.dto.PatientSearchScopeDTO;
 import com.his.patient.dto.PatientUpsertDTO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.entity.BizPatientTagRelation;
+import com.his.patient.enums.CardTypeEnum;
+import com.his.patient.enums.MaritalStatusEnum;
+import com.his.patient.enums.PatientTypeEnum;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
 import com.his.patient.service.*;
@@ -31,7 +36,6 @@ import com.his.system.entity.SysUser;
 import com.his.system.service.PatientTagService;
 import com.his.system.service.SmsCodeService;
 import com.his.system.service.SysUserService;
-import com.his.system.support.CodeText;
 import com.his.system.support.FieldChangeRecorder;
 import com.his.system.support.FieldSpec;
 import com.his.system.enums.MaskEnum;
@@ -76,7 +80,7 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
      */
     private static final List<FieldSpec> PATIENT_FIELDS = FieldSpec.list(
             FieldSpec.of("patientName", "姓名"),
-            FieldSpec.render("gender", "性别", v -> CodeText.of(v, "男", "女", "未知")),
+            FieldSpec.render("gender", "性别", v -> SysGenderEnum.getText((Integer) v)),
             FieldSpec.of("birthDate", "出生日期"),
             FieldSpec.masked("idCard", "身份证号", MaskEnum.ID_CARD),
             FieldSpec.masked("phone", "联系电话", MaskEnum.PHONE),
@@ -86,17 +90,17 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
             FieldSpec.masked("address", "家庭住址", MaskEnum.ADDRESS),
             FieldSpec.of("nation", "民族"),
             FieldSpec.of("occupation", "职业"),
-            FieldSpec.render("maritalStatus", "婚姻状况", v -> CodeText.of(v, "未婚", "已婚", "离异", "丧偶")),
+            FieldSpec.render("maritalStatus", "婚姻状况", v -> MaritalStatusEnum.getText((Integer) v)),
             FieldSpec.of("bloodType", "血型"),
             FieldSpec.of("allergyHistory", "过敏史"),
             FieldSpec.of("medicalHistory", "既往病史"),
             FieldSpec.render("patientType", "患者类型",
-                    v -> CodeText.of(v, "自费", "城镇职工医保", "城乡居民医保", "公费", "其他")),
+                    v -> PatientTypeEnum.getText((Integer) v)),
             FieldSpec.masked("medicalInsuranceNo", "医保卡号", MaskEnum.BANK_NO),
             FieldSpec.of("medicalInsuranceType", "医保类型"),
-            FieldSpec.render("cardType", "证件类型", v -> CodeText.of(v, "身份证", "护照", "军官证")),
+            FieldSpec.render("cardType", "证件类型", v -> CardTypeEnum.getText((Integer) v)),
             FieldSpec.masked("cardNo", "证件号码", MaskEnum.BANK_NO),
-            FieldSpec.render("status", "状态", CodeText::enable)
+            FieldSpec.render("status", "状态", v -> EnableStatusEnum.getText((Integer) v))
     );
     private final RedisSequenceService redisSequenceService;
     private final BizPatientTagRelationMapper tagRelationMapper;

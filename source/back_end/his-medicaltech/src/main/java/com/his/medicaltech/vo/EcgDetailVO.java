@@ -27,37 +27,53 @@ public class EcgDetailVO {
 
     private String applyNo;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者编号 */
+    /**
+     * 患者编号
+     */
     private String patientNo;
 
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     private String patientName;
 
-    /** 性别（1-男 2-女 9-未知） */
+    /**
+     * 性别（1-男 2-女 9-未知）
+     */
     private Integer gender;
 
     private String genderText;
 
-    /** 年龄 */
+    /**
+     * 年龄
+     */
     private Integer age;
 
-    /** 就诊日期 */
+    /**
+     * 就诊日期
+     */
     private LocalDate visitDate;
 
     private String itemCode;
 
-    /** 项目名称 */
+    /**
+     * 项目名称
+     */
     private String itemName;
 
     private String bodyPart;
 
     private String applyDeptName;
 
-    /** 申请医生 */
+    /**
+     * 申请医生
+     */
     private String applyDoctorName;
 
     private String clinicalDiagnosis;
@@ -89,7 +105,9 @@ public class EcgDetailVO {
 
     private LocalDateTime collectTime;
 
-    /** 12 导联采样 JSON 字符串（EcgWavePanel 消费） */
+    /**
+     * 12 导联采样 JSON 字符串（EcgWavePanel 消费）
+     */
     private String waveData;
 
     // 测量参数
@@ -156,7 +174,9 @@ public class EcgDetailVO {
 
     private Integer stEpisodeCount;
 
-    /** 24小时逐时平均心率（JSON 数组字符串） */
+    /**
+     * 24小时逐时平均心率（JSON 数组字符串）
+     */
     private String hourlyHrJson;
 
     private String analysisBy;
@@ -179,7 +199,9 @@ public class EcgDetailVO {
 
     private String reportContent;
 
-    /** 结论 */
+    /**
+     * 结论
+     */
     private String conclusion;
 
     private String suggestions;
@@ -196,7 +218,9 @@ public class EcgDetailVO {
 
     private String auditBy;
 
-    /** 审核时间 */
+    /**
+     * 审核时间
+     */
     private LocalDateTime auditTime;
 
     private String publishBy;
@@ -207,13 +231,17 @@ public class EcgDetailVO {
 
     private String rejectReason;
 
-    /** 报告医师签名ID（null=未签；双签留痕的另一半在审核签名上） */
+    /**
+     * 报告医师签名ID（null=未签；双签留痕的另一半在审核签名上）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long reportSignId;
 
     private LocalDateTime reportSignedTime;
 
-    /** 审核医师签名ID（null=未审核） */
+    /**
+     * 审核医师签名ID（null=未审核）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long auditSignId;
 

@@ -4,20 +4,21 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
-import com.his.operation.dto.AnesthesiaActionDTO;
-import com.his.operation.dto.PacuEnterDTO;
-import com.his.operation.dto.PacuLeaveDTO;
-import com.his.operation.dto.PacuQueryPageDTO;
-import com.his.operation.dto.PacuScoreDTO;
+import com.his.operation.dto.*;
 import com.his.operation.entity.BizAnesthesiaPacu;
 import com.his.operation.entity.BizAnesthesiaRecord;
 import com.his.operation.entity.BizOperationApply;
 import com.his.operation.mapper.BizAnesthesiaPacuMapper;
 import com.his.operation.mapper.BizAnesthesiaRecordMapper;
 import com.his.operation.mapper.BizOperationApplyMapper;
+import com.his.operation.enums.AwarenessLevelEnum;
+import com.his.operation.enums.AnesthesiaChargeStatusEnum;
+import com.his.operation.enums.AnesthesiaRecordStatusEnum;
+import com.his.operation.enums.OperationAnesthesiaMethodEnum;
+import com.his.operation.enums.PacuDispositionEnum;
+import com.his.operation.enums.PacuStatusEnum;
 import com.his.operation.service.PacuService;
-import com.his.operation.support.AnesthesiaLabels;
-import com.his.operation.support.OperationApplyLabels;
+import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.support.OperationChargeBiller;
 import com.his.operation.vo.OperationChargeSummaryVO;
 import com.his.operation.vo.PacuRecordVO;
@@ -62,6 +63,26 @@ public class PacuServiceImpl implements PacuService {
     private final BizAnesthesiaRecordMapper recordMapper;
     private final BizOperationApplyMapper applyMapper;
     private final OperationChargeBiller biller;
+
+    private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
+        if (from == null || to == null) {
+            return null;
+        }
+        long m = Duration.between(from, to).toMinutes();
+        return m < 0 ? null : m;
+    }
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static LocalDateTime toSeconds(LocalDateTime time) {
+        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static BigDecimal nz(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
 
     @Override
     public IPage<PacuRecordVO> listPage(PacuQueryPageDTO query) {
@@ -108,7 +129,7 @@ public class PacuServiceImpl implements PacuService {
         if (record == null) {
             throw new BusinessException("麻醉记录单不存在");
         }
-        if (Integer.valueOf(AnesthesiaLabels.RECORD_DRAFT).equals(record.getRecordStatus())) {
+        if (Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(record.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + record.getRecordNo()
                     + " 还在「记录中」，先把麻醉记录提交，再登记入 PACU");
         }
@@ -137,8 +158,8 @@ public class PacuServiceImpl implements PacuService {
         entity.setNurseName(employeeNameOf(dto.getNurseId()));
         entity.setAnesthetistId(dto.getAnesthetistId() != null ? dto.getAnesthetistId() : record.getAnesthetistId());
         entity.setAnesthetistName(employeeNameOf(entity.getAnesthetistId()));
-        entity.setStatus(AnesthesiaLabels.PACU_IN);
-        entity.setChargeStatus(AnesthesiaLabels.CHARGE_PENDING);
+        entity.setStatus(PacuStatusEnum.IN.getCode());
+        entity.setChargeStatus(AnesthesiaChargeStatusEnum.PENDING.getCode());
         entity.setComplicationFlag(0);
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
@@ -148,6 +169,8 @@ public class PacuServiceImpl implements PacuService {
                 entity.getPacuNo(), record.getRecordNo(), apply.getPatientName(), entity.getNurseName());
         return entity.getPacuNo();
     }
+
+    // 内部
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -159,7 +182,7 @@ public class PacuServiceImpl implements PacuService {
         }
         Integer total;
         try {
-            total = AnesthesiaLabels.aldreteTotal(dto.getScoreActivity(), dto.getScoreRespiration(),
+            total = AnesthesiaCalcs.aldreteTotal(dto.getScoreActivity(), dto.getScoreRespiration(),
                     dto.getScoreCirculation(), dto.getScoreConsciousness(), dto.getScoreSpo2());
         } catch (IllegalArgumentException e) {
             throw new BusinessException(e.getMessage());
@@ -175,7 +198,7 @@ public class PacuServiceImpl implements PacuService {
         entity.setAnalgesia(dto.getAnalgesia());
         entity.setComplicationFlag(dto.getComplicationFlag() == null ? 0 : dto.getComplicationFlag());
         entity.setComplicationNote(dto.getComplicationNote());
-        entity.setLeaveCriteriaMet(total != null && total >= AnesthesiaLabels.ALDRETE_DISCHARGE_MIN ? 1 : 0);
+        entity.setLeaveCriteriaMet(total != null && total >= AnesthesiaCalcs.ALDRETE_DISCHARGE_MIN ? 1 : 0);
         if (dto.getRemark() != null) {
             entity.setRemark(dto.getRemark());
         }
@@ -189,18 +212,18 @@ public class PacuServiceImpl implements PacuService {
     @Transactional(rollbackFor = Exception.class)
     public OperationChargeSummaryVO leave(PacuLeaveDTO dto) {
         BizAnesthesiaPacu entity = mustInRoom(dto == null ? null : dto.getPacuId());
-        if (!AnesthesiaLabels.isValidDisposition(dto.getDisposition())) {
+        if (!PacuDispositionEnum.isValid(dto.getDisposition())) {
             throw new BusinessException("出室去向取值不合法（应为 1-回病房 2-转ICU 3-继续留观）");
         }
         if (entity.getAldreteTotal() == null) {
             throw new BusinessException("尚未完成 Aldrete 评分，不能出室");
         }
-        boolean criteriaMet = entity.getAldreteTotal() >= AnesthesiaLabels.ALDRETE_DISCHARGE_MIN;
+        boolean criteriaMet = entity.getAldreteTotal() >= AnesthesiaCalcs.ALDRETE_DISCHARGE_MIN;
         if (!criteriaMet) {
             // B-条件必填：Aldrete 未达出室标准时才要求写明出室原因，依赖运行时评分，DTO 注解无法表达，保留
             if (!StringUtils.hasText(dto.getNote())) {
                 throw new BusinessException("Aldrete 评分 " + entity.getAldreteTotal() + " 未达出室标准 "
-                        + AnesthesiaLabels.ALDRETE_DISCHARGE_MIN + " 分，出室必须写明原因");
+                        + AnesthesiaCalcs.ALDRETE_DISCHARGE_MIN + " 分，出室必须写明原因");
             }
             if (Integer.valueOf(1).equals(dto.getDisposition())) {
                 throw new BusinessException("Aldrete 评分 " + entity.getAldreteTotal()
@@ -215,7 +238,7 @@ public class PacuServiceImpl implements PacuService {
         entity.setLeaveTime(toSeconds(dto.getLeaveTime() == null ? now() : dto.getLeaveTime()));
         entity.setDisposition(dto.getDisposition());
         entity.setLeaveCriteriaMet(criteriaMet ? 1 : 0);
-        entity.setStatus(AnesthesiaLabels.PACU_OUT);
+        entity.setStatus(PacuStatusEnum.OUT.getCode());
         if (StringUtils.hasText(dto.getNote())) {
             entity.setRemark(StringUtils.hasText(entity.getRemark())
                     ? entity.getRemark() + "；出室说明：" + dto.getNote() : "出室说明：" + dto.getNote());
@@ -237,7 +260,7 @@ public class PacuServiceImpl implements PacuService {
         pacuMapper.updateById(entity);
         log.info("出PACU pacuNo={} Aldrete={} 去向={} 计费=成功{}项/失败{}项 金额={}",
                 entity.getPacuNo(), entity.getAldreteTotal(),
-                AnesthesiaLabels.pacuDispositionText(dto.getDisposition()),
+                PacuDispositionEnum.labelOrUnknown(dto.getDisposition()),
                 summary.getSuccessItems(), summary.getFailedItems(), summary.getAmount());
         return summary;
     }
@@ -263,27 +286,27 @@ public class PacuServiceImpl implements PacuService {
     @Override
     public long countInRoom() {
         return pacuMapper.selectCount(new LambdaQueryWrapper<BizAnesthesiaPacu>()
-                .eq(BizAnesthesiaPacu::getStatus, AnesthesiaLabels.PACU_IN));
+                .eq(BizAnesthesiaPacu::getStatus, PacuStatusEnum.IN.getCode()));
     }
-
-    // 内部
 
     private void applyChargeResult(BizAnesthesiaPacu entity, OperationChargeSummaryVO summary) {
         if (summary == null || summary.getTotalItems() == 0) {
-            entity.setChargeStatus(AnesthesiaLabels.CHARGE_PENDING);
+            entity.setChargeStatus(AnesthesiaChargeStatusEnum.PENDING.getCode());
             entity.setChargeFailReason("本次没有可计费项目");
             return;
         }
         entity.setChargedAmount(nz(entity.getChargedAmount()).add(summary.getAmount()));
         if (summary.hasFailure()) {
-            entity.setChargeStatus(AnesthesiaLabels.CHARGE_FAILED);
-            entity.setChargeFailReason(AnesthesiaLabels.clipReason(String.join("；", summary.getMessages())));
+            entity.setChargeStatus(AnesthesiaChargeStatusEnum.FAILED.getCode());
+            entity.setChargeFailReason(AnesthesiaCalcs.clipReason(String.join("；", summary.getMessages())));
         } else {
-            entity.setChargeStatus(AnesthesiaLabels.CHARGE_DONE);
+            entity.setChargeStatus(AnesthesiaChargeStatusEnum.DONE.getCode());
             entity.setFeeNo(summary.getFeeNo());
             entity.setChargeFailReason(null);
         }
     }
+
+    // 展示态
 
     private BizAnesthesiaPacu mustGet(Long pacuId) {
         // C-非 DTO 入参：私有 helper 校验方法参数，被多入口复用，Bean Validation 不覆盖，保留
@@ -299,9 +322,9 @@ public class PacuServiceImpl implements PacuService {
 
     private BizAnesthesiaPacu mustInRoom(Long pacuId) {
         BizAnesthesiaPacu entity = mustGet(pacuId);
-        if (!Objects.equals(AnesthesiaLabels.PACU_IN, entity.getStatus())) {
+        if (!Objects.equals(PacuStatusEnum.IN.getCode(), entity.getStatus())) {
             throw new BusinessException("PACU 复苏单 " + entity.getPacuNo() + " 当前状态为「"
-                    + AnesthesiaLabels.pacuStatusText(entity.getStatus()) + "」，只有「在室观察」可以评分/出室");
+                    + PacuStatusEnum.labelOrUnknown(entity.getStatus()) + "」，只有「在室观察」可以评分/出室");
         }
         return entity;
     }
@@ -320,21 +343,19 @@ public class PacuServiceImpl implements PacuService {
         return prefix + String.format("%04d", seq);
     }
 
-    // 展示态
-
     private void decorate(PacuRecordVO vo) {
-        vo.setStatusText(AnesthesiaLabels.pacuStatusText(vo.getStatus()));
-        vo.setAwarenessText(AnesthesiaLabels.awarenessText(vo.getAwareness()));
-        vo.setDispositionText(AnesthesiaLabels.pacuDispositionText(vo.getDisposition()));
-        vo.setChargeStatusText(AnesthesiaLabels.chargeStatusText(vo.getChargeStatus()));
-        vo.setAnesthesiaTypeText(OperationApplyLabels.anesthesiaText(vo.getAnesthesiaType()));
+        vo.setStatusText(PacuStatusEnum.getText(vo.getStatus()));
+        vo.setAwarenessText(AwarenessLevelEnum.getText(vo.getAwareness()));
+        vo.setDispositionText(PacuDispositionEnum.getText(vo.getDisposition()));
+        vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(vo.getChargeStatus()));
+        vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
 
-        boolean inRoom = Objects.equals(AnesthesiaLabels.PACU_IN, vo.getStatus());
+        boolean inRoom = Objects.equals(PacuStatusEnum.IN.getCode(), vo.getStatus());
         Long stay = minutesBetween(vo.getEnterTime(),
                 vo.getLeaveTime() == null ? LocalDateTime.now() : vo.getLeaveTime());
         vo.setStayMinutes(stay);
-        vo.setStayDurationText(AnesthesiaLabels.durationText(stay));
-        vo.setBillHours(AnesthesiaLabels.billHours(stay));
+        vo.setStayDurationText(AnesthesiaCalcs.durationText(stay));
+        vo.setBillHours(AnesthesiaCalcs.billHours(stay));
 
         vo.setCanScore(inRoom);
         vo.setCanLeave(inRoom && vo.getAldreteTotal() != null);
@@ -347,35 +368,15 @@ public class PacuServiceImpl implements PacuService {
         if (inRoom && vo.getAldreteTotal() == null) {
             return "尚未完成 Aldrete 评分";
         }
-        if (vo.getAldreteTotal() != null && vo.getAldreteTotal() < AnesthesiaLabels.ALDRETE_DISCHARGE_MIN) {
-            return "Aldrete " + vo.getAldreteTotal() + " 分，未达出室标准 " + AnesthesiaLabels.ALDRETE_DISCHARGE_MIN + " 分";
+        if (vo.getAldreteTotal() != null && vo.getAldreteTotal() < AnesthesiaCalcs.ALDRETE_DISCHARGE_MIN) {
+            return "Aldrete " + vo.getAldreteTotal() + " 分，未达出室标准 " + AnesthesiaCalcs.ALDRETE_DISCHARGE_MIN + " 分";
         }
-        if (Integer.valueOf(AnesthesiaLabels.CHARGE_FAILED).equals(vo.getChargeStatus())) {
+        if (Integer.valueOf(AnesthesiaChargeStatusEnum.FAILED.getCode()).equals(vo.getChargeStatus())) {
             return "计费异常：" + vo.getChargeFailReason();
         }
-        if (!inRoom && Integer.valueOf(AnesthesiaLabels.CHARGE_PENDING).equals(vo.getChargeStatus())) {
+        if (!inRoom && Integer.valueOf(AnesthesiaChargeStatusEnum.PENDING.getCode()).equals(vo.getChargeStatus())) {
             return "已出室但尚未计费";
         }
         return null;
-    }
-
-    private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
-        if (from == null || to == null) {
-            return null;
-        }
-        long m = Duration.between(from, to).toMinutes();
-        return m < 0 ? null : m;
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
     }
 }

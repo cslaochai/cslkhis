@@ -25,7 +25,9 @@ public class LisQcVO {
 
         private String itemCode;
 
-        /** 项目名称 */
+        /**
+         * 项目名称
+         */
         private String itemName;
 
         private String instrumentNo;
@@ -48,17 +50,23 @@ public class LisQcVO {
 
         private BigDecimal cvLimit;
 
-        /** 实际 CV = SD / 靶值 × 100%（服务端算，超过 cvLimit 即为靶值漂移） */
+        /**
+         * 实际 CV = SD / 靶值 × 100%（服务端算，超过 cvLimit 即为靶值漂移）
+         */
         private BigDecimal cvActual;
 
         private LocalDate expireDate;
 
         private Integer status;
 
-        /** 状态文本 */
+        /**
+         * 状态文本
+         */
         private String statusText;
 
-        /** 该计划累计质控点数 */
+        /**
+         * 该计划累计质控点数
+         */
         private Integer recordCount;
     }
 
@@ -74,7 +82,9 @@ public class LisQcVO {
 
         private String itemCode;
 
-        /** 项目名称 */
+        /**
+         * 项目名称
+         */
         private String itemName;
 
         private String instrumentName;
@@ -94,10 +104,14 @@ public class LisQcVO {
         @com.fasterxml.jackson.annotation.JsonProperty("zScore")
         private BigDecimal zScore;
 
-        /** 1-在控 2-警告 3-失控；0-未判定（靶值/SD 缺失） */
+        /**
+         * 1-在控 2-警告 3-失控；0-未判定（靶值/SD 缺失）
+         */
         private Integer status;
 
-        /** 状态文本 */
+        /**
+         * 状态文本
+         */
         private String statusText;
 
         private String violatedRules;
@@ -129,7 +143,9 @@ public class LisQcVO {
         private long warning;
         private long outOfControl;
         private long pendingHandle;
-        /** 在控率（%），分母为今日质控点数；今日无数据时为 0 */
+        /**
+         * 在控率（%），分母为今日质控点数；今日无数据时为 0
+         */
         private BigDecimal inControlRate;
     }
 }

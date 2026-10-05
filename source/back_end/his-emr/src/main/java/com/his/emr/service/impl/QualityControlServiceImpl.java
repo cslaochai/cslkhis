@@ -3,6 +3,9 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.enums.RecordQcTypeEnum;
+import com.his.common.enums.RecordStatusEnum;
+import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.QcCandidateQueryPageDTO;
 import com.his.emr.dto.QcExecuteDTO;
@@ -17,6 +20,7 @@ import com.his.emr.service.QualityControlService;
 import com.his.emr.support.*;
 import com.his.emr.vo.*;
 import com.his.patient.entity.BizInpatientRecord;
+import com.his.patient.enums.InpatientRecordTypeEnum;
 import com.his.patient.mapper.BizInpatientRecordMapper;
 import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
@@ -255,7 +259,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         for (int code : new int[]{0, 1, 2, 3, 4}) {
             QcTypeSelectListVO item = new QcTypeSelectListVO();
             item.setCode(code);
-            item.setText(QcTexts.qcType(code));
+            item.setText(RecordQcTypeEnum.getText(code));
             list.add(item);
         }
         return list;
@@ -363,7 +367,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         }
         if (qc.getQcStatus() == null || qc.getQcStatus() != 1) {
             throw new BusinessException("只有「待处理」的质控单可以处理，当前状态："
-                    + QcTexts.qcStatus(qc.getQcStatus()));
+                    + QcStatusEnum.labelOrUnknown(qc.getQcStatus()));
         }
         qc.setQcStatus(ignore ? RuleCheckStatusEnum.IGNORED.getCode() : RuleCheckStatusEnum.HANDLED.getCode());
         qc.setRemark(remark);
@@ -390,27 +394,44 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     // 码值中文与等级换算
 
     /**
-     * 列表行补中文。未知码值由 {@link QcTexts} 渲染成「未知(n)」，不回落合法值。
+     * 列表行补中文。未知码值由各枚举 {@code getText} 渲染成空串，不回落合法值。
      * score 为空的旧版质控单 gradeText 保持 null —— 不猜等级。
      */
     private void enrich(BizQualityControlVO vo) {
-        vo.setRecordSourceText(QcTexts.recordSource(vo.getRecordSource()));
-        vo.setQcTypeText(QcTexts.qcType(vo.getQcType()));
-        vo.setQcStatusText(QcTexts.qcStatus(vo.getQcStatus()));
-        vo.setQcResultText(QcTexts.qcResult(vo.getQcResult()));
-        vo.setRecordStatusText(QcTexts.recordStatus(vo.getRecordStatus()));
-        vo.setRecordTypeText(vo.getRecordType() == null ? null : QcTexts.recordType(vo.getRecordType()));
+        vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
+        vo.setQcTypeText(RecordQcTypeEnum.getText(vo.getQcType()));
+        vo.setQcStatusText(QcStatusEnum.getText(vo.getQcStatus()));
+        vo.setQcResultText(QcResultEnum.getText(vo.getQcResult()));
+        vo.setRecordStatusText(RecordStatusEnum.getText(vo.getRecordStatus()));
+        vo.setRecordTypeText(vo.getRecordType() == null ? null : InpatientRecordTypeEnum.getText(vo.getRecordType()));
         vo.setSeverityMaxText(vo.getSeverityMax() == null ? null : QcSeverityEnum.textOf(vo.getSeverityMax()));
-        vo.setGradeText(QcTexts.grade(vo.getScore(), vo.getSeverityMax()));
+        vo.setGradeText(grade(vo.getScore(), vo.getSeverityMax()));
     }
 
     private void enrich(QcCandidateVO vo) {
-        vo.setRecordSourceText(QcTexts.recordSource(vo.getRecordSource()));
-        vo.setGenderText(QcTexts.gender(vo.getGender()));
-        vo.setRecordTypeText(vo.getRecordType() == null ? null : QcTexts.recordType(vo.getRecordType()));
-        vo.setRecordStatusText(QcTexts.recordStatus(vo.getRecordStatus()));
-        vo.setLastGrade(QcTexts.grade(vo.getLastScore(), vo.getLastSeverityMax()));
+        vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
+        vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
+        vo.setRecordTypeText(vo.getRecordType() == null ? null : InpatientRecordTypeEnum.getText(vo.getRecordType()));
+        vo.setRecordStatusText(RecordStatusEnum.getText(vo.getRecordStatus()));
+        vo.setLastGrade(grade(vo.getLastScore(), vo.getLastSeverityMax()));
         vo.setQced(vo.getLastQcId() != null);
+    }
+
+    /**
+     * 病历质量等级：有否决项必为丙级，否则按分数线（甲≥90 乙75~89 丙&lt;75）。
+     * score 为空（旧版质控）返回 null —— 不猜等级。
+     */
+    private static String grade(Integer score, Integer severityMax) {
+        if (score == null) {
+            return null;
+        }
+        if (severityMax != null && severityMax >= QcSeverityEnum.FATAL.getCode()) {
+            return "丙";
+        }
+        if (score >= 90) {
+            return "甲";
+        }
+        return score >= 75 ? "乙" : "丙";
     }
 
     /**
@@ -422,8 +443,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             return new ArrayList<>();
         }
         for (QcIssue issue : issues) {
-            QcDimensionEnum dimension = QcDimensionEnum.ofCode(issue.getDimension());
-            issue.setDimensionText(dimension == null ? "未知(" + issue.getDimension() + ")" : dimension.getText());
+            issue.setDimensionText(QcDimensionEnum.getText(issue.getDimension()));
             issue.setSeverityText(QcSeverityEnum.textOf(issue.getSeverity()));
             QcRuleEnum rule = QcRuleEnum.ofCode(issue.getRuleCode());
             issue.setBasis(rule == null ? null : rule.getBasis());

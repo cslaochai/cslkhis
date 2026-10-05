@@ -13,6 +13,7 @@ import com.his.pharmacy.dto.DrugInboundQueryPageDTO;
 import com.his.pharmacy.entity.BizDrugInbound;
 import com.his.pharmacy.entity.BizDrugInboundDetail;
 import com.his.pharmacy.entity.BizDrugStock;
+import com.his.pharmacy.enums.DrugInboundStatusEnum;
 import com.his.pharmacy.mapper.BizDrugInboundDetailMapper;
 import com.his.pharmacy.mapper.BizDrugInboundMapper;
 import com.his.pharmacy.service.DrugInboundService;
@@ -171,7 +172,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("入库单不存在或已删除");
         }
         if (in.getInboundStatus() == null || in.getInboundStatus() != 1) {
-            throw new BusinessException("只有待审核的入库单可以审核（当前：" + statusText(in.getInboundStatus()) + "）");
+            throw new BusinessException("只有待审核的入库单可以审核（当前：" + DrugInboundStatusEnum.labelOrUnknown(in.getInboundStatus()) + "）");
         }
         if (detailMapper.countActiveByInbound(in.getId()) == 0) {
             throw new BusinessException("入库单没有有效明细，不能审核");
@@ -195,7 +196,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("入库单不存在或已删除");
         }
         if (in.getInboundStatus() == null || in.getInboundStatus() != 2) {
-            throw new BusinessException("只有已审核的入库单可以入库（当前：" + statusText(in.getInboundStatus()) + "）");
+            throw new BusinessException("只有已审核的入库单可以入库（当前：" + DrugInboundStatusEnum.labelOrUnknown(in.getInboundStatus()) + "）");
         }
 
         List<DrugInboundDetailVO> details = detailMapper.selectByInboundId(in.getId());
@@ -239,7 +240,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("入库单不存在或已删除");
         }
         if (in.getInboundStatus() == null || (in.getInboundStatus() != 1 && in.getInboundStatus() != 2)) {
-            throw new BusinessException("只有待审核或已审核的入库单可以取消（当前：" + statusText(in.getInboundStatus())
+            throw new BusinessException("只有待审核或已审核的入库单可以取消（当前：" + DrugInboundStatusEnum.labelOrUnknown(in.getInboundStatus())
                     + "）；已入库的入库单要冲销请走退货入库");
         }
         String operator = UserUtils.getCurrentEmployeeName();
@@ -272,18 +273,5 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
 
     private static String emptyToNull(String s) {
         return StringUtils.hasText(s) ? s.trim() : null;
-    }
-
-    private static String statusText(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-        return switch (status) {
-            case 1 -> "待审核";
-            case 2 -> "已审核";
-            case 3 -> "已入库";
-            case 4 -> "已取消";
-            default -> "未知(" + status + ")";
-        };
     }
 }

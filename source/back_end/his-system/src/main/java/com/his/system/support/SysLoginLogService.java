@@ -31,56 +31,6 @@ public class SysLoginLogService {
     private final SysLoginLogMapper loginLogMapper;
     private final SysUserMapper userMapper;
 
-    /** 登录成功/失败/登出统一入口。 */
-    public void record(String userName, HttpServletRequest request, boolean success, String msg) {
-        Long userId = null;
-        String realName = null;
-        if (StringUtils.hasText(userName)) {
-            SysUser user = findUser(userName);
-            if (user != null) {
-                userId = user.getId();
-                realName = user.getRealName();
-            }
-        }
-        record(userName, userId, realName, request, success, msg);
-    }
-
-    /** 已知用户身份时（登录成功链路，省一次回查）。 */
-    public void record(String userName, Long userId, String realName, HttpServletRequest request,
-                       boolean success, String msg) {
-        try {
-            String ip = clientIp(request);
-            String ua = request == null ? null : request.getHeader("User-Agent");
-            SysLoginLog row = new SysLoginLog();
-            row.setUserName(cut(userName, 64));
-            row.setUserId(userId);
-            row.setRealName(cut(realName, 64));
-            row.setLoginIp(cut(ip, 50));
-            row.setLoginLocation(ip == null ? null : (isPrivateIp(ip) ? "内网" : "外网"));
-            row.setBrowser(cut(parseBrowser(ua), 100));
-            row.setOs(cut(parseOs(ua), 100));
-            row.setUserAgent(cut(ua, 500));
-            row.setLoginStatus(success ? 0 : 1);
-            row.setMsg(cut(msg, 200));
-            row.setLoginTime(LocalDateTime.now());
-            row.setCreateBy(cut(userName, 64));
-            loginLogMapper.insert(row);
-        } catch (Exception e) {
-            log.error("登录日志写入失败 userName={} success={}", userName, success, e);
-        }
-    }
-
-    private SysUser findUser(String userName) {
-        try {
-            LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(SysUser::getUserName, userName).last("LIMIT 1");
-            return userMapper.selectOne(wrapper);
-        } catch (Exception e) {
-            log.warn("登录日志回填用户信息失败 userName={}", userName, e);
-            return null;
-        }
-    }
-
     static String clientIp(HttpServletRequest request) {
         if (request == null) {
             return null;
@@ -95,7 +45,9 @@ public class SysLoginLogService {
         return request.getRemoteAddr();
     }
 
-    /** 内网网段判定（10/8、172.16/12、192.168/16、127/8、::1）。不认识的公网 IP 一律"外网"，不猜城市。 */
+    /**
+     * 内网网段判定（10/8、172.16/12、192.168/16、127/8、::1）。不认识的公网 IP 一律"外网"，不猜城市。
+     */
     static boolean isPrivateIp(String ip) {
         if (!StringUtils.hasText(ip)) {
             return false;
@@ -118,7 +70,9 @@ public class SysLoginLogService {
         return false;
     }
 
-    /** 浏览器识别：只认主流内核，认不出就留空（不猜）。 */
+    /**
+     * 浏览器识别：只认主流内核，认不出就留空（不猜）。
+     */
     static String parseBrowser(String ua) {
         if (!StringUtils.hasText(ua)) {
             return null;
@@ -167,5 +121,59 @@ public class SysLoginLogService {
 
     private static String cut(String s, int max) {
         return s == null || s.length() <= max ? s : s.substring(0, max);
+    }
+
+    /**
+     * 登录成功/失败/登出统一入口。
+     */
+    public void record(String userName, HttpServletRequest request, boolean success, String msg) {
+        Long userId = null;
+        String realName = null;
+        if (StringUtils.hasText(userName)) {
+            SysUser user = findUser(userName);
+            if (user != null) {
+                userId = user.getId();
+                realName = user.getRealName();
+            }
+        }
+        record(userName, userId, realName, request, success, msg);
+    }
+
+    /**
+     * 已知用户身份时（登录成功链路，省一次回查）。
+     */
+    public void record(String userName, Long userId, String realName, HttpServletRequest request,
+                       boolean success, String msg) {
+        try {
+            String ip = clientIp(request);
+            String ua = request == null ? null : request.getHeader("User-Agent");
+            SysLoginLog row = new SysLoginLog();
+            row.setUserName(cut(userName, 64));
+            row.setUserId(userId);
+            row.setRealName(cut(realName, 64));
+            row.setLoginIp(cut(ip, 50));
+            row.setLoginLocation(ip == null ? null : (isPrivateIp(ip) ? "内网" : "外网"));
+            row.setBrowser(cut(parseBrowser(ua), 100));
+            row.setOs(cut(parseOs(ua), 100));
+            row.setUserAgent(cut(ua, 500));
+            row.setLoginStatus(success ? 0 : 1);
+            row.setMsg(cut(msg, 200));
+            row.setLoginTime(LocalDateTime.now());
+            row.setCreateBy(cut(userName, 64));
+            loginLogMapper.insert(row);
+        } catch (Exception e) {
+            log.error("登录日志写入失败 userName={} success={}", userName, success, e);
+        }
+    }
+
+    private SysUser findUser(String userName) {
+        try {
+            LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(SysUser::getUserName, userName).last("LIMIT 1");
+            return userMapper.selectOne(wrapper);
+        } catch (Exception e) {
+            log.warn("登录日志回填用户信息失败 userName={}", userName, e);
+            return null;
+        }
     }
 }

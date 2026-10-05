@@ -199,9 +199,9 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         BizStaffSchedule core = staffScheduleService.ensureForClinic(dto, source);
         if (submittedStaffType != null && !Objects.equals(submittedStaffType, core.getStaffType())) {
             throw new BusinessException("「" + core.getEmployeeName() + "」在"
-                    + OrgUnitTypeEnum.labelOf(core.getOrgType()) + "「" + core.getDeptName()
-                    + "」的岗位类别是" + StaffTypeEnum.labelOf(core.getStaffType())
-                    + "，不是" + StaffTypeEnum.labelOf(submittedStaffType) + "：请先修正这个人的岗位配置，排班表不接受手填类别");
+                    + OrgUnitTypeEnum.getText(core.getOrgType()) + "「" + core.getDeptName()
+                    + "」的岗位类别是" + StaffTypeEnum.getText(core.getStaffType())
+                    + "，不是" + StaffTypeEnum.getText(submittedStaffType) + "：请先修正这个人的岗位配置，排班表不接受手填类别");
         }
         schedule.setStaffScheduleId(core.getId());
         schedule.setWeekDay(core.getWeekDay());
@@ -518,7 +518,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         vo.setDoctorName(entity.getDoctorName());
         vo.setStaffType(entity.getStaffType());
         // 岗位类别名不落排班表（类别码已在表上），按码从枚举带出——枚举是本地常量，零查库
-        vo.setStaffTypeName(StaffTypeEnum.labelOf(entity.getStaffType()));
+        vo.setStaffTypeName(StaffTypeEnum.getText(entity.getStaffType()));
         vo.setScheduleDate(entity.getScheduleDate());
         vo.setStartTime(entity.getStartTime());
         vo.setEndTime(entity.getEndTime());
@@ -756,7 +756,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         vo.setStaffId(s.getDoctorId());
         vo.setStaffName(s.getDoctorName());
         vo.setStaffType(s.getStaffType());
-        vo.setStaffTypeName(StaffTypeEnum.labelOf(s.getStaffType()));
+        vo.setStaffTypeName(StaffTypeEnum.getText(s.getStaffType()));
         vo.setDeptId(s.getDeptId());
         vo.setDeptName(s.getDeptName());
         vo.setShiftId(s.getShiftId());
@@ -800,7 +800,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         // 加号是给医生出诊班加号源：出勤岗压根没有号源池，加了也挂不出去（sql/195）
         if (!StaffTypeEnum.hasSource(schedule.getStaffType())) {
             throw new BusinessException("只有医生出诊排班能加号："
-                    + StaffTypeEnum.labelOf(schedule.getStaffType()) + "岗位是出勤排班，不对外放号");
+                    + StaffTypeEnum.getText(schedule.getStaffType()) + "岗位是出勤排班，不对外放号");
         }
         int added = schedule.getAddedSource() == null ? 0 : schedule.getAddedSource();
         String stamp = LocalDate.now() + " 加号" + addNum + "（" + reason + "）";

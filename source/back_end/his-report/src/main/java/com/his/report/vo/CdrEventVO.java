@@ -56,7 +56,7 @@ public class CdrEventVO {
     private Integer statusCode;
 
     /** 状态文本 */
-    @Schema(description = "状态文案（服务端翻译，未知码值给 未知(n)）")
+    @Schema(description = "状态文案（服务端翻译，未知码值返回空串）")
     private String statusText;
 
     @Schema(description = "副码（文书类型/医嘱类别/诊断类型…）")

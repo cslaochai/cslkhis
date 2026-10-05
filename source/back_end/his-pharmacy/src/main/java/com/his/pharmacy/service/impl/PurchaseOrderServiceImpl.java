@@ -14,6 +14,7 @@ import com.his.pharmacy.dto.PurchaseOrderUpsertDTO;
 import com.his.pharmacy.entity.BizPurchaseOrder;
 import com.his.pharmacy.entity.BizPurchaseOrderDetail;
 import com.his.pharmacy.entity.SysSupplier;
+import com.his.pharmacy.enums.PurchaseApprovalStatusEnum;
 import com.his.pharmacy.mapper.BizDrugInboundMapper;
 import com.his.pharmacy.mapper.BizPurchaseOrderDetailMapper;
 import com.his.pharmacy.mapper.BizPurchaseOrderMapper;
@@ -159,7 +160,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
             throw new BusinessException("采购订单不存在或已删除");
         }
         if (order.getApprovalStatus() == null || order.getApprovalStatus() != 0) {
-            throw new BusinessException("只有待审批的订单可以审批（当前：" + approvalText(order.getApprovalStatus()) + "）");
+            throw new BusinessException("只有待审批的订单可以审批（当前：" + PurchaseApprovalStatusEnum.labelOrUnknown(order.getApprovalStatus()) + "）");
         }
         // B 类：驳回原因只在 approvalStatus=2 时必填，条件必填不能下沉成 @NotBlank
         if (dto.getApprovalStatus() == 2 && !StringUtils.hasText(dto.getRemark())) {
@@ -187,7 +188,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
             throw new BusinessException("采购订单不存在或已删除");
         }
         if (order.getApprovalStatus() == null || order.getApprovalStatus() != 1) {
-            throw new BusinessException("只有审批通过的采购订单才能生成入库单（当前审批：" + approvalText(order.getApprovalStatus()) + "）");
+            throw new BusinessException("只有审批通过的采购订单才能生成入库单（当前审批：" + PurchaseApprovalStatusEnum.labelOrUnknown(order.getApprovalStatus()) + "）");
         }
 
         List<PurchaseOrderDetailVO> details = detailMapper.selectDetailWithDrug(orderId);
@@ -281,17 +282,5 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
 
     private static String emptyToNull(String s) {
         return StringUtils.hasText(s) ? s.trim() : null;
-    }
-
-    private static String approvalText(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-        return switch (status) {
-            case 0 -> "待审批";
-            case 1 -> "已通过";
-            case 2 -> "已驳回";
-            default -> "未知(" + status + ")";
-        };
     }
 }
