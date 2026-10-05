@@ -11,12 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -38,7 +33,7 @@ public class InpatientLeaveController {
     @PreAuthorize("hasAuthority('ipd:leave:list')")
     @Operation(summary = "请假台账分页（overdueOnly=true 只看超期未归，超期是查询时算的展示态）")
     @PostMapping("/listPage")
-    public Result<PageResult<InpatientLeaveVO.Row>> listPage(@RequestBody(required = false) InpatientLeaveDTO.QueryPage dto) {
+    public Result<PageResult<InpatientLeaveVO.Row>> listPage(@Valid @RequestBody(required = false) InpatientLeaveDTO.QueryPage dto) {
         return Result.success(leaveService.listPage(dto == null ? new InpatientLeaveDTO.QueryPage() : dto));
     }
 

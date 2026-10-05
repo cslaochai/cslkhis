@@ -17,9 +17,13 @@ public class SurveyDispatchIssueDTO implements Serializable {
     @NotNull(message = "随访任务ID不能为空")
     private Long followupTaskId;
 
-    /** 回收渠道:1-电话代填 2-短信 3-微信 4-现场扫码（默认 1） */
+    /**
+     * 回收渠道:1-电话代填 2-短信 3-微信 4-现场扫码（默认 1）
+     */
     private Integer channel;
 
-    /** 回收截止天数（默认 14 天） */
+    /**
+     * 回收截止天数（默认 14 天）
+     */
     private Integer expireDays;
 }

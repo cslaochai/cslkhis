@@ -2,8 +2,8 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.SysUserQueryPageDTO;
 import com.his.system.dto.SysUserPasswordUpsertDTO;
+import com.his.system.dto.SysUserQueryPageDTO;
 import com.his.system.dto.SysUserUpsertDTO;
 import com.his.system.service.SysUserService;
 import com.his.system.vo.SysUserListVO;
@@ -12,9 +12,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 用户管理控制器
@@ -30,7 +29,7 @@ public class UserController {
 
     @Operation(summary = "分页查询用户列表")
     @PostMapping("/listPage")
-    public Result<PageResult<SysUserListVO>> listPage(@RequestBody SysUserQueryPageDTO queryDTO) {
+    public Result<PageResult<SysUserListVO>> listPage(@Valid @RequestBody SysUserQueryPageDTO queryDTO) {
         return Result.success(userService.queryUserPage(queryDTO));
     }
 
@@ -73,7 +72,7 @@ public class UserController {
     @PreAuthorize("hasAuthority('system:user:edit')")
     @Operation(summary = "重置密码")
     @PostMapping("/resetPassword")
-    public Result<Void> resetPassword(@RequestBody SysUserPasswordUpsertDTO resetDTO) {
+    public Result<Void> resetPassword(@Valid @RequestBody SysUserPasswordUpsertDTO resetDTO) {
         userService.resetUserPassword(resetDTO);
         return Result.success();
     }

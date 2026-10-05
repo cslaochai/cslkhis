@@ -8,15 +8,23 @@ import lombok.Data;
 @Data
 public class ArchiveBorrowStatsVO {
 
-    /** 待审核 */
+    /**
+     * 待审核
+     */
     private Long pending;
 
-    /** 已借出（未还） */
+    /**
+     * 已借出（未还）
+     */
     private Long lentOut;
 
-    /** 超期未还（已借出且应还日期早于今日） */
+    /**
+     * 超期未还（已借出且应还日期早于今日）
+     */
     private Long overdue;
 
-    /** 已归还（累计） */
+    /**
+     * 已归还（累计）
+     */
     private Long returned;
 }

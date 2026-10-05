@@ -14,6 +14,8 @@ public class DisputeActionDTO implements Serializable {
     @NotNull(message = "单据ID不能为空")
     private Long id;
 
-    /** 动作说明（撤销必填） */
+    /**
+     * 动作说明（撤销必填）
+     */
     private String content;
 }

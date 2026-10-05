@@ -1,10 +1,10 @@
 package com.his.emr.service.impl;
 
-import com.his.emr.service.TreatmentService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
+import com.his.common.enums.BillingStatusEnum;
 import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
@@ -12,9 +12,12 @@ import com.his.common.exception.BusinessException;
 import com.his.emr.dto.TreatmentDTO;
 import com.his.emr.entity.BizTreatmentApply;
 import com.his.emr.entity.BizTreatmentRecord;
+import com.his.emr.enums.TreatmentExecStatusEnum;
+import com.his.emr.enums.TreatmentRecordStatusEnum;
 import com.his.emr.mapper.BizTreatmentApplyMapper;
 import com.his.emr.mapper.BizTreatmentRecordMapper;
 import com.his.emr.mapper.SysTreatmentItemMapper;
+import com.his.emr.service.TreatmentService;
 import com.his.emr.support.TreatmentChargeInvoker;
 import com.his.emr.support.TreatmentDictText;
 import com.his.emr.vo.TreatmentVO;
@@ -34,19 +37,8 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
-import com.his.common.enums.BillingStatusEnum;
-import com.his.emr.enums.TreatmentExecStatusEnum;
-
-import com.his.emr.enums.TreatmentRecordStatusEnum;
 /**
  * 门诊治疗站（G19）：治疗申请（疗程）→ 排期 → 按次打卡 → 按次计费。
  *
@@ -72,7 +64,9 @@ public class TreatmentServiceImpl implements TreatmentService {
 
     private static final int AMOUNT_SCALE = 2;
     private static final String UNIT_TIMES = "次";
-    /** 开单/改期允许的日期窗口：往前 31 天（补开疗程），往后 365 天 */
+    /**
+     * 开单/改期允许的日期窗口：往前 31 天（补开疗程），往后 365 天
+     */
     private static final int BACK_DAYS = 31;
     private static final int AHEAD_DAYS = 365;
 
@@ -81,10 +75,65 @@ public class TreatmentServiceImpl implements TreatmentService {
     private final SysTreatmentItemMapper itemMapper;
     private final RedisSequenceService sequenceService;
     private final TreatmentDictText dictText;
-    /** 记账经 Invoker 走 REQUIRES_NEW 独立事务：记账失败不拖垮打卡，留痕与补记入口都在流水行上 */
+    /**
+     * 记账经 Invoker 走 REQUIRES_NEW 独立事务：记账失败不拖垮打卡，留痕与补记入口都在流水行上
+     */
     private final TreatmentChargeInvoker chargeInvoker;
 
     // 查询
+
+    private static String trim(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private static int nz(Integer v, int dft) {
+        return v == null ? dft : v;
+    }
+
+    /**
+     * 写库前一律截到列宽：超长会把整条 update 顶成 500，用户连失败原因都看不到
+     */
+    private static String cut(String s, int max) {
+        String t = trim(s);
+        if (t == null) {
+            return null;
+        }
+        return t.length() <= max ? t : t.substring(0, max);
+    }
+
+    private static String str(Object o) {
+        return o == null ? null : String.valueOf(o);
+    }
+
+    private static Long toLong(Object o) {
+        if (o == null) {
+            return null;
+        }
+        return o instanceof Number n ? n.longValue() : Long.parseLong(String.valueOf(o));
+    }
+
+    private static Integer toInt(Object o) {
+        if (o == null) {
+            return null;
+        }
+        return o instanceof Number n ? n.intValue() : Integer.parseInt(String.valueOf(o));
+    }
+
+    // 写入
+
+    private static BigDecimal toDecimal(Object o) {
+        if (o == null) {
+            return null;
+        }
+        if (o instanceof BigDecimal b) {
+            return b;
+        }
+        if (o instanceof Number n) {
+            return BigDecimal.valueOf(n.doubleValue());
+        }
+        String s = String.valueOf(o);
+        return StringUtils.hasText(s) ? new BigDecimal(s) : null;
+    }
 
     public PageResult<TreatmentVO.ApplyVO> listPageApplies(TreatmentDTO.ApplyQuery q) {
         LambdaQueryWrapper<BizTreatmentApply> w = new LambdaQueryWrapper<>();
@@ -121,7 +170,9 @@ public class TreatmentServiceImpl implements TreatmentService {
         return detail;
     }
 
-    /** 按次流水分页（治疗台与台账共用一套过滤口径） */
+    /**
+     * 按次流水分页（治疗台与台账共用一套过滤口径）
+     */
     public PageResult<TreatmentVO.ExecVO> listPageExecs(TreatmentDTO.ExecQuery q) {
         Page<BizTreatmentRecord> page = execPage(q, nz(q.getPageNum(), 1), nz(q.getPageSize(), 20));
         Map<Long, BizTreatmentApply> applies = applyMap(page.getRecords());
@@ -174,7 +225,11 @@ public class TreatmentServiceImpl implements TreatmentService {
         return v;
     }
 
-    /** 治疗项目候选（开单时选项目用，带单价与能解析出来的执行科室） */
+    // 计费
+
+    /**
+     * 治疗项目候选（开单时选项目用，带单价与能解析出来的执行科室）
+     */
     public List<TreatmentVO.ItemSelectListVO> itemSelectList(String keyword, Integer limit) {
         List<TreatmentVO.ItemSelectListVO> out = new ArrayList<>();
         for (Map<String, Object> row : itemMapper.selectOptions(trim(keyword), Math.min(nz(limit, 50), 200))) {
@@ -193,8 +248,6 @@ public class TreatmentServiceImpl implements TreatmentService {
         }
         return out;
     }
-
-    // 写入
 
     /**
      * 开单 / 改疗程。
@@ -301,7 +354,11 @@ public class TreatmentServiceImpl implements TreatmentService {
         return getDetail(apply.getApplyId());
     }
 
-    /** 改期（单条待执行流水挪到别的日期） */
+    // 排期与状态
+
+    /**
+     * 改期（单条待执行流水挪到别的日期）
+     */
     @Transactional(rollbackFor = Exception.class)
     public TreatmentVO.ExecVO rescheduleExec(TreatmentDTO.ExecReschedule dto) {
         BizTreatmentRecord exec = requireExec(dto.getRecordId());
@@ -356,7 +413,9 @@ public class TreatmentServiceImpl implements TreatmentService {
         return vo;
     }
 
-    /** 补记：只针对「已执行但没记上钱」的行 */
+    /**
+     * 补记：只针对「已执行但没记上钱」的行
+     */
     @Transactional(rollbackFor = Exception.class)
     public TreatmentVO.ExecVO retryCharge(Long recordId) {
         BizTreatmentRecord exec = requireExec(recordId);
@@ -373,7 +432,11 @@ public class TreatmentServiceImpl implements TreatmentService {
         return vo;
     }
 
-    /** 取消疗程：未执行的次数一并取消；已执行且已计费的行不退费（退费走收费窗口） */
+    // 组装 VO
+
+    /**
+     * 取消疗程：未执行的次数一并取消；已执行且已计费的行不退费（退费走收费窗口）
+     */
     @Transactional(rollbackFor = Exception.class)
     public int cancelApply(TreatmentDTO.ApplyCancel dto) {
         BizTreatmentApply apply = requireApply(dto.getApplyId());
@@ -396,7 +459,9 @@ public class TreatmentServiceImpl implements TreatmentService {
         return pending.size();
     }
 
-    /** 删除申请单：只有"一次都没执行过"的疗程可以删 */
+    /**
+     * 删除申请单：只有"一次都没执行过"的疗程可以删
+     */
     @Transactional(rollbackFor = Exception.class)
     public void deleteApply(Long applyId) {
         BizTreatmentApply apply = requireApply(applyId);
@@ -409,8 +474,6 @@ public class TreatmentServiceImpl implements TreatmentService {
         execMapper.delete(new LambdaQueryWrapper<BizTreatmentRecord>().eq(BizTreatmentRecord::getApplyId, applyId));
         applyMapper.deleteById(applyId);
     }
-
-    // 计费
 
     /**
      * 一次打卡计费一次，把结果写回流水行。
@@ -463,6 +526,8 @@ public class TreatmentServiceImpl implements TreatmentService {
         }
     }
 
+    // 内部工具
+
     private void markCharge(BizTreatmentRecord exec, int status, String feeNo, Long feeId,
                             BigDecimal amount, String reason) {
         boolean done = status == BillingStatusEnum.BILLED.getCode();
@@ -478,8 +543,6 @@ public class TreatmentServiceImpl implements TreatmentService {
         exec.setChargeTime(done ? LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS) : null);
         execMapper.updateById(exec);
     }
-
-    // 排期与状态
 
     private void buildSchedule(BizTreatmentApply apply) {
         LocalDate start = apply.getStartDate() == null ? LocalDate.now() : apply.getStartDate();
@@ -546,8 +609,6 @@ public class TreatmentServiceImpl implements TreatmentService {
         return null;
     }
 
-    // 组装 VO
-
     private TreatmentVO.ApplyVO toApplyVo(BizTreatmentApply a) {
         TreatmentVO.ApplyVO v = new TreatmentVO.ApplyVO();
         BeanUtils.copyProperties(a, v);
@@ -606,8 +667,6 @@ public class TreatmentServiceImpl implements TreatmentService {
         return v;
     }
 
-    // 内部工具
-
     private Page<BizTreatmentRecord> execPage(TreatmentDTO.ExecQuery q, int pageNum, int pageSize) {
         LambdaQueryWrapper<BizTreatmentRecord> w = new LambdaQueryWrapper<>();
         w.eq(q.getApplyId() != null, BizTreatmentRecord::getApplyId, q.getApplyId())
@@ -636,7 +695,9 @@ public class TreatmentServiceImpl implements TreatmentService {
         return execMapper.selectPage(new Page<>(pageNum, pageSize), w);
     }
 
-    /** 关键字/患者 → 申请单ID 集合（流水表上没有患者姓名列，只能先回申请单定位） */
+    /**
+     * 关键字/患者 → 申请单ID 集合（流水表上没有患者姓名列，只能先回申请单定位）
+     */
     private List<Long> applyIds(Long patientId, String kw) {
         LambdaQueryWrapper<BizTreatmentApply> w = new LambdaQueryWrapper<>();
         w.select(BizTreatmentApply::getApplyId)
@@ -746,54 +807,5 @@ public class TreatmentServiceImpl implements TreatmentService {
 
     private String execStatusText(Integer status) {
         return dictText.text(TreatmentDictText.DICT_EXEC_STATUS, status);
-    }
-
-    private static String trim(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static int nz(Integer v, int dft) {
-        return v == null ? dft : v;
-    }
-
-    /** 写库前一律截到列宽：超长会把整条 update 顶成 500，用户连失败原因都看不到 */
-    private static String cut(String s, int max) {
-        String t = trim(s);
-        if (t == null) {
-            return null;
-        }
-        return t.length() <= max ? t : t.substring(0, max);
-    }
-
-    private static String str(Object o) {
-        return o == null ? null : String.valueOf(o);
-    }
-
-    private static Long toLong(Object o) {
-        if (o == null) {
-            return null;
-        }
-        return o instanceof Number n ? n.longValue() : Long.parseLong(String.valueOf(o));
-    }
-
-    private static Integer toInt(Object o) {
-        if (o == null) {
-            return null;
-        }
-        return o instanceof Number n ? n.intValue() : Integer.parseInt(String.valueOf(o));
-    }
-
-    private static BigDecimal toDecimal(Object o) {
-        if (o == null) {
-            return null;
-        }
-        if (o instanceof BigDecimal b) {
-            return b;
-        }
-        if (o instanceof Number n) {
-            return BigDecimal.valueOf(n.doubleValue());
-        }
-        String s = String.valueOf(o);
-        return StringUtils.hasText(s) ? new BigDecimal(s) : null;
     }
 }

@@ -2,32 +2,15 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.emr.dto.RxReviewBatchQueryPageDTO;
-import com.his.emr.dto.RxReviewBatchUpsertDTO;
-import com.his.emr.dto.RxReviewItemAddByNoDTO;
-import com.his.emr.dto.RxReviewItemPageDTO;
-import com.his.emr.dto.RxReviewItemUpsertDTO;
-import com.his.emr.dto.RxReviewPublicityDTO;
-import com.his.emr.dto.RxReviewTalkQueryPageDTO;
-import com.his.emr.dto.RxReviewTalkUpsertDTO;
+import com.his.emr.dto.*;
 import com.his.emr.service.RxReviewService;
-import com.his.emr.vo.RxPublicityDoctorVO;
-import com.his.emr.vo.RxReviewBatchVO;
-import com.his.emr.vo.RxReviewItemVO;
-import com.his.emr.vo.RxReviewStatsVO;
-import com.his.emr.vo.RxReviewTalkVO;
+import com.his.emr.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -51,7 +34,7 @@ public class RxReviewController {
     @Operation(summary = "点评批次分页")
     @PreAuthorize("hasAuthority('pharmacy:rxReview:list')")
     @PostMapping("/batchListPage")
-    public Result<PageResult<RxReviewBatchVO>> batchListPage(@RequestBody RxReviewBatchQueryPageDTO query) {
+    public Result<PageResult<RxReviewBatchVO>> batchListPage(@Valid @RequestBody RxReviewBatchQueryPageDTO query) {
         return Result.success(rxReviewService.batchListPage(query));
     }
 
@@ -81,7 +64,7 @@ public class RxReviewController {
     @Operation(summary = "点评明细分页（附处方药品明细文本）")
     @PreAuthorize("hasAuthority('pharmacy:rxReview:list')")
     @PostMapping("/itemListPage")
-    public Result<PageResult<RxReviewItemVO>> itemListPage(@RequestBody RxReviewItemPageDTO query) {
+    public Result<PageResult<RxReviewItemVO>> itemListPage(@Valid @RequestBody RxReviewItemPageDTO query) {
         return Result.success(rxReviewService.itemListPage(query));
     }
 
@@ -111,7 +94,7 @@ public class RxReviewController {
     @Operation(summary = "已公示明细分页（公示页）")
     @PreAuthorize("hasAuthority('pharmacy:rxPublicity:list')")
     @PostMapping("/publicityListPage")
-    public Result<PageResult<RxReviewItemVO>> publicityListPage(@RequestBody RxReviewItemPageDTO query) {
+    public Result<PageResult<RxReviewItemVO>> publicityListPage(@Valid @RequestBody RxReviewItemPageDTO query) {
         return Result.success(rxReviewService.publicityListPage(query));
     }
 
@@ -134,7 +117,7 @@ public class RxReviewController {
     @Operation(summary = "约谈记录分页")
     @PreAuthorize("hasAuthority('pharmacy:rxReview:list')")
     @PostMapping("/talkListPage")
-    public Result<PageResult<RxReviewTalkVO>> talkListPage(@RequestBody RxReviewTalkQueryPageDTO query) {
+    public Result<PageResult<RxReviewTalkVO>> talkListPage(@Valid @RequestBody RxReviewTalkQueryPageDTO query) {
         return Result.success(rxReviewService.talkListPage(query));
     }
 
@@ -164,7 +147,7 @@ public class RxReviewController {
     @Operation(summary = "导出点评明细台账 CSV（BOM，上限 5000 行）")
     @PreAuthorize("hasAuthority('pharmacy:rxReview:export')")
     @PostMapping("/itemExportCsv")
-    public Result<String> itemExportCsv(@RequestBody RxReviewItemPageDTO query) {
+    public Result<String> itemExportCsv(@Valid @RequestBody RxReviewItemPageDTO query) {
         return Result.success(rxReviewService.itemExportCsv(query));
     }
 }

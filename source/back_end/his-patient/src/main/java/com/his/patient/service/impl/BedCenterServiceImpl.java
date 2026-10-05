@@ -36,7 +36,7 @@ import com.his.patient.vo.BedPoolVO;
 import com.his.patient.vo.BedWaitStatsVO;
 import com.his.patient.vo.BedWaitVO;
 import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.entity.SysConfig;
 import com.his.system.enums.BizTypeEnum;

@@ -1,23 +1,13 @@
 package com.his.emr.service.impl;
 
-import com.his.common.exception.BusinessException;
 import com.his.common.config.SignProperties;
-import com.his.common.util.KeyPairFactory;
-import com.his.common.dto.SignCertIssueDTO;
-import com.his.common.dto.SignCertRevokeDTO;
-import com.his.common.dto.SignCommandDTO;
-import com.his.common.dto.SignatureInvalidateDTO;
-import com.his.common.dto.SignatureSignDTO;
-import com.his.common.enums.CertIssuedMode;
-import com.his.common.enums.CertStatus;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
-import com.his.common.enums.SignStatus;
-import com.his.common.enums.SignVerifyStatus;
-import com.his.common.enums.TimeSource;
+import com.his.common.dto.*;
+import com.his.common.enums.*;
+import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.service.ExternalCaChannelService;
 import com.his.common.service.SignCertService;
+import com.his.common.util.KeyPairFactory;
 import com.his.common.vo.SignCertVO;
 import com.his.common.vo.SignOptionVO;
 import com.his.common.vo.SignatureOptionsVO;
@@ -26,7 +16,7 @@ import com.his.emr.service.SignatureCenterService;
 import com.his.emr.vo.SignCaProbeOutboundVO;
 import com.his.emr.vo.SignCaStatusVO;
 import com.his.emr.vo.SignCertSelectListVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -49,6 +39,37 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
     private final SignCertService signCertService;
     private final SignProperties signProperties;
     private final ExternalCaChannelService externalCaChannel;
+
+    private static SignOptionVO opt(Integer code, String text) {
+        return new SignOptionVO(String.valueOf(code), text);
+    }
+
+    private static void fillSigner(SignCommandDTO cmd, CurrentUser user) {
+        cmd.setSignerId(employeeIdOf(user));
+        cmd.setSignerName(nameOf(user));
+        cmd.setSignerDeptId(user == null ? null : user.getDeptId());
+        cmd.setSignerDeptName(user == null ? null : user.getDeptName());
+    }
+
+    /**
+     * 员工ID 优先（签名必须落到员工，不能落成系统账号 admin 的 userId=1）
+     */
+    private static Long employeeIdOf(CurrentUser user) {
+        if (user == null) {
+            return null;
+        }
+        return user.getEmployeeId() != null ? user.getEmployeeId() : user.getUserId();
+    }
+
+    private static String nameOf(CurrentUser user) {
+        if (user == null) {
+            return null;
+        }
+        if (user.getEmployeeName() != null && !user.getEmployeeName().isBlank()) {
+            return user.getEmployeeName();
+        }
+        return user.getRealName();
+    }
 
     @Override
     public SignatureOptionsVO queryOptions() {
@@ -161,34 +182,5 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
         result.setConclusion("CSR 已按适配器口径提交并打印到服务端控制台（[M8真CA口子] 标记段）；"
                 + "未接入真 CA 前不会返回证书，也不会落任何证书记录");
         return result;
-    }
-
-    private static SignOptionVO opt(Integer code, String text) {
-        return new SignOptionVO(String.valueOf(code), text);
-    }
-
-    private static void fillSigner(SignCommandDTO cmd, CurrentUser user) {
-        cmd.setSignerId(employeeIdOf(user));
-        cmd.setSignerName(nameOf(user));
-        cmd.setSignerDeptId(user == null ? null : user.getDeptId());
-        cmd.setSignerDeptName(user == null ? null : user.getDeptName());
-    }
-
-    /** 员工ID 优先（签名必须落到员工，不能落成系统账号 admin 的 userId=1） */
-    private static Long employeeIdOf(CurrentUser user) {
-        if (user == null) {
-            return null;
-        }
-        return user.getEmployeeId() != null ? user.getEmployeeId() : user.getUserId();
-    }
-
-    private static String nameOf(CurrentUser user) {
-        if (user == null) {
-            return null;
-        }
-        if (user.getEmployeeName() != null && !user.getEmployeeName().isBlank()) {
-            return user.getEmployeeName();
-        }
-        return user.getRealName();
     }
 }

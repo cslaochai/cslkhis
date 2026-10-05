@@ -1,6 +1,6 @@
 package com.his.system.service;
 
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.system.entity.SysMessage;
 import lombok.Data;
 

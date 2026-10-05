@@ -29,19 +29,29 @@ public interface SourcePaidAdvanceService {
      */
     void advancePrescriptionDetail(Long prescriptionDetailId, BigDecimal paidAmount, Integer payMethod);
 
-    /** 处方明细整行红冲（退费）：明细置已退费、未发的发药记录取消，全部退费时主表置已退费 */
+    /**
+     * 处方明细整行红冲（退费）：明细置已退费、未发的发药记录取消，全部退费时主表置已退费
+     */
     void revertPrescriptionDetail(Long prescriptionDetailId, String reason);
 
-    /** 检查申请单缴清：置「2-已缴费」（执行记录由医技域另建，不在这里） */
+    /**
+     * 检查申请单缴清：置「2-已缴费」（执行记录由医技域另建，不在这里）
+     */
     void advanceInspectionApply(Long applyId);
 
-    /** 检查申请单退回「1-已提交」（已取消的单子不动） */
+    /**
+     * 检查申请单退回「1-已提交」（已取消的单子不动）
+     */
     void revertInspectionApply(Long applyId);
 
-    /** 检验申请单缴清 */
+    /**
+     * 检验申请单缴清
+     */
     void advanceLaboratoryApply(Long applyId);
 
-    /** 检验申请单退回「1-已提交」 */
+    /**
+     * 检验申请单退回「1-已提交」
+     */
     void revertLaboratoryApply(Long applyId);
 
     /**

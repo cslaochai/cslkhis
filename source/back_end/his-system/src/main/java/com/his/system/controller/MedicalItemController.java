@@ -2,24 +2,17 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.SysInspectionItemQueryPageDTO;
-import com.his.system.dto.SysInspectionItemUpsertDTO;
-import com.his.system.dto.SysLaboratoryItemDetailUpsertDTO;
-import com.his.system.dto.SysLaboratoryItemQueryPageDTO;
-import com.his.system.dto.SysLaboratoryItemUpsertDTO;
+import com.his.system.dto.*;
 import com.his.system.service.MedicalItemService;
-import com.his.system.vo.SysInspectionItemSelectListVO;
-import com.his.system.vo.SysInspectionItemVO;
-import com.his.system.vo.SysLaboratoryItemDetailVO;
-import com.his.system.vo.SysLaboratoryItemSelectListVO;
-import com.his.system.vo.SysLaboratoryItemVO;
+import com.his.system.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 @Tag(name = "检查检验项目管理")
 @RestController
@@ -34,7 +27,7 @@ public class MedicalItemController {
 
     @Operation(summary = "查询检查项目列表")
     @PostMapping("/inspectionListPage")
-    public Result<PageResult<SysInspectionItemVO>> inspectionListPage(@RequestBody SysInspectionItemQueryPageDTO queryDTO) {
+    public Result<PageResult<SysInspectionItemVO>> inspectionListPage(@Valid @RequestBody SysInspectionItemQueryPageDTO queryDTO) {
         return Result.success(medicalItemService.inspectionListPage(queryDTO));
     }
 
@@ -62,7 +55,7 @@ public class MedicalItemController {
     @PreAuthorize("hasAuthority('medtech:inspectionItems:add')")
     @Operation(summary = "新增或修改检查项目")
     @PostMapping("/inspectionUpsert")
-    public Result<Void> inspectionUpsert(@RequestBody SysInspectionItemUpsertDTO upsertDTO) {
+    public Result<Void> inspectionUpsert(@Valid @RequestBody SysInspectionItemUpsertDTO upsertDTO) {
         medicalItemService.inspectionUpsert(upsertDTO);
         return Result.success("操作成功", null);
     }
@@ -79,7 +72,7 @@ public class MedicalItemController {
 
     @Operation(summary = "查询检验项目列表")
     @PostMapping("/laboratoryListPage")
-    public Result<PageResult<SysLaboratoryItemVO>> laboratoryListPage(@RequestBody SysLaboratoryItemQueryPageDTO queryDTO) {
+    public Result<PageResult<SysLaboratoryItemVO>> laboratoryListPage(@Valid @RequestBody SysLaboratoryItemQueryPageDTO queryDTO) {
         return Result.success(medicalItemService.laboratoryListPage(queryDTO));
     }
 
@@ -105,7 +98,7 @@ public class MedicalItemController {
     @PreAuthorize("hasAuthority('medtech:inspectionItems:add')")
     @Operation(summary = "新增或修改检验项目")
     @PostMapping("/laboratoryUpsert")
-    public Result<Void> laboratoryUpsert(@RequestBody SysLaboratoryItemUpsertDTO upsertDTO) {
+    public Result<Void> laboratoryUpsert(@Valid @RequestBody SysLaboratoryItemUpsertDTO upsertDTO) {
         medicalItemService.laboratoryUpsert(upsertDTO);
         return Result.success("操作成功", null);
     }
@@ -129,7 +122,7 @@ public class MedicalItemController {
     @PreAuthorize("hasAuthority('medtech:inspectionItems:add')")
     @Operation(summary = "新增或修改检验项目明细")
     @PostMapping("/laboratory/detailUpsert")
-    public Result<Void> laboratoryItemDetailUpsert(@RequestBody SysLaboratoryItemDetailUpsertDTO upsertDTO) {
+    public Result<Void> laboratoryItemDetailUpsert(@Valid @RequestBody SysLaboratoryItemDetailUpsertDTO upsertDTO) {
         medicalItemService.laboratoryDetailUpsert(upsertDTO);
         return Result.success("操作成功", null);
     }

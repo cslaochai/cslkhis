@@ -9,15 +9,11 @@ import com.his.system.vo.StaffWorktimeVO;
 import com.his.system.vo.WorktimeSummaryVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -44,7 +40,7 @@ public class StaffAttendanceController {
     @Operation(summary = "签到（幂等：重复刷卡不改写最早那次签到时间）")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/checkIn")
-    public Result<BizStaffAttendance> checkIn(@RequestBody AttendanceDTO dto) {
+    public Result<BizStaffAttendance> checkIn(@Valid @RequestBody AttendanceDTO dto) {
         BizStaffAttendance row = staffAttendanceService.checkIn(dto);
         return Result.success(say(row.getAttendanceStatus()), row);
     }
@@ -52,7 +48,7 @@ public class StaffAttendanceController {
     @Operation(summary = "签退（算实际工时/超时工时，给出迟到早退判定）")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/checkOut")
-    public Result<BizStaffAttendance> checkOut(@RequestBody AttendanceDTO dto) {
+    public Result<BizStaffAttendance> checkOut(@Valid @RequestBody AttendanceDTO dto) {
         BizStaffAttendance row = staffAttendanceService.checkOut(dto);
         return Result.success(row.getActualMinutes() != null
                 ? "已签退，实际工时 " + row.getActualMinutes() + " 分钟" : "已签退", row);
@@ -61,14 +57,14 @@ public class StaffAttendanceController {
     @Operation(summary = "确认缺勤（全系统唯一能产生「缺勤」的入口，须科室确认）")
     @PreAuthorize("hasAuthority('org:schedule:edit')")
     @PostMapping("/markAbsent")
-    public Result<BizStaffAttendance> markAbsent(@RequestBody AttendanceDTO dto) {
+    public Result<BizStaffAttendance> markAbsent(@Valid @RequestBody AttendanceDTO dto) {
         return Result.success("已确认为缺勤", staffAttendanceService.markAbsent(dto));
     }
 
     @Operation(summary = "手工登记/修正工时（没有打卡数据的日子由护士长补登）")
     @PreAuthorize("hasAuthority('org:schedule:edit')")
     @PostMapping("/adjust")
-    public Result<BizStaffAttendance> adjust(@RequestBody AttendanceDTO dto) {
+    public Result<BizStaffAttendance> adjust(@Valid @RequestBody AttendanceDTO dto) {
         return Result.success("工时已登记", staffAttendanceService.adjust(dto));
     }
 

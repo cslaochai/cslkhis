@@ -13,15 +13,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 麻精药品专册控制器（G10）。
@@ -45,7 +40,7 @@ public class NarcoticRegisterController {
 
     @Operation(summary = "麻精药品专册分页查询")
     @PostMapping("/listPage")
-    public Result<PageResult<BizNarcoticRegisterVO>> listPage(@RequestBody NarcoticRegisterQueryPageDTO query) {
+    public Result<PageResult<BizNarcoticRegisterVO>> listPage(@Valid @RequestBody NarcoticRegisterQueryPageDTO query) {
         return Result.success(narcoticControlService.listPage(query));
     }
 
@@ -72,7 +67,7 @@ public class NarcoticRegisterController {
     @Operation(summary = "处方麻精限量预检（返回违规清单，空=通过）")
     @GetMapping("/checkPrescription")
     public Result<List<NarcoticViolationVO>> checkPrescription(@RequestParam Long prescriptionId,
-                                                              @RequestParam(required = false) String overLimitReason) {
+                                                               @RequestParam(required = false) String overLimitReason) {
         return Result.success(narcoticControlService.checkPrescription(prescriptionId, overLimitReason));
     }
 
@@ -86,7 +81,7 @@ public class NarcoticRegisterController {
     @Operation(summary = "处方麻精预检（含管制明细清单与双人复核要求）")
     @GetMapping("/precheck")
     public Result<NarcoticPrecheckVO> precheck(@RequestParam Long prescriptionId,
-                                              @RequestParam(required = false) String overLimitReason) {
+                                               @RequestParam(required = false) String overLimitReason) {
         return Result.success(narcoticControlService.precheck(prescriptionId, overLimitReason));
     }
 }

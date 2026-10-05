@@ -39,7 +39,7 @@ public class ShiftController {
     @PreAuthorize("hasAuthority('org:schedule:list')")
     @Operation(summary = "班次分页查询（关键词=名称模糊；排序 start_time + id 二级键）")
     @PostMapping("/listPage")
-    public Result<PageResult<ShiftVO>> listPage(@RequestBody ShiftQueryPageDTO dto) {
+    public Result<PageResult<ShiftVO>> listPage(@Valid @RequestBody ShiftQueryPageDTO dto) {
         return Result.success(shiftService.pageVO(dto));
     }
 

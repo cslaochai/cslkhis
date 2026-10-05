@@ -34,18 +34,6 @@ public enum QcRecordSource {
         this.tableName = tableName;
     }
 
-    public String getCode() {
-        return code;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    public String getTableName() {
-        return tableName;
-    }
-
     /**
      * 解析来源码。空值按门诊病历处理（旧数据没有 record_source 列）。
      *
@@ -64,5 +52,17 @@ public enum QcRecordSource {
             }
         }
         throw new BusinessException("未知的病历来源：" + code + "（可选 OUTPATIENT-门诊病历 / INPATIENT-住院文书）");
+    }
+
+    public String getCode() {
+        return code;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public String getTableName() {
+        return tableName;
     }
 }

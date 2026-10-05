@@ -46,7 +46,9 @@ public class BizPublicHealthReportVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
-    /** 上报类型（1-传染病 2-死因监测 3-慢性病 4-其他） */
+    /**
+     * 上报类型（1-传染病 2-死因监测 3-慢性病 4-其他）
+     */
     private Integer reportType;
 
     /**

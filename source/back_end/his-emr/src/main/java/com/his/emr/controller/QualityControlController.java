@@ -2,31 +2,18 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.emr.dto.QcBatchExecuteDTO;
-import com.his.emr.dto.QcCandidateQueryPageDTO;
-import com.his.emr.dto.QcExecuteDTO;
-import com.his.emr.dto.QcHandleDTO;
-import com.his.emr.dto.QcQueryPageDTO;
-import com.his.emr.support.QcIssue;
+import com.his.emr.dto.*;
 import com.his.emr.service.QualityControlService;
-import com.his.emr.vo.BizQualityControlVO;
-import com.his.emr.vo.QcCandidateVO;
-import com.his.emr.vo.QcDimensionSelectListVO;
-import com.his.emr.vo.QcOverviewVO;
-import com.his.emr.vo.QcRuleMetricVO;
-import com.his.emr.vo.QcTypeSelectListVO;
+import com.his.emr.support.QcIssue;
+import com.his.emr.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 病案质控（P5.4）。
@@ -52,7 +39,7 @@ public class QualityControlController {
 
     @Operation(summary = "质控单分页（可按来源/类型/状态/结果/关键词过滤）")
     @PostMapping("/listPage")
-    public Result<PageResult<BizQualityControlVO>> listPage(@RequestBody QcQueryPageDTO queryDTO) {
+    public Result<PageResult<BizQualityControlVO>> listPage(@Valid @RequestBody QcQueryPageDTO queryDTO) {
         return Result.success(qualityControlService.selectQcPage(queryDTO));
     }
 
@@ -82,7 +69,7 @@ public class QualityControlController {
 
     @Operation(summary = "待质控病历候选分页（先选来源：OUTPATIENT / INPATIENT）")
     @GetMapping("/listCandidatePage")
-    public Result<PageResult<QcCandidateVO>> listCandidatePage(QcCandidateQueryPageDTO queryDTO) {
+    public Result<PageResult<QcCandidateVO>> listCandidatePage(@Valid QcCandidateQueryPageDTO queryDTO) {
         return Result.success(qualityControlService.listCandidatePage(queryDTO));
     }
 
@@ -103,14 +90,14 @@ public class QualityControlController {
     @PreAuthorize("hasAuthority('qc:recordQc:edit')")
     @Operation(summary = "执行质控（单份病历）")
     @PostMapping("/executeQc")
-    public Result<BizQualityControlVO> executeQc(@RequestBody QcExecuteDTO actionDTO) {
+    public Result<BizQualityControlVO> executeQc(@Valid @RequestBody QcExecuteDTO actionDTO) {
         return Result.success(qualityControlService.executeQc(actionDTO));
     }
 
     @PreAuthorize("hasAuthority('qc:recordQc:edit')")
     @Operation(summary = "执行质控（批量，病案室月末质控）")
     @PostMapping("/executeQcBatch")
-    public Result<List<BizQualityControlVO>> executeQcBatch(@RequestBody QcBatchExecuteDTO actionDTO) {
+    public Result<List<BizQualityControlVO>> executeQcBatch(@Valid @RequestBody QcBatchExecuteDTO actionDTO) {
         return Result.success(qualityControlService.executeQcBatch(
                 actionDTO.getRecordSource(), actionDTO.getRecordIds(), actionDTO.getQcType()));
     }
@@ -118,7 +105,7 @@ public class QualityControlController {
     @PreAuthorize("hasAuthority('qc:recordQc:edit')")
     @Operation(summary = "处理质控问题（整改完成 / 忽略）")
     @PostMapping("/handleQc")
-    public Result<Void> handleQc(@RequestBody QcHandleDTO actionDTO) {
+    public Result<Void> handleQc(@Valid @RequestBody QcHandleDTO actionDTO) {
         boolean success = qualityControlService.handleQc(actionDTO.getId(), actionDTO.getIgnore(), actionDTO.getRemark());
         return success ? Result.success("处理成功", null) : Result.error("处理失败");
     }

@@ -113,7 +113,7 @@ public class InsuranceSettlementController {
     @PreAuthorize("hasAuthority('finance:insurance:edit')")
     @Operation(summary = "审核结算清单")
     @PostMapping("/audit")
-    public Result<Void> audit(@RequestBody SettlementAuditDTO actionDTO) {
+    public Result<Void> audit(@Valid @RequestBody SettlementAuditDTO actionDTO) {
         boolean success = settlementService.auditSettlement(actionDTO.getId(), actionDTO.getApproved(), actionDTO.getRemark());
         return success ? Result.success("审核成功", null) : Result.error("审核失败");
     }

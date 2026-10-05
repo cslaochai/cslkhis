@@ -7,84 +7,48 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
-import com.his.common.enums.ApplyStatusEnum;
-import com.his.common.enums.AuditStatusEnum;
-import com.his.common.enums.EncounterTypeEnum;
-import com.his.common.enums.FeeSourceTypeEnum;
-import com.his.common.enums.PaymentItemTypeEnum;
-import com.his.common.enums.RecordStatusEnum;
-import com.his.common.exception.BusinessException;
-import com.his.common.dto.SignCommandDTO;
-import com.his.common.enums.ObjectSignStatus;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
-import com.his.common.service.EmrSignatureService;
-import com.his.common.vo.SignatureVO;
-import com.his.common.support.TcmGramUnits;
-import com.his.emr.dto.InspectionApplyUpsertDTO;
-import com.his.emr.dto.LaboratoryApplyUpsertDTO;
-import com.his.emr.dto.MedicalRecordQueryDTO;
-import com.his.emr.dto.MedicalRecordQueryPageDTO;
-import com.his.emr.dto.MedicalRecordSaveDTO;
-import com.his.emr.dto.QcExecuteDTO;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.entity.BizQueue;
 import com.his.appoint.enums.AppointStatusEnum;
 import com.his.appoint.enums.QueueStatusEnum;
 import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
-import com.his.emr.entity.BizInspectionApply;
-import com.his.emr.entity.BizLaboratoryApply;
-import com.his.emr.entity.BizMedicalRecordArchive;
-import com.his.emr.entity.BizChronicRecord;
-import com.his.emr.entity.BizPrescription;
-import com.his.emr.entity.BizPrescriptionAuditLog;
-import com.his.emr.entity.BizPrescriptionDetail;
-import com.his.emr.entity.BizMedicalRecord;
-import com.his.emr.entity.BizMedicalRecordLog;
-import com.his.emr.entity.BizFollowupTask;
-import com.his.emr.mapper.BizInspectionApplyMapper;
-import com.his.emr.mapper.BizLaboratoryApplyMapper;
-import com.his.emr.mapper.BizMedicalRecordArchiveMapper;
-import com.his.emr.mapper.BizChronicRecordMapper;
-import com.his.emr.mapper.BizPrescriptionAuditLogMapper;
-import com.his.emr.mapper.BizPrescriptionDetailMapper;
-import com.his.emr.mapper.BizPrescriptionMapper;
-import com.his.emr.mapper.BizMedicalRecordLogMapper;
-import com.his.emr.mapper.BizMedicalRecordMapper;
-import com.his.emr.mapper.BizFollowupTaskMapper;
-import com.his.emr.support.QcRecordSource;
 import com.his.appoint.service.DoctorStatusCacheService;
-import com.his.emr.service.EmrService;
+import com.his.common.base.PageResult;
+import com.his.common.base.RedisSequenceService;
+import com.his.common.dto.SignCommandDTO;
+import com.his.common.enums.*;
+import com.his.common.exception.BusinessException;
+import com.his.common.service.EmrSignatureService;
+import com.his.common.support.TcmGramUnits;
+import com.his.common.vo.SignatureVO;
+import com.his.emr.dto.*;
+import com.his.emr.entity.*;
+import com.his.emr.enums.*;
+import com.his.emr.mapper.*;
 import com.his.emr.service.AiDraftDiffService;
-import com.his.emr.service.QualityControlService;
 import com.his.emr.service.ApplyExecStatusGateway;
+import com.his.emr.service.EmrService;
+import com.his.emr.service.QualityControlService;
+import com.his.emr.support.QcRecordSource;
+import com.his.emr.vo.*;
 import com.his.fee.dto.FeeBookDTO;
 import com.his.fee.entity.BizFeeRecord;
 import com.his.fee.service.FeeRecordService;
 import com.his.fee.support.FeeCatalogResolver;
 import com.his.fee.vo.FeeTypeSumVO;
-import com.his.pharmacy.service.AntibioticService;
-import com.his.emr.vo.BizInspectionApplyVO;
-import com.his.emr.vo.BizLaboratoryApplyVO;
-import com.his.emr.vo.BizPrescriptionDetailVO;
-import com.his.emr.vo.BizPrescriptionVO;
-import com.his.emr.vo.BizMedicalRecordVO;
-import com.his.emr.vo.EmrRecordDetailVO;
-import com.his.emr.vo.MyMedicalRecordVO;
-import com.his.patient.service.PatientGuardianService;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
-import com.his.system.entity.SysDrug;
-import com.his.system.mapper.SysDrugMapper;
+import com.his.patient.service.PatientGuardianService;
+import com.his.pharmacy.service.AntibioticService;
 import com.his.pharmacy.service.PharmacyService;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
+import com.his.system.entity.SysDrug;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.entity.SysLaboratoryItem;
+import com.his.system.mapper.SysDrugMapper;
 import com.his.system.mapper.SysInspectionItemMapper;
 import com.his.system.mapper.SysLaboratoryItemMapper;
 import lombok.RequiredArgsConstructor;
@@ -101,25 +65,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import com.his.emr.enums.RxAuditActionEnum;
-
-import com.his.common.enums.PrescriptionStatusEnum;
-import com.his.common.enums.YesOrNoEnum;
-import com.his.common.enums.RecordQcTypeEnum;
-import com.his.emr.enums.PrescriptionDetailStatusEnum;
-import com.his.emr.enums.FollowupTaskStatusEnum;
-import com.his.emr.enums.ArchiveStatusEnum;
-import com.his.emr.enums.FollowupTypeEnum;
 /**
  * 医生工作站服务实现
  */
@@ -141,14 +90,18 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     private final FeeRecordService feeRecordService;
     private final BizMedicalRecordArchiveMapper archiveMapper;
     private final BizPatientMapper patientMapper;
-    /** 就诊人越权闸：员工放行，患者只能读自己绑定的就诊人 */
+    /**
+     * 就诊人越权闸：员工放行，患者只能读自己绑定的就诊人
+     */
     private final PatientGuardianService patientGuardianService;
     private final BizAppointInfoMapper appointInfoMapper;
     private final BizQueueMapper queueMapper;
     private final SysInspectionItemMapper inspectionItemMapper;
     private final SysLaboratoryItemMapper laboratoryItemMapper;
     private final SysDrugMapper drugMapper;
-    /** 电子签名（P5.5）：结诊提交即签名，签名即锁定 */
+    /**
+     * 电子签名（P5.5）：结诊提交即签名，签名即锁定
+     */
     private final EmrSignatureService signatureService;
     private final RedisSequenceService sequenceService;
     private final DoctorStatusCacheService doctorStatusCacheService;
@@ -171,6 +124,19 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      * AI 草稿留痕（G-10）：医生点「填入草稿」后保存病历，把 AI 原稿与终稿的 diff 落一行。
      */
     private final AiDraftDiffService aiDraftDiffService;
+
+    /**
+     * 引导单「取药流程」的判据：本次应收里有没有药品类项目（2-西药 3-中成药 4-中药饮片）。
+     */
+    private static boolean isDrugItemType(Integer itemType) {
+        return Objects.equals(PaymentItemTypeEnum.WESTERN_MEDICINE.getCode(), itemType)
+                || Objects.equals(PaymentItemTypeEnum.CHINESE_PATENT_MEDICINE.getCode(), itemType)
+                || Objects.equals(PaymentItemTypeEnum.CHINESE_HERBAL_MEDICINE.getCode(), itemType);
+    }
+
+    private static BigDecimal nz(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
 
     @Override
     public List<BizMedicalRecordVO> getByPatientId(MedicalRecordQueryDTO queryDTO) {
@@ -205,7 +171,9 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         return vo;
     }
 
-    /** 取某次就诊最新一份病历；同 registId 有多份时取 id 最大（最新）的。 */
+    /**
+     * 取某次就诊最新一份病历；同 registId 有多份时取 id 最大（最新）的。
+     */
     private BizMedicalRecord latestByRegistId(Long registId) {
         if (registId == null) {
             return null;
@@ -416,10 +384,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         // 那是"事后擦屁股"，不是管控。抛异常让整张处方回滚。
         List<Long> abxDrugIds = prescription.getDetails() == null ? Collections.emptyList()
                 : prescription.getDetails().stream()
-                        .map(BizPrescriptionDetail::getDrugId)
-                        .filter(Objects::nonNull)
-                        .distinct()
-                        .toList();
+                .map(BizPrescriptionDetail::getDrugId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
         antibioticService.assertCanPrescribe(prescription.getDoctorId(), abxDrugIds);
 
         // 生成处方号
@@ -645,6 +613,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         return prescriptionMapper.delete(prescriptionWrapper) >= 0;
     }
 
+    // 检查/检验申请单（批次E：开单即落库 + 删除保护 + 结果回显）
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteInspectionAppliesByRecordId(Long recordId) {
@@ -671,8 +641,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
         return true;
     }
-
-    // 检查/检验申请单（批次E：开单即落库 + 删除保护 + 结果回显）
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -807,6 +775,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         return laboratoryApplyMapper.deleteById(id) > 0;
     }
 
+    // 申请单：内部辅助
+
     @Override
     public List<BizInspectionApplyVO> listInspectionApplies(Long registId) {
         if (registId == null) {
@@ -851,8 +821,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         return vos;
     }
 
-    // 申请单：内部辅助
-
     private BizAppointInfo requireAppoint(Long registId) {
         // C 类保留：私有兜底被多个申请单入口与内部流程共用，Bean Validation 覆盖不到这一层
         if (registId == null) {
@@ -888,7 +856,9 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
     }
 
-    /** 签名即锁定：已签名的申请单不许改内容，要改先去签名中心作废签名（作废留痕）。 */
+    /**
+     * 签名即锁定：已签名的申请单不许改内容，要改先去签名中心作废签名（作废留痕）。
+     */
     private void requireApplyUnsigned(String applyNo, Integer signStatus) {
         if (Objects.equals(ObjectSignStatus.SIGNED.getCode(), signStatus)) {
             throw new BusinessException("申请单 " + applyNo + " 已电子签名（签名即锁定），不允许直接修改；"
@@ -896,7 +866,9 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
     }
 
-    /** 检查申请单开单即签（业务类型=7，场景=申请开立）；签名失败随本事务回滚。 */
+    /**
+     * 检查申请单开单即签（业务类型=7，场景=申请开立）；签名失败随本事务回滚。
+     */
     private void signInspectionApply(BizInspectionApply apply) {
         SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(SignBizType.INSPECTION_APPLY.getCode());
@@ -916,7 +888,9 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
     }
 
-    /** 检验申请单开单即签（业务类型=8），规则同 {@link #signInspectionApply}。 */
+    /**
+     * 检验申请单开单即签（业务类型=8），规则同 {@link #signInspectionApply}。
+     */
     private void signLaboratoryApply(BizLaboratoryApply apply) {
         SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(SignBizType.LAB_APPLY.getCode());
@@ -948,7 +922,9 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 + String.format("%04d", SEQ.incrementAndGet() % 10000);
     }
 
-    /** 患者 / 科室 / 医生快照 —— 申请单是独立单据，必须自带这些信息，不能靠关联查。 */
+    /**
+     * 患者 / 科室 / 医生快照 —— 申请单是独立单据，必须自带这些信息，不能靠关联查。
+     */
     private void fillInspectionApplySnapshot(BizInspectionApply apply, BizAppointInfo appoint, BizPatient patient) {
         apply.setRegistId(appoint.getId());
         apply.setPatientId(patient.getId());
@@ -1153,17 +1129,23 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         return null;
     }
 
-    /** 检查记录「已取消(7)」——退费留下的墓碑，不占用申请单。 */
+    /**
+     * 检查记录「已取消(7)」——退费留下的墓碑，不占用申请单。
+     */
     private boolean isCancelledInspection(Integer recordStatus) {
         return recordStatus != null && recordStatus == 7;
     }
 
-    /** 检验记录「已取消(8)」——与检查不是同一套码表，别合并判断。 */
+    /**
+     * 检验记录「已取消(8)」——与检查不是同一套码表，别合并判断。
+     */
     private boolean isCancelledLaboratory(Integer recordStatus) {
         return recordStatus != null && recordStatus == 8;
     }
 
-    /** 是否已产生费用记账行。查询失败按"已记账"处理 —— 宁可拒删。 */
+    /**
+     * 是否已产生费用记账行。查询失败按"已记账"处理 —— 宁可拒删。
+     */
     private boolean feeBookedExists(Integer sourceType, Long sourceId) {
         try {
             return feeRecordService.findBookedBySource(sourceType, sourceId, null) != null;
@@ -1173,17 +1155,12 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
     }
 
-    /** 项目类型码 → 引导单上的费用名（字典 his_charge_item_type，权威在 PaymentItemTypeEnum）。 */
+    /**
+     * 项目类型码 → 引导单上的费用名（字典 his_charge_item_type，权威在 PaymentItemTypeEnum）。
+     */
     private String feeItemTypeName(Integer itemType) {
         PaymentItemTypeEnum typeEnum = PaymentItemTypeEnum.getByCode(itemType);
         return (typeEnum == null ? "其他" : typeEnum.getDesc()) + "费";
-    }
-
-    /** 引导单「取药流程」的判据：本次应收里有没有药品类项目（2-西药 3-中成药 4-中药饮片）。 */
-    private static boolean isDrugItemType(Integer itemType) {
-        return Objects.equals(PaymentItemTypeEnum.WESTERN_MEDICINE.getCode(), itemType)
-                || Objects.equals(PaymentItemTypeEnum.CHINESE_PATENT_MEDICINE.getCode(), itemType)
-                || Objects.equals(PaymentItemTypeEnum.CHINESE_HERBAL_MEDICINE.getCode(), itemType);
     }
 
     private Map<Long, ApplyExecStatusGateway.ExecStatus> inspectionExecMap(List<Long> applyIds) {
@@ -1881,10 +1858,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         dto.setItemType(itemType);
         dto.setCatalogType(FeeCatalogResolver.byItemType(itemType));
         return dto;
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
     }
 
     /**

@@ -4,6 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.emr.dto.SingleDiseaseDTO;
 import com.his.emr.vo.SingleDiseaseAutoEnrollStatVO;
 import com.his.emr.vo.SingleDiseaseVO;
+
 import java.util.List;
 
 public interface SingleDiseaseService {

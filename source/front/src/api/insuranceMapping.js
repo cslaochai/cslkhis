@@ -12,9 +12,9 @@ export function upsertYbCatalog(data) {
     return request.post('/charge/ybCatalog/upsert', data)
 }
 
-// 目录批量导入（按 yb_code 幂等，存在即更新）
+// 目录批量导入（按 yb_code 幂等，存在即更新；API 层包成 DTO 入参形状，视图层零改动）
 export function importYbCatalog(items) {
-    return request.post('/charge/ybCatalog/importBatch', items)
+    return request.post('/charge/ybCatalog/importBatch', {items})
 }
 
 // 目录启停

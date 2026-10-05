@@ -14,34 +14,52 @@ import java.time.LocalDateTime;
 @Data
 public class DisputeFlowVO implements Serializable {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 主单ID */
+    /**
+     * 主单ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long caseId;
 
-    /** 动作（受理/调查/协商/回复投诉人/封存病历/结案/撤销…） */
+    /**
+     * 动作（受理/调查/协商/回复投诉人/封存病历/结案/撤销…）
+     */
     private String action;
 
-    /** 动作前状态 */
+    /**
+     * 动作前状态
+     */
     private Integer fromStatus;
 
-    /** 动作后状态 */
+    /**
+     * 动作后状态
+     */
     private Integer toStatus;
 
-    /** 处理说明 */
+    /**
+     * 处理说明
+     */
     private String content;
 
-    /** 操作人（员工ID） */
+    /**
+     * 操作人（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long operatorId;
 
-    /** 操作人姓名 */
+    /**
+     * 操作人姓名
+     */
     private String operator;
 
-    /** 操作时间 */
+    /**
+     * 操作时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime operateTime;
 }

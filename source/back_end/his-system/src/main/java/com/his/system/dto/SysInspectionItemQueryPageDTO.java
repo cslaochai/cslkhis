@@ -16,7 +16,9 @@ public class SysInspectionItemQueryPageDTO extends PageParam {
      */
     private String keyword;
 
-    /** 项目类型（1-放射检查 2-超声检查 3-心电图 4-内镜检查 5-其他） */
+    /**
+     * 项目类型（1-放射检查 2-超声检查 3-心电图 4-内镜检查 5-其他）
+     */
     private Integer itemType;
 
     /**

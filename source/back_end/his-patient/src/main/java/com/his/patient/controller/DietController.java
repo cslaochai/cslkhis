@@ -2,32 +2,16 @@ package com.his.patient.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.patient.dto.DietConfirmDTO;
-import com.his.patient.dto.DietPlanQueryPageDTO;
-import com.his.patient.dto.DietPlanStopDTO;
-import com.his.patient.dto.DietPlanUpsertDTO;
-import com.his.patient.dto.MealGenerateDTO;
-import com.his.patient.dto.MealOrderQueryPageDTO;
-import com.his.patient.dto.MealStatusDTO;
+import com.his.patient.dto.*;
 import com.his.patient.service.DietPlanService;
 import com.his.patient.service.MealOrderService;
-import com.his.patient.vo.DietPlanVO;
-import com.his.patient.vo.DietTypeOptionVO;
-import com.his.patient.vo.MealGenerateVO;
-import com.his.patient.vo.MealOrderVO;
-import com.his.patient.vo.WardVO;
+import com.his.patient.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -75,7 +59,7 @@ public class DietController {
     @Operation(summary = "膳食方案分页（待接收的排前面）")
     @PreAuthorize("hasAuthority('ipd:diet:plan')")
     @PostMapping("/planListPage")
-    public Result<PageResult<DietPlanVO>> planListPage(@RequestBody DietPlanQueryPageDTO query) {
+    public Result<PageResult<DietPlanVO>> planListPage(@Valid @RequestBody DietPlanQueryPageDTO query) {
         return Result.success(dietPlanService.planListPage(query));
     }
 
@@ -119,7 +103,7 @@ public class DietController {
     @Operation(summary = "订餐明细分页（按日期/病区/餐次/状态）")
     @PreAuthorize("hasAuthority('ipd:meal:list')")
     @PostMapping("/mealListPage")
-    public Result<PageResult<MealOrderVO>> mealListPage(@RequestBody MealOrderQueryPageDTO query) {
+    public Result<PageResult<MealOrderVO>> mealListPage(@Valid @RequestBody MealOrderQueryPageDTO query) {
         return Result.success(mealOrderService.mealListPage(query));
     }
 

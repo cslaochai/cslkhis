@@ -1,15 +1,17 @@
 package com.his.emr.service.impl;
 
-import com.his.emr.service.SingleDiseaseService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
+import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.SingleDiseaseDTO;
 import com.his.emr.entity.BizSingleDiseaseCase;
 import com.his.emr.entity.SysSingleDisease;
+import com.his.emr.enums.SingleDiseaseQcStatusEnum;
 import com.his.emr.mapper.BizSingleDiseaseCaseMapper;
 import com.his.emr.mapper.SysSingleDiseaseMapper;
+import com.his.emr.service.SingleDiseaseService;
 import com.his.emr.vo.SingleDiseaseAutoEnrollStatVO;
 import com.his.emr.vo.SingleDiseaseVO;
 import com.his.security.UserUtils;
@@ -25,8 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.his.common.enums.YesOrNoEnum;
-import com.his.emr.enums.SingleDiseaseQcStatusEnum;
 /**
  * 单病种质控服务（M4）。
  *
@@ -62,7 +62,9 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         }).toList();
     }
 
-    /** 目录新增/修改（编码唯一）。 */
+    /**
+     * 目录新增/修改（编码唯一）。
+     */
     @Transactional(rollbackFor = Exception.class)
     public SingleDiseaseVO.Disease diseaseUpsert(SingleDiseaseDTO.DiseaseUpsert dto) {
         SysSingleDisease entity = new SysSingleDisease();
@@ -91,7 +93,9 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         return vo;
     }
 
-    /** 物理删除（纯配置表，唯一键不含 del_flag）。 */
+    /**
+     * 物理删除（纯配置表，唯一键不含 del_flag）。
+     */
     @Transactional(rollbackFor = Exception.class)
     public void diseaseDelete(Long id) {
         Long cases = caseMapper.selectCount(new LambdaQueryWrapper<BizSingleDiseaseCase>()
@@ -102,7 +106,9 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         diseaseMapper.purgeById(id);
     }
 
-    /** 前缀归一：去空格、去空段、统一大写。 */
+    /**
+     * 前缀归一：去空格、去空段、统一大写。
+     */
     private String normalizePrefix(String prefix) {
         String[] parts = prefix.split("[,，]");
         StringBuilder sb = new StringBuilder();
@@ -123,7 +129,9 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
 
     // 纳入
 
-    /** 手工纳入：首页快照 + 唯一校验（同病种同住院一次）。 */
+    /**
+     * 手工纳入：首页快照 + 唯一校验（同病种同住院一次）。
+     */
     @Transactional(rollbackFor = Exception.class)
     public SingleDiseaseVO.Case enroll(SingleDiseaseDTO.Enroll dto) {
         SysSingleDisease disease = diseaseMapper.selectById(dto.getDiseaseId());
@@ -133,7 +141,9 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         return doEnroll(disease, dto.getAdmissionId(), 2);
     }
 
-    /** 自动扫描：按 ICD 前缀扫出院首页，批量纳入未入组病例。 */
+    /**
+     * 自动扫描：按 ICD 前缀扫出院首页，批量纳入未入组病例。
+     */
     @Transactional(rollbackFor = Exception.class)
     public SingleDiseaseAutoEnrollStatVO autoEnroll(SingleDiseaseDTO.AutoEnroll dto) {
         SysSingleDisease disease = diseaseMapper.selectById(dto.getDiseaseId());
@@ -162,7 +172,9 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         return result;
     }
 
-    /** 纳入主体：取首页快照、唯一校验、建底账行。 */
+    /**
+     * 纳入主体：取首页快照、唯一校验、建底账行。
+     */
     private SingleDiseaseVO.Case doEnroll(SysSingleDisease disease, Long admissionId, int enrollWay) {
         Map<String, Object> snap = caseMapper.selectSummarySnapshot(admissionId);
         if (snap == null) {
@@ -199,7 +211,9 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         return toCaseVO(c, disease.getDiseaseName());
     }
 
-    /** 主要诊断编码是否命中任一前缀。 */
+    /**
+     * 主要诊断编码是否命中任一前缀。
+     */
     private boolean matchPrefix(String prefixes, String diagCode) {
         for (String p : prefixes.split(",")) {
             if (!p.isEmpty() && diagCode.toUpperCase().startsWith(p)) {
@@ -256,7 +270,9 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         return toCaseVO(c, diseaseName(c.getDiseaseId()));
     }
 
-    /** 上报打标（质控通过才可上报）。 */
+    /**
+     * 上报打标（质控通过才可上报）。
+     */
     @Transactional(rollbackFor = Exception.class)
     public SingleDiseaseVO.Case report(Long id) {
         BizSingleDiseaseCase c = caseMapper.selectById(id);
@@ -294,7 +310,9 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), vos);
     }
 
-    /** 病种指标（服务端复算，不信任前端）。 */
+    /**
+     * 病种指标（服务端复算，不信任前端）。
+     */
     public List<SingleDiseaseVO.Metric> metrics() {
         List<SingleDiseaseVO.Disease> diseases = diseaseList();
         List<SingleDiseaseVO.Metric> list = new ArrayList<>();
@@ -319,7 +337,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
             m.setDeathRate(cases.isEmpty() ? BigDecimal.ZERO : BigDecimal.valueOf(death)
                     .divide(BigDecimal.valueOf(cases.size()), 4, RoundingMode.HALF_UP));
             m.setAvgInpatientDays(cases.isEmpty() ? BigDecimal.ZERO : BigDecimal.valueOf(cases.stream()
-                    .mapToInt(c -> c.getInpatientDays() == null ? 0 : c.getInpatientDays()).average().orElse(0))
+                            .mapToInt(c -> c.getInpatientDays() == null ? 0 : c.getInpatientDays()).average().orElse(0))
                     .setScale(2, RoundingMode.HALF_UP));
             m.setAvgTotalAmount(cases.isEmpty() ? BigDecimal.ZERO : BigDecimal.valueOf(cases.stream()
                     .mapToDouble(c -> c.getTotalAmount() == null ? 0 : c.getTotalAmount().doubleValue())

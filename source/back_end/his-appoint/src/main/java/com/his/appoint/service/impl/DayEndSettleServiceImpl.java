@@ -5,7 +5,7 @@ import com.his.appoint.mapper.DayEndSettleMapper;
 import com.his.appoint.service.DayEndSettleService;
 import com.his.appoint.vo.DayEndSettleResultVO;
 import com.his.common.exception.BusinessException;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

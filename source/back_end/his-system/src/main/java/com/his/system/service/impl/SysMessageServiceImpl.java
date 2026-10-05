@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.dto.MessageQueryPageDTO;

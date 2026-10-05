@@ -27,7 +27,9 @@ public enum SingleDiseaseQcStatusEnum {
         return null;
     }
 
-    /** 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案。 */
+    /**
+     * 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案。
+     */
     public static String labelOf(Integer code) {
         SingleDiseaseQcStatusEnum item = code == null ? null : fromCode(code);
         return item == null ? null : item.label;

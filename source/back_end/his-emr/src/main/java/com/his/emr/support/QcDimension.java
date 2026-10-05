@@ -40,18 +40,6 @@ public enum QcDimension {
         this.description = description;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
     /**
      * 按质控类型取维度；不认识的值返回 null 由调用方决定怎么处理
      */
@@ -65,5 +53,17 @@ public enum QcDimension {
             }
         }
         return null;
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public String getDescription() {
+        return description;
     }
 }

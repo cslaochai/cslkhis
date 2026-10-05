@@ -46,7 +46,7 @@ public class InpatientAccountController {
     @PreAuthorize(VIEW)
     @Operation(summary = "预交金流水分页（按收退时间倒序）")
     @GetMapping("/prepay/listPage")
-    public Result<IPage<PrepayVO>> prepayListPage(PrepayQueryPageDTO query) {
+    public Result<IPage<PrepayVO>> prepayListPage(@Valid PrepayQueryPageDTO query) {
         return Result.success(accountService.prepayListPage(query));
     }
 

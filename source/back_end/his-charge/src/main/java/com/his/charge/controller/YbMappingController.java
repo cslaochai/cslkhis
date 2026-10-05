@@ -61,7 +61,7 @@ public class YbMappingController {
     @PreAuthorize("hasAuthority('finance:insuranceMapping:edit')")
     @Operation(summary = "自动对照（名称精确匹配且唯一命中才落；itemType 空=全部）")
     @PostMapping("/autoMatch")
-    public Result<YbAutoMatchResultVO> autoMatch(@RequestBody YbAutoMatchDTO dto) {
+    public Result<YbAutoMatchResultVO> autoMatch(@Valid @RequestBody YbAutoMatchDTO dto) {
         return Result.success(mappingService.autoMatch(dto));
     }
 }

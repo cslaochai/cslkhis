@@ -2,7 +2,7 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.exception.BusinessException;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.dto.MenuUpsertDTO;
 import com.his.system.entity.SysMenu;

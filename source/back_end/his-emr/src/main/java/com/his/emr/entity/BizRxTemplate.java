@@ -11,20 +11,30 @@ import lombok.EqualsAndHashCode;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** 处方模板 */
+/**
+ * 处方模板
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_rx_template")
 public class BizRxTemplate extends BaseEntity {
 
-    /** 医生ID */
+    /**
+     * 医生ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;
-    /** 模板名称 */
+    /**
+     * 模板名称
+     */
     private String templateName;
-    /** 药品数量 */
+    /**
+     * 药品数量
+     */
     private Integer drugCount;
-    /** 总金额 */
+    /**
+     * 总金额
+     */
     private BigDecimal totalAmount;
 
     @TableField(exist = false)

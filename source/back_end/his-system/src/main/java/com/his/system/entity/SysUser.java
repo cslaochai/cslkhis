@@ -1,6 +1,5 @@
 package com.his.system.entity;
 
-import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -10,10 +9,10 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Set;
 
-/** 用户 */
+/**
+ * 用户
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_user")
@@ -51,7 +50,9 @@ public class SysUser extends BaseEntity {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 微信openid（小程序订阅消息发送用，user_type=3） */
+    /**
+     * 微信openid（小程序订阅消息发送用，user_type=3）
+     */
     private String openid;
 
     /**

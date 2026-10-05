@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.enums.CheckResultEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.entity.BizClinicalRuleCheck;
+import com.his.emr.enums.RuleCheckStatusEnum;
 import com.his.emr.mapper.BizClinicalRuleCheckMapper;
 import com.his.emr.service.ClinicalRuleCheckService;
 import com.his.emr.vo.BizClinicalRuleCheckVO;
@@ -20,8 +22,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import com.his.common.enums.CheckResultEnum;
-import com.his.emr.enums.RuleCheckStatusEnum;
 /**
  * 临床规则校验服务实现
  */

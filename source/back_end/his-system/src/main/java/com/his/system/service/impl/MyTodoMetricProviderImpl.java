@@ -2,8 +2,8 @@ package com.his.system.service.impl;
 
 import com.his.system.service.MyTodoMetricProvider;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.security.CurrentUser;
-import com.his.security.WorkbenchMetricProvider;
+import com.his.security.entity.CurrentUser;
+import com.his.security.provider.WorkbenchMetricProvider;
 import com.his.system.entity.SysMessage;
 import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;

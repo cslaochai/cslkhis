@@ -21,7 +21,9 @@ public class InsurancePolicyQueryPageDTO extends PageParam {
      */
     private String insuranceType;
 
-    /** 结算方式（2-城镇职工医保 3-城乡居民医保 4-公费医疗） */
+    /**
+     * 结算方式（2-城镇职工医保 3-城乡居民医保 4-公费医疗）
+     */
     private Integer settlementType;
 
     /**

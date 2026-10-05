@@ -43,7 +43,7 @@ public class CssdPackController {
 
     @Operation(summary = "器械包分页查询")
     @PostMapping("/listPage")
-    public Result<PageResult<CssdPackVO>> listPage(@RequestBody CssdDTO.QueryPage dto) {
+    public Result<PageResult<CssdPackVO>> listPage(@Valid @RequestBody CssdDTO.QueryPage dto) {
         var page = cssdService.listPage(dto == null ? new CssdDTO.QueryPage() : dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

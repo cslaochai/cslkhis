@@ -9,16 +9,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 门诊治疗站（G19）：治疗申请（疗程）→ 排期 → 按次打卡 → 按次计费。
@@ -42,7 +36,7 @@ public class TreatmentController {
     @PreAuthorize("hasAuthority('opd:treatmentStation:add')")
     @Operation(summary = "分页查询治疗申请（疗程）")
     @PostMapping("/applyListPage")
-    public Result<PageResult<TreatmentVO.ApplyVO>> applyListPage(@RequestBody TreatmentDTO.ApplyQuery query) {
+    public Result<PageResult<TreatmentVO.ApplyVO>> applyListPage(@Valid @RequestBody TreatmentDTO.ApplyQuery query) {
         return Result.success(treatmentService.listPageApplies(query));
     }
 
@@ -56,7 +50,7 @@ public class TreatmentController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/item/selectList")
     public Result<List<TreatmentVO.ItemSelectListVO>> itemSelectList(@RequestParam(required = false) String keyword,
-                                                                @RequestParam(required = false) Integer limit) {
+                                                                     @RequestParam(required = false) Integer limit) {
         return Result.success(treatmentService.itemSelectList(keyword, limit));
     }
 
@@ -89,13 +83,13 @@ public class TreatmentController {
 
     @Operation(summary = "分页查询按次执行流水（治疗台/台账共用）")
     @PostMapping("/execListPage")
-    public Result<PageResult<TreatmentVO.ExecVO>> execListPage(@RequestBody TreatmentDTO.ExecQuery query) {
+    public Result<PageResult<TreatmentVO.ExecVO>> execListPage(@Valid @RequestBody TreatmentDTO.ExecQuery query) {
         return Result.success(treatmentService.listPageExecs(query));
     }
 
     @Operation(summary = "流水状态分布（与分页同口径，但不带上被统计的那一维）")
     @PostMapping("/execStatusCount")
-    public Result<List<TreatmentVO.StatusCountVO>> execStatusCount(@RequestBody TreatmentDTO.ExecQuery query) {
+    public Result<List<TreatmentVO.StatusCountVO>> execStatusCount(@Valid @RequestBody TreatmentDTO.ExecQuery query) {
         return Result.success(treatmentService.statusCount(query));
     }
 

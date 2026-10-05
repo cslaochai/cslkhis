@@ -34,7 +34,7 @@ public class RevisitFeePolicyController {
     @PreAuthorize("hasAuthority('opd:revisitPolicy:list')")
     @Operation(summary = "分页查询复诊收费策略")
     @PostMapping("/listPage")
-    public Result<PageResult<RevisitFeePolicyVO>> listPage(@RequestBody RevisitFeePolicyQueryPageDTO queryDTO) {
+    public Result<PageResult<RevisitFeePolicyVO>> listPage(@Valid @RequestBody RevisitFeePolicyQueryPageDTO queryDTO) {
         return Result.success(revisitFeePolicyService.listPage(queryDTO));
     }
 

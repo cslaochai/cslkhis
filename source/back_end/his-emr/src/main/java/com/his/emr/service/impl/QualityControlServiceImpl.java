@@ -9,28 +9,16 @@ import com.his.emr.dto.QcExecuteDTO;
 import com.his.emr.dto.QcQueryPageDTO;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizQualityControl;
+import com.his.emr.enums.RuleCheckStatusEnum;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.mapper.BizQualityControlMapper;
-import com.his.emr.support.QcDimension;
-import com.his.emr.support.QcIssue;
-import com.his.emr.support.QcRecordSource;
-import com.his.emr.support.QcResult;
-import com.his.emr.support.QcRule;
-import com.his.emr.support.QcRuleEngine;
-import com.his.emr.support.QcSeverity;
-import com.his.emr.support.QcSnapshot;
 import com.his.emr.service.QcStoreService;
-import com.his.emr.support.QcTexts;
 import com.his.emr.service.QualityControlService;
-import com.his.emr.vo.BizQualityControlVO;
-import com.his.emr.vo.QcCandidateVO;
-import com.his.emr.vo.QcDimensionSelectListVO;
-import com.his.emr.vo.QcOverviewVO;
-import com.his.emr.vo.QcRuleMetricVO;
-import com.his.emr.vo.QcTypeSelectListVO;
+import com.his.emr.support.*;
+import com.his.emr.vo.*;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.mapper.BizInpatientRecordMapper;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;
@@ -42,14 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import com.his.emr.enums.RuleCheckStatusEnum;
 /**
  * 病案质控服务实现（P5.4）。
  *
@@ -101,6 +83,41 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     private final SysMessageService sysMessageService;
 
     // 查询
+
+    /**
+     * 质控类型归一。
+     *
+     * <p>明确拒绝 4：AI 内涵质控有自己的接口与自己的落库路径，
+     * 从形式质控的入口传 4 进来只会产生一张"规则跑不了、AI 又没跑"的空单。
+     * 宁可报错，也不接受一个语义不明的参数。
+     */
+    private static Integer normalizeQcType(Integer qcType) {
+        if (qcType == null || qcType == 0) {
+            return 0;
+        }
+        if (QcDimension.ofCode(qcType) == null) {
+            throw new BusinessException("不支持的质控类型：" + qcType
+                    + "（可选 0-综合 1-完整性 2-规范性 3-逻辑性；AI 内涵质控请调用 /ai/emrQc 接口）");
+        }
+        return qcType;
+    }
+
+    private static String currentOperator() {
+        try {
+            CurrentUser user = UserUtils.getCurrentUser();
+            if (user != null) {
+                if (StringUtils.hasText(user.getRealName())) {
+                    return user.getRealName();
+                }
+                if (StringUtils.hasText(user.getUsername())) {
+                    return user.getUsername();
+                }
+            }
+        } catch (Exception ignored) {
+            // 非请求线程（定时任务 / 归档流程内的调用）
+        }
+        return OPERATOR_FALLBACK;
+    }
 
     @Override
     public PageResult<BizQualityControlVO> selectQcPage(QcQueryPageDTO query) {
@@ -216,6 +233,8 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
                 result.getRecords());
     }
 
+    // 执行质控
+
     @Override
     public List<QcDimensionSelectListVO> dimensionDict() {
         List<QcDimensionSelectListVO> list = new ArrayList<>();
@@ -241,8 +260,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         }
         return list;
     }
-
-    // 执行质控
 
     @Override
     public BizQualityControlVO executeQc(QcExecuteDTO dto) {
@@ -355,24 +372,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         return this.updateById(qc);
     }
 
-    /**
-     * 质控类型归一。
-     *
-     * <p>明确拒绝 4：AI 内涵质控有自己的接口与自己的落库路径，
-     * 从形式质控的入口传 4 进来只会产生一张"规则跑不了、AI 又没跑"的空单。
-     * 宁可报错，也不接受一个语义不明的参数。
-     */
-    private static Integer normalizeQcType(Integer qcType) {
-        if (qcType == null || qcType == 0) {
-            return 0;
-        }
-        if (QcDimension.ofCode(qcType) == null) {
-            throw new BusinessException("不支持的质控类型：" + qcType
-                    + "（可选 0-综合 1-完整性 2-规范性 3-逻辑性；AI 内涵质控请调用 /ai/emrQc 接口）");
-        }
-        return qcType;
-    }
-
     private QcSnapshot loadSnapshot(QcRecordSource source, Long recordId) {
         if (source == QcRecordSource.OUTPATIENT) {
             BizMedicalRecord record = medicalRecordMapper.selectById(recordId);
@@ -386,23 +385,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             throw new BusinessException("住院文书不存在或已删除：" + recordId);
         }
         return QcSnapshot.ofInpatient(record);
-    }
-
-    private static String currentOperator() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user != null) {
-                if (StringUtils.hasText(user.getRealName())) {
-                    return user.getRealName();
-                }
-                if (StringUtils.hasText(user.getUsername())) {
-                    return user.getUsername();
-                }
-            }
-        } catch (Exception ignored) {
-            // 非请求线程（定时任务 / 归档流程内的调用）
-        }
-        return OPERATOR_FALLBACK;
     }
 
     // 码值中文与等级换算

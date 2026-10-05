@@ -62,7 +62,9 @@ public class SysInspectionItemVO {
      */
     private String itemName;
 
-    /** 项目类型（1-放射检查 2-超声检查 3-心电图 4-内镜检查 5-其他） */
+    /**
+     * 项目类型（1-放射检查 2-超声检查 3-心电图 4-内镜检查 5-其他）
+     */
     private Integer itemType;
 
     /**
@@ -96,10 +98,14 @@ public class SysInspectionItemVO {
      */
     private String contraindication;
 
-    /** 是否支持急诊（0-否 1-是） */
+    /**
+     * 是否支持急诊（0-否 1-是）
+     */
     private Integer isEmergency;
 
-    /** 是否需要预约（0-否 1-是） */
+    /**
+     * 是否需要预约（0-否 1-是）
+     */
     private Integer isAppointment;
 
     /**

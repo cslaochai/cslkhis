@@ -4,11 +4,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.enums.AdverseAcquiredEnum;
+import com.his.common.enums.DelFlagEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.AdverseEventActionDTO;
 import com.his.emr.dto.AdverseEventQueryPageDTO;
 import com.his.emr.dto.AdverseEventUpsertDTO;
 import com.his.emr.entity.BizAdverseEvent;
+import com.his.emr.enums.AdverseEventStatusEnum;
+import com.his.emr.enums.AdverseEventTypeEnum;
 import com.his.emr.mapper.BizAdverseEventMapper;
 import com.his.emr.service.AdverseEventService;
 import com.his.emr.vo.AdverseEventStatsVO;
@@ -21,13 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Map;
 
-import com.his.emr.enums.AdverseEventStatusEnum;
-import com.his.emr.enums.AdverseEventTypeEnum;
-
-import com.his.common.enums.DelFlagEnum;
 /**
  * 不良事件服务实现
- *
+ * <p>
  * 状态机：1 已上报待处理 → 2 处理中 → 3 已整改 → 4 已结案（不可逆）。
  * 每一步流转都留「操作人 id + 姓名 + 意见 + 时间」，这是三甲评审要看的痕迹链。
  */
@@ -37,6 +36,28 @@ public class AdverseEventServiceImpl implements AdverseEventService {
 
     private final BizAdverseEventMapper eventMapper;
     private final RedisSequenceService sequenceService;
+
+    private static LocalDateTime nowSec() {
+        return LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+    }
+
+    private static String trimToNull(String s) {
+        if (s == null) {
+            return null;
+        }
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    private static Long asLong(Object v) {
+        if (v == null) {
+            return 0L;
+        }
+        if (v instanceof Number n) {
+            return n.longValue();
+        }
+        return Long.parseLong(v.toString());
+    }
 
     @Override
     public PageResult<AdverseEventVO> page(AdverseEventQueryPageDTO q) {
@@ -178,6 +199,8 @@ public class AdverseEventServiceImpl implements AdverseEventService {
         saveStep(e, "整改");
     }
 
+    // 内部
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void close(AdverseEventActionDTO dto) {
@@ -222,9 +245,9 @@ public class AdverseEventServiceImpl implements AdverseEventService {
         return vo;
     }
 
-    // 内部
-
-    /** 取单 + 加行锁 + 前置态校验（流转的并发闸门：不锁行可能同一步被两人各执行一次） */
+    /**
+     * 取单 + 加行锁 + 前置态校验（流转的并发闸门：不锁行可能同一步被两人各执行一次）
+     */
     private BizAdverseEvent lockAndCheck(Long id, int expectedStatus, String action) {
         BizAdverseEvent e = eventMapper.selectByIdForUpdate(id);
         if (e == null || e.getDelFlag() != 0) {
@@ -245,27 +268,5 @@ public class AdverseEventServiceImpl implements AdverseEventService {
 
     private String nextEventNo() {
         return sequenceService.generateAdverseEventNo();
-    }
-
-    private static LocalDateTime nowSec() {
-        return LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
-    }
-
-    private static String trimToNull(String s) {
-        if (s == null) {
-            return null;
-        }
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
-    }
-
-    private static Long asLong(Object v) {
-        if (v == null) {
-            return 0L;
-        }
-        if (v instanceof Number n) {
-            return n.longValue();
-        }
-        return Long.parseLong(v.toString());
     }
 }

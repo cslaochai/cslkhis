@@ -1,18 +1,18 @@
 package com.his.emr.service.impl;
 
-import com.his.emr.service.PrescriptionSignProvider;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.his.common.entity.SignSubject;
 import com.his.common.enums.PrescriptionStatusEnum;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
-import com.his.common.entity.SignSubject;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
+import com.his.emr.service.PrescriptionSignProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -45,6 +45,49 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
 
     private final BizPrescriptionMapper prescriptionMapper;
     private final BizPrescriptionDetailMapper detailMapper;
+
+    /**
+     * 明细逐条一行，字段用 {@code |} 分隔、行间换行 —— 全部为"用药内容"，不含明细行的流程状态
+     */
+    private static String detailsText(List<BizPrescriptionDetail> details) {
+        if (details == null || details.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        int i = 0;
+        for (BizPrescriptionDetail d : details) {
+            i++;
+            sb.append(i).append('|')
+                    .append(nz(d.getDrugCode())).append('|')
+                    .append(nz(d.getDrugName())).append('|')
+                    .append(nz(d.getGenericName())).append('|')
+                    .append(nz(d.getSpecification())).append('|')
+                    .append(nz(d.getDosageForm())).append('|')
+                    .append(nz(d.getUnit())).append('|')
+                    .append(plain(d.getQuantity())).append('|')
+                    .append(plain(d.getPrice())).append('|')
+                    .append(plain(d.getAmount())).append('|')
+                    .append(nz(d.getSingleDosage())).append('|')
+                    .append(nz(d.getUsageDosage())).append('|')
+                    .append(nz(d.getFrequency())).append('|')
+                    .append(nz(d.getRoute())).append('|')
+                    .append(d.getDuration() == null ? "" : d.getDuration()).append('|')
+                    .append(d.getIsSkinTest() == null ? "" : d.getIsSkinTest())
+                    .append('\n');
+        }
+        return sb.toString();
+    }
+
+    private static String nz(String s) {
+        return s == null ? "" : s;
+    }
+
+    /**
+     * BigDecimal 去尾零：金额 `10.00` 与 `10.0` 必须算出同一个摘要
+     */
+    private static String plain(BigDecimal v) {
+        return v == null ? null : v.stripTrailingZeros().toPlainString();
+    }
 
     @Override
     public SignBizType bizType() {
@@ -175,44 +218,5 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
                 .put("isUrgent", p.getIsUrgent())
                 .put("details", detailsText(details))
                 .build();
-    }
-
-    /** 明细逐条一行，字段用 {@code |} 分隔、行间换行 —— 全部为"用药内容"，不含明细行的流程状态 */
-    private static String detailsText(List<BizPrescriptionDetail> details) {
-        if (details == null || details.isEmpty()) {
-            return "";
-        }
-        StringBuilder sb = new StringBuilder();
-        int i = 0;
-        for (BizPrescriptionDetail d : details) {
-            i++;
-            sb.append(i).append('|')
-                    .append(nz(d.getDrugCode())).append('|')
-                    .append(nz(d.getDrugName())).append('|')
-                    .append(nz(d.getGenericName())).append('|')
-                    .append(nz(d.getSpecification())).append('|')
-                    .append(nz(d.getDosageForm())).append('|')
-                    .append(nz(d.getUnit())).append('|')
-                    .append(plain(d.getQuantity())).append('|')
-                    .append(plain(d.getPrice())).append('|')
-                    .append(plain(d.getAmount())).append('|')
-                    .append(nz(d.getSingleDosage())).append('|')
-                    .append(nz(d.getUsageDosage())).append('|')
-                    .append(nz(d.getFrequency())).append('|')
-                    .append(nz(d.getRoute())).append('|')
-                    .append(d.getDuration() == null ? "" : d.getDuration()).append('|')
-                    .append(d.getIsSkinTest() == null ? "" : d.getIsSkinTest())
-                    .append('\n');
-        }
-        return sb.toString();
-    }
-
-    private static String nz(String s) {
-        return s == null ? "" : s;
-    }
-
-    /** BigDecimal 去尾零：金额 `10.00` 与 `10.0` 必须算出同一个摘要 */
-    private static String plain(BigDecimal v) {
-        return v == null ? null : v.stripTrailingZeros().toPlainString();
     }
 }

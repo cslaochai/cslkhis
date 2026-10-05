@@ -2,11 +2,6 @@ package com.his.patient.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.patient.controller.PatientAllergyController;
-import com.his.patient.controller.PatientContactController;
-import com.his.patient.controller.PatientFamilyHistoryController;
-import com.his.patient.controller.PatientPastDiseaseController;
-import com.his.patient.controller.PatientSurgeryHistoryController;
 import com.his.patient.dto.PatientQueryPageDTO;
 import com.his.patient.dto.PatientRegisterDTO;
 import com.his.patient.dto.PatientUpsertDTO;
@@ -14,7 +9,6 @@ import com.his.patient.service.PatientService;
 import com.his.patient.vo.PatientDetailVO;
 import com.his.patient.vo.PatientRegisterVO;
 import com.his.patient.vo.PatientVO;
-import com.his.patient.controller.PatientTagRelationController;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -42,7 +36,7 @@ public class PatientController {
 
     @Operation(summary = "分页查询患者列表")
     @PostMapping("/listPage")
-    public Result<PageResult<PatientVO>> listPage(@RequestBody PatientQueryPageDTO queryDTO) {
+    public Result<PageResult<PatientVO>> listPage(@Valid @RequestBody PatientQueryPageDTO queryDTO) {
         return Result.success(patientService.queryPatientPage(queryDTO));
     }
 
@@ -80,7 +74,7 @@ public class PatientController {
     @Operation(summary = "患者自助注册（小程序端建档并开通账号）")
     @PreAuthorize("permitAll()")
     @PostMapping("/register")
-    public Result<PatientRegisterVO> register(@RequestBody PatientRegisterDTO dto) {
+    public Result<PatientRegisterVO> register(@Valid @RequestBody PatientRegisterDTO dto) {
         return Result.success("注册成功", patientService.register(dto));
     }
 }

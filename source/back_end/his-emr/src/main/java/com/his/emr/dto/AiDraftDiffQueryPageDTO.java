@@ -11,12 +11,18 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class AiDraftDiffQueryPageDTO extends PageParam {
 
-    /** 患者姓名（模糊） */
+    /**
+     * 患者姓名（模糊）
+     */
     private String patientName;
 
-    /** 终审医生姓名（模糊） */
+    /**
+     * 终审医生姓名（模糊）
+     */
     private String doctorName;
 
-    /** 是否修改（1-有修改 0-未修改） */
+    /**
+     * 是否修改（1-有修改 0-未修改）
+     */
     private Integer changed;
 }

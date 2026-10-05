@@ -10,13 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -51,7 +45,7 @@ public class NursingQcController {
     @Operation(summary = "检查人下拉（该病区所属科室的在职人员）")
     @GetMapping("/inspectorSelectList")
     public Result<List<NurseQcVO.Inspector>> inspectorSelectList(@RequestParam Long wardId,
-                                                                @RequestParam(required = false) String keyword) {
+                                                                 @RequestParam(required = false) String keyword) {
         return Result.success(nursingQcService.inspectorSelectList(wardId, keyword));
     }
 
@@ -66,7 +60,7 @@ public class NursingQcController {
     @Operation(summary = "检查单分页（病区 × 月 × 类别）")
     @PostMapping("/checkListPage")
     public Result<PageResult<NurseQcVO.CheckRow>> checkListPage(
-            @RequestBody(required = false) NursingQcDTO.CheckQueryPage dto) {
+            @Valid @RequestBody(required = false) NursingQcDTO.CheckQueryPage dto) {
         return Result.success(nursingQcService.checkListPage(dto));
     }
 
@@ -109,7 +103,7 @@ public class NursingQcController {
     @PreAuthorize("hasAuthority('nursing:qc:list')")
     @Operation(summary = "指标趋势（一条指标按月一个点，wardId 空=可见范围全院合并）")
     @PostMapping("/trend")
-    public Result<List<NurseQcVO.Kpi>> trend(@RequestBody NursingQcDTO.TrendQuery dto) {
+    public Result<List<NurseQcVO.Kpi>> trend(@Valid @RequestBody NursingQcDTO.TrendQuery dto) {
         return Result.success(nursingQcService.trend(dto));
     }
 
@@ -124,7 +118,7 @@ public class NursingQcController {
     @Operation(summary = "指标台账分页（每行都带分子分母与来源备注）")
     @PostMapping("/ledgerListPage")
     public Result<PageResult<NurseQcVO.LedgerRow>> ledgerListPage(
-            @RequestBody(required = false) NursingQcDTO.LedgerQueryPage dto) {
+            @Valid @RequestBody(required = false) NursingQcDTO.LedgerQueryPage dto) {
         return Result.success(nursingQcService.ledgerListPage(dto));
     }
 

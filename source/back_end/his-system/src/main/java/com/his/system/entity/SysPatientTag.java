@@ -10,7 +10,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** 患者标签 */
+/**
+ * 患者标签
+ */
 @Data
 @TableName("sys_patient_tag")
 public class SysPatientTag {
@@ -27,7 +29,9 @@ public class SysPatientTag {
      */
     private String tagName;
 
-    /** 标签缩写用于展示 */
+    /**
+     * 标签缩写用于展示
+     */
     private String shortName;
 
     /**

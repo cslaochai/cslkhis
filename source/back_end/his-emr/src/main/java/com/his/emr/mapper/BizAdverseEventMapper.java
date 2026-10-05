@@ -16,7 +16,7 @@ public interface BizAdverseEventMapper extends BaseMapper<BizAdverseEvent> {
 
     /**
      * 不良事件分页
-     *
+     * <p>
      * ⚠ ORDER BY 必须补唯一二级键 id（同秒上报顺序不稳定 → 翻页重复+丢行，且不报错）
      * ⚠ 日期过滤用 DATE(report_time)：`report_time <= '2026-09-23'` 会漏掉当天全部事件
      * ⚠ 普通 @Select（非 script）里比较符写真字符 `<>`，写 `&lt;&gt;` 会被原样发给 MySQL（G9 踩过）
@@ -87,7 +87,7 @@ public interface BizAdverseEventMapper extends BaseMapper<BizAdverseEvent> {
 
     /**
      * 病区名称（跨模块读病区）。
-     *
+     * <p>
      * ⚠ 病区没有 del_flag 列，别给它加条件（裸 SQL 不加照样查得到，加了直接 Unknown column）。
      */
     @Select("SELECT ward_name FROM sys_ward WHERE ward_id = #{wardId}")

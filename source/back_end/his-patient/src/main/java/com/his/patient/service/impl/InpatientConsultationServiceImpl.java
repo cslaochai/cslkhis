@@ -31,7 +31,7 @@ import com.his.patient.support.ConsultationLabels;
 import com.his.patient.vo.ConsultationVO;
 import com.his.patient.vo.WardVO;
 import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysMessage;

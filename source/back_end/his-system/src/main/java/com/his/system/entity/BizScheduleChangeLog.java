@@ -24,36 +24,54 @@ import java.time.LocalDateTime;
 @TableName("biz_schedule_change_log")
 public class BizScheduleChangeLog extends BaseEntity {
 
-    /** 员工排班ID */
+    /**
+     * 员工排班ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long staffScheduleId;
 
-    /** 变更类型（1-换班 2-代班 3-停班 4-加号 5-减号 6-出诊变更） */
+    /**
+     * 变更类型（1-换班 2-代班 3-停班 4-加号 5-减号 6-出诊变更）
+     */
     private Integer actionType;
 
-    /** 原值班人 */
+    /**
+     * 原值班人
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long fromEmployeeId;
 
-    /** 实际值班人 */
+    /**
+     * 实际值班人
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long toEmployeeId;
 
-    /** 原班次ID */
+    /**
+     * 原班次ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long fromShiftId;
 
-    /** 新班次ID */
+    /**
+     * 新班次ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long toShiftId;
 
-    /** 变更数量 */
+    /**
+     * 变更数量
+     */
     private Integer amount;
 
-    /** 变更原因 */
+    /**
+     * 变更原因
+     */
     private String reason;
 
-    /** 变更时间 */
+    /**
+     * 变更时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime occurTime;
 }

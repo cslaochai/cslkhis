@@ -9,7 +9,9 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 
-/** 检验项目字典 */
+/**
+ * 检验项目字典
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_laboratory_item")

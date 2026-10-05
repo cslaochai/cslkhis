@@ -1,5 +1,7 @@
 package com.his.charge.controller;
 
+import com.his.charge.dto.ArrearsBoardQueryDTO;
+import com.his.charge.dto.ArrearsPolicyUpsertDTO;
 import com.his.charge.service.ArrearsControlService;
 import com.his.charge.vo.ArrearsPatientVO;
 import com.his.charge.vo.ArrearsPolicyVO;
@@ -7,6 +9,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -35,29 +38,16 @@ public class ArrearsControlController {
     @PreAuthorize("hasAuthority('charge:arrearsControl:add')")
     @Operation(summary = "更新管控策略")
     @PostMapping("/policyUpsert")
-    public Result<ArrearsPolicyVO> policyUpsert(@RequestBody ArrearsPolicyVO dto) {
+    public Result<ArrearsPolicyVO> policyUpsert(@Valid @RequestBody ArrearsPolicyUpsertDTO dto) {
         return Result.success("策略已保存", arrearsControlService.upsertPolicy(dto));
     }
 
     @Operation(summary = "在院欠费患者榜（按欠费额倒序）")
     @PostMapping("/board")
-    public Result<PageResult<ArrearsPatientVO>> board(@RequestBody(required = false) BoardQuery q) {
-        BoardQuery query = q == null ? new BoardQuery() : q;
+    public Result<PageResult<ArrearsPatientVO>> board(@Valid @RequestBody(required = false) ArrearsBoardQueryDTO q) {
+        ArrearsBoardQueryDTO query = q == null ? new ArrearsBoardQueryDTO() : q;
         var page = arrearsControlService.arrearsBoard(query.getKeyword(), query.getPageNum(), query.getPageSize());
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
-    }
-
-    /**
-     * 榜单查询入参（GET 带复杂参数被规范禁止，走 POST）
-     */
-    @lombok.Data
-    public static class BoardQuery {
-        /**
-         * 患者姓名/患者号模糊
-         */
-        private String keyword;
-        private Integer pageNum = 1;
-        private Integer pageSize = 10;
     }
 }

@@ -11,18 +11,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 药品入库单控制器
- *
+ * <p>
  * 链路：采购订单审批通过 →（生成）入库单【待审核】→（审核）【已审核】→（入库）【已入库，动库存】
  * 生成入库单的入口在采购订单侧（/purchase/generateInbound），本控制器负责入库单自身的流转。
  */
@@ -37,7 +31,7 @@ public class DrugInboundController {
 
     @Operation(summary = "分页查询入库单")
     @PostMapping("/listPage")
-    public Result<PageResult<DrugInboundVO>> listPage(@RequestBody DrugInboundQueryPageDTO queryDTO) {
+    public Result<PageResult<DrugInboundVO>> listPage(@Valid @RequestBody DrugInboundQueryPageDTO queryDTO) {
         return Result.success(drugInboundService.page(queryDTO));
     }
 

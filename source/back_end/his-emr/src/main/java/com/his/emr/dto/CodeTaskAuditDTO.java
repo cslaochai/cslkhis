@@ -9,14 +9,20 @@ import lombok.Data;
 @Data
 public class CodeTaskAuditDTO {
 
-    /** 任务ID */
+    /**
+     * 任务ID
+     */
     @NotNull(message = "任务ID不能为空")
     private Long id;
 
-    /** true 通过 / false 退修 */
+    /**
+     * true 通过 / false 退修
+     */
     @NotNull(message = "请选择审核结论")
     private Boolean approve;
 
-    /** 审核意见（退修必填） */
+    /**
+     * 审核意见（退修必填）
+     */
     private String remark;
 }

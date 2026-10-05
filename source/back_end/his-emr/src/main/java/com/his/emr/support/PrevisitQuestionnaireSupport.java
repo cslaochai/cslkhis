@@ -12,16 +12,24 @@ import java.util.Map;
  */
 public final class PrevisitQuestionnaireSupport {
 
-    /** 量表版本：题目结构或选项有实质变化时递增 */
+    /**
+     * 量表版本：题目结构或选项有实质变化时递增
+     */
     public static final String VERSION = "2026.10";
 
-    /** 题型：单选 */
+    /**
+     * 题型：单选
+     */
     public static final String TYPE_CHOICE = "choice";
 
-    /** 题型：文本 */
+    /**
+     * 题型：文本
+     */
     public static final String TYPE_TEXT = "text";
 
-    /** 主症状清单（覆盖门诊常见主诉；「其他」走自由文本兜底） */
+    /**
+     * 主症状清单（覆盖门诊常见主诉；「其他」走自由文本兜底）
+     */
     public static final List<Option> MAIN_SYMPTOMS = List.of(
             new Option("fever_cough", "发热/咳嗽/咽痛"),
             new Option("dizzy_headache", "头晕/头痛"),
@@ -33,7 +41,9 @@ public final class PrevisitQuestionnaireSupport {
             new Option("insomnia_weak", "乏力/失眠"),
             new Option("other", "其他"));
 
-    /** 通用问（所有主症状都要答） */
+    /**
+     * 通用问（所有主症状都要答）
+     */
     public static final List<Question> COMMON_QUESTIONS = List.of(
             new Question("onset", "症状持续多久了", TYPE_CHOICE,
                     List.of("1天以内", "1-3天", "4-7天", "1-2周", "2周以上")),
@@ -45,7 +55,9 @@ public final class PrevisitQuestionnaireSupport {
             new Question("allergy", "是否有已知药物/食物过敏", TYPE_CHOICE,
                     List.of("无", "有（请在补充描述里写明过敏物）")));
 
-    /** 主症状追问组（每症状 2 问，作答负荷最低的追问树起点） */
+    /**
+     * 主症状追问组（每症状 2 问，作答负荷最低的追问树起点）
+     */
     public static final Map<String, List<Question>> SYMPTOM_QUESTIONS = Map.of(
             "fever_cough", List.of(
                     new Question("peak_temp", "最高体温大约多少", TYPE_CHOICE,
@@ -87,60 +99,18 @@ public final class PrevisitQuestionnaireSupport {
                             List.of("晨起", "午后", "全天", "说不清"))),
             "other", List.of());
 
-    /**
-     * 选项/题目
-     */
-    public static class Option {
-        public final String code;
-        public final String label;
-
-        public Option(String code, String label) {
-            this.code = code;
-            this.label = label;
-        }
-
-        public String getCode() {
-            return code;
-        }
-
-        public String getLabel() {
-            return label;
-        }
-    }
-
-    /**
-     * 问题
-     */
-    public static class Question {
-        public final String key;
-        public final String label;
-        public final String type;
-        public final List<String> options;
-
-        public Question(String key, String label, String type, List<String> options) {
-            this.key = key;
-            this.label = label;
-            this.type = type;
-            this.options = options;
-        }
-
-        public String getKey() {
-            return key;
-        }
-
-        public String getLabel() {
-            return label;
-        }
-
-        public String getType() {
-            return type;
-        }
-
-        public List<String> getOptions() {
-            return options;
-        }
-    }
-
     private PrevisitQuestionnaireSupport() {
+    }
+
+    /**
+         * 选项/题目
+         */
+        public record Option(String code, String label) {
+    }
+
+    /**
+         * 问题
+         */
+        public record Question(String key, String label, String type, List<String> options) {
     }
 }

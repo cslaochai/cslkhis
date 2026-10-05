@@ -9,10 +9,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 检查预约工作台接口（URL 前缀 /medicaltech/examAppoint）
@@ -28,19 +28,19 @@ public class ExamAppointmentController {
 
     @Operation(summary = "待预约申请分页（已缴费/已提交急诊，且无在办预约）")
     @PostMapping("/pendingListPage")
-    public Result<PageResult<ExamApptVO.ApplyVO>> pendingListPage(@RequestBody ExamApptDTO.ApplyQuery query) {
+    public Result<PageResult<ExamApptVO.ApplyVO>> pendingListPage(@Valid @RequestBody ExamApptDTO.ApplyQuery query) {
         return Result.success(appointmentService.pendingListPage(query));
     }
 
     @Operation(summary = "预约台账分页")
     @PostMapping("/listPage")
-    public Result<PageResult<ExamApptVO.ApptVO>> listPage(@RequestBody ExamApptDTO.ApptQuery query) {
+    public Result<PageResult<ExamApptVO.ApptVO>> listPage(@Valid @RequestBody ExamApptDTO.ApptQuery query) {
         return Result.success(appointmentService.listPage(query));
     }
 
     @Operation(summary = "预约台账状态分布（与分页同口径，后端统计）")
     @PostMapping("/statusCount")
-    public Result<List<ExamApptVO.StatusCountVO>> statusCount(@RequestBody ExamApptDTO.ApptQuery query) {
+    public Result<List<ExamApptVO.StatusCountVO>> statusCount(@Valid @RequestBody ExamApptDTO.ApptQuery query) {
         return Result.success(appointmentService.statusCount(query));
     }
 

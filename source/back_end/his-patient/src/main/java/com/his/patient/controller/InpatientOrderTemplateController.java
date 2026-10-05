@@ -13,13 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -50,7 +44,7 @@ public class InpatientOrderTemplateController {
     @PreAuthorize("hasAuthority('ipd:order:list')")
     @Operation(summary = "模板分页（模板管理弹窗）")
     @GetMapping("/listPage")
-    public Result<IPage<InpatientOrderTemplateListVO>> listPage(InpatientOrderTemplateQueryPageDTO query) {
+    public Result<IPage<InpatientOrderTemplateListVO>> listPage(@Valid InpatientOrderTemplateQueryPageDTO query) {
         return Result.success(templateService.listPage(query));
     }
 

@@ -9,10 +9,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 传染病报告卡控制器（G11）。
@@ -29,7 +29,7 @@ public class InfectiousReportController {
 
     @Operation(summary = "报卡分页")
     @PostMapping("/listPage")
-    public Result<PageResult<InfectiousReportVO.Row>> listPage(@RequestBody(required = false) InfectiousReportDTO.QueryPage dto) {
+    public Result<PageResult<InfectiousReportVO.Row>> listPage(@Valid @RequestBody(required = false) InfectiousReportDTO.QueryPage dto) {
         return Result.success(infectiousReportService.page(dto == null ? new InfectiousReportDTO.QueryPage() : dto));
     }
 

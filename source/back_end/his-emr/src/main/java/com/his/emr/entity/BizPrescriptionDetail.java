@@ -9,7 +9,9 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 
-/** 处方明细 */
+/**
+ * 处方明细
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_prescription_detail")

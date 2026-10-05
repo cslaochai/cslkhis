@@ -14,33 +14,51 @@ import java.time.LocalDate;
 @Data
 public class DutyRosterQueryPageDTO {
 
-    /** 页码 */
+    /**
+     * 页码
+     */
     private Integer pageNum = 1;
 
-    /** 每页条数 */
+    /**
+     * 每页条数
+     */
     private Integer pageSize = 10;
 
-    /** 起始日期（含） */
+    /**
+     * 起始日期（含）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate beginDate;
 
-    /** 截止日期（含） */
+    /**
+     * 截止日期（含）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate endDate;
 
-    /** 班次（1-白班 2-夜班 00-次日08） */
+    /**
+     * 班次（1-白班 2-夜班 00-次日08）
+     */
     private Integer shiftType;
 
-    /** 班内角色（1-主班 2-副班） */
+    /**
+     * 班内角色（1-主班 2-副班）
+     */
     private Integer roleType;
 
-    /** 值班人 */
+    /**
+     * 值班人
+     */
     private Long employeeId;
 
-    /** 值班点位ID（按点位看某一天的排班） */
+    /**
+     * 值班点位ID（按点位看某一天的排班）
+     */
     private Long postId;
 
-    /** 责任范围（1-全院行政 2-急诊 3-感染 4-总务 5-信息 6-临床科室） */
+    /**
+     * 责任范围（1-全院行政 2-急诊 3-感染 4-总务 5-信息 6-临床科室）
+     */
     private Integer dutyScope;
 
     /**

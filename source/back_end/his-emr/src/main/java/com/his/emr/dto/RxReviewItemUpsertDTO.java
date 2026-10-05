@@ -17,19 +17,27 @@ import java.util.List;
 @Data
 public class RxReviewItemUpsertDTO {
 
-    /** 主键 */
+    /**
+     * 主键
+     */
     @NotNull(message = "点评明细不能为空")
     private Long id;
 
-    /** 点评结论（1-合理 2-不规范处方 3-用药不适宜处方 4-超常处方） */
+    /**
+     * 点评结论（1-合理 2-不规范处方 3-用药不适宜处方 4-超常处方）
+     */
     @NotNull(message = "点评结论不能为空")
     @Min(value = 1, message = "点评结论非法")
     @Max(value = 4, message = "点评结论非法")
     private Integer reviewResult;
 
-    /** 问题码（11-15不规范 21-27不适宜 31-34超常） */
+    /**
+     * 问题码（11-15不规范 21-27不适宜 31-34超常）
+     */
     private List<String> problemTypes;
 
-    /** 点评意见（不合理时必填） */
+    /**
+     * 点评意见（不合理时必填）
+     */
     private String reviewOpinion;
 }

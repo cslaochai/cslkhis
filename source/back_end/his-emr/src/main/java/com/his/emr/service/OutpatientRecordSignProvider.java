@@ -1,17 +1,20 @@
 package com.his.emr.service;
 
-import com.his.common.service.SignableContentProvider;
+import com.his.common.entity.SignSubject;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
-import com.his.common.entity.SignSubject;
+import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.emr.entity.BizMedicalRecord;
+
 import java.time.LocalDateTime;
 
 public interface OutpatientRecordSignProvider extends SignableContentProvider {
 
-    /** 门诊病历状态文案（与前端 1草稿/2已提交/3已归档/4已作废一致）；未知码值不回落 */
-    public static String recordStatusText(Integer status) {
+    /**
+     * 门诊病历状态文案（与前端 1草稿/2已提交/3已归档/4已作废一致）；未知码值不回落
+     */
+    static String recordStatusText(Integer status) {
         if (status == null) {
             return "—";
         }
@@ -24,8 +27,10 @@ public interface OutpatientRecordSignProvider extends SignableContentProvider {
         };
     }
 
-    /** 规范化文本：只含病历内容字段，顺序固定 */
-    public static String canonical(BizMedicalRecord r) {
+    /**
+     * 规范化文本：只含病历内容字段，顺序固定
+     */
+    static String canonical(BizMedicalRecord r) {
         return CanonicalText.create("OUTPATIENT_RECORD")
                 .put("recordNo", r.getRecordNo())
                 .put("patientId", r.getPatientId())

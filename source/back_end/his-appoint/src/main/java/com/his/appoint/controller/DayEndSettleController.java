@@ -6,6 +6,7 @@ import com.his.appoint.vo.DayEndSettleResultVO;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,7 +33,7 @@ public class DayEndSettleController {
     @Operation(summary = "执行日终结转：未签到→爽约 / 已签到未就诊→未就诊 / 队列行→已失效")
     @PostMapping("/run")
     @PreAuthorize("hasAuthority('opd:todayVisits:list')")
-    public Result<DayEndSettleResultVO> run(@RequestBody DayEndSettleDTO dto) {
+    public Result<DayEndSettleResultVO> run(@Valid @RequestBody DayEndSettleDTO dto) {
         // 结论放在 message、明细放在 data（Result.success 的签名是 (message, data)）
         DayEndSettleResultVO vo = dayEndSettleService.settle(dto);
         return Result.success(vo.getMessage(), vo);

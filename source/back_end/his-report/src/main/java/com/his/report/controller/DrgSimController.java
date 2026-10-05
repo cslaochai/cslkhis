@@ -9,10 +9,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * DRG-DIP 分组模拟控制器（院内简化模拟器；正式方案接入后整体替换）。
@@ -34,13 +34,13 @@ public class DrgSimController {
 
     @Operation(summary = "批量模拟（不传 ids 默认最近 50 条）")
     @PostMapping("/simulateBatch")
-    public Result<DrgSimVO.SummaryListVO> simulateBatch(@RequestBody(required = false) DrgSimDTO.SimulateBatch dto) {
+    public Result<DrgSimVO.SummaryListVO> simulateBatch(@Valid @RequestBody(required = false) DrgSimDTO.SimulateBatch dto) {
         return Result.success("批量模拟完成", drgSimService.simulateBatch(dto));
     }
 
     @Operation(summary = "模拟结果分页")
     @PostMapping("/result/listPage")
-    public Result<PageResult<DrgSimVO.ResultRow>> resultPage(@RequestBody DrgSimDTO.ResultQuery dto) {
+    public Result<PageResult<DrgSimVO.ResultRow>> resultPage(@Valid @RequestBody DrgSimDTO.ResultQuery dto) {
         var page = drgSimService.resultPage(dto == null ? new DrgSimDTO.ResultQuery() : dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

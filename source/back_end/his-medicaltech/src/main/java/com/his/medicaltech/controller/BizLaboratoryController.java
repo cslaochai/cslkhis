@@ -11,6 +11,7 @@ import com.his.medicaltech.vo.BizLaboratoryRecordVO;
 import com.his.medicaltech.vo.LaboratoryDetailVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -32,7 +33,7 @@ public class BizLaboratoryController {
 
     @Operation(summary = "分页查询检验记录列表")
     @PostMapping("/listPage")
-    public Result<PageResult<BizLaboratoryRecordVO>> laboratoryListPage(@RequestBody LaboratoryRecordQueryDTO queryDTO) {
+    public Result<PageResult<BizLaboratoryRecordVO>> laboratoryListPage(@Valid @RequestBody LaboratoryRecordQueryDTO queryDTO) {
         return Result.success(medicalTechService.selectLaboratoryRecordPageVO(
                 queryDTO.getPatientId(), queryDTO.getLaboratoryDeptId(),
                 queryDTO.getPageNum(), queryDTO.getPageSize()));
@@ -40,7 +41,7 @@ public class BizLaboratoryController {
 
     @Operation(summary = "查询检验记录列表（不分页）")
     @PostMapping("/list")
-    public Result<List<BizLaboratoryRecordVO>> laboratoryList(@RequestBody LaboratoryRecordQueryDTO queryDTO) {
+    public Result<List<BizLaboratoryRecordVO>> laboratoryList(@Valid @RequestBody LaboratoryRecordQueryDTO queryDTO) {
         return Result.success(medicalTechService.selectLaboratoryRecordListVO(
                 queryDTO.getPatientId(), queryDTO.getLaboratoryDeptId()));
     }
@@ -56,14 +57,14 @@ public class BizLaboratoryController {
 
     @Operation(summary = "接收标本")
     @PostMapping("/receive")
-    public Result<Void> receiveSpecimen(@RequestBody LaboratoryReceiveDTO receiveDTO) {
+    public Result<Void> receiveSpecimen(@Valid @RequestBody LaboratoryReceiveDTO receiveDTO) {
         boolean success = medicalTechService.receiveSpecimen(receiveDTO.getRecordId(), receiveDTO.getReceiveBy());
         return success ? Result.success("接收成功", null) : Result.error("接收失败");
     }
 
     @Operation(summary = "录入检验结果")
     @PostMapping("/inputResult")
-    public Result<Void> inputLabResult(@RequestBody LabResultSaveDTO labResultSaveDTO) {
+    public Result<Void> inputLabResult(@Valid @RequestBody LabResultSaveDTO labResultSaveDTO) {
         boolean success = medicalTechService.saveResult(labResultSaveDTO);
         return success ? Result.success("录入成功", null) : Result.error("录入失败");
     }
@@ -71,7 +72,7 @@ public class BizLaboratoryController {
 
     @Operation(summary = "审核检验报告")
     @PostMapping("/audit")
-    public Result<Void> auditLaboratory(@RequestBody LaboratoryAuditDTO auditDTO) {
+    public Result<Void> auditLaboratory(@Valid @RequestBody LaboratoryAuditDTO auditDTO) {
         boolean success = medicalTechService.auditLaboratory(auditDTO.getRecordId(), auditDTO.getAuditBy());
         return success ? Result.success("审核成功", null) : Result.error("审核失败");
     }

@@ -11,12 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 人力配置标准（一个单元 × 一个班次 × 一个岗位类别该配多少人）。
@@ -34,7 +29,7 @@ public class StaffPlanRuleController {
     @Operation(summary = "分页查询人力标准")
     @PreAuthorize("hasAuthority('org:schedule:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<StaffPlanRuleVO>> listPage(@RequestBody StaffPlanRuleQueryPageDTO queryDTO) {
+    public Result<PageResult<StaffPlanRuleVO>> listPage(@Valid @RequestBody StaffPlanRuleQueryPageDTO queryDTO) {
         return Result.success(staffPlanRuleService.pageVO(queryDTO));
     }
 

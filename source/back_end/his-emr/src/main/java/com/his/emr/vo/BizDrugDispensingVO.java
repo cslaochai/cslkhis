@@ -84,7 +84,9 @@ public class BizDrugDispensingVO {
      */
     private String unit;
 
-    /** 发药数量 */
+    /**
+     * 发药数量
+     */
     private BigDecimal quantity;
 
     /**
@@ -102,11 +104,15 @@ public class BizDrugDispensingVO {
      */
     private Integer dispensingStatus;
 
-    /** 发药药师ID */
+    /**
+     * 发药药师ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long pharmacistId;
 
-    /** 发药药师姓名 */
+    /**
+     * 发药药师姓名
+     */
     private String pharmacistName;
 
     /**

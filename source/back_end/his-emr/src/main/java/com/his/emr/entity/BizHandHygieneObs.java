@@ -17,30 +17,48 @@ import java.time.LocalDateTime;
 @TableName("biz_hand_hygiene_obs")
 public class BizHandHygieneObs extends BaseEntity {
 
-    /** 观察日期 */
+    /**
+     * 观察日期
+     */
     private LocalDate obsDate;
 
-    /** 被观察科室ID */
+    /**
+     * 被观察科室ID
+     */
     private Long deptId;
 
-    /** 被观察科室（快照） */
+    /**
+     * 被观察科室（快照）
+     */
     private String deptName;
 
-    /** 观察对象（1医生/2护士/3工勤其他） */
+    /**
+     * 观察对象（1医生/2护士/3工勤其他）
+     */
     private Integer obsObject;
 
-    /** 手卫生时机数 */
+    /**
+     * 手卫生时机数
+     */
     private Integer opportunityCount;
 
-    /** 实际执行数（≤时机数） */
+    /**
+     * 实际执行数（≤时机数）
+     */
     private Integer complyCount;
 
-    /** 观察人ID */
+    /**
+     * 观察人ID
+     */
     private Long observerId;
 
-    /** 观察人姓名（快照） */
+    /**
+     * 观察人姓名（快照）
+     */
     private String observerName;
 
-    /** 观察登记时间 */
+    /**
+     * 观察登记时间
+     */
     private LocalDateTime obsTime;
 }

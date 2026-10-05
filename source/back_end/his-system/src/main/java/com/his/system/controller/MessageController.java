@@ -8,13 +8,14 @@ import com.his.system.vo.MessageTypeCountVO;
 import com.his.system.vo.SysMessageVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 消息通知控制器
@@ -46,7 +47,7 @@ public class MessageController {
 
     @Operation(summary = "查询消息列表")
     @GetMapping("/listPage")
-    public Result<PageResult<SysMessageVO>> listPage(MessageQueryPageDTO queryDTO) {
+    public Result<PageResult<SysMessageVO>> listPage(@Valid MessageQueryPageDTO queryDTO) {
         return Result.success(messageService.queryMessagePage(queryDTO));
     }
 

@@ -28,7 +28,7 @@ import com.his.patient.vo.PatientHealthProfileVO;
 import com.his.patient.vo.PatientRegisterVO;
 import com.his.patient.vo.PatientVO;
 import com.his.patient.service.BizPatientTagRelationService;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.entity.SysUser;
 import com.his.system.service.SysUserService;

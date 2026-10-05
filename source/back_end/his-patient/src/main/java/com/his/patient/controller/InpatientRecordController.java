@@ -2,30 +2,17 @@ package com.his.patient.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.patient.dto.InpatientRecordArchiveDTO;
-import com.his.patient.dto.InpatientRecordLogQueryPageDTO;
-import com.his.patient.dto.InpatientRecordQueryPageDTO;
-import com.his.patient.dto.InpatientRecordSubmitDTO;
-import com.his.patient.dto.InpatientRecordUpsertDTO;
+import com.his.patient.dto.*;
 import com.his.patient.service.InpatientRecordService;
-import com.his.patient.vo.CodeOptionVO;
-import com.his.patient.vo.InpatientRecordDetailVO;
-import com.his.patient.vo.InpatientRecordLogVO;
-import com.his.patient.vo.InpatientRecordVO;
-import com.his.patient.vo.RecordQualityStatVO;
+import com.his.patient.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 住院病历文书（P2：结构化率 80% 的载体）。
@@ -51,7 +38,7 @@ public class InpatientRecordController {
 
     @Operation(summary = "病历文书分页（列表行不带长文本，只给摘要与结构化率）")
     @GetMapping("/listPage")
-    public Result<IPage<InpatientRecordVO>> listPage(InpatientRecordQueryPageDTO query) {
+    public Result<IPage<InpatientRecordVO>> listPage(@Valid InpatientRecordQueryPageDTO query) {
         return Result.success(recordService.listPage(query));
     }
 
@@ -64,7 +51,7 @@ public class InpatientRecordController {
     @PreAuthorize("hasAuthority('ipd:record:add')")
     @Operation(summary = "新增/修改病历文书（传什么覆盖什么；修改逐字段留痕，已归档拒改）")
     @PostMapping("/save")
-    public Result<InpatientRecordDetailVO> save(@RequestBody InpatientRecordUpsertDTO dto) {
+    public Result<InpatientRecordDetailVO> save(@Valid @RequestBody InpatientRecordUpsertDTO dto) {
         return Result.success("病历文书已保存", recordService.save(dto));
     }
 
@@ -84,14 +71,14 @@ public class InpatientRecordController {
 
     @Operation(summary = "修改日志分页（可按单据查，也可按 admissionId 查本次住院全部文书的修改轨迹）")
     @GetMapping("/logs")
-    public Result<IPage<InpatientRecordLogVO>> logs(InpatientRecordLogQueryPageDTO query) {
+    public Result<IPage<InpatientRecordLogVO>> logs(@Valid InpatientRecordLogQueryPageDTO query) {
         return Result.success(recordService.logPage(query));
     }
 
     @Operation(summary = "某份文书的全部修改日志（按时间升序，不分页；docType=1病历 2护理）")
     @GetMapping("/logList")
     public Result<List<InpatientRecordLogVO>> logList(@RequestParam Integer docType,
-                                                     @RequestParam Long recordId) {
+                                                      @RequestParam Long recordId) {
         return Result.success(recordService.logList(docType, recordId));
     }
 

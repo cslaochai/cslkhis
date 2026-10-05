@@ -1,5 +1,6 @@
 package com.his.security;
 
+import com.his.security.entity.CurrentUser;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 

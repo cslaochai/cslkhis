@@ -51,7 +51,7 @@ public class StatReportController {
 
     @Operation(summary = "上报台账分页（不含报文大字段）")
     @PostMapping("/listPage")
-    public Result<PageResult<StatReportVO.Row>> listPage(@RequestBody StatReportDTO.QueryPage dto) {
+    public Result<PageResult<StatReportVO.Row>> listPage(@Valid @RequestBody StatReportDTO.QueryPage dto) {
         var page = statReportService.listPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

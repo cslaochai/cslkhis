@@ -27,34 +27,6 @@ import java.util.List;
 public interface NarcoticRegisterMapper extends BaseMapper<BizNarcoticRegister> {
 
     /**
-     * 药品管制分类行（跨模块读药品字典）
-     */
-    class DrugSpecialRow {
-        private Long drugId;
-        private String drugCode;
-        private String drugName;
-        private String specification;
-        private String unit;
-        private String dosageForm;
-        private Integer specialFlag;
-
-        public Long getDrugId() { return drugId; }
-        public void setDrugId(Long drugId) { this.drugId = drugId; }
-        public String getDrugCode() { return drugCode; }
-        public void setDrugCode(String drugCode) { this.drugCode = drugCode; }
-        public String getDrugName() { return drugName; }
-        public void setDrugName(String drugName) { this.drugName = drugName; }
-        public String getSpecification() { return specification; }
-        public void setSpecification(String specification) { this.specification = specification; }
-        public String getUnit() { return unit; }
-        public void setUnit(String unit) { this.unit = unit; }
-        public String getDosageForm() { return dosageForm; }
-        public void setDosageForm(String dosageForm) { this.dosageForm = dosageForm; }
-        public Integer getSpecialFlag() { return specialFlag; }
-        public void setSpecialFlag(Integer specialFlag) { this.specialFlag = specialFlag; }
-    }
-
-    /**
      * 按药品ID批量取管制分类（跨模块读药品字典）
      */
     @Select("<script>" +
@@ -78,16 +50,6 @@ public interface NarcoticRegisterMapper extends BaseMapper<BizNarcoticRegister> 
             "   AND change_quantity < 0 AND batch_no IS NOT NULL " +
             " ORDER BY id ASC")
     List<BatchRow> selectDeductBatches(@Param("sourceType") String sourceType, @Param("sourceId") Long sourceId);
-
-    class BatchRow {
-        private String batchNo;
-        private java.math.BigDecimal qty;
-
-        public String getBatchNo() { return batchNo; }
-        public void setBatchNo(String batchNo) { this.batchNo = batchNo; }
-        public java.math.BigDecimal getQty() { return qty; }
-        public void setQty(java.math.BigDecimal qty) { this.qty = qty; }
-    }
 
     /**
      * 患者身份证号（跨模块读患者基本信息）
@@ -134,4 +96,94 @@ public interface NarcoticRegisterMapper extends BaseMapper<BizNarcoticRegister> 
      */
     @Select("SELECT COUNT(*) FROM biz_narcotic_register WHERE register_no = #{registerNo}")
     long countByRegisterNo(@Param("registerNo") String registerNo);
+
+    /**
+     * 药品管制分类行（跨模块读药品字典）
+     */
+    class DrugSpecialRow {
+        private Long drugId;
+        private String drugCode;
+        private String drugName;
+        private String specification;
+        private String unit;
+        private String dosageForm;
+        private Integer specialFlag;
+
+        public Long getDrugId() {
+            return drugId;
+        }
+
+        public void setDrugId(Long drugId) {
+            this.drugId = drugId;
+        }
+
+        public String getDrugCode() {
+            return drugCode;
+        }
+
+        public void setDrugCode(String drugCode) {
+            this.drugCode = drugCode;
+        }
+
+        public String getDrugName() {
+            return drugName;
+        }
+
+        public void setDrugName(String drugName) {
+            this.drugName = drugName;
+        }
+
+        public String getSpecification() {
+            return specification;
+        }
+
+        public void setSpecification(String specification) {
+            this.specification = specification;
+        }
+
+        public String getUnit() {
+            return unit;
+        }
+
+        public void setUnit(String unit) {
+            this.unit = unit;
+        }
+
+        public String getDosageForm() {
+            return dosageForm;
+        }
+
+        public void setDosageForm(String dosageForm) {
+            this.dosageForm = dosageForm;
+        }
+
+        public Integer getSpecialFlag() {
+            return specialFlag;
+        }
+
+        public void setSpecialFlag(Integer specialFlag) {
+            this.specialFlag = specialFlag;
+        }
+    }
+
+    class BatchRow {
+        private String batchNo;
+        private java.math.BigDecimal qty;
+
+        public String getBatchNo() {
+            return batchNo;
+        }
+
+        public void setBatchNo(String batchNo) {
+            this.batchNo = batchNo;
+        }
+
+        public java.math.BigDecimal getQty() {
+            return qty;
+        }
+
+        public void setQty(java.math.BigDecimal qty) {
+            this.qty = qty;
+        }
+    }
 }

@@ -6,11 +6,7 @@ import com.his.patient.dto.PatientIndexQueryDTO;
 import com.his.patient.dto.PatientMergeDTO;
 import com.his.patient.dto.PatientMergeRevertDTO;
 import com.his.patient.service.PatientIndexService;
-import com.his.patient.vo.PatientDuplicateGroupVO;
-import com.his.patient.vo.PatientIndexDictVO;
-import com.his.patient.vo.PatientIndexStatVO;
-import com.his.patient.vo.PatientIndexVO;
-import com.his.patient.vo.PatientMergeLogVO;
+import com.his.patient.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -37,13 +33,13 @@ public class PatientIndexController {
 
     @Operation(summary = "患者主索引分页（含档案完整度与业务数据量）")
     @PostMapping("/listPage")
-    public Result<PageResult<PatientIndexVO>> listPage(@RequestBody PatientIndexQueryDTO queryDTO) {
+    public Result<PageResult<PatientIndexVO>> listPage(@Valid @RequestBody PatientIndexQueryDTO queryDTO) {
         return Result.success(patientIndexService.selectIndexPage(queryDTO));
     }
 
     @Operation(summary = "疑似重复档案检测（分级；返回的是'值得看一眼'而非'应该合并'）")
     @PostMapping("/duplicateList")
-    public Result<List<PatientDuplicateGroupVO>> duplicateList(@RequestBody PatientIndexQueryDTO queryDTO) {
+    public Result<List<PatientDuplicateGroupVO>> duplicateList(@Valid @RequestBody PatientIndexQueryDTO queryDTO) {
         return Result.success(patientIndexService.detectDuplicates(queryDTO));
     }
 
@@ -70,7 +66,7 @@ public class PatientIndexController {
     @PreAuthorize("hasAuthority('patient:empi:edit')")
     @Operation(summary = "合并历史分页")
     @PostMapping("/mergeLogListPage")
-    public Result<PageResult<PatientMergeLogVO>> mergeLogListPage(@RequestBody PatientIndexQueryDTO queryDTO) {
+    public Result<PageResult<PatientMergeLogVO>> mergeLogListPage(@Valid @RequestBody PatientIndexQueryDTO queryDTO) {
         return Result.success(patientIndexService.selectMergeLogPage(queryDTO));
     }
 

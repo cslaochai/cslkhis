@@ -19,8 +19,6 @@ import com.his.operation.support.OperationApplyLabels;
 import com.his.operation.vo.CountItemVO;
 import com.his.operation.vo.OperationCountVO;
 import com.his.patient.service.PatientService;
-import com.his.security.CurrentUser;
-import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;

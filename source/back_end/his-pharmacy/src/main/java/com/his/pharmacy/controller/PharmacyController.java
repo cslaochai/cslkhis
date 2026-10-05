@@ -13,10 +13,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 药房管理控制器
@@ -35,7 +35,7 @@ public class PharmacyController {
 
     @Operation(summary = "分页查询库存列表")
     @PostMapping("/stockListPage")
-    public Result<PageResult<BizDrugStockVO>> stockListPage(@RequestBody DrugStockQueryDTO queryDTO) {
+    public Result<PageResult<BizDrugStockVO>> stockListPage(@Valid @RequestBody DrugStockQueryDTO queryDTO) {
         return Result.success(pharmacyService.selectStockPage(
                 queryDTO.getDrugName(), queryDTO.getStockStatus(), queryDTO.getStockRoom(),
                 queryDTO.getPageNum(), queryDTO.getPageSize()));
@@ -49,7 +49,7 @@ public class PharmacyController {
     @Operation(summary = "库存批次候选列表")
     @PostMapping("/stockBatchCandidates")
     @PreAuthorize("hasAnyAuthority('pharmacy:stock:list', 'pharmacy:drugTransfer:list', 'pharmacy:supplierReturn:list')")
-    public Result<List<BizDrugStockVO>> stockBatchCandidates(@RequestBody DrugStockQueryDTO queryDTO) {
+    public Result<List<BizDrugStockVO>> stockBatchCandidates(@Valid @RequestBody DrugStockQueryDTO queryDTO) {
         boolean onlyWithSupplier = Boolean.TRUE.equals(queryDTO.getOnlyWithSupplier());
         return Result.success(pharmacyService.selectBatchCandidates(
                 queryDTO.getStockRoom(), queryDTO.getDrugName(), onlyWithSupplier));
@@ -72,7 +72,7 @@ public class PharmacyController {
     @PreAuthorize("hasAuthority('pharmacy:stock:edit')")
     @Operation(summary = "入库")
     @PostMapping("/stockInbound")
-    public Result<Void> inboundStock(@RequestBody DrugStockChangeDTO changeDTO) {
+    public Result<Void> inboundStock(@Valid @RequestBody DrugStockChangeDTO changeDTO) {
         boolean success = pharmacyService.inboundStock(changeDTO.getStockId(), changeDTO.getQuantity());
         return success ? Result.success() : Result.error("入库失败");
     }
@@ -80,7 +80,7 @@ public class PharmacyController {
     @PreAuthorize("hasAuthority('pharmacy:stock:edit')")
     @Operation(summary = "出库")
     @PostMapping("/stockOutbound")
-    public Result<Void> outboundStock(@RequestBody DrugStockChangeDTO changeDTO) {
+    public Result<Void> outboundStock(@Valid @RequestBody DrugStockChangeDTO changeDTO) {
         boolean success = pharmacyService.outboundStock(changeDTO.getStockId(), changeDTO.getQuantity());
         return success ? Result.success() : Result.error("出库失败");
     }
@@ -88,13 +88,13 @@ public class PharmacyController {
     @PreAuthorize("hasAuthority('pharmacy:stock:edit')")
     @Operation(summary = "查询库存预警列表")
     @PostMapping("/stockWarningList")
-    public Result<List<BizDrugStockVO>> stockWarning(@RequestBody DrugStockQueryDTO queryDTO) {
+    public Result<List<BizDrugStockVO>> stockWarning(@Valid @RequestBody DrugStockQueryDTO queryDTO) {
         return Result.success(pharmacyService.selectStockWarningList(queryDTO.getStockStatus()));
     }
 
     @Operation(summary = "分页查询库存出入库流水")
     @PostMapping("/stockLogListPage")
-    public Result<PageResult<BizDrugStockLogVO>> stockLogListPage(@RequestBody DrugStockLogQueryPageDTO queryDTO) {
+    public Result<PageResult<BizDrugStockLogVO>> stockLogListPage(@Valid @RequestBody DrugStockLogQueryPageDTO queryDTO) {
         return Result.success(pharmacyService.selectStockLogPage(
                 queryDTO.getDrugName(), queryDTO.getChangeType(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }

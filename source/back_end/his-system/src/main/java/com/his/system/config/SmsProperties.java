@@ -24,12 +24,18 @@ public class SmsProperties {
      */
     private boolean mock = false;
 
-    /** 验证码有效期（秒） */
+    /**
+     * 验证码有效期（秒）
+     */
     private int ttlSeconds = 300;
 
-    /** 同一手机号+场景的重发间隔（秒） */
+    /**
+     * 同一手机号+场景的重发间隔（秒）
+     */
     private int resendSeconds = 60;
 
-    /** 验证码位数 */
+    /**
+     * 验证码位数
+     */
     private int length = 6;
 }

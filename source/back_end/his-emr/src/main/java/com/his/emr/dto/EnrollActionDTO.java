@@ -15,6 +15,8 @@ public class EnrollActionDTO implements Serializable {
     private Long id;
 
     // 不设 @Size：超长由服务端截到列宽落库
-    /** 原因 */
+    /**
+     * 原因
+     */
     private String reason;
 }

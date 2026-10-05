@@ -5,29 +5,19 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.exception.BusinessException;
-import com.his.emr.dto.EnrollActionDTO;
-import com.his.emr.dto.EnrollQueryPageDTO;
-import com.his.emr.dto.EnrollUpsertDTO;
-import com.his.emr.dto.OrderCheckDTO;
-import com.his.emr.dto.PathwayActionDTO;
-import com.his.emr.dto.PathwayQueryPageDTO;
-import com.his.emr.dto.PathwayUpsertDTO;
-import com.his.emr.dto.VarianceUpsertDTO;
+import com.his.emr.dto.*;
 import com.his.emr.entity.BizPathway;
 import com.his.emr.entity.BizPathwayEnroll;
 import com.his.emr.entity.BizPathwayStep;
 import com.his.emr.entity.BizPathwayVariance;
+import com.his.emr.enums.PathwayEnrollStatusEnum;
+import com.his.emr.enums.PathwayStatusEnum;
 import com.his.emr.mapper.BizPathwayEnrollMapper;
 import com.his.emr.mapper.BizPathwayMapper;
 import com.his.emr.mapper.BizPathwayStepMapper;
 import com.his.emr.mapper.BizPathwayVarianceMapper;
 import com.his.emr.service.PathwayService;
-import com.his.emr.vo.PathwayAdmissionVO;
-import com.his.emr.vo.PathwayAnalysisVO;
-import com.his.emr.vo.PathwayEnrollVO;
-import com.his.emr.vo.PathwayStepVO;
-import com.his.emr.vo.PathwayVO;
-import com.his.emr.vo.OrderCheckVO;
+import com.his.emr.vo.*;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -45,9 +35,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-
-import com.his.emr.enums.PathwayEnrollStatusEnum;
-import com.his.emr.enums.PathwayStatusEnum;
 
 /**
  * 临床路径服务实现。
@@ -69,7 +56,9 @@ import com.his.emr.enums.PathwayStatusEnum;
 @RequiredArgsConstructor
 public class PathwayServiceImpl implements PathwayService {
 
-    /** 原因类文本统一截 200（列宽 255，留余量，超长会把业务失败升级成 Data too long 500） */
+    /**
+     * 原因类文本统一截 200（列宽 255，留余量，超长会把业务失败升级成 Data too long 500）
+     */
     private static final int REASON_MAX = 200;
 
     private final BizPathwayMapper pathwayMapper;
@@ -79,6 +68,73 @@ public class PathwayServiceImpl implements PathwayService {
     private final RedisSequenceService sequenceService;
 
     // 模板
+
+    /**
+     * 路径日派生：在径按今天封顶；终态按 finish_date 定格。下限 1（入径当天=第 1 路径日）。
+     */
+    private static Integer deriveCurrentDay(Integer status, LocalDate enrollDate, LocalDate finishDate, Integer totalDays) {
+        if (enrollDate == null || totalDays == null || totalDays <= 0) {
+            return null;
+        }
+        LocalDate end = Objects.equals(status, PathwayEnrollStatusEnum.ENROLLED.getCode()) || finishDate == null
+                ? LocalDate.now() : finishDate;
+        long day = ChronoUnit.DAYS.between(enrollDate, end) + 1;
+        if (day < 1) {
+            day = 1;
+        }
+        return (int) Math.min(day, totalDays);
+    }
+
+    private static Double rate(Long numerator, Long denominator) {
+        if (denominator == null || denominator == 0) {
+            return null;
+        }
+        return BigDecimal.valueOf(numerator == null ? 0 : numerator)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(denominator), 1, RoundingMode.HALF_UP)
+                .doubleValue();
+    }
+
+    private static Long sum(List<Long> values) {
+        return values.stream().filter(Objects::nonNull).mapToLong(Long::longValue).sum();
+    }
+
+    private static LocalDate parseDate(String dateTimeText) {
+        if (!StringUtils.hasText(dateTimeText) || dateTimeText.length() < 10) {
+            return null;
+        }
+        return LocalDate.parse(dateTimeText.substring(0, 10));
+    }
+
+    private static void validateEnrollDate(LocalDate enrollDate, LocalDate admitDate) {
+        if (enrollDate.isAfter(LocalDate.now())) {
+            throw new BusinessException("入径日期不能是未来日期");
+        }
+        if (admitDate != null && enrollDate.isBefore(admitDate)) {
+            throw new BusinessException("入径日期不能早于入院日期（" + admitDate + "）");
+        }
+    }
+
+    private static String trimToNull(String text) {
+        return StringUtils.hasText(text) ? text.trim() : null;
+    }
+
+    // 入径 / 变异 / 终态
+
+    private static String cutToNull(String text, int max) {
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        return cut(text.trim(), max);
+    }
+
+    private static String cut(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max);
+    }
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
 
     @Override
     public PageResult<PathwayVO> listPage(PathwayQueryPageDTO dto) {
@@ -159,6 +215,8 @@ public class PathwayServiceImpl implements PathwayService {
         return getDetailById(entity.getId());
     }
 
+    // 变异分析
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PathwayVO publishPathway(PathwayActionDTO dto) {
@@ -183,6 +241,8 @@ public class PathwayServiceImpl implements PathwayService {
         return getDetailById(pathway.getId());
     }
 
+    // 医生站软约束（只读，不拦截）
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PathwayVO deprecatePathway(PathwayActionDTO dto) {
@@ -197,8 +257,6 @@ public class PathwayServiceImpl implements PathwayService {
         return getDetailById(pathway.getId());
     }
 
-    // 入径 / 变异 / 终态
-
     @Override
     public PageResult<PathwayEnrollVO> enrollListPage(EnrollQueryPageDTO dto) {
         int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
@@ -210,6 +268,8 @@ public class PathwayServiceImpl implements PathwayService {
                 v.getFinishDate(), v.getTotalDays())));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
+
+    // 内部
 
     @Override
     public PathwayEnrollVO enrollGetDetailById(Long id) {
@@ -366,8 +426,6 @@ public class PathwayServiceImpl implements PathwayService {
         return enrollGetDetailById(enroll.getId());
     }
 
-    // 变异分析
-
     @Override
     public PathwayAnalysisVO analysis(Long pathwayId) {
         PathwayAnalysisVO vo = new PathwayAnalysisVO();
@@ -383,8 +441,6 @@ public class PathwayServiceImpl implements PathwayService {
         vo.setTopReasons(varianceMapper.selectTopReasons(pathwayId, 10));
         return vo;
     }
-
-    // 医生站软约束（只读，不拦截）
 
     @Override
     public PathwayEnrollVO activeEnrollByAdmission(Long admissionId) {
@@ -441,9 +497,9 @@ public class PathwayServiceImpl implements PathwayService {
         return vo;
     }
 
-    // 内部
-
-    /** 受限账号（如病区医生）只能碰授权科室患者的路径数据 */
+    /**
+     * 受限账号（如病区医生）只能碰授权科室患者的路径数据
+     */
     private void checkDeptAccess(Long deptId) {
         Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
         if (allowed != null && (deptId == null || !allowed.contains(deptId))) {
@@ -451,7 +507,9 @@ public class PathwayServiceImpl implements PathwayService {
         }
     }
 
-    /** 草稿步骤变化后回算总日数（发布时再固化一次） */
+    /**
+     * 草稿步骤变化后回算总日数（发布时再固化一次）
+     */
     private void applyTotalDays(BizPathway pathway) {
         Integer maxDay = stepMapper.selectMaxDayNo(pathway.getId());
         int total = maxDay != null && maxDay > 0 ? maxDay : 0;
@@ -470,52 +528,6 @@ public class PathwayServiceImpl implements PathwayService {
         }
     }
 
-    /**
-     * 路径日派生：在径按今天封顶；终态按 finish_date 定格。下限 1（入径当天=第 1 路径日）。
-     */
-    private static Integer deriveCurrentDay(Integer status, LocalDate enrollDate, LocalDate finishDate, Integer totalDays) {
-        if (enrollDate == null || totalDays == null || totalDays <= 0) {
-            return null;
-        }
-        LocalDate end = Objects.equals(status, PathwayEnrollStatusEnum.ENROLLED.getCode()) || finishDate == null
-                ? LocalDate.now() : finishDate;
-        long day = ChronoUnit.DAYS.between(enrollDate, end) + 1;
-        if (day < 1) {
-            day = 1;
-        }
-        return (int) Math.min(day, totalDays);
-    }
-
-    private static Double rate(Long numerator, Long denominator) {
-        if (denominator == null || denominator == 0) {
-            return null;
-        }
-        return BigDecimal.valueOf(numerator == null ? 0 : numerator)
-                .multiply(BigDecimal.valueOf(100))
-                .divide(BigDecimal.valueOf(denominator), 1, RoundingMode.HALF_UP)
-                .doubleValue();
-    }
-
-    private static Long sum(List<Long> values) {
-        return values.stream().filter(Objects::nonNull).mapToLong(Long::longValue).sum();
-    }
-
-    private static LocalDate parseDate(String dateTimeText) {
-        if (!StringUtils.hasText(dateTimeText) || dateTimeText.length() < 10) {
-            return null;
-        }
-        return LocalDate.parse(dateTimeText.substring(0, 10));
-    }
-
-    private static void validateEnrollDate(LocalDate enrollDate, LocalDate admitDate) {
-        if (enrollDate.isAfter(LocalDate.now())) {
-            throw new BusinessException("入径日期不能是未来日期");
-        }
-        if (admitDate != null && enrollDate.isBefore(admitDate)) {
-            throw new BusinessException("入径日期不能早于入院日期（" + admitDate + "）");
-        }
-    }
-
     private BizPathway requirePathway(Long id) {
         BizPathway pathway = pathwayMapper.selectById(id);
         if (pathway == null) {
@@ -530,25 +542,6 @@ public class PathwayServiceImpl implements PathwayService {
             throw new BusinessException("入径记录不存在或已删除");
         }
         return enroll;
-    }
-
-    private static String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
-    private static String cutToNull(String text, int max) {
-        if (!StringUtils.hasText(text)) {
-            return null;
-        }
-        return cut(text.trim(), max);
-    }
-
-    private static String cut(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
     private String currentOperator() {

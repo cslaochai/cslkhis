@@ -57,7 +57,9 @@ public class SysLaboratoryItemDetailVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long laboratoryItemId;
 
-    /** 项目编码（唯一） */
+    /**
+     * 项目编码（唯一）
+     */
     private String itemCode;
 
     /**

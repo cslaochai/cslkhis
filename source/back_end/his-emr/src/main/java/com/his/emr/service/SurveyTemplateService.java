@@ -16,19 +16,29 @@ import java.util.List;
  */
 public interface SurveyTemplateService {
 
-    /** 分页（keyword/scene/status） */
+    /**
+     * 分页（keyword/scene/status）
+     */
     PageResult<SurveyTemplateVO> listPage(SurveyTemplateQueryPageDTO dto);
 
-    /** 下拉：启用中的卷（scene 可空=全部） */
+    /**
+     * 下拉：启用中的卷（scene 可空=全部）
+     */
     List<SurveyTemplateSelectListVO> selectEnabled(Integer scene);
 
-    /** 详情（含题目清单） */
+    /**
+     * 详情（含题目清单）
+     */
     SurveyTemplateVO getDetailById(Long id);
 
-    /** 新增 / 修改（整卷覆盖题目：物理删旧题再插） */
+    /**
+     * 新增 / 修改（整卷覆盖题目：物理删旧题再插）
+     */
     SurveyTemplateVO upsert(SurveyTemplateUpsertDTO dto);
 
-    /** 删除（软删；已被发放引用时拒绝，让改停用） */
+    /**
+     * 删除（软删；已被发放引用时拒绝，让改停用）
+     */
     boolean deleteById(Long id);
 
     /**

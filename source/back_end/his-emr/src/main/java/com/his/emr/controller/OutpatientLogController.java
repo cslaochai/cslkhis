@@ -8,6 +8,7 @@ import com.his.emr.vo.OutpatientLogListVO;
 import com.his.emr.vo.OutpatientLogStatsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,14 +33,14 @@ public class OutpatientLogController {
     @Operation(summary = "日志分页（跨科室回溯，不按登录科室收窄——口径与就诊总览一致）")
     @GetMapping("/listPage")
     @PreAuthorize("hasAuthority('opd:outpatientLog:list')")
-    public Result<PageResult<OutpatientLogListVO>> listPage(OutpatientLogQueryDTO query) {
+    public Result<PageResult<OutpatientLogListVO>> listPage(@Valid OutpatientLogQueryDTO query) {
         return Result.success(outpatientLogService.listPage(query));
     }
 
     @Operation(summary = "统计条（与分页同一套筛选条件）")
     @GetMapping("/stats")
     @PreAuthorize("hasAuthority('opd:outpatientLog:list')")
-    public Result<OutpatientLogStatsVO> stats(OutpatientLogQueryDTO query) {
+    public Result<OutpatientLogStatsVO> stats(@Valid OutpatientLogQueryDTO query) {
         return Result.success(outpatientLogService.stats(query));
     }
 }

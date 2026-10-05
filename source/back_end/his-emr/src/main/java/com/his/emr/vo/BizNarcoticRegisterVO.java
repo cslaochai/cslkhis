@@ -14,35 +14,53 @@ import java.time.LocalDateTime;
 @Data
 public class BizNarcoticRegisterVO {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 专册登记号 */
+    /**
+     * 专册登记号
+     */
     private String registerNo;
 
-    /** 处方ID */
+    /**
+     * 处方ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long prescriptionId;
 
-    /** 处方号 */
+    /**
+     * 处方号
+     */
     private String prescriptionNo;
 
-    /** 发药记录ID */
+    /**
+     * 发药记录ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long dispensingId;
 
-    /** 发药单号 */
+    /**
+     * 发药单号
+     */
     private String dispensingNo;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者号 */
+    /**
+     * 患者号
+     */
     private String patientNo;
 
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     private String patientName;
 
     /**
@@ -50,36 +68,56 @@ public class BizNarcoticRegisterVO {
      */
     private Integer gender;
 
-    /** 年龄 */
+    /**
+     * 年龄
+     */
     private Integer age;
 
-    /** 身份证号 */
+    /**
+     * 身份证号
+     */
     private String idCard;
 
-    /** 开方科室ID */
+    /**
+     * 开方科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 开方科室名称 */
+    /**
+     * 开方科室名称
+     */
     private String deptName;
 
-    /** 临床诊断 */
+    /**
+     * 临床诊断
+     */
     private String diagnosis;
 
-    /** 药品ID */
+    /**
+     * 药品ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long drugId;
 
-    /** 药品编码 */
+    /**
+     * 药品编码
+     */
     private String drugCode;
 
-    /** 药品名称 */
+    /**
+     * 药品名称
+     */
     private String drugName;
 
-    /** 规格 */
+    /**
+     * 规格
+     */
     private String specification;
 
-    /** 单位 */
+    /**
+     * 单位
+     */
     private String unit;
 
     /**
@@ -87,53 +125,83 @@ public class BizNarcoticRegisterVO {
      */
     private Integer specialFlag;
 
-    /** 剂型（用于判定限量档位：注射剂/控缓释/其他） */
+    /**
+     * 剂型（用于判定限量档位：注射剂/控缓释/其他）
+     */
     private String dosageForm;
 
-    /** 发药数量 */
+    /**
+     * 发药数量
+     */
     private BigDecimal quantity;
 
-    /** 批号 */
+    /**
+     * 批号
+     */
     private String batchNo;
 
-    /** 核定的处方天数 */
+    /**
+     * 核定的处方天数
+     */
     private Integer duration;
 
-    /** 规则允许的最大天数 */
+    /**
+     * 规则允许的最大天数
+     */
     private Integer limitDays;
 
-    /** 核定日用量 */
+    /**
+     * 核定日用量
+     */
     private BigDecimal dailyDosage;
 
-    /** 开方医师ID */
+    /**
+     * 开方医师ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;
 
-    /** 开方医师姓名 */
+    /**
+     * 开方医师姓名
+     */
     private String doctorName;
 
-    /** 审方药师 */
+    /**
+     * 审方药师
+     */
     private String auditBy;
 
-    /** 发药人ID */
+    /**
+     * 发药人ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long dispenseById;
 
-    /** 发药人姓名 */
+    /**
+     * 发药人姓名
+     */
     private String dispenseBy;
 
-    /** 发药时间 */
+    /**
+     * 发药时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime dispenseTime;
 
-    /** 复核人ID */
+    /**
+     * 复核人ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long checkerId;
 
-    /** 复核人姓名 */
+    /**
+     * 复核人姓名
+     */
     private String checkerName;
 
-    /** 复核时间 */
+    /**
+     * 复核时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime checkTime;
 
@@ -142,29 +210,45 @@ public class BizNarcoticRegisterVO {
      */
     private Integer ampouleStatus;
 
-    /** 发出安瓿数 */
+    /**
+     * 发出安瓿数
+     */
     private BigDecimal ampouleIssued;
 
-    /** 回收空安瓿数 */
+    /**
+     * 回收空安瓿数
+     */
     private BigDecimal ampouleReturned;
 
-    /** 剩余液销毁量 */
+    /**
+     * 剩余液销毁量
+     */
     private BigDecimal ampouleDestroyed;
 
-    /** 回收登记人 */
+    /**
+     * 回收登记人
+     */
     private String returnBy;
 
-    /** 回收登记时间 */
+    /**
+     * 回收登记时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime returnTime;
 
-    /** 回收/销毁说明 */
+    /**
+     * 回收/销毁说明
+     */
     private String returnRemark;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

@@ -16,14 +16,20 @@ import lombok.Data;
 @Data
 public class DepartmentSelectListVO {
 
-    /** 科室ID（序列化成字符串，避免 JS 精度丢失） */
+    /**
+     * 科室ID（序列化成字符串，避免 JS 精度丢失）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 科室编码（唯一） */
+    /**
+     * 科室编码（唯一）
+     */
     private String deptCode;
 
-    /** 科室名称 */
+    /**
+     * 科室名称
+     */
     private String deptName;
 
     /**
@@ -32,7 +38,9 @@ public class DepartmentSelectListVO {
      */
     private Integer deptType;
 
-    /** 上级科室ID，顶级为 0 */
+    /**
+     * 上级科室ID，顶级为 0
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long parentId;
 }

@@ -3,9 +3,6 @@ package com.his.emr.vo;
 import lombok.Data;
 
 import java.util.List;
-import com.his.emr.vo.BizInspectionApplyVO;
-import com.his.emr.vo.BizLaboratoryApplyVO;
-import com.his.emr.vo.BizPrescriptionVO;
 
 /**
  * 病历详情出参（病历 + 处方 + 检查申请 + 检验申请）

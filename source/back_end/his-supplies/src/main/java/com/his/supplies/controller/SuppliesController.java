@@ -34,7 +34,7 @@ public class SuppliesController {
 
     @Operation(summary = "耗材字典分页")
     @PostMapping("/consumableListPage")
-    public Result<PageResult<SysConsumableVO>> consumableListPage(@RequestBody ConsumableQueryPageDTO queryDTO) {
+    public Result<PageResult<SysConsumableVO>> consumableListPage(@Valid @RequestBody ConsumableQueryPageDTO queryDTO) {
         return Result.success(suppliesService.selectConsumablePage(
                 queryDTO.getKeyword(), queryDTO.getCategory(), queryDTO.getStatus(),
                 queryDTO.getPageNum(), queryDTO.getPageSize()));
@@ -65,7 +65,7 @@ public class SuppliesController {
 
     @Operation(summary = "库存分页")
     @PostMapping("/stockListPage")
-    public Result<PageResult<BizConsumableStockVO>> stockListPage(@RequestBody ConsumableStockQueryPageDTO queryDTO) {
+    public Result<PageResult<BizConsumableStockVO>> stockListPage(@Valid @RequestBody ConsumableStockQueryPageDTO queryDTO) {
         return Result.success(suppliesService.selectStockPage(
                 queryDTO.getKeyword(), queryDTO.getCategory(), queryDTO.getStockStatus(),
                 queryDTO.getPageNum(), queryDTO.getPageSize()));
@@ -90,7 +90,7 @@ public class SuppliesController {
     @PreAuthorize("hasAuthority('asset:supplies:edit')")
     @Operation(summary = "补货入库")
     @PostMapping("/stockInbound")
-    public Result<Void> stockInbound(@RequestBody ConsumableStockChangeDTO changeDTO) {
+    public Result<Void> stockInbound(@Valid @RequestBody ConsumableStockChangeDTO changeDTO) {
         boolean success = suppliesService.inboundStock(changeDTO.getStockId(), changeDTO.getQuantity(), operatorName());
         return success ? Result.success() : Result.error("入库失败");
     }
@@ -98,7 +98,7 @@ public class SuppliesController {
     @PreAuthorize("hasAuthority('asset:supplies:edit')")
     @Operation(summary = "其他出库")
     @PostMapping("/stockOutbound")
-    public Result<Void> stockOutbound(@RequestBody ConsumableStockChangeDTO changeDTO) {
+    public Result<Void> stockOutbound(@Valid @RequestBody ConsumableStockChangeDTO changeDTO) {
         boolean success = suppliesService.outboundStock(changeDTO.getStockId(), changeDTO.getQuantity(), operatorName());
         return success ? Result.success() : Result.error("出库失败");
     }
@@ -117,7 +117,7 @@ public class SuppliesController {
     @PreAuthorize("hasAuthority('asset:supplies:edit')")
     @Operation(summary = "领用台账分页")
     @PostMapping("/consumeListPage")
-    public Result<PageResult<BizConsumableConsumeVO>> consumeListPage(@RequestBody ConsumableConsumeQueryPageDTO queryDTO) {
+    public Result<PageResult<BizConsumableConsumeVO>> consumeListPage(@Valid @RequestBody ConsumableConsumeQueryPageDTO queryDTO) {
         return Result.success(suppliesService.selectConsumePage(
                 queryDTO.getKeyword(), queryDTO.getDeptId(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }
@@ -126,7 +126,7 @@ public class SuppliesController {
 
     @Operation(summary = "出入库流水分页")
     @PostMapping("/stockLogListPage")
-    public Result<PageResult<BizConsumableStockLogVO>> stockLogListPage(@RequestBody ConsumableStockLogQueryPageDTO queryDTO) {
+    public Result<PageResult<BizConsumableStockLogVO>> stockLogListPage(@Valid @RequestBody ConsumableStockLogQueryPageDTO queryDTO) {
         return Result.success(suppliesService.selectStockLogPage(
                 queryDTO.getKeyword(), queryDTO.getChangeType(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }
@@ -147,7 +147,7 @@ public class SuppliesController {
 
     @Operation(summary = "溯源台账分页（正/反向追溯）")
     @PostMapping("/traceListPage")
-    public Result<PageResult<BizConsumableTraceVO>> traceListPage(@RequestBody ConsumableTraceQueryPageDTO queryDTO) {
+    public Result<PageResult<BizConsumableTraceVO>> traceListPage(@Valid @RequestBody ConsumableTraceQueryPageDTO queryDTO) {
         return Result.success(highValueTraceService.selectTracePage(queryDTO));
     }
 

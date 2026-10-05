@@ -24,8 +24,14 @@ public class WechatProperties {
 
     private String appSecret = "";
 
-    /** 订阅消息模板ID，key 为业务场景码（regist_success / report_ready / queue_called ...） */
+    /**
+     * 订阅消息模板ID，key 为业务场景码（regist_success / report_ready / queue_called ...）
+     */
     private Map<String, String> templates = new HashMap<>();
+
+    private static boolean notBlank(String s) {
+        return s != null && !s.isBlank();
+    }
 
     public boolean ready() {
         return enabled && notBlank(appId) && notBlank(appSecret);
@@ -33,9 +39,5 @@ public class WechatProperties {
 
     public String templateOf(String scene) {
         return templates.get(scene);
-    }
-
-    private static boolean notBlank(String s) {
-        return s != null && !s.isBlank();
     }
 }

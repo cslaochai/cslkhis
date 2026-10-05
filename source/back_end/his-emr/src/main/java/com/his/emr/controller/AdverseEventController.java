@@ -12,14 +12,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 不良事件控制器（全院上报 + PDCA 四态闭环）
@@ -35,7 +29,7 @@ public class AdverseEventController {
 
     @Operation(summary = "分页查询不良事件")
     @PostMapping("/listPage")
-    public Result<PageResult<AdverseEventVO>> listPage(@RequestBody AdverseEventQueryPageDTO queryDTO) {
+    public Result<PageResult<AdverseEventVO>> listPage(@Valid @RequestBody AdverseEventQueryPageDTO queryDTO) {
         return Result.success(adverseEventService.page(queryDTO));
     }
 

@@ -25,7 +25,9 @@ public class FollowupTaskSnapshot implements Serializable {
 
     private String patientName;
 
-    /** 明文手机号（评价侧入库供外呼拨号，出参一律脱敏） */
+    /**
+     * 明文手机号（评价侧入库供外呼拨号，出参一律脱敏）
+     */
     private String phone;
 
     private Long deptId;

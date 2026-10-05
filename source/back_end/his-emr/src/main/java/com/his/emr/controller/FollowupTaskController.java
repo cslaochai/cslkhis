@@ -2,13 +2,7 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.emr.dto.FollowupCancelDTO;
-import com.his.emr.dto.FollowupCallRegisterDTO;
-import com.his.emr.dto.FollowupCallResultDTO;
-import com.his.emr.dto.FollowupCompleteDTO;
-import com.his.emr.dto.FollowupQueryDTO;
-import com.his.emr.dto.FollowupStartDTO;
-import com.his.emr.dto.FollowupTaskDTO;
+import com.his.emr.dto.*;
 import com.his.emr.service.FollowupTaskService;
 import com.his.emr.vo.BizFollowupTaskVO;
 import com.his.emr.vo.FollowupStatVO;
@@ -17,12 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 随访任务控制器。
@@ -44,7 +33,7 @@ public class FollowupTaskController {
     @PreAuthorize("hasAuthority('inpatient:followup:list')")
     @Operation(summary = "分页查询随访任务（科室按登录岗位收口）")
     @PostMapping("/listPage")
-    public Result<PageResult<BizFollowupTaskVO>> listPage(@RequestBody(required = false) FollowupQueryDTO queryDTO) {
+    public Result<PageResult<BizFollowupTaskVO>> listPage(@Valid @RequestBody(required = false) FollowupQueryDTO queryDTO) {
         return Result.success(followupTaskService.listPage(queryDTO));
     }
 
@@ -79,7 +68,7 @@ public class FollowupTaskController {
     @PreAuthorize("hasAuthority('inpatient:followup:edit')")
     @Operation(summary = "开始随访")
     @PostMapping("/startFollowup")
-    public Result<Void> startFollowup(@RequestBody FollowupStartDTO actionDTO) {
+    public Result<Void> startFollowup(@Valid @RequestBody FollowupStartDTO actionDTO) {
         followupTaskService.startFollowup(actionDTO.getId(), actionDTO.getExecutorId(), actionDTO.getExecutorName());
         return Result.success("开始随访", null);
     }
@@ -87,7 +76,7 @@ public class FollowupTaskController {
     @PreAuthorize("hasAuthority('inpatient:followup:edit')")
     @Operation(summary = "完成随访（同时自动发放满意度问卷）")
     @PostMapping("/completeFollowup")
-    public Result<Void> completeFollowup(@RequestBody FollowupCompleteDTO actionDTO) {
+    public Result<Void> completeFollowup(@Valid @RequestBody FollowupCompleteDTO actionDTO) {
         followupTaskService.completeFollowup(actionDTO.getId(), actionDTO.getResult());
         return Result.success("随访完成", null);
     }
@@ -102,7 +91,7 @@ public class FollowupTaskController {
     @PreAuthorize("hasAuthority('inpatient:followup:delete')")
     @Operation(summary = "取消随访")
     @PostMapping("/cancelFollowup")
-    public Result<Void> cancelFollowup(@RequestBody FollowupCancelDTO actionDTO) {
+    public Result<Void> cancelFollowup(@Valid @RequestBody FollowupCancelDTO actionDTO) {
         followupTaskService.cancelFollowup(actionDTO.getId(), actionDTO.getReason());
         return Result.success("已取消", null);
     }

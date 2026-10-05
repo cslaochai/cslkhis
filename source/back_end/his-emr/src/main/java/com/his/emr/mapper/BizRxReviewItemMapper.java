@@ -15,7 +15,9 @@ import java.util.Map;
 @Mapper
 public interface BizRxReviewItemMapper extends BaseMapper<BizRxReviewItem> {
 
-    /** 删批次 = 整批物理删明细（uk_batch_rx 不含 del_flag，软删会占键）。调用前必须校验批次下无已点评明细。 */
+    /**
+     * 删批次 = 整批物理删明细（uk_batch_rx 不含 del_flag，软删会占键）。调用前必须校验批次下无已点评明细。
+     */
     @Delete("DELETE FROM biz_rx_review_item WHERE batch_id = #{batchId}")
     int purgeByBatchId(@Param("batchId") Long batchId);
 

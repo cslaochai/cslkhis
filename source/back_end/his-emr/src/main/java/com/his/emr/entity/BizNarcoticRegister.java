@@ -134,7 +134,9 @@ public class BizNarcoticRegister extends BaseEntity {
      */
     private Integer specialFlag;
 
-    /** 剂型（用于判定限量档位：注射剂/控缓释/其他） */
+    /**
+     * 剂型（用于判定限量档位：注射剂/控缓释/其他）
+     */
     private String dosageForm;
 
     /**

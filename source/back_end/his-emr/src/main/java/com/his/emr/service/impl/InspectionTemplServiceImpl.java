@@ -11,7 +11,7 @@ import com.his.emr.mapper.BizLaboratoryTemplateMapper;
 import com.his.emr.service.InspectionTemplService;
 import com.his.emr.vo.BizInspectionTemplateVO;
 import com.his.emr.vo.BizLaboratoryTemplateVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;

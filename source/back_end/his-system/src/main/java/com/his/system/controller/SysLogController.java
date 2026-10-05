@@ -4,22 +4,13 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.system.dto.LogQueryPageDTO;
 import com.his.system.service.SysLogService;
-import com.his.system.vo.AuditLogVO;
-import com.his.system.vo.FieldChangeVO;
-import com.his.system.vo.LogStatVO;
-import com.his.system.vo.LoginLogVO;
-import com.his.system.vo.OperLogDetailVO;
-import com.his.system.vo.OperLogListVO;
+import com.his.system.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -43,7 +34,7 @@ public class SysLogController {
     @Operation(summary = "操作日志分页")
     @PreAuthorize("hasAuthority('system:log:list')")
     @PostMapping("/operLogListPage")
-    public Result<PageResult<OperLogListVO>> operLogListPage(@RequestBody LogQueryPageDTO query) {
+    public Result<PageResult<OperLogListVO>> operLogListPage(@Valid @RequestBody LogQueryPageDTO query) {
         return Result.success(logService.operLogListPage(query));
     }
 
@@ -57,14 +48,14 @@ public class SysLogController {
     @Operation(summary = "登录日志分页（成功失败同表，靠 loginStatus 区分）")
     @PreAuthorize("hasAuthority('system:log:list')")
     @PostMapping("/loginLogListPage")
-    public Result<PageResult<LoginLogVO>> loginLogListPage(@RequestBody LogQueryPageDTO query) {
+    public Result<PageResult<LoginLogVO>> loginLogListPage(@Valid @RequestBody LogQueryPageDTO query) {
         return Result.success(logService.loginLogListPage(query));
     }
 
     @Operation(summary = "审计日志分页")
     @PreAuthorize("hasAuthority('system:log:list')")
     @PostMapping("/auditLogListPage")
-    public Result<PageResult<AuditLogVO>> auditLogListPage(@RequestBody LogQueryPageDTO query) {
+    public Result<PageResult<AuditLogVO>> auditLogListPage(@Valid @RequestBody LogQueryPageDTO query) {
         return Result.success(logService.auditLogListPage(query));
     }
 
@@ -78,7 +69,7 @@ public class SysLogController {
     @Operation(summary = "字段级修改日志分页（哪个字段从什么值改成了什么值）")
     @PreAuthorize("hasAuthority('system:log:list')")
     @PostMapping("/fieldChangeListPage")
-    public Result<PageResult<FieldChangeVO>> fieldChangeListPage(@RequestBody LogQueryPageDTO query) {
+    public Result<PageResult<FieldChangeVO>> fieldChangeListPage(@Valid @RequestBody LogQueryPageDTO query) {
         return Result.success(logService.fieldChangeListPage(query));
     }
 
@@ -99,7 +90,7 @@ public class SysLogController {
     @Operation(summary = "导出 CSV（logType 1-操作 2-登录 3-审计 4-字段变更，最多 5000 行）")
     @PreAuthorize("hasAuthority('system:log:export')")
     @PostMapping("/exportCsv")
-    public Result<String> exportCsv(@RequestBody LogQueryPageDTO query) {
+    public Result<String> exportCsv(@Valid @RequestBody LogQueryPageDTO query) {
         return Result.success(logService.exportCsv(query));
     }
 }

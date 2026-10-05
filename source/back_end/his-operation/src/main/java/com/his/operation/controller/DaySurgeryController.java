@@ -2,17 +2,7 @@ package com.his.operation.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.operation.dto.DaySurgeryActionDTO;
-import com.his.operation.dto.DaySurgeryApplyUpsertDTO;
-import com.his.operation.dto.DaySurgeryArrangeDTO;
-import com.his.operation.dto.DaySurgeryDischargeDTO;
-import com.his.operation.dto.DaySurgeryEvalDTO;
-import com.his.operation.dto.DaySurgeryFinishDTO;
-import com.his.operation.dto.DaySurgeryFollowDTO;
-import com.his.operation.dto.DaySurgeryItemQueryPageDTO;
-import com.his.operation.dto.DaySurgeryItemUpsertDTO;
-import com.his.operation.dto.DaySurgeryQueryPageDTO;
-import com.his.operation.dto.DaySurgeryTransferDTO;
+import com.his.operation.dto.*;
 import com.his.operation.service.DaySurgeryService;
 import com.his.operation.vo.DaySurgeryApplyVO;
 import com.his.operation.vo.DaySurgeryItemVO;
@@ -22,13 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -51,7 +35,7 @@ public class DaySurgeryController {
     @PreAuthorize("hasAuthority('ipd:daySurgery:list')")
     @Operation(summary = "准入目录分页")
     @PostMapping("/itemListPage")
-    public Result<PageResult<DaySurgeryItemVO>> itemListPage(@RequestBody DaySurgeryItemQueryPageDTO dto) {
+    public Result<PageResult<DaySurgeryItemVO>> itemListPage(@Valid @RequestBody DaySurgeryItemQueryPageDTO dto) {
         return Result.success(daySurgeryService.itemListPage(dto));
     }
 
@@ -81,7 +65,7 @@ public class DaySurgeryController {
     @PreAuthorize("hasAuthority('ipd:daySurgery:list')")
     @Operation(summary = "日间手术登记单分页")
     @PostMapping("/listPage")
-    public Result<PageResult<DaySurgeryApplyVO>> listPage(@RequestBody DaySurgeryQueryPageDTO dto) {
+    public Result<PageResult<DaySurgeryApplyVO>> listPage(@Valid @RequestBody DaySurgeryQueryPageDTO dto) {
         return Result.success(daySurgeryService.listPage(dto));
     }
 

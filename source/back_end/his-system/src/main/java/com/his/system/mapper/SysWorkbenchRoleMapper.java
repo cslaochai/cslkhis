@@ -17,11 +17,15 @@ import org.apache.ibatis.annotations.Param;
 @Mapper
 public interface SysWorkbenchRoleMapper extends BaseMapper<SysWorkbenchRole> {
 
-    /** 清空某角色的全部卡片配置（保存=整体替换的第一步） */
+    /**
+     * 清空某角色的全部卡片配置（保存=整体替换的第一步）
+     */
     @Delete("DELETE FROM sys_workbench_role WHERE role_id = #{roleId}")
     int purgeByRole(@Param("roleId") Long roleId);
 
-    /** 卡片从注册表删除时，连带清掉所有角色对它的引用，避免留下指向已删卡片的孤儿行 */
+    /**
+     * 卡片从注册表删除时，连带清掉所有角色对它的引用，避免留下指向已删卡片的孤儿行
+     */
     @Delete("DELETE FROM sys_workbench_role WHERE widget_id = #{widgetId}")
     int purgeByWidget(@Param("widgetId") Long widgetId);
 }

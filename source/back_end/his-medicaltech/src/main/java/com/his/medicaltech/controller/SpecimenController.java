@@ -11,10 +11,10 @@ import com.his.medicaltech.vo.BizLaboratoryRecordVO;
 import com.his.medicaltech.vo.SpecimenStatsVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 医技管理 - 标本控制器
@@ -30,7 +30,7 @@ public class SpecimenController {
 
     @Operation(summary = "分页查询标本列表")
     @PostMapping("/list")
-    public Result<PageResult<BizLaboratoryRecordVO>> specimenList(@RequestBody SpecimenQueryDTO queryDTO) {
+    public Result<PageResult<BizLaboratoryRecordVO>> specimenList(@Valid @RequestBody SpecimenQueryDTO queryDTO) {
         return Result.success(medicalTechService.selectSpecimenPageVO(
                 queryDTO.getPatientId(), queryDTO.getRecordStatus(), queryDTO.getKeyword(),
                 queryDTO.getPageNum(), queryDTO.getPageSize()));
@@ -45,7 +45,7 @@ public class SpecimenController {
     @PreAuthorize("hasAuthority('medtech:specimen:edit')")
     @Operation(summary = "分配标本条码")
     @PostMapping("/barcode")
-    public Result<Void> assignBarcode(@RequestBody SpecimenBarcodeDTO barcodeDTO) {
+    public Result<Void> assignBarcode(@Valid @RequestBody SpecimenBarcodeDTO barcodeDTO) {
         boolean success = medicalTechService.assignBarcode(barcodeDTO.getRecordId(), barcodeDTO.getSpecimenNo());
         return success ? Result.success("分配成功", null) : Result.error("分配失败");
     }
@@ -53,7 +53,7 @@ public class SpecimenController {
     @PreAuthorize("hasAuthority('medtech:specimen:edit')")
     @Operation(summary = "标本采集确认")
     @PostMapping("/sample")
-    public Result<Void> sampleSpecimen(@RequestBody SpecimenSampleDTO sampleDTO) {
+    public Result<Void> sampleSpecimen(@Valid @RequestBody SpecimenSampleDTO sampleDTO) {
         boolean success = medicalTechService.sampleSpecimen(sampleDTO.getRecordId(), sampleDTO.getSampleBy());
         return success ? Result.success("采集确认成功", null) : Result.error("操作失败");
     }
@@ -61,7 +61,7 @@ public class SpecimenController {
     @PreAuthorize("hasAuthority('medtech:specimen:edit')")
     @Operation(summary = "标本退回")
     @PostMapping("/reject")
-    public Result<Void> rejectSpecimen(@RequestBody SpecimenRejectDTO rejectDTO) {
+    public Result<Void> rejectSpecimen(@Valid @RequestBody SpecimenRejectDTO rejectDTO) {
         boolean success = medicalTechService.rejectSpecimen(rejectDTO.getRecordId(), rejectDTO.getReason());
         return success ? Result.success("退回成功", null) : Result.error("操作失败");
     }

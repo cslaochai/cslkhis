@@ -2,19 +2,19 @@ package com.his.patient.controller;
 
 import com.his.common.base.Result;
 import com.his.patient.dto.PatientTagBatchUpsertDTO;
-import com.his.patient.dto.PatientTagUpsertDTO;
 import com.his.patient.dto.PatientTagDelDTO;
 import com.his.patient.dto.PatientTagQueryDTO;
+import com.his.patient.dto.PatientTagUpsertDTO;
 import com.his.patient.service.BizPatientTagRelationService;
 import com.his.system.vo.SysPatientTagVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 患者标签关联控制器
@@ -40,7 +40,7 @@ public class PatientTagRelationController {
     @PreAuthorize("hasAuthority('patient:tag:add')")
     @Operation(summary = "给患者添加标签")
     @PostMapping("/add")
-    public Result<Void> add(@RequestBody PatientTagUpsertDTO tagDTO) {
+    public Result<Void> add(@Valid @RequestBody PatientTagUpsertDTO tagDTO) {
         tagRelationService.addTag(tagDTO);
         return Result.success();
     }
@@ -48,7 +48,7 @@ public class PatientTagRelationController {
     @PreAuthorize("hasAuthority('patient:tag:delete')")
     @Operation(summary = "移除患者的标签")
     @PostMapping("/delete")
-    public Result<Void> delete(@RequestBody PatientTagDelDTO delDTO) {
+    public Result<Void> delete(@Valid @RequestBody PatientTagDelDTO delDTO) {
         tagRelationService.deleteTag(delDTO);
         return Result.success();
     }
@@ -56,7 +56,7 @@ public class PatientTagRelationController {
     @PreAuthorize("hasAuthority('patient:tag:add')")
     @Operation(summary = "批量给患者添加标签")
     @PostMapping("/batchAdd")
-    public Result<Void> batchAdd(@RequestBody PatientTagBatchUpsertDTO batchDTO) {
+    public Result<Void> batchAdd(@Valid @RequestBody PatientTagBatchUpsertDTO batchDTO) {
         tagRelationService.batchAdd(batchDTO);
         return Result.success();
     }

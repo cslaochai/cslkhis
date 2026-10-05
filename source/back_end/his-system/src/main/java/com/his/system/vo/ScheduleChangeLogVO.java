@@ -25,7 +25,9 @@ public class ScheduleChangeLogVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long fromEmployeeId;
 
-    /** 原值班人姓名（按留痕时的人快照取，人已被删时为空） */
+    /**
+     * 原值班人姓名（按留痕时的人快照取，人已被删时为空）
+     */
     private String fromEmployeeName;
 
     @JsonSerialize(using = ToStringSerializer.class)

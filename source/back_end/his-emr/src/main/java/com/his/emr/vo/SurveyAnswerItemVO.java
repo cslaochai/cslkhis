@@ -12,32 +12,50 @@ import java.io.Serializable;
 @Data
 public class SurveyAnswerItemVO implements Serializable {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 题目ID */
+    /**
+     * 题目ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long itemId;
 
-    /** 评价维度 */
+    /**
+     * 评价维度
+     */
     private Integer dimension;
 
-    /** 题号（快照） */
+    /**
+     * 题号（快照）
+     */
     private Integer seqNo;
 
-    /** 题干（快照） */
+    /**
+     * 题干（快照）
+     */
     private String title;
 
-    /** 题型（快照） */
+    /**
+     * 题型（快照）
+     */
     private Integer questionType;
 
-    /** 得分 */
+    /**
+     * 得分
+     */
     private Integer score;
 
-    /** 选项文本 */
+    /**
+     * 选项文本
+     */
     private String optionLabel;
 
-    /** 文本题回答 */
+    /**
+     * 文本题回答
+     */
     private String textValue;
 }

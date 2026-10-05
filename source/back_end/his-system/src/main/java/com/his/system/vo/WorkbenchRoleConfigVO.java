@@ -22,7 +22,9 @@ public class WorkbenchRoleConfigVO {
     private String roleCode;
     private String roleName;
 
-    /** 0-默认 1-一律工作台 2-一律患者工作站（同角色多行时取最大值兜底） */
+    /**
+     * 0-默认 1-一律工作台 2-一律患者工作站（同角色多行时取最大值兜底）
+     */
     private Integer landingScope;
 
     private List<WorkbenchWidgetVO> widgets;

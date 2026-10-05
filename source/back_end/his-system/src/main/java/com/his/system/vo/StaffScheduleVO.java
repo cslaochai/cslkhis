@@ -19,10 +19,14 @@ public class StaffScheduleVO {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate scheduleDate;
 
-    /** 星期（1-周一 7-周日） */
+    /**
+     * 星期（1-周一 7-周日）
+     */
     private Integer weekDay;
 
-    /** 星期文案 */
+    /**
+     * 星期文案
+     */
     private String weekDayText;
 
     private Integer orgType;
@@ -53,13 +57,17 @@ public class StaffScheduleVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long shiftId;
 
-    /** 班次名称（班次已删除时为空，前端按「未分类」渲染） */
+    /**
+     * 班次名称（班次已删除时为空，前端按「未分类」渲染）
+     */
     private String shiftName;
 
     private String startTime;
     private String endTime;
 
-    /** 是否跨零点班（结束时间早于开始时间） */
+    /**
+     * 是否跨零点班（结束时间早于开始时间）
+     */
     private Boolean crossDay;
 
     private Integer dutyStatus;
@@ -68,12 +76,16 @@ public class StaffScheduleVO {
     private Integer attendMode;
     private String attendModeText;
 
-    /** 是否出诊（0-否 1-是） */
+    /**
+     * 是否出诊（0-否 1-是）
+     */
     private Integer clinicFlag;
 
     private Integer workMinutes;
 
-    /** 工时（小时，一位小数字符串，避免前端再算一遍除法） */
+    /**
+     * 工时（小时，一位小数字符串，避免前端再算一遍除法）
+     */
     private String workHours;
 
     private Integer scheduleSource;

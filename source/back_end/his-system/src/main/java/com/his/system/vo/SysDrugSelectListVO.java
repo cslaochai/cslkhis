@@ -18,7 +18,9 @@ public class SysDrugSelectListVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 药品编码（唯一） */
+    /**
+     * 药品编码（唯一）
+     */
     private String drugCode;
 
     /**
@@ -36,10 +38,14 @@ public class SysDrugSelectListVO {
      */
     private String specification;
 
-    /** 剂型（片剂、胶囊、注射剂等） */
+    /**
+     * 剂型（片剂、胶囊、注射剂等）
+     */
     private String dosageForm;
 
-    /** 单位（片、粒、支等） */
+    /**
+     * 单位（片、粒、支等）
+     */
     private String unit;
 
     /**

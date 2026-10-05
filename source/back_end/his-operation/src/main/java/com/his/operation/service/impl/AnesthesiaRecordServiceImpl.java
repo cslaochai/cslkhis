@@ -33,7 +33,7 @@ import com.his.operation.vo.AnesthesiaVisitVO;
 import com.his.operation.vo.OperationChargeItemVO;
 import com.his.operation.vo.OperationChargeSummaryVO;
 import com.his.patient.service.PatientService;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,9 +49,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * 麻醉记录单服务实现（G15 核心）。

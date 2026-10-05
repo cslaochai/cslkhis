@@ -11,51 +11,71 @@ import java.time.LocalDateTime;
 
 /**
  * 不良事件上报/修改入参
- *
+ * <p>
  * 修改仅允许状态=1（已上报待处理）且本人上报的单；
  * reporterId / eventNo / status 由服务端控制，前端传了也忽略。
  */
 @Data
 public class AdverseEventUpsertDTO {
 
-    /** 主键（null=新增上报） */
+    /**
+     * 主键（null=新增上报）
+     */
     private Long id;
 
-    /** 事件类型（1-11，字典 his_adverse_event_type） */
+    /**
+     * 事件类型（1-11，字典 his_adverse_event_type）
+     */
     @NotNull(message = "事件类型不能为空")
     @Min(value = 1, message = "事件类型非法")
     @Max(value = 11, message = "事件类型非法")
     private Integer eventType;
 
-    /** 事件等级（1-4，字典 his_adverse_event_level） */
+    /**
+     * 事件等级（1-4，字典 his_adverse_event_level）
+     */
     @NotNull(message = "事件等级不能为空")
     @Min(value = 1, message = "事件等级非法")
     @Max(value = 4, message = "事件等级非法")
     private Integer eventLevel;
 
-    /** 发生科室的ID */
+    /**
+     * 发生科室的ID
+     */
     @NotNull(message = "发生科室不能为空")
     private Long occurDeptId;
 
-    /** 发生时间（EP date-picker 默认空格分隔，@JsonFormat 宽进同项目惯例） */
+    /**
+     * 发生时间（EP date-picker 默认空格分隔，@JsonFormat 宽进同项目惯例）
+     */
     @NotNull(message = "发生时间不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime occurTime;
 
-    /** 关联患者（可空） */
+    /**
+     * 关联患者（可空）
+     */
     private Long patientId;
 
-    /** 患者姓名（可空；patientId 非空时必填，服务端校验） */
+    /**
+     * 患者姓名（可空；patientId 非空时必填，服务端校验）
+     */
     private String patientName;
 
-    /** 关联就诊挂号单的ID（可空） */
+    /**
+     * 关联就诊挂号单的ID（可空）
+     */
     private Long visitId;
 
-    /** 事件摘要 */
+    /**
+     * 事件摘要
+     */
     @NotBlank(message = "事件摘要不能为空")
     private String title;
 
-    /** 事件详细经过 */
+    /**
+     * 事件详细经过
+     */
     @NotBlank(message = "事件经过不能为空")
     private String description;
 
@@ -70,6 +90,8 @@ public class AdverseEventUpsertDTO {
     @Max(value = 2, message = "来源只能是 1-院内获得 或 2-入院带入")
     private Integer acquiredFlag;
 
-    /** 即时处置措施（可空） */
+    /**
+     * 即时处置措施（可空）
+     */
     private String immediateAction;
 }

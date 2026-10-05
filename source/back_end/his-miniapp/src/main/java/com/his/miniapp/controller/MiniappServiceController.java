@@ -35,6 +35,13 @@ public class MiniappServiceController {
     private final MiniappServiceMessageService messageService;
     private final MiniappServiceTraceService traceService;
 
+    private static Long parseId(String value) {
+        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
+            return null;
+        }
+        return Long.parseLong(value);
+    }
+
     @Operation(summary = "提交留言（归属由登录态决定）")
     @PostMapping("/messageUpsert")
     @PreAuthorize("hasAuthority('PATIENT')")
@@ -45,7 +52,7 @@ public class MiniappServiceController {
     @Operation(summary = "我的工单（分页，含处理状态与受理人）")
     @PostMapping("/myMessages")
     @PreAuthorize("hasAuthority('PATIENT')")
-    public Result<PageResult<ServiceMessageListVO>> myMessages(@RequestBody MessagePageDTO dto) {
+    public Result<PageResult<ServiceMessageListVO>> myMessages(@Valid @RequestBody MessagePageDTO dto) {
         MessagePageDTO query = dto == null ? new MessagePageDTO() : dto;
         return Result.success(messageService.myPage(query.getPageNum(), query.getPageSize()));
     }
@@ -71,13 +78,6 @@ public class MiniappServiceController {
     public Result<Integer> ticketAction(@RequestBody @Valid ServiceTicketActionDTO dto) {
         messageService.patientAction(dto);
         return Result.success(1);
-    }
-
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
     }
 
     @Operation(summary = "客服页行为埋点（失败不影响业务）")

@@ -10,10 +10,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 出院带药控制器。
@@ -38,7 +38,7 @@ public class DischargeDrugController {
 
     @Operation(summary = "分页查询带药单")
     @PostMapping("/listPage")
-    public Result<PageResult<DischargeDrugVO>> listPage(@RequestBody DischargeDrugDTO.QueryPage dto) {
+    public Result<PageResult<DischargeDrugVO>> listPage(@Valid @RequestBody DischargeDrugDTO.QueryPage dto) {
         var page = dischargeDrugService.listPage(dto == null ? new DischargeDrugDTO.QueryPage() : dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

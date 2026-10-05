@@ -10,13 +10,19 @@ import java.util.List;
 @Data
 public class DrugRationalGroupVO {
 
-    /** 与入参 groupId 原样回传，调用方据此贴回自己的行 */
+    /**
+     * 与入参 groupId 原样回传，调用方据此贴回自己的行
+     */
     private String groupId;
 
-    /** 本组是否存在应当拦截审方通过的命中（只有相互作用禁忌级为 true） */
+    /**
+     * 本组是否存在应当拦截审方通过的命中（只有相互作用禁忌级为 true）
+     */
     private Boolean blocked;
 
-    /** 拦截时给药师/医生看的合并理由（逐字由命中项正文拼成，不再加工） */
+    /**
+     * 拦截时给药师/医生看的合并理由（逐字由命中项正文拼成，不再加工）
+     */
     private String blockMessage;
 
     private List<DrugRationalHitVO> hits;

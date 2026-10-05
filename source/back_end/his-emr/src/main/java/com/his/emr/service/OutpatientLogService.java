@@ -4,7 +4,6 @@ import com.his.common.base.PageResult;
 import com.his.emr.dto.OutpatientLogQueryDTO;
 import com.his.emr.vo.OutpatientLogListVO;
 import com.his.emr.vo.OutpatientLogStatsVO;
-import com.his.emr.service.InfectiousReportService;
 
 /**
  * 门诊日志（法规台账）。只读：报卡写动作一律走 {@code InfectiousReportService}，

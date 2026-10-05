@@ -29,7 +29,7 @@ import com.his.patient.vo.InpatientRecordVO;
 import com.his.patient.vo.RecordQualityStatVO;
 import com.his.patient.vo.WardVO;
 import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;

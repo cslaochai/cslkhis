@@ -16,7 +16,9 @@ public class TcmDecoctCancelDTO {
     @NotNull(message = "代煎单ID不能为空")
     private Long id;
 
-    /** 原因 */
+    /**
+     * 原因
+     */
     @NotBlank(message = "作废必须填写原因")
     private String reason;
 }

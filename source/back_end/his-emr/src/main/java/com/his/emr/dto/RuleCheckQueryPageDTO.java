@@ -16,9 +16,13 @@ public class RuleCheckQueryPageDTO extends PageParam {
      */
     private Long patientId;
 
-    /** 规则类型（1-配伍禁忌 2-检验诊断关联性 3-用药合理性） */
+    /**
+     * 规则类型（1-配伍禁忌 2-检验诊断关联性 3-用药合理性）
+     */
     private Integer ruleType;
 
-    /** 处理状态（1-待处理 2-已处理 3-已忽略） */
+    /**
+     * 处理状态（1-待处理 2-已处理 3-已忽略）
+     */
     private Integer checkStatus;
 }

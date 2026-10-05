@@ -2,11 +2,7 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.emr.dto.RecordQcFlowFinalDTO;
-import com.his.emr.dto.RecordQcFlowOpinionDTO;
-import com.his.emr.dto.RecordQcFlowQueryPageDTO;
-import com.his.emr.dto.RecordQcFlowReturnDTO;
-import com.his.emr.dto.RecordQcFlowStartDTO;
+import com.his.emr.dto.*;
 import com.his.emr.service.RecordQcFlowService;
 import com.his.emr.vo.RecordQcFlowActionVO;
 import com.his.emr.vo.RecordQcFlowVO;
@@ -14,14 +10,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 病历三级质控流转控制器
- *
+ * <p>
  * 状态机全部收口在 RecordQcFlowServiceImpl，本类不做状态判断。
  */
 @Tag(name = "病历三级质控流转")
@@ -74,7 +70,7 @@ public class RecordQcFlowController {
 
     @Operation(summary = "流转单分页")
     @PostMapping("/listPage")
-    public Result<PageResult<RecordQcFlowVO>> listPage(@RequestBody RecordQcFlowQueryPageDTO queryDTO) {
+    public Result<PageResult<RecordQcFlowVO>> listPage(@Valid @RequestBody RecordQcFlowQueryPageDTO queryDTO) {
         return Result.success(flowService.page(queryDTO));
     }
 

@@ -11,10 +11,14 @@ import java.io.Serializable;
 @Data
 public class RecordQcFlowStartDTO implements Serializable {
 
-    /** 病历ID */
+    /**
+     * 病历ID
+     */
     @NotNull(message = "病历ID不能为空")
     private Long recordId;
 
-    /** 发起备注（可空） */
+    /**
+     * 发起备注（可空）
+     */
     private String remark;
 }

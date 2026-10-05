@@ -11,12 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -94,7 +89,7 @@ public class SingleDiseaseController {
     @PreAuthorize("hasAuthority('qc:singleDisease:list')")
     @Operation(summary = "病例分页")
     @PostMapping("/caseListPage")
-    public Result<PageResult<SingleDiseaseVO.Case>> caseListPage(@RequestBody SingleDiseaseDTO.CaseQuery query) {
+    public Result<PageResult<SingleDiseaseVO.Case>> caseListPage(@Valid @RequestBody SingleDiseaseDTO.CaseQuery query) {
         return Result.success(singleDiseaseService.casePage(query));
     }
 

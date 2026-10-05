@@ -1,7 +1,7 @@
 package com.his.config;
 
 import com.his.security.DeptScopeGuard;
-import com.his.security.DeptScopeProvider;
+import com.his.security.provider.DeptScopeProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.InitializingBean;

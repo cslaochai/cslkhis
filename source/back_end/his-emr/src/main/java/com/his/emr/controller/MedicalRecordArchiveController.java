@@ -8,10 +8,10 @@ import com.his.emr.vo.BizMedicalRecordArchiveVO;
 import com.his.emr.vo.MedicalRecordArchiveCountVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 病历归档控制器
@@ -27,7 +27,7 @@ public class MedicalRecordArchiveController {
 
     @Operation(summary = "分页查询归档记录")
     @PostMapping("/listPage")
-    public Result<PageResult<BizMedicalRecordArchiveVO>> listPage(@RequestBody ArchiveQueryPageDTO queryDTO) {
+    public Result<PageResult<BizMedicalRecordArchiveVO>> listPage(@Valid @RequestBody ArchiveQueryPageDTO queryDTO) {
         return Result.success(archiveService.selectArchivePage(queryDTO.getPatientId(), queryDTO.getArchiveStatus(),
                 queryDTO.getKeyword(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }

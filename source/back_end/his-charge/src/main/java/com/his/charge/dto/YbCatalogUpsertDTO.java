@@ -1,6 +1,7 @@
 package com.his.charge.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
@@ -23,7 +24,7 @@ public class YbCatalogUpsertDTO {
     /**
      * 目录类型（1-西药/中成药 2-中药饮片 3-医疗服务项目 4-医用耗材）
      */
-    @jakarta.validation.constraints.NotNull(message = "目录类型不能为空")
+    @NotNull(message = "目录类型不能为空")
     private Integer catalogType;
 
     /**

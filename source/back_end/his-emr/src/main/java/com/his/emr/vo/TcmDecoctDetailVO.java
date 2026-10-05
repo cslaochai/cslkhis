@@ -23,13 +23,17 @@ public class TcmDecoctDetailVO extends TcmDecoctVO {
     @Data
     public static class HerbLine {
 
-        /** 主键ID */
+        /**
+         * 主键ID
+         */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long id;
 
         private String drugCode;
 
-        /** 药品名称 */
+        /**
+         * 药品名称
+         */
         private String drugName;
 
         private String specification;

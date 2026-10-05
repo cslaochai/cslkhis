@@ -13,13 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -58,7 +52,7 @@ public class DutyRosterController {
     @Operation(summary = "分页查询总值班排班")
     @PreAuthorize("hasAuthority('org:duty:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<DutyRosterVO>> listPage(@RequestBody DutyRosterQueryPageDTO queryDTO) {
+    public Result<PageResult<DutyRosterVO>> listPage(@Valid @RequestBody DutyRosterQueryPageDTO queryDTO) {
         return Result.success(dutyRosterService.listPage(queryDTO));
     }
 

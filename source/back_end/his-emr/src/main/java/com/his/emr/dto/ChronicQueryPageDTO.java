@@ -10,7 +10,9 @@ public class ChronicQueryPageDTO {
     private Long patientId;
     private String patientName;
     private String recordNo;
-    /** 慢病名称或 ICD-10 编码模糊匹配 */
+    /**
+     * 慢病名称或 ICD-10 编码模糊匹配
+     */
     private String diseaseKeyword;
     private Integer confirmStatus;
     private Integer pageNum = 1;

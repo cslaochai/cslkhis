@@ -9,7 +9,9 @@ import lombok.Data;
 @Data
 public class RoleNameVO {
 
-    /** 角色编码（唯一） */
+    /**
+     * 角色编码（唯一）
+     */
     private String roleCode;
 
     /**

@@ -31,14 +31,14 @@ public class AppointController {
 
     @Operation(summary = "分页查询挂号记录")
     @GetMapping("/listPage")
-    public Result<PageResult<BizAppointInfoListVO>> listPage(AppointQueryDTO queryDTO) {
+    public Result<PageResult<BizAppointInfoListVO>> listPage(@Valid AppointQueryDTO queryDTO) {
         PageResult<BizAppointInfoListVO> result = appointService.listPage(queryDTO);
         return Result.success(result);
     }
 
     @Operation(summary = "挂号状态统计：六格状态卡一次取全（口径与 listPage 一致）")
     @GetMapping("/statusCount")
-    public Result<AppointStatusCountVO> statusCount(AppointQueryDTO queryDTO) {
+    public Result<AppointStatusCountVO> statusCount(@Valid AppointQueryDTO queryDTO) {
         return Result.success(appointService.statusCount(queryDTO));
     }
 
@@ -51,7 +51,7 @@ public class AppointController {
     @PreAuthorize("hasAuthority('opd:appointments:add')")
     @Operation(summary = "患者挂号或编辑挂号（新增/修改合一）")
     @PostMapping("/appointUpsert")
-    public Result<BizAppointInfoListVO> appointUpsert(@RequestBody AppointUpsertDTO upsertDTO) {
+    public Result<BizAppointInfoListVO> appointUpsert(@Valid @RequestBody AppointUpsertDTO upsertDTO) {
         return Result.success(upsertDTO.getId() == null ? "挂号成功" : "修改成功", appointService.appointUpsert(upsertDTO));
     }
 
@@ -112,14 +112,14 @@ public class AppointController {
 
     @Operation(summary = "获取挂号详情")
     @GetMapping("/getDetail")
-    public Result<BizAppointInfoListVO> getDetail(AppointQueryDTO appointQueryDTO) {
+    public Result<BizAppointInfoListVO> getDetail(@Valid AppointQueryDTO appointQueryDTO) {
         return Result.success(appointService.getDetail(appointQueryDTO));
     }
 
     @PreAuthorize("hasAuthority('opd:appointments:edit')")
     @Operation(summary = "更新挂号状态")
     @PostMapping("/updateStatus")
-    public Result<Void> updateStatus(@RequestBody AppointStatusUpsertDTO appointStatusDTO) {
+    public Result<Void> updateStatus(@Valid @RequestBody AppointStatusUpsertDTO appointStatusDTO) {
         boolean success = appointService.updateStatus(appointStatusDTO.getRegistId(), appointStatusDTO.getStatus());
         return success ? Result.success() : Result.error("更新状态失败");
     }

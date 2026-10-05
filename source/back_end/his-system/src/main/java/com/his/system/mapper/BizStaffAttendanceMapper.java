@@ -48,7 +48,9 @@ public interface BizStaffAttendanceMapper extends BaseMapper<BizStaffAttendance>
     @Delete("DELETE FROM biz_staff_attendance WHERE id = #{id}")
     int purgeById(@Param("id") Long id);
 
-    /** 这个人当天的全部出勤（一个单元一行，跨两个单元支援就是两行） */
+    /**
+     * 这个人当天的全部出勤（一个单元一行，跨两个单元支援就是两行）
+     */
     @Select("SELECT * FROM biz_staff_attendance WHERE del_flag = 0 "
             + "AND employee_id = #{employeeId} AND schedule_date = #{date}")
     List<BizStaffAttendance> selectDayOfEmployee(@Param("employeeId") Long employeeId,
@@ -64,15 +66,21 @@ public interface BizStaffAttendanceMapper extends BaseMapper<BizStaffAttendance>
     List<BizStaffSchedule> selectDayPlanOfEmployee(@Param("employeeId") Long employeeId,
                                                    @Param("date") LocalDate date);
 
-    /** 按 id 取一条计划事实（签退时要把这条记录放回它自己的班，才知道几点该下班） */
+    /**
+     * 按 id 取一条计划事实（签退时要把这条记录放回它自己的班，才知道几点该下班）
+     */
     @Select("SELECT * FROM biz_staff_schedule WHERE del_flag = 0 AND id = #{id}")
     BizStaffSchedule selectPlanById(@Param("id") Long id);
 
-    /** 迟到宽限（分钟）—— 判定参数存在班次字典里，不写死在代码里 */
+    /**
+     * 迟到宽限（分钟）—— 判定参数存在班次字典里，不写死在代码里
+     */
     @Select("SELECT late_grace_minutes FROM biz_shift WHERE id = #{shiftId} AND del_flag = 0")
     Integer selectLateGrace(@Param("shiftId") Long shiftId);
 
-    /** 班次快照（含起止时间与迟到宽限） */
+    /**
+     * 班次快照（含起止时间与迟到宽限）
+     */
     @Select("SELECT id, shift_name, start_time, end_time, cross_day, is_night, duration_minutes, late_grace_minutes "
             + "FROM biz_shift WHERE id = #{shiftId} AND del_flag = 0")
     BizShift selectShift(@Param("shiftId") Long shiftId);

@@ -37,7 +37,7 @@ import com.his.patient.support.InpatientRecordLabels;
 import com.his.patient.support.SettlementGate;
 import com.his.patient.support.SummaryOperationSeq;
 import com.his.patient.service.InpatientSettlementGateway;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
 import com.his.patient.vo.BedMapVO;

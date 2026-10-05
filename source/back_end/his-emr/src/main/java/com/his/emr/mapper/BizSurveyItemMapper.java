@@ -26,12 +26,16 @@ public interface BizSurveyItemMapper extends BaseMapper<BizSurveyItem> {
     @Delete("DELETE FROM biz_survey_item WHERE template_id = #{templateId}")
     int purgeByTemplate(@Param("templateId") Long templateId);
 
-    /** 模板下的题目（按题号升序，出题与回收都按它排） */
+    /**
+     * 模板下的题目（按题号升序，出题与回收都按它排）
+     */
     @Select("SELECT * FROM biz_survey_item WHERE del_flag = 0 AND template_id = #{templateId} "
             + "ORDER BY seq_no ASC, id ASC")
     List<BizSurveyItem> selectByTemplate(@Param("templateId") Long templateId);
 
-    /** 一次捞多张卷的题目数（列表页那一列，避免逐行 count 的 N+1） */
+    /**
+     * 一次捞多张卷的题目数（列表页那一列，避免逐行 count 的 N+1）
+     */
     @Select("""
             <script>
             SELECT template_id AS t, COUNT(*) AS c FROM biz_survey_item

@@ -2,32 +2,17 @@ package com.his.patient.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.patient.dto.BedMapQueryDTO;
-import com.his.patient.dto.InpatientAdmitDTO;
-import com.his.patient.dto.InpatientDischargeDTO;
-import com.his.patient.dto.InpatientQueryPageDTO;
-import com.his.patient.dto.InpatientSummaryUpsertDTO;
-import com.his.patient.dto.InpatientTransferDTO;
+import com.his.patient.dto.*;
 import com.his.patient.service.InpatientService;
-import com.his.patient.vo.BedMapVO;
-import com.his.patient.vo.BedVO;
-import com.his.patient.vo.InpatientDetailVO;
-import com.his.patient.vo.InpatientStatsVO;
-import com.his.patient.vo.InpatientVO;
-import com.his.patient.vo.WardVO;
+import com.his.patient.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 住院管理（第 1 期：入出院闭环 + 病案首页）
@@ -44,14 +29,14 @@ public class InpatientController {
 
     @Operation(summary = "住院列表分页（在院/已出院）")
     @GetMapping("/listPage")
-    public Result<IPage<InpatientVO>> listPage(InpatientQueryPageDTO query) {
+    public Result<IPage<InpatientVO>> listPage(@Valid InpatientQueryPageDTO query) {
         return Result.success(inpatientService.listPage(query));
     }
 
     @Operation(summary = "本科室住院列表分页（医生站/护士站左栏，科室由服务端按登录态强制过滤）")
     @GetMapping("/listMyDeptPage")
     @PreAuthorize("isAuthenticated()")
-    public Result<IPage<InpatientVO>> listMyDeptPage(InpatientQueryPageDTO query) {
+    public Result<IPage<InpatientVO>> listMyDeptPage(@Valid InpatientQueryPageDTO query) {
         return Result.success(inpatientService.listMyDeptPage(query));
     }
 
@@ -89,14 +74,14 @@ public class InpatientController {
     @Operation(summary = "病区床位图（住院患者总览，按登录岗位科室收口）")
     @GetMapping("/bedMap")
     @PreAuthorize("hasAnyAuthority('ipd:nurse:list', 'ipd:order:list', 'ipd:inpatient:list')")
-    public Result<BedMapVO> bedMap(BedMapQueryDTO query) {
+    public Result<BedMapVO> bedMap(@Valid BedMapQueryDTO query) {
         return Result.success(inpatientService.bedMap(query));
     }
 
     @PreAuthorize("hasAuthority('ipd:inpatient:edit')")
     @Operation(summary = "入院登记（分床并占用床位）")
     @PostMapping("/admit")
-    public Result<String> admit(@RequestBody InpatientAdmitDTO dto) {
+    public Result<String> admit(@Valid @RequestBody InpatientAdmitDTO dto) {
         // 雪花ID 超过 JS 的 2^53，直接返回 Long 会在浏览器端被静默截断（2100945558440022018 → ...0022000），
         // 前端拿这个 ID 回头查详情/换床/出院必然「入院记录不存在」。统一以字符串出参。
         return Result.success("入院登记成功", String.valueOf(inpatientService.admit(dto)));

@@ -2,11 +2,7 @@ package com.his.pharmacy.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.pharmacy.dto.StocktakeAuditDTO;
-import com.his.pharmacy.dto.StocktakeCountUpsertDTO;
-import com.his.pharmacy.dto.StocktakeIdDTO;
-import com.his.pharmacy.dto.StocktakeQueryPageDTO;
-import com.his.pharmacy.dto.StocktakeUpsertDTO;
+import com.his.pharmacy.dto.*;
 import com.his.pharmacy.service.StocktakeService;
 import com.his.pharmacy.vo.StocktakeVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,13 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 药房盘点（第 1 期：账面快照 → 实盘录入 → 差异 → 复核过账）
@@ -37,7 +27,7 @@ public class StocktakeController {
     @Operation(summary = "盘点单分页")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('pharmacy:stocktake:list')")
-    public Result<PageResult<StocktakeVO>> listPage(@RequestBody StocktakeQueryPageDTO query) {
+    public Result<PageResult<StocktakeVO>> listPage(@Valid @RequestBody StocktakeQueryPageDTO query) {
         return Result.success(stocktakeService.listPage(query));
     }
 

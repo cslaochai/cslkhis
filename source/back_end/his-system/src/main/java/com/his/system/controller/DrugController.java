@@ -10,11 +10,12 @@ import com.his.system.vo.SysDrugSelectListVO;
 import com.his.system.vo.SysDrugVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 药品管理控制器
@@ -30,7 +31,7 @@ public class DrugController {
 
     @Operation(summary = "分页查询药品列表")
     @PostMapping("/listPage")
-    public Result<PageResult<SysDrugVO>> listPage(@RequestBody SysDrugQueryPageDTO queryDTO) {
+    public Result<PageResult<SysDrugVO>> listPage(@Valid @RequestBody SysDrugQueryPageDTO queryDTO) {
         return Result.success(drugService.listPage(queryDTO));
     }
 
@@ -41,7 +42,7 @@ public class DrugController {
     @Operation(summary = "药品下拉选择列表（不分页）")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/selectList")
-    public Result<List<SysDrugSelectListVO>> selectList(SysDrugSelectDTO queryDTO) {
+    public Result<List<SysDrugSelectListVO>> selectList(@Valid SysDrugSelectDTO queryDTO) {
         return Result.success(drugService.selectList(queryDTO));
     }
 
@@ -54,7 +55,7 @@ public class DrugController {
     @PreAuthorize("hasAuthority('pharmacy:stock:add')")
     @Operation(summary = "新增或修改药品")
     @PostMapping("/drugUpsert")
-    public Result<Void> drugUpsert(@RequestBody SysDrugUpsertDTO upsertDTO) {
+    public Result<Void> drugUpsert(@Valid @RequestBody SysDrugUpsertDTO upsertDTO) {
         drugService.upsert(upsertDTO);
         return Result.success("操作成功", null);
     }

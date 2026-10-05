@@ -9,6 +9,7 @@ import com.his.miniapp.vo.DoctorSelectListVO;
 import com.his.miniapp.vo.PatientDetailVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -41,7 +42,7 @@ public class MiniappDirectoryController {
 
     @Operation(summary = "可挂号源（复用排班域 service，患者端原样取数）")
     @PostMapping("/scheduleList")
-    public Result<List<ScheduleSelectListVO>> scheduleList(@RequestBody ScheduleSelectQueryDTO queryDTO) {
+    public Result<List<ScheduleSelectListVO>> scheduleList(@Valid @RequestBody ScheduleSelectQueryDTO queryDTO) {
         return Result.success(miniappDirectoryService.schedules(queryDTO));
     }
 

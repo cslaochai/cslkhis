@@ -1,11 +1,15 @@
 package com.his.emr.service.impl;
 
-import com.his.emr.service.QcStoreService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.common.enums.CheckResultEnum;
+import com.his.common.enums.RecordQcTypeEnum;
 import com.his.emr.entity.BizQualityControl;
 import com.his.emr.entity.BizQualityControlIssue;
+import com.his.emr.enums.RuleCheckStatusEnum;
 import com.his.emr.mapper.BizQualityControlIssueMapper;
 import com.his.emr.mapper.BizQualityControlMapper;
+import com.his.emr.service.QcStoreService;
+import com.his.emr.support.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,15 +20,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import com.his.emr.support.QcDimension;
-import com.his.emr.support.QcIssue;
-import com.his.emr.support.QcResult;
-import com.his.emr.support.QcSnapshot;
-import com.his.emr.support.QcTexts;
 
-import com.his.common.enums.CheckResultEnum;
-import com.his.common.enums.RecordQcTypeEnum;
-import com.his.emr.enums.RuleCheckStatusEnum;
 /**
  * 质控结果落库。
  *
@@ -34,7 +30,7 @@ import com.his.emr.enums.RuleCheckStatusEnum;
  *
  * <p><b>单号生成换掉了原实现</b>：原来用 {@code AtomicInteger} + 秒级时间戳，
  * 进程重启序号归零、同一秒内两条必撞 {@code uk_qc_no}。现在改成
- *「{@code QC} + yyyyMMdd + 4 位当日序号」，序号来自当日已有单据数的实测值，
+ * 「{@code QC} + yyyyMMdd + 4 位当日序号」，序号来自当日已有单据数的实测值，
  * 并在插入前显式查重；仍有并发窗口，由调用方重试兜底 ——
  * 这不是"理论上可能"，而是必须留的退路。
  */
@@ -67,6 +63,46 @@ public class QcStoreServiceImpl implements QcStoreService {
     private final BizQualityControlMapper qualityControlMapper;
 
     private final BizQualityControlIssueMapper qualityControlIssueMapper;
+
+    /**
+     * 检查内容：跑的是哪几个维度由 qcType 决定，写成文字供列表页直接读
+     */
+    private static String describe(Integer qcType, QcResult result) {
+        String label = QcTexts.qcType(qcType == null ? 0 : qcType);
+        String dimensions = result.getDimensions().stream()
+                .map(code -> {
+                    QcDimension dimension = QcDimension.ofCode(code);
+                    return dimension == null ? "未知(" + code + ")" : dimension.getText();
+                })
+                .reduce((a, b) -> a + "+" + b)
+                .orElse("（无适用规则）");
+        return String.format("%s（%s）", label, dimensions);
+    }
+
+    /**
+     * 明细的可读摘要，供列表页与 CDR 时间轴使用。
+     * 格式固定为「序号.[维度/严重度]字段：描述」，人可读且可枚举。
+     */
+    private static String joinIssues(List<QcIssue> issues) {
+        StringBuilder builder = new StringBuilder();
+        int index = 1;
+        for (QcIssue issue : issues) {
+            builder.append(index++).append('.')
+                    .append('[').append(issue.getDimensionText()).append('/').append(issue.getSeverityText()).append(']')
+                    .append(issue.getFieldName()).append('：').append(issue.getErrorDetail()).append('；');
+            if (builder.length() >= ERROR_DETAIL_MAX_LENGTH) {
+                break;
+            }
+        }
+        return truncate(builder.toString(), ERROR_DETAIL_MAX_LENGTH);
+    }
+
+    private static String truncate(String text, int maxLength) {
+        if (text == null) {
+            return null;
+        }
+        return text.length() <= maxLength ? text : text.substring(0, maxLength);
+    }
 
     /**
      * 落库一张质控单及其问题明细。整体成功或整体回滚 ——
@@ -151,45 +187,5 @@ public class QcStoreServiceImpl implements QcStoreService {
     private boolean exists(String qcNo) {
         return qualityControlMapper.selectCount(
                 new LambdaQueryWrapper<BizQualityControl>().eq(BizQualityControl::getQcNo, qcNo)) > 0;
-    }
-
-    /**
-     * 检查内容：跑的是哪几个维度由 qcType 决定，写成文字供列表页直接读
-     */
-    private static String describe(Integer qcType, QcResult result) {
-        String label = QcTexts.qcType(qcType == null ? 0 : qcType);
-        String dimensions = result.getDimensions().stream()
-                .map(code -> {
-                    QcDimension dimension = QcDimension.ofCode(code);
-                    return dimension == null ? "未知(" + code + ")" : dimension.getText();
-                })
-                .reduce((a, b) -> a + "+" + b)
-                .orElse("（无适用规则）");
-        return String.format("%s（%s）", label, dimensions);
-    }
-
-    /**
-     * 明细的可读摘要，供列表页与 CDR 时间轴使用。
-     * 格式固定为「序号.[维度/严重度]字段：描述」，人可读且可枚举。
-     */
-    private static String joinIssues(List<QcIssue> issues) {
-        StringBuilder builder = new StringBuilder();
-        int index = 1;
-        for (QcIssue issue : issues) {
-            builder.append(index++).append('.')
-                    .append('[').append(issue.getDimensionText()).append('/').append(issue.getSeverityText()).append(']')
-                    .append(issue.getFieldName()).append('：').append(issue.getErrorDetail()).append('；');
-            if (builder.length() >= ERROR_DETAIL_MAX_LENGTH) {
-                break;
-            }
-        }
-        return truncate(builder.toString(), ERROR_DETAIL_MAX_LENGTH);
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (text == null) {
-            return null;
-        }
-        return text.length() <= maxLength ? text : text.substring(0, maxLength);
     }
 }

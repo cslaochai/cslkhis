@@ -8,6 +8,8 @@ import com.his.common.exception.BusinessException;
 import com.his.emr.dto.InfectiousReportDTO;
 import com.his.emr.entity.BizInfectiousReport;
 import com.his.emr.entity.SysInfectiousDisease;
+import com.his.emr.enums.InfectiousClassEnum;
+import com.his.emr.enums.InfectiousReportStatusEnum;
 import com.his.emr.mapper.BizInfectiousReportMapper;
 import com.his.emr.mapper.SysInfectiousDiseaseMapper;
 import com.his.emr.service.InfectiousReportService;
@@ -21,18 +23,11 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import com.his.emr.enums.InfectiousReportStatusEnum;
-
-import java.util.Objects;
-import com.his.emr.enums.InfectiousClassEnum;
 /**
  * 传染病报告卡服务实现
- *
+ * <p>
  * 状态机：1 待审核 → 2 已审核(待直报) → 3 已直报；1/2 → 4 已退报（必填原因），
  * 退报卡修改后重新提交回 1（report_count 递增留痕）。3 是终态：直报过的卡只读。
  * 时限快照在填卡时由目录推导（甲类 2h / 乙丙 24h），逾期催报走站内信、按天幂等。
@@ -48,6 +43,18 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
     private final com.his.system.service.SysMessageService sysMessageService;
 
     // 查询
+
+    private static String tr(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private static Long toLong(Object o) {
+        return o == null ? null : Long.valueOf(String.valueOf(o));
+    }
+
+    private static Integer toInteger(Object o) {
+        return o == null ? null : Integer.valueOf(String.valueOf(o));
+    }
 
     @Override
     public PageResult<InfectiousReportVO.Row> page(InfectiousReportDTO.QueryPage q) {
@@ -71,8 +78,10 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         int from = Math.min((q.getPageNo() - 1) * q.getPageSize(), total);
         int to = Math.min(from + q.getPageSize(), total);
         List<InfectiousReportVO.Row> rows = list.subList(from, to).stream().map(this::toRow).toList();
-        return PageResult.of((long) total, q.getPageNo(), q.getPageSize(), (total + q.getPageSize() - 1) / q.getPageSize(), rows);
+        return PageResult.of(total, q.getPageNo(), q.getPageSize(), (total + q.getPageSize() - 1) / q.getPageSize(), rows);
     }
+
+    // 写路径
 
     @Override
     public InfectiousReportVO.Detail getDetailById(Long id) {
@@ -140,8 +149,6 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         return s;
     }
 
-    // 写路径
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(InfectiousReportDTO.Upsert dto) {
@@ -198,6 +205,8 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         return exists.getId();
     }
 
+    // 时限催报（发送方：定时 + 手工补跑双路径，按天幂等）
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void audit(InfectiousReportDTO.Audit dto) {
@@ -212,6 +221,8 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         r.setAuditOpinion(tr(dto.getOpinion()));
         reportMapper.updateById(r);
     }
+
+    // 内部
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -249,8 +260,6 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         reportMapper.updateById(r);
         return payload;
     }
-
-    // 时限催报（发送方：定时 + 手工补跑双路径，按天幂等）
 
     @Override
     public int notifyOverdue() {
@@ -298,8 +307,6 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         log.info("[传染病报卡] 时限催报扫描完成：超时未报 {} 张，发送催报 {} 条", overdue.size(), sent);
         return sent;
     }
-
-    // 内部
 
     private void fillCard(BizInfectiousReport r, InfectiousReportDTO.Upsert dto, SysInfectiousDisease disease,
                           Map<String, Object> patient, Long reportBy, String reportByName) {
@@ -442,17 +449,5 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
             return "已退报";
         }
         return "未知(" + s + ")";
-    }
-
-    private static String tr(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static Long toLong(Object o) {
-        return o == null ? null : Long.valueOf(String.valueOf(o));
-    }
-
-    private static Integer toInteger(Object o) {
-        return o == null ? null : Integer.valueOf(String.valueOf(o));
     }
 }

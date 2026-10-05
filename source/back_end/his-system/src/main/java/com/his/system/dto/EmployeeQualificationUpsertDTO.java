@@ -28,7 +28,9 @@ public class EmployeeQualificationUpsertDTO {
     @NotNull(message = "员工不能为空")
     private Long employeeId;
 
-    /** 证书类型（2-医师执业证 3-护士执业证 4-药师资格证 5-技术职称聘书 9-其他） */
+    /**
+     * 证书类型（2-医师执业证 3-护士执业证 4-药师资格证 5-技术职称聘书 9-其他）
+     */
     @NotBlank(message = "证书类型不能为空")
     @Size(max = 8, message = "证书类型取值不合法")
     private String certType;

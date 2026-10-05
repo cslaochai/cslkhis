@@ -12,7 +12,9 @@ public class WorkbenchConfigVO {
 
     private String roleCode;
 
-    /** 登录/切角色落点（0-默认 1-一律工作台 2-一律患者工作站），见 lib/role-workspace.js */
+    /**
+     * 登录/切角色落点（0-默认 1-一律工作台 2-一律患者工作站），见 lib/role-workspace.js
+     */
     private Integer landingScope;
 
     private List<WorkbenchWidgetVO> widgets;

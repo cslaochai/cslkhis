@@ -52,7 +52,9 @@ public class DepartmentVO {
      */
     private String remark;
 
-    /** 科室编码（唯一） */
+    /**
+     * 科室编码（唯一）
+     */
     private String deptCode;
 
     /**
@@ -60,7 +62,9 @@ public class DepartmentVO {
      */
     private String deptName;
 
-    /** 科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他） */
+    /**
+     * 科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他）
+     */
     private Integer deptType;
 
     /**

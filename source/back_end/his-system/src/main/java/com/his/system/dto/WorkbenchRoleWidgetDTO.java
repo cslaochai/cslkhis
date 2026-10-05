@@ -9,15 +9,21 @@ import lombok.Data;
 @Data
 public class WorkbenchRoleWidgetDTO {
 
-    /** 卡片ID */
+    /**
+     * 卡片ID
+     */
     @NotNull(message = "卡片ID不能为空")
     private Long widgetId;
 
-    /** 该角色下的卡片顺序 */
+    /**
+     * 该角色下的卡片顺序
+     */
     @NotNull(message = "排序号不能为空")
     private Integer sortOrder;
 
-    /** 1-展示 0-关掉但不删配置行 */
+    /**
+     * 1-展示 0-关掉但不删配置行
+     */
     @NotNull(message = "显示状态不能为空")
     private Integer visible;
 }

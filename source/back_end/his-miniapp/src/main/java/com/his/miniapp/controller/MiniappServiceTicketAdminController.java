@@ -33,10 +33,17 @@ public class MiniappServiceTicketAdminController {
 
     private final MiniappServiceTicketAdminService ticketAdminService;
 
+    private static Long parseId(String value) {
+        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
+            return null;
+        }
+        return Long.parseLong(value);
+    }
+
     @Operation(summary = "工单列表（待受理优先排序）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('service:ticket:list')")
-    public Result<PageResult<ServiceMessageListVO>> listPage(@RequestBody TicketSearchDTO dto) {
+    public Result<PageResult<ServiceMessageListVO>> listPage(@Valid @RequestBody TicketSearchDTO dto) {
         return Result.success(ticketAdminService.adminPage(dto));
     }
 
@@ -60,12 +67,5 @@ public class MiniappServiceTicketAdminController {
     public Result<Integer> handle(@RequestBody @Valid TicketHandleDTO dto) {
         ticketAdminService.handle(dto);
         return Result.success(1);
-    }
-
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
     }
 }

@@ -10,11 +10,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 检查预约设备与号源接口（URL 前缀 /medicaltech/examDevice）
@@ -31,7 +31,7 @@ public class ExamDeviceController {
 
     @Operation(summary = "分页查询预约设备")
     @PostMapping("/listPage")
-    public Result<PageResult<ExamApptVO.DeviceVO>> listPage(@RequestBody ExamApptDTO.DeviceQuery query) {
+    public Result<PageResult<ExamApptVO.DeviceVO>> listPage(@Valid @RequestBody ExamApptDTO.DeviceQuery query) {
         return Result.success(deviceService.listPage(query));
     }
 
@@ -39,7 +39,7 @@ public class ExamDeviceController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/selectList")
     public Result<List<ExamApptVO.DeviceSelectListVO>> selectList(@RequestParam(required = false) Integer deviceType,
-                                                                 @RequestParam(required = false) Long itemId) {
+                                                                  @RequestParam(required = false) Long itemId) {
         return Result.success(deviceService.selectList(deviceType, itemId));
     }
 
@@ -54,7 +54,7 @@ public class ExamDeviceController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/item/selectList")
     public Result<List<ExamApptVO.ItemSelectListVO>> itemCandidates(@RequestParam(required = false) String keyword,
-                                                                @RequestParam(required = false) Integer limit) {
+                                                                    @RequestParam(required = false) Integer limit) {
         return Result.success(deviceService.itemCandidates(keyword, limit));
     }
 

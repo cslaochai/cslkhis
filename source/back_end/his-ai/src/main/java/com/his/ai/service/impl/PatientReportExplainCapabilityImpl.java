@@ -22,7 +22,7 @@ import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.medicaltech.support.LabAbnormalJudge;
 import com.his.medicaltech.support.LabCriticalValueRules;
 import com.his.patient.service.PatientGuardianService;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

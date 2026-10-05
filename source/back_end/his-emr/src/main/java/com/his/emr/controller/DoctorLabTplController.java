@@ -6,11 +6,12 @@ import com.his.emr.service.InspectionTemplService;
 import com.his.emr.vo.BizLaboratoryTemplateVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 医生工作站 - 检验申请模板控制器
@@ -33,7 +34,7 @@ public class DoctorLabTplController {
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
     @Operation(summary = "新增检验申请模板")
     @PostMapping("/templateUpsert")
-    public Result<Void> addLaboratoryTemplate(@RequestBody BizLaboratoryTemplateUpsertDTO upsertDTO) {
+    public Result<Void> addLaboratoryTemplate(@Valid @RequestBody BizLaboratoryTemplateUpsertDTO upsertDTO) {
         boolean success = inspectionTemplService.addLaboratoryTemplate(upsertDTO);
         return success ? Result.success("新增成功", null) : Result.error("新增失败");
     }

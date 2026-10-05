@@ -45,9 +45,13 @@ public class StaffOnDutyVO {
     private Integer attendMode;
     private String attendModeText;
 
-    /** 是否出诊（0-否 1-是） */
+    /**
+     * 是否出诊（0-否 1-是）
+     */
     private Integer clinicFlag;
 
-    /** 排班日期（跨零点班归开始日，所以可能是昨天） */
+    /**
+     * 排班日期（跨零点班归开始日，所以可能是昨天）
+     */
     private String scheduleDate;
 }

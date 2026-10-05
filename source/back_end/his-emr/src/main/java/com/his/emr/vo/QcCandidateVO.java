@@ -28,14 +28,20 @@ public class QcCandidateVO {
 
     private String recordNo;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者编号 */
+    /**
+     * 患者编号
+     */
     private String patientNo;
 
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     private String patientName;
 
     /**
@@ -45,13 +51,19 @@ public class QcCandidateVO {
 
     private String genderText;
 
-    /** 年龄 */
+    /**
+     * 年龄
+     */
     private Integer age;
 
-    /** 科室名称 */
+    /**
+     * 科室名称
+     */
     private String deptName;
 
-    /** 医生姓名 */
+    /**
+     * 医生姓名
+     */
     private String doctorName;
 
     /**

@@ -10,18 +10,26 @@ import lombok.Data;
 @Data
 public class CodeTaskSubmitDTO {
 
-    /** 任务ID */
+    /**
+     * 任务ID
+     */
     @NotNull(message = "任务ID不能为空")
     private Long id;
 
-    /** 主诊断 ICD-10 编码 */
+    /**
+     * 主诊断 ICD-10 编码
+     */
     @NotBlank(message = "主诊断 ICD 编码不能为空")
     private String mainIcdCode;
 
-    /** 主诊断名称 */
+    /**
+     * 主诊断名称
+     */
     @NotBlank(message = "主诊断名称不能为空")
     private String mainIcdName;
 
-    /** 其他诊断/手术 ICD（文本，可空） */
+    /**
+     * 其他诊断/手术 ICD（文本，可空）
+     */
     private String otherIcdText;
 }

@@ -66,7 +66,9 @@ public class BizFollowupTaskVO {
      */
     private String diagnosis;
 
-    /** 随访类型（1-复诊提醒 2-慢病随访 3-用药指导 4-术后随访） */
+    /**
+     * 随访类型（1-复诊提醒 2-慢病随访 3-用药指导 4-术后随访）
+     */
     private Integer followupType;
 
     /**

@@ -11,10 +11,14 @@ import java.io.Serializable;
 @Data
 public class RecordQcFlowOpinionDTO implements Serializable {
 
-    /** 流转单ID */
+    /**
+     * 流转单ID
+     */
     @NotNull(message = "流转单ID不能为空")
     private Long flowId;
 
-    /** 审核意见 / 整改说明（可空） */
+    /**
+     * 审核意见 / 整改说明（可空）
+     */
     private String opinion;
 }

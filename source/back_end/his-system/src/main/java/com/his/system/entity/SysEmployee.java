@@ -10,7 +10,9 @@ import lombok.EqualsAndHashCode;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** 员工 */
+/**
+ * 员工
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_employee")

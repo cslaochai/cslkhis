@@ -7,6 +7,7 @@ import com.his.report.vo.CdrEventTypeSelectListVO;
 import com.his.report.vo.CdrTimelineVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,7 +38,7 @@ public class CdrController {
 
     @Operation(summary = "获取患者全景时间轴（按就诊次组织，含事件与数据缺口）")
     @GetMapping("/getDetailById")
-    public Result<CdrTimelineVO> getDetailById(CdrQueryDTO dto) {
+    public Result<CdrTimelineVO> getDetailById(@Valid CdrQueryDTO dto) {
         return Result.success(cdrService.getTimeline(dto));
     }
 

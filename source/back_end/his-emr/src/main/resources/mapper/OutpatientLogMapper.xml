@@ -1,23 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<!--
-  门诊日志（法规台账）：基表是**门诊病历**，一行 = 一次有诊断事实的接诊。
-
-  三条设计要点，改动前务必先读：
-
-  1) 只出 record_status IN (2 已提交, 3 已归档)。草稿（1）没有诊断事实，作废（4）不是事实，
-     出现在日志里等于把"还没发生/已否认"的接诊上报给疾控抽查。
-
-  2) 「可报/已报」不落新列、不建第二套状态机。可报 = 诊断 ICD 前缀命中
-     sys_infectious_disease（前缀正则由服务层从字典现拼，经 #{regex} 传入）；
-     已报 = biz_infectious_report 存在该挂号的卡（取 MAX(id)，与报卡模块"退报重报"
-     递增次数的事实一致：最新一张说了算）。报告卡本身的状态以报卡表为唯一权威，
-     这里只带出 report_no/report_status 供核查页展示，**不参与统计口径**。
-
-  3) 自定义 SQL 不受 @TableLogic 影响，三张表的 del_flag 全部显式写。
-     LEFT JOIN 条件写在 ON/子查询里，不写进 WHERE（写进 WHERE 会整批丢掉未报行，
-     而未报行恰恰是这页存在的理由）。
--->
 <mapper namespace="com.his.emr.mapper.OutpatientLogMapper">
 
     <sql id="logBase">

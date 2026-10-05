@@ -12,8 +12,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 病案借阅/复印控制器
@@ -29,7 +29,7 @@ public class ArchiveBorrowController {
 
     @Operation(summary = "分页查询借阅/复印单")
     @PostMapping("/listPage")
-    public Result<PageResult<ArchiveBorrowVO>> listPage(@RequestBody ArchiveBorrowQueryPageDTO queryDTO) {
+    public Result<PageResult<ArchiveBorrowVO>> listPage(@Valid @RequestBody ArchiveBorrowQueryPageDTO queryDTO) {
         return Result.success(borrowService.page(queryDTO));
     }
 

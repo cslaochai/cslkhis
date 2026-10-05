@@ -46,7 +46,9 @@ public class ClinicRoomVO {
      */
     private Integer delFlag;
 
-    /** 备注信息 */
+    /**
+     * 备注信息
+     */
     private String remark;
 
     /**
@@ -70,6 +72,8 @@ public class ClinicRoomVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 诊室状态（1-启用 0-停用） */
+    /**
+     * 诊室状态（1-启用 0-停用）
+     */
     private Integer status;
 }

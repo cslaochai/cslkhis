@@ -5,7 +5,9 @@ import lombok.Data;
 
 import java.util.List;
 
-/** 公示入参：只允许公示"已点评且结论 2/3/4"的明细；公示只增不可撤 */
+/**
+ * 公示入参：只允许公示"已点评且结论 2/3/4"的明细；公示只增不可撤
+ */
 @Data
 public class RxReviewPublicityDTO {
 

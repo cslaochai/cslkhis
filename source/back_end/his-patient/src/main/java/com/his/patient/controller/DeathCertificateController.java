@@ -13,12 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -43,14 +38,14 @@ public class DeathCertificateController {
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "证明台账分页（含上报台账，overdue=1 只看逾期未报）")
     @PostMapping("/cert/listPage")
-    public Result<PageResult<DeathCertificateVO.Row>> certListPage(@RequestBody(required = false) DeathCertificateDTO.QueryPage dto) {
+    public Result<PageResult<DeathCertificateVO.Row>> certListPage(@Valid @RequestBody(required = false) DeathCertificateDTO.QueryPage dto) {
         return Result.success(deathCertificateService.listPage(dto == null ? new DeathCertificateDTO.QueryPage() : dto));
     }
 
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "待开证榜（已办死亡离院但无有效证明，欠账榜）")
     @PostMapping("/cert/pendingListPage")
-    public Result<PageResult<DeathCertificateVO.PendingRow>> pendingListPage(@RequestBody(required = false) DeathCertificateDTO.QueryPage dto) {
+    public Result<PageResult<DeathCertificateVO.PendingRow>> pendingListPage(@Valid @RequestBody(required = false) DeathCertificateDTO.QueryPage dto) {
         return Result.success(deathCertificateService.pendingListPage(dto == null ? new DeathCertificateDTO.QueryPage() : dto));
     }
 
@@ -141,7 +136,7 @@ public class DeathCertificateController {
     @PreAuthorize("hasAuthority('ipd:deathCertificate:list')")
     @Operation(summary = "死亡登记簿分页")
     @PostMapping("/register/listPage")
-    public Result<PageResult<DeathRegisterVO.Row>> registerListPage(@RequestBody(required = false) DeathRegistrationDTO.QueryPage dto) {
+    public Result<PageResult<DeathRegisterVO.Row>> registerListPage(@Valid @RequestBody(required = false) DeathRegistrationDTO.QueryPage dto) {
         return Result.success(deathRegistrationService.listPage(dto == null ? new DeathRegistrationDTO.QueryPage() : dto));
     }
 
@@ -163,7 +158,7 @@ public class DeathCertificateController {
     @Operation(summary = "可登记候选（已办死亡离院的住院）")
     @GetMapping("/register/admissions")
     public Result<List<DeathRegisterVO.Base>> registerAdmissions(@RequestParam(required = false) String keyword,
-                                                                @RequestParam(required = false) Integer limit) {
+                                                                 @RequestParam(required = false) Integer limit) {
         return Result.success(deathRegistrationService.admissionCandidates(keyword, limit));
     }
 

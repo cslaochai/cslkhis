@@ -5,22 +5,21 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.exception.BusinessException;
-import com.his.emr.dto.RecordQcFlowFinalDTO;
-import com.his.emr.dto.RecordQcFlowOpinionDTO;
-import com.his.emr.dto.RecordQcFlowQueryPageDTO;
-import com.his.emr.dto.RecordQcFlowReturnDTO;
-import com.his.emr.dto.RecordQcFlowStartDTO;
+import com.his.emr.dto.*;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizRecordQcFlow;
 import com.his.emr.entity.BizRecordQcFlowAction;
+import com.his.emr.enums.RecordQcActionEnum;
+import com.his.emr.enums.RecordQcFlowStatusEnum;
+import com.his.emr.enums.RecordQcLevelEnum;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.mapper.BizRecordQcFlowActionMapper;
 import com.his.emr.mapper.BizRecordQcFlowMapper;
-import com.his.emr.support.QcTexts;
 import com.his.emr.service.RecordQcFlowService;
+import com.his.emr.support.QcTexts;
 import com.his.emr.vo.RecordQcFlowActionVO;
 import com.his.emr.vo.RecordQcFlowVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,17 +30,13 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-import com.his.emr.enums.RecordQcActionEnum;
-import com.his.emr.enums.RecordQcFlowStatusEnum;
-import com.his.emr.enums.RecordQcLevelEnum;
-
 /**
  * 病历三级质控流转服务实现
- *
+ * <p>
  * 状态机（收口在本类，Controller 不碰状态）：
- *   1 科级待审 →（approve）→ 2 病案室待审 →（approve）→ 3 医务处待审 →（finalApprove）→ 4 终审通过；
- *   1/2/3 任一级（returnForRework）→ 5 整改中，current_level 保持为退回发生级；
- *   5（resubmit）→ 回到 current_level 对应待审状态。
+ * 1 科级待审 →（approve）→ 2 病案室待审 →（approve）→ 3 医务处待审 →（finalApprove）→ 4 终审通过；
+ * 1/2/3 任一级（returnForRework）→ 5 整改中，current_level 保持为退回发生级；
+ * 5（resubmit）→ 回到 current_level 对应待审状态。
  * 所有动作写质控流转动作时间线时间线，只增不改。
  */
 @Slf4j
@@ -225,7 +220,9 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         actionMapper.insert(a);
     }
 
-    /** 取流转单（行锁）并校验存在 */
+    /**
+     * 取流转单（行锁）并校验存在
+     */
     private BizRecordQcFlow lockAndCheck(Long flowId) {
         BizRecordQcFlow flow = flowMapper.selectByIdForUpdate(flowId);
         if (flow == null) {
@@ -237,7 +234,9 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         return flow;
     }
 
-    /** 校验处于三个待审级之一 */
+    /**
+     * 校验处于三个待审级之一
+     */
     private void requireReviewStage(BizRecordQcFlow flow) {
         int s = flow.getFlowStatus();
         if (s != RecordQcFlowStatusEnum.DEPT_PENDING.getCode() && s != RecordQcFlowStatusEnum.ARCHIVE_PENDING.getCode() && s != RecordQcFlowStatusEnum.MEDAFFAIRS_PENDING.getCode()) {

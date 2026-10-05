@@ -29,7 +29,9 @@ public class InsurancePolicyUpsertDTO {
     @NotBlank(message = "医保类型不能为空")
     private String insuranceType;
 
-    /** 结算方式（2-城镇职工医保 3-城乡居民医保 4-公费医疗） */
+    /**
+     * 结算方式（2-城镇职工医保 3-城乡居民医保 4-公费医疗）
+     */
     @NotNull(message = "结算方式不能为空")
     private Integer settlementType;
 

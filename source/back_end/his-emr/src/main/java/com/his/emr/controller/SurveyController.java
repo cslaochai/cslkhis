@@ -2,12 +2,7 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.emr.dto.SurveyAnswerQueryPageDTO;
-import com.his.emr.dto.SurveyAnswerUpsertDTO;
-import com.his.emr.dto.SurveyAnswerVoidDTO;
-import com.his.emr.dto.SurveyDispatchActionDTO;
-import com.his.emr.dto.SurveyDispatchIssueDTO;
-import com.his.emr.dto.SurveyDispatchQueryPageDTO;
+import com.his.emr.dto.*;
 import com.his.emr.service.SurveyService;
 import com.his.emr.vo.SurveyAnswerVO;
 import com.his.emr.vo.SurveyDispatchVO;
@@ -17,12 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 满意度评价发放/回收与看板（sql/164）。
@@ -44,7 +34,7 @@ public class SurveyController {
     @PreAuthorize("hasAuthority('qc:survey:list')")
     @Operation(summary = "发放/回收台账分页（手机号出参脱敏）")
     @PostMapping("/dispatch/listPage")
-    public Result<PageResult<SurveyDispatchVO>> dispatchListPage(@RequestBody SurveyDispatchQueryPageDTO dto) {
+    public Result<PageResult<SurveyDispatchVO>> dispatchListPage(@Valid @RequestBody SurveyDispatchQueryPageDTO dto) {
         return Result.success(surveyService.dispatchListPage(dto));
     }
 
@@ -74,7 +64,7 @@ public class SurveyController {
     @PreAuthorize("hasAuthority('qc:survey:list')")
     @Operation(summary = "答卷分页")
     @PostMapping("/answer/listPage")
-    public Result<PageResult<SurveyAnswerVO>> answerListPage(@RequestBody SurveyAnswerQueryPageDTO dto) {
+    public Result<PageResult<SurveyAnswerVO>> answerListPage(@Valid @RequestBody SurveyAnswerQueryPageDTO dto) {
         return Result.success(surveyService.answerListPage(dto));
     }
 

@@ -37,7 +37,9 @@ public class EmployeePostVO {
 
     private String deptCode;
 
-    /** 科室名称 */
+    /**
+     * 科室名称
+     */
     private String deptName;
 
     /**

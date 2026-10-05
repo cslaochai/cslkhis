@@ -6,7 +6,7 @@ import com.his.appoint.enums.QueueStatusEnum;
 import com.his.appoint.mapper.BizQueueMapper;
 import com.his.patient.service.PatientTodayVisit;
 import com.his.patient.service.PatientTodayVisitProvider;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

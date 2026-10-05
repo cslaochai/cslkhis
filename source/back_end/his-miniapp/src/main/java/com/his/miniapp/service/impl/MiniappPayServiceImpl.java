@@ -28,7 +28,7 @@ import com.his.miniapp.vo.PayOrderListVO;
 import com.his.miniapp.vo.PayOrderVO;
 import com.his.miniapp.vo.PendingBillItemVO;
 import com.his.miniapp.vo.PendingBillListVO;
-import com.his.security.JwtUtils;
+import com.his.security.utils.JwtUtils;
 import com.his.security.UserUtils;
 import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;

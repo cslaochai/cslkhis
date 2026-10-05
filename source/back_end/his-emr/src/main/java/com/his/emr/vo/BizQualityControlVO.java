@@ -71,7 +71,9 @@ public class BizQualityControlVO {
      */
     private String recordStatusText;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
@@ -95,7 +97,9 @@ public class BizQualityControlVO {
      */
     private String doctorName;
 
-    /** 质控类型（0-综合 1-完整性检查 2-规范性检查 3-逻辑性检查 4-AI内涵质控） */
+    /**
+     * 质控类型（0-综合 1-完整性检查 2-规范性检查 3-逻辑性检查 4-AI内涵质控）
+     */
     private Integer qcType;
 
     /**
@@ -138,7 +142,9 @@ public class BizQualityControlVO {
      */
     private String gradeText;
 
-    /** 最高问题严重度（0-无问题 1-提示 2-重要 3-否决项） */
+    /**
+     * 最高问题严重度（0-无问题 1-提示 2-重要 3-否决项）
+     */
     private Integer severityMax;
 
     /**
@@ -167,21 +173,31 @@ public class BizQualityControlVO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime qcTime;
 
-    /** 创建人 */
+    /**
+     * 创建人
+     */
     private String createBy;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
-    /** 更新人 */
+    /**
+     * 更新人
+     */
     private String updateBy;
 
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
 
-    /** 删除标志（0-正常 1-删除） */
+    /**
+     * 删除标志（0-正常 1-删除）
+     */
     private Integer delFlag;
 
     /**

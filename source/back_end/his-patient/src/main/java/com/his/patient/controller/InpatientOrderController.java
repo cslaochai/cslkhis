@@ -2,13 +2,7 @@ package com.his.patient.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.patient.dto.InpatientOrderCancelDTO;
-import com.his.patient.dto.InpatientOrderQueryPageDTO;
-import com.his.patient.dto.InpatientOrderStopDTO;
-import com.his.patient.dto.InpatientOrderUpsertDTO;
-import com.his.patient.dto.InpatientOrderVerifyDTO;
-import com.his.patient.dto.OrderExecCompleteDTO;
-import com.his.patient.dto.OrderExecQueryPageDTO;
+import com.his.patient.dto.*;
 import com.his.patient.service.InpatientOrderService;
 import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.patient.vo.InpatientOrderVO;
@@ -16,13 +10,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 住院医嘱（P1：医嘱 → 校对 → 执行 → 计费）
@@ -44,7 +33,7 @@ public class InpatientOrderController {
 
     @Operation(summary = "医嘱分页（医生站 / 护士站共用；pendingVerifyOnly=1 只看待校对）")
     @GetMapping("/listPage")
-    public Result<IPage<InpatientOrderVO>> listPage(InpatientOrderQueryPageDTO query) {
+    public Result<IPage<InpatientOrderVO>> listPage(@Valid InpatientOrderQueryPageDTO query) {
         return Result.success(orderService.listPage(query));
     }
 
@@ -58,14 +47,14 @@ public class InpatientOrderController {
     @PreAuthorize("hasAuthority('ipd:order:edit')")
     @Operation(summary = "护士医嘱校对（批量，未校对不可执行）")
     @PostMapping("/verify")
-    public Result<Integer> verify(@RequestBody InpatientOrderVerifyDTO dto) {
+    public Result<Integer> verify(@Valid @RequestBody InpatientOrderVerifyDTO dto) {
         return Result.success("医嘱校对成功", orderService.verify(dto));
     }
 
     @PreAuthorize("hasAuthority('ipd:order:edit')")
     @Operation(summary = "停止医嘱（同组套整组停；长期医嘱只能停不能作废）")
     @PostMapping("/stop")
-    public Result<Integer> stop(@RequestBody InpatientOrderStopDTO dto) {
+    public Result<Integer> stop(@Valid @RequestBody InpatientOrderStopDTO dto) {
         return Result.success("医嘱已停止", orderService.stop(dto));
     }
 
@@ -79,20 +68,20 @@ public class InpatientOrderController {
 
     @Operation(summary = "护士待执行队列（加急优先、按计划时间升序；会补当天长期医嘱计划）")
     @GetMapping("/execPendingList")
-    public Result<IPage<InpatientOrderExecVO>> execPendingList(OrderExecQueryPageDTO query) {
+    public Result<IPage<InpatientOrderExecVO>> execPendingList(@Valid OrderExecQueryPageDTO query) {
         return Result.success(orderService.execPendingList(query));
     }
 
     @PreAuthorize("hasAuthority('ipd:order:edit')")
     @Operation(summary = "医嘱执行（批量：2-已执行并计费 / 3-已跳过并留原因）")
     @PostMapping("/exec/complete")
-    public Result<Integer> execComplete(@RequestBody OrderExecCompleteDTO dto) {
+    public Result<Integer> execComplete(@Valid @RequestBody OrderExecCompleteDTO dto) {
         return Result.success("医嘱执行已记录", orderService.execComplete(dto));
     }
 
     @Operation(summary = "执行记录查询（含已执行 / 已跳过，留痕不删除）")
     @GetMapping("/execList")
-    public Result<IPage<InpatientOrderExecVO>> execList(OrderExecQueryPageDTO query) {
+    public Result<IPage<InpatientOrderExecVO>> execList(@Valid OrderExecQueryPageDTO query) {
         return Result.success(orderService.execList(query));
     }
 

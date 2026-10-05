@@ -20,7 +20,7 @@ import com.his.patient.mapper.BizNursingQcIndicatorMapper;
 import com.his.patient.mapper.SysNursingQcItemMapper;
 import com.his.patient.service.NursingQcService;
 import com.his.patient.vo.NurseQcVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;

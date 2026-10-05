@@ -12,25 +12,33 @@ import java.util.List;
 @Data
 public class LogStatVO {
 
-    /** 操作日志总量 */
+    /**
+     * 操作日志总量
+     */
     private Long operTotal;
     private Long operToday;
     private Long operFailToday;
     private Long oper7d;
 
-    /** 登录日志总量 */
+    /**
+     * 登录日志总量
+     */
     private Long loginTotal;
     private Long loginToday;
     private Long loginFailToday;
     private Long login7d;
 
-    /** 审计日志总量 */
+    /**
+     * 审计日志总量
+     */
     private Long auditTotal;
     private Long auditToday;
     private Long auditFailToday;
     private Long audit7d;
 
-    /** 字段级变更总量（sql/159 的第四本账） */
+    /**
+     * 字段级变更总量（sql/159 的第四本账）
+     */
     private Long fieldChangeTotal;
     private Long fieldChangeToday;
     private Long fieldChange7d;

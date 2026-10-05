@@ -8,11 +8,12 @@ import com.his.system.service.SysClinicRoomService;
 import com.his.system.vo.ClinicRoomVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 诊室管理控制器
@@ -28,13 +29,13 @@ public class ClinicRoomController {
 
     @Operation(summary = "分页查询诊室列表")
     @PostMapping("/listPage")
-    public Result<PageResult<ClinicRoomVO>> listPage(@RequestBody ClinicRoomQueryDTO queryDTO) {
+    public Result<PageResult<ClinicRoomVO>> listPage(@Valid @RequestBody ClinicRoomQueryDTO queryDTO) {
         return Result.success(clinicRoomService.listPage(queryDTO));
     }
 
     @Operation(summary = "查询诊室列表（不分页）")
     @PostMapping("/list")
-    public Result<List<ClinicRoomVO>> list(@RequestBody ClinicRoomQueryDTO queryDTO) {
+    public Result<List<ClinicRoomVO>> list(@Valid @RequestBody ClinicRoomQueryDTO queryDTO) {
         return Result.success(clinicRoomService.listAll(queryDTO));
     }
 
@@ -47,7 +48,7 @@ public class ClinicRoomController {
     @Operation(summary = "新增或修改诊室")
     @PreAuthorize("hasAuthority('org:clinicRoom:add')")
     @PostMapping("/clinicRoomUpsert")
-    public Result<Void> clinicRoomUpsert(@RequestBody ClinicRoomUpsertDTO upsertDTO) {
+    public Result<Void> clinicRoomUpsert(@Valid @RequestBody ClinicRoomUpsertDTO upsertDTO) {
         return Result.success(clinicRoomService.upsert(upsertDTO), null);
     }
 

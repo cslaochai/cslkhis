@@ -13,8 +13,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 病案编码任务控制器
@@ -30,7 +30,7 @@ public class CodeTaskController {
 
     @Operation(summary = "分页查询编码任务")
     @PostMapping("/listPage")
-    public Result<PageResult<ArchiveCodeTaskVO>> listPage(@RequestBody CodeTaskQueryPageDTO queryDTO) {
+    public Result<PageResult<ArchiveCodeTaskVO>> listPage(@Valid @RequestBody CodeTaskQueryPageDTO queryDTO) {
         return Result.success(taskService.page(queryDTO));
     }
 

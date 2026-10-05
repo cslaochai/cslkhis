@@ -5,7 +5,9 @@ import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/** 检验项目组套明细（检验项目组套明细） */
+/**
+ * 检验项目组套明细（检验项目组套明细）
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_laboratory_item_detail")

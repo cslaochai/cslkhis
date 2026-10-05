@@ -10,11 +10,15 @@ import lombok.Data;
 @Data
 public class AdverseEventActionDTO {
 
-    /** 事件主键 */
+    /**
+     * 事件主键
+     */
     @NotNull(message = "事件ID不能为空")
     private Long id;
 
-    /** 处理意见 / 整改措施 / 验证结论（按接口语义） */
+    /**
+     * 处理意见 / 整改措施 / 验证结论（按接口语义）
+     */
     @NotBlank(message = "意见内容不能为空")
     private String remark;
 }

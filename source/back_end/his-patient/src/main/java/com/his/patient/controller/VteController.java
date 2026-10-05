@@ -2,32 +2,15 @@ package com.his.patient.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.patient.dto.VteEventQueryPageDTO;
-import com.his.patient.dto.VteEventUpsertDTO;
-import com.his.patient.dto.VtePreventQueryPageDTO;
-import com.his.patient.dto.VtePreventUpsertDTO;
-import com.his.patient.dto.VteRiskQueryPageDTO;
-import com.his.patient.dto.VteStatsGenerateDTO;
-import com.his.patient.dto.VteStatsQueryPageDTO;
+import com.his.patient.dto.*;
 import com.his.patient.service.VteService;
-import com.his.patient.vo.VteEventVO;
-import com.his.patient.vo.VteMeasureOptionVO;
-import com.his.patient.vo.VteOverviewVO;
-import com.his.patient.vo.VtePreventVO;
-import com.his.patient.vo.VteRiskListVO;
-import com.his.patient.vo.VteStatsVO;
+import com.his.patient.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -59,14 +42,14 @@ public class VteController {
     @Operation(summary = "VTE 风险名单（默认只给中高危，风险取每次住院最新一条 Caprini 评估）")
     @PreAuthorize("hasAuthority('nursing:vte:prevent')")
     @PostMapping("/riskListPage")
-    public Result<PageResult<VteRiskListVO>> riskListPage(@RequestBody VteRiskQueryPageDTO query) {
+    public Result<PageResult<VteRiskListVO>> riskListPage(@Valid @RequestBody VteRiskQueryPageDTO query) {
         return Result.success(vteService.riskListPage(query));
     }
 
     @Operation(summary = "预防措施记录分页")
     @PreAuthorize("hasAuthority('nursing:vte:prevent')")
     @PostMapping("/preventListPage")
-    public Result<PageResult<VtePreventVO>> preventListPage(@RequestBody VtePreventQueryPageDTO query) {
+    public Result<PageResult<VtePreventVO>> preventListPage(@Valid @RequestBody VtePreventQueryPageDTO query) {
         return Result.success(vteService.preventListPage(query));
     }
 
@@ -101,7 +84,7 @@ public class VteController {
     @Operation(summary = "VTE 事件分页")
     @PreAuthorize("hasAuthority('nursing:vte:monitor')")
     @PostMapping("/eventListPage")
-    public Result<PageResult<VteEventVO>> eventListPage(@RequestBody VteEventQueryPageDTO query) {
+    public Result<PageResult<VteEventVO>> eventListPage(@Valid @RequestBody VteEventQueryPageDTO query) {
         return Result.success(vteService.eventListPage(query));
     }
 
@@ -144,14 +127,14 @@ public class VteController {
     @Operation(summary = "已生成的防控指标分页")
     @PreAuthorize("hasAuthority('nursing:vte:monitor')")
     @PostMapping("/statsListPage")
-    public Result<PageResult<VteStatsVO>> statsListPage(@RequestBody VteStatsQueryPageDTO query) {
+    public Result<PageResult<VteStatsVO>> statsListPage(@Valid @RequestBody VteStatsQueryPageDTO query) {
         return Result.success(vteService.statsListPage(query));
     }
 
     @Operation(summary = "导出防控指标 CSV（BOM，上限 5000 行）")
     @PreAuthorize("hasAuthority('nursing:vte:statExport')")
     @PostMapping("/statsExportCsv")
-    public Result<String> statsExportCsv(@RequestBody VteStatsQueryPageDTO query) {
+    public Result<String> statsExportCsv(@Valid @RequestBody VteStatsQueryPageDTO query) {
         return Result.success(vteService.statsExportCsv(query));
     }
 }

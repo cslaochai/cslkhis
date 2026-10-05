@@ -7,7 +7,9 @@ import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/** 检验申请模板 */
+/**
+ * 检验申请模板
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_laboratory_template")

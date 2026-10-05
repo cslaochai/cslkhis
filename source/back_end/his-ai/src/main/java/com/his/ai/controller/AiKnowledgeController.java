@@ -17,11 +17,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.util.StringUtils;
 
 /**
  * 知识库问答（RAG）接口。
@@ -51,7 +51,7 @@ public class AiKnowledgeController {
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/ingest")
     @Operation(summary = "录入/更新知识文档（手工或文件导入；自动切块建索引）")
-    public Result<Long> ingest(@RequestBody KnowledgeIngestDTO dto) {
+    public Result<Long> ingest(@Valid @RequestBody KnowledgeIngestDTO dto) {
         SysKnowledgeDoc doc = new SysKnowledgeDoc();
         doc.setTitle(dto.getTitle());
         doc.setCategory(StringUtils.hasText(dto.getCategory()) ? dto.getCategory() : dto.getTitle());
@@ -63,7 +63,7 @@ public class AiKnowledgeController {
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/listPage")
     @Operation(summary = "知识文档分页列表")
-    public Result<IPage<KnowledgeDocListVO>> listPage(@RequestBody KnowledgeDocQueryPageDTO dto) {
+    public Result<IPage<KnowledgeDocListVO>> listPage(@Valid @RequestBody KnowledgeDocQueryPageDTO dto) {
         return Result.success(storeService.listPage(dto));
     }
 

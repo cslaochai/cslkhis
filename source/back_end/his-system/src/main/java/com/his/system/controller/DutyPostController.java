@@ -12,13 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -37,15 +31,15 @@ public class DutyPostController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/selectList")
     public Result<List<DutyPostSelectListVO>> selectList(@RequestParam(required = false) Integer dutyScope,
-                                                        @RequestParam(required = false) Integer orgType,
-                                                        @RequestParam(required = false) Long orgId) {
+                                                         @RequestParam(required = false) Integer orgType,
+                                                         @RequestParam(required = false) Long orgId) {
         return Result.success(dutyPostService.selectListVO(dutyScope, orgType, orgId));
     }
 
     @Operation(summary = "分页查询点位")
     @PreAuthorize("hasAuthority('org:duty:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<DutyPostVO>> listPage(@RequestBody DutyPostQueryPageDTO queryDTO) {
+    public Result<PageResult<DutyPostVO>> listPage(@Valid @RequestBody DutyPostQueryPageDTO queryDTO) {
         return Result.success(dutyPostService.pageVO(queryDTO));
     }
 

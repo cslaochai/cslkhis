@@ -12,13 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -41,7 +35,7 @@ public class AnesthesiaFollowupController {
     @PreAuthorize("hasAuthority('ipd:anesthesia:list')")
     @Operation(summary = "随访分页（麻醉记录/住院/状态/关键字）")
     @GetMapping("/listPage")
-    public Result<IPage<AnesthesiaFollowupVO>> listPage(AnesthesiaFollowupQueryPageDTO query) {
+    public Result<IPage<AnesthesiaFollowupVO>> listPage(@Valid AnesthesiaFollowupQueryPageDTO query) {
         return Result.success(followupService.listPage(query));
     }
 

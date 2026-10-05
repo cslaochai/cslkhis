@@ -10,7 +10,9 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** 病历归档 */
+/**
+ * 病历归档
+ */
 @Data
 @TableName("biz_medical_record_archive")
 public class BizMedicalRecordArchive {

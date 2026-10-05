@@ -13,7 +13,9 @@ import java.time.LocalDateTime;
 @Data
 public class PriceChangeHistoryVO {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
@@ -22,32 +24,50 @@ public class PriceChangeHistoryVO {
      */
     private String itemType;
 
-    /** 项目ID */
+    /**
+     * 项目ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long itemId;
 
-    /** 项目编码 */
+    /**
+     * 项目编码
+     */
     private String itemCode;
 
-    /** 项目名称（冗余） */
+    /**
+     * 项目名称（冗余）
+     */
     private String itemName;
 
-    /** 原价 */
+    /**
+     * 原价
+     */
     private BigDecimal oldPrice;
 
-    /** 新价 */
+    /**
+     * 新价
+     */
     private BigDecimal newPrice;
 
-    /** 调价原因 */
+    /**
+     * 调价原因
+     */
     private String changeReason;
 
-    /** 操作人ID（员工ID） */
+    /**
+     * 操作人ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long operatorId;
 
-    /** 操作人姓名 */
+    /**
+     * 操作人姓名
+     */
     private String operatorName;
 
-    /** 调价时间 */
+    /**
+     * 调价时间
+     */
     private LocalDateTime changeTime;
 }

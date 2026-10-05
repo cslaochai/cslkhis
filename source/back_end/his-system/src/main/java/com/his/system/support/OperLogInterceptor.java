@@ -1,7 +1,7 @@
 package com.his.system.support;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.entity.SysOperLog;
 import com.his.system.mapper.SysOperLogMapper;

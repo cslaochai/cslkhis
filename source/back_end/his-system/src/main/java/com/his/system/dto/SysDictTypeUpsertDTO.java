@@ -13,7 +13,9 @@ public class SysDictTypeUpsertDTO {
      */
     private Long id;
 
-    /** 字典类型（唯一） */
+    /**
+     * 字典类型（唯一）
+     */
     private String dictType;
 
     /**

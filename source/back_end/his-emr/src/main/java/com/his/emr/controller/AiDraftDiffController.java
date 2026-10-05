@@ -7,6 +7,7 @@ import com.his.emr.service.AiDraftDiffService;
 import com.his.emr.vo.AiDraftDiffListVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,7 +32,7 @@ public class AiDraftDiffController {
     @Operation(summary = "草稿留痕分页（AI 管理台）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('ai:admin:list')")
-    public Result<PageResult<AiDraftDiffListVO>> listPage(@RequestBody(required = false) AiDraftDiffQueryPageDTO queryDTO) {
+    public Result<PageResult<AiDraftDiffListVO>> listPage(@Valid @RequestBody(required = false) AiDraftDiffQueryPageDTO queryDTO) {
         return Result.success(aiDraftDiffService.listPage(queryDTO));
     }
 }

@@ -9,10 +9,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 患者联系人控制器
@@ -36,7 +36,7 @@ public class PatientContactController {
 
     @Operation(summary = "查询患者的联系人列表")
     @PostMapping("/list")
-    public Result<List<PatientContactVO>> list(@RequestBody PatientContactQueryDTO queryDTO) {
+    public Result<List<PatientContactVO>> list(@Valid @RequestBody PatientContactQueryDTO queryDTO) {
         return Result.success(healthProfileService.getProfile(queryDTO.getPatientId()).getContacts());
     }
 

@@ -16,13 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,7 +39,7 @@ public class StaffScheduleController {
     @Operation(summary = "分页查询排班（日期区间 + 单元 + 岗位类别 + 出勤状态 + 姓名/工号关键词）")
     @PreAuthorize("hasAuthority('org:schedule:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<StaffScheduleVO>> listPage(@RequestBody StaffScheduleQueryPageDTO queryDTO) {
+    public Result<PageResult<StaffScheduleVO>> listPage(@Valid @RequestBody StaffScheduleQueryPageDTO queryDTO) {
         return Result.success(staffScheduleService.pageVO(queryDTO));
     }
 

@@ -66,7 +66,9 @@ public class RoleVO {
      */
     private Integer roleType;
 
-    /** 数据权限范围（1-全部数据 2-自定义数据 3-本部门数据 4-本部门及以下 5-仅本人数据） */
+    /**
+     * 数据权限范围（1-全部数据 2-自定义数据 3-本部门数据 4-本部门及以下 5-仅本人数据）
+     */
     private Integer dataScope;
 
     /**

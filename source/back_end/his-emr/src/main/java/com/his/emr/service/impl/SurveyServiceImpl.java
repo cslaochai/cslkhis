@@ -7,34 +7,15 @@ import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.SensitiveMaskUtils;
-import com.his.emr.dto.DisputeCaseUpsertDTO;
+import com.his.emr.dto.*;
+import com.his.emr.entity.*;
+import com.his.emr.enums.*;
+import com.his.emr.mapper.*;
 import com.his.emr.service.DisputeService;
-import com.his.emr.entity.BizFollowupTask;
-import com.his.emr.mapper.BizFollowupTaskMapper;
-import com.his.emr.dto.SurveyAnswerQueryPageDTO;
-import com.his.emr.dto.SurveyAnswerUpsertDTO;
-import com.his.emr.dto.SurveyAnswerVoidDTO;
-import com.his.emr.dto.SurveyDispatchActionDTO;
-import com.his.emr.dto.SurveyDispatchIssueDTO;
-import com.his.emr.dto.SurveyDispatchQueryPageDTO;
-import com.his.emr.entity.BizSurveyAnswer;
-import com.his.emr.entity.BizSurveyAnswerItem;
-import com.his.emr.entity.BizSurveyDispatch;
-import com.his.emr.entity.BizSurveyItem;
-import com.his.emr.entity.BizSurveyTemplate;
-import com.his.emr.mapper.BizSurveyAnswerItemMapper;
-import com.his.emr.mapper.BizSurveyAnswerMapper;
-import com.his.emr.mapper.BizSurveyDispatchMapper;
-import com.his.emr.mapper.BizSurveyItemMapper;
 import com.his.emr.service.SurveyService;
 import com.his.emr.service.SurveyTemplateService;
 import com.his.emr.support.FollowupTaskSnapshot;
-import com.his.emr.vo.SurveyAnswerItemVO;
-import com.his.emr.vo.SurveyAnswerVO;
-import com.his.emr.vo.SurveyDispatchVO;
-import com.his.emr.vo.SurveyStatItemVO;
-import com.his.emr.vo.SurveyStatVO;
-import com.his.emr.vo.SurveyTemplateVO;
+import com.his.emr.vo.*;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -50,25 +31,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-
-import com.his.emr.enums.AnswerStatusEnum;
-import com.his.emr.enums.ComplainantRelEnum;
-import com.his.emr.enums.DisputeCategoryEnum;
-import com.his.emr.enums.DisputeSourceEnum;
-import com.his.emr.enums.FillSourceEnum;
-import com.his.emr.enums.FollowupTaskStatusEnum;
-import com.his.emr.enums.SurveyChannelEnum;
-import com.his.emr.enums.SurveyDispatchStatusEnum;
-import com.his.emr.enums.SurveyQuestionTypeEnum;
-import com.his.emr.enums.SurveySceneEnum;
-import com.his.emr.enums.SurveySourceEnum;
+import java.util.*;
 
 /**
  * 满意度评价发放/回收与看板实现。
@@ -97,14 +60,20 @@ public class SurveyServiceImpl implements SurveyService {
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    /** 评价维度名（字典 his_survey_dimension 的 Java 侧镜像，看板直接出中文名） */
+    /**
+     * 评价维度名（字典 his_survey_dimension 的 Java 侧镜像，看板直接出中文名）
+     */
     private static final Map<Integer, String> DIMENSION_NAMES = Map.of(
             1, "挂号便捷", 2, "医生服务", 3, "护士服务", 4, "环境与流程",
             5, "费用透明", 6, "疗效与安全感", 7, "总体印象");
-    /** 回收渠道名（字典 his_survey_channel） */
+    /**
+     * 回收渠道名（字典 his_survey_channel）
+     */
     private static final Map<Integer, String> CHANNEL_NAMES = Map.of(
             1, "电话代填", 2, "短信", 3, "微信/互联网", 4, "现场扫码");
-    /** 回收状态名（字典 his_survey_dispatch_status） */
+    /**
+     * 回收状态名（字典 his_survey_dispatch_status）
+     */
     private static final Map<Integer, String> DISPATCH_STATUS_NAMES = Map.of(
             1, "待推送", 2, "已推送待回收", 3, "已回收", 4, "已过期", 5, "已拒答");
 
@@ -119,6 +88,48 @@ public class SurveyServiceImpl implements SurveyService {
 
     // 发放与回收
 
+    private static BigDecimal rate(long numerator, long denominator) {
+        if (denominator <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(numerator).multiply(HUNDRED)
+                .divide(BigDecimal.valueOf(denominator), 1, RoundingMode.HALF_UP);
+    }
+
+    private static BigDecimal decimal(Object v) {
+        return v == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(v));
+    }
+
+    private static long toLong(Object v) {
+        return v == null ? 0L : new BigDecimal(String.valueOf(v)).longValue();
+    }
+
+    private static long nz(Long v) {
+        return v == null ? 0L : v;
+    }
+
+    private static int maxScoreOf(BizSurveyItem item) {
+        return item.getMaxScore() == null ? 5 : item.getMaxScore();
+    }
+
+    // 答卷
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static String cut(String v, int max) {
+        if (v == null) {
+            return null;
+        }
+        String s = v.trim();
+        return s.length() <= max ? s : s.substring(0, max);
+    }
+
+    private static String trimToNull(String v) {
+        return StringUtils.hasText(v) ? v.trim() : null;
+    }
+
     @Override
     public PageResult<SurveyDispatchVO> dispatchListPage(SurveyDispatchQueryPageDTO dto) {
         Page<SurveyDispatchVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
@@ -132,6 +143,8 @@ public class SurveyServiceImpl implements SurveyService {
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
+    // 看板
+
     @Override
     public SurveyDispatchVO dispatchGetById(Long id) {
         BizSurveyDispatch entity = requireDispatch(id);
@@ -142,6 +155,8 @@ public class SurveyServiceImpl implements SurveyService {
         decorateDispatch(vo, true);
         return vo;
     }
+
+    // 内部：校验、算分、转投诉
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -237,8 +252,6 @@ public class SurveyServiceImpl implements SurveyService {
         dispatchMapper.updateById(entity);
         return dispatchGetById(entity.getId());
     }
-
-    // 答卷
 
     @Override
     public PageResult<SurveyAnswerVO> answerListPage(SurveyAnswerQueryPageDTO dto) {
@@ -375,8 +388,6 @@ public class SurveyServiceImpl implements SurveyService {
         return answerGetById(answer.getId());
     }
 
-    // 看板
-
     @Override
     public SurveyStatVO stat(Long templateId, Integer scene, String dateFrom, String dateTo) {
         String from = trimToNull(dateFrom);
@@ -430,7 +441,7 @@ public class SurveyServiceImpl implements SurveyService {
             long rated = toLong(nps.get("rated"));
             vo.setNps(rated == 0 ? BigDecimal.ZERO
                     : BigDecimal.valueOf(toLong(nps.get("promoter")) - toLong(nps.get("detractor")))
-                            .multiply(HUNDRED).divide(BigDecimal.valueOf(rated), 1, RoundingMode.HALF_UP));
+                    .multiply(HUNDRED).divide(BigDecimal.valueOf(rated), 1, RoundingMode.HALF_UP));
         } else {
             vo.setNps(BigDecimal.ZERO);
         }
@@ -476,9 +487,11 @@ public class SurveyServiceImpl implements SurveyService {
         return vo;
     }
 
-    // 内部：校验、算分、转投诉
+    // 内部：出参与收口
 
-    /** 卷面题目（按题目ID索引）—— 回收必须落在这张卷真实存在的题上 */
+    /**
+     * 卷面题目（按题目ID索引）—— 回收必须落在这张卷真实存在的题上
+     */
     private Map<Long, BizSurveyItem> paperOf(Long templateId) {
         Map<Long, BizSurveyItem> paper = new HashMap<>();
         for (BizSurveyItem item : itemMapper.selectByTemplate(templateId)) {
@@ -614,7 +627,9 @@ public class SurveyServiceImpl implements SurveyService {
         return false;
     }
 
-    /** 低分卷转成投诉单（走 DisputeService，绝不直接写它的表：登记要生成单号、患者快照、状态初始化） */
+    /**
+     * 低分卷转成投诉单（走 DisputeService，绝不直接写它的表：登记要生成单号、患者快照、状态初始化）
+     */
     private DisputeCaseUpsertDTO buildDispute(BizSurveyDispatch dispatch, BizSurveyAnswer answer,
                                               List<SurveyAnswerItemVO> items) {
         DisputeCaseUpsertDTO dto = new DisputeCaseUpsertDTO();
@@ -648,7 +663,9 @@ public class SurveyServiceImpl implements SurveyService {
         return dto;
     }
 
-    /** 最短板维度描述（均分最低的那个维度） */
+    /**
+     * 最短板维度描述（均分最低的那个维度）
+     */
     private String worstDimension(List<SurveyAnswerItemVO> items) {
         Map<Integer, BigDecimal> sum = new HashMap<>();
         Map<Integer, Long> cnt = new HashMap<>();
@@ -688,15 +705,17 @@ public class SurveyServiceImpl implements SurveyService {
         return item;
     }
 
-    // 内部：出参与收口
-
-    /** 过期是派生态：状态列没有 4 也算（不靠定时任务翻状态，避免「日期已过、状态还没刷」的漂移窗口） */
+    /**
+     * 过期是派生态：状态列没有 4 也算（不靠定时任务翻状态，避免「日期已过、状态还没刷」的漂移窗口）
+     */
     private boolean isOverdue(BizSurveyDispatch entity) {
         return !Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.RECYCLED.getCode())
                 && entity.getExpireTime() != null && entity.getExpireTime().isBefore(now());
     }
 
-    /** @param plainPhone 仅编辑回显（外呼拨号）给明文，列表一律脱敏 */
+    /**
+     * @param plainPhone 仅编辑回显（外呼拨号）给明文，列表一律脱敏
+     */
     private void decorateDispatch(SurveyDispatchVO vo, boolean plainPhone) {
         Integer st = vo.getDispatchStatus();
         boolean recycled = Objects.equals(st, SurveyDispatchStatusEnum.RECYCLED.getCode());
@@ -725,14 +744,15 @@ public class SurveyServiceImpl implements SurveyService {
         return entity;
     }
 
-    /** 数据范围 fail-closed：受限角色碰授权外科室的发放/答卷直接拒 */
     private void assertDeptAccessible(Long deptId) {
         if (!DeptScopeGuard.canAccessDept(deptId)) {
             throw new BusinessException("该数据所属科室不在当前岗位的数据范围内");
         }
     }
 
-    /** null=不限科室；非空=收口集合（显式 deptId 越权时由 DeptScopeGuard 抛错；空集合按配置缺失拒掉，绝不放行成全院） */
+    /**
+     * null=不限科室；非空=收口集合（显式 deptId 越权时由 DeptScopeGuard 抛错；空集合按配置缺失拒掉，绝不放行成全院）
+     */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
         Long resolved = DeptScopeGuard.resolveDeptId(requestedDeptId);
         if (resolved != null) {
@@ -756,45 +776,5 @@ public class SurveyServiceImpl implements SurveyService {
     private String currentOperator() {
         String name = UserUtils.getCurrentEmployeeName();
         return StringUtils.hasText(name) ? name : "系统";
-    }
-
-    private static BigDecimal rate(long numerator, long denominator) {
-        if (denominator <= 0) {
-            return BigDecimal.ZERO;
-        }
-        return BigDecimal.valueOf(numerator).multiply(HUNDRED)
-                .divide(BigDecimal.valueOf(denominator), 1, RoundingMode.HALF_UP);
-    }
-
-    private static BigDecimal decimal(Object v) {
-        return v == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(v));
-    }
-
-    private static long toLong(Object v) {
-        return v == null ? 0L : new BigDecimal(String.valueOf(v)).longValue();
-    }
-
-    private static long nz(Long v) {
-        return v == null ? 0L : v;
-    }
-
-    private static int maxScoreOf(BizSurveyItem item) {
-        return item.getMaxScore() == null ? 5 : item.getMaxScore();
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        String s = v.trim();
-        return s.length() <= max ? s : s.substring(0, max);
-    }
-
-    private static String trimToNull(String v) {
-        return StringUtils.hasText(v) ? v.trim() : null;
     }
 }

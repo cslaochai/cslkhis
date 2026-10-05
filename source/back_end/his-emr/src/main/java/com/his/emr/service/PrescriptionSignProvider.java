@@ -1,10 +1,11 @@
 package com.his.emr.service;
 
-import com.his.common.service.SignableContentProvider;
+import com.his.common.entity.SignSubject;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
-import com.his.common.entity.SignSubject;
+import com.his.common.service.SignableContentProvider;
 import com.his.emr.entity.BizPrescription;
+
 import java.time.LocalDateTime;
 
 public interface PrescriptionSignProvider extends SignableContentProvider {
@@ -12,7 +13,7 @@ public interface PrescriptionSignProvider extends SignableContentProvider {
     /**
      * 处方状态文案（1-草稿 2-已提交 3-已审核 4-已发药 5-已取消 6-已退药）；**未知码值不回落**。
      */
-    public static String rxStatusText(Integer status) {
+    static String rxStatusText(Integer status) {
         if (status == null) {
             return "—";
         }

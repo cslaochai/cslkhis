@@ -9,8 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 体检控制器（套餐 / 登记 / 结果 / 总检）。
@@ -35,7 +35,7 @@ public class CheckupController {
 
     @Operation(summary = "套餐分页")
     @PostMapping("/package/listPage")
-    public Result<PageResult<CheckupVO.PackageVO>> packagePage(@RequestBody CheckupDTO.PackageQuery dto) {
+    public Result<PageResult<CheckupVO.PackageVO>> packagePage(@Valid @RequestBody CheckupDTO.PackageQuery dto) {
         var page = checkupService.packagePage(dto == null ? new CheckupDTO.PackageQuery() : dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
@@ -64,7 +64,7 @@ public class CheckupController {
 
     @Operation(summary = "体检登记分页")
     @PostMapping("/record/listPage")
-    public Result<PageResult<CheckupVO.RecordVO>> recordPage(@RequestBody CheckupDTO.RecordQuery dto) {
+    public Result<PageResult<CheckupVO.RecordVO>> recordPage(@Valid @RequestBody CheckupDTO.RecordQuery dto) {
         var page = checkupService.recordPage(dto == null ? new CheckupDTO.RecordQuery() : dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

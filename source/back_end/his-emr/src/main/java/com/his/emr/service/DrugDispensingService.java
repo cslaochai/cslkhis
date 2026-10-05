@@ -5,7 +5,6 @@ import com.his.common.base.PageResult;
 import com.his.emr.entity.BizDrugDispensing;
 import com.his.emr.vo.BizDrugDispensingVO;
 import com.his.emr.vo.DrugDispensingCountVO;
-import com.his.emr.service.NarcoticControlService;
 
 /**
  * 药品发药服务接口
@@ -26,7 +25,7 @@ public interface DrugDispensingService extends IService<BizDrugDispensing> {
      * 发药窗口据此在**点发药之前**提示"这行要不要选复核药师"。
      */
     PageResult<BizDrugDispensingVO> selectDispensingPage(Long patientId, String patientName, String prescriptionNo,
-                                                        Integer dispensingStatus, int pageNum, int pageSize);
+                                                         Integer dispensingStatus, int pageNum, int pageSize);
 
     /**
      * 单行发药（一行 = 一个药品 × 一张处方）

@@ -9,9 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 病理亚专业接口
@@ -31,7 +30,7 @@ public class PathologyController {
 
     @Operation(summary = "分页查询病理单")
     @PostMapping("/listPage")
-    public Result<PageResult<PathologyVO.ListVO>> listPage(@RequestBody PathologyDTO.Query query) {
+    public Result<PageResult<PathologyVO.ListVO>> listPage(@Valid @RequestBody PathologyDTO.Query query) {
         return Result.success(pathologyService.pageVO(query));
     }
 

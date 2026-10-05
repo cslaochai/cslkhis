@@ -7,8 +7,6 @@ import org.springframework.stereotype.Component;
 /**
  * 登录口令传输加密配置（yml 的 {@code his.security.sm2.*} 段）。
  *
- * <p><b>私钥属于环境密钥，不进 git</b>：只写在各环境的 {@code application-local.yml}
- * （已被 .gitignore 拦截）或环境变量里，本类不给默认值。
  */
 @Data
 @Component

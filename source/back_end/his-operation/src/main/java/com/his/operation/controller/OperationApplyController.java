@@ -2,12 +2,7 @@ package com.his.operation.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.operation.dto.OperationApplyQueryPageDTO;
-import com.his.operation.dto.OperationApplyUpsertDTO;
-import com.his.operation.dto.OperationCancelDTO;
-import com.his.operation.dto.OperationFinishDTO;
-import com.his.operation.dto.OperationPreopCheckDTO;
-import com.his.operation.dto.OperationScheduleDTO;
+import com.his.operation.dto.*;
 import com.his.operation.service.OperationApplyService;
 import com.his.operation.vo.OperationApplyVO;
 import com.his.operation.vo.OperationScheduleMatrixVO;
@@ -15,15 +10,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 住院手术闭环端点（P4.3）。
@@ -46,7 +36,7 @@ public class OperationApplyController {
 
     @Operation(summary = "手术申请分页（状态/术式/主刀/手术间/日期范围/关键字）")
     @GetMapping("/listPage")
-    public Result<IPage<OperationApplyVO>> listPage(OperationApplyQueryPageDTO query) {
+    public Result<IPage<OperationApplyVO>> listPage(@Valid OperationApplyQueryPageDTO query) {
         return Result.success(operationApplyService.listPage(query));
     }
 

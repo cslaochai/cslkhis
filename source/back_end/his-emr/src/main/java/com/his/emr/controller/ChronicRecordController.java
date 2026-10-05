@@ -5,8 +5,8 @@ import com.his.common.base.Result;
 import com.his.emr.dto.ChronicCancelDTO;
 import com.his.emr.dto.ChronicQueryPageDTO;
 import com.his.emr.dto.ChronicUpsertDTO;
-import com.his.emr.vo.ChronicRecordListVO;
 import com.his.emr.service.ChronicRecordService;
+import com.his.emr.vo.ChronicRecordListVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -50,7 +50,7 @@ public class ChronicRecordController {
 
     @Operation(summary = "慢病档案分页（医生站）")
     @PostMapping("/listPage")
-    public Result<PageResult<ChronicRecordListVO>> listPage(@RequestBody ChronicQueryPageDTO dto) {
+    public Result<PageResult<ChronicRecordListVO>> listPage(@Valid @RequestBody ChronicQueryPageDTO dto) {
         return Result.success(chronicRecordService.listPage(dto));
     }
 

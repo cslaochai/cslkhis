@@ -1,25 +1,24 @@
 package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.base.PageResult;
 import com.his.common.base.Constants;
+import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
+import com.his.common.enums.DelFlagEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.SensitiveMaskUtils;
-import com.his.emr.dto.DisputeActionDTO;
-import com.his.emr.dto.DisputeCaseUpsertDTO;
-import com.his.emr.dto.DisputeCloseDTO;
-import com.his.emr.dto.DisputeFollowDTO;
-import com.his.emr.dto.DisputeQueryPageDTO;
+import com.his.emr.dto.*;
 import com.his.emr.entity.BizDisputeCase;
 import com.his.emr.entity.BizDisputeFlow;
+import com.his.emr.enums.DisputeStatusEnum;
+import com.his.emr.enums.SealStatusEnum;
 import com.his.emr.mapper.BizDisputeCaseMapper;
 import com.his.emr.mapper.BizDisputeFlowMapper;
 import com.his.emr.service.DisputeService;
+import com.his.emr.service.MedicalRecordArchiveService;
 import com.his.emr.vo.DisputeCaseVO;
 import com.his.emr.vo.DisputeStatItemVO;
 import com.his.emr.vo.DisputeStatVO;
-import com.his.emr.service.MedicalRecordArchiveService;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,10 +36,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-import com.his.emr.enums.DisputeStatusEnum;
-import com.his.emr.enums.SealStatusEnum;
-
-import com.his.common.enums.DelFlagEnum;
 /**
  * 医疗纠纷 / 投诉登记服务实现。
  *
@@ -69,6 +64,54 @@ public class DisputeServiceImpl implements DisputeService {
 
     // 查询
 
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static String currentName() {
+        String name = UserUtils.getCurrentEmployeeName();
+        return name == null ? "系统" : name;
+    }
+
+    // 登记 / 修改
+
+    private static long toLong(Object v) {
+        if (v == null) {
+            return 0L;
+        }
+        return new BigDecimal(String.valueOf(v)).longValue();
+    }
+
+    // 受理（联动封存）
+
+    private static LocalDateTime parseDateTime(String v) {
+        String s = trimToNull(v);
+        if (s == null) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(s.replace(' ', 'T'));
+        } catch (Exception e) {
+            throw new BusinessException("时间格式不正确，应为 yyyy-MM-dd HH:mm:ss");
+        }
+    }
+
+    private static String cut(String v, int max) {
+        if (v == null) {
+            return null;
+        }
+        String s = v.trim();
+        return s.length() <= max ? s : s.substring(0, max);
+    }
+
+    // 处理跟踪
+
+    private static String trimToNull(String v) {
+        return StringUtils.hasText(v) ? v.trim() : null;
+    }
+
+    // 结案 / 撤销 / 删除
+
     @Override
     public PageResult<DisputeCaseVO> listPage(DisputeQueryPageDTO dto) {
         int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
@@ -87,8 +130,6 @@ public class DisputeServiceImpl implements DisputeService {
         vo.setFlows(flowMapper.selectByCaseId(id));
         return vo;
     }
-
-    // 登记 / 修改
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -141,7 +182,7 @@ public class DisputeServiceImpl implements DisputeService {
         return requireVo(entity.getId());
     }
 
-    // 受理（联动封存）
+    // 统计
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -163,6 +204,8 @@ public class DisputeServiceImpl implements DisputeService {
                 DisputeStatusEnum.INVESTIGATING.getCode(), cut(dto.getContent(), 1000), operator);
         return requireVo(entity.getId());
     }
+
+    // 内部
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -187,8 +230,6 @@ public class DisputeServiceImpl implements DisputeService {
                 "手动补封存，病案ID " + entity.getArchiveId(), operator);
         return requireVo(entity.getId());
     }
-
-    // 处理跟踪
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -220,8 +261,6 @@ public class DisputeServiceImpl implements DisputeService {
         addFlow(entity.getId(), action, from, to, cut(dto.getContent(), 1000), currentName());
         return requireVo(entity.getId());
     }
-
-    // 结案 / 撤销 / 删除
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -284,8 +323,6 @@ public class DisputeServiceImpl implements DisputeService {
         return caseMapper.deleteById(id) > 0;
     }
 
-    // 统计
-
     @Override
     public DisputeStatVO stat(String dateFrom, String dateTo) {
         String from = trimToNull(dateFrom);
@@ -347,9 +384,9 @@ public class DisputeServiceImpl implements DisputeService {
         return vo;
     }
 
-    // 内部
-
-    /** 尝试封存：有已归档病案则封并回写；无则返回 false（调用方决定是标记待封还是报错） */
+    /**
+     * 尝试封存：有已归档病案则封并回写；无则返回 false（调用方决定是标记待封还是报错）
+     */
     private boolean sealIfPossible(BizDisputeCase entity, String operator, String scene) {
         Long archiveId = entity.getPatientId() == null
                 ? null : caseMapper.selectSealableArchiveId(entity.getPatientId());
@@ -379,7 +416,9 @@ public class DisputeServiceImpl implements DisputeService {
         flowMapper.insert(flow);
     }
 
-    /** 按钮可用性与派生字段一律服务端算，前端不许按 status switch */
+    /**
+     * 按钮可用性与派生字段一律服务端算，前端不许按 status switch
+     */
     private void decorate(DisputeCaseVO vo) {
         Integer st = vo.getStatus();
         boolean pending = Objects.equals(st, DisputeStatusEnum.PENDING.getCode());
@@ -443,45 +482,5 @@ public class DisputeServiceImpl implements DisputeService {
     private String nextCaseNo() {
         return Constants.DISPUTE_NO_PREFIX + LocalDate.now().format(NO_DATE)
                 + String.format("%04d", sequenceService.next("DISPUTE"));
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static String currentName() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return name == null ? "系统" : name;
-    }
-
-    private static long toLong(Object v) {
-        if (v == null) {
-            return 0L;
-        }
-        return new BigDecimal(String.valueOf(v)).longValue();
-    }
-
-    private static LocalDateTime parseDateTime(String v) {
-        String s = trimToNull(v);
-        if (s == null) {
-            return null;
-        }
-        try {
-            return LocalDateTime.parse(s.replace(' ', 'T'));
-        } catch (Exception e) {
-            throw new BusinessException("时间格式不正确，应为 yyyy-MM-dd HH:mm:ss");
-        }
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        String s = v.trim();
-        return s.length() <= max ? s : s.substring(0, max);
-    }
-
-    private static String trimToNull(String v) {
-        return StringUtils.hasText(v) ? v.trim() : null;
     }
 }

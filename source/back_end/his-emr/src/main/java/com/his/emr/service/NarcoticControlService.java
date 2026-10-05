@@ -95,9 +95,9 @@ public interface NarcoticControlService {
      * 姓名**按 ID 从员工表反查**，不取前端传值 —— 复核是签名性质的动作，
      * 姓名可由前端随便给的话，复核记录就成了自述。
      *
-     * @param drugId       药品ID
-     * @param dispenserId  发药人（服务端从登录态取，不信前端）
-     * @param checkerId    复核人ID（前端选定的在场复核药师）
+     * @param drugId      药品ID
+     * @param dispenserId 发药人（服务端从登录态取，不信前端）
+     * @param checkerId   复核人ID（前端选定的在场复核药师）
      * @return 复核人姓名；该药品不需要双人复核时返回 {@code null}
      * @throws com.his.common.exception.BusinessException 未指定复核人、复核人非在职药剂师、或与发药人同一人
      */

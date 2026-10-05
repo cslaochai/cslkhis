@@ -51,10 +51,14 @@ public class TechAuthUpsertDTO {
      */
     private Integer authType;
 
-    /** 授权依据（技术准入评价/培训考核/累计手术量，评审要看依据） */
+    /**
+     * 授权依据（技术准入评价/培训考核/累计手术量，评审要看依据）
+     */
     private String authBasis;
 
-    /** 授权生效日期 */
+    /**
+     * 授权生效日期
+     */
     @NotNull(message = "生效日期不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate validFrom;

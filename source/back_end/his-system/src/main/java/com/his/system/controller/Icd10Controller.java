@@ -7,11 +7,12 @@ import com.his.system.vo.Icd10PredictVO;
 import com.his.system.vo.SysIcd10SelectListVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * ICD-10 编码管理
@@ -37,7 +38,7 @@ public class Icd10Controller {
 
     @Operation(summary = "智能预测ICD-10编码（规则版，不调用模型）")
     @PostMapping("/predict")
-    public Result<List<Icd10PredictVO>> predict(@RequestBody Icd10PredictDTO predictDTO) {
+    public Result<List<Icd10PredictVO>> predict(@Valid @RequestBody Icd10PredictDTO predictDTO) {
         return Result.success(icd10Service.predict(predictDTO));
     }
 }

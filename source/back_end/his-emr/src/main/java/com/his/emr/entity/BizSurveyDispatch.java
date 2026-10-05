@@ -24,61 +24,97 @@ import java.time.LocalDateTime;
 @TableName("biz_survey_dispatch")
 public class BizSurveyDispatch extends BaseEntity {
 
-    /** 回收截止天数（发放后 N 天未回收即视为过期） */
+    /**
+     * 回收截止天数（发放后 N 天未回收即视为过期）
+     */
     public static final int DEFAULT_EXPIRE_DAYS = 14;
 
-    /** 发放单号（SD+yyyyMMdd+4位） */
+    /**
+     * 发放单号（SD+yyyyMMdd+4位）
+     */
     private String dispatchNo;
 
-    /** 问卷模板ID */
+    /**
+     * 问卷模板ID
+     */
     private Long templateId;
 
-    /** 模板名称（快照，模板改名不影响已发放台账） */
+    /**
+     * 模板名称（快照，模板改名不影响已发放台账）
+     */
     private String templateName;
 
-    /** 适用场景（快照） */
+    /**
+     * 适用场景（快照）
+     */
     private Integer scene;
 
-    /** 发放来源（1-随访任务 2-出院结算 3-人工补发） */
+    /**
+     * 发放来源（1-随访任务 2-出院结算 3-人工补发）
+     */
     private Integer sourceType;
 
-    /** 来源单据ID */
+    /**
+     * 来源单据ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long sourceId;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者编号（快照） */
+    /**
+     * 患者编号（快照）
+     */
     private String patientNo;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
-    /** 联系手机号（明文存供触达；列表出参一律脱敏） */
+    /**
+     * 联系手机号（明文存供触达；列表出参一律脱敏）
+     */
     private String phone;
 
-    /** 就诊科室ID */
+    /**
+     * 就诊科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 科室名称（快照） */
+    /**
+     * 科室名称（快照）
+     */
     private String deptName;
 
-    /** 回收渠道（1-电话代填 2-短信 3-微信 4-现场扫码） */
+    /**
+     * 回收渠道（1-电话代填 2-短信 3-微信 4-现场扫码）
+     */
     private Integer channel;
 
-    /** 回收状态（1-待推送 2-已推送待回收 3-已回收 4-已过期 5-已拒答） */
+    /**
+     * 回收状态（1-待推送 2-已推送待回收 3-已回收 4-已过期 5-已拒答）
+     */
     private Integer dispatchStatus;
 
-    /** 推送/发起时间 */
+    /**
+     * 推送/发起时间
+     */
     private LocalDateTime pushTime;
 
-    /** 回收截止时间 */
+    /**
+     * 回收截止时间
+     */
     private LocalDateTime expireTime;
 
-    /** 回收到的答卷ID（一发放一答卷） */
+    /**
+     * 回收到的答卷ID（一发放一答卷）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long answerId;
 }

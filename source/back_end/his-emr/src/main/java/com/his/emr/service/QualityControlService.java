@@ -7,12 +7,7 @@ import com.his.emr.dto.QcExecuteDTO;
 import com.his.emr.dto.QcQueryPageDTO;
 import com.his.emr.entity.BizQualityControl;
 import com.his.emr.support.QcIssue;
-import com.his.emr.vo.BizQualityControlVO;
-import com.his.emr.vo.QcCandidateVO;
-import com.his.emr.vo.QcDimensionSelectListVO;
-import com.his.emr.vo.QcOverviewVO;
-import com.his.emr.vo.QcRuleMetricVO;
-import com.his.emr.vo.QcTypeSelectListVO;
+import com.his.emr.vo.*;
 
 import java.util.List;
 

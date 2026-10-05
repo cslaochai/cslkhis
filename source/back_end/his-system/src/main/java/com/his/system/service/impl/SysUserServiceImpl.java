@@ -11,7 +11,7 @@ import com.his.common.enums.UserTypeEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.SensitiveMaskUtils;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.dto.SysUserPasswordUpsertDTO;
 import com.his.system.dto.SysUserQueryPageDTO;

@@ -52,7 +52,7 @@ public class MiniappAppointController {
 
     @Operation(summary = "我的预约（分页，按绑定关系校验）")
     @GetMapping("/listPage")
-    public Result<PageResult<BizAppointInfoListVO>> listPage(AppointQueryDTO queryDTO) {
+    public Result<PageResult<BizAppointInfoListVO>> listPage(@Valid AppointQueryDTO queryDTO) {
         if (queryDTO.getPatientId() != null
                 && !patientGuardianService.canAccessPatient(queryDTO.getPatientId())) {
             return Result.error("无权查询该就诊人的预约");
@@ -62,7 +62,7 @@ public class MiniappAppointController {
 
     @Operation(summary = "挂号详情")
     @GetMapping("/getDetail")
-    public Result<BizAppointInfoListVO> getDetail(AppointQueryDTO queryDTO) {
+    public Result<BizAppointInfoListVO> getDetail(@Valid AppointQueryDTO queryDTO) {
         BizAppointInfo regist = appointService.getById(queryDTO.getPatientId());
         if (regist != null && patientGuardianService.patientScopeViolated(regist.getPatientId())) {
             return Result.error("无权查看该挂号");

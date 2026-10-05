@@ -66,14 +66,18 @@ public interface BizSurveyDispatchMapper extends BaseMapper<BizSurveyDispatch> {
     @Select("SELECT d.* FROM biz_survey_dispatch d WHERE d.id = #{id} AND d.del_flag = 0")
     BizSurveyDispatch selectDispatchById(@Param("id") Long id);
 
-    /** 同一次来源是否已发放过（幂等：撞 uk_survey_dispatch_source 之前先问一次，返回既有单） */
+    /**
+     * 同一次来源是否已发放过（幂等：撞 uk_survey_dispatch_source 之前先问一次，返回既有单）
+     */
     @Select("SELECT * FROM biz_survey_dispatch WHERE del_flag = 0 "
             + "AND source_type = #{sourceType} AND source_id = #{sourceId} AND template_id = #{templateId} LIMIT 1")
     BizSurveyDispatch selectBySource(@Param("sourceType") Integer sourceType,
                                      @Param("sourceId") Long sourceId,
                                      @Param("templateId") Long templateId);
 
-    /** 回收状态分布（key=dispatch_status，c=条数） */
+    /**
+     * 回收状态分布（key=dispatch_status，c=条数）
+     */
     @Select("""
             <script>
             SELECT d.dispatch_status AS k, COUNT(*) AS c
@@ -96,7 +100,9 @@ public interface BizSurveyDispatchMapper extends BaseMapper<BizSurveyDispatch> {
                                             @Param("dateTo") String dateTo,
                                             @Param("scopeDeptIds") List<Long> scopeDeptIds);
 
-    /** 超截止仍未回收的条数（看板「待催办」） */
+    /**
+     * 超截止仍未回收的条数（看板「待催办」）
+     */
     @Select("""
             <script>
             SELECT COUNT(*) FROM biz_survey_dispatch d
@@ -114,7 +120,9 @@ public interface BizSurveyDispatchMapper extends BaseMapper<BizSurveyDispatch> {
                       @Param("sourceType") Integer sourceType,
                       @Param("scopeDeptIds") List<Long> scopeDeptIds);
 
-    /** 按渠道的发放/回收（把「发出去永远收不回」的渠道显式暴露出来） */
+    /**
+     * 按渠道的发放/回收（把「发出去永远收不回」的渠道显式暴露出来）
+     */
     @Select("""
             <script>
             SELECT d.channel AS k, COUNT(*) AS total,

@@ -12,8 +12,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 价格管理控制器
@@ -46,7 +46,7 @@ public class PriceController {
 
     @Operation(summary = "分页查询调价历史")
     @PostMapping("/historyListPage")
-    public Result<PageResult<PriceChangeHistoryVO>> historyListPage(@RequestBody PriceHistoryQueryPageDTO queryDTO) {
+    public Result<PageResult<PriceChangeHistoryVO>> historyListPage(@Valid @RequestBody PriceHistoryQueryPageDTO queryDTO) {
         return Result.success(priceService.historyListPage(queryDTO));
     }
 

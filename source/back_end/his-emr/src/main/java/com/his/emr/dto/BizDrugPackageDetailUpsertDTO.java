@@ -64,7 +64,9 @@ public class BizDrugPackageDetailUpsertDTO {
      */
     private String usageDosage;
 
-    /** 用药频次 */
+    /**
+     * 用药频次
+     */
     private String frequency;
 
     /**

@@ -9,8 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 绩效成本核算控制器。
@@ -36,7 +36,7 @@ public class PerfController {
 
     @Operation(summary = "成本分页")
     @PostMapping("/cost/listPage")
-    public Result<PageResult<PerfVO.CostRow>> costPage(@RequestBody PerfDTO.CostQuery dto) {
+    public Result<PageResult<PerfVO.CostRow>> costPage(@Valid @RequestBody PerfDTO.CostQuery dto) {
         var page = perfService.costPage(dto == null ? new PerfDTO.CostQuery() : dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
@@ -56,7 +56,7 @@ public class PerfController {
 
     @Operation(summary = "绩效结果分页")
     @PostMapping("/result/listPage")
-    public Result<PageResult<PerfVO.PerfRow>> perfPage(@RequestBody PerfDTO.PerfQuery dto) {
+    public Result<PageResult<PerfVO.PerfRow>> perfPage(@Valid @RequestBody PerfDTO.PerfQuery dto) {
         var page = perfService.perfPage(dto == null ? new PerfDTO.PerfQuery() : dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

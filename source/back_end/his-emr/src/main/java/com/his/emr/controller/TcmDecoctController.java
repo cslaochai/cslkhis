@@ -15,12 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 中药代煎台账（sql/139）。
@@ -42,7 +37,7 @@ public class TcmDecoctController {
     @Operation(summary = "代煎台账分页")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('pharmacy:tcmDecoct:list')")
-    public Result<PageResult<TcmDecoctVO>> listPage(@RequestBody TcmDecoctQueryPageDTO query) {
+    public Result<PageResult<TcmDecoctVO>> listPage(@Valid @RequestBody TcmDecoctQueryPageDTO query) {
         return Result.success(tcmDecoctService.listPage(query));
     }
 

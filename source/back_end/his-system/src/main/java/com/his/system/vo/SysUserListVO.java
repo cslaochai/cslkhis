@@ -29,7 +29,9 @@ public class SysUserListVO {
      */
     private String realName;
 
-    /** 用户类型（1-系统用户 2-外部用户） */
+    /**
+     * 用户类型（1-系统用户 2-外部用户）
+     */
     private Integer userType;
 
     /**

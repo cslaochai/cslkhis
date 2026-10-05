@@ -4,12 +4,16 @@ import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
+import com.his.common.enums.DelFlagEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.ArchiveBorrowApplyDTO;
 import com.his.emr.dto.ArchiveBorrowAuditDTO;
 import com.his.emr.dto.ArchiveBorrowQueryPageDTO;
 import com.his.emr.entity.BizArchiveBorrow;
 import com.his.emr.entity.BizMedicalRecordArchive;
+import com.his.emr.enums.ArchiveStatusEnum;
+import com.his.emr.enums.BorrowStatusEnum;
+import com.his.emr.enums.BorrowTypeEnum;
 import com.his.emr.mapper.BizArchiveBorrowMapper;
 import com.his.emr.mapper.BizMedicalRecordArchiveMapper;
 import com.his.emr.service.ArchiveBorrowService;
@@ -30,14 +34,9 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-import com.his.emr.enums.ArchiveStatusEnum;
-import com.his.emr.enums.BorrowStatusEnum;
-import com.his.emr.enums.BorrowTypeEnum;
-
-import com.his.common.enums.DelFlagEnum;
 /**
  * 病案借阅/复印服务实现
- *
+ * <p>
  * 状态机：1 待审核 → 2 已借出 → 3 已归还；拒绝 → 4；复印审核通过直接 → 5 已复印。
  * 每步流转留「操作人 id + 姓名 + 意见 + 时间」痕迹链。
  */
@@ -50,6 +49,14 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
     private final BizMedicalRecordArchiveMapper archiveMapper;
     private final RedisSequenceService sequenceService;
     private final SysMessageService sysMessageService;
+
+    private static String trimToNull(String s) {
+        if (s == null) {
+            return null;
+        }
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
 
     @Override
     public PageResult<ArchiveBorrowVO> page(ArchiveBorrowQueryPageDTO q) {
@@ -190,6 +197,8 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
         }
     }
 
+    // 借阅超期提醒（发送方，定时 + 手工补跑双路径，可重入）
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
@@ -210,7 +219,7 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
         }
     }
 
-    // 借阅超期提醒（发送方，定时 + 手工补跑双路径，可重入）
+    // 内部
 
     @Override
     public int notifyOverdue() {
@@ -264,15 +273,5 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
         }
         log.info("[病案借阅] 超期扫描完成：超期未还 {} 张，发送提醒 {} 条", overdueList.size(), sent);
         return sent;
-    }
-
-    // 内部
-
-    private static String trimToNull(String s) {
-        if (s == null) {
-            return null;
-        }
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
     }
 }

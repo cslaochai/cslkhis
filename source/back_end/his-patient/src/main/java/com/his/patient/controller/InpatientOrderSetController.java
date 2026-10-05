@@ -13,13 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -54,7 +48,7 @@ public class InpatientOrderSetController {
     @PreAuthorize("hasAuthority('ipd:orderSet:list')")
     @Operation(summary = "组套分页（管理页，落在可见集内）")
     @GetMapping("/listPage")
-    public Result<IPage<OrderSetListVO>> listPage(OrderSetQueryPageDTO query) {
+    public Result<IPage<OrderSetListVO>> listPage(@Valid OrderSetQueryPageDTO query) {
         return Result.success(orderSetService.listPage(query));
     }
 

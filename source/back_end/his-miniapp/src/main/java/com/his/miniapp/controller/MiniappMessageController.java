@@ -30,7 +30,7 @@ public class MiniappMessageController {
 
     @Operation(summary = "我的消息（分页）")
     @PostMapping("/listPage")
-    public Result<PageResult<MessageListVO>> listPage(@RequestBody MessagePageDTO dto) {
+    public Result<PageResult<MessageListVO>> listPage(@Valid @RequestBody MessagePageDTO dto) {
         return Result.success(messageService.myPage(dto.getPageNum(), dto.getPageSize()));
     }
 

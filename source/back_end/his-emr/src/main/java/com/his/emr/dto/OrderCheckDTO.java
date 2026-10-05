@@ -12,17 +12,23 @@ import java.util.List;
 @Data
 public class OrderCheckDTO implements Serializable {
 
-    /** 入院ID */
+    /**
+     * 入院ID
+     */
     @NotNull(message = "admissionId 不能为空")
     private Long admissionId;
 
-    /** 本次开立的医嘱条目（无编码的条目按名称精确比对） */
+    /**
+     * 本次开立的医嘱条目（无编码的条目按名称精确比对）
+     */
     private List<CheckItem> items;
 
     @Data
     public static class CheckItem implements Serializable {
         private String itemCode;
-        /** 项目名称 */
+        /**
+         * 项目名称
+         */
         private String itemName;
     }
 }

@@ -2,31 +2,15 @@ package com.his.patient.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.patient.dto.BedAssignUpsertDTO;
-import com.his.patient.dto.BedMapQueryDTO;
-import com.his.patient.dto.BedPoolQueryPageDTO;
-import com.his.patient.dto.BedWaitAdmitDTO;
-import com.his.patient.dto.BedWaitOperateDTO;
-import com.his.patient.dto.BedWaitQueryPageDTO;
-import com.his.patient.dto.BedWaitUpsertDTO;
+import com.his.patient.dto.*;
 import com.his.patient.service.BedCenterService;
-import com.his.patient.vo.BedMapVO;
-import com.his.patient.vo.BedMatchVO;
-import com.his.patient.vo.BedOverviewVO;
-import com.his.patient.vo.BedPoolVO;
-import com.his.patient.vo.BedWaitStatsVO;
-import com.his.patient.vo.BedWaitVO;
+import com.his.patient.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -48,7 +32,7 @@ public class BedCenterController {
     @Operation(summary = "等床队列分页（危重优先，同级按登记先后）")
     @GetMapping("/queue/listPage")
     @PreAuthorize("hasAuthority('ipd:bedCenter:list')")
-    public Result<IPage<BedWaitVO>> queueListPage(BedWaitQueryPageDTO query) {
+    public Result<IPage<BedWaitVO>> queueListPage(@Valid BedWaitQueryPageDTO query) {
         return Result.success(bedCenterService.queuePage(query));
     }
 
@@ -121,7 +105,7 @@ public class BedCenterController {
     @Operation(summary = "全院床位池（含占用者与预留去向）")
     @GetMapping("/pool/listPage")
     @PreAuthorize("hasAuthority('ipd:bedCenter:list')")
-    public Result<BedPoolVO> bedPool(BedPoolQueryPageDTO query) {
+    public Result<BedPoolVO> bedPool(@Valid BedPoolQueryPageDTO query) {
         return Result.success(bedCenterService.bedPool(query));
     }
 
@@ -133,7 +117,7 @@ public class BedCenterController {
     @Operation(summary = "床位调配图（一床一卡，含预留去向与可用动作）")
     @GetMapping("/pool/bedMap")
     @PreAuthorize("hasAuthority('ipd:bedCenter:list')")
-    public Result<BedMapVO> bedMap(BedMapQueryDTO query) {
+    public Result<BedMapVO> bedMap(@Valid BedMapQueryDTO query) {
         return Result.success(bedCenterService.bedMap(query));
     }
 

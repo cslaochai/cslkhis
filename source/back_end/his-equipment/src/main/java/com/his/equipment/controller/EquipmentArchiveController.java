@@ -7,9 +7,10 @@ import com.his.equipment.service.EquipmentService;
 import com.his.equipment.vo.EquipmentVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 设备档案控制器（台账只读；档案增删走资产口径，本域聚焦维保计量）。
@@ -25,7 +26,7 @@ public class EquipmentArchiveController {
 
     @Operation(summary = "设备台账分页")
     @PostMapping("/listPage")
-    public Result<PageResult<EquipmentVO>> listPage(@RequestBody EquipmentDTO.QueryPage dto) {
+    public Result<PageResult<EquipmentVO>> listPage(@Valid @RequestBody EquipmentDTO.QueryPage dto) {
         var page = equipmentService.listPage(dto == null ? new EquipmentDTO.QueryPage() : dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

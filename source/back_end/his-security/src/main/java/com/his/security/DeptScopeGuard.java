@@ -1,6 +1,8 @@
 package com.his.security;
 
 import com.his.common.exception.BusinessException;
+import com.his.security.entity.CurrentUser;
+import com.his.security.provider.DeptScopeProvider;
 
 import java.util.Set;
 

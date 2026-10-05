@@ -10,11 +10,12 @@ import com.his.emr.vo.BizDrugPackageVO;
 import com.his.emr.vo.BizRxTemplateVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 医生工作站 - 医生个人模板控制器（常用诊断 / 处方模板 / 药品套餐）
@@ -39,7 +40,7 @@ public class DoctorTemplateController {
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
     @Operation(summary = "保存常用诊断模板（全量覆盖）")
     @PostMapping("/saveDiag")
-    public Result<Void> saveDiagTemplates(@RequestBody DiagTemplateUpsertDTO saveDTO) {
+    public Result<Void> saveDiagTemplates(@Valid @RequestBody DiagTemplateUpsertDTO saveDTO) {
         boolean success = otherTemplateService.saveDiagTemplates(saveDTO);
         return success ? Result.success("保存成功", null) : Result.error("保存失败");
     }
@@ -69,7 +70,7 @@ public class DoctorTemplateController {
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
     @Operation(summary = "保存处方模板")
     @PostMapping("/saveRx")
-    public Result<Void> saveRxTemplate(@RequestBody BizRxTemplateUpsertDTO upsertDTO) {
+    public Result<Void> saveRxTemplate(@Valid @RequestBody BizRxTemplateUpsertDTO upsertDTO) {
         boolean success = otherTemplateService.saveRxTemplate(upsertDTO);
         return success ? Result.success("保存成功", null) : Result.error("保存失败");
     }
@@ -99,7 +100,7 @@ public class DoctorTemplateController {
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
     @Operation(summary = "保存药品套餐")
     @PostMapping("/savePackage")
-    public Result<Void> saveDrugPackage(@RequestBody BizDrugPackageUpsertDTO upsertDTO) {
+    public Result<Void> saveDrugPackage(@Valid @RequestBody BizDrugPackageUpsertDTO upsertDTO) {
         boolean success = otherTemplateService.saveDrugPackage(upsertDTO);
         return success ? Result.success("保存成功", null) : Result.error("保存失败");
     }

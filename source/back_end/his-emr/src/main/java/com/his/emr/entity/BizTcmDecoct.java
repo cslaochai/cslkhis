@@ -11,7 +11,6 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import com.his.emr.entity.BizPrescriptionDetail;
 
 /**
  * 中药代煎服务单（sql/139）。
@@ -44,14 +43,20 @@ public class BizTcmDecoct extends BaseEntity {
      */
     private String prescriptionNo;
 
-    /** 患者ID（快照） */
+    /**
+     * 患者ID（快照）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者号（快照） */
+    /**
+     * 患者号（快照）
+     */
     private String patientNo;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
     /**
@@ -89,25 +94,37 @@ public class BizTcmDecoct extends BaseEntity {
      */
     private Integer decoctStatus;
 
-    /** 代煎药房ID */
+    /**
+     * 代煎药房ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long pharmacyId;
 
-    /** 代煎药房名称（快照） */
+    /**
+     * 代煎药房名称（快照）
+     */
     private String pharmacyName;
 
-    /** 最近一次状态操作人 */
+    /**
+     * 最近一次状态操作人
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long operatorId;
 
-    /** 最近一次状态操作人姓名（快照） */
+    /**
+     * 最近一次状态操作人姓名（快照）
+     */
     private String operatorName;
 
-    /** 煎药完成时间 */
+    /**
+     * 煎药完成时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime decoctTime;
 
-    /** 患者取走时间（终态） */
+    /**
+     * 患者取走时间（终态）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime pickupTime;
 

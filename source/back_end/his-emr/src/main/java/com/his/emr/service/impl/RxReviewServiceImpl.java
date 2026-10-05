@@ -3,30 +3,14 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
+import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.emr.dto.RxReviewBatchQueryPageDTO;
-import com.his.emr.dto.RxReviewBatchUpsertDTO;
-import com.his.emr.dto.RxReviewItemPageDTO;
-import com.his.emr.dto.RxReviewItemUpsertDTO;
-import com.his.emr.dto.RxReviewPublicityDTO;
-import com.his.emr.dto.RxReviewTalkQueryPageDTO;
-import com.his.emr.dto.RxReviewTalkUpsertDTO;
-import com.his.emr.entity.BizPrescription;
-import com.his.emr.entity.BizPrescriptionDetail;
-import com.his.emr.entity.BizRxDoctorTalk;
-import com.his.emr.entity.BizRxReviewBatch;
-import com.his.emr.entity.BizRxReviewItem;
-import com.his.emr.mapper.BizPrescriptionDetailMapper;
-import com.his.emr.mapper.BizPrescriptionMapper;
-import com.his.emr.mapper.BizRxDoctorTalkMapper;
-import com.his.emr.mapper.BizRxReviewBatchMapper;
-import com.his.emr.mapper.BizRxReviewItemMapper;
+import com.his.emr.dto.*;
+import com.his.emr.entity.*;
+import com.his.emr.enums.*;
+import com.his.emr.mapper.*;
 import com.his.emr.service.RxReviewService;
-import com.his.emr.vo.RxPublicityDoctorVO;
-import com.his.emr.vo.RxReviewBatchVO;
-import com.his.emr.vo.RxReviewItemVO;
-import com.his.emr.vo.RxReviewStatsVO;
-import com.his.emr.vo.RxReviewTalkVO;
+import com.his.emr.vo.*;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -40,22 +24,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import com.his.emr.enums.RectifyStatusEnum;
-import com.his.emr.enums.RxReviewBatchStatusEnum;
-import com.his.emr.enums.RxReviewItemStatusEnum;
-import com.his.emr.enums.RxReviewResultEnum;
-import com.his.emr.enums.RxReviewTypeEnum;
-
-import com.his.common.enums.YesOrNoEnum;
-import com.his.emr.enums.PublicityStatusEnum;
 /**
  * 处方点评实现。
  *
@@ -71,13 +42,17 @@ public class RxReviewServiceImpl implements RxReviewService {
     private static final DateTimeFormatter CSV_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int EXPORT_MAX = 5000;
 
-    /** 结论 → 允许的问题码分组（11~15 不规范 / 21~27 不适宜 / 31~34 超常） */
+    /**
+     * 结论 → 允许的问题码分组（11~15 不规范 / 21~27 不适宜 / 31~34 超常）
+     */
     private static final Map<Integer, Set<String>> RESULT_PROBLEM_CODES = Map.of(
             RxReviewResultEnum.IRREGULAR.getCode(), Set.of("11", "12", "13", "14", "15"),
             RxReviewResultEnum.UNSUITABLE.getCode(), Set.of("21", "22", "23", "24", "25", "26", "27"),
             RxReviewResultEnum.ABNORMAL.getCode(), Set.of("31", "32", "33", "34"));
 
-    /** 规范：超常处方 3 次以上且无正当理由 → 警告并限制处方权 */
+    /**
+     * 规范：超常处方 3 次以上且无正当理由 → 警告并限制处方权
+     */
     private static final long NEED_TALK_ABNORMAL_THRESHOLD = 3;
 
     private final BizRxReviewBatchMapper batchMapper;
@@ -87,6 +62,53 @@ public class RxReviewServiceImpl implements RxReviewService {
     private final BizPrescriptionDetailMapper prescriptionDetailMapper;
 
     // 批次
+
+    private static long longOf(Object v) {
+        return v == null ? 0L : ((Number) v).longValue();
+    }
+
+    /**
+     * 百分比（分母 0 记 0.00），scale 2
+     */
+    private static BigDecimal ratePercent(long numerator, long denominator) {
+        if (denominator <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return BigDecimal.valueOf(numerator)
+                .multiply(BigDecimal.valueOf(100))
+                .divide(BigDecimal.valueOf(denominator), 2, RoundingMode.HALF_UP);
+    }
+
+    private static String resultText(Integer result) {
+        if (result == null) {
+            return "未点评";
+        }
+        return switch (result) {
+            case 1 -> "合理处方";
+            case 2 -> "不规范处方";
+            case 3 -> "用药不适宜处方";
+            case 4 -> "超常处方";
+            default -> "未知(" + result + ")";
+        };
+    }
+
+    private static String csv(String v) {
+        if (v == null) {
+            return "";
+        }
+        if (v.contains(",") || v.contains("\"") || v.contains("\n")) {
+            return '"' + v.replace("\"", "\"\"") + '"';
+        }
+        return v;
+    }
+
+    private static String cut(String v, int max) {
+        if (v == null) {
+            return null;
+        }
+        String t = v.trim();
+        return t.length() <= max ? t : t.substring(0, max);
+    }
 
     @Override
     public PageResult<RxReviewBatchVO> batchListPage(RxReviewBatchQueryPageDTO query) {
@@ -107,6 +129,8 @@ public class RxReviewServiceImpl implements RxReviewService {
         List<RxReviewBatchVO> vos = page.getRecords().stream().map(this::toBatchVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), vos);
     }
+
+    // 明细 / 点评
 
     @Override
     @Transactional
@@ -207,7 +231,7 @@ public class RxReviewServiceImpl implements RxReviewService {
         batchMapper.deleteById(id);
     }
 
-    // 明细 / 点评
+    // 公示
 
     @Override
     public PageResult<RxReviewItemVO> itemListPage(RxReviewItemPageDTO query) {
@@ -220,7 +244,9 @@ public class RxReviewServiceImpl implements RxReviewService {
                 toItemVOs(page.getRecords()));
     }
 
-    /** 明细查询条件（列表/导出同形） */
+    /**
+     * 明细查询条件（列表/导出同形）
+     */
     private LambdaQueryWrapper<BizRxReviewItem> itemWrapper(RxReviewItemPageDTO query) {
         LambdaQueryWrapper<BizRxReviewItem> wrapper = new LambdaQueryWrapper<>();
         String prescriptionNo = query.getPrescriptionNo() == null ? null : query.getPrescriptionNo().trim();
@@ -248,10 +274,10 @@ public class RxReviewServiceImpl implements RxReviewService {
         int result = dto.getReviewResult();
         List<String> codes = dto.getProblemTypes() == null ? List.of()
                 : dto.getProblemTypes().stream()
-                        .filter(StringUtils::hasText)
-                        .map(String::trim)
-                        .distinct()
-                        .toList();
+                .filter(StringUtils::hasText)
+                .map(String::trim)
+                .distinct()
+                .toList();
         String opinion = dto.getReviewOpinion() == null ? null : dto.getReviewOpinion().trim();
 
         if (result == RxReviewResultEnum.REASONABLE.getCode()) {
@@ -291,7 +317,9 @@ public class RxReviewServiceImpl implements RxReviewService {
         autoFinishBatchIfDone(item.getBatchId());
     }
 
-    /** 批次下明细全部点评 → 批次自动置已完成（保留手动关闭入口，抽样数没点完也能归档） */
+    /**
+     * 批次下明细全部点评 → 批次自动置已完成（保留手动关闭入口，抽样数没点完也能归档）
+     */
     private void autoFinishBatchIfDone(Long batchId) {
         BizRxReviewBatch batch = batchMapper.selectById(batchId);
         if (batch == null || batch.getStatus() == RxReviewBatchStatusEnum.DONE.getCode()) {
@@ -302,7 +330,7 @@ public class RxReviewServiceImpl implements RxReviewService {
         Long reviewed = itemMapper.selectCount(new LambdaQueryWrapper<BizRxReviewItem>()
                 .eq(BizRxReviewItem::getBatchId, batchId)
                 .eq(BizRxReviewItem::getReviewStatus, RxReviewItemStatusEnum.DONE.getCode()));
-        if (total != null && reviewed != null && total > 0 && total.equals(reviewed)) {
+        if (total != null && total > 0 && total.equals(reviewed)) {
             batch.setStatus(RxReviewBatchStatusEnum.DONE.getCode());
             batchMapper.updateById(batch);
         }
@@ -341,8 +369,6 @@ public class RxReviewServiceImpl implements RxReviewService {
         itemMapper.insert(toItemEntity(batch, p));
     }
 
-    // 公示
-
     @Override
     @Transactional
     public int publicity(RxReviewPublicityDTO dto) {
@@ -373,6 +399,8 @@ public class RxReviewServiceImpl implements RxReviewService {
         }
         return items.size();
     }
+
+    // 约谈
 
     @Override
     public PageResult<RxReviewItemVO> publicityListPage(RxReviewItemPageDTO query) {
@@ -427,22 +455,6 @@ public class RxReviewServiceImpl implements RxReviewService {
         vo.setPendingCount(pending);
         return vo;
     }
-
-    private static long longOf(Object v) {
-        return v == null ? 0L : ((Number) v).longValue();
-    }
-
-    /** 百分比（分母 0 记 0.00），scale 2 */
-    private static BigDecimal ratePercent(long numerator, long denominator) {
-        if (denominator <= 0) {
-            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        }
-        return BigDecimal.valueOf(numerator)
-                .multiply(BigDecimal.valueOf(100))
-                .divide(BigDecimal.valueOf(denominator), 2, RoundingMode.HALF_UP);
-    }
-
-    // 约谈
 
     @Override
     public PageResult<RxReviewTalkVO> talkListPage(RxReviewTalkQueryPageDTO query) {
@@ -518,7 +530,9 @@ public class RxReviewServiceImpl implements RxReviewService {
         return toTalkVO(talk);
     }
 
-    /** 约谈依据（关联点评明细）校验：必须存在、均为不合理处方、且同属入参医师 */
+    /**
+     * 约谈依据（关联点评明细）校验：必须存在、均为不合理处方、且同属入参医师
+     */
     private RelatedContext resolveRelatedItems(List<Long> relatedIds, Long doctorId, String doctorName) {
         List<Long> ids = relatedIds == null ? List.of()
                 : relatedIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
@@ -554,10 +568,7 @@ public class RxReviewServiceImpl implements RxReviewService {
                 ids.stream().map(String::valueOf).collect(Collectors.joining(",")));
     }
 
-    /** 关联明细上下文（doctorId / deptName / 明细 / id 文本） */
-    private record RelatedContext(Long doctorId, String deptName,
-                                  List<BizRxReviewItem> items, String idsText) {
-    }
+    // 导出
 
     @Override
     public void talkConfirm(Long id, String confirmBy) {
@@ -590,8 +601,6 @@ public class RxReviewServiceImpl implements RxReviewService {
         talkMapper.deleteById(id);
     }
 
-    // 导出
-
     @Override
     public String itemExportCsv(RxReviewItemPageDTO query) {
         query.setPageNum(1);
@@ -621,45 +630,14 @@ public class RxReviewServiceImpl implements RxReviewService {
         return sb.toString();
     }
 
-    private static String resultText(Integer result) {
-        if (result == null) {
-            return "未点评";
-        }
-        return switch (result) {
-            case 1 -> "合理处方";
-            case 2 -> "不规范处方";
-            case 3 -> "用药不适宜处方";
-            case 4 -> "超常处方";
-            default -> "未知(" + result + ")";
-        };
-    }
-
-    private static String csv(String v) {
-        if (v == null) {
-            return "";
-        }
-        if (v.contains(",") || v.contains("\"") || v.contains("\n")) {
-            return '"' + v.replace("\"", "\"\"") + '"';
-        }
-        return v;
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        String t = v.trim();
-        return t.length() <= max ? t : t.substring(0, max);
-    }
-
-    // 组装
-
     private String nextBatchNo() {
         String day = LocalDate.now().format(DAY_FMT);
         String max = batchMapper.selectMaxBatchNo(day);
         int seq = max == null ? 0 : Integer.parseInt(max.substring(max.length() - 4));
         return "RXRB" + day + String.format("%04d", seq + 1);
     }
+
+    // 组装
 
     private String nextTalkNo() {
         String day = LocalDate.now().format(DAY_FMT);
@@ -668,7 +646,9 @@ public class RxReviewServiceImpl implements RxReviewService {
         return "YT" + day + String.format("%04d", seq + 1);
     }
 
-    /** 抽样/补录共用：处方 → 点照明细（快照冻结） */
+    /**
+     * 抽样/补录共用：处方 → 点照明细（快照冻结）
+     */
     private BizRxReviewItem toItemEntity(BizRxReviewBatch batch, BizPrescription p) {
         BizRxReviewItem item = new BizRxReviewItem();
         item.setBatchId(batch.getId());
@@ -709,7 +689,9 @@ public class RxReviewServiceImpl implements RxReviewService {
         return vo;
     }
 
-    /** 明细 VO + 处方药品明细文本（一次 IN 查全，内存分组，避免 N+1） */
+    /**
+     * 明细 VO + 处方药品明细文本（一次 IN 查全，内存分组，避免 N+1）
+     */
     private List<RxReviewItemVO> toItemVOs(List<BizRxReviewItem> records) {
         List<Long> prescriptionIds = records.stream()
                 .map(BizRxReviewItem::getPrescriptionId).distinct().toList();
@@ -790,7 +772,7 @@ public class RxReviewServiceImpl implements RxReviewService {
                 .toList();
         Map<Long, RxReviewItemVO> itemMap = allIds.isEmpty() ? Map.of()
                 : toItemVOs(itemMapper.selectList(new LambdaQueryWrapper<BizRxReviewItem>()
-                        .in(BizRxReviewItem::getId, allIds))).stream()
+                .in(BizRxReviewItem::getId, allIds))).stream()
                 .collect(Collectors.toMap(RxReviewItemVO::getId, v -> v, (a, b) -> a));
 
         List<RxReviewTalkVO> vos = new ArrayList<>(records.size());
@@ -835,5 +817,12 @@ public class RxReviewServiceImpl implements RxReviewService {
         vo.setCreateTime(t.getCreateTime());
         vo.setRemark(t.getRemark());
         return vo;
+    }
+
+    /**
+     * 关联明细上下文（doctorId / deptName / 明细 / id 文本）
+     */
+    private record RelatedContext(Long doctorId, String deptName,
+                                  List<BizRxReviewItem> items, String idsText) {
     }
 }

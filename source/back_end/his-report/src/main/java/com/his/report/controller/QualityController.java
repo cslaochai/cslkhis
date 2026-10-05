@@ -10,13 +10,14 @@ import com.his.report.vo.QualityRuleVO;
 import com.his.report.vo.QualitySummaryVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 数据质量报表（P5.3）。
@@ -57,7 +58,7 @@ public class QualityController {
 
     @Operation(summary = "问题清单（分页，可定位到具体记录）")
     @GetMapping("/listIssuePage")
-    public Result<PageResult<QualityIssueVO>> listIssuePage(QualityIssueQueryPageDTO dto) {
+    public Result<PageResult<QualityIssueVO>> listIssuePage(@Valid QualityIssueQueryPageDTO dto) {
         return Result.success(qualityService.listIssuePage(dto));
     }
 }

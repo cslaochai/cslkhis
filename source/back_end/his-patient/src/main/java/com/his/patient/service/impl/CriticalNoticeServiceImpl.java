@@ -20,6 +20,7 @@ import com.his.patient.service.CriticalNoticeService;
 import com.his.patient.vo.CriticalNoticeVO;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -242,7 +243,7 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         cmd.setSignScene(SignScene.NOTICE_ISSUE.getCode());
         cmd.setSignerId(me);
         cmd.setSignerName(notice.getDoctorName());
-        com.his.security.CurrentUser user = UserUtils.getCurrentUser();
+        CurrentUser user = UserUtils.getCurrentUser();
         if (user != null) {
             cmd.setSignerDeptId(user.getDeptId());
             cmd.setSignerDeptName(user.getDeptName());
@@ -363,7 +364,6 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         }
     }
 
-    /** 数据范围 fail-closed：受限角色只能碰授权科室的单据（AGENTS §6） */
     private void assertDeptAccessible(Long deptId) {
         if (!DeptScopeGuard.canAccessDept(deptId)) {
             throw new BusinessException("该通知单所属科室不在当前岗位的数据范围内");

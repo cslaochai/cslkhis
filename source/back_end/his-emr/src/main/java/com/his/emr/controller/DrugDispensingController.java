@@ -11,9 +11,10 @@ import com.his.pharmacy.dto.DispensingQueryPageDTO;
 import com.his.security.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 药品发药管理控制器
@@ -30,7 +31,7 @@ public class DrugDispensingController {
 
     @Operation(summary = "分页查询发药明细")
     @PostMapping("/listPage")
-    public Result<PageResult<BizDrugDispensingVO>> listPage(@RequestBody DispensingQueryPageDTO queryDTO) {
+    public Result<PageResult<BizDrugDispensingVO>> listPage(@Valid @RequestBody DispensingQueryPageDTO queryDTO) {
         PageResult<BizDrugDispensingVO> result = drugDispensingService.selectDispensingPage(
                 queryDTO.getPatientId(), queryDTO.getPatientName(), queryDTO.getPrescriptionNo(),
                 queryDTO.getDispensingStatus(), queryDTO.getPageNum(), queryDTO.getPageSize());
@@ -52,7 +53,7 @@ public class DrugDispensingController {
     @PreAuthorize("hasAuthority('pharmacy:dispensing:edit')")
     @Operation(summary = "发药（单行）")
     @PostMapping("/dispense")
-    public Result<Void> dispense(@RequestBody DrugDispenseDTO actionDTO) {
+    public Result<Void> dispense(@Valid @RequestBody DrugDispenseDTO actionDTO) {
         boolean success = drugDispensingService.dispense(actionDTO.getId(),
                 resolvePharmacistId(actionDTO.getPharmacistId()),
                 resolvePharmacistName(actionDTO.getPharmacistName()),
@@ -64,7 +65,7 @@ public class DrugDispensingController {
     @PreAuthorize("hasAuthority('pharmacy:dispensing:edit')")
     @Operation(summary = "按处方整单发药")
     @PostMapping("/dispenseByPrescription")
-    public Result<Void> dispenseByPrescription(@RequestBody DrugDispenseDTO actionDTO) {
+    public Result<Void> dispenseByPrescription(@Valid @RequestBody DrugDispenseDTO actionDTO) {
         boolean success = drugDispensingService.dispenseByPrescription(actionDTO.getPrescriptionId(),
                 resolvePharmacistId(actionDTO.getPharmacistId()),
                 resolvePharmacistName(actionDTO.getPharmacistName()),
@@ -76,7 +77,7 @@ public class DrugDispensingController {
     @PreAuthorize("hasAuthority('pharmacy:dispensing:edit')")
     @Operation(summary = "退药")
     @PostMapping("/returnDrug")
-    public Result<Void> returnDrug(@RequestBody DrugReturnDTO actionDTO) {
+    public Result<Void> returnDrug(@Valid @RequestBody DrugReturnDTO actionDTO) {
         boolean success = drugDispensingService.returnDrug(actionDTO.getId(), actionDTO.getReason());
         return success ? Result.success("退药成功", null) : Result.error("退药失败");
     }

@@ -34,7 +34,7 @@ public class LisEqaController {
     @PreAuthorize("hasAuthority('medtech:lisEqa:list')")
     @Operation(summary = "质评批次分页")
     @PostMapping("/planListPage")
-    public Result<PageResult<LisEqaVO.PlanVO>> planListPage(@RequestBody LisEqaDTO.PlanQuery query) {
+    public Result<PageResult<LisEqaVO.PlanVO>> planListPage(@Valid @RequestBody LisEqaDTO.PlanQuery query) {
         return Result.success(lisEqaService.planPage(query));
     }
 
@@ -59,7 +59,7 @@ public class LisEqaController {
     @PreAuthorize("hasAuthority('medtech:lisEqa:list')")
     @Operation(summary = "盲样台账分页")
     @PostMapping("/sampleListPage")
-    public Result<PageResult<LisEqaVO.SampleVO>> sampleListPage(@RequestBody LisEqaDTO.SampleQuery query) {
+    public Result<PageResult<LisEqaVO.SampleVO>> sampleListPage(@Valid @RequestBody LisEqaDTO.SampleQuery query) {
         return Result.success(lisEqaService.samplePage(query));
     }
 
@@ -117,7 +117,7 @@ public class LisEqaController {
     @PreAuthorize("hasAuthority('medtech:lisEqa:list')")
     @Operation(summary = "仪器间比对（室间差）分页")
     @PostMapping("/compareListPage")
-    public Result<PageResult<LisEqaVO.CompareVO>> compareListPage(@RequestBody LisEqaDTO.CompareQuery query) {
+    public Result<PageResult<LisEqaVO.CompareVO>> compareListPage(@Valid @RequestBody LisEqaDTO.CompareQuery query) {
         return Result.success(lisEqaService.comparePage(query));
     }
 

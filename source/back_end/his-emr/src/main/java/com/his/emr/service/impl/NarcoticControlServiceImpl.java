@@ -3,6 +3,7 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
+import com.his.common.enums.SpecialDrugFlagEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.AmpouleReturnDTO;
 import com.his.emr.dto.NarcoticRegisterQueryPageDTO;
@@ -10,15 +11,12 @@ import com.his.emr.entity.BizDrugDispensing;
 import com.his.emr.entity.BizNarcoticRegister;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
+import com.his.emr.enums.AmpouleStatusEnum;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
 import com.his.emr.mapper.NarcoticRegisterMapper;
 import com.his.emr.service.NarcoticControlService;
-import com.his.emr.vo.BizNarcoticRegisterVO;
-import com.his.emr.vo.ControlledDrugVO;
-import com.his.emr.vo.NarcoticPrecheckVO;
-import com.his.emr.vo.NarcoticRegisterCountVO;
-import com.his.emr.vo.NarcoticViolationVO;
+import com.his.emr.vo.*;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,20 +30,11 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
-import com.his.emr.enums.AmpouleStatusEnum;
-import com.his.common.enums.SpecialDrugFlagEnum;
 
 /**
  * 麻精药品特殊管理服务实现。
@@ -66,29 +55,23 @@ import com.his.common.enums.SpecialDrugFlagEnum;
 @RequiredArgsConstructor
 public class NarcoticControlServiceImpl implements NarcoticControlService {
 
-    /** 违规级别 */
+    /**
+     * 违规级别
+     */
     private static final String LEVEL_BLOCK = "BLOCK";
     private static final String LEVEL_WARN = "WARN";
-
     /**
-     * 专册登记号当日序号游标：key = 日期前缀（NZ+yyyyMMdd），value = 已用到的序号。
-     *
-     * <p>⚠ 这里**不能用"进程内自增从 0 开始"**（本项目其它地方生成单号是那么写的）。
-     * 专册的 {@code register_no} 有唯一索引 {@code uk_narco_register_no}，
-     * 而进程内计数器**服务一重启就归零** → 当天已经发过一单（NZ202609230001）之后重启，
-     * 下一单又生成 NZ202609230001 → 唯一键冲突 → **整个发药事务回滚**，
-     * 药师看到的是"发药失败"，库存、状态、专册全没动，且和麻精规则毫无关系 —— 极难排查。
-     * 所以起点一律从库里的当日已用条数取（{@code countByRegisterNoPrefix}）。
+     * 「N次/N剂」里的数量，兼容阿拉伯数字与中文数字
      */
-    private final Map<String, Integer> registerSeqCache = new ConcurrentHashMap<>();
-
-    /** 「N次/N剂」里的数量，兼容阿拉伯数字与中文数字 */
     private static final Pattern P_TIMES = Pattern.compile("([0-9]+|[一二两三四五六七八九十]+)\\s*(?:次|剂)");
-    /** 「每N小时」 */
+    /**
+     * 「每N小时」
+     */
     private static final Pattern P_EVERY_HOURS = Pattern.compile("每\\s*([0-9]+)\\s*小时");
-    /** 提取数字（用于 single_dosage 这类「1」「1袋」「10ml」的字段） */
+    /**
+     * 提取数字（用于 single_dosage 这类「1」「1袋」「10ml」的字段）
+     */
     private static final Pattern P_FIRST_NUMBER = Pattern.compile("([0-9]+(?:\\.[0-9]+)?)");
-
     /**
      * 中文数字 → 阿拉伯数字。
      * <p>用静态块而不是 {@code Map.of} —— {@code Map.of} 最多只支持 10 组键值对，
@@ -112,11 +95,83 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
         CN_NUMBER = Collections.unmodifiableMap(cn);
     }
 
+    /**
+     * 专册登记号当日序号游标：key = 日期前缀（NZ+yyyyMMdd），value = 已用到的序号。
+     *
+     * <p>⚠ 这里**不能用"进程内自增从 0 开始"**（本项目其它地方生成单号是那么写的）。
+     * 专册的 {@code register_no} 有唯一索引 {@code uk_narco_register_no}，
+     * 而进程内计数器**服务一重启就归零** → 当天已经发过一单（NZ202609230001）之后重启，
+     * 下一单又生成 NZ202609230001 → 唯一键冲突 → **整个发药事务回滚**，
+     * 药师看到的是"发药失败"，库存、状态、专册全没动，且和麻精规则毫无关系 —— 极难排查。
+     * 所以起点一律从库里的当日已用条数取（{@code countByRegisterNoPrefix}）。
+     */
+    private final Map<String, Integer> registerSeqCache = new ConcurrentHashMap<>();
     private final NarcoticRegisterMapper narcoticRegisterMapper;
     private final BizPrescriptionMapper prescriptionMapper;
     private final BizPrescriptionDetailMapper prescriptionDetailMapper;
 
     // 规则口径
+
+    private static boolean isInjection(String dosageForm) {
+        return StringUtils.hasText(dosageForm)
+                && (dosageForm.contains("注射") || dosageForm.contains("大输液") || dosageForm.contains("输液"));
+    }
+
+    private static boolean isControlledRelease(String dosageForm) {
+        // 只认「缓释/控释」——「肠溶片」常被误当成控缓释制剂，但法条里控缓释制剂不含肠溶制剂
+        return StringUtils.hasText(dosageForm)
+                && (dosageForm.contains("缓释") || dosageForm.contains("控释"));
+    }
+
+    private static BigDecimal firstNumber(String text) {
+        if (!StringUtils.hasText(text)) {
+            return null;
+        }
+        Matcher m = P_FIRST_NUMBER.matcher(text);
+        if (!m.find()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(m.group(1));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static String flagText(Integer specialFlag) {
+        if (specialFlag == null) {
+            return "未知管制品种";
+        }
+        if (specialFlag == SpecialDrugFlagEnum.NARCOTIC.getCode()) {
+            return "麻醉药品";
+        }
+        if (specialFlag == SpecialDrugFlagEnum.PSYCHOTROPIC_1.getCode()) {
+            return "第一类精神药品";
+        }
+        if (specialFlag == SpecialDrugFlagEnum.PSYCHOTROPIC_2.getCode()) {
+            return "第二类精神药品";
+        }
+        if (specialFlag == SpecialDrugFlagEnum.TOXIC.getCode()) {
+            return "毒性药品";
+        }
+        return "普通药品";
+    }
+
+    private static String dosageFormText(String dosageForm) {
+        if (isInjection(dosageForm)) {
+            return "注射剂";
+        }
+        if (isControlledRelease(dosageForm)) {
+            return "控缓释制剂";
+        }
+        return StringUtils.hasText(dosageForm) ? dosageForm : "其他剂型";
+    }
+
+    private static String nvl(String value, String fallback) {
+        return StringUtils.hasText(value) ? value : fallback;
+    }
+
+    // 处方限量校验
 
     @Override
     public Integer limitDaysOf(Integer specialFlag, String dosageForm) {
@@ -165,6 +220,8 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
                 || specialFlag == SpecialDrugFlagEnum.TOXIC.getCode();
     }
 
+    // 双人复核闸门
+
     @Override
     public boolean requiresAmpouleTracking(Integer specialFlag, String dosageForm) {
         // 空安瓿回收只对**麻醉药品与第一类精神药品的注射剂**有法定要求
@@ -176,18 +233,7 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
                 && isInjection(dosageForm);
     }
 
-    private static boolean isInjection(String dosageForm) {
-        return StringUtils.hasText(dosageForm)
-                && (dosageForm.contains("注射") || dosageForm.contains("大输液") || dosageForm.contains("输液"));
-    }
-
-    private static boolean isControlledRelease(String dosageForm) {
-        // 只认「缓释/控释」——「肠溶片」常被误当成控缓释制剂，但法条里控缓释制剂不含肠溶制剂
-        return StringUtils.hasText(dosageForm)
-                && (dosageForm.contains("缓释") || dosageForm.contains("控释"));
-    }
-
-    // 处方限量校验
+    // 专册登记
 
     @Override
     public List<NarcoticViolationVO> checkPrescription(Long prescriptionId, String overLimitReason) {
@@ -278,7 +324,7 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
                     detail.getDrugName(), flagText(specialFlag), dosageFormText(dosageForm),
                     limitDays, actualDays, actualDays - limitDays,
                     canWaive ? "（已填写超量理由，按《处方管理办法》第24条放行并记入专册）"
-                             : (specialFlag == SpecialDrugFlagEnum.PSYCHOTROPIC_2.getCode() ? "（第二类精神药品超7日须由医师注明理由）" : "")));
+                            : (specialFlag == SpecialDrugFlagEnum.PSYCHOTROPIC_2.getCode() ? "（第二类精神药品超7日须由医师注明理由）" : "")));
             v.setPrescriptionDetailId(detail.getId());
             v.setDrugName(detail.getDrugName());
             v.setSpecialFlag(specialFlag);
@@ -330,13 +376,20 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
         String text = frequency.trim().toLowerCase().replace(" ", "");
         // 英文简写
         switch (text) {
-            case "qd": return 1;
-            case "bid": return 2;
-            case "tid": return 3;
-            case "qid": return 4;
-            case "qn": return 1;
-            case "qod": return null;   // 隔日一次：按日用量折算会产生 0.5，属于"核不出"，交给调用方拦
-            default: break;
+            case "qd":
+                return 1;
+            case "bid":
+                return 2;
+            case "tid":
+                return 3;
+            case "qid":
+                return 4;
+            case "qn":
+                return 1;
+            case "qod":
+                return null;   // 隔日一次：按日用量折算会产生 0.5，属于"核不出"，交给调用方拦
+            default:
+                break;
         }
         // q8h / q12h
         if (text.startsWith("q") && text.endsWith("h")) {
@@ -369,7 +422,7 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
         return null;
     }
 
-    // 双人复核闸门
+    // 空安瓿回收
 
     @Override
     public String resolveAndAssertChecker(Long drugId, Long dispenserId, Long checkerId) {
@@ -396,7 +449,7 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
         return checkerName;
     }
 
-    // 专册登记
+    // 查询
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -531,8 +584,6 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
                 .collect(Collectors.joining(","));
     }
 
-    // 空安瓿回收
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizNarcoticRegisterVO updateAmpouleReturn(AmpouleReturnDTO dto) {
@@ -572,7 +623,7 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
         return toVO(narcoticRegisterMapper.selectById(exists.getId()));
     }
 
-    // 查询
+    // 辅助
 
     @Override
     public PageResult<BizNarcoticRegisterVO> listPage(NarcoticRegisterQueryPageDTO query) {
@@ -677,7 +728,7 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
         //    那时提示"可填写理由后放行"就是骗人。
         boolean onlyOverLimitWaivable = !blocks.isEmpty() && !StringUtils.hasText(overLimitReason)
                 && blocks.stream().allMatch(b -> "OVER_LIMIT".equals(b.getCode())
-                        && b.getSpecialFlag() != null && b.getSpecialFlag() == SpecialDrugFlagEnum.PSYCHOTROPIC_2.getCode());
+                && b.getSpecialFlag() != null && b.getSpecialFlag() == SpecialDrugFlagEnum.PSYCHOTROPIC_2.getCode());
         vo.setOverLimitReasonRequired(onlyOverLimitWaivable);
         return vo;
     }
@@ -699,8 +750,6 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
         }
         return result;
     }
-
-    // 辅助
 
     /**
      * 生成专册登记号：NZ + yyyyMMdd + 4位序号。
@@ -750,53 +799,5 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
         BizNarcoticRegisterVO vo = new BizNarcoticRegisterVO();
         BeanUtils.copyProperties(entity, vo);
         return vo;
-    }
-
-    private static BigDecimal firstNumber(String text) {
-        if (!StringUtils.hasText(text)) {
-            return null;
-        }
-        Matcher m = P_FIRST_NUMBER.matcher(text);
-        if (!m.find()) {
-            return null;
-        }
-        try {
-            return new BigDecimal(m.group(1));
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private static String flagText(Integer specialFlag) {
-        if (specialFlag == null) {
-            return "未知管制品种";
-        }
-        if (specialFlag == SpecialDrugFlagEnum.NARCOTIC.getCode()) {
-            return "麻醉药品";
-        }
-        if (specialFlag == SpecialDrugFlagEnum.PSYCHOTROPIC_1.getCode()) {
-            return "第一类精神药品";
-        }
-        if (specialFlag == SpecialDrugFlagEnum.PSYCHOTROPIC_2.getCode()) {
-            return "第二类精神药品";
-        }
-        if (specialFlag == SpecialDrugFlagEnum.TOXIC.getCode()) {
-            return "毒性药品";
-        }
-        return "普通药品";
-    }
-
-    private static String dosageFormText(String dosageForm) {
-        if (isInjection(dosageForm)) {
-            return "注射剂";
-        }
-        if (isControlledRelease(dosageForm)) {
-            return "控缓释制剂";
-        }
-        return StringUtils.hasText(dosageForm) ? dosageForm : "其他剂型";
-    }
-
-    private static String nvl(String value, String fallback) {
-        return StringUtils.hasText(value) ? value : fallback;
     }
 }

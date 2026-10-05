@@ -10,7 +10,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/** 药品发药记录 */
+/**
+ * 药品发药记录
+ */
 @Data
 @TableName("biz_drug_dispensing")
 public class BizDrugDispensing {

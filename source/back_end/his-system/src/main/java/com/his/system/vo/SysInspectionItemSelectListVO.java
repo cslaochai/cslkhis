@@ -12,25 +12,39 @@ import java.math.BigDecimal;
 @Data
 public class SysInspectionItemSelectListVO {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 项目编码（唯一） */
+    /**
+     * 项目编码（唯一）
+     */
     private String itemCode;
 
-    /** 项目名称 */
+    /**
+     * 项目名称
+     */
     private String itemName;
 
-    /** 项目类型（1-放射检查 2-超声检查 3-心电图 4-内镜检查 5-其他） */
+    /**
+     * 项目类型（1-放射检查 2-超声检查 3-心电图 4-内镜检查 5-其他）
+     */
     private Integer itemType;
 
-    /** 检查部位 */
+    /**
+     * 检查部位
+     */
     private String bodyPart;
 
-    /** 检查价格 */
+    /**
+     * 检查价格
+     */
     private BigDecimal price;
 
-    /** 检查前准备 */
+    /**
+     * 检查前准备
+     */
     private String preparation;
 }

@@ -22,7 +22,7 @@ import com.his.common.enums.RefundApplyStatusEnum;
 import com.his.common.enums.TxnSourceEnum;
 import com.his.common.exception.BusinessException;
 import com.his.fee.service.FeeRecordService;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;

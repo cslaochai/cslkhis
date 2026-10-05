@@ -9,9 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 内镜亚专业接口（URL 前缀 /medicaltech/endoscopy）
@@ -29,7 +28,7 @@ public class EndoscopyController {
 
     @Operation(summary = "分页查询内镜检查记录")
     @PostMapping("/listPage")
-    public Result<PageResult<EndoscopyVO.ListVO>> listPage(@RequestBody EndoscopyDTO.Query query) {
+    public Result<PageResult<EndoscopyVO.ListVO>> listPage(@Valid @RequestBody EndoscopyDTO.Query query) {
         return Result.success(endoscopyService.pageVO(query));
     }
 

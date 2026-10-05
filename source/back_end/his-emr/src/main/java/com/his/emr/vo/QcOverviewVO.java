@@ -118,12 +118,16 @@ public class QcOverviewVO {
     @Data
     public static class DimensionStat {
 
-        /** 维度 */
+        /**
+         * 维度
+         */
         private Integer dimension;
 
         private String dimensionText;
 
-        /** 问题数 */
+        /**
+         * 问题数
+         */
         private long issueCount;
 
         private long deductTotal;

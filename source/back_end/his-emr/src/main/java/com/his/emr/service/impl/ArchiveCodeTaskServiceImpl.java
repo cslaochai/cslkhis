@@ -4,12 +4,14 @@ import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
+import com.his.common.enums.DelFlagEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.CodeTaskAssignUpsertDTO;
 import com.his.emr.dto.CodeTaskAuditDTO;
 import com.his.emr.dto.CodeTaskQueryPageDTO;
 import com.his.emr.dto.CodeTaskSubmitDTO;
 import com.his.emr.entity.BizArchiveCodeTask;
+import com.his.emr.enums.CodeTaskStatusEnum;
 import com.his.emr.mapper.BizArchiveCodeTaskMapper;
 import com.his.emr.service.ArchiveCodeTaskService;
 import com.his.emr.vo.ArchiveCodeTaskStatsVO;
@@ -28,12 +30,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.his.emr.enums.CodeTaskStatusEnum;
-
-import com.his.common.enums.DelFlagEnum;
 /**
  * 病案编码任务服务实现
- *
+ * <p>
  * 状态机：1 待编码 →（提交）→ 2 已提交 →（审核）→ 3 已完成 / 4 已退修；
  * 已退修可再次提交（→2），每次退修 return_count+1 留痕并站内信提醒编码员。
  */
@@ -45,6 +44,14 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
     private final BizArchiveCodeTaskMapper taskMapper;
     private final RedisSequenceService sequenceService;
     private final SysMessageService sysMessageService;
+
+    private static String trimToNull(String s) {
+        if (s == null) {
+            return null;
+        }
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
 
     @Override
     public PageResult<ArchiveCodeTaskVO> page(CodeTaskQueryPageDTO q) {
@@ -151,6 +158,8 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
         }
     }
 
+    // 内部
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void audit(CodeTaskAuditDTO dto) {
@@ -186,9 +195,9 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
         }
     }
 
-    // 内部
-
-    /** 退修提醒编码员（通知型：整改动作是「改编码重新提交」，无消息内闭环接口） */
+    /**
+     * 退修提醒编码员（通知型：整改动作是「改编码重新提交」，无消息内闭环接口）
+     */
     private void notifyRework(BizArchiveCodeTask t) {
         if (t.getCoderId() == null) {
             return;
@@ -214,13 +223,5 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
             // 提醒失败不影响审核主流程
             log.warn("[编码任务池] 退修提醒发送失败 taskId={} coderId={}", t.getId(), t.getCoderId(), ex);
         }
-    }
-
-    private static String trimToNull(String s) {
-        if (s == null) {
-            return null;
-        }
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
     }
 }

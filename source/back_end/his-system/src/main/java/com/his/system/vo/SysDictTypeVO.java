@@ -51,7 +51,9 @@ public class SysDictTypeVO {
      */
     private String remark;
 
-    /** 字典类型（唯一） */
+    /**
+     * 字典类型（唯一）
+     */
     private String dictType;
 
     /**

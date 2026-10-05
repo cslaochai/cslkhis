@@ -3,26 +3,30 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.appoint.dto.AppointUpsertDTO;
+import com.his.appoint.entity.BizAppointInfo;
+import com.his.appoint.enums.AppointSourceEnum;
+import com.his.appoint.enums.AppointStatusEnum;
+import com.his.appoint.enums.RevisitSourceEnum;
+import com.his.appoint.enums.VisitTypeEnum;
+import com.his.appoint.service.AppointService;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.SensitiveMaskUtils;
 import com.his.emr.dto.FollowupQueryDTO;
 import com.his.emr.dto.FollowupTaskDTO;
-import com.his.appoint.dto.AppointUpsertDTO;
-import com.his.appoint.entity.BizAppointInfo;
-import com.his.appoint.enums.AppointStatusEnum;
-import com.his.appoint.enums.RevisitSourceEnum;
-import com.his.appoint.enums.VisitTypeEnum;
-import com.his.appoint.service.AppointService;
-import com.his.emr.entity.BizSurveyDispatch;
+import com.his.emr.entity.BizFollowupTask;
+import com.his.emr.enums.FollowupCallChannelEnum;
+import com.his.emr.enums.FollowupCallStatusEnum;
+import com.his.emr.enums.FollowupTaskStatusEnum;
+import com.his.emr.enums.SurveySourceEnum;
+import com.his.emr.mapper.BizFollowupTaskMapper;
+import com.his.emr.service.FollowupTaskService;
 import com.his.emr.service.SurveyService;
 import com.his.emr.support.FollowupTaskSnapshot;
 import com.his.emr.vo.BizFollowupTaskVO;
 import com.his.emr.vo.FollowupStatVO;
 import com.his.security.DeptScopeGuard;
-import com.his.emr.entity.BizFollowupTask;
-import com.his.emr.mapper.BizFollowupTaskMapper;
-import com.his.emr.service.FollowupTaskService;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,22 +39,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
-import com.his.emr.enums.FollowupTaskStatusEnum;
-import com.his.emr.enums.FollowupCallStatusEnum;
-import com.his.emr.enums.FollowupCallChannelEnum;
-import com.his.emr.enums.SurveySourceEnum;
-
-import com.his.appoint.enums.AppointSourceEnum;
 /**
  * 随访任务服务实现
  */
@@ -59,11 +51,15 @@ import com.his.appoint.enums.AppointSourceEnum;
 @RequiredArgsConstructor
 public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, BizFollowupTask> implements FollowupTaskService {
 
-    /** 随访方式名（字典 his_followup_type 的 Java 侧镜像，看板直接出中文） */
+    /**
+     * 随访方式名（字典 his_followup_type 的 Java 侧镜像，看板直接出中文）
+     */
     private static final Map<Integer, String> TYPE_NAMES = Map.of(
             1, "复诊提醒", 2, "慢病随访", 3, "用药指导", 4, "术后随访");
 
-    /** 出院一键生成的默认随访天数 */
+    /**
+     * 出院一键生成的默认随访天数
+     */
     private static final int DEFAULT_DAYS_OFFSET = 7;
 
     /**
@@ -79,14 +75,36 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
 
     private final BizFollowupTaskMapper taskMapper;
 
-    /** 满意度评价：随访完成时自动发一张卷（方向单向，评价侧不回依赖本服务，见 FollowupTaskSnapshot） */
+    /**
+     * 满意度评价：随访完成时自动发一张卷（方向单向，评价侧不回依赖本服务，见 FollowupTaskSnapshot）
+     */
     private final SurveyService surveyService;
 
-    /** 患者触达（G-06）：站内信通道常通，微信订阅消息未启用时内部静默降级 */
+    /**
+     * 患者触达（G-06）：站内信通道常通，微信订阅消息未启用时内部静默降级
+     */
     private final com.his.system.service.SysMessageService sysMessageService;
 
-    /** 电话外呼通道（G-15）：mock=人工登记待呼，真实线路接入前绝不假装已呼出 */
+    /**
+     * 电话外呼通道（G-15）：mock=人工登记待呼，真实线路接入前绝不假装已呼出
+     */
     private final com.his.emr.service.FollowupCallChannelService followupCallChannelService;
+
+    private static long toLong(Map<String, Object> row, String key) {
+        Object v = row == null ? null : row.get(key);
+        return v == null ? 0L : new BigDecimal(String.valueOf(v)).longValue();
+    }
+
+    /**
+     * 写库前先截到列宽：超长原因让服务端截断，而不是让 insert 报 Data too long 变成 500
+     */
+    private static String cut(String v, int max) {
+        if (v == null) {
+            return null;
+        }
+        String s = v.trim();
+        return s.length() <= max ? s : s.substring(0, max);
+    }
 
     @Override
     public PageResult<BizFollowupTaskVO> listPage(FollowupQueryDTO dto) {
@@ -137,7 +155,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         long shouldDo = pending + doing + done;
         vo.setCompleteRate(shouldDo == 0 ? BigDecimal.ZERO
                 : BigDecimal.valueOf(done).multiply(new BigDecimal("100"))
-                        .divide(BigDecimal.valueOf(shouldDo), 1, RoundingMode.HALF_UP));
+                .divide(BigDecimal.valueOf(shouldDo), 1, RoundingMode.HALF_UP));
 
         // 类型分布必须四档全出（含 0）：GROUP BY 只回有任务的类型，看板上"少了两档"
         // 会被读成「本院没有这类随访」，而事实是这类今天恰好没活。
@@ -496,7 +514,9 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         return toVo(task, true);
     }
 
-    /** @param plainPhone 编辑回显给明文，列表一律脱敏并清空明文 */
+    /**
+     * @param plainPhone 编辑回显给明文，列表一律脱敏并清空明文
+     */
     private BizFollowupTaskVO toVo(BizFollowupTask entity, boolean plainPhone) {
         BizFollowupTaskVO vo = new BizFollowupTaskVO();
         BeanUtils.copyProperties(entity, vo);
@@ -510,7 +530,9 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         return vo;
     }
 
-    /** 逾期 = 还没做完且计划时间已过，现算不落列（状态列没人翻，数出来永远偏小） */
+    /**
+     * 逾期 = 还没做完且计划时间已过，现算不落列（状态列没人翻，数出来永远偏小）
+     */
     private boolean isOverdue(BizFollowupTask task) {
         Integer status = task.getFollowupStatus();
         boolean open = Integer.valueOf(FollowupTaskStatusEnum.PENDING.getCode()).equals(status)
@@ -518,7 +540,9 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         return open && task.getFollowupTime() != null && task.getFollowupTime().isBefore(LocalDateTime.now());
     }
 
-    /** 手动新建：FUV+yyyyMMddHHmmss+3 位随机（task_no VARCHAR(32)：3+14+3=20，安全余量足够） */
+    /**
+     * 手动新建：FUV+yyyyMMddHHmmss+3 位随机（task_no VARCHAR(32)：3+14+3=20，安全余量足够）
+     */
     private String nextTaskNo(Long dischargeId) {
         String ts = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now());
         return "FUV" + ts + ThreadLocalRandom.current().nextInt(100, 1000);
@@ -560,16 +584,15 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         };
     }
 
-    // 数据范围与工具
-
-    /** 数据范围 fail-closed：受限角色只能碰授权科室的任务（AGENTS §6） */
     private void assertDeptAccessible(Long deptId) {
         if (!DeptScopeGuard.canAccessDept(deptId)) {
             throw new BusinessException("该随访任务所属科室不在当前岗位的数据范围内");
         }
     }
 
-    /** null=不限科室；非空=收口集合（保证非空，IN () 是语法错误，空集合一律当配置缺失拒掉） */
+    /**
+     * null=不限科室；非空=收口集合（保证非空，IN () 是语法错误，空集合一律当配置缺失拒掉）
+     */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
         Long resolved = DeptScopeGuard.resolveDeptId(requestedDeptId);
         if (resolved != null) {
@@ -588,19 +611,5 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     private String statusName(Integer status) {
         String label = FollowupTaskStatusEnum.labelOf(status);
         return label == null ? "未知" : label;
-    }
-
-    private static long toLong(Map<String, Object> row, String key) {
-        Object v = row == null ? null : row.get(key);
-        return v == null ? 0L : new BigDecimal(String.valueOf(v)).longValue();
-    }
-
-    /** 写库前先截到列宽：超长原因让服务端截断，而不是让 insert 报 Data too long 变成 500 */
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        String s = v.trim();
-        return s.length() <= max ? s : s.substring(0, max);
     }
 }

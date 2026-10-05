@@ -11,6 +11,8 @@ import com.his.emr.dto.SurveyTemplateUpsertDTO;
 import com.his.emr.entity.BizSurveyDispatch;
 import com.his.emr.entity.BizSurveyItem;
 import com.his.emr.entity.BizSurveyTemplate;
+import com.his.emr.enums.SurveyQuestionTypeEnum;
+import com.his.emr.enums.SurveyTemplateStatusEnum;
 import com.his.emr.mapper.BizSurveyDispatchMapper;
 import com.his.emr.mapper.BizSurveyItemMapper;
 import com.his.emr.mapper.BizSurveyTemplateMapper;
@@ -28,15 +30,8 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-
-import com.his.emr.enums.SurveyQuestionTypeEnum;
-import com.his.emr.enums.SurveyTemplateStatusEnum;
 
 /**
  * 满意度问卷模板服务实现。
@@ -48,10 +43,14 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    /** 维度码值范围（字典 his_survey_dimension 1-7） */
+    /**
+     * 维度码值范围（字典 his_survey_dimension 1-7）
+     */
     private static final int DIMENSION_MIN = 1;
     private static final int DIMENSION_MAX = 7;
-    /** 题型码值范围（字典 his_survey_question_type 1-5） */
+    /**
+     * 题型码值范围（字典 his_survey_question_type 1-5）
+     */
     private static final int QT_MIN = 1;
     private static final int QT_MAX = 5;
 
@@ -59,6 +58,28 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
     private final BizSurveyItemMapper itemMapper;
     private final BizSurveyDispatchMapper dispatchMapper;
     private final RedisSequenceService sequenceService;
+
+    /**
+     * 入库前截到列宽：超长文本让服务端截断，而不是让 insert 报 Data too long 变成 500
+     */
+    private static String cut(String v, int max) {
+        if (v == null) {
+            return null;
+        }
+        String s = v.trim();
+        return s.length() <= max ? s : s.substring(0, max);
+    }
+
+    private static String trimToNull(String v) {
+        return StringUtils.hasText(v) ? v.trim() : null;
+    }
+
+    /**
+     * 聚合列（COUNT/BIGINT）在 JDBC 侧可能是 Long/BigInteger/BigDecimal，统一按字符串转
+     */
+    private static long asLong(Object v) {
+        return v == null ? 0L : new BigDecimal(String.valueOf(v)).longValue();
+    }
 
     @Override
     public PageResult<SurveyTemplateVO> listPage(SurveyTemplateQueryPageDTO dto) {
@@ -75,7 +96,7 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
         // 题目数一次批量捞：逐行 count 会在「一页 20 张卷」时打出 20 条 SQL
         Map<Long, Integer> itemCounts = ids.isEmpty() ? Map.of()
                 : itemMapper.countByTemplates(ids).stream().collect(Collectors.toMap(
-                        r -> asLong(r.get("t")), r -> (int) asLong(r.get("c")), (a, b) -> a));
+                r -> asLong(r.get("t")), r -> (int) asLong(r.get("c")), (a, b) -> a));
         List<SurveyTemplateVO> records = page.getRecords().stream().map(t -> {
             SurveyTemplateVO vo = new SurveyTemplateVO();
             BeanUtils.copyProperties(t, vo);
@@ -112,6 +133,8 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
         vo.setItems(itemMapper.selectByTemplate(id));
         return vo;
     }
+
+    // 内部
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -181,8 +204,6 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
         return vo;
     }
 
-    // 内部
-
     /**
      * 题目校验：题号卷内唯一、维度/题型在字典码值范围内。
      *
@@ -222,7 +243,9 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
         return item;
     }
 
-    /** 满分按题型兜底：量表 5、NPS 10、其余 0（不参与计分） */
+    /**
+     * 满分按题型兜底：量表 5、NPS 10、其余 0（不参与计分）
+     */
     private int defaultMaxScore(Integer questionType) {
         if (Objects.equals(questionType, SurveyQuestionTypeEnum.SCALE.getCode())) {
             return 5;
@@ -249,23 +272,5 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
     private String currentOperator() {
         String name = UserUtils.getCurrentEmployeeName();
         return StringUtils.hasText(name) ? name : "system";
-    }
-
-    /** 入库前截到列宽：超长文本让服务端截断，而不是让 insert 报 Data too long 变成 500 */
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        String s = v.trim();
-        return s.length() <= max ? s : s.substring(0, max);
-    }
-
-    private static String trimToNull(String v) {
-        return StringUtils.hasText(v) ? v.trim() : null;
-    }
-
-    /** 聚合列（COUNT/BIGINT）在 JDBC 侧可能是 Long/BigInteger/BigDecimal，统一按字符串转 */
-    private static long asLong(Object v) {
-        return v == null ? 0L : new BigDecimal(String.valueOf(v)).longValue();
     }
 }

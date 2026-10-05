@@ -11,7 +11,9 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** 门诊病历 */
+/**
+ * 门诊病历
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_medical_record")

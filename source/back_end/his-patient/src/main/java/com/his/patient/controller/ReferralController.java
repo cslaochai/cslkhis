@@ -9,8 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 双向转诊控制器。
@@ -36,7 +36,7 @@ public class ReferralController {
 
     @Operation(summary = "分页查询转诊单")
     @PostMapping("/listPage")
-    public Result<PageResult<ReferralVO>> listPage(@RequestBody ReferralDTO.QueryPage dto) {
+    public Result<PageResult<ReferralVO>> listPage(@Valid @RequestBody ReferralDTO.QueryPage dto) {
         var page = referralService.listPage(dto == null ? new ReferralDTO.QueryPage() : dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

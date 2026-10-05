@@ -18,7 +18,9 @@ public class SysPatientTagUpsertDTO {
      */
     private String tagName;
 
-    /** 标签缩写用于展示 */
+    /**
+     * 标签缩写用于展示
+     */
     private String shortName;
 
     /**

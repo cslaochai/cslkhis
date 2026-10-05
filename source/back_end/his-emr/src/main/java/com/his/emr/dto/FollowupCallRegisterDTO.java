@@ -9,7 +9,9 @@ import lombok.Data;
 @Data
 public class FollowupCallRegisterDTO {
 
-    /** 随访任务ID */
+    /**
+     * 随访任务ID
+     */
     @NotNull(message = "随访任务ID不能为空")
     private Long id;
 }

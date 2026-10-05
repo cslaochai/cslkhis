@@ -2,11 +2,7 @@ package com.his.patient.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.patient.dto.IcuMonitorQueryPageDTO;
-import com.his.patient.dto.IcuMonitorUpsertDTO;
-import com.his.patient.dto.IcuStayOutDTO;
-import com.his.patient.dto.IcuStayQueryPageDTO;
-import com.his.patient.dto.IcuStayUpsertDTO;
+import com.his.patient.dto.*;
 import com.his.patient.service.IcuService;
 import com.his.patient.vo.IcuVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,12 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -44,7 +35,7 @@ public class IcuController {
     @PreAuthorize("hasAuthority('ipd:icu:list')")
     @Operation(summary = "入出科台账分页")
     @PostMapping("/stay/listPage")
-    public Result<PageResult<IcuVO.StayVO>> stayListPage(@RequestBody IcuStayQueryPageDTO dto) {
+    public Result<PageResult<IcuVO.StayVO>> stayListPage(@Valid @RequestBody IcuStayQueryPageDTO dto) {
         return Result.success(icuService.stayListPage(dto));
     }
 
@@ -89,7 +80,7 @@ public class IcuController {
     @PreAuthorize("hasAuthority('ipd:icu:list')")
     @Operation(summary = "监护记录分页")
     @PostMapping("/monitor/listPage")
-    public Result<PageResult<IcuVO.MonitorVO>> monitorListPage(@RequestBody IcuMonitorQueryPageDTO dto) {
+    public Result<PageResult<IcuVO.MonitorVO>> monitorListPage(@Valid @RequestBody IcuMonitorQueryPageDTO dto) {
         return Result.success(icuService.monitorListPage(dto));
     }
 

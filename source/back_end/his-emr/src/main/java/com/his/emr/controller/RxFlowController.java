@@ -3,17 +3,20 @@ package com.his.emr.controller;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.RxFlowActionDTO;
-import com.his.emr.dto.RxFlowUpsertDTO;
 import com.his.emr.dto.RxFlowQueryPageDTO;
-import com.his.emr.vo.RxFlowListVO;
+import com.his.emr.dto.RxFlowUpsertDTO;
 import com.his.emr.service.RxFlowService;
+import com.his.emr.vo.RxFlowListVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 处方流转单（M2，院外取药口子·打印桩形态）。
@@ -54,7 +57,7 @@ public class RxFlowController {
 
     @Operation(summary = "流转单分页")
     @PostMapping("/listPage")
-    public Result<PageResult<RxFlowListVO>> listPage(@RequestBody RxFlowQueryPageDTO dto) {
+    public Result<PageResult<RxFlowListVO>> listPage(@Valid @RequestBody RxFlowQueryPageDTO dto) {
         return Result.success(rxFlowService.listPage(dto));
     }
 }

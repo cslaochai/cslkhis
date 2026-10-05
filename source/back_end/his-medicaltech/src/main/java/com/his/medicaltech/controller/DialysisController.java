@@ -11,12 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -40,7 +35,7 @@ public class DialysisController {
     @PreAuthorize("hasAuthority('medtech:dialysis:list')")
     @Operation(summary = "透析档案分页（电话出参脱敏）")
     @PostMapping("/archive/listPage")
-    public Result<PageResult<DialysisVO.ArchiveVO>> archiveListPage(@RequestBody DialysisDTO.ArchiveQuery dto) {
+    public Result<PageResult<DialysisVO.ArchiveVO>> archiveListPage(@Valid @RequestBody DialysisDTO.ArchiveQuery dto) {
         return Result.success(dialysisService.archiveListPage(dto));
     }
 
@@ -93,7 +88,7 @@ public class DialysisController {
     @PreAuthorize("hasAuthority('medtech:dialysis:list')")
     @Operation(summary = "机位台账分页")
     @PostMapping("/machine/listPage")
-    public Result<PageResult<DialysisVO.MachineVO>> machineListPage(@RequestBody DialysisDTO.MachineQuery dto) {
+    public Result<PageResult<DialysisVO.MachineVO>> machineListPage(@Valid @RequestBody DialysisDTO.MachineQuery dto) {
         return Result.success(dialysisService.machineListPage(dto));
     }
 
@@ -116,7 +111,7 @@ public class DialysisController {
     @PreAuthorize("hasAuthority('medtech:dialysis:list')")
     @Operation(summary = "透析单分页台账")
     @PostMapping("/session/listPage")
-    public Result<PageResult<DialysisVO.SessionVO>> sessionListPage(@RequestBody DialysisDTO.SessionQuery dto) {
+    public Result<PageResult<DialysisVO.SessionVO>> sessionListPage(@Valid @RequestBody DialysisDTO.SessionQuery dto) {
         return Result.success(dialysisService.sessionListPage(dto));
     }
 

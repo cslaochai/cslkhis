@@ -9,6 +9,7 @@ import com.his.ai.vo.Icd10SelectListVO;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,14 +50,14 @@ public class AiIcd10Controller {
     @PreAuthorize("hasAuthority('opd:doctorWorkstation:add')")
     @Operation(summary = "推荐 ICD-10 编码（码表封闭集合内选择 + 规则降级回落）")
     @PostMapping("/predict")
-    public Result<Icd10PredictVO> predict(@RequestBody Icd10PredictDTO predictDTO) {
+    public Result<Icd10PredictVO> predict(@Valid @RequestBody Icd10PredictDTO predictDTO) {
         return Result.success(icd10Capability.predict(predictDTO));
     }
 
     @Operation(summary = "检索 ICD-10 编码下拉选项（纯字典查询，不调用模型）")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/selectList")
-    public Result<List<Icd10SelectListVO>> selectList(@RequestBody Icd10SelectListDTO selectListDTO) {
+    public Result<List<Icd10SelectListVO>> selectList(@Valid @RequestBody Icd10SelectListDTO selectListDTO) {
         return Result.success(icd10RecallService.selectOptions(selectListDTO));
     }
 }

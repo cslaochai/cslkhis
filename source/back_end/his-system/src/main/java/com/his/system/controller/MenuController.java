@@ -6,11 +6,12 @@ import com.his.system.service.SysMenuService;
 import com.his.system.vo.MenuVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 菜单管理控制器
@@ -52,7 +53,7 @@ public class MenuController {
     @PreAuthorize("hasAuthority('system:menu:add')")
     @Operation(summary = "新增或修改菜单")
     @PostMapping("/menuUpsert")
-    public Result<Void> menuUpsert(@RequestBody MenuUpsertDTO upsertDTO) {
+    public Result<Void> menuUpsert(@Valid @RequestBody MenuUpsertDTO upsertDTO) {
         return Result.success(menuService.upsert(upsertDTO), null);
     }
 

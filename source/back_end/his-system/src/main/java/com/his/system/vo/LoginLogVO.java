@@ -13,39 +13,63 @@ import java.time.LocalDateTime;
 @Data
 public class LoginLogVO {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 用户名 */
+    /**
+     * 用户名
+     */
     private String userName;
 
-    /** 用户ID */
+    /**
+     * 用户ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 
-    /** 真实姓名 */
+    /**
+     * 真实姓名
+     */
     private String realName;
-    /** 登录IP */
+    /**
+     * 登录IP
+     */
     private String loginIp;
-    /** 登录地点 */
+    /**
+     * 登录地点
+     */
     private String loginLocation;
-    /** 浏览器类型 */
+    /**
+     * 浏览器类型
+     */
     private String browser;
-    /** 操作系统 */
+    /**
+     * 操作系统
+     */
     private String os;
 
-    /** 登录状态（0-成功 1-失败） */
+    /**
+     * 登录状态（0-成功 1-失败）
+     */
     private Integer loginStatus;
     private String loginStatusText;
 
-    /** 提示消息（失败原因） */
+    /**
+     * 提示消息（失败原因）
+     */
     private String msg;
 
-    /** 登录时间 */
+    /**
+     * 登录时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime loginTime;
 
-    /** 完整 UA（列表也返回，排查异常终端靠它） */
+    /**
+     * 完整 UA（列表也返回，排查异常终端靠它）
+     */
     private String userAgent;
 }

@@ -11,7 +11,7 @@ import com.his.patient.mapper.SysOrderDictDataMapper;
 import com.his.patient.service.OrderDictService;
 import com.his.patient.support.OrderDictTypes;
 import com.his.patient.vo.OrderDictListVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;

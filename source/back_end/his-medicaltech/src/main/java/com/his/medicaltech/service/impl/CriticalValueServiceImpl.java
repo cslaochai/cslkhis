@@ -21,7 +21,7 @@ import com.his.medicaltech.service.CriticalValueService;
 import com.his.medicaltech.support.LabCriticalValueRules;
 import com.his.medicaltech.vo.BizCriticalValueVO;
 import com.his.medicaltech.vo.CriticalValueStatsVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.entity.SysConfig;
 import com.his.system.entity.SysMessage;

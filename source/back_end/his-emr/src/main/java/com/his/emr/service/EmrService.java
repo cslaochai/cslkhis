@@ -2,20 +2,12 @@ package com.his.emr.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
-import com.his.emr.dto.InspectionApplyUpsertDTO;
-import com.his.emr.dto.LaboratoryApplyUpsertDTO;
-import com.his.emr.dto.MedicalRecordQueryDTO;
-import com.his.emr.dto.MedicalRecordQueryPageDTO;
+import com.his.emr.dto.*;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.entity.BizLaboratoryApply;
-import com.his.emr.entity.BizPrescription;
-import com.his.emr.vo.BizInspectionApplyVO;
-import com.his.emr.vo.BizLaboratoryApplyVO;
-import com.his.emr.vo.BizMedicalRecordVO;
-import com.his.emr.vo.EmrRecordDetailVO;
-import com.his.emr.vo.MyMedicalRecordVO;
-import com.his.emr.dto.MedicalRecordSaveDTO;
 import com.his.emr.entity.BizMedicalRecord;
+import com.his.emr.entity.BizPrescription;
+import com.his.emr.vo.*;
 
 import java.util.List;
 

@@ -11,13 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -44,7 +38,7 @@ public class OrderDictController {
     @PreAuthorize("hasAuthority('ipd:orderDict:list')")
     @Operation(summary = "字典分页（管理页按 途径 / 频次 / 剂量单位 分 Tab）")
     @GetMapping("/listPage")
-    public Result<IPage<OrderDictListVO>> listPage(OrderDictQueryPageDTO query) {
+    public Result<IPage<OrderDictListVO>> listPage(@Valid OrderDictQueryPageDTO query) {
         return Result.success(orderDictService.listPage(query));
     }
 

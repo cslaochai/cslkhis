@@ -15,7 +15,9 @@ import java.util.Map;
 @Mapper
 public interface BizFollowupTaskMapper extends BaseMapper<BizFollowupTask> {
 
-    /** 患者快照（跨模块裸 SQL，患者基本信息列名已对 information_schema 核对） */
+    /**
+     * 患者快照（跨模块裸 SQL，患者基本信息列名已对 information_schema 核对）
+     */
     @Select("SELECT id, patient_no AS patientNo, patient_name AS patientName, phone AS phone, "
             + "last_visit_dept AS deptId, last_visit_dept_name AS deptName "
             + "FROM biz_patient WHERE id = #{patientId} AND del_flag = 0 LIMIT 1")
@@ -63,7 +65,9 @@ public interface BizFollowupTaskMapper extends BaseMapper<BizFollowupTask> {
             """)
     List<Map<String, Object>> selectDischargesWithoutTask(@Param("limit") int limit);
 
-    /** 科室名快照（科室跨模块裸 SQL，列名已核对） */
+    /**
+     * 科室名快照（科室跨模块裸 SQL，列名已核对）
+     */
     @Select("SELECT dept_name FROM sys_department WHERE id = #{deptId} AND del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
@@ -97,7 +101,9 @@ public interface BizFollowupTaskMapper extends BaseMapper<BizFollowupTask> {
             """)
     Map<String, Object> statOverview(@Param("scopeDeptIds") List<Long> scopeDeptIds);
 
-    /** 看板：按随访方式分布（字典 his_followup_type） */
+    /**
+     * 看板：按随访方式分布（字典 his_followup_type）
+     */
     @Select("""
             <script>
             SELECT t.followup_type AS k, COUNT(*) AS c

@@ -13,7 +13,9 @@ public class RuleCheckExecuteDTO {
      */
     private Long recordId;
 
-    /** 规则类型（1-配伍禁忌 2-检验诊断关联性 3-用药合理性） */
+    /**
+     * 规则类型（1-配伍禁忌 2-检验诊断关联性 3-用药合理性）
+     */
     private Integer ruleType;
 
     /**

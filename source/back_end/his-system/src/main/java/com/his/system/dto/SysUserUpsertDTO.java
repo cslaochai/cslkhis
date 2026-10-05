@@ -6,7 +6,6 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import com.his.system.dto.EmployeePostDTO;
 
 /**
  * 用户新增/编辑DTO
@@ -29,7 +28,9 @@ public class SysUserUpsertDTO {
      */
     private String realName;
 
-    /** 用户类型（1-系统用户 2-外部用户） */
+    /**
+     * 用户类型（1-系统用户 2-外部用户）
+     */
     private Integer userType;
 
     /**

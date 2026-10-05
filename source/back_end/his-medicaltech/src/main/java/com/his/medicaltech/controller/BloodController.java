@@ -9,9 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 血库储血台账接口（URL 前缀 /medicaltech/bloodBank）
@@ -34,7 +33,7 @@ public class BloodController {
 
     @Operation(summary = "库存台账分页")
     @PostMapping("/inventoryListPage")
-    public Result<PageResult<BloodVO.InventoryVO>> inventoryListPage(@RequestBody BloodDTO.InventoryQuery query) {
+    public Result<PageResult<BloodVO.InventoryVO>> inventoryListPage(@Valid @RequestBody BloodDTO.InventoryQuery query) {
         return Result.success(bloodService.inventoryPage(query));
     }
 
@@ -94,7 +93,7 @@ public class BloodController {
     @PreAuthorize("hasAuthority('medtech:bloodBank:edit')")
     @Operation(summary = "配血单分页")
     @PostMapping("/crossmatchListPage")
-    public Result<PageResult<BloodVO.CrossmatchVO>> crossmatchListPage(@RequestBody BloodDTO.CrossmatchQuery query) {
+    public Result<PageResult<BloodVO.CrossmatchVO>> crossmatchListPage(@Valid @RequestBody BloodDTO.CrossmatchQuery query) {
         return Result.success(bloodService.crossmatchPage(query));
     }
 
@@ -124,7 +123,7 @@ public class BloodController {
 
     @Operation(summary = "出入库流水分页")
     @PostMapping("/logListPage")
-    public Result<PageResult<BloodVO.StockLogVO>> logListPage(@RequestBody BloodDTO.LogQuery query) {
+    public Result<PageResult<BloodVO.StockLogVO>> logListPage(@Valid @RequestBody BloodDTO.LogQuery query) {
         return Result.success(bloodService.logPage(query));
     }
 }

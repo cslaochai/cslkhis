@@ -1,6 +1,6 @@
 package com.his.patient.support;
 
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import org.springframework.stereotype.Component;
 

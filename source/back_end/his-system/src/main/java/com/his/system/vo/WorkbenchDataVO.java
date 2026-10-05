@@ -13,7 +13,9 @@ import java.util.Map;
 @Data
 public class WorkbenchDataVO {
 
-    /** 卡片编码（工作台卡片注册表.widget_code） */
+    /**
+     * 卡片编码（工作台卡片注册表.widget_code）
+     */
     private String code;
 
     private Map<String, Object> data;

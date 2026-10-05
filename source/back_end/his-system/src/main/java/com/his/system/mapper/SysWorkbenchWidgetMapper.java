@@ -9,7 +9,6 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import com.his.system.mapper.SysUserMapper;
 
 /**
  * 工作台卡片注册表 Mapper。
@@ -25,7 +24,9 @@ import com.his.system.mapper.SysUserMapper;
 @Mapper
 public interface SysWorkbenchWidgetMapper extends BaseMapper<SysWorkbenchWidget> {
 
-    /** 某角色当前实际应渲染的卡片（已过滤：配置勾选 + 已上线 + 权限码命中） */
+    /**
+     * 某角色当前实际应渲染的卡片（已过滤：配置勾选 + 已上线 + 权限码命中）
+     */
     @Select("""
             SELECT w.id,
                    w.widget_code AS widgetCode,
@@ -83,7 +84,9 @@ public interface SysWorkbenchWidgetMapper extends BaseMapper<SysWorkbenchWidget>
             """)
     List<WorkbenchWidgetVO> selectFallbackWidgets(@Param("roleCode") String roleCode);
 
-    /** 配置页回显：注册表全量左连该角色配置行（未勾选也返回，visible=0） */
+    /**
+     * 配置页回显：注册表全量左连该角色配置行（未勾选也返回，visible=0）
+     */
     @Select("""
             SELECT w.id,
                    w.widget_code AS widgetCode,
@@ -113,7 +116,9 @@ public interface SysWorkbenchWidgetMapper extends BaseMapper<SysWorkbenchWidget>
     @Delete("DELETE FROM sys_workbench_widget WHERE id = #{widgetId}")
     int purgeById(@Param("widgetId") Long widgetId);
 
-    /** 落点策略：同一角色多行时取最大值兜底（铺底按角色整体 UPDATE，正常只会有一个值） */
+    /**
+     * 落点策略：同一角色多行时取最大值兜底（铺底按角色整体 UPDATE，正常只会有一个值）
+     */
     @Select("""
             SELECT MAX(x.landing_scope)
               FROM sys_workbench_role x

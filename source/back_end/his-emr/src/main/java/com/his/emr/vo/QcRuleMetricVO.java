@@ -13,7 +13,9 @@ import lombok.Data;
 @Data
 public class QcRuleMetricVO {
 
-    /** 规则编码 */
+    /**
+     * 规则编码
+     */
     private String ruleCode;
 
     private String ruleName;

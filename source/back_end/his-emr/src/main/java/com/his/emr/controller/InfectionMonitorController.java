@@ -9,10 +9,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 院感监测控制器（L10：病例报告卡 / 目标性监测 / 手卫生依从性）。
@@ -38,7 +38,7 @@ public class InfectionMonitorController {
     @Operation(summary = "病例分页")
     @PostMapping("/case/listPage")
     public Result<PageResult<InfectionMonitorVO.CaseRow>> caseListPage(
-            @RequestBody(required = false) InfectionMonitorDTO.CaseQueryPage dto) {
+            @Valid @RequestBody(required = false) InfectionMonitorDTO.CaseQueryPage dto) {
         return Result.success(infectionMonitorService.casePage(dto == null ? new InfectionMonitorDTO.CaseQueryPage() : dto));
     }
 
@@ -69,7 +69,7 @@ public class InfectionMonitorController {
     @Operation(summary = "监测分页")
     @PostMapping("/monitor/listPage")
     public Result<PageResult<InfectionMonitorVO.MonitorRow>> monitorListPage(
-            @RequestBody(required = false) InfectionMonitorDTO.MonitorQueryPage dto) {
+            @Valid @RequestBody(required = false) InfectionMonitorDTO.MonitorQueryPage dto) {
         return Result.success(infectionMonitorService.monitorPage(dto == null ? new InfectionMonitorDTO.MonitorQueryPage() : dto));
     }
 
@@ -130,7 +130,7 @@ public class InfectionMonitorController {
     @Operation(summary = "观察记录分页")
     @PostMapping("/handObs/listPage")
     public Result<PageResult<InfectionMonitorVO.HandObsRow>> handObsListPage(
-            @RequestBody(required = false) InfectionMonitorDTO.HandObsQueryPage dto) {
+            @Valid @RequestBody(required = false) InfectionMonitorDTO.HandObsQueryPage dto) {
         return Result.success(infectionMonitorService.handObsPage(dto == null ? new InfectionMonitorDTO.HandObsQueryPage() : dto));
     }
 
@@ -146,7 +146,7 @@ public class InfectionMonitorController {
     @Operation(summary = "依从率统计（先聚合再算比率，默认近 30 天）")
     @PostMapping("/handObs/stats")
     public Result<InfectionMonitorVO.HandObsStats> handObsStats(
-            @RequestBody(required = false) InfectionMonitorDTO.HandObsStatsQuery dto) {
+            @Valid @RequestBody(required = false) InfectionMonitorDTO.HandObsStatsQuery dto) {
         return Result.success(infectionMonitorService.handObsStats(dto == null ? new InfectionMonitorDTO.HandObsStatsQuery() : dto));
     }
 }

@@ -11,12 +11,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -37,7 +32,7 @@ public class CriticalNoticeController {
     @PreAuthorize("hasAuthority('ipd:criticalNotice:list')")
     @Operation(summary = "通知台账分页")
     @PostMapping("/listPage")
-    public Result<PageResult<CriticalNoticeVO.Row>> listPage(@RequestBody(required = false) CriticalNoticeDTO.QueryPage dto) {
+    public Result<PageResult<CriticalNoticeVO.Row>> listPage(@Valid @RequestBody(required = false) CriticalNoticeDTO.QueryPage dto) {
         return Result.success(criticalNoticeService.listPage(dto == null ? new CriticalNoticeDTO.QueryPage() : dto));
     }
 

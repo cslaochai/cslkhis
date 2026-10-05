@@ -24,38 +24,60 @@ import java.math.BigDecimal;
 @TableName("biz_staff_plan_rule")
 public class BizStaffPlanRule extends BaseEntity {
 
-    /** 排班单元类型（1-科室 2-病区 3-全院） */
+    /**
+     * 排班单元类型（1-科室 2-病区 3-全院）
+     */
     private Integer orgType;
 
-    /** 排班单元ID（全院级为 0） */
+    /**
+     * 排班单元ID（全院级为 0）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long orgId;
 
-    /** 排班单元名称（快照） */
+    /**
+     * 排班单元名称（快照）
+     */
     private String orgName;
 
-    /** 标准班次ID（0-该单元全部班次） */
+    /**
+     * 标准班次ID（0-该单元全部班次）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long shiftId;
 
-    /** 岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他） */
+    /**
+     * 岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他）
+     */
     private Integer staffType;
 
-    /** 最低在岗人数 */
+    /**
+     * 最低在岗人数
+     */
     private Integer minStaff;
 
-    /** 最高在岗人数 */
+    /**
+     * 最高在岗人数
+     */
     private Integer maxStaff;
 
-    /** 单周工时上限 */
+    /**
+     * 单周工时上限
+     */
     private BigDecimal maxWeekHours;
 
-    /** 连续夜班天数上限 */
+    /**
+     * 连续夜班天数上限
+     */
     private Integer maxConsecutiveNightDays;
 
-    /** 连续上班天数上限 */
+    /**
+     * 连续上班天数上限
+     */
     private Integer maxConsecutiveWorkDays;
 
-    /** 状态（0-停用 1-启用） */
+    /**
+     * 状态（0-停用 1-启用）
+     */
     private Integer status;
 }

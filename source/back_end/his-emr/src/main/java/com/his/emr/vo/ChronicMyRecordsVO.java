@@ -13,9 +13,13 @@ import java.util.List;
 @Data
 public class ChronicMyRecordsVO {
 
-    /** 建档记录（不按认定状态过滤，作废/待认定都在内） */
+    /**
+     * 建档记录（不按认定状态过滤，作废/待认定都在内）
+     */
     private List<ChronicRecordListVO> records;
 
-    /** 长处方资格：存在一条已认定档案即具备 */
+    /**
+     * 长处方资格：存在一条已认定档案即具备
+     */
     private Boolean longRxEligible;
 }

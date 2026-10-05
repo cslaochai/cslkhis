@@ -11,13 +11,19 @@ import java.time.LocalDate;
 @Data
 public class StaffTypeDayWorkingVO {
 
-    /** 岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他） */
+    /**
+     * 岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他）
+     */
     private Integer staffType;
 
-    /** 排班日期 */
+    /**
+     * 排班日期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate scheduleDate;
 
-    /** 在岗人次（duty_status=1 的行数） */
+    /**
+     * 在岗人次（duty_status=1 的行数）
+     */
     private Long workingCount;
 }

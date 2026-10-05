@@ -16,9 +16,13 @@ public class DutyLogHandoverDTO {
     @NotNull(message = "日志ID不能为空")
     private Long id;
 
-    /** 接班人（留空 = 下一班总值班） */
+    /**
+     * 接班人（留空 = 下一班总值班）
+     */
     private Long handoverEmpId;
 
-    /** 交班说明（留给接班人的话；不是必填，但交接时说清背景能省对方半小时） */
+    /**
+     * 交班说明（留给接班人的话；不是必填，但交接时说清背景能省对方半小时）
+     */
     private String handleResult;
 }

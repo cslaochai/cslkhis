@@ -11,20 +11,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 供应商管理控制器
- *
+ * <p>
  * 口径：编码唯一；被采购订单引用的供应商不可删除（只能停用）；
  * 写接口不做额外的身份入参 —— 操作人服务端从登录态取。
  */
@@ -39,7 +33,7 @@ public class SupplierController {
 
     @Operation(summary = "分页查询供应商")
     @PostMapping("/listPage")
-    public Result<PageResult<SysSupplierVO>> listPage(@RequestBody SupplierQueryPageDTO queryDTO) {
+    public Result<PageResult<SysSupplierVO>> listPage(@Valid @RequestBody SupplierQueryPageDTO queryDTO) {
         return Result.success(supplierService.page(queryDTO));
     }
 

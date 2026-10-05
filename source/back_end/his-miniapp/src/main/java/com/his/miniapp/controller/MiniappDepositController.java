@@ -9,6 +9,7 @@ import com.his.miniapp.service.MiniappDepositService;
 import com.his.miniapp.vo.AdmissionSelectListVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -41,7 +42,7 @@ public class MiniappDepositController {
 
     @Operation(summary = "押金流水分页")
     @PostMapping("/listPage")
-    public Result<IPage<PrepayVO>> listPage(@RequestBody PrepayQueryPageDTO query) {
+    public Result<IPage<PrepayVO>> listPage(@Valid @RequestBody PrepayQueryPageDTO query) {
         return Result.success(miniappDepositService.prepayListPage(query));
     }
 }

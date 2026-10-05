@@ -32,7 +32,7 @@ import com.his.patient.vo.TempSheetVO;
 import com.his.patient.vo.WardNursingFactsVO;
 import com.his.patient.vo.WardVO;
 import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;

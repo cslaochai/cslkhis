@@ -27,7 +27,9 @@ public enum SealStatusEnum {
         return null;
     }
 
-    /** 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案，不能回落到合法文案。 */
+    /**
+     * 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案，不能回落到合法文案。
+     */
     public static String labelOf(Integer code) {
         SealStatusEnum item = code == null ? null : fromCode(code);
         return item == null ? null : item.label;

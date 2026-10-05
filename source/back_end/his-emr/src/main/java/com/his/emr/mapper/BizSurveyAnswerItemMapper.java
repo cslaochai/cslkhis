@@ -23,7 +23,9 @@ public interface BizSurveyAnswerItemMapper extends BaseMapper<BizSurveyAnswerIte
     @Delete("DELETE FROM biz_survey_answer_item WHERE answer_id = #{answerId}")
     int purgeByAnswer(@Param("answerId") Long answerId);
 
-    /** 答卷明细（按题号升序，详情与重算都用它） */
+    /**
+     * 答卷明细（按题号升序，详情与重算都用它）
+     */
     @Select("SELECT * FROM biz_survey_answer_item WHERE del_flag = 0 AND answer_id = #{answerId} "
             + "ORDER BY seq_no ASC, id ASC")
     List<SurveyAnswerItemVO> selectByAnswer(@Param("answerId") Long answerId);

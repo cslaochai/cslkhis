@@ -35,7 +35,7 @@ import com.his.patient.service.PatientService;
 import com.his.operation.vo.OperationApplyVO;
 import com.his.operation.vo.OperationScheduleMatrixVO;
 import com.his.patient.vo.WardVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.service.EmployeeTechAuthService;

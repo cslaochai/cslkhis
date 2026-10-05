@@ -2,31 +2,15 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.emr.dto.EnrollActionDTO;
-import com.his.emr.dto.EnrollQueryPageDTO;
-import com.his.emr.dto.EnrollUpsertDTO;
-import com.his.emr.dto.OrderCheckDTO;
-import com.his.emr.dto.PathwayActionDTO;
-import com.his.emr.dto.PathwayQueryPageDTO;
-import com.his.emr.dto.PathwayUpsertDTO;
-import com.his.emr.dto.VarianceUpsertDTO;
+import com.his.emr.dto.*;
 import com.his.emr.service.PathwayService;
-import com.his.emr.vo.OrderCheckVO;
-import com.his.emr.vo.PathwayAdmissionVO;
-import com.his.emr.vo.PathwayAnalysisVO;
-import com.his.emr.vo.PathwayEnrollVO;
-import com.his.emr.vo.PathwayVO;
+import com.his.emr.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -49,7 +33,7 @@ public class PathwayController {
     @PreAuthorize("hasAuthority('qc:clinicalPath:list')")
     @Operation(summary = "模板分页")
     @PostMapping("/listPage")
-    public Result<PageResult<PathwayVO>> listPage(@RequestBody PathwayQueryPageDTO dto) {
+    public Result<PageResult<PathwayVO>> listPage(@Valid @RequestBody PathwayQueryPageDTO dto) {
         return Result.success(pathwayService.listPage(dto));
     }
 
@@ -93,7 +77,7 @@ public class PathwayController {
     @PreAuthorize("hasAuthority('qc:clinicalPath:list')")
     @Operation(summary = "入径台账分页")
     @PostMapping("/enrollListPage")
-    public Result<PageResult<PathwayEnrollVO>> enrollListPage(@RequestBody EnrollQueryPageDTO dto) {
+    public Result<PageResult<PathwayEnrollVO>> enrollListPage(@Valid @RequestBody EnrollQueryPageDTO dto) {
         return Result.success(pathwayService.enrollListPage(dto));
     }
 

@@ -9,7 +9,9 @@ import org.apache.ibatis.annotations.Select;
 
 import java.util.Map;
 
-/** 单病种病例 Mapper */
+/**
+ * 单病种病例 Mapper
+ */
 @Mapper
 public interface BizSingleDiseaseCaseMapper extends BaseMapper<BizSingleDiseaseCase> {
 

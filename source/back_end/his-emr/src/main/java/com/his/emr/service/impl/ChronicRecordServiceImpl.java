@@ -8,6 +8,7 @@ import com.his.emr.dto.ChronicCancelDTO;
 import com.his.emr.dto.ChronicQueryPageDTO;
 import com.his.emr.dto.ChronicUpsertDTO;
 import com.his.emr.entity.BizChronicRecord;
+import com.his.emr.enums.ChronicConfirmStatusEnum;
 import com.his.emr.mapper.BizChronicRecordMapper;
 import com.his.emr.service.ChronicRecordService;
 import com.his.emr.vo.ChronicMyRecordsVO;
@@ -23,7 +24,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.his.emr.enums.ChronicConfirmStatusEnum;
 /**
  * 慢病建档/认定（M1，医生工作站）。
  *

@@ -10,6 +10,7 @@ import com.his.medicaltech.vo.BizInspectionRecordVO;
 import com.his.medicaltech.vo.InspectionDetailVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +32,7 @@ public class BizInspectionController {
 
     @Operation(summary = "分页查询检查记录列表")
     @PostMapping("/listPage")
-    public Result<PageResult<BizInspectionRecordVO>> inspectionListPage(@RequestBody InspectionRecordQueryDTO queryDTO) {
+    public Result<PageResult<BizInspectionRecordVO>> inspectionListPage(@Valid @RequestBody InspectionRecordQueryDTO queryDTO) {
         return Result.success(medicalTechService.selectInspectionRecordPageVO(
                 queryDTO.getPatientId(), queryDTO.getInspectionDeptId(),
                 queryDTO.getPageNum(), queryDTO.getPageSize()));
@@ -39,7 +40,7 @@ public class BizInspectionController {
 
     @Operation(summary = "查询检查记录列表（不分页）")
     @PostMapping("/list")
-    public Result<List<BizInspectionRecordVO>> inspectionList(@RequestBody InspectionRecordQueryDTO queryDTO) {
+    public Result<List<BizInspectionRecordVO>> inspectionList(@Valid @RequestBody InspectionRecordQueryDTO queryDTO) {
         return Result.success(medicalTechService.selectInspectionRecordListVO(
                 queryDTO.getPatientId(), queryDTO.getInspectionDeptId()));
     }
@@ -71,7 +72,7 @@ public class BizInspectionController {
 
     @Operation(summary = "执行检查")
     @PostMapping("/execute")
-    public Result<Void> executeInspection(@RequestBody InspectionExecuteDTO executeDTO) {
+    public Result<Void> executeInspection(@Valid @RequestBody InspectionExecuteDTO executeDTO) {
         boolean success = medicalTechService.executeInspection(executeDTO.getRecordId(),
                 executeDTO.getExecuteBy(), executeDTO.getResultDescription(),
                 executeDTO.getResultConclusion(), executeDTO.getSuggestions());
@@ -95,7 +96,7 @@ public class BizInspectionController {
 
     @Operation(summary = "审核检查报告")
     @PostMapping("/audit")
-    public Result<Void> auditInspection(@RequestBody InspectionAuditDTO auditDTO) {
+    public Result<Void> auditInspection(@Valid @RequestBody InspectionAuditDTO auditDTO) {
         boolean success = medicalTechService.auditInspection(auditDTO.getRecordId(), auditDTO.getAuditBy());
         return success ? Result.success("审核成功", null) : Result.error("审核失败");
     }

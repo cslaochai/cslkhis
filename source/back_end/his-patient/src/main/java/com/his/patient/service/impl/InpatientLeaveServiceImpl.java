@@ -20,6 +20,7 @@ import com.his.patient.service.InpatientLeaveService;
 import com.his.patient.vo.InpatientLeaveVO;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
+import com.his.security.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
 import lombok.RequiredArgsConstructor;
@@ -280,7 +281,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
             cmd.setSignScene(SignScene.LEAVE_APPROVE.getCode());
             cmd.setSignerId(me);
             cmd.setSignerName(myName);
-            com.his.security.CurrentUser user = UserUtils.getCurrentUser();
+            CurrentUser user = UserUtils.getCurrentUser();
             if (user != null) {
                 cmd.setSignerDeptId(user.getDeptId());
                 cmd.setSignerDeptName(user.getDeptName());
@@ -521,7 +522,6 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         d.setCanPrint(left || Objects.equals(LeaveStatusEnum.RETURNED.getCode(), st));
     }
 
-    /** 数据范围 fail-closed：受限角色只能碰授权科室的单据（AGENTS §6） */
     private void assertDeptAccessible(Long deptId) {
         if (!DeptScopeGuard.canAccessDept(deptId)) {
             throw new BusinessException("该请假单所属科室不在当前岗位的数据范围内");

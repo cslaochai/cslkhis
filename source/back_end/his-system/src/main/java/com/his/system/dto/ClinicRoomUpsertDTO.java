@@ -37,6 +37,8 @@ public class ClinicRoomUpsertDTO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 诊室状态（1-启用 0-停用） */
+    /**
+     * 诊室状态（1-启用 0-停用）
+     */
     private Integer status;
 }

@@ -1,9 +1,9 @@
 package com.his.emr.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.his.common.base.PageResult;
 import com.his.emr.entity.BizClinicalRuleCheck;
 import com.his.emr.vo.BizClinicalRuleCheckVO;
-import com.his.common.base.PageResult;
 
 /**
  * 临床规则校验服务接口

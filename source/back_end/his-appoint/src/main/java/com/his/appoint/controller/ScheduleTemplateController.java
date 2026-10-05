@@ -37,7 +37,7 @@ public class ScheduleTemplateController {
 
     @Operation(summary = "模板分页查询（关键词=科室/医生/诊室/备注模糊；排序 星期几+班次+开始时间+id 二级键）")
     @PostMapping("/listPage")
-    public Result<PageResult<ScheduleTemplateVO>> listPage(@RequestBody ScheduleTemplateQueryPageDTO dto) {
+    public Result<PageResult<ScheduleTemplateVO>> listPage(@Valid @RequestBody ScheduleTemplateQueryPageDTO dto) {
         return Result.success(scheduleTemplateService.pageVO(dto));
     }
 
@@ -76,7 +76,7 @@ public class ScheduleTemplateController {
     @PreAuthorize("hasAuthority('org:schedule:add')")
     @Operation(summary = "按模板生成目标周排班（返回结论文案）")
     @PostMapping("/generate")
-    public Result<Void> generate(@RequestBody ScheduleTemplateGenerateDTO dto) {
+    public Result<Void> generate(@Valid @RequestBody ScheduleTemplateGenerateDTO dto) {
         String message = scheduleTemplateService.generateForWeek(dto.getWeekOffset(), dto.getDeptId(),
                 dto.getStaffType());
         // 返回值即结论：文案放 message（铁律 12）

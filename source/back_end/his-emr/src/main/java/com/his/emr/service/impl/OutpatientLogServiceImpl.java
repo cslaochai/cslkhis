@@ -34,7 +34,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OutpatientLogServiceImpl implements OutpatientLogService {
 
-    /** 目录为空时的正则哨兵：^$ 永不命中任何诊断编码（空串命中会被当成"什么都能报"） */
+    /**
+     * 目录为空时的正则哨兵：^$ 永不命中任何诊断编码（空串命中会被当成"什么都能报"）
+     */
     private static final String NO_MATCH_REGEX = "^$";
 
     private final OutpatientLogMapper outpatientLogMapper;
@@ -64,7 +66,9 @@ public class OutpatientLogServiceImpl implements OutpatientLogService {
         return stats == null ? new OutpatientLogStatsVO() : stats;
     }
 
-    /** ICD 前缀 → 病种名（同名多前缀时后者覆盖无所谓，展示用 best effort） */
+    /**
+     * ICD 前缀 → 病种名（同名多前缀时后者覆盖无所谓，展示用 best effort）
+     */
     private Map<String, String> loadReportablePrefixes() {
         List<SysInfectiousDisease> diseases = diseaseMapper.selectList(
                 new LambdaQueryWrapper<SysInfectiousDisease>()
@@ -78,7 +82,9 @@ public class OutpatientLogServiceImpl implements OutpatientLogService {
         return prefixes;
     }
 
-    /** {@code B15-B19} 摊成 B15..B19；{@code U07.1} 原样；非法段忽略（脏字典不该让整个日志页 500） */
+    /**
+     * {@code B15-B19} 摊成 B15..B19；{@code U07.1} 原样；非法段忽略（脏字典不该让整个日志页 500）
+     */
     private List<String> expand(String seg) {
         List<String> out = new ArrayList<>();
         if (seg.isEmpty()) {
@@ -113,7 +119,9 @@ public class OutpatientLogServiceImpl implements OutpatientLogService {
                 .orElse(NO_MATCH_REGEX);
     }
 
-    /** 前缀可能被多个病种共享（如 A00/A01 都是腹泻类），命中几个拼几个 */
+    /**
+     * 前缀可能被多个病种共享（如 A00/A01 都是腹泻类），命中几个拼几个
+     */
     private String matchDisease(String diagnosisCode, Map<String, String> prefixes) {
         if (diagnosisCode == null) {
             return null;

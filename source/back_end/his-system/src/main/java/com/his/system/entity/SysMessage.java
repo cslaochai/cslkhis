@@ -9,7 +9,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** 消息通知 */
+/**
+ * 消息通知
+ */
 @Data
 @TableName("sys_message")
 public class SysMessage {
@@ -89,7 +91,9 @@ public class SysMessage {
      */
     private LocalDateTime sendTime;
 
-    /** 渠道发送失败原因（channel!=system 时留痕，写入前已截断） */
+    /**
+     * 渠道发送失败原因（channel!=system 时留痕，写入前已截断）
+     */
     private String errorMsg;
 
     /**

@@ -18,7 +18,7 @@ import com.his.patient.vo.InpatientOrderTemplateItemVO;
 import com.his.patient.vo.OrderSetDetailVO;
 import com.his.patient.vo.OrderSetListVO;
 import com.his.patient.vo.OrderSetSelectListVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

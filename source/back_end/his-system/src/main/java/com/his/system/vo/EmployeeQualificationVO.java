@@ -13,31 +13,47 @@ import java.time.LocalDate;
 @Data
 public class EmployeeQualificationVO {
 
-    /** 主键（雪花ID） */
+    /**
+     * 主键（雪花ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 员工ID */
+    /**
+     * 员工ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long employeeId;
 
-    /** 证书类型（2-医师执业证 3-护士执业证 4-药师资格证 5-技术职称聘书 9-其他） */
+    /**
+     * 证书类型（2-医师执业证 3-护士执业证 4-药师资格证 5-技术职称聘书 9-其他）
+     */
     private String certType;
 
-    /** 证书编号 */
+    /**
+     * 证书编号
+     */
     private String certNo;
 
-    /** 发证机关 */
+    /**
+     * 发证机关
+     */
     private String issueOrg;
 
-    /** 发证日期 */
+    /**
+     * 发证日期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate issueDate;
 
-    /** 有效期至（null = 长期有效） */
+    /**
+     * 有效期至（null = 长期有效）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate validUntil;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

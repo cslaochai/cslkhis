@@ -3,21 +3,16 @@ package com.his.patient.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
 import com.his.patient.dto.AdmissionOrderCancelDTO;
-import com.his.patient.dto.AdmissionOrderUpsertDTO;
 import com.his.patient.dto.AdmissionOrderQueryPageDTO;
+import com.his.patient.dto.AdmissionOrderUpsertDTO;
 import com.his.patient.service.AdmissionOrderService;
 import com.his.patient.vo.AdmissionOrderVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 住院证（入院通知单）—— 门诊转住院闭环的入口
@@ -42,7 +37,7 @@ public class AdmissionOrderController {
 
     @Operation(summary = "住院证分页（住院处待收治看板）")
     @GetMapping("/listPage")
-    public Result<IPage<AdmissionOrderVO>> listPage(AdmissionOrderQueryPageDTO query) {
+    public Result<IPage<AdmissionOrderVO>> listPage(@Valid AdmissionOrderQueryPageDTO query) {
         return Result.success(admissionOrderService.listPage(query));
     }
 

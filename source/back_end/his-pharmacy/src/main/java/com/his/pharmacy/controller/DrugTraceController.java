@@ -2,12 +2,7 @@ package com.his.pharmacy.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.pharmacy.dto.DrugTraceCollectDTO;
-import com.his.pharmacy.dto.DrugTraceDispenseDTO;
-import com.his.pharmacy.dto.DrugTraceQueryPageDTO;
-import com.his.pharmacy.dto.DrugTraceScanDTO;
-import com.his.pharmacy.dto.DrugTraceUploadDTO;
-import com.his.pharmacy.dto.DrugTraceVoidDTO;
+import com.his.pharmacy.dto.*;
 import com.his.pharmacy.service.DrugTraceService;
 import com.his.pharmacy.vo.DrugTraceReconcileVO;
 import com.his.pharmacy.vo.DrugTraceScanVO;
@@ -19,13 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 药品追溯码采集与核对控制器
@@ -80,7 +69,7 @@ public class DrugTraceController {
 
     @Operation(summary = "追溯码台账分页")
     @PostMapping("/listPage")
-    public Result<PageResult<DrugTraceVO>> listPage(@RequestBody DrugTraceQueryPageDTO queryDTO) {
+    public Result<PageResult<DrugTraceVO>> listPage(@Valid @RequestBody DrugTraceQueryPageDTO queryDTO) {
         return Result.success(drugTraceService.page(queryDTO));
     }
 
@@ -104,7 +93,9 @@ public class DrugTraceController {
         return Result.success();
     }
 
-    /** 操作人一律取登录态，无登录态兜底"系统"（dev 直连场景） */
+    /**
+     * 操作人一律取登录态，无登录态兜底"系统"（dev 直连场景）
+     */
     private String currentOperator() {
         String name = UserUtils.getCurrentEmployeeName();
         return (name != null && !name.isBlank()) ? name : "系统";

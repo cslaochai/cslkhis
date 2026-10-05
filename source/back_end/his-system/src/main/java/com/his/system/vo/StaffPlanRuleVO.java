@@ -23,7 +23,9 @@ public class StaffPlanRuleVO {
 
     private String orgName;
 
-    /** 标准班次ID（0=该单元全部班次共用） */
+    /**
+     * 标准班次ID（0=该单元全部班次共用）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long shiftId;
 

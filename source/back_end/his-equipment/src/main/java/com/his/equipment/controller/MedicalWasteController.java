@@ -9,8 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 医疗废物登记控制器。登记 → 交接 → 处置三态闭环；已交接后禁删。
@@ -55,7 +55,7 @@ public class MedicalWasteController {
 
     @Operation(summary = "医废登记分页查询")
     @PostMapping("/listPage")
-    public Result<PageResult<WasteVO>> listPage(@RequestBody WasteDTO.QueryPage dto) {
+    public Result<PageResult<WasteVO>> listPage(@Valid @RequestBody WasteDTO.QueryPage dto) {
         var page = wasteService.listPage(dto == null ? new WasteDTO.QueryPage() : dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));

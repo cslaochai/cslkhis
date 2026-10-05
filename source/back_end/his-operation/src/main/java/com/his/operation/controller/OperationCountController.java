@@ -10,13 +10,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 手术器械/敷料清点端点（G15 并行链）。
@@ -64,7 +59,7 @@ public class OperationCountController {
     @PreAuthorize("hasAuthority('ipd:operationCount:edit')")
     @Operation(summary = "登记某一阶段的清点数量（1-术前 2-关体前 3-关体后；必须逐项给全）")
     @PostMapping("/countPhase")
-    public Result<Void> countPhase(@RequestBody CountPhaseDTO dto) {
+    public Result<Void> countPhase(@Valid @RequestBody CountPhaseDTO dto) {
         countService.countPhase(dto);
         return Result.success("本次清点已登记", null);
     }

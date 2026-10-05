@@ -18,20 +18,28 @@ public class EnrollUpsertDTO implements Serializable {
 
     private Long id;
 
-    /** 入院ID */
+    /**
+     * 入院ID
+     */
     @NotNull(message = "入院ID不能为空")
     private Long admissionId;
 
-    /** 模板ID */
+    /**
+     * 模板ID
+     */
     @NotNull(message = "路径模板不能为空")
     private Long pathwayId;
 
-    /** 入径日期 */
+    /**
+     * 入径日期
+     */
     @NotNull(message = "入径日期不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate enrollDate;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     @Size(max = 512, message = "备注最长 512")
     private String remark;
 }

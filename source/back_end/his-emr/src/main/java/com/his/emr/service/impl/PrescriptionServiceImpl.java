@@ -6,46 +6,24 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.enums.PrescriptionPayStatusEnum;
-import com.his.common.enums.PrescriptionStatusEnum;
-import com.his.common.enums.PrescriptionTypeEnum;
-import com.his.common.exception.BusinessException;
 import com.his.common.dto.SignCommandDTO;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.*;
+import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.vo.SignatureVO;
-import com.his.emr.entity.BizInspectionApply;
-import com.his.emr.entity.BizLaboratoryApply;
-import com.his.emr.entity.BizPrescription;
-import com.his.emr.entity.BizPrescriptionAuditLog;
-import com.his.emr.entity.BizPrescriptionDetail;
-import com.his.emr.entity.BizMedicalRecord;
-import com.his.emr.entity.BizMedicalRecordLog;
-import com.his.emr.mapper.BizInspectionApplyMapper;
-import com.his.emr.mapper.BizLaboratoryApplyMapper;
-import com.his.emr.mapper.BizPrescriptionAuditLogMapper;
-import com.his.emr.mapper.BizPrescriptionDetailMapper;
-import com.his.emr.mapper.BizPrescriptionMapper;
-import com.his.emr.mapper.BizMedicalRecordLogMapper;
-import com.his.emr.mapper.BizMedicalRecordMapper;
-import com.his.system.enums.BizTypeEnum;
-import com.his.system.service.SysMessageService;
+import com.his.emr.dto.*;
+import com.his.emr.entity.*;
+import com.his.emr.enums.PrescriptionDetailStatusEnum;
+import com.his.emr.enums.RxAuditActionEnum;
+import com.his.emr.mapper.*;
+import com.his.emr.service.PrescriptionService;
+import com.his.emr.vo.*;
 import com.his.system.dto.DrugRationalGroupDTO;
 import com.his.system.dto.DrugRationalItemDTO;
+import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.DrugRationalCheckService;
+import com.his.system.service.SysMessageService;
 import com.his.system.vo.DrugRationalGroupVO;
-import com.his.emr.dto.InspectionApplyQueryDTO;
-import com.his.emr.dto.LaboratoryApplyQueryDTO;
-import com.his.emr.dto.PrescriptionAuditDTO;
-import com.his.emr.dto.PrescriptionQueryDTO;
-import com.his.emr.dto.PrescriptionQueryPageDTO;
-import com.his.emr.service.PrescriptionService;
-import com.his.emr.vo.BizPrescriptionDetailVO;
-import com.his.emr.vo.BizPrescriptionVO;
-import com.his.emr.vo.MyPrescriptionDetailVO;
-import com.his.emr.vo.MyPrescriptionVO;
-import com.his.emr.vo.PrescriptionRationalVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -54,17 +32,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-
-import com.his.emr.enums.PrescriptionDetailStatusEnum;
-import com.his.emr.enums.RxAuditActionEnum;
 
 /**
  * 医生工作站服务实现
@@ -336,7 +306,9 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         return item;
     }
 
-    /** 审方动作流水（只增）。 */
+    /**
+     * 审方动作流水（只增）。
+     */
     private void insertAuditLog(BizPrescription p, Long roundNo, int action, Long auditorId,
                                 String auditorName, String opinion) {
         BizPrescriptionAuditLog logRow = new BizPrescriptionAuditLog();
@@ -365,10 +337,10 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         try {
             String content = pass
                     ? String.format("您为患者 %s 开具的处方 %s 已由药师 %s 审核通过。%s",
-                            p.getPatientName(), p.getPrescriptionNo(), auditorName,
-                            StringUtils.hasText(opinion) ? "审方意见：" + opinion : "")
+                    p.getPatientName(), p.getPrescriptionNo(), auditorName,
+                    StringUtils.hasText(opinion) ? "审方意见：" + opinion : "")
                     : String.format("您为患者 %s 开具的处方 %s 被药师 %s 退回（第 %s 次）。退回原因：%s。请修改处方后重新提交。",
-                            p.getPatientName(), p.getPrescriptionNo(), auditorName, returnNo, opinion);
+                    p.getPatientName(), p.getPrescriptionNo(), auditorName, returnNo, opinion);
             String payload = JSONUtil.toJsonStr(new java.util.LinkedHashMap<String, Object>() {{
                 put("patientName", p.getPatientName());
                 put("prescriptionNo", p.getPrescriptionNo());

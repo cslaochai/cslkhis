@@ -19,27 +19,41 @@ import java.util.List;
 @Data
 public class SurveyTemplateUpsertDTO implements Serializable {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     private Long id;
 
-    /** 问卷名称 */
+    /**
+     * 问卷名称
+     */
     @NotBlank(message = "问卷名称不能为空")
     private String templateName;
 
-    /** 适用场景（1-出院随访 2-门诊 3-住院在院 4-体检） */
+    /**
+     * 适用场景（1-出院随访 2-门诊 3-住院在院 4-体检）
+     */
     @NotNull(message = "适用场景不能为空")
     private Integer scene;
 
-    /** 状态:1-启用 2-停用（默认启用） */
+    /**
+     * 状态:1-启用 2-停用（默认启用）
+     */
     private Integer status;
 
-    /** 说明（调查目的、口径、上报去向） */
+    /**
+     * 说明（调查目的、口径、上报去向）
+     */
     private String description;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 
-    /** 明细项集合 */
+    /**
+     * 明细项集合
+     */
     @Valid
     @NotEmpty(message = "问卷至少要有 1 道题")
     private List<Item> items;
@@ -53,7 +67,9 @@ public class SurveyTemplateUpsertDTO implements Serializable {
         @NotNull(message = "题号不能为空")
         private Integer seqNo;
 
-        /** 维度 */
+        /**
+         * 维度
+         */
         @NotNull(message = "评价维度不能为空")
         private Integer dimension;
 
@@ -63,13 +79,19 @@ public class SurveyTemplateUpsertDTO implements Serializable {
         @NotBlank(message = "题干不能为空")
         private String title;
 
-        /** 是否必答:0-否 1-是（默认必答） */
+        /**
+         * 是否必答:0-否 1-是（默认必答）
+         */
         private Integer required;
 
-        /** 权重（不传按 1.00；0 表示不计分） */
+        /**
+         * 权重（不传按 1.00；0 表示不计分）
+         */
         private BigDecimal weight;
 
-        /** 满分（量表 5 / NPS 10，不传按题型默认） */
+        /**
+         * 满分（量表 5 / NPS 10，不传按题型默认）
+         */
         private Integer maxScore;
     }
 }

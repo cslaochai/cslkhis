@@ -13,40 +13,62 @@ import java.time.LocalDateTime;
 @Data
 public class PrevisitDetailVO {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 挂号ID */
+    /**
+     * 挂号ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long registId;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     private String patientName;
 
-    /** 就诊科室名称 */
+    /**
+     * 就诊科室名称
+     */
     private String deptName;
 
-    /** 主症状 */
+    /**
+     * 主症状
+     */
     private String mainSymptom;
 
-    /** 问答明细JSON */
+    /**
+     * 问答明细JSON
+     */
     private String answersJson;
 
-    /** 患者补充描述 */
+    /**
+     * 患者补充描述
+     */
     private String freeText;
 
-    /** 病史摘要（模型凝练或规则模板） */
+    /**
+     * 病史摘要（模型凝练或规则模板）
+     */
     private String summaryAi;
 
-    /** 摘要来源（1-模型 2-规则） */
+    /**
+     * 摘要来源（1-模型 2-规则）
+     */
     private Integer summarySource;
 
-    /** 提交时间 */
+    /**
+     * 提交时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 }

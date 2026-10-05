@@ -1,6 +1,5 @@
 package com.his.operation.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.exception.BusinessException;
 import com.his.operation.dto.SafetyCheckSignDTO;
 import com.his.operation.entity.BizOperationApply;
@@ -10,7 +9,7 @@ import com.his.operation.mapper.BizOperationSafetyCheckMapper;
 import com.his.operation.service.OperationSafetyCheckService;
 import com.his.operation.support.OperationApplyLabels;
 import com.his.operation.support.SafetyCheckItems;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.operation.vo.SafetyCheckVO;
 import lombok.RequiredArgsConstructor;

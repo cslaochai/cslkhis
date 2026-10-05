@@ -21,7 +21,9 @@ import java.time.LocalDate;
 @Data
 public class DutyRosterUpsertDTO {
 
-    /** 主键 */
+    /**
+     * 主键
+     */
     private Long id;
 
     /**
@@ -32,35 +34,53 @@ public class DutyRosterUpsertDTO {
      */
     private Long postId;
 
-    /** 值班日期（必填；夜班填开始日） */
+    /**
+     * 值班日期（必填；夜班填开始日）
+     */
     @NotNull(message = "值班日期不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dutyDate;
 
-    /** 班次（1-白班 2-夜班 00-次日08） */
+    /**
+     * 班次（1-白班 2-夜班 00-次日08）
+     */
     @NotNull(message = "班次不能为空")
     private Integer shiftType;
 
-    /** 班内角色（1-主班 2-副班） */
+    /**
+     * 班内角色（1-主班 2-副班）
+     */
     @NotNull(message = "班内角色不能为空")
     private Integer roleType;
 
-    /** 值班人（员工的ID，必填且必须在职） */
+    /**
+     * 值班人（员工的ID，必填且必须在职）
+     */
     @NotNull(message = "值班人不能为空")
     private Long employeeId;
 
-    /** 值班联系电话（留空回落员工档案手机） */
+    /**
+     * 值班联系电话（留空回落员工档案手机）
+     */
     private String phone;
 
-    /** 班次开始 HH:mm（留空按班次口径：白班 08:00 / 夜班 18:00） */
+    /**
+     * 班次开始 HH:mm（留空按班次口径：白班 08:00 / 夜班 18:00）
+     */
     private String startTime;
 
-    /** 班次结束 HH:mm（留空按班次口径：白班 18:00 / 夜班 08:00） */
+    /**
+     * 班次结束 HH:mm（留空按班次口径：白班 18:00 / 夜班 08:00）
+     */
     private String endTime;
 
-    /** 1-有效 0-停用（留空按 1） */
+    /**
+     * 1-有效 0-停用（留空按 1）
+     */
     private Integer status;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

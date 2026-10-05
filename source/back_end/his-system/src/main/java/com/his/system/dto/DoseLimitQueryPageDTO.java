@@ -11,12 +11,18 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class DoseLimitQueryPageDTO extends PageParam {
 
-    /** 成分关键字（模糊匹配 component） */
+    /**
+     * 成分关键字（模糊匹配 component）
+     */
     private String component;
 
-    /** 口径说明关键字（模糊匹配 note） */
+    /**
+     * 口径说明关键字（模糊匹配 note）
+     */
     private String keyword;
 
-    /** 状态过滤（1-启用 0-停用），NULL=全部 */
+    /**
+     * 状态过滤（1-启用 0-停用），NULL=全部
+     */
     private Integer status;
 }

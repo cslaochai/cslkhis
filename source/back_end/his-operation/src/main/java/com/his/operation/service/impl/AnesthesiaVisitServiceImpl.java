@@ -14,7 +14,7 @@ import com.his.operation.service.AnesthesiaVisitService;
 import com.his.operation.support.AnesthesiaLabels;
 import com.his.operation.support.OperationApplyLabels;
 import com.his.operation.vo.AnesthesiaVisitVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

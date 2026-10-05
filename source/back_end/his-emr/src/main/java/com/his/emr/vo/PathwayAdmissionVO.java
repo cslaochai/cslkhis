@@ -12,35 +12,53 @@ import java.io.Serializable;
 @Data
 public class PathwayAdmissionVO implements Serializable {
 
-    /** 入院ID */
+    /**
+     * 入院ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
     private String admissionNo;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者编号（快照） */
+    /**
+     * 患者编号（快照）
+     */
     private String patientNo;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
-    /** 入院科室ID（快照） */
+    /**
+     * 入院科室ID（快照）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 入院科室名称（快照） */
+    /**
+     * 入院科室名称（快照）
+     */
     private String deptName;
 
-    /** 入院诊断（文本快照） */
+    /**
+     * 入院诊断（文本快照）
+     */
     private String diagnosis;
 
-    /** 入院时间（DATE_FORMAT 出串，避免跨层日期漂移） */
+    /**
+     * 入院时间（DATE_FORMAT 出串，避免跨层日期漂移）
+     */
     private String admitTime;
 
-    /** 在院状态（仅快照查询回填；候选查询恒为在院） */
+    /**
+     * 在院状态（仅快照查询回填；候选查询恒为在院）
+     */
     private Integer admitStatus;
 }

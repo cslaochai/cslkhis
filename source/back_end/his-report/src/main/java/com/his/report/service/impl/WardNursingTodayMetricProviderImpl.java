@@ -2,8 +2,8 @@ package com.his.report.service.impl;
 
 import com.his.report.service.WardNursingTodayMetricProvider;
 import com.his.report.mapper.WorkbenchMetricMapper;
-import com.his.security.CurrentUser;
-import com.his.security.WorkbenchMetricProvider;
+import com.his.security.entity.CurrentUser;
+import com.his.security.provider.WorkbenchMetricProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

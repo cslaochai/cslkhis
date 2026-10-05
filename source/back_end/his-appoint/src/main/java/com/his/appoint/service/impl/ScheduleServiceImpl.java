@@ -33,7 +33,7 @@ import com.his.common.enums.StaffTypeEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
 import com.his.system.service.SysClinicRoomService;

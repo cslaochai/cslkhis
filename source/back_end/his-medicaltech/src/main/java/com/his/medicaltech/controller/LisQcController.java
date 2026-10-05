@@ -9,10 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * LIS 室内质控接口（URL 前缀 /medicaltech/lisQc）
@@ -30,7 +28,7 @@ public class LisQcController {
 
     @Operation(summary = "质控计划分页")
     @PostMapping("/planListPage")
-    public Result<PageResult<LisQcVO.PlanVO>> planListPage(@RequestBody LisQcDTO.PlanQuery query) {
+    public Result<PageResult<LisQcVO.PlanVO>> planListPage(@Valid @RequestBody LisQcDTO.PlanQuery query) {
         return Result.success(lisQcService.planPage(query));
     }
 
@@ -59,7 +57,7 @@ public class LisQcController {
 
     @Operation(summary = "质控记录分页")
     @PostMapping("/recordListPage")
-    public Result<PageResult<LisQcVO.RecordVO>> recordListPage(@RequestBody LisQcDTO.RecordQuery query) {
+    public Result<PageResult<LisQcVO.RecordVO>> recordListPage(@Valid @RequestBody LisQcDTO.RecordQuery query) {
         return Result.success(lisQcService.recordPage(query));
     }
 

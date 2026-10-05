@@ -16,14 +16,20 @@ public class DutySubstituteDTO {
     @NotNull(message = "排班记录不能为空")
     private Long id;
 
-    /** 换班后的实际值班人（必填且必须在职） */
+    /**
+     * 换班后的实际值班人（必填且必须在职）
+     */
     @NotNull(message = "换班后值班人不能为空")
     private Long substituteEmpId;
 
-    /** 换班后的联系电话（留空回落新员工档案手机） */
+    /**
+     * 换班后的联系电话（留空回落新员工档案手机）
+     */
     private String phone;
 
-    /** 换班原因（必填：主班换人是全院协调的敏感动作，不能无理由改） */
+    /**
+     * 换班原因（必填：主班换人是全院协调的敏感动作，不能无理由改）
+     */
     @NotBlank(message = "换班原因不能为空")
     private String substituteReason;
 }

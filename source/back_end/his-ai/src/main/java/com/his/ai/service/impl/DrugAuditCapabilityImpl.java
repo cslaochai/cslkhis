@@ -25,7 +25,7 @@ import com.his.patient.entity.BizPatientAllergy;
 import com.his.patient.mapper.BizPatientAllergyMapper;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.entity.SysDrug;
 import com.his.system.mapper.SysDrugMapper;

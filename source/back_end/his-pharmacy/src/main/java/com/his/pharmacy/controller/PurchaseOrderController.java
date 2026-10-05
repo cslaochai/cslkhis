@@ -13,18 +13,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 药品采购订单控制器
- *
+ * <p>
  * 链路：建单（含明细）→ 审批 → 入库（按明细建/加药品批次 + 写库存流水）
  * 状态机与金额口径见 {@link com.his.pharmacy.service.impl.PurchaseOrderServiceImpl} 类注释。
  */
@@ -39,7 +33,7 @@ public class PurchaseOrderController {
 
     @Operation(summary = "分页查询采购订单")
     @PostMapping("/listPage")
-    public Result<PageResult<PurchaseOrderVO>> listPage(@RequestBody PurchaseOrderQueryPageDTO queryDTO) {
+    public Result<PageResult<PurchaseOrderVO>> listPage(@Valid @RequestBody PurchaseOrderQueryPageDTO queryDTO) {
         return Result.success(purchaseOrderService.page(queryDTO));
     }
 

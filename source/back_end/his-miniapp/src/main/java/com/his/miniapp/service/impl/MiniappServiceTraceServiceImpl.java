@@ -4,7 +4,7 @@ import com.his.miniapp.dto.ServiceTraceDTO;
 import com.his.miniapp.entity.SysServiceTrace;
 import com.his.miniapp.mapper.MiniappServiceTraceMapper;
 import com.his.miniapp.service.MiniappServiceTraceService;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

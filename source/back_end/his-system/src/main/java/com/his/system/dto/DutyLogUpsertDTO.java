@@ -21,45 +21,67 @@ import java.time.LocalDateTime;
 @Data
 public class DutyLogUpsertDTO {
 
-    /** 主键 */
+    /**
+     * 主键
+     */
     private Long id;
 
-    /** 值班日期（必填；夜班填开始日） */
+    /**
+     * 值班日期（必填；夜班填开始日）
+     */
     @NotNull(message = "值班日期不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dutyDate;
 
-    /** 班次 1-白班 2-夜班（1-白班 2-夜班） */
+    /**
+     * 班次 1-白班 2-夜班（1-白班 2-夜班）
+     */
     @NotNull(message = "班次不能为空")
     private Integer shiftType;
 
-    /** 值班人（留空 = 当前时刻的总值班） */
+    /**
+     * 值班人（留空 = 当前时刻的总值班）
+     */
     private Long employeeId;
 
-    /** 记录类型 1-值班事件 2-遗留事项 3-巡查记录（1-值班事件 2-遗留事项 3-巡查记录） */
+    /**
+     * 记录类型 1-值班事件 2-遗留事项 3-巡查记录（1-值班事件 2-遗留事项 3-巡查记录）
+     */
     @NotNull(message = "记录类型不能为空")
     private Integer logType;
 
-    /** 发生时间（留空 = 当前时间） */
+    /**
+     * 发生时间（留空 = 当前时间）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime happenTime;
 
-    /** 标题 */
+    /**
+     * 标题
+     */
     @NotBlank(message = "标题不能为空")
     @Size(max = 200, message = "标题不超过 200 字")
     private String title;
 
-    /** 事件经过 */
+    /**
+     * 事件经过
+     */
     @Size(max = 2000, message = "事件经过不超过 2000 字")
     private String content;
 
-    /** 处理情况 */
+    /**
+     * 处理情况
+     */
     @Size(max = 1000, message = "处理情况不超过 1000 字")
     private String handleResult;
 
-    /** 状态 0-待处理 1-已处理 2-已交班（0-待处理 1-已处理 2-已交班） */
+    /**
+     * 状态 0-待处理 1-已处理 2-已交班（0-待处理 1-已处理 2-已交班）
+     */
     private Integer status;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

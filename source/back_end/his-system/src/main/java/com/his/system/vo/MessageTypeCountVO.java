@@ -10,12 +10,18 @@ import java.io.Serializable;
 @Data
 public class MessageTypeCountVO implements Serializable {
 
-    /** 业务类型 */
+    /**
+     * 业务类型
+     */
     private String bizType;
 
-    /** 该类型消息总数 */
+    /**
+     * 该类型消息总数
+     */
     private Long total;
 
-    /** 该类型未读数 */
+    /**
+     * 该类型未读数
+     */
     private Long unread;
 }

@@ -16,7 +16,9 @@ public class FollowupQueryDTO extends PageParam {
      */
     private Long patientId;
 
-    /** 随访类型（1-复诊提醒 2-慢病随访 3-用药指导 4-术后随访） */
+    /**
+     * 随访类型（1-复诊提醒 2-慢病随访 3-用药指导 4-术后随访）
+     */
     private Integer followupType;
 
     /**
@@ -29,9 +31,13 @@ public class FollowupQueryDTO extends PageParam {
      */
     private String patientName;
 
-    /** 随访科室（越权科室由后端 DeptScopeGuard 直接拒绝，不做静默改写） */
+    /**
+     * 随访科室（越权科室由后端 DeptScopeGuard 直接拒绝，不做静默改写）
+     */
     private Long deptId;
 
-    /** 仅看逾期未随访（待随访/随访中且计划时间已过） */
+    /**
+     * 仅看逾期未随访（待随访/随访中且计划时间已过）
+     */
     private Boolean overdueOnly;
 }

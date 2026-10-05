@@ -9,7 +9,9 @@ import com.his.emr.vo.PrevisitQuestionnaireVO;
  */
 public interface PrevisitRecordService {
 
-    /** 量表（题目结构随接口下发，前端不写死） */
+    /**
+     * 量表（题目结构随接口下发，前端不写死）
+     */
     PrevisitQuestionnaireVO questionnaire();
 
     /**
@@ -18,7 +20,9 @@ public interface PrevisitRecordService {
      */
     PrevisitDetailVO submit(PrevisitSubmitDTO dto);
 
-    /** 按挂号取预问诊记录（无则 null） */
+    /**
+     * 按挂号取预问诊记录（无则 null）
+     */
     PrevisitDetailVO getByRegist(Long registId);
 
     /**

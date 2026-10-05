@@ -19,25 +19,39 @@ import java.io.Serializable;
 @TableName("biz_pathway_step")
 public class BizPathwayStep extends BaseEntity implements Serializable {
 
-    /** 模板ID */
+    /**
+     * 模板ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long pathwayId;
 
-    /** 路径日（入院当天=1，封顶 total_days） */
+    /**
+     * 路径日（入院当天=1，封顶 total_days）
+     */
     private Integer dayNo;
 
-    /** 项目类型:1-诊疗 2-用药 3-手术操作 4-护理 5-病情评估 6-宣教（字典 his_pathway_item_type） */
+    /**
+     * 项目类型:1-诊疗 2-用药 3-手术操作 4-护理 5-病情评估 6-宣教（字典 his_pathway_item_type）
+     */
     private Integer itemType;
 
-    /** 项目名称 */
+    /**
+     * 项目名称
+     */
     private String itemName;
 
-    /** 字典项目编码（治疗项目/药品，供医嘱变异比对；自由文本步骤为 NULL） */
+    /**
+     * 字典项目编码（治疗项目/药品，供医嘱变异比对；自由文本步骤为 NULL）
+     */
     private String itemCode;
 
-    /** 路径要求/具体内容 */
+    /**
+     * 路径要求/具体内容
+     */
     private String content;
 
-    /** 同日内的顺序 */
+    /**
+     * 同日内的顺序
+     */
     private Integer sortNo;
 }

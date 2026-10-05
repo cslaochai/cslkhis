@@ -13,14 +13,24 @@ import lombok.EqualsAndHashCode;
 @TableName("sys_workbench_role")
 public class SysWorkbenchRole extends BaseEntity {
 
-    /** 角色ID（刻意存 id 不存角色码，角色改名不影响配置） */
+    /**
+     * 角色ID（刻意存 id 不存角色码，角色改名不影响配置）
+     */
     private Long roleId;
-    /** 卡片ID */
+    /**
+     * 卡片ID
+     */
     private Long widgetId;
-    /** 该角色下的卡片顺序 */
+    /**
+     * 该角色下的卡片顺序
+     */
     private Integer sortOrder;
-    /** 1-展示 0-关掉但不删，便于回滚 */
+    /**
+     * 1-展示 0-关掉但不删，便于回滚
+     */
     private Integer visible;
-    /** 落点（0-默认 1-一律工作台 2-一律患者工作站），服务端取 MAX 兜底 */
+    /**
+     * 落点（0-默认 1-一律工作台 2-一律患者工作站），服务端取 MAX 兜底
+     */
     private Integer landingScope;
 }

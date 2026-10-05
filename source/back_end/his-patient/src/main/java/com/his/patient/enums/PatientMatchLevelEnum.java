@@ -9,13 +9,7 @@ import java.time.LocalDate;
 /**
  * 患者重复档案例档案匹配分级（P5.1 EMPI）
  *
- * <p><b>实测依据（2026-09-19，变动前先重新实测）</b>：
- * 全库 44 个患者里，手机号 {@code 18888888888} 下挂着 <b>10 个不同的人</b>
- * （陈柴/刘德勇/刘亦菲/老王/…），{@code 13900000001} 挂 2 个 —— 都是造数时共用的号码。
- * 唯一一对同名（"老刘"）身份证分别是 430726199102122257 / 430726199845261258、
- * 出生日期也不同 —— <b>那是真两个人</b>。
  *
- * <p>所以分级必须这么定，不能按常识放宽：
  * <ul>
  *   <li>{@link #ID_CARD} 强依据 —— 只有身份证号算数。</li>
  *   <li>{@link #NAME_PHONE} 手机号只能**配合姓名**降级为"疑似"，
@@ -29,13 +23,21 @@ import java.time.LocalDate;
 @Getter
 public enum PatientMatchLevelEnum {
 
-    /** 1-身份证号相同（强依据，唯一可直接采信的） */
+    /**
+     * 1-身份证号相同（强依据，唯一可直接采信的）
+     */
     ID_CARD(1, "身份证号相同"),
-    /** 2-姓名 + 性别 + 出生日期全等 */
+    /**
+     * 2-姓名 + 性别 + 出生日期全等
+     */
     NAME_GENDER_BIRTH(2, "姓名+性别+出生日期相同"),
-    /** 3-姓名 + 手机号相同 */
+    /**
+     * 3-姓名 + 手机号相同
+     */
     NAME_PHONE(3, "姓名+手机号相同"),
-    /** 4-人工判定（无字段命中，通常是仅同名） */
+    /**
+     * 4-人工判定（无字段命中，通常是仅同名）
+     */
     MANUAL(4, "仅姓名相同（未命中任何强字段）");
 
     private final int code;
@@ -55,13 +57,17 @@ public enum PatientMatchLevelEnum {
         return null;
     }
 
-    /** 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案，不能回落到合法文案。 */
+    /**
+     * 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案，不能回落到合法文案。
+     */
     public static String labelOf(Integer code) {
         PatientMatchLevelEnum item = code == null ? null : fromCode(code);
         return item == null ? null : item.label;
     }
 
-    /** 无级别显示为破折号，脏码值要显式暴露出来，不能糊成某个合法级别。 */
+    /**
+     * 无级别显示为破折号，脏码值要显式暴露出来，不能糊成某个合法级别。
+     */
     public static String text(Integer level) {
         if (level == null) {
             return "—";
@@ -70,7 +76,9 @@ public enum PatientMatchLevelEnum {
         return label == null ? "未知(" + level + ")" : label;
     }
 
-    /** 是否强依据。强依据才谈得上"基本可确认是同一人" */
+    /**
+     * 是否强依据。强依据才谈得上"基本可确认是同一人"
+     */
     public static boolean isStrong(Integer level) {
         return level != null && level == ID_CARD.getCode();
     }
@@ -113,7 +121,9 @@ public enum PatientMatchLevelEnum {
         return MANUAL.getCode();
     }
 
-    /** 命中依据的字段值快照（写进合并审计，事后能一眼看出当初凭什么合的） */
+    /**
+     * 命中依据的字段值快照（写进合并审计，事后能一眼看出当初凭什么合的）
+     */
     public static String matchSnapshot(Integer level, BizPatient a, BizPatient b) {
         if (level == null) {
             return null;
@@ -135,11 +145,6 @@ public enum PatientMatchLevelEnum {
 
     /**
      * 用于把多份档案聚成一组的 key。同 key 即"值得放到一起看"。
-     *
-     * <p><b>关键字段为空一律返回 null（不成组）</b>。这一条不是洁癖 —— 不做的话后果很重：
-     * 未填身份证的档案会全部落进 {@code "IDC:"} 这同一个 key，于是"医嘱验证患者甲 + 老王 +
-     * 两个同名同生日患者"会被显示成**一个重复组**（实测踩到过：一个组里塞了 7 个毫不相干的人）。
-     * 组是按 key 分的，所以绝不能给空值一个共享的 key。
      */
     public static String groupKey(Integer level, BizPatient p) {
         if (level == null || p == null) {
@@ -161,7 +166,9 @@ public enum PatientMatchLevelEnum {
         };
     }
 
-    /** 交叉命中时取更强的那条作为整组的级别（同一对档案可能同时命中 2 和 3） */
+    /**
+     * 交叉命中时取更强的那条作为整组的级别（同一对档案可能同时命中 2 和 3）
+     */
     public static Integer stronger(Integer x, Integer y) {
         if (x == null) {
             return y;
@@ -185,7 +192,9 @@ public enum PatientMatchLevelEnum {
         return s == null ? "" : s.trim();
     }
 
-    /** 生日为空的档案不能进 L2 组（供上层提示"该档案缺出生日期"） */
+    /**
+     * 生日为空的档案不能进 L2 组（供上层提示"该档案缺出生日期"）
+     */
     public static boolean birthDateMissing(BizPatient p) {
         LocalDate d = p == null ? null : p.getBirthDate();
         return d == null;

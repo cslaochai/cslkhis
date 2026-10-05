@@ -30,11 +30,15 @@ public class DutyPostVO {
     private Integer roleType;
     private String roleTypeText;
 
-    /** 值班层级（0-不适用 1-一线 2-二线 3-三线） */
+    /**
+     * 值班层级（0-不适用 1-一线 2-二线 3-三线）
+     */
     private Integer dutyLevel;
     private String dutyLevelText;
 
-    /** 响应形态（1-坐班 2-听班 3-留院值班） */
+    /**
+     * 响应形态（1-坐班 2-听班 3-留院值班）
+     */
     private Integer attendMode;
     private String attendModeText;
 
@@ -43,10 +47,14 @@ public class DutyPostVO {
 
     private String shiftName;
 
-    /** 班次开始时间 HH:mm */
+    /**
+     * 班次开始时间 HH:mm
+     */
     private String startTime;
 
-    /** 班次结束时间 HH:mm */
+    /**
+     * 班次结束时间 HH:mm
+     */
     private String endTime;
 
     private Integer requiredStaffType;

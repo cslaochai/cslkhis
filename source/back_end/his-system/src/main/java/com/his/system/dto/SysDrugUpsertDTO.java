@@ -45,10 +45,14 @@ public class SysDrugUpsertDTO {
      */
     private String specification;
 
-    /** 剂型（片剂、胶囊、注射剂等） */
+    /**
+     * 剂型（片剂、胶囊、注射剂等）
+     */
     private String dosageForm;
 
-    /** 单位（片、粒、支等） */
+    /**
+     * 单位（片、粒、支等）
+     */
     private String unit;
 
     /**
@@ -97,7 +101,9 @@ public class SysDrugUpsertDTO {
      */
     private BigDecimal retailPrice;
 
-    /** 是否医保药品（0-否 1-是） */
+    /**
+     * 是否医保药品（0-否 1-是）
+     */
     private Integer isMedicalInsurance;
 
     /**
@@ -115,10 +121,14 @@ public class SysDrugUpsertDTO {
      */
     private Integer shelfLife;
 
-    /** 是否需要皮试（0-否 1-是） */
+    /**
+     * 是否需要皮试（0-否 1-是）
+     */
     private Integer isSkinTest;
 
-    /** 是否冷链药品（0-否 1-是） */
+    /**
+     * 是否冷链药品（0-否 1-是）
+     */
     private Integer isColdChain;
 
     /**

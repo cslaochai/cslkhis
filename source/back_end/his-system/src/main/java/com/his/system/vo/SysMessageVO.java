@@ -55,7 +55,9 @@ public class SysMessageVO {
      */
     private String bizType;
 
-    /** 关联业务ID */
+    /**
+     * 关联业务ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long bizId;
 
@@ -74,7 +76,9 @@ public class SysMessageVO {
      */
     private Integer handleStatus;
 
-    /** 发送状态（0-待发送 1-已发送 2-发送失败） */
+    /**
+     * 发送状态（0-待发送 1-已发送 2-发送失败）
+     */
     private Integer sendStatus;
 
     /**

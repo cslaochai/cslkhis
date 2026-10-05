@@ -25,10 +25,14 @@ public class SwitchPostVO {
 
     private String roleName;
 
-    /** 科室ID */
+    /**
+     * 科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 科室名称 */
+    /**
+     * 科室名称
+     */
     private String deptName;
 }

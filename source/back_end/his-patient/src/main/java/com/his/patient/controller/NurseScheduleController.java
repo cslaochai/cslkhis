@@ -10,13 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -56,8 +50,8 @@ public class NurseScheduleController {
     @Operation(summary = "护士下拉（该排班单元所属科室的在册护士：护士/护师）")
     @GetMapping("/nurseSelectList")
     public Result<List<NurseScheduleVO.Nurse>> nurseSelectList(@RequestParam(required = false) Integer unitType,
-                                                              @RequestParam Long unitId,
-                                                              @RequestParam(required = false) String keyword) {
+                                                               @RequestParam Long unitId,
+                                                               @RequestParam(required = false) String keyword) {
         return Result.success(nurseScheduleService.nurseSelectList(unitType, unitId, keyword));
     }
 
@@ -71,7 +65,7 @@ public class NurseScheduleController {
     @PreAuthorize("hasAuthority('nursing:schedule:list')")
     @Operation(summary = "排班台账分页（跨病区回看）")
     @PostMapping("/listPage")
-    public Result<PageResult<NurseScheduleVO.Row>> listPage(@RequestBody(required = false) NurseScheduleDTO.QueryPage dto) {
+    public Result<PageResult<NurseScheduleVO.Row>> listPage(@Valid @RequestBody(required = false) NurseScheduleDTO.QueryPage dto) {
         return Result.success(nurseScheduleService.listPage(dto == null ? new NurseScheduleDTO.QueryPage() : dto));
     }
 

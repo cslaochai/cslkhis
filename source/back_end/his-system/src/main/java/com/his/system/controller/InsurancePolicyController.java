@@ -10,9 +10,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 医保政策配置控制器
@@ -30,7 +29,7 @@ public class InsurancePolicyController {
 
     @Operation(summary = "分页查询医保政策")
     @PostMapping("/listPage")
-    public Result<PageResult<InsurancePolicyVO>> listPage(@RequestBody InsurancePolicyQueryPageDTO queryDTO) {
+    public Result<PageResult<InsurancePolicyVO>> listPage(@Valid @RequestBody InsurancePolicyQueryPageDTO queryDTO) {
         return Result.success(insurancePolicyService.queryPolicyPage(queryDTO));
     }
 

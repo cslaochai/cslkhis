@@ -22,11 +22,15 @@ public class DutyPostSelectListVO {
     private Integer roleType;
     private String roleTypeText;
 
-    /** 值班层级（0-不适用 1-一线 2-二线 3-三线） */
+    /**
+     * 值班层级（0-不适用 1-一线 2-二线 3-三线）
+     */
     private Integer dutyLevel;
     private String dutyLevelText;
 
-    /** 响应形态（1-坐班 2-听班 3-留院值班） */
+    /**
+     * 响应形态（1-坐班 2-听班 3-留院值班）
+     */
     private Integer attendMode;
     private String attendModeText;
 
@@ -38,9 +42,13 @@ public class DutyPostSelectListVO {
     private String startTime;
     private String endTime;
 
-    /** 应到岗位类别（空=不限） */
+    /**
+     * 应到岗位类别（空=不限）
+     */
     private Integer requiredStaffType;
 
-    /** 点位值班电话 */
+    /**
+     * 点位值班电话
+     */
     private String phone;
 }

@@ -2,12 +2,7 @@ package com.his.system.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.system.dto.TechAuthApproveDTO;
-import com.his.system.dto.TechAuthOverrideConfirmDTO;
-import com.his.system.dto.TechAuthOverrideQueryPageDTO;
-import com.his.system.dto.TechAuthQueryPageDTO;
-import com.his.system.dto.TechAuthRevokeDTO;
-import com.his.system.dto.TechAuthUpsertDTO;
+import com.his.system.dto.*;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.vo.EmployeeTechAuthVO;
 import com.his.system.vo.TechAuthOverrideVO;
@@ -16,13 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -44,7 +33,7 @@ public class EmployeeTechAuthController {
     @Operation(summary = "分页查询授权台账")
     @PreAuthorize("hasAuthority('org:techAuth:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<EmployeeTechAuthVO>> listPage(@RequestBody TechAuthQueryPageDTO query) {
+    public Result<PageResult<EmployeeTechAuthVO>> listPage(@Valid @RequestBody TechAuthQueryPageDTO query) {
         return Result.success(techAuthService.listPage(query));
     }
 
@@ -104,7 +93,7 @@ public class EmployeeTechAuthController {
     @Operation(summary = "分页查询急诊越权登记")
     @PreAuthorize("hasAuthority('org:techAuth:list')")
     @PostMapping("/overrideListPage")
-    public Result<PageResult<TechAuthOverrideVO>> overrideListPage(@RequestBody TechAuthOverrideQueryPageDTO query) {
+    public Result<PageResult<TechAuthOverrideVO>> overrideListPage(@Valid @RequestBody TechAuthOverrideQueryPageDTO query) {
         return Result.success(techAuthService.overrideListPage(query));
     }
 

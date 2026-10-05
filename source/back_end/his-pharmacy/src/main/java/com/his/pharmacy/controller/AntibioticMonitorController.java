@@ -15,12 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -42,7 +37,7 @@ public class AntibioticMonitorController {
     @Operation(summary = "已生成的监测指标分页")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:monitor')")
     @PostMapping("/statsListPage")
-    public Result<PageResult<AntibioticStatsVO>> statsListPage(@RequestBody AntibioticStatsQueryPageDTO query) {
+    public Result<PageResult<AntibioticStatsVO>> statsListPage(@Valid @RequestBody AntibioticStatsQueryPageDTO query) {
         return Result.success(monitorService.statsListPage(query));
     }
 
@@ -63,7 +58,7 @@ public class AntibioticMonitorController {
     @Operation(summary = "导出监测指标 CSV（BOM，上限 5000 行）")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:statExport')")
     @PostMapping("/statsExportCsv")
-    public Result<String> statsExportCsv(@RequestBody AntibioticStatsQueryPageDTO query) {
+    public Result<String> statsExportCsv(@Valid @RequestBody AntibioticStatsQueryPageDTO query) {
         return Result.success(monitorService.statsExportCsv(query));
     }
 
@@ -77,7 +72,7 @@ public class AntibioticMonitorController {
     @Operation(summary = "I 类切口点评记录分页")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:incision')")
     @PostMapping("/incisionReviewListPage")
-    public Result<PageResult<IncisionReviewVO>> incisionReviewListPage(@RequestBody IncisionReviewQueryPageDTO query) {
+    public Result<PageResult<IncisionReviewVO>> incisionReviewListPage(@Valid @RequestBody IncisionReviewQueryPageDTO query) {
         return Result.success(monitorService.incisionReviewListPage(query));
     }
 

@@ -23,7 +23,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PrevisitRecordServiceImpl implements PrevisitRecordService {
 
-    /** 补充描述入库上限：患者粘贴长文时截断，不让 TEXT 列被单条问卷撑爆 */
+    /**
+     * 补充描述入库上限：患者粘贴长文时截断，不让 TEXT 列被单条问卷撑爆
+     */
     private static final int FREE_TEXT_MAX = 1000;
 
     private final BizPrevisitRecordMapper previsitRecordMapper;
@@ -31,6 +33,14 @@ public class PrevisitRecordServiceImpl implements PrevisitRecordService {
     private final BizAppointInfoMapper appointInfoMapper;
 
     private final ObjectMapper objectMapper;
+
+    private static String cut(String text, int max) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        String value = text.trim();
+        return value.length() <= max ? value : value.substring(0, max);
+    }
 
     @Override
     public PrevisitQuestionnaireVO questionnaire() {
@@ -113,13 +123,5 @@ public class PrevisitRecordServiceImpl implements PrevisitRecordService {
             // 问答明细序列化失败不该拦提交：摘要还有主症状和补充描述可用
             return "[]";
         }
-    }
-
-    private static String cut(String text, int max) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= max ? value : value.substring(0, max);
     }
 }

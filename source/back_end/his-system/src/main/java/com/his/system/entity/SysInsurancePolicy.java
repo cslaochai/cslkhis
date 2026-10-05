@@ -8,12 +8,16 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/** 医保政策配置 */
+/**
+ * 医保政策配置
+ */
 @Data
 @TableName("sys_insurance_policy")
 public class SysInsurancePolicy {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
@@ -47,10 +51,16 @@ public class SysInsurancePolicy {
      */
     private Integer status;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     private LocalDateTime updateTime;
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

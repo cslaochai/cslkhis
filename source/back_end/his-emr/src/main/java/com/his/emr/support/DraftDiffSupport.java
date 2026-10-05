@@ -15,14 +15,53 @@ import java.util.List;
 @Component
 public class DraftDiffSupport {
 
-    /** 单侧文本入库上限：草稿/终稿超长截断，避免 TEXT 列被整段病历撑爆 */
+    /**
+     * 单侧文本入库上限：草稿/终稿超长截断，避免 TEXT 列被整段病历撑爆
+     */
     public static final int TEXT_MAX = 2000;
 
-    /** 分段 JSON 文本总长上限（MEDIUMTEXT 内留足余量，超长时末段截断） */
+    /**
+     * 分段 JSON 文本总长上限（MEDIUMTEXT 内留足余量，超长时末段截断）
+     */
     private static final int DIFF_JSON_MAX = 8000;
 
-    /** LCS 动规上限：超过该长度按「全删全增」一笔带过（2000×2000 的表约 4MB，可接受） */
+    /**
+     * LCS 动规上限：超过该长度按「全删全增」一笔带过（2000×2000 的表约 4MB，可接受）
+     */
     private static final int LCS_LIMIT = 2000;
+
+    private static void append(List<Segment> segments, int type, char c) {
+        if (!segments.isEmpty() && segments.get(segments.size() - 1).type == type) {
+            Segment last = segments.get(segments.size() - 1);
+            last.text += c;
+        } else {
+            segments.add(new Segment(type, String.valueOf(c)));
+        }
+    }
+
+    private static String escape(String text) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            switch (c) {
+                case '"' -> builder.append("\\\"");
+                case '\\' -> builder.append("\\\\");
+                case '\n' -> builder.append("\\n");
+                case '\r' -> builder.append("\\r");
+                case '\t' -> builder.append("\\t");
+                default -> builder.append(c);
+            }
+        }
+        return builder.toString();
+    }
+
+    private static String cut(String text, int max) {
+        if (text == null) {
+            return "";
+        }
+        String value = text.trim();
+        return value.length() <= max ? value : value.substring(0, max);
+    }
 
     /**
      * 计算差异分段。
@@ -134,38 +173,5 @@ public class DraftDiffSupport {
         public String getText() {
             return text;
         }
-    }
-
-    private static void append(List<Segment> segments, int type, char c) {
-        if (!segments.isEmpty() && segments.get(segments.size() - 1).type == type) {
-            Segment last = segments.get(segments.size() - 1);
-            last.text += c;
-        } else {
-            segments.add(new Segment(type, String.valueOf(c)));
-        }
-    }
-
-    private static String escape(String text) {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            switch (c) {
-                case '"' -> builder.append("\\\"");
-                case '\\' -> builder.append("\\\\");
-                case '\n' -> builder.append("\\n");
-                case '\r' -> builder.append("\\r");
-                case '\t' -> builder.append("\\t");
-                default -> builder.append(c);
-            }
-        }
-        return builder.toString();
-    }
-
-    private static String cut(String text, int max) {
-        if (text == null) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= max ? value : value.substring(0, max);
     }
 }

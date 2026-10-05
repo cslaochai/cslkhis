@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.emr.entity.BizMedicalRecordArchive;
+import com.his.emr.enums.ArchiveStatusEnum;
 import com.his.emr.mapper.BizMedicalRecordArchiveMapper;
 import com.his.emr.service.MedicalRecordArchiveService;
 import com.his.emr.vo.BizMedicalRecordArchiveVO;
@@ -26,8 +27,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import com.his.emr.enums.ArchiveStatusEnum;
 
 /**
  * 病历归档服务实现

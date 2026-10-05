@@ -1,7 +1,7 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.security.DeptScopeProvider;
+import com.his.security.provider.DeptScopeProvider;
 import com.his.system.entity.SysRole;
 import com.his.system.mapper.SysEmployeePostMapper;
 import com.his.system.mapper.SysRoleMapper;

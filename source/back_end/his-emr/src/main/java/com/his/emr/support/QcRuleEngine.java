@@ -7,13 +7,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /**
@@ -116,6 +110,96 @@ public class QcRuleEngine {
     private static final List<String> PLAN_LABELS = List.of("诊疗计划", "处理意见", "治疗计划");
 
     /**
+     * 等级：有否决项必为丙级（单否项压过分数），否则按分数线
+     */
+    private static String gradeOf(int vetoCount, int score) {
+        if (vetoCount > 0) {
+            return "丙";
+        }
+        if (score >= GRADE_A_SCORE) {
+            return "甲";
+        }
+        return score >= GRADE_B_SCORE ? "乙" : "丙";
+    }
+
+    private static String summarize(QcResult result) {
+        if (result.getIssues().isEmpty()) {
+            return String.format("未发现问题，得分 %d 分，质量等级甲级", result.getScore());
+        }
+        String fields = result.getIssues().stream()
+                .limit(3)
+                .map(QcIssue::getFieldName)
+                .distinct()
+                .reduce((a, b) -> a + "、" + b)
+                .orElse("");
+        return String.format("命中 %d 条问题（否决项 %d 条），得分 %d 分，质量等级%s级，判定%s；优先整改：%s",
+                result.getIssueCount(), result.getVetoCount(), result.getScore(), result.getGrade(),
+                result.isPass() ? "通过" : "不通过", fields);
+    }
+
+    private static boolean applicable(QcRule rule, QcSnapshot snapshot) {
+        return switch (rule.getScope()) {
+            case OUTPATIENT -> snapshot.getSource() == QcRecordSource.OUTPATIENT;
+            case OUTPATIENT_AND_ENTRY ->
+                    snapshot.getSource() == QcRecordSource.OUTPATIENT || snapshot.isInpatientEntry();
+            case INPATIENT -> snapshot.getSource() == QcRecordSource.INPATIENT;
+            case INPATIENT_NOTE -> snapshot.isInpatientNote();
+            case ALL -> true;
+        };
+    }
+
+    /**
+     * 主诉是否"没有实质内容"。没有实质内容时，F01/F02/F03 一律不判 ——
+     * 缺主诉已经由 C01 报过一次，同一件事不该在三处重复扣分。
+     */
+    private static boolean isChiefComplaintBlank(QcSnapshot s) {
+        return ClinicalTextMatcher.isPlaceholderOnly(s.getChiefComplaint(), "主诉");
+    }
+
+    // 适用范围
+
+    /**
+     * 统一的"字段没写"判定。返回空表示不构成问题。
+     * 「未填写」与「只有占位内容」要分开说 —— 前者是漏填，后者是套了模板没替换，
+     * 整改动作不一样（一个要补，一个要改内容）。
+     */
+    private static Optional<String> missing(String value, boolean absent, String label) {
+        if (!absent) {
+            return Optional.empty();
+        }
+        return Optional.of(ClinicalTextMatcher.isBlank(value)
+                ? String.format("「%s」未填写", label)
+                : String.format("「%s」只有占位/模板内容，未记录实质信息", label));
+    }
+
+    // 规则实现：穷尽 switch，少一条编译不过
+
+    /**
+     * 证据原文：压平空白、截断。空值给「（空）」而不是空串 ——
+     * 界面上"没有证据"和"证据是空字符串"必须能区分开。
+     */
+    private static String evidenceOf(String text) {
+        if (!hasText(text)) {
+            return "（空）";
+        }
+        return truncate(text.replaceAll("\\s+", " ").trim(), EVIDENCE_MAX_LENGTH);
+    }
+
+    // 辅助
+
+    private static boolean hasText(String text) {
+        return StringUtils.hasText(text);
+    }
+
+    private static String truncate(String text, int maxLength) {
+        if (text == null) {
+            return "";
+        }
+        String value = text.trim();
+        return value.length() <= maxLength ? value : value.substring(0, maxLength) + "…";
+    }
+
+    /**
      * 启动自检：规则的"存在性"必须能被观测到。
      * 三个维度各自至少要有一条规则 —— 否则前端的维度筛选会点出一个永远空的列表，
      * 而"空列表"和"这个维度没问题"在界面上长得一模一样。
@@ -197,49 +281,6 @@ public class QcRuleEngine {
         result.setSummary(summarize(result));
         return result;
     }
-
-    /**
-     * 等级：有否决项必为丙级（单否项压过分数），否则按分数线
-     */
-    private static String gradeOf(int vetoCount, int score) {
-        if (vetoCount > 0) {
-            return "丙";
-        }
-        if (score >= GRADE_A_SCORE) {
-            return "甲";
-        }
-        return score >= GRADE_B_SCORE ? "乙" : "丙";
-    }
-
-    private static String summarize(QcResult result) {
-        if (result.getIssues().isEmpty()) {
-            return String.format("未发现问题，得分 %d 分，质量等级甲级", result.getScore());
-        }
-        String fields = result.getIssues().stream()
-                .limit(3)
-                .map(QcIssue::getFieldName)
-                .distinct()
-                .reduce((a, b) -> a + "、" + b)
-                .orElse("");
-        return String.format("命中 %d 条问题（否决项 %d 条），得分 %d 分，质量等级%s级，判定%s；优先整改：%s",
-                result.getIssueCount(), result.getVetoCount(), result.getScore(), result.getGrade(),
-                result.isPass() ? "通过" : "不通过", fields);
-    }
-
-    // 适用范围
-
-    private static boolean applicable(QcRule rule, QcSnapshot snapshot) {
-        return switch (rule.getScope()) {
-            case OUTPATIENT -> snapshot.getSource() == QcRecordSource.OUTPATIENT;
-            case OUTPATIENT_AND_ENTRY ->
-                    snapshot.getSource() == QcRecordSource.OUTPATIENT || snapshot.isInpatientEntry();
-            case INPATIENT -> snapshot.getSource() == QcRecordSource.INPATIENT;
-            case INPATIENT_NOTE -> snapshot.isInpatientNote();
-            case ALL -> true;
-        };
-    }
-
-    // 规则实现：穷尽 switch，少一条编译不过
 
     private Optional<QcIssue> check(QcRule rule, QcSnapshot s) {
         return switch (rule) {
@@ -451,52 +492,5 @@ public class QcRuleEngine {
                         "（见描述）"));
             }
         };
-    }
-
-    // 辅助
-
-    /**
-     * 主诉是否"没有实质内容"。没有实质内容时，F01/F02/F03 一律不判 ——
-     * 缺主诉已经由 C01 报过一次，同一件事不该在三处重复扣分。
-     */
-    private static boolean isChiefComplaintBlank(QcSnapshot s) {
-        return ClinicalTextMatcher.isPlaceholderOnly(s.getChiefComplaint(), "主诉");
-    }
-
-    /**
-     * 统一的"字段没写"判定。返回空表示不构成问题。
-     * 「未填写」与「只有占位内容」要分开说 —— 前者是漏填，后者是套了模板没替换，
-     * 整改动作不一样（一个要补，一个要改内容）。
-     */
-    private static Optional<String> missing(String value, boolean absent, String label) {
-        if (!absent) {
-            return Optional.empty();
-        }
-        return Optional.of(ClinicalTextMatcher.isBlank(value)
-                ? String.format("「%s」未填写", label)
-                : String.format("「%s」只有占位/模板内容，未记录实质信息", label));
-    }
-
-    /**
-     * 证据原文：压平空白、截断。空值给「（空）」而不是空串 ——
-     * 界面上"没有证据"和"证据是空字符串"必须能区分开。
-     */
-    private static String evidenceOf(String text) {
-        if (!hasText(text)) {
-            return "（空）";
-        }
-        return truncate(text.replaceAll("\\s+", " ").trim(), EVIDENCE_MAX_LENGTH);
-    }
-
-    private static boolean hasText(String text) {
-        return StringUtils.hasText(text);
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (text == null) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength) + "…";
     }
 }

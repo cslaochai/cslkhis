@@ -2,30 +2,17 @@ package com.his.patient.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.patient.dto.NursingAssessmentQueryPageDTO;
-import com.his.patient.dto.NursingAssessmentUpsertDTO;
-import com.his.patient.dto.NursingRecordBatchUpsertDTO;
-import com.his.patient.dto.NursingRecordQueryPageDTO;
-import com.his.patient.dto.NursingRecordUpsertDTO;
+import com.his.patient.dto.*;
 import com.his.patient.service.InpatientNursingService;
-import com.his.patient.vo.CodeOptionVO;
-import com.his.patient.vo.IntakeOutputSummaryVO;
-import com.his.patient.vo.NursingAssessmentVO;
-import com.his.patient.vo.NursingRecordVO;
-import com.his.patient.vo.TempSheetVO;
+import com.his.patient.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 护理文书（三测单 / 护理记录单 / 生命体征监测）。
@@ -44,7 +31,7 @@ public class InpatientNursingController {
 
     @Operation(summary = "护理文书分页（按测量时间升序）")
     @GetMapping("/listPage")
-    public Result<IPage<NursingRecordVO>> listPage(NursingRecordQueryPageDTO query) {
+    public Result<IPage<NursingRecordVO>> listPage(@Valid NursingRecordQueryPageDTO query) {
         return Result.success(nursingService.listPage(query));
     }
 
@@ -57,15 +44,15 @@ public class InpatientNursingController {
     @PreAuthorize("hasAuthority('ipd:nurse:add')")
     @Operation(summary = "录入/修改护理文书（三测单按时点唯一；修改逐字段留痕）")
     @PostMapping("/save")
-    public Result<NursingRecordVO> save(@RequestBody NursingRecordUpsertDTO dto) {
+    public Result<NursingRecordVO> save(@Valid @RequestBody NursingRecordUpsertDTO dto) {
         return Result.success("护理文书已保存", nursingService.save(dto));
     }
 
     @Operation(summary = "三测单数据（按测量时间升序给全，前端据此自动画体温曲线；曲线不分页）")
     @GetMapping("/tempSheet")
     public Result<TempSheetVO> tempSheet(@RequestParam Long admissionId,
-                                        @RequestParam(required = false) String beginDate,
-                                        @RequestParam(required = false) String endDate) {
+                                         @RequestParam(required = false) String beginDate,
+                                         @RequestParam(required = false) String endDate) {
         return Result.success(nursingService.tempSheet(admissionId, beginDate, endDate));
     }
 
@@ -94,7 +81,7 @@ public class InpatientNursingController {
 
     @Operation(summary = "护理评估单分页（必须按入院ID或病区查询）")
     @GetMapping("/assessment/listPage")
-    public Result<IPage<NursingAssessmentVO>> assessmentListPage(NursingAssessmentQueryPageDTO query) {
+    public Result<IPage<NursingAssessmentVO>> assessmentListPage(@Valid NursingAssessmentQueryPageDTO query) {
         return Result.success(nursingService.assessmentListPage(query));
     }
 
@@ -107,8 +94,8 @@ public class InpatientNursingController {
     @Operation(summary = "出入量小结（从护理文书原始测量行按日复算）")
     @GetMapping("/intakeOutputSummary")
     public Result<IntakeOutputSummaryVO> intakeOutputSummary(@RequestParam Long admissionId,
-                                                            @RequestParam(required = false) String beginDate,
-                                                            @RequestParam(required = false) String endDate) {
+                                                             @RequestParam(required = false) String beginDate,
+                                                             @RequestParam(required = false) String endDate) {
         return Result.success(nursingService.intakeOutputSummary(admissionId, beginDate, endDate));
     }
 }

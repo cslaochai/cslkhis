@@ -2,11 +2,7 @@ package com.his.operation.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.operation.dto.AnesthesiaActionDTO;
-import com.his.operation.dto.PacuEnterDTO;
-import com.his.operation.dto.PacuLeaveDTO;
-import com.his.operation.dto.PacuQueryPageDTO;
-import com.his.operation.dto.PacuScoreDTO;
+import com.his.operation.dto.*;
 import com.his.operation.service.PacuService;
 import com.his.operation.vo.OperationChargeSummaryVO;
 import com.his.operation.vo.PacuRecordVO;
@@ -14,13 +10,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * PACU 麻醉后监测治疗端点（G15 第三环）。
@@ -39,7 +30,7 @@ public class PacuController {
 
     @Operation(summary = "PACU 复苏记录分页（住院/手术/麻醉记录/在室状态/关键字）")
     @GetMapping("/listPage")
-    public Result<IPage<PacuRecordVO>> listPage(PacuQueryPageDTO query) {
+    public Result<IPage<PacuRecordVO>> listPage(@Valid PacuQueryPageDTO query) {
         return Result.success(pacuService.listPage(query));
     }
 
@@ -65,7 +56,7 @@ public class PacuController {
     @PreAuthorize("hasAuthority('ipd:anesthesia:edit')")
     @Operation(summary = "Aldrete 评分（总分由服务端逐项相加，不接收前端传总分）")
     @PostMapping("/score")
-    public Result<Void> score(@RequestBody PacuScoreDTO dto) {
+    public Result<Void> score(@Valid @RequestBody PacuScoreDTO dto) {
         pacuService.score(dto);
         return Result.success("Aldrete 评分已记录", null);
     }

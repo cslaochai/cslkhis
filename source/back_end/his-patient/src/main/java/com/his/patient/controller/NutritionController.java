@@ -3,35 +3,21 @@ package com.his.patient.controller;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.patient.dto.ConsultationAcceptDTO;
-import com.his.patient.dto.ConsultationCancelDTO;
-import com.his.patient.dto.ConsultationFinishDTO;
-import com.his.patient.dto.ConsultationQueryPageDTO;
-import com.his.patient.dto.ConsultationUpsertDTO;
-import com.his.patient.dto.NutritionScreenQueryPageDTO;
-import com.his.patient.dto.NutritionScreenUpsertDTO;
-import com.his.patient.dto.NutritionStatsGenerateDTO;
-import com.his.patient.dto.NutritionStatsQueryPageDTO;
+import com.his.patient.dto.*;
+import com.his.patient.service.InpatientConsultationService;
 import com.his.patient.service.NutritionScreenService;
 import com.his.patient.service.NutritionStatsService;
+import com.his.patient.support.ConsultationLabels;
+import com.his.patient.vo.ConsultationVO;
 import com.his.patient.vo.NutritionOverviewVO;
 import com.his.patient.vo.NutritionScreenVO;
 import com.his.patient.vo.NutritionStatsVO;
-import com.his.patient.service.InpatientConsultationService;
-import com.his.patient.support.ConsultationLabels;
-import com.his.patient.vo.ConsultationVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -72,7 +58,7 @@ public class NutritionController {
     @Operation(summary = "筛查评定分页（dueOnly=1 只看到期未复筛）")
     @PreAuthorize("hasAuthority('ipd:nutrition:screen')")
     @PostMapping("/screenListPage")
-    public Result<PageResult<NutritionScreenVO>> screenListPage(@RequestBody NutritionScreenQueryPageDTO query) {
+    public Result<PageResult<NutritionScreenVO>> screenListPage(@Valid @RequestBody NutritionScreenQueryPageDTO query) {
         return Result.success(screenService.screenListPage(query));
     }
 
@@ -102,7 +88,7 @@ public class NutritionController {
     @Operation(summary = "营养会诊分页（只给 consultCategory=2，不接受前端改类别）")
     @PreAuthorize("hasAuthority('ipd:nutrition:consult')")
     @PostMapping("/consultListPage")
-    public Result<PageResult<ConsultationVO>> consultListPage(@RequestBody ConsultationQueryPageDTO query) {
+    public Result<PageResult<ConsultationVO>> consultListPage(@Valid @RequestBody ConsultationQueryPageDTO query) {
         query.setConsultCategory(ConsultationLabels.CATEGORY_NUTRITION);
         IPage<ConsultationVO> page = consultationService.listPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
@@ -168,14 +154,14 @@ public class NutritionController {
     @Operation(summary = "已生成的营养指标分页")
     @PreAuthorize("hasAuthority('ipd:nutrition:stats')")
     @PostMapping("/statsListPage")
-    public Result<PageResult<NutritionStatsVO>> statsListPage(@RequestBody NutritionStatsQueryPageDTO query) {
+    public Result<PageResult<NutritionStatsVO>> statsListPage(@Valid @RequestBody NutritionStatsQueryPageDTO query) {
         return Result.success(statsService.statsListPage(query));
     }
 
     @Operation(summary = "导出营养指标 CSV（BOM，上限 5000 行）")
     @PreAuthorize("hasAuthority('ipd:nutrition:statExport')")
     @PostMapping("/statsExportCsv")
-    public Result<String> statsExportCsv(@RequestBody NutritionStatsQueryPageDTO query) {
+    public Result<String> statsExportCsv(@Valid @RequestBody NutritionStatsQueryPageDTO query) {
         return Result.success(statsService.statsExportCsv(query));
     }
 }

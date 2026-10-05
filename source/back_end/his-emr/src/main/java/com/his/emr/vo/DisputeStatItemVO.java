@@ -18,10 +18,14 @@ public class DisputeStatItemVO implements Serializable {
 
     private String key;
 
-    /** 名称 */
+    /**
+     * 名称
+     */
     private String name;
 
-    /** 科室ID */
+    /**
+     * 科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 

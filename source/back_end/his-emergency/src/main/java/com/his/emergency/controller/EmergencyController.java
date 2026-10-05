@@ -2,30 +2,19 @@ package com.his.emergency.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.emergency.dto.BizEmergencyUpsertDTO;
-import com.his.emergency.dto.EmergencyAdmitDTO;
-import com.his.emergency.dto.EmergencyHandoverQueryPageDTO;
-import com.his.emergency.dto.EmergencyHandoverUpsertDTO;
-import com.his.emergency.dto.EmergencyQueryDTO;
-import com.his.emergency.dto.EmergencyStatusUpsertDTO;
+import com.his.emergency.dto.*;
 import com.his.emergency.service.EmergencyService;
-import com.his.emergency.vo.BizEmergencyVO;
-import com.his.emergency.vo.EmergencyDutyVO;
-import com.his.emergency.vo.EmergencyHandoverDetailVO;
-import com.his.emergency.vo.EmergencyHandoverPendingVO;
-import com.his.emergency.vo.EmergencyHandoverVO;
-import com.his.emergency.vo.EmergencyStatsVO;
-import com.his.emergency.vo.EmergencyTakeCandidateVO;
+import com.his.emergency.vo.*;
 import com.his.patient.vo.BedVO;
 import com.his.patient.vo.WardVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 急诊管理控制器
@@ -41,7 +30,7 @@ public class EmergencyController {
     @Operation(summary = "分页查询急诊记录（出参含候诊时长/超时档位/派单方式）")
     @PostMapping("/list")
     @PreAuthorize("hasAuthority('opd:emergency:list')")
-    public Result<PageResult<BizEmergencyVO>> list(@RequestBody EmergencyQueryDTO queryDTO) {
+    public Result<PageResult<BizEmergencyVO>> list(@Valid @RequestBody EmergencyQueryDTO queryDTO) {
         return Result.success(emergencyService.listPage(queryDTO));
     }
 
@@ -139,7 +128,7 @@ public class EmergencyController {
     @Operation(summary = "交班台账分页")
     @PostMapping("/handoverListPage")
     @PreAuthorize("hasAuthority('opd:emergency:list')")
-    public Result<PageResult<EmergencyHandoverVO>> handoverListPage(@RequestBody EmergencyHandoverQueryPageDTO queryDTO) {
+    public Result<PageResult<EmergencyHandoverVO>> handoverListPage(@Valid @RequestBody EmergencyHandoverQueryPageDTO queryDTO) {
         return Result.success(emergencyService.handoverListPage(queryDTO));
     }
 

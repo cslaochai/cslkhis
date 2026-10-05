@@ -15,20 +15,28 @@ import java.util.List;
 @Data
 public class PathwayAnalysisVO implements Serializable {
 
-    /** 汇总（当前筛选范围内） */
+    /**
+     * 汇总（当前筛选范围内）
+     */
     private Long enrollCount;
     private Long finishCount;
     private Long abortCount;
     private Long varianceCount;
     private Double finishRate;
 
-    /** 模板维度行 */
+    /**
+     * 模板维度行
+     */
     private List<Row> rows;
 
-    /** 变异类型分布 */
+    /**
+     * 变异类型分布
+     */
     private List<TypeStat> typeStats;
 
-    /** 变异原因 TOP10 */
+    /**
+     * 变异原因 TOP10
+     */
     private List<ReasonStat> topReasons;
 
     @Data
@@ -53,7 +61,9 @@ public class PathwayAnalysisVO implements Serializable {
 
     @Data
     public static class ReasonStat implements Serializable {
-        /** 原因 */
+        /**
+         * 原因
+         */
         private String reason;
         private Long cnt;
     }

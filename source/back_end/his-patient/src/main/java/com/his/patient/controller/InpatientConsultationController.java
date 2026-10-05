@@ -2,11 +2,7 @@ package com.his.patient.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.patient.dto.ConsultationAcceptDTO;
-import com.his.patient.dto.ConsultationCancelDTO;
-import com.his.patient.dto.ConsultationFinishDTO;
-import com.his.patient.dto.ConsultationQueryPageDTO;
-import com.his.patient.dto.ConsultationUpsertDTO;
+import com.his.patient.dto.*;
 import com.his.patient.service.InpatientConsultationService;
 import com.his.patient.support.ConsultationLabels;
 import com.his.patient.vo.ConsultationVO;
@@ -14,13 +10,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 住院会诊（P4.1：申请 → 应答 → 会诊记录 → 完成 → 回写病历）
@@ -41,7 +32,7 @@ public class InpatientConsultationController {
 
     @Operation(summary = "会诊分页（unfinishedOnly=1 只看未完成；toDeptId 用会诊科室工作台过滤）")
     @GetMapping("/listPage")
-    public Result<IPage<ConsultationVO>> listPage(ConsultationQueryPageDTO query) {
+    public Result<IPage<ConsultationVO>> listPage(@Valid ConsultationQueryPageDTO query) {
         return Result.success(consultationService.listPage(query));
     }
 
@@ -86,7 +77,7 @@ public class InpatientConsultationController {
     @Operation(summary = "未完成会诊数（待应答 + 已应答；工作台角标用）")
     @GetMapping("/countUnfinished")
     public Result<Long> countUnfinished(@RequestParam(required = false) Long toDeptId,
-                                       @RequestParam(required = false) Long admissionId) {
+                                        @RequestParam(required = false) Long admissionId) {
         return Result.success(consultationService.countUnfinished(toDeptId, admissionId));
     }
 }

@@ -12,15 +12,21 @@ import java.util.List;
 @Data
 public class WorkbenchRoleConfigUpsertDTO {
 
-    /** 角色ID */
+    /**
+     * 角色ID
+     */
     @NotNull(message = "角色ID不能为空")
     private Long roleId;
 
-    /** 登录/切角色落点（0-默认 1-一律工作台 2-一律患者工作站） */
+    /**
+     * 登录/切角色落点（0-默认 1-一律工作台 2-一律患者工作站）
+     */
     @NotNull(message = "落点策略不能为空")
     private Integer landingScope;
 
-    /** 允许为空数组=该角色清空卡片配置（首页回落到通用三张卡） */
+    /**
+     * 允许为空数组=该角色清空卡片配置（首页回落到通用三张卡）
+     */
     @Valid
     private List<WorkbenchRoleWidgetDTO> widgets;
 }

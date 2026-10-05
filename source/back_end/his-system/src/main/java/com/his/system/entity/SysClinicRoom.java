@@ -7,7 +7,9 @@ import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/** 诊室 */
+/**
+ * 诊室
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_clinic_room")

@@ -8,7 +8,6 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import com.his.system.vo.EmployeePostVO;
 
 /**
  * 用户信息VO（包含员工信息）
@@ -43,7 +42,9 @@ public class UserDetailVO {
      */
     private String deptName;
 
-    /** 用户类型（1-系统用户 2-外部用户） */
+    /**
+     * 用户类型（1-系统用户 2-外部用户）
+     */
     private Integer userType;
 
     /**
@@ -84,7 +85,9 @@ public class UserDetailVO {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime passwordUpdateTime;
 
-    /** 关联员工ID */
+    /**
+     * 关联员工ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long empId;
 

@@ -16,7 +16,7 @@ import com.his.patient.vo.GuardianPatientVO;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.PatientService;
 import com.his.patient.vo.SmsSendVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.service.SysAuditLogService;
 import com.his.system.entity.SysUser;
@@ -39,7 +39,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import com.his.common.enums.UserTypeEnum;
 @Service

@@ -14,16 +14,24 @@ import java.util.List;
  */
 public interface ChronicRecordService {
 
-    /** 慢病建档（建档即认定） */
+    /**
+     * 慢病建档（建档即认定）
+     */
     ChronicRecordListVO upsert(ChronicUpsertDTO dto);
 
-    /** 慢病档案作废（单向：1→2） */
+    /**
+     * 慢病档案作废（单向：1→2）
+     */
     void cancel(ChronicCancelDTO dto);
 
-    /** 慢病档案分页（医生站） */
+    /**
+     * 慢病档案分页（医生站）
+     */
     PageResult<ChronicRecordListVO> listPage(ChronicQueryPageDTO dto);
 
-    /** 患者的有效慢病档案（长处方资格判定用） */
+    /**
+     * 患者的有效慢病档案（长处方资格判定用）
+     */
     List<ChronicRecordListVO> activeList(Long patientId);
 
     /**

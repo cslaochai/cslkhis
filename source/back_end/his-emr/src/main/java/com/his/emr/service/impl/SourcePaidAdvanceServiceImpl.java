@@ -5,16 +5,9 @@ import com.his.common.base.RedisSequenceService;
 import com.his.common.enums.ApplyStatusEnum;
 import com.his.common.enums.PrescriptionPayStatusEnum;
 import com.his.common.exception.BusinessException;
-import com.his.emr.entity.BizDrugDispensing;
-import com.his.emr.entity.BizInspectionApply;
-import com.his.emr.entity.BizLaboratoryApply;
-import com.his.emr.entity.BizPrescription;
-import com.his.emr.entity.BizPrescriptionDetail;
-import com.his.emr.mapper.BizDrugDispensingMapper;
-import com.his.emr.mapper.BizInspectionApplyMapper;
-import com.his.emr.mapper.BizLaboratoryApplyMapper;
-import com.his.emr.mapper.BizPrescriptionDetailMapper;
-import com.his.emr.mapper.BizPrescriptionMapper;
+import com.his.emr.entity.*;
+import com.his.emr.enums.DispensingStatusEnum;
+import com.his.emr.mapper.*;
 import com.his.emr.service.SourcePaidAdvanceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,8 +17,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-
-import com.his.emr.enums.DispensingStatusEnum;
 
 /**
  * 来源单据缴费推进实现（见接口注释的容错口径）。
@@ -49,6 +40,17 @@ public class SourcePaidAdvanceServiceImpl implements SourcePaidAdvanceService {
     private final BizLaboratoryApplyMapper laboratoryApplyMapper;
     private final BizDrugDispensingMapper drugDispensingMapper;
     private final RedisSequenceService redisSequenceService;
+
+    private static int nz(Integer v) {
+        return v == null ? 0 : v;
+    }
+
+    private static String cut(String s) {
+        if (s == null) {
+            return null;
+        }
+        return s.length() <= 500 ? s : s.substring(0, 500);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -216,7 +218,9 @@ public class SourcePaidAdvanceServiceImpl implements SourcePaidAdvanceService {
         }
     }
 
-    /** 为一条处方明细生成待发药记录（同一条明细已有记录就不再叠加） */
+    /**
+     * 为一条处方明细生成待发药记录（同一条明细已有记录就不再叠加）
+     */
     private void createPendingDispensing(BizPrescriptionDetail detail, BizPrescription prescription) {
         LambdaQueryWrapper<BizDrugDispensing> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizDrugDispensing::getPrescriptionDetailId, detail.getId());
@@ -242,16 +246,5 @@ public class SourcePaidAdvanceServiceImpl implements SourcePaidAdvanceService {
         dispensing.setAmount(detail.getAmount());
         dispensing.setDispensingStatus(DispensingStatusEnum.PENDING.getCode());
         drugDispensingMapper.insert(dispensing);
-    }
-
-    private static int nz(Integer v) {
-        return v == null ? 0 : v;
-    }
-
-    private static String cut(String s) {
-        if (s == null) {
-            return null;
-        }
-        return s.length() <= 500 ? s : s.substring(0, 500);
     }
 }

@@ -28,7 +28,7 @@ public class QueueController {
 
     @Operation(summary = "查询医生接诊状态")
     @PostMapping("/getDoctorStatus")
-    public Result<DoctorStatusVO> getDoctorStatus(@RequestBody DoctorStatusQueryDTO dto) {
+    public Result<DoctorStatusVO> getDoctorStatus(@Valid @RequestBody DoctorStatusQueryDTO dto) {
         return Result.success(queueService.doctorStatusOf(dto.getDoctorId()));
     }
 
@@ -47,7 +47,7 @@ public class QueueController {
 
     @Operation(summary = "批量查询医生接诊状态")
     @PostMapping("/batchGetDoctorStatus")
-    public Result<List<DoctorStatusVO>> batchGetDoctorStatus(@RequestBody DoctorStatusBatchQueryDTO dto) {
+    public Result<List<DoctorStatusVO>> batchGetDoctorStatus(@Valid @RequestBody DoctorStatusBatchQueryDTO dto) {
         return Result.success(queueService.batchDoctorStatus(dto));
     }
 
@@ -59,7 +59,7 @@ public class QueueController {
 
     @Operation(summary = "查询队列列表")
     @GetMapping("/listPage")
-    public Result<PageResult<BizQueueListVO>> listPage(QueueQueryDTO queueQueryDTO) {
+    public Result<PageResult<BizQueueListVO>> listPage(@Valid QueueQueryDTO queueQueryDTO) {
         return Result.success(queueService.listPage(queueQueryDTO));
     }
 
@@ -73,19 +73,19 @@ public class QueueController {
      */
     @Operation(summary = "门诊日志分页（跨科室，筛选条件下推）")
     @GetMapping("/opdLogListPage")
-    public Result<PageResult<OpdLogListVO>> opdLogListPage(OpdLogQueryDTO query) {
+    public Result<PageResult<OpdLogListVO>> opdLogListPage(@Valid OpdLogQueryDTO query) {
         return Result.success(queueService.opdLogPage(query));
     }
 
     @Operation(summary = "门诊日志统计条（与分页同一套筛选条件）")
     @GetMapping("/opdLogStats")
-    public Result<OpdLogStatsVO> opdLogStats(OpdLogQueryDTO query) {
+    public Result<OpdLogStatsVO> opdLogStats(@Valid OpdLogQueryDTO query) {
         return Result.success(queueService.opdLogStats(query));
     }
 
     @Operation(summary = "队列统计")
     @GetMapping("/stats")
-    public Result<QueueStatsVO> queueStats(QueueQueryDTO queueQueryDTO) {
+    public Result<QueueStatsVO> queueStats(@Valid QueueQueryDTO queueQueryDTO) {
         return Result.success(queueService.stats(queueQueryDTO));
     }
 
@@ -105,20 +105,20 @@ public class QueueController {
     @PreAuthorize("hasAnyAuthority('opd:triage:edit', 'opd:doctorWorkstation:edit')")
     @Operation(summary = "叫下一位（返回接诊回执：叫到了谁）")
     @PostMapping("/callNext")
-    public Result<QueueCallNextVO> callNext(@RequestBody QueueCallNextDTO queueCallNextDTO) {
+    public Result<QueueCallNextVO> callNext(@Valid @RequestBody QueueCallNextDTO queueCallNextDTO) {
         return Result.success(queueService.callNextByOperator(queueCallNextDTO));
     }
 
     @Operation(summary = "过号处理")
     @PostMapping("/overdueQueue")
-    public Result<Void> overdueQueue(@RequestBody QueueOverdueDTO dto) {
+    public Result<Void> overdueQueue(@Valid @RequestBody QueueOverdueDTO dto) {
         boolean success = queueService.overdueQueue(dto.getId(), dto.getReason());
         return success ? Result.success() : Result.error("操作失败");
     }
 
     @Operation(summary = "医保费用预估")
     @PostMapping("/estimate")
-    public Result<InsuranceEstimateVO> estimate(@RequestBody InsuranceEstimateDTO dto) {
+    public Result<InsuranceEstimateVO> estimate(@Valid @RequestBody InsuranceEstimateDTO dto) {
         InsuranceEstimateVO vo = queueService.estimateInsurance(dto);
         return Result.success(vo);
     }

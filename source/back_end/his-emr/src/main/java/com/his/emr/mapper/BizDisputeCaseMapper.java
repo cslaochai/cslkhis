@@ -66,7 +66,9 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
     @Select("SELECT p.patient_name FROM biz_patient p WHERE p.id = #{patientId} AND p.del_flag = 0")
     String selectPatientName(@Param("patientId") Long patientId);
 
-    /** 科室名快照（科室跨模块裸 SQL） */
+    /**
+     * 科室名快照（科室跨模块裸 SQL）
+     */
     @Select("SELECT d.dept_name FROM sys_department d WHERE d.id = #{deptId} AND d.del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
@@ -93,7 +95,7 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
             </script>
             """)
     List<java.util.Map<String, Object>> countByStatus(@Param("dateFrom") String dateFrom,
-                                                     @Param("dateTo") String dateTo);
+                                                      @Param("dateTo") String dateTo);
 
     @Select("""
             <script>
@@ -122,7 +124,9 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
     List<java.util.Map<String, Object>> countByDeptTop(@Param("dateFrom") String dateFrom,
                                                        @Param("dateTo") String dateTo);
 
-    /** 已结案单据的赔偿合计与平均结案天数（未结案不参与平均） */
+    /**
+     * 已结案单据的赔偿合计与平均结案天数（未结案不参与平均）
+     */
     @Select("""
             <script>
             SELECT COALESCE(SUM(c.compensation), 0) AS total,

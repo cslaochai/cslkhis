@@ -3,14 +3,9 @@ package com.his.system.controller;
 import com.his.common.base.Result;
 import com.his.system.dto.ChangePasswordDTO;
 import com.his.system.dto.LoginRequestDTO;
-import com.his.system.service.AuthService;
-import com.his.system.vo.LoginVO;
-import com.his.system.vo.PublicKeyVO;
-import com.his.system.vo.UserLoginVO;
-import com.his.system.vo.UserRolesVO;
 import com.his.system.dto.SwitchPostDTO;
-import com.his.system.vo.EmployeePostVO;
-import com.his.system.vo.SwitchPostVO;
+import com.his.system.service.AuthService;
+import com.his.system.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,7 +36,7 @@ public class LoginController {
 
     @Operation(summary = "用户登录")
     @PostMapping("/login")
-    public Result<LoginVO> login(@RequestBody LoginRequestDTO loginRequestDTO, HttpServletRequest request) {
+    public Result<LoginVO> login(@Valid @RequestBody LoginRequestDTO loginRequestDTO, HttpServletRequest request) {
         return Result.success("登录成功", authService.login(loginRequestDTO, request));
     }
 
@@ -66,7 +61,7 @@ public class LoginController {
 
     @Operation(summary = "修改密码")
     @PostMapping("/changePassword")
-    public Result<Void> changePassword(@RequestBody ChangePasswordDTO request) {
+    public Result<Void> changePassword(@Valid @RequestBody ChangePasswordDTO request) {
         authService.updatePassword(request);
         return Result.success("密码修改成功", null);
     }

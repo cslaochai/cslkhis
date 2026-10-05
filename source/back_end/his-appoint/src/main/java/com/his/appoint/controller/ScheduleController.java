@@ -28,7 +28,7 @@ public class ScheduleController {
     @PreAuthorize("hasAuthority('org:schedule:add')")
     @Operation(summary = "新增或修改排班（新增/修改合一）")
     @PostMapping("/scheduleUpsert")
-    public Result<Void> scheduleUpsert(@RequestBody ScheduleUpsertDTO upsertDTO) {
+    public Result<Void> scheduleUpsert(@Valid @RequestBody ScheduleUpsertDTO upsertDTO) {
         scheduleService.scheduleUpsert(upsertDTO);
         return Result.success();
     }
@@ -43,14 +43,14 @@ public class ScheduleController {
 
     @Operation(summary = "查询排班列表")
     @PostMapping("/list")
-    public Result<List<ScheduleDetailVO>> scheduleList(@RequestBody ScheduleQueryDTO queryDTO) {
+    public Result<List<ScheduleDetailVO>> scheduleList(@Valid @RequestBody ScheduleQueryDTO queryDTO) {
         return Result.success(scheduleService.listDetail(queryDTO));
     }
 
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "查询可挂号源（下拉取数，只要求登录）")
     @PostMapping("/selectList")
-    public Result<List<ScheduleSelectListVO>> scheduleSelectList(@RequestBody ScheduleSelectQueryDTO scheduleQueryDTO) {
+    public Result<List<ScheduleSelectListVO>> scheduleSelectList(@Valid @RequestBody ScheduleSelectQueryDTO scheduleQueryDTO) {
         return Result.success(scheduleService.selectListVO(scheduleQueryDTO));
     }
 
@@ -63,7 +63,7 @@ public class ScheduleController {
     @PreAuthorize("hasAuthority('org:schedule:edit')")
     @Operation(summary = "更新就诊状态")
     @PostMapping("/updateConsultStatus")
-    public Result<Void> updateConsultStatus(@RequestBody ScheduleConsultStatusUpsertDTO dto) {
+    public Result<Void> updateConsultStatus(@Valid @RequestBody ScheduleConsultStatusUpsertDTO dto) {
         boolean success = scheduleService.updateConsultStatus(dto.getScheduleId(), dto.getConsultStatus());
         return success ? Result.success() : Result.error("更新失败");
     }
@@ -71,7 +71,7 @@ public class ScheduleController {
     @PreAuthorize("hasAuthority('org:schedule:edit')")
     @Operation(summary = "停诊/启用（只更新状态列）")
     @PostMapping("/updateStatus")
-    public Result<Void> updateStatus(@RequestBody ScheduleStatusUpsertDTO dto) {
+    public Result<Void> updateStatus(@Valid @RequestBody ScheduleStatusUpsertDTO dto) {
         boolean success = scheduleService.updateStatus(dto.getScheduleId(), dto.getStatus());
         return success ? Result.success() : Result.error("更新失败");
     }
@@ -98,7 +98,7 @@ public class ScheduleController {
     @PreAuthorize("isAuthenticated()")
     @Operation(summary = "今日在岗（跨岗位；可按指定时刻判定，支持跨零点夜班）")
     @PostMapping("/onDuty")
-    public Result<List<OnDutyStaffVO>> onDuty(@RequestBody(required = false) OnDutyQueryDTO queryDTO) {
+    public Result<List<OnDutyStaffVO>> onDuty(@Valid @RequestBody(required = false) OnDutyQueryDTO queryDTO) {
         return Result.success(scheduleService.onDuty(queryDTO));
     }
 

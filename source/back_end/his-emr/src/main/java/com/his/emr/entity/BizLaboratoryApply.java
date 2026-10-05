@@ -12,7 +12,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** 检验申请单 */
+/**
+ * 检验申请单
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_laboratory_apply")

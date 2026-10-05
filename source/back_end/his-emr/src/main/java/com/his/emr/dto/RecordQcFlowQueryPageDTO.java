@@ -11,18 +11,28 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = false)
 public class RecordQcFlowQueryPageDTO extends PageParam {
 
-    /** 流转单号（模糊） */
+    /**
+     * 流转单号（模糊）
+     */
     private String flowNo;
 
-    /** 流转状态（1-科级待审 2-病案室待审 3-医务处待审 4-终审通过 5-整改中） */
+    /**
+     * 流转状态（1-科级待审 2-病案室待审 3-医务处待审 4-终审通过 5-整改中）
+     */
     private Integer flowStatus;
 
-    /** 当前停留级（1-科级 2-病案室 3-医务处） */
+    /**
+     * 当前停留级（1-科级 2-病案室 3-医务处）
+     */
     private Integer currentLevel;
 
-    /** 病历来源（OUTPATIENT/INPATIENT） */
+    /**
+     * 病历来源（OUTPATIENT/INPATIENT）
+     */
     private String recordSource;
 
-    /** 关键词（单号/患者/科室） */
+    /**
+     * 关键词（单号/患者/科室）
+     */
     private String keyword;
 }

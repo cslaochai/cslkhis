@@ -2,8 +2,8 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.his.common.exception.BusinessException;
-import com.his.security.CurrentUser;
-import com.his.security.JwtUtils;
+import com.his.security.entity.CurrentUser;
+import com.his.security.utils.JwtUtils;
 import com.his.security.PasswordCipher;
 import com.his.security.UserUtils;
 import com.his.system.dto.ChangePasswordDTO;

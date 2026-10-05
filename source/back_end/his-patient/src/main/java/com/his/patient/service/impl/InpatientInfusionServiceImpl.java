@@ -12,7 +12,7 @@ import com.his.patient.mapper.BizInpatientOrderMapper;
 import com.his.patient.service.InpatientInfusionService;
 import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.patient.vo.InfusionRoundVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

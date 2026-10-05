@@ -10,11 +10,12 @@ import com.his.system.vo.DepartmentSelectListVO;
 import com.his.system.vo.DepartmentVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 科室管理控制器
@@ -36,13 +37,13 @@ public class DepartmentController {
 
     @Operation(summary = "分页查询科室列表")
     @PostMapping("/listPage")
-    public Result<PageResult<DepartmentVO>> listPage(@RequestBody DepartmentQueryDTO queryDTO) {
+    public Result<PageResult<DepartmentVO>> listPage(@Valid @RequestBody DepartmentQueryDTO queryDTO) {
         return Result.success(departmentService.listPage(queryDTO));
     }
 
     @Operation(summary = "查询科室列表（不分页）")
     @PostMapping("/list")
-    public Result<List<DepartmentVO>> list(@RequestBody DepartmentQueryDTO queryDTO) {
+    public Result<List<DepartmentVO>> list(@Valid @RequestBody DepartmentQueryDTO queryDTO) {
         return Result.success(departmentService.list(queryDTO));
     }
 
@@ -57,7 +58,7 @@ public class DepartmentController {
      */
     @Operation(summary = "科室下拉（scope 控制是否按当前人过滤，默认按当前人）")
     @GetMapping("/selectList")
-    public Result<List<DepartmentSelectListVO>> selectList(DepartmentSelectDTO selectDTO) {
+    public Result<List<DepartmentSelectListVO>> selectList(@Valid DepartmentSelectDTO selectDTO) {
         return Result.success(departmentService.selectList(selectDTO));
     }
 
@@ -70,7 +71,7 @@ public class DepartmentController {
     @Operation(summary = "新增或修改科室")
     @PreAuthorize("hasAuthority('org:dept:add')")
     @PostMapping("/departmentUpsert")
-    public Result<Void> departmentUpsert(@RequestBody DepartmentUpsertDTO upsertDTO) {
+    public Result<Void> departmentUpsert(@Valid @RequestBody DepartmentUpsertDTO upsertDTO) {
         return Result.success(departmentService.upsert(upsertDTO), null);
     }
 

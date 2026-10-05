@@ -16,11 +16,15 @@ import java.util.List;
 @Data
 public class DrugRationalGroupDTO {
 
-    /** 调用方定位标识（通常是处方ID，字符串化避免前端精度丢失） */
+    /**
+     * 调用方定位标识（通常是处方ID，字符串化避免前端精度丢失）
+     */
     @NotBlank(message = "分组标识不能为空")
     private String groupId;
 
-    /** 明细项集合 */
+    /**
+     * 明细项集合
+     */
     @NotEmpty(message = "药品明细不能为空")
     @Valid
     private List<DrugRationalItemDTO> items;

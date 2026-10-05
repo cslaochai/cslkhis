@@ -1,10 +1,11 @@
 package com.his.charge.service.impl;
 
-import com.his.charge.service.ArrearsControlService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.charge.dto.ArrearsPolicyUpsertDTO;
 import com.his.charge.entity.BizArrearsPolicy;
 import com.his.charge.mapper.BizArrearsPolicyMapper;
+import com.his.charge.service.ArrearsControlService;
 import com.his.charge.vo.ArrearsPatientVO;
 import com.his.charge.vo.ArrearsPolicyVO;
 import com.his.common.exception.BusinessException;
@@ -15,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -37,14 +37,8 @@ public class ArrearsControlServiceImpl implements ArrearsControlService {
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public ArrearsPolicyVO upsertPolicy(ArrearsPolicyVO dto) {
+    public ArrearsPolicyVO upsertPolicy(ArrearsPolicyUpsertDTO dto) {
         BizArrearsPolicy p = requirePolicy();
-        if (dto.getWarnLine() != null && dto.getWarnLine().compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("预警线不能为负数");
-        }
-        if (dto.getStopLine() != null && dto.getStopLine().compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("停费线不能为负数");
-        }
         if (dto.getStopEnabled() != null && dto.getStopEnabled() == 1 && dto.getStopLine() == null) {
             throw new BusinessException("开启停费管控必须设置停费线");
         }
@@ -54,7 +48,7 @@ public class ArrearsControlServiceImpl implements ArrearsControlService {
         }
         p.setWarnLine(dto.getWarnLine());
         p.setStopLine(dto.getStopLine());
-        p.setStopEnabled(dto.getStopEnabled() == null ? p.getStopEnabled() : dto.getStopEnabled());
+        p.setStopEnabled(dto.getStopEnabled());
         if (StringUtils.hasText(dto.getStopClasses())) {
             p.setStopClasses(dto.getStopClasses().trim());
         }

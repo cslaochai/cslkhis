@@ -17,7 +17,9 @@ public class SurveyAnswerVoidDTO implements Serializable {
     @NotNull(message = "答卷ID不能为空")
     private Long id;
 
-    /** 原因 */
+    /**
+     * 原因
+     */
     @NotBlank(message = "作废原因不能为空")
     private String reason;
 }

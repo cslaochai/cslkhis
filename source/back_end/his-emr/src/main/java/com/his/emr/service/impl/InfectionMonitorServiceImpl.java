@@ -3,12 +3,17 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
+import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.InfectionMonitorDTO;
 import com.his.emr.entity.BizHandHygieneObs;
 import com.his.emr.entity.BizInfectionCase;
 import com.his.emr.entity.BizInfectionMonitor;
 import com.his.emr.entity.BizInfectionMonitorDaily;
+import com.his.emr.enums.DeviceMonitorStatusEnum;
+import com.his.emr.enums.InfectionCaseStatusEnum;
+import com.his.emr.enums.InfectionMonitorTypeEnum;
+import com.his.emr.enums.InfectionSourceEnum;
 import com.his.emr.mapper.BizHandHygieneObsMapper;
 import com.his.emr.mapper.BizInfectionCaseMapper;
 import com.his.emr.mapper.BizInfectionMonitorDailyMapper;
@@ -25,30 +30,20 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-import com.his.emr.enums.DeviceMonitorStatusEnum;
-import com.his.emr.enums.InfectionCaseStatusEnum;
-
-import com.his.common.enums.YesOrNoEnum;
-import java.util.Objects;
-import com.his.emr.enums.InfectionMonitorTypeEnum;
-import com.his.emr.enums.InfectionSourceEnum;
 /**
  * 院感监测服务实现（L10）
- *
+ * <p>
  * 三块口径：
  * 1. 病例报告卡：1 待核实 → 2 已确认 / 3 已排除（核实是感控办的结论，只允许核实一次，
- *    结论错了建新卡订正——质控留痕不覆盖）。漏报调查发现的应报未报走补报建卡（leakFlag=1），
- *    与正常报卡同链路，仅统计口径区分。
+ * 结论错了建新卡订正——质控留痕不覆盖）。漏报调查发现的应报未报走补报建卡（leakFlag=1），
+ * 与正常报卡同链路，仅统计口径区分。
  * 2. 目标性监测：感染确认（infectionFlag=1）不改在管状态（status），两条线独立——
- *    感染后继续在管到拔管，导管日统计才完整。每日打卡只增禁删禁改（质控留痕），
- *    导管日 = 有效打卡数，感染率（‰）= 感染例次 / 导管日 × 1000。
+ * 感染后继续在管到拔管，导管日统计才完整。每日打卡只增禁删禁改（质控留痕），
+ * 导管日 = 有效打卡数，感染率（‰）= 感染例次 / 导管日 × 1000。
  * 3. 手卫生观察：只增不改。依从率（%）= SUM(执行) / SUM(时机) × 100，先聚合再算比率，
- *    不做单条比率的二次平均（平均的比率是错的）。
+ * 不做单条比率的二次平均（平均的比率是错的）。
  */
 @Slf4j
 @Service
@@ -62,6 +57,25 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     private final RedisSequenceService sequenceService;
 
     // 病例报告卡
+
+    /**
+     * 比率兜底：分母 0 给 0，不抛异常不猜 NaN
+     */
+    private static double rate(long num, long den) {
+        return den <= 0 ? 0.0 : (double) num / den;
+    }
+
+    private static String tr(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private static Long toLong(Object o) {
+        return o == null ? null : Long.valueOf(String.valueOf(o));
+    }
+
+    private static Integer toInteger(Object o) {
+        return o == null ? null : Integer.valueOf(String.valueOf(o));
+    }
 
     @Override
     public InfectionMonitorVO.CaseStats caseStats() {
@@ -113,6 +127,8 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     public InfectionMonitorVO.CaseRow caseGetDetailById(Long id) {
         return toCaseRow(requireCase(id));
     }
+
+    // 目标性监测
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -206,8 +222,6 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         }
         return c;
     }
-
-    // 目标性监测
 
     @Override
     public PageResult<InfectionMonitorVO.MonitorRow> monitorPage(InfectionMonitorDTO.MonitorQueryPage q) {
@@ -327,6 +341,8 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         monitorMapper.updateById(m);
     }
 
+    // 手卫生依从性
+
     @Override
     public InfectionMonitorVO.MonitorStats monitorStats() {
         List<BizInfectionMonitor> all = monitorMapper.selectList(
@@ -420,8 +436,6 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         return vo;
     }
 
-    // 手卫生依从性
-
     @Override
     public PageResult<InfectionMonitorVO.HandObsRow> handObsPage(InfectionMonitorDTO.HandObsQueryPage q) {
         LambdaQueryWrapper<BizHandHygieneObs> w = new LambdaQueryWrapper<BizHandHygieneObs>()
@@ -434,6 +448,8 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         List<BizHandHygieneObs> list = handObsMapper.selectList(w);
         return pageOf(list, q.getPageNo(), q.getPageSize(), this::toHandObsRow);
     }
+
+    // 内部工具
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -512,12 +528,6 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         return caseMapper.selectDeptName(deptId);
     }
 
-    // 内部工具
-
-    private interface RowMapper<T, R> {
-        R map(T source);
-    }
-
     private <T, R> PageResult<R> pageOf(List<T> list, Long pageNo, Long pageSize, RowMapper<T, R> mapper) {
         int total = list.size();
         int ps = pageSize == null || pageSize < 1 ? 10 : pageSize.intValue();
@@ -525,12 +535,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         int from = Math.min((pn - 1) * ps, total);
         int to = Math.min(from + ps, total);
         List<R> rows = list.subList(from, to).stream().map(mapper::map).toList();
-        return PageResult.of((long) total, (long) pn, (long) ps, (long) ((total + ps - 1) / ps), rows);
-    }
-
-    /** 比率兜底：分母 0 给 0，不抛异常不猜 NaN */
-    private static double rate(long num, long den) {
-        return den <= 0 ? 0.0 : (double) num / den;
+        return PageResult.of(total, pn, ps, (total + ps - 1) / ps, rows);
     }
 
     private String statusText(Integer s) {
@@ -623,15 +628,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         return vo;
     }
 
-    private static String tr(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static Long toLong(Object o) {
-        return o == null ? null : Long.valueOf(String.valueOf(o));
-    }
-
-    private static Integer toInteger(Object o) {
-        return o == null ? null : Integer.valueOf(String.valueOf(o));
+    private interface RowMapper<T, R> {
+        R map(T source);
     }
 }

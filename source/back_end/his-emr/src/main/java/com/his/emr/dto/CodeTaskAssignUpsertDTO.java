@@ -9,11 +9,15 @@ import lombok.Data;
 @Data
 public class CodeTaskAssignUpsertDTO {
 
-    /** 任务ID */
+    /**
+     * 任务ID
+     */
     @NotNull(message = "任务ID不能为空")
     private Long id;
 
-    /** 编码人员工ID（姓名服务端按员工反查，不信任前端） */
+    /**
+     * 编码人员工ID（姓名服务端按员工反查，不信任前端）
+     */
     @NotNull(message = "请选择编码员")
     private Long coderId;
 }

@@ -1,17 +1,18 @@
 package com.his.emr.service;
 
-import com.his.common.service.SignableContentProvider;
+import com.his.common.entity.SignSubject;
 import com.his.common.enums.ApplyStatusEnum;
 import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
-import com.his.common.entity.SignSubject;
+import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.emr.entity.BizLaboratoryApply;
+
 import java.time.LocalDateTime;
 
 public interface LaboratoryApplySignProvider extends SignableContentProvider {
 
-    public static String statusText(Integer status) {
+    static String statusText(Integer status) {
         if (status == null) {
             return "—";
         }
@@ -19,8 +20,10 @@ public interface LaboratoryApplySignProvider extends SignableContentProvider {
         return e.getCode() == status ? e.getLabel() : "未知(" + status + ")";
     }
 
-    /** 规范化文本：只含开单内容，按固定顺序 */
-    public static String canonical(BizLaboratoryApply a) {
+    /**
+     * 规范化文本：只含开单内容，按固定顺序
+     */
+    static String canonical(BizLaboratoryApply a) {
         return CanonicalText.create("LABORATORY_APPLY")
                 .put("applyNo", a.getApplyNo())
                 .put("patientId", a.getPatientId())
@@ -49,6 +52,10 @@ public interface LaboratoryApplySignProvider extends SignableContentProvider {
                 .build();
     }
 
+    static String plain(java.math.BigDecimal v) {
+        return v == null ? null : v.stripTrailingZeros().toPlainString();
+    }
+
     SignBizType bizType();
 
     SignSubject load(Long bizId);
@@ -58,8 +65,4 @@ public interface LaboratoryApplySignProvider extends SignableContentProvider {
     void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime);
 
     void revokeSignAnchor(Long bizId, Long signId);
-
-    static String plain(java.math.BigDecimal v) {
-        return v == null ? null : v.stripTrailingZeros().toPlainString();
-    }
 }

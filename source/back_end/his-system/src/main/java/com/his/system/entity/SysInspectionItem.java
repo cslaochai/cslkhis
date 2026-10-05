@@ -9,36 +9,62 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 
-/** 检查项目字典 */
+/**
+ * 检查项目字典
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_inspection_item")
 public class SysInspectionItem extends BaseEntity {
 
-    /** 项目编码（唯一） */
+    /**
+     * 项目编码（唯一）
+     */
     private String itemCode;
-    /** 项目名称 */
+    /**
+     * 项目名称
+     */
     private String itemName;
-    /** 项目类型（1-放射检查 2-超声检查 3-心电图 4-内镜检查 5-其他） */
+    /**
+     * 项目类型（1-放射检查 2-超声检查 3-心电图 4-内镜检查 5-其他）
+     */
     private Integer itemType;
 
-    /** 检查科室ID */
+    /**
+     * 检查科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
-    /** 检查部位 */
+    /**
+     * 检查部位
+     */
     private String bodyPart;
-    /** 检查价格 */
+    /**
+     * 检查价格
+     */
     private BigDecimal price;
-    /** 检查时长（分钟） */
+    /**
+     * 检查时长（分钟）
+     */
     private Integer duration;
-    /** 检查前准备 */
+    /**
+     * 检查前准备
+     */
     private String preparation;
-    /** 检查禁忌 */
+    /**
+     * 检查禁忌
+     */
     private String contraindication;
-    /** 是否支持急诊（0-否 1-是） */
+    /**
+     * 是否支持急诊（0-否 1-是）
+     */
     private Integer isEmergency;
-    /** 是否需要预约（0-否 1-是） */
+    /**
+     * 是否需要预约（0-否 1-是）
+     */
     private Integer isAppointment;
-    /** 状态（0-停用 1-启用） */
+    /**
+     * 状态（0-停用 1-启用）
+     */
     private Integer status;
 }

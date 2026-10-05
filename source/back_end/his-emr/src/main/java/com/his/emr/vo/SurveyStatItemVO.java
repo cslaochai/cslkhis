@@ -20,7 +20,9 @@ public class SurveyStatItemVO implements Serializable {
 
     private String key;
 
-    /** 名称 */
+    /**
+     * 名称
+     */
     private String name;
 
     private Long count;

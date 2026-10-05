@@ -12,13 +12,17 @@ import lombok.Data;
 @Data
 public class SysDepartList {
 
-    /** 科室ID */
+    /**
+     * 科室ID
+     */
     @TableId(type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
     private String deptCode;
-    /** 科室名称 */
+    /**
+     * 科室名称
+     */
     private String deptName;
 
     private Integer isPrimary;

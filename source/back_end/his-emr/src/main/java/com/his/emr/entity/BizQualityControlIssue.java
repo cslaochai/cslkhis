@@ -21,47 +21,79 @@ import java.time.LocalDateTime;
 @TableName("biz_quality_control_issue")
 public class BizQualityControlIssue {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @TableId(type = IdType.ASSIGN_ID)
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 质控单ID */
+    /**
+     * 质控单ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long qcId;
 
-    /** 质控单号 */
+    /**
+     * 质控单号
+     */
     private String qcNo;
 
-    /** 病历来源 */
+    /**
+     * 病历来源
+     */
     private String recordSource;
 
-    /** 病历ID */
+    /**
+     * 病历ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 规则编码 */
+    /**
+     * 规则编码
+     */
     private String ruleCode;
-    /** 规则名称 */
+    /**
+     * 规则名称
+     */
     private String ruleName;
-    /** 维度（1-完整性 2-规范性 3-逻辑性） */
+    /**
+     * 维度（1-完整性 2-规范性 3-逻辑性）
+     */
     private Integer dimension;
-    /** 严重度（1-提示 2-重要 3-否决） */
+    /**
+     * 严重度（1-提示 2-重要 3-否决）
+     */
     private Integer severity;
-    /** 扣分 */
+    /**
+     * 扣分
+     */
     private Integer deduct;
-    /** 问题字段 */
+    /**
+     * 问题字段
+     */
     private String fieldName;
-    /** 问题描述 */
+    /**
+     * 问题描述
+     */
     private String errorDetail;
-    /** 整改建议 */
+    /**
+     * 整改建议
+     */
     private String suggestion;
-    /** 病历原文证据（截断） */
+    /**
+     * 病历原文证据（截断）
+     */
     private String evidence;
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createTime;
 }

@@ -8,10 +8,10 @@ import com.his.medicaltech.service.MedicalTechService;
 import com.his.medicaltech.vo.BizReportVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 医技管理 - 报告控制器
@@ -27,7 +27,7 @@ public class BizReportController {
 
     @Operation(summary = "分页查询报告列表")
     @PostMapping("/list")
-    public Result<PageResult<BizReportVO>> reportList(@RequestBody ReportRecordQueryDTO queryDTO) {
+    public Result<PageResult<BizReportVO>> reportList(@Valid @RequestBody ReportRecordQueryDTO queryDTO) {
         return Result.success(medicalTechService.selectReportPageVO(
                 queryDTO.getPatientId(), queryDTO.getReportType(), queryDTO.getReportStatus(),
                 queryDTO.getPageNum(), queryDTO.getPageSize()));
@@ -42,7 +42,7 @@ public class BizReportController {
     @PreAuthorize("hasAuthority('medtech:laboratoryWorkstation:edit')")
     @Operation(summary = "发布报告")
     @PostMapping("/publish")
-    public Result<Void> publishReport(@RequestBody ReportPublishDTO publishDTO) {
+    public Result<Void> publishReport(@Valid @RequestBody ReportPublishDTO publishDTO) {
         boolean success = medicalTechService.publishReport(publishDTO.getReportId(), publishDTO.getPublishBy());
         return success ? Result.success("发布成功", null) : Result.error("发布失败");
     }

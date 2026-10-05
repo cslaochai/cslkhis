@@ -1,10 +1,10 @@
 package com.his.emr.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.his.common.base.PageResult;
 import com.his.emr.dto.PublicHealthSubmitDTO;
 import com.his.emr.entity.BizPublicHealthReport;
 import com.his.emr.vo.BizPublicHealthReportVO;
-import com.his.common.base.PageResult;
 
 /**
  * 公卫上报服务接口

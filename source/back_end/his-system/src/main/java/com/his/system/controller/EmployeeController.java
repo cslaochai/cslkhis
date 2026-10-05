@@ -10,10 +10,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 员工管理控制器
@@ -29,13 +29,13 @@ public class EmployeeController {
 
     @Operation(summary = "分页查询员工列表")
     @GetMapping("/listPage")
-    public Result<PageResult<EmployeeVO>> listPage(EmployeeQueryDTO queryDTO) {
+    public Result<PageResult<EmployeeVO>> listPage(@Valid EmployeeQueryDTO queryDTO) {
         return Result.success(employeeService.listPage(queryDTO));
     }
 
     @Operation(summary = "分页查询员工列表")
     @GetMapping("/selectList")
-    public Result<List<EmployeeVO>> selectList(EmployeeQueryDTO queryDTO) {
+    public Result<List<EmployeeVO>> selectList(@Valid EmployeeQueryDTO queryDTO) {
         return Result.success(employeeService.selectList(queryDTO));
     }
 

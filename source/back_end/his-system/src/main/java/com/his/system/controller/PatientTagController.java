@@ -8,11 +8,12 @@ import com.his.system.service.PatientTagService;
 import com.his.system.vo.SysPatientTagVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 患者标签管理控制器
@@ -28,13 +29,13 @@ public class PatientTagController {
 
     @Operation(summary = "查询患者标签列表")
     @PostMapping("/listPage")
-    public Result<PageResult<SysPatientTagVO>> listPage(@RequestBody SysPatientTagQueryDTO queryDTO) {
+    public Result<PageResult<SysPatientTagVO>> listPage(@Valid @RequestBody SysPatientTagQueryDTO queryDTO) {
         return Result.success(patientTagService.queryTagPage(queryDTO));
     }
 
     @Operation(summary = "查询患者标签列表")
     @PostMapping("/list")
-    public Result<List<SysPatientTagVO>> list(@RequestBody SysPatientTagQueryDTO queryDTO) {
+    public Result<List<SysPatientTagVO>> list(@Valid @RequestBody SysPatientTagQueryDTO queryDTO) {
         return Result.success(patientTagService.queryTagList(queryDTO));
     }
 
@@ -47,7 +48,7 @@ public class PatientTagController {
     @PreAuthorize("hasAuthority('patient:tag:add')")
     @Operation(summary = "新增或修改患者标签")
     @PostMapping("/patientTagUpsert")
-    public Result<Void> patientTagUpsert(@RequestBody SysPatientTagUpsertDTO upsertDTO) {
+    public Result<Void> patientTagUpsert(@Valid @RequestBody SysPatientTagUpsertDTO upsertDTO) {
         return Result.success(patientTagService.upsertTag(upsertDTO), null);
     }
 

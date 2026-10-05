@@ -42,7 +42,7 @@ import com.his.common.exception.BusinessException;
 import com.his.patient.service.PatientGuardianService;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.DeptScopeGuard;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;

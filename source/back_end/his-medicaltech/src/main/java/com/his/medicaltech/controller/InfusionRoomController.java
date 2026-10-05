@@ -10,12 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -106,7 +101,7 @@ public class InfusionRoomController {
     @PreAuthorize("hasAuthority('medtech:infusion:list')")
     @Operation(summary = "今日输液单分页")
     @PostMapping("/listPage")
-    public Result<PageResult<InfusionRoomVO.Infusion>> listPage(@RequestBody InfusionRoomDTO.InfusionQuery query) {
+    public Result<PageResult<InfusionRoomVO.Infusion>> listPage(@Valid @RequestBody InfusionRoomDTO.InfusionQuery query) {
         return Result.success(infusionRoomService.listPage(query));
     }
 

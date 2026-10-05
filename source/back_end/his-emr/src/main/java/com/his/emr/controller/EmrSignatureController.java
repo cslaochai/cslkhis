@@ -2,30 +2,11 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.common.dto.SignCertIssueDTO;
-import com.his.common.dto.SignCertQueryPageDTO;
-import com.his.common.dto.SignCertRevokeDTO;
-import com.his.common.dto.SignatureInvalidateDTO;
-import com.his.common.dto.SignatureQueryPageDTO;
-import com.his.common.dto.SignatureSignDTO;
-import com.his.common.dto.SignatureVerifyByBizDTO;
-import com.his.common.dto.SignatureVerifyDTO;
-import com.his.common.dto.TsaStatusUpsertDTO;
-import com.his.common.dto.TsaTimeSourceDTO;
-import com.his.common.dto.TsaTokenQueryPageDTO;
-import com.his.common.dto.TsaTokenVerifyDTO;
+import com.his.common.dto.*;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.service.SignCertService;
 import com.his.common.service.TsaService;
-import com.his.common.vo.ObjectSignatureVO;
-import com.his.common.vo.SignCertVO;
-import com.his.common.vo.SignVerifyVO;
-import com.his.common.vo.SignatureOptionsVO;
-import com.his.common.vo.SignatureSummaryVO;
-import com.his.common.vo.SignatureVO;
-import com.his.common.vo.TsaStatusVO;
-import com.his.common.vo.TsaTokenVerifyVO;
-import com.his.common.vo.TsaTokenVO;
+import com.his.common.vo.*;
 import com.his.emr.service.SignatureCenterService;
 import com.his.emr.vo.SignCaProbeOutboundVO;
 import com.his.emr.vo.SignCaStatusVO;
@@ -34,14 +15,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 电子签名与时间戳（P5.5）。
@@ -72,7 +49,7 @@ public class EmrSignatureController {
 
     @Operation(summary = "签名记录分页（可按对象类型/场景/签名人/状态/验签结果/时间过滤）")
     @GetMapping("/emr/signature/listPage")
-    public Result<PageResult<SignatureVO>> listPage(SignatureQueryPageDTO query) {
+    public Result<PageResult<SignatureVO>> listPage(@Valid SignatureQueryPageDTO query) {
         var page = signatureService.listPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 page.getPages(), page.getRecords()));
@@ -145,7 +122,7 @@ public class EmrSignatureController {
 
     @Operation(summary = "时间戳令牌台账分页（只增不改的签发流水，可按序列号精确查）")
     @GetMapping("/emr/tsa/tokenListPage")
-    public Result<PageResult<TsaTokenVO>> tsaTokenListPage(TsaTokenQueryPageDTO query) {
+    public Result<PageResult<TsaTokenVO>> tsaTokenListPage(@Valid TsaTokenQueryPageDTO query) {
         var page = tsaService.listPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 page.getPages(), page.getRecords()));
@@ -190,7 +167,7 @@ public class EmrSignatureController {
 
     @Operation(summary = "签名证书分页")
     @GetMapping("/emr/signCert/listPage")
-    public Result<PageResult<SignCertVO>> certListPage(SignCertQueryPageDTO query) {
+    public Result<PageResult<SignCertVO>> certListPage(@Valid SignCertQueryPageDTO query) {
         var page = signCertService.listPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 page.getPages(), page.getRecords()));

@@ -18,7 +18,9 @@ import java.time.LocalDateTime;
 @TableName("sys_price_change_history")
 public class SysPriceChangeHistory {
 
-    /** 主键ID */
+    /**
+     * 主键ID
+     */
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
@@ -37,7 +39,9 @@ public class SysPriceChangeHistory {
      */
     private String itemCode;
 
-    /** 项目名称（冗余） */
+    /**
+     * 项目名称（冗余）
+     */
     private String itemName;
 
     /**
@@ -55,7 +59,9 @@ public class SysPriceChangeHistory {
      */
     private String changeReason;
 
-    /** 操作人ID（员工ID） */
+    /**
+     * 操作人ID（员工ID）
+     */
     private Long operatorId;
 
     /**

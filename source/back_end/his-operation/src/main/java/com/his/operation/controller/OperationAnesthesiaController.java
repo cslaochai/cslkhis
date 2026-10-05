@@ -2,36 +2,18 @@ package com.his.operation.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
-import com.his.operation.dto.AnesthesiaActionDTO;
-import com.his.operation.dto.AnesthesiaMedUpsertDTO;
-import com.his.operation.dto.AnesthesiaRecordUpsertDTO;
-import com.his.operation.dto.AnesthesiaRecordQueryPageDTO;
-import com.his.operation.dto.AnesthesiaRecordUpdateUpsertDTO;
-import com.his.operation.dto.AnesthesiaVitalUpsertDTO;
-import com.his.operation.dto.AnesthesiaVisitFinishDTO;
-import com.his.operation.dto.AnesthesiaVisitQueryPageDTO;
-import com.his.operation.dto.AnesthesiaVisitUpsertDTO;
+import com.his.operation.dto.*;
 import com.his.operation.service.AnesthesiaRecordService;
 import com.his.operation.service.AnesthesiaVisitService;
-import com.his.operation.vo.AnesthesiaMedVO;
-import com.his.operation.vo.AnesthesiaRecordVO;
-import com.his.operation.vo.AnesthesiaVitalVO;
-import com.his.operation.vo.AnesthesiaVisitVO;
-import com.his.operation.vo.OperationChargeItemVO;
-import com.his.operation.vo.OperationChargeSummaryVO;
+import com.his.operation.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 手术麻醉链端点（G15：术前访视 → 麻醉记录单 → 计费联动）。
@@ -56,7 +38,7 @@ public class OperationAnesthesiaController {
 
     @Operation(summary = "术前访视分页（住院/手术/结论/关键字）")
     @GetMapping("/visitListPage")
-    public Result<IPage<AnesthesiaVisitVO>> visitListPage(AnesthesiaVisitQueryPageDTO query) {
+    public Result<IPage<AnesthesiaVisitVO>> visitListPage(@Valid AnesthesiaVisitQueryPageDTO query) {
         return Result.success(visitService.listPage(query));
     }
 
@@ -97,7 +79,7 @@ public class OperationAnesthesiaController {
 
     @Operation(summary = "麻醉记录单分页（住院/手术/麻醉医师/状态/关键字/未计费）")
     @GetMapping("/recordListPage")
-    public Result<IPage<AnesthesiaRecordVO>> recordListPage(AnesthesiaRecordQueryPageDTO query) {
+    public Result<IPage<AnesthesiaRecordVO>> recordListPage(@Valid AnesthesiaRecordQueryPageDTO query) {
         return Result.success(recordService.listPage(query));
     }
 

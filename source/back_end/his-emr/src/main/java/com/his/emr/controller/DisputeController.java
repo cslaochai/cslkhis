@@ -2,11 +2,7 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.emr.dto.DisputeActionDTO;
-import com.his.emr.dto.DisputeCaseUpsertDTO;
-import com.his.emr.dto.DisputeCloseDTO;
-import com.his.emr.dto.DisputeFollowDTO;
-import com.his.emr.dto.DisputeQueryPageDTO;
+import com.his.emr.dto.*;
 import com.his.emr.service.DisputeService;
 import com.his.emr.vo.DisputeCaseVO;
 import com.his.emr.vo.DisputeStatVO;
@@ -15,13 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 医疗纠纷 / 投诉登记（登记 → 受理 → 调查处理 → 结案 / 撤销，病历封存联动）。
@@ -40,7 +30,7 @@ public class DisputeController {
     @PreAuthorize("hasAuthority('qc:dispute:list')")
     @Operation(summary = "纠纷/投诉分页")
     @PostMapping("/listPage")
-    public Result<PageResult<DisputeCaseVO>> listPage(@RequestBody DisputeQueryPageDTO dto) {
+    public Result<PageResult<DisputeCaseVO>> listPage(@Valid @RequestBody DisputeQueryPageDTO dto) {
         return Result.success(disputeService.listPage(dto));
     }
 

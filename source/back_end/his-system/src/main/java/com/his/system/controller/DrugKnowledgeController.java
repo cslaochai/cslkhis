@@ -14,12 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 合理用药知识库（药物相互作用 × 剂量上限）维护
@@ -39,7 +34,7 @@ public class DrugKnowledgeController {
     @Operation(summary = "分页查询药物相互作用")
     @PreAuthorize("hasAuthority('system:drugKnowledge:list')")
     @PostMapping("/interactionListPage")
-    public Result<PageResult<DrugInteractionVO>> interactionListPage(@RequestBody DrugInteractionQueryPageDTO queryDTO) {
+    public Result<PageResult<DrugInteractionVO>> interactionListPage(@Valid @RequestBody DrugInteractionQueryPageDTO queryDTO) {
         return Result.success(drugKnowledgeService.interactionListPage(queryDTO));
     }
 
@@ -61,7 +56,7 @@ public class DrugKnowledgeController {
     @Operation(summary = "分页查询剂量上限")
     @PreAuthorize("hasAuthority('system:drugKnowledge:list')")
     @PostMapping("/doseListPage")
-    public Result<PageResult<DoseLimitVO>> doseListPage(@RequestBody DoseLimitQueryPageDTO queryDTO) {
+    public Result<PageResult<DoseLimitVO>> doseListPage(@Valid @RequestBody DoseLimitQueryPageDTO queryDTO) {
         return Result.success(drugKnowledgeService.doseLimitListPage(queryDTO));
     }
 

@@ -27,7 +27,7 @@ import com.his.patient.vo.PatientIndexStatVO;
 import com.his.patient.vo.PatientIndexVO;
 import com.his.patient.vo.PatientMatchLevelSelectListVO;
 import com.his.patient.vo.PatientMergeLogVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -9,10 +9,10 @@ import com.his.emr.service.ClinicalRuleCheckService;
 import com.his.emr.vo.BizClinicalRuleCheckVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 临床规则校验控制器
@@ -28,7 +28,7 @@ public class ClinicalRuleCheckController {
 
     @Operation(summary = "分页查询校验记录")
     @PostMapping("/listPage")
-    public Result<PageResult<BizClinicalRuleCheckVO>> listPage(@RequestBody RuleCheckQueryPageDTO queryDTO) {
+    public Result<PageResult<BizClinicalRuleCheckVO>> listPage(@Valid @RequestBody RuleCheckQueryPageDTO queryDTO) {
         return Result.success(ruleCheckService.selectCheckPage(queryDTO.getPatientId(), queryDTO.getRuleType(),
                 queryDTO.getCheckStatus(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }
@@ -42,7 +42,7 @@ public class ClinicalRuleCheckController {
     @PreAuthorize("hasAuthority('emr:medicalReview:edit')")
     @Operation(summary = "执行临床规则校验")
     @PostMapping("/executeCheck")
-    public Result<BizClinicalRuleCheckVO> executeCheck(@RequestBody RuleCheckExecuteDTO actionDTO) {
+    public Result<BizClinicalRuleCheckVO> executeCheck(@Valid @RequestBody RuleCheckExecuteDTO actionDTO) {
         return Result.success(ruleCheckService.executeCheck(actionDTO.getRecordId(), actionDTO.getRuleType(),
                 actionDTO.getCheckBy()));
     }
@@ -50,7 +50,7 @@ public class ClinicalRuleCheckController {
     @PreAuthorize("hasAuthority('emr:medicalReview:edit')")
     @Operation(summary = "处理校验问题")
     @PostMapping("/handleCheck")
-    public Result<Void> handleCheck(@RequestBody RuleCheckHandleDTO actionDTO) {
+    public Result<Void> handleCheck(@Valid @RequestBody RuleCheckHandleDTO actionDTO) {
         boolean success = ruleCheckService.handleCheck(actionDTO.getId(), actionDTO.getIgnore(), actionDTO.getRemark());
         return success ? Result.success("处理成功", null) : Result.error("处理失败");
     }

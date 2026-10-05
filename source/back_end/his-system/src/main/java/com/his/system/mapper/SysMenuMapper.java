@@ -24,11 +24,11 @@ public interface SysMenuMapper extends BaseMapper<SysMenu> {
 
     /**
      * 按「员工 + 当前角色」查询菜单
-     *
+     * <p>
      * 权限口径：菜单展示跟随**当前角色**（JWT 里带 currentRole，切换角色会换 token），
      * 而不是员工全部角色的并集。并集会让多角色员工（如同时挂医生 + 药剂师）越权看到
      * 另一个角色的菜单，「切换角色」也就失去意义。
-     *
+     * <p>
      * 返回结果里可能同时含菜单与它的一级目录，交由调用方 buildMenuTree 组装。
      */
     @Select("SELECT DISTINCT m.* FROM sys_menu m " +

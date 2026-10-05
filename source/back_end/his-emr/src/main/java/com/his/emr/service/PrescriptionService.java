@@ -2,11 +2,7 @@ package com.his.emr.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
-import com.his.emr.dto.InspectionApplyQueryDTO;
-import com.his.emr.dto.LaboratoryApplyQueryDTO;
-import com.his.emr.dto.PrescriptionAuditDTO;
-import com.his.emr.dto.PrescriptionQueryDTO;
-import com.his.emr.dto.PrescriptionQueryPageDTO;
+import com.his.emr.dto.*;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.entity.BizLaboratoryApply;
 import com.his.emr.entity.BizMedicalRecord;
@@ -57,6 +53,7 @@ public interface PrescriptionService extends IService<BizMedicalRecord> {
      * 查询检查申请列表（不分页）
      */
     List<BizInspectionApply> getByPatientId(InspectionApplyQueryDTO queryDTO);
+
     /**
      * 查询检验申请列表（不分页）
      */

@@ -5,7 +5,9 @@ import com.his.emr.entity.SysSingleDisease;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 
-/** 单病种目录 Mapper */
+/**
+ * 单病种目录 Mapper
+ */
 @Mapper
 public interface SysSingleDiseaseMapper extends BaseMapper<SysSingleDisease> {
 

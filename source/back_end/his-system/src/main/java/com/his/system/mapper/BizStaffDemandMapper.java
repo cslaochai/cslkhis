@@ -3,11 +3,7 @@ package com.his.system.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.system.entity.BizStaffDemand;
 import com.his.system.vo.StaffDemandGapVO;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,7 +21,9 @@ import java.util.List;
 @Mapper
 public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {
 
-    /** 派生号段的起点（避免 19 位雪花 id 撞车；号段内自增） */
+    /**
+     * 派生号段的起点（避免 19 位雪花 id 撞车；号段内自增）
+     */
     @Select("SELECT COALESCE(MAX(id), 896800000000000000) FROM biz_staff_demand "
             + "WHERE id < 896800000000900000")
     Long maxDerivedId();
@@ -54,7 +52,9 @@ public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {
                                      @Param("orgId") Long orgId,
                                      @Param("staffType") Integer staffType);
 
-    /** 重算前清掉窗口内的派生产物（手工调整 demand_source=3 一行不动） */
+    /**
+     * 重算前清掉窗口内的派生产物（手工调整 demand_source=3 一行不动）
+     */
     @Delete("DELETE FROM biz_staff_demand "
             + "WHERE demand_source IN (1,2) AND demand_date BETWEEN #{startDate} AND #{endDate}")
     int purgeDerived(@Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
@@ -208,14 +208,18 @@ public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {
                      @Param("calcBasis") String calcBasis, @Param("operator") String operator,
                      @Param("remark") String remark);
 
-    /** 手工调整前先看一眼系统原来算了多少（写进依据里，下次重算回来时有个参照） */
+    /**
+     * 手工调整前先看一眼系统原来算了多少（写进依据里，下次重算回来时有个参照）
+     */
     @Select("SELECT required_count FROM biz_staff_demand "
             + "WHERE del_flag = 0 AND demand_date = #{demandDate} AND org_type = #{orgType} "
             + "AND org_id = #{orgId} AND staff_type = #{staffType} AND period_code = 0 AND shift_id = 0")
     Integer selectRequired(@Param("demandDate") LocalDate demandDate, @Param("orgType") Integer orgType,
                            @Param("orgId") Long orgId, @Param("staffType") Integer staffType);
 
-    /** 单元名称快照：手工调整那行要知道自己挂在哪个病区/科室上 */
+    /**
+     * 单元名称快照：手工调整那行要知道自己挂在哪个病区/科室上
+     */
     @Select("SELECT dept_name FROM sys_department d WHERE d.id = #{orgId}")
     String selectDeptName(@Param("orgId") Long orgId);
 

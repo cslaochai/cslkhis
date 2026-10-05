@@ -26,7 +26,7 @@ public class RefundApplyController {
 
     @Operation(summary = "分页查询退费申请")
     @PostMapping("/listPage")
-    public Result<PageResult<BizRefundApplyVO>> listPage(@RequestBody RefundQueryPageDTO queryDTO) {
+    public Result<PageResult<BizRefundApplyVO>> listPage(@Valid @RequestBody RefundQueryPageDTO queryDTO) {
         PageResult<BizRefundApplyVO> result = refundApplyService.selectRefundApplyPage(
                 queryDTO.getPatientId(),
                 queryDTO.getApplyStatus(),

@@ -17,7 +17,7 @@ import com.his.miniapp.vo.PatientDetailVO;
 import com.his.miniapp.vo.ServiceMessageListVO;
 import com.his.miniapp.vo.ServiceTicketDetailVO;
 import com.his.miniapp.vo.ServiceTicketLogVO;
-import com.his.security.CurrentUser;
+import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

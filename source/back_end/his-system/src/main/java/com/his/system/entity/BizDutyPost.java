@@ -21,23 +21,35 @@ import lombok.EqualsAndHashCode;
 @TableName("biz_duty_post")
 public class BizDutyPost extends BaseEntity {
 
-    /** 点位编码 */
+    /**
+     * 点位编码
+     */
     private String postCode;
 
-    /** 点位名称 */
+    /**
+     * 点位名称
+     */
     private String postName;
 
-    /** 责任范围（1-全院行政 2-急诊 3-感染 4-总务 5-信息） */
+    /**
+     * 责任范围（1-全院行政 2-急诊 3-感染 4-总务 5-信息）
+     */
     private Integer dutyScope;
 
-    /** 排班单元类型（1-科室 2-病区 3-全院） */
+    /**
+     * 排班单元类型（1-科室 2-病区 3-全院）
+     */
     private Integer orgType;
 
-    /** 排班单元ID（全院级为 0） */
+    /**
+     * 排班单元ID（全院级为 0）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long orgId;
 
-    /** 班内角色（1-主班 2-副班） */
+    /**
+     * 班内角色（1-主班 2-副班）
+     */
     private Integer roleType;
 
     /**
@@ -57,19 +69,29 @@ public class BizDutyPost extends BaseEntity {
      */
     private Integer attendMode;
 
-    /** 标准班次ID */
+    /**
+     * 标准班次ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long shiftId;
 
-    /** 应到岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他，空-不限） */
+    /**
+     * 应到岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政其他，空-不限）
+     */
     private Integer requiredStaffType;
 
-    /** 点位值班电话 */
+    /**
+     * 点位值班电话
+     */
     private String phone;
 
-    /** 排序号 */
+    /**
+     * 排序号
+     */
     private Integer sortNo;
 
-    /** 状态（0-停用 1-启用） */
+    /**
+     * 状态（0-停用 1-启用）
+     */
     private Integer status;
 }

@@ -9,7 +9,9 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 
-/** 药品字典 */
+/**
+ * 药品字典
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("sys_drug")

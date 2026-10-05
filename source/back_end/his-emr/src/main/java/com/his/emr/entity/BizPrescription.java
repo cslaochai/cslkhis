@@ -13,7 +13,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** 处方主表 */
+/**
+ * 处方主表
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_prescription")

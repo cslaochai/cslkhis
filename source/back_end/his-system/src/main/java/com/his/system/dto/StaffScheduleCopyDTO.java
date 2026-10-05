@@ -15,24 +15,34 @@ import java.time.LocalDate;
 @Data
 public class StaffScheduleCopyDTO {
 
-    /** 排班单元类型（1-科室 2-病区 3-全院） */
+    /**
+     * 排班单元类型（1-科室 2-病区 3-全院）
+     */
     @NotNull(message = "排班单元类型不能为空")
     private Integer orgType;
 
-    /** 排班单元ID（全院级不传） */
+    /**
+     * 排班单元ID（全院级不传）
+     */
     private Long orgId;
 
-    /** 来源区间开始日（含） */
+    /**
+     * 来源区间开始日（含）
+     */
     @NotNull(message = "来源区间开始日不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fromStartDate;
 
-    /** 来源区间结束日（含） */
+    /**
+     * 来源区间结束日（含）
+     */
     @NotNull(message = "来源区间结束日不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fromEndDate;
 
-    /** 目标区间开始日（含） */
+    /**
+     * 目标区间开始日（含）
+     */
     @NotNull(message = "目标区间开始日不能为空")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate toStartDate;

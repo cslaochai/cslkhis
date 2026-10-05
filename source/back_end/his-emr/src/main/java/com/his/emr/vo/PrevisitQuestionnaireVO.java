@@ -12,15 +12,23 @@ import java.util.Map;
 @Data
 public class PrevisitQuestionnaireVO {
 
-    /** 量表版本 */
+    /**
+     * 量表版本
+     */
     private String version;
 
-    /** 主症状清单 */
+    /**
+     * 主症状清单
+     */
     private List<PrevisitQuestionnaireSupport.Option> mainSymptoms;
 
-    /** 通用问 */
+    /**
+     * 通用问
+     */
     private List<PrevisitQuestionnaireSupport.Question> commonQuestions;
 
-    /** 主症状追问组（key=主症状 code） */
+    /**
+     * 主症状追问组（key=主症状 code）
+     */
     private Map<String, List<PrevisitQuestionnaireSupport.Question>> symptomQuestions;
 }

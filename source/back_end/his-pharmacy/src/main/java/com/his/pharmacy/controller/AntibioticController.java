@@ -2,30 +2,15 @@ package com.his.pharmacy.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.pharmacy.dto.AntibioticAliasUpsertDTO;
-import com.his.pharmacy.dto.AntibioticAuthQueryPageDTO;
-import com.his.pharmacy.dto.AntibioticAuthUpsertDTO;
-import com.his.pharmacy.dto.AntibioticCatalogLevelUpsertDTO;
-import com.his.pharmacy.dto.AntibioticCatalogQueryPageDTO;
+import com.his.pharmacy.dto.*;
 import com.his.pharmacy.service.AntibioticService;
-import com.his.pharmacy.vo.AntibioticAliasVO;
-import com.his.pharmacy.vo.AntibioticAuthCheckVO;
-import com.his.pharmacy.vo.AntibioticAuthVO;
-import com.his.pharmacy.vo.AntibioticCatalogVO;
-import com.his.pharmacy.vo.AntibioticDoctorSelectListVO;
-import com.his.pharmacy.vo.AntibioticDrugSelectListVO;
+import com.his.pharmacy.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -47,7 +32,7 @@ public class AntibioticController {
     @Operation(summary = "分级目录分页")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:catalog')")
     @PostMapping("/catalogListPage")
-    public Result<PageResult<AntibioticCatalogVO>> catalogListPage(@RequestBody AntibioticCatalogQueryPageDTO query) {
+    public Result<PageResult<AntibioticCatalogVO>> catalogListPage(@Valid @RequestBody AntibioticCatalogQueryPageDTO query) {
         return Result.success(antibioticService.catalogListPage(query));
     }
 
@@ -98,7 +83,7 @@ public class AntibioticController {
     @Operation(summary = "处方权授权分页")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:catalog')")
     @PostMapping("/authListPage")
-    public Result<PageResult<AntibioticAuthVO>> authListPage(@RequestBody AntibioticAuthQueryPageDTO query) {
+    public Result<PageResult<AntibioticAuthVO>> authListPage(@Valid @RequestBody AntibioticAuthQueryPageDTO query) {
         return Result.success(antibioticService.authListPage(query));
     }
 
@@ -112,8 +97,8 @@ public class AntibioticController {
     @Operation(summary = "开方前越权自检（医生站用：这药我能不能开）")
     @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'pharmacy:antibiotic:catalog')")
     @PostMapping("/checkAuthority")
-    public Result<AntibioticAuthCheckVO> checkAuthority(@RequestBody List<Long> drugIds) {
+    public Result<AntibioticAuthCheckVO> checkAuthority(@Valid @RequestBody AntibioticAuthCheckQueryDTO dto) {
         return Result.success(antibioticService.checkAuthority(
-                com.his.security.UserUtils.getCurrentEmployeeId(), drugIds));
+                com.his.security.UserUtils.getCurrentEmployeeId(), dto.getDrugIds()));
     }
 }

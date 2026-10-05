@@ -31,10 +31,17 @@ public class AiLabPlainAdminController {
 
     private final LabPlainItemAdminService labPlainItemAdminService;
 
+    private static Long parseId(String value) {
+        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
+            return null;
+        }
+        return Long.parseLong(value);
+    }
+
     @Operation(summary = "词典列表（含停用）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('lab:plain:list')")
-    public Result<PageResult<LabPlainItemAdminVO>> listPage(@RequestBody LabPlainItemSearchDTO dto) {
+    public Result<PageResult<LabPlainItemAdminVO>> listPage(@Valid @RequestBody LabPlainItemSearchDTO dto) {
         return Result.success(labPlainItemAdminService.adminPage(dto == null ? new LabPlainItemSearchDTO() : dto));
     }
 
@@ -72,13 +79,6 @@ public class AiLabPlainAdminController {
     public Result<Integer> deleteById(@RequestBody @Valid IdDTO dto) {
         labPlainItemAdminService.adminDelete(parseId(dto.getId()));
         return Result.success(1);
-    }
-
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
     }
 
     @Data

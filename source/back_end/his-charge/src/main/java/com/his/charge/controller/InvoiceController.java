@@ -32,7 +32,7 @@ public class InvoiceController {
     @Operation(summary = "分页查询发票")
     @PreAuthorize("hasAuthority('finance:invoice:list')")
     @PostMapping("/listPage")
-    public Result<PageResult<BizInvoiceVO>> listPage(@RequestBody InvoiceQueryPageDTO queryDTO) {
+    public Result<PageResult<BizInvoiceVO>> listPage(@Valid @RequestBody InvoiceQueryPageDTO queryDTO) {
         return Result.success(invoiceService.selectInvoicePage(queryDTO.getPatientId(), queryDTO.getBillId(),
                 queryDTO.getInvoiceStatus(), queryDTO.getKeyword(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }
@@ -62,7 +62,7 @@ public class InvoiceController {
     @PreAuthorize("hasAuthority('finance:invoice:delete')")
     @Operation(summary = "作废发票")
     @PostMapping("/voidInvoice")
-    public Result<Void> voidInvoice(@RequestBody InvoiceVoidDTO actionDTO) {
+    public Result<Void> voidInvoice(@Valid @RequestBody InvoiceVoidDTO actionDTO) {
         boolean success = invoiceService.voidInvoice(actionDTO.getId(), actionDTO.getReason());
         return success ? Result.success("作废成功", null) : Result.error("作废失败");
     }

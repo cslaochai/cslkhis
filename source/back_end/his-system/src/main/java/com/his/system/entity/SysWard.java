@@ -20,16 +20,24 @@ public class SysWard {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
 
-    /** 病区编码 */
+    /**
+     * 病区编码
+     */
     private String wardCode;
 
-    /** 病区名称 */
+    /**
+     * 病区名称
+     */
     private String wardName;
 
-    /** 所属科室ID */
+    /**
+     * 所属科室ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 状态（0-停用 1-正常） */
+    /**
+     * 状态（0-停用 1-正常）
+     */
     private Integer status;
 }

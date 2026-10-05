@@ -34,10 +34,17 @@ public class MiniappFaqAdminController {
 
     private final MiniappFaqService faqService;
 
+    private static Long parseId(String value) {
+        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
+            return null;
+        }
+        return Long.parseLong(value);
+    }
+
     @Operation(summary = "常见问题列表（含停用）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('patient:faq:list')")
-    public Result<PageResult<FaqAdminVO>> listPage(@RequestBody FaqSearchDTO dto) {
+    public Result<PageResult<FaqAdminVO>> listPage(@Valid @RequestBody FaqSearchDTO dto) {
         return Result.success(faqService.adminPage(dto));
     }
 
@@ -61,13 +68,6 @@ public class MiniappFaqAdminController {
     public Result<Integer> deleteById(@RequestBody @Valid IdDTO dto) {
         faqService.adminDelete(parseId(dto.getId()));
         return Result.success(1);
-    }
-
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
     }
 
     @Data

@@ -1,6 +1,6 @@
 package com.his.system.service.impl;
 
-import com.his.security.RolePermissionProvider;
+import com.his.security.provider.RolePermissionProvider;
 import com.his.system.service.RolePermissionCache;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

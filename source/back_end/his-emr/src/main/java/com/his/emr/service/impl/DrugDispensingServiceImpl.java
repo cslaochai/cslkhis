@@ -3,10 +3,12 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.enums.PrescriptionStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.TcmGramUnits;
 import com.his.emr.entity.BizDrugDispensing;
 import com.his.emr.entity.BizPrescription;
+import com.his.emr.enums.DispensingStatusEnum;
 import com.his.emr.mapper.BizDrugDispensingMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
 import com.his.emr.service.DrugDispensingService;
@@ -30,9 +32,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.his.emr.enums.DispensingStatusEnum;
-import com.his.common.enums.PrescriptionStatusEnum;
-
 /**
  * 药品发药服务实现
  * 闭环口径：
@@ -40,11 +39,11 @@ import com.his.common.enums.PrescriptionStatusEnum;
  * 2) **麻精限量闸门**：整张处方一次判定，任一管制明细超法定处方天数 → 整单不发（NarcoticControlService）；
  * 3) **麻精双人复核闸门**：麻醉药品、第一类精神药品必须指定复核药师，且不得与发药人同人；
  * 4) 扣库存：PharmacyService.deductStockFefo 先过期先出、跨批次、逐批落药品库存流水，
- *    前后合计写回药品发药记录.stock_before/stock_after；
- *    <b>中药饮片行先换算再扣</b>（quantity 是克、批次是 kg/袋，见 {@code TcmGramUnits}，sql/139）；
+ * 前后合计写回药品发药记录.stock_before/stock_after；
+ * <b>中药饮片行先换算再扣</b>（quantity 是克、批次是 kg/袋，见 {@code TcmGramUnits}，sql/139）；
  * 5) **麻精写专册**：发药成功后按 FEFO 实际扣减批次登记，批号从流水回查、不取前端传值；
  * 6) 处方联动：该处方全部待发明细发完 → 处方置 4 + dispense_time/dispense_by；任一明细退药 → 处方置 6 + refund_*；
- *    饮片方且标了代煎的，在置 4 的同一事务里生成代煎台账（中药代煎单，幂等）；
+ * 饮片方且标了代煎的，在置 4 的同一事务里生成代煎台账（中药代煎单，幂等）；
  * 7) 一切状态迁移校验失败抛 BusinessException，绝不静默成功。
  *
  * <p>闸门顺序是「先校验、后扣库存」：反过来的话每次校验失败都要回滚一批流水，
@@ -84,7 +83,7 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
 
     @Override
     public PageResult<BizDrugDispensingVO> selectDispensingPage(Long patientId, String patientName, String prescriptionNo,
-                                                               Integer dispensingStatus, int pageNum, int pageSize) {
+                                                                Integer dispensingStatus, int pageNum, int pageSize) {
         Page<BizDrugDispensing> page = baseMapper.selectDispensingPage(
                 new Page<>(pageNum, pageSize), patientId, patientName, prescriptionNo, dispensingStatus);
         List<BizDrugDispensingVO> voList = page.getRecords().stream()

@@ -53,18 +53,6 @@ public enum QcSeverity {
         this.deduct = deduct;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    public int getDeduct() {
-        return deduct;
-    }
-
     public static String textOf(Integer code) {
         if (code == null) {
             return null;
@@ -75,5 +63,17 @@ public enum QcSeverity {
             }
         }
         return "未知(" + code + ")";
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public int getDeduct() {
+        return deduct;
     }
 }

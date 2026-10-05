@@ -17,18 +17,28 @@ import java.time.LocalDateTime;
 @TableName("biz_infection_monitor_daily")
 public class BizInfectionMonitorDaily extends BaseEntity {
 
-    /** 监测登记ID（院感目标性监测登记） */
+    /**
+     * 监测登记ID（院感目标性监测登记）
+     */
     private Long monitorId;
 
-    /** 监测日期 */
+    /**
+     * 监测日期
+     */
     private LocalDate monitorDate;
 
-    /** 记录人ID */
+    /**
+     * 记录人ID
+     */
     private Long recorderId;
 
-    /** 记录人姓名（快照） */
+    /**
+     * 记录人姓名（快照）
+     */
     private String recorderName;
 
-    /** 记录时间 */
+    /**
+     * 记录时间
+     */
     private LocalDateTime recordTime;
 }

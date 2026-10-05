@@ -30,7 +30,9 @@ public class InsurancePolicyVO {
      */
     private String insuranceType;
 
-    /** 结算方式（2-城镇职工医保 3-城乡居民医保 4-公费医疗） */
+    /**
+     * 结算方式（2-城镇职工医保 3-城乡居民医保 4-公费医疗）
+     */
     private Integer settlementType;
 
     /**
@@ -53,11 +55,15 @@ public class InsurancePolicyVO {
      */
     private String remark;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
 
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime updateTime;
 }

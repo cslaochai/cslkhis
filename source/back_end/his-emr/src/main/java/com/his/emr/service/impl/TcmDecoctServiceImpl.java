@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
+import com.his.common.enums.PrescriptionTypeEnum;
 import com.his.common.enums.TcmDecoctStatusEnum;
+import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.TcmDecoctAdvanceDTO;
 import com.his.emr.dto.TcmDecoctCancelDTO;
@@ -16,8 +18,8 @@ import com.his.emr.entity.BizTcmDecoct;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
 import com.his.emr.mapper.BizTcmDecoctMapper;
-import com.his.emr.service.TcmDecoctService;
 import com.his.emr.service.DecoctReceiptPrinter;
+import com.his.emr.service.TcmDecoctService;
 import com.his.emr.vo.TcmDecoctCountVO;
 import com.his.emr.vo.TcmDecoctDetailVO;
 import com.his.emr.vo.TcmDecoctVO;
@@ -34,15 +36,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
-
-import com.his.common.enums.PrescriptionTypeEnum;
-import com.his.common.enums.YesOrNoEnum;
 
 /**
  * 中药代煎台账实现（sql/139）。
@@ -62,9 +57,13 @@ import com.his.common.enums.YesOrNoEnum;
 @RequiredArgsConstructor
 public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcmDecoct> implements TcmDecoctService {
 
-    /** 煎法脚注里的"常规项"：水煎服不必出现在回执的特别提示里 */
+    /**
+     * 煎法脚注里的"常规项"：水煎服不必出现在回执的特别提示里
+     */
     private static final String METHOD_PLAIN = "水煎服";
-    /** 作废原因列宽 */
+    /**
+     * 作废原因列宽
+     */
     private static final int W_CANCEL_REASON = 200;
 
     private final BizPrescriptionMapper prescriptionMapper;
@@ -72,6 +71,13 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
     private final RedisSequenceService redisSequenceService;
     private final DecoctReceiptPrinter decoctReceiptPrinter;
     private final SysAuditLogService sysAuditLogService;
+
+    private static String cut(String s, int max) {
+        if (s == null || s.length() <= max) {
+            return s;
+        }
+        return s.substring(0, max);
+    }
 
     @Override
     public PageResult<TcmDecoctVO> listPage(TcmDecoctQueryPageDTO query) {
@@ -351,12 +357,5 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
 
     private String currentDeptName() {
         return UserUtils.getCurrentUser() == null ? null : UserUtils.getCurrentUser().getDeptName();
-    }
-
-    private static String cut(String s, int max) {
-        if (s == null || s.length() <= max) {
-            return s;
-        }
-        return s.substring(0, max);
     }
 }

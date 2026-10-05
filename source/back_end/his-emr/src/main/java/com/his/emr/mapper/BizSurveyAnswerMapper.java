@@ -65,7 +65,9 @@ public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {
             + "WHERE a.id = #{id} AND a.del_flag = 0")
     SurveyAnswerVO selectAnswerById(@Param("id") Long id);
 
-    /** 总览：有效卷数、均分、百分制、满意率、低分数、已转投诉数、作废数 */
+    /**
+     * 总览：有效卷数、均分、百分制、满意率、低分数、已转投诉数、作废数
+     */
     @Select("""
             <script>
             SELECT COUNT(CASE WHEN a.answer_status = 1 THEN 1 END) AS total,
@@ -96,7 +98,9 @@ public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {
                                     @Param("dateTo") String dateTo,
                                     @Param("scopeDeptIds") List<Long> scopeDeptIds);
 
-    /** NPS 分档（推荐者 9-10 / 中立 7-8 / 贬损者 0-6），只认有效卷 */
+    /**
+     * NPS 分档（推荐者 9-10 / 中立 7-8 / 贬损者 0-6），只认有效卷
+     */
     @Select("""
             <script>
             SELECT COUNT(a.nps) AS rated,
@@ -115,9 +119,9 @@ public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {
             </script>
             """)
     Map<String, Object> statNps(@Param("templateId") Long templateId,
-                               @Param("dateFrom") String dateFrom,
-                               @Param("dateTo") String dateTo,
-                               @Param("scopeDeptIds") List<Long> scopeDeptIds);
+                                @Param("dateFrom") String dateFrom,
+                                @Param("dateTo") String dateTo,
+                                @Param("scopeDeptIds") List<Long> scopeDeptIds);
 
     /**
      * 维度均分（升序 = 短板在前）。
@@ -177,7 +181,9 @@ public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {
                                                @Param("dateTo") String dateTo,
                                                @Param("scopeDeptIds") List<Long> scopeDeptIds);
 
-    /** 近 30 日趋势（按提交日聚合，只认有效卷） */
+    /**
+     * 近 30 日趋势（按提交日聚合，只认有效卷）
+     */
     @Select("""
             <script>
             SELECT DATE_FORMAT(a.fill_time, '%Y-%m-%d') AS d, COUNT(*) AS c,

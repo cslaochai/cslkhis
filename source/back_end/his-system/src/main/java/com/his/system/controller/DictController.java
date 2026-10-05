@@ -12,11 +12,12 @@ import com.his.system.vo.SysDictDataVO;
 import com.his.system.vo.SysDictTypeVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 字典管理控制器
@@ -47,7 +48,7 @@ public class DictController {
     @Operation(summary = "新增或修改字典类型")
     @PreAuthorize("hasAuthority('system:dict:add')")
     @PostMapping("/typeUpsert")
-    public Result<Void> typeUpsert(@RequestBody SysDictTypeUpsertDTO upsertDTO) {
+    public Result<Void> typeUpsert(@Valid @RequestBody SysDictTypeUpsertDTO upsertDTO) {
         dictTypeService.upsert(upsertDTO);
         return Result.success("操作成功", null);
     }
@@ -62,13 +63,13 @@ public class DictController {
 
     @Operation(summary = "根据字典类型查询字典数据（优先从Redis缓存获取）")
     @PostMapping("/data/selectList")
-    public Result<List<SysDictDataVO>> getDictDataByType(@RequestBody DictDataQueryDTO queryDTO) {
+    public Result<List<SysDictDataVO>> getDictDataByType(@Valid @RequestBody DictDataQueryDTO queryDTO) {
         return Result.success(dictDataService.selectList(queryDTO));
     }
 
     @Operation(summary = "批量获取字典数据（按字典类型分组）")
     @PostMapping("/data/selectGroup")
-    public Result<List<DictTypeGroupVO>> getDictDataMap(@RequestBody DictDataQueryDTO queryDTO) {
+    public Result<List<DictTypeGroupVO>> getDictDataMap(@Valid @RequestBody DictDataQueryDTO queryDTO) {
         return Result.success(dictDataService.selectGroup(queryDTO));
     }
 
@@ -81,7 +82,7 @@ public class DictController {
     @Operation(summary = "新增或修改字典数据")
     @PreAuthorize("hasAuthority('system:dict:add')")
     @PostMapping("/dataUpsert")
-    public Result<Void> dataUpsert(@RequestBody SysDictDataUpsertDTO upsertDTO) {
+    public Result<Void> dataUpsert(@Valid @RequestBody SysDictDataUpsertDTO upsertDTO) {
         dictDataService.upsert(upsertDTO);
         return Result.success("操作成功", null);
     }

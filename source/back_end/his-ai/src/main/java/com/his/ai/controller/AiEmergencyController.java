@@ -6,6 +6,7 @@ import com.his.ai.vo.EmergencyTriageResultVO;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,7 +31,7 @@ public class AiEmergencyController {
 
     @Operation(summary = "急诊分诊建议（只升不降，仅供护士确认）")
     @PostMapping("/suggest")
-    public Result<EmergencyTriageResultVO> suggest(@RequestBody EmergencyTriageDTO dto) {
+    public Result<EmergencyTriageResultVO> suggest(@Valid @RequestBody EmergencyTriageDTO dto) {
         return Result.success(emergencyTriageCapability.suggest(dto));
     }
 }

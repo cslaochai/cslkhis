@@ -21,6 +21,8 @@ public class QcBatchExecuteDTO {
      */
     private List<Long> recordIds;
 
-    /** 质控类型（0-综合 1-完整性检查 2-规范性检查 3-逻辑性检查 4-AI内涵质控） */
+    /**
+     * 质控类型（0-综合 1-完整性检查 2-规范性检查 3-逻辑性检查 4-AI内涵质控）
+     */
     private Integer qcType;
 }

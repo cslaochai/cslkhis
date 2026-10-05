@@ -9,9 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 超声亚专业接口（URL 前缀 /medicaltech/ultrasound）
@@ -27,7 +26,7 @@ public class UltrasoundController {
 
     @Operation(summary = "分页查询超声检查记录")
     @PostMapping("/listPage")
-    public Result<PageResult<UltrasoundVO.ListVO>> listPage(@RequestBody UltrasoundDTO.Query query) {
+    public Result<PageResult<UltrasoundVO.ListVO>> listPage(@Valid @RequestBody UltrasoundDTO.Query query) {
         return Result.success(ultrasoundService.pageVO(query));
     }
 

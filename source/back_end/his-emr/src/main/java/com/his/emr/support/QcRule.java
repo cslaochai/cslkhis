@@ -165,6 +165,21 @@ public enum QcRule {
         this.basis = basis;
     }
 
+    /**
+     * 按编码取规则，取不到即返 null（调用方负责报错，不做静默兜底）
+     */
+    public static QcRule ofCode(String code) {
+        if (code == null || code.isBlank()) {
+            return null;
+        }
+        for (QcRule rule : values()) {
+            if (rule.code.equalsIgnoreCase(code.trim())) {
+                return rule;
+            }
+        }
+        return null;
+    }
+
     public String getCode() {
         return code;
     }
@@ -199,20 +214,5 @@ public enum QcRule {
 
     public String getBasis() {
         return basis;
-    }
-
-    /**
-     * 按编码取规则，取不到即返 null（调用方负责报错，不做静默兜底）
-     */
-    public static QcRule ofCode(String code) {
-        if (code == null || code.isBlank()) {
-            return null;
-        }
-        for (QcRule rule : values()) {
-            if (rule.code.equalsIgnoreCase(code.trim())) {
-                return rule;
-            }
-        }
-        return null;
     }
 }
