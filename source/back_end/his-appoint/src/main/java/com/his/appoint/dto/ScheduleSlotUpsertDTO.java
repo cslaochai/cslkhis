@@ -9,10 +9,6 @@ import java.util.List;
 
 /**
  * 段级号源编辑入参（/schedule/slotUpsert）：一次提交一个排班的若干段。
- *
- * <p>为什么是整段列表而不是单段单发：号源是「Σ段 = 主表总量」的总量约束，
- * 逐段单发会让中途状态出现 Σ段 ≠ 主表的窗口；一次提交在事务内整批生效。
- * 允许只提交要改的段（部分编辑），未提交的段原样保留。
  */
 @Data
 public class ScheduleSlotUpsertDTO {

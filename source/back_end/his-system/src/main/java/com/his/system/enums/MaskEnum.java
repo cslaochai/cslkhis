@@ -1,4 +1,4 @@
-package com.his.system.support;
+package com.his.system.enums;
 
 /**
  * 字段值打码方式。
@@ -11,7 +11,7 @@ package com.his.system.support;
  * <p>为什么连日志都要打码：日志表的可见面比主档宽（只读不写、常被导出给检查人员），
  * 不打码等于给"能看日志的人"开了一条绕过主档权限拿全量身份证的路。
  */
-public enum Mask {
+public enum MaskEnum {
 
     /** 不打码（业务字段默认） */
     NONE,

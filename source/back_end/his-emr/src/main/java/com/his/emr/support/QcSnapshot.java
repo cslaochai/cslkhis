@@ -1,6 +1,7 @@
 package com.his.emr.support;
 
 import com.his.emr.entity.BizMedicalRecord;
+import com.his.emr.enums.QcRecordSourceEnum;
 import com.his.patient.entity.BizInpatientRecord;
 import lombok.Data;
 
@@ -22,7 +23,7 @@ import java.time.LocalDateTime;
 @Data
 public class QcSnapshot {
 
-    private QcRecordSource source;
+    private QcRecordSourceEnum source;
 
     private Long recordId;
 
@@ -96,7 +97,7 @@ public class QcSnapshot {
      */
     public static QcSnapshot ofOutpatient(BizMedicalRecord r) {
         QcSnapshot s = new QcSnapshot();
-        s.source = QcRecordSource.OUTPATIENT;
+        s.source = QcRecordSourceEnum.OUTPATIENT;
         s.recordId = r.getId();
         s.recordNo = r.getRecordNo();
         s.patientId = r.getPatientId();
@@ -136,7 +137,7 @@ public class QcSnapshot {
      */
     public static QcSnapshot ofInpatient(BizInpatientRecord r) {
         QcSnapshot s = new QcSnapshot();
-        s.source = QcRecordSource.INPATIENT;
+        s.source = QcRecordSourceEnum.INPATIENT;
         s.recordId = r.getId();
         s.recordNo = r.getRecordNo();
         s.patientId = r.getPatientId();
@@ -210,21 +211,21 @@ public class QcSnapshot {
      * 是否为住院入院记录（record_type = 1）
      */
     public boolean isInpatientEntry() {
-        return source == QcRecordSource.INPATIENT && recordType != null && recordType == 1;
+        return source == QcRecordSourceEnum.INPATIENT && recordType != null && recordType == 1;
     }
 
     /**
      * 是否为住院记录类文书（非入院记录）
      */
     public boolean isInpatientNote() {
-        return source == QcRecordSource.INPATIENT && !isInpatientEntry();
+        return source == QcRecordSourceEnum.INPATIENT && !isInpatientEntry();
     }
 
     /**
      * 文书类型中文名，用于问题描述里定位"是哪份文书"
      */
     public String recordTypeText() {
-        if (source == QcRecordSource.OUTPATIENT) {
+        if (source == QcRecordSourceEnum.OUTPATIENT) {
             return "门诊病历";
         }
         return recordType == null ? "住院文书" : QcTexts.recordType(recordType);

@@ -10,6 +10,7 @@ import com.his.patient.enums.StatsScopeEnum;
 import com.his.patient.enums.VteEventTypeEnum;
 import com.his.patient.enums.VteOnsetEnum;
 import com.his.patient.enums.VtePreventStatusEnum;
+import com.his.patient.enums.VteRiskLevelEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.VteService;
 import com.his.patient.support.VteRules;
@@ -704,13 +705,7 @@ public class VteServiceImpl implements VteService {
     }
 
     private String riskText(int level) {
-        return switch (level) {
-            case 1 -> "低风险";
-            case 2 -> "中风险";
-            case 3 -> "高风险";
-            case 4 -> "极高风险";
-            default -> "未知(" + level + ")";
-        };
+        return VteRiskLevelEnum.labelOf(level);
     }
 
     private String csv(String v) {

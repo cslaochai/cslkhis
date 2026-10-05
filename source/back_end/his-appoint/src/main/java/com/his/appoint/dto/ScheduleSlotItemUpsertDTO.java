@@ -7,9 +7,6 @@ import lombok.Data;
 
 /**
  * 段级号源编辑单行入参（/schedule/slotUpsert 的 slots 元素）。
- *
- * <p>段的时间窗（seq/startTime/endTime）不接受编辑：段边界是挂号快照
- * （slot_start/slot_end）的语义来源，改窗等于篡改已挂号的时段事实。
  */
 @Data
 public class ScheduleSlotItemUpsertDTO {

@@ -3,6 +3,7 @@ package com.his.emr.support;
 import com.his.common.support.ClinicalTextMatcher;
 
 import com.his.common.enums.SysGenderEnum;
+import com.his.emr.enums.*;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -25,7 +26,7 @@ import java.util.regex.Pattern;
  * <ol>
  *   <li><b>每条规则对一份病历最多产出一条问题</b>。得分因此可复算、可对账；
  *       一条规则报 3 遍只会让得分失真，不会让医生更重视。</li>
- *   <li><b>适用范围由 {@link QcRule#getScope()} 决定</b>，见 {@link QcScope} 的说明：
+ *   <li><b>适用范围由 {@link QcRuleEnum#getScope()} 决定</b>，见 {@link QcScopeEnum} 的说明：
  *       把"主诉必填"套到手术记录上是本引擎最容易犯、后果最严重的错。</li>
  *   <li><b>规则的实现用穷尽 switch 表达式</b>（无 default）。Java 枚举穷尽性由编译器检查，
  *       新增规则忘记实现会**编译不过**，而不是运行时静默跳过。</li>
@@ -139,12 +140,12 @@ public class QcRuleEngine {
                 result.isPass() ? "通过" : "不通过", fields);
     }
 
-    private static boolean applicable(QcRule rule, QcSnapshot snapshot) {
+    private static boolean applicable(QcRuleEnum rule, QcSnapshot snapshot) {
         return switch (rule.getScope()) {
-            case OUTPATIENT -> snapshot.getSource() == QcRecordSource.OUTPATIENT;
+            case OUTPATIENT -> snapshot.getSource() == QcRecordSourceEnum.OUTPATIENT;
             case OUTPATIENT_AND_ENTRY ->
-                    snapshot.getSource() == QcRecordSource.OUTPATIENT || snapshot.isInpatientEntry();
-            case INPATIENT -> snapshot.getSource() == QcRecordSource.INPATIENT;
+                    snapshot.getSource() == QcRecordSourceEnum.OUTPATIENT || snapshot.isInpatientEntry();
+            case INPATIENT -> snapshot.getSource() == QcRecordSourceEnum.INPATIENT;
             case INPATIENT_NOTE -> snapshot.isInpatientNote();
             case ALL -> true;
         };
@@ -208,24 +209,24 @@ public class QcRuleEngine {
      */
     @PostConstruct
     public void selfCheck() {
-        Map<QcDimension, Integer> counts = new EnumMap<>(QcDimension.class);
+        Map<QcDimensionEnum, Integer> counts = new EnumMap<>(QcDimensionEnum.class);
         Set<String> codes = new LinkedHashSet<>();
-        for (QcRule rule : QcRule.values()) {
+        for (QcRuleEnum rule : QcRuleEnum.values()) {
             counts.merge(rule.getDimension(), 1, Integer::sum);
             if (!codes.add(rule.getCode())) {
                 throw new IllegalStateException("[病案质控] 规则编码重复：" + rule.getCode());
             }
-            if (QcRule.ofCode(rule.getCode()) != rule) {
+            if (QcRuleEnum.ofCode(rule.getCode()) != rule) {
                 throw new IllegalStateException("[病案质控] 规则编码无法反查：" + rule.getCode());
             }
         }
-        for (QcDimension dimension : QcDimension.values()) {
+        for (QcDimensionEnum dimension : QcDimensionEnum.values()) {
             if (counts.getOrDefault(dimension, 0) == 0) {
                 throw new IllegalStateException("[病案质控] 维度 " + dimension.getText() + " 没有任何规则");
             }
         }
         log.info("[病案质控] 规则引擎就绪：{} 条规则，维度分布 {}",
-                QcRule.values().length, counts);
+                QcRuleEnum.values().length, counts);
     }
 
     /**
@@ -236,11 +237,11 @@ public class QcRuleEngine {
      * @return 质控结论（含问题明细）
      */
     public QcResult inspect(QcSnapshot snapshot, Integer qcType) {
-        QcDimension only = QcDimension.ofCode(qcType);
+        QcDimensionEnum only = QcDimensionEnum.ofCode(qcType);
         List<QcIssue> issues = new ArrayList<>();
         Set<Integer> dimensions = new LinkedHashSet<>();
 
-        for (QcRule rule : QcRule.values()) {
+        for (QcRuleEnum rule : QcRuleEnum.values()) {
             if (only != null && rule.getDimension() != only) {
                 continue;
             }
@@ -270,10 +271,10 @@ public class QcRuleEngine {
                 .mapToInt(issue -> issue.getSeverity() == null ? 0 : issue.getSeverity())
                 .max().orElse(0);
         int vetoCount = (int) issues.stream().filter(issue -> issue.getSeverity() != null
-                && issue.getSeverity() == QcSeverity.FATAL.getCode()).count();
+                && issue.getSeverity() == QcSeverityEnum.FATAL.getCode()).count();
         // 通过 = 没有严重度 ≥2 的问题。提示项（严重度 1）只扣分，不判不通过
         boolean pass = issues.stream()
-                .allMatch(issue -> issue.getSeverity() == null || issue.getSeverity() < QcSeverity.MAJOR.getCode());
+                .allMatch(issue -> issue.getSeverity() == null || issue.getSeverity() < QcSeverityEnum.MAJOR.getCode());
 
         result.setScore(score);
         result.setSeverityMax(severityMax);
@@ -284,7 +285,7 @@ public class QcRuleEngine {
         return result;
     }
 
-    private Optional<QcIssue> check(QcRule rule, QcSnapshot s) {
+    private Optional<QcIssue> check(QcRuleEnum rule, QcSnapshot s) {
         return switch (rule) {
             case C01 -> missing(s.getChiefComplaint(),
                     ClinicalTextMatcher.isPlaceholderOnly(s.getChiefComplaint(), "主诉"), "主诉")

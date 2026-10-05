@@ -44,10 +44,6 @@ public class ScheduleUpsertDTO {
 
     /**
      * 岗位类别（1医生 2护理 3医技 4药学 5收费 6行政其他，见 {@code StaffTypeEnum}）
-     *
-     * <p>必填：不填就无法判断这条排班是「出诊放号」还是「岗位出勤」，
-     * 而这两者的号源/诊室/挂号费规则完全不同（只有 1-医生有号源）。
-     * 历史数据由 DDL 默认值补成 1-医生，这里只约束新增/修改。
      */
     @NotNull(message = "请选择岗位类别")
     private Integer staffType;

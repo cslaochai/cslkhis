@@ -436,11 +436,21 @@
   `his-common/enums`；同名字段在不同表里表达不同含义时是两个不同枚举，各自带业务主语
   （`BedWaitStatusEnum` / `BedAllocateStatusEnum`，不是一个 `StatusEnum` 通吃）。
   **禁止**按表名造 `BizXxxStatusEnum`，**禁止**无主语的 `StatusEnum`/`TypeEnum`/`ResultEnum`。
-- **码值 → 文案的映射一律进枚举，禁止 `*Labels` 文案壳类**：集中写 `switch` + `未知(code)` 兜底的
-  `XxxLabels` / `XxxText` 壳类是反模式（本次重构已把 patient 模块的 5 个纯文案壳类下沉枚举、调用方直调枚举）。
-  新建码值时直接在枚举里写 `label`，**不要再开一个壳类**把码值翻译成文案。
-  唯一例外：含**临床判定 / 计算口径**（如 Aldrete 评分、相容性判定、记账折算、时长格式化）的
-  `support` 类可保留，但里面不得再写 `未知(code)` 兜底——未知码值一律返回空串。
+- **码值 → 文案的映射一律进枚举或字典，禁止独立的「码值→文案」反模式**：任何把码值翻译成文案的
+  `switch` / `Map` / `getOrDefault` + `未知(code)` 兜底，**无论它叫什么名字**
+  （`XxxLabels` / `XxxText` / `XxxTexts` / `XxxItems` / `XxxRules`，还是 service impl 里的一段内联 `switch`、
+  实体上的一个 `getXxxText` 方法），都属于反模式 —— 映射逻辑必须下沉到**枚举**或**字典**，
+  调用侧只调 `枚举.labelOf(...)`（展示）或 `DictCacheService.getDicDataLabel(dictType, code)`（字典项）。
+  唯一例外：含**临床判定 / 计算口径**（如 Aldrete 评分、相容性判定、记账折算、时长格式化、
+  手术安全核查项注册表）的 `support` 类可保留为「内部注册表」，但里面不得再写 `未知(code)` 兜底——
+  未知码值一律返回空串。
+- **枚举还是字典（落点选取口径）**：按"是否稳定、后端是否拿码值做逻辑判断"决定落点 ——
+  ① **变化小、后端要用码值做判断**（状态机流转、权限/分支、计算口径）的封闭集合 → **枚举**
+     （全仓通用放 `his-common/enums`，否则放所属模块 `enums`）；
+  ② **变化大、由操作员在后台字典维护**（机构自定的类型 / 项目 / 选项）的 → **字典**，走
+     `DictCacheService.getDicDataLabel(dictType, code)`，不进 Java 枚举；
+  ③ 既有的"集中式大字典"类（`QcTexts` / `CdrStatusTexts` / `SafetyCheckItems` 等）本身就是某域的码值字典，
+     按上述口径逐方法下沉到枚举或字典，类可保留为"字典层"，但每个方法只做"调枚举/字典"这一件事。
 - **双方法口径**：每个枚举提供两个静态翻译方法，语义严格区分：
   - `labelOf(Integer)`——**展示用**：`null` 或不在枚举内（脏数据）一律返回空串 `""`，
     不回落到某个合法文案、也不暴露「未知(n)」。**绝不返回 null**（返回 null 会把 NPE 风险甩给调用方，
@@ -449,9 +459,12 @@
     （`null` 本身渲染成「未知」），**保留原始码值**以便排查脏数据。业务异常消息、审计日志、
     合规报表里需要让人看到「到底是哪个脏值」时才用，绝不用它喂前端展示。
   - 机械判据：`grep -rn "未知(" --include=*.java` 命中的，必须只是 `labelOrUnknown` 的方法体、
-    或显式 `Objects.toString(xxxEnum.labelOf(...), "未知(n)")` 这类手写等价物；纯展示路径出现「未知(n)」即违规。
-  - 迁移进度：patient 模块的 5 个纯文案壳类与背靠的 26 个枚举已下沉（含 `his-common` 的 `AdmitStatusEnum` 等）；
-    其余模块（emr / system / supplies / pharmacy / medicaltech / operation / report / miniapp 及 common 其余枚举）
+    或显式 `Objects.toString(xxxEnum.labelOf(...), "未知(n)")` 这类手写等价物，以及 `DictCacheService`
+    内部翻译；纯展示路径、独立 `XxxText(s)` 壳类、service 内联 `switch` 里出现「未知(code)」即违规。
+  - 迁移进度：patient 模块 5 个纯文案壳类 + 26 个枚举已下沉；VTE 域 `VteRules` 7 个方法全委托枚举、
+    4 个 VTE 枚举升级双方法、新增 `VteDiagnosisBasisEnum`/`VteOutcomeEnum`/`VteRiskLevelEnum`；
+    emr 的 `QcTexts` 14 个方法全委托枚举（新增 `QcStatusEnum`/`QcResultEnum`/`QcGradeEnum`）。
+    其余模块（system / supplies / pharmacy / medicaltech / operation / report / miniapp 及 common 其余枚举）
     仍用旧 `未知(code)` 兜底，属待迁移项——新代码一律按双方法写，存量按此口径逐步收口。
 - **文案差异不产生新枚举**：码值相同、中文叫法不同时**复用枚举**（文案以枚举 `label` 为唯一来源），
   不同模块若确有不可调和的措辞差异，差异放在调用侧局部常量 / 方法，且仍调枚举 `labelOf` 做兜底；

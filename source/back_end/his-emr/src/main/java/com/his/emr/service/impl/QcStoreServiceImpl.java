@@ -5,6 +5,7 @@ import com.his.common.enums.CheckResultEnum;
 import com.his.common.enums.RecordQcTypeEnum;
 import com.his.emr.entity.BizQualityControl;
 import com.his.emr.entity.BizQualityControlIssue;
+import com.his.emr.enums.QcDimensionEnum;
 import com.his.emr.enums.RuleCheckStatusEnum;
 import com.his.emr.mapper.BizQualityControlIssueMapper;
 import com.his.emr.mapper.BizQualityControlMapper;
@@ -71,7 +72,7 @@ public class QcStoreServiceImpl implements QcStoreService {
         String label = QcTexts.qcType(qcType == null ? 0 : qcType);
         String dimensions = result.getDimensions().stream()
                 .map(code -> {
-                    QcDimension dimension = QcDimension.ofCode(code);
+                    QcDimensionEnum dimension = QcDimensionEnum.ofCode(code);
                     return dimension == null ? "未知(" + code + ")" : dimension.getText();
                 })
                 .reduce((a, b) -> a + "+" + b)

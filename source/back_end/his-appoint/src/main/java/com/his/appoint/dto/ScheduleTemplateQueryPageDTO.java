@@ -6,9 +6,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 排班模板分页查询入参
- * <p>
- * 关键词命中范围：科室名 / 医生名 / 诊室名 / 备注（四列 OR 模糊）——模板页只有这些是可读文本，
- * 号源、费用、星期几都是码值，用关键词搜没有意义。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

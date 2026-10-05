@@ -7,9 +7,6 @@ import java.time.LocalDate;
 
 /**
  * 日终结转入参。
- *
- * <p>不给「操作人」字段：操作人一律服务端从登录态取（{@code UserUtils.getCurrentUser()}），
- * 不信前端传的身份。
  */
 @Data
 @Schema(description = "日终结转入参")

@@ -34,7 +34,7 @@ import com.his.system.service.SysUserService;
 import com.his.system.support.CodeText;
 import com.his.system.support.FieldChangeRecorder;
 import com.his.system.support.FieldSpec;
-import com.his.system.support.Mask;
+import com.his.system.enums.MaskEnum;
 import com.his.system.vo.SysPatientTagVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,12 +78,12 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
             FieldSpec.of("patientName", "姓名"),
             FieldSpec.render("gender", "性别", v -> CodeText.of(v, "男", "女", "未知")),
             FieldSpec.of("birthDate", "出生日期"),
-            FieldSpec.masked("idCard", "身份证号", Mask.ID_CARD),
-            FieldSpec.masked("phone", "联系电话", Mask.PHONE),
+            FieldSpec.masked("idCard", "身份证号", MaskEnum.ID_CARD),
+            FieldSpec.masked("phone", "联系电话", MaskEnum.PHONE),
             FieldSpec.of("contactName", "紧急联系人"),
-            FieldSpec.masked("contactPhone", "联系人电话", Mask.PHONE),
+            FieldSpec.masked("contactPhone", "联系人电话", MaskEnum.PHONE),
             FieldSpec.of("contactRelation", "与患者关系"),
-            FieldSpec.masked("address", "家庭住址", Mask.ADDRESS),
+            FieldSpec.masked("address", "家庭住址", MaskEnum.ADDRESS),
             FieldSpec.of("nation", "民族"),
             FieldSpec.of("occupation", "职业"),
             FieldSpec.render("maritalStatus", "婚姻状况", v -> CodeText.of(v, "未婚", "已婚", "离异", "丧偶")),
@@ -92,10 +92,10 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
             FieldSpec.of("medicalHistory", "既往病史"),
             FieldSpec.render("patientType", "患者类型",
                     v -> CodeText.of(v, "自费", "城镇职工医保", "城乡居民医保", "公费", "其他")),
-            FieldSpec.masked("medicalInsuranceNo", "医保卡号", Mask.BANK_NO),
+            FieldSpec.masked("medicalInsuranceNo", "医保卡号", MaskEnum.BANK_NO),
             FieldSpec.of("medicalInsuranceType", "医保类型"),
             FieldSpec.render("cardType", "证件类型", v -> CodeText.of(v, "身份证", "护照", "军官证")),
-            FieldSpec.masked("cardNo", "证件号码", Mask.BANK_NO),
+            FieldSpec.masked("cardNo", "证件号码", MaskEnum.BANK_NO),
             FieldSpec.render("status", "状态", CodeText::enable)
     );
     private final RedisSequenceService redisSequenceService;

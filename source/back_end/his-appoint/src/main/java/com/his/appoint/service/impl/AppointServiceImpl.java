@@ -20,7 +20,7 @@ import com.his.appoint.service.AppointChargeGateway;
 import com.his.appoint.service.AppointService;
 import com.his.appoint.service.MedicalRecordRefGateway;
 import com.his.appoint.service.RevisitFeePolicyService;
-import com.his.appoint.support.DayEndSettleTrigger;
+import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.support.PatientVisitSummaryUpdater;
 import com.his.appoint.vo.AppointStatusCountVO;
 import com.his.appoint.vo.BizAppointInfoListVO;

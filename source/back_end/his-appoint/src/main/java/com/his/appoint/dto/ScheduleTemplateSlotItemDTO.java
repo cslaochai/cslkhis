@@ -7,11 +7,6 @@ import lombok.Data;
 
 /**
  * 模板段级号源配置项（跟随 {@link ScheduleTemplateUpsertDTO} 整批提交）。
- *
- * <p>保存侧约束（非法即整批拒绝，见 {@code ScheduleTemplateServiceImpl#persistSlotConfig}）：
- * 段必须无缝铺满班次时间窗（首段起点=窗起、末段终点=窗止、相邻段首尾衔接），
- * 且起止都落在半小时整点上（时长为 30 分钟的整数倍）；
- * Σ段号源=模板号源总数、Σ段预约池=模板预约号源数。
  */
 @Data
 public class ScheduleTemplateSlotItemDTO {

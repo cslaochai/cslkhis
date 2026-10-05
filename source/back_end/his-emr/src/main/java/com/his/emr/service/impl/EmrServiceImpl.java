@@ -30,7 +30,7 @@ import com.his.emr.service.AiDraftDiffService;
 import com.his.emr.service.ApplyExecStatusGateway;
 import com.his.emr.service.EmrService;
 import com.his.emr.service.QualityControlService;
-import com.his.emr.support.QcRecordSource;
+import com.his.emr.enums.QcRecordSourceEnum;
 import com.his.emr.vo.*;
 import com.his.fee.dto.FeeBookDTO;
 import com.his.fee.entity.BizFeeRecord;
@@ -1683,7 +1683,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             //     质控失败不能把归档也拖下水，所以整体兜住异常；但绝不兜住之后假装质控成功。
             try {
                 QcExecuteDTO qcDto = new QcExecuteDTO();
-                qcDto.setRecordSource(QcRecordSource.OUTPATIENT.getCode());
+                qcDto.setRecordSource(QcRecordSourceEnum.OUTPATIENT.getCode());
                 qcDto.setRecordId(bizMedicalRecord.getId());
                 qcDto.setQcType(RecordQcTypeEnum.COMPREHENSIVE.getCode());
                 qualityControlService.executeQc(qcDto);

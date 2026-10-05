@@ -9,7 +9,7 @@ import com.his.emr.dto.QcExecuteDTO;
 import com.his.emr.dto.QcQueryPageDTO;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizQualityControl;
-import com.his.emr.enums.RuleCheckStatusEnum;
+import com.his.emr.enums.*;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.mapper.BizQualityControlMapper;
 import com.his.emr.service.QcStoreService;
@@ -95,7 +95,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         if (qcType == null || qcType == 0) {
             return 0;
         }
-        if (QcDimension.ofCode(qcType) == null) {
+        if (QcDimensionEnum.ofCode(qcType) == null) {
             throw new BusinessException("不支持的质控类型：" + qcType
                     + "（可选 0-综合 1-完整性 2-规范性 3-逻辑性；AI 内涵质控请调用 /ai/emrQc 接口）");
         }
@@ -166,7 +166,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         Map<Integer, QcRuleMetricVO> statByDimension = new HashMap<>();
         baseMapper.selectDimensionStat().forEach(stat -> statByDimension.put(stat.getDimension(), stat));
         List<QcOverviewVO.DimensionStat> dimensions = new ArrayList<>();
-        for (QcDimension dimension : QcDimension.values()) {
+        for (QcDimensionEnum dimension : QcDimensionEnum.values()) {
             QcOverviewVO.DimensionStat stat = new QcOverviewVO.DimensionStat();
             stat.setDimension(dimension.getCode());
             stat.setDimensionText(dimension.getText());
@@ -185,7 +185,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
      */
     @Override
     public List<QcRuleMetricVO> listRuleMetric(Integer dimension) {
-        QcDimension only = dimension == null ? null : QcDimension.ofCode(dimension);
+        QcDimensionEnum only = dimension == null ? null : QcDimensionEnum.ofCode(dimension);
         if (dimension != null && only == null) {
             throw new BusinessException("未知的质控维度：" + dimension + "（可选 1-完整性 2-规范性 3-逻辑性）");
         }
@@ -193,7 +193,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         baseMapper.selectRuleStat().forEach(stat -> statByRule.put(stat.getRuleCode(), stat));
 
         List<QcRuleMetricVO> list = new ArrayList<>();
-        for (QcRule rule : QcRule.values()) {
+        for (QcRuleEnum rule : QcRuleEnum.values()) {
             if (only != null && rule.getDimension() != only) {
                 continue;
             }
@@ -223,9 +223,9 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     @Override
     public PageResult<QcCandidateVO> listCandidatePage(QcCandidateQueryPageDTO query) {
-        QcRecordSource source = QcRecordSource.parse(query.getRecordSource());
+        QcRecordSourceEnum source = QcRecordSourceEnum.parse(query.getRecordSource());
         Page<QcCandidateVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        var result = source == QcRecordSource.OUTPATIENT
+        var result = source == QcRecordSourceEnum.OUTPATIENT
                 ? baseMapper.selectOutpatientCandidatePage(page, query)
                 : baseMapper.selectInpatientCandidatePage(page, query);
         result.getRecords().forEach(this::enrich);
@@ -238,7 +238,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     @Override
     public List<QcDimensionSelectListVO> dimensionDict() {
         List<QcDimensionSelectListVO> list = new ArrayList<>();
-        for (QcDimension dimension : QcDimension.values()) {
+        for (QcDimensionEnum dimension : QcDimensionEnum.values()) {
             QcDimensionSelectListVO item = new QcDimensionSelectListVO();
             item.setCode(dimension.getCode());
             item.setText(dimension.getText());
@@ -268,7 +268,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             throw new BusinessException("病历ID不能为空");
         }
         Integer qcType = normalizeQcType(dto.getQcType());
-        QcSnapshot snapshot = loadSnapshot(QcRecordSource.parse(dto.getRecordSource()), dto.getRecordId());
+        QcSnapshot snapshot = loadSnapshot(QcRecordSourceEnum.parse(dto.getRecordSource()), dto.getRecordId());
         QcResult result = qcRuleEngine.inspect(snapshot, qcType);
 
         String operator = StringUtils.hasText(dto.getQcBy()) ? dto.getQcBy().trim() : currentOperator();
@@ -372,8 +372,8 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         return this.updateById(qc);
     }
 
-    private QcSnapshot loadSnapshot(QcRecordSource source, Long recordId) {
-        if (source == QcRecordSource.OUTPATIENT) {
+    private QcSnapshot loadSnapshot(QcRecordSourceEnum source, Long recordId) {
+        if (source == QcRecordSourceEnum.OUTPATIENT) {
             BizMedicalRecord record = medicalRecordMapper.selectById(recordId);
             if (record == null) {
                 throw new BusinessException("门诊病历不存在或已删除：" + recordId);
@@ -400,7 +400,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         vo.setQcResultText(QcTexts.qcResult(vo.getQcResult()));
         vo.setRecordStatusText(QcTexts.recordStatus(vo.getRecordStatus()));
         vo.setRecordTypeText(vo.getRecordType() == null ? null : QcTexts.recordType(vo.getRecordType()));
-        vo.setSeverityMaxText(vo.getSeverityMax() == null ? null : QcSeverity.textOf(vo.getSeverityMax()));
+        vo.setSeverityMaxText(vo.getSeverityMax() == null ? null : QcSeverityEnum.textOf(vo.getSeverityMax()));
         vo.setGradeText(QcTexts.grade(vo.getScore(), vo.getSeverityMax()));
     }
 
@@ -422,10 +422,10 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             return new ArrayList<>();
         }
         for (QcIssue issue : issues) {
-            QcDimension dimension = QcDimension.ofCode(issue.getDimension());
+            QcDimensionEnum dimension = QcDimensionEnum.ofCode(issue.getDimension());
             issue.setDimensionText(dimension == null ? "未知(" + issue.getDimension() + ")" : dimension.getText());
-            issue.setSeverityText(QcSeverity.textOf(issue.getSeverity()));
-            QcRule rule = QcRule.ofCode(issue.getRuleCode());
+            issue.setSeverityText(QcSeverityEnum.textOf(issue.getSeverity()));
+            QcRuleEnum rule = QcRuleEnum.ofCode(issue.getRuleCode());
             issue.setBasis(rule == null ? null : rule.getBasis());
         }
         return issues;

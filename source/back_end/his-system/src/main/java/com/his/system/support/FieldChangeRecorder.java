@@ -3,6 +3,7 @@ package com.his.system.support;
 import com.his.security.entity.CurrentUser;
 import com.his.security.UserUtils;
 import com.his.system.entity.SysFieldChangeLog;
+import com.his.system.enums.MaskEnum;
 import com.his.system.mapper.SysFieldChangeLogMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -134,7 +135,7 @@ public class FieldChangeRecorder {
         }
         try {
             SysFieldChangeLog row = build(bizType, bizId, bizNo, bizName,
-                    new FieldSpec("-", operation, Mask.NONE, null), null, null,
+                    new FieldSpec("-", operation, MaskEnum.NONE, null), null, null,
                     TYPE_ACTION, null);
             row.setBatchNo(newBatchNo());
             fieldChangeLogMapper.insert(row);
@@ -233,11 +234,11 @@ public class FieldChangeRecorder {
         return s.isEmpty() ? null : s;
     }
 
-    private static String mask(String s, Mask mask) {
-        if (s == null || mask == null || mask == Mask.NONE) {
+    private static String mask(String s, MaskEnum maskEnum) {
+        if (s == null || maskEnum == null || maskEnum == MaskEnum.NONE) {
             return s;
         }
-        return switch (mask) {
+        return switch (maskEnum) {
             case ID_CARD -> keepHeadTail(s, 6, 4);
             // 手机号固定 11 位，取前 3（号段）后 4；座机/其它长度退化为前 2 后 2
             case PHONE -> s.length() == 11 ? keepHeadTail(s, 3, 4) : keepHeadTail(s, 2, 2);
@@ -260,18 +261,18 @@ public class FieldChangeRecorder {
      * 按字段名兜底嗅探打码方式：新增字段忘了标 mask 时，靠名字也能挡住最要命的那几类。
      * （护照/军官证/医保卡号都落在 BANK_NO 这一档 —— 都是"前 4 后 4"的证件号口径。）
      */
-    static Mask sniffMask(String fieldName) {
+    static MaskEnum sniffMask(String fieldName) {
         String f = fieldName.toLowerCase();
         if (f.contains("idcard")) {
-            return Mask.ID_CARD;
+            return MaskEnum.ID_CARD;
         }
         if (f.contains("phone") || f.contains("mobile") || f.contains("tel")) {
-            return Mask.PHONE;
+            return MaskEnum.PHONE;
         }
         if (f.contains("bank") || f.contains("cardno") || f.contains("insuranceno") || f.contains("cardno")) {
-            return Mask.BANK_NO;
+            return MaskEnum.BANK_NO;
         }
-        return Mask.NONE;
+        return MaskEnum.NONE;
     }
 
     /** 批次号：FC + 年月日时分秒 + 6 位随机 —— 同一毫秒内两次保存靠随机位区分，且人能念出来。 */

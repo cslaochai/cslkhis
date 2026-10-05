@@ -7,10 +7,6 @@ import lombok.Data;
 
 /**
  * 复诊费用预估入参
- *
- * <p>提交挂号<b>之前</b>问一次「这张复诊号要交多少钱」。判定口径必须与
- * {@code addAppoint} 用同一个 decide，否则会出现「预览 12 元、结账 0 元」这种
- * 患者已在小程序上确认过金额的错位。
  */
 @Data
 public class RevisitFeePreviewDTO {

@@ -1,5 +1,7 @@
 package com.his.system.support;
 
+import com.his.system.enums.MaskEnum;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
@@ -22,7 +24,7 @@ import java.util.function.Function;
  * <p>不给 mask 时会按字段名兜底嗅探（见 {@code FieldChangeRecorder#sniffMask}）：
  * 名字里带 idCard / phone / bank 的自动打码 —— 新增字段忘了标 mask 也不至于裸奔。
  */
-public record FieldSpec(String name, String label, Mask mask, Function<Object, String> renderer) {
+public record FieldSpec(String name, String label, MaskEnum maskEnum, Function<Object, String> renderer) {
 
     /** 原样记录（mask 按字段名嗅探兜底） */
     public static FieldSpec of(String name, String label) {
@@ -30,8 +32,8 @@ public record FieldSpec(String name, String label, Mask mask, Function<Object, S
     }
 
     /** 指定打码方式 */
-    public static FieldSpec masked(String name, String label, Mask mask) {
-        return new FieldSpec(name, label, mask, null);
+    public static FieldSpec masked(String name, String label, MaskEnum maskEnum) {
+        return new FieldSpec(name, label, maskEnum, null);
     }
 
     /** 码值渲染成人读文本（如 1 → 男） */
@@ -50,7 +52,7 @@ public record FieldSpec(String name, String label, Mask mask, Function<Object, S
     }
 
     /** 实际生效的打码方式：显式优先，未指定则按字段名嗅探 */
-    Mask effectiveMask() {
-        return mask != null ? mask : FieldChangeRecorder.sniffMask(name);
+    MaskEnum effectiveMask() {
+        return maskEnum != null ? maskEnum : FieldChangeRecorder.sniffMask(name);
     }
 }

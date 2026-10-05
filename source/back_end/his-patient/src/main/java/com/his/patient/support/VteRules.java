@@ -1,6 +1,11 @@
 package com.his.patient.support;
 
 import com.his.patient.enums.VteMeasureTypeEnum;
+import com.his.patient.enums.VteOnsetEnum;
+import com.his.patient.enums.VtePreventStatusEnum;
+import com.his.patient.enums.VteEventTypeEnum;
+import com.his.patient.enums.VteDiagnosisBasisEnum;
+import com.his.patient.enums.VteOutcomeEnum;
 
 import java.util.Arrays;
 import java.util.List;
@@ -12,6 +17,10 @@ import java.util.List;
  * <p><b>推荐矩阵为什么按风险等级分档</b>：Caprini 0~2 分的低危患者做药物预防是过度医疗
  * （出血风险大于血栓获益）；高危/极高危只做基础预防等于没防。分档是临床指南的硬要求，
  * 不是"可选勾选项"。
+ *
+ * <p><b>码值 → 文案一律走枚举</b>：本类的 {@code xxxText} 只做"调对应枚举的 {@code labelOf}"这一件事，
+ * 不内联 switch、不自己写「未知(xxx)」兜底 —— 未知码值由枚举 {@code labelOf} 返回空串，
+ * 异常 / 审计场景走枚举的 {@code labelOrUnknown}（见 AGENTS.md §13）。
  */
 public final class VteRules {
 
@@ -67,64 +76,31 @@ public final class VteRules {
 
     public static String measureCodeText(String code) {
         Measure m = measureOf(code);
-        return m == null ? "未知(" + code + ")" : m.name();
+        return m == null ? "" : m.name();
     }
 
     public static String measureTypeText(Integer type) {
-        return switch (type == null ? 0 : type) {
-            case 1 -> "基础预防";
-            case 2 -> "物理预防";
-            case 3 -> "药物预防";
-            default -> "未知(" + type + ")";
-        };
+        return VteMeasureTypeEnum.labelOf(type);
     }
 
     public static String executeStatusText(Integer status) {
-        return switch (status == null ? -1 : status) {
-            case 0 -> "待落实";
-            case 1 -> "已落实";
-            case 2 -> "禁忌未用";
-            case 3 -> "患者拒绝";
-            default -> "未知(" + status + ")";
-        };
+        return VtePreventStatusEnum.labelOf(status);
     }
 
     public static String eventTypeText(Integer type) {
-        return switch (type == null ? 0 : type) {
-            case 1 -> "深静脉血栓（DVT）";
-            case 2 -> "肺栓塞（PE）";
-            case 3 -> "预防相关出血";
-            default -> "未知(" + type + ")";
-        };
+        return VteEventTypeEnum.labelOf(type);
     }
 
     public static String onsetTypeText(Integer type) {
-        return switch (type == null ? 0 : type) {
-            case 1 -> "院内发生";
-            case 2 -> "入院时已存在";
-            default -> "未知(" + type + ")";
-        };
+        return VteOnsetEnum.labelOf(type);
     }
 
     public static String basisText(Integer basis) {
-        return switch (basis == null ? 0 : basis) {
-            case 1 -> "超声";
-            case 2 -> "CT 肺动脉造影";
-            case 3 -> "静脉造影";
-            case 4 -> "临床诊断";
-            case 5 -> "其他";
-            default -> "未知(" + basis + ")";
-        };
+        return VteDiagnosisBasisEnum.labelOf(basis);
     }
 
     public static String outcomeText(Integer outcome) {
-        return switch (outcome == null ? 0 : outcome) {
-            case 1 -> "好转";
-            case 2 -> "未愈";
-            case 3 -> "死亡";
-            case 4 -> "未知";
-            default -> "未知(" + outcome + ")";
-        };
+        return VteOutcomeEnum.labelOf(outcome);
     }
 
     /**
@@ -148,6 +124,6 @@ public final class VteRules {
     /**
      * 措施项定义（顺序即页面展示顺序）
      */
-    public record Measure(String code, int type, String name, String desc) {
+    public static record Measure(String code, int type, String name, String desc) {
     }
 }

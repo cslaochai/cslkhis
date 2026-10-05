@@ -17,9 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 日终结转控制器（手工补跑）。
  *
- * <p>权限码借用门诊日志的 {@code opd:todayVisits:list}：结转是「门诊日志」页面上的动作，
- * 谁能看门诊日志谁就能补跑。刻意不新造权限码 —— 新码没有角色拥有，结果是按钮点了 403，
- * 那还不如直接共享（这动作本身可重入、只动历史日期，风险低于退费）。
  */
 @Tag(name = "日终结转")
 @RestController

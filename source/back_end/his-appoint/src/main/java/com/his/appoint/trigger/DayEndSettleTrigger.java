@@ -1,4 +1,4 @@
-package com.his.appoint.support;
+package com.his.appoint.trigger;
 
 import com.his.appoint.service.DayEndSettleService;
 import com.his.appoint.vo.DayEndSettleResultVO;

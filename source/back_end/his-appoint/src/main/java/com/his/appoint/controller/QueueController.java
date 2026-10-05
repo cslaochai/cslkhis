@@ -63,14 +63,6 @@ public class QueueController {
         return Result.success(queueService.listPage(queueQueryDTO));
     }
 
-    /**
-     * 门诊日志分页。与 /listPage 刻意分开：
-     * <ul>
-     *   <li>/listPage 是<b>分诊台</b>口径，被当前登录用户的科室强制收窄；</li>
-     *   <li>本端点是<b>跨科室查询分析</b>口径，科室/状态/关键词全部由筛选条件决定。</li>
-     * </ul>
-     * 合成一个接口的话，迟早有人把「日志能看到全院」当成「分诊台也能看到全院」。
-     */
     @Operation(summary = "门诊日志分页（跨科室，筛选条件下推）")
     @GetMapping("/opdLogListPage")
     public Result<PageResult<OpdLogListVO>> opdLogListPage(@Valid OpdLogQueryDTO query) {
@@ -97,11 +89,6 @@ public class QueueController {
         return Result.success();
     }
 
-    // 患者端「我的排队 / 到院签到」已迁至 his-miniapp 的 /miniapp/queue/*（患者端点集中收口）
-
-    // 医生站「接诊下一位」调的就是这个口子，原先只挂分诊台码 opd:triage:edit：
-    // 医生角色(10013)根本没有该码（菜单里 opd:triage:* 只授分诊岗位），
-    // 按钮画出来了、点了必 403。叫号本来就是「分诊台 or 本诊室医生」两终端共用，按各自页面码放行。
     @PreAuthorize("hasAnyAuthority('opd:triage:edit', 'opd:doctorWorkstation:edit')")
     @Operation(summary = "叫下一位（返回接诊回执：叫到了谁）")
     @PostMapping("/callNext")
@@ -143,9 +130,6 @@ public class QueueController {
     @PostMapping("/rejoinQueue")
     public Result<Integer> rejoinQueue(@RequestParam Long queueId) {
         Integer seq = queueService.rejoinQueue(queueId);
-        // 序号直接回给前端：护士需要看到「现在排第几」，只说"已优先"没法向患者交代。
-        // 文案保持中性 —— 同一个接口两个场景（候诊中→复诊优先 / 已过号→回队），
-        // 说死"已置为优先"会让过号回队的护士以为操作性质变了。
         return Result.success("已入队，当前序号 " + seq, seq);
     }
 

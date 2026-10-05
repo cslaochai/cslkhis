@@ -1,13 +1,26 @@
 package com.his.emr.support;
 
+import com.his.common.enums.RecordQcTypeEnum;
+import com.his.common.enums.RecordStatusEnum;
+import com.his.common.enums.SysGenderEnum;
+import com.his.emr.enums.QcGradeEnum;
+import com.his.emr.enums.QcResultEnum;
+import com.his.emr.enums.QcStatusEnum;
+import com.his.emr.enums.RecordQcActionEnum;
+import com.his.emr.enums.RecordQcFlowStatusEnum;
+import com.his.emr.enums.RecordQcLevelEnum;
+import com.his.patient.enums.InpatientRecordTypeEnum;
+
 /**
  * 质控相关码值 → 中文的**唯一**映射处。
  *
  * <p>为什么不放在前端：两份码值表一定会有一份先过期，然后界面显示"未知"而没人发现。
  * 为什么不散落在 Service / VO / SQL 里：那样同一个码值会有三种说法。
  *
- * <p><b>未知码值一律渲染成「未知(码值)」，绝不回落到某个合法值</b> ——
- * 回落会把"数据有问题"伪装成"数据正常"，这是最难查的一类缺陷。
+ * <p><b>码值 → 文案一律走枚举</b>：本类的每个方法只做"调对应枚举的 {@code labelOf}"这一件事，
+ * 不内联 switch、不自己写「未知(xxx)」兜底 —— 未知码值由枚举 {@code labelOf} 返回空串（展示口径）；
+ * 异常 / 审计场景若需保留原始码值，由调用侧改走枚举的 {@code labelOrUnknown}（见 AGENTS.md §13）。
+ * 仅 {@code recordSource} 这类字符串码（无对应枚举）保留内部映射，兜底同样给空串。
  */
 public final class QcTexts {
 
@@ -21,14 +34,8 @@ public final class QcTexts {
         if (code == null) {
             return null;
         }
-        return switch (code) {
-            case 0 -> "综合质控";
-            case 1 -> "完整性检查";
-            case 2 -> "规范性检查";
-            case 3 -> "逻辑性检查";
-            case 4 -> "AI内涵质控";
-            default -> unknown(code);
-        };
+        String label = RecordQcTypeEnum.labelOf(code);
+        return label != null ? label : "";
     }
 
     /**
@@ -38,12 +45,8 @@ public final class QcTexts {
         if (code == null) {
             return null;
         }
-        return switch (code) {
-            case 1 -> "待处理";
-            case 2 -> "已处理";
-            case 3 -> "已忽略";
-            default -> unknown(code);
-        };
+        String label = QcStatusEnum.labelOf(code);
+        return label != null ? label : "";
     }
 
     /**
@@ -53,11 +56,8 @@ public final class QcTexts {
         if (code == null) {
             return null;
         }
-        return switch (code) {
-            case 0 -> "不通过";
-            case 1 -> "通过";
-            default -> unknown(code);
-        };
+        String label = QcResultEnum.labelOf(code);
+        return label != null ? label : "";
     }
 
     /**
@@ -67,13 +67,8 @@ public final class QcTexts {
         if (code == null) {
             return null;
         }
-        return switch (code) {
-            case 1 -> "草稿";
-            case 2 -> "已提交";
-            case 3 -> "已归档";
-            case 4 -> "已作废";
-            default -> unknown(code);
-        };
+        String label = RecordStatusEnum.labelOf(code);
+        return label != null ? label : "";
     }
 
     /**
@@ -83,14 +78,8 @@ public final class QcTexts {
         if (code == null) {
             return null;
         }
-        return switch (code) {
-            case 1 -> "科级待审";
-            case 2 -> "病案室待审";
-            case 3 -> "医务处待审";
-            case 4 -> "终审通过";
-            case 5 -> "整改中";
-            default -> unknown(code);
-        };
+        String label = RecordQcFlowStatusEnum.labelOf(code);
+        return label != null ? label : "";
     }
 
     /**
@@ -100,12 +89,8 @@ public final class QcTexts {
         if (code == null) {
             return null;
         }
-        return switch (code) {
-            case 1 -> "科级";
-            case 2 -> "病案室";
-            case 3 -> "医务处";
-            default -> unknown(code);
-        };
+        String label = RecordQcLevelEnum.labelOf(code);
+        return label != null ? label : "";
     }
 
     /**
@@ -115,14 +100,8 @@ public final class QcTexts {
         if (code == null) {
             return null;
         }
-        return switch (code) {
-            case 1 -> "发起送审";
-            case 2 -> "审核通过";
-            case 3 -> "退回整改";
-            case 4 -> "整改提交";
-            case 5 -> "终审通过";
-            default -> unknown(code);
-        };
+        String label = RecordQcActionEnum.labelOf(code);
+        return label != null ? label : "";
     }
 
     /**
@@ -132,12 +111,8 @@ public final class QcTexts {
         if (code == null) {
             return null;
         }
-        return switch (code) {
-            case 1 -> "甲级";
-            case 2 -> "乙级";
-            case 3 -> "丙级";
-            default -> unknown(code);
-        };
+        String label = QcGradeEnum.labelOf(code);
+        return label != null ? label : "";
     }
 
     /**
@@ -147,20 +122,8 @@ public final class QcTexts {
         if (code == null) {
             return null;
         }
-        return switch (code) {
-            case 1 -> "入院记录";
-            case 2 -> "首次病程";
-            case 3 -> "日常病程";
-            case 4 -> "术前小结";
-            case 5 -> "手术记录";
-            case 6 -> "术后首次病程";
-            case 7 -> "出院记录";
-            case 8 -> "死亡记录";
-            case 9 -> "会诊记录";
-            case 10 -> "转科记录";
-            case 11 -> "输血记录";
-            default -> unknown(code);
-        };
+        String label = InpatientRecordTypeEnum.labelOf(code);
+        return label != null ? label : "";
     }
 
     /**
@@ -173,7 +136,7 @@ public final class QcTexts {
         return switch (code.trim().toUpperCase()) {
             case "OUTPATIENT" -> "门诊病历";
             case "INPATIENT" -> "住院文书";
-            default -> unknown(code);
+            default -> "";
         };
     }
 
@@ -184,12 +147,8 @@ public final class QcTexts {
         if (code == null) {
             return null;
         }
-        return switch (code) {
-            case 1 -> "男";
-            case 2 -> "女";
-            case 9 -> "未知";
-            default -> unknown(code);
-        };
+        SysGenderEnum g = SysGenderEnum.fromCode(code);
+        return g != null ? g.getLabel() : "";
     }
 
     /**
@@ -207,9 +166,5 @@ public final class QcTexts {
             return "甲";
         }
         return score >= 75 ? "乙" : "丙";
-    }
-
-    private static String unknown(Object code) {
-        return "未知(" + code + ")";
     }
 }

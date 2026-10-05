@@ -44,8 +44,6 @@ public class ScheduleTemplateUpsertDTO {
 
     /**
      * 岗位类别（1医生 2护理 3医技 4药学 5收费 6行政其他，见 {@code StaffTypeEnum}）
-     *
-     * <p>必填：模板生成排班时原样带给排班信息，岗位决定这条排班有没有号源/诊室。
      */
     @NotNull(message = "请选择岗位类别")
     private Integer staffType;
@@ -93,8 +91,6 @@ public class ScheduleTemplateUpsertDTO {
 
     /**
      * 号源总数：只对医生岗（staff_type=1）有意义。
-     * 非医生岗是纯出勤模板，号源不参与——是否必须 ≥1 由
-     * {@code ScheduleTemplateServiceImpl#saveTemplate} 按岗位收口，DTO 层只拦负数。
      */
     @Min(value = 0, message = "号源数量不能为负")
     private Integer totalSource;
@@ -152,8 +148,6 @@ public class ScheduleTemplateUpsertDTO {
 
     /**
      * 段级号源配置（可选，只对医生岗有意义）：
-     * null=本次不动（保留已有段配置）；[]=清空段配置（生成排班时回退半小时均分）；
-     * 非空=整批替换（无缝铺满班次时间窗 + 半小时网格 + Σ段=主表，保存侧校验，非法整批拒绝）。
      */
     @Valid
     private List<ScheduleTemplateSlotItemDTO> slots;

@@ -35,7 +35,7 @@ import com.his.appoint.service.DoctorStatusCacheService;
 import com.his.appoint.service.QueueService;
 import com.his.appoint.service.ScheduleService;
 import com.his.appoint.service.AppointChargeGateway;
-import com.his.appoint.support.DayEndSettleTrigger;
+import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.support.PatientVisitSummaryUpdater;
 import com.his.appoint.vo.DoctorStatsVO;
 import com.his.appoint.vo.InsuranceEstimateVO;

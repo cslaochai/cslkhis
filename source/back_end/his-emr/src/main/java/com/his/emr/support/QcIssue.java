@@ -2,6 +2,7 @@ package com.his.emr.support;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.emr.enums.QcRuleEnum;
 import lombok.Data;
 
 /**
@@ -92,7 +93,7 @@ public class QcIssue {
      */
     private String basis;
 
-    public static QcIssue of(QcRule rule, String errorDetail, String evidence) {
+    public static QcIssue of(QcRuleEnum rule, String errorDetail, String evidence) {
         QcIssue issue = new QcIssue();
         issue.ruleCode = rule.getCode();
         issue.ruleName = rule.getName();
