@@ -1,12 +1,13 @@
 package com.his.miniapp.service.impl;
 
-import com.his.miniapp.enums.PayBizTypeEnum;
 import com.his.miniapp.service.WxPayChannelService;
 import com.his.miniapp.entity.BizPayOrder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 微信支付出口（小程序一期口子，同 M7/M8 打印桩形态）。
@@ -19,6 +20,8 @@ import java.util.Map;
 @Slf4j
 @Service
 public class WxPayChannelServiceImpl implements WxPayChannelService {
+    @Autowired
+    private DictCacheService dictText;
 
     /**
      * 统一下单。

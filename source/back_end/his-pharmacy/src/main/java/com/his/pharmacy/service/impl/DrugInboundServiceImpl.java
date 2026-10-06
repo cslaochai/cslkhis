@@ -13,7 +13,6 @@ import com.his.pharmacy.dto.DrugInboundQueryPageDTO;
 import com.his.pharmacy.entity.BizDrugInbound;
 import com.his.pharmacy.entity.BizDrugInboundDetail;
 import com.his.pharmacy.entity.BizDrugStock;
-import com.his.pharmacy.enums.DrugInboundStatusEnum;
 import com.his.pharmacy.mapper.BizDrugInboundDetailMapper;
 import com.his.pharmacy.mapper.BizDrugInboundMapper;
 import com.his.pharmacy.service.DrugInboundService;
@@ -35,6 +34,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 药品入库单服务实现
@@ -49,6 +50,8 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, BizDrugInbound>
+    @Autowired
+    private DictCacheService dictText;
         implements DrugInboundService {
 
     private final BizDrugInboundMapper inboundMapper;

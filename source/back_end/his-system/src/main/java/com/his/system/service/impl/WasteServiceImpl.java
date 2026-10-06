@@ -8,7 +8,6 @@ import com.his.common.exception.BusinessException;
 import com.his.system.dto.WasteDTO;
 import com.his.system.entity.BizMedicalWaste;
 import com.his.system.enums.WasteStatusEnum;
-import com.his.system.enums.WasteTypeEnum;
 import com.his.system.mapper.BizMedicalWasteMapper;
 import com.his.system.service.WasteService;
 import com.his.system.vo.WasteVO;
@@ -22,6 +21,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 医疗废物登记服务。
@@ -32,6 +33,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class WasteServiceImpl implements WasteService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 

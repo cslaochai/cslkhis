@@ -10,12 +10,8 @@ import com.his.operation.dto.AnesthesiaVisitUpsertDTO;
 import com.his.operation.entity.BizAnesthesiaVisit;
 import com.his.operation.entity.BizOperationApply;
 import com.his.operation.enums.AsaGradeEnum;
-import com.his.operation.enums.MallampatiGradeEnum;
-import com.his.operation.enums.NeckMobilityEnum;
-import com.his.operation.enums.NpoStatusEnum;
 import com.his.operation.enums.OperationAnesthesiaMethodEnum;
 import com.his.operation.enums.OperationApplyStatusEnum;
-import com.his.operation.enums.OperationEmergencyEnum;
 import com.his.operation.enums.VisitConclusionEnum;
 import com.his.operation.enums.VisitStatusEnum;
 import com.his.operation.mapper.BizAnesthesiaVisitMapper;
@@ -38,6 +34,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 麻醉术前访视服务实现（G15 第一环）。
@@ -59,6 +57,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 

@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechAuthStatusEnum;
-import com.his.common.enums.TechAuthTypeEnum;
 import com.his.common.enums.TechLevelEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
@@ -38,6 +37,8 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 技术授权台账与准入闸实现。
@@ -56,6 +57,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
+    @Autowired
+    private DictCacheService dictText;
 
     /** 授权状态：1-待审批 2-已授权 3-已驳回 4-已收回（唯一口径 TechAuthStatusEnum） */
     /** 越权登记状态：1-待上级确认 2-已确认 */
@@ -525,7 +528,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         if (type == null) {
             return "—";
         }
-        return TechAuthTypeEnum.getText(type);
+        return dictText.getDicDataLabel("biz_common_techAuthTypeEnum", type);
     }
 
     private static String trim(String value) {

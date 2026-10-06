@@ -34,6 +34,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 订餐配送实现。
@@ -52,6 +54,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class MealOrderServiceImpl implements MealOrderService {
+    @Autowired
+    private DictCacheService dictText;
     private final DeptScopeProvider deptScopeProvider;
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");

@@ -44,5 +44,9 @@
             <groupId>com.his</groupId>
             <artifactId>his-appoint</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-operation</artifactId>
+        </dependency>
     </dependencies>
 </project>

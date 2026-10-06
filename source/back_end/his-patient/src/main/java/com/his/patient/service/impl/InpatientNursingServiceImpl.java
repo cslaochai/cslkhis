@@ -1,7 +1,5 @@
 package com.his.patient.service.impl;
 import com.his.common.util.TimeUtil;
-import com.his.patient.enums.NursingLevelEnum;
-import com.his.patient.enums.NursingShiftEnum;
 import com.his.patient.enums.SummaryStatusEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -20,7 +18,6 @@ import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientNursingService;
 import com.his.patient.enums.InpatientRecordStatusEnum;
 import com.his.patient.enums.NursingAssessTypeEnum;
-import com.his.patient.enums.NursingRiskLevelEnum;
 import com.his.patient.vo.*;
 import com.his.system.provider.DeptScopeProvider;
 import com.his.system.utils.UserUtils;
@@ -37,6 +34,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 护理文书服务实现（三测单 / 护理记录单 / 生命体征监测）。
@@ -59,6 +58,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InpatientNursingServiceImpl implements InpatientNursingService {
+    @Autowired
+    private DictCacheService dictText;
     private final DeptScopeProvider deptScopeProvider;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -771,7 +772,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         WardVO ward = bedMapper.selectWardById(wardId);
         vo.setWardName(ward == null ? null : ward.getWardName());
         vo.setShift(shift);
-        vo.setShiftText(NursingShiftEnum.getText(shift));
+        vo.setShiftText(dictText.getDicDataLabel("biz_patient_nursingShiftEnum", shift));
         vo.setWindowBegin(begin);
         vo.setWindowEnd(end);
 

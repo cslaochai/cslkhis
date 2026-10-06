@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
 import com.his.pharmacy.dto.ConsumableUpsertDTO;
 import com.his.pharmacy.entity.BizConsumableStock;
-import com.his.pharmacy.supplies.vo.*;
 import com.his.pharmacy.vo.*;
 
 import java.math.BigDecimal;

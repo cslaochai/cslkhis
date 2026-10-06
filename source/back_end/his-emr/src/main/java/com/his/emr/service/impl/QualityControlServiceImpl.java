@@ -38,6 +38,8 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 病案质控服务实现（P5.4）。
@@ -61,6 +63,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapper, BizQualityControl>
+    @Autowired
+    private DictCacheService dictText;
         implements QualityControlService {
 
     /**

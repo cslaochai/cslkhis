@@ -1,9 +1,6 @@
 package com.his.patient.service.impl;
 import com.his.common.util.TimeUtil;
 import com.his.common.enums.AdmitStatusEnum;
-import com.his.patient.enums.OrderExecStatusEnum;
-import com.his.patient.enums.OrderSourceEnum;
-import com.his.patient.enums.OrderUrgentEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -50,6 +47,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 住院医嘱服务实现（P1：医嘱 → 校对 → 执行 → 计费）。
@@ -77,6 +76,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InpatientOrderServiceImpl implements InpatientOrderService {
+    @Autowired
+    private DictCacheService dictText;
 
     // 医嘱状态
 
@@ -846,7 +847,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             processed++;
         }
         log.info("医嘱执行处理完成 条数={} 结果={} 护士={}", processed,
-                OrderExecStatusEnum.getText(status), nurseName);
+                dictText.getDicDataLabel("biz_patient_orderExecStatusEnum", status), nurseName);
         return processed;
     }
 

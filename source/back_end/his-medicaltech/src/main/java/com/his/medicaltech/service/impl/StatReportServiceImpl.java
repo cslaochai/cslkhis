@@ -7,8 +7,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.dto.StatReportDTO;
 import com.his.medicaltech.entity.BizStatReport;
-import com.his.medicaltech.enums.StatReportStatusEnum;
-import com.his.medicaltech.enums.StatReportTypeEnum;
 import com.his.medicaltech.mapper.BizStatReportMapper;
 import com.his.medicaltech.mapper.StatReportAggMapper;
 import com.his.medicaltech.service.StatReportService;
@@ -30,6 +28,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 病案统计上报服务（打印预留）。
@@ -44,6 +44,8 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 @RequiredArgsConstructor
 public class StatReportServiceImpl implements StatReportService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");

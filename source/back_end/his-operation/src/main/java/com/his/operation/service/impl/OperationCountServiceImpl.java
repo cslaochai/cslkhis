@@ -9,7 +9,6 @@ import com.his.operation.dto.OperationCountUpsertDTO;
 import com.his.operation.entity.BizOperationApply;
 import com.his.operation.entity.BizOperationCount;
 import com.his.operation.entity.BizOperationCountItem;
-import com.his.operation.enums.CountCategoryEnum;
 import com.his.operation.enums.CountPhaseEnum;
 import com.his.operation.enums.CountResultEnum;
 import com.his.operation.enums.CountStatusEnum;
@@ -36,6 +35,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 手术器械/敷料清点服务实现（G15 并行链）。
@@ -59,6 +60,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class OperationCountServiceImpl implements OperationCountService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 

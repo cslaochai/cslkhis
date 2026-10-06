@@ -11,7 +11,6 @@ import com.his.medicaltech.dto.EndoscopyDTO;
 import com.his.medicaltech.dto.PathologyDTO;
 import com.his.medicaltech.entity.BizEndoscopyRecord;
 import com.his.medicaltech.entity.BizPathologyOrder;
-import com.his.medicaltech.enums.EndoscopyHpResultEnum;
 import com.his.medicaltech.enums.EndoscopyTypeEnum;
 import com.his.medicaltech.enums.InsRecordStatusEnum;
 import com.his.medicaltech.mapper.BizEndoscopyRecordMapper;

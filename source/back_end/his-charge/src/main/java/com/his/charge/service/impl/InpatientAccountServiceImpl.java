@@ -8,8 +8,6 @@ import com.his.charge.entity.BizAlert;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizSettlementBill;
-import com.his.charge.enums.InpatientSettleResultEnum;
-import com.his.charge.enums.PrepayTypeEnum;
 import com.his.charge.mapper.BizAlertMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.*;
@@ -34,6 +32,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 住院账务服务实现（P3，四层口径）。
@@ -66,6 +66,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InpatientAccountServiceImpl implements InpatientAccountService {
+    @Autowired
+    private DictCacheService dictText;
 
     /**
      * 金额统一两位小数（元）
@@ -393,7 +395,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         vo.setArrearsAmount(arrearsAmount);
         vo.setSettled(discharge != null);
         vo.setSettlementNo(discharge != null ? discharge.getBillNo() : null);
-        vo.setSettleStatusText(InpatientSettleResultEnum.getText(settleStatus));
+        vo.setSettleStatusText(dictText.getDicDataLabel("biz_charge_inpatientSettleResultEnum", settleStatus));
         vo.setHintText(arrears
                 ? "住院费用已发生 " + total.toPlainString() + " 元，已收 " + state.collected().toPlainString()
                 + " 元（住院账户余额 " + balance.toPlainString() + " 元），欠费 "
@@ -588,7 +590,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         vo.setPatientNo(t.getPatientNo());
         vo.setPatientName(t.getPatientName());
         vo.setPrepayType(prepayType);
-        vo.setPrepayTypeText(PrepayTypeEnum.getText(prepayType));
+        vo.setPrepayTypeText(dictText.getDicDataLabel("biz_charge_prepayTypeEnum", prepayType));
         vo.setAmount(t.getAmount());
         vo.setBalanceAfter(balanceAfter);
         vo.setPayMethod(t.getPayMethod());

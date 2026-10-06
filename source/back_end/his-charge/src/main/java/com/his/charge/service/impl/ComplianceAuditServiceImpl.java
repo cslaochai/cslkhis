@@ -7,7 +7,6 @@ import com.his.charge.config.ComplianceProperties;
 import com.his.charge.dto.*;
 import com.his.charge.entity.*;
 import com.his.charge.enums.AuditResultStateEnum;
-import com.his.charge.enums.ComplianceAuditTypeEnum;
 import com.his.charge.enums.RuleCatalogEnum;
 import com.his.charge.mapper.*;
 import com.his.charge.service.ComplianceAuditService;
@@ -18,7 +17,6 @@ import com.his.charge.support.RuleFinding;
 import com.his.charge.support.SettlementEvidence;
 import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
-import com.his.common.enums.AdmitConditionEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.system.entity.CurrentUser;
@@ -38,6 +36,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 医保合规审核服务实现。
@@ -48,6 +48,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ComplianceAuditServiceImpl implements ComplianceAuditService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter AUDIT_NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 

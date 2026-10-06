@@ -11,7 +11,6 @@ import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.PatientImagingExplainCapability;
 import com.his.ai.support.PatientTextGuard;
 import com.his.ai.vo.PatientImagingExplainVO;
-import com.his.common.enums.PositiveFlagEnum;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.entity.BizReport;
 import com.his.medicaltech.enums.ReportStatusEnum;
@@ -28,6 +27,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 患者端影像报告解读（大白话版，G-17）。
@@ -50,6 +51,8 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class PatientImagingExplainCapabilityImpl implements PatientImagingExplainCapability {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final String TEMPLATE_NAME = "patient-imaging-explain";
 

@@ -12,11 +12,9 @@ import com.his.operation.entity.BizOperationApply;
 import com.his.operation.mapper.BizAnesthesiaPacuMapper;
 import com.his.operation.mapper.BizAnesthesiaRecordMapper;
 import com.his.operation.mapper.BizOperationApplyMapper;
-import com.his.operation.enums.AwarenessLevelEnum;
 import com.his.operation.enums.AnesthesiaChargeStatusEnum;
 import com.his.operation.enums.AnesthesiaRecordStatusEnum;
 import com.his.operation.enums.OperationAnesthesiaMethodEnum;
-import com.his.operation.enums.PacuDispositionEnum;
 import com.his.operation.enums.PacuStatusEnum;
 import com.his.operation.service.PacuService;
 import com.his.operation.support.AnesthesiaCalcs;
@@ -36,6 +34,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * PACU 麻醉后监测治疗服务实现（G15 第三环）。
@@ -57,6 +57,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class PacuServiceImpl implements PacuService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 

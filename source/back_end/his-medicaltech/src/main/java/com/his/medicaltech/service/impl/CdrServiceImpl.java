@@ -1,13 +1,10 @@
 package com.his.medicaltech.service.impl;
+import com.his.patient.enums.VisitStatusEnum;
 
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.dto.CdrQueryDTO;
-import com.his.medicaltech.enums.CdrEmergencyStatusEnum;
-import com.his.medicaltech.enums.CdrEmergencyTriageEnum;
-import com.his.medicaltech.enums.CdrRegistStatusEnum;
-import com.his.medicaltech.enums.CdrVisitStatusEnum;
 import com.his.medicaltech.mapper.CdrMapper;
 import com.his.medicaltech.service.CdrService;
 import com.his.medicaltech.enums.CdrEventTypeEnum;
@@ -31,6 +28,8 @@ import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 患者全景时间轴实现（P5.2）。
@@ -45,6 +44,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class CdrServiceImpl implements CdrService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -239,7 +240,7 @@ public class CdrServiceImpl implements CdrService {
             node.setAnchorNo(str(v.get("visit_no")));
             node.setStartTime(fmt(ldt(v.get("start_time"))));
             node.setEndTime(fmt(ldt(v.get("end_time"))));
-            node.setStatusText(CdrVisitStatusEnum.getText(intVal(v.get("visit_status"))));
+            node.setStatusText(VisitStatusEnum.getText(intVal(v.get("visit_status"))));
             node.setTotalAmount(dec(v.get("total_amount")));
             node.setTitle(node.getNodeTypeText());
 

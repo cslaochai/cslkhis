@@ -14,7 +14,6 @@ import com.his.pharmacy.dto.PurchaseOrderUpsertDTO;
 import com.his.pharmacy.entity.BizPurchaseOrder;
 import com.his.pharmacy.entity.BizPurchaseOrderDetail;
 import com.his.pharmacy.entity.SysSupplier;
-import com.his.pharmacy.enums.PurchaseApprovalStatusEnum;
 import com.his.pharmacy.mapper.BizDrugInboundMapper;
 import com.his.pharmacy.mapper.BizPurchaseOrderDetailMapper;
 import com.his.pharmacy.mapper.BizPurchaseOrderMapper;
@@ -38,6 +37,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 采购订单服务实现
@@ -52,6 +53,8 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper, BizPurchaseOrder>
+    @Autowired
+    private DictCacheService dictText;
         implements PurchaseOrderService {
 
     private final BizPurchaseOrderMapper orderMapper;

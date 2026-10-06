@@ -10,13 +10,11 @@ import com.his.common.enums.SysGenderEnum;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.BedAllocateStatusEnum;
-import com.his.patient.enums.BedMatchLevelEnum;
 import com.his.patient.enums.BedStatusEnum;
 import com.his.patient.enums.BedWaitStatusEnum;
 import com.his.patient.enums.BedPriorityEnum;
 import com.his.patient.enums.BedTypeEnum;
 import com.his.patient.enums.BedGenderLimitEnum;
-import com.his.patient.enums.BedAllocTypeEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.BedCenterService;
 import com.his.patient.service.InpatientService;
@@ -44,6 +42,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 床位服务中心实现
@@ -71,6 +71,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class BedCenterServiceImpl implements BedCenterService {
+    @Autowired
+    private DictCacheService dictText;
 
     /**
      * 等待超时的最长天数；缺失或非法一律回落 7 天（不回落成"永不超时"）
@@ -701,7 +703,7 @@ public class BedCenterServiceImpl implements BedCenterService {
                 score += 20;
             }
             b.setMatchLevel(level);
-            b.setMatchLevelText(BedMatchLevelEnum.getText(level));
+            b.setMatchLevelText(dictText.getDicDataLabel("biz_patient_bedMatchLevelEnum", level));
             b.setMatchScore(score);
             b.setBedTypeText(BedTypeEnum.getText(b.getBedType()));
             b.setExpectWardMatched(expectMatched);

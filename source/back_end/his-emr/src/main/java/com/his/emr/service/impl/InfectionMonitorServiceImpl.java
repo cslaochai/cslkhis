@@ -12,7 +12,6 @@ import com.his.emr.entity.BizInfectionMonitor;
 import com.his.emr.entity.BizInfectionMonitorDaily;
 import com.his.emr.enums.DeviceMonitorStatusEnum;
 import com.his.emr.enums.InfectionCaseStatusEnum;
-import com.his.emr.enums.InfectionMonitorTypeEnum;
 import com.his.emr.enums.InfectionSourceEnum;
 import com.his.emr.mapper.BizHandHygieneObsMapper;
 import com.his.emr.mapper.BizInfectionCaseMapper;
@@ -31,6 +30,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 院感监测服务实现（L10）
@@ -49,6 +50,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InfectionMonitorServiceImpl implements InfectionMonitorService {
+    @Autowired
+    private DictCacheService dictText;
 
     private final BizInfectionCaseMapper caseMapper;
     private final BizInfectionMonitorMapper monitorMapper;
@@ -543,7 +546,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     }
 
     private String monitorTypeText(Integer t) {
-        return InfectionMonitorTypeEnum.getText(t);
+        return dictText.getDicDataLabel("biz_emr_infectionMonitorTypeEnum", t);
     }
 
     private String infectionSiteText(String site) {

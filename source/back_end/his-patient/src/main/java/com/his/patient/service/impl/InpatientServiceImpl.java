@@ -1,7 +1,6 @@
 package com.his.patient.service.impl;
 import com.his.charge.api.InpatientSettlementGateway;
 import com.his.common.util.TimeUtil;
-import com.his.patient.enums.NursingLevelEnum;
 
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -42,6 +41,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 住院管理实现（第 1 期）
@@ -64,6 +65,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class InpatientServiceImpl implements InpatientService {
+    @Autowired
+    private DictCacheService dictText;
     private final DeptScopeProvider deptScopeProvider;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");

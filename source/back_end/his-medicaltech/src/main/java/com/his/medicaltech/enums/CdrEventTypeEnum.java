@@ -1,7 +1,26 @@
 package com.his.medicaltech.enums;
+import com.his.common.enums.BillStatusEnum;
+import com.his.common.enums.PrescriptionTypeEnum;
+import com.his.emr.enums.FollowupTaskStatusEnum;
+import com.his.medicaltech.enums.CriticalValueStatusEnum;
+import com.his.medicaltech.enums.InsRecordStatusEnum;
+import com.his.operation.enums.OperationApplyStatusEnum;
+import com.his.patient.enums.ConsultScopeEnum;
+import com.his.patient.enums.InpatientOrderStatusEnum;
+import com.his.patient.enums.InpatientRecordTypeEnum;
+import com.his.patient.enums.NursingDocTypeEnum;
+import com.his.patient.enums.OrderTypeEnum;
+import com.his.patient.enums.TransferStatusEnum;
 
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.PaymentMethodEnum;
+import com.his.common.enums.RecordStatusEnum;
+import com.his.emr.enums.ArchiveStatusEnum;
+import com.his.emr.enums.TreatmentExecStatusEnum;
+import com.his.patient.enums.AdmitWayEnum;
+import com.his.patient.enums.InpatientRecordStatusEnum;
+import com.his.patient.enums.ReferralStatusEnum;
+import com.his.patient.enums.SummaryStatusEnum;
 
 import java.util.function.Function;
 
@@ -24,25 +43,25 @@ public enum CdrEventTypeEnum {
     REGIST("regist", "挂号", CdrNodeTypeEnum.OUTPATIENT, CdrRegistStatusEnum::getText, null, null),
 
     OUTPATIENT_RECORD("outpatientRecord", "门诊病历", CdrNodeTypeEnum.OUTPATIENT,
-            CdrOutpatientRecordStatusEnum::getText, null, null),
+            RecordStatusEnum::getText, null, null),
 
     PRESCRIPTION("prescription", "处方", CdrNodeTypeEnum.OUTPATIENT, CdrPrescriptionStatusEnum::getText,
-            CdrPrescriptionTypeEnum::getText, "处方类型"),
+            PrescriptionTypeEnum::getText, "处方类型"),
 
     LAB_APPLY("laboratoryApply", "检验申请", CdrNodeTypeEnum.OUTPATIENT,
             CdrLabApplyStatusEnum::getText, null, null),
 
     LAB_REPORT("laboratoryReport", "检验报告", CdrNodeTypeEnum.OUTPATIENT,
-            CdrLabRecordStatusEnum::getText, null, null),
+            LabRecordStatusEnum::getText, null, null),
 
     INSP_APPLY("inspectionApply", "检查申请", CdrNodeTypeEnum.OUTPATIENT,
             CdrInspApplyStatusEnum::getText, null, null),
 
     INSP_REPORT("inspectionReport", "检查报告", CdrNodeTypeEnum.OUTPATIENT,
-            CdrInspRecordStatusEnum::getText, null, null),
+            InsRecordStatusEnum::getText, null, null),
 
     TREATMENT("treatmentApply", "治疗单", CdrNodeTypeEnum.OUTPATIENT,
-            CdrTreatmentStatusEnum::getText, null, null),
+            TreatmentExecStatusEnum::getText, null, null),
 
     CHARGE("charge", "收费", CdrNodeTypeEnum.OUTPATIENT, CdrChargeStatusEnum::getText,
             CdrChargeTypeEnum::getText, "收费类型"),
@@ -53,61 +72,61 @@ public enum CdrEventTypeEnum {
     QUEUE("queue", "候诊叫号", CdrNodeTypeEnum.OUTPATIENT, CdrQueueStatusEnum::getText, null, null),
 
     RECORD_ARCHIVE("recordArchive", "病案归档", CdrNodeTypeEnum.OUTPATIENT,
-            CdrArchiveStatusEnum::getText, null, null),
+            ArchiveStatusEnum::getText, null, null),
 
     REPORT_DOC("report", "报告单", CdrNodeTypeEnum.OUTPATIENT, null, null, null),
 
     // 住院域
     ADMISSION("admission", "入院登记", CdrNodeTypeEnum.INPATIENT, AdmitStatusEnum::getText,
-            CdrAdmitWayEnum::getText, "入院途径"),
+            AdmitWayEnum::getText, "入院途径"),
 
     INPATIENT_RECORD("inpatientRecord", "住院文书", CdrNodeTypeEnum.INPATIENT,
-            CdrInpatientRecordStatusEnum::getText, CdrInpatientRecordTypeEnum::getText, "文书类型"),
+            InpatientRecordStatusEnum::getText, InpatientRecordTypeEnum::getText, "文书类型"),
 
     INPATIENT_ORDER("inpatientOrder", "住院医嘱", CdrNodeTypeEnum.INPATIENT,
-            CdrOrderStatusEnum::getText, CdrOrderTypeEnum::getText, "医嘱类型"),
+            InpatientOrderStatusEnum::getText, OrderTypeEnum::getText, "医嘱类型"),
 
     INPATIENT_DIAGNOSIS("inpatientDiagnosis", "住院诊断", CdrNodeTypeEnum.INPATIENT,
             null, CdrDiagTypeEnum::getText, "诊断类型"),
 
     INPATIENT_SUMMARY("inpatientSummary", "病案首页", CdrNodeTypeEnum.INPATIENT,
-            CdrSummaryStatusEnum::getText, null, null),
+            SummaryStatusEnum::getText, null, null),
 
     OPERATION_APPLY("operationApply", "手术申请", CdrNodeTypeEnum.INPATIENT,
-            CdrOperationStatusEnum::getText, null, null),
+            OperationApplyStatusEnum::getText, null, null),
 
     INPATIENT_OPERATION("inpatientOperation", "手术记录", CdrNodeTypeEnum.INPATIENT,
             null, null, null),
 
     CONSULTATION("consultation", "会诊", CdrNodeTypeEnum.INPATIENT,
-            CdrConsultStatusEnum::getText, CdrConsultTypeEnum::getText, "会诊范围"),
+            CdrConsultStatusEnum::getText, ConsultScopeEnum::getText, "会诊范围"),
 
-    TRANSFER("transfer", "转科", CdrNodeTypeEnum.INPATIENT, CdrTransferStatusEnum::getText, null, null),
+    TRANSFER("transfer", "转科", CdrNodeTypeEnum.INPATIENT, TransferStatusEnum::getText, null, null),
 
     TRANSFUSION("transfusion", "输血", CdrNodeTypeEnum.INPATIENT,
-            CdrTransfusionStatusEnum::getText, null, null),
+            TransfusionStatusEnum::getText, null, null),
 
     NURSING_RECORD("nursingRecord", "护理记录", CdrNodeTypeEnum.INPATIENT,
-            CdrInpatientRecordStatusEnum::getText, CdrNursingTypeEnum::getText, "文书类型"),
+            InpatientRecordStatusEnum::getText, NursingDocTypeEnum::getText, "文书类型"),
 
     PREPAY("prepay", "预交金", CdrNodeTypeEnum.INPATIENT, null, PaymentMethodEnum::getText, "支付方式"),
 
     DISCHARGE("discharge", "出院", CdrNodeTypeEnum.INPATIENT, CdrDischargeStatusEnum::getText, null, null),
 
     INPATIENT_SETTLE("inpatientSettlement", "住院结算", CdrNodeTypeEnum.INPATIENT,
-            CdrInpatientSettleStatusEnum::getText, null, null),
+            BillStatusEnum::getText, null, null),
 
     // 患者级（跨就诊）
     EMERGENCY("emergency", "急诊", CdrNodeTypeEnum.EMERGENCY, CdrEmergencyStatusEnum::getText, null, null),
 
-    CRITICAL_VALUE("criticalValue", "危急值", CdrNodeTypeEnum.PATIENT, CdrCriticalValueStatusEnum::getText,
-            CdrCriticalTypeEnum::getText, "偏离方向"),
+    CRITICAL_VALUE("criticalValue", "危急值", CdrNodeTypeEnum.PATIENT, CriticalValueStatusEnum::getText,
+            CriticalTypeEnum::getText, "偏离方向"),
 
-    QC("qualityControl", "病案质控", CdrNodeTypeEnum.PATIENT, CdrQcStatusEnum::getText, null, null),
+    QC("qualityControl", "病案质控", CdrNodeTypeEnum.PATIENT, QcStatusEnum::getText, null, null),
 
-    FOLLOWUP("followupTask", "随访", CdrNodeTypeEnum.PATIENT, CdrFollowupStatusEnum::getText, null, null),
+    FOLLOWUP("followupTask", "随访", CdrNodeTypeEnum.PATIENT, FollowupTaskStatusEnum::getText, null, null),
 
-    REFERRAL("referral", "转诊", CdrNodeTypeEnum.PATIENT, CdrReferralStatusEnum::getText, null, null),
+    REFERRAL("referral", "转诊", CdrNodeTypeEnum.PATIENT, ReferralStatusEnum::getText, null, null),
 
     PUBLIC_HEALTH("publicHealthReport", "公卫上报", CdrNodeTypeEnum.PATIENT,
             CdrPublicHealthReportStatusEnum::getText, CdrPublicHealthReportTypeEnum::getText, "上报类型");

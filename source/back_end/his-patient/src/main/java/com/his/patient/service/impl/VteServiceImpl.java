@@ -7,13 +7,10 @@ import com.his.common.exception.BusinessException;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.StatsScopeEnum;
-import com.his.patient.enums.VteDiagnosisBasisEnum;
 import com.his.patient.enums.VteEventTypeEnum;
 import com.his.patient.enums.VteMeasureTypeEnum;
 import com.his.patient.enums.VteOnsetEnum;
-import com.his.patient.enums.VteOutcomeEnum;
 import com.his.patient.enums.VtePreventStatusEnum;
-import com.his.patient.enums.VteRiskLevelEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.VteService;
 import com.his.patient.support.VteRules;
@@ -34,6 +31,8 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * VTE 防控服务实现。
@@ -51,6 +50,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class VteServiceImpl implements VteService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter CSV_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");

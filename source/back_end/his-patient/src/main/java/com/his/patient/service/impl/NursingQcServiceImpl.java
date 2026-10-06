@@ -32,6 +32,8 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 护理质控服务实现（sql/168）。
@@ -59,6 +61,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class NursingQcServiceImpl implements NursingQcService {
+    @Autowired
+    private DictCacheService dictText;
     private final DeptScopeProvider deptScopeProvider;
 
     private static final int TEXT_MAX = 500;

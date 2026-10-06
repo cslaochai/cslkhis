@@ -46,6 +46,13 @@ public enum BillStatusEnum {
         return item == null ? "未知状态" : item.desc;
     }
 
+    /**
+     * 文案出口（与项目枚举约定一致；委托 {@link #descOf}）
+     */
+    public static String getText(Integer code) {
+        return descOf(code);
+    }
+
     public Integer getCode() {
         return code;
     }

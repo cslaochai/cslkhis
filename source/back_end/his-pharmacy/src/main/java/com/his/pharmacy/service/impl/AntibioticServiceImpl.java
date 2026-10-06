@@ -11,8 +11,6 @@ import com.his.pharmacy.dto.AntibioticCatalogLevelUpsertDTO;
 import com.his.pharmacy.dto.AntibioticCatalogQueryPageDTO;
 import com.his.pharmacy.entity.BizAntibioticAlias;
 import com.his.pharmacy.entity.BizAntibioticAuth;
-import com.his.pharmacy.enums.AntibioticAuthStatusEnum;
-import com.his.pharmacy.enums.AntibioticLevelEnum;
 import com.his.pharmacy.mapper.AntibioticCatalogMapper;
 import com.his.pharmacy.mapper.AntibioticEmployeeMapper;
 import com.his.pharmacy.mapper.BizAntibioticAliasMapper;
@@ -37,6 +35,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 抗菌药物分级目录与处方权授权。
@@ -49,6 +49,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AntibioticServiceImpl implements AntibioticService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
@@ -269,7 +271,7 @@ public class AntibioticServiceImpl implements AntibioticService {
         }
         Integer authLevel = maxValidLevel(doctorId);
         vo.setAuthLevel(authLevel);
-        vo.setAuthLevelText(authLevel == null ? "无有效授权" : AntibioticLevelEnum.getText(authLevel));
+        vo.setAuthLevelText(authLevel == null ? "无有效授权" : dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", authLevel));
 
         List<AntibioticDrugSelectListVO> drugs = catalogMapper.selectAntibioticByIds(drugIds);
         for (AntibioticDrugSelectListVO drug : drugs) {
@@ -294,7 +296,7 @@ public class AntibioticServiceImpl implements AntibioticService {
                     .reduce((a, b) -> a + "、" + b).orElse("");
             vo.setTip(authLevel == null
                     ? "您没有有效的抗菌药物处方权授权，不能开具：" + names
-                    : "您当前的抗菌药物处方权为" + AntibioticLevelEnum.getText(authLevel) + "，不能开具：" + names
+                    : "您当前的抗菌药物处方权为" + dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", authLevel) + "，不能开具：" + names
                       + "。请改用同级可开品种，或由具有相应处方权的医师开具。");
         }
         return vo;

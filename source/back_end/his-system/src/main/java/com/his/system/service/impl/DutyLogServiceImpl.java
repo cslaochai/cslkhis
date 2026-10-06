@@ -17,7 +17,6 @@ import com.his.system.entity.BizDutyLog;
 import com.his.system.entity.SysEmployee;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.enums.DutyLogStatusEnum;
-import com.his.system.enums.DutyLogTypeEnum;
 import com.his.system.mapper.BizDutyLogMapper;
 import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.vo.DutyLogVO;
@@ -33,6 +32,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 import com.his.system.service.SysMessageService;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 值班日志（交班本）服务。
@@ -55,6 +56,8 @@ import com.his.system.service.SysMessageService;
 @Service
 @RequiredArgsConstructor
 public class DutyLogServiceImpl implements DutyLogService {
+    @Autowired
+    private DictCacheService dictText;
 
     /** 列表默认窗口：近 7 天（交班本是流水账，翻三个月前没意义，当天和前一天必须带出来） */
     private static final int DEFAULT_BACK_DAYS = 7;
@@ -297,7 +300,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         if (t == null) {
             return "-";
         }
-        return DutyLogTypeEnum.getText(t);
+        return dictText.getDicDataLabel("biz_system_dutyLogTypeEnum", t);
     }
 
     private String statusText(Integer s) {

@@ -3,7 +3,6 @@ package com.his.ai.service.impl;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.DeteriorationLlmOutputDTO;
-import com.his.ai.enums.DeteriorationAlertLevelEnum;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.DeteriorationAlertCapability;
 import com.his.ai.support.DeteriorationScoreRules;
@@ -19,6 +18,8 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 危重预警实现（G-12）。
@@ -30,6 +31,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapability {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final String TEMPLATE_NAME = "deterioration-alert";
 
@@ -75,7 +78,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
             row.setTotalScore(score.getTotalScore());
             int level = DeteriorationScoreRules.alertLevel(score.getTotalScore());
             row.setAlertLevel(level);
-            row.setAlertText(DeteriorationAlertLevelEnum.getText(level));
+            row.setAlertText(dictText.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
             result.add(row);
         }
         // 预警级降序、同级按分数降序 —— 值班护士从最差的看起
@@ -113,7 +116,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
         vo.setTotalScore(score.getTotalScore());
         int level = DeteriorationScoreRules.alertLevel(score.getTotalScore());
         vo.setAlertLevel(level);
-        vo.setAlertText(DeteriorationAlertLevelEnum.getText(level));
+        vo.setAlertText(dictText.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
         vo.setTriggeredFacts(triggeredFacts(vital));
         if (level == 0) {
             // 未达预警阈值不调模型：模型只服务预警情形（纪律 2 / 纪律 9 的反向裁剪）
@@ -142,7 +145,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
         variables.put("vitalText", vitalText(vital));
         variables.put("totalScore", String.valueOf(score.getTotalScore()));
         variables.put("alertLevel", String.valueOf(level));
-        variables.put("alertText", DeteriorationAlertLevelEnum.getText(level));
+        variables.put("alertText", dictText.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
         variables.put("itemsText", itemsText(vital));
 
         AiCallDTO call = AiCallDTO.builder()

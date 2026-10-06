@@ -10,7 +10,6 @@ import com.his.pharmacy.dto.CssdDTO;
 import com.his.pharmacy.entity.BizCssdPack;
 import com.his.pharmacy.enums.CssdCheckResultEnum;
 import com.his.pharmacy.enums.CssdNodeStatusEnum;
-import com.his.pharmacy.enums.CssdSterilizeMethodEnum;
 import com.his.pharmacy.entity.BizCssdTrace;
 import com.his.pharmacy.mapper.BizCssdPackMapper;
 import com.his.pharmacy.mapper.BizCssdTraceMapper;
@@ -26,6 +25,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * CSSD 消毒供应追溯服务。
@@ -38,6 +39,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class CssdServiceImpl implements CssdService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 

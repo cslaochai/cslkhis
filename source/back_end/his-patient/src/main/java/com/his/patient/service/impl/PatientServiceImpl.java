@@ -15,9 +15,6 @@ import com.his.patient.dto.PatientSearchScopeDTO;
 import com.his.patient.dto.PatientUpsertDTO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.entity.BizPatientTagRelation;
-import com.his.patient.enums.CardTypeEnum;
-import com.his.patient.enums.MaritalStatusEnum;
-import com.his.patient.enums.PatientTypeEnum;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizPatientTagRelationMapper;
 import com.his.patient.service.*;
@@ -55,6 +52,8 @@ import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 患者服务实现
@@ -63,6 +62,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> implements PatientService {
+    @Autowired
+    private DictCacheService dictText;
 
     /**
      * 对象类型：患者主档

@@ -9,17 +9,11 @@ import com.his.operation.dto.*;
 import com.his.operation.entity.*;
 import com.his.operation.enums.AirwayDeviceEnum;
 import com.his.operation.enums.AnesthesiaChargeStatusEnum;
-import com.his.operation.enums.AnesthesiaEffectEnum;
 import com.his.operation.enums.AnesthesiaRecordStatusEnum;
 import com.his.operation.enums.AsaGradeEnum;
 import com.his.operation.enums.ChargeSourceEnum;
-import com.his.operation.enums.MedPhaseEnum;
-import com.his.operation.enums.MedRouteEnum;
 import com.his.operation.enums.OperationAnesthesiaMethodEnum;
 import com.his.operation.enums.OperationApplyStatusEnum;
-import com.his.operation.enums.OperationEmergencyEnum;
-import com.his.operation.enums.PostopDispositionEnum;
-import com.his.operation.enums.VentilationModeEnum;
 import com.his.operation.enums.VisitConclusionEnum;
 import com.his.operation.mapper.*;
 import com.his.operation.service.AnesthesiaRecordService;
@@ -46,6 +40,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 麻醉记录单服务实现（G15 核心）。
@@ -69,6 +65,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 

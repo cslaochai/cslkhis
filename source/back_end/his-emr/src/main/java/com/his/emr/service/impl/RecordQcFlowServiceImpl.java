@@ -26,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 病历三级质控流转服务实现
@@ -40,6 +42,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class RecordQcFlowServiceImpl implements RecordQcFlowService {
+    @Autowired
+    private DictCacheService dictText;
 
     private final BizRecordQcFlowMapper flowMapper;
     private final BizRecordQcFlowActionMapper actionMapper;

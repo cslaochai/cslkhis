@@ -17,9 +17,6 @@ import com.his.operation.entity.BizOperationSafetyCheck;
 import com.his.operation.entity.SysOperationRoom;
 import com.his.operation.enums.OperationAnesthesiaMethodEnum;
 import com.his.operation.enums.OperationApplyStatusEnum;
-import com.his.operation.enums.OperationEmergencyEnum;
-import com.his.operation.enums.OperationIncisionEnum;
-import com.his.operation.enums.OperationLevelEnum;
 import com.his.operation.mapper.BizOperationApplyMapper;
 import com.his.operation.mapper.BizOperationCountMapper;
 import com.his.operation.mapper.BizOperationSafetyCheckMapper;
@@ -55,6 +52,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 住院手术闭环服务实现（P4.3）。
@@ -81,6 +80,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class OperationApplyServiceImpl implements OperationApplyService {
+    @Autowired
+    private DictCacheService dictText;
 
     /**
      * 术前核对完成后多久没结束算"卡住"（查询时算，不落状态列）

@@ -47,6 +47,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 挂号服务实现
@@ -54,6 +56,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> implements QueueService {
+    @Autowired
+    private DictCacheService dictText;
 
     private final PatientService patientService;
 

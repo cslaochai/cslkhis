@@ -8,10 +8,6 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.system.dto.LogQueryPageDTO;
 import com.his.system.entity.SysAuditLog;
-import com.his.system.enums.AuditLogStatusEnum;
-import com.his.system.enums.LoginStatusEnum;
-import com.his.system.enums.OperBusinessTypeEnum;
-import com.his.system.enums.OperStatusEnum;
 import com.his.system.entity.SysFieldChangeLog;
 import com.his.system.entity.SysLoginLog;
 import com.his.system.entity.SysOperLog;
@@ -39,6 +35,8 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 日志审计服务实现（sql/158）。
@@ -51,6 +49,8 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class SysLogServiceImpl implements SysLogService {
+    @Autowired
+    private DictCacheService dictText;
 
     /** CSV 导出行上限：审计导出是给检查人员看的，不是给数据库做全量备份。 */
     private static final int EXPORT_MAX = 5000;

@@ -45,6 +45,8 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 住院输血闭环服务实现（P4.4）。
@@ -78,6 +80,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class TransfusionApplyServiceImpl implements TransfusionApplyService {
+    @Autowired
+    private DictCacheService dictText;
 
     /**
      * 入院状态：在院
@@ -536,7 +540,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         for (int level = 1; level <= 3; level++) {
             TransfusionApplyVO.LevelCount lc = new TransfusionApplyVO.LevelCount();
             lc.setApproveLevel(level);
-            lc.setApproveLevelText(TransfusionApproveLevelEnum.getText(level));
+            lc.setApproveLevelText(dictText.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", level));
             lc.setCount(applyMapper.selectCount(
                     new LambdaQueryWrapper<BizTransfusionApply>()
                             .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.APPROVED.getCode())

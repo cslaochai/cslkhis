@@ -26,6 +26,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 单病种质控服务（M4）。
@@ -37,6 +39,8 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class SingleDiseaseServiceImpl implements SingleDiseaseService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.BASIC_ISO_DATE;
 

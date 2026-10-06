@@ -10,9 +10,7 @@ import com.his.pharmacy.dto.IncisionReviewQueryPageDTO;
 import com.his.pharmacy.dto.IncisionReviewUpsertDTO;
 import com.his.pharmacy.entity.BizAntibioticIncisionReview;
 import com.his.pharmacy.entity.BizAntibioticStats;
-import com.his.pharmacy.enums.AntibioticLevelEnum;
 import com.his.pharmacy.enums.AntibioticProblemTypeEnum;
-import com.his.pharmacy.enums.AntibioticTimingEnum;
 import com.his.pharmacy.mapper.AntibioticCatalogMapper;
 import com.his.pharmacy.mapper.AntibioticStatMapper;
 import com.his.pharmacy.mapper.BizAntibioticIncisionReviewMapper;
@@ -40,6 +38,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 抗菌药物使用监测与 I 类切口预防用药点评。
@@ -54,6 +54,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
+    @Autowired
+    private DictCacheService dictText;
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter CSV_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");

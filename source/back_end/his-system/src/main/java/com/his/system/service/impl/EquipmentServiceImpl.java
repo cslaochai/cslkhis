@@ -12,8 +12,6 @@ import com.his.system.dto.MeteringQueryPageDTO;
 import com.his.system.entity.BizEquipmentMaintain;
 import com.his.system.entity.BizEquipmentMetering;
 import com.his.system.entity.SysEquipment;
-import com.his.system.enums.EquipCategoryEnum;
-import com.his.system.enums.EquipStatusEnum;
 import com.his.system.enums.MaintainResultEnum;
 import com.his.system.enums.MaintainTypeEnum;
 import com.his.system.enums.MeteringResultEnum;
@@ -36,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 设备档案/维保/计量服务。
@@ -50,6 +50,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class EquipmentServiceImpl implements EquipmentService {
+    @Autowired
+    private DictCacheService dictText;
 
     private final SysEquipmentMapper equipmentMapper;
     private final BizEquipmentMaintainMapper maintainMapper;

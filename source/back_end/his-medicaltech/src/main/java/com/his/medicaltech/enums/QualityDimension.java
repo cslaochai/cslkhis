@@ -34,7 +34,7 @@ public enum QualityDimension {
     /**
      * 未知维度码返回 null，由调用方决定如何显式报错，不做静默回落
      */
-    public static String parse(String code) {
+    public static QualityDimension parse(String code) {
         if (code == null || code.isBlank()) {
             return null;
         }

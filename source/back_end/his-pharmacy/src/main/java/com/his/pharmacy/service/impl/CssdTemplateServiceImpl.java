@@ -8,7 +8,6 @@ import com.his.system.utils.UserUtils;
 import com.his.pharmacy.dto.CssdDTO;
 import com.his.pharmacy.entity.BizCssdPackTemplate;
 import com.his.pharmacy.entity.BizCssdPackTemplateItem;
-import com.his.pharmacy.enums.CssdSterilizeMethodEnum;
 import com.his.pharmacy.mapper.BizCssdPackTemplateItemMapper;
 import com.his.pharmacy.mapper.BizCssdPackTemplateMapper;
 import com.his.pharmacy.service.CssdTemplateService;
@@ -26,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * CSSD 器械包模板目录服务。
@@ -36,6 +37,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class CssdTemplateServiceImpl implements CssdTemplateService {
+    @Autowired
+    private DictCacheService dictText;
 
     private final BizCssdPackTemplateMapper templateMapper;
     private final BizCssdPackTemplateItemMapper itemMapper;

@@ -1,6 +1,5 @@
 package com.his.patient.service.impl;
 import com.his.common.util.TimeUtil;
-import com.his.patient.enums.ConsultUrgentEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -40,6 +39,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
+import com.his.system.service.DictCacheService;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 住院会诊服务实现（P4.1）。
@@ -68,6 +69,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class InpatientConsultationServiceImpl implements InpatientConsultationService {
+    @Autowired
+    private DictCacheService dictText;
 
     /**
      * 申请时未指定会诊医生：既有列 doctor_id 是 NOT NULL，用 0 表示"未指定"
