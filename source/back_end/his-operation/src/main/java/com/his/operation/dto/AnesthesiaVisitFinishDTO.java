@@ -1,5 +1,7 @@
 package com.his.operation.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -25,6 +27,8 @@ public class AnesthesiaVisitFinishDTO implements Serializable {
      * 访视结论：1-可施行麻醉 2-暂缓手术 3-需会诊/进一步评估
      */
     @NotNull(message = "访视结论不能为空（没有结论的访视等于没访视）")
+    @Min(value = 1, message = "访视结论取值不合法（应为 1-可施行麻醉 / 2-暂缓手术 / 3-需会诊）")
+    @Max(value = 3, message = "访视结论取值不合法（应为 1-可施行麻醉 / 2-暂缓手术 / 3-需会诊）")
     private Integer conclusion;
 
     /**

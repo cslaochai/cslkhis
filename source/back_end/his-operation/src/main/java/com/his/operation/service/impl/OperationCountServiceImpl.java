@@ -144,9 +144,6 @@ public class OperationCountServiceImpl implements OperationCountService {
         List<CountItemInputUpsertDTO> inputs = dto.getItems() == null ? List.of() : dto.getItems();
         int seq = 0;
         for (CountItemInputUpsertDTO input : inputs) {
-            if (!CountCategoryEnum.isValid(input.getItemCategory())) {
-                throw new BusinessException("清点项类别取值不合法（应为 1-器械 2-敷料 3-缝针 4-刀片 5-其他）");
-            }
             BizOperationCountItem item = new BizOperationCountItem();
             item.setCountId(entity.getId());
             item.setSeqNo(++seq);
@@ -172,9 +169,6 @@ public class OperationCountServiceImpl implements OperationCountService {
                     + CountPhaseEnum.labelOrUnknown(entity.getPhase())
                     + "」，不能再追加明细 —— 新加的那一行的术前基线是后补的，比对没有意义");
         }
-        if (!CountCategoryEnum.isValid(dto.getItemCategory())) {
-            throw new BusinessException("清点项类别取值不合法（应为 1-器械 2-敷料 3-缝针 4-刀片 5-其他）");
-        }
         BizOperationCountItem item = new BizOperationCountItem();
         item.setCountId(entity.getId());
         item.setSeqNo(itemMapper.maxSeqNo(entity.getId()) + 1);
@@ -193,9 +187,6 @@ public class OperationCountServiceImpl implements OperationCountService {
     public void countPhase(CountPhaseDTO dto) {
         BizOperationCount entity = mustGet(dto == null ? null : dto.getCountId());
         Integer phase = dto.getPhase();
-        if (phase == null || phase < CountPhaseEnum.BEFORE.getCode() || phase > CountPhaseEnum.FINAL.getCode()) {
-            throw new BusinessException("清点阶段取值不合法（应为 1-术前 2-关体前 3-关体后）");
-        }
         if (!Objects.equals(entity.getPhase() + 1, phase)) {
             throw new BusinessException("清点单 " + entity.getCountNo() + " 当前处于「"
                     + CountPhaseEnum.labelOrUnknown(entity.getPhase()) + "」，只能登记「"

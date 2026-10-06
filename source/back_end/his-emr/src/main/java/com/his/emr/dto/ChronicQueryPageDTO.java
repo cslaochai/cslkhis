@@ -1,12 +1,17 @@
 package com.his.emr.dto;
 
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.io.Serializable;
 
 /**
  * 慢病档案分页查询入参
  */
 @Data
-public class ChronicQueryPageDTO {
+@EqualsAndHashCode(callSuper = true)
+public class ChronicQueryPageDTO extends PageParam implements Serializable {
     private Long patientId;
     private String patientName;
     private String recordNo;
@@ -15,6 +20,4 @@ public class ChronicQueryPageDTO {
      */
     private String diseaseKeyword;
     private Integer confirmStatus;
-    private Integer pageNum = 1;
-    private Integer pageSize = 10;
 }

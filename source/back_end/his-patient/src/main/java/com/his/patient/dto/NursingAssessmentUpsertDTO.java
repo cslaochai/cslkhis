@@ -1,6 +1,8 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.InEnum;
+import com.his.patient.enums.NursingAssessTypeEnum;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -28,8 +30,7 @@ public class NursingAssessmentUpsertDTO {
 
     /** 评估类型（1-压疮Braden 2-跌倒Morse 3-疼痛NRS） */
     @NotNull(message = "评估类型不能为空")
-    @Min(value = 1, message = "评估类型取值不合法")
-    @Max(value = 5, message = "评估类型取值不合法")
+    @InEnum(value = NursingAssessTypeEnum.class, message = "评估类型取值不合法（1-压疮 Braden 2-跌倒 Morse 3-疼痛 NRS 4-VTE Caprini 5-管路滑脱）")
     private Integer assessType;
 
     /** 前端算的合计（后端对 items 求和复算，不一致即拒绝） */

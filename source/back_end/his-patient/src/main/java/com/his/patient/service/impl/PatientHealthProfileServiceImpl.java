@@ -330,10 +330,6 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         if (dto == null) {
             throw new BusinessException("家族史内容不能为空");
         }
-        if (!isAliveLegally(dto.getIsAlive())) {
-            // ③业务规则：码值合法性（0/1），与"字段填没填"无关
-            throw new BusinessException("是否在世取值不合法（0-已故 1-在世）");
-        }
         if (Integer.valueOf(0).equals(dto.getIsAlive()) && !StringUtils.hasText(dto.getCauseOfDeath())) {
             // ①条件必填：只有选了「已故」才必填死亡原因，@NotNull 一刀切会挡掉合法的在世提交
             throw new BusinessException("已故亲属必须填写死亡原因");
@@ -692,10 +688,6 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
             throw new BusinessException(label + "取值不合法：" + value + "（可选："
                     + String.join("/", allowed) + "）");
         }
-    }
-
-    private boolean isAliveLegally(Integer isAlive) {
-        return isAlive == null || isAlive == 0 || isAlive == 1;
     }
 
     private String truncate(String s, int max) {

@@ -1,10 +1,14 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
+import com.his.common.validation.InEnum;
+import com.his.patient.enums.DeathPlaceEnum;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,13 +25,8 @@ public class DeathCertificateDTO {
 
     /** 分页查询（证明台账 + 上报台账共用） */
     @Data
-    public static class QueryPage {
-        /** 页码 */
-        private Integer pageNum = 1;
-
-        /** 每页条数 */
-        private Integer pageSize = 10;
-
+    @EqualsAndHashCode(callSuper = true)
+    public static class QueryPage extends PageParam {
         /** 证明编号 / 死者姓名 / 根本死因关键字 */
         private String keyword;
 
@@ -89,6 +88,7 @@ public class DeathCertificateDTO {
 
         /** 死亡地点（1-医院 2-来院途中 3-家中 4-民政管理机构 5-其他机构 9-未指明） */
         @NotNull(message = "死亡地点不能为空")
+        @InEnum(value = DeathPlaceEnum.class, message = "死亡地点取值不合法（见字典 his_death_place）")
         private Integer deathPlace;
 
         /** 医院内死亡必填（服务端按住院快照兜底为出院时所在科室） */

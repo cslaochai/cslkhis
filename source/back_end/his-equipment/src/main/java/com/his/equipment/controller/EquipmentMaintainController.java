@@ -2,7 +2,8 @@ package com.his.equipment.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.equipment.dto.EquipmentDTO;
+import com.his.equipment.dto.MaintainCreateDTO;
+import com.his.equipment.dto.MaintainQueryPageDTO;
 import com.his.equipment.service.EquipmentService;
 import com.his.equipment.vo.MaintainVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,7 +27,7 @@ public class EquipmentMaintainController {
 
     @Operation(summary = "维保记录分页")
     @PostMapping("/listPage")
-    public Result<PageResult<MaintainVO>> listPage(@Valid @RequestBody EquipmentDTO.MaintainQueryPage dto) {
+    public Result<PageResult<MaintainVO>> listPage(@Valid @RequestBody MaintainQueryPageDTO dto) {
         var page = equipmentService.maintainListPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
@@ -35,7 +36,7 @@ public class EquipmentMaintainController {
     @PreAuthorize("hasAuthority('asset:equipment:add')")
     @Operation(summary = "维保登记")
     @PostMapping("/create")
-    public Result<MaintainVO> create(@Valid @RequestBody EquipmentDTO.MaintainCreate dto) {
+    public Result<MaintainVO> create(@Valid @RequestBody MaintainCreateDTO dto) {
         return Result.success("维保登记成功", equipmentService.maintainCreate(dto));
     }
 

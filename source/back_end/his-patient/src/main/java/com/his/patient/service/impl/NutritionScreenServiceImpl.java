@@ -100,10 +100,6 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
     @Transactional(rollbackFor = Exception.class)
     public NutritionScreenVO screenUpsert(NutritionScreenUpsertDTO dto) {
         Integer type = dto.getScreenType();
-        // ③业务规则：量表码值合法性（非空与 1~3 已由 DTO @NotNull/@Min/@Max + @Valid 收口，此处兜内部调用）
-        if (type == null || type < NutritionScreenTypeEnum.NRS2002.getCode() || type > NutritionScreenTypeEnum.MNA.getCode()) {
-            throw new BusinessException("筛查量表取值不合法（1-NRS2002 2-PG-SGA 3-MNA）");
-        }
         // ①条件必填：选了 NRS2002 才必填两个分项评分，换别的量表就必填总分，@NotNull 会误伤另一种量表
         if (type == NutritionScreenTypeEnum.NRS2002.getCode()
                 && (dto.getImpairScore() == null || dto.getSeverityScore() == null)) {

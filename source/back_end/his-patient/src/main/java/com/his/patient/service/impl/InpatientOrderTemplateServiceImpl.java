@@ -83,9 +83,6 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         }
 
         Integer orderType = dto.getOrderType() != null ? dto.getOrderType() : OrderTypeEnum.TEMP.getCode();
-        if (!Objects.equals(OrderTypeEnum.LONG.getCode(), orderType) && !Objects.equals(OrderTypeEnum.TEMP.getCode(), orderType)) {
-            throw new BusinessException("医嘱类型取值不合法（应为 1-长期 2-临时）");
-        }
 
         String templateName = dto.getTemplateName().trim();
         if (templateName.length() > 100) {

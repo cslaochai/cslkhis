@@ -74,6 +74,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class EcgServiceImpl implements EcgService {
+    /** 分页每页条数上限（技术阈值，防止前端传入超大值把库拖垮；DTO 迁 PageParam 后在此夹取） */
+    private static final int MAX_PAGE_SIZE = 200;
+
 
     private final EcgMapper ecgMapper;
     private final BizReportMapper reportMapper;
@@ -95,8 +98,8 @@ public class EcgServiceImpl implements EcgService {
 
     @Override
     public PageResult<EcgListVO> listPage(EcgQueryPageDTO query) {
-        int pageNum = query.getPageNum() == null || query.getPageNum() < 1 ? 1 : query.getPageNum();
-        int pageSize = query.getPageSize() == null || query.getPageSize() < 1 ? 10 : query.getPageSize();
+        int pageNum = Math.max(query.getPageNum(), 1);
+        int pageSize = Math.min(Math.max(query.getPageSize(), 1), MAX_PAGE_SIZE);
         IPage<EcgListVO> page = new Page<>(pageNum, pageSize);
         List<EcgListVO> list = ecgMapper.selectWorkbenchPage(page,
                 trim(query.getKeyword()), query.getCollectPending(), query.getOnlyUnwritten(),

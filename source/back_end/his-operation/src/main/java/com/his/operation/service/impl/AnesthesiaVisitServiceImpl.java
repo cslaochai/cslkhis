@@ -110,18 +110,6 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(AnesthesiaVisitUpsertDTO dto) {
-        if (dto.getAsaGrade() != null && !AsaGradeEnum.isValid(dto.getAsaGrade())) {
-            throw new BusinessException("ASA 分级取值不合法（应为 1~5），当前=" + dto.getAsaGrade());
-        }
-        if (dto.getMallampati() != null && !MallampatiGradeEnum.isValid(dto.getMallampati())) {
-            throw new BusinessException("Mallampati 分级取值不合法（应为 1~4），当前=" + dto.getMallampati());
-        }
-        if (dto.getNpoStatus() != null && !NpoStatusEnum.isValid(dto.getNpoStatus())) {
-            throw new BusinessException("禁食禁饮状态取值不合法（应为 0~2），当前=" + dto.getNpoStatus());
-        }
-        if (dto.getConclusion() != null && !VisitConclusionEnum.isValid(dto.getConclusion())) {
-            throw new BusinessException("访视结论取值不合法（应为 1~3），当前=" + dto.getConclusion());
-        }
         validateHighRisk(dto);
 
         BizOperationApply apply = applyMapper.selectById(dto.getApplyId());
@@ -210,10 +198,6 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void finish(AnesthesiaVisitFinishDTO dto) {
-        if (!VisitConclusionEnum.isValid(dto.getConclusion())) {
-            throw new BusinessException("访视结论取值不合法（应为 1-可施行麻醉 / 2-暂缓手术 / 3-需会诊），当前="
-                    + dto.getConclusion());
-        }
         BizAnesthesiaVisit entity = visitMapper.selectById(dto.getVisitId());
         if (entity == null) {
             throw new BusinessException("麻醉术前访视单不存在");

@@ -1,6 +1,8 @@
 package com.his.patient.dto;
 
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 
@@ -8,7 +10,8 @@ import java.io.Serializable;
  * 远程会诊分页查询入参（listPage 为 POST）。
  */
 @Data
-public class TeleConsultQueryPageDTO implements Serializable {
+@EqualsAndHashCode(callSuper = true)
+public class TeleConsultQueryPageDTO extends PageParam implements Serializable {
 
     /** 单号/患者姓名/专家姓名模糊 */
     private String keyword;
@@ -27,10 +30,4 @@ public class TeleConsultQueryPageDTO implements Serializable {
 
     /** 仅未完成（待安排+已安排） */
     private Boolean openOnly;
-
-    /** 页码 */
-    private Integer pageNum = 1;
-
-    /** 每页条数 */
-    private Integer pageSize = 10;
 }

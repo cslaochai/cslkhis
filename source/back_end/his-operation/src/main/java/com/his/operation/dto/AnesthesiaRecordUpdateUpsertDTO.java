@@ -1,6 +1,8 @@
 package com.his.operation.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -139,6 +141,8 @@ public class AnesthesiaRecordUpdateUpsertDTO implements Serializable {
     /**
      * 术后去向（1-回病房 2-入PACU 3-入ICU）
      */
+    @Min(value = 1, message = "术后去向取值不合法（应为 1-回病房 2-入PACU 3-入ICU）")
+    @Max(value = 3, message = "术后去向取值不合法（应为 1-回病房 2-入PACU 3-入ICU）")
     private Integer postopDisposition;
 
     /**

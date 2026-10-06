@@ -1,12 +1,14 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -82,7 +84,8 @@ public class NursingQcDTO {
 
     /** 检查单分页 */
     @Data
-    public static class CheckQueryPage {
+    @EqualsAndHashCode(callSuper = true)
+    public static class CheckQueryPage extends PageParam {
         /** 关键字 */
         private String keyword;
         /** 病区ID */
@@ -96,15 +99,12 @@ public class NursingQcDTO {
         private String startMonth;
         @Pattern(regexp = "^$|^\\d{4}-\\d{2}$", message = "结束月份格式必须为 yyyy-MM")
         private String endMonth;
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 10;
     }
 
     /** 台账分页 */
     @Data
-    public static class LedgerQueryPage {
+    @EqualsAndHashCode(callSuper = true)
+    public static class LedgerQueryPage extends PageParam {
         /** 关键字 */
         private String keyword;
         /** 病区ID */
@@ -120,10 +120,6 @@ public class NursingQcDTO {
         private String startMonth;
         @Pattern(regexp = "^$|^\\d{4}-\\d{2}$", message = "结束月份格式必须为 yyyy-MM")
         private String endMonth;
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 10;
     }
 
     /** 月度 KPI：wardId 空=当前岗位可见范围全院合并 */

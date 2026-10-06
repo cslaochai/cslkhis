@@ -66,11 +66,6 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
     private static final int SIGNATURE_MAX = 512 * 1024;
 
     /**
-     * 通知类别合法码（字典 his_notice_type）
-     */
-    private static final Set<Integer> NOTICE_TYPES = Set.of(
-            NoticeTypeEnum.CRITICAL.getCode(), NoticeTypeEnum.SERIOUS.getCode());
-    /**
      * 神志合法码（字典 his_notice_consciousness）
      */
     private static final Set<Integer> CONSCIOUSNESS = Set.of(1, 2, 3, 4, 9);
@@ -205,10 +200,6 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         }
         if (snapshot.getAdmitTime() != null && notifyTime.isBefore(toSeconds(snapshot.getAdmitTime()))) {
             throw new BusinessException("告知时间不能早于入院时间");
-        }
-        // 保留（类别③）：码值必须命中字典取值（1-病危 2-病重），不是「是否为空」
-        if (dto.getNoticeType() == null || !NOTICE_TYPES.contains(dto.getNoticeType())) {
-            throw new BusinessException("通知类别取值不合法（见字典 his_notice_type）");
         }
         // 保留（类别③）：神志码值必须命中字典取值
         if (dto.getConsciousnessStatus() == null || !CONSCIOUSNESS.contains(dto.getConsciousnessStatus())) {

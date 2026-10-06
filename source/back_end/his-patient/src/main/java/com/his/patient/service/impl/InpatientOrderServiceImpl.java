@@ -148,10 +148,6 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (dto == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        // 医嘱类型取值区间：码值合法性（类别③），留在 service
-        if (!Objects.equals(OrderTypeEnum.LONG.getCode(), dto.getOrderType()) && !Objects.equals(OrderTypeEnum.TEMP.getCode(), dto.getOrderType())) {
-            throw new BusinessException("医嘱类型取值不合法（应为 1-长期 2-临时）");
-        }
         List<InpatientOrderItemDTO> items = dto.getItems();
         for (InpatientOrderItemDTO item : items) {
             InpatientOrderItemRules.validate(item);

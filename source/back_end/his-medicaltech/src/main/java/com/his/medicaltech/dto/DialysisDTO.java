@@ -1,9 +1,14 @@
 package com.his.medicaltech.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
+import com.his.common.validation.InEnum;
+import com.his.medicaltech.enums.DialysisPatientStatusEnum;
+import com.his.medicaltech.enums.DialysisTimeSlotEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -19,12 +24,8 @@ public class DialysisDTO {
 
     /** 透析档案分页查询 */
     @Data
-    public static class ArchiveQuery {
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 10;
-
+    @EqualsAndHashCode(callSuper = true)
+    public static class ArchiveQuery extends PageParam {
         private String dialysisNo;
 
         /** 患者姓名（快照） */
@@ -68,6 +69,7 @@ public class DialysisDTO {
         private Long id;
 
         @NotNull(message = "目标状态不能为空")
+        @InEnum(value = DialysisPatientStatusEnum.class, message = "目标状态取值不合法（1-在透 2-暂停 3-退出）")
         private Integer status;
 
         /** 原因 */
@@ -142,12 +144,8 @@ public class DialysisDTO {
 
     /** 机位分页查询 */
     @Data
-    public static class MachineQuery {
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 10;
-
+    @EqualsAndHashCode(callSuper = true)
+    public static class MachineQuery extends PageParam {
         /** 机位号（快照） */
         private String machineNo;
 
@@ -158,12 +156,8 @@ public class DialysisDTO {
 
     /** 透析单分页查询 */
     @Data
-    public static class SessionQuery {
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 10;
-
+    @EqualsAndHashCode(callSuper = true)
+    public static class SessionQuery extends PageParam {
         /** 透析单号 */
         private String sessionNo;
 
@@ -204,6 +198,7 @@ public class DialysisDTO {
 
         /** 时段（1-上午 2-下午 3-夜间） */
         @NotNull(message = "时段不能为空")
+        @InEnum(value = DialysisTimeSlotEnum.class, message = "时段取值不合法（1-上午 2-下午 3-夜间）")
         private Integer timeSlot;
 
         /** 机位ID */
@@ -227,6 +222,7 @@ public class DialysisDTO {
 
         /** 时段（1-上午 2-下午 3-夜间） */
         @NotNull(message = "时段不能为空")
+        @InEnum(value = DialysisTimeSlotEnum.class, message = "时段取值不合法（1-上午 2-下午 3-夜间）")
         private Integer timeSlot;
 
         /** 机位ID */

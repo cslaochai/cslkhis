@@ -1,7 +1,9 @@
 package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 
@@ -12,17 +14,8 @@ import java.time.LocalDate;
  * 昨天的夜班必须带出来 —— 凌晨 0~8 点解析的就是它。
  */
 @Data
-public class DutyRosterQueryPageDTO {
-
-    /**
-     * 页码
-     */
-    private Integer pageNum = 1;
-
-    /**
-     * 每页条数
-     */
-    private Integer pageSize = 10;
+@EqualsAndHashCode(callSuper = true)
+public class DutyRosterQueryPageDTO extends PageParam {
 
     /**
      * 起始日期（含）

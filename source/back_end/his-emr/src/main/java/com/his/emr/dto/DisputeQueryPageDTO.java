@@ -1,6 +1,8 @@
 package com.his.emr.dto;
 
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 
@@ -11,7 +13,8 @@ import java.io.Serializable;
  * 不传 LocalDateTime（EP 空格分隔与 ISO T 分隔两套格式会互相 400）。
  */
 @Data
-public class DisputeQueryPageDTO implements Serializable {
+@EqualsAndHashCode(callSuper = true)
+public class DisputeQueryPageDTO extends PageParam implements Serializable {
 
     /**
      * 单号/患者姓名/投诉人模糊
@@ -52,14 +55,4 @@ public class DisputeQueryPageDTO implements Serializable {
      * 登记截止日期 yyyy-MM-dd
      */
     private String dateTo;
-
-    /**
-     * 页码
-     */
-    private Integer pageNum = 1;
-
-    /**
-     * 每页条数
-     */
-    private Integer pageSize = 10;
 }

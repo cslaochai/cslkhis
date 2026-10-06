@@ -18,6 +18,7 @@ public final class LowCodingEvidenceDict {
 
     /**
      * 字典条目。icdPrefix 用来在清单里找「是否已经编了」，
+     * todo：为什么这里能写死？
      * 找不到才报低编 —— 避免已编还报。
      */
     private static final List<Entry> ENTRIES = Arrays.asList(

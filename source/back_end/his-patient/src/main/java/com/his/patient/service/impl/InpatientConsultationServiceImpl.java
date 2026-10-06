@@ -116,12 +116,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         if (dto == null) {
             throw new BusinessException("入院ID不能为空（会诊必须挂在一次住院上）");
         }
-        validateConsultType(dto.getConsultType());
         Integer category = dto.getConsultCategory() == null
                 ? ConsultCategoryEnum.NORMAL.getCode() : dto.getConsultCategory();
-        if (ConsultCategoryEnum.fromCode(category) == null) {
-            throw new BusinessException("会诊类别取值不合法（1-普通科间 2-营养 3-药学 4-其他专科）");
-        }
 
         BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
@@ -297,15 +293,6 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
     }
 
     // 完成（回写病历）
-
-    private void validateConsultType(Integer consultType) {
-        // ③业务规则：码值合法性；"不能为空"已收口到 DTO @NotNull
-        if (!Objects.equals(ConsultScopeEnum.IN_DEPT.getCode(), consultType)
-                && !Objects.equals(ConsultScopeEnum.CROSS_DEPT.getCode(), consultType)
-                && !Objects.equals(ConsultScopeEnum.HOSPITAL.getCode(), consultType)) {
-            throw new BusinessException("会诊范围取值不合法（应为 1-科内 2-科间 3-全院）");
-        }
-    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)

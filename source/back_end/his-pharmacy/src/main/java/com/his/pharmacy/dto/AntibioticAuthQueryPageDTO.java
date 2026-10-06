@@ -1,12 +1,15 @@
 package com.his.pharmacy.dto;
 
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /** 抗菌药物处方权授权分页入参 */
 @Data
-public class AntibioticAuthQueryPageDTO {
+@EqualsAndHashCode(callSuper = true)
+public class AntibioticAuthQueryPageDTO extends PageParam {
 
     /** 医师姓名/科室模糊 */
     private String keyword;
@@ -23,12 +26,4 @@ public class AntibioticAuthQueryPageDTO {
 
     /** 只看当前可用（状态有效且未过期） */
     private Boolean onlyEffective;
-
-    /** 页码 */
-    @Min(value = 1, message = "页码非法")
-    private Integer pageNum = 1;
-
-    /** 每页条数 */
-    @Min(value = 1, message = "每页条数非法")
-    private Integer pageSize = 10;
 }

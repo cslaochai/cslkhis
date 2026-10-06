@@ -93,9 +93,6 @@ public class StocktakeServiceImpl implements StocktakeService {
     @Transactional(rollbackFor = Exception.class)
     public StocktakeVO upsert(StocktakeUpsertDTO dto) {
         Integer drugType = dto.getScopeDrugType();
-        if (drugType != null && (drugType < 1 || drugType > 3)) {
-            throw new BusinessException("药品类型只能是 1-西药 / 2-中成药 / 3-中药饮片（不传=全部）");
-        }
         String keyword = trimToNull(dto.getScopeKeyword());
         String title = dto.getStocktakeTitle().trim();
         String operator = UserUtils.getCurrentEmployeeName();

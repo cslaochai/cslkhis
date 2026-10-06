@@ -113,7 +113,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
                 .orderByDesc(BizInspectionApply::getIsEmergency)
                 .orderByAsc(BizInspectionApply::getId);
         Page<BizInspectionApply> page = applyMapper.selectPage(
-                new Page<>(nz(q.getPageNum(), 1), nz(q.getPageSize(), 20)), w);
+                new Page<>(q.getPageNum(), q.getPageSize()), w);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 toApplyVos(page.getRecords()));
     }
@@ -122,7 +122,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
 
     public PageResult<ExamApptVO.ApptVO> listPage(ExamApptDTO.ApptQuery q) {
         Page<BizExamAppointment> page = appointmentMapper.selectPage(
-                new Page<>(nz(q.getPageNum(), 1), nz(q.getPageSize(), 20)), apptFilter(q));
+                new Page<>(q.getPageNum(), q.getPageSize()), apptFilter(q));
         List<ExamApptVO.ApptVO> records = new ArrayList<>();
         for (BizExamAppointment a : page.getRecords()) {
             records.add(toApptVo(a));

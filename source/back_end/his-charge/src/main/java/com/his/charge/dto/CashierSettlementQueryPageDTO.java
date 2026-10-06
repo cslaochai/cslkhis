@@ -1,12 +1,15 @@
 package com.his.charge.dto;
 
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 交班单分页查询入参。
  */
 @Data
-public class CashierSettlementQueryPageDTO {
+@EqualsAndHashCode(callSuper = true)
+public class CashierSettlementQueryPageDTO extends PageParam {
 
     /**
      * 收费员工号
@@ -27,14 +30,4 @@ public class CashierSettlementQueryPageDTO {
      * 统计区间止日期止
      */
     private String dateEnd;
-
-    /**
-     * 页码
-     */
-    private Integer pageNum = 1;
-
-    /**
-     * 每页条数
-     */
-    private Integer pageSize = 10;
 }

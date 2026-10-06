@@ -1,7 +1,9 @@
 package com.his.report.dto;
 
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.List;
 
@@ -39,7 +41,8 @@ public class DrgSimDTO {
      * 结果分页
      */
     @Data
-    public static class ResultQuery {
+    @EqualsAndHashCode(callSuper = true)
+    public static class ResultQuery extends PageParam {
         /**
          * 1已入组 2未入组
          */
@@ -48,13 +51,5 @@ public class DrgSimDTO {
          * 关键字
          */
         private String keyword;
-        /**
-         * 页码
-         */
-        private Integer pageNum = 1;
-        /**
-         * 每页条数
-         */
-        private Integer pageSize = 10;
     }
 }

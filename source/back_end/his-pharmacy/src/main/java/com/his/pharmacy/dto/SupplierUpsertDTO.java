@@ -1,5 +1,7 @@
 package com.his.pharmacy.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -45,9 +47,13 @@ public class SupplierUpsertDTO {
     private LocalDate licenseExpiry;
 
     /** 评级：1-差 2-一般 3-良好 4-优秀（空则默认 3） */
+    @Min(value = 1, message = "供应商评级取值不合法（1-差 2-一般 3-良好 4-优秀）")
+    @Max(value = 4, message = "供应商评级取值不合法（1-差 2-一般 3-良好 4-优秀）")
     private Integer rating;
 
     /** 状态：0-停用 1-正常（空则默认 1） */
+    @Min(value = 0, message = "供应商状态取值不合法（0-停用 1-正常）")
+    @Max(value = 1, message = "供应商状态取值不合法（0-停用 1-正常）")
     private Integer status;
 
     /** 备注 */

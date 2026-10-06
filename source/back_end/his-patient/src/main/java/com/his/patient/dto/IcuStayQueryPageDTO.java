@@ -1,7 +1,9 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 
@@ -9,13 +11,8 @@ import java.time.LocalDate;
  * ICU 入出科台账分页入参
  */
 @Data
-public class IcuStayQueryPageDTO {
-
-    /** 页码 */
-    private Integer pageNum = 1;
-
-    /** 每页条数 */
-    private Integer pageSize = 10;
+@EqualsAndHashCode(callSuper = true)
+public class IcuStayQueryPageDTO extends PageParam {
 
     /** 入科单号 */
     private String stayNo;

@@ -1,6 +1,8 @@
 package com.his.operation.dto;
 
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 
@@ -8,7 +10,8 @@ import java.io.Serializable;
  * 日间手术登记单分页查询入参。
  */
 @Data
-public class DaySurgeryQueryPageDTO implements Serializable {
+@EqualsAndHashCode(callSuper = true)
+public class DaySurgeryQueryPageDTO extends PageParam implements Serializable {
 
     /**
      * 单号/患者姓名/术式名称模糊
@@ -49,14 +52,4 @@ public class DaySurgeryQueryPageDTO implements Serializable {
      * 计划手术截止日 yyyy-MM-dd
      */
     private String dateTo;
-
-    /**
-     * 页码
-     */
-    private Integer pageNum = 1;
-
-    /**
-     * 每页条数
-     */
-    private Integer pageSize = 10;
 }

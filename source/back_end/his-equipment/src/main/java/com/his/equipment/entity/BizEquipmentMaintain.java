@@ -1,6 +1,8 @@
 package com.his.equipment.entity;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -82,6 +84,7 @@ public class BizEquipmentMaintain {
     /**
      * 创建时间
      */
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
     /**
      * 更新人
@@ -90,9 +93,11 @@ public class BizEquipmentMaintain {
     /**
      * 更新时间
      */
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updateTime;
     /**
      * 删除标志（0-正常 1-删除）
+    @TableField(fill = FieldFill.INSERT)
      */
     private Integer delFlag;
 }

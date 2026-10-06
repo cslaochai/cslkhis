@@ -61,6 +61,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ExamFilmServiceImpl implements ExamFilmService {
+    /** 分页每页条数上限（技术阈值，防止前端传入超大值把库拖垮；DTO 迁 PageParam 后在此夹取） */
+    private static final int MAX_PAGE_SIZE = 200;
+
 
     private static final int AMOUNT_SCALE = 2;
 
@@ -76,8 +79,8 @@ public class ExamFilmServiceImpl implements ExamFilmService {
 
     @Override
     public PageResult<ExamFilmVO> listPage(ExamFilmQueryPageDTO query) {
-        int pageNum = query.getPageNum() == null || query.getPageNum() < 1 ? 1 : query.getPageNum();
-        int pageSize = query.getPageSize() == null || query.getPageSize() < 1 ? 10 : query.getPageSize();
+        int pageNum = Math.max(query.getPageNum(), 1);
+        int pageSize = Math.min(Math.max(query.getPageSize(), 1), MAX_PAGE_SIZE);
         IPage<ExamFilmVO> page = new Page<>(pageNum, pageSize);
         List<ExamFilmVO> list = filmMapper.selectFilmPage(page,
                 trim(query.getKeyword()), query.getRecordId(), query.getFilmStatus(),

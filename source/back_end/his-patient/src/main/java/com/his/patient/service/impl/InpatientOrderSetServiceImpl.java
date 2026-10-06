@@ -69,9 +69,6 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
             throw new BusinessException("组套内容不能为空");
         }
         Integer scope = dto.getScope();
-        if (!Objects.equals(TemplateScopeEnum.PERSONAL.getCode(), scope) && !Objects.equals(TemplateScopeEnum.DEPT.getCode(), scope) && !Objects.equals(TemplateScopeEnum.HOSPITAL.getCode(), scope)) {
-            throw new BusinessException("共享范围取值不合法（应为 1-个人 2-科室 3-全院）");
-        }
 
         List<InpatientOrderItemDTO> items = new ArrayList<>();
         if (dto.getItems() != null) {
@@ -90,9 +87,6 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         }
 
         Integer orderType = dto.getOrderType() != null ? dto.getOrderType() : OrderTypeEnum.TEMP.getCode();
-        if (!Objects.equals(OrderTypeEnum.LONG.getCode(), orderType) && !Objects.equals(OrderTypeEnum.TEMP.getCode(), orderType)) {
-            throw new BusinessException("医嘱类型取值不合法（应为 1-长期 2-临时）");
-        }
 
         String templateName = dto.getTemplateName().trim();
         if (templateName.length() > 100) {

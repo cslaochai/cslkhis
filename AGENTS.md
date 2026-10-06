@@ -494,6 +494,105 @@
   `grep -rn "static final int" --include=*.java source/back_end` 里只剩技术阈值常量（逐条核对，业务码值为 0）；
   `grep -rnE "set[A-Z]\w*\(\s*[0-9]+\s*\)|Objects\.equals\(\s*[0-9]+," --include=*.java source/back_end` 结果为 0。
 
+## 14. 码值映射禁止用 static final Map 承载（枚举的Map 写法是同一条反模式）
+- **禁止** `private static final Map<Integer, String> XXX_TYPE = Map.of(1, "保养", 2, "维修", 3, "巡检");`
+  这类把码值+文案写进 `Map` 常量的写法。它和 `XxxLabels` 壳类是同一个错误的两种皮：
+  映射逻辑写在了枚举外面，编译期不校验、IDE 跳不过去、也没有 `isValid` 可供校验注解调用。
+  **所有「某一列的码值 → 文案」必须是一个枚举**，调用侧写 `XxxEnum.getText(code)`。
+- 一句话判据：**看到 `Map<Integer, String>` / `Map.of(1,"…")` 里装的是码值和中文，就是违规**，
+  立刻改成枚举。（真·非码值用途的 Map 常量不受此限：查表缓存、ID→对象的合并结果、`Map.of()` 空集合等。）
+- 迁移进度（2026-10-05）：全仓 15 处 `static final Map<Integer,String>` 已全部处置——
+  equipment 6 个（维保类型/维保结果/计量类型/计量结果/设备状态/设备类别 → 6 个新枚举）、
+  emr 3 个（随访任务类型、问卷维度/渠道）、ai 1 个（费用解释项目类型）、operation 1 个（麻醉收费项）；
+  剩下 5 处是 `support` 类里的**注册表**（输血核查项、手术核查项、安全核查项、随访不良反应项），
+  按 §13 例外条款保留（它们是"核查项集合"而非单纯码值映射，且带勾稽逻辑），
+  但已补`text()` 返回 `""` 兜底 + `labelOrUnknown` 双方法。
+  验收判据：`grep -rn "static final Map<Integer, String>" --include=*.java source/back_end` 只剩上述注册表。
+
+## 15. 分页 DTO 必须继承 PageParam，且必须是独立顶层类
+- **分页查询 DTO 一律 `extends com.his.common.base.PageParam`**，不再各自声明
+  `private Integer pageNum = 1; private Integer pageSize = 10;`。
+  `PageParam` 已有 `int pageNum = 1 / int pageSize = 10`，重复声明会造成两套默认值，
+  而且 `@Data` 子类不给 `@EqualsAndHashCode(callSuper = true)` 会让 Lombok 编译告警、
+  父类字段被equals/hashCode 漏掉。正确写法：
+  ```java
+  @Data
+  @EqualsAndHashCode(callSuper = true)
+  public class XxxQueryPageDTO extends PageParam implements Serializable { ... }
+  ```
+- **禁止把 DTO 写成 `XxxDTO` 聚合类里的 `public static class` 内部类**。
+  一个内部类文件会让 import 变成 `EquipmentDTO.QueryPage` 这种带外部类限定的前缀，
+  Swagger/日志/前端联调看不全类名，按类名 grep 也搜不到；且**内部类无法被其他模块复用**。
+  规矩：**一个 DTO 一个文件**，文件名 = 类名，必须带 `DTO` 后缀（VO 同理带 `VO` 后缀）。
+- **DTO 不留死代码**：定义了却没有任何 Controller/Service 引用的内部类直接删，别"提出来"——
+  `EquipmentDTO.MaintainDelete`（带 `reason` 字段）就是活例子：接口用 `@RequestParam Long id`、
+  前端 `maintainDelete(id)` 也不传 reason，这段校验和字段从来没生效过，2026-10-05 已随聚合类一起删除。
+- 迁移进度（2026-10-05）：`EquipmentDTO` 5 个内部类拆为5 个独立文件
+  （`EquipmentQueryPageDTO` / `MaintainQueryPageDTO` / `MaintainCreateDTO` /
+  `MeteringQueryPageDTO` / `MeteringCreateDTO`，聚合类 `EquipmentDTO` 整个删除）；
+  全仓 60 个"自带 pageNum/pageSize 却没继承 PageParam"的分页 DTO 待全部改完（见下）。
+  验收判据：`grep -rln "private Integer pageNum\|private int pageNum" --include=*.java source/back_end`
+  的每个文件（除 `his-common/base/PageParam.java` 本身）都要能在同文件里grep 到 `extends PageParam`。
+
+## 16. 码值范围校验走 Bean Validation，禁止 service 里手写 containsKey 抛异常
+- **「这个码值合不合法」是入参约束，必须用 Bean Validation 声明在 DTO 字段上**，不要在 service 里
+  `if (!XXX_MAP.containsKey(dto.getXxx())) throw new BusinessException("取值不合法（1-… 2-…）");`。
+  手写版的三个问题：① 校验文案和枚举 `label` 是两处副本，枚举加一个码值这里就漏改；
+  ② 绕过 Controller 直接调 service（内部复用、定时任务）时校验失效；
+  ③ 每个 Service 重复一遍，`GlobalExceptionHandler` 的 `MethodArgumentNotValidException`
+  分支已经有了，统一走它错误码和文案才一致。
+- **用法**：
+  - 码值**区间连续**（如 1/2/3/4）→ 用 `@Min(1) @Max(3)`（jakarta.validation 自带，本仓已有 206 处在用）。
+  - 码值**不连续或来自枚举/字典** → 用 `@InEnum(XxxEnum.class)`（`his-common/validation/InEnum`），
+    反射调枚举的 `isValid(code)`。**这正是 §13 强制每个枚举提供 `isValid` 的原因** ——
+    枚举模板的 `isValid` 不再只是自测用，它是校验注解的落点。
+  - **为什么不能一律用 @Min/@Max`（实测数据，别凭感觉）**：全库 377 个带 int code 的枚举里，
+    **9 个码值不连续**，`@Min(min) @Max(max)` 会把这些码值全放行：
+    `DeathPlaceEnum`/`DischargeWayEnum` 是 `1,2,3,4,5,9`（9 是"未指明/其他"的保留码，
+    6/7/8 根本不存在，@Min(1)@Max(9) 会放过 6/7/8）；`SysGenderEnum`/`InpatientLeaveTypeEnum` 是 `1,2,9`；
+    `TcmDecoctStatusEnum` 是 `1,2,3,9`；`EndoscopyTypeEnum` 是 `1,2,7`；`OpdLogStatusEnum` 是 `0,1,8`；
+    `GuardianRelationEnum` 是 `1..16,99`；`QcSeverityEnum` 有重复的 0。
+    这类集合**只能靠枚举 `isValid` 卡**。所以判断口径是：
+    **先看枚举码值连不连续，连续用 @Min/@Max，不连续用 @InEnum。**
+  - `@InEnum` 的 `null` 一律放行（是否必填交给 `@NotNull`），只管"填了之后合不合法"。
+  - 字符串码值枚举（血型、输血反应类型）用 `@InEnum(value = XxxEnum.class, type = InEnum.Type.TEXT)`。
+- **Service 层只保留跨字段业务规则**（"下次维保日期不能早于本次维保日期"、"有效期至不能早于计量日期"），
+  这类规则确实没法用注解表达，留在 service 是对的；**单字段码值合法性一律上注解**。
+- 迁移进度（2026-10-05）：`@InEnum` + `InEnumValidator` 建于 `his-common/validation`；
+  equipment 域4 处手写 containsKey 校验（维保类型/维保结果/计量类型/计量结果）已改为 DTO 上`@InEnum`。
+  验收判据：`grep -rn "取值不合法" --include=*.java source/back_end` 只允许出现在 DTO 注解参数与
+  `@Schema(description=...)` 里，不允许出现在 service impl 的方法体里。
+
+## 17. 不自造时间截断工具方法：DATETIME(0) 的精度由库保证（签名/哈希场景才截秒）
+- **禁止**在 service 里写这类私有工具方法：
+  ```java
+  private static LocalDateTime nowSeconds() { return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS); }
+  private static LocalDateTime toSeconds(LocalDateTime t) { return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS); }
+  ```
+  这类方法的存在几乎总是**掩盖了一个更该修的根因**，而不是真的需要。
+  本库实测：全库 1068 个 `datetime` 列**精度全部为 0**（`DATETIME_PRECISION = 0`），
+  MySQL 存进去自动四舍五入到秒，**Java 侧再截一次是重复劳动**，且掩盖了实体没配自动填充的真问题。
+- **正确顺序**（遇到"更新时间要写但没写上"时按这个查）：
+  1. 先查实体有没有 `@TableField(fill = FieldFill.INSERT)` / `INSERT_UPDATE`。
+     本库 296 个 `update_time` 列里只有 60 个带 `on update CURRENT_TIMESTAMP`，
+     305 个 `create_time` 里只有 162 个带 `DEFAULT CURRENT_TIMESTAMP` —— **不能指望 DB 兜底**。
+     MP 的 `MetaObjectHandler`（`his-web/config/MyBatisPlusConfig`）是全库统一入口，
+     实体加注解即生效，**这才是正解**。
+  2. 加了注解后，service 里就不用再`setUpdateTime(...)`，让`strictUpdateFill` 自动填。
+  3. 实锤案例：`sys_equipment` 90 行里**89 行 `update_time` 是 NULL**，
+     因为 `SysEquipment` 实体没配 `fill`、DB 列又没 `on update` —— 当初只能靠手写
+     `setUpdateTime(nowSeconds())` 补洞，方法本身是**症状**，补 `fill` 才是**病因**。
+     2026-10-05 已给 `SysEquipment` / `BizEquipmentMaintain` / `BizEquipmentMetering`
+     三个实体补齐 `createTime`/`updateTime`/`delFlag` 的 `fill`，`nowSeconds()` 随之删除。
+- **唯一允许截秒的场景**：时间值参与**签名 / 哈希 / 防重放 /幂等键**计算，
+  这类必须保证"同一秒内重复计算结果一致"，且必须**收口到一个共用方法**、在 javadoc 里写明理由
+  （如 `EmrSignatureServiceImpl.seconds` / `TsaChannelServiceImpl` / `SignCertServiceImpl`）。
+  截秒和「库列精度」是两件事，别混为一谈。
+- 机械判据：`grep -rn "truncatedTo" --include=*.java source/back_end` 的命中，
+  只允许是① 签名/哈希场景的共用方法，② 少量 `LocalDateTime.now()` 直接落库的写法（会被库四舍五入，无害）。
+  **禁止**是每个 service 各自复制一份的 `nowSeconds` / `toSeconds` / `seconds` 私有方法
+  —— 同一语义三处复制就不叫收口。
+
 ## 8. 凭据分流：登录口令可入库，环境口令一律不入库
 
 口径一句话：**「谁能拿这个口令登录系统」可入库；「能连上这台机器/这个中间件」不可入库。**

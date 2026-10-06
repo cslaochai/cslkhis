@@ -59,6 +59,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class RadiologyReportServiceImpl implements RadiologyReportService {
+    /** 分页每页条数上限（技术阈值，防止前端传入超大值把库拖垮；DTO 迁 PageParam 后在此夹取） */
+    private static final int MAX_PAGE_SIZE = 200;
+
 
     private final RadioReportMapper radioReportMapper;
     private final BizReportMapper reportMapper;
@@ -74,8 +77,8 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
 
     @Override
     public PageResult<RadioReportListVO> listPage(RadioReportQueryPageDTO query) {
-        int pageNum = query.getPageNum() == null || query.getPageNum() < 1 ? 1 : query.getPageNum();
-        int pageSize = query.getPageSize() == null || query.getPageSize() < 1 ? 10 : query.getPageSize();
+        int pageNum = Math.max(query.getPageNum(), 1);
+        int pageSize = Math.min(Math.max(query.getPageSize(), 1), MAX_PAGE_SIZE);
         IPage<RadioReportListVO> page = new Page<>(pageNum, pageSize);
         List<RadioReportListVO> list = radioReportMapper.selectWorkbenchPage(page,
                 trim(query.getKeyword()), query.getReportStatus(), query.getPositiveFlag(),

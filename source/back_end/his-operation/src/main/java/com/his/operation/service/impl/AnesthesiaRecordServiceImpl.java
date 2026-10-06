@@ -236,9 +236,6 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     @Transactional(rollbackFor = Exception.class)
     public void update(AnesthesiaRecordUpdateUpsertDTO dto) {
         BizAnesthesiaRecord entity = mustEditable(dto == null ? null : dto.getRecordId());
-        if (!PostopDispositionEnum.isValid(dto.getPostopDisposition()) && dto.getPostopDisposition() != null) {
-            throw new BusinessException("术后去向取值不合法（应为 1-回病房 2-入PACU 3-入ICU）");
-        }
         // B-条件必填：标记发生麻醉不良事件时才要求经过与处理，跨字段条件，DTO 注解无法表达，保留
         if (Integer.valueOf(1).equals(dto.getAdverseEventFlag()) && !StringUtils.hasText(dto.getAdverseEventNote())) {
             throw new BusinessException("已标记发生麻醉不良事件，必须填写经过与处理");
@@ -295,9 +292,6 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     @Transactional(rollbackFor = Exception.class)
     public void addMed(AnesthesiaMedUpsertDTO dto) {
         BizAnesthesiaRecord record = mustEditable(dto == null ? null : dto.getRecordId());
-        if (dto.getMedPhase() != null && !MedPhaseEnum.isValid(dto.getMedPhase())) {
-            throw new BusinessException("用药阶段取值不合法（应为 1-诱导 2-维持 3-苏醒）");
-        }
         BizAnesthesiaMed med = new BizAnesthesiaMed();
         med.setRecordId(record.getId());
         med.setMedTime(toSeconds(dto.getMedTime()));

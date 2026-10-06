@@ -40,7 +40,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 /**
  * 抗菌药物使用监测与 I 类切口预防用药点评。
@@ -65,9 +64,6 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     private static final BigDecimal TARGET_OP_USAGE_RATE = new BigDecimal("20.00");
     private static final BigDecimal TARGET_IP_USAGE_RATE = new BigDecimal("60.00");
     private static final BigDecimal TARGET_MICRO_RATE = new BigDecimal("50.00");
-
-    /** 结论=不合理时允许的问题码（41~48） */
-    private static final Set<String> PROBLEM_CODES = AntibioticProblemTypeEnum.allCodes();
 
     private final AntibioticStatMapper statMapper;
     private final BizAntibioticStatsMapper statsMapper;
@@ -286,7 +282,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                 throw new BusinessException("结论为不合理时必须选择问题码");
             }
             for (String c : codes) {
-                if (!PROBLEM_CODES.contains(c)) {
+                if (!AntibioticProblemTypeEnum.isValid(c)) {
                     throw new BusinessException("问题码非法：" + c + "（允许 41~48）");
                 }
             }

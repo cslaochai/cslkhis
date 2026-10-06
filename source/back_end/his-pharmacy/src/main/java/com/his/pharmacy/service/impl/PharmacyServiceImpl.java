@@ -96,9 +96,6 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
             // 手工建批默认落在药房：历史上所有库存都在"药房架上"这一层，不传就当沿用旧口径
             stock.setStockRoom(StockRoomEnum.PHARMACY.getCode());
         }
-        if (StockRoomEnum.fromCode(stock.getStockRoom()) == null) {
-            throw new BusinessException("库存地点只能是 1-药库 / 2-药房");
-        }
         if (baseMapper.countSameBatch(stock.getDrugId(), stock.getBatchNo(), stock.getStockRoom()) > 0) {
             throw new BusinessException("该药品此批号在同一个库存地点已有库存，请改为入库操作");
         }

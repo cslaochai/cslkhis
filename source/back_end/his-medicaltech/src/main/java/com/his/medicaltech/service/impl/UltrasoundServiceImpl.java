@@ -62,7 +62,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
                 .le(q.getEndDate() != null, BizUltrasoundRecord::getVisitDate, q.getEndDate())
                 .orderByDesc(BizUltrasoundRecord::getId);
         Page<BizUltrasoundRecord> page = recordMapper.selectPage(
-                new Page<>(q.getPageNum() == null ? 1 : q.getPageNum(), q.getPageSize() == null ? 20 : q.getPageSize()), w);
+                new Page<>(q.getPageNum(), q.getPageSize()), w);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 toListVo(page.getRecords()));
     }

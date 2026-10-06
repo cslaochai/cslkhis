@@ -19,6 +19,7 @@ import com.his.emr.entity.BizFollowupTask;
 import com.his.emr.enums.FollowupCallChannelEnum;
 import com.his.emr.enums.FollowupCallStatusEnum;
 import com.his.emr.enums.FollowupTaskStatusEnum;
+import com.his.emr.enums.FollowupTypeEnum;
 import com.his.emr.enums.SurveySourceEnum;
 import com.his.emr.mapper.BizFollowupTaskMapper;
 import com.his.emr.service.FollowupTaskService;
@@ -50,12 +51,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, BizFollowupTask> implements FollowupTaskService {
-
-    /**
-     * 随访方式名（字典 his_followup_type 的 Java 侧镜像，看板直接出中文）
-     */
-    private static final Map<Integer, String> TYPE_NAMES = Map.of(
-            1, "复诊提醒", 2, "慢病随访", 3, "用药指导", 4, "术后随访");
 
     /**
      * 出院一键生成的默认随访天数
@@ -163,9 +158,13 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         for (Map<String, Object> r : taskMapper.countByType(scope)) {
             typeCount.put((int) toLong(r, "k"), toLong(r, "c"));
         }
+        // 按码值升序出，与旧 Map 键序一致（枚举声明序不等于码值序，不能直接 values()）
         List<FollowupStatVO.StatItem> byType = new ArrayList<>();
-        for (int k : new TreeMap<>(TYPE_NAMES).keySet()) {
-            byType.add(new FollowupStatVO.StatItem(String.valueOf(k), TYPE_NAMES.get(k),
+        List<FollowupTypeEnum> types = new ArrayList<>(Arrays.asList(FollowupTypeEnum.values()));
+        types.sort(Comparator.comparingInt(FollowupTypeEnum::getCode));
+        for (FollowupTypeEnum type : types) {
+            int k = type.getCode();
+            byType.add(new FollowupStatVO.StatItem(String.valueOf(k), type.getLabel(),
                     typeCount.getOrDefault(k, 0L)));
         }
         vo.setByType(byType);
@@ -335,9 +334,11 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             // 患者触达（G-06）：开始随访即把随访内容推给患者，患者可在小程序「我的随访」反馈。
             // 发信失败不影响随访推进（旁路），与满意度问卷同一个姿态。
             try {
+                // 展示口径走枚举 getText；脏码值不回落成某个合法类型名，退回中性文案「随访」
+                String typeText = FollowupTypeEnum.getText(task.getFollowupType());
                 sysMessageService.sendWechatToPatient(task.getPatientId(), "followup_started",
                         "pages/followup/followup",
-                        Map.of("随访类型", TYPE_NAMES.getOrDefault(task.getFollowupType(), "随访")),
+                        Map.of("随访类型", StringUtils.hasText(typeText) ? typeText : "随访"),
                         "随访通知",
                         StringUtils.hasText(task.getFollowupContent())
                                 ? task.getFollowupContent() : "您有一份随访计划，请查看详情并反馈近况",

@@ -1,6 +1,9 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.InEnum;
+import com.his.patient.enums.BedGenderLimitEnum;
+import com.his.patient.enums.BedPriorityEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -60,9 +63,11 @@ public class BedWaitUpsertDTO {
     private String bedType;
 
     /** 优先级：1-普通 2-急 3-危重，默认 1 */
+    @InEnum(value = BedPriorityEnum.class, message = "优先级取值不合法（应为 1-普通 2-急 3-危重）")
     private Integer priority;
 
     /** 性别限制：0-不限 1-限男床 2-限女床，默认 0 */
+    @InEnum(value = BedGenderLimitEnum.class, message = "性别限制取值不合法（应为 0-不限 1-限男床 2-限女床）")
     private Integer genderLimit;
 
     /** 隔离需求：0-否 1-是，默认 0 */

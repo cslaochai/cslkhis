@@ -30,6 +30,13 @@ public enum TemplateScopeEnum {
     }
 
     /**
+     * 码值是否合法（写入侧校验用；null 不合法）
+     */
+    public static boolean isValid(Integer code) {
+        return code != null && fromCode(code) != null;
+    }
+
+    /**
      * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」——
      * 脏数据应由数据治理流程修复，而非界面伪装。
      */

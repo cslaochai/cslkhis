@@ -1,7 +1,9 @@
 package com.his.emr.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -10,7 +12,8 @@ import java.time.LocalDate;
  * 入径台账分页查询入参（enrollListPage 为 POST）。
  */
 @Data
-public class EnrollQueryPageDTO implements Serializable {
+@EqualsAndHashCode(callSuper = true)
+public class EnrollQueryPageDTO extends PageParam implements Serializable {
 
     /**
      * 模板ID
@@ -37,14 +40,4 @@ public class EnrollQueryPageDTO implements Serializable {
      * 患者姓名（快照）
      */
     private String patientName;
-
-    /**
-     * 页码
-     */
-    private Integer pageNum = 1;
-
-    /**
-     * 每页条数
-     */
-    private Integer pageSize = 10;
 }

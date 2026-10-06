@@ -1,5 +1,7 @@
 package com.his.patient.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -49,6 +51,8 @@ public class OrderDictUpsertDTO implements Serializable {
     /**
      * 状态：1-启用 0-停用（不传按启用）
      */
+    @Min(value = 0, message = "状态取值不合法（应为 0-停用 1-启用）")
+    @Max(value = 1, message = "状态取值不合法（应为 0-停用 1-启用）")
     private Integer status;
 
     /** 备注 */

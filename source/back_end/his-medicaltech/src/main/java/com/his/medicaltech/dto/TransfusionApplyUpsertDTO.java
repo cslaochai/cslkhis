@@ -1,5 +1,7 @@
 package com.his.medicaltech.dto;
 
+import com.his.common.validation.InEnum;
+import com.his.medicaltech.enums.BloodComponentEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -41,6 +43,8 @@ public class TransfusionApplyUpsertDTO implements Serializable {
     private String patientRh;
 
     /** 血液品种（必填）：1-红细胞悬液 2-血浆 3-血小板 4-冷沉淀 5-全血 6-其他 */
+    @NotNull(message = "血液品种不能为空")
+    @InEnum(value = BloodComponentEnum.class, message = "血液品种取值不合法（1-红细胞悬液 2-血浆 3-血小板 4-冷沉淀 5-全血 6-其他）")
     private Integer bloodComponent;
 
     /** 规格（如 1.5U / 200ml / 1治疗量） */

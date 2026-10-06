@@ -153,9 +153,7 @@ public class PivasServiceImpl implements PivasService {
 
     @Override
     public PageResult<PivasVO> listPage(PivasQueryPageDTO dto) {
-        int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
-        int pageSize = dto.getPageSize() != null ? dto.getPageSize() : 10;
-        Page<PivasVO> page = new Page<>(pageNum, pageSize);
+        Page<PivasVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         // mapper 返回 List 时结果只在返回值里，page.getRecords() 不会被 MP 回填
         List<PivasVO> records = batchMapper.selectBatchPage(page, dto.getWardId(), dto.getAdmixDate(),
                 dto.getPatientName(), dto.getStatus());

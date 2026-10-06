@@ -82,9 +82,6 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DrugInboundVO createInbound(DrugInboundCreateDTO dto) {
-        if (dto.getInboundType() == null || dto.getInboundType() < 1 || dto.getInboundType() > 4) {
-            throw new BusinessException("入库类型只能是 1-采购入库 / 2-退货入库 / 3-盘盈入库 / 4-其他入库");
-        }
         // C 类：采购订单生成入库单时由本模块 service 直调本方法，那条路径不过 Bean Validation
         if (dto.getItems() == null || dto.getItems().isEmpty()) {
             throw new BusinessException("入库明细不能为空，至少要有一条");

@@ -1,5 +1,7 @@
 package com.his.pharmacy.dto;
 
+import com.his.common.enums.StockRoomEnum;
+import com.his.common.validation.InEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -62,6 +64,7 @@ public class BizDrugStockUpsertDTO {
     /**
      * 库存地点：1-药库 2-药房（不传=药房，sql/154）
      */
+    @InEnum(value = StockRoomEnum.class, message = "库存地点取值不合法（1-药库 2-药房）")
     private Integer stockRoom;
     /**
      * 供应商

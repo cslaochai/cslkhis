@@ -1,6 +1,8 @@
 package com.his.pharmacy.dto;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -18,6 +20,8 @@ public class DrugInboundCreateDTO {
 
     /** 入库类型（1-采购入库 2-退货入库 3-盘盈入库 4-其他入库） */
     @NotNull(message = "入库类型不能为空")
+    @Min(value = 1, message = "入库类型取值不合法（1-采购入库 2-退货入库 3-盘盈入库 4-其他入库）")
+    @Max(value = 4, message = "入库类型取值不合法（1-采购入库 2-退货入库 3-盘盈入库 4-其他入库）")
     private Integer inboundType;
 
     /** 来源采购订单ID（采购入库时必填） */

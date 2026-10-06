@@ -2,7 +2,8 @@ package com.his.equipment.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.equipment.dto.EquipmentDTO;
+import com.his.equipment.dto.MeteringCreateDTO;
+import com.his.equipment.dto.MeteringQueryPageDTO;
 import com.his.equipment.service.EquipmentService;
 import com.his.equipment.vo.MeteringVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -26,7 +27,7 @@ public class EquipmentMeteringController {
 
     @Operation(summary = "计量记录分页")
     @PostMapping("/listPage")
-    public Result<PageResult<MeteringVO>> listPage(@Valid @RequestBody EquipmentDTO.MeteringQueryPage dto) {
+    public Result<PageResult<MeteringVO>> listPage(@Valid @RequestBody MeteringQueryPageDTO dto) {
         var page = equipmentService.meteringListPage(dto);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
@@ -35,7 +36,7 @@ public class EquipmentMeteringController {
     @PreAuthorize("hasAuthority('asset:equipment:add')")
     @Operation(summary = "计量登记")
     @PostMapping("/create")
-    public Result<MeteringVO> create(@Valid @RequestBody EquipmentDTO.MeteringCreate dto) {
+    public Result<MeteringVO> create(@Valid @RequestBody MeteringCreateDTO dto) {
         return Result.success("计量登记成功", equipmentService.meteringCreate(dto));
     }
 

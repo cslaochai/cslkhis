@@ -70,7 +70,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
                 .le(q.getEndDate() != null, BizEndoscopyRecord::getVisitDate, q.getEndDate())
                 .orderByDesc(BizEndoscopyRecord::getId);
         Page<BizEndoscopyRecord> page = recordMapper.selectPage(
-                new Page<>(q.getPageNum() == null ? 1 : q.getPageNum(), q.getPageSize() == null ? 20 : q.getPageSize()), w);
+                new Page<>(q.getPageNum(), q.getPageSize()), w);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 toListVo(page.getRecords()));
     }
@@ -117,7 +117,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         vo.setStatusText(dictText.getDicDataLabel(DICT_STATUS, vo.getStatus()));
         vo.setEndoTypeText(dictText.getDicDataLabel(DICT_ENDO_TYPE, vo.getEndoType()));
         vo.setAnesthesiaMethodText(dictText.getDicDataLabel(DICT_ANESTHESIA, vo.getAnesthesiaMethod()));
-        vo.setHpResultText(EndoscopyHpResultEnum.textOf(vo.getHpResult()));
+        vo.setHpResultText(EndoscopyHpResultEnum.getText(vo.getHpResult()));
     }
 
     // 写入

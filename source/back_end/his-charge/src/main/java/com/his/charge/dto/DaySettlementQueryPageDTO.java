@@ -1,12 +1,15 @@
 package com.his.charge.dto;
 
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 日结单分页查询入参。
  */
 @Data
-public class DaySettlementQueryPageDTO {
+@EqualsAndHashCode(callSuper = true)
+public class DaySettlementQueryPageDTO extends PageParam {
 
     /**
      * 对账结论（1-已平 2-有差异）
@@ -27,14 +30,4 @@ public class DaySettlementQueryPageDTO {
      * 日期止
      */
     private String dateEnd;
-
-    /**
-     * 页码
-     */
-    private Integer pageNum = 1;
-
-    /**
-     * 每页条数
-     */
-    private Integer pageSize = 10;
 }

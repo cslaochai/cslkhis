@@ -1,5 +1,8 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.InEnum;
+import com.his.patient.enums.ConsultCategoryEnum;
+import com.his.patient.enums.ConsultScopeEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -37,6 +40,7 @@ public class ConsultationUpsertDTO implements Serializable {
      * 会诊范围：1-科内 2-科间 3-全院（必填）
      */
     @NotNull(message = "会诊范围不能为空（1-科内 2-科间 3-全院）")
+    @InEnum(value = ConsultScopeEnum.class, message = "会诊范围取值不合法（应为 1-科内 2-科间 3-全院）")
     private Integer consultType;
 
     /**
@@ -44,6 +48,7 @@ public class ConsultationUpsertDTO implements Serializable {
      * <p>由接口入口钉死（普通会诊页固定 1、营养会诊页固定 2），不接受页面自选 ——
      * 类别决定这单在哪个工作台出现，能被请求体随意改就等于能把会诊藏起来。
      */
+    @InEnum(value = ConsultCategoryEnum.class, message = "会诊类别取值不合法（1-普通科间 2-营养 3-药学 4-其他专科）")
     private Integer consultCategory;
 
     /**

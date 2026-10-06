@@ -1,10 +1,14 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
+import com.his.common.validation.InEnum;
+import com.his.patient.enums.NoticeTypeEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,7 +23,8 @@ public class CriticalNoticeDTO {
 
     /** 分页查询 */
     @Data
-    public static class QueryPage {
+    @EqualsAndHashCode(callSuper = true)
+    public static class QueryPage extends PageParam {
         /** 关键字 */
         private String keyword;
         /** 通知类别（1-病危 2-病重） */
@@ -32,10 +37,6 @@ public class CriticalNoticeDTO {
         private LocalDate startDate;
         /** 结束日期 */
         private LocalDate endDate;
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 10;
     }
 
     /** 填写/修改草稿（一般项目由服务端按住院重查快照） */
@@ -48,6 +49,7 @@ public class CriticalNoticeDTO {
         private Long admissionId;
         /** 通知类别（1-病危 2-病重） */
         @NotNull(message = "通知类别不能为空")
+        @InEnum(value = NoticeTypeEnum.class, message = "通知类别取值不合法（见字典 his_notice_type）")
         private Integer noticeType;
         /** 患者神志（1-清醒 2-嗜睡 3-意识模糊 4-昏迷 9-其他） */
         @NotNull(message = "患者神志不能为空")

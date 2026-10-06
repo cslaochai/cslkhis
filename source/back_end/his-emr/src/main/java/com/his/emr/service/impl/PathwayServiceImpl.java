@@ -138,9 +138,7 @@ public class PathwayServiceImpl implements PathwayService {
 
     @Override
     public PageResult<PathwayVO> listPage(PathwayQueryPageDTO dto) {
-        int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
-        int pageSize = dto.getPageSize() != null ? dto.getPageSize() : 10;
-        Page<PathwayVO> page = new Page<>(pageNum, pageSize);
+        Page<PathwayVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         // mapper 返回 List 时结果只在返回值里，page.getRecords() 不会被 MP 回填
         List<PathwayVO> records = pathwayMapper.selectPathwayPage(page, trimToNull(dto.getKeyword()),
                 dto.getStatus(), dto.getDeptId());
@@ -259,9 +257,7 @@ public class PathwayServiceImpl implements PathwayService {
 
     @Override
     public PageResult<PathwayEnrollVO> enrollListPage(EnrollQueryPageDTO dto) {
-        int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
-        int pageSize = dto.getPageSize() != null ? dto.getPageSize() : 10;
-        Page<PathwayEnrollVO> page = new Page<>(pageNum, pageSize);
+        Page<PathwayEnrollVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<PathwayEnrollVO> records = enrollMapper.selectEnrollPage(page, dto.getPathwayId(),
                 dto.getDeptId(), dto.getStatus(), dto.getEnrollDate(), trimToNull(dto.getPatientName()));
         records.forEach(v -> v.setCurrentDay(deriveCurrentDay(v.getStatus(), v.getEnrollDate(),

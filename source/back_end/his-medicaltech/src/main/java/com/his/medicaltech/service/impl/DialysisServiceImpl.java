@@ -84,7 +84,7 @@ public class DialysisServiceImpl implements DialysisService {
     // 档案
 
     public PageResult<DialysisVO.ArchiveVO> archiveListPage(DialysisDTO.ArchiveQuery query) {
-        Page<DialysisVO.ArchiveVO> page = new Page<>(nvl(query.getPageNum(), 1), nvl(query.getPageSize(), 10));
+        Page<DialysisVO.ArchiveVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<DialysisVO.ArchiveVO> records = archiveMapper.selectArchivePage(page,
                 trimToNull(query.getDialysisNo()), trimToNull(query.getPatientName()),
                 query.getAccessType(), query.getStatus());
@@ -149,9 +149,6 @@ public class DialysisServiceImpl implements DialysisService {
     public DialysisVO.ArchiveVO archiveChangeStatus(DialysisDTO.ArchiveStatus dto) {
         BizDialysisPatient archive = requireArchive(dto.getId());
         int target = dto.getStatus();
-        if (target < DialysisPatientStatusEnum.ON.getCode() || target > DialysisPatientStatusEnum.EXITED.getCode()) {
-            throw new BusinessException("目标状态不合法");
-        }
         if (archive.getStatus() == DialysisPatientStatusEnum.EXITED.getCode()) {
             throw new BusinessException("档案已退出透析，不能再变更");
         }
@@ -246,7 +243,7 @@ public class DialysisServiceImpl implements DialysisService {
     // 机位
 
     public PageResult<DialysisVO.MachineVO> machineListPage(DialysisDTO.MachineQuery query) {
-        Page<DialysisVO.MachineVO> page = new Page<>(nvl(query.getPageNum(), 1), nvl(query.getPageSize(), 10));
+        Page<DialysisVO.MachineVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<DialysisVO.MachineVO> records = machineMapper.selectMachinePage(page,
                 trimToNull(query.getMachineNo()), trimToNull(query.getRoomName()), query.getStatus());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
@@ -297,7 +294,7 @@ public class DialysisServiceImpl implements DialysisService {
     // 排班与透析单
 
     public PageResult<DialysisVO.SessionVO> sessionListPage(DialysisDTO.SessionQuery query) {
-        Page<DialysisVO.SessionVO> page = new Page<>(nvl(query.getPageNum(), 1), nvl(query.getPageSize(), 10));
+        Page<DialysisVO.SessionVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<DialysisVO.SessionVO> records = sessionMapper.selectSessionPage(page,
                 trimToNull(query.getSessionNo()), trimToNull(query.getPatientName()),
                 query.getStartDate(), query.getEndDate(), query.getTimeSlot(),
@@ -355,10 +352,7 @@ public class DialysisServiceImpl implements DialysisService {
         if (date.isAfter(LocalDate.now())) {
             throw new BusinessException("透析日期不能晚于今天（跨日排班请按日期分批）");
         }
-        int slot = nvl(dto.getTimeSlot(), DialysisTimeSlotEnum.MORNING.getCode());
-        if (slot < DialysisTimeSlotEnum.MORNING.getCode() || slot > DialysisTimeSlotEnum.NIGHT.getCode()) {
-            throw new BusinessException("时段不合法");
-        }
+        int slot = dto.getTimeSlot();
         assertSlotFree(date, slot, machine.getId(), null);
 
         BizDialysisSession session = new BizDialysisSession();

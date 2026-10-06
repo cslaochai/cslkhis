@@ -114,7 +114,7 @@ public class BloodServiceImpl implements BloodService {
         w.orderByAsc(BizBloodInventory::getExpireDate)
                 .orderByDesc(BizBloodInventory::getId);
         Page<BizBloodInventory> page = invMapper.selectPage(
-                new Page<>(q.getPageNum() == null ? 1 : q.getPageNum(), q.getPageSize() == null ? 20 : q.getPageSize()), w);
+                new Page<>(q.getPageNum(), q.getPageSize()), w);
         List<BloodVO.InventoryVO> vos = new ArrayList<>();
         for (BizBloodInventory b : page.getRecords()) {
             vos.add(toInvVo(b));
@@ -276,7 +276,7 @@ public class BloodServiceImpl implements BloodService {
                 .eq(q.getResult() != null, BizBloodCrossmatch::getResult, q.getResult())
                 .orderByDesc(BizBloodCrossmatch::getId);
         Page<BizBloodCrossmatch> page = cmMapper.selectPage(
-                new Page<>(q.getPageNum() == null ? 1 : q.getPageNum(), q.getPageSize() == null ? 20 : q.getPageSize()), w);
+                new Page<>(q.getPageNum(), q.getPageSize()), w);
         List<BloodVO.CrossmatchVO> vos = new ArrayList<>();
         for (BizBloodCrossmatch c : page.getRecords()) {
             vos.add(toCmVo(c));
@@ -383,7 +383,7 @@ public class BloodServiceImpl implements BloodService {
                 .orderByDesc(BizBloodStockLog::getOperateTime)
                 .orderByDesc(BizBloodStockLog::getId);
         Page<BizBloodStockLog> page = logMapper.selectPage(
-                new Page<>(q.getPageNum() == null ? 1 : q.getPageNum(), q.getPageSize() == null ? 20 : q.getPageSize()), w);
+                new Page<>(q.getPageNum(), q.getPageSize()), w);
         List<BloodVO.StockLogVO> vos = new ArrayList<>();
         for (BizBloodStockLog l : page.getRecords()) {
             BloodVO.StockLogVO vo = new BloodVO.StockLogVO();

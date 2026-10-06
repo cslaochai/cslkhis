@@ -1,6 +1,8 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.InEnum;
+import com.his.patient.enums.AdmitWayEnum;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -47,6 +49,7 @@ public class InpatientAdmitDTO {
     private LocalDateTime admitTime;
 
     /** 入院途径：1-门诊 2-急诊 3-转院 4-其他（必填，病案首页字段） */
+    @InEnum(value = AdmitWayEnum.class, message = "入院途径取值不合法（应为 1-门诊 2-急诊 3-转院 4-其他）")
     private Integer admitWay;
 
     /** 入院诊断（文本） */

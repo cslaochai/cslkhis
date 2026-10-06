@@ -1,5 +1,7 @@
 package com.his.operation.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -47,16 +49,22 @@ public class OperationApplyUpsertDTO implements Serializable {
     /**
      * 手术级别（1-一级 2-二级 3-三级 4-四级）
      */
+    @Min(value = 1, message = "手术级别取值不合法（应为 1~4：一级~四级）")
+    @Max(value = 4, message = "手术级别取值不合法（应为 1~4：一级~四级）")
     private Integer operationLevel;
 
     /**
      * 切口等级（0-0类 1-Ⅰ类 2-Ⅱ类 3-Ⅲ类）
      */
+    @Min(value = 0, message = "切口等级取值不合法（应为 0~3：0类/Ⅰ类/Ⅱ类/Ⅲ类）")
+    @Max(value = 3, message = "切口等级取值不合法（应为 0~3：0类/Ⅰ类/Ⅱ类/Ⅲ类）")
     private Integer incisionLevel;
 
     /**
      * 麻醉方式（1-全麻 2-椎管内 3-神经阻滞 4-局麻 5-其他）
      */
+    @Min(value = 1, message = "麻醉方式取值不合法（应为 1~5：全麻/椎管内/神经阻滞/局麻/其他）")
+    @Max(value = 5, message = "麻醉方式取值不合法（应为 1~5：全麻/椎管内/神经阻滞/局麻/其他）")
     private Integer anesthesiaType;
 
     /**

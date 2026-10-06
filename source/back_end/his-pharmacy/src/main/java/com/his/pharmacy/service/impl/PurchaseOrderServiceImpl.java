@@ -152,9 +152,6 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void audit(PurchaseOrderAuditDTO dto) {
-        if (dto.getApprovalStatus() == null || (dto.getApprovalStatus() != 1 && dto.getApprovalStatus() != 2)) {
-            throw new BusinessException("审批结论只能是 1-通过 或 2-驳回");
-        }
         BizPurchaseOrder order = orderMapper.selectByIdForUpdate(dto.getOrderId());
         if (order == null) {
             throw new BusinessException("采购订单不存在或已删除");

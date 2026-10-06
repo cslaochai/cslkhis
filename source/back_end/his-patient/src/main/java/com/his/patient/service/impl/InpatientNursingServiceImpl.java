@@ -132,8 +132,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         if (dto.getAdmissionId() == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        if (dto.getNursingType() == null || dto.getNursingType() < 1 || dto.getNursingType() > 3) {
-            throw new BusinessException("护理文书类型取值不合法（1-三测单 2-护理记录单 3-生命体征监测）");
+        if (dto.getNursingType() == null) {
+            throw new BusinessException("护理文书类型不能为空");
         }
         if (dto.getMeasureTime() == null) {
             throw new BusinessException("测量/记录时间不能为空（三测单按时点唯一，时间是它的主键语义）");
@@ -446,10 +446,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NursingAssessmentVO saveAssessment(NursingAssessmentUpsertDTO dto) {
-        // 保留（类别③）：评估类型码值合法性（1~5 量表枚举），不是「是否为空」
-        if (dto.getAssessType() == null || dto.getAssessType() < 1 || dto.getAssessType() > 5) {
-            throw new BusinessException("评估类型取值不合法（1-压疮 Braden 2-跌倒 Morse 3-疼痛 NRS 4-VTE Caprini 5-管路滑脱）");
-        }
         // 保留（类别③）：总分必须能由量表明细推导，是业务一致性规则而非入参非空
         int recomputed = sumItems(dto.getItemsJson());
         if (dto.getTotalScore() == null || dto.getTotalScore() != recomputed) {

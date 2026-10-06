@@ -60,18 +60,6 @@ public class SurveyServiceImpl implements SurveyService {
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    /**
-     * 评价维度名（字典 his_survey_dimension 的 Java 侧镜像，看板直接出中文名）
-     */
-    private static final Map<Integer, String> DIMENSION_NAMES = Map.of(
-            1, "挂号便捷", 2, "医生服务", 3, "护士服务", 4, "环境与流程",
-            5, "费用透明", 6, "疗效与安全感", 7, "总体印象");
-    /**
-     * 回收渠道名（字典 his_survey_channel）
-     */
-    private static final Map<Integer, String> CHANNEL_NAMES = Map.of(
-            1, "电话代填", 2, "短信", 3, "微信/互联网", 4, "现场扫码");
-
     private final BizSurveyDispatchMapper dispatchMapper;
     private final BizSurveyAnswerMapper answerMapper;
     private final BizSurveyAnswerItemMapper answerItemMapper;
@@ -445,7 +433,7 @@ public class SurveyServiceImpl implements SurveyService {
         for (Map<String, Object> row : answerMapper.statByDimension(templateId, from, to, scope)) {
             int k = (int) toLong(row.get("k"));
             SurveyStatItemVO item = new SurveyStatItemVO(String.valueOf(k),
-                    DIMENSION_NAMES.getOrDefault(k, "维度" + k), toLong(row.get("c")));
+                    SurveyDimensionEnum.getText(k), toLong(row.get("c")));
             item.setAvgScore(decimal(row.get("avg_score")));
             byDimension.add(item);
         }
@@ -465,7 +453,7 @@ public class SurveyServiceImpl implements SurveyService {
             int k = (int) toLong(row.get("k"));
             long total = toLong(row.get("total"));
             SurveyStatItemVO item = new SurveyStatItemVO(String.valueOf(k),
-                    CHANNEL_NAMES.getOrDefault(k, "渠道" + k), total);
+                    SurveyChannelEnum.getText(k), total);
             item.setRate(rate(toLong(row.get("recycled")), total));
             byChannel.add(item);
         }
@@ -681,7 +669,8 @@ public class SurveyServiceImpl implements SurveyService {
                 worstKey = entry.getKey();
             }
         }
-        return worstKey == null ? null : DIMENSION_NAMES.getOrDefault(worstKey, "维度" + worstKey) + " " + worstAvg + " 分";
+        // 落进纠纷投诉单正文（可追责的书面记录），脏码值要用 labelOrUnknown 保留原始码值便于排查
+        return worstKey == null ? null : SurveyDimensionEnum.labelOrUnknown(worstKey) + " " + worstAvg + " 分";
     }
 
     private BizSurveyAnswerItem toAnswerItem(Long answerId, Long templateId, SurveyAnswerItemVO src) {

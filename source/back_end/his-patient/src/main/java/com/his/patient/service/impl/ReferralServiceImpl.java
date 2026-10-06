@@ -65,9 +65,6 @@ public class ReferralServiceImpl implements ReferralService {
     @Transactional(rollbackFor = Exception.class)
     public ReferralVO create(ReferralDTO.Create dto) {
         int direction = dto.getDirection() == null ? ReferralDirectionEnum.UP.getCode() : dto.getDirection();
-        if (direction != ReferralDirectionEnum.UP.getCode() && direction != ReferralDirectionEnum.DOWN.getCode()) {
-            throw new BusinessException("转诊方向取值不合法（1-上转 2-下转）");
-        }
         if (!StringUtils.hasText(dto.getToHospital()) && dto.getToDeptId() == null) {
             throw new BusinessException("院际转诊必须填转入医院，院内转诊必须选转入科室");
         }

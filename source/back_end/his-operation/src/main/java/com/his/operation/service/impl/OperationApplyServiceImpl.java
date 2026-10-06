@@ -335,10 +335,6 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(OperationApplyUpsertDTO dto) {
-        validateLevel(dto.getOperationLevel());
-        validateIncision(dto.getIncisionLevel());
-        validateAnesthesia(dto.getAnesthesiaType());
-
         BizAdmission admission = inpatientService.getAdmissionById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
@@ -861,25 +857,6 @@ public class OperationApplyServiceImpl implements OperationApplyService {
             throw new BusinessException("手术申请单不存在");
         }
         return entity;
-    }
-
-    private void validateLevel(Integer level) {
-        if (level != null && !OperationLevelEnum.isValid(level)) {
-            throw new BusinessException("手术级别取值不合法（应为 1~4：一级~四级），当前=" + level);
-        }
-    }
-
-    private void validateIncision(Integer level) {
-        // 注意是 0~3：0 类切口（如经自然腔道）是合法值，用 1~3 校验会把它判成非法
-        if (level != null && !OperationIncisionEnum.isValid(level)) {
-            throw new BusinessException("切口等级取值不合法（应为 0~3：0类/Ⅰ类/Ⅱ类/Ⅲ类），当前=" + level);
-        }
-    }
-
-    private void validateAnesthesia(Integer type) {
-        if (type != null && !OperationAnesthesiaMethodEnum.isValid(type)) {
-            throw new BusinessException("麻醉方式取值不合法（应为 1~5：全麻/椎管内/神经阻滞/局麻/其他），当前=" + type);
-        }
     }
 
     /**

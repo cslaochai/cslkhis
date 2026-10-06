@@ -211,10 +211,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         if (!RhTypeEnum.isValidRh(dto.getPatientRh())) {
             throw new BusinessException("受血者 Rh 血型不能为空（阳/阴）——Rh 阴性属稀有血型，直接决定备血方案");
         }
-        if (!BloodComponentEnum.isValid(dto.getBloodComponent())) {
-            throw new BusinessException("血液品种取值不合法（应为 1~6：红细胞悬液/血浆/血小板/冷沉淀/全血/其他），当前="
-                    + dto.getBloodComponent());
-        }
         if (dto.getBagCount() == null || dto.getBagCount() < 1) {
             throw new BusinessException("申请袋数必须大于 0（没有袋数的用血申请无法配血）");
         }
@@ -388,10 +384,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String approve(TransfusionApproveDTO dto) {
-        if (dto.getApproveResult() == null
-                || (dto.getApproveResult() != 1 && dto.getApproveResult() != 2)) {
-            throw new BusinessException("审批结论取值不合法（1-通过 2-驳回）");
-        }
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         Integer status = entity.getApproveStatus();
         if (!Objects.equals(TransfusionApproveStatusEnum.PENDING.getCode(), status)
@@ -550,10 +542,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             }
             if (!RhTypeEnum.isValidRh(bag.getBagRh())) {
                 throw new BusinessException("血袋 " + bagNo + " 的 Rh 血型不合法（应为 阳/阴）");
-            }
-            if (bag.getCrossmatchResult() == null
-                    || (bag.getCrossmatchResult() != 1 && bag.getCrossmatchResult() != 2)) {
-                throw new BusinessException("血袋 " + bagNo + " 的配血结论必填（1-相合 2-不合）");
             }
             if (bag.getExpireDate() == null) {
                 throw new BusinessException("血袋 " + bagNo + " 的有效期必填（超期血袋不得输注）");
@@ -895,11 +883,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         if (Objects.equals(1, entity.getHasReaction())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 已上报过输血反应（"
                     + entity.getReactionType() + "），不能重复上报");
-        }
-        if (!TransfusionReactionTypeEnum.isValid(dto.getReactionType())) {
-            throw new BusinessException("输血反应类型不合法（应从字典选择：" 
-                    + String.join("/", TransfusionReactionTypeEnum.options()) + "），当前="
-                    + dto.getReactionType());
         }
 
         entity.setHasReaction(1);

@@ -1,5 +1,7 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.InEnum;
+import com.his.patient.enums.IsAliveEnum;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
@@ -33,6 +35,7 @@ public class PatientFamilyHistoryUpsertDTO {
      */
     private Integer age;
     /** 是否在世（0-已故 1-在世） */
+    @InEnum(value = IsAliveEnum.class, message = "是否在世取值不合法（0-已故 1-在世）")
     private Integer isAlive;
     /** 死亡原因 */
     private String causeOfDeath;

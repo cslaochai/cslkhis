@@ -1,6 +1,9 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.InEnum;
+import com.his.patient.enums.VteEventTypeEnum;
+import com.his.patient.enums.VteOnsetEnum;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -26,10 +29,12 @@ public class VteEventUpsertDTO {
 
     /** 事件类型（1-深静脉血栓DVT 2-肺栓塞PE 3-预防相关出血） */
     @NotNull(message = "事件类型不能为空")
+    @InEnum(value = VteEventTypeEnum.class, message = "事件类型取值不合法（1-DVT 2-肺栓塞 3-预防相关出血）")
     private Integer eventType;
 
     /** 发生时机（1-院内发生 2-入院时已存在） */
     @NotNull(message = "发生时机不能为空")
+    @InEnum(value = VteOnsetEnum.class, message = "发生时机取值不合法（1-院内发生 2-入院时已存在）")
     private Integer onsetType;
 
     /** 确诊日期 */

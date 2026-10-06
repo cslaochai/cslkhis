@@ -43,17 +43,6 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    /**
-     * 维度码值范围（字典 his_survey_dimension 1-7）
-     */
-    private static final int DIMENSION_MIN = 1;
-    private static final int DIMENSION_MAX = 7;
-    /**
-     * 题型码值范围（字典 his_survey_question_type 1-5）
-     */
-    private static final int QT_MIN = 1;
-    private static final int QT_MAX = 5;
-
     private final BizSurveyTemplateMapper templateMapper;
     private final BizSurveyItemMapper itemMapper;
     private final BizSurveyDispatchMapper dispatchMapper;
@@ -205,22 +194,19 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
     }
 
     /**
-     * 题目校验：题号卷内唯一、维度/题型在字典码值范围内。
+     * 题目校验：题号卷内唯一、量表题满分固定 5。
      *
      * <p>题号重复不在这里靠数据库报错 —— 撞 uk_survey_item 的 500 对配置页用户毫无意义，
      * 前置校验才能把「第 3 题和第 5 题题号都是 4」说清楚。
+     *
+     * <p>维度/题型的码值合法性由 DTO 上的 {@code @InEnum} 把关，这里不再手写范围判断
+     * （AGENTS.md §16）。
      */
     private void validateItems(List<SurveyTemplateUpsertDTO.Item> items) {
         Set<Integer> seqs = new HashSet<>();
         for (SurveyTemplateUpsertDTO.Item item : items) {
             if (!seqs.add(item.getSeqNo())) {
                 throw new BusinessException("题号重复：" + item.getSeqNo());
-            }
-            if (item.getDimension() < DIMENSION_MIN || item.getDimension() > DIMENSION_MAX) {
-                throw new BusinessException("评价维度取值不合法（" + DIMENSION_MIN + "-" + DIMENSION_MAX + "）");
-            }
-            if (item.getQuestionType() < QT_MIN || item.getQuestionType() > QT_MAX) {
-                throw new BusinessException("题型取值不合法（" + QT_MIN + "-" + QT_MAX + "）");
             }
             if (Objects.equals(item.getQuestionType(), SurveyQuestionTypeEnum.SCALE.getCode())
                     && item.getMaxScore() != null && item.getMaxScore() != 5) {

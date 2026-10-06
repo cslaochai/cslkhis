@@ -104,9 +104,7 @@ public class TeleConsultServiceImpl implements TeleConsultService {
 
     @Override
     public PageResult<TeleConsultVO> teleListPage(TeleConsultQueryPageDTO dto) {
-        int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
-        int pageSize = dto.getPageSize() != null ? dto.getPageSize() : 10;
-        Page<TeleConsultVO> page = new Page<>(pageNum, pageSize);
+        Page<TeleConsultVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<TeleConsultVO> records = teleMapper.selectTelePage(page, trimToNull(dto.getKeyword()),
                 dto.getConsultType(), dto.getStatus(), dto.getApplyDeptId(),
                 dto.getUrgentOnly(), dto.getOpenOnly());
@@ -235,9 +233,7 @@ public class TeleConsultServiceImpl implements TeleConsultService {
 
     @Override
     public PageResult<OnlineConsultVO> onlineListPage(OnlineQueryPageDTO dto) {
-        int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
-        int pageSize = dto.getPageSize() != null ? dto.getPageSize() : 10;
-        Page<OnlineConsultVO> page = new Page<>(pageNum, pageSize);
+        Page<OnlineConsultVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<OnlineConsultVO> records = onlineMapper.selectOnlinePage(page, trimToNull(dto.getKeyword()),
                 dto.getConsultType(), dto.getStatus(), dto.getDeptId(), dto.getDoctorId(), dto.getWaitingOnly());
         records.forEach(this::decorateOnline);

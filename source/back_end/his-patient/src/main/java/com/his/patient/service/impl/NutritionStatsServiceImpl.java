@@ -30,6 +30,7 @@ import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 营养膳食指标与看板实现（sql/168 §4）。
@@ -93,7 +94,8 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
         String operator = currentName();
         List<NutritionStatsVO> result = new ArrayList<>();
 
-        if (dto.getScopeType() == StatsScopeEnum.DEPT.getCode()) {
+        // scopeType 合法性由 DTO 的 @InEnum 把关（1-全院 2-科室），这里只分派
+        if (Objects.equals(StatsScopeEnum.DEPT.getCode(), dto.getScopeType())) {
             List<DeptStatRowVO> depts = statMapper.selectDischargeDepts(from(ym), to(ym));
             if (CollectionUtils.isEmpty(depts)) {
                 throw new BusinessException(ym + " 没有已出院患者，无法按科室生成快照");
@@ -102,11 +104,9 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
                 result.add(toVO(upsertRow(compute(ym, dto.getStatMonth(), StatsScopeEnum.DEPT.getCode(),
                         d.getDeptId(), d.getDeptName()), operator)));
             }
-        } else if (dto.getScopeType() == StatsScopeEnum.HOSPITAL.getCode()) {
+        } else {
             result.add(toVO(upsertRow(compute(ym, dto.getStatMonth(), StatsScopeEnum.HOSPITAL.getCode(),
                     null, null), operator)));
-        } else {
-            throw new BusinessException("统计范围取值不合法（1-全院 2-科室）");
         }
         log.info("营养膳食指标生成 月份={} 范围={} 行数={} 操作人={}", dto.getStatMonth(), dto.getScopeType(),
                 result.size(), operator);

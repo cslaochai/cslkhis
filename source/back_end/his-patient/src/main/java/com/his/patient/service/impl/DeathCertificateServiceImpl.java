@@ -79,14 +79,6 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     private static final int CHAIN_MAX_ROWS = 4;
 
     /**
-     * 死亡地点合法码值（字典 his_death_place：1医院 2来院途中 3家中 4民政管理机构 5其他机构 9未指明）
-     */
-    private static final Set<Integer> DEATH_PLACES = Set.of(
-            DeathPlaceEnum.HOSPITAL.getCode(), DeathPlaceEnum.TRANSFER.getCode(), DeathPlaceEnum.HOME.getCode(),
-            DeathPlaceEnum.CIVIL_AGENCY.getCode(), DeathPlaceEnum.OTHER_INSTITUTION.getCode(),
-            DeathPlaceEnum.UNSPECIFIED.getCode());
-
-    /**
      * 单次催报扫描上限（同传染病报卡，防止一次拉爆内存）
      */
     private static final int NOTIFY_BATCH = 200;
@@ -324,9 +316,6 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
             throw new BusinessException("死亡时间不能早于入院时间");
         }
         Integer deathPlace = dto.getDeathPlace();
-        if (deathPlace == null || !DEATH_PLACES.contains(deathPlace)) {
-            throw new BusinessException("死亡地点取值不合法（见字典 his_death_place）");
-        }
         if (Objects.equals(snapshot.getAdmitStatus(), AdmitStatusEnum.IN_HOSPITAL.getCode()) && deathPlace != DeathPlaceEnum.HOSPITAL.getCode()) {
             throw new BusinessException("患者仍在院，死亡地点必须为「医院」");
         }

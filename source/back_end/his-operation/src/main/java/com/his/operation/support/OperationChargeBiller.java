@@ -13,6 +13,7 @@ import com.his.operation.entity.BizOperationChargeItem;
 import com.his.operation.enums.AirwayDeviceEnum;
 import com.his.operation.enums.AnesthesiaChargeStatusEnum;
 import com.his.operation.enums.ChargeSourceEnum;
+import com.his.operation.enums.OperationAnesthesiaMethodEnum;
 import com.his.operation.mapper.BizOperationChargeItemMapper;
 import com.his.operation.vo.OperationChargeSummaryVO;
 import lombok.RequiredArgsConstructor;
@@ -57,11 +58,8 @@ public class OperationChargeBiller {
     private static final int AMOUNT_SCALE = 2;
 
     /**
-     * 麻醉方式 → 麻醉费项目编码（1-全麻 2-椎管内 3-神经阻滞 4-局麻 5-其他）
+     * 麻醉监护费项目编码（按小时收，与麻醉方式无关）
      */
-    private static final Map<Integer, String> ANESTHESIA_ITEM = Map.of(
-            1, "AN001", 2, "AN002", 3, "AN003", 4, "AN004", 5, "AN005");
-
     private static final String ITEM_MONITOR = "AN006";
     private static final String ITEM_INTUBATION = "AN007";
     private static final String ITEM_PACU = "AN008";
@@ -107,13 +105,13 @@ public class OperationChargeBiller {
         String basis = "麻醉记录 " + record.getRecordNo();
 
         // ① 麻醉费：方式 → 项目。方式没登记就不能收费（不知道做的是什么麻醉）
-        String anesthesiaItem = ANESTHESIA_ITEM.get(record.getAnesthesiaType());
-        if (anesthesiaItem == null) {
+        OperationAnesthesiaMethodEnum method = OperationAnesthesiaMethodEnum.fromCode(record.getAnesthesiaType());
+        if (method == null) {
             fail(summary, record, null, "未登记麻醉方式，无法确定麻醉费项目", basis, record.getRecordNo());
         } else {
             billOne(summary, record.getAdmissionId(), record.getPatientId(), patientNo, record.getPatientName(),
                     record.getApplyId(), record.getApplyNo(), ChargeSourceEnum.RECORD.getCode(), record.getId(), record.getRecordNo(),
-                    anesthesiaItem, BigDecimal.ONE, basis + " 麻醉费");
+                    method.getChargeItemCode(), BigDecimal.ONE, basis + " 麻醉费");
         }
 
         // ② 麻醉监护（按小时）

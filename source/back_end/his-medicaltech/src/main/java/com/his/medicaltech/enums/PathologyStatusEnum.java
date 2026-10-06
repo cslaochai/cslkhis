@@ -44,9 +44,10 @@ public enum PathologyStatusEnum {
         return fromCode(code) != null;
     }
 
+    /** 展示用：null 或不在枚举内返回空串（不把「未知」渲染给用户看） */
     public static String getText(Integer code) {
         PathologyStatusEnum e = fromCode(code);
-        return e == null ? "未知(" + code + ")" : e.getLabel();
+        return e == null ? "" : e.getLabel();
     }
 
     /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */

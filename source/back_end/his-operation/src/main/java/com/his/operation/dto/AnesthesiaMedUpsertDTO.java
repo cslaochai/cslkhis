@@ -1,6 +1,8 @@
 package com.his.operation.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -34,6 +36,8 @@ public class AnesthesiaMedUpsertDTO implements Serializable {
     /**
      * 用药阶段（1-诱导 2-维持 3-苏醒）
      */
+    @Min(value = 1, message = "用药阶段取值不合法（应为 1-诱导 2-维持 3-苏醒）")
+    @Max(value = 3, message = "用药阶段取值不合法（应为 1-诱导 2-维持 3-苏醒）")
     private Integer medPhase;
 
     /**

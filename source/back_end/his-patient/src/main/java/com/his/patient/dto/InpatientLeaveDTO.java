@@ -1,10 +1,14 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
+import com.his.common.validation.InEnum;
+import com.his.patient.enums.InpatientLeaveTypeEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,7 +29,8 @@ public class InpatientLeaveDTO {
 
     /** 分页查询 */
     @Data
-    public static class QueryPage {
+    @EqualsAndHashCode(callSuper = true)
+    public static class QueryPage extends PageParam {
         /** 关键字 */
         private String keyword;
         /** 请假类别（1-临时外出当日往返 2-离院过夜 9-其他） */
@@ -40,10 +45,6 @@ public class InpatientLeaveDTO {
         private LocalDate startDate;
         /** 结束日期 */
         private LocalDate endDate;
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 10;
     }
 
     /** 填写/修改申请单（一般项目由服务端按住院重查快照；审批医师不由前端指定） */
@@ -56,6 +57,7 @@ public class InpatientLeaveDTO {
         private Long admissionId;
         /** 请假类别（1-临时外出当日往返 2-离院过夜 9-其他） */
         @NotNull(message = "请假类别不能为空")
+        @InEnum(value = InpatientLeaveTypeEnum.class, message = "请假类别取值不合法（见字典 his_leave_type）")
         private Integer leaveType;
         /** 请假事由（必填） */
         @NotBlank(message = "请假事由不能为空")

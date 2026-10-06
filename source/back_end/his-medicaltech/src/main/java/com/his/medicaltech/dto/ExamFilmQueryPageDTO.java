@@ -2,24 +2,16 @@ package com.his.medicaltech.dto;
 
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 胶片用量分页查询（sql/138）。
  */
 @Data
-public class ExamFilmQueryPageDTO {
-
-    /** 页码 */
-    @Min(value = 1, message = "页码从 1 开始")
-    private Integer pageNum = 1;
-
-    /** 每页条数 */
-    @Min(value = 1, message = "每页条数至少 1")
-    @Max(value = 200, message = "每页条数不能超过 200")
-    private Integer pageSize = 10;
+@EqualsAndHashCode(callSuper = true)
+public class ExamFilmQueryPageDTO extends PageParam {
 
     /** 关键字：患者姓名 / 患者号 / 胶片单号 / 记录号 */
     private String keyword;

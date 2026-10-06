@@ -308,7 +308,7 @@ public class ExamImageServiceImpl implements ExamImageService {
         BeanUtils.copyProperties(row, vo);
         vo.setModalityText(row.getModality() == null ? null
                 : subDictText.getDicDataLabel("his_exam_device_type", row.getModality()));
-        vo.setSourceText(ExamImageSourceEnum.textOf(row.getSource()));
+        vo.setSourceText(ExamImageSourceEnum.getText(row.getSource()));
         return vo;
     }
 

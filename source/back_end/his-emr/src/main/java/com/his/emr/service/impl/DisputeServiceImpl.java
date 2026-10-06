@@ -114,9 +114,7 @@ public class DisputeServiceImpl implements DisputeService {
 
     @Override
     public PageResult<DisputeCaseVO> listPage(DisputeQueryPageDTO dto) {
-        int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
-        int pageSize = dto.getPageSize() != null ? dto.getPageSize() : 10;
-        Page<DisputeCaseVO> page = new Page<>(pageNum, pageSize);
+        Page<DisputeCaseVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<DisputeCaseVO> records = caseMapper.selectCasePage(page, trimToNull(dto.getKeyword()),
                 dto.getCaseType(), dto.getStatus(), dto.getLevel(), dto.getDeptId(),
                 dto.getOpenOnly(), trimToNull(dto.getDateFrom()), trimToNull(dto.getDateTo()));

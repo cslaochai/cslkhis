@@ -1,5 +1,7 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.InEnum;
+import com.his.patient.enums.TransferTypeEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -43,6 +45,7 @@ public class InpatientTransferUpsertDTO implements Serializable {
     /**
      * 转科类型：1-普通转科 2-急诊转科 3-转入ICU 4-ICU转出（为空按普通转科）
      */
+    @InEnum(value = TransferTypeEnum.class, message = "转科类型取值不合法（应为 1~4）")
     private Integer transferType;
 
     /**

@@ -1,5 +1,7 @@
 package com.his.operation.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -25,6 +27,8 @@ public class CountPhaseDTO implements Serializable {
      * 阶段：1-术前 2-关体前 3-关体后
      */
     @NotNull(message = "清点阶段不能为空")
+    @Min(value = 1, message = "清点阶段取值不合法（应为 1-术前 2-关体前 3-关体后）")
+    @Max(value = 3, message = "清点阶段取值不合法（应为 1-术前 2-关体前 3-关体后）")
     private Integer phase;
 
     /**

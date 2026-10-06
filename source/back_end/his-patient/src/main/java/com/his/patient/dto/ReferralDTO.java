@@ -1,8 +1,12 @@
 package com.his.patient.dto;
 
+import com.his.common.base.PageParam;
+import com.his.common.validation.InEnum;
+import com.his.patient.enums.ReferralDirectionEnum;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 
@@ -35,8 +39,9 @@ public class ReferralDTO {
         /** 转入医院名称（院际转诊必填） */
         private String toHospital;
 
-        /** 转诊方向:1-上转 2-下转（默认 1 上转） */
-        private Integer direction;
+/** 转诊方向:1-上转 2-下转（默认 1 上转） */
+        @InEnum(value = ReferralDirectionEnum.class, message = "转诊方向取值不合法（1-上转 2-下转）")
+    private Integer direction;
 
         /** 转诊原因 */
         @NotBlank(message = "转诊原因不能为空")
@@ -54,7 +59,8 @@ public class ReferralDTO {
 
     /** 分页查询 */
     @Data
-    public static class QueryPage implements Serializable {
+    @EqualsAndHashCode(callSuper = true)
+    public static class QueryPage extends PageParam implements Serializable {
 
         /** 患者ID */
         private Long patientId;
@@ -67,12 +73,6 @@ public class ReferralDTO {
 
         /** 转入医院模糊 */
         private String toHospital;
-
-        /** 页码 */
-        private Integer pageNum = 1;
-
-        /** 每页条数 */
-        private Integer pageSize = 10;
     }
 
     /** 确认（0→1） */

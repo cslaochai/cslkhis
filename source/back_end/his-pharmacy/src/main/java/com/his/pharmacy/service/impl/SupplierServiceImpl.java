@@ -67,13 +67,7 @@ public class SupplierServiceImpl extends ServiceImpl<SysSupplierMapper, SysSuppl
         }
 
         Integer rating = dto.getRating() == null ? 3 : dto.getRating();
-        if (rating < 1 || rating > 4) {
-            throw new BusinessException("供应商评级只能是 1-差 / 2-一般 / 3-良好 / 4-优秀");
-        }
         Integer status = dto.getStatus() == null ? 1 : dto.getStatus();
-        if (status != 0 && status != 1) {
-            throw new BusinessException("供应商状态只能是 0-停用 或 1-正常");
-        }
 
         String operator = UserUtils.getCurrentEmployeeName();
 

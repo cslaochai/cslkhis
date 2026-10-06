@@ -151,9 +151,6 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     @Transactional(rollbackFor = Exception.class)
     public String save(InpatientTransferUpsertDTO dto) {
         int type = dto.getTransferType() == null ? 1 : dto.getTransferType();
-        if (!TransferTypeEnum.isValid(type)) {
-            throw new BusinessException("转科类型取值不合法（应为 1~4）");
-        }
 
         BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {

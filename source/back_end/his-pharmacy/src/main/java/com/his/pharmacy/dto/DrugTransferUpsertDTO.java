@@ -1,5 +1,7 @@
 package com.his.pharmacy.dto;
 
+import com.his.common.enums.DrugTransferTypeEnum;
+import com.his.common.validation.InEnum;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -24,6 +26,7 @@ public class DrugTransferUpsertDTO {
 
     /** 方向（1-药库下拨药房 2-药房退回药库） */
     @NotNull(message = "调拨方向不能为空")
+    @InEnum(value = DrugTransferTypeEnum.class, message = "调拨方向取值不合法（1-药库下拨药房 2-药房退回药库）")
     private Integer transferType;
 
     /** 事由（必填：事后没人记得为什么搬这批货，就等于没有溯源） */

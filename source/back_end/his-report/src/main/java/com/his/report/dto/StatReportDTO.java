@@ -1,9 +1,11 @@
 package com.his.report.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
 
@@ -46,15 +48,8 @@ public class StatReportDTO {
      * 台账分页查询
      */
     @Data
-    public static class QueryPage {
-        /**
-         * 页码
-         */
-        private Integer pageNum = 1;
-        /**
-         * 每页条数
-         */
-        private Integer pageSize = 10;
+    @EqualsAndHashCode(callSuper = true)
+    public static class QueryPage extends PageParam {
         /**
          * 上报单号/标题模糊
          */

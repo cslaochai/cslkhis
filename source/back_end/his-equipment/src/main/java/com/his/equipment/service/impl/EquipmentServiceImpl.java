@@ -4,10 +4,20 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
-import com.his.equipment.dto.EquipmentDTO;
+import com.his.equipment.dto.EquipmentQueryPageDTO;
+import com.his.equipment.dto.MaintainCreateDTO;
+import com.his.equipment.dto.MaintainQueryPageDTO;
+import com.his.equipment.dto.MeteringCreateDTO;
+import com.his.equipment.dto.MeteringQueryPageDTO;
 import com.his.equipment.entity.BizEquipmentMaintain;
 import com.his.equipment.entity.BizEquipmentMetering;
 import com.his.equipment.entity.SysEquipment;
+import com.his.equipment.enums.EquipCategoryEnum;
+import com.his.equipment.enums.EquipStatusEnum;
+import com.his.equipment.enums.MaintainResultEnum;
+import com.his.equipment.enums.MaintainTypeEnum;
+import com.his.equipment.enums.MeteringResultEnum;
+import com.his.equipment.enums.MeteringTypeEnum;
 import com.his.equipment.mapper.BizEquipmentMaintainMapper;
 import com.his.equipment.mapper.BizEquipmentMeteringMapper;
 import com.his.equipment.mapper.SysEquipmentMapper;
@@ -22,7 +32,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -34,19 +43,13 @@ import java.util.stream.Collectors;
  * <p>台账口径：nextMaintainDate = lastMaintainDate + maintainCycleDays（现算不落库）；
  * 维保登记成功后回写医疗设备台账的最后维保日期（档案与记录双写一致性）；
  * 维保记录删除（录错）后按剩余记录重算最近维保日期，无剩余记录时保留原值不猜。
+ *
+ * <p>码值口径全部走 {@code com.his.equipment.enums}，码值合法性由DTO 上的 {@code @InEnum} 校验，
+ * 本层不再手写containsKey 抛异常（AGENTS.md §13/§14）。
  */
 @Service
 @RequiredArgsConstructor
 public class EquipmentServiceImpl implements EquipmentService {
-
-    private static final Map<Integer, String> MAINTAIN_TYPE = Map.of(1, "保养", 2, "维修", 3, "巡检");
-    private static final Map<Integer, String> MAINTAIN_RESULT = Map.of(1, "正常", 2, "异常");
-    private static final Map<Integer, String> METERING_TYPE = Map.of(1, "强检", 2, "校准");
-    private static final Map<Integer, String> METERING_RESULT = Map.of(1, "合格", 2, "不合格");
-    private static final Map<Integer, String> EQUIP_STATUS = Map.of(1, "在用", 2, "停用", 3, "维修中", 4, "报废");
-    private static final Map<Integer, String> EQUIP_CATEGORY = Map.of(
-            1, "大型影像设备", 2, "检验分析设备", 3, "生命支持设备", 4, "手术室设备",
-            5, "抢救设备", 6, "常规诊疗设备", 7, "其他设备");
 
     private final SysEquipmentMapper equipmentMapper;
     private final BizEquipmentMaintainMapper maintainMapper;
@@ -58,13 +61,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         return s == null ? null : s.trim();
     }
 
-    private static LocalDateTime nowSeconds() {
-        return LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
-    }
-
-    // 维保
-
-    public IPage<EquipmentVO> listPage(EquipmentDTO.QueryPage q) {
+    public IPage<EquipmentVO> listPage(EquipmentQueryPageDTO q) {
         String kw = tr(q.getKeyword());
         LambdaQueryWrapper<SysEquipment> w = new LambdaQueryWrapper<SysEquipment>()
                 .eq(q.getCategory() != null, SysEquipment::getCategory, q.getCategory())
@@ -99,7 +96,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         return vo;
     }
 
-    public IPage<MaintainVO> maintainListPage(EquipmentDTO.MaintainQueryPage q) {
+    public IPage<MaintainVO> maintainListPage(MaintainQueryPageDTO q) {
         requireEquipment(q.getEquipmentId());
         LambdaQueryWrapper<BizEquipmentMaintain> w = new LambdaQueryWrapper<BizEquipmentMaintain>()
                 .eq(BizEquipmentMaintain::getEquipmentId, q.getEquipmentId())
@@ -113,14 +110,8 @@ public class EquipmentServiceImpl implements EquipmentService {
     // 计量
 
     @Transactional(rollbackFor = Exception.class)
-    public MaintainVO maintainCreate(EquipmentDTO.MaintainCreate dto) {
-        if (!MAINTAIN_TYPE.containsKey(dto.getMaintainType())) {
-            throw new BusinessException("维保类型取值不合法（1-保养 2-维修 3-巡检）");
-        }
-        int result = dto.getMaintainResult() == null ? 1 : dto.getMaintainResult();
-        if (!MAINTAIN_RESULT.containsKey(result)) {
-            throw new BusinessException("维保结果取值不合法（1-正常 2-异常）");
-        }
+    public MaintainVO maintainCreate(MaintainCreateDTO dto) {
+        // 码值合法性已由 DTO 的 @InEnum 把关，这里只管跨字段业务规则
         if (dto.getNextMaintainDate() != null && dto.getNextMaintainDate().isBefore(dto.getMaintainDate())) {
             throw new BusinessException("下次维保日期不能早于本次维保日期");
         }
@@ -136,16 +127,16 @@ public class EquipmentServiceImpl implements EquipmentService {
         m.setCost(dto.getCost());
         m.setFaultDesc(tr(dto.getFaultDesc()));
         m.setHandleResult(tr(dto.getHandleResult()));
-        m.setMaintainResult(result);
+        m.setMaintainResult(dto.getMaintainResult() == null
+                ? MaintainResultEnum.NORMAL.getCode() : dto.getMaintainResult());
         m.setHandlerName(StringUtils.hasText(dto.getHandlerName()) ? dto.getHandlerName().trim()
                 : UserUtils.getCurrentEmployeeName());
         m.setCreateBy(UserUtils.getCurrentEmployeeName());
         maintainMapper.insert(m);
 
-        // 回写档案最近维保日期（维保闭环的关键动作）
+        // 回写档案最近维保日期（维保闭环的关键动作）；updateTime 由实体 @TableField 自动填充
         e.setLastMaintainDate(dto.getMaintainDate());
         e.setUpdateBy(UserUtils.getCurrentEmployeeName());
-        e.setUpdateTime(nowSeconds());
         equipmentMapper.updateById(e);
         return toMaintainVo(m);
     }
@@ -170,13 +161,12 @@ public class EquipmentServiceImpl implements EquipmentService {
                     && !Objects.equals(e.getLastMaintainDate(), latest.getMaintainDate())) {
                 e.setLastMaintainDate(latest.getMaintainDate());
                 e.setUpdateBy(UserUtils.getCurrentEmployeeName());
-                e.setUpdateTime(nowSeconds());
                 equipmentMapper.updateById(e);
             }
         }
     }
 
-    public IPage<MeteringVO> meteringListPage(EquipmentDTO.MeteringQueryPage q) {
+    public IPage<MeteringVO> meteringListPage(MeteringQueryPageDTO q) {
         requireEquipment(q.getEquipmentId());
         LambdaQueryWrapper<BizEquipmentMetering> w = new LambdaQueryWrapper<BizEquipmentMetering>()
                 .eq(BizEquipmentMetering::getEquipmentId, q.getEquipmentId())
@@ -190,14 +180,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     // 私有
 
     @Transactional(rollbackFor = Exception.class)
-    public MeteringVO meteringCreate(EquipmentDTO.MeteringCreate dto) {
-        if (!METERING_TYPE.containsKey(dto.getMeteringType())) {
-            throw new BusinessException("计量类型取值不合法（1-强检 2-校准）");
-        }
-        int result = dto.getMeteringResult() == null ? 1 : dto.getMeteringResult();
-        if (!METERING_RESULT.containsKey(result)) {
-            throw new BusinessException("计量结果取值不合法（1-合格 2-不合格）");
-        }
+    public MeteringVO meteringCreate(MeteringCreateDTO dto) {
         if (dto.getValidUntil().isBefore(dto.getMeteringDate())) {
             throw new BusinessException("有效期至不能早于计量日期");
         }
@@ -210,7 +193,8 @@ public class EquipmentServiceImpl implements EquipmentService {
         m.setMeteringType(dto.getMeteringType());
         m.setMeteringDate(dto.getMeteringDate());
         m.setValidUntil(dto.getValidUntil());
-        m.setMeteringResult(result);
+        m.setMeteringResult(dto.getMeteringResult() == null
+                ? MeteringResultEnum.QUALIFIED.getCode() : dto.getMeteringResult());
         m.setCertNo(tr(dto.getCertNo()));
         m.setAgency(tr(dto.getAgency()));
         m.setCreateBy(UserUtils.getCurrentEmployeeName());
@@ -256,7 +240,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setEquipmentCode(e.getEquipmentCode());
         vo.setEquipmentName(e.getEquipmentName());
         vo.setCategory(e.getCategory());
-        vo.setCategoryText(e.getCategory() == null ? null : EQUIP_CATEGORY.get(e.getCategory()));
+        vo.setCategoryText(EquipCategoryEnum.getText(e.getCategory()));
         vo.setDeptId(e.getDeptId());
         vo.setDeptName(e.getDeptName());
         vo.setBrand(e.getBrand());
@@ -264,7 +248,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setPurchaseDate(e.getPurchaseDate());
         vo.setPurchasePrice(e.getPurchasePrice());
         vo.setStatus(e.getStatus());
-        vo.setStatusText(e.getStatus() == null ? null : EQUIP_STATUS.get(e.getStatus()));
+        vo.setStatusText(EquipStatusEnum.getText(e.getStatus()));
         vo.setMaintainCycleDays(e.getMaintainCycleDays());
         vo.setLastMaintainDate(e.getLastMaintainDate());
         if (e.getLastMaintainDate() != null && e.getMaintainCycleDays() != null && e.getMaintainCycleDays() > 0) {
@@ -283,14 +267,14 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setEquipmentCode(m.getEquipmentCode());
         vo.setEquipmentName(m.getEquipmentName());
         vo.setMaintainType(m.getMaintainType());
-        vo.setMaintainTypeText(MAINTAIN_TYPE.get(m.getMaintainType()));
+        vo.setMaintainTypeText(MaintainTypeEnum.getText(m.getMaintainType()));
         vo.setMaintainDate(m.getMaintainDate());
         vo.setNextMaintainDate(m.getNextMaintainDate());
         vo.setCost(m.getCost());
         vo.setFaultDesc(m.getFaultDesc());
         vo.setHandleResult(m.getHandleResult());
         vo.setMaintainResult(m.getMaintainResult());
-        vo.setMaintainResultText(MAINTAIN_RESULT.get(m.getMaintainResult()));
+        vo.setMaintainResultText(MaintainResultEnum.getText(m.getMaintainResult()));
         vo.setHandlerName(m.getHandlerName());
         vo.setCreateBy(m.getCreateBy());
         vo.setCreateTime(m.getCreateTime());
@@ -304,12 +288,12 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setEquipmentCode(m.getEquipmentCode());
         vo.setEquipmentName(m.getEquipmentName());
         vo.setMeteringType(m.getMeteringType());
-        vo.setMeteringTypeText(METERING_TYPE.get(m.getMeteringType()));
+        vo.setMeteringTypeText(MeteringTypeEnum.getText(m.getMeteringType()));
         vo.setMeteringDate(m.getMeteringDate());
         vo.setValidUntil(m.getValidUntil());
         vo.setExpired(m.getValidUntil() != null && m.getValidUntil().isBefore(LocalDate.now()));
         vo.setMeteringResult(m.getMeteringResult());
-        vo.setMeteringResultText(METERING_RESULT.get(m.getMeteringResult()));
+        vo.setMeteringResultText(MeteringResultEnum.getText(m.getMeteringResult()));
         vo.setCertNo(m.getCertNo());
         vo.setAgency(m.getAgency());
         vo.setCreateBy(m.getCreateBy());

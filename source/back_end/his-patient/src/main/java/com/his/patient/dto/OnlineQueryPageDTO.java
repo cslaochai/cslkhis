@@ -1,6 +1,8 @@
 package com.his.patient.dto;
 
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 
@@ -8,7 +10,8 @@ import java.io.Serializable;
  * 线上问诊分页查询入参（listPage 为 POST）。
  */
 @Data
-public class OnlineQueryPageDTO implements Serializable {
+@EqualsAndHashCode(callSuper = true)
+public class OnlineQueryPageDTO extends PageParam implements Serializable {
 
     /** 单号/患者姓名模糊 */
     private String keyword;
@@ -27,10 +30,4 @@ public class OnlineQueryPageDTO implements Serializable {
 
     /** 仅待接诊（工作台待办用） */
     private Boolean waitingOnly;
-
-    /** 页码 */
-    private Integer pageNum = 1;
-
-    /** 每页条数 */
-    private Integer pageSize = 10;
 }

@@ -99,9 +99,6 @@ public class DrugTransferServiceImpl implements DrugTransferService {
     @Transactional(rollbackFor = Exception.class)
     public DrugTransferVO upsert(DrugTransferUpsertDTO dto) {
         DrugTransferTypeEnum type = DrugTransferTypeEnum.fromCode(dto.getTransferType());
-        if (type == null) {
-            throw new BusinessException("调拨方向只能是 1-药库下拨药房 / 2-药房退回药库");
-        }
         String reason = requireText(dto.getReason(), "调拨事由", 200);
         String operator = UserUtils.getCurrentEmployeeName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);

@@ -1,10 +1,12 @@
 package com.his.patient.dto;
 
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -59,7 +61,8 @@ public class DischargeDrugDTO {
 
     /** 分页查询 */
     @Data
-    public static class QueryPage implements Serializable {
+    @EqualsAndHashCode(callSuper = true)
+    public static class QueryPage extends PageParam implements Serializable {
 
         /** 入院ID */
         private Long admissionId;
@@ -72,12 +75,6 @@ public class DischargeDrugDTO {
 
         /** 发药状态（1-待发药 2-已发药） */
         private Integer dispenseStatus;
-
-        /** 页码 */
-        private Integer pageNum = 1;
-
-        /** 每页条数 */
-        private Integer pageSize = 10;
     }
 
     /** 批量发药 */

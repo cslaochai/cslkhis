@@ -71,7 +71,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
                 // 二级键：同 visit_date 的行顺序不稳 → 翻页会重复/丢行且不报错
                 .orderByDesc(BizPathologyOrder::getId);
         Page<BizPathologyOrder> page = orderMapper.selectPage(
-                new Page<>(q.getPageNum() == null ? 1 : q.getPageNum(), q.getPageSize() == null ? 20 : q.getPageSize()), w);
+                new Page<>(q.getPageNum(), q.getPageSize()), w);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 toListVo(page.getRecords()));
     }

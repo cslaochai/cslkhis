@@ -212,9 +212,6 @@ public class PacuServiceImpl implements PacuService {
     @Transactional(rollbackFor = Exception.class)
     public OperationChargeSummaryVO leave(PacuLeaveDTO dto) {
         BizAnesthesiaPacu entity = mustInRoom(dto == null ? null : dto.getPacuId());
-        if (!PacuDispositionEnum.isValid(dto.getDisposition())) {
-            throw new BusinessException("出室去向取值不合法（应为 1-回病房 2-转ICU 3-继续留观）");
-        }
         if (entity.getAldreteTotal() == null) {
             throw new BusinessException("尚未完成 Aldrete 评分，不能出室");
         }

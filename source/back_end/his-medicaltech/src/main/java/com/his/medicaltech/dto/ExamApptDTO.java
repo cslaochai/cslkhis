@@ -1,9 +1,11 @@
 package com.his.medicaltech.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -19,11 +21,8 @@ public class ExamApptDTO {
     // 设备
 
     @Data
-    public static class DeviceQuery {
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 20;
+    @EqualsAndHashCode(callSuper = true)
+    public static class DeviceQuery extends PageParam {
         /** 关键字 */
         private String keyword;
         /** 设备类型 */
@@ -160,11 +159,8 @@ public class ExamApptDTO {
     // 待预约申请 / 预约单
 
     @Data
-    public static class ApplyQuery {
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 20;
+    @EqualsAndHashCode(callSuper = true)
+    public static class ApplyQuery extends PageParam {
         /** 关键字 */
         private String keyword;
         /** 患者ID */
@@ -181,11 +177,8 @@ public class ExamApptDTO {
     }
 
     @Data
-    public static class ApptQuery {
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 20;
+    @EqualsAndHashCode(callSuper = true)
+    public static class ApptQuery extends PageParam {
         private String apptNo;
         /** 关键字 */
         private String keyword;

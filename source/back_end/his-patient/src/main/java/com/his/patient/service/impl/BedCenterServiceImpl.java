@@ -207,12 +207,6 @@ public class BedCenterServiceImpl implements BedCenterService {
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
-        if (BedPriorityEnum.getText(dto.getPriority() == null ? 1 : dto.getPriority()) == null) {
-            throw new BusinessException("优先级取值不合法（应为 1-普通 2-急 3-危重）");
-        }
-        if (BedGenderLimitEnum.getText(dto.getGenderLimit() == null ? 0 : dto.getGenderLimit()) == null) {
-            throw new BusinessException("性别限制取值不合法（应为 0-不限 1-限男床 2-限女床）");
-        }
 
         BizAdmissionOrder order = null;
         if (dto.getAdmissionOrderId() != null) {
@@ -593,9 +587,6 @@ public class BedCenterServiceImpl implements BedCenterService {
         // 有证 = 门诊转住院（途径由 InpatientService 强制为 1）；无证必须有途径（病案首页必填）
         if (wait.getAdmissionOrderId() == null && dto.getAdmitWay() == null) {
             throw new BusinessException("入院途径不能为空（病案首页必填项）");
-        }
-        if (dto.getAdmitWay() != null && !AdmitWayEnum.isValid(dto.getAdmitWay())) {
-            throw new BusinessException("入院途径取值不合法（应为 1-门诊 2-急诊 3-转院 4-其他）");
         }
 
         InpatientAdmitDTO admitDto = new InpatientAdmitDTO();

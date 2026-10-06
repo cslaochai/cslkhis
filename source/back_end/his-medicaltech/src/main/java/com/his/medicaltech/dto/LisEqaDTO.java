@@ -1,9 +1,11 @@
 package com.his.medicaltech.dto;
 
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -48,12 +50,8 @@ public class LisEqaDTO {
     }
 
     @Data
-    public static class PlanQuery {
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 20;
-
+    @EqualsAndHashCode(callSuper = true)
+    public static class PlanQuery extends PageParam {
         private Integer planYear;
 
         private Integer batchNo;
@@ -165,12 +163,8 @@ public class LisEqaDTO {
     }
 
     @Data
-    public static class SampleQuery {
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 20;
-
+    @EqualsAndHashCode(callSuper = true)
+    public static class SampleQuery extends PageParam {
         /** 质评批次ID */
         private Long planId;
 
@@ -258,12 +252,8 @@ public class LisEqaDTO {
     }
 
     @Data
-    public static class CompareQuery {
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 20;
-
+    @EqualsAndHashCode(callSuper = true)
+    public static class CompareQuery extends PageParam {
         /** 质评批次ID */
         private Long planId;
 

@@ -182,9 +182,6 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
             throw new BusinessException("该住院尚未办理「死亡」离院，死亡事实未确认，不能登记");
         }
         Integer deathType = dto.getDeathType();
-        if (deathType == null || deathType < DeathTypeEnum.DISEASE.getCode() || deathType > DeathTypeEnum.UNKNOWN.getCode()) {
-            throw new BusinessException("死亡类型取值不合法（见字典 his_death_type）");
-        }
 
         BizDeathRegistration register;
         if (dto.getId() == null) {

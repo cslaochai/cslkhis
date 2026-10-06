@@ -157,9 +157,7 @@ public class WardDispenseServiceImpl implements WardDispenseService {
 
     @Override
     public PageResult<WardDispenseVO> listPage(WardDispenseQueryPageDTO dto) {
-        int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
-        int pageSize = dto.getPageSize() != null ? dto.getPageSize() : 10;
-        Page<WardDispenseVO> page = new Page<>(pageNum, pageSize);
+        Page<WardDispenseVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<WardDispenseVO> records = dispenseMapper.selectDispensePage(
                 page, dto.getWardId(), dto.getDispenseDate(), dto.getPatientName(), dto.getStatus());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);

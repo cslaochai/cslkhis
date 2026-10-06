@@ -1,9 +1,11 @@
 package com.his.patient.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -101,7 +103,8 @@ public class NurseScheduleDTO {
 
     /** 台账分页（跨病区，护理部查排班历史用） */
     @Data
-    public static class QueryPage {
+    @EqualsAndHashCode(callSuper = true)
+    public static class QueryPage extends PageParam {
         /** 关键字 */
         private String keyword;
         /** 病区ID */
@@ -116,10 +119,6 @@ public class NurseScheduleDTO {
         private LocalDate endDate;
         /** 状态（1-上班 2-休息 3-请假 4-培训 5-停班） */
         private Integer scheduleStatus;
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 10;
     }
 
     /** 人力配置标准保存（shiftId=0 的病区级行只认工时/连班/总人数，班次行只认人数） */

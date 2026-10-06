@@ -1,8 +1,10 @@
 package com.his.patient.dto;
 
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -45,14 +47,11 @@ public class CheckupDTO {
 
     /** 套餐分页 */
     @Data
-    public static class PackageQuery {
+    @EqualsAndHashCode(callSuper = true)
+    public static class PackageQuery extends PageParam {
         /** 关键字 */
         private String keyword;
         private Integer status;
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 10;
     }
 
     /** 体检登记 */
@@ -73,16 +72,13 @@ public class CheckupDTO {
 
     /** 登记分页 */
     @Data
-    public static class RecordQuery {
+    @EqualsAndHashCode(callSuper = true)
+    public static class RecordQuery extends PageParam {
         /** 关键字 */
         private String keyword;
         private Integer recordStatus;
         private Integer personType;
         private LocalDate checkupDate;
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 10;
     }
 
     /** 单项结果录入 */

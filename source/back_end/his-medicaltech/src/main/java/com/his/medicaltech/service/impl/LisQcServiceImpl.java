@@ -59,7 +59,7 @@ public class LisQcServiceImpl implements LisQcService {
                 .eq(q.getStatus() != null, BizLisQcPlan::getStatus, q.getStatus())
                 .orderByDesc(BizLisQcPlan::getId);
         Page<BizLisQcPlan> page = planMapper.selectPage(
-                new Page<>(q.getPageNum() == null ? 1 : q.getPageNum(), q.getPageSize() == null ? 20 : q.getPageSize()), w);
+                new Page<>(q.getPageNum(), q.getPageSize()), w);
         List<LisQcVO.PlanVO> vos = new ArrayList<>();
         for (BizLisQcPlan p : page.getRecords()) {
             vos.add(toPlanVo(p));
@@ -123,10 +123,6 @@ public class LisQcServiceImpl implements LisQcService {
     @Transactional(rollbackFor = Exception.class)
     public void planToggle(Long planId, Integer status) {
         BizLisQcPlan p = requirePlan(planId);
-        // ③ 业务规则：码值合法性收口（字段必填已由入参注解约束）
-        if (status == null || (status != 0 && status != 1)) {
-            throw new BusinessException("状态码值非法（0-停用 1-启用）");
-        }
         p.setStatus(status);
         planMapper.updateById(p);
     }
@@ -223,7 +219,7 @@ public class LisQcServiceImpl implements LisQcService {
                 .orderByDesc(BizLisQcRecord::getQcTime)
                 .orderByDesc(BizLisQcRecord::getId);
         Page<BizLisQcRecord> page = recordMapper.selectPage(
-                new Page<>(q.getPageNum() == null ? 1 : q.getPageNum(), q.getPageSize() == null ? 20 : q.getPageSize()), w);
+                new Page<>(q.getPageNum(), q.getPageSize()), w);
         List<LisQcVO.RecordVO> vos = new ArrayList<>();
         for (BizLisQcRecord r : page.getRecords()) {
             vos.add(toRecordVo(r));

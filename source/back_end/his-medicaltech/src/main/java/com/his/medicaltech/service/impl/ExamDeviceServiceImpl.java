@@ -74,7 +74,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
                 .eq(q.getStatus() != null, BizExamDevice::getStatus, q.getStatus())
                 .orderByAsc(BizExamDevice::getDeviceCode);
         Page<BizExamDevice> page = deviceMapper.selectPage(
-                new Page<>(nz(q.getPageNum(), 1), nz(q.getPageSize(), 20)), w);
+                new Page<>(q.getPageNum(), q.getPageSize()), w);
         Map<Long, Integer> itemCounts = itemCountByDevice();
         Map<Long, String> equipmentNames = equipmentNameMap();
         List<ExamApptVO.DeviceVO> records = new ArrayList<>();

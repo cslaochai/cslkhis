@@ -195,10 +195,6 @@ public class VteServiceImpl implements VteService {
             throw new BusinessException("措施码不合法（BASIC-基础预防 / PHYSICAL-物理预防 / DRUG-药物预防）");
         }
         Integer status = dto.getExecuteStatus();
-        // 保留（类别③）：落实状态码值取值区间（0~3）
-        if (status == null || status < 0 || status > 3) {
-            throw new BusinessException("落实状态取值不合法（0-待落实 1-已落实 2-禁忌未用 3-患者拒绝）");
-        }
         // 禁忌/拒绝必须给理由：否则"未落实"和"有原因未落实"在系统里是一回事，落实率就说不清
         boolean notDone = status == VtePreventStatusEnum.CONTRAINDICATION.getCode() || status == VtePreventStatusEnum.REFUSED.getCode();
         String reason = dto.getReason() == null ? null : dto.getReason().trim();
@@ -317,13 +313,6 @@ public class VteServiceImpl implements VteService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public VteEventVO eventUpsert(VteEventUpsertDTO dto) {
-        // 保留（类别③）：事件类型 / 发生时机码值取值区间（1~3、1~2）
-        if (dto.getEventType() == null || dto.getEventType() < 1 || dto.getEventType() > 3) {
-            throw new BusinessException("事件类型取值不合法（1-DVT 2-肺栓塞 3-预防相关出血）");
-        }
-        if (dto.getOnsetType() == null || dto.getOnsetType() < 1 || dto.getOnsetType() > 2) {
-            throw new BusinessException("发生时机取值不合法（1-院内发生 2-入院时已存在）");
-        }
         // 保留（类别③）：确诊日期不能落在未来（是否必填由入参注解负责）
         if (dto.getDiagnoseDate().isAfter(LocalDate.now())) {
             throw new BusinessException("确诊日期不能晚于今天");
@@ -415,7 +404,8 @@ public class VteServiceImpl implements VteService {
         String operator = currentName();
 
         List<VteStatsVO> result = new ArrayList<>();
-        if (dto.getScopeType() == StatsScopeEnum.DEPT.getCode()) {
+        // scopeType 合法性由 DTO 的 @InEnum 把关（1-全院 2-科室），这里只分派
+        if (Objects.equals(StatsScopeEnum.DEPT.getCode(), dto.getScopeType())) {
             List<DeptCountRowVO> depts = statMapper.selectDischargeDepts(from, to);
             if (CollectionUtils.isEmpty(depts)) {
                 throw new BusinessException(ym + " 没有已出院患者，无法按科室生成快照");
@@ -425,11 +415,9 @@ public class VteServiceImpl implements VteService {
                         d.getDeptId(), d.getDeptName());
                 result.add(toStatsVO(upsertRow(row, operator, null)));
             }
-        } else if (dto.getScopeType() == StatsScopeEnum.HOSPITAL.getCode()) {
+        } else {
             BizVteStats row = compute(dto.getStatMonth(), from, to, StatsScopeEnum.HOSPITAL.getCode(), null, null);
             result.add(toStatsVO(upsertRow(row, operator, null)));
-        } else {
-            throw new BusinessException("统计范围取值不合法（1-全院 2-科室）");
         }
         log.info("VTE 防控指标生成 月份={} 范围={} 行数={} 操作人={}", dto.getStatMonth(), dto.getScopeType(),
                 result.size(), operator);

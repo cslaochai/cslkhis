@@ -2,10 +2,6 @@ package com.his.pharmacy.enums;
 
 import lombok.Getter;
 
-import java.util.Arrays;
-import java.util.Set;
-import java.util.stream.Collectors;
-
 /**
  * 抗菌药物切口Review问题类型枚举（字符串码 41~48）。
  */
@@ -49,10 +45,19 @@ public enum AntibioticProblemTypeEnum {
         return item != null ? item.label : "";
     }
 
+    /** 码值是否合法（写入侧校验用；null 不合法） */
+    public static boolean isValid(String code) {
+        return fromCode(code) != null;
+    }
+
     /**
-     * 全部合法问题码（写入侧校验用）。
+     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」，保留原始码值便于排查脏数据。
      */
-    public static Set<String> allCodes() {
-        return Arrays.stream(values()).map(AntibioticProblemTypeEnum::getCode).collect(Collectors.toSet());
+    public static String labelOrUnknown(String code) {
+        if (code == null) {
+            return "未知";
+        }
+        AntibioticProblemTypeEnum item = fromCode(code);
+        return item != null ? item.label : "未知(" + code + ")";
     }
 }

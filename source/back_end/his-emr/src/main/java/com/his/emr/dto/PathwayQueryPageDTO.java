@@ -1,6 +1,8 @@
 package com.his.emr.dto;
 
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serializable;
 
@@ -8,7 +10,8 @@ import java.io.Serializable;
  * 临床路径模板分页查询入参（listPage 为 POST）。
  */
 @Data
-public class PathwayQueryPageDTO implements Serializable {
+@EqualsAndHashCode(callSuper = true)
+public class PathwayQueryPageDTO extends PageParam implements Serializable {
 
     /**
      * 编码/名称/诊断模糊
@@ -24,14 +27,4 @@ public class PathwayQueryPageDTO implements Serializable {
      * 适用科室ID
      */
     private Long deptId;
-
-    /**
-     * 页码
-     */
-    private Integer pageNum = 1;
-
-    /**
-     * 每页条数
-     */
-    private Integer pageSize = 10;
 }

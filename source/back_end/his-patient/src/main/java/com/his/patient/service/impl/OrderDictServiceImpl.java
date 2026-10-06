@@ -109,9 +109,6 @@ public class OrderDictServiceImpl implements OrderDictService {
         }
 
         Integer status = dto.getStatus() == null ? 1 : dto.getStatus();
-        if (!Objects.equals(0, status) && !Objects.equals(1, status)) {
-            throw new BusinessException("状态取值不合法（应为 0-停用 1-启用）");
-        }
 
         String operator = currentUsername();
         if (dto.getId() == null) {

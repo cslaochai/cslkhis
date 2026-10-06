@@ -28,6 +28,13 @@ public enum NutritionScreenTypeEnum {
     }
 
     /**
+     * 码值是否合法（写入侧校验用；null 不合法）
+     */
+    public static boolean isValid(Integer code) {
+        return code != null && fromCode(code) != null;
+    }
+
+    /**
      * 码值不在枚举内（脏数据）返回 null，由调用侧决定兜底文案，不能回落到合法文案。
      */
     public static String getText(Integer code) {

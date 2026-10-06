@@ -72,11 +72,6 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     private static final int SIGNATURE_MAX = 512 * 1024;
 
     /**
-     * 请假类别合法码（字典 his_leave_type）
-     */
-    private static final Set<Integer> LEAVE_TYPES = Set.of(
-            InpatientLeaveTypeEnum.DAY_TRIP.getCode(), InpatientLeaveTypeEnum.OVERNIGHT.getCode(), InpatientLeaveTypeEnum.OTHER.getCode());
-    /**
      * 与患者关系合法码（字典 his_notice_relation，与病危重通知同一码表）
      */
     private static final Set<Integer> RELATIONS = Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 99);
@@ -220,9 +215,6 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         }
         if (!Objects.equals(snapshot.getAdmitStatus(), AdmitStatusEnum.IN_HOSPITAL.getCode())) {
             throw new BusinessException("患者已不在院，不能填写请假单（请假必须发生在住院期间）");
-        }
-        if (dto.getLeaveType() == null || !LEAVE_TYPES.contains(dto.getLeaveType())) {
-            throw new BusinessException("请假类别取值不合法（见字典 his_leave_type）");
         }
         LocalDateTime expectedLeave = toSeconds(dto.getExpectedLeaveTime());
         LocalDateTime expectedReturn = toSeconds(dto.getExpectedReturnTime());

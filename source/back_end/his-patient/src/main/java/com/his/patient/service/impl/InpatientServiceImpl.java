@@ -271,9 +271,6 @@ public class InpatientServiceImpl implements InpatientService {
             if (dto.getAdmitWay() == null) {
                 throw new BusinessException("入院途径不能为空（病案首页必填项）");
             }
-            if (!AdmitWayEnum.isValid(dto.getAdmitWay())) {
-                throw new BusinessException("入院途径取值不合法（应为 1-门诊 2-急诊 3-转院 4-其他）");
-            }
         }
         int admitWay = order != null ? 1 : dto.getAdmitWay();
 
@@ -459,9 +456,6 @@ public class InpatientServiceImpl implements InpatientService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void discharge(InpatientDischargeDTO dto) {
-        if (!DischargeWayEnum.isValid(dto.getDischargeWay())) {
-            throw new BusinessException("离院方式取值不合法");
-        }
         BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");

@@ -1,8 +1,10 @@
 package com.his.medicaltech.dto;
 
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -71,12 +73,8 @@ public class PathologyDTO {
 
     /** 分页 / 列表查询（条件一律下推后端，前端不切片） */
     @Data
-    public static class Query {
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 20;
-
+    @EqualsAndHashCode(callSuper = true)
+    public static class Query extends PageParam {
         /** 病理号 */
         private String orderNo;
 

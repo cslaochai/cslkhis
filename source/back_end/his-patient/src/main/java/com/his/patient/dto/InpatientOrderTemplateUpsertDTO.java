@@ -1,5 +1,7 @@
 package com.his.patient.dto;
 
+import com.his.common.validation.InEnum;
+import com.his.patient.enums.OrderTypeEnum;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -33,6 +35,7 @@ public class InpatientOrderTemplateUpsertDTO implements Serializable {
     /**
      * 默认医嘱类型：1-长期 2-临时（缺省按临时）
      */
+    @InEnum(value = OrderTypeEnum.class, message = "医嘱类型取值不合法（应为 1-长期 2-临时）")
     private Integer orderType;
 
     /** 备注/适用场景说明 */

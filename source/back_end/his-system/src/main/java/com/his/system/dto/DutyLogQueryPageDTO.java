@@ -1,7 +1,9 @@
 package com.his.system.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 
@@ -12,17 +14,8 @@ import java.time.LocalDate;
  * 而默认带出当天和前一天是必须的 —— 接班人一进页面就要看到昨夜留了什么。
  */
 @Data
-public class DutyLogQueryPageDTO {
-
-    /**
-     * 页码
-     */
-    private Integer pageNum = 1;
-
-    /**
-     * 每页条数
-     */
-    private Integer pageSize = 10;
+@EqualsAndHashCode(callSuper = true)
+public class DutyLogQueryPageDTO extends PageParam {
 
     /**
      * 起始日期（含，默认 7 天前）

@@ -1,8 +1,10 @@
 package com.his.medicaltech.dto;
 
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 
@@ -68,12 +70,8 @@ public class EndoscopyDTO {
     }
 
     @Data
-    public static class Query {
-        /** 页码 */
-        private Integer pageNum = 1;
-        /** 每页条数 */
-        private Integer pageSize = 20;
-
+    @EqualsAndHashCode(callSuper = true)
+    public static class Query extends PageParam {
         /** 内镜检查号 */
         private String recordNo;
 

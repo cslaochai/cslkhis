@@ -1,8 +1,10 @@
 package com.his.report.dto;
 
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 
@@ -60,7 +62,8 @@ public class PerfDTO {
      * 成本分页
      */
     @Data
-    public static class CostQuery {
+    @EqualsAndHashCode(callSuper = true)
+    public static class CostQuery extends PageParam {
         /**
          * 科室ID
          */
@@ -69,14 +72,6 @@ public class PerfDTO {
          * 核算月份
          */
         private String costMonth;
-        /**
-         * 页码
-         */
-        private Integer pageNum = 1;
-        /**
-         * 每页条数
-         */
-        private Integer pageSize = 10;
     }
 
     /**
@@ -104,7 +99,8 @@ public class PerfDTO {
      * 绩效结果分页
      */
     @Data
-    public static class PerfQuery {
+    @EqualsAndHashCode(callSuper = true)
+    public static class PerfQuery extends PageParam {
         /**
          * 科室ID
          */
@@ -113,13 +109,5 @@ public class PerfDTO {
          * 核算月份
          */
         private String costMonth;
-        /**
-         * 页码
-         */
-        private Integer pageNum = 1;
-        /**
-         * 每页条数
-         */
-        private Integer pageSize = 10;
     }
 }

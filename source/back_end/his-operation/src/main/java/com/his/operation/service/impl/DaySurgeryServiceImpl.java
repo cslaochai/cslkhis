@@ -129,9 +129,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
 
     @Override
     public PageResult<DaySurgeryItemVO> itemListPage(DaySurgeryItemQueryPageDTO dto) {
-        int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
-        int pageSize = dto.getPageSize() != null ? dto.getPageSize() : 10;
-        Page<DaySurgeryItemVO> page = new Page<>(pageNum, pageSize);
+        Page<DaySurgeryItemVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<DaySurgeryItemVO> records = itemMapper.selectItemPage(page, trimToNull(dto.getKeyword()),
                 dto.getDeptId(), dto.getEnabledOnly());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
@@ -199,9 +197,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
 
     @Override
     public PageResult<DaySurgeryApplyVO> listPage(DaySurgeryQueryPageDTO dto) {
-        int pageNum = dto.getPageNum() != null ? dto.getPageNum() : 1;
-        int pageSize = dto.getPageSize() != null ? dto.getPageSize() : 10;
-        Page<DaySurgeryApplyVO> page = new Page<>(pageNum, pageSize);
+        Page<DaySurgeryApplyVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         List<DaySurgeryApplyVO> records = applyMapper.selectApplyPage(page, trimToNull(dto.getKeyword()),
                 dto.getStatus(), dto.getItemId(), dto.getDeptId(), dto.getOpenOnly(), dto.getOverdueOnly(),
                 trimToNull(dto.getDateFrom()), trimToNull(dto.getDateTo()));

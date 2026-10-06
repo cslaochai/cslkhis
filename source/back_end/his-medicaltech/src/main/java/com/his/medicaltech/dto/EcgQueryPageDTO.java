@@ -1,23 +1,15 @@
 package com.his.medicaltech.dto;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import com.his.common.base.PageParam;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 心电工作台分页查询（sql/173）。
  */
 @Data
-public class EcgQueryPageDTO {
-
-    /** 页码 */
-    @Min(value = 1, message = "页码从 1 开始")
-    private Integer pageNum = 1;
-
-    /** 每页条数 */
-    @Min(value = 1, message = "每页条数至少 1")
-    @Max(value = 200, message = "每页条数不能超过 200")
-    private Integer pageSize = 10;
+@EqualsAndHashCode(callSuper = true)
+public class EcgQueryPageDTO extends PageParam {
 
     /** 关键字：患者姓名 / 患者号 / 记录号 / 检查项目名 */
     private String keyword;

@@ -1,6 +1,9 @@
 package com.his.medicaltech.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.validation.InEnum;
+import com.his.medicaltech.enums.BloodComponentEnum;
+import com.his.medicaltech.enums.CrossmatchResultEnum;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -65,6 +68,7 @@ public class TransfusionCrossmatchDTO implements Serializable {
         private String bagRh;
 
         /** 血液品种（可空 = 与申请单一致；填了就必须与申请单一致，防止"申请血浆发红细胞"） */
+        @InEnum(value = BloodComponentEnum.class, message = "血液品种取值不合法（1-红细胞悬液 2-血浆 3-血小板 4-冷沉淀 5-全血 6-其他）")
         private Integer bloodComponent;
 
         /** 规格 */
@@ -94,6 +98,8 @@ public class TransfusionCrossmatchDTO implements Serializable {
         private String crossmatchSide;
 
         /** 配血结论（必填）：1-相合 2-不合 */
+        @NotNull(message = "配血结论不能为空（没有配血结论的血袋等于没配）")
+        @InEnum(value = CrossmatchResultEnum.class, message = "配血结论取值不合法（1-相合 2-不相合 3-可疑凝集）")
         private Integer crossmatchResult;
 
         /** 备注 */

@@ -684,8 +684,8 @@ public class LisEqaServiceImpl implements LisEqaService {
     // 内部
 
     @SuppressWarnings("unchecked")
-    private <T> Page<T> page(Integer pageNum, Integer pageSize) {
-        return (Page<T>) new Page<>(pageNum == null ? 1 : pageNum, pageSize == null ? 20 : pageSize);
+    private <T> Page<T> page(int pageNum, int pageSize) {
+        return (Page<T>) new Page<>(pageNum, pageSize);
     }
 
     private BizLisEqaPlan requirePlan(Long id) {
