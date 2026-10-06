@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.common.util.TimeUtil;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.patient.enums.OrderExecStatusEnum;
 import com.his.patient.enums.OrderSourceEnum;
@@ -48,7 +49,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -137,10 +137,6 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     /**
      * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
      */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(InpatientOrderUpsertDTO dto) {
@@ -178,7 +174,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             }
         }
 
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
 
         // 准入闸（sql/155）：手术医嘱（order_class=6）要求开单人本人有「手术类」技术授权。
         // 级别不在这里判 —— 医嘱只写"要做手术"，几级由手术申请单定，级别闸落在排台（见 OperationApplyServiceImpl）。
@@ -229,8 +225,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         }
 
         String orderGroup = StringUtils.hasText(dto.getOrderGroup()) ? dto.getOrderGroup() : nextOrderGroup();
-        LocalDateTime startTime = toSeconds(dto.getStartTime() != null ? dto.getStartTime() : now);
-        LocalDateTime planEndTime = toSeconds(dto.getPlanEndTime());
+        LocalDateTime startTime = TimeUtil.toSeconds(dto.getStartTime() != null ? dto.getStartTime() : now);
+        LocalDateTime planEndTime = TimeUtil.toSeconds(dto.getPlanEndTime());
         if (planEndTime != null && planEndTime.isBefore(startTime)) {
             throw new BusinessException("计划结束时间不能早于开始时间");
         }
@@ -323,7 +319,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (dto.getOrderType() != null && !Objects.equals(dto.getOrderType(), order.getOrderType())) {
             throw new BusinessException("修改医嘱不能改变医嘱类型（同一组套必须同起同停）；如需变更请停止原组套后重新开立");
         }
-        if (dto.getStartTime() != null && !toSeconds(dto.getStartTime()).equals(order.getStartTime())) {
+        if (dto.getStartTime() != null && !TimeUtil.toSeconds(dto.getStartTime()).equals(order.getStartTime())) {
             throw new BusinessException("修改医嘱不能改变开始时间（同一组套必须同起同停）；如需变更请停止原组套后重新开立");
         }
         if (dto.getIsUrgent() != null
@@ -347,7 +343,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         order.setPrice(price);
         order.setAmount(qty.multiply(price).setScale(2, RoundingMode.HALF_UP));
         if (dto.getPlanEndTime() != null) {
-            order.setPlanEndTime(toSeconds(dto.getPlanEndTime()));
+            order.setPlanEndTime(TimeUtil.toSeconds(dto.getPlanEndTime()));
         }
         if (dto.getRemark() != null) {
             order.setRemark(dto.getRemark());
@@ -414,7 +410,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             throw new BusinessException("请选择要校对的医嘱");
         }
 
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         Long nurseId = currentEmpId();
         String nurseName = currentName();
 
@@ -598,7 +594,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
                     + "」，只有「已校对 / 执行中」的医嘱可以停止；「待校对」的请改用作废");
         }
 
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         Long doctorId = currentEmpId();
         String doctorName = currentName();
 
@@ -688,7 +684,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             order.setStopDoctorName(doctorName);
             order.setStopReason(dto.getCancelReason());
             orderMapper.updateById(order);
-            syncDietPlanOnStopOrCancel(order, toSeconds(LocalDateTime.now()), dto.getCancelReason());
+            syncDietPlanOnStopOrCancel(order, TimeUtil.toSeconds(LocalDateTime.now()), dto.getCancelReason());
         }
         log.info("作废医嘱 组套={} 条数={} 原因={} 操作人={}",
                 target.getOrderGroup(), targets.size(), dto.getCancelReason(), doctorName);
@@ -761,9 +757,6 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             throw new BusinessException("请选择要处理的执行记录");
         }
         int status = dto.getExecStatus() != null ? dto.getExecStatus() : ExecStatusEnum.EXECUTED.getCode();
-        if (!Objects.equals(ExecStatusEnum.EXECUTED.getCode(), status) && !Objects.equals(ExecStatusEnum.SKIPPED.getCode(), status)) {
-            throw new BusinessException("执行结果取值不合法（应为 2-已执行 3-已跳过）");
-        }
         if (Objects.equals(ExecStatusEnum.SKIPPED.getCode(), status) && !StringUtils.hasText(dto.getExecNote())) {
             throw new BusinessException("跳过必须写明原因（飞检问的是「这条医嘱为什么没有执行记录」，答「删了」不成立）");
         }
@@ -772,7 +765,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             throw new BusinessException("请选择要处理的执行记录");
         }
 
-        LocalDateTime execTime = toSeconds(dto.getExecTime() != null ? dto.getExecTime() : LocalDateTime.now());
+        LocalDateTime execTime = TimeUtil.toSeconds(dto.getExecTime() != null ? dto.getExecTime() : LocalDateTime.now());
         Long nurseId = currentEmpId();
         String nurseName = currentName();
 
@@ -930,7 +923,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
      * —— 否则"未校对不可执行"这条铁律会被补计划悄悄绕过。
      */
     private void backfillTodayPlans(Long admissionId, Long patientId) {
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         List<BizInpatientOrder> actives = orderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
                 .eq(BizInpatientOrder::getOrderType, OrderTypeEnum.LONG.getCode())
                 .in(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.VERIFIED.getCode(), InpatientOrderStatusEnum.EXECUTING.getCode())

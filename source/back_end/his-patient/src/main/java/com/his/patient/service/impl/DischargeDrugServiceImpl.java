@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.DischargeDrugDTO;
 import com.his.patient.entity.BizDischargeDrug;
@@ -70,7 +71,7 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
         d.setCreateBy(UserUtils.getCurrentEmployeeName());
         if (dto.getId() != null) {
             d.setUpdateBy(UserUtils.getCurrentEmployeeName());
-            d.setUpdateTime(toSeconds(LocalDateTime.now()));
+            d.setUpdateTime(TimeUtil.toSeconds(LocalDateTime.now()));
         }
         if (dto.getId() == null) {
             drugMapper.insert(d);
@@ -125,7 +126,7 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
                 throw new BusinessException("带药单 " + d.getOrderNo() + " 已发药，不能重复发药");
             }
         }
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         String who = UserUtils.getCurrentEmployeeName();
         Long empId = UserUtils.getCurrentEmployeeId();
         for (BizDischargeDrug d : list) {
@@ -160,10 +161,6 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
      */
     private String tr(String s) {
         return s == null ? null : s.trim();
-    }
-
-    private LocalDateTime toSeconds(LocalDateTime t) {
-        return t.truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
     }
 
     private Long requirePatientId(Long admissionId) {

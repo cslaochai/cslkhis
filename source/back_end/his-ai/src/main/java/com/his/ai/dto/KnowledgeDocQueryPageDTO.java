@@ -1,16 +1,15 @@
 package com.his.ai.dto;
 
+import com.his.common.base.PageParam;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 /**
  * 知识文档分页查询。
  */
 @Data
-public class KnowledgeDocQueryPageDTO {
-
-    private Integer pageNum = 1;
-
-    private Integer pageSize = 10;
+@EqualsAndHashCode(callSuper = true)
+public class KnowledgeDocQueryPageDTO extends PageParam {
 
     /**
      * 标题模糊

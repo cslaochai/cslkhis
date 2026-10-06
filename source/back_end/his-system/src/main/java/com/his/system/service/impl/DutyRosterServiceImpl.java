@@ -248,13 +248,7 @@ public class DutyRosterServiceImpl implements DutyRosterService {
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(DutyRosterUpsertDTO dto) {
         DutyShiftTypeEnum shiftType = DutyShiftTypeEnum.fromCode(dto.getShiftType());
-        if (shiftType == null) {
-            throw new BusinessException("班次取值不合法（" + DutyShiftTypeEnum.whitelistText() + "）");
-        }
         DutyRoleTypeEnum roleType = DutyRoleTypeEnum.fromCode(dto.getRoleType());
-        if (roleType == null) {
-            throw new BusinessException("班内角色取值不合法（" + DutyRoleTypeEnum.whitelistText() + "）");
-        }
         SysEmployee emp = requireOnDutyEmployee(dto.getEmployeeId());
         // 点位优先：传了 postId 就以点位为权威（班次/角色/层级/响应形态/所属单元全部由它带出），
         // 没传才走老语义——按班次+角色反查「全院行政」点位

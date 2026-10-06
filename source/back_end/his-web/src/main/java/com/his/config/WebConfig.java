@@ -15,15 +15,14 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // 映射 uploads 目录为静态资源（使用绝对路径）
+        // 映射目录
         String uploadPath = System.getProperty("user.dir") + "/uploads/";
         registry.addResourceHandler("/uploads/**")
                 .addResourceLocations("file:" + uploadPath);
     }
 
     /**
-     * 操作日志拦截器（sql/158）：只记写动作，读接口在拦截器内部写死的名单里挡掉。
-     * 注册在 web 模块而不是 his-system —— MVC 配置属于应用装配层，库模块不管 URL 映射。
+     * 操作日志拦截器
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {

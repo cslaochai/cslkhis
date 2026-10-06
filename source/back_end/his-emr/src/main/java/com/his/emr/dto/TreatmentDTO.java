@@ -1,10 +1,12 @@
 package com.his.emr.dto;
 
+import com.his.common.base.PageParam;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -20,15 +22,9 @@ public class TreatmentDTO {
     // 申请单
 
     @Data
-    public static class ApplyQuery {
-        /**
-         * 页码
-         */
-        private Integer pageNum = 1;
-        /**
-         * 每页条数
-         */
-        private Integer pageSize = 20;
+    @EqualsAndHashCode(callSuper = true)
+    public static class ApplyQuery extends PageParam {
+
         /**
          * 关键字
          */
@@ -113,15 +109,9 @@ public class TreatmentDTO {
     // 按次流水
 
     @Data
-    public static class ExecQuery {
-        /**
-         * 页码
-         */
-        private Integer pageNum = 1;
-        /**
-         * 每页条数
-         */
-        private Integer pageSize = 20;
+    @EqualsAndHashCode(callSuper = true)
+    public static class ExecQuery extends PageParam {
+
         /**
          * 关键字
          */

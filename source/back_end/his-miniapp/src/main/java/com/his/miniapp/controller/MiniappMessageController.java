@@ -2,18 +2,17 @@ package com.his.miniapp.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
+import com.his.miniapp.dto.MarkReadDTO;
+import com.his.miniapp.dto.MessagePageDTO;
 import com.his.miniapp.service.MiniappMessageService;
 import com.his.miniapp.vo.MessageListVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 
 /**
  * 患者端消息中心（小程序二期）。
@@ -46,15 +45,5 @@ public class MiniappMessageController {
         return Result.success(messageService.markRead(dto.getMessageIds()));
     }
 
-    @Data
-    public static class MessagePageDTO {
-        private Integer pageNum = 1;
-        private Integer pageSize = 10;
-    }
 
-    @Data
-    public static class MarkReadDTO {
-        @NotEmpty(message = "messageIds不能为空")
-        private List<String> messageIds;
-    }
 }

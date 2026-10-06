@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.common.util.TimeUtil;
 import com.his.patient.enums.ConsultUrgentEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -37,7 +38,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 
@@ -105,10 +105,6 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
     /**
      * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
      */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(ConsultationUpsertDTO dto) {
@@ -141,7 +137,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
                     + "」必须请到别的科室；本科室内部的请会诊请选「科内会诊」");
         }
 
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         int isUrgent = Objects.equals(YesOrNoEnum.YES.getCode(), dto.getIsUrgent())
                 ? YesOrNoEnum.YES.getCode() : YesOrNoEnum.NO.getCode();
 
@@ -311,7 +307,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
             // 没登录上下文就没有"谁接诊"这件事 —— 宁可报错，也不留一条没有接诊人的会诊
             throw new BusinessException("未能识别当前登录用户，无法记录接诊医生");
         }
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         String doctorName = currentName();
 
         entity.setConsultStatus(ConsultationStatusEnum.ACCEPTED.getCode());
@@ -362,8 +358,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
                     + ConsultationStatusEnum.labelOrUnknown(entity.getConsultStatus()) + "」，不能重复完成");
         }
 
-        LocalDateTime now = toSeconds(LocalDateTime.now());
-        LocalDateTime consultTime = toSeconds(dto.getConsultTime() != null ? dto.getConsultTime() : now);
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime consultTime = TimeUtil.toSeconds(dto.getConsultTime() != null ? dto.getConsultTime() : now);
         if (entity.getAcceptTime() != null && consultTime.isBefore(entity.getAcceptTime())) {
             throw new BusinessException("会诊时间不能早于接诊时间（接诊时间 " + entity.getAcceptTime() + "）");
         }
@@ -546,7 +542,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         vo.setCanCancel(pending);
         vo.setCanFinish(accepted);
 
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         LocalDateTime from = vo.getApplyTime();
         LocalDateTime to = vo.getAcceptTime() != null ? vo.getAcceptTime() : now;
         vo.setResponseMinutes(from == null ? null : minutesBetween(from, to));

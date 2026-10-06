@@ -411,9 +411,6 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         if (current >= 4) {
             throw new BusinessException("该急诊记录已结束（转住院/离院/死亡），不能再变更状态");
         }
-        if (status == null || status < 2 || status > 6) {
-            throw new BusinessException("状态取值不合法（2-接诊 3-留观 5-离院 6-死亡）");
-        }
         if (status == 4) {
             // 以前点一下就翻成「转住院」，账面上转了、入院记录里根本没有这个人。
             // 转住院必须走 /emergency/admit：真实入院登记（选病区床位）完成后才落终态。

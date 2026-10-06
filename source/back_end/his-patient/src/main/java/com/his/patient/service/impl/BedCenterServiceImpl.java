@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
 import com.his.common.enums.SysGenderEnum;
 import com.his.patient.dto.*;
@@ -42,7 +43,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -133,16 +133,12 @@ public class BedCenterServiceImpl implements BedCenterService {
         if (from == null || to == null) {
             return 0;
         }
-        return Math.max(0, Duration.between(toSeconds(from), toSeconds(to)).toHours());
+        return Math.max(0, Duration.between(TimeUtil.toSeconds(from), TimeUtil.toSeconds(to)).toHours());
     }
 
     /**
      * 时间统一截到秒：库表是 DATETIME(0)，写进去会被四舍五入，不截会导致"写进去的 ≠ 读回来的"
      */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     @Override
     public IPage<BedWaitVO> queuePage(BedWaitQueryPageDTO query) {
         LambdaQueryWrapper<BizBedWait> wrapper = new LambdaQueryWrapper<>();
@@ -260,7 +256,7 @@ public class BedCenterServiceImpl implements BedCenterService {
                 : order != null && order.getExpectAdmitTime() != null ? order.getExpectAdmitTime().toLocalDate() : null);
         wait.setDiagnosisName(dto.getDiagnosisName());
         wait.setWaitStatus(BedWaitStatusEnum.PENDING.getCode());
-        wait.setRegisterTime(toSeconds(LocalDateTime.now()));
+        wait.setRegisterTime(TimeUtil.toSeconds(LocalDateTime.now()));
         wait.setRemark(dto.getRemark());
         waitMapper.insert(wait);
 
@@ -342,7 +338,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         bedMapper.update(null, upd);
         // 锁定的床不计入病区占用数 —— 占用数的定义是 bed_status=2（人真的住进去了）
 
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         BizBedWait arrange = new BizBedWait();
         arrange.setId(wait.getId());
         arrange.setWaitStatus(BedWaitStatusEnum.ARRANGED.getCode());
@@ -567,7 +563,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         upd.setId(wait.getId());
         upd.setWaitStatus(BedWaitStatusEnum.CANCELLED.getCode());
         upd.setCancelReason(dto.getReason());
-        upd.setCancelTime(toSeconds(LocalDateTime.now()));
+        upd.setCancelTime(TimeUtil.toSeconds(LocalDateTime.now()));
         waitMapper.updateById(upd);
         log.info("床位排队取消 waitNo={} waitId={} 原因={}", wait.getWaitNo(), wait.getId(), dto.getReason());
     }
@@ -606,7 +602,7 @@ public class BedCenterServiceImpl implements BedCenterService {
 
         Long admissionId = inpatientService.admit(admitDto);
 
-        LocalDateTime admitTime = toSeconds(dto.getAdmitTime() != null ? dto.getAdmitTime() : LocalDateTime.now());
+        LocalDateTime admitTime = TimeUtil.toSeconds(dto.getAdmitTime() != null ? dto.getAdmitTime() : LocalDateTime.now());
         BizBedWait upd = new BizBedWait();
         upd.setId(wait.getId());
         upd.setWaitStatus(BedWaitStatusEnum.ADMITTED.getCode());
@@ -927,7 +923,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         wait.setExpectAdmitDate(order.getExpectAdmitTime() != null ? order.getExpectAdmitTime().toLocalDate() : null);
         wait.setDiagnosisName(order.getDiagnosisName());
         wait.setWaitStatus(BedWaitStatusEnum.PENDING.getCode());
-        wait.setRegisterTime(toSeconds(order.getOrderTime() != null ? order.getOrderTime() : LocalDateTime.now()));
+        wait.setRegisterTime(TimeUtil.toSeconds(order.getOrderTime() != null ? order.getOrderTime() : LocalDateTime.now()));
         wait.setRemark("系统自动：随住院证 " + order.getOrderNo() + " 入队");
         waitMapper.insert(wait);
         log.info("住院证自动入床队列 waitNo={} orderNo={} patient={}", wait.getWaitNo(), order.getOrderNo(), order.getPatientName());
@@ -955,7 +951,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         upd.setId(wait.getId());
         upd.setWaitStatus(BedWaitStatusEnum.CANCELLED.getCode());
         upd.setCancelReason(reason);
-        upd.setCancelTime(toSeconds(LocalDateTime.now()));
+        upd.setCancelTime(TimeUtil.toSeconds(LocalDateTime.now()));
         waitMapper.updateById(upd);
         log.info("住院证作废联动退出队列 waitNo={} waitId={} 原因={}", wait.getWaitNo(), wait.getId(), reason);
     }
@@ -972,7 +968,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         if (rows.isEmpty()) {
             return;
         }
-        LocalDateTime time = toSeconds(admitTime == null ? LocalDateTime.now() : admitTime);
+        LocalDateTime time = TimeUtil.toSeconds(admitTime == null ? LocalDateTime.now() : admitTime);
         for (BizBedWait w : rows) {
             BizBedWait upd = new BizBedWait();
             upd.setId(w.getId());
@@ -1013,7 +1009,7 @@ public class BedCenterServiceImpl implements BedCenterService {
                     .eq(BizBedAllocate::getWaitId, wait.getId())
                     .eq(BizBedAllocate::getAllocStatus, BedAllocateStatusEnum.RESERVED.getCode())
                     .set(BizBedAllocate::getAllocStatus, allocEndStatus)
-                    .set(BizBedAllocate::getReleaseTime, toSeconds(LocalDateTime.now()))
+                    .set(BizBedAllocate::getReleaseTime, TimeUtil.toSeconds(LocalDateTime.now()))
                     .set(BizBedAllocate::getReleaseReason, reason);
             allocateMapper.update(null, allocUpd);
         }

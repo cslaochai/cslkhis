@@ -1,14 +1,17 @@
 package com.his.emr.dto;
 
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 /**
  * 点评批次分页入参
  */
 @Data
-public class RxReviewBatchQueryPageDTO {
+@EqualsAndHashCode(callSuper = true)
+public class RxReviewBatchQueryPageDTO extends PageParam {
 
     /**
      * 批次名称/批次号模糊
@@ -29,15 +32,4 @@ public class RxReviewBatchQueryPageDTO {
     @Max(value = 2, message = "点评类型非法")
     private Integer reviewType;
 
-    /**
-     * 页码
-     */
-    @Min(value = 1, message = "页码非法")
-    private Integer pageNum = 1;
-
-    /**
-     * 每页条数
-     */
-    @Min(value = 1, message = "每页条数非法")
-    private Integer pageSize = 10;
 }

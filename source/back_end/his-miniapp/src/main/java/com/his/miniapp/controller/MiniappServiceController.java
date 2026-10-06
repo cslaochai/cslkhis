@@ -6,6 +6,7 @@ import com.his.miniapp.dto.ServiceMessageUpsertDTO;
 import com.his.miniapp.dto.ServiceTicketActionDTO;
 import com.his.miniapp.dto.ServiceTicketAppendDTO;
 import com.his.miniapp.dto.ServiceTraceDTO;
+import com.his.miniapp.dto.MessagePageDTO;
 import com.his.miniapp.service.MiniappServiceMessageService;
 import com.his.miniapp.service.MiniappServiceTraceService;
 import com.his.miniapp.vo.ServiceMessageListVO;
@@ -13,7 +14,6 @@ import com.his.miniapp.vo.ServiceTicketDetailVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
@@ -88,9 +88,4 @@ public class MiniappServiceController {
         return Result.success(1);
     }
 
-    @Data
-    public static class MessagePageDTO {
-        private Integer pageNum = 1;
-        private Integer pageSize = 10;
-    }
 }

@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
 import com.his.common.enums.SysGenderEnum;
 import com.his.patient.dto.AdmissionOrderCancelDTO;
@@ -29,7 +30,6 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
@@ -81,10 +81,6 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
     /**
      * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
      */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     // 查询
 
     @Override
@@ -106,7 +102,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
                 .eq(BizAdmissionOrder::getPatientId, dto.getPatientId())
                 .eq(BizAdmissionOrder::getOrderStatus, AdmissionOrderStatusEnum.PENDING.getCode())
                 .and(w -> w.isNull(BizAdmissionOrder::getValidUntil)
-                        .or().gt(BizAdmissionOrder::getValidUntil, toSeconds(LocalDateTime.now())))
+                        .or().gt(BizAdmissionOrder::getValidUntil, TimeUtil.toSeconds(LocalDateTime.now())))
                 .orderByDesc(BizAdmissionOrder::getOrderTime)
                 .last("LIMIT 1"));
         if (pendingOfPatient != null) {
@@ -122,7 +118,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
             throw new BusinessException("该患者当前在院，无需再开住院证");
         }
 
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         int validDays = validDays();
 
         BizAdmissionOrder order = new BizAdmissionOrder();
@@ -268,7 +264,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
             throw new BusinessException("住院证当前状态为「"
                     + AdmissionOrderStatusEnum.labelOrUnknown(order.getOrderStatus()) + "」，不能收治");
         }
-        if (order.getValidUntil() != null && order.getValidUntil().isBefore(toSeconds(LocalDateTime.now()))) {
+        if (order.getValidUntil() != null && order.getValidUntil().isBefore(TimeUtil.toSeconds(LocalDateTime.now()))) {
             throw new BusinessException("住院证已于 " + order.getValidUntil() + " 过期，不能再收治，请重新开证");
         }
         return order;
@@ -307,7 +303,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
 
         boolean pending = Objects.equals(AdmissionOrderStatusEnum.PENDING.getCode(), vo.getOrderStatus());
         boolean expired = pending && vo.getValidUntil() != null
-                && vo.getValidUntil().isBefore(toSeconds(LocalDateTime.now()));
+                && vo.getValidUntil().isBefore(TimeUtil.toSeconds(LocalDateTime.now()));
         vo.setExpired(expired);
 
         vo.setDeptAdjusted(vo.getAdmitDeptId() != null && vo.getApplyDeptId() != null

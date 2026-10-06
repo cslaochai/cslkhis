@@ -3,6 +3,7 @@ package com.his.common.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.config.SignProperties;
 import com.his.common.dto.SignCommandDTO;
@@ -31,7 +32,6 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -91,10 +91,6 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         } catch (NumberFormatException e) {
             return 1L;
         }
-    }
-
-    private static LocalDateTime seconds(LocalDateTime t) {
-        return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS);
     }
 
     // 验签
@@ -191,7 +187,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         String content = subject.contentWithPrev(prevDigest);
         String digest = SignCrypto.sha256Hex(content);
         String signValue = SignCrypto.sign(privatePem, content);
-        LocalDateTime now = seconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
 
         BizEmrSignature e = new BizEmrSignature();
         e.setSignNo(nextSignNo());
@@ -277,7 +273,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         vo.setSignStatus(sig.getSignStatus());
         vo.setSignStatusText(SignStatus.textOf(sig.getSignStatus()));
         vo.setDigestAtSign(sig.getContentDigest());
-        vo.setCheckedAt(seconds(LocalDateTime.now()));
+        vo.setCheckedAt(TimeUtil.toSeconds(LocalDateTime.now()));
 
         // 断言一：签名值本身（用签名时留存的内容快照，不用当前内容）
         SysSignCert cert = sig.getCertId() == null ? null : certMapper.selectById(sig.getCertId());
@@ -423,7 +419,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         if (Objects.equals(SignStatus.INVALID.getCode(), sig.getSignStatus())) {
             throw new BusinessException("签名 " + sig.getSignNo() + " 已作废，不能重复作废");
         }
-        LocalDateTime now = seconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         store.updateInvalidate(signId, reason, now, operatorId, operatorName);
 
         SignableContentProvider provider = findProvider(sig.getBizType());

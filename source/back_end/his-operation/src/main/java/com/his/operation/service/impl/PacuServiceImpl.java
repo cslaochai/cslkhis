@@ -3,6 +3,7 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
 import com.his.operation.dto.*;
 import com.his.operation.entity.BizAnesthesiaPacu;
@@ -74,10 +75,6 @@ public class PacuServiceImpl implements PacuService {
 
     private static LocalDateTime now() {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
     }
 
     private static BigDecimal nz(BigDecimal value) {
@@ -232,7 +229,7 @@ public class PacuServiceImpl implements PacuService {
             throw new BusinessException("复苏期间发生并发症，出室去向不能是「回病房」");
         }
 
-        entity.setLeaveTime(toSeconds(dto.getLeaveTime() == null ? now() : dto.getLeaveTime()));
+        entity.setLeaveTime(TimeUtil.toSeconds(dto.getLeaveTime() == null ? now() : dto.getLeaveTime()));
         entity.setDisposition(dto.getDisposition());
         entity.setLeaveCriteriaMet(criteriaMet ? 1 : 0);
         entity.setStatus(PacuStatusEnum.OUT.getCode());

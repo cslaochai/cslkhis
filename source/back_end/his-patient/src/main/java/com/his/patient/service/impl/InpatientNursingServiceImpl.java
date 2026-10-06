@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.common.util.TimeUtil;
 import com.his.patient.enums.NursingLevelEnum;
 import com.his.patient.enums.NursingShiftEnum;
 import com.his.patient.enums.SummaryStatusEnum;
@@ -35,7 +36,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -95,7 +95,9 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             case 4 -> score >= 7 ? 4 : score >= 5 ? 3 : score >= 3 ? 2 : 1;
             // 管路滑脱 0~24：0~3 低 / 4~7 中 / 8~11 高 / ≥12 极高（sql/159）
             case 5 -> score >= 12 ? 4 : score >= 8 ? 3 : score >= 4 ? 2 : 1;
-            default -> throw new BusinessException("评估类型取值不合法");
+            // 码值合法性由 DTO 的 @InEnum(NursingAssessTypeEnum) 兜住，走到这里必是 1~5 之一；
+            // 兜底不返回 0（risk_level 合法值是 1~4，返回 0 等于静默写脏数据）
+            default -> throw new IllegalStateException("评估类型无分档口径：" + assessType);
         };
     }
 
@@ -107,10 +109,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             return bd.stripTrailingZeros().toPlainString();
         }
         return String.valueOf(v);
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
     }
 
     @Override
@@ -180,7 +178,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         }
 
         record.setNursingType(dto.getNursingType());
-        record.setMeasureTime(toSeconds(dto.getMeasureTime()));
+        record.setMeasureTime(TimeUtil.toSeconds(dto.getMeasureTime()));
         record.setShift(dto.getShift());
         applyContent(record, dto);
         record.setNursingLevel(dto.getNursingLevel());
@@ -224,7 +222,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             record.setShift(dto.getShift());
         }
         if (dto.getMeasureTime() != null) {
-            record.setMeasureTime(toSeconds(dto.getMeasureTime()));
+            record.setMeasureTime(TimeUtil.toSeconds(dto.getMeasureTime()));
         }
         record.setNursingLevel(dto.getNursingLevel());
         record.setNursingContent(dto.getNursingContent());
@@ -439,7 +437,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             create(item);
         }
         log.info("体温单批量录入 {} 行 时点={} 护士={}", prepared.size(),
-                toSeconds(dto.getMeasureTime()), currentName());
+                TimeUtil.toSeconds(dto.getMeasureTime()), currentName());
         return prepared.size();
     }
 
@@ -481,7 +479,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             row.setTotalScore(recomputed);
             row.setRiskLevel(riskLevel);
             row.setItemsJson(dto.getItemsJson());
-            row.setAssessTime(toSeconds(dto.getAssessTime()));
+            row.setAssessTime(TimeUtil.toSeconds(dto.getAssessTime()));
             row.setAssessNurseId(currentEmpId());
             row.setAssessNurseName(currentName());
             row.setRemark(dto.getRemark());
@@ -497,7 +495,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             row.setTotalScore(recomputed);
             row.setRiskLevel(riskLevel);
             row.setItemsJson(dto.getItemsJson());
-            row.setAssessTime(toSeconds(dto.getAssessTime()));
+            row.setAssessTime(TimeUtil.toSeconds(dto.getAssessTime()));
             row.setAssessNurseId(currentEmpId());
             row.setAssessNurseName(currentName());
             row.setRemark(dto.getRemark());
@@ -578,11 +576,9 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             case 3 -> "NRS 总分应在 0~10";
             case 4 -> "Caprini 总分应在 0~58";
             case 5 -> "管路滑脱总分应在 0~24";
-            default -> null;
+            // 码值合法性由 DTO 的 @InEnum(NursingAssessTypeEnum) 兜住，走到这里必是 1~5 之一
+            default -> throw new IllegalStateException("评估类型无分档口径：" + assessType);
         };
-        if (range == null) {
-            throw new BusinessException("评估类型取值不合法");
-        }
         boolean outOfRange = switch (assessType) {
             case 1 -> score < 6 || score > 23;
             case 2 -> score < 0 || score > 125;
@@ -887,7 +883,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         if (dto.getMeasureTime() != null) {
             pairs.add(new Object[]{"measure_time",
                     oldRecord.getMeasureTime() == null ? null : oldRecord.getMeasureTime().toString(),
-                    toSeconds(dto.getMeasureTime()).toString()});
+                    TimeUtil.toSeconds(dto.getMeasureTime()).toString()});
         }
         pairs.add(new Object[]{"shift", oldRecord.getShift(), dto.getShift()});
         pairs.add(new Object[]{"temperature", oldRecord.getTemperature(), dto.getTemperature()});

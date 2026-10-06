@@ -2,6 +2,7 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
@@ -32,7 +33,6 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -61,10 +61,6 @@ public class MealOrderServiceImpl implements MealOrderService {
 
     private static String trim(String v) {
         return v == null ? null : v.trim();
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
     }
 
     private static String cut(String v, int max) {
@@ -188,7 +184,7 @@ public class MealOrderServiceImpl implements MealOrderService {
         // 同一个人可能同时有两条口服方案（如"糖尿病饮食 + 口服营养补充"），
         // 而 uk_meal_order 只认「人 + 日期 + 餐次」—— 批内必须去重，否则整批生成撞唯一键
         Set<String> batchKeys = new HashSet<>();
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         String operator = currentName();
         for (BizDietPlan plan : plans) {
             if (lockedAdmissions.contains(plan.getAdmissionId())) {
@@ -265,7 +261,7 @@ public class MealOrderServiceImpl implements MealOrderService {
             throw new BusinessException("请选择要处理的订餐");
         }
 
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         String operator = currentName();
         // 批量要么全推要么全不动：食堂按病区整批点"配送"，一半成功会让人以为都送出去了
         List<BizMealOrder> rows = new ArrayList<>(ids.size());

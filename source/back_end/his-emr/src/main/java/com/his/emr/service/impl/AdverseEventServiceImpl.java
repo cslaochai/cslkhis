@@ -1,6 +1,7 @@
 package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.enums.AdverseAcquiredEnum;
@@ -36,10 +37,6 @@ public class AdverseEventServiceImpl implements AdverseEventService {
 
     private final BizAdverseEventMapper eventMapper;
     private final RedisSequenceService sequenceService;
-
-    private static LocalDateTime nowSec() {
-        return LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
-    }
 
     private static String trimToNull(String s) {
         if (s == null) {
@@ -180,7 +177,7 @@ public class AdverseEventServiceImpl implements AdverseEventService {
         e.setHandlerId(UserUtils.getCurrentEmployeeId());
         e.setHandlerName(UserUtils.getCurrentEmployeeName());
         e.setHandleRemark(dto.getRemark().trim());
-        e.setHandleTime(nowSec());
+        e.setHandleTime(TimeUtil.nowSeconds());
         e.setStatus(AdverseEventStatusEnum.HANDLED.getCode());
         e.setUpdateTime(e.getHandleTime());
         saveStep(e, "处理");
@@ -193,7 +190,7 @@ public class AdverseEventServiceImpl implements AdverseEventService {
         e.setRectifyById(UserUtils.getCurrentEmployeeId());
         e.setRectifyByName(UserUtils.getCurrentEmployeeName());
         e.setRectifyMeasures(dto.getRemark().trim());
-        e.setRectifyTime(nowSec());
+        e.setRectifyTime(TimeUtil.nowSeconds());
         e.setStatus(AdverseEventStatusEnum.RECTIFIED.getCode());
         e.setUpdateTime(e.getRectifyTime());
         saveStep(e, "整改");
@@ -208,7 +205,7 @@ public class AdverseEventServiceImpl implements AdverseEventService {
         e.setCloseById(UserUtils.getCurrentEmployeeId());
         e.setCloseByName(UserUtils.getCurrentEmployeeName());
         e.setVerifyRemark(dto.getRemark().trim());
-        e.setCloseTime(nowSec());
+        e.setCloseTime(TimeUtil.nowSeconds());
         e.setStatus(AdverseEventStatusEnum.CLOSED.getCode());
         e.setUpdateTime(e.getCloseTime());
         saveStep(e, "结案");

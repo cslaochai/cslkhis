@@ -52,8 +52,8 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
     @Override
     public PageResult<ServiceMessageListVO> adminPage(TicketSearchDTO dto) {
         TicketSearchDTO query = dto == null ? new TicketSearchDTO() : dto;
-        int pageNum = query.getPageNum() == null || query.getPageNum() < 1 ? 1 : query.getPageNum();
-        int pageSize = query.getPageSize() == null || query.getPageSize() < 1 ? 20 : Math.min(query.getPageSize(), 200);
+        int pageNum = Math.max(1, query.getPageNum());
+        int pageSize = Math.min(Math.max(1, query.getPageSize()), 200);
 
         String keyword = StringUtils.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
         String mine = Boolean.TRUE.equals(query.getOnlyMine()) ? currentUsername() : null;

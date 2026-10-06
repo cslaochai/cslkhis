@@ -1,12 +1,14 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.DeathRegistrationDTO;
 import com.his.patient.entity.BizDeathRegistration;
+import com.his.patient.enums.DeathRegisterCopyEnum;
 import com.his.patient.enums.DeathRegisterStatusEnum;
 import com.his.patient.enums.DeathTypeEnum;
 import com.his.patient.mapper.BizDeathRegistrationMapper;
@@ -64,7 +66,8 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
     }
 
     /**
-     * 领取联次：只留 1~4 的码值、去重、按升序，前端多选传法不一也不用担心
+     * 领取联次：只留合法码值、去重、按升序，前端多选传法不一也不用担心。
+     * 复数字段（"1,2,3"）@InEnum 校验不了（注解只管单值），逐个 split 调枚举判定
      */
     private static String normalizeCopies(String copies) {
         if (!StringUtils.hasText(copies)) {
@@ -76,8 +79,8 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
             if (v.isEmpty()) {
                 continue;
             }
-            if (!"1".equals(v) && !"2".equals(v) && !"3".equals(v) && !"4".equals(v)) {
-                throw new BusinessException("联次取值不合法（1-记录联 2-户籍联 3-殡葬联 4-家属联）");
+            if (!DeathRegisterCopyEnum.isValid(v)) {
+                throw new BusinessException("联次取值不合法：" + v + "（1-记录联 2-户籍联 3-殡葬联 4-家属联）");
             }
             set.add(v);
         }
@@ -102,10 +105,6 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
 
     private static LocalDateTime atEnd(LocalDate date) {
         return date == null ? null : date.atTime(23, 59, 59);
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
     }
 
     // 内部
@@ -216,16 +215,16 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
         register.setPoliceFlag(flag(dto.getPoliceFlag()));
         register.setPoliceOrg(cutToNull(dto.getPoliceOrg(), UNIT_MAX));
         register.setPoliceCaseNo(cutToNull(dto.getPoliceCaseNo(), 64));
-        register.setPoliceReportTime(toSeconds(dto.getPoliceReportTime()));
+        register.setPoliceReportTime(TimeUtil.toSeconds(dto.getPoliceReportTime()));
         register.setForensicFlag(flag(dto.getForensicFlag()));
         register.setBodyDisposal(dto.getBodyDisposal());
         register.setBodyUnit(cutToNull(dto.getBodyUnit(), UNIT_MAX));
-        register.setBodyTransportTime(toSeconds(dto.getBodyTransportTime()));
+        register.setBodyTransportTime(TimeUtil.toSeconds(dto.getBodyTransportTime()));
         register.setRelativeName(cutToNull(dto.getRelativeName(), 50));
         register.setRelativeRelation(cutToNull(dto.getRelativeRelation(), 20));
         register.setRelativePhone(cutToNull(dto.getRelativePhone(), 20));
         register.setReceivedCopies(normalizeCopies(dto.getReceivedCopies()));
-        register.setReceiveTime(toSeconds(dto.getReceiveTime()));
+        register.setReceiveTime(TimeUtil.toSeconds(dto.getReceiveTime()));
         register.setDisputeFlag(flag(dto.getDisputeFlag()));
         register.setDisputeDesc(cutToNull(dto.getDisputeDesc(), DESC_MAX));
         register.setRemark(cutToNull(dto.getRemark(), DESC_MAX));

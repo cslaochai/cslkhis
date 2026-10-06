@@ -47,6 +47,7 @@ public enum CdrChargeStatusEnum {
 
     /** 异常 / 审计用：null 或脏码值返回「未知(n)」，保留原始码值 */
     public static String labelOrUnknown(Integer code) {
-        return code == null ? "未知" : "未知(" + code + ")";
+        CdrChargeStatusEnum item = code == null ? null : fromCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

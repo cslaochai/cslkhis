@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.common.util.TimeUtil;
 import com.his.patient.enums.BedStatusEnum;
 import com.his.patient.enums.InpatientOrderStatusEnum;
 import com.his.patient.enums.InpatientRecordTypeEnum;
@@ -188,7 +189,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
             throw new BusinessException("患者不存在");
         }
 
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
 
         BizInpatientTransfer entity = new BizInpatientTransfer();
         entity.setTransferNo(nextTransferNo());
@@ -266,7 +267,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         Long oldBedId = admission.getBedId();
         Long oldWardId = admission.getWardId();
 
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
 
         // 1) 医嘱：先处置，后换科。停不掉的一定写进 order_remark，绝不静默。
         String orderRemark = settleLongOrders(entity);
@@ -545,10 +546,6 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         long days = java.time.temporal.ChronoUnit.DAYS
                 .between(admitTime.toLocalDate(), end.toLocalDate());
         return days < 1 ? 1 : (int) days;
-    }
-
-    private LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
     }
 
     /**

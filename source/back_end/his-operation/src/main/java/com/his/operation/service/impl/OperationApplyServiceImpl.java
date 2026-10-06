@@ -3,6 +3,7 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.SysGenderEnum;
@@ -53,7 +54,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -107,16 +107,12 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     }
 
     private static LocalDateTime now() {
-        return toSeconds(LocalDateTime.now());
+        return TimeUtil.toSeconds(LocalDateTime.now());
     }
 
     /**
      * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
      */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     /**
      * 下界宽松解析：{@code yyyy-MM-dd} → 当天 00:00:00；带时分秒则原样使用（含）。
      */
@@ -423,8 +419,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void schedule(OperationScheduleDTO dto) {
-        LocalDateTime start = toSeconds(dto.getPlannedStartTime());
-        LocalDateTime end = toSeconds(dto.getPlannedEndTime());
+        LocalDateTime start = TimeUtil.toSeconds(dto.getPlannedStartTime());
+        LocalDateTime end = TimeUtil.toSeconds(dto.getPlannedEndTime());
         // D-业务规则：时间先后关系，DTO 注解无法表达，保留
         if (!end.isAfter(start)) {
             throw new BusinessException("计划结束时间必须晚于开始时间");
@@ -541,8 +537,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
                     + "」，未完成术前核对不能登记完成（术后补一条核对记录属于伪造，必须先把核对做完）");
         }
 
-        LocalDateTime start = toSeconds(dto.getOperationStartTime());
-        LocalDateTime end = toSeconds(dto.getOperationEndTime());
+        LocalDateTime start = TimeUtil.toSeconds(dto.getOperationStartTime());
+        LocalDateTime end = TimeUtil.toSeconds(dto.getOperationEndTime());
         // D-业务规则：时间先后关系，DTO 注解无法表达，保留
         if (!end.isAfter(start)) {
             throw new BusinessException("实际结束时间必须晚于开始时间");

@@ -1,10 +1,13 @@
 package com.his.supplies.dto;
 
+import com.his.common.base.PageParam;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -42,6 +45,8 @@ public class CssdDTO {
         /**
          * 灭菌方式:1-高压蒸汽 2-环氧乙烷 3-低温等离子（默认 1）
          */
+        @Min(value = 1, message = "灭菌方式取值不合法（1-高压蒸汽 2-环氧乙烷 3-低温等离子）")
+        @Max(value = 3, message = "灭菌方式取值不合法（1-高压蒸汽 2-环氧乙烷 3-低温等离子）")
         private Integer sterilizeMethod;
 
         /**
@@ -82,6 +87,8 @@ public class CssdDTO {
         /**
          * 节点结果:1-合格 2-不合格（仅灭菌完成节点生效；不合格自动退回清洗）
          */
+        @Min(value = 1, message = "节点结果取值不合法（1-合格 2-不合格）")
+        @Max(value = 2, message = "节点结果取值不合法（1-合格 2-不合格）")
         private Integer result;
 
         /**
@@ -104,7 +111,8 @@ public class CssdDTO {
      * 器械包分页查询
      */
     @Data
-    public static class QueryPage implements Serializable {
+    @EqualsAndHashCode(callSuper = true)
+    public static class QueryPage extends PageParam implements Serializable {
 
         /**
          * 关键词：条码/名称/科室模糊
@@ -116,15 +124,6 @@ public class CssdDTO {
          */
         private Integer status;
 
-        /**
-         * 页码
-         */
-        private Integer pageNum = 1;
-
-        /**
-         * 每页条数
-         */
-        private Integer pageSize = 10;
     }
 
     /**
@@ -148,6 +147,8 @@ public class CssdDTO {
          * 默认灭菌方式:1-高压蒸汽 2-环氧乙烷 3-低温等离子
          */
         @NotNull(message = "默认灭菌方式不能为空")
+        @Min(value = 1, message = "灭菌方式取值不合法（1-高压蒸汽 2-环氧乙烷 3-低温等离子）")
+        @Max(value = 3, message = "灭菌方式取值不合法（1-高压蒸汽 2-环氧乙烷 3-低温等离子）")
         private Integer sterilizeMethod;
 
         /**
@@ -196,7 +197,8 @@ public class CssdDTO {
      * 模板分页查询
      */
     @Data
-    public static class TemplateQueryPage implements Serializable {
+    @EqualsAndHashCode(callSuper = true)
+    public static class TemplateQueryPage extends PageParam implements Serializable {
 
         /**
          * 关键词：包编码/名称模糊
@@ -208,14 +210,5 @@ public class CssdDTO {
          */
         private Integer status;
 
-        /**
-         * 页码
-         */
-        private Integer pageNum = 1;
-
-        /**
-         * 每页条数
-         */
-        private Integer pageSize = 10;
     }
 }

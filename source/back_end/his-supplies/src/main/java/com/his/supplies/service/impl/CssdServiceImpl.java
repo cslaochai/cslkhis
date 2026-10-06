@@ -3,6 +3,7 @@ package com.his.supplies.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
 import com.his.security.UserUtils;
 import com.his.supplies.dto.CssdDTO;
@@ -24,7 +25,6 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -54,18 +54,11 @@ public class CssdServiceImpl implements CssdService {
 
     // 流转
 
-    private static LocalDateTime nowSeconds() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
     // 查询
 
     @Transactional(rollbackFor = Exception.class)
     public CssdPackVO receive(CssdDTO.Receive dto) {
         int method = dto.getSterilizeMethod() == null ? 1 : dto.getSterilizeMethod();
-        if (CssdSterilizeMethodEnum.fromCode(method) == null) {
-            throw new BusinessException("灭菌方式取值不合法（1-高压蒸汽 2-环氧乙烷 3-低温等离子）");
-        }
         BizCssdPack p = new BizCssdPack();
         p.setPackNo(StringUtils.hasText(dto.getPackNo()) ? dto.getPackNo().trim() : nextPackNo());
         if (packMapper.selectIdByNoAny(p.getPackNo()) != null) {
@@ -76,7 +69,7 @@ public class CssdServiceImpl implements CssdService {
         p.setDeptName(tr(dto.getDeptName()));
         p.setSterilizeMethod(method);
         p.setStatus(CssdNodeStatusEnum.RECEIVED.getCode());
-        p.setLastNodeTime(nowSeconds());
+        p.setLastNodeTime(TimeUtil.nowSeconds());
         p.setCreateBy(UserUtils.getCurrentEmployeeName());
         packMapper.insert(p);
 
@@ -95,9 +88,6 @@ public class CssdServiceImpl implements CssdService {
         }
         int target = from + 1;
         int result = dto.getResult() == null ? CssdCheckResultEnum.OK.getCode() : dto.getResult();
-        if (CssdCheckResultEnum.fromCode(result) == null) {
-            throw new BusinessException("节点结果取值不合法（1-合格 2-不合格）");
-        }
         String operator = StringUtils.hasText(dto.getOperatorName()) ? dto.getOperatorName().trim()
                 : UserUtils.getCurrentEmployeeName();
 
@@ -123,14 +113,14 @@ public class CssdServiceImpl implements CssdService {
         }
 
         p.setStatus(target);
-        p.setLastNodeTime(nowSeconds());
+        p.setLastNodeTime(TimeUtil.nowSeconds());
         p.setUpdateBy(UserUtils.getCurrentEmployeeName());
         packMapper.updateById(p);
 
         // 灭菌完成判不合格 → 包退回清洗（重新打包灭菌），追溯节点如实记录不合格
         if (CssdNodeStatusEnum.STORED.is(target) && CssdCheckResultEnum.NG.is(result)) {
             p.setStatus(CssdNodeStatusEnum.WASHING.getCode());
-            p.setLastNodeTime(nowSeconds());
+            p.setLastNodeTime(TimeUtil.nowSeconds());
             packMapper.updateById(p);
         }
         insertTrace(p, target, dto.getRemark(), p.getSterilizerNo(), p.getBatchNo(), result, operator);
@@ -172,7 +162,7 @@ public class CssdServiceImpl implements CssdService {
         t.setPackId(p.getId());
         t.setPackNo(p.getPackNo());
         t.setNodeType(nodeType);
-        t.setNodeTime(nowSeconds());
+        t.setNodeTime(TimeUtil.nowSeconds());
         t.setOperatorName(operator);
         t.setSterilizerNo(sterilizerNo);
         t.setBatchNo(batchNo);

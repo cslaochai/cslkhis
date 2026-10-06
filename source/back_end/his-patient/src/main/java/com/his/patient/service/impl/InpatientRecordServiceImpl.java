@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.common.util.TimeUtil;
 import com.his.patient.enums.AgeUnitEnum;
 import com.his.patient.enums.InpatientRecordTypeEnum;
 import com.his.patient.enums.SummaryStatusEnum;
@@ -109,10 +110,6 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
 
     // 校验
 
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     // 查询
 
     @Override
@@ -136,10 +133,6 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         }
         if (dto.getRecordType() == null) {
             throw new BusinessException("文书类型不能为空");
-        }
-        // 保留（类别③）：文书类型码值取值区间，不是「是否为空」
-        if (dto.getRecordType() < 1 || dto.getRecordType() > 10) {
-            throw new BusinessException("文书类型取值不合法（应为 1~10）");
         }
         // 9-会诊记录 / 10-转科记录是**系统文书**（由各自闭环完成时回写）：单独给出可执行的提示，
         // 而不是笼统地说"类型不合法" —— 类型字典里有这两个码，说它们不合法会把人绕晕。
@@ -200,7 +193,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         record.setRecordType(dto.getRecordType());
         record.setRecordTitle(StringUtils.hasText(dto.getRecordTitle())
                 ? dto.getRecordTitle() : InpatientRecordTypeEnum.getText(dto.getRecordType()));
-        record.setRecordTime(toSeconds(dto.getRecordTime() != null ? dto.getRecordTime() : LocalDateTime.now()));
+        record.setRecordTime(TimeUtil.toSeconds(dto.getRecordTime() != null ? dto.getRecordTime() : LocalDateTime.now()));
 
         applyContent(record, dto);
         record.setRecordStatus(RecordStatusEnum.DRAFT.getCode());
@@ -252,7 +245,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         record.setRecordTitle(StringUtils.hasText(dto.getRecordTitle())
                 ? dto.getRecordTitle() : record.getRecordTitle());
         if (dto.getRecordTime() != null) {
-            record.setRecordTime(toSeconds(dto.getRecordTime()));
+            record.setRecordTime(TimeUtil.toSeconds(dto.getRecordTime()));
         }
         record.setRemark(dto.getRemark());
         applyContent(record, dto);
@@ -565,7 +558,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
                         + "」，只有「草稿」可以提交");
             }
         }
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         Long empId = currentEmpId();
         String name = currentName();
         for (BizInpatientRecord r : records) {
@@ -616,7 +609,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
                         + "」，只有「已提交」可以归档（草稿请先提交）");
             }
         }
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         Long empId = currentEmpId();
         String name = currentName();
         for (BizInpatientRecord r : records) {
@@ -935,7 +928,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         if (dto.getRecordTime() != null) {
             pairs.add(new Object[]{"record_time",
                     oldRecord.getRecordTime() == null ? null : oldRecord.getRecordTime().toString(),
-                    toSeconds(dto.getRecordTime()).toString()});
+                    TimeUtil.toSeconds(dto.getRecordTime()).toString()});
         }
         pairs.add(new Object[]{"chief_complaint", oldRecord.getChiefComplaint(), dto.getChiefComplaint()});
         pairs.add(new Object[]{"present_illness", oldRecord.getPresentIllness(), dto.getPresentIllness()});

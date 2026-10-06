@@ -1,6 +1,8 @@
 package com.his.ai.dto;
 
+import com.his.common.base.PageParam;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 /**
@@ -10,13 +12,7 @@ import lombok.Data;
  */
 @Data
 @Schema(description = "白话词典检索条件")
-public class LabPlainItemSearchDTO {
-
-    @Schema(description = "页码，从 1 开始")
-    private Integer pageNum = 1;
-
-    @Schema(description = "每页条数")
-    private Integer pageSize = 20;
+public class LabPlainItemSearchDTO extends PageParam {
 
     @Schema(description = "分组名，为空查全部")
     private String groupName;

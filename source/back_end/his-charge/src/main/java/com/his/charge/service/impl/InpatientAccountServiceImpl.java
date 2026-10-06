@@ -2,6 +2,7 @@ package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.charge.dto.*;
 import com.his.charge.entity.BizAlert;
 import com.his.charge.entity.BizPaymentTxn;
@@ -39,7 +40,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -158,10 +158,6 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
     /**
      * DATETIME(0) 是四舍五入不是截断：落库又要比较的时间统一截到秒
      */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     @Override
     public IPage<PrepayVO> prepayListPage(PrepayQueryPageDTO query) {
         PrepayQueryPageDTO q = query != null ? query : new PrepayQueryPageDTO();
@@ -506,7 +502,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
                 + " 元，住院账户余额 " + balance.toPlainString() + " 元，欠费 " + arrears.toPlainString() + " 元");
         alert.setAlertStatus(0);
         alert.setNotifyUserId(admission.getAdmitDoctorId());
-        alert.setNotifyTime(toSeconds(LocalDateTime.now()));
+        alert.setNotifyTime(TimeUtil.toSeconds(LocalDateTime.now()));
         alert.setRemark("admissionId=" + admission.getAdmissionId());
         alertMapper.insert(alert);
         notifyArrears(admission, patient, "出院结算", payable, balance, arrears);
@@ -531,7 +527,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
                 + " 元（仅提示，不阻断诊疗）");
         alert.setAlertStatus(0);
         alert.setNotifyUserId(admission.getAdmitDoctorId());
-        alert.setNotifyTime(toSeconds(LocalDateTime.now()));
+        alert.setNotifyTime(TimeUtil.toSeconds(LocalDateTime.now()));
         alert.setRemark("admissionId=" + admission.getAdmissionId());
         alertMapper.insert(alert);
         notifyArrears(admission, patient, "在院余额预警", total, balance, arrears);

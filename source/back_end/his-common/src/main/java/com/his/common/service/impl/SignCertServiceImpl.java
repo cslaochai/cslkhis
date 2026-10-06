@@ -3,6 +3,7 @@ package com.his.common.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.config.SignProperties;
 import com.his.common.dto.SignCertIssueDTO;
@@ -30,7 +31,6 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -82,10 +82,6 @@ public class SignCertServiceImpl implements SignCertService {
         }
     }
 
-    private static LocalDateTime seconds(LocalDateTime t) {
-        return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SysSignCert ensureActiveCert(Long empId, String empName, Long deptId, String deptName) {
@@ -94,7 +90,7 @@ public class SignCertServiceImpl implements SignCertService {
             throw new BusinessException("签名人不能为空（未取到当前登录用户的员工ID）；"
                     + "签名留痕必须落到员工，不能落成系统账号");
         }
-        LocalDateTime now = seconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         SysSignCert exist = certMapper.selectActiveByEmp(empId, now);
         if (exist != null) {
             return exist;
@@ -120,7 +116,7 @@ public class SignCertServiceImpl implements SignCertService {
         if (!StringUtils.hasText(dto.getEmpName())) {
             throw new BusinessException("员工姓名不能为空（证书上必须能看出这是谁）");
         }
-        SysSignCert exist = certMapper.selectActiveByEmp(dto.getEmpId(), seconds(LocalDateTime.now()));
+        SysSignCert exist = certMapper.selectActiveByEmp(dto.getEmpId(), TimeUtil.toSeconds(LocalDateTime.now()));
         if (exist != null) {
             throw new BusinessException("员工「" + dto.getEmpName() + "」已持有有效证书 "
                     + exist.getCertNo() + "（有效期至 " + exist.getValidTo() + "）；"
@@ -149,7 +145,7 @@ public class SignCertServiceImpl implements SignCertService {
         String salt = keyProtector.newSalt();
         String protectedKey = keyProtector.protect(pair.privatePem(), salt, properties.getIterations());
 
-        LocalDateTime now = seconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         LocalDateTime to = now.plusDays(validDays);
 
         for (int attempt = 1; attempt <= 3; attempt++) {
@@ -233,7 +229,7 @@ public class SignCertServiceImpl implements SignCertService {
         }
         cert.setCertStatus(CertStatus.REVOKED.getCode());
         cert.setRevokeReason(dto.getReason());
-        cert.setRevokeTime(seconds(LocalDateTime.now()));
+        cert.setRevokeTime(TimeUtil.toSeconds(LocalDateTime.now()));
         cert.setRevokeBy(operatorId);
         cert.setRevokeByName(operatorName);
         certMapper.updateById(cert);
@@ -300,7 +296,7 @@ public class SignCertServiceImpl implements SignCertService {
         if (Objects.equals(CertStatus.REVOKED.getCode(), cert.getCertStatus())) {
             throw new BusinessException("证书 " + cert.getCertNo() + " 已吊销，不能用于签名");
         }
-        LocalDateTime now = seconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         if (cert.getValidTo() != null && cert.getValidTo().isBefore(now)) {
             throw new BusinessException("证书 " + cert.getCertNo() + " 已于 " + cert.getValidTo()
                     + " 过期，不能用于签名；请重新签发");
@@ -385,7 +381,7 @@ public class SignCertServiceImpl implements SignCertService {
         if (withPublicKey) {
             vo.setPublicKey(c.getPublicKey());
         }
-        boolean expired = c.getValidTo() != null && c.getValidTo().isBefore(seconds(LocalDateTime.now()));
+        boolean expired = c.getValidTo() != null && c.getValidTo().isBefore(TimeUtil.toSeconds(LocalDateTime.now()));
         vo.setExpired(expired);
         boolean revoked = Objects.equals(CertStatus.REVOKED.getCode(), c.getCertStatus());
         vo.setCanRevoke(!revoked);

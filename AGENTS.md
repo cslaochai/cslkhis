@@ -490,6 +490,22 @@
   Java 码值与库注释不一致时以 Java 现有值为准（改码值=改数据口径，属于独立的、要单独拍板的一步），
   并把冲突单独列出来修，不许在枚举化顺手「修正」。
 - **字典权威在 Java 枚举**（重申 §7）：新增/调整码值必须同步 `sql/xxx` 的字典段，两侧同码同义。
+  - **labelOrUnknown 必须真的查枚举**（2026-10-06 实锤过一批系统 bug）：批量补方法时最容易写出
+    ```java
+    public static String labelOrUnknown(Integer code) {
+        return code == null ? "未知" : "未知(" + code + ")";   // ← 任何合法码值都返回「未知」
+    }
+    ```
+    这种**空壳实现**：`getText` 是对的，`labelOrUnknown` 却对任何码值都输出「未知(n)」，
+    编译不报错、单测也测不出来（只要没有"合法码值应输出 label"的断言）。
+    **判据**：方法体里必须能看到它查了枚举（`XxxEnum item = fromCode(code)` + `item.label`）。
+    修法：`return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;`
+    2026-10-06 全仓扫出 **49 个这类空壳**（report 41 个 `Cdr*` + charge 3 + common 2
+    （`PaymentMethodEnum` / `SettlementModeEnum`）+ emr 1（`QcDimensionEnum`）+ `PaymentItemTypeEnum`
+    + `StatReportTypeEnum`（"未知类型"变体）），已全部修复。
+    **注意判据别写太死**：合法实现可能用 `item.label` / `item.getLabel()` / `item.desc` /
+    `item.text`（Lombok getter，变量名也可能是 `status`/`source`/`e` 而不是 `item`）——
+    判据要认「**方法体最终返回了枚举实例的文案字段**」，别只匹配一种写法，否则会误报成 bug。
 - 机械判据：
   `grep -rn "static final int" --include=*.java source/back_end` 里只剩技术阈值常量（逐条核对，业务码值为 0）；
   `grep -rnE "set[A-Z]\w*\(\s*[0-9]+\s*\)|Objects\.equals\(\s*[0-9]+," --include=*.java source/back_end` 结果为 0。
@@ -501,12 +517,14 @@
   **所有「某一列的码值 → 文案」必须是一个枚举**，调用侧写 `XxxEnum.getText(code)`。
 - 一句话判据：**看到 `Map<Integer, String>` / `Map.of(1,"…")` 里装的是码值和中文，就是违规**，
   立刻改成枚举。（真·非码值用途的 Map 常量不受此限：查表缓存、ID→对象的合并结果、`Map.of()` 空集合等。）
-- 迁移进度（2026-10-05）：全仓 15 处 `static final Map<Integer,String>` 已全部处置——
-  equipment 6 个（维保类型/维保结果/计量类型/计量结果/设备状态/设备类别 → 6 个新枚举）、
-  emr 3 个（随访任务类型、问卷维度/渠道）、ai 1 个（费用解释项目类型）、operation 1 个（麻醉收费项）；
-  剩下 5 处是 `support` 类里的**注册表**（输血核查项、手术核查项、安全核查项、随访不良反应项），
-  按 §13 例外条款保留（它们是"核查项集合"而非单纯码值映射，且带勾稽逻辑），
-  但已补`text()` 返回 `""` 兜底 + `labelOrUnknown` 双方法。
+- 迁移进度（2026-10-06 全量收口完成）：全仓 11 处 `static final Map<Integer,String>` 已全部处置——
+  equipment 6（维保类型/维保结果/计量类型/计量结果/设备状态/设备类别 → 6 个新枚举）、
+  emr 3（随访任务类型、问卷维度、问卷渠道：其中 2 个**已有枚举直接复用**，只新建 `SurveyDimensionEnum`）、
+  ai 1（费用解释项目类型 → **复用 his-common的 `PaymentItemTypeEnum`**，码值 1-8 与
+  `biz_settlement_bill_item.item_type` 落库分布逐字一致）、operation 1（麻醉收费项）。
+  **保留 4 处**：`TransfusionCheckItems` / `OperationCheckItems` / `SafetyCheckItems` /
+  `FollowupAdverseItems` 是 `support` 里的**注册表**（核查项集合 + 勾稽逻辑），
+  按 §13 例外条款保留（不是单纯码值映射），但 `text()` 脏值兜底已改成 `""` + 补 `labelOrUnknown`。
   验收判据：`grep -rn "static final Map<Integer, String>" --include=*.java source/back_end` 只剩上述注册表。
 
 ## 15. 分页 DTO 必须继承 PageParam，且必须是独立顶层类
@@ -527,12 +545,29 @@
 - **DTO 不留死代码**：定义了却没有任何 Controller/Service 引用的内部类直接删，别"提出来"——
   `EquipmentDTO.MaintainDelete`（带 `reason` 字段）就是活例子：接口用 `@RequestParam Long id`、
   前端 `maintainDelete(id)` 也不传 reason，这段校验和字段从来没生效过，2026-10-05 已随聚合类一起删除。
-- 迁移进度（2026-10-05）：`EquipmentDTO` 5 个内部类拆为5 个独立文件
+- 迁移进度（2026-10-05~06）：`EquipmentDTO` 5 个内部类拆为5 个独立文件
   （`EquipmentQueryPageDTO` / `MaintainQueryPageDTO` / `MaintainCreateDTO` /
   `MeteringQueryPageDTO` / `MeteringCreateDTO`，聚合类 `EquipmentDTO` 整个删除）；
-  全仓 60 个"自带 pageNum/pageSize 却没继承 PageParam"的分页 DTO 待全部改完（见下）。
+  全仓约 **75 个分页 DTO** 已全部改为 `extends PageParam`（`grep -rln "private Integer pageNum" `
+  已无非 PageParam 命中）。另把 miniapp 两个 controller 里写在类内部的 `MessagePageDTO` /
+  `MarkReadDTO` 提成独立 DTO 文件（同时违反 §10 分层与 §15）。
   验收判据：`grep -rln "private Integer pageNum\|private int pageNum" --include=*.java source/back_end`
   的每个文件（除 `his-common/base/PageParam.java` 本身）都要能在同文件里grep 到 `extends PageParam`。
+- **⚠️ 待拍板：`PageParam` 本身缺夹取与上限（2026-10-06 记录，未擅自改公共类）**：
+  ① `pageSize` **没有上限**，而迁移前有 3 个 DTO 带 `@Max(200)`，继承后这条约束**静默消失**；
+  ② `pageNum/pageSize` 是原始 `int` 且**不做夹取**，前端传 0 或负数会直接进 mapper
+     （SQL `LIMIT 0, -1` 行为未定义），迁移前各 DTO 自己写 `Math.max(1, …)` 兜着；
+  ③ 默认值不统一：`PageParam` 是 10，但有 8 个 DTO 原本默认 20（迁移后行为变了）。
+  **建议方案（待确认）**：在 `PageParam` 加两个 getter 做夹取
+  （`getPageNum() { return Math.max(1, pageNum); }`、`getPageSize() { return Math.min(Math.max(1, pageSize), 200); }`），
+  一处解决全部；**但这会改变 75+ 个 DTO 的现有行为**（默认值 20→10、越界值不再透传），
+  且下游 `PageParam.pageNum` 字段仍可被直接访问，得先决定是否收成私有。**未动，等拍板。**
+- ⚠️ **`Integer` → `int` 会让兜底代码编译失败（已踩，现象具有欺骗性）**：
+  `PageParam.pageNum` 是原始 `int`，迁移前 DTO 声明的是 `Integer`，所以
+  `dto.getPageNum() == null ? 1 : dto.getPageNum()`、`Integer::equals`、三元里混 `Integer`/`int`
+  这类写法继承后会报「二元运算符 '==' 的操作数类型错误」或 NPE 风险。
+  **更坑的是：增量编译会掩盖它**（2026-10-06 实测前 5 轮 `mvn -o -DskipTests install` 全 SUCCESS，
+  第 6 轮才炸出 4 处）——**分页 DTO 改造一律以 `clean install` 为准**。
 
 ## 16. 码值范围校验走 Bean Validation，禁止 service 里手写 containsKey 抛异常
 - **「这个码值合不合法」是入参约束，必须用 Bean Validation 声明在 DTO 字段上**，不要在 service 里
@@ -558,8 +593,14 @@
   - 字符串码值枚举（血型、输血反应类型）用 `@InEnum(value = XxxEnum.class, type = InEnum.Type.TEXT)`。
 - **Service 层只保留跨字段业务规则**（"下次维保日期不能早于本次维保日期"、"有效期至不能早于计量日期"），
   这类规则确实没法用注解表达，留在 service 是对的；**单字段码值合法性一律上注解**。
-- 迁移进度（2026-10-05）：`@InEnum` + `InEnumValidator` 建于 `his-common/validation`；
-  equipment 域4 处手写 containsKey 校验（维保类型/维保结果/计量类型/计量结果）已改为 DTO 上`@InEnum`。
+- 迁移进度（2026-10-06 全量收口完成）：`@InEnum` + `InEnumValidator` 建于 `his-common/validation`；
+  共迁走 **40+ 处** service 手写 `containsKey` / `Set.of().contains()` 码值校验，落到 DTO 字段注解
+  （equipment 4、emr 2、patient 18、medicaltech 6、pharmacy 7、其余零散），
+  码值连续的用 `@Min/@Max`、不连续的用 `@InEnum`；顺带给 **19 个已有枚举补 `isValid`**（`@InEnum` 的落点，
+  patient 模块枚举本来就齐、缺的只是 `isValid`）。
+  **保留在 service 的三类是对的，不要再往注解上搬**：① 跨字段业务规则（"下次维保日期不能早于本次维保日期"）；
+  ② 后台字典维护的集合（`his_notice_consciousness` 等 7 处，属"字典"不进 Java 枚举）；
+  ③ service 内部派生值校验（不是 HTTP 入参，挂 DTO 注解无效，删了就真失去兜底）。
   验收判据：`grep -rn "取值不合法" --include=*.java source/back_end` 只允许出现在 DTO 注解参数与
   `@Schema(description=...)` 里，不允许出现在 service impl 的方法体里。
 
@@ -584,14 +625,19 @@
      `setUpdateTime(nowSeconds())` 补洞，方法本身是**症状**，补 `fill` 才是**病因**。
      2026-10-05 已给 `SysEquipment` / `BizEquipmentMaintain` / `BizEquipmentMetering`
      三个实体补齐 `createTime`/`updateTime`/`delFlag` 的 `fill`，`nowSeconds()` 随之删除。
-- **唯一允许截秒的场景**：时间值参与**签名 / 哈希 / 防重放 /幂等键**计算，
-  这类必须保证"同一秒内重复计算结果一致"，且必须**收口到一个共用方法**、在 javadoc 里写明理由
-  （如 `EmrSignatureServiceImpl.seconds` / `TsaChannelServiceImpl` / `SignCertServiceImpl`）。
-  截秒和「库列精度」是两件事，别混为一谈。
-- 机械判据：`grep -rn "truncatedTo" --include=*.java source/back_end` 的命中，
-  只允许是① 签名/哈希场景的共用方法，② 少量 `LocalDateTime.now()` 直接落库的写法（会被库四舍五入，无害）。
-  **禁止**是每个 service 各自复制一份的 `nowSeconds` / `toSeconds` / `seconds` 私有方法
-  —— 同一语义三处复制就不叫收口。
+- **唯一允许截秒的场景**：时间值参与**落库后回读比较 / 签名 / 哈希 / 防重放 / 幂等键**计算，
+  这类必须保证"同一秒内重复计算结果一致"。**收口到 `com.his.common.util.TimeUtil`**
+  （`TimeUtil.toSeconds(t)` 归一入参、`TimeUtil.nowSeconds()` 取当前秒），
+  **禁止每个 service 各写一份私有副本**——2026-10-06 收口前全仓有 **26 个副本**
+  （`nowSeconds` / `nowSec` / `toSeconds` / `seconds` 四种名字混用，283 处调用），
+  同一语义复制 26 份还各叫各的，这不叫收口。已全部改为调`TimeUtil`。
+- **单纯"记个时间"不要截秒**：`createTime` / `updateTime` / 操作日志时间直接 `LocalDateTime.now()`，
+  库会自动四舍五入（1068 个列全是 `DATETIME_PRECISION = 0`），且该配实体
+  `@TableField(fill = ...)` 让 MP 统一填（`sys_equipment` 89/90 行 `update_time` 是 NULL 就是反例）。
+- 机械判据：
+  - `grep -rn "private \(static \)\?LocalDateTime \(toSeconds\|seconds\|nowSeconds\|nowSec\)" --include=*.java source/back_end`
+    结果必须为 **0**（唯一实现在 `his-common/util/TimeUtil.java`）。
+  - `grep -rn "static final Map<Integer, String>" --include=*.java source/back_end` 只剩 §14 允许的注册表类。
 
 ## 8. 凭据分流：登录口令可入库，环境口令一律不入库
 

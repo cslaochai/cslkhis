@@ -66,7 +66,8 @@ public enum PaymentMethodEnum {
      * 异常 / 审计 / 合规用码值 → 文案。null 或不在枚举内返回「未知(n)」，保留原始码值以便排查脏数据。
      */
     public static String labelOrUnknown(Integer code) {
-        return code == null ? "未知" : "未知(" + code + ")";
+        PaymentMethodEnum item = code == null ? null : getByCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.desc;
     }
 
     /**

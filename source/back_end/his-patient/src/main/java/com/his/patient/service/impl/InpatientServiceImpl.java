@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.common.util.TimeUtil;
 import com.his.patient.enums.NursingLevelEnum;
 
 import cn.hutool.json.JSONUtil;
@@ -116,10 +117,6 @@ public class InpatientServiceImpl implements InpatientService {
      * </ol>
      * 所以凡是会落库、又会被拿来比较的时间，一律先截到秒，保证「写进去的 = 读回来的」。
      */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     // 查询
 
     /**
@@ -311,7 +308,7 @@ public class InpatientServiceImpl implements InpatientService {
             throw new BusinessException("入院科室与床位所属科室不一致");
         }
 
-        LocalDateTime admitTime = toSeconds(dto.getAdmitTime() != null ? dto.getAdmitTime() : LocalDateTime.now());
+        LocalDateTime admitTime = TimeUtil.toSeconds(dto.getAdmitTime() != null ? dto.getAdmitTime() : LocalDateTime.now());
 
         // 门诊线索：有证以证为准（证是那次门诊留下的凭据）
         Long registId = order != null ? order.getRegistId() : dto.getRegistId();
@@ -467,10 +464,10 @@ public class InpatientServiceImpl implements InpatientService {
             throw new BusinessException("该入院已存在出院记录");
         }
 
-        LocalDateTime dischargeTime = toSeconds(dto.getDischargeTime() != null ? dto.getDischargeTime() : LocalDateTime.now());
+        LocalDateTime dischargeTime = TimeUtil.toSeconds(dto.getDischargeTime() != null ? dto.getDischargeTime() : LocalDateTime.now());
         // 两边都截到秒再比：库里存的是秒，拿毫秒级的 now() 去比会误报「早于入院时间」
         if (admission.getAdmitTime() != null
-                && dischargeTime.isBefore(toSeconds(admission.getAdmitTime()))) {
+                && dischargeTime.isBefore(TimeUtil.toSeconds(admission.getAdmitTime()))) {
             throw new BusinessException("出院时间不能早于入院时间");
         }
 
@@ -960,7 +957,7 @@ public class InpatientServiceImpl implements InpatientService {
      * 时间轴直接错乱。
      */
     private Long ensureVisit(Long patientId, Long registId) {
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         LocalDateTime dayStart = now.toLocalDate().atStartOfDay();
         LocalDateTime dayEnd = now.toLocalDate().plusDays(1).atStartOfDay();
 

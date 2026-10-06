@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.ReferralDTO;
 import com.his.patient.entity.BizReferral;
@@ -81,7 +82,7 @@ public class ReferralServiceImpl implements ReferralService {
         r.setDiagnosis(dto.getDiagnosis());
         r.setContactPhone(dto.getContactPhone());
         r.setReferralStatus(ReferralStatusEnum.PENDING.getCode());
-        r.setReferralTime(toSeconds(LocalDateTime.now()));
+        r.setReferralTime(TimeUtil.toSeconds(LocalDateTime.now()));
         r.setRemark(dto.getRemark());
         r.setCreateBy(UserUtils.getCurrentEmployeeName());
         referralMapper.insert(r);
@@ -120,7 +121,7 @@ public class ReferralServiceImpl implements ReferralService {
         }
         r.setAuditBy(UserUtils.getCurrentEmployeeId());
         r.setAuditName(UserUtils.getCurrentEmployeeName());
-        r.setAuditTime(toSeconds(LocalDateTime.now()));
+        r.setAuditTime(TimeUtil.toSeconds(LocalDateTime.now()));
         r.setAuditRemark(dto.getAuditRemark());
         r.setUpdateBy(UserUtils.getCurrentEmployeeName());
         r.setUpdateTime(r.getAuditTime());
@@ -135,7 +136,7 @@ public class ReferralServiceImpl implements ReferralService {
             throw new BusinessException("只有已确认的转诊单可以完成（当前：" + statusText(r) + "）");
         }
         r.setReferralStatus(ReferralStatusEnum.FINISHED.getCode());
-        r.setFinishTime(toSeconds(LocalDateTime.now()));
+        r.setFinishTime(TimeUtil.toSeconds(LocalDateTime.now()));
         r.setFinishRemark(dto.getFinishRemark());
         r.setUpdateBy(UserUtils.getCurrentEmployeeName());
         r.setUpdateTime(r.getFinishTime());
@@ -155,7 +156,7 @@ public class ReferralServiceImpl implements ReferralService {
         r.setReferralStatus(ReferralStatusEnum.CANCELLED.getCode());
         r.setRemark((r.getRemark() == null ? "" : r.getRemark() + "；") + "取消原因：" + dto.getCancelReason().trim());
         r.setUpdateBy(UserUtils.getCurrentEmployeeName());
-        r.setUpdateTime(toSeconds(LocalDateTime.now()));
+        r.setUpdateTime(TimeUtil.toSeconds(LocalDateTime.now()));
         referralMapper.updateById(r);
         return toVo(r, loadDeptNames());
     }
@@ -290,10 +291,6 @@ public class ReferralServiceImpl implements ReferralService {
 
     private String tr(String s) {
         return s == null ? null : s.trim();
-    }
-
-    private LocalDateTime toSeconds(LocalDateTime t) {
-        return t.truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
     }
 
     private BizReferral requireReferral(Long id) {

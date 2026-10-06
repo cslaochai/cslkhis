@@ -104,9 +104,6 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
 
     @Transactional(rollbackFor = Exception.class)
     public CssdPackTemplateVO upsert(CssdDTO.TemplateUpsert dto) {
-        if (CssdSterilizeMethodEnum.fromCode(dto.getSterilizeMethod()) == null) {
-            throw new BusinessException("灭菌方式取值不合法（1-高压蒸汽 2-环氧乙烷 3-低温等离子）");
-        }
         String code = tr(dto.getTemplateCode());
         String name = tr(dto.getPackName());
 

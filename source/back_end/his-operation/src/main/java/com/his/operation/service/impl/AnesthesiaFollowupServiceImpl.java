@@ -2,6 +2,7 @@ package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.operation.dto.AnesthesiaFollowupQueryPageDTO;
@@ -26,7 +27,6 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -83,16 +83,12 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     }
 
     private static LocalDateTime now() {
-        return toSeconds(LocalDateTime.now());
+        return TimeUtil.toSeconds(LocalDateTime.now());
     }
 
     /**
      * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)）
      */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     @Override
     public IPage<AnesthesiaFollowupVO> listPage(AnesthesiaFollowupQueryPageDTO query) {
         if (query == null) {
@@ -187,7 +183,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         }
         validateTimeAgainstAnesthesia(dto.getFollowupTime(), entity.getRecordId());
 
-        entity.setFollowupTime(toSeconds(dto.getFollowupTime()));
+        entity.setFollowupTime(TimeUtil.toSeconds(dto.getFollowupTime()));
         entity.setPainScore(dto.getPainScore());
         entity.setRecovery(dto.getRecovery());
         entity.setAdverseItems(FollowupAdverseItems.serialize(adverse));

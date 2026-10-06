@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.DietConfirmDTO;
@@ -29,7 +30,6 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -76,10 +76,6 @@ public class DietPlanServiceImpl implements DietPlanService {
 
     private static String trim(String v) {
         return v == null ? null : v.trim();
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
     }
 
     private static String cut(String v, int max) {
@@ -188,7 +184,7 @@ public class DietPlanServiceImpl implements DietPlanService {
             row.setPlanStatus(PlanStatusEnum.RUNNING.getCode());
             // 营养师自己登记的方案不需要"自己接收自己"，直接计为已接收
             row.setConfirmStatus(DietConfirmStatusEnum.DONE.getCode());
-            row.setConfirmTime(toSeconds(LocalDateTime.now()));
+            row.setConfirmTime(TimeUtil.toSeconds(LocalDateTime.now()));
             row.setConfirmerId(UserUtils.getCurrentEmployeeId());
             row.setConfirmerName(currentName());
         } else {
@@ -216,7 +212,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         row.setFluidTarget(dto.getFluidTarget());
         row.setMealTypes(normalizeMealTypes(dto.getMealTypes(), diet));
         if (row.getStartTime() == null) {
-            row.setStartTime(toSeconds(dto.getStartTime() == null ? LocalDateTime.now() : dto.getStartTime()));
+            row.setStartTime(TimeUtil.toSeconds(dto.getStartTime() == null ? LocalDateTime.now() : dto.getStartTime()));
         }
         row.setRemark(cut(trim(dto.getRemark()), 500));
 
@@ -268,7 +264,7 @@ public class DietPlanServiceImpl implements DietPlanService {
             throw new BusinessException("请选择要处理的膳食方案");
         }
 
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         // 批量要么全成要么全不动：一半接收一半报错，营养科说不清哪些单子已经生效
         List<BizDietPlan> rows = new ArrayList<>(ids.size());
         for (Long id : ids) {
@@ -313,7 +309,7 @@ public class DietPlanServiceImpl implements DietPlanService {
             throw new BusinessException("方案 " + row.getDietNo() + " 当前为「"
                     + PlanStatusEnum.labelOrUnknown(row.getPlanStatus()) + "」，不需要再停止");
         }
-        LocalDateTime stopTime = toSeconds(dto.getStopTime() == null ? LocalDateTime.now() : dto.getStopTime());
+        LocalDateTime stopTime = TimeUtil.toSeconds(dto.getStopTime() == null ? LocalDateTime.now() : dto.getStopTime());
         applyStop(row, stopTime, trim(dto.getReason()));
         return planMapper.selectVoById(row.getId());
     }
@@ -373,7 +369,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         row.setCalorieTarget(diet == null ? null : diet.calorie());
         row.setProteinTarget(diet == null ? null : diet.protein());
         row.setMealTypes(diet == null ? null : normalizeMealTypes(null, diet));
-        row.setStartTime(toSeconds(order.getStartTime() == null ? LocalDateTime.now() : order.getStartTime()));
+        row.setStartTime(TimeUtil.toSeconds(order.getStartTime() == null ? LocalDateTime.now() : order.getStartTime()));
         row.setPlanStatus(PlanStatusEnum.RUNNING.getCode());
         row.setConfirmStatus(DietConfirmStatusEnum.PENDING.getCode());
         row.setRemark(cut("由医嘱 " + order.getOrderNo() + " 校对派生", 500));
@@ -398,7 +394,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         if (row == null || !Objects.equals(PlanStatusEnum.RUNNING.getCode(), row.getPlanStatus())) {
             return;
         }
-        applyStop(row, toSeconds(stopTime == null ? LocalDateTime.now() : stopTime), reason);
+        applyStop(row, TimeUtil.toSeconds(stopTime == null ? LocalDateTime.now() : stopTime), reason);
     }
 
     @Override
@@ -408,7 +404,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         if (row == null || Objects.equals(PlanStatusEnum.CANCELED.getCode(), row.getPlanStatus())) {
             return;
         }
-        LocalDateTime now = toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         row.setPlanStatus(PlanStatusEnum.CANCELED.getCode());
         row.setStopTime(now);
         row.setRemark(cut(appendRemark(row.getRemark(), "来源医嘱已作废"), 500));
@@ -448,10 +444,10 @@ public class DietPlanServiceImpl implements DietPlanService {
                 .ge(BizMealOrder::getMealDate, fromDate)
                 .in(BizMealOrder::getDeliverStatus, MealDeliverStatusEnum.PENDING.getCode(), MealDeliverStatusEnum.PREPARED.getCode())
                 .set(BizMealOrder::getDeliverStatus, MealDeliverStatusEnum.CANCELED.getCode())
-                .set(BizMealOrder::getCancelTime, toSeconds(LocalDateTime.now()))
+                .set(BizMealOrder::getCancelTime, TimeUtil.toSeconds(LocalDateTime.now()))
                 .set(BizMealOrder::getCancelReason, reason)
                 .set(BizMealOrder::getUpdateBy, currentName())
-                .set(BizMealOrder::getUpdateTime, toSeconds(LocalDateTime.now())));
+                .set(BizMealOrder::getUpdateTime, TimeUtil.toSeconds(LocalDateTime.now())));
         if (n > 0) {
             log.info("膳食方案停/废联动退订 方案={} 条数={} 原因={}", dietPlanId, n, reason);
         }

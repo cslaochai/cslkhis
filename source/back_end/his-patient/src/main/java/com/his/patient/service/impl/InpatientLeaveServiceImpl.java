@@ -2,6 +2,7 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.dto.SignCommandDTO;
@@ -99,10 +100,6 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
 
     private static LocalDateTime now() {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime t) {
-        return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS);
     }
 
     private static LocalDateTime parse(String text) {
@@ -216,14 +213,14 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         if (!Objects.equals(snapshot.getAdmitStatus(), AdmitStatusEnum.IN_HOSPITAL.getCode())) {
             throw new BusinessException("患者已不在院，不能填写请假单（请假必须发生在住院期间）");
         }
-        LocalDateTime expectedLeave = toSeconds(dto.getExpectedLeaveTime());
-        LocalDateTime expectedReturn = toSeconds(dto.getExpectedReturnTime());
+        LocalDateTime expectedLeave = TimeUtil.toSeconds(dto.getExpectedLeaveTime());
+        LocalDateTime expectedReturn = TimeUtil.toSeconds(dto.getExpectedReturnTime());
         if (expectedLeave.isAfter(expectedReturn)) {
             throw new BusinessException("预计离院时间不能晚于预计返回时间");
         }
         // 注意：Base.admitTime 是 SQL DATE_FORMAT 出的字符串，必须先 parse 才能与时间比较
         LocalDateTime admitTime = StringUtils.hasText(snapshot.getAdmitTime()) ? parse(snapshot.getAdmitTime()) : null;
-        if (admitTime != null && expectedLeave.isBefore(toSeconds(admitTime))) {
+        if (admitTime != null && expectedLeave.isBefore(TimeUtil.toSeconds(admitTime))) {
             throw new BusinessException("预计离院时间不能早于入院时间（人还没入院就开始请假是编造事实）");
         }
         long hours = java.time.Duration.between(expectedLeave, expectedReturn).toHours();
@@ -405,7 +402,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         if (signature.length() > SIGNATURE_MAX) {
             throw new BusinessException("手写签名图片过大，请清空画板后重新签名");
         }
-        LocalDateTime actualLeave = dto.getActualLeaveTime() == null ? now() : toSeconds(dto.getActualLeaveTime());
+        LocalDateTime actualLeave = dto.getActualLeaveTime() == null ? now() : TimeUtil.toSeconds(dto.getActualLeaveTime());
         if (actualLeave.isAfter(now())) {
             throw new BusinessException("实际离院时间不能晚于当前时间");
         }

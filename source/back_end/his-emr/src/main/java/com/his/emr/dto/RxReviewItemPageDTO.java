@@ -1,14 +1,17 @@
 package com.his.emr.dto;
 
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 /**
  * 点评明细分页入参（batchId 为空 = 跨批次全量，供统计/导出；页面明细 tab 固定传批次）
  */
 @Data
-public class RxReviewItemPageDTO {
+@EqualsAndHashCode(callSuper = true)
+public class RxReviewItemPageDTO extends PageParam {
 
     /**
      * 批次ID（可空）
@@ -46,15 +49,4 @@ public class RxReviewItemPageDTO {
     @Max(value = 1, message = "公示状态非法")
     private Integer publicityStatus;
 
-    /**
-     * 页码
-     */
-    @Min(value = 1, message = "页码非法")
-    private Integer pageNum = 1;
-
-    /**
-     * 每页条数
-     */
-    @Min(value = 1, message = "每页条数非法")
-    private Integer pageSize = 10;
 }

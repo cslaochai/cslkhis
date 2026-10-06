@@ -104,14 +104,6 @@ public class DutyLogServiceImpl implements DutyLogService {
 
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(DutyLogUpsertDTO dto) {
-        if (dto.getShiftType() == null || (dto.getShiftType() != DutyShiftTypeEnum.DAY.getCode()
-                && dto.getShiftType() != DutyShiftTypeEnum.NIGHT.getCode())) {
-            throw new BusinessException("班次取值不合法（1-白班 2-夜班）");
-        }
-        if (dto.getLogType() == null || dto.getLogType() < DutyLogTypeEnum.EVENT.getCode()
-                || dto.getLogType() > DutyLogTypeEnum.PATROL.getCode()) {
-            throw new BusinessException("记录类型取值不合法（1-值班事件 2-遗留事项 3-巡查记录）");
-        }
         int status = dto.getStatus() == null ? DutyLogStatusEnum.PENDING.getCode() : dto.getStatus();
         if (status != DutyLogStatusEnum.PENDING.getCode() && status != DutyLogStatusEnum.DONE.getCode()) {
             // 交班本最容易被绕过的地方：登记时直接写"已签收"，等于自己给自己签字交接。

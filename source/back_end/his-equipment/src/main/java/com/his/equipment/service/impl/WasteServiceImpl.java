@@ -3,6 +3,7 @@ package com.his.equipment.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
 import com.his.equipment.dto.WasteDTO;
 import com.his.equipment.entity.BizMedicalWaste;
@@ -41,15 +42,8 @@ public class WasteServiceImpl implements WasteService {
         return s == null ? null : s.trim();
     }
 
-    private static LocalDateTime nowSeconds() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
     @Transactional(rollbackFor = Exception.class)
     public WasteVO create(WasteDTO.Create dto) {
-        if (WasteTypeEnum.fromCode(dto.getWasteType()) == null) {
-            throw new BusinessException("医废类别取值不合法（1-感染性 2-损伤性 3-病理性 4-药物性 5-化学性）");
-        }
         // ① 条件必填：科室ID与科室名称二选一即可（前端可只传名称），单字段加 @NotNull 会把合法请求挡成 400
         if (dto.getDeptId() == null && !StringUtils.hasText(dto.getDeptName())) {
             throw new BusinessException("产生科室不能为空");
@@ -77,7 +71,7 @@ public class WasteServiceImpl implements WasteService {
         }
         w.setStatus(WasteStatusEnum.HANDED_OVER.getCode());
         w.setHandoverName(dto.getHandoverName().trim());
-        w.setHandoverTime(nowSeconds());
+        w.setHandoverTime(TimeUtil.nowSeconds());
         w.setUpdateBy(UserUtils.getCurrentEmployeeName());
         w.setUpdateTime(w.getHandoverTime());
         wasteMapper.updateById(w);
@@ -92,7 +86,7 @@ public class WasteServiceImpl implements WasteService {
         }
         w.setStatus(WasteStatusEnum.DISPOSED.getCode());
         w.setDisposalCompany(dto.getDisposalCompany().trim());
-        w.setDisposalTime(nowSeconds());
+        w.setDisposalTime(TimeUtil.nowSeconds());
         w.setUpdateBy(UserUtils.getCurrentEmployeeName());
         w.setUpdateTime(w.getDisposalTime());
         wasteMapper.updateById(w);

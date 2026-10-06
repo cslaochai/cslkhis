@@ -60,6 +60,15 @@ public enum PaymentItemTypeEnum {
      * 异常 / 审计 / 合规用码值 → 文案。null 或不在枚举内返回「未知(n)」，保留原始码值以便排查脏数据。
      */
     public static String labelOrUnknown(Integer code) {
-        return code == null ? "未知" : "未知(" + code + ")";
+        PaymentItemTypeEnum item = getByCode(code);
+        return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.desc;
+    }
+
+    /**
+     * 码值是否合法（写入侧校验用；null 不合法）。
+     * biz_settlement_bill_item.item_type 的落库码值 1-8 全在本枚举内（2026-10-06 核实）。
+     */
+    public static boolean isValid(Integer code) {
+        return getByCode(code) != null;
     }
 }

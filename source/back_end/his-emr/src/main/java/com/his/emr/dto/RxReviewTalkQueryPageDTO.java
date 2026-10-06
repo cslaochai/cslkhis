@@ -1,8 +1,10 @@
 package com.his.emr.dto;
 
+import com.his.common.base.PageParam;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -11,7 +13,8 @@ import java.time.LocalDate;
  * 医师约谈分页入参
  */
 @Data
-public class RxReviewTalkQueryPageDTO {
+@EqualsAndHashCode(callSuper = true)
+public class RxReviewTalkQueryPageDTO extends PageParam {
 
     /**
      * 医师姓名/约谈编号模糊
@@ -44,15 +47,4 @@ public class RxReviewTalkQueryPageDTO {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dateEnd;
 
-    /**
-     * 页码
-     */
-    @Min(value = 1, message = "页码非法")
-    private Integer pageNum = 1;
-
-    /**
-     * 每页条数
-     */
-    @Min(value = 1, message = "每页条数非法")
-    private Integer pageSize = 10;
 }

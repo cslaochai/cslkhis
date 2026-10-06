@@ -1,8 +1,12 @@
 package com.his.equipment.dto;
 
+import com.his.common.base.PageParam;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -27,6 +31,8 @@ public class WasteDTO {
          * 医废类别（1-感染性 2-损伤性 3-病理性 4-药物性 5-化学性）
          */
         @NotNull(message = "医废类别不能为空")
+        @Min(value = 1, message = "医废类别取值不合法（1-感染性 2-损伤性 3-病理性 4-药物性 5-化学性）")
+        @Max(value = 5, message = "医废类别取值不合法（1-感染性 2-损伤性 3-病理性 4-药物性 5-化学性）")
         private Integer wasteType;
 
         /**
@@ -93,7 +99,8 @@ public class WasteDTO {
      * 分页查询
      */
     @Data
-    public static class QueryPage implements Serializable {
+    @EqualsAndHashCode(callSuper = true)
+    public static class QueryPage extends PageParam implements Serializable {
 
         /**
          * 关键词：交接单号/科室模糊
@@ -119,14 +126,5 @@ public class WasteDTO {
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate collectDateEnd;
 
-        /**
-         * 页码
-         */
-        private Integer pageNum = 1;
-
-        /**
-         * 每页条数
-         */
-        private Integer pageSize = 10;
     }
 }

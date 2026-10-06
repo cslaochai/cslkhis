@@ -3,6 +3,7 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
 import com.his.operation.dto.*;
 import com.his.operation.entity.*;
@@ -103,10 +104,6 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     /**
      * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
      */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     private static BigDecimal nz(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
     }
@@ -213,7 +210,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         entity.setAnesthetistId(dto.getAnesthetistId() != null ? dto.getAnesthetistId() : currentEmpId());
         entity.setAnesthetistName(employeeNameOf(entity.getAnesthetistId()));
         entity.setAssistantAnesthetistName(dto.getAssistantAnesthetistName());
-        entity.setEnterRoomTime(toSeconds(dto.getEnterRoomTime() == null ? now() : dto.getEnterRoomTime()));
+        entity.setEnterRoomTime(TimeUtil.toSeconds(dto.getEnterRoomTime() == null ? now() : dto.getEnterRoomTime()));
         entity.setRecordStatus(AnesthesiaRecordStatusEnum.DRAFT.getCode());
         entity.setChargeStatus(AnesthesiaChargeStatusEnum.PENDING.getCode());
         // 「急诊超前麻醉」的状态靠 visit_id 为空来表达，不额外加一列：
@@ -248,7 +245,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     @Transactional(rollbackFor = Exception.class)
     public void addVital(AnesthesiaVitalUpsertDTO dto) {
         BizAnesthesiaRecord record = mustEditable(dto == null ? null : dto.getRecordId());
-        LocalDateTime sampleTime = toSeconds(dto.getSampleTime());
+        LocalDateTime sampleTime = TimeUtil.toSeconds(dto.getSampleTime());
         if (vitalMapper.countSameTime(record.getId(), sampleTime) > 0) {
             throw new BusinessException("采样时刻 " + dto.getSampleTime()
                     + " 已有生命体征记录；同一时刻一个点只能有一组真值（要改请先看是不是采样时刻填错了）");
@@ -294,7 +291,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         BizAnesthesiaRecord record = mustEditable(dto == null ? null : dto.getRecordId());
         BizAnesthesiaMed med = new BizAnesthesiaMed();
         med.setRecordId(record.getId());
-        med.setMedTime(toSeconds(dto.getMedTime()));
+        med.setMedTime(TimeUtil.toSeconds(dto.getMedTime()));
         med.setMedPhase(dto.getMedPhase());
         med.setDrugCode(dto.getDrugCode());
         med.setDrugName(dto.getDrugName().trim());
@@ -527,12 +524,12 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (dto.getAssistantAnesthetistName() != null) {
             entity.setAssistantAnesthetistName(dto.getAssistantAnesthetistName());
         }
-        entity.setEnterRoomTime(toSeconds(pick(entity.getEnterRoomTime(), dto.getEnterRoomTime())));
-        entity.setAnesthesiaStartTime(toSeconds(pick(entity.getAnesthesiaStartTime(), dto.getAnesthesiaStartTime())));
-        entity.setOperationStartTime(toSeconds(pick(entity.getOperationStartTime(), dto.getOperationStartTime())));
-        entity.setOperationEndTime(toSeconds(pick(entity.getOperationEndTime(), dto.getOperationEndTime())));
-        entity.setAnesthesiaEndTime(toSeconds(pick(entity.getAnesthesiaEndTime(), dto.getAnesthesiaEndTime())));
-        entity.setLeaveRoomTime(toSeconds(pick(entity.getLeaveRoomTime(), dto.getLeaveRoomTime())));
+        entity.setEnterRoomTime(TimeUtil.toSeconds(pick(entity.getEnterRoomTime(), dto.getEnterRoomTime())));
+        entity.setAnesthesiaStartTime(TimeUtil.toSeconds(pick(entity.getAnesthesiaStartTime(), dto.getAnesthesiaStartTime())));
+        entity.setOperationStartTime(TimeUtil.toSeconds(pick(entity.getOperationStartTime(), dto.getOperationStartTime())));
+        entity.setOperationEndTime(TimeUtil.toSeconds(pick(entity.getOperationEndTime(), dto.getOperationEndTime())));
+        entity.setAnesthesiaEndTime(TimeUtil.toSeconds(pick(entity.getAnesthesiaEndTime(), dto.getAnesthesiaEndTime())));
+        entity.setLeaveRoomTime(TimeUtil.toSeconds(pick(entity.getLeaveRoomTime(), dto.getLeaveRoomTime())));
         entity.setCrystalloid(pick(entity.getCrystalloid(), dto.getCrystalloid()));
         entity.setColloid(pick(entity.getColloid(), dto.getColloid()));
         entity.setBloodTransfusion(pick(entity.getBloodTransfusion(), dto.getBloodTransfusion()));

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
 import com.his.patient.entity.BizPatient;
 import com.his.medicaltech.dto.TransfusionApplyQueryPageDTO;
@@ -767,7 +768,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             throw new BusinessException("该患者已不在院，不能开始输注");
         }
 
-        LocalDateTime start = toSeconds(dto.getInfusionStartTime());
+        LocalDateTime start = TimeUtil.toSeconds(dto.getInfusionStartTime());
         LocalDateTime now = now();
         String nurse1 = employeeNameOf(dto.getCheckNurseId());
         String nurse2 = employeeNameOf(dto.getCheckNurse2Id());
@@ -815,7 +816,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
                     + TransfusionStatusEnum.labelOrUnknown(entity.getTransfusionStatus())
                     + "」，未开始输注不能登记完成");
         }
-        LocalDateTime end = toSeconds(dto.getInfusionEndTime());
+        LocalDateTime end = TimeUtil.toSeconds(dto.getInfusionEndTime());
         if (entity.getInfusionStartTime() != null && !end.isAfter(entity.getInfusionStartTime())) {
             throw new BusinessException("输注结束时间必须晚于开始时间（"
                     + entity.getInfusionStartTime().format(FULL_TIME) + "）");
@@ -1290,14 +1291,10 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     }
 
     private static LocalDateTime now() {
-        return toSeconds(LocalDateTime.now());
+        return TimeUtil.toSeconds(LocalDateTime.now());
     }
 
     /** 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入） */
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     /** 下界宽松解析：{@code yyyy-MM-dd} → 当天 00:00:00；带时分秒则原样使用（含） */
     private static String normalizeFrom(String raw) {
         Parsed p = parse(raw);

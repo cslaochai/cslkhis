@@ -1,6 +1,8 @@
 package com.his.miniapp.dto;
 
+import com.his.common.base.PageParam;
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 /**
@@ -11,13 +13,7 @@ import lombok.Data;
  */
 @Data
 @Schema(description = "院内工单检索条件")
-public class TicketSearchDTO {
-
-    @Schema(description = "页码，从 1 开始")
-    private Integer pageNum = 1;
-
-    @Schema(description = "每页条数")
-    private Integer pageSize = 20;
+public class TicketSearchDTO extends PageParam {
 
     @Schema(description = "工单状态：0-待受理 1-处理中 2-已办结 3-已关闭，为空查全部")
     private Integer status;

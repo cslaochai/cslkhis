@@ -1,6 +1,7 @@
 package com.his.ai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.ai.dto.PatientFeeExplainDTO;
 import com.his.ai.service.PatientFeeExplainCapability;
 import com.his.ai.vo.FeeCatalogGroupVO;
@@ -55,13 +56,6 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
     private static final int CATALOG_A = 1;
     private static final int CATALOG_B = 2;
     private static final int CATALOG_C = 3;
-
-    /**
-     * 项目类型：1-挂号费 2-西药 3-中成药 4-中药饮片 5-检查 6-检验 7-治疗 8-耗材
-     */
-    private static final Map<Integer, String> ITEM_TYPE_TEXT = Map.of(
-            1, "挂号费", 2, "西药", 3, "中成药", 4, "中药饮片",
-            5, "检查", 6, "检验", 7, "治疗", 8, "耗材");
 
     /**
      * 每个分组最多列出的项目名数量：列太长患者反而不看
@@ -265,7 +259,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             PatientFeeExplainVO.FeeItemGroupVO vo = new PatientFeeExplainVO.FeeItemGroupVO();
             vo.setItemType(entry.getKey());
-            vo.setItemTypeText(ITEM_TYPE_TEXT.getOrDefault(entry.getKey(), "其他"));
+            vo.setItemTypeText(PaymentItemTypeEnum.getText(entry.getKey()));
             vo.setAmount(amount);
             vo.setItemCount(entry.getValue().size());
             groups.add(vo);

@@ -1,5 +1,7 @@
 package com.his.patient.dto;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -24,7 +26,11 @@ public class OrderExecCompleteDTO implements Serializable {
      */
     private List<Long> execIds;
 
-    /** 执行状态（1-待执行 2-已执行 3-已跳过 4-已退回） */
+    /**
+     * 执行状态（本端点只接受 2-已执行 3-已跳过；1-待执行 4-已退回由其他动作推进）
+     */
+    @Min(value = 2, message = "执行结果取值不合法（应为 2-已执行 3-已跳过）")
+    @Max(value = 3, message = "执行结果取值不合法（应为 2-已执行 3-已跳过）")
     private Integer execStatus;
 
     /**

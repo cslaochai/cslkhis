@@ -1,5 +1,6 @@
 package com.his.patient.service.impl;
 
+import com.his.common.util.TimeUtil;
 import com.his.common.enums.ExecStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.InfusionActionDTO;
@@ -67,10 +68,6 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         return false;
     }
 
-    private static LocalDateTime nowSeconds() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public InpatientOrderExecVO start(InfusionActionDTO dto) {
@@ -81,7 +78,7 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
             throw new BusinessException("该执行行已在 "
                     + exec.getInfusionStartTime() + " 开始输注，不能重复开始");
         }
-        exec.setInfusionStartTime(nowSeconds());
+        exec.setInfusionStartTime(TimeUtil.nowSeconds());
         exec.setDripRate(requireDripRate(dto.getDripRate()));
         execMapper.updateById(exec);
         log.info("输液开始 execId={} dripRate={} 护士={}", exec.getId(), exec.getDripRate(), currentName());
@@ -96,7 +93,7 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         if (exec.getInfusionEndTime() != null) {
             throw new BusinessException("该袋已于 " + exec.getInfusionEndTime() + " 结束输注，不能补录巡视（结束后补的观察是假记录）");
         }
-        LocalDateTime roundTime = dto.getRoundTime() == null ? nowSeconds() : dto.getRoundTime().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime roundTime = dto.getRoundTime() == null ? TimeUtil.nowSeconds() : dto.getRoundTime().truncatedTo(ChronoUnit.SECONDS);
         if (roundTime.isBefore(exec.getInfusionStartTime())) {
             throw new BusinessException("巡视时间（" + roundTime + "）早于开始输注时间（"
                     + exec.getInfusionStartTime() + "）——落在外面的巡视是无效观察");
@@ -138,7 +135,7 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
             // ①条件必填：只有标记了不良反应才必填描述，@NotBlank 会把无反应的正常结束挡成 400
             throw new BusinessException("标记了输液不良反应，必须填写不良反应描述（事后追溯的起点）");
         }
-        LocalDateTime endTime = nowSeconds();
+        LocalDateTime endTime = TimeUtil.nowSeconds();
         if (endTime.isBefore(exec.getInfusionStartTime())) {
             throw new BusinessException("结束时间早于开始时间（时钟异常？），拒绝落库");
         }

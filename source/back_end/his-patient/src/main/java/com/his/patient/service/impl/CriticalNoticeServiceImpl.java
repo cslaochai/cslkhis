@@ -1,6 +1,7 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.dto.SignCommandDTO;
@@ -82,10 +83,6 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
 
     private static LocalDateTime now() {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime toSeconds(LocalDateTime t) {
-        return t == null ? null : t.truncatedTo(ChronoUnit.SECONDS);
     }
 
     private static LocalDateTime atStart(java.time.LocalDate date) {
@@ -193,12 +190,12 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         // 写路径与签发/作废同一口径收口：不校验就能给别科患者开单，等于绕过了岗位数据范围
         assertDeptAccessible(snapshot.getDeptId());
         LocalDateTime now = now();
-        LocalDateTime notifyTime = toSeconds(dto.getNotifyTime());
+        LocalDateTime notifyTime = TimeUtil.toSeconds(dto.getNotifyTime());
         // 保留（类别③）：告知时间要落在「入院之后、此刻之前」，是时间轴业务规则，不是入参是否为空
         if (notifyTime.isAfter(now)) {
             throw new BusinessException("告知时间不能晚于当前时间");
         }
-        if (snapshot.getAdmitTime() != null && notifyTime.isBefore(toSeconds(snapshot.getAdmitTime()))) {
+        if (snapshot.getAdmitTime() != null && notifyTime.isBefore(TimeUtil.toSeconds(snapshot.getAdmitTime()))) {
             throw new BusinessException("告知时间不能早于入院时间");
         }
         // 保留（类别③）：神志码值必须命中字典取值

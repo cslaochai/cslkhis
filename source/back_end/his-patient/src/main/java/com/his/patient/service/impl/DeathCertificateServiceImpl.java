@@ -2,6 +2,7 @@ package com.his.patient.service.impl;
 
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
 import com.his.common.base.RedisSequenceService;
 import com.his.common.enums.AdmitStatusEnum;
@@ -225,10 +226,6 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
 
     // 死因监测上报（外发段预留：当前组装报文落库留痕）
 
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
-
     private static LocalDateTime now() {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
@@ -312,7 +309,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         if (dto.getDeathTime().isAfter(now())) {
             throw new BusinessException("死亡时间不能晚于当前时间");
         }
-        if (snapshot.getAdmitTime() != null && dto.getDeathTime().isBefore(toSeconds(snapshot.getAdmitTime()))) {
+        if (snapshot.getAdmitTime() != null && dto.getDeathTime().isBefore(TimeUtil.toSeconds(snapshot.getAdmitTime()))) {
             throw new BusinessException("死亡时间不能早于入院时间");
         }
         Integer deathPlace = dto.getDeathPlace();
@@ -356,7 +353,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         cert.setIdCard(cutToNull(snapshot.getIdCard(), 18));
         cert.setOccupation(cutToNull(snapshot.getOccupation(), UNIT_MAX));
         cert.setMaritalStatus(snapshot.getMaritalStatus());
-        cert.setDeathTime(toSeconds(dto.getDeathTime()));
+        cert.setDeathTime(TimeUtil.toSeconds(dto.getDeathTime()));
         cert.setDeathPlace(deathPlace);
         applyDeathDept(cert, deathPlace, dto.getDeathDeptId(), snapshot);
         cert.setClinicalDiagnosis(cut(trimToNull(dto.getClinicalDiagnosis()), DIAG_MAX));
@@ -375,7 +372,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         cert.setPhysicianName(cut(requireText(
                 StringUtils.hasText(dto.getPhysicianName()) ? dto.getPhysicianName() : UserUtils.getCurrentEmployeeName(),
                 "填表医师不能为空"), 50));
-        cert.setFillTime(dto.getFillTime() != null ? toSeconds(dto.getFillTime()) : (isNew ? now() : cert.getFillTime()));
+        cert.setFillTime(dto.getFillTime() != null ? TimeUtil.toSeconds(dto.getFillTime()) : (isNew ? now() : cert.getFillTime()));
         cert.setRemark(cutToNull(dto.getRemark(), DIAG_MAX));
         // 时限起算点是死亡时间，每次保存都按最新死亡时间重算（改了死亡时间时限必须跟着走）
         cert.setReportDeadline(cert.getDeathTime().plusDays(REPORT_DEADLINE_DAYS));
@@ -434,7 +431,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
             throw new BusinessException("该住院尚未办理「死亡」离院，不能签发死亡证明（先走出院办理，离院方式选「死亡」）");
         }
         if (discharge.getDischargeTime() != null
-                && !toSeconds(discharge.getDischargeTime()).equals(cert.getDeathTime())) {
+                && !TimeUtil.toSeconds(discharge.getDischargeTime()).equals(cert.getDeathTime())) {
             throw new BusinessException("死亡时间与死亡离院时间不一致：出院办理记录为 "
                     + discharge.getDischargeTime() + "，两者必须是同一时点，请把证明的死亡时间改成它");
         }
@@ -620,7 +617,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
             return;
         }
         BizDeathCertificate cert = requireCert(certId);
-        if (cert.getDeathTime() != null && !toSeconds(dischargeTime).equals(cert.getDeathTime())) {
+        if (cert.getDeathTime() != null && !TimeUtil.toSeconds(dischargeTime).equals(cert.getDeathTime())) {
             throw new BusinessException("该住院已有死亡证明（" + cert.getCertNo() + "），出院时间必须等于证明的死亡时间 "
                     + cert.getDeathTime() + "：同一个时点，不许两处编");
         }

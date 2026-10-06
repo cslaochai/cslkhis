@@ -1,6 +1,7 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
@@ -27,7 +28,6 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -56,10 +56,6 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
     private final BizPatientMapper patientMapper;
     private final SysBedMapper bedMapper;
     private final NutritionStatMapper statMapper;
-
-    private static LocalDateTime toSeconds(LocalDateTime time) {
-        return time == null ? null : time.truncatedTo(ChronoUnit.SECONDS);
-    }
 
     private static String trim(String v) {
         return v == null ? null : v.trim();
@@ -125,7 +121,7 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
             throw new BusinessException("NRS2002 总分应在 0~7 之间，请核对分项评分");
         }
 
-        LocalDateTime screenTime = toSeconds(dto.getScreenTime() == null ? LocalDateTime.now() : dto.getScreenTime());
+        LocalDateTime screenTime = TimeUtil.toSeconds(dto.getScreenTime() == null ? LocalDateTime.now() : dto.getScreenTime());
         LocalDate nextScreenDate = resolveNextScreenDate(type, risk, screenTime, dto.getNextScreenDate());
 
         BizNutritionScreen row;
