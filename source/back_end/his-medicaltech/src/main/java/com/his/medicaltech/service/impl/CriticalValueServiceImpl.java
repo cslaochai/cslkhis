@@ -166,20 +166,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     }
 
     private static String currentOperator() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user != null) {
-                if (StringUtils.hasText(user.getUsername())) {
-                    return user.getUsername();
-                }
-                if (StringUtils.hasText(user.getRealName())) {
-                    return user.getRealName();
-                }
-            }
-        } catch (Exception ignored) {
-            // 非请求线程
-        }
-        return "system";
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     @Override

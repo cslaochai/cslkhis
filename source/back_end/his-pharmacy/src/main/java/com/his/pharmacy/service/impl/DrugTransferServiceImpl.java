@@ -100,7 +100,7 @@ public class DrugTransferServiceImpl implements DrugTransferService {
     public DrugTransferVO upsert(DrugTransferUpsertDTO dto) {
         DrugTransferTypeEnum type = DrugTransferTypeEnum.fromCode(dto.getTransferType());
         String reason = requireText(dto.getReason(), "调拨事由", 200);
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         List<BizDrugTransferItem> rows = buildItems(dto.getItems(), type, operator);
 
@@ -155,7 +155,7 @@ public class DrugTransferServiceImpl implements DrugTransferService {
     public DrugTransferVO confirmOut(DrugTransferActionDTO dto) {
         BizDrugTransfer head = lock(dto.getId());
         requireStatus(head, DrugTransferStatusEnum.PENDING_OUT, "确认发出");
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         List<BizDrugTransferItem> items = listItems(head.getId());
         if (items.isEmpty()) {
@@ -192,7 +192,7 @@ public class DrugTransferServiceImpl implements DrugTransferService {
     public DrugTransferVO confirmIn(DrugTransferActionDTO dto) {
         BizDrugTransfer head = lock(dto.getId());
         requireStatus(head, DrugTransferStatusEnum.PENDING_IN, "确认接收");
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         List<BizDrugTransferItem> items = listItems(head.getId());
         long pending = items.stream().filter(i -> !Integer.valueOf(1).equals(i.getInFlag())).count();
@@ -247,7 +247,7 @@ public class DrugTransferServiceImpl implements DrugTransferService {
         BizDrugTransfer head = lock(dto.getId());
         requireStatus(head, DrugTransferStatusEnum.PENDING_OUT, "作废");
         String reason = requireText(dto.getReason(), "作废原因", 200);
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         // 待发出=一行库存都没动过，作废只是把单子关掉；一旦发出就成了在途，作废会让药凭空消失，
         // 想收回去只有一条路：开一张反向调拨单，让流水把它讲清楚。

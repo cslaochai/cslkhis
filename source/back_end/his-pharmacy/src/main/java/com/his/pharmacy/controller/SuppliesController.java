@@ -170,7 +170,6 @@ public class SuppliesController {
     }
 
     private String operatorName() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return (name != null && !name.isBlank()) ? name : "系统操作";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

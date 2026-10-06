@@ -86,12 +86,12 @@ public class DrugDispensingController {
      * 药师身份以后端登录态为准（员工ID/姓名），DTO 传值仅作无登录态兜底
      */
     private Long resolvePharmacistId(Long fallback) {
-        Long employeeId = UserUtils.getCurrentEmployeeId();
+        Long employeeId = UserUtils.getCurrentUser().getEmployeeId();
         return employeeId != null ? employeeId : fallback;
     }
 
     private String resolvePharmacistName(String fallback) {
-        String name = UserUtils.getCurrentEmployeeName();
+        String name = UserUtils.getCurrentUser().getRealName();
         return (name != null && !name.isBlank()) ? name : fallback;
     }
 }

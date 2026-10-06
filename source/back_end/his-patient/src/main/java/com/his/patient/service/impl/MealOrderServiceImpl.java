@@ -306,7 +306,7 @@ public class MealOrderServiceImpl implements MealOrderService {
                 }
             } else if (Objects.equals(MealDeliverStatusEnum.DELIVERED.getCode(), target)) {
                 row.setDeliverTime(now);
-                row.setDeliverById(UserUtils.getCurrentEmployeeId());
+                row.setDeliverById(UserUtils.getCurrentUser().getEmployeeId());
                 row.setDeliverByName(operator);
             } else if (Objects.equals(MealDeliverStatusEnum.SIGNED.getCode(), target)) {
                 row.setSignTime(now);
@@ -340,11 +340,6 @@ public class MealOrderServiceImpl implements MealOrderService {
     }
 
     private String currentName() {
-        String name = UserUtils.getCurrentEmployeeName();
-        if (StringUtils.hasText(name)) {
-            return name;
-        }
-        Long empId = UserUtils.getCurrentEmployeeId();
-        return empId == null ? "system" : String.valueOf(empId);
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

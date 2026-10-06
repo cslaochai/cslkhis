@@ -68,9 +68,9 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
         d.setUsageText(dto.getUsageText());
         d.setDays(dto.getDays());
         d.setRemark(dto.getRemark());
-        d.setCreateBy(UserUtils.getCurrentEmployeeName());
+        d.setCreateBy(UserUtils.getCurrentUser().getRealName());
         if (dto.getId() != null) {
-            d.setUpdateBy(UserUtils.getCurrentEmployeeName());
+            d.setUpdateBy(UserUtils.getCurrentUser().getRealName());
             d.setUpdateTime(TimeUtil.toSeconds(LocalDateTime.now()));
         }
         if (dto.getId() == null) {
@@ -127,8 +127,8 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
             }
         }
         LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
-        String who = UserUtils.getCurrentEmployeeName();
-        Long empId = UserUtils.getCurrentEmployeeId();
+        String who = UserUtils.getCurrentUser().getRealName();
+        Long empId = UserUtils.getCurrentUser().getEmployeeId();
         for (BizDischargeDrug d : list) {
             d.setDispenseStatus(DischargeDrugStatusEnum.DISPENSED.getCode());
             d.setDispenseBy(empId);

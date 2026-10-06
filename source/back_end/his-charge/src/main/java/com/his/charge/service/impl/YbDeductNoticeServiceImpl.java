@@ -162,7 +162,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         entity.setNoticeDate(dto.getNoticeDate());
         entity.setHandleDeadline(dto.getHandleDeadline());
         entity.setRemark(cut(dto.getRemark(), 500));
-        entity.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (creating) {
             noticeMapper.insert(entity);
             writeLog(entity.getId(), ACTION_CREATE, "扣款通知录入：" + entity.getDeductNo()
@@ -180,7 +180,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         if (!YbDeductStatusEnum.PENDING_CONFIRM.matches(entity.getDeductStatus())) {
             throw new BusinessException("仅「待确认」的扣款通知可发起申诉");
         }
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         entity.setAppealReason(cut(dto.getAppealReason(), 500));
         entity.setAppealMaterial(cut(dto.getAppealMaterial(), 500));
         entity.setAppealBy(operator);
@@ -202,7 +202,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         if (result == null || (result != 1 && result != 2)) {
             throw new BusinessException("申诉结果只能是 1-成功 或 2-驳回");
         }
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         entity.setAppealResult(result);
         entity.setAppealResultRemark(cut(dto.getAppealResultRemark(), 500));
         entity.setAppealResultBy(operator);
@@ -245,7 +245,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
             }
             default -> throw new BusinessException("损失承担方式不合法（1-院方 2-科室 3-个人 4-科室+个人共担）");
         }
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         entity.setLiableDeptId(dto.getLiableDeptId());
         entity.setLiableDeptName(cut(dto.getLiableDeptName(), 100));
         entity.setLiableEmpName(cut(dto.getLiableEmpName(), 64));
@@ -275,7 +275,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
             throw new BusinessException("缴回金额必须等于扣款金额 " + entity.getDeductAmount()
                     + " 元；差额请由院内承担流程另行处理，不要在这里抹平");
         }
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         entity.setPaidAmount(dto.getPaidAmount());
         entity.setPaybackDate(dto.getPaybackDate());
         entity.setPaybackVoucher(cut(dto.getPaybackVoucher(), 100));
@@ -295,7 +295,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         if (!YbDeductStatusEnum.PENDING_CONFIRM.matches(entity.getDeductStatus())) {
             throw new BusinessException("仅「待确认」的扣款通知可作废；已进入申诉或缴回流程的请走对应动作");
         }
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         entity.setCancelReason(cut(dto.getReason(), 500));
         entity.setCancelBy(operator);
         entity.setCancelTime(LocalDateTime.now());
@@ -347,7 +347,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         log.setAction(action);
         log.setDetail(cut(detail, 1000));
         log.setAmount(amount);
-        log.setOperator(UserUtils.getCurrentEmployeeName());
+        log.setOperator(UserUtils.getCurrentUser().getRealName());
         log.setOperateTime(LocalDateTime.now());
         logMapper.insert(log);
     }

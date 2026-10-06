@@ -196,8 +196,8 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
         bill.setLocalTxnId(txn.getId());
         bill.setTxnDirection(txn.getDirection());
         bill.setMatchTime(LocalDateTime.now());
-        bill.setMatchedById(UserUtils.getCurrentEmployeeId());
-        bill.setMatchedByName(UserUtils.getCurrentEmployeeName());
+        bill.setMatchedById(UserUtils.getCurrentUser().getEmployeeId());
+        bill.setMatchedByName(UserUtils.getCurrentUser().getRealName());
         bill.setDiffAmount(BigDecimal.ZERO);
         try {
             return this.updateById(bill);
@@ -221,8 +221,8 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
         }
         bill.setMatchStatus(dto.getHandleType());
         bill.setMatchTime(LocalDateTime.now());
-        bill.setMatchedById(UserUtils.getCurrentEmployeeId());
-        bill.setMatchedByName(UserUtils.getCurrentEmployeeName());
+        bill.setMatchedById(UserUtils.getCurrentUser().getEmployeeId());
+        bill.setMatchedByName(UserUtils.getCurrentUser().getRealName());
         bill.setHandleRemark(cut(dto.getHandleRemark(), 490));
         return this.updateById(bill);
     }

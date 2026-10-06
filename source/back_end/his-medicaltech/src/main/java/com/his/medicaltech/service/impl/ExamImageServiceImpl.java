@@ -12,6 +12,7 @@ import com.his.medicaltech.entity.BizExamImage;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.entity.BizReport;
+import com.his.medicaltech.config.ExamImageProperties;
 import com.his.medicaltech.enums.ExamImageSourceEnum;
 import com.his.medicaltech.enums.ReportTypeEnum;
 import com.his.medicaltech.mapper.BizExamImageMapper;
@@ -48,25 +49,26 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class ExamImageServiceImpl implements ExamImageService {
-
-    /**
-     * 学习阶段只收灰阶/彩色位图：真 DICOM 的 .dcm 需要解析器，阅片器也画不出来
-     */
-    private static final Set<String> ALLOWED_EXT = Set.of("jpg", "jpeg", "png");
-    private static final long MAX_BYTES = 10L * 1024 * 1024;
-    private static final int MAX_FRAME_COUNT = 24;
-    private static final int DEFAULT_FRAME_COUNT = 6;
-    private static final String UPLOAD_ROOT_REL = "uploads/examImage";
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    private final BizExamImageMapper imageMapper;
-    private final BizReportMapper reportMapper;
-    private final BizInspectionRecordMapper inspectionRecordMapper;
-    private final BizLaboratoryRecordMapper laboratoryRecordMapper;
-    private final BizInspectionApplyMapper inspectionApplyMapper;
-    private final BizLaboratoryApplyMapper laboratoryApplyMapper;
+    private final ExamImageProperties examImageProperties;
+
+    private final BizExamImageMapper bizExamImageMapper;
+
+    private final BizReportMapper bizReportMapper;
+
+    private final BizInspectionRecordMapper bizInspectionRecordMapper;
+
+    private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
+
+    private final BizInspectionApplyMapper bizInspectionApplyMapper;
+
+    private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
+
     private final MockExamImageSource mockExamImageSource;
-    private final DictCacheService subDictText;
+
+    private final DictCacheService dictCacheService;
+
     private final SysAuditLogService sysAuditLogService;
 
     private static String cut(String s, int max) {
@@ -86,11 +88,12 @@ public class ExamImageServiceImpl implements ExamImageService {
                 ? Paths.get(file.getOriginalFilename()).getFileName().toString() : "image";
         String ext = StringUtils.getFilenameExtension(originalName);
         ext = ext == null ? "" : ext.toLowerCase(Locale.ROOT);
-        if (!ALLOWED_EXT.contains(ext)) {
+        if (!examImageProperties.getAllowedExt().contains(ext)) {
             throw new BusinessException("影像文件只支持 jpg/png（当前：" + ext + "）");
         }
-        if (file.getSize() > MAX_BYTES) {
-            throw new BusinessException("单帧影像不能超过 10MB");
+        if (file.getSize() > examImageProperties.getMaxBytes().toBytes()) {
+            throw new BusinessException("单帧影像不能超过 "
+                    + examImageProperties.getMaxBytes().toBytes() / (1024 * 1024) + "MB");
         }
         Anchor anchor = resolveAnchor(uploadDTO.getBizType(), uploadDTO.getApplyId());
 
@@ -103,7 +106,7 @@ public class ExamImageServiceImpl implements ExamImageService {
         row.setFileSize(file.getSize());
         row.setMimeType(cut(file.getContentType(), 64));
         row.setSource(ExamImageSourceEnum.UPLOAD.getCode());
-        imageMapper.insert(row);
+        bizExamImageMapper.insert(row);
         return toVO(row);
     }
 
@@ -112,10 +115,11 @@ public class ExamImageServiceImpl implements ExamImageService {
     public List<ExamImageVO> mockImport(ExamImageMockImportDTO importDTO) {
         Anchor anchor = resolveAnchor(importDTO.getBizType(), importDTO.getApplyId());
         int frames = importDTO.getFrameCount() == null || importDTO.getFrameCount() <= 0
-                ? DEFAULT_FRAME_COUNT : Math.min(importDTO.getFrameCount(), MAX_FRAME_COUNT);
+                ? examImageProperties.getDefaultFrameCount()
+                : Math.min(importDTO.getFrameCount(), examImageProperties.getMaxFrameCount());
         int startSeq = nextSeq(importDTO.getBizType(), importDTO.getApplyId());
         String modalityText = importDTO.getModality() == null ? null
-                : subDictText.getDicDataLabel("his_exam_device_type", importDTO.getModality());
+                : dictCacheService.getDicDataLabel("his_exam_device_type", importDTO.getModality());
 
         List<ExamImageVO> created = new ArrayList<>();
         try {
@@ -132,7 +136,7 @@ public class ExamImageServiceImpl implements ExamImageService {
                 row.setMimeType("image/png");
                 row.setSource(ExamImageSourceEnum.MOCK_DICOM.getCode());
                 row.setRemark(cut("模拟 DICOM 导入（非真实影像）", 500));
-                imageMapper.insert(row);
+                bizExamImageMapper.insert(row);
                 created.add(toVO(row));
             }
         } catch (IOException e) {
@@ -147,7 +151,7 @@ public class ExamImageServiceImpl implements ExamImageService {
             // 老数据里存在没有 apply_id 的执行记录（迁移前直接建的），返回空而不是拼出 apply_id is null 的查询
             return new ArrayList<>();
         }
-        return toVOList(imageMapper.selectList(new LambdaQueryWrapper<BizExamImage>()
+        return toVOList(bizExamImageMapper.selectList(new LambdaQueryWrapper<BizExamImage>()
                 .eq(BizExamImage::getBizType, bizType)
                 .eq(BizExamImage::getApplyId, applyId)
                 .orderByAsc(BizExamImage::getSeq)));
@@ -155,7 +159,7 @@ public class ExamImageServiceImpl implements ExamImageService {
 
     @Override
     public List<ExamImageVO> listByReportId(Long reportId) {
-        BizReport report = reportId == null ? null : reportMapper.selectById(reportId);
+        BizReport report = reportId == null ? null : bizReportMapper.selectById(reportId);
         if (report == null || report.getRecordId() == null) {
             return new ArrayList<>();
         }
@@ -168,19 +172,19 @@ public class ExamImageServiceImpl implements ExamImageService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteById(Long id, String reason) {
-        BizExamImage row = id == null ? null : imageMapper.selectById(id);
+        BizExamImage row = id == null ? null : bizExamImageMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("影像帧不存在或已被删除");
         }
         // 留痕必须在删之前拿得到内容：物理删之后这行就没了，审计是唯一的历史
-        sysAuditLogService.record(UserUtils.getCurrentEmployeeId(), UserUtils.getCurrentEmployeeName(),
+        sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "检查影像", "删除影像帧", "biz_exam_image", row.getId(),
                 cut("apply=" + row.getBizType() + "#" + row.getApplyId() + " seq=" + row.getSeq()
                         + " file=" + row.getFileName() + " url=" + row.getFileUrl()
                         + " 原因=" + (StringUtils.hasText(reason) ? reason : "未填写"), 2000),
                 true, null);
         deleteFileQuietly(row.getFileUrl());
-        return imageMapper.purgeById(id) > 0;
+        return bizExamImageMapper.purgeById(id) > 0;
     }
 
     private Anchor resolveAnchor(Integer bizType, Long applyId) {
@@ -193,14 +197,14 @@ public class ExamImageServiceImpl implements ExamImageService {
             throw new BusinessException("申请单不能为空");
         }
         if (type == ReportTypeEnum.INSPECTION) {
-            BizInspectionApply apply = inspectionApplyMapper.selectById(applyId);
+            BizInspectionApply apply = bizInspectionApplyMapper.selectById(applyId);
             if (apply == null) {
                 throw new BusinessException("检查申请单不存在");
             }
             return new Anchor(applyId, apply.getApplyNo(), apply.getPatientId(), apply.getPatientName(),
                     apply.getInspectionItemName(), apply.getBodyPart());
         }
-        BizLaboratoryApply apply = laboratoryApplyMapper.selectById(applyId);
+        BizLaboratoryApply apply = bizLaboratoryApplyMapper.selectById(applyId);
         if (apply == null) {
             throw new BusinessException("检验申请单不存在");
         }
@@ -210,10 +214,10 @@ public class ExamImageServiceImpl implements ExamImageService {
 
     private Long resolveApplyIdByRecord(Integer reportType, Long recordId) {
         if (ReportTypeEnum.INSPECTION.getCode().equals(reportType)) {
-            BizInspectionRecord record = inspectionRecordMapper.selectById(recordId);
+            BizInspectionRecord record = bizInspectionRecordMapper.selectById(recordId);
             return record == null ? null : record.getApplyId();
         }
-        BizLaboratoryRecord record = laboratoryRecordMapper.selectById(recordId);
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(recordId);
         return record == null ? null : record.getApplyId();
     }
 
@@ -237,7 +241,7 @@ public class ExamImageServiceImpl implements ExamImageService {
      * 否则两帧同为 seq=1，阅片器翻页会看到重复帧。
      */
     private int nextSeq(Integer bizType, Long applyId) {
-        List<BizExamImage> exists = imageMapper.selectList(new LambdaQueryWrapper<BizExamImage>()
+        List<BizExamImage> exists = bizExamImageMapper.selectList(new LambdaQueryWrapper<BizExamImage>()
                 .eq(BizExamImage::getBizType, bizType)
                 .eq(BizExamImage::getApplyId, applyId)
                 .orderByDesc(BizExamImage::getSeq)
@@ -250,6 +254,14 @@ public class ExamImageServiceImpl implements ExamImageService {
     }
 
     /**
+     * 影像落盘根目录（规范化去尾部斜杠）。来自配置 {@code his.medicaltech.exam-image.upload-root-rel}。
+     */
+    private String uploadRoot() {
+        String root = examImageProperties.getUploadRootRel();
+        return root == null ? "" : root.replaceAll("/+$", "");
+    }
+
+    /**
      * 落盘并返回相对访问路径（uploads/examImage/yyyyMMdd/xxx.png）。
      *
      * <p>文件名一律服务端生成：用户传什么名字只作为展示用的 file_name 存着，
@@ -257,7 +269,7 @@ public class ExamImageServiceImpl implements ExamImageService {
      */
     private String saveBytes(String fileName, byte[] bytes) {
         String dateDir = LocalDate.now().format(DAY);
-        String relativeDir = UPLOAD_ROOT_REL + "/" + dateDir;
+        String relativeDir = uploadRoot() + "/" + dateDir;
         File dir = new File(System.getProperty("user.dir"), relativeDir);
         if (!dir.exists() && !dir.mkdirs()) {
             throw new BusinessException("影像存储目录创建失败：" + dir.getAbsolutePath());
@@ -283,7 +295,7 @@ public class ExamImageServiceImpl implements ExamImageService {
      * 只允许删本模块自己目录下的文件，防止 file_url 被改成任意路径后借删除接口删服务器文件
      */
     private void deleteFileQuietly(String fileUrl) {
-        if (!StringUtils.hasText(fileUrl) || !fileUrl.startsWith(UPLOAD_ROOT_REL + "/")) {
+        if (!StringUtils.hasText(fileUrl) || !fileUrl.startsWith(uploadRoot() + "/")) {
             log.warn("[影像删除] file_url 不在影像目录内，跳过磁盘删除：{}", fileUrl);
             return;
         }
@@ -309,7 +321,7 @@ public class ExamImageServiceImpl implements ExamImageService {
         ExamImageVO vo = new ExamImageVO();
         BeanUtils.copyProperties(row, vo);
         vo.setModalityText(row.getModality() == null ? null
-                : subDictText.getDicDataLabel("his_exam_device_type", row.getModality()));
+                : dictCacheService.getDicDataLabel("his_exam_device_type", row.getModality()));
         vo.setSourceText(ExamImageSourceEnum.getText(row.getSource()));
         return vo;
     }

@@ -341,7 +341,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         txn.setSourceType(TxnSourceEnum.PREPAY.getCode());
         txn.setChannelTxnNo(cut(channelNoOf(payMethod, null, spec.channelTxnNo(), txn), W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
-        txn.setCashierName(cut(UserUtils.getCurrentEmployeeName(), W_CASHIER_NAME));
+        txn.setCashierName(cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
         txn.setTxnTime(txnTime);
         txn.setTxnDate(txnTime.toLocalDate());
         txn.setReceiptNo(cut(spec.receiptNo(), W_RECEIPT_NO));
@@ -457,7 +457,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
                 : RefundMethodEnum.ofPayMethod(origMethod).getCode());
         txn.setChannelTxnNo(cut(channelRefundNo, W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
-        txn.setCashierName(cut(UserUtils.getCurrentEmployeeName(), W_CASHIER_NAME));
+        txn.setCashierName(cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
         txn.setTxnTime(txnTime);
         txn.setTxnDate(txnTime.toLocalDate());
         txn.setRemark(cut(spec.remark(), W_REMARK));
@@ -532,7 +532,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         txn.setSourceType(source.getCode());
         txn.setChannelTxnNo(cut(channelNoOf(payMethod, accountTxn, item.getChannelTxnNo(), txn), W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
-        txn.setCashierName(cut(UserUtils.getCurrentEmployeeName(), W_CASHIER_NAME));
+        txn.setCashierName(cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
         txn.setTxnTime(LocalDateTime.now());
         txn.setTxnDate(LocalDate.now());
         txn.setReason(null);
@@ -661,7 +661,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         txn.setRefundMethod(refundMethod.getCode());
         txn.setChannelTxnNo(cut(channelRefundNo, W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
-        txn.setCashierName(cut(UserUtils.getCurrentEmployeeName(), W_CASHIER_NAME));
+        txn.setCashierName(cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
         txn.setTxnTime(LocalDateTime.now());
         txn.setTxnDate(LocalDate.now());
         txn.setReason(cut(dto.getReason(), W_REASON));
@@ -754,7 +754,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
     }
 
     private Long currentCashier() {
-        Long employeeId = UserUtils.getCurrentEmployeeId();
+        Long employeeId = UserUtils.getCurrentUser().getEmployeeId();
         return employeeId == null ? CASHIER_SYSTEM : employeeId;
     }
 

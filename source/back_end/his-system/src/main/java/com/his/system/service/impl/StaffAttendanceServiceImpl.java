@@ -554,7 +554,6 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
     }
 
     private String operator() {
-        CurrentUser user = UserUtils.getCurrentUser();
-        return user == null || user.getUsername() == null ? "system" : user.getUsername();
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

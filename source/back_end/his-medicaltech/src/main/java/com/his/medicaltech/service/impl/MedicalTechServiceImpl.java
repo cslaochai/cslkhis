@@ -273,7 +273,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                     + "」，不要重复提交拍片完成");
         }
         record.setExecuteTime(LocalDateTime.now());
-        record.setExecuteBy(UserUtils.getCurrentEmployeeName());
+        record.setExecuteBy(UserUtils.getCurrentUser().getRealName());
         record.setRecordStatus(InsRecordStatusEnum.RESULTED.getCode());
         this.updateById(record);
         // 不建报告、不签名：拍片是技师的活，诊断结论是医师的活（sql/138）
@@ -643,7 +643,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
      */
     private SignatureVO signReport(Integer bizType, Long bizId, String bizNo, SignSceneEnum scene,
                                    Long deptId, String deptName, String bizLabel) {
-        Long signerId = UserUtils.getCurrentEmployeeId();
+        Long signerId = UserUtils.getCurrentUser().getEmployeeId();
         if (signerId == null) {
             throw new BusinessException(bizLabel + " " + bizNo + " 签名失败：取不到当前登录用户，无法确定签名人");
         }
@@ -652,7 +652,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         cmd.setBizId(bizId);
         cmd.setSignScene(scene.getCode());
         cmd.setSignerId(signerId);
-        cmd.setSignerName(UserUtils.getCurrentEmployeeName());
+        cmd.setSignerName(UserUtils.getCurrentUser().getRealName());
         cmd.setSignerDeptId(deptId);
         cmd.setSignerDeptName(deptName);
         try {
@@ -710,7 +710,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
      * 异常文案走 {@link #toLabResultVO} 统一算，前端不要拿 abnormalFlag 自己写三目。
      */
     private List<BizLabResultVO> loadLabItems(BizReport report) {
-        if (report.getRecordId() == null || !Integer.valueOf(2).equals(report.getReportType())) {
+        if (report.getRecordId() == null || !ReportTypeEnum.LAB_TEST.getCode().equals(report.getReportType())) {
             return List.of();
         }
         return labResultMapper.selectList(new LambdaQueryWrapper<BizLabResult>()
@@ -1047,15 +1047,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                 + String.format("%04d", EXECUTION_SEQ.incrementAndGet() % 10000);
     }
 
-    /**
-     * 取当前登录人姓名，取不到（后台任务/无上下文）时退化为「系统」。
-     */
     private String currentOperatorName() {
-        try {
-            var user = UserUtils.getCurrentUser();
-            return user != null && user.getRealName() != null ? user.getRealName() : "系统";
-        } catch (Exception e) {
-            return "系统";
-        }
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

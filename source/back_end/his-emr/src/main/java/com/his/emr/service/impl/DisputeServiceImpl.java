@@ -69,8 +69,7 @@ public class DisputeServiceImpl implements DisputeService {
     }
 
     private static String currentName() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return name == null ? "系统" : name;
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     // 登记 / 修改
@@ -407,7 +406,7 @@ public class DisputeServiceImpl implements DisputeService {
         flow.setFromStatus(from);
         flow.setToStatus(to);
         flow.setContent(content);
-        flow.setOperatorId(UserUtils.getCurrentEmployeeId());
+        flow.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());
         flow.setOperator(operator);
         flow.setOperateTime(now());
         flow.setDelFlag(DelFlagEnum.NORMAL.getCode());

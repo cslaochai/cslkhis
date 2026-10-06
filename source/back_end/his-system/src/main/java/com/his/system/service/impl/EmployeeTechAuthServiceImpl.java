@@ -114,7 +114,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
 
     @Override
     public List<EmployeeTechAuthVO> mine() {
-        Long empId = UserUtils.getCurrentEmployeeId();
+        Long empId = UserUtils.getCurrentUser().getEmployeeId();
         return listByEmployee(empId);
     }
 
@@ -183,7 +183,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         entity.setRemark(clip(dto.getRemark(), REASON_MAX));
         if (create) {
             entity.setAuthStatus(TechAuthStatusEnum.PENDING.getCode());
-            entity.setApplyBy(UserUtils.getCurrentEmployeeName());
+            entity.setApplyBy(UserUtils.getCurrentUser().getRealName());
             entity.setApplyTime(LocalDateTime.now());
             authMapper.insert(entity);
         } else {
@@ -204,8 +204,8 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
                     + "」，只有「待审批」可以审批");
         }
         entity.setAuthStatus(Boolean.TRUE.equals(dto.getApproved()) ? TechAuthStatusEnum.GRANTED.getCode() : TechAuthStatusEnum.REJECTED.getCode());
-        entity.setApproverId(UserUtils.getCurrentEmployeeId());
-        entity.setApproverName(UserUtils.getCurrentEmployeeName());
+        entity.setApproverId(UserUtils.getCurrentUser().getEmployeeId());
+        entity.setApproverName(UserUtils.getCurrentUser().getRealName());
         entity.setApproveTime(LocalDateTime.now());
         entity.setApproveOpinion(clip(dto.getApproveOpinion(), REASON_MAX));
         // 审批即生效：原记录若授到更晚日期，收回旧的一律由人工做，这里不自动覆盖
@@ -223,7 +223,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
                     + TechAuthStatusEnum.getText(entity.getAuthStatus()) + "」");
         }
         entity.setAuthStatus(TechAuthStatusEnum.REVOKED.getCode());
-        entity.setRevokeBy(UserUtils.getCurrentEmployeeName());
+        entity.setRevokeBy(UserUtils.getCurrentUser().getRealName());
         entity.setRevokeTime(LocalDateTime.now());
         entity.setRevokeReason(clip(dto.getRevokeReason(), REASON_MAX));
         authMapper.updateById(entity);
@@ -381,13 +381,13 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         if (!Objects.equals(OV_PENDING, entity.getOverrideStatus())) {
             throw new BusinessException("该越权登记已确认，不能重复确认");
         }
-        Long supervisorId = UserUtils.getCurrentEmployeeId();
+        Long supervisorId = UserUtils.getCurrentUser().getEmployeeId();
         if (supervisorId != null && supervisorId.equals(entity.getEmployeeId())) {
             throw new BusinessException("越权本人不能确认自己的越权登记（事后追认必须由上级或医务科做，否则等于自己给自己补授权）");
         }
         entity.setOverrideStatus(OV_CONFIRMED);
         entity.setSupervisorId(supervisorId);
-        entity.setSupervisorName(UserUtils.getCurrentEmployeeName());
+        entity.setSupervisorName(UserUtils.getCurrentUser().getRealName());
         entity.setConfirmTime(LocalDateTime.now());
         entity.setConfirmOpinion(clip(dto.getConfirmOpinion(), REASON_MAX));
         overrideMapper.updateById(entity);
@@ -518,7 +518,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         vo.setConfirmOpinion(entity.getConfirmOpinion());
         vo.setCreateTime(entity.getCreateTime());
         // 确认键与写入侧同一条规矩：越权本人不能追认自己（否则等于自己给自己补授权），界面上也就不给这个按钮
-        Long me = UserUtils.getCurrentEmployeeId();
+        Long me = UserUtils.getCurrentUser().getEmployeeId();
         vo.setCanConfirm(Objects.equals(OV_PENDING, entity.getOverrideStatus())
                 && !(me != null && me.equals(entity.getEmployeeId())));
         return vo;

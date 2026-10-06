@@ -152,7 +152,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
         row.setDecoctStatus(TcmDecoctStatusEnum.PENDING.getCode());
         row.setPharmacyId(currentDeptId());
         row.setPharmacyName(currentDeptName());
-        row.setCreateBy(UserUtils.getCurrentEmployeeName());
+        row.setCreateBy(UserUtils.getCurrentUser().getRealName());
         this.save(row);
         log.info("代煎单已生成 {}（处方 {}，{} 剂 / {} 味 / {} g）",
                 row.getDecoctNo(), row.getPrescriptionNo(), row.getDoseCount(), row.getHerbCount(), row.getTotalGrams());
@@ -177,9 +177,9 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
         }
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         row.setDecoctStatus(target);
-        row.setOperatorId(UserUtils.getCurrentEmployeeId());
-        row.setOperatorName(UserUtils.getCurrentEmployeeName());
-        row.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        row.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());
+        row.setOperatorName(UserUtils.getCurrentUser().getRealName());
+        row.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (target == 2) {
             row.setDecoctTime(now);
         } else {
@@ -188,7 +188,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
         if (!this.updateById(row)) {
             throw new BusinessException("代煎状态更新失败");
         }
-        sysAuditLogService.record(UserUtils.getCurrentEmployeeId(), UserUtils.getCurrentEmployeeName(),
+        sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "中药代煎", target == 2 ? "标记已煎" : "标记已取", "biz_tcm_decoct", row.getId(),
                 "decoctNo=" + row.getDecoctNo() + " prescription=" + row.getPrescriptionNo()
                         + " " + TcmDecoctStatusEnum.getText(from) + "→" + TcmDecoctStatusEnum.getText(target),
@@ -211,13 +211,13 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
         String reason = cut(dto.getReason().trim(), W_CANCEL_REASON);
         row.setDecoctStatus(TcmDecoctStatusEnum.CANCELLED.getCode());
         row.setCancelReason(reason);
-        row.setOperatorId(UserUtils.getCurrentEmployeeId());
-        row.setOperatorName(UserUtils.getCurrentEmployeeName());
-        row.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        row.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());
+        row.setOperatorName(UserUtils.getCurrentUser().getRealName());
+        row.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (!this.updateById(row)) {
             throw new BusinessException("代煎单作废失败");
         }
-        sysAuditLogService.record(UserUtils.getCurrentEmployeeId(), UserUtils.getCurrentEmployeeName(),
+        sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "中药代煎", "作废代煎单", "biz_tcm_decoct", row.getId(),
                 "decoctNo=" + row.getDecoctNo() + " 原状态=" + TcmDecoctStatusEnum.getText(from) + " 原因=" + reason,
                 true, null);
@@ -229,7 +229,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
         BizTcmDecoct row = require(id);
         List<BizPrescriptionDetail> details = listDetails(row.getPrescriptionId());
         String taskId = decoctReceiptPrinter.printReceipt(row, details);
-        sysAuditLogService.record(UserUtils.getCurrentEmployeeId(), UserUtils.getCurrentEmployeeName(),
+        sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "中药代煎", "打印代煎回执", "biz_tcm_decoct", row.getId(),
                 "decoctNo=" + row.getDecoctNo() + " 剂数=" + row.getDoseCount()
                         + " 味数=" + row.getHerbCount() + " 总克数=" + row.getTotalGrams()
@@ -256,13 +256,13 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
         }
         row.setDecoctStatus(TcmDecoctStatusEnum.CANCELLED.getCode());
         row.setCancelReason(cut("发药已退，代煎单自动作废", W_CANCEL_REASON));
-        row.setOperatorId(UserUtils.getCurrentEmployeeId());
-        row.setOperatorName(UserUtils.getCurrentEmployeeName());
-        row.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        row.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());
+        row.setOperatorName(UserUtils.getCurrentUser().getRealName());
+        row.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (!this.updateById(row)) {
             throw new BusinessException("代煎单作废失败");
         }
-        sysAuditLogService.record(UserUtils.getCurrentEmployeeId(), UserUtils.getCurrentEmployeeName(),
+        sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "中药代煎", "退药自动作废", "biz_tcm_decoct", row.getId(),
                 "decoctNo=" + row.getDecoctNo() + " prescription=" + row.getPrescriptionNo() + " 待煎→已作废",
                 true, null);

@@ -744,8 +744,7 @@ public class LisEqaServiceImpl implements LisEqaService {
     }
 
     private String currentName() {
-        String n = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(n) ? n : "未知操作人";
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private String clip(String s) {

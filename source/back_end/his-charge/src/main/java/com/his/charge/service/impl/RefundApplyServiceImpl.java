@@ -272,7 +272,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
             throw new BusinessException("请填写作废原因（台账要能回答「为什么批了又退回去」）");
         }
         apply.setApplyStatus(RefundApplyStatusEnum.DISCARDED.getCode());
-        apply.setCancelBy(StringUtils.hasText(currentUserName()) ? currentUserName() : "系统");
+        apply.setCancelBy(currentUserName());
         apply.setCancelTime(LocalDateTime.now());
         // 先截到列宽再落库：超长会让这句"作废"本身变成 500，用户连申请单都关不掉
         apply.setCancelReason(cut(reason.trim(), W_CANCEL_REASON));
@@ -368,11 +368,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
      * 当前登录人姓名：优先员工姓名，退回登录账号真实姓名
      */
     private String currentUserName() {
-        CurrentUser user = UserUtils.getCurrentUser();
-        if (user == null) {
-            return null;
-        }
-        return StringUtils.hasText(user.getEmployeeName()) ? user.getEmployeeName() : user.getRealName();
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     /**

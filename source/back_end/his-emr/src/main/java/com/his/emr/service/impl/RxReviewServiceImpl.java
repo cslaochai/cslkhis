@@ -166,9 +166,9 @@ public class RxReviewServiceImpl implements RxReviewService {
         batch.setSampleCount(sampled.size());
         batch.setReviewedCount(0);
         batch.setStatus(RxReviewBatchStatusEnum.RUNNING.getCode());
-        batch.setReviewerId(UserUtils.getCurrentEmployeeId());
-        batch.setReviewerName(UserUtils.getCurrentEmployeeName());
-        batch.setCreateBy(UserUtils.getCurrentEmployeeName());
+        batch.setReviewerId(UserUtils.getCurrentUser().getEmployeeId());
+        batch.setReviewerName(UserUtils.getCurrentUser().getRealName());
+        batch.setCreateBy(UserUtils.getCurrentUser().getRealName());
         batch.setRemark(StringUtils.hasText(dto.getRemark()) ? dto.getRemark().trim() : null);
         batchMapper.insert(batch);
 
@@ -302,8 +302,8 @@ public class RxReviewServiceImpl implements RxReviewService {
         item.setReviewResult(result);
         item.setProblemTypes(codes.isEmpty() ? null : String.join(",", codes));
         item.setReviewOpinion(opinion);
-        item.setReviewerId(UserUtils.getCurrentEmployeeId());
-        item.setReviewerName(UserUtils.getCurrentEmployeeName());
+        item.setReviewerId(UserUtils.getCurrentUser().getEmployeeId());
+        item.setReviewerName(UserUtils.getCurrentUser().getRealName());
         item.setReviewTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         itemMapper.updateById(item);
 
@@ -374,7 +374,7 @@ public class RxReviewServiceImpl implements RxReviewService {
         if (items.size() != ids.size()) {
             throw new BusinessException("存在无效的点评明细");
         }
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
         for (BizRxReviewItem item : items) {
             if (item.getReviewStatus() == null || item.getReviewStatus() != RxReviewItemStatusEnum.DONE.getCode()) {
@@ -486,7 +486,7 @@ public class RxReviewServiceImpl implements RxReviewService {
         if (dto.getId() == null) {
             talk = new BizRxDoctorTalk();
             talk.setTalkNo(nextTalkNo());
-            talk.setCreateBy(UserUtils.getCurrentEmployeeName());
+            talk.setCreateBy(UserUtils.getCurrentUser().getRealName());
             talk.setDoctorConfirm(YesOrNoEnum.NO.getCode());
             talk.setRectifyStatus(dto.getRectifyStatus() == null
                     ? RectifyStatusEnum.PENDING.getCode() : dto.getRectifyStatus());
@@ -508,7 +508,7 @@ public class RxReviewServiceImpl implements RxReviewService {
         talk.setTalkType(dto.getTalkType());
         talk.setTalkTime(dto.getTalkTime());
         talk.setTalkerName(StringUtils.hasText(dto.getTalkerName())
-                ? dto.getTalkerName().trim() : UserUtils.getCurrentEmployeeName());
+                ? dto.getTalkerName().trim() : UserUtils.getCurrentUser().getRealName());
         talk.setTalkerOrg(StringUtils.hasText(dto.getTalkerOrg()) ? dto.getTalkerOrg().trim() : null);
         talk.setRelatedCount(ctx.items().size());
         talk.setRelatedReviewIds(ctx.idsText());

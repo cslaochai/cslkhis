@@ -52,8 +52,6 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
 
     private static final String BIZ_TYPE = "medical_record";
 
-    private static final String QC_BY_FALLBACK = "system";
-
     /**
      * 质控类型：AI 内涵质控（综合）。
      * <p>
@@ -193,20 +191,7 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
     }
 
     private static String currentOperator() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user != null) {
-                if (StringUtils.hasText(user.getUsername())) {
-                    return user.getUsername();
-                }
-                if (StringUtils.hasText(user.getRealName())) {
-                    return user.getRealName();
-                }
-            }
-        } catch (Exception ignored) {
-            // 非请求线程
-        }
-        return QC_BY_FALLBACK;
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private static String buildNo(String prefix) {

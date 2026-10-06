@@ -65,6 +65,13 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
     private static final int APPT_CANCELLED = 4;
     private static final int APPT_NOSHOW = 5;
 
+    /**
+     * 爽约判定的操作人。检查爽约由 {@code ExamNoShowTrigger} 每 10 分钟扫一次，
+     * 调度线程没有登录态 —— 这是全项目第二处（第一处是日终结转）允许落系统值的路径，
+     * 落库可一眼看出「这单不是人来取消的」。人工改约/取消一律走真人操作人。
+     */
+    private static final String SYSTEM_NOSHOW_OPERATOR = "system:examNoShow";
+
     private static final int APPLY_SUBMITTED = 1;
     private static final int APPLY_PAID = 2;
     private static final int APPLY_BOOKED = 3;
@@ -247,7 +254,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         BizInspectionApply apply = requireApply(old.getApplyId());
         int prevStatus = old.getPrevApplyStatus() == null ? APPLY_PAID : old.getPrevApplyStatus();
         releaseOld(old, "改约：" + dto.getExamDate() + " " + dto.getStartTime() + "，原因：" + dto.getReason(),
-                APPT_CANCELLED);
+                APPT_CANCELLED, currentName());
         BizExamAppointment fresh = doBook(apply, dto.getDeviceId(), dto.getExamDate(), dto.getStartTime(),
                 prevStatus, "改约自 " + old.getApptNo() + "（" + old.getExamDate() + " " + old.getStartTime()
                         + "-" + old.getEndTime() + " @" + old.getDeviceName() + "）；原因：" + dto.getReason());
@@ -269,7 +276,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
             throw new BusinessException("仅「已预约」可取消（当前："
                     + dictText.getDicDataLabel(DICT_APPT_STATUS, appt.getStatus()) + "）；已到检请在检查工作站取消登记");
         }
-        releaseOld(appt, dto.getCancelReason(), APPT_CANCELLED);
+        releaseOld(appt, dto.getCancelReason(), APPT_CANCELLED, currentName());
     }
 
     // 时段推荐
@@ -324,7 +331,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         int done = 0;
         for (BizExamAppointment appt : overdue) {
             try {
-                releaseOld(appt, "超时未到检，系统自动判为爽约", APPT_NOSHOW);
+                releaseOld(appt, "超时未到检，系统自动判为爽约", APPT_NOSHOW, SYSTEM_NOSHOW_OPERATOR);
                 done++;
             } catch (Exception e) {
                 log.warn("[检查预约] 爽约处理失败 {}：{}", appt.getApptNo(), e.getMessage());
@@ -533,9 +540,12 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
     }
 
     /**
-     * 取消/改约/爽约的共同收尾：退号 + 终结唯一索引位 + 申请单精确回退
+     * 取消/改约/爽约的共同收尾：退号 + 终结唯一索引位 + 申请单精确回退。
+     *
+     * <p>操作人由调用方传入而不是内部取：三个调用点里两个是人工操作、一个是定时任务，
+     * 口径不同（见 {@link #SYSTEM_NOSHOW_OPERATOR}）。
      */
-    private void releaseOld(BizExamAppointment appt, String reason, int targetStatus) {
+    private void releaseOld(BizExamAppointment appt, String reason, int targetStatus, String operator) {
         BizExamDevice device = deviceMapper.selectForUpdate(appt.getDeviceId());
         LocalDate date = appt.getExamDate();
         if (device != null) {
@@ -558,7 +568,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         appointmentMapper.updateById(update);
         appointmentMapper.markInactive(appt.getId());
         int prev = appt.getPrevApplyStatus() == null ? APPLY_PAID : appt.getPrevApplyStatus();
-        if (applyWriterMapper.revertBooked(appt.getApplyId(), prev, currentName()) == 0) {
+        if (applyWriterMapper.revertBooked(appt.getApplyId(), prev, operator) == 0) {
             log.warn("[检查预约] {} 终结后申请单 {} 未停在「已预约」，状态不回退（可能已进入执行链）",
                     appt.getApptNo(), appt.getApplyNo());
         }
@@ -826,8 +836,11 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         return apply.getIsEmergency() != null && apply.getIsEmergency() == 1;
     }
 
+    /**
+     * 操作人（人工路径）：取不到登录态直接报错。
+     * 定时任务那条路径走 {@link #SYSTEM_NOSHOW_OPERATOR}，不经过这里。
+     */
     private String currentName() {
-        String n = UserUtils.getCurrentEmployeeName();
-        return n != null ? n : "系统";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

@@ -125,7 +125,7 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
         invoice.setTotalAmount(net);
         invoice.setInvoiceStatus(InvoiceStatusEnum.ISSUED.getCode());
         invoice.setInvoiceTime(LocalDateTime.now());
-        invoice.setCreateBy(cut(UserUtils.getCurrentEmployeeName(), 64));
+        invoice.setCreateBy(cut(UserUtils.getCurrentUser().getRealName(), 64));
         invoice.setCreateTime(LocalDateTime.now());
         invoice.setRemark(cut(dto.getRemark(), W_REMARK));
         // 作废后重开：新票指回被作废的那张，红冲链在票这一层也留痕

@@ -376,8 +376,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
     }
 
     private String currentName() {
-        String n = UserUtils.getCurrentEmployeeName();
-        return n != null ? n : "未知操作人";
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     /**
@@ -391,8 +390,8 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         String operator = r.getEndoscopist();
         TechAuthGateDTO gate = new TechAuthGateDTO();
         // 登录人就是术者时直接用工号，避免同名员工误判；否则按姓名回捞档案
-        if (UserUtils.getCurrentEmployeeName() != null && UserUtils.getCurrentEmployeeName().equals(operator)) {
-            gate.setEmployeeId(UserUtils.getCurrentEmployeeId());
+        if (UserUtils.getCurrentUser().getRealName().equals(operator)) {
+            gate.setEmployeeId(UserUtils.getCurrentUser().getEmployeeId());
         }
         gate.setEmployeeName(operator);
         gate.setAuthCategory(TechAuthCategoryEnum.ENDOSCOPY.getCode());

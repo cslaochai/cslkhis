@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "sms.code")
+@ConfigurationProperties(prefix = "his.sms.code")
 public class SmsProperties {
 
     /**

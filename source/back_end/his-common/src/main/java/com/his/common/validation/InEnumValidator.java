@@ -6,15 +6,11 @@ import jakarta.validation.ConstraintValidatorContext;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link InEnum} 校验器：反射调目标枚举的 {@code isValid}。
- *
- * <p>刻意用反射而不是把枚举值硬编进注解：枚举是唯一码值口径（AGENTS.md §13），
- * 注解里再抄一份码值清单就成第二套口径，枚举一改这里就静默失效。
- *
- * <p>目标枚举缺 isValid 方法时**放行**（不误伤存量接口），但首次触发会打 WARN，
- * 便于补齐——枚举模板已要求 isValid，缺方法属于实现漏项而非合法状态。
  */
 public class InEnumValidator implements ConstraintValidator<InEnum, Object> {
 
@@ -24,7 +20,7 @@ public class InEnumValidator implements ConstraintValidator<InEnum, Object> {
     /**
      * 启动期只提醒一次同一个枚举，避免每请求刷屏
      */
-    private static final java.util.Set<String> WARNED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private static final Set<String> WARNED = ConcurrentHashMap.newKeySet();
 
     private Class<?> enumClass;
     private InEnum.Type type;

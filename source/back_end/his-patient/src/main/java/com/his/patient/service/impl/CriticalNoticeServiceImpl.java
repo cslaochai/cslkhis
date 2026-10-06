@@ -244,12 +244,12 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         notice.setDoctorMeasures(cutToNull(dto.getDoctorMeasures(), TEXT_MAX));
         notice.setNotifyTime(notifyTime);
         if (isNew || notice.getDoctorId() == null) {
-            Long me = UserUtils.getCurrentEmployeeId();
+            Long me = UserUtils.getCurrentUser().getEmployeeId();
             notice.setDoctorId(me != null ? me : dto.getDoctorId());
             // 保留（类别②）：校验对象是服务端快照/登录上下文带出的医师名，不是入参字段，注解覆盖不到
             notice.setDoctorName(cut(requireText(
                     StringUtils.hasText(notice.getDoctorName()) ? notice.getDoctorName()
-                            : UserUtils.getCurrentEmployeeName(), "告知医师不能为空"), NAME_MAX));
+                            : UserUtils.getCurrentUser().getRealName(), "告知医师不能为空"), NAME_MAX));
         }
         applyWitness(notice, dto.getWitnessDoctorId(), dto.getWitnessDoctorName());
         notice.setRemark(cutToNull(dto.getRemark(), REASON_MAX));
@@ -273,8 +273,8 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         }
 
         // 落款人 = 当前登录职工：法定签名的责任主体不许前端冒充
-        Long me = UserUtils.getCurrentEmployeeId();
-        String myName = UserUtils.getCurrentEmployeeName();
+        Long me = UserUtils.getCurrentUser().getEmployeeId();
+        String myName = UserUtils.getCurrentUser().getRealName();
         if (me == null || !StringUtils.hasText(myName)) {
             throw new BusinessException("当前登录账号未绑定员工档案，无法以医师身份签发");
         }
@@ -439,7 +439,6 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
     }
 
     private String currentOperator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(name) ? name : "system";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

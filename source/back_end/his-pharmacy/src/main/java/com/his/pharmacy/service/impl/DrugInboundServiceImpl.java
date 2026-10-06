@@ -94,7 +94,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("该采购订单已生成过入库单（未取消），不能重复生成；如原单有误请先取消");
         }
 
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         String inboundNo = redisSequenceService.generateInboundNo();
 
         BigDecimal totalAmount = BigDecimal.ZERO;
@@ -177,7 +177,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
         if (detailMapper.countActiveByInbound(in.getId()) == 0) {
             throw new BusinessException("入库单没有有效明细，不能审核");
         }
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         this.lambdaUpdate()
                 .eq(BizDrugInbound::getId, in.getId())
                 .set(BizDrugInbound::getInboundStatus, 2)
@@ -207,7 +207,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("入库单没有有效明细，不能入库");
         }
 
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         for (DrugInboundDetailVO d : active) {
             BizDrugStock batchInfo = new BizDrugStock();
             batchInfo.setDrugId(d.getDrugId());
@@ -243,7 +243,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("只有待审核或已审核的入库单可以取消（当前：" + dictText.getDicDataLabel("biz_pharmacy_drugInboundStatusEnum", in.getInboundStatus())
                     + "）；已入库的入库单要冲销请走退货入库");
         }
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         detailMapper.markCancelled(in.getId());
         this.lambdaUpdate()
                 .eq(BizDrugInbound::getId, in.getId())

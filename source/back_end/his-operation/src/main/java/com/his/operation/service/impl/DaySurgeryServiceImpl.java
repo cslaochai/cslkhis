@@ -78,8 +78,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     }
 
     private static String currentName() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return name == null ? "系统" : name;
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private static long toLong(Object v) {
@@ -384,7 +383,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         follow.setFollowType(dto.getFollowType());
         follow.setResult(dto.getResult());
         follow.setContent(cut(dto.getContent(), 500));
-        follow.setOperatorId(UserUtils.getCurrentEmployeeId());
+        follow.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());
         follow.setOperator(currentName());
         follow.setFollowTime(now());
         follow.setDelFlag(0);

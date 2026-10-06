@@ -367,10 +367,10 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         cert.setRelativeName(cutToNull(dto.getRelativeName(), 50));
         cert.setRelativeRelation(cutToNull(dto.getRelativeRelation(), 20));
         cert.setRelativePhone(cutToNull(dto.getRelativePhone(), 20));
-        cert.setPhysicianId(dto.getPhysicianId() != null ? dto.getPhysicianId() : UserUtils.getCurrentEmployeeId());
+        cert.setPhysicianId(dto.getPhysicianId() != null ? dto.getPhysicianId() : UserUtils.getCurrentUser().getEmployeeId());
         // ②非web入口口径：校验对象是「入参姓名 或 当前登录人」的合并值，不是纯 DTO 字段，注解表达不了
         cert.setPhysicianName(cut(requireText(
-                StringUtils.hasText(dto.getPhysicianName()) ? dto.getPhysicianName() : UserUtils.getCurrentEmployeeName(),
+                StringUtils.hasText(dto.getPhysicianName()) ? dto.getPhysicianName() : UserUtils.getCurrentUser().getRealName(),
                 "填表医师不能为空"), 50));
         cert.setFillTime(dto.getFillTime() != null ? TimeUtil.toSeconds(dto.getFillTime()) : (isNew ? now() : cert.getFillTime()));
         cert.setRemark(cutToNull(dto.getRemark(), DIAG_MAX));
@@ -408,7 +408,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.DRAFT.getCode())) {
             throw new BusinessException("只有草稿状态的证明可以提交审核（当前：" + statusText(cert.getCertStatus()) + "）");
         }
-        cert.setReviewerId(UserUtils.getCurrentEmployeeId());
+        cert.setReviewerId(UserUtils.getCurrentUser().getEmployeeId());
         cert.setReviewerName(currentOperator());
         cert.setReviewTime(now());
         cert.setReviewOpinion(cutToNull(dto.getOpinion(), REASON_MAX));
@@ -711,7 +711,6 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     }
 
     private String currentOperator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(name) ? name : "system";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

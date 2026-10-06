@@ -32,7 +32,13 @@ public class AiAuditServiceImpl implements AiAuditService {
                 entity.setCreateTime(LocalDateTime.now());
             }
             if (!StringUtils.hasText(entity.getCreateBy())) {
-                entity.setCreateBy(StringUtils.hasText(entity.getOperator()) ? entity.getOperator() : "system");
+                if (!StringUtils.hasText(entity.getOperator())) {
+                    // 调用方没给 operator 就等于「这次 AI 调用不知道谁触发的」，
+                    // 塞system 等于伪造审计痕迹；宁可丢这条日志也要让调用方补上
+                    log.warn("[AI] 审计日志缺少 operator（capabilityKey={}），本次不落库", entity.getCapabilityKey());
+                    return;
+                }
+                entity.setCreateBy(entity.getOperator());
             }
             sysAiCallLogMapper.insert(entity);
         } catch (Exception ex) {

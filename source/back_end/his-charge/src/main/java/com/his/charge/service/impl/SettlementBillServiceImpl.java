@@ -144,8 +144,8 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         }
         bill.setBillDate(LocalDate.now());
         bill.setBillTime(LocalDateTime.now());
-        bill.setBillById(UserUtils.getCurrentEmployeeId());
-        bill.setBillByName(cut(UserUtils.getCurrentEmployeeName(), W_BILL_BY_NAME));
+        bill.setBillById(UserUtils.getCurrentUser().getEmployeeId());
+        bill.setBillByName(cut(UserUtils.getCurrentUser().getRealName(), W_BILL_BY_NAME));
         bill.setRemark(cut(dto.getRemark(), W_REMARK));
         this.save(bill);
 
@@ -271,8 +271,8 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         }
 
         bill.setBillStatus(BillStatusEnum.VOIDED.getCode());
-        bill.setVoidById(UserUtils.getCurrentEmployeeId());
-        bill.setVoidByName(cut(UserUtils.getCurrentEmployeeName(), W_BILL_BY_NAME));
+        bill.setVoidById(UserUtils.getCurrentUser().getEmployeeId());
+        bill.setVoidByName(cut(UserUtils.getCurrentUser().getRealName(), W_BILL_BY_NAME));
         bill.setVoidTime(LocalDateTime.now());
         bill.setVoidReason(cut(dto.getReason(), W_VOID_REASON));
         this.updateById(bill);

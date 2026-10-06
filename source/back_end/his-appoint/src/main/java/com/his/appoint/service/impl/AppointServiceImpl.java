@@ -970,17 +970,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
      * 当前操作人姓名 —— 一律服务端取，不信前端传的身份。
      */
     private String currentOperatorName() {
-        CurrentUser currentUser = UserUtils.getCurrentUser();
-        if (currentUser == null) {
-            return "系统";
-        }
-        if (StringUtils.hasText(currentUser.getEmployeeName())) {
-            return currentUser.getEmployeeName();
-        }
-        if (StringUtils.hasText(currentUser.getRealName())) {
-            return currentUser.getRealName();
-        }
-        return currentUser.getUsername();
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     @Override

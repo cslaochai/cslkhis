@@ -1,6 +1,6 @@
 package com.his.config;
 
-import com.his.system.support.OperLogInterceptor;
+import com.his.system.interceptor.OperLogInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;

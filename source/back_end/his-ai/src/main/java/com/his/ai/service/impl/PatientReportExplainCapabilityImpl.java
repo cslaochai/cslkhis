@@ -16,6 +16,8 @@ import com.his.common.exception.BusinessException;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.entity.BizReport;
+import com.his.ai.enums.PatientLabExplainStatusEnum;
+import com.his.medicaltech.enums.ReportTypeEnum;
 import com.his.medicaltech.mapper.BizLabResultMapper;
 import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
 import com.his.medicaltech.mapper.BizReportMapper;
@@ -60,32 +62,6 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
 
     private static final String BIZ_TYPE = "report";
 
-    /**
-     * biz_report.report_type：1-检查 2-检验
-     */
-    private static final int REPORT_TYPE_LABORATORY = 2;
-
-    /**
-     * 结果状态：正常
-     */
-    private static final int STATUS_NORMAL = 1;
-    /**
-     * 结果状态：偏高
-     */
-    private static final int STATUS_HIGH = 2;
-    /**
-     * 结果状态：偏低
-     */
-    private static final int STATUS_LOW = 3;
-    /**
-     * 结果状态：未判定
-     */
-    private static final int STATUS_UNJUDGED = 4;
-    /**
-     * 结果状态：异常（方向不明确）
-     */
-    private static final int STATUS_ABNORMAL = 5;
-
     private static final int OUTPUT_TOKEN_LIMIT = 512;
 
     private static final int SUMMARY_MAX_LENGTH = 120;
@@ -124,31 +100,25 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
 
     private final PatientGuardianService patientGuardianService;
 
-    private static int toStatus(Integer flag, boolean unjudged) {
+    private static Integer toStatus(Integer flag, boolean unjudged) {
         if (unjudged) {
-            return STATUS_UNJUDGED;
+            return PatientLabExplainStatusEnum.UNJUDGED.getCode();
         }
         if (flag == null) {
-            return STATUS_NORMAL;
+            return PatientLabExplainStatusEnum.NORMAL.getCode();
         }
         return switch (flag) {
-            case LabAbnormalJudge.HIGH -> STATUS_HIGH;
-            case LabAbnormalJudge.LOW -> STATUS_LOW;
-            case LabAbnormalJudge.ABNORMAL -> STATUS_ABNORMAL;
-            default -> STATUS_NORMAL;
+            case LabAbnormalJudge.HIGH -> PatientLabExplainStatusEnum.HIGH.getCode();
+            case LabAbnormalJudge.LOW -> PatientLabExplainStatusEnum.LOW.getCode();
+            case LabAbnormalJudge.ABNORMAL -> PatientLabExplainStatusEnum.ABNORMAL.getCode();
+            default -> PatientLabExplainStatusEnum.NORMAL.getCode();
         };
     }
 
     // ---------------------------------------------------------------- 规则层
 
-    private static String statusText(int status) {
-        return switch (status) {
-            case STATUS_HIGH -> "偏高";
-            case STATUS_LOW -> "偏低";
-            case STATUS_UNJUDGED -> "待核对";
-            case STATUS_ABNORMAL -> "异常";
-            default -> "正常";
-        };
+    private static String statusText(Integer status) {
+        return PatientLabExplainStatusEnum.getText(status);
     }
 
     /**
@@ -157,7 +127,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
      * 危急值优先级最高：不管词典有没有，先把「立即联系医生」说在前面。
      * 这是代码判定的事实，不是措辞选择。
      */
-    private static String buildPlainText(int status, boolean unjudged, SysLabPlainItem plain,
+    private static String buildPlainText(Integer status, boolean unjudged, SysLabPlainItem plain,
                                          String criticalDesc) {
         if (StringUtils.hasText(criticalDesc)) {
             return "【需要尽快处理】" + criticalDesc + "。请立即联系接诊医生或前往急诊。";
@@ -165,13 +135,13 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
         if (unjudged) {
             return FALLBACK_UNJUDGED;
         }
-        if (status == STATUS_HIGH) {
+        if (PatientLabExplainStatusEnum.HIGH.getCode().equals(status)) {
             return plain == null ? FALLBACK_ABNORMAL : plain.getHighText();
         }
-        if (status == STATUS_LOW) {
+        if (PatientLabExplainStatusEnum.LOW.getCode().equals(status)) {
             return plain == null ? FALLBACK_ABNORMAL : plain.getLowText();
         }
-        if (status == STATUS_ABNORMAL) {
+        if (PatientLabExplainStatusEnum.ABNORMAL.getCode().equals(status)) {
             return plain == null ? FALLBACK_ABNORMAL : plain.getHighText();
         }
         // 正常：说清这项是查什么的，比说「一切正常」有用；也不必加任何判断
@@ -236,7 +206,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
             // 不区分「报告不存在」和「无权查看」，避免被用来探测报告是否存在
             throw new BusinessException("报告不存在或无权查看：" + dto.getReportId());
         }
-        if (report.getReportType() == null || report.getReportType() != REPORT_TYPE_LABORATORY) {
+        if (report.getReportType() == null || !ReportTypeEnum.LAB_TEST.getCode().equals(report.getReportType())) {
             throw new BusinessException("目前只对检验报告提供逐项解读；检查报告（CT/B超等）请咨询接诊医生");
         }
 
@@ -284,14 +254,15 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
 
             boolean unjudged = LabAbnormalJudge.isUnjudged(result.getJudgeNote());
             Integer flag = result.getAbnormalFlag() == null ? LabAbnormalJudge.NORMAL : result.getAbnormalFlag();
-            int status = toStatus(flag, unjudged);
+            Integer status = toStatus(flag, unjudged);
             item.setStatus(status);
             item.setStatusText(statusText(status));
-            item.setArrow(status == STATUS_HIGH ? "↑" : status == STATUS_LOW ? "↓" : "");
+            item.setArrow(PatientLabExplainStatusEnum.HIGH.getCode().equals(status) ? "↑"
+                    : PatientLabExplainStatusEnum.LOW.getCode().equals(status) ? "↓" : "");
 
             if (unjudged) {
                 unjudgedCount++;
-            } else if (status != STATUS_NORMAL) {
+            } else if (!PatientLabExplainStatusEnum.NORMAL.getCode().equals(status)) {
                 abnormalCount++;
             }
             if (isCritical) {

@@ -1,0 +1,14 @@
+# 电子签名配置
+his:
+  sign:
+    # 签名主密钥属敏感项：此处留空，dev 文件覆盖为内联真值，生产用 HIS_SIGN_SECRET 注入。
+    master-secret: ${HIS_SIGN_SECRET:}
+    # PBKDF2 迭代次数（新证书使用；老证书用自己行里存的值，调大不会让老证书解不开）
+    iterations: 120000
+    # 证书默认有效期（天）
+    default-valid-days: 365
+    # 缺证书时是否自动签发（首次签名按需补发院内托管证书，避免把业务堵死）
+    auto-issue-cert: true
+    # 默认时间来源：1-本机时钟 2-院内授时服务器 3-第三方TSA
+    # 本期未接入 2/3，即使这里填 2 或 3 也会被运行期降级成 1 并在日志里告警（不谎报可信时间）
+    time-source: 1

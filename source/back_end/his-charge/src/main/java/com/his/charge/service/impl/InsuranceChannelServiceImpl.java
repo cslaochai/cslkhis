@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.charge.entity.BizInsuranceReport;
+import com.his.charge.enums.InsuranceReportStatusEnum;
+import com.his.charge.enums.InsuranceReportTypeEnum;
 import com.his.charge.mapper.BizInsuranceReportMapper;
 import com.his.charge.service.InsuranceChannelService;
 import lombok.RequiredArgsConstructor;
@@ -99,8 +101,8 @@ public class InsuranceChannelServiceImpl implements InsuranceChannelService {
         log.info("[M9医保外发口子] ===== 模拟从医保前置机拉取当日账单 ===== billDate={}（真实接入=调前置机对账接口）", billDate);
         List<BizInsuranceReport> records = reportMapper.selectList(new LambdaQueryWrapper<BizInsuranceReport>()
                 .eq(BizInsuranceReport::getBillDate, billDate)
-                .eq(BizInsuranceReport::getReportType, 1)
-                .eq(BizInsuranceReport::getStatus, 1)
+                .eq(BizInsuranceReport::getReportType, InsuranceReportTypeEnum.UPLOAD.getCode())
+                .eq(BizInsuranceReport::getStatus, InsuranceReportStatusEnum.SUCCESS.getCode())
                 .orderByAsc(BizInsuranceReport::getId));
         return records.stream()
                 .map(r -> new RemoteSettlement(r.getTradeNo(), r.getSettlementNo(),

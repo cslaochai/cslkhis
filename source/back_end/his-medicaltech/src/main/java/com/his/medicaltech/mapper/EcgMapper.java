@@ -50,7 +50,7 @@ public interface EcgMapper {
               LEFT JOIN biz_ecg_holter h
                 ON h.record_id = rec.id AND h.del_flag = 0
               LEFT JOIN biz_report r
-                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = 1
+                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = ${@com.his.medicaltech.enums.ReportTypeEnum@INSPECTION.getCode()}
              WHERE rec.del_flag = 0
                AND rec.record_status NOT IN (7)
                <if test="keyword != null and keyword != ''">
@@ -107,7 +107,7 @@ public interface EcgMapper {
               LEFT JOIN biz_ecg_holter h
                 ON h.record_id = rec.id AND h.del_flag = 0
               LEFT JOIN biz_report r
-                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = 1
+                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = ${@com.his.medicaltech.enums.ReportTypeEnum@INSPECTION.getCode()}
              WHERE rec.del_flag = 0 AND rec.id = #{recordId}
             """)
     EcgListVO selectWorkbenchByRecordId(@Param("recordId") Long recordId);

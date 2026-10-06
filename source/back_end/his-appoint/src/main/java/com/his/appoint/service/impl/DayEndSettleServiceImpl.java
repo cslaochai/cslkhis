@@ -42,17 +42,25 @@ public class DayEndSettleServiceImpl implements DayEndSettleService {
         return "【日终结转 " + d + " 自动收尾】";
     }
 
+    /**
+     * <b>三处定时任务豁免点之一</b>（另两处：检查爽约判定 {@code ExamAppointmentServiceImpl}、
+     * 出院随访自动补建 {@code FollowupTaskServiceImpl}）。
+     *
+     * <p>日结转有 cron（每天 00:10）与进页面懒触发两条路径，两条共用 {@link #doSettle}。
+     * cron 那条是调度线程，没有登录态；其余位置一律走
+     * {@code UserUtils.getCurrentUser().getRealName()}（取不到就是 NPE/报错，不塞默认值），
+     * 这里一刀切报错等于把每天的日结转打挂。
+     *
+     * <p>取值形态是 {@code 姓名(员工ID)}：只写名字分不清同名员工，只写 ID 又对不上人眼。
+     */
     private static String currentOperator() {
         CurrentUser user = UserUtils.getCurrentUser();
-        if (user == null) {
+        if (user == null || user.getEmployeeId() == null) {
             return SYSTEM_OPERATOR;
         }
-        if (user.getEmployeeId() != null) {
-            return user.getEmployeeName() == null
-                    ? String.valueOf(user.getEmployeeId())
-                    : user.getEmployeeName() + "(" + user.getEmployeeId() + ")";
-        }
-        return user.getUsername() == null ? SYSTEM_OPERATOR : user.getUsername();
+        return user.getRealName() == null || user.getRealName().isBlank()
+                ? String.valueOf(user.getEmployeeId())
+                : user.getRealName() + "(" + user.getEmployeeId() + ")";
     }
 
     private static DayEndSettleResultVO build(LocalDate from, LocalDate to, long noShow, long unvisited,

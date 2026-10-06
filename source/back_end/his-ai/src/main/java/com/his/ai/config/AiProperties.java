@@ -25,7 +25,7 @@ import java.util.Map;
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "ai")
+@ConfigurationProperties(prefix = "his.ai")
 public class AiProperties {
 
     /**
@@ -117,10 +117,6 @@ public class AiProperties {
 
     @Data
     public static class Rag {
-        /**
-         * embedding 提供方：local-tf（默认，零依赖）/ ollama（将来）
-         */
-        private String embeddingProvider = "local-tf";
         /**
          * 切块大小（字符）
          */

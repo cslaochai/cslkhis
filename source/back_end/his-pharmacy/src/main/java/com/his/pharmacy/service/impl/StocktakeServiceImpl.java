@@ -95,7 +95,7 @@ public class StocktakeServiceImpl implements StocktakeService {
         Integer drugType = dto.getScopeDrugType();
         String keyword = trimToNull(dto.getScopeKeyword());
         String title = dto.getStocktakeTitle().trim();
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
 
         if (dto.getId() == null) {
@@ -161,7 +161,7 @@ public class StocktakeServiceImpl implements StocktakeService {
     public StocktakeVO saveCount(StocktakeCountUpsertDTO dto) {
         BizStocktake head = lock(dto.getId());
         requireStatus(head, StocktakeStatusEnum.COUNTING.getCode(), "录入实盘数");
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
 
         for (StocktakeCountUpsertDTO.Item row : dto.getItems()) {
@@ -192,7 +192,7 @@ public class StocktakeServiceImpl implements StocktakeService {
     public StocktakeVO submit(StocktakeIdDTO dto) {
         BizStocktake head = lock(dto.getId());
         requireStatus(head, StocktakeStatusEnum.COUNTING.getCode(), "提交盘点");
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
 
         long uncounted = itemMapper.countUncounted(head.getId());
@@ -221,7 +221,7 @@ public class StocktakeServiceImpl implements StocktakeService {
     public StocktakeVO audit(StocktakeAuditDTO dto) {
         BizStocktake head = lock(dto.getId());
         requireStatus(head, StocktakeStatusEnum.AUDITING.getCode(), "复核盘点单");
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         String remark = cut(dto.getRemark(), 500);
 

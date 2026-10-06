@@ -182,7 +182,7 @@ public class PivasServiceImpl implements PivasService {
         if (!pass && !StringUtils.hasText(dto.getReason())) {
             throw new BusinessException("审方退回必须填写原因");
         }
-        item.setAuditorId(UserUtils.getCurrentEmployeeId());
+        item.setAuditorId(UserUtils.getCurrentUser().getEmployeeId());
         item.setAuditorName(currentOperator());
         item.setAuditTime(now());
         if (pass) {
@@ -248,7 +248,7 @@ public class PivasServiceImpl implements PivasService {
             throw new BusinessException("仅已排队明细允许调配（当前状态码 " + item.getStatus() + "）");
         }
         item.setStatus(BizPivasItem.STATUS_COMPOUNDED);
-        item.setCompounderId(UserUtils.getCurrentEmployeeId());
+        item.setCompounderId(UserUtils.getCurrentUser().getEmployeeId());
         item.setCompounderName(currentOperator());
         item.setCompoundTime(now());
         if (StringUtils.hasText(dto.getRemark())) {
@@ -269,7 +269,7 @@ public class PivasServiceImpl implements PivasService {
             throw new BusinessException("仅已调配明细允许核对发放（当前状态码 " + item.getStatus() + "）");
         }
         item.setStatus(BizPivasItem.STATUS_VERIFIED);
-        item.setVerifierId(UserUtils.getCurrentEmployeeId());
+        item.setVerifierId(UserUtils.getCurrentUser().getEmployeeId());
         item.setVerifierName(currentOperator());
         item.setVerifyTime(now());
         if (StringUtils.hasText(dto.getRemark())) {
@@ -419,7 +419,6 @@ public class PivasServiceImpl implements PivasService {
     }
 
     private String currentOperator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(name) ? name : "system";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

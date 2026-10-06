@@ -53,7 +53,7 @@ public class ArrearsControlServiceImpl implements ArrearsControlService {
             p.setStopClasses(dto.getStopClasses().trim());
         }
         p.setRemark(dto.getRemark());
-        p.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        p.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         p.setUpdateTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         policyMapper.updateById(p);
         return toVo(p);

@@ -275,7 +275,7 @@ public class IcuServiceImpl implements IcuService {
         if (dto.getId() == null) {
             monitor = new BizIcuMonitor();
             monitor.setStayId(stay.getId());
-            monitor.setRecorderId(UserUtils.getCurrentEmployeeId());
+            monitor.setRecorderId(UserUtils.getCurrentUser().getEmployeeId());
             monitor.setRecorderName(currentOperator());
         } else {
             monitor = monitorMapper.selectById(dto.getId());
@@ -431,7 +431,6 @@ public class IcuServiceImpl implements IcuService {
     }
 
     private String currentOperator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(name) ? name : "system";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

@@ -101,7 +101,7 @@ public class YbChronicServiceImpl implements YbChronicService {
         entity.setIcdCode(cut(dto.getIcdCode(), 32));
         entity.setDefaultValidMonths(dto.getDefaultValidMonths());
         entity.setRemark(cut(dto.getRemark(), 500));
-        entity.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (creating) {
             catalogMapper.insert(entity);
         } else {
@@ -119,7 +119,7 @@ public class YbChronicServiceImpl implements YbChronicService {
         }
         BizYbChronicCatalog entity = requireCatalog(id);
         entity.setStatus(status);
-        entity.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         catalogMapper.updateById(entity);
     }
 
@@ -226,7 +226,7 @@ public class YbChronicServiceImpl implements YbChronicService {
         entity.setValidEnd(dto.getValidEnd());
         entity.setValidEndKey(validEndKey);
         entity.setRemark(cut(dto.getRemark(), 500));
-        entity.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (creating) {
             regMapper.insert(entity);
         } else {
@@ -242,7 +242,7 @@ public class YbChronicServiceImpl implements YbChronicService {
         if (!Integer.valueOf(REG_VALID).equals(entity.getRegStatus())) {
             throw new BusinessException("仅「有效」的备案可注销，已注销/已驳回是终态");
         }
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         entity.setRegStatus(REG_CANCELLED);
         entity.setCancelReason(cut(dto.getReason(), 500));
         entity.setCancelBy(operator);
@@ -258,7 +258,7 @@ public class YbChronicServiceImpl implements YbChronicService {
         if (!Integer.valueOf(REG_VALID).equals(entity.getRegStatus())) {
             throw new BusinessException("仅「有效」的备案可驳回，已注销/已驳回是终态");
         }
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         entity.setRegStatus(REG_REJECTED);
         entity.setRejectReason(cut(dto.getReason(), 500));
         entity.setRejectBy(operator);
@@ -274,16 +274,16 @@ public class YbChronicServiceImpl implements YbChronicService {
     private void applyRegisterEmployee(BizYbChronicReg entity, ChronicRegUpsertDTO dto, boolean creating) {
         String inputName = dto.getRegisterEmpName() == null ? null : dto.getRegisterEmpName().trim();
         if (inputName == null || inputName.isEmpty()) {
-            entity.setRegisterEmpName(cut(UserUtils.getCurrentEmployeeName(), 64));
-            entity.setRegisterEmpId(UserUtils.getCurrentEmployeeId());
+            entity.setRegisterEmpName(cut(UserUtils.getCurrentUser().getRealName(), 64));
+            entity.setRegisterEmpId(UserUtils.getCurrentUser().getEmployeeId());
             return;
         }
-        if (creating && !Objects.equals(inputName, UserUtils.getCurrentEmployeeName()) && !isText(dto.getRemark())) {
+        if (creating && !Objects.equals(inputName, UserUtils.getCurrentUser().getRealName()) && !isText(dto.getRemark())) {
             throw new BusinessException("经办人不是当前登录人（外部机构代办）时，必须在备注写明原因，例如「XX市医保中心窗口张XX代办」");
         }
         entity.setRegisterEmpName(cut(inputName, 64));
-        entity.setRegisterEmpId(Objects.equals(inputName, UserUtils.getCurrentEmployeeName())
-                ? UserUtils.getCurrentEmployeeId() : null);
+        entity.setRegisterEmpId(Objects.equals(inputName, UserUtils.getCurrentUser().getRealName())
+                ? UserUtils.getCurrentUser().getEmployeeId() : null);
     }
 
     /**

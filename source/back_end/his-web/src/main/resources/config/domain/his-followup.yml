@@ -1,0 +1,11 @@
+# 随访配置
+his:
+  followup:
+    # 外呼通道：mock=人工（护士自己拨，只登记「待外呼」）；aliyun-vms=自动外呼。
+    call-channel: mock
+    channel:
+      aliyun-vms:
+        access-key-id: ${HIS_CALL_ACCESS_KEY_ID:}
+        access-key-secret: ${HIS_CALL_ACCESS_KEY_SECRET:}
+        called-show-number: ${HIS_CALL_SHOW_NUMBER:}
+        tts-code: ${HIS_CALL_TTS_CODE:}

@@ -100,6 +100,6 @@ public class AntibioticController {
     @PostMapping("/checkAuthority")
     public Result<AntibioticAuthCheckVO> checkAuthority(@Valid @RequestBody AntibioticAuthCheckQueryDTO dto) {
         return Result.success(antibioticService.checkAuthority(
-                UserUtils.getCurrentEmployeeId(), dto.getDrugIds()));
+                UserUtils.getCurrentUser().getEmployeeId(), dto.getDrugIds()));
     }
 }

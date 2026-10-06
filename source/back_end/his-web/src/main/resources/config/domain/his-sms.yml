@@ -1,0 +1,8 @@
+# 短信验证码配置
+his:
+  sms:
+    code:
+      mock: ${HIS_SMS_MOCK:false}
+      ttl-seconds: 300
+      resend-seconds: 60
+      length: 6

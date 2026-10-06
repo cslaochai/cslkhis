@@ -71,12 +71,12 @@ public class CssdServiceImpl implements CssdService {
         p.setSterilizeMethod(method);
         p.setStatus(CssdNodeStatusEnum.RECEIVED.getCode());
         p.setLastNodeTime(TimeUtil.nowSeconds());
-        p.setCreateBy(UserUtils.getCurrentEmployeeName());
+        p.setCreateBy(UserUtils.getCurrentUser().getRealName());
         packMapper.insert(p);
 
         insertTrace(p, CssdNodeStatusEnum.RECEIVED.getCode(), dto.getRemark(), null, null, CssdCheckResultEnum.OK.getCode(),
                 StringUtils.hasText(dto.getOperatorName()) ? dto.getOperatorName().trim()
-                        : UserUtils.getCurrentEmployeeName());
+                        : UserUtils.getCurrentUser().getRealName());
         return toVo(p, loadTraces(p.getId()));
     }
 
@@ -90,7 +90,7 @@ public class CssdServiceImpl implements CssdService {
         int target = from + 1;
         int result = dto.getResult() == null ? CssdCheckResultEnum.OK.getCode() : dto.getResult();
         String operator = StringUtils.hasText(dto.getOperatorName()) ? dto.getOperatorName().trim()
-                : UserUtils.getCurrentEmployeeName();
+                : UserUtils.getCurrentUser().getRealName();
 
         if (CssdNodeStatusEnum.STERILIZING.is(target)) {
             // ① 条件必填：锅次/批次只在推进到灭菌节点时必填（同一接口服务全部节点），DTO 注解一刀切会挡掉其他节点的合法请求
@@ -115,7 +115,7 @@ public class CssdServiceImpl implements CssdService {
 
         p.setStatus(target);
         p.setLastNodeTime(TimeUtil.nowSeconds());
-        p.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        p.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         packMapper.updateById(p);
 
         // 灭菌完成判不合格 → 包退回清洗（重新打包灭菌），追溯节点如实记录不合格

@@ -1,0 +1,8 @@
+# 微信小程序配置
+his:
+  wechat:
+    miniapp:
+      enabled: false
+      app-id: ${HIS_WX_MINIAPP_APPID:}
+      app-secret: ${HIS_WX_MINIAPP_SECRET:}
+      templates: {}

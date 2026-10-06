@@ -95,8 +95,6 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
 
     private static final int OUTPUT_TOKEN_LIMIT = 1536;
 
-    private static final String OPERATOR_FALLBACK = "system";
-
     private static final DateTimeFormatter NO_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final BizPrescriptionMapper prescriptionMapper;
@@ -275,20 +273,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     }
 
     private static String currentOperator() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user != null) {
-                if (StringUtils.hasText(user.getUsername())) {
-                    return user.getUsername();
-                }
-                if (StringUtils.hasText(user.getRealName())) {
-                    return user.getRealName();
-                }
-            }
-        } catch (Exception ignored) {
-            // 非请求线程
-        }
-        return OPERATOR_FALLBACK;
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private static String buildNo(String prefix) {

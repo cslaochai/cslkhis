@@ -147,8 +147,8 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         if (patient == null) {
             throw new BusinessException("患者不存在：" + dto.getPatientId());
         }
-        Long operatorId = UserUtils.getCurrentEmployeeId();
-        String operatorName = UserUtils.getCurrentEmployeeName();
+        Long operatorId = UserUtils.getCurrentUser().getEmployeeId();
+        String operatorName = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
 
         if (dto.getId() == null) {
@@ -183,7 +183,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
             throw new BusinessException(InfectionCaseStatusEnum.labelOrUnknown(c.getCaseStatus()) + "的病例不能核实（仅待核实可审）");
         }
         c.setCaseStatus(dto.getAuditResult());
-        c.setAuditName(UserUtils.getCurrentEmployeeName());
+        c.setAuditName(UserUtils.getCurrentUser().getRealName());
         c.setAuditTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         c.setAuditRemark(tr(dto.getAuditRemark()));
         caseMapper.updateById(c);
@@ -296,8 +296,8 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         BizInfectionMonitorDaily d = new BizInfectionMonitorDaily();
         d.setMonitorId(m.getId());
         d.setMonitorDate(date);
-        d.setRecorderId(UserUtils.getCurrentEmployeeId());
-        d.setRecorderName(UserUtils.getCurrentEmployeeName());
+        d.setRecorderId(UserUtils.getCurrentUser().getEmployeeId());
+        d.setRecorderName(UserUtils.getCurrentUser().getRealName());
         d.setRecordTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         d.setRemark(tr(dto.getRemark()));
         dailyMapper.insert(d);
@@ -474,8 +474,8 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         o.setObsObject(dto.getObsObject());
         o.setOpportunityCount(dto.getOpportunityCount());
         o.setComplyCount(dto.getComplyCount());
-        o.setObserverId(UserUtils.getCurrentEmployeeId());
-        o.setObserverName(UserUtils.getCurrentEmployeeName());
+        o.setObserverId(UserUtils.getCurrentUser().getEmployeeId());
+        o.setObserverName(UserUtils.getCurrentUser().getRealName());
         o.setObsTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         o.setRemark(tr(dto.getRemark()));
         handObsMapper.insert(o);

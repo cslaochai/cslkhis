@@ -93,8 +93,6 @@ public class PasswordCipherService {
             throw new BusinessException("登录密码不能为空");
         }
         String cipher = cipherHex.trim();
-        // 明文口令（"admin / 123456" 这类）在这里就该被挡回去 ——
-        // 不是因为解不开，而是"允许明文通过"等于这套加密白做，边界必须硬。
         if (!HEX.matcher(cipher).matches()
                 || cipher.length() % 2 != 0
                 || cipher.length() < MIN_CIPHER_HEX_LEN
@@ -102,10 +100,6 @@ public class PasswordCipherService {
             throw new BusinessException("登录密码未加密传输，已被拒绝，请刷新页面后重试");
         }
 
-        // sm-crypto 输出的 C1 永远不带 04 前缀（64 字节 x|y），这里无条件补上。
-        // 不能用 startsWith("04") 做「智能判断」：C1 的 x 坐标首字节是均匀随机的，
-        // 约 1/256 的密文恰好以 04 开头，被误判为已带前缀后 BouncyCastle 解出
-        // Invalid point coordinates —— 症状是「登录绝大多数正常、偶尔莫名失败」，极难排查。
         String fullHex = C1_PREFIX + cipher;
         try {
             SM2 sm2 = new SM2(privateKeyHex, publicKeyHex);
@@ -122,7 +116,6 @@ public class PasswordCipherService {
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
-            // 最常见成因：后端换了密钥（重启生成了新 key），而前端还拿着旧公钥加密
             log.warn("[登录加密] SM2 解密失败，keyId={}，密文长度={}，原因={}（多半是公钥已轮换，前端需重拉）",
                     keyId, cipher.length(), e.getMessage());
             throw new BusinessException("登录密码密文解析失败，请刷新页面后重试");

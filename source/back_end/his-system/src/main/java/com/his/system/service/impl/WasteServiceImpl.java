@@ -58,9 +58,9 @@ public class WasteServiceImpl implements WasteService {
         w.setDeptName(tr(dto.getDeptName()));
         w.setCollectTime(dto.getCollectTime().truncatedTo(ChronoUnit.SECONDS));
         w.setCollectorName(StringUtils.hasText(dto.getCollectorName()) ? dto.getCollectorName().trim()
-                : UserUtils.getCurrentEmployeeName());
+                : UserUtils.getCurrentUser().getRealName());
         w.setStatus(WasteStatusEnum.REGISTERED.getCode());
-        w.setCreateBy(UserUtils.getCurrentEmployeeName());
+        w.setCreateBy(UserUtils.getCurrentUser().getRealName());
         wasteMapper.insert(w);
         return toVo(w);
     }
@@ -74,7 +74,7 @@ public class WasteServiceImpl implements WasteService {
         w.setStatus(WasteStatusEnum.HANDED_OVER.getCode());
         w.setHandoverName(dto.getHandoverName().trim());
         w.setHandoverTime(TimeUtil.nowSeconds());
-        w.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        w.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         w.setUpdateTime(w.getHandoverTime());
         wasteMapper.updateById(w);
         return toVo(w);
@@ -89,7 +89,7 @@ public class WasteServiceImpl implements WasteService {
         w.setStatus(WasteStatusEnum.DISPOSED.getCode());
         w.setDisposalCompany(dto.getDisposalCompany().trim());
         w.setDisposalTime(TimeUtil.nowSeconds());
-        w.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        w.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         w.setUpdateTime(w.getDisposalTime());
         wasteMapper.updateById(w);
         return toVo(w);

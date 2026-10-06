@@ -70,7 +70,7 @@ public class YbMappingServiceImpl implements YbMappingService {
         if (catalog.getStatus() == null || catalog.getStatus() != 1) {
             throw new BusinessException("医保目录已停用，不可对照：" + catalog.getYbCode());
         }
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
 
         // 换对照 = 覆盖（uk_item 唯一，天然一对一）
         BizYbMapping mapping = mappingMapper.selectOne(new LambdaQueryWrapper<BizYbMapping>()
@@ -133,6 +133,7 @@ public class YbMappingServiceImpl implements YbMappingService {
         int matched = 0;
         int ambiguous = 0;
         int noMatch = 0;
+        String operator = UserUtils.getCurrentUser().getRealName();
 
         List<Integer> types = dto.getItemType() == null
                 ? List.of(1, 2, 3, 4)
@@ -167,9 +168,9 @@ public class YbMappingServiceImpl implements YbMappingService {
                     mapping.setYbCode(catalog.getYbCode());
                     mapping.setYbName(catalog.getYbName());
                     mapping.setMatchType(1);
-                    mapping.setMappedBy("system");
+                    mapping.setMappedBy(operator);
                     mapping.setMappedTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
-                    mapping.setCreateBy("system");
+                    mapping.setCreateBy(operator);
                     mappingMapper.insert(mapping);
                     matched++;
                 }

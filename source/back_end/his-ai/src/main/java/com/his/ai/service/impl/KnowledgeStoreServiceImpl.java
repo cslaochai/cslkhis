@@ -91,7 +91,7 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
             chunkMapper.insert(chunk);
             vectorStore.upsert(chunk.getId(), doc.getId(), piece, doc.getTitle(),
                     doc.getCategory(),
-                    embeddingSelector.select(aiProperties.getRag().getEmbeddingProvider()).embed(piece));
+                    embeddingSelector.select().embed(piece));
             idx++;
         }
         doc.setChunkCount(pieces.size());
@@ -161,7 +161,7 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
             }
             vectorStore.upsert(c.getId(), c.getDocId(), c.getContent(), c.getDocTitle(),
                     c.getCategory(),
-                    embeddingSelector.select(aiProperties.getRag().getEmbeddingProvider()).embed(c.getContent()));
+                    embeddingSelector.select().embed(c.getContent()));
             count++;
         }
         log.info("[RAG] 索引重建完成，载入切块 {} 条", count);

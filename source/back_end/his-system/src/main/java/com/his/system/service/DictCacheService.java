@@ -1,6 +1,5 @@
 package com.his.system.service;
 
-import org.springframework.boot.CommandLineRunner;
 import com.his.system.entity.SysDictData;
 import java.util.List;
 

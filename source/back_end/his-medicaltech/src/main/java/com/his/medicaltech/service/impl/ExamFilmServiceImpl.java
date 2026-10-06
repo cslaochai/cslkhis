@@ -206,8 +206,8 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         dto.setEncounterNo(null);
         dto.setDeptId(record == null ? null : record.getInspectionDeptId());
         dto.setDeptName(record == null ? null : record.getInspectionDeptName());
-        dto.setDoctorId(UserUtils.getCurrentEmployeeId());
-        dto.setDoctorName(UserUtils.getCurrentEmployeeName());
+        dto.setDoctorId(UserUtils.getCurrentUser().getEmployeeId());
+        dto.setDoctorName(UserUtils.getCurrentUser().getRealName());
         // 胶片是耗材：项目类型 8-耗材材料，费用来源 7-耗材使用
         dto.setItemType(PaymentItemTypeEnum.CONSUMABLE.getCode());
         dto.setItemCode(film.getSpecCode());
@@ -231,7 +231,7 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         film.setFeeNo(fee.getFeeNo());
         filmMapper.updateById(film);
 
-        sysAuditLogService.record(UserUtils.getCurrentEmployeeId(), UserUtils.getCurrentEmployeeName(),
+        sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "检查胶片", "胶片记账", "biz_exam_film", film.getId(),
                 cut("胶片单号=" + film.getFilmNo() + " 规格=" + film.getSpecName()
                         + " 张数=" + film.getQuantity() + " 金额=" + film.getAmount()
@@ -251,7 +251,7 @@ public class ExamFilmServiceImpl implements ExamFilmService {
             throw new BusinessException("该胶片已发放给患者，重复打印请先登记一行新的");
         }
         film.setFilmStatus(FilmStatusEnum.PRINTED.getCode());
-        film.setPrintBy(UserUtils.getCurrentEmployeeName());
+        film.setPrintBy(UserUtils.getCurrentUser().getRealName());
         film.setPrintTime(LocalDateTime.now());
         filmMapper.updateById(film);
         return fillText(toVO(film));
@@ -270,7 +270,7 @@ public class ExamFilmServiceImpl implements ExamFilmService {
             throw new BusinessException("该胶片已发放，不要重复发放");
         }
         film.setFilmStatus(FilmStatusEnum.DELIVERED.getCode());
-        film.setDeliverBy(UserUtils.getCurrentEmployeeName());
+        film.setDeliverBy(UserUtils.getCurrentUser().getRealName());
         film.setDeliverTime(LocalDateTime.now());
         filmMapper.updateById(film);
         return fillText(toVO(film));
@@ -288,7 +288,7 @@ public class ExamFilmServiceImpl implements ExamFilmService {
             throw new BusinessException("已发放给患者的胶片不能作废：实物已经出去了");
         }
         // 留痕必须在改状态之前：作废后这行的快照还在，但"是谁因为什么作废的"只有审计里有
-        sysAuditLogService.record(UserUtils.getCurrentEmployeeId(), UserUtils.getCurrentEmployeeName(),
+        sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "检查胶片", "作废胶片", "biz_exam_film", film.getId(),
                 cut("胶片单号=" + film.getFilmNo() + " 规格=" + film.getSpecName()
                         + " 张数=" + film.getQuantity() + " 金额=" + film.getAmount()

@@ -674,10 +674,10 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     }
 
     /**
-     * 操作人一律服务端取，不信前端传的身份；取不到时留 null 而不是编一个名字
+     * 操作人一律服务端取，不信前端传的身份；取不到直接报错，不编名字也不留 null
      */
     private String currentOperator() {
-        return UserUtils.getCurrentEmployeeName();
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private void requireInEnum(String label, String value, java.util.Set<String> allowed) {

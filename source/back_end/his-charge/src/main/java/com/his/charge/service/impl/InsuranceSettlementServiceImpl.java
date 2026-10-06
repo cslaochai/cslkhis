@@ -12,6 +12,8 @@ import com.his.charge.entity.*;
 import com.his.charge.mapper.*;
 import com.his.charge.service.InsuranceChannelService;
 import com.his.charge.service.InsuranceSettlementService;
+import com.his.charge.enums.InsuranceReportStatusEnum;
+import com.his.charge.enums.InsuranceReportTypeEnum;
 import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
@@ -438,7 +440,7 @@ public class InsuranceSettlementServiceImpl
         List<BizSettlementBillItem> items = billItemMapper.selectByBill(bill.getId());
 
         String tradeNo = nextTradeNo();
-        BizInsuranceReport report = newReport(settlement, 1, "2304", tradeNo);
+        BizInsuranceReport report = newReport(settlement, InsuranceReportTypeEnum.UPLOAD.getCode(), "2304", tradeNo);
         report.setPayload(buildUploadPayload(settlement, bill, items, tradeNo));
         report.setTotalAmount(settlement.getTotalAmount());
         report.setInsurancePay(settlement.getInsurancePay());
@@ -483,8 +485,8 @@ public class InsuranceSettlementServiceImpl
     private void sendCancel(BizInsuranceSettlement settlement, String reason) {
         List<BizInsuranceReport> uploads = reportMapper.selectList(new LambdaQueryWrapper<BizInsuranceReport>()
                 .eq(BizInsuranceReport::getSettlementId, settlement.getId())
-                .eq(BizInsuranceReport::getReportType, 1)
-                .eq(BizInsuranceReport::getStatus, 1)
+                .eq(BizInsuranceReport::getReportType, InsuranceReportTypeEnum.UPLOAD.getCode())
+                .eq(BizInsuranceReport::getStatus, InsuranceReportStatusEnum.SUCCESS.getCode())
                 .orderByDesc(BizInsuranceReport::getId));
         if (CollectionUtils.isEmpty(uploads)) {
             throw new BusinessException("未找到回执成功的上传报文，无法撤销");
@@ -504,7 +506,7 @@ public class InsuranceSettlementServiceImpl
         payload.put("sendTime", LocalDateTime.now().format(TS));
         payload.put("note", "撤销报文：正式环境按医保前置机 2305 规范做字段映射");
 
-        BizInsuranceReport cancel = newReport(settlement, 2, "2305", tradeNo);
+        BizInsuranceReport cancel = newReport(settlement, InsuranceReportTypeEnum.CANCEL.getCode(), "2305", tradeNo);
         cancel.setOrigTradeNo(original.getTradeNo());
         cancel.setPayload(toPrettyJson(payload));
         cancel.setRemark(truncate(cutReason, 490));
@@ -520,7 +522,7 @@ public class InsuranceSettlementServiceImpl
         if (!receipt.isSuccess()) {
             throw new BusinessException("医保撤销被拒：" + truncate(receipt.getErrMsg(), 200));
         }
-        original.setStatus(3);
+        original.setStatus(InsuranceReportStatusEnum.CANCELLED.getCode());
         reportMapper.updateById(original);
     }
 
@@ -579,10 +581,10 @@ public class InsuranceSettlementServiceImpl
                 .eq(BizInsuranceReport::getBillDate, billDate)
                 .select(BizInsuranceReport.class, fi ->
                         !"payload".equals(fi.getProperty()) && !"replyPayload".equals(fi.getProperty())));
-        vo.setUploadSuccess((int) dayReports.stream().filter(r -> r.getReportType() == 1 && r.getStatus() == 1).count());
-        vo.setUploadFail((int) dayReports.stream().filter(r -> r.getReportType() == 1 && r.getStatus() == 2).count());
-        vo.setUploadCancelled((int) dayReports.stream().filter(r -> r.getReportType() == 1 && r.getStatus() == 3).count());
-        vo.setCancelSent((int) dayReports.stream().filter(r -> r.getReportType() == 2 && r.getStatus() == 1).count());
+        vo.setUploadSuccess((int) dayReports.stream().filter(r -> InsuranceReportTypeEnum.UPLOAD.getCode().equals(r.getReportType()) && InsuranceReportStatusEnum.SUCCESS.getCode().equals(r.getStatus())).count());
+        vo.setUploadFail((int) dayReports.stream().filter(r -> InsuranceReportTypeEnum.UPLOAD.getCode().equals(r.getReportType()) && InsuranceReportStatusEnum.FAIL.getCode().equals(r.getStatus())).count());
+        vo.setUploadCancelled((int) dayReports.stream().filter(r -> InsuranceReportTypeEnum.UPLOAD.getCode().equals(r.getReportType()) && InsuranceReportStatusEnum.CANCELLED.getCode().equals(r.getStatus())).count());
+        vo.setCancelSent((int) dayReports.stream().filter(r -> InsuranceReportTypeEnum.CANCEL.getCode().equals(r.getReportType()) && InsuranceReportStatusEnum.SUCCESS.getCode().equals(r.getStatus())).count());
 
         Map<String, InsuranceChannelService.RemoteSettlement> remoteByNo = remotes.stream()
                 .collect(Collectors.toMap(InsuranceChannelService.RemoteSettlement::getSettlementNo, Function.identity(), (a, b) -> a));
@@ -816,14 +818,14 @@ public class InsuranceSettlementServiceImpl
         report.setReportType(reportType);
         report.setMsgType(msgType);
         report.setTradeNo(tradeNo);
-        report.setStatus(0);
+        report.setStatus(InsuranceReportStatusEnum.INIT.getCode());
         report.setSendTime(LocalDateTime.now());
         report.setBillDate(LocalDate.now());
         return report;
     }
 
     private void applyReceipt(BizInsuranceReport report, InsuranceChannelService.Receipt receipt) {
-        report.setStatus(receipt.isSuccess() ? 1 : 2);
+        report.setStatus(receipt.isSuccess() ? InsuranceReportStatusEnum.SUCCESS.getCode() : InsuranceReportStatusEnum.FAIL.getCode());
         report.setReceiptNo(receipt.getReceiptNo());
         report.setReplyPayload(receipt.getReplyPayload());
         report.setErrMsg(truncate(receipt.getErrMsg(), 500));

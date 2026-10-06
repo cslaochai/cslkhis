@@ -314,8 +314,8 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         assertDeptAccessible(leave.getDeptId());
 
         // 落款人 = 当前登录职工：批准/拒绝都是医疗决定，责任主体不许前端冒充
-        Long me = UserUtils.getCurrentEmployeeId();
-        String myName = UserUtils.getCurrentEmployeeName();
+        Long me = UserUtils.getCurrentUser().getEmployeeId();
+        String myName = UserUtils.getCurrentUser().getRealName();
         if (me == null || !StringUtils.hasText(myName)) {
             throw new BusinessException("当前登录账号未绑定员工档案，无法以医师身份审批");
         }
@@ -621,7 +621,6 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     }
 
     private String currentOperator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(name) ? name : "system";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

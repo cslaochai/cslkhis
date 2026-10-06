@@ -551,33 +551,11 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
      * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
      */
     private Long currentEmpId() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user == null) {
-                return null;
-            }
-            return user.getEmployeeId() != null ? user.getEmployeeId() : user.getUserId();
-        } catch (Exception e) {
-            return null;
-        }
+        return UserUtils.getCurrentUser().getEmployeeId();
     }
 
     private String currentName() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user == null) {
-                return null;
-            }
-            if (StringUtils.hasText(user.getEmployeeName())) {
-                return user.getEmployeeName();
-            }
-            if (StringUtils.hasText(user.getRealName())) {
-                return user.getRealName();
-            }
-            return user.getUsername();
-        } catch (Exception e) {
-            return null;
-        }
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     // 内部：名称 / 组装

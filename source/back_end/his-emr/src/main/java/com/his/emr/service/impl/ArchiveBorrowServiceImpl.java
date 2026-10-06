@@ -33,6 +33,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 病案借阅/复印服务实现
@@ -117,8 +118,8 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
             throw new BusinessException("该病历已有同类型在途申请（待审核或未归还），请勿重复申请");
         }
 
-        Long operatorId = UserUtils.getCurrentEmployeeId();
-        String operatorName = UserUtils.getCurrentEmployeeName();
+        Long operatorId = UserUtils.getCurrentUser().getEmployeeId();
+        String operatorName = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
 
         BizArchiveBorrow b = new BizArchiveBorrow();
@@ -158,8 +159,8 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
             throw new BusinessException("拒绝必须填写审核意见");
         }
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-        b.setAuditById(UserUtils.getCurrentEmployeeId());
-        b.setAuditByName(UserUtils.getCurrentEmployeeName());
+        b.setAuditById(UserUtils.getCurrentUser().getEmployeeId());
+        b.setAuditByName(UserUtils.getCurrentUser().getRealName());
         b.setAuditRemark(trimToNull(dto.getRemark()));
         b.setAuditTime(now);
         if (approve) {
@@ -209,7 +210,9 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
         if (b.getStatus() != null && b.getStatus() != BorrowStatusEnum.PENDING.getCode()) {
             throw new BusinessException("已审核的单据不能删除（留痕完整性要求）");
         }
-        if (!UserUtils.getCurrentEmployeeId().equals(b.getApplicantId())) {
+        // Objects.equals 而不是 .equals()：employeeId 可能为 null（管理账号无员工档），
+        // 直接 .equals 会 NPE 变成 500，看起来像服务端坏了
+        if (!Objects.equals(UserUtils.getCurrentUser().getEmployeeId(), b.getApplicantId())) {
             throw new BusinessException("只有申请人本人可以删除");
         }
         // ⚠ MP 全局 logic-delete-field=delFlag：updateById 不允许 set del_flag（静默跳过），

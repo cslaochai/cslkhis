@@ -466,8 +466,7 @@ public class BloodServiceImpl implements BloodService {
     }
 
     private String currentName() {
-        String n = UserUtils.getCurrentEmployeeName();
-        return n != null ? n : "未知操作人";
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private String clip(String s) {

@@ -175,7 +175,7 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         if (dispensing.getDispensingStatus() == null || dispensing.getDispensingStatus() != DispensingStatusEnum.DISPENSED.getCode()) {
             throw new BusinessException("当前状态不允许退药");
         }
-        String operatorName = UserUtils.getCurrentEmployeeName();
+        String operatorName = UserUtils.getCurrentUser().getRealName();
 
         // 退药回库（落流水 type=3）：回库量必须与当初的扣库量同一个口径（档案单位），
         // 否则饮片退一次药，账上就多出一堆不存在的克
@@ -252,7 +252,7 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         BigDecimal stockQuantity = stockUnitsOf(dispensing);
         StockDeductResultDTO deduct = pharmacyService.deductStockFefo(dispensing.getDrugId(), stockQuantity,
                 "dispensing", dispensing.getId(), dispensing.getDispensingNo(),
-                pharmacistName != null ? pharmacistName : UserUtils.getCurrentEmployeeName());
+                pharmacistName != null ? pharmacistName : UserUtils.getCurrentUser().getRealName());
         dispensing.setStockBefore(deduct.getQuantityBefore());
         dispensing.setStockAfter(deduct.getQuantityAfter());
 

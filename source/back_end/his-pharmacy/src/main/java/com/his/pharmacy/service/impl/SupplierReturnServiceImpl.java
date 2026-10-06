@@ -104,7 +104,7 @@ public class SupplierReturnServiceImpl implements SupplierReturnService {
             throw new BusinessException("供应商不存在或已停用（供应商#" + dto.getSupplierId() + "）");
         }
         String reason = requireText(dto.getReturnReason(), "退货原因", 200);
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         List<BizDrugSupplierReturnItem> rows = buildItems(dto.getItems(), dto.getSupplierId(), supplierName, operator);
 
@@ -157,7 +157,7 @@ public class SupplierReturnServiceImpl implements SupplierReturnService {
     public SupplierReturnVO confirmReturn(SupplierReturnActionDTO dto) {
         BizDrugSupplierReturn head = lock(dto.getId());
         requireStatus(head, SupplierReturnStatusEnum.PENDING, "确认退货");
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         List<BizDrugSupplierReturnItem> items = itemMapper.selectList(
                 Wrappers.<BizDrugSupplierReturnItem>lambdaQuery()
@@ -198,7 +198,7 @@ public class SupplierReturnServiceImpl implements SupplierReturnService {
         BizDrugSupplierReturn head = lock(dto.getId());
         requireStatus(head, SupplierReturnStatusEnum.PENDING, "作废");
         String reason = requireText(dto.getReason(), "作废原因", 200);
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         returnMapper.update(null, Wrappers.<BizDrugSupplierReturn>lambdaUpdate()
                 .eq(BizDrugSupplierReturn::getId, head.getId())

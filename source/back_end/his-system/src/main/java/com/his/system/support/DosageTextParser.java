@@ -1,11 +1,11 @@
 package com.his.system.support;
 
+import com.his.system.enums.MassUnitEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -13,22 +13,15 @@ import java.util.regex.Pattern;
 
 /**
  * 剂量文本解析（单次给药量 / 规格单件含量 / 频次每日次数），统一折算成 <b>mg</b>
- * <p>
- * <b>设计原则：解不出来就返回 null，绝不猜。</b>处方明细的 single_dosage 是医生手填的自由文本
- * （库里现存 {@code ''}、{@code '1'}、{@code '2'}、'1片'、'1支'、{@code '0.5g'}、{@code '11'} 等形态），
- * specification 更是五花八门（0.5g×16片、10ml:1g/支、80mg/5mg×7片、36片/盒、统货）。
- * 解析失败时若按「1 片 / 1mg」兜底，就会批量造出假超量；而审方提示被证实错一次，
- * 药师此后会无视所有提示，这个功能等于报废。所以口径是<b>宁可漏报不可误报</b>。
- * 完整论证见 {@code sql/130} 文件头第四条。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DosageTextParser {
 
     /**
-     * 质量记法（拉丁单位按长度优先排列，否则 'mg' 会被 'g' 抢走前半段）
+     * 质量记法。单位清单由 {@link MassUnitEnum} 单点提供（按别名长度降序，否则 'mg' 会被 'g' 抢前半段），
+     * 这里只负责「数值 + 空格 + 单位」这套记法本身。
      */
-    private static final Pattern MASS = Pattern.compile(
-            "(\\d+(?:\\.\\d+)?)\\s*(mcg|μg|ug|mg|g|微克|毫克|克)(?![A-Za-z])", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MASS = MassUnitEnum.massPattern();
 
     /**
      * 只出现拉丁单位以外还带体积/长度等干扰记法的规格视为不可比
@@ -47,24 +40,13 @@ public final class DosageTextParser {
     private static final List<String> PIECE_UNITS = List.of(
             "片", "粒", "袋", "支", "瓶", "板", "枚", "贴", "帖", "丸", "胶囊", "包");
 
-    private static final BigDecimal THOUSAND = new BigDecimal("1000");
-
     /**
      * 数值 + 单位 → mg
      *
      * @return null 表示该单位不是质量单位（ml/IU/片/空）
      */
     public static BigDecimal toMg(BigDecimal value, String unit) {
-        if (value == null || !StringUtils.hasText(unit)) {
-            return null;
-        }
-        String u = unit.trim().toLowerCase();
-        return switch (u) {
-            case "mg", "毫克" -> value;
-            case "g", "克" -> value.multiply(THOUSAND);
-            case "ug", "μg", "mcg", "微克" -> value.divide(THOUSAND, 6, RoundingMode.HALF_UP);
-            default -> null;
-        };
+        return MassUnitEnum.toMg(value, unit);
     }
 
     /**

@@ -93,11 +93,7 @@ public class DrugTraceController {
         return Result.success();
     }
 
-    /**
-     * 操作人一律取登录态，无登录态兜底"系统"（dev 直连场景）
-     */
     private String currentOperator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return (name != null && !name.isBlank()) ? name : "系统";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

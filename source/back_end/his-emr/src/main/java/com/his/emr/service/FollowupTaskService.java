@@ -32,8 +32,19 @@ public interface FollowupTaskService extends IService<BizFollowupTask> {
 
     /**
      * 按出院记录一键生成随访计划（G20：同一出院记录幂等，重复调用返回已生成任务）
+     *
+     * <p>操作人取登录态（{@code realName}），取不到就炸，不塞默认值。
      */
     BizFollowupTask createFromDischarge(FollowupTaskDTO.FromDischarge dto);
+
+    /**
+     * 按出院记录生成随访计划，操作人由调用方显式指定。
+     *
+     * <p><b>给定时任务用</b>：出院随访自动补建由 {@code DischargeFollowupTrigger} 每 10 分钟扫一次，
+     * 调度线程没有登录态。走重载而不是在方法内部判空兜底，是为了让「这条随访是人建的还是系统补的」
+     * 在调用点就一目了然 —— 方法内部回落出来的系统值，在调用链上根本看不出来。
+     */
+    BizFollowupTask createFromDischarge(FollowupTaskDTO.FromDischarge dto, String operator);
 
     /**
      * 出参口径的按出院记录生成：手机号按编辑回显给明文

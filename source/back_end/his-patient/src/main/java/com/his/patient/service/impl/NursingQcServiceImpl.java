@@ -155,15 +155,7 @@ public class NursingQcServiceImpl implements NursingQcService {
     // 台账与看板
 
     private static String operator() {
-        CurrentUser user = UserUtils.getCurrentUser();
-        if (user == null) {
-            return "system";
-        }
-        if (user.getUsername() != null && !user.getUsername().isBlank()) {
-            return user.getUsername();
-        }
-        String name = UserUtils.getCurrentEmployeeName();
-        return name == null || name.isBlank() ? "system" : name;
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private static String trimToNull(String value) {
@@ -709,14 +701,14 @@ public class NursingQcServiceImpl implements NursingQcService {
      * 检查人：空=当前登录人；传了就必须是在职人员，姓名一律取库里的快照。
      *
      * <p>留空分支也必须过 {@link #checkMapper} 的 selectInspector 同一道在职闸 —— 曾经直接拿
-     * {@code UserUtils.getCurrentEmployeeId()} 落库，admin 的 emp_id=1 在员工里是
+     * {@code UserUtils.getCurrentUser().getEmployeeId()} 落库，admin 的 emp_id=1 在员工里是
      * <b>status=0 的停用员工</b>，写出一张 inspector_id 过不了自己校验的检查单：
      * 下次编辑回传就被「检查人不存在或已停用」拒掉，这张单从此改不动。写入侧与校验侧必须同一把尺子，
      * 过不了闸就不记检查人（留 NULL），而不是写一个注定非法的值。
      */
     private NurseQcVO.Inspector resolveInspector(Long inspectorId) {
         if (inspectorId == null) {
-            Long currentEmpId = UserUtils.getCurrentEmployeeId();
+            Long currentEmpId = UserUtils.getCurrentUser().getEmployeeId();
             return currentEmpId == null ? null : checkMapper.selectInspector(currentEmpId);
         }
         NurseQcVO.Inspector inspector = checkMapper.selectInspector(inspectorId);

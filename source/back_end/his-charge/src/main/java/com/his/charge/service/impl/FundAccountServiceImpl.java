@@ -232,8 +232,8 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
         txn.setPaymentTxnId(spec.paymentTxnId());
         txn.setPayMethod(spec.payMethod());
         txn.setChannelTxnNo(cut(spec.channelTxnNo(), W_CHANNEL_TXN_NO));
-        txn.setOperatorId(UserUtils.getCurrentEmployeeId());
-        txn.setOperatorName(cut(UserUtils.getCurrentEmployeeName(), W_OPERATOR_NAME));
+        txn.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());
+        txn.setOperatorName(cut(UserUtils.getCurrentUser().getRealName(), W_OPERATOR_NAME));
         txn.setTxnTime(LocalDateTime.now());
         txn.setTxnStatus(TXN_STATUS_SUCCESS);
         txn.setRemark(cut(spec.reason(), W_REMARK));

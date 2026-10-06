@@ -1,16 +1,4 @@
-server:
-  port: 8080
-  servlet:
-    context-path: /api
-
 spring:
-  application:
-    name: his-backend
-  # 换机器或部署时：复制一份 application-local.yml 填值，或改用对应环境变量（见各占位符）。
-  servlet:
-    multipart:
-      max-file-size: 20MB
-      max-request-size: 60MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${HIS_DB_URL:}
@@ -30,208 +18,27 @@ spring:
       password: ${HIS_REDIS_PASSWORD:}
       database: 0
       timeout: 5000
-  jackson:
-    date-format: yyyy-MM-dd HH:mm:ss
-    time-zone: Asia/Shanghai
-    serialization:
-      write-dates-as-timestamps: false
-
-mybatis-plus:
-  mapper-locations: classpath*:mapper/**/*.xml
-  configuration:
-    map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-  global-config:
-    db-config:
-      id-type: ASSIGN_ID
-      logic-delete-field: delFlag
-      logic-delete-value: 1
-      logic-not-delete-value: 0
 
 jwt:
+  # 签名密钥
   secret: ${HIS_JWT_SECRET:}
   expiration: 86400000  # 24小时
 
-ai:
-  enabled: true
-  provider: openai-compatible
-  base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-  api-key: ${HIS_AI_API_KEY:}
-  model: deepseek-v4.1-flash
-  model-lite: deepseek-v4.1-flash
-  # 全局超时（毫秒）
-  timeout-ms: 8000
-  # 失败重试次数
-  max-retries: 1
-  # 熔断时长（秒）
-  circuit-breaker-seconds: 300
-  # 连续失败多少次触发熔断
-  circuit-failure-threshold: 5
-  # ICD 候选粗召回条数
-  retrieve-topn: 50
-  # 能力开关：key 必须是 AiCapabilityKeys 里的能力标识。
-  # false / 不写该能力时该能力直接降级（不写=开启，总开关已控制）
-  features:
-    icd10: true
-    drug_audit: true
-    emr_qc: true
-    # 检验解读：默认规则结论；仅异常项 ≥3（组合异常）时才调模型做连贯解读（纪律 9）
-    lab_interpret: true
-    emergency_triage: true
-    emr_extract: true
-    emr_draft: true
-    # 患者端（小程序）：报告解读的事实层不依赖模型，关掉也只是措辞变朴素。
-    # 费用解释曾是模型能力，P1 起裁撤模型环节转纯计算（纪律 9），不再是 AI 能力。
-    patient_report_explain: true
-    # 患者端影像报告解读（G-17）：只解读不做诊断结论（NMPA 红线）。检查介绍走词典，
-    # 描述/结论白话走模型；关掉后小程序检查报告解读入口直接报错拒绝
-    patient_imaging_explain: true
-    # 患者端导诊口语归一：只做「口语→症状词+追问」，不推荐科室。
-    # 关掉后用患者原话查规则表，导诊功能本身不退化，只是命中率略低。
-    patient_triage_normalize: true
-    # 知识库问答（RAG）：基于院内知识库检索增强生成，只做解释科普，不做判定
-    knowledge_qa: true
-    # AI 运营问数（NL2SQL）：模型只生成 SELECT，必须过 OperationSqlGuard 白名单闸门才执行
-    operation_qa: true
-    # 预问诊病史摘要：只整理患者自述、禁结论，模型挂掉按主症状+问答拼规则模板
-    previsit_summary: true
-    # 随访话术草拟：产物是医生终审的输入框初稿，越界文案被患者文案硬闸拦下后回落类型模板
-    followup_compose: true
-    # 医保审核证据判定（G-07）：规则命中后逐条读病历证据判「支持/反驳/证据不足」，
-    # 产物只提示人工复核，不写库不改规则结论；模型挂掉时规则的判定依据与整改建议照常可见
-    insurance_evidence: true
-    # 危重预警（G-12）：MEWS+SpO2 评分纯代码，仅达预警阈值才调模型给观察建议；
-    # 只提示不写库，模型挂掉评分与预警级照常可见
-    deterioration_alert: true
-    # 护理交接班摘要（G-13）：病区×班次事实聚合纯代码，模型拟 SBAR 草稿护士终审；
-    # 模型挂掉回落规则模板（source=rule）
-    nursing_handover: true
-    # 语音口述转写（G-14）：ASR 确定性转换，失败如实报错——语音没有规则兜底文本，造文本即造假病历
-    voice_transcribe: true
-  # 单能力超时覆盖（毫秒），未配置的回落 timeout-ms
-  timeouts:
-    icd10: 8000        # 同步路径，医生在等
-    drug_audit: 5000   # 同步路径，超时即放行不阻塞开方
-    lab_interpret: 15000   # 推理模型思考慢，8s 实测必超时（14:38 两次 Read timed out）
-    emergency_triage: 5000
-    emr_extract: 8000  # 医生粘贴文本后当场等结果
-    emr_draft: 8000
-    # 首次调用还要算上模型冷启动，实测 4s 会超时。给不出就回落规则文案，不会卡住页面。
-    patient_report_explain: 9000
-    # 影像解读：报告文本比检验长（描述+结论+建议三段输出），患者当场等
-    patient_imaging_explain: 9000
-    # 患者点完「看看挂什么科」就等着，超过 5 秒直接用原话查
-    patient_triage_normalize: 5000
-    # 知识库问答（同步路径，模型基于检索材料作答，超时回落原文片段）
-    knowledge_qa: 8000
-    # 运营问数：管理者在等（SQL 生成 + 结果摘要两次模型调用共用该预算）
-    operation_qa: 10000
-    # 预问诊摘要：患者提交问卷后当场等结果，超时回落规则模板不卡提交流程
-    previsit_summary: 8000
-    # 随访话术：医生点「AI 拟话术」当场等，超时回落类型模板
-    followup_compose: 8000
-    # 医保证据判定：要逐条读病历叙述再判多命中项，推理模型 10s 实测不够（同 lab_interpret 因）
-    insurance_evidence: 15000
-    # 危重预警建议：单患者短文本，护士点开预警弹窗当场等
-    deterioration_alert: 8000
-    # 交接班摘要：整班事实聚合一篇 SBAR，同步路径上限内
-    nursing_handover: 10000
-    # 语音转写：ASR 同步转写，医生在等；超时如实报错不造文本
-    voice_transcribe: 20000
-
-  # 按能力覆盖模型（G-16 多模型路由）：命中即该能力整体换模型（含 lite 分流），未配的回落 ai.model
-  models:
-    # 问数走轻量模型（受控 SELECT 生成，够用且省）
-    operation_qa: deepseek-v4.1-flash
-    # 文书类走主模型（现病史草拟要叙事能力；将来换更强模型只改这里）
-    emr_draft: deepseek-v4.1-flash
-  # 语音识别（ASR）：与 chat 端点同域但模型隔离，密钥真值只落 application-local.yml
-  asr:
-    model: qwen3-asr-flash
-    api-key: ${HIS_AI_API_KEY:}
-    max-audio-mb: 15
-
-  rag:
-    # local-tf 是设计内默认（零外部依赖，直接跑通 RAG 全链路）；remote 需 embedding 服务有配额，
-    # 当前 text-embedding-v3/v4 免费额度已耗尽（直调 400 AllocationQuota），额度恢复后可切回 remote
-    embedding-provider: local-tf
-    chunk-size: 500
-    chunk-overlap: 80
-    top-k: 4
-    auto-seed: true
-    corpus-paths: rag-corpus
-    embed-base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-    # 与 ai.api-key 同源：application-local.yml 里配一处即可
-    embed-api-key: ${ai.api-key:}
-    embed-model: text-embedding-v3
-
-wechat:
-  miniapp:
-    enabled: false
-    app-id: ${HIS_WX_MINIAPP_APPID:}
-    app-secret: ${HIS_WX_MINIAPP_SECRET:}
-    templates: {}
-
-sms:
-  code:
-    mock: ${HIS_SMS_MOCK:false}
-    ttl-seconds: 300
-    resend-seconds: 60
-    length: 6
-
-# 随访电话外呼通道（G-15）：mock=人工登记待呼（护士自己拨号回填结果）；
-# 接入真实外呼线路后改配置分支，登记成功却假装「已呼出」是造假
-followup:
-  call-channel: mock
-  # 真实外呼线路配置占位（G-15 后续决策项，P6 只落框架）：当前无消费方——
-  # call-channel 配了 mock 以外的值会 fail-fast 拒绝登记。
-  # 线路凭据到位后的施工口径见手册 G-15：实现拨号分支（HTTP 签名直调、不引 SDK，
-  # 保 mvn -o 离线打包）+ 状态回填，凭据真值填 application-local.yml / 环境变量，绝不入库。
-  channel:
-    aliyun-vms:
-      access-key-id: ${HIS_CALL_ACCESS_KEY_ID:}
-      access-key-secret: ${HIS_CALL_ACCESS_KEY_SECRET:}
-      called-show-number: ${HIS_CALL_SHOW_NUMBER:}
-      tts-code: ${HIS_CALL_TTS_CODE:}
-
-insurance:
-  compliance:
-    # 总开关。false 时审核接口直接报错拒绝，不会给出误导性的「全部通过」
-    enabled: true
-    # 高倍率阈值：费用倍率 > 该值 判为高编高套嫌疑
-    high-cost-ratio: 2.0
-    # 低倍率阈值：费用倍率 < 该值 判为低编入组嫌疑
-    low-cost-ratio: 0.5
-    # 最短住院天数：低于该值且无手术 → 低标入院嫌疑（当前因无住院管理模块无法计算，返回「不适用」）
-    min-inpatient-days: 3
-    # 分解住院回看窗口（天）
-    readmit-window-days: 15
-    # 单条依据文本落库上限（evidence 字段长度限制）
-    max-evidence-quote: 300
-
 his:
+  # 签名主密钥
   sign:
-    master-secret: ${HIS_SIGN_SECRET:CslkHis@Sign#2026!DevOnly}
-    # PBKDF2 迭代次数（新证书使用；老证书用自己行里存的值，调大不会让老证书解不开）
-    iterations: 120000
-    # 证书默认有效期（天）
-    default-valid-days: 365
-    # 缺证书时是否自动签发（首次签名按需补发院内托管证书，避免把业务堵死）
-    auto-issue-cert: true
-    # 默认时间来源：1-本机时钟 2-院内授时服务器 3-第三方TSA
-    # 本期未接入 2/3，即使这里填 2 或 3 也会被运行期降级成 1 并在日志里告警（不谎报可信时间）
-    time-source: 1
-
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
-  api-docs:
-    path: /v3/api-docs
+    master-secret: ${HIS_SIGN_SECRET:}
+  # AI 密钥
+  ai:
+    api-key: ${HIS_AI_API_KEY:}
+    asr:
+      api-key: ${HIS_AI_API_KEY:}
+  # 随访外呼通道：mock=人工（护士自拨，只登记「待外呼」）。
+  followup:
+    call-channel: mock
 
 knife4j:
   enable: false
-  setting:
-    language: zh_cn
 
 logging:
   level:

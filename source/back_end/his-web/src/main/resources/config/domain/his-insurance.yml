@@ -1,0 +1,16 @@
+# 医保合规审核配置
+his:
+  insurance:
+    compliance:
+      # 总开关。false 时审核接口直接报错拒绝，不会给出误导性的「全部通过」
+      enabled: true
+      # 高倍率阈值：费用倍率 > 该值 判为高编高套嫌疑
+      high-cost-ratio: 2.0
+      # 低倍率阈值：费用倍率 < 该值 判为低编入组嫌疑
+      low-cost-ratio: 0.5
+      # 最短住院天数：低于该值且无手术 → 低标入院嫌疑（当前因无住院管理模块无法计算，返回「不适用」）
+      min-inpatient-days: 3
+      # 分解住院回看窗口（天）
+      readmit-window-days: 15
+      # 单条依据文本落库上限（evidence 字段长度限制）
+      max-evidence-quote: 300

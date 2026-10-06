@@ -161,7 +161,7 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         row.setNextScreenDate(nextScreenDate);
         row.setItemsJson(StringUtils.hasText(dto.getItemsJson()) ? dto.getItemsJson().trim() : null);
         row.setScreenTime(screenTime);
-        row.setScreenerId(UserUtils.getCurrentEmployeeId());
+        row.setScreenerId(UserUtils.getCurrentUser().getEmployeeId());
         row.setScreenerName(currentName());
         row.setRemark(cut(trim(dto.getRemark()), 500));
 
@@ -231,12 +231,7 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
     }
 
     private String currentName() {
-        String name = UserUtils.getCurrentEmployeeName();
-        if (StringUtils.hasText(name)) {
-            return name;
-        }
-        Long empId = UserUtils.getCurrentEmployeeId();
-        return empId == null ? "system" : String.valueOf(empId);
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private String nextNo(String prefix, long maxSeq) {

@@ -1,8 +1,8 @@
 package com.his.pharmacy.support;
 
 import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.util.regex.Matcher;
@@ -19,22 +19,22 @@ import java.util.regex.Pattern;
  *   <li><b>中国药品追溯码（20 位数字）</b>：{@code 81000001000000000001}，
  *       前 8 位 = 药品本体码（国家药监分配）、后 12 位 = 生产序列号。</li>
  * </ol>
- *
- * <p>铁律（与耗材 UdiParser 同源）：<b>只认确定的码制，不猜</b>。
- * 解析不出产品标识就返回 {@code parsed=false}，由调用方要求人工指定药品后再采集 ——
- * 猜错产品标识会把一个码记到别的药头上，医保追溯链一旦错配就是整批数据作废。
- * 20 位码里"哪几位是批号"各企业编码规则不统一，因此<b>只切本体码与序列号，批号一律不解析</b>，
- * 批号以挂靠的库存批次为准。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DrugTraceParser {
 
-    /** GS1：AI 括号串（只取药品追溯必需的 4 个 AI） */
+    /**
+     * GS1：AI 括号串（只取药品追溯必需的 4 个 AI）
+     */
     private static final Pattern BRACKETED = Pattern.compile("\\((01|10|17|21)\\)([^(]*)");
-    /** 中国药品追溯码：8 位本体码 + 12 位序列号 */
+    /**
+     * 中国药品追溯码：8 位本体码 + 12 位序列号
+     */
     private static final Pattern CN20 = Pattern.compile("^(\\d{8})(\\d{12})$");
 
-    /** 码制：1-GS1 2-中国药品追溯码20位 3-其他/未识别 */
+    /**
+     * 码制：1-GS1 2-中国药品追溯码20位 3-其他/未识别
+     */
     public static final int CODE_TYPE_GS1 = 1;
     public static final int CODE_TYPE_CN20 = 2;
     public static final int CODE_TYPE_OTHER = 3;
@@ -42,15 +42,25 @@ public final class DrugTraceParser {
     @Data
     public static class TraceParts {
         private Integer codeType = CODE_TYPE_OTHER;
-        /** 产品标识（GS1 GTIN-14 / 20 位码前 8 位本体码） */
+        /**
+         * 产品标识（GS1 GTIN-14 / 20 位码前 8 位本体码）
+         */
         private String drugDi;
-        /** 生产序列号 */
+        /**
+         * 生产序列号
+         */
         private String serialNo;
-        /** 码内批号（仅 GS1 (10) 有） */
+        /**
+         * 码内批号（仅 GS1 (10) 有）
+         */
         private String batchNo;
-        /** 码内有效期（仅 GS1 (17) 有） */
+        /**
+         * 码内有效期（仅 GS1 (17) 有）
+         */
         private LocalDate expiryDate;
-        /** 是否解析出产品标识（false → 必须人工指定药品） */
+        /**
+         * 是否解析出产品标识（false → 必须人工指定药品）
+         */
         private boolean parsed;
     }
 
@@ -74,7 +84,8 @@ public final class DrugTraceParser {
                 case "21" -> parts.serialNo = value;
                 case "10" -> parts.batchNo = value;
                 case "17" -> parts.expiryDate = parseYymmdd(value);
-                default -> { }
+                default -> {
+                }
             }
         }
         if (hasBrackets && parts.drugDi != null && !parts.drugDi.isBlank()) {
@@ -95,7 +106,9 @@ public final class DrugTraceParser {
         return parts;
     }
 
-    /** GS1 (17)：YYMMDD（日给 00 表示当月最后一天）；部分企业只给 YYMM */
+    /**
+     * GS1 (17)：YYMMDD（日给 00 表示当月最后一天）；部分企业只给 YYMM
+     */
     private static LocalDate parseYymmdd(String value) {
         if (value == null || value.length() < 4 || !value.chars().allMatch(Character::isDigit)) {
             return null;

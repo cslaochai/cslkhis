@@ -186,7 +186,7 @@ public class DietPlanServiceImpl implements DietPlanService {
             // 营养师自己登记的方案不需要"自己接收自己"，直接计为已接收
             row.setConfirmStatus(DietConfirmStatusEnum.DONE.getCode());
             row.setConfirmTime(TimeUtil.toSeconds(LocalDateTime.now()));
-            row.setConfirmerId(UserUtils.getCurrentEmployeeId());
+            row.setConfirmerId(UserUtils.getCurrentUser().getEmployeeId());
             row.setConfirmerName(currentName());
         } else {
             row = planMapper.selectById(dto.getId());
@@ -290,7 +290,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         for (BizDietPlan row : rows) {
             row.setConfirmStatus(accept ? DietConfirmStatusEnum.DONE.getCode() : DietConfirmStatusEnum.REJECTED.getCode());
             row.setConfirmTime(now);
-            row.setConfirmerId(UserUtils.getCurrentEmployeeId());
+            row.setConfirmerId(UserUtils.getCurrentUser().getEmployeeId());
             row.setConfirmerName(currentName());
             row.setRejectReason(accept ? null : reason);
             planMapper.updateById(row);
@@ -486,12 +486,7 @@ public class DietPlanServiceImpl implements DietPlanService {
     }
 
     private String currentName() {
-        String name = UserUtils.getCurrentEmployeeName();
-        if (StringUtils.hasText(name)) {
-            return name;
-        }
-        Long empId = UserUtils.getCurrentEmployeeId();
-        return empId == null ? "system" : String.valueOf(empId);
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private String nextNo(String prefix, long maxSeq) {

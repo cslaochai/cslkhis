@@ -1,5 +1,6 @@
 package com.his.system.support;
 
+import com.his.system.interceptor.OperLogInterceptor;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.Ordered;

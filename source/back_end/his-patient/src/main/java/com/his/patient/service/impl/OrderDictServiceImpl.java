@@ -266,14 +266,6 @@ public class OrderDictServiceImpl implements OrderDictService {
     }
 
     private String currentUsername() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user == null) {
-                return null;
-            }
-            return StringUtils.hasText(user.getUsername()) ? user.getUsername() : user.getRealName();
-        } catch (Exception e) {
-            return null;
-        }
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

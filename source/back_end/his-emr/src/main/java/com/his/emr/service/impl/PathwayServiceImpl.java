@@ -371,7 +371,7 @@ public class PathwayServiceImpl implements PathwayService {
         variance.setVarianceReason(cut(dto.getVarianceReason().trim(), REASON_MAX));
         variance.setHandling(cutToNull(dto.getHandling(), REASON_MAX));
         variance.setOccurredDate(dto.getOccurredDate());
-        variance.setRecorderId(UserUtils.getCurrentEmployeeId());
+        variance.setRecorderId(UserUtils.getCurrentUser().getEmployeeId());
         variance.setRecorderName(currentOperator());
         variance.setRecordTime(now());
         varianceMapper.insert(variance);
@@ -540,7 +540,6 @@ public class PathwayServiceImpl implements PathwayService {
     }
 
     private String currentOperator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(name) ? name : "system";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

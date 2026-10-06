@@ -95,8 +95,7 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
     }
 
     private static String operator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(name) ? name : "system";
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private static LocalDateTime atStart(LocalDate date) {
@@ -253,7 +252,7 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
             throw new BusinessException("确认登记前必须登记尸体处理方式（遗体交给谁是处置闭环的一半）");
         }
         register.setRegisterStatus(DeathRegisterStatusEnum.DONE.getCode());
-        register.setRegistrarId(UserUtils.getCurrentEmployeeId());
+        register.setRegistrarId(UserUtils.getCurrentUser().getEmployeeId());
         register.setRegistrarName(operator());
         register.setRegisterTime(now());
         save(register);

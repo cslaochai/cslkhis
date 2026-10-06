@@ -143,8 +143,8 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         // 未分配的任务提交即认领：编码员自己领活是任务池的正常形态
         if (t.getCoderId() == null) {
-            t.setCoderId(UserUtils.getCurrentEmployeeId());
-            t.setCoderName(UserUtils.getCurrentEmployeeName());
+            t.setCoderId(UserUtils.getCurrentUser().getEmployeeId());
+            t.setCoderName(UserUtils.getCurrentUser().getRealName());
             t.setAssignTime(now);
         }
         t.setMainIcdCode(dto.getMainIcdCode().trim());
@@ -176,8 +176,8 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
             throw new BusinessException("退修必须填写审核意见");
         }
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-        t.setAuditById(UserUtils.getCurrentEmployeeId());
-        t.setAuditByName(UserUtils.getCurrentEmployeeName());
+        t.setAuditById(UserUtils.getCurrentUser().getEmployeeId());
+        t.setAuditByName(UserUtils.getCurrentUser().getRealName());
         t.setAuditRemark(trimToNull(dto.getRemark()));
         t.setAuditTime(now);
         if (approve) {

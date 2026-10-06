@@ -67,8 +67,7 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     }
 
     private static String currentName() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return name == null ? "系统" : name;
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private static long toLong(Object v) {
@@ -142,7 +141,7 @@ public class TeleConsultServiceImpl implements TeleConsultService {
         entity.setAdmissionId(dto.getAdmissionId());
         entity.setApplyDeptId(dto.getApplyDeptId());
         entity.setApplyDeptName(dto.getApplyDeptId() == null ? null : teleMapper.selectDeptName(dto.getApplyDeptId()));
-        entity.setApplyDoctorId(dto.getApplyDoctorId() == null ? UserUtils.getCurrentEmployeeId() : dto.getApplyDoctorId());
+        entity.setApplyDoctorId(dto.getApplyDoctorId() == null ? UserUtils.getCurrentUser().getEmployeeId() : dto.getApplyDoctorId());
         entity.setApplyDoctor(currentName());
         entity.setConsultType(dto.getConsultType());
         entity.setExpertHospital(cut(dto.getExpertHospital(), 128));
@@ -282,7 +281,7 @@ public class TeleConsultServiceImpl implements TeleConsultService {
         entity.setAcceptBy(currentName());
         entity.setAcceptTime(now());
         if (entity.getDoctorId() == null) {
-            entity.setDoctorId(UserUtils.getCurrentEmployeeId());
+            entity.setDoctorId(UserUtils.getCurrentUser().getEmployeeId());
         }
         if (!StringUtils.hasText(entity.getDoctorName())) {
             entity.setDoctorName(currentName());

@@ -113,7 +113,7 @@ public class YbInspectionServiceImpl implements YbInspectionService {
         entity.setInspectTeam(cut(dto.getInspectTeam(), 200));
         entity.setOurReceiver(cut(dto.getOurReceiver(), 64));
         entity.setRemark(cut(dto.getRemark(), 500));
-        entity.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (creating) {
             inspectionMapper.insert(entity);
         } else {
@@ -132,8 +132,8 @@ public class YbInspectionServiceImpl implements YbInspectionService {
         entity.setStatus(STATUS_CONCLUDED);
         entity.setConclusion(cut(dto.getConclusion(), 1000));
         entity.setConcludeTime(LocalDateTime.now());
-        entity.setConcludeBy(UserUtils.getCurrentEmployeeName());
-        entity.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        entity.setConcludeBy(UserUtils.getCurrentUser().getRealName());
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         inspectionMapper.updateById(entity);
     }
 
@@ -151,9 +151,9 @@ public class YbInspectionServiceImpl implements YbInspectionService {
         }
         entity.setStatus(STATUS_CANCELLED);
         entity.setCancelReason(cut(dto.getReason(), 500));
-        entity.setCancelBy(UserUtils.getCurrentEmployeeName());
+        entity.setCancelBy(UserUtils.getCurrentUser().getRealName());
         entity.setCancelTime(LocalDateTime.now());
-        entity.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         inspectionMapper.updateById(entity);
     }
 

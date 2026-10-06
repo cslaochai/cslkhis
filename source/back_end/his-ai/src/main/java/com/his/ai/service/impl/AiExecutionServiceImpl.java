@@ -43,8 +43,6 @@ public class AiExecutionServiceImpl implements AiExecutionService {
     private static final String SELF_CORRECT_HINT =
             "上一次输出无法解析为 JSON：%s。请只输出合法 JSON 对象，不要任何解释文字，不要用 markdown 代码块包裹。";
 
-    private static final String OPERATOR_FALLBACK = "system";
-
     private final AiConfigProvider configProvider;
 
     private final PromptTemplate promptTemplate;
@@ -194,25 +192,8 @@ public class AiExecutionServiceImpl implements AiExecutionService {
         auditService.record(entity);
     }
 
-    /**
-     * 取当前登录账号。异步线程（如未来的 @Async 质控任务）取不到 SecurityContext，
-     * 会回落为 system —— 所以异步化时必须在投递前把 operator 捕获下来传进去。
-     */
     private String currentOperator() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user != null) {
-                if (StringUtils.hasText(user.getUsername())) {
-                    return user.getUsername();
-                }
-                if (StringUtils.hasText(user.getRealName())) {
-                    return user.getRealName();
-                }
-            }
-        } catch (Exception ignored) {
-            // 非请求线程，忽略
-        }
-        return OPERATOR_FALLBACK;
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     /**

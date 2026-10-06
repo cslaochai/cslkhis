@@ -333,9 +333,9 @@ public class TreatmentServiceImpl implements TreatmentService {
         apply.setDeptId(toLong(regist.get("deptId")));
         apply.setDeptName(str(regist.get("deptName")));
         // 开单人优先取登录态：入参能传"医生"就等于谁都能替别人开单
-        Long loginEmployee = UserUtils.getCurrentEmployeeId();
+        Long loginEmployee = UserUtils.getCurrentUser().getEmployeeId();
         apply.setDoctorId(loginEmployee != null ? loginEmployee : toLong(regist.get("doctorId")));
-        String loginName = UserUtils.getCurrentEmployeeName();
+        String loginName = UserUtils.getCurrentUser().getRealName();
         apply.setDoctorName(StringUtils.hasText(loginName) ? loginName : str(regist.get("doctorName")));
         apply.setTreatmentItemId(toLong(item.get("itemId")));
         apply.setItemCode(str(item.get("itemCode")));
@@ -409,9 +409,9 @@ public class TreatmentServiceImpl implements TreatmentService {
         exec.setResult(cut(StringUtils.hasText(dto.getResult()) ? dto.getResult()
                 : ("第 " + exec.getExecSeq() + " 次治疗完成，过程顺利"), 1000));
         exec.setRemark(cut(dto.getRemark(), 500));
-        Long employeeId = UserUtils.getCurrentEmployeeId();
+        Long employeeId = UserUtils.getCurrentUser().getEmployeeId();
         exec.setNurseId(employeeId);
-        exec.setExecutorName(cut(UserUtils.getCurrentEmployeeName(), 50));
+        exec.setExecutorName(cut(UserUtils.getCurrentUser().getRealName(), 50));
         execMapper.updateById(exec);
 
         String chargeNote = billOnce(exec, apply);

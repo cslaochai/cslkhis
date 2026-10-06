@@ -40,7 +40,7 @@ public interface RadioReportMapper {
               JOIN sys_inspection_item i
                 ON i.item_code = rec.inspection_item_code AND i.del_flag = 0 AND i.item_type = 1
               LEFT JOIN biz_report r
-                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = 1
+                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = ${@com.his.medicaltech.enums.ReportTypeEnum@INSPECTION.getCode()}
              WHERE rec.del_flag = 0
                AND rec.record_status IN (4, 5, 6)
                <if test="keyword != null and keyword != ''">
@@ -100,7 +100,7 @@ public interface RadioReportMapper {
               JOIN sys_inspection_item i
                 ON i.item_code = rec.inspection_item_code AND i.del_flag = 0 AND i.item_type = 1
               LEFT JOIN biz_report r
-                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = 1
+                ON r.record_id = rec.id AND r.del_flag = 0 AND r.report_type = ${@com.his.medicaltech.enums.ReportTypeEnum@INSPECTION.getCode()}
              WHERE rec.del_flag = 0 AND rec.id = #{recordId}
             """)
     RadioReportListVO selectWorkbenchByRecordId(@Param("recordId") Long recordId);

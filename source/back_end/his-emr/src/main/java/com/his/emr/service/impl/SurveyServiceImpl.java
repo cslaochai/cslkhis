@@ -292,7 +292,7 @@ public class SurveyServiceImpl implements SurveyService {
         answer.setAnswerStatus(AnswerStatusEnum.VALID.getCode());
         answer.setFillSource(dto.getFillSource() == null ? FillSourceEnum.AGENT.getCode() : dto.getFillSource());
         answer.setAnonymousFlag(Objects.equals(dto.getAnonymousFlag(), 1) ? 1 : 0);
-        answer.setFillEmployeeId(UserUtils.getCurrentEmployeeId());
+        answer.setFillEmployeeId(UserUtils.getCurrentUser().getEmployeeId());
         answer.setFillEmployeeName(cut(currentOperator(), 64));
         answer.setFillTime(now());
         answer.setCommentText(cut(dto.getCommentText(), 1000));
@@ -756,7 +756,6 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     private String currentOperator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(name) ? name : "系统";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

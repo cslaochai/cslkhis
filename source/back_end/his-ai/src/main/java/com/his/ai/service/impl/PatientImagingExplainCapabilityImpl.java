@@ -14,9 +14,11 @@ import com.his.ai.vo.PatientImagingExplainVO;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.entity.BizReport;
 import com.his.medicaltech.enums.ReportStatusEnum;
+import com.his.medicaltech.enums.ReportTypeEnum;
 import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.patient.service.PatientGuardianService;
 import com.his.system.entity.CurrentUser;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,8 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 患者端影像报告解读（大白话版，G-17）。
@@ -51,17 +51,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class PatientImagingExplainCapabilityImpl implements PatientImagingExplainCapability {
-    @Autowired
-    private DictCacheService dictText;
-
     private static final String TEMPLATE_NAME = "patient-imaging-explain";
 
     private static final String BIZ_TYPE = "report";
-
-    /**
-     * biz_report.report_type：1-检查 2-检验
-     */
-    private static final int REPORT_TYPE_EXAM = 1;
 
     /**
      * 固定免责提示——少了这句话，「肺部有条索影」就会被患者读成诊断结论。
@@ -72,6 +64,8 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
                     + "若报告标注为危急，请立即联系医生或前往急诊。";
 
     private final BizReportMapper reportMapper;
+
+    private final DictCacheService dictCacheService;
 
     private final SysImagingPlainItemMapper imagingPlainItemMapper;
 
@@ -84,8 +78,6 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
     private static String nullToDash(String text) {
         return StringUtils.hasText(text) ? text : "（未填写）";
     }
-
-    // ---------------------------------------------------------------- 词典层
 
     @Override
     public PatientImagingExplainVO execute(PatientImagingExplainDTO dto) {
@@ -102,7 +94,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
             // 不区分「报告不存在」和「无权查看」，避免被用来探测报告是否存在
             throw new BusinessException("报告不存在或无权查看：" + dto.getReportId());
         }
-        if (report.getReportType() == null || report.getReportType() != REPORT_TYPE_EXAM) {
+        if (report.getReportType() == null || !ReportTypeEnum.INSPECTION.getCode().equals(report.getReportType())) {
             throw new BusinessException("该报告不是检查报告；检验报告请使用检验报告解读入口");
         }
         // 未发布的报告文本可能改到一半，解读它等于解读假报告
@@ -116,7 +108,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
         vo.setItemName(report.getItemName());
         vo.setExamMethod(report.getExamMethod());
         vo.setReportTime(report.getPublishTime());
-        vo.setPositiveText(dictText.getDicDataLabel("biz_common_positiveFlagEnum", report.getPositiveFlag()));
+        vo.setPositiveText(dictCacheService.getDicDataLabel("biz_common_positiveFlagEnum", report.getPositiveFlag()));
         // 危急是代码事实，置顶提示不经过模型——这是整个 VO 里唯一允许「催促」的字段
         if (Integer.valueOf(1).equals(report.getIsCritical())) {
             vo.setCriticalAlert("报告已由诊断医生标注为危急，请立即联系接诊医生或前往急诊。");
@@ -214,7 +206,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
         Map<String, Object> variables = new HashMap<>();
         variables.put("itemName", nullToDash(report.getItemName()));
         variables.put("examMethod", nullToDash(report.getExamMethod()));
-        variables.put("positiveText", nullToDash(dictText.getDicDataLabel("biz_common_positiveFlagEnum", report.getPositiveFlag())));
+        variables.put("positiveText", nullToDash(dictCacheService.getDicDataLabel("biz_common_positiveFlagEnum", report.getPositiveFlag())));
         variables.put("hasDictIntro", plain != null);
         variables.put("findings", nullToDash(report.getReportContent()));
         variables.put("conclusions", nullToDash(report.getConclusion()));

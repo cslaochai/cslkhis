@@ -222,8 +222,9 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
         CurrentUser user = UserUtils.getCurrentUser();
         if (user != null) {
             row.setOperatorId(user.getUserId());
-            row.setOperatorName(cut(StringUtils.hasText(user.getEmployeeName())
-                    ? user.getEmployeeName() : user.getRealName(), 64));
+            // 姓名单一口径取 realName：employeeName/username 回落会让同一张表里
+            // 不同来源的操作人格式不一致，事后按人名检索会漏
+            row.setOperatorName(cut(user.getRealName(), 64));
             row.setDeptId(user.getDeptId());
             row.setDeptName(cut(user.getDeptName(), 64));
         }

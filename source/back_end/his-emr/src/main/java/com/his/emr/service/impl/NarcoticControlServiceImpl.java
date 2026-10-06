@@ -616,7 +616,7 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
         patch.setAmpouleReturned(returned);
         patch.setAmpouleDestroyed(dto.getAmpouleDestroyed());
         patch.setReturnRemark(dto.getReturnRemark());
-        patch.setReturnBy(nvl(UserUtils.getCurrentEmployeeName(), "系统"));
+        patch.setReturnBy(UserUtils.getCurrentUser().getRealName());
         patch.setReturnTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         narcoticRegisterMapper.updateById(patch);
 

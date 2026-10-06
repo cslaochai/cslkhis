@@ -77,8 +77,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
      */
     private static final int MAX_BATCH_SIZE = 200;
 
-    private static final String OPERATOR_FALLBACK = "system";
-
     private final BizMedicalRecordMapper medicalRecordMapper;
 
     private final BizInpatientRecordMapper inpatientRecordMapper;
@@ -114,20 +112,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     }
 
     private static String currentOperator() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user != null) {
-                if (StringUtils.hasText(user.getRealName())) {
-                    return user.getRealName();
-                }
-                if (StringUtils.hasText(user.getUsername())) {
-                    return user.getUsername();
-                }
-            }
-        } catch (Exception ignored) {
-            // 非请求线程（定时任务 / 归档流程内的调用）
-        }
-        return OPERATOR_FALLBACK;
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     /**

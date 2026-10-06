@@ -76,7 +76,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         entity.setDiseaseName(dto.getDiseaseName());
         entity.setIcd10Prefix(normalizePrefix(dto.getIcd10Prefix()));
         entity.setRemark(dto.getRemark());
-        entity.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (dto.getId() != null) {
             SysSingleDisease exist = diseaseMapper.selectById(dto.getId());
             if (exist == null) {
@@ -85,7 +85,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
             entity.setId(dto.getId());
             diseaseMapper.updateById(entity);
         } else {
-            entity.setCreateBy(UserUtils.getCurrentEmployeeName());
+            entity.setCreateBy(UserUtils.getCurrentUser().getRealName());
             diseaseMapper.insert(entity);
         }
         SingleDiseaseVO.Disease vo = new SingleDiseaseVO.Disease();
@@ -210,7 +210,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         c.setEnrollWay(enrollWay);
         c.setQcStatus(SingleDiseaseQcStatusEnum.PENDING.getCode());
         c.setReportStatus(YesOrNoEnum.NO.getCode());
-        c.setCreateBy(UserUtils.getCurrentEmployeeName());
+        c.setCreateBy(UserUtils.getCurrentUser().getRealName());
         caseMapper.insert(c);
         return toCaseVO(c, disease.getDiseaseName());
     }
@@ -269,7 +269,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
             c.setQcIssues(String.join("；", issues));
         }
         c.setRemark(dto.getRemark());
-        c.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        c.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         caseMapper.updateById(c);
         return toCaseVO(c, diseaseName(c.getDiseaseId()));
     }
@@ -291,7 +291,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         }
         c.setReportStatus(YesOrNoEnum.YES.getCode());
         c.setReportTime(java.time.LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
-        c.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        c.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         caseMapper.updateById(c);
         return toCaseVO(c, diseaseName(c.getDiseaseId()));
     }

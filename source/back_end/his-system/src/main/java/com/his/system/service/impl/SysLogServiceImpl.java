@@ -411,13 +411,15 @@ public class SysLogServiceImpl implements SysLogService {
         return sb.toString();
     }
 
+    /**
+     * 操作日志的操作人。<b>不抛异常</b>：操作日志是旁路审计，构造失败绝不能打断业务。
+     * 取不到就留空串，库里能看出「这条日志没有操作人」；塞个假名字反而是伪造审计痕迹。
+     * 姓名单一口径取 realName，不回落 employeeName/username —— 那两个与库里其他操作人字段对不上。
+     */
     private String operatorName() {
         var user = UserUtils.getCurrentUser();
-        if (user == null) {
-            return "";
-        }
-        return org.springframework.util.StringUtils.hasText(user.getEmployeeName())
-                ? user.getEmployeeName() : user.getRealName();
+        return user == null || user.getRealName() == null || user.getRealName().isBlank()
+                ? "" : user.getRealName();
     }
 
     // 转换

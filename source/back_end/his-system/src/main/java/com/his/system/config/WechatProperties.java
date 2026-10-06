@@ -8,14 +8,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 微信小程序运行时配置（yml 的 {@code wechat.miniapp.*} 段）。
- *
- * <p>与 {@code ai.*} 同一口径：部署期配置随代码走，密钥只从环境变量取、不落库不进仓库。
- * appid/secret 任一为空即视为「通道未开通」，发送侧整体降级为不发送，不阻断业务。
+ * 微信小程序运行时配置（yml 的 {@code his.wechat.miniapp.*} 段）。
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "wechat.miniapp")
+@ConfigurationProperties(prefix = "his.wechat.miniapp")
 public class WechatProperties {
 
     private boolean enabled = false;

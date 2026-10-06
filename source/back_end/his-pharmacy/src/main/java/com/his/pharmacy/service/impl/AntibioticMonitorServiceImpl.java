@@ -107,9 +107,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         YearMonth ym = requireMonth(dto.getStatMonth());
         LocalDate from = ym.atDay(1);
         LocalDate to = ym.atEndOfMonth();
-        String operator = StringUtils.hasText(UserUtils.getCurrentEmployeeName())
-                ? UserUtils.getCurrentEmployeeName() : UserUtils.getCurrentEmployeeId() == null
-                ? "system" : String.valueOf(UserUtils.getCurrentEmployeeId());
+        String operator = UserUtils.getCurrentUser().getRealName();
 
         List<AntibioticStatsVO> result = new ArrayList<>();
         if (dto.getScopeType() == BizAntibioticStats.SCOPE_DEPT) {
@@ -331,7 +329,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                 throw new BusinessException("该手术不在待点评范围内（仅已完成且切口等级为 I 类的手术）");
             }
             entity.setIncisionLevel(1);
-            entity.setCreateBy(UserUtils.getCurrentEmployeeName());
+            entity.setCreateBy(UserUtils.getCurrentUser().getRealName());
         }
 
         entity.setDrugId(dto.getDrugId());
@@ -353,8 +351,8 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         entity.setReviewResult(dto.getReviewResult());
         entity.setProblemTypes(unreasonable ? dto.getProblemTypes().trim() : null);
         entity.setReviewOpinion(StringUtils.hasText(dto.getReviewOpinion()) ? dto.getReviewOpinion().trim() : null);
-        entity.setReviewerId(UserUtils.getCurrentEmployeeId());
-        entity.setReviewerName(UserUtils.getCurrentEmployeeName());
+        entity.setReviewerId(UserUtils.getCurrentUser().getEmployeeId());
+        entity.setReviewerName(UserUtils.getCurrentUser().getRealName());
         entity.setReviewTime(LocalDateTime.now());
         entity.setRemark(StringUtils.hasText(dto.getRemark()) ? dto.getRemark().trim() : null);
 

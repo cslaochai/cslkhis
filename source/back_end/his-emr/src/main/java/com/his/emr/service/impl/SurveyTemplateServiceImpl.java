@@ -256,7 +256,6 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
     }
 
     private String currentOperator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(name) ? name : "system";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

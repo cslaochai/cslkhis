@@ -57,8 +57,8 @@ public class PrescriptionController {
         CurrentUser user = UserUtils.getCurrentUser();
         return Result.success(prescriptionService.auditPrescription(
                 dto,
-                UserUtils.getCurrentEmployeeId(),
-                UserUtils.getCurrentEmployeeName(),
+                UserUtils.getCurrentUser().getEmployeeId(),
+                UserUtils.getCurrentUser().getRealName(),
                 user == null ? null : user.getDeptId(),
                 user == null ? null : user.getDeptName()));
     }

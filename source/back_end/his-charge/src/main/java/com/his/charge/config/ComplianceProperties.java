@@ -8,14 +8,10 @@ import java.math.BigDecimal;
 
 /**
  * 医保合规审核配置。
- * <p>
- * 落点在 {@code application.yml} 的 {@code insurance.compliance.*} 段（启动时绑定一次，改值需重启）。
- * <b>刻意不写系统参数</b>：这些是部署期阈值，属于随制品走的配置，
- * 与 AI 配置（{@code ai.*}）同一口径。
  */
 @Data
 @Component
-@ConfigurationProperties(prefix = "insurance.compliance")
+@ConfigurationProperties(prefix = "his.insurance.compliance")
 public class ComplianceProperties {
 
     /**

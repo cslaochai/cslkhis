@@ -133,7 +133,7 @@ public class AntibioticServiceImpl implements AntibioticService {
             }
         } else {
             entity = new BizAntibioticAlias();
-            entity.setCreateBy(UserUtils.getCurrentEmployeeName());
+            entity.setCreateBy(UserUtils.getCurrentUser().getRealName());
         }
         entity.setDrugId(dto.getDrugId());
         entity.setDrugName(drug.getDrugName());
@@ -235,7 +235,7 @@ public class AntibioticServiceImpl implements AntibioticService {
             auth.setAuthNo(nextAuthNo());
             auth.setDoctorId(dto.getDoctorId());
             auth.setAuthLevel(dto.getAuthLevel());
-            auth.setCreateBy(UserUtils.getCurrentEmployeeName());
+            auth.setCreateBy(UserUtils.getCurrentUser().getRealName());
         }
         auth.setDoctorName(doctor.getDoctorName());
         auth.setDeptId(doctor.getDeptId());

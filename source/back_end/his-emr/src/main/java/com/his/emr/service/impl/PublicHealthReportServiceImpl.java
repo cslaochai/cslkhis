@@ -75,7 +75,7 @@ public class PublicHealthReportServiceImpl extends ServiceImpl<BizPublicHealthRe
         report.setReportStatus(ReviewStatusEnum.PENDING.getCode());
         report.setReportTime(LocalDateTime.now());
         if (report.getReportBy() == null || report.getReportBy().isBlank()) {
-            report.setReportBy(UserUtils.getCurrentEmployeeName());
+            report.setReportBy(UserUtils.getCurrentUser().getRealName());
         }
         // 本实体不是 BaseEntity 子类，三列不会自动填充，必须显式写
         LocalDateTime now = LocalDateTime.now();

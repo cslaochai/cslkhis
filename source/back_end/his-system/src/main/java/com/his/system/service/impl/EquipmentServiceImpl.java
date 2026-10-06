@@ -132,13 +132,13 @@ public class EquipmentServiceImpl implements EquipmentService {
         m.setMaintainResult(dto.getMaintainResult() == null
                 ? MaintainResultEnum.NORMAL.getCode() : dto.getMaintainResult());
         m.setHandlerName(StringUtils.hasText(dto.getHandlerName()) ? dto.getHandlerName().trim()
-                : UserUtils.getCurrentEmployeeName());
-        m.setCreateBy(UserUtils.getCurrentEmployeeName());
+                : UserUtils.getCurrentUser().getRealName());
+        m.setCreateBy(UserUtils.getCurrentUser().getRealName());
         maintainMapper.insert(m);
 
         // 回写档案最近维保日期（维保闭环的关键动作）；updateTime 由实体 @TableField 自动填充
         e.setLastMaintainDate(dto.getMaintainDate());
-        e.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        e.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         equipmentMapper.updateById(e);
         return toMaintainVo(m);
     }
@@ -162,7 +162,7 @@ public class EquipmentServiceImpl implements EquipmentService {
             if (e != null && !Objects.equals(e.getDelFlag(), 1)
                     && !Objects.equals(e.getLastMaintainDate(), latest.getMaintainDate())) {
                 e.setLastMaintainDate(latest.getMaintainDate());
-                e.setUpdateBy(UserUtils.getCurrentEmployeeName());
+                e.setUpdateBy(UserUtils.getCurrentUser().getRealName());
                 equipmentMapper.updateById(e);
             }
         }
@@ -199,7 +199,7 @@ public class EquipmentServiceImpl implements EquipmentService {
                 ? MeteringResultEnum.QUALIFIED.getCode() : dto.getMeteringResult());
         m.setCertNo(tr(dto.getCertNo()));
         m.setAgency(tr(dto.getAgency()));
-        m.setCreateBy(UserUtils.getCurrentEmployeeName());
+        m.setCreateBy(UserUtils.getCurrentUser().getRealName());
         meteringMapper.insert(m);
         return toMeteringVo(m);
     }

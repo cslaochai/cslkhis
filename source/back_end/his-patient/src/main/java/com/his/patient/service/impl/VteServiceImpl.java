@@ -259,7 +259,7 @@ public class VteServiceImpl implements VteService {
         row.setPlanDate(dto.getPlanDate() == null ? LocalDate.now() : dto.getPlanDate());
         row.setExecuteStatus(status);
         row.setExecuteTime(executeTime);
-        row.setExecutorId(UserUtils.getCurrentEmployeeId());
+        row.setExecutorId(UserUtils.getCurrentUser().getEmployeeId());
         row.setExecutorName(currentName());
         row.setReason(reason);
         row.setRemark(dto.getRemark() == null ? null : dto.getRemark().trim());
@@ -357,7 +357,7 @@ public class VteServiceImpl implements VteService {
         row.setThrombusSite(dto.getThrombusSite() == null ? null : dto.getThrombusSite().trim());
         row.setOutcome(dto.getOutcome());
         row.setDrugPreventFlag(dto.getDrugPreventFlag() == null ? 0 : dto.getDrugPreventFlag());
-        row.setReporterId(UserUtils.getCurrentEmployeeId());
+        row.setReporterId(UserUtils.getCurrentUser().getEmployeeId());
         row.setReporterName(currentName());
         row.setReportTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         row.setRemark(dto.getRemark() == null ? null : dto.getRemark().trim());
@@ -595,12 +595,7 @@ public class VteServiceImpl implements VteService {
     }
 
     private String currentName() {
-        String name = UserUtils.getCurrentEmployeeName();
-        if (StringUtils.hasText(name)) {
-            return name;
-        }
-        Long empId = UserUtils.getCurrentEmployeeId();
-        return empId == null ? "system" : String.valueOf(empId);
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private VtePreventVO toPreventVO(BizVtePrevent r) {

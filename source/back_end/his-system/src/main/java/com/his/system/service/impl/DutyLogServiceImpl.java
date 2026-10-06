@@ -91,7 +91,7 @@ public class DutyLogServiceImpl implements DutyLogService {
 
     /** 当前登录人的待签收遗留事项（交班对象是自己、状态已交班、还没签收） */
     public List<DutyLogVO> pendingMine() {
-        Long empId = UserUtils.getCurrentEmployeeId();
+        Long empId = UserUtils.getCurrentUser().getEmployeeId();
         if (empId == null) {
             return List.of();
         }
@@ -158,7 +158,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         // ⚠ 记录人必须显式写：全局 MetaObjectHandler 只填 createTime/updateTime/delFlag，
         //   **不填 createBy**（见 his-web MyBatisPlusConfig）。值班日志的"谁写的"是要留痕的
         //   —— 代记/补记时值班人和记录人不是同一个人，全系统默认 null 等于这条痕没了。
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         if (insert) {
             row.setCreateBy(operator);
             logMapper.insert(row);
@@ -250,7 +250,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         if (!Objects.equals(DutyLogStatusEnum.HANDED.getCode(), row.getStatus())) {
             throw new BusinessException("只有已交班的记录才能签收（当前状态：" + statusText(row.getStatus()) + "）");
         }
-        Long me = UserUtils.getCurrentEmployeeId();
+        Long me = UserUtils.getCurrentUser().getEmployeeId();
         if (me == null || !me.equals(row.getHandoverEmpId())) {
             throw new BusinessException("只有接班人本人能签收（当前登录人不是交班对象）");
         }
@@ -264,7 +264,7 @@ public class DutyLogServiceImpl implements DutyLogService {
     // 内部
 
     private DutyLogVO toVO(BizDutyLog r) {
-        Long me = UserUtils.getCurrentEmployeeId();
+        Long me = UserUtils.getCurrentUser().getEmployeeId();
         DutyLogVO vo = new DutyLogVO();
         vo.setId(r.getId());
         vo.setDutyDate(r.getDutyDate());

@@ -97,7 +97,7 @@ public class DrugKnowledgeServiceImpl implements DrugKnowledgeService {
         entity.setStatus(upsertDTO.getStatus() == null ? 1 : upsertDTO.getStatus());
         entity.setRemark(cut(upsertDTO.getRemark(), WIDTH_TEXT, "备注"));
 
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         if (upsertDTO.getId() == null) {
             // 归一化后的顺序才是库里存的顺序（前端把谁写在前面对结果没有影响）
             List<String> parts = DrugComponentPair.parts(pairKey);
@@ -197,7 +197,7 @@ public class DrugKnowledgeServiceImpl implements DrugKnowledgeService {
         entity.setStatus(upsertDTO.getStatus() == null ? 1 : upsertDTO.getStatus());
         entity.setRemark(cut(upsertDTO.getRemark(), WIDTH_TEXT, "备注"));
 
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         if (upsertDTO.getId() == null) {
             entity.setCreateBy(operator);
             doseLimitMapper.insert(entity);

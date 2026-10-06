@@ -164,8 +164,8 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         if (patient == null) {
             throw new BusinessException("患者不存在：" + dto.getPatientId());
         }
-        Long operatorId = UserUtils.getCurrentEmployeeId();
-        String operatorName = UserUtils.getCurrentEmployeeName();
+        Long operatorId = UserUtils.getCurrentUser().getEmployeeId();
+        String operatorName = UserUtils.getCurrentUser().getRealName();
 
         if (dto.getId() == null) {
             BizInfectiousReport r = new BizInfectiousReport();
@@ -215,7 +215,7 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         if (r.getReportStatus() != InfectiousReportStatusEnum.PENDING.getCode()) {
             throw new BusinessException(statusText(r.getReportStatus()) + "的卡不能审核（仅待审核可审）");
         }
-        String name = StringUtils.hasText(dto.getAuditByName()) ? dto.getAuditByName() : UserUtils.getCurrentEmployeeName();
+        String name = StringUtils.hasText(dto.getAuditByName()) ? dto.getAuditByName() : UserUtils.getCurrentUser().getRealName();
         r.setReportStatus(InfectiousReportStatusEnum.AUDITED.getCode());
         r.setAuditByName(name);
         r.setAuditTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
@@ -235,7 +235,7 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         if (r.getReportStatus() == InfectiousReportStatusEnum.RETURNED.getCode()) {
             throw new BusinessException("已是退报状态，无需重复退报");
         }
-        String name = StringUtils.hasText(dto.getAuditByName()) ? dto.getAuditByName() : UserUtils.getCurrentEmployeeName();
+        String name = StringUtils.hasText(dto.getAuditByName()) ? dto.getAuditByName() : UserUtils.getCurrentUser().getRealName();
         r.setReportStatus(InfectiousReportStatusEnum.RETURNED.getCode());
         r.setReturnReason(tr(dto.getReason()));
         r.setAuditByName(name);

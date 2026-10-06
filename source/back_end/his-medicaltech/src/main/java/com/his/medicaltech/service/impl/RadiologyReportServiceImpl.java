@@ -171,8 +171,8 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         record.setReportSignId(sign.getId());
         record.setReportSignedTime(sign.getSignedTime());
 
-        Long employeeId = UserUtils.getCurrentEmployeeId();
-        report.setWriteBy(UserUtils.getCurrentEmployeeName());
+        Long employeeId = UserUtils.getCurrentUser().getEmployeeId();
+        report.setWriteBy(UserUtils.getCurrentUser().getRealName());
         report.setWriteById(employeeId);
         report.setWriteTime(LocalDateTime.now());
         report.setReportStatus(ReportStatusEnum.PENDING_REVIEW.getCode());
@@ -180,7 +180,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         saveOrUpdateReport(report);
         inspectionRecordMapper.updateById(record);
 
-        sysAuditLogService.record(employeeId, UserUtils.getCurrentEmployeeName(),
+        sysAuditLogService.record(employeeId, UserUtils.getCurrentUser().getRealName(),
                 "放射报告", "提交报告待审核", "biz_report", report.getId(),
                 cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
                         + " 项目=" + record.getInspectionItemName()
@@ -201,7 +201,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         }
         // 双签制度：谁写的报告谁不能自己审。用员工ID 比，不用姓名比 ——
         // 同名同姓的两个医师用姓名判会互相误判，要么拦错人要么放过去。
-        Long current = UserUtils.getCurrentEmployeeId();
+        Long current = UserUtils.getCurrentUser().getEmployeeId();
         if (report.getWriteById() != null && report.getWriteById().equals(current)) {
             throw new BusinessException("不能审核自己书写的报告：请由另一位放射诊断医师审核");
         }
@@ -211,13 +211,13 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         SignatureVO sign = signReport(record, SignSceneEnum.REPORT_AUDIT);
         record.setAuditSignId(sign.getId());
         record.setAuditSignedTime(sign.getSignedTime());
-        record.setAuditBy(UserUtils.getCurrentEmployeeName());
+        record.setAuditBy(UserUtils.getCurrentUser().getRealName());
         record.setAuditTime(sign.getSignedTime());
         record.setRecordStatus(InsRecordStatusEnum.REVIEWED.getCode());
         inspectionRecordMapper.updateById(record);
 
         report.setReportStatus(ReportStatusEnum.REVIEWED.getCode());
-        report.setAuditBy(UserUtils.getCurrentEmployeeName());
+        report.setAuditBy(UserUtils.getCurrentUser().getRealName());
         report.setAuditTime(sign.getSignedTime());
         report.setRejectReason(null);
         if (StringUtils.hasText(dto.getReason())) {
@@ -225,7 +225,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         }
         reportMapper.updateById(report);
 
-        sysAuditLogService.record(current, UserUtils.getCurrentEmployeeName(),
+        sysAuditLogService.record(current, UserUtils.getCurrentUser().getRealName(),
                 "放射报告", "审核通过", "biz_report", report.getId(),
                 cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
                         + " 意见=" + (StringUtils.hasText(dto.getReason()) ? dto.getReason() : "无")
@@ -257,8 +257,8 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         // 退回后必须清掉签名指针，否则医师改完再提交会被签名层挡住
         // （"已有报告医师签名，不能重复签名"）。签名记录本身没删 —— 它仍在签名链上，
         // 签名中心能看到这一版曾经被谁签过；清掉的只是"当前有效签名"这个指针。
-        Long current = UserUtils.getCurrentEmployeeId();
-        sysAuditLogService.record(current, UserUtils.getCurrentEmployeeName(),
+        Long current = UserUtils.getCurrentUser().getEmployeeId();
+        sysAuditLogService.record(current, UserUtils.getCurrentUser().getRealName(),
                 "放射报告", "退回重写", "biz_report", report.getId(),
                 cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
                         + " 原因=" + dto.getReason()
@@ -298,13 +298,13 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         }
         LocalDateTime now = LocalDateTime.now();
         report.setReportStatus(ReportStatusEnum.PUBLISHED.getCode());
-        report.setPublishBy(UserUtils.getCurrentEmployeeName());
+        report.setPublishBy(UserUtils.getCurrentUser().getRealName());
         report.setPublishTime(now);
         reportMapper.updateById(report);
 
         record.setRecordStatus(InsRecordStatusEnum.PUBLISHED.getCode());
         record.setReportTime(now);
-        record.setReportBy(UserUtils.getCurrentEmployeeName());
+        record.setReportBy(UserUtils.getCurrentUser().getRealName());
         inspectionRecordMapper.updateById(record);
 
         if (record.getApplyDoctorId() != null) {
@@ -313,7 +313,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
                             + record.getInspectionItemName() + "放射报告已发布，请查看。",
                     BizTypeEnum.REPORT.getType(), record.getId());
         }
-        sysAuditLogService.record(UserUtils.getCurrentEmployeeId(), UserUtils.getCurrentEmployeeName(),
+        sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "放射报告", "发布报告", "biz_report", report.getId(),
                 cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName(), 2000),
                 true, null);
@@ -443,7 +443,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
      * <p>签名人取自登录态：入参里的姓名字符串谁都能填成别人的名字，用它签名等于签名可伪造。
      */
     private SignatureVO signReport(BizInspectionRecord record, SignSceneEnum scene) {
-        Long signerId = UserUtils.getCurrentEmployeeId();
+        Long signerId = UserUtils.getCurrentUser().getEmployeeId();
         if (signerId == null) {
             throw new BusinessException("签名失败：取不到当前登录用户，无法确定签名人");
         }
@@ -452,7 +452,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         cmd.setBizId(record.getId());
         cmd.setSignScene(scene.getCode());
         cmd.setSignerId(signerId);
-        cmd.setSignerName(UserUtils.getCurrentEmployeeName());
+        cmd.setSignerName(UserUtils.getCurrentUser().getRealName());
         cmd.setSignerDeptId(record.getInspectionDeptId());
         cmd.setSignerDeptName(record.getInspectionDeptName());
         try {
@@ -537,7 +537,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
 
     @Override
     public List<RadioReportTemplateVO> templateSelectList(Integer modality) {
-        Long me = UserUtils.getCurrentEmployeeId();
+        Long me = UserUtils.getCurrentUser().getEmployeeId();
         LambdaQueryWrapper<BizRadioReportTemplate> w = new LambdaQueryWrapper<>();
         w.eq(BizRadioReportTemplate::getStatus, 1);
         // 公用模板（is_public=1）或本人私有；员工ID 取不到时只给公用 ——
@@ -580,7 +580,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
             entity.setIsPublic(1);
         }
         if (Objects.equals(0, entity.getIsPublic()) && entity.getDoctorId() == null) {
-            entity.setDoctorId(UserUtils.getCurrentEmployeeId());
+            entity.setDoctorId(UserUtils.getCurrentUser().getEmployeeId());
         }
         if (entity.getStatus() == null) {
             entity.setStatus(1);

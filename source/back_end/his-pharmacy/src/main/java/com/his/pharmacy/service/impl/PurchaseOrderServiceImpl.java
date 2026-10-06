@@ -103,7 +103,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
                 .map(BizPurchaseOrderDetail::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         LocalDateTime orderTime = (dto.getOrderTime() != null ? dto.getOrderTime() : LocalDateTime.now())
                 .truncatedTo(ChronoUnit.SECONDS);
 
@@ -169,11 +169,11 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
         if (detailMapper.countByOrder(order.getOrderId()) == 0) {
             throw new BusinessException("订单没有明细，不能审批");
         }
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
         this.lambdaUpdate()
                 .eq(BizPurchaseOrder::getOrderId, order.getOrderId())
                 .set(BizPurchaseOrder::getApprovalStatus, dto.getApprovalStatus())
-                .set(BizPurchaseOrder::getApproverId, UserUtils.getCurrentEmployeeId())
+                .set(BizPurchaseOrder::getApproverId, UserUtils.getCurrentUser().getEmployeeId())
                 .set(BizPurchaseOrder::getRemark, StringUtils.hasText(dto.getRemark()) ? dto.getRemark() : order.getRemark())
                 .set(BizPurchaseOrder::getUpdateBy, operator)
                 .update();

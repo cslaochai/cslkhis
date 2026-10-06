@@ -59,7 +59,7 @@ public class YbCatalogServiceImpl implements YbCatalogService {
         if (dto.getId() == null) {
             entity = new BizYbCatalog();
             entity.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
-            entity.setCreateBy(UserUtils.getCurrentEmployeeName());
+            entity.setCreateBy(UserUtils.getCurrentUser().getRealName());
         } else {
             entity = catalogMapper.selectById(dto.getId());
             if (entity == null) {
@@ -80,7 +80,7 @@ public class YbCatalogServiceImpl implements YbCatalogService {
             entity.setStatus(dto.getStatus());
         }
         entity.setRemark(cut(dto.getRemark(), 500));
-        entity.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (dto.getId() == null) {
             catalogMapper.insert(entity);
         } else {
@@ -134,7 +134,7 @@ public class YbCatalogServiceImpl implements YbCatalogService {
             throw new BusinessException("目录不存在或已删除");
         }
         entity.setStatus(status);
-        entity.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         catalogMapper.updateById(entity);
     }
 

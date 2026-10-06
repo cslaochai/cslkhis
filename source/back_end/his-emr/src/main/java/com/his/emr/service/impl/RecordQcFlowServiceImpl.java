@@ -16,7 +16,6 @@ import com.his.emr.mapper.BizRecordQcFlowMapper;
 import com.his.emr.service.RecordQcFlowService;
 import com.his.emr.vo.RecordQcFlowActionVO;
 import com.his.emr.vo.RecordQcFlowVO;
-import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,7 +62,6 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         if (flowMapper.countActiveByRecordId(dto.getRecordId()) > 0) {
             throw new BusinessException("该病历已有在途质控流转（未终审通过），不能重复发起");
         }
-        CurrentUser user = UserUtils.getCurrentUser();
 
         BizRecordQcFlow flow = new BizRecordQcFlow();
         flow.setFlowNo(nextFlowNo());
@@ -75,12 +73,12 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         flow.setDeptName(record.getDeptName());
         flow.setFlowStatus(RecordQcFlowStatusEnum.DEPT_PENDING.getCode());
         flow.setCurrentLevel(RecordQcLevelEnum.DEPT.getCode());
-        flow.setCreateBy(user == null ? "system" : user.getRealName());
+        flow.setCreateBy(UserUtils.getCurrentUser().getRealName());
         flow.setRemark(dto.getRemark());
         flowMapper.insert(flow);
 
         insertAction(flow.getId(), RecordQcLevelEnum.DEPT.getCode(), RecordQcActionEnum.START.getCode(), "发起三级质控流转",
-                null, null, user);
+                null, null);
         return decorate(flowMapper.selectFlowById(flow.getId()));
     }
 
@@ -89,7 +87,6 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
     public void approve(RecordQcFlowOpinionDTO dto) {
         BizRecordQcFlow flow = lockAndCheck(dto.getFlowId());
         requireReviewStage(flow);
-        CurrentUser user = UserUtils.getCurrentUser();
 
         int nextStatus;
         int nextLevel;
@@ -104,11 +101,11 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         }
         flow.setFlowStatus(nextStatus);
         flow.setCurrentLevel(nextLevel);
-        flow.setUpdateBy(user == null ? "system" : user.getRealName());
+        flow.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         flowMapper.updateById(flow);
 
         insertAction(flow.getId(), levelOfStatus(flow.getFlowStatus()), RecordQcActionEnum.APPROVE.getCode(),
-                dto.getOpinion(), null, null, user);
+                dto.getOpinion(), null, null);
     }
 
     @Override
@@ -116,7 +113,6 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
     public void returnForRework(RecordQcFlowReturnDTO dto) {
         BizRecordQcFlow flow = lockAndCheck(dto.getFlowId());
         requireReviewStage(flow);
-        CurrentUser user = UserUtils.getCurrentUser();
 
         flow.setFlowStatus(RecordQcFlowStatusEnum.REWORKING.getCode());
         // current_level 保持为退回发生级 = 整改后需回到的级
@@ -124,11 +120,11 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         flow.setReturnReason(dto.getDefectDetail());
         flow.setReturnRequirement(dto.getRequirement());
         flow.setReturnDeadline(dto.getReturnDeadline());
-        flow.setUpdateBy(user == null ? "system" : user.getRealName());
+        flow.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         flowMapper.updateById(flow);
 
         insertAction(flow.getId(), flow.getReturnLevel(), RecordQcActionEnum.RETURN.getCode(),
-                dto.getOpinion(), dto.getDefectDetail(), dto.getRequirement(), user);
+                dto.getOpinion(), dto.getDefectDetail(), dto.getRequirement());
     }
 
     @Override
@@ -139,14 +135,13 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
             throw new BusinessException("当前状态（" + RecordQcFlowStatusEnum.labelOrUnknown(flow.getFlowStatus())
                     + "）不是整改中，无需整改提交");
         }
-        CurrentUser user = UserUtils.getCurrentUser();
 
         flow.setFlowStatus(statusOfLevel(flow.getReturnLevel() == null ? RecordQcLevelEnum.DEPT.getCode() : flow.getReturnLevel()));
         flow.setCurrentLevel(flow.getReturnLevel() == null ? RecordQcLevelEnum.DEPT.getCode() : flow.getReturnLevel());
-        flow.setUpdateBy(user == null ? "system" : user.getRealName());
+        flow.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         flowMapper.updateById(flow);
 
-        insertAction(flow.getId(), RecordQcLevelEnum.DEPT.getCode(), RecordQcActionEnum.RESUBMIT.getCode(), dto.getOpinion(), null, null, user);
+        insertAction(flow.getId(), RecordQcLevelEnum.DEPT.getCode(), RecordQcActionEnum.RESUBMIT.getCode(), dto.getOpinion(), null, null);
     }
 
     @Override
@@ -158,17 +153,16 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
             throw new BusinessException("当前停留级（" + RecordQcLevelEnum.labelOrUnknown(flow.getCurrentLevel())
                     + "）不是医务处，不能终审");
         }
-        CurrentUser user = UserUtils.getCurrentUser();
 
         flow.setFlowStatus(RecordQcFlowStatusEnum.FINAL_APPROVED.getCode());
         flow.setGrade(dto.getGrade());
         flow.setFinalScore(dto.getFinalScore());
         flow.setFinalOpinion(dto.getFinalOpinion());
-        flow.setUpdateBy(user == null ? "system" : user.getRealName());
+        flow.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         flowMapper.updateById(flow);
 
         insertAction(flow.getId(), RecordQcLevelEnum.MEDAFFAIRS.getCode(), RecordQcActionEnum.FINAL.getCode(),
-                dto.getFinalOpinion(), null, null, user);
+                dto.getFinalOpinion(), null, null);
     }
 
     @Override
@@ -207,7 +201,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
     }
 
     private void insertAction(Long flowId, int level, int action,
-                              String opinion, String defectDetail, String requirement, CurrentUser user) {
+                              String opinion, String defectDetail, String requirement) {
         BizRecordQcFlowAction a = new BizRecordQcFlowAction();
         a.setFlowId(flowId);
         a.setLevel(level);
@@ -215,8 +209,8 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         a.setOpinion(opinion);
         a.setDefectDetail(defectDetail);
         a.setRequirement(requirement);
-        a.setOperatorId(user == null ? null : user.getEmployeeId());
-        a.setOperatorName(user == null ? "system" : user.getRealName());
+        a.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());
+        a.setOperatorName(UserUtils.getCurrentUser().getRealName());
         a.setActionTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         actionMapper.insert(a);
     }

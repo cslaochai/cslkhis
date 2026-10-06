@@ -69,7 +69,7 @@ public class SupplierServiceImpl extends ServiceImpl<SysSupplierMapper, SysSuppl
         Integer rating = dto.getRating() == null ? 3 : dto.getRating();
         Integer status = dto.getStatus() == null ? 1 : dto.getStatus();
 
-        String operator = UserUtils.getCurrentEmployeeName();
+        String operator = UserUtils.getCurrentUser().getRealName();
 
         if (dto.getSupplierId() == null) {
             SysSupplier entity = new SysSupplier();

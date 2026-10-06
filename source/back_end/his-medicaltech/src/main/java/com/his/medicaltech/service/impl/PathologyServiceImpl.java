@@ -487,8 +487,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
     }
 
     private String currentName() {
-        String n = UserUtils.getCurrentEmployeeName();
-        return n != null ? n : "未知操作人";
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     /** 写库的文本一律先截到列宽（原因/意见超长会把业务失败升级成 500） */

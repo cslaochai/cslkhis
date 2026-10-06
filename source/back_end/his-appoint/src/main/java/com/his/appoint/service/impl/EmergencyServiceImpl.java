@@ -452,14 +452,14 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
      * （按 doctor_id=我收口）永远看不见这个患者——共享池就变成无人认领的死角。
      */
     private void claimDoctor(BizEmergency emergency) {
-        Long meEmp = UserUtils.getCurrentEmployeeId();
+        Long meEmp = UserUtils.getCurrentUser().getEmployeeId();
         if (emergency.getDoctorId() != null && meEmp != null && !emergency.getDoctorId().equals(meEmp)) {
             String who = StringUtils.hasText(emergency.getDoctorName()) ? emergency.getDoctorName() : "当班医生";
             throw new BusinessException("该患者已由 " + who + " 接诊，请勿重复接诊");
         }
         if (emergency.getDoctorId() == null && meEmp != null) {
             emergency.setDoctorId(meEmp);
-            emergency.setDoctorName(UserUtils.getCurrentEmployeeName());
+            emergency.setDoctorName(UserUtils.getCurrentUser().getRealName());
             // 认领要留痕：这一行原来是「入池待派单」，现在是"谁把它从池子里捞走的"。
             // 没有这一笔，超时升级永远分不清"没人管"和"有人认领了还没看"。
             emergency.setAssignType(EmergencyAssignTypeEnum.CLAIMED.getCode());
@@ -485,7 +485,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         BizAppointInfo appoint = findEmergencyAppoint(emergency.getPatientId());
         Long admitDoctorId = admitDTO.getAdmitDoctorId() != null ? admitDTO.getAdmitDoctorId() : emergency.getDoctorId();
         if (admitDoctorId == null) {
-            admitDoctorId = UserUtils.getCurrentEmployeeId();
+            admitDoctorId = UserUtils.getCurrentUser().getEmployeeId();
         }
 
         InpatientAdmitDTO inpatient = new InpatientAdmitDTO();
@@ -989,7 +989,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
     @Transactional(rollbackFor = Exception.class)
     public Long submitHandover(EmergencyHandoverUpsertDTO submitDTO) {
         Long fromEmpId = requireCurrentEmployee();
-        String fromEmpName = UserUtils.getCurrentEmployeeName();
+        String fromEmpName = UserUtils.getCurrentUser().getRealName();
         if (!StringUtils.hasText(fromEmpName)) {
             SysEmployee me = sysEmployeeMapper.selectById(fromEmpId);
             fromEmpName = me == null ? String.valueOf(fromEmpId) : me.getEmpName();
@@ -1399,7 +1399,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
     }
 
     private Long requireCurrentEmployee() {
-        Long empId = UserUtils.getCurrentEmployeeId();
+        Long empId = UserUtils.getCurrentUser().getEmployeeId();
         if (empId == null) {
             throw new BusinessException("未获取到登录员工身份，无法办理交班");
         }

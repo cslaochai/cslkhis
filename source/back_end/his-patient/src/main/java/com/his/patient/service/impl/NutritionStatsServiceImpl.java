@@ -295,12 +295,7 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
     }
 
     private String currentName() {
-        String name = UserUtils.getCurrentEmployeeName();
-        if (StringUtils.hasText(name)) {
-            return name;
-        }
-        Long empId = UserUtils.getCurrentEmployeeId();
-        return empId == null ? "system" : String.valueOf(empId);
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private String csv(String v) {

@@ -183,7 +183,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (dto.getId() == null
                 && items.stream().anyMatch(i -> Objects.equals(OrderClassEnum.OPERATION.getCode(), i.getOrderClass()))) {
             TechAuthGateDTO authGate = new TechAuthGateDTO();
-            authGate.setEmployeeId(UserUtils.getCurrentEmployeeId());
+            authGate.setEmployeeId(UserUtils.getCurrentUser().getEmployeeId());
             authGate.setAuthCategory(TechAuthCategoryEnum.SURGERY.getCode());
             authGate.setRequiredLevel(1);
             authGate.setItemCode(items.stream().map(InpatientOrderItemDTO::getItemCode)
@@ -1078,21 +1078,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     }
 
     private String currentName() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user == null) {
-                return null;
-            }
-            if (StringUtils.hasText(user.getEmployeeName())) {
-                return user.getEmployeeName();
-            }
-            if (StringUtils.hasText(user.getRealName())) {
-                return user.getRealName();
-            }
-            return user.getUsername();
-        } catch (Exception e) {
-            return null;
-        }
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     /**

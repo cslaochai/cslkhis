@@ -14,13 +14,8 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * 远程 embedding 实现（OpenAI 兼容 {@code /v1/embeddings}）。
+ * 远程 embedding 实现
  *
- * <p>当院内部署了 Ollama / TEI / vLLM 等 embedding 服务时，把 {@code ai.rag.embedding-provider}
- * 设为 {@code remote} 即用语义向量（同义词、 paraphrasing 都能对齐），远强于本地 hashing trick。
- * 配置优先级：{@code ai.rag.embed-*} 优先，未配则回落 {@code ai.base-url / ai.apiKey / ai.model}。
- *
- * <p>本实现只在显式选中 {@code remote} 时才会被调用；默认 {@code local-tf}，不会触碰任何外部服务。
  */
 @Slf4j
 @Component

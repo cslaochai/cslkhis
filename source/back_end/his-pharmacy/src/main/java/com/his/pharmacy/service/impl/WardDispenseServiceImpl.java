@@ -181,7 +181,7 @@ public class WardDispenseServiceImpl implements WardDispenseService {
             throw new BusinessException("仅待配药明细允许配药（当前状态码 " + item.getStatus() + "）");
         }
         String operatorName = currentOperator();
-        Long operatorId = UserUtils.getCurrentEmployeeId();
+        Long operatorId = UserUtils.getCurrentUser().getEmployeeId();
 
         // ① FEFO 扣库存：先过期先出、跨批次、逐批落药品库存流水；总量不足整单失败
         StockDeductResultDTO deduct = pharmacyService.deductStockFefo(item.getDrugId(), item.getQuantity(),
@@ -218,7 +218,7 @@ public class WardDispenseServiceImpl implements WardDispenseService {
             throw new BusinessException("仅已配药明细允许核对（当前状态码 " + item.getStatus() + "）");
         }
         item.setStatus(BizWardDispenseItem.STATUS_CHECKED);
-        item.setCheckerId(UserUtils.getCurrentEmployeeId());
+        item.setCheckerId(UserUtils.getCurrentUser().getEmployeeId());
         item.setCheckerName(currentOperator());
         item.setCheckTime(now());
         if (StringUtils.hasText(dto.getRemark())) {
@@ -385,7 +385,6 @@ public class WardDispenseServiceImpl implements WardDispenseService {
     }
 
     private String currentOperator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(name) ? name : "system";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

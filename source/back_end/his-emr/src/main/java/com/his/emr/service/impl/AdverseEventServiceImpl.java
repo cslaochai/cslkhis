@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 不良事件服务实现
@@ -105,8 +106,8 @@ public class AdverseEventServiceImpl implements AdverseEventService {
         int acquiredFlag = admittedWith ? AdverseAcquiredEnum.ADMITTED_WITH.getCode()
                 : AdverseAcquiredEnum.HOSPITAL_ACQUIRED.getCode();
 
-        Long operatorId = UserUtils.getCurrentEmployeeId();
-        String operatorName = UserUtils.getCurrentEmployeeName();
+        Long operatorId = UserUtils.getCurrentUser().getEmployeeId();
+        String operatorName = UserUtils.getCurrentUser().getRealName();
 
         if (dto.getId() == null) {
             BizAdverseEvent e = new BizAdverseEvent();
@@ -174,8 +175,8 @@ public class AdverseEventServiceImpl implements AdverseEventService {
     @Transactional(rollbackFor = Exception.class)
     public void handle(AdverseEventActionDTO dto) {
         BizAdverseEvent e = lockAndCheck(dto.getId(), AdverseEventStatusEnum.REPORTED.getCode(), "处理");
-        e.setHandlerId(UserUtils.getCurrentEmployeeId());
-        e.setHandlerName(UserUtils.getCurrentEmployeeName());
+        e.setHandlerId(UserUtils.getCurrentUser().getEmployeeId());
+        e.setHandlerName(UserUtils.getCurrentUser().getRealName());
         e.setHandleRemark(dto.getRemark().trim());
         e.setHandleTime(TimeUtil.nowSeconds());
         e.setStatus(AdverseEventStatusEnum.HANDLED.getCode());
@@ -187,8 +188,8 @@ public class AdverseEventServiceImpl implements AdverseEventService {
     @Transactional(rollbackFor = Exception.class)
     public void rectify(AdverseEventActionDTO dto) {
         BizAdverseEvent e = lockAndCheck(dto.getId(), AdverseEventStatusEnum.HANDLED.getCode(), "整改");
-        e.setRectifyById(UserUtils.getCurrentEmployeeId());
-        e.setRectifyByName(UserUtils.getCurrentEmployeeName());
+        e.setRectifyById(UserUtils.getCurrentUser().getEmployeeId());
+        e.setRectifyByName(UserUtils.getCurrentUser().getRealName());
         e.setRectifyMeasures(dto.getRemark().trim());
         e.setRectifyTime(TimeUtil.nowSeconds());
         e.setStatus(AdverseEventStatusEnum.RECTIFIED.getCode());
@@ -202,8 +203,8 @@ public class AdverseEventServiceImpl implements AdverseEventService {
     @Transactional(rollbackFor = Exception.class)
     public void close(AdverseEventActionDTO dto) {
         BizAdverseEvent e = lockAndCheck(dto.getId(), AdverseEventStatusEnum.RECTIFIED.getCode(), "结案");
-        e.setCloseById(UserUtils.getCurrentEmployeeId());
-        e.setCloseByName(UserUtils.getCurrentEmployeeName());
+        e.setCloseById(UserUtils.getCurrentUser().getEmployeeId());
+        e.setCloseByName(UserUtils.getCurrentUser().getRealName());
         e.setVerifyRemark(dto.getRemark().trim());
         e.setCloseTime(TimeUtil.nowSeconds());
         e.setStatus(AdverseEventStatusEnum.CLOSED.getCode());
@@ -221,7 +222,9 @@ public class AdverseEventServiceImpl implements AdverseEventService {
         if (e.getStatus() != null && e.getStatus() != AdverseEventStatusEnum.REPORTED.getCode()) {
             throw new BusinessException("事件已进入处理流程，不能删除（留痕完整性要求）");
         }
-        if (!UserUtils.getCurrentEmployeeId().equals(e.getReporterId())) {
+        // Objects.equals 而不是 .equals()：employeeId 可能为 null（管理账号无员工档），
+        // 直接 .equals 会 NPE 变成 500，看起来像服务端坏了
+        if (!Objects.equals(UserUtils.getCurrentUser().getEmployeeId(), e.getReporterId())) {
             throw new BusinessException("只有上报人本人可以删除");
         }
         // ⚠ MP 全局 logic-delete-field=delFlag：updateById 不允许 set del_flag（静默跳过），

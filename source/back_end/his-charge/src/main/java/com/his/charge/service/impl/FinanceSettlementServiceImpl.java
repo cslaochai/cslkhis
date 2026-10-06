@@ -227,11 +227,11 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public CashierSettlementVO handover(CashierHandoverDTO dto) {
-        Long cashierId = UserUtils.getCurrentEmployeeId();
+        Long cashierId = UserUtils.getCurrentUser().getEmployeeId();
         if (cashierId == null) {
             throw new BusinessException("无法识别当前收费员工号，交班失败");
         }
-        String cashierName = UserUtils.getCurrentEmployeeName();
+        String cashierName = UserUtils.getCurrentUser().getRealName();
         if (!StringUtils.hasText(cashierName)) {
             cashierName = "未知收费员";
         }
@@ -425,7 +425,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         entity.setDiffAmount(reconcile.getMaxDiffAmount());
         entity.setDiffDetail(reconcile.getSummary());
         entity.setSettleStatus(1);
-        entity.setSettleBy(UserUtils.getCurrentEmployeeName());
+        entity.setSettleBy(UserUtils.getCurrentUser().getRealName());
         entity.setSettleTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         if (dto.getRemark() != null) {
             entity.setRemark(dto.getRemark());
@@ -503,7 +503,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
             throw new BusinessException("该日结单已审核，请勿重复审核");
         }
         row.setSettleStatus(2);
-        row.setAuditBy(UserUtils.getCurrentEmployeeName());
+        row.setAuditBy(UserUtils.getCurrentUser().getRealName());
         row.setAuditTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
         row.setAuditRemark(dto.getAuditRemark());
         if (dto.getRemark() != null) {

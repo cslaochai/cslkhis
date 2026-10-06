@@ -1,0 +1,17 @@
+# 检查影像配置
+his:
+  medicaltech:
+    exam-image:
+      # 允许上传的影像扩展名（小写，不含点）
+      allowed-ext:
+        - jpg
+        - jpeg
+        - png
+      # 单帧影像大小上限
+      max-bytes: 10MB
+      # 单次模拟导入帧数上限
+      max-frame-count: 24
+      # 模拟导入未传 frameCount 时的默认帧数
+      default-frame-count: 6
+      # 影像落盘相对根目录（相对 user.dir，不含前导/尾部斜杠）
+      upload-root-rel: uploads/examImage

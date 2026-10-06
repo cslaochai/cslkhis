@@ -7,8 +7,8 @@ package com.his.ai.rag.embedding;
  * 存储，向量形态一致，切换只改实现、不动调用方。
  *
  * <p>开发环境默认实现 {@link LocalTfEmbeddingProvider}（hashing trick 落到固定维度，零外部依赖）。
- * 若院内部署了 Ollama / TEI / vLLM 等 embedding 服务，新增 {@link RemoteEmbeddingProvider}
- * 并在 {@code application.yml: ai.rag.embedding-provider} 切到 {@code remote} 即可用语义向量。
+ * 若院内部署了 Ollama / TEI / vLLM 等 embedding 服务，配置 {@code ai.rag.embed-base-url}
+ * 即自动走 {@code remote}（OpenAI 兼容语义向量），不配则回落 {@code local-tf}。
  *
  * <p>语义对齐（同义词、药品别名）不靠向量——那走结构化知识表；向量只负责「字面/语义相近的片段聚到一起」。
  */

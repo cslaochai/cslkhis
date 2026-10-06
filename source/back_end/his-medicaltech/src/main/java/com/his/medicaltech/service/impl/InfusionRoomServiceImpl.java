@@ -124,11 +124,11 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         seat.setSeatNo(dto.getSeatNo());
         seat.setArea(dto.getArea());
         seat.setRemark(dto.getRemark());
-        seat.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        seat.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (dto.getId() != null) {
             seatMapper.updateById(seat);
         } else {
-            seat.setCreateBy(UserUtils.getCurrentEmployeeName());
+            seat.setCreateBy(UserUtils.getCurrentUser().getRealName());
             seatMapper.insert(seat);
         }
         InfusionRoomVO.Seat vo = new InfusionRoomVO.Seat();
@@ -168,8 +168,8 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         inf.setStatus(Boolean.TRUE.equals(needTest(dto.getNeedSkinTest()))
                 ? InfusionStatusEnum.PENDING_TEST.getCode() : InfusionStatusEnum.WAITING.getCode());
         inf.setAdverseFlag(YesOrNoEnum.NO.getCode());
-        inf.setNurseId(UserUtils.getCurrentEmployeeId());
-        inf.setNurseName(UserUtils.getCurrentEmployeeName());
+        inf.setNurseId(UserUtils.getCurrentUser().getEmployeeId());
+        inf.setNurseName(UserUtils.getCurrentUser().getRealName());
         inf.setRemark(dto.getRemark());
         inf.setCreateBy(inf.getNurseName());
         infusionMapper.insert(inf);
@@ -219,8 +219,8 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         st.setTreatmentRecordId(inf.getTreatmentRecordId());
         st.setTestTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         st.setResult(SkinTestResultEnum.PENDING.getCode());
-        st.setNurseId(UserUtils.getCurrentEmployeeId());
-        st.setNurseName(UserUtils.getCurrentEmployeeName());
+        st.setNurseId(UserUtils.getCurrentUser().getEmployeeId());
+        st.setNurseName(UserUtils.getCurrentUser().getRealName());
         st.setRemark(dto.getRemark());
         st.setCreateBy(st.getNurseName());
         skinTestMapper.insert(st);
@@ -250,7 +250,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         }
         st.setResult(dto.getResult());
         st.setResultTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
-        st.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        st.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         skinTestMapper.updateById(st);
 
         // 皮试表不持有输液单外键（输液单持 skinTestId），反查进行中的输液单
@@ -264,7 +264,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
                 cancelInternal(inf, "皮试阳性（皮试单 " + st.getTestNo() + "）");
             } else {
                 inf.setStatus(InfusionStatusEnum.WAITING.getCode());
-                inf.setUpdateBy(UserUtils.getCurrentEmployeeName());
+                inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
                 infusionMapper.updateById(inf);
             }
         }
@@ -292,7 +292,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         inf.setStatus(InfusionStatusEnum.INFUSING.getCode());
         inf.setStartTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         inf.setDripRate(dto.getDripRate());
-        inf.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         infusionMapper.updateById(inf);
         return toInfusionVO(inf);
     }
@@ -311,8 +311,8 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         r.setRoundTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         r.setDripRate(dto.getDripRate());
         r.setRemainingVolume(dto.getRemainingVolume());
-        r.setNurseId(UserUtils.getCurrentEmployeeId());
-        r.setNurseName(UserUtils.getCurrentEmployeeName());
+        r.setNurseId(UserUtils.getCurrentUser().getEmployeeId());
+        r.setNurseName(UserUtils.getCurrentUser().getRealName());
         r.setRemark(dto.getRemark());
         r.setCreateBy(r.getNurseName());
         roundMapper.insert(r);
@@ -344,7 +344,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         inf.setEndTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         inf.setAdverseFlag(dto.getAdverseFlag());
         inf.setAdverseDesc(dto.getAdverseDesc());
-        inf.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         infusionMapper.updateById(inf);
         releaseSeat(inf);
         return toInfusionVO(inf);
@@ -368,7 +368,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         inf.setStatus(InfusionStatusEnum.CANCELLED.getCode());
         inf.setCancelReason(cut(reason, 500));
         inf.setEndTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
-        inf.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         infusionMapper.updateById(inf);
         releaseSeat(inf);
     }
@@ -394,7 +394,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
                 .ne(BizOutpInfusion::getId, inf.getId()));
         if (ongoing == 0 && seat.getSeatStatus() == InfusionSeatStatusEnum.OCCUPIED.getCode()) {
             seat.setSeatStatus(InfusionSeatStatusEnum.FREE.getCode());
-            seat.setUpdateBy(UserUtils.getCurrentEmployeeName());
+            seat.setUpdateBy(UserUtils.getCurrentUser().getRealName());
             seatMapper.updateById(seat);
         }
     }

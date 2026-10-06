@@ -215,7 +215,7 @@ public class DialysisServiceImpl implements DialysisService {
             entity.setArchiveId(dto.getArchiveId());
             entity.setStatus(DialysisPrescriptionStatusEnum.ACTIVE.getCode());
             entity.setPatientName(archive.getPatientName());
-            entity.setDoctorId(UserUtils.getCurrentEmployeeId());
+            entity.setDoctorId(UserUtils.getCurrentUser().getEmployeeId());
             entity.setDoctorName(currentOperator());
         } else {
             entity = requirePrescription(dto.getId());
@@ -654,7 +654,6 @@ public class DialysisServiceImpl implements DialysisService {
     }
 
     private String currentOperator() {
-        String name = UserUtils.getCurrentEmployeeName();
-        return StringUtils.hasText(name) ? name : "system";
+        return UserUtils.getCurrentUser().getRealName();
     }
 }

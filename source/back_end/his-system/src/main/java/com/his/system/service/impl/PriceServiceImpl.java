@@ -156,7 +156,10 @@ public class PriceServiceImpl implements PriceService {
     }
 
     /**
-     * 操作人：优先用员工身份（与站内信、签名口径一致），没有则退回登录账号
+     * 操作人：员工身份优先（与站内信、签名口径一致）。
+     * 姓名单一口径取 {@code realName}，不再回落 {@code employeeName}/{@code username} ——
+     * 那两个与库里其他操作人字段不是同一口径，回落出来的值事后按人名检索会对不上。
+     * 取不到登录态就整段留空：变价历史是留痕，缺操作人能查出来，塞个假名字不行。
      */
     private void fillOperator(SysPriceChangeHistory history) {
         CurrentUser currentUser = UserUtils.getCurrentUser();
@@ -165,8 +168,7 @@ public class PriceServiceImpl implements PriceService {
         }
         history.setOperatorId(Objects.nonNull(currentUser.getEmployeeId())
                 ? currentUser.getEmployeeId() : currentUser.getUserId());
-        history.setOperatorName(StringUtils.hasText(currentUser.getEmployeeName())
-                ? currentUser.getEmployeeName() : currentUser.getRealName());
+        history.setOperatorName(StringUtils.hasText(currentUser.getRealName()) ? currentUser.getRealName() : null);
     }
 
     private String normalizeType(String itemType) {

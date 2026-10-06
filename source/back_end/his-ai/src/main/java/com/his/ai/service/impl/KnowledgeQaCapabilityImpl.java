@@ -58,7 +58,7 @@ public class KnowledgeQaCapabilityImpl implements KnowledgeQaCapability {
         KnowledgeAskVO vo = new KnowledgeAskVO();
         vo.setQuestion(dto.getQuestion());
 
-        float[] queryVector = embeddingSelector.select(aiProperties.getRag().getEmbeddingProvider())
+        float[] queryVector = embeddingSelector.select()
                 .embed(dto.getQuestion());
         List<RetrievedChunk> hits = vectorStore.search(queryVector, aiProperties.getRag().getTopK());
 

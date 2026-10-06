@@ -134,10 +134,10 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
         t.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
         t.setRemark(tr(dto.getRemark()));
         if (self == null) {
-            t.setCreateBy(UserUtils.getCurrentEmployeeName());
+            t.setCreateBy(UserUtils.getCurrentUser().getRealName());
             templateMapper.insert(t);
         } else {
-            t.setUpdateBy(UserUtils.getCurrentEmployeeName());
+            t.setUpdateBy(UserUtils.getCurrentUser().getRealName());
             templateMapper.updateById(t);
             itemMapper.delete(new LambdaQueryWrapper<BizCssdPackTemplateItem>()
                     .eq(BizCssdPackTemplateItem::getTemplateId, t.getId()));
@@ -168,7 +168,7 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
         t.setId(templateId);
         t.setDelFlag(1);
         t.setStatus(0);
-        t.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        t.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         templateMapper.updateById(t);
     }
 

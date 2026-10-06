@@ -703,3 +703,39 @@
 - **枚举构造不在此列**：枚举（隐式）无参构造不能由 `@NoArgsConstructor` 替代，枚举一律不要手写构造（本项目枚举均无参、无手写构造）。
 - **Spring Bean 不碰**：带 `@Component` / `@Service` / `@Configuration` / `@Repository` 的类由容器实例化，本就不该有手写无参构造（若见到，是误写，应删而非加注解）。
 - 机械判据：`grep -rnE "\b(private|protected|public)\s+[A-Z][\w$]*\s*\(\s*\)\s*\{\s*\}" --include=*.java source/back_end` 命中的，必须已是枚举（自然豁免，因其构造不带上述修饰符）或已配套 `@NoArgsConstructor`（手写体应删除）；新增代码一律不手写无参构造。改造脚本见 `workspace/_scan_empty_ctors.py` + `workspace/_apply_noargs.py`。
+
+## 20. 操作人取值：直接 `getCurrentUser().getRealName()`，严禁任何默认值（2026-10-06 全仓收口）
+- **`UserUtils` 只有一个方法 `getCurrentUser()`**。不要新增 `getCurrentEmployeeId()` / `getCurrentEmployeeName()` /
+  `requireOperatorName()` 这类封装 —— 同一个语义出现两个出口就一定会漂移成两套口径（本次收口前正是如此：
+  6 份私有 `currentOperator()` 副本各写各的兜底）。要操作人直接链式取字段：
+  ```java
+  entity.setCreateBy(UserUtils.getCurrentUser().getRealName());   // 姓名
+  row.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());  // 员工ID
+  ```
+- **姓名口径只有 `CurrentUser.realName`**（即 `sys_user.real_name`，登录时 `UserDetailsServiceImpl` 无条件填充，
+  缺员工档当场拒登录）。**禁止**回落 `employeeName` / `username` / `getUsername()`：
+  `username` 是账号拼音（`user_name = real_name` 去符号小写全拼），拿它当人名会让库里操作人列出现两种格式，事后按人名检索直接漏。
+- **禁止塞默认值**：`"system"` / `"未知操作人"` / `"系统"` / `"系统操作"` / `String.valueOf(empId)` / `try-catch-return-null` 全部禁止。
+  取不到就是**报错**（NPE 由全局异常处理兜成 500，或自己抛 `BusinessException`），不是继续执行。
+  塞假值的代价是「谁干的」被藏进库里，出事时查不出来，而且现象是零报错。
+- **三处定时任务豁免（唯一允许落系统值的地方，2026-10-06 逐个 cron 用调用图排查确定）**：
+  | 位置 | 值 | 触发 |
+  |---|---|---|
+  | `DayEndSettleServiceImpl.currentOperator()` | `system:dayEndSettle` | cron 每天 00:10 + 进页面懒触发（共用 `doSettle`） |
+  | `ExamAppointmentServiceImpl` | `system:examNoShow` | `ExamNoShowTrigger` 每 10 分钟（与人工改约/取消共用 `releaseOld`） |
+  | `FollowupTaskServiceImpl` | `system:autoFollowup` | `DischargeFollowupTrigger` 每 10 分钟（`autoCreateFromDischarge`） |
+  后两处的做法是**给方法加 operator 参数 / 重载，由调用方显式传**（`createFromDischarge(dto, operator)`），
+  **不是**在方法内部判空回落 —— 内部回落出来的系统值在调用链上根本看不出来。
+  ⚠ 改任何 cron 链路前，先用「花括号配平 + 方法调用图递归」查清它到底会不会取当前人，别凭方法名猜
+  （`escalateOverdue`/`notifyOverdue`/`autoNoShow` 这类名字看着像，其实现身不取，调用链才取）。
+- **旁路审计特例（不抛异常，但也不塞假名字）**：操作日志与字段变更记录构造失败绝不能打断业务，
+  所以 `OperLogInterceptor` / `FieldChangeRecorderImpl` / `PriceServiceImpl` / `SysLogServiceImpl`
+  取不到登录态时**留空/null**（库里能看出「这条没操作人」），而不是填假值；同时也要删掉它们的 `employeeName`/`username` 回落。
+  `AiAuditServiceImpl` 同理：调用方没给 operator 就 warn + 不落库。
+  ⚠ 若取操作人的那行**在 try 块内**，异常会被 catch 吞成 warn，报错等于没有 —— 要么把取值挪到 try 外面，要么明确接受这条记录丢失。
+- **机械判据**（新增/改动代码自查）：
+  ```bash
+  grep -rnE '"system"|"未知操作人"|"系统操作"|getCurrentEmployeeName\(\)|getCurrentEmployeeId\(\)' --include=*.java source/back_end
+  ```
+  只允许命中上表三处定时任务常量、`ChannelEnum.SYSTEM`、`AiMessageDTO.ROLE_SYSTEM`，
+  以及 `OperLogInterceptor.resolveTitle` 的 `return "系统"`（那是**操作模块标题**，不是操作人）。

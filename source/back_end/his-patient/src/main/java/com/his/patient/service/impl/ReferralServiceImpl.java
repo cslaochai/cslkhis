@@ -84,7 +84,7 @@ public class ReferralServiceImpl implements ReferralService {
         r.setReferralStatus(ReferralStatusEnum.PENDING.getCode());
         r.setReferralTime(TimeUtil.toSeconds(LocalDateTime.now()));
         r.setRemark(dto.getRemark());
-        r.setCreateBy(UserUtils.getCurrentEmployeeName());
+        r.setCreateBy(UserUtils.getCurrentUser().getRealName());
         referralMapper.insert(r);
         // 转诊是跨院动作，协调人是总值班而不是开单科室：登记即让他知道，别等患者家属来问
         notifyDutyOnCreate(r);
@@ -119,11 +119,11 @@ public class ReferralServiceImpl implements ReferralService {
         if (dto.getToDeptId() != null) {
             r.setToDeptId(dto.getToDeptId());
         }
-        r.setAuditBy(UserUtils.getCurrentEmployeeId());
-        r.setAuditName(UserUtils.getCurrentEmployeeName());
+        r.setAuditBy(UserUtils.getCurrentUser().getEmployeeId());
+        r.setAuditName(UserUtils.getCurrentUser().getRealName());
         r.setAuditTime(TimeUtil.toSeconds(LocalDateTime.now()));
         r.setAuditRemark(dto.getAuditRemark());
-        r.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         r.setUpdateTime(r.getAuditTime());
         referralMapper.updateById(r);
         return toVo(r, loadDeptNames());
@@ -138,7 +138,7 @@ public class ReferralServiceImpl implements ReferralService {
         r.setReferralStatus(ReferralStatusEnum.FINISHED.getCode());
         r.setFinishTime(TimeUtil.toSeconds(LocalDateTime.now()));
         r.setFinishRemark(dto.getFinishRemark());
-        r.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         r.setUpdateTime(r.getFinishTime());
         referralMapper.updateById(r);
         return toVo(r, loadDeptNames());
@@ -155,7 +155,7 @@ public class ReferralServiceImpl implements ReferralService {
         }
         r.setReferralStatus(ReferralStatusEnum.CANCELLED.getCode());
         r.setRemark((r.getRemark() == null ? "" : r.getRemark() + "；") + "取消原因：" + dto.getCancelReason().trim());
-        r.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         r.setUpdateTime(TimeUtil.toSeconds(LocalDateTime.now()));
         referralMapper.updateById(r);
         return toVo(r, loadDeptNames());

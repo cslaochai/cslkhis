@@ -115,8 +115,8 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         row.setAmount(price.multiply(quantity).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP));
         row.setFeeStatus(FeeStatusEnum.PENDING.getCode());
         row.setBookTime(LocalDateTime.now());
-        row.setBookById(UserUtils.getCurrentEmployeeId());
-        row.setBookByName(cut(UserUtils.getCurrentEmployeeName(), W_BOOK_BY_NAME));
+        row.setBookById(UserUtils.getCurrentUser().getEmployeeId());
+        row.setBookByName(cut(UserUtils.getCurrentUser().getRealName(), W_BOOK_BY_NAME));
         row.setRemark(cut(dto.getRemark(), W_REMARK));
         this.save(row);
         log.info("[记账] {} 患者 {} 项目 {} 数量 {} 金额 ¥{}", row.getFeeNo(), row.getPatientName(),
@@ -408,8 +408,8 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         neg.setSourceNo(orig.getSourceNo());
         neg.setOrigFeeId(orig.getId());
         neg.setBookTime(LocalDateTime.now());
-        neg.setBookById(UserUtils.getCurrentEmployeeId());
-        neg.setBookByName(cut(UserUtils.getCurrentEmployeeName(), W_BOOK_BY_NAME));
+        neg.setBookById(UserUtils.getCurrentUser().getEmployeeId());
+        neg.setBookByName(cut(UserUtils.getCurrentUser().getRealName(), W_BOOK_BY_NAME));
         neg.setRemark(cut(reason, W_REMARK));
         this.save(neg);
 

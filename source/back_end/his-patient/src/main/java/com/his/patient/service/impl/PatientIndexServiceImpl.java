@@ -361,9 +361,8 @@ public class PatientIndexServiceImpl implements PatientIndexService {
                 .set(BizPatient::getStatus, originalStatus != null ? originalStatus : 1)
                 .eq(BizPatient::getId, merged.getId()));
 
-        CurrentUser user = UserUtils.getCurrentUser();
         logEntity.setLogStatus(2);
-        logEntity.setRevertBy(user == null ? "系统" : user.getEmployeeName());
+        logEntity.setRevertBy(UserUtils.getCurrentUser().getRealName());
         logEntity.setRevertTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         logEntity.setRevertReason(dto.getRevertReason().trim());
         mergeLogMapper.updateById(logEntity);

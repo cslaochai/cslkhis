@@ -50,6 +50,13 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     /**
      * 出院一键生成的默认随访天数
      */
+    /**
+     * 随访计划自动补建的操作人。出院随访由 {@code DischargeFollowupTrigger} 每 10 分钟扫一次，
+     * 调度线程没有登录态 —— 这是三处定时任务豁免点之一（另两处：日终结转、检查爽约判定），
+     * 落库可一眼看出「这条随访是系统补的，不是人建的」。
+     */
+    private static final String SYSTEM_AUTO_FOLLOWUP_OPERATOR = "system:autoFollowup";
+
     private static final int DEFAULT_DAYS_OFFSET = 7;
     /**
      * 任务上已挂的复诊号处于这些状态时允许重新生成 —— 号已经作废（退号/过号/爽约），
@@ -210,7 +217,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         if (dto.getRemark() != null) {
             task.setRemark(dto.getRemark());
         }
-        String who = UserUtils.getCurrentEmployeeName();
+        String who = UserUtils.getCurrentUser().getRealName();
         if (dto.getId() == null) {
             task.setCreateBy(who);
             this.save(task);
@@ -225,6 +232,12 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizFollowupTask createFromDischarge(FollowupTaskDTO.FromDischarge dto) {
+        return createFromDischarge(dto, UserUtils.getCurrentUser().getRealName());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BizFollowupTask createFromDischarge(FollowupTaskDTO.FromDischarge dto, String operator) {
         Map<String, Object> snap = taskMapper.selectDischargeSnapshot(dto.getDischargeId());
         if (snap == null || snap.get("patientId") == null) {
             throw new BusinessException("出院记录不存在（dischargeId=" + dto.getDischargeId() + "）");
@@ -261,7 +274,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
                 ? dto.getFollowupContent() : buildDefaultContent(type, diagnosis));
         task.setFollowupStatus(FollowupTaskStatusEnum.PENDING.getCode());
         task.setRemark(anchor + "按出院记录 " + snap.get("dischargeNo") + " 自动生成（出院后 " + days + " 天）");
-        task.setCreateBy(UserUtils.getCurrentEmployeeName());
+        task.setCreateBy(operator);
         this.save(task);
         return task;
     }
@@ -285,7 +298,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
                 FollowupTaskDTO.FromDischarge dto = new FollowupTaskDTO.FromDischarge();
                 dto.setDischargeId(dischargeId);
                 dto.setFollowupType(toLong(row, "hasOperation") > 0 ? 4 : 1);
-                createFromDischarge(dto);
+                createFromDischarge(dto, SYSTEM_AUTO_FOLLOWUP_OPERATOR);
                 created++;
             } catch (Exception e) {
                 // 单条失败只留痕：欠账仍在下一轮的扫描缺口里，不能因为一个人建不了就整批停住
@@ -321,8 +334,8 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         }
 
         task.setFollowupStatus(FollowupTaskStatusEnum.DOING.getCode());
-        task.setExecutorId(executorId == null ? UserUtils.getCurrentEmployeeId() : executorId);
-        task.setExecutorName(StringUtils.hasText(executorName) ? executorName : UserUtils.getCurrentEmployeeName());
+        task.setExecutorId(executorId == null ? UserUtils.getCurrentUser().getEmployeeId() : executorId);
+        task.setExecutorName(StringUtils.hasText(executorName) ? executorName : UserUtils.getCurrentUser().getRealName());
         boolean updated = this.updateById(task);
         if (updated) {
             // 患者触达（G-06）：开始随访即把随访内容推给患者，患者可在小程序「我的随访」反馈。
@@ -462,7 +475,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     }
 
     private void touch(BizFollowupTask task) {
-        task.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        task.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         task.setUpdateTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
     }
 
@@ -503,7 +516,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
 
         task.setRevisitRecordId(dto.getRevisitRecordId());
         task.setRevisitAppointId(appoint.getId());
-        task.setUpdateBy(UserUtils.getCurrentEmployeeName());
+        task.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         task.setUpdateTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         this.updateById(task);
         return toVo(task, true);

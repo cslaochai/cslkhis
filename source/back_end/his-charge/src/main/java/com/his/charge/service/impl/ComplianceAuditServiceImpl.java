@@ -624,15 +624,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     }
 
     private String currentUserName() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user != null) {
-                return StringUtils.hasText(user.getRealName()) ? user.getRealName() : user.getUsername();
-            }
-        } catch (Exception e) {
-            log.debug("获取当前用户失败，审核人留空：{}", e.getMessage());
-        }
-        return null;
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private SettlementDiagnosisVO toDiagnosisVO(BizSettlementDiagnosis entity) {

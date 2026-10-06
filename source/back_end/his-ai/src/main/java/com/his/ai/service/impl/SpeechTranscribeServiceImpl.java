@@ -194,6 +194,9 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
 
     private void recordAudit(String capabilityKey, AiCallStatusEnum status, int latencyMs, String model,
                              String errorMsg, String inputMeta, String outputDigest) {
+        // 取操作人放在 try 外面：catch 只该兜「审计落库失败」，
+        // 把「取不到当前人」一起吞掉就等于把报错变回静默 warn
+        String operator = currentOperator();
         try {
             SysAiCallLog entity = new SysAiCallLog();
             entity.setCapabilityKey(capabilityKey);
@@ -211,7 +214,7 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
             if (StringUtils.hasText(errorMsg)) {
                 entity.setErrorMsg(AiMaskUtils.digest(errorMsg, 480));
             }
-            entity.setOperator(currentOperator());
+            entity.setOperator(operator);
             auditService.record(entity);
         } catch (Exception ex) {
             // 审计失败不能反过来打断转写主流程
@@ -220,15 +223,7 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
     }
 
     private String currentOperator() {
-        try {
-            var user = UserUtils.getCurrentUser();
-            if (user != null && StringUtils.hasText(user.getUsername())) {
-                return user.getUsername();
-            }
-        } catch (Exception ignored) {
-            // 非请求线程，忽略
-        }
-        return "system";
+        return UserUtils.getCurrentUser().getRealName();
     }
 
     private RestClient clientOf(String baseUrl, int timeoutMs) {
