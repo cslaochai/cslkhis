@@ -1,43 +1,31 @@
 package com.his.charge.service.impl;
 
-import com.his.charge.entity.BizInsuranceReport;
-import com.his.charge.entity.BizInsuranceSettlement;
-import com.his.charge.entity.BizInvoice;
-import com.his.charge.entity.BizPaymentTxn;
-import com.his.charge.entity.BizSettlementBill;
-import com.his.charge.entity.BizSettlementBillItem;
-import com.his.charge.mapper.BizInsuranceReportMapper;
-import com.his.charge.mapper.BizInsuranceSettlementMapper;
-import com.his.charge.mapper.BizInvoiceMapper;
-import com.his.charge.mapper.BizPaymentTxnMapper;
-import com.his.charge.mapper.BizSettlementBillItemMapper;
-import com.his.charge.mapper.BizSettlementBillMapper;
-import com.his.charge.service.AppointGateway;
-import com.his.charge.service.EmrGateway;
-import com.his.charge.service.InsuranceChannelService;
-import com.his.charge.service.InsuranceSettlementService;
-import com.his.charge.service.PatientGateway;
-import com.his.charge.vo.AdmissionBrief;
-import com.his.charge.vo.BizInsuranceReportVO;
-import com.his.charge.vo.BizInsuranceSettlementVO;
-import com.his.charge.vo.InsuranceSettlementDetailVO;
-import com.his.charge.vo.InsuranceStatsVO;
-import com.his.charge.vo.MedicalRecordBrief;
-import com.his.charge.vo.PatientBrief;
-import com.his.charge.vo.PreSettlementVO;
-import com.his.charge.vo.ReconcileResultVO;
-import com.his.charge.vo.RegistBrief;
-import com.his.charge.vo.SettlementResultVO;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.his.charge.api.AppointGateway;
+import com.his.charge.api.PatientGateway;
+import com.his.charge.entity.*;
+import com.his.charge.mapper.*;
+import com.his.charge.api.EmrGateway;
+import com.his.charge.service.InsuranceChannelService;
+import com.his.charge.service.InsuranceSettlementService;
+import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -47,13 +35,6 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 /**
  * 医保结算清单实现（L2 账单的报盘出口）。
@@ -134,7 +115,7 @@ public class InsuranceSettlementServiceImpl
         BeanUtils.copyProperties(settlement, vo);
 
         // 1. 患者档案补齐性别/年龄/证号/医保号（清单只是快照，允许有空）
-        PatientBrief patient = settlement.getPatientId() == null ? null
+        PatientBriefVO patient = settlement.getPatientId() == null ? null
                 : patientGateway.findPatient(settlement.getPatientId());
         if (patient != null) {
             if (!StringUtils.hasText(vo.getPatientName())) {
@@ -160,7 +141,7 @@ public class InsuranceSettlementServiceImpl
         }
 
         // 2. 挂号（门诊）/入院（住院）：科室、医生、就诊日期
-        RegistBrief regist = settlement.getRegistId() == null ? null
+        RegistBriefVO regist = settlement.getRegistId() == null ? null
                 : appointGateway.findRegist(settlement.getRegistId());
         if (regist != null) {
             vo.setRegistNo(regist.getRegistNo());
@@ -184,7 +165,7 @@ public class InsuranceSettlementServiceImpl
             }
         } else if (EncounterTypeEnum.INPATIENT.getCode().equals(settlement.getEncounterType())
                 && settlement.getEncounterId() != null) {
-            AdmissionBrief admission = patientGateway.findAdmission(settlement.getEncounterId());
+            AdmissionBriefVO admission = patientGateway.findAdmission(settlement.getEncounterId());
             if (admission != null) {
                 vo.setAdmissionNo(admission.getAdmissionNo());
                 vo.setVisitDate(admission.getAdmitTime() == null ? null : admission.getAdmitTime().toLocalDate());
@@ -196,7 +177,7 @@ public class InsuranceSettlementServiceImpl
 
         // 3. 诊断：清单上没有就取该患者最近一次病历（合规审核找的是同一份诊断依据）
         if (!StringUtils.hasText(vo.getDiagnosisName()) || !StringUtils.hasText(vo.getDiagnosis())) {
-            MedicalRecordBrief record = settlement.getPatientId() == null ? null
+            MedicalRecordBriefVO record = settlement.getPatientId() == null ? null
                     : latestMedicalRecord(settlement.getPatientId());
             if (record != null) {
                 if (!StringUtils.hasText(vo.getDiagnosis())) {
@@ -281,7 +262,7 @@ public class InsuranceSettlementServiceImpl
         Long registId = EncounterTypeEnum.OUTPATIENT.getCode().equals(bill.getEncounterType())
                 ? bill.getEncounterId() : null;
         settlement.setRegistId(registId);
-        RegistBrief regist = registId == null ? null : appointGateway.findRegist(registId);
+        RegistBriefVO regist = registId == null ? null : appointGateway.findRegist(registId);
         settlement.setDeptId(regist != null ? regist.getDeptId() : firstDeptId(items));
         settlement.setDeptName(regist != null ? regist.getDeptName() : firstDeptName(items));
         settlement.setDoctorId(regist == null ? null : regist.getDoctorId());
@@ -720,7 +701,7 @@ public class InsuranceSettlementServiceImpl
      * <p>2304 报文直接读实体（{@code buildUploadPayload}），医保局靠身份证号匹配参保人 ——
      * 只在详情接口里从档案回补，报出去的报文就是一张没有人的清单。
      */
-    private void fillPatientIdentity(BizInsuranceSettlement settlement, PatientBrief patient) {
+    private void fillPatientIdentity(BizInsuranceSettlement settlement, PatientBriefVO patient) {
         if (patient == null) {
             return;
         }
@@ -741,7 +722,7 @@ public class InsuranceSettlementServiceImpl
         if (settlement.getRegistId() == null) {
             return;
         }
-        MedicalRecordBrief record = emrGateway.findLatestMedicalRecordByRegist(settlement.getRegistId());
+        MedicalRecordBriefVO record = emrGateway.findLatestMedicalRecordByRegist(settlement.getRegistId());
         if (record == null) {
             return;
         }
@@ -884,7 +865,7 @@ public class InsuranceSettlementServiceImpl
         return CollectionUtils.isEmpty(invoices) ? null : invoices.get(0).getInvoiceNo();
     }
 
-    private MedicalRecordBrief latestMedicalRecord(Long patientId) {
+    private MedicalRecordBriefVO latestMedicalRecord(Long patientId) {
         return emrGateway.findLatestMedicalRecordByPatient(patientId);
     }
 

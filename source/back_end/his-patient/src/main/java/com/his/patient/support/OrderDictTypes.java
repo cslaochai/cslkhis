@@ -1,9 +1,10 @@
 package com.his.patient.support;
 
+import com.his.patient.enums.OrderDictTypeEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
 import java.util.List;
-import java.util.Map;
 
 /**
  * 医嘱基础字典的三类口径（sql/142）：给药途径 / 用药频次 / 剂量单位。
@@ -14,6 +15,8 @@ import java.util.Map;
  * <p><b>值域口径（不要各写一份）</b>：
  * 途径存中文（历史医嘱 route 列就是中文，改成码会让存量数据渲染成「未知」），
  * 频次存英文缩写（qd/bid…，与医嘱单书写习惯一致），剂量单位是字面单位（g/mg/ml/片…）。
+ *
+ * <p>码值→中文名见 {@link OrderDictTypeEnum}。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OrderDictTypes {
@@ -31,28 +34,13 @@ public final class OrderDictTypes {
      */
     public static final String DOSE_UNIT = "his_dose_unit";
     public static final List<String> ALL = List.of(ROUTE, FREQ, DOSE_UNIT);
-    private static final Map<String, String> NAME = Map.of(
-            ROUTE, "给药途径",
-            FREQ, "用药频次",
-            DOSE_UNIT, "剂量单位");
-
-    /**
-     * 字典类型 → 医嘱表里对应的列（统计「这个值有多少条医嘱在用」用）
-     */
-    private static final Map<String, String> ORDER_COLUMN = Map.of(
-            ROUTE, "route",
-            FREQ, "frequency",
-            DOSE_UNIT, "dosage_unit");
 
     /**
      * 类型中文名（<b>展示用</b>）。null 给「—」；不在三类之内返回空串，
      * 不回落到看似合法的类型名，也不暴露「未知(type)」—— 界面只说"没有文案"，脏值交由数据治理发现。
      */
     public static String text(String dictType) {
-        if (dictType == null) {
-            return "—";
-        }
-        return NAME.getOrDefault(dictType, "");
+        return OrderDictTypeEnum.getText(dictType);
     }
 
     /**
@@ -60,23 +48,20 @@ public final class OrderDictTypes {
      * 绝不用于前端展示。
      */
     public static String labelOrUnknown(String dictType) {
-        if (dictType == null) {
-            return "未知";
-        }
-        return NAME.getOrDefault(dictType, "未知(" + dictType + ")");
+        return OrderDictTypeEnum.labelOrUnknown(dictType);
     }
 
     /**
      * 是否为受管的医嘱字典类型（决定能不能从这个口子写库）
      */
     public static boolean isManaged(String dictType) {
-        return dictType != null && NAME.containsKey(dictType);
+        return OrderDictTypeEnum.isManaged(dictType);
     }
 
     /**
      * 医嘱表里对应的列名（只可能是三列之一，调用方不可传外部输入）
      */
     public static String orderColumn(String dictType) {
-        return ORDER_COLUMN.get(dictType);
+        return OrderDictTypeEnum.orderColumn(dictType);
     }
 }

@@ -1,6 +1,6 @@
 package com.his.charge.vo;
 
-import com.his.charge.service.PatientGateway;
+import com.his.charge.api.PatientGateway;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -18,35 +18,55 @@ import lombok.NoArgsConstructor;
  */
 @Data
 @NoArgsConstructor
-public class PatientBrief {
+public class PatientBriefVO {
 
-    /** 患者ID（biz_patient 主键） */
+    /**
+     * 患者ID（biz_patient 主键）
+     */
     private Long id;
 
-    /** 患者编号 */
+    /**
+     * 患者编号
+     */
     private String patientNo;
 
-    /** 患者姓名 */
+    /**
+     * 患者姓名
+     */
     private String patientName;
 
-    /** 性别（1-男 2-女） */
+    /**
+     * 性别（1-男 2-女）
+     */
     private Integer gender;
 
-    /** 年龄（岁） */
+    /**
+     * 年龄（岁）
+     */
     private Integer age;
 
-    /** 联系电话 */
+    /**
+     * 联系电话
+     */
     private String phone;
 
-    /** 身份证号（医保结算身份核对用） */
+    /**
+     * 身份证号（医保结算身份核对用）
+     */
     private String idCard;
 
-    /** 患者类型 */
+    /**
+     * 患者类型
+     */
     private Integer patientType;
 
-    /** 医保类型 */
+    /**
+     * 医保类型
+     */
     private String medicalInsuranceType;
 
-    /** 医保卡号/医保编号（空串 = 无医保，按自费结算） */
+    /**
+     * 医保卡号/医保编号（空串 = 无医保，按自费结算）
+     */
     private String medicalInsuranceNo;
 }

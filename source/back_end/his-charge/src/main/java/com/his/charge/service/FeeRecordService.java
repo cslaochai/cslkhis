@@ -1,5 +1,6 @@
 package com.his.charge.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.dto.FeeRecordQueryPageDTO;
 import com.his.charge.dto.FeeReverseDTO;
@@ -7,8 +8,8 @@ import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.vo.BizFeeRecordDetailVO;
 import com.his.charge.vo.BizFeeRecordVO;
 import com.his.charge.vo.FeeTypeSumVO;
-import com.baomidou.mybatisplus.extension.service.IService;
 import com.his.common.base.PageResult;
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -128,7 +129,9 @@ public interface FeeRecordService extends IService<BizFeeRecord> {
      */
     int releaseFromBill(List<Long> feeIds);
 
-    /** 本账单名下的记账行（含红冲负行），撤销账单时按这张清单逐行冲减 */
+    /**
+     * 本账单名下的记账行（含红冲负行），撤销账单时按这张清单逐行冲减
+     */
     List<BizFeeRecord> listByBill(Long billId);
 
     /**

@@ -1,5 +1,6 @@
 package com.his.patient.support;
 
+import com.his.patient.enums.PatientDataTableEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import java.util.Collections;
@@ -18,18 +19,7 @@ public final class PatientDataTables {
     public static final Map<String, String> LABELS = build();
 
     private static Map<String, String> build() {
-        Map<String, String> m = new LinkedHashMap<>();
-        m.put("regist", "挂号");
-        m.put("visit", "就诊次");
-        m.put("outpatientRecord", "门诊病历");
-        m.put("prescription", "处方");
-        m.put("charge", "收费");
-        m.put("admission", "住院");
-        m.put("inspection", "检查申请");
-        m.put("laboratory", "检验申请");
-        m.put("treatment", "治疗申请");
-        m.put("inpatientRecord", "住院病历");
-        return Collections.unmodifiableMap(m);
+        return Collections.unmodifiableMap(PatientDataTableEnum.all());
     }
 
     /**

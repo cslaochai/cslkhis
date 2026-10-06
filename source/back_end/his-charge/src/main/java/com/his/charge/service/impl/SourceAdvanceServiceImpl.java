@@ -1,29 +1,28 @@
 package com.his.charge.service.impl;
 
 
-
-
+import com.his.charge.api.MedicalTechGateway;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizPaymentTxnMapper;
-import com.his.charge.service.EmrGateway;
+import com.his.charge.api.EmrGateway;
 import com.his.charge.service.FeeRecordService;
-import com.his.charge.service.MedicalTechGateway;
 import com.his.charge.service.SourceAdvanceService;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.FeeStatusEnum;
 import com.his.common.enums.PayDirectionEnum;
 import com.his.common.enums.PayTxnStatusEnum;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 来源单据推进实现：把记账行的 {@code source_type + source_id} 翻译成"该动哪张临床单据"。

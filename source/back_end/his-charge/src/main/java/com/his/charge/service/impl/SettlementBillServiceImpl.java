@@ -1,48 +1,30 @@
 package com.his.charge.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.charge.api.PatientGateway;
 import com.his.charge.dto.BillQueryPageDTO;
 import com.his.charge.dto.BillSettleUpsertDTO;
 import com.his.charge.dto.BillVoidDTO;
 import com.his.charge.dto.PendingEncounterQueryPageDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.entity.BizInsuranceCatalogRule;
-import com.his.charge.entity.BizPaymentTxn;
-import com.his.charge.entity.BizSettlementBill;
-import com.his.charge.entity.BizSettlementBillItem;
+import com.his.charge.entity.*;
 import com.his.charge.mapper.BizInsuranceCatalogRuleMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.charge.service.FeeRecordService;
 import com.his.charge.service.InsuranceSettlementService;
-import com.his.charge.service.PatientGateway;
 import com.his.charge.service.SettlementBillService;
 import com.his.charge.service.SourceAdvanceService;
-import com.his.charge.vo.BillPreviewVO;
-import com.his.charge.vo.BizFeeRecordVO;
-import com.his.charge.vo.BizSettlementBillDetailVO;
-import com.his.charge.vo.BizSettlementBillItemVO;
-import com.his.charge.vo.BizSettlementBillVO;
-import com.his.charge.vo.PatientBrief;
-import com.his.charge.vo.PendingEncounterVO;
-import com.his.charge.vo.PendingFeeVO;
-import com.his.charge.vo.RefundableLineVO;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.system.service.InsurancePolicyService;
 import com.his.system.utils.UserUtils;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -50,6 +32,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.function.Function;
 
 /**
  * 结算账单实现（L2）
@@ -787,7 +776,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
      * 结算方式与医保口径：调用方没指定时按患者有没有医保号推。
      */
     private PatientInsurance resolveInsurance(Long patientId, Integer settlementMode) {
-        PatientBrief patient = patientId == null ? null : patientGateway.findPatient(patientId);
+        PatientBriefVO patient = patientId == null ? null : patientGateway.findPatient(patientId);
         boolean hasInsurance = patient != null && StringUtils.hasText(patient.getMedicalInsuranceNo());
         SettlementModeEnum mode = SettlementModeEnum.getByCode(settlementMode);
         if (mode == null) {

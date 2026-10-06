@@ -1,7 +1,6 @@
 package com.his.appoint.service.impl;
 
 
-import com.his.charge.service.AppointChargeGateway;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -9,63 +8,34 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.appoint.dto.AppointCheckInUpdateDTO;
-import com.his.appoint.dto.InsuranceEstimateDTO;
-import com.his.appoint.dto.QueueCallNextDTO;
-import com.his.appoint.dto.QueueQueryDTO;
-import com.his.appoint.dto.QueueTodayQueryDTO;
-import com.his.appoint.dto.DoctorStatusBatchQueryDTO;
-import com.his.appoint.dto.DoctorStatusSetDTO;
-import com.his.appoint.dto.OpdLogQueryDTO;
-import com.his.appoint.dto.TriageUpsertDTO;
+import com.his.appoint.dto.*;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.entity.BizQueue;
 import com.his.appoint.entity.BizSchedule;
 import com.his.appoint.entity.BizTriageRecord;
-import com.his.appoint.enums.AppointStatusEnum;
-import com.his.appoint.enums.VisitTypeEnum;
-import com.his.appoint.enums.QueueStatusEnum;
-import com.his.appoint.enums.QueueTypeEnum;
-import com.his.appoint.enums.OpdLogStatusEnum;
-import com.his.appoint.enums.TriageLevelEnum;
-import com.his.appoint.mapper.BizAppointInfoMapper;
-import com.his.appoint.mapper.BizQueueMapper;
-import com.his.appoint.mapper.BizScheduleMapper;
-import com.his.appoint.mapper.OpdLogMapper;
-import com.his.appoint.mapper.BizTriageRecordMapper;
+import com.his.appoint.enums.*;
+import com.his.appoint.mapper.*;
 import com.his.appoint.service.DoctorStatusCacheService;
 import com.his.appoint.service.QueueService;
 import com.his.appoint.service.ScheduleService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
-import com.his.appoint.support.PatientVisitSummaryUpdater;
-import com.his.appoint.vo.DoctorStatsVO;
-import com.his.appoint.vo.InsuranceEstimateVO;
-import com.his.appoint.vo.BizQueueListVO;
-import com.his.appoint.vo.ConsultingPatientVO;
-import com.his.appoint.vo.DoctorConsultingVO;
-import com.his.appoint.vo.PatientQueueVO;
-import com.his.appoint.vo.QueueCallNextVO;
-import com.his.appoint.vo.QueueStatsVO;
-import com.his.appoint.vo.DoctorStatusVO;
-import com.his.appoint.vo.OnDutyStaffVO;
-import com.his.appoint.vo.OpdLogListVO;
-import com.his.appoint.vo.OpdLogStatsVO;
-import com.his.appoint.vo.TriageDetailVO;
-import com.his.appoint.vo.TriageRecordVO;
+import com.his.appoint.vo.*;
+import com.his.charge.api.AppointChargeGateway;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.patient.service.PatientGuardianService;
+import com.his.patient.service.PatientService;
 import com.his.system.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.SysClinicRoom;
 import com.his.system.service.InsurancePolicyService;
 import com.his.system.service.SysClinicRoomService;
+import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,44 +55,42 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> implements QueueService {
 
-    private final ApplicationContext applicationContext;
+    private final PatientService patientService;
+
+    private final BizScheduleMapper bizScheduleMapper;
+
+    private final RedisSequenceService redisSequenceService;
+
     private final BizAppointInfoMapper bizAppointInfoMapper;
-    /**
-     * 收费查询能力通过 SPI 获取，实现位于 his-charge
-     */
+
     private final ObjectProvider<AppointChargeGateway> appointChargeGateway;
+
     private final InsurancePolicyService insurancePolicyService;
+
     private final DoctorStatusCacheService doctorStatusCacheService;
+
     private final PatientGuardianService patientGuardianService;
+
     private final SysClinicRoomService sysClinicRoomService;
+
     private final OpdLogMapper opdLogMapper;
+
     private final BizTriageRecordMapper bizTriageRecordMapper;
-    /**
-     * 日终结转的懒触发。进门诊页面顺手把「昨天及更早」的遗留收掉，
-     * 免得「昨天签到没看上」的行一直挂在今天的口径里（详见 {@link DayEndSettleTrigger}）。
-     */
+
     private final DayEndSettleTrigger dayEndSettleTrigger;
-    private final PatientVisitSummaryUpdater patientVisitSummaryUpdater;
-    private final com.his.system.service.SysMessageService sysMessageService;
-    /**
-     * 今日在岗（sql/196）：分诊记录上的「当班护士」必须来自当天的护理排班，
-     * 而不是「谁登的浏览器就记谁」。用 @Lazy 是因为 ScheduleServiceImpl 反向依赖了 AppointService。
-     */
+
+    private final SysMessageService sysMessageService;
+
     @Lazy
     private final ScheduleService scheduleService;
 
     @Override
     public List<BizQueueListVO> getTodayQueueList(QueueTodayQueryDTO queueQueryDTO) {
-        // 先收遗留：否则昨天的候诊行（若 visit_date 有脏值）或昨天的挂号会污染今天的口径
         dayEndSettleTrigger.ensureSettledUpToYesterday();
         CurrentUser currentUser = UserUtils.getCurrentUser();
         if (currentUser == null || currentUser.getDeptId() == null) {
             return Collections.emptyList();
         }
-        // 「今日队列」的今日 = **就诊日（visit_date）**，不是「到院日（arrive_time）」。
-        // 原先按 arrive_time 收口，与叫号（callNext 按 visit_date）是两套口径：
-        // 挂了隔日号当天签到的患者会出现在列表里，医生点「接诊下一位」却报「没有候诊患者」。
-        // 全项目「今日就诊」以 visit_date 为准（同 PatientTodayVisitProviderImpl）。
         LambdaQueryWrapper<BizQueue> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizQueue::getDeptId, currentUser.getDeptId())
                 .eq(BizQueue::getDoctorId, currentUser.getEmployeeId())
@@ -139,14 +107,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
         return resultList;
     }
 
-    /**
-     * 队列实体 → 列表 VO（补挂号侧快照字段）。
-     *
-     * <p>列表查询与「叫号回执」共用这一份：两处各写一遍的后果是回执少带了
-     * {@code registId/visitType/revisitRecordId}，前端拿到回执却挂不上病历。
-     *
-     * @return 无挂号记录时返回 null（该行不可接诊，调用方跳过）
-     */
     private BizQueueListVO toBizQueueListVO(BizQueue queue) {
         if (queue == null || queue.getRegistId() == null) {
             return null;
@@ -159,7 +119,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
             vo.setAge(registInfo.getAge());
             vo.setSettlementType(registInfo.getSettlementType());
             vo.setVisitType(registInfo.getVisitType());
-            // 批次E/E6：复诊带回原病历ID
             vo.setRevisitRecordId(registInfo.getRevisitRecordId());
             vo.setMedicalInsuranceType(registInfo.getMedicalInsuranceType());
             vo.setRegistStatus(registInfo.getRegistStatus());
@@ -180,7 +139,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
         if (vo.getRoomId() != null || registInfo == null || registInfo.getScheduleId() == null) {
             return;
         }
-        BizSchedule schedule = applicationContext.getBean(BizScheduleMapper.class)
+        BizSchedule schedule = bizScheduleMapper
                 .selectById(registInfo.getScheduleId());
         if (schedule != null) {
             vo.setRoomId(schedule.getRoomId());
@@ -191,8 +150,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
     @Override
     public PageResult<BizQueueListVO> listPage(QueueQueryDTO queueQueryDTO) {
         CurrentUser currentUser = UserUtils.getCurrentUser();
-        // 诊区：显式传了就用传的（分诊台要能切诊区），否则收窄到登录用户科室（保持原语义）。
-        // 两者都没有 → 返回空，由前端提示「请先选择诊区」，不要悄悄给全院数据。
         Long deptId = queueQueryDTO.getDeptId() != null
                 ? queueQueryDTO.getDeptId()
                 : (currentUser != null ? currentUser.getDeptId() : null);
@@ -225,8 +182,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
                     .le(BizQueue::getArriveTime, queueQueryDTO.getDate() + " 23:59:59");
         }
 
-        // 关键词：姓名/患者号/排队号在队列表上；就诊号在挂号表上，先取 id 集合再 OR 进来。
-        // 必须下推到 SQL —— 拿当前页在内存里 filter 会「翻页后结果静默变少」。
         if (StrUtil.isNotBlank(queueQueryDTO.getKeyword())) {
             String kw = queueQueryDTO.getKeyword().trim();
             List<Long> registIds = bizAppointInfoMapper.selectList(new LambdaQueryWrapper<BizAppointInfo>()
@@ -244,9 +199,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
             });
         }
 
-        // 候诊顺序就是叫号顺序：等级优先，同级看排队号。
-        // IFNULL(...,4) 是给历史脏数据兜底（签到不写 triage_level 的旧记录为 NULL）——
-        // 直接按 triage_level ASC 的话 NULL 在 MySQL 里排最前，会把 1 级危重挤到后面去。
         wrapper.last("ORDER BY IFNULL(triage_level, 4) ASC, sequence_no ASC");
 
         Page<BizQueue> page = this.page(new Page<>(queueQueryDTO.getPageNum(), queueQueryDTO.getPageSize()), wrapper);
@@ -293,15 +245,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
         return appointInfo == null ? null : appointInfo.getPatientId();
     }
 
-    /**
-     * 这张号的挂号费是否已结清。
-     *
-     * <p>口径来自结算层（L2）而不是收费单状态列：<b>没有账单就是没有欠账</b>（复诊免收、
-     * 或建单时收费模块缺席），有账单则必须是「3-已支付」。旧模型为了在这里放行免收号，
-     * 必须在支付层造一张 0 元收费单，那是拿假流水满足真门禁。
-     *
-     * @param gateway 收费 SPI 实现，可能为空（未引入 his-charge）
-     */
     private boolean isRegistFeeSettled(AppointChargeGateway gateway, BizAppointInfo appoint) {
         if (appoint.getBillId() == null) {
             return true;
@@ -336,9 +279,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
                 ? appointInfo.getVisitDate()
                 : LocalDate.now();
         // 就诊日必须就是今天。签到的产物是「今天这个医生队列里的一行」，
-        // 而全项目的「今天该看谁」一律按 visit_date 取号 —— 若放行跨日签到，
-        // 会生成一行 visit_date=过去的队列：分诊台/医生站/叫号**都看不到它**，
-        // 患者排了队却永远叫不到，页面上却没有任何异常。宁可当场拒绝并给出路。
         LocalDate today = LocalDate.now();
         if (!visitDate.equals(today)) {
             throw new BusinessException("该挂号就诊日为 " + visitDate + "，"
@@ -371,17 +311,10 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
         queue.setQueueType(QueueTypeEnum.NORMAL.getCode());
         queue.setQueueStatus(QueueStatusEnum.WAITING.getCode());
         queue.setArriveTime(LocalDateTime.now());
-        // 签到即入队，并显式给 4 级（非急）默认等级。
-        // 分诊台的职责是「把危重提上来」，不是「放行普通患者」—— 不写默认等级的话，
-        // 护士不在岗/忙不过来时全院患者都停在「未分诊」，医生叫号直接被拒，门诊就此停摆。
-        // triage_status 仍留 0（表示这份分级没经护士核验），只用于统计和页面提示，不再拦接诊。
         queue.setTriageLevel(TriageLevelEnum.NON_URGENT.getCode());
         queue.setTriageStatus(0);
-        // 诊室快照：唯一来源是**排班**（医生-诊室绑定在排班上）。入队时就写下来，
-        // 分诊卡只读展示、叫号屏按它提示诊室；分诊台不再有改诊室的入口 ——
-        // 护士要换诊室去改排班，改排班时会把该班次未结束的队列行一起搬（见 ScheduleServiceImpl）。
         BizSchedule schedule = appointInfo.getScheduleId() != null
-                ? applicationContext.getBean(BizScheduleMapper.class).selectById(appointInfo.getScheduleId())
+                ? bizScheduleMapper.selectById(appointInfo.getScheduleId())
                 : null;
         if (schedule != null) {
             queue.setRoomId(schedule.getRoomId());
@@ -405,7 +338,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
 
         // 根据排班ID获取诊室信息，取呼叨代号
         if (scheduleId != null) {
-            BizScheduleMapper scheduleMapper = applicationContext.getBean(BizScheduleMapper.class);
+            BizScheduleMapper scheduleMapper = bizScheduleMapper;
             BizSchedule schedule = scheduleMapper.selectById(scheduleId);
             if (schedule != null && schedule.getRoomId() != null) {
                 SysClinicRoom room = sysClinicRoomService.getById(schedule.getRoomId());
@@ -422,7 +355,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
 
         // 生成序号（当天该诊室的序号，Redis 递增）
         String dateStr = LocalDate.now().toString().replace("-", "").substring(4);
-        RedisSequenceService redisSequenceService = applicationContext.getBean(RedisSequenceService.class);
         long seq = redisSequenceService.next("queue:room:" + prefix + ":" + dateStr);
         return prefix + String.format("%03d", seq);
     }
@@ -462,16 +394,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public QueueCallNextVO callNext(Long deptId, Long doctorId) {
-        // 只叫「今天该看 + 还在候诊 + 归我」的人：
-        // ① visit_date = 今天（就诊日口径，与医生站列表 getTodayQueueList 一致）；
-        // ② queue_status = 2 候诊中，且 regist_id 非空（没有挂号单接不了诊，挂不上病历）；
-        // ③ **doctor_id = 我** ← 本轮修掉的真缺陷。取号原先只按 dept_id，
-        //    而医生站列表按 dept_id + doctor_id 过滤：同科室只要还有第二个医生候诊，
-        //    A 医生点「接诊下一位」就会把 B 医生的患者接走（并把 doctor_id 改写成 A）。
-        //    分诊台把患者分给谁，谁才叫得到 —— 取号范围必须等于展示范围。
-        // ④ 不再要求 triage_status = 1（签到已给 4 级默认等级）；危重优先由 callSpecific 把关。
-        // ⑤ 排序 IFNULL(triage_level, 4) ASC, sequence_no ASC：1 级危重可插队；
-        //    历史脏数据（triage_level 为 NULL）落在 4 级位置，不会把 1 级危重挤后面。
         LambdaQueryWrapper<BizQueue> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizQueue::getDeptId, deptId)
                 .eq(BizQueue::getDoctorId, doctorId)
@@ -509,7 +431,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
         }
 
         // 抢占成功后再收上一位：同一医生同一时刻只允许一条「就诊中」。
-        // 放在 CAS 之后 —— CAS 失败回滚时上一位不受影响，不会把没看完的患者误标结束。
         BizQueue previous = closeConsultingOf(deptId, doctorId, queue.getId());
         if (doctorId != null) {
             // 更新医生接诊状态到Redis
@@ -542,10 +463,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
             throw new BusinessException("只能呼叫候诊中的患者");
         }
 
-        // 危重优先是这套队列**唯一保留的硬闸门**：队列里还有 1/2 级未接诊的患者时，
-        // 不允许人为跳过他们去叫普通患者（三甲评审要求危重优先处置）。
-        // 注意只拦 1/2 级、且只拦「绕过」这一种情形 —— 目标本身就是危重时放行，
-        // 同级之间医生可自由挑人。3/4 级之间不做限制，医生按现场情况安排。
         Integer targetLevel = queue.getTriageLevel() != null
                 ? queue.getTriageLevel() : TriageLevelEnum.NON_URGENT.getCode();
         if (targetLevel > TriageLevelEnum.EMERGENCY.getCode()) {
@@ -584,16 +501,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
 
     /**
      * 结束该医生所有还在「就诊中」的队列 —— 保证同一医生同一时刻只有一条就诊中。
-     *
-     * <p>为什么必须收口在服务端：队列 3 → 4 原先只有「病历结诊提交」一个出口
-     * （见 {@code EmrServiceImpl} 的 isSubmit 分支），医生不点结诊就连点「接诊下一位」
-     * 会累积出多条「就诊中」；前端 pickQueueRow 取第一条就会选错人，
-     * 队列统计与「当前接诊患者」也一起失真。
-     *
-     * @param excludeQueueId 排除本次刚抢到的这一条（它此刻已是就诊中，不能被自己关掉）
-     * @return 被结束的**今日**那一条（多条时取最近叫号的一条），供回执如实告知医生；
-     * 只结束了跨日残留时返回 null —— 昨天的患者不该出现在今天的叫号提示里
-     * （医生会疑惑「我今天没看这个人」），但状态照样要清掉，不能让它一直挂着。
      */
     private BizQueue closeConsultingOf(Long deptId, Long doctorId, Long excludeQueueId) {
         if (deptId == null || doctorId == null) {
@@ -688,9 +595,11 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
             if (registInfo != null) {
                 registInfo.setRegistStatus(AppointStatusEnum.COMPLETED.getCode()); // 已完成
                 bizAppointInfoMapper.updateById(registInfo);
-                // 结诊即就诊事实：回写患者主档的首次/最近就诊冗余组（患者中心列表展示用）。
-                // 就诊时间取结诊时刻（now，含时分秒）；科室/医生取挂号单快照（ID+名成对）。
-                patientVisitSummaryUpdater.onVisitCompleted(registInfo.getPatientId(), queue.getEndTime(),
+
+                patientService.markLastVisit(registInfo.getPatientId(), queue.getEndTime(),
+                        registInfo.getDeptId(), registInfo.getDeptName(),
+                        registInfo.getDoctorId(), registInfo.getDoctorName());
+                patientService.markFirstVisit(registInfo.getPatientId(), queue.getEndTime(),
                         registInfo.getDeptId(), registInfo.getDeptName(),
                         registInfo.getDoctorId(), registInfo.getDoctorName());
             }
@@ -955,7 +864,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
     @Override
     public List<DoctorConsultingVO> getDoctorConsultingInfo(Long deptId) {
         // 查询今日排班，获取科室下的医生
-        BizScheduleMapper scheduleMapper = applicationContext.getBean(BizScheduleMapper.class);
+        BizScheduleMapper scheduleMapper = bizScheduleMapper;
         LambdaQueryWrapper<BizSchedule> scheduleWrapper = new LambdaQueryWrapper<>();
         scheduleWrapper.eq(BizSchedule::getDeptId, deptId)
                 .eq(BizSchedule::getScheduleDate, LocalDate.now());
@@ -1021,7 +930,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
                 .eq(BizAppointInfo::getDeptId, deptId)));
 
         // 从Redis获取坐诊医生数量
-        BizScheduleMapper scheduleMapper = applicationContext.getBean(BizScheduleMapper.class);
+        BizScheduleMapper scheduleMapper = bizScheduleMapper;
         LambdaQueryWrapper<BizSchedule> scheduleWrapper = new LambdaQueryWrapper<>();
         scheduleWrapper.eq(BizSchedule::getDeptId, deptId)
                 .eq(BizSchedule::getScheduleDate, LocalDate.now());
@@ -1221,7 +1130,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
         if (roomId == null && queue.getRegistId() != null) {
             BizAppointInfo regist = bizAppointInfoMapper.selectById(queue.getRegistId());
             BizSchedule schedule = regist != null && regist.getScheduleId() != null
-                    ? applicationContext.getBean(BizScheduleMapper.class).selectById(regist.getScheduleId())
+                    ? bizScheduleMapper.selectById(regist.getScheduleId())
                     : null;
             if (schedule != null) {
                 roomId = schedule.getRoomId();

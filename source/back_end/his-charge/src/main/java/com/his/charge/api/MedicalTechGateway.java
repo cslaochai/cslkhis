@@ -1,8 +1,8 @@
-package com.his.charge.service;
+package com.his.charge.api;
 
-import com.his.charge.vo.InspectionRecordBrief;
-import com.his.charge.vo.LabResultBrief;
-import com.his.charge.vo.LaboratoryRecordBrief;
+import com.his.charge.vo.InspectionRecordBriefVO;
+import com.his.charge.vo.LabResultBriefVO;
+import com.his.charge.vo.LaboratoryRecordBriefVO;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -30,7 +30,7 @@ public interface MedicalTechGateway {
      * @param patientId 患者ID（可空，返回空列表）
      * @param visitDate 就诊日期（可空 = 不限日期）
      */
-    List<LaboratoryRecordBrief> listLaboratoryRecords(Long patientId, LocalDate visitDate);
+    List<LaboratoryRecordBriefVO> listLaboratoryRecords(Long patientId, LocalDate visitDate);
 
     /**
      * 某患者某就诊日的检验结果项。
@@ -38,12 +38,12 @@ public interface MedicalTechGateway {
      * <p>实现方内部按「记录 → 结果项」两段查：结果项挂在检验记录下，
      * 收费域不该知道这张父子关系，所以对外是一次平铺查询。</p>
      */
-    List<LabResultBrief> listLabResults(Long patientId, LocalDate visitDate);
+    List<LabResultBriefVO> listLabResults(Long patientId, LocalDate visitDate);
 
     /**
      * 某患者某就诊日的检查记录。
      */
-    List<InspectionRecordBrief> listInspections(Long patientId, LocalDate visitDate);
+    List<InspectionRecordBriefVO> listInspections(Long patientId, LocalDate visitDate);
 
     /**
      * 缴费成功后按检查申请单幂等创建执行记录（已存在则什么都不做）。

@@ -27,7 +27,7 @@ import com.his.emr.entity.*;
 import com.his.emr.enums.*;
 import com.his.emr.mapper.*;
 import com.his.emr.service.AiDraftDiffService;
-import com.his.emr.service.ApplyExecStatusGateway;
+import com.his.emr.api.ApplyExecStatusGateway;
 import com.his.emr.service.EmrService;
 import com.his.emr.service.QualityControlService;
 import com.his.emr.enums.QcRecordSourceEnum;

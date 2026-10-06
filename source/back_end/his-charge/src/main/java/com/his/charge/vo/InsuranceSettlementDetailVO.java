@@ -1,15 +1,16 @@
 package com.his.charge.vo;
 
-import com.his.charge.entity.BizSettlementBillItem;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.charge.entity.BizSettlementBillItem;
+import lombok.Data;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import lombok.Data;
 
 /**
  * 医保结算清单详情 VO

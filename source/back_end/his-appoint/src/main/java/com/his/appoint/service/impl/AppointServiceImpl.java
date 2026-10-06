@@ -1,7 +1,6 @@
 package com.his.appoint.service.impl;
 
 
-import com.his.charge.service.AppointChargeGateway;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -19,29 +18,30 @@ import com.his.appoint.mapper.BizQueueMapper;
 import com.his.appoint.mapper.BizScheduleMapper;
 import com.his.appoint.mapper.BizScheduleSlotMapper;
 import com.his.appoint.service.AppointService;
-import com.his.appoint.service.MedicalRecordRefGateway;
+import com.his.appoint.api.MedicalRecordRefGateway;
 import com.his.appoint.service.RevisitFeePolicyService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
-import com.his.appoint.support.PatientVisitSummaryUpdater;
 import com.his.appoint.vo.AppointStatusCountVO;
 import com.his.appoint.vo.BizAppointInfoListVO;
 import com.his.appoint.vo.RevisitFeePreviewVO;
 import com.his.appoint.vo.RevisitRecordSelectVO;
+import com.his.charge.api.AppointChargeGateway;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.AttendModeEnum;
 import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.PatientGuardianService;
-import com.his.system.provider.DeptScopeProvider;
-import com.his.system.utils.UserUtils;
-import com.his.system.entity.CurrentUser;
+import com.his.patient.service.PatientService;
 import com.his.system.entity.BizStaffSchedule;
+import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffScheduleService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -74,58 +74,18 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
     private final RedisSequenceService redisSequenceService;
     private final BizPatientMapper patientMapper;
     private final PatientGuardianService patientGuardianService;
-    /**
-     * 挂号单上的「班别」是历史快照：排班表已不存班别，只能按 shift_id 从班次字典取
-     */
+    private final PatientService patientService;
     private final ShiftService shiftService;
-    /**
-     * 岗位排班事实：号源放不放由它决定（出诊计划只是「这个班放号」，不代表人今天在场）
-     */
     private final StaffScheduleService staffScheduleService;
-    /**
-     * 收费能力通过 SPI 获取，实现位于 his-charge
-     */
     private final ObjectProvider<AppointChargeGateway> appointChargeGateway;
-
-    /**
-     * 病历引用能力通过 SPI 获取，实现位于 his-emr（复诊关联原病历校验）
-     */
     private final ObjectProvider<MedicalRecordRefGateway> medicalRecordRefGateway;
-
-    /**
-     * 复诊号收多少钱的唯一判定入口（原来写死 {@code waived = revisit}）
-     */
     private final RevisitFeePolicyService revisitFeePolicyService;
-
-    /**
-     * 结诊后回写患者主档「首次/最近就诊」冗余字段（患者中心列表展示用）
-     */
-    private final PatientVisitSummaryUpdater patientVisitSummaryUpdater;
-
-    /**
-     * 日终结转的懒触发：挂号的三个读接口（列表/统计/看板）在取数前顺手把「昨天及更早」的遗留收掉。
-     */
     private final DayEndSettleTrigger dayEndSettleTrigger;
 
     private static BigDecimal nzAmount(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
     }
 
-    /**
-     * 就诊日已过 → 返回拒绝理由，未过期返回 null。
-     *
-     * <p>状态闸门（{@link AppointStatusEnum#isCancelable}）只管「诊疗发没发生」，管不到「日期过没过去」：
-     * 日终结转没跑的那天（夜里关机、停诊、导数据），昨天的号还停在 1/2，于是既能退又能改约。
-     * 而这两件事在业务上都不成立 —— 号源属于过去的日期，退了也还不回池（见 {@code DayEndSettleMapper}
-     * 类注释「为什么不释放号源」），改了等于把昨天的就诊挪到今天。
-     *
-     * <p>刻意<b>只到「日」不到「时段」</b>：当天下午的号没来看，傍晚来窗口退钱是合理诉求，
-     * 用 slotEnd 卡死会把这种正常操作变成 400。日终结转同样是次日 00:10 才收，两边口径一致。
-     *
-     * <p>患者昨天没来、今天要把挂号费退掉，走的不是退号而是<b>退费申请</b>
-     * （{@code /charge/refund/applyRefund}：申请 → 审核 → 执行，全程留痕、允许跨期），
-     * 挂号行保持「爽约/未就诊」不动 —— 那是就诊事实，改了医保和报表都对不上。
-     */
     private static String visitDatePastReason(BizAppointInfo regist, String action) {
         LocalDate visitDate = regist.getVisitDate();
         if (visitDate == null || !visitDate.isBefore(LocalDate.now())) {
@@ -1190,7 +1150,10 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
         // 操作台把状态改成「已就诊」也是结诊事实，与队列结诊（completeQueue）走同一份回写：
         // 漏掉这条路径，从挂号管理里手工完结的挂号永远不会出现在患者的「最近/首次就诊」上。
         if (saved && targetStatus == AppointStatusEnum.COMPLETED.getCode()) {
-            patientVisitSummaryUpdater.onVisitCompleted(regist.getPatientId(), LocalDateTime.now(),
+            patientService.markLastVisit(regist.getPatientId(), LocalDateTime.now(),
+                    regist.getDeptId(), regist.getDeptName(),
+                    regist.getDoctorId(), regist.getDoctorName());
+            patientService.markFirstVisit(regist.getPatientId(), LocalDateTime.now(),
                     regist.getDeptId(), regist.getDeptName(),
                     regist.getDoctorId(), regist.getDoctorName());
         }

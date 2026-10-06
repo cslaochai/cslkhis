@@ -1,6 +1,5 @@
 package com.his.charge.support;
 
-import com.his.charge.dto.FeeBookDTO;
 import com.his.common.enums.PaymentItemTypeEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -18,11 +17,17 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class FeeCatalogResolver {
 
-    /** 自费：不参与统筹分摊 */
+    /**
+     * 自费：不参与统筹分摊
+     */
     public static final int SELF_PAY = 0;
-    /** 甲类：全额纳入报销范围（按政策比例） */
+    /**
+     * 甲类：全额纳入报销范围（按政策比例）
+     */
     public static final int CLASS_A = 1;
-    /** 乙类：先由个人负担先行自付比例，剩余再按比例报销 */
+    /**
+     * 乙类：先由个人负担先行自付比例，剩余再按比例报销
+     */
     public static final int CLASS_B = 2;
 
     /**

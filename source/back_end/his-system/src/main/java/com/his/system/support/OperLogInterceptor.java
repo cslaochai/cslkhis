@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
  * <p><b>登录不在这儿记：</b>/auth/login 等由 {@link com.his.system.service.SysLoginLogService} 单独记登录日志，两本账不重复。
  *
  * <p><b>失败判定：</b>业务异常被 {@code GlobalExceptionHandler} 兜成 HTTP 200 + code=500，
- * 拦截面上的 {@code ex} 会是 null —— 所以配了 {@link OperLogExceptionMarker} 把异常挂到请求属性上，
+ * 拦截面上的 {@code ex} 会是 null —— 所以配了 {@link OperLogExceptionResolver} 把异常挂到请求属性上，
  * 这里读它才是准的（读不到再退回 HTTP 状态码 >= 400）。
  */
 @Slf4j

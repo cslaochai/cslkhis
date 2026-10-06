@@ -1,4 +1,4 @@
-package com.his.appoint.service;
+package com.his.appoint.api;
 
 import lombok.Data;
 

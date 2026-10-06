@@ -4,6 +4,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.enums.InpatientRecordTypeEnum;
+import com.his.patient.enums.RecordStructuredGroupEnum;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -77,7 +78,7 @@ public final class RecordStructuredFields {
      */
     public static final String GROUP_TRANSFUSION = "transfusion";
 
-    private static final Map<String, String> GROUP_LABELS = new LinkedHashMap<>();
+    private static final Map<String, String> GROUP_LABELS = RecordStructuredGroupEnum.all();
     /**
      * 所有文书都计入的要素（26 项）
      */
@@ -171,16 +172,7 @@ public final class RecordStructuredFields {
             new KeyElement("efficacy", "疗效评估与反应处理", GROUP_TRANSFUSION, BizInpatientRecord::getTreatmentPlan)
     );
 
-    static {
-        GROUP_LABELS.put(GROUP_HISTORY, "病史要素");
-        GROUP_LABELS.put(GROUP_VITAL, "生命体征");
-        GROUP_LABELS.put(GROUP_EXAM, "体格检查");
-        GROUP_LABELS.put(GROUP_CONCLUSION, "诊疗过程与结论");
-        GROUP_LABELS.put(GROUP_CONSULT, "会诊要素");
-        GROUP_LABELS.put(GROUP_TRANSFER, "转科要素");
-        GROUP_LABELS.put(GROUP_OPERATION, "手术要素");
-        GROUP_LABELS.put(GROUP_TRANSFUSION, "输血要素");
-    }
+    // 分组中文名见 RecordStructuredGroupEnum（GROUP_LABELS 由其派生）
 
     /**
      * 该文书类型应具备的结构化要素清单（分母）。

@@ -1,8 +1,9 @@
-package com.his.charge.service;
+package com.his.charge.api;
 
+import com.his.charge.service.FeeRecordService;
 import com.his.charge.support.ChargeDeptResolver;
-import com.his.charge.vo.AdmissionBrief;
-import com.his.charge.vo.PatientBrief;
+import com.his.charge.vo.AdmissionBriefVO;
+import com.his.charge.vo.PatientBriefVO;
 
 /**
  * 患者域对收费域提供的只读端口（依赖倒置）。
@@ -32,7 +33,7 @@ public interface PatientGateway {
      * @param patientId 患者ID（可空，为空直接返回 null）
      * @return 不存在时返回 {@code null}
      */
-    PatientBrief findPatient(Long patientId);
+    PatientBriefVO findPatient(Long patientId);
 
     /**
      * 按入院ID取入院摘要。
@@ -40,7 +41,7 @@ public interface PatientGateway {
      * @param admissionId 入院ID（可空，为空直接返回 null）
      * @return 不存在时返回 {@code null}
      */
-    AdmissionBrief findAdmission(Long admissionId);
+    AdmissionBriefVO findAdmission(Long admissionId);
 
     /**
      * 按住院医嘱单号反查开单科室（收费明细的科室归属反查入口）。

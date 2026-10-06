@@ -3,9 +3,9 @@ package com.his.appoint.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.mapper.BizAppointInfoMapper;
-import com.his.charge.service.AppointGateway;
+import com.his.charge.api.AppointGateway;
 import com.his.charge.support.ChargeDeptResolver;
-import com.his.charge.vo.RegistBrief;
+import com.his.charge.vo.RegistBriefVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +23,7 @@ public class AppointGatewayImpl implements AppointGateway {
     private final BizAppointInfoMapper appointInfoMapper;
 
     @Override
-    public RegistBrief findRegist(Long registId) {
+    public RegistBriefVO findRegist(Long registId) {
         if (registId == null) {
             return null;
         }
@@ -42,11 +42,11 @@ public class AppointGatewayImpl implements AppointGateway {
                 : new ChargeDeptResolver.DeptRef(row.getDeptId(), row.getDeptName());
     }
 
-    private RegistBrief toBrief(BizAppointInfo e) {
+    private RegistBriefVO toBrief(BizAppointInfo e) {
         if (e == null) {
             return null;
         }
-        RegistBrief brief = new RegistBrief();
+        RegistBriefVO brief = new RegistBriefVO();
         brief.setId(e.getId());
         brief.setRegistNo(e.getRegistNo());
         brief.setPatientId(e.getPatientId());

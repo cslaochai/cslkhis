@@ -1,4 +1,4 @@
-package com.his.charge.support;
+package com.his.charge.utils;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;

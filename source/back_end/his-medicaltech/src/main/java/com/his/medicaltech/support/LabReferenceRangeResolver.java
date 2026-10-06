@@ -35,8 +35,6 @@ public class LabReferenceRangeResolver {
 
     private final SysLaboratoryItemDetailMapper detailMapper;
 
-    // 用 Collections.emptyMap() 而非 Map.of()：不可变集合的 get(null) 会抛 NPE，
-    // 而这里的 key 来自检验项目码/名称，脏数据下可能为 null。
     private volatile Map<String, String> byCode = Collections.emptyMap();
     private volatile Map<String, String> byName = Collections.emptyMap();
     private final AtomicLong loadedAt = new AtomicLong(0L);

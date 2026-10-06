@@ -12,6 +12,7 @@ import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
 import com.his.emr.mapper.BizPrescriptionMapper;
+import com.his.ai.enums.DrugFrequencyEnum;
 import com.his.patient.service.PatientGuardianService;
 import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
@@ -22,9 +23,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 患者端用药说明实现。
@@ -83,11 +82,6 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
      */
     private static final String CAUTION_MISSED =
             "漏服时：想起来就补一次；如果已经快到下一次吃药的时间，就跳过这次，不要一次吃两份。";
-
-    /**
-     * 频次词典：处方上既写「一日三次」也写「tid」，这里只做同义改写，不做任何推断
-     */
-    private static final Map<String, String> FREQUENCY_DICT = frequencyDict();
 
     private final BizPrescriptionMapper prescriptionMapper;
 
@@ -184,7 +178,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
             return null;
         }
         String raw = frequency.trim();
-        String hit = FREQUENCY_DICT.get(raw.toLowerCase());
+        String hit = DrugFrequencyEnum.getText(raw);
         if (StringUtils.hasText(hit)) {
             return hit;
         }
@@ -202,25 +196,6 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
             result = result.replace(cn[i], String.valueOf(i));
         }
         return result;
-    }
-
-    private static Map<String, String> frequencyDict() {
-        Map<String, String> dict = new LinkedHashMap<>();
-        dict.put("qd", "每天 1 次");
-        dict.put("bid", "每天 2 次");
-        dict.put("tid", "每天 3 次");
-        dict.put("qid", "每天 4 次");
-        dict.put("qn", "每晚 1 次");
-        dict.put("hs", "睡前 1 次");
-        dict.put("qod", "隔天 1 次");
-        dict.put("biw", "每周 2 次");
-        dict.put("q4h", "每 4 小时 1 次");
-        dict.put("q6h", "每 6 小时 1 次");
-        dict.put("q8h", "每 8 小时 1 次");
-        dict.put("q12h", "每 12 小时 1 次");
-        dict.put("prn", "不舒服时按需使用");
-        dict.put("st", "立即使用 1 次");
-        return dict;
     }
 
     // ---------------------------------------------------------------- 词典层

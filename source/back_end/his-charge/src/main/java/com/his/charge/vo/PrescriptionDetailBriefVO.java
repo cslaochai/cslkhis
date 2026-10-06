@@ -1,6 +1,6 @@
 package com.his.charge.vo;
 
-import com.his.charge.service.EmrGateway;
+import com.his.charge.api.EmrGateway;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -11,14 +11,20 @@ import lombok.NoArgsConstructor;
  */
 @Data
 @NoArgsConstructor
-public class PrescriptionDetailBrief {
+public class PrescriptionDetailBriefVO {
 
-    /** 处方明细ID */
+    /**
+     * 处方明细ID
+     */
     private Long id;
 
-    /** 所属处方ID */
+    /**
+     * 所属处方ID
+     */
     private Long prescriptionId;
 
-    /** 药品名（诊断依据关键词匹配的素材） */
+    /**
+     * 药品名（诊断依据关键词匹配的素材）
+     */
     private String drugName;
 }

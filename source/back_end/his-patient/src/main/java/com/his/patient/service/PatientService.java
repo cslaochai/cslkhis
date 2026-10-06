@@ -11,6 +11,7 @@ import com.his.patient.vo.PatientDetailVO;
 import com.his.patient.vo.PatientRegisterVO;
 import com.his.patient.vo.PatientVO;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -101,4 +102,17 @@ public interface PatientService extends IService<BizPatient> {
      * 校验不通过时抛业务异常，文案即原来直接返回给前端的提示。
      */
     PatientRegisterVO register(PatientRegisterDTO dto);
+
+    /**
+     * 结诊回写「最近就诊」冗余组（last_visit_*）。仅把 SQL 落库（WHERE 条件见
+     * {@code BizPatientMapper#markLastVisit}，一处定义不重复判断）；失败抛异常由调用方处理。
+     */
+    void markLastVisit(Long patientId, LocalDateTime visitTime, Long deptId, String deptName,
+                       Long doctorId, String doctorName);
+
+    /**
+     * 结诊回写「首次就诊」冗余组（first_visit_*）。仅当尚无首次就诊或本次更早时不覆盖。
+     */
+    void markFirstVisit(Long patientId, LocalDateTime visitTime, Long deptId, String deptName,
+                        Long doctorId, String doctorName);
 }

@@ -13,9 +13,13 @@ import java.math.BigDecimal;
 @Data
 public class FeeTypeSumVO {
 
-    /** 项目类型（字典 {@code his_charge_item_type}） */
+    /**
+     * 项目类型（字典 {@code his_charge_item_type}）
+     */
     private Integer itemType;
 
-    /** 该类型净额（含红冲负行，已全额红冲的行不计） */
+    /**
+     * 该类型净额（含红冲负行，已全额红冲的行不计）
+     */
     private BigDecimal amount;
 }

@@ -3,12 +3,17 @@ package com.his.charge.service;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
 public interface InsuranceChannelService {
+
+    Receipt send(OutboundMessage message);
+
+    List<RemoteSettlement> queryDayBill(LocalDate billDate);
 
     @Data
     @NoArgsConstructor
@@ -57,8 +62,4 @@ public interface InsuranceChannelService {
         private BigDecimal insurancePay;
         private String receiptNo;
     }
-
-    Receipt send(OutboundMessage message);
-
-    List<RemoteSettlement> queryDayBill(LocalDate billDate);
 }

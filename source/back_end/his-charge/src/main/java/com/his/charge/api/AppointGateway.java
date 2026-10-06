@@ -1,7 +1,7 @@
-package com.his.charge.service;
+package com.his.charge.api;
 
 import com.his.charge.support.ChargeDeptResolver;
-import com.his.charge.vo.RegistBrief;
+import com.his.charge.vo.RegistBriefVO;
 
 /**
  * 挂号域对收费域提供的只读端口（依赖倒置）。
@@ -20,7 +20,7 @@ public interface AppointGateway {
      * @param registId 挂号ID（可空，为空直接返回 null）
      * @return 不存在时返回 {@code null}
      */
-    RegistBrief findRegist(Long registId);
+    RegistBriefVO findRegist(Long registId);
 
     /**
      * 按挂号单号反查开单科室（收费明细的科室归属反查入口）。

@@ -1,5 +1,9 @@
 package com.his.charge.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.dto.FeeRecordQueryPageDTO;
 import com.his.charge.dto.FeeReverseDTO;
@@ -9,10 +13,6 @@ import com.his.charge.service.FeeRecordService;
 import com.his.charge.vo.BizFeeRecordDetailVO;
 import com.his.charge.vo.BizFeeRecordVO;
 import com.his.charge.vo.FeeTypeSumVO;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
@@ -20,12 +20,6 @@ import com.his.common.enums.FeeStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -33,6 +27,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * 费用记账实现（L1）。
@@ -48,7 +49,9 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
 
     private static final int AMOUNT_SCALE = 2;
 
-    /** 列宽：写库文本一律先截，超长报 Data too long 会把"记不上账"升级成 500 */
+    /**
+     * 列宽：写库文本一律先截，超长报 Data too long 会把"记不上账"升级成 500
+     */
     private static final int W_FEE_NO = 32;
     private static final int W_PATIENT_NO = 32;
     private static final int W_PATIENT_NAME = 50;
@@ -64,6 +67,17 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
     private static final int W_REMARK = 500;
 
     private final RedisSequenceService redisSequenceService;
+
+    private static BigDecimal nz(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private static String cut(String value, int max) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() <= max ? value : value.substring(0, max);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -498,16 +512,5 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         BizFeeRecordVO vo = new BizFeeRecordVO();
         BeanUtils.copyProperties(row, vo);
         return vo;
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
-
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() <= max ? value : value.substring(0, max);
     }
 }

@@ -1,4 +1,4 @@
-package com.his.charge.service;
+package com.his.charge.api;
 
 import lombok.Data;
 
@@ -8,21 +8,6 @@ import java.util.Map;
 
 /**
  * 挂号侧对收费能力的引用点（SPI）。
- * <p>
- * 接口定义在调用方模块 his-appoint，实现放在 his-charge，
- * 以此保证 Maven 模块依赖方向为 appoint → (无 charge)，由 charge → appoint 单向依赖，
- * 规避 appoint ↔ charge 的双向依赖。
- * <p>
- * 若实现缺失（未引入 his-charge），调用方需自行降级。
- * <p>
- * <b>四层收费模型（sql/125）后，本接口只认「结算账单」（L2），不再认旧的收费单。</b>
- * 挂号即结算：挂号费/诊查费先进记账层（L1），出账时锁定成一张 {@code bill_type=1} 的账单，
- * 窗口收钱写支付流水（L3），账单状态由流水现算。所以：
- * <ul>
- *   <li>免收（复诊策略命中全免）= <b>不记账、不出账单</b>，返回 {@code null}；
- *       旧模型为了过签到门禁必须造一张 0 元收费单，那是支付层替临床层撒谎。</li>
- *   <li>签到门禁读的是账单状态，不是支付状态列，更不是收费单状态。</li>
- * </ul>
  */
 public interface AppointChargeGateway {
 

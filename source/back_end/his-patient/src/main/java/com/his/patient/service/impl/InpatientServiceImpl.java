@@ -1,5 +1,5 @@
 package com.his.patient.service.impl;
-import com.his.charge.service.InpatientSettlementGateway;
+import com.his.charge.api.InpatientSettlementGateway;
 import com.his.common.util.TimeUtil;
 import com.his.patient.enums.NursingLevelEnum;
 

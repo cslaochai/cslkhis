@@ -1,8 +1,8 @@
 package com.his.charge.support;
 
-import com.his.charge.service.AppointGateway;
-import com.his.charge.service.EmrGateway;
-import com.his.charge.service.PatientGateway;
+import com.his.charge.api.AppointGateway;
+import com.his.charge.api.PatientGateway;
+import com.his.charge.api.EmrGateway;
 import com.his.common.enums.PaymentItemTypeEnum;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

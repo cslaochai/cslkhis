@@ -1,6 +1,6 @@
 package com.his.charge.vo;
 
-import com.his.charge.service.EmrGateway;
+import com.his.charge.api.EmrGateway;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -14,14 +14,20 @@ import lombok.NoArgsConstructor;
  */
 @Data
 @NoArgsConstructor
-public class PrescriptionBrief {
+public class PrescriptionBriefVO {
 
-    /** 处方ID */
+    /**
+     * 处方ID
+     */
     private Long id;
 
-    /** 处方号 */
+    /**
+     * 处方号
+     */
     private String prescriptionNo;
 
-    /** 处方状态（1-草稿 2-已开立 …，取值口径见 his-emr 的 PrescriptionStatusEnum） */
+    /**
+     * 处方状态（1-草稿 2-已开立 …，取值口径见 his-emr 的 PrescriptionStatusEnum）
+     */
     private Integer prescriptionStatus;
 }

@@ -4,12 +4,13 @@ package com.his.charge.support;
 import com.his.charge.entity.BizSettlementDiagnosis;
 import com.his.charge.enums.RuleCatalogEnum;
 import com.his.common.enums.SysGenderEnum;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 /**
  * B 组：逻辑排他。

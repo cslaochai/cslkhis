@@ -1,7 +1,7 @@
 package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.emr.service.ApplyExecStatusGateway;
+import com.his.emr.api.ApplyExecStatusGateway;
 import com.his.medicaltech.entity.BizCriticalValue;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLaboratoryRecord;

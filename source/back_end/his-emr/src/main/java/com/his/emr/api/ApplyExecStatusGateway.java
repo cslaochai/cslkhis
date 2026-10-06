@@ -1,4 +1,4 @@
-package com.his.emr.service;
+package com.his.emr.api;
 
 import lombok.Data;
 

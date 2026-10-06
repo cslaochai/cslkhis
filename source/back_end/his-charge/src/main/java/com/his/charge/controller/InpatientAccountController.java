@@ -4,7 +4,6 @@ import com.his.charge.dto.InpatientSettlementUpsertDTO;
 import com.his.charge.dto.PrepayQueryPageDTO;
 import com.his.charge.dto.PrepayUpsertDTO;
 import com.his.charge.service.InpatientAccountService;
-import com.his.charge.service.InpatientSettlementGateway;
 import com.his.charge.vo.DailyBillVO;
 import com.his.charge.vo.InpatientAccountSummaryVO;
 import com.his.charge.vo.InpatientSettlementPreviewVO;

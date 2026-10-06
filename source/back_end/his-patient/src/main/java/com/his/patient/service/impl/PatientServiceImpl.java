@@ -791,4 +791,16 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
         return vo;
     }
 
+    @Override
+    public void markLastVisit(Long patientId, LocalDateTime visitTime, Long deptId, String deptName,
+                              Long doctorId, String doctorName) {
+        baseMapper.markLastVisit(patientId, visitTime, deptId, deptName, doctorId, doctorName);
+    }
+
+    @Override
+    public void markFirstVisit(Long patientId, LocalDateTime visitTime, Long deptId, String deptName,
+                               Long doctorId, String doctorName) {
+        baseMapper.markFirstVisit(patientId, visitTime, deptId, deptName, doctorId, doctorName);
+    }
+
 }

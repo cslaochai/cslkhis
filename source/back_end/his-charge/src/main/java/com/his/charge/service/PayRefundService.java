@@ -5,6 +5,8 @@ import java.math.BigDecimal;
 
 public interface PayRefundService {
 
+    RefundReceipt refund(RefundRequest request);
+
     /**
      * @param payMethod 原支付方式（字典 {@code his_pay_method}），决定分发给哪个渠道
      * @param chargeNo  原收款单号，真渠道要靠它反查原交易流水
@@ -31,6 +33,4 @@ public interface PayRefundService {
             return new RefundReceipt(false, null, errMsg);
         }
     }
-
-    RefundReceipt refund(RefundRequest request);
 }

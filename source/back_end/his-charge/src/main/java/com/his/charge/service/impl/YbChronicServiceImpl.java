@@ -1,37 +1,34 @@
 package com.his.charge.service.impl;
 
-import com.his.charge.dto.ChronicCatalogQueryPageDTO;
-import com.his.charge.dto.ChronicCatalogUpsertDTO;
-import com.his.charge.dto.ChronicRegQueryPageDTO;
-import com.his.charge.dto.ChronicRegTerminalDTO;
-import com.his.charge.dto.ChronicRegUpsertDTO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.charge.api.PatientGateway;
+import com.his.charge.dto.*;
 import com.his.charge.entity.BizYbChronicCatalog;
 import com.his.charge.entity.BizYbChronicReg;
 import com.his.charge.mapper.BizYbChronicCatalogMapper;
 import com.his.charge.mapper.BizYbChronicRegMapper;
-import com.his.charge.service.PatientGateway;
 import com.his.charge.service.YbChronicService;
 import com.his.charge.vo.ChronicCatalogVO;
 import com.his.charge.vo.ChronicRegListVO;
 import com.his.charge.vo.ChronicRegSummaryVO;
-import com.his.charge.vo.PatientBrief;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.charge.vo.PatientBriefVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.system.utils.UserUtils;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 门诊慢特病服务实现。
@@ -189,7 +186,7 @@ public class YbChronicServiceImpl implements YbChronicService {
         if (!Integer.valueOf(1).equals(catalog.getStatus())) {
             throw new BusinessException("病种「" + catalog.getDiseaseName() + "」已停用，请先启用目录或换病种");
         }
-        PatientBrief patient = patientGateway.findPatient(dto.getPatientId());
+        PatientBriefVO patient = patientGateway.findPatient(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在或已删除");
         }

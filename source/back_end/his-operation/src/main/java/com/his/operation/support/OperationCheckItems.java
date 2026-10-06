@@ -1,8 +1,14 @@
 package com.his.operation.support;
 
+import com.his.operation.enums.OperationPreCheckItemEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 术前核对要点（手术安全核查单的可核对部分）。
@@ -13,7 +19,7 @@ import java.util.*;
  * 就变成"看起来核过了"，与"模型说没事"是同一种不可审计的证据。
  *
  * <p>因此：核对结果是<b>码值集合</b>（如 {@code 1,2,3,4}），必核项缺失直接拒绝提交，
- * 前端按 {@link #all()} 渲染勾选框。
+ * 前端按 {@link #all()} 渲染勾选框。码值→文案见 {@link OperationPreCheckItemEnum}。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OperationCheckItems {
@@ -21,34 +27,24 @@ public final class OperationCheckItems {
     /**
      * 必核项：这 4 项缺任何一项都不允许进入"术前核对完成"
      */
-    public static final List<Integer> REQUIRED = List.of(1, 2, 3, 4);
-    private static final Map<Integer, String> LABELS = new LinkedHashMap<>();
-
-    static {
-        LABELS.put(1, "患者身份与手术部位标识已核对");
-        LABELS.put(2, "手术术式与知情同意书已核对");
-        LABELS.put(3, "麻醉方式与麻醉同意书已核对");
-        LABELS.put(4, "过敏史与术前用药已核对");
-        LABELS.put(5, "备血、器械与植入物已到位");
-        LABELS.put(6, "影像资料与化验结果已确认");
-    }
+    public static final List<Integer> REQUIRED = OperationPreCheckItemEnum.requiredCodes();
 
     /**
      * 全部核对项（码 → 文案），供前端渲染勾选框
      */
     public static Map<Integer, String> all() {
-        return LABELS;
+        return OperationPreCheckItemEnum.all();
     }
 
     public static String text(Integer code) {
         if (code == null) {
             return "—";
         }
-        return LABELS.getOrDefault(code, "");
+        return OperationPreCheckItemEnum.getText(code);
     }
 
     public static boolean isValid(Integer code) {
-        return code != null && LABELS.containsKey(code);
+        return OperationPreCheckItemEnum.isValid(code);
     }
 
     /**

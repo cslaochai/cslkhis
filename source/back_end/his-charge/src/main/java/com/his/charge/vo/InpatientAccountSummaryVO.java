@@ -1,11 +1,11 @@
 package com.his.charge.vo;
 
-import com.his.charge.service.InpatientSettlementGateway;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import lombok.Data;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
-import lombok.Data;
 
 /**
  * 住院账务概览（医生站 / 护士站的欠费提示就靠它）。

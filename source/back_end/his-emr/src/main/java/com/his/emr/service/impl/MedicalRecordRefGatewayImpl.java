@@ -1,7 +1,7 @@
 package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.appoint.service.MedicalRecordRefGateway;
+import com.his.appoint.api.MedicalRecordRefGateway;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import lombok.RequiredArgsConstructor;

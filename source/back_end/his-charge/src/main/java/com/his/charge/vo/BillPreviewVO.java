@@ -1,11 +1,12 @@
 package com.his.charge.vo;
 
-import com.his.charge.entity.BizSettlementBillItem;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.his.charge.entity.BizSettlementBillItem;
+import lombok.Data;
+
 import java.math.BigDecimal;
 import java.util.List;
-import lombok.Data;
 
 /**
  * 结算试算出参（L2）：与结算同一套计算（共用草稿），只是不落库。

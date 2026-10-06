@@ -3,6 +3,8 @@ package com.his.patient.support;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import com.his.patient.entity.BizPatient;
+import com.his.patient.enums.PatientProfileCoverageEnum;
+import com.his.patient.enums.PatientProfileFieldEnum;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -30,28 +32,13 @@ public final class PatientProfileFields {
      * `联系人` 也一样（患者基本信息.contact_name vs 患者联系方式）。
      * 手术史/家族史/用药史没有对应的患者基本信息文本字段，不在此表。
      */
-    private static final Map<String, String> PROFILE_KEY_TO_LABEL = Map.of(
-            "allergy", "过敏史",
-            "pastDisease", "既往病史",
-            "contact", "联系人");
+    private static final Map<String, String> PROFILE_KEY_TO_LABEL = PatientProfileCoverageEnum.all();
 
     private static Map<String, String> build() {
         Map<String, String> m = new LinkedHashMap<>();
-        m.put("patientName", "姓名");
-        m.put("gender", "性别");
-        m.put("birthDate", "出生日期");
-        m.put("idCard", "身份证号");
-        m.put("phone", "手机号");
-        m.put("address", "家庭住址");
-        m.put("nation", "民族");
-        m.put("occupation", "职业");
-        m.put("maritalStatus", "婚姻状况");
-        m.put("bloodType", "血型");
-        m.put("contactName", "联系人");
-        m.put("contactPhone", "联系人电话");
-        m.put("allergyHistory", "过敏史");
-        m.put("medicalHistory", "既往病史");
-        m.put("medicalInsuranceType", "医保类型");
+        for (PatientProfileFieldEnum e : PatientProfileFieldEnum.values()) {
+            m.put(e.getCode(), e.getLabel());
+        }
         // 必须用 unmodifiableMap 而不是 Map.copyOf：copyOf 会丢掉 LinkedHashMap 的插入顺序，
         // 页面上的"关键字段清单"就是按这个顺序渲染的。
         return java.util.Collections.unmodifiableMap(m);

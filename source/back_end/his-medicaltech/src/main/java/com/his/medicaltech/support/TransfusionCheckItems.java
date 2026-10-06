@@ -1,9 +1,10 @@
 package com.his.medicaltech.support;
 
+import com.his.medicaltech.enums.TransfusionCheckItemEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -19,50 +20,31 @@ import java.util.Set;
  *
  * <p>所以：核对结果是码值集合（如 {@code 1,2,3,4,5,6}），1~6 必核项缺任何一项直接拒绝提交，
  * 前端按 {@link #all()} 渲染勾选框。第 7、8 项为附加项（同意书、输注前生命体征），
- * 各地要求不一，不设为必核但可勾选。
+ * 各地要求不一，不设为必核但可勾选。码值→文案见 {@link TransfusionCheckItemEnum}。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TransfusionCheckItems {
 
     /** 必核项：这 6 项缺任何一项都不允许开始输注 */
-    public static final List<Integer> REQUIRED = List.of(1, 2, 3, 4, 5, 6);
-
-    private static final Map<Integer, String> LABELS = new LinkedHashMap<>();
-
-    static {
-        LABELS.put(1, "受血者姓名、住院号与腕带信息一致");
-        LABELS.put(2, "受血者与血袋血型（ABO + Rh）相符");
-        LABELS.put(3, "血袋号、血液品种与规格与发血单一致");
-        LABELS.put(4, "交叉配血结果相合（主侧/次侧）");
-        LABELS.put(5, "血液外观无异常（无溶血、无凝块、无气泡、无变色）");
-        LABELS.put(6, "血袋有效期与包装完好");
-        LABELS.put(7, "输血知情同意书已签署");
-        LABELS.put(8, "输注前生命体征已测量并记录");
-    }
+    public static final List<Integer> REQUIRED = TransfusionCheckItemEnum.requiredCodes();
 
     /** 全部核对项（码 → 文案），供前端渲染勾选框 */
     public static Map<Integer, String> all() {
-        return LABELS;
+        return TransfusionCheckItemEnum.all();
     }
 
     /** 核对项文案（<b>展示用</b>）。null 给「—」；非法码值返回空串，不伪装成某一项。 */
     public static String text(Integer code) {
-        if (code == null) {
-            return "—";
-        }
-        return LABELS.getOrDefault(code, "");
+        return TransfusionCheckItemEnum.getText(code);
     }
 
     /** 核对项文案（<b>异常 / 审计用</b>）：非法码值返回「未知(n)」，保留原值便于排查。 */
     public static String labelOrUnknown(Integer code) {
-        if (code == null) {
-            return "未知";
-        }
-        return LABELS.getOrDefault(code, "未知(" + code + ")");
+        return TransfusionCheckItemEnum.labelOrUnknown(code);
     }
 
     public static boolean isValid(Integer code) {
-        return code != null && LABELS.containsKey(code);
+        return TransfusionCheckItemEnum.isValid(code);
     }
 
     /**

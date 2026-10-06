@@ -1,10 +1,10 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.charge.vo.AdmissionBrief;
+import com.his.charge.vo.AdmissionBriefVO;
 import com.his.charge.support.ChargeDeptResolver;
-import com.his.charge.vo.PatientBrief;
-import com.his.charge.service.PatientGateway;
+import com.his.charge.vo.PatientBriefVO;
+import com.his.charge.api.PatientGateway;
 import com.his.patient.entity.BizAdmission;
 import com.his.patient.entity.BizInpatientOrder;
 import com.his.patient.entity.BizPatient;
@@ -22,8 +22,8 @@ import org.springframework.stereotype.Service;
  * 若把接口放在本模块，charge 就得依赖 patient，而 patient 又要依赖 charge 记账，
  * Maven reactor 判定成环，直接拒绝构建。
  *
- * <p>实体 → 摘要的映射只在这里发生：charge 拿到的是 {@link PatientBrief} /
- * {@link AdmissionBrief}，看不到 {@link BizPatient} / {@link BizAdmission}，
+ * <p>实体 → 摘要的映射只在这里发生：charge 拿到的是 {@link PatientBriefVO} /
+ * {@link AdmissionBriefVO}，看不到 {@link BizPatient} / {@link BizAdmission}，
  * 对方实体加字段、改字段名都不会传导成收费域的编译错误。
  *
  * <p>走 Mapper 而非 Service：这两个方法只是单行主键查询，
@@ -39,7 +39,7 @@ public class PatientGatewayImpl implements PatientGateway {
     private final BizInpatientOrderMapper inpatientOrderMapper;
 
     @Override
-    public PatientBrief findPatient(Long patientId) {
+    public PatientBriefVO findPatient(Long patientId) {
         if (patientId == null) {
             return null;
         }
@@ -47,7 +47,7 @@ public class PatientGatewayImpl implements PatientGateway {
     }
 
     @Override
-    public AdmissionBrief findAdmission(Long admissionId) {
+    public AdmissionBriefVO findAdmission(Long admissionId) {
         if (admissionId == null) {
             return null;
         }
@@ -66,11 +66,11 @@ public class PatientGatewayImpl implements PatientGateway {
                 : new ChargeDeptResolver.DeptRef(order.getDeptId(), order.getDeptName());
     }
 
-    private PatientBrief toBrief(BizPatient e) {
+    private PatientBriefVO toBrief(BizPatient e) {
         if (e == null) {
             return null;
         }
-        PatientBrief brief = new PatientBrief();
+        PatientBriefVO brief = new PatientBriefVO();
         brief.setId(e.getId());
         brief.setPatientNo(e.getPatientNo());
         brief.setPatientName(e.getPatientName());
@@ -84,11 +84,11 @@ public class PatientGatewayImpl implements PatientGateway {
         return brief;
     }
 
-    private AdmissionBrief toBrief(BizAdmission e) {
+    private AdmissionBriefVO toBrief(BizAdmission e) {
         if (e == null) {
             return null;
         }
-        AdmissionBrief brief = new AdmissionBrief();
+        AdmissionBriefVO brief = new AdmissionBriefVO();
         brief.setAdmissionId(e.getAdmissionId());
         brief.setAdmissionNo(e.getAdmissionNo());
         brief.setPatientId(e.getPatientId());

@@ -3,12 +3,13 @@ package com.his.charge.support;
 
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.enums.RuleCatalogEnum;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * C 组：住院指征（低编入组 / 低标入院 / 分解住院）。

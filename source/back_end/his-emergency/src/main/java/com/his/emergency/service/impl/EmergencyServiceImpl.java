@@ -16,7 +16,7 @@ import com.his.common.base.PageResult;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.EmergencyAssignTypeEnum;
 import com.his.common.enums.EmergencyStatusEnum;
-import com.his.common.enums.EmpTitleCode;
+import com.his.common.support.EmpTitleCode;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;

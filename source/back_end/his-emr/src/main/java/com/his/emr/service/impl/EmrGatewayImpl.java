@@ -2,10 +2,10 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.charge.support.ChargeDeptResolver;
-import com.his.charge.service.EmrGateway;
-import com.his.charge.vo.MedicalRecordBrief;
-import com.his.charge.vo.PrescriptionBrief;
-import com.his.charge.vo.PrescriptionDetailBrief;
+import com.his.charge.api.EmrGateway;
+import com.his.charge.vo.MedicalRecordBriefVO;
+import com.his.charge.vo.PrescriptionBriefVO;
+import com.his.charge.vo.PrescriptionDetailBriefVO;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.entity.BizLaboratoryApply;
 import com.his.emr.entity.BizMedicalRecord;
@@ -44,7 +44,7 @@ public class EmrGatewayImpl implements EmrGateway {
     private final SourcePaidAdvanceService sourcePaidAdvanceService;
 
     @Override
-    public MedicalRecordBrief findLatestMedicalRecordByRegist(Long registId) {
+    public MedicalRecordBriefVO findLatestMedicalRecordByRegist(Long registId) {
         if (registId == null) {
             return null;
         }
@@ -54,7 +54,7 @@ public class EmrGatewayImpl implements EmrGateway {
     }
 
     @Override
-    public MedicalRecordBrief findLatestMedicalRecordByPatient(Long patientId) {
+    public MedicalRecordBriefVO findLatestMedicalRecordByPatient(Long patientId) {
         if (patientId == null) {
             return null;
         }
@@ -65,7 +65,7 @@ public class EmrGatewayImpl implements EmrGateway {
 
 
     @Override
-    public List<PrescriptionBrief> listPrescriptionsByRegist(Long registId) {
+    public List<PrescriptionBriefVO> listPrescriptionsByRegist(Long registId) {
         if (registId == null) {
             return List.of();
         }
@@ -77,7 +77,7 @@ public class EmrGatewayImpl implements EmrGateway {
     }
 
     @Override
-    public List<PrescriptionBrief> listPrescriptionsByPatient(Long patientId) {
+    public List<PrescriptionBriefVO> listPrescriptionsByPatient(Long patientId) {
         if (patientId == null) {
             return List.of();
         }
@@ -89,7 +89,7 @@ public class EmrGatewayImpl implements EmrGateway {
     }
 
     @Override
-    public List<PrescriptionDetailBrief> listPrescriptionDetails(List<Long> prescriptionIds) {
+    public List<PrescriptionDetailBriefVO> listPrescriptionDetails(List<Long> prescriptionIds) {
         if (prescriptionIds == null || prescriptionIds.isEmpty()) {
             return List.of();
         }
@@ -97,7 +97,7 @@ public class EmrGatewayImpl implements EmrGateway {
                         .in(BizPrescriptionDetail::getPrescriptionId, prescriptionIds)
                         .orderByAsc(BizPrescriptionDetail::getId)).stream()
                 .map(e -> {
-                    PrescriptionDetailBrief brief = new PrescriptionDetailBrief();
+                    PrescriptionDetailBriefVO brief = new PrescriptionDetailBriefVO();
                     brief.setId(e.getId());
                     brief.setPrescriptionId(e.getPrescriptionId());
                     brief.setDrugName(e.getDrugName());
@@ -180,16 +180,16 @@ public class EmrGatewayImpl implements EmrGateway {
         sourcePaidAdvanceService.assertNoDrugPendingReturn(prescriptionDetailIds, scene);
     }
 
-    private PrescriptionBrief toBrief(BizPrescription e) {
-        PrescriptionBrief brief = new PrescriptionBrief();
+    private PrescriptionBriefVO toBrief(BizPrescription e) {
+        PrescriptionBriefVO brief = new PrescriptionBriefVO();
         brief.setId(e.getId());
         brief.setPrescriptionNo(e.getPrescriptionNo());
         brief.setPrescriptionStatus(e.getPrescriptionStatus());
         return brief;
     }
 
-    private MedicalRecordBrief toBrief(BizMedicalRecord e) {
-        MedicalRecordBrief brief = new MedicalRecordBrief();
+    private MedicalRecordBriefVO toBrief(BizMedicalRecord e) {
+        MedicalRecordBriefVO brief = new MedicalRecordBriefVO();
         brief.setRecordNo(e.getRecordNo());
         brief.setDiagnosisCode(e.getDiagnosisCode());
         brief.setDiagnosisName(e.getDiagnosisName());
@@ -205,7 +205,7 @@ public class EmrGatewayImpl implements EmrGateway {
         return brief;
     }
 
-    private MedicalRecordBrief first(List<BizMedicalRecord> list) {
+    private MedicalRecordBriefVO first(List<BizMedicalRecord> list) {
         return list == null || list.isEmpty() ? null : toBrief(list.get(0));
     }
 

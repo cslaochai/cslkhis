@@ -1,9 +1,10 @@
 package com.his.charge.vo;
 
-import com.his.charge.service.AppointGateway;
-import java.time.LocalDate;
+import com.his.charge.api.AppointGateway;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
 
 /**
  * 挂号/就诊记录跨域摘要：收费域只读预约挂号信息的最小字段集。
@@ -16,47 +17,75 @@ import lombok.NoArgsConstructor;
  */
 @Data
 @NoArgsConstructor
-public class RegistBrief {
+public class RegistBriefVO {
 
-    /** 挂号ID（biz_appoint_info 主键） */
+    /**
+     * 挂号ID（biz_appoint_info 主键）
+     */
     private Long id;
 
-    /** 挂号单号（收费明细来源单号，科室反查用） */
+    /**
+     * 挂号单号（收费明细来源单号，科室反查用）
+     */
     private String registNo;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     private Long patientId;
 
-    /** 患者姓名（挂号时点的姓名快照） */
+    /**
+     * 患者姓名（挂号时点的姓名快照）
+     */
     private String patientName;
 
-    /** 性别（1-男 2-女） */
+    /**
+     * 性别（1-男 2-女）
+     */
     private Integer gender;
 
-    /** 年龄（岁） */
+    /**
+     * 年龄（岁）
+     */
     private Integer age;
 
-    /** 科室ID */
+    /**
+     * 科室ID
+     */
     private Long deptId;
 
-    /** 科室名称（快照） */
+    /**
+     * 科室名称（快照）
+     */
     private String deptName;
 
-    /** 医生ID */
+    /**
+     * 医生ID
+     */
     private Long doctorId;
 
-    /** 医生姓名（快照） */
+    /**
+     * 医生姓名（快照）
+     */
     private String doctorName;
 
-    /** 就诊类型（1-初诊 2-复诊；<b>与挂号类型 regist_type 不是一回事</b>） */
+    /**
+     * 就诊类型（1-初诊 2-复诊；<b>与挂号类型 regist_type 不是一回事</b>）
+     */
     private Integer visitType;
 
-    /** 就诊日期（当日就诊范围判定用它，不用 regist_time） */
+    /**
+     * 就诊日期（当日就诊范围判定用它，不用 regist_time）
+     */
     private LocalDate visitDate;
 
-    /** 医保类型 */
+    /**
+     * 医保类型
+     */
     private String medicalInsuranceType;
 
-    /** 医保卡号/医保编号 */
+    /**
+     * 医保卡号/医保编号
+     */
     private String medicalInsuranceNo;
 }

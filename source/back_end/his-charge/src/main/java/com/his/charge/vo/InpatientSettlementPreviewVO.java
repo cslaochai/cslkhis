@@ -1,12 +1,12 @@
 package com.his.charge.vo;
 
-import com.his.charge.service.SettlementBillService;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import lombok.Data;
+
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.List;
-import lombok.Data;
 
 /**
  * 住院出院结算试算（L2 账单口径 + L3 余额抵扣）。

@@ -21,7 +21,7 @@ import org.springframework.web.servlet.ModelAndView;
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
-public class OperLogExceptionMarker implements HandlerExceptionResolver {
+public class OperLogExceptionResolver implements HandlerExceptionResolver {
 
     @Override
     public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response,

@@ -1,10 +1,10 @@
 package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.charge.vo.InspectionRecordBrief;
-import com.his.charge.vo.LabResultBrief;
-import com.his.charge.vo.LaboratoryRecordBrief;
-import com.his.charge.service.MedicalTechGateway;
+import com.his.charge.vo.InspectionRecordBriefVO;
+import com.his.charge.vo.LabResultBriefVO;
+import com.his.charge.vo.LaboratoryRecordBriefVO;
+import com.his.charge.api.MedicalTechGateway;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
@@ -40,7 +40,7 @@ public class MedicalTechGatewayImpl implements MedicalTechGateway {
     private final MedicalTechService medicalTechService;
 
     @Override
-    public List<LaboratoryRecordBrief> listLaboratoryRecords(Long patientId, LocalDate visitDate) {
+    public List<LaboratoryRecordBriefVO> listLaboratoryRecords(Long patientId, LocalDate visitDate) {
         if (patientId == null) {
             return List.of();
         }
@@ -56,9 +56,9 @@ public class MedicalTechGatewayImpl implements MedicalTechGateway {
     }
 
     @Override
-    public List<LabResultBrief> listLabResults(Long patientId, LocalDate visitDate) {
+    public List<LabResultBriefVO> listLabResults(Long patientId, LocalDate visitDate) {
         List<Long> recordIds = listLaboratoryRecords(patientId, visitDate).stream()
-                .map(LaboratoryRecordBrief::getId)
+                .map(LaboratoryRecordBriefVO::getId)
                 .toList();
         if (recordIds.isEmpty()) {
             return List.of();
@@ -71,7 +71,7 @@ public class MedicalTechGatewayImpl implements MedicalTechGateway {
     }
 
     @Override
-    public List<InspectionRecordBrief> listInspections(Long patientId, LocalDate visitDate) {
+    public List<InspectionRecordBriefVO> listInspections(Long patientId, LocalDate visitDate) {
         if (patientId == null) {
             return List.of();
         }
@@ -106,8 +106,8 @@ public class MedicalTechGatewayImpl implements MedicalTechGateway {
         medicalTechService.cancelLaboratoryByApplyId(applyId, reason);
     }
 
-    private LaboratoryRecordBrief toBrief(BizLaboratoryRecord e) {
-        LaboratoryRecordBrief brief = new LaboratoryRecordBrief();
+    private LaboratoryRecordBriefVO toBrief(BizLaboratoryRecord e) {
+        LaboratoryRecordBriefVO brief = new LaboratoryRecordBriefVO();
         brief.setId(e.getId());
         brief.setPatientId(e.getPatientId());
         brief.setLaboratoryItemName(e.getLaboratoryItemName());
@@ -117,8 +117,8 @@ public class MedicalTechGatewayImpl implements MedicalTechGateway {
         return brief;
     }
 
-    private LabResultBrief toBrief(BizLabResult e) {
-        LabResultBrief brief = new LabResultBrief();
+    private LabResultBriefVO toBrief(BizLabResult e) {
+        LabResultBriefVO brief = new LabResultBriefVO();
         brief.setId(e.getId());
         brief.setRecordId(e.getRecordId());
         brief.setLaboratoryItemName(e.getLaboratoryItemName());
@@ -130,8 +130,8 @@ public class MedicalTechGatewayImpl implements MedicalTechGateway {
         return brief;
     }
 
-    private InspectionRecordBrief toBrief(BizInspectionRecord e) {
-        InspectionRecordBrief brief = new InspectionRecordBrief();
+    private InspectionRecordBriefVO toBrief(BizInspectionRecord e) {
+        InspectionRecordBriefVO brief = new InspectionRecordBriefVO();
         brief.setId(e.getId());
         brief.setPatientId(e.getPatientId());
         brief.setInspectionItemName(e.getInspectionItemName());

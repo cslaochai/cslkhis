@@ -8,6 +8,8 @@ import java.util.List;
 
 public interface PayChannelService {
 
+    List<ChannelTrade> fetchChannelBill(Integer channel, LocalDate billDate);
+
     /**
      * 渠道侧一笔流水。
      *
@@ -18,6 +20,4 @@ public interface PayChannelService {
     public record ChannelTrade(String channelTradeNo, LocalDateTime tradeTime, BigDecimal amount)
             implements Serializable {
     }
-
-    List<ChannelTrade> fetchChannelBill(Integer channel, LocalDate billDate);
 }

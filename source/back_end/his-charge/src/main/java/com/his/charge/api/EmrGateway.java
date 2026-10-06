@@ -1,9 +1,10 @@
-package com.his.charge.service;
+package com.his.charge.api;
 
 import com.his.charge.support.ChargeDeptResolver;
-import com.his.charge.vo.MedicalRecordBrief;
-import com.his.charge.vo.PrescriptionBrief;
-import com.his.charge.vo.PrescriptionDetailBrief;
+import com.his.charge.vo.MedicalRecordBriefVO;
+import com.his.charge.vo.PrescriptionBriefVO;
+import com.his.charge.vo.PrescriptionDetailBriefVO;
+
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -23,7 +24,7 @@ public interface EmrGateway {
      *
      * @return 查不到返回 {@code null}
      */
-    MedicalRecordBrief findLatestMedicalRecordByRegist(Long registId);
+    MedicalRecordBriefVO findLatestMedicalRecordByRegist(Long registId);
 
     /**
      * 按患者ID取最近一条病历（挂号ID 查不到时的回退口径）。
@@ -33,7 +34,7 @@ public interface EmrGateway {
      *
      * @return 查不到返回 {@code null}
      */
-    MedicalRecordBrief findLatestMedicalRecordByPatient(Long patientId);
+    MedicalRecordBriefVO findLatestMedicalRecordByPatient(Long patientId);
 
     /**
      * 是否开过处方（入院适应证核查用）。
@@ -50,19 +51,19 @@ public interface EmrGateway {
     /**
      * 某次就诊的处方（按挂号ID）。
      */
-    List<PrescriptionBrief> listPrescriptionsByRegist(Long registId);
+    List<PrescriptionBriefVO> listPrescriptionsByRegist(Long registId);
 
     /**
      * 某患者的处方（挂号ID 下查不到时的回退口径）。
      */
-    List<PrescriptionBrief> listPrescriptionsByPatient(Long patientId);
+    List<PrescriptionBriefVO> listPrescriptionsByPatient(Long patientId);
 
     /**
      * 处方明细（诊断依据关键词匹配只要药名）。
      *
      * @param prescriptionIds 处方ID清单（可空，返回空列表）
      */
-    List<PrescriptionDetailBrief> listPrescriptionDetails(List<Long> prescriptionIds);
+    List<PrescriptionDetailBriefVO> listPrescriptionDetails(List<Long> prescriptionIds);
 
     /**
      * 按处方号反查开单科室。
@@ -104,16 +105,24 @@ public interface EmrGateway {
      */
     void revertPrescriptionDetail(Long prescriptionDetailId, String reason);
 
-    /** 检验申请单已缴费 */
+    /**
+     * 检验申请单已缴费
+     */
     void advanceLaboratoryApply(Long applyId);
 
-    /** 检验申请单被撤销，退回未缴费。 */
+    /**
+     * 检验申请单被撤销，退回未缴费。
+     */
     void revertLaboratoryApply(Long applyId);
 
-    /** 检查申请单已缴费 */
+    /**
+     * 检查申请单已缴费
+     */
     void advanceInspectionApply(Long applyId);
 
-    /** 检查申请单被撤销，退回未缴费。 */
+    /**
+     * 检查申请单被撤销，退回未缴费。
+     */
     void revertInspectionApply(Long applyId);
 
     /**

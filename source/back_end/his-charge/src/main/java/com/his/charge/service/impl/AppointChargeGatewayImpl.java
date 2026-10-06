@@ -1,26 +1,24 @@
 package com.his.charge.service.impl;
 
 
-
-
-
+import com.his.charge.api.AppointChargeGateway;
 import com.his.charge.dto.BillSettleUpsertDTO;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizSettlementBillMapper;
-import com.his.charge.service.AppointChargeGateway;
 import com.his.charge.service.FeeRecordService;
 import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
 import com.his.common.enums.*;
-import java.math.BigDecimal;
-import java.util.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.math.BigDecimal;
+import java.util.*;
 
 /**
  * 挂号侧收费能力 SPI 实现，落在 his-charge（四层模型口径，见 {@link AppointChargeGateway}）。

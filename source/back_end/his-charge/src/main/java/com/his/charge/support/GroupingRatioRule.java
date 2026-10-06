@@ -1,16 +1,16 @@
 package com.his.charge.support;
 
 
-
 import com.his.charge.config.ComplianceProperties;
 import com.his.charge.entity.SysDrgGroup;
 import com.his.charge.enums.RuleCatalogEnum;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 /**
  * D 组：分组倍率。

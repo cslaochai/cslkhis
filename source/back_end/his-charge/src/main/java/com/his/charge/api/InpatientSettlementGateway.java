@@ -1,4 +1,4 @@
-package com.his.charge.service;
+package com.his.charge.api;
 
 import lombok.Data;
 

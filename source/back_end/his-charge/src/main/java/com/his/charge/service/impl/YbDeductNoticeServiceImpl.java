@@ -1,47 +1,38 @@
 package com.his.charge.service.impl;
 
-import com.his.charge.dto.DeductAppealDTO;
-import com.his.charge.dto.DeductAppealResultDTO;
-import com.his.charge.dto.DeductConfirmDTO;
-import com.his.charge.dto.DeductNoticeQueryPageDTO;
-import com.his.charge.dto.DeductNoticeUpsertDTO;
-import com.his.charge.dto.DeductPaybackDTO;
-import com.his.charge.dto.YbCancelDTO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.charge.api.PatientGateway;
+import com.his.charge.dto.*;
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizYbDeductLog;
 import com.his.charge.entity.BizYbDeductNotice;
 import com.his.charge.entity.BizYbInspection;
+import com.his.charge.enums.YbDeductStatusEnum;
 import com.his.charge.mapper.BizYbDeductLogMapper;
 import com.his.charge.mapper.BizYbDeductNoticeMapper;
 import com.his.charge.mapper.BizYbInspectionMapper;
 import com.his.charge.service.InsuranceSettlementService;
-import com.his.charge.service.PatientGateway;
 import com.his.charge.service.YbDeductNoticeService;
-import com.his.charge.support.YbDeductStatus;
-import com.his.charge.vo.DeductLogVO;
-import com.his.charge.vo.DeductNoticeDetailVO;
-import com.his.charge.vo.DeductNoticeListVO;
-import com.his.charge.vo.DeductSummaryVO;
-import com.his.charge.vo.PatientBrief;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.system.utils.UserUtils;
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+
 /**
- * 扣款通知服务实现（状态机见 YbDeductStatus 注释；每个动作都写一条留痕）。
+ * 扣款通知服务实现（状态机见 YbDeductStatusEnum；每个动作都写一条留痕）。
  *
  * <p>口径要点：
  * 超期只是展示态（期限早于当天且还没结案），不落列、不起定时任务，避免「日期已过、状态还没刷」；
@@ -95,7 +86,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
                 .orderByAsc(BizYbDeductNotice::getHandleDeadline)
                 .orderByDesc(BizYbDeductNotice::getId);
         if (Boolean.TRUE.equals(queryDTO.getOnlyOverdue())) {
-            wrapper.in(BizYbDeductNotice::getDeductStatus, YbDeductStatus.PENDING_CONFIRM, YbDeductStatus.APPEALING)
+            wrapper.in(BizYbDeductNotice::getDeductStatus, YbDeductStatusEnum.PENDING_CONFIRM.getCode(), YbDeductStatusEnum.APPEALING.getCode())
                     .lt(BizYbDeductNotice::getHandleDeadline, today);
         }
         IPage<BizYbDeductNotice> page = noticeMapper.selectPage(
@@ -140,10 +131,10 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         if (creating) {
             entity = new BizYbDeductNotice();
             entity.setDeductNo(sequenceService.generateYbDeductNo());
-            entity.setDeductStatus(YbDeductStatus.PENDING_CONFIRM);
+            entity.setDeductStatus(YbDeductStatusEnum.PENDING_CONFIRM.getCode());
         } else {
             entity = require(dto.getId());
-            if (!Integer.valueOf(YbDeductStatus.PENDING_CONFIRM).equals(entity.getDeductStatus())) {
+            if (!YbDeductStatusEnum.PENDING_CONFIRM.matches(entity.getDeductStatus())) {
                 throw new BusinessException("仅「待确认」的扣款通知可修改，已进入申诉/确认/缴回流程的单据请走对应动作");
             }
         }
@@ -156,7 +147,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         entity.setEncounterId(dto.getEncounterId());
         entity.setPatientId(dto.getPatientId());
         // 患者姓名/编号以库里的事实为准：前端传的是选择器快照，一旦漏传或传错，扣款单上就是空白
-        PatientBrief patient = dto.getPatientId() == null ? null : patientGateway.findPatient(dto.getPatientId());
+        PatientBriefVO patient = dto.getPatientId() == null ? null : patientGateway.findPatient(dto.getPatientId());
         if (dto.getPatientId() != null && patient == null) {
             throw new BusinessException("患者不存在或已删除");
         }
@@ -186,7 +177,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
     @Transactional(rollbackFor = Exception.class)
     public void appeal(DeductAppealDTO dto) {
         BizYbDeductNotice entity = require(dto.getId());
-        if (!Integer.valueOf(YbDeductStatus.PENDING_CONFIRM).equals(entity.getDeductStatus())) {
+        if (!YbDeductStatusEnum.PENDING_CONFIRM.matches(entity.getDeductStatus())) {
             throw new BusinessException("仅「待确认」的扣款通知可发起申诉");
         }
         String operator = UserUtils.getCurrentEmployeeName();
@@ -194,7 +185,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         entity.setAppealMaterial(cut(dto.getAppealMaterial(), 500));
         entity.setAppealBy(operator);
         entity.setAppealTime(LocalDateTime.now());
-        entity.setDeductStatus(YbDeductStatus.APPEALING);
+        entity.setDeductStatus(YbDeductStatusEnum.APPEALING.getCode());
         entity.setUpdateBy(operator);
         noticeMapper.updateById(entity);
         writeLog(entity.getId(), ACTION_APPEAL, "提交申诉：" + entity.getAppealReason(), null);
@@ -204,7 +195,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
     @Transactional(rollbackFor = Exception.class)
     public void appealResult(DeductAppealResultDTO dto) {
         BizYbDeductNotice entity = require(dto.getId());
-        if (!Integer.valueOf(YbDeductStatus.APPEALING).equals(entity.getDeductStatus())) {
+        if (!YbDeductStatusEnum.APPEALING.matches(entity.getDeductStatus())) {
             throw new BusinessException("仅「申诉中」的扣款通知可录入申诉结果");
         }
         Integer result = dto.getAppealResult();
@@ -216,7 +207,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         entity.setAppealResultRemark(cut(dto.getAppealResultRemark(), 500));
         entity.setAppealResultBy(operator);
         entity.setAppealResultTime(LocalDateTime.now());
-        entity.setDeductStatus(result == 1 ? YbDeductStatus.APPEAL_SUCCESS : YbDeductStatus.WAIT_PAY);
+        entity.setDeductStatus(result == 1 ? YbDeductStatusEnum.APPEAL_SUCCESS.getCode() : YbDeductStatusEnum.WAIT_PAY.getCode());
         entity.setUpdateBy(operator);
         noticeMapper.updateById(entity);
         writeLog(entity.getId(), ACTION_APPEAL_RESULT,
@@ -230,7 +221,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
     public void confirm(DeductConfirmDTO dto) {
         BizYbDeductNotice entity = require(dto.getId());
         int status = entity.getDeductStatus();
-        if (status != YbDeductStatus.PENDING_CONFIRM && status != YbDeductStatus.WAIT_PAY) {
+        if (status != YbDeductStatusEnum.PENDING_CONFIRM.getCode() && status != YbDeductStatusEnum.WAIT_PAY.getCode()) {
             throw new BusinessException("仅「待确认」或「维持扣款待缴」的扣款通知可确认追责");
         }
         BigDecimal deduct = entity.getDeductAmount();
@@ -263,7 +254,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         entity.setBearEmpAmount(empAmount);
         entity.setConfirmBy(operator);
         entity.setConfirmTime(LocalDateTime.now());
-        entity.setDeductStatus(YbDeductStatus.WAIT_PAY);
+        entity.setDeductStatus(YbDeductStatusEnum.WAIT_PAY.getCode());
         entity.setUpdateBy(operator);
         noticeMapper.updateById(entity);
         writeLog(entity.getId(), ACTION_CONFIRM, "确认扣款并追责：承担方式 " + entity.getLossBearType()
@@ -274,7 +265,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
     @Transactional(rollbackFor = Exception.class)
     public void payback(DeductPaybackDTO dto) {
         BizYbDeductNotice entity = require(dto.getId());
-        if (!Integer.valueOf(YbDeductStatus.WAIT_PAY).equals(entity.getDeductStatus())) {
+        if (!YbDeductStatusEnum.WAIT_PAY.matches(entity.getDeductStatus())) {
             throw new BusinessException("仅「维持扣款待缴」的扣款通知可录入缴回");
         }
         if (!isText(entity.getConfirmBy())) {
@@ -290,7 +281,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         entity.setPaybackVoucher(cut(dto.getPaybackVoucher(), 100));
         entity.setPaybackBy(operator);
         entity.setPaybackTime(LocalDateTime.now());
-        entity.setDeductStatus(YbDeductStatus.PAID_BACK);
+        entity.setDeductStatus(YbDeductStatusEnum.PAID_BACK.getCode());
         entity.setUpdateBy(operator);
         noticeMapper.updateById(entity);
         writeLog(entity.getId(), ACTION_PAYBACK, "财务缴回医保基金：" + entity.getPaidAmount()
@@ -301,14 +292,14 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
     @Transactional(rollbackFor = Exception.class)
     public void cancel(YbCancelDTO dto) {
         BizYbDeductNotice entity = require(dto.getId());
-        if (!Integer.valueOf(YbDeductStatus.PENDING_CONFIRM).equals(entity.getDeductStatus())) {
+        if (!YbDeductStatusEnum.PENDING_CONFIRM.matches(entity.getDeductStatus())) {
             throw new BusinessException("仅「待确认」的扣款通知可作废；已进入申诉或缴回流程的请走对应动作");
         }
         String operator = UserUtils.getCurrentEmployeeName();
         entity.setCancelReason(cut(dto.getReason(), 500));
         entity.setCancelBy(operator);
         entity.setCancelTime(LocalDateTime.now());
-        entity.setDeductStatus(YbDeductStatus.CANCELLED);
+        entity.setDeductStatus(YbDeductStatusEnum.CANCELLED.getCode());
         entity.setUpdateBy(operator);
         noticeMapper.updateById(entity);
         writeLog(entity.getId(), ACTION_CANCEL, "作废：" + entity.getCancelReason(), null);
@@ -370,8 +361,8 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
     }
 
     private boolean isOverdue(BizYbDeductNotice entity, LocalDate today) {
-        boolean open = entity.getDeductStatus() == YbDeductStatus.PENDING_CONFIRM
-                || entity.getDeductStatus() == YbDeductStatus.APPEALING;
+        boolean open = entity.getDeductStatus() == YbDeductStatusEnum.PENDING_CONFIRM.getCode()
+                || entity.getDeductStatus() == YbDeductStatusEnum.APPEALING.getCode();
         return open && entity.getHandleDeadline() != null && entity.getHandleDeadline().isBefore(today);
     }
 

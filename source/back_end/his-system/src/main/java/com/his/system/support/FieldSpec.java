@@ -7,22 +7,7 @@ import java.util.List;
 import java.util.function.Function;
 
 /**
- * 字段级留痕的字段声明：要记哪个字段、中文名叫啥、值怎么打码、码值怎么翻成人话。
- *
- * <p><b>为什么要声明而不是直接反射全字段：</b>反射全字段会把 password、updateTime、
- * delFlag 这些也记进来，日志一半是噪音，还可能把口令原文写进审计表 —— 那是事故。
- * 显式声明一遍，顺手就把"这个对象有哪些字段值得被审计"这件事钉死在代码里。
- *
- * <p>四种写法（业务侧按需挑）：
- * <pre>{@code
- *   of("patientName", "姓名")                       // 原样记
- *   masked("idCard", "身份证号", Mask.ID_CARD)       // 打码后记
- *   render("gender", "性别", v -> SysGenderEnum.getText((Integer) v))     // 1/2/9 → 男/女/未知，翻成人话再记
- *   render("status", "状态", v -> statusText(v), Mask.NONE)
- * }</pre>
- *
- * <p>不给 mask 时会按字段名兜底嗅探（见 {@link #sniffMask}）：
- * 名字里带 idCard / phone / bank 的自动打码 —— 新增字段忘了标 mask 也不至于裸奔。
+ * 字段级审计/留痕的字段声明
  */
 public record FieldSpec(String name, String label, MaskEnum maskEnum, Function<Object, String> renderer) {
 

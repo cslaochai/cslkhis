@@ -1,22 +1,21 @@
 package com.his.charge.support;
 
 
-
-
 import com.his.charge.entity.BizSettlementBillItem;
 import com.his.charge.entity.BizSettlementDiagnosis;
 import com.his.charge.entity.BizSettlementOperation;
 import com.his.charge.enums.RuleCatalogEnum;
-import com.his.charge.vo.InspectionRecordBrief;
-import com.his.charge.vo.LabResultBrief;
-import com.his.charge.vo.LaboratoryRecordBrief;
-import com.his.charge.vo.MedicalRecordBrief;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+import com.his.charge.vo.InspectionRecordBriefVO;
+import com.his.charge.vo.LabResultBriefVO;
+import com.his.charge.vo.LaboratoryRecordBriefVO;
+import com.his.charge.vo.MedicalRecordBriefVO;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A 组：编码依据一致性。
@@ -111,7 +110,7 @@ public class CodingEvidenceRule implements ComplianceRule {
      * A03 主要诊断与病历诊断不一致
      */
     private void evaluateA03(RuleContext ctx, BizSettlementDiagnosis main, List<RuleFinding> findings) {
-        MedicalRecordBrief record = ctx.getEvidence().getMedicalRecord();
+        MedicalRecordBriefVO record = ctx.getEvidence().getMedicalRecord();
         if (record == null) {
             findings.add(RuleFinding.na(RuleCatalogEnum.A03, "查无病历记录，无法比对清单与病历诊断"));
             return;
@@ -304,18 +303,18 @@ public class CodingEvidenceRule implements ComplianceRule {
      */
     private String labInspectionText(SettlementEvidence ev) {
         StringBuilder sb = new StringBuilder();
-        for (LabResultBrief r : ev.getLabResults()) {
+        for (LabResultBriefVO r : ev.getLabResults()) {
             sb.append(safe(r.getLaboratoryItemName())).append(' ')
                     .append(safe(r.getResultValue())).append(' ')
                     .append(safe(r.getAbnormalDesc())).append(' ')
                     .append(safe(r.getJudgeNote())).append(' ');
         }
-        for (LaboratoryRecordBrief r : ev.getLabRecords()) {
+        for (LaboratoryRecordBriefVO r : ev.getLabRecords()) {
             sb.append(safe(r.getLaboratoryItemName())).append(' ')
                     .append(safe(r.getDiagnosis())).append(' ')
                     .append(safe(r.getSuggestions())).append(' ');
         }
-        for (InspectionRecordBrief r : ev.getInspections()) {
+        for (InspectionRecordBriefVO r : ev.getInspections()) {
             sb.append(safe(r.getInspectionItemName())).append(' ')
                     .append(safe(r.getClinicalDiagnosis())).append(' ')
                     .append(safe(r.getResultConclusion())).append(' ');

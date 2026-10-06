@@ -1,32 +1,23 @@
 package com.his.charge.service.impl;
 
 
-
 import com.his.charge.entity.BizArrearsPolicy;
 import com.his.charge.mapper.BizArrearsPolicyMapper;
 import com.his.charge.service.ArrearsControlGate;
 import com.his.charge.service.InpatientAccountService;
-import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 /**
  * 欠费管控 Gate 实现（SPI：接口在 his-patient，本类是 his-charge 侧实现）。
  *
- * <p>安全底线（硬约束，不是配置能绕的）：
- * <ul>
- *   <li>策略未启用 → 一律放行；</li>
- *   <li>只拦 stopClasses 里配置的类别（默认 2 检查/3 检验/4 治疗）——
- *       即使有人把 stop_classes 配上「1 药品」，这里也强制剔除药品(1)/手术(6)/输血(7)，
- *       急救用药被欠费卡住是医疗事故，这条不给运维任何关闭口子；</li>
- *   <li>欠费额只能从 {@link InpatientAccountService#arrearsView} 取，本类不自己算 ——
- *       前台欠费榜说欠 800、这里却说不欠，管控就永远解释不清。</li>
- * </ul>
  */
 @Slf4j
 @Component

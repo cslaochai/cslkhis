@@ -1,33 +1,28 @@
 package com.his.charge.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.charge.api.AppointGateway;
+import com.his.charge.api.MedicalTechGateway;
+import com.his.charge.api.PatientGateway;
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizInsuranceSettlementMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
-import com.his.charge.service.AppointGateway;
-import com.his.charge.service.EmrGateway;
-import com.his.charge.service.MedicalTechGateway;
-import com.his.charge.service.PatientGateway;
+import com.his.charge.api.EmrGateway;
 import com.his.charge.service.SettlementEvidenceService;
 import com.his.charge.support.SettlementEvidence;
-import com.his.charge.vo.LaboratoryRecordBrief;
-import com.his.charge.vo.MedicalRecordBrief;
-import com.his.charge.vo.PatientBrief;
-import com.his.charge.vo.PrescriptionBrief;
-import com.his.charge.vo.RegistBrief;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.charge.vo.*;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.EncounterTypeEnum;
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+
+import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * 依证据聚合服务：把一个 regist_id 上的所有「能作为编码依据」的数据捞齐。
@@ -67,7 +62,7 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
 
         // 1. 挂号（锚点）
         Long registId = settlement.getRegistId();
-        RegistBrief regist = registId == null ? null : appointGateway.findRegist(registId);
+        RegistBriefVO regist = registId == null ? null : appointGateway.findRegist(registId);
         ev.setRegist(regist);
         if (registId == null) {
             ev.markMissing("清单未关联挂号ID，无法定位就诊依据");
@@ -78,14 +73,14 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
         // 2. 患者
         Long patientId = settlement.getPatientId() != null ? settlement.getPatientId()
                 : (regist != null ? regist.getPatientId() : null);
-        PatientBrief patient = patientId == null ? null : patientGateway.findPatient(patientId);
+        PatientBriefVO patient = patientId == null ? null : patientGateway.findPatient(patientId);
         ev.setPatient(patient);
         if (patient == null) {
             ev.markMissing("患者档案缺失，性别/年龄类规则无法判定");
         }
 
         // 3. 病历：优先按 registId；历史数据 registId 为空时落 patientId 最近一条
-        MedicalRecordBrief record = registId == null ? null : emrGateway.findLatestMedicalRecordByRegist(registId);
+        MedicalRecordBriefVO record = registId == null ? null : emrGateway.findLatestMedicalRecordByRegist(registId);
         if (record == null && patientId != null) {
             record = emrGateway.findLatestMedicalRecordByPatient(patientId);
             if (record != null) {
@@ -107,7 +102,7 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
         }
 
         // 5. 处方（按 registId，回落 patientId）
-        List<PrescriptionBrief> prescriptions = registId == null
+        List<PrescriptionBriefVO> prescriptions = registId == null
                 ? List.of() : emrGateway.listPrescriptionsByRegist(registId);
         if (prescriptions.isEmpty()) {
             prescriptions = emrGateway.listPrescriptionsByPatient(patientId);
@@ -115,12 +110,12 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
         ev.setPrescriptions(prescriptions);
         if (!prescriptions.isEmpty()) {
             ev.setPrescriptionDetails(emrGateway.listPrescriptionDetails(
-                    prescriptions.stream().map(PrescriptionBrief::getId).toList()));
+                    prescriptions.stream().map(PrescriptionBriefVO::getId).toList()));
         }
 
         // 6. 检验：表里没有 regist_id，只能按 patientId + 就诊日期定位
         LocalDate visitDate = regist != null ? regist.getVisitDate() : null;
-        List<LaboratoryRecordBrief> labs = medicalTechGateway.listLaboratoryRecords(patientId, visitDate);
+        List<LaboratoryRecordBriefVO> labs = medicalTechGateway.listLaboratoryRecords(patientId, visitDate);
         ev.setLabRecords(labs);
         ev.setLabResults(medicalTechGateway.listLabResults(patientId, visitDate));
         if (!labs.isEmpty() && visitDate == null) {
@@ -154,7 +149,7 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
         return settlementMapper.selectList(wrapper.orderByDesc(BizInsuranceSettlement::getCreateTime));
     }
 
-    private BizSettlementBill resolveBill(BizInsuranceSettlement settlement, RegistBrief regist, Long patientId) {
+    private BizSettlementBill resolveBill(BizInsuranceSettlement settlement, RegistBriefVO regist, Long patientId) {
         if (settlement.getBillId() != null) {
             BizSettlementBill bill = billMapper.selectById(settlement.getBillId());
             if (bill != null) {
