@@ -1,5 +1,7 @@
 package com.his.medicaltech.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.his.medicaltech.enums.BloodComponentEnum;
 import com.his.medicaltech.enums.BloodTypeEnum;
 import com.his.medicaltech.enums.RhTypeEnum;
@@ -26,10 +28,8 @@ import java.util.Set;
  * 因此按「宁严不宽」实现：血型取不到 / 品种不认识 → 一律判<b>不相容</b>，
  * 由调用方给出「为什么被拒」的文案。宽进严出的反例在这里是致命的。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TransfusionRules {
-
-    private TransfusionRules() {
-    }
 
     // 一、用血分级审批折算（sql/93；《医疗机构临床用血管理办法》）
     //   <400ml 上级医师（主治及以上）；400~799ml 科主任；≥800ml 医务科。

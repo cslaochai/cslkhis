@@ -247,12 +247,4 @@ public class PathologyDTO {
         private String sourceRecordNo;
     }
 
-    /** 批量蜡块（取材时一次提交多块） */
-    @Data
-    public static class BlockBatch {
-        @NotNull(message = "病理主单ID不能为空")
-        private Long orderId;
-
-        private List<BlockUpsert> blocks;
-    }
 }

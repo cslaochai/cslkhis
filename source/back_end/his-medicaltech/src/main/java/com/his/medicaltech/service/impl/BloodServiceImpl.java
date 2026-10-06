@@ -23,7 +23,7 @@ import com.his.medicaltech.mapper.BizBloodInventoryMapper;
 import com.his.medicaltech.mapper.BizBloodStockLogMapper;
 import com.his.medicaltech.vo.BloodVO;
 import com.his.system.service.DictCacheService;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

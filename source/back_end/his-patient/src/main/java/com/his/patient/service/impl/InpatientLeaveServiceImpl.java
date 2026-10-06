@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.ObjectSignStatus;
@@ -15,14 +15,13 @@ import com.his.common.service.EmrSignatureService;
 import com.his.common.vo.SignatureVO;
 import com.his.patient.dto.InpatientLeaveDTO;
 import com.his.patient.entity.BizInpatientLeave;
-import com.his.patient.enums.InpatientLeaveTypeEnum;
 import com.his.patient.enums.LeaveStatusEnum;
 import com.his.patient.mapper.BizInpatientLeaveMapper;
 import com.his.patient.service.InpatientLeaveService;
 import com.his.patient.vo.InpatientLeaveVO;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
-import com.his.security.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +59,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class InpatientLeaveServiceImpl implements InpatientLeaveService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private static final int REASON_MAX = 500;
     private static final int DEST_MAX = 200;
@@ -589,23 +589,23 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     }
 
     private void assertDeptAccessible(Long deptId) {
-        if (!DeptScopeGuard.canAccessDept(deptId)) {
+        if (!deptScopeProvider.canAccessDept(deptId)) {
             throw new BusinessException("该请假单所属科室不在当前岗位的数据范围内");
         }
     }
 
     /**
-     * 返回 null=不受限；非空=收口科室集合（显式 deptId 由 DeptScopeGuard 校验越权）。
+     * 返回 null=不受限；非空=收口科室集合（显式 deptId 由 DeptScopeProvider 校验越权）。
      *
      * <p><b>空授权要用哨兵</b>：受限但一个科室都没配时若直接返回空集合，动态 SQL 会拼出
      * {@code dept_id IN ()}，MySQL 报语法错误被兜成 500 —— 看上去像后端挂了，其实是「什么都看不到」。
      */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
-        Long resolved = DeptScopeGuard.resolveDeptId(requestedDeptId);
+        Long resolved = deptScopeProvider.resolveDeptId(requestedDeptId);
         if (resolved != null) {
             return null;
         }
-        Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         if (allowed == null) {
             return null;
         }

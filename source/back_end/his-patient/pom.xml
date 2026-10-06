@@ -24,10 +24,14 @@
         <!-- 医嘱执行即产生应收：一次执行落一条记账行 -->
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-fee</artifactId>
+            <artifactId>his-system</artifactId>
         </dependency>
+        <!-- 记账（FeeRecordService）、欠费管控与出院结算门禁（ArrearsControlGate /
+             InpatientSettlementGateway）都在 his-charge：本模块依赖它，
+             反向依赖禁止出现，否则 reactor 判环 -->
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-system</artifactId>
-        </dependency>    </dependencies>
+            <artifactId>his-charge</artifactId>
+        </dependency>
+    </dependencies>
 </project>

@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.security.DeptScopeGuard;
+import com.his.system.provider.DeptScopeProvider;
 import com.his.supplies.dto.ConsumableUpsertDTO;
 import com.his.supplies.entity.BizConsumableConsume;
 import com.his.supplies.entity.BizConsumableStock;
@@ -36,6 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 @RequiredArgsConstructor
 public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, BizConsumableStock> implements SuppliesService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private final SysConsumableMapper consumableMapper;
     private final BizConsumableStockLogMapper stockLogMapper;
@@ -244,12 +245,12 @@ public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, B
                                                                 int pageNum, int pageSize) {
         // 科室数据权限收口（M6）：领用台账归属领用科室；传了 deptId 先越权校验，
         // 没传且受限则收敛到授权科室集合（不再等于看全院台账）。
-        Long scopedDeptId = DeptScopeGuard.resolveDeptId(deptId);
+        Long scopedDeptId = deptScopeProvider.resolveDeptId(deptId);
         if (scopedDeptId != null) {
             deptId = scopedDeptId;
         }
-        List<Long> scopeDeptIds = (DeptScopeGuard.isScoped() && scopedDeptId == null)
-                ? List.copyOf(DeptScopeGuard.allowedDeptIds()) : null;
+        List<Long> scopeDeptIds = (deptScopeProvider.isScoped() && scopedDeptId == null)
+                ? List.copyOf(deptScopeProvider.allowedDeptIds()) : null;
         Page<BizConsumableConsumeVO> page = consumeMapper.selectConsumePage(
                 new Page<>(pageNum, pageSize), keyword, deptId, scopeDeptIds);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());

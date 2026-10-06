@@ -21,7 +21,7 @@ import java.util.function.Function;
  *   render("status", "状态", v -> statusText(v), Mask.NONE)
  * }</pre>
  *
- * <p>不给 mask 时会按字段名兜底嗅探（见 {@code FieldChangeRecorder#sniffMask}）：
+ * <p>不给 mask 时会按字段名兜底嗅探（见 {@link #sniffMask}）：
  * 名字里带 idCard / phone / bank 的自动打码 —— 新增字段忘了标 mask 也不至于裸奔。
  */
 public record FieldSpec(String name, String label, MaskEnum maskEnum, Function<Object, String> renderer) {
@@ -62,9 +62,27 @@ public record FieldSpec(String name, String label, MaskEnum maskEnum, Function<O
     }
 
     /**
+     * 按字段名兜底嗅探打码方式：新增字段忘了标 mask 时，靠名字也能挡住最要命的那几类。
+     * （护照/军官证/医保卡号都落在 BANK_NO 这一档 —— 都是"前 4 后 4"的证件号口径。）
+     */
+    public static MaskEnum sniffMask(String fieldName) {
+        String f = fieldName.toLowerCase();
+        if (f.contains("idcard")) {
+            return MaskEnum.ID_CARD;
+        }
+        if (f.contains("phone") || f.contains("mobile") || f.contains("tel")) {
+            return MaskEnum.PHONE;
+        }
+        if (f.contains("bank") || f.contains("cardno") || f.contains("insuranceno")) {
+            return MaskEnum.BANK_NO;
+        }
+        return MaskEnum.NONE;
+    }
+
+    /**
      * 实际生效的打码方式：显式优先，未指定则按字段名嗅探
      */
-    MaskEnum effectiveMask() {
-        return maskEnum != null ? maskEnum : FieldChangeRecorder.sniffMask(name);
+    public MaskEnum effectiveMask() {
+        return maskEnum != null ? maskEnum : sniffMask(name);
     }
 }

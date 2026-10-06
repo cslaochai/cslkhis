@@ -1,5 +1,7 @@
 package com.his.common.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.util.Set;
@@ -27,6 +29,7 @@ import java.util.Set;
  * 合并会改变医保合规审核的命中结论，属于行为变更，需要重跑合规验证后再做 ——
  * 不要顺手替换。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ClinicalTextMatcher {
 
     /**
@@ -54,9 +57,6 @@ public final class ClinicalTextMatcher {
      * 不剥掉就没法识别出「这只是把字段名抄了一遍」。
      */
     private static final String STRIP_PATTERN = "[\\s　*＊#\\-—_、,，.。;；:：()（）\\[\\]【】/\\\\|⚠✱※★☆○●]";
-
-    private ClinicalTextMatcher() {
-    }
 
     /**
      * 带否定语义保护的包含判断。

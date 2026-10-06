@@ -1,5 +1,6 @@
 package com.his.common.base;
 
+import lombok.NoArgsConstructor;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -9,6 +10,7 @@ import java.util.List;
  * 分页结果
  */
 @Data
+@NoArgsConstructor
 public class PageResult<T> implements Serializable {
 
     private long total;
@@ -16,9 +18,6 @@ public class PageResult<T> implements Serializable {
     private long pageSize;
     private long pages;
     private List<T> records;
-
-    public PageResult() {
-    }
 
     public PageResult(long total, long pageNum, long pageSize, long pages, List<T> records) {
         this.total = total;

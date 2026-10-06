@@ -18,7 +18,7 @@ import com.his.medicaltech.mapper.BizEndoscopyRecordMapper;
 import com.his.medicaltech.service.EndoscopyService;
 import com.his.medicaltech.service.PathologyService;
 import com.his.medicaltech.vo.EndoscopyVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;

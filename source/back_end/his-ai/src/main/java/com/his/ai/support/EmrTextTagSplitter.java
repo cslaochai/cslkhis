@@ -1,5 +1,7 @@
 package com.his.ai.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashMap;
@@ -29,6 +31,7 @@ import java.util.regex.Pattern;
  * </ol>
  * 一句话：<b>宁可漏切也不能错切</b> —— 漏切医生看得见（字段空着），错切医生很可能看不见。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EmrTextTagSplitter {
 
     /**
@@ -54,9 +57,6 @@ public final class EmrTextTagSplitter {
      * 这是本类"宁可漏切不能错切"原则的具体落地。
      */
     private static final Pattern UNKNOWN_LABEL = Pattern.compile("^[^\\s：:]{1,10}[:：=]");
-
-    private EmrTextTagSplitter() {
-    }
 
     /**
      * 按标签切分文本

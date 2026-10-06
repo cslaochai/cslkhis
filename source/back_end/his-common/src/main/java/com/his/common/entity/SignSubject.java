@@ -1,5 +1,7 @@
 package com.his.common.entity;
 
+import com.his.common.util.SignCryptoUtil;
+
 /**
  * 被签对象在"签名这一刻"的投影。
  *
@@ -32,7 +34,7 @@ public record SignSubject(
      * 内容摘要（SHA-256 十六进制小写）
      */
     public String digest() {
-        return com.his.common.util.SignCrypto.sha256Hex(canonicalContent);
+        return SignCryptoUtil.sha256Hex(canonicalContent);
     }
 
     /**
@@ -50,6 +52,6 @@ public record SignSubject(
      * 便捷：带链的摘要
      */
     public String digestWithPrev(String prevDigest) {
-        return com.his.common.util.SignCrypto.sha256Hex(contentWithPrev(prevDigest));
+        return SignCryptoUtil.sha256Hex(contentWithPrev(prevDigest));
     }
 }

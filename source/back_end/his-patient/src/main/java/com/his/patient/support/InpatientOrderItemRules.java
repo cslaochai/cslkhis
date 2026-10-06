@@ -1,5 +1,7 @@
 package com.his.patient.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.InpatientOrderItemDTO;
 import com.his.patient.enums.OrderClassEnum;
@@ -12,6 +14,7 @@ import org.springframework.util.StringUtils;
  * 模板就成了绕过硬规则的后门 —— 错误只是从「保存时」推迟到「套用时」，而且那时医生已经点了提交，
  * 现场更难解释。校验口径必须单点，否则两处规则一旦漂移，就会出现"模板里合法、开立时被拒"。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class InpatientOrderItemRules {
 
     /**
@@ -19,9 +22,6 @@ public final class InpatientOrderItemRules {
      */
     public static final int ORDER_CLASS_MIN = 1;
     public static final int ORDER_CLASS_MAX = 10;
-
-    private InpatientOrderItemRules() {
-    }
 
     /**
      * 医嘱类别 → 记账项目类型（`费用记账流水的项目类型`）。

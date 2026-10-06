@@ -5,8 +5,6 @@ import com.his.miniapp.dto.WxLoginDTO;
 import com.his.miniapp.vo.WxLoginVO;
 import com.his.miniapp.service.MiniappPayService;
 import com.his.patient.service.PatientGuardianService;
-import com.his.security.UserUtils;
-import com.his.common.exception.BusinessException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

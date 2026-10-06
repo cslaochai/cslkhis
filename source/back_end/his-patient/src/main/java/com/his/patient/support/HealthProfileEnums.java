@@ -1,5 +1,7 @@
 package com.his.patient.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -18,6 +20,7 @@ import java.util.Set;
  * 而表列是 {@code NOT NULL}。此处的选择是显式写「未评估」并让页面照实显示 ——
  * 比默认编一个「中度」好得多：编出来的严重程度会真的被当成临床信息读。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class HealthProfileEnums {
 
     /**
@@ -72,9 +75,6 @@ public final class HealthProfileEnums {
      * 迁移生成、无法判断严重程度时的显式取值
      */
     public static final String SEVERITY_UNKNOWN = "未评估";
-
-    private HealthProfileEnums() {
-    }
 
     /**
      * 按关键词猜过敏类型 —— 只在**一次性迁移**（主档自由文本 → 结构化行）时使用。

@@ -12,7 +12,7 @@ import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.OrgUnitTypeEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
-import com.his.security.DeptScopeGuard;
+import com.his.system.provider.DeptScopeProvider;
 import com.his.system.dto.DutyPostQueryPageDTO;
 import com.his.system.dto.DutyPostUpsertDTO;
 import com.his.system.entity.BizDutyPost;
@@ -42,6 +42,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyPost> implements DutyPostService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private final ShiftService shiftService;
     private final SysWardMapper wardMapper;
@@ -254,10 +255,10 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
      * （「今天全院谁负责」不是敏感信息，收口等于让人半夜找不到打电话的对象）。
      */
     private LambdaQueryWrapper<BizDutyPost> scoped(LambdaQueryWrapper<BizDutyPost> wrapper) {
-        if (!DeptScopeGuard.isScoped()) {
+        if (!deptScopeProvider.isScoped()) {
             return wrapper;
         }
-        Set<Long> allowed = new HashSet<>(DeptScopeGuard.allowedDeptIds());
+        Set<Long> allowed = new HashSet<>(deptScopeProvider.allowedDeptIds());
         wrapper.and(w -> w.eq(BizDutyPost::getOrgType, OrgUnitTypeEnum.HOSPITAL.getCode())
                 .or(o -> o.in(!allowed.isEmpty(), BizDutyPost::getOrgId, allowed)
                         .in(BizDutyPost::getOrgType, OrgUnitTypeEnum.DEPT.getCode(), OrgUnitTypeEnum.WARD.getCode())));

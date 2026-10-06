@@ -1,5 +1,7 @@
 package com.his.appoint.service.impl;
 
+
+import com.his.charge.service.AppointChargeGateway;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -34,7 +36,6 @@ import com.his.appoint.mapper.BizTriageRecordMapper;
 import com.his.appoint.service.DoctorStatusCacheService;
 import com.his.appoint.service.QueueService;
 import com.his.appoint.service.ScheduleService;
-import com.his.appoint.service.AppointChargeGateway;
 import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.support.PatientVisitSummaryUpdater;
 import com.his.appoint.vo.DoctorStatsVO;
@@ -52,13 +53,13 @@ import com.his.appoint.vo.OpdLogStatsVO;
 import com.his.appoint.vo.TriageDetailVO;
 import com.his.appoint.vo.TriageRecordVO;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.service.PatientGuardianService;
-import com.his.security.entity.CurrentUser;
-import com.his.security.UserUtils;
+import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import com.his.system.entity.SysClinicRoom;
 import com.his.system.service.InsurancePolicyService;
 import com.his.system.service.SysClinicRoomService;

@@ -1,5 +1,7 @@
 package com.his.common.enums;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -20,6 +22,7 @@ import java.util.List;
  * <p><b>不要在这里加「按中文标签判定」的方法</b>：字典文案是会改的
  * （「主治（主管）医师」随时可能被改成「主治医师」），按文案判定等于把业务挂在可编辑的配置上。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EmpTitleCode {
 
     /**
@@ -42,9 +45,6 @@ public final class EmpTitleCode {
     public static final List<String> SENIOR =
             Collections.unmodifiableList(Arrays.asList(
                     "301", "302", "303", "304", "401", "402", "403", "404"));
-
-    private EmpTitleCode() {
-    }
 
     /**
      * 职称码是否为副高及以上（3xx/4xx）。null / 空 / 非卫技系列（5xx 及以上）一律 false。

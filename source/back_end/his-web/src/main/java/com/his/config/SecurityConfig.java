@@ -2,7 +2,7 @@ package com.his.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.common.base.Result;
-import com.his.security.JwtAuthenticationFilter;
+import com.his.system.filter.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

@@ -1,5 +1,7 @@
 package com.his.patient.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.patient.entity.BizInpatientOperation;
 import com.his.patient.mapper.BizInpatientOperationMapper;
@@ -24,10 +26,8 @@ import java.util.Objects;
  * <b>同一份数据有两个写入方，排序规则就必须只有一处实现</b>，否则迟早出现
  * "首页主要手术指向序号 2"这种没人能一眼看懂的错。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SummaryOperationSeq {
-
-    private SummaryOperationSeq() {
-    }
 
     /**
      * 重排某次住院的全部手术明细序号：主要手术在前，其余按手术时间升序，

@@ -75,13 +75,6 @@ public class ExamApptDTO {
         private String remark;
     }
 
-    @Data
-    public static class DeviceIdOnly {
-        /** 设备ID */
-        @NotNull(message = "设备ID不能为空")
-        private Long deviceId;
-    }
-
     /** 设备可开展项目：整单覆盖式保存（本次未提交的映射视为取消） */
     @Data
     public static class DeviceItemSave {

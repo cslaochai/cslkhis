@@ -1,5 +1,7 @@
 package com.his.ai.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.util.regex.Matcher;
@@ -17,6 +19,7 @@ import java.util.regex.Pattern;
  * 而它们在合法 SELECT 里真实存在（ORDER BY 降序、REPLACE 清洗函数），
  * 进黑名单只会误杀正常分析语句。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OperationSqlGuard {
 
     /**
@@ -44,9 +47,6 @@ public final class OperationSqlGuard {
     private static final Pattern LIMIT_SINGLE = Pattern.compile("\\blimit\\s+(\\d+)", Pattern.CASE_INSENSITIVE);
 
     private static final Pattern LIMIT_KEYWORD = Pattern.compile("\\blimit\\b", Pattern.CASE_INSENSITIVE);
-
-    private OperationSqlGuard() {
-    }
 
     /**
      * 校验并规范化模型生成的 SQL。

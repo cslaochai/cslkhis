@@ -13,7 +13,7 @@ import com.his.report.enums.StatReportTypeEnum;
 import com.his.report.mapper.BizStatReportMapper;
 import com.his.report.mapper.StatReportAggMapper;
 import com.his.report.vo.StatReportVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

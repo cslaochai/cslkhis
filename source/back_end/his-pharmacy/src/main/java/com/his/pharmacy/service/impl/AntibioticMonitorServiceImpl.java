@@ -23,7 +23,7 @@ import com.his.pharmacy.vo.DeptCountRowVO;
 import com.his.pharmacy.vo.IncisionCandidateVO;
 import com.his.pharmacy.vo.IncisionDrugCandidateVO;
 import com.his.pharmacy.vo.IncisionReviewVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

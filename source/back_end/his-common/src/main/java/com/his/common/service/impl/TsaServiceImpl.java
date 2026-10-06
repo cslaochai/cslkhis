@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.dto.TsaTokenQueryPageDTO;
 import com.his.common.entity.BizTsaToken;
 import com.his.common.entity.SysTsaServer;
@@ -16,7 +16,7 @@ import com.his.common.mapper.SysTsaServerMapper;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.service.TsaChannelService;
 import com.his.common.service.TsaService;
-import com.his.common.util.SignCrypto;
+import com.his.common.util.SignCryptoUtil;
 import com.his.common.vo.TsaStatusVO;
 import com.his.common.vo.TsaTokenVO;
 import com.his.common.vo.TsaTokenVerifyVO;
@@ -75,7 +75,7 @@ public class TsaServiceImpl implements TsaService {
         SysTsaServer server = serverMapper.selectOne(new LambdaQueryWrapper<SysTsaServer>()
                 .eq(SysTsaServer::getTsaCode, "LOCAL"));
         if (server != null) {
-            vo.setKeyFingerprintGroups(SignCrypto.fingerprintGroups(server.getKeyFingerprint()));
+            vo.setKeyFingerprintGroups(SignCryptoUtil.fingerprintGroups(server.getKeyFingerprint()));
             if (vo.getTsaName() == null) {
                 vo.setTsaName(server.getTsaName());
             }

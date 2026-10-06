@@ -1,5 +1,7 @@
 package com.his.patient.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.his.common.exception.BusinessException;
 import com.his.patient.entity.BizPatient;
 import org.springframework.util.StringUtils;
@@ -13,6 +15,7 @@ import java.util.Set;
  * 患者主档建档 / 修改的<b>写入口校验</b>。
  *
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class PatientProfileValidator {
 
     /**
@@ -30,9 +33,6 @@ public final class PatientProfileValidator {
 
     private static final int[] WEIGHTS = {7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2};
     private static final char[] CHECK_CODES = "10X98765432".toCharArray();
-
-    private PatientProfileValidator() {
-    }
 
     /**
      * 主档建档（患者管理页「新增患者」/ 挂号页「新增患者」）。

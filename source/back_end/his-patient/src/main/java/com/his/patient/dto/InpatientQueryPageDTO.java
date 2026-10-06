@@ -24,7 +24,7 @@ public class InpatientQueryPageDTO extends PageParam {
     private Integer admitStatus;
 
     /**
-     * 科室数据权限收敛集合（M6）—— <b>只由服务端</b>按 {@code DeptScopeGuard} 填充，
+     * 科室数据权限收敛集合（M6）—— <b>只由服务端</b>按 {@code DeptScopeProvider} 填充，
      * 前端传什么都必须忽略（listPage 入口先置 null 再收口）。受限且未传 deptId 时非空。
      */
     private List<Long> scopeDeptIds;

@@ -1,5 +1,7 @@
 package com.his.emergency.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.util.StringUtils;
@@ -23,6 +25,7 @@ import java.util.regex.Pattern;
  * <p>
  * <b>本类只产出「建议」，不写库、不覆盖人工分级。</b>
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EmergencyTriageRules {
 
     /**
@@ -88,9 +91,6 @@ public final class EmergencyTriageRules {
      */
     private static final List<String> CONSCIOUSNESS_KEYWORDS = List.of(
             "意识不清", "昏迷", "呼之不应", "抽搐", "惊厥", "意识丧失", "不省人事", "昏睡");
-
-    private EmergencyTriageRules() {
-    }
 
     /**
      * 解析生命体征。同时支持 JSON 与「T39.5 P130 BP80/50」这类文本 ——

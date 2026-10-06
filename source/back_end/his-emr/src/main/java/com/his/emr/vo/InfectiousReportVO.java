@@ -210,36 +210,4 @@ public class InfectiousReportVO {
         private String icd10;
     }
 
-    /**
-     * 列表分页壳
-     */
-    @Data
-    public static class PageVO {
-        /**
-         * 总条数
-         */
-        private Long total;
-        /**
-         * 页码
-         */
-        private Integer pageNum;
-        /**
-         * 每页条数
-         */
-        private Integer pageSize;
-        private Integer pages;
-        /**
-         * 明细行集合
-         */
-        private List<Row> records;
-    }
-
-    /**
-     * 统计 + 字典文案兜底用（预留扩展）
-     */
-    @Data
-    public static class DictRow {
-        private String dictValue;
-        private String dictLabel;
-    }
 }

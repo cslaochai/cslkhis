@@ -2,7 +2,7 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.SingleDiseaseDTO;
@@ -14,7 +14,7 @@ import com.his.emr.mapper.SysSingleDiseaseMapper;
 import com.his.emr.service.SingleDiseaseService;
 import com.his.emr.vo.SingleDiseaseAutoEnrollStatVO;
 import com.his.emr.vo.SingleDiseaseVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

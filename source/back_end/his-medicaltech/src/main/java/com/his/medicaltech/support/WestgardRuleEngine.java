@@ -1,5 +1,7 @@
 package com.his.medicaltech.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -23,6 +25,7 @@ import java.util.List;
  * <p>Z =（测定值 − 靶值）/ SD。SD = 0 或靶值为空时无法判定 → 落在「未判定」，
  * **绝不因为算不出就说在控**（算不出却判在控，比报错更危险）。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class WestgardRuleEngine {
 
     public static final int IN_CONTROL = 1;
@@ -59,9 +62,6 @@ public final class WestgardRuleEngine {
         public String ruleText() {
             return String.join(",", rules);
         }
-    }
-
-    private WestgardRuleEngine() {
     }
 
     /**

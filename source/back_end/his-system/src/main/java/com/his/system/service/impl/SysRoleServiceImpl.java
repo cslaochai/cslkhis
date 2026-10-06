@@ -3,7 +3,7 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
 import com.his.system.dto.RoleMenuUpsertDTO;
 import com.his.system.dto.SysRoleQueryDTO;

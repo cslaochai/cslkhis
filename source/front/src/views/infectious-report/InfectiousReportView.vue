@@ -59,7 +59,7 @@ const onNotify = async () => {
 }
 
 // ---------------- 列表 ----------------
-const query = reactive({ pageNo: 1, pageSize: DEFAULT_PAGE_SIZE, reportStatus: null, infectiousClass: null, keyword: '', overdue: 0 })
+const query = reactive({ pageNum: 1, pageSize: DEFAULT_PAGE_SIZE, reportStatus: null, infectiousClass: null, keyword: '', overdue: 0 })
 const rows = ref([])
 const total = ref(0)
 const loading = ref(false)
@@ -73,9 +73,9 @@ const loadRows = async () => {
     else ElMessage.error(res.message || '加载报卡失败')
   } catch (e) { console.error(e); ElMessage.error('加载报卡失败') } finally { loading.value = false }
 }
-const resetQuery = () => { query.reportStatus = null; query.infectiousClass = null; query.keyword = ''; query.overdue = 0; query.pageNo = 1; loadRows() }
+const resetQuery = () => { query.reportStatus = null; query.infectiousClass = null; query.keyword = ''; query.overdue = 0; query.pageNum = 1; loadRows() }
 const overdueFlag = ref(false)
-const onOverdueChange = (v) => { query.overdue = v ? 1 : 0; query.pageNo = 1; loadRows() }
+const onOverdueChange = (v) => { query.overdue = v ? 1 : 0; query.pageNum = 1; loadRows() }
 
 // ---------------- 填卡 / 编辑 ----------------
 const openVisible = ref(false)
@@ -206,23 +206,23 @@ onMounted(async () => { await Promise.all([loadDicts(), loadStats(), loadRows()]
       <div class="flex items-start justify-between gap-4">
         <el-form :model="query" inline @submit.prevent>
           <el-form-item label="状态">
-            <el-select v-model="query.reportStatus" placeholder="状态" clearable style="width:120px" data-testid="filter-status" @change="query.pageNo = 1; loadRows()">
+            <el-select v-model="query.reportStatus" placeholder="状态" clearable style="width:120px" data-testid="filter-status" @change="query.pageNum = 1; loadRows()">
               <el-option v-for="d in statusDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue" />
             </el-select>
           </el-form-item>
           <el-form-item label="类别">
-            <el-select v-model="query.infectiousClass" placeholder="类别" clearable style="width:110px" data-testid="filter-class" @change="query.pageNo = 1; loadRows()">
+            <el-select v-model="query.infectiousClass" placeholder="类别" clearable style="width:110px" data-testid="filter-class" @change="query.pageNum = 1; loadRows()">
               <el-option v-for="d in classDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue" />
             </el-select>
           </el-form-item>
           <el-form-item label="关键字">
-            <el-input v-model="query.keyword" placeholder="单号/患者/病种" clearable style="width:200px" data-testid="filter-keyword" @keyup.enter="query.pageNo = 1; loadRows()" />
+            <el-input v-model="query.keyword" placeholder="单号/患者/病种" clearable style="width:200px" data-testid="filter-keyword" @keyup.enter="query.pageNum = 1; loadRows()" />
           </el-form-item>
           <el-form-item>
             <el-checkbox v-model="overdueFlag" data-testid="filter-overdue" @change="onOverdueChange">只看超时未报</el-checkbox>
           </el-form-item>
           <el-form-item>
-            <el-button :icon="Search" type="primary" data-testid="btn-search" @click="query.pageNo = 1; loadRows()">查询</el-button>
+            <el-button :icon="Search" type="primary" data-testid="btn-search" @click="query.pageNum = 1; loadRows()">查询</el-button>
             <el-button :icon="Refresh" data-testid="btn-reset" @click="resetQuery">重置</el-button>
           </el-form-item>
         </el-form>
@@ -279,7 +279,7 @@ onMounted(async () => { await Promise.all([loadDicts(), loadStats(), loadRows()]
       </el-table-column>
       </el-table>
       <div ref="footerRef" class="list-footer flex items-center justify-end">
-        <el-pagination v-model:current-page="query.pageNo" :page-size="query.pageSize" :total="total"
+        <el-pagination v-model:current-page="query.pageNum" :page-size="query.pageSize" :total="total"
           layout="total, prev, pager, next" data-testid="report-pagination" @current-change="loadRows" />
       </div>
     </el-card>

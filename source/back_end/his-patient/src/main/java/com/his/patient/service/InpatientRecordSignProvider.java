@@ -5,7 +5,7 @@ import com.his.common.enums.SignBizType;
 import com.his.common.enums.SignScene;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
-import com.his.common.util.SignCrypto;
+import com.his.common.util.SignCryptoUtil;
 import com.his.patient.entity.BizInpatientRecord;
 
 import java.time.LocalDateTime;
@@ -63,7 +63,7 @@ public interface InpatientRecordSignProvider extends SignableContentProvider {
      * 供外部（如签名详情页）按当前内容重算摘要用
      */
     public static String digestOf(BizInpatientRecord r) {
-        return SignCrypto.sha256Hex(canonical(r));
+        return SignCryptoUtil.sha256Hex(canonical(r));
     }
 
     /**

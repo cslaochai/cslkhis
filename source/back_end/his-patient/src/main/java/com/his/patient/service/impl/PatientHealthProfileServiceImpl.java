@@ -10,7 +10,7 @@ import com.his.patient.service.PatientHealthProfileService;
 import com.his.patient.support.HealthProfileEnums;
 import com.his.patient.support.PatientProfileValidator;
 import com.his.patient.vo.*;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.system.entity.SysDictData;
 import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;

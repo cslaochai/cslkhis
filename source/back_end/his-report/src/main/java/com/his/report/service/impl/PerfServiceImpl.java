@@ -12,7 +12,7 @@ import com.his.report.mapper.BizDeptCostMonthMapper;
 import com.his.report.mapper.BizPerfResultMapper;
 import com.his.report.mapper.PerfMapper;
 import com.his.report.vo.PerfVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +20,6 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.util.Map;
 
 /**

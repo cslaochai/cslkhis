@@ -150,11 +150,4 @@ public class SingleDiseaseVO {
         private Long qcPassedCount;
     }
 
-    /**
-     * 指标总览
-     */
-    @Data
-    public static class MetricBoard {
-        private List<Metric> metrics;
-    }
 }

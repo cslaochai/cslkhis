@@ -1,8 +1,8 @@
 package com.his.charge.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.charge.entity.BizYbChronicReg;
 import com.his.charge.vo.ChronicRegSummaryVO;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 

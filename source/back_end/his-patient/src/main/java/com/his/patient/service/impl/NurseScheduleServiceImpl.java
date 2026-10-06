@@ -15,7 +15,7 @@ import com.his.patient.entity.BizNurseSchedule;
 import com.his.patient.mapper.BizNurseScheduleMapper;
 import com.his.patient.service.NurseScheduleService;
 import com.his.patient.vo.NurseScheduleVO;
-import com.his.security.DeptScopeGuard;
+import com.his.system.provider.DeptScopeProvider;
 import com.his.system.dto.StaffPlanRuleUpsertDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.BizStaffPlanRule;
@@ -61,6 +61,7 @@ import java.util.function.Predicate;
 @Service
 @RequiredArgsConstructor
 public class NurseScheduleServiceImpl implements NurseScheduleService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private static final int REMARK_MAX = 500;
     private static final int NURSE_LIMIT = 500;
@@ -252,7 +253,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
     public PageResult<NurseScheduleVO.Row> listPage(NurseScheduleDTO.QueryPage query) {
         NurseScheduleDTO.QueryPage q = query == null ? new NurseScheduleDTO.QueryPage() : query;
         IPage<NurseScheduleVO.Row> page = new Page<>(nvl(q.getPageNum(), 1), nvl(q.getPageSize(), 10));
-        Long deptId = DeptScopeGuard.resolveDeptId(q.getDeptId());
+        Long deptId = deptScopeProvider.resolveDeptId(q.getDeptId());
         List<Long> deptIds = scopedDeptIds(q.getDeptId());
         List<NurseScheduleVO.Row> records = scheduleMapper.selectSchedulePage(page, trimToNull(q.getKeyword()),
                 q.getWardId(), deptId, q.getScheduleStatus(), q.getStartDate(), q.getEndDate(), deptIds);
@@ -369,7 +370,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         if (row == null) {
             throw new BusinessException("排班行不存在或已删除");
         }
-        if (!DeptScopeGuard.canAccessDept(row.getDeptId())) {
+        if (!deptScopeProvider.canAccessDept(row.getDeptId())) {
             throw new BusinessException("无权删除该病区的排班（不在当前岗位的数据范围内）");
         }
         scheduleMapper.purgeById(id);
@@ -738,7 +739,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         }
         // 标准只存单元 id，科室归属从病区现取（不在标准行上冗余 dept 列，避免调科后两处不一致）
         NurseScheduleVO.Ward ward = scheduleMapper.selectWard(rule.getOrgId());
-        if (ward == null || !DeptScopeGuard.canAccessDept(ward.getDeptId())) {
+        if (ward == null || !deptScopeProvider.canAccessDept(ward.getDeptId())) {
             throw new BusinessException("无权维护该病区的人力标准（不在当前岗位的数据范围内）");
         }
         planRuleService.deleteById(id);
@@ -1032,7 +1033,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         if (unit == null) {
             throw new BusinessException(type == UNIT_WARD ? "病区不存在或已停用" : "门诊科室不存在或已停用");
         }
-        if (!DeptScopeGuard.canAccessDept(unit.getDeptId())) {
+        if (!deptScopeProvider.canAccessDept(unit.getDeptId())) {
             throw new BusinessException("无权操作「" + unit.getWardName() + "」的排班（不在当前岗位的数据范围内）");
         }
         return unit;
@@ -1054,7 +1055,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         if (ward == null) {
             throw new BusinessException("病区不存在或已停用");
         }
-        if (!DeptScopeGuard.canAccessDept(ward.getDeptId())) {
+        if (!deptScopeProvider.canAccessDept(ward.getDeptId())) {
             throw new BusinessException("无权操作「" + ward.getWardName() + "」的排班（不在当前岗位的数据范围内）");
         }
         return ward;
@@ -1090,11 +1091,11 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
      * 当前岗位可见科室；null=不收口（全院），空集合用 -1 兜住，避免 IN () 语法错
      */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
-        Long resolved = DeptScopeGuard.resolveDeptId(requestedDeptId);
+        Long resolved = deptScopeProvider.resolveDeptId(requestedDeptId);
         if (resolved != null) {
             return null;
         }
-        Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         if (allowed == null) {
             return null;
         }

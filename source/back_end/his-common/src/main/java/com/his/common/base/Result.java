@@ -1,5 +1,6 @@
 package com.his.common.base;
 
+import lombok.NoArgsConstructor;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -8,14 +9,12 @@ import java.io.Serializable;
  * 统一响应结果
  */
 @Data
+@NoArgsConstructor
 public class Result<T> implements Serializable {
 
     private int code;
     private String message;
     private T data;
-
-    public Result() {
-    }
 
     public Result(int code, String message, T data) {
         this.code = code;

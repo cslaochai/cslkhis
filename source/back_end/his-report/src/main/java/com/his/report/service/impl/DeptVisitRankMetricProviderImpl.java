@@ -2,8 +2,8 @@ package com.his.report.service.impl;
 
 import com.his.report.service.DeptVisitRankMetricProvider;
 import com.his.report.mapper.WorkbenchMetricMapper;
-import com.his.security.entity.CurrentUser;
-import com.his.security.provider.WorkbenchMetricProvider;
+import com.his.system.entity.CurrentUser;
+import com.his.system.provider.WorkbenchMetricProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -23,8 +23,8 @@ import com.his.medicaltech.service.CriticalValueService;
 import com.his.medicaltech.support.LabCriticalValueRules;
 import com.his.medicaltech.vo.BizCriticalValueVO;
 import com.his.medicaltech.vo.CriticalValueStatsVO;
-import com.his.security.entity.CurrentUser;
-import com.his.security.UserUtils;
+import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import com.his.system.entity.SysConfig;
 import com.his.system.entity.SysMessage;
 import com.his.system.entity.SysEmployee;
@@ -619,7 +619,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         BeanUtils.copyProperties(entity, vo);
         vo.setGenderText(SysGenderEnum.getText(entity.getGender()));
         vo.setStatusText(statusText(entity.getStatus()));
-        vo.setCriticalTypeText(criticalTypeText(entity.getCriticalType()));
+        vo.setCriticalTypeText(CriticalTypeEnum.getText(entity.getCriticalType()));
         vo.setResultText(buildResultText(entity));
         vo.setOverdue(isOverdue(entity));
         return vo;
@@ -658,13 +658,6 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         }
         CriticalValueStatusEnum e = CriticalValueStatusEnum.getByCode(status);
         return e != null ? e.getDescription() : "未知";
-    }
-
-    private static String criticalTypeText(Integer type) {
-        if (type == null) {
-            return "未知";
-        }
-        return type == CriticalTypeEnum.HIGH.getCode() ? "偏高" : "偏低";
     }
 
     private static LocalDateTime startOfDay(String text) {

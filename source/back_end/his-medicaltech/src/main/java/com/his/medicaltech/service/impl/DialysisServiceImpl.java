@@ -6,9 +6,9 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.BaseEntity;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
-import com.his.common.support.SensitiveMaskUtils;
+import com.his.common.util.SensitiveMaskUtil;
 import com.his.medicaltech.dto.DialysisDTO;
 import com.his.medicaltech.entity.BizDialysisMachine;
 import com.his.medicaltech.entity.BizDialysisPatient;
@@ -27,7 +27,7 @@ import com.his.medicaltech.mapper.BizDialysisPatientMapper;
 import com.his.medicaltech.mapper.BizDialysisPrescriptionMapper;
 import com.his.medicaltech.mapper.BizDialysisSessionMapper;
 import com.his.medicaltech.vo.DialysisVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -625,7 +625,7 @@ public class DialysisServiceImpl implements DialysisService {
     }
 
     private void maskArchivePhone(DialysisVO.ArchiveVO vo) {
-        vo.setPhoneMasked(SensitiveMaskUtils.maskPhone(vo.getPhone()));
+        vo.setPhoneMasked(SensitiveMaskUtil.maskPhone(vo.getPhone()));
         vo.setPhone(null);
     }
 

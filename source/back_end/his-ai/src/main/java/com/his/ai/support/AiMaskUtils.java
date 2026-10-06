@@ -1,5 +1,7 @@
 package com.his.ai.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.util.regex.Pattern;
@@ -13,6 +15,7 @@ import java.util.regex.Pattern;
  * <p>
  * 注意：正则只能挡住格式规整的号码。姓名是挡不住的，只能靠源头不查。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AiMaskUtils {
 
     private static final String MASK_ID_CARD = "[身份证号]";
@@ -23,9 +26,6 @@ public final class AiMaskUtils {
     private static final Pattern MOBILE = Pattern.compile("(?<!\\d)1[3-9]\\d{9}(?!\\d)");
 
     private static final int DEFAULT_MAX_LENGTH = 512;
-
-    private AiMaskUtils() {
-    }
 
     /**
      * 屏蔽身份证号与手机号。先处理 18 位再处理 15 位，避免 18 位被截成 15 位误判。

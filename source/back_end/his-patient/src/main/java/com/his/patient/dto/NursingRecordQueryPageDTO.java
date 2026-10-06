@@ -45,7 +45,7 @@ public class NursingRecordQueryPageDTO extends PageParam implements Serializable
     private String endTime;
 
     /**
-     * 科室数据权限收敛集合（M6）—— 只由服务端按 {@code DeptScopeGuard} 填充，
+     * 科室数据权限收敛集合（M6）—— 只由服务端按 {@code DeptScopeProvider} 填充，
      * listPage 入口先置 null，前端传什么都忽略。受限时非空。
      */
     private List<Long> scopeDeptIds;

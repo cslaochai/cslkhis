@@ -2,6 +2,7 @@ package com.his.emr.service;
 
 import com.his.common.base.PageResult;
 import com.his.emr.dto.InfectiousReportDTO;
+import com.his.emr.dto.InfectiousReportQueryPageDTO;
 import com.his.emr.vo.InfectiousReportVO;
 
 import java.util.List;
@@ -11,7 +12,7 @@ import java.util.List;
  */
 public interface InfectiousReportService {
 
-    PageResult<InfectiousReportVO.Row> page(InfectiousReportDTO.QueryPage q);
+    PageResult<InfectiousReportVO.Row> page(InfectiousReportQueryPageDTO q);
 
     InfectiousReportVO.Detail getDetailById(Long id);
 

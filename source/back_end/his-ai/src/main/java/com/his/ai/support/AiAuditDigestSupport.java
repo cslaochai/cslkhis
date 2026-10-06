@@ -1,5 +1,7 @@
 package com.his.ai.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
@@ -20,6 +22,7 @@ import java.util.Map;
  * </ul>
  * 非法反射访问、组装中途任何异常都按「返回空摘要」兜底 —— 审计失败不能反过来打断业务调用。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AiAuditDigestSupport {
 
     /**
@@ -35,9 +38,6 @@ public final class AiAuditDigestSupport {
      * 集合内 POJO 元素的递归层数：封顶 1，覆盖「judgments/焦点列表」这类一层嵌套契约
      */
     private static final int MAX_DEPTH = 1;
-
-    private AiAuditDigestSupport() {
-    }
 
     /**
      * 组装模型输出 DTO 的审计摘要。

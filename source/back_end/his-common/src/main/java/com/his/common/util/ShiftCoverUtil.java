@@ -1,5 +1,7 @@
 package com.his.common.util;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalTime;
@@ -18,10 +20,8 @@ import java.time.LocalTime;
  *
  * <p><b>解析不了就当不在岗</b>，绝不猜：时间字符串脏了就返回 null，调用方跳过这一条。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ShiftCoverUtil {
-
-    private ShiftCoverUtil() {
-    }
 
     /**
      * 解析排班时间字符串（"08:00" / "08:00:00" / "8:00" 补零后）。

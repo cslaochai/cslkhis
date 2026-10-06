@@ -24,7 +24,7 @@ import com.his.pharmacy.vo.AntibioticAuthVO;
 import com.his.pharmacy.vo.AntibioticCatalogVO;
 import com.his.pharmacy.vo.AntibioticDoctorSelectListVO;
 import com.his.pharmacy.vo.AntibioticDrugSelectListVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

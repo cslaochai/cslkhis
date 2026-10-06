@@ -1,6 +1,6 @@
 package com.his.system.service;
 
-import com.his.security.entity.CurrentUser;
+import com.his.system.entity.CurrentUser;
 import com.his.system.dto.EmployeePostDTO;
 import com.his.system.vo.EmployeePostVO;
 import com.his.system.vo.SwitchPostVO;

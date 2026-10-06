@@ -15,7 +15,7 @@ import com.his.medicaltech.entity.BizUltrasoundRecord;
 import com.his.medicaltech.mapper.BizUltrasoundMeasureMapper;
 import com.his.medicaltech.mapper.BizUltrasoundRecordMapper;
 import com.his.medicaltech.vo.UltrasoundVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

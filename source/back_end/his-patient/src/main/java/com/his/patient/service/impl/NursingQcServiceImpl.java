@@ -17,9 +17,9 @@ import com.his.patient.mapper.BizNursingQcIndicatorMapper;
 import com.his.patient.mapper.SysNursingQcItemMapper;
 import com.his.patient.service.NursingQcService;
 import com.his.patient.vo.NurseQcVO;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
-import com.his.security.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -59,6 +59,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class NursingQcServiceImpl implements NursingQcService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private static final int TEXT_MAX = 500;
     private static final int OPERATOR_MAX = 64;
@@ -207,7 +208,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         NursingQcDTO.CheckQueryPage q = query == null ? new NursingQcDTO.CheckQueryPage() : query;
         IPage<NurseQcVO.CheckRow> page = new Page<>(nvl(q.getPageNum(), 1), nvl(q.getPageSize(), 10));
         List<NurseQcVO.CheckRow> records = checkMapper.selectCheckPage(page, trimToNull(q.getKeyword()),
-                q.getWardId(), DeptScopeGuard.resolveDeptId(q.getDeptId()), q.getCategory(), q.getStatus(),
+                q.getWardId(), deptScopeProvider.resolveDeptId(q.getDeptId()), q.getCategory(), q.getStatus(),
                 trimToNull(q.getStartMonth()), trimToNull(q.getEndMonth()), scopedDeptIds(q.getDeptId()));
         records.forEach(this::fillCheckText);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
@@ -410,7 +411,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         NursingQcDTO.LedgerQueryPage q = query == null ? new NursingQcDTO.LedgerQueryPage() : query;
         IPage<NurseQcVO.LedgerRow> page = new Page<>(nvl(q.getPageNum(), 1), nvl(q.getPageSize(), 10));
         List<NurseQcVO.LedgerRow> records = indicatorMapper.selectLedgerPage(page, trimToNull(q.getKeyword()),
-                q.getWardId(), DeptScopeGuard.resolveDeptId(q.getDeptId()), trimToNull(q.getIndicatorCode()),
+                q.getWardId(), deptScopeProvider.resolveDeptId(q.getDeptId()), trimToNull(q.getIndicatorCode()),
                 q.getReportStatus(), trimToNull(q.getStatMonth()), trimToNull(q.getStartMonth()),
                 trimToNull(q.getEndMonth()), scopedDeptIds(q.getDeptId()));
         records.forEach(this::fillLedgerText);
@@ -597,7 +598,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         if (row == null) {
             throw new BusinessException("台账行不存在");
         }
-        if (!DeptScopeGuard.canAccessDept(row.getDeptId())) {
+        if (!deptScopeProvider.canAccessDept(row.getDeptId())) {
             throw new BusinessException("无权删除「" + row.getWardName() + "」的台账（不在当前岗位的数据范围内）");
         }
         indicatorMapper.purgeById(id);
@@ -670,7 +671,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         if (row == null) {
             throw new BusinessException("检查单不存在");
         }
-        if (!DeptScopeGuard.canAccessDept(row.getDeptId())) {
+        if (!deptScopeProvider.canAccessDept(row.getDeptId())) {
             throw new BusinessException("无权操作「" + row.getWardName() + "」的检查单（不在当前岗位的数据范围内）");
         }
         fillCheckText(row);
@@ -694,7 +695,7 @@ public class NursingQcServiceImpl implements NursingQcService {
      */
     private NurseQcVO.Ward requireVisibleWard(Long wardId) {
         NurseQcVO.Ward ward = requireWard(wardId);
-        if (!DeptScopeGuard.canAccessDept(ward.getDeptId())) {
+        if (!deptScopeProvider.canAccessDept(ward.getDeptId())) {
             throw new BusinessException("无权操作「" + ward.getWardName() + "」的护理质控数据（不在当前岗位的数据范围内）");
         }
         return ward;
@@ -774,11 +775,11 @@ public class NursingQcServiceImpl implements NursingQcService {
      * 当前岗位可见科室；null=不收口（全院），空集合用 -1 兜住，避免 IN () 语法错
      */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
-        Long resolved = DeptScopeGuard.resolveDeptId(requestedDeptId);
+        Long resolved = deptScopeProvider.resolveDeptId(requestedDeptId);
         if (resolved != null) {
             return null;
         }
-        Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         if (allowed == null) {
             return null;
         }

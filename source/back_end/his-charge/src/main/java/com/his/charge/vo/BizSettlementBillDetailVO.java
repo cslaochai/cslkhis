@@ -1,11 +1,11 @@
 package com.his.charge.vo;
 
+
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizSettlementBillItem;
+import java.util.List;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.util.List;
 
 /**
  * 账单详情：账单头 + 行快照 + 全部收/退流水。

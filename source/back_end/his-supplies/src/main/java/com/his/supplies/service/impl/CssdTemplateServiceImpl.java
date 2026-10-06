@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.supplies.dto.CssdDTO;
 import com.his.supplies.entity.BizCssdPackTemplate;
 import com.his.supplies.entity.BizCssdPackTemplateItem;

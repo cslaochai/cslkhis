@@ -1,5 +1,7 @@
 package com.his.miniapp.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDate;
@@ -15,10 +17,8 @@ import java.util.Map;
  * 整型列可能是 Byte/Short/Integer。直接强转会在运行期抛 ClassCastException 被兜成 500，
  * 这里统一按 Number/Temporal 分支收敛成出参字段类型。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RawRowValues {
-
-    private RawRowValues() {
-    }
 
     public static Object value(Map<String, Object> row, String key) {
         return row == null ? null : row.get(key);

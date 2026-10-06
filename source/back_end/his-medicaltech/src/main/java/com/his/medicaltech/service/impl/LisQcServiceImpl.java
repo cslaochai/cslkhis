@@ -13,7 +13,7 @@ import com.his.medicaltech.mapper.BizLisQcRecordMapper;
 import com.his.medicaltech.support.WestgardRuleEngine;
 import com.his.medicaltech.vo.LisQcVO;
 import com.his.system.service.DictCacheService;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

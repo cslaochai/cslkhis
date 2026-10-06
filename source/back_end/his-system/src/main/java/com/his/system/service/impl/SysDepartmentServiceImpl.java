@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.security.DeptScopeGuard;
+import com.his.system.provider.DeptScopeProvider;
 import com.his.system.dto.DepartmentQueryDTO;
 import com.his.system.dto.DepartmentSelectDTO;
 import com.his.system.dto.DepartmentUpsertDTO;
@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class SysDepartmentServiceImpl implements SysDepartmentService {
+    private final DeptScopeProvider deptScopeProvider;
 
     /**
      * 顶级部门的固定编码：它既是树根也是「不许删、不许改父节点」的判据。
@@ -65,7 +66,7 @@ public class SysDepartmentServiceImpl implements SysDepartmentService {
                 .orderByAsc(SysDepartment::getId);
 
         if (!isAllScope(selectDTO.getScope())) {
-            Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+            Set<Long> allowed = deptScopeProvider.allowedDeptIds();
             if (allowed != null) {
                 if (allowed.isEmpty()) {
                     return new ArrayList<>();

@@ -1,5 +1,7 @@
 package com.his.patient.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.his.patient.entity.BizPatient;
 import org.springframework.util.StringUtils;
 
@@ -13,6 +15,7 @@ import java.util.*;
  * 而 `idCard`、`birthDate` 空着直接导致无法去重、无法判断用药禁忌。
  * 所以完整度必须只对**诊疗必需字段**算，且要能报出**具体缺了哪几个**（不达标要能定位）。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class PatientProfileFields {
 
     /**
@@ -31,9 +34,6 @@ public final class PatientProfileFields {
             "allergy", "过敏史",
             "pastDisease", "既往病史",
             "contact", "联系人");
-
-    private PatientProfileFields() {
-    }
 
     private static Map<String, String> build() {
         Map<String, String> m = new LinkedHashMap<>();

@@ -1,5 +1,7 @@
 package com.his.common.util;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
@@ -19,10 +21,8 @@ import java.time.temporal.ChronoUnit;
  * {@code nowSeconds()} / {@code toSeconds()} / {@code seconds()}，共 283 处调用，
  * 同一语义复制 26 份——这不叫收口，且各自改名导致无法统一调整。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TimeUtil {
-
-    private TimeUtil() {
-    }
 
     /**
      * 归一到秒。null 安全（null 进null 出）。

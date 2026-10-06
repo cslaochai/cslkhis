@@ -1,5 +1,7 @@
 package com.his.operation.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.util.*;
 
 /**
@@ -13,6 +15,7 @@ import java.util.*;
  * <p>核查结果同样是<b>码值集合</b>（逗号分隔），必核项缺失直接拒收 ——
  * 与"术前核对 4 项必核"同一条原则：逐项确认才是核对，一段自由文本只是"看起来核过了"。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SafetyCheckItems {
 
     /**
@@ -67,9 +70,6 @@ public final class SafetyCheckItems {
         signOut.put(5, "患者转运与交接注意事项已沟通（接收护士 / 医师在场确认）");
         PHASE_ITEMS.put(PHASE_SIGN_OUT, signOut);
         PHASE_REQUIRED.put(PHASE_SIGN_OUT, List.of(1, 2, 4, 5));
-    }
-
-    private SafetyCheckItems() {
     }
 
     public static String phaseText(Integer phase) {

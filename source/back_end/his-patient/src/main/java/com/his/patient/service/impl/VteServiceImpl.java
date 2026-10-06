@@ -18,7 +18,7 @@ import com.his.patient.mapper.*;
 import com.his.patient.service.VteService;
 import com.his.patient.support.VteRules;
 import com.his.patient.vo.*;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;

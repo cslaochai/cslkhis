@@ -20,7 +20,7 @@ import java.util.List;
  *       在系统里无处表达，别的队列会把同一张床安排给别人。</li>
  * </ol>
  *
- * <p><b>科室边界不收口</b>（不调 DeptScopeGuard）：这个域的存在意义就是"跨科室找床"，
+ * <p><b>科室边界不收口</b>（不调 DeptScopeProvider）：这个域的存在意义就是"跨科室找床"，
  * 按岗位科室收口等于让它看不到自己要管的资源。边界由 {@code ipd:bedCenter:list} 的授权控制。
  */
 public interface BedCenterService {

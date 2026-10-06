@@ -1,11 +1,11 @@
 package com.his.charge.entity;
 
+import com.his.charge.mapper.BizYbMappingMapper;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.his.common.base.BaseEntity;
+import java.time.LocalDateTime;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-
-import java.time.LocalDateTime;
 
 /**
  * 医保目录对照表（院内项目 ↔ 国家医保编码，一对一）。

@@ -1,6 +1,8 @@
 package com.his.system.service;
 
-import com.his.security.entity.CurrentUser;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysMessage;
 import lombok.Data;
 
@@ -14,12 +16,10 @@ import java.time.format.DateTimeFormatter;
  * JS 侧 {@code Number} 只有 53 位精度，19 位的 {@code messageId} 会被静默四舍五入
  * （点"处理"就打不开原消息）。这里统一转成字符串，时间格式也固定成前端可直接渲染的文本。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class MessageMetricSupport {
 
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-
-    private MessageMetricSupport() {
-    }
 
     /**
      * 收件人口径：消息通知.receiver_id 存的是<b>员工ID</b>，不是用户的ID

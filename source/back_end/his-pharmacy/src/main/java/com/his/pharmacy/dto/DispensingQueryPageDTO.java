@@ -23,7 +23,7 @@ public class DispensingQueryPageDTO extends PageParam {
      */
     private String prescriptionNo;
     /**
-     * 发药状态（参考 DispensingStatus 枚举）
+     * 发药状态（1-待发药 2-已发药 3-已取药 4-已退药）
      */
     private Integer dispensingStatus;
 }

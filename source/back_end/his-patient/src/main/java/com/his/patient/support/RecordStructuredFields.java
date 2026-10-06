@@ -1,5 +1,7 @@
 package com.his.patient.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.enums.InpatientRecordTypeEnum;
 import org.springframework.util.StringUtils;
@@ -27,6 +29,7 @@ import java.util.function.Function;
  * 否则入院记录的"结构化率"永远差一项，医生为了凑分会往病程正文里填一句废话，
  * 报表好看了、病历更假了。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RecordStructuredFields {
 
     /**
@@ -177,9 +180,6 @@ public final class RecordStructuredFields {
         GROUP_LABELS.put(GROUP_TRANSFER, "转科要素");
         GROUP_LABELS.put(GROUP_OPERATION, "手术要素");
         GROUP_LABELS.put(GROUP_TRANSFUSION, "输血要素");
-    }
-
-    private RecordStructuredFields() {
     }
 
     /**

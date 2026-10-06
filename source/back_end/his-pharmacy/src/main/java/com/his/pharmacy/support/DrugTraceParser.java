@@ -1,5 +1,7 @@
 package com.his.pharmacy.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -24,6 +26,7 @@ import java.util.regex.Pattern;
  * 20 位码里"哪几位是批号"各企业编码规则不统一，因此<b>只切本体码与序列号，批号一律不解析</b>，
  * 批号以挂靠的库存批次为准。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DrugTraceParser {
 
     /** GS1：AI 括号串（只取药品追溯必需的 4 个 AI） */
@@ -35,9 +38,6 @@ public final class DrugTraceParser {
     public static final int CODE_TYPE_GS1 = 1;
     public static final int CODE_TYPE_CN20 = 2;
     public static final int CODE_TYPE_OTHER = 3;
-
-    private DrugTraceParser() {
-    }
 
     @Data
     public static class TraceParts {

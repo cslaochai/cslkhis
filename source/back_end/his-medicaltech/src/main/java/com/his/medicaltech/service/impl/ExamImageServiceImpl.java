@@ -22,7 +22,7 @@ import com.his.medicaltech.mapper.BizInspectionRecordMapper;
 import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
 import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.system.service.DictCacheService;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.system.service.SysAuditLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -146,11 +146,4 @@ public class NurseScheduleDTO {
         private String remark;
     }
 
-    /** 标准删除 */
-    @Data
-    public static class RuleDelete {
-        /** 主键ID */
-        @NotNull(message = "缺少规则ID")
-        private Long id;
-    }
 }

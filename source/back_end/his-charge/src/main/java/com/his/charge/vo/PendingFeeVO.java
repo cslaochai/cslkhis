@@ -1,6 +1,5 @@
 package com.his.charge.vo;
 
-import com.his.fee.vo.BizFeeRecordVO;
 import lombok.Data;
 
 import java.math.BigDecimal;

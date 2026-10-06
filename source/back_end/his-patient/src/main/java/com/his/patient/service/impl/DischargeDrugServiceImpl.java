@@ -13,7 +13,7 @@ import com.his.patient.service.DischargeDrugService;
 import com.his.system.service.DictCacheService;
 import com.his.patient.vo.DischargeDrugSelectListVO;
 import com.his.patient.vo.DischargeDrugVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

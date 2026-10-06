@@ -1,0 +1,42 @@
+package com.his.charge.vo;
+
+import com.his.charge.service.MedicalTechGateway;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+/**
+ * 检验结果项跨域摘要（低编/高编稽核的证据来源）。
+ *
+ * <p>收费域只读「项目名 + 结果值 + 单位 + 异常描述 + 判读意见」这几个字段，
+ * 用来拼证据文本与做诊断依据匹配，不需要检验域的整张结果表。
+ *
+ * @see MedicalTechGateway
+ */
+@Data
+@NoArgsConstructor
+public class LabResultBrief {
+
+    /** 结果项ID */
+    private Long id;
+
+    /** 所属检验记录ID */
+    private Long recordId;
+
+    /** 检验项目名 */
+    private String laboratoryItemName;
+
+    /** 结果值 */
+    private String resultValue;
+
+    /** 结果单位 */
+    private String resultUnit;
+
+    /** 参考范围（合规稽核要区分"高值有参考区间"和"无区间裸值"） */
+    private String referenceRange;
+
+    /** 异常描述（偏高/偏低/阳性…） */
+    private String abnormalDesc;
+
+    /** 判读意见/备注 */
+    private String judgeNote;
+}

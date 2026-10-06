@@ -13,7 +13,7 @@ import com.his.patient.mapper.BizReferralMapper;
 import com.his.patient.service.ReferralService;
 import com.his.system.service.DictCacheService;
 import com.his.patient.vo.ReferralVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.system.entity.SysConfig;
 import com.his.system.entity.SysMessage;
 import com.his.system.enums.BizTypeEnum;

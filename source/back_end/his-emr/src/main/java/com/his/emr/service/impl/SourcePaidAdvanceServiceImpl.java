@@ -1,7 +1,7 @@
 package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.ApplyStatusEnum;
 import com.his.common.enums.PrescriptionPayStatusEnum;
 import com.his.common.exception.BusinessException;

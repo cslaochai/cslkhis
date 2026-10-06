@@ -1,5 +1,7 @@
 package com.his.supplies.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import lombok.Data;
 
 import java.time.LocalDate;
@@ -10,13 +12,11 @@ import java.util.regex.Pattern;
  * GS1 UDI 解析器（高值耗材扫码串 → DI/序列号/批号/有效期）。
  *
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class UdiParser {
 
     private static final Pattern BRACKETED = Pattern.compile("\\((0[17]|1[07]|21)\\)([^(]*)");
     private static final Pattern BARE_DI = Pattern.compile("^01(\\d{14})");
-
-    private UdiParser() {
-    }
 
     /**
      * 宽松解析：解析不出 DI 返回 parsed=false（登记仍可继续，DI 列留空等人工补录），

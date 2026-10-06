@@ -3,7 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.ObjectSignStatus;
@@ -15,13 +15,12 @@ import com.his.common.vo.SignatureVO;
 import com.his.patient.dto.CriticalNoticeDTO;
 import com.his.patient.entity.BizCriticalNotice;
 import com.his.patient.enums.NoticeStatusEnum;
-import com.his.patient.enums.NoticeTypeEnum;
 import com.his.patient.mapper.BizCriticalNoticeMapper;
 import com.his.patient.service.CriticalNoticeService;
 import com.his.patient.vo.CriticalNoticeVO;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
-import com.his.security.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -55,6 +54,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class CriticalNoticeServiceImpl implements CriticalNoticeService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private static final int DIAG_MAX = 500;
     private static final int TEXT_MAX = 1000;
@@ -413,20 +413,20 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
     }
 
     private void assertDeptAccessible(Long deptId) {
-        if (!DeptScopeGuard.canAccessDept(deptId)) {
+        if (!deptScopeProvider.canAccessDept(deptId)) {
             throw new BusinessException("该通知单所属科室不在当前岗位的数据范围内");
         }
     }
 
     /**
-     * 返回 null=不受限；非空=收口科室集合（显式 deptId 由 DeptScopeGuard 校验越权）
+     * 返回 null=不受限；非空=收口科室集合（显式 deptId 由 DeptScopeProvider 校验越权）
      */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
-        Long resolved = DeptScopeGuard.resolveDeptId(requestedDeptId);
+        Long resolved = deptScopeProvider.resolveDeptId(requestedDeptId);
         if (resolved != null) {
             return null;
         }
-        Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         return allowed == null ? null : List.copyOf(allowed);
     }
 

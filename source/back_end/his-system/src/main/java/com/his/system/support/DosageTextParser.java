@@ -1,5 +1,7 @@
 package com.his.system.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -19,6 +21,7 @@ import java.util.regex.Pattern;
  * 药师此后会无视所有提示，这个功能等于报废。所以口径是<b>宁可漏报不可误报</b>。
  * 完整论证见 {@code sql/130} 文件头第四条。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DosageTextParser {
 
     /**
@@ -45,9 +48,6 @@ public final class DosageTextParser {
             "片", "粒", "袋", "支", "瓶", "板", "枚", "贴", "帖", "丸", "胶囊", "包");
 
     private static final BigDecimal THOUSAND = new BigDecimal("1000");
-
-    private DosageTextParser() {
-    }
 
     /**
      * 数值 + 单位 → mg

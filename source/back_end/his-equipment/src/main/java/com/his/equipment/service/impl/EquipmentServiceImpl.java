@@ -25,7 +25,7 @@ import com.his.equipment.service.EquipmentService;
 import com.his.equipment.vo.EquipmentVO;
 import com.his.equipment.vo.MaintainVO;
 import com.his.equipment.vo.MeteringVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

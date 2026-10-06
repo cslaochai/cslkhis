@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.util.TimeUtil;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.config.SignProperties;
 import com.his.common.dto.SignCertIssueDTO;
 import com.his.common.dto.SignCertQueryPageDTO;
@@ -18,8 +18,8 @@ import com.his.common.mapper.SysSignCertMapper;
 import com.his.common.service.ExternalCaChannelService;
 import com.his.common.service.SignCertService;
 import com.his.common.util.KeyPairFactory;
-import com.his.common.util.KeyProtector;
-import com.his.common.util.SignCrypto;
+import com.his.common.util.KeyProtectorUtil;
+import com.his.common.util.SignCryptoUtil;
 import com.his.common.vo.SignCertVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,7 +61,7 @@ public class SignCertServiceImpl implements SignCertService {
 
     private final SysSignCertMapper certMapper;
     private final SignConfigMapper configMapper;
-    private final KeyProtector keyProtector;
+    private final KeyProtectorUtil keyProtectorUtil;
     private final SignProperties properties;
     private final RedisSequenceService sequenceService;
     /**
@@ -132,7 +132,7 @@ public class SignCertServiceImpl implements SignCertService {
                                 int validDays, CertIssuedMode mode,
                                 Long operatorId, String operatorName, String remark) {
         // 没有主口令就不签发：宁可不发证，也不让私钥明文落库
-        keyProtector.requireSecret();
+        keyProtectorUtil.requireSecret();
 
         // M8 留口子：外部 CA 模式下先本地生成密钥对、把 Subject+公钥交给 CA 适配器
         //（PKCS#10 常规流程：私钥不出本地，CA 只签公钥）。当前适配器是控制台打印桩，
@@ -142,8 +142,8 @@ public class SignCertServiceImpl implements SignCertService {
         }
 
         KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate();
-        String salt = keyProtector.newSalt();
-        String protectedKey = keyProtector.protect(pair.privatePem(), salt, properties.getIterations());
+        String salt = keyProtectorUtil.newSalt();
+        String protectedKey = keyProtectorUtil.protect(pair.privatePem(), salt, properties.getIterations());
 
         LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
         LocalDateTime to = now.plusDays(validDays);
@@ -156,10 +156,10 @@ public class SignCertServiceImpl implements SignCertService {
             cert.setDeptId(deptId);
             cert.setDeptName(deptName);
             cert.setKeyAlgo("RSA" + KeyPairFactory.KEY_SIZE);
-            cert.setDigestAlgo(SignCrypto.DIGEST_ALGO);
-            cert.setSignAlgo(SignCrypto.SIGN_ALGO);
+            cert.setDigestAlgo(SignCryptoUtil.DIGEST_ALGO);
+            cert.setSignAlgo(SignCryptoUtil.SIGN_ALGO);
             cert.setPublicKey(pair.publicPem());
-            cert.setKeyFingerprint(SignCrypto.fingerprint(pair.publicPem()));
+            cert.setKeyFingerprint(SignCryptoUtil.fingerprint(pair.publicPem()));
             cert.setProtectedPrivateKey(protectedKey);
             cert.setKeySalt(salt);
             cert.setKeyIterations(properties.getIterations());
@@ -301,7 +301,7 @@ public class SignCertServiceImpl implements SignCertService {
             throw new BusinessException("证书 " + cert.getCertNo() + " 已于 " + cert.getValidTo()
                     + " 过期，不能用于签名；请重新签发");
         }
-        return keyProtector.unprotect(cert.getProtectedPrivateKey(), cert.getKeySalt(),
+        return keyProtectorUtil.unprotect(cert.getProtectedPrivateKey(), cert.getKeySalt(),
                 cert.getKeyIterations() == null ? properties.getIterations() : cert.getKeyIterations());
     }
 
@@ -366,7 +366,7 @@ public class SignCertServiceImpl implements SignCertService {
         vo.setDigestAlgo(c.getDigestAlgo());
         vo.setSignAlgo(c.getSignAlgo());
         vo.setKeyFingerprint(c.getKeyFingerprint());
-        vo.setKeyFingerprintGroups(SignCrypto.fingerprintGroups(c.getKeyFingerprint()));
+        vo.setKeyFingerprintGroups(SignCryptoUtil.fingerprintGroups(c.getKeyFingerprint()));
         vo.setIssuedMode(c.getIssuedMode());
         vo.setIssuedModeText(CertIssuedMode.textOf(c.getIssuedMode()));
         vo.setCertStatus(c.getCertStatus());

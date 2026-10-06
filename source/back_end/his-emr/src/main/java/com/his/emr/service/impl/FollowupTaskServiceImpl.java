@@ -12,7 +12,7 @@ import com.his.appoint.enums.VisitTypeEnum;
 import com.his.appoint.service.AppointService;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.common.support.SensitiveMaskUtils;
+import com.his.common.util.SensitiveMaskUtil;
 import com.his.emr.dto.FollowupQueryDTO;
 import com.his.emr.dto.FollowupTaskDTO;
 import com.his.emr.entity.BizFollowupTask;
@@ -27,8 +27,8 @@ import com.his.emr.service.SurveyService;
 import com.his.emr.support.FollowupTaskSnapshot;
 import com.his.emr.vo.BizFollowupTaskVO;
 import com.his.emr.vo.FollowupStatVO;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -51,6 +51,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, BizFollowupTask> implements FollowupTaskService {
+    private final DeptScopeProvider deptScopeProvider;
 
     /**
      * 出院一键生成的默认随访天数
@@ -521,7 +522,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     private BizFollowupTaskVO toVo(BizFollowupTask entity, boolean plainPhone) {
         BizFollowupTaskVO vo = new BizFollowupTaskVO();
         BeanUtils.copyProperties(entity, vo);
-        vo.setPhoneMasked(SensitiveMaskUtils.maskPhone(entity == null ? null : entity.getPhone()));
+        vo.setPhoneMasked(SensitiveMaskUtil.maskPhone(entity == null ? null : entity.getPhone()));
         if (!plainPhone) {
             vo.setPhone(null);
         }
@@ -586,7 +587,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     }
 
     private void assertDeptAccessible(Long deptId) {
-        if (!DeptScopeGuard.canAccessDept(deptId)) {
+        if (!deptScopeProvider.canAccessDept(deptId)) {
             throw new BusinessException("该随访任务所属科室不在当前岗位的数据范围内");
         }
     }
@@ -595,11 +596,11 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
      * null=不限科室；非空=收口集合（保证非空，IN () 是语法错误，空集合一律当配置缺失拒掉）
      */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
-        Long resolved = DeptScopeGuard.resolveDeptId(requestedDeptId);
+        Long resolved = deptScopeProvider.resolveDeptId(requestedDeptId);
         if (resolved != null) {
             return List.of(resolved);
         }
-        Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         if (allowed == null) {
             return null;
         }

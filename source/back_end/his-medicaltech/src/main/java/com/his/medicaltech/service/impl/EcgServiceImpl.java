@@ -42,7 +42,7 @@ import com.his.medicaltech.mapper.BizInspectionRecordMapper;
 import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.medicaltech.mapper.RadioReportMapper;
 import com.his.system.service.DictCacheService;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.system.service.SysAuditLogService;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;

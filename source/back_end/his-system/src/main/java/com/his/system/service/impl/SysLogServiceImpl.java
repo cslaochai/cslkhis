@@ -20,6 +20,7 @@ import com.his.system.mapper.SysFieldChangeLogMapper;
 import com.his.system.mapper.SysLoginLogMapper;
 import com.his.system.mapper.SysOperLogMapper;
 import com.his.system.service.SysLogService;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.AuditLogVO;
 import com.his.system.vo.FieldChangeVO;
 import com.his.system.vo.LogStatVO;
@@ -337,8 +338,7 @@ public class SysLogServiceImpl implements SysLogService {
     public String exportCsv(LogQueryPageDTO query) {
         LogQueryPageDTO q = orEmpty(query);
         int type = q.getLogType() == null ? 1 : q.getLogType();
-        q.setPageNum(1);
-        q.setPageSize(EXPORT_MAX);
+        q.forExport(EXPORT_MAX);
         StringBuilder sb = new StringBuilder();
         // BOM：Excel 打开 UTF-8 CSV 不加 BOM 会全屏乱码
         sb.append('\uFEFF');
@@ -412,7 +412,7 @@ public class SysLogServiceImpl implements SysLogService {
     }
 
     private String operatorName() {
-        var user = com.his.security.UserUtils.getCurrentUser();
+        var user = UserUtils.getCurrentUser();
         if (user == null) {
             return "";
         }

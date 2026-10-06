@@ -6,13 +6,13 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.UserTypeEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.support.SensitiveMaskUtils;
-import com.his.security.entity.CurrentUser;
-import com.his.security.UserUtils;
+import com.his.common.util.SensitiveMaskUtil;
+import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import com.his.system.dto.SysUserPasswordUpsertDTO;
 import com.his.system.dto.SysUserQueryPageDTO;
 import com.his.system.dto.SysUserUpsertDTO;
@@ -29,8 +29,7 @@ import com.his.system.vo.EmployeePostVO;
 import com.his.system.vo.RoleNameVO;
 import com.his.system.vo.UserDetailVO;
 import com.his.common.enums.EnableStatusEnum;
-import com.his.common.enums.UserTypeEnum;
-import com.his.system.support.FieldChangeRecorder;
+import com.his.system.service.FieldChangeRecorder;
 import com.his.system.support.FieldSpec;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -420,9 +419,9 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (vo == null) {
             throw new BusinessException("当前登录用户不存在");
         }
-        vo.setPhone(SensitiveMaskUtils.maskPhone(vo.getPhone()));
-        vo.setIdCard(SensitiveMaskUtils.maskIdCard(vo.getIdCard()));
-        vo.setEmail(SensitiveMaskUtils.maskEmail(vo.getEmail()));
+        vo.setPhone(SensitiveMaskUtil.maskPhone(vo.getPhone()));
+        vo.setIdCard(SensitiveMaskUtil.maskIdCard(vo.getIdCard()));
+        vo.setEmail(SensitiveMaskUtil.maskEmail(vo.getEmail()));
         return vo;
     }
 

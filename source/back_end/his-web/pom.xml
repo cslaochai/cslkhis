@@ -21,10 +21,7 @@
             <groupId>com.his</groupId>
             <artifactId>his-common</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-security</artifactId>
-        </dependency>
+        
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-system</artifactId>

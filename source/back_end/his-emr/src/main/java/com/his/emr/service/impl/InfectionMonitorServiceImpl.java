@@ -2,7 +2,7 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.InfectionMonitorDTO;
@@ -20,7 +20,7 @@ import com.his.emr.mapper.BizInfectionMonitorDailyMapper;
 import com.his.emr.mapper.BizInfectionMonitorMapper;
 import com.his.emr.service.InfectionMonitorService;
 import com.his.emr.vo.InfectionMonitorVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

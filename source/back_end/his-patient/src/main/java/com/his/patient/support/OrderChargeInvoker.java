@@ -1,8 +1,8 @@
 package com.his.patient.support;
 
-import com.his.fee.dto.FeeBookDTO;
-import com.his.fee.entity.BizFeeRecord;
-import com.his.fee.service.FeeRecordService;
+import com.his.charge.dto.FeeBookDTO;
+import com.his.charge.entity.BizFeeRecord;
+import com.his.charge.service.FeeRecordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

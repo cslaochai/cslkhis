@@ -15,6 +15,7 @@ import com.his.ai.support.AiAuditDigestSupport;
 import com.his.ai.support.AiMaskUtils;
 import com.his.ai.vo.VoiceTranscribeResultVO;
 import com.his.common.exception.BusinessException;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -220,7 +221,7 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
 
     private String currentOperator() {
         try {
-            var user = com.his.security.UserUtils.getCurrentUser();
+            var user = UserUtils.getCurrentUser();
             if (user != null && StringUtils.hasText(user.getUsername())) {
                 return user.getUsername();
             }

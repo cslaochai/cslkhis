@@ -1,5 +1,7 @@
 package com.his.charge.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.util.Arrays;
 import java.util.List;
 
@@ -14,6 +16,7 @@ import java.util.List;
  * 生产环境应替换为「检验项目-诊断」对照表（可复用 `检验项目组套明细`），
  * 而不是继续在代码里加映射。</p>
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class LowCodingEvidenceDict {
 
     /**
@@ -32,9 +35,6 @@ public final class LowCodingEvidenceDict {
             new Entry("颅脑CT", "脑梗死", "I63", "INSP"),
             new Entry("胸部CT", "肺部感染", "J18", "INSP")
     );
-
-    private LowCodingEvidenceDict() {
-    }
 
     public static List<Entry> entries() {
         return ENTRIES;

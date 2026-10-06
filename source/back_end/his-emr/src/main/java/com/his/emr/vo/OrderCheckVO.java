@@ -1,5 +1,6 @@
 package com.his.emr.vo;
 
+import lombok.NoArgsConstructor;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
@@ -49,15 +50,13 @@ public class OrderCheckVO implements Serializable {
     private List<Deviation> deviations = new ArrayList<>();
 
     @Data
+    @NoArgsConstructor
     public static class Deviation implements Serializable {
         private String itemCode;
         /**
          * 项目名称
          */
         private String itemName;
-
-        public Deviation() {
-        }
 
         public Deviation(String itemCode, String itemName) {
             this.itemCode = itemCode;

@@ -1,12 +1,11 @@
 package com.his.charge.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.charge.entity.BizInsuranceCatalogRule;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
-
-import java.util.List;
 
 /**
  * 医保目录报销规则 Mapper。

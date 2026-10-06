@@ -18,8 +18,8 @@ import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.DietPlanVO;
 import com.his.patient.vo.DietTypeOptionVO;
 import com.his.patient.vo.WardVO;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -54,6 +54,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class DietPlanServiceImpl implements DietPlanService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String PREFIX_PLAN = "DP";
@@ -454,7 +455,7 @@ public class DietPlanServiceImpl implements DietPlanService {
     }
 
     private void applyDeptScope(DietPlanQueryPageDTO query) {
-        Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         if (allowed != null) {
             query.setScopeDeptIds(new ArrayList<>(allowed));
         }

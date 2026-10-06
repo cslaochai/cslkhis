@@ -11,7 +11,7 @@ import com.his.emr.enums.*;
 import com.his.emr.mapper.*;
 import com.his.emr.service.RxReviewService;
 import com.his.emr.vo.*;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -599,8 +599,7 @@ public class RxReviewServiceImpl implements RxReviewService {
 
     @Override
     public String itemExportCsv(RxReviewItemPageDTO query) {
-        query.setPageNum(1);
-        query.setPageSize(EXPORT_MAX);
+        query.forExport(EXPORT_MAX);
         List<RxReviewItemVO> rows = itemListPage(query).getRecords();
         StringBuilder sb = new StringBuilder();
         sb.append('\uFEFF');

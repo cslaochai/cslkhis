@@ -1,5 +1,7 @@
 package com.his.medicaltech.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.util.Set;
@@ -21,6 +23,7 @@ import java.util.Set;
  * 不判定时返回 {@code judged=false} 并把原因写进说明，
  * 由调用方保留前端传入的原值 —— <b>绝不把「不知道」写成「正常」</b>。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class LabAbnormalJudge {
 
     /**
@@ -55,9 +58,6 @@ public final class LabAbnormalJudge {
     public static final String NOTE_UNJUDGED_PREFIX = "未判定：";
 
     private static final double EPSILON = 1e-9;
-
-    private LabAbnormalJudge() {
-    }
 
     /**
      * 判定结论

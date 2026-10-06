@@ -17,8 +17,8 @@ import com.his.patient.service.NutritionScreenService;
 import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.NutritionScreenVO;
 import com.his.patient.vo.WardVO;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,6 +47,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class NutritionScreenServiceImpl implements NutritionScreenService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String PREFIX_SCREEN = "NS";
@@ -207,7 +208,7 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
      * 科室数据权限收口：受限岗位只看得到授权科室的筛查（营养师 data_scope=1 全院，不受限）
      */
     private void applyDeptScope(NutritionScreenQueryPageDTO query) {
-        Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         if (allowed != null) {
             query.setScopeDeptIds(new ArrayList<>(allowed));
         }

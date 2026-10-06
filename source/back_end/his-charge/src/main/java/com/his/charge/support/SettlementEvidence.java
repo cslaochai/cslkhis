@@ -1,22 +1,24 @@
 package com.his.charge.support;
 
-import com.his.appoint.entity.BizAppointInfo;
+
+
+
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.entity.BizSettlementBillItem;
-import com.his.emr.entity.BizPrescription;
-import com.his.emr.entity.BizPrescriptionDetail;
-import com.his.emr.entity.BizMedicalRecord;
-import com.his.medicaltech.entity.BizInspectionRecord;
-import com.his.medicaltech.entity.BizLabResult;
-import com.his.medicaltech.entity.BizLaboratoryRecord;
-import com.his.patient.entity.BizPatient;
-import lombok.Data;
-
+import com.his.charge.vo.InspectionRecordBrief;
+import com.his.charge.vo.LabResultBrief;
+import com.his.charge.vo.LaboratoryRecordBrief;
+import com.his.charge.vo.MedicalRecordBrief;
+import com.his.charge.vo.PatientBrief;
+import com.his.charge.vo.PrescriptionBrief;
+import com.his.charge.vo.PrescriptionDetailBrief;
+import com.his.charge.vo.RegistBrief;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.Data;
 
 /**
  * 一次就诊的「依据包」。
@@ -40,27 +42,27 @@ public class SettlementEvidence {
     /**
      * 挂号记录（锚点载体）
      */
-    private BizAppointInfo regist;
+    private RegistBrief regist;
 
     /**
      * 患者档案（性别/年龄，逻辑排他规则要用）
      */
-    private BizPatient patient;
+    private PatientBrief patient;
 
     /**
      * 病历（诊断依据的主要来源）
      */
-    private BizMedicalRecord medicalRecord;
+    private MedicalRecordBrief medicalRecord;
 
     /**
      * 本次就诊处方
      */
-    private List<BizPrescription> prescriptions = new ArrayList<>();
+    private List<PrescriptionBrief> prescriptions = new ArrayList<>();
 
     /**
      * 处方明细（药品名，用于诊断依据匹配）
      */
-    private List<BizPrescriptionDetail> prescriptionDetails = new ArrayList<>();
+    private List<PrescriptionDetailBrief> prescriptionDetails = new ArrayList<>();
 
     /**
      * 结算账单（清单的宿主，L2）
@@ -75,17 +77,17 @@ public class SettlementEvidence {
     /**
      * 检验记录
      */
-    private List<BizLaboratoryRecord> labRecords = new ArrayList<>();
+    private List<LaboratoryRecordBrief> labRecords = new ArrayList<>();
 
     /**
      * 检验结果（明细项名 + 结论，低编证据的主要来源）
      */
-    private List<BizLabResult> labResults = new ArrayList<>();
+    private List<LabResultBrief> labResults = new ArrayList<>();
 
     /**
      * 检查记录
      */
-    private List<BizInspectionRecord> inspections = new ArrayList<>();
+    private List<InspectionRecordBrief> inspections = new ArrayList<>();
 
     /**
      * 缺什么依据。规则判定为「不适用」时，原因从这里取 ——
@@ -138,7 +140,7 @@ public class SettlementEvidence {
         if (medicalRecord == null) {
             return "";
         }
-        BizMedicalRecord r = medicalRecord;
+        MedicalRecordBrief r = medicalRecord;
         return join(r.getChiefComplaint(), r.getPresentIllness(), r.getPastHistory(),
                 r.getSpecialistExam(), r.getAuxiliaryExam(), r.getTreatmentPlan(),
                 r.getDiagnosisName(), r.getDiagnosis());
@@ -154,19 +156,19 @@ public class SettlementEvidence {
                 .collect(Collectors.joining(" ")));
         sb.append(' ');
         sb.append(prescriptionDetails.stream()
-                .map(BizPrescriptionDetail::getDrugName).filter(n -> n != null)
+                .map(PrescriptionDetailBrief::getDrugName).filter(n -> n != null)
                 .collect(Collectors.joining(" ")));
         sb.append(' ');
         sb.append(labRecords.stream()
-                .map(BizLaboratoryRecord::getLaboratoryItemName).filter(n -> n != null)
+                .map(LaboratoryRecordBrief::getLaboratoryItemName).filter(n -> n != null)
                 .collect(Collectors.joining(" ")));
         sb.append(' ');
         sb.append(labResults.stream()
-                .map(BizLabResult::getLaboratoryItemName).filter(n -> n != null)
+                .map(LabResultBrief::getLaboratoryItemName).filter(n -> n != null)
                 .collect(Collectors.joining(" ")));
         sb.append(' ');
         sb.append(inspections.stream()
-                .map(BizInspectionRecord::getInspectionItemName).filter(n -> n != null)
+                .map(InspectionRecordBrief::getInspectionItemName).filter(n -> n != null)
                 .collect(Collectors.joining(" ")));
         return sb.toString();
     }

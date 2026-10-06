@@ -6,7 +6,7 @@ import com.his.patient.dto.GuardianSendBindCodeDTO;
 import com.his.patient.dto.GuardianUpsertDTO;
 import com.his.patient.vo.GuardianPatientVO;
 import com.his.patient.vo.SmsSendVO;
-import com.his.security.entity.CurrentUser;
+import com.his.system.entity.CurrentUser;
 
 import java.util.List;
 

@@ -1,5 +1,7 @@
 package com.his.system.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.his.common.exception.BusinessException;
 import org.springframework.util.StringUtils;
 
@@ -16,12 +18,10 @@ import java.util.List;
  * Java 侧 {@code String.compareTo} 比较 UTF-16 码元，BMP 内等价于码位序，也等价于 utf8mb4 的二进制序，
  * 两侧因此对齐；本类的自检就是拿铺底数据现算一遍键去比对。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DrugComponentPair {
 
     private static final String SEP = "&";
-
-    private DrugComponentPair() {
-    }
 
     /**
      * 归一化：去空白、同成分拒绝、按二进制序排定后拼接

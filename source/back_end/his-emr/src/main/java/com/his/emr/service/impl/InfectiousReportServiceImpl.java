@@ -3,9 +3,10 @@ package com.his.emr.service.impl;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.InfectiousReportDTO;
+import com.his.emr.dto.InfectiousReportQueryPageDTO;
 import com.his.emr.entity.BizInfectiousReport;
 import com.his.emr.entity.SysInfectiousDisease;
 import com.his.emr.enums.InfectiousClassEnum;
@@ -14,7 +15,7 @@ import com.his.emr.mapper.BizInfectiousReportMapper;
 import com.his.emr.mapper.SysInfectiousDiseaseMapper;
 import com.his.emr.service.InfectiousReportService;
 import com.his.emr.vo.InfectiousReportVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -57,7 +58,7 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
     }
 
     @Override
-    public PageResult<InfectiousReportVO.Row> page(InfectiousReportDTO.QueryPage q) {
+    public PageResult<InfectiousReportVO.Row> page(InfectiousReportQueryPageDTO q) {
         LambdaQueryWrapper<BizInfectiousReport> w = new LambdaQueryWrapper<BizInfectiousReport>()
                 .eq(q.getReportStatus() != null, BizInfectiousReport::getReportStatus, q.getReportStatus())
                 .eq(q.getInfectiousClass() != null, BizInfectiousReport::getInfectiousClass, q.getInfectiousClass())
@@ -75,10 +76,10 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
             list = list.stream().filter(r -> isOverdue(r)).toList();
         }
         int total = list.size();
-        int from = Math.min((q.getPageNo() - 1) * q.getPageSize(), total);
+        int from = Math.min((q.getPageNum() - 1) * q.getPageSize(), total);
         int to = Math.min(from + q.getPageSize(), total);
         List<InfectiousReportVO.Row> rows = list.subList(from, to).stream().map(this::toRow).toList();
-        return PageResult.of(total, q.getPageNo(), q.getPageSize(), (total + q.getPageSize() - 1) / q.getPageSize(), rows);
+        return PageResult.of(total, q.getPageNum(), q.getPageSize(), (total + q.getPageSize() - 1) / q.getPageSize(), rows);
     }
 
     // 写路径

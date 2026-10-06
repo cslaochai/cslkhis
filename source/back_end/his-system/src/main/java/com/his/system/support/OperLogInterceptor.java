@@ -1,8 +1,10 @@
 package com.his.system.support;
 
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.his.security.UserUtils;
-import com.his.security.entity.CurrentUser;
+import com.his.system.filter.OperLogCachingFilter;
+import com.his.system.utils.RequestInfoUtils;
+import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysOperLog;
 import com.his.system.mapper.SysOperLogMapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,7 +36,7 @@ import java.util.regex.Pattern;
  * <p><b>旁路：</b>落库失败只打 error 日志，绝不让业务操作跟着失败；
  * 但也绝不静默吞 —— 出问题在日志里能查到。
  *
- * <p><b>登录不在这儿记：</b>/auth/login 等由 {@link SysLoginLogService} 单独记登录日志，两本账不重复。
+ * <p><b>登录不在这儿记：</b>/auth/login 等由 {@link com.his.system.service.SysLoginLogService} 单独记登录日志，两本账不重复。
  *
  * <p><b>失败判定：</b>业务异常被 {@code GlobalExceptionHandler} 兜成 HTTP 200 + code=500，
  * 拦截面上的 {@code ex} 会是 null —— 所以配了 {@link OperLogExceptionMarker} 把异常挂到请求属性上，
@@ -246,8 +248,8 @@ public class OperLogInterceptor implements HandlerInterceptor {
                 row.setDeptName(user.getDeptName());
             }
             row.setOperUrl(uri.length() > 500 ? uri.substring(0, 500) : uri);
-            row.setOperIp(SysLoginLogService.clientIp(request));
-            row.setOperLocation(SysLoginLogService.isPrivateIp(row.getOperIp()) ? "内网" : "外网");
+            row.setOperIp(RequestInfoUtils.clientIp(request));
+            row.setOperLocation(RequestInfoUtils.isPrivateIp(row.getOperIp()) ? "内网" : "外网");
             row.setOperTime(LocalDateTime.now());
             request.setAttribute(ATTR_PENDING, row);
             request.setAttribute(ATTR_START, System.currentTimeMillis());

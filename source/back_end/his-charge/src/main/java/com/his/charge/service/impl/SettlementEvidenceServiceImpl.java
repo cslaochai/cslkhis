@@ -1,41 +1,33 @@
 package com.his.charge.service.impl;
 
-import com.his.charge.service.SettlementEvidenceService;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.appoint.entity.BizAppointInfo;
-import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizInsuranceSettlementMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
+import com.his.charge.service.AppointGateway;
+import com.his.charge.service.EmrGateway;
+import com.his.charge.service.MedicalTechGateway;
+import com.his.charge.service.PatientGateway;
+import com.his.charge.service.SettlementEvidenceService;
 import com.his.charge.support.SettlementEvidence;
+import com.his.charge.vo.LaboratoryRecordBrief;
+import com.his.charge.vo.MedicalRecordBrief;
+import com.his.charge.vo.PatientBrief;
+import com.his.charge.vo.PrescriptionBrief;
+import com.his.charge.vo.RegistBrief;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.EncounterTypeEnum;
-import com.his.emr.entity.BizPrescription;
-import com.his.emr.entity.BizPrescriptionDetail;
-import com.his.emr.mapper.BizPrescriptionDetailMapper;
-import com.his.emr.mapper.BizPrescriptionMapper;
-import com.his.emr.entity.BizMedicalRecord;
-import com.his.emr.mapper.BizMedicalRecordMapper;
-import com.his.medicaltech.entity.BizInspectionRecord;
-import com.his.medicaltech.entity.BizLabResult;
-import com.his.medicaltech.entity.BizLaboratoryRecord;
-import com.his.medicaltech.mapper.BizInspectionRecordMapper;
-import com.his.medicaltech.mapper.BizLabResultMapper;
-import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.mapper.BizPatientMapper;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
-
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 /**
  * 依证据聚合服务：把一个 regist_id 上的所有「能作为编码依据」的数据捞齐。
@@ -49,16 +41,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SettlementEvidenceServiceImpl implements SettlementEvidenceService {
 
-    private final BizAppointInfoMapper appointInfoMapper;
-    private final BizPatientMapper patientMapper;
-    private final BizMedicalRecordMapper medicalRecordMapper;
-    private final BizPrescriptionMapper prescriptionMapper;
-    private final BizPrescriptionDetailMapper prescriptionDetailMapper;
+    private final AppointGateway appointGateway;
+    private final PatientGateway patientGateway;
+    private final MedicalTechGateway medicalTechGateway;
+    private final EmrGateway emrGateway;
     private final BizSettlementBillMapper billMapper;
     private final BizSettlementBillItemMapper billItemMapper;
-    private final BizLaboratoryRecordMapper laboratoryRecordMapper;
-    private final BizLabResultMapper labResultMapper;
-    private final BizInspectionRecordMapper inspectionRecordMapper;
     private final BizInsuranceSettlementMapper settlementMapper;
 
     private static <T> T first(List<T> list) {
@@ -79,7 +67,7 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
 
         // 1. 挂号（锚点）
         Long registId = settlement.getRegistId();
-        BizAppointInfo regist = registId == null ? null : appointInfoMapper.selectById(registId);
+        RegistBrief regist = registId == null ? null : appointGateway.findRegist(registId);
         ev.setRegist(regist);
         if (registId == null) {
             ev.markMissing("清单未关联挂号ID，无法定位就诊依据");
@@ -90,25 +78,16 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
         // 2. 患者
         Long patientId = settlement.getPatientId() != null ? settlement.getPatientId()
                 : (regist != null ? regist.getPatientId() : null);
-        BizPatient patient = patientId == null ? null : patientMapper.selectById(patientId);
+        PatientBrief patient = patientId == null ? null : patientGateway.findPatient(patientId);
         ev.setPatient(patient);
         if (patient == null) {
             ev.markMissing("患者档案缺失，性别/年龄类规则无法判定");
         }
 
         // 3. 病历：优先按 registId；历史数据 registId 为空时落 patientId 最近一条
-        BizMedicalRecord record = null;
-        if (registId != null) {
-            List<BizMedicalRecord> byRegist = medicalRecordMapper.selectList(
-                    new LambdaQueryWrapper<BizMedicalRecord>()
-                            .eq(BizMedicalRecord::getRegistId, registId)
-                            .orderByDesc(BizMedicalRecord::getCreateTime));
-            record = first(byRegist);
-        }
+        MedicalRecordBrief record = registId == null ? null : emrGateway.findLatestMedicalRecordByRegist(registId);
         if (record == null && patientId != null) {
-            record = first(medicalRecordMapper.selectList(new LambdaQueryWrapper<BizMedicalRecord>()
-                    .eq(BizMedicalRecord::getPatientId, patientId)
-                    .orderByDesc(BizMedicalRecord::getCreateTime)));
+            record = emrGateway.findLatestMedicalRecordByPatient(patientId);
             if (record != null) {
                 ev.markMissing("本次就诊无病历，已回落到患者最近一次病历，诊断一致性规则结论需人工复核");
             }
@@ -128,42 +107,28 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
         }
 
         // 5. 处方（按 registId，回落 patientId）
-        List<BizPrescription> prescriptions = new ArrayList<>();
-        if (registId != null) {
-            prescriptions = prescriptionMapper.selectList(new LambdaQueryWrapper<BizPrescription>()
-                    .eq(BizPrescription::getRegistId, registId)
-                    .orderByAsc(BizPrescription::getId));
-        }
-        if (prescriptions.isEmpty() && patientId != null) {
-            prescriptions = prescriptionMapper.selectList(new LambdaQueryWrapper<BizPrescription>()
-                    .eq(BizPrescription::getPatientId, patientId)
-                    .orderByDesc(BizPrescription::getCreateTime));
+        List<PrescriptionBrief> prescriptions = registId == null
+                ? List.of() : emrGateway.listPrescriptionsByRegist(registId);
+        if (prescriptions.isEmpty()) {
+            prescriptions = emrGateway.listPrescriptionsByPatient(patientId);
         }
         ev.setPrescriptions(prescriptions);
         if (!prescriptions.isEmpty()) {
-            List<Long> pids = prescriptions.stream().map(BizPrescription::getId).collect(Collectors.toList());
-            ev.setPrescriptionDetails(prescriptionDetailMapper.selectList(
-                    new LambdaQueryWrapper<BizPrescriptionDetail>()
-                            .in(BizPrescriptionDetail::getPrescriptionId, pids)
-                            .orderByAsc(BizPrescriptionDetail::getId)));
+            ev.setPrescriptionDetails(emrGateway.listPrescriptionDetails(
+                    prescriptions.stream().map(PrescriptionBrief::getId).toList()));
         }
 
         // 6. 检验：表里没有 regist_id，只能按 patientId + 就诊日期定位
         LocalDate visitDate = regist != null ? regist.getVisitDate() : null;
-        List<BizLaboratoryRecord> labs = selectLabs(patientId, visitDate);
+        List<LaboratoryRecordBrief> labs = medicalTechGateway.listLaboratoryRecords(patientId, visitDate);
         ev.setLabRecords(labs);
-        if (!labs.isEmpty()) {
-            List<Long> recordIds = labs.stream().map(BizLaboratoryRecord::getId).collect(Collectors.toList());
-            ev.setLabResults(labResultMapper.selectList(new LambdaQueryWrapper<BizLabResult>()
-                    .in(BizLabResult::getRecordId, recordIds)
-                    .orderByAsc(BizLabResult::getSortOrder)));
-        }
+        ev.setLabResults(medicalTechGateway.listLabResults(patientId, visitDate));
         if (!labs.isEmpty() && visitDate == null) {
             ev.markMissing("检验记录只能按患者聚合（无就诊日期），可能含其他次就诊数据");
         }
 
         // 7. 检查：同样按 patientId + 就诊日期
-        ev.setInspections(selectInspections(patientId, visitDate));
+        ev.setInspections(medicalTechGateway.listInspections(patientId, visitDate));
 
         return ev;
     }
@@ -189,33 +154,7 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
         return settlementMapper.selectList(wrapper.orderByDesc(BizInsuranceSettlement::getCreateTime));
     }
 
-    private List<BizLaboratoryRecord> selectLabs(Long patientId, LocalDate visitDate) {
-        if (patientId == null) {
-            return Collections.emptyList();
-        }
-        LambdaQueryWrapper<BizLaboratoryRecord> wrapper = new LambdaQueryWrapper<BizLaboratoryRecord>()
-                .eq(BizLaboratoryRecord::getPatientId, patientId)
-                .orderByDesc(BizLaboratoryRecord::getCreateTime);
-        if (visitDate != null) {
-            wrapper.eq(BizLaboratoryRecord::getVisitDate, visitDate);
-        }
-        return laboratoryRecordMapper.selectList(wrapper);
-    }
-
-    private List<BizInspectionRecord> selectInspections(Long patientId, LocalDate visitDate) {
-        if (patientId == null) {
-            return Collections.emptyList();
-        }
-        LambdaQueryWrapper<BizInspectionRecord> wrapper = new LambdaQueryWrapper<BizInspectionRecord>()
-                .eq(BizInspectionRecord::getPatientId, patientId)
-                .orderByDesc(BizInspectionRecord::getCreateTime);
-        if (visitDate != null) {
-            wrapper.eq(BizInspectionRecord::getVisitDate, visitDate);
-        }
-        return inspectionRecordMapper.selectList(wrapper);
-    }
-
-    private BizSettlementBill resolveBill(BizInsuranceSettlement settlement, BizAppointInfo regist, Long patientId) {
+    private BizSettlementBill resolveBill(BizInsuranceSettlement settlement, RegistBrief regist, Long patientId) {
         if (settlement.getBillId() != null) {
             BizSettlementBill bill = billMapper.selectById(settlement.getBillId());
             if (bill != null) {

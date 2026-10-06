@@ -2,25 +2,20 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.his.common.exception.BusinessException;
-import com.his.security.entity.CurrentUser;
-import com.his.security.utils.JwtUtils;
-import com.his.security.PasswordCipher;
-import com.his.security.UserUtils;
 import com.his.system.dto.ChangePasswordDTO;
 import com.his.system.dto.LoginRequestDTO;
 import com.his.system.dto.SwitchPostDTO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysUser;
 import com.his.system.mapper.SysUserMapper;
+import com.his.system.support.PasswordCipherService;
 import com.his.system.service.AuthService;
-import com.his.system.service.SysUserService;
-import com.his.system.vo.LoginVO;
-import com.his.system.vo.PublicKeyVO;
-import com.his.system.vo.UserLoginVO;
-import com.his.system.vo.UserRolesVO;
 import com.his.system.service.EmployeePostService;
-import com.his.system.vo.EmployeePostVO;
-import com.his.system.vo.SwitchPostVO;
-import com.his.system.support.SysLoginLogService;
+import com.his.system.service.SysUserService;
+import com.his.system.service.SysLoginLogService;
+import com.his.system.utils.JwtUtils;
+import com.his.system.utils.UserUtils;
+import com.his.system.vo.*;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -44,19 +39,15 @@ public class AuthServiceImpl implements AuthService {
     private final EmployeePostService employeePostService;
     private final SysUserMapper userMapper;
     private final SysLoginLogService loginLogService;
-    private final PasswordCipher passwordCipher;
+    private final PasswordCipherService passwordCipherService;
 
     @Override
     public LoginVO login(LoginRequestDTO loginRequestDTO, HttpServletRequest request) {
         String username = loginRequestDTO == null ? null : loginRequestDTO.getUsername();
-
-        // 口令在浏览器里就用 SM2 公钥加密了，这里还原成明文再交给 Spring Security 去比 BCrypt。
-        // 「还原失败」必须落登录日志：拿明文口令直接撞接口本身就是要留痕的行为，
-        // 不加这条的话，有人在扫描器里灌 123456 试探，登录日志里什么都不会留下。
         String cipherPassword = loginRequestDTO == null ? null : loginRequestDTO.getPassword();
         String password;
         try {
-            password = passwordCipher.decrypt(cipherPassword);
+            password = passwordCipherService.decrypt(cipherPassword);
         } catch (RuntimeException e) {
             loginLogService.record(username, request, false, "口令密文非法：" + e.getMessage());
             throw e;
@@ -69,8 +60,6 @@ public class AuthServiceImpl implements AuthService {
             );
             currentUser = (CurrentUser) authentication.getPrincipal();
         } catch (AuthenticationException e) {
-            // 失败登录必须落一条：口令爆破在系统里留下的唯一痕迹就是这本账，
-            // 只记成功登录的话，"有人拿 admin 试了两百次口令"在审计上等于没发生（等保三级 8.1.4）。
             loginLogService.record(username, request, false, "认证失败：" + e.getMessage());
             throw e;
         }
@@ -88,9 +77,6 @@ public class AuthServiceImpl implements AuthService {
 
         recordLoginHabit(currentUser, clientIp(request));
 
-        // 登录落点也必须落在一个**岗位**上。原先只认角色、科室沿用主科室快照，
-        // 于是「主科室没给这个角色配岗位」时会签出错配 token —— 菜单按医生画、数据按药房取，
-        // 正是本模块要消灭的那类静默错配。
         Long landingDeptId = currentUser.getDeptId();
         String landingDeptName = currentUser.getDeptName();
         if (currentUser.getEmployeeId() != null) {
@@ -166,8 +152,8 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public PublicKeyVO publicKey() {
         PublicKeyVO vo = new PublicKeyVO();
-        vo.setKeyId(passwordCipher.getKeyId());
-        vo.setPublicKey(passwordCipher.getPublicKeyHex());
+        vo.setKeyId(passwordCipherService.getKeyId());
+        vo.setPublicKey(passwordCipherService.getPublicKeyHex());
         return vo;
     }
 
@@ -178,8 +164,8 @@ public class AuthServiceImpl implements AuthService {
 
         // 改密码是「新口令第一次上网」的场合，与登录同一对 SM2 公钥加密，明文一律拒收；
         // 不收口的话，登录加密就只拦了半条链路 —— 新口令照样在网络上裸奔。
-        String oldPassword = passwordCipher.decrypt(changePasswordDTO == null ? null : changePasswordDTO.getOldPassword());
-        String newPassword = passwordCipher.decrypt(changePasswordDTO == null ? null : changePasswordDTO.getNewPassword());
+        String oldPassword = passwordCipherService.decrypt(changePasswordDTO == null ? null : changePasswordDTO.getOldPassword());
+        String newPassword = passwordCipherService.decrypt(changePasswordDTO == null ? null : changePasswordDTO.getNewPassword());
 
         boolean success = userService.changePassword(userId, oldPassword, newPassword);
 

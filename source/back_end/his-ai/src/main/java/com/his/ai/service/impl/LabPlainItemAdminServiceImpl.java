@@ -91,8 +91,9 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
 
     @Override
     public PageResult<LabPlainItemAdminVO> adminPage(LabPlainItemSearchDTO dto) {
-        int pageNum = Math.max(1, dto.getPageNum());
-        int pageSize = Math.min(Math.max(1, dto.getPageSize()), 200);
+        // 越界夹取在 PageParam.getPageNum/getPageSize 里统一做，这里不再重复一遍
+        int pageNum = dto.getPageNum();
+        int pageSize = dto.getPageSize();
 
         LambdaQueryWrapper<SysLabPlainItem> w = new LambdaQueryWrapper<>();
         // like(cond, col, v)：实参先求值，这里先判空再取 trim，传空不会 NPE

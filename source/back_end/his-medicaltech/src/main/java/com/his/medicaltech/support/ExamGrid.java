@@ -1,5 +1,7 @@
 package com.his.medicaltech.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.entity.BizExamDevice;
 
@@ -20,10 +22,8 @@ import java.util.List;
  *       而不是让患者躺在机器上午休两小时。</li>
  * </ol>
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ExamGrid {
-
-    private ExamGrid() {
-    }
 
     /** "HH:mm" → 当日分钟数；格式不合直接抛业务异常，不静默当 0 点。 */
     public static int toMin(String hhmm) {

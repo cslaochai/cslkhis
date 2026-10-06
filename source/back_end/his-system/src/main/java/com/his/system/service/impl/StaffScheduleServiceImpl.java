@@ -14,7 +14,7 @@ import com.his.common.enums.StaffTypeEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
-import com.his.security.DeptScopeGuard;
+import com.his.system.provider.DeptScopeProvider;
 import com.his.system.dto.StaffScheduleCopyDTO;
 import com.his.system.dto.StaffScheduleQueryPageDTO;
 import com.his.system.dto.StaffScheduleSwapDTO;
@@ -74,6 +74,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper, BizStaffSchedule>
         implements StaffScheduleService {
+    private final DeptScopeProvider deptScopeProvider;
 
     /** 无班次（休息/请假/培训/停班）与全院级的单元ID都用 0 表达，NULL 会让唯一键失效 */
     private static final long ID_NONE = 0L;
@@ -939,7 +940,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             // 全院级不属于任何科室，人人可见（见 #scoped）
             return;
         }
-        if (!DeptScopeGuard.canAccessDept(deptId)) {
+        if (!deptScopeProvider.canAccessDept(deptId)) {
             throw new BusinessException("没有该科室的排班权限（不在当前岗位的数据范围内）");
         }
     }
@@ -949,10 +950,10 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * 「今天全院谁负责」不是敏感信息，收掉等于让人半夜找不到打电话的对象。
      */
     private LambdaQueryWrapper<BizStaffSchedule> scoped(LambdaQueryWrapper<BizStaffSchedule> wrapper) {
-        if (!DeptScopeGuard.isScoped()) {
+        if (!deptScopeProvider.isScoped()) {
             return wrapper;
         }
-        Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         if (allowed == null || allowed.isEmpty()) {
             wrapper.eq(BizStaffSchedule::getOrgType, OrgUnitTypeEnum.HOSPITAL.getCode());
             return wrapper;

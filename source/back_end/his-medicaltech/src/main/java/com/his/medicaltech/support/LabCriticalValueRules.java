@@ -1,5 +1,7 @@
 package com.his.medicaltech.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -26,6 +28,7 @@ import com.his.medicaltech.support.LabReferenceRangeParser;
  * 规则表后续建议迁移到检验项目组套明细增加危急值上下限两列，
  * 由检验科自行维护；当前写在代码里是因为库里没有这两列。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class LabCriticalValueRules {
 
     /**
@@ -53,9 +56,6 @@ public final class LabCriticalValueRules {
             new Rule("PO2", "氧分压", "动脉血氧分压", "mmHg", 60.0, null),
             new Rule("PCO2", "二氧化碳分压", "动脉血二氧化碳分压", "mmHg", null, 70.0),
             new Rule("CTNI", "肌钙蛋白", "肌钙蛋白", "ng/mL", null, 0.5));
-
-    private LabCriticalValueRules() {
-    }
 
     /**
      * 危急值命中结果

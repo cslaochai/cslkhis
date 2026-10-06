@@ -1,5 +1,7 @@
 package com.his.medicaltech.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -22,6 +24,7 @@ import java.math.RoundingMode;
  * 三个都拿不出数据 → <b>判不出来就是判不出来</b>，result_status 落到 0 未判定，
  * 不因为"看起来差不多"就写合格。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EqaJudgeEngine {
 
     public static final int MODE_NONE = 0;
@@ -49,9 +52,6 @@ public final class EqaJudgeEngine {
 
     private static final BigDecimal SDI_SATISFY = BigDecimal.ONE;
     private static final BigDecimal SDI_FAIL = new BigDecimal("2");
-
-    private EqaJudgeEngine() {
-    }
 
     /**
      * 单条盲样成绩判定。

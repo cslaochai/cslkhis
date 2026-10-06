@@ -21,10 +21,7 @@
             <groupId>com.his</groupId>
             <artifactId>his-common</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-security</artifactId>
-        </dependency>
+        
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-system</artifactId>
@@ -32,5 +29,10 @@
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-patient</artifactId>
+        </dependency>
+        <!-- 挂号即结算 + AppointChargeGateway 由收费域声明，本模块依赖它；反向依赖禁止 -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-charge</artifactId>
         </dependency>    </dependencies>
 </project>

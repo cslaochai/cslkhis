@@ -21,8 +21,8 @@ import com.his.patient.service.MealOrderService;
 import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.MealGenerateVO;
 import com.his.patient.vo.MealOrderVO;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -52,6 +52,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class MealOrderServiceImpl implements MealOrderService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String PREFIX_MEAL = "MO";
@@ -76,7 +77,7 @@ public class MealOrderServiceImpl implements MealOrderService {
     public PageResult<MealOrderVO> mealListPage(MealOrderQueryPageDTO query) {
         query.setKeyword(trim(query.getKeyword()));
         query.setDietCode(trim(query.getDietCode()));
-        Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         if (allowed != null) {
             query.setScopeDeptIds(new ArrayList<>(allowed));
         }

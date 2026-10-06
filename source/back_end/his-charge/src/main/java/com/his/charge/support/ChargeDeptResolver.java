@@ -1,17 +1,9 @@
 package com.his.charge.support;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.appoint.entity.BizAppointInfo;
-import com.his.appoint.mapper.BizAppointInfoMapper;
+import com.his.charge.service.AppointGateway;
+import com.his.charge.service.EmrGateway;
+import com.his.charge.service.PatientGateway;
 import com.his.common.enums.PaymentItemTypeEnum;
-import com.his.emr.entity.BizInspectionApply;
-import com.his.emr.entity.BizLaboratoryApply;
-import com.his.emr.mapper.BizInspectionApplyMapper;
-import com.his.emr.mapper.BizLaboratoryApplyMapper;
-import com.his.emr.entity.BizPrescription;
-import com.his.emr.mapper.BizPrescriptionMapper;
-import com.his.patient.entity.BizInpatientOrder;
-import com.his.patient.mapper.BizInpatientOrderMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -48,11 +40,9 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class ChargeDeptResolver {
 
-    private final BizAppointInfoMapper appointInfoMapper;
-    private final BizPrescriptionMapper prescriptionMapper;
-    private final BizInspectionApplyMapper inspectionApplyMapper;
-    private final BizLaboratoryApplyMapper laboratoryApplyMapper;
-    private final BizInpatientOrderMapper inpatientOrderMapper;
+    private final AppointGateway appointGateway;
+    private final EmrGateway emrGateway;
+    private final PatientGateway patientGateway;
 
     /**
      * 按明细类型 + 来源单号反查开单科室。
@@ -80,33 +70,21 @@ public class ChargeDeptResolver {
     }
 
     private DeptRef fromAppoint(String registNo) {
-        BizAppointInfo row = appointInfoMapper.selectOne(new LambdaQueryWrapper<BizAppointInfo>()
-                .eq(BizAppointInfo::getRegistNo, registNo)
-                .last("LIMIT 1"));
-        return row == null ? null : new DeptRef(row.getDeptId(), row.getDeptName());
+        return appointGateway.findDeptByRegistNo(registNo);
     }
 
     // 各来源单
 
     private DeptRef fromPrescription(String prescriptionNo) {
-        BizPrescription row = prescriptionMapper.selectOne(new LambdaQueryWrapper<BizPrescription>()
-                .eq(BizPrescription::getPrescriptionNo, prescriptionNo)
-                .last("LIMIT 1"));
-        return row == null ? null : new DeptRef(row.getDeptId(), row.getDeptName());
+        return emrGateway.findDeptByPrescriptionNo(prescriptionNo);
     }
 
     private DeptRef fromInspection(String applyNo) {
-        BizInspectionApply row = inspectionApplyMapper.selectOne(new LambdaQueryWrapper<BizInspectionApply>()
-                .eq(BizInspectionApply::getApplyNo, applyNo)
-                .last("LIMIT 1"));
-        return row == null ? null : new DeptRef(row.getDeptId(), row.getDeptName());
+        return emrGateway.findDeptByInspectionApplyNo(applyNo);
     }
 
     private DeptRef fromLaboratory(String applyNo) {
-        BizLaboratoryApply row = laboratoryApplyMapper.selectOne(new LambdaQueryWrapper<BizLaboratoryApply>()
-                .eq(BizLaboratoryApply::getApplyNo, applyNo)
-                .last("LIMIT 1"));
-        return row == null ? null : new DeptRef(row.getDeptId(), row.getDeptName());
+        return emrGateway.findDeptByLaboratoryApplyNo(applyNo);
     }
 
     /**
@@ -116,10 +94,7 @@ public class ChargeDeptResolver {
      * 注意用的是**开立科室**不是患者当前科室 —— 转科后开的医嘱该算新科室。
      */
     private DeptRef fromInpatientOrder(String orderNo) {
-        BizInpatientOrder row = inpatientOrderMapper.selectOne(new LambdaQueryWrapper<BizInpatientOrder>()
-                .eq(BizInpatientOrder::getOrderNo, orderNo)
-                .last("LIMIT 1"));
-        return row == null ? null : new DeptRef(row.getDeptId(), row.getDeptName());
+        return patientGateway.findDeptByOrderNo(orderNo);
     }
 
     /**

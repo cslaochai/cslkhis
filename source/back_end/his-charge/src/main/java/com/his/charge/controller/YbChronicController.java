@@ -1,6 +1,14 @@
 package com.his.charge.controller;
 
-import com.his.charge.dto.*;
+
+
+
+
+import com.his.charge.dto.ChronicCatalogQueryPageDTO;
+import com.his.charge.dto.ChronicCatalogUpsertDTO;
+import com.his.charge.dto.ChronicRegQueryPageDTO;
+import com.his.charge.dto.ChronicRegTerminalDTO;
+import com.his.charge.dto.ChronicRegUpsertDTO;
 import com.his.charge.service.YbChronicService;
 import com.his.charge.vo.ChronicCatalogVO;
 import com.his.charge.vo.ChronicRegListVO;
@@ -10,11 +18,10 @@ import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * 门诊慢特病病种目录 + 人员备案（菜单 1011，sql/163）。

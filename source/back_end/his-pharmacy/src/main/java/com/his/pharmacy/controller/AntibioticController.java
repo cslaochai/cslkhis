@@ -5,6 +5,7 @@ import com.his.common.base.Result;
 import com.his.pharmacy.dto.*;
 import com.his.pharmacy.service.AntibioticService;
 import com.his.pharmacy.vo.*;
+import com.his.system.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -99,6 +100,6 @@ public class AntibioticController {
     @PostMapping("/checkAuthority")
     public Result<AntibioticAuthCheckVO> checkAuthority(@Valid @RequestBody AntibioticAuthCheckQueryDTO dto) {
         return Result.success(antibioticService.checkAuthority(
-                com.his.security.UserUtils.getCurrentEmployeeId(), dto.getDrugIds()));
+                UserUtils.getCurrentEmployeeId(), dto.getDrugIds()));
     }
 }

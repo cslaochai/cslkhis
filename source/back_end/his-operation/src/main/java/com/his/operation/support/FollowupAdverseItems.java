@@ -1,5 +1,7 @@
 package com.his.operation.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -10,6 +12,7 @@ import java.util.stream.Collectors;
  * 与前端 {@code lib/anesthesia.js} 各一份单点。未知码值一律返回空串，
  * 绝不回落成某个看起来合法的值。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class FollowupAdverseItems {
 
     /**
@@ -27,9 +30,6 @@ public final class FollowupAdverseItems {
         ALL.put(7, "呼吸并发症");
         ALL.put(8, "低血压/心律失常");
         ALL.put(9, "其他");
-    }
-
-    private FollowupAdverseItems() {
     }
 
     /**

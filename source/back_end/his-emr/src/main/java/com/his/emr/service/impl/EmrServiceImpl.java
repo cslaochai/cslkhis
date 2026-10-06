@@ -15,7 +15,7 @@ import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
 import com.his.appoint.service.DoctorStatusCacheService;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
@@ -32,19 +32,19 @@ import com.his.emr.service.EmrService;
 import com.his.emr.service.QualityControlService;
 import com.his.emr.enums.QcRecordSourceEnum;
 import com.his.emr.vo.*;
-import com.his.fee.dto.FeeBookDTO;
-import com.his.fee.entity.BizFeeRecord;
-import com.his.fee.service.FeeRecordService;
-import com.his.fee.support.FeeCatalogResolver;
-import com.his.fee.vo.FeeTypeSumVO;
+import com.his.charge.dto.FeeBookDTO;
+import com.his.charge.entity.BizFeeRecord;
+import com.his.charge.service.FeeRecordService;
+import com.his.charge.support.FeeCatalogResolver;
+import com.his.charge.vo.FeeTypeSumVO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.PatientGuardianService;
 import com.his.pharmacy.service.AntibioticService;
 import com.his.pharmacy.service.PharmacyService;
-import com.his.security.entity.CurrentUser;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
+import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
 import com.his.system.entity.SysDrug;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.entity.SysLaboratoryItem;
@@ -76,6 +76,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedicalRecord> implements EmrService {
+    private final DeptScopeProvider deptScopeProvider;
 
     static final String[] HUIFANG_TYPE = {"糖尿病", "高血压", "冠心病"};
     private static final AtomicInteger TASK_SEQ = new AtomicInteger(0);
@@ -202,15 +203,15 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     public PageResult<BizMedicalRecordVO> listPage(MedicalRecordQueryPageDTO queryDTO) {
         LambdaQueryWrapper<BizMedicalRecord> wrapper = new LambdaQueryWrapper<>();
         // 科室数据权限收口（M6）：先越权校验显式 deptId，再按授权科室集合收敛（不传时不再等于看全院）。
-        Long scopedDeptId = DeptScopeGuard.resolveDeptId(queryDTO.getDeptId());
+        Long scopedDeptId = deptScopeProvider.resolveDeptId(queryDTO.getDeptId());
         if (scopedDeptId != null) {
             queryDTO.setDeptId(scopedDeptId);
         }
         wrapper.eq(queryDTO.getPatientId() != null, BizMedicalRecord::getPatientId, queryDTO.getPatientId())
                 .eq(queryDTO.getDoctorId() != null, BizMedicalRecord::getDoctorId, queryDTO.getDoctorId())
                 .eq(queryDTO.getDeptId() != null, BizMedicalRecord::getDeptId, queryDTO.getDeptId())
-                .in(DeptScopeGuard.isScoped() && scopedDeptId == null,
-                        BizMedicalRecord::getDeptId, DeptScopeGuard.allowedDeptIds())
+                .in(deptScopeProvider.isScoped() && scopedDeptId == null,
+                        BizMedicalRecord::getDeptId, deptScopeProvider.allowedDeptIds())
                 .eq(queryDTO.getVisitDate() != null, BizMedicalRecord::getVisitDate, queryDTO.getVisitDate())
                 .ge(queryDTO.getVisitDateStart() != null, BizMedicalRecord::getVisitDate, queryDTO.getVisitDateStart())
                 .le(queryDTO.getVisitDateEnd() != null, BizMedicalRecord::getVisitDate, queryDTO.getVisitDateEnd())

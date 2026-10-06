@@ -32,7 +32,7 @@ public class FollowupQueryDTO extends PageParam {
     private String patientName;
 
     /**
-     * 随访科室（越权科室由后端 DeptScopeGuard 直接拒绝，不做静默改写）
+     * 随访科室（越权科室由后端 DeptScopeProvider 直接拒绝，不做静默改写）
      */
     private Long deptId;
 

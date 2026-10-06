@@ -9,7 +9,6 @@ import com.his.common.exception.BusinessException;
 import com.his.common.enums.SysGenderEnum;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
-import com.his.patient.enums.AdmitWayEnum;
 import com.his.patient.enums.BedAllocateStatusEnum;
 import com.his.patient.enums.BedMatchLevelEnum;
 import com.his.patient.enums.BedStatusEnum;
@@ -22,8 +21,8 @@ import com.his.patient.mapper.*;
 import com.his.patient.service.BedCenterService;
 import com.his.patient.service.InpatientService;
 import com.his.patient.vo.*;
-import com.his.security.UserUtils;
-import com.his.security.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysConfigMapper;
@@ -754,7 +753,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         List<BedMapVO.DeptOption> deptOptions = bedMapMapper.selectDeptOptions();
         result.setDeptOptions(deptOptions);
 
-        // 1) 科室：本域刻意不调 DeptScopeGuard —— 它的存在意义就是跨科找床，按岗位收口等于瞎。
+        // 1) 科室：本域刻意不调 DeptScopeProvider —— 它的存在意义就是跨科找床，按岗位收口等于瞎。
         //    但不传 deptId 时也不能把全院 1000+ 张床一次画出来（画得下也没人看），
         //    所以优先落当前账号的主岗位科室，主科室没床才退到第一个有床科室。
         Long deptId = query == null ? null : query.getDeptId();

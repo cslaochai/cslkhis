@@ -1,10 +1,13 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.security.provider.DeptScopeProvider;
+import com.his.common.exception.BusinessException;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysRole;
 import com.his.system.mapper.SysEmployeePostMapper;
 import com.his.system.mapper.SysRoleMapper;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,8 +17,11 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-@Service
+/**
+ * 科室权限
+ */
 @Slf4j
+@Service
 @RequiredArgsConstructor
 public class DeptScopeProviderImpl implements DeptScopeProvider {
 
@@ -61,5 +67,60 @@ public class DeptScopeProviderImpl implements DeptScopeProvider {
         SysRole role = roleMapper.selectOne(
                 new LambdaQueryWrapper<SysRole>().eq(SysRole::getRoleCode, roleCode).last("LIMIT 1"));
         return role != null && role.getDataScope() != null && role.getDataScope() == DATA_SCOPE_ALL;
+    }
+
+    @Override
+    public boolean isScoped() {
+        return allowedDeptIdsForCurrentUser() != null;
+    }
+
+    @Override
+    public Set<Long> allowedDeptIds() {
+        return allowedDeptIdsForCurrentUser();
+    }
+
+    @Override
+    public Long resolveDeptId(Long requestedDeptId) {
+        Set<Long> allowed = allowedDeptIdsForCurrentUser();
+        if (allowed == null) {
+            // 不受限 → 传什么用什么
+            return requestedDeptId;
+        }
+        if (requestedDeptId == null) {
+            // 受限但没指定 → 返回 null，由调用方决定"用 allowedDeptIds() 收口"还是"只取主科室"。
+            // 这里刻意不自动返回主科室：调用语义（列表要看全部授权科室 / 单条要看主科室）由业务定。
+            return null;
+        }
+        if (!allowed.contains(requestedDeptId)) {
+            throw new BusinessException("无权查看该科室的数据（科室ID " + requestedDeptId + "）");
+        }
+        return requestedDeptId;
+    }
+
+    @Override
+    public boolean canAccessDept(Long deptId) {
+        Set<Long> allowed = allowedDeptIdsForCurrentUser();
+        if (allowed == null) {
+            return true;
+        }
+        return deptId != null && allowed.contains(deptId);
+    }
+
+    /**
+     * 取当前登录用户被授权的科室集合（政策层内部使用）。
+     *
+     * @return null = 不受限（看全院 / 未登录 / 未装配）；非 null = 受限集合
+     */
+    private Set<Long> allowedDeptIdsForCurrentUser() {
+        CurrentUser user = UserUtils.getCurrentUser();
+        if (user == null) {
+            // 未登录 → 不受限
+            return null;
+        }
+        // 角色 data_scope=1（全部数据）直接放开 —— 否则 admin/院领导会被锁在自己被授权的几个科室上
+        if (isUnrestrictedRole(user.getCurrentRole())) {
+            return null;
+        }
+        return deptIdsOfEmployee(user.getEmployeeId(), user.getDeptId(), user.getCurrentRole());
     }
 }

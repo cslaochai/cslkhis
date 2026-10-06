@@ -1,5 +1,7 @@
 package com.his.ai.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.his.patient.vo.NursingVitalFactVO;
 import lombok.Getter;
 import lombok.Setter;
@@ -17,6 +19,7 @@ import java.util.List;
  * 宁可少评一项也不猜意识状态，注释留痕防止后人"补全"成拍脑袋分档。
  * </p>
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DeteriorationScoreRules {
 
     /**
@@ -32,9 +35,6 @@ public final class DeteriorationScoreRules {
      */
     public static final int NO_DATA_SCORE = -1;
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
-
-    private DeteriorationScoreRules() {
-    }
 
     /**
      * 对一条体征行评分。行内没有任何体征值时 totalScore=NO_DATA（不预警也不给建议）。

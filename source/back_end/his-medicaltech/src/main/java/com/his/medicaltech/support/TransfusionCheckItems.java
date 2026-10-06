@@ -1,5 +1,7 @@
 package com.his.medicaltech.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -19,10 +21,8 @@ import java.util.Set;
  * 前端按 {@link #all()} 渲染勾选框。第 7、8 项为附加项（同意书、输注前生命体征），
  * 各地要求不一，不设为必核但可勾选。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TransfusionCheckItems {
-
-    private TransfusionCheckItems() {
-    }
 
     /** 必核项：这 6 项缺任何一项都不允许开始输注 */
     public static final List<Integer> REQUIRED = List.of(1, 2, 3, 4, 5, 6);

@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.support.SensitiveMaskUtils;
+import com.his.common.util.SensitiveMaskUtil;
 import com.his.emr.dto.OutpatientLogQueryDTO;
 import com.his.emr.entity.SysInfectiousDisease;
 import com.his.emr.mapper.OutpatientLogMapper;
@@ -50,7 +50,7 @@ public class OutpatientLogServiceImpl implements OutpatientLogService {
                 outpatientLogMapper.selectLogPage(page, query, toRegex(prefixes));
         List<OutpatientLogListVO> records = result.getRecords();
         for (OutpatientLogListVO vo : records) {
-            vo.setPhoneMasked(SensitiveMaskUtils.maskPhone(vo.getPhone()));
+            vo.setPhoneMasked(SensitiveMaskUtil.maskPhone(vo.getPhone()));
             vo.setPhone(null);
             if (Boolean.TRUE.equals(vo.getReportable())) {
                 vo.setMatchedDiseaseName(matchDisease(vo.getDiagnosisCode(), prefixes));

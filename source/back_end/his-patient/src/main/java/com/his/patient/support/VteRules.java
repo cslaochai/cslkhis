@@ -1,5 +1,7 @@
 package com.his.patient.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.his.patient.enums.VteMeasureTypeEnum;
 
 import java.util.Arrays;
@@ -17,6 +19,7 @@ import java.util.List;
  * {@code labelOrUnknown}（异常 / 审计），本类不再承担任何文案渲染 —— 不内联 switch、
  * 不自己写「未知(xxx)」兜底（见 AGENTS.md §13）。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class VteRules {
 
     /**
@@ -35,9 +38,6 @@ public final class VteRules {
             new Measure(CODE_BASIC, VteMeasureTypeEnum.BASIC.getCode(), "基础预防", "健康教育、早期活动/踝泵运动、避免脱水、慎用止血药"),
             new Measure(CODE_PHYSICAL, VteMeasureTypeEnum.PHYSICAL.getCode(), "物理预防", "梯度压力袜（GCS）/间歇充气加压装置（IPC）/足底静脉泵（VFP）"),
             new Measure(CODE_DRUG, VteMeasureTypeEnum.DRUG.getCode(), "药物预防", "低分子肝素/普通肝素/利伐沙班等；有活动性出血等禁忌者禁用"));
-
-    private VteRules() {
-    }
 
     /**
      * 按风险等级推荐应落实的措施码。

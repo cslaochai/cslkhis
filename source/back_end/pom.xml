@@ -32,9 +32,7 @@
     <modules>
         <!-- 底座 -->
         <module>his-common</module>
-        <module>his-security</module>
         <!-- 费用记账事实（L1）：各临床域与结算域都要写它，故排在所有业务域之前 -->
-        <module>his-fee</module>
         <!-- 主数据 -->
         <module>his-system</module>
         <module>his-patient</module>
@@ -66,16 +64,6 @@
             <dependency>
                 <groupId>com.his</groupId>
                 <artifactId>his-common</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.his</groupId>
-                <artifactId>his-security</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.his</groupId>
-                <artifactId>his-fee</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

@@ -1,5 +1,7 @@
 package com.his.operation.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.operation.enums.AsaGradeEnum;
 
@@ -13,10 +15,8 @@ import java.util.List;
  * 展示文案一律走 {@code com.his.operation.enums} 下各枚举的 {@code getText}（展示）
  * / {@code labelOrUnknown}（异常 / 审计），本类里不得出现「未知(code)」兜底。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AnesthesiaCalcs {
-
-    private AnesthesiaCalcs() {
-    }
 
     /**
      * 出室 Aldrete 评分阈值（≥ 9 才允许按标准出室）。

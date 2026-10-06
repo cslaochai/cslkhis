@@ -14,7 +14,7 @@ import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.DeptStatRowVO;
 import com.his.patient.vo.NutritionOverviewVO;
 import com.his.patient.vo.NutritionStatsVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

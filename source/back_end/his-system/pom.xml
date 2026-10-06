@@ -14,7 +14,7 @@
     <artifactId>his-system</artifactId>
     <packaging>jar</packaging>
     <name>his-system</name>
-    <description>系统主数据：用户/角色/菜单/部门/员工/字典/诊室/消息/审计/ICD10/医保政策/药品与医技项目</description>
+    <description>系统主数据：用户/角色/菜单/部门/员工/字典/诊室/消息/审计/ICD10/医保政策/药品与医技项目 + 认证鉴权（JWT/当前登录用户上下文）</description>
 
     <dependencies>
         <dependency>
@@ -22,7 +22,27 @@
             <artifactId>his-common</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-security</artifactId>
-        </dependency>    </dependencies>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
 </project>

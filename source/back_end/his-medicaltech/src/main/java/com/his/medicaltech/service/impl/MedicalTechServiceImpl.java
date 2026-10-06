@@ -41,7 +41,7 @@ import com.his.medicaltech.vo.BizLaboratoryRecordVO;
 import com.his.medicaltech.vo.BizReportVO;
 import com.his.medicaltech.vo.InspectionDetailVO;
 import com.his.medicaltech.vo.LaboratoryDetailVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;

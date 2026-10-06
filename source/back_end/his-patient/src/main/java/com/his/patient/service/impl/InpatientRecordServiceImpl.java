@@ -19,9 +19,9 @@ import com.his.patient.enums.InpatientRecordStatusEnum;
 import com.his.patient.enums.NursingDocFieldEnum;
 import com.his.patient.support.RecordStructuredFields;
 import com.his.patient.vo.*;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
-import com.his.security.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -59,6 +59,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InpatientRecordServiceImpl implements InpatientRecordService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter HM = DateTimeFormatter.ofPattern("HH:mm");
@@ -390,8 +391,8 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
     public IPage<InpatientRecordVO> listPage(InpatientRecordQueryPageDTO query) {
         // 科室数据权限收口（M6）：文书归属科室（dept_id），受限角色只看授权科室的文书。
         // scopeDeptIds 是服务端专用字段，先清掉前端可能伪造的值。
-        query.setScopeDeptIds(DeptScopeGuard.isScoped()
-                ? List.copyOf(DeptScopeGuard.allowedDeptIds()) : null);
+        query.setScopeDeptIds(deptScopeProvider.isScoped()
+                ? List.copyOf(deptScopeProvider.allowedDeptIds()) : null);
         IPage<BizInpatientRecord> page = recordMapper.selectRecordPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         List<InpatientRecordVO> rows = new ArrayList<>(page.getRecords().size());

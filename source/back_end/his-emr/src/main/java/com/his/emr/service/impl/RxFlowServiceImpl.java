@@ -13,7 +13,7 @@ import com.his.emr.mapper.BizPrescriptionMapper;
 import com.his.emr.mapper.BizRxFlowMapper;
 import com.his.emr.service.RxFlowService;
 import com.his.emr.vo.RxFlowListVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;

@@ -1,5 +1,7 @@
 package com.his.patient.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.his.patient.enums.*;
 
 import java.util.*;
@@ -17,6 +19,7 @@ import java.util.*;
  *       两者都不该出现在食堂配送单上 —— 给肠外营养的患者订一份"饭"是错的。</li>
  * </ol>
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class NutritionRules {
 
     /**
@@ -104,9 +107,6 @@ public final class NutritionRules {
         for (Diet d : DIETS) {
             BY_CODE.put(d.code(), d);
         }
-    }
-
-    private NutritionRules() {
     }
 
     /**

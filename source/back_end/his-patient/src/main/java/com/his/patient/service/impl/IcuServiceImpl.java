@@ -2,7 +2,7 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.*;
@@ -14,7 +14,7 @@ import com.his.patient.mapper.BizIcuMonitorMapper;
 import com.his.patient.mapper.BizIcuStayMapper;
 import com.his.patient.service.IcuService;
 import com.his.patient.vo.IcuVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

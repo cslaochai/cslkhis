@@ -1,20 +1,25 @@
 package com.his.charge.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.charge.dto.InpatientSettlementUpsertDTO;
 import com.his.charge.dto.PrepayQueryPageDTO;
 import com.his.charge.dto.PrepayUpsertDTO;
 import com.his.charge.service.InpatientAccountService;
-import com.his.charge.vo.*;
+import com.his.charge.service.InpatientSettlementGateway;
+import com.his.charge.vo.DailyBillVO;
+import com.his.charge.vo.InpatientAccountSummaryVO;
+import com.his.charge.vo.InpatientSettlementPreviewVO;
+import com.his.charge.vo.InpatientSettlementVO;
+import com.his.charge.vo.PrepayBalanceVO;
+import com.his.charge.vo.PrepayVO;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 /**
  * 住院账务（预交金 / 日清单 / 出院结算 / 欠费提示）。
@@ -24,7 +29,7 @@ import java.util.List;
  *   <li>{@code /summary} 是 GET 但<b>可能写一条欠费告警</b>（同 P1 的 {@code /execPendingList}）：
  *       告警按"同一入院一天一条"去重，医生站每次打开页面都会查，不去重会刷屏。</li>
  *   <li><b>欠费不阻断任何诊疗动作</b>：本控制器没有任何"欠费则拒绝"的分支，
- *       唯一的拦截在出院侧（没结算不允许出院，见 {@code com.his.patient.service.InpatientSettlementGateway}）。</li>
+ *       唯一的拦截在出院侧（没结算不允许出院，见 {@code InpatientSettlementGateway}）。</li>
  * </ol>
  *
  * <p><b>鉴权一律标在方法上，不标在类上</b>：类级注解会静默覆盖所有没写自己注解的方法，

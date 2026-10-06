@@ -23,40 +23,15 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-security</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-fee</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
             <artifactId>his-system</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-patient</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-operation</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-appoint</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-pharmacy</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-medicaltech</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-supplies</artifactId>
-        </dependency>
+        <!--
+            注意：his-charge 是记账与结算的底层模块，业务域（patient / emr / medicaltech /
+            appoint …）反过来依赖它取记账能力。因此本模块<b>禁止</b>依赖任何业务域模块：
+            一旦反向依赖，业务域同时依赖本模块就成环，Maven reactor 直接拒绝构建。
+            需要读业务域数据时走本模块声明的 Gateway 端口（PatientGateway 等），
+            由业务域实现，跨模块不得直连对方 Mapper 与实体。
+        -->
         <!-- 支付二维码生成 -->
         <dependency>
             <groupId>com.google.zxing</groupId>

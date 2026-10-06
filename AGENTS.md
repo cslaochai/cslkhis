@@ -553,15 +553,23 @@
   `MarkReadDTO` 提成独立 DTO 文件（同时违反 §10 分层与 §15）。
   验收判据：`grep -rln "private Integer pageNum\|private int pageNum" --include=*.java source/back_end`
   的每个文件（除 `his-common/base/PageParam.java` 本身）都要能在同文件里grep 到 `extends PageParam`。
-- **⚠️ 待拍板：`PageParam` 本身缺夹取与上限（2026-10-06 记录，未擅自改公共类）**：
-  ① `pageSize` **没有上限**，而迁移前有 3 个 DTO 带 `@Max(200)`，继承后这条约束**静默消失**；
-  ② `pageNum/pageSize` 是原始 `int` 且**不做夹取**，前端传 0 或负数会直接进 mapper
-     （SQL `LIMIT 0, -1` 行为未定义），迁移前各 DTO 自己写 `Math.max(1, …)` 兜着；
-  ③ 默认值不统一：`PageParam` 是 10，但有 8 个 DTO 原本默认 20（迁移后行为变了）。
-  **建议方案（待确认）**：在 `PageParam` 加两个 getter 做夹取
-  （`getPageNum() { return Math.max(1, pageNum); }`、`getPageSize() { return Math.min(Math.max(1, pageSize), 200); }`），
-  一处解决全部；**但这会改变 75+ 个 DTO 的现有行为**（默认值 20→10、越界值不再透传），
-  且下游 `PageParam.pageNum` 字段仍可被直接访问，得先决定是否收成私有。**未动，等拍板。**
+- **✅ `PageParam` 已加越界夹取（2026-10-06 老王拍板落地）**，全部 75+ 分页 DTO 一处生效：
+  ```java
+  public int getPageNum()  { return pageNum < 1 ? 1 : pageNum; }
+  public int getPageSize() { if (pageSize < 1) return DEFAULT_PAGE_SIZE;
+                             return exportMode ? pageSize : Math.min(pageSize, MAX_PAGE_SIZE); }
+  ```
+  - `MAX_PAGE_SIZE = 200`（与前端 `page-sizes` 最大档一致）、`DEFAULT_PAGE_SIZE = 10`。
+  - **用getter 夹取而不是 `@Min/@Max` 报 400**：前端本来就合法地传 200，导出还要一次拉 5000 行，
+    硬校验会把导出和超档请求一起打回。越界静默夹到上限，语义是「你要多少最多给你这么多」。
+  - **导出绕过通道**：`forExport(int maxRows)` 置 `exportMode`（`transient` + `@JsonIgnore`，
+    请求体传不进来、响应不外泄），固定第 1 页并放开上限。
+    改用它的两处：`RxReviewServiceImpl.itemExportCsv`、`SysLogServiceImpl.exportCsv`（原 `setPageSize(EXPORT_MAX)`）。
+    **新写导出必须走 `forExport`，别拿外部入参的 pageSize 当上限。**
+  - 原本在 service 里重复写的 `Math.max(1, …)` / `Math.min(…, 200)` 属重复造轮子，已删
+    （`LabPlainItemAdminServiceImpl.adminPage`）。
+  - ⚠️ **`pageSize/pageNum` 是原始 `int`，直接读字段拿不到夹取**——必须走 getter。
+    同理 8 个原本默认 20 的 DTO 迁移后默认变10，属预期统一。
 - ⚠️ **`Integer` → `int` 会让兜底代码编译失败（已踩，现象具有欺骗性）**：
   `PageParam.pageNum` 是原始 `int`，迁移前 DTO 声明的是 `Integer`，所以
   `dto.getPageNum() == null ? 1 : dto.getPageNum()`、`Integer::equals`、三元里混 `Integer`/`int`
@@ -639,6 +647,24 @@
     结果必须为 **0**（唯一实现在 `his-common/util/TimeUtil.java`）。
   - `grep -rn "static final Map<Integer, String>" --include=*.java source/back_end` 只剩 §14 允许的注册表类。
 
+## 18. 零引用枚举必须删掉，不留"备着将来用"
+- **判据很简单**：一个 `*Enum.java` 文件名去掉后缀，在全后端 `.java`/`.xml` 里grep 不到任何
+  `\bXxxEnum\b` 命中（排除自身文件），就是零引用，直接删。
+  2026-10-06 扫出 **23 个零引用枚举已全删**（`ChargeStatusEnum` / `ChargeTypeEnum` /
+  `SettlementTypeEnum` / `AbnormalFlagEnum` / `CatalogTypeEnum` / `FollowupStatusEnum` /
+  `RefundFlowSourceEnum` / `SysDicEnum`（空壳类，连枚举都不是）/ `DecoctMethodEnum` /
+  `DisputeLevelEnum` / `DoctorTalkTypeEnum` / `RxFlowStatusEnum` / `BedWaitGenderLimitEnum` /
+  `BedWaitPriorityEnum` / `CheckupAbnormalFlagEnum` / `DischargeStatusEnum` / `InpatientDiagTypeEnum` /
+  `NutritionScreenSourceEnum` / `OrderDictSourceEnum` / `PatientMergeLogStatusEnum` /
+  `PatientTagSourceEnum` / `CdrNursingLevelEnum` / `CdrOrderClassEnum`），删完全仓枚举 394→ 371，零引用 0。
+- **为什么删**：码值文案的唯一价值是被读侧调用。没人调用的枚举是纯噪音——它会让人误以为
+  「这个码值已经有口径了」，真要用时从枚举里抄的label 也没人验证过。**枚举不是文档，是代码。**
+- **⚠️ 注意重名坑**：`his-common` 的 `AbnormalFlagEnum` 与 `his-medicaltech` 的
+  `UltrasoundAbnormalFlagEnum` 码值重叠，grep 引用时必须用 `\b<完整类名>\b` 全字匹配，
+  别用前缀/子串匹配（`AbnormalFlag` 会同时命中两个，导致删错）。
+- 机械判据：全仓枚举文件逐个做上述零引用统计，**结果必须为空**。
+  删完必须 `mvn -o -DskipTests clean install` 兜底（增量编译对删除类不可靠）。
+
 ## 8. 凭据分流：登录口令可入库，环境口令一律不入库
 
 口径一句话：**「谁能拿这个口令登录系统」可入库；「能连上这台机器/这个中间件」不可入库。**
@@ -665,3 +691,15 @@
   `java -jar his-web/target/his-backend.jar` → 探 `/api/auth/info`（期望 401）→ 跑登录脚本。
   端点 401 只说明进程活着，**还要跑一次 `POST /auth/login` + `POST /system/dict/refreshCache`**
   才证明 DB 口令（登录）与 Redis 口令（缓存刷新）都真的读到了。
+
+## 19. 无参构造一律用 Lombok 生成，禁止手写（2026-10-06 全量收口）
+- **本工程 Lombok 重度使用**（`@Data` 1988 处、`@NoArgsConstructor` 已用 17 处），手写 `public Xxx() {}` / `private Xxx() {}` 是非惯用法，统一由注解生成。全仓 **59 处**手写空构造已于 2026-10-06 全部替换（4 个 `public` + 55 个 `private`，覆盖 13 个模块）。
+- **访问级规则（逐字节还原手写语义）**：
+  - 工具 / 常量 / support 类（`final class` + 全静态，防止实例化）：`private Xxx() {}` → `@NoArgsConstructor(access = AccessLevel.PRIVATE)`（需 `import lombok.AccessLevel;`）。
+  - 需要反序列化无参构造的 POJO / DTO / VO / Result（带 `@Data`）：`public Xxx() {}` → 普通 `@NoArgsConstructor`（默认 public，保留 `@Data`）。
+  - 嵌套类同理按所在类的访问级选注解——注解必须落在内层类上、缩进对齐内层类（如 `ArrearsControlGate.OrderCheck`）。
+- **禁止重复声明（已踩出真编译 bug）**：类上**已经**有 `@NoArgsConstructor` 时，再手写一个无参构造 = **重复构造**——Java 构造签名只看「类名 + 参数列表」，访问修饰符不参与区分，于是 `public` 注解构造与 `private` 手写构造签名相同 → 编译直接报错。修法：**删掉手写那个**，按访问级调注解。2026-10-06 的 `PemCodecUtil` 正是「`@NoArgsConstructor`(public) + 手写 `private PemCodec()`」双声明导致的编译阻塞，已修。
+- **`@Data` 与 `@NoArgsConstructor` 不冲突**：`@Data` 只在类有 `final` / `@NonNull` 字段时才生成无参构造；本仓核心类（`Result` / `PageResult` 等）无 `final` / `@NonNull` 字段，现在能编过就是证据，补 `@NoArgsConstructor` 不会与之撞。
+- **枚举构造不在此列**：枚举（隐式）无参构造不能由 `@NoArgsConstructor` 替代，枚举一律不要手写构造（本项目枚举均无参、无手写构造）。
+- **Spring Bean 不碰**：带 `@Component` / `@Service` / `@Configuration` / `@Repository` 的类由容器实例化，本就不该有手写无参构造（若见到，是误写，应删而非加注解）。
+- 机械判据：`grep -rnE "\b(private|protected|public)\s+[A-Z][\w$]*\s*\(\s*\)\s*\{\s*\}" --include=*.java source/back_end` 命中的，必须已是枚举（自然豁免，因其构造不带上述修饰符）或已配套 `@NoArgsConstructor`（手写体应删除）；新增代码一律不手写无参构造。改造脚本见 `workspace/_scan_empty_ctors.py` + `workspace/_apply_noargs.py`。

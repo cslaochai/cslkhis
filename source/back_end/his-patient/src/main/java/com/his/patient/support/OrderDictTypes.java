@@ -1,5 +1,7 @@
 package com.his.patient.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.Map;
 
@@ -13,6 +15,7 @@ import java.util.Map;
  * 途径存中文（历史医嘱 route 列就是中文，改成码会让存量数据渲染成「未知」），
  * 频次存英文缩写（qd/bid…，与医嘱单书写习惯一致），剂量单位是字面单位（g/mg/ml/片…）。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OrderDictTypes {
 
     /**
@@ -40,9 +43,6 @@ public final class OrderDictTypes {
             ROUTE, "route",
             FREQ, "frequency",
             DOSE_UNIT, "dosage_unit");
-
-    private OrderDictTypes() {
-    }
 
     /**
      * 类型中文名（<b>展示用</b>）。null 给「—」；不在三类之内返回空串，

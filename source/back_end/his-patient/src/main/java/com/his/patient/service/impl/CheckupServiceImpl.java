@@ -11,7 +11,7 @@ import com.his.patient.mapper.*;
 import com.his.patient.service.CheckupService;
 import com.his.system.service.DictCacheService;
 import com.his.patient.vo.CheckupVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

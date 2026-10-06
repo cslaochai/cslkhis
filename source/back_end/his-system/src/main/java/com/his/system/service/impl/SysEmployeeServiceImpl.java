@@ -3,8 +3,8 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
-import com.his.common.support.SensitiveMaskUtils;
+import com.his.common.service.RedisSequenceService;
+import com.his.common.util.SensitiveMaskUtil;
 import com.his.system.dto.EmployeeQueryDTO;
 import com.his.system.dto.EmployeeUpsertDTO;
 import com.his.system.entity.SysEmployee;
@@ -159,9 +159,9 @@ public class SysEmployeeServiceImpl implements SysEmployeeService {
         if (vo == null) {
             return;
         }
-        vo.setPhone(SensitiveMaskUtils.maskPhone(vo.getPhone()));
-        vo.setIdCard(SensitiveMaskUtils.maskIdCard(vo.getIdCard()));
-        vo.setEmail(SensitiveMaskUtils.maskEmail(vo.getEmail()));
+        vo.setPhone(SensitiveMaskUtil.maskPhone(vo.getPhone()));
+        vo.setIdCard(SensitiveMaskUtil.maskIdCard(vo.getIdCard()));
+        vo.setEmail(SensitiveMaskUtil.maskEmail(vo.getEmail()));
     }
 
     private EmployeeVO convertToVO(SysEmployee emp) {

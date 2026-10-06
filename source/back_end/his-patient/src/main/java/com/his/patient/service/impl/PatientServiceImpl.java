@@ -4,11 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.support.SensitiveMaskUtils;
+import com.his.common.util.SensitiveMaskUtil;
 import com.his.patient.dto.PatientQueryPageDTO;
 import com.his.patient.dto.PatientRegisterDTO;
 import com.his.patient.dto.PatientSearchScopeDTO;
@@ -28,15 +28,15 @@ import com.his.patient.vo.PatientDetailVO;
 import com.his.patient.vo.PatientHealthProfileVO;
 import com.his.patient.vo.PatientRegisterVO;
 import com.his.patient.vo.PatientVO;
-import com.his.security.PasswordCipher;
-import com.his.security.UserUtils;
-import com.his.security.entity.CurrentUser;
+import com.his.system.support.PasswordCipherService;
+import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysPatientTag;
 import com.his.system.entity.SysUser;
 import com.his.system.service.PatientTagService;
 import com.his.system.service.SmsCodeService;
 import com.his.system.service.SysUserService;
-import com.his.system.support.FieldChangeRecorder;
+import com.his.system.service.FieldChangeRecorder;
 import com.his.system.support.FieldSpec;
 import com.his.system.enums.MaskEnum;
 import com.his.system.vo.SysPatientTagVO;
@@ -119,7 +119,7 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
      * 注册口令传输加密：前端提交的是 SM2 密文（与登录同一对公钥），这里还原成明文再交 BCrypt 落库。
      * 注册是初始口令第一次上网的场合，和登录一样不能收明文 —— 留明文口子等于登录加密白做。
      */
-    private final PasswordCipher passwordCipher;
+    private final PasswordCipherService passwordCipherService;
     /**
      * 注册验证码校验：手机号所有权由它证明，未通过则不建档、不开账号。
      */
@@ -618,11 +618,11 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
             return;
         }
         for (PatientVO vo : voList) {
-            vo.setMedicalInsuranceNoMasked(SensitiveMaskUtils.maskCardNo(vo.getMedicalInsuranceNo()));
+            vo.setMedicalInsuranceNoMasked(SensitiveMaskUtil.maskCardNo(vo.getMedicalInsuranceNo()));
             vo.setMedicalInsuranceNo(null);
             vo.setPhoneMasked(maskPhone(vo.getPhone()));
             vo.setPhone(null);
-            vo.setIdCardMasked(SensitiveMaskUtils.maskIdCard(vo.getIdCard()));
+            vo.setIdCardMasked(SensitiveMaskUtil.maskIdCard(vo.getIdCard()));
             vo.setIdCard(null);
         }
     }
@@ -658,15 +658,15 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
      * 表单是「回填 → 整对象 upsert」，存进去的星号会把真号洗掉（不可逆数据损坏）。
      */
     private void maskDetailSensitiveFields(PatientDetailVO vo) {
-        vo.setIdCardMasked(SensitiveMaskUtils.maskIdCard(vo.getIdCard()));
+        vo.setIdCardMasked(SensitiveMaskUtil.maskIdCard(vo.getIdCard()));
         vo.setIdCard(null);
         vo.setPhoneMasked(maskPhone(vo.getPhone()));
         vo.setPhone(null);
         vo.setContactPhoneMasked(maskPhone(vo.getContactPhone()));
         vo.setContactPhone(null);
-        vo.setCardNoMasked(SensitiveMaskUtils.maskMiddle(vo.getCardNo(), 2, 2));
+        vo.setCardNoMasked(SensitiveMaskUtil.maskMiddle(vo.getCardNo(), 2, 2));
         vo.setCardNo(null);
-        vo.setMedicalInsuranceNoMasked(SensitiveMaskUtils.maskCardNo(vo.getMedicalInsuranceNo()));
+        vo.setMedicalInsuranceNoMasked(SensitiveMaskUtil.maskCardNo(vo.getMedicalInsuranceNo()));
         vo.setMedicalInsuranceNo(null);
     }
 
@@ -728,7 +728,7 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
             throw new BusinessException("手机号格式不正确");
         }
         // 口令在客户端已用 SM2 公钥加密，先还原再验长度；明文一律拒收（与 /auth/login 同一口径）
-        String rawPassword = passwordCipher.decrypt(dto.getPassword());
+        String rawPassword = passwordCipherService.decrypt(dto.getPassword());
         if (rawPassword.length() < 6) {
             throw new BusinessException("密码至少 6 位");
         }

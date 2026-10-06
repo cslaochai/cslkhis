@@ -1,15 +1,15 @@
 package com.his.common.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.entity.BizTsaToken;
 import com.his.common.entity.SysTsaServer;
 import com.his.common.mapper.BizTsaTokenMapper;
 import com.his.common.mapper.SysTsaServerMapper;
 import com.his.common.service.TsaChannelService;
 import com.his.common.util.KeyPairFactory;
-import com.his.common.util.KeyProtector;
-import com.his.common.util.SignCrypto;
+import com.his.common.util.KeyProtectorUtil;
+import com.his.common.util.SignCryptoUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -47,7 +47,7 @@ import java.time.temporal.ChronoUnit;
  * 签名链、证书体系、验签断言都不动。
  *
  * <p><b>密钥自举</b>：首次使用时若服务表无 LOCAL 行，自动生成密钥对落库（与证书自动签发同思路）；
- * 私钥用 {@link KeyProtector} 加密托管，主口令缺失时 available()=false，签名侧自然降级本机时钟。
+ * 私钥用 {@link KeyProtectorUtil} 加密托管，主口令缺失时 available()=false，签名侧自然降级本机时钟。
  */
 @Slf4j
 @Service
@@ -63,7 +63,7 @@ public class TsaChannelServiceImpl implements TsaChannelService {
 
     private final SysTsaServerMapper serverMapper;
     private final BizTsaTokenMapper tokenMapper;
-    private final KeyProtector keyProtector;
+    private final KeyProtectorUtil keyProtectorUtil;
     private final RedisSequenceService sequenceService;
 
     /**
@@ -73,10 +73,10 @@ public class TsaChannelServiceImpl implements TsaChannelService {
     private volatile String cachedPrivatePem;
 
     public TsaChannelServiceImpl(SysTsaServerMapper serverMapper, BizTsaTokenMapper tokenMapper,
-                                 KeyProtector keyProtector, RedisSequenceService sequenceService) {
+                                 KeyProtectorUtil keyProtectorUtil, RedisSequenceService sequenceService) {
         this.serverMapper = serverMapper;
         this.tokenMapper = tokenMapper;
-        this.keyProtector = keyProtector;
+        this.keyProtectorUtil = keyProtectorUtil;
         this.sequenceService = sequenceService;
     }
 
@@ -165,14 +165,14 @@ public class TsaChannelServiceImpl implements TsaChannelService {
                         + String.format("%06d", tokenMapper.countBySerialPrefix(
                         SERIAL_PREFIX + LocalDate.now().format(NO_DATE)) + 1);
             }
-            String token = SignCrypto.sign(privatePem, canonical(serial, digestHex, tsaTime));
+            String token = SignCryptoUtil.sign(privatePem, canonical(serial, digestHex, tsaTime));
 
             BizTsaToken row = new BizTsaToken();
             row.setSerial(serial);
             row.setDigestHex(digestHex);
             row.setTsaTime(tsaTime);
             row.setTokenValue(token);
-            row.setAlgo(SignCrypto.SIGN_ALGO);
+            row.setAlgo(SignCryptoUtil.SIGN_ALGO);
             try {
                 tokenMapper.insert(row);
                 return new Stamp(serial, tsaTime, token);
@@ -209,7 +209,7 @@ public class TsaChannelServiceImpl implements TsaChannelService {
         if (server == null) {
             return false;
         }
-        return SignCrypto.verify(server.getPublicPem(),
+        return SignCryptoUtil.verify(server.getPublicPem(),
                 canonical(serial, digestHex, tsaTime.truncatedTo(ChronoUnit.SECONDS)), tokenValue);
     }
 
@@ -248,17 +248,17 @@ public class TsaChannelServiceImpl implements TsaChannelService {
     }
 
     private SysTsaServer bootstrap() {
-        keyProtector.requireSecret();
+        keyProtectorUtil.requireSecret();
         KeyPairFactory.KeyPairPem kp = KeyPairFactory.generate();
-        String salt = keyProtector.newSalt();
+        String salt = keyProtectorUtil.newSalt();
         int iterations = 120000;
 
         SysTsaServer s = new SysTsaServer();
         s.setTsaCode(TSA_CODE);
         s.setTsaName("本地内置TSA（演示信任根，非第三方）");
         s.setPublicPem(kp.publicPem());
-        s.setKeyFingerprint(SignCrypto.fingerprint(kp.publicPem()));
-        s.setProtectedPrivateKey(keyProtector.protect(kp.privatePem(), salt, iterations));
+        s.setKeyFingerprint(SignCryptoUtil.fingerprint(kp.publicPem()));
+        s.setProtectedPrivateKey(keyProtectorUtil.protect(kp.privatePem(), salt, iterations));
         s.setKeySalt(salt);
         s.setKeyIterations(iterations);
         s.setTsaStatus(1);
@@ -281,7 +281,7 @@ public class TsaChannelServiceImpl implements TsaChannelService {
         if (pem != null) {
             return pem;
         }
-        pem = keyProtector.unprotect(server.getProtectedPrivateKey(), server.getKeySalt(),
+        pem = keyProtectorUtil.unprotect(server.getProtectedPrivateKey(), server.getKeySalt(),
                 server.getKeyIterations());
         cachedPrivatePem = pem;
         return pem;

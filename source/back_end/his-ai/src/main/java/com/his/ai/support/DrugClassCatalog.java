@@ -1,5 +1,7 @@
 package com.his.ai.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -25,6 +27,7 @@ import java.util.*;
  * 同类重复检查就会对同一组药报两次 —— 医生看到重复的报错，只会觉得系统不靠谱。
  * 所以这里按「重复用药检查的实际口径」归并，而不是按药理学的严格分类。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DrugClassCatalog {
 
     private static final List<DrugClass> CLASSES = List.of(
@@ -69,9 +72,6 @@ public final class DrugClassCatalog {
         CONDITION_SYNONYMS.put("前列腺肥大", List.of("前列腺增生", "排尿困难"));
         CONDITION_SYNONYMS.put("重症肌无力", List.of("肌无力"));
         CONDITION_SYNONYMS.put("心力衰竭", List.of("心衰", "心功能不全"));
-    }
-
-    private DrugClassCatalog() {
     }
 
     /**

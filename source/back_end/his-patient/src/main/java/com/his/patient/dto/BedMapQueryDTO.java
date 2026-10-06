@@ -6,7 +6,7 @@ import lombok.Data;
  * 病区床位图查询入参
  *
  * <p>两个参数都只用于<b>收窄</b>范围，不能用于越权：{@code deptId} 先过
- * {@code DeptScopeGuard.resolveDeptId}，越权直接抛业务异常（不静默改写成有权科室）。
+ * {@code DeptScopeProvider.resolveDeptId}，越权直接抛业务异常（不静默改写成有权科室）。
  */
 @Data
 public class BedMapQueryDTO {

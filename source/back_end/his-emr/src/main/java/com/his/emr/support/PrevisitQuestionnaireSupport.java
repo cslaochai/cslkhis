@@ -1,5 +1,7 @@
 package com.his.emr.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.Map;
 
@@ -10,6 +12,7 @@ import java.util.Map;
  * 的长尾凝练。量表版本化在代码里随接口下发，改动量表只动这一处；
  * 患者提交的 answers_json 只存回显数据，不存题目版本，避免两侧结构漂移。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class PrevisitQuestionnaireSupport {
 
     /**
@@ -98,9 +101,6 @@ public final class PrevisitQuestionnaireSupport {
                     new Question("weak_when", "乏力最明显的时段", TYPE_CHOICE,
                             List.of("晨起", "午后", "全天", "说不清"))),
             "other", List.of());
-
-    private PrevisitQuestionnaireSupport() {
-    }
 
     /**
          * 选项/题目

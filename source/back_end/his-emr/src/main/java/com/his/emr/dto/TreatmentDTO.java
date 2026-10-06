@@ -89,12 +89,6 @@ public class TreatmentDTO {
     }
 
     @Data
-    public static class ApplyIdOnly {
-        @NotNull(message = "治疗申请单不能为空")
-        private Long applyId;
-    }
-
-    @Data
     public static class ApplyCancel {
         @NotNull(message = "治疗申请单不能为空")
         private Long applyId;
@@ -151,12 +145,6 @@ public class TreatmentDTO {
          */
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate endDate;
-    }
-
-    @Data
-    public static class ExecIdOnly {
-        @NotNull(message = "执行流水不能为空")
-        private Long recordId;
     }
 
     @Data

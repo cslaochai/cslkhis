@@ -14,7 +14,7 @@ import com.his.medicaltech.mapper.BizPathologyBlockMapper;
 import com.his.medicaltech.mapper.BizPathologyOrderMapper;
 import com.his.medicaltech.vo.PathologyVO;
 import com.his.system.service.DictCacheService;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

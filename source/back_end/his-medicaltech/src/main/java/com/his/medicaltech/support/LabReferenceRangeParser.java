@@ -1,5 +1,7 @@
 package com.his.medicaltech.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashSet;
@@ -22,6 +24,7 @@ import com.his.common.enums.SysGenderEnum;
  * 同样返回 UNPARSABLE。<b>取男取女都是错的</b>，血红蛋白按男性标准判女性患者的贫血
  * 是会漏诊的。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class LabReferenceRangeParser {
 
     private static final Pattern FIRST_NUMBER = Pattern.compile("[-+]?\\d+(?:\\.\\d+)?");
@@ -44,9 +47,6 @@ public final class LabReferenceRangeParser {
             new String[]{"+++", "阳性"});
 
     private static final char[] DASHES = {'-', '－', '—', '–', '~', '～'};
-
-    private LabReferenceRangeParser() {
-    }
 
     /**
      * 解析参考区间。

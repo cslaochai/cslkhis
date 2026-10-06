@@ -1,14 +1,14 @@
 package com.his.charge.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.charge.entity.BizYbDeductNotice;
+import com.his.charge.service.impl.YbDeductNoticeServiceImpl;
 import com.his.charge.vo.DeductSummaryVO;
 import com.his.charge.vo.YbInspectionDeductCountVO;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
-
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import java.util.Collection;
 import java.util.List;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 
 /**
  * 扣款通知单 Mapper（状态机流转见 YbDeductNoticeServiceImpl）。

@@ -1,5 +1,7 @@
 package com.his.miniapp.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import com.his.miniapp.entity.SysFaq;
 import org.springframework.util.StringUtils;
 
@@ -20,6 +22,7 @@ import java.util.Set;
  * 按答案匹配会把一堆不相关的排上来。权重是 keywords(3) > question(2) > answer(1)，
  * 答案命中只作兜底。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class FaqSearchSupport {
 
     /** 疑问词与虚词：切词时剔掉，否则「怎么」「可以」会命中几乎所有条目 */
@@ -33,9 +36,6 @@ public final class FaqSearchSupport {
 
     /** 检索词个数上限：患者贴一整段话进来时不能生成上百个词 */
     private static final int MAX_TERMS = 8;
-
-    private FaqSearchSupport() {
-    }
 
     /**
      * 输入 → 检索词列表。

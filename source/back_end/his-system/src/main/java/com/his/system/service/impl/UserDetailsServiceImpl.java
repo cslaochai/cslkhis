@@ -1,7 +1,7 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.security.entity.CurrentUser;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysUser;
 import com.his.system.mapper.SysEmployeeMapper;

@@ -2,7 +2,7 @@ package com.his.supplies.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.supplies.dto.*;
 import com.his.supplies.service.HighValueTraceService;
 import com.his.supplies.service.SuppliesService;

@@ -1,30 +1,57 @@
 package com.his.charge.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.appoint.entity.BizAppointInfo;
-import com.his.appoint.mapper.BizAppointInfoMapper;
-import com.his.charge.config.ComplianceProperties;
-import com.his.charge.dto.*;
-import com.his.charge.entity.*;
+import com.his.charge.dto.ComplianceAuditQueryPageDTO;
+import com.his.charge.dto.ComplianceBatchAuditDTO;
+import com.his.charge.dto.SettlementCodingUpsertDTO;
+import com.his.charge.dto.SettlementDiagnosisUpsertDTO;
+import com.his.charge.dto.SettlementOperationUpsertDTO;
+import com.his.charge.entity.BizComplianceAudit;
+import com.his.charge.entity.BizComplianceAuditItem;
+import com.his.charge.entity.BizInsuranceSettlement;
+import com.his.charge.entity.BizSettlementDiagnosis;
+import com.his.charge.entity.BizSettlementOperation;
+import com.his.charge.entity.SysDrgGroup;
 import com.his.charge.enums.AuditResultStateEnum;
 import com.his.charge.enums.ComplianceAuditTypeEnum;
 import com.his.charge.enums.RuleCatalogEnum;
-import com.his.charge.mapper.*;
+import com.his.charge.mapper.BizComplianceAuditItemMapper;
+import com.his.charge.mapper.BizComplianceAuditMapper;
+import com.his.charge.mapper.BizInsuranceSettlementMapper;
+import com.his.charge.mapper.BizSettlementDiagnosisMapper;
+import com.his.charge.mapper.BizSettlementOperationMapper;
+import com.his.charge.mapper.SysDrgGroupMapper;
+import com.his.charge.service.AppointGateway;
 import com.his.charge.service.ComplianceAuditService;
 import com.his.charge.service.SettlementEvidenceService;
-import com.his.charge.support.*;
-import com.his.charge.vo.*;
+import com.his.charge.config.ComplianceProperties;
+import com.his.charge.support.ComplianceRule;
+import com.his.charge.support.RuleContext;
+import com.his.charge.support.RuleFinding;
+import com.his.charge.support.SettlementEvidence;
+import com.his.charge.vo.ComplianceAuditDetailVO;
+import com.his.charge.vo.ComplianceAuditItemVO;
+import com.his.charge.vo.ComplianceAuditVO;
+import com.his.charge.vo.ComplianceEvidenceNarrativeVO;
+import com.his.charge.vo.LabResultBrief;
+import com.his.charge.vo.RegistBrief;
+import com.his.charge.vo.SettlementCodingVO;
+import com.his.charge.vo.SettlementDiagnosisVO;
+import com.his.charge.vo.SettlementOperationVO;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.exception.BusinessException;
-
+import com.his.common.enums.AdmitConditionEnum;
 import com.his.common.enums.SysGenderEnum;
-import com.his.medicaltech.entity.BizLabResult;
-import com.his.patient.enums.AdmitConditionEnum;
-import com.his.security.entity.CurrentUser;
-import com.his.security.UserUtils;
+import com.his.common.exception.BusinessException;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysIcd10;
 import com.his.system.mapper.SysIcd10Mapper;
+import com.his.system.utils.UserUtils;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -32,12 +59,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 /**
  * 医保合规审核服务实现。
@@ -52,7 +73,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     private static final DateTimeFormatter AUDIT_NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final BizInsuranceSettlementMapper settlementMapper;
-    private final BizAppointInfoMapper appointInfoMapper;
+    private final AppointGateway appointGateway;
     private final SysIcd10Mapper icd10Mapper;
     private final BizSettlementDiagnosisMapper diagnosisMapper;
     private final BizSettlementOperationMapper operationMapper;
@@ -390,13 +411,13 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
 
     /** 检验摘要只摆事实：项名：结果值单位（参考范围），最多 30 条防提示词失控 */
     private String buildLabSummary(SettlementEvidence evidence) {
-        List<BizLabResult> results = evidence.getLabResults();
+        List<LabResultBrief> results = evidence.getLabResults();
         if (CollectionUtils.isEmpty(results)) {
             return "无";
         }
         StringBuilder sb = new StringBuilder();
         int count = 0;
-        for (BizLabResult r : results) {
+        for (LabResultBrief r : results) {
             if (count >= 30) {
                 break;
             }
@@ -564,7 +585,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         int window = properties.getReadmitWindowDays();
         LocalDateTime baseline = null;
         if (settlement.getRegistId() != null) {
-            BizAppointInfo regist = appointInfoMapper.selectById(settlement.getRegistId());
+            RegistBrief regist = appointGateway.findRegist(settlement.getRegistId());
             if (regist != null && regist.getVisitDate() != null) {
                 baseline = regist.getVisitDate().atStartOfDay();
             }

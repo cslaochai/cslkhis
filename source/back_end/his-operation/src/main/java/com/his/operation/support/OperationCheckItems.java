@@ -1,5 +1,7 @@
 package com.his.operation.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.util.*;
 
 /**
@@ -13,6 +15,7 @@ import java.util.*;
  * <p>因此：核对结果是<b>码值集合</b>（如 {@code 1,2,3,4}），必核项缺失直接拒绝提交，
  * 前端按 {@link #all()} 渲染勾选框。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OperationCheckItems {
 
     /**
@@ -28,9 +31,6 @@ public final class OperationCheckItems {
         LABELS.put(4, "过敏史与术前用药已核对");
         LABELS.put(5, "备血、器械与植入物已到位");
         LABELS.put(6, "影像资料与化验结果已确认");
-    }
-
-    private OperationCheckItems() {
     }
 
     /**

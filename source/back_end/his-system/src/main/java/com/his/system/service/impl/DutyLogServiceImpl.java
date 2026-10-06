@@ -9,7 +9,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.system.dto.DutyLogHandoverDTO;
 import com.his.system.dto.DutyLogQueryPageDTO;
 import com.his.system.dto.DutyLogUpsertDTO;

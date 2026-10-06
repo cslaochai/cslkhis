@@ -1,5 +1,7 @@
 package com.his.ai.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -12,6 +14,7 @@ import java.util.stream.Collectors;
  * 安全闸门的表名校验。新增可查询表只改这里，三处自动同步；
  * 列清单同时是给模型的「允许使用的列」边界，因此只收录实测核对过列名的列。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OperationSchemaCatalog {
 
     private static final List<TableDef> TABLES = List.of(
@@ -50,9 +53,6 @@ public final class OperationSchemaCatalog {
     private static final Set<String> TABLE_NAMES = TABLES.stream()
             .map(TableDef::tableName)
             .collect(Collectors.toUnmodifiableSet());
-
-    private OperationSchemaCatalog() {
-    }
 
     public static List<TableDef> tables() {
         return TABLES;

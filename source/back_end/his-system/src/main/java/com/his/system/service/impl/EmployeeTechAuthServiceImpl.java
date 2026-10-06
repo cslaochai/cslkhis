@@ -9,7 +9,7 @@ import com.his.common.enums.TechAuthTypeEnum;
 import com.his.common.enums.TechLevelEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.system.dto.TechAuthApproveDTO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.dto.TechAuthOverrideConfirmDTO;

@@ -11,7 +11,7 @@ import com.his.pharmacy.mapper.SysSupplierMapper;
 import com.his.pharmacy.service.SupplierService;
 import com.his.pharmacy.vo.SysSupplierSelectListVO;
 import com.his.pharmacy.vo.SysSupplierVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

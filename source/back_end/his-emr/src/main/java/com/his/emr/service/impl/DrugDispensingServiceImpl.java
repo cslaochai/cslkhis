@@ -19,7 +19,7 @@ import com.his.emr.vo.DrugDispensingCountVO;
 import com.his.emr.vo.NarcoticViolationVO;
 import com.his.pharmacy.dto.StockDeductResultDTO;
 import com.his.pharmacy.service.PharmacyService;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.system.entity.SysDrug;
 import com.his.system.mapper.SysDrugMapper;
 import lombok.RequiredArgsConstructor;

@@ -1,5 +1,7 @@
 package com.his.appoint.service.impl;
 
+
+import com.his.charge.service.AppointChargeGateway;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -16,7 +18,6 @@ import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
 import com.his.appoint.mapper.BizScheduleMapper;
 import com.his.appoint.mapper.BizScheduleSlotMapper;
-import com.his.appoint.service.AppointChargeGateway;
 import com.his.appoint.service.AppointService;
 import com.his.appoint.service.MedicalRecordRefGateway;
 import com.his.appoint.service.RevisitFeePolicyService;
@@ -27,7 +28,7 @@ import com.his.appoint.vo.BizAppointInfoListVO;
 import com.his.appoint.vo.RevisitFeePreviewVO;
 import com.his.appoint.vo.RevisitRecordSelectVO;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.AttendModeEnum;
 import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
@@ -35,9 +36,9 @@ import com.his.common.exception.BusinessException;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.PatientGuardianService;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
-import com.his.security.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.BizStaffSchedule;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffScheduleService;
@@ -65,6 +66,7 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizAppointInfo> implements AppointService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private final BizScheduleMapper scheduleMapper;
     private final BizScheduleSlotMapper slotMapper;
@@ -205,11 +207,11 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
      * </ul>
      */
     private void applyDeptScope(LambdaQueryWrapper<BizAppointInfo> wrapper, Long requestedDeptId) {
-        Long scopedDeptId = DeptScopeGuard.resolveDeptId(requestedDeptId);
+        Long scopedDeptId = deptScopeProvider.resolveDeptId(requestedDeptId);
         if (scopedDeptId != null) {
             wrapper.eq(BizAppointInfo::getDeptId, scopedDeptId);
-        } else if (DeptScopeGuard.isScoped()) {
-            wrapper.in(BizAppointInfo::getDeptId, DeptScopeGuard.allowedDeptIds());
+        } else if (deptScopeProvider.isScoped()) {
+            wrapper.in(BizAppointInfo::getDeptId, deptScopeProvider.allowedDeptIds());
         }
     }
 

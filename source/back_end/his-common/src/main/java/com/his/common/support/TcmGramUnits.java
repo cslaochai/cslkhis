@@ -1,5 +1,7 @@
 package com.his.common.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -15,6 +17,7 @@ import java.math.RoundingMode;
  * 扣库存<b>向上</b>取整到 0.01 档案单位（向下取整等于少扣库存，账上永远比架上多，
  * 拆零发出去的半袋也要从架上拿走）。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TcmGramUnits {
 
     /**
@@ -26,9 +29,6 @@ public final class TcmGramUnits {
      * 库存列是 decimal(10,2)，扣减量只能精确到 0.01 档案单位
      */
     private static final int STOCK_SCALE = 2;
-
-    private TcmGramUnits() {
-    }
 
     /**
      * 该药是否按克开方。换算率为空 = 西药/中成药（或档案没维护），一律走原来的「数量即库存数量」口径。

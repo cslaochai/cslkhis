@@ -21,15 +21,8 @@
             <groupId>com.his</groupId>
             <artifactId>his-common</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-security</artifactId>
-        </dependency>
+        
         <!-- 病历提交即开立项目：检查/检验/处方逐条落记账行，退单前的引用校验也查它 -->
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-fee</artifactId>
-        </dependency>
         <dependency>
             <groupId>com.his</groupId>
             <artifactId>his-system</artifactId>
@@ -57,6 +50,11 @@
         <dependency>
             <groupId>com.github.librepdf</groupId>
             <artifactId>openpdf</artifactId>
+        </dependency>
+        <!-- 记账（FeeRecordService）、处方/病历证据读取（EmrGateway 实现方在本模块）；本模块依赖它，反向依赖会成环 -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-charge</artifactId>
         </dependency>
     </dependencies>
 </project>

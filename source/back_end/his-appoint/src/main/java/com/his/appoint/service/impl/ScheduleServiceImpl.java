@@ -33,9 +33,9 @@ import com.his.common.enums.StaffTypeEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
-import com.his.security.entity.CurrentUser;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
+import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
 import com.his.system.service.SysClinicRoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -58,6 +58,7 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSchedule> implements ScheduleService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private final BizScheduleMapper scheduleMapper;
     private final BizAppointInfoMapper appointInfoMapper;
@@ -91,11 +92,11 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         //   · 传了 deptId → 必须在被授权范围内，越权直接拒绝（不静默改写条件）；
         //   · 没传但用户受限 → 收口到他被授权的科室集合（而不是全院）；
         //   · data_scope=1（全部数据）角色 → 维持原行为，不加条件。
-        Long scopedDeptId = DeptScopeGuard.resolveDeptId(queryDTO.getDeptId());
+        Long scopedDeptId = deptScopeProvider.resolveDeptId(queryDTO.getDeptId());
         if (scopedDeptId != null) {
             wrapper.eq(BizSchedule::getDeptId, scopedDeptId);
-        } else if (DeptScopeGuard.isScoped()) {
-            wrapper.in(BizSchedule::getDeptId, DeptScopeGuard.allowedDeptIds());
+        } else if (deptScopeProvider.isScoped()) {
+            wrapper.in(BizSchedule::getDeptId, deptScopeProvider.allowedDeptIds());
         }
         // 岗位类别（sql/195）：空=全部岗位，传了就只看该岗位。
         // 排班面板是「按岗位分开看」的——「今天内科几个医生出诊」和「今天窗口几个收费员在岗」是两张表，
@@ -130,11 +131,11 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
     @Override
     public List<BizSchedule> scheduleSelectList(ScheduleSelectQueryDTO scheduleQueryDTO) {
         LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<>();
-        Long scopedDeptId = DeptScopeGuard.resolveDeptId(scheduleQueryDTO.getDeptId());
+        Long scopedDeptId = deptScopeProvider.resolveDeptId(scheduleQueryDTO.getDeptId());
         if (scopedDeptId != null) {
             wrapper.eq(BizSchedule::getDeptId, scopedDeptId);
-        } else if (DeptScopeGuard.isScoped()) {
-            wrapper.in(BizSchedule::getDeptId, DeptScopeGuard.allowedDeptIds());
+        } else if (deptScopeProvider.isScoped()) {
+            wrapper.in(BizSchedule::getDeptId, deptScopeProvider.allowedDeptIds());
         }
         // 号源下拉只认医生出诊排班（sql/195）：护士/技师/收费员这些岗位是**出勤排班**，
         // 号源恒 0 且没有诊室，一旦混进这个下拉，挂号员能选到「张三（收费员）」并挂出一个没有号源的号。

@@ -4,9 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.Constants;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
-import com.his.common.support.SensitiveMaskUtils;
+import com.his.common.util.SensitiveMaskUtil;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
 import com.his.emr.enums.*;
@@ -16,8 +16,8 @@ import com.his.emr.service.SurveyService;
 import com.his.emr.service.SurveyTemplateService;
 import com.his.emr.support.FollowupTaskSnapshot;
 import com.his.emr.vo.*;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -54,6 +54,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class SurveyServiceImpl implements SurveyService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private static final BigDecimal HUNDRED = new BigDecimal("100");
 
@@ -708,7 +709,7 @@ public class SurveyServiceImpl implements SurveyService {
         vo.setCanRefuse(Objects.equals(st, SurveyDispatchStatusEnum.PENDING_PUSH.getCode())
                 || Objects.equals(st, SurveyDispatchStatusEnum.PUSHED.getCode())
                 || Objects.equals(st, SurveyDispatchStatusEnum.EXPIRED.getCode()));
-        vo.setPhoneMasked(SensitiveMaskUtils.maskPhone(vo.getPhone()));
+        vo.setPhoneMasked(SensitiveMaskUtil.maskPhone(vo.getPhone()));
         if (!plainPhone) {
             vo.setPhone(null);
         }
@@ -729,20 +730,20 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     private void assertDeptAccessible(Long deptId) {
-        if (!DeptScopeGuard.canAccessDept(deptId)) {
+        if (!deptScopeProvider.canAccessDept(deptId)) {
             throw new BusinessException("该数据所属科室不在当前岗位的数据范围内");
         }
     }
 
     /**
-     * null=不限科室；非空=收口集合（显式 deptId 越权时由 DeptScopeGuard 抛错；空集合按配置缺失拒掉，绝不放行成全院）
+     * null=不限科室；非空=收口集合（显式 deptId 越权时由 DeptScopeProvider 抛错；空集合按配置缺失拒掉，绝不放行成全院）
      */
     private List<Long> scopedDeptIds(Long requestedDeptId) {
-        Long resolved = DeptScopeGuard.resolveDeptId(requestedDeptId);
+        Long resolved = deptScopeProvider.resolveDeptId(requestedDeptId);
         if (resolved != null) {
             return List.of(resolved);
         }
-        Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         if (allowed == null) {
             return null;
         }

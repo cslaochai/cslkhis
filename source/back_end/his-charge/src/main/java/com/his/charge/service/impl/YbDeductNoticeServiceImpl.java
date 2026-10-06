@@ -1,10 +1,12 @@
 package com.his.charge.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.charge.constant.YbDeductStatus;
-import com.his.charge.dto.*;
+import com.his.charge.dto.DeductAppealDTO;
+import com.his.charge.dto.DeductAppealResultDTO;
+import com.his.charge.dto.DeductConfirmDTO;
+import com.his.charge.dto.DeductNoticeQueryPageDTO;
+import com.his.charge.dto.DeductNoticeUpsertDTO;
+import com.his.charge.dto.DeductPaybackDTO;
+import com.his.charge.dto.YbCancelDTO;
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.entity.BizYbDeductLog;
 import com.his.charge.entity.BizYbDeductNotice;
@@ -13,27 +15,30 @@ import com.his.charge.mapper.BizYbDeductLogMapper;
 import com.his.charge.mapper.BizYbDeductNoticeMapper;
 import com.his.charge.mapper.BizYbInspectionMapper;
 import com.his.charge.service.InsuranceSettlementService;
+import com.his.charge.service.PatientGateway;
 import com.his.charge.service.YbDeductNoticeService;
+import com.his.charge.support.YbDeductStatus;
 import com.his.charge.vo.DeductLogVO;
 import com.his.charge.vo.DeductNoticeDetailVO;
 import com.his.charge.vo.DeductNoticeListVO;
 import com.his.charge.vo.DeductSummaryVO;
+import com.his.charge.vo.PatientBrief;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
-import com.his.patient.service.PatientService;
-import com.his.security.UserUtils;
-import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
+import com.his.common.service.RedisSequenceService;
+import com.his.system.utils.UserUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 扣款通知服务实现（状态机见 YbDeductStatus 注释；每个动作都写一条留痕）。
@@ -69,7 +74,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
     private final BizYbDeductLogMapper logMapper;
     private final BizYbInspectionMapper inspectionMapper;
     private final InsuranceSettlementService settlementService;
-    private final PatientService patientService;
+    private final PatientGateway patientGateway;
     private final RedisSequenceService sequenceService;
 
     @Override
@@ -151,7 +156,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         entity.setEncounterId(dto.getEncounterId());
         entity.setPatientId(dto.getPatientId());
         // 患者姓名/编号以库里的事实为准：前端传的是选择器快照，一旦漏传或传错，扣款单上就是空白
-        BizPatient patient = dto.getPatientId() == null ? null : patientService.getById(dto.getPatientId());
+        PatientBrief patient = dto.getPatientId() == null ? null : patientGateway.findPatient(dto.getPatientId());
         if (dto.getPatientId() != null && patient == null) {
             throw new BusinessException("患者不存在或已删除");
         }

@@ -1,11 +1,17 @@
 package com.his.charge.service;
 
-import com.his.charge.dto.*;
+
+
+
+import com.his.charge.dto.ChronicCatalogQueryPageDTO;
+import com.his.charge.dto.ChronicCatalogUpsertDTO;
+import com.his.charge.dto.ChronicRegQueryPageDTO;
+import com.his.charge.dto.ChronicRegTerminalDTO;
+import com.his.charge.dto.ChronicRegUpsertDTO;
 import com.his.charge.vo.ChronicCatalogVO;
 import com.his.charge.vo.ChronicRegListVO;
 import com.his.charge.vo.ChronicRegSummaryVO;
 import com.his.common.base.PageResult;
-
 import java.util.List;
 
 /**

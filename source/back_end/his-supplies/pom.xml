@@ -21,13 +21,15 @@
             <groupId>com.his</groupId>
             <artifactId>his-common</artifactId>
         </dependency>
+        
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-security</artifactId>
+            <artifactId>his-system</artifactId>
         </dependency>
+        <!-- 高值计费记账（FeeRecordService） 在 his-charge；本模块依赖它，反向依赖会成环 -->
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-fee</artifactId>
+            <artifactId>his-charge</artifactId>
         </dependency>
     </dependencies>
 </project>

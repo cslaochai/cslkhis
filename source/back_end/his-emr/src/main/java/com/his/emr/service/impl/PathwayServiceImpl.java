@@ -3,7 +3,7 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.*;
 import com.his.emr.entity.BizPathway;
@@ -18,8 +18,8 @@ import com.his.emr.mapper.BizPathwayStepMapper;
 import com.his.emr.mapper.BizPathwayVarianceMapper;
 import com.his.emr.service.PathwayService;
 import com.his.emr.vo.*;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -55,6 +55,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class PathwayServiceImpl implements PathwayService {
+    private final DeptScopeProvider deptScopeProvider;
 
     /**
      * 原因类文本统一截 200（列宽 255，留余量，超长会把业务失败升级成 Data too long 500）
@@ -497,7 +498,7 @@ public class PathwayServiceImpl implements PathwayService {
      * 受限账号（如病区医生）只能碰授权科室患者的路径数据
      */
     private void checkDeptAccess(Long deptId) {
-        Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         if (allowed != null && (deptId == null || !allowed.contains(deptId))) {
             throw new BusinessException("无权访问该科室患者的路径数据");
         }

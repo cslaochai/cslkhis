@@ -1,5 +1,7 @@
 package com.his.patient.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -10,12 +12,10 @@ import java.util.Map;
  * <p>标识必须与 {@code PatientIndexMapper.countDataByPatientIds} 里 UNION ALL 的
  * 第一列常量严格一致；改一处必须改另一处，否则页面会显示成"未知(regist)"。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class PatientDataTables {
 
     public static final Map<String, String> LABELS = build();
-
-    private PatientDataTables() {
-    }
 
     private static Map<String, String> build() {
         Map<String, String> m = new LinkedHashMap<>();

@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.util.TimeUtil;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.config.SignProperties;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.dto.SignatureQueryPageDTO;
@@ -17,7 +17,7 @@ import com.his.common.mapper.BizEmrSignatureMapper;
 import com.his.common.mapper.SignConfigMapper;
 import com.his.common.mapper.SysSignCertMapper;
 import com.his.common.service.*;
-import com.his.common.util.SignCrypto;
+import com.his.common.util.SignCryptoUtil;
 import com.his.common.vo.ObjectSignatureVO;
 import com.his.common.vo.SignVerifyVO;
 import com.his.common.vo.SignatureSummaryVO;
@@ -185,8 +185,8 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         String prevDigest = prev == null ? null : prev.getContentDigest();
 
         String content = subject.contentWithPrev(prevDigest);
-        String digest = SignCrypto.sha256Hex(content);
-        String signValue = SignCrypto.sign(privatePem, content);
+        String digest = SignCryptoUtil.sha256Hex(content);
+        String signValue = SignCryptoUtil.sign(privatePem, content);
         LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
 
         BizEmrSignature e = new BizEmrSignature();
@@ -209,8 +209,8 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         e.setSignerTitle(cmd.getSignerTitle());
         e.setCertId(cert.getId());
         e.setCertNo(cert.getCertNo());
-        e.setDigestAlgo(SignCrypto.DIGEST_ALGO);
-        e.setSignAlgo(SignCrypto.SIGN_ALGO);
+        e.setDigestAlgo(SignCryptoUtil.DIGEST_ALGO);
+        e.setSignAlgo(SignCryptoUtil.SIGN_ALGO);
         e.setContentDigest(digest);
         e.setSignValue(signValue);
         e.setContentSnapshot(content);
@@ -287,8 +287,8 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             signFailReason = "该签名未留存被签内容快照（历史数据），无法校验签名值";
         } else {
             try {
-                signatureValid = SignCrypto.verify(cert.getPublicKey(), sig.getContentSnapshot(), sig.getSignValue());
-            } catch (SignCrypto.SignException e) {
+                signatureValid = SignCryptoUtil.verify(cert.getPublicKey(), sig.getContentSnapshot(), sig.getSignValue());
+            } catch (SignCryptoUtil.SignException e) {
                 signatureValid = false;
                 signFailReason = "验签执行异常：" + e.getMessage();
             }

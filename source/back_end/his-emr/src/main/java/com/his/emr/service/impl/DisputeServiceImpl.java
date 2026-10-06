@@ -3,10 +3,10 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.Constants;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.support.SensitiveMaskUtils;
+import com.his.common.util.SensitiveMaskUtil;
 import com.his.emr.dto.*;
 import com.his.emr.entity.BizDisputeCase;
 import com.his.emr.entity.BizDisputeFlow;
@@ -19,7 +19,7 @@ import com.his.emr.service.MedicalRecordArchiveService;
 import com.his.emr.vo.DisputeCaseVO;
 import com.his.emr.vo.DisputeStatItemVO;
 import com.his.emr.vo.DisputeStatVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -433,7 +433,7 @@ public class DisputeServiceImpl implements DisputeService {
         vo.setCanSeal(!terminal && Objects.equals(vo.getNeedSeal(), 1)
                 && !Objects.equals(vo.getSealStatus(), SealStatusEnum.DONE.getCode()));
         vo.setCanDelete(pending);
-        vo.setComplainantTel(SensitiveMaskUtils.maskPhone(vo.getComplainantTel()));
+        vo.setComplainantTel(SensitiveMaskUtil.maskPhone(vo.getComplainantTel()));
         // 受理天数：未受理 0，已结案取受理→结案，其余取受理→今天
         if (vo.getAcceptTime() == null) {
             vo.setOpenDays(0);

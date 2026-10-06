@@ -1,5 +1,7 @@
 package com.his.ai.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
@@ -18,6 +20,7 @@ import java.util.regex.Pattern;
  * 主诉：咳嗽3天这种带标签的格式（从其他系统/模板抄来的），
  * 这类内容用规则逐字切分比让模型改写更准 —— 也顺带成为模型不可用时的兜底路径。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EmrFieldCatalog {
 
     private static final List<TextField> TEXT_FIELDS = List.of(
@@ -98,9 +101,6 @@ public final class EmrFieldCatalog {
             }
         }
         SORTED_ALIASES.sort(Comparator.comparingInt((Map.Entry<String, TextField> e) -> e.getKey().length()).reversed());
-    }
-
-    private EmrFieldCatalog() {
     }
 
     public static List<TextField> textFields() {

@@ -1,6 +1,6 @@
 package com.his.patient.support;
 
-import com.his.patient.service.InpatientSettlementGateway;
+import com.his.charge.service.InpatientSettlementGateway;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;

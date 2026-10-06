@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.charge.service.InpatientSettlementGateway;
 import com.his.common.util.TimeUtil;
 import com.his.patient.enums.NursingLevelEnum;
 
@@ -11,7 +12,6 @@ import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
-import com.his.patient.enums.AdmitWayEnum;
 import com.his.patient.enums.BedStatusEnum;
 import com.his.patient.enums.DischargeWayEnum;
 import com.his.patient.enums.SummaryStatusEnum;
@@ -21,9 +21,9 @@ import com.his.patient.service.*;
 import com.his.patient.support.SettlementGate;
 import com.his.patient.support.SummaryOperationSeq;
 import com.his.patient.vo.*;
-import com.his.security.DeptScopeGuard;
-import com.his.security.UserUtils;
-import com.his.security.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +64,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class InpatientServiceImpl implements InpatientService {
+    private final DeptScopeProvider deptScopeProvider;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private final BizAdmissionMapper admissionMapper;
@@ -137,11 +138,11 @@ public class InpatientServiceImpl implements InpatientService {
         // 科室数据权限收口（M6）：scopeDeptIds 是服务端专用字段，先清掉前端可能伪造的值再按登录态填充。
         // 传了 deptId → 越权直接拒绝；没传且受限 → 收敛到授权科室集合（不再是"不传=看全院"）。
         query.setScopeDeptIds(null);
-        Long scopedDeptId = DeptScopeGuard.resolveDeptId(query.getDeptId());
+        Long scopedDeptId = deptScopeProvider.resolveDeptId(query.getDeptId());
         if (scopedDeptId != null) {
             query.setDeptId(scopedDeptId);
-        } else if (DeptScopeGuard.isScoped()) {
-            query.setScopeDeptIds(List.copyOf(DeptScopeGuard.allowedDeptIds()));
+        } else if (deptScopeProvider.isScoped()) {
+            query.setScopeDeptIds(List.copyOf(deptScopeProvider.allowedDeptIds()));
         }
         Page<InpatientVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         IPage<InpatientVO> result = admissionMapper.selectInpatientPage(page, query);
@@ -692,8 +693,8 @@ public class InpatientServiceImpl implements InpatientService {
         InpatientStatsVO vo = new InpatientStatsVO();
         // 与 listPage 同一收口口径（M6）：受限角色看到的"在院/今日入出院"必须和列表条数对得上，
         // 否则出现「列表 3 条、卡片全院总数」。床位是全院物理资源，不随科室收口。
-        List<Long> scopeDeptIds = DeptScopeGuard.isScoped()
-                ? List.copyOf(DeptScopeGuard.allowedDeptIds()) : null;
+        List<Long> scopeDeptIds = deptScopeProvider.isScoped()
+                ? List.copyOf(deptScopeProvider.allowedDeptIds()) : null;
         LambdaQueryWrapper<BizAdmission> inHospitalWrapper = new LambdaQueryWrapper<BizAdmission>()
                 .eq(BizAdmission::getAdmitStatus, AdmitStatusEnum.IN_HOSPITAL.getCode());
         if (scopeDeptIds != null) {
@@ -739,7 +740,7 @@ public class InpatientServiceImpl implements InpatientService {
         BedMapVO result = new BedMapVO();
 
         // 1) 科室收口：显式传的 deptId 先过授权校验（越权直接拒，不静默改写）
-        Long deptId = DeptScopeGuard.resolveDeptId(query == null ? null : query.getDeptId());
+        Long deptId = deptScopeProvider.resolveDeptId(query == null ? null : query.getDeptId());
         if (deptId == null) {
             // 不受限（data_scope=1）也没指定科室 → 落主岗位科室。
             // 不退化成"全院 1000+ 张卡"：那样既画不开，也不是任何人关心的视图。
@@ -842,7 +843,7 @@ public class InpatientServiceImpl implements InpatientService {
      * 科室下拉：按授权范围收口，且只保留真的有床位的科室
      */
     private List<BedMapVO.DeptOption> resolveDeptOptions(Long currentDeptId, String currentDeptName) {
-        Set<Long> allowed = DeptScopeGuard.allowedDeptIds();
+        Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         List<BedMapVO.DeptOption> options = new ArrayList<>();
         for (BedMapVO.DeptOption option : bedMapMapper.selectDeptOptions()) {
             if (allowed == null || allowed.contains(option.getDeptId())) {

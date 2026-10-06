@@ -1,7 +1,8 @@
 package com.his.charge.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.charge.entity.BizYbCatalog;
+import com.his.charge.service.impl.YbCatalogServiceImpl;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 
 /**

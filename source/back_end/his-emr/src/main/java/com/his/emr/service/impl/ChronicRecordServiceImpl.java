@@ -13,7 +13,7 @@ import com.his.emr.mapper.BizChronicRecordMapper;
 import com.his.emr.service.ChronicRecordService;
 import com.his.emr.vo.ChronicMyRecordsVO;
 import com.his.emr.vo.ChronicRecordListVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

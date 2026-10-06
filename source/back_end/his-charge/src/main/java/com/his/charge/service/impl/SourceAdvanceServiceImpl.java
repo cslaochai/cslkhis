@@ -1,27 +1,29 @@
 package com.his.charge.service.impl;
 
+
+
+
+import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizPaymentTxnMapper;
+import com.his.charge.service.EmrGateway;
+import com.his.charge.service.FeeRecordService;
+import com.his.charge.service.MedicalTechGateway;
 import com.his.charge.service.SourceAdvanceService;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.FeeStatusEnum;
 import com.his.common.enums.PayDirectionEnum;
 import com.his.common.enums.PayTxnStatusEnum;
-import com.his.emr.service.SourcePaidAdvanceService;
-import com.his.fee.entity.BizFeeRecord;
-import com.his.fee.service.FeeRecordService;
-import com.his.medicaltech.service.MedicalTechService;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 来源单据推进实现：把记账行的 {@code source_type + source_id} 翻译成"该动哪张临床单据"。
@@ -36,8 +38,8 @@ public class SourceAdvanceServiceImpl implements SourceAdvanceService {
 
     private final FeeRecordService feeRecordService;
     private final BizPaymentTxnMapper paymentTxnMapper;
-    private final SourcePaidAdvanceService sourcePaidAdvanceService;
-    private final MedicalTechService medicalTechService;
+    private final EmrGateway emrGateway;
+    private final MedicalTechGateway medicalTechGateway;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -58,18 +60,18 @@ public class SourceAdvanceServiceImpl implements SourceAdvanceService {
             }
             switch (source) {
                 case PRESCRIPTION -> {
-                    sourcePaidAdvanceService.advancePrescriptionDetail(row.getSourceId(), row.getAmount(), payMethod);
+                    emrGateway.advancePrescriptionDetail(row.getSourceId(), row.getAmount(), payMethod);
                     advanced++;
                 }
                 case EXAM_APPLY -> {
-                    sourcePaidAdvanceService.advanceInspectionApply(row.getSourceId());
+                    emrGateway.advanceInspectionApply(row.getSourceId());
                     // 执行记录由医技域按申请单幂等创建：收费只负责"钱到了"，不替医技决定怎么开工
-                    medicalTechService.ensureInspectionRecordFromApply(row.getSourceId());
+                    medicalTechGateway.ensureInspectionRecordFromApply(row.getSourceId());
                     advanced++;
                 }
                 case LAB_APPLY -> {
-                    sourcePaidAdvanceService.advanceLaboratoryApply(row.getSourceId());
-                    medicalTechService.ensureLaboratoryRecordFromApply(row.getSourceId());
+                    emrGateway.advanceLaboratoryApply(row.getSourceId());
+                    medicalTechGateway.ensureLaboratoryRecordFromApply(row.getSourceId());
                     advanced++;
                 }
                 default -> {
@@ -106,19 +108,19 @@ public class SourceAdvanceServiceImpl implements SourceAdvanceService {
             }
             switch (source) {
                 case PRESCRIPTION -> {
-                    sourcePaidAdvanceService.revertPrescriptionDetail(row.getSourceId(), reason);
+                    emrGateway.revertPrescriptionDetail(row.getSourceId(), reason);
                     reverted++;
                 }
                 case EXAM_APPLY -> {
                     // 先让医技把还没开始的执行记录置取消，再把申请单退回未缴费；
                     // 已经做过的检查不靠退费抹平（医技侧自己判断能不能取消）
-                    medicalTechService.cancelInspectionByApplyId(row.getSourceId(), reason);
-                    sourcePaidAdvanceService.revertInspectionApply(row.getSourceId());
+                    medicalTechGateway.cancelInspectionByApplyId(row.getSourceId(), reason);
+                    emrGateway.revertInspectionApply(row.getSourceId());
                     reverted++;
                 }
                 case LAB_APPLY -> {
-                    medicalTechService.cancelLaboratoryByApplyId(row.getSourceId(), reason);
-                    sourcePaidAdvanceService.revertLaboratoryApply(row.getSourceId());
+                    medicalTechGateway.cancelLaboratoryByApplyId(row.getSourceId(), reason);
+                    emrGateway.revertLaboratoryApply(row.getSourceId());
                     reverted++;
                 }
                 default -> {
@@ -154,7 +156,7 @@ public class SourceAdvanceServiceImpl implements SourceAdvanceService {
             }
             detailIds.add(row.getSourceId());
         }
-        sourcePaidAdvanceService.assertNoDrugPendingReturn(detailIds, scene);
+        emrGateway.assertNoDrugPendingReturn(detailIds, scene);
     }
 
     /**

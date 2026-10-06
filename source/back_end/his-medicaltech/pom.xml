@@ -23,14 +23,6 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-security</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
-            <artifactId>his-fee</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.his</groupId>
             <artifactId>his-system</artifactId>
         </dependency>
         <dependency>
@@ -42,6 +34,11 @@
             <artifactId>his-emr</artifactId>
             <version>1.0.0</version>
             <scope>compile</scope>
+        </dependency>
+        <!-- 记账（FeeRecordService）、医技证据读取（MedicalTechGateway 实现方在本模块）；本模块依赖它，反向依赖会成环 -->
+        <dependency>
+            <groupId>com.his</groupId>
+            <artifactId>his-charge</artifactId>
         </dependency>
     </dependencies>
 </project>

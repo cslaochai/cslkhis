@@ -12,7 +12,7 @@ import com.his.emr.entity.BizPublicHealthReport;
 import com.his.emr.mapper.BizPublicHealthReportMapper;
 import com.his.emr.service.PublicHealthReportService;
 import com.his.emr.vo.BizPublicHealthReportVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;

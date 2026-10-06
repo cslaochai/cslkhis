@@ -1,4 +1,6 @@
 package com.his.miniapp.support;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
 /**
  * 工单状态与流转动作的<b>唯一口径</b>（建表见 {@code sql/221}）。
@@ -7,6 +9,7 @@ package com.his.miniapp.support;
  * 工单化后语义变了（1 从"已处理"变成"处理中"）。口径散在 Service 和前端各写一份，
  * 必然出现"后端认为在处理中、前端显示已处理"。这里改一次，两边都跟着改。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ServiceTicketStatus {
 
     /** 待受理：患者已提交，无人认领 */
@@ -30,9 +33,6 @@ public final class ServiceTicketStatus {
     public static final int ACT_CLOSE = 5;
     public static final int ACT_CANCEL = 6;
     public static final int ACT_REOPEN = 7;
-
-    private ServiceTicketStatus() {
-    }
 
     public static String statusText(Integer status) {
         if (status == null) {

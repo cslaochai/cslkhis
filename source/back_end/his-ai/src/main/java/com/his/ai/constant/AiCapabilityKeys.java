@@ -1,4 +1,6 @@
 package com.his.ai.constant;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
 /**
  * AI 能力标识。
@@ -9,6 +11,7 @@ package com.his.ai.constant;
  * <p>
  * 命名需与 application.yml 的 {@code ai.features.<key>}、{@code ai.timeouts.<key>} 保持一致。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AiCapabilityKeys {
 
     /**
@@ -176,6 +179,4 @@ public final class AiCapabilityKeys {
      */
     public static final String HEALTH_CHECK = "health_check";
 
-    private AiCapabilityKeys() {
-    }
 }

@@ -3,7 +3,7 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.base.RedisSequenceService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.DrugStockChangeTypeEnum;
 import com.his.common.enums.StockRoomEnum;
 import com.his.common.enums.StockStatusEnum;

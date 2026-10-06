@@ -1,5 +1,7 @@
 package com.his.charge.support;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.util.Arrays;
 import java.util.List;
 
@@ -14,6 +16,7 @@ import java.util.List;
  * 项目依赖方向硬约束「业务模块不得依赖 his-ai」，his-charge 引用不到它。
  * 两份实现语义必须保持一致；若要根治，应把匹配器上移到 his-common 供两侧共用。</p>
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EvidenceKeywordMatcher {
 
     /**
@@ -26,9 +29,6 @@ public final class EvidenceKeywordMatcher {
      * 否定回看窗口（字符数）
      */
     private static final int WINDOW = 4;
-
-    private EvidenceKeywordMatcher() {
-    }
 
     /**
      * 在文本中匹配任一关键词，且该次出现不是被否定的。

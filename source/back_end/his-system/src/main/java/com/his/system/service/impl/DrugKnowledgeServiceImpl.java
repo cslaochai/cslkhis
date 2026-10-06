@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import com.his.system.dto.DoseLimitQueryPageDTO;
 import com.his.system.dto.DoseLimitUpsertDTO;
 import com.his.system.dto.DrugInteractionQueryPageDTO;

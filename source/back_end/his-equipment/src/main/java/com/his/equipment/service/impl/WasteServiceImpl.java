@@ -12,14 +12,13 @@ import com.his.equipment.enums.WasteTypeEnum;
 import com.his.equipment.mapper.BizMedicalWasteMapper;
 import com.his.equipment.service.WasteService;
 import com.his.equipment.vo.WasteVO;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;

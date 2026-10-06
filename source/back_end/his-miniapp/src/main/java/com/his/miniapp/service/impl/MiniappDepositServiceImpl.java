@@ -11,7 +11,7 @@ import com.his.miniapp.service.MiniappDepositService;
 import com.his.miniapp.support.RawRowValues;
 import com.his.miniapp.vo.AdmissionSelectListVO;
 import com.his.patient.service.PatientGuardianService;
-import com.his.security.UserUtils;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -1,5 +1,7 @@
 package com.his.miniapp.util;
 
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -14,10 +16,8 @@ import java.util.List;
  * 内容为单页 Helvetica 英文占位排版 —— 只保证「文件真实存在、可被 wx.openDocument 打开」，
  * 中文版式（医院抬头/红章/检验结果表格）等真对接时由专业 PDF 服务替换，接口形态不变。
  */
+@NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class MiniappPdfStub {
-
-    private MiniappPdfStub() {
-    }
 
     /** 报告 PDF 桩：单页占位文档。 */
     public static byte[] reportPdf(String reportNo, String patientName, String itemName,
