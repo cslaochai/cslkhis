@@ -1,24 +1,8 @@
 package com.his.appoint.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.his.appoint.dto.QueueCallNextDTO;
-import com.his.appoint.dto.QueueQueryDTO;
-import com.his.appoint.dto.QueueTodayQueryDTO;
+import com.his.appoint.dto.*;
 import com.his.appoint.entity.BizQueue;
-import com.his.appoint.vo.*;
-import com.his.appoint.dto.AppointCheckInUpdateDTO;
-import com.his.appoint.dto.InsuranceEstimateDTO;
-import com.his.appoint.vo.DoctorStatsVO;
-import com.his.appoint.vo.InsuranceEstimateVO;
-import com.his.appoint.dto.DoctorStatusBatchQueryDTO;
-import com.his.appoint.dto.DoctorStatusSetDTO;
-import com.his.appoint.vo.DoctorStatusVO;
-import com.his.appoint.dto.OpdLogQueryDTO;
-import com.his.appoint.vo.OpdLogListVO;
-import com.his.appoint.vo.OpdLogStatsVO;
-import com.his.appoint.dto.TriageUpsertDTO;
-import com.his.appoint.vo.TriageDetailVO;
-import com.his.appoint.vo.TriageRecordVO;
 import com.his.appoint.vo.*;
 import com.his.common.base.PageResult;
 

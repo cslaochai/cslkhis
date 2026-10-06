@@ -1,6 +1,5 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.medicaltech.service.PathologyService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -12,6 +11,7 @@ import com.his.medicaltech.entity.BizPathologyOrder;
 import com.his.medicaltech.enums.PathologyStatusEnum;
 import com.his.medicaltech.mapper.BizPathologyBlockMapper;
 import com.his.medicaltech.mapper.BizPathologyOrderMapper;
+import com.his.medicaltech.service.PathologyService;
 import com.his.medicaltech.vo.PathologyVO;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
@@ -45,7 +45,9 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, BizPathologyOrder> implements PathologyService {
 
-    /** 冰冻 / 细胞学：不经过蜡块制片流程，可提前出诊断 */
+    /**
+     * 冰冻 / 细胞学：不经过蜡块制片流程，可提前出诊断
+     */
     private static final int EXAM_FROZEN = 2;
     private static final int EXAM_CYTOLOGY = 3;
 
@@ -185,7 +187,9 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         return o;
     }
 
-    /** 内镜活检送检：由内镜域调用，生成一条已登记的病理单 */
+    /**
+     * 内镜活检送检：由内镜域调用，生成一条已登记的病理单
+     */
     @Transactional(rollbackFor = Exception.class)
     public BizPathologyOrder createFromEndoscopy(PathologyDTO.FromEndoscopy dto) {
         BizPathologyOrder o = new BizPathologyOrder();
@@ -223,7 +227,9 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         orderMapper.updateById(o);
     }
 
-    /** 主单级流程推进：3 已取材 / 4 已制片 */
+    /**
+     * 主单级流程推进：3 已取材 / 4 已制片
+     */
     @Transactional(rollbackFor = Exception.class)
     public void process(PathologyDTO.Process dto) {
         BizPathologyOrder o = requireOrder(dto.getOrderId());
@@ -283,7 +289,9 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         return b;
     }
 
-    /** 蜡块流转：1 取材 2 包埋 3 切片（单向推进），返回主单ID */
+    /**
+     * 蜡块流转：1 取材 2 包埋 3 切片（单向推进），返回主单ID
+     */
     @Transactional(rollbackFor = Exception.class)
     public Long blockAction(PathologyDTO.BlockAction dto) {
         BizPathologyBlock b = blockMapper.selectById(dto.getBlockId());
@@ -342,7 +350,9 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         return o.getId();
     }
 
-    /** 初诊 */
+    /**
+     * 初诊
+     */
     @Transactional(rollbackFor = Exception.class)
     public void report(PathologyDTO.Report dto) {
         BizPathologyOrder o = requireOrder(dto.getOrderId());
@@ -369,7 +379,9 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         orderMapper.updateById(o);
     }
 
-    /** 审核（审核人不得是初诊人本人） */
+    /**
+     * 审核（审核人不得是初诊人本人）
+     */
     @Transactional(rollbackFor = Exception.class)
     public void audit(PathologyDTO.Audit dto) {
         BizPathologyOrder o = requireOrder(dto.getOrderId());
@@ -390,7 +402,9 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         orderMapper.updateById(o);
     }
 
-    /** 发布（终态前一步：已审核 → 已发布） */
+    /**
+     * 发布（终态前一步：已审核 → 已发布）
+     */
     @Transactional(rollbackFor = Exception.class)
     public void publish(Long orderId) {
         BizPathologyOrder o = requireOrder(orderId);
@@ -447,7 +461,9 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
                 || Integer.valueOf(EXAM_CYTOLOGY).equals(o.getExamType());
     }
 
-    /** 统计某状态下区间内蜡块数（minStatus~maxStatus） */
+    /**
+     * 统计某状态下区间内蜡块数（minStatus~maxStatus）
+     */
     private long countBlocks(Long orderId, int minStatus, int maxStatus) {
         return blockMapper.selectCount(new LambdaQueryWrapper<BizPathologyBlock>()
                 .eq(BizPathologyBlock::getOrderId, orderId)
@@ -476,7 +492,9 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
     }
 
     /** 写库的文本一律先截到列宽（原因/意见超长会把业务失败升级成 500） */
-    /** null 安全 trim：查询条件的 value 参数是急切求值的，直接 x.trim() 会在 x 为 null 时 NPE */
+    /**
+     * null 安全 trim：查询条件的 value 参数是急切求值的，直接 x.trim() 会在 x 为 null 时 NPE
+     */
     private String tr(String s) {
         return s == null ? null : s.trim();
     }
@@ -488,7 +506,9 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         return s.length() > 480 ? s.substring(0, 480) : s;
     }
 
-    /** 供内镜域按病理号反查（活检送检后回填） */
+    /**
+     * 供内镜域按病理号反查（活检送检后回填）
+     */
     public String orderNoById(Long id) {
         if (id == null) {
             return null;
@@ -497,7 +517,9 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         return o == null ? null : o.getOrderNo();
     }
 
-    /** 判断某病理号是否存在（避免重复送检） */
+    /**
+     * 判断某病理号是否存在（避免重复送检）
+     */
     public boolean existsBySource(String sourceRecordNo) {
         if (!StringUtils.hasText(sourceRecordNo)) {
             return false;

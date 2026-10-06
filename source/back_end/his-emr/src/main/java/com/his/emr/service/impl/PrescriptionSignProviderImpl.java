@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.his.common.entity.SignSubject;
 import com.his.common.enums.PrescriptionStatusEnum;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.emr.entity.BizPrescription;
@@ -28,8 +28,8 @@ import java.util.Objects;
  *
  * <p>《处方管理办法》要求处方审核由药师完成，**审方与发药是两道手**：
  * <ul>
- *   <li>{@link SignScene#RX_CREATE} → 写医师签名ID（开方医师）</li>
- *   <li>{@link SignScene#RX_AUDIT}  → 写审核签名ID（审方药师）</li>
+ *   <li>{@link SignSceneEnum#RX_CREATE} → 写医师签名ID（开方医师）</li>
+ *   <li>{@link SignSceneEnum#RX_AUDIT}  → 写审核签名ID（审方药师）</li>
  * </ul>
  * 第二环（审方）的签名内容带上第一环的摘要，于是"审方之后又改了处方内容"会同时打断
  * 第二环的验签 —— 否则两次签名各自绑同一份内容，改谁都验得过去，双签就成了摆设。
@@ -90,8 +90,8 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
     }
 
     @Override
-    public SignBizType bizType() {
-        return SignBizType.PRESCRIPTION;
+    public SignBizTypeEnum bizType() {
+        return SignBizTypeEnum.PRESCRIPTION;
     }
 
     @Override
@@ -113,7 +113,7 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
     }
 
     @Override
-    public String blockReason(SignSubject subject, SignScene scene) {
+    public String blockReason(SignSubject subject, SignSceneEnum scene) {
         BizPrescription p = prescriptionMapper.selectById(subject.bizId());
         if (p == null) {
             return "处方不存在或已被删除，无法签名";
@@ -123,14 +123,14 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
                 || Objects.equals(PrescriptionStatusEnum.RETURNED.getCode(), status)) {
             return "处方 " + p.getPrescriptionNo() + " 已" + PrescriptionSignProvider.rxStatusText(status) + "，不能签名";
         }
-        if (scene == SignScene.RX_CREATE) {
+        if (scene == SignSceneEnum.RX_CREATE) {
             if (p.getDoctorSignId() != null) {
                 return "处方 " + p.getPrescriptionNo() + " 已有开方签名，不能重复签名；"
                         + "如需修改，请先在「签名中心」作废该签名";
             }
             return null;
         }
-        if (scene == SignScene.RX_AUDIT) {
+        if (scene == SignSceneEnum.RX_AUDIT) {
             if (p.getAuditSignId() != null) {
                 return "处方 " + p.getPrescriptionNo() + " 已有审方签名，不能重复签名；"
                         + "如需修改，请先在「签名中心」作废该签名";
@@ -148,11 +148,11 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
     }
 
     @Override
-    public void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime) {
+    public void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime) {
         BizPrescription patch = new BizPrescription();
         patch.setId(bizId);
         LocalDateTime t = signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS);
-        if (scene == SignScene.RX_AUDIT) {
+        if (scene == SignSceneEnum.RX_AUDIT) {
             patch.setAuditSignId(signId);
             patch.setAuditSignedTime(t);
         } else {

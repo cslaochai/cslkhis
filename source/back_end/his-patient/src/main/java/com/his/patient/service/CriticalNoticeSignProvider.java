@@ -1,8 +1,8 @@
 package com.his.patient.service;
 
 import com.his.common.entity.SignSubject;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.patient.entity.BizCriticalNotice;
@@ -42,13 +42,13 @@ public interface CriticalNoticeSignProvider extends SignableContentProvider {
                 .build();
     }
 
-    SignBizType bizType();
+    SignBizTypeEnum bizType();
 
     SignSubject load(Long bizId);
 
-    String blockReason(SignSubject subject, SignScene scene);
+    String blockReason(SignSubject subject, SignSceneEnum scene);
 
-    void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime);
+    void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime);
 
     void revokeSignAnchor(Long bizId, Long signId);
 }

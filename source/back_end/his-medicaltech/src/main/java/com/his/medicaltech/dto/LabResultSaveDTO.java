@@ -19,7 +19,9 @@ public class LabResultSaveDTO {
      */
     private String executeBy;
 
-    /** 检验结论/诊断 */
+    /**
+     * 检验结论/诊断
+     */
     private String diagnosis;
 
     /**

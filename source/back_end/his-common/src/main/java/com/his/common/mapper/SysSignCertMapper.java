@@ -23,7 +23,9 @@ public interface SysSignCertMapper extends BaseMapper<SysSignCert> {
             + "ORDER BY id DESC LIMIT 1")
     SysSignCert selectActiveByEmp(@Param("empId") Long empId, @Param("now") LocalDateTime now);
 
-    /** 证书号序号（CERT+yyyyMMdd 前缀） */
+    /**
+     * 证书号序号（CERT+yyyyMMdd 前缀）
+     */
     @Select("SELECT COUNT(*) FROM sys_sign_cert WHERE del_flag = 0 AND cert_no LIKE CONCAT(#{prefix}, '%')")
     long countByCertNoPrefix(@Param("prefix") String prefix);
 }

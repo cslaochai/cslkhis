@@ -7,7 +7,9 @@ import lombok.Data;
  */
 @Data
 public class LaboratoryAuditDTO {
-    /** 检查/检验记录ID */
+    /**
+     * 检查/检验记录ID
+     */
     private Long recordId;
 
     /**

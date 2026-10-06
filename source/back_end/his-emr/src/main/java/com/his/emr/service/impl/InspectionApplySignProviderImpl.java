@@ -3,9 +3,9 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.his.common.entity.SignSubject;
 import com.his.common.enums.ApplyStatusEnum;
-import com.his.common.enums.ObjectSignStatus;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.ObjectSignStatusEnum;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
@@ -37,8 +37,8 @@ public class InspectionApplySignProviderImpl implements SignableContentProvider,
     private final BizInspectionApplyMapper applyMapper;
 
     @Override
-    public SignBizType bizType() {
-        return SignBizType.INSPECTION_APPLY;
+    public SignBizTypeEnum bizType() {
+        return SignBizTypeEnum.INSPECTION_APPLY;
     }
 
     @Override
@@ -60,15 +60,15 @@ public class InspectionApplySignProviderImpl implements SignableContentProvider,
     }
 
     @Override
-    public String blockReason(SignSubject subject, SignScene scene) {
-        if (scene != SignScene.APPLY_CREATE) {
+    public String blockReason(SignSubject subject, SignSceneEnum scene) {
+        if (scene != SignSceneEnum.APPLY_CREATE) {
             return "检查申请单只支持「申请开立签名」场景，当前场景「" + scene.getText() + "」不适用";
         }
         BizInspectionApply a = applyMapper.selectById(subject.bizId());
         if (a == null) {
             return "检查申请单不存在或已被删除，无法签名";
         }
-        if (Objects.equals(ObjectSignStatus.SIGNED.getCode(), a.getSignStatus())) {
+        if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), a.getSignStatus())) {
             return "检查申请单 " + a.getApplyNo() + " 已签名（签名即锁定），不能重复签名；"
                     + "如需修改，请先在「签名中心」作废该签名（作废会留痕并解除锁定）";
         }
@@ -79,10 +79,10 @@ public class InspectionApplySignProviderImpl implements SignableContentProvider,
     }
 
     @Override
-    public void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime) {
+    public void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime) {
         BizInspectionApply patch = new BizInspectionApply();
         patch.setId(bizId);
-        patch.setSignStatus(ObjectSignStatus.SIGNED.getCode());
+        patch.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
         patch.setSignId(signId);
         patch.setSignedTime(signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS));
         applyMapper.updateById(patch);
@@ -96,7 +96,7 @@ public class InspectionApplySignProviderImpl implements SignableContentProvider,
         }
         applyMapper.update(null, new LambdaUpdateWrapper<BizInspectionApply>()
                 .eq(BizInspectionApply::getId, bizId)
-                .set(BizInspectionApply::getSignStatus, ObjectSignStatus.INVALIDATED.getCode())
+                .set(BizInspectionApply::getSignStatus, ObjectSignStatusEnum.INVALIDATED.getCode())
                 .set(BizInspectionApply::getSignId, null));
         log.info("检查申请单签名已作废回写 applyNo={} signId={}", a.getApplyNo(), signId);
     }

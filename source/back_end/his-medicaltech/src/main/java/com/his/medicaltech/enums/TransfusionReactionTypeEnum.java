@@ -31,7 +31,9 @@ public enum TransfusionReactionTypeEnum {
         this.label = code;
     }
 
-    /** 词表是否合法（写入侧校验用；null 与空串都不合法） */
+    /**
+     * 词表是否合法（写入侧校验用；null 与空串都不合法）
+     */
     public static boolean isValid(String type) {
         return fromCode(type) != null;
     }
@@ -58,13 +60,17 @@ public enum TransfusionReactionTypeEnum {
         return item == null ? "" : item.label;
     }
 
-    /** 异常 / 审计用：null 或词表外返回「未知(n)」（null 本身渲染成「未知」），保留原始值便于排查。 */
+    /**
+     * 异常 / 审计用：null 或词表外返回「未知(n)」（null 本身渲染成「未知」），保留原始值便于排查。
+     */
     public static String labelOrUnknown(String code) {
         TransfusionReactionTypeEnum item = fromCode(code);
         return item == null ? (code == null || code.isBlank() ? "未知" : "未知(" + code + ")") : item.label;
     }
 
-    /** 下拉候选（词表顺序即上报频次顺序） */
+    /**
+     * 下拉候选（词表顺序即上报频次顺序）
+     */
     public static List<String> options() {
         List<String> list = new ArrayList<>();
         for (TransfusionReactionTypeEnum item : values()) {

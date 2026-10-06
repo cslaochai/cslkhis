@@ -200,9 +200,9 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
             // 通过：先签名、后改状态（顺序不能反 —— 签名层的准入规则要求处方处于「草稿」或「已提交」，
             // 若先把状态写成 3-已审核，签名层会当场把自己拒掉） ----
             SignCommandDTO cmd = new SignCommandDTO();
-            cmd.setBizType(SignBizType.PRESCRIPTION.getCode());
+            cmd.setBizType(SignBizTypeEnum.PRESCRIPTION.getCode());
             cmd.setBizId(p.getId());
-            cmd.setSignScene(SignScene.RX_AUDIT.getCode());
+            cmd.setSignScene(SignSceneEnum.RX_AUDIT.getCode());
             cmd.setSignerId(auditorId);
             cmd.setSignerName(auditorName);
             cmd.setSignerDeptId(auditorDeptId);

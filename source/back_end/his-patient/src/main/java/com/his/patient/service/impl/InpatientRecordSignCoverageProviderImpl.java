@@ -1,8 +1,8 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.common.enums.ObjectSignStatus;
-import com.his.common.enums.SignBizType;
+import com.his.common.enums.ObjectSignStatusEnum;
+import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.service.SignCoverageProvider;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.mapper.BizInpatientRecordMapper;
@@ -24,20 +24,20 @@ public class InpatientRecordSignCoverageProviderImpl implements SignCoverageProv
     private final BizInpatientRecordMapper recordMapper;
 
     @Override
-    public SignBizType bizType() {
-        return SignBizType.INPATIENT_RECORD;
+    public SignBizTypeEnum bizType() {
+        return SignBizTypeEnum.INPATIENT_RECORD;
     }
 
     @Override
     public SignCoverage coverage() {
         long total = recordMapper.selectCount(null);
         long signed = recordMapper.selectCount(new LambdaQueryWrapper<BizInpatientRecord>()
-                .eq(BizInpatientRecord::getSignStatus, ObjectSignStatus.SIGNED.getCode()));
+                .eq(BizInpatientRecord::getSignStatus, ObjectSignStatusEnum.SIGNED.getCode()));
         long invalidated = recordMapper.selectCount(new LambdaQueryWrapper<BizInpatientRecord>()
-                .eq(BizInpatientRecord::getSignStatus, ObjectSignStatus.INVALIDATED.getCode()));
+                .eq(BizInpatientRecord::getSignStatus, ObjectSignStatusEnum.INVALIDATED.getCode()));
         long pending = recordMapper.selectCount(new LambdaQueryWrapper<BizInpatientRecord>()
-                .eq(BizInpatientRecord::getSignStatus, ObjectSignStatus.UNSIGNED.getCode()));
-        return new SignCoverage(SignBizType.INPATIENT_RECORD.getCode(), SignBizType.INPATIENT_RECORD.getText(),
+                .eq(BizInpatientRecord::getSignStatus, ObjectSignStatusEnum.UNSIGNED.getCode()));
+        return new SignCoverage(SignBizTypeEnum.INPATIENT_RECORD.getCode(), SignBizTypeEnum.INPATIENT_RECORD.getText(),
                 total, signed, pending, invalidated);
     }
 }

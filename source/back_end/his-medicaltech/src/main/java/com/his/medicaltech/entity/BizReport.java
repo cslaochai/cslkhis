@@ -10,7 +10,9 @@ import lombok.EqualsAndHashCode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** 报告单 */
+/**
+ * 报告单
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_report")

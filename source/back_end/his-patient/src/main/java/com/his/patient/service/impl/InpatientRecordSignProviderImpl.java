@@ -3,8 +3,8 @@ import com.his.patient.enums.SummaryStatusEnum;
 
 import com.his.common.entity.SignSubject;
 import com.his.common.enums.RecordStatusEnum;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.patient.entity.BizInpatientRecord;
@@ -44,8 +44,8 @@ public class InpatientRecordSignProviderImpl implements SignableContentProvider,
     private final BizInpatientRecordMapper recordMapper;
 
     @Override
-    public SignBizType bizType() {
-        return SignBizType.INPATIENT_RECORD;
+    public SignBizTypeEnum bizType() {
+        return SignBizTypeEnum.INPATIENT_RECORD;
     }
 
     @Override
@@ -67,7 +67,7 @@ public class InpatientRecordSignProviderImpl implements SignableContentProvider,
     }
 
     @Override
-    public String blockReason(SignSubject subject, SignScene scene) {
+    public String blockReason(SignSubject subject, SignSceneEnum scene) {
         BizInpatientRecord r = recordMapper.selectById(subject.bizId());
         if (r == null) {
             return "病历文书不存在或已被删除，无法签名";
@@ -88,7 +88,7 @@ public class InpatientRecordSignProviderImpl implements SignableContentProvider,
     }
 
     @Override
-    public void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime) {
+    public void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime) {
         BizInpatientRecord r = new BizInpatientRecord();
         r.setId(bizId);
         r.setSignStatus(1);

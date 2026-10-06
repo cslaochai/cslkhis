@@ -33,11 +33,6 @@ public enum InsRecordStatusEnum {
         return null;
     }
 
-    /** Integer 码值判定：null 安全，语义同 == 比较 int 常量 */
-    public boolean is(Integer code) {
-        return code != null && code.equals(this.code);
-    }
-
     public static boolean isValid(Integer code) {
         return getByCode(code) != null;
     }
@@ -51,9 +46,18 @@ public enum InsRecordStatusEnum {
         return e == null ? "" : e.desc;
     }
 
-    /** 异常 / 审计用：null 或越界码值返回「未知(n)」（null 本身渲染成「未知」）。 */
+    /**
+     * 异常 / 审计用：null 或越界码值返回「未知(n)」（null 本身渲染成「未知」）。
+     */
     public static String labelOrUnknown(Integer code) {
         InsRecordStatusEnum e = getByCode(code);
         return e == null ? (code == null ? "未知" : "未知(" + code + ")") : e.desc;
+    }
+
+    /**
+     * Integer 码值判定：null 安全，语义同 == 比较 int 常量
+     */
+    public boolean is(Integer code) {
+        return code != null && code.equals(this.code);
     }
 }

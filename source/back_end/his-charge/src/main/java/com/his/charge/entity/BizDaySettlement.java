@@ -1,14 +1,15 @@
 package com.his.charge.entity;
 
-import com.his.charge.mapper.BizDaySettlementMapper;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.charge.mapper.BizDaySettlementMapper;
 import com.his.common.base.BaseEntity;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 /**
  * 院级日结单（G8）。一天一张，{@code settleDate} 唯一。

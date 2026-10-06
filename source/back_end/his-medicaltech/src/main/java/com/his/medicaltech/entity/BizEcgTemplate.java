@@ -18,27 +18,43 @@ import lombok.EqualsAndHashCode;
 @TableName("biz_ecg_template")
 public class BizEcgTemplate extends BaseEntity {
 
-    /** 模板编码（唯一） */
+    /**
+     * 模板编码（唯一）
+     */
     private String templateCode;
 
-    /** 模板名称 */
+    /**
+     * 模板名称
+     */
     private String templateName;
 
-    /** 适用心电类型（字典 his_ecg_type；NULL=通用） */
+    /**
+     * 适用心电类型（字典 his_ecg_type；NULL=通用）
+     */
     private Integer ecgType;
 
-    /** 心电图所见模板 */
+    /**
+     * 心电图所见模板
+     */
     private String findingTpl;
 
-    /** 心电图诊断模板 */
+    /**
+     * 心电图诊断模板
+     */
     private String conclusionTpl;
 
-    /** 建议模板 */
+    /**
+     * 建议模板
+     */
     private String suggestionTpl;
 
-    /** 排序号 */
+    /**
+     * 排序号
+     */
     private Integer sortOrder;
 
-    /** 状态（0-停用 1-启用） */
+    /**
+     * 状态（0-停用 1-启用）
+     */
     private Integer status;
 }

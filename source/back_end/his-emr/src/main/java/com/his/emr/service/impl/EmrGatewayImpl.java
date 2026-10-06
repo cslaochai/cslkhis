@@ -1,21 +1,13 @@
 package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.charge.support.ChargeDeptResolver;
 import com.his.charge.api.EmrGateway;
+import com.his.charge.support.ChargeDeptResolver;
 import com.his.charge.vo.MedicalRecordBriefVO;
 import com.his.charge.vo.PrescriptionBriefVO;
 import com.his.charge.vo.PrescriptionDetailBriefVO;
-import com.his.emr.entity.BizInspectionApply;
-import com.his.emr.entity.BizLaboratoryApply;
-import com.his.emr.entity.BizMedicalRecord;
-import com.his.emr.entity.BizPrescription;
-import com.his.emr.entity.BizPrescriptionDetail;
-import com.his.emr.mapper.BizInspectionApplyMapper;
-import com.his.emr.mapper.BizLaboratoryApplyMapper;
-import com.his.emr.mapper.BizMedicalRecordMapper;
-import com.his.emr.mapper.BizPrescriptionDetailMapper;
-import com.his.emr.mapper.BizPrescriptionMapper;
+import com.his.emr.entity.*;
+import com.his.emr.mapper.*;
 import com.his.emr.service.SourcePaidAdvanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

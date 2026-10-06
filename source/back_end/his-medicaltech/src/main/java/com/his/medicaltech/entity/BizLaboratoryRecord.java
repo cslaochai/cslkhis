@@ -11,7 +11,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** 检验记录 */
+/**
+ * 检验记录
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_laboratory_record")

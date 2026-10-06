@@ -11,7 +11,9 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface BizTsaTokenMapper extends BaseMapper<BizTsaToken> {
 
-    /** 台账总条数（Redis 不可用时的取号兜底：当天前缀计数 +1） */
+    /**
+     * 台账总条数（Redis 不可用时的取号兜底：当天前缀计数 +1）
+     */
     @Select("SELECT COUNT(*) FROM biz_tsa_token WHERE serial LIKE CONCAT(#{prefix}, '%')")
     long countBySerialPrefix(String prefix);
 }

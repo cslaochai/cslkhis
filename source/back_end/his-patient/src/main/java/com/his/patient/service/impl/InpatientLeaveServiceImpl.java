@@ -7,9 +7,9 @@ import com.his.common.base.PageResult;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.AdmitStatusEnum;
-import com.his.common.enums.ObjectSignStatus;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.ObjectSignStatusEnum;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.vo.SignatureVO;
@@ -244,7 +244,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
             leave.setLeaveNo(redisSequenceService.generateInpatientLeaveNo());
             leave.setAdmissionId(dto.getAdmissionId());
             leave.setLeaveStatus(LeaveStatusEnum.PENDING.getCode());
-            leave.setSignStatus(ObjectSignStatus.UNSIGNED.getCode());
+            leave.setSignStatus(ObjectSignStatusEnum.UNSIGNED.getCode());
             leave.setPrintCount(0);
         } else {
             leave = requireLeave(dto.getId());
@@ -336,9 +336,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
 
             // 批准即电子签名：签名失败随审批事务回滚，不允许「批了但没签名」的中间态
             SignCommandDTO cmd = new SignCommandDTO();
-            cmd.setBizType(SignBizType.INPATIENT_LEAVE.getCode());
+            cmd.setBizType(SignBizTypeEnum.INPATIENT_LEAVE.getCode());
             cmd.setBizId(leave.getId());
-            cmd.setSignScene(SignScene.LEAVE_APPROVE.getCode());
+            cmd.setSignScene(SignSceneEnum.LEAVE_APPROVE.getCode());
             cmd.setSignerId(me);
             cmd.setSignerName(myName);
             CurrentUser user = UserUtils.getCurrentUser();
@@ -353,7 +353,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
                 SignatureVO sig = signatureService.sign(cmd);
                 // 锚点三件套必须在这里一起写：provider 的 applySignAnchor 已把 sign_status 置 1，
                 // 但下面还要用**签名前读出的实体**整行 updateById，漏写就把它冲回 0（签名失效、单据像没锁）。
-                leave.setSignStatus(ObjectSignStatus.SIGNED.getCode());
+                leave.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
                 leave.setSignId(sig.getId());
                 leave.setSignedTime(sig.getSignedTime() == null ? null
                         : sig.getSignedTime().truncatedTo(ChronoUnit.SECONDS));

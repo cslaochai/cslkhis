@@ -1,10 +1,10 @@
 package com.his.charge.utils;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import cn.hutool.core.img.ImgUtil;
 import cn.hutool.extra.qrcode.QrCodeUtil;
 import cn.hutool.extra.qrcode.QrConfig;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.awt.image.BufferedImage;

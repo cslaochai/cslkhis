@@ -1,7 +1,7 @@
 package com.his.charge.mapper;
 
-import com.his.charge.entity.BizSettlementDiagnosis;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.his.charge.entity.BizSettlementDiagnosis;
 import org.apache.ibatis.annotations.Mapper;
 
 /**

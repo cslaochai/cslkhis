@@ -5,36 +5,36 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.exception.BusinessException;
 import com.his.common.dto.SignCommandDTO;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
+import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.vo.SignatureVO;
-import com.his.medicaltech.entity.BizInspectionRecord;
-import com.his.medicaltech.entity.BizReport;
-import com.his.medicaltech.enums.InsRecordStatusEnum;
-import com.his.medicaltech.enums.ReportStatusEnum;
-import com.his.medicaltech.enums.ReportTypeEnum;
-import com.his.medicaltech.service.ExamImageService;
-import com.his.medicaltech.mapper.BizInspectionRecordMapper;
-import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.medicaltech.dto.RadioReportAuditDTO;
 import com.his.medicaltech.dto.RadioReportQueryPageDTO;
 import com.his.medicaltech.dto.RadioReportUpsertDTO;
 import com.his.medicaltech.dto.RadioTemplateUpsertDTO;
+import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizRadioReportTemplate;
+import com.his.medicaltech.entity.BizReport;
+import com.his.medicaltech.enums.InsRecordStatusEnum;
+import com.his.medicaltech.enums.ReportStatusEnum;
+import com.his.medicaltech.enums.ReportTypeEnum;
+import com.his.medicaltech.mapper.BizInspectionRecordMapper;
 import com.his.medicaltech.mapper.BizRadioReportTemplateMapper;
+import com.his.medicaltech.mapper.BizReportMapper;
 import com.his.medicaltech.mapper.RadioReportMapper;
+import com.his.medicaltech.service.ExamImageService;
 import com.his.medicaltech.service.RadiologyReportService;
 import com.his.medicaltech.vo.RadioReportDetailVO;
 import com.his.medicaltech.vo.RadioReportListVO;
 import com.his.medicaltech.vo.RadioReportTemplateVO;
-import com.his.system.service.DictCacheService;
-import com.his.system.utils.UserUtils;
-import com.his.system.service.SysAuditLogService;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.service.DictCacheService;
+import com.his.system.service.SysAuditLogService;
 import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -59,7 +59,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class RadiologyReportServiceImpl implements RadiologyReportService {
-    /** 分页每页条数上限（技术阈值，防止前端传入超大值把库拖垮；DTO 迁 PageParam 后在此夹取） */
+    /**
+     * 分页每页条数上限（技术阈值，防止前端传入超大值把库拖垮；DTO 迁 PageParam 后在此夹取）
+     */
     private static final int MAX_PAGE_SIZE = 200;
 
 
@@ -75,6 +77,18 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
 
     // 查询
 
+    private static String trim(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private static String cut(String s, int max) {
+        if (s == null) {
+            return null;
+        }
+        String v = s.trim();
+        return v.length() <= max ? v : v.substring(0, max);
+    }
+
     @Override
     public PageResult<RadioReportListVO> listPage(RadioReportQueryPageDTO query) {
         int pageNum = Math.max(query.getPageNum(), 1);
@@ -86,6 +100,8 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         fillText(list);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), list);
     }
+
+    // 写
 
     @Override
     public RadioReportDetailVO getDetailByRecordId(Long recordId) {
@@ -107,8 +123,6 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         BizInspectionRecord record = loadRadiologyRecord(report.getRecordId());
         return toDetail(record, report);
     }
-
-    // 写
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -153,7 +167,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         if (record.getReportSignId() != null) {
             throw new BusinessException("本报告已有报告医师签名，不能重复提交；如需修改请由审核医师退回后重写");
         }
-        SignatureVO sign = signReport(record, SignScene.REPORT_ISSUE);
+        SignatureVO sign = signReport(record, SignSceneEnum.REPORT_ISSUE);
         record.setReportSignId(sign.getId());
         record.setReportSignedTime(sign.getSignedTime());
 
@@ -194,7 +208,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
 
         // 先签名、后改状态：签名层的准入规则要求记录仍处于「已出结果未审核」，
         // 先把 record 写成「已审核」会让签名层把自己拒掉。
-        SignatureVO sign = signReport(record, SignScene.REPORT_AUDIT);
+        SignatureVO sign = signReport(record, SignSceneEnum.REPORT_AUDIT);
         record.setAuditSignId(sign.getId());
         record.setAuditSignedTime(sign.getSignedTime());
         record.setAuditBy(UserUtils.getCurrentEmployeeName());
@@ -219,6 +233,8 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
                 true, null);
         return toDetail(record, report);
     }
+
+    // 内部
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -304,8 +320,6 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         return toDetail(record, report);
     }
 
-    // 内部
-
     /**
      * 取检查记录并**强制它是放射项目**。
      *
@@ -344,7 +358,9 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         return report;
     }
 
-    /** 报告已发布/已作废后不许再改 */
+    /**
+     * 报告已发布/已作废后不许再改
+     */
     private void rejectIfClosed(BizReport report) {
         Integer st = report.getReportStatus();
         if (Objects.equals(ReportStatusEnum.PUBLISHED.getCode(), st)
@@ -354,7 +370,9 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         }
     }
 
-    /** 找已有报告，没有就按记录建一条空壳（报告号服务端生成） */
+    /**
+     * 找已有报告，没有就按记录建一条空壳（报告号服务端生成）
+     */
     private BizReport ensureReport(BizInspectionRecord record) {
         BizReport exists = reportMapper.selectOne(new LambdaQueryWrapper<BizReport>()
                 .eq(BizReport::getRecordId, record.getId())
@@ -401,7 +419,11 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         }
     }
 
-    /** 把入参写进报告实体（服务端兜住的字段不在这里赋值） */
+    // 出参
+
+    /**
+     * 把入参写进报告实体（服务端兜住的字段不在这里赋值）
+     */
     private void applyContent(BizInspectionRecord record, BizReport report, RadioReportUpsertDTO dto) {
         report.setTemplateId(dto.getTemplateId());
         report.setExamMethod(cut(dto.getExamMethod(), 200));
@@ -420,13 +442,13 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
      *
      * <p>签名人取自登录态：入参里的姓名字符串谁都能填成别人的名字，用它签名等于签名可伪造。
      */
-    private SignatureVO signReport(BizInspectionRecord record, SignScene scene) {
+    private SignatureVO signReport(BizInspectionRecord record, SignSceneEnum scene) {
         Long signerId = UserUtils.getCurrentEmployeeId();
         if (signerId == null) {
             throw new BusinessException("签名失败：取不到当前登录用户，无法确定签名人");
         }
         SignCommandDTO cmd = new SignCommandDTO();
-        cmd.setBizType(SignBizType.INSPECTION_REPORT.getCode());
+        cmd.setBizType(SignBizTypeEnum.INSPECTION_REPORT.getCode());
         cmd.setBizId(record.getId());
         cmd.setSignScene(scene.getCode());
         cmd.setSignerId(signerId);
@@ -440,8 +462,6 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
                     + "失败：" + e.getMessage());
         }
     }
-
-    // 出参
 
     private void fillText(List<RadioReportListVO> list) {
         if (list == null) {
@@ -596,17 +616,5 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
             vo.setTemplateName(e.getTemplateCode());
         }
         return vo;
-    }
-
-    private static String trim(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static String cut(String s, int max) {
-        if (s == null) {
-            return null;
-        }
-        String v = s.trim();
-        return v.length() <= max ? v : v.substring(0, max);
     }
 }

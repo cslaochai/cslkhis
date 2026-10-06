@@ -3,8 +3,8 @@ package com.his.emr.dto;
 import com.his.common.base.PageParam;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import lombok.EqualsAndHashCode;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 点评明细分页入参（batchId 为空 = 跨批次全量，供统计/导出；页面明细 tab 固定传批次）

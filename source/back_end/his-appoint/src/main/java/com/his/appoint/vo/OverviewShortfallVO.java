@@ -13,32 +13,50 @@ import java.time.LocalDate;
 @Data
 public class OverviewShortfallVO {
 
-    /** 排班日期 */
+    /**
+     * 排班日期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate scheduleDate;
 
-    /** 排班单元类型（1-科室 2-病区 3-全院） */
+    /**
+     * 排班单元类型（1-科室 2-病区 3-全院）
+     */
     private Integer orgType;
 
-    /** 排班单元ID（全院级为 0） */
+    /**
+     * 排班单元ID（全院级为 0）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long orgId;
 
-    /** 排班单元名称 */
+    /**
+     * 排班单元名称
+     */
     private String orgName;
 
-    /** 班次名称（0-全部班次） */
+    /**
+     * 班次名称（0-全部班次）
+     */
     private String shiftName;
 
-    /** 岗位类别名称 */
+    /**
+     * 岗位类别名称
+     */
     private String staffTypeName;
 
-    /** 最低在岗人数 */
+    /**
+     * 最低在岗人数
+     */
     private Integer minStaff;
 
-    /** 实际在岗人次 */
+    /**
+     * 实际在岗人次
+     */
     private Long actualCount;
 
-    /** 缺口人数 */
+    /**
+     * 缺口人数
+     */
     private Integer shortfall;
 }

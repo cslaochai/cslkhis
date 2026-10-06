@@ -14,25 +14,39 @@ import java.util.List;
 @Data
 public class ScheduleOverviewVO {
 
-    /** 周起始（周一） */
+    /**
+     * 周起始（周一）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate beginDate;
 
-    /** 天数（固定 7） */
+    /**
+     * 天数（固定 7）
+     */
     private Integer days;
 
-    /** 岗位类别 × 日期在岗人次（卡片行） */
+    /**
+     * 岗位类别 × 日期在岗人次（卡片行）
+     */
     private List<OverviewStaffTypeDayVO> staffTypeDays;
 
-    /** 出诊单元 × 日期在岗人次（矩阵格子） */
+    /**
+     * 出诊单元 × 日期在岗人次（矩阵格子）
+     */
     private List<OverviewUnitDayVO> unitDays;
 
-    /** 门诊号源按日汇总 */
+    /**
+     * 门诊号源按日汇总
+     */
     private List<OverviewClinicDayVO> clinicDays;
 
-    /** 人力缺口清单 */
+    /**
+     * 人力缺口清单
+     */
     private List<OverviewShortfallVO> shortfalls;
 
-    /** 本周每日总值班解析（白班/夜班） */
+    /**
+     * 本周每日总值班解析（白班/夜班）
+     */
     private List<OverviewDutyDayVO> dutyDays;
 }

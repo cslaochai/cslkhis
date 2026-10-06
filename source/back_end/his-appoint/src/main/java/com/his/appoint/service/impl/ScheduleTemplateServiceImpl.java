@@ -9,14 +9,12 @@ import com.his.appoint.dto.ScheduleTemplateUpsertDTO;
 import com.his.appoint.entity.BizSchedule;
 import com.his.appoint.entity.BizScheduleSlotTemplate;
 import com.his.appoint.entity.BizScheduleTemplate;
-import com.his.system.entity.BizShift;
 import com.his.appoint.mapper.BizScheduleMapper;
 import com.his.appoint.mapper.BizScheduleSlotTemplateMapper;
 import com.his.appoint.mapper.BizScheduleTemplateMapper;
 import com.his.appoint.service.ScheduleService;
 import com.his.appoint.service.ScheduleSlotService;
 import com.his.appoint.service.ScheduleTemplateService;
-import com.his.system.service.ShiftService;
 import com.his.appoint.vo.ScheduleTemplatePreviewVO;
 import com.his.appoint.vo.ScheduleTemplateSlotVO;
 import com.his.appoint.vo.ScheduleTemplateVO;
@@ -25,6 +23,8 @@ import com.his.common.enums.ScheduleStatusEnum;
 import com.his.common.enums.StaffScheduleSourceEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.system.entity.BizShift;
+import com.his.system.service.ShiftService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -355,7 +355,9 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
         }
     }
 
-    /** "HH:mm" → 当日分钟数；段表是 char(5) 的定式存储，格式不在保存侧拦住就会漂进生成链路 */
+    /**
+     * "HH:mm" → 当日分钟数；段表是 char(5) 的定式存储，格式不在保存侧拦住就会漂进生成链路
+     */
     private int minuteOf(String hhmm, String what) {
         if (hhmm == null || !hhmm.matches("^([01]\\d|2[0-3]):[0-5]\\d$")) {
             throw new BusinessException(what + "格式必须是 HH:mm");

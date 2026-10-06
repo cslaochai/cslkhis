@@ -73,7 +73,9 @@ public enum TransfusionCheckItemEnum {
         return e != null ? e.label : "未知(" + code + ")";
     }
 
-    /** 必核项码值（1~6 缺任意一项不允许开始输注） */
+    /**
+     * 必核项码值（1~6 缺任意一项不允许开始输注）
+     */
     public static List<Integer> requiredCodes() {
         List<Integer> list = new ArrayList<>();
         for (TransfusionCheckItemEnum e : values()) {
@@ -84,7 +86,9 @@ public enum TransfusionCheckItemEnum {
         return list;
     }
 
-    /** 全部核对项（码→文案），供前端渲染勾选框 */
+    /**
+     * 全部核对项（码→文案），供前端渲染勾选框
+     */
     public static Map<Integer, String> all() {
         Map<Integer, String> m = new LinkedHashMap<>();
         for (TransfusionCheckItemEnum e : values()) {

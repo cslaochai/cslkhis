@@ -1,6 +1,5 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.medicaltech.service.LisQcService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
@@ -10,6 +9,7 @@ import com.his.medicaltech.entity.BizLisQcPlan;
 import com.his.medicaltech.entity.BizLisQcRecord;
 import com.his.medicaltech.mapper.BizLisQcPlanMapper;
 import com.his.medicaltech.mapper.BizLisQcRecordMapper;
+import com.his.medicaltech.service.LisQcService;
 import com.his.medicaltech.support.WestgardRuleEngine;
 import com.his.medicaltech.vo.LisQcVO;
 import com.his.system.service.DictCacheService;
@@ -170,7 +170,9 @@ public class LisQcServiceImpl implements LisQcService {
         return toRecordVo(r);
     }
 
-    /** 该计划最近 n 个点（时间升序，不含当前点）。同秒多点必须补 id 二级键，否则「前一点」取错，2-2s/7-T 全部失真 */
+    /**
+     * 该计划最近 n 个点（时间升序，不含当前点）。同秒多点必须补 id 二级键，否则「前一点」取错，2-2s/7-T 全部失真
+     */
     private List<WestgardRuleEngine.QcPoint> historyAsc(Long planId, int n) {
         List<BizLisQcRecord> latest = recordMapper.selectList(new LambdaQueryWrapper<BizLisQcRecord>()
                 .eq(BizLisQcRecord::getPlanId, planId)
@@ -185,7 +187,9 @@ public class LisQcServiceImpl implements LisQcService {
         return out;
     }
 
-    /** R-4s 用：同项目+同仪器、同日其它水平的最近一点 */
+    /**
+     * R-4s 用：同项目+同仪器、同日其它水平的最近一点
+     */
     private List<WestgardRuleEngine.QcPoint> batchOthers(BizLisQcPlan plan, LocalDate date) {
         List<BizLisQcPlan> siblings = planMapper.selectList(new LambdaQueryWrapper<BizLisQcPlan>()
                 .eq(BizLisQcPlan::getItemCode, plan.getItemCode())
@@ -328,7 +332,9 @@ public class LisQcServiceImpl implements LisQcService {
         return status == null || status == 0 ? "未判定" : dictText.getDicDataLabel(DICT_STATUS, status);
     }
 
-    /** null 安全 trim：查询条件的 value 参数是急切求值的，直接 x.trim() 会在 x 为 null 时 NPE */
+    /**
+     * null 安全 trim：查询条件的 value 参数是急切求值的，直接 x.trim() 会在 x 为 null 时 NPE
+     */
     private String tr(String s) {
         return s == null ? null : s.trim();
     }

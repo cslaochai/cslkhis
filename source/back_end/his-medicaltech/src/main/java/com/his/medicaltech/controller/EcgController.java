@@ -2,14 +2,7 @@ package com.his.medicaltech.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.medicaltech.dto.EcgAuditDTO;
-import com.his.medicaltech.dto.EcgCollectWaveDTO;
-import com.his.medicaltech.dto.EcgHolterUpsertDTO;
-import com.his.medicaltech.dto.EcgMeasureUpsertDTO;
-import com.his.medicaltech.dto.EcgQueryPageDTO;
-import com.his.medicaltech.dto.EcgReportUpsertDTO;
-import com.his.medicaltech.dto.EcgSimulateDTO;
-import com.his.medicaltech.dto.EcgTemplateUpsertDTO;
+import com.his.medicaltech.dto.*;
 import com.his.medicaltech.service.EcgService;
 import com.his.medicaltech.vo.EcgDetailVO;
 import com.his.medicaltech.vo.EcgListVO;

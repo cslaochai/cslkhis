@@ -3,11 +3,7 @@ package com.his.medicaltech.support;
 import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
-import java.awt.BasicStroke;
-import java.awt.Color;
-import java.awt.Font;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
+import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -29,6 +25,10 @@ public class MockExamImageSource {
 
     private static final int SIZE = 512;
     private static final Font LABEL_FONT = new Font("SansSerif", Font.PLAIN, 14);
+
+    private static String cut(String s, int max) {
+        return s.length() <= max ? s : s.substring(0, max);
+    }
 
     /**
      * 生成第 seq 帧的 PNG 字节。
@@ -112,9 +112,5 @@ public class MockExamImageSource {
         g.drawLine(12, SIZE - 30, 12, SIZE - 18);
         g.drawLine(112, SIZE - 30, 112, SIZE - 18);
         g.drawString("10cm", 128, SIZE - 18);
-    }
-
-    private static String cut(String s, int max) {
-        return s.length() <= max ? s : s.substring(0, max);
     }
 }

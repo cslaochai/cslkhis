@@ -75,23 +75,23 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
     public SignatureOptionsVO queryOptions() {
         SignatureOptionsVO vo = new SignatureOptionsVO();
         List<SignOptionVO> bizTypes = new ArrayList<>();
-        for (SignBizType t : SignBizType.values()) {
+        for (SignBizTypeEnum t : SignBizTypeEnum.values()) {
             bizTypes.add(opt(t.getCode(), t.getText()));
         }
         List<SignOptionVO> scenes = new ArrayList<>();
-        for (SignScene s : SignScene.values()) {
+        for (SignSceneEnum s : SignSceneEnum.values()) {
             scenes.add(opt(s.getCode(), s.getText()));
         }
         List<SignOptionVO> signStatuses = new ArrayList<>();
-        for (SignStatus s : SignStatus.values()) {
+        for (SignStatusEnum s : SignStatusEnum.values()) {
             signStatuses.add(opt(s.getCode(), s.getText()));
         }
         List<SignOptionVO> verifyStatuses = new ArrayList<>();
-        for (SignVerifyStatus s : SignVerifyStatus.values()) {
+        for (SignVerifyStatusEnum s : SignVerifyStatusEnum.values()) {
             verifyStatuses.add(opt(s.getCode(), s.getText()));
         }
         List<SignOptionVO> timeSources = new ArrayList<>();
-        for (TimeSource t : TimeSource.values()) {
+        for (TimeSourceEnum t : TimeSourceEnum.values()) {
             timeSources.add(opt(t.getCode(), t.getText()));
         }
         vo.setBizTypes(bizTypes);
@@ -101,11 +101,11 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
         vo.setTimeSources(timeSources);
 
         List<SignOptionVO> certStatuses = new ArrayList<>();
-        for (CertStatus s : CertStatus.values()) {
+        for (CertStatusEnum s : CertStatusEnum.values()) {
             certStatuses.add(opt(s.getCode(), s.getText()));
         }
         List<SignOptionVO> issuedModes = new ArrayList<>();
-        for (CertIssuedMode m : CertIssuedMode.values()) {
+        for (CertIssuedModeEnum m : CertIssuedModeEnum.values()) {
             issuedModes.add(opt(m.getCode(), m.getText()));
         }
         vo.setCertStatuses(certStatuses);
@@ -119,7 +119,7 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
         SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(dto.getBizType());
         cmd.setBizId(dto.getBizId());
-        cmd.setSignScene(dto.getSignScene() == null ? SignScene.MAKEUP.getCode() : dto.getSignScene());
+        cmd.setSignScene(dto.getSignScene() == null ? SignSceneEnum.MAKEUP.getCode() : dto.getSignScene());
         fillSigner(cmd, user);
         cmd.setRemark("补签：" + (dto.getRemark() == null ? "" : dto.getRemark()));
         return signatureService.sign(cmd);

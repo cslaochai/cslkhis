@@ -14,43 +14,42 @@ import com.his.appoint.enums.QueueStatusEnum;
 import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
 import com.his.appoint.service.DoctorStatusCacheService;
-import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
-import com.his.common.dto.SignCommandDTO;
-import com.his.common.enums.*;
-import com.his.common.exception.BusinessException;
-import com.his.common.service.EmrSignatureService;
-import com.his.common.support.TcmGramUnits;
-import com.his.common.vo.SignatureVO;
-import com.his.emr.dto.*;
-import com.his.emr.entity.*;
-import com.his.emr.enums.*;
-import com.his.emr.mapper.*;
-import com.his.emr.service.AiDraftDiffService;
-import com.his.emr.api.ApplyExecStatusGateway;
-import com.his.emr.service.EmrService;
-import com.his.emr.service.QualityControlService;
-import com.his.emr.enums.QcRecordSourceEnum;
-import com.his.emr.vo.*;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.service.FeeRecordService;
 import com.his.charge.support.FeeCatalogResolver;
 import com.his.charge.vo.FeeTypeSumVO;
+import com.his.common.base.PageResult;
+import com.his.common.dto.SignCommandDTO;
+import com.his.common.enums.*;
+import com.his.common.exception.BusinessException;
+import com.his.common.service.EmrSignatureService;
+import com.his.common.service.RedisSequenceService;
+import com.his.common.support.TcmGramUnits;
+import com.his.common.vo.SignatureVO;
+import com.his.emr.api.ApplyExecStatusGateway;
+import com.his.emr.dto.*;
+import com.his.emr.entity.*;
+import com.his.emr.enums.*;
+import com.his.emr.mapper.*;
+import com.his.emr.service.AiDraftDiffService;
+import com.his.emr.service.EmrService;
+import com.his.emr.service.QualityControlService;
+import com.his.emr.vo.*;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.PatientGuardianService;
 import com.his.pharmacy.service.AntibioticService;
 import com.his.pharmacy.service.PharmacyService;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.DeptScopeProvider;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.SysDrug;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.entity.SysLaboratoryItem;
 import com.his.system.mapper.SysDrugMapper;
 import com.his.system.mapper.SysInspectionItemMapper;
 import com.his.system.mapper.SysLaboratoryItemMapper;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -76,11 +75,10 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedicalRecord> implements EmrService {
-    private final DeptScopeProvider deptScopeProvider;
-
     static final String[] HUIFANG_TYPE = {"糖尿病", "高血压", "冠心病"};
     private static final AtomicInteger TASK_SEQ = new AtomicInteger(0);
     private static final AtomicInteger SEQ = new AtomicInteger(0);
+    private final DeptScopeProvider deptScopeProvider;
     private final BizPrescriptionMapper prescriptionMapper;
     private final BizPrescriptionDetailMapper prescriptionDetailMapper;
     private final BizPrescriptionAuditLogMapper prescriptionAuditLogMapper;
@@ -428,9 +426,9 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      */
     private void signPrescription(BizPrescription p) {
         SignCommandDTO cmd = new SignCommandDTO();
-        cmd.setBizType(SignBizType.PRESCRIPTION.getCode());
+        cmd.setBizType(SignBizTypeEnum.PRESCRIPTION.getCode());
         cmd.setBizId(p.getId());
-        cmd.setSignScene(SignScene.RX_CREATE.getCode());
+        cmd.setSignScene(SignSceneEnum.RX_CREATE.getCode());
         cmd.setSignerId(p.getDoctorId());
         cmd.setSignerName(p.getDoctorName());
         cmd.setSignerDeptId(p.getDeptId());
@@ -861,7 +859,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      * 签名即锁定：已签名的申请单不许改内容，要改先去签名中心作废签名（作废留痕）。
      */
     private void requireApplyUnsigned(String applyNo, Integer signStatus) {
-        if (Objects.equals(ObjectSignStatus.SIGNED.getCode(), signStatus)) {
+        if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), signStatus)) {
             throw new BusinessException("申请单 " + applyNo + " 已电子签名（签名即锁定），不允许直接修改；"
                     + "如需修改，请先在「签名中心」作废该签名，作废后再次保存会自动完成补签");
         }
@@ -872,16 +870,16 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      */
     private void signInspectionApply(BizInspectionApply apply) {
         SignCommandDTO cmd = new SignCommandDTO();
-        cmd.setBizType(SignBizType.INSPECTION_APPLY.getCode());
+        cmd.setBizType(SignBizTypeEnum.INSPECTION_APPLY.getCode());
         cmd.setBizId(apply.getId());
-        cmd.setSignScene(SignScene.APPLY_CREATE.getCode());
+        cmd.setSignScene(SignSceneEnum.APPLY_CREATE.getCode());
         cmd.setSignerId(apply.getDoctorId());
         cmd.setSignerName(apply.getDoctorName());
         cmd.setSignerDeptId(apply.getDeptId());
         cmd.setSignerDeptName(apply.getDeptName());
         try {
             SignatureVO sig = signatureService.sign(cmd);
-            apply.setSignStatus(ObjectSignStatus.SIGNED.getCode());
+            apply.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
             apply.setSignId(sig.getId());
             apply.setSignedTime(sig.getSignedTime());
         } catch (BusinessException e) {
@@ -894,16 +892,16 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      */
     private void signLaboratoryApply(BizLaboratoryApply apply) {
         SignCommandDTO cmd = new SignCommandDTO();
-        cmd.setBizType(SignBizType.LAB_APPLY.getCode());
+        cmd.setBizType(SignBizTypeEnum.LAB_APPLY.getCode());
         cmd.setBizId(apply.getId());
-        cmd.setSignScene(SignScene.APPLY_CREATE.getCode());
+        cmd.setSignScene(SignSceneEnum.APPLY_CREATE.getCode());
         cmd.setSignerId(apply.getDoctorId());
         cmd.setSignerName(apply.getDoctorName());
         cmd.setSignerDeptId(apply.getDeptId());
         cmd.setSignerDeptName(apply.getDeptName());
         try {
             SignatureVO sig = signatureService.sign(cmd);
-            apply.setSignStatus(ObjectSignStatus.SIGNED.getCode());
+            apply.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
             apply.setSignId(sig.getId());
             apply.setSignedTime(sig.getSignedTime());
         } catch (BusinessException e) {
@@ -1087,7 +1085,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      */
     private String inspectionDeleteBlock(Long applyId, Integer applyStatus,
                                          ApplyExecStatusGateway.ExecStatus exec, Integer signStatus) {
-        if (Objects.equals(ObjectSignStatus.SIGNED.getCode(), signStatus)) {
+        if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), signStatus)) {
             return "该申请单已电子签名（签名即锁定），请先在「签名中心」作废签名";
         }
         if (!Objects.equals(ApplyStatusEnum.SUBMITTED.getCode(), applyStatus)) {
@@ -1106,7 +1104,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
     private String laboratoryDeleteBlock(Long applyId, Integer applyStatus,
                                          ApplyExecStatusGateway.ExecStatus exec, Integer signStatus) {
-        if (Objects.equals(ObjectSignStatus.SIGNED.getCode(), signStatus)) {
+        if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), signStatus)) {
             return "该申请单已电子签名（签名即锁定），请先在「签名中心」作废签名";
         }
         if (!Objects.equals(ApplyStatusEnum.SUBMITTED.getCode(), applyStatus)) {
@@ -1325,7 +1323,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             }
             // 签名即锁定（P5.5）：锁挂在内容上。recordStatus 只拦得住"已提交"，
             // 拦不住"已签名但状态被别的入口改回去"这类情况，两道都要有。
-            if (java.util.Objects.equals(ObjectSignStatus.SIGNED.getCode(), bizMedicalRecord.getSignStatus())) {
+            if (java.util.Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), bizMedicalRecord.getSignStatus())) {
                 throw new BusinessException("病历 " + bizMedicalRecord.getRecordNo()
                         + " 已由 " + bizMedicalRecord.getDoctorName() + " 签名（"
                         + bizMedicalRecord.getSignedTime() + "），签名即锁定，不允许修改；"
@@ -1713,16 +1711,16 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      */
     private void signOutpatientRecord(BizMedicalRecord r) {
         SignCommandDTO cmd = new SignCommandDTO();
-        cmd.setBizType(SignBizType.OUTPATIENT_RECORD.getCode());
+        cmd.setBizType(SignBizTypeEnum.OUTPATIENT_RECORD.getCode());
         cmd.setBizId(r.getId());
-        cmd.setSignScene(SignScene.SUBMIT.getCode());
+        cmd.setSignScene(SignSceneEnum.SUBMIT.getCode());
         cmd.setSignerId(r.getDoctorId());
         cmd.setSignerName(r.getDoctorName());
         cmd.setSignerDeptId(r.getDeptId());
         cmd.setSignerDeptName(r.getDeptName());
         try {
             SignatureVO sig = signatureService.sign(cmd);
-            r.setSignStatus(ObjectSignStatus.SIGNED.getCode());
+            r.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
             r.setSignId(sig.getId());
             r.setSignedTime(sig.getSignedTime());
         } catch (BusinessException e) {

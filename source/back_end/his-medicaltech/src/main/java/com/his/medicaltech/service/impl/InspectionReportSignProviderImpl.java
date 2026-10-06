@@ -1,20 +1,18 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.medicaltech.service.InspectionReportSignProvider;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
 import com.his.common.entity.SignSubject;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
-import com.his.common.support.CanonicalText;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.enums.InsRecordStatusEnum;
 import com.his.medicaltech.mapper.BizInspectionRecordMapper;
+import com.his.medicaltech.service.InspectionReportSignProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
@@ -24,8 +22,8 @@ import java.util.Objects;
  *
  * <p>报告是两级签发，出结果的人与签发的人通常不是同一个：
  * <ul>
- *   <li>{@link SignScene#REPORT_ISSUE} → 写报告签名ID（报告医师，出结果那一刻）</li>
- *   <li>{@link SignScene#REPORT_AUDIT} → 写审核签名ID（审核医师，签发那一刻）</li>
+ *   <li>{@link SignSceneEnum#REPORT_ISSUE} → 写报告签名ID（报告医师，出结果那一刻）</li>
+ *   <li>{@link SignSceneEnum#REPORT_AUDIT} → 写审核签名ID（审核医师，签发那一刻）</li>
  * </ul>
  * 第二环带上第一环摘要（签名链）：审核之后又改了检查描述/结论，第二环验签当场断 ——
  * 这正是"报告发出去之后还能改"这类事故唯一能被发现的路径。
@@ -41,8 +39,8 @@ public class InspectionReportSignProviderImpl implements SignableContentProvider
     private final BizInspectionRecordMapper recordMapper;
 
     @Override
-    public SignBizType bizType() {
-        return SignBizType.INSPECTION_REPORT;
+    public SignBizTypeEnum bizType() {
+        return SignBizTypeEnum.INSPECTION_REPORT;
     }
 
     @Override
@@ -64,7 +62,7 @@ public class InspectionReportSignProviderImpl implements SignableContentProvider
     }
 
     @Override
-    public String blockReason(SignSubject subject, SignScene scene) {
+    public String blockReason(SignSubject subject, SignSceneEnum scene) {
         BizInspectionRecord r = recordMapper.selectById(subject.bizId());
         if (r == null) {
             return "检查记录不存在或已被删除，无法签名";
@@ -77,7 +75,7 @@ public class InspectionReportSignProviderImpl implements SignableContentProvider
                 || Objects.equals(InsRecordStatusEnum.REVIEWED.getCode(), status)
                 || Objects.equals(InsRecordStatusEnum.PUBLISHED.getCode(), status);
 
-        if (scene == SignScene.REPORT_ISSUE) {
+        if (scene == SignSceneEnum.REPORT_ISSUE) {
             if (r.getReportSignId() != null) {
                 return "检查报告 " + r.getRecordNo() + " 已有报告医师签名，不能重复签名；"
                         + "如需修改，请先在「签名中心」作废该签名";
@@ -88,7 +86,7 @@ public class InspectionReportSignProviderImpl implements SignableContentProvider
             }
             return null;
         }
-        if (scene == SignScene.REPORT_AUDIT) {
+        if (scene == SignSceneEnum.REPORT_AUDIT) {
             if (r.getAuditSignId() != null) {
                 return "检查报告 " + r.getRecordNo() + " 已有审核医师签名，不能重复签名；"
                         + "如需修改，请先在「签名中心」作废该签名";
@@ -104,11 +102,11 @@ public class InspectionReportSignProviderImpl implements SignableContentProvider
     }
 
     @Override
-    public void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime) {
+    public void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime) {
         BizInspectionRecord patch = new BizInspectionRecord();
         patch.setId(bizId);
         LocalDateTime t = signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS);
-        if (scene == SignScene.REPORT_AUDIT) {
+        if (scene == SignSceneEnum.REPORT_AUDIT) {
             patch.setAuditSignId(signId);
             patch.setAuditSignedTime(t);
         } else {

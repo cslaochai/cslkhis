@@ -29,7 +29,9 @@ public enum SurveyQuestionTypeEnum {
         return null;
     }
 
-    /** 码值是否合法（写入侧校验用；null 不合法） */
+    /**
+     * 码值是否合法（写入侧校验用；null 不合法）
+     */
     public static boolean isValid(Integer code) {
         return code != null && fromCode(code) != null;
     }
@@ -42,7 +44,9 @@ public enum SurveyQuestionTypeEnum {
         return item == null ? null : item.label;
     }
 
-    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
+    /**
+     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
+     */
     public static String labelOrUnknown(Integer code) {
         SurveyQuestionTypeEnum item = code == null ? null : fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;

@@ -20,25 +20,37 @@ import java.time.LocalDateTime;
 @Data
 public class TransfusionStartDTO implements Serializable {
 
-    /** 输血申请单ID（必填） */
+    /**
+     * 输血申请单ID（必填）
+     */
     @NotNull(message = "输血申请单ID不能为空")
     private Long applyId;
 
-    /** 输血前核对要点码（必填，逗号分隔，如 "1,2,3,4,5,6"） */
+    /**
+     * 输血前核对要点码（必填，逗号分隔，如 "1,2,3,4,5,6"）
+     */
     private String checkItems;
 
-    /** 核对补充说明（异常项必须写在这里） */
+    /**
+     * 核对补充说明（异常项必须写在这里）
+     */
     private String checkNote;
 
-    /** 核对护士1 ID（必填，员工ID） */
+    /**
+     * 核对护士1 ID（必填，员工ID）
+     */
     @NotNull(message = "核对护士1 不能为空")
     private Long checkNurseId;
 
-    /** 核对护士2 ID（必填，员工ID，不能与核对护士1 相同） */
+    /**
+     * 核对护士2 ID（必填，员工ID，不能与核对护士1 相同）
+     */
     @NotNull(message = "核对护士2 不能为空（输血必须双人核对）")
     private Long checkNurse2Id;
 
-    /** 输注执行护士ID（员工ID；为空 = 由核对护士1 执行） */
+    /**
+     * 输注执行护士ID（员工ID；为空 = 由核对护士1 执行）
+     */
     private Long infusionNurseId;
 
     /**
@@ -53,12 +65,18 @@ public class TransfusionStartDTO implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime infusionStartTime;
 
-    /** 滴速（如 60滴/分；输注前 15 分钟须慢速） */
+    /**
+     * 滴速（如 60滴/分；输注前 15 分钟须慢速）
+     */
     private String infusionSpeed;
 
-    /** 输注过程观察（生命体征与不良反应） */
+    /**
+     * 输注过程观察（生命体征与不良反应）
+     */
     private String observation;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

@@ -2,7 +2,8 @@ package com.his.common.service.impl;
 
 import com.his.common.entity.BizEmrSignature;
 import com.his.common.entity.SysSignCert;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.SignSceneEnum;
+import com.his.common.enums.SignStatusEnum;
 import com.his.common.mapper.BizEmrSignatureMapper;
 import com.his.common.mapper.SysSignCertMapper;
 import com.his.common.service.SignableContentProvider;
@@ -33,7 +34,7 @@ public class SignatureStoreServiceImpl implements SignatureStoreService {
     private final SysSignCertMapper certMapper;
 
     @Transactional(rollbackFor = Exception.class)
-    public void insertAndAnchor(BizEmrSignature entity, SignableContentProvider provider, SignScene scene,
+    public void insertAndAnchor(BizEmrSignature entity, SignableContentProvider provider, SignSceneEnum scene,
                                 SysSignCert cert) {
         signMapper.insert(entity);
         provider.applySignAnchor(entity.getBizId(), scene, entity.getId(), entity.getSignedTime());
@@ -69,7 +70,7 @@ public class SignatureStoreServiceImpl implements SignatureStoreService {
                                  Long operatorId, String operatorName) {
         BizEmrSignature patch = new BizEmrSignature();
         patch.setId(signId);
-        patch.setSignStatus(com.his.common.enums.SignStatus.INVALID.getCode());
+        patch.setSignStatus(SignStatusEnum.INVALID.getCode());
         patch.setInvalidReason(reason);
         patch.setInvalidTime(time);
         patch.setInvalidBy(operatorId);

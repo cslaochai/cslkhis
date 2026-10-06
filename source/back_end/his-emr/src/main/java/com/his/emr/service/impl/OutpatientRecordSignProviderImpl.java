@@ -1,10 +1,10 @@
 package com.his.emr.service.impl;
 
 import com.his.common.entity.SignSubject;
-import com.his.common.enums.ObjectSignStatus;
+import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;
@@ -34,8 +34,8 @@ public class OutpatientRecordSignProviderImpl implements SignableContentProvider
     private final BizMedicalRecordMapper recordMapper;
 
     @Override
-    public SignBizType bizType() {
-        return SignBizType.OUTPATIENT_RECORD;
+    public SignBizTypeEnum bizType() {
+        return SignBizTypeEnum.OUTPATIENT_RECORD;
     }
 
     @Override
@@ -57,12 +57,12 @@ public class OutpatientRecordSignProviderImpl implements SignableContentProvider
     }
 
     @Override
-    public String blockReason(SignSubject subject, SignScene scene) {
+    public String blockReason(SignSubject subject, SignSceneEnum scene) {
         BizMedicalRecord r = recordMapper.selectById(subject.bizId());
         if (r == null) {
             return "门诊病历不存在或已被删除，无法签名";
         }
-        if (Objects.equals(ObjectSignStatus.SIGNED.getCode(), r.getSignStatus())) {
+        if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), r.getSignStatus())) {
             return "门诊病历 " + r.getRecordNo() + " 已签名（签名即锁定），不能重复签名；"
                     + "如需修改，请先在「签名中心」作废该签名（作废会留痕并解除锁定）";
         }
@@ -78,10 +78,10 @@ public class OutpatientRecordSignProviderImpl implements SignableContentProvider
     }
 
     @Override
-    public void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime) {
+    public void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime) {
         BizMedicalRecord patch = new BizMedicalRecord();
         patch.setId(bizId);
-        patch.setSignStatus(ObjectSignStatus.SIGNED.getCode());
+        patch.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
         patch.setSignId(signId);
         patch.setSignedTime(signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS));
         recordMapper.updateById(patch);
@@ -95,7 +95,7 @@ public class OutpatientRecordSignProviderImpl implements SignableContentProvider
         }
         BizMedicalRecord patch = new BizMedicalRecord();
         patch.setId(bizId);
-        patch.setSignStatus(ObjectSignStatus.INVALIDATED.getCode());
+        patch.setSignStatus(ObjectSignStatusEnum.INVALIDATED.getCode());
         recordMapper.updateById(patch);
     }
 }

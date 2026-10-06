@@ -31,29 +31,6 @@ public record LabReferenceRange(Kind kind,
                                 Set<String> acceptableQualitative,
                                 String sourceText) {
 
-    public enum Kind {
-        /**
-         * 双侧闭/开区间
-         */
-        RANGE,
-        /**
-         * 仅有上限（{@code <5.2}）
-         */
-        UPPER_ONLY,
-        /**
-         * 仅有下限（{@code >30}）
-         */
-        LOWER_ONLY,
-        /**
-         * 定性结果（阴性/阳性/相合…）
-         */
-        QUALITATIVE,
-        /**
-         * 无法解析 —— 调用方<b>不得</b>据此判定异常
-         */
-        UNPARSABLE
-    }
-
     private static final Set<String> EMPTY = Set.of();
 
     public static LabReferenceRange unparsable(String sourceText) {
@@ -77,6 +54,17 @@ public record LabReferenceRange(Kind kind,
     public static LabReferenceRange qualitative(Set<String> acceptable, String sourceText) {
         return new LabReferenceRange(Kind.QUALITATIVE, null, null, false, false,
                 new LinkedHashSet<>(acceptable), sourceText);
+    }
+
+    private static String format(Double value) {
+        if (value == null) {
+            return "";
+        }
+        // 去掉 4.0 这种多余的小数末尾 0，让描述与医生习惯一致
+        if (value == Math.floor(value) && !Double.isInfinite(value)) {
+            return String.valueOf(value.longValue());
+        }
+        return String.valueOf(value);
     }
 
     /**
@@ -105,14 +93,26 @@ public record LabReferenceRange(Kind kind,
         };
     }
 
-    private static String format(Double value) {
-        if (value == null) {
-            return "";
-        }
-        // 去掉 4.0 这种多余的小数末尾 0，让描述与医生习惯一致
-        if (value == Math.floor(value) && !Double.isInfinite(value)) {
-            return String.valueOf(value.longValue());
-        }
-        return String.valueOf(value);
+    public enum Kind {
+        /**
+         * 双侧闭/开区间
+         */
+        RANGE,
+        /**
+         * 仅有上限（{@code <5.2}）
+         */
+        UPPER_ONLY,
+        /**
+         * 仅有下限（{@code >30}）
+         */
+        LOWER_ONLY,
+        /**
+         * 定性结果（阴性/阳性/相合…）
+         */
+        QUALITATIVE,
+        /**
+         * 无法解析 —— 调用方<b>不得</b>据此判定异常
+         */
+        UNPARSABLE
     }
 }

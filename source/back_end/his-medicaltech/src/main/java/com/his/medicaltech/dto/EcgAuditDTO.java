@@ -15,6 +15,8 @@ public class EcgAuditDTO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long reportId;
 
-    /** 审核意见（通过时选填）/ 退回原因（退回时必填） */
+    /**
+     * 审核意见（通过时选填）/ 退回原因（退回时必填）
+     */
     private String reason;
 }

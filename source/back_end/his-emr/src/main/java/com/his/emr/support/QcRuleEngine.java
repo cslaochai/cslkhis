@@ -1,8 +1,7 @@
 package com.his.emr.support;
 
-import com.his.common.support.ClinicalTextMatcher;
-
 import com.his.common.enums.SysGenderEnum;
+import com.his.common.support.ClinicalTextMatcher;
 import com.his.emr.enums.*;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;

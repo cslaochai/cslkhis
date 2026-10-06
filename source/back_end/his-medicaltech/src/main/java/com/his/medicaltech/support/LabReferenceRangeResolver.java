@@ -34,10 +34,9 @@ public class LabReferenceRangeResolver {
     private static final long CACHE_TTL_MS = 300_000L;
 
     private final SysLaboratoryItemDetailMapper detailMapper;
-
+    private final AtomicLong loadedAt = new AtomicLong(0L);
     private volatile Map<String, String> byCode = Collections.emptyMap();
     private volatile Map<String, String> byName = Collections.emptyMap();
-    private final AtomicLong loadedAt = new AtomicLong(0L);
 
     /**
      * 解析某检验结果条目的参考区间。

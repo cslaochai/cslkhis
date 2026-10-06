@@ -1,9 +1,9 @@
 package com.his.ai.support;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import com.his.patient.vo.NursingVitalFactVO;
+import lombok.AccessLevel;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;

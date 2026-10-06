@@ -1,10 +1,11 @@
 package com.his.medicaltech.service;
 
 
-import com.his.medicaltech.entity.BizUltrasoundRecord;
 import com.his.common.base.PageResult;
 import com.his.medicaltech.dto.UltrasoundDTO;
+import com.his.medicaltech.entity.BizUltrasoundRecord;
 import com.his.medicaltech.vo.UltrasoundVO;
+
 import java.util.List;
 
 public interface UltrasoundService extends com.baomidou.mybatisplus.extension.service.IService<BizUltrasoundRecord> {

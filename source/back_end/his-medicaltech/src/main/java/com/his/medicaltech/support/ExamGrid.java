@@ -1,9 +1,9 @@
 package com.his.medicaltech.support;
 
-import lombok.AccessLevel;
-import lombok.NoArgsConstructor;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.entity.BizExamDevice;
+import lombok.AccessLevel;
+import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,7 +25,9 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ExamGrid {
 
-    /** "HH:mm" → 当日分钟数；格式不合直接抛业务异常，不静默当 0 点。 */
+    /**
+     * "HH:mm" → 当日分钟数；格式不合直接抛业务异常，不静默当 0 点。
+     */
     public static int toMin(String hhmm) {
         if (hhmm == null || !hhmm.matches("\\d{2}:\\d{2}")) {
             throw new BusinessException("时间格式应为 HH:mm，收到：" + hhmm);

@@ -20,6 +20,8 @@ public class ReportRecordQueryDTO extends PageParam {
      */
     private Integer reportType;
 
-    /** 报告状态（1-待审核 2-初审通过 3-已审核 4-已发布 5-已作废） */
+    /**
+     * 报告状态（1-待审核 2-初审通过 3-已审核 4-已发布 5-已作废）
+     */
     private Integer reportStatus;
 }

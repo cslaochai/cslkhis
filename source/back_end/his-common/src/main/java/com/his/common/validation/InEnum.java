@@ -3,11 +3,7 @@ package com.his.common.validation;
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * 码值合法性校验：值必须是目标枚举 {@code isValid(code)} 认可的码值。
@@ -50,9 +46,13 @@ public @interface InEnum {
     Class<? extends Payload>[] payload() default {};
 
     enum Type {
-        /** Integer 码值，枚举需有 isValid(Integer) */
+        /**
+         * Integer 码值，枚举需有 isValid(Integer)
+         */
         CODE,
-        /** String 码值，枚举需有 isValid(String) */
+        /**
+         * String 码值，枚举需有 isValid(String)
+         */
         TEXT
     }
 }

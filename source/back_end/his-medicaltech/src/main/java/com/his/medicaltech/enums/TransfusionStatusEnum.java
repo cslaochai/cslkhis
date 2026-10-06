@@ -38,16 +38,13 @@ public enum TransfusionStatusEnum {
         return null;
     }
 
-    /** Integer 码值判定：null 安全，语义同 == 比较 int 常量 */
-    public boolean is(Integer code) {
-        return code != null && code == this.code;
-    }
-
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
     }
 
-    /** 展示用码值 → 文案。null 返回「—」；脏值返回空串，不回落成「已完成」——那等于把没做完记成做完了。 */
+    /**
+     * 展示用码值 → 文案。null 返回「—」；脏值返回空串，不回落成「已完成」——那等于把没做完记成做完了。
+     */
     public static String getText(Integer code) {
         if (code == null) {
             return "—";
@@ -56,9 +53,18 @@ public enum TransfusionStatusEnum {
         return item == null ? "" : item.label;
     }
 
-    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
+    /**
+     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
+     */
     public static String labelOrUnknown(Integer code) {
         TransfusionStatusEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
+    }
+
+    /**
+     * Integer 码值判定：null 安全，语义同 == 比较 int 常量
+     */
+    public boolean is(Integer code) {
+        return code != null && code == this.code;
     }
 }

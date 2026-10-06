@@ -16,11 +16,7 @@ import com.his.common.util.SensitiveMaskUtil;
 import com.his.emr.dto.FollowupQueryDTO;
 import com.his.emr.dto.FollowupTaskDTO;
 import com.his.emr.entity.BizFollowupTask;
-import com.his.emr.enums.FollowupCallChannelEnum;
-import com.his.emr.enums.FollowupCallStatusEnum;
-import com.his.emr.enums.FollowupTaskStatusEnum;
-import com.his.emr.enums.FollowupTypeEnum;
-import com.his.emr.enums.SurveySourceEnum;
+import com.his.emr.enums.*;
 import com.his.emr.mapper.BizFollowupTaskMapper;
 import com.his.emr.service.FollowupTaskService;
 import com.his.emr.service.SurveyService;
@@ -51,13 +47,10 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, BizFollowupTask> implements FollowupTaskService {
-    private final DeptScopeProvider deptScopeProvider;
-
     /**
      * 出院一键生成的默认随访天数
      */
     private static final int DEFAULT_DAYS_OFFSET = 7;
-
     /**
      * 任务上已挂的复诊号处于这些状态时允许重新生成 —— 号已经作废（退号/过号/爽约），
      * 患者确实还得再复诊一次；拦住会把任务永久卡死。
@@ -66,7 +59,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             AppointStatusEnum.CANCELLED.getCode(),
             AppointStatusEnum.OVERDUE.getCode(),
             AppointStatusEnum.NO_SHOW.getCode());
-
+    private final DeptScopeProvider deptScopeProvider;
     private final AppointService appointService;
 
     private final BizFollowupTaskMapper taskMapper;

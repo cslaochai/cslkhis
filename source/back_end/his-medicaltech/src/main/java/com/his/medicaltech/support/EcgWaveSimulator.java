@@ -26,7 +26,9 @@ public class EcgWaveSimulator {
     public static final int GAIN_MM_PER_MV = 10;
     public static final int PAPER_SPEED_MM_PER_S = 25;
 
-    /** 导联顺序（标准 12 导联） */
+    /**
+     * 导联顺序（标准 12 导联）
+     */
     private static final String[] LEADS = {
             "I", "II", "III", "aVR", "aVL", "aVF", "V1", "V2", "V3", "V4", "V5", "V6"
     };
@@ -51,7 +53,9 @@ public class EcgWaveSimulator {
             {0.07, -0.03, 1.00, -0.05, 0.25},  // V6
     };
 
-    /** 每秒心跳数（按节律） */
+    /**
+     * 每秒心跳数（按节律）
+     */
     private static final Map<Integer, double[]> RHYTHM = Map.of(
             1, new double[]{75, 1.0, 1.0},    // 窦性心律 75bpm
             2, new double[]{115, 1.0, 1.0},   // 窦性心动过速
@@ -63,6 +67,14 @@ public class EcgWaveSimulator {
     private static final String[] RHYTHM_NAME = {
             null, "窦性心律", "窦性心动过速", "窦性心动过缓", "心房颤动", "室性早搏"
     };
+
+    /**
+     * 高斯波形：amp * exp(-(dt-mu)^2 / (2 sigma^2))
+     */
+    private static double gauss(double dt, double mu, double sigma, double amp) {
+        double d = dt - mu;
+        return amp * Math.exp(-(d * d) / (2 * sigma * sigma));
+    }
 
     /**
      * 合成 12 导联波形 JSON。
@@ -148,7 +160,9 @@ public class EcgWaveSimulator {
         return sb.toString();
     }
 
-    /** 单个心拍在导联上的电位贡献（时间差 dt 秒；pvc=室早形态；afib=无 P 波） */
+    /**
+     * 单个心拍在导联上的电位贡献（时间差 dt 秒；pvc=室早形态；afib=无 P 波）
+     */
     private double beatWave(double dt, boolean pvc, double[] amp, boolean afib) {
         if (dt < -0.1 || dt > 0.7) {
             return 0;
@@ -168,11 +182,5 @@ public class EcgWaveSimulator {
         v += gauss(dt, 0.243, 0.012, amp[3]);                       // S
         v += gauss(dt, 0.40, 0.050, amp[4]);                        // T
         return v;
-    }
-
-    /** 高斯波形：amp * exp(-(dt-mu)^2 / (2 sigma^2)) */
-    private static double gauss(double dt, double mu, double sigma, double amp) {
-        double d = dt - mu;
-        return amp * Math.exp(-(d * d) / (2 * sigma * sigma));
     }
 }

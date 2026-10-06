@@ -39,7 +39,9 @@ public enum TransfusionApproveLevelEnum {
         return fromCode(code) != null;
     }
 
-    /** 展示用码值 → 文案。null 返回「—」；脏值返回空串。 */
+    /**
+     * 展示用码值 → 文案。null 返回「—」；脏值返回空串。
+     */
     public static String getText(Integer code) {
         if (code == null) {
             return "—";
@@ -48,13 +50,17 @@ public enum TransfusionApproveLevelEnum {
         return item == null ? "" : item.label;
     }
 
-    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」）。 */
+    /**
+     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」）。
+     */
     public static String labelOrUnknown(Integer code) {
         TransfusionApproveLevelEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
-    /** Integer 码值判定：null 安全，语义同 == 比较 int 常量 */
+    /**
+     * Integer 码值判定：null 安全，语义同 == 比较 int 常量
+     */
     public boolean is(Integer code) {
         return code != null && code == this.code;
     }

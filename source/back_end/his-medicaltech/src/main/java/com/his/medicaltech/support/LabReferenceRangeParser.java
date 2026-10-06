@@ -1,5 +1,6 @@
 package com.his.medicaltech.support;
 
+import com.his.common.enums.SysGenderEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
@@ -9,8 +10,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.his.common.enums.SysGenderEnum;
 
 /**
  * 参考区间解析器：把人工维护的自由文本区间解析为 {@link LabReferenceRange}。

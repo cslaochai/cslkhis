@@ -2,6 +2,7 @@ package com.his.medicaltech.support;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -33,40 +34,9 @@ public final class WestgardRuleEngine {
     public static final int OUT_OF_CONTROL = 3;
     public static final int UNJUDGED = 0;
 
-    /** 质控点：Z 值 + 水平（用于 R-4s） */
-    public static class QcPoint {
-        private final double z;
-
-        public QcPoint(double z) {
-            this.z = z;
-        }
-
-        public double getZ() {
-            return z;
-        }
-    }
-
-    /** 判定结果 */
-    public static class Verdict {
-        private int status = IN_CONTROL;
-        private final List<String> rules = new ArrayList<>();
-
-        public int getStatus() {
-            return status;
-        }
-
-        public List<String> getRules() {
-            return rules;
-        }
-
-        public String ruleText() {
-            return String.join(",", rules);
-        }
-    }
-
     /**
-     * @param historyAsc 该计划的历史质控点（**按时间升序**，不含当前点）
-     * @param currentZ   当前点的 Z 值
+     * @param historyAsc  该计划的历史质控点（**按时间升序**，不含当前点）
+     * @param currentZ    当前点的 Z 值
      * @param batchOthers 同一批次（同项目+同仪器+同日期）其它水平的最近点，用于 R-4s；可为 null
      * @return 判定结果
      */
@@ -122,7 +92,9 @@ public final class WestgardRuleEngine {
         return v;
     }
 
-    /** Z 值：SD 为 0 / 空时返回 null，由调用方落到「未判定」 */
+    /**
+     * Z 值：SD 为 0 / 空时返回 null，由调用方落到「未判定」
+     */
     public static BigDecimal zScore(BigDecimal value, BigDecimal mean, BigDecimal sd) {
         if (value == null || mean == null || sd == null) {
             return null;
@@ -137,7 +109,9 @@ public final class WestgardRuleEngine {
         return (a >= 0 && b >= 0) || (a < 0 && b < 0);
     }
 
-    /** 末尾连续 n 个点同侧且 |Z| ≥ threshold */
+    /**
+     * 末尾连续 n 个点同侧且 |Z| ≥ threshold
+     */
     private static boolean consecutiveSameSideOver(List<QcPoint> seq, int n, double threshold) {
         if (seq.size() < n) {
             return false;
@@ -155,7 +129,9 @@ public final class WestgardRuleEngine {
         return true;
     }
 
-    /** 末尾连续 n 个点单调（全升或全降） */
+    /**
+     * 末尾连续 n 个点单调（全升或全降）
+     */
     private static boolean monotonicRun(List<QcPoint> seq, int n) {
         if (seq.size() < n) {
             return false;
@@ -172,5 +148,40 @@ public final class WestgardRuleEngine {
             }
         }
         return up || down;
+    }
+
+    /**
+     * 质控点：Z 值 + 水平（用于 R-4s）
+     */
+    public static class QcPoint {
+        private final double z;
+
+        public QcPoint(double z) {
+            this.z = z;
+        }
+
+        public double getZ() {
+            return z;
+        }
+    }
+
+    /**
+     * 判定结果
+     */
+    public static class Verdict {
+        private final List<String> rules = new ArrayList<>();
+        private int status = IN_CONTROL;
+
+        public int getStatus() {
+            return status;
+        }
+
+        public List<String> getRules() {
+            return rules;
+        }
+
+        public String ruleText() {
+            return String.join(",", rules);
+        }
     }
 }

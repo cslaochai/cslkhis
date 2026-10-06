@@ -2,6 +2,7 @@ package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.charge.api.AppointGateway;
+import com.his.charge.api.EmrGateway;
 import com.his.charge.api.MedicalTechGateway;
 import com.his.charge.api.PatientGateway;
 import com.his.charge.entity.BizInsuranceSettlement;
@@ -9,7 +10,6 @@ import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.mapper.BizInsuranceSettlementMapper;
 import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
-import com.his.charge.api.EmrGateway;
 import com.his.charge.service.SettlementEvidenceService;
 import com.his.charge.support.SettlementEvidence;
 import com.his.charge.vo.*;

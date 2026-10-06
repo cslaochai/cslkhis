@@ -2,6 +2,7 @@ package com.his.ai.support;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;

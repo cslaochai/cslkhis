@@ -16,17 +16,25 @@ import lombok.Data;
 @Data
 public class EcgCollectWaveDTO {
 
-    /** 检查记录ID */
+    /**
+     * 检查记录ID
+     */
     @NotNull(message = "缺少检查记录")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
-    /** 心电类型（字典 his_ecg_type：1-常规静息心电图 2-24小时动态心电图） */
+    /**
+     * 心电类型（字典 his_ecg_type：1-常规静息心电图 2-24小时动态心电图）
+     */
     private Integer ecgType;
 
-    /** 波形数据 JSON（必填；为空请走 /simulateWave） */
+    /**
+     * 波形数据 JSON（必填；为空请走 /simulateWave）
+     */
     private String waveData;
 
-    /** 采集设备号（可空） */
+    /**
+     * 采集设备号（可空）
+     */
     private String deviceNo;
 }

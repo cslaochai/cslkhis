@@ -38,7 +38,9 @@ public interface BizExamDeviceMapper extends BaseMapper<BizExamDevice> {
             + "WHERE del_flag = 0 ORDER BY equipment_code ASC")
     List<Map<String, Object>> selectEquipmentOptions();
 
-    /** 各设备已开展项目数（列表页一次统计，不逐行查） */
+    /**
+     * 各设备已开展项目数（列表页一次统计，不逐行查）
+     */
     @Select("SELECT device_id AS deviceId, COUNT(*) AS n FROM biz_exam_device_item "
             + "WHERE del_flag = 0 GROUP BY device_id")
     List<Map<String, Object>> countItemsByDevice();

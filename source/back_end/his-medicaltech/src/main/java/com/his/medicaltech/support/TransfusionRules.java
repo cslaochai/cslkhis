@@ -1,12 +1,8 @@
 package com.his.medicaltech.support;
 
+import com.his.medicaltech.enums.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import com.his.medicaltech.enums.BloodComponentEnum;
-import com.his.medicaltech.enums.BloodTypeEnum;
-import com.his.medicaltech.enums.RhTypeEnum;
-import com.his.medicaltech.enums.TransfusionApproveStatusEnum;
-import com.his.medicaltech.enums.TransfusionStatusEnum;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
@@ -36,10 +32,53 @@ public final class TransfusionRules {
     //   折算口径：ml 直取；1U≈200ml（红细胞/全血）；1治疗量≈250ml（血小板/冷沉淀）；
     //   折不出来一律按最高级 —— 宁可多审一级，不可少审。
 
-    /** 折算：1U（红细胞/全血）≈ 200ml */
+    /**
+     * 折算：1U（红细胞/全血）≈ 200ml
+     */
     public static final int ML_PER_UNIT = 200;
-    /** 折算：1治疗量（血小板/冷沉淀）≈ 250ml */
+    /**
+     * 折算：1治疗量（血小板/冷沉淀）≈ 250ml
+     */
     public static final int ML_PER_THERAPEUTIC = 250;
+    /**
+     * 红细胞输注的 ABO 相容表：键 = 受血者，值 = 可接受的血袋血型。
+     *
+     * <pre>
+     *   受血者 A  ← 可接受 A、O
+     *   受血者 B  ← 可接受 B、O
+     *   受血者 AB ← 可接受 A、B、AB、O
+     *   受血者 O  ← 只能 O
+     * </pre>
+     *
+     * <p>O 型是"万能供者"、AB 型是"万能受者"，这句话只对<b>红细胞</b>成立 ——
+     * 换到血浆上方向正好相反，见 {@link #PLASMA_ACCEPT}。
+     * 把这两个表混成一个，是输血系统里最经典也最致命的一个错误。
+     */
+    private static final Map<String, Set<String>> RBC_ACCEPT = Map.of(
+            "A", Set.of("A", "O"),
+            "B", Set.of("B", "O"),
+            "AB", Set.of("A", "B", "AB", "O"),
+            "O", Set.of("O")
+    );
+    /**
+     * 血浆（含冷沉淀）输注的 ABO 相容表：方向与红细胞<b>相反</b>。
+     *
+     * <pre>
+     *   受血者 A  ← 可接受 A、AB
+     *   受血者 B  ← 可接受 B、AB
+     *   受血者 AB ← 只能 AB
+     *   受血者 O  ← 可接受 A、B、AB、O（万能受者）
+     * </pre>
+     *
+     * <p>道理：血浆里的<b>抗体</b>才是风险源，O 型血浆同时含抗 A 与抗 B，
+     * 只能给 O 型患者。写成红细胞那一套，就会把 O 型血浆发给 A 型患者 —— 溶血。
+     */
+    private static final Map<String, Set<String>> PLASMA_ACCEPT = Map.of(
+            "A", Set.of("A", "AB"),
+            "B", Set.of("B", "AB"),
+            "AB", Set.of("AB"),
+            "O", Set.of("A", "B", "AB", "O")
+    );
 
     /**
      * 折算申请量为毫升数；折不出来返回 null（调用方按最高级处理）。
@@ -77,7 +116,11 @@ public final class TransfusionRules {
                 && Integer.valueOf(1).equals(isEmergency);
     }
 
-    /** 是否"未完成"（待配血 / 已配血 / 已发血 / 输注中）—— 工作台角标用 */
+    // 二、相容性规则（本类最要紧的一段）
+
+    /**
+     * 是否"未完成"（待配血 / 已配血 / 已发血 / 输注中）—— 工作台角标用
+     */
     public static boolean isUnfinished(Integer status) {
         return TransfusionStatusEnum.PENDING_CROSSMATCH.is(status)
                 || TransfusionStatusEnum.CROSSMATCHED.is(status)
@@ -85,55 +128,14 @@ public final class TransfusionRules {
                 || TransfusionStatusEnum.INFUSING.is(status);
     }
 
-    /** 是否"在途"（已配血 / 已发血 / 输注中）—— 防重复申请用 */
+    /**
+     * 是否"在途"（已配血 / 已发血 / 输注中）—— 防重复申请用
+     */
     public static boolean isActive(Integer status) {
         return TransfusionStatusEnum.CROSSMATCHED.is(status)
                 || TransfusionStatusEnum.ISSUED.is(status)
                 || TransfusionStatusEnum.INFUSING.is(status);
     }
-
-    // 二、相容性规则（本类最要紧的一段）
-
-    /**
-     * 红细胞输注的 ABO 相容表：键 = 受血者，值 = 可接受的血袋血型。
-     *
-     * <pre>
-     *   受血者 A  ← 可接受 A、O
-     *   受血者 B  ← 可接受 B、O
-     *   受血者 AB ← 可接受 A、B、AB、O
-     *   受血者 O  ← 只能 O
-     * </pre>
-     *
-     * <p>O 型是"万能供者"、AB 型是"万能受者"，这句话只对<b>红细胞</b>成立 ——
-     * 换到血浆上方向正好相反，见 {@link #PLASMA_ACCEPT}。
-     * 把这两个表混成一个，是输血系统里最经典也最致命的一个错误。
-     */
-    private static final Map<String, Set<String>> RBC_ACCEPT = Map.of(
-            "A", Set.of("A", "O"),
-            "B", Set.of("B", "O"),
-            "AB", Set.of("A", "B", "AB", "O"),
-            "O", Set.of("O")
-    );
-
-    /**
-     * 血浆（含冷沉淀）输注的 ABO 相容表：方向与红细胞<b>相反</b>。
-     *
-     * <pre>
-     *   受血者 A  ← 可接受 A、AB
-     *   受血者 B  ← 可接受 B、AB
-     *   受血者 AB ← 只能 AB
-     *   受血者 O  ← 可接受 A、B、AB、O（万能受者）
-     * </pre>
-     *
-     * <p>道理：血浆里的<b>抗体</b>才是风险源，O 型血浆同时含抗 A 与抗 B，
-     * 只能给 O 型患者。写成红细胞那一套，就会把 O 型血浆发给 A 型患者 —— 溶血。
-     */
-    private static final Map<String, Set<String>> PLASMA_ACCEPT = Map.of(
-            "A", Set.of("A", "AB"),
-            "B", Set.of("B", "AB"),
-            "AB", Set.of("AB"),
-            "O", Set.of("A", "B", "AB", "O")
-    );
 
     /**
      * ABO 是否相容（宁严不宽：血型取不到、品种不认识 → 判<b>不相容</b>）。
@@ -182,7 +184,9 @@ public final class TransfusionRules {
         return false;
     }
 
-    /** 相容性被拒时的可执行文案（必须写清"哪一袋、什么血型、为什么不行"） */
+    /**
+     * 相容性被拒时的可执行文案（必须写清"哪一袋、什么血型、为什么不行"）
+     */
     public static String incompatibleReason(Integer component, String patientAbo, String patientRh,
                                             String bagNo, String bagAbo, String bagRh) {
         List<String> reasons = new ArrayList<>();
@@ -199,7 +203,9 @@ public final class TransfusionRules {
         return "血袋 " + bagNo + "：" + String.join("；", reasons);
     }
 
-    /** 中文血型文案（列表展示用，如「A 型 Rh(+)」）；两个码都空时给「—」 */
+    /**
+     * 中文血型文案（列表展示用，如「A 型 Rh(+)」）；两个码都空时给「—」
+     */
     public static String bloodTypeText(String abo, String rh) {
         if (abo == null && rh == null) {
             return "—";
@@ -209,7 +215,9 @@ public final class TransfusionRules {
         return a + " 型 " + (r.isEmpty() ? "Rh(?)" : r);
     }
 
-    /** 时长文案（分钟 → "1 小时 20 分钟"） */
+    /**
+     * 时长文案（分钟 → "1 小时 20 分钟"）
+     */
     public static String durationText(Long minutes) {
         if (minutes == null) {
             return "—";

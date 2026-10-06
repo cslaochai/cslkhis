@@ -1,9 +1,9 @@
 package com.his.medicaltech.service;
 
 
-import com.his.medicaltech.entity.BizEndoscopyRecord;
 import com.his.common.base.PageResult;
 import com.his.medicaltech.dto.EndoscopyDTO;
+import com.his.medicaltech.entity.BizEndoscopyRecord;
 import com.his.medicaltech.vo.EndoscopyVO;
 
 public interface EndoscopyService extends com.baomidou.mybatisplus.extension.service.IService<BizEndoscopyRecord> {

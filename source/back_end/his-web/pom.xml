@@ -44,7 +44,7 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-supplies</artifactId>
+            <artifactId>his-pharmacy</artifactId>
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
@@ -52,11 +52,11 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-equipment</artifactId>
+            <artifactId>his-system</artifactId>
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-emergency</artifactId>
+            <artifactId>his-appoint</artifactId>
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
@@ -64,7 +64,7 @@
         </dependency>
         <dependency>
             <groupId>com.his</groupId>
-            <artifactId>his-report</artifactId>
+            <artifactId>his-medicaltech</artifactId>
         </dependency>
         <dependency>
             <groupId>com.his</groupId>

@@ -6,9 +6,9 @@ import com.his.common.base.PageResult;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.AdmitStatusEnum;
-import com.his.common.enums.ObjectSignStatus;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.ObjectSignStatusEnum;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.vo.SignatureVO;
@@ -210,7 +210,7 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
             notice.setNoticeNo(redisSequenceService.generateCriticalNoticeNo());
             notice.setAdmissionId(dto.getAdmissionId());
             notice.setNoticeStatus(NoticeStatusEnum.DRAFT.getCode());
-            notice.setSignStatus(ObjectSignStatus.UNSIGNED.getCode());
+            notice.setSignStatus(ObjectSignStatusEnum.UNSIGNED.getCode());
             notice.setPrintCount(0);
         } else {
             notice = requireNotice(dto.getId());
@@ -286,9 +286,9 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         notice.setDoctorName(cut(myName, NAME_MAX));
 
         SignCommandDTO cmd = new SignCommandDTO();
-        cmd.setBizType(SignBizType.CRITICAL_NOTICE.getCode());
+        cmd.setBizType(SignBizTypeEnum.CRITICAL_NOTICE.getCode());
         cmd.setBizId(notice.getId());
-        cmd.setSignScene(SignScene.NOTICE_ISSUE.getCode());
+        cmd.setSignScene(SignSceneEnum.NOTICE_ISSUE.getCode());
         cmd.setSignerId(me);
         cmd.setSignerName(notice.getDoctorName());
         CurrentUser user = UserUtils.getCurrentUser();
@@ -303,7 +303,7 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
             SignatureVO sig = signatureService.sign(cmd);
             // 锚点三件套必须在这里一起写：provider 的 applySignAnchor 已把 sign_status 置 1，
             // 但本方法随后用**签发前读出的实体**整行 updateById，漏写就把它冲回 0（签名失效、单据像没锁）。
-            notice.setSignStatus(ObjectSignStatus.SIGNED.getCode());
+            notice.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
             notice.setSignId(sig.getId());
             notice.setSignedTime(sig.getSignedTime());
         } catch (BusinessException e) {
@@ -355,7 +355,7 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         if (Objects.equals(NoticeStatusEnum.VOIDED.getCode(), notice.getNoticeStatus())) {
             throw new BusinessException("该通知单已作废");
         }
-        if (Objects.equals(ObjectSignStatus.SIGNED.getCode(), notice.getSignStatus())) {
+        if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), notice.getSignStatus())) {
             throw new BusinessException("该通知单已电子签名锁定，请先在「签名中心」作废签名，再作废单据（作废留痕）");
         }
         assertDeptAccessible(notice.getDeptId());
@@ -406,7 +406,7 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
      * 签名即锁定：有效签名挂着就不许改内容（同申请单口径）
      */
     private void requireUnsigned(BizCriticalNotice notice) {
-        if (Objects.equals(ObjectSignStatus.SIGNED.getCode(), notice.getSignStatus())) {
+        if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), notice.getSignStatus())) {
             throw new BusinessException("通知单 " + notice.getNoticeNo() + " 已电子签名（签名即锁定），不允许直接修改；"
                     + "请先在「签名中心」作废该签名（作废会留痕并解除锁定）");
         }

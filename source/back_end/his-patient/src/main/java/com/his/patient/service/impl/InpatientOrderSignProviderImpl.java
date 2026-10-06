@@ -2,8 +2,8 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.his.common.entity.SignSubject;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.patient.entity.BizInpatientOrder;
 import com.his.patient.enums.InpatientOrderStatusEnum;
@@ -22,8 +22,8 @@ import java.util.Objects;
  *
  * <p>医嘱是"医生开立 + 护士校对"两道手，两道都要有人负责，所以是两次独立签名：
  * <ul>
- *   <li>{@link SignScene#ORDER_CREATE} → 写医师签名ID</li>
- *   <li>{@link SignScene#ORDER_VERIFY} → 写护士签名ID</li>
+ *   <li>{@link SignSceneEnum#ORDER_CREATE} → 写医师签名ID</li>
+ *   <li>{@link SignSceneEnum#ORDER_VERIFY} → 写护士签名ID</li>
  * </ul>
  * 第二次签名的内容里会带上第一次的摘要（签名链，见 {@code SignSubject.contentWithPrev}），
  * 于是"护士校对之后医生又改了这条医嘱"会同时打断第二环的验签 ——
@@ -40,8 +40,8 @@ public class InpatientOrderSignProviderImpl implements SignableContentProvider, 
     private final BizInpatientOrderMapper orderMapper;
 
     @Override
-    public SignBizType bizType() {
-        return SignBizType.INPATIENT_ORDER;
+    public SignBizTypeEnum bizType() {
+        return SignBizTypeEnum.INPATIENT_ORDER;
     }
 
     @Override
@@ -63,18 +63,18 @@ public class InpatientOrderSignProviderImpl implements SignableContentProvider, 
     }
 
     @Override
-    public String blockReason(SignSubject subject, SignScene scene) {
+    public String blockReason(SignSubject subject, SignSceneEnum scene) {
         BizInpatientOrder o = orderMapper.selectById(subject.bizId());
         if (o == null) {
             return "医嘱不存在或已被删除，无法签名";
         }
-        if (scene == SignScene.ORDER_CREATE) {
+        if (scene == SignSceneEnum.ORDER_CREATE) {
             if (o.getDoctorSignId() != null) {
                 return "医嘱 " + o.getOrderNo() + " 已有开立签名，不能重复签名";
             }
             return null;
         }
-        if (scene == SignScene.ORDER_VERIFY) {
+        if (scene == SignSceneEnum.ORDER_VERIFY) {
             if (o.getNurseSignId() != null) {
                 return "医嘱 " + o.getOrderNo() + " 已有校对签名，不能重复签名";
             }
@@ -91,11 +91,11 @@ public class InpatientOrderSignProviderImpl implements SignableContentProvider, 
     }
 
     @Override
-    public void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime) {
+    public void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime) {
         BizInpatientOrder patch = new BizInpatientOrder();
         patch.setId(bizId);
         LocalDateTime t = signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS);
-        if (scene == SignScene.ORDER_VERIFY) {
+        if (scene == SignSceneEnum.ORDER_VERIFY) {
             patch.setNurseSignId(signId);
             patch.setNurseSignedTime(t);
         } else {

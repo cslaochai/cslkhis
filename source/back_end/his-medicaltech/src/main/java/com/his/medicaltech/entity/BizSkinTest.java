@@ -21,38 +21,58 @@ import java.time.LocalDateTime;
 @TableName("biz_skin_test")
 public class BizSkinTest extends BaseEntity {
 
-    /** 皮试单号 */
+    /**
+     * 皮试单号
+     */
     private String testNo;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
-    /** 皮试药物名称 */
+    /**
+     * 皮试药物名称
+     */
     private String drugName;
 
-    /** 来源治疗记录ID（可空） */
+    /**
+     * 来源治疗记录ID（可空）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long treatmentRecordId;
 
-    /** 皮试时间（打皮试针） */
+    /**
+     * 皮试时间（打皮试针）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime testTime;
 
-    /** 判读结果（0-待判读 1-阴性 2-阳性） */
+    /**
+     * 判读结果（0-待判读 1-阴性 2-阳性）
+     */
     private Integer result;
 
-    /** 判读时间（观察窗 >= 15 分钟） */
+    /**
+     * 判读时间（观察窗 >= 15 分钟）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime resultTime;
 
-    /** 执行护士ID */
+    /**
+     * 执行护士ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long nurseId;
 
-    /** 执行护士姓名（快照） */
+    /**
+     * 执行护士姓名（快照）
+     */
     private String nurseName;
 }

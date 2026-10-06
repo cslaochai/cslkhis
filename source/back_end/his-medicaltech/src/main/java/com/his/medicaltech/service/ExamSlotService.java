@@ -4,6 +4,7 @@ import com.his.medicaltech.dto.ExamApptDTO;
 import com.his.medicaltech.entity.BizExamDevice;
 import com.his.medicaltech.entity.BizExamSlot;
 import com.his.medicaltech.vo.ExamApptVO;
+
 import java.time.LocalDate;
 import java.util.List;
 

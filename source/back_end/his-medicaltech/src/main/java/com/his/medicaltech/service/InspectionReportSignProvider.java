@@ -1,15 +1,15 @@
 package com.his.medicaltech.service;
 
-import com.his.common.service.SignableContentProvider;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
 import com.his.common.entity.SignSubject;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
+import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.enums.InsRecordStatusEnum;
-import java.time.LocalDateTime;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public interface InspectionReportSignProvider extends SignableContentProvider {
 
@@ -23,7 +23,9 @@ public interface InspectionReportSignProvider extends SignableContentProvider {
         return status == null ? "—" : InsRecordStatusEnum.labelOrUnknown(status);
     }
 
-    /** 规范化文本：只含"检查报告内容"，按固定顺序 */
+    /**
+     * 规范化文本：只含"检查报告内容"，按固定顺序
+     */
     public static String canonical(BizInspectionRecord r) {
         return CanonicalText.create("INSPECTION_REPORT")
                 .put("recordNo", r.getRecordNo())
@@ -50,17 +52,20 @@ public interface InspectionReportSignProvider extends SignableContentProvider {
                 .build();
     }
 
-    SignBizType bizType();
-
-    SignSubject load(Long bizId);
-
-    String blockReason(SignSubject subject, SignScene scene);
-
-    void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime);
-
-    void revokeSignAnchor(Long bizId, Long signId);
-    /** BigDecimal 去尾零：金额 {@code 10.00} 与 {@code 10.0} 必须算出同一个摘要 */
+    /**
+     * BigDecimal 去尾零：金额 {@code 10.00} 与 {@code 10.0} 必须算出同一个摘要
+     */
     static String plain(BigDecimal v) {
         return v == null ? null : v.stripTrailingZeros().toPlainString();
     }
+
+    SignBizTypeEnum bizType();
+
+    SignSubject load(Long bizId);
+
+    String blockReason(SignSubject subject, SignSceneEnum scene);
+
+    void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime);
+
+    void revokeSignAnchor(Long bizId, Long signId);
 }

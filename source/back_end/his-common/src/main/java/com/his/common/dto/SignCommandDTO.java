@@ -1,5 +1,7 @@
 package com.his.common.dto;
 
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 import lombok.Data;
 
 /**
@@ -13,7 +15,7 @@ import lombok.Data;
 public class SignCommandDTO {
 
     /**
-     * 签名对象类型（码值权威见 {@link com.his.common.enums.SignBizType}）
+     * 签名对象类型（码值权威见 {@link SignBizTypeEnum}）
      */
     private Integer bizType;
 
@@ -23,7 +25,7 @@ public class SignCommandDTO {
     private Long bizId;
 
     /**
-     * 签名场景（码值权威见 {@link com.his.common.enums.SignScene}）
+     * 签名场景（码值权威见 {@link SignSceneEnum}）
      */
     private Integer signScene;
 

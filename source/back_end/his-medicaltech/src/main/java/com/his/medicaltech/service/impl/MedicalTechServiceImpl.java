@@ -5,10 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.exception.BusinessException;
 import com.his.common.dto.SignCommandDTO;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
+import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.vo.SignatureVO;
 import com.his.emr.entity.BizInspectionApply;
@@ -34,16 +34,10 @@ import com.his.medicaltech.service.MedicalTechService;
 import com.his.medicaltech.support.LabAbnormalJudge;
 import com.his.medicaltech.support.LabReferenceRange;
 import com.his.medicaltech.support.LabReferenceRangeResolver;
-import com.his.medicaltech.vo.SpecimenStatsVO;
-import com.his.medicaltech.vo.BizInspectionRecordVO;
-import com.his.medicaltech.vo.BizLabResultVO;
-import com.his.medicaltech.vo.BizLaboratoryRecordVO;
-import com.his.medicaltech.vo.BizReportVO;
-import com.his.medicaltech.vo.InspectionDetailVO;
-import com.his.medicaltech.vo.LaboratoryDetailVO;
-import com.his.system.utils.UserUtils;
+import com.his.medicaltech.vo.*;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -64,7 +58,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizInspectionRecord> implements MedicalTechService {
 
-    /** 执行记录号自增序号（迁移自 his-charge 的 EXECUTION_SEQ） */
+    /**
+     * 执行记录号自增序号（迁移自 his-charge 的 EXECUTION_SEQ）
+     */
     private static final java.util.concurrent.atomic.AtomicInteger EXECUTION_SEQ =
             new java.util.concurrent.atomic.AtomicInteger(0);
 
@@ -78,10 +74,22 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     private final LabReferenceRangeResolver referenceRangeResolver;
     private final CriticalValueService criticalValueService;
     private final EmrSignatureService signatureService;
-    /** 放射分岗（sql/138）：只有它知道某个检查项目是不是放射（检查项目字典的项目类型） */
+    /**
+     * 放射分岗（sql/138）：只有它知道某个检查项目是不是放射（检查项目字典的项目类型）
+     */
     private final com.his.medicaltech.mapper.RadioReportMapper radioReportMapper;
-    /** 简化 PACS（sql/137）：详情出参顺带带出影像帧，工作站不必二次请求 */
+    /**
+     * 简化 PACS（sql/137）：详情出参顺带带出影像帧，工作站不必二次请求
+     */
     private final com.his.medicaltech.service.ExamImageService examImageService;
+
+    private static String truncateForNote(String text) {
+        if (text == null) {
+            return null;
+        }
+        String value = text.trim();
+        return value.length() <= 200 ? value : value.substring(0, 200);
+    }
 
     @Override
     public PageResult<BizInspectionRecord> selectInspectionRecordPage(Long patientId, Long inspectionDeptId, int pageNum, int pageSize) {
@@ -572,14 +580,6 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         }
     }
 
-    private static String truncateForNote(String text) {
-        if (text == null) {
-            return null;
-        }
-        String value = text.trim();
-        return value.length() <= 200 ? value : value.substring(0, 200);
-    }
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean auditLaboratory(Long recordId, String auditBy) {
@@ -613,17 +613,21 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         sysMessageService.sendSystemMessage(receiverId, receiverName, title, content, bizType, bizId);
     }
 
-    /** 检查报告签名（{@code audit=false} 报告医师 / {@code audit=true} 审核医师） */
+    /**
+     * 检查报告签名（{@code audit=false} 报告医师 / {@code audit=true} 审核医师）
+     */
     private SignatureVO signInspectionReport(BizInspectionRecord r, boolean audit) {
-        return signReport(SignBizType.INSPECTION_REPORT.getCode(), r.getId(), r.getRecordNo(),
-                audit ? SignScene.REPORT_AUDIT : SignScene.REPORT_ISSUE,
+        return signReport(SignBizTypeEnum.INSPECTION_REPORT.getCode(), r.getId(), r.getRecordNo(),
+                audit ? SignSceneEnum.REPORT_AUDIT : SignSceneEnum.REPORT_ISSUE,
                 r.getInspectionDeptId(), r.getInspectionDeptName(), "检查报告");
     }
 
-    /** 检验报告签名（同上） */
+    /**
+     * 检验报告签名（同上）
+     */
     private SignatureVO signLabReport(BizLaboratoryRecord r, boolean audit) {
-        return signReport(SignBizType.LAB_REPORT.getCode(), r.getId(), r.getRecordNo(),
-                audit ? SignScene.REPORT_AUDIT : SignScene.REPORT_ISSUE,
+        return signReport(SignBizTypeEnum.LAB_REPORT.getCode(), r.getId(), r.getRecordNo(),
+                audit ? SignSceneEnum.REPORT_AUDIT : SignSceneEnum.REPORT_ISSUE,
                 r.getLaboratoryDeptId(), r.getLaboratoryDeptName(), "检验报告");
     }
 
@@ -637,7 +641,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
      * <p>签名失败一律抛出、让事务回滚：**一份"没有医师签名却显示已出结果"的报告
      * 比一次执行失败危险得多** —— 它会安静地流到临床。
      */
-    private SignatureVO signReport(Integer bizType, Long bizId, String bizNo, SignScene scene,
+    private SignatureVO signReport(Integer bizType, Long bizId, String bizNo, SignSceneEnum scene,
                                    Long deptId, String deptName, String bizLabel) {
         Long signerId = UserUtils.getCurrentEmployeeId();
         if (signerId == null) {
@@ -1043,7 +1047,9 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                 + String.format("%04d", EXECUTION_SEQ.incrementAndGet() % 10000);
     }
 
-    /** 取当前登录人姓名，取不到（后台任务/无上下文）时退化为「系统」。 */
+    /**
+     * 取当前登录人姓名，取不到（后台任务/无上下文）时退化为「系统」。
+     */
     private String currentOperatorName() {
         try {
             var user = UserUtils.getCurrentUser();

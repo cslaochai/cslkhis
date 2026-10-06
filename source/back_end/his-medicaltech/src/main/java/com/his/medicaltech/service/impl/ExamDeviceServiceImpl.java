@@ -1,6 +1,5 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.medicaltech.service.ExamDeviceService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -15,11 +14,12 @@ import com.his.medicaltech.mapper.BizExamAppointmentMapper;
 import com.his.medicaltech.mapper.BizExamDeviceItemMapper;
 import com.his.medicaltech.mapper.BizExamDeviceMapper;
 import com.his.medicaltech.mapper.BizExamSlotMapper;
+import com.his.medicaltech.service.ExamDeviceService;
 import com.his.medicaltech.support.ExamGrid;
 import com.his.medicaltech.vo.ExamApptVO;
-import com.his.system.service.DictCacheService;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.mapper.SysInspectionItemMapper;
+import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -63,12 +63,49 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
 
     // 查询
 
+    private static String trim(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private static String upper(String s) {
+        String t = trim(s);
+        return t == null ? null : t.toUpperCase();
+    }
+
+    private static boolean eq(String a, String b) {
+        return java.util.Objects.equals(a == null || a.isEmpty() ? null : a, b == null || b.isEmpty() ? null : b);
+    }
+
+    private static int nz(Integer v, int dft) {
+        return v == null ? dft : v;
+    }
+
+    private static String str(Object o) {
+        return o == null ? null : String.valueOf(o);
+    }
+
+    private static Long toLong(Object o) {
+        if (o == null) {
+            return null;
+        }
+        return o instanceof Number n ? n.longValue() : Long.parseLong(String.valueOf(o));
+    }
+
+    // 写入
+
+    private static Integer toInteger(Object o) {
+        if (o == null) {
+            return null;
+        }
+        return o instanceof Number n ? n.intValue() : Integer.parseInt(String.valueOf(o));
+    }
+
     public PageResult<ExamApptVO.DeviceVO> listPage(ExamApptDTO.DeviceQuery q) {
         LambdaQueryWrapper<BizExamDevice> w = new LambdaQueryWrapper<>();
         String kw = trim(q.getKeyword());
         w.and(StringUtils.hasText(kw), x -> x.like(BizExamDevice::getDeviceName, kw)
-                .or().like(BizExamDevice::getDeviceCode, kw)
-                .or().like(BizExamDevice::getRoomName, kw))
+                        .or().like(BizExamDevice::getDeviceCode, kw)
+                        .or().like(BizExamDevice::getRoomName, kw))
                 .eq(q.getDeviceType() != null, BizExamDevice::getDeviceType, q.getDeviceType())
                 .eq(q.getDeptId() != null, BizExamDevice::getDeptId, q.getDeptId())
                 .eq(q.getStatus() != null, BizExamDevice::getStatus, q.getStatus())
@@ -109,6 +146,8 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         return out;
     }
 
+    // 内部
+
     public ExamApptVO.DeviceVO getDetail(Long deviceId) {
         BizExamDevice d = require(deviceId);
         ExamApptVO.DeviceVO vo = toDeviceVo(d, itemCountByDevice(), equipmentNameMap());
@@ -131,7 +170,9 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         return out;
     }
 
-    /** 检查项目候选（供设备配项目时挑选） */
+    /**
+     * 检查项目候选（供设备配项目时挑选）
+     */
     public List<ExamApptVO.ItemSelectListVO> itemCandidates(String keyword, Integer limit) {
         String kw = trim(keyword);
         List<SysInspectionItem> items = inspectionItemMapper.selectList(
@@ -165,8 +206,6 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         }
         return out;
     }
-
-    // 写入
 
     @Transactional(rollbackFor = Exception.class)
     public ExamApptVO.DeviceVO upsert(ExamApptDTO.DeviceUpsert dto) {
@@ -227,7 +266,9 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         deviceMapper.deleteById(deviceId);
     }
 
-    /** 覆盖式保存：本次提交即最终清单，未提交的映射视为取消 */
+    /**
+     * 覆盖式保存：本次提交即最终清单，未提交的映射视为取消
+     */
     @Transactional(rollbackFor = Exception.class)
     public int saveItems(ExamApptDTO.DeviceItemSave dto) {
         BizExamDevice device = require(dto.getDeviceId());
@@ -263,8 +304,6 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         return items.size();
     }
 
-    // 内部
-
     private BizExamDevice require(Long deviceId) {
         // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
         if (deviceId == null) {
@@ -295,7 +334,9 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         }
     }
 
-    /** 配置合法性：一次把口径校死，别让脏配置在生成号源时才炸 */
+    /**
+     * 配置合法性：一次把口径校死，别让脏配置在生成号源时才炸
+     */
     private void validateGrid(BizExamDevice d) {
         int step = d.getSlotMinutes();
         if (step < 5 || step > 240 || step % 5 != 0) {
@@ -369,47 +410,14 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         return map;
     }
 
-    /** 台账表很小（实测几十行），一次读全量建映射，比每行再查一次便宜 */
+    /**
+     * 台账表很小（实测几十行），一次读全量建映射，比每行再查一次便宜
+     */
     private Map<Long, String> equipmentNameMap() {
         Map<Long, String> map = new HashMap<>();
         for (Map<String, Object> row : deviceMapper.selectEquipmentOptions()) {
             map.put(toLong(row.get("id")), str(row.get("equipmentName")));
         }
         return map;
-    }
-
-    private static String trim(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static String upper(String s) {
-        String t = trim(s);
-        return t == null ? null : t.toUpperCase();
-    }
-
-    private static boolean eq(String a, String b) {
-        return java.util.Objects.equals(a == null || a.isEmpty() ? null : a, b == null || b.isEmpty() ? null : b);
-    }
-
-    private static int nz(Integer v, int dft) {
-        return v == null ? dft : v;
-    }
-
-    private static String str(Object o) {
-        return o == null ? null : String.valueOf(o);
-    }
-
-    private static Long toLong(Object o) {
-        if (o == null) {
-            return null;
-        }
-        return o instanceof Number n ? n.longValue() : Long.parseLong(String.valueOf(o));
-    }
-
-    private static Integer toInteger(Object o) {
-        if (o == null) {
-            return null;
-        }
-        return o instanceof Number n ? n.intValue() : Integer.parseInt(String.valueOf(o));
     }
 }

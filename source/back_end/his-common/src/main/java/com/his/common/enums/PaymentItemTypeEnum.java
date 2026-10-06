@@ -40,14 +40,6 @@ public enum PaymentItemTypeEnum {
         return null;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
     /**
      * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
      */
@@ -70,5 +62,13 @@ public enum PaymentItemTypeEnum {
      */
     public static boolean isValid(Integer code) {
         return getByCode(code) != null;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
     }
 }

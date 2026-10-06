@@ -1,6 +1,5 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.medicaltech.service.ExamSlotService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.dto.ExamApptDTO;
@@ -10,6 +9,7 @@ import com.his.medicaltech.entity.BizExamSlot;
 import com.his.medicaltech.mapper.BizExamAppointmentMapper;
 import com.his.medicaltech.mapper.BizExamDeviceMapper;
 import com.his.medicaltech.mapper.BizExamSlotMapper;
+import com.his.medicaltech.service.ExamSlotService;
 import com.his.medicaltech.support.ExamGrid;
 import com.his.medicaltech.vo.ExamApptVO;
 import com.his.system.service.DictCacheService;
@@ -20,11 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 检查号源服务：按设备开放时段生成分时段格子、看板、锁号、对账，以及占号/退号的原子动作。
@@ -56,7 +52,30 @@ public class ExamSlotServiceImpl implements ExamSlotService {
 
     // 生成 / 看板
 
-    /** 生成（补齐）号源：可连生成多天，幂等 */
+    private static boolean overlaps(BizExamSlot cell, BizExamAppointment appt) {
+        if (appt.getStartTime() == null || appt.getEndTime() == null) {
+            return false;
+        }
+        int cs = ExamGrid.toMin(cell.getStartTime());
+        int ce = ExamGrid.toMin(cell.getEndTime());
+        int as = ExamGrid.toMin(appt.getStartTime());
+        int ae = ExamGrid.toMin(appt.getEndTime());
+        return as < ce && ae > cs;
+    }
+
+    private static boolean isPast(BizExamSlot cell, LocalDate date, LocalDateTime now) {
+        if (date.isBefore(now.toLocalDate())) {
+            return true;
+        }
+        if (!date.isEqual(now.toLocalDate())) {
+            return false;
+        }
+        return LocalTime.parse(cell.getEndTime()).isBefore(now.toLocalTime());
+    }
+
+    /**
+     * 生成（补齐）号源：可连生成多天，幂等
+     */
     @Transactional(rollbackFor = Exception.class)
     public ExamApptVO.SlotEnsureVO ensureSlots(ExamApptDTO.SlotEnsure dto) {
         BizExamDevice device = deviceMapper.selectForUpdate(dto.getDeviceId());
@@ -94,7 +113,9 @@ public class ExamSlotServiceImpl implements ExamSlotService {
         return vo;
     }
 
-    /** 号源看板：格子计数 + 实际占号者（谁占了这一格要能指认出来） */
+    /**
+     * 号源看板：格子计数 + 实际占号者（谁占了这一格要能指认出来）
+     */
     public ExamApptVO.SlotBoardVO board(ExamApptDTO.SlotQuery dto) {
         BizExamDevice device = deviceMapper.selectById(dto.getDeviceId());
         if (device == null) {
@@ -158,7 +179,11 @@ public class ExamSlotServiceImpl implements ExamSlotService {
         return vo;
     }
 
-    /** 锁号 / 放号：格子里还有人占着就不许锁 */
+    // 占号 / 退号（供预约服务在同一事务内调用）
+
+    /**
+     * 锁号 / 放号：格子里还有人占着就不许锁
+     */
     @Transactional(rollbackFor = Exception.class)
     public void toggle(ExamApptDTO.SlotToggle dto) {
         if (dto.getStatus() == null || (dto.getStatus() != SLOT_LOCKED && dto.getStatus() != SLOT_OPEN)) {
@@ -188,7 +213,9 @@ public class ExamSlotServiceImpl implements ExamSlotService {
         slotMapper.updateById(update);
     }
 
-    /** 号源对账：以预约单为事实独立复算 used_source，报漂移并修正 */
+    /**
+     * 号源对账：以预约单为事实独立复算 used_source，报漂移并修正
+     */
     @Transactional(rollbackFor = Exception.class)
     public ExamApptVO.SlotRecalcVO recalc(ExamApptDTO.SlotRecalc dto) {
         if (dto.getDateTo().isBefore(dto.getDateFrom())) {
@@ -264,9 +291,9 @@ public class ExamSlotServiceImpl implements ExamSlotService {
         return vo;
     }
 
-    // 占号 / 退号（供预约服务在同一事务内调用）
-
-    /** 锁设备 → 幂等补齐格子 → 返回按 start_time 升序的当日格子（仅当前开放窗口内的） */
+    /**
+     * 锁设备 → 幂等补齐格子 → 返回按 start_time 升序的当日格子（仅当前开放窗口内的）
+     */
     public List<BizExamSlot> ensureLockedDay(BizExamDevice device, LocalDate date) {
         ensureDayLocked(device, date);
         List<BizExamSlot> rows = slotMapper.selectDayForUpdate(device.getId(), date);
@@ -284,17 +311,25 @@ public class ExamSlotServiceImpl implements ExamSlotService {
         return out;
     }
 
-    /** 逐格 +1 占号；expectUsed 兜底，锁没生效时宁可抛错也不静默写歪 */
+    /**
+     * 逐格 +1 占号；expectUsed 兜底，锁没生效时宁可抛错也不静默写歪
+     */
     public void claim(BizExamDevice device, LocalDate date, List<BizExamSlot> cells, int[] span) {
         write(device, date, cells, span, 1);
     }
 
-    /** 逐格 -1 退号（取消/爽约） */
+    /**
+     * 逐格 -1 退号（取消/爽约）
+     */
     public void release(BizExamDevice device, LocalDate date, List<BizExamSlot> cells, int[] span) {
         write(device, date, cells, span, -1);
     }
 
-    /** 占用区间覆盖的格子集合（拒绝跨过午休断档与开放窗口之外的请求） */
+    // 内部
+
+    /**
+     * 占用区间覆盖的格子集合（拒绝跨过午休断档与开放窗口之外的请求）
+     */
     public int[] spanOf(List<BizExamSlot> cells, int startMin, int endMin) {
         List<int[]> grid = new ArrayList<>();
         for (BizExamSlot c : cells) {
@@ -316,8 +351,6 @@ public class ExamSlotServiceImpl implements ExamSlotService {
         return device;
     }
 
-    // 内部
-
     private void write(BizExamDevice device, LocalDate date, List<BizExamSlot> cells, int[] span, int delta) {
         for (int i = span[0]; i <= span[1]; i++) {
             BizExamSlot cell = cells.get(i);
@@ -338,7 +371,9 @@ public class ExamSlotServiceImpl implements ExamSlotService {
         }
     }
 
-    /** 返回 [本次新增, 原有, 当日应有格子数] */
+    /**
+     * 返回 [本次新增, 原有, 当日应有格子数]
+     */
     private int[] ensureDayLocked(BizExamDevice device, LocalDate date) {
         List<int[]> grid = ExamGrid.daySlots(device);
         List<BizExamSlot> rows = slotMapper.selectDayForUpdate(device.getId(), date);
@@ -414,7 +449,9 @@ public class ExamSlotServiceImpl implements ExamSlotService {
         return filterGrid(device, slotMapper.selectDayForUpdate(device.getId(), date));
     }
 
-    /** 只保留仍落在当前开放窗口内的格子（改过开放时间后，窗口外的历史格子不再出现在看板上） */
+    /**
+     * 只保留仍落在当前开放窗口内的格子（改过开放时间后，窗口外的历史格子不再出现在看板上）
+     */
     private List<BizExamSlot> filterGrid(BizExamDevice device, List<BizExamSlot> rows) {
         if (rows.isEmpty()) {
             return rows;
@@ -424,26 +461,5 @@ public class ExamSlotServiceImpl implements ExamSlotService {
             starts.add(ExamGrid.toHHmm(g[0]));
         }
         return rows.stream().filter(r -> starts.contains(r.getStartTime())).toList();
-    }
-
-    private static boolean overlaps(BizExamSlot cell, BizExamAppointment appt) {
-        if (appt.getStartTime() == null || appt.getEndTime() == null) {
-            return false;
-        }
-        int cs = ExamGrid.toMin(cell.getStartTime());
-        int ce = ExamGrid.toMin(cell.getEndTime());
-        int as = ExamGrid.toMin(appt.getStartTime());
-        int ae = ExamGrid.toMin(appt.getEndTime());
-        return as < ce && ae > cs;
-    }
-
-    private static boolean isPast(BizExamSlot cell, LocalDate date, LocalDateTime now) {
-        if (date.isBefore(now.toLocalDate())) {
-            return true;
-        }
-        if (!date.isEqual(now.toLocalDate())) {
-            return false;
-        }
-        return LocalTime.parse(cell.getEndTime()).isBefore(now.toLocalTime());
     }
 }

@@ -4,11 +4,7 @@ import com.his.medicaltech.enums.TransfusionCheckItemEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 输血前双人核对要点（输血安全核查单的可核对部分）。
@@ -25,20 +21,28 @@ import java.util.Set;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TransfusionCheckItems {
 
-    /** 必核项：这 6 项缺任何一项都不允许开始输注 */
+    /**
+     * 必核项：这 6 项缺任何一项都不允许开始输注
+     */
     public static final List<Integer> REQUIRED = TransfusionCheckItemEnum.requiredCodes();
 
-    /** 全部核对项（码 → 文案），供前端渲染勾选框 */
+    /**
+     * 全部核对项（码 → 文案），供前端渲染勾选框
+     */
     public static Map<Integer, String> all() {
         return TransfusionCheckItemEnum.all();
     }
 
-    /** 核对项文案（<b>展示用</b>）。null 给「—」；非法码值返回空串，不伪装成某一项。 */
+    /**
+     * 核对项文案（<b>展示用</b>）。null 给「—」；非法码值返回空串，不伪装成某一项。
+     */
     public static String text(Integer code) {
         return TransfusionCheckItemEnum.getText(code);
     }
 
-    /** 核对项文案（<b>异常 / 审计用</b>）：非法码值返回「未知(n)」，保留原值便于排查。 */
+    /**
+     * 核对项文案（<b>异常 / 审计用</b>）：非法码值返回「未知(n)」，保留原值便于排查。
+     */
     public static String labelOrUnknown(Integer code) {
         return TransfusionCheckItemEnum.labelOrUnknown(code);
     }
@@ -77,7 +81,9 @@ public final class TransfusionCheckItems {
         return set;
     }
 
-    /** 序列化为逗号分隔串（按码值升序，保证同一组勾选写出来的字符串稳定可比） */
+    /**
+     * 序列化为逗号分隔串（按码值升序，保证同一组勾选写出来的字符串稳定可比）
+     */
     public static String serialize(Set<Integer> codes) {
         if (codes == null || codes.isEmpty()) {
             return null;
@@ -94,7 +100,9 @@ public final class TransfusionCheckItems {
         return sb.toString();
     }
 
-    /** 未核的必核项文案（用于拒绝时的可执行提示） */
+    /**
+     * 未核的必核项文案（用于拒绝时的可执行提示）
+     */
     public static List<String> missingRequired(Set<Integer> codes) {
         List<String> missing = new ArrayList<>();
         for (Integer req : REQUIRED) {
@@ -105,7 +113,9 @@ public final class TransfusionCheckItems {
         return missing;
     }
 
-    /** 核对结果的完整文案（列表展示用） */
+    /**
+     * 核对结果的完整文案（列表展示用）
+     */
     public static String summaryText(String items) {
         Set<Integer> codes;
         try {

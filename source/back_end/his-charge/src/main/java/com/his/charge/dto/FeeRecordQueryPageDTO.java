@@ -16,7 +16,9 @@ public class FeeRecordQueryPageDTO extends PageParam {
      */
     private String keyword;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     private Long patientId;
 
     /**
@@ -24,7 +26,9 @@ public class FeeRecordQueryPageDTO extends PageParam {
      */
     private Integer encounterType;
 
-    /** 就诊标识 */
+    /**
+     * 就诊标识
+     */
     private Long encounterId;
 
     /**
@@ -32,13 +36,19 @@ public class FeeRecordQueryPageDTO extends PageParam {
      */
     private Integer feeStatus;
 
-    /** 项目类型（1-挂号费 2-西药 3-中成药 4-中药饮片 5-检查 6-检验 7-治疗 8-耗材） */
+    /**
+     * 项目类型（1-挂号费 2-西药 3-中成药 4-中药饮片 5-检查 6-检验 7-治疗 8-耗材）
+     */
     private Integer itemType;
 
-    /** 费用来源 */
+    /**
+     * 费用来源
+     */
     private Integer sourceType;
 
-    /** 费用归属科室 */
+    /**
+     * 费用归属科室
+     */
     private Long deptId;
 
     /**

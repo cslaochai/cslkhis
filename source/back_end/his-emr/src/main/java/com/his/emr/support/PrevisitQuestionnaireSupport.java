@@ -2,6 +2,7 @@ package com.his.emr.support;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
 import java.util.List;
 import java.util.Map;
 
@@ -103,14 +104,14 @@ public final class PrevisitQuestionnaireSupport {
             "other", List.of());
 
     /**
-         * 选项/题目
-         */
-        public record Option(String code, String label) {
+     * 选项/题目
+     */
+    public record Option(String code, String label) {
     }
 
     /**
-         * 问题
-         */
-        public record Question(String key, String label, String type, List<String> options) {
+     * 问题
+     */
+    public record Question(String key, String label, String type, List<String> options) {
     }
 }

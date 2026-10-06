@@ -1,8 +1,8 @@
 package com.his.ai.dto;
 
 import com.his.common.base.PageParam;
-import lombok.EqualsAndHashCode;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 知识文档分页查询。

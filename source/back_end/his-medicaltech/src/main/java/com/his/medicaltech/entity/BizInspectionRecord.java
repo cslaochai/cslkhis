@@ -11,7 +11,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** 检查记录 */
+/**
+ * 检查记录
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_inspection_record")

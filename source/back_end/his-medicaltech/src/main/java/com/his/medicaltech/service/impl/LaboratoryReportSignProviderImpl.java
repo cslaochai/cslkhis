@@ -1,23 +1,21 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.medicaltech.service.LaboratoryReportSignProvider;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
 import com.his.common.entity.SignSubject;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
-import com.his.common.support.CanonicalText;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.enums.LabRecordStatusEnum;
 import com.his.medicaltech.mapper.BizLabResultMapper;
 import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
+import com.his.medicaltech.service.LaboratoryReportSignProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -41,8 +39,8 @@ public class LaboratoryReportSignProviderImpl implements SignableContentProvider
     private final BizLabResultMapper labResultMapper;
 
     @Override
-    public SignBizType bizType() {
-        return SignBizType.LAB_REPORT;
+    public SignBizTypeEnum bizType() {
+        return SignBizTypeEnum.LAB_REPORT;
     }
 
     @Override
@@ -64,7 +62,7 @@ public class LaboratoryReportSignProviderImpl implements SignableContentProvider
     }
 
     @Override
-    public String blockReason(SignSubject subject, SignScene scene) {
+    public String blockReason(SignSubject subject, SignSceneEnum scene) {
         BizLaboratoryRecord r = recordMapper.selectById(subject.bizId());
         if (r == null) {
             return "检验记录不存在或已被删除，无法签名";
@@ -77,7 +75,7 @@ public class LaboratoryReportSignProviderImpl implements SignableContentProvider
                 || Objects.equals(LabRecordStatusEnum.REVIEWED.getCode(), status)
                 || Objects.equals(LabRecordStatusEnum.RELEASED.getCode(), status);
 
-        if (scene == SignScene.REPORT_ISSUE) {
+        if (scene == SignSceneEnum.REPORT_ISSUE) {
             if (r.getReportSignId() != null) {
                 return "检验报告 " + r.getRecordNo() + " 已有报告医师签名，不能重复签名；"
                         + "如需修改，请先在「签名中心」作废该签名";
@@ -88,7 +86,7 @@ public class LaboratoryReportSignProviderImpl implements SignableContentProvider
             }
             return null;
         }
-        if (scene == SignScene.REPORT_AUDIT) {
+        if (scene == SignSceneEnum.REPORT_AUDIT) {
             if (r.getAuditSignId() != null) {
                 return "检验报告 " + r.getRecordNo() + " 已有审核医师签名，不能重复签名；"
                         + "如需修改，请先在「签名中心」作废该签名";
@@ -104,11 +102,11 @@ public class LaboratoryReportSignProviderImpl implements SignableContentProvider
     }
 
     @Override
-    public void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime) {
+    public void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime) {
         BizLaboratoryRecord patch = new BizLaboratoryRecord();
         patch.setId(bizId);
         LocalDateTime t = signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS);
-        if (scene == SignScene.REPORT_AUDIT) {
+        if (scene == SignSceneEnum.REPORT_AUDIT) {
             patch.setAuditSignId(signId);
             patch.setAuditSignedTime(t);
         } else {
@@ -140,7 +138,9 @@ public class LaboratoryReportSignProviderImpl implements SignableContentProvider
         }
     }
 
-    /** 结果明细（按 sort_order, id 升序 —— 顺序必须确定） */
+    /**
+     * 结果明细（按 sort_order, id 升序 —— 顺序必须确定）
+     */
     private List<BizLabResult> resultsOf(Long recordId) {
         return labResultMapper.selectList(new LambdaQueryWrapper<BizLabResult>()
                 .eq(BizLabResult::getRecordId, recordId)

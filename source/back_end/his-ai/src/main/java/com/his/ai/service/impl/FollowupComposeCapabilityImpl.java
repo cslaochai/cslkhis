@@ -38,10 +38,14 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
 
     private static final String BIZ_TYPE = "followup";
 
-    /** 话术长度上限：提示词纪律是 60~150 字，超了截断 */
+    /**
+     * 话术长度上限：提示词纪律是 60~150 字，超了截断
+     */
     private static final int CONTENT_MAX = 200;
 
-    /** 病种上下文条数上限：慢病档案多的患者不把提示词撑爆 */
+    /**
+     * 病种上下文条数上限：慢病档案多的患者不把提示词撑爆
+     */
     private static final int MAX_DISEASES = 5;
 
     private final AiExecutionService aiExecutionService;
@@ -49,6 +53,16 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
     private final ChronicRecordService chronicRecordService;
 
     private final PatientTextGuard textGuard;
+
+    private static String truncate(String text, int maxLength) {
+        if (!StringUtils.hasText(text)) {
+            return "";
+        }
+        String value = text.trim();
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    // ---------------------------------------------------------------- 模型层
 
     @Override
     public FollowupComposeVO execute(FollowupComposeDTO dto) {
@@ -81,7 +95,7 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
         return vo;
     }
 
-    // ---------------------------------------------------------------- 模型层
+    // ---------------------------------------------------------------- 清洗层
 
     private Optional<FollowupComposeLlmOutputDTO> callModel(String typeLabel, String diseaseContext) {
         Map<String, Object> variables = Map.of(
@@ -100,8 +114,6 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
 
         return aiExecutionService.call(call, FollowupComposeLlmOutputDTO.class);
     }
-
-    // ---------------------------------------------------------------- 清洗层
 
     /**
      * 病种上下文：前端带来的诊断优先，慢病档案的在管病种补齐。
@@ -128,17 +140,11 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
         return diseases.isEmpty() ? "暂无慢病档案与诊断信息" : truncate(String.join("、", diseases), 120);
     }
 
-    /** 类型模板：不带任何医学内容，只保留关怀+遵医嘱+反馈引导三段式 */
+    /**
+     * 类型模板：不带任何医学内容，只保留关怀+遵医嘱+反馈引导三段式
+     */
     private String buildRuleContent(String typeLabel) {
         return "您好，这是一条" + typeLabel + "提醒：请遵医嘱按时复查、规律作息。"
                 + "如方便，请在小程序「我的随访」里反馈近况；有不适请及时来院就诊。";
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 }

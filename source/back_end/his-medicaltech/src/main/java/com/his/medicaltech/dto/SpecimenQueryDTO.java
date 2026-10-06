@@ -15,7 +15,9 @@ public class SpecimenQueryDTO extends PageParam {
      */
     private Long patientId;
 
-    /** 记录状态（1-已登记 2-已签到 3-检查中 4-已出结果 5-已审核 6-已发布 7-已取消） */
+    /**
+     * 记录状态（1-已登记 2-已签到 3-检查中 4-已出结果 5-已审核 6-已发布 7-已取消）
+     */
     private Integer recordStatus;
 
     /**

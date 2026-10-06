@@ -7,13 +7,7 @@ import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.entity.BizReport;
-import com.his.medicaltech.vo.BizInspectionRecordVO;
-import com.his.medicaltech.vo.BizLaboratoryRecordVO;
-import com.his.medicaltech.vo.BizReportVO;
-import com.his.medicaltech.vo.InspectionDetailVO;
-import com.his.medicaltech.vo.LaboratoryDetailVO;
-import com.his.medicaltech.vo.SpecimenStatsVO;
-import org.springframework.transaction.annotation.Transactional;
+import com.his.medicaltech.vo.*;
 
 import java.util.List;
 

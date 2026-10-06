@@ -1,10 +1,10 @@
 package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.charge.api.MedicalTechGateway;
 import com.his.charge.vo.InspectionRecordBriefVO;
 import com.his.charge.vo.LabResultBriefVO;
 import com.his.charge.vo.LaboratoryRecordBriefVO;
-import com.his.charge.api.MedicalTechGateway;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;

@@ -280,7 +280,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             orderMapper.insert(order);
             // 开立即签：签名的内容取自**库里的医嘱行**，所以必须 insert 之后再签。
             // 签名失败直接抛，整个开立事务回滚 —— 不留下"医嘱在、签名没签上"的缺口。
-            signOrder(order, SignScene.ORDER_CREATE, "医嘱开立");
+            signOrder(order, SignSceneEnum.ORDER_CREATE, "医嘱开立");
             orderNos.add(order.getOrderNo());
         }
 
@@ -353,7 +353,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         // 正确处理是「作废旧签名 + 按新内容重签」，而不是留着一条验不过的签名让人猜。
         // 作废会把医嘱行上的 doctor_sign_id 清空，于是紧接着的重签不会被 blockReason 拦住。
         invalidateDoctorSignIfAny(order, "医嘱内容被修改（" + currentName() + "），原开立签名对新内容已失效");
-        signOrder(order, SignScene.ORDER_CREATE, "医嘱修改后重签");
+        signOrder(order, SignSceneEnum.ORDER_CREATE, "医嘱修改后重签");
 
         log.info("修改医嘱 orderNo={} 组套={} 项目={}", order.getOrderNo(), order.getOrderGroup(), order.getItemName());
         return order.getOrderGroup();
@@ -376,9 +376,9 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     /**
      * 给一条医嘱签名；失败直接抛（不吞），由调用方的业务事务整体回滚
      */
-    private void signOrder(BizInpatientOrder order, SignScene scene, String actionLabel) {
+    private void signOrder(BizInpatientOrder order, SignSceneEnum scene, String actionLabel) {
         SignCommandDTO cmd = new SignCommandDTO();
-        cmd.setBizType(SignBizType.INPATIENT_ORDER.getCode());
+        cmd.setBizType(SignBizTypeEnum.INPATIENT_ORDER.getCode());
         cmd.setBizId(order.getId());
         cmd.setSignScene(scene.getCode());
         cmd.setSignerId(currentEmpId());
@@ -387,7 +387,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         cmd.setSignerDeptName(currentDeptName());
         try {
             SignatureVO sig = signatureService.sign(cmd);
-            if (scene == SignScene.ORDER_VERIFY) {
+            if (scene == SignSceneEnum.ORDER_VERIFY) {
                 order.setNurseSignId(sig.getId());
                 order.setNurseSignedTime(sig.getSignedTime());
             } else {
@@ -438,7 +438,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             // 校对即签：先落库（签名服务读库放行判断），再签校对名。
             // 这条签名的内容里会带上开立签名的摘要 —— 护士校对之后医生再改医嘱，
             // 第二环验签会当场断掉，医嘱上的"双签"才不是摆设。
-            signOrder(order, SignScene.ORDER_VERIFY, "医嘱校对");
+            signOrder(order, SignSceneEnum.ORDER_VERIFY, "医嘱校对");
             ensurePlanForToday(order, now);
             // 临床营养医嘱校对通过 → 同事务派生膳食方案。
             // 校对是"护士确认这条医嘱真实存在"的唯一时点，未校对的医嘱不该出现在营养科工作台上；

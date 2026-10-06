@@ -22,17 +22,25 @@ import java.time.LocalDateTime;
 @TableName("biz_fee_record")
 public class BizFeeRecord extends BaseEntity {
 
-    /** 记账流水号 */
+    /**
+     * 记账流水号
+     */
     private String feeNo;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者号（快照） */
+    /**
+     * 患者号（快照）
+     */
     private String patientNo;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
     /**
@@ -47,7 +55,9 @@ public class BizFeeRecord extends BaseEntity {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long encounterId;
 
-    /** 就诊标识单号 */
+    /**
+     * 就诊标识单号
+     */
     private String encounterNo;
 
     /**
@@ -57,29 +67,45 @@ public class BizFeeRecord extends BaseEntity {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 科室名称（快照） */
+    /**
+     * 科室名称（快照）
+     */
     private String deptName;
 
-    /** 开单/执行人员工ID */
+    /**
+     * 开单/执行人员工ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;
 
-    /** 开单人姓名（快照） */
+    /**
+     * 开单人姓名（快照）
+     */
     private String doctorName;
 
-    /** 项目类型，字典 {@code his_charge_item_type}（1-挂号费 … 8-耗材） */
+    /**
+     * 项目类型，字典 {@code his_charge_item_type}（1-挂号费 … 8-耗材）
+     */
     private Integer itemType;
 
-    /** 项目/药品编码 */
+    /**
+     * 项目/药品编码
+     */
     private String itemCode;
 
-    /** 项目名称：记账时快照，字典改名不影响历史账单 */
+    /**
+     * 项目名称：记账时快照，字典改名不影响历史账单
+     */
     private String itemName;
 
-    /** 规格 */
+    /**
+     * 规格
+     */
     private String specification;
 
-    /** 单位 */
+    /**
+     * 单位
+     */
     private String unit;
 
     /**
@@ -88,26 +114,40 @@ public class BizFeeRecord extends BaseEntity {
      */
     private Integer catalogType;
 
-    /** 单价 */
+    /**
+     * 单价
+     */
     private BigDecimal price;
 
-    /** 红冲行为负的冲减数量 */
+    /**
+     * 红冲行为负的冲减数量
+     */
     private BigDecimal quantity;
 
-    /** 金额 = 单价 × 数量（红冲行为负） */
+    /**
+     * 金额 = 单价 × 数量（红冲行为负）
+     */
     private BigDecimal amount;
 
-    /** 记账状态，字典 {@code his_fee_status}：1-待结算 2-已锁定 3-已结算 4-已红冲 */
+    /**
+     * 记账状态，字典 {@code his_fee_status}：1-待结算 2-已锁定 3-已结算 4-已红冲
+     */
     private Integer feeStatus;
 
-    /** 费用来源单据，字典 {@code his_fee_source_type} */
+    /**
+     * 费用来源单据，字典 {@code his_fee_source_type}
+     */
     private Integer sourceType;
 
-    /** 来源单据ID（处方明细ID/申请ID/医嘱ID…） */
+    /**
+     * 来源单据ID（处方明细ID/申请ID/医嘱ID…）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long sourceId;
 
-    /** 来源单据号 */
+    /**
+     * 来源单据号
+     */
     private String sourceNo;
 
     /**
@@ -119,18 +159,26 @@ public class BizFeeRecord extends BaseEntity {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long origFeeId;
 
-    /** 累计已冲金额（每执行一笔红冲就累加 abs(负行amount)，用于快速判断剩余可退额） */
+    /**
+     * 累计已冲金额（每执行一笔红冲就累加 abs(负行amount)，用于快速判断剩余可退额）
+     */
     private BigDecimal refundedAmount;
 
-    /** 记账时间 */
+    /**
+     * 记账时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime bookTime;
 
-    /** 记账人员工ID */
+    /**
+     * 记账人员工ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long bookById;
 
-    /** 记账人姓名（快照） */
+    /**
+     * 记账人姓名（快照）
+     */
     private String bookByName;
 
     /**

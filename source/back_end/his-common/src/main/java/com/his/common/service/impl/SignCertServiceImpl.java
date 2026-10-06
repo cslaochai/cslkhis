@@ -3,23 +3,23 @@ package com.his.common.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.config.SignProperties;
 import com.his.common.dto.SignCertIssueDTO;
 import com.his.common.dto.SignCertQueryPageDTO;
 import com.his.common.dto.SignCertRevokeDTO;
 import com.his.common.entity.SysSignCert;
-import com.his.common.enums.CertIssuedMode;
-import com.his.common.enums.CertStatus;
+import com.his.common.enums.CertIssuedModeEnum;
+import com.his.common.enums.CertStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.mapper.SignConfigMapper;
 import com.his.common.mapper.SysSignCertMapper;
 import com.his.common.service.ExternalCaChannelService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.service.SignCertService;
 import com.his.common.util.KeyPairFactory;
 import com.his.common.util.KeyProtectorUtil;
 import com.his.common.util.SignCryptoUtil;
+import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignCertVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -102,7 +102,7 @@ public class SignCertServiceImpl implements SignCertService {
         }
         log.info("自动签发签名证书：empId={} empName={}", empId, empName);
         return doIssue(empId, empName, deptId, deptName, effectiveValidDays(null),
-                CertIssuedMode.AUTO, null, null, "首次签名时由系统按需自动签发（院内托管证书）");
+                CertIssuedModeEnum.AUTO, null, null, "首次签名时由系统按需自动签发（院内托管证书）");
     }
 
     @Override
@@ -123,13 +123,13 @@ public class SignCertServiceImpl implements SignCertService {
                     + "如需换新证书请先吊销原证书（吊销会留痕）");
         }
         SysSignCert cert = doIssue(dto.getEmpId(), dto.getEmpName(), dto.getDeptId(), dto.getDeptName(),
-                effectiveValidDays(dto.getValidDays()), CertIssuedMode.MANUAL,
+                effectiveValidDays(dto.getValidDays()), CertIssuedModeEnum.MANUAL,
                 operatorId, operatorName, dto.getRemark());
         return toVO(cert, true);
     }
 
     private SysSignCert doIssue(Long empId, String empName, Long deptId, String deptName,
-                                int validDays, CertIssuedMode mode,
+                                int validDays, CertIssuedModeEnum mode,
                                 Long operatorId, String operatorName, String remark) {
         // 没有主口令就不签发：宁可不发证，也不让私钥明文落库
         keyProtectorUtil.requireSecret();
@@ -164,7 +164,7 @@ public class SignCertServiceImpl implements SignCertService {
             cert.setKeySalt(salt);
             cert.setKeyIterations(properties.getIterations());
             cert.setIssuedMode(mode.getCode());
-            cert.setCertStatus(CertStatus.ACTIVE.getCode());
+            cert.setCertStatus(CertStatusEnum.ACTIVE.getCode());
             cert.setValidFrom(now);
             cert.setValidTo(to);
             cert.setSignCount(0);
@@ -224,10 +224,10 @@ public class SignCertServiceImpl implements SignCertService {
         if (cert == null) {
             throw new BusinessException("证书不存在");
         }
-        if (Objects.equals(CertStatus.REVOKED.getCode(), cert.getCertStatus())) {
+        if (Objects.equals(CertStatusEnum.REVOKED.getCode(), cert.getCertStatus())) {
             throw new BusinessException("证书 " + cert.getCertNo() + " 已是吊销状态，不能重复吊销");
         }
-        cert.setCertStatus(CertStatus.REVOKED.getCode());
+        cert.setCertStatus(CertStatusEnum.REVOKED.getCode());
         cert.setRevokeReason(dto.getReason());
         cert.setRevokeTime(TimeUtil.toSeconds(LocalDateTime.now()));
         cert.setRevokeBy(operatorId);
@@ -275,7 +275,7 @@ public class SignCertServiceImpl implements SignCertService {
     @Override
     public List<SignCertVO> selectList(String keyword) {
         LambdaQueryWrapper<SysSignCert> w = new LambdaQueryWrapper<>();
-        w.eq(SysSignCert::getCertStatus, CertStatus.ACTIVE.getCode());
+        w.eq(SysSignCert::getCertStatus, CertStatusEnum.ACTIVE.getCode());
         if (StringUtils.hasText(keyword)) {
             String kw = keyword.trim();
             w.and(x -> x.like(SysSignCert::getCertNo, kw).or().like(SysSignCert::getEmpName, kw));
@@ -293,7 +293,7 @@ public class SignCertServiceImpl implements SignCertService {
         if (cert == null) {
             throw new BusinessException("证书不存在");
         }
-        if (Objects.equals(CertStatus.REVOKED.getCode(), cert.getCertStatus())) {
+        if (Objects.equals(CertStatusEnum.REVOKED.getCode(), cert.getCertStatus())) {
             throw new BusinessException("证书 " + cert.getCertNo() + " 已吊销，不能用于签名");
         }
         LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
@@ -316,14 +316,14 @@ public class SignCertServiceImpl implements SignCertService {
     @Override
     public long countAutoIssued() {
         return certMapper.selectCount(new LambdaQueryWrapper<SysSignCert>()
-                .eq(SysSignCert::getIssuedMode, CertIssuedMode.AUTO.getCode()));
+                .eq(SysSignCert::getIssuedMode, CertIssuedModeEnum.AUTO.getCode()));
     }
 
     @Override
     public long countActiveEmployees() {
         List<SysSignCert> list = certMapper.selectList(new LambdaQueryWrapper<SysSignCert>()
                 .select(SysSignCert::getEmpId)
-                .eq(SysSignCert::getCertStatus, CertStatus.ACTIVE.getCode()));
+                .eq(SysSignCert::getCertStatus, CertStatusEnum.ACTIVE.getCode()));
         return list.stream().map(SysSignCert::getEmpId).filter(Objects::nonNull).distinct().count();
     }
 
@@ -368,9 +368,9 @@ public class SignCertServiceImpl implements SignCertService {
         vo.setKeyFingerprint(c.getKeyFingerprint());
         vo.setKeyFingerprintGroups(SignCryptoUtil.fingerprintGroups(c.getKeyFingerprint()));
         vo.setIssuedMode(c.getIssuedMode());
-        vo.setIssuedModeText(CertIssuedMode.textOf(c.getIssuedMode()));
+        vo.setIssuedModeText(CertIssuedModeEnum.textOf(c.getIssuedMode()));
         vo.setCertStatus(c.getCertStatus());
-        vo.setCertStatusText(CertStatus.textOf(c.getCertStatus()));
+        vo.setCertStatusText(CertStatusEnum.textOf(c.getCertStatus()));
         vo.setValidFrom(c.getValidFrom());
         vo.setValidTo(c.getValidTo());
         vo.setRevokeReason(c.getRevokeReason());
@@ -383,7 +383,7 @@ public class SignCertServiceImpl implements SignCertService {
         }
         boolean expired = c.getValidTo() != null && c.getValidTo().isBefore(TimeUtil.toSeconds(LocalDateTime.now()));
         vo.setExpired(expired);
-        boolean revoked = Objects.equals(CertStatus.REVOKED.getCode(), c.getCertStatus());
+        boolean revoked = Objects.equals(CertStatusEnum.REVOKED.getCode(), c.getCertStatus());
         vo.setCanRevoke(!revoked);
         if (revoked) {
             vo.setActionHint("已吊销（" + c.getRevokeReason() + "），不可再用；如需继续签名请重新签发");

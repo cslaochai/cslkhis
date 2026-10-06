@@ -25,7 +25,9 @@ public interface BizExamAppointmentMapper extends BaseMapper<BizExamAppointment>
             + "WHERE id = #{id} AND del_flag = 0")
     int markInactive(@Param("id") Long id);
 
-    /** 行锁读单条预约单（改约/取消/到检按同一顺序先锁自己） */
+    /**
+     * 行锁读单条预约单（改约/取消/到检按同一顺序先锁自己）
+     */
     @Select("SELECT * FROM biz_exam_appointment WHERE id = #{id} AND del_flag = 0 FOR UPDATE")
     BizExamAppointment selectForUpdate(@Param("id") Long id);
 
@@ -38,32 +40,40 @@ public interface BizExamAppointmentMapper extends BaseMapper<BizExamAppointment>
     @Select("SELECT * FROM biz_exam_appointment WHERE patient_id = #{patientId} AND exam_date = #{examDate} "
             + "AND active_flag = 1 AND status IN (1, 2) AND del_flag = 0 ORDER BY start_time ASC FOR UPDATE")
     List<BizExamAppointment> selectPatientDayForUpdate(@Param("patientId") Long patientId,
-                                                      @Param("examDate") LocalDate examDate);
+                                                       @Param("examDate") LocalDate examDate);
 
-    /** 某设备某日的在办/已完成占号（status 1/2/3 —— 取消与爽约不占格子） */
+    /**
+     * 某设备某日的在办/已完成占号（status 1/2/3 —— 取消与爽约不占格子）
+     */
     @Select("SELECT * FROM biz_exam_appointment WHERE device_id = #{deviceId} AND exam_date = #{slotDate} "
             + "AND status IN (1, 2, 3) AND del_flag = 0 ORDER BY start_time ASC")
     List<BizExamAppointment> selectOccupants(@Param("deviceId") Long deviceId,
-                                            @Param("slotDate") LocalDate slotDate);
+                                             @Param("slotDate") LocalDate slotDate);
 
-    /** 号源对账用：按设备+日期区间取占号事实（deviceId 传 null = 全院；一次取回内存算，不逐格 count） */
+    /**
+     * 号源对账用：按设备+日期区间取占号事实（deviceId 传 null = 全院；一次取回内存算，不逐格 count）
+     */
     @Select("SELECT * FROM biz_exam_appointment WHERE exam_date BETWEEN #{dateFrom} AND #{dateTo} "
             + "AND status IN (1, 2, 3) AND del_flag = 0 "
             + "AND (#{deviceId, jdbcType=BIGINT} IS NULL OR device_id = #{deviceId, jdbcType=BIGINT})")
     List<BizExamAppointment> selectRangeOccupants(@Param("deviceId") Long deviceId,
-                                                 @Param("dateFrom") LocalDate dateFrom,
-                                                 @Param("dateTo") LocalDate dateTo);
+                                                  @Param("dateFrom") LocalDate dateFrom,
+                                                  @Param("dateTo") LocalDate dateTo);
 
-    /** 到检超时扫描：停在「已预约」且时段已过的单 */
+    /**
+     * 到检超时扫描：停在「已预约」且时段已过的单
+     */
     @Select("SELECT * FROM biz_exam_appointment WHERE status = 1 AND active_flag = 1 AND del_flag = 0 "
             + "AND (exam_date < CURDATE() OR (exam_date = CURDATE() AND end_time <= DATE_FORMAT(NOW(), '%H:%i')))")
     List<BizExamAppointment> selectOverdueNoShow();
 
-    /** 按状态分组统计（deviceId/slotDate 传 null 表示该维度不限；前端不得拿当前页 list 自己数） */
+    /**
+     * 按状态分组统计（deviceId/slotDate 传 null 表示该维度不限；前端不得拿当前页 list 自己数）
+     */
     @Select("SELECT status, COUNT(*) AS n FROM biz_exam_appointment WHERE del_flag = 0 "
             + "AND (#{deviceId, jdbcType=BIGINT} IS NULL OR device_id = #{deviceId, jdbcType=BIGINT}) "
             + "AND (#{slotDate, jdbcType=DATE} IS NULL OR exam_date = #{slotDate, jdbcType=DATE}) "
             + "GROUP BY status")
     List<Map<String, Object>> countGroupByStatus(@Param("deviceId") Long deviceId,
-                                                @Param("slotDate") LocalDate slotDate);
+                                                 @Param("slotDate") LocalDate slotDate);
 }

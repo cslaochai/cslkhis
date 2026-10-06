@@ -51,7 +51,7 @@ public interface PatientGateway {
      *
      * @param orderNo 住院医嘱单号
      * @return 查不到返回 {@code null}（调用方保持科室为空，<b>不得兜底成默认科室</b>，
-     *         兜底会让科室收入表凭空多出一块来路不明的钱）
+     * 兜底会让科室收入表凭空多出一块来路不明的钱）
      */
     ChargeDeptResolver.DeptRef findDeptByOrderNo(String orderNo);
 }

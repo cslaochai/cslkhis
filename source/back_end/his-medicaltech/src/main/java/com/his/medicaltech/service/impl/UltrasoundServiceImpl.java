@@ -1,20 +1,20 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.medicaltech.service.UltrasoundService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.medicaltech.enums.InsRecordStatusEnum;
-import com.his.medicaltech.enums.UltrasoundAbnormalFlagEnum;
-import com.his.system.service.DictCacheService;
 import com.his.medicaltech.dto.UltrasoundDTO;
 import com.his.medicaltech.entity.BizUltrasoundMeasure;
 import com.his.medicaltech.entity.BizUltrasoundRecord;
+import com.his.medicaltech.enums.InsRecordStatusEnum;
+import com.his.medicaltech.enums.UltrasoundAbnormalFlagEnum;
 import com.his.medicaltech.mapper.BizUltrasoundMeasureMapper;
 import com.his.medicaltech.mapper.BizUltrasoundRecordMapper;
+import com.his.medicaltech.service.UltrasoundService;
 import com.his.medicaltech.vo.UltrasoundVO;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -185,7 +185,9 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         recordMapper.updateById(r);
     }
 
-    /** 测量值整单覆盖式保存：以本次提交为准，未提交的先删 */
+    /**
+     * 测量值整单覆盖式保存：以本次提交为准，未提交的先删
+     */
     @Transactional(rollbackFor = Exception.class)
     public int saveMeasures(UltrasoundDTO.MeasureSave dto) {
         BizUltrasoundRecord r = require(dto.getRecordId());
@@ -416,7 +418,9 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         return n != null ? n : "未知操作人";
     }
 
-    /** null 安全 trim：查询条件的 value 参数是急切求值的，直接 x.trim() 会在 x 为 null 时 NPE */
+    /**
+     * null 安全 trim：查询条件的 value 参数是急切求值的，直接 x.trim() 会在 x 为 null 时 NPE
+     */
     private String tr(String s) {
         return s == null ? null : s.trim();
     }

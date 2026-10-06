@@ -6,24 +6,24 @@ import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.entity.BizLaboratoryApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
 import com.his.emr.mapper.BizLaboratoryApplyMapper;
-import com.his.medicaltech.entity.BizInspectionRecord;
-import com.his.medicaltech.entity.BizLaboratoryRecord;
-import com.his.medicaltech.entity.BizReport;
-import com.his.medicaltech.enums.ReportTypeEnum;
 import com.his.medicaltech.dto.ExamImageMockImportDTO;
 import com.his.medicaltech.dto.ExamImageUploadDTO;
 import com.his.medicaltech.entity.BizExamImage;
+import com.his.medicaltech.entity.BizInspectionRecord;
+import com.his.medicaltech.entity.BizLaboratoryRecord;
+import com.his.medicaltech.entity.BizReport;
 import com.his.medicaltech.enums.ExamImageSourceEnum;
+import com.his.medicaltech.enums.ReportTypeEnum;
 import com.his.medicaltech.mapper.BizExamImageMapper;
-import com.his.medicaltech.service.ExamImageService;
-import com.his.medicaltech.support.MockExamImageSource;
-import com.his.medicaltech.vo.ExamImageVO;
 import com.his.medicaltech.mapper.BizInspectionRecordMapper;
 import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
 import com.his.medicaltech.mapper.BizReportMapper;
+import com.his.medicaltech.service.ExamImageService;
+import com.his.medicaltech.support.MockExamImageSource;
+import com.his.medicaltech.vo.ExamImageVO;
 import com.his.system.service.DictCacheService;
-import com.his.system.utils.UserUtils;
 import com.his.system.service.SysAuditLogService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -39,11 +39,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * 简化 PACS 影像帧服务（sql/137）
@@ -53,7 +49,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ExamImageServiceImpl implements ExamImageService {
 
-    /** 学习阶段只收灰阶/彩色位图：真 DICOM 的 .dcm 需要解析器，阅片器也画不出来 */
+    /**
+     * 学习阶段只收灰阶/彩色位图：真 DICOM 的 .dcm 需要解析器，阅片器也画不出来
+     */
     private static final Set<String> ALLOWED_EXT = Set.of("jpg", "jpeg", "png");
     private static final long MAX_BYTES = 10L * 1024 * 1024;
     private static final int MAX_FRAME_COUNT = 24;
@@ -70,6 +68,13 @@ public class ExamImageServiceImpl implements ExamImageService {
     private final MockExamImageSource mockExamImageSource;
     private final DictCacheService subDictText;
     private final SysAuditLogService sysAuditLogService;
+
+    private static String cut(String s, int max) {
+        if (s == null) {
+            return null;
+        }
+        return s.length() <= max ? s : s.substring(0, max);
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -158,6 +163,8 @@ public class ExamImageServiceImpl implements ExamImageService {
         return applyId == null ? new ArrayList<>() : listByApply(report.getReportType(), applyId);
     }
 
+    // 内部
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteById(Long id, String reason) {
@@ -174,13 +181,6 @@ public class ExamImageServiceImpl implements ExamImageService {
                 true, null);
         deleteFileQuietly(row.getFileUrl());
         return imageMapper.purgeById(id) > 0;
-    }
-
-    // 内部
-
-    /** 申请单上的影像锚点快照（一次解析，避免每帧查一次库） */
-    private record Anchor(Long applyId, String applyNo, Long patientId, String patientName,
-                          String itemName, String bodyPart) {
     }
 
     private Anchor resolveAnchor(Integer bizType, Long applyId) {
@@ -279,7 +279,9 @@ public class ExamImageServiceImpl implements ExamImageService {
         }
     }
 
-    /** 只允许删本模块自己目录下的文件，防止 file_url 被改成任意路径后借删除接口删服务器文件 */
+    /**
+     * 只允许删本模块自己目录下的文件，防止 file_url 被改成任意路径后借删除接口删服务器文件
+     */
     private void deleteFileQuietly(String fileUrl) {
         if (!StringUtils.hasText(fileUrl) || !fileUrl.startsWith(UPLOAD_ROOT_REL + "/")) {
             log.warn("[影像删除] file_url 不在影像目录内，跳过磁盘删除：{}", fileUrl);
@@ -312,10 +314,10 @@ public class ExamImageServiceImpl implements ExamImageService {
         return vo;
     }
 
-    private static String cut(String s, int max) {
-        if (s == null) {
-            return null;
-        }
-        return s.length() <= max ? s : s.substring(0, max);
+    /**
+     * 申请单上的影像锚点快照（一次解析，避免每帧查一次库）
+     */
+    private record Anchor(Long applyId, String applyNo, Long patientId, String patientName,
+                          String itemName, String bodyPart) {
     }
 }

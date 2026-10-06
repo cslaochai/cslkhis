@@ -3,31 +3,31 @@ package com.his.medicaltech.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.charge.dto.FeeBookDTO;
+import com.his.charge.entity.BizFeeRecord;
+import com.his.charge.service.FeeRecordService;
 import com.his.common.base.PageResult;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.service.FeeRecordService;
-import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.dto.ExamFilmQueryPageDTO;
 import com.his.medicaltech.dto.ExamFilmSpecUpsertDTO;
 import com.his.medicaltech.dto.ExamFilmUpsertDTO;
 import com.his.medicaltech.entity.BizExamFilm;
 import com.his.medicaltech.entity.BizFilmSpec;
+import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.enums.FilmStatusEnum;
 import com.his.medicaltech.mapper.BizExamFilmMapper;
 import com.his.medicaltech.mapper.BizFilmSpecMapper;
+import com.his.medicaltech.mapper.BizInspectionRecordMapper;
 import com.his.medicaltech.service.ExamFilmService;
 import com.his.medicaltech.vo.ExamFilmVO;
 import com.his.medicaltech.vo.FilmSpecSelectListVO;
-import com.his.medicaltech.mapper.BizInspectionRecordMapper;
 import com.his.system.service.DictCacheService;
-import com.his.system.utils.UserUtils;
 import com.his.system.service.SysAuditLogService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -61,7 +61,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ExamFilmServiceImpl implements ExamFilmService {
-    /** 分页每页条数上限（技术阈值，防止前端传入超大值把库拖垮；DTO 迁 PageParam 后在此夹取） */
+    /**
+     * 分页每页条数上限（技术阈值，防止前端传入超大值把库拖垮；DTO 迁 PageParam 后在此夹取）
+     */
     private static final int MAX_PAGE_SIZE = 200;
 
 
@@ -77,6 +79,18 @@ public class ExamFilmServiceImpl implements ExamFilmService {
 
     // 查询
 
+    private static String trim(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private static String cut(String s, int max) {
+        if (s == null) {
+            return null;
+        }
+        String v = s.trim();
+        return v.length() <= max ? v : v.substring(0, max);
+    }
+
     @Override
     public PageResult<ExamFilmVO> listPage(ExamFilmQueryPageDTO query) {
         int pageNum = Math.max(query.getPageNum(), 1);
@@ -88,6 +102,8 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         list.forEach(this::fillText);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), list);
     }
+
+    // 写
 
     @Override
     public List<ExamFilmVO> listByRecordId(Long recordId) {
@@ -108,8 +124,6 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         String to = StringUtils.hasText(endDate) ? endDate.trim() : from;
         return filmMapper.selectStats(from, to);
     }
-
-    // 写
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -243,6 +257,8 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         return fillText(toVO(film));
     }
 
+    // 规格价目
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ExamFilmVO deliver(Long filmId) {
@@ -285,8 +301,6 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         return filmMapper.updateById(update) > 0;
     }
 
-    // 规格价目
-
     @Override
     public List<FilmSpecSelectListVO> specSelectList() {
         return specMapper.selectList(new LambdaQueryWrapper<BizFilmSpec>()
@@ -295,6 +309,8 @@ public class ExamFilmServiceImpl implements ExamFilmService {
                         .orderByAsc(BizFilmSpec::getId))
                 .stream().map(this::toSpecVO).collect(Collectors.toList());
     }
+
+    // 内部
 
     @Override
     public FilmSpecSelectListVO upsertSpec(ExamFilmSpecUpsertDTO dto) {
@@ -334,8 +350,6 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         return specMapper.purgeById(id) > 0;
     }
 
-    // 内部
-
     private BizExamFilm loadFilm(Long filmId) {
         BizExamFilm film = filmId == null ? null : filmMapper.selectById(filmId);
         if (film == null) {
@@ -344,7 +358,9 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         return film;
     }
 
-    /** 把检查记录与规格的当前值快照进胶片行（改名/改价不影响已发出的行） */
+    /**
+     * 把检查记录与规格的当前值快照进胶片行（改名/改价不影响已发出的行）
+     */
     private void fillSnapshot(BizExamFilm film, BizInspectionRecord record, BizFilmSpec spec) {
         film.setRecordId(record.getId());
         film.setRecordNo(record.getRecordNo());
@@ -402,17 +418,5 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         FilmSpecSelectListVO vo = new FilmSpecSelectListVO();
         BeanUtils.copyProperties(e, vo);
         return vo;
-    }
-
-    private static String trim(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static String cut(String s, int max) {
-        if (s == null) {
-            return null;
-        }
-        String v = s.trim();
-        return v.length() <= max ? v : v.substring(0, max);
     }
 }

@@ -1,16 +1,7 @@
 package com.his.charge.controller;
 
 
-
-
-
-import com.his.charge.dto.DeductAppealDTO;
-import com.his.charge.dto.DeductAppealResultDTO;
-import com.his.charge.dto.DeductConfirmDTO;
-import com.his.charge.dto.DeductNoticeQueryPageDTO;
-import com.his.charge.dto.DeductNoticeUpsertDTO;
-import com.his.charge.dto.DeductPaybackDTO;
-import com.his.charge.dto.YbCancelDTO;
+import com.his.charge.dto.*;
 import com.his.charge.service.YbDeductNoticeService;
 import com.his.charge.vo.DeductNoticeDetailVO;
 import com.his.charge.vo.DeductNoticeListVO;

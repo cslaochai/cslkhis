@@ -14,13 +14,19 @@ import java.io.Serializable;
 @Data
 public class TransfusionIssueDTO implements Serializable {
 
-    /** 输血申请单ID（必填） */
+    /**
+     * 输血申请单ID（必填）
+     */
     @NotNull(message = "输血申请单ID不能为空")
     private Long applyId;
 
-    /** 发血备注（如"已核对血袋外观"） */
+    /**
+     * 发血备注（如"已核对血袋外观"）
+     */
     private String issueRemark;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

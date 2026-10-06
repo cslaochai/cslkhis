@@ -3,7 +3,6 @@ package com.his.emr.vo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * 传染病报告卡 VO 集合。

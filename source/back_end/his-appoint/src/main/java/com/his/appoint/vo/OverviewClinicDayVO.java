@@ -12,19 +12,29 @@ import java.time.LocalDate;
 @Data
 public class OverviewClinicDayVO {
 
-    /** 排班日期 */
+    /**
+     * 排班日期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate scheduleDate;
 
-    /** 出诊班次数 */
+    /**
+     * 出诊班次数
+     */
     private Long shiftCount;
 
-    /** 总号源 */
+    /**
+     * 总号源
+     */
     private BigDecimal totalSource;
 
-    /** 已挂号源 */
+    /**
+     * 已挂号源
+     */
     private BigDecimal usedSource;
 
-    /** 停诊班次数 */
+    /**
+     * 停诊班次数
+     */
     private Long stoppedCount;
 }

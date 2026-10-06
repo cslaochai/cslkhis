@@ -46,14 +46,6 @@ public enum PaymentMethodEnum {
         return null;
     }
 
-    public Integer getCode() {
-        return code;
-    }
-
-    public String getDesc() {
-        return desc;
-    }
-
     /**
      * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
      */
@@ -68,6 +60,14 @@ public enum PaymentMethodEnum {
     public static String labelOrUnknown(Integer code) {
         PaymentMethodEnum item = code == null ? null : getByCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.desc;
+    }
+
+    public Integer getCode() {
+        return code;
+    }
+
+    public String getDesc() {
+        return desc;
     }
 
     /**

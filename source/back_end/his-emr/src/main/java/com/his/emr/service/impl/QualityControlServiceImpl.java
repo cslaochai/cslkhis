@@ -17,15 +17,18 @@ import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.mapper.BizQualityControlMapper;
 import com.his.emr.service.QcStoreService;
 import com.his.emr.service.QualityControlService;
-import com.his.emr.support.*;
+import com.his.emr.support.QcIssue;
+import com.his.emr.support.QcResult;
+import com.his.emr.support.QcRuleEngine;
+import com.his.emr.support.QcSnapshot;
 import com.his.emr.vo.*;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.enums.InpatientRecordTypeEnum;
 import com.his.patient.mapper.BizInpatientRecordMapper;
 import com.his.system.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -121,6 +124,23 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             // 非请求线程（定时任务 / 归档流程内的调用）
         }
         return OPERATOR_FALLBACK;
+    }
+
+    /**
+     * 病历质量等级：有否决项必为丙级，否则按分数线（甲≥90 乙75~89 丙&lt;75）。
+     * score 为空（旧版质控）返回 null —— 不猜等级。
+     */
+    private static String grade(Integer score, Integer severityMax) {
+        if (score == null) {
+            return null;
+        }
+        if (severityMax != null && severityMax >= QcSeverityEnum.FATAL.getCode()) {
+            return "丙";
+        }
+        if (score >= 90) {
+            return "甲";
+        }
+        return score >= 75 ? "乙" : "丙";
     }
 
     @Override
@@ -225,6 +245,8 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         return list;
     }
 
+    // 执行质控
+
     @Override
     public PageResult<QcCandidateVO> listCandidatePage(QcCandidateQueryPageDTO query) {
         QcRecordSourceEnum source = QcRecordSourceEnum.parse(query.getRecordSource());
@@ -236,8 +258,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
                 result.getRecords());
     }
-
-    // 执行质控
 
     @Override
     public List<QcDimensionSelectListVO> dimensionDict() {
@@ -376,6 +396,8 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         return this.updateById(qc);
     }
 
+    // 码值中文与等级换算
+
     private QcSnapshot loadSnapshot(QcRecordSourceEnum source, Long recordId) {
         if (source == QcRecordSourceEnum.OUTPATIENT) {
             BizMedicalRecord record = medicalRecordMapper.selectById(recordId);
@@ -390,8 +412,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         }
         return QcSnapshot.ofInpatient(record);
     }
-
-    // 码值中文与等级换算
 
     /**
      * 列表行补中文。未知码值由各枚举 {@code getText} 渲染成空串，不回落合法值。
@@ -415,23 +435,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         vo.setRecordStatusText(RecordStatusEnum.getText(vo.getRecordStatus()));
         vo.setLastGrade(grade(vo.getLastScore(), vo.getLastSeverityMax()));
         vo.setQced(vo.getLastQcId() != null);
-    }
-
-    /**
-     * 病历质量等级：有否决项必为丙级，否则按分数线（甲≥90 乙75~89 丙&lt;75）。
-     * score 为空（旧版质控）返回 null —— 不猜等级。
-     */
-    private static String grade(Integer score, Integer severityMax) {
-        if (score == null) {
-            return null;
-        }
-        if (severityMax != null && severityMax >= QcSeverityEnum.FATAL.getCode()) {
-            return "丙";
-        }
-        if (score >= 90) {
-            return "甲";
-        }
-        return score >= 75 ? "乙" : "丙";
     }
 
     /**

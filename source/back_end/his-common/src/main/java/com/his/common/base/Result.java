@@ -1,7 +1,7 @@
 package com.his.common.base;
 
-import lombok.NoArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 

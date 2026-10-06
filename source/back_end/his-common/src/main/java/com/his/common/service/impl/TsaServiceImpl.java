@@ -4,16 +4,16 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.dto.TsaTokenQueryPageDTO;
 import com.his.common.entity.BizTsaToken;
 import com.his.common.entity.SysTsaServer;
-import com.his.common.enums.TimeSource;
+import com.his.common.enums.TimeSourceEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.mapper.BizTsaTokenMapper;
 import com.his.common.mapper.SignConfigMapper;
 import com.his.common.mapper.SysTsaServerMapper;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.service.TsaChannelService;
 import com.his.common.service.TsaService;
 import com.his.common.util.SignCryptoUtil;
@@ -85,7 +85,7 @@ public class TsaServiceImpl implements TsaService {
         vo.setConfigTimeSource(cfg);
         int effective = signatureService.effectiveTimeSource();
         vo.setEffectiveTimeSource(effective);
-        vo.setEffectiveTimeSourceText(TimeSource.textOf(effective));
+        vo.setEffectiveTimeSourceText(TimeSourceEnum.textOf(effective));
 
         vo.setTokenCount(tokenMapper.selectCount(null));
         BizTsaToken last = tokenMapper.selectOne(new LambdaQueryWrapper<BizTsaToken>()
@@ -96,11 +96,11 @@ public class TsaServiceImpl implements TsaService {
 
         // 配置了 3 却降级 = 最常见的误读点，必须在这里写明白；
         // 适配器在线但没启用 = 次常见（文案不能说"未接入"，与上面的「在线」同屏自相矛盾）
-        if (available && effective == TimeSource.TSA.getCode()) {
+        if (available && effective == TimeSourceEnum.TSA.getCode()) {
             vo.setTrustNote("已接入" + (vo.getTsaName() == null ? "TSA" : vo.getTsaName())
                     + "：令牌用 TSA 独立密钥签发，可对抗本机时钟篡改。注意：信任根为院内（本地内置 TSA，"
                     + "非第三方 CA/TSA），不对外声称法律效力；换真 TSA 只需替换适配器实现。");
-        } else if (cfg != null && cfg == TimeSource.TSA.getCode() && !available) {
+        } else if (cfg != null && cfg == TimeSourceEnum.TSA.getCode() && !available) {
             vo.setTrustNote("配置 sign.time_source=3 但 TSA 适配器不在线，实际生效的是「本机时钟」"
                     + "（宁可承认不可信，也不谎报可信）。请排查 sys_tsa_server 行状态与主口令配置。");
         } else if (available) {
@@ -166,12 +166,12 @@ public class TsaServiceImpl implements TsaService {
     @Override
     public TsaStatusVO updateTimeSource(Integer timeSource) {
         if (timeSource == null
-                || (timeSource != TimeSource.LOCAL.getCode() && timeSource != TimeSource.TSA.getCode())) {
+                || (timeSource != TimeSourceEnum.LOCAL.getCode() && timeSource != TimeSourceEnum.TSA.getCode())) {
             // 2（院内授时）没有对应实现，配了也只会按本机时钟跑——拒绝比静默降级诚实
             throw new BusinessException("时间来源只允许 1（本机时钟）或 3（可信时间戳）；"
                     + "2（院内授时服务器）尚未接入实现，禁止配置");
         }
-        String text = timeSource == TimeSource.TSA.getCode()
+        String text = timeSource == TimeSourceEnum.TSA.getCode()
                 ? "3（第三方可信时间戳，经本地内置TSA适配）"
                 : "1（本机时钟）";
         // config_id 非自增：先更后插，插不进（并发新建撞唯一键）就再更一次兜底

@@ -1,6 +1,5 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.medicaltech.service.LisEqaService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
@@ -12,6 +11,7 @@ import com.his.medicaltech.entity.BizLisEqaSample;
 import com.his.medicaltech.mapper.BizLisEqaCompareMapper;
 import com.his.medicaltech.mapper.BizLisEqaPlanMapper;
 import com.his.medicaltech.mapper.BizLisEqaSampleMapper;
+import com.his.medicaltech.service.LisEqaService;
 import com.his.medicaltech.support.EqaJudgeEngine;
 import com.his.medicaltech.vo.LisEqaVO;
 import com.his.system.service.DictCacheService;
@@ -26,12 +26,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 室间质评（EQA）服务
@@ -61,12 +56,16 @@ public class LisEqaServiceImpl implements LisEqaService {
     private static final String DICT_JUDGE_MODE = "his_lis_eqa_judge_mode";
     private static final String DICT_COMPARE_STATUS = "his_lis_eqa_compare_status";
 
-    /** 批次状态：3-已上报 4-已回报 5-已归档（服务端单向推进） */
+    /**
+     * 批次状态：3-已上报 4-已回报 5-已归档（服务端单向推进）
+     */
     private static final int PLAN_REPORTED = 3;
     private static final int PLAN_RETURNED = 4;
     private static final int PLAN_ARCHIVED = 5;
 
-    /** 盲样流转：1-已检测 2-已上报 3-已回报 */
+    /**
+     * 盲样流转：1-已检测 2-已上报 3-已回报
+     */
     private static final int SAMPLE_TESTED = 1;
     private static final int SAMPLE_REPORTED = 2;
     private static final int SAMPLE_RETURNED = 3;
@@ -472,7 +471,9 @@ public class LisEqaServiceImpl implements LisEqaService {
         return vo;
     }
 
-    /** 重算批次的科目数 / 样品数 / 不合格数 / PT 得分 / 合格标志 */
+    /**
+     * 重算批次的科目数 / 样品数 / 不合格数 / PT 得分 / 合格标志
+     */
     private void recalcPlanStat(BizLisEqaPlan plan) {
         List<BizLisEqaSample> all = sampleMapper.selectList(new LambdaQueryWrapper<BizLisEqaSample>()
                 .eq(BizLisEqaSample::getPlanId, plan.getId()));
@@ -712,7 +713,9 @@ public class LisEqaServiceImpl implements LisEqaService {
         return s;
     }
 
-    /** 归档后整条链都不许动：台账的价值就在于它是当时事实，可以改的台账没人信 */
+    /**
+     * 归档后整条链都不许动：台账的价值就在于它是当时事实，可以改的台账没人信
+     */
     private void assertEditable(BizLisEqaPlan plan) {
         if (plan.getStatus() != null && plan.getStatus() >= PLAN_RETURNED) {
             throw new BusinessException("批次「" + plan.getPlanNo() + "」当前为「"
@@ -720,7 +723,9 @@ public class LisEqaServiceImpl implements LisEqaService {
         }
     }
 
-    /** 仪器名统一：不填就是空串（列上 NOT NULL DEFAULT ''，让唯一键能生效） */
+    /**
+     * 仪器名统一：不填就是空串（列上 NOT NULL DEFAULT ''，让唯一键能生效）
+     */
     private String instrumentOf(String raw) {
         return StringUtils.hasText(raw) ? raw.trim() : "";
     }

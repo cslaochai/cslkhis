@@ -5,6 +5,7 @@ import com.his.medicaltech.dto.PathologyDTO;
 import com.his.medicaltech.entity.BizPathologyBlock;
 import com.his.medicaltech.entity.BizPathologyOrder;
 import com.his.medicaltech.vo.PathologyVO;
+
 import java.util.List;
 
 public interface PathologyService extends com.baomidou.mybatisplus.extension.service.IService<BizPathologyOrder> {

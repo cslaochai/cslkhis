@@ -89,7 +89,9 @@ public enum YbDeductStatusEnum {
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
-    /** 与库里 Integer 列比较：null 视为不匹配 */
+    /**
+     * 与库里 Integer 列比较：null 视为不匹配
+     */
     public boolean matches(Integer v) {
         return v != null && v == code;
     }

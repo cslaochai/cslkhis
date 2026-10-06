@@ -2,6 +2,7 @@ package com.his.medicaltech.support;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
@@ -32,24 +33,35 @@ public final class EqaJudgeEngine {
     public static final int MODE_TEA = 2;
     public static final int MODE_RANGE = 3;
 
-    /** 0-未判定 */
+    /**
+     * 0-未判定
+     */
     public static final int UNJUDGED = 0;
-    /** 1-满意 */
+    /**
+     * 1-满意
+     */
     public static final int SATISFACTORY = 1;
-    /** 2-尚可（踩着边界，算合格但要盯着） */
+    /**
+     * 2-尚可（踩着边界，算合格但要盯着）
+     */
     public static final int ACCEPTABLE = 2;
-    /** 3-不合格 */
+    /**
+     * 3-不合格
+     */
     public static final int FAILED = 3;
 
-    /** PT 合格红线（%）：一次质评里合格项占比低于这个值，整批就是不合格 */
+    /**
+     * PT 合格红线（%）：一次质评里合格项占比低于这个值，整批就是不合格
+     */
     public static final BigDecimal PT_PASS_LINE = new BigDecimal("80");
-
-    /** TEa 口径下「尚可」的倍数上限 */
-    private static final BigDecimal TEA_WARN_TIMES = new BigDecimal("1.5");
-
-    /** 没给 TEa 时的默认允许互差（%），用于仪器间比对 */
+    /**
+     * 没给 TEa 时的默认允许互差（%），用于仪器间比对
+     */
     public static final BigDecimal DEFAULT_COMPARE_ALLOW = new BigDecimal("8");
-
+    /**
+     * TEa 口径下「尚可」的倍数上限
+     */
+    private static final BigDecimal TEA_WARN_TIMES = new BigDecimal("1.5");
     private static final BigDecimal SDI_SATISFY = BigDecimal.ONE;
     private static final BigDecimal SDI_FAIL = new BigDecimal("2");
 
@@ -99,7 +111,9 @@ public final class EqaJudgeEngine {
         return Verdict.none();
     }
 
-    /** 偏倚% =（本室值 − 靶值）/ |靶值| × 100；靶值缺失或为 0 时算不出 → null */
+    /**
+     * 偏倚% =（本室值 − 靶值）/ |靶值| × 100；靶值缺失或为 0 时算不出 → null
+     */
     public static BigDecimal biasRate(BigDecimal testValue, BigDecimal target) {
         if (testValue == null || target == null || target.compareTo(BigDecimal.ZERO) == 0) {
             return null;
@@ -156,7 +170,9 @@ public final class EqaJudgeEngine {
                 .setScale(2, RoundingMode.HALF_UP);
     }
 
-    /** 判定结果 */
+    /**
+     * 判定结果
+     */
     public static class Verdict {
 
         private final int judgeMode;
@@ -171,7 +187,9 @@ public final class EqaJudgeEngine {
             this.resultStatus = resultStatus;
         }
 
-        /** 缺少判定依据时的兜底：mode=0 + resultStatus=0，前端显示「未判定」 */
+        /**
+         * 缺少判定依据时的兜底：mode=0 + resultStatus=0，前端显示「未判定」
+         */
         public static Verdict none() {
             return new Verdict(MODE_NONE, null, null, UNJUDGED);
         }

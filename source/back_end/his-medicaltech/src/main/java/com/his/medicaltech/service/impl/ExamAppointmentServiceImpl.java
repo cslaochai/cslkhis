@@ -1,12 +1,10 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.medicaltech.service.ExamAppointmentService;
-import com.his.medicaltech.service.ExamSlotService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
 import com.his.medicaltech.dto.ExamApptDTO;
@@ -18,14 +16,16 @@ import com.his.medicaltech.mapper.BizExamAppointmentMapper;
 import com.his.medicaltech.mapper.BizExamDeviceItemMapper;
 import com.his.medicaltech.mapper.BizExamDeviceMapper;
 import com.his.medicaltech.mapper.ExamApplyWriterMapper;
+import com.his.medicaltech.service.ExamAppointmentService;
+import com.his.medicaltech.service.ExamSlotService;
 import com.his.medicaltech.support.ExamGrid;
 import com.his.medicaltech.vo.ExamApptVO;
-import com.his.system.service.DictCacheService;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysInspectionItemMapper;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -36,11 +36,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 检查预约服务：待预约申请、占号/改约/取消/到检/完成/爽约，以及设备与患者两侧的冲突检测。
@@ -80,7 +76,9 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
     private static final String DICT_APPLY_STATUS = "his_inspection_apply_status";
     private static final String DICT_DEVICE_TYPE = "his_exam_device_type";
 
-    /** 待预约事实：active_flag=1 才有在办预约（唯一索引位） */
+    /**
+     * 待预约事实：active_flag=1 才有在办预约（唯一索引位）
+     */
     private static final String NO_ACTIVE_APPOINTMENT =
             "SELECT 1 FROM biz_exam_appointment ea WHERE ea.apply_id = biz_inspection_apply.id "
                     + "AND ea.active_flag = 1 AND ea.del_flag = 0";
@@ -98,14 +96,34 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
 
     // 待预约申请
 
+    private static String trim(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    // 预约台账
+
+    private static int nz(Integer v, int dft) {
+        return v == null ? dft : v;
+    }
+
+    /**
+     * 写库前先截到列宽：把数据库报错升级成 500 是没必要的
+     */
+    private static String clip(String s) {
+        if (s == null) {
+            return null;
+        }
+        return s.length() > 480 ? s.substring(0, 480) : s;
+    }
+
     public PageResult<ExamApptVO.ApplyVO> pendingListPage(ExamApptDTO.ApplyQuery q) {
         LambdaQueryWrapper<BizInspectionApply> w = new LambdaQueryWrapper<BizInspectionApply>()
                 .in(BizInspectionApply::getApplyStatus, APPLY_SUBMITTED, APPLY_PAID)
                 .notExists(NO_ACTIVE_APPOINTMENT);
         String kw = trim(q.getKeyword());
         w.and(StringUtils.hasText(kw), x -> x.like(BizInspectionApply::getApplyNo, kw)
-                .or().like(BizInspectionApply::getPatientName, kw)
-                .or().like(BizInspectionApply::getInspectionItemName, kw))
+                        .or().like(BizInspectionApply::getPatientName, kw)
+                        .or().like(BizInspectionApply::getInspectionItemName, kw))
                 .eq(q.getPatientId() != null, BizInspectionApply::getPatientId, q.getPatientId())
                 .eq(q.getIsEmergency() != null, BizInspectionApply::getIsEmergency, q.getIsEmergency())
                 .ge(q.getStartDate() != null, BizInspectionApply::getVisitDate, q.getStartDate())
@@ -118,8 +136,6 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
                 toApplyVos(page.getRecords()));
     }
 
-    // 预约台账
-
     public PageResult<ExamApptVO.ApptVO> listPage(ExamApptDTO.ApptQuery q) {
         Page<BizExamAppointment> page = appointmentMapper.selectPage(
                 new Page<>(q.getPageNum(), q.getPageSize()), apptFilter(q));
@@ -130,7 +146,11 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
-    /** 各状态单数：与 listPage 同一套筛选条件，逐状态 count（状态是固定 5 档，比拼接 group by 更不易写错） */
+    // 占号 / 改约 / 取消
+
+    /**
+     * 各状态单数：与 listPage 同一套筛选条件，逐状态 count（状态是固定 5 档，比拼接 group by 更不易写错）
+     */
     public List<ExamApptVO.StatusCountVO> statusCount(ExamApptDTO.ApptQuery q) {
         // 状态分布是「换一档看看还有多少」的导航，本身不能被 status 过滤条件支配 ——
         // 否则点中某一档后其余四档全部归零，分布条当场失去意义。
@@ -177,7 +197,8 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
                 case APPT_FINISHED -> vo.setTodayFinished(s.getCount());
                 case APPT_CANCELLED -> vo.setTodayCancelled(s.getCount());
                 case APPT_NOSHOW -> vo.setTodayNoShow(s.getCount());
-                default -> { }
+                default -> {
+                }
             }
         }
         vo.setPendingApplies(applyMapper.selectCount(new LambdaQueryWrapper<BizInspectionApply>()
@@ -192,8 +213,6 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
                 .ne(BizExamDevice::getStatus, DEVICE_OPEN)));
         return vo;
     }
-
-    // 占号 / 改约 / 取消
 
     @Transactional(rollbackFor = Exception.class)
     public ExamApptVO.ApptDetailVO book(ExamApptDTO.Book dto) {
@@ -253,7 +272,11 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         releaseOld(appt, dto.getCancelReason(), APPT_CANCELLED);
     }
 
-    /** 到检：申请单从「已预约」推进到「检查中」；号源不释放（机器时间已经花掉了） */
+    // 时段推荐
+
+    /**
+     * 到检：申请单从「已预约」推进到「检查中」；号源不释放（机器时间已经花掉了）
+     */
     @Transactional(rollbackFor = Exception.class)
     public void arrive(ExamApptDTO.ApptIdOnly dto) {
         BizExamAppointment appt = requireAppt(dto.getApptId());
@@ -272,6 +295,8 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
                     appt.getApptNo(), appt.getApplyNo());
         }
     }
+
+    // 内部：占号
 
     @Transactional(rollbackFor = Exception.class)
     public void finish(ExamApptDTO.ApptIdOnly dto) {
@@ -307,8 +332,6 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         }
         return done;
     }
-
-    // 时段推荐
 
     /**
      * 推荐可选时段：只在该项目的可承接设备之间选，按「日期 → 时刻」给最近的空档。
@@ -387,8 +410,6 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
                 : "找到 " + options.size() + " 个可选时段（按日期与时刻就近排序）");
         return vo;
     }
-
-    // 内部：占号
 
     private BizExamAppointment doBook(BizInspectionApply apply, Long deviceId, LocalDate examDate,
                                       String startTime, Integer prevStatus, String remark) {
@@ -511,7 +532,9 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         return appt;
     }
 
-    /** 取消/改约/爽约的共同收尾：退号 + 终结唯一索引位 + 申请单精确回退 */
+    /**
+     * 取消/改约/爽约的共同收尾：退号 + 终结唯一索引位 + 申请单精确回退
+     */
     private void releaseOld(BizExamAppointment appt, String reason, int targetStatus) {
         BizExamDevice device = deviceMapper.selectForUpdate(appt.getDeviceId());
         LocalDate date = appt.getExamDate();
@@ -557,7 +580,9 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         }
     }
 
-    /** @return 申请单在预约前应处于的状态（取消时按它精确回退） */
+    /**
+     * @return 申请单在预约前应处于的状态（取消时按它精确回退）
+     */
     private int gateApplyStatus(BizInspectionApply apply) {
         int status = apply.getApplyStatus() == null ? 0 : apply.getApplyStatus();
         if (status == APPLY_BOOKED) {
@@ -618,6 +643,8 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         return out;
     }
 
+    // 内部：查询辅助
+
     private String occupantsOverlapping(List<BizExamAppointment> occupants, BizExamSlot cell) {
         List<String> nos = new ArrayList<>();
         for (BizExamAppointment a : occupants) {
@@ -668,8 +695,6 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         }
     }
 
-    // 内部：查询辅助
-
     private LambdaQueryWrapper<BizExamAppointment> apptFilter(ExamApptDTO.ApptQuery q) {
         String kw = trim(q.getKeyword());
         LambdaQueryWrapper<BizExamAppointment> w = new LambdaQueryWrapper<>();
@@ -677,9 +702,9 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
             w.eq(BizExamAppointment::getApptNo, q.getApptNo().trim());
         }
         w.and(StringUtils.hasText(kw), x -> x.like(BizExamAppointment::getPatientName, kw)
-                .or().like(BizExamAppointment::getApptNo, kw)
-                .or().like(BizExamAppointment::getItemName, kw)
-                .or().like(BizExamAppointment::getDeviceName, kw))
+                        .or().like(BizExamAppointment::getApptNo, kw)
+                        .or().like(BizExamAppointment::getItemName, kw)
+                        .or().like(BizExamAppointment::getDeviceName, kw))
                 .eq(q.getPatientId() != null, BizExamAppointment::getPatientId, q.getPatientId())
                 .eq(q.getDeviceId() != null, BizExamAppointment::getDeviceId, q.getDeviceId())
                 .eq(q.getExamDeptId() != null, BizExamAppointment::getExamDeptId, q.getExamDeptId())
@@ -804,21 +829,5 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
     private String currentName() {
         String n = UserUtils.getCurrentEmployeeName();
         return n != null ? n : "系统";
-    }
-
-    private static String trim(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static int nz(Integer v, int dft) {
-        return v == null ? dft : v;
-    }
-
-    /** 写库前先截到列宽：把数据库报错升级成 500 是没必要的 */
-    private static String clip(String s) {
-        if (s == null) {
-            return null;
-        }
-        return s.length() > 480 ? s.substring(0, 480) : s;
     }
 }

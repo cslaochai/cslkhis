@@ -78,6 +78,12 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
 
     private final PatientGuardianService patientGuardianService;
 
+    private static String nullToDash(String text) {
+        return StringUtils.hasText(text) ? text : "（未填写）";
+    }
+
+    // ---------------------------------------------------------------- 词典层
+
     @Override
     public PatientImagingExplainVO execute(PatientImagingExplainDTO dto) {
         CurrentUser user = UserUtils.getCurrentUser();
@@ -169,7 +175,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
         return vo;
     }
 
-    // ---------------------------------------------------------------- 词典层
+    // ---------------------------------------------------------------- 模型层
 
     /**
      * 关键词匹配：报告项目名包含词典关键词即命中，多个命中取关键词最长的一条
@@ -201,8 +207,6 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
         return best;
     }
 
-    // ---------------------------------------------------------------- 模型层
-
     private Optional<PatientImagingLlmOutputDTO> callModel(BizReport report, SysImagingPlainItem plain) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("itemName", nullToDash(report.getItemName()));
@@ -225,9 +229,5 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
                 .build();
 
         return aiExecutionService.call(call, PatientImagingLlmOutputDTO.class);
-    }
-
-    private static String nullToDash(String text) {
-        return StringUtils.hasText(text) ? text : "（未填写）";
     }
 }

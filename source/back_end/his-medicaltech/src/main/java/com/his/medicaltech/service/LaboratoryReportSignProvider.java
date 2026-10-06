@@ -1,17 +1,17 @@
 package com.his.medicaltech.service;
 
-import com.his.common.service.SignableContentProvider;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
 import com.his.common.entity.SignSubject;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
+import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.enums.LabRecordStatusEnum;
-import java.time.LocalDateTime;
-import java.util.List;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 
 public interface LaboratoryReportSignProvider extends SignableContentProvider {
@@ -26,7 +26,9 @@ public interface LaboratoryReportSignProvider extends SignableContentProvider {
         return status == null ? "—" : LabRecordStatusEnum.labelOrUnknown(status);
     }
 
-    /** 规范化文本：报告头 + **结果明细**，不含任何流程字段 */
+    /**
+     * 规范化文本：报告头 + **结果明细**，不含任何流程字段
+     */
     public static String canonical(BizLaboratoryRecord r, List<BizLabResult> results) {
         return CanonicalText.create("LAB_REPORT")
                 .put("recordNo", r.getRecordNo())
@@ -53,16 +55,9 @@ public interface LaboratoryReportSignProvider extends SignableContentProvider {
                 .build();
     }
 
-    SignBizType bizType();
-
-    SignSubject load(Long bizId);
-
-    String blockReason(SignSubject subject, SignScene scene);
-
-    void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime);
-
-    void revokeSignAnchor(Long bizId, Long signId);
-    /** 明细逐条一行，字段用 {@code |} 分隔、行间换行 */
+    /**
+     * 明细逐条一行，字段用 {@code |} 分隔、行间换行
+     */
     static String resultsText(List<BizLabResult> results) {
         if (results == null || results.isEmpty()) {
             return "";
@@ -82,10 +77,22 @@ public interface LaboratoryReportSignProvider extends SignableContentProvider {
         }
         return sb.toString();
     }
+
     static String plain(BigDecimal v) {
         return v == null ? null : v.stripTrailingZeros().toPlainString();
     }
+
     static String nz(String s) {
         return s == null ? "" : s;
     }
+
+    SignBizTypeEnum bizType();
+
+    SignSubject load(Long bizId);
+
+    String blockReason(SignSubject subject, SignSceneEnum scene);
+
+    void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime);
+
+    void revokeSignAnchor(Long bizId, Long signId);
 }

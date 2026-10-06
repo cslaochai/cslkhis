@@ -4,8 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.Constants;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
@@ -54,13 +54,10 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class SurveyServiceImpl implements SurveyService {
-    private final DeptScopeProvider deptScopeProvider;
-
     private static final BigDecimal HUNDRED = new BigDecimal("100");
-
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
+    private final DeptScopeProvider deptScopeProvider;
     private final BizSurveyDispatchMapper dispatchMapper;
     private final BizSurveyAnswerMapper answerMapper;
     private final BizSurveyAnswerItemMapper answerItemMapper;

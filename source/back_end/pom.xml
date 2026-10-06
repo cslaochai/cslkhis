@@ -39,17 +39,13 @@
         <module>his-pharmacy</module>
         <module>his-appoint</module>
         <!-- 物资耗材与设备后勤 -->
-        <module>his-supplies</module>
-        <module>his-equipment</module>
         <!-- 临床业务 -->
         <module>his-operation</module>
         <module>his-medicaltech</module>
-        <module>his-emergency</module>
         <module>his-emr</module>
         <!-- 交易与结算 -->
         <module>his-charge</module>
         <!-- 统计 -->
-        <module>his-report</module>
         <!-- 预留 -->
         <module>his-ai</module>
         <!-- 患者端小程序聚合层（BFF，须在各业务域之后、启动层之前） -->
@@ -93,7 +89,7 @@
             </dependency>
             <dependency>
                 <groupId>com.his</groupId>
-                <artifactId>his-supplies</artifactId>
+                <artifactId>his-pharmacy</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -103,7 +99,7 @@
             </dependency>
             <dependency>
                 <groupId>com.his</groupId>
-                <artifactId>his-equipment</artifactId>
+                <artifactId>his-system</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -113,7 +109,7 @@
             </dependency>
             <dependency>
                 <groupId>com.his</groupId>
-                <artifactId>his-emergency</artifactId>
+                <artifactId>his-appoint</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -123,7 +119,7 @@
             </dependency>
             <dependency>
                 <groupId>com.his</groupId>
-                <artifactId>his-report</artifactId>
+                <artifactId>his-medicaltech</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

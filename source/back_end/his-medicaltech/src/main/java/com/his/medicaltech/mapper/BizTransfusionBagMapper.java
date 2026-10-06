@@ -39,7 +39,9 @@ public interface BizTransfusionBagMapper extends BaseMapper<BizTransfusionBag> {
     long countByBagNo(@Param("bagNo") String bagNo,
                       @Param("excludeApplyId") Long excludeApplyId);
 
-    /** 某张申请单下的血袋（按录入顺序升序 = 配血顺序） */
+    /**
+     * 某张申请单下的血袋（按录入顺序升序 = 配血顺序）
+     */
     @Select("""
             SELECT * FROM biz_transfusion_bag
             WHERE del_flag = 0 AND apply_id = #{applyId}
@@ -47,14 +49,18 @@ public interface BizTransfusionBagMapper extends BaseMapper<BizTransfusionBag> {
             """)
     List<BizTransfusionBag> selectByApply(@Param("applyId") Long applyId);
 
-    /** 某张申请单下已配血的血袋数（配血齐不齐的判定依据） */
+    /**
+     * 某张申请单下已配血的血袋数（配血齐不齐的判定依据）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_transfusion_bag
             WHERE del_flag = 0 AND apply_id = #{applyId}
             """)
     long countByApply(@Param("applyId") Long applyId);
 
-    /** 某张申请单下"配血不合"的血袋数（>0 → crossmatch_status = 3，不可发血） */
+    /**
+     * 某张申请单下"配血不合"的血袋数（>0 → crossmatch_status = 3，不可发血）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_transfusion_bag
             WHERE del_flag = 0 AND apply_id = #{applyId} AND crossmatch_result = 2

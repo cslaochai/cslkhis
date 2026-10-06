@@ -12,13 +12,19 @@ import java.util.List;
  */
 public interface ExamImageService {
 
-    /** 工作站上传一张影像（seq 由服务端 max+1 递增） */
+    /**
+     * 工作站上传一张影像（seq 由服务端 max+1 递增）
+     */
     ExamImageVO upload(MultipartFile file, ExamImageUploadDTO uploadDTO);
 
-    /** 模拟 DICOM 导入：后端生成 frameCount 帧灰阶测试图 */
+    /**
+     * 模拟 DICOM 导入：后端生成 frameCount 帧灰阶测试图
+     */
     List<ExamImageVO> mockImport(ExamImageMockImportDTO importDTO);
 
-    /** 按申请单取全部帧（seq 升序，阅片器直接铺） */
+    /**
+     * 按申请单取全部帧（seq 升序，阅片器直接铺）
+     */
     List<ExamImageVO> listByApply(Integer bizType, Long applyId);
 
     /**

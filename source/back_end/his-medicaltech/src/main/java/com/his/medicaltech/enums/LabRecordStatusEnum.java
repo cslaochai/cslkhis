@@ -22,16 +22,9 @@ public enum LabRecordStatusEnum {
         this.description = description;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
     /**
      * 根据状态码获取对应的枚举实例
+     *
      * @param code 状态码
      * @return 对应的枚举实例，若未找到则返回 null
      */
@@ -44,7 +37,9 @@ public enum LabRecordStatusEnum {
         return null;
     }
 
-    /** Integer 入口（null 安全，与 {@link #getByCode(int)} 同义） */
+    /**
+     * Integer 入口（null 安全，与 {@link #getByCode(int)} 同义）
+     */
     public static LabRecordStatusEnum fromCode(Integer code) {
         return code == null ? null : getByCode(code);
     }
@@ -63,9 +58,19 @@ public enum LabRecordStatusEnum {
         return item == null ? "" : item.description;
     }
 
-    /** 异常 / 审计用：null 或越界码值返回「未知(n)」（null 本身渲染成「未知」）。 */
+    /**
+     * 异常 / 审计用：null 或越界码值返回「未知(n)」（null 本身渲染成「未知」）。
+     */
     public static String labelOrUnknown(Integer code) {
         LabRecordStatusEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.description;
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getDescription() {
+        return description;
     }
 }

@@ -21,46 +21,74 @@ import java.time.LocalDateTime;
 @TableName("biz_pathology_block")
 public class BizPathologyBlock extends BaseEntity {
 
-    /** 病理主单ID */
+    /**
+     * 病理主单ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long orderId;
 
-    /** 病理号 */
+    /**
+     * 病理号
+     */
     private String orderNo;
 
-    /** 蜡块号（如 A1 / B2） */
+    /**
+     * 蜡块号（如 A1 / B2）
+     */
     private String blockNo;
 
-    /** 取材部位描述 */
+    /**
+     * 取材部位描述
+     */
     private String partDesc;
 
-    /** 蜡块数 */
+    /**
+     * 蜡块数
+     */
     private Integer blockCount;
 
-    /** 切片数 */
+    /**
+     * 切片数
+     */
     private Integer sliceCount;
 
-    /** 切片号 */
+    /**
+     * 切片号
+     */
     private String slideNo;
 
-    /** 状态（1-待取材 2-已取材 3-已包埋 4-已切片） */
+    /**
+     * 状态（1-待取材 2-已取材 3-已包埋 4-已切片）
+     */
     private Integer status;
 
-    /** 取材人 */
+    /**
+     * 取材人
+     */
     private String samplingBy;
 
-    /** 取材时间 */
+    /**
+     * 取材时间
+     */
     private LocalDateTime samplingTime;
 
-    /** 包埋人 */
+    /**
+     * 包埋人
+     */
     private String embeddingBy;
 
-    /** 包埋时间 */
+    /**
+     * 包埋时间
+     */
     private LocalDateTime embeddingTime;
 
-    /** 切片人 */
+    /**
+     * 切片人
+     */
     private String sliceBy;
 
-    /** 切片时间 */
+    /**
+     * 切片时间
+     */
     private LocalDateTime sliceTime;
 }

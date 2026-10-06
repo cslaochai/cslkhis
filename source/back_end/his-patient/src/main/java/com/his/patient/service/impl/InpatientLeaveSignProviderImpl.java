@@ -2,9 +2,9 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.his.common.entity.SignSubject;
-import com.his.common.enums.ObjectSignStatus;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.ObjectSignStatusEnum;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.patient.entity.BizInpatientLeave;
 import com.his.patient.enums.LeaveStatusEnum;
@@ -37,8 +37,8 @@ public class InpatientLeaveSignProviderImpl implements SignableContentProvider, 
     private final BizInpatientLeaveMapper leaveMapper;
 
     @Override
-    public SignBizType bizType() {
-        return SignBizType.INPATIENT_LEAVE;
+    public SignBizTypeEnum bizType() {
+        return SignBizTypeEnum.INPATIENT_LEAVE;
     }
 
     @Override
@@ -60,15 +60,15 @@ public class InpatientLeaveSignProviderImpl implements SignableContentProvider, 
     }
 
     @Override
-    public String blockReason(SignSubject subject, SignScene scene) {
-        if (scene != SignScene.LEAVE_APPROVE) {
+    public String blockReason(SignSubject subject, SignSceneEnum scene) {
+        if (scene != SignSceneEnum.LEAVE_APPROVE) {
             return "住院请假单只支持「请假审批签名」场景，当前场景「" + scene.getText() + "」不适用";
         }
         BizInpatientLeave l = leaveMapper.selectById(subject.bizId());
         if (l == null) {
             return "请假单不存在或已被删除，无法签名";
         }
-        if (Objects.equals(ObjectSignStatus.SIGNED.getCode(), l.getSignStatus())) {
+        if (Objects.equals(ObjectSignStatusEnum.SIGNED.getCode(), l.getSignStatus())) {
             return "请假单 " + l.getLeaveNo() + " 已签名（签名即锁定），不能重复签名；"
                     + "如需修改，请先在「签名中心」作废该签名（作废会留痕并解除锁定）";
         }
@@ -80,10 +80,10 @@ public class InpatientLeaveSignProviderImpl implements SignableContentProvider, 
     }
 
     @Override
-    public void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime) {
+    public void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime) {
         BizInpatientLeave patch = new BizInpatientLeave();
         patch.setId(bizId);
-        patch.setSignStatus(ObjectSignStatus.SIGNED.getCode());
+        patch.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
         patch.setSignId(signId);
         patch.setSignedTime(signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS));
         leaveMapper.updateById(patch);
@@ -97,7 +97,7 @@ public class InpatientLeaveSignProviderImpl implements SignableContentProvider, 
         }
         leaveMapper.update(null, new LambdaUpdateWrapper<BizInpatientLeave>()
                 .eq(BizInpatientLeave::getId, bizId)
-                .set(BizInpatientLeave::getSignStatus, ObjectSignStatus.INVALIDATED.getCode())
+                .set(BizInpatientLeave::getSignStatus, ObjectSignStatusEnum.INVALIDATED.getCode())
                 .set(BizInpatientLeave::getSignId, null));
         log.info("住院请假单签名已作废回写 leaveNo={} signId={}", l.getLeaveNo(), signId);
     }

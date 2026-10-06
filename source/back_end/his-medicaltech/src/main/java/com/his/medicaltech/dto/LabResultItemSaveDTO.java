@@ -37,7 +37,9 @@ public class LabResultItemSaveDTO {
      */
     private String referenceRange;
 
-    /** 异常标志（0-正常 1-偏高 2-偏低 3-异常） */
+    /**
+     * 异常标志（0-正常 1-偏高 2-偏低 3-异常）
+     */
     private Integer abnormalFlag;
 
     /**

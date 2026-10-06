@@ -30,7 +30,9 @@ import java.util.List;
 @Mapper
 public interface BizTransfusionApplyMapper extends BaseMapper<BizTransfusionApply> {
 
-    /** 列表/详情公共投影（见类注释：不 JOIN 任何主表已有快照的列） */
+    /**
+     * 列表/详情公共投影（见类注释：不 JOIN 任何主表已有快照的列）
+     */
     String PROJECTION = """
             SELECT c.*,
                    a.admit_status,
@@ -42,7 +44,9 @@ public interface BizTransfusionApplyMapper extends BaseMapper<BizTransfusionAppl
                      LEFT JOIN biz_inpatient_record r ON r.id = c.record_id AND r.del_flag = 0
             """;
 
-    /** 输血申请分页（输血科配血工作台 / 病区申请方工作台共用） */
+    /**
+     * 输血申请分页（输血科配血工作台 / 病区申请方工作台共用）
+     */
     @Select(PROJECTION + """
             WHERE c.del_flag = 0
               AND (#{q.admissionId} IS NULL OR c.admission_id = #{q.admissionId})
@@ -70,22 +74,30 @@ public interface BizTransfusionApplyMapper extends BaseMapper<BizTransfusionAppl
     IPage<TransfusionApplyVO> selectApplyPage(IPage<TransfusionApplyVO> page,
                                               @Param("q") TransfusionApplyQueryPageDTO query);
 
-    /** 输血申请详情 */
+    /**
+     * 输血申请详情
+     */
     @Select(PROJECTION + " WHERE c.del_flag = 0 AND c.id = #{applyId}")
     TransfusionApplyVO selectApplyById(@Param("applyId") Long applyId);
 
-    /** 某次住院的全部输血申请（按申请时间升序 = 这条链的发生顺序） */
+    /**
+     * 某次住院的全部输血申请（按申请时间升序 = 这条链的发生顺序）
+     */
     @Select(PROJECTION + """
              WHERE c.del_flag = 0 AND c.admission_id = #{admissionId}
              ORDER BY c.apply_time ASC, c.id ASC
             """)
     List<TransfusionApplyVO> selectByAdmission(@Param("admissionId") Long admissionId);
 
-    /** 当天已生成的输血单号条数（单号序号用） */
+    /**
+     * 当天已生成的输血单号条数（单号序号用）
+     */
     @Select("SELECT COUNT(*) FROM biz_transfusion_apply WHERE del_flag = 0 AND apply_no LIKE CONCAT(#{prefix}, '%')")
     long countByNoPrefix(@Param("prefix") String prefix);
 
-    /** 未完成输血数（待配血 + 已配血 + 已发血 + 输注中）：工作台角标用 */
+    /**
+     * 未完成输血数（待配血 + 已配血 + 已发血 + 输注中）：工作台角标用
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_transfusion_apply
             WHERE del_flag = 0 AND transfusion_status IN (0, 1, 2, 3)
@@ -114,11 +126,15 @@ public interface BizTransfusionApplyMapper extends BaseMapper<BizTransfusionAppl
                                       @Param("component") Integer component,
                                       @Param("excludeId") Long excludeId);
 
-    /** 科室名（取不到返回 null，由调用方渲染「未知科室(ID=x)」，绝不编一个名字） */
+    /**
+     * 科室名（取不到返回 null，由调用方渲染「未知科室(ID=x)」，绝不编一个名字）
+     */
     @Select("SELECT dept_name FROM sys_department WHERE id = #{deptId} AND del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
-    /** 员工姓名（申请/配血/发血/核对/输注/上报一律服务端查名，不信任前端传来的姓名） */
+    /**
+     * 员工姓名（申请/配血/发血/核对/输注/上报一律服务端查名，不信任前端传来的姓名）
+     */
     @Select("SELECT emp_name FROM sys_employee WHERE id = #{empId} AND del_flag = 0")
     String selectEmployeeName(@Param("empId") Long empId);
 }

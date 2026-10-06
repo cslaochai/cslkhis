@@ -1,8 +1,8 @@
 package com.his.common.service;
 
 import com.his.common.entity.SignSubject;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
 
 import java.time.LocalDateTime;
 
@@ -30,7 +30,7 @@ public interface SignableContentProvider {
     /**
      * 本实现负责的对象类型
      */
-    SignBizType bizType();
+    SignBizTypeEnum bizType();
 
     /**
      * 加载被签对象。
@@ -44,7 +44,7 @@ public interface SignableContentProvider {
      *
      * @return {@code null} 表示可以签；非空字符串是**给用户看的拒绝理由**
      */
-    String blockReason(SignSubject subject, SignScene scene);
+    String blockReason(SignSubject subject, SignSceneEnum scene);
 
     /**
      * 签名成功后回写锚点（病例行上的 sign_status / sign_id / signed_time，
@@ -53,7 +53,7 @@ public interface SignableContentProvider {
      * <p>刻意**不在这里改业务状态**：签名是留痕动作，不承担状态机职责。
      * 谁改状态由业务自己的流程决定。
      */
-    void applySignAnchor(Long bizId, SignScene scene, Long signId, LocalDateTime signedTime);
+    void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime);
 
     /**
      * 签名被作废后回写锚点：对象置「签名已失效」（2），并清掉指向该签名的指针。

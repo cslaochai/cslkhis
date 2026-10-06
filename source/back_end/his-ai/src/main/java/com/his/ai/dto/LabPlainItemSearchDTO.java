@@ -2,7 +2,6 @@ package com.his.ai.dto;
 
 import com.his.common.base.PageParam;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 /**

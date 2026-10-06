@@ -4,48 +4,31 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
+import com.his.common.enums.AdmitStatusEnum;
+import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.patient.entity.BizPatient;
-import com.his.medicaltech.dto.TransfusionApplyQueryPageDTO;
-import com.his.medicaltech.dto.TransfusionApplyUpsertDTO;
-import com.his.medicaltech.dto.TransfusionApproveDTO;
-import com.his.medicaltech.dto.TransfusionCancelDTO;
-import com.his.medicaltech.dto.TransfusionCrossmatchDTO;
-import com.his.medicaltech.dto.TransfusionFinishDTO;
-import com.his.medicaltech.dto.TransfusionIssueDTO;
-import com.his.medicaltech.dto.TransfusionReactionDTO;
-import com.his.medicaltech.dto.TransfusionStartDTO;
-import com.his.patient.entity.BizAdmission;
-import com.his.patient.service.InpatientService;
-import com.his.patient.entity.BizInpatientRecord;
-import com.his.patient.service.InpatientRecordService;
+import com.his.common.util.TimeUtil;
+import com.his.medicaltech.dto.*;
 import com.his.medicaltech.entity.BizTransfusionApply;
 import com.his.medicaltech.entity.BizTransfusionApprove;
 import com.his.medicaltech.entity.BizTransfusionBag;
-import com.his.medicaltech.mapper.BizTransfusionApproveMapper;
+import com.his.medicaltech.enums.*;
 import com.his.medicaltech.mapper.BizTransfusionApplyMapper;
+import com.his.medicaltech.mapper.BizTransfusionApproveMapper;
 import com.his.medicaltech.mapper.BizTransfusionBagMapper;
 import com.his.medicaltech.service.TransfusionApplyService;
-import com.his.common.enums.AdmitStatusEnum;
-import com.his.common.enums.SysGenderEnum;
 import com.his.medicaltech.support.TransfusionCheckItems;
-import com.his.medicaltech.enums.TransfusionStatusEnum;
-import com.his.medicaltech.enums.BloodBagStatusEnum;
-import com.his.medicaltech.enums.BloodComponentEnum;
-import com.his.medicaltech.enums.BloodTypeEnum;
-import com.his.medicaltech.enums.CrossmatchResultEnum;
-import com.his.medicaltech.enums.RhTypeEnum;
-import com.his.medicaltech.enums.TransfusionApproveLevelEnum;
-import com.his.medicaltech.enums.TransfusionApproveStatusEnum;
-import com.his.medicaltech.enums.TransfusionCrossmatchStatusEnum;
-import com.his.medicaltech.enums.TransfusionReactionTypeEnum;
 import com.his.medicaltech.support.TransfusionRules;
-import com.his.patient.vo.CodeOptionVO;
 import com.his.medicaltech.vo.TransfusionApplyVO;
 import com.his.medicaltech.vo.TransfusionBagVO;
-import com.his.patient.vo.WardVO;
+import com.his.patient.entity.BizAdmission;
+import com.his.patient.entity.BizInpatientRecord;
+import com.his.patient.entity.BizPatient;
+import com.his.patient.service.InpatientRecordService;
+import com.his.patient.service.InpatientService;
 import com.his.patient.service.PatientService;
+import com.his.patient.vo.CodeOptionVO;
+import com.his.patient.vo.WardVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -61,13 +44,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 住院输血闭环服务实现（P4.4）。
@@ -102,16 +79,24 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class TransfusionApplyServiceImpl implements TransfusionApplyService {
 
-    /** 入院状态：在院 */
+    /**
+     * 入院状态：在院
+     */
     private static final int ADMITTED = 1;
 
-    /** 病历文书类型：11-输血记录（本闭环完成时由系统回写） */
+    /**
+     * 病历文书类型：11-输血记录（本闭环完成时由系统回写）
+     */
     private static final int RECORD_TYPE_TRANSFUSION = 11;
 
-    /** 文书状态：已提交（输血记录一落库就是正式文书，不留在草稿箱） */
+    /**
+     * 文书状态：已提交（输血记录一落库就是正式文书，不留在草稿箱）
+     */
     private static final int RECORD_STATUS_SUBMITTED = 2;
 
-    /** 已配血/已发血后多久没往下走算"卡住"（查询时算，不落状态列） */
+    /**
+     * 已配血/已发血后多久没往下走算"卡住"（查询时算，不落状态列）
+     */
     private static final long STALLED_HOURS = 24;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -126,6 +111,62 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     private final InpatientRecordService inpatientRecordService;
 
     // 查询
+
+    /**
+     * 追加备注（不覆盖已有内容；超 500 截断，避免超长直接 SQL 报错）
+     */
+    private static String mergeRemark(String origin, String append) {
+        String text = StringUtils.hasText(origin)
+                ? (StringUtils.hasText(append) ? origin + "；" + append : origin)
+                : append;
+        if (text != null && text.length() > 500) {
+            return text.substring(0, 497) + "…";
+        }
+        return text;
+    }
+
+    private static String textOr(String value, String fallback) {
+        return StringUtils.hasText(value) ? value : fallback;
+    }
+
+    private static LocalDateTime now() {
+        return TimeUtil.toSeconds(LocalDateTime.now());
+    }
+
+    /**
+     * 下界宽松解析：{@code yyyy-MM-dd} → 当天 00:00:00；带时分秒则原样使用（含）
+     */
+    private static String normalizeFrom(String raw) {
+        Parsed p = parse(raw);
+        return p == null ? null : p.from;
+    }
+
+    /**
+     * 上界宽松解析：{@code yyyy-MM-dd} → 次日 00:00:00（不含，覆盖当天最后一秒）
+     */
+    private static String normalizeTo(String raw) {
+        Parsed p = parse(raw);
+        return p == null ? null : p.to;
+    }
+
+    private static Parsed parse(String raw) {
+        if (!StringUtils.hasText(raw)) {
+            return null;
+        }
+        String s = raw.trim();
+        try {
+            if (s.length() == 10) {
+                LocalDate d = LocalDate.parse(s);
+                return new Parsed(d.atStartOfDay().format(FULL_TIME),
+                        d.plusDays(1).atStartOfDay().format(FULL_TIME));
+            }
+            LocalDateTime t = LocalDateTime.parse(s, FULL_TIME);
+            return new Parsed(t.format(FULL_TIME), t.format(FULL_TIME));
+        } catch (DateTimeParseException e) {
+            // 明确报格式问题，不静默忽略、也不让它变成 500
+            throw new BusinessException("时间格式不正确：" + raw + "（应为 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss）");
+        }
+    }
 
     @Override
     public IPage<TransfusionApplyVO> listPage(TransfusionApplyQueryPageDTO query) {
@@ -142,6 +183,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         return page;
     }
 
+    // 一、申请（待配血）
+
     @Override
     public TransfusionApplyVO getDetailById(Long applyId) {
         // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
@@ -156,6 +199,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         vo.setApproveRecords(approveListByApply(applyId));
         return vo;
     }
+
+    // 一·五、用血分级审批（sql/93：通过 / 驳回 / 流水 / 统计）
 
     @Override
     public List<TransfusionApplyVO> listByAdmission(Long admissionId) {
@@ -180,6 +225,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         return list;
     }
 
+    // 二、配血（待配血 → 已配血；逐袋录入，ABO/Rh 硬拦）
+
     @Override
     public List<TransfusionApplyVO.CheckItem> checkItems() {
         List<TransfusionApplyVO.CheckItem> list = new ArrayList<>();
@@ -193,12 +240,14 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         return list;
     }
 
+    // 三、发血（已配血 → 已发血）
+
     @Override
     public List<String> reactionTypes() {
         return TransfusionReactionTypeEnum.options();
     }
 
-    // 一、申请（待配血）
+    // 四、开始输注（已发血 → 输注中；双人核对）
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -380,7 +429,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         return entity.getApplyNo();
     }
 
-    // 一·五、用血分级审批（sql/93：通过 / 驳回 / 流水 / 统计）
+    // 五、完成（输注中 → 已完成；回写输血记录病历 + 首页标志）
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -438,6 +487,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         return entity.getApplyNo();
     }
 
+    // 六、输血反应上报（仅已完成且尚未上报；不回改历史状态）
+
     @Override
     public List<TransfusionApplyVO.ApproveRecord> approveListByApply(Long applyId) {
         // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
@@ -463,6 +514,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
         return rows;
     }
+
+    // 七、取消（仅待配血 / 已配血 / 已发血）
 
     @Override
     public TransfusionApplyVO.ApproveStats approveStats() {
@@ -494,7 +547,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         return stats;
     }
 
-    // 二、配血（待配血 → 已配血；逐袋录入，ABO/Rh 硬拦）
+    // 回写：输血记录病历
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -673,7 +726,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
                 + " 袋相合，尚未配齐，继续配血后方可发血";
     }
 
-    // 三、发血（已配血 → 已发血）
+    // 展示态
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -733,8 +786,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         applyMapper.updateById(entity);
         log.info("发血 applyNo={} 血袋 {} 袋 发血人={}", entity.getApplyNo(), bags.size(), currentName());
     }
-
-    // 四、开始输注（已发血 → 输注中；双人核对）
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -800,8 +851,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
                 entity.getApplyNo(), start.format(FULL_TIME), nurse1, nurse2,
                 entity.getCheckItems(), entity.getInfusionNurseName());
     }
-
-    // 五、完成（输注中 → 已完成；回写输血记录病历 + 首页标志）
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -869,7 +918,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
                 end.format(FULL_TIME), dto.getActualAmount(), record.getRecordNo(), currentName());
     }
 
-    // 六、输血反应上报（仅已完成且尚未上报；不回改历史状态）
+    // 工具
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -901,8 +950,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
                 entity.getApplyNo(), entity.getAdmissionId(), dto.getReactionType(), currentName());
     }
 
-    // 七、取消（仅待配血 / 已配血 / 已发血）
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(TransfusionCancelDTO dto) {
@@ -927,8 +974,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         log.info("取消输血申请 applyNo={} 原因={} 操作人={}",
                 entity.getApplyNo(), dto.getCancelReason(), currentName());
     }
-
-    // 回写：输血记录病历
 
     /**
      * 把这次输血回写成一份住院病历（类型=输血记录，状态直接「已提交」）。
@@ -1049,8 +1094,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         // 病历号取号与落库归病历文书的写入方（输血侧只负责把这次输血写成文书内容）
         return inpatientRecordService.appendClosedLoopRecord(record);
     }
-
-    // 展示态
 
     /**
      * @param withBags 是否加载血袋明细（详情接口 true、列表 false —— 列表逐行查血袋就是 N+1）
@@ -1195,8 +1238,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         return null;
     }
 
-    // 工具
-
     private BizTransfusionApply mustGet(Long applyId) {
         BizTransfusionApply entity = applyMapper.selectById(applyId);
         if (entity == null) {
@@ -1205,18 +1246,9 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         return entity;
     }
 
-    /** 追加备注（不覆盖已有内容；超 500 截断，避免超长直接 SQL 报错） */
-    private static String mergeRemark(String origin, String append) {
-        String text = StringUtils.hasText(origin)
-                ? (StringUtils.hasText(append) ? origin + "；" + append : origin)
-                : append;
-        if (text != null && text.length() > 500) {
-            return text.substring(0, 497) + "…";
-        }
-        return text;
-    }
-
-    /** 科室名（取不到就返回"未知科室(ID=x)"，绝不编一个科室名） */
+    /**
+     * 科室名（取不到就返回"未知科室(ID=x)"，绝不编一个科室名）
+     */
     private String deptNameOf(Long deptId) {
         if (deptId == null) {
             return null;
@@ -1240,7 +1272,9 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         return inpatientService.getBedNoById(bedId);
     }
 
-    /** 员工姓名（服务端查名，不信任前端传来的姓名 —— 姓名是可以随便伪造的字符串） */
+    /**
+     * 员工姓名（服务端查名，不信任前端传来的姓名 —— 姓名是可以随便伪造的字符串）
+     */
     private String employeeNameOf(Long empId) {
         if (empId == null) {
             return null;
@@ -1249,13 +1283,17 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
+    /** 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入） */
+
     private String nextApplyNo() {
         String prefix = "SX" + LocalDate.now().format(NO_DATE);
         long seq = applyMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 
-    /** 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信/手术同一口径 */
+    /**
+     * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信/手术同一口径
+     */
     private Long currentEmpId() {
         try {
             CurrentUser user = UserUtils.getCurrentUser();
@@ -1283,46 +1321,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             return user.getUsername();
         } catch (Exception e) {
             return null;
-        }
-    }
-
-    private static String textOr(String value, String fallback) {
-        return StringUtils.hasText(value) ? value : fallback;
-    }
-
-    private static LocalDateTime now() {
-        return TimeUtil.toSeconds(LocalDateTime.now());
-    }
-
-    /** 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入） */
-    /** 下界宽松解析：{@code yyyy-MM-dd} → 当天 00:00:00；带时分秒则原样使用（含） */
-    private static String normalizeFrom(String raw) {
-        Parsed p = parse(raw);
-        return p == null ? null : p.from;
-    }
-
-    /** 上界宽松解析：{@code yyyy-MM-dd} → 次日 00:00:00（不含，覆盖当天最后一秒） */
-    private static String normalizeTo(String raw) {
-        Parsed p = parse(raw);
-        return p == null ? null : p.to;
-    }
-
-    private static Parsed parse(String raw) {
-        if (!StringUtils.hasText(raw)) {
-            return null;
-        }
-        String s = raw.trim();
-        try {
-            if (s.length() == 10) {
-                LocalDate d = LocalDate.parse(s);
-                return new Parsed(d.atStartOfDay().format(FULL_TIME),
-                        d.plusDays(1).atStartOfDay().format(FULL_TIME));
-            }
-            LocalDateTime t = LocalDateTime.parse(s, FULL_TIME);
-            return new Parsed(t.format(FULL_TIME), t.format(FULL_TIME));
-        } catch (DateTimeParseException e) {
-            // 明确报格式问题，不静默忽略、也不让它变成 500
-            throw new BusinessException("时间格式不正确：" + raw + "（应为 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss）");
         }
     }
 

@@ -1,11 +1,8 @@
 package com.his.emr.dto;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-
-import java.time.LocalDateTime;
 
 /**
  * 传染病报告卡 DTO 集合。

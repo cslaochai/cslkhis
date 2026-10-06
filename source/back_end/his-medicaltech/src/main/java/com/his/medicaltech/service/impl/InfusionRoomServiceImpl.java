@@ -1,14 +1,13 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.medicaltech.service.InfusionRoomService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.medicaltech.dto.InfusionRoomDTO;
 import com.his.medicaltech.entity.BizInfusionSeat;
 import com.his.medicaltech.entity.BizOutpInfusion;
@@ -21,6 +20,7 @@ import com.his.medicaltech.mapper.BizInfusionSeatMapper;
 import com.his.medicaltech.mapper.BizOutpInfusionMapper;
 import com.his.medicaltech.mapper.BizOutpInfusionRoundMapper;
 import com.his.medicaltech.mapper.BizSkinTestMapper;
+import com.his.medicaltech.service.InfusionRoomService;
 import com.his.medicaltech.vo.InfusionRoomVO;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +46,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class InfusionRoomServiceImpl implements InfusionRoomService {
 
-    /** 皮试判读最小观察窗（分钟） */
+    /**
+     * 皮试判读最小观察窗（分钟）
+     */
     private static final long SKIN_TEST_OBSERVE_MINUTES = 15;
 
     private final BizInfusionSeatMapper seatMapper;
@@ -57,7 +59,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
 
     // 座位
 
-    /** 座位图（含占用输液单摘要） */
+    /**
+     * 座位图（含占用输液单摘要）
+     */
     public List<InfusionRoomVO.Seat> seats() {
         List<BizInfusionSeat> seats = seatMapper.selectList(new LambdaQueryWrapper<BizInfusionSeat>()
                 .orderByAsc(BizInfusionSeat::getArea).orderByAsc(BizInfusionSeat::getSeatNo));
@@ -88,7 +92,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         }).toList();
     }
 
-    /** 座位新增/修改（座位号唯一；占用中的座位不允许改状态） */
+    /**
+     * 座位新增/修改（座位号唯一；占用中的座位不允许改状态）
+     */
     @Transactional(rollbackFor = Exception.class)
     public InfusionRoomVO.Seat seatUpsert(InfusionRoomDTO.SeatUpsert dto) {
         if (dto.getSeatStatus() != null && dto.getSeatStatus() == InfusionSeatStatusEnum.OCCUPIED.getCode()) {
@@ -136,7 +142,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
 
     // 入座
 
-    /** 入座：建输液单 + 占座。needSkinTest=1 → 待皮试；否则待输注。 */
+    /**
+     * 入座：建输液单 + 占座。needSkinTest=1 → 待皮试；否则待输注。
+     */
     @Transactional(rollbackFor = Exception.class)
     public InfusionRoomVO.Infusion admit(InfusionRoomDTO.Admit dto) {
         BizInfusionSeat seat = seatMapper.selectById(dto.getSeatId());
@@ -176,7 +184,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         return flag != null && flag == YesOrNoEnum.YES.getCode();
     }
 
-    /** 患者快照（服务端重查，不信任前端）。 */
+    /**
+     * 患者快照（服务端重查，不信任前端）。
+     */
     private void fillPatientSnapshot(BizOutpInfusion inf) {
         Map<String, Object> row = infusionMapper.selectPatientSnapshot(inf.getPatientId());
         if (row == null) {
@@ -192,7 +202,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
 
     // 皮试
 
-    /** 打皮试：输液单必须处于待皮试；一张输液单一张皮试单。 */
+    /**
+     * 打皮试：输液单必须处于待皮试；一张输液单一张皮试单。
+     */
     @Transactional(rollbackFor = Exception.class)
     public InfusionRoomVO.Infusion skinTest(InfusionRoomDTO.SkinTestCreate dto) {
         BizOutpInfusion inf = mustInfusing(dto.getInfusionId());
@@ -219,7 +231,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         return toInfusionVO(inf);
     }
 
-    /** 皮试判读：观察窗 <15 分钟拒绝；阳性 → 输液单取消 + 释放座位。 */
+    /**
+     * 皮试判读：观察窗 <15 分钟拒绝；阳性 → 输液单取消 + 释放座位。
+     */
     @Transactional(rollbackFor = Exception.class)
     public InfusionRoomVO.Infusion skinTestResult(InfusionRoomDTO.SkinTestResult dto) {
         BizSkinTest st = skinTestMapper.selectById(dto.getSkinTestId());
@@ -260,7 +274,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
 
     // 输注
 
-    /** 开始输注：待输注（或待皮试且皮试阴性）才可开始；写滴速 + 开始时间。 */
+    /**
+     * 开始输注：待输注（或待皮试且皮试阴性）才可开始；写滴速 + 开始时间。
+     */
     @Transactional(rollbackFor = Exception.class)
     public InfusionRoomVO.Infusion start(InfusionRoomDTO.Start dto) {
         BizOutpInfusion inf = mustInfusing(dto.getInfusionId());
@@ -281,7 +297,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         return toInfusionVO(inf);
     }
 
-    /** 巡视：只增不改（输液中才可巡视）。 */
+    /**
+     * 巡视：只增不改（输液中才可巡视）。
+     */
     @Transactional(rollbackFor = Exception.class)
     public InfusionRoomVO.Round round(InfusionRoomDTO.Round dto) {
         BizOutpInfusion inf = mustInfusing(dto.getInfusionId());
@@ -309,7 +327,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         return vo;
     }
 
-    /** 结束输注：adverseFlag=1 时描述必填；释放座位。 */
+    /**
+     * 结束输注：adverseFlag=1 时描述必填；释放座位。
+     */
     @Transactional(rollbackFor = Exception.class)
     public InfusionRoomVO.Infusion finish(InfusionRoomDTO.Finish dto) {
         BizOutpInfusion inf = mustInfusing(dto.getInfusionId());
@@ -330,7 +350,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         return toInfusionVO(inf);
     }
 
-    /** 取消（1/2/3 态均可）：必须给原因；释放座位。 */
+    /**
+     * 取消（1/2/3 态均可）：必须给原因；释放座位。
+     */
     @Transactional(rollbackFor = Exception.class)
     public InfusionRoomVO.Infusion cancel(InfusionRoomDTO.Cancel dto) {
         BizOutpInfusion inf = mustInfusing(dto.getInfusionId());
@@ -351,7 +373,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         releaseSeat(inf);
     }
 
-    /** 释放座位（占用该座的输液单已不在进行态才释放）。 */
+    /**
+     * 释放座位（占用该座的输液单已不在进行态才释放）。
+     */
     private void releaseSeat(BizOutpInfusion inf) {
         if (inf.getSeatId() == null) {
             return;
@@ -377,7 +401,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
 
     // 查询
 
-    /** 今日输液单分页（含皮试信息联查）。 */
+    /**
+     * 今日输液单分页（含皮试信息联查）。
+     */
     public PageResult<InfusionRoomVO.Infusion> listPage(InfusionRoomDTO.InfusionQuery query) {
         LambdaQueryWrapper<BizOutpInfusion> wrapper = new LambdaQueryWrapper<>();
         wrapper.apply("DATE(create_time) = {0}", LocalDate.now())
@@ -393,7 +419,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), vos);
     }
 
-    /** 巡视记录（时间升序）。 */
+    /**
+     * 巡视记录（时间升序）。
+     */
     public List<InfusionRoomVO.Round> rounds(Long infusionId) {
         return roundMapper.selectList(new LambdaQueryWrapper<BizOutpInfusionRound>()
                         .eq(BizOutpInfusionRound::getInfusionId, infusionId)
@@ -411,7 +439,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
                 }).toList();
     }
 
-    /** 今日看板：座位图 + 各状态计数。 */
+    /**
+     * 今日看板：座位图 + 各状态计数。
+     */
     public InfusionRoomVO.Board board() {
         InfusionRoomVO.Board board = new InfusionRoomVO.Board();
         board.setSeats(seats());
@@ -469,7 +499,9 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         return vo;
     }
 
-    /** 单号：前缀 + yyyyMMdd + 5 位 Redis 流水（与挂号单号同一套机制）。 */
+    /**
+     * 单号：前缀 + yyyyMMdd + 5 位 Redis 流水（与挂号单号同一套机制）。
+     */
     private String nextNo(String prefix) {
         return prefix + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
                 + String.format("%05d", redisSequenceService.next("INFUSION_" + prefix));

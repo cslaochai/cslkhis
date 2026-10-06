@@ -1,11 +1,10 @@
 package com.his.charge.mapper;
 
-import com.his.charge.entity.BizArrearsPolicy;
-import com.his.charge.service.InpatientAccountService;
-import com.his.charge.vo.ArrearsPatientVO;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.charge.entity.BizArrearsPolicy;
+import com.his.charge.vo.ArrearsPatientVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

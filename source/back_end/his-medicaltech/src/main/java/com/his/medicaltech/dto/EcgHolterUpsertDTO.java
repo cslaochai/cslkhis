@@ -17,61 +17,97 @@ import java.time.LocalDateTime;
 @Data
 public class EcgHolterUpsertDTO {
 
-    /** 检查记录ID */
+    /**
+     * 检查记录ID
+     */
     @NotNull(message = "缺少检查记录")
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
-    /** 开始佩戴时间 */
+    /**
+     * 开始佩戴时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime wearStartTime;
 
-    /** 结束佩戴时间 */
+    /**
+     * 结束佩戴时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime wearEndTime;
 
-    /** 总心搏数 */
+    /**
+     * 总心搏数
+     */
     private Integer totalBeats;
 
-    /** 平均心率（次/分） */
+    /**
+     * 平均心率（次/分）
+     */
     private Integer avgHr;
 
-    /** 最快心率（次/分） */
+    /**
+     * 最快心率（次/分）
+     */
     private Integer maxHr;
 
-    /** 最快心率时刻（HH:mm） */
+    /**
+     * 最快心率时刻（HH:mm）
+     */
     private String maxHrTime;
 
-    /** 最慢心率（次/分） */
+    /**
+     * 最慢心率（次/分）
+     */
     private Integer minHr;
 
-    /** 最慢心率时刻（HH:mm） */
+    /**
+     * 最慢心率时刻（HH:mm）
+     */
     private String minHrTime;
 
-    /** 是否检出房颤（0-否 1-是） */
+    /**
+     * 是否检出房颤（0-否 1-是）
+     */
     private Integer afibFlag;
 
-    /** 房颤心搏数 */
+    /**
+     * 房颤心搏数
+     */
     private Integer afibBeats;
 
-    /** 室上性早搏总数 */
+    /**
+     * 室上性早搏总数
+     */
     private Integer svcCount;
 
-    /** 室性早搏总数 */
+    /**
+     * 室性早搏总数
+     */
     private Integer pvcCount;
 
-    /** 室性心动过速阵数 */
+    /**
+     * 室性心动过速阵数
+     */
     private Integer vtCount;
 
-    /** 停搏（长间歇）次数 */
+    /**
+     * 停搏（长间歇）次数
+     */
     private Integer pauseCount;
 
-    /** 最长停搏时长（ms） */
+    /**
+     * 最长停搏时长（ms）
+     */
     private Integer longestPauseMs;
 
-    /** ST段异常发作阵数 */
+    /**
+     * ST段异常发作阵数
+     */
     private Integer stEpisodeCount;
 
-    /** 24小时逐时平均心率（JSON 数组字符串，下标 0~23 = 小时） */
+    /**
+     * 24小时逐时平均心率（JSON 数组字符串，下标 0~23 = 小时）
+     */
     private String hourlyHrJson;
 }

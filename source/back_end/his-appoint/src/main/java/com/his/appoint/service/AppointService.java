@@ -1,11 +1,7 @@
 package com.his.appoint.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.his.appoint.dto.AppointBoardQueryDTO;
-import com.his.appoint.dto.AppointCancelDTO;
-import com.his.appoint.dto.AppointQueryDTO;
-import com.his.appoint.dto.AppointUpsertDTO;
-import com.his.appoint.dto.RevisitFeePreviewDTO;
+import com.his.appoint.dto.*;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.vo.AppointStatusCountVO;
 import com.his.appoint.vo.BizAppointInfoListVO;

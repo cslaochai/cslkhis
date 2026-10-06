@@ -1,24 +1,23 @@
 package com.his.ai.service.impl;
 
-import com.his.common.enums.SysGenderEnum;
-
-import com.his.ai.service.LabInterpretCapability;
-import com.his.ai.service.AiExecutionService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.LabInterpretExecuteDTO;
 import com.his.ai.dto.LabInterpretLlmOutputDTO;
+import com.his.ai.service.AiExecutionService;
+import com.his.ai.service.LabInterpretCapability;
 import com.his.ai.vo.LabInterpretResultVO;
 import com.his.ai.vo.LabItemOverviewVO;
 import com.his.ai.vo.LabTrendVO;
+import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.medicaltech.support.LabCriticalValueRules;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.mapper.BizLabResultMapper;
 import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
 import com.his.medicaltech.support.LabAbnormalJudge;
+import com.his.medicaltech.support.LabCriticalValueRules;
 import com.his.medicaltech.support.LabReferenceRangeParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -510,8 +509,8 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
     }
 
     private Optional<LabInterpretLlmOutputDTO> callModel(BizLaboratoryRecord record,
-                                                      List<LabItemOverviewVO> items,
-                                                      List<LabTrendVO> trends) {
+                                                         List<LabItemOverviewVO> items,
+                                                         List<LabTrendVO> trends) {
         Map<String, Object> variables = new HashMap<>();
         variables.put("gender", SysGenderEnum.getText(record.getGender()));
         variables.put("age", record.getAge() == null ? "（未填写）" : record.getAge() + "岁");

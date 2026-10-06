@@ -1,6 +1,5 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.medicaltech.service.BloodService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
@@ -10,17 +9,11 @@ import com.his.medicaltech.dto.BloodDTO;
 import com.his.medicaltech.entity.BizBloodCrossmatch;
 import com.his.medicaltech.entity.BizBloodInventory;
 import com.his.medicaltech.entity.BizBloodStockLog;
-import com.his.medicaltech.enums.BloodInventoryStatusEnum;
-import com.his.medicaltech.enums.BloodSourceTypeEnum;
-import com.his.medicaltech.enums.BloodStockLogBizTypeEnum;
-import com.his.medicaltech.enums.BloodTypeEnum;
-import com.his.medicaltech.enums.CrossmatchMethodEnum;
-import com.his.medicaltech.enums.CrossmatchOrderStatusEnum;
-import com.his.medicaltech.enums.CrossmatchResultEnum;
-import com.his.medicaltech.enums.RhTypeEnum;
+import com.his.medicaltech.enums.*;
 import com.his.medicaltech.mapper.BizBloodCrossmatchMapper;
 import com.his.medicaltech.mapper.BizBloodInventoryMapper;
 import com.his.medicaltech.mapper.BizBloodStockLogMapper;
+import com.his.medicaltech.service.BloodService;
 import com.his.medicaltech.vo.BloodVO;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
@@ -409,7 +402,9 @@ public class BloodServiceImpl implements BloodService {
         logMapper.insert(l);
     }
 
-    /** 配血结论：服务端生成 ABO/Rh 核对说明，操作人补充内容拼在后面 */
+    /**
+     * 配血结论：服务端生成 ABO/Rh 核对说明，操作人补充内容拼在后面
+     */
     private String buildConclusion(BizBloodCrossmatch c, String extra) {
         String patientT = dictText.getDicDataLabel(DICT_BLOOD_TYPE, c.getPatientBloodType());
         String bagT = dictText.getDicDataLabel(DICT_BLOOD_TYPE, c.getBagBloodType());
@@ -482,7 +477,9 @@ public class BloodServiceImpl implements BloodService {
         return s.length() > 480 ? s.substring(0, 480) : s;
     }
 
-    /** null 安全 trim：查询条件的 value 参数是急切求值的，直接 x.trim() 会在 x 为 null 时 NPE */
+    /**
+     * null 安全 trim：查询条件的 value 参数是急切求值的，直接 x.trim() 会在 x 为 null 时 NPE
+     */
     private String tr(String s) {
         return s == null ? null : s.trim();
     }

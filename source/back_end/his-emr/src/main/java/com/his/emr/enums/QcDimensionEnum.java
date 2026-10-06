@@ -55,18 +55,6 @@ public enum QcDimensionEnum {
         return null;
     }
 
-    public int getCode() {
-        return code;
-    }
-
-    public String getText() {
-        return text;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
     /**
      * 展示用码值 → 文案。null 或不在枚举内（脏数据）一律返回空串，不回落到合法文案、也不暴露「未知(n)」。
      */
@@ -81,5 +69,17 @@ public enum QcDimensionEnum {
     public static String labelOrUnknown(Integer code) {
         QcDimensionEnum item = code == null ? null : ofCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.text;
+    }
+
+    public int getCode() {
+        return code;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public String getDescription() {
+        return description;
     }
 }

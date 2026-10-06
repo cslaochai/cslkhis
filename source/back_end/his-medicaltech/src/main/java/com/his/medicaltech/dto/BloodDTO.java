@@ -14,14 +14,20 @@ import java.time.LocalDate;
  */
 public class BloodDTO {
 
-    /** 血袋入库登记 */
+    /**
+     * 血袋入库登记
+     */
     @Data
     public static class Inbound {
-        /** 血袋号 */
+        /**
+         * 血袋号
+         */
         @NotBlank(message = "血袋号不能为空")
         private String bagNo;
 
-        /** 血型 */
+        /**
+         * 血型
+         */
         @NotNull(message = "血型不能为空")
         private Integer bloodType;
 
@@ -48,17 +54,23 @@ public class BloodDTO {
 
         private String storageLoc;
 
-        /** 备注 */
+        /**
+         * 备注
+         */
         private String remark;
     }
 
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class InventoryQuery extends PageParam {
-        /** 血袋号 */
+        /**
+         * 血袋号
+         */
         private String bagNo;
 
-        /** 血型 */
+        /**
+         * 血型
+         */
         private Integer bloodType;
 
         private Integer rhType;
@@ -67,40 +79,56 @@ public class BloodDTO {
 
         private Integer status;
 
-        /** 效期预警：只看 N 天内到期（含已过期） */
+        /**
+         * 效期预警：只看 N 天内到期（含已过期）
+         */
         private Integer expireWithinDays;
 
         private String storageLoc;
     }
 
-    /** 预留 / 取消预留 / 发血 / 报废 / 退回的通用袋操作 */
+    /**
+     * 预留 / 取消预留 / 发血 / 报废 / 退回的通用袋操作
+     */
     @Data
     public static class BagAction {
         @NotNull(message = "血袋ID不能为空")
         private Long bagId;
 
-        /** 发血必填：用血申请单号 */
+        /**
+         * 发血必填：用血申请单号
+         */
         private String applyNo;
 
-        /** 报废 / 退回必填 */
+        /**
+         * 报废 / 退回必填
+         */
         private String reason;
     }
 
-    /** 新建配血单（待配血） */
+    /**
+     * 新建配血单（待配血）
+     */
     @Data
     public static class CrossmatchCreate {
         private Long id;
 
         private String applyNo;
 
-        /** 患者ID */
+        /**
+         * 患者ID
+         */
         @NotNull(message = "患者ID不能为空")
         private Long patientId;
 
-        /** 患者编号 */
+        /**
+         * 患者编号
+         */
         private String patientNo;
 
-        /** 患者姓名 */
+        /**
+         * 患者姓名
+         */
         @NotBlank(message = "患者姓名不能为空")
         private String patientName;
 
@@ -109,7 +137,9 @@ public class BloodDTO {
 
         private Integer patientRhType;
 
-        /** 血袋号 */
+        /**
+         * 血袋号
+         */
         @NotBlank(message = "血袋号不能为空")
         private String bagNo;
     }
@@ -119,10 +149,14 @@ public class BloodDTO {
     public static class CrossmatchQuery extends PageParam {
         private String matchNo;
 
-        /** 血袋号 */
+        /**
+         * 血袋号
+         */
         private String bagNo;
 
-        /** 患者姓名 */
+        /**
+         * 患者姓名
+         */
         private String patientName;
 
         private Integer status;
@@ -130,7 +164,9 @@ public class BloodDTO {
         private Integer result;
     }
 
-    /** 执行配血 */
+    /**
+     * 执行配血
+     */
     @Data
     public static class CrossmatchExecute {
         @NotNull(message = "配血单ID不能为空")
@@ -139,10 +175,14 @@ public class BloodDTO {
         @NotNull(message = "配血结果不能为空")
         private Integer result;
 
-        /** 配血方法（缺省凝聚胺法） */
+        /**
+         * 配血方法（缺省凝聚胺法）
+         */
         private Integer method;
 
-        /** 结论 */
+        /**
+         * 结论
+         */
         private String conclusion;
     }
 
@@ -152,7 +192,9 @@ public class BloodDTO {
         private Long matchId;
     }
 
-    /** 作废配血单 */
+    /**
+     * 作废配血单
+     */
     @Data
     public static class CrossmatchVoid {
         @NotNull(message = "配血单ID不能为空")
@@ -162,10 +204,14 @@ public class BloodDTO {
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class LogQuery extends PageParam {
-        /** 血袋号 */
+        /**
+         * 血袋号
+         */
         private String bagNo;
 
-        /** 业务类型 */
+        /**
+         * 业务类型
+         */
         private Integer bizType;
 
         private String applyNo;

@@ -5,47 +5,28 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.exception.BusinessException;
 import com.his.common.dto.SignCommandDTO;
-import com.his.common.enums.SignBizType;
-import com.his.common.enums.SignScene;
+import com.his.common.enums.SignBizTypeEnum;
+import com.his.common.enums.SignSceneEnum;
+import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.vo.SignatureVO;
-import com.his.medicaltech.dto.EcgAuditDTO;
-import com.his.medicaltech.dto.EcgCollectWaveDTO;
-import com.his.medicaltech.dto.EcgHolterUpsertDTO;
-import com.his.medicaltech.dto.EcgMeasureUpsertDTO;
-import com.his.medicaltech.dto.EcgQueryPageDTO;
-import com.his.medicaltech.dto.EcgReportUpsertDTO;
-import com.his.medicaltech.dto.EcgSimulateDTO;
-import com.his.medicaltech.dto.EcgTemplateUpsertDTO;
-import com.his.medicaltech.entity.BizEcgHolter;
-import com.his.medicaltech.entity.BizEcgMeasure;
-import com.his.medicaltech.entity.BizEcgTemplate;
-import com.his.medicaltech.entity.BizEcgWaveform;
-import com.his.medicaltech.mapper.BizEcgHolterMapper;
-import com.his.medicaltech.mapper.BizEcgMeasureMapper;
-import com.his.medicaltech.mapper.BizEcgTemplateMapper;
-import com.his.medicaltech.mapper.BizEcgWaveformMapper;
-import com.his.medicaltech.mapper.EcgMapper;
+import com.his.medicaltech.dto.*;
+import com.his.medicaltech.entity.*;
+import com.his.medicaltech.enums.InsRecordStatusEnum;
+import com.his.medicaltech.enums.ReportStatusEnum;
+import com.his.medicaltech.enums.ReportTypeEnum;
+import com.his.medicaltech.mapper.*;
 import com.his.medicaltech.service.EcgService;
 import com.his.medicaltech.support.EcgWaveSimulator;
 import com.his.medicaltech.vo.EcgDetailVO;
 import com.his.medicaltech.vo.EcgListVO;
 import com.his.medicaltech.vo.EcgTemplateVO;
-import com.his.medicaltech.entity.BizInspectionRecord;
-import com.his.medicaltech.entity.BizReport;
-import com.his.medicaltech.enums.InsRecordStatusEnum;
-import com.his.medicaltech.enums.ReportStatusEnum;
-import com.his.medicaltech.enums.ReportTypeEnum;
-import com.his.medicaltech.mapper.BizInspectionRecordMapper;
-import com.his.medicaltech.mapper.BizReportMapper;
-import com.his.medicaltech.mapper.RadioReportMapper;
-import com.his.system.service.DictCacheService;
-import com.his.system.utils.UserUtils;
-import com.his.system.service.SysAuditLogService;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.service.DictCacheService;
+import com.his.system.service.SysAuditLogService;
 import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -74,7 +55,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class EcgServiceImpl implements EcgService {
-    /** 分页每页条数上限（技术阈值，防止前端传入超大值把库拖垮；DTO 迁 PageParam 后在此夹取） */
+    /**
+     * 分页每页条数上限（技术阈值，防止前端传入超大值把库拖垮；DTO 迁 PageParam 后在此夹取）
+     */
     private static final int MAX_PAGE_SIZE = 200;
 
 
@@ -91,10 +74,26 @@ public class EcgServiceImpl implements EcgService {
     private final BizEcgTemplateMapper templateMapper;
     private final EcgWaveSimulator waveSimulator;
 
-    /** 复用放射模块的 item_type 查询（同一张检查项目字典，同一模块内共享 bean） */
+    /**
+     * 复用放射模块的 item_type 查询（同一张检查项目字典，同一模块内共享 bean）
+     */
     private final RadioReportMapper radioReportMapper;
 
     // 查询
+
+    private static String trim(String s) {
+        return s == null ? null : s.trim();
+    }
+
+    private static String cut(String s, int max) {
+        if (s == null) {
+            return null;
+        }
+        String v = s.trim();
+        return v.length() <= max ? v : v.substring(0, max);
+    }
+
+    // 采集
 
     @Override
     public PageResult<EcgListVO> listPage(EcgQueryPageDTO query) {
@@ -117,8 +116,6 @@ public class EcgServiceImpl implements EcgService {
         BizEcgHolter holter = row.getHolterId() == null ? null : holterMapper.selectById(row.getHolterId());
         return toDetail(row, wave, measure, holter, report);
     }
-
-    // 采集
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -202,6 +199,8 @@ public class EcgServiceImpl implements EcgService {
                 true, null);
         return getDetailByRecordId(record.getId());
     }
+
+    // 报告
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -291,8 +290,6 @@ public class EcgServiceImpl implements EcgService {
         return getDetailByRecordId(dto.getRecordId());
     }
 
-    // 报告
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public EcgDetailVO saveDraft(EcgReportUpsertDTO dto) {
@@ -347,7 +344,7 @@ public class EcgServiceImpl implements EcgService {
         if (record.getReportSignId() != null) {
             throw new BusinessException("本报告已有报告医师签名，不能重复提交；如需修改请由审核医师退回后重写");
         }
-        SignatureVO sign = signReport(record, SignScene.REPORT_ISSUE);
+        SignatureVO sign = signReport(record, SignSceneEnum.REPORT_ISSUE);
         record.setReportSignId(sign.getId());
         record.setReportSignedTime(sign.getSignedTime());
 
@@ -386,7 +383,7 @@ public class EcgServiceImpl implements EcgService {
         }
 
         // 先签名、后改状态：签名层的准入规则要求记录仍处于「已出结果未审核」
-        SignatureVO sign = signReport(record, SignScene.REPORT_AUDIT);
+        SignatureVO sign = signReport(record, SignSceneEnum.REPORT_AUDIT);
         record.setAuditSignId(sign.getId());
         record.setAuditSignedTime(sign.getSignedTime());
         record.setAuditBy(UserUtils.getCurrentEmployeeName());
@@ -411,6 +408,8 @@ public class EcgServiceImpl implements EcgService {
                 true, null);
         return getDetailByRecordId(record.getId());
     }
+
+    // 内部
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -483,9 +482,9 @@ public class EcgServiceImpl implements EcgService {
         return getDetailByRecordId(record.getId());
     }
 
-    // 内部
-
-    /** 取工作台行并强制它是心电项目（item_type=3），这是分岗的另一半闸门 */
+    /**
+     * 取工作台行并强制它是心电项目（item_type=3），这是分岗的另一半闸门
+     */
     private EcgListVO loadWorkbenchRow(Long recordId) {
         if (recordId == null) {
             throw new BusinessException("缺少检查记录ID");
@@ -509,7 +508,9 @@ public class EcgServiceImpl implements EcgService {
         return record;
     }
 
-    /** 可采集状态：2已签到/3检查中可采；4已出结果可重采（覆盖）；5/6 报告已进流程不许动波形 */
+    /**
+     * 可采集状态：2已签到/3检查中可采；4已出结果可重采（覆盖）；5/6 报告已进流程不许动波形
+     */
     private BizInspectionRecord loadCollectableRecord(Long recordId) {
         BizInspectionRecord record = loadEcgRecord(recordId);
         Integer st = record.getRecordStatus();
@@ -587,13 +588,13 @@ public class EcgServiceImpl implements EcgService {
         report.setIsCritical(dto.getIsCritical() == null ? 0 : dto.getIsCritical());
     }
 
-    private SignatureVO signReport(BizInspectionRecord record, SignScene scene) {
+    private SignatureVO signReport(BizInspectionRecord record, SignSceneEnum scene) {
         Long signerId = UserUtils.getCurrentEmployeeId();
         if (signerId == null) {
             throw new BusinessException("签名失败：取不到当前登录用户，无法确定签名人");
         }
         SignCommandDTO cmd = new SignCommandDTO();
-        cmd.setBizType(SignBizType.INSPECTION_REPORT.getCode());
+        cmd.setBizType(SignBizTypeEnum.INSPECTION_REPORT.getCode());
         cmd.setBizId(record.getId());
         cmd.setSignScene(scene.getCode());
         cmd.setSignerId(signerId);
@@ -792,17 +793,5 @@ public class EcgServiceImpl implements EcgService {
             vo.setTemplateName(e.getTemplateCode());
         }
         return vo;
-    }
-
-    private static String trim(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static String cut(String s, int max) {
-        if (s == null) {
-            return null;
-        }
-        String v = s.trim();
-        return v.length() <= max ? v : v.substring(0, max);
     }
 }

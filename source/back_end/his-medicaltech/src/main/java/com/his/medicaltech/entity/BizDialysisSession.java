@@ -25,94 +25,150 @@ import java.time.LocalDateTime;
 @TableName("biz_dialysis_session")
 public class BizDialysisSession extends BaseEntity implements Serializable {
 
-    /** 透析单号（HD + yyyyMMdd + 4 位） */
+    /**
+     * 透析单号（HD + yyyyMMdd + 4 位）
+     */
     private String sessionNo;
 
-    /** 透析日期 */
+    /**
+     * 透析日期
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dialysisDate;
 
-    /** 时段（1-上午 2-下午 3-夜间） */
+    /**
+     * 时段（1-上午 2-下午 3-夜间）
+     */
     private Integer timeSlot;
 
-    /** 机位ID */
+    /**
+     * 机位ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long machineId;
 
-    /** 机位号（快照） */
+    /**
+     * 机位号（快照）
+     */
     private String machineNo;
 
-    /** 透析档案ID */
+    /**
+     * 透析档案ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long archiveId;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者编号（快照） */
+    /**
+     * 患者编号（快照）
+     */
     private String patientNo;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
-    /** 使用的透析处方ID */
+    /**
+     * 使用的透析处方ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long prescriptionId;
 
-    /** 干体重 kg */
+    /**
+     * 干体重 kg
+     */
     private BigDecimal dryWeight;
 
-    /** 处方透析时长分钟（快照） */
+    /**
+     * 处方透析时长分钟（快照）
+     */
     private Integer durationMin;
 
-    /** 处方血流量（快照） */
+    /**
+     * 处方血流量（快照）
+     */
     private Integer bloodFlow;
 
-    /** 透析器（快照） */
+    /**
+     * 透析器（快照）
+     */
     private Integer dialyzer;
 
-    /** 抗凝方式（快照） */
+    /**
+     * 抗凝方式（快照）
+     */
     private Integer anticoagulant;
 
-    /** 状态（1-已排班 2-透析中 3-已完成 4-已取消） */
+    /**
+     * 状态（1-已排班 2-透析中 3-已完成 4-已取消）
+     */
     private Integer status;
 
-    /** 透前体重 kg（上机必填） */
+    /**
+     * 透前体重 kg（上机必填）
+     */
     private BigDecimal beforeWeight;
 
-    /** 通路评估（上机必填） */
+    /**
+     * 通路评估（上机必填）
+     */
     private String accessCheck;
 
-    /** 上机时间 */
+    /**
+     * 上机时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime onTime;
 
-    /** 上机人 */
+    /**
+     * 上机人
+     */
     private String onBy;
 
-    /** 透后体重 kg */
+    /**
+     * 透后体重 kg
+     */
     private BigDecimal afterWeight;
 
-    /** 实际透析时长分钟 */
+    /**
+     * 实际透析时长分钟
+     */
     private Integer actualDurationMin;
 
-    /** 实际超滤量 ml =（透前-透后）×1000，服务端回算 */
+    /**
+     * 实际超滤量 ml =（透前-透后）×1000，服务端回算
+     */
     private BigDecimal ultraMl;
 
-    /** 下机时间 */
+    /**
+     * 下机时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime offTime;
 
-    /** 下机人 */
+    /**
+     * 下机人
+     */
     private String offBy;
 
-    /** 不良反应类型（，空=无） */
+    /**
+     * 不良反应类型（，空=无）
+     */
     private Integer adverseType;
 
-    /** 不良反应处置描述 */
+    /**
+     * 不良反应处置描述
+     */
     private String adverseDesc;
 
-    /** 取消原因 */
+    /**
+     * 取消原因
+     */
     private String cancelReason;
 }

@@ -8,7 +8,9 @@ import org.apache.ibatis.annotations.Select;
 
 import java.util.Map;
 
-/** 门诊输液单 Mapper */
+/**
+ * 门诊输液单 Mapper
+ */
 @Mapper
 public interface BizOutpInfusionMapper extends BaseMapper<BizOutpInfusion> {
 

@@ -10,13 +10,19 @@ import lombok.Getter;
 @Getter
 public enum EvidenceVerdictEnum {
 
-    /** 证据明确支持规则怀疑 */
+    /**
+     * 证据明确支持规则怀疑
+     */
     SUPPORTED(1, "证据支持"),
 
-    /** 证据明确反驳规则怀疑 */
+    /**
+     * 证据明确反驳规则怀疑
+     */
     REFUTED(2, "证据反驳"),
 
-    /** 证据不足以判定 */
+    /**
+     * 证据不足以判定
+     */
     INSUFFICIENT(3, "证据不足");
 
     private final Integer code;
@@ -39,7 +45,9 @@ public enum EvidenceVerdictEnum {
         return null;
     }
 
-    /** 码值是否合法（写入侧校验用；null 不合法） */
+    /**
+     * 码值是否合法（写入侧校验用；null 不合法）
+     */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
     }
@@ -64,7 +72,9 @@ public enum EvidenceVerdictEnum {
         return e == null ? null : e.label;
     }
 
-    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
+    /**
+     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
+     */
     public static String labelOrUnknown(Integer code) {
         EvidenceVerdictEnum item = code == null ? null : fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;

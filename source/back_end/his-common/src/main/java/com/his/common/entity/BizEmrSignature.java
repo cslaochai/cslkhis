@@ -2,6 +2,7 @@ package com.his.common.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.his.common.base.BaseEntity;
+import com.his.common.enums.SignBizTypeEnum;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -28,7 +29,7 @@ public class BizEmrSignature extends BaseEntity {
     private String signNo;
 
     /**
-     * 签名对象类型（码值权威见 {@link com.his.common.enums.SignBizType}，1~9）
+     * 签名对象类型（码值权威见 {@link SignBizTypeEnum}，1~9）
      */
     private Integer bizType;
 

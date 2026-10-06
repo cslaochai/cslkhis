@@ -34,6 +34,7 @@ public enum AdmitStatusEnum {
         AdmitStatusEnum item = code == null ? null : fromCode(code);
         return item == null ? "" : item.label;
     }
+
     /**
      * 异常 / 审计 / 合规用码值 → 文案。null 或不在枚举内返回「未知(n)」，
      * 用于业务异常消息或审计日志，保留原始码值以便排查脏数据。

@@ -75,13 +75,17 @@ public enum AuditResultStateEnum {
         return state == null ? "" : state.label;
     }
 
-    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
+    /**
+     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
+     */
     public static String labelOrUnknown(Integer code) {
         AuditResultStateEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
-    /** @deprecated 用 {@link #fromCode(Integer)}（模板方法名） */
+    /**
+     * @deprecated 用 {@link #fromCode(Integer)}（模板方法名）
+     */
     @Deprecated
     public static AuditResultStateEnum of(Integer code) {
         return fromCode(code);

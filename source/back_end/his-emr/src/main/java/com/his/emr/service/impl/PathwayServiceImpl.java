@@ -3,8 +3,8 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.emr.dto.*;
 import com.his.emr.entity.BizPathway;
 import com.his.emr.entity.BizPathwayEnroll;
@@ -55,13 +55,11 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class PathwayServiceImpl implements PathwayService {
-    private final DeptScopeProvider deptScopeProvider;
-
     /**
      * 原因类文本统一截 200（列宽 255，留余量，超长会把业务失败升级成 Data too long 500）
      */
     private static final int REASON_MAX = 200;
-
+    private final DeptScopeProvider deptScopeProvider;
     private final BizPathwayMapper pathwayMapper;
     private final BizPathwayStepMapper stepMapper;
     private final BizPathwayEnrollMapper enrollMapper;

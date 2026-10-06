@@ -1,17 +1,9 @@
 package com.his.medicaltech.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.medicaltech.dto.TransfusionApplyQueryPageDTO;
-import com.his.medicaltech.dto.TransfusionApplyUpsertDTO;
-import com.his.medicaltech.dto.TransfusionApproveDTO;
-import com.his.medicaltech.dto.TransfusionCancelDTO;
-import com.his.medicaltech.dto.TransfusionCrossmatchDTO;
-import com.his.medicaltech.dto.TransfusionFinishDTO;
-import com.his.medicaltech.dto.TransfusionIssueDTO;
-import com.his.medicaltech.dto.TransfusionReactionDTO;
-import com.his.medicaltech.dto.TransfusionStartDTO;
-import com.his.patient.vo.CodeOptionVO;
+import com.his.medicaltech.dto.*;
 import com.his.medicaltech.vo.TransfusionApplyVO;
+import com.his.patient.vo.CodeOptionVO;
 
 import java.util.List;
 
@@ -42,25 +34,39 @@ import java.util.List;
  */
 public interface TransfusionApplyService {
 
-    /** 输血申请分页 */
+    /**
+     * 输血申请分页
+     */
     IPage<TransfusionApplyVO> listPage(TransfusionApplyQueryPageDTO query);
 
-    /** 输血申请详情（含血袋明细） */
+    /**
+     * 输血申请详情（含血袋明细）
+     */
     TransfusionApplyVO getDetailById(Long applyId);
 
-    /** 某次住院的全部输血申请（按申请时间升序 = 这条链的发生顺序） */
+    /**
+     * 某次住院的全部输血申请（按申请时间升序 = 这条链的发生顺序）
+     */
     List<TransfusionApplyVO> listByAdmission(Long admissionId);
 
-    /** 发起 / 修改输血申请（返回输血申请单号；修改仅允许「待配血」） */
+    /**
+     * 发起 / 修改输血申请（返回输血申请单号；修改仅允许「待配血」）
+     */
     String save(TransfusionApplyUpsertDTO dto);
 
-    /** 用血分级审批（通过/驳回；驳回必填原因；急诊补审同样走这里） */
+    /**
+     * 用血分级审批（通过/驳回；驳回必填原因；急诊补审同样走这里）
+     */
     String approve(TransfusionApproveDTO dto);
 
-    /** 某单的审批流水（时间正序 = 逐级链的自然顺序） */
+    /**
+     * 某单的审批流水（时间正序 = 逐级链的自然顺序）
+     */
     List<TransfusionApplyVO.ApproveRecord> approveListByApply(Long applyId);
 
-    /** 审批统计（按状态 + 按级别） */
+    /**
+     * 审批统计（按状态 + 按级别）
+     */
     TransfusionApplyVO.ApproveStats approveStats();
 
     /**
@@ -75,30 +81,48 @@ public interface TransfusionApplyService {
      */
     String crossmatch(TransfusionCrossmatchDTO dto);
 
-    /** 发血（已配血且全部相合 → 已发血） */
+    /**
+     * 发血（已配血且全部相合 → 已发血）
+     */
     void issue(TransfusionIssueDTO dto);
 
-    /** 开始输注（含双人核对；已发血 → 输注中） */
+    /**
+     * 开始输注（含双人核对；已发血 → 输注中）
+     */
     void startInfusion(TransfusionStartDTO dto);
 
-    /** 完成（输注中 → 已完成；回写输血记录病历 + 首页 is_transfusion=1） */
+    /**
+     * 完成（输注中 → 已完成；回写输血记录病历 + 首页 is_transfusion=1）
+     */
     void finish(TransfusionFinishDTO dto);
 
-    /** 输血反应上报（仅「已完成」且尚未上报；只置 has_reaction，不回改历史状态） */
+    /**
+     * 输血反应上报（仅「已完成」且尚未上报；只置 has_reaction，不回改历史状态）
+     */
     void reportReaction(TransfusionReactionDTO dto);
 
-    /** 取消（仅待配血 / 已配血 / 已发血 → 已取消） */
+    /**
+     * 取消（仅待配血 / 已配血 / 已发血 → 已取消）
+     */
     void cancel(TransfusionCancelDTO dto);
 
-    /** 未完成输血数（工作台角标） */
+    /**
+     * 未完成输血数（工作台角标）
+     */
     long countUnfinished(Long admissionId);
 
-    /** 血液品种字典（前端渲染下拉） */
+    /**
+     * 血液品种字典（前端渲染下拉）
+     */
     List<CodeOptionVO> componentOptions();
 
-    /** 输血前核对要点字典（前端渲染勾选框） */
+    /**
+     * 输血前核对要点字典（前端渲染勾选框）
+     */
     List<TransfusionApplyVO.CheckItem> checkItems();
 
-    /** 输血反应类型字典（受控字典，前端只能选不能填） */
+    /**
+     * 输血反应类型字典（受控字典，前端只能选不能填）
+     */
     List<String> reactionTypes();
 }

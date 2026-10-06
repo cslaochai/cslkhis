@@ -11,22 +11,34 @@ import java.time.LocalDate;
 @Data
 public class OverviewDutyDayVO {
 
-    /** 值班日期（夜班以开始日为准） */
+    /**
+     * 值班日期（夜班以开始日为准）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dutyDate;
 
-    /** 班次：1-白班 2-夜班 */
+    /**
+     * 班次：1-白班 2-夜班
+     */
     private Integer shiftType;
 
-    /** 班次文案 */
+    /**
+     * 班次文案
+     */
     private String shiftTypeText;
 
-    /** 是否排到（1-有 0-漏排） */
+    /**
+     * 是否排到（1-有 0-漏排）
+     */
     private Integer found;
 
-    /** 实际值班人（换班后为准） */
+    /**
+     * 实际值班人（换班后为准）
+     */
     private String actualEmpName;
 
-    /** 漏排原因（found=0 时给出） */
+    /**
+     * 漏排原因（found=0 时给出）
+     */
     private String emptyReason;
 }

@@ -11,7 +11,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class RadioReportQueryPageDTO extends PageParam {
 
-    /** 关键字：患者姓名 / 患者号 / 记录号 / 检查项目名 */
+    /**
+     * 关键字：患者姓名 / 患者号 / 记录号 / 检查项目名
+     */
     private String keyword;
 
     /**
@@ -20,15 +22,23 @@ public class RadioReportQueryPageDTO extends PageParam {
      */
     private Integer reportStatus;
 
-    /** 只看还没人写报告的检查（report_id IS NULL） */
+    /**
+     * 只看还没人写报告的检查（report_id IS NULL）
+     */
     private Boolean onlyUnwritten;
 
-    /** 阴阳性（字典 his_positive_flag） */
+    /**
+     * 阴阳性（字典 his_positive_flag）
+     */
     private Integer positiveFlag;
 
-    /** 起始日期（yyyy-MM-dd，按检查记录创建时间） */
+    /**
+     * 起始日期（yyyy-MM-dd，按检查记录创建时间）
+     */
     private String startDate;
 
-    /** 截止日期（yyyy-MM-dd；服务端补 23:59:59，不补会把当天全部时点滤掉） */
+    /**
+     * 截止日期（yyyy-MM-dd；服务端补 23:59:59，不补会把当天全部时点滤掉）
+     */
     private String endDate;
 }

@@ -5,34 +5,30 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.support.EmpTitleCode;
-import com.his.common.exception.BusinessException;
-
 import com.his.common.enums.SysGenderEnum;
+import com.his.common.exception.BusinessException;
+import com.his.common.support.EmpTitleCode;
 import com.his.medicaltech.dto.CriticalValueHandleDTO;
 import com.his.medicaltech.dto.CriticalValueQueryPageDTO;
 import com.his.medicaltech.dto.CriticalValueReceiveDTO;
-import com.his.medicaltech.enums.CriticalValueStatusEnum;
-import com.his.medicaltech.enums.NotifyStatusEnum;
-import com.his.system.enums.BizTypeEnum;
 import com.his.medicaltech.entity.BizCriticalValue;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
+import com.his.medicaltech.enums.CriticalTypeEnum;
+import com.his.medicaltech.enums.CriticalValueStatusEnum;
+import com.his.medicaltech.enums.NotifyStatusEnum;
 import com.his.medicaltech.mapper.BizCriticalValueMapper;
 import com.his.medicaltech.service.CriticalValueService;
 import com.his.medicaltech.support.LabCriticalValueRules;
 import com.his.medicaltech.vo.BizCriticalValueVO;
 import com.his.medicaltech.vo.CriticalValueStatsVO;
-import com.his.system.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
-import com.his.system.entity.SysConfig;
-import com.his.system.entity.SysMessage;
-import com.his.system.entity.SysEmployee;
-import com.his.system.entity.SysUser;
+import com.his.system.entity.*;
+import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysConfigMapper;
 import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.mapper.SysUserMapper;
 import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -51,7 +47,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.his.medicaltech.enums.CriticalTypeEnum;
 /**
  * 检验危急值闭环服务实现。
  * <p>
@@ -106,11 +101,86 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     private final SysEmployeeMapper sysEmployeeMapper;
 
     private final com.his.medicaltech.mapper.BizLaboratoryRecordMapper recordMapper;
-
-    private volatile Integer cachedDeadlineMinutes;
     private final AtomicLong configLoadedAt = new AtomicLong(0L);
+    private volatile Integer cachedDeadlineMinutes;
 
     // 识别与上报
+
+    private static boolean isOverdue(BizCriticalValue entity) {
+        Integer status = entity.getStatus();
+        if (status == null || (status != CriticalValueStatusEnum.PENDING.getCode() && status != CriticalValueStatusEnum.RECEIVED.getCode())) {
+            return false;
+        }
+        return entity.getDeadlineTime() != null && LocalDateTime.now().isAfter(entity.getDeadlineTime());
+    }
+
+    private static String buildResultText(BizCriticalValue entity) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(entity.getResultValue() == null ? "" : entity.getResultValue());
+        if (StringUtils.hasText(entity.getResultUnit())) {
+            builder.append(' ').append(entity.getResultUnit());
+        }
+        if (entity.getCriticalType() != null) {
+            builder.append(entity.getCriticalType() == CriticalTypeEnum.HIGH.getCode() ? " ↑" : " ↓");
+        }
+        return builder.toString();
+    }
+
+    /**
+     * 状态文案。
+     * <p>
+     * 「1」的文案必须是「待接收」而不是「未处理」—— 后者是通用措辞，
+     * 而这里是闭环流转的第一环（已上报、尚未被医护接收），
+     * 与列表页的筛选项、统计卡片、DB 列注释都取同一个口径。
+     */
+    private static String statusText(Integer status) {
+        if (status == null) {
+            return "未知";
+        }
+        CriticalValueStatusEnum e = CriticalValueStatusEnum.getByCode(status);
+        return e != null ? e.getDescription() : "未知";
+    }
+
+    private static LocalDateTime startOfDay(String text) {
+        return LocalDate.parse(text.trim(), DATE_FORMATTER).atStartOfDay();
+    }
+
+    private static LocalDateTime endOfDay(String text) {
+        return LocalDate.parse(text.trim(), DATE_FORMATTER).atTime(23, 59, 59);
+    }
+
+    // 查询
+
+    private static String buildNo() {
+        String timestamp = LocalDateTime.now().format(NO_FORMATTER);
+        String tail = String.format("%04d", (int) (Math.random() * 10_000));
+        return NO_PREFIX + timestamp + tail;
+    }
+
+    private static String truncate(String text, int maxLength) {
+        if (!StringUtils.hasText(text)) {
+            return text;
+        }
+        String value = text.trim();
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    private static String currentOperator() {
+        try {
+            CurrentUser user = UserUtils.getCurrentUser();
+            if (user != null) {
+                if (StringUtils.hasText(user.getUsername())) {
+                    return user.getUsername();
+                }
+                if (StringUtils.hasText(user.getRealName())) {
+                    return user.getRealName();
+                }
+            }
+        } catch (Exception ignored) {
+            // 非请求线程
+        }
+        return "system";
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -243,6 +313,8 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         }
     }
 
+    // 超时升级
+
     /**
      * 兜底接收人。配置值可以是用户名，也可以直接是员工ID。
      * <p>
@@ -292,14 +364,6 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             log.warn("[危急值] {} 通知留痕写入失败，原因为：{}", entity.getCriticalNo(), remark);
         }
     }
-
-    /**
-     * 兜底接收人（员工ID + 姓名）
-     */
-    private record Receiver(Long employeeId, String name) {
-    }
-
-    // 查询
 
     @Override
     public PageResult<BizCriticalValueVO> listPage(CriticalValueQueryPageDTO dto) {
@@ -399,6 +463,8 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         return updateById(entity);
     }
 
+    // 内部
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean handle(CriticalValueHandleDTO dto) {
@@ -429,8 +495,6 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         }
         return ok;
     }
-
-    // 超时升级
 
     /**
      * 超时升级主流程：每条「已超时仍未处置」的危急值只升级一次。
@@ -467,7 +531,9 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         return escalated;
     }
 
-    /** 升级单条。返回 true 表示真的发了升级通知。 */
+    /**
+     * 升级单条。返回 true 表示真的发了升级通知。
+     */
     private boolean escalateOne(BizCriticalValue entity) {
         // 收件人第一路：该危急值已发消息的全部收件人（开单医生/兜底接收人）
         List<Long> receiverIds = new ArrayList<>(sysMessageService.receiverIdsOfBiz(
@@ -547,7 +613,9 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         return leaders;
     }
 
-    /** 发升级消息。toLeader 只影响 payload 标记，闭环联动复用 handle() 的业务标识匹配。 */
+    /**
+     * 发升级消息。toLeader 只影响 payload 标记，闭环联动复用 handle() 的业务标识匹配。
+     */
     private int sendEscalation(Long receiverId, String title, String content,
                                BizCriticalValue entity, int toLeader) {
         try {
@@ -573,7 +641,9 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         }
     }
 
-    /** 升级标记落库 + remark 留痕。标记必须置上：每条只升级一次，不能被每 5 分钟的扫描重复轰炸。 */
+    /**
+     * 升级标记落库 + remark 留痕。标记必须置上：每条只升级一次，不能被每 5 分钟的扫描重复轰炸。
+     */
     private void markEscalated(BizCriticalValue entity, String remark) {
         try {
             BizCriticalValue patch = new BizCriticalValue();
@@ -595,8 +665,6 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         }
         return removeById(criticalValueId);
     }
-
-    // 内部
 
     private BizCriticalValue require(Long criticalValueId) {
         // C类：内部按主键捞单的公共闸口，入参非请求 DTO，Bean Validation 够不到，保留
@@ -625,80 +693,6 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         return vo;
     }
 
-    private static boolean isOverdue(BizCriticalValue entity) {
-        Integer status = entity.getStatus();
-        if (status == null || (status != CriticalValueStatusEnum.PENDING.getCode() && status != CriticalValueStatusEnum.RECEIVED.getCode())) {
-            return false;
-        }
-        return entity.getDeadlineTime() != null && LocalDateTime.now().isAfter(entity.getDeadlineTime());
-    }
-
-    private static String buildResultText(BizCriticalValue entity) {
-        StringBuilder builder = new StringBuilder();
-        builder.append(entity.getResultValue() == null ? "" : entity.getResultValue());
-        if (StringUtils.hasText(entity.getResultUnit())) {
-            builder.append(' ').append(entity.getResultUnit());
-        }
-        if (entity.getCriticalType() != null) {
-            builder.append(entity.getCriticalType() == CriticalTypeEnum.HIGH.getCode() ? " ↑" : " ↓");
-        }
-        return builder.toString();
-    }
-
-    /**
-     * 状态文案。
-     * <p>
-     * 「1」的文案必须是「待接收」而不是「未处理」—— 后者是通用措辞，
-     * 而这里是闭环流转的第一环（已上报、尚未被医护接收），
-     * 与列表页的筛选项、统计卡片、DB 列注释都取同一个口径。
-     */
-    private static String statusText(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-        CriticalValueStatusEnum e = CriticalValueStatusEnum.getByCode(status);
-        return e != null ? e.getDescription() : "未知";
-    }
-
-    private static LocalDateTime startOfDay(String text) {
-        return LocalDate.parse(text.trim(), DATE_FORMATTER).atStartOfDay();
-    }
-
-    private static LocalDateTime endOfDay(String text) {
-        return LocalDate.parse(text.trim(), DATE_FORMATTER).atTime(23, 59, 59);
-    }
-
-    private static String buildNo() {
-        String timestamp = LocalDateTime.now().format(NO_FORMATTER);
-        String tail = String.format("%04d", (int) (Math.random() * 10_000));
-        return NO_PREFIX + timestamp + tail;
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return text;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
-    private static String currentOperator() {
-        try {
-            CurrentUser user = UserUtils.getCurrentUser();
-            if (user != null) {
-                if (StringUtils.hasText(user.getUsername())) {
-                    return user.getUsername();
-                }
-                if (StringUtils.hasText(user.getRealName())) {
-                    return user.getRealName();
-                }
-            }
-        } catch (Exception ignored) {
-            // 非请求线程
-        }
-        return "system";
-    }
-
     /**
      * 处置时限（分钟），取自系统参数，读不到用 30 分钟兜底。
      */
@@ -721,5 +715,11 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         cachedDeadlineMinutes = minutes;
         configLoadedAt.set(now);
         return minutes;
+    }
+
+    /**
+     * 兜底接收人（员工ID + 姓名）
+     */
+    private record Receiver(Long employeeId, String name) {
     }
 }

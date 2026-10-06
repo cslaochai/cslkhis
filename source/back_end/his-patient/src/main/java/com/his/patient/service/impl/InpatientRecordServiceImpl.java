@@ -1,4 +1,5 @@
 package com.his.patient.service.impl;
+import com.his.common.enums.*;
 import com.his.common.util.TimeUtil;
 import com.his.patient.enums.AgeUnitEnum;
 import com.his.patient.enums.InpatientRecordTypeEnum;
@@ -7,8 +8,6 @@ import com.his.patient.enums.SummaryStatusEnum;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.enums.RecordStatusEnum;
-import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -81,7 +80,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
      * 签名状态文案：未知码值渲染成「未知(n)」，不回落成"未签名" —— 那是两次不同的事实
      */
     private static String signStatusText(Integer signStatus) {
-        return com.his.common.enums.ObjectSignStatus.textOf(signStatus);
+        return ObjectSignStatusEnum.textOf(signStatus);
     }
 
     /**
@@ -570,7 +569,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
             r.setSubmitTime(now);
             recordMapper.updateById(r);
 
-            com.his.common.vo.SignatureVO sig = signOrFail(r, com.his.common.enums.SignScene.SUBMIT,
+            com.his.common.vo.SignatureVO sig = signOrFail(r, SignSceneEnum.SUBMIT,
                     "病历提交");
             if (sig != null) {
                 // 签名服务已经 UPDATE 过锚点。把新值同步回内存实体后再写一次，
@@ -618,7 +617,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
             // 已签名的直接跳过（blockReason 会拒绝重复签，不能把整个归档批次拖挂）。
             if (!Objects.equals(1, r.getSignStatus())) {
                 com.his.common.vo.SignatureVO sig = signOrFail(r,
-                        com.his.common.enums.SignScene.ARCHIVE, "病历归档");
+                        SignSceneEnum.ARCHIVE, "病历归档");
                 if (sig != null) {
                     r.setSignStatus(1);
                     r.setSignId(sig.getId());
@@ -650,10 +649,10 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
      * 代价远小于留下无法追溯的缺口。
      */
     private com.his.common.vo.SignatureVO signOrFail(BizInpatientRecord r,
-                                                     com.his.common.enums.SignScene scene,
+                                                     SignSceneEnum scene,
                                                      String actionLabel) {
         com.his.common.dto.SignCommandDTO cmd = new com.his.common.dto.SignCommandDTO();
-        cmd.setBizType(com.his.common.enums.SignBizType.INPATIENT_RECORD.getCode());
+        cmd.setBizType(SignBizTypeEnum.INPATIENT_RECORD.getCode());
         cmd.setBizId(r.getId());
         cmd.setSignScene(scene.getCode());
         cmd.setSignerId(currentEmpId());

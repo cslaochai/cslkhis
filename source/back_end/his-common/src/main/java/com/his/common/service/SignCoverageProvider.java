@@ -1,6 +1,6 @@
 package com.his.common.service;
 
-import com.his.common.enums.SignBizType;
+import com.his.common.enums.SignBizTypeEnum;
 
 /**
  * 「这类对象一共有多少、签了多少」的统计扩展点。
@@ -10,7 +10,7 @@ import com.his.common.enums.SignBizType;
  */
 public interface SignCoverageProvider {
 
-    SignBizType bizType();
+    SignBizTypeEnum bizType();
 
     /**
      * 统计口径：合计是**当前仍然有效**的对象数（未删除）；

@@ -42,280 +42,436 @@ import java.time.LocalDateTime;
 @TableName("biz_transfusion_apply")
 public class BizTransfusionApply extends BaseEntity {
 
-    /** 输血申请单号（SX + yyyyMMdd + 4位序号） */
+    /**
+     * 输血申请单号（SX + yyyyMMdd + 4位序号）
+     */
     private String applyNo;
 
-    /** 入院ID（入院记录的入院ID） */
+    /**
+     * 入院ID（入院记录的入院ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
-    /** 入院号（快照） */
+    /**
+     * 入院号（快照）
+     */
     private String admissionNo;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者号（快照） */
+    /**
+     * 患者号（快照）
+     */
     private String patientNo;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     private String patientName;
 
-    /** 性别（快照）（1-男 2-女） */
+    /**
+     * 性别（快照）（1-男 2-女）
+     */
     private Integer gender;
 
-    /** 年龄（快照） */
+    /**
+     * 年龄（快照）
+     */
     private Integer age;
 
     // 申请方
 
-    /** 申请科室ID（= 患者当前科室，服务端推导） */
+    /**
+     * 申请科室ID（= 患者当前科室，服务端推导）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long applyDeptId;
 
-    /** 申请科室名称（快照） */
+    /**
+     * 申请科室名称（快照）
+     */
     private String applyDeptName;
 
-    /** 申请时所在病区名称（快照） */
+    /**
+     * 申请时所在病区名称（快照）
+     */
     private String applyWardName;
 
-    /** 申请时床号（快照） */
+    /**
+     * 申请时床号（快照）
+     */
     private String applyBedNo;
 
-    /** 申请医生ID（员工ID，不是用户的ID） */
+    /**
+     * 申请医生ID（员工ID，不是用户的ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long applyDoctorId;
 
-    /** 申请医生姓名（快照） */
+    /**
+     * 申请医生姓名（快照）
+     */
     private String applyDoctorName;
 
-    /** 申请时间 */
+    /**
+     * 申请时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime applyTime;
 
     // 受血者血型
 
-    /** 受血者ABO血型：A/B/O/AB */
+    /**
+     * 受血者ABO血型：A/B/O/AB
+     */
     private String patientAbo;
 
-    /** 受血者Rh血型：阳/阴 */
+    /**
+     * 受血者Rh血型：阳/阴
+     */
     private String patientRh;
 
     // 用血需求
 
-    /** 血液品种（1-红细胞悬液 2-血浆 3-血小板 4-冷沉淀 5-全血 6-其他） */
+    /**
+     * 血液品种（1-红细胞悬液 2-血浆 3-血小板 4-冷沉淀 5-全血 6-其他）
+     */
     private Integer bloodComponent;
 
-    /** 规格（如 1.5U / 200ml / 1治疗量） */
+    /**
+     * 规格（如 1.5U / 200ml / 1治疗量）
+     */
     private String componentSpec;
 
-    /** 申请袋数（配血累计不得超过此数） */
+    /**
+     * 申请袋数（配血累计不得超过此数）
+     */
     private Integer bagCount;
 
-    /** 申请总量 */
+    /**
+     * 申请总量
+     */
     private BigDecimal plannedAmount;
 
-    /** 总量单位：U / ml / 治疗量 */
+    /**
+     * 总量单位：U / ml / 治疗量
+     */
     private String amountUnit;
 
-    /** 输血目的（纠正贫血/补充凝血因子/提升血小板…） */
+    /**
+     * 输血目的（纠正贫血/补充凝血因子/提升血小板…）
+     */
     private String transfusionPurpose;
 
-    /** 输血指征（Hb/HCT/PLT 指标 + 临床症状，缺了就是无指征用血） */
+    /**
+     * 输血指征（Hb/HCT/PLT 指标 + 临床症状，缺了就是无指征用血）
+     */
     private String indication;
 
-    /** 输血前血红蛋白 Hb（g/L） */
+    /**
+     * 输血前血红蛋白 Hb（g/L）
+     */
     private BigDecimal preHb;
 
-    /** 输血前红细胞压积 HCT（%） */
+    /**
+     * 输血前红细胞压积 HCT（%）
+     */
     private BigDecimal preHct;
 
-    /** 输血前血小板 PLT（×10^9/L） */
+    /**
+     * 输血前血小板 PLT（×10^9/L）
+     */
     private Integer prePlt;
 
-    /** 既往输血史 */
+    /**
+     * 既往输血史
+     */
     private String transfusionHistory;
 
-    /** 既往输血反应史 */
+    /**
+     * 既往输血反应史
+     */
     private String reactionHistory;
 
-    /** 妊娠史（育龄女性） */
+    /**
+     * 妊娠史（育龄女性）
+     */
     private String pregnancyHistory;
 
-    /** 是否紧急用血（0-否 1-是） */
+    /**
+     * 是否紧急用血（0-否 1-是）
+     */
     private Integer isEmergency;
 
     // 配血
 
-    /** 配血状态：0-待配血 1-配血中（未配齐）2-全部相合且配齐 3-存在配血不合 */
+    /**
+     * 配血状态：0-待配血 1-配血中（未配齐）2-全部相合且配齐 3-存在配血不合
+     */
     private Integer crossmatchStatus;
 
-    /** 配血人ID（员工ID） */
+    /**
+     * 配血人ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long crossmatchDoctorId;
 
-    /** 配血人姓名（快照） */
+    /**
+     * 配血人姓名（快照）
+     */
     private String crossmatchDoctorName;
 
-    /** 配血完成时间（全部相合的时刻） */
+    /**
+     * 配血完成时间（全部相合的时刻）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime crossmatchTime;
 
     // 发血
 
-    /** 发血人ID（员工ID） */
+    /**
+     * 发血人ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long issueDoctorId;
 
-    /** 发血人姓名（快照） */
+    /**
+     * 发血人姓名（快照）
+     */
     private String issueDoctorName;
 
-    /** 发血时间 */
+    /**
+     * 发血时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime issueTime;
 
     // 输注（双人核对）
 
-    /** 输血前核对要点码（逗号分隔，如 1,2,3,4,5,6） */
+    /**
+     * 输血前核对要点码（逗号分隔，如 1,2,3,4,5,6）
+     */
     private String checkItems;
 
-    /** 核对补充说明（异常项必须写在这里） */
+    /**
+     * 核对补充说明（异常项必须写在这里）
+     */
     private String checkNote;
 
-    /** 核对护士1 ID（员工ID） */
+    /**
+     * 核对护士1 ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long checkNurseId;
 
-    /** 核对护士1 姓名（快照） */
+    /**
+     * 核对护士1 姓名（快照）
+     */
     private String checkNurseName;
 
-    /** 核对护士2 ID（员工ID） */
+    /**
+     * 核对护士2 ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long checkNurse2Id;
 
-    /** 核对护士2 姓名（快照） */
+    /**
+     * 核对护士2 姓名（快照）
+     */
     private String checkNurse2Name;
 
-    /** 双人核对时间 */
+    /**
+     * 双人核对时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime checkTime;
 
-    /** 输注执行护士ID（员工ID） */
+    /**
+     * 输注执行护士ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long infusionNurseId;
 
-    /** 输注执行护士姓名（快照） */
+    /**
+     * 输注执行护士姓名（快照）
+     */
     private String infusionNurseName;
 
-    /** 输注开始时间 */
+    /**
+     * 输注开始时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime infusionStartTime;
 
-    /** 输注结束时间 */
+    /**
+     * 输注结束时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime infusionEndTime;
 
-    /** 实际输注量 */
+    /**
+     * 实际输注量
+     */
     private BigDecimal actualAmount;
 
-    /** 滴速（如 60滴/分） */
+    /**
+     * 滴速（如 60滴/分）
+     */
     private String infusionSpeed;
 
-    /** 输注过程观察（生命体征与不良反应） */
+    /**
+     * 输注过程观察（生命体征与不良反应）
+     */
     private String observation;
 
     // 输血反应上报
 
-    /** 有无输血反应（0-未上报 1-已上报有反应） */
+    /**
+     * 有无输血反应（0-未上报 1-已上报有反应）
+     */
     private Integer hasReaction;
 
-    /** 反应类型 */
+    /**
+     * 反应类型
+     */
     private String reactionType;
 
-    /** 反应描述 */
+    /**
+     * 反应描述
+     */
     private String reactionDesc;
 
-    /** 处理措施 */
+    /**
+     * 处理措施
+     */
     private String reactionHandle;
 
-    /** 上报人ID（员工ID） */
+    /**
+     * 上报人ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long reactionReporterId;
 
-    /** 上报人姓名（快照） */
+    /**
+     * 上报人姓名（快照）
+     */
     private String reactionReporterName;
 
-    /** 上报时间 */
+    /**
+     * 上报时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime reactionTime;
 
     // 疗效评估 / 完成
 
-    /** 输注后疗效评估 */
+    /**
+     * 输注后疗效评估
+     */
     private String efficacyEval;
 
-    /** 输血后血红蛋白 Hb（g/L） */
+    /**
+     * 输血后血红蛋白 Hb（g/L）
+     */
     private BigDecimal postHb;
 
-    /** 输血后红细胞压积 HCT（%） */
+    /**
+     * 输血后红细胞压积 HCT（%）
+     */
     private BigDecimal postHct;
 
-    /** 输血后血小板 PLT（×10^9/L） */
+    /**
+     * 输血后血小板 PLT（×10^9/L）
+     */
     private Integer postPlt;
 
-    /** 完成录入人ID（员工ID） */
+    /**
+     * 完成录入人ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long finishDoctorId;
 
-    /** 完成录入人姓名（快照） */
+    /**
+     * 完成录入人姓名（快照）
+     */
     private String finishDoctorName;
 
-    /** 完成时间 */
+    /**
+     * 完成时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime finishTime;
 
-    /** 回写住院病历ID（住院病历文书的ID，record_type=11 输血记录） */
+    /**
+     * 回写住院病历ID（住院病历文书的ID，record_type=11 输血记录）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
     // 状态
 
-    /** 状态（0-待配血 1-已配血 2-已发血 3-输注中 4-已完成 5-已取消） */
+    /**
+     * 状态（0-待配血 1-已配血 2-已发血 3-输注中 4-已完成 5-已取消）
+     */
     private Integer transfusionStatus;
 
-    /** 取消原因（仅待配血/已配血/已发血可取消） */
+    /**
+     * 取消原因（仅待配血/已配血/已发血可取消）
+     */
     private String cancelReason;
 
-    /** 取消人ID（员工ID） */
+    /**
+     * 取消人ID（员工ID）
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long cancelDoctorId;
 
-    /** 取消人姓名（快照） */
+    /**
+     * 取消人姓名（快照）
+     */
     private String cancelDoctorName;
 
-    /** 取消时间 */
+    /**
+     * 取消时间
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime cancelTime;
 
     // 用血分级审批（sql/93；《医疗机构临床用血管理办法》分级审核签发）
 
-    /** 申请量折算毫升数（ml直取；1U≈200ml；1治疗量≈250ml；无法折算按最高级审批） */
+    /**
+     * 申请量折算毫升数（ml直取；1U≈200ml；1治疗量≈250ml；无法折算按最高级审批）
+     */
     private Integer amountMl;
 
-    /** 审批级别（服务端按折算量推导）：1-上级医师（主治及以上，<400ml）2-科主任（400~799ml）3-医务科（≥800ml） */
+    /**
+     * 审批级别（服务端按折算量推导）：1-上级医师（主治及以上，<400ml）2-科主任（400~799ml）3-医务科（≥800ml）
+     */
     private Integer approveLevel;
 
-    /** 审批状态（0-待审批 1-已通过 2-已驳回 3-急诊待补审） */
+    /**
+     * 审批状态（0-待审批 1-已通过 2-已驳回 3-急诊待补审）
+     */
     private Integer approveStatus;
 
-    /** 最近一次驳回原因（驳回后修改重提即清空） */
+    /**
+     * 最近一次驳回原因（驳回后修改重提即清空）
+     */
     private String approveRejectReason;
 
-    /** 审批通过时间（补审=补办时刻） */
+    /**
+     * 审批通过时间（补审=补办时刻）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime approveTime;
 
-    /** 是否急诊补审（0-常规审批 1-急诊后补） */
+    /**
+     * 是否急诊补审（0-常规审批 1-急诊后补）
+     */
     private Integer approveMakeup;
 }

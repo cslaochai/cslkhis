@@ -9,19 +9,19 @@ import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.dto.EndoscopyDTO;
 import com.his.medicaltech.dto.PathologyDTO;
+import com.his.medicaltech.entity.BizEndoscopyRecord;
+import com.his.medicaltech.entity.BizPathologyOrder;
 import com.his.medicaltech.enums.EndoscopyHpResultEnum;
 import com.his.medicaltech.enums.EndoscopyTypeEnum;
 import com.his.medicaltech.enums.InsRecordStatusEnum;
-import com.his.medicaltech.entity.BizEndoscopyRecord;
-import com.his.medicaltech.entity.BizPathologyOrder;
 import com.his.medicaltech.mapper.BizEndoscopyRecordMapper;
 import com.his.medicaltech.service.EndoscopyService;
 import com.his.medicaltech.service.PathologyService;
 import com.his.medicaltech.vo.EndoscopyVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -58,6 +58,19 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
     private final PathologyService pathologyService;
     private final DictCacheService dictText;
     private final EmployeeTechAuthService techAuthService;
+
+    /**
+     * ERCP=4 级；取活检=2 级；其余诊断性镜检=1 级
+     */
+    private static int requiredEndoLevel(BizEndoscopyRecord r) {
+        if (EndoscopyTypeEnum.ERCP.is(r.getEndoType())) {
+            return 4;
+        }
+        if (Integer.valueOf(1).equals(r.getBiopsyFlag())) {
+            return 2;
+        }
+        return 1;
+    }
 
     public PageResult<EndoscopyVO.ListVO> pageVO(EndoscopyDTO.Query q) {
         LambdaQueryWrapper<BizEndoscopyRecord> w = new LambdaQueryWrapper<>();
@@ -113,14 +126,14 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         return out;
     }
 
+    // 写入
+
     private void fillText(EndoscopyVO.DetailVO vo) {
         vo.setStatusText(dictText.getDicDataLabel(DICT_STATUS, vo.getStatus()));
         vo.setEndoTypeText(dictText.getDicDataLabel(DICT_ENDO_TYPE, vo.getEndoType()));
         vo.setAnesthesiaMethodText(dictText.getDicDataLabel(DICT_ANESTHESIA, vo.getAnesthesiaMethod()));
         vo.setHpResultText(EndoscopyHpResultEnum.getText(vo.getHpResult()));
     }
-
-    // 写入
 
     @Transactional(rollbackFor = Exception.class)
     public EndoscopyVO.DetailVO upsertRecord(EndoscopyDTO.RecordUpsert dto) {
@@ -313,6 +326,8 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         recordMapper.updateById(r);
     }
 
+    // 内部
+
     @Transactional(rollbackFor = Exception.class)
     public void cancel(EndoscopyDTO.Cancel dto) {
         BizEndoscopyRecord r = require(dto.getRecordId());
@@ -327,8 +342,6 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         r.setCancelTime(LocalDateTime.now().withNano(0));
         recordMapper.updateById(r);
     }
-
-    // 内部
 
     private BizEndoscopyRecord require(Long id) {
         // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
@@ -394,19 +407,6 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         } catch (BusinessException e) {
             throw new BusinessException("内镜术者「" + operator + "」" + e.getMessage());
         }
-    }
-
-    /**
-     * ERCP=4 级；取活检=2 级；其余诊断性镜检=1 级
-     */
-    private static int requiredEndoLevel(BizEndoscopyRecord r) {
-        if (EndoscopyTypeEnum.ERCP.is(r.getEndoType())) {
-            return 4;
-        }
-        if (Integer.valueOf(1).equals(r.getBiopsyFlag())) {
-            return 2;
-        }
-        return 1;
     }
 
     /**

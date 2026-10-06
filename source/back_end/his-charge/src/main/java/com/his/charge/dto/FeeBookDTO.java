@@ -21,14 +21,20 @@ public class FeeBookDTO {
      */
     private Long id;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @NotNull(message = "缺少患者")
     private Long patientId;
 
-    /** 患者号（快照） */
+    /**
+     * 患者号（快照）
+     */
     private String patientNo;
 
-    /** 患者姓名（快照） */
+    /**
+     * 患者姓名（快照）
+     */
     @NotBlank(message = "缺少患者姓名")
     private String patientName;
 
@@ -44,7 +50,9 @@ public class FeeBookDTO {
     @NotNull(message = "缺少就诊标识")
     private Long encounterId;
 
-    /** 就诊标识单号 */
+    /**
+     * 就诊标识单号
+     */
     private String encounterNo;
 
     /**
@@ -53,33 +61,51 @@ public class FeeBookDTO {
      */
     private Long deptId;
 
-    /** 科室名称（快照） */
+    /**
+     * 科室名称（快照）
+     */
     private String deptName;
 
-    /** 开单/执行人员工ID */
+    /**
+     * 开单/执行人员工ID
+     */
     private Long doctorId;
 
-    /** 开单人姓名（快照） */
+    /**
+     * 开单人姓名（快照）
+     */
     private String doctorName;
 
-    /** 项目类型（1-挂号费 2-西药 3-中成药 4-中药饮片 5-检查 6-检验 7-治疗 8-耗材） */
+    /**
+     * 项目类型（1-挂号费 2-西药 3-中成药 4-中药饮片 5-检查 6-检验 7-治疗 8-耗材）
+     */
     @NotNull(message = "缺少项目类型")
     private Integer itemType;
 
-    /** 项目/药品编码 */
+    /**
+     * 项目/药品编码
+     */
     private String itemCode;
 
-    /** 项目名称 */
+    /**
+     * 项目名称
+     */
     @NotBlank(message = "缺少项目名称")
     private String itemName;
 
-    /** 规格 */
+    /**
+     * 规格
+     */
     private String specification;
 
-    /** 单位 */
+    /**
+     * 单位
+     */
     private String unit;
 
-    /** 单价 */
+    /**
+     * 单价
+     */
     @NotNull(message = "缺少单价")
     @DecimalMin(value = "0", message = "单价不能为负")
     private BigDecimal price;
@@ -103,7 +129,9 @@ public class FeeBookDTO {
      */
     private Long sourceId;
 
-    /** 来源单据号 */
+    /**
+     * 来源单据号
+     */
     private String sourceNo;
 
     /**
@@ -111,6 +139,8 @@ public class FeeBookDTO {
      */
     private Integer catalogType;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

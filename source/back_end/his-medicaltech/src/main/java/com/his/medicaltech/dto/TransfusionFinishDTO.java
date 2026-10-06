@@ -20,7 +20,9 @@ import java.time.LocalDateTime;
 @Data
 public class TransfusionFinishDTO implements Serializable {
 
-    /** 输血申请单ID（必填） */
+    /**
+     * 输血申请单ID（必填）
+     */
     @NotNull(message = "输血申请单ID不能为空")
     private Long applyId;
 
@@ -33,25 +35,39 @@ public class TransfusionFinishDTO implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime infusionEndTime;
 
-    /** 实际输注量（必填，>0） */
+    /**
+     * 实际输注量（必填，>0）
+     */
     private BigDecimal actualAmount;
 
-    /** 输注过程/输注后观察（必填：生命体征与有无不良反应） */
+    /**
+     * 输注过程/输注后观察（必填：生命体征与有无不良反应）
+     */
     @NotBlank(message = "输注过程观察不能为空（开始后 15 分钟是反应高发期，必须记录）")
     private String observation;
 
-    /** 输注后疗效评估（症状改善 + 复查指标） */
+    /**
+     * 输注后疗效评估（症状改善 + 复查指标）
+     */
     private String efficacyEval;
 
-    /** 输血后血红蛋白 Hb（g/L） */
+    /**
+     * 输血后血红蛋白 Hb（g/L）
+     */
     private BigDecimal postHb;
 
-    /** 输血后红细胞压积 HCT（%） */
+    /**
+     * 输血后红细胞压积 HCT（%）
+     */
     private BigDecimal postHct;
 
-    /** 输血后血小板 PLT（×10^9/L） */
+    /**
+     * 输血后血小板 PLT（×10^9/L）
+     */
     private Integer postPlt;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

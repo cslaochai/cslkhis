@@ -1,31 +1,24 @@
 package com.his.medicaltech.service.impl;
 
-import com.his.medicaltech.service.DialysisService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.BaseEntity;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.medicaltech.dto.DialysisDTO;
 import com.his.medicaltech.entity.BizDialysisMachine;
 import com.his.medicaltech.entity.BizDialysisPatient;
 import com.his.medicaltech.entity.BizDialysisPrescription;
 import com.his.medicaltech.entity.BizDialysisSession;
-import com.his.medicaltech.enums.DialysisAnticoagulantEnum;
-import com.his.medicaltech.enums.DialysisFreqEnum;
-import com.his.medicaltech.enums.DialysisMachineStatusEnum;
-import com.his.medicaltech.enums.DialysisPatientStatusEnum;
-import com.his.medicaltech.enums.DialysisPrescriptionStatusEnum;
-import com.his.medicaltech.enums.DialysisSessionStatusEnum;
-import com.his.medicaltech.enums.DialysisTimeSlotEnum;
-import com.his.medicaltech.enums.DialyzerTypeEnum;
+import com.his.medicaltech.enums.*;
 import com.his.medicaltech.mapper.BizDialysisMachineMapper;
 import com.his.medicaltech.mapper.BizDialysisPatientMapper;
 import com.his.medicaltech.mapper.BizDialysisPrescriptionMapper;
 import com.his.medicaltech.mapper.BizDialysisSessionMapper;
+import com.his.medicaltech.service.DialysisService;
 import com.his.medicaltech.vo.DialysisVO;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -40,11 +33,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * 血液净化（透析）中心服务。
@@ -70,7 +59,9 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class DialysisServiceImpl implements DialysisService {
 
-    /** 原因/描述类文本落库上限（列宽 255，留余量） */
+    /**
+     * 原因/描述类文本落库上限（列宽 255，留余量）
+     */
     private static final int REASON_MAX = 200;
 
     private static final int MAX_TEXT = 255;
@@ -83,6 +74,33 @@ public class DialysisServiceImpl implements DialysisService {
 
     // 档案
 
+    private static String slotText(int slot) {
+        String label = DialysisTimeSlotEnum.getText(slot);
+        return label == null ? DialysisTimeSlotEnum.MORNING.getLabel() : label;
+    }
+
+    private static Integer nvl(Integer value, Integer fallback) {
+        return value == null ? fallback : value;
+    }
+
+    private static String trimToNull(String text) {
+        return StringUtils.hasText(text) ? text.trim() : null;
+    }
+
+    private static String cutToNull(String text, int max) {
+        return StringUtils.hasText(text) ? cut(text.trim(), max) : null;
+    }
+
+    // 处方
+
+    private static String cut(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max);
+    }
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
     public PageResult<DialysisVO.ArchiveVO> archiveListPage(DialysisDTO.ArchiveQuery query) {
         Page<DialysisVO.ArchiveVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<DialysisVO.ArchiveVO> records = archiveMapper.selectArchivePage(page,
@@ -92,7 +110,11 @@ public class DialysisServiceImpl implements DialysisService {
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
-    /** 编辑回显：电话保持明文（前端整对象回写，遮码会把真号洗成星号） */
+    // 机位
+
+    /**
+     * 编辑回显：电话保持明文（前端整对象回写，遮码会把真号洗成星号）
+     */
     public DialysisVO.ArchiveVO archiveGetById(Long id) {
         DialysisVO.ArchiveVO vo = archiveMapper.selectArchiveById(id);
         if (vo == null) {
@@ -144,7 +166,9 @@ public class DialysisServiceImpl implements DialysisService {
         return archiveGetById(entity.getId());
     }
 
-    /** 在透 1 ↔ 暂停 2；两者 → 退出 3（终态）。退出/暂停必须有原因，且没有未结束的透析单。 */
+    /**
+     * 在透 1 ↔ 暂停 2；两者 → 退出 3（终态）。退出/暂停必须有原因，且没有未结束的透析单。
+     */
     @Transactional(rollbackFor = Exception.class)
     public DialysisVO.ArchiveVO archiveChangeStatus(DialysisDTO.ArchiveStatus dto) {
         BizDialysisPatient archive = requireArchive(dto.getId());
@@ -166,7 +190,7 @@ public class DialysisServiceImpl implements DialysisService {
         return archiveGetById(archive.getId());
     }
 
-    // 处方
+    // 排班与透析单
 
     public List<DialysisVO.PrescriptionVO> prescriptionList(Long archiveId) {
         requireArchive(archiveId);
@@ -240,8 +264,6 @@ public class DialysisServiceImpl implements DialysisService {
                 .orElseThrow(() -> new BusinessException("处方停用后读取失败"));
     }
 
-    // 机位
-
     public PageResult<DialysisVO.MachineVO> machineListPage(DialysisDTO.MachineQuery query) {
         Page<DialysisVO.MachineVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<DialysisVO.MachineVO> records = machineMapper.selectMachinePage(page,
@@ -291,8 +313,6 @@ public class DialysisServiceImpl implements DialysisService {
                 .orElseThrow(() -> new BusinessException("机位保存后读取失败"));
     }
 
-    // 排班与透析单
-
     public PageResult<DialysisVO.SessionVO> sessionListPage(DialysisDTO.SessionQuery query) {
         Page<DialysisVO.SessionVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<DialysisVO.SessionVO> records = sessionMapper.selectSessionPage(page,
@@ -340,6 +360,8 @@ public class DialysisServiceImpl implements DialysisService {
         return board;
     }
 
+    // 统计
+
     @Transactional(rollbackFor = Exception.class)
     public DialysisVO.SessionVO schedule(DialysisDTO.Schedule dto) {
         BizDialysisPatient archive = requireArchive(dto.getArchiveId());
@@ -382,6 +404,8 @@ public class DialysisServiceImpl implements DialysisService {
         }
         return sessionGetById(session.getId());
     }
+
+    // 内部工具
 
     @Transactional(rollbackFor = Exception.class)
     public DialysisVO.SessionVO reschedule(DialysisDTO.Reschedule dto) {
@@ -470,7 +494,9 @@ public class DialysisServiceImpl implements DialysisService {
         return sessionGetById(session.getId());
     }
 
-    /** 不良反应：透析中或已完成的治疗单都可登记（下机后迟发反应也要留痕） */
+    /**
+     * 不良反应：透析中或已完成的治疗单都可登记（下机后迟发反应也要留痕）
+     */
     @Transactional(rollbackFor = Exception.class)
     public DialysisVO.SessionVO recordAdverse(DialysisDTO.AdverseUpsert dto) {
         BizDialysisSession session = requireSession(dto.getId());
@@ -500,8 +526,6 @@ public class DialysisServiceImpl implements DialysisService {
         return sessionGetById(session.getId());
     }
 
-    // 统计
-
     public DialysisVO.StatsVO stats(DialysisDTO.StatsQuery dto) {
         if (dto.getEndDate().isBefore(dto.getStartDate())) {
             throw new BusinessException("结束日期不能早于开始日期");
@@ -526,13 +550,11 @@ public class DialysisServiceImpl implements DialysisService {
         stats.setInDialysisPatients(inDialysis);
         stats.setSessionsPerPatient(inDialysis == 0 ? null
                 : BigDecimal.valueOf(nvl(stats.getSessionTotal(), 0))
-                        .divide(BigDecimal.valueOf(inDialysis), 2, RoundingMode.HALF_UP));
+                .divide(BigDecimal.valueOf(inDialysis), 2, RoundingMode.HALF_UP));
         stats.setAdverseTypes(sessionMapper.selectAdverseTypes(dto.getStartDate(), dto.getEndDate()));
         stats.setMachineLoads(sessionMapper.selectMachineLoads(dto.getStartDate(), dto.getEndDate()));
         return stats;
     }
-
-    // 内部工具
 
     private void stopOtherActive(Long archiveId, Long keepId) {
         List<BizDialysisPrescription> actives = prescriptionMapper.selectList(
@@ -574,11 +596,6 @@ public class DialysisServiceImpl implements DialysisService {
 
     private String slotBusyMessage(LocalDate date, int slot, String machineNo) {
         return date + " " + slotText(slot) + " 机位 " + machineNo + " 已被占用，请换机位或换时段";
-    }
-
-    private static String slotText(int slot) {
-        String label = DialysisTimeSlotEnum.getText(slot);
-        return label == null ? DialysisTimeSlotEnum.MORNING.getLabel() : label;
     }
 
     private BizDialysisMachine requireUsableMachine(Long machineId) {
@@ -634,26 +651,6 @@ public class DialysisServiceImpl implements DialysisService {
         if (!ok) {
             throw new BusinessException(message);
         }
-    }
-
-    private static Integer nvl(Integer value, Integer fallback) {
-        return value == null ? fallback : value;
-    }
-
-    private static String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
-    private static String cutToNull(String text, int max) {
-        return StringUtils.hasText(text) ? cut(text.trim(), max) : null;
-    }
-
-    private static String cut(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
     private String currentOperator() {

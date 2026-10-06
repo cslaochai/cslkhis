@@ -59,21 +59,6 @@ public final class LabAbnormalJudge {
 
     private static final double EPSILON = 1e-9;
 
-    /**
-     * 判定结论
-     *
-     * @param flag        异常标志，取值见本类常量
-     * @param description 异常描述，正常或未判定时为空串
-     * @param judged      是否真的做了判定
-     * @param note        未判定的原因（带 {@link LabAbnormalJudge#NOTE_UNJUDGED_PREFIX} 前缀），判定成功时为 null
-     */
-    public record Verdict(int flag, String description, boolean judged, String note) {
-
-        public static Verdict notJudged(String reason) {
-            return new Verdict(NORMAL, "", false, NOTE_UNJUDGED_PREFIX + reason);
-        }
-    }
-
     public static Verdict judge(String resultValue, LabReferenceRange range) {
         if (range == null || !range.usable()) {
             String raw = range == null ? "" : range.describe();
@@ -164,5 +149,20 @@ public final class LabAbnormalJudge {
      */
     public static String getText(Integer flag, String judgeNote) {
         return isUnjudged(judgeNote) ? "未判定" : getText(flag);
+    }
+
+    /**
+     * 判定结论
+     *
+     * @param flag        异常标志，取值见本类常量
+     * @param description 异常描述，正常或未判定时为空串
+     * @param judged      是否真的做了判定
+     * @param note        未判定的原因（带 {@link LabAbnormalJudge#NOTE_UNJUDGED_PREFIX} 前缀），判定成功时为 null
+     */
+    public record Verdict(int flag, String description, boolean judged, String note) {
+
+        public static Verdict notJudged(String reason) {
+            return new Verdict(NORMAL, "", false, NOTE_UNJUDGED_PREFIX + reason);
+        }
     }
 }

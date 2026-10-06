@@ -1,18 +1,17 @@
 package com.his.ai.service.impl;
 
-import com.his.common.enums.SysGenderEnum;
-
-import com.his.ai.service.EmrExtractCapability;
-import com.his.ai.service.AiExecutionService;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.EmrExtractDTO;
 import com.his.ai.dto.EmrExtractLlmOutputDTO;
+import com.his.ai.service.AiExecutionService;
+import com.his.ai.service.EmrExtractCapability;
 import com.his.ai.support.AiMaskUtils;
 import com.his.ai.support.EmrFieldCatalog;
 import com.his.ai.support.EmrTextTagSplitter;
 import com.his.ai.vo.EmrExtractFieldVO;
 import com.his.ai.vo.EmrExtractResultVO;
+import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;

@@ -16,18 +16,28 @@ import lombok.EqualsAndHashCode;
 @TableName("biz_exam_device_item")
 public class BizExamDeviceItem extends BaseEntity {
 
-    /** 设备ID */
+    /**
+     * 设备ID
+     */
     private Long deviceId;
 
-    /** 检查项目ID */
+    /**
+     * 检查项目ID
+     */
     private Long itemId;
 
-    /** 项目编码（快照） */
+    /**
+     * 项目编码（快照）
+     */
     private String itemCode;
 
-    /** 项目名称（快照） */
+    /**
+     * 项目名称（快照）
+     */
     private String itemName;
 
-    /** 该设备做该项目的时长（分钟），空则取项目字典 duration */
+    /**
+     * 该设备做该项目的时长（分钟），空则取项目字典 duration
+     */
     private Integer examMinutes;
 }

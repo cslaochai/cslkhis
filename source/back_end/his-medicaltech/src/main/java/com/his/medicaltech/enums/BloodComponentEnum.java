@@ -41,7 +41,9 @@ public enum BloodComponentEnum {
         return null;
     }
 
-    /** 码值是否合法（写入侧校验用；null 不合法） */
+    /**
+     * 码值是否合法（写入侧校验用；null 不合法）
+     */
     public static boolean isValid(Integer code) {
         return fromCode(code) != null;
     }
@@ -58,13 +60,17 @@ public enum BloodComponentEnum {
         return item == null ? "" : item.label;
     }
 
-    /** 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。 */
+    /**
+     * 异常 / 审计用：null 或不在枚举内返回「未知(n)」（null 本身渲染成「未知」），保留原始码值便于排查脏数据。
+     */
     public static String labelOrUnknown(Integer code) {
         BloodComponentEnum item = fromCode(code);
         return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;
     }
 
-    /** 下拉选项用（保持 sql 列注释的码值顺序） */
+    /**
+     * 下拉选项用（保持 sql 列注释的码值顺序）
+     */
     public static Map<Integer, String> options() {
         Map<Integer, String> map = new LinkedHashMap<>();
         for (BloodComponentEnum item : values()) {
@@ -73,17 +79,23 @@ public enum BloodComponentEnum {
         return map;
     }
 
-    /** 是否为「红细胞类」（含全血）：ABO 按红细胞规则判相容 */
+    /**
+     * 是否为「红细胞类」（含全血）：ABO 按红细胞规则判相容
+     */
     public static boolean isRedCellGroup(Integer component) {
         return RED_CELL.is(component) || WHOLE_BLOOD.is(component);
     }
 
-    /** 是否为「血浆类」（含冷沉淀）：ABO 按血浆规则判相容（与红细胞方向相反） */
+    /**
+     * 是否为「血浆类」（含冷沉淀）：ABO 按血浆规则判相容（与红细胞方向相反）
+     */
     public static boolean isPlasmaGroup(Integer component) {
         return PLASMA.is(component) || CRYOPRECIPITATE.is(component);
     }
 
-    /** Integer 码值判定：null 安全，语义同 == 比较 int 常量 */
+    /**
+     * Integer 码值判定：null 安全，语义同 == 比较 int 常量
+     */
     public boolean is(Integer code) {
         return code != null && code == this.code;
     }

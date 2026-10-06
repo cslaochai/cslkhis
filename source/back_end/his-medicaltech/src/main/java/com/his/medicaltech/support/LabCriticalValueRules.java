@@ -1,5 +1,6 @@
 package com.his.medicaltech.support;
 
+import com.his.medicaltech.enums.CriticalTypeEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
@@ -7,8 +8,6 @@ import org.springframework.util.StringUtils;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import com.his.medicaltech.enums.CriticalTypeEnum;
-import com.his.medicaltech.support.LabReferenceRangeParser;
 
 /**
  * 危急值硬规则（纯代码，<b>绝不由模型判断</b>）。
@@ -31,18 +30,6 @@ import com.his.medicaltech.support.LabReferenceRangeParser;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class LabCriticalValueRules {
 
-    /**
-     * 项目规则。编码精确匹配（大写），{@code nameKeyword} 为项目名包含匹配。
-     * 二者命中其一即可，但单位必须与结果单位一致。
-     */
-    private record Rule(String code,
-                        String nameKeyword,
-                        String label,
-                        String unit,
-                        Double criticalLow,
-                        Double criticalHigh) {
-    }
-
     private static final List<Rule> RULES = List.of(
             new Rule("K", "血钾", "血清钾", "mmol/L", 2.5, 6.0),
             new Rule("NA", "血钠", "血清钠", "mmol/L", 120.0, 160.0),
@@ -56,20 +43,6 @@ public final class LabCriticalValueRules {
             new Rule("PO2", "氧分压", "动脉血氧分压", "mmHg", 60.0, null),
             new Rule("PCO2", "二氧化碳分压", "动脉血二氧化碳分压", "mmHg", null, 70.0),
             new Rule("CTNI", "肌钙蛋白", "肌钙蛋白", "ng/mL", null, 0.5));
-
-    /**
-     * 危急值命中结果
-     *
-     * @param type          1-偏低 2-偏高
-     * @param itemLabel     项目规范名
-     * @param value         数值
-     * @param unit          单位
-     * @param threshold     阈值文本
-     * @param description   给医生看的描述
-     */
-    public record Hit(int type, String itemLabel, double value, String unit,
-                      String threshold, String description) {
-    }
 
     /**
      * 判定一条检验结果是否达到危急值。
@@ -147,5 +120,31 @@ public final class LabCriticalValueRules {
             return String.valueOf((long) value);
         }
         return String.valueOf(value);
+    }
+
+    /**
+     * 项目规则。编码精确匹配（大写），{@code nameKeyword} 为项目名包含匹配。
+     * 二者命中其一即可，但单位必须与结果单位一致。
+     */
+    private record Rule(String code,
+                        String nameKeyword,
+                        String label,
+                        String unit,
+                        Double criticalLow,
+                        Double criticalHigh) {
+    }
+
+    /**
+     * 危急值命中结果
+     *
+     * @param type        1-偏低 2-偏高
+     * @param itemLabel   项目规范名
+     * @param value       数值
+     * @param unit        单位
+     * @param threshold   阈值文本
+     * @param description 给医生看的描述
+     */
+    public record Hit(int type, String itemLabel, double value, String unit,
+                      String threshold, String description) {
     }
 }

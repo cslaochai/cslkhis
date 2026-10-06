@@ -55,10 +55,10 @@ public interface BizDialysisPatientMapper extends BaseMapper<BizDialysisPatient>
             </script>
             """)
     List<DialysisVO.ArchiveVO> selectArchivePage(IPage<DialysisVO.ArchiveVO> page,
-                                                @Param("dialysisNo") String dialysisNo,
-                                                @Param("patientName") String patientName,
-                                                @Param("accessType") Integer accessType,
-                                                @Param("status") Integer status);
+                                                 @Param("dialysisNo") String dialysisNo,
+                                                 @Param("patientName") String patientName,
+                                                 @Param("accessType") Integer accessType,
+                                                 @Param("status") Integer status);
 
     @Select("""
             SELECT """ + ARCHIVE_COLUMNS + """

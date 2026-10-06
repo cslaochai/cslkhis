@@ -1,8 +1,6 @@
 package com.his.medicaltech.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.his.common.base.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -24,21 +22,33 @@ import java.math.BigDecimal;
 @TableName("biz_film_spec")
 public class BizFilmSpec extends BaseEntity {
 
-    /** 规格编码（唯一） */
+    /**
+     * 规格编码（唯一）
+     */
     private String specCode;
 
-    /** 规格名称（如 14×17英寸激光胶片） */
+    /**
+     * 规格名称（如 14×17英寸激光胶片）
+     */
     private String specName;
 
-    /** 单价（元/张） */
+    /**
+     * 单价（元/张）
+     */
     private BigDecimal unitPrice;
 
-    /** 计价单位（默认张） */
+    /**
+     * 计价单位（默认张）
+     */
     private String unit;
 
-    /** 排序号 */
+    /**
+     * 排序号
+     */
     private Integer sortOrder;
 
-    /** 状态（0-停用 1-启用） */
+    /**
+     * 状态（0-停用 1-启用）
+     */
     private Integer status;
 }

@@ -18,12 +18,18 @@ import java.io.Serializable;
 @TableName("biz_dialysis_machine")
 public class BizDialysisMachine extends BaseEntity implements Serializable {
 
-    /** 机位号 */
+    /**
+     * 机位号
+     */
     private String machineNo;
 
-    /** 透析分区 */
+    /**
+     * 透析分区
+     */
     private String roomName;
 
-    /** 状态（1-可用 2-维修 3-停用） */
+    /**
+     * 状态（1-可用 2-维修 3-停用）
+     */
     private Integer status;
 }

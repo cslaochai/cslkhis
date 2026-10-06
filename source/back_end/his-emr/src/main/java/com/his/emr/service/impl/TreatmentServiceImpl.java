@@ -2,13 +2,16 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.charge.dto.FeeBookDTO;
+import com.his.charge.entity.BizFeeRecord;
+import com.his.charge.support.FeeCatalogResolver;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.BillingStatusEnum;
 import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.emr.dto.TreatmentDTO;
 import com.his.emr.entity.BizTreatmentApply;
 import com.his.emr.entity.BizTreatmentRecord;
@@ -19,11 +22,8 @@ import com.his.emr.mapper.BizTreatmentRecordMapper;
 import com.his.emr.mapper.SysTreatmentItemMapper;
 import com.his.emr.service.TreatmentService;
 import com.his.emr.support.TreatmentChargeInvoker;
-import com.his.system.service.DictCacheService;
 import com.his.emr.vo.TreatmentVO;
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.support.FeeCatalogResolver;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,7 +70,9 @@ public class TreatmentServiceImpl implements TreatmentService {
     private static final int BACK_DAYS = 31;
     private static final int AHEAD_DAYS = 365;
 
-    /** 治疗站字典类型（原 TreatmentDictText 常量，文案统一走 DictCacheService.text） */
+    /**
+     * 治疗站字典类型（原 TreatmentDictText 常量，文案统一走 DictCacheService.text）
+     */
     private static final String DICT_ITEM_TYPE = "his_treatment_item_type";
     private static final String DICT_APPLY_STATUS = "his_treatment_apply_status";
     private static final String DICT_RECORD_STATUS = "his_treatment_record_status";
