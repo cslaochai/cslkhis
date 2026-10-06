@@ -315,8 +315,8 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         for (BizAnesthesiaMed m : list) {
             AnesthesiaMedVO vo = new AnesthesiaMedVO();
             BeanUtils.copyProperties(m, vo);
-            vo.setMedPhaseText(MedPhaseEnum.getText(m.getMedPhase()));
-            vo.setRouteText(MedRouteEnum.getText(m.getRoute()));
+            vo.setMedPhaseText(dictText.getDicDataLabel("biz_operation_medPhaseEnum", m.getMedPhase()));
+            vo.setRouteText(dictText.getDicDataLabel("biz_operation_medRouteEnum", m.getRoute()));
             vo.setDoseText(m.getDose() == null ? null
                     : m.getDose().stripTrailingZeros().toPlainString()
                     + (StringUtils.hasText(m.getUnit()) ? " " + m.getUnit() : ""));
@@ -583,12 +583,12 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         vo.setApplyAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getApplyAnesthesiaType()));
         vo.setAsaText(AsaGradeEnum.getText(vo.getAsaGrade()));
         vo.setAirwayDeviceText(AirwayDeviceEnum.getText(vo.getAirwayDevice()));
-        vo.setVentilationText(VentilationModeEnum.getText(vo.getVentilationMode()));
-        vo.setEffectText(AnesthesiaEffectEnum.getText(vo.getAnesthesiaEffect()));
-        vo.setDispositionText(PostopDispositionEnum.getText(vo.getPostopDisposition()));
+        vo.setVentilationText(dictText.getDicDataLabel("biz_operation_ventilationModeEnum", vo.getVentilationMode()));
+        vo.setEffectText(dictText.getDicDataLabel("biz_operation_anesthesiaEffectEnum", vo.getAnesthesiaEffect()));
+        vo.setDispositionText(dictText.getDicDataLabel("biz_operation_postopDispositionEnum", vo.getPostopDisposition()));
         vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(vo.getChargeStatus()));
         vo.setVisitConclusionText(VisitConclusionEnum.getText(vo.getVisitConclusion()));
-        vo.setEmergencyText(OperationEmergencyEnum.getText(vo.getIsEmergency()));
+        vo.setEmergencyText(dictText.getDicDataLabel("biz_operation_operationEmergencyEnum", vo.getIsEmergency()));
         vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
 
         Long anesthesiaMinutes = minutesBetween(vo.getAnesthesiaStartTime(), vo.getAnesthesiaEndTime());

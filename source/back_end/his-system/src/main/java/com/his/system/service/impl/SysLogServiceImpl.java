@@ -105,7 +105,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setId(row.getId());
         vo.setTitle(row.getTitle());
         vo.setBusinessType(row.getBusinessType());
-        vo.setBusinessTypeText(OperBusinessTypeEnum.getText(row.getBusinessType()));
+        vo.setBusinessTypeText(dictText.getDicDataLabel("biz_system_operBusinessTypeEnum", row.getBusinessType()));
         vo.setMethod(row.getMethod());
         vo.setRequestMethod(row.getRequestMethod());
         vo.setOperName(row.getOperName());
@@ -118,7 +118,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setOperParam(row.getOperParam());
         vo.setJsonResult(row.getJsonResult());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(OperStatusEnum.getText(row.getStatus()));
+        vo.setStatusText(dictText.getDicDataLabel("biz_system_operStatusEnum", row.getStatus()));
         vo.setErrorMsg(row.getErrorMsg());
         vo.setOperTime(row.getOperTime());
         vo.setCostTime(row.getCostTime());
@@ -427,7 +427,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setId(row.getId());
         vo.setTitle(row.getTitle());
         vo.setBusinessType(row.getBusinessType());
-        vo.setBusinessTypeText(OperBusinessTypeEnum.getText(row.getBusinessType()));
+        vo.setBusinessTypeText(dictText.getDicDataLabel("biz_system_operBusinessTypeEnum", row.getBusinessType()));
         vo.setMethod(row.getMethod());
         vo.setRequestMethod(row.getRequestMethod());
         vo.setOperName(row.getOperName());
@@ -437,7 +437,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setOperIp(row.getOperIp());
         vo.setOperLocation(row.getOperLocation());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(OperStatusEnum.getText(row.getStatus()));
+        vo.setStatusText(dictText.getDicDataLabel("biz_system_operStatusEnum", row.getStatus()));
         vo.setOperTime(row.getOperTime());
         vo.setCostTime(row.getCostTime());
         vo.setErrorMsg(row.getErrorMsg() == null ? null : cut(row.getErrorMsg(), 200));
@@ -455,7 +455,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setBrowser(row.getBrowser());
         vo.setOs(row.getOs());
         vo.setLoginStatus(row.getLoginStatus());
-        vo.setLoginStatusText(LoginStatusEnum.getText(row.getLoginStatus()));
+        vo.setLoginStatusText(dictText.getDicDataLabel("biz_system_loginStatusEnum", row.getLoginStatus()));
         vo.setMsg(row.getMsg());
         vo.setLoginTime(row.getLoginTime());
         vo.setUserAgent(row.getUserAgent());
@@ -474,7 +474,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setContent(row.getContent());
         vo.setIp(row.getIp());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(AuditLogStatusEnum.getText(row.getStatus()));
+        vo.setStatusText(dictText.getDicDataLabel("biz_system_auditLogStatusEnum", row.getStatus()));
         vo.setErrorMsg(row.getErrorMsg());
         vo.setCreateTime(row.getCreateTime());
         return vo;

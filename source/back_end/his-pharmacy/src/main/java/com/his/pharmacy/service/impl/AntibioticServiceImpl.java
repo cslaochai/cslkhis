@@ -160,7 +160,7 @@ public class AntibioticServiceImpl implements AntibioticService {
     public List<AntibioticDrugSelectListVO> antibioticDrugSelectList() {
         List<AntibioticDrugSelectListVO> list = catalogMapper.selectAntibioticDrugs();
         for (AntibioticDrugSelectListVO vo : list) {
-            vo.setAntibioticLevelText(AntibioticLevelEnum.getText(vo.getAntibioticLevel()));
+            vo.setAntibioticLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", vo.getAntibioticLevel()));
         }
         return list;
     }
@@ -228,7 +228,7 @@ public class AntibioticServiceImpl implements AntibioticService {
                     .eq(BizAntibioticAuth::getDoctorId, dto.getDoctorId())
                     .eq(BizAntibioticAuth::getAuthLevel, dto.getAuthLevel()));
             if (exist != null) {
-                throw new BusinessException("该医师已有" + AntibioticLevelEnum.labelOrUnknown(dto.getAuthLevel())
+                throw new BusinessException("该医师已有" + dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", dto.getAuthLevel())
                         + "的授权记录（" + exist.getAuthNo() + "），请直接修改那条而不是重复新增");
             }
             auth = new BizAntibioticAuth();
@@ -279,9 +279,9 @@ public class AntibioticServiceImpl implements AntibioticService {
                 AntibioticAuthCheckVO.BlockedDrug b = new AntibioticAuthCheckVO.BlockedDrug();
                 b.setDrugName(drug.getDrugName());
                 b.setAntibioticLevel(drug.getAntibioticLevel());
-                b.setAntibioticLevelText(AntibioticLevelEnum.getText(drug.getAntibioticLevel()));
+                b.setAntibioticLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", drug.getAntibioticLevel()));
                 b.setRequiredLevel(drug.getAntibioticLevel());
-                b.setRequiredLevelText(AntibioticLevelEnum.getText(drug.getAntibioticLevel()));
+                b.setRequiredLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", drug.getAntibioticLevel()));
                 vo.getBlockedDrugs().add(b);
             }
         }
@@ -338,7 +338,7 @@ public class AntibioticServiceImpl implements AntibioticService {
     }
 
     private void fillLevelText(AntibioticCatalogVO vo) {
-        vo.setAntibioticLevelText(AntibioticLevelEnum.getText(vo.getAntibioticLevel()));
+        vo.setAntibioticLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", vo.getAntibioticLevel()));
         vo.setInCatalog(vo.getAntibioticLevel() != null && vo.getAntibioticLevel() > 0);
     }
 
@@ -352,12 +352,12 @@ public class AntibioticServiceImpl implements AntibioticService {
         vo.setDeptName(e.getDeptName());
         vo.setTitle(e.getTitle());
         vo.setAuthLevel(e.getAuthLevel());
-        vo.setAuthLevelText(AntibioticLevelEnum.getText(e.getAuthLevel()));
+        vo.setAuthLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", e.getAuthLevel()));
         vo.setAuthBasis(e.getAuthBasis());
         vo.setAuthDate(e.getAuthDate());
         vo.setExpireDate(e.getExpireDate());
         vo.setStatus(e.getStatus());
-        vo.setStatusText(AntibioticAuthStatusEnum.getText(e.getStatus()));
+        vo.setStatusText(dictText.getDicDataLabel("biz_pharmacy_antibioticAuthStatusEnum", e.getStatus()));
         vo.setEffective(e.getStatus() != null
                 && e.getStatus() == BizAntibioticAuth.STATUS_VALID
                 && e.getExpireDate() != null

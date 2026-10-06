@@ -194,7 +194,7 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
         vo.setTemplateCode(t.getTemplateCode());
         vo.setPackName(t.getPackName());
         vo.setSterilizeMethod(t.getSterilizeMethod());
-        vo.setSterilizeMethodText(CssdSterilizeMethodEnum.getText(t.getSterilizeMethod()));
+        vo.setSterilizeMethodText(dictText.getDicDataLabel("biz_pharmacy_cssdSterilizeMethodEnum", t.getSterilizeMethod()));
         vo.setStatus(t.getStatus());
         vo.setRemark(t.getRemark());
         vo.setItems(items);

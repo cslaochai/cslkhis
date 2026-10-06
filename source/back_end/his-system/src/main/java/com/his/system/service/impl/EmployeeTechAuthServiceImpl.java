@@ -524,7 +524,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         return vo;
     }
 
-    private static String authTypeText(Integer type) {
+    private String authTypeText(Integer type) {
         if (type == null) {
             return "—";
         }

@@ -142,7 +142,7 @@ public class StatReportServiceImpl implements StatReportService {
         List<Map<String, Object>> topDx = aggMapper.topDiagnoses(startStr, endStr, deptFilter);
         List<Map<String, Object>> cases = aggMapper.cohortCases(startStr, endStr, deptFilter);
 
-        String typeName = StatReportTypeEnum.getText(dto.getReportType());
+        String typeName = dictText.getDicDataLabel("biz_medicaltech_statReportTypeEnum", dto.getReportType());
         String title = (deptName == null ? "" : deptName) + typeName + "（" + period + "）";
         String operator = operatorName();
         LocalDateTime now = LocalDateTime.now();
@@ -256,7 +256,7 @@ public class StatReportServiceImpl implements StatReportService {
     public StatReportVO.Row submit(Long id) {
         BizStatReport r = mustGet(id);
         if (r.getStatus() != 0) {
-            throw new BusinessException("只有草稿可报出（当前状态：" + StatReportStatusEnum.labelOrUnknown(r.getStatus()) + "）");
+            throw new BusinessException("只有草稿可报出（当前状态：" + dictText.getDicDataLabel("biz_medicaltech_statReportStatusEnum", r.getStatus()) + "）");
         }
         r.setStatus(1);
         r.setSubmitTime(LocalDateTime.now());

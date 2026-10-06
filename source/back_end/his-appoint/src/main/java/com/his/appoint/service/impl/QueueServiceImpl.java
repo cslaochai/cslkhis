@@ -1103,7 +1103,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
      * 静默贴一个合法文案比显示未知更危险。
      */
     private void fillLogStatus(OpdLogListVO vo) {
-        vo.setLogStatusLabel(OpdLogStatusEnum.getText(vo.getLogStatus()));
+        vo.setLogStatusLabel(dictText.getDicDataLabel("biz_appoint_opdLogStatusEnum", vo.getLogStatus()));
     }
 
     @Override

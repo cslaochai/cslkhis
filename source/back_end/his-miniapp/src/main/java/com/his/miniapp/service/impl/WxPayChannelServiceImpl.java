@@ -33,8 +33,8 @@ public class WxPayChannelServiceImpl implements WxPayChannelService {
     public PayUnifiedResult unifiedOrder(BizPayOrder order) {
         log.info("[微信支付口子] ===== 模拟调微信统一下单（V3 transactions/jsapi）=====");
         log.info("[微信支付口子] 商户单号={} 业务类型={} 业务单ID={} 金额=￥{} 描述={}",
-                order.getPayNo(), PayBizTypeEnum.labelOrUnknown(order.getBizType()), order.getBizId(),
-                order.getAmount(), PayBizTypeEnum.labelOrUnknown(order.getBizType()));
+                order.getPayNo(), dictText.getDicDataLabel("biz_miniapp_payBizTypeEnum", order.getBizType()), order.getBizId(),
+                order.getAmount(), dictText.getDicDataLabel("biz_miniapp_payBizTypeEnum", order.getBizType()));
         log.info("[微信支付口子] ===== 模拟支付回调（notify 验签通过）=====");
         log.info("[微信支付口子] out_trade_no={} trade_state=SUCCESS transaction_id=MOCK_{}",
                 order.getPayNo(), System.currentTimeMillis());

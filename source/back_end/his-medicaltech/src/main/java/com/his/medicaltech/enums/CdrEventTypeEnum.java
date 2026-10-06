@@ -23,6 +23,23 @@ import com.his.patient.enums.ReferralStatusEnum;
 import com.his.patient.enums.SummaryStatusEnum;
 
 import java.util.function.Function;
+import com.his.medicaltech.enums.CdrChargeStatusEnum;
+import com.his.medicaltech.enums.CdrChargeTypeEnum;
+import com.his.medicaltech.enums.CdrConsultStatusEnum;
+import com.his.medicaltech.enums.CdrDiagTypeEnum;
+import com.his.medicaltech.enums.CdrDischargeStatusEnum;
+import com.his.medicaltech.enums.CdrEmergencyStatusEnum;
+import com.his.medicaltech.enums.CdrEmergencyTriageEnum;
+import com.his.medicaltech.enums.CdrEventTypeEnum;
+import com.his.medicaltech.enums.CdrInspApplyStatusEnum;
+import com.his.medicaltech.enums.CdrInsuranceSettleStatusEnum;
+import com.his.medicaltech.enums.CdrLabApplyStatusEnum;
+import com.his.medicaltech.enums.CdrPrescriptionStatusEnum;
+import com.his.medicaltech.enums.CdrPublicHealthReportStatusEnum;
+import com.his.medicaltech.enums.CdrPublicHealthReportTypeEnum;
+import com.his.medicaltech.enums.CdrQueueStatusEnum;
+import com.his.medicaltech.enums.CdrRegistStatusEnum;
+import com.his.emr.enums.QcStatusEnum;
 
 /**
  * CDR 时间轴上的**事件类型**表。

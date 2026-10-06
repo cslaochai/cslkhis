@@ -256,7 +256,7 @@ public class PacuServiceImpl implements PacuService {
         pacuMapper.updateById(entity);
         log.info("出PACU pacuNo={} Aldrete={} 去向={} 计费=成功{}项/失败{}项 金额={}",
                 entity.getPacuNo(), entity.getAldreteTotal(),
-                PacuDispositionEnum.labelOrUnknown(dto.getDisposition()),
+                dictText.getDicDataLabel("biz_operation_pacuDispositionEnum", dto.getDisposition()),
                 summary.getSuccessItems(), summary.getFailedItems(), summary.getAmount());
         return summary;
     }
@@ -341,8 +341,8 @@ public class PacuServiceImpl implements PacuService {
 
     private void decorate(PacuRecordVO vo) {
         vo.setStatusText(PacuStatusEnum.getText(vo.getStatus()));
-        vo.setAwarenessText(AwarenessLevelEnum.getText(vo.getAwareness()));
-        vo.setDispositionText(PacuDispositionEnum.getText(vo.getDisposition()));
+        vo.setAwarenessText(dictText.getDicDataLabel("biz_operation_awarenessLevelEnum", vo.getAwareness()));
+        vo.setDispositionText(dictText.getDicDataLabel("biz_operation_pacuDispositionEnum", vo.getDisposition()));
         vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(vo.getChargeStatus()));
         vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
 

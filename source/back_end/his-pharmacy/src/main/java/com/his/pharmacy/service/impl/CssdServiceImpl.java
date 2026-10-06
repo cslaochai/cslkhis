@@ -204,7 +204,7 @@ public class CssdServiceImpl implements CssdService {
         vo.setDeptId(p.getDeptId());
         vo.setDeptName(p.getDeptName());
         vo.setSterilizeMethod(p.getSterilizeMethod());
-        vo.setSterilizeMethodText(CssdSterilizeMethodEnum.getText(p.getSterilizeMethod()));
+        vo.setSterilizeMethodText(dictText.getDicDataLabel("biz_pharmacy_cssdSterilizeMethodEnum", p.getSterilizeMethod()));
         vo.setStatus(p.getStatus());
         vo.setStatusText(CssdNodeStatusEnum.getText(p.getStatus()));
         vo.setSterilizerNo(p.getSterilizerNo());

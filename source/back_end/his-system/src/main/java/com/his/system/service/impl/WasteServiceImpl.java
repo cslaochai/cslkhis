@@ -154,7 +154,7 @@ public class WasteServiceImpl implements WasteService {
         vo.setId(w.getId());
         vo.setWasteNo(w.getWasteNo());
         vo.setWasteType(w.getWasteType());
-        vo.setWasteTypeText(WasteTypeEnum.getText(w.getWasteType()));
+        vo.setWasteTypeText(dictText.getDicDataLabel("biz_system_wasteTypeEnum", w.getWasteType()));
         vo.setWeightKg(w.getWeightKg());
         vo.setDeptId(w.getDeptId());
         vo.setDeptName(w.getDeptName());

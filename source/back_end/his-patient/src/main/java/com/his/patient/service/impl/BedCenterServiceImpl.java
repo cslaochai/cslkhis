@@ -801,7 +801,7 @@ public class BedCenterServiceImpl implements BedCenterService {
                 bed.setReservedPriorityText(BedPriorityEnum.getText(bed.getReservedPriority()));
             }
             if (bed.getAllocType() != null) {
-                bed.setAllocTypeText(BedAllocTypeEnum.getText(bed.getAllocType()));
+                bed.setAllocTypeText(dictText.getDicDataLabel("biz_patient_bedAllocTypeEnum", bed.getAllocType()));
             }
             // 动作可用性一律服务端算：前端不自判状态机，避免"页面说能点、接口说不行"
             Integer st = bed.getBedStatus();

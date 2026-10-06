@@ -712,8 +712,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         record.setRemark("系统回写：手术申请单号 " + entity.getApplyNo()
                 + "，主刀 " + textOr(entity.getSurgeonName(), "未指定")
                 + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getText(entity.getAnesthesiaType())
-                + "，手术级别 " + OperationLevelEnum.getText(entity.getOperationLevel())
-                + "，切口等级 " + OperationIncisionEnum.getText(entity.getIncisionLevel()));
+                + "，手术级别 " + dictText.getDicDataLabel("biz_operation_operationLevelEnum", entity.getOperationLevel())
+                + "，切口等级 " + dictText.getDicDataLabel("biz_operation_operationIncisionEnum", entity.getIncisionLevel()));
         record.setRecordStatus(RecordStatusEnum.SUBMITTED.getCode());
         // 签名 = 主刀医师；主刀缺失才回落到录入人（宁可记"谁录的"，也不留空签名）
         record.setDoctorId(entity.getSurgeonId() != null ? entity.getSurgeonId() : currentEmpId());
@@ -776,10 +776,10 @@ public class OperationApplyServiceImpl implements OperationApplyService {
 
     private void decorate(OperationApplyVO vo) {
         vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
-        vo.setOperationLevelText(OperationLevelEnum.getText(vo.getOperationLevel()));
-        vo.setIncisionLevelText(OperationIncisionEnum.getText(vo.getIncisionLevel()));
+        vo.setOperationLevelText(dictText.getDicDataLabel("biz_operation_operationLevelEnum", vo.getOperationLevel()));
+        vo.setIncisionLevelText(dictText.getDicDataLabel("biz_operation_operationIncisionEnum", vo.getIncisionLevel()));
         vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
-        vo.setIsEmergencyText(OperationEmergencyEnum.getText(vo.getIsEmergency()));
+        vo.setIsEmergencyText(dictText.getDicDataLabel("biz_operation_operationEmergencyEnum", vo.getIsEmergency()));
         vo.setIsMainText(vo.getIsMain() == null ? "—" : (vo.getIsMain() == 1 ? "主要手术" : "次要手术"));
         vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
         vo.setAdmitStatusText(AdmitStatusEnum.getText(vo.getAdmitStatus()));

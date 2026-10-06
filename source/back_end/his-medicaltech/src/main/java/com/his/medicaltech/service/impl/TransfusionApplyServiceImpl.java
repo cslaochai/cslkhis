@@ -505,7 +505,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             TransfusionApplyVO.ApproveRecord row = new TransfusionApplyVO.ApproveRecord();
             row.setId(r.getId());
             row.setApproveLevel(r.getApproveLevel());
-            row.setApproveLevelText(TransfusionApproveLevelEnum.getText(r.getApproveLevel()));
+            row.setApproveLevelText(dictText.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", r.getApproveLevel()));
             row.setApproveResult(r.getApproveResult());
             row.setApproveResultText(Objects.equals(1, r.getApproveResult()) ? "通过" : "驳回");
             row.setApproverId(r.getApproverId());
@@ -568,7 +568,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
                     + TransfusionApproveStatusEnum.labelOrUnknown(entity.getApproveStatus())
                     + "」，未通过审批不能配血（申请量 "
                     + (entity.getAmountMl() == null ? "待折算" : entity.getAmountMl() + "ml")
-                    + "，属「" + TransfusionApproveLevelEnum.labelOrUnknown(entity.getApproveLevel()) + "」审核签发范围）");
+                    + "，属「" + dictText.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", entity.getApproveLevel()) + "」审核签发范围）");
         }
         BizAdmission admission = inpatientService.getAdmissionById(entity.getAdmissionId());
         if (admission == null || !Objects.equals(ADMITTED, admission.getAdmitStatus())) {
@@ -1112,7 +1112,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         vo.setAdmitStatusText(AdmitStatusEnum.getText(vo.getAdmitStatus()));
         vo.setHasReactionText(Objects.equals(1, vo.getHasReaction()) ? "有反应（已上报）" : "未上报反应");
         vo.setApproveStatusText(TransfusionApproveStatusEnum.getText(vo.getApproveStatus()));
-        vo.setApproveLevelText(TransfusionApproveLevelEnum.getText(vo.getApproveLevel()));
+        vo.setApproveLevelText(dictText.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", vo.getApproveLevel()));
         vo.setCheckItemsText(TransfusionCheckItems.summaryText(vo.getCheckItems()));
         vo.setCheckItemOptions(checkItems());
         vo.setReactionTypeOptions(TransfusionReactionTypeEnum.options());

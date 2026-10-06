@@ -349,7 +349,7 @@ public class OperationCountServiceImpl implements OperationCountService {
         for (BizOperationCountItem item : items) {
             CountItemVO itemVo = new CountItemVO();
             BeanUtils.copyProperties(item, itemVo);
-            itemVo.setItemCategoryText(CountCategoryEnum.getText(item.getItemCategory()));
+            itemVo.setItemCategoryText(dictText.getDicDataLabel("biz_operation_countCategoryEnum", item.getItemCategory()));
             // ★ 判定基准是术前基线，不是上一段（连续两次都少一块纱布时，"与上段一致"会显示通过）
             if (item.getBeforeQty() != null && item.getFinalQty() != null) {
                 itemVo.setConsistent(Objects.equals(item.getBeforeQty(), item.getFinalQty()));

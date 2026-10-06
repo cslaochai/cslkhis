@@ -291,7 +291,7 @@ public class CdrServiceImpl implements CdrService {
             node.setStartTime(fmt(ldt(r.get("regist_time"), ldt(r.get("visit_date")))));
             node.setDeptName(str(r.get("dept_name")));
             node.setOperatorName(str(r.get("doctor_name")));
-            node.setStatusText(CdrRegistStatusEnum.getText(intVal(r.get("regist_status"))));
+            node.setStatusText(dictText.getDicDataLabel("biz_medicaltech_cdrRegistStatusEnum", intVal(r.get("regist_status"))));
             node.setTitle(composeTitle(node.getNodeTypeText(), node.getDeptName(), node.getOperatorName()));
             node.setSubtitle("该挂号未被就诊次收录");
             node.setFromShadow(isShadow(r.get("owner_pid"), pid));
@@ -341,8 +341,8 @@ public class CdrServiceImpl implements CdrService {
             node.setEndTime(fmt(ldt(e.get("finish_time"))));
             node.setDeptName(str(e.get("dept_name")));
             node.setOperatorName(str(e.get("doctor_name")));
-            node.setStatusText(CdrEmergencyStatusEnum.getText(intVal(e.get("emergency_status"))));
-            String triage = CdrEmergencyTriageEnum.getText(intVal(e.get("triage_level")));
+            node.setStatusText(dictText.getDicDataLabel("biz_medicaltech_cdrEmergencyStatusEnum", intVal(e.get("emergency_status"))));
+            String triage = dictText.getDicDataLabel("biz_medicaltech_cdrEmergencyTriageEnum", intVal(e.get("triage_level")));
             String zone = str(e.get("zone"));
             node.setSubtitle(StringUtils.hasText(triage) || StringUtils.hasText(zone)
                     ? ((triage == null ? "" : triage) + " " + (zone == null ? "" : zone)).trim() : null);

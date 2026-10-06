@@ -356,7 +356,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             p.setMeasureTime(r.getMeasureTime());
             p.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DATE));
             p.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(CLOCK));
-            p.setShiftText(NursingShiftEnum.getText(r.getShift()));
+            p.setShiftText(dictText.getDicDataLabel("biz_patient_nursingShiftEnum", r.getShift()));
             p.setTemperature(r.getTemperature());
             p.setPulse(r.getPulse());
             p.setRespiration(r.getRespiration());
@@ -611,7 +611,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setAssessTypeText(NursingAssessTypeEnum.getText(row.getAssessType()));
         vo.setTotalScore(row.getTotalScore());
         vo.setRiskLevel(row.getRiskLevel());
-        vo.setRiskLevelText(NursingRiskLevelEnum.getText(row.getRiskLevel()));
+        vo.setRiskLevelText(dictText.getDicDataLabel("biz_patient_nursingRiskLevelEnum", row.getRiskLevel()));
         vo.setItemsJson(row.getItemsJson());
         vo.setAssessTime(row.getAssessTime());
         vo.setAssessNurseId(row.getAssessNurseId());
@@ -855,7 +855,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DATE));
         vo.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(CLOCK));
         vo.setShift(r.getShift());
-        vo.setShiftText(NursingShiftEnum.getText(r.getShift()));
+        vo.setShiftText(dictText.getDicDataLabel("biz_patient_nursingShiftEnum", r.getShift()));
         vo.setTemperature(r.getTemperature());
         vo.setPulse(r.getPulse());
         vo.setRespiration(r.getRespiration());
@@ -869,7 +869,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setIntakeVolume(r.getIntakeVolume());
         vo.setOutputVolume(r.getOutputVolume());
         vo.setNursingLevel(r.getNursingLevel());
-        vo.setNursingLevelText(NursingLevelEnum.getText(r.getNursingLevel()));
+        vo.setNursingLevelText(dictText.getDicDataLabel("biz_patient_nursingLevelEnum", r.getNursingLevel()));
         vo.setNursingContent(r.getNursingContent());
         vo.setNurseId(r.getNurseId());
         vo.setNurseName(r.getNurseName());

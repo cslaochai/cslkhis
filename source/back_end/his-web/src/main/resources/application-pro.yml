@@ -7,8 +7,6 @@ spring:
   application:
     name: his-backend
   # 换机器或部署时：复制一份 application-local.yml 填值，或改用对应环境变量（见各占位符）。
-  config:
-    import: optional:classpath:application-local.yml
   servlet:
     multipart:
       max-file-size: 20MB
@@ -51,7 +49,6 @@ mybatis-plus:
       logic-not-delete-value: 0
 
 jwt:
-  # 签名密钥属敏感项，只落 application-local.yml / 环境变量（值见 workspace/环境凭据.md）
   secret: ${HIS_JWT_SECRET:}
   expiration: 86400000  # 24小时
 
@@ -59,7 +56,6 @@ ai:
   enabled: true
   provider: openai-compatible
   base-url: https://dashscope.aliyuncs.com/compatible-mode/v1
-  # 模型访问密钥属敏感项，真值只落 application-local.yml（不入库）
   api-key: ${HIS_AI_API_KEY:}
   model: deepseek-v4.1-flash
   model-lite: deepseek-v4.1-flash

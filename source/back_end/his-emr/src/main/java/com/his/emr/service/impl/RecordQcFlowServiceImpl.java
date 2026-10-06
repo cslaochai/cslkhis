@@ -295,7 +295,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         vo.setFlowStatusText(RecordQcFlowStatusEnum.getText(vo.getFlowStatus()));
         vo.setCurrentLevelText(RecordQcLevelEnum.getText(vo.getCurrentLevel()));
         vo.setReturnLevelText(RecordQcLevelEnum.getText(vo.getReturnLevel()));
-        vo.setGradeText(QcGradeEnum.getText(vo.getGrade()));
+        vo.setGradeText(dictText.getDicDataLabel("biz_emr_qcGradeEnum", vo.getGrade()));
         vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
         return vo;
     }

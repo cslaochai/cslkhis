@@ -773,7 +773,7 @@ public class InpatientServiceImpl implements InpatientService {
         for (BedMapVO.BedCard bed : beds) {
             bed.setBedStatusText(BedStatusEnum.getText(bed.getBedStatus()));
             bed.setNursingLevelText(bed.getNursingLevel() == null
-                    ? "未评估" : NursingLevelEnum.getText(bed.getNursingLevel()));
+                    ? "未评估" : dictText.getDicDataLabel("biz_patient_nursingLevelEnum", bed.getNursingLevel()));
         }
         result.setBeds(beds);
         if (!beds.isEmpty()) {

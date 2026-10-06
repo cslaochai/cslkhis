@@ -617,7 +617,7 @@ public class VteServiceImpl implements VteService {
         vo.setAssessmentId(r.getAssessmentId());
         vo.setCapriniScore(r.getCapriniScore());
         vo.setRiskLevel(r.getRiskLevel());
-        vo.setRiskLevelText(r.getRiskLevel() == null ? "未评" : VteRiskLevelEnum.getText(r.getRiskLevel()));
+        vo.setRiskLevelText(r.getRiskLevel() == null ? "未评" : dictText.getDicDataLabel("biz_patient_vteRiskLevelEnum", r.getRiskLevel()));
         vo.setMeasureCode(r.getMeasureCode());
         vo.setMeasureCodeText(VteRules.measureCodeText(r.getMeasureCode()));
         vo.setMeasureType(r.getMeasureType());
@@ -649,10 +649,10 @@ public class VteServiceImpl implements VteService {
         vo.setOnsetTypeText(VteOnsetEnum.getText(r.getOnsetType()));
         vo.setDiagnoseDate(r.getDiagnoseDate());
         vo.setDiagnosisBasis(r.getDiagnosisBasis());
-        vo.setDiagnosisBasisText(VteDiagnosisBasisEnum.getText(r.getDiagnosisBasis()));
+        vo.setDiagnosisBasisText(dictText.getDicDataLabel("biz_patient_vteDiagnosisBasisEnum", r.getDiagnosisBasis()));
         vo.setThrombusSite(r.getThrombusSite());
         vo.setOutcome(r.getOutcome());
-        vo.setOutcomeText(VteOutcomeEnum.getText(r.getOutcome()));
+        vo.setOutcomeText(dictText.getDicDataLabel("biz_patient_vteOutcomeEnum", r.getOutcome()));
         vo.setDrugPreventFlag(r.getDrugPreventFlag());
         vo.setReporterName(r.getReporterName());
         vo.setReportTime(r.getReportTime());

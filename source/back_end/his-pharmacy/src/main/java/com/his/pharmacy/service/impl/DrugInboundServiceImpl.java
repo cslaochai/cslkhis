@@ -50,9 +50,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, BizDrugInbound>
+        implements DrugInboundService {
     @Autowired
     private DictCacheService dictText;
-        implements DrugInboundService {
 
     private final BizDrugInboundMapper inboundMapper;
     private final BizDrugInboundDetailMapper detailMapper;
@@ -172,7 +172,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("入库单不存在或已删除");
         }
         if (in.getInboundStatus() == null || in.getInboundStatus() != 1) {
-            throw new BusinessException("只有待审核的入库单可以审核（当前：" + DrugInboundStatusEnum.labelOrUnknown(in.getInboundStatus()) + "）");
+            throw new BusinessException("只有待审核的入库单可以审核（当前：" + dictText.getDicDataLabel("biz_pharmacy_drugInboundStatusEnum", in.getInboundStatus()) + "）");
         }
         if (detailMapper.countActiveByInbound(in.getId()) == 0) {
             throw new BusinessException("入库单没有有效明细，不能审核");
@@ -196,7 +196,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("入库单不存在或已删除");
         }
         if (in.getInboundStatus() == null || in.getInboundStatus() != 2) {
-            throw new BusinessException("只有已审核的入库单可以入库（当前：" + DrugInboundStatusEnum.labelOrUnknown(in.getInboundStatus()) + "）");
+            throw new BusinessException("只有已审核的入库单可以入库（当前：" + dictText.getDicDataLabel("biz_pharmacy_drugInboundStatusEnum", in.getInboundStatus()) + "）");
         }
 
         List<DrugInboundDetailVO> details = detailMapper.selectByInboundId(in.getId());
@@ -240,7 +240,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("入库单不存在或已删除");
         }
         if (in.getInboundStatus() == null || (in.getInboundStatus() != 1 && in.getInboundStatus() != 2)) {
-            throw new BusinessException("只有待审核或已审核的入库单可以取消（当前：" + DrugInboundStatusEnum.labelOrUnknown(in.getInboundStatus())
+            throw new BusinessException("只有待审核或已审核的入库单可以取消（当前：" + dictText.getDicDataLabel("biz_pharmacy_drugInboundStatusEnum", in.getInboundStatus())
                     + "）；已入库的入库单要冲销请走退货入库");
         }
         String operator = UserUtils.getCurrentEmployeeName();

@@ -159,7 +159,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         IPage<PrepayVO> raw = paymentTxnMapper.selectPrepayPage(page, q);
         // 文案由后端给：前端判码值就会有第二套口径（支付方式码值前端就抄错过一次，把 4 当银行卡）
         for (PrepayVO vo : raw.getRecords()) {
-            vo.setPrepayTypeText(PrepayTypeEnum.getText(vo.getPrepayType()));
+            vo.setPrepayTypeText(dictText.getDicDataLabel("biz_charge_prepayTypeEnum", vo.getPrepayType()));
             vo.setPayMethodText(PaymentMethodEnum.getText(vo.getPayMethod()));
         }
         return raw;
@@ -653,7 +653,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         vo.setRefundAmount(scale(refund));
         vo.setArrearsAmount(scale(arrears));
         vo.setSettleStatus(arrears.signum() > 0 ? SETTLE_ARREARS : SETTLE_CLEARED);
-        vo.setSettleStatusText(InpatientSettleResultEnum.getText(vo.getSettleStatus()));
+        vo.setSettleStatusText(dictText.getDicDataLabel("biz_charge_inpatientSettleResultEnum", vo.getSettleStatus()));
         vo.setSettleMode(bill.getSettlementMode());
         vo.setSettleModeText(SettlementModeEnum.getText(bill.getSettlementMode()));
         vo.setInsuranceType(bill.getInsuranceType());

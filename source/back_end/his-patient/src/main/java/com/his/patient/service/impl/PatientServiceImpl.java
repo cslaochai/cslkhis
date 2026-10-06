@@ -79,7 +79,7 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
      * <p><b>打码只打直接标识符</b>（身份证 / 手机号 / 住址 / 医保卡号），姓名、性别、
      * 过敏史这些业务字段原样留 —— 全打码的日志在检查时答不出"过敏史什么时候被改过"。
      */
-    private static final List<FieldSpec> PATIENT_FIELDS = FieldSpec.list(
+    private final List<FieldSpec> PATIENT_FIELDS = FieldSpec.list(
             FieldSpec.of("patientName", "姓名"),
             FieldSpec.render("gender", "性别", v -> SysGenderEnum.getText((Integer) v)),
             FieldSpec.of("birthDate", "出生日期"),
@@ -91,15 +91,15 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
             FieldSpec.masked("address", "家庭住址", MaskEnum.ADDRESS),
             FieldSpec.of("nation", "民族"),
             FieldSpec.of("occupation", "职业"),
-            FieldSpec.render("maritalStatus", "婚姻状况", v -> MaritalStatusEnum.getText((Integer) v)),
+            FieldSpec.render("maritalStatus", "婚姻状况", v -> dictText.getDicDataLabel("biz_patient_maritalStatusEnum", (Integer) v)),
             FieldSpec.of("bloodType", "血型"),
             FieldSpec.of("allergyHistory", "过敏史"),
             FieldSpec.of("medicalHistory", "既往病史"),
             FieldSpec.render("patientType", "患者类型",
-                    v -> PatientTypeEnum.getText((Integer) v)),
+                    v -> dictText.getDicDataLabel("biz_patient_patientTypeEnum", (Integer) v)),
             FieldSpec.masked("medicalInsuranceNo", "医保卡号", MaskEnum.BANK_NO),
             FieldSpec.of("medicalInsuranceType", "医保类型"),
-            FieldSpec.render("cardType", "证件类型", v -> CardTypeEnum.getText((Integer) v)),
+            FieldSpec.render("cardType", "证件类型", v -> dictText.getDicDataLabel("biz_patient_cardTypeEnum", (Integer) v)),
             FieldSpec.masked("cardNo", "证件号码", MaskEnum.BANK_NO),
             FieldSpec.render("status", "状态", v -> EnableStatusEnum.getText((Integer) v))
     );

@@ -242,7 +242,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setEquipmentCode(e.getEquipmentCode());
         vo.setEquipmentName(e.getEquipmentName());
         vo.setCategory(e.getCategory());
-        vo.setCategoryText(EquipCategoryEnum.getText(e.getCategory()));
+        vo.setCategoryText(dictText.getDicDataLabel("biz_system_equipCategoryEnum", e.getCategory()));
         vo.setDeptId(e.getDeptId());
         vo.setDeptName(e.getDeptName());
         vo.setBrand(e.getBrand());
@@ -250,7 +250,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setPurchaseDate(e.getPurchaseDate());
         vo.setPurchasePrice(e.getPurchasePrice());
         vo.setStatus(e.getStatus());
-        vo.setStatusText(EquipStatusEnum.getText(e.getStatus()));
+        vo.setStatusText(dictText.getDicDataLabel("biz_system_equipStatusEnum", e.getStatus()));
         vo.setMaintainCycleDays(e.getMaintainCycleDays());
         vo.setLastMaintainDate(e.getLastMaintainDate());
         if (e.getLastMaintainDate() != null && e.getMaintainCycleDays() != null && e.getMaintainCycleDays() > 0) {

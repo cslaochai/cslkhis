@@ -63,9 +63,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapper, BizQualityControl>
+        implements QualityControlService {
     @Autowired
     private DictCacheService dictText;
-        implements QualityControlService {
 
     /**
      * 单号冲突重试次数
@@ -391,7 +391,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         }
         if (qc.getQcStatus() == null || qc.getQcStatus() != 1) {
             throw new BusinessException("只有「待处理」的质控单可以处理，当前状态："
-                    + QcStatusEnum.labelOrUnknown(qc.getQcStatus()));
+                    + dictText.getDicDataLabel("biz_emr_qcStatusEnum", qc.getQcStatus()));
         }
         qc.setQcStatus(ignore ? RuleCheckStatusEnum.IGNORED.getCode() : RuleCheckStatusEnum.HANDLED.getCode());
         qc.setRemark(remark);
@@ -424,8 +424,8 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     private void enrich(BizQualityControlVO vo) {
         vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
         vo.setQcTypeText(RecordQcTypeEnum.getText(vo.getQcType()));
-        vo.setQcStatusText(QcStatusEnum.getText(vo.getQcStatus()));
-        vo.setQcResultText(QcResultEnum.getText(vo.getQcResult()));
+        vo.setQcStatusText(dictText.getDicDataLabel("biz_emr_qcStatusEnum", vo.getQcStatus()));
+        vo.setQcResultText(dictText.getDicDataLabel("biz_emr_qcResultEnum", vo.getQcResult()));
         vo.setRecordStatusText(RecordStatusEnum.getText(vo.getRecordStatus()));
         vo.setRecordTypeText(vo.getRecordType() == null ? null : InpatientRecordTypeEnum.getText(vo.getRecordType()));
         vo.setSeverityMaxText(vo.getSeverityMax() == null ? null : QcSeverityEnum.textOf(vo.getSeverityMax()));

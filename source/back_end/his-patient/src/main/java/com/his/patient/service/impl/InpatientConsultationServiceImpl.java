@@ -531,7 +531,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
     private void decorate(ConsultationVO vo) {
         vo.setConsultTypeText(ConsultScopeEnum.getText(vo.getConsultType()));
         vo.setConsultStatusText(ConsultationStatusEnum.getText(vo.getConsultStatus()));
-        vo.setIsUrgentText(ConsultUrgentEnum.getText(vo.getIsUrgent()));
+        vo.setIsUrgentText(dictText.getDicDataLabel("biz_patient_consultUrgentEnum", vo.getIsUrgent()));
         // 类别 null（存量行未填）→ 一律按"普通科间会诊"显示；非 null 脏数据 → 空串，由数据治理修复，不伪装
         vo.setConsultCategoryText(vo.getConsultCategory() == null
                 ? ConsultCategoryEnum.NORMAL.getLabel() : ConsultCategoryEnum.getText(vo.getConsultCategory()));

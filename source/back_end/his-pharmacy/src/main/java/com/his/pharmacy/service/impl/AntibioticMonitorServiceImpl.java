@@ -239,7 +239,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                 List<IncisionDrugCandidateVO> drugs = statMapper.selectPeriopAntibioticOrders(
                         vo.getAdmissionId(), vo.getOperationTime());
                 for (IncisionDrugCandidateVO d : drugs) {
-                    d.setAntibioticLevelText(AntibioticLevelEnum.getText(d.getAntibioticLevel()));
+                    d.setAntibioticLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", d.getAntibioticLevel()));
                     d.setMinutesFromIncision(d.getStartTime() == null ? null
                             : java.time.Duration.between(vo.getOperationTime(), d.getStartTime()).toMinutes());
                 }
@@ -470,10 +470,10 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         vo.setDrugId(e.getDrugId());
         vo.setDrugName(e.getDrugName());
         vo.setAntibioticLevel(e.getAntibioticLevel());
-        vo.setAntibioticLevelText(AntibioticLevelEnum.getText(e.getAntibioticLevel()));
+        vo.setAntibioticLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", e.getAntibioticLevel()));
         vo.setIndicationFlag(e.getIndicationFlag());
         vo.setTimingType(e.getTimingType());
-        vo.setTimingTypeText(AntibioticTimingEnum.getText(e.getTimingType()));
+        vo.setTimingTypeText(dictText.getDicDataLabel("biz_pharmacy_antibioticTimingEnum", e.getTimingType()));
         vo.setCourseHours(e.getCourseHours());
         vo.setComboFlag(e.getComboFlag());
         vo.setComboReason(e.getComboReason());

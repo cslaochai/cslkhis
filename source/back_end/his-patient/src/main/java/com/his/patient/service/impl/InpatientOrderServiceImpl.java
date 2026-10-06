@@ -781,7 +781,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             }
             if (!Objects.equals(ExecStatusEnum.PENDING.getCode(), exec.getExecStatus())) {
                 throw new BusinessException("该执行记录已是「"
-                        + OrderExecStatusEnum.labelOrUnknown(exec.getExecStatus()) + "」，不能重复处理");
+                        + dictText.getDicDataLabel("biz_patient_orderExecStatusEnum", exec.getExecStatus()) + "」，不能重复处理");
             }
             BizInpatientOrder order = orderMapper.selectById(exec.getOrderId());
             if (order == null) {
@@ -1009,8 +1009,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
         vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
         vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
-        vo.setSourceText(OrderSourceEnum.getText(vo.getSource()));
-        vo.setIsUrgentText(OrderUrgentEnum.getText(vo.getIsUrgent()));
+        vo.setSourceText(dictText.getDicDataLabel("biz_patient_orderSourceEnum", vo.getSource()));
+        vo.setIsUrgentText(dictText.getDicDataLabel("biz_patient_orderUrgentEnum", vo.getIsUrgent()));
 
         boolean pendingVerify = Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), vo.getOrderStatus());
         vo.setCanVerify(pendingVerify);
@@ -1044,7 +1044,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
         vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
         vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
-        vo.setExecStatusText(OrderExecStatusEnum.getText(vo.getExecStatus()));
+        vo.setExecStatusText(dictText.getDicDataLabel("biz_patient_orderExecStatusEnum", vo.getExecStatus()));
         vo.setCharged(vo.getFeeRecordId() != null);
         vo.setInfusion(InpatientInfusionServiceImpl.isInfusionRoute(vo.getRoute()));
     }

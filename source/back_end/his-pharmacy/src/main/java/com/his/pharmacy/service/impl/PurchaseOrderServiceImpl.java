@@ -53,9 +53,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper, BizPurchaseOrder>
+        implements PurchaseOrderService {
     @Autowired
     private DictCacheService dictText;
-        implements PurchaseOrderService {
 
     private final BizPurchaseOrderMapper orderMapper;
     private final BizPurchaseOrderDetailMapper detailMapper;
@@ -160,7 +160,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
             throw new BusinessException("采购订单不存在或已删除");
         }
         if (order.getApprovalStatus() == null || order.getApprovalStatus() != 0) {
-            throw new BusinessException("只有待审批的订单可以审批（当前：" + PurchaseApprovalStatusEnum.labelOrUnknown(order.getApprovalStatus()) + "）");
+            throw new BusinessException("只有待审批的订单可以审批（当前：" + dictText.getDicDataLabel("biz_pharmacy_purchaseApprovalStatusEnum", order.getApprovalStatus()) + "）");
         }
         // B 类：驳回原因只在 approvalStatus=2 时必填，条件必填不能下沉成 @NotBlank
         if (dto.getApprovalStatus() == 2 && !StringUtils.hasText(dto.getRemark())) {
@@ -188,7 +188,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
             throw new BusinessException("采购订单不存在或已删除");
         }
         if (order.getApprovalStatus() == null || order.getApprovalStatus() != 1) {
-            throw new BusinessException("只有审批通过的采购订单才能生成入库单（当前审批：" + PurchaseApprovalStatusEnum.labelOrUnknown(order.getApprovalStatus()) + "）");
+            throw new BusinessException("只有审批通过的采购订单才能生成入库单（当前审批：" + dictText.getDicDataLabel("biz_pharmacy_purchaseApprovalStatusEnum", order.getApprovalStatus()) + "）");
         }
 
         List<PurchaseOrderDetailVO> details = detailMapper.selectDetailWithDrug(orderId);

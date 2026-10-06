@@ -538,7 +538,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
 
     private void fillAuditText(ComplianceAuditVO vo) {
         vo.setRiskLevelText(RuleCatalogEnum.riskLabel(vo.getRiskLevel()));
-        vo.setAuditTypeText(ComplianceAuditTypeEnum.getText(vo.getAuditType()));
+        vo.setAuditTypeText(dictText.getDicDataLabel("biz_charge_complianceAuditTypeEnum", vo.getAuditType()));
     }
 
     private Set<String> loadEnabledIcdCodes() {
@@ -640,7 +640,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         BeanUtils.copyProperties(entity, vo);
         vo.setDiagTypeText(entity.getDiagType() == null ? ""
                 : (entity.getDiagType() == 1 ? "主要诊断" : "其他诊断"));
-        vo.setAdmitConditionText(AdmitConditionEnum.getText(entity.getAdmitCondition()));
+        vo.setAdmitConditionText(dictText.getDicDataLabel("biz_common_admitConditionEnum", entity.getAdmitCondition()));
         // 三态中文一律走 getText，禁止在这里拼「通过」
         vo.setEvidenceStatusText(AuditResultStateEnum.getText(entity.getEvidenceStatus()));
         return vo;

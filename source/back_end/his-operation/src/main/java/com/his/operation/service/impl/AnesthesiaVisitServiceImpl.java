@@ -243,15 +243,15 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
     private void decorate(AnesthesiaVisitVO vo) {
         vo.setAsaText(AsaGradeEnum.getText(vo.getAsaGrade()));
         vo.setAsaFullText(AnesthesiaCalcs.asaFullText(vo.getAsaGrade(), vo.getAsaEmergency()));
-        vo.setMallampatiText(MallampatiGradeEnum.getText(vo.getMallampati()));
-        vo.setNeckMobilityText(NeckMobilityEnum.getText(vo.getNeckMobility()));
-        vo.setNpoText(NpoStatusEnum.getText(vo.getNpoStatus()));
+        vo.setMallampatiText(dictText.getDicDataLabel("biz_operation_mallampatiGradeEnum", vo.getMallampati()));
+        vo.setNeckMobilityText(dictText.getDicDataLabel("biz_operation_neckMobilityEnum", vo.getNeckMobility()));
+        vo.setNpoText(dictText.getDicDataLabel("biz_operation_npoStatusEnum", vo.getNpoStatus()));
         vo.setConclusionText(VisitConclusionEnum.getText(vo.getConclusion()));
         vo.setVisitStatusText(VisitStatusEnum.getText(vo.getVisitStatus()));
         vo.setDifficultAirwayText(Objects.equals(YesOrNoEnum.YES.getCode(), vo.getDifficultAirway()) ? "是"
                 : Objects.equals(YesOrNoEnum.NO.getCode(), vo.getDifficultAirway()) ? "否" : "");
         vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
-        vo.setEmergencyText(OperationEmergencyEnum.getText(vo.getIsEmergency()));
+        vo.setEmergencyText(dictText.getDicDataLabel("biz_operation_operationEmergencyEnum", vo.getIsEmergency()));
         vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
         vo.setBmi(bmi(vo.getHeightCm(), vo.getWeightKg()));
 
