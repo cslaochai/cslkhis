@@ -13,6 +13,7 @@ import com.his.medicaltech.service.LisQcService;
 import com.his.medicaltech.support.WestgardRuleEngine;
 import com.his.medicaltech.vo.LisQcVO;
 import com.his.system.service.DictCacheService;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -131,6 +132,10 @@ public class LisQcServiceImpl implements LisQcService {
 
     @Transactional(rollbackFor = Exception.class)
     public LisQcVO.RecordVO inputResult(LisQcDTO.ResultInput dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizLisQcPlan plan = requirePlan(dto.getPlanId());
         if (plan.getStatus() == null || plan.getStatus() != 1) {
             throw new BusinessException("质控计划已停用（" + plan.getPlanNo() + "），不能录入质控结果");
@@ -151,7 +156,7 @@ public class LisQcServiceImpl implements LisQcService {
         r.setQcTime(LocalDateTime.now().withNano(0));
         r.setResultValue(dto.getResultValue());
         r.setZScore(z);
-        r.setOperator(currentName());
+        r.setOperator(operatorUser.getRealName());
         r.setRemark(clip(dto.getRemark()));
 
         if (z == null) {
@@ -243,6 +248,10 @@ public class LisQcServiceImpl implements LisQcService {
 
     @Transactional(rollbackFor = Exception.class)
     public void handle(LisQcDTO.Handle dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizLisQcRecord r = requireRecord(dto.getRecordId());
         if (r.getStatus() == null || r.getStatus() != 3) {
             throw new BusinessException("仅「失控」记录需要处理（当前：" + voStatusText(r.getStatus()) + "）");
@@ -253,13 +262,17 @@ public class LisQcServiceImpl implements LisQcService {
         r.setHandleStatus(2);
         r.setHandleCause(clip(dto.getHandleCause()));
         r.setHandleMeasure(clip(dto.getHandleMeasure()));
-        r.setHandleBy(currentName());
+        r.setHandleBy(operatorUser.getRealName());
         r.setHandleTime(LocalDateTime.now().withNano(0));
         recordMapper.updateById(r);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void review(LisQcDTO.Review dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizLisQcRecord r = requireRecord(dto.getRecordId());
         if (r.getStatus() == null || r.getStatus() != 3) {
             throw new BusinessException("仅「失控」记录需要复核");
@@ -267,7 +280,7 @@ public class LisQcServiceImpl implements LisQcService {
         if (r.getHandleStatus() == null || r.getHandleStatus() != 2) {
             throw new BusinessException("复核前必须先完成处理（当前：" + dictText.getDicDataLabel(DICT_HANDLE, r.getHandleStatus()) + "）");
         }
-        String who = currentName();
+        String who = operatorUser.getRealName();
         if (who != null && who.equals(r.getHandleBy())) {
             throw new BusinessException("复核人不得是处理人本人（" + who + "）——失控纠正必须第二人确认");
         }
@@ -347,10 +360,6 @@ public class LisQcServiceImpl implements LisQcService {
             return base;
         }
         return base + "-" + System.currentTimeMillis() % 100000;
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private String clip(String s) {

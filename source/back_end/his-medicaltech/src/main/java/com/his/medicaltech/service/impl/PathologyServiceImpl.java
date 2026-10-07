@@ -14,6 +14,7 @@ import com.his.medicaltech.mapper.BizPathologyOrderMapper;
 import com.his.medicaltech.service.PathologyService;
 import com.his.medicaltech.vo.PathologyVO;
 import com.his.system.service.DictCacheService;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -210,6 +211,10 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
 
     @Transactional(rollbackFor = Exception.class)
     public void receive(PathologyDTO.Receive dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPathologyOrder o = requireOrder(dto.getOrderId());
         assertMutable(o);
         if (!PathologyStatusEnum.REGISTERED.is(o.getStatus())) {
@@ -222,7 +227,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
             o.setSpecimenPart(dto.getSpecimenPart());
         }
         o.setStatus(PathologyStatusEnum.RECEIVED.getCode());
-        o.setReceiveBy(currentName());
+        o.setReceiveBy(operatorUser.getRealName());
         o.setReceiveTime(LocalDateTime.now().withNano(0));
         orderMapper.updateById(o);
     }
@@ -232,6 +237,10 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
      */
     @Transactional(rollbackFor = Exception.class)
     public void process(PathologyDTO.Process dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPathologyOrder o = requireOrder(dto.getOrderId());
         assertMutable(o);
         int target = dto.getTargetStatus();
@@ -243,7 +252,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
             if (!skipBlock && countBlocks(o.getId(), 2, 4) == 0) {
                 throw new BusinessException("尚无任何已取材的蜡块，不能把主单推进到「已取材」——请先登记蜡块并完成取材");
             }
-            o.setSamplingBy(currentName());
+            o.setSamplingBy(operatorUser.getRealName());
             o.setSamplingTime(LocalDateTime.now().withNano(0));
         } else if (PathologyStatusEnum.SLICED.is(target)) {
             if (!PathologyStatusEnum.SAMPLED.is(o.getStatus())) {
@@ -252,7 +261,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
             if (!skipBlock && countBlocks(o.getId(), 4, 4) == 0) {
                 throw new BusinessException("尚无任何已切片的蜡块，不能把主单推进到「已制片」");
             }
-            o.setSliceBy(currentName());
+            o.setSliceBy(operatorUser.getRealName());
             o.setSliceTime(LocalDateTime.now().withNano(0));
         } else {
             throw new BusinessException("不支持的目标状态：" + target);
@@ -294,13 +303,17 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
      */
     @Transactional(rollbackFor = Exception.class)
     public Long blockAction(PathologyDTO.BlockAction dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPathologyBlock b = blockMapper.selectById(dto.getBlockId());
         if (b == null) {
             throw new BusinessException("蜡块不存在：" + dto.getBlockId());
         }
         BizPathologyOrder o = requireOrder(b.getOrderId());
         assertMutable(o);
-        String who = currentName();
+        String who = operatorUser.getRealName();
         LocalDateTime now = LocalDateTime.now().withNano(0);
         int action = dto.getAction();
         if (action == 1) {
@@ -355,6 +368,10 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
      */
     @Transactional(rollbackFor = Exception.class)
     public void report(PathologyDTO.Report dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPathologyOrder o = requireOrder(dto.getOrderId());
         assertMutable(o);
         boolean frozen = isFrozenOrCytology(o);
@@ -374,7 +391,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         o.setSuggestion(dto.getSuggestion());
         o.setFrozenResult(dto.getFrozenResult());
         o.setStatus(PathologyStatusEnum.REPORTED.getCode());
-        o.setReportBy(currentName());
+        o.setReportBy(operatorUser.getRealName());
         o.setReportTime(LocalDateTime.now().withNano(0));
         orderMapper.updateById(o);
     }
@@ -384,12 +401,16 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
      */
     @Transactional(rollbackFor = Exception.class)
     public void audit(PathologyDTO.Audit dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPathologyOrder o = requireOrder(dto.getOrderId());
         assertMutable(o);
         if (!PathologyStatusEnum.REPORTED.is(o.getStatus())) {
             throw new BusinessException("仅「已初诊」的病理单可审核（当前：" + dictText.getDicDataLabel(DICT_STATUS, o.getStatus()) + "）");
         }
-        String who = currentName();
+        String who = operatorUser.getRealName();
         if (who != null && who.equals(o.getReportBy())) {
             throw new BusinessException("审核人不得是初诊人本人（" + who + "）——病理报告必须两级签署");
         }
@@ -407,6 +428,10 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
      */
     @Transactional(rollbackFor = Exception.class)
     public void publish(Long orderId) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPathologyOrder o = requireOrder(orderId);
         if (PathologyStatusEnum.PUBLISHED.is(o.getStatus())) {
             throw new BusinessException("该病理报告已发布");
@@ -415,7 +440,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
             throw new BusinessException("报告发布前必须完成审核（当前：" + dictText.getDicDataLabel(DICT_STATUS, o.getStatus()) + "）");
         }
         o.setStatus(PathologyStatusEnum.PUBLISHED.getCode());
-        o.setPublishBy(currentName());
+        o.setPublishBy(operatorUser.getRealName());
         o.setPublishTime(LocalDateTime.now().withNano(0));
         orderMapper.updateById(o);
     }
@@ -484,10 +509,6 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
             }
         }
         return "BL" + day + System.currentTimeMillis() % 100000;
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     /** 写库的文本一律先截到列宽（原因/意见超长会把业务失败升级成 500） */

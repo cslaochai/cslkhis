@@ -115,6 +115,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         if (dto == null) {
             throw new BusinessException("入院ID不能为空（会诊必须挂在一次住院上）");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         Integer category = dto.getConsultCategory() == null
                 ? ConsultCategoryEnum.NORMAL.getCode() : dto.getConsultCategory();
 
@@ -140,7 +142,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
                     + "」必须请到别的科室；本科室内部的请会诊请选「科内会诊」");
         }
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         int isUrgent = Objects.equals(YesOrNoEnum.YES.getCode(), dto.getIsUrgent())
                 ? YesOrNoEnum.YES.getCode() : YesOrNoEnum.NO.getCode();
 
@@ -164,8 +166,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         entity.setVisitId(admission.getVisitId());
         entity.setAdmissionId(admission.getAdmissionId());
         entity.setFromDeptId(fromDeptId);
-        entity.setApplyDoctorId(currentEmpId());
-        entity.setApplyDoctorName(currentName());
+        entity.setApplyDoctorId(operatorUser.getEmployeeId());
+        entity.setApplyDoctorName(operatorUser.getRealName());
         entity.setToDeptId(dto.getToDeptId());
         entity.setConsultType(dto.getConsultType());
         // 类别申请时定死，修改申请不允许改类别（否则能把会诊从营养工作台藏到普通工作台）
@@ -254,6 +256,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
      * 患者、入院、申请科室、申请医生、申请时间都是**已经发生的事实**，改它们等于改病史。
      */
     private String updateOne(ConsultationUpsertDTO dto, BizAdmission admission, int isUrgent) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizConsultation entity = consultationMapper.selectById(dto.getId());
         if (entity == null) {
             throw new BusinessException("会诊记录不存在");
@@ -287,7 +291,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         consultationMapper.updateById(entity);
         log.info("修改会诊申请 consultationNo={} 会诊科室={} 范围={} 急={} 操作人={}",
                 entity.getConsultationNo(), dto.getToDeptId(),
-                ConsultScopeEnum.getText(dto.getConsultType()), isUrgent, currentName());
+                ConsultScopeEnum.getText(dto.getConsultType()), isUrgent, operatorUser.getRealName());
         return entity.getConsultationNo();
     }
 
@@ -300,18 +304,20 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         if (dto == null) {
             throw new BusinessException("会诊ID不能为空");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizConsultation entity = mustGet(dto.getConsultationId());
         if (!Objects.equals(ConsultationStatusEnum.PENDING.getCode(), entity.getConsultStatus())) {
             throw new BusinessException("会诊 " + entity.getConsultationNo() + " 当前状态为「"
                     + ConsultationStatusEnum.labelOrUnknown(entity.getConsultStatus()) + "」，不能应答");
         }
-        Long doctorId = currentEmpId();
+        Long doctorId = operatorUser.getEmployeeId();
         if (doctorId == null) {
             // 没登录上下文就没有"谁接诊"这件事 —— 宁可报错，也不留一条没有接诊人的会诊
             throw new BusinessException("未能识别当前登录用户，无法记录接诊医生");
         }
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
-        String doctorName = currentName();
+        LocalDateTime now = TimeUtil.nowSeconds();
+        String doctorName = operatorUser.getRealName();
 
         entity.setConsultStatus(ConsultationStatusEnum.ACCEPTED.getCode());
         entity.setAcceptTime(now);
@@ -361,7 +367,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
                     + ConsultationStatusEnum.labelOrUnknown(entity.getConsultStatus()) + "」，不能重复完成");
         }
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         LocalDateTime consultTime = TimeUtil.toSeconds(dto.getConsultTime() != null ? dto.getConsultTime() : now);
         if (entity.getAcceptTime() != null && consultTime.isBefore(entity.getAcceptTime())) {
             throw new BusinessException("会诊时间不能早于接诊时间（接诊时间 " + entity.getAcceptTime() + "）");
@@ -461,6 +467,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         if (dto == null) {
             throw new BusinessException("会诊ID不能为空");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizConsultation entity = mustGet(dto.getConsultationId());
         if (Objects.equals(ConsultationStatusEnum.CANCELLED.getCode(), entity.getConsultStatus())) {
             throw new BusinessException("会诊 " + entity.getConsultationNo() + " 已取消，不能重复取消");
@@ -478,7 +486,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         closeConsultTodo(entity.getConsultationId(), 2);
 
         log.info("取消会诊 consultationNo={} 原因={} 操作人={}",
-                entity.getConsultationNo(), dto.getCancelReason(), currentName());
+                entity.getConsultationNo(), dto.getCancelReason(), operatorUser.getRealName());
     }
 
     /**
@@ -545,7 +553,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         vo.setCanCancel(pending);
         vo.setCanFinish(accepted);
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         LocalDateTime from = vo.getApplyTime();
         LocalDateTime to = vo.getAcceptTime() != null ? vo.getAcceptTime() : now;
         vo.setResponseMinutes(from == null ? null : minutesBetween(from, to));
@@ -627,11 +635,4 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
     /**
      * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
      */
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

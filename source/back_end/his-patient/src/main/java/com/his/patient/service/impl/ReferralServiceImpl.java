@@ -82,7 +82,7 @@ public class ReferralServiceImpl implements ReferralService {
         r.setDiagnosis(dto.getDiagnosis());
         r.setContactPhone(dto.getContactPhone());
         r.setReferralStatus(ReferralStatusEnum.PENDING.getCode());
-        r.setReferralTime(TimeUtil.toSeconds(LocalDateTime.now()));
+        r.setReferralTime(TimeUtil.nowSeconds());
         r.setRemark(dto.getRemark());
         r.setCreateBy(UserUtils.getCurrentUser().getRealName());
         referralMapper.insert(r);
@@ -121,7 +121,7 @@ public class ReferralServiceImpl implements ReferralService {
         }
         r.setAuditBy(UserUtils.getCurrentUser().getEmployeeId());
         r.setAuditName(UserUtils.getCurrentUser().getRealName());
-        r.setAuditTime(TimeUtil.toSeconds(LocalDateTime.now()));
+        r.setAuditTime(TimeUtil.nowSeconds());
         r.setAuditRemark(dto.getAuditRemark());
         r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         r.setUpdateTime(r.getAuditTime());
@@ -136,7 +136,7 @@ public class ReferralServiceImpl implements ReferralService {
             throw new BusinessException("只有已确认的转诊单可以完成（当前：" + statusText(r) + "）");
         }
         r.setReferralStatus(ReferralStatusEnum.FINISHED.getCode());
-        r.setFinishTime(TimeUtil.toSeconds(LocalDateTime.now()));
+        r.setFinishTime(TimeUtil.nowSeconds());
         r.setFinishRemark(dto.getFinishRemark());
         r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         r.setUpdateTime(r.getFinishTime());
@@ -156,7 +156,7 @@ public class ReferralServiceImpl implements ReferralService {
         r.setReferralStatus(ReferralStatusEnum.CANCELLED.getCode());
         r.setRemark((r.getRemark() == null ? "" : r.getRemark() + "；") + "取消原因：" + dto.getCancelReason().trim());
         r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        r.setUpdateTime(TimeUtil.toSeconds(LocalDateTime.now()));
+        r.setUpdateTime(TimeUtil.nowSeconds());
         referralMapper.updateById(r);
         return toVo(r, loadDeptNames());
     }

@@ -23,6 +23,7 @@ import com.his.medicaltech.vo.ExamApptVO;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysInspectionItemMapper;
+import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
@@ -243,6 +244,10 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
      */
     @Transactional(rollbackFor = Exception.class)
     public ExamApptVO.ApptDetailVO reschedule(ExamApptDTO.Reschedule dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizExamAppointment old = requireAppt(dto.getApptId());
         if (old.getActiveFlag() == null) {
             throw new BusinessException("预约单 " + old.getApptNo() + " 已终结，不能再改约");
@@ -254,7 +259,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         BizInspectionApply apply = requireApply(old.getApplyId());
         int prevStatus = old.getPrevApplyStatus() == null ? APPLY_PAID : old.getPrevApplyStatus();
         releaseOld(old, "改约：" + dto.getExamDate() + " " + dto.getStartTime() + "，原因：" + dto.getReason(),
-                APPT_CANCELLED, currentName());
+                APPT_CANCELLED, operatorUser.getRealName());
         BizExamAppointment fresh = doBook(apply, dto.getDeviceId(), dto.getExamDate(), dto.getStartTime(),
                 prevStatus, "改约自 " + old.getApptNo() + "（" + old.getExamDate() + " " + old.getStartTime()
                         + "-" + old.getEndTime() + " @" + old.getDeviceName() + "）；原因：" + dto.getReason());
@@ -268,6 +273,10 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void cancel(ExamApptDTO.Cancel dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizExamAppointment appt = requireAppt(dto.getApptId());
         if (appt.getActiveFlag() == null) {
             throw new BusinessException("预约单 " + appt.getApptNo() + " 已终结");
@@ -276,7 +285,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
             throw new BusinessException("仅「已预约」可取消（当前："
                     + dictText.getDicDataLabel(DICT_APPT_STATUS, appt.getStatus()) + "）；已到检请在检查工作站取消登记");
         }
-        releaseOld(appt, dto.getCancelReason(), APPT_CANCELLED, currentName());
+        releaseOld(appt, dto.getCancelReason(), APPT_CANCELLED, operatorUser.getRealName());
     }
 
     // 时段推荐
@@ -286,6 +295,10 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void arrive(ExamApptDTO.ApptIdOnly dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizExamAppointment appt = requireAppt(dto.getApptId());
         if (appt.getStatus() != APPT_BOOKED) {
             throw new BusinessException("仅「已预约」可签到（当前："
@@ -296,7 +309,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         update.setStatus(APPT_ARRIVED);
         update.setArriveTime(LocalDateTime.now().withNano(0));
         appointmentMapper.updateById(update);
-        int moved = applyWriterMapper.markArrived(appt.getApplyId(), currentName());
+        int moved = applyWriterMapper.markArrived(appt.getApplyId(), operatorUser.getRealName());
         if (moved == 0) {
             log.warn("[检查预约] {} 到检时申请单 {} 未停在「已预约」，不覆盖其当前状态",
                     appt.getApptNo(), appt.getApplyNo());
@@ -420,6 +433,10 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
 
     private BizExamAppointment doBook(BizInspectionApply apply, Long deviceId, LocalDate examDate,
                                       String startTime, Integer prevStatus, String remark) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizExamDevice device = deviceMapper.selectForUpdate(deviceId);
         if (device == null) {
             throw new BusinessException("预约设备不存在：" + deviceId);
@@ -525,7 +542,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         appt.setEndTime(ExamGrid.toHHmm(endMin));
         appt.setIsEmergency(apply.getIsEmergency());
         appt.setStatus(APPT_BOOKED);
-        appt.setBookBy(currentName());
+        appt.setBookBy(operatorUser.getRealName());
         appt.setBookTime(now);
         appt.setRemark(clip(remark));
         appointmentMapper.insert(appt);
@@ -533,7 +550,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         slotService.claim(device, examDate, cells, span);
 
         LocalDateTime appointmentTime = LocalDateTime.of(examDate, LocalTime.of(startMin / 60, startMin % 60));
-        if (applyWriterMapper.markBooked(apply.getId(), appointmentTime, currentName()) == 0) {
+        if (applyWriterMapper.markBooked(apply.getId(), appointmentTime, operatorUser.getRealName()) == 0) {
             throw new BusinessException("申请单状态推进失败（可能已被他人处理），预约已回滚，请刷新后重试");
         }
         return appt;
@@ -834,13 +851,5 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
 
     private boolean isEmergency(BizInspectionApply apply) {
         return apply.getIsEmergency() != null && apply.getIsEmergency() == 1;
-    }
-
-    /**
-     * 操作人（人工路径）：取不到登录态直接报错。
-     * 定时任务那条路径走 {@link #SYSTEM_NOSHOW_OPERATOR}，不经过这里。
-     */
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 }

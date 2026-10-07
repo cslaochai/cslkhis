@@ -347,6 +347,8 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void voidNotice(CriticalNoticeDTO.VoidNotice dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizCriticalNotice notice = requireNotice(dto.getId());
         if (Objects.equals(NoticeStatusEnum.ACKED.getCode(), notice.getNoticeStatus())) {
             throw new BusinessException("已签收的通知单承载患方签字的告知事实，不允许作废；"
@@ -361,7 +363,7 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         assertDeptAccessible(notice.getDeptId());
         notice.setNoticeStatus(NoticeStatusEnum.VOIDED.getCode());
         notice.setVoidReason(cut(trimToNull(dto.getVoidReason()), REASON_MAX));
-        notice.setVoidBy(currentOperator());
+        notice.setVoidBy(operatorUser.getRealName());
         notice.setVoidTime(now());
         saveNotice(notice, false);
     }
@@ -369,11 +371,13 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void print(CriticalNoticeDTO.Print dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizCriticalNotice notice = requireNotice(dto.getId());
         if (!Objects.equals(NoticeStatusEnum.ACKED.getCode(), notice.getNoticeStatus())) {
             throw new BusinessException("只有「已签收」的通知单打印回执（未签收的告知尚未闭环）");
         }
-        notice.setPrinterName(currentOperator());
+        notice.setPrinterName(operatorUser.getRealName());
         notice.setPrintCount(nvl(notice.getPrintCount(), 0) + 1);
         notice.setLastPrintTime(now());
         saveNotice(notice, false);
@@ -438,7 +442,4 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         }
     }
 
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

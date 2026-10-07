@@ -142,6 +142,10 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ComplianceAuditDetailVO audit(Long settlementId, Integer auditType) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         if (!properties.isEnabled()) {
             throw new BusinessException("医保合规审核功能已关闭（insurance.compliance.enabled=false）");
         }
@@ -231,7 +235,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
                     : "未接入DRG分组方案（sys_drg_group为空），未计算入组与费用倍率");
         }
 
-        audit.setAuditBy(currentUserName());
+        audit.setAuditBy(operatorUser.getRealName());
         audit.setAuditTime(LocalDateTime.now());
         auditMapper.insert(audit);
 
@@ -621,10 +625,6 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     private String nextAuditNo() {
         return "CA" + LocalDateTime.now().format(AUDIT_NO_FMT)
                 + String.format("%04d", ThreadLocalRandom.current().nextInt(10000));
-    }
-
-    private String currentUserName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private SettlementDiagnosisVO toDiagnosisVO(BizSettlementDiagnosis entity) {

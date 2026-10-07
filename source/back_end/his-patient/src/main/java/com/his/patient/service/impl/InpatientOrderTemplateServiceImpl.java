@@ -69,6 +69,8 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         if (dto == null) {
             throw new BusinessException("模板至少包含一条医嘱明细");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         List<InpatientOrderItemDTO> items = new ArrayList<>();
         for (InpatientOrderItemDTO item : dto.getItems()) {
             if (item != null && StringUtils.hasText(item.getItemName())) {
@@ -89,7 +91,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
             throw new BusinessException("模板名称不能超过 100 字");
         }
 
-        Long doctorId = currentEmpId();
+        Long doctorId = operatorUser.getEmployeeId();
         if (doctorId == null) {
             throw new BusinessException("未获取到当前登录医生，无法保存模板");
         }
@@ -104,7 +106,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
 
         if (dto.getId() == null) {
             template.setDoctorId(doctorId);
-            template.setDoctorName(currentName());
+            template.setDoctorName(operatorUser.getRealName());
             template.setDeptId(currentDeptId());
             templateMapper.insert(template);
         } else {
@@ -128,7 +130,9 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
 
     @Override
     public InpatientOrderTemplateDetailVO getById(Long id) {
-        BizInpatientOrderTemplate template = requireOwned(id, currentEmpId());
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        BizInpatientOrderTemplate template = requireOwned(id, operatorUser.getEmployeeId());
         List<BizInpatientOrderTemplateItem> items = itemMapper.selectList(
                 new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
                         .eq(BizInpatientOrderTemplateItem::getTemplateId, template.getId())
@@ -150,11 +154,9 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
 
     @Override
     public IPage<InpatientOrderTemplateListVO> listPage(InpatientOrderTemplateQueryPageDTO query) {
-        Long doctorId = currentEmpId();
-        Page<InpatientOrderTemplateListVO> empty = new Page<>(query.getPageNum(), query.getPageSize());
-        if (doctorId == null) {
-            return empty;
-        }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        Long doctorId = operatorUser.getEmployeeId();
         String keyword = StringUtils.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
         LambdaQueryWrapper<BizInpatientOrderTemplate> wrapper = new LambdaQueryWrapper<BizInpatientOrderTemplate>()
                 .eq(BizInpatientOrderTemplate::getDoctorId, doctorId)
@@ -174,10 +176,9 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
 
     @Override
     public List<InpatientOrderTemplateSelectListVO> selectList() {
-        Long doctorId = currentEmpId();
-        if (doctorId == null) {
-            return new ArrayList<>();
-        }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        Long doctorId = operatorUser.getEmployeeId();
         List<BizInpatientOrderTemplate> list = templateMapper.selectList(
                 new LambdaQueryWrapper<BizInpatientOrderTemplate>()
                         .eq(BizInpatientOrderTemplate::getDoctorId, doctorId)
@@ -196,7 +197,9 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
-        BizInpatientOrderTemplate template = requireOwned(id, currentEmpId());
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        BizInpatientOrderTemplate template = requireOwned(id, operatorUser.getEmployeeId());
         // 明细无软删列，物理删；主表走 @TableLogic 逻辑删，历史医嘱上"来自模板"的痕迹不受影响
         itemMapper.delete(new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
                 .eq(BizInpatientOrderTemplateItem::getTemplateId, template.getId()));
@@ -263,17 +266,6 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         }
         String trimmed = remark.trim();
         return trimmed.length() > 500 ? trimmed.substring(0, 500) : trimmed;
-    }
-
-    /**
-     * 模板归属一律用**员工ID**（不是用户的ID），与医嘱行 doctor_id 同一口径
-     */
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private Long currentDeptId() {

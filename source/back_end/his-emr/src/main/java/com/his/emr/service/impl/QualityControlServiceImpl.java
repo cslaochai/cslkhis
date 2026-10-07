@@ -111,10 +111,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         return qcType;
     }
 
-    private static String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
-
     /**
      * 病历质量等级：有否决项必为丙级，否则按分数线（甲≥90 乙75~89 丙&lt;75）。
      * score 为空（旧版质控）返回 null —— 不猜等级。
@@ -281,10 +277,14 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             throw new BusinessException("病历ID不能为空");
         }
         Integer qcType = normalizeQcType(dto.getQcType());
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         QcSnapshot snapshot = loadSnapshot(QcRecordSourceEnum.parse(dto.getRecordSource()), dto.getRecordId());
         QcResult result = qcRuleEngine.inspect(snapshot, qcType);
 
-        String operator = StringUtils.hasText(dto.getQcBy()) ? dto.getQcBy().trim() : currentOperator();
+        String operator = StringUtils.hasText(dto.getQcBy()) ? dto.getQcBy().trim() : operatorUser.getRealName();
         BizQualityControl saved = null;
         for (int attempt = 1; attempt <= MAX_NO_RETRY && saved == null; attempt++) {
             try {
@@ -370,6 +370,10 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean handleQc(Long qcId, boolean ignore, String remark) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizQualityControl qc = this.getById(qcId);
         if (qc == null) {
             throw new BusinessException("质控单不存在：" + qcId);
@@ -380,7 +384,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         }
         qc.setQcStatus(ignore ? RuleCheckStatusEnum.IGNORED.getCode() : RuleCheckStatusEnum.HANDLED.getCode());
         qc.setRemark(remark);
-        qc.setUpdateBy(currentOperator());
+        qc.setUpdateBy(operatorUser.getRealName());
         qc.setUpdateTime(LocalDateTime.now());
         return this.updateById(qc);
     }

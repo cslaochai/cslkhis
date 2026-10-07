@@ -83,7 +83,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     }
 
     private static LocalDateTime now() {
-        return TimeUtil.toSeconds(LocalDateTime.now());
+        return TimeUtil.nowSeconds();
     }
 
     /**
@@ -151,6 +151,8 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(AnesthesiaFollowupUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         Set<Integer> adverse;
         try {
             adverse = FollowupAdverseItems.parse(dto.getAdverseItems());
@@ -173,8 +175,8 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
             entity.setRoundNo(followupMapper.maxRoundOf(record.getId()) + 1);
             entity.setFollowupNo(nextFollowupNo());
             entity.setFollowupStatus(AnesthesiaFollowupStatusEnum.DRAFT.getCode());
-            entity.setFollowupDoctorId(currentEmpId());
-            entity.setFollowupDoctorName(currentName());
+            entity.setFollowupDoctorId(operatorUser.getEmployeeId());
+            entity.setFollowupDoctorName(operatorUser.getRealName());
         } else {
             entity = mustGetDraft(dto.getId());
             if (!Objects.equals(entity.getRecordId(), dto.getRecordId())) {
@@ -209,6 +211,8 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void finish(Long id) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizAnesthesiaFollowup entity = mustGetDraft(id);
 
         // 完成闸门的分量都在文案里：缺一项都不允许"随访"对外生效
@@ -237,21 +241,23 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         entity.setFollowupStatus(AnesthesiaFollowupStatusEnum.DONE.getCode());
         entity.setFinishTime(now());
         if (entity.getFollowupDoctorId() == null) {
-            entity.setFollowupDoctorId(currentEmpId());
-            entity.setFollowupDoctorName(currentName());
+            entity.setFollowupDoctorId(operatorUser.getEmployeeId());
+            entity.setFollowupDoctorName(operatorUser.getRealName());
         }
         followupMapper.updateById(entity);
         log.info("麻醉随访完成 followupNo={} 轮次={} 疼痛={} 恢复={} 完成人={}",
                 entity.getFollowupNo(), entity.getRoundNo(), entity.getPainScore(),
-                FollowupAdverseItems.recoveryText(entity.getRecovery()), currentName());
+                FollowupAdverseItems.recoveryText(entity.getRecovery()), operatorUser.getRealName());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizAnesthesiaFollowup entity = mustGetDraft(id);
         followupMapper.deleteById(entity.getId());
-        log.info("删除麻醉随访草稿 followupNo={} 操作人={}", entity.getFollowupNo(), currentName());
+        log.info("删除麻醉随访草稿 followupNo={} 操作人={}", entity.getFollowupNo(), operatorUser.getRealName());
     }
 
     /**
@@ -332,11 +338,4 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     /**
      * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
      */
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

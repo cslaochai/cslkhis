@@ -102,7 +102,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
                 .eq(BizAdmissionOrder::getPatientId, dto.getPatientId())
                 .eq(BizAdmissionOrder::getOrderStatus, AdmissionOrderStatusEnum.PENDING.getCode())
                 .and(w -> w.isNull(BizAdmissionOrder::getValidUntil)
-                        .or().gt(BizAdmissionOrder::getValidUntil, TimeUtil.toSeconds(LocalDateTime.now())))
+                        .or().gt(BizAdmissionOrder::getValidUntil, TimeUtil.nowSeconds()))
                 .orderByDesc(BizAdmissionOrder::getOrderTime)
                 .last("LIMIT 1"));
         if (pendingOfPatient != null) {
@@ -118,7 +118,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
             throw new BusinessException("该患者当前在院，无需再开住院证");
         }
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         int validDays = validDays();
 
         BizAdmissionOrder order = new BizAdmissionOrder();
@@ -264,7 +264,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
             throw new BusinessException("住院证当前状态为「"
                     + AdmissionOrderStatusEnum.labelOrUnknown(order.getOrderStatus()) + "」，不能收治");
         }
-        if (order.getValidUntil() != null && order.getValidUntil().isBefore(TimeUtil.toSeconds(LocalDateTime.now()))) {
+        if (order.getValidUntil() != null && order.getValidUntil().isBefore(TimeUtil.nowSeconds())) {
             throw new BusinessException("住院证已于 " + order.getValidUntil() + " 过期，不能再收治，请重新开证");
         }
         return order;
@@ -303,7 +303,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
 
         boolean pending = Objects.equals(AdmissionOrderStatusEnum.PENDING.getCode(), vo.getOrderStatus());
         boolean expired = pending && vo.getValidUntil() != null
-                && vo.getValidUntil().isBefore(TimeUtil.toSeconds(LocalDateTime.now()));
+                && vo.getValidUntil().isBefore(TimeUtil.nowSeconds());
         vo.setExpired(expired);
 
         vo.setDeptAdjusted(vo.getAdmitDeptId() != null && vo.getApplyDeptId() != null

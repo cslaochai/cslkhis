@@ -3,6 +3,7 @@ package com.his.miniapp.service.impl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniappMessageMapper;
+import com.his.system.entity.CurrentUser;
 import com.his.miniapp.service.MiniappMessageService;
 import com.his.miniapp.support.RawRowValues;
 import com.his.miniapp.vo.MessageListVO;
@@ -24,7 +25,11 @@ public class MiniappMessageServiceImpl implements MiniappMessageService {
 
     @Override
     public PageResult<MessageListVO> myPage(Integer pageNum, Integer pageSize) {
-        Long userId = currentUserId();
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        Long userId = operatorUser.getUserId();
         int size = pageSize == null || pageSize < 1 || pageSize > MAX_PAGE_SIZE ? DEFAULT_PAGE_SIZE : pageSize;
         int current = pageNum == null || pageNum < 1 ? 1 : pageNum;
         List<Map<String, Object>> rows = messageMapper.selectMyMessages(userId, (current - 1) * size, size);
@@ -35,7 +40,11 @@ public class MiniappMessageServiceImpl implements MiniappMessageService {
 
     @Override
     public long unreadCount() {
-        return messageMapper.countUnread(currentUserId());
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        return messageMapper.countUnread(operatorUser.getUserId());
     }
 
     @Override
@@ -46,11 +55,11 @@ public class MiniappMessageServiceImpl implements MiniappMessageService {
                 throw new BusinessException("非法的消息ID");
             }
         }
-        return messageMapper.markRead(String.join(",", messageIds), currentUserId());
-    }
-
-    private Long currentUserId() {
-        return UserUtils.getCurrentUser().getUserId();
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        return messageMapper.markRead(String.join(",", messageIds), operatorUser.getUserId());
     }
 
     private static MessageListVO toVO(Map<String, Object> row) {

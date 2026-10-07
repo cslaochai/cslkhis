@@ -4,6 +4,8 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.pharmacy.dto.*;
 import com.his.pharmacy.vo.*;
+import com.his.common.exception.BusinessException;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import com.his.pharmacy.service.HighValueTraceService;
 import com.his.pharmacy.service.SuppliesService;
@@ -81,9 +83,13 @@ public class SuppliesController {
     @Operation(summary = "建批入库")
     @PostMapping("/stockUpsert")
     public Result<Void> stockUpsert(@Valid @RequestBody ConsumableStockUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         boolean success = suppliesService.addStock(dto.getConsumableId(), dto.getBatchNo(),
                 dto.getProductionDate(), dto.getExpiryDate(), dto.getQuantity(), dto.getCostPrice(),
-                dto.getLocation(), dto.getSupplier(), operatorName());
+                dto.getLocation(), dto.getSupplier(), operatorUser.getRealName());
         return success ? Result.success() : Result.error("入库失败");
     }
 
@@ -91,7 +97,11 @@ public class SuppliesController {
     @Operation(summary = "补货入库")
     @PostMapping("/stockInbound")
     public Result<Void> stockInbound(@Valid @RequestBody ConsumableStockChangeDTO changeDTO) {
-        boolean success = suppliesService.inboundStock(changeDTO.getStockId(), changeDTO.getQuantity(), operatorName());
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        boolean success = suppliesService.inboundStock(changeDTO.getStockId(), changeDTO.getQuantity(), operatorUser.getRealName());
         return success ? Result.success() : Result.error("入库失败");
     }
 
@@ -99,7 +109,11 @@ public class SuppliesController {
     @Operation(summary = "其他出库")
     @PostMapping("/stockOutbound")
     public Result<Void> stockOutbound(@Valid @RequestBody ConsumableStockChangeDTO changeDTO) {
-        boolean success = suppliesService.outboundStock(changeDTO.getStockId(), changeDTO.getQuantity(), operatorName());
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        boolean success = suppliesService.outboundStock(changeDTO.getStockId(), changeDTO.getQuantity(), operatorUser.getRealName());
         return success ? Result.success() : Result.error("出库失败");
     }
 
@@ -109,8 +123,12 @@ public class SuppliesController {
     @Operation(summary = "科室领用（扣库存 FEFO）")
     @PostMapping("/consume")
     public Result<Void> consume(@Valid @RequestBody ConsumableConsumeDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         boolean success = suppliesService.consume(dto.getConsumableId(), dto.getQuantity(),
-                dto.getDeptId(), dto.getPurpose(), operatorName());
+                dto.getDeptId(), dto.getPurpose(), operatorUser.getRealName());
         return success ? Result.success("领用成功", null) : Result.error("领用失败");
     }
 
@@ -142,7 +160,11 @@ public class SuppliesController {
     @Operation(summary = "高值耗材使用登记（关联患者+扣批次1件+计费尝试）")
     @PostMapping("/traceUse")
     public Result<BizConsumableTraceVO> traceUse(@Valid @RequestBody HighValueUseDTO dto) {
-        return Result.success(highValueTraceService.traceUse(dto, operatorName()));
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        return Result.success(highValueTraceService.traceUse(dto, operatorUser.getRealName()));
     }
 
     @Operation(summary = "溯源台账分页（正/反向追溯）")
@@ -160,16 +182,21 @@ public class SuppliesController {
     @Operation(summary = "溯源记录作废（退货回库；已计费拒绝）")
     @PostMapping("/traceVoid")
     public Result<BizConsumableTraceVO> traceVoid(@Valid @RequestBody TraceVoidDTO dto) {
-        return Result.success(highValueTraceService.traceVoid(dto.getTraceId(), dto.getReason(), operatorName()));
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        return Result.success(highValueTraceService.traceVoid(dto.getTraceId(), dto.getReason(), operatorUser.getRealName()));
     }
 
     @Operation(summary = "计费失败补记（按台账快照重走计费）")
     @PostMapping("/traceRecharge")
     public Result<BizConsumableTraceVO> traceRecharge(@Valid @RequestBody TraceRechargeDTO dto) {
-        return Result.success(highValueTraceService.traceRecharge(dto.getTraceId(), operatorName()));
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        return Result.success(highValueTraceService.traceRecharge(dto.getTraceId(), operatorUser.getRealName()));
     }
 
-    private String operatorName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

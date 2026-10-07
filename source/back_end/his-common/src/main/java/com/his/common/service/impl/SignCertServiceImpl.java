@@ -90,7 +90,7 @@ public class SignCertServiceImpl implements SignCertService {
             throw new BusinessException("签名人不能为空（未取到当前登录用户的员工ID）；"
                     + "签名留痕必须落到员工，不能落成系统账号");
         }
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         SysSignCert exist = certMapper.selectActiveByEmp(empId, now);
         if (exist != null) {
             return exist;
@@ -116,7 +116,7 @@ public class SignCertServiceImpl implements SignCertService {
         if (!StringUtils.hasText(dto.getEmpName())) {
             throw new BusinessException("员工姓名不能为空（证书上必须能看出这是谁）");
         }
-        SysSignCert exist = certMapper.selectActiveByEmp(dto.getEmpId(), TimeUtil.toSeconds(LocalDateTime.now()));
+        SysSignCert exist = certMapper.selectActiveByEmp(dto.getEmpId(), TimeUtil.nowSeconds());
         if (exist != null) {
             throw new BusinessException("员工「" + dto.getEmpName() + "」已持有有效证书 "
                     + exist.getCertNo() + "（有效期至 " + exist.getValidTo() + "）；"
@@ -145,7 +145,7 @@ public class SignCertServiceImpl implements SignCertService {
         String salt = keyProtectorUtil.newSalt();
         String protectedKey = keyProtectorUtil.protect(pair.privatePem(), salt, properties.getIterations());
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         LocalDateTime to = now.plusDays(validDays);
 
         for (int attempt = 1; attempt <= 3; attempt++) {
@@ -229,7 +229,7 @@ public class SignCertServiceImpl implements SignCertService {
         }
         cert.setCertStatus(CertStatusEnum.REVOKED.getCode());
         cert.setRevokeReason(dto.getReason());
-        cert.setRevokeTime(TimeUtil.toSeconds(LocalDateTime.now()));
+        cert.setRevokeTime(TimeUtil.nowSeconds());
         cert.setRevokeBy(operatorId);
         cert.setRevokeByName(operatorName);
         certMapper.updateById(cert);
@@ -296,7 +296,7 @@ public class SignCertServiceImpl implements SignCertService {
         if (Objects.equals(CertStatusEnum.REVOKED.getCode(), cert.getCertStatus())) {
             throw new BusinessException("证书 " + cert.getCertNo() + " 已吊销，不能用于签名");
         }
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         if (cert.getValidTo() != null && cert.getValidTo().isBefore(now)) {
             throw new BusinessException("证书 " + cert.getCertNo() + " 已于 " + cert.getValidTo()
                     + " 过期，不能用于签名；请重新签发");
@@ -381,7 +381,7 @@ public class SignCertServiceImpl implements SignCertService {
         if (withPublicKey) {
             vo.setPublicKey(c.getPublicKey());
         }
-        boolean expired = c.getValidTo() != null && c.getValidTo().isBefore(TimeUtil.toSeconds(LocalDateTime.now()));
+        boolean expired = c.getValidTo() != null && c.getValidTo().isBefore(TimeUtil.nowSeconds());
         vo.setExpired(expired);
         boolean revoked = Objects.equals(CertStatusEnum.REVOKED.getCode(), c.getCertStatus());
         vo.setCanRevoke(!revoked);

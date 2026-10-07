@@ -150,6 +150,8 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(InpatientTransferUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         int type = dto.getTransferType() == null ? 1 : dto.getTransferType();
 
         BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
@@ -188,7 +190,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
             throw new BusinessException("患者不存在");
         }
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
 
         BizInpatientTransfer entity = new BizInpatientTransfer();
         entity.setTransferNo(nextTransferNo());
@@ -217,8 +219,8 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         entity.setTransferReason(dto.getTransferReason());
         entity.setHospitalDays(calcHospitalDays(admission.getAdmitTime(), now));
         entity.setStopOrdersCount(0);
-        entity.setApplyDoctorId(currentEmpId());
-        entity.setApplyDoctorName(currentName());
+        entity.setApplyDoctorId(operatorUser.getEmployeeId());
+        entity.setApplyDoctorName(operatorUser.getEmployeeName());
         entity.setApplyTime(now);
         entity.setTransferStatus(TransferStatusEnum.PENDING.getCode());
         if (StringUtils.hasText(dto.getRemark())) {
@@ -237,6 +239,8 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void accept(InpatientTransferAcceptDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientTransfer entity = transferMapper.selectById(dto.getTransferId());
         if (entity == null) {
             throw new BusinessException("转科记录不存在");
@@ -266,7 +270,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         Long oldBedId = admission.getBedId();
         Long oldWardId = admission.getWardId();
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
 
         // 1) 医嘱：先处置，后换科。停不掉的一定写进 order_remark，绝不静默。
         String orderRemark = settleLongOrders(entity);
@@ -297,8 +301,8 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         // 6) 转科单收尾
         entity.setTransferStatus(TransferStatusEnum.DONE.getCode());
         entity.setReceiveTime(now);
-        entity.setReceiveDoctorId(currentEmpId());
-        entity.setReceiveDoctorName(currentName());
+        entity.setReceiveDoctorId(operatorUser.getEmployeeId());
+        entity.setReceiveDoctorName(operatorUser.getRealName());
         entity.setRecordId(record.getId());
         entity.setStopOrdersCount(countStoppedFromRemark(orderRemark));
         entity.setOrderRemark(orderRemark);
@@ -321,6 +325,8 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(InpatientTransferCancelDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientTransfer entity = transferMapper.selectById(dto.getTransferId());
         if (entity == null) {
             throw new BusinessException("转科记录不存在");
@@ -335,7 +341,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         transferMapper.updateById(entity);
 
         log.info("转科申请已取消 transferNo={} 原因={} 操作人={}",
-                entity.getTransferNo(), dto.getCancelReason(), currentName());
+                entity.getTransferNo(), dto.getCancelReason(), operatorUser.getRealName());
     }
 
     // 内部：医嘱处置
@@ -483,6 +489,8 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
      */
     private BizInpatientRecord writeBackRecord(BizInpatientTransfer entity, BizPatient patient,
                                                String orderRemark, LocalDateTime now) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientRecord record = new BizInpatientRecord();
         record.setRecordNo(nextRecordNo());
         record.setAdmissionId(entity.getAdmissionId());
@@ -517,8 +525,8 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         record.setRemark("系统回写：转科单号 " + entity.getTransferNo()
                 + "，转科原因：" + entity.getTransferReason());
         record.setRecordStatus(RecordStatusEnum.SUBMITTED.getCode());
-        record.setDoctorId(entity.getReceiveDoctorId() != null ? entity.getReceiveDoctorId() : currentEmpId());
-        record.setDoctorName(entity.getReceiveDoctorName() != null ? entity.getReceiveDoctorName() : currentName());
+        record.setDoctorId(entity.getReceiveDoctorId() != null ? entity.getReceiveDoctorId() : operatorUser.getEmployeeId());
+        record.setDoctorName(entity.getReceiveDoctorName() != null ? entity.getReceiveDoctorName() : operatorUser.getRealName());
         record.setSubmitTime(now);
         recordMapper.insert(record);
         return record;
@@ -545,17 +553,6 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         long days = java.time.temporal.ChronoUnit.DAYS
                 .between(admitTime.toLocalDate(), end.toLocalDate());
         return days < 1 ? 1 : (int) days;
-    }
-
-    /**
-     * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
-     */
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     // 内部：名称 / 组装

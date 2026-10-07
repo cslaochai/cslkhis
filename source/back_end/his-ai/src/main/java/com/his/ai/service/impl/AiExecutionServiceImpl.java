@@ -8,6 +8,7 @@ import com.his.ai.dto.LlmResultDTO;
 import com.his.ai.entity.SysAiCallLog;
 import com.his.ai.enums.AiCallStatusEnum;
 import com.his.ai.exception.LlmException;
+import com.his.common.exception.BusinessException;
 import com.his.ai.service.AiAuditService;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.LlmClient;
@@ -63,8 +64,10 @@ public class AiExecutionServiceImpl implements AiExecutionService {
      * @return 解析成功的结果；任何环节失败均返回 {@link Optional#empty()}
      */
     public <T> Optional<T> call(AiCallDTO call, Class<T> resultType) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         String capabilityKey = call.getCapabilityKey();
-        String operator = currentOperator();
+        String operator = operatorUser.getRealName();
 
         if (!configProvider.isCapabilityEnabled(capabilityKey)) {
             record(call, operator, null, AiCallStatusEnum.DEGRADED, 0,
@@ -190,10 +193,6 @@ public class AiExecutionServiceImpl implements AiExecutionService {
         entity.setModel(model);
         entity.setErrorMsg(AiMaskUtils.digest(errorMsg, 480));
         auditService.record(entity);
-    }
-
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     /**

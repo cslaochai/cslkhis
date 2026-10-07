@@ -71,7 +71,7 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
         d.setCreateBy(UserUtils.getCurrentUser().getRealName());
         if (dto.getId() != null) {
             d.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-            d.setUpdateTime(TimeUtil.toSeconds(LocalDateTime.now()));
+            d.setUpdateTime(TimeUtil.nowSeconds());
         }
         if (dto.getId() == null) {
             drugMapper.insert(d);
@@ -126,7 +126,7 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
                 throw new BusinessException("带药单 " + d.getOrderNo() + " 已发药，不能重复发药");
             }
         }
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         String who = UserUtils.getCurrentUser().getRealName();
         Long empId = UserUtils.getCurrentUser().getEmployeeId();
         for (BizDischargeDrug d : list) {

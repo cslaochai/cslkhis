@@ -19,6 +19,7 @@ import com.his.medicaltech.service.PathologyService;
 import com.his.medicaltech.vo.EndoscopyVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.service.DictCacheService;
+import com.his.system.entity.CurrentUser;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -188,12 +189,16 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
      */
     @Transactional(rollbackFor = Exception.class)
     public void execute(EndoscopyDTO.Execute dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizEndoscopyRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.SIGNED_IN.is(r.getStatus()) && !InsRecordStatusEnum.CHECKING.is(r.getStatus())) {
             throw new BusinessException("请先签到再执行检查（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
-        r.setEndoscopist(StringUtils.hasText(dto.getEndoscopist()) ? dto.getEndoscopist() : currentName());
+        r.setEndoscopist(StringUtils.hasText(dto.getEndoscopist()) ? dto.getEndoscopist() : operatorUser.getRealName());
         if (dto.getBowelPrepScore() != null) {
             if (dto.getBowelPrepScore() < 0 || dto.getBowelPrepScore() > 9) {
                 throw new BusinessException("肠道准备 Boston 评分须在 0~9 之间");
@@ -276,6 +281,10 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
      */
     @Transactional(rollbackFor = Exception.class)
     public void report(EndoscopyDTO.Report dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizEndoscopyRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.CHECKING.is(r.getStatus())) {
@@ -285,19 +294,23 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         r.setDiagnosis(dto.getDiagnosis());
         r.setSuggestion(dto.getSuggestion());
         r.setStatus(InsRecordStatusEnum.RESULTED.getCode());
-        r.setReportBy(currentName());
+        r.setReportBy(operatorUser.getRealName());
         r.setReportTime(LocalDateTime.now().withNano(0));
         recordMapper.updateById(r);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void audit(EndoscopyDTO.Audit dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizEndoscopyRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.RESULTED.is(r.getStatus())) {
             throw new BusinessException("仅「已出报告」可审核（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
-        String who = currentName();
+        String who = operatorUser.getRealName();
         if (who != null && who.equals(r.getReportBy())) {
             throw new BusinessException("审核人不得是报告医师本人（" + who + "）——内镜报告必须两级签署");
         }
@@ -312,6 +325,10 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
 
     @Transactional(rollbackFor = Exception.class)
     public void publish(Long recordId) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizEndoscopyRecord r = require(recordId);
         if (InsRecordStatusEnum.PUBLISHED.is(r.getStatus())) {
             throw new BusinessException("该报告已发布");
@@ -320,7 +337,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
             throw new BusinessException("发布前必须完成审核（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         r.setStatus(InsRecordStatusEnum.PUBLISHED.getCode());
-        r.setPublishBy(currentName());
+        r.setPublishBy(operatorUser.getRealName());
         r.setPublishTime(LocalDateTime.now().withNano(0));
         recordMapper.updateById(r);
     }
@@ -373,10 +390,6 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
             }
         }
         return "NJ" + day + System.currentTimeMillis() % 100000;
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     /**

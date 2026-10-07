@@ -11,8 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 入院登记（入院记录）
- * <p>这是一张既有表：主键是入院ID 而不是 {@code id}（出院记录的入院ID 引用它），
- * 因此**不继承 BaseEntity**，改为显式声明主键与审计列，避免 BaseEntity 的 id 映射到不存在的列。
  */
 @Data
 @TableName("biz_admission")

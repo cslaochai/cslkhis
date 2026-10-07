@@ -19,6 +19,7 @@ import com.his.patient.mapper.BizDeathCertificateMapper;
 import com.his.patient.service.DeathCertificateService;
 import com.his.patient.vo.DeathCertificateVO;
 import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
@@ -302,6 +303,8 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(DeathCertificateDTO.Upsert dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         DeathCertificateVO.PatientSnapshot snapshot = certMapper.selectPatientSnapshot(dto.getAdmissionId());
         if (snapshot == null) {
             throw new BusinessException("住院记录不存在");
@@ -384,7 +387,6 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
 
         // 死因链整体替换：本表无 del_flag，唯一键不含 del_flag，必须先物理删再插（软删会占键）
         causeMapper.purgeByCertId(cert.getId());
-        String operator = currentOperator();
         LocalDateTime createTime = now();
         for (DeathCertificateDTO.CauseRow row : causes) {
             BizDeathCertificateCause cause = new BizDeathCertificateCause();
@@ -394,7 +396,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
             cause.setIcdCode(cutToNull(row.getIcdCode(), ICD_CODE_MAX));
             cause.setIcdName(cut(trimToNull(row.getIcdName()), ICD_NAME_MAX));
             cause.setIntervalText(cutToNull(row.getIntervalText(), INTERVAL_MAX));
-            cause.setCreateBy(operator);
+            cause.setCreateBy(operatorUser.getRealName());
             cause.setCreateTime(createTime);
             causeMapper.insert(cause);
         }
@@ -404,12 +406,14 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void audit(DeathCertificateDTO.Audit dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizDeathCertificate cert = requireCert(dto.getId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.DRAFT.getCode())) {
             throw new BusinessException("只有草稿状态的证明可以提交审核（当前：" + statusText(cert.getCertStatus()) + "）");
         }
-        cert.setReviewerId(UserUtils.getCurrentUser().getEmployeeId());
-        cert.setReviewerName(currentOperator());
+        cert.setReviewerId(operatorUser.getEmployeeId());
+        cert.setReviewerName(operatorUser.getRealName());
         cert.setReviewTime(now());
         cert.setReviewOpinion(cutToNull(dto.getOpinion(), REASON_MAX));
         cert.setCertStatus(DeathCertStatusEnum.AUDITED.getCode());
@@ -459,13 +463,15 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void voidCert(DeathCertificateDTO.VoidCert dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizDeathCertificate cert = requireCert(dto.getId());
         if (Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.VOIDED.getCode())) {
             throw new BusinessException("该证明已作废，无需重复作废");
         }
         cert.setCertStatus(DeathCertStatusEnum.VOIDED.getCode());
         cert.setVoidReason(cut(trimToNull(dto.getReason()), REASON_MAX));
-        cert.setVoidBy(currentOperator());
+        cert.setVoidBy(operatorUser.getRealName());
         cert.setVoidTime(now());
         saveCert(cert);
     }
@@ -477,6 +483,8 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long reissue(Long origCertId) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizDeathCertificate orig = requireCert(origCertId);
         if (!Objects.equals(orig.getCertStatus(), DeathCertStatusEnum.VOIDED.getCode())) {
             throw new BusinessException("只有已作废的证明才能重开（当前：" + statusText(orig.getCertStatus()) + "）");
@@ -530,7 +538,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
             cause.setIcdCode(row.getIcdCode());
             cause.setIcdName(row.getIcdName());
             cause.setIntervalText(row.getIntervalText());
-            cause.setCreateBy(currentOperator());
+            cause.setCreateBy(operatorUser.getRealName());
             cause.setCreateTime(now());
             causeMapper.insert(cause);
         }
@@ -540,11 +548,13 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void print(DeathCertificateDTO.Print dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizDeathCertificate cert = requireCert(dto.getId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.ISSUED.getCode())) {
             throw new BusinessException("只有「已开具」的证明才打印（" + statusText(cert.getCertStatus()) + "的表样不能作为凭证）");
         }
-        cert.setPrinterName(currentOperator());
+        cert.setPrinterName(operatorUser.getRealName());
         cert.setPrintCount((cert.getPrintCount() == null ? 0 : cert.getPrintCount()) + 1);
         cert.setLastPrintTime(now());
         saveCert(cert);
@@ -710,7 +720,4 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         return JSONUtil.toJsonStr(payload);
     }
 
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

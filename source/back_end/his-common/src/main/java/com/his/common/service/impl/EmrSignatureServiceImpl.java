@@ -186,7 +186,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         String content = subject.contentWithPrev(prevDigest);
         String digest = SignCryptoUtil.sha256Hex(content);
         String signValue = SignCryptoUtil.sign(privatePem, content);
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
 
         BizEmrSignature e = new BizEmrSignature();
         e.setSignNo(nextSignNo());
@@ -272,7 +272,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         vo.setSignStatus(sig.getSignStatus());
         vo.setSignStatusText(SignStatusEnum.textOf(sig.getSignStatus()));
         vo.setDigestAtSign(sig.getContentDigest());
-        vo.setCheckedAt(TimeUtil.toSeconds(LocalDateTime.now()));
+        vo.setCheckedAt(TimeUtil.nowSeconds());
 
         // 断言一：签名值本身（用签名时留存的内容快照，不用当前内容）
         SysSignCert cert = sig.getCertId() == null ? null : certMapper.selectById(sig.getCertId());
@@ -418,7 +418,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         if (Objects.equals(SignStatusEnum.INVALID.getCode(), sig.getSignStatus())) {
             throw new BusinessException("签名 " + sig.getSignNo() + " 已作废，不能重复作废");
         }
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         store.updateInvalidate(signId, reason, now, operatorId, operatorName);
 
         SignableContentProvider provider = findProvider(sig.getBizType());

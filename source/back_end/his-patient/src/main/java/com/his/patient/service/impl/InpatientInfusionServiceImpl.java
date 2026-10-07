@@ -71,6 +71,8 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public InpatientOrderExecVO start(InfusionActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientOrderExec exec = requireExec(dto.getExecId());
         requireInfusion(exec);
         requireDone(exec);
@@ -81,13 +83,15 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         exec.setInfusionStartTime(TimeUtil.nowSeconds());
         exec.setDripRate(requireDripRate(dto.getDripRate()));
         execMapper.updateById(exec);
-        log.info("输液开始 execId={} dripRate={} 护士={}", exec.getId(), exec.getDripRate(), currentName());
+        log.info("输液开始 execId={} dripRate={} 护士={}", exec.getId(), exec.getDripRate(), operatorUser.getRealName());
         return toVO(exec);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public InfusionRoundVO round(InfusionActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientOrderExec exec = requireExec(dto.getExecId());
         requireStarted(exec);
         if (exec.getInfusionEndTime() != null) {
@@ -112,8 +116,8 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         round.setRoundTime(roundTime);
         round.setDripRate(dto.getDripRate());
         round.setRemainingVolume(dto.getRemainingVolume());
-        round.setRoundNurseId(currentEmpId());
-        round.setRoundNurseName(currentName());
+        round.setRoundNurseId(operatorUser.getEmployeeId());
+        round.setRoundNurseName(operatorUser.getRealName());
         round.setRemark(dto.getRemark());
         roundMapper.insert(round);
         log.info("输液巡视 execId={} time={} dripRate={} 护士={}",
@@ -124,6 +128,8 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public InpatientOrderExecVO finish(InfusionActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientOrderExec exec = requireExec(dto.getExecId());
         requireStarted(exec);
         if (exec.getInfusionEndTime() != null) {
@@ -143,7 +149,7 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         exec.setAdverseFlag(adverse ? 1 : 0);
         exec.setAdverseNote(adverse ? dto.getAdverseNote() : null);
         execMapper.updateById(exec);
-        log.info("输液结束 execId={} adverse={} 护士={}", exec.getId(), adverse, currentName());
+        log.info("输液结束 execId={} adverse={} 护士={}", exec.getId(), adverse, operatorUser.getRealName());
         return toVO(exec);
     }
 
@@ -240,11 +246,4 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         return vo;
     }
 
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

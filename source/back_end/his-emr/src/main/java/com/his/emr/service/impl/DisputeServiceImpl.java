@@ -19,6 +19,7 @@ import com.his.emr.service.MedicalRecordArchiveService;
 import com.his.emr.vo.DisputeCaseVO;
 import com.his.emr.vo.DisputeStatItemVO;
 import com.his.emr.vo.DisputeStatVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -66,10 +67,6 @@ public class DisputeServiceImpl implements DisputeService {
 
     private static LocalDateTime now() {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     // 登记 / 修改
@@ -138,7 +135,11 @@ public class DisputeServiceImpl implements DisputeService {
             entity.setCaseNo(nextCaseNo());
             entity.setStatus(DisputeStatusEnum.PENDING.getCode());
             entity.setSealStatus(SealStatusEnum.NONE.getCode());
-            entity.setRegisterBy(currentName());
+            CurrentUser operatorUser = UserUtils.getCurrentUser();
+            if (operatorUser == null) {
+                throw new BusinessException("当前用户信息不存在");
+            }
+            entity.setRegisterBy(operatorUser.getRealName());
             entity.setRegisterTime(now());
         } else {
             entity = requireEntity(dto.getId());
@@ -184,11 +185,15 @@ public class DisputeServiceImpl implements DisputeService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DisputeCaseVO accept(DisputeActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDisputeCase entity = requireEntity(dto.getId());
         if (!Objects.equals(entity.getStatus(), DisputeStatusEnum.PENDING.getCode())) {
             throw new BusinessException("仅「待受理」单据可受理（当前：" + statusName(entity.getStatus()) + "）");
         }
-        String operator = currentName();
+        String operator = operatorUser.getRealName();
         entity.setStatus(DisputeStatusEnum.INVESTIGATING.getCode());
         entity.setAcceptBy(operator);
         entity.setAcceptTime(now());
@@ -207,6 +212,10 @@ public class DisputeServiceImpl implements DisputeService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DisputeCaseVO sealNow(DisputeActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDisputeCase entity = requireEntity(dto.getId());
         if (!Objects.equals(entity.getNeedSeal(), 1)) {
             throw new BusinessException("该单据未申请封存病历，无需补封");
@@ -217,7 +226,7 @@ public class DisputeServiceImpl implements DisputeService {
         if (isTerminal(entity.getStatus())) {
             throw new BusinessException("已结案/已撤销单据不允许再封存病历");
         }
-        String operator = currentName();
+        String operator = operatorUser.getRealName();
         boolean sealed = sealIfPossible(entity, operator, "补封存");
         if (!sealed) {
             throw new BusinessException("该患者暂无「已归档」病历，请先完成病案归档再补封");
@@ -231,6 +240,10 @@ public class DisputeServiceImpl implements DisputeService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DisputeCaseVO follow(DisputeFollowDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDisputeCase entity = requireEntity(dto.getId());
         Integer from = entity.getStatus();
         if (isTerminal(from)) {
@@ -249,19 +262,23 @@ public class DisputeServiceImpl implements DisputeService {
             to = dto.getToStatus();
             entity.setStatus(to);
             if (Objects.equals(to, DisputeStatusEnum.INVESTIGATING.getCode()) && entity.getAcceptTime() == null) {
-                entity.setAcceptBy(currentName());
+                entity.setAcceptBy(operatorUser.getRealName());
                 entity.setAcceptTime(now());
             }
             caseMapper.updateById(entity);
         }
         String action = cut(dto.getAction(), 64);
-        addFlow(entity.getId(), action, from, to, cut(dto.getContent(), 1000), currentName());
+        addFlow(entity.getId(), action, from, to, cut(dto.getContent(), 1000), operatorUser.getRealName());
         return requireVo(entity.getId());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DisputeCaseVO close(DisputeCloseDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDisputeCase entity = requireEntity(dto.getId());
         Integer from = entity.getStatus();
         if (!Objects.equals(from, DisputeStatusEnum.INVESTIGATING.getCode())
@@ -272,7 +289,7 @@ public class DisputeServiceImpl implements DisputeService {
         if (dto.getCompensation().signum() < 0) {
             throw new BusinessException("赔偿金额不能为负（无赔偿请填 0）");
         }
-        String operator = currentName();
+        String operator = operatorUser.getRealName();
         entity.setStatus(DisputeStatusEnum.CLOSED.getCode());
         entity.setDealType(dto.getDealType());
         entity.setDutyType(dto.getDutyType());
@@ -289,6 +306,10 @@ public class DisputeServiceImpl implements DisputeService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DisputeCaseVO revoke(DisputeActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDisputeCase entity = requireEntity(dto.getId());
         Integer from = entity.getStatus();
         if (isTerminal(from)) {
@@ -299,7 +320,7 @@ public class DisputeServiceImpl implements DisputeService {
         if (reason == null) {
             throw new BusinessException("撤销原因必填");
         }
-        String operator = currentName();
+        String operator = operatorUser.getRealName();
         entity.setStatus(DisputeStatusEnum.REVOKED.getCode());
         entity.setRevokeReason(cut(reason, 500));
         caseMapper.updateById(entity);

@@ -18,6 +18,7 @@ import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.NutritionScreenVO;
 import com.his.patient.vo.WardVO;
 import com.his.system.provider.DeptScopeProvider;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -96,6 +97,8 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NutritionScreenVO screenUpsert(NutritionScreenUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         Integer type = dto.getScreenType();
         // ①条件必填：选了 NRS2002 才必填两个分项评分，换别的量表就必填总分，@NotNull 会误伤另一种量表
         if (type == NutritionScreenTypeEnum.NRS2002.getCode()
@@ -161,17 +164,17 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         row.setNextScreenDate(nextScreenDate);
         row.setItemsJson(StringUtils.hasText(dto.getItemsJson()) ? dto.getItemsJson().trim() : null);
         row.setScreenTime(screenTime);
-        row.setScreenerId(UserUtils.getCurrentUser().getEmployeeId());
-        row.setScreenerName(currentName());
+        row.setScreenerId(operatorUser.getEmployeeId());
+        row.setScreenerName(operatorUser.getRealName());
         row.setRemark(cut(trim(dto.getRemark()), 500));
 
         if (insert) {
             screenMapper.insert(row);
             log.info("营养筛查登记 住院={} 量表={} 总分={} 判定={} 操作人={}", admission.getAdmissionNo(),
-                    type, total, risk, currentName());
+                    type, total, risk, operatorUser.getRealName());
         } else {
             screenMapper.updateById(row);
-            log.info("营养筛查修改 id={} 总分={} 判定={} 操作人={}", row.getId(), total, risk, currentName());
+            log.info("营养筛查修改 id={} 总分={} 判定={} 操作人={}", row.getId(), total, risk, operatorUser.getRealName());
         }
         return screenMapper.selectVoById(row.getId());
     }
@@ -228,10 +231,6 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         }
         SysBed bed = bedMapper.selectById(bedId);
         return bed == null ? null : bed.getBedNo();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private String nextNo(String prefix, long maxSeq) {

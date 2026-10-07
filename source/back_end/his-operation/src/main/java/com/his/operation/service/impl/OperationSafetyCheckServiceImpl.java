@@ -96,6 +96,8 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
             throw new BusinessException("核查时段只允许 1-麻醉诱导前 2-手术开始前 3-患者离开手术室前，当前="
                     + dto.getPhase());
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         int phase = dto.getPhase();
 
         BizOperationApply apply = applyMapper.selectById(dto.getApplyId());
@@ -176,8 +178,8 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
         entity.setNurseId(nurseId);
         entity.setNurseName(employeeNameOf(nurseId));
         entity.setNurseSignTime(now);
-        entity.setRecorderId(currentEmpId());
-        entity.setRecorderName(currentName());
+        entity.setRecorderId(operatorUser.getEmployeeId());
+        entity.setRecorderName(operatorUser.getRealName());
         entity.setCheckTime(now);
         if (dto.getRemark() != null) {
             entity.setRemark(dto.getRemark());
@@ -185,7 +187,7 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
         checkMapper.insert(entity);
         log.info("安全核查签单 applyNo={} 时段={} 术者={} 麻醉={} 护士={} 录入人={}",
                 apply.getApplyNo(), SafetyCheckItems.phaseText(phase),
-                entity.getSurgeonName(), entity.getAnesthetistName(), entity.getNurseName(), currentName());
+                entity.getSurgeonName(), entity.getAnesthetistName(), entity.getNurseName(), operatorUser.getRealName());
         return entity.getCheckNo();
     }
 
@@ -236,14 +238,6 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
         String prefix = "HC" + LocalDate.now().format(NO_DATE);
         long seq = checkMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
-    }
-
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private SafetyCheckVO toVO(BizOperationSafetyCheck row) {

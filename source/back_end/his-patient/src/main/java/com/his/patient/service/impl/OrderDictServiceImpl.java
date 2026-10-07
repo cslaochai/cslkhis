@@ -101,6 +101,8 @@ public class OrderDictServiceImpl implements OrderDictService {
         if (dto == null) {
             throw new BusinessException("字典内容不能为空");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         String dictType = requireType(dto.getDictType());
 
         String label = dto.getDictLabel() == null ? null : dto.getDictLabel().trim();
@@ -110,7 +112,7 @@ public class OrderDictServiceImpl implements OrderDictService {
 
         Integer status = dto.getStatus() == null ? 1 : dto.getStatus();
 
-        String operator = currentUsername();
+        String operator = operatorUser.getRealName();
         if (dto.getId() == null) {
             String value = dto.getDictValue() == null ? null : dto.getDictValue().trim();
             // ①条件必填：只有新增（id==null）才要求字典值，修改分支允许不传，@NotBlank 会把合法修改挡成 400
@@ -162,6 +164,8 @@ public class OrderDictServiceImpl implements OrderDictService {
 
     @Override
     public void deleteById(Long id, String dictType) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         String type = requireType(dictType);
         // ②非web入口：service 方法参数判空，没有 DTO 字段可挂注解（HTTP 侧 @RequestParam 已必填）
         if (id == null) {
@@ -174,7 +178,7 @@ public class OrderDictServiceImpl implements OrderDictService {
         // 逻辑删：字典行留着，历史医嘱按原值仍能渲染出文案
         dictMapper.deleteById(id);
         refreshCache(type);
-        log.info("删除医嘱字典 id={} {} = {} 操作人={}", id, type, entity.getDictValue(), currentUsername());
+        log.info("删除医嘱字典 id={} {} = {} 操作人={}", id, type, entity.getDictValue(), operatorUser.getRealName());
     }
 
     // 内部
@@ -265,7 +269,4 @@ public class OrderDictServiceImpl implements OrderDictService {
         return trimmed.length() > 500 ? trimmed.substring(0, 500) : trimmed;
     }
 
-    private String currentUsername() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

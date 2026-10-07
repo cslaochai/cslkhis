@@ -11,6 +11,7 @@ import com.his.patient.support.HealthProfileEnums;
 import com.his.patient.support.PatientProfileValidator;
 import com.his.patient.vo.*;
 import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysDictData;
 import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
@@ -505,7 +506,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
             return;
         }
         Long patientId = patient.getId();
-        String operator = currentOperator();
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        String operator = operatorUser.getRealName();
 
         // 过敏史
         if (!listAllergies(patientId).isEmpty()) {
@@ -578,6 +581,8 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
      * 主档文本投影的统一写入口：必须用 LambdaUpdateWrapper.set，才能把值真正置成 null
      */
     private void writePatientText(Long patientId, String column, String value) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         String text = StringUtils.hasText(value) ? value : null;
         LambdaUpdateWrapper<BizPatient> wrapper = new LambdaUpdateWrapper<BizPatient>()
                 .eq(BizPatient::getId, patientId);
@@ -586,17 +591,19 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         } else {
             wrapper.set(BizPatient::getMedicalHistory, text);
         }
-        wrapper.set(BizPatient::getUpdateBy, currentOperator());
+        wrapper.set(BizPatient::getUpdateBy, operatorUser.getRealName());
         patientMapper.update(null, wrapper);
     }
 
     private void writePatientContact(Long patientId, String name, String phone, String relationText) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         patientMapper.update(null, new LambdaUpdateWrapper<BizPatient>()
                 .eq(BizPatient::getId, patientId)
                 .set(BizPatient::getContactName, name)
                 .set(BizPatient::getContactPhone, phone)
                 .set(BizPatient::getContactRelation, relationText)
-                .set(BizPatient::getUpdateBy, currentOperator()));
+                .set(BizPatient::getUpdateBy, operatorUser.getRealName()));
     }
 
     /**
@@ -646,7 +653,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     private <T> void persist(T entity, Long id,
                              java.util.function.Function<T, Integer> inserter,
                              java.util.function.Function<T, Integer> updater) {
-        String operator = currentOperator();
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        String operator = operatorUser.getRealName();
         if (id == null) {
             applyCreateBy(entity, operator);
             inserter.apply(entity);
@@ -671,13 +680,6 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
             // 更新时不带 create_by（null 会被 MP 忽略），避免把它冲掉
             be.setCreateBy(null);
         }
-    }
-
-    /**
-     * 操作人一律服务端取，不信前端传的身份；取不到直接报错，不编名字也不留 null
-     */
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private void requireInEnum(String label, String value, java.util.Set<String> allowed) {

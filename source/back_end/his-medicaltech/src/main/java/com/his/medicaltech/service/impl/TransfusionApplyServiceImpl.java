@@ -134,7 +134,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     }
 
     private static LocalDateTime now() {
-        return TimeUtil.toSeconds(LocalDateTime.now());
+        return TimeUtil.nowSeconds();
     }
 
     /**
@@ -256,6 +256,10 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(TransfusionApplyUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         // D类：码值合法性（空值与非 A/B/O/AB 一并拒绝），不是单纯「没填」，DTO 注解放不下
         if (!BloodTypeEnum.isValidAbo(dto.getPatientAbo())) {
             throw new BusinessException("受血者 ABO 血型不能为空且必须是 A/B/O/AB 之一（当前="
@@ -307,8 +311,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             entity.setApplyDeptName(deptNameOf(admission.getDeptId()));
             entity.setApplyWardName(wardNameOf(admission.getWardId()));
             entity.setApplyBedNo(bedNoOf(admission.getBedId()));
-            entity.setApplyDoctorId(currentEmpId());
-            entity.setApplyDoctorName(currentName());
+            entity.setApplyDoctorId(operatorUser.getEmployeeId());
+            entity.setApplyDoctorName(operatorUser.getRealName());
             entity.setApplyTime(now());
             entity.setApplyNo(nextApplyNo());
             entity.setTransfusionStatus(TransfusionStatusEnum.PENDING_CROSSMATCH.getCode());
@@ -429,7 +433,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
                 create ? "发起" : "修改", entity.getApplyNo(), entity.getAdmissionId(),
                 TransfusionRules.bloodTypeText(abo, rh),
                 BloodComponentEnum.getText(entity.getBloodComponent()),
-                entity.getBagCount(), entity.getIsEmergency(), currentName());
+                entity.getBagCount(), entity.getIsEmergency(), operatorUser.getRealName());
         return entity.getApplyNo();
     }
 
@@ -438,6 +442,10 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String approve(TransfusionApproveDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         Integer status = entity.getApproveStatus();
         if (!Objects.equals(TransfusionApproveStatusEnum.PENDING.getCode(), status)
@@ -451,7 +459,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
 
         LocalDateTime now = now();
-        Long approverId = currentEmpId();
+        Long approverId = operatorUser.getEmployeeId();
         // 职称快照：审批那一刻的职称定格（事后升职称不改历史记录）
         String approverTitle = approveRecordMapper.selectEmpTitle(approverId);
         boolean makeup = Objects.equals(TransfusionApproveStatusEnum.MAKEUP_PENDING.getCode(), status);
@@ -462,7 +470,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         record.setApproveLevel(entity.getApproveLevel() == null ? 1 : entity.getApproveLevel());
         record.setApproveResult(dto.getApproveResult());
         record.setApproverId(approverId);
-        record.setApproverName(currentName());
+        record.setApproverName(operatorUser.getRealName());
         record.setApproverTitle(approverTitle);
         record.setOpinion(StringUtils.hasText(dto.getOpinion()) ? dto.getOpinion().trim() : null);
         record.setIsMakeup(makeup ? 1 : 0);
@@ -487,7 +495,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
         log.info("用血审批 applyNo={} 结论={} 级别={} 补审={} 审批人={}",
                 entity.getApplyNo(), dto.getApproveResult() == 1 ? "通过" : "驳回",
-                entity.getApproveLevel(), makeup, currentName());
+                entity.getApproveLevel(), makeup, operatorUser.getRealName());
         return entity.getApplyNo();
     }
 
@@ -556,6 +564,10 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String crossmatch(TransfusionCrossmatchDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         if (!Objects.equals(TransfusionStatusEnum.PENDING_CROSSMATCH.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
@@ -587,8 +599,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         List<String> problems = new ArrayList<>();
 
         LocalDateTime now = now();
-        Long empId = currentEmpId();
-        String empName = currentName();
+        Long empId = operatorUser.getEmployeeId();
+        String empName = operatorUser.getRealName();
 
         for (TransfusionCrossmatchDTO.BagDTO bag : dto.getBags()) {
             String bagNo = bag.getBagNo() == null ? null : bag.getBagNo().trim();
@@ -735,6 +747,10 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void issue(TransfusionIssueDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         if (Objects.equals(TransfusionStatusEnum.PENDING_CROSSMATCH.getCode(), entity.getTransfusionStatus())) {
             // 同是「待配血」，原因可能完全不同：一次都还没配 vs 配了但结论是不合。
@@ -780,15 +796,15 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             }
             bagMapper.updateById(bag);
         }
-        entity.setIssueDoctorId(currentEmpId());
-        entity.setIssueDoctorName(currentName());
+        entity.setIssueDoctorId(operatorUser.getEmployeeId());
+        entity.setIssueDoctorName(operatorUser.getRealName());
         entity.setIssueTime(now);
         entity.setTransfusionStatus(TransfusionStatusEnum.ISSUED.getCode());
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(mergeRemark(entity.getRemark(), dto.getRemark()));
         }
         applyMapper.updateById(entity);
-        log.info("发血 applyNo={} 血袋 {} 袋 发血人={}", entity.getApplyNo(), bags.size(), currentName());
+        log.info("发血 applyNo={} 血袋 {} 袋 发血人={}", entity.getApplyNo(), bags.size(), operatorUser.getRealName());
     }
 
     @Override
@@ -859,6 +875,10 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void finish(TransfusionFinishDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         if (Objects.equals(TransfusionStatusEnum.FINISHED.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 已完成，不能重复回写"
@@ -906,8 +926,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         entity.setPostHb(dto.getPostHb());
         entity.setPostHct(dto.getPostHct());
         entity.setPostPlt(dto.getPostPlt());
-        entity.setFinishDoctorId(currentEmpId());
-        entity.setFinishDoctorName(currentName());
+        entity.setFinishDoctorId(operatorUser.getEmployeeId());
+        entity.setFinishDoctorName(operatorUser.getRealName());
         entity.setFinishTime(now);
         entity.setRecordId(record.getId());
         entity.setTransfusionStatus(TransfusionStatusEnum.FINISHED.getCode());
@@ -919,7 +939,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         log.info("输血完成 applyNo={} 输注 {}~{} 实际量={} 病历号={} 录入人={}",
                 entity.getApplyNo(),
                 entity.getInfusionStartTime() == null ? "-" : entity.getInfusionStartTime().format(FULL_TIME),
-                end.format(FULL_TIME), dto.getActualAmount(), record.getRecordNo(), currentName());
+                end.format(FULL_TIME), dto.getActualAmount(), record.getRecordNo(), operatorUser.getRealName());
     }
 
     // 工具
@@ -927,6 +947,10 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void reportReaction(TransfusionReactionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         if (!Objects.equals(TransfusionStatusEnum.FINISHED.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 当前状态为「"
@@ -943,20 +967,24 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         entity.setReactionType(dto.getReactionType());
         entity.setReactionDesc(dto.getReactionDesc());
         entity.setReactionHandle(dto.getReactionHandle());
-        entity.setReactionReporterId(currentEmpId());
-        entity.setReactionReporterName(currentName());
+        entity.setReactionReporterId(operatorUser.getEmployeeId());
+        entity.setReactionReporterName(operatorUser.getRealName());
         entity.setReactionTime(now());
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(mergeRemark(entity.getRemark(), dto.getRemark()));
         }
         applyMapper.updateById(entity);
         log.warn("输血反应上报 applyNo={} admissionId={} 类型={} 上报人={}",
-                entity.getApplyNo(), entity.getAdmissionId(), dto.getReactionType(), currentName());
+                entity.getApplyNo(), entity.getAdmissionId(), dto.getReactionType(), operatorUser.getRealName());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(TransfusionCancelDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         if (Objects.equals(TransfusionStatusEnum.CANCELLED.getCode(), entity.getTransfusionStatus())) {
             throw new BusinessException("输血单 " + entity.getApplyNo() + " 已取消，不能重复取消");
@@ -971,12 +999,12 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
         entity.setTransfusionStatus(TransfusionStatusEnum.CANCELLED.getCode());
         entity.setCancelReason(dto.getCancelReason());
-        entity.setCancelDoctorId(currentEmpId());
-        entity.setCancelDoctorName(currentName());
+        entity.setCancelDoctorId(operatorUser.getEmployeeId());
+        entity.setCancelDoctorName(operatorUser.getRealName());
         entity.setCancelTime(now());
         applyMapper.updateById(entity);
         log.info("取消输血申请 applyNo={} 原因={} 操作人={}",
-                entity.getApplyNo(), dto.getCancelReason(), currentName());
+                entity.getApplyNo(), dto.getCancelReason(), operatorUser.getRealName());
     }
 
     /**
@@ -992,6 +1020,10 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     private BizInpatientRecord writeBackRecord(BizTransfusionApply entity, BizAdmission admission,
                                                TransfusionFinishDTO dto,
                                                LocalDateTime end, LocalDateTime now) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPatient patient = patientService.getById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在，无法回写输血记录");
@@ -1091,9 +1123,9 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
                 + (Objects.equals(1, entity.getIsEmergency()) ? "，紧急用血" : ""));
         record.setRecordStatus(RECORD_STATUS_SUBMITTED);
         // 签名 = 申请输血的经治医师；缺失才回落到录入人（宁可记"谁录的"，也不留空签名）
-        record.setDoctorId(entity.getApplyDoctorId() != null ? entity.getApplyDoctorId() : currentEmpId());
+        record.setDoctorId(entity.getApplyDoctorId() != null ? entity.getApplyDoctorId() : operatorUser.getEmployeeId());
         record.setDoctorName(StringUtils.hasText(entity.getApplyDoctorName())
-                ? entity.getApplyDoctorName() : currentName());
+                ? entity.getApplyDoctorName() : operatorUser.getRealName());
         record.setSubmitTime(now);
         // 病历号取号与落库归病历文书的写入方（输血侧只负责把这次输血写成文书内容）
         return inpatientRecordService.appendClosedLoopRecord(record);
@@ -1298,14 +1330,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     /**
      * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信/手术同一口径
      */
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
-
     private record Parsed(String from, String to) {
     }
 }

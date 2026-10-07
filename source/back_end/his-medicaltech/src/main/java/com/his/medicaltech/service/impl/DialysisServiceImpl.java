@@ -20,6 +20,7 @@ import com.his.medicaltech.mapper.BizDialysisPrescriptionMapper;
 import com.his.medicaltech.mapper.BizDialysisSessionMapper;
 import com.his.medicaltech.service.DialysisService;
 import com.his.medicaltech.vo.DialysisVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -215,8 +216,12 @@ public class DialysisServiceImpl implements DialysisService {
             entity.setArchiveId(dto.getArchiveId());
             entity.setStatus(DialysisPrescriptionStatusEnum.ACTIVE.getCode());
             entity.setPatientName(archive.getPatientName());
-            entity.setDoctorId(UserUtils.getCurrentUser().getEmployeeId());
-            entity.setDoctorName(currentOperator());
+            CurrentUser operatorUser = UserUtils.getCurrentUser();
+            if (operatorUser == null) {
+                throw new BusinessException("当前用户信息不存在");
+            }
+            entity.setDoctorId(operatorUser.getEmployeeId());
+            entity.setDoctorName(operatorUser.getRealName());
         } else {
             entity = requirePrescription(dto.getId());
             if (!Objects.equals(entity.getArchiveId(), dto.getArchiveId())) {
@@ -436,6 +441,10 @@ public class DialysisServiceImpl implements DialysisService {
 
     @Transactional(rollbackFor = Exception.class)
     public DialysisVO.SessionVO startSession(DialysisDTO.SessionStart dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDialysisSession session = requireSession(dto.getId());
         if (session.getStatus() != DialysisSessionStatusEnum.SCHEDULED.getCode()) {
             throw new BusinessException("该治疗单不是「已排班」状态，不能上机");
@@ -450,7 +459,7 @@ public class DialysisServiceImpl implements DialysisService {
         session.setBeforeWeight(dto.getBeforeWeight());
         session.setAccessCheck(cut(dto.getAccessCheck().trim(), MAX_TEXT));
         session.setOnTime(onTime);
-        session.setOnBy(currentOperator());
+        session.setOnBy(operatorUser.getRealName());
         session.setStatus(DialysisSessionStatusEnum.ON_MACHINE.getCode());
         if (sessionMapper.updateById(session) <= 0) {
             throw new BusinessException("上机登记失败");
@@ -460,6 +469,10 @@ public class DialysisServiceImpl implements DialysisService {
 
     @Transactional(rollbackFor = Exception.class)
     public DialysisVO.SessionVO finishSession(DialysisDTO.SessionFinish dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDialysisSession session = requireSession(dto.getId());
         if (session.getStatus() != DialysisSessionStatusEnum.ON_MACHINE.getCode()) {
             throw new BusinessException("该治疗单不是「透析中」状态，不能下机");
@@ -476,7 +489,7 @@ public class DialysisServiceImpl implements DialysisService {
         }
         session.setAfterWeight(dto.getAfterWeight());
         session.setOffTime(offTime);
-        session.setOffBy(currentOperator());
+        session.setOffBy(operatorUser.getRealName());
         session.setActualDurationMin((int) ChronoUnit.MINUTES.between(session.getOnTime(), offTime));
         // 超滤量 =（透前-透后）kg × 1000；体重记反了会是负数，直接挡回来而不是落一条脏账
         BigDecimal delta = session.getBeforeWeight().subtract(dto.getAfterWeight());
@@ -652,8 +665,6 @@ public class DialysisServiceImpl implements DialysisService {
             throw new BusinessException(message);
         }
     }
-
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }
+
+

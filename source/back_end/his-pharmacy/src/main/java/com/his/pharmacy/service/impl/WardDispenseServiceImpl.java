@@ -20,6 +20,7 @@ import com.his.pharmacy.support.WardDispenseChargeInvoker;
 import com.his.pharmacy.vo.WardDispenseCandidateVO;
 import com.his.pharmacy.vo.WardDispenseStatsVO;
 import com.his.pharmacy.vo.WardDispenseVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -81,6 +82,10 @@ public class WardDispenseServiceImpl implements WardDispenseService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public WardDispenseVO generate(WardDispenseGenerateDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         LocalDate day = dto.getDispenseDate() != null ? dto.getDispenseDate() : LocalDate.now();
         if (day.isAfter(LocalDate.now())) {
             throw new BusinessException("摆药日期不能是未来日期");
@@ -102,7 +107,7 @@ public class WardDispenseServiceImpl implements WardDispenseService {
                     + (unmatched > 0 ? "（另有 " + unmatched + " 条药品医嘱未能匹配药品档案，已跳过）" : ""));
         }
 
-        String operator = currentOperator();
+        String operator = operatorUser.getRealName();
         BizWardDispense dispense = null;
         for (WardDispenseCandidateVO c : cands) {
             if (dispense == null || !Objects.equals(dispense.getAdmissionId(), c.getAdmissionId())) {
@@ -176,12 +181,16 @@ public class WardDispenseServiceImpl implements WardDispenseService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public WardDispenseVO dispenseItem(WardDispenseActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizWardDispenseItem item = requireItem(dto.getItemId());
         if (item.getStatus() == null || item.getStatus() != BizWardDispenseItem.STATUS_PENDING) {
             throw new BusinessException("仅待配药明细允许配药（当前状态码 " + item.getStatus() + "）");
         }
-        String operatorName = currentOperator();
-        Long operatorId = UserUtils.getCurrentUser().getEmployeeId();
+        String operatorName = operatorUser.getRealName();
+        Long operatorId = operatorUser.getEmployeeId();
 
         // ① FEFO 扣库存：先过期先出、跨批次、逐批落药品库存流水；总量不足整单失败
         StockDeductResultDTO deduct = pharmacyService.deductStockFefo(item.getDrugId(), item.getQuantity(),
@@ -213,13 +222,17 @@ public class WardDispenseServiceImpl implements WardDispenseService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public WardDispenseVO checkItem(WardDispenseActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizWardDispenseItem item = requireItem(dto.getItemId());
         if (item.getStatus() == null || item.getStatus() != BizWardDispenseItem.STATUS_DISPENSED) {
             throw new BusinessException("仅已配药明细允许核对（当前状态码 " + item.getStatus() + "）");
         }
         item.setStatus(BizWardDispenseItem.STATUS_CHECKED);
-        item.setCheckerId(UserUtils.getCurrentUser().getEmployeeId());
-        item.setCheckerName(currentOperator());
+        item.setCheckerId(operatorUser.getEmployeeId());
+        item.setCheckerName(operatorUser.getRealName());
         item.setCheckTime(now());
         if (StringUtils.hasText(dto.getRemark())) {
             item.setRemark(dto.getRemark());
@@ -238,13 +251,17 @@ public class WardDispenseServiceImpl implements WardDispenseService {
         if (!StringUtils.hasText(dto.getReason())) {
             throw new BusinessException("退药原因必填");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizWardDispenseItem item = requireItem(dto.getItemId());
         if (item.getStatus() == null
                 || (item.getStatus() != BizWardDispenseItem.STATUS_DISPENSED
                 && item.getStatus() != BizWardDispenseItem.STATUS_CHECKED)) {
             throw new BusinessException("仅已配药/已核对明细允许退药（当前状态码 " + item.getStatus() + "）");
         }
-        String operatorName = currentOperator();
+        String operatorName = operatorUser.getRealName();
 
         // ① 回库（落 type=3 流水；并入数量最大批次，无批次则按来源单建新批次）
         pharmacyService.restoreStock(item.getDrugId(), item.getQuantity(),
@@ -384,7 +401,4 @@ public class WardDispenseServiceImpl implements WardDispenseService {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

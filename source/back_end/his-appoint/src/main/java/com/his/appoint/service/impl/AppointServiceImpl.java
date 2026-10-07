@@ -958,19 +958,14 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
             return;
         }
         AppointChargeGateway.CancelCommand command = new AppointChargeGateway.CancelCommand();
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         command.setBillId(registInfo.getBillId());
         command.setReason(StringUtils.hasText(reason) ? reason : "退号");
-        command.setOperator(currentOperatorName());
+        command.setOperator(operatorUser.getRealName());
         boolean closed = gateway.cancelRegistCharge(command);
         log.info("退号联动账单：registId={}，billId={}，撤销={}",
                 registInfo.getId(), registInfo.getBillId(), closed);
-    }
-
-    /**
-     * 当前操作人姓名 —— 一律服务端取，不信前端传的身份。
-     */
-    private String currentOperatorName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     @Override

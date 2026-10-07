@@ -18,6 +18,7 @@ import com.his.emr.mapper.BizPathwayStepMapper;
 import com.his.emr.mapper.BizPathwayVarianceMapper;
 import com.his.emr.service.PathwayService;
 import com.his.emr.vo.*;
+import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeProvider;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -217,6 +218,10 @@ public class PathwayServiceImpl implements PathwayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PathwayVO publishPathway(PathwayActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPathway pathway = requirePathway(dto.getId());
         if (!Objects.equals(pathway.getStatus(), PathwayStatusEnum.DRAFT.getCode())) {
             throw new BusinessException("仅草稿模板允许发布");
@@ -230,7 +235,7 @@ public class PathwayServiceImpl implements PathwayService {
         }
         pathway.setTotalDays(maxDay);
         pathway.setStatus(PathwayStatusEnum.ACTIVE.getCode());
-        pathway.setPublishBy(currentOperator());
+        pathway.setPublishBy(operatorUser.getRealName());
         pathway.setPublishTime(now());
         if (pathwayMapper.updateById(pathway) <= 0) {
             throw new BusinessException("发布失败");
@@ -324,7 +329,11 @@ public class PathwayServiceImpl implements PathwayService {
             enroll.setDeptName(snap.getDeptName());
             enroll.setDiagnosis(snap.getDiagnosis());
             enroll.setEnrollDate(dto.getEnrollDate());
-            enroll.setEnrollBy(currentOperator());
+            CurrentUser operatorUser = UserUtils.getCurrentUser();
+            if (operatorUser == null) {
+                throw new BusinessException("当前用户信息不存在");
+            }
+            enroll.setEnrollBy(operatorUser.getRealName());
             enroll.setEnrollTime(now());
             enroll.setStatus(PathwayEnrollStatusEnum.ENROLLED.getCode());
             enroll.setVarianceCount(0);
@@ -351,6 +360,10 @@ public class PathwayServiceImpl implements PathwayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PathwayEnrollVO varianceUpsert(VarianceUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPathwayEnroll enroll = requireEnroll(dto.getEnrollId());
         // 医生站开单入口也调本接口（ipd:order:add），科室越权在此收口
         checkDeptAccess(enroll.getDeptId());
@@ -371,8 +384,8 @@ public class PathwayServiceImpl implements PathwayService {
         variance.setVarianceReason(cut(dto.getVarianceReason().trim(), REASON_MAX));
         variance.setHandling(cutToNull(dto.getHandling(), REASON_MAX));
         variance.setOccurredDate(dto.getOccurredDate());
-        variance.setRecorderId(UserUtils.getCurrentUser().getEmployeeId());
-        variance.setRecorderName(currentOperator());
+        variance.setRecorderId(operatorUser.getEmployeeId());
+        variance.setRecorderName(operatorUser.getRealName());
         variance.setRecordTime(now());
         varianceMapper.insert(variance);
 
@@ -383,6 +396,10 @@ public class PathwayServiceImpl implements PathwayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PathwayEnrollVO finishEnroll(EnrollActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPathwayEnroll enroll = requireEnroll(dto.getId());
         if (!Objects.equals(enroll.getStatus(), PathwayEnrollStatusEnum.ENROLLED.getCode())) {
             throw new BusinessException("仅在径记录允许完成");
@@ -390,7 +407,7 @@ public class PathwayServiceImpl implements PathwayService {
         // 有变异不挡完成：完成=按计划走完或临床认可的结局
         enroll.setStatus(PathwayEnrollStatusEnum.FINISHED.getCode());
         enroll.setFinishDate(LocalDate.now());
-        enroll.setFinishBy(currentOperator());
+        enroll.setFinishBy(operatorUser.getRealName());
         if (StringUtils.hasText(dto.getReason())) {
             enroll.setRemark(cut(dto.getReason().trim(), 500));
         }
@@ -403,6 +420,10 @@ public class PathwayServiceImpl implements PathwayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PathwayEnrollVO abortEnroll(EnrollActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPathwayEnroll enroll = requireEnroll(dto.getId());
         if (!Objects.equals(enroll.getStatus(), PathwayEnrollStatusEnum.ENROLLED.getCode())) {
             throw new BusinessException("仅在径记录允许退径");
@@ -413,7 +434,7 @@ public class PathwayServiceImpl implements PathwayService {
         }
         enroll.setStatus(PathwayEnrollStatusEnum.ABORTED.getCode());
         enroll.setFinishDate(LocalDate.now());
-        enroll.setFinishBy(currentOperator());
+        enroll.setFinishBy(operatorUser.getRealName());
         enroll.setAbortReason(cut(dto.getReason().trim(), REASON_MAX));
         if (enrollMapper.updateById(enroll) <= 0) {
             throw new BusinessException("退径更新失败");
@@ -537,9 +558,5 @@ public class PathwayServiceImpl implements PathwayService {
             throw new BusinessException("入径记录不存在或已删除");
         }
         return enroll;
-    }
-
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 }

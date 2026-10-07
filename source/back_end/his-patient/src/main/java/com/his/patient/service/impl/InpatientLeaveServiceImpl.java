@@ -291,7 +291,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         leave.setExpectedReturnTime(expectedReturn);
         if (isNew) {
             leave.setApplyTime(now());
-            leave.setApplyBy(cutToNull(currentOperator(), 64));
+            CurrentUser operatorUser = UserUtils.getCurrentUser();
+            if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+            leave.setApplyBy(cutToNull(operatorUser.getRealName(), 64));
         }
         leave.setRemark(cutToNull(dto.getRemark(), REASON_MAX));
         saveLeave(leave, isNew);
@@ -314,8 +316,10 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         assertDeptAccessible(leave.getDeptId());
 
         // 落款人 = 当前登录职工：批准/拒绝都是医疗决定，责任主体不许前端冒充
-        Long me = UserUtils.getCurrentUser().getEmployeeId();
-        String myName = UserUtils.getCurrentUser().getRealName();
+        CurrentUser currentUser = UserUtils.getCurrentUser();
+        if (currentUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        Long me = currentUser.getEmployeeId();
+        String myName = currentUser.getRealName();
         if (me == null || !StringUtils.hasText(myName)) {
             throw new BusinessException("当前登录账号未绑定员工档案，无法以医师身份审批");
         }
@@ -423,6 +427,8 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void confirmBack(InpatientLeaveDTO.Back dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (!Objects.equals(LeaveStatusEnum.LEFT.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("只有「已离院」的请假单能销假，当前为「"
@@ -435,7 +441,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         }
         leave.setActualReturnTime(now);
         leave.setReturnNote(cutToNull(dto.getReturnNote(), NOTE_MAX));
-        leave.setReturnBy(cutToNull(currentOperator(), 64));
+        leave.setReturnBy(cutToNull(operatorUser.getRealName(), 64));
         leave.setLeaveStatus(LeaveStatusEnum.RETURNED.getCode());
         saveLeave(leave, false);
     }
@@ -443,6 +449,8 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(InpatientLeaveDTO.Cancel dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (Objects.equals(LeaveStatusEnum.LEFT.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("已离院的请假单不能取消（人已经出去了，事实不能蒸发）——请等患者返回后销假");
@@ -455,7 +463,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         assertDeptAccessible(leave.getDeptId());
         leave.setLeaveStatus(LeaveStatusEnum.CANCELLED.getCode());
         leave.setCancelReason(cut(trimToNull(dto.getCancelReason()), REASON_MAX));
-        leave.setCancelBy(cutToNull(currentOperator(), 64));
+        leave.setCancelBy(cutToNull(operatorUser.getRealName(), 64));
         leave.setCancelTime(now());
         saveLeave(leave, false);
     }
@@ -463,6 +471,8 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void recordContact(InpatientLeaveDTO.Contact dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (!Objects.equals(LeaveStatusEnum.LEFT.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("只有「已离院」的请假单记录超期处置，当前为「"
@@ -480,7 +490,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         leave.setOverdueContactResult(dto.getContactResult());
         leave.setOverdueContactNote(cutToNull(dto.getContactNote(), NOTE_MAX));
         leave.setOverdueContactTime(now());
-        leave.setOverdueContactBy(cutToNull(currentOperator(), 64));
+        leave.setOverdueContactBy(cutToNull(operatorUser.getRealName(), 64));
         leave.setReportTo(dto.getReportTo());
         saveLeave(leave, false);
     }
@@ -488,12 +498,14 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void print(InpatientLeaveDTO.Print dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (!Objects.equals(LeaveStatusEnum.LEFT.getCode(), leave.getLeaveStatus())
                 && !Objects.equals(LeaveStatusEnum.RETURNED.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("只有「已离院/已返回」的请假单打印承诺书（未离院的是没有患方签字的半张纸）");
         }
-        leave.setPrinterName(currentOperator());
+        leave.setPrinterName(operatorUser.getRealName());
         leave.setPrintCount(nvl(leave.getPrintCount(), 0) + 1);
         leave.setLastPrintTime(now());
         saveLeave(leave, false);
@@ -620,7 +632,4 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         }
     }
 
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

@@ -14,6 +14,7 @@ import com.his.medicaltech.mapper.BizUltrasoundMeasureMapper;
 import com.his.medicaltech.mapper.BizUltrasoundRecordMapper;
 import com.his.medicaltech.service.UltrasoundService;
 import com.his.medicaltech.vo.UltrasoundVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -169,12 +170,16 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
 
     @Transactional(rollbackFor = Exception.class)
     public void execute(UltrasoundDTO.Execute dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizUltrasoundRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.SIGNED_IN.is(r.getStatus()) && !InsRecordStatusEnum.CHECKING.is(r.getStatus())) {
             throw new BusinessException("请先签到再执行检查（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
-        r.setSonographer(StringUtils.hasText(dto.getSonographer()) ? dto.getSonographer() : currentName());
+        r.setSonographer(StringUtils.hasText(dto.getSonographer()) ? dto.getSonographer() : operatorUser.getRealName());
         if (StringUtils.hasText(dto.getBodyPart())) {
             r.setBodyPart(dto.getBodyPart());
         }
@@ -241,6 +246,10 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
 
     @Transactional(rollbackFor = Exception.class)
     public void report(UltrasoundDTO.Report dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizUltrasoundRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.CHECKING.is(r.getStatus())) {
@@ -250,19 +259,23 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         r.setConclusion(dto.getConclusion());
         r.setSuggestion(dto.getSuggestion());
         r.setStatus(InsRecordStatusEnum.RESULTED.getCode());
-        r.setReportBy(currentName());
+        r.setReportBy(operatorUser.getRealName());
         r.setReportTime(LocalDateTime.now().withNano(0));
         recordMapper.updateById(r);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void audit(UltrasoundDTO.Audit dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizUltrasoundRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.RESULTED.is(r.getStatus())) {
             throw new BusinessException("仅「已出报告」可审核（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
-        String who = currentName();
+        String who = operatorUser.getRealName();
         if (who != null && who.equals(r.getReportBy())) {
             throw new BusinessException("审核人不得是报告医师本人（" + who + "）——超声报告必须两级签署");
         }
@@ -277,6 +290,10 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
 
     @Transactional(rollbackFor = Exception.class)
     public void publish(Long recordId) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizUltrasoundRecord r = require(recordId);
         if (InsRecordStatusEnum.PUBLISHED.is(r.getStatus())) {
             throw new BusinessException("该报告已发布");
@@ -285,7 +302,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
             throw new BusinessException("发布前必须完成审核（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         r.setStatus(InsRecordStatusEnum.PUBLISHED.getCode());
-        r.setPublishBy(currentName());
+        r.setPublishBy(operatorUser.getRealName());
         r.setPublishTime(LocalDateTime.now().withNano(0));
         recordMapper.updateById(r);
     }
@@ -411,10 +428,6 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
             }
         }
         return "CS" + day + System.currentTimeMillis() % 100000;
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     /**

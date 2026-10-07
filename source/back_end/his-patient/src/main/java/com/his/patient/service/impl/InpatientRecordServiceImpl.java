@@ -145,6 +145,8 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
                     + "请在「转科 / 交接班」里发起并由转入科室接收");
         }
 
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
@@ -197,8 +199,8 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
 
         applyContent(record, dto);
         record.setRecordStatus(RecordStatusEnum.DRAFT.getCode());
-        record.setDoctorId(currentEmpId());
-        record.setDoctorName(currentName());
+        record.setDoctorId(operatorUser.getEmployeeId());
+        record.setDoctorName(operatorUser.getRealName());
         record.setRemark(dto.getRemark());
 
         // 新建入院记录时把患者档案里的过敏史带出来当初始值 —— 仍是医生可改的快照，
@@ -256,8 +258,10 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
             logMapper.insert(row);
         }
         if (!changes.isEmpty()) {
+            CurrentUser operatorUser = UserUtils.getCurrentUser();
+            if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
             log.info("修改病历文书 recordNo={} 变更字段数={} 医生={}",
-                    record.getRecordNo(), changes.size(), currentName());
+                    record.getRecordNo(), changes.size(), operatorUser.getRealName());
         }
         return detail(record.getId());
     }
@@ -548,6 +552,8 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         if (dto == null) {
             throw new BusinessException("请选择要提交的文书");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         List<BizInpatientRecord> records = loadForBatch(dto.getIds());
 
         // 先全量校验再写：部分成功会让医生不知道哪些生效了
@@ -558,9 +564,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
                         + "」，只有「草稿」可以提交");
             }
         }
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
-        Long empId = currentEmpId();
-        String name = currentName();
+        LocalDateTime now = TimeUtil.nowSeconds();
+        Long empId = operatorUser.getEmployeeId();
+        String name = operatorUser.getRealName();
         for (BizInpatientRecord r : records) {
             // **先把「已提交」落到库，再签名**。签名服务是从库里读状态做放行判断的，
             // 只改内存对象没用 —— 反过来的话 blockReason 会读到「还是草稿」，
@@ -600,6 +606,8 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         if (dto == null) {
             throw new BusinessException("请选择要归档的文书");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         List<BizInpatientRecord> records = loadForBatch(dto.getIds());
 
         for (BizInpatientRecord r : records) {
@@ -609,9 +617,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
                         + "」，只有「已提交」可以归档（草稿请先提交）");
             }
         }
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
-        Long empId = currentEmpId();
-        String name = currentName();
+        LocalDateTime now = TimeUtil.nowSeconds();
+        Long empId = operatorUser.getEmployeeId();
+        String name = operatorUser.getRealName();
         for (BizInpatientRecord r : records) {
             // 归档补签：正常情况下提交时已经签过，这里只兜住"提交时签名失败/历史数据"两种缺口。
             // 已签名的直接跳过（blockReason 会拒绝重复签，不能把整个归档批次拖挂）。
@@ -651,12 +659,14 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
     private com.his.common.vo.SignatureVO signOrFail(BizInpatientRecord r,
                                                      SignSceneEnum scene,
                                                      String actionLabel) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         com.his.common.dto.SignCommandDTO cmd = new com.his.common.dto.SignCommandDTO();
         cmd.setBizType(SignBizTypeEnum.INPATIENT_RECORD.getCode());
         cmd.setBizId(r.getId());
         cmd.setSignScene(scene.getCode());
-        cmd.setSignerId(currentEmpId());
-        cmd.setSignerName(currentName());
+        cmd.setSignerId(operatorUser.getEmployeeId());
+        cmd.setSignerName(operatorUser.getRealName());
         cmd.setSignerDeptId(currentDeptId());
         cmd.setSignerDeptName(currentDeptName());
         try {
@@ -984,13 +994,15 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
      * 动作日志（创建/提交/归档）：不带字段三件套，靠 operation 表达
      */
     private BizInpatientRecordLog actionLog(BizInpatientRecord record, String operation) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientRecordLog row = new BizInpatientRecordLog();
         row.setDocType(RecordDocTypeEnum.MEDICAL.getCode());
         row.setRecordId(record.getId());
         row.setRecordNo(record.getRecordNo());
         row.setRecordType(record.getRecordType());
-        row.setUserId(currentEmpId());
-        row.setUserName(currentName());
+        row.setUserId(operatorUser.getEmployeeId());
+        row.setUserName(operatorUser.getRealName());
         row.setOperation(operation);
         return row;
     }
@@ -1058,17 +1070,6 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         String prefix = "BL" + LocalDate.now().format(NO_DATE);
         long seq = recordMapper.countByRecordNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
-    }
-
-    /**
-     * 文书的医生留痕一律用**员工ID**（不是用户的ID），与 P1 医嘱同一口径
-     */
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     /**

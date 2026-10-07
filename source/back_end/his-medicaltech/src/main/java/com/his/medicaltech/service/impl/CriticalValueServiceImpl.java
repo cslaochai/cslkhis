@@ -22,6 +22,7 @@ import com.his.medicaltech.service.CriticalValueService;
 import com.his.medicaltech.support.LabCriticalValueRules;
 import com.his.medicaltech.vo.BizCriticalValueVO;
 import com.his.medicaltech.vo.CriticalValueStatsVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.*;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysConfigMapper;
@@ -165,13 +166,13 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 
-    private static String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int detectAndReport(BizLaboratoryRecord record, List<BizLabResult> results) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         if (record == null || results == null || results.isEmpty()) {
             return 0;
         }
@@ -206,13 +207,13 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             entity.setCriticalDesc(truncate(value.description(), 300));
             entity.setReportDeptId(record.getLaboratoryDeptId());
             entity.setReportDeptName(record.getLaboratoryDeptName());
-            entity.setReportBy(currentOperator());
+            entity.setReportBy(operatorUser.getRealName());
             entity.setReportTime(now);
             entity.setDeadlineTime(now.plusMinutes(deadlineMinutes));
             entity.setNotifyStatus(NotifyStatusEnum.NONE.getCode());
             entity.setStatus(CriticalValueStatusEnum.PENDING.getCode());
             entity.setSource(SOURCE_RULE);
-            entity.setCreateBy(currentOperator());
+            entity.setCreateBy(operatorUser.getRealName());
             hits.add(entity);
         }
 
@@ -439,14 +440,18 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean receive(CriticalValueReceiveDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizCriticalValue entity = require(dto.getCriticalValueId());
         if (entity.getStatus() != CriticalValueStatusEnum.PENDING.getCode()) {
             throw new BusinessException("当前状态不允许接收（状态：" + statusText(entity.getStatus()) + "）");
         }
         entity.setStatus(CriticalValueStatusEnum.RECEIVED.getCode());
-        entity.setReceiveBy(StringUtils.hasText(dto.getReceiveBy()) ? dto.getReceiveBy() : currentOperator());
+        entity.setReceiveBy(StringUtils.hasText(dto.getReceiveBy()) ? dto.getReceiveBy() : operatorUser.getRealName());
         entity.setReceiveTime(LocalDateTime.now());
-        entity.setUpdateBy(currentOperator());
+        entity.setUpdateBy(operatorUser.getRealName());
         return updateById(entity);
     }
 
@@ -455,12 +460,16 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean handle(CriticalValueHandleDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizCriticalValue entity = require(dto.getCriticalValueId());
         if (entity.getStatus() != CriticalValueStatusEnum.PENDING.getCode() && entity.getStatus() != CriticalValueStatusEnum.RECEIVED.getCode()) {
             throw new BusinessException("当前状态不允许处置（状态：" + statusText(entity.getStatus()) + "）");
         }
         entity.setStatus(CriticalValueStatusEnum.HANDLED.getCode());
-        entity.setHandleBy(StringUtils.hasText(dto.getHandleBy()) ? dto.getHandleBy() : currentOperator());
+        entity.setHandleBy(StringUtils.hasText(dto.getHandleBy()) ? dto.getHandleBy() : operatorUser.getRealName());
         entity.setHandleTime(LocalDateTime.now());
         entity.setHandleMeasure(truncate(dto.getHandleMeasure(), 500));
         // 未显式接收就直接处置时，把接收人也补上：闭环链条不能断在中间
@@ -468,7 +477,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             entity.setReceiveBy(entity.getHandleBy());
             entity.setReceiveTime(entity.getHandleTime());
         }
-        entity.setUpdateBy(currentOperator());
+        entity.setUpdateBy(operatorUser.getRealName());
         boolean ok = updateById(entity);
         if (ok) {
             // 消息侧待办联动：危急值处置完成 → 该危急值的站内信 handle_status 置 1。

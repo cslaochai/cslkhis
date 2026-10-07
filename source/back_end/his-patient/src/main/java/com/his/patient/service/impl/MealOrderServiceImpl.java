@@ -22,6 +22,7 @@ import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.MealGenerateVO;
 import com.his.patient.vo.MealOrderVO;
 import com.his.system.provider.DeptScopeProvider;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -132,6 +133,8 @@ public class MealOrderServiceImpl implements MealOrderService {
         if (mealDate.isBefore(LocalDate.now())) {
             throw new BusinessException("不能为「" + mealDate + "」之前的日期生成餐单（食堂无法补送过去的餐）");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
 
         List<BizDietPlan> plans = planMapper.selectList(new LambdaQueryWrapper<BizDietPlan>()
                 .eq(BizDietPlan::getPlanStatus, PlanStatusEnum.RUNNING.getCode())
@@ -189,8 +192,8 @@ public class MealOrderServiceImpl implements MealOrderService {
         // 同一个人可能同时有两条口服方案（如"糖尿病饮食 + 口服营养补充"），
         // 而 uk_meal_order 只认「人 + 日期 + 餐次」—— 批内必须去重，否则整批生成撞唯一键
         Set<String> batchKeys = new HashSet<>();
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
-        String operator = currentName();
+        LocalDateTime now = TimeUtil.nowSeconds();
+        String operator = operatorUser.getRealName();
         for (BizDietPlan plan : plans) {
             if (lockedAdmissions.contains(plan.getAdmissionId())) {
                 continue;
@@ -249,6 +252,8 @@ public class MealOrderServiceImpl implements MealOrderService {
         if (dto == null) {
             throw new BusinessException("请选择要处理的订餐");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         Integer target = dto.getDeliverStatus();
         if (target == null || !NutritionRules.isMealStatus(target)
                 || target == MealDeliverStatusEnum.PENDING.getCode()) {
@@ -266,8 +271,8 @@ public class MealOrderServiceImpl implements MealOrderService {
             throw new BusinessException("请选择要处理的订餐");
         }
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
-        String operator = currentName();
+        LocalDateTime now = TimeUtil.nowSeconds();
+        String operator = operatorUser.getRealName();
         // 批量要么全推要么全不动：食堂按病区整批点"配送"，一半成功会让人以为都送出去了
         List<BizMealOrder> rows = new ArrayList<>(ids.size());
         for (Long id : ids) {
@@ -306,7 +311,7 @@ public class MealOrderServiceImpl implements MealOrderService {
                 }
             } else if (Objects.equals(MealDeliverStatusEnum.DELIVERED.getCode(), target)) {
                 row.setDeliverTime(now);
-                row.setDeliverById(UserUtils.getCurrentUser().getEmployeeId());
+                row.setDeliverById(operatorUser.getEmployeeId());
                 row.setDeliverByName(operator);
             } else if (Objects.equals(MealDeliverStatusEnum.SIGNED.getCode(), target)) {
                 row.setSignTime(now);
@@ -339,7 +344,4 @@ public class MealOrderServiceImpl implements MealOrderService {
         return mealMapper.purgeById(id);
     }
 
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

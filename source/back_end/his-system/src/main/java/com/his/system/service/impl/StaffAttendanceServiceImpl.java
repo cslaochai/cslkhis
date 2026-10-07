@@ -186,6 +186,10 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
 
     @Override
     public BizStaffAttendance markAbsent(AttendanceDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         Long employeeId = requireEmployee(dto);
         LocalDate date = dto.getWorkDate() == null ? LocalDate.now() : dto.getWorkDate();
         List<BizStaffSchedule> plans = baseMapper.selectDayPlanOfEmployee(employeeId, date);
@@ -226,7 +230,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         row.setAttendanceStatus(STATUS_ABSENT);
         row.setDataSource(1);
         row.setConfirmStatus(1);
-        row.setConfirmBy(operator());
+        row.setConfirmBy(operatorUser.getRealName());
         row.setConfirmTime(LocalDateTime.now());
         row.setRemark(normalizeRemark(dto.getRemark()));
         if (row.getId() == null) {
@@ -239,6 +243,10 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
 
     @Override
     public BizStaffAttendance adjust(AttendanceDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         Long employeeId = requireEmployee(dto);
         LocalDate date = dto.getWorkDate() == null ? LocalDate.now() : dto.getWorkDate();
         if (dto.getActualMinutes() == null || dto.getActualMinutes() < 0) {
@@ -282,7 +290,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         row.setDataSource(1);
         // 这一步本身就是人在登记，不必再走一遍科室确认
         row.setConfirmStatus(1);
-        row.setConfirmBy(operator());
+        row.setConfirmBy(operatorUser.getRealName());
         row.setConfirmTime(LocalDateTime.now());
         row.setRemark(normalizeRemark(dto.getRemark()));
         if (row.getId() == null) {
@@ -295,12 +303,16 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
 
     @Override
     public void confirm(Long id, Integer confirmStatus) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizStaffAttendance row = requireRow(id);
         if (confirmStatus == null || confirmStatus < 0 || confirmStatus > 2) {
             throw new BusinessException("确认状态只能是 0-待确认、1-已确认、2-有异议");
         }
         row.setConfirmStatus(confirmStatus);
-        row.setConfirmBy(operator());
+        row.setConfirmBy(operatorUser.getRealName());
         row.setConfirmTime(LocalDateTime.now());
         baseMapper.updateById(row);
     }
@@ -553,7 +565,4 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         return remark == null || remark.isBlank() ? null : remark.trim();
     }
 
-    private String operator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

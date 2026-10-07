@@ -272,10 +272,6 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         return finding.getErrorLevel() == null ? 0 : finding.getErrorLevel();
     }
 
-    private static String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
-
     private static String buildNo(String prefix) {
         String timestamp = LocalDateTime.now().format(NO_FORMATTER);
         String tail = String.format("%06d", (int) (Math.random() * 1_000_000));
@@ -493,7 +489,9 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
             return;
         }
         try {
-            String operator = currentOperator();
+            CurrentUser operatorUser = UserUtils.getCurrentUser();
+            if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+            String operator = operatorUser.getRealName();
             BizClinicalRuleCheck check = new BizClinicalRuleCheck();
             check.setCheckNo(buildNo("RCAI"));
             check.setRecordId(prescription.getRecordId());

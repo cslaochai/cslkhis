@@ -14,6 +14,7 @@ import com.his.medicaltech.mapper.BizLisEqaSampleMapper;
 import com.his.medicaltech.service.LisEqaService;
 import com.his.medicaltech.support.EqaJudgeEngine;
 import com.his.medicaltech.vo.LisEqaVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -146,6 +147,10 @@ public class LisEqaServiceImpl implements LisEqaService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void archive(LisEqaDTO.PlanArchive dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizLisEqaPlan p = requirePlan(dto.getPlanId());
         if (p.getStatus() != null && p.getStatus() == PLAN_ARCHIVED) {
             throw new BusinessException("批次已归档（" + p.getPlanNo() + "），无需重复归档");
@@ -168,7 +173,7 @@ public class LisEqaServiceImpl implements LisEqaService {
             throw new BusinessException("还有 " + toReview + " 项整改未完成复核，不允许归档");
         }
         p.setStatus(PLAN_ARCHIVED);
-        p.setArchiveBy(currentName());
+        p.setArchiveBy(operatorUser.getRealName());
         p.setArchiveTime(LocalDateTime.now().withNano(0));
         planMapper.updateById(p);
     }
@@ -277,6 +282,10 @@ public class LisEqaServiceImpl implements LisEqaService {
      */
     @Transactional(rollbackFor = Exception.class)
     public int sampleGenerate(LisEqaDTO.SampleGenerate dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizLisEqaPlan plan = requirePlan(dto.getPlanId());
         assertEditable(plan);
         List<String> instruments = new ArrayList<>();
@@ -315,7 +324,7 @@ public class LisEqaServiceImpl implements LisEqaService {
                     s.setInstrumentName(instr);
                     s.setMethodName(StringUtils.hasText(dto.getMethodName()) ? dto.getMethodName().trim() : null);
                     s.setReceiveDate(dto.getReceiveDate());
-                    s.setReceiveBy(StringUtils.hasText(dto.getReceiveBy()) ? dto.getReceiveBy().trim() : currentName());
+                    s.setReceiveBy(StringUtils.hasText(dto.getReceiveBy()) ? dto.getReceiveBy().trim() : operatorUser.getRealName());
                     s.setStatus(0);
                     s.setResultStatus(0);
                     s.setHandleStatus(0);
@@ -344,6 +353,10 @@ public class LisEqaServiceImpl implements LisEqaService {
 
     @Transactional(rollbackFor = Exception.class)
     public LisEqaVO.SampleVO test(LisEqaDTO.TestInput dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizLisEqaSample s = requireSample(dto.getSampleId());
         BizLisEqaPlan plan = requirePlan(s.getPlanId());
         assertEditable(plan);
@@ -351,7 +364,7 @@ public class LisEqaServiceImpl implements LisEqaService {
             throw new BusinessException("该盲样成绩已回报（" + s.getSampleNo() + "），检测结果不允许再改");
         }
         s.setTestValue(dto.getTestValue());
-        s.setTestBy(currentName());
+        s.setTestBy(operatorUser.getRealName());
         s.setTestTime(LocalDateTime.now().withNano(0));
         if (StringUtils.hasText(dto.getRemark())) {
             s.setRemark(clip(dto.getRemark()));
@@ -606,6 +619,10 @@ public class LisEqaServiceImpl implements LisEqaService {
 
     @Transactional(rollbackFor = Exception.class)
     public void rectify(LisEqaDTO.Rectify dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizLisEqaSample s = requireSample(dto.getSampleId());
         if (s.getResultStatus() == null || s.getResultStatus() != EqaJudgeEngine.FAILED) {
             throw new BusinessException("仅「不合格」项需要整改（当前："
@@ -617,13 +634,17 @@ public class LisEqaServiceImpl implements LisEqaService {
         s.setHandleStatus(2);
         s.setHandleCause(clip(dto.getHandleCause()));
         s.setHandleMeasure(clip(dto.getHandleMeasure()));
-        s.setHandleBy(currentName());
+        s.setHandleBy(operatorUser.getRealName());
         s.setHandleTime(LocalDateTime.now().withNano(0));
         sampleMapper.updateById(s);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void rectifyReview(LisEqaDTO.RectifyReview dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizLisEqaSample s = requireSample(dto.getSampleId());
         if (s.getResultStatus() == null || s.getResultStatus() != EqaJudgeEngine.FAILED) {
             throw new BusinessException("仅「不合格」项需要复核");
@@ -631,7 +652,7 @@ public class LisEqaServiceImpl implements LisEqaService {
         if (s.getHandleStatus() == null || s.getHandleStatus() != 2) {
             throw new BusinessException("复核前必须先完成整改（当前：" + handleStatusText(s.getHandleStatus(), s.getReviewBy()) + "）");
         }
-        String who = currentName();
+        String who = operatorUser.getRealName();
         if (who.equals(s.getHandleBy())) {
             throw new BusinessException("复核人不得是整改人本人（" + who + "）——纠正是否到位必须第二人确认");
         }
@@ -741,10 +762,6 @@ public class LisEqaServiceImpl implements LisEqaService {
             }
         }
         return base + "-" + System.currentTimeMillis() % 100000;
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private String clip(String s) {

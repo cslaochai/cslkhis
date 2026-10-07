@@ -16,6 +16,7 @@ import com.his.emr.service.SurveyService;
 import com.his.emr.service.SurveyTemplateService;
 import com.his.emr.support.FollowupTaskSnapshot;
 import com.his.emr.vo.*;
+import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeProvider;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -166,6 +167,10 @@ public class SurveyServiceImpl implements SurveyService {
         if (task == null || task.getTaskId() == null) {
             throw new BusinessException("随访任务不存在，无法发放评价");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         int src = sourceType == null ? SurveySourceEnum.FOLLOWUP.getCode() : sourceType;
         SurveyTemplateVO template = templateService.findEnabledForScene(SurveySceneEnum.DISCHARGE_FOLLOWUP.getCode());
         // 没配卷就不发：评价域是随访的旁路，绝不能反过来把随访卡死
@@ -198,7 +203,7 @@ public class SurveyServiceImpl implements SurveyService {
         // 短信/微信没有真实网关，只能落「待推送」等人工外呼 —— 状态诚实比好看重要
         entity.setDispatchStatus(SurveyDispatchStatusEnum.PENDING_PUSH.getCode());
         entity.setExpireTime(now().plusDays(days));
-        entity.setCreateBy(currentOperator());
+        entity.setCreateBy(operatorUser.getRealName());
         dispatchMapper.insert(entity);
         return dispatchGetById(entity.getId());
     }
@@ -260,6 +265,10 @@ public class SurveyServiceImpl implements SurveyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SurveyAnswerVO submitAnswer(SurveyAnswerUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizSurveyDispatch dispatch = requireDispatch(dto.getDispatchId());
         assertDeptAccessible(dispatch.getDeptId());
         if (Objects.equals(dispatch.getDispatchStatus(), SurveyDispatchStatusEnum.EXPIRED.getCode())) {
@@ -286,14 +295,14 @@ public class SurveyServiceImpl implements SurveyService {
             answer.setPatientName(dispatch.getPatientName());
             answer.setDeptId(dispatch.getDeptId());
             answer.setDeptName(dispatch.getDeptName());
-            answer.setCreateBy(currentOperator());
+            answer.setCreateBy(operatorUser.getRealName());
         }
         // 患者身份与科室一律取自发放单，不接收前端传值：否则改个 patientId 就能把意见挂到别人头上
         answer.setAnswerStatus(AnswerStatusEnum.VALID.getCode());
         answer.setFillSource(dto.getFillSource() == null ? FillSourceEnum.AGENT.getCode() : dto.getFillSource());
         answer.setAnonymousFlag(Objects.equals(dto.getAnonymousFlag(), 1) ? 1 : 0);
-        answer.setFillEmployeeId(UserUtils.getCurrentUser().getEmployeeId());
-        answer.setFillEmployeeName(cut(currentOperator(), 64));
+        answer.setFillEmployeeId(operatorUser.getEmployeeId());
+        answer.setFillEmployeeName(cut(operatorUser.getRealName(), 64));
         answer.setFillTime(now());
         answer.setCommentText(cut(dto.getCommentText(), 1000));
         answer.setRemark(cut(dto.getRemark(), 512));
@@ -331,6 +340,10 @@ public class SurveyServiceImpl implements SurveyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SurveyAnswerVO voidAnswer(SurveyAnswerVoidDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizSurveyAnswer answer = answerMapper.selectById(dto.getId());
         if (answer == null) {
             throw new BusinessException("答卷不存在或已删除");
@@ -342,7 +355,7 @@ public class SurveyServiceImpl implements SurveyService {
         String reason = cut(dto.getReason(), 400);
         answer.setAnswerStatus(AnswerStatusEnum.VOID.getCode());
         answer.setRemark(cut((answer.getRemark() == null ? "" : answer.getRemark() + "；")
-                + "作废：" + reason + "（" + currentOperator() + " " + LocalDate.now() + "）", 512));
+                + "作废：" + reason + "（" + operatorUser.getRealName() + " " + LocalDate.now() + "）", 512));
         answerMapper.updateById(answer);
 
         // 发放单退回未回收：作废不等于「没问过」，回收率的分母不能跟着缩
@@ -672,6 +685,10 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     private BizSurveyAnswerItem toAnswerItem(Long answerId, Long templateId, SurveyAnswerItemVO src) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizSurveyAnswerItem item = new BizSurveyAnswerItem();
         item.setAnswerId(answerId);
         item.setItemId(src.getItemId());
@@ -683,7 +700,7 @@ public class SurveyServiceImpl implements SurveyService {
         item.setScore(src.getScore());
         item.setOptionLabel(src.getOptionLabel());
         item.setTextValue(src.getTextValue());
-        item.setCreateBy(currentOperator());
+        item.setCreateBy(operatorUser.getRealName());
         return item;
     }
 
@@ -753,9 +770,5 @@ public class SurveyServiceImpl implements SurveyService {
     private String nextNo(String prefix, String module) {
         return prefix + LocalDate.now().format(NO_DATE)
                 + String.format("%04d", sequenceService.next(module));
-    }
-
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 }

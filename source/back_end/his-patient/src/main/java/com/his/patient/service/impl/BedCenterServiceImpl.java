@@ -4,32 +4,29 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
-import com.his.common.exception.BusinessException;
 import com.his.common.enums.SysGenderEnum;
+import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
-import com.his.patient.enums.BedAllocateStatusEnum;
-import com.his.patient.enums.BedStatusEnum;
-import com.his.patient.enums.BedWaitStatusEnum;
-import com.his.patient.enums.BedPriorityEnum;
-import com.his.patient.enums.BedTypeEnum;
-import com.his.patient.enums.BedGenderLimitEnum;
+import com.his.patient.enums.*;
 import com.his.patient.mapper.*;
 import com.his.patient.service.BedCenterService;
 import com.his.patient.service.InpatientService;
 import com.his.patient.vo.*;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysConfigMapper;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.DutyRosterService;
 import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.DutyOfficerVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -42,8 +39,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 床位服务中心实现
@@ -257,7 +252,7 @@ public class BedCenterServiceImpl implements BedCenterService {
                 : order != null && order.getExpectAdmitTime() != null ? order.getExpectAdmitTime().toLocalDate() : null);
         wait.setDiagnosisName(dto.getDiagnosisName());
         wait.setWaitStatus(BedWaitStatusEnum.PENDING.getCode());
-        wait.setRegisterTime(TimeUtil.toSeconds(LocalDateTime.now()));
+        wait.setRegisterTime(TimeUtil.nowSeconds());
         wait.setRemark(dto.getRemark());
         waitMapper.insert(wait);
 
@@ -298,6 +293,10 @@ public class BedCenterServiceImpl implements BedCenterService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void assignBed(BedAssignUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizBedWait wait = requireWait(dto.getWaitId());
         if (Objects.equals(BedWaitStatusEnum.ADMITTED.getCode(), wait.getWaitStatus())) {
             throw new BusinessException("该患者已收治入院，无需再安排床位");
@@ -339,7 +338,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         bedMapper.update(null, upd);
         // 锁定的床不计入病区占用数 —— 占用数的定义是 bed_status=2（人真的住进去了）
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         BizBedWait arrange = new BizBedWait();
         arrange.setId(wait.getId());
         arrange.setWaitStatus(BedWaitStatusEnum.ARRANGED.getCode());
@@ -350,7 +349,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         arrange.setAssignedDeptId(bed.getDeptId());
         arrange.setAssignedDeptName(deptName);
         arrange.setAssignedTime(now);
-        arrange.setAssignedBy(currentName());
+        arrange.setAssignedBy(operatorUser.getRealName());
         waitMapper.updateById(arrange);
 
         boolean cross = wait.getApplyDeptId() != null && !Objects.equals(wait.getApplyDeptId(), bed.getDeptId());
@@ -370,8 +369,8 @@ public class BedCenterServiceImpl implements BedCenterService {
         alloc.setPatientName(wait.getPatientName());
         alloc.setAllocType(cross ? 2 : 1);
         alloc.setAllocStatus(BedAllocateStatusEnum.RESERVED.getCode());
-        alloc.setOperatorId(currentEmpId());
-        alloc.setOperatorName(currentName());
+        alloc.setOperatorId(operatorUser.getEmployeeId());
+        alloc.setOperatorName(operatorUser.getRealName());
         alloc.setOperateTime(now);
         alloc.setRemark(dto.getRemark());
         allocateMapper.insert(alloc);
@@ -564,7 +563,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         upd.setId(wait.getId());
         upd.setWaitStatus(BedWaitStatusEnum.CANCELLED.getCode());
         upd.setCancelReason(dto.getReason());
-        upd.setCancelTime(TimeUtil.toSeconds(LocalDateTime.now()));
+        upd.setCancelTime(TimeUtil.nowSeconds());
         waitMapper.updateById(upd);
         log.info("床位排队取消 waitNo={} waitId={} 原因={}", wait.getWaitNo(), wait.getId(), dto.getReason());
     }
@@ -952,7 +951,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         upd.setId(wait.getId());
         upd.setWaitStatus(BedWaitStatusEnum.CANCELLED.getCode());
         upd.setCancelReason(reason);
-        upd.setCancelTime(TimeUtil.toSeconds(LocalDateTime.now()));
+        upd.setCancelTime(TimeUtil.nowSeconds());
         waitMapper.updateById(upd);
         log.info("住院证作废联动退出队列 waitNo={} waitId={} 原因={}", wait.getWaitNo(), wait.getId(), reason);
     }
@@ -1010,7 +1009,7 @@ public class BedCenterServiceImpl implements BedCenterService {
                     .eq(BizBedAllocate::getWaitId, wait.getId())
                     .eq(BizBedAllocate::getAllocStatus, BedAllocateStatusEnum.RESERVED.getCode())
                     .set(BizBedAllocate::getAllocStatus, allocEndStatus)
-                    .set(BizBedAllocate::getReleaseTime, TimeUtil.toSeconds(LocalDateTime.now()))
+                    .set(BizBedAllocate::getReleaseTime, TimeUtil.nowSeconds())
                     .set(BizBedAllocate::getReleaseReason, reason);
             allocateMapper.update(null, allocUpd);
         }
@@ -1242,14 +1241,4 @@ public class BedCenterServiceImpl implements BedCenterService {
         }
     }
 
-    /**
-     * 留痕一律用员工ID（不是用户的ID），与医嘱/站内信同一口径
-     */
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

@@ -145,6 +145,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (dto == null) {
             throw new BusinessException("入院ID不能为空");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         List<InpatientOrderItemDTO> items = dto.getItems();
         for (InpatientOrderItemDTO item : items) {
             InpatientOrderItemRules.validate(item);
@@ -175,7 +177,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             }
         }
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
 
         // 准入闸（sql/155）：手术医嘱（order_class=6）要求开单人本人有「手术类」技术授权。
         // 级别不在这里判 —— 医嘱只写"要做手术"，几级由手术申请单定，级别闸落在排台（见 OperationApplyServiceImpl）。
@@ -233,7 +235,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         }
 
         Long doctorId = currentEmpId();
-        String doctorName = currentName();
+        String doctorName = operatorUser.getRealName();
         int source = dto.getSource() != null ? dto.getSource() : 1;
         int isUrgent = Objects.equals(1, dto.getIsUrgent()) ? 1 : 0;
 
@@ -301,6 +303,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
      * 需要变更就走「停止原组套 → 重新开立」。
      */
     private String updateOne(InpatientOrderUpsertDTO dto, BizAdmission admission, LocalDateTime now) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientOrder order = orderMapper.selectById(dto.getId());
         if (order == null) {
             throw new BusinessException("医嘱不存在");
@@ -353,7 +357,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         // 内容变了 → 原来那份开立签名绑的是旧内容，已经失效。
         // 正确处理是「作废旧签名 + 按新内容重签」，而不是留着一条验不过的签名让人猜。
         // 作废会把医嘱行上的 doctor_sign_id 清空，于是紧接着的重签不会被 blockReason 拦住。
-        invalidateDoctorSignIfAny(order, "医嘱内容被修改（" + currentName() + "），原开立签名对新内容已失效");
+        invalidateDoctorSignIfAny(order, "医嘱内容被修改（" + operatorUser.getRealName() + "），原开立签名对新内容已失效");
         signOrder(order, SignSceneEnum.ORDER_CREATE, "医嘱修改后重签");
 
         log.info("修改医嘱 orderNo={} 组套={} 项目={}", order.getOrderNo(), order.getOrderGroup(), order.getItemName());
@@ -364,10 +368,12 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
      * 作废该医嘱上的开立签名（没有就什么也不做）；不吞异常
      */
     private void invalidateDoctorSignIfAny(BizInpatientOrder order, String reason) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         if (order.getDoctorSignId() == null) {
             return;
         }
-        signatureService.invalidate(order.getDoctorSignId(), reason, currentEmpId(), currentName());
+        signatureService.invalidate(order.getDoctorSignId(), reason, currentEmpId(), operatorUser.getRealName());
         order.setDoctorSignId(null);
         order.setDoctorSignedTime(null);
     }
@@ -378,12 +384,14 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
      * 给一条医嘱签名；失败直接抛（不吞），由调用方的业务事务整体回滚
      */
     private void signOrder(BizInpatientOrder order, SignSceneEnum scene, String actionLabel) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(SignBizTypeEnum.INPATIENT_ORDER.getCode());
         cmd.setBizId(order.getId());
         cmd.setSignScene(scene.getCode());
         cmd.setSignerId(currentEmpId());
-        cmd.setSignerName(currentName());
+        cmd.setSignerName(operatorUser.getRealName());
         cmd.setSignerDeptId(currentDeptId());
         cmd.setSignerDeptName(currentDeptName());
         try {
@@ -406,14 +414,16 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (dto == null || dto.getOrderIds() == null || dto.getOrderIds().isEmpty()) {
             throw new BusinessException("请选择要校对的医嘱");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         List<Long> ids = dto.getOrderIds().stream().filter(Objects::nonNull).distinct().toList();
         if (ids.isEmpty()) {
             throw new BusinessException("请选择要校对的医嘱");
         }
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         Long nurseId = currentEmpId();
-        String nurseName = currentName();
+        String nurseName = operatorUser.getRealName();
 
         // 第一遍：全量校验。批量校对要么全成功、要么一条都不改 ——
         // 部分成功会让护士不知道哪些生效了，进而重复点或漏点（漏点就是医嘱漏执行）。
@@ -574,6 +584,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (!StringUtils.hasText(dto.getStopReason())) {
             throw new BusinessException("停止原因不能为空（停止是一个医疗决定，必须有人负责）");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientOrder target = orderMapper.selectById(dto.getOrderId());
         if (target == null) {
             throw new BusinessException("医嘱不存在");
@@ -595,9 +607,9 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
                     + "」，只有「已校对 / 执行中」的医嘱可以停止；「待校对」的请改用作废");
         }
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         Long doctorId = currentEmpId();
-        String doctorName = currentName();
+        String doctorName = operatorUser.getRealName();
 
         List<BizInpatientOrder> targets = new ArrayList<>();
         if (StringUtils.hasText(target.getOrderGroup())) {
@@ -643,6 +655,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (dto == null) {
             throw new BusinessException("医嘱ID不能为空");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientOrder target = orderMapper.selectById(dto.getOrderId());
         if (target == null) {
             throw new BusinessException("医嘱不存在");
@@ -678,14 +692,14 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         }
 
         Long doctorId = currentEmpId();
-        String doctorName = currentName();
+        String doctorName = operatorUser.getRealName();
         for (BizInpatientOrder order : targets) {
             order.setOrderStatus(InpatientOrderStatusEnum.CANCELLED.getCode());
             order.setStopDoctorId(doctorId);
             order.setStopDoctorName(doctorName);
             order.setStopReason(dto.getCancelReason());
             orderMapper.updateById(order);
-            syncDietPlanOnStopOrCancel(order, TimeUtil.toSeconds(LocalDateTime.now()), dto.getCancelReason());
+            syncDietPlanOnStopOrCancel(order, TimeUtil.nowSeconds(), dto.getCancelReason());
         }
         log.info("作废医嘱 组套={} 条数={} 原因={} 操作人={}",
                 target.getOrderGroup(), targets.size(), dto.getCancelReason(), doctorName);
@@ -757,6 +771,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (dto == null || dto.getExecIds() == null || dto.getExecIds().isEmpty()) {
             throw new BusinessException("请选择要处理的执行记录");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         int status = dto.getExecStatus() != null ? dto.getExecStatus() : ExecStatusEnum.EXECUTED.getCode();
         if (Objects.equals(ExecStatusEnum.SKIPPED.getCode(), status) && !StringUtils.hasText(dto.getExecNote())) {
             throw new BusinessException("跳过必须写明原因（飞检问的是「这条医嘱为什么没有执行记录」，答「删了」不成立）");
@@ -768,7 +784,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
 
         LocalDateTime execTime = TimeUtil.toSeconds(dto.getExecTime() != null ? dto.getExecTime() : LocalDateTime.now());
         Long nurseId = currentEmpId();
-        String nurseName = currentName();
+        String nurseName = operatorUser.getRealName();
 
         // 第一遍：全量校验（含父医嘱状态）
         List<BizInpatientOrderExec> rows = new ArrayList<>(ids.size());
@@ -924,7 +940,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
      * —— 否则"未校对不可执行"这条铁律会被补计划悄悄绕过。
      */
     private void backfillTodayPlans(Long admissionId, Long patientId) {
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         List<BizInpatientOrder> actives = orderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
                 .eq(BizInpatientOrder::getOrderType, OrderTypeEnum.LONG.getCode())
                 .in(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.VERIFIED.getCode(), InpatientOrderStatusEnum.EXECUTING.getCode())
@@ -1075,10 +1091,6 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             // 非请求线程（定时/脚本）取不到上下文
             return null;
         }
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     /**

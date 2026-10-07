@@ -15,6 +15,7 @@ import com.his.patient.mapper.*;
 import com.his.patient.service.VteService;
 import com.his.patient.support.VteRules;
 import com.his.patient.vo.*;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -190,6 +191,8 @@ public class VteServiceImpl implements VteService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public VtePreventVO preventUpsert(VtePreventUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         VteRules.Measure measure = VteRules.measureOf(dto.getMeasureCode());
         // 保留（类别③）：措施码必须是字典里的三个码之一（能不能解析成措施是业务规则，不是「是否为空」）
         if (measure == null) {
@@ -259,8 +262,8 @@ public class VteServiceImpl implements VteService {
         row.setPlanDate(dto.getPlanDate() == null ? LocalDate.now() : dto.getPlanDate());
         row.setExecuteStatus(status);
         row.setExecuteTime(executeTime);
-        row.setExecutorId(UserUtils.getCurrentUser().getEmployeeId());
-        row.setExecutorName(currentName());
+        row.setExecutorId(operatorUser.getEmployeeId());
+        row.setExecutorName(operatorUser.getRealName());
         row.setReason(reason);
         row.setRemark(dto.getRemark() == null ? null : dto.getRemark().trim());
 
@@ -271,10 +274,10 @@ public class VteServiceImpl implements VteService {
                 throw new BusinessException("该患者已登记过「" + measure.name() + "」，请改为修改已有记录");
             }
             log.info("VTE 措施登记 住院={} 措施={} 状态={} 操作人={}", admission.getAdmissionNo(),
-                    measure.code(), status, currentName());
+                    measure.code(), status, operatorUser.getRealName());
         } else {
             preventMapper.updateById(row);
-            log.info("VTE 措施修改 id={} 措施={} 状态={} 操作人={}", row.getId(), measure.code(), status, currentName());
+            log.info("VTE 措施修改 id={} 措施={} 状态={} 操作人={}", row.getId(), measure.code(), status, operatorUser.getRealName());
         }
         return toPreventVO(row);
     }
@@ -314,6 +317,8 @@ public class VteServiceImpl implements VteService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public VteEventVO eventUpsert(VteEventUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         // 保留（类别③）：确诊日期不能落在未来（是否必填由入参注解负责）
         if (dto.getDiagnoseDate().isAfter(LocalDate.now())) {
             throw new BusinessException("确诊日期不能晚于今天");
@@ -357,15 +362,15 @@ public class VteServiceImpl implements VteService {
         row.setThrombusSite(dto.getThrombusSite() == null ? null : dto.getThrombusSite().trim());
         row.setOutcome(dto.getOutcome());
         row.setDrugPreventFlag(dto.getDrugPreventFlag() == null ? 0 : dto.getDrugPreventFlag());
-        row.setReporterId(UserUtils.getCurrentUser().getEmployeeId());
-        row.setReporterName(currentName());
+        row.setReporterId(operatorUser.getEmployeeId());
+        row.setReporterName(operatorUser.getRealName());
         row.setReportTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         row.setRemark(dto.getRemark() == null ? null : dto.getRemark().trim());
 
         if (insert) {
             eventMapper.insert(row);
             log.info("VTE 事件登记 住院={} 类型={} 时机={} 操作人={}", admission.getAdmissionNo(),
-                    dto.getEventType(), dto.getOnsetType(), currentName());
+                    dto.getEventType(), dto.getOnsetType(), operatorUser.getRealName());
         } else {
             eventMapper.updateById(row);
         }
@@ -399,10 +404,12 @@ public class VteServiceImpl implements VteService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public List<VteStatsVO> generateStats(VteStatsGenerateDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         YearMonth ym = requireMonth(dto.getStatMonth());
         LocalDateTime from = ym.atDay(1).atStartOfDay();
         LocalDateTime to = ym.atEndOfMonth().atTime(23, 59, 59);
-        String operator = currentName();
+        String operator = operatorUser.getRealName();
 
         List<VteStatsVO> result = new ArrayList<>();
         // scopeType 合法性由 DTO 的 @InEnum 把关（1-全院 2-科室），这里只分派
@@ -592,10 +599,6 @@ public class VteServiceImpl implements VteService {
         }
         SysBed bed = bedMapper.selectById(bedId);
         return bed == null ? null : bed.getBedNo();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private VtePreventVO toPreventVO(BizVtePrevent r) {

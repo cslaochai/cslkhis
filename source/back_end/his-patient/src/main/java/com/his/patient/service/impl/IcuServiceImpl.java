@@ -15,6 +15,7 @@ import com.his.patient.mapper.BizIcuStayMapper;
 import com.his.patient.service.IcuService;
 import com.his.patient.vo.IcuVO;
 import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -162,7 +163,9 @@ public class IcuServiceImpl implements IcuService {
             stay.setPatientId(admission.getPatientId());
             stay.setStatus(IcuStayStatusEnum.IN.getCode());
             stay.setMonitorCount(0);
-            stay.setInBy(currentOperator());
+            CurrentUser operatorUser = UserUtils.getCurrentUser();
+            if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+            stay.setInBy(operatorUser.getRealName());
         } else {
             stay = requireActiveStay(dto.getId());
             if (!Objects.equals(stay.getAdmissionId(), dto.getAdmissionId())) {
@@ -193,6 +196,8 @@ public class IcuServiceImpl implements IcuService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public IcuVO.StayVO stayOut(IcuStayOutDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizIcuStay stay = requireActiveStay(dto.getId());
         LocalDateTime outTime = dto.getOutTime().truncatedTo(ChronoUnit.SECONDS);
         if (outTime.isAfter(now())) {
@@ -219,7 +224,7 @@ public class IcuServiceImpl implements IcuService {
         stay.setOutDest(dest);
         stay.setOutReason(cutToNull(dto.getOutReason(), REASON_MAX));
         stay.setOutGcs(dto.getOutGcs());
-        stay.setOutBy(currentOperator());
+        stay.setOutBy(operatorUser.getRealName());
         if (stayMapper.updateById(stay) <= 0) {
             throw new BusinessException("出科登记失败");
         }
@@ -275,8 +280,10 @@ public class IcuServiceImpl implements IcuService {
         if (dto.getId() == null) {
             monitor = new BizIcuMonitor();
             monitor.setStayId(stay.getId());
-            monitor.setRecorderId(UserUtils.getCurrentUser().getEmployeeId());
-            monitor.setRecorderName(currentOperator());
+            CurrentUser operatorUser = UserUtils.getCurrentUser();
+            if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+            monitor.setRecorderId(operatorUser.getEmployeeId());
+            monitor.setRecorderName(operatorUser.getRealName());
         } else {
             monitor = monitorMapper.selectById(dto.getId());
             if (monitor == null) {
@@ -430,7 +437,4 @@ public class IcuServiceImpl implements IcuService {
         return dto.getGcsEye() + dto.getGcsVerbal() + dto.getGcsMotor();
     }
 
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

@@ -138,6 +138,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         if (dto.getMeasureTime() == null) {
             throw new BusinessException("测量/记录时间不能为空（三测单按时点唯一，时间是它的主键语义）");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
@@ -186,8 +188,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         record.setNursingLevel(dto.getNursingLevel());
         record.setNursingContent(dto.getNursingContent());
         record.setRecordStatus(RecordStatusEnum.DRAFT.getCode());
-        record.setNurseId(currentEmpId());
-        record.setNurseName(currentName());
+        record.setNurseId(operatorUser.getEmployeeId());
+        record.setNurseName(operatorUser.getRealName());
         record.setRemark(dto.getRemark());
 
         try {
@@ -206,6 +208,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     // 查询
 
     private NursingRecordVO update(NursingRecordUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizNursingRecord record = nursingMapper.selectById(dto.getId());
         if (record == null) {
             throw new BusinessException("护理文书不存在");
@@ -230,8 +234,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         record.setNursingContent(dto.getNursingContent());
         record.setRemark(dto.getRemark());
         applyContent(record, dto);
-        record.setNurseId(currentEmpId());
-        record.setNurseName(currentName());
+        record.setNurseId(operatorUser.getEmployeeId());
+        record.setNurseName(operatorUser.getRealName());
 
         try {
             nursingMapper.updateById(record);
@@ -395,6 +399,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int saveBatch(NursingRecordBatchUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         Set<Long> seen = new HashSet<>();
         List<NursingRecordUpsertDTO> prepared = new ArrayList<>(dto.getRows().size());
         for (int i = 0; i < dto.getRows().size(); i++) {
@@ -439,13 +445,15 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             create(item);
         }
         log.info("体温单批量录入 {} 行 时点={} 护士={}", prepared.size(),
-                TimeUtil.toSeconds(dto.getMeasureTime()), currentName());
+                TimeUtil.toSeconds(dto.getMeasureTime()), operatorUser.getRealName());
         return prepared.size();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NursingAssessmentVO saveAssessment(NursingAssessmentUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         // 保留（类别③）：总分必须能由量表明细推导，是业务一致性规则而非入参非空
         int recomputed = sumItems(dto.getItemsJson());
         if (dto.getTotalScore() == null || dto.getTotalScore() != recomputed) {
@@ -482,8 +490,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             row.setRiskLevel(riskLevel);
             row.setItemsJson(dto.getItemsJson());
             row.setAssessTime(TimeUtil.toSeconds(dto.getAssessTime()));
-            row.setAssessNurseId(currentEmpId());
-            row.setAssessNurseName(currentName());
+            row.setAssessNurseId(operatorUser.getEmployeeId());
+            row.setAssessNurseName(operatorUser.getRealName());
             row.setRemark(dto.getRemark());
             assessmentMapper.insert(row);
         } else {
@@ -498,8 +506,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             row.setRiskLevel(riskLevel);
             row.setItemsJson(dto.getItemsJson());
             row.setAssessTime(TimeUtil.toSeconds(dto.getAssessTime()));
-            row.setAssessNurseId(currentEmpId());
-            row.setAssessNurseName(currentName());
+            row.setAssessNurseId(operatorUser.getEmployeeId());
+            row.setAssessNurseName(operatorUser.getRealName());
             row.setRemark(dto.getRemark());
             assessmentMapper.updateById(row);
         }
@@ -920,13 +928,15 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     }
 
     private BizInpatientRecordLog actionLog(BizNursingRecord record, String operation) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizInpatientRecordLog row = new BizInpatientRecordLog();
         row.setDocType(RecordDocTypeEnum.NURSING.getCode());
         row.setRecordId(record.getId());
         row.setRecordNo(record.getRecordNo());
         row.setRecordType(record.getNursingType());
-        row.setUserId(currentEmpId());
-        row.setUserName(currentName());
+        row.setUserId(operatorUser.getEmployeeId());
+        row.setUserName(operatorUser.getRealName());
         row.setOperation(operation);
         return row;
     }
@@ -953,14 +963,4 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         return prefix + String.format("%04d", seq);
     }
 
-    /**
-     * 护理文书的护士留痕一律用**员工ID**（不是用户的ID）
-     */
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

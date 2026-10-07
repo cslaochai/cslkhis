@@ -57,8 +57,12 @@ public class StaffDemandServiceImpl extends ServiceImpl<BizStaffDemandMapper, Bi
     @Override
     public DemandRecalcResult recalc(LocalDate startDate, LocalDate endDate) {
         requireRange(startDate, endDate);
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         DemandRecalcResult result = new DemandRecalcResult();
-        String operator = operator();
+        String operator = operatorUser.getRealName();
 
         // 先清窗口内的派生产物：唯一键不含 del_flag，软删行会占键导致下次重算撞重复键
         baseMapper.purgeDerived(startDate, endDate);
@@ -89,6 +93,10 @@ public class StaffDemandServiceImpl extends ServiceImpl<BizStaffDemandMapper, Bi
         if (requiredCount == null || requiredCount < 1) {
             throw new BusinessException("需求人数至少 1 人");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         String orgName = orgType == OrgUnitTypeEnum.WARD.getCode()
                 ? baseMapper.selectWardName(orgId)
                 : baseMapper.selectDeptName(orgId);
@@ -101,7 +109,7 @@ public class StaffDemandServiceImpl extends ServiceImpl<BizStaffDemandMapper, Bi
 
         Long id = baseMapper.maxDerivedId() + 1L;
         baseMapper.upsertManual(id, demandDate, orgType, orgId, orgName, staffType, requiredCount,
-                basis, operator(), remark);
+                basis, operatorUser.getRealName(), remark);
     }
 
     /** 缺口行补上给人看的文案：单元类型、岗位类别、需求来源 */
@@ -134,7 +142,4 @@ public class StaffDemandServiceImpl extends ServiceImpl<BizStaffDemandMapper, Bi
         }
     }
 
-    private String operator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

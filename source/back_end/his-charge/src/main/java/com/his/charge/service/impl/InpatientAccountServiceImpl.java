@@ -496,7 +496,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
                 + " 元，住院账户余额 " + balance.toPlainString() + " 元，欠费 " + arrears.toPlainString() + " 元");
         alert.setAlertStatus(0);
         alert.setNotifyUserId(admission.getAdmitDoctorId());
-        alert.setNotifyTime(TimeUtil.toSeconds(LocalDateTime.now()));
+        alert.setNotifyTime(TimeUtil.nowSeconds());
         alert.setRemark("admissionId=" + admission.getAdmissionId());
         alertMapper.insert(alert);
         notifyArrears(admission, patient, "出院结算", payable, balance, arrears);
@@ -521,7 +521,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
                 + " 元（仅提示，不阻断诊疗）");
         alert.setAlertStatus(0);
         alert.setNotifyUserId(admission.getAdmitDoctorId());
-        alert.setNotifyTime(TimeUtil.toSeconds(LocalDateTime.now()));
+        alert.setNotifyTime(TimeUtil.nowSeconds());
         alert.setRemark("admissionId=" + admission.getAdmissionId());
         alertMapper.insert(alert);
         notifyArrears(admission, patient, "在院余额预警", total, balance, arrears);

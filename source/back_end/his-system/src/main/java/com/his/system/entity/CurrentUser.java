@@ -17,12 +17,16 @@ import java.util.List;
 public class CurrentUser implements UserDetails {
 
     private Long userId;
+
     private String username;
+
     @JsonIgnore
     private String password;
+
     private String realName;
 
     private Long deptId;
+
     private String deptName;
 
     private Integer userType;
@@ -32,11 +36,14 @@ public class CurrentUser implements UserDetails {
     private Long employeeId;
 
     private String employeeName;
-    private Integer loginCount;
-    private String currentRole;
-    private List<String> roles;
-    private List<String> permissions;
 
+    private Integer loginCount;
+
+    private String currentRole;
+
+    private List<String> roles;
+
+    private List<String> permissions;
 
     @Override
     @JsonIgnore
@@ -54,7 +61,6 @@ public class CurrentUser implements UserDetails {
         }
         // 患者账号（用户类型为 3）：注入统一的 PATIENT authority，患者端聚合模块
         // （his-miniapp，/miniapp/**）按 hasAuthority('PATIENT') 一把抓鉴权。
-        // 院内权限码不发给患者 —— 患者永远不走 opd:/finance: 等院内端点。
         if (userType != null && userType == 3) {
             authorities.add(new SimpleGrantedAuthority("PATIENT"));
         }

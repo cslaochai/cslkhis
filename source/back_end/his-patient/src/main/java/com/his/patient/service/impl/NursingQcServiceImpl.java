@@ -154,10 +154,6 @@ public class NursingQcServiceImpl implements NursingQcService {
 
     // 台账与看板
 
-    private static String operator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
-
     private static String trimToNull(String value) {
         if (value == null) {
             return null;
@@ -562,6 +558,8 @@ public class NursingQcServiceImpl implements NursingQcService {
         if (command == null) {
             throw new BusinessException("请选择统计月份");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         String statMonth = requireMonth(command.getStatMonth(), "统计月份");
         NursingQcReportEnum target = NursingQcReportEnum.fromCode(command.getReportStatus());
         // ③业务规则：码值合法性（非空已由 DTO @NotNull 收口）
@@ -570,7 +568,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         }
         NurseQcVO.Ward ward = command.getWardId() == null ? null : requireVisibleWard(command.getWardId());
         int affected = indicatorMapper.updateReportStatus(statMonth, ward == null ? null : ward.getWardId(),
-                target.getCode(), ward == null ? scopedDeptIds(null) : null, cut(operator(), OPERATOR_MAX));
+                target.getCode(), ward == null ? scopedDeptIds(null) : null, cut(operatorUser.getRealName(), OPERATOR_MAX));
         NurseQcVO.ReportResult result = new NurseQcVO.ReportResult();
         result.setStatMonth(statMonth);
         result.setAffectedCount(affected);
@@ -607,6 +605,8 @@ public class NursingQcServiceImpl implements NursingQcService {
      */
     private BizNursingQcIndicator buildIndicator(NursingIndicatorEnum e, NurseQcVO.Ward ward, String statMonth,
                                                  LocalDate monthStart, LocalDate statEnd, int bedDays) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BigDecimal numerator;
         BigDecimal denominator;
         String remark;
@@ -651,7 +651,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         row.setSourceType(e.getSourceType());
         row.setReportStatus(NursingQcReportEnum.UNREPORTED.getCode());
         row.setCalcTime(LocalDateTime.now());
-        String operator = cut(operator(), OPERATOR_MAX);
+        String operator = cut(operatorUser.getRealName(), OPERATOR_MAX);
         row.setCreateBy(operator);
         row.setUpdateBy(operator);
         row.setRemark(cut(remark, TEXT_MAX));

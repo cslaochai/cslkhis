@@ -961,7 +961,7 @@ public class InpatientServiceImpl implements InpatientService {
      * 时间轴直接错乱。
      */
     private Long ensureVisit(Long patientId, Long registId) {
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         LocalDateTime dayStart = now.toLocalDate().atStartOfDay();
         LocalDateTime dayEnd = now.toLocalDate().plusDays(1).atStartOfDay();
 

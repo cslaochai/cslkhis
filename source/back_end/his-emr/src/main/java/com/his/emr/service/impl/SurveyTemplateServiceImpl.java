@@ -19,6 +19,7 @@ import com.his.emr.mapper.BizSurveyTemplateMapper;
 import com.his.emr.service.SurveyTemplateService;
 import com.his.emr.vo.SurveyTemplateSelectListVO;
 import com.his.emr.vo.SurveyTemplateVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -128,6 +129,10 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SurveyTemplateVO upsert(SurveyTemplateUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizSurveyTemplate template;
         boolean isNew = dto.getId() == null;
         if (isNew) {
@@ -147,7 +152,7 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
         validateItems(dto.getItems());
 
         if (isNew) {
-            template.setCreateBy(currentOperator());
+            template.setCreateBy(operatorUser.getRealName());
             templateMapper.insert(template);
         } else {
             templateMapper.updateById(template);
@@ -216,6 +221,10 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
     }
 
     private BizSurveyItem toItem(Long templateId, SurveyTemplateUpsertDTO.Item src) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizSurveyItem item = new BizSurveyItem();
         item.setTemplateId(templateId);
         item.setSeqNo(src.getSeqNo());
@@ -225,7 +234,7 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
         item.setRequired(src.getRequired() == null ? 1 : src.getRequired());
         item.setWeight(src.getWeight() == null ? BigDecimal.ONE : src.getWeight());
         item.setMaxScore(src.getMaxScore() == null ? defaultMaxScore(src.getQuestionType()) : src.getMaxScore());
-        item.setCreateBy(currentOperator());
+        item.setCreateBy(operatorUser.getRealName());
         return item;
     }
 
@@ -253,9 +262,5 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
     private String nextNo() {
         return Constants.SURVEY_TEMPLATE_NO_PREFIX + LocalDate.now().format(NO_DATE)
                 + String.format("%04d", sequenceService.next(Constants.SURVEY_TEMPLATE_NO_KEY_PREFIX));
-    }
-
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 }

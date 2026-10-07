@@ -149,6 +149,8 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String create(AnesthesiaRecordUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizOperationApply apply = applyMapper.selectById(dto.getApplyId());
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
@@ -205,7 +207,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
                 ? dto.getAnesthesiaType() : apply.getAnesthesiaType());
         entity.setAsaGrade(dto.getAsaGrade() != null
                 ? dto.getAsaGrade() : (existingVisit == null ? null : existingVisit.getAsaGrade()));
-        entity.setAnesthetistId(dto.getAnesthetistId() != null ? dto.getAnesthetistId() : currentEmpId());
+        entity.setAnesthetistId(dto.getAnesthetistId() != null ? dto.getAnesthetistId() : operatorUser.getEmployeeId());
         entity.setAnesthetistName(employeeNameOf(entity.getAnesthetistId()));
         entity.setAssistantAnesthetistName(dto.getAssistantAnesthetistName());
         entity.setEnterRoomTime(TimeUtil.toSeconds(dto.getEnterRoomTime() == null ? now() : dto.getEnterRoomTime()));
@@ -221,7 +223,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         log.info("开立麻醉记录 recordNo={} applyNo={} 麻醉方式={} 急诊={} 访视ID={} 待补访视={} 开立人={}",
                 entity.getRecordNo(), apply.getApplyNo(),
                 OperationAnesthesiaMethodEnum.labelOrUnknown(entity.getAnesthesiaType()),
-                emergency, visitId, visitPending, currentName());
+                emergency, visitId, visitPending, operatorUser.getRealName());
         return entity.getRecordNo();
     }
 
@@ -330,6 +332,8 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OperationChargeSummaryVO submit(AnesthesiaActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizAnesthesiaRecord entity = mustGet(dto == null ? null : dto.getId());
         if (!Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
@@ -353,8 +357,8 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         }
 
         entity.setRecordStatus(AnesthesiaRecordStatusEnum.SUBMITTED.getCode());
-        entity.setSubmitDoctorId(currentEmpId());
-        entity.setSubmitDoctorName(currentName());
+        entity.setSubmitDoctorId(operatorUser.getEmployeeId());
+        entity.setSubmitDoctorName(operatorUser.getRealName());
         entity.setSubmitTime(now());
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
@@ -373,27 +377,29 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         recordMapper.updateById(entity);
         log.info("提交麻醉记录 recordNo={} 状态=已提交 计费=成功{}项/失败{}项 金额={} 提交人={}",
                 entity.getRecordNo(), summary.getSuccessItems(), summary.getFailedItems(),
-                summary.getAmount(), currentName());
+                summary.getAmount(), operatorUser.getRealName());
         return summary;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void audit(AnesthesiaActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizAnesthesiaRecord entity = mustGet(dto == null ? null : dto.getId());
         if (!Integer.valueOf(AnesthesiaRecordStatusEnum.SUBMITTED.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
                     + AnesthesiaRecordStatusEnum.labelOrUnknown(entity.getRecordStatus()) + "」，只有「已提交」可以审核");
         }
         entity.setRecordStatus(AnesthesiaRecordStatusEnum.AUDITED.getCode());
-        entity.setAuditDoctorId(currentEmpId());
-        entity.setAuditDoctorName(currentName());
+        entity.setAuditDoctorId(operatorUser.getEmployeeId());
+        entity.setAuditDoctorName(operatorUser.getRealName());
         entity.setAuditTime(now());
         if (dto != null && StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
         recordMapper.updateById(entity);
-        log.info("审核麻醉记录 recordNo={} 审核人={}", entity.getRecordNo(), currentName());
+        log.info("审核麻醉记录 recordNo={} 审核人={}", entity.getRecordNo(), operatorUser.getRealName());
     }
 
     @Override
@@ -641,11 +647,4 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     /**
      * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
      */
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

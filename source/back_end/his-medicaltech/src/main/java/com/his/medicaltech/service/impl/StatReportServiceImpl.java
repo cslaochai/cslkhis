@@ -11,6 +11,7 @@ import com.his.medicaltech.mapper.BizStatReportMapper;
 import com.his.medicaltech.mapper.StatReportAggMapper;
 import com.his.medicaltech.service.StatReportService;
 import com.his.medicaltech.vo.StatReportVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -81,12 +82,12 @@ public class StatReportServiceImpl implements StatReportService {
         return t.length() > max ? t.substring(0, max) : t;
     }
 
-    private static String operatorName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
-
     @Transactional(rollbackFor = Exception.class)
     public StatReportVO.Detail generate(StatReportDTO.Generate dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         if (dto.getPeriodType() == null || (dto.getPeriodType() != 1 && dto.getPeriodType() != 2)) {
             throw new BusinessException("期间类型只能是 1-月报 或 2-年报");
         }
@@ -143,7 +144,7 @@ public class StatReportServiceImpl implements StatReportService {
 
         String typeName = dictText.getDicDataLabel("biz_medicaltech_statReportTypeEnum", dto.getReportType());
         String title = (deptName == null ? "" : deptName) + typeName + "（" + period + "）";
-        String operator = operatorName();
+        String operator = operatorUser.getRealName();
         LocalDateTime now = LocalDateTime.now();
 
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -253,13 +254,17 @@ public class StatReportServiceImpl implements StatReportService {
 
     @Transactional(rollbackFor = Exception.class)
     public StatReportVO.Row submit(Long id) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizStatReport r = mustGet(id);
         if (r.getStatus() != 0) {
             throw new BusinessException("只有草稿可报出（当前状态：" + dictText.getDicDataLabel("biz_medicaltech_statReportStatusEnum", r.getStatus()) + "）");
         }
         r.setStatus(1);
         r.setSubmitTime(LocalDateTime.now());
-        r.setSubmitByName(operatorName());
+        r.setSubmitByName(operatorUser.getRealName());
         reportMapper.updateById(r);
         return toRow(r);
     }

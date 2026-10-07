@@ -15,6 +15,7 @@ import com.his.medicaltech.mapper.BizBloodInventoryMapper;
 import com.his.medicaltech.mapper.BizBloodStockLogMapper;
 import com.his.medicaltech.service.BloodService;
 import com.his.medicaltech.vo.BloodVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -67,6 +68,10 @@ public class BloodServiceImpl implements BloodService {
 
     @Transactional(rollbackFor = Exception.class)
     public BizBloodInventory inbound(BloodDTO.Inbound dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         String bagNo = dto.getBagNo().trim();
         if (invMapper.selectCount(new LambdaQueryWrapper<BizBloodInventory>()
                 .eq(BizBloodInventory::getBagNo, bagNo)) > 0) {
@@ -85,7 +90,7 @@ public class BloodServiceImpl implements BloodService {
         b.setAboVerify(dto.getAboVerify() != null && dto.getAboVerify() == YesOrNoEnum.YES.getCode()
                 ? YesOrNoEnum.YES.getCode() : YesOrNoEnum.NO.getCode());
         b.setStatus(BloodInventoryStatusEnum.IN_STOCK.getCode());
-        b.setInboundBy(currentName());
+        b.setInboundBy(operatorUser.getRealName());
         b.setInboundTime(LocalDateTime.now().withNano(0));
         invMapper.insert(b);
         writeLog(bagNo, BloodStockLogBizTypeEnum.INBOUND.getCode(), null, BloodInventoryStatusEnum.IN_STOCK.getCode(), null, null);
@@ -209,6 +214,10 @@ public class BloodServiceImpl implements BloodService {
         if (!StringUtils.hasText(dto.getApplyNo())) {
             throw new BusinessException("发血必须关联用血申请单号");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizBloodInventory b = requireBag(dto.getBagId());
         if (b.getStatus() != BloodInventoryStatusEnum.RESERVED.getCode()) {
             throw new BusinessException("发血前血袋必须「已预留」（预留由配血复核相合产生）——当前："
@@ -216,7 +225,7 @@ public class BloodServiceImpl implements BloodService {
         }
         b.setStatus(BloodInventoryStatusEnum.ISSUED.getCode());
         b.setApplyNo(dto.getApplyNo().trim());
-        b.setOutboundBy(currentName());
+        b.setOutboundBy(operatorUser.getRealName());
         b.setOutboundTime(LocalDateTime.now().withNano(0));
         invMapper.updateById(b);
         writeLog(b.getBagNo(), BloodStockLogBizTypeEnum.ISSUE.getCode(), BloodInventoryStatusEnum.RESERVED.getCode(), BloodInventoryStatusEnum.ISSUED.getCode(), b.getApplyNo(), null);
@@ -227,6 +236,10 @@ public class BloodServiceImpl implements BloodService {
         if (!StringUtils.hasText(dto.getReason())) {
             throw new BusinessException("报废必须填写原因");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizBloodInventory b = requireBag(dto.getBagId());
         if (b.getStatus() != BloodInventoryStatusEnum.IN_STOCK.getCode() && b.getStatus() != BloodInventoryStatusEnum.RESERVED.getCode()) {
             throw new BusinessException("仅「在库 / 已预留」血袋可报废（当前："
@@ -234,7 +247,7 @@ public class BloodServiceImpl implements BloodService {
         }
         int from = b.getStatus();
         b.setStatus(BloodInventoryStatusEnum.SCRAPPED.getCode());
-        b.setOutboundBy(currentName());
+        b.setOutboundBy(operatorUser.getRealName());
         b.setOutboundTime(LocalDateTime.now().withNano(0));
         invMapper.updateById(b);
         writeLog(b.getBagNo(), BloodStockLogBizTypeEnum.SCRAP.getCode(), from, BloodInventoryStatusEnum.SCRAPPED.getCode(), null, dto.getReason());
@@ -245,6 +258,10 @@ public class BloodServiceImpl implements BloodService {
         if (!StringUtils.hasText(dto.getReason())) {
             throw new BusinessException("退回必须填写原因");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizBloodInventory b = requireBag(dto.getBagId());
         if (b.getStatus() != BloodInventoryStatusEnum.IN_STOCK.getCode() && b.getStatus() != BloodInventoryStatusEnum.RESERVED.getCode()) {
             throw new BusinessException("仅「在库 / 已预留」血袋可退回（当前："
@@ -252,7 +269,7 @@ public class BloodServiceImpl implements BloodService {
         }
         int from = b.getStatus();
         b.setStatus(BloodInventoryStatusEnum.RETURNED.getCode());
-        b.setOutboundBy(currentName());
+        b.setOutboundBy(operatorUser.getRealName());
         b.setOutboundTime(LocalDateTime.now().withNano(0));
         invMapper.updateById(b);
         writeLog(b.getBagNo(), BloodStockLogBizTypeEnum.RETURN.getCode(), from, BloodInventoryStatusEnum.RETURNED.getCode(), null, dto.getReason());
@@ -311,6 +328,10 @@ public class BloodServiceImpl implements BloodService {
 
     @Transactional(rollbackFor = Exception.class)
     public void crossmatchExecute(BloodDTO.CrossmatchExecute dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizBloodCrossmatch c = requireCm(dto.getMatchId());
         if (c.getStatus() != CrossmatchOrderStatusEnum.PENDING.getCode()) {
             throw new BusinessException("仅「待配血」可执行配血（当前：" + dictText.getDicDataLabel(DICT_CM_STATUS, c.getStatus()) + "）");
@@ -319,18 +340,22 @@ public class BloodServiceImpl implements BloodService {
         c.setResult(dto.getResult());
         c.setConclusion(buildConclusion(c, dto.getConclusion()));
         c.setStatus(CrossmatchOrderStatusEnum.MATCHED.getCode());
-        c.setOperator(currentName());
+        c.setOperator(operatorUser.getRealName());
         c.setMatchTime(LocalDateTime.now().withNano(0));
         cmMapper.updateById(c);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void crossmatchVerify(BloodDTO.CrossmatchVerify dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizBloodCrossmatch c = requireCm(dto.getMatchId());
         if (c.getStatus() != CrossmatchOrderStatusEnum.MATCHED.getCode()) {
             throw new BusinessException("仅「已配血」可复核（当前：" + dictText.getDicDataLabel(DICT_CM_STATUS, c.getStatus()) + "）");
         }
-        String who = currentName();
+        String who = operatorUser.getRealName();
         if (who != null && who.equals(c.getOperator())) {
             throw new BusinessException("复核人不得是配血人本人（" + who + "）——配血结果必须双人确认");
         }
@@ -390,6 +415,10 @@ public class BloodServiceImpl implements BloodService {
     // 内部
 
     private void writeLog(String bagNo, int bizType, Integer from, Integer to, String applyNo, String reason) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizBloodStockLog l = new BizBloodStockLog();
         l.setBagNo(bagNo);
         l.setBizType(bizType);
@@ -397,7 +426,7 @@ public class BloodServiceImpl implements BloodService {
         l.setToStatus(to);
         l.setApplyNo(applyNo);
         l.setReason(clip(reason));
-        l.setOperator(currentName());
+        l.setOperator(operatorUser.getRealName());
         l.setOperateTime(LocalDateTime.now().withNano(0));
         logMapper.insert(l);
     }
@@ -463,10 +492,6 @@ public class BloodServiceImpl implements BloodService {
             }
         }
         return "PX" + day + System.currentTimeMillis() % 100000;
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private String clip(String s) {

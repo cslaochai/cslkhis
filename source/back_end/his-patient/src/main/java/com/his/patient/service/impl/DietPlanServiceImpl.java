@@ -20,6 +20,7 @@ import com.his.patient.vo.DietTypeOptionVO;
 import com.his.patient.vo.WardVO;
 import com.his.system.provider.DeptScopeProvider;
 import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -164,6 +165,8 @@ public class DietPlanServiceImpl implements DietPlanService {
             throw new BusinessException("「待指定饮食」是医嘱派生的占位档，登记方案时必须选定真实饮食类型");
         }
 
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizDietPlan row;
         boolean insert = dto.getId() == null;
         if (insert) {
@@ -185,9 +188,9 @@ public class DietPlanServiceImpl implements DietPlanService {
             row.setPlanStatus(PlanStatusEnum.RUNNING.getCode());
             // 营养师自己登记的方案不需要"自己接收自己"，直接计为已接收
             row.setConfirmStatus(DietConfirmStatusEnum.DONE.getCode());
-            row.setConfirmTime(TimeUtil.toSeconds(LocalDateTime.now()));
+            row.setConfirmTime(TimeUtil.nowSeconds());
             row.setConfirmerId(UserUtils.getCurrentUser().getEmployeeId());
-            row.setConfirmerName(currentName());
+            row.setConfirmerName(operatorUser.getRealName());
         } else {
             row = planMapper.selectById(dto.getId());
             if (row == null) {
@@ -224,10 +227,10 @@ public class DietPlanServiceImpl implements DietPlanService {
                 throw new BusinessException("膳食方案号生成冲突（并发登记），请重试");
             }
             log.info("膳食方案登记 住院={} 饮食={} 途径={} 操作人={}", row.getAdmissionId(), diet.code(),
-                    diet.route(), currentName());
+                    diet.route(), operatorUser.getRealName());
         } else {
             planMapper.updateById(row);
-            log.info("膳食方案修改 id={} 饮食={} 操作人={}", row.getId(), diet.code(), currentName());
+            log.info("膳食方案修改 id={} 饮食={} 操作人={}", row.getId(), diet.code(), operatorUser.getRealName());
         }
         return planMapper.selectVoById(row.getId());
     }
@@ -253,6 +256,8 @@ public class DietPlanServiceImpl implements DietPlanService {
         if (dto == null) {
             throw new BusinessException("请选择要处理的膳食方案");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         boolean accept = Boolean.TRUE.equals(dto.getAccept());
         String reason = cut(trim(dto.getRejectReason()), 500);
         if (!accept && !StringUtils.hasText(reason)) {
@@ -265,7 +270,7 @@ public class DietPlanServiceImpl implements DietPlanService {
             throw new BusinessException("请选择要处理的膳食方案");
         }
 
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         // 批量要么全成要么全不动：一半接收一半报错，营养科说不清哪些单子已经生效
         List<BizDietPlan> rows = new ArrayList<>(ids.size());
         for (Long id : ids) {
@@ -291,11 +296,11 @@ public class DietPlanServiceImpl implements DietPlanService {
             row.setConfirmStatus(accept ? DietConfirmStatusEnum.DONE.getCode() : DietConfirmStatusEnum.REJECTED.getCode());
             row.setConfirmTime(now);
             row.setConfirmerId(UserUtils.getCurrentUser().getEmployeeId());
-            row.setConfirmerName(currentName());
+            row.setConfirmerName(operatorUser.getRealName());
             row.setRejectReason(accept ? null : reason);
             planMapper.updateById(row);
         }
-        log.info("膳食方案{} 条数={} 操作人={} ids={}", accept ? "接收" : "退回", rows.size(), currentName(), ids);
+        log.info("膳食方案{} 条数={} 操作人={} ids={}", accept ? "接收" : "退回", rows.size(), operatorUser.getRealName(), ids);
         return rows.size();
     }
 
@@ -405,7 +410,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         if (row == null || Objects.equals(PlanStatusEnum.CANCELED.getCode(), row.getPlanStatus())) {
             return;
         }
-        LocalDateTime now = TimeUtil.toSeconds(LocalDateTime.now());
+        LocalDateTime now = TimeUtil.nowSeconds();
         row.setPlanStatus(PlanStatusEnum.CANCELED.getCode());
         row.setStopTime(now);
         row.setRemark(cut(appendRemark(row.getRemark(), "来源医嘱已作废"), 500));
@@ -426,6 +431,8 @@ public class DietPlanServiceImpl implements DietPlanService {
      * 停止方案 + 退订未送出的未来餐（已配送/已签收的既成事实不动）
      */
     private void applyStop(BizDietPlan row, LocalDateTime stopTime, String reason) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         row.setPlanStatus(PlanStatusEnum.STOPPED.getCode());
         row.setStopTime(stopTime);
         row.setRemark(cut(appendRemark(row.getRemark(),
@@ -433,22 +440,24 @@ public class DietPlanServiceImpl implements DietPlanService {
         planMapper.updateById(row);
         cancelFutureMeals(row.getId(), stopTime.toLocalDate(),
                 cut("方案停止（" + row.getDietNo() + "）" + (StringUtils.hasText(reason) ? reason.trim() : ""), 500));
-        log.info("膳食方案停止 方案={} 停止时间={} 操作人={}", row.getDietNo(), stopTime, currentName());
+        log.info("膳食方案停止 方案={} 停止时间={} 操作人={}", row.getDietNo(), stopTime, operatorUser.getRealName());
     }
 
     private void cancelFutureMeals(Long dietPlanId, LocalDate fromDate, String reason) {
         if (dietPlanId == null) {
             return;
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         int n = mealMapper.update(null, new LambdaUpdateWrapper<BizMealOrder>()
                 .eq(BizMealOrder::getDietPlanId, dietPlanId)
                 .ge(BizMealOrder::getMealDate, fromDate)
                 .in(BizMealOrder::getDeliverStatus, MealDeliverStatusEnum.PENDING.getCode(), MealDeliverStatusEnum.PREPARED.getCode())
                 .set(BizMealOrder::getDeliverStatus, MealDeliverStatusEnum.CANCELED.getCode())
-                .set(BizMealOrder::getCancelTime, TimeUtil.toSeconds(LocalDateTime.now()))
+                .set(BizMealOrder::getCancelTime, TimeUtil.nowSeconds())
                 .set(BizMealOrder::getCancelReason, reason)
-                .set(BizMealOrder::getUpdateBy, currentName())
-                .set(BizMealOrder::getUpdateTime, TimeUtil.toSeconds(LocalDateTime.now())));
+                .set(BizMealOrder::getUpdateBy, operatorUser.getRealName())
+                .set(BizMealOrder::getUpdateTime, TimeUtil.nowSeconds()));
         if (n > 0) {
             log.info("膳食方案停/废联动退订 方案={} 条数={} 原因={}", dietPlanId, n, reason);
         }
@@ -483,10 +492,6 @@ public class DietPlanServiceImpl implements DietPlanService {
         }
         SysBed bed = bedMapper.selectById(bedId);
         return bed == null ? null : bed.getBedNo();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private String nextNo(String prefix, long maxSeq) {

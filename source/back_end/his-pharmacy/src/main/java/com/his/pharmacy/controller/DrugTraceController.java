@@ -8,6 +8,8 @@ import com.his.pharmacy.vo.DrugTraceReconcileVO;
 import com.his.pharmacy.vo.DrugTraceScanVO;
 import com.his.pharmacy.vo.DrugTraceUploadResultVO;
 import com.his.pharmacy.vo.DrugTraceVO;
+import com.his.common.exception.BusinessException;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -43,28 +45,44 @@ public class DrugTraceController {
     @Operation(summary = "入库采集/存量补采")
     @PostMapping("/collect")
     public Result<DrugTraceVO> collect(@Valid @RequestBody DrugTraceCollectDTO collectDTO) {
-        return Result.success(drugTraceService.collect(collectDTO, currentOperator()));
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        return Result.success(drugTraceService.collect(collectDTO, operatorUser.getRealName()));
     }
 
     @PreAuthorize("hasAuthority('pharmacy:drugTrace:edit')")
     @Operation(summary = "发药核销（扫追溯码绑定已发药记录）")
     @PostMapping("/verifyDispense")
     public Result<DrugTraceVO> verifyDispense(@Valid @RequestBody DrugTraceDispenseDTO dispenseDTO) {
-        return Result.success(drugTraceService.verifyDispense(dispenseDTO, currentOperator()));
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        return Result.success(drugTraceService.verifyDispense(dispenseDTO, operatorUser.getRealName()));
     }
 
     @PreAuthorize("hasAuthority('pharmacy:drugTrace:edit')")
     @Operation(summary = "作废（1-退药 2-报损 3-召回）")
     @PostMapping("/void")
     public Result<DrugTraceVO> voidTrace(@Valid @RequestBody DrugTraceVoidDTO voidDTO) {
-        return Result.success(drugTraceService.voidTrace(voidDTO, currentOperator()));
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        return Result.success(drugTraceService.voidTrace(voidDTO, operatorUser.getRealName()));
     }
 
     @PreAuthorize("hasAuthority('pharmacy:drugTrace:export')")
     @Operation(summary = "批量上传医保局（ids 为空=上传全部待上传/失败）")
     @PostMapping("/upload")
     public Result<DrugTraceUploadResultVO> upload(@Valid @RequestBody DrugTraceUploadDTO uploadDTO) {
-        return Result.success(drugTraceService.upload(uploadDTO, currentOperator()));
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
+        return Result.success(drugTraceService.upload(uploadDTO, operatorUser.getRealName()));
     }
 
     @Operation(summary = "追溯码台账分页")
@@ -93,7 +111,4 @@ public class DrugTraceController {
         return Result.success();
     }
 
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

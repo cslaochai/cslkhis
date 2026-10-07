@@ -18,6 +18,7 @@ import com.his.patient.service.TeleConsultService;
 import com.his.patient.vo.OnlineConsultVO;
 import com.his.patient.vo.TeleConsultStatVO;
 import com.his.patient.vo.TeleConsultVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,10 +65,6 @@ public class TeleConsultServiceImpl implements TeleConsultService {
 
     private static LocalDateTime now() {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private static long toLong(Object v) {
@@ -121,6 +118,8 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TeleConsultVO teleUpsert(TeleConsultUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizTeleConsult entity;
         boolean isNew = dto.getId() == null;
         if (isNew) {
@@ -141,8 +140,8 @@ public class TeleConsultServiceImpl implements TeleConsultService {
         entity.setAdmissionId(dto.getAdmissionId());
         entity.setApplyDeptId(dto.getApplyDeptId());
         entity.setApplyDeptName(dto.getApplyDeptId() == null ? null : teleMapper.selectDeptName(dto.getApplyDeptId()));
-        entity.setApplyDoctorId(dto.getApplyDoctorId() == null ? UserUtils.getCurrentUser().getEmployeeId() : dto.getApplyDoctorId());
-        entity.setApplyDoctor(currentName());
+        entity.setApplyDoctorId(dto.getApplyDoctorId() == null ? operatorUser.getEmployeeId() : dto.getApplyDoctorId());
+        entity.setApplyDoctor(operatorUser.getRealName());
         entity.setConsultType(dto.getConsultType());
         entity.setExpertHospital(cut(dto.getExpertHospital(), 128));
         entity.setExpertDept(cut(dto.getExpertDept(), 128));
@@ -163,6 +162,8 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TeleConsultVO teleArrange(TeleArrangeDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizTeleConsult entity = requireTeleEntity(dto.getId());
         if (!Objects.equals(entity.getStatus(), TeleConsultStatusEnum.PENDING.getCode())) {
             throw new BusinessException("仅「待安排」的会诊单可安排（当前：" + teleStatusName(entity.getStatus()) + "）");
@@ -184,7 +185,7 @@ public class TeleConsultServiceImpl implements TeleConsultService {
         if (StringUtils.hasText(dto.getExpertTitle())) {
             entity.setExpertTitle(cut(dto.getExpertTitle(), 32));
         }
-        entity.setArrangeBy(currentName());
+        entity.setArrangeBy(operatorUser.getRealName());
         entity.setArrangeTime(now());
         teleMapper.updateById(entity);
         return requireTeleVo(entity.getId());
@@ -193,6 +194,8 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public TeleConsultVO teleComplete(TeleActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizTeleConsult entity = requireTeleEntity(dto.getId());
         if (!Objects.equals(entity.getStatus(), TeleConsultStatusEnum.ARRANGED.getCode())) {
             throw new BusinessException("仅「已安排」的会诊单可出意见完成（当前：" + teleStatusName(entity.getStatus()) + "）");
@@ -200,7 +203,7 @@ public class TeleConsultServiceImpl implements TeleConsultService {
         String opinion = trimToNull(dto.getContent());
         entity.setStatus(TeleConsultStatusEnum.DONE.getCode());
         entity.setOpinion(cut(opinion, 1000));
-        entity.setCompleteBy(currentName());
+        entity.setCompleteBy(operatorUser.getRealName());
         entity.setCompleteTime(now());
         teleMapper.updateById(entity);
         return requireTeleVo(entity.getId());
@@ -249,6 +252,8 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OnlineConsultVO onlineApply(OnlineApplyDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizPatient patient = requirePatient(dto.getPatientId());
         BizOnlineConsult entity = new BizOnlineConsult();
         entity.setConsultNo(nextNo(Constants.ONLINE_CONSULT_NO_PREFIX, "ONLINE_CONSULT"));
@@ -258,7 +263,7 @@ public class TeleConsultServiceImpl implements TeleConsultService {
         entity.setDeptId(dto.getDeptId());
         entity.setDeptName(dto.getDeptId() == null ? null : onlineMapper.selectDeptName(dto.getDeptId()));
         entity.setDoctorId(dto.getDoctorId());
-        entity.setDoctorName(dto.getDoctorId() == null ? null : currentName());
+        entity.setDoctorName(dto.getDoctorId() == null ? null : operatorUser.getRealName());
         entity.setConsultType(dto.getConsultType());
         entity.setChiefComplaint(cut(dto.getChiefComplaint(), 1000));
         entity.setStatus(OnlineConsultStatusEnum.WAITING.getCode());
@@ -273,18 +278,20 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OnlineConsultVO onlineAccept(Long id) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizOnlineConsult entity = requireOnlineEntity(id);
         if (!Objects.equals(entity.getStatus(), OnlineConsultStatusEnum.WAITING.getCode())) {
             throw new BusinessException("仅「待接诊」的问诊单可接诊（当前：" + onlineStatusName(entity.getStatus()) + "）");
         }
         entity.setStatus(OnlineConsultStatusEnum.ACCEPTED.getCode());
-        entity.setAcceptBy(currentName());
+        entity.setAcceptBy(operatorUser.getRealName());
         entity.setAcceptTime(now());
         if (entity.getDoctorId() == null) {
-            entity.setDoctorId(UserUtils.getCurrentUser().getEmployeeId());
+            entity.setDoctorId(operatorUser.getEmployeeId());
         }
         if (!StringUtils.hasText(entity.getDoctorName())) {
-            entity.setDoctorName(currentName());
+            entity.setDoctorName(operatorUser.getRealName());
         }
         onlineMapper.updateById(entity);
         return requireOnlineVo(entity.getId());
@@ -293,6 +300,8 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public OnlineConsultVO onlineReply(OnlineReplyDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizOnlineConsult entity = requireOnlineEntity(dto.getId());
         if (!Objects.equals(entity.getStatus(), OnlineConsultStatusEnum.ACCEPTED.getCode())) {
             throw new BusinessException("仅「接诊中」的问诊单可回复（当前：" + onlineStatusName(entity.getStatus()) + "）");
@@ -301,7 +310,7 @@ public class TeleConsultServiceImpl implements TeleConsultService {
         entity.setReply(cut(dto.getReply(), 1000));
         entity.setAdvice(cut(dto.getAdvice(), 500));
         entity.setNeedVisit(dto.getNeedVisit() == null ? 0 : dto.getNeedVisit());
-        entity.setFinishBy(currentName());
+        entity.setFinishBy(operatorUser.getRealName());
         entity.setFinishTime(now());
         onlineMapper.updateById(entity);
         return requireOnlineVo(entity.getId());

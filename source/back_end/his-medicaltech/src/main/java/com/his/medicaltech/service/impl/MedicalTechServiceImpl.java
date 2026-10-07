@@ -37,6 +37,7 @@ import com.his.medicaltech.support.LabReferenceRangeResolver;
 import com.his.medicaltech.vo.*;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -852,6 +853,10 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         if (applyId == null) {
             throw new BusinessException("检查申请单ID为空，无法生成检查记录");
         }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         // 幂等闸门：同一张申请单只允许有一条检查记录。
         // getOne(wrapper, false) 不抛异常，存量重复数据不会把缴费直接打挂。
         BizInspectionRecord exists = this.getOne(new LambdaQueryWrapper<BizInspectionRecord>()
@@ -905,7 +910,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setClinicalDiagnosis(apply.getClinicalDiagnosis());
         record.setPrice(apply.getPrice());
         record.setRecordStatus(InsRecordStatusEnum.REGISTERED.getCode()); // 1-已登记
-        record.setCreateBy(currentOperatorName());
+        record.setCreateBy(operatorUser.getRealName());
         record.setCreateTime(LocalDateTime.now());
         inspectionRecordMapper.insert(record);
         return record.getId();
@@ -916,6 +921,10 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     public Long ensureLaboratoryRecordFromApply(Long applyId) {
         if (applyId == null) {
             throw new BusinessException("检验申请单ID为空，无法生成检验记录");
+        }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
         }
         BizLaboratoryRecord exists = laboratoryRecordMapper.selectOne(new LambdaQueryWrapper<BizLaboratoryRecord>()
                 .eq(BizLaboratoryRecord::getApplyId, applyId)
@@ -965,7 +974,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setSpecimenType(apply.getSpecimenType());
         record.setPrice(apply.getPrice());
         record.setRecordStatus(LabRecordStatusEnum.REGISTERED.getCode()); // 1-已登记
-        record.setCreateBy(currentOperatorName());
+        record.setCreateBy(operatorUser.getRealName());
         record.setCreateTime(LocalDateTime.now());
         laboratoryRecordMapper.insert(record);
         return record.getId();
@@ -1047,7 +1056,4 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                 + String.format("%04d", EXECUTION_SEQ.incrementAndGet() % 10000);
     }
 
-    private String currentOperatorName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

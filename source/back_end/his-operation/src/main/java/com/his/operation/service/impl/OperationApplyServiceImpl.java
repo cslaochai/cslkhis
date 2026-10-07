@@ -108,7 +108,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     }
 
     private static LocalDateTime now() {
-        return TimeUtil.toSeconds(LocalDateTime.now());
+        return TimeUtil.nowSeconds();
     }
 
     /**
@@ -332,6 +332,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(OperationApplyUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizAdmission admission = inpatientService.getAdmissionById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
@@ -360,8 +362,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
             entity.setApplyDeptName(deptNameOf(admission.getDeptId()));
             entity.setApplyWardName(wardNameOf(admission.getWardId()));
             entity.setApplyBedNo(bedNoOf(admission.getBedId()));
-            entity.setApplyDoctorId(currentEmpId());
-            entity.setApplyDoctorName(currentName());
+            entity.setApplyDoctorId(operatorUser.getEmployeeId());
+            entity.setApplyDoctorName(operatorUser.getRealName());
             entity.setApplyTime(now());
             entity.setApplyNo(nextApplyNo());
             entity.setOperationStatus(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode());
@@ -413,13 +415,15 @@ public class OperationApplyServiceImpl implements OperationApplyService {
                 entity, "手术申请人", null);
         log.info("{}手术申请 applyNo={} admissionId={} 术式={} 急诊={} 主要={} 申请人={}",
                 create ? "发起" : "修改", entity.getApplyNo(), entity.getAdmissionId(),
-                entity.getPlannedOperationName(), entity.getIsEmergency(), entity.getIsMain(), currentName());
+                entity.getPlannedOperationName(), entity.getIsEmergency(), entity.getIsMain(), operatorUser.getRealName());
         return entity.getApplyNo();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void schedule(OperationScheduleDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         LocalDateTime start = TimeUtil.toSeconds(dto.getPlannedStartTime());
         LocalDateTime end = TimeUtil.toSeconds(dto.getPlannedEndTime());
         // D-业务规则：时间先后关系，DTO 注解无法表达，保留
@@ -459,8 +463,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         entity.setAssistantName(dto.getAssistantName());
         entity.setAnesthetistId(dto.getAnesthetistId());
         entity.setAnesthetistName(employeeNameOf(dto.getAnesthetistId()));
-        entity.setScheduleDoctorId(currentEmpId());
-        entity.setScheduleDoctorName(currentName());
+        entity.setScheduleDoctorId(operatorUser.getEmployeeId());
+        entity.setScheduleDoctorName(operatorUser.getRealName());
         entity.setScheduleTime(now());
         entity.setScheduleRemark(dto.getScheduleRemark());
         entity.setOperationStatus(OperationApplyStatusEnum.SCHEDULED.getCode());
@@ -475,12 +479,14 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
         log.info("排台 applyNo={} 手术间={} {}~{} 主刀={} 排台人={}",
                 entity.getApplyNo(), dto.getOperationRoom(),
-                start.format(FULL_TIME), end.format(FULL_TIME), surgeonName, currentName());
+                start.format(FULL_TIME), end.format(FULL_TIME), surgeonName, operatorUser.getRealName());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void preopCheck(OperationPreopCheckDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizOperationApply entity = mustGet(dto.getApplyId());
         if (Objects.equals(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo()
@@ -506,8 +512,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
 
         entity.setPreopCheckItems(OperationCheckItems.serialize(codes));
         entity.setPreopNote(dto.getPreopNote());
-        entity.setPreopCheckDoctorId(currentEmpId());
-        entity.setPreopCheckDoctorName(currentName());
+        entity.setPreopCheckDoctorId(operatorUser.getEmployeeId());
+        entity.setPreopCheckDoctorName(operatorUser.getRealName());
         entity.setPreopCheckTime(now());
         entity.setOperationStatus(OperationApplyStatusEnum.PREOP_CHECKED.getCode());
         if (StringUtils.hasText(dto.getRemark())) {
@@ -516,7 +522,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         applyMapper.updateById(entity);
         log.info("术前核对完成 applyNo={} 核对项={} 异常说明={} 核对人={}",
                 entity.getApplyNo(), entity.getPreopCheckItems(),
-                StringUtils.hasText(dto.getPreopNote()) ? dto.getPreopNote() : "无", currentName());
+                StringUtils.hasText(dto.getPreopNote()) ? dto.getPreopNote() : "无", operatorUser.getRealName());
     }
 
     // 展示态
@@ -524,6 +530,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void finish(OperationFinishDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizOperationApply entity = mustGet(dto.getApplyId());
         if (Objects.equals(OperationApplyStatusEnum.CANCELLED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 已取消，不能完成");
@@ -605,8 +613,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         entity.setIntraopProcedure(dto.getIntraopProcedure());
         entity.setPostopNote(dto.getPostopNote());
         entity.setSpecimenSent(dto.getSpecimenSent());
-        entity.setFinishDoctorId(currentEmpId());
-        entity.setFinishDoctorName(currentName());
+        entity.setFinishDoctorId(operatorUser.getEmployeeId());
+        entity.setFinishDoctorName(operatorUser.getRealName());
         entity.setFinishTime(now);
         entity.setOperationId(op.getId());
         entity.setRecordId(record.getId());
@@ -618,12 +626,14 @@ public class OperationApplyServiceImpl implements OperationApplyService {
 
         log.info("手术完成 applyNo={} 术式={} {}~{} 首页明细ID={} 病历号={} 录入人={}",
                 entity.getApplyNo(), actualName, start.format(FULL_TIME), end.format(FULL_TIME),
-                op.getId(), record.getRecordNo(), currentName());
+                op.getId(), record.getRecordNo(), operatorUser.getRealName());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(OperationCancelDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizOperationApply entity = mustGet(dto.getApplyId());
         if (Objects.equals(OperationApplyStatusEnum.CANCELLED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 已取消，不能重复取消");
@@ -638,12 +648,12 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
         entity.setOperationStatus(OperationApplyStatusEnum.CANCELLED.getCode());
         entity.setCancelReason(dto.getCancelReason());
-        entity.setCancelDoctorId(currentEmpId());
-        entity.setCancelDoctorName(currentName());
+        entity.setCancelDoctorId(operatorUser.getEmployeeId());
+        entity.setCancelDoctorName(operatorUser.getRealName());
         entity.setCancelTime(now());
         applyMapper.updateById(entity);
         log.info("取消手术 applyNo={} 原因={} 操作人={}",
-                entity.getApplyNo(), dto.getCancelReason(), currentName());
+                entity.getApplyNo(), dto.getCancelReason(), operatorUser.getRealName());
     }
 
     // 工具
@@ -662,6 +672,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
                                                OperationFinishDTO dto,
                                                LocalDateTime start, LocalDateTime end,
                                                String basis, LocalDateTime now) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizPatient patient = patientService.getById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在，无法回写手术记录");
@@ -716,9 +728,9 @@ public class OperationApplyServiceImpl implements OperationApplyService {
                 + "，切口等级 " + dictText.getDicDataLabel("biz_operation_operationIncisionEnum", entity.getIncisionLevel()));
         record.setRecordStatus(RecordStatusEnum.SUBMITTED.getCode());
         // 签名 = 主刀医师；主刀缺失才回落到录入人（宁可记"谁录的"，也不留空签名）
-        record.setDoctorId(entity.getSurgeonId() != null ? entity.getSurgeonId() : currentEmpId());
+        record.setDoctorId(entity.getSurgeonId() != null ? entity.getSurgeonId() : operatorUser.getEmployeeId());
         record.setDoctorName(StringUtils.hasText(entity.getSurgeonName())
-                ? entity.getSurgeonName() : currentName());
+                ? entity.getSurgeonName() : operatorUser.getRealName());
         record.setSubmitTime(now);
         // 病历号取号与落库归病历文书的写入方（手术侧只负责把这台手术写成文书内容）
         return inpatientRecordService.appendClosedLoopRecord(record);
@@ -924,14 +936,6 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     /**
      * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
      */
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
-
     private record Parsed(String from, String to) {
     }
 }

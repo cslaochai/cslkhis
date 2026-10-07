@@ -14,6 +14,7 @@ import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.DeptStatRowVO;
 import com.his.patient.vo.NutritionOverviewVO;
 import com.his.patient.vo.NutritionStatsVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -90,8 +91,10 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public List<NutritionStatsVO> generateStats(NutritionStatsGenerateDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         YearMonth ym = requireMonth(dto.getStatMonth());
-        String operator = currentName();
+        String operator = operatorUser.getRealName();
         List<NutritionStatsVO> result = new ArrayList<>();
 
         // scopeType 合法性由 DTO 的 @InEnum 把关（1-全院 2-科室），这里只分派
@@ -292,10 +295,6 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
         }
         return BigDecimal.valueOf(num).multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(den), 2, RoundingMode.HALF_UP);
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private String csv(String v) {

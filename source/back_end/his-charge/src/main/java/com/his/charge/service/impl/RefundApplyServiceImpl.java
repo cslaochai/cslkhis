@@ -172,6 +172,10 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizRefundApplyVO submitRefundApply(RefundApplySubmitDTO submitDTO) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizRefundApply apply = new BizRefundApply();
         BeanUtils.copyProperties(submitDTO, apply);
         BizSettlementBill bill = settlementBillService.getById(apply.getBillId());
@@ -229,7 +233,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         apply.setApplyStatus(RefundApplyStatusEnum.PENDING_AUDIT.getCode());
         apply.setApplyTime(LocalDateTime.now());
         // 申请人以服务端登录身份为准，前端传什么都不采信（避免冒名提交）
-        apply.setApplyBy(StringUtils.hasText(currentUserName()) ? currentUserName() : apply.getApplyBy());
+        apply.setApplyBy(operatorUser.getRealName());
         this.save(apply);
         BizRefundApplyVO vo = new BizRefundApplyVO();
         BeanUtils.copyProperties(apply, vo);
@@ -239,6 +243,10 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean auditRefundApply(Long applyId, boolean approved, Long auditorId, String auditorName, String remark) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizRefundApply apply = requireApply(applyId);
         if (!Objects.equals(RefundApplyStatusEnum.PENDING_AUDIT.getCode(), apply.getApplyStatus())) {
             throw new BusinessException(statusError("审核", apply.getApplyStatus()));
@@ -247,8 +255,8 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         apply.setApplyStatus(approved
                 ? RefundApplyStatusEnum.AUDIT_PASSED.getCode() : RefundApplyStatusEnum.AUDIT_REJECTED.getCode());
         // 审核人以服务端登录身份为准，DTO 里带的值只作无登录态时的兜底
-        apply.setAuditorId(Objects.nonNull(currentUserId()) ? currentUserId() : auditorId);
-        apply.setAuditorName(StringUtils.hasText(currentUserName()) ? currentUserName() : auditorName);
+        apply.setAuditorId(operatorUser.getEmployeeId() != null ? operatorUser.getEmployeeId() : operatorUser.getUserId());
+        apply.setAuditorName(operatorUser.getRealName());
         apply.setAuditTime(LocalDateTime.now());
         apply.setAuditRemark(remark);
         return this.updateById(apply);
@@ -263,6 +271,10 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean discardRefundApply(Long applyId, String reason) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizRefundApply apply = requireApply(applyId);
         if (!RefundApplyStatusEnum.isInflight(apply.getApplyStatus())) {
             throw new BusinessException(statusError("作废", apply.getApplyStatus()));
@@ -272,7 +284,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
             throw new BusinessException("请填写作废原因（台账要能回答「为什么批了又退回去」）");
         }
         apply.setApplyStatus(RefundApplyStatusEnum.DISCARDED.getCode());
-        apply.setCancelBy(currentUserName());
+        apply.setCancelBy(operatorUser.getRealName());
         apply.setCancelTime(LocalDateTime.now());
         // 先截到列宽再落库：超长会让这句"作废"本身变成 500，用户连申请单都关不掉
         apply.setCancelReason(cut(reason.trim(), W_CANCEL_REASON));
@@ -293,6 +305,10 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean executeRefund(Long applyId, String refundBy) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizRefundApply apply = requireApply(applyId);
         if (!Objects.equals(RefundApplyStatusEnum.AUDIT_PASSED.getCode(), apply.getApplyStatus())) {
             throw new BusinessException(statusError("退费", apply.getApplyStatus()));
@@ -316,7 +332,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         apply.setApplyStatus(RefundApplyStatusEnum.REFUNDED.getCode());
         // 实退以选中的记账行为准（发起之后可能又有别的退费执行过，前缀和会重新算）
         apply.setRefundAmount(sumAmount(targets).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP));
-        apply.setRefundBy(StringUtils.hasText(currentUserName()) ? currentUserName() : refundBy);
+        apply.setRefundBy(operatorUser.getRealName());
         apply.setRefundTime(LocalDateTime.now());
         return this.updateById(apply);
     }
@@ -364,21 +380,4 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         return targets;
     }
 
-    /**
-     * 当前登录人姓名：优先员工姓名，退回登录账号真实姓名
-     */
-    private String currentUserName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
-
-    /**
-     * 当前登录人ID：优先员工ID（与站内信、签名口径一致），退回登录账号ID
-     */
-    private Long currentUserId() {
-        CurrentUser user = UserUtils.getCurrentUser();
-        if (user == null) {
-            return null;
-        }
-        return Objects.nonNull(user.getEmployeeId()) ? user.getEmployeeId() : user.getUserId();
-    }
 }

@@ -15,6 +15,7 @@ import com.his.patient.mapper.BizDeathRegistrationMapper;
 import com.his.patient.service.DeathRegistrationService;
 import com.his.patient.vo.DeathRegisterVO;
 import com.his.system.utils.UserUtils;
+import com.his.system.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -92,10 +93,6 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
             return "未知";
         }
         return DeathRegisterStatusEnum.labelOrUnknown(status);
-    }
-
-    private static String operator() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private static LocalDateTime atStart(LocalDate date) {
@@ -238,6 +235,8 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void confirm(DeathRegistrationDTO.Confirm dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizDeathRegistration register = requireRegister(dto.getId());
         if (!Objects.equals(register.getRegisterStatus(), DeathRegisterStatusEnum.DRAFT.getCode())) {
             throw new BusinessException("只有草稿登记可确认（当前：" + statusText(register.getRegisterStatus()) + "）");
@@ -252,8 +251,8 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
             throw new BusinessException("确认登记前必须登记尸体处理方式（遗体交给谁是处置闭环的一半）");
         }
         register.setRegisterStatus(DeathRegisterStatusEnum.DONE.getCode());
-        register.setRegistrarId(UserUtils.getCurrentUser().getEmployeeId());
-        register.setRegistrarName(operator());
+        register.setRegistrarId(operatorUser.getEmployeeId());
+        register.setRegistrarName(operatorUser.getRealName());
         register.setRegisterTime(now());
         save(register);
     }

@@ -110,6 +110,8 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(AnesthesiaVisitUpsertDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         validateHighRisk(dto);
 
         BizOperationApply apply = applyMapper.selectById(dto.getApplyId());
@@ -142,8 +144,8 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
             entity.setIsEmergency(apply.getIsEmergency() == null ? 0 : apply.getIsEmergency());
             entity.setVisitNo(nextVisitNo());
             entity.setVisitStatus(0);
-            entity.setVisitDoctorId(currentEmpId());
-            entity.setVisitDoctorName(currentName());
+            entity.setVisitDoctorId(operatorUser.getEmployeeId());
+            entity.setVisitDoctorName(operatorUser.getRealName());
         } else {
             entity = visitMapper.selectById(dto.getId());
             if (entity == null) {
@@ -179,8 +181,8 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
         if (dto.getRemark() != null) {
             entity.setRemark(dto.getRemark());
         }
-        entity.setVisitDoctorId(currentEmpId());
-        entity.setVisitDoctorName(currentName());
+        entity.setVisitDoctorId(operatorUser.getEmployeeId());
+        entity.setVisitDoctorName(operatorUser.getRealName());
 
         if (create) {
             visitMapper.insert(entity);
@@ -191,13 +193,15 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
                 create ? "新建" : "修改", entity.getVisitNo(), apply.getApplyNo(),
                 AsaGradeEnum.labelOrUnknown(entity.getAsaGrade()),
                 Objects.equals(YesOrNoEnum.YES.getCode(), entity.getDifficultAirway()) ? "是" : "否",
-                VisitConclusionEnum.labelOrUnknown(entity.getConclusion()), currentName());
+                VisitConclusionEnum.labelOrUnknown(entity.getConclusion()), operatorUser.getRealName());
         return entity.getVisitNo();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void finish(AnesthesiaVisitFinishDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
         BizAnesthesiaVisit entity = visitMapper.selectById(dto.getVisitId());
         if (entity == null) {
             throw new BusinessException("麻醉术前访视单不存在");
@@ -213,13 +217,13 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
         entity.setConclusion(dto.getConclusion());
         entity.setConclusionNote(dto.getConclusionNote());
         entity.setVisitStatus(1);
-        entity.setVisitDoctorId(currentEmpId());
-        entity.setVisitDoctorName(currentName());
+        entity.setVisitDoctorId(operatorUser.getEmployeeId());
+        entity.setVisitDoctorName(operatorUser.getRealName());
         entity.setVisitTime(now());
         visitMapper.updateById(entity);
         log.info("完成麻醉术前访视 visitNo={} 结论={}（{}）访视医师={}",
                 entity.getVisitNo(), VisitConclusionEnum.labelOrUnknown(dto.getConclusion()),
-                StringUtils.hasText(dto.getConclusionNote()) ? dto.getConclusionNote() : "无补充说明", currentName());
+                StringUtils.hasText(dto.getConclusionNote()) ? dto.getConclusionNote() : "无补充说明", operatorUser.getRealName());
     }
 
     @Override
@@ -317,11 +321,4 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
     /**
      * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
      */
-    private Long currentEmpId() {
-        return UserUtils.getCurrentUser().getEmployeeId();
-    }
-
-    private String currentName() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }

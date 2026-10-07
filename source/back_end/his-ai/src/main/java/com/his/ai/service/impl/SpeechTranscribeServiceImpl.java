@@ -15,6 +15,7 @@ import com.his.ai.support.AiAuditDigestSupport;
 import com.his.ai.support.AiMaskUtils;
 import com.his.ai.vo.VoiceTranscribeResultVO;
 import com.his.common.exception.BusinessException;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -196,7 +197,9 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
                              String errorMsg, String inputMeta, String outputDigest) {
         // 取操作人放在 try 外面：catch 只该兜「审计落库失败」，
         // 把「取不到当前人」一起吞掉就等于把报错变回静默 warn
-        String operator = currentOperator();
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        String operator = operatorUser.getRealName();
         try {
             SysAiCallLog entity = new SysAiCallLog();
             entity.setCapabilityKey(capabilityKey);
@@ -220,10 +223,6 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
             // 审计失败不能反过来打断转写主流程
             log.warn("[AI] {} 审计落库失败：{}", capabilityKey, ex.getMessage());
         }
-    }
-
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
     }
 
     private RestClient clientOf(String baseUrl, int timeoutMs) {

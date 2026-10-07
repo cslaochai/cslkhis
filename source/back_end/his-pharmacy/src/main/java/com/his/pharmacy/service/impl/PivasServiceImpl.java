@@ -17,6 +17,7 @@ import com.his.pharmacy.service.PivasService;
 import com.his.pharmacy.vo.PivasCandidateVO;
 import com.his.pharmacy.vo.PivasStatsVO;
 import com.his.pharmacy.vo.PivasVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -76,6 +77,10 @@ public class PivasServiceImpl implements PivasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PivasVO generate(PivasGenerateDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         LocalDate day = dto.getAdmixDate() != null ? dto.getAdmixDate() : LocalDate.now();
         if (day.isAfter(LocalDate.now())) {
             throw new BusinessException("调配日期不能是未来日期");
@@ -97,7 +102,7 @@ public class PivasServiceImpl implements PivasService {
                     + (unmatched > 0 ? "（另有 " + unmatched + " 条静脉药未能匹配药品档案，已跳过）" : ""));
         }
 
-        String operator = currentOperator();
+        String operator = operatorUser.getRealName();
         BizPivasBatch batch = null;
         for (PivasCandidateVO c : cands) {
             if (batch == null || !Objects.equals(batch.getAdmissionId(), c.getAdmissionId())) {
@@ -173,6 +178,10 @@ public class PivasServiceImpl implements PivasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PivasVO auditItem(PivasAuditDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPivasItem item = requireItem(dto.getItemId());
         if (item.getStatus() == null || item.getStatus() != BizPivasItem.STATUS_PENDING_AUDIT) {
             throw new BusinessException("仅待审方明细允许审方（当前状态码 " + item.getStatus() + "）");
@@ -182,8 +191,8 @@ public class PivasServiceImpl implements PivasService {
         if (!pass && !StringUtils.hasText(dto.getReason())) {
             throw new BusinessException("审方退回必须填写原因");
         }
-        item.setAuditorId(UserUtils.getCurrentUser().getEmployeeId());
-        item.setAuditorName(currentOperator());
+        item.setAuditorId(operatorUser.getEmployeeId());
+        item.setAuditorName(operatorUser.getRealName());
         item.setAuditTime(now());
         if (pass) {
             item.setStatus(BizPivasItem.STATUS_AUDITED);
@@ -205,6 +214,10 @@ public class PivasServiceImpl implements PivasService {
         // B 类：入参 DTO 被调配/核对入口复用，那两个入口只传 itemId，batchId 加 @NotNull 会挡死它们
         if (dto.getBatchId() == null) {
             throw new BusinessException("静配单ID不能为空");
+        }
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
         }
         BizPivasBatch batch = requireBatch(dto.getBatchId());
         List<BizPivasItem> items = itemMapper.selectList(new LambdaQueryWrapper<BizPivasItem>()
@@ -231,7 +244,7 @@ public class PivasServiceImpl implements PivasService {
             }
         }
         // 标签打印预留：这里只落操作人与时间，真实对接时在同一事务尾部出打印任务
-        batch.setLabelBy(currentOperator());
+        batch.setLabelBy(operatorUser.getRealName());
         batch.setLabelTime(now());
         if (batchMapper.updateById(batch) <= 0) {
             throw new BusinessException("打标签更新主单失败");
@@ -243,13 +256,17 @@ public class PivasServiceImpl implements PivasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PivasVO compoundItem(PivasActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPivasItem item = requireItem(dto.getItemId());
         if (item.getStatus() == null || item.getStatus() != BizPivasItem.STATUS_QUEUED) {
             throw new BusinessException("仅已排队明细允许调配（当前状态码 " + item.getStatus() + "）");
         }
         item.setStatus(BizPivasItem.STATUS_COMPOUNDED);
-        item.setCompounderId(UserUtils.getCurrentUser().getEmployeeId());
-        item.setCompounderName(currentOperator());
+        item.setCompounderId(operatorUser.getEmployeeId());
+        item.setCompounderName(operatorUser.getRealName());
         item.setCompoundTime(now());
         if (StringUtils.hasText(dto.getRemark())) {
             item.setRemark(dto.getRemark());
@@ -264,13 +281,17 @@ public class PivasServiceImpl implements PivasService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PivasVO verifyItem(PivasActionDTO dto) {
+        CurrentUser operatorUser = UserUtils.getCurrentUser();
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPivasItem item = requireItem(dto.getItemId());
         if (item.getStatus() == null || item.getStatus() != BizPivasItem.STATUS_COMPOUNDED) {
             throw new BusinessException("仅已调配明细允许核对发放（当前状态码 " + item.getStatus() + "）");
         }
         item.setStatus(BizPivasItem.STATUS_VERIFIED);
-        item.setVerifierId(UserUtils.getCurrentUser().getEmployeeId());
-        item.setVerifierName(currentOperator());
+        item.setVerifierId(operatorUser.getEmployeeId());
+        item.setVerifierName(operatorUser.getRealName());
         item.setVerifyTime(now());
         if (StringUtils.hasText(dto.getRemark())) {
             item.setRemark(dto.getRemark());
@@ -418,7 +439,4 @@ public class PivasServiceImpl implements PivasService {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
-    private String currentOperator() {
-        return UserUtils.getCurrentUser().getRealName();
-    }
 }
