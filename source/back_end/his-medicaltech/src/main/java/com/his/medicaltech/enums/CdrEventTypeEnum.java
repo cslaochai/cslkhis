@@ -30,7 +30,7 @@ import com.his.medicaltech.enums.CdrConsultStatusEnum;
 import com.his.medicaltech.enums.CdrDiagTypeEnum;
 import com.his.medicaltech.enums.CdrDischargeStatusEnum;
 import com.his.common.enums.EmergencyStatusEnum;
-import com.his.medicaltech.enums.CdrEmergencyTriageEnum;
+import com.his.common.enums.EmergencyTriageLevelEnum;
 import com.his.medicaltech.enums.CdrEventTypeEnum;
 import com.his.medicaltech.enums.CdrInspApplyStatusEnum;
 import com.his.medicaltech.enums.CdrInsuranceSettleStatusEnum;

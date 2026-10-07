@@ -1,6 +1,7 @@
 package com.his.appoint.support;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.common.enums.EmergencyTriageLevelEnum;
 import com.his.common.util.TextUtil;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
@@ -30,10 +31,10 @@ public class EmergencyWaitPolicy {
      * 级别 → 兜底时限（分钟），系统参数读不到时用
      */
     private static final Map<Integer, Integer> DEFAULT_MINUTES = Map.of(
-            EmergencyTriageRules.LEVEL_CRITICAL, 0,
-            EmergencyTriageRules.LEVEL_SEVERE, 10,
-            EmergencyTriageRules.LEVEL_URGENT, 30,
-            EmergencyTriageRules.LEVEL_NON_URGENT, 120);
+            EmergencyTriageLevelEnum.CRITICAL.getCode(), 0,
+            EmergencyTriageLevelEnum.SEVERE.getCode(), 10,
+            EmergencyTriageLevelEnum.URGENT.getCode(), 30,
+            EmergencyTriageLevelEnum.NON_URGENT.getCode(), 120);
 
     /**
      * 未定级按 Ⅲ级（30 分钟）收口：宁可早报警，不要因为漏填级别而永远不超时

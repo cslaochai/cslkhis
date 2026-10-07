@@ -2,6 +2,7 @@ package com.his.appoint.support;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.his.common.enums.EmergencyTriageLevelEnum;
 import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -27,26 +28,6 @@ import java.util.regex.Pattern;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EmergencyTriageRules {
-
-    /**
-     * I 级濒危
-     */
-    public static final int LEVEL_CRITICAL = 1;
-
-    /**
-     * II 级危重
-     */
-    public static final int LEVEL_SEVERE = 2;
-
-    /**
-     * III 级急症
-     */
-    public static final int LEVEL_URGENT = 3;
-
-    /**
-     * IV 级非急症
-     */
-    public static final int LEVEL_NON_URGENT = 4;
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -203,10 +184,10 @@ public final class EmergencyTriageRules {
         Integer spo2 = vitals.spo2();
         if (spo2 != null) {
             if (spo2 < 90) {
-                flags.add(new RedFlag("血氧饱和度 " + spo2 + "%（<90%）", LEVEL_CRITICAL,
+                flags.add(new RedFlag("血氧饱和度 " + spo2 + "%（<90%）", EmergencyTriageLevelEnum.CRITICAL.getCode(),
                         "立即吸氧并持续监测血氧饱和度"));
             } else if (spo2 < 94) {
-                flags.add(new RedFlag("血氧饱和度 " + spo2 + "%（<94%）", LEVEL_SEVERE,
+                flags.add(new RedFlag("血氧饱和度 " + spo2 + "%（<94%）", EmergencyTriageLevelEnum.SEVERE.getCode(),
                         "吸氧并复查血氧，评估呼吸衰竭风险"));
             }
         }
@@ -214,26 +195,26 @@ public final class EmergencyTriageRules {
         Integer systolic = vitals.systolic();
         if (systolic != null) {
             if (systolic < 90) {
-                flags.add(new RedFlag("收缩压 " + systolic + " mmHg（<90）", LEVEL_CRITICAL,
+                flags.add(new RedFlag("收缩压 " + systolic + " mmHg（<90）", EmergencyTriageLevelEnum.CRITICAL.getCode(),
                         "建立静脉通道，按休克流程评估与补液"));
             } else if (systolic > 220) {
-                flags.add(new RedFlag("收缩压 " + systolic + " mmHg（>220）", LEVEL_SEVERE,
+                flags.add(new RedFlag("收缩压 " + systolic + " mmHg（>220）", EmergencyTriageLevelEnum.SEVERE.getCode(),
                         "评估高血压急症，警惕靶器官损害"));
             }
         }
         Integer diastolic = vitals.diastolic();
         if (diastolic != null && diastolic > 130) {
-            flags.add(new RedFlag("舒张压 " + diastolic + " mmHg（>130）", LEVEL_SEVERE,
+            flags.add(new RedFlag("舒张压 " + diastolic + " mmHg（>130）", EmergencyTriageLevelEnum.SEVERE.getCode(),
                     "复测血压并评估高血压急症"));
         }
 
         Integer pulse = vitals.pulse();
         if (pulse != null) {
             if (pulse < 40 || pulse > 150) {
-                flags.add(new RedFlag("心率 " + pulse + " 次/分（<40 或 >150）", LEVEL_CRITICAL,
+                flags.add(new RedFlag("心率 " + pulse + " 次/分（<40 或 >150）", EmergencyTriageLevelEnum.CRITICAL.getCode(),
                         "立即心电监护，评估血流动力学稳定性"));
             } else if (pulse < 50 || pulse > 120) {
-                flags.add(new RedFlag("心率 " + pulse + " 次/分（<50 或 >120）", LEVEL_SEVERE,
+                flags.add(new RedFlag("心率 " + pulse + " 次/分（<50 或 >120）", EmergencyTriageLevelEnum.SEVERE.getCode(),
                         "心电监护，查明心动过速/过缓原因"));
             }
         }
@@ -241,10 +222,10 @@ public final class EmergencyTriageRules {
         Integer respiratory = vitals.respiratory();
         if (respiratory != null) {
             if (respiratory < 8 || respiratory > 30) {
-                flags.add(new RedFlag("呼吸 " + respiratory + " 次/分（<8 或 >30）", LEVEL_CRITICAL,
+                flags.add(new RedFlag("呼吸 " + respiratory + " 次/分（<8 或 >30）", EmergencyTriageLevelEnum.CRITICAL.getCode(),
                         "评估气道与呼吸支持需求，必要时辅助通气"));
             } else if (respiratory > 24) {
-                flags.add(new RedFlag("呼吸 " + respiratory + " 次/分（>24）", LEVEL_SEVERE,
+                flags.add(new RedFlag("呼吸 " + respiratory + " 次/分（>24）", EmergencyTriageLevelEnum.SEVERE.getCode(),
                         "监测呼吸频率变化，查找呼吸窘迫原因"));
             }
         }
@@ -252,10 +233,10 @@ public final class EmergencyTriageRules {
         Double temperature = vitals.temperature();
         if (temperature != null) {
             if (temperature < 35 || temperature > 41) {
-                flags.add(new RedFlag("体温 " + temperature + "℃（<35 或 >41）", LEVEL_CRITICAL,
+                flags.add(new RedFlag("体温 " + temperature + "℃（<35 或 >41）", EmergencyTriageLevelEnum.CRITICAL.getCode(),
                         "立即物理降温（高热）或复温（低体温）并查找病因"));
             } else if (temperature > 39.5) {
-                flags.add(new RedFlag("体温 " + temperature + "℃（>39.5）", LEVEL_SEVERE,
+                flags.add(new RedFlag("体温 " + temperature + "℃（>39.5）", EmergencyTriageLevelEnum.SEVERE.getCode(),
                         "退热处理并评估感染灶"));
             }
         }
@@ -263,17 +244,17 @@ public final class EmergencyTriageRules {
         Integer gcs = vitals.gcs();
         if (gcs != null) {
             if (gcs <= 8) {
-                flags.add(new RedFlag("GCS " + gcs + " 分（≤8，昏迷）", LEVEL_CRITICAL,
+                flags.add(new RedFlag("GCS " + gcs + " 分（≤8，昏迷）", EmergencyTriageLevelEnum.CRITICAL.getCode(),
                         "保持气道通畅，评估气管插管指征"));
             } else if (gcs <= 12) {
-                flags.add(new RedFlag("GCS " + gcs + " 分（≤12）", LEVEL_SEVERE,
+                flags.add(new RedFlag("GCS " + gcs + " 分（≤12）", EmergencyTriageLevelEnum.SEVERE.getCode(),
                         "评估意识障碍原因，观察瞳孔与肢体活动"));
             }
         }
 
         Integer painScore = vitals.painScore();
         if (painScore != null && painScore >= 8) {
-            flags.add(new RedFlag("疼痛评分 " + painScore + " 分（≥8）", LEVEL_SEVERE,
+            flags.add(new RedFlag("疼痛评分 " + painScore + " 分（≥8）", EmergencyTriageLevelEnum.SEVERE.getCode(),
                     "评估疼痛性质与部位，排查致命性胸腹痛"));
         }
         return flags;
@@ -290,7 +271,7 @@ public final class EmergencyTriageRules {
         String text = chiefComplaint.replaceAll("\\s+", "");
         for (String keyword : CONSCIOUSNESS_KEYWORDS) {
             if (text.contains(keyword)) {
-                flags.add(new RedFlag("主诉提示意识障碍：「" + keyword + "」", LEVEL_CRITICAL,
+                flags.add(new RedFlag("主诉提示意识障碍：「" + keyword + "」", EmergencyTriageLevelEnum.CRITICAL.getCode(),
                         "立即评估气道、呼吸、循环与意识，按昏迷流程处置"));
                 break;
             }
@@ -305,7 +286,7 @@ public final class EmergencyTriageRules {
         if (flags == null || flags.isEmpty()) {
             return null;
         }
-        int level = LEVEL_NON_URGENT;
+        int level = EmergencyTriageLevelEnum.NON_URGENT.getCode();
         for (RedFlag flag : flags) {
             level = Math.min(level, flag.minLevel());
         }
@@ -362,32 +343,19 @@ public final class EmergencyTriageRules {
 
     // 绿色通道
 
-    public static String levelText(Integer level) {
-        if (level == null) {
-            return "未定级";
-        }
-        return switch (level) {
-            case LEVEL_CRITICAL -> "I级 濒危";
-            case LEVEL_SEVERE -> "II级 危重";
-            case LEVEL_URGENT -> "III级 急症";
-            case LEVEL_NON_URGENT -> "IV级 非急症";
-            default -> "未知级别";
-        };
-    }
-
     /**
      * 级别 → 区域。刻意用推导而不是取模型给的区域字符串 ——
      * 级别与区域是同一件事的两种表达，让两者由不同来源给出必然出现自相矛盾。
+     * <p>脏值（不在 1-4 内）按绿区收口：区域只影响接诊动线，不参与优先级排序。
      */
     public static String zoneOf(Integer level) {
         if (level == null) {
             return null;
         }
-        return switch (level) {
-            case LEVEL_CRITICAL, LEVEL_SEVERE -> "红区";
-            case LEVEL_URGENT -> "黄区";
-            default -> "绿区";
-        };
+        if (EmergencyTriageLevelEnum.isRedZone(level)) {
+            return "红区";
+        }
+        return level == EmergencyTriageLevelEnum.URGENT.getCode() ? "黄区" : "绿区";
     }
 
     /**

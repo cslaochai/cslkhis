@@ -502,6 +502,18 @@
   实例（2026-10-07）：`EmergencyStatusEnum`（his-common，20 处调用点，appoint 拿它流转状态）
   vs `CdrEmergencyStatusEnum`（his-medicaltech，1 处展示调用点）→ 删后者、CDR 两处改指前者，
   码值 1-6 与 `biz_emergency` 列注释和字典 `his_emergency_status` 逐字一致，故合并零数据风险。
+- **同一列的码值散在「support 类的 `static final int` 常量组 + 一个私有 `levelText` switch」时，那是同一个反模式的两半，
+  必须一次收掉**：常量壳（§13 末尾判据：是不是「某一列能取的值」）和码值→文案 switch 都建在**列的外面**，
+  于是「新增一个级别」要改常量、改 switch、改区域推导、改时限表四处，而改枚举只需一处。
+  做法：新建枚举带 `getCode/isValid/getText/labelOrUnknown` + 把**业务推导**（红黄绿区、优先级、超时时限）
+  留在 support 类里调枚举；support 类只删常量与文案方法，计算逻辑不动（属 §13「含临床判定/计算口径」例外）。
+  **注意别把两个不同的域合并成一个枚举**：码值形状相同（都是 1-4）但含义由不同列表达时是两个枚举
+  （`EmergencyTriageLevelEnum` 急诊 I~IV 级濒危/危重/急症/非急症 vs `TriageLevelEnum` 门诊 危重/急症/亚急/非急），
+  合成一个就会让「门诊 1-危重」去渲染急诊的「I级濒危」。
+  实例（2026-10-07）：`EmergencyTriageRules.LEVEL_*`×4 + `levelText` + `CdrEmergencyTriageEnum`（4 处展示调用点）
+  → 新建 `EmergencyTriageLevelEnum`（label 逐字取列注释「1-I级濒危 2-II级危重 3-III级急症 4-IV级非急症」）、删枚举副本，
+  原「I级 濒危」（带空格）与「未知级别」两套写法归一，脏值改出空串；null→「未定级」是刻意声明的缺省档
+  （这一列的真实语义是「还没分诊」，与 §13 里 `SysGenderEnum` null→「未知」同一例外），必须在 javadoc 写明。
 - **码值 → 文案的映射一律进枚举或字典，禁止独立的「码值→文案」反模式**：任何把码值翻译成文案的
   `switch` / `Map` / `getOrDefault` + `未知(code)` 兜底，**无论它叫什么名字**
   （`XxxLabels` / `XxxText` / `XxxTexts` / `XxxItems` / `XxxRules`，还是 service impl 里的一段内联 `switch`、

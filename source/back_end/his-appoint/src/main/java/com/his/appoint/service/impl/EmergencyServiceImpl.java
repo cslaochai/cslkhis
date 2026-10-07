@@ -18,6 +18,7 @@ import com.his.appoint.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.enums.EmergencyAssignTypeEnum;
 import com.his.common.enums.EmergencyStatusEnum;
+import com.his.common.enums.EmergencyTriageLevelEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
@@ -762,7 +763,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
             return 0;
         }
 
-        String levelText = EmergencyTriageRules.levelText(emergency.getTriageLevel());
+        String levelText = EmergencyTriageLevelEnum.getText(emergency.getTriageLevel());
         String title = "急诊候诊超时：" + emergency.getPatientName() + "（" + levelText + "）";
         String content = String.format(
                 "急诊 %s 已候诊 %s，应接诊时限 %s 分钟（分诊 %s，就诊科室 %s）。请立即接诊；"
@@ -923,7 +924,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         vo.setGender(entity.getGender());
         vo.setAge(entity.getAge());
         vo.setTriageLevel(entity.getTriageLevel());
-        vo.setTriageLevelText(EmergencyTriageRules.levelText(entity.getTriageLevel()));
+        vo.setTriageLevelText(EmergencyTriageLevelEnum.getText(entity.getTriageLevel()));
         vo.setEmergencyStatus(entity.getEmergencyStatus());
         vo.setEmergencyStatusText(EmergencyStatusEnum.getText(entity.getEmergencyStatus()));
         vo.setDeptName(entity.getDeptName());
@@ -1251,7 +1252,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
 
     private EmergencyHandoverItemVO toItemVO(BizEmergencyHandoverItem item) {
         EmergencyHandoverItemVO vo = BeanUtil.copyProperties(item, EmergencyHandoverItemVO.class);
-        vo.setTriageLevelText(EmergencyTriageRules.levelText(item.getTriageLevel()));
+        vo.setTriageLevelText(EmergencyTriageLevelEnum.getText(item.getTriageLevel()));
         vo.setEmergencyStatusText(EmergencyStatusEnum.getText(item.getEmergencyStatus()));
         vo.setOverdueText(EmergencyWaitPolicy.overdueText(item.getOverdueLevel() == null ? 0 : item.getOverdueLevel()));
         return vo;

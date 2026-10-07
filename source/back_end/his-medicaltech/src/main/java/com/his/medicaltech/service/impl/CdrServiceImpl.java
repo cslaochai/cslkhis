@@ -10,7 +10,7 @@ import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.CdrQueryDTO;
 import com.his.common.enums.EmergencyStatusEnum;
-import com.his.medicaltech.enums.CdrEmergencyTriageEnum;
+import com.his.common.enums.EmergencyTriageLevelEnum;
 import com.his.medicaltech.enums.CdrEventTypeEnum;
 import com.his.medicaltech.enums.CdrNodeTypeEnum;
 import com.his.medicaltech.mapper.CdrMapper;
@@ -279,7 +279,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
             node.setDeptName(str(e.getDeptName()));
             node.setOperatorName(str(e.getDoctorName()));
             node.setStatusText(EmergencyStatusEnum.getText(e.getEmergencyStatus()));
-            String triage = CdrEmergencyTriageEnum.getText(e.getTriageLevel());
+            String triage = EmergencyTriageLevelEnum.getText(e.getTriageLevel());
             String zone = str(e.getZone());
             node.setSubtitle(TextUtil.hasText(triage) || TextUtil.hasText(zone)
                     ? ((triage == null ? "" : triage) + " " + (zone == null ? "" : zone)).trim() : null);

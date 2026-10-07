@@ -13,6 +13,7 @@ import com.his.appoint.mapper.BizEmergencyMapper;
 import com.his.appoint.support.EmergencyTriageRules;
 import com.his.appoint.support.EmergencyTriageRules.RedFlag;
 import com.his.appoint.support.EmergencyTriageRules.VitalSigns;
+import com.his.common.enums.EmergencyTriageLevelEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
@@ -125,8 +126,8 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         if (level == null) {
             return null;
         }
-        return Math.max(EmergencyTriageRules.LEVEL_CRITICAL,
-                Math.min(EmergencyTriageRules.LEVEL_NON_URGENT, level));
+        return Math.max(EmergencyTriageLevelEnum.CRITICAL.getCode(),
+                Math.min(EmergencyTriageLevelEnum.NON_URGENT.getCode(), level));
     }
 
     private static String buildRuleReasoning(EmergencyTriageResultVO vo, List<RedFlag> flags) {
@@ -217,7 +218,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         vo.setVitalSignsMissing(vitals.isEmpty());
 
         vo.setCurrentLevel(entity == null ? null : entity.getTriageLevel());
-        vo.setCurrentLevelText(EmergencyTriageRules.levelText(vo.getCurrentLevel()));
+        vo.setCurrentLevelText(EmergencyTriageLevelEnum.getText(vo.getCurrentLevel()));
         vo.setCurrentZone(entity == null ? null : entity.getZone());
         vo.setCurrentGreenChannel(entity == null ? null : entity.getGreenChannel());
 
@@ -226,7 +227,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         flags.addAll(EmergencyTriageRules.evaluateChiefComplaint(chiefComplaint));
         Integer hardLevel = EmergencyTriageRules.hardLevelOf(flags);
         vo.setHardLevel(hardLevel);
-        vo.setHardLevelText(hardLevel == null ? "未命中红旗征象" : EmergencyTriageRules.levelText(hardLevel));
+        vo.setHardLevelText(hardLevel == null ? "未命中红旗征象" : EmergencyTriageLevelEnum.getText(hardLevel));
         vo.setRedFlags(limit(flags.stream().map(RedFlag::label).toList(), MAX_RED_FLAGS));
 
         String channelByKeyword = EmergencyTriageRules.detectGreenChannel(chiefComplaint);
@@ -265,7 +266,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         // 合并（只升不降）
         Integer suggested = minLevel(hardLevel, llmLevel, vo.getCurrentLevel());
         vo.setSuggestedLevel(suggested);
-        vo.setSuggestedLevelText(EmergencyTriageRules.levelText(suggested));
+        vo.setSuggestedLevelText(EmergencyTriageLevelEnum.getText(suggested));
         vo.setSuggestedZone(EmergencyTriageRules.zoneOf(suggested));
         vo.setSuggestedGreenChannel(pickChannel(channelByKeyword, llmChannel, vo.getCurrentGreenChannel()));
         vo.setLevelBasis(resolveBasis(hardLevel, llmLevel, vo.getCurrentLevel(), suggested));
