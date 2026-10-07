@@ -16,10 +16,6 @@ import java.util.Base64;
 /**
  * 私钥静态保护：PBKDF2-HMAC-SHA256 派生 + AES-256-GCM 加密。
  *
- * <p>为什么必须做：私钥是"签名的不可否认性"的根。私钥明文落库等于
- * 任何能读这张表的人都能伪造签名 —— 那电子签名就成了装饰。
- * 而数据库口令本身就写在配置文件里，所以私钥**不能只依赖数据库权限**保护。
- *
  * <p>三条约定：
  * <ol>
  *   <li>口令来自环境变量 {@code HIS_SIGN_SECRET}（经 {@link SignProperties} 注入）。
@@ -56,8 +52,7 @@ public class KeyProtectorUtil {
      */
     public void requireSecret() {
         if (!TextUtil.hasText(properties.getMasterSecret())) {
-            throw new BusinessException("未配置签名主口令（环境变量 HIS_SIGN_SECRET），"
-                    + "无法安全托管私钥；为避免私钥明文落库，已拒绝签发证书");
+            throw new BusinessException("未配置签名主口令（环境变量 HIS_SIGN_SECRET），无法安全托管私钥；为避免私钥明文落库，已拒绝签发证书");
         }
     }
 
@@ -108,8 +103,7 @@ public class KeyProtectorUtil {
                     new GCMParameterSpec(TAG_BITS, iv));
             return new String(cipher.doFinal(ct), StandardCharsets.UTF_8);
         } catch (Exception e) {
-            throw new BusinessException("私钥解密失败（主口令不符或密文被篡改），"
-                    + "该证书已不可用于签名；请吊销后重新签发。原因：" + e.getMessage());
+            throw new BusinessException("私钥解密失败（主口令不符或密文被篡改），该证书已不可用于签名；请吊销后重新签发。原因：" + e.getMessage());
         }
     }
 

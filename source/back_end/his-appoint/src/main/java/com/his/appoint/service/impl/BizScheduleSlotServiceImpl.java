@@ -10,7 +10,7 @@ import com.his.appoint.entity.BizScheduleSlot;
 import com.his.appoint.entity.BizScheduleSlotTemplate;
 import com.his.appoint.mapper.BizScheduleMapper;
 import com.his.appoint.mapper.BizScheduleSlotMapper;
-import com.his.appoint.service.ScheduleSlotService;
+import com.his.appoint.service.BizScheduleSlotService;
 import com.his.appoint.vo.ScheduleSlotVO;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.ScheduleStatusEnum;
@@ -33,8 +33,7 @@ import java.util.*;
  */
 @Service
 @RequiredArgsConstructor
-public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, BizScheduleSlot>
-        implements ScheduleSlotService {
+public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, BizScheduleSlot> implements BizScheduleSlotService {
 
     private final BizScheduleSlotMapper bizScheduleSlotMapper;
     private final BizScheduleMapper bizScheduleMapper;

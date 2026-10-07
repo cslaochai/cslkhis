@@ -16,8 +16,8 @@ import com.his.appoint.enums.*;
 import com.his.appoint.enums.OpdLogStatusEnum;
 import com.his.appoint.mapper.*;
 import com.his.appoint.service.DoctorStatusCacheService;
-import com.his.appoint.service.QueueService;
-import com.his.appoint.service.ScheduleService;
+import com.his.appoint.service.BizQueueService;
+import com.his.appoint.service.BizScheduleService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.vo.*;
 import com.his.charge.api.AppointChargeGateway;
@@ -54,22 +54,35 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> implements QueueService {
+public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> implements BizQueueService {
     private final BizPatientService bizPatientService;
+
     private final BizScheduleMapper bizScheduleMapper;
+
     private final RedisSequenceService redisSequenceService;
+
     private final BizAppointInfoMapper bizAppointInfoMapper;
+
     private final ObjectProvider<AppointChargeGateway> appointChargeGateway;
+
     private final InsurancePolicyService insurancePolicyService;
+
     private final DoctorStatusCacheService doctorStatusCacheService;
+
     private final PatientGuardianService patientGuardianService;
+
     private final SysClinicRoomService sysClinicRoomService;
+
     private final OpdLogMapper opdLogMapper;
+
     private final BizTriageRecordMapper bizTriageRecordMapper;
+
     private final DayEndSettleTrigger dayEndSettleTrigger;
+
     private final SysMessageService sysMessageService;
+
     @Lazy
-    private final ScheduleService scheduleService;
+    private final BizScheduleService bizScheduleService;
 
     @Override
     public List<BizQueueListVO> getTodayQueueList(QueueTodayQueryDTO queueQueryDTO) {
@@ -1321,7 +1334,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
     /**
      * 本次分诊的当班护士 —— 取当天护理排班上此刻在岗的人。
      *
-     * <p>取值顺序见 {@link ScheduleService#pickDutyStaff}：优先本人（若本人就在当班名单里），
+     * <p>取值顺序见 {@link BizScheduleService#pickDutyStaff}：优先本人（若本人就在当班名单里），
      * 否则取此刻在岗/当日最近一班。<b>排班查不到就返回 null，不用登录人兜底</b> ——
      * 分诊是临床动作，责任人必须是真的当班护士；没有当班记录就留空，
      * 页面上显示「未记录护士」比显示一个没上班的人诚实。
@@ -1335,7 +1348,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
         }
         try {
             Long selfEmpId = currentUser == null ? null : currentUser.getEmployeeId();
-            return scheduleService.pickDutyStaff(deptId, StaffTypeEnum.NURSE.getCode(), selfEmpId);
+            return bizScheduleService.pickDutyStaff(deptId, StaffTypeEnum.NURSE.getCode(), selfEmpId);
         } catch (Exception ex) {
             return null;
         }

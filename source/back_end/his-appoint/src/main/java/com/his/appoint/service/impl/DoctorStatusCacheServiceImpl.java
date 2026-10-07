@@ -17,9 +17,11 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DoctorStatusCacheServiceImpl implements DoctorStatusCacheService {      // 暂停
+public class DoctorStatusCacheServiceImpl implements DoctorStatusCacheService {
     private static final String CACHE_PREFIX = "doctor:status:";
+
     private static final long CACHE_EXPIRE_HOURS = 24;
+
     private final StringRedisTemplate stringRedisTemplate;
 
     /**

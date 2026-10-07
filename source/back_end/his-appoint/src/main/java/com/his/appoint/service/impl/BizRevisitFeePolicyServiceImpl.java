@@ -8,7 +8,7 @@ import com.his.appoint.dto.RevisitFeePolicyUpsertDTO;
 import com.his.appoint.entity.BizRevisitFeePolicy;
 import com.his.appoint.enums.RevisitChargeModeEnum;
 import com.his.appoint.mapper.BizRevisitFeePolicyMapper;
-import com.his.appoint.service.RevisitFeePolicyService;
+import com.his.appoint.service.BizRevisitFeePolicyService;
 import com.his.appoint.vo.RevisitFeePolicyVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
@@ -29,9 +29,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-public class RevisitFeePolicyServiceImpl
-        extends ServiceImpl<BizRevisitFeePolicyMapper, BizRevisitFeePolicy>
-        implements RevisitFeePolicyService {
+public class BizRevisitFeePolicyServiceImpl extends ServiceImpl<BizRevisitFeePolicyMapper, BizRevisitFeePolicy> implements BizRevisitFeePolicyService {
 
     /**
      * 三态条件：不限

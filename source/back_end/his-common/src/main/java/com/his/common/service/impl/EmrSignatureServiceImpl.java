@@ -163,7 +163,6 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     }
 
     // 查询
-
     private BizEmrSignature buildSignature(SignCommandDTO cmd, SignSceneEnum scene, SignSubject subject,
                                            SysSignCert cert, String privatePem) {
         BizEmrSignature prev = bizEmrSignatureMapper.selectLastByBiz(cmd.getBizType(), cmd.getBizId());

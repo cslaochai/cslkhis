@@ -18,8 +18,8 @@ import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
 import com.his.appoint.mapper.BizScheduleMapper;
 import com.his.appoint.mapper.BizScheduleSlotMapper;
-import com.his.appoint.service.AppointService;
-import com.his.appoint.service.RevisitFeePolicyService;
+import com.his.appoint.service.BizAppointService;
+import com.his.appoint.service.BizRevisitFeePolicyService;
 import com.his.appoint.trigger.DayEndSettleTrigger;
 import com.his.appoint.vo.AppointStatusCountVO;
 import com.his.appoint.vo.BizAppointInfoListVO;
@@ -67,21 +67,33 @@ import java.util.Map;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizAppointInfo> implements AppointService {
+public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizAppointInfo> implements BizAppointService {
     private final DeptScopeProvider deptScopeProvider;
 
     private final BizScheduleMapper bizScheduleMapper;
+
     private final BizScheduleSlotMapper bizScheduleSlotMapper;
+
     private final BizQueueMapper bizQueueMapper;
+
     private final RedisSequenceService redisSequenceService;
+
     private final BizPatientMapper bizPatientMapper;
+
     private final PatientGuardianService patientGuardianService;
+
     private final BizPatientService bizPatientService;
+
     private final ShiftService shiftService;
+
     private final StaffScheduleService staffScheduleService;
+
     private final ObjectProvider<AppointChargeGateway> appointChargeGateway;
+
     private final ObjectProvider<MedicalRecordRefGateway> medicalRecordRefGateway;
-    private final RevisitFeePolicyService revisitFeePolicyService;
+
+    private final BizRevisitFeePolicyService bizRevisitFeePolicyService;
+
     private final DayEndSettleTrigger dayEndSettleTrigger;
 
     private static String visitDatePastReason(BizAppointInfo regist, String action) {
@@ -569,7 +581,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
         // 复诊收哪几项费由「复诊收费策略」判定（原来这里写死 waived = revisit，见 sql/121）。
         // 免收时不记账也不出账（返回 null）：签到门禁认的是「这张号没有未结清的挂号账单」，
         // 旧模型为了过门禁造 0 元收费单那套已经随收费单一起退役。
-        RevisitFeePolicyService.RevisitFeeDecision feeDecision = revisitFeePolicyService.decide(
+        BizRevisitFeePolicyService.RevisitFeeDecision feeDecision = bizRevisitFeePolicyService.decide(
                 buildRevisitFeeContext(revisit, upsertDTO.getRevisitSource(), origin, schedule,
                         appointInfo.getDeptId(), appointInfo.getDoctorId(), appointInfo.getVisitDate()));
 
@@ -658,7 +670,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
             vo.setDoctorName(schedule.getDoctorName());
         }
 
-        RevisitFeePolicyService.RevisitFeeDecision decision = revisitFeePolicyService.decide(
+        BizRevisitFeePolicyService.RevisitFeeDecision decision = bizRevisitFeePolicyService.decide(
                 buildRevisitFeeContext(true, previewDTO.getRevisitSource(), origin, schedule,
                         vo.getDeptId(), vo.getDoctorId(), vo.getVisitDate()));
         vo.setRegistFee(decision.getRegistFee());
@@ -706,10 +718,10 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
      * <p>初诊也走这里（revisit=false → 来源 null → 只有「不限来源」的策略可能命中），
      * 目的是让「原价 0 的号也建单并置已收费」这条口径只有一处实现。
      */
-    private RevisitFeePolicyService.RevisitFeeContext buildRevisitFeeContext(
+    private BizRevisitFeePolicyService.RevisitFeeContext buildRevisitFeeContext(
             boolean revisit, Integer revisitSource, MedicalRecordRefGateway.RecordBrief origin,
             BizSchedule schedule, Long targetDeptId, Long targetDoctorId, LocalDate targetVisitDate) {
-        RevisitFeePolicyService.RevisitFeeContext context = new RevisitFeePolicyService.RevisitFeeContext();
+        BizRevisitFeePolicyService.RevisitFeeContext context = new BizRevisitFeePolicyService.RevisitFeeContext();
         context.setRevisitSource(revisit ? revisitSource : null);
         context.setRegistFee(schedule == null || schedule.getRegistFee() == null
                 ? BigDecimal.ZERO : schedule.getRegistFee());

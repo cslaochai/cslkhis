@@ -37,7 +37,7 @@ public interface DayEndSettleService {
      *
      * @throws com.his.common.exception.BusinessException 当传入的不是过去日期（当天还在营业，不能结转）
      */
-    DayEndSettleResultVO settle(DayEndSettleDTO dto);
+    DayEndSettleResultVO settle(DayEndSettleDTO settleDTO);
 
     /**
      * 补跑「所有还留着遗留记录的历史日期」直到昨天。

@@ -94,8 +94,6 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
                 .last("LIMIT 1"));
         vo.setLastTokenTime(last == null ? null : last.getTsaTime());
 
-        // 配置了 3 却降级 = 最常见的误读点，必须在这里写明白；
-        // 适配器在线但没启用 = 次常见（文案不能说"未接入"，与上面的「在线」同屏自相矛盾）
         if (available && effective == TimeSourceEnum.TSA.getCode()) {
             vo.setTrustNote("已接入" + (vo.getTsaName() == null ? "TSA" : vo.getTsaName())
                     + "：令牌用 TSA 独立密钥签发，可对抗本机时钟篡改。注意：信任根为院内（本地内置 TSA，"
@@ -142,8 +140,6 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
         return result;
     }
 
-    // G6b 运维操作：启停 / 时间来源 / 令牌复验
-
     @Override
     public TsaStatusVO updateStatus(Integer tsaStatus) {
         if (tsaStatus == null || (tsaStatus != 0 && tsaStatus != 1)) {
@@ -153,8 +149,6 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
                 .eq(SysTsaServer::getTsaCode, "LOCAL")
                 .set(SysTsaServer::getTsaStatus, tsaStatus));
         if (updated == 0) {
-            // 行不存在时**绝不顺带创建**——自举是 TSA 通道的职责且需要主口令，
-            // 这里造一行没有密钥的空壳只会把"未就绪"伪装成"已配置"
             throw new BusinessException("本地 TSA 服务行不存在（尚未自举），无法直接启停");
         }
         // 失效实现方缓存：available()/盖章下一次调用重读库，操作即时生效
@@ -174,11 +168,10 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
         String text = timeSource == TimeSourceEnum.TSA.getCode()
                 ? "3（第三方可信时间戳，经本地内置TSA适配）"
                 : "1（本机时钟）";
-        // config_id 非自增：先更后插，插不进（并发新建撞唯一键）就再更一次兜底
         if (signConfigMapper.updateValue(CFG_TIME_SOURCE, String.valueOf(timeSource)) == 0) {
             try {
                 signConfigMapper.insertValue(redisSequenceService.next("SYS_CONFIG"), CFG_TIME_SOURCE,
-                        String.valueOf(timeSource), "签名时间来源", "G6b 运维接口写入：" + text);
+                        String.valueOf(timeSource), "签名时间来源", "运维接口写入：" + text);
             } catch (DuplicateKeyException e) {
                 signConfigMapper.updateValue(CFG_TIME_SOURCE, String.valueOf(timeSource));
             }

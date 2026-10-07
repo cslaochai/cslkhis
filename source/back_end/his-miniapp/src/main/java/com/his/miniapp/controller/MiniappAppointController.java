@@ -4,7 +4,7 @@ import com.his.appoint.dto.AppointCancelDTO;
 import com.his.appoint.dto.AppointQueryDTO;
 import com.his.appoint.dto.AppointUpsertDTO;
 import com.his.appoint.entity.BizAppointInfo;
-import com.his.appoint.service.AppointService;
+import com.his.appoint.service.BizAppointService;
 import com.his.appoint.vo.BizAppointInfoListVO;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
@@ -29,8 +29,10 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasAuthority('PATIENT')")
 public class MiniappAppointController {
 
-    private final AppointService appointService;
+    private final BizAppointService bizAppointService;
+
     private final PatientGuardianService patientGuardianService;
+
     private final MiniappPayService miniappPayService;
 
     @Operation(summary = "患者挂号（新增；预约池扣号）")
@@ -47,7 +49,7 @@ public class MiniappAppointController {
         if (upsertDTO.getRegistSource() == null || upsertDTO.getRegistSource() != 4) {
             upsertDTO.setRegistSource(4);
         }
-        BizAppointInfo result = appointService.addAppoint(upsertDTO);
+        BizAppointInfo result = bizAppointService.addAppoint(upsertDTO);
         return Result.success("挂号成功", toVO(result));
     }
 
@@ -58,13 +60,13 @@ public class MiniappAppointController {
                 && !patientGuardianService.canAccessPatient(queryDTO.getPatientId())) {
             return Result.error("无权查询该就诊人的预约");
         }
-        return Result.success(appointService.listPage(queryDTO));
+        return Result.success(bizAppointService.listPage(queryDTO));
     }
 
     @Operation(summary = "挂号详情")
     @GetMapping("/getDetail")
     public Result<BizAppointInfoListVO> getDetail(@Valid AppointQueryDTO queryDTO) {
-        BizAppointInfo regist = appointService.getById(queryDTO.getPatientId());
+        BizAppointInfo regist = bizAppointService.getById(queryDTO.getPatientId());
         if (regist != null && patientGuardianService.patientScopeViolated(regist.getPatientId())) {
             return Result.error("无权查看该挂号");
         }
@@ -76,7 +78,7 @@ public class MiniappAppointController {
     public Result<Void> cancel(@RequestBody @Valid AppointCancelDTO appointCancelDTO) {
         Long registId = appointCancelDTO.getRegistId();
         // 归属从挂号记录反查，不看前端传的是谁
-        BizAppointInfo regist = appointService.getById(registId);
+        BizAppointInfo regist = bizAppointService.getById(registId);
         if (regist == null) {
             return Result.error("挂号记录不存在");
         }
@@ -85,7 +87,7 @@ public class MiniappAppointController {
         }
         String reason = TextUtil.hasText(appointCancelDTO.getReason())
                 ? appointCancelDTO.getReason() : "患者主动退号";
-        boolean success = appointService.cancelRegist(registId, reason);
+        boolean success = bizAppointService.cancelRegist(registId, reason);
         if (!success) {
             return Result.error("退号失败");
         }

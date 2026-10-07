@@ -1,6 +1,6 @@
 package com.his.appoint.trigger;
 
-import com.his.appoint.service.EmergencyService;
+import com.his.appoint.service.BizEmergencyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,12 +22,12 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class EmergencyWaitEscalateTrigger {
 
-    private final EmergencyService emergencyService;
+    private final BizEmergencyService bizEmergencyService;
 
     @Scheduled(cron = "0 */5 * * * ?")
     public void scheduledEscalateOverdue() {
         try {
-            emergencyService.escalateOverdue();
+            bizEmergencyService.escalateOverdue();
         } catch (Exception e) {
             // 定时任务失败只记日志：催办不能影响任何业务线程
             log.error("[急诊候诊] 超时升级定时任务失败：{}", e.getMessage(), e);
@@ -42,7 +42,7 @@ public class EmergencyWaitEscalateTrigger {
     @Scheduled(cron = "0 */5 * * * ?")
     public void scheduledEscalateObservation() {
         try {
-            emergencyService.escalateObservation();
+            bizEmergencyService.escalateObservation();
         } catch (Exception e) {
             log.error("[急诊留观] 超时限催办定时任务失败：{}", e.getMessage(), e);
         }

@@ -11,9 +11,9 @@ import com.his.appoint.entity.BizSchedule;
 import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.appoint.mapper.BizQueueMapper;
 import com.his.appoint.mapper.BizScheduleMapper;
-import com.his.appoint.service.AppointService;
-import com.his.appoint.service.ScheduleService;
-import com.his.appoint.service.ScheduleSlotService;
+import com.his.appoint.service.BizAppointService;
+import com.his.appoint.service.BizScheduleService;
+import com.his.appoint.service.BizScheduleSlotService;
 import com.his.appoint.vo.OnDutyStaffVO;
 import com.his.appoint.vo.ScheduleDetailVO;
 import com.his.appoint.vo.ScheduleSelectListVO;
@@ -50,7 +50,7 @@ import java.util.Objects;
  */
 @Service
 @RequiredArgsConstructor
-public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSchedule> implements ScheduleService {
+public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSchedule> implements BizScheduleService {
 
     private final DeptScopeProvider deptScopeProvider;
 
@@ -58,9 +58,9 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
 
     private final BizAppointInfoMapper bizAppointInfoMapper;
 
-    private final AppointService appointService;
+    private final BizAppointService bizAppointService;
 
-    private final ScheduleSlotService scheduleSlotService;
+    private final BizScheduleSlotService bizScheduleSlotService;
 
     private final BizQueueMapper bizQueueMapper;
 
@@ -127,7 +127,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         }
         boolean ok = bizScheduleMapper.insert(schedule) > 0;
         if (ok && StaffTypeEnum.hasSource(schedule.getStaffType())) {
-            scheduleSlotService.generateSlots(schedule.getId(), schedule.getStartTime(), schedule.getEndTime(),
+            bizScheduleSlotService.generateSlots(schedule.getId(), schedule.getStartTime(), schedule.getEndTime(),
                     schedule.getTotalSource(), schedule.getAppointmentSource());
         }
         return ok;
@@ -211,9 +211,9 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         boolean ok = bizScheduleMapper.updateById(schedule) > 0;
         if (ok) {
             if (StaffTypeEnum.hasSource(schedule.getStaffType())) {
-                scheduleSlotService.regenerateForSchedule(schedule, schedule.getTotalSource(), schedule.getAppointmentSource());
+                bizScheduleSlotService.regenerateForSchedule(schedule, schedule.getTotalSource(), schedule.getAppointmentSource());
             } else {
-                scheduleSlotService.physicalDeleteByScheduleId(schedule.getId());
+                bizScheduleSlotService.physicalDeleteByScheduleId(schedule.getId());
             }
             if (roomChanged) {
                 syncRoomToTodayWorklist(schedule);
@@ -257,7 +257,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
             throw new BusinessException("该排班已有挂号记录，无法删除");
         }
         assertNotPast(existing.getScheduleDate(), "删除");
-        scheduleSlotService.physicalDeleteByScheduleId(id);
+        bizScheduleSlotService.physicalDeleteByScheduleId(id);
         boolean ok = bizScheduleMapper.physicalDeleteById(id) > 0;
         if (ok) {
             releaseCoreSchedule(existing.getStaffScheduleId());
@@ -514,7 +514,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         boolean ok = bizScheduleMapper.updateById(schedule) > 0;
         if (ok) {
             // 段状态随主表联动：停诊 → 段全停（扣减 SQL 带 status=1，停用段不可再挂）；启用 → 段恢复
-            scheduleSlotService.syncStatusToSlots(scheduleId, status);
+            bizScheduleSlotService.syncStatusToSlots(scheduleId, status);
         }
         return ok;
     }
@@ -550,7 +550,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         int ok = 0;
         for (Long id : registIds) {
             try {
-                if (appointService.cancelRegist(id, cancelReason)) {
+                if (bizAppointService.cancelRegist(id, cancelReason)) {
                     ok++;
                 }
             } catch (Exception ignored) {
@@ -706,7 +706,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         boolean ok = bizScheduleMapper.updateById(update) > 0;
         if (ok) {
             // 加号摊到段（余数给前面的段），Σ段写回主表——号源事实在段上，主表只是汇总
-            scheduleSlotService.spreadAddSource(scheduleId, addNum);
+            bizScheduleSlotService.spreadAddSource(scheduleId, addNum);
         }
         return ok;
     }

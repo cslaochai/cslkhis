@@ -15,6 +15,8 @@ import java.util.List;
  */
 public interface EmrSignatureService {
 
+    IPage<SignatureVO> listPage(SignatureQueryPageDTO query);
+
     /**
      * 签名（业务动作自动触发，或管理员补签）
      */
@@ -37,8 +39,6 @@ public interface EmrSignatureService {
 
     SignatureVO getById(Long id);
 
-    IPage<SignatureVO> listPage(SignatureQueryPageDTO query);
-
     List<SignatureVO> listByBiz(Integer bizType, Long bizId);
 
     /**
@@ -50,10 +50,6 @@ public interface EmrSignatureService {
 
     /**
      * 最终生效的时间来源。
-     *
-     * <p>规则：配置为 2/3 但当前**没有对应的时间戳实现**时，一律降级成 1-本机时钟。
-     * 这是"宁可承认不可信，也不谎报可信"的落点 —— 没有 TSA 却写 3，
-     * 等于给一份可随手修改的时间盖上"可信时间戳"的章。
      */
     int effectiveTimeSource();
 }

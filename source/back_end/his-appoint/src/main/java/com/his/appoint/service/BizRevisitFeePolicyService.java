@@ -21,7 +21,7 @@ import java.math.BigDecimal;
  * <p>匹配口径：来源 → 同医生/同科室三态 → 间隔天数上限，按 priority 升序、id 升序取第一条；
  * <b>匹配不到任何策略 = 全额收费</b>。
  */
-public interface RevisitFeePolicyService extends IService<BizRevisitFeePolicy> {
+public interface BizRevisitFeePolicyService extends IService<BizRevisitFeePolicy> {
 
     /**
      * 判定一次复诊挂号该收哪些费。

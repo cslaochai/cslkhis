@@ -12,9 +12,9 @@ import com.his.appoint.entity.BizScheduleTemplate;
 import com.his.appoint.mapper.BizScheduleMapper;
 import com.his.appoint.mapper.BizScheduleSlotTemplateMapper;
 import com.his.appoint.mapper.BizScheduleTemplateMapper;
-import com.his.appoint.service.ScheduleService;
-import com.his.appoint.service.ScheduleSlotService;
-import com.his.appoint.service.ScheduleTemplateService;
+import com.his.appoint.service.BizScheduleService;
+import com.his.appoint.service.BizScheduleSlotService;
+import com.his.appoint.service.BizScheduleTemplateService;
 import com.his.appoint.vo.ScheduleTemplatePreviewVO;
 import com.his.appoint.vo.ScheduleTemplateSlotVO;
 import com.his.appoint.vo.ScheduleTemplateVO;
@@ -47,20 +47,19 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplateMapper, BizScheduleTemplate>
-        implements ScheduleTemplateService {
+public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplateMapper, BizScheduleTemplate>
+        implements BizScheduleTemplateService {
 
     private final BizScheduleTemplateMapper bizScheduleTemplateMapper;
+
     private final BizScheduleMapper bizScheduleMapper;
+
     private final BizScheduleSlotTemplateMapper bizScheduleSlotTemplateMapper;
-    private final ScheduleSlotService scheduleSlotService;
-    /**
-     * 出诊计划的写口径（出勤事实派生、岗位类别以人事为准）与手工排班共用同一条，模板不另算一遍
-     */
-    private final ScheduleService scheduleService;
-    /**
-     * 班次字典：模板的时间段与班别全部由 shift_id 带出，模板表不再自己存一份
-     */
+
+    private final BizScheduleSlotService bizScheduleSlotService;
+
+    private final BizScheduleService bizScheduleService;
+
     private final ShiftService shiftService;
 
     @Override
@@ -486,7 +485,7 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
             BizSchedule s = buildSchedule(tpl, shift, date);
             try {
                 // 出勤事实与手工排班走同一条派生口径；本方法不带事务，一条模板配错只跳过这一条
-                scheduleService.bindCoreSchedule(s, StaffScheduleSourceEnum.TEMPLATE);
+                bizScheduleService.bindCoreSchedule(s, StaffScheduleSourceEnum.TEMPLATE);
             } catch (Exception e) {
                 skippedInvalid++;
                 log.warn("模板 {}（{} {}）挂不上岗位排班事实，跳过：{}", tpl.getId(), tpl.getDoctorName(), date, e.getMessage());
@@ -502,7 +501,7 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
                 }
             } catch (Exception e) {
                 skippedInvalid++;
-                scheduleSlotService.physicalDeleteByScheduleId(s.getId());
+                bizScheduleSlotService.physicalDeleteByScheduleId(s.getId());
                 bizScheduleMapper.physicalDeleteById(s.getId());
                 log.warn("模板生成排班失败（{} {} {}）：{}", tpl.getDoctorName(), date,
                         shift.getStartTime() + "-" + shift.getEndTime(), e.getMessage());
@@ -547,10 +546,10 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
                         .eq(BizScheduleSlotTemplate::getTemplateId, templateId)
                         .orderByAsc(BizScheduleSlotTemplate::getSeq));
         if (tplSlots.isEmpty()) {
-            scheduleSlotService.generateSlots(schedule.getId(), schedule.getStartTime(), schedule.getEndTime(),
+            bizScheduleSlotService.generateSlots(schedule.getId(), schedule.getStartTime(), schedule.getEndTime(),
                     schedule.getTotalSource(), schedule.getAppointmentSource());
         } else {
-            scheduleSlotService.generateFromTemplate(schedule.getId(), tplSlots);
+            bizScheduleSlotService.generateFromTemplate(schedule.getId(), tplSlots);
         }
     }
 

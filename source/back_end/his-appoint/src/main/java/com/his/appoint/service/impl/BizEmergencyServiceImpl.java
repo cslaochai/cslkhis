@@ -9,10 +9,9 @@ import com.his.appoint.dto.*;
 import com.his.appoint.entity.*;
 import com.his.appoint.enums.*;
 import com.his.appoint.mapper.*;
-import com.his.appoint.service.EmergencyService;
-import com.his.appoint.service.ScheduleService;
+import com.his.appoint.service.BizEmergencyService;
+import com.his.appoint.service.BizScheduleService;
 import com.his.appoint.support.EmergencyObservationPolicy;
-import com.his.appoint.support.EmergencyTriageRules;
 import com.his.appoint.support.EmergencyWaitPolicy;
 import com.his.appoint.vo.*;
 import com.his.common.base.PageResult;
@@ -53,19 +52,17 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEmergency> implements EmergencyService {
+public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEmergency> implements BizEmergencyService {
 
     /**
      * 候诊是否超时的判定式（读时算，不落列）。target_see_minutes 为 NULL 的存量行按未定级时限收口。
      */
-    private static final String OVERDUE_SQL =
-            "admission_time IS NOT NULL AND TIMESTAMPDIFF(MINUTE, admission_time, NOW()) > IFNULL(target_see_minutes, {0})";
+    private static final String OVERDUE_SQL = "admission_time IS NOT NULL AND TIMESTAMPDIFF(MINUTE, admission_time, NOW()) > IFNULL(target_see_minutes, {0})";
 
     /**
      * 留观已超该小时数（读时算，不落列）；状态=3 的收口写在各处 wrapper 里，本式只管时间
      */
-    private static final String OBS_OVER_SQL =
-            "TIMESTAMPDIFF(HOUR, observation_start_time, NOW()) >= {0}";
+    private static final String OBS_OVER_SQL = "TIMESTAMPDIFF(HOUR, observation_start_time, NOW()) >= {0}";
 
     /**
      * 无人可发待办时的兜底接收人（用户名或员工ID），口径同 lab.critical_value_fallback_receiver
@@ -77,7 +74,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
     private final BizPatientMapper bizPatientMapper;
     private final RedisSequenceService redisSequenceService;
     private final InpatientService inpatientService;
-    private final ScheduleService scheduleService;
+    private final BizScheduleService bizScheduleService;
     private final EmergencyWaitPolicy waitPolicy;
     private final EmergencyObservationPolicy obsPolicy;
     private final SysMessageService sysMessageService;
@@ -366,7 +363,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         }
         LocalTime now = LocalTime.now();
         List<BizSchedule> onDuty = new ArrayList<>();
-        for (BizSchedule s : scheduleService.getTodaySchedule(deptId)) {
+        for (BizSchedule s : bizScheduleService.getTodaySchedule(deptId)) {
             if (s.getDoctorId() == null) {
                 continue;
             }
@@ -1439,7 +1436,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
      */
     private String currentShiftName(Long deptId, Long empId) {
         LocalTime now = LocalTime.now();
-        for (BizSchedule schedule : scheduleService.getTodaySchedule(deptId)) {
+        for (BizSchedule schedule : bizScheduleService.getTodaySchedule(deptId)) {
             if (!Objects.equals(schedule.getDoctorId(), empId) || schedule.getShiftId() == null) {
                 continue;
             }

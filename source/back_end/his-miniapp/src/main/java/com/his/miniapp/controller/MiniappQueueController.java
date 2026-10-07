@@ -1,7 +1,7 @@
 package com.his.miniapp.controller;
 
 import com.his.appoint.dto.AppointCheckInUpdateDTO;
-import com.his.appoint.service.QueueService;
+import com.his.appoint.service.BizQueueService;
 import com.his.appoint.vo.PatientQueueVO;
 import com.his.common.base.Result;
 import com.his.patient.service.PatientGuardianService;
@@ -24,7 +24,7 @@ import java.util.List;
 @PreAuthorize("hasAuthority('PATIENT')")
 public class MiniappQueueController {
 
-    private final QueueService queueService;
+    private final BizQueueService bizQueueService;
     private final PatientGuardianService patientGuardianService;
 
     @Operation(summary = "我的排队（近3日挂号 + 位次 + 前方等待人数）")
@@ -34,21 +34,21 @@ public class MiniappQueueController {
         if (!patientGuardianService.canAccessPatient(patientId)) {
             return Result.error("无权查询该就诊人的排队信息");
         }
-        return Result.success(queueService.myQueue(patientId));
+        return Result.success(bizQueueService.myQueue(patientId));
     }
 
     @Operation(summary = "到院签到")
     @PostMapping("/myCheckIn")
     public Result<Void> myCheckIn(@RequestBody @Valid AppointCheckInUpdateDTO updateDTO) {
         // 归属从挂号记录反查，不看前端传的是谁——否则改 registId 就能替他人签到
-        Long ownerPatientId = queueService.patientIdOfRegist(updateDTO.getRegistId());
+        Long ownerPatientId = bizQueueService.patientIdOfRegist(updateDTO.getRegistId());
         if (ownerPatientId == null) {
             return Result.error("挂号记录不存在");
         }
         if (!patientGuardianService.canAccessPatient(ownerPatientId)) {
             return Result.error("无权为该就诊人签到");
         }
-        boolean success = queueService.checkInByRegistId(updateDTO);
+        boolean success = bizQueueService.checkInByRegistId(updateDTO);
         return success ? Result.success() : Result.error("签到失败");
     }
 }

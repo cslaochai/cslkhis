@@ -3,7 +3,7 @@ package com.his.miniapp.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.entity.BizAppointInfo;
-import com.his.appoint.service.AppointService;
+import com.his.appoint.service.BizAppointService;
 import com.his.charge.dto.BillPayDTO;
 import com.his.charge.dto.PrepayUpsertDTO;
 import com.his.charge.entity.BizSettlementBill;
@@ -70,7 +70,7 @@ public class MiniappPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPay
     private final PaymentService paymentService;
     private final InpatientAccountService inpatientAccountService;
     private final SysMessageService sysMessageService;
-    private final AppointService appointService;
+    private final BizAppointService bizAppointService;
 
     // 微信登录口子
 
@@ -184,7 +184,7 @@ public class MiniappPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPay
      * 所以小程序支付成功必须落到支付资金流水，否则患者线上付了钱到院仍签不了到。
      */
     private void advanceRegistCharge(BizPayOrder order) {
-        BizAppointInfo regist = appointService.getById(order.getBizId());
+        BizAppointInfo regist = bizAppointService.getById(order.getBizId());
         if (regist == null) {
             throw new BusinessException("挂号记录不存在：" + order.getBizId());
         }

@@ -43,17 +43,6 @@ public class DayEndSettleServiceImpl implements DayEndSettleService {
         return "【日终结转 " + d + " 自动收尾】";
     }
 
-    /**
-     * <b>三处定时任务豁免点之一</b>（另两处：检查爽约判定 {@code ExamAppointmentServiceImpl}、
-     * 出院随访自动补建 {@code FollowupTaskServiceImpl}）。
-     *
-     * <p>日结转有 cron（每天 00:10）与进页面懒触发两条路径，两条共用 {@link #doSettle}。
-     * cron 那条是调度线程，没有登录态；其余位置一律走
-     * {@code UserUtils.getCurrentUser().getRealName()}（取不到就是 NPE/报错，不塞默认值），
-     * 这里一刀切报错等于把每天的日结转打挂。
-     *
-     * <p>取值形态是 {@code 姓名(员工ID)}：只写名字分不清同名员工，只写 ID 又对不上人眼。
-     */
     private static String currentOperator() {
         CurrentUser user = UserUtils.getCurrentUser();
         if (user == null || user.getEmployeeId() == null) {
@@ -80,18 +69,12 @@ public class DayEndSettleServiceImpl implements DayEndSettleService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public DayEndSettleResultVO settle(DayEndSettleDTO dto) {
-        boolean dryRun = dto != null && Boolean.TRUE.equals(dto.getDryRun());
-        if (dto != null && dto.getSettleDate() != null) {
-            // 指定日期 = 只结转这一天（页面选了某天时用）
-            LocalDate target = dto.getSettleDate();
+    public DayEndSettleResultVO settle(DayEndSettleDTO settleDTO) {
+        boolean dryRun = settleDTO != null && Boolean.TRUE.equals(settleDTO.getDryRun());
+        if (settleDTO != null && settleDTO.getSettleDate() != null) {
+            LocalDate target = settleDTO.getSettleDate();
             return doSettle(target, target, dryRun);
         }
-        // 不指定日期 = 补跑「从最早遗留日到昨天」。
-        //
-        // 这里原本写的是「只结转昨天」，与 DTO 上的 @Schema 说明相反 —— 结果是页面上看得见
-        // 6 条爽约、却怎么也清不掉更早那几天的遗留（手工按钮和懒触发的口径不一样，用户没法理解）。
-        // 手工按钮要的正是「把积压一次清干净」，所以直接复用懒触发那条路径，一天只有一个口径。
         return settlePending(dryRun);
     }
 

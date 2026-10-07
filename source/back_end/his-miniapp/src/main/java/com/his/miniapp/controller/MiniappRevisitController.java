@@ -4,7 +4,7 @@ import com.his.common.base.Result;
 import com.his.appoint.dto.AppointUpsertDTO;
 import com.his.appoint.dto.RevisitFeePreviewDTO;
 import com.his.appoint.entity.BizAppointInfo;
-import com.his.appoint.service.AppointService;
+import com.his.appoint.service.BizAppointService;
 import com.his.appoint.vo.BizAppointInfoListVO;
 import com.his.appoint.vo.RevisitFeePreviewVO;
 import com.his.appoint.vo.RevisitRecordSelectVO;
@@ -48,7 +48,7 @@ public class MiniappRevisitController {
     /** 4-预约挂号：线上只从排班的预约池扣号，传别的等于网上抢现场号 */
     private static final int REGIST_SOURCE_APPOINTMENT = 4;
 
-    private final AppointService appointService;
+    private final BizAppointService bizAppointService;
     private final PatientGuardianService patientGuardianService;
 
     @PreAuthorize("hasAuthority('PATIENT')")
@@ -58,7 +58,7 @@ public class MiniappRevisitController {
         if (!patientGuardianService.canAccessPatient(patientId)) {
             return Result.error("无权查询该就诊人的病历");
         }
-        return Result.success(appointService.revisitRecordSelectList(patientId, 20));
+        return Result.success(bizAppointService.revisitRecordSelectList(patientId, 20));
     }
 
     @PreAuthorize("hasAuthority('PATIENT')")
@@ -69,7 +69,7 @@ public class MiniappRevisitController {
             return Result.error("无权查询该就诊人的费用");
         }
         previewDTO.setRevisitSource(REVISIT_SOURCE_PATIENT_SELF);
-        return Result.success(appointService.revisitFeePreview(previewDTO));
+        return Result.success(bizAppointService.revisitFeePreview(previewDTO));
     }
 
     @PreAuthorize("hasAuthority('PATIENT')")
@@ -83,7 +83,7 @@ public class MiniappRevisitController {
         upsertDTO.setVisitType(VISIT_TYPE_REVISIT);
         upsertDTO.setRevisitSource(REVISIT_SOURCE_PATIENT_SELF);
         upsertDTO.setRegistSource(REGIST_SOURCE_APPOINTMENT);
-        BizAppointInfo result = appointService.addAppoint(upsertDTO);
+        BizAppointInfo result = bizAppointService.addAppoint(upsertDTO);
         return Result.success("复诊预约成功", toVO(result));
     }
 

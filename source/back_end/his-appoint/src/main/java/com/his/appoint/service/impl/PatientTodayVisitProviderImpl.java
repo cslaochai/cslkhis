@@ -20,16 +20,6 @@ import java.util.Map;
 
 /**
  * 「今日就诊」提供者实现（就诊域）。
- *
- * <p>实现 {@link PatientTodayVisitProvider}（接口在患者域），让全局患者搜索能把
- * 「今天真的在就诊」的患者排到最前。his-appoint 已依赖 his-patient，方向正确。
- *
- * <p>口径与医生站今日队列（{@code QueueServiceImpl#getTodayQueueList}）保持一致：
- * <b>按候诊队列的就诊日期 = 今天</b>，而不是 arrive_time 区间 —— 后者在跨零点的
- * 夜班场景下会把昨天的患者算成今天。
- *
- * <p>只覆盖**门诊**（候诊队列）。住院在院的标注属另一笔账：住院患者有独立工作区，
- * 且入院记录在患者域的住院包里，放到这里会让就诊域反向依赖住院包。
  */
 @Slf4j
 @Component
@@ -42,7 +32,6 @@ public class PatientTodayVisitProviderImpl implements PatientTodayVisitProvider 
     public Map<Long, PatientTodayVisit> todayVisits() {
         LambdaQueryWrapper<BizQueue> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizQueue::getVisitDate, LocalDate.now())
-                // 已退号(5)/已过号(6) 不算「今日就诊」——写了病历也轮不到他
                 .in(BizQueue::getQueueStatus,
                         QueueStatusEnum.WAITING.getCode(),
                         QueueStatusEnum.CONSULTING.getCode(),
@@ -68,9 +57,6 @@ public class PatientTodayVisitProviderImpl implements PatientTodayVisitProvider 
                 result.put(q.getPatientId(), visit);
                 continue;
             }
-            // 同一患者今天可能有多条队列记录（多次挂号/签到）：
-            // 查询已按 arrive_time DESC，先到的更新，所以默认保留先到的；
-            // 唯一例外——「我的人」优先，否则医生会看到患者在别科的最新状态而漏掉自己这单。
             if (Boolean.TRUE.equals(visit.getMine()) && !Boolean.TRUE.equals(exist.getMine())) {
                 result.put(q.getPatientId(), visit);
             }

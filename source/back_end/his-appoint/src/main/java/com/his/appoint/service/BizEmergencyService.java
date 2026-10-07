@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * 急诊服务接口
  */
-public interface EmergencyService extends IService<BizEmergency> {
+public interface BizEmergencyService extends IService<BizEmergency> {
 
     /**
      * 分页查询急诊记录（出参带候诊时长与超时档位，判定在读时算不落列）

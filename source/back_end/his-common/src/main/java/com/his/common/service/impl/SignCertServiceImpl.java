@@ -56,9 +56,13 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     private static final String CFG_AUTO_ISSUE = "sign.cert.auto_issue";
 
     private final SysSignCertMapper sysSignCertMapper;
+
     private final SignConfigMapper signConfigMapper;
+
     private final KeyProtectorUtil keyProtectorUtil;
+
     private final SignProperties signProperties;
+
     private final RedisSequenceService redisSequenceService;
     /**
      * 外部 CA 适配器（M8 留口子）：无实现/未配置 external 时为 null，走院内自签

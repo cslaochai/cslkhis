@@ -10,13 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 电子签名证据。
- *
- * <p><b>本表只增</b>。{@code content_digest / sign_value / content_snapshot / signed_time}
- * 四列在 service 层没有任何 setter 调用路径 —— 要改结论只能再签一次或作废，
- * 历史行永远保留原样。
- *
- * <p>唯一允许被 UPDATE 的是 {@code verify_status / verify_time / verify_count}：
- * 那三列记录的是"事后核查的结果"，不是签名本身。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

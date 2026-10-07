@@ -1,6 +1,6 @@
 package com.his.appoint.controller;
 
-import com.his.appoint.service.ScheduleOverviewService;
+import com.his.appoint.service.BizScheduleOverviewService;
 import com.his.appoint.vo.ScheduleOverviewVO;
 import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
@@ -21,13 +21,13 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class ScheduleOverviewController {
 
-    private final ScheduleOverviewService scheduleOverviewService;
+    private final BizScheduleOverviewService bizScheduleOverviewService;
 
     @PreAuthorize("hasAuthority('org:schedule:list')")
     @Operation(summary = "排班周总览（门诊号源/在岗/缺口/总值班一屏聚合，只读）")
     @GetMapping("/overviewWeek")
     public Result<ScheduleOverviewVO> overviewWeek(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate beginDate) {
-        return Result.success(scheduleOverviewService.overviewWeek(beginDate));
+        return Result.success(bizScheduleOverviewService.overviewWeek(beginDate));
     }
 }

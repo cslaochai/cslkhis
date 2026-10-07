@@ -1,6 +1,6 @@
 package com.his.miniapp.controller;
 
-import com.his.appoint.service.QueueService;
+import com.his.appoint.service.BizQueueService;
 import com.his.common.base.Result;
 import com.his.emr.dto.PrevisitSubmitDTO;
 import com.his.emr.service.PrevisitRecordService;
@@ -32,7 +32,7 @@ public class MiniappPrevisitController {
 
     private final PrevisitRecordService previsitRecordService;
 
-    private final QueueService queueService;
+    private final BizQueueService bizQueueService;
 
     private final PatientGuardianService patientGuardianService;
 
@@ -46,7 +46,7 @@ public class MiniappPrevisitController {
     @PostMapping("/submit")
     public Result<PrevisitDetailVO> submit(@RequestBody @Valid PrevisitSubmitDTO dto) {
         // 归属从挂号记录反查，不看前端传的谁 —— 改 registId 就能替他人填病史
-        Long ownerPatientId = queueService.patientIdOfRegist(dto.getRegistId());
+        Long ownerPatientId = bizQueueService.patientIdOfRegist(dto.getRegistId());
         if (ownerPatientId == null) {
             return Result.error("挂号记录不存在");
         }
@@ -59,7 +59,7 @@ public class MiniappPrevisitController {
     @Operation(summary = "按挂号查已提交的问卷（回显）")
     @GetMapping("/getByRegist")
     public Result<PrevisitDetailVO> getByRegist(@RequestParam Long registId) {
-        Long ownerPatientId = queueService.patientIdOfRegist(registId);
+        Long ownerPatientId = bizQueueService.patientIdOfRegist(registId);
         if (ownerPatientId == null) {
             return Result.error("挂号记录不存在");
         }

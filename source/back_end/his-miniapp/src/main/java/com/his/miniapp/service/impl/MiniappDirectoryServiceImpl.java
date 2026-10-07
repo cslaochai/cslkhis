@@ -2,7 +2,7 @@ package com.his.miniapp.service.impl;
 
 import com.his.appoint.dto.ScheduleSelectQueryDTO;
 import com.his.appoint.entity.BizSchedule;
-import com.his.appoint.service.ScheduleService;
+import com.his.appoint.service.BizScheduleService;
 import com.his.appoint.vo.ScheduleSelectListVO;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniappDirectoryMapper;
@@ -23,7 +23,7 @@ import java.util.List;
 public class MiniappDirectoryServiceImpl implements MiniappDirectoryService {
 
     private final MiniappDirectoryMapper miniappDirectoryMapper;
-    private final ScheduleService scheduleService;
+    private final BizScheduleService bizScheduleService;
     private final PatientGuardianService patientGuardianService;
 
     @Override
@@ -56,7 +56,7 @@ public class MiniappDirectoryServiceImpl implements MiniappDirectoryService {
 
     @Override
     public List<ScheduleSelectListVO> schedules(ScheduleSelectQueryDTO queryDTO) {
-        List<BizSchedule> list = scheduleService.scheduleSelectList(queryDTO);
+        List<BizSchedule> list = bizScheduleService.scheduleSelectList(queryDTO);
         return list.stream().map(detail -> {
             ScheduleSelectListVO vo = new ScheduleSelectListVO();
             BeanUtils.copyProperties(detail, vo);

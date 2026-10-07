@@ -113,7 +113,6 @@ public class EmrSignatureController {
     }
 
     // 可信时间戳（TSA）
-
     @Operation(summary = "TSA 服务状态（适配器在线 / 配置与生效的时间来源 / 台账计数；纯查询无副作用）")
     @GetMapping("/emr/tsa/status")
     public Result<TsaStatusVO> tsaStatus() {
@@ -149,7 +148,6 @@ public class EmrSignatureController {
     }
 
     // 证书签发信任根（M8 留口子：内部自签 / 外部 CA）
-
     @Operation(summary = "CA 签发模式状态（M8；internal=院内自签，external=外部CA适配器当前形态）")
     @GetMapping("/emr/signCa/status")
     public Result<SignCaStatusVO> signCaStatus() {
@@ -164,7 +162,6 @@ public class EmrSignatureController {
     }
 
     // 证书
-
     @Operation(summary = "签名证书分页")
     @GetMapping("/emr/signCert/listPage")
     public Result<PageResult<SignCertVO>> certListPage(@Valid SignCertQueryPageDTO query) {
