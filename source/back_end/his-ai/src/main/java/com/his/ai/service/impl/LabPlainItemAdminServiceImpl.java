@@ -54,13 +54,6 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
         return vo;
     }
 
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
-    }
-
     private static String trim(String value) {
         return value == null ? null : value.trim();
     }
@@ -145,7 +138,7 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
         checkPatientText(itemName, dto.getHighText());
         checkPatientText(itemName, dto.getLowText());
 
-        Long id = parseId(dto.getId());
+        Long id = dto.getId();
         SysLabPlainItem exist = plainMapper.selectByItemName(itemName);
         if (exist != null && (id == null || !exist.getId().equals(id))) {
             // 唯一键不含 del_flag，撞键只会得到一个看不懂的 SQL 异常
@@ -183,9 +176,6 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
 
     @Override
     public void adminDelete(Long id) {
-        if (id == null) {
-            throw new BusinessException("词条ID不能为空");
-        }
         if (plainMapper.selectById(id) == null) {
             throw new BusinessException("词条不存在或已删除");
         }

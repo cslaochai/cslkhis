@@ -8,6 +8,7 @@ import com.his.common.enums.DelFlagEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.DateFormats;
 import com.his.medicaltech.dto.InfusionRoomDTO;
 import com.his.medicaltech.entity.BizInfusionSeat;
 import com.his.medicaltech.entity.BizOutpInfusion;
@@ -30,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -503,7 +503,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
      * 单号：前缀 + yyyyMMdd + 5 位 Redis 流水（与挂号单号同一套机制）。
      */
     private String nextNo(String prefix) {
-        return prefix + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
+        return prefix + LocalDate.now().format(DateFormats.COMPACT_DATE)
                 + String.format("%05d", redisSequenceService.next("INFUSION_" + prefix));
     }
 

@@ -8,6 +8,7 @@ import com.his.charge.enums.InsuranceReportStatusEnum;
 import com.his.charge.enums.InsuranceReportTypeEnum;
 import com.his.charge.mapper.BizInsuranceReportMapper;
 import com.his.charge.service.InsuranceChannelService;
+import com.his.common.util.DateFormats;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,7 +17,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -43,8 +43,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class InsuranceChannelServiceImpl implements InsuranceChannelService {
 
-    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
     private final BizInsuranceReportMapper reportMapper;
     private final ObjectMapper objectMapper;
 
@@ -55,7 +53,7 @@ public class InsuranceChannelServiceImpl implements InsuranceChannelService {
         // —— M9 留口子：这一段打印就是"向医保前置机外发报文"的占位，真前置机接入后整块替换 ——
         log.info("[M9医保外发口子] ===== 报文外发 → 医保前置机 ===== msgType={} tradeNo={}", message.getMsgType(), message.getTradeNo());
         log.info("[M9医保外发口子] 报文全文：\n{}", message.getPayload());
-        String replyTime = LocalDateTime.now().format(TS);
+        String replyTime = LocalDateTime.now().format(DateFormats.DATETIME);
         try {
             JsonNode root = objectMapper.readTree(message.getPayload());
             String settlementNo = text(root, "settlementNo");

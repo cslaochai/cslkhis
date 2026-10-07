@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.*;
@@ -30,7 +31,6 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +57,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private final BizAnesthesiaRecordMapper recordMapper;
 
     private final BizAnesthesiaVitalMapper vitalMapper;
@@ -581,7 +580,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     }
 
     private String nextRecordNo() {
-        String prefix = "MZ" + LocalDate.now().format(NO_DATE);
+        String prefix = "MZ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = recordMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }

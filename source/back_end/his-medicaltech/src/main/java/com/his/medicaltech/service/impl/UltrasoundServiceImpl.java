@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.medicaltech.dto.UltrasoundDTO;
 import com.his.medicaltech.entity.BizUltrasoundMeasure;
 import com.his.medicaltech.entity.BizUltrasoundRecord;
@@ -26,7 +27,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -416,7 +416,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
     }
 
     private String nextRecordNo(LocalDate date) {
-        String day = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String day = date.format(DateFormats.COMPACT_DATE);
         long base = recordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
                 .ge(BizUltrasoundRecord::getCreateTime, date.atStartOfDay())
                 .lt(BizUltrasoundRecord::getCreateTime, date.plusDays(1).atStartOfDay())) + 1;

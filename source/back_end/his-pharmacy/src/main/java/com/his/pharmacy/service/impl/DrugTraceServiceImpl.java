@@ -3,6 +3,7 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.pharmacy.dto.DrugTraceCollectDTO;
 import com.his.pharmacy.dto.DrugTraceDispenseDTO;
 import com.his.pharmacy.dto.DrugTraceQueryPageDTO;
@@ -30,7 +31,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -69,7 +69,6 @@ public class DrugTraceServiceImpl implements DrugTraceService {
     private final BizDrugTraceMapper traceMapper;
     private final BizDrugStockMapper stockMapper;
     private final DrugTraceUploadChannelService uploadGateway;
-
 
     @Override
     public DrugTraceScanVO scan(DrugTraceScanDTO dto) {
@@ -168,7 +167,6 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         return vo;
     }
 
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DrugTraceVO collect(DrugTraceCollectDTO dto, String operatorName) {
@@ -255,7 +253,6 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         return traceMapper.selectTraceById(t.getId());
     }
 
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DrugTraceVO verifyDispense(DrugTraceDispenseDTO dto, String operatorName) {
@@ -299,7 +296,6 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         return traceMapper.selectTraceById(exist.getId());
     }
 
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DrugTraceVO voidTrace(DrugTraceVoidDTO dto, String operatorName) {
@@ -323,7 +319,6 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         traceMapper.updateById(t);
         return traceMapper.selectTraceById(exist.getId());
     }
-
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -408,7 +403,6 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         return result;
     }
 
-
     @Override
     public PageResult<DrugTraceVO> page(DrugTraceQueryPageDTO q) {
         Page<DrugTraceVO> page = traceMapper.selectTracePage(
@@ -456,7 +450,6 @@ public class DrugTraceServiceImpl implements DrugTraceService {
             throw new BusinessException("只能删除「在库且未上传」的误采记录；已核销或已上传的码属于医保数据，不允许删除");
         }
     }
-
 
     private void fillDrug(DrugTraceScanVO vo, Map<String, Object> drug) {
         vo.setDrugId(toLong(drug.get("id")));
@@ -510,12 +503,12 @@ public class DrugTraceServiceImpl implements DrugTraceService {
     }
 
     private String nextTraceNo() {
-        return "DR" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+        return "DR" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                 + String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
     }
 
     private String nextUploadBatchNo() {
-        return "UP" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+        return "UP" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                 + String.format("%02d", ThreadLocalRandom.current().nextInt(100));
     }
 

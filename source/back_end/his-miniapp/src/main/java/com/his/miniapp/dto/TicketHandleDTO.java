@@ -1,7 +1,7 @@
 package com.his.miniapp.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
@@ -14,9 +14,9 @@ import lombok.Data;
 @Schema(description = "院内处理工单入参")
 public class TicketHandleDTO {
 
-    @NotBlank(message = "工单ID不能为空")
-    @Schema(description = "工单ID（字符串）")
-    private String id;
+    @NotNull(message = "工单ID不能为空")
+    @Schema(description = "工单ID")
+    private Long id;
 
     @Schema(description = "动作：accept-受理 reply-回复 finish-办结 close-关闭 note-内部备注", example = "accept")
     private String action;

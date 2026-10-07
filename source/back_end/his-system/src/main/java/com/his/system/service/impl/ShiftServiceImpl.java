@@ -10,6 +10,7 @@ import com.his.common.enums.ShiftUseScopeEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.system.dto.ShiftQueryPageDTO;
 import com.his.system.dto.ShiftUpsertDTO;
 import com.his.system.entity.BizShift;
@@ -23,7 +24,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -34,8 +34,6 @@ import java.util.stream.Collectors;
  */
 @Service
 public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> implements ShiftService {
-
-    private static final DateTimeFormatter HHMM = DateTimeFormatter.ofPattern("HH:mm");
 
     @Override
     public List<BizShift> listShifts(Long deptId, Integer status, Integer useScope) {
@@ -194,8 +192,8 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
         LocalTime start;
         LocalTime end;
         try {
-            start = LocalTime.parse(shift.getStartTime(), HHMM);
-            end = LocalTime.parse(shift.getEndTime(), HHMM);
+            start = LocalTime.parse(shift.getStartTime(), DateFormats.TIME_MINUTE);
+            end = LocalTime.parse(shift.getEndTime(), DateFormats.TIME_MINUTE);
         } catch (Exception e) {
             return "时间格式必须为 HH:mm（如 08:00）";
         }

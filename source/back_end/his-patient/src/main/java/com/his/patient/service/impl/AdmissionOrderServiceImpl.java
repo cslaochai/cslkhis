@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.AdmissionOrderCancelDTO;
 import com.his.patient.dto.AdmissionOrderQueryPageDTO;
@@ -29,7 +30,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 
 /**
@@ -49,8 +49,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class AdmissionOrderServiceImpl implements AdmissionOrderService {
-
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private static final String VALID_DAYS_CONFIG_KEY = "admission_order.valid_days";
 
@@ -339,7 +337,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
     }
 
     private String nextOrderNo() {
-        String prefix = "RZ" + LocalDate.now().format(NO_DATE);
+        String prefix = "RZ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = orderMapper.countByOrderNoPrefix(prefix) + 1;
         return prefix + String.format("%03d", seq);
     }

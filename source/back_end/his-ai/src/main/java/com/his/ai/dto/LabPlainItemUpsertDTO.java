@@ -21,7 +21,7 @@ import lombok.Data;
 public class LabPlainItemUpsertDTO {
 
     @Schema(description = "主键，为空表示新增")
-    private String id;
+    private Long id;
 
     @Schema(description = "所属分组", example = "血常规")
     private String groupName;

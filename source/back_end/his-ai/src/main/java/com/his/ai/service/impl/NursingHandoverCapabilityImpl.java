@@ -8,6 +8,7 @@ import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.NursingHandoverCapability;
 import com.his.ai.support.DeteriorationScoreRules;
 import com.his.ai.vo.WardHandoverVO;
+import com.his.common.util.DateFormats;
 import com.his.patient.service.InpatientNursingService;
 import com.his.patient.vo.NursingAssessmentVO;
 import com.his.patient.vo.WardNursingFactsVO;
@@ -18,7 +19,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -36,8 +36,6 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
     private static final String TEMPLATE_NAME = "nursing-handover";
 
     private static final String BIZ_TYPE = "nursing_handover";
-
-    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     /**
      * 高风险评估口径：风险等级 3-高风险 4-极高风险
@@ -93,7 +91,7 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
         WardHandoverVO vo = new WardHandoverVO();
         vo.setWardName(facts.getWardName() == null ? ("病区" + dto.getWardId()) : facts.getWardName());
         vo.setShiftText(facts.getShiftText());
-        vo.setWindowText(begin.format(TIME) + " ~ " + end.format(TIME));
+        vo.setWindowText(begin.format(DateFormats.DATETIME_MINUTE) + " ~ " + end.format(DateFormats.DATETIME_MINUTE));
         vo.setInHospitalCount(facts.getCensus().getInHospitalCount());
         vo.setDischargeCount(facts.getCensus().getDischargeCount());
         vo.setNewAdmissions(newAdmissionLines(facts));
@@ -115,7 +113,7 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
                         .variables(variables)
                         .bizType(BIZ_TYPE)
                         // 病区级调用没有单一 bizId；用病区ID + 班次窗起点做检索锚点
-                        .inputDigest("ward=" + dto.getWardId() + "; window=" + begin.format(TIME))
+                        .inputDigest("ward=" + dto.getWardId() + "; window=" + begin.format(DateFormats.DATETIME_MINUTE))
                         .build(),
                 NursingHandoverLlmOutputDTO.class);
         if (output.isEmpty() || !StringUtils.hasText(output.get().getSummary())) {

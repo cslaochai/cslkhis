@@ -6,6 +6,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.DateFormats;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.emr.dto.*;
 import com.his.emr.entity.BizDisputeCase;
@@ -30,7 +31,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -55,8 +55,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class DisputeServiceImpl implements DisputeService {
-
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizDisputeCaseMapper caseMapper;
     private final BizDisputeFlowMapper flowMapper;
@@ -498,7 +496,7 @@ public class DisputeServiceImpl implements DisputeService {
     }
 
     private String nextCaseNo() {
-        return Constants.DISPUTE_NO_PREFIX + LocalDate.now().format(NO_DATE)
+        return Constants.DISPUTE_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
                 + String.format("%04d", sequenceService.next("DISPUTE"));
     }
 }

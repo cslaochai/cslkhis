@@ -12,6 +12,7 @@ import com.his.appoint.enums.VisitTypeEnum;
 import com.his.appoint.service.AppointService;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.emr.dto.FollowupQueryDTO;
 import com.his.emr.dto.FollowupTaskDTO;
@@ -35,7 +36,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -254,7 +254,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         }
 
         LocalDateTime dischargeTime = LocalDateTime.parse((String) snap.get("dischargeTime"),
-                DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                DateFormats.DATETIME);
         int days = dto.getDaysOffset() == null || dto.getDaysOffset() < 1 ? DEFAULT_DAYS_OFFSET : dto.getDaysOffset();
         int type = dto.getFollowupType() == null ? 1 : dto.getFollowupType();
 
@@ -552,7 +552,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
      * 手动新建：FUV+yyyyMMddHHmmss+3 位随机（task_no VARCHAR(32)：3+14+3=20，安全余量足够）
      */
     private String nextTaskNo(Long dischargeId) {
-        String ts = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now());
+        String ts = DateFormats.COMPACT_DATETIME.format(LocalDateTime.now());
         return "FUV" + ts + ThreadLocalRandom.current().nextInt(100, 1000);
     }
 

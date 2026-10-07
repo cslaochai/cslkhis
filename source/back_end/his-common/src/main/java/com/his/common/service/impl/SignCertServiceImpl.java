@@ -16,6 +16,7 @@ import com.his.common.mapper.SysSignCertMapper;
 import com.his.common.service.ExternalCaChannelService;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.service.SignCertService;
+import com.his.common.util.DateFormats;
 import com.his.common.util.KeyPairFactory;
 import com.his.common.util.KeyProtectorUtil;
 import com.his.common.util.SignCryptoUtil;
@@ -30,7 +31,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -54,7 +54,6 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class SignCertServiceImpl implements SignCertService {
 
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String CERT_NO_PREFIX = "CERT";
     private static final String CFG_VALID_DAYS = "sign.cert.valid_days";
     private static final String CFG_AUTO_ISSUE = "sign.cert.auto_issue";
@@ -350,7 +349,7 @@ public class SignCertServiceImpl implements SignCertService {
     }
 
     private String nextCertNo() {
-        String prefix = CERT_NO_PREFIX + LocalDate.now().format(NO_DATE);
+        String prefix = CERT_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE);
         return prefix + String.format("%04d", certMapper.countByCertNoPrefix(prefix) + 1);
     }
 

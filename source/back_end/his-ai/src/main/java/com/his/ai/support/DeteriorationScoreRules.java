@@ -1,5 +1,6 @@
 package com.his.ai.support;
 
+import com.his.common.util.DateFormats;
 import com.his.patient.vo.NursingVitalFactVO;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -7,7 +8,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,7 +34,6 @@ public final class DeteriorationScoreRules {
      * 无体征数据时的占位总分
      */
     public static final int NO_DATA_SCORE = -1;
-    private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
 
     /**
      * 对一条体征行评分。行内没有任何体征值时 totalScore=NO_DATA（不预警也不给建议）。
@@ -135,7 +134,7 @@ public final class DeteriorationScoreRules {
             String who = (r.getBedNo() == null ? "" : r.getBedNo() + "床 ")
                     + (r.getPatientName() == null ? "" : r.getPatientName() + " ");
             String when = r.getMeasureTime() == null ? "" : "（" + r.getMeasureTime().toLocalDate() + " "
-                    + r.getMeasureTime().format(CLOCK) + "）";
+                    + r.getMeasureTime().format(DateFormats.TIME_MINUTE) + "）";
             events.add(who + String.join("、", marks) + when);
         }
         return events;

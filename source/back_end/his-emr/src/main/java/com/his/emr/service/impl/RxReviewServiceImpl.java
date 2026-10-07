@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
 import com.his.emr.enums.*;
@@ -23,7 +24,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -38,8 +38,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RxReviewServiceImpl implements RxReviewService {
 
-    private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter CSV_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int EXPORT_MAX = 5000;
 
     /**
@@ -618,15 +616,15 @@ public class RxReviewServiceImpl implements RxReviewService {
                     .append(csv(r.getProblemTypes())).append(',')
                     .append(csv(r.getReviewOpinion())).append(',')
                     .append(csv(r.getReviewerName())).append(',')
-                    .append(r.getReviewTime() == null ? "" : r.getReviewTime().format(CSV_TIME_FMT)).append(',')
+                    .append(r.getReviewTime() == null ? "" : r.getReviewTime().format(DateFormats.DATETIME)).append(',')
                     .append(r.getPublicityStatus() != null && r.getPublicityStatus() == 1 ? "已公示" : "未公示").append(',')
-                    .append(r.getPublicityTime() == null ? "" : r.getPublicityTime().format(CSV_TIME_FMT)).append('\n');
+                    .append(r.getPublicityTime() == null ? "" : r.getPublicityTime().format(DateFormats.DATETIME)).append('\n');
         }
         return sb.toString();
     }
 
     private String nextBatchNo() {
-        String day = LocalDate.now().format(DAY_FMT);
+        String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
         String max = batchMapper.selectMaxBatchNo(day);
         int seq = max == null ? 0 : Integer.parseInt(max.substring(max.length() - 4));
         return "RXRB" + day + String.format("%04d", seq + 1);
@@ -635,7 +633,7 @@ public class RxReviewServiceImpl implements RxReviewService {
     // 组装
 
     private String nextTalkNo() {
-        String day = LocalDate.now().format(DAY_FMT);
+        String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
         String max = talkMapper.selectMaxTalkNo(day);
         int seq = max == null ? 0 : Integer.parseInt(max.substring(max.length() - 4));
         return "YT" + day + String.format("%04d", seq + 1);

@@ -8,6 +8,7 @@ import com.his.ai.service.DeteriorationAlertCapability;
 import com.his.ai.support.DeteriorationScoreRules;
 import com.his.ai.vo.DeteriorationExplainVO;
 import com.his.ai.vo.DeteriorationScanVO;
+import com.his.common.util.DateFormats;
 import com.his.patient.service.InpatientNursingService;
 import com.his.patient.vo.NursingVitalFactVO;
 import com.his.system.service.DictCacheService;
@@ -17,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -32,7 +32,6 @@ import java.util.*;
 public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapability {
     private static final String TEMPLATE_NAME = "deterioration-alert";
     private static final String BIZ_TYPE = "deterioration_alert";
-    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     /**
      * 评分窗口：取最近 24h 的最新体征（更早的体征不代表当前状态）
      */
@@ -63,7 +62,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
             row.setAdmissionId(vital.getAdmissionId());
             row.setPatientName(vital.getPatientName());
             row.setBedNo(vital.getBedNo());
-            row.setMeasureTime(vital.getMeasureTime() == null ? null : vital.getMeasureTime().format(TIME));
+            row.setMeasureTime(vital.getMeasureTime() == null ? null : vital.getMeasureTime().format(DateFormats.DATETIME));
             DeteriorationScoreRules.DeteriorationScore score = DeteriorationScoreRules.score(vital);
             row.setItems(DeteriorationScoreRules.items(vital));
             row.setTotalScore(score.getTotalScore());
@@ -101,7 +100,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
         vo.setPatientName(vital.getPatientName());
         vo.setBedNo(vital.getBedNo());
         vo.setWardName(vital.getWardName());
-        vo.setMeasureTime(vital.getMeasureTime() == null ? null : vital.getMeasureTime().format(TIME));
+        vo.setMeasureTime(vital.getMeasureTime() == null ? null : vital.getMeasureTime().format(DateFormats.DATETIME));
         DeteriorationScoreRules.DeteriorationScore score = DeteriorationScoreRules.score(vital);
         vo.setItems(DeteriorationScoreRules.items(vital));
         vo.setTotalScore(score.getTotalScore());
@@ -147,7 +146,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
                 .bizId(vital.getAdmissionId())
                 // 输入摘要不含患者标识文本（姓名在 mask 正则之外），用 admissionId + 测量时间做检索锚点
                 .inputDigest("admission=" + vital.getAdmissionId()
-                        + (vital.getMeasureTime() == null ? "" : "; " + vital.getMeasureTime().format(TIME)))
+                        + (vital.getMeasureTime() == null ? "" : "; " + vital.getMeasureTime().format(DateFormats.DATETIME)))
                 .build();
         return aiExecutionService.call(call, DeteriorationLlmOutputDTO.class);
     }
@@ -193,7 +192,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
     }
 
     private String measureTimeText(NursingVitalFactVO vital) {
-        return vital.getMeasureTime() == null ? "未知" : vital.getMeasureTime().format(TIME);
+        return vital.getMeasureTime() == null ? "未知" : vital.getMeasureTime().format(DateFormats.DATETIME);
     }
 
     private void append(StringBuilder sb, String label, String value) {

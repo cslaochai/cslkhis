@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.AttendingRelationTypeEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.patient.dto.AttendingBindDTO;
 import com.his.patient.entity.BizAdmission;
 import com.his.patient.entity.BizAttendingRelation;
@@ -23,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,9 +44,6 @@ public class AttendingRelationServiceImpl
      * 状态：已结束
      */
     private static final int STATUS_ENDED = 0;
-
-    private static final DateTimeFormatter FULL = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final DateTimeFormatter MINUTE = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final BizAdmissionMapper admissionMapper;
     private final BizPatientMapper patientMapper;
@@ -231,12 +228,12 @@ public class AttendingRelationServiceImpl
         }
         String value = text.trim();
         try {
-            return LocalDateTime.parse(value, FULL);
+            return LocalDateTime.parse(value, DateFormats.DATETIME);
         } catch (DateTimeParseException ignored) {
             // 落到分钟级再试一次
         }
         try {
-            return LocalDateTime.parse(value, MINUTE);
+            return LocalDateTime.parse(value, DateFormats.DATETIME_MINUTE);
         } catch (DateTimeParseException e) {
             throw new BusinessException("时间格式不正确，应为 yyyy-MM-dd HH:mm:ss 或 yyyy-MM-dd HH:mm");
         }

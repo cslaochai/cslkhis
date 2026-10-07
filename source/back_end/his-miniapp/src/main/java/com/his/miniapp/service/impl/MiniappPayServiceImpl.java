@@ -13,6 +13,7 @@ import com.his.common.enums.TxnSourceEnum;
 import com.his.common.exception.BusinessException;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.service.AppointService;
+import com.his.common.util.DateFormats;
 import com.his.miniapp.service.WxLoginChannelService;
 import com.his.miniapp.dto.WxLoginDTO;
 import com.his.miniapp.mapper.MiniappSysUserMapper;
@@ -40,7 +41,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -62,8 +62,6 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class MiniappPayServiceImpl implements MiniappPayService {
-
-    private static final DateTimeFormatter PAY_NO_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final WxLoginChannelService wxLoginChannelService;
     private final WxPayChannelService wxPayChannelService;
@@ -129,7 +127,7 @@ public class MiniappPayServiceImpl implements MiniappPayService {
 
         var current = UserUtils.getCurrentUser();
         BizPayOrder order = new BizPayOrder();
-        order.setPayNo("PAY" + LocalDate.now().format(PAY_NO_FMT)
+        order.setPayNo("PAY" + LocalDate.now().format(DateFormats.COMPACT_DATE)
                 + String.format("%05d", sequenceService.next("PAY")));
         order.setBizType(dto.getBizType());
         order.setBizId(dto.getBizId());

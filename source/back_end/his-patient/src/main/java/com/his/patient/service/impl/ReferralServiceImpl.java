@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.ReferralDTO;
 import com.his.patient.entity.BizReferral;
@@ -28,7 +29,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -309,7 +309,7 @@ public class ReferralServiceImpl implements ReferralService {
      * 单号 REF + yyyyMMddHHmmss + 3 位随机，唯一索引兜底
      */
     private String nextReferralNo() {
-        return "REF" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())
+        return "REF" + DateFormats.COMPACT_DATETIME.format(LocalDateTime.now())
                 + ThreadLocalRandom.current().nextInt(100, 1000);
     }
 

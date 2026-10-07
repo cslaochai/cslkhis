@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.enums.SpecialDrugFlagEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.emr.dto.AmpouleReturnDTO;
 import com.his.emr.dto.NarcoticRegisterQueryPageDTO;
 import com.his.emr.entity.BizDrugDispensing;
@@ -28,7 +29,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -759,7 +759,7 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
      * 跨进程由 {@code uk_narco_register_no} 唯一索引兜底（真撞了会让发药整体回滚，所以这里宁可多查一次）。
      */
     private synchronized String nextRegisterNo(LocalDateTime now) {
-        String prefix = "NZ" + now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefix = "NZ" + now.format(DateFormats.COMPACT_DATE);
         int used = registerSeqCache.computeIfAbsent(prefix,
                 p -> (int) narcoticRegisterMapper.countByRegisterNoPrefix(p));
         for (int i = 1; i <= 9999; i++) {

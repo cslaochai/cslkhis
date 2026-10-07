@@ -41,24 +41,13 @@ public class MiniappServiceTraceServiceImpl implements MiniappServiceTraceServic
             entity.setSessionId(cut(dto.getSessionId(), SESSION_ID_MAX));
             entity.setEventType(cut(dto.getEventType(), 32));
             entity.setEventKey(cut(dto.getEventKey(), EVENT_KEY_MAX));
-            entity.setFaqId(parseId(dto.getFaqId()));
+            entity.setFaqId(dto.getFaqId());
             entity.setHitCount(dto.getHitCount());
             traceMapper.insert(entity);
         } catch (Exception ex) {
             log.warn("[客服埋点] 写入失败，忽略 type={} key={} err={}",
                     dto.getEventType(), dto.getEventKey(), ex.getMessage());
         }
-    }
-
-    /**
-     * ID 只按字符串解析：前端传来的雪花 ID 一旦经过 JSON 数字就会丢精度，
-     * 表现为「埋点的 faqId 对不上任何一条 FAQ」，而且不报错。
-     */
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
     }
 
     private static String cut(String text, int max) {

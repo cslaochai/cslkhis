@@ -7,6 +7,7 @@ import com.his.common.mapper.BizTsaTokenMapper;
 import com.his.common.mapper.SysTsaServerMapper;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.service.TsaChannelService;
+import com.his.common.util.DateFormats;
 import com.his.common.util.KeyPairFactory;
 import com.his.common.util.KeyProtectorUtil;
 import com.his.common.util.SignCryptoUtil;
@@ -16,7 +17,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
 /**
@@ -57,8 +57,6 @@ public class TsaChannelServiceImpl implements TsaChannelService {
      */
     private static final String CANONICAL_PREFIX = "HIS-TSA-V1";
     private static final String SERIAL_PREFIX = "TSA";
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter TS_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     private static final int MAX_RETRY = 3;
 
     private final SysTsaServerMapper serverMapper;
@@ -85,7 +83,7 @@ public class TsaChannelServiceImpl implements TsaChannelService {
      */
     private static String canonical(String serial, String digestHex, LocalDateTime tsaTime) {
         return CANONICAL_PREFIX + "|" + serial + "|" + digestHex.toLowerCase()
-                + "|" + TS_FORMAT.format(tsaTime);
+                + "|" + DateFormats.ISO_DATETIME.format(tsaTime);
     }
 
     /**
@@ -159,11 +157,11 @@ public class TsaChannelServiceImpl implements TsaChannelService {
             String serial;
             try {
                 long seq = sequenceService.next("TSA_TOKEN");
-                serial = SERIAL_PREFIX + LocalDate.now().format(NO_DATE) + String.format("%06d", seq);
+                serial = SERIAL_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE) + String.format("%06d", seq);
             } catch (Exception e) {
-                serial = SERIAL_PREFIX + LocalDate.now().format(NO_DATE)
+                serial = SERIAL_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
                         + String.format("%06d", tokenMapper.countBySerialPrefix(
-                        SERIAL_PREFIX + LocalDate.now().format(NO_DATE)) + 1);
+                        SERIAL_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)) + 1);
             }
             String token = SignCryptoUtil.sign(privatePem, canonical(serial, digestHex, tsaTime));
 

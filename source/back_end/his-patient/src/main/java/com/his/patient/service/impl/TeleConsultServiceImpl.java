@@ -5,6 +5,7 @@ import com.his.common.base.Constants;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.DateFormats;
 import com.his.patient.dto.*;
 import com.his.patient.entity.BizOnlineConsult;
 import com.his.patient.entity.BizPatient;
@@ -29,7 +30,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
@@ -53,8 +53,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class TeleConsultServiceImpl implements TeleConsultService {
-
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizTeleConsultMapper teleMapper;
     private final BizOnlineConsultMapper onlineMapper;
@@ -478,6 +476,6 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     }
 
     private String nextNo(String prefix, String module) {
-        return prefix + LocalDate.now().format(NO_DATE) + String.format("%04d", sequenceService.next(module));
+        return prefix + LocalDate.now().format(DateFormats.COMPACT_DATE) + String.format("%04d", sequenceService.next(module));
     }
 }

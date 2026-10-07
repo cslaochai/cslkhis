@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.operation.dto.AnesthesiaVisitFinishDTO;
 import com.his.operation.dto.AnesthesiaVisitQueryPageDTO;
 import com.his.operation.dto.AnesthesiaVisitUpsertDTO;
@@ -28,7 +29,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
@@ -39,7 +39,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizAnesthesiaVisitMapper visitMapper;
 
@@ -299,7 +298,7 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
     }
 
     private String nextVisitNo() {
-        String prefix = "MF" + LocalDate.now().format(NO_DATE);
+        String prefix = "MF" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = visitMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }

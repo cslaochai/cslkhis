@@ -13,6 +13,7 @@ import com.his.ai.vo.OperationColumnVO;
 import com.his.ai.vo.OperationQaResultVO;
 import com.his.ai.vo.OperationRowVO;
 import com.his.ai.vo.OperationSchemaVO;
+import com.his.common.util.DateFormats;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +27,6 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -70,10 +70,6 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
 
     private static final int EXECUTE_ERROR_MAX_LENGTH = 200;
 
-    private static final DateTimeFormatter DATETIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
     private final AiExecutionService aiExecutionService;
 
     private final DataSource dataSource;
@@ -90,19 +86,19 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
         }
         // DATETIME/DATE 列经 JDBC 出来是时间对象，直接 toString 会变成 ISO 带秒带 T 的形态
         if (value instanceof LocalDateTime dateTime) {
-            return DATETIME_FORMATTER.format(dateTime);
+            return DateFormats.DATETIME_MINUTE.format(dateTime);
         }
         if (value instanceof LocalDate date) {
-            return DATE_FORMATTER.format(date);
+            return DateFormats.DATE.format(date);
         }
         if (value instanceof LocalTime time) {
             return time.toString();
         }
         if (value instanceof Timestamp timestamp) {
-            return DATETIME_FORMATTER.format(timestamp.toLocalDateTime());
+            return DateFormats.DATETIME_MINUTE.format(timestamp.toLocalDateTime());
         }
         if (value instanceof java.sql.Date date) {
-            return DATE_FORMATTER.format(date.toLocalDate());
+            return DateFormats.DATE.format(date.toLocalDate());
         }
         return value;
     }
@@ -187,7 +183,7 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
         Map<String, Object> variables = new HashMap<>();
         variables.put("schema", OperationSchemaCatalog.schemaText());
         variables.put("question", question);
-        variables.put("today", LocalDate.now().format(DATE_FORMATTER));
+        variables.put("today", LocalDate.now().format(DateFormats.DATE));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.OPERATION_QA)

@@ -1,9 +1,9 @@
 package com.his.common.support;
 
+import com.his.common.util.DateFormats;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -44,8 +44,6 @@ public final class CanonicalText {
     /**
      * 时间统一渲染格式（见 {@link #normalize} 说明）
      */
-    public static final DateTimeFormatter TS_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    public static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private final String bizTag;
     private final Map<String, String> fields = new LinkedHashMap<>();
@@ -74,10 +72,10 @@ public final class CanonicalText {
             return "";
         }
         if (value instanceof LocalDateTime t) {
-            return t.format(TS_FMT);
+            return t.format(DateFormats.DATETIME);
         }
         if (value instanceof LocalDate d) {
-            return d.format(DATE_FMT);
+            return d.format(DateFormats.DATE);
         }
         if (value instanceof BigDecimal b) {
             return b.stripTrailingZeros().toPlainString();

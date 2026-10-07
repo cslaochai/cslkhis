@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.*;
@@ -27,7 +28,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -46,8 +46,6 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class VteServiceImpl implements VteService {
-    private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter CSV_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int EXPORT_MAX = 5000;
     /**
      * 评审/VTE 防治中心建设常用阈值，只作提示不判定
@@ -227,7 +225,7 @@ public class VteServiceImpl implements VteService {
         boolean insert;
         if (dto.getId() == null) {
             row = new BizVtePrevent();
-            row.setPreventNo(nextNo(PREFIX_PREVENT, preventMapper.maxPreventSeq(PREFIX_PREVENT + LocalDate.now().format(DAY_FMT))));
+            row.setPreventNo(nextNo(PREFIX_PREVENT, preventMapper.maxPreventSeq(PREFIX_PREVENT + LocalDate.now().format(DateFormats.COMPACT_DATE))));
             insert = true;
         } else {
             row = preventMapper.selectById(dto.getId());
@@ -332,7 +330,7 @@ public class VteServiceImpl implements VteService {
         boolean insert;
         if (dto.getId() == null) {
             row = new BizVteEvent();
-            row.setEventNo(nextNo(PREFIX_EVENT, eventMapper.maxEventSeq(PREFIX_EVENT + LocalDate.now().format(DAY_FMT))));
+            row.setEventNo(nextNo(PREFIX_EVENT, eventMapper.maxEventSeq(PREFIX_EVENT + LocalDate.now().format(DateFormats.COMPACT_DATE))));
             insert = true;
         } else {
             row = eventMapper.selectById(dto.getId());
@@ -476,7 +474,7 @@ public class VteServiceImpl implements VteService {
                     .append(r.getVteIncidenceRate()).append(',')
                     .append(r.getBleedCount()).append(',')
                     .append(csv(r.getGenerateBy())).append(',')
-                    .append(r.getGenerateTime() == null ? "" : CSV_TIME_FMT.format(r.getGenerateTime()))
+                    .append(r.getGenerateTime() == null ? "" : DateFormats.DATETIME.format(r.getGenerateTime()))
                     .append('\n');
         }
         return sb.toString();
@@ -565,7 +563,7 @@ public class VteServiceImpl implements VteService {
      * 单号：前缀 + 当日已用最大序号 +1（不是 count+1 —— 删过一条序号会回退撞唯一键）
      */
     private String nextNo(String prefix, long maxSeq) {
-        return prefix + LocalDate.now().format(DAY_FMT) + String.format("%04d", maxSeq + 1);
+        return prefix + LocalDate.now().format(DateFormats.COMPACT_DATE) + String.format("%04d", maxSeq + 1);
     }
 
     private NursingAssessmentVO latestCaprini(Long admissionId) {

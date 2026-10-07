@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.InpatientTransferAcceptDTO;
 import com.his.patient.dto.InpatientTransferCancelDTO;
@@ -31,7 +32,6 @@ import org.springframework.util.StringUtils;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -71,8 +71,6 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     // 病历
 
     // 病案首页
-
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizInpatientTransferMapper transferMapper;
     private final BizAdmissionMapper admissionMapper;
@@ -537,13 +535,13 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     // 内部：编号 / 时间 / 用户
 
     private String nextTransferNo() {
-        String prefix = "ZK" + LocalDate.now().format(NO_DATE);
+        String prefix = "ZK" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = transferMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 
     private String nextRecordNo() {
-        String prefix = "BL" + LocalDate.now().format(NO_DATE);
+        String prefix = "BL" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = recordMapper.countByRecordNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }

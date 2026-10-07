@@ -9,6 +9,7 @@ import com.his.common.exception.BusinessException;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.support.FeeCatalogResolver;
+import com.his.common.util.DateFormats;
 import com.his.pharmacy.dto.ConsumableTraceQueryPageDTO;
 import com.his.pharmacy.dto.HighValueUseDTO;
 import com.his.pharmacy.entity.BizConsumableStock;
@@ -34,7 +35,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -395,7 +395,7 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
     }
 
     private String nextTraceNo() {
-        return "HV" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+        return "HV" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                 + String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
     }
 }

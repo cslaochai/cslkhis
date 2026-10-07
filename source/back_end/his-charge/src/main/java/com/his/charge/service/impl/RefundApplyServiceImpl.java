@@ -18,6 +18,7 @@ import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.RefundApplyStatusEnum;
 import com.his.common.enums.TxnSourceEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -228,7 +228,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
             throw new BusinessException("该账单已有退费申请（待审核 / 待执行），不能重复发起；"
                     + "金额或类型要改，请先作废那条申请");
         }
-        apply.setRefundApplyNo("RA" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+        apply.setRefundApplyNo("RA" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                 + String.format("%04d", SEQ.incrementAndGet() % 10000));
         apply.setApplyStatus(RefundApplyStatusEnum.PENDING_AUDIT.getCode());
         apply.setApplyTime(LocalDateTime.now());

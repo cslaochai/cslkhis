@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.*;
 import com.his.medicaltech.entity.BizTransfusionApply;
@@ -42,7 +43,6 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -95,9 +95,6 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
      * 已配血/已发血后多久没往下走算"卡住"（查询时算，不落状态列）
      */
     private static final long STALLED_HOURS = 24;
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter FULL_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final DateTimeFormatter TIME_HM = DateTimeFormatter.ofPattern("HH:mm");
 
     private final BizTransfusionApplyMapper applyMapper;
 
@@ -160,11 +157,11 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         try {
             if (s.length() == 10) {
                 LocalDate d = LocalDate.parse(s);
-                return new Parsed(d.atStartOfDay().format(FULL_TIME),
-                        d.plusDays(1).atStartOfDay().format(FULL_TIME));
+                return new Parsed(d.atStartOfDay().format(DateFormats.DATETIME),
+                        d.plusDays(1).atStartOfDay().format(DateFormats.DATETIME));
             }
-            LocalDateTime t = LocalDateTime.parse(s, FULL_TIME);
-            return new Parsed(t.format(FULL_TIME), t.format(FULL_TIME));
+            LocalDateTime t = LocalDateTime.parse(s, DateFormats.DATETIME);
+            return new Parsed(t.format(DateFormats.DATETIME), t.format(DateFormats.DATETIME));
         } catch (DateTimeParseException e) {
             // 明确报格式问题，不静默忽略、也不让它变成 500
             throw new BusinessException("时间格式不正确：" + raw + "（应为 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss）");
@@ -867,7 +864,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
         applyMapper.updateById(entity);
         log.info("开始输注 applyNo={} 开始={} 双人核对={}/{} 核对项={} 执行护士={}",
-                entity.getApplyNo(), start.format(FULL_TIME), nurse1, nurse2,
+                entity.getApplyNo(), start.format(DateFormats.DATETIME), nurse1, nurse2,
                 entity.getCheckItems(), entity.getInfusionNurseName());
     }
 
@@ -891,7 +888,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         LocalDateTime end = TimeUtil.toSeconds(dto.getInfusionEndTime());
         if (entity.getInfusionStartTime() != null && !end.isAfter(entity.getInfusionStartTime())) {
             throw new BusinessException("输注结束时间必须晚于开始时间（"
-                    + entity.getInfusionStartTime().format(FULL_TIME) + "）");
+                    + entity.getInfusionStartTime().format(DateFormats.DATETIME) + "）");
         }
         if (dto.getActualAmount() == null || dto.getActualAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException("实际输注量必须大于 0（输完了却不知道输了多少，记录等于没写）");
@@ -937,8 +934,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
 
         log.info("输血完成 applyNo={} 输注 {}~{} 实际量={} 病历号={} 录入人={}",
                 entity.getApplyNo(),
-                entity.getInfusionStartTime() == null ? "-" : entity.getInfusionStartTime().format(FULL_TIME),
-                end.format(FULL_TIME), dto.getActualAmount(), record.getRecordNo(), operatorUser.getRealName());
+                entity.getInfusionStartTime() == null ? "-" : entity.getInfusionStartTime().format(DateFormats.DATETIME),
+                end.format(DateFormats.DATETIME), dto.getActualAmount(), record.getRecordNo(), operatorUser.getRealName());
     }
 
     // 工具
@@ -1050,8 +1047,8 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         }
         if (entity.getInfusionStartTime() != null) {
             long minutes = Math.max(0, Duration.between(entity.getInfusionStartTime(), end).toMinutes());
-            course.append("输注时间：").append(entity.getInfusionStartTime().format(FULL_TIME))
-                    .append(" ~ ").append(end.format(FULL_TIME))
+            course.append("输注时间：").append(entity.getInfusionStartTime().format(DateFormats.DATETIME))
+                    .append(" ~ ").append(end.format(DateFormats.DATETIME))
                     .append("（").append(TransfusionRules.durationText(minutes)).append("）\n");
         }
         if (StringUtils.hasText(entity.getInfusionSpeed())) {
@@ -1323,7 +1320,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
      */
 
     private String nextApplyNo() {
-        String prefix = "SX" + LocalDate.now().format(NO_DATE);
+        String prefix = "SX" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = applyMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }

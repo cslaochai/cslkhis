@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.pharmacy.dto.AntibioticStatsGenerateDTO;
 import com.his.pharmacy.dto.AntibioticStatsQueryPageDTO;
 import com.his.pharmacy.dto.IncisionReviewQueryPageDTO;
@@ -30,7 +31,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,8 +49,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
-    private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter CSV_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int EXPORT_MAX = 5000;
     /**
      * 评审/专项整治常用阈值，只作提示不判定（写在 VO 里给前端对照）
@@ -156,7 +154,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                     .append(r.getMicroSubmitRate()).append(',')
                     .append(r.getUnmatchedOrderCount()).append(',')
                     .append(csv(r.getGenerateBy())).append(',')
-                    .append(r.getGenerateTime() == null ? "" : CSV_TIME_FMT.format(r.getGenerateTime()))
+                    .append(r.getGenerateTime() == null ? "" : DateFormats.DATETIME.format(r.getGenerateTime()))
                     .append('\n');
         }
         return sb.toString();
@@ -382,7 +380,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     }
 
     private String nextReviewNo() {
-        String day = LocalDate.now().format(DAY_FMT);
+        String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
         String max = incisionMapper.selectMaxReviewNo(day);
         int seq = 1;
         if (StringUtils.hasText(max) && max.length() >= 4) {

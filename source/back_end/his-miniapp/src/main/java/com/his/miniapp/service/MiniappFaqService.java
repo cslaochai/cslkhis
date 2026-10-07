@@ -1,7 +1,7 @@
 package com.his.miniapp.service;
 
 import com.his.common.base.PageResult;
-import com.his.miniapp.dto.FaqSearchDTO;
+import com.his.miniapp.dto.FaqPageQueryDTO;
 import com.his.miniapp.dto.FaqUpsertDTO;
 import com.his.miniapp.vo.FaqAdminVO;
 import com.his.miniapp.vo.FaqCategoryVO;
@@ -18,7 +18,7 @@ public interface MiniappFaqService {
     List<FaqCategoryVO> categories();
 
     /** 检索（关键词切词匹配 + 分类过滤，分页） */
-    PageResult<FaqListVO> search(FaqSearchDTO dto);
+    PageResult<FaqListVO> search(FaqPageQueryDTO dto);
 
     /** 单条详情（并累计查看次数） */
     FaqListVO getById(Long faqId);
@@ -36,7 +36,7 @@ public interface MiniappFaqService {
     // ===== 后台维护 =====
 
     /** 后台列表（含停用的，供运营维护） */
-    PageResult<FaqAdminVO> adminPage(FaqSearchDTO dto);
+    PageResult<FaqAdminVO> adminPage(FaqPageQueryDTO dto);
 
     /** 后台详情 */
     FaqAdminVO adminGetById(Long faqId);

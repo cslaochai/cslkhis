@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.NutritionScreenQueryPageDTO;
 import com.his.patient.dto.NutritionScreenUpsertDTO;
@@ -28,7 +29,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -48,7 +48,6 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class NutritionScreenServiceImpl implements NutritionScreenService {
-    private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String PREFIX_SCREEN = "NS";
     private final DeptScopeProvider deptScopeProvider;
     private final BizNutritionScreenMapper screenMapper;
@@ -133,7 +132,7 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         if (insert) {
             row = new BizNutritionScreen();
             row.setScreenNo(nextNo(PREFIX_SCREEN, screenMapper.maxScreenSeq(PREFIX_SCREEN
-                    + (screenTime == null ? LocalDate.now() : screenTime.toLocalDate()).format(DAY_FMT))));
+                    + (screenTime == null ? LocalDate.now() : screenTime.toLocalDate()).format(DateFormats.COMPACT_DATE))));
         } else {
             row = screenMapper.selectById(dto.getId());
             if (row == null) {
@@ -234,6 +233,6 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
     }
 
     private String nextNo(String prefix, long maxSeq) {
-        return prefix + LocalDate.now().format(DAY_FMT) + String.format("%04d", maxSeq + 1);
+        return prefix + LocalDate.now().format(DateFormats.COMPACT_DATE) + String.format("%04d", maxSeq + 1);
     }
 }

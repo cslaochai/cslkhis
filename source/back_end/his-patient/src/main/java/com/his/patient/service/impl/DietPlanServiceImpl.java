@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DietConfirmDTO;
 import com.his.patient.dto.DietPlanQueryPageDTO;
@@ -30,7 +31,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -55,7 +55,6 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class DietPlanServiceImpl implements DietPlanService {
-    private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String PREFIX_PLAN = "DP";
     private final DeptScopeProvider deptScopeProvider;
     private final BizDietPlanMapper planMapper;
@@ -174,7 +173,7 @@ public class DietPlanServiceImpl implements DietPlanService {
             BizPatient patient = admission.getPatientId() == null ? null
                     : patientMapper.selectById(admission.getPatientId());
             row = new BizDietPlan();
-            row.setDietNo(nextNo(PREFIX_PLAN, planMapper.maxDietSeq(PREFIX_PLAN + LocalDate.now().format(DAY_FMT))));
+            row.setDietNo(nextNo(PREFIX_PLAN, planMapper.maxDietSeq(PREFIX_PLAN + LocalDate.now().format(DateFormats.COMPACT_DATE))));
             row.setAdmissionId(admission.getAdmissionId());
             row.setPatientId(admission.getPatientId());
             row.setPatientNo(patient == null ? null : patient.getPatientNo());
@@ -354,7 +353,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         String code = diet == null ? NutritionRules.CODE_TO_DETERMINE : diet.code();
 
         BizDietPlan row = new BizDietPlan();
-        row.setDietNo(nextNo(PREFIX_PLAN, planMapper.maxDietSeq(PREFIX_PLAN + LocalDate.now().format(DAY_FMT))));
+        row.setDietNo(nextNo(PREFIX_PLAN, planMapper.maxDietSeq(PREFIX_PLAN + LocalDate.now().format(DateFormats.COMPACT_DATE))));
         row.setAdmissionId(order.getAdmissionId());
         row.setPatientId(order.getPatientId());
         row.setPatientNo(order.getPatientNo());
@@ -501,6 +500,6 @@ public class DietPlanServiceImpl implements DietPlanService {
     }
 
     private String nextNo(String prefix, long maxSeq) {
-        return prefix + LocalDate.now().format(DAY_FMT) + String.format("%04d", maxSeq + 1);
+        return prefix + LocalDate.now().format(DateFormats.COMPACT_DATE) + String.format("%04d", maxSeq + 1);
     }
 }

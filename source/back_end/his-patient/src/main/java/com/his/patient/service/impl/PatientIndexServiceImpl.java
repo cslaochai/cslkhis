@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.patient.dto.PatientIndexQueryDTO;
 import com.his.patient.dto.PatientMergeDTO;
 import com.his.patient.dto.PatientMergeRevertDTO;
@@ -33,7 +34,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -600,7 +600,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
     }
 
     private String nextMergeNo() {
-        String prefix = NO_PREFIX + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String prefix = NO_PREFIX + LocalDateTime.now().format(DateFormats.COMPACT_DATE);
         long n = mergeLogMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", n % 10000);
     }

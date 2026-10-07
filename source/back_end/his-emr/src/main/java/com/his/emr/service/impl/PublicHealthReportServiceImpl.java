@@ -7,6 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.enums.ReviewStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.emr.dto.PublicHealthSubmitDTO;
 import com.his.emr.entity.BizPublicHealthReport;
 import com.his.emr.mapper.BizPublicHealthReportMapper;
@@ -19,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -70,7 +70,7 @@ public class PublicHealthReportServiceImpl extends ServiceImpl<BizPublicHealthRe
     public BizPublicHealthReportVO submitReport(PublicHealthSubmitDTO submitDTO) {
         BizPublicHealthReport report = new BizPublicHealthReport();
         BeanUtils.copyProperties(submitDTO, report);
-        report.setReportNo("PH" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+        report.setReportNo("PH" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                 + String.format("%04d", SEQ.incrementAndGet() % 10000));
         report.setReportStatus(ReviewStatusEnum.PENDING.getCode());
         report.setReportTime(LocalDateTime.now());

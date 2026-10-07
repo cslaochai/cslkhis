@@ -2,12 +2,12 @@ package com.his.system.service;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import com.his.common.util.DateFormats;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysMessage;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * 待办/通知两张卡共用的出参装配。
@@ -18,8 +18,6 @@ import java.time.format.DateTimeFormatter;
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class MessageMetricSupport {
-
-    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     /**
      * 收件人口径：消息通知.receiver_id 存的是<b>员工ID</b>，不是用户的ID
@@ -47,7 +45,7 @@ public final class MessageMetricSupport {
     }
 
     public static String text(LocalDateTime time) {
-        return time == null ? null : TIME.format(time);
+        return time == null ? null : DateFormats.DATETIME_MINUTE.format(time);
     }
 
     /** 卡片里的一条消息（字段与 {@code lib/messageCatalog.js} 的 bizType 对齐，展示名由前端查表） */

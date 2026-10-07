@@ -15,6 +15,7 @@ import com.his.common.mapper.BizEmrSignatureMapper;
 import com.his.common.mapper.SignConfigMapper;
 import com.his.common.mapper.SysSignCertMapper;
 import com.his.common.service.*;
+import com.his.common.util.DateFormats;
 import com.his.common.util.SignCryptoUtil;
 import com.his.common.util.TimeUtil;
 import com.his.common.vo.ObjectSignatureVO;
@@ -30,7 +31,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -59,7 +59,6 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class EmrSignatureServiceImpl implements EmrSignatureService {
 
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String SIGN_NO_PREFIX = "SIG";
     private static final String CFG_TIME_SOURCE = "sign.time_source";
     /**
@@ -78,19 +77,6 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     private final com.his.common.mapper.BizTsaTokenMapper tsaTokenMapper;
     private final ObjectProvider<SignableContentProvider> providers;
     private final ObjectProvider<SignCoverageProvider> coverageProviders;
-
-    // 签名
-
-    private static long longValue(String s) {
-        if (!StringUtils.hasText(s)) {
-            return 1L;
-        }
-        try {
-            return Long.parseLong(s.trim());
-        } catch (NumberFormatException e) {
-            return 1L;
-        }
-    }
 
     // 验签
 
@@ -715,7 +701,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     }
 
     private String nextSignNo() {
-        String prefix = SIGN_NO_PREFIX + LocalDate.now().format(NO_DATE);
+        String prefix = SIGN_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE);
         // 优先 Redis 原子自增（永不撞）；Redis 不可用时回落"当天已用条数 +1"。
         // 回落分支在**同一业务事务内**撞唯一索引时没法靠重试解决
         // （事务已被标记 rollback-only，重试只会得到 "Transaction silently rolled back"），

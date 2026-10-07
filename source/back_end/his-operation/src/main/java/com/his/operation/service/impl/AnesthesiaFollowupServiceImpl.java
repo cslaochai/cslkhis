@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.AnesthesiaFollowupQueryPageDTO;
 import com.his.operation.dto.AnesthesiaFollowupUpsertDTO;
@@ -26,7 +27,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -63,8 +63,6 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     /**
      * 随访状态：唯一口径 AnesthesiaFollowupStatusEnum（0草稿 1已完成）
      */
-
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizAnesthesiaFollowupMapper followupMapper;
     private final BizAnesthesiaRecordMapper recordMapper;
@@ -336,7 +334,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     }
 
     private String nextFollowupNo() {
-        String prefix = "MS" + LocalDate.now().format(NO_DATE);
+        String prefix = "MS" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = followupMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }

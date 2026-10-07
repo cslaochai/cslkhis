@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.pharmacy.dto.*;
 import com.his.pharmacy.entity.BizAntibioticAlias;
 import com.his.pharmacy.entity.BizAntibioticAuth;
@@ -23,7 +24,6 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -39,8 +39,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AntibioticServiceImpl implements AntibioticService {
-
-    private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final DictCacheService dictCacheService;
     private final AntibioticCatalogMapper catalogMapper;
@@ -313,7 +311,7 @@ public class AntibioticServiceImpl implements AntibioticService {
     // 内部
 
     private String nextAuthNo() {
-        String day = LocalDate.now().format(DAY_FMT);
+        String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
         String max = authMapper.selectMaxAuthNo(day);
         int seq = 1;
         if (StringUtils.hasText(max) && max.length() >= 4) {

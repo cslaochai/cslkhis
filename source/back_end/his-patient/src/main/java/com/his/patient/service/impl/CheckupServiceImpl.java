@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.patient.dto.CheckupDTO;
 import com.his.patient.entity.*;
 import com.his.patient.enums.CheckupStatusEnum;
@@ -18,7 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
@@ -158,7 +158,7 @@ public class CheckupServiceImpl implements CheckupService {
             throw new BusinessException("套餐性别限制：该套餐仅适用于" + dictText.getDicDataLabel("sys_gender", p.getGenderLimit()));
         }
         BizCheckupRecord r = new BizCheckupRecord();
-        r.setRecordNo("CU" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())
+        r.setRecordNo("CU" + DateFormats.COMPACT_DATETIME.format(LocalDateTime.now())
                 + ThreadLocalRandom.current().nextInt(100, 1000));
         r.setPatientId(patient.getId());
         r.setPatientName(patient.getPatientName());

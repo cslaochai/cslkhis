@@ -11,6 +11,7 @@ import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.patient.dto.InpatientLeaveDTO;
@@ -103,7 +104,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
             return LocalDateTime.MIN;
         }
         return LocalDateTime.parse(text.length() > 19 ? text.substring(0, 19) : text,
-                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                DateFormats.DATETIME);
     }
 
     private static LocalDateTime atStart(java.time.LocalDate date) {

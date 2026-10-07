@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.patient.dto.NutritionStatsGenerateDTO;
 import com.his.patient.dto.NutritionStatsQueryPageDTO;
 import com.his.patient.entity.BizNutritionStats;
@@ -28,7 +29,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -48,8 +48,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class NutritionStatsServiceImpl implements NutritionStatsService {
-
-    private static final DateTimeFormatter CSV_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final BizNutritionStatsMapper statsMapper;
     private final NutritionStatMapper statMapper;
@@ -156,7 +154,7 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
                     .append(r.getMealSignRate()).append(',')
                     .append(n(r.getMealCancelCount())).append(',')
                     .append(csv(r.getGenerateBy())).append(',')
-                    .append(r.getGenerateTime() == null ? "" : CSV_TIME_FMT.format(r.getGenerateTime()))
+                    .append(r.getGenerateTime() == null ? "" : DateFormats.DATETIME.format(r.getGenerateTime()))
                     .append('\n');
         }
         return sb.toString();

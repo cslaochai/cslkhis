@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.CssdDTO;
 import com.his.pharmacy.entity.BizCssdPack;
@@ -23,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 
@@ -38,7 +38,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class CssdServiceImpl implements CssdService {
-    private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private final DictCacheService dictCacheService;
     private final BizCssdPackMapper packMapper;
     private final BizCssdTraceMapper traceMapper;
@@ -180,7 +179,7 @@ public class CssdServiceImpl implements CssdService {
      * 条码自动生成：CSSD + yyyyMMdd + 顺延序号（查重含软删行，防唯一键冲突）
      */
     private String nextPackNo() {
-        String date = LocalDate.now().format(NO_FMT);
+        String date = LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = 1;
         for (int i = 0; i < 20; i++) {
             String no = "CSSD" + date + String.format("%03d", seq);

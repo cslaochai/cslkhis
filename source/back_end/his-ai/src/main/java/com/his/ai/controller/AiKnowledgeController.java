@@ -25,12 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 知识库问答（RAG）接口。
- *
- * <p><b>落地位置：</b> his-ai 暴露 {@code /ai/knowledge/*}，不改动业务模块（避免循环依赖）。
- * 前端若要做患者端智能咨询，调 {@code /ai/knowledge/ask} 即可。
- *
- * <p><b>权限：</b> ask 任何登录用户可用（患者/医护都可能需要）；维护类接口（录入/列表/删除/重建/种子）
- * 限定 {@code ai:knowledge:manage}（sys_menu 按钮码，见 sql/225），与 AI 管理台页面的维护签页同源。
  */
 @Tag(name = "AI 能力-知识库问答(RAG)")
 @RestController

@@ -1,11 +1,11 @@
 package com.his.miniapp.util;
 
+import com.his.common.util.DateFormats;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,7 +23,7 @@ public final class MiniappPdfStub {
     public static byte[] reportPdf(String reportNo, String patientName, String itemName,
                                    String deptName, String doctorName, LocalDateTime reportTime) {
         String time = reportTime == null
-                ? "-" : reportTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+                ? "-" : reportTime.format(DateFormats.DATETIME_MINUTE);
         List<String> lines = List.of(
                 "Lukang Hospital (HIS stub PDF)",
                 "--------------------------------------------",

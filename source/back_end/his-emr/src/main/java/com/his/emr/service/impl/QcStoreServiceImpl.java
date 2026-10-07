@@ -3,6 +3,7 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.enums.CheckResultEnum;
 import com.his.common.enums.RecordQcTypeEnum;
+import com.his.common.util.DateFormats;
 import com.his.emr.entity.BizQualityControl;
 import com.his.emr.entity.BizQualityControlIssue;
 import com.his.emr.enums.QcDimensionEnum;
@@ -20,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -47,10 +47,6 @@ public class QcStoreServiceImpl implements QcStoreService {
      * 旧实现是 QC + 14 位时间 + 4 位（共 20 位），本实现是 {@code QC + 8 + 4}（共 14 位）。
      */
     private static final String NO_PREFIX = "QC";
-
-    private static final DateTimeFormatter DAY_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
-
-    private static final DateTimeFormatter FALLBACK_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
 
     /**
      * 问题明细条数上限。一份病历的问题不会超过规则总数（当前 20 条），
@@ -165,7 +161,7 @@ public class QcStoreServiceImpl implements QcStoreService {
      * 仍然撞车就退到毫秒级 + 3 位随机，保证业务不会因为"序号用完了"而落不了库。
      */
     private String nextQcNo() {
-        String dayPrefix = NO_PREFIX + LocalDate.now().format(DAY_FORMATTER);
+        String dayPrefix = NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long base = qualityControlMapper.countByQcNoPrefix(dayPrefix);
         for (int offset = 1; offset <= 50; offset++) {
             String candidate = dayPrefix + String.format("%04d", (base + offset) % 10000);
@@ -174,7 +170,7 @@ public class QcStoreServiceImpl implements QcStoreService {
             }
         }
         for (int attempt = 0; attempt < 20; attempt++) {
-            String candidate = NO_PREFIX + LocalDateTime.now().format(FALLBACK_FORMATTER)
+            String candidate = NO_PREFIX + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME_MS)
                     + String.format("%03d", (int) (Math.random() * 1000));
             if (!exists(candidate)) {
                 return candidate;

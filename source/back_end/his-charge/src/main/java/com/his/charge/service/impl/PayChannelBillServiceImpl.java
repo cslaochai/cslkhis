@@ -18,6 +18,7 @@ import com.his.common.enums.PayDirectionEnum;
 import com.his.common.enums.PayTxnStatusEnum;
 import com.his.common.enums.PaymentMethodEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +31,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -55,9 +55,6 @@ import java.util.stream.Collectors;
 public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapper, BizPayChannelBill>
         implements PayChannelBillService {
 
-    private static final DateTimeFormatter BATCH_TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
     /**
      * 可对账的在线渠道：取自 {@link PaymentMethodEnum#channelBacked()}，不另写一份裸数字表
      */
@@ -66,7 +63,6 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
 
     private final BizPaymentTxnMapper paymentTxnMapper;
     private final PayChannelService payChannelService;
-
 
     private static String cut(String text, int max) {
         if (text == null) {
@@ -114,7 +110,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
                         .eq(BizPayChannelBill::getBillDate, dto.getBillDate()))
                 .stream().map(BizPayChannelBill::getChannelTradeNo).collect(Collectors.toSet());
 
-        String batchNo = "IMP" + LocalDateTime.now().format(BATCH_TS)
+        String batchNo = "IMP" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                 + String.format("%03d", dto.getChannel());
         int inserted = 0;
         for (PayChannelService.ChannelTrade trade : trades) {
@@ -312,7 +308,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
             vo.setBillNo(txn.getBillNo());
             vo.setPatientName(txn.getPatientName());
             vo.setAmount(txn.getAmount());
-            vo.setTxnTime(txn.getTxnTime() == null ? "" : TS.format(txn.getTxnTime()));
+            vo.setTxnTime(txn.getTxnTime() == null ? "" : DateFormats.DATETIME.format(txn.getTxnTime()));
             vos.add(vo);
         }
         return vos;

@@ -12,6 +12,7 @@ import com.his.ai.vo.LabItemOverviewVO;
 import com.his.ai.vo.LabTrendVO;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.mapper.BizLabResultMapper;
@@ -27,7 +28,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -90,8 +90,6 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
     private static final int OUTPUT_TOKEN_LIMIT = 2048;
 
     private static final int CONCLUSION_MAX_LENGTH = 500;
-
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private final BizLaboratoryRecordMapper laboratoryRecordMapper;
 
@@ -477,7 +475,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
                 LabTrendVO.Point point = new LabTrendVO.Point();
                 point.setRecordNo(record.getRecordNo());
                 point.setDate(record.getExecuteTime() == null
-                        ? "" : record.getExecuteTime().format(DATE_FORMATTER));
+                        ? "" : record.getExecuteTime().format(DateFormats.DATE));
                 point.setResultValue(result.getResultValue());
                 point.setNumericValue(numeric);
                 point.setAbnormalFlag(result.getAbnormalFlag());

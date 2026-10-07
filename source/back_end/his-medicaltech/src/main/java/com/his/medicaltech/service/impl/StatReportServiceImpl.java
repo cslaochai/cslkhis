@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.medicaltech.dto.StatReportDTO;
 import com.his.medicaltech.entity.BizStatReport;
 import com.his.medicaltech.mapper.BizStatReportMapper;
@@ -24,7 +25,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,8 +37,6 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 @RequiredArgsConstructor
 public class StatReportServiceImpl implements StatReportService {
-    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final BizStatReportMapper reportMapper;
 
@@ -98,8 +96,8 @@ public class StatReportServiceImpl implements StatReportService {
             start = LocalDate.of(y, 1, 1);
             end = LocalDate.of(y, 12, 31);
         }
-        String startStr = start.atStartOfDay().format(DTF);
-        String endStr = end.atTime(LocalTime.MAX).format(DTF);
+        String startStr = start.atStartOfDay().format(DateFormats.DATETIME);
+        String endStr = end.atTime(LocalTime.MAX).format(DateFormats.DATETIME);
 
         Long deptId = dto.getDeptId();
         BizStatReport dup = reportMapper.selectOne(new LambdaQueryWrapper<BizStatReport>()
@@ -208,7 +206,7 @@ public class StatReportServiceImpl implements StatReportService {
         reserved.put("printTip", "本报文可打印成纸质报表，加盖机构公章后作为上报留档。");
         payload.put("reserved", reserved);
         payload.put("operator", operator);
-        payload.put("generatedAt", now.format(DTF));
+        payload.put("generatedAt", now.format(DateFormats.DATETIME));
 
         String payloadJson;
         try {
@@ -218,7 +216,7 @@ public class StatReportServiceImpl implements StatReportService {
         }
 
         BizStatReport r = new BizStatReport();
-        r.setReportNo("TJ" + now.format(TS) + ThreadLocalRandom.current().nextInt(100, 1000));
+        r.setReportNo("TJ" + now.format(DateFormats.COMPACT_DATETIME) + ThreadLocalRandom.current().nextInt(100, 1000));
         r.setReportType(dto.getReportType());
         r.setPeriodType(dto.getPeriodType());
         r.setPeriodValue(period);

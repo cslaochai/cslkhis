@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DischargeDrugDTO;
 import com.his.patient.entity.BizDischargeDrug;
@@ -20,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -183,7 +183,7 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
      * 单号 DDA + yyyyMMddHHmmss + 3 位随机，撞库概率忽略；唯一索引兜底
      */
     private String nextOrderNo() {
-        return "DDA" + DateTimeFormatter.ofPattern("yyyyMMddHHmmss").format(LocalDateTime.now())
+        return "DDA" + DateFormats.COMPACT_DATETIME.format(LocalDateTime.now())
                 + ThreadLocalRandom.current().nextInt(100, 1000);
     }
 

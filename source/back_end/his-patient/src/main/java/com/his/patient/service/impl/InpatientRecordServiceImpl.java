@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -26,7 +27,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -53,8 +53,6 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InpatientRecordServiceImpl implements InpatientRecordService {
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter HM = DateTimeFormatter.ofPattern("HH:mm");
     private final DeptScopeProvider deptScopeProvider;
     private final BizInpatientRecordMapper recordMapper;
     private final BizInpatientRecordLogMapper logMapper;
@@ -1072,7 +1070,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
     }
 
     private String nextRecordNo() {
-        String prefix = "BL" + LocalDate.now().format(NO_DATE);
+        String prefix = "BL" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = recordMapper.countByRecordNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }

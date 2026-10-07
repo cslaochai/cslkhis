@@ -2,13 +2,13 @@ package com.his.common.service.impl;
 
 import com.his.common.base.Constants;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.DateFormats;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 
 /**
  * {@link RedisSequenceService} 的 Redis 实现。
@@ -21,13 +21,11 @@ import java.time.format.DateTimeFormatter;
 @RequiredArgsConstructor
 public class RedisSequenceServiceImpl implements RedisSequenceService {
 
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
-
     private final StringRedisTemplate stringRedisTemplate;
 
     @Override
     public long next(String module) {
-        String key = module + ":" + LocalDate.now().format(DATE_FMT);
+        String key = module + ":" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         Long seq = stringRedisTemplate.opsForValue().increment(key);
         if (seq != null && seq == 1L) {
             // 首次设置，设置 24 小时过期

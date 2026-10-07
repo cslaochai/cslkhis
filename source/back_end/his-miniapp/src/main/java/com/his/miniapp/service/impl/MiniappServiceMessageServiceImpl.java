@@ -3,6 +3,7 @@ package com.his.miniapp.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.miniapp.dto.ServiceMessageUpsertDTO;
 import com.his.miniapp.dto.ServiceTicketActionDTO;
 import com.his.miniapp.dto.ServiceTicketAppendDTO;
@@ -26,7 +27,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -45,10 +45,6 @@ import java.util.List;
 public class MiniappServiceMessageServiceImpl implements MiniappServiceMessageService {
 
     private static final String NO_PREFIX = "MSG";
-
-    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyyMMdd");
-
-    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /** 与 biz_service_message.content 列宽一致，写库前先截 */
     private static final int CONTENT_MAX = 1000;
@@ -125,7 +121,7 @@ public class MiniappServiceMessageServiceImpl implements MiniappServiceMessageSe
 
     @Override
     public void append(ServiceTicketAppendDTO dto) {
-        BizServiceMessage ticket = requireOwnTicket(parseId(dto.getId()));
+        BizServiceMessage ticket = requireOwnTicket(dto.getId());
         if (!ServiceTicketStatus.canAppend(ticket.getStatus())) {
             throw new BusinessException("工单已关闭，无法补充；如需继续咨询请重新提交");
         }
@@ -146,7 +142,7 @@ public class MiniappServiceMessageServiceImpl implements MiniappServiceMessageSe
 
     @Override
     public void patientAction(ServiceTicketActionDTO dto) {
-        BizServiceMessage ticket = requireOwnTicket(parseId(dto.getId()));
+        BizServiceMessage ticket = requireOwnTicket(dto.getId());
         String action = dto.getAction() == null ? "" : dto.getAction().trim();
         CurrentUser user = UserUtils.getCurrentUser();
         String operator = user == null ? null : user.getUsername();
@@ -219,7 +215,7 @@ public class MiniappServiceMessageServiceImpl implements MiniappServiceMessageSe
      * <p><b>绝不用「当天 count + 1」</b>：删掉一条之后 count 回退，下一个单号直接撞唯一键。
      */
     private String nextMessageNo() {
-        String prefix = NO_PREFIX + LocalDate.now().format(DAY);
+        String prefix = NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE);
         String max = messageMapper.maxMessageNo(prefix);
         int seq = 1;
         if (StringUtils.hasText(max) && max.length() > prefix.length()) {
@@ -284,7 +280,7 @@ public class MiniappServiceMessageServiceImpl implements MiniappServiceMessageSe
             vo.setOperatorName(row.getOperatorType() != null && row.getOperatorType() == 1
                     ? "我" : row.getOperatorName());
             vo.setVisibleToPatient(row.getVisibleToPatient());
-            vo.setCreateTime(row.getCreateTime() == null ? "" : row.getCreateTime().format(TIME));
+            vo.setCreateTime(row.getCreateTime() == null ? "" : row.getCreateTime().format(DateFormats.DATETIME));
             vos.add(vo);
         }
         return vos;
@@ -303,13 +299,6 @@ public class MiniappServiceMessageServiceImpl implements MiniappServiceMessageSe
             actions.add("reopen");
         }
         return actions;
-    }
-
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
     }
 
     private static String cut(String text, int max) {
@@ -332,7 +321,7 @@ public class MiniappServiceMessageServiceImpl implements MiniappServiceMessageSe
         vo.setReplyCount(entity.getReplyCount());
         vo.setHandleResult(entity.getHandleResult());
         vo.setActions(patientActions(entity.getStatus()));
-        vo.setCreateTime(entity.getCreateTime() == null ? "" : entity.getCreateTime().format(TIME));
+        vo.setCreateTime(entity.getCreateTime() == null ? "" : entity.getCreateTime().format(DateFormats.DATETIME));
         return vo;
     }
 
@@ -350,7 +339,7 @@ public class MiniappServiceMessageServiceImpl implements MiniappServiceMessageSe
         vo.setAcceptByName(entity.getAcceptByName());
         vo.setCloseReason(entity.getCloseReason());
         vo.setHandleResult(entity.getHandleResult());
-        vo.setCreateTime(entity.getCreateTime() == null ? "" : entity.getCreateTime().format(TIME));
+        vo.setCreateTime(entity.getCreateTime() == null ? "" : entity.getCreateTime().format(DateFormats.DATETIME));
         return vo;
     }
 }

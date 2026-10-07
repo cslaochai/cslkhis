@@ -14,6 +14,7 @@ import com.his.charge.service.*;
 import com.his.charge.vo.*;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.system.entity.SysEmployee;
 import com.his.system.enums.BizTypeEnum;
@@ -31,7 +32,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -83,9 +83,6 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
      * 欠费告警类型（写入预警记录.alert_type）
      */
     private static final String ALERT_ARREARS = "ARREARS";
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final DateTimeFormatter SECOND = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final BizPaymentTxnMapper paymentTxnMapper;
     private final BizAlertMapper alertMapper;
     private final PatientGateway patientGateway;
@@ -96,7 +93,6 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
     private final SysMessageService sysMessageService;
     private final SysEmployeeMapper sysEmployeeMapper;
     private DictCacheService dictCacheService;
-
 
     // 预交金（L3 资金流水 + 住院资金账户）
 
@@ -124,7 +120,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
     }
 
     private static String dayOf(LocalDateTime time) {
-        return time == null ? null : time.toLocalDate().format(DAY);
+        return time == null ? null : time.toLocalDate().format(DateFormats.DATE);
     }
 
     // 日清单（L1 记账行按天汇总）
@@ -559,7 +555,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
     }
 
     private String nextAlertNo() {
-        String prefix = "BJ" + LocalDate.now().format(NO_DATE);
+        String prefix = "BJ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         return prefix + String.format("%04d", alertMapper.countByAlertNoPrefix(prefix) + 1);
     }
 
@@ -614,7 +610,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         item.setPrice(row.getPrice());
         // 记账行金额本身就是净额：红冲另写一行负数、不改原行，所以这里不做任何减法
         item.setAmount(scale(row.getAmount()));
-        item.setOccurTime(row.getBookTime() == null ? null : row.getBookTime().format(SECOND));
+        item.setOccurTime(row.getBookTime() == null ? null : row.getBookTime().format(DateFormats.DATETIME));
         item.setSourceNo(row.getSourceNo());
         return item;
     }

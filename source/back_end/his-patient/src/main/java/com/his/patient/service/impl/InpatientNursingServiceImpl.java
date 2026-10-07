@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -29,7 +30,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -53,9 +53,6 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InpatientNursingServiceImpl implements InpatientNursingService {
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
     private static final BigDecimal MIN_TEMP = new BigDecimal("34");
     private static final BigDecimal MAX_TEMP = new BigDecimal("43");
 
@@ -359,8 +356,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             TempSheetVO.TempPointVO p = new TempSheetVO.TempPointVO();
             p.setRecordId(r.getId());
             p.setMeasureTime(r.getMeasureTime());
-            p.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DATE));
-            p.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(CLOCK));
+            p.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DateFormats.DATE));
+            p.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(DateFormats.TIME_MINUTE));
             p.setShiftText(dictCacheService.getDicDataLabel("biz_patient_nursingShiftEnum", r.getShift()));
             p.setTemperature(r.getTemperature());
             p.setPulse(r.getPulse());
@@ -636,7 +633,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     // 跨模块事实面（只聚事实不判异常 —— 阈值口径留在消费方）
 
     private String nextAssessNo() {
-        String prefix = "AS" + LocalDate.now().format(NO_DATE);
+        String prefix = "AS" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = bizNursingAssessmentMapper.countByAssessNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
@@ -666,7 +663,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             LocalDate day = r.getMeasureTime().toLocalDate();
             IntakeOutputSummaryVO.DayRow row = byDay.computeIfAbsent(day, k -> {
                 IntakeOutputSummaryVO.DayRow d = new IntakeOutputSummaryVO.DayRow();
-                d.setDate(k.format(DATE));
+                d.setDate(k.format(DateFormats.DATE));
                 d.setIntake(0);
                 d.setOutput(0);
                 d.setUrine(0);
@@ -865,8 +862,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setNursingType(r.getNursingType());
         vo.setNursingTypeText(NursingDocTypeEnum.getText(r.getNursingType()));
         vo.setMeasureTime(r.getMeasureTime());
-        vo.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DATE));
-        vo.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(CLOCK));
+        vo.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DateFormats.DATE));
+        vo.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(DateFormats.TIME_MINUTE));
         vo.setShift(r.getShift());
         vo.setShiftText(dictCacheService.getDicDataLabel("biz_patient_nursingShiftEnum", r.getShift()));
         vo.setTemperature(r.getTemperature());
@@ -965,7 +962,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     }
 
     private String nextRecordNo() {
-        String prefix = "HL" + LocalDate.now().format(NO_DATE);
+        String prefix = "HL" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = bizNursingRecordMapper.countByRecordNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }

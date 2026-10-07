@@ -6,13 +6,13 @@ import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.PayChannelService;
 import com.his.common.enums.PayTxnStatusEnum;
 import com.his.common.enums.PaymentMethodEnum;
+import com.his.common.util.DateFormats;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,10 +41,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PayChannelServiceImpl implements PayChannelService {
 
-    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
     private final BizPaymentTxnMapper paymentTxnMapper;
-
 
     /**
      * 拉取指定渠道、指定账单日的渠道侧流水。
@@ -70,7 +67,7 @@ public class PayChannelServiceImpl implements PayChannelService {
             // 真渠道就是那个位置存商户平台流水号，所以这里直接复用，不另造一套号。
             String tradeNo = StringUtils.hasText(txn.getChannelTxnNo())
                     ? txn.getChannelTxnNo()
-                    : "SIMU-" + channel + "-" + billDate.format(DAY) + "-" + txn.getTxnNo();
+                    : "SIMU-" + channel + "-" + billDate.format(DateFormats.DATE) + "-" + txn.getTxnNo();
             trades.add(new ChannelTrade(tradeNo, txn.getTxnTime(), txn.getAmount()));
             log.info("[M7支付渠道口子] 渠道流水 tradeNo={} amount={}（对应本地支付流水 {}）",
                     tradeNo, txn.getAmount(), txn.getTxnNo());

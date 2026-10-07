@@ -19,6 +19,7 @@ import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysIcd10;
 import com.his.system.mapper.SysIcd10Mapper;
@@ -33,7 +34,6 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
@@ -47,7 +47,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ComplianceAuditServiceImpl implements ComplianceAuditService {
-    private static final DateTimeFormatter AUDIT_NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private final BizInsuranceSettlementMapper settlementMapper;
     private final AppointGateway appointGateway;
     private final SysIcd10Mapper icd10Mapper;
@@ -617,7 +616,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     }
 
     private String nextAuditNo() {
-        return "CA" + LocalDateTime.now().format(AUDIT_NO_FMT)
+        return "CA" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                 + String.format("%04d", ThreadLocalRandom.current().nextInt(10000));
     }
 

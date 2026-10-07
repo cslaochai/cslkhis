@@ -18,6 +18,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.DateFormats;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +32,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,7 +46,6 @@ import java.util.Map;
 public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaymentTxn> implements PaymentService {
 
     private static final int AMOUNT_SCALE = 2;
-    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     /**
      * 无员工上下文（患者端自助、系统任务）时的收银人占位ID：班结会把它单列一栏，不与真人混在一起
@@ -584,7 +583,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         if (!payMethod.channelBacked()) {
             return null;
         }
-        return "SIMU-" + payMethod.getCode() + "-" + LocalDate.now().format(DAY) + "-" + txn.getTxnNo();
+        return "SIMU-" + payMethod.getCode() + "-" + LocalDate.now().format(DateFormats.COMPACT_DATE) + "-" + txn.getTxnNo();
     }
 
     /**

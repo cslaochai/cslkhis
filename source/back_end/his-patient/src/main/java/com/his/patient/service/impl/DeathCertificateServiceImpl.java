@@ -6,6 +6,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DeathCertificateDTO;
 import com.his.patient.entity.BizDeathCertificate;
@@ -31,7 +32,6 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Period;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -88,7 +88,6 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     /**
      * 上报报文里的时间统一空格分隔（全项目入参与展示同一口径，不留 ISO 的 T 分隔去二次转义）
      */
-    private static final DateTimeFormatter PAYLOAD_TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final BizDeathCertificateMapper certMapper;
     private final BizDeathCertificateCauseMapper causeMapper;
@@ -192,7 +191,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
      * 时间序列化成报文体里的固定格式，null 保持 null（不写 "null" 字符串）
      */
     private static String ts(LocalDateTime time) {
-        return time == null ? null : time.format(PAYLOAD_TS);
+        return time == null ? null : time.format(DateFormats.DATETIME);
     }
 
     private static String nullToEmpty(String text) {

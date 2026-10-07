@@ -2,6 +2,7 @@ package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.entity.BizLaboratoryApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
@@ -39,7 +40,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -49,7 +49,6 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class ExamImageServiceImpl implements ExamImageService {
-    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final ExamImageProperties examImageProperties;
 
@@ -250,7 +249,7 @@ public class ExamImageServiceImpl implements ExamImageService {
     }
 
     private String buildFileName(String ext) {
-        return LocalDate.now().format(DAY) + "_" + UUID.randomUUID().toString().replace("-", "") + "." + ext;
+        return LocalDate.now().format(DateFormats.COMPACT_DATE) + "_" + UUID.randomUUID().toString().replace("-", "") + "." + ext;
     }
 
     /**
@@ -268,7 +267,7 @@ public class ExamImageServiceImpl implements ExamImageService {
      * 参与拼路径就等于把 "../../application.yml" 交给请求方（AGENTS 的目录穿越口子）。
      */
     private String saveBytes(String fileName, byte[] bytes) {
-        String dateDir = LocalDate.now().format(DAY);
+        String dateDir = LocalDate.now().format(DateFormats.COMPACT_DATE);
         String relativeDir = uploadRoot() + "/" + dateDir;
         File dir = new File(System.getProperty("user.dir"), relativeDir);
         if (!dir.exists() && !dir.mkdirs()) {

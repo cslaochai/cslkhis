@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.pharmacy.dto.ConsumableUpsertDTO;
 import com.his.pharmacy.entity.BizConsumableConsume;
 import com.his.pharmacy.entity.BizConsumableStock;
@@ -25,7 +26,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -307,7 +307,7 @@ public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, B
     }
 
     private String nextConsumeNo() {
-        return "LC" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+        return "LC" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                 + String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
     }
 }

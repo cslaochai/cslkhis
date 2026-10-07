@@ -6,6 +6,7 @@ import com.his.common.base.Constants;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.DateFormats;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
@@ -30,7 +31,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -56,8 +56,6 @@ import java.util.*;
 @RequiredArgsConstructor
 public class SurveyServiceImpl implements SurveyService {
     private static final BigDecimal HUNDRED = new BigDecimal("100");
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final DeptScopeProvider deptScopeProvider;
     private final BizSurveyDispatchMapper dispatchMapper;
     private final BizSurveyAnswerMapper answerMapper;
@@ -632,7 +630,7 @@ public class SurveyServiceImpl implements SurveyService {
         dto.setComplainant(answer.getPatientName());
         dto.setComplainantRel(ComplainantRelEnum.SELF.getCode());
         dto.setComplainantTel(dispatch.getPhone());
-        dto.setOccurTime(answer.getFillTime() == null ? null : answer.getFillTime().format(TIME_FMT));
+        dto.setOccurTime(answer.getFillTime() == null ? null : answer.getFillTime().format(DateFormats.DATETIME));
         dto.setOccurPlace("出院随访满意度回访");
 
         StringBuilder content = new StringBuilder();
@@ -763,7 +761,7 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     private String nextNo(String prefix, String module) {
-        return prefix + LocalDate.now().format(NO_DATE)
+        return prefix + LocalDate.now().format(DateFormats.COMPACT_DATE)
                 + String.format("%04d", sequenceService.next(module));
     }
 }

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.BizOperationApply;
@@ -79,9 +80,6 @@ public class OperationApplyServiceImpl implements OperationApplyService {
      * 术前核对完成后多久没结束算"卡住"（查询时算，不落状态列）
      */
     private static final long STALLED_HOURS = 24;
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter FULL_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final DateTimeFormatter TIME_HM = DateTimeFormatter.ofPattern("HH:mm");
 
     private final BizOperationApplyMapper bizOperationApplyMapper;
 
@@ -138,11 +136,11 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         try {
             if (s.length() == 10) {
                 LocalDate d = LocalDate.parse(s);
-                return new Parsed(d.atStartOfDay().format(FULL_TIME),
-                        d.plusDays(1).atStartOfDay().format(FULL_TIME));
+                return new Parsed(d.atStartOfDay().format(DateFormats.DATETIME),
+                        d.plusDays(1).atStartOfDay().format(DateFormats.DATETIME));
             }
-            LocalDateTime t = LocalDateTime.parse(s, FULL_TIME);
-            return new Parsed(t.format(FULL_TIME), t.format(FULL_TIME));
+            LocalDateTime t = LocalDateTime.parse(s, DateFormats.DATETIME);
+            return new Parsed(t.format(DateFormats.DATETIME), t.format(DateFormats.DATETIME));
         } catch (DateTimeParseException e) {
             // 明确报格式问题，不静默忽略、也不让它变成 500
             throw new BusinessException("时间格式不正确：" + raw + "（应为 yyyy-MM-dd 或 yyyy-MM-dd HH:mm:ss）");
@@ -452,7 +450,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         if (!conflicts.isEmpty()) {
             BizOperationApply c = conflicts.get(0);
             throw new BusinessException("「" + dto.getOperationRoom() + "」在 "
-                    + c.getPlannedStartTime().format(TIME_HM) + "~" + c.getPlannedEndTime().format(TIME_HM)
+                    + c.getPlannedStartTime().format(DateFormats.TIME_MINUTE) + "~" + c.getPlannedEndTime().format(DateFormats.TIME_MINUTE)
                     + " 已被 " + c.getApplyNo() + "（" + c.getPatientName() + " "
                     + c.getPlannedOperationName() + "）占用，请换手术间或换时段");
         }
@@ -482,7 +480,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
         log.info("排台 applyNo={} 手术间={} {}~{} 主刀={} 排台人={}",
                 entity.getApplyNo(), dto.getOperationRoom(),
-                start.format(FULL_TIME), end.format(FULL_TIME), surgeonName, operatorUser.getRealName());
+                start.format(DateFormats.DATETIME), end.format(DateFormats.DATETIME), surgeonName, operatorUser.getRealName());
     }
 
     @Override
@@ -632,7 +630,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         bizOperationApplyMapper.updateById(entity);
 
         log.info("手术完成 applyNo={} 术式={} {}~{} 首页明细ID={} 病历号={} 录入人={}",
-                entity.getApplyNo(), actualName, start.format(FULL_TIME), end.format(FULL_TIME),
+                entity.getApplyNo(), actualName, start.format(DateFormats.DATETIME), end.format(DateFormats.DATETIME),
                 op.getId(), record.getRecordNo(), operatorUser.getRealName());
     }
 
@@ -696,7 +694,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
 
         StringBuilder course = new StringBuilder();
         course.append("手术名称：").append(dto.getActualOperationName()).append('\n');
-        course.append("手术时间：").append(start.format(FULL_TIME)).append(" ~ ").append(end.format(FULL_TIME))
+        course.append("手术时间：").append(start.format(DateFormats.DATETIME)).append(" ~ ").append(end.format(DateFormats.DATETIME))
                 .append("（").append(AnesthesiaCalcs.durationText(
                         Duration.between(start, end).toMinutes())).append("）\n");
         course.append("术中所见：").append(dto.getIntraopFindings()).append('\n');
@@ -822,8 +820,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         vo.setCanCancel(pending || scheduled);
 
         if (vo.getPlannedStartTime() != null && vo.getPlannedEndTime() != null) {
-            vo.setPlannedTimeText(vo.getPlannedStartTime().format(FULL_TIME) + " ~ "
-                    + vo.getPlannedEndTime().format(TIME_HM));
+            vo.setPlannedTimeText(vo.getPlannedStartTime().format(DateFormats.DATETIME) + " ~ "
+                    + vo.getPlannedEndTime().format(DateFormats.TIME_MINUTE));
         }
         if (vo.getOperationStartTime() != null && vo.getOperationEndTime() != null) {
             long minutes = Math.max(0, Duration.between(
@@ -914,7 +912,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     }
 
     private String nextApplyNo() {
-        String prefix = "SS" + LocalDate.now().format(NO_DATE);
+        String prefix = "SS" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = bizOperationApplyMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }

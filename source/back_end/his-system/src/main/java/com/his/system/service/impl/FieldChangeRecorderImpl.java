@@ -1,5 +1,6 @@
 package com.his.system.service.impl;
 
+import com.his.common.util.DateFormats;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysFieldChangeLog;
 import com.his.system.enums.MaskEnum;
@@ -19,7 +20,6 @@ import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -46,8 +46,6 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
      * 值列宽（与表 VARCHAR(500) 对齐）
      */
     private static final int VALUE_MAX = 500;
-
-    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -97,7 +95,7 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
             return null;
         }
         if (v instanceof LocalDateTime t) {
-            return t.format(TS);
+            return t.format(DateFormats.DATETIME);
         }
         if (v instanceof LocalDate d) {
             return d.toString();
@@ -139,7 +137,7 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
      * 批次号：FC + 年月日时分秒 + 6 位随机 —— 同一毫秒内两次保存靠随机位区分，且人能念出来。
      */
     private static String newBatchNo() {
-        return "FC" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+        return "FC" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                 + String.format("%06d", RANDOM.nextInt(1_000_000));
     }
 

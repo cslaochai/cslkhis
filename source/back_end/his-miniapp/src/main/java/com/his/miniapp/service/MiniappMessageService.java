@@ -19,5 +19,5 @@ public interface MiniappMessageService {
      *
      * @return 实际被置为已读的条数
      */
-    int markRead(List<String> messageIds);
+    int markRead(List<Long> messageIds);
 }

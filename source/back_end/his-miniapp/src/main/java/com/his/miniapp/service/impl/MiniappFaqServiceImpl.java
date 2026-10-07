@@ -4,7 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.miniapp.dto.FaqSearchDTO;
+import com.his.common.util.DateFormats;
+import com.his.miniapp.dto.FaqPageQueryDTO;
 import com.his.miniapp.dto.FaqUpsertDTO;
 import com.his.miniapp.entity.SysFaq;
 import com.his.miniapp.mapper.MiniappFaqMapper;
@@ -18,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -41,8 +41,6 @@ public class MiniappFaqServiceImpl implements MiniappFaqService {
     private static final int MAX_PAGE_SIZE = 50;
     private static final int DEFAULT_HOT_LIMIT = 8;
     private static final int MAX_HOT_LIMIT = 20;
-
-    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final MiniappFaqMapper faqMapper;
 
@@ -69,7 +67,7 @@ public class MiniappFaqServiceImpl implements MiniappFaqService {
     }
 
     @Override
-    public PageResult<FaqListVO> search(FaqSearchDTO dto) {
+    public PageResult<FaqListVO> search(FaqPageQueryDTO dto) {
         List<SysFaq> all = enabledFaqs();
         if (dto != null && StringUtils.hasText(dto.getCategoryCode())) {
             all = all.stream().filter(f -> dto.getCategoryCode().equals(f.getCategoryCode())).toList();
@@ -107,9 +105,6 @@ public class MiniappFaqServiceImpl implements MiniappFaqService {
 
     @Override
     public FaqListVO getById(Long faqId) {
-        if (faqId == null) {
-            throw new BusinessException("常见问题ID不能为空");
-        }
         SysFaq faq = faqMapper.selectOne(new LambdaQueryWrapper<SysFaq>()
                 .eq(SysFaq::getId, faqId)
                 .eq(SysFaq::getStatus, 1));
@@ -137,9 +132,6 @@ public class MiniappFaqServiceImpl implements MiniappFaqService {
 
     @Override
     public int feedback(Long faqId, Integer helpful) {
-        if (faqId == null) {
-            throw new BusinessException("常见问题ID不能为空");
-        }
         boolean useful = helpful == null || helpful != 0;
         boolean updated = faqMapper.update(null, new LambdaUpdateWrapper<SysFaq>()
                 .eq(SysFaq::getId, faqId)
@@ -152,7 +144,7 @@ public class MiniappFaqServiceImpl implements MiniappFaqService {
     }
 
     @Override
-    public PageResult<FaqAdminVO> adminPage(FaqSearchDTO dto) {
+    public PageResult<FaqAdminVO> adminPage(FaqPageQueryDTO dto) {
         List<SysFaq> all = faqMapper.selectList(new LambdaQueryWrapper<SysFaq>()
                 .orderByAsc(SysFaq::getSortOrder)
                 .orderByAsc(SysFaq::getId));
@@ -186,9 +178,9 @@ public class MiniappFaqServiceImpl implements MiniappFaqService {
 
     @Override
     public String adminUpsert(FaqUpsertDTO dto) {
-        boolean isNew = !StringUtils.hasText(dto.getId()) || !dto.getId().matches("\\d{1,20}");
-        SysFaq entity = isNew ? new SysFaq() : faqMapper.selectById(Long.parseLong(dto.getId()));
-        if (!isNew && entity == null) {
+        boolean isNew = dto.getId() == null;
+        SysFaq entity = isNew ? new SysFaq() : faqMapper.selectById(dto.getId());
+        if (entity == null) {
             throw new BusinessException("常见问题不存在：" + dto.getId());
         }
         if (isNew) {
@@ -215,9 +207,6 @@ public class MiniappFaqServiceImpl implements MiniappFaqService {
 
     @Override
     public void adminDelete(Long faqId) {
-        if (faqId == null) {
-            throw new BusinessException("常见问题ID不能为空");
-        }
         faqMapper.purgeById(faqId);
     }
 
@@ -260,7 +249,7 @@ public class MiniappFaqServiceImpl implements MiniappFaqService {
         vo.setUselessCount(faq.getUselessCount());
         vo.setStatus(faq.getStatus());
         vo.setSortOrder(faq.getSortOrder());
-        vo.setCreateTime(faq.getCreateTime() == null ? "" : faq.getCreateTime().format(TIME));
+        vo.setCreateTime(faq.getCreateTime() == null ? "" : faq.getCreateTime().format(DateFormats.DATETIME));
         return vo;
     }
 

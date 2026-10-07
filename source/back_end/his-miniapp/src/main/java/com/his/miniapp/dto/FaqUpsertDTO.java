@@ -17,7 +17,7 @@ import lombok.Data;
 public class FaqUpsertDTO {
 
     /** 主键（为空则新增） */
-    private String id;
+    private Long id;
 
     /** 分类编码 */
     @NotBlank(message = "分类编码不能为空")

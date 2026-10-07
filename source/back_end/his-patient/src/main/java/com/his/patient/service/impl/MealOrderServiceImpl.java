@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.MealGenerateDTO;
 import com.his.patient.dto.MealOrderQueryPageDTO;
@@ -34,7 +35,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -54,7 +54,6 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class MealOrderServiceImpl implements MealOrderService {
-    private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String PREFIX_MEAL = "MO";
     private final DeptScopeProvider deptScopeProvider;
     private final BizMealOrderMapper mealMapper;
@@ -185,7 +184,7 @@ public class MealOrderServiceImpl implements MealOrderService {
             }
         }
 
-        long seq = mealMapper.maxMealSeq(PREFIX_MEAL + mealDate.format(DAY_FMT));
+        long seq = mealMapper.maxMealSeq(PREFIX_MEAL + mealDate.format(DateFormats.COMPACT_DATE));
         int generated = 0;
         // 同一个人可能同时有两条口服方案（如"糖尿病饮食 + 口服营养补充"），
         // 而 uk_meal_order 只认「人 + 日期 + 餐次」—— 批内必须去重，否则整批生成撞唯一键
@@ -207,7 +206,7 @@ public class MealOrderServiceImpl implements MealOrderService {
                 }
                 seq++;
                 BizMealOrder row = new BizMealOrder();
-                row.setMealNo(PREFIX_MEAL + mealDate.format(DAY_FMT) + String.format("%04d", seq));
+                row.setMealNo(PREFIX_MEAL + mealDate.format(DateFormats.COMPACT_DATE) + String.format("%04d", seq));
                 row.setAdmissionId(plan.getAdmissionId());
                 row.setPatientId(plan.getPatientId());
                 row.setPatientNo(plan.getPatientNo());

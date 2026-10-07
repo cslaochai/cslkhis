@@ -2,6 +2,7 @@ package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.operation.dto.CountItemInputUpsertDTO;
 import com.his.operation.dto.CountPhaseDTO;
 import com.his.operation.dto.CountQtyDTO;
@@ -31,7 +32,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,7 +59,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class OperationCountServiceImpl implements OperationCountService {
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final DictCacheService dictCacheService;
 
@@ -393,7 +392,7 @@ public class OperationCountServiceImpl implements OperationCountService {
     }
 
     private String nextCountNo() {
-        String prefix = "QD" + LocalDate.now().format(NO_DATE);
+        String prefix = "QD" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = bizOperationCountMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }

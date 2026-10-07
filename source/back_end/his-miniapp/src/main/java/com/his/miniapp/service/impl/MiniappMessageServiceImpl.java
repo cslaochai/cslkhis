@@ -66,17 +66,11 @@ public class MiniappMessageServiceImpl implements MiniappMessageService {
     }
 
     @Override
-    public int markRead(List<String> messageIds) {
-        // 数字白名单校验：拼 IN 列表前拒绝任何非数字（messageIds 是字符串形态的 BIGINT）
-        for (String id : messageIds) {
-            if (id == null || !id.matches("\\d{1,20}")) {
-                throw new BusinessException("非法的消息ID");
-            }
-        }
+    public int markRead(List<Long> messageIds) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        return messageMapper.markRead(String.join(",", messageIds), operatorUser.getUserId());
+        return messageMapper.markRead(messageIds, operatorUser.getUserId());
     }
 }

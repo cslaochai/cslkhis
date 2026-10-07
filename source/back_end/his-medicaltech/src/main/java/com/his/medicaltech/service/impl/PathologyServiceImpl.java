@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.medicaltech.dto.PathologyDTO;
 import com.his.medicaltech.entity.BizPathologyBlock;
 import com.his.medicaltech.entity.BizPathologyOrder;
@@ -24,7 +25,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -497,7 +497,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
     }
 
     private String nextOrderNo(LocalDate date) {
-        String day = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String day = date.format(DateFormats.COMPACT_DATE);
         long base = orderMapper.selectCount(new LambdaQueryWrapper<BizPathologyOrder>()
                 .ge(BizPathologyOrder::getCreateTime, date.atStartOfDay())
                 .lt(BizPathologyOrder::getCreateTime, date.plusDays(1).atStartOfDay())) + 1;

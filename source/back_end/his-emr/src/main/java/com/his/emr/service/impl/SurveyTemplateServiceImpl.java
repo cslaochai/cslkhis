@@ -6,6 +6,7 @@ import com.his.common.base.Constants;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.DateFormats;
 import com.his.emr.dto.SurveyTemplateQueryPageDTO;
 import com.his.emr.dto.SurveyTemplateUpsertDTO;
 import com.his.emr.entity.BizSurveyDispatch;
@@ -30,7 +31,6 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -41,8 +41,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class SurveyTemplateServiceImpl implements SurveyTemplateService {
-
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizSurveyTemplateMapper templateMapper;
     private final BizSurveyItemMapper itemMapper;
@@ -260,7 +258,7 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
     }
 
     private String nextNo() {
-        return Constants.SURVEY_TEMPLATE_NO_PREFIX + LocalDate.now().format(NO_DATE)
+        return Constants.SURVEY_TEMPLATE_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
                 + String.format("%04d", sequenceService.next(Constants.SURVEY_TEMPLATE_NO_KEY_PREFIX));
     }
 }

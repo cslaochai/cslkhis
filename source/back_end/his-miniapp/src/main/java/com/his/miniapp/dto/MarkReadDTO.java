@@ -13,5 +13,5 @@ import java.util.List;
 public class MarkReadDTO implements Serializable {
 
     @NotEmpty(message = "messageIds不能为空")
-    private List<String> messageIds;
+    private List<Long> messageIds;
 }

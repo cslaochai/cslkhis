@@ -3,12 +3,11 @@ package com.his.patient.support;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.patient.entity.BizPatient;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.format.ResolverStyle;
 import java.util.Set;
 
 /**
@@ -27,9 +26,6 @@ public final class PatientProfileValidator {
      * 性别码值说明（拼进报错消息里，省得调用方去翻文档）
      */
     public static final String GENDER_HINT = "1-男 2-女 9-未知";
-
-    private static final DateTimeFormatter BIRTH_FORMAT =
-            DateTimeFormatter.ofPattern("uuuuMMdd").withResolverStyle(ResolverStyle.STRICT);
 
     private static final int[] WEIGHTS = {7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2};
     private static final char[] CHECK_CODES = "10X98765432".toCharArray();
@@ -135,7 +131,7 @@ public final class PatientProfileValidator {
             return false;
         }
         try {
-            LocalDate.parse(idCard.substring(6, 14), BIRTH_FORMAT);
+            LocalDate.parse(idCard.substring(6, 14), DateFormats.STRICT_COMPACT_DATE);
             return true;
         } catch (Exception e) {
             return false;
@@ -181,7 +177,7 @@ public final class PatientProfileValidator {
             return null;
         }
         try {
-            return LocalDate.parse(s.substring(6, 14), BIRTH_FORMAT);
+            return LocalDate.parse(s.substring(6, 14), DateFormats.STRICT_COMPACT_DATE);
         } catch (Exception e) {
             return null;
         }

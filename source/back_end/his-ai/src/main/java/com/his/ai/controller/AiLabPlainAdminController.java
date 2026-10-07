@@ -1,5 +1,6 @@
 package com.his.ai.controller;
 
+import com.his.ai.dto.LabPlainDeleteDTO;
 import com.his.ai.dto.LabPlainItemSearchDTO;
 import com.his.ai.dto.LabPlainItemUpsertDTO;
 import com.his.ai.service.LabPlainItemAdminService;
@@ -10,11 +11,8 @@ import com.his.common.base.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,13 +28,6 @@ import java.util.List;
 public class AiLabPlainAdminController {
 
     private final LabPlainItemAdminService labPlainItemAdminService;
-
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
-    }
 
     @Operation(summary = "词典列表（含停用）")
     @PostMapping("/listPage")
@@ -55,8 +46,8 @@ public class AiLabPlainAdminController {
     @Operation(summary = "词典详情")
     @GetMapping("/getById")
     @PreAuthorize("hasAuthority('lab:plain:list')")
-    public Result<LabPlainItemAdminVO> getById(@RequestParam String id) {
-        return Result.success(labPlainItemAdminService.adminGetById(parseId(id)));
+    public Result<LabPlainItemAdminVO> getById(@RequestParam Long id) {
+        return Result.success(labPlainItemAdminService.adminGetById(id));
     }
 
     @Operation(summary = "覆盖率自检：库内出现过的检验项目还有哪些没配白话（前端维护页已不展示，供巡检/脚本直接取）")
@@ -73,17 +64,11 @@ public class AiLabPlainAdminController {
         return Result.success(labPlainItemAdminService.adminUpsert(dto));
     }
 
-    @Operation(summary = "删除词条（物理删，uk_item_name 唯一键不含 del_flag）")
+    @Operation(summary = "删除词条")
     @PostMapping("/deleteById")
     @PreAuthorize("hasAuthority('lab:plain:delete')")
-    public Result<Integer> deleteById(@RequestBody @Valid IdDTO dto) {
-        labPlainItemAdminService.adminDelete(parseId(dto.getId()));
+    public Result<Integer> deleteById(@RequestBody @Valid LabPlainDeleteDTO dto) {
+        labPlainItemAdminService.adminDelete(dto.getId());
         return Result.success(1);
-    }
-
-    @Data
-    public static class IdDTO {
-        @NotBlank(message = "id不能为空")
-        private String id;
     }
 }

@@ -2,6 +2,7 @@ package com.his.medicaltech.service.impl;
 
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.medicaltech.dto.QualityIssueQueryPageDTO;
 import com.his.medicaltech.mapper.QualityMapper;
 import com.his.medicaltech.service.QualityService;
@@ -17,7 +18,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -43,7 +43,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class QualityServiceImpl implements QualityService {
 
-    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
     /**
      * 单条规则明细的安全上限：超出说明数据已严重跑偏，先截断保证接口可用并在日志里告警
@@ -106,7 +105,7 @@ public class QualityServiceImpl implements QualityService {
         List<QualityRuleVO> allRules = ruleVOs(totals);
 
         QualitySummaryVO summary = new QualitySummaryVO();
-        summary.setGeneratedAt(LocalDateTime.now().format(TS));
+        summary.setGeneratedAt(LocalDateTime.now().format(DateFormats.DATETIME));
         summary.setRuleCount(allRules.size());
         summary.setCheckedTotal(sum(allRules, QualityRuleVO::getCheckedTotal));
         summary.setIssueCount(sum(allRules, QualityRuleVO::getIssueCount));

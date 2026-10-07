@@ -29,7 +29,7 @@ public class ServiceTraceDTO {
     private String eventKey;
 
     /** 关联常见问题ID */
-    private String faqId;
+    private Long faqId;
 
     /** 搜索命中条数（event_type=search 时） */
     private Integer hitCount;

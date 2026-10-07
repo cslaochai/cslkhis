@@ -10,6 +10,7 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.util.DateFormats;
 import com.his.common.vo.SignatureVO;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.entity.BizLaboratoryApply;
@@ -1052,7 +1053,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
      */
     private String genNo(String prefix) {
         return prefix + LocalDateTime.now()
-                .format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+                .format(DateFormats.COMPACT_DATETIME)
                 + String.format("%04d", EXECUTION_SEQ.incrementAndGet() % 10000);
     }
 

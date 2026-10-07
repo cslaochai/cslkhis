@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.emr.dto.RxFlowActionDTO;
 import com.his.emr.dto.RxFlowQueryPageDTO;
 import com.his.emr.dto.RxFlowUpsertDTO;
@@ -20,7 +21,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -41,7 +41,6 @@ import java.util.concurrent.atomic.AtomicLong;
 @RequiredArgsConstructor
 public class RxFlowServiceImpl implements RxFlowService {
 
-    private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final AtomicLong SEQ = new AtomicLong();
 
     private final BizRxFlowMapper rxFlowMapper;
@@ -62,7 +61,7 @@ public class RxFlowServiceImpl implements RxFlowService {
         }
         var current = UserUtils.getCurrentUser();
         BizRxFlow flow = new BizRxFlow();
-        flow.setFlowNo("RXF" + LocalDateTime.now().format(NO_FMT)
+        flow.setFlowNo("RXF" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                 + String.format("%04d", SEQ.incrementAndGet() % 10000));
         flow.setPrescriptionId(prescription.getId());
         flow.setPrescriptionNo(prescription.getPrescriptionNo());

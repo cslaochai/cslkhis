@@ -1,6 +1,7 @@
 package com.his.operation.service.impl;
 
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.operation.dto.SafetyCheckSignDTO;
 import com.his.operation.entity.BizOperationApply;
 import com.his.operation.entity.BizOperationSafetyCheck;
@@ -20,7 +21,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -42,9 +42,6 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckService {
-
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private static final DateTimeFormatter FULL_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final BizOperationSafetyCheckMapper checkMapper;
     private final BizOperationApplyMapper applyMapper;
@@ -237,7 +234,7 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
     }
 
     private String nextCheckNo() {
-        String prefix = "HC" + LocalDate.now().format(NO_DATE);
+        String prefix = "HC" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = checkMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
@@ -263,7 +260,7 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
         vo.setNurseId(row.getNurseId());
         vo.setNurseName(row.getNurseName());
         vo.setRecorderName(row.getRecorderName());
-        vo.setCheckTime(row.getCheckTime() == null ? null : row.getCheckTime().format(FULL_TIME));
+        vo.setCheckTime(row.getCheckTime() == null ? null : row.getCheckTime().format(DateFormats.DATETIME));
         vo.setRemark(row.getRemark());
         return vo;
     }

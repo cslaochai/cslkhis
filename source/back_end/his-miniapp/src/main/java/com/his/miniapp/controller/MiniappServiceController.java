@@ -16,7 +16,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -34,13 +33,6 @@ public class MiniappServiceController {
 
     private final MiniappServiceMessageService messageService;
     private final MiniappServiceTraceService traceService;
-
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
-    }
 
     @Operation(summary = "提交留言（归属由登录态决定）")
     @PostMapping("/messageUpsert")
@@ -60,8 +52,8 @@ public class MiniappServiceController {
     @Operation(summary = "工单详情（含流转时间轴，只能看自己的）")
     @GetMapping("/ticketDetail")
     @PreAuthorize("hasAuthority('PATIENT')")
-    public Result<ServiceTicketDetailVO> ticketDetail(@RequestParam String id) {
-        return Result.success(messageService.myDetail(parseId(id)));
+    public Result<ServiceTicketDetailVO> ticketDetail(@RequestParam Long id) {
+        return Result.success(messageService.myDetail(id));
     }
 
     @Operation(summary = "补充留言（已办结的单补充会自动重开）")

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.system.dto.WasteDTO;
 import com.his.system.entity.BizMedicalWaste;
@@ -19,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
@@ -32,8 +32,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class WasteServiceImpl implements WasteService {
-
-    private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizMedicalWasteMapper wasteMapper;
 
@@ -136,7 +134,8 @@ public class WasteServiceImpl implements WasteService {
      * 交接单号自动生成：MW + yyyyMMdd + 顺延序号（查重含软删行，防唯一键冲突）
      */
     private String nextWasteNo() {
-        String date = LocalDate.now().format(NO_FMT);
+
+        String date = LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = 1;
         for (int i = 0; i < 20; i++) {
             String no = "MW" + date + String.format("%03d", seq);

@@ -5,6 +5,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.DateFormats;
 import com.his.emr.dto.SingleDiseaseDTO;
 import com.his.emr.entity.BizSingleDiseaseCase;
 import com.his.emr.entity.SysSingleDisease;
@@ -23,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,7 +38,6 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class SingleDiseaseServiceImpl implements SingleDiseaseService {
-    private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.BASIC_ISO_DATE;
     private final SysSingleDiseaseMapper diseaseMapper;
     private final BizSingleDiseaseCaseMapper caseMapper;
     private final RedisSequenceService redisSequenceService;
@@ -222,7 +221,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
     }
 
     private String generateCaseNo() {
-        return "SD" + LocalDate.now().format(DAY_FMT)
+        return "SD" + LocalDate.now().format(DateFormats.COMPACT_DATE)
                 + String.format("%05d", redisSequenceService.next("SINGLE_DISEASE_CASE"));
     }
 

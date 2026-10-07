@@ -7,6 +7,7 @@ import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.DateFormats;
 import com.his.operation.dto.*;
 import com.his.operation.entity.BizDaySurgeryApply;
 import com.his.operation.entity.BizDaySurgeryFollow;
@@ -34,7 +35,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -59,8 +59,6 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class DaySurgeryServiceImpl implements DaySurgeryService {
-
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizDaySurgeryItemMapper itemMapper;
     private final BizDaySurgeryApplyMapper applyMapper;
@@ -595,7 +593,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     }
 
     private String nextApplyNo() {
-        return Constants.DAY_SURGERY_NO_PREFIX + LocalDate.now().format(NO_DATE)
+        return Constants.DAY_SURGERY_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
                 + String.format("%04d", sequenceService.next("DAY_SURGERY"));
     }
 }

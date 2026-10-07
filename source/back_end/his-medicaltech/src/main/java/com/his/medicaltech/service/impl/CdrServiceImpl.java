@@ -3,6 +3,7 @@ package com.his.medicaltech.service.impl;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.medicaltech.dto.CdrQueryDTO;
 import com.his.medicaltech.enums.CdrEventTypeEnum;
 import com.his.medicaltech.enums.CdrNodeTypeEnum;
@@ -24,7 +25,6 @@ import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -48,8 +48,6 @@ public class CdrServiceImpl implements CdrService {
     private static final String ANCHOR_ADMISSION = "ADMISSION";
     private static final String ANCHOR_EMERGENCY = "EMERGENCY";
     private static final String ANCHOR_PATIENT = "PATIENT";
-    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private final CdrMapper cdrMapper;
     private final BizPatientMapper patientMapper;
     private final PatientIndexService patientIndexService;
@@ -159,7 +157,7 @@ public class CdrServiceImpl implements CdrService {
     }
 
     private static String fmt(LocalDateTime t) {
-        return t == null ? null : t.format(FMT);
+        return t == null ? null : t.format(DateFormats.DATETIME);
     }
 
     private static List<String> splitIds(Object v) {
@@ -176,8 +174,13 @@ public class CdrServiceImpl implements CdrService {
         return out;
     }
 
-    private static Long parseId(String v) {
-        // ② 非 web 入口的入参：除时间轴的查询条件外，还被内部行数据解析复用，Bean Validation 只在 HTTP 参数绑定时跑
+    /**
+     * 解析裸 SQL 行里的 pid 字符串。
+     *
+     * <p><b>只用于内部行数据</b>（{@code Map} 里 CAST AS CHAR 的列），不是 HTTP 入参 ——
+     * HTTP 入参一律走 DTO 的 Long 字段，让 Jackson 在绑定层就报 400。
+     */
+    private static Long parseRowId(String v) {
         if (!StringUtils.hasText(v)) {
             throw new BusinessException("患者ID不能为空");
         }
@@ -190,7 +193,10 @@ public class CdrServiceImpl implements CdrService {
 
     @Override
     public CdrTimelineVO getTimeline(CdrQueryDTO dto) {
-        Long pid = parseId(dto == null ? null : dto.getPatientId());
+        if (dto == null || dto.getPatientId() == null) {
+            throw new BusinessException("患者ID不能为空");
+        }
+        Long pid = dto.getPatientId();
         BizPatient main = patientMapper.selectById(pid);
         if (main == null) {
             throw new BusinessException("患者不存在或已删除");
@@ -560,7 +566,7 @@ public class CdrServiceImpl implements CdrService {
         vo.setPatientName(p.getPatientName());
         vo.setGenderText(SysGenderEnum.getText(p.getGender()));
         vo.setAge(p.getAge());
-        vo.setBirthDate(p.getBirthDate() == null ? null : p.getBirthDate().format(DATE_FMT));
+        vo.setBirthDate(p.getBirthDate() == null ? null : p.getBirthDate().format(DateFormats.DATE));
         vo.setIdCard(p.getIdCard());
         vo.setPhone(p.getPhone());
         vo.setAddress(p.getAddress());
@@ -578,7 +584,7 @@ public class CdrServiceImpl implements CdrService {
                 continue;
             }
             CdrArchiveVO a = new CdrArchiveVO();
-            a.setPatientId(parseId(rid));
+            a.setPatientId(parseRowId(rid));
             a.setPatientNo(str(r.get("patient_no")));
             a.setPatientName(str(r.get("patient_name")));
             a.setMergeTime(fmt(ldt(r.get("merge_time"))));

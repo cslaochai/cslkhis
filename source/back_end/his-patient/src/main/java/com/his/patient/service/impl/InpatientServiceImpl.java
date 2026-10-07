@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.charge.api.InpatientSettlementGateway;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -41,7 +42,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -67,7 +67,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class InpatientServiceImpl implements InpatientService {
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private final DeptScopeProvider deptScopeProvider;
     private final BizAdmissionMapper bizAdmissionMapper;
     private final BizDischargeMapper bizDischargeMapper;
@@ -935,13 +934,13 @@ public class InpatientServiceImpl implements InpatientService {
     }
 
     private String nextAdmissionNo() {
-        String prefix = "ADM" + LocalDate.now().format(NO_DATE);
+        String prefix = "ADM" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = bizAdmissionMapper.countByAdmissionNoPrefix(prefix) + 1;
         return prefix + String.format("%03d", seq);
     }
 
     private String nextDischargeNo() {
-        String prefix = "DIS" + LocalDate.now().format(NO_DATE);
+        String prefix = "DIS" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = bizDischargeMapper.countByDischargeNoPrefix(prefix) + 1;
         return prefix + String.format("%03d", seq);
     }
@@ -995,7 +994,7 @@ public class InpatientServiceImpl implements InpatientService {
     }
 
     private String nextVisitNo() {
-        String prefix = "VISIT" + LocalDate.now().format(NO_DATE);
+        String prefix = "VISIT" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = visitMapper.countByVisitNoPrefix(prefix) + 1;
         return prefix + String.format("%03d", seq);
     }

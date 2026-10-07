@@ -3,6 +3,7 @@ package com.his.miniapp.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.miniapp.dto.TicketHandleDTO;
 import com.his.miniapp.dto.TicketSearchDTO;
 import com.his.miniapp.entity.BizServiceMessage;
@@ -23,7 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,8 +38,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicketAdminService {
-
-    private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /** 超过这个时长仍未受理算超时 */
     private static final int OVERDUE_HOURS = 24;
@@ -87,7 +85,7 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
             vo.setAcceptByName(row.getAcceptByName());
             vo.setReplyCount(row.getReplyCount());
             vo.setHandleResult(row.getHandleResult());
-            vo.setCreateTime(row.getCreateTime() == null ? "" : row.getCreateTime().format(TIME));
+            vo.setCreateTime(row.getCreateTime() == null ? "" : row.getCreateTime().format(DateFormats.DATETIME));
             records.add(vo);
         }
         long pages = (total + pageSize - 1) / pageSize;
@@ -126,7 +124,7 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
         vo.setAcceptByName(ticket.getAcceptByName());
         vo.setCloseReason(ticket.getCloseReason());
         vo.setHandleResult(ticket.getHandleResult());
-        vo.setCreateTime(ticket.getCreateTime() == null ? "" : ticket.getCreateTime().format(TIME));
+        vo.setCreateTime(ticket.getCreateTime() == null ? "" : ticket.getCreateTime().format(DateFormats.DATETIME));
         // 院内看全量（含内部备注），患者端才过滤
         vo.setLogs(allLogs(ticket.getId()));
         return vo;
@@ -134,7 +132,7 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
 
     @Override
     public void handle(TicketHandleDTO dto) {
-        BizServiceMessage ticket = requireTicket(parseId(dto.getId()));
+        BizServiceMessage ticket = requireTicket(dto.getId());
         String action = dto.getAction() == null ? "" : dto.getAction().trim();
         CurrentUser user = UserUtils.getCurrentUser();
         String operator = user == null ? null : user.getUsername();
@@ -255,7 +253,7 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
             vo.setOperatorType(row.getOperatorType());
             vo.setOperatorName(row.getOperatorName());
             vo.setVisibleToPatient(row.getVisibleToPatient());
-            vo.setCreateTime(row.getCreateTime() == null ? "" : row.getCreateTime().format(TIME));
+            vo.setCreateTime(row.getCreateTime() == null ? "" : row.getCreateTime().format(DateFormats.DATETIME));
             vos.add(vo);
         }
         return vos;
@@ -279,13 +277,6 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
     private static String currentUsername() {
         CurrentUser user = UserUtils.getCurrentUser();
         return user == null ? null : user.getUsername();
-    }
-
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
     }
 
     private static String cut(String text, int max) {

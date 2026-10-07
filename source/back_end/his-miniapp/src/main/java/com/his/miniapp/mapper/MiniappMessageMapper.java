@@ -48,10 +48,19 @@ public interface MiniappMessageMapper {
     @Select("SELECT COUNT(*) FROM sys_message WHERE receiver_id = #{userId} AND read_status = 0")
     long countUnread(@Param("userId") Long userId);
 
-    /** 标记已读（只允许标自己的消息；幂等）。 */
+    /**
+     * 标记已读（只允许标自己的消息；幂等）。
+     *
+     * <p>ids 走 {@code <foreach>} 逐个绑参，不拼字符串：入参已经是 {@code List<Long>}，
+     * 一个非数字进不来，拼 IN 列表反而是给自己开注入面。
+     */
     @Update("""
+            <script>
             UPDATE sys_message SET read_status = 1, read_time = NOW()
-            WHERE message_id IN (${ids}) AND receiver_id = #{userId} AND read_status = 0
+            WHERE message_id IN
+            <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+            AND receiver_id = #{userId} AND read_status = 0
+            </script>
             """)
-    int markRead(@Param("ids") String ids, @Param("userId") Long userId);
+    int markRead(@Param("ids") List<Long> ids, @Param("userId") Long userId);
 }

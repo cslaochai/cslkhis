@@ -13,6 +13,7 @@ import com.his.charge.service.PaymentService;
 import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -24,7 +25,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -70,8 +70,6 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
     private static final int PAY_BALANCE = 5;
 
     private static final int SCALE = 2;
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final DateTimeFormatter DAY_KEY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizCashierSettlementMapper cashierMapper;
     private final BizDaySettlementMapper dayMapper;
@@ -133,7 +131,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
             throw new BusinessException("日期不能为空");
         }
         try {
-            return LocalDate.parse(s.trim().substring(0, 10), DATE_FMT);
+            return LocalDate.parse(s.trim().substring(0, 10), DateFormats.DATE);
         } catch (Exception e) {
             throw new BusinessException("日期格式应为 yyyy-MM-dd：" + s);
         }
@@ -393,7 +391,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
 
         BizDaySettlement entity = existing != null ? existing : new BizDaySettlement();
         if (existing == null) {
-            entity.setSettlementNo("RJ" + day.format(DAY_KEY_FMT));
+            entity.setSettlementNo("RJ" + day.format(DateFormats.COMPACT_DATE));
         }
         entity.setSettleDate(day);
         entity.setShiftCount(ctx.shifts.size());
@@ -646,7 +644,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
                 .max(lv3.getDiffAmount().abs()).setScale(SCALE, RoundingMode.HALF_UP);
 
         SettlementReconcileVO vo = new SettlementReconcileVO();
-        vo.setSettleDate(day.format(DATE_FMT));
+        vo.setSettleDate(day.format(DateFormats.DATE));
         vo.setItems(items);
         vo.setPassed(passed);
         vo.setMaxDiffAmount(maxDiff);
@@ -809,7 +807,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
     private String nextCashierNo() {
         // 与 EmrServiceImpl 的取号同理：按"当天已用序号"取，不用进程内自增 ——
         // 进程内自增在服务重启后当天第一单必然撞唯一索引。
-        String prefix = "JS" + LocalDateTime.now().format(DAY_KEY_FMT);
+        String prefix = "JS" + LocalDateTime.now().format(DateFormats.COMPACT_DATE);
         long used = cashierMapper.countByNoPrefix(prefix);
         return prefix + String.format("%04d", (used + 1) % 10000);
     }

@@ -19,6 +19,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.DateFormats;
 import com.his.common.util.SensitiveMaskUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +33,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
@@ -53,8 +53,6 @@ public class InsuranceSettlementServiceImpl
         extends ServiceImpl<BizInsuranceSettlementMapper, BizInsuranceSettlement>
         implements InsuranceSettlementService {
 
-    private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final DateTimeFormatter TRADE_STAMP = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
     private static final int AMOUNT_SCALE = 2;
     private static final BigDecimal HUNDRED = new BigDecimal("100");
 
@@ -503,7 +501,7 @@ public class InsuranceSettlementServiceImpl
         payload.put("billNo", settlement.getBillNo());
         payload.put("patientName", settlement.getPatientName());
         payload.put("cancelReason", cutReason);
-        payload.put("sendTime", LocalDateTime.now().format(TS));
+        payload.put("sendTime", LocalDateTime.now().format(DateFormats.DATETIME));
         payload.put("note", "撤销报文：正式环境按医保前置机 2305 规范做字段映射");
 
         BizInsuranceReport cancel = newReport(settlement, InsuranceReportTypeEnum.CANCEL.getCode(), "2305", tradeNo);
@@ -798,7 +796,7 @@ public class InsuranceSettlementServiceImpl
         payload.put("fixMedinsCode", "H4301000001");
         payload.put("fixMedinsName", "长沙市麓康医院");
         payload.put("settlementNo", s.getSettlementNo());
-        payload.put("sendTime", LocalDateTime.now().format(TS));
+        payload.put("sendTime", LocalDateTime.now().format(DateFormats.DATETIME));
         payload.put("patient", patient);
         payload.put("visit", visit);
         payload.put("fees", fees);
@@ -892,7 +890,7 @@ public class InsuranceSettlementServiceImpl
     }
 
     private String nextTradeNo() {
-        return "HIS" + LocalDateTime.now().format(TRADE_STAMP) + ThreadLocalRandom.current().nextInt(100, 1000);
+        return "HIS" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME_MS) + ThreadLocalRandom.current().nextInt(100, 1000);
     }
 
     private String toPrettyJson(Object value) {

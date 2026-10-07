@@ -13,7 +13,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -33,13 +32,6 @@ public class MiniappServiceTicketAdminController {
 
     private final MiniappServiceTicketAdminService ticketAdminService;
 
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
-    }
-
     @Operation(summary = "工单列表（待受理优先排序）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('service:ticket:list')")
@@ -57,8 +49,8 @@ public class MiniappServiceTicketAdminController {
     @Operation(summary = "工单详情（含全量流转记录，含内部备注）")
     @GetMapping("/getById")
     @PreAuthorize("hasAuthority('service:ticket:list')")
-    public Result<ServiceTicketDetailVO> getById(@RequestParam String id) {
-        return Result.success(ticketAdminService.detail(parseId(id)));
+    public Result<ServiceTicketDetailVO> getById(@RequestParam Long id) {
+        return Result.success(ticketAdminService.detail(id));
     }
 
     @Operation(summary = "受理 / 回复 / 办结 / 关闭 / 内部备注（操作人取登录人）")

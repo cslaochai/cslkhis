@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.CheckResultEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.emr.entity.BizClinicalRuleCheck;
 import com.his.emr.enums.RuleCheckStatusEnum;
 import com.his.emr.mapper.BizClinicalRuleCheckMapper;
@@ -17,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -55,7 +55,7 @@ public class ClinicalRuleCheckServiceImpl extends ServiceImpl<BizClinicalRuleChe
     @Transactional(rollbackFor = Exception.class)
     public BizClinicalRuleCheckVO executeCheck(Long recordId, Integer ruleType, String checkBy) {
         BizClinicalRuleCheck check = new BizClinicalRuleCheck();
-        check.setCheckNo("RC" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
+        check.setCheckNo("RC" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                 + String.format("%04d", SEQ.incrementAndGet() % 10000));
         check.setRecordId(recordId);
         check.setRuleType(ruleType);

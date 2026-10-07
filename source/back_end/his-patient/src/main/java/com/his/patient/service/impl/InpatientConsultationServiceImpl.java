@@ -8,6 +8,7 @@ import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -33,7 +34,6 @@ import org.springframework.util.StringUtils;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 
@@ -73,7 +73,6 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
      * <p>只作为**查询时判定**超时的依据，不落状态列 —— 与"危急值超时是查询时算的"同一口径。
      */
     private static final int URGENT_RESPONSE_MINUTES = 10;
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final SysMessageService sysMessageService;
 
@@ -623,13 +622,13 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
     }
 
     private String nextConsultationNo() {
-        String prefix = "HZ" + LocalDate.now().format(NO_DATE);
+        String prefix = "HZ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = bizConsultationMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 
     private String nextRecordNo() {
-        String prefix = "BL" + LocalDate.now().format(NO_DATE);
+        String prefix = "BL" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = bizInpatientRecordMapper.countByRecordNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }

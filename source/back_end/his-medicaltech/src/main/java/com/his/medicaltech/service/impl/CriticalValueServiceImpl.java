@@ -8,6 +8,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.EmpTitleCode;
+import com.his.common.util.DateFormats;
 import com.his.medicaltech.dto.CriticalValueHandleDTO;
 import com.his.medicaltech.dto.CriticalValueQueryPageDTO;
 import com.his.medicaltech.dto.CriticalValueReceiveDTO;
@@ -41,7 +42,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -73,10 +73,6 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     private static final String SOURCE_RULE = "RULE";
 
     private static final String NO_PREFIX = "WJ";
-
-    private static final DateTimeFormatter NO_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private static final String DEADLINE_CONFIG_KEY = "lab.critical_value_deadline_minutes";
 
@@ -142,17 +138,17 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     }
 
     private static LocalDateTime startOfDay(String text) {
-        return LocalDate.parse(text.trim(), DATE_FORMATTER).atStartOfDay();
+        return LocalDate.parse(text.trim(), DateFormats.DATE).atStartOfDay();
     }
 
     private static LocalDateTime endOfDay(String text) {
-        return LocalDate.parse(text.trim(), DATE_FORMATTER).atTime(23, 59, 59);
+        return LocalDate.parse(text.trim(), DateFormats.DATE).atTime(23, 59, 59);
     }
 
     // 查询
 
     private static String buildNo() {
-        String timestamp = LocalDateTime.now().format(NO_FORMATTER);
+        String timestamp = LocalDateTime.now().format(DateFormats.COMPACT_DATETIME);
         String tail = String.format("%04d", (int) (Math.random() * 10_000));
         return NO_PREFIX + timestamp + tail;
     }

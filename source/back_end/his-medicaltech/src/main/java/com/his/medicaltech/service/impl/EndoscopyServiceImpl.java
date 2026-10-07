@@ -7,6 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.medicaltech.dto.EndoscopyDTO;
 import com.his.medicaltech.dto.PathologyDTO;
 import com.his.medicaltech.entity.BizEndoscopyRecord;
@@ -30,7 +31,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -378,7 +378,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
     }
 
     private String nextRecordNo(LocalDate date) {
-        String day = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String day = date.format(DateFormats.COMPACT_DATE);
         long base = recordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
                 .ge(BizEndoscopyRecord::getCreateTime, date.atStartOfDay())
                 .lt(BizEndoscopyRecord::getCreateTime, date.plusDays(1).atStartOfDay())) + 1;

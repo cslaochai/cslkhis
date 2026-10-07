@@ -2,18 +2,16 @@ package com.his.miniapp.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.miniapp.dto.FaqSearchDTO;
+import com.his.miniapp.dto.FaqPageQueryDTO;
 import com.his.miniapp.dto.FaqUpsertDTO;
+import com.his.miniapp.dto.FaqDeleteDTO;
 import com.his.miniapp.service.MiniappFaqService;
 import com.his.miniapp.vo.FaqAdminVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -34,45 +32,32 @@ public class MiniappFaqAdminController {
 
     private final MiniappFaqService faqService;
 
-    private static Long parseId(String value) {
-        if (!StringUtils.hasText(value) || !value.matches("\\d{1,20}")) {
-            return null;
-        }
-        return Long.parseLong(value);
-    }
-
     @Operation(summary = "常见问题列表（含停用）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('patient:faq:list')")
-    public Result<PageResult<FaqAdminVO>> listPage(@Valid @RequestBody FaqSearchDTO dto) {
-        return Result.success(faqService.adminPage(dto));
+    public Result<PageResult<FaqAdminVO>> listPage(@Valid @RequestBody FaqPageQueryDTO pageQueryDTO) {
+        return Result.success(faqService.adminPage(pageQueryDTO));
     }
 
     @Operation(summary = "常见问题详情")
     @GetMapping("/getById")
     @PreAuthorize("hasAuthority('patient:faq:list')")
-    public Result<FaqAdminVO> getById(@RequestParam String faqId) {
-        return Result.success(faqService.adminGetById(parseId(faqId)));
+    public Result<FaqAdminVO> getById(@RequestParam Long faqId) {
+        return Result.success(faqService.adminGetById(faqId));
     }
 
     @Operation(summary = "新增或修改常见问题")
     @PostMapping("/upsert")
     @PreAuthorize("hasAuthority('patient:faq:upsert')")
-    public Result<String> upsert(@RequestBody @Valid FaqUpsertDTO dto) {
-        return Result.success(faqService.adminUpsert(dto));
+    public Result<String> upsert(@RequestBody @Valid FaqUpsertDTO upsertDTO) {
+        return Result.success(faqService.adminUpsert(upsertDTO));
     }
 
-    @Operation(summary = "删除常见问题（物理删，faq_no 唯一键不含 del_flag）")
+    @Operation(summary = "删除常见问题")
     @PostMapping("/deleteById")
     @PreAuthorize("hasAuthority('patient:faq:delete')")
-    public Result<Integer> deleteById(@RequestBody @Valid IdDTO dto) {
-        faqService.adminDelete(parseId(dto.getId()));
+    public Result<Integer> deleteById(@RequestBody @Valid FaqDeleteDTO deleteDTO) {
+        faqService.adminDelete(deleteDTO.getId());
         return Result.success(1);
-    }
-
-    @Data
-    public static class IdDTO {
-        @NotBlank(message = "id不能为空")
-        private String id;
     }
 }

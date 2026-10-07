@@ -14,6 +14,7 @@ import com.his.ai.vo.DrugAuditResultVO;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.ClinicalTextMatcher;
+import com.his.common.util.DateFormats;
 import com.his.emr.entity.BizClinicalRuleCheck;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizPrescription;
@@ -36,7 +37,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -94,8 +94,6 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     private static final int SUGGESTION_MAX_LENGTH = 500;
 
     private static final int OUTPUT_TOKEN_LIMIT = 1536;
-
-    private static final DateTimeFormatter NO_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     private final BizPrescriptionMapper prescriptionMapper;
 
@@ -273,7 +271,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     }
 
     private static String buildNo(String prefix) {
-        String timestamp = LocalDateTime.now().format(NO_FORMATTER);
+        String timestamp = LocalDateTime.now().format(DateFormats.COMPACT_DATETIME);
         String tail = String.format("%06d", (int) (Math.random() * 1_000_000));
         return prefix + timestamp + tail;
     }

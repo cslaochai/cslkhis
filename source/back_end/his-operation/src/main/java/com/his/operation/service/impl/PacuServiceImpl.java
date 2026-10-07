@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.BizAnesthesiaPacu;
@@ -32,7 +33,6 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
@@ -57,7 +57,6 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class PacuServiceImpl implements PacuService {
 
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private final BizAnesthesiaPacuMapper bizAnesthesiaPacuMapper;
     private final BizAnesthesiaRecordMapper bizAnesthesiaRecordMapper;
     private final BizOperationApplyMapper bizOperationApplyMapper;
@@ -331,7 +330,7 @@ public class PacuServiceImpl implements PacuService {
     }
 
     private String nextPacuNo() {
-        String prefix = "FS" + LocalDate.now().format(NO_DATE);
+        String prefix = "FS" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = bizAnesthesiaPacuMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }

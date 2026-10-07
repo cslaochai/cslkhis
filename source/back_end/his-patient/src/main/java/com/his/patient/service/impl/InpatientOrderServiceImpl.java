@@ -11,6 +11,7 @@ import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.patient.dto.*;
@@ -45,7 +46,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -55,7 +55,6 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InpatientOrderServiceImpl implements InpatientOrderService {
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private static final int BACKFILL_LIMIT = 500;
 
@@ -1054,13 +1053,13 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     }
 
     private String nextOrderNo() {
-        String prefix = "YZ" + LocalDate.now().format(NO_DATE);
+        String prefix = "YZ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = bizInpatientOrderMapper.countByOrderNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 
     private String nextOrderGroup() {
-        String prefix = "G" + LocalDate.now().format(NO_DATE);
+        String prefix = "G" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         long seq = bizInpatientOrderMapper.countByOrderGroupPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }

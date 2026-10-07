@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -35,7 +36,6 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -74,7 +74,6 @@ public class BedCenterServiceImpl implements BedCenterService {
      * 匹配候选的数量上限：全院上千张床全列出来等于没列
      */
     private static final int MATCH_LIMIT = 30;
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     /**
      * 等床多久没安排就找总值班（系统参数：duty.coord.bed_wait_hours，缺失/非法回落 24）
      */
@@ -1218,12 +1217,12 @@ public class BedCenterServiceImpl implements BedCenterService {
     }
 
     private String nextWaitNo() {
-        String prefix = "DC" + LocalDate.now().format(NO_DATE);
+        String prefix = "DC" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         return prefix + String.format("%03d", waitMapper.countByWaitNoPrefix(prefix) + 1);
     }
 
     private String nextAllocateNo() {
-        String prefix = "TP" + LocalDate.now().format(NO_DATE);
+        String prefix = "TP" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         return prefix + String.format("%03d", allocateMapper.countByAllocateNoPrefix(prefix) + 1);
     }
 

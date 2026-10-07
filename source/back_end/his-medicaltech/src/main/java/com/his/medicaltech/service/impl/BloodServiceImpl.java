@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.medicaltech.dto.BloodDTO;
 import com.his.medicaltech.entity.BizBloodCrossmatch;
 import com.his.medicaltech.entity.BizBloodInventory;
@@ -481,7 +482,7 @@ public class BloodServiceImpl implements BloodService {
     }
 
     private String nextMatchNo() {
-        String day = LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
         long base = cmMapper.selectCount(new LambdaQueryWrapper<BizBloodCrossmatch>()
                 .ge(BizBloodCrossmatch::getCreateTime, LocalDate.now().atStartOfDay())) + 1;
         for (int i = 0; i < 20; i++) {

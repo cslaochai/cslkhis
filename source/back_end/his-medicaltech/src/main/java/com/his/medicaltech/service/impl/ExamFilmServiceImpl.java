@@ -10,6 +10,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
 import com.his.medicaltech.dto.ExamFilmQueryPageDTO;
@@ -392,7 +393,7 @@ public class ExamFilmServiceImpl implements ExamFilmService {
      * 撞了就抛错让人重试，好过静默生成两个同号胶片。
      */
     private String newFilmNo() {
-        String day = LocalDate.now().format(java.time.format.DateTimeFormatter.BASIC_ISO_DATE);
+        String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
         String prefix = "FM" + day;
         long seq = filmMapper.selectMaxSeqOfDay(prefix) + 1;
         return prefix + String.format("%05d", seq);

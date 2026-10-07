@@ -1,6 +1,7 @@
 package com.his.medicaltech.service.impl;
 
 import com.his.common.exception.BusinessException;
+import com.his.common.util.DateFormats;
 import com.his.medicaltech.mapper.StatsMapper;
 import com.his.medicaltech.service.StatsService;
 import com.his.medicaltech.vo.StatsOverviewVO;
@@ -10,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 
 /**
  * 报表统计服务：全部聚合下推 SQL，服务层只做窗口兜底与比率现算。
@@ -21,7 +21,6 @@ import java.time.format.DateTimeFormatter;
 @RequiredArgsConstructor
 public class StatsServiceImpl implements StatsService {
 
-    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final int DEFAULT_WINDOW_DAYS = 30;
     private static final int MAX_WINDOW_DAYS = 366;
     private static final BigDecimal HUNDRED = new BigDecimal("100");
@@ -45,7 +44,7 @@ public class StatsServiceImpl implements StatsService {
             return null;
         }
         try {
-            return LocalDate.parse(text.trim(), DAY);
+            return LocalDate.parse(text.trim(), DateFormats.DATE);
         } catch (Exception ex) {
             throw new BusinessException("日期格式应为 yyyy-MM-dd: " + text);
         }
@@ -75,8 +74,8 @@ public class StatsServiceImpl implements StatsService {
         if (start.isBefore(end.minusDays(MAX_WINDOW_DAYS - 1L))) {
             throw new BusinessException("统计窗口最长支持 " + MAX_WINDOW_DAYS + " 天");
         }
-        String s = start.format(DAY);
-        String e = end.format(DAY);
+        String s = start.format(DateFormats.DATE);
+        String e = end.format(DateFormats.DATE);
 
         StatsOverviewVO vo = new StatsOverviewVO();
         vo.setStartDate(s);
