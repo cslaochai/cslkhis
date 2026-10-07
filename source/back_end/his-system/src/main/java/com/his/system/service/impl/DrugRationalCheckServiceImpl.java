@@ -5,6 +5,7 @@ import com.his.system.dto.DrugRationalGroupDTO;
 import com.his.system.dto.DrugRationalItemDTO;
 import com.his.system.entity.SysDrugDoseLimit;
 import com.his.system.entity.SysDrugInteraction;
+import com.his.system.enums.MassUnitEnum;
 import com.his.system.mapper.SysDrugDoseLimitMapper;
 import com.his.system.mapper.SysDrugInteractionMapper;
 import com.his.system.service.DrugRationalCheckService;
@@ -156,11 +157,12 @@ public class DrugRationalCheckServiceImpl implements DrugRationalCheckService {
                 if (!matches(item, limit.getComponent())) {
                     continue;
                 }
-                BigDecimal factor = DosageTextParser.toMg(BigDecimal.ONE, limit.getDoseUnit());
-                if (factor == null) {
+                MassUnitEnum unit = MassUnitEnum.fromUnit(limit.getDoseUnit());
+                if (unit == null) {
                     // 库里存了非质量单位（历史数据或手工插库），拿它比较就是编数字
                     continue;
                 }
+                BigDecimal factor = unit.getFactorToMg();
                 addIfExceeded(hits, item, limit, singleMg, factor, true);
                 BigDecimal times = DosageTextParser.timesPerDay(item.getFrequency());
                 if (times != null) {

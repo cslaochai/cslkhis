@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -41,15 +42,6 @@ public final class DosageTextParser {
             "片", "粒", "袋", "支", "瓶", "板", "枚", "贴", "帖", "丸", "胶囊", "包");
 
     /**
-     * 数值 + 单位 → mg
-     *
-     * @return null 表示该单位不是质量单位（ml/IU/片/空）
-     */
-    public static BigDecimal toMg(BigDecimal value, String unit) {
-        return MassUnitEnum.toMg(value, unit);
-    }
-
-    /**
      * 规格的<b>单件含量</b>（mg/片、mg/支）
      * <p>
      * 认：0.5g×16片→500、2.5mg×60片→2.5、10ml:1g/支→1000、100mg*30片→100。
@@ -77,7 +69,7 @@ public final class DosageTextParser {
             return null;
         }
         Matcher single = MASS.matcher(masses.get(0));
-        return single.find() ? toMg(new BigDecimal(single.group(1)), single.group(2)) : null;
+        return single.find() ? MassUnitEnum.toMg(new BigDecimal(single.group(1)), single.group(2)) : null;
     }
 
     /**
@@ -111,7 +103,7 @@ public final class DosageTextParser {
         String unit = leadingUnit(rest);
 
         if (StringUtils.hasText(unit)) {
-            BigDecimal direct = toMg(value, unit);
+            BigDecimal direct = MassUnitEnum.toMg(value, unit);
             if (direct != null) {
                 return direct;
             }
