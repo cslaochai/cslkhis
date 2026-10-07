@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
-import com.his.system.utils.UserUtils;
 import com.his.pharmacy.dto.CssdDTO;
 import com.his.pharmacy.entity.BizCssdPackTemplate;
 import com.his.pharmacy.entity.BizCssdPackTemplateItem;
@@ -15,6 +14,8 @@ import com.his.pharmacy.vo.CssdPackTemplateItemSelectListVO;
 import com.his.pharmacy.vo.CssdPackTemplateItemVO;
 import com.his.pharmacy.vo.CssdPackTemplateSelectListVO;
 import com.his.pharmacy.vo.CssdPackTemplateVO;
+import com.his.system.service.DictCacheService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -25,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * CSSD 器械包模板目录服务。
@@ -37,8 +36,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class CssdTemplateServiceImpl implements CssdTemplateService {
-    @Autowired
-    private DictCacheService dictText;
+    private final DictCacheService dictCacheService;
 
     private final BizCssdPackTemplateMapper templateMapper;
     private final BizCssdPackTemplateItemMapper itemMapper;
@@ -194,7 +192,7 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
         vo.setTemplateCode(t.getTemplateCode());
         vo.setPackName(t.getPackName());
         vo.setSterilizeMethod(t.getSterilizeMethod());
-        vo.setSterilizeMethodText(dictText.getDicDataLabel("biz_pharmacy_cssdSterilizeMethodEnum", t.getSterilizeMethod()));
+        vo.setSterilizeMethodText(dictCacheService.getDicDataLabel("biz_pharmacy_cssdSterilizeMethodEnum", t.getSterilizeMethod()));
         vo.setStatus(t.getStatus());
         vo.setRemark(t.getRemark());
         vo.setItems(items);

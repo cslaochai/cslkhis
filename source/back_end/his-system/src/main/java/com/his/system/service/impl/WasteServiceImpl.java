@@ -3,15 +3,16 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.system.dto.WasteDTO;
 import com.his.system.entity.BizMedicalWaste;
 import com.his.system.enums.WasteStatusEnum;
 import com.his.system.mapper.BizMedicalWasteMapper;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.WasteService;
-import com.his.system.vo.WasteVO;
 import com.his.system.utils.UserUtils;
+import com.his.system.vo.WasteVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,8 +22,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 医疗废物登记服务。
@@ -33,12 +32,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class WasteServiceImpl implements WasteService {
-    @Autowired
-    private DictCacheService dictText;
 
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     private final BizMedicalWasteMapper wasteMapper;
+
+    private final DictCacheService dictCacheService;
 
     private static String tr(String s) {
         return s == null ? null : s.trim();
@@ -154,7 +153,7 @@ public class WasteServiceImpl implements WasteService {
         vo.setId(w.getId());
         vo.setWasteNo(w.getWasteNo());
         vo.setWasteType(w.getWasteType());
-        vo.setWasteTypeText(dictText.getDicDataLabel("biz_system_wasteTypeEnum", w.getWasteType()));
+        vo.setWasteTypeText(dictCacheService.getDicDataLabel("biz_system_wasteTypeEnum", w.getWasteType()));
         vo.setWeightKg(w.getWeightKg());
         vo.setDeptId(w.getDeptId());
         vo.setDeptName(w.getDeptName());

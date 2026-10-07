@@ -26,7 +26,6 @@ import com.his.system.vo.DutyOfficerVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -81,16 +80,23 @@ public class BedCenterServiceImpl implements BedCenterService {
      */
     private static final String DUTY_BED_WAIT_HOURS_KEY = "duty.coord.bed_wait_hours";
     private static final int DUTY_BED_WAIT_HOURS_FALLBACK = 24;
+
     private final BizBedWaitMapper waitMapper;
+
     private final BedCenterMapper allocateMapper;
+
     private final SysBedMapper bedMapper;
     /**
      * 床位图聚合（与护士站共用，护士看在院患者，这里看可调配性）
      */
     private final BedMapMapper bedMapMapper;
+
     private final BizPatientMapper patientMapper;
+
     private final BizAdmissionOrderMapper orderMapper;
+
     private final BizAdmissionMapper admissionMapper;
+
     private final SysConfigMapper sysConfigMapper;
     /**
      * 收治复写入院主流程：不重写一套 admit，否则两条入口各推进一步就会打架
@@ -100,9 +106,10 @@ public class BedCenterServiceImpl implements BedCenterService {
      * 全院当天谁负责：跨科调配与等床超时的兜底收口人（sql/169）
      */
     private final DutyRosterService dutyRosterService;
+
     private final SysMessageService sysMessageService;
-    @Autowired
-    private DictCacheService dictText;
+
+    private final DictCacheService dictCacheService;
 
     // 等床队列
 
@@ -719,7 +726,7 @@ public class BedCenterServiceImpl implements BedCenterService {
                 score += 20;
             }
             b.setMatchLevel(level);
-            b.setMatchLevelText(dictText.getDicDataLabel("biz_patient_bedMatchLevelEnum", level));
+            b.setMatchLevelText(dictCacheService.getDicDataLabel("biz_patient_bedMatchLevelEnum", level));
             b.setMatchScore(score);
             b.setBedTypeText(BedTypeEnum.getText(b.getBedType()));
             b.setExpectWardMatched(expectMatched);
@@ -815,7 +822,7 @@ public class BedCenterServiceImpl implements BedCenterService {
                 bed.setReservedPriorityText(BedPriorityEnum.getText(bed.getReservedPriority()));
             }
             if (bed.getAllocType() != null) {
-                bed.setAllocTypeText(dictText.getDicDataLabel("biz_patient_bedAllocTypeEnum", bed.getAllocType()));
+                bed.setAllocTypeText(dictCacheService.getDicDataLabel("biz_patient_bedAllocTypeEnum", bed.getAllocType()));
             }
             // 动作可用性一律服务端算：前端不自判状态机，避免"页面说能点、接口说不行"
             Integer st = bed.getBedStatus();

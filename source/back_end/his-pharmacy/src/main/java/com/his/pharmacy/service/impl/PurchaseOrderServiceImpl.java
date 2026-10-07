@@ -3,14 +3,9 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
-import com.his.pharmacy.dto.DrugInboundCreateDTO;
-import com.his.pharmacy.dto.DrugInboundItemDTO;
-import com.his.pharmacy.dto.PurchaseOrderAuditDTO;
-import com.his.pharmacy.dto.PurchaseOrderDetailUpsertDTO;
-import com.his.pharmacy.dto.PurchaseOrderQueryPageDTO;
-import com.his.pharmacy.dto.PurchaseOrderUpsertDTO;
+import com.his.common.service.RedisSequenceService;
+import com.his.pharmacy.dto.*;
 import com.his.pharmacy.entity.BizPurchaseOrder;
 import com.his.pharmacy.entity.BizPurchaseOrderDetail;
 import com.his.pharmacy.entity.SysSupplier;
@@ -23,6 +18,7 @@ import com.his.pharmacy.service.PurchaseOrderService;
 import com.his.pharmacy.vo.DrugInboundVO;
 import com.his.pharmacy.vo.PurchaseOrderDetailVO;
 import com.his.pharmacy.vo.PurchaseOrderVO;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -37,25 +33,22 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 采购订单服务实现
- *
+ * <p>
  * 状态机（两个状态各自独立）：
- *   approval_status 0待审批 → 1已通过 / 2已驳回；只有 0 可审批；已通过不可改（要先驳回）
- *   inbound_status  0未入库 → 1已入库；入库前置 = 审批通过且未入库；入库后不可再入、不可删
- *
+ * approval_status 0待审批 → 1已通过 / 2已驳回；只有 0 可审批；已通过不可改（要先驳回）
+ * inbound_status  0未入库 → 1已入库；入库前置 = 审批通过且未入库；入库后不可再入、不可删
+ * <p>
  * 金额口径：明细 amount = 数量 × 单价，订单 total_amount = Σ明细 amount，**全部服务端重算**，
- *          前端传来的 amount / totalAmount 一律不采信（否则前端能把总额改成任意值）。
+ * 前端传来的 amount / totalAmount 一律不采信（否则前端能把总额改成任意值）。
  */
 @Service
 @RequiredArgsConstructor
 public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper, BizPurchaseOrder>
         implements PurchaseOrderService {
-    @Autowired
-    private DictCacheService dictText;
+    private final DictCacheService dictCacheService;
 
     private final BizPurchaseOrderMapper orderMapper;
     private final BizPurchaseOrderDetailMapper detailMapper;
@@ -63,6 +56,10 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
     private final BizDrugInboundMapper inboundMapper;
     private final DrugInboundService drugInboundService;
     private final RedisSequenceService redisSequenceService;
+
+    private static String emptyToNull(String s) {
+        return StringUtils.hasText(s) ? s.trim() : null;
+    }
 
     @Override
     public PageResult<PurchaseOrderVO> page(PurchaseOrderQueryPageDTO queryDTO) {
@@ -160,7 +157,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
             throw new BusinessException("采购订单不存在或已删除");
         }
         if (order.getApprovalStatus() == null || order.getApprovalStatus() != 0) {
-            throw new BusinessException("只有待审批的订单可以审批（当前：" + dictText.getDicDataLabel("biz_pharmacy_purchaseApprovalStatusEnum", order.getApprovalStatus()) + "）");
+            throw new BusinessException("只有待审批的订单可以审批（当前：" + dictCacheService.getDicDataLabel("biz_pharmacy_purchaseApprovalStatusEnum", order.getApprovalStatus()) + "）");
         }
         // B 类：驳回原因只在 approvalStatus=2 时必填，条件必填不能下沉成 @NotBlank
         if (dto.getApprovalStatus() == 2 && !StringUtils.hasText(dto.getRemark())) {
@@ -188,7 +185,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
             throw new BusinessException("采购订单不存在或已删除");
         }
         if (order.getApprovalStatus() == null || order.getApprovalStatus() != 1) {
-            throw new BusinessException("只有审批通过的采购订单才能生成入库单（当前审批：" + dictText.getDicDataLabel("biz_pharmacy_purchaseApprovalStatusEnum", order.getApprovalStatus()) + "）");
+            throw new BusinessException("只有审批通过的采购订单才能生成入库单（当前审批：" + dictCacheService.getDicDataLabel("biz_pharmacy_purchaseApprovalStatusEnum", order.getApprovalStatus()) + "）");
         }
 
         List<PurchaseOrderDetailVO> details = detailMapper.selectDetailWithDrug(orderId);
@@ -236,7 +233,6 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
         }
     }
 
-
     /**
      * 明细校验 + 金额重算
      */
@@ -278,9 +274,5 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
             d.setUpdateBy(operator);
             detailMapper.insert(d);
         }
-    }
-
-    private static String emptyToNull(String s) {
-        return StringUtils.hasText(s) ? s.trim() : null;
     }
 }

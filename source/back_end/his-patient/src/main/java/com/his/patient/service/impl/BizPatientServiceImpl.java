@@ -4,10 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.patient.dto.PatientQueryPageDTO;
 import com.his.patient.dto.PatientRegisterDTO;
@@ -25,17 +25,14 @@ import com.his.patient.vo.PatientDetailVO;
 import com.his.patient.vo.PatientHealthProfileVO;
 import com.his.patient.vo.PatientRegisterVO;
 import com.his.patient.vo.PatientVO;
-import com.his.system.support.PasswordCipherService;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysPatientTag;
 import com.his.system.entity.SysUser;
-import com.his.system.service.PatientTagService;
-import com.his.system.service.SmsCodeService;
-import com.his.system.service.SysUserService;
-import com.his.system.service.FieldChangeRecorder;
-import com.his.system.support.FieldSpec;
 import com.his.system.enums.MaskEnum;
+import com.his.system.service.*;
+import com.his.system.support.FieldSpec;
+import com.his.system.support.PasswordCipherService;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.SysPatientTagVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,8 +49,6 @@ import java.time.Period;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 患者服务实现
@@ -61,14 +56,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> implements PatientService {
-    @Autowired
-    private DictCacheService dictText;
-
+public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> implements BizPatientService {
     /**
      * 对象类型：患者主档
      */
     private static final String PATIENT = "PATIENT";
+    private final DictCacheService dictCacheService;
     /**
      * 患者主档参与字段级留痕的字段清单。
      *
@@ -91,15 +84,15 @@ public class PatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient
             FieldSpec.masked("address", "家庭住址", MaskEnum.ADDRESS),
             FieldSpec.of("nation", "民族"),
             FieldSpec.of("occupation", "职业"),
-            FieldSpec.render("maritalStatus", "婚姻状况", v -> dictText.getDicDataLabel("biz_patient_maritalStatusEnum", (Integer) v)),
+            FieldSpec.render("maritalStatus", "婚姻状况", v -> dictCacheService.getDicDataLabel("biz_patient_maritalStatusEnum", (Integer) v)),
             FieldSpec.of("bloodType", "血型"),
             FieldSpec.of("allergyHistory", "过敏史"),
             FieldSpec.of("medicalHistory", "既往病史"),
             FieldSpec.render("patientType", "患者类型",
-                    v -> dictText.getDicDataLabel("biz_patient_patientTypeEnum", (Integer) v)),
+                    v -> dictCacheService.getDicDataLabel("biz_patient_patientTypeEnum", (Integer) v)),
             FieldSpec.masked("medicalInsuranceNo", "医保卡号", MaskEnum.BANK_NO),
             FieldSpec.of("medicalInsuranceType", "医保类型"),
-            FieldSpec.render("cardType", "证件类型", v -> dictText.getDicDataLabel("biz_patient_cardTypeEnum", (Integer) v)),
+            FieldSpec.render("cardType", "证件类型", v -> dictCacheService.getDicDataLabel("biz_patient_cardTypeEnum", (Integer) v)),
             FieldSpec.masked("cardNo", "证件号码", MaskEnum.BANK_NO),
             FieldSpec.render("status", "状态", v -> EnableStatusEnum.getText((Integer) v))
     );

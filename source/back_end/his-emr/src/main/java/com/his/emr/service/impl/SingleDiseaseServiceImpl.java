@@ -14,6 +14,7 @@ import com.his.emr.mapper.SysSingleDiseaseMapper;
 import com.his.emr.service.SingleDiseaseService;
 import com.his.emr.vo.SingleDiseaseAutoEnrollStatVO;
 import com.his.emr.vo.SingleDiseaseVO;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,8 +27,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 单病种质控服务（M4）。
@@ -39,16 +38,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class SingleDiseaseServiceImpl implements SingleDiseaseService {
-    @Autowired
-    private DictCacheService dictText;
-
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.BASIC_ISO_DATE;
-
     private final SysSingleDiseaseMapper diseaseMapper;
     private final BizSingleDiseaseCaseMapper caseMapper;
     private final RedisSequenceService redisSequenceService;
-
-    // 目录
+    private DictCacheService dictCacheService;
 
     public List<SingleDiseaseVO.Disease> diseaseList() {
         List<SysSingleDisease> diseases = diseaseMapper.selectList(

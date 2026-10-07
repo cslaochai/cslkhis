@@ -20,7 +20,7 @@ import com.his.operation.vo.DaySurgeryItemCountVO;
 import com.his.operation.vo.DaySurgeryItemVO;
 import com.his.operation.vo.DaySurgeryStatVO;
 import com.his.patient.entity.BizPatient;
-import com.his.patient.service.PatientService;
+import com.his.patient.service.BizPatientService;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.service.EmployeeTechAuthService;
@@ -65,7 +65,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     private final BizDaySurgeryItemMapper itemMapper;
     private final BizDaySurgeryApplyMapper applyMapper;
     private final BizDaySurgeryFollowMapper followMapper;
-    private final PatientService patientService;
+    private final BizPatientService bizPatientService;
     private final RedisSequenceService sequenceService;
     /**
      * 手术分级授权闸门（G21）：his-system 提供，择期手术不够级别直接拒单
@@ -568,7 +568,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     }
 
     private BizPatient requirePatient(Long patientId) {
-        BizPatient patient = patientService.getById(patientId);
+        BizPatient patient = bizPatientService.getById(patientId);
         if (patient == null || !Objects.equals(patient.getDelFlag(), 0)) {
             throw new BusinessException("患者不存在或已删除");
         }

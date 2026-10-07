@@ -19,6 +19,7 @@ import com.his.emr.mapper.BizInfectionMonitorDailyMapper;
 import com.his.emr.mapper.BizInfectionMonitorMapper;
 import com.his.emr.service.InfectionMonitorService;
 import com.his.emr.vo.InfectionMonitorVO;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,8 +31,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 院感监测服务实现（L10）
@@ -50,16 +49,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class InfectionMonitorServiceImpl implements InfectionMonitorService {
-    @Autowired
-    private DictCacheService dictText;
-
     private final BizInfectionCaseMapper caseMapper;
     private final BizInfectionMonitorMapper monitorMapper;
     private final BizInfectionMonitorDailyMapper dailyMapper;
     private final BizHandHygieneObsMapper handObsMapper;
     private final RedisSequenceService sequenceService;
-
-    // 病例报告卡
+    private DictCacheService dictCacheService;
 
     /**
      * 比率兜底：分母 0 给 0，不抛异常不猜 NaN
@@ -546,7 +541,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     }
 
     private String monitorTypeText(Integer t) {
-        return dictText.getDicDataLabel("biz_emr_infectionMonitorTypeEnum", t);
+        return dictCacheService.getDicDataLabel("biz_emr_infectionMonitorTypeEnum", t);
     }
 
     private String infectionSiteText(String site) {

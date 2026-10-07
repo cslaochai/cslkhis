@@ -16,11 +16,8 @@ import com.his.pharmacy.mapper.AntibioticStatMapper;
 import com.his.pharmacy.mapper.BizAntibioticIncisionReviewMapper;
 import com.his.pharmacy.mapper.BizAntibioticStatsMapper;
 import com.his.pharmacy.service.AntibioticMonitorService;
-import com.his.pharmacy.vo.AntibioticStatsVO;
-import com.his.pharmacy.vo.DeptCountRowVO;
-import com.his.pharmacy.vo.IncisionCandidateVO;
-import com.his.pharmacy.vo.IncisionDrugCandidateVO;
-import com.his.pharmacy.vo.IncisionReviewVO;
+import com.his.pharmacy.vo.*;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,8 +35,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 抗菌药物使用监测与 I 类切口预防用药点评。
@@ -47,30 +42,28 @@ import org.springframework.beans.factory.annotation.Autowired;
  * <p>要点：
  * ① 指标计算在 {@link #compute} 一处，试算与落库共用 —— 试算对不上快照就是 bug，不是"口径不同"；
  * ② 送检率是<b>简化口径</b>（同次住院是否有微生物送检，不做时序比对），VO 的 remark 每次都带上这句，
- *    防止有人拿着简化口径的数去报严格口径的表；
+ * 防止有人拿着简化口径的数去报严格口径的表；
  * ③ I 类切口点评的结论由药师下，但服务端做一致性校验（不合理必填问题码、联合用药必填理由、
- *    特殊使用级无会诊必须挂 47）—— 药师也是人，表单不校验迟早出现"结论不合理但问题码空着"。
+ * 特殊使用级无会诊必须挂 47）—— 药师也是人，表单不校验迟早出现"结论不合理但问题码空着"。
  */
 @Service
 @RequiredArgsConstructor
 public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
-    @Autowired
-    private DictCacheService dictText;
-
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter CSV_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int EXPORT_MAX = 5000;
-
-    /** 评审/专项整治常用阈值，只作提示不判定（写在 VO 里给前端对照） */
+    /**
+     * 评审/专项整治常用阈值，只作提示不判定（写在 VO 里给前端对照）
+     */
     private static final BigDecimal TARGET_AUD = new BigDecimal("40.00");
     private static final BigDecimal TARGET_OP_USAGE_RATE = new BigDecimal("20.00");
     private static final BigDecimal TARGET_IP_USAGE_RATE = new BigDecimal("60.00");
     private static final BigDecimal TARGET_MICRO_RATE = new BigDecimal("50.00");
-
     private final AntibioticStatMapper statMapper;
     private final BizAntibioticStatsMapper statsMapper;
     private final BizAntibioticIncisionReviewMapper incisionMapper;
     private final AntibioticCatalogMapper catalogMapper;
+    private DictCacheService dictCacheService;
 
     // 监测指标
 
@@ -207,7 +200,9 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         return row;
     }
 
-    /** 同月同范围覆盖（唯一键 uk_antibiotic_stats，不含 del_flag，不走软删） */
+    /**
+     * 同月同范围覆盖（唯一键 uk_antibiotic_stats，不含 del_flag，不走软删）
+     */
     private BizAntibioticStats upsertRow(BizAntibioticStats row, String operator, String remark) {
         BizAntibioticStats exist = statsMapper.selectOne(new LambdaQueryWrapper<BizAntibioticStats>()
                 .eq(BizAntibioticStats::getStatMonth, row.getStatMonth())
@@ -237,7 +232,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                 List<IncisionDrugCandidateVO> drugs = statMapper.selectPeriopAntibioticOrders(
                         vo.getAdmissionId(), vo.getOperationTime());
                 for (IncisionDrugCandidateVO d : drugs) {
-                    d.setAntibioticLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", d.getAntibioticLevel()));
+                    d.setAntibioticLevelText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", d.getAntibioticLevel()));
                     d.setMinutesFromIncision(d.getStartTime() == null ? null
                             : java.time.Duration.between(vo.getOperationTime(), d.getStartTime()).toMinutes());
                 }
@@ -400,7 +395,9 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         return "KQI" + day + String.format("%04d", seq);
     }
 
-    /** 百分比（分母为 0 记 0，不除） */
+    /**
+     * 百分比（分母为 0 记 0，不除）
+     */
     private BigDecimal rate(long numerator, long denominator) {
         if (denominator <= 0) {
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -410,7 +407,9 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                 .divide(BigDecimal.valueOf(denominator), 2, RoundingMode.HALF_UP);
     }
 
-    /** AUD = DDDs × 100 / 人天数（人天数为 0 记 0，不除） */
+    /**
+     * AUD = DDDs × 100 / 人天数（人天数为 0 记 0，不除）
+     */
     private BigDecimal aud(BigDecimal ddds, long patientDays) {
         if (patientDays <= 0 || ddds == null) {
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
@@ -468,10 +467,10 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         vo.setDrugId(e.getDrugId());
         vo.setDrugName(e.getDrugName());
         vo.setAntibioticLevel(e.getAntibioticLevel());
-        vo.setAntibioticLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", e.getAntibioticLevel()));
+        vo.setAntibioticLevelText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", e.getAntibioticLevel()));
         vo.setIndicationFlag(e.getIndicationFlag());
         vo.setTimingType(e.getTimingType());
-        vo.setTimingTypeText(dictText.getDicDataLabel("biz_pharmacy_antibioticTimingEnum", e.getTimingType()));
+        vo.setTimingTypeText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticTimingEnum", e.getTimingType()));
         vo.setCourseHours(e.getCourseHours());
         vo.setComboFlag(e.getComboFlag());
         vo.setComboReason(e.getComboReason());

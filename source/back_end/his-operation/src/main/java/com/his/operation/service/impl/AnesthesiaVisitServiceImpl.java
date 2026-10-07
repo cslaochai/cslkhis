@@ -20,7 +20,6 @@ import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -35,29 +34,18 @@ import java.util.Objects;
 
 /**
  * 麻醉术前访视服务实现（G15 第一环）。
- *
- * <p>本类固化了这些<b>至少踩过一次或一定会被追问</b>的点：
- *
- * <ol>
- *   <li><b>一台手术一份访视</b>：UNIQUE(apply_id) 之外再做一次计数，是为了把
- *       "重复建档"变成人话错误而不是一个 SQL 约束异常（后者会被全局异常渲染成 500）。</li>
- *   <li><b>已完成的访视不能直接改内容</b>：评估结论一旦出账就是麻醉科的正式意见，
- *       要改必须重新走 {@code finish}（留新的时间与新的结论）。</li>
- *   <li><b>困难气道必须写备选方案</b>：不写 ="明知插不上管却没准备"，这是术前访视最有价值的一句。</li>
- *   <li><b>ASA Ⅳ/Ⅴ 级必须写风险说明</b>：这两级意味着围术期风险显著，一句"风险高"不够。</li>
- *   <li><b>未完成访视不能开立麻醉记录</b>（急诊例外）——这条闸门在
- *       {@code AnesthesiaRecordServiceImpl#create} 里，本类只负责提供判定。</li>
- * </ol>
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
+
     private final BizAnesthesiaVisitMapper visitMapper;
+
     private final BizOperationApplyMapper applyMapper;
-    @Autowired
-    private DictCacheService dictText;
+
+    private DictCacheService dictCacheService;
 
     private static LocalDateTime now() {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
@@ -245,15 +233,15 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
     private void decorate(AnesthesiaVisitVO vo) {
         vo.setAsaText(AsaGradeEnum.getText(vo.getAsaGrade()));
         vo.setAsaFullText(AnesthesiaCalcs.asaFullText(vo.getAsaGrade(), vo.getAsaEmergency()));
-        vo.setMallampatiText(dictText.getDicDataLabel("biz_operation_mallampatiGradeEnum", vo.getMallampati()));
-        vo.setNeckMobilityText(dictText.getDicDataLabel("biz_operation_neckMobilityEnum", vo.getNeckMobility()));
-        vo.setNpoText(dictText.getDicDataLabel("biz_operation_npoStatusEnum", vo.getNpoStatus()));
+        vo.setMallampatiText(dictCacheService.getDicDataLabel("biz_operation_mallampatiGradeEnum", vo.getMallampati()));
+        vo.setNeckMobilityText(dictCacheService.getDicDataLabel("biz_operation_neckMobilityEnum", vo.getNeckMobility()));
+        vo.setNpoText(dictCacheService.getDicDataLabel("biz_operation_npoStatusEnum", vo.getNpoStatus()));
         vo.setConclusionText(VisitConclusionEnum.getText(vo.getConclusion()));
         vo.setVisitStatusText(VisitStatusEnum.getText(vo.getVisitStatus()));
         vo.setDifficultAirwayText(Objects.equals(YesOrNoEnum.YES.getCode(), vo.getDifficultAirway()) ? "是"
                 : Objects.equals(YesOrNoEnum.NO.getCode(), vo.getDifficultAirway()) ? "否" : "");
         vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
-        vo.setEmergencyText(dictText.getDicDataLabel("biz_operation_operationEmergencyEnum", vo.getIsEmergency()));
+        vo.setEmergencyText(dictCacheService.getDicDataLabel("biz_operation_operationEmergencyEnum", vo.getIsEmergency()));
         vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
         vo.setBmi(bmi(vo.getHeightCm(), vo.getWeightKg()));
 

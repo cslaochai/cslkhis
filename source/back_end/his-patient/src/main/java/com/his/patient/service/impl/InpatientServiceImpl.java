@@ -33,7 +33,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -70,12 +69,9 @@ import java.util.stream.Collectors;
 public class InpatientServiceImpl implements InpatientService {
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private final DeptScopeProvider deptScopeProvider;
-    private final BizAdmissionMapper admissionMapper;
-    private final BizDischargeMapper dischargeMapper;
+    private final BizAdmissionMapper bizAdmissionMapper;
+    private final BizDischargeMapper bizDischargeMapper;
     private final SysBedMapper bedMapper;
-    /**
-     * 床位图聚合（一床一卡，跨在院/护理/手术/医嘱取数）
-     */
     private final BedMapMapper bedMapMapper;
     private final BizPatientMapper patientMapper;
     private final BizInpatientSummaryMapper summaryMapper;
@@ -109,8 +105,8 @@ public class InpatientServiceImpl implements InpatientService {
      * 降级为"不回填"，绝不让一次真实入院因为队列记账失败而被回滚。
      */
     private final ObjectProvider<BedCenterService> bedCenterProvider;
-    @Autowired
-    private DictCacheService dictText;
+
+    private DictCacheService dictCacheService;
 
     /**
      * 时间精度统一到「秒」。
@@ -150,7 +146,7 @@ public class InpatientServiceImpl implements InpatientService {
             query.setScopeDeptIds(List.copyOf(deptScopeProvider.allowedDeptIds()));
         }
         Page<InpatientVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        IPage<InpatientVO> result = admissionMapper.selectInpatientPage(page, query);
+        IPage<InpatientVO> result = bizAdmissionMapper.selectInpatientPage(page, query);
 
         LocalDateTime now = LocalDateTime.now();
         for (InpatientVO vo : result.getRecords()) {
@@ -186,7 +182,7 @@ public class InpatientServiceImpl implements InpatientService {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        InpatientDetailVO.AdmissionInfo info = admissionMapper.selectAdmissionInfo(admissionId);
+        InpatientDetailVO.AdmissionInfo info = bizAdmissionMapper.selectAdmissionInfo(admissionId);
         if (info == null) {
             throw new BusinessException("入院记录不存在");
         }
@@ -281,7 +277,7 @@ public class InpatientServiceImpl implements InpatientService {
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
-        if (admissionMapper.countInHospitalByPatient(dto.getPatientId()) > 0) {
+        if (bizAdmissionMapper.countInHospitalByPatient(dto.getPatientId()) > 0) {
             throw new BusinessException("该患者已有在院记录，不能重复办理入院");
         }
 
@@ -339,7 +335,7 @@ public class InpatientServiceImpl implements InpatientService {
         admission.setAdmitDiagnosisName(dto.getAdmitDiagnosisName());
         admission.setAdmitStatus(AdmitStatusEnum.IN_HOSPITAL.getCode());
         admission.setRemark(dto.getRemark());
-        admissionMapper.insert(admission);
+        bizAdmissionMapper.insert(admission);
 
         occupyBed(bed, dto.getPatientId(), dto.getWardId());
         createSummaryDraft(admission, patient, ward, bed);
@@ -414,7 +410,7 @@ public class InpatientServiceImpl implements InpatientService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void transfer(InpatientTransferDTO dto) {
-        BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
@@ -446,7 +442,7 @@ public class InpatientServiceImpl implements InpatientService {
         if (StringUtils.hasText(dto.getReason())) {
             admission.setRemark(dto.getReason());
         }
-        admissionMapper.updateById(admission);
+        bizAdmissionMapper.updateById(admission);
 
         if (!Objects.equals(oldWardId, newBed.getWardId())) {
             bedMapper.syncWardOccupied(oldWardId);
@@ -459,14 +455,14 @@ public class InpatientServiceImpl implements InpatientService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void discharge(InpatientDischargeDTO dto) {
-        BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
         if (!Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
             throw new BusinessException("该患者已办理出院，不能重复办理");
         }
-        if (dischargeMapper.countByAdmission(dto.getAdmissionId()) > 0) {
+        if (bizDischargeMapper.countByAdmission(dto.getAdmissionId()) > 0) {
             throw new BusinessException("该入院已存在出院记录");
         }
 
@@ -508,7 +504,7 @@ public class InpatientServiceImpl implements InpatientService {
         }
 
         // 再入院判定必须在把本人置为出院之前做（查询里已排除本人，顺序不影响，但先算更直观）
-        boolean readmit31d = admissionMapper.countReadmitWithin31d(
+        boolean readmit31d = bizAdmissionMapper.countReadmitWithin31d(
                 admission.getPatientId(), admission.getAdmissionId(), dischargeTime) > 0;
 
         int days = calcInpatientDays(admission.getAdmitTime(), dischargeTime);
@@ -526,11 +522,11 @@ public class InpatientServiceImpl implements InpatientService {
         discharge.setDischargeSummary(dto.getDischargeSummary());
         discharge.setDischargeStatus(1);
         discharge.setRemark(mergeRemark(dto.getRemark(), settleNote));
-        dischargeMapper.insert(discharge);
+        bizDischargeMapper.insert(discharge);
 
         admission.setAdmitStatus(AdmitStatusEnum.DISCHARGED.getCode());
         admission.setDischargeTime(dischargeTime);
-        admissionMapper.updateById(admission);
+        bizAdmissionMapper.updateById(admission);
 
         releaseBed(admission.getBedId());
 
@@ -554,7 +550,7 @@ public class InpatientServiceImpl implements InpatientService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public InpatientDetailVO saveSummary(InpatientSummaryUpsertDTO dto) {
-        BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
@@ -705,9 +701,9 @@ public class InpatientServiceImpl implements InpatientService {
         if (scopeDeptIds != null) {
             inHospitalWrapper.in(BizAdmission::getDeptId, scopeDeptIds);
         }
-        vo.setInHospitalCount(admissionMapper.selectCount(inHospitalWrapper));
-        vo.setTodayAdmitted(admissionMapper.countTodayAdmitted(scopeDeptIds));
-        vo.setTodayDischarged(admissionMapper.countTodayDischarged(scopeDeptIds));
+        vo.setInHospitalCount(bizAdmissionMapper.selectCount(inHospitalWrapper));
+        vo.setTodayAdmitted(bizAdmissionMapper.countTodayAdmitted(scopeDeptIds));
+        vo.setTodayDischarged(bizAdmissionMapper.countTodayDischarged(scopeDeptIds));
         vo.setPendingAdmissionOrderCount(admissionOrderService.countPending());
 
         long total = bedMapper.selectCount(null);
@@ -775,7 +771,7 @@ public class InpatientServiceImpl implements InpatientService {
         for (BedMapVO.BedCard bed : beds) {
             bed.setBedStatusText(BedStatusEnum.getText(bed.getBedStatus()));
             bed.setNursingLevelText(bed.getNursingLevel() == null
-                    ? "未评估" : dictText.getDicDataLabel("biz_patient_nursingLevelEnum", bed.getNursingLevel()));
+                    ? "未评估" : dictCacheService.getDicDataLabel("biz_patient_nursingLevelEnum", bed.getNursingLevel()));
         }
         result.setBeds(beds);
         if (!beds.isEmpty()) {
@@ -940,13 +936,13 @@ public class InpatientServiceImpl implements InpatientService {
 
     private String nextAdmissionNo() {
         String prefix = "ADM" + LocalDate.now().format(NO_DATE);
-        long seq = admissionMapper.countByAdmissionNoPrefix(prefix) + 1;
+        long seq = bizAdmissionMapper.countByAdmissionNoPrefix(prefix) + 1;
         return prefix + String.format("%03d", seq);
     }
 
     private String nextDischargeNo() {
         String prefix = "DIS" + LocalDate.now().format(NO_DATE);
-        long seq = dischargeMapper.countByDischargeNoPrefix(prefix) + 1;
+        long seq = bizDischargeMapper.countByDischargeNoPrefix(prefix) + 1;
         return prefix + String.format("%03d", seq);
     }
 
@@ -1144,7 +1140,7 @@ public class InpatientServiceImpl implements InpatientService {
 
     @Override
     public BizAdmission getAdmissionById(Long admissionId) {
-        return admissionId == null ? null : admissionMapper.selectById(admissionId);
+        return admissionId == null ? null : bizAdmissionMapper.selectById(admissionId);
     }
 
     @Override

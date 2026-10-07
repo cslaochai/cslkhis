@@ -34,8 +34,8 @@ import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
+import com.his.patient.service.BizPatientService;
 import com.his.patient.service.PatientGuardianService;
-import com.his.patient.service.PatientService;
 import com.his.system.entity.BizStaffSchedule;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeProvider;
@@ -74,7 +74,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
     private final RedisSequenceService redisSequenceService;
     private final BizPatientMapper patientMapper;
     private final PatientGuardianService patientGuardianService;
-    private final PatientService patientService;
+    private final BizPatientService bizPatientService;
     private final ShiftService shiftService;
     private final StaffScheduleService staffScheduleService;
     private final ObjectProvider<AppointChargeGateway> appointChargeGateway;
@@ -1137,10 +1137,10 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
         // 操作台把状态改成「已就诊」也是结诊事实，与队列结诊（completeQueue）走同一份回写：
         // 漏掉这条路径，从挂号管理里手工完结的挂号永远不会出现在患者的「最近/首次就诊」上。
         if (saved && targetStatus == AppointStatusEnum.COMPLETED.getCode()) {
-            patientService.markLastVisit(regist.getPatientId(), LocalDateTime.now(),
+            bizPatientService.markLastVisit(regist.getPatientId(), LocalDateTime.now(),
                     regist.getDeptId(), regist.getDeptName(),
                     regist.getDoctorId(), regist.getDoctorName());
-            patientService.markFirstVisit(regist.getPatientId(), LocalDateTime.now(),
+            bizPatientService.markFirstVisit(regist.getPatientId(), LocalDateTime.now(),
                     regist.getDeptId(), regist.getDeptName(),
                     regist.getDoctorId(), regist.getDoctorName());
         }

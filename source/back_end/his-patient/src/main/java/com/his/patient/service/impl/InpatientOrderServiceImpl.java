@@ -36,7 +36,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -51,25 +50,6 @@ import java.util.*;
 
 /**
  * 住院医嘱服务实现（P1：医嘱 → 校对 → 执行 → 计费）。
- *
- * <p>除接口注释里那三条铁律（未校对不可执行 / 长期只能停不能作废 / 同组套同起同停）之外，
- * 本类还固化了这些**至少踩过一次或一定会被追问**的点：
- *
- * <ol>
- *   <li><b>批量动作「先全量校验、再写入」</b>：批量校对/批量执行只要有一条状态不合法就整批拒绝，
- *       并指名是哪条医嘱。部分成功会让护士不知道哪些生效了，进而重复点或漏点。</li>
- *   <li><b>停止不修改执行行</b>：停止只影响后续。未执行的计划行保持「待执行」不动 ——
- *       把它改成「已退回」等于编造一个"护士退回"的事实，而队列查询已经用
- *       {@code order_status IN (2,3)} 把它们排除干净了。</li>
- *   <li><b>计划行按天生成、查询时补当天（无定时任务）</b>：见 {@link #backfillTodayPlans}，
- *       同「危急值超时是查询时算的」口径 —— 状态由事实推导，不靠后台任务把状态"跑"出来。</li>
- *   <li><b>「未计费」必须可见</b>：收费模块缺席时执行照常成功，但要把"未计费"写进执行备注，
- *       绝不静默当作已计费（同「发送方 status=1 只证明我发过」）。</li>
- *   <li><b>金额一律快照</b>：单价开立时写进医嘱行，执行时不再回查字典 ——
- *       否则调价后账单与医嘱会对不上，四核对会出现假阳性。</li>
- *   <li><b>时间截到秒</b>：库表是 {@code DATETIME(0)}，MySQL 会四舍五入，不截就会
- *       "写进去的 ≠ 读回来的"。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -77,23 +57,19 @@ import java.util.*;
 public class InpatientOrderServiceImpl implements InpatientOrderService {
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    // 医嘱状态
-
-    // 执行状态
-
-    // 医嘱类型
-    /**
-     * 一次查询最多补多少条计划行。
-     * <p>补计划发生在 GET 里，必须有上限：异常数据（比如几百条跨月未执行的长期医嘱）
-     * 不能把一次翻页查询拖成批量写。
-     */
     private static final int BACKFILL_LIMIT = 500;
-    private final BizInpatientOrderMapper orderMapper;
-    private final BizInpatientOrderExecMapper execMapper;
-    private final BizAdmissionMapper admissionMapper;
-    private final BizPatientMapper patientMapper;
+
+    private final BizInpatientOrderMapper bizInpatientOrderMapper;
+
+    private final BizInpatientOrderExecMapper bizInpatientOrderExecMapper;
+
+    private final BizAdmissionMapper bizAdmissionMapper;
+
+    private final BizPatientMapper bizPatientMapper;
+
     private final SysBedMapper bedMapper;
-    private final OrderChargeInvoker chargeInvoker;
+
+    private final OrderChargeInvoker orderChargeInvoker;
     /**
      * 膳食方案（sql/168）：临床营养医嘱校对即派生、停/作废即同步停/废
      */
@@ -114,8 +90,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
      * 技术授权准入闸（sql/155）：无手术资质的人不能开手术医嘱
      */
     private final EmployeeTechAuthService techAuthService;
-    @Autowired
-    private DictCacheService dictText;
+
+    private DictCacheService dictCacheService;
 
     // 开立 / 修改
 
@@ -150,7 +126,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             InpatientOrderItemRules.validate(item);
         }
 
-        BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
@@ -198,7 +174,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         }
 
         // 新增
-        BizPatient patient = patientMapper.selectById(admission.getPatientId());
+        BizPatient patient = bizPatientMapper.selectById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
@@ -278,7 +254,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             order.setIsUrgent(isUrgent);
             order.setSource(source);
             order.setRemark(dto.getRemark());
-            orderMapper.insert(order);
+            bizInpatientOrderMapper.insert(order);
             // 开立即签：签名的内容取自**库里的医嘱行**，所以必须 insert 之后再签。
             // 签名失败直接抛，整个开立事务回滚 —— 不留下"医嘱在、签名没签上"的缺口。
             signOrder(order, SignSceneEnum.ORDER_CREATE, "医嘱开立");
@@ -305,7 +281,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizInpatientOrder order = orderMapper.selectById(dto.getId());
+        BizInpatientOrder order = bizInpatientOrderMapper.selectById(dto.getId());
         if (order == null) {
             throw new BusinessException("医嘱不存在");
         }
@@ -353,7 +329,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (dto.getRemark() != null) {
             order.setRemark(dto.getRemark());
         }
-        orderMapper.updateById(order);
+        bizInpatientOrderMapper.updateById(order);
         // 内容变了 → 原来那份开立签名绑的是旧内容，已经失效。
         // 正确处理是「作废旧签名 + 按新内容重签」，而不是留着一条验不过的签名让人猜。
         // 作废会把医嘱行上的 doctor_sign_id 清空，于是紧接着的重签不会被 blockReason 拦住。
@@ -435,7 +411,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         // 部分成功会让护士不知道哪些生效了，进而重复点或漏点（漏点就是医嘱漏执行）。
         List<BizInpatientOrder> orders = new ArrayList<>(ids.size());
         for (Long id : ids) {
-            BizInpatientOrder order = orderMapper.selectById(id);
+            BizInpatientOrder order = bizInpatientOrderMapper.selectById(id);
             if (order == null) {
                 throw new BusinessException("医嘱不存在（ID=" + id + "）");
             }
@@ -451,7 +427,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             order.setVerifyNurseId(nurseId);
             order.setVerifyNurseName(nurseName);
             order.setVerifyTime(now);
-            orderMapper.updateById(order);
+            bizInpatientOrderMapper.updateById(order);
             // 校对即签：先落库（签名服务读库放行判断），再签校对名。
             // 这条签名的内容里会带上开立签名的摘要 —— 护士校对之后医生再改医嘱，
             // 第二环验签会当场断掉，医嘱上的"双签"才不是摆设。
@@ -540,7 +516,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (!StringUtils.hasText(reason)) {
             throw new BusinessException("停止原因不能为空（停止是一个医疗决定，必须有人负责）");
         }
-        List<BizInpatientOrder> longs = orderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
+        List<BizInpatientOrder> longs = bizInpatientOrderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
                 .eq(BizInpatientOrder::getAdmissionId, admissionId)
                 .eq(BizInpatientOrder::getOrderType, OrderTypeEnum.LONG.getCode())
                 .in(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.VERIFIED.getCode(), InpatientOrderStatusEnum.EXECUTING.getCode())
@@ -594,7 +570,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizInpatientOrder target = orderMapper.selectById(dto.getOrderId());
+        BizInpatientOrder target = bizInpatientOrderMapper.selectById(dto.getOrderId());
         if (target == null) {
             throw new BusinessException("医嘱不存在");
         }
@@ -622,7 +598,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         List<BizInpatientOrder> targets = new ArrayList<>();
         if (StringUtils.hasText(target.getOrderGroup())) {
             // 同组套同起同停：不允许"一组药停一半"
-            targets = orderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
+            targets = bizInpatientOrderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
                     .eq(BizInpatientOrder::getAdmissionId, target.getAdmissionId())
                     .eq(BizInpatientOrder::getOrderGroup, target.getOrderGroup())
                     .in(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), InpatientOrderStatusEnum.VERIFIED.getCode(), InpatientOrderStatusEnum.EXECUTING.getCode()));
@@ -646,7 +622,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             order.setStopDoctorId(doctorId);
             order.setStopDoctorName(doctorName);
             order.setStopReason(dto.getStopReason());
-            orderMapper.updateById(order);
+            bizInpatientOrderMapper.updateById(order);
             // 刻意不动执行行：停止只影响后续，未执行的计划仍如实留在"待执行"，
             // 队列查询用 order_status IN (2,3) 把它们排除。改成"已退回"等于编造事实。
             syncDietPlanOnStopOrCancel(order, now, dto.getStopReason());
@@ -667,7 +643,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizInpatientOrder target = orderMapper.selectById(dto.getOrderId());
+        BizInpatientOrder target = bizInpatientOrderMapper.selectById(dto.getOrderId());
         if (target == null) {
             throw new BusinessException("医嘱不存在");
         }
@@ -676,7 +652,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (StringUtils.hasText(target.getOrderGroup())) {
             // 组套是一个「开立单元」：开错就是整组开错，所以整组作废。
             // 但组内只要有一条已经进到校对之后，就不允许整组抹掉 —— 那是停止的地盘。
-            targets = orderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
+            targets = bizInpatientOrderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
                     .eq(BizInpatientOrder::getAdmissionId, target.getAdmissionId())
                     .eq(BizInpatientOrder::getOrderGroup, target.getOrderGroup())
                     .in(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), InpatientOrderStatusEnum.VERIFIED.getCode(), InpatientOrderStatusEnum.EXECUTING.getCode(), InpatientOrderStatusEnum.FINISHED.getCode()));
@@ -708,7 +684,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             order.setStopDoctorId(doctorId);
             order.setStopDoctorName(doctorName);
             order.setStopReason(dto.getCancelReason());
-            orderMapper.updateById(order);
+            bizInpatientOrderMapper.updateById(order);
             syncDietPlanOnStopOrCancel(order, TimeUtil.nowSeconds(), dto.getCancelReason());
         }
         log.info("作废医嘱 组套={} 条数={} 原因={} 操作人={}",
@@ -736,7 +712,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     @Override
     public IPage<InpatientOrderVO> listPage(InpatientOrderQueryPageDTO query) {
         Page<InpatientOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        IPage<InpatientOrderVO> result = orderMapper.selectOrderPage(page, query);
+        IPage<InpatientOrderVO> result = bizInpatientOrderMapper.selectOrderPage(page, query);
         result.getRecords().forEach(this::decorateOrder);
         return result;
     }
@@ -746,7 +722,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     public IPage<InpatientOrderExecVO> execPendingList(OrderExecQueryPageDTO query) {
         backfillTodayPlans(query.getAdmissionId(), query.getPatientId());
         Page<InpatientOrderExecVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        IPage<InpatientOrderExecVO> result = execMapper.selectPendingPage(page, query);
+        IPage<InpatientOrderExecVO> result = bizInpatientOrderExecMapper.selectPendingPage(page, query);
         result.getRecords().forEach(this::decorateExec);
         return result;
     }
@@ -756,21 +732,21 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     @Override
     public IPage<InpatientOrderExecVO> execList(OrderExecQueryPageDTO query) {
         Page<InpatientOrderExecVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        IPage<InpatientOrderExecVO> result = execMapper.selectExecPage(page, query);
+        IPage<InpatientOrderExecVO> result = bizInpatientOrderExecMapper.selectExecPage(page, query);
         result.getRecords().forEach(this::decorateExec);
         return result;
     }
 
     @Override
     public long countPendingVerify(Long admissionId) {
-        return orderMapper.selectCount(new LambdaQueryWrapper<BizInpatientOrder>()
+        return bizInpatientOrderMapper.selectCount(new LambdaQueryWrapper<BizInpatientOrder>()
                 .eq(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.PENDING_VERIFY.getCode())
                 .eq(admissionId != null, BizInpatientOrder::getAdmissionId, admissionId));
     }
 
     @Override
     public long countPendingExec(Long admissionId) {
-        return execMapper.countPendingByAdmission(admissionId);
+        return bizInpatientOrderExecMapper.countPendingByAdmission(admissionId);
     }
 
     // 计划行（按天生成 / 查询补当天）
@@ -803,15 +779,15 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         Map<Long, BizInpatientOrder> orderById = new HashMap<>();
         Map<Long, BizAdmission> admissionCache = new HashMap<>();
         for (Long id : ids) {
-            BizInpatientOrderExec exec = execMapper.selectById(id);
+            BizInpatientOrderExec exec = bizInpatientOrderExecMapper.selectById(id);
             if (exec == null) {
                 throw new BusinessException("执行记录不存在（ID=" + id + "）");
             }
             if (!Objects.equals(ExecStatusEnum.PENDING.getCode(), exec.getExecStatus())) {
                 throw new BusinessException("该执行记录已是「"
-                        + dictText.getDicDataLabel("biz_patient_orderExecStatusEnum", exec.getExecStatus()) + "」，不能重复处理");
+                        + dictCacheService.getDicDataLabel("biz_patient_orderExecStatusEnum", exec.getExecStatus()) + "」，不能重复处理");
             }
-            BizInpatientOrder order = orderMapper.selectById(exec.getOrderId());
+            BizInpatientOrder order = bizInpatientOrderMapper.selectById(exec.getOrderId());
             if (order == null) {
                 throw new BusinessException("执行记录（ID=" + id + "）对应的医嘱不存在");
             }
@@ -840,7 +816,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
                 // 记账走独立事务（OrderChargeInvoker）：记账失败绝不能把"护士已经做过了"一起回滚
                 BizFeeRecord chargeResult = null;
                 try {
-                    chargeResult = chargeInvoker.book(buildChargeFee(order, exec, admissionCache));
+                    chargeResult = orderChargeInvoker.book(buildChargeFee(order, exec, admissionCache));
                 } catch (Exception e) {
                     log.error("医嘱 {} 第 {} 次执行计费失败（执行记录仍会照常更新）",
                             order.getOrderNo(), exec.getExecSeq(), e);
@@ -861,7 +837,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
                 } else if (Objects.equals(InpatientOrderStatusEnum.VERIFIED.getCode(), order.getOrderStatus())) {
                     order.setOrderStatus(InpatientOrderStatusEnum.EXECUTING.getCode());
                 }
-                orderMapper.updateById(order);
+                bizInpatientOrderMapper.updateById(order);
             } else {
                 // 跳过：不计费。临时医嘱仍停在「已校对」—— 这次没做不等于做完了，
                 // 系统不替临床把"没做"记成"完成"；这条医嘱需要医生重新开立或停止。
@@ -871,11 +847,11 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
                 }
             }
 
-            execMapper.updateById(exec);
+            bizInpatientOrderExecMapper.updateById(exec);
             processed++;
         }
         log.info("医嘱执行处理完成 条数={} 结果={} 护士={}", processed,
-                dictText.getDicDataLabel("biz_patient_orderExecStatusEnum", status), nurseName);
+                dictCacheService.getDicDataLabel("biz_patient_orderExecStatusEnum", status), nurseName);
         return processed;
     }
 
@@ -902,7 +878,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         dto.setEncounterType(EncounterTypeEnum.INPATIENT.getCode());
         dto.setEncounterId(order.getAdmissionId());
         BizAdmission admission = admissionCache.computeIfAbsent(order.getAdmissionId(),
-                id -> admissionMapper.selectById(id));
+                id -> bizAdmissionMapper.selectById(id));
         if (admission != null) {
             dto.setEncounterNo(admission.getAdmissionNo());
         }
@@ -953,7 +929,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
      */
     private void backfillTodayPlans(Long admissionId, Long patientId) {
         LocalDateTime now = TimeUtil.nowSeconds();
-        List<BizInpatientOrder> actives = orderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
+        List<BizInpatientOrder> actives = bizInpatientOrderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
                 .eq(BizInpatientOrder::getOrderType, OrderTypeEnum.LONG.getCode())
                 .in(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.VERIFIED.getCode(), InpatientOrderStatusEnum.EXECUTING.getCode())
                 .eq(admissionId != null, BizInpatientOrder::getAdmissionId, admissionId)
@@ -992,19 +968,19 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (order.getPlanEndTime() != null && !order.getPlanEndTime().isAfter(now)) {
             return false;
         }
-        if (execMapper.countByOrderAndDate(order.getId(), today) > 0) {
+        if (bizInpatientOrderExecMapper.countByOrderAndDate(order.getId(), today) > 0) {
             return false;
         }
         BizInpatientOrderExec exec = new BizInpatientOrderExec();
         exec.setOrderId(order.getId());
         exec.setAdmissionId(order.getAdmissionId());
         exec.setPatientId(order.getPatientId());
-        exec.setExecSeq((int) execMapper.countByOrder(order.getId()) + 1);
+        exec.setExecSeq((int) bizInpatientOrderExecMapper.countByOrder(order.getId()) + 1);
         exec.setPlanDate(today);
         exec.setPlanTime(planTimeOf(order, now));
         exec.setExecStatus(ExecStatusEnum.PENDING.getCode());
         try {
-            execMapper.insert(exec);
+            bizInpatientOrderExecMapper.insert(exec);
             return true;
         } catch (DuplicateKeyException e) {
             // 并发下唯一索引 uk_ioe_order_plan_date 兜底：别的线程刚补过，不算失败
@@ -1037,8 +1013,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
         vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
         vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
-        vo.setSourceText(dictText.getDicDataLabel("biz_patient_orderSourceEnum", vo.getSource()));
-        vo.setIsUrgentText(dictText.getDicDataLabel("biz_patient_orderUrgentEnum", vo.getIsUrgent()));
+        vo.setSourceText(dictCacheService.getDicDataLabel("biz_patient_orderSourceEnum", vo.getSource()));
+        vo.setIsUrgentText(dictCacheService.getDicDataLabel("biz_patient_orderUrgentEnum", vo.getIsUrgent()));
 
         boolean pendingVerify = Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), vo.getOrderStatus());
         vo.setCanVerify(pendingVerify);
@@ -1072,20 +1048,20 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
         vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
         vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
-        vo.setExecStatusText(dictText.getDicDataLabel("biz_patient_orderExecStatusEnum", vo.getExecStatus()));
+        vo.setExecStatusText(dictCacheService.getDicDataLabel("biz_patient_orderExecStatusEnum", vo.getExecStatus()));
         vo.setCharged(vo.getFeeRecordId() != null);
         vo.setInfusion(InpatientInfusionServiceImpl.isInfusionRoute(vo.getRoute()));
     }
 
     private String nextOrderNo() {
         String prefix = "YZ" + LocalDate.now().format(NO_DATE);
-        long seq = orderMapper.countByOrderNoPrefix(prefix) + 1;
+        long seq = bizInpatientOrderMapper.countByOrderNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 
     private String nextOrderGroup() {
         String prefix = "G" + LocalDate.now().format(NO_DATE);
-        long seq = orderMapper.countByOrderGroupPrefix(prefix) + 1;
+        long seq = bizInpatientOrderMapper.countByOrderGroupPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 

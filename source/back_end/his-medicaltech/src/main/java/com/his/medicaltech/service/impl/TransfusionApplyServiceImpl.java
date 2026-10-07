@@ -24,9 +24,9 @@ import com.his.medicaltech.vo.TransfusionBagVO;
 import com.his.patient.entity.BizAdmission;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.entity.BizPatient;
+import com.his.patient.service.BizPatientService;
 import com.his.patient.service.InpatientRecordService;
 import com.his.patient.service.InpatientService;
-import com.his.patient.service.PatientService;
 import com.his.patient.vo.CodeOptionVO;
 import com.his.patient.vo.WardVO;
 import com.his.system.entity.CurrentUser;
@@ -34,7 +34,6 @@ import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -99,14 +98,20 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter FULL_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter TIME_HM = DateTimeFormatter.ofPattern("HH:mm");
+
     private final BizTransfusionApplyMapper applyMapper;
+
     private final BizTransfusionBagMapper bagMapper;
+
     private final BizTransfusionApproveMapper approveRecordMapper;
-    private final PatientService patientService;
+
+    private final BizPatientService bizPatientService;
+
     private final InpatientService inpatientService;
+
     private final InpatientRecordService inpatientRecordService;
-    @Autowired
-    private DictCacheService dictText;
+
+    private DictCacheService dictCacheService;
 
     // 查询
 
@@ -278,7 +283,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         if (!Objects.equals(ADMITTED, admission.getAdmitStatus())) {
             throw new BusinessException("该患者当前不是「在院」状态，不能申请输血（已出院的住院不能开输血单）");
         }
-        BizPatient patient = patientService.getById(admission.getPatientId());
+        BizPatient patient = bizPatientService.getById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
@@ -507,7 +512,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
             TransfusionApplyVO.ApproveRecord row = new TransfusionApplyVO.ApproveRecord();
             row.setId(r.getId());
             row.setApproveLevel(r.getApproveLevel());
-            row.setApproveLevelText(dictText.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", r.getApproveLevel()));
+            row.setApproveLevelText(dictCacheService.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", r.getApproveLevel()));
             row.setApproveResult(r.getApproveResult());
             row.setApproveResultText(Objects.equals(1, r.getApproveResult()) ? "通过" : "驳回");
             row.setApproverId(r.getApproverId());
@@ -542,7 +547,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         for (int level = 1; level <= 3; level++) {
             TransfusionApplyVO.LevelCount lc = new TransfusionApplyVO.LevelCount();
             lc.setApproveLevel(level);
-            lc.setApproveLevelText(dictText.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", level));
+            lc.setApproveLevelText(dictCacheService.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", level));
             lc.setCount(applyMapper.selectCount(
                     new LambdaQueryWrapper<BizTransfusionApply>()
                             .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.APPROVED.getCode())
@@ -574,7 +579,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
                     + TransfusionApproveStatusEnum.labelOrUnknown(entity.getApproveStatus())
                     + "」，未通过审批不能配血（申请量 "
                     + (entity.getAmountMl() == null ? "待折算" : entity.getAmountMl() + "ml")
-                    + "，属「" + dictText.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", entity.getApproveLevel()) + "」审核签发范围）");
+                    + "，属「" + dictCacheService.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", entity.getApproveLevel()) + "」审核签发范围）");
         }
         BizAdmission admission = inpatientService.getAdmissionById(entity.getAdmissionId());
         if (admission == null || !Objects.equals(ADMITTED, admission.getAdmitStatus())) {
@@ -1018,7 +1023,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizPatient patient = patientService.getById(admission.getPatientId());
+        BizPatient patient = bizPatientService.getById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在，无法回写输血记录");
         }
@@ -1138,7 +1143,7 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         vo.setAdmitStatusText(AdmitStatusEnum.getText(vo.getAdmitStatus()));
         vo.setHasReactionText(Objects.equals(1, vo.getHasReaction()) ? "有反应（已上报）" : "未上报反应");
         vo.setApproveStatusText(TransfusionApproveStatusEnum.getText(vo.getApproveStatus()));
-        vo.setApproveLevelText(dictText.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", vo.getApproveLevel()));
+        vo.setApproveLevelText(dictCacheService.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", vo.getApproveLevel()));
         vo.setCheckItemsText(TransfusionCheckItems.summaryText(vo.getCheckItems()));
         vo.setCheckItemOptions(checkItems());
         vo.setReactionTypeOptions(TransfusionReactionTypeEnum.options());

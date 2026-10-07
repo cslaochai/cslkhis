@@ -20,7 +20,8 @@ import com.his.operation.service.OperationCountService;
 import com.his.operation.vo.CountItemVO;
 import com.his.operation.vo.OperationCountVO;
 import com.his.patient.entity.BizPatient;
-import com.his.patient.service.PatientService;
+import com.his.patient.service.BizPatientService;
+import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -35,8 +36,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 手术器械/敷料清点服务实现（G15 并行链）。
@@ -60,15 +59,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class OperationCountServiceImpl implements OperationCountService {
-    @Autowired
-    private DictCacheService dictText;
-
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-    private final BizOperationCountMapper countMapper;
-    private final BizOperationCountItemMapper itemMapper;
-    private final BizOperationApplyMapper applyMapper;
-    private final PatientService patientService;
+    private final DictCacheService dictCacheService;
+
+    private final BizPatientService bizPatientService;
+
+    private final BizOperationCountMapper bizOperationCountMapper;
+
+    private final BizOperationCountItemMapper bizOperationCountItemMapper;
+
+    private final BizOperationApplyMapper bizOperationApplyMapper;
 
     private static int nz(Integer value) {
         return value == null ? 0 : value;
@@ -88,7 +89,7 @@ public class OperationCountServiceImpl implements OperationCountService {
         if (applyId == null) {
             throw new BusinessException("手术申请单ID不能为空");
         }
-        BizOperationCount entity = countMapper.selectOne(
+        BizOperationCount entity = bizOperationCountMapper.selectOne(
                 new LambdaQueryWrapper<BizOperationCount>()
                         .eq(BizOperationCount::getApplyId, applyId)
                         .last("LIMIT 1"));
@@ -101,7 +102,7 @@ public class OperationCountServiceImpl implements OperationCountService {
         if (countId == null) {
             throw new BusinessException("清点单ID不能为空");
         }
-        BizOperationCount entity = countMapper.selectById(countId);
+        BizOperationCount entity = bizOperationCountMapper.selectById(countId);
         if (entity == null) {
             throw new BusinessException("手术清点单不存在");
         }
@@ -111,14 +112,14 @@ public class OperationCountServiceImpl implements OperationCountService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String create(OperationCountUpsertDTO dto) {
-        BizOperationApply apply = applyMapper.selectById(dto.getApplyId());
+        BizOperationApply apply = bizOperationApplyMapper.selectById(dto.getApplyId());
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
         }
         if (Integer.valueOf(OperationApplyStatusEnum.CANCELLED.getCode()).equals(apply.getOperationStatus())) {
             throw new BusinessException("手术单 " + apply.getApplyNo() + " 已取消，不需要清点");
         }
-        if (countMapper.selectCount(new LambdaQueryWrapper<BizOperationCount>()
+        if (bizOperationCountMapper.selectCount(new LambdaQueryWrapper<BizOperationCount>()
                 .eq(BizOperationCount::getApplyId, apply.getId())) > 0) {
             throw new BusinessException("该手术已有器械清点单，不能重复建档");
         }
@@ -142,7 +143,7 @@ public class OperationCountServiceImpl implements OperationCountService {
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
-        countMapper.insert(entity);
+        bizOperationCountMapper.insert(entity);
 
         List<CountItemInputUpsertDTO> inputs = dto.getItems() == null ? List.of() : dto.getItems();
         int seq = 0;
@@ -155,7 +156,7 @@ public class OperationCountServiceImpl implements OperationCountService {
             item.setSpec(input.getSpec());
             item.setBeforeQty(input.getBeforeQty());
             item.setRemark(input.getRemark());
-            itemMapper.insert(item);
+            bizOperationCountItemMapper.insert(item);
         }
         log.info("建立手术清点单 countNo={} applyNo={} 明细 {} 行 洗手护士={} 巡回护士={}",
                 entity.getCountNo(), apply.getApplyNo(), seq,
@@ -174,13 +175,13 @@ public class OperationCountServiceImpl implements OperationCountService {
         }
         BizOperationCountItem item = new BizOperationCountItem();
         item.setCountId(entity.getId());
-        item.setSeqNo(itemMapper.maxSeqNo(entity.getId()) + 1);
+        item.setSeqNo(bizOperationCountItemMapper.maxSeqNo(entity.getId()) + 1);
         item.setItemCategory(dto.getItemCategory());
         item.setItemName(dto.getItemName().trim());
         item.setSpec(dto.getSpec());
         item.setBeforeQty(dto.getBeforeQty());
         item.setRemark(dto.getRemark());
-        itemMapper.insert(item);
+        bizOperationCountItemMapper.insert(item);
     }
 
     // 内部
@@ -196,7 +197,7 @@ public class OperationCountServiceImpl implements OperationCountService {
                     + CountPhaseEnum.labelOrUnknown(entity.getPhase() + 1)
                     + "」（三阶段必须按顺序推进，跳过 = 关体后才第一次数，那就晚了）");
         }
-        List<BizOperationCountItem> items = itemMapper.selectByCount(entity.getId());
+        List<BizOperationCountItem> items = bizOperationCountItemMapper.selectByCount(entity.getId());
         if (items.isEmpty()) {
             throw new BusinessException("清点单 " + entity.getCountNo() + " 没有任何明细，先登记清点清单");
         }
@@ -238,7 +239,7 @@ public class OperationCountServiceImpl implements OperationCountService {
                     }
                 }
             }
-            itemMapper.updateById(item);
+            bizOperationCountItemMapper.updateById(item);
         }
 
         boolean diff = !diffs.isEmpty();
@@ -283,7 +284,7 @@ public class OperationCountServiceImpl implements OperationCountService {
         if (dto.getRemark() != null) {
             entity.setRemark(dto.getRemark());
         }
-        countMapper.updateById(entity);
+        bizOperationCountMapper.updateById(entity);
         log.info("手术清点 countNo={} 阶段={} 结果={} 核对人={}{}",
                 entity.getCountNo(), CountPhaseEnum.labelOrUnknown(phase),
                 CountResultEnum.labelOrUnknown(result), nurseName,
@@ -295,7 +296,7 @@ public class OperationCountServiceImpl implements OperationCountService {
         if (applyId == null) {
             return false;
         }
-        return countMapper.countUnfinished(applyId) > 0;
+        return bizOperationCountMapper.countUnfinished(applyId) > 0;
     }
 
     @Override
@@ -303,7 +304,7 @@ public class OperationCountServiceImpl implements OperationCountService {
         if (applyId == null) {
             return false;
         }
-        return countMapper.countDiscrepancy(applyId) > 0;
+        return bizOperationCountMapper.countDiscrepancy(applyId) > 0;
     }
 
     private BizOperationCount mustGet(Long countId) {
@@ -311,7 +312,7 @@ public class OperationCountServiceImpl implements OperationCountService {
         if (countId == null) {
             throw new BusinessException("清点单ID不能为空");
         }
-        BizOperationCount entity = countMapper.selectById(countId);
+        BizOperationCount entity = bizOperationCountMapper.selectById(countId);
         if (entity == null) {
             throw new BusinessException("手术清点单不存在");
         }
@@ -321,7 +322,7 @@ public class OperationCountServiceImpl implements OperationCountService {
     private OperationCountVO buildVO(BizOperationCount entity) {
         OperationCountVO vo = new OperationCountVO();
         BeanUtils.copyProperties(entity, vo);
-        BizOperationApply apply = applyMapper.selectById(entity.getApplyId());
+        BizOperationApply apply = bizOperationApplyMapper.selectById(entity.getApplyId());
         if (apply != null) {
             vo.setSurgeonName(apply.getSurgeonName());
             vo.setPlannedStartTime(apply.getPlannedStartTime());
@@ -329,7 +330,7 @@ public class OperationCountServiceImpl implements OperationCountService {
             vo.setOperationStatusText(OperationApplyStatusEnum.getText(apply.getOperationStatus()));
         }
         if (entity.getPatientId() != null) {
-            BizPatient patient = patientService.getById(entity.getPatientId());
+            BizPatient patient = bizPatientService.getById(entity.getPatientId());
             if (patient != null) {
                 vo.setPatientNo(patient.getPatientNo());
             }
@@ -341,7 +342,7 @@ public class OperationCountServiceImpl implements OperationCountService {
         vo.setClosureResultText(CountResultEnum.getText(entity.getClosureResult()));
         vo.setFinalResultText(CountResultEnum.getText(entity.getFinalResult()));
 
-        List<BizOperationCountItem> items = itemMapper.selectByCount(entity.getId());
+        List<BizOperationCountItem> items = bizOperationCountItemMapper.selectByCount(entity.getId());
         List<CountItemVO> vos = new ArrayList<>();
         int totalBefore = 0;
         int totalClosure = 0;
@@ -349,7 +350,7 @@ public class OperationCountServiceImpl implements OperationCountService {
         for (BizOperationCountItem item : items) {
             CountItemVO itemVo = new CountItemVO();
             BeanUtils.copyProperties(item, itemVo);
-            itemVo.setItemCategoryText(dictText.getDicDataLabel("biz_operation_countCategoryEnum", item.getItemCategory()));
+            itemVo.setItemCategoryText(dictCacheService.getDicDataLabel("biz_operation_countCategoryEnum", item.getItemCategory()));
             // ★ 判定基准是术前基线，不是上一段（连续两次都少一块纱布时，"与上段一致"会显示通过）
             if (item.getBeforeQty() != null && item.getFinalQty() != null) {
                 itemVo.setConsistent(Objects.equals(item.getBeforeQty(), item.getFinalQty()));
@@ -387,13 +388,13 @@ public class OperationCountServiceImpl implements OperationCountService {
         if (empId == null) {
             return null;
         }
-        String name = applyMapper.selectEmployeeName(empId);
+        String name = bizOperationApplyMapper.selectEmployeeName(empId);
         return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
     private String nextCountNo() {
         String prefix = "QD" + LocalDate.now().format(NO_DATE);
-        long seq = countMapper.countByNoPrefix(prefix) + 1;
+        long seq = bizOperationCountMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 }

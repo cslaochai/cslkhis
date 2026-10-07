@@ -28,9 +28,9 @@ import com.his.patient.entity.BizInpatientOperation;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.enums.InpatientRecordTypeEnum;
+import com.his.patient.service.BizPatientService;
 import com.his.patient.service.InpatientRecordService;
 import com.his.patient.service.InpatientService;
-import com.his.patient.service.PatientService;
 import com.his.patient.vo.WardVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.entity.CurrentUser;
@@ -39,7 +39,6 @@ import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -83,19 +82,26 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter FULL_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter TIME_HM = DateTimeFormatter.ofPattern("HH:mm");
-    private final BizOperationApplyMapper applyMapper;
-    private final PatientService patientService;
+
+    private final BizOperationApplyMapper bizOperationApplyMapper;
+
+    private final BizPatientService bizPatientService;
+
     private final InpatientService inpatientService;
+
     private final InpatientRecordService inpatientRecordService;
-    private final EmployeeTechAuthService techAuthService;
-    private final BizOperationCountMapper operationCountMapper;
-    private final SysOperationRoomMapper roomMapper;
-    private final BizOperationSafetyCheckMapper safetyCheckMapper;
-    @Autowired
-    private DictCacheService dictText;
+
+    private final EmployeeTechAuthService employeeTechAuthService;
+
+    private final BizOperationCountMapper bizOperationCountMapper;
+
+    private final SysOperationRoomMapper sysOperationRoomMapper;
+
+    private final BizOperationSafetyCheckMapper bizOperationSafetyCheckMapper;
+
+    private DictCacheService dictCacheService;
 
     // 查询
-
     private static String textOr(String value, String fallback) {
         return StringUtils.hasText(value) ? value : fallback;
     }
@@ -150,7 +156,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
         query.setPlannedDateFrom(normalizeFrom(query.getPlannedDateFrom()));
         query.setPlannedDateTo(normalizeTo(query.getPlannedDateTo()));
-        IPage<OperationApplyVO> page = applyMapper.selectApplyPage(
+        IPage<OperationApplyVO> page = bizOperationApplyMapper.selectApplyPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         page.getRecords().forEach(this::decorate);
         return page;
@@ -162,7 +168,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         if (applyId == null) {
             throw new BusinessException("手术申请单ID不能为空");
         }
-        OperationApplyVO vo = applyMapper.selectApplyById(applyId);
+        OperationApplyVO vo = bizOperationApplyMapper.selectApplyById(applyId);
         if (vo == null) {
             throw new BusinessException("手术申请单不存在");
         }
@@ -178,7 +184,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        List<OperationApplyVO> list = applyMapper.selectByAdmission(admissionId);
+        List<OperationApplyVO> list = bizOperationApplyMapper.selectByAdmission(admissionId);
         list.forEach(this::decorate);
         return list;
     }
@@ -187,7 +193,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
 
     @Override
     public long countUnfinished(Long admissionId) {
-        return applyMapper.countUnfinished(admissionId);
+        return bizOperationApplyMapper.countUnfinished(admissionId);
     }
 
     // 三、术前核对（已排期 → 术前核对完成）
@@ -197,12 +203,12 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         // 手术间主数据（启用）优先，再并入历史 distinct —— 老申请单用过的自由文本
         // 不能丢（否则改排一台历史手术时下拉里找不到它原来的手术间）。
         List<String> rooms = new ArrayList<>();
-        roomMapper.selectList(new LambdaQueryWrapper<SysOperationRoom>()
+        sysOperationRoomMapper.selectList(new LambdaQueryWrapper<SysOperationRoom>()
                         .eq(SysOperationRoom::getStatus, 1)
                         .orderByAsc(SysOperationRoom::getSortOrder)
                         .orderByAsc(SysOperationRoom::getRoomCode))
                 .forEach(r -> rooms.add(r.getRoomName()));
-        for (String legacy : applyMapper.selectRoomList()) {
+        for (String legacy : bizOperationApplyMapper.selectRoomList()) {
             if (!rooms.contains(legacy)) {
                 rooms.add(legacy);
             }
@@ -225,7 +231,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         matrix.setDate(day.format(DateTimeFormatter.ISO_LOCAL_DATE));
 
         // 列 = 启用中的手术间主数据（顺序即总表列序）
-        List<SysOperationRoom> enabledRooms = roomMapper.selectList(
+        List<SysOperationRoom> enabledRooms = sysOperationRoomMapper.selectList(
                 new LambdaQueryWrapper<SysOperationRoom>()
                         .eq(SysOperationRoom::getStatus, 1)
                         .orderByAsc(SysOperationRoom::getSortOrder)
@@ -233,8 +239,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
 
         LocalDateTime from = day.atStartOfDay();
         LocalDateTime to = day.plusDays(1).atStartOfDay();
-        List<OperationApplyVO> scheduled = applyMapper.selectScheduledBetween(from, to);
-        List<OperationApplyVO> pending = applyMapper.selectUnscheduled();
+        List<OperationApplyVO> scheduled = bizOperationApplyMapper.selectScheduledBetween(from, to);
+        List<OperationApplyVO> pending = bizOperationApplyMapper.selectUnscheduled();
         scheduled.forEach(this::decorate);
         pending.forEach(this::decorate);
 
@@ -297,7 +303,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         if (ids.isEmpty()) {
             return result;
         }
-        List<BizOperationSafetyCheck> rows = safetyCheckMapper.selectList(
+        List<BizOperationSafetyCheck> rows = bizOperationSafetyCheckMapper.selectList(
                 new LambdaQueryWrapper<BizOperationSafetyCheck>()
                         .select(BizOperationSafetyCheck::getApplyId)
                         .in(BizOperationSafetyCheck::getApplyId, ids));
@@ -336,7 +342,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         if (!Objects.equals(AdmitStatusEnum.IN_HOSPITAL.getCode(), admission.getAdmitStatus())) {
             throw new BusinessException("该患者当前不是「在院」状态，不能申请手术（已出院的住院不能开手术单）");
         }
-        BizPatient patient = patientService.getById(admission.getPatientId());
+        BizPatient patient = bizPatientService.getById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
@@ -375,13 +381,13 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
 
         // 重复申请：同一住院 + 同一拟施术式，不允许并存两条未完成申请（四核对的"重复"）
-        if (applyMapper.countUnfinishedSameName(dto.getAdmissionId(), dto.getPlannedOperationName()) > 0) {
+        if (bizOperationApplyMapper.countUnfinishedSameName(dto.getAdmissionId(), dto.getPlannedOperationName()) > 0) {
             throw new BusinessException("该住院已有一条未完成的「" + dto.getPlannedOperationName()
                     + "」手术申请，请先完成或取消后再发起（同一台手术申请两次属于重复）");
         }
         // 主要手术唯一：同一次住院只能有一条主要手术申请
         if (isMain == 1
-                && applyMapper.countMainOperation(dto.getAdmissionId(), entity.getId()) > 0) {
+                && bizOperationApplyMapper.countMainOperation(dto.getAdmissionId(), entity.getId()) > 0) {
             throw new BusinessException("该住院已有一条「主要手术」申请，同一次住院只允许一条"
                     + "（首页主要手术只能有 1 条，与本条并存会导致首页出现两条主手术）");
         }
@@ -400,9 +406,9 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
 
         if (create) {
-            applyMapper.insert(entity);
+            bizOperationApplyMapper.insert(entity);
         } else {
-            applyMapper.updateById(entity);
+            bizOperationApplyMapper.updateById(entity);
         }
         // 准入闸（sql/155）：申请人可以替团队开单，但本人必须是「有手术资质」的人 ——
         // 药师、管理员、纯门诊医师拿着账号不该能发起手术申请。级别闸在排台定术者时判。
@@ -441,7 +447,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
 
         // 排台冲突：同手术间、时间区间重叠、在途/已完成的手术
-        List<BizOperationApply> conflicts = applyMapper.selectRoomConflicts(
+        List<BizOperationApply> conflicts = bizOperationApplyMapper.selectRoomConflicts(
                 dto.getOperationRoom(), start, end, entity.getId());
         if (!conflicts.isEmpty()) {
             BizOperationApply c = conflicts.get(0);
@@ -465,7 +471,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         entity.setScheduleTime(now());
         entity.setScheduleRemark(dto.getScheduleRemark());
         entity.setOperationStatus(OperationApplyStatusEnum.SCHEDULED.getCode());
-        applyMapper.updateById(entity);
+        bizOperationApplyMapper.updateById(entity);
         // 分级授权闸（sql/155）：排台是"这台手术由谁来做"的唯一事实来源，所以级别闸落在这里。
         // 主刀按手术级别要求「手术类」授权，麻醉医师按同级要求「麻醉类」授权。
         gateTechAuth(dto.getSurgeonId(), TechAuthCategoryEnum.SURGERY.getCode(),
@@ -518,7 +524,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
-        applyMapper.updateById(entity);
+        bizOperationApplyMapper.updateById(entity);
         log.info("术前核对完成 applyNo={} 核对项={} 异常说明={} 核对人={}",
                 entity.getApplyNo(), entity.getPreopCheckItems(),
                 StringUtils.hasText(dto.getPreopNote()) ? dto.getPreopNote() : "无", operatorUser.getRealName());
@@ -623,7 +629,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
-        applyMapper.updateById(entity);
+        bizOperationApplyMapper.updateById(entity);
 
         log.info("手术完成 applyNo={} 术式={} {}~{} 首页明细ID={} 病历号={} 录入人={}",
                 entity.getApplyNo(), actualName, start.format(FULL_TIME), end.format(FULL_TIME),
@@ -654,7 +660,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         entity.setCancelDoctorId(operatorUser.getEmployeeId());
         entity.setCancelDoctorName(operatorUser.getRealName());
         entity.setCancelTime(now());
-        applyMapper.updateById(entity);
+        bizOperationApplyMapper.updateById(entity);
         log.info("取消手术 applyNo={} 原因={} 操作人={}",
                 entity.getApplyNo(), dto.getCancelReason(), operatorUser.getRealName());
     }
@@ -679,7 +685,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizPatient patient = patientService.getById(admission.getPatientId());
+        BizPatient patient = bizPatientService.getById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在，无法回写手术记录");
         }
@@ -729,8 +735,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         record.setRemark("系统回写：手术申请单号 " + entity.getApplyNo()
                 + "，主刀 " + textOr(entity.getSurgeonName(), "未指定")
                 + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getText(entity.getAnesthesiaType())
-                + "，手术级别 " + dictText.getDicDataLabel("biz_operation_operationLevelEnum", entity.getOperationLevel())
-                + "，切口等级 " + dictText.getDicDataLabel("biz_operation_operationIncisionEnum", entity.getIncisionLevel()));
+                + "，手术级别 " + dictCacheService.getDicDataLabel("biz_operation_operationLevelEnum", entity.getOperationLevel())
+                + "，切口等级 " + dictCacheService.getDicDataLabel("biz_operation_operationIncisionEnum", entity.getIncisionLevel()));
         record.setRecordStatus(RecordStatusEnum.SUBMITTED.getCode());
         // 签名 = 主刀医师；主刀缺失才回落到录入人（宁可记"谁录的"，也不留空签名）
         record.setDoctorId(entity.getSurgeonId() != null ? entity.getSurgeonId() : operatorUser.getEmployeeId());
@@ -749,18 +755,18 @@ public class OperationApplyServiceImpl implements OperationApplyService {
      * 等于把唯一能在关腔前拦住的机会让给事后追溯。
      */
     private void guardCount(BizOperationApply entity) {
-        long sheets = operationCountMapper.selectCount(
+        long sheets = bizOperationCountMapper.selectCount(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BizOperationCount>()
                         .eq(BizOperationCount::getApplyId, entity.getId()));
         if (sheets == 0) {
             return;
         }
-        if (operationCountMapper.countDiscrepancy(entity.getId()) > 0) {
+        if (bizOperationCountMapper.countDiscrepancy(entity.getId()) > 0) {
             throw new BusinessException("手术单 " + entity.getApplyNo()
                     + " 的器械清点存在未处理的差异，不能登记手术完成 —— "
                     + "先把差异查清并在清点单上写明处理结果（这一条是异物遗留唯一能在关腔前发现的机制）");
         }
-        if (operationCountMapper.countUnfinished(entity.getId()) > 0) {
+        if (bizOperationCountMapper.countUnfinished(entity.getId()) > 0) {
             throw new BusinessException("手术单 " + entity.getApplyNo()
                     + " 的器械清点尚未走完三轮（术前 → 关体前 → 关体后），不能登记手术完成");
         }
@@ -774,7 +780,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
      * 而单子上却留着看起来走过流程的签名 —— 这比没签更糟。
      */
     private void guardSafetyCheck(BizOperationApply entity) {
-        long phases = safetyCheckMapper.countPhases(entity.getId());
+        long phases = bizOperationSafetyCheckMapper.countPhases(entity.getId());
         if (phases > 0 && phases < SafetyCheckItems.ALL_PHASES.size()) {
             throw new BusinessException("手术单 " + entity.getApplyNo()
                     + " 的安全核查只签了 " + phases + " 轮（共 3 轮：麻醉实施前 → 手术开始前 → 患者离开手术室前），"
@@ -793,10 +799,10 @@ public class OperationApplyServiceImpl implements OperationApplyService {
 
     private void decorate(OperationApplyVO vo) {
         vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
-        vo.setOperationLevelText(dictText.getDicDataLabel("biz_operation_operationLevelEnum", vo.getOperationLevel()));
-        vo.setIncisionLevelText(dictText.getDicDataLabel("biz_operation_operationIncisionEnum", vo.getIncisionLevel()));
+        vo.setOperationLevelText(dictCacheService.getDicDataLabel("biz_operation_operationLevelEnum", vo.getOperationLevel()));
+        vo.setIncisionLevelText(dictCacheService.getDicDataLabel("biz_operation_operationIncisionEnum", vo.getIncisionLevel()));
         vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
-        vo.setIsEmergencyText(dictText.getDicDataLabel("biz_operation_operationEmergencyEnum", vo.getIsEmergency()));
+        vo.setIsEmergencyText(dictCacheService.getDicDataLabel("biz_operation_operationEmergencyEnum", vo.getIsEmergency()));
         vo.setIsMainText(vo.getIsMain() == null ? "—" : (vo.getIsMain() == 1 ? "主要手术" : "次要手术"));
         vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
         vo.setAdmitStatusText(AdmitStatusEnum.getText(vo.getAdmitStatus()));
@@ -866,7 +872,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     }
 
     private BizOperationApply mustGet(Long applyId) {
-        BizOperationApply entity = applyMapper.selectById(applyId);
+        BizOperationApply entity = bizOperationApplyMapper.selectById(applyId);
         if (entity == null) {
             throw new BusinessException("手术申请单不存在");
         }
@@ -880,7 +886,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         if (deptId == null) {
             return null;
         }
-        String name = applyMapper.selectDeptName(deptId);
+        String name = bizOperationApplyMapper.selectDeptName(deptId);
         return StringUtils.hasText(name) ? name : "未知科室(ID=" + deptId + ")";
     }
 
@@ -903,13 +909,13 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         if (empId == null) {
             return null;
         }
-        String name = applyMapper.selectEmployeeName(empId);
+        String name = bizOperationApplyMapper.selectEmployeeName(empId);
         return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
     private String nextApplyNo() {
         String prefix = "SS" + LocalDate.now().format(NO_DATE);
-        long seq = applyMapper.countByNoPrefix(prefix) + 1;
+        long seq = bizOperationApplyMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 
@@ -932,7 +938,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         gate.setReason(roleName + "「" + textOr(personName, "未指名") + "」在急诊手术 " + entity.getApplyNo()
                 + "（" + entity.getPlannedOperationName() + "）上越权，该手术要求 " + requiredLevel + " 级授权");
         try {
-            techAuthService.gate(gate);
+            employeeTechAuthService.gate(gate);
         } catch (BusinessException e) {
             throw new BusinessException(roleName + "（" + textOr(personName, "未指名") + "）" + e.getMessage());
         }

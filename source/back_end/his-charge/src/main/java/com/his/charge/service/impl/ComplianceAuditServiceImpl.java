@@ -27,7 +27,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -63,11 +62,9 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
      * 全部规则实现，Spring 自动注入
      */
     private final List<ComplianceRule> rules;
-    @Autowired
-    private DictCacheService dictText;
+    private DictCacheService dictCacheService;
 
     // 编码明细维护
-
     @Override
     public SettlementCodingVO getCoding(Long settlementId) {
         BizInsuranceSettlement settlement = requireSettlement(settlementId);
@@ -539,7 +536,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
 
     private void fillAuditText(ComplianceAuditVO vo) {
         vo.setRiskLevelText(RuleCatalogEnum.riskLabel(vo.getRiskLevel()));
-        vo.setAuditTypeText(dictText.getDicDataLabel("biz_charge_complianceAuditTypeEnum", vo.getAuditType()));
+        vo.setAuditTypeText(dictCacheService.getDicDataLabel("biz_charge_complianceAuditTypeEnum", vo.getAuditType()));
     }
 
     private Set<String> loadEnabledIcdCodes() {
@@ -629,7 +626,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         BeanUtils.copyProperties(entity, vo);
         vo.setDiagTypeText(entity.getDiagType() == null ? ""
                 : (entity.getDiagType() == 1 ? "主要诊断" : "其他诊断"));
-        vo.setAdmitConditionText(dictText.getDicDataLabel("biz_common_admitConditionEnum", entity.getAdmitCondition()));
+        vo.setAdmitConditionText(dictCacheService.getDicDataLabel("biz_common_admitConditionEnum", entity.getAdmitCondition()));
         // 三态中文一律走 getText，禁止在这里拼「通过」
         vo.setEvidenceStatusText(AuditResultStateEnum.getText(entity.getEvidenceStatus()));
         return vo;

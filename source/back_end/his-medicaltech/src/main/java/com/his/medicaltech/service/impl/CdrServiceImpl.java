@@ -1,19 +1,20 @@
 package com.his.medicaltech.service.impl;
-import com.his.patient.enums.VisitStatusEnum;
 
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.dto.CdrQueryDTO;
-import com.his.medicaltech.mapper.CdrMapper;
-import com.his.medicaltech.service.CdrService;
 import com.his.medicaltech.enums.CdrEventTypeEnum;
 import com.his.medicaltech.enums.CdrNodeTypeEnum;
+import com.his.medicaltech.mapper.CdrMapper;
+import com.his.medicaltech.service.CdrService;
 import com.his.medicaltech.vo.*;
 import com.his.patient.entity.BizPatient;
+import com.his.patient.enums.VisitStatusEnum;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.PatientIndexService;
 import com.his.patient.support.PatientProfileFields;
+import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -28,8 +29,6 @@ import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 患者全景时间轴实现（P5.2）。
@@ -44,20 +43,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class CdrServiceImpl implements CdrService {
-    @Autowired
-    private DictCacheService dictText;
-
-    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     private static final String ANCHOR_REGIST = "REGIST";
     private static final String ANCHOR_ADMISSION = "ADMISSION";
     private static final String ANCHOR_EMERGENCY = "EMERGENCY";
     private static final String ANCHOR_PATIENT = "PATIENT";
-
+    private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private final CdrMapper cdrMapper;
     private final BizPatientMapper patientMapper;
     private final PatientIndexService patientIndexService;
+    private DictCacheService dictCacheService;
 
     /**
      * 事件金额的语义标签。金额不能只给一个数字，得说清这是"实收"还是"总额"
@@ -291,7 +287,7 @@ public class CdrServiceImpl implements CdrService {
             node.setStartTime(fmt(ldt(r.get("regist_time"), ldt(r.get("visit_date")))));
             node.setDeptName(str(r.get("dept_name")));
             node.setOperatorName(str(r.get("doctor_name")));
-            node.setStatusText(dictText.getDicDataLabel("biz_medicaltech_cdrRegistStatusEnum", intVal(r.get("regist_status"))));
+            node.setStatusText(dictCacheService.getDicDataLabel("biz_medicaltech_cdrRegistStatusEnum", intVal(r.get("regist_status"))));
             node.setTitle(composeTitle(node.getNodeTypeText(), node.getDeptName(), node.getOperatorName()));
             node.setSubtitle("该挂号未被就诊次收录");
             node.setFromShadow(isShadow(r.get("owner_pid"), pid));
@@ -341,8 +337,8 @@ public class CdrServiceImpl implements CdrService {
             node.setEndTime(fmt(ldt(e.get("finish_time"))));
             node.setDeptName(str(e.get("dept_name")));
             node.setOperatorName(str(e.get("doctor_name")));
-            node.setStatusText(dictText.getDicDataLabel("biz_medicaltech_cdrEmergencyStatusEnum", intVal(e.get("emergency_status"))));
-            String triage = dictText.getDicDataLabel("biz_medicaltech_cdrEmergencyTriageEnum", intVal(e.get("triage_level")));
+            node.setStatusText(dictCacheService.getDicDataLabel("biz_medicaltech_cdrEmergencyStatusEnum", intVal(e.get("emergency_status"))));
+            String triage = dictCacheService.getDicDataLabel("biz_medicaltech_cdrEmergencyTriageEnum", intVal(e.get("triage_level")));
             String zone = str(e.get("zone"));
             node.setSubtitle(StringUtils.hasText(triage) || StringUtils.hasText(zone)
                     ? ((triage == null ? "" : triage) + " " + (zone == null ? "" : zone)).trim() : null);

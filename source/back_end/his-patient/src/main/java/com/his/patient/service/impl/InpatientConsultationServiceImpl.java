@@ -26,7 +26,6 @@ import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -75,21 +74,24 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
      */
     private static final int URGENT_RESPONSE_MINUTES = 10;
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-    private final BizConsultationMapper consultationMapper;
-    private final BizAdmissionMapper admissionMapper;
-    private final BizPatientMapper patientMapper;
-    private final BizInpatientRecordMapper recordMapper;
-    private final SysBedMapper bedMapper;
-    /**
-     * 站内信（consult 发送方 + accept/cancel 待办闭环）
-     */
+
     private final SysMessageService sysMessageService;
+
+    private final DictCacheService dictCacheService;
+
+    private final BizConsultationMapper bizConsultationMapper;
+
+    private final BizAdmissionMapper bizAdmissionMapper;
+
+    private final BizPatientMapper bizPatientMapper;
+
+    private final BizInpatientRecordMapper bizInpatientRecordMapper;
+
+    private final SysBedMapper sysBedMapper;
+
     private final SysEmployeeMapper sysEmployeeMapper;
-    @Autowired
-    private DictCacheService dictText;
 
     // 申请 / 修改
-
     private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
         if (from == null || to == null) {
             return null;
@@ -130,7 +132,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         Integer category = dto.getConsultCategory() == null
                 ? ConsultCategoryEnum.NORMAL.getCode() : dto.getConsultCategory();
 
-        BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
@@ -161,7 +163,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
 
         // 新增：同一住院 + 同一会诊科室不允许并存两条未完成会诊（四核对的"重复"）
-        long unfinished = consultationMapper.selectCount(new LambdaQueryWrapper<BizConsultation>()
+        long unfinished = bizConsultationMapper.selectCount(new LambdaQueryWrapper<BizConsultation>()
                 .eq(BizConsultation::getAdmissionId, admission.getAdmissionId())
                 .eq(BizConsultation::getToDeptId, dto.getToDeptId())
                 .in(BizConsultation::getConsultStatus, ConsultationStatusEnum.PENDING.getCode(), ConsultationStatusEnum.ACCEPTED.getCode()));
@@ -188,7 +190,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         entity.setApplyTime(now);
         entity.setConsultStatus(ConsultationStatusEnum.PENDING.getCode());
         entity.setRemark(dto.getRemark());
-        consultationMapper.insert(entity);
+        bizConsultationMapper.insert(entity);
 
         notifyNewConsultation(entity, admission);
         log.info("申请会诊 consultationNo={} admissionId={} 申请科室={} 会诊科室={} 范围={} 急={} 申请医生={}",
@@ -226,7 +228,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
                         entity.getConsultationNo(), entity.getToDeptId(), entity.getDoctorId());
                 return;
             }
-            BizPatient patient = patientMapper.selectById(admission.getPatientId());
+            BizPatient patient = bizPatientMapper.selectById(admission.getPatientId());
             String patientName = patient == null || patient.getPatientName() == null ? "未知" : patient.getPatientName();
             boolean urgent = Objects.equals(YesOrNoEnum.YES.getCode(), entity.getIsUrgent());
             String title = (urgent ? "急会诊邀请：" : "会诊邀请：") + patientName
@@ -272,7 +274,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizConsultation entity = consultationMapper.selectById(dto.getId());
+        BizConsultation entity = bizConsultationMapper.selectById(dto.getId());
         if (entity == null) {
             throw new BusinessException("会诊记录不存在");
         }
@@ -284,7 +286,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
                     + ConsultationStatusEnum.labelOrUnknown(entity.getConsultStatus())
                     + "」，只有「待应答」的会诊申请可以修改；已应答的请直接完成会诊");
         }
-        long unfinished = consultationMapper.selectCount(new LambdaQueryWrapper<BizConsultation>()
+        long unfinished = bizConsultationMapper.selectCount(new LambdaQueryWrapper<BizConsultation>()
                 .eq(BizConsultation::getAdmissionId, admission.getAdmissionId())
                 .eq(BizConsultation::getToDeptId, dto.getToDeptId())
                 .in(BizConsultation::getConsultStatus, ConsultationStatusEnum.PENDING.getCode(), ConsultationStatusEnum.ACCEPTED.getCode())
@@ -302,7 +304,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         if (dto.getRemark() != null) {
             entity.setRemark(dto.getRemark());
         }
-        consultationMapper.updateById(entity);
+        bizConsultationMapper.updateById(entity);
         log.info("修改会诊申请 consultationNo={} 会诊科室={} 范围={} 急={} 操作人={}",
                 entity.getConsultationNo(), dto.getToDeptId(),
                 ConsultScopeEnum.getText(dto.getConsultType()), isUrgent, operatorUser.getRealName());
@@ -344,7 +346,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
-        consultationMapper.updateById(entity);
+        bizConsultationMapper.updateById(entity);
 
         // 消息侧待办联动：会诊已接诊 → 该会诊的站内信 handle_status 0→1。
         // 缺了这一步，会诊科室接诊了，收件箱里还挂着「待处理」（与危急值闭环同一手法）。
@@ -399,7 +401,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         if (dto.getRemark() != null) {
             entity.setRemark(dto.getRemark());
         }
-        consultationMapper.updateById(entity);
+        bizConsultationMapper.updateById(entity);
 
         log.info("会诊完成 consultationNo={} 会诊科室={} 结论字数={} 回写病历ID={} recordNo={}",
                 entity.getConsultationNo(), entity.getToDeptId(),
@@ -417,11 +419,11 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
      */
     private BizInpatientRecord writeBackRecord(BizConsultation entity, String conclusion,
                                                LocalDateTime consultTime, LocalDateTime now) {
-        BizAdmission admission = admissionMapper.selectById(entity.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(entity.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在，无法回写会诊病历（admissionId=" + entity.getAdmissionId() + "）");
         }
-        BizPatient patient = patientMapper.selectById(admission.getPatientId());
+        BizPatient patient = bizPatientMapper.selectById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在，无法回写会诊病历");
         }
@@ -429,7 +431,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         String deptName = null;
         String wardName = null;
         if (admission.getWardId() != null) {
-            WardVO ward = bedMapper.selectWardById(admission.getWardId());
+            WardVO ward = sysBedMapper.selectWardById(admission.getWardId());
             if (ward != null) {
                 wardName = ward.getWardName();
                 deptName = ward.getDeptName();
@@ -437,7 +439,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
         String bedNo = null;
         if (admission.getBedId() != null) {
-            SysBed bed = bedMapper.selectById(admission.getBedId());
+            SysBed bed = sysBedMapper.selectById(admission.getBedId());
             if (bed != null) {
                 bedNo = bed.getBedNo();
             }
@@ -470,7 +472,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         record.setDoctorId(entity.getAcceptDoctorId() != null ? entity.getAcceptDoctorId() : entity.getDoctorId());
         record.setDoctorName(entity.getAcceptDoctorName());
         record.setSubmitTime(now);
-        recordMapper.insert(record);
+        bizInpatientRecordMapper.insert(record);
         return record;
     }
 
@@ -496,7 +498,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
         entity.setConsultStatus(ConsultationStatusEnum.CANCELLED.getCode());
         entity.setCancelReason(dto.getCancelReason());
-        consultationMapper.updateById(entity);
+        bizConsultationMapper.updateById(entity);
 
         // 消息侧待办联动：会诊已取消 → 待办消息置「已关闭」（2），收件人不用再惦记
         closeConsultTodo(entity.getConsultationId(), 2);
@@ -526,7 +528,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
     @Override
     public IPage<ConsultationVO> listPage(ConsultationQueryPageDTO query) {
         Page<ConsultationVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        IPage<ConsultationVO> result = consultationMapper.selectConsultationPage(page, query);
+        IPage<ConsultationVO> result = bizConsultationMapper.selectConsultationPage(page, query);
         result.getRecords().forEach(this::decorate);
         return result;
     }
@@ -539,7 +541,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         if (consultationId == null) {
             throw new BusinessException("会诊ID不能为空");
         }
-        ConsultationVO vo = consultationMapper.selectConsultationById(consultationId);
+        ConsultationVO vo = bizConsultationMapper.selectConsultationById(consultationId);
         if (vo == null) {
             throw new BusinessException("会诊记录不存在");
         }
@@ -549,13 +551,13 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
 
     @Override
     public long countUnfinished(Long toDeptId, Long admissionId) {
-        return consultationMapper.countUnfinished(toDeptId, admissionId);
+        return bizConsultationMapper.countUnfinished(toDeptId, admissionId);
     }
 
     private void decorate(ConsultationVO vo) {
         vo.setConsultTypeText(ConsultScopeEnum.getText(vo.getConsultType()));
         vo.setConsultStatusText(ConsultationStatusEnum.getText(vo.getConsultStatus()));
-        vo.setIsUrgentText(dictText.getDicDataLabel("biz_patient_consultUrgentEnum", vo.getIsUrgent()));
+        vo.setIsUrgentText(dictCacheService.getDicDataLabel("biz_patient_consultUrgentEnum", vo.getIsUrgent()));
         // 类别 null（存量行未填）→ 一律按"普通科间会诊"显示；非 null 脏数据 → 空串，由数据治理修复，不伪装
         vo.setConsultCategoryText(vo.getConsultCategory() == null
                 ? ConsultCategoryEnum.NORMAL.getLabel() : ConsultCategoryEnum.getText(vo.getConsultCategory()));
@@ -586,7 +588,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
     }
 
     private BizConsultation mustGet(Long consultationId) {
-        BizConsultation entity = consultationMapper.selectById(consultationId);
+        BizConsultation entity = bizConsultationMapper.selectById(consultationId);
         if (entity == null) {
             throw new BusinessException("会诊记录不存在");
         }
@@ -601,7 +603,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
             return admission.getDeptId();
         }
         if (admission.getWardId() != null) {
-            WardVO ward = bedMapper.selectWardById(admission.getWardId());
+            WardVO ward = sysBedMapper.selectWardById(admission.getWardId());
             if (ward != null) {
                 return ward.getDeptId();
             }
@@ -616,19 +618,19 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         if (deptId == null) {
             return "未知科室";
         }
-        String name = consultationMapper.selectDeptName(deptId);
+        String name = bizConsultationMapper.selectDeptName(deptId);
         return StringUtils.hasText(name) ? name : "未知科室(ID=" + deptId + ")";
     }
 
     private String nextConsultationNo() {
         String prefix = "HZ" + LocalDate.now().format(NO_DATE);
-        long seq = consultationMapper.countByNoPrefix(prefix) + 1;
+        long seq = bizConsultationMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 
     private String nextRecordNo() {
         String prefix = "BL" + LocalDate.now().format(NO_DATE);
-        long seq = recordMapper.countByRecordNoPrefix(prefix) + 1;
+        long seq = bizInpatientRecordMapper.countByRecordNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 

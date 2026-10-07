@@ -10,6 +10,7 @@ import com.his.ai.vo.DeteriorationExplainVO;
 import com.his.ai.vo.DeteriorationScanVO;
 import com.his.patient.service.InpatientNursingService;
 import com.his.patient.vo.NursingVitalFactVO;
+import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,8 +19,6 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 危重预警实现（G-12）。
@@ -31,28 +30,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapability {
-    @Autowired
-    private DictCacheService dictText;
-
     private static final String TEMPLATE_NAME = "deterioration-alert";
-
     private static final String BIZ_TYPE = "deterioration_alert";
-
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
     /**
      * 评分窗口：取最近 24h 的最新体征（更早的体征不代表当前状态）
      */
     private static final int LOOKBACK_HOURS = 24;
-
     /**
      * 建议上限（与提示词 ≤150 字纪律一致）
      */
     private static final int ADVICE_MAX = 200;
-
     private final AiExecutionService aiExecutionService;
-
     private final InpatientNursingService inpatientNursingService;
+    private DictCacheService dictCacheService;
 
     private static String truncate(String text, int maxLength) {
         if (!StringUtils.hasText(text)) {
@@ -78,7 +69,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
             row.setTotalScore(score.getTotalScore());
             int level = DeteriorationScoreRules.alertLevel(score.getTotalScore());
             row.setAlertLevel(level);
-            row.setAlertText(dictText.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
+            row.setAlertText(dictCacheService.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
             result.add(row);
         }
         // 预警级降序、同级按分数降序 —— 值班护士从最差的看起
@@ -116,7 +107,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
         vo.setTotalScore(score.getTotalScore());
         int level = DeteriorationScoreRules.alertLevel(score.getTotalScore());
         vo.setAlertLevel(level);
-        vo.setAlertText(dictText.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
+        vo.setAlertText(dictCacheService.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
         vo.setTriggeredFacts(triggeredFacts(vital));
         if (level == 0) {
             // 未达预警阈值不调模型：模型只服务预警情形（纪律 2 / 纪律 9 的反向裁剪）
@@ -145,7 +136,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
         variables.put("vitalText", vitalText(vital));
         variables.put("totalScore", String.valueOf(score.getTotalScore()));
         variables.put("alertLevel", String.valueOf(level));
-        variables.put("alertText", dictText.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
+        variables.put("alertText", dictCacheService.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
         variables.put("itemsText", itemsText(vital));
 
         AiCallDTO call = AiCallDTO.builder()

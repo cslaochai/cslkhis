@@ -4,11 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
-import com.his.system.dto.EquipmentQueryPageDTO;
-import com.his.system.dto.MaintainCreateDTO;
-import com.his.system.dto.MaintainQueryPageDTO;
-import com.his.system.dto.MeteringCreateDTO;
-import com.his.system.dto.MeteringQueryPageDTO;
+import com.his.system.dto.*;
 import com.his.system.entity.BizEquipmentMaintain;
 import com.his.system.entity.BizEquipmentMetering;
 import com.his.system.entity.SysEquipment;
@@ -19,11 +15,12 @@ import com.his.system.enums.MeteringTypeEnum;
 import com.his.system.mapper.BizEquipmentMaintainMapper;
 import com.his.system.mapper.BizEquipmentMeteringMapper;
 import com.his.system.mapper.SysEquipmentMapper;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.EquipmentService;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.EquipmentVO;
 import com.his.system.vo.MaintainVO;
 import com.his.system.vo.MeteringVO;
-import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,8 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 设备档案/维保/计量服务。
@@ -50,15 +45,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class EquipmentServiceImpl implements EquipmentService {
-    @Autowired
-    private DictCacheService dictText;
-
     private final SysEquipmentMapper equipmentMapper;
     private final BizEquipmentMaintainMapper maintainMapper;
     private final BizEquipmentMeteringMapper meteringMapper;
+    private DictCacheService dictCacheService;
 
     // 设备台账
-
     private static String tr(String s) {
         return s == null ? null : s.trim();
     }
@@ -242,7 +234,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setEquipmentCode(e.getEquipmentCode());
         vo.setEquipmentName(e.getEquipmentName());
         vo.setCategory(e.getCategory());
-        vo.setCategoryText(dictText.getDicDataLabel("biz_system_equipCategoryEnum", e.getCategory()));
+        vo.setCategoryText(dictCacheService.getDicDataLabel("biz_system_equipCategoryEnum", e.getCategory()));
         vo.setDeptId(e.getDeptId());
         vo.setDeptName(e.getDeptName());
         vo.setBrand(e.getBrand());
@@ -250,7 +242,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setPurchaseDate(e.getPurchaseDate());
         vo.setPurchasePrice(e.getPurchasePrice());
         vo.setStatus(e.getStatus());
-        vo.setStatusText(dictText.getDicDataLabel("biz_system_equipStatusEnum", e.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel("biz_system_equipStatusEnum", e.getStatus()));
         vo.setMaintainCycleDays(e.getMaintainCycleDays());
         vo.setLastMaintainDate(e.getLastMaintainDate());
         if (e.getLastMaintainDate() != null && e.getMaintainCycleDays() != null && e.getMaintainCycleDays() > 0) {

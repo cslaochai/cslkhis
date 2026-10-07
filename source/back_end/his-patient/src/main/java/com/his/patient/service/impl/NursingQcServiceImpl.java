@@ -23,7 +23,6 @@ import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,8 +70,7 @@ public class NursingQcServiceImpl implements NursingQcService {
     private final BizNursingQcCheckItemMapper checkItemMapper;
     private final SysNursingQcItemMapper itemMapper;
     private final BizNursingQcIndicatorMapper indicatorMapper;
-    @Autowired
-    private DictCacheService dictText;
+    private final DictCacheService dictCacheService;
 
     // 参照数据
 

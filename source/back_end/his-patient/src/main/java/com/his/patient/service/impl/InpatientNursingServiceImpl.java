@@ -21,7 +21,6 @@ import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,21 +56,26 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
-    /**
-     * 体温可信范围（℃）：超出就是录入事故或单位写错，必须拦下
-     */
     private static final BigDecimal MIN_TEMP = new BigDecimal("34");
     private static final BigDecimal MAX_TEMP = new BigDecimal("43");
+
     private final DeptScopeProvider deptScopeProvider;
-    private final BizNursingRecordMapper nursingMapper;
-    private final BizInpatientRecordLogMapper logMapper;
-    private final BizAdmissionMapper admissionMapper;
-    private final BizPatientMapper patientMapper;
+
+    private final BizNursingRecordMapper bizNursingRecordMapper;
+
+    private final BizInpatientRecordLogMapper bizInpatientRecordLogMapper;
+
+    private final BizAdmissionMapper bizAdmissionMapper;
+
+    private final BizPatientMapper bizPatientMapper;
+
     private final SysBedMapper bedMapper;
-    private final BizNursingAssessmentMapper assessmentMapper;
+
+    private final BizNursingAssessmentMapper bizNursingAssessmentMapper;
+
     private final ObjectMapper objectMapper;
-    @Autowired
-    private DictCacheService dictText;
+
+    private DictCacheService dictCacheService;
 
     // 录入 / 修改
 
@@ -135,11 +139,11 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
-        BizPatient patient = patientMapper.selectById(admission.getPatientId());
+        BizPatient patient = bizPatientMapper.selectById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
@@ -188,7 +192,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         record.setRemark(dto.getRemark());
 
         try {
-            nursingMapper.insert(record);
+            bizNursingRecordMapper.insert(record);
         } catch (DuplicateKeyException e) {
             throw new BusinessException("该测量时点已存在同类型的护理文书（三测单同一时点只允许一条），请核对时间或改为修改已有记录");
         }
@@ -207,7 +211,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizNursingRecord record = nursingMapper.selectById(dto.getId());
+        BizNursingRecord record = bizNursingRecordMapper.selectById(dto.getId());
         if (record == null) {
             throw new BusinessException("护理文书不存在");
         }
@@ -235,12 +239,12 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         record.setNurseName(operatorUser.getRealName());
 
         try {
-            nursingMapper.updateById(record);
+            bizNursingRecordMapper.updateById(record);
         } catch (DuplicateKeyException e) {
             throw new BusinessException("该测量时点已存在同类型的护理文书，不能改到这个时点上");
         }
         for (BizInpatientRecordLog row : changes) {
-            logMapper.insert(row);
+            bizInpatientRecordLogMapper.insert(row);
         }
         if (!changes.isEmpty()) {
             log.info("修改护理文书 recordNo={} 变更字段数={}", record.getRecordNo(), changes.size());
@@ -298,7 +302,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
     @Override
     public NursingRecordVO detail(Long id) {
-        BizNursingRecord record = nursingMapper.selectById(id);
+        BizNursingRecord record = bizNursingRecordMapper.selectById(id);
         if (record == null) {
             throw new BusinessException("护理文书不存在");
         }
@@ -313,7 +317,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         // scopeDeptIds 是服务端专用字段，先清掉前端可能伪造的值。
         query.setScopeDeptIds(deptScopeProvider.isScoped()
                 ? List.copyOf(deptScopeProvider.allowedDeptIds()) : null);
-        IPage<BizNursingRecord> page = nursingMapper.selectNursingPage(
+        IPage<BizNursingRecord> page = bizNursingRecordMapper.selectNursingPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         List<NursingRecordVO> rows = new ArrayList<>(page.getRecords().size());
         for (BizNursingRecord r : page.getRecords()) {
@@ -332,11 +336,11 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        BizAdmission admission = admissionMapper.selectById(admissionId);
+        BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
-        List<BizNursingRecord> list = nursingMapper.selectByAdmissionAndType(admissionId, NursingDocTypeEnum.TEMP.getCode(), beginDate,
+        List<BizNursingRecord> list = bizNursingRecordMapper.selectByAdmissionAndType(admissionId, NursingDocTypeEnum.TEMP.getCode(), beginDate,
                 StringUtils.hasText(endDate) ? endDate + " 23:59:59" : null);
 
         TempSheetVO sheet = new TempSheetVO();
@@ -357,7 +361,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             p.setMeasureTime(r.getMeasureTime());
             p.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DATE));
             p.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(CLOCK));
-            p.setShiftText(dictText.getDicDataLabel("biz_patient_nursingShiftEnum", r.getShift()));
+            p.setShiftText(dictCacheService.getDicDataLabel("biz_patient_nursingShiftEnum", r.getShift()));
             p.setTemperature(r.getTemperature());
             p.setPulse(r.getPulse());
             p.setRespiration(r.getRespiration());
@@ -413,7 +417,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
                     && row.getSpo2() == null) {
                 throw new BusinessException(at + "至少要录一个体征值");
             }
-            BizAdmission admission = admissionMapper.selectById(row.getAdmissionId());
+            BizAdmission admission = bizAdmissionMapper.selectById(row.getAdmissionId());
             if (admission == null) {
                 throw new BusinessException(at + "入院记录不存在（admissionId=" + row.getAdmissionId() + "）");
             }
@@ -466,11 +470,11 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
         BizNursingAssessment row;
         if (dto.getId() == null) {
-            BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+            BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
             if (admission == null) {
                 throw new BusinessException("入院记录不存在");
             }
-            BizPatient patient = patientMapper.selectById(admission.getPatientId());
+            BizPatient patient = bizPatientMapper.selectById(admission.getPatientId());
             row = new BizNursingAssessment();
             row.setAssessNo(nextAssessNo());
             row.setAdmissionId(admission.getAdmissionId());
@@ -494,9 +498,9 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             row.setAssessNurseId(operatorUser.getEmployeeId());
             row.setAssessNurseName(operatorUser.getRealName());
             row.setRemark(dto.getRemark());
-            assessmentMapper.insert(row);
+            bizNursingAssessmentMapper.insert(row);
         } else {
-            row = assessmentMapper.selectById(dto.getId());
+            row = bizNursingAssessmentMapper.selectById(dto.getId());
             if (row == null) {
                 throw new BusinessException("评估单不存在");
             }
@@ -510,7 +514,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             row.setAssessNurseId(operatorUser.getEmployeeId());
             row.setAssessNurseName(operatorUser.getRealName());
             row.setRemark(dto.getRemark());
-            assessmentMapper.updateById(row);
+            bizNursingAssessmentMapper.updateById(row);
         }
         log.info("护理评估单 {} assessNo={} type={} score={} risk={}",
                 dto.getId() == null ? "创建" : "修改", row.getAssessNo(),
@@ -525,7 +529,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         if (query.getAdmissionId() == null && query.getWardId() == null) {
             throw new BusinessException("必须按入院ID或病区查询（评估单不做全院裸捞）");
         }
-        return assessmentMapper.selectAssessPage(
+        return bizNursingAssessmentMapper.selectAssessPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
     }
 
@@ -542,7 +546,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        return assessmentMapper.selectLatestByAdmission(admissionId);
+        return bizNursingAssessmentMapper.selectLatestByAdmission(admissionId);
     }
 
     /**
@@ -620,7 +624,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setAssessTypeText(NursingAssessTypeEnum.getText(row.getAssessType()));
         vo.setTotalScore(row.getTotalScore());
         vo.setRiskLevel(row.getRiskLevel());
-        vo.setRiskLevelText(dictText.getDicDataLabel("biz_patient_nursingRiskLevelEnum", row.getRiskLevel()));
+        vo.setRiskLevelText(dictCacheService.getDicDataLabel("biz_patient_nursingRiskLevelEnum", row.getRiskLevel()));
         vo.setItemsJson(row.getItemsJson());
         vo.setAssessTime(row.getAssessTime());
         vo.setAssessNurseId(row.getAssessNurseId());
@@ -633,7 +637,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
     private String nextAssessNo() {
         String prefix = "AS" + LocalDate.now().format(NO_DATE);
-        long seq = assessmentMapper.countByAssessNoPrefix(prefix) + 1;
+        long seq = bizNursingAssessmentMapper.countByAssessNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 
@@ -643,14 +647,14 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        BizAdmission admission = admissionMapper.selectById(admissionId);
+        BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
         // endDate 是日期字符串，直接 `measure_time <= 'yyyy-MM-dd'` 会把当天全部时点滤掉
         // （datetime 恒大于当日 00:00:00 字符串）→ 补全天边界
         String endBoundary = StringUtils.hasText(endDate) ? endDate + " 23:59:59" : null;
-        List<BizNursingRecord> list = nursingMapper.selectByAdmissionAndTypes(
+        List<BizNursingRecord> list = bizNursingRecordMapper.selectByAdmissionAndTypes(
                 admissionId, List.of(NursingDocTypeEnum.TEMP.getCode(), NursingDocTypeEnum.VITAL.getCode()), beginDate, endBoundary);
 
         // 按日聚合：TreeMap 保证日期升序（小结必须按时间正序读，倒序读会诱导漏看趋势）
@@ -723,7 +727,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         if (wardId == null) {
             throw new BusinessException("病区ID不能为空");
         }
-        List<BizNursingRecord> rows = nursingMapper.selectList(new LambdaQueryWrapper<BizNursingRecord>()
+        List<BizNursingRecord> rows = bizNursingRecordMapper.selectList(new LambdaQueryWrapper<BizNursingRecord>()
                 .eq(BizNursingRecord::getWardId, wardId)
                 .ge(since != null, BizNursingRecord::getMeasureTime, since)
                 .and(w -> w.isNotNull(BizNursingRecord::getTemperature)
@@ -756,7 +760,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        List<BizNursingRecord> rows = nursingMapper.selectList(new LambdaQueryWrapper<BizNursingRecord>()
+        List<BizNursingRecord> rows = bizNursingRecordMapper.selectList(new LambdaQueryWrapper<BizNursingRecord>()
                 .eq(BizNursingRecord::getAdmissionId, admissionId)
                 .ge(since != null, BizNursingRecord::getMeasureTime, since)
                 .and(w -> w.isNotNull(BizNursingRecord::getTemperature)
@@ -781,18 +785,18 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         WardVO ward = bedMapper.selectWardById(wardId);
         vo.setWardName(ward == null ? null : ward.getWardName());
         vo.setShift(shift);
-        vo.setShiftText(dictText.getDicDataLabel("biz_patient_nursingShiftEnum", shift));
+        vo.setShiftText(dictCacheService.getDicDataLabel("biz_patient_nursingShiftEnum", shift));
         vo.setWindowBegin(begin);
         vo.setWindowEnd(end);
 
-        vo.setVitalRows(nursingMapper.selectList(new LambdaQueryWrapper<BizNursingRecord>()
+        vo.setVitalRows(bizNursingRecordMapper.selectList(new LambdaQueryWrapper<BizNursingRecord>()
                         .eq(BizNursingRecord::getWardId, wardId)
                         .ge(BizNursingRecord::getMeasureTime, begin)
                         .lt(BizNursingRecord::getMeasureTime, end)
                         .orderByAsc(BizNursingRecord::getMeasureTime))
                 .stream().map(this::toVitalFact).collect(java.util.stream.Collectors.toList()));
 
-        vo.setAssessmentRows(assessmentMapper.selectList(new LambdaQueryWrapper<BizNursingAssessment>()
+        vo.setAssessmentRows(bizNursingAssessmentMapper.selectList(new LambdaQueryWrapper<BizNursingAssessment>()
                         .eq(BizNursingAssessment::getWardId, wardId)
                         .ge(BizNursingAssessment::getAssessTime, begin)
                         .lt(BizNursingAssessment::getAssessTime, end)
@@ -800,15 +804,15 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
                 .stream().map(this::toAssessVO).collect(java.util.stream.Collectors.toList()));
 
         WardNursingFactsVO.Census census = new WardNursingFactsVO.Census();
-        census.setInHospitalCount(Math.toIntExact(admissionMapper.selectCount(new LambdaQueryWrapper<BizAdmission>()
+        census.setInHospitalCount(Math.toIntExact(bizAdmissionMapper.selectCount(new LambdaQueryWrapper<BizAdmission>()
                 .eq(BizAdmission::getWardId, wardId)
                 .eq(BizAdmission::getAdmitStatus, AdmitStatusEnum.IN_HOSPITAL.getCode()))));
-        census.setDischargeCount(Math.toIntExact(admissionMapper.selectCount(new LambdaQueryWrapper<BizAdmission>()
+        census.setDischargeCount(Math.toIntExact(bizAdmissionMapper.selectCount(new LambdaQueryWrapper<BizAdmission>()
                 .eq(BizAdmission::getWardId, wardId)
                 .eq(BizAdmission::getAdmitStatus, AdmitStatusEnum.DISCHARGED.getCode())
                 .ge(BizAdmission::getDischargeTime, begin)
                 .lt(BizAdmission::getDischargeTime, end))));
-        List<BizAdmission> newAdmissions = admissionMapper.selectList(new LambdaQueryWrapper<BizAdmission>()
+        List<BizAdmission> newAdmissions = bizAdmissionMapper.selectList(new LambdaQueryWrapper<BizAdmission>()
                 .eq(BizAdmission::getWardId, wardId)
                 .ge(BizAdmission::getAdmitTime, begin)
                 .lt(BizAdmission::getAdmitTime, end)
@@ -864,7 +868,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DATE));
         vo.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(CLOCK));
         vo.setShift(r.getShift());
-        vo.setShiftText(dictText.getDicDataLabel("biz_patient_nursingShiftEnum", r.getShift()));
+        vo.setShiftText(dictCacheService.getDicDataLabel("biz_patient_nursingShiftEnum", r.getShift()));
         vo.setTemperature(r.getTemperature());
         vo.setPulse(r.getPulse());
         vo.setRespiration(r.getRespiration());
@@ -878,7 +882,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setIntakeVolume(r.getIntakeVolume());
         vo.setOutputVolume(r.getOutputVolume());
         vo.setNursingLevel(r.getNursingLevel());
-        vo.setNursingLevelText(dictText.getDicDataLabel("biz_patient_nursingLevelEnum", r.getNursingLevel()));
+        vo.setNursingLevelText(dictCacheService.getDicDataLabel("biz_patient_nursingLevelEnum", r.getNursingLevel()));
         vo.setNursingContent(r.getNursingContent());
         vo.setNurseId(r.getNurseId());
         vo.setNurseName(r.getNurseName());
@@ -947,11 +951,11 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     // 私有辅助
 
     private void writeActionLog(BizNursingRecord record, String operation) {
-        logMapper.insert(actionLog(record, operation));
+        bizInpatientRecordLogMapper.insert(actionLog(record, operation));
     }
 
     private String patientNameOf(Long patientId) {
-        BizPatient p = patientMapper.selectById(patientId);
+        BizPatient p = bizPatientMapper.selectById(patientId);
         return p == null ? null : p.getPatientName();
     }
 
@@ -962,7 +966,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
     private String nextRecordNo() {
         String prefix = "HL" + LocalDate.now().format(NO_DATE);
-        long seq = nursingMapper.countByRecordNoPrefix(prefix) + 1;
+        long seq = bizNursingRecordMapper.countByRecordNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 

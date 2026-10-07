@@ -15,14 +15,13 @@ import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.support.OperationChargeBiller;
 import com.his.operation.vo.*;
 import com.his.patient.entity.BizPatient;
-import com.his.patient.service.PatientService;
+import com.his.patient.service.BizPatientService;
 import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -60,15 +59,22 @@ import java.util.List;
 public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private final BizAnesthesiaRecordMapper recordMapper;
+
     private final BizAnesthesiaVitalMapper vitalMapper;
+
     private final BizAnesthesiaMedMapper medMapper;
+
     private final BizOperationApplyMapper applyMapper;
+
     private final BizOperationChargeItemMapper chargeItemMapper;
-    private final PatientService patientService;
+
+    private final BizPatientService bizPatientService;
+
     private final AnesthesiaVisitService visitService;
-    private final OperationChargeBiller biller;
-    @Autowired
-    private DictCacheService dictText;
+
+    private final OperationChargeBiller operationChargeBiller;
+
+    private DictCacheService dictCacheService;
 
     // 查询
 
@@ -310,8 +316,8 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         for (BizAnesthesiaMed m : list) {
             AnesthesiaMedVO vo = new AnesthesiaMedVO();
             BeanUtils.copyProperties(m, vo);
-            vo.setMedPhaseText(dictText.getDicDataLabel("biz_operation_medPhaseEnum", m.getMedPhase()));
-            vo.setRouteText(dictText.getDicDataLabel("biz_operation_medRouteEnum", m.getRoute()));
+            vo.setMedPhaseText(dictCacheService.getDicDataLabel("biz_operation_medPhaseEnum", m.getMedPhase()));
+            vo.setRouteText(dictCacheService.getDicDataLabel("biz_operation_medRouteEnum", m.getRoute()));
             vo.setDoseText(m.getDose() == null ? null
                     : m.getDose().stripTrailingZeros().toPlainString()
                     + (StringUtils.hasText(m.getUnit()) ? " " + m.getUnit() : ""));
@@ -362,7 +368,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         // ★ 计费联动：业务照常推进，记账失败只记失败（money 没到账 ≠ 麻醉没做）
         OperationChargeSummaryVO summary = new OperationChargeSummaryVO();
         try {
-            summary = biller.billRecord(entity, patientNoOf(entity.getPatientId()));
+            summary = operationChargeBiller.billRecord(entity, patientNoOf(entity.getPatientId()));
         } catch (Exception e) {
             log.error("麻醉记录 {} 计费异常：{}", entity.getRecordNo(), e.getMessage(), e);
             summary.getMessages().add("计费过程异常：" + e.getMessage());
@@ -409,7 +415,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         }
         OperationChargeSummaryVO summary;
         try {
-            summary = biller.billRecord(entity, patientNoOf(entity.getPatientId()));
+            summary = operationChargeBiller.billRecord(entity, patientNoOf(entity.getPatientId()));
         } catch (Exception e) {
             log.error("麻醉记录 {} 重新计费异常：{}", entity.getRecordNo(), e.getMessage(), e);
             summary = new OperationChargeSummaryVO();
@@ -465,7 +471,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (patientId == null) {
             return null;
         }
-        BizPatient patient = patientService.getById(patientId);
+        BizPatient patient = bizPatientService.getById(patientId);
         return patient == null ? null : patient.getPatientNo();
     }
 
@@ -586,12 +592,12 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         vo.setApplyAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getApplyAnesthesiaType()));
         vo.setAsaText(AsaGradeEnum.getText(vo.getAsaGrade()));
         vo.setAirwayDeviceText(AirwayDeviceEnum.getText(vo.getAirwayDevice()));
-        vo.setVentilationText(dictText.getDicDataLabel("biz_operation_ventilationModeEnum", vo.getVentilationMode()));
-        vo.setEffectText(dictText.getDicDataLabel("biz_operation_anesthesiaEffectEnum", vo.getAnesthesiaEffect()));
-        vo.setDispositionText(dictText.getDicDataLabel("biz_operation_postopDispositionEnum", vo.getPostopDisposition()));
+        vo.setVentilationText(dictCacheService.getDicDataLabel("biz_operation_ventilationModeEnum", vo.getVentilationMode()));
+        vo.setEffectText(dictCacheService.getDicDataLabel("biz_operation_anesthesiaEffectEnum", vo.getAnesthesiaEffect()));
+        vo.setDispositionText(dictCacheService.getDicDataLabel("biz_operation_postopDispositionEnum", vo.getPostopDisposition()));
         vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(vo.getChargeStatus()));
         vo.setVisitConclusionText(VisitConclusionEnum.getText(vo.getVisitConclusion()));
-        vo.setEmergencyText(dictText.getDicDataLabel("biz_operation_operationEmergencyEnum", vo.getIsEmergency()));
+        vo.setEmergencyText(dictCacheService.getDicDataLabel("biz_operation_operationEmergencyEnum", vo.getIsEmergency()));
         vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
 
         Long anesthesiaMinutes = minutesBetween(vo.getAnesthesiaStartTime(), vo.getAnesthesiaEndTime());

@@ -15,14 +15,10 @@ import com.his.system.mapper.SysAuditLogMapper;
 import com.his.system.mapper.SysFieldChangeLogMapper;
 import com.his.system.mapper.SysLoginLogMapper;
 import com.his.system.mapper.SysOperLogMapper;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.SysLogService;
 import com.his.system.utils.UserUtils;
-import com.his.system.vo.AuditLogVO;
-import com.his.system.vo.FieldChangeVO;
-import com.his.system.vo.LogStatVO;
-import com.his.system.vo.LoginLogVO;
-import com.his.system.vo.OperLogDetailVO;
-import com.his.system.vo.OperLogListVO;
+import com.his.system.vo.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,8 +31,6 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 日志审计服务实现（sql/158）。
@@ -49,22 +43,121 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class SysLogServiceImpl implements SysLogService {
-    @Autowired
-    private DictCacheService dictText;
 
-    /** CSV 导出行上限：审计导出是给检查人员看的，不是给数据库做全量备份。 */
+
+    /**
+     * CSV 导出行上限：审计导出是给检查人员看的，不是给数据库做全量备份。
+     */
     private static final int EXPORT_MAX = 5000;
 
-    /** 口令爆破嫌疑阈值（近24小时失败次数） */
+    /**
+     * 口令爆破嫌疑阈值（近24小时失败次数）
+     */
     private static final int BRUTE_FORCE_THRESHOLD = 5;
 
-
+    private final DictCacheService dictCacheService;
     private final SysOperLogMapper operLogMapper;
     private final SysLoginLogMapper loginLogMapper;
     private final SysAuditLogMapper auditLogMapper;
     private final SysFieldChangeLogMapper fieldChangeLogMapper;
 
     // 操作日志
+
+    private static LogQueryPageDTO orEmpty(LogQueryPageDTO query) {
+        return query == null ? new LogQueryPageDTO() : query;
+    }
+
+    /**
+     * 先 trim 再判空：MP 的 {@code like(condition, column, value)} 是普通方法调用，
+     * 实参里的 {@code xx.trim()} 无论 condition 真假都会先求值 —— 传 null 就 NPE（本轮实测踩到）。
+     */
+    private static String trim(String s) {
+        if (s == null) {
+            return null;
+        }
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    // 登录日志
+
+    /**
+     * 日期区间：入参只到天，上界必须补到 23:59:59 ——
+     * 直接拿日期字符串比大小会把当天全部时点滤掉（G12 已踩）。
+     */
+    private static <T> void applyRange(LambdaQueryWrapper<T> wrapper, LogQueryPageDTO q,
+                                       com.baomidou.mybatisplus.core.toolkit.support.SFunction<T, ?> column) {
+        if (StringUtils.hasText(q.getBeginTime())) {
+            wrapper.ge(column, parseDay(q.getBeginTime(), LocalTime.MIN));
+        }
+        if (StringUtils.hasText(q.getEndTime())) {
+            wrapper.le(column, parseDay(q.getEndTime(), LocalTime.MAX.withNano(0)));
+        }
+    }
+
+    // 审计日志
+
+    private static LocalDateTime parseDay(String day, LocalTime time) {
+        String d = day.trim();
+        if (d.length() > 10) {
+            d = d.substring(0, 10);
+        }
+        try {
+            return LocalDateTime.of(LocalDate.parse(d), time);
+        } catch (DateTimeParseException e) {
+            throw new BusinessException("日期格式不正确，应为 yyyy-MM-dd：" + day);
+        }
+    }
+
+    /**
+     * 对象类型文本。认不出的码值**原样返回**而不是落成"未知"：
+     * 新接一个对象忘了补这里，界面上会直接显示原始码值（一眼看出该补）；
+     * 回落成"未知"的话这个缺口永远不会被发现（MEMORY：未知值不得渲染成某个合法值）。
+     */
+    static String bizTypeText(String v) {
+        if (v == null) {
+            return "未知";
+        }
+        return switch (v) {
+            case "PATIENT" -> "患者主档";
+            case "USER" -> "系统用户";
+            case "EMPLOYEE" -> "员工档案";
+            case "MEDICAL_RECORD" -> "门诊病历";
+            case "INPATIENT_RECORD" -> "住院文书";
+            default -> v;
+        };
+    }
+
+    // 字段级修改日志（第四本账，sql/159）
+
+    /**
+     * 变更类型：INSERT-建档 UPDATE-修改 ACTION-操作留痕（无字段级新旧值）。
+     */
+    static String changeTypeText(String v) {
+        if (v == null) {
+            return "未知";
+        }
+        return switch (v) {
+            case "INSERT" -> "建档";
+            case "UPDATE" -> "修改";
+            case "ACTION" -> "操作";
+            default -> v;
+        };
+    }
+
+    private static String csv(Object v) {
+        if (v == null) {
+            return "";
+        }
+        String s = String.valueOf(v).replace("\r", " ").replace("\n", " ");
+        return s.contains(",") || s.contains("\"") ? "\"" + s.replace("\"", "\"\"") + "\"" : s;
+    }
+
+    // 统计
+
+    private static String cut(String s, int max) {
+        return s == null || s.length() <= max ? s : s.substring(0, max);
+    }
 
     @Override
     public PageResult<OperLogListVO> operLogListPage(LogQueryPageDTO query) {
@@ -105,7 +198,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setId(row.getId());
         vo.setTitle(row.getTitle());
         vo.setBusinessType(row.getBusinessType());
-        vo.setBusinessTypeText(dictText.getDicDataLabel("biz_system_operBusinessTypeEnum", row.getBusinessType()));
+        vo.setBusinessTypeText(dictCacheService.getDicDataLabel("biz_system_operBusinessTypeEnum", row.getBusinessType()));
         vo.setMethod(row.getMethod());
         vo.setRequestMethod(row.getRequestMethod());
         vo.setOperName(row.getOperName());
@@ -118,14 +211,14 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setOperParam(row.getOperParam());
         vo.setJsonResult(row.getJsonResult());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(dictText.getDicDataLabel("biz_system_operStatusEnum", row.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel("biz_system_operStatusEnum", row.getStatus()));
         vo.setErrorMsg(row.getErrorMsg());
         vo.setOperTime(row.getOperTime());
         vo.setCostTime(row.getCostTime());
         return vo;
     }
 
-    // 登录日志
+    // 导出
 
     @Override
     public PageResult<LoginLogVO> loginLogListPage(LogQueryPageDTO query) {
@@ -148,8 +241,6 @@ public class SysLogServiceImpl implements SysLogService {
         List<LoginLogVO> records = page.getRecords().stream().map(this::toLoginVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
-
-    // 审计日志
 
     @Override
     public PageResult<AuditLogVO> auditLogListPage(LogQueryPageDTO query) {
@@ -184,6 +275,8 @@ public class SysLogServiceImpl implements SysLogService {
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
+    // 转换
+
     @Override
     public AuditLogVO auditLogDetail(Long id) {
         // C 类保留：入参是 GET @RequestParam 标量而非 request DTO，Bean Validation 注解无处安放
@@ -196,8 +289,6 @@ public class SysLogServiceImpl implements SysLogService {
         }
         return toAuditVO(row);
     }
-
-    // 字段级修改日志（第四本账，sql/159）
 
     @Override
     public PageResult<FieldChangeVO> fieldChangeListPage(LogQueryPageDTO query) {
@@ -248,8 +339,6 @@ public class SysLogServiceImpl implements SysLogService {
         return fieldChangeLogMapper.selectList(wrapper).stream().map(this::toFieldChangeVO).toList();
     }
 
-    // 统计
-
     @Override
     public LogStatVO stat() {
         LocalDateTime now = LocalDateTime.now();
@@ -295,7 +384,11 @@ public class SysLogServiceImpl implements SysLogService {
         return vo;
     }
 
-    /** 近24小时登录失败次数达到阈值的账号（口令爆破嫌疑）。 */
+    // 工具
+
+    /**
+     * 近24小时登录失败次数达到阈值的账号（口令爆破嫌疑）。
+     */
     private List<LogStatVO.RiskAccount> riskyAccounts(LocalDateTime since) {
         try {
             QueryWrapper<SysLoginLog> w = new QueryWrapper<>();
@@ -331,8 +424,6 @@ public class SysLogServiceImpl implements SysLogService {
         Long n = mapper.selectCount(wrapper);
         return n == null ? 0L : n;
     }
-
-    // 导出
 
     @Override
     public String exportCsv(LogQueryPageDTO query) {
@@ -422,14 +513,12 @@ public class SysLogServiceImpl implements SysLogService {
                 ? "" : user.getRealName();
     }
 
-    // 转换
-
     private OperLogListVO toOperVO(SysOperLog row) {
         OperLogListVO vo = new OperLogListVO();
         vo.setId(row.getId());
         vo.setTitle(row.getTitle());
         vo.setBusinessType(row.getBusinessType());
-        vo.setBusinessTypeText(dictText.getDicDataLabel("biz_system_operBusinessTypeEnum", row.getBusinessType()));
+        vo.setBusinessTypeText(dictCacheService.getDicDataLabel("biz_system_operBusinessTypeEnum", row.getBusinessType()));
         vo.setMethod(row.getMethod());
         vo.setRequestMethod(row.getRequestMethod());
         vo.setOperName(row.getOperName());
@@ -439,7 +528,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setOperIp(row.getOperIp());
         vo.setOperLocation(row.getOperLocation());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(dictText.getDicDataLabel("biz_system_operStatusEnum", row.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel("biz_system_operStatusEnum", row.getStatus()));
         vo.setOperTime(row.getOperTime());
         vo.setCostTime(row.getCostTime());
         vo.setErrorMsg(row.getErrorMsg() == null ? null : cut(row.getErrorMsg(), 200));
@@ -457,7 +546,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setBrowser(row.getBrowser());
         vo.setOs(row.getOs());
         vo.setLoginStatus(row.getLoginStatus());
-        vo.setLoginStatusText(dictText.getDicDataLabel("biz_system_loginStatusEnum", row.getLoginStatus()));
+        vo.setLoginStatusText(dictCacheService.getDicDataLabel("biz_system_loginStatusEnum", row.getLoginStatus()));
         vo.setMsg(row.getMsg());
         vo.setLoginTime(row.getLoginTime());
         vo.setUserAgent(row.getUserAgent());
@@ -476,7 +565,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setContent(row.getContent());
         vo.setIp(row.getIp());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(dictText.getDicDataLabel("biz_system_auditLogStatusEnum", row.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel("biz_system_auditLogStatusEnum", row.getStatus()));
         vo.setErrorMsg(row.getErrorMsg());
         vo.setCreateTime(row.getCreateTime());
         return vo;
@@ -503,93 +592,5 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setChangeTime(row.getChangeTime());
         vo.setRemark(row.getRemark());
         return vo;
-    }
-
-    // 工具
-
-    private static LogQueryPageDTO orEmpty(LogQueryPageDTO query) {
-        return query == null ? new LogQueryPageDTO() : query;
-    }
-
-    /**
-     * 先 trim 再判空：MP 的 {@code like(condition, column, value)} 是普通方法调用，
-     * 实参里的 {@code xx.trim()} 无论 condition 真假都会先求值 —— 传 null 就 NPE（本轮实测踩到）。
-     */
-    private static String trim(String s) {
-        if (s == null) {
-            return null;
-        }
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
-    }
-
-    /**
-     * 日期区间：入参只到天，上界必须补到 23:59:59 ——
-     * 直接拿日期字符串比大小会把当天全部时点滤掉（G12 已踩）。
-     */
-    private static <T> void applyRange(LambdaQueryWrapper<T> wrapper, LogQueryPageDTO q,
-                                       com.baomidou.mybatisplus.core.toolkit.support.SFunction<T, ?> column) {
-        if (StringUtils.hasText(q.getBeginTime())) {
-            wrapper.ge(column, parseDay(q.getBeginTime(), LocalTime.MIN));
-        }
-        if (StringUtils.hasText(q.getEndTime())) {
-            wrapper.le(column, parseDay(q.getEndTime(), LocalTime.MAX.withNano(0)));
-        }
-    }
-
-    private static LocalDateTime parseDay(String day, LocalTime time) {
-        String d = day.trim();
-        if (d.length() > 10) {
-            d = d.substring(0, 10);
-        }
-        try {
-            return LocalDateTime.of(LocalDate.parse(d), time);
-        } catch (DateTimeParseException e) {
-            throw new BusinessException("日期格式不正确，应为 yyyy-MM-dd：" + day);
-        }
-    }
-
-    /**
-     * 对象类型文本。认不出的码值**原样返回**而不是落成"未知"：
-     * 新接一个对象忘了补这里，界面上会直接显示原始码值（一眼看出该补）；
-     * 回落成"未知"的话这个缺口永远不会被发现（MEMORY：未知值不得渲染成某个合法值）。
-     */
-    static String bizTypeText(String v) {
-        if (v == null) {
-            return "未知";
-        }
-        return switch (v) {
-            case "PATIENT" -> "患者主档";
-            case "USER" -> "系统用户";
-            case "EMPLOYEE" -> "员工档案";
-            case "MEDICAL_RECORD" -> "门诊病历";
-            case "INPATIENT_RECORD" -> "住院文书";
-            default -> v;
-        };
-    }
-
-    /** 变更类型：INSERT-建档 UPDATE-修改 ACTION-操作留痕（无字段级新旧值）。 */
-    static String changeTypeText(String v) {
-        if (v == null) {
-            return "未知";
-        }
-        return switch (v) {
-            case "INSERT" -> "建档";
-            case "UPDATE" -> "修改";
-            case "ACTION" -> "操作";
-            default -> v;
-        };
-    }
-
-    private static String csv(Object v) {
-        if (v == null) {
-            return "";
-        }
-        String s = String.valueOf(v).replace("\r", " ").replace("\n", " ");
-        return s.contains(",") || s.contains("\"") ? "\"" + s.replace("\"", "\"\"") + "\"" : s;
-    }
-
-    private static String cut(String s, int max) {
-        return s == null || s.length() <= max ? s : s.substring(0, max);
     }
 }

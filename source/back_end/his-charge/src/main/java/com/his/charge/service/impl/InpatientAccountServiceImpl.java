@@ -22,7 +22,6 @@ import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -94,13 +93,10 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
     private final FundAccountService fundAccountService;
     private final FeeRecordService feeRecordService;
     private final SettlementBillService settlementBillService;
-    /**
-     * 站内信（arrears 发送方）：欠费告警同步通知主管医生
-     */
     private final SysMessageService sysMessageService;
     private final SysEmployeeMapper sysEmployeeMapper;
-    @Autowired
-    private DictCacheService dictText;
+    private DictCacheService dictCacheService;
+
 
     // 预交金（L3 资金流水 + 住院资金账户）
 
@@ -153,7 +149,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         IPage<PrepayVO> raw = paymentTxnMapper.selectPrepayPage(page, q);
         // 文案由后端给：前端判码值就会有第二套口径（支付方式码值前端就抄错过一次，把 4 当银行卡）
         for (PrepayVO vo : raw.getRecords()) {
-            vo.setPrepayTypeText(dictText.getDicDataLabel("biz_charge_prepayTypeEnum", vo.getPrepayType()));
+            vo.setPrepayTypeText(dictCacheService.getDicDataLabel("biz_charge_prepayTypeEnum", vo.getPrepayType()));
             vo.setPayMethodText(PaymentMethodEnum.getText(vo.getPayMethod()));
         }
         return raw;
@@ -389,7 +385,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         vo.setArrearsAmount(arrearsAmount);
         vo.setSettled(discharge != null);
         vo.setSettlementNo(discharge != null ? discharge.getBillNo() : null);
-        vo.setSettleStatusText(dictText.getDicDataLabel("biz_charge_inpatientSettleResultEnum", settleStatus));
+        vo.setSettleStatusText(dictCacheService.getDicDataLabel("biz_charge_inpatientSettleResultEnum", settleStatus));
         vo.setHintText(arrears
                 ? "住院费用已发生 " + total.toPlainString() + " 元，已收 " + state.collected().toPlainString()
                 + " 元（住院账户余额 " + balance.toPlainString() + " 元），欠费 "
@@ -584,7 +580,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         vo.setPatientNo(t.getPatientNo());
         vo.setPatientName(t.getPatientName());
         vo.setPrepayType(prepayType);
-        vo.setPrepayTypeText(dictText.getDicDataLabel("biz_charge_prepayTypeEnum", prepayType));
+        vo.setPrepayTypeText(dictCacheService.getDicDataLabel("biz_charge_prepayTypeEnum", prepayType));
         vo.setAmount(t.getAmount());
         vo.setBalanceAfter(balanceAfter);
         vo.setPayMethod(t.getPayMethod());
@@ -647,7 +643,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         vo.setRefundAmount(scale(refund));
         vo.setArrearsAmount(scale(arrears));
         vo.setSettleStatus(arrears.signum() > 0 ? SETTLE_ARREARS : SETTLE_CLEARED);
-        vo.setSettleStatusText(dictText.getDicDataLabel("biz_charge_inpatientSettleResultEnum", vo.getSettleStatus()));
+        vo.setSettleStatusText(dictCacheService.getDicDataLabel("biz_charge_inpatientSettleResultEnum", vo.getSettleStatus()));
         vo.setSettleMode(bill.getSettlementMode());
         vo.setSettleModeText(SettlementModeEnum.getText(bill.getSettlementMode()));
         vo.setInsuranceType(bill.getInsuranceType());

@@ -3,24 +3,25 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.BizAnesthesiaPacu;
 import com.his.operation.entity.BizAnesthesiaRecord;
 import com.his.operation.entity.BizOperationApply;
-import com.his.operation.mapper.BizAnesthesiaPacuMapper;
-import com.his.operation.mapper.BizAnesthesiaRecordMapper;
-import com.his.operation.mapper.BizOperationApplyMapper;
 import com.his.operation.enums.AnesthesiaChargeStatusEnum;
 import com.his.operation.enums.AnesthesiaRecordStatusEnum;
 import com.his.operation.enums.OperationAnesthesiaMethodEnum;
 import com.his.operation.enums.PacuStatusEnum;
+import com.his.operation.mapper.BizAnesthesiaPacuMapper;
+import com.his.operation.mapper.BizAnesthesiaRecordMapper;
+import com.his.operation.mapper.BizOperationApplyMapper;
 import com.his.operation.service.PacuService;
 import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.support.OperationChargeBiller;
 import com.his.operation.vo.OperationChargeSummaryVO;
 import com.his.operation.vo.PacuRecordVO;
+import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,8 +35,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * PACU 麻醉后监测治疗服务实现（G15 第三环）。
@@ -57,15 +56,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class PacuServiceImpl implements PacuService {
-    @Autowired
-    private DictCacheService dictText;
 
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-
-    private final BizAnesthesiaPacuMapper pacuMapper;
-    private final BizAnesthesiaRecordMapper recordMapper;
-    private final BizOperationApplyMapper applyMapper;
-    private final OperationChargeBiller biller;
+    private final BizAnesthesiaPacuMapper bizAnesthesiaPacuMapper;
+    private final BizAnesthesiaRecordMapper bizAnesthesiaRecordMapper;
+    private final BizOperationApplyMapper bizOperationApplyMapper;
+    private final OperationChargeBiller operationChargeBiller;
+    private DictCacheService dictCacheService;
 
     private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
         if (from == null || to == null) {
@@ -88,7 +85,7 @@ public class PacuServiceImpl implements PacuService {
         if (query == null) {
             query = new PacuQueryPageDTO();
         }
-        IPage<PacuRecordVO> page = pacuMapper.selectPacuPage(
+        IPage<PacuRecordVO> page = bizAnesthesiaPacuMapper.selectPacuPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         page.getRecords().forEach(this::decorate);
         return page;
@@ -100,7 +97,7 @@ public class PacuServiceImpl implements PacuService {
         if (pacuId == null) {
             throw new BusinessException("PACU 记录ID不能为空");
         }
-        PacuRecordVO vo = pacuMapper.selectVOById(pacuId);
+        PacuRecordVO vo = bizAnesthesiaPacuMapper.selectVOById(pacuId);
         if (vo == null) {
             throw new BusinessException("PACU 复苏记录不存在");
         }
@@ -114,7 +111,7 @@ public class PacuServiceImpl implements PacuService {
         if (recordId == null) {
             throw new BusinessException("麻醉记录单ID不能为空");
         }
-        PacuRecordVO vo = pacuMapper.selectVOByRecord(recordId);
+        PacuRecordVO vo = bizAnesthesiaPacuMapper.selectVOByRecord(recordId);
         if (vo != null) {
             decorate(vo);
         }
@@ -124,7 +121,7 @@ public class PacuServiceImpl implements PacuService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String enter(PacuEnterDTO dto) {
-        BizAnesthesiaRecord record = recordMapper.selectById(dto.getRecordId());
+        BizAnesthesiaRecord record = bizAnesthesiaRecordMapper.selectById(dto.getRecordId());
         if (record == null) {
             throw new BusinessException("麻醉记录单不存在");
         }
@@ -132,12 +129,12 @@ public class PacuServiceImpl implements PacuService {
             throw new BusinessException("麻醉记录单 " + record.getRecordNo()
                     + " 还在「记录中」，先把麻醉记录提交，再登记入 PACU");
         }
-        long exists = pacuMapper.selectCount(
+        long exists = bizAnesthesiaPacuMapper.selectCount(
                 new LambdaQueryWrapper<BizAnesthesiaPacu>().eq(BizAnesthesiaPacu::getRecordId, record.getId()));
         if (exists > 0) {
             throw new BusinessException("该麻醉记录已有 PACU 复苏单，不能重复入室");
         }
-        BizOperationApply apply = applyMapper.selectById(record.getApplyId());
+        BizOperationApply apply = bizOperationApplyMapper.selectById(record.getApplyId());
         if (apply == null) {
             throw new BusinessException("关联的手术申请单不存在，无法登记入 PACU");
         }
@@ -163,7 +160,7 @@ public class PacuServiceImpl implements PacuService {
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
-        pacuMapper.insert(entity);
+        bizAnesthesiaPacuMapper.insert(entity);
         log.info("入PACU pacuNo={} recordNo={} 患者={} 复苏护士={}",
                 entity.getPacuNo(), record.getRecordNo(), apply.getPatientName(), entity.getNurseName());
         return entity.getPacuNo();
@@ -201,7 +198,7 @@ public class PacuServiceImpl implements PacuService {
         if (dto.getRemark() != null) {
             entity.setRemark(dto.getRemark());
         }
-        pacuMapper.updateById(entity);
+        bizAnesthesiaPacuMapper.updateById(entity);
         log.info("PACU 评分 pacuNo={} Aldrete={}（活动{} 呼吸{} 循环{} 意识{} 氧合{}）",
                 entity.getPacuNo(), total, entity.getScoreActivity(), entity.getScoreRespiration(),
                 entity.getScoreCirculation(), entity.getScoreConsciousness(), entity.getScoreSpo2());
@@ -245,7 +242,7 @@ public class PacuServiceImpl implements PacuService {
         // ★ 出室即联动计费
         OperationChargeSummaryVO summary;
         try {
-            summary = biller.billPacu(entity);
+            summary = operationChargeBiller.billPacu(entity);
         } catch (Exception e) {
             log.error("PACU {} 计费异常：{}", entity.getPacuNo(), e.getMessage(), e);
             summary = new OperationChargeSummaryVO();
@@ -253,10 +250,10 @@ public class PacuServiceImpl implements PacuService {
             summary.setFailedItems(1);
         }
         applyChargeResult(entity, summary);
-        pacuMapper.updateById(entity);
+        bizAnesthesiaPacuMapper.updateById(entity);
         log.info("出PACU pacuNo={} Aldrete={} 去向={} 计费=成功{}项/失败{}项 金额={}",
                 entity.getPacuNo(), entity.getAldreteTotal(),
-                dictText.getDicDataLabel("biz_operation_pacuDispositionEnum", dto.getDisposition()),
+                dictCacheService.getDicDataLabel("biz_operation_pacuDispositionEnum", dto.getDisposition()),
                 summary.getSuccessItems(), summary.getFailedItems(), summary.getAmount());
         return summary;
     }
@@ -267,7 +264,7 @@ public class PacuServiceImpl implements PacuService {
         BizAnesthesiaPacu entity = mustGet(dto == null ? null : dto.getId());
         OperationChargeSummaryVO summary;
         try {
-            summary = biller.billPacu(entity);
+            summary = operationChargeBiller.billPacu(entity);
         } catch (Exception e) {
             log.error("PACU {} 重新计费异常：{}", entity.getPacuNo(), e.getMessage(), e);
             summary = new OperationChargeSummaryVO();
@@ -275,13 +272,13 @@ public class PacuServiceImpl implements PacuService {
             summary.setFailedItems(1);
         }
         applyChargeResult(entity, summary);
-        pacuMapper.updateById(entity);
+        bizAnesthesiaPacuMapper.updateById(entity);
         return summary;
     }
 
     @Override
     public long countInRoom() {
-        return pacuMapper.selectCount(new LambdaQueryWrapper<BizAnesthesiaPacu>()
+        return bizAnesthesiaPacuMapper.selectCount(new LambdaQueryWrapper<BizAnesthesiaPacu>()
                 .eq(BizAnesthesiaPacu::getStatus, PacuStatusEnum.IN.getCode()));
     }
 
@@ -309,7 +306,7 @@ public class PacuServiceImpl implements PacuService {
         if (pacuId == null) {
             throw new BusinessException("PACU 记录ID不能为空");
         }
-        BizAnesthesiaPacu entity = pacuMapper.selectById(pacuId);
+        BizAnesthesiaPacu entity = bizAnesthesiaPacuMapper.selectById(pacuId);
         if (entity == null) {
             throw new BusinessException("PACU 复苏记录不存在");
         }
@@ -329,20 +326,20 @@ public class PacuServiceImpl implements PacuService {
         if (empId == null) {
             return null;
         }
-        String name = applyMapper.selectEmployeeName(empId);
+        String name = bizOperationApplyMapper.selectEmployeeName(empId);
         return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
     private String nextPacuNo() {
         String prefix = "FS" + LocalDate.now().format(NO_DATE);
-        long seq = pacuMapper.countByNoPrefix(prefix) + 1;
+        long seq = bizAnesthesiaPacuMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 
     private void decorate(PacuRecordVO vo) {
         vo.setStatusText(PacuStatusEnum.getText(vo.getStatus()));
-        vo.setAwarenessText(dictText.getDicDataLabel("biz_operation_awarenessLevelEnum", vo.getAwareness()));
-        vo.setDispositionText(dictText.getDicDataLabel("biz_operation_pacuDispositionEnum", vo.getDisposition()));
+        vo.setAwarenessText(dictCacheService.getDicDataLabel("biz_operation_awarenessLevelEnum", vo.getAwareness()));
+        vo.setDispositionText(dictCacheService.getDicDataLabel("biz_operation_pacuDispositionEnum", vo.getDisposition()));
         vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(vo.getChargeStatus()));
         vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
 

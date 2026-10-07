@@ -9,13 +9,17 @@ import com.his.emr.dto.*;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizRecordQcFlow;
 import com.his.emr.entity.BizRecordQcFlowAction;
-import com.his.emr.enums.*;
+import com.his.emr.enums.QcRecordSourceEnum;
+import com.his.emr.enums.RecordQcActionEnum;
+import com.his.emr.enums.RecordQcFlowStatusEnum;
+import com.his.emr.enums.RecordQcLevelEnum;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.mapper.BizRecordQcFlowActionMapper;
 import com.his.emr.mapper.BizRecordQcFlowMapper;
 import com.his.emr.service.RecordQcFlowService;
 import com.his.emr.vo.RecordQcFlowActionVO;
 import com.his.emr.vo.RecordQcFlowVO;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,8 +29,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 病历三级质控流转服务实现
@@ -41,13 +43,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class RecordQcFlowServiceImpl implements RecordQcFlowService {
-    @Autowired
-    private DictCacheService dictText;
-
     private final BizRecordQcFlowMapper flowMapper;
     private final BizRecordQcFlowActionMapper actionMapper;
     private final BizMedicalRecordMapper medicalRecordMapper;
     private final RedisSequenceService sequenceService;
+    private DictCacheService dictCacheService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -289,7 +289,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         vo.setFlowStatusText(RecordQcFlowStatusEnum.getText(vo.getFlowStatus()));
         vo.setCurrentLevelText(RecordQcLevelEnum.getText(vo.getCurrentLevel()));
         vo.setReturnLevelText(RecordQcLevelEnum.getText(vo.getReturnLevel()));
-        vo.setGradeText(dictText.getDicDataLabel("biz_emr_qcGradeEnum", vo.getGrade()));
+        vo.setGradeText(dictCacheService.getDicDataLabel("biz_emr_qcGradeEnum", vo.getGrade()));
         vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
         return vo;
     }

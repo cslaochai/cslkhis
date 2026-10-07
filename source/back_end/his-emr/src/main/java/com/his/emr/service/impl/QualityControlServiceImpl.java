@@ -32,7 +32,6 @@ import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -62,8 +61,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapper, BizQualityControl>
-        implements QualityControlService {
+public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapper, BizQualityControl> implements QualityControlService {
     /**
      * 单号冲突重试次数
      */
@@ -72,19 +70,18 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
      * 批量质控单次上限，防止前端误传全表 ID
      */
     private static final int MAX_BATCH_SIZE = 200;
-    private final BizMedicalRecordMapper medicalRecordMapper;
-    private final BizInpatientRecordMapper inpatientRecordMapper;
-    private final QcRuleEngine qcRuleEngine;
-    private final QcStoreService qcStoreService;
-    /**
-     * 站内信（emr-qc 发送方）：质控发现问题 → 通知病历书写医生。
-     * 发送失败只记日志——质控留痕是主流程，通知是副产品，不能让一条消息把质控单回滚掉。
-     */
-    private final SysMessageService sysMessageService;
-    @Autowired
-    private DictCacheService dictText;
 
-    // 查询
+    private final BizMedicalRecordMapper medicalRecordMapper;
+
+    private final BizInpatientRecordMapper inpatientRecordMapper;
+
+    private final QcRuleEngine qcRuleEngine;
+
+    private final QcStoreService qcStoreService;
+
+    private final SysMessageService sysMessageService;
+
+    private DictCacheService dictCacheService;
 
     /**
      * 质控类型归一。
@@ -373,7 +370,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         }
         if (qc.getQcStatus() == null || qc.getQcStatus() != 1) {
             throw new BusinessException("只有「待处理」的质控单可以处理，当前状态："
-                    + dictText.getDicDataLabel("biz_emr_qcStatusEnum", qc.getQcStatus()));
+                    + dictCacheService.getDicDataLabel("biz_emr_qcStatusEnum", qc.getQcStatus()));
         }
         qc.setQcStatus(ignore ? RuleCheckStatusEnum.IGNORED.getCode() : RuleCheckStatusEnum.HANDLED.getCode());
         qc.setRemark(remark);
@@ -406,8 +403,8 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     private void enrich(BizQualityControlVO vo) {
         vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
         vo.setQcTypeText(RecordQcTypeEnum.getText(vo.getQcType()));
-        vo.setQcStatusText(dictText.getDicDataLabel("biz_emr_qcStatusEnum", vo.getQcStatus()));
-        vo.setQcResultText(dictText.getDicDataLabel("biz_emr_qcResultEnum", vo.getQcResult()));
+        vo.setQcStatusText(dictCacheService.getDicDataLabel("biz_emr_qcStatusEnum", vo.getQcStatus()));
+        vo.setQcResultText(dictCacheService.getDicDataLabel("biz_emr_qcResultEnum", vo.getQcResult()));
         vo.setRecordStatusText(RecordStatusEnum.getText(vo.getRecordStatus()));
         vo.setRecordTypeText(vo.getRecordType() == null ? null : InpatientRecordTypeEnum.getText(vo.getRecordType()));
         vo.setSeverityMaxText(vo.getSeverityMax() == null ? null : QcSeverityEnum.textOf(vo.getSeverityMax()));

@@ -8,21 +8,16 @@ import com.his.common.enums.TechAuthStatusEnum;
 import com.his.common.enums.TechLevelEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.utils.UserUtils;
-import com.his.system.dto.TechAuthApproveDTO;
-import com.his.system.dto.TechAuthGateDTO;
-import com.his.system.dto.TechAuthOverrideConfirmDTO;
-import com.his.system.dto.TechAuthOverrideQueryPageDTO;
-import com.his.system.dto.TechAuthQueryPageDTO;
-import com.his.system.dto.TechAuthRevokeDTO;
-import com.his.system.dto.TechAuthUpsertDTO;
+import com.his.system.dto.*;
 import com.his.system.entity.BizTechAuthOverride;
 import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysEmployeeTechAuth;
 import com.his.system.mapper.BizTechAuthOverrideMapper;
 import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.mapper.SysEmployeeTechAuthMapper;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.EmployeeTechAuthVO;
 import com.his.system.vo.TechAuthCheckVO;
 import com.his.system.vo.TechAuthOverrideVO;
@@ -37,8 +32,6 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 技术授权台账与准入闸实现。
@@ -57,22 +50,37 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
-    @Autowired
-    private DictCacheService dictText;
-
     /** 授权状态：1-待审批 2-已授权 3-已驳回 4-已收回（唯一口径 TechAuthStatusEnum） */
-    /** 越权登记状态：1-待上级确认 2-已确认 */
+    /**
+     * 越权登记状态：1-待上级确认 2-已确认
+     */
     private static final int OV_PENDING = 1;
     private static final int OV_CONFIRMED = 2;
 
     private static final int REASON_MAX = 500;
     private static final int BASIS_MAX = 200;
 
+    private final DictCacheService dictCacheService;
     private final SysEmployeeTechAuthMapper authMapper;
     private final BizTechAuthOverrideMapper overrideMapper;
     private final SysEmployeeMapper employeeMapper;
 
     // 一、台账查询
+
+    private static String trim(String value) {
+        return StringUtils.hasText(value) ? value.trim() : null;
+    }
+
+    /**
+     * 写库的原因/依据一律先截到列宽：超长会让 insert 报 Data too long，把「提示」升级成 500
+     */
+    private static String clip(String value, int max) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        String v = value.trim();
+        return v.length() <= max ? v : v.substring(0, max);
+    }
 
     @Override
     public PageResult<EmployeeTechAuthVO> listPage(TechAuthQueryPageDTO query) {
@@ -101,6 +109,8 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         return toVO(mustGet(id));
     }
 
+    // 二、登记 / 审批 / 收回 / 删除
+
     @Override
     public List<EmployeeTechAuthVO> listByEmployee(Long employeeId) {
         if (employeeId == null) {
@@ -117,8 +127,6 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         Long empId = UserUtils.getCurrentUser().getEmployeeId();
         return listByEmployee(empId);
     }
-
-    // 二、登记 / 审批 / 收回 / 删除
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -214,6 +222,8 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
                 TechAuthStatusEnum.getText(entity.getAuthStatus()), entity.getApproverName());
     }
 
+    // 三、准入闸
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void revoke(TechAuthRevokeDTO dto) {
@@ -242,8 +252,6 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         authMapper.deleteById(id);
     }
 
-    // 三、准入闸
-
     @Override
     public SysEmployeeTechAuth findEffective(Long employeeId, Integer authCategory, LocalDate operateDate) {
         if (employeeId == null || authCategory == null) {
@@ -258,6 +266,8 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         wrapper.orderByDesc(SysEmployeeTechAuth::getTechLevel).last("LIMIT 1");
         return authMapper.selectOne(wrapper);
     }
+
+    // 四、越权登记台账
 
     @Override
     public TechAuthCheckVO checkAuthorized(Long employeeId, Integer authCategory,
@@ -355,7 +365,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         return check;
     }
 
-    // 四、越权登记台账
+    // 五、内部工具
 
     @Override
     public PageResult<TechAuthOverrideVO> overrideListPage(TechAuthOverrideQueryPageDTO query) {
@@ -394,8 +404,6 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         log.info("越权登记确认 id={} emp={} 确认人={}", entity.getId(), entity.getEmployeeName(), entity.getSupervisorName());
     }
 
-    // 五、内部工具
-
     /**
      * 按姓名回捞员工ID（术者/内镜医师在库里只有姓名字符串的历史单据用）。
      * <p>查不到与重名都拒：前者多半是外院专家没建档，后者根本判不出是谁，
@@ -418,7 +426,9 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         return hits.get(0).getId();
     }
 
-    /** 有效期覆盖指定日期（含边界）：valid_from <= date <= valid_until，NULL 有效期 = 长期 */
+    /**
+     * 有效期覆盖指定日期（含边界）：valid_from <= date <= valid_until，NULL 有效期 = 长期
+     */
     private void applyEffective(LambdaQueryWrapper<SysEmployeeTechAuth> wrapper, LocalDate date) {
         wrapper.le(SysEmployeeTechAuth::getValidFrom, date)
                 .and(w -> w.isNull(SysEmployeeTechAuth::getValidUntil)
@@ -528,19 +538,6 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         if (type == null) {
             return "—";
         }
-        return dictText.getDicDataLabel("biz_common_techAuthTypeEnum", type);
-    }
-
-    private static String trim(String value) {
-        return StringUtils.hasText(value) ? value.trim() : null;
-    }
-
-    /** 写库的原因/依据一律先截到列宽：超长会让 insert 报 Data too long，把「提示」升级成 500 */
-    private static String clip(String value, int max) {
-        if (!StringUtils.hasText(value)) {
-            return null;
-        }
-        String v = value.trim();
-        return v.length() <= max ? v : v.substring(0, max);
+        return dictCacheService.getDicDataLabel("biz_common_techAuthTypeEnum", type);
     }
 }

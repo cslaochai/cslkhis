@@ -15,7 +15,6 @@ import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -40,13 +39,14 @@ import java.util.concurrent.ThreadLocalRandom;
 public class StatReportServiceImpl implements StatReportService {
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private final BizStatReportMapper reportMapper;
-    private final StatReportAggMapper aggMapper;
-    private final ObjectMapper objectMapper;
-    @Autowired
-    private DictCacheService dictText;
 
-    // 生成
+    private final BizStatReportMapper reportMapper;
+
+    private final StatReportAggMapper aggMapper;
+
+    private final ObjectMapper objectMapper;
+
+    private DictCacheService dictCacheService;
 
     /**
      * selectPage 排除列后字段为 null，聚合 map 兜底空 Map
@@ -56,7 +56,6 @@ public class StatReportServiceImpl implements StatReportService {
     }
 
     // 报出 / 作废
-
     private static long toLong(Object v) {
         return v == null ? 0L : ((Number) v).longValue();
     }
@@ -66,7 +65,6 @@ public class StatReportServiceImpl implements StatReportService {
     }
 
     // 查询
-
     private static String cut(String s, int max) {
         if (s == null) return null;
         String t = s.trim();
@@ -133,7 +131,7 @@ public class StatReportServiceImpl implements StatReportService {
         List<Map<String, Object>> topDx = aggMapper.topDiagnoses(startStr, endStr, deptFilter);
         List<Map<String, Object>> cases = aggMapper.cohortCases(startStr, endStr, deptFilter);
 
-        String typeName = dictText.getDicDataLabel("biz_medicaltech_statReportTypeEnum", dto.getReportType());
+        String typeName = dictCacheService.getDicDataLabel("biz_medicaltech_statReportTypeEnum", dto.getReportType());
         String title = (deptName == null ? "" : deptName) + typeName + "（" + period + "）";
         String operator = operatorUser.getRealName();
         LocalDateTime now = LocalDateTime.now();
@@ -251,7 +249,7 @@ public class StatReportServiceImpl implements StatReportService {
         }
         BizStatReport r = mustGet(id);
         if (r.getStatus() != 0) {
-            throw new BusinessException("只有草稿可报出（当前状态：" + dictText.getDicDataLabel("biz_medicaltech_statReportStatusEnum", r.getStatus()) + "）");
+            throw new BusinessException("只有草稿可报出（当前状态：" + dictCacheService.getDicDataLabel("biz_medicaltech_statReportStatusEnum", r.getStatus()) + "）");
         }
         r.setStatus(1);
         r.setSubmitTime(LocalDateTime.now());

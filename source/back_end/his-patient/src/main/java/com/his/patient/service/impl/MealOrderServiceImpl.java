@@ -27,7 +27,6 @@ import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -60,8 +59,7 @@ public class MealOrderServiceImpl implements MealOrderService {
     private final DeptScopeProvider deptScopeProvider;
     private final BizMealOrderMapper mealMapper;
     private final BizDietPlanMapper planMapper;
-    @Autowired
-    private DictCacheService dictText;
+    private final DictCacheService dictCacheService;
 
     private static String trim(String v) {
         return v == null ? null : v.trim();

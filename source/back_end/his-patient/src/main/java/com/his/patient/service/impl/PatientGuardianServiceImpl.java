@@ -13,17 +13,17 @@ import com.his.patient.entity.BizPatientGuardian;
 import com.his.patient.enums.GuardianRelationEnum;
 import com.his.patient.mapper.BizPatientGuardianMapper;
 import com.his.patient.mapper.BizPatientMapper;
+import com.his.patient.service.BizPatientService;
 import com.his.patient.service.PatientGuardianService;
-import com.his.patient.service.PatientService;
 import com.his.patient.vo.GuardianPatientVO;
 import com.his.patient.vo.SmsSendVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysUser;
 import com.his.system.mapper.SysUserMapper;
 import com.his.system.service.SmsCodeService;
 import com.his.system.service.SysAuditLogService;
 import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -52,7 +52,7 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
 
     private final BizPatientGuardianMapper guardianMapper;
     private final BizPatientMapper patientMapper;
-    private final PatientService patientService;
+    private final BizPatientService bizPatientService;
     private final SysUserMapper sysUserMapper;
     private final SysMessageService sysMessageService;
     private final SmsCodeService smsCodeService;
@@ -177,7 +177,7 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
     public SmsSendVO sendBindCode(GuardianSendBindCodeDTO dto) {
         CurrentUser user = requirePatientUser();
         String idCard = normalizeIdCard(dto.getIdCard());
-        BizPatient patient = patientService.selectByIdCard(idCard);
+        BizPatient patient = bizPatientService.selectByIdCard(idCard);
         if (patient == null || !patient.getPatientName().equals(dto.getPatientName().trim())) {
             // 与 bindPatient 同口径的合并文案，不区分哪种不匹配，避免探测建档
             throw new BusinessException("未找到匹配的就诊档案，请核对姓名与身份证号");
@@ -205,7 +205,7 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
         if (!GuardianRelationEnum.isValid(dto.getRelation())) {
             throw new BusinessException("关系码值不正确");
         }
-        BizPatient patient = patientService.selectByIdCard(idCard);
+        BizPatient patient = bizPatientService.selectByIdCard(idCard);
         if (patient == null || !patient.getPatientName().equals(dto.getPatientName().trim())) {
             // 双因子任一不匹配即拒绝，且不区分哪种不匹配 —— 避免拿此接口探测谁建过档
             auditGuardian(user, "bindPatient", null, false, "姓名与身份证号未匹配到就诊档案, idCard=" + maskIdCard(idCard));
@@ -254,7 +254,7 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
         if (!GuardianRelationEnum.isValid(dto.getRelation())) {
             throw new BusinessException("关系码值不正确");
         }
-        if (patientService.selectByIdCard(idCard) != null) {
+        if (bizPatientService.selectByIdCard(idCard) != null) {
             throw new BusinessException("该身份证已建档，请改用「绑定就诊人」");
         }
         if (countActiveBindings(user.getUserId()) >= MAX_BINDINGS_PER_USER) {

@@ -26,10 +26,11 @@ import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.patient.service.BizPatientService;
 import com.his.patient.service.PatientGuardianService;
-import com.his.patient.service.PatientService;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysClinicRoom;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.InsurancePolicyService;
 import com.his.system.service.SysClinicRoomService;
 import com.his.system.service.SysMessageService;
@@ -47,8 +48,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 挂号服务实现
@@ -56,37 +55,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> implements QueueService {
-    @Autowired
-    private DictCacheService dictText;
-
-    private final PatientService patientService;
-
+    private final BizPatientService bizPatientService;
     private final BizScheduleMapper bizScheduleMapper;
-
     private final RedisSequenceService redisSequenceService;
-
     private final BizAppointInfoMapper bizAppointInfoMapper;
-
     private final ObjectProvider<AppointChargeGateway> appointChargeGateway;
-
     private final InsurancePolicyService insurancePolicyService;
-
     private final DoctorStatusCacheService doctorStatusCacheService;
-
     private final PatientGuardianService patientGuardianService;
-
     private final SysClinicRoomService sysClinicRoomService;
-
     private final OpdLogMapper opdLogMapper;
-
     private final BizTriageRecordMapper bizTriageRecordMapper;
-
     private final DayEndSettleTrigger dayEndSettleTrigger;
-
     private final SysMessageService sysMessageService;
-
     @Lazy
     private final ScheduleService scheduleService;
+    private DictCacheService dictCacheService;
 
     @Override
     public List<BizQueueListVO> getTodayQueueList(QueueTodayQueryDTO queueQueryDTO) {
@@ -600,10 +584,10 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
                 registInfo.setRegistStatus(AppointStatusEnum.COMPLETED.getCode()); // 已完成
                 bizAppointInfoMapper.updateById(registInfo);
 
-                patientService.markLastVisit(registInfo.getPatientId(), queue.getEndTime(),
+                bizPatientService.markLastVisit(registInfo.getPatientId(), queue.getEndTime(),
                         registInfo.getDeptId(), registInfo.getDeptName(),
                         registInfo.getDoctorId(), registInfo.getDoctorName());
-                patientService.markFirstVisit(registInfo.getPatientId(), queue.getEndTime(),
+                bizPatientService.markFirstVisit(registInfo.getPatientId(), queue.getEndTime(),
                         registInfo.getDeptId(), registInfo.getDeptName(),
                         registInfo.getDoctorId(), registInfo.getDoctorName());
             }
@@ -1103,7 +1087,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
      * 静默贴一个合法文案比显示未知更危险。
      */
     private void fillLogStatus(OpdLogListVO vo) {
-        vo.setLogStatusLabel(dictText.getDicDataLabel("biz_appoint_opdLogStatusEnum", vo.getLogStatus()));
+        vo.setLogStatusLabel(dictCacheService.getDicDataLabel("biz_appoint_opdLogStatusEnum", vo.getLogStatus()));
     }
 
     @Override

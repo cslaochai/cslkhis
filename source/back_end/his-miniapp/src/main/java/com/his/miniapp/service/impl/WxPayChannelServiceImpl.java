@@ -1,12 +1,10 @@
 package com.his.miniapp.service.impl;
 
-import com.his.miniapp.service.WxPayChannelService;
 import com.his.miniapp.entity.BizPayOrder;
+import com.his.miniapp.service.WxPayChannelService;
+import com.his.system.service.DictCacheService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 微信支付出口（小程序一期口子，同 M7/M8 打印桩形态）。
@@ -19,21 +17,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Slf4j
 @Service
 public class WxPayChannelServiceImpl implements WxPayChannelService {
-    @Autowired
-    private DictCacheService dictText;
+    private DictCacheService dictCacheService;
 
     /**
      * 统一下单。
      *
      * @param order 已落库的支付单（待支付状态）
      * @return mockPaid=true 表示桩模式（调用方应立即推进支付成功）；
-     *         false 表示真收银台模式，payParams 交给前端 wx.requestPayment
+     * false 表示真收银台模式，payParams 交给前端 wx.requestPayment
      */
     public PayUnifiedResult unifiedOrder(BizPayOrder order) {
         log.info("[微信支付口子] ===== 模拟调微信统一下单（V3 transactions/jsapi）=====");
         log.info("[微信支付口子] 商户单号={} 业务类型={} 业务单ID={} 金额=￥{} 描述={}",
-                order.getPayNo(), dictText.getDicDataLabel("biz_miniapp_payBizTypeEnum", order.getBizType()), order.getBizId(),
-                order.getAmount(), dictText.getDicDataLabel("biz_miniapp_payBizTypeEnum", order.getBizType()));
+                order.getPayNo(), dictCacheService.getDicDataLabel("biz_miniapp_payBizTypeEnum", order.getBizType()), order.getBizId(),
+                order.getAmount(), dictCacheService.getDicDataLabel("biz_miniapp_payBizTypeEnum", order.getBizType()));
         log.info("[微信支付口子] ===== 模拟支付回调（notify 验签通过）=====");
         log.info("[微信支付口子] out_trade_no={} trade_state=SUCCESS transaction_id=MOCK_{}",
                 order.getPayNo(), System.currentTimeMillis());

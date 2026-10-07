@@ -4,11 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.pharmacy.dto.AntibioticAliasUpsertDTO;
-import com.his.pharmacy.dto.AntibioticAuthQueryPageDTO;
-import com.his.pharmacy.dto.AntibioticAuthUpsertDTO;
-import com.his.pharmacy.dto.AntibioticCatalogLevelUpsertDTO;
-import com.his.pharmacy.dto.AntibioticCatalogQueryPageDTO;
+import com.his.pharmacy.dto.*;
 import com.his.pharmacy.entity.BizAntibioticAlias;
 import com.his.pharmacy.entity.BizAntibioticAuth;
 import com.his.pharmacy.mapper.AntibioticCatalogMapper;
@@ -16,12 +12,8 @@ import com.his.pharmacy.mapper.AntibioticEmployeeMapper;
 import com.his.pharmacy.mapper.BizAntibioticAliasMapper;
 import com.his.pharmacy.mapper.BizAntibioticAuthMapper;
 import com.his.pharmacy.service.AntibioticService;
-import com.his.pharmacy.vo.AntibioticAliasVO;
-import com.his.pharmacy.vo.AntibioticAuthCheckVO;
-import com.his.pharmacy.vo.AntibioticAuthVO;
-import com.his.pharmacy.vo.AntibioticCatalogVO;
-import com.his.pharmacy.vo.AntibioticDoctorSelectListVO;
-import com.his.pharmacy.vo.AntibioticDrugSelectListVO;
+import com.his.pharmacy.vo.*;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,8 +27,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 抗菌药物分级目录与处方权授权。
@@ -49,11 +39,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class AntibioticServiceImpl implements AntibioticService {
-    @Autowired
-    private DictCacheService dictText;
 
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 
+    private final DictCacheService dictCacheService;
     private final AntibioticCatalogMapper catalogMapper;
     private final AntibioticEmployeeMapper employeeMapper;
     private final BizAntibioticAuthMapper authMapper;
@@ -160,7 +149,7 @@ public class AntibioticServiceImpl implements AntibioticService {
     public List<AntibioticDrugSelectListVO> antibioticDrugSelectList() {
         List<AntibioticDrugSelectListVO> list = catalogMapper.selectAntibioticDrugs();
         for (AntibioticDrugSelectListVO vo : list) {
-            vo.setAntibioticLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", vo.getAntibioticLevel()));
+            vo.setAntibioticLevelText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", vo.getAntibioticLevel()));
         }
         return list;
     }
@@ -228,7 +217,7 @@ public class AntibioticServiceImpl implements AntibioticService {
                     .eq(BizAntibioticAuth::getDoctorId, dto.getDoctorId())
                     .eq(BizAntibioticAuth::getAuthLevel, dto.getAuthLevel()));
             if (exist != null) {
-                throw new BusinessException("该医师已有" + dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", dto.getAuthLevel())
+                throw new BusinessException("该医师已有" + dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", dto.getAuthLevel())
                         + "的授权记录（" + exist.getAuthNo() + "），请直接修改那条而不是重复新增");
             }
             auth = new BizAntibioticAuth();
@@ -271,7 +260,7 @@ public class AntibioticServiceImpl implements AntibioticService {
         }
         Integer authLevel = maxValidLevel(doctorId);
         vo.setAuthLevel(authLevel);
-        vo.setAuthLevelText(authLevel == null ? "无有效授权" : dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", authLevel));
+        vo.setAuthLevelText(authLevel == null ? "无有效授权" : dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", authLevel));
 
         List<AntibioticDrugSelectListVO> drugs = catalogMapper.selectAntibioticByIds(drugIds);
         for (AntibioticDrugSelectListVO drug : drugs) {
@@ -279,9 +268,9 @@ public class AntibioticServiceImpl implements AntibioticService {
                 AntibioticAuthCheckVO.BlockedDrug b = new AntibioticAuthCheckVO.BlockedDrug();
                 b.setDrugName(drug.getDrugName());
                 b.setAntibioticLevel(drug.getAntibioticLevel());
-                b.setAntibioticLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", drug.getAntibioticLevel()));
+                b.setAntibioticLevelText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", drug.getAntibioticLevel()));
                 b.setRequiredLevel(drug.getAntibioticLevel());
-                b.setRequiredLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", drug.getAntibioticLevel()));
+                b.setRequiredLevelText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", drug.getAntibioticLevel()));
                 vo.getBlockedDrugs().add(b);
             }
         }
@@ -296,8 +285,8 @@ public class AntibioticServiceImpl implements AntibioticService {
                     .reduce((a, b) -> a + "、" + b).orElse("");
             vo.setTip(authLevel == null
                     ? "您没有有效的抗菌药物处方权授权，不能开具：" + names
-                    : "您当前的抗菌药物处方权为" + dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", authLevel) + "，不能开具：" + names
-                      + "。请改用同级可开品种，或由具有相应处方权的医师开具。");
+                    : "您当前的抗菌药物处方权为" + dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", authLevel) + "，不能开具：" + names
+                    + "。请改用同级可开品种，或由具有相应处方权的医师开具。");
         }
         return vo;
     }
@@ -338,7 +327,7 @@ public class AntibioticServiceImpl implements AntibioticService {
     }
 
     private void fillLevelText(AntibioticCatalogVO vo) {
-        vo.setAntibioticLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", vo.getAntibioticLevel()));
+        vo.setAntibioticLevelText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", vo.getAntibioticLevel()));
         vo.setInCatalog(vo.getAntibioticLevel() != null && vo.getAntibioticLevel() > 0);
     }
 
@@ -352,12 +341,12 @@ public class AntibioticServiceImpl implements AntibioticService {
         vo.setDeptName(e.getDeptName());
         vo.setTitle(e.getTitle());
         vo.setAuthLevel(e.getAuthLevel());
-        vo.setAuthLevelText(dictText.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", e.getAuthLevel()));
+        vo.setAuthLevelText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", e.getAuthLevel()));
         vo.setAuthBasis(e.getAuthBasis());
         vo.setAuthDate(e.getAuthDate());
         vo.setExpireDate(e.getExpireDate());
         vo.setStatus(e.getStatus());
-        vo.setStatusText(dictText.getDicDataLabel("biz_pharmacy_antibioticAuthStatusEnum", e.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticAuthStatusEnum", e.getStatus()));
         vo.setEffective(e.getStatus() != null
                 && e.getStatus() == BizAntibioticAuth.STATUS_VALID
                 && e.getExpireDate() != null

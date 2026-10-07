@@ -3,19 +3,20 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
-import com.his.system.utils.UserUtils;
+import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.CssdDTO;
 import com.his.pharmacy.entity.BizCssdPack;
+import com.his.pharmacy.entity.BizCssdTrace;
 import com.his.pharmacy.enums.CssdCheckResultEnum;
 import com.his.pharmacy.enums.CssdNodeStatusEnum;
-import com.his.pharmacy.entity.BizCssdTrace;
 import com.his.pharmacy.mapper.BizCssdPackMapper;
 import com.his.pharmacy.mapper.BizCssdTraceMapper;
 import com.his.pharmacy.service.CssdService;
 import com.his.pharmacy.vo.CssdPackVO;
 import com.his.pharmacy.vo.CssdTraceVO;
+import com.his.system.service.DictCacheService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,8 +26,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * CSSD 消毒供应追溯服务。
@@ -39,11 +38,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class CssdServiceImpl implements CssdService {
-    @Autowired
-    private DictCacheService dictText;
-
     private static final DateTimeFormatter NO_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
-
+    private final DictCacheService dictCacheService;
     private final BizCssdPackMapper packMapper;
     private final BizCssdTraceMapper traceMapper;
 
@@ -204,7 +200,7 @@ public class CssdServiceImpl implements CssdService {
         vo.setDeptId(p.getDeptId());
         vo.setDeptName(p.getDeptName());
         vo.setSterilizeMethod(p.getSterilizeMethod());
-        vo.setSterilizeMethodText(dictText.getDicDataLabel("biz_pharmacy_cssdSterilizeMethodEnum", p.getSterilizeMethod()));
+        vo.setSterilizeMethodText(dictCacheService.getDicDataLabel("biz_pharmacy_cssdSterilizeMethodEnum", p.getSterilizeMethod()));
         vo.setStatus(p.getStatus());
         vo.setStatusText(CssdNodeStatusEnum.getText(p.getStatus()));
         vo.setSterilizerNo(p.getSterilizerNo());

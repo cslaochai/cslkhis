@@ -1,15 +1,12 @@
 package com.his.system.service.impl;
 
-import com.his.common.enums.DutyShiftTypeEnum;
-import com.his.system.service.DutyLogService;
-import com.his.system.service.DutyRosterService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
+import com.his.common.enums.DutyShiftTypeEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.utils.UserUtils;
 import com.his.system.dto.DutyLogHandoverDTO;
 import com.his.system.dto.DutyLogQueryPageDTO;
 import com.his.system.dto.DutyLogUpsertDTO;
@@ -19,6 +16,11 @@ import com.his.system.enums.BizTypeEnum;
 import com.his.system.enums.DutyLogStatusEnum;
 import com.his.system.mapper.BizDutyLogMapper;
 import com.his.system.mapper.SysEmployeeMapper;
+import com.his.system.service.DictCacheService;
+import com.his.system.service.DutyLogService;
+import com.his.system.service.DutyRosterService;
+import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.DutyLogVO;
 import com.his.system.vo.DutyOfficerVO;
 import lombok.RequiredArgsConstructor;
@@ -31,9 +33,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
-import com.his.system.service.SysMessageService;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 值班日志（交班本）服务。
@@ -56,12 +55,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class DutyLogServiceImpl implements DutyLogService {
-    @Autowired
-    private DictCacheService dictText;
-
-    /** 列表默认窗口：近 7 天（交班本是流水账，翻三个月前没意义，当天和前一天必须带出来） */
+    /**
+     * 列表默认窗口：近 7 天（交班本是流水账，翻三个月前没意义，当天和前一天必须带出来）
+     */
     private static final int DEFAULT_BACK_DAYS = 7;
-
+    private final DictCacheService dictCacheService;
     private final BizDutyLogMapper logMapper;
     private final SysEmployeeMapper employeeMapper;
     private final DutyRosterService dutyRosterService;
@@ -89,7 +87,9 @@ public class DutyLogServiceImpl implements DutyLogService {
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), list);
     }
 
-    /** 当前登录人的待签收遗留事项（交班对象是自己、状态已交班、还没签收） */
+    /**
+     * 当前登录人的待签收遗留事项（交班对象是自己、状态已交班、还没签收）
+     */
     public List<DutyLogVO> pendingMine() {
         Long empId = UserUtils.getCurrentUser().getEmployeeId();
         if (empId == null) {
@@ -172,7 +172,9 @@ public class DutyLogServiceImpl implements DutyLogService {
         return row.getId();
     }
 
-    /** 删除（软删：日志没有唯一键，且值班记录要留档给评审翻） */
+    /**
+     * 删除（软删：日志没有唯一键，且值班记录要留档给评审翻）
+     */
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
         BizDutyLog row = logMapper.selectById(id);
@@ -240,7 +242,9 @@ public class DutyLogServiceImpl implements DutyLogService {
         log.info("值班交班 id={} 值班人={} 接班人={}", row.getId(), row.getEmployeeName(), nextEmpName);
     }
 
-    /** 签收：接班人确认收到。必须是交班对象本人，代签收的"已签收"是假的 */
+    /**
+     * 签收：接班人确认收到。必须是交班对象本人，代签收的"已签收"是假的
+     */
     @Transactional(rollbackFor = Exception.class)
     public void ack(Long id) {
         BizDutyLog row = logMapper.selectById(id);
@@ -300,7 +304,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         if (t == null) {
             return "-";
         }
-        return dictText.getDicDataLabel("biz_system_dutyLogTypeEnum", t);
+        return dictCacheService.getDicDataLabel("biz_system_dutyLogTypeEnum", t);
     }
 
     private String statusText(Integer s) {
