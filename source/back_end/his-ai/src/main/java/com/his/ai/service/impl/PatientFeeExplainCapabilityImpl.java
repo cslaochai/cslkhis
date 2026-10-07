@@ -13,6 +13,7 @@ import com.his.charge.mapper.BizSettlementBillItemMapper;
 import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.NumUtil;
 import com.his.patient.service.PatientGuardianService;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
@@ -71,11 +72,11 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
             "以上是本账单的费用构成说明，实际报销以医保经办和收费窗口的解释为准；"
                     + "对某项收费有疑问，可在收费窗口打印明细清单核对。";
 
-    private final BizSettlementBillMapper billMapper;
+    private final BizSettlementBillMapper bizSettlementBillMapper;
 
-    private final BizSettlementBillItemMapper billItemMapper;
+    private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
 
-    private final BizInsuranceSettlementMapper insuranceSettlementMapper;
+    private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
 
     private final PatientGuardianService patientGuardianService;
 
@@ -118,15 +119,11 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
      * 部分场景结算时只写了统筹与个账，selfAmount 留空，此时倒推比显示 0 更接近事实。
      */
     private static BigDecimal selfPartOf(BizSettlementBillItem item) {
-        BigDecimal self = nz(item.getSelfAmount());
+        BigDecimal self = NumUtil.orZero(item.getSelfAmount());
         if (self.compareTo(BigDecimal.ZERO) > 0) {
             return self;
         }
-        return nz(item.getAmount()).subtract(nz(item.getPoolAmount())).subtract(nz(item.getAccountAmount()));
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
+        return NumUtil.orZero(item.getAmount()).subtract(NumUtil.orZero(item.getPoolAmount())).subtract(NumUtil.orZero(item.getAccountAmount()));
     }
 
     /**
@@ -136,7 +133,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         if (total == null || total.compareTo(BigDecimal.ZERO) <= 0) {
             return BigDecimal.ZERO.setScale(1);
         }
-        return nz(part).multiply(BigDecimal.valueOf(100))
+        return NumUtil.orZero(part).multiply(BigDecimal.valueOf(100))
                 .divide(total, 1, RoundingMode.HALF_UP);
     }
 
@@ -146,7 +143,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
             throw new BusinessException("未获取到就诊人身份，请重新登录");
         }
 
-        BizSettlementBill bill = billMapper.selectById(dto.getBillId());
+        BizSettlementBill bill = bizSettlementBillMapper.selectById(dto.getBillId());
         if (bill == null) {
             throw new BusinessException("账单不存在：" + dto.getBillId());
         }
@@ -154,7 +151,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
             throw new BusinessException("账单不存在或无权查看：" + dto.getBillId());
         }
 
-        List<BizSettlementBillItem> items = billItemMapper.selectList(
+        List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectList(
                 new LambdaQueryWrapper<BizSettlementBillItem>()
                         .eq(BizSettlementBillItem::getBillId, bill.getId()));
 
@@ -165,10 +162,10 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         vo.setBillNo(bill.getBillNo());
         vo.setPatientName(bill.getPatientName());
         vo.setBillDate(bill.getBillDate());
-        vo.setTotalAmount(nz(bill.getTotalAmount()));
-        vo.setPoolAmount(nz(bill.getPoolAmount()));
-        vo.setAccountAmount(nz(bill.getAccountAmount()));
-        vo.setSelfAmount(nz(bill.getSelfAmount()));
+        vo.setTotalAmount(NumUtil.orZero(bill.getTotalAmount()));
+        vo.setPoolAmount(NumUtil.orZero(bill.getPoolAmount()));
+        vo.setAccountAmount(NumUtil.orZero(bill.getAccountAmount()));
+        vo.setSelfAmount(NumUtil.orZero(bill.getSelfAmount()));
         vo.setSelfRatio(ratio(vo.getSelfAmount(), vo.getTotalAmount()));
 
         if (insurance != null) {
@@ -193,7 +190,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
     }
 
     private BizInsuranceSettlement loadInsurance(Long billId) {
-        List<BizInsuranceSettlement> list = insuranceSettlementMapper.selectList(
+        List<BizInsuranceSettlement> list = bizInsuranceSettlementMapper.selectList(
                 new LambdaQueryWrapper<BizInsuranceSettlement>()
                         .eq(BizInsuranceSettlement::getBillId, billId)
                         .orderByDesc(BizInsuranceSettlement::getId)
@@ -219,7 +216,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         for (Map.Entry<Integer, List<BizSettlementBillItem>> entry : byCatalog.entrySet()) {
             List<BizSettlementBillItem> group = entry.getValue();
             BigDecimal amount = group.stream()
-                    .map(item -> nz(item.getAmount()))
+                    .map(item -> NumUtil.orZero(item.getAmount()))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             FeeCatalogGroupVO vo = new FeeCatalogGroupVO();
             vo.setCatalogType(entry.getKey());
@@ -255,7 +252,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         List<PatientFeeExplainVO.FeeItemGroupVO> groups = new ArrayList<>();
         for (Map.Entry<Integer, List<BizSettlementBillItem>> entry : byType.entrySet()) {
             BigDecimal amount = entry.getValue().stream()
-                    .map(item -> nz(item.getAmount()))
+                    .map(item -> NumUtil.orZero(item.getAmount()))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             PatientFeeExplainVO.FeeItemGroupVO vo = new PatientFeeExplainVO.FeeItemGroupVO();
             vo.setItemType(entry.getKey());
@@ -279,14 +276,14 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
             if (result.size() >= TOP_SELF_LIMIT) {
                 break;
             }
-            if (nz(item.getAmount()).compareTo(BigDecimal.ZERO) <= 0) {
+            if (NumUtil.orZero(item.getAmount()).compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
             PatientFeeExplainVO.FeeTopItemVO vo = new PatientFeeExplainVO.FeeTopItemVO();
             vo.setItemName(item.getItemName());
-            vo.setAmount(nz(item.getAmount()));
+            vo.setAmount(NumUtil.orZero(item.getAmount()));
             vo.setCatalogText(catalogText(item.getCatalogType() == null ? CATALOG_SELF : item.getCatalogType()));
-            vo.setSelfAmount(nz(item.getSelfAmount()));
+            vo.setSelfAmount(NumUtil.orZero(item.getSelfAmount()));
             result.add(vo);
         }
         return result;
@@ -302,11 +299,11 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         for (FeeCatalogGroupVO group : groups) {
             if (group.getCatalogType() != null
                     && (group.getCatalogType() == CATALOG_SELF || group.getCatalogType() == CATALOG_C)) {
-                selfPayPart = selfPayPart.add(nz(group.getAmount()));
+                selfPayPart = selfPayPart.add(NumUtil.orZero(group.getAmount()));
             }
         }
         BigDecimal total = groups.stream()
-                .map(group -> nz(group.getAmount()))
+                .map(group -> NumUtil.orZero(group.getAmount()))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         if (total.compareTo(BigDecimal.ZERO) <= 0) {
@@ -334,7 +331,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         FeeCatalogGroupVO top = groups.get(0);
         return String.format("这笔费用共 %.2f 元，医保统筹支付 %.2f 元，个人自付 %.2f 元；"
                         + "其中%s %.2f 元，占比最高。",
-                nz(vo.getTotalAmount()), nz(vo.getPoolAmount()), nz(vo.getSelfAmount()),
-                top.getCatalogText(), nz(top.getAmount()));
+                NumUtil.orZero(vo.getTotalAmount()), NumUtil.orZero(vo.getPoolAmount()), NumUtil.orZero(vo.getSelfAmount()),
+                top.getCatalogText(), NumUtil.orZero(top.getAmount()));
     }
 }

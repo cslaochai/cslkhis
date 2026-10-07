@@ -1,5 +1,4 @@
 package com.his.patient.service.impl;
-import com.his.patient.enums.SummaryStatusEnum;
 
 import com.his.common.entity.SignSubject;
 import com.his.common.enums.RecordStatusEnum;
@@ -7,7 +6,9 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
+import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizInpatientRecord;
+import com.his.patient.enums.SummaryStatusEnum;
 import com.his.patient.mapper.BizInpatientRecordMapper;
 import com.his.patient.service.InpatientRecordSignProvider;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
@@ -41,7 +41,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class InpatientRecordSignProviderImpl implements SignableContentProvider, InpatientRecordSignProvider {
 
-    private final BizInpatientRecordMapper recordMapper;
+    private final BizInpatientRecordMapper bizInpatientRecordMapper;
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -50,7 +50,7 @@ public class InpatientRecordSignProviderImpl implements SignableContentProvider,
 
     @Override
     public SignSubject load(Long bizId) {
-        BizInpatientRecord r = recordMapper.selectById(bizId);
+        BizInpatientRecord r = bizInpatientRecordMapper.selectById(bizId);
         if (r == null) {
             return null;
         }
@@ -68,7 +68,7 @@ public class InpatientRecordSignProviderImpl implements SignableContentProvider,
 
     @Override
     public String blockReason(SignSubject subject, SignSceneEnum scene) {
-        BizInpatientRecord r = recordMapper.selectById(subject.bizId());
+        BizInpatientRecord r = bizInpatientRecordMapper.selectById(subject.bizId());
         if (r == null) {
             return "病历文书不存在或已被删除，无法签名";
         }
@@ -93,13 +93,13 @@ public class InpatientRecordSignProviderImpl implements SignableContentProvider,
         r.setId(bizId);
         r.setSignStatus(1);
         r.setSignId(signId);
-        r.setSignedTime(signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS));
-        recordMapper.updateById(r);
+        r.setSignedTime(signedTime == null ? null : TimeUtil.toSeconds(signedTime));
+        bizInpatientRecordMapper.updateById(r);
     }
 
     @Override
     public void revokeSignAnchor(Long bizId, Long signId) {
-        BizInpatientRecord r = recordMapper.selectById(bizId);
+        BizInpatientRecord r = bizInpatientRecordMapper.selectById(bizId);
         if (r == null || !Objects.equals(signId, r.getSignId())) {
             // 锚点指向的不是被作废的那条签名：不动它（说明后来又签过一次，不能误伤新签名）
             return;
@@ -109,6 +109,6 @@ public class InpatientRecordSignProviderImpl implements SignableContentProvider,
         BizInpatientRecord patch = new BizInpatientRecord();
         patch.setId(bizId);
         patch.setSignStatus(2);
-        recordMapper.updateById(patch);
+        bizInpatientRecordMapper.updateById(patch);
     }
 }

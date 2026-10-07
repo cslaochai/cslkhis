@@ -3,15 +3,18 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.CheckupDTO;
 import com.his.patient.entity.*;
 import com.his.patient.enums.CheckupStatusEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.CheckupService;
-import com.his.system.service.DictCacheService;
 import com.his.patient.vo.CheckupVO;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,25 +35,21 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class CheckupServiceImpl implements CheckupService {
+public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizCheckupRecord> implements CheckupService {
 
-    private final SysCheckupPackageMapper packageMapper;
-    private final SysCheckupPackageItemMapper packageItemMapper;
-    private final BizCheckupRecordMapper recordMapper;
-    private final BizCheckupResultMapper resultMapper;
-    private final BizPatientMapper patientMapper;
-    private final DictCacheService dictText;
+    private final SysCheckupPackageMapper sysCheckupPackageMapper;
+    private final SysCheckupPackageItemMapper sysCheckupPackageItemMapper;
+    private final BizCheckupRecordMapper bizCheckupRecordMapper;
+    private final BizCheckupResultMapper bizCheckupResultMapper;
+    private final BizPatientMapper bizPatientMapper;
+    private final DictCacheService dictCacheService;
 
     // 套餐
-
-    private static String tr(String s) {
-        return s == null ? "" : s.trim();
-    }
 
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.PackageVO savePackage(CheckupDTO.PackageSave dto) {
         String name = dto.getPackageName().trim();
-        Long dupId = packageMapper.selectIdByNameIncludeDeleted(name);
+        Long dupId = sysCheckupPackageMapper.selectIdByNameIncludeDeleted(name);
         if (dupId != null && !Objects.equals(dupId, dto.getId())) {
             throw new BusinessException("套餐名称已存在：" + name);
         }
@@ -60,7 +59,7 @@ public class CheckupServiceImpl implements CheckupService {
         SysCheckupPackage p;
         boolean update = dto.getId() != null;
         if (update) {
-            p = packageMapper.selectById(dto.getId());
+            p = sysCheckupPackageMapper.selectById(dto.getId());
             if (p == null || p.getDelFlag() != null && p.getDelFlag() == 1) {
                 throw new BusinessException("套餐不存在或已删除");
             }
@@ -77,18 +76,18 @@ public class CheckupServiceImpl implements CheckupService {
         p.setRemark(dto.getRemark());
         p.setUpdateBy(UserUtils.getCurrentUser().getUsername());
         if (update) {
-            packageMapper.updateById(p);
+            sysCheckupPackageMapper.updateById(p);
         } else {
-            packageMapper.insert(p);
+            sysCheckupPackageMapper.insert(p);
         }
         // 明细整单替换（逻辑删旧行）
-        List<SysCheckupPackageItem> old = packageItemMapper.selectList(
+        List<SysCheckupPackageItem> old = sysCheckupPackageItemMapper.selectList(
                 new LambdaQueryWrapper<SysCheckupPackageItem>().eq(SysCheckupPackageItem::getPackageId, p.getId()));
         for (SysCheckupPackageItem o : old) {
             if (o.getDelFlag() == null || o.getDelFlag() == 0) {
                 o.setDelFlag(1);
                 o.setUpdateBy(UserUtils.getCurrentUser().getUsername());
-                packageItemMapper.updateById(o);
+                sysCheckupPackageItemMapper.updateById(o);
             }
         }
         int sort = 0;
@@ -102,22 +101,22 @@ public class CheckupServiceImpl implements CheckupService {
             it.setSortOrder(sort++);
             it.setDelFlag(0);
             it.setCreateBy(UserUtils.getCurrentUser().getUsername());
-            packageItemMapper.insert(it);
+            sysCheckupPackageItemMapper.insert(it);
         }
         return toPackageVo(p);
     }
 
     public IPage<CheckupVO.PackageVO> packagePage(CheckupDTO.PackageQuery dto) {
         LambdaQueryWrapper<SysCheckupPackage> qw = new LambdaQueryWrapper<SysCheckupPackage>()
-                .like(StringUtils.hasText(dto.getKeyword()), SysCheckupPackage::getPackageName, tr(dto.getKeyword()))
+                .like(StringUtils.hasText(dto.getKeyword()), SysCheckupPackage::getPackageName, TextUtil.trimToEmpty(dto.getKeyword()))
                 .eq(dto.getStatus() != null, SysCheckupPackage::getStatus, dto.getStatus())
                 .orderByDesc(SysCheckupPackage::getId);
-        IPage<SysCheckupPackage> page = packageMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw);
+        IPage<SysCheckupPackage> page = sysCheckupPackageMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw);
         return page.convert(this::toPackageVo);
     }
 
     public CheckupVO.PackageVO getPackage(Long id) {
-        SysCheckupPackage p = packageMapper.selectById(id);
+        SysCheckupPackage p = sysCheckupPackageMapper.selectById(id);
         if (p == null || p.getDelFlag() != null && p.getDelFlag() == 1) {
             throw new BusinessException("套餐不存在或已删除");
         }
@@ -131,31 +130,31 @@ public class CheckupServiceImpl implements CheckupService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void disablePackage(Long id) {
-        SysCheckupPackage p = packageMapper.selectById(id);
+        SysCheckupPackage p = sysCheckupPackageMapper.selectById(id);
         if (p == null || p.getDelFlag() != null && p.getDelFlag() == 1) {
             throw new BusinessException("套餐不存在或已删除");
         }
         p.setStatus(0);
         p.setUpdateBy(UserUtils.getCurrentUser().getUsername());
-        packageMapper.updateById(p);
+        sysCheckupPackageMapper.updateById(p);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.RecordVO createRecord(CheckupDTO.RecordCreate dto) {
-        SysCheckupPackage p = packageMapper.selectById(dto.getPackageId());
+        SysCheckupPackage p = sysCheckupPackageMapper.selectById(dto.getPackageId());
         if (p == null || p.getDelFlag() != null && p.getDelFlag() == 1) {
             throw new BusinessException("套餐不存在或已删除");
         }
         if (p.getStatus() == null || p.getStatus() != 1) {
             throw new BusinessException("套餐已停用，不能用于新登记");
         }
-        BizPatient patient = patientMapper.selectById(dto.getPatientId());
+        BizPatient patient = bizPatientMapper.selectById(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("体检人不存在");
         }
         if (p.getGenderLimit() != null && p.getGenderLimit() > 0
                 && patient.getGender() != null && !patient.getGender().equals(p.getGenderLimit())) {
-            throw new BusinessException("套餐性别限制：该套餐仅适用于" + dictText.getDicDataLabel("sys_gender", p.getGenderLimit()));
+            throw new BusinessException("套餐性别限制：该套餐仅适用于" + dictCacheService.getDicDataLabel("sys_gender", p.getGenderLimit()));
         }
         BizCheckupRecord r = new BizCheckupRecord();
         r.setRecordNo("CU" + DateFormats.COMPACT_DATETIME.format(LocalDateTime.now())
@@ -173,9 +172,9 @@ public class CheckupServiceImpl implements CheckupService {
         r.setRecordStatus(CheckupStatusEnum.REGISTERED.getCode());
         r.setCreateBy(UserUtils.getCurrentUser().getUsername());
         r.setRemark(dto.getRemark());
-        recordMapper.insert(r);
+        bizCheckupRecordMapper.insert(r);
         // 按套餐项目预生成结果空行
-        List<SysCheckupPackageItem> items = packageItemMapper.selectList(
+        List<SysCheckupPackageItem> items = sysCheckupPackageItemMapper.selectList(
                 new LambdaQueryWrapper<SysCheckupPackageItem>()
                         .eq(SysCheckupPackageItem::getPackageId, p.getId())
                         .eq(SysCheckupPackageItem::getDelFlag, 0)
@@ -192,7 +191,7 @@ public class CheckupServiceImpl implements CheckupService {
             res.setRefStandard(item.getRefStandard());
             res.setAbnormalFlag(0);
             res.setCreateBy(UserUtils.getCurrentUser().getUsername());
-            resultMapper.insert(res);
+            bizCheckupResultMapper.insert(res);
         }
         return toRecordVo(r, false);
     }
@@ -200,19 +199,19 @@ public class CheckupServiceImpl implements CheckupService {
     public IPage<CheckupVO.RecordVO> recordPage(CheckupDTO.RecordQuery dto) {
         LambdaQueryWrapper<BizCheckupRecord> qw = new LambdaQueryWrapper<BizCheckupRecord>()
                 .and(StringUtils.hasText(dto.getKeyword()), w -> w
-                        .like(BizCheckupRecord::getPatientName, tr(dto.getKeyword()))
-                        .or().like(BizCheckupRecord::getRecordNo, tr(dto.getKeyword())))
+                        .like(BizCheckupRecord::getPatientName, TextUtil.trimToEmpty(dto.getKeyword()))
+                        .or().like(BizCheckupRecord::getRecordNo, TextUtil.trimToEmpty(dto.getKeyword())))
                 .eq(dto.getRecordStatus() != null, BizCheckupRecord::getRecordStatus, dto.getRecordStatus())
                 .eq(dto.getPersonType() != null, BizCheckupRecord::getPersonType, dto.getPersonType())
                 .eq(dto.getCheckupDate() != null, BizCheckupRecord::getCheckupDate, dto.getCheckupDate())
                 .orderByDesc(BizCheckupRecord::getCheckupDate)
                 .orderByDesc(BizCheckupRecord::getId);
-        IPage<BizCheckupRecord> page = recordMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw);
+        IPage<BizCheckupRecord> page = bizCheckupRecordMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw);
         return page.convert(r -> toRecordVo(r, false));
     }
 
     public CheckupVO.RecordVO getRecord(Long id) {
-        BizCheckupRecord r = recordMapper.selectById(id);
+        BizCheckupRecord r = bizCheckupRecordMapper.selectById(id);
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
         }
@@ -224,11 +223,11 @@ public class CheckupServiceImpl implements CheckupService {
      */
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.ResultVO saveResult(CheckupDTO.ResultSave dto) {
-        BizCheckupResult res = resultMapper.selectById(dto.getResultId());
+        BizCheckupResult res = bizCheckupResultMapper.selectById(dto.getResultId());
         if (res == null || res.getDelFlag() != null && res.getDelFlag() == 1) {
             throw new BusinessException("结果行不存在或已删除");
         }
-        BizCheckupRecord r = recordMapper.selectById(res.getRecordId());
+        BizCheckupRecord r = bizCheckupRecordMapper.selectById(res.getRecordId());
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
         }
@@ -239,13 +238,13 @@ public class CheckupServiceImpl implements CheckupService {
         res.setAbnormalFlag(dto.getAbnormalFlag() == null ? 0 : dto.getAbnormalFlag());
         res.setSummaryText(dto.getSummaryText());
         res.setCheckerName(dto.getCheckerName());
-        res.setResultTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        res.setResultTime(TimeUtil.nowSeconds());
         res.setUpdateBy(UserUtils.getCurrentUser().getUsername());
-        resultMapper.updateById(res);
+        bizCheckupResultMapper.updateById(res);
         if (r.getRecordStatus() == CheckupStatusEnum.REGISTERED.getCode()) {
             r.setRecordStatus(CheckupStatusEnum.IN_PROGRESS.getCode());
             r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
-            recordMapper.updateById(r);
+            bizCheckupRecordMapper.updateById(r);
         }
         return toResultVo(res);
     }
@@ -255,7 +254,7 @@ public class CheckupServiceImpl implements CheckupService {
      */
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.RecordVO conclude(CheckupDTO.Conclusion dto) {
-        BizCheckupRecord r = recordMapper.selectById(dto.getRecordId());
+        BizCheckupRecord r = bizCheckupRecordMapper.selectById(dto.getRecordId());
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
         }
@@ -268,9 +267,9 @@ public class CheckupServiceImpl implements CheckupService {
         r.setConclusion(dto.getConclusion().trim());
         r.setDoctorName(dto.getDoctorName());
         r.setRecordStatus(CheckupStatusEnum.REPORTED.getCode());
-        r.setReportTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        r.setReportTime(TimeUtil.nowSeconds());
         r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
-        recordMapper.updateById(r);
+        bizCheckupRecordMapper.updateById(r);
         return toRecordVo(r, true);
     }
 
@@ -279,7 +278,7 @@ public class CheckupServiceImpl implements CheckupService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void startCheckup(Long recordId) {
-        BizCheckupRecord r = recordMapper.selectById(recordId);
+        BizCheckupRecord r = bizCheckupRecordMapper.selectById(recordId);
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
         }
@@ -288,7 +287,7 @@ public class CheckupServiceImpl implements CheckupService {
         }
         r.setRecordStatus(CheckupStatusEnum.IN_PROGRESS.getCode());
         r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
-        recordMapper.updateById(r);
+        bizCheckupRecordMapper.updateById(r);
     }
 
     // 转换
@@ -298,7 +297,7 @@ public class CheckupServiceImpl implements CheckupService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void deleteRecord(Long recordId) {
-        BizCheckupRecord r = recordMapper.selectById(recordId);
+        BizCheckupRecord r = bizCheckupRecordMapper.selectById(recordId);
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
         }
@@ -307,7 +306,7 @@ public class CheckupServiceImpl implements CheckupService {
         }
         r.setDelFlag(1);
         r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
-        recordMapper.updateById(r);
+        bizCheckupRecordMapper.updateById(r);
     }
 
     private CheckupVO.PackageVO toPackageVo(SysCheckupPackage p) {
@@ -320,7 +319,7 @@ public class CheckupServiceImpl implements CheckupService {
         vo.setDescription(p.getDescription());
         vo.setStatus(p.getStatus());
         vo.setRemark(p.getRemark());
-        vo.setItems(packageItemMapper.selectList(new LambdaQueryWrapper<SysCheckupPackageItem>()
+        vo.setItems(sysCheckupPackageItemMapper.selectList(new LambdaQueryWrapper<SysCheckupPackageItem>()
                         .eq(SysCheckupPackageItem::getPackageId, p.getId())
                         .eq(SysCheckupPackageItem::getDelFlag, 0)
                         .orderByAsc(SysCheckupPackageItem::getSortOrder)
@@ -357,7 +356,7 @@ public class CheckupServiceImpl implements CheckupService {
         vo.setReportTime(r.getReportTime());
         vo.setRemark(r.getRemark());
         if (withResults) {
-            vo.setResults(resultMapper.selectList(new LambdaQueryWrapper<BizCheckupResult>()
+            vo.setResults(bizCheckupResultMapper.selectList(new LambdaQueryWrapper<BizCheckupResult>()
                             .eq(BizCheckupResult::getRecordId, r.getId())
                             .eq(BizCheckupResult::getDelFlag, 0)
                             .orderByAsc(BizCheckupResult::getItemType)
@@ -385,12 +384,12 @@ public class CheckupServiceImpl implements CheckupService {
      * 总检前置校验复用：全部明细已录（resultValue 非空）才算 3 已完成 —— 在读接口里顺带判定并落状态
      */
     public CheckupVO.RecordVO refreshFinishStatus(Long recordId) {
-        BizCheckupRecord r = recordMapper.selectById(recordId);
+        BizCheckupRecord r = bizCheckupRecordMapper.selectById(recordId);
         if (r == null || r.getDelFlag() != null && r.getDelFlag() == 1) {
             throw new BusinessException("体检登记不存在或已删除");
         }
         if (r.getRecordStatus() == CheckupStatusEnum.IN_PROGRESS.getCode()) {
-            long pending = resultMapper.selectCount(new LambdaQueryWrapper<BizCheckupResult>()
+            long pending = bizCheckupResultMapper.selectCount(new LambdaQueryWrapper<BizCheckupResult>()
                     .eq(BizCheckupResult::getRecordId, r.getId())
                     .eq(BizCheckupResult::getDelFlag, 0)
                     .and(w -> w.isNull(BizCheckupResult::getResultValue)
@@ -398,7 +397,7 @@ public class CheckupServiceImpl implements CheckupService {
             if (pending == 0) {
                 r.setRecordStatus(CheckupStatusEnum.FINISHED.getCode());
                 r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
-                recordMapper.updateById(r);
+                bizCheckupRecordMapper.updateById(r);
             }
         }
         return toRecordVo(r, true);

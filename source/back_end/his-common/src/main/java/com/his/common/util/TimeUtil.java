@@ -3,11 +3,14 @@ package com.his.common.util;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
 
 /**
- * 时间戳秒级归一（全库唯一收口点）。
+ * 时间工具：秒级归一 + 日边界 + 时长（全库唯一收口点）。
  *
  * <p><b>为什么需要它</b>：本库 1068 个 {@code datetime} 列精度全部为 0（{@code DATETIME_PRECISION = 0}），
  * MySQL 存进去会**四舍五入**到秒；而 Java 的 {@code LocalDateTime.now()} 带纳秒。
@@ -21,6 +24,13 @@ import java.time.temporal.ChronoUnit;
  * <p>2026-10-06 收口：原先 26 个 service 各写一份私有
  * {@code nowSeconds()} / {@code toSeconds()} / {@code seconds()}，共 283 处调用，
  * 同一语义复制 26 份——这不叫收口，且各自改名导致无法统一调整。
+ *
+ * <p>2026-10-07 收口：并入「日边界」与「时长」两族，同样是各 service 自写私有副本漂移出来的结果
+ * （{@code atStart}/{@code atEnd}/{@code dayStart}/{@code dayEnd} 8 份、
+ * {@code minutesBetween}/{@code hoursBetween} 5 份，且负时长有的返回 null 有的返回负数）。
+ * <b>时长口径按调用意图分两个方法，不要凭手气挑</b>：
+ * 计费/时长统计只认「已发生」的区间用 {@link #elapsedMinutes}；
+ * 需要如实反映时间倒挂（如「已等待分钟」把未来时间显示成负数）用 {@link #minutesBetween}。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TimeUtil {
@@ -53,5 +63,55 @@ public final class TimeUtil {
      */
     public static LocalDateTime nowSeconds() {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    /**
+     * 当日 00:00:00。
+     */
+    public static LocalDateTime dayStart(LocalDate day) {
+        return day == null ? null : day.atStartOfDay();
+    }
+
+    /**
+     * 当日 23:59:59 —— 按日期过滤的右边界。
+     *
+     * <p><b>不要用 {@code day.atTime(LocalTime.MAX)}（23:59:59.999999999）</b>：本库 datetime 列精度为 0，
+     * MySQL 会把它<b>四舍五入进下一天</b>，于是 "≤ 当天" 实际捞到了次日 00:00:00 的行（见 AGENTS.md §3）。
+     */
+    public static LocalDateTime dayEnd(LocalDate day) {
+        return day == null ? null : day.atTime(LocalTime.MAX).truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    /**
+     * 区间分钟数：如实反映时间倒挂（结束早于开始返回负数），端点缺失返回 null。
+     *
+     * <p>用于「已等待分钟」这类要暴露异常的场景；计费/合规统计请用 {@link #elapsedMinutes}。
+     */
+    public static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
+        if (from == null || to == null) {
+            return null;
+        }
+        return Duration.between(toSeconds(from), toSeconds(to)).toMinutes();
+    }
+
+    /**
+     * 已耗时分钟数：只认「已经发生」的区间，端点缺失或时间倒挂都算无值。
+     *
+     * <p>计费与合规统计用这个 —— 把「结束时间早于开始时间」的脏数据折算成负时长，
+     * 等于把一条录入错误静默变成一笔负账单。
+     */
+    public static Long elapsedMinutes(LocalDateTime from, LocalDateTime to) {
+        Long minutes = minutesBetween(from, to);
+        return minutes == null || minutes < 0 ? null : minutes;
+    }
+
+    /**
+     * 已耗时整小时数（向下取整）：端点缺失或倒挂都算 0。
+     */
+    public static long elapsedHours(LocalDateTime from, LocalDateTime to) {
+        if (from == null || to == null) {
+            return 0L;
+        }
+        return Math.max(0L, Duration.between(toSeconds(from), toSeconds(to)).toHours());
     }
 }

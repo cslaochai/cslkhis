@@ -27,41 +27,41 @@ import java.util.List;
 @RequiredArgsConstructor
 public class YbInspectionController {
 
-    private final YbInspectionService inspectionService;
+    private final YbInspectionService ybInspectionService;
 
     @PreAuthorize("hasAuthority('finance:insuranceDeduct:list')")
     @Operation(summary = "批次分页（附名下扣款单数与金额）")
     @GetMapping("/listPage")
     public Result<PageResult<YbInspectionListVO>> listPage(@Valid YbInspectionQueryPageDTO queryDTO) {
-        return Result.success(inspectionService.listPage(queryDTO));
+        return Result.success(ybInspectionService.listPage(queryDTO));
     }
 
     @PreAuthorize("hasAuthority('finance:insuranceDeduct:list')")
     @Operation(summary = "批次详情")
     @GetMapping("/getById")
     public Result<YbInspectionListVO> getById(@RequestParam Long id) {
-        return Result.success(inspectionService.getById(id));
+        return Result.success(ybInspectionService.getById(id));
     }
 
     @PreAuthorize("hasAuthority('finance:insuranceDeduct:list')")
     @Operation(summary = "进行中批次下拉（新建扣款通知时挂批次）")
     @GetMapping("/selectList")
     public Result<List<YbInspectionListVO>> selectList() {
-        return Result.success(inspectionService.selectRunningList());
+        return Result.success(ybInspectionService.selectRunningList());
     }
 
     @PreAuthorize("hasAuthority('finance:insuranceDeduct:add')")
     @Operation(summary = "批次新增/修改（仅进行中可改）")
     @PostMapping("/upsert")
     public Result<YbInspectionListVO> upsert(@Valid @RequestBody YbInspectionUpsertDTO dto) {
-        return Result.success(inspectionService.upsert(dto));
+        return Result.success(ybInspectionService.upsert(dto));
     }
 
     @PreAuthorize("hasAuthority('finance:insuranceDeduct:edit')")
     @Operation(summary = "批次结项（结论必填）")
     @PostMapping("/conclude")
     public Result<Void> conclude(@Valid @RequestBody YbInspectConcludeDTO dto) {
-        inspectionService.conclude(dto);
+        ybInspectionService.conclude(dto);
         return Result.success(null);
     }
 
@@ -69,7 +69,7 @@ public class YbInspectionController {
     @Operation(summary = "批次作废（名下有扣款通知时禁止）")
     @PostMapping("/cancel")
     public Result<Void> cancel(@Valid @RequestBody YbCancelDTO dto) {
-        inspectionService.cancel(dto);
+        ybInspectionService.cancel(dto);
         return Result.success(null);
     }
 }

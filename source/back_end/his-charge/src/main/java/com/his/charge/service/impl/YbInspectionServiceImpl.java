@@ -3,6 +3,7 @@ package com.his.charge.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.YbCancelDTO;
 import com.his.charge.dto.YbInspectConcludeDTO;
 import com.his.charge.dto.YbInspectionQueryPageDTO;
@@ -17,6 +18,7 @@ import com.his.charge.vo.YbInspectionListVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -38,7 +40,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class YbInspectionServiceImpl implements YbInspectionService {
+public class YbInspectionServiceImpl extends ServiceImpl<BizYbInspectionMapper, BizYbInspection> implements YbInspectionService {
 
     /**
      * 状态：1-进行中 2-已结项 3-已作废
@@ -47,9 +49,9 @@ public class YbInspectionServiceImpl implements YbInspectionService {
     private static final int STATUS_CONCLUDED = 2;
     private static final int STATUS_CANCELLED = 3;
 
-    private final BizYbInspectionMapper inspectionMapper;
-    private final BizYbDeductNoticeMapper deductNoticeMapper;
-    private final RedisSequenceService sequenceService;
+    private final BizYbInspectionMapper bizYbInspectionMapper;
+    private final BizYbDeductNoticeMapper bizYbDeductNoticeMapper;
+    private final RedisSequenceService redisSequenceService;
 
     @Override
     public PageResult<YbInspectionListVO> listPage(YbInspectionQueryPageDTO queryDTO) {
@@ -63,7 +65,7 @@ public class YbInspectionServiceImpl implements YbInspectionService {
                         .or().like(BizYbInspection::getOurReceiver, queryDTO.getKeyword()))
                 .orderByAsc(BizYbInspection::getStatus)
                 .orderByDesc(BizYbInspection::getInspectDate);
-        IPage<BizYbInspection> page = inspectionMapper.selectPage(
+        IPage<BizYbInspection> page = bizYbInspectionMapper.selectPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         List<YbInspectionListVO> voList = page.getRecords().stream().map(this::toVO).toList();
         fillDeductCount(voList);
@@ -80,7 +82,7 @@ public class YbInspectionServiceImpl implements YbInspectionService {
 
     @Override
     public List<YbInspectionListVO> selectRunningList() {
-        return inspectionMapper.selectList(new LambdaQueryWrapper<BizYbInspection>()
+        return bizYbInspectionMapper.selectList(new LambdaQueryWrapper<BizYbInspection>()
                         .eq(BizYbInspection::getStatus, STATUS_RUNNING)
                         .orderByDesc(BizYbInspection::getInspectDate))
                 .stream().map(this::toVO).toList();
@@ -96,7 +98,7 @@ public class YbInspectionServiceImpl implements YbInspectionService {
         boolean creating = dto.getId() == null;
         if (creating) {
             entity = new BizYbInspection();
-            entity.setInspectNo(sequenceService.generateYbInspectNo());
+            entity.setInspectNo(redisSequenceService.generateYbInspectNo());
             entity.setStatus(STATUS_RUNNING);
         } else {
             entity = require(dto.getId());
@@ -106,18 +108,18 @@ public class YbInspectionServiceImpl implements YbInspectionService {
             }
         }
         entity.setInspectType(dto.getInspectType());
-        entity.setFundOrg(cut(dto.getFundOrg(), 100));
+        entity.setFundOrg(TextUtil.cut(dto.getFundOrg(), 100));
         entity.setInspectStartDate(dto.getInspectStartDate());
         entity.setInspectEndDate(dto.getInspectEndDate());
         entity.setInspectDate(dto.getInspectDate());
-        entity.setInspectTeam(cut(dto.getInspectTeam(), 200));
-        entity.setOurReceiver(cut(dto.getOurReceiver(), 64));
-        entity.setRemark(cut(dto.getRemark(), 500));
+        entity.setInspectTeam(TextUtil.cut(dto.getInspectTeam(), 200));
+        entity.setOurReceiver(TextUtil.cut(dto.getOurReceiver(), 64));
+        entity.setRemark(TextUtil.cut(dto.getRemark(), 500));
         entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (creating) {
-            inspectionMapper.insert(entity);
+            bizYbInspectionMapper.insert(entity);
         } else {
-            inspectionMapper.updateById(entity);
+            bizYbInspectionMapper.updateById(entity);
         }
         return toVO(entity);
     }
@@ -130,11 +132,11 @@ public class YbInspectionServiceImpl implements YbInspectionService {
             throw new BusinessException("仅「进行中」的批次可结项");
         }
         entity.setStatus(STATUS_CONCLUDED);
-        entity.setConclusion(cut(dto.getConclusion(), 1000));
+        entity.setConclusion(TextUtil.cut(dto.getConclusion(), 1000));
         entity.setConcludeTime(LocalDateTime.now());
         entity.setConcludeBy(UserUtils.getCurrentUser().getRealName());
         entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        inspectionMapper.updateById(entity);
+        bizYbInspectionMapper.updateById(entity);
     }
 
     @Override
@@ -144,21 +146,21 @@ public class YbInspectionServiceImpl implements YbInspectionService {
         if (!Integer.valueOf(STATUS_RUNNING).equals(entity.getStatus())) {
             throw new BusinessException("仅「进行中」的批次可作废");
         }
-        Long related = deductNoticeMapper.selectCount(new LambdaQueryWrapper<BizYbDeductNotice>()
+        Long related = bizYbDeductNoticeMapper.selectCount(new LambdaQueryWrapper<BizYbDeductNotice>()
                 .eq(BizYbDeductNotice::getInspectionId, entity.getId()));
         if (related != null && related > 0) {
             throw new BusinessException("该批次名下已有 " + related + " 张扣款通知，问题已入账不能作废，请先处理扣款单");
         }
         entity.setStatus(STATUS_CANCELLED);
-        entity.setCancelReason(cut(dto.getReason(), 500));
+        entity.setCancelReason(TextUtil.cut(dto.getReason(), 500));
         entity.setCancelBy(UserUtils.getCurrentUser().getRealName());
         entity.setCancelTime(LocalDateTime.now());
         entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        inspectionMapper.updateById(entity);
+        bizYbInspectionMapper.updateById(entity);
     }
 
     private BizYbInspection require(Long id) {
-        BizYbInspection entity = id == null ? null : inspectionMapper.selectById(id);
+        BizYbInspection entity = id == null ? null : bizYbInspectionMapper.selectById(id);
         if (entity == null) {
             throw new BusinessException("飞检批次不存在或已删除");
         }
@@ -173,7 +175,7 @@ public class YbInspectionServiceImpl implements YbInspectionService {
             return;
         }
         List<Long> ids = voList.stream().map(YbInspectionListVO::getId).toList();
-        Map<Long, YbInspectionDeductCountVO> counted = deductNoticeMapper.countByInspectionIds(ids).stream()
+        Map<Long, YbInspectionDeductCountVO> counted = bizYbDeductNoticeMapper.countByInspectionIds(ids).stream()
                 .collect(Collectors.toMap(YbInspectionDeductCountVO::getInspectionId, Function.identity(), (a, b) -> a));
         for (YbInspectionListVO vo : voList) {
             YbInspectionDeductCountVO hit = counted.get(vo.getId());
@@ -193,14 +195,4 @@ public class YbInspectionServiceImpl implements YbInspectionService {
         return text != null && !text.isBlank();
     }
 
-    /**
-     * 写库文本先截列宽：超长会把「保存失败」升级成 500，用户连原因都看不到
-     */
-    private String cut(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        String trimmed = text.trim();
-        return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
-    }
 }

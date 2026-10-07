@@ -1,15 +1,19 @@
 package com.his.pharmacy.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.charge.dto.FeeBookDTO;
+import com.his.charge.entity.BizFeeRecord;
+import com.his.charge.support.FeeCatalogResolver;
 import com.his.common.base.PageResult;
 import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.support.FeeCatalogResolver;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.ConsumableTraceQueryPageDTO;
 import com.his.pharmacy.dto.HighValueUseDTO;
 import com.his.pharmacy.entity.BizConsumableStock;
@@ -46,7 +50,7 @@ import java.util.concurrent.ThreadLocalRandom;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class HighValueTraceServiceImpl implements HighValueTraceService {
+public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMapper, BizConsumableTrace> implements HighValueTraceService {
 
     private static final BigDecimal ONE = BigDecimal.ONE;
     /**
@@ -55,22 +59,11 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
     private static final int FAIL_REASON_MAX = 500;
     private static final int VOID_REASON_MAX = 200;
 
-    private final BizConsumableTraceMapper traceMapper;
-    private final SysConsumableMapper consumableMapper;
-    private final BizConsumableStockMapper stockMapper;
-    private final BizConsumableStockLogMapper stockLogMapper;
+    private final BizConsumableTraceMapper bizConsumableTraceMapper;
+    private final SysConsumableMapper sysConsumableMapper;
+    private final BizConsumableStockMapper bizConsumableStockMapper;
+    private final BizConsumableStockLogMapper bizConsumableStockLogMapper;
     private final TraceChargeInvoker chargeInvoker;
-
-    private static BigDecimal nz(BigDecimal v) {
-        return v == null ? BigDecimal.ZERO : v;
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        return v.length() <= max ? v : v.substring(0, max);
-    }
 
     private static String blankToNull(String v) {
         return StringUtils.hasText(v) ? v.trim() : null;
@@ -90,7 +83,7 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
             vo.setTip("未能从码串解析出 UDI-DI（GS1 (01) 段），请人工选择耗材后继续登记");
             return vo;
         }
-        SysConsumable dict = traceMapper.selectByUdiDi(parts.getDi());
+        SysConsumable dict = bizConsumableTraceMapper.selectByUdiDi(parts.getDi());
         if (dict == null) {
             vo.setTip("UDI-DI " + parts.getDi() + " 未命中耗材字典，请先到字典录入该 DI，或人工选择耗材");
             return vo;
@@ -114,7 +107,7 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         if (StringUtils.hasText(vo.getTip())) {
             return vo;
         }
-        vo.setBatches(stockMapper.selectInStockBatches(dict.getId()).stream().map(b -> {
+        vo.setBatches(bizConsumableStockMapper.selectInStockBatches(dict.getId()).stream().map(b -> {
             UdiScanVO.BatchOption opt = new UdiScanVO.BatchOption();
             opt.setStockId(b.getId());
             opt.setBatchNo(b.getBatchNo());
@@ -131,7 +124,7 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
     @Transactional(rollbackFor = Exception.class)
     public BizConsumableTraceVO traceUse(HighValueUseDTO dto, String operatorName) {
         String udiCode = dto.getUdiCode().trim();
-        SysConsumable dict = consumableMapper.selectById(dto.getConsumableId());
+        SysConsumable dict = sysConsumableMapper.selectById(dto.getConsumableId());
         if (dict == null) {
             throw new BusinessException("耗材字典中不存在该耗材");
         }
@@ -141,10 +134,10 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         if (dict.getIsHighValue() == null || dict.getIsHighValue() != 1) {
             throw new BusinessException("仅高值耗材走扫码溯源登记，普通耗材请走科室领用");
         }
-        if (traceMapper.countActiveByUdi(udiCode) > 0) {
+        if (bizConsumableTraceMapper.countActiveByUdi(udiCode) > 0) {
             throw new BusinessException("该 UDI 已存在使用中的登记记录，同一件耗材不允许重复登记");
         }
-        BizConsumableStock stock = stockMapper.selectBatchForUpdate(dto.getStockId());
+        BizConsumableStock stock = bizConsumableStockMapper.selectBatchForUpdate(dto.getStockId());
         if (stock == null) {
             throw new BusinessException("出库批次不存在");
         }
@@ -160,7 +153,7 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         String patientNo = dto.getPatientNo();
         String patientName = dto.getPatientName();
         if (!StringUtils.hasText(patientNo) || !StringUtils.hasText(patientName)) {
-            PatientBriefVO snap = traceMapper.selectPatientSnapshot(dto.getPatientId());
+            PatientBriefVO snap = bizConsumableTraceMapper.selectPatientSnapshot(dto.getPatientId());
             if (snap == null) {
                 throw new BusinessException("患者不存在，请重新选择");
             }
@@ -182,7 +175,7 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         trace.setSpecification(dict.getSpecification());
         trace.setUnit(dict.getUnit());
         trace.setRegCertNo(dict.getRegCertNo());
-        trace.setRetailPrice(nz(dict.getRetailPrice()));
+        trace.setRetailPrice(NumUtil.orZero(dict.getRetailPrice()));
         trace.setStockId(stock.getId());
         trace.setBatchNo(stock.getBatchNo());
         trace.setSupplier(stock.getSupplier());
@@ -194,26 +187,26 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         trace.setAdmissionId(dto.getAdmissionId());
         trace.setDeptId(dto.getDeptId());
         if (dto.getDeptId() != null) {
-            trace.setDeptName(stockMapper.selectDeptNameById(dto.getDeptId()));
+            trace.setDeptName(bizConsumableStockMapper.selectDeptNameById(dto.getDeptId()));
         }
-        trace.setUsageTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        trace.setUsageTime(TimeUtil.nowSeconds());
         trace.setOperatorName(operatorName);
         trace.setChargeStatus(0);
         trace.setStatus(1);
         trace.setRemark(dto.getPurpose());
-        traceMapper.insert(trace);
+        bizConsumableTraceMapper.insert(trace);
 
         deductBatch(stock, trace, operatorName);
         tryCharge(trace);
-        traceMapper.updateById(trace);
-        return toVo(traceMapper.selectById(trace.getId()));
+        bizConsumableTraceMapper.updateById(trace);
+        return toVo(bizConsumableTraceMapper.selectById(trace.getId()));
     }
 
     // 私有
 
     @Override
     public PageResult<BizConsumableTraceVO> selectTracePage(ConsumableTraceQueryPageDTO q) {
-        Page<BizConsumableTraceVO> page = traceMapper.selectTracePage(
+        Page<BizConsumableTraceVO> page = bizConsumableTraceMapper.selectTracePage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 blankToNull(q.getKeyword()), q.getConsumableId(), q.getPatientId(),
                 q.getChargeStatus(), q.getStatus());
@@ -222,7 +215,7 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
 
     @Override
     public ConsumableTraceDetailVO getTraceDetailById(Long traceId) {
-        ConsumableTraceDetailVO vo = traceMapper.selectTraceDetail(traceId);
+        ConsumableTraceDetailVO vo = bizConsumableTraceMapper.selectTraceDetail(traceId);
         if (vo == null) {
             throw new BusinessException("溯源记录不存在");
         }
@@ -232,7 +225,7 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizConsumableTraceVO traceVoid(Long traceId, String reason, String operatorName) {
-        BizConsumableTrace trace = traceMapper.selectById(traceId);
+        BizConsumableTrace trace = bizConsumableTraceMapper.selectById(traceId);
         if (trace == null) {
             throw new BusinessException("溯源记录不存在");
         }
@@ -242,17 +235,17 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         if (trace.getChargeStatus() != null && trace.getChargeStatus() == 1) {
             throw new BusinessException("该件耗材已计费，请先在收费侧完成退费再作废");
         }
-        BizConsumableStock stock = stockMapper.selectBatchForUpdate(trace.getStockId());
+        BizConsumableStock stock = bizConsumableStockMapper.selectBatchForUpdate(trace.getStockId());
         if (stock == null) {
             throw new BusinessException("原出库批次已不存在，无法退库；请核实实物后手工调整库存");
         }
         BigDecimal before = stock.getQuantity();
         stock.setQuantity(before.add(ONE));
-        stock.setTotalAmount(stock.getQuantity().multiply(nz(stock.getCostPrice())));
+        stock.setTotalAmount(stock.getQuantity().multiply(NumUtil.orZero(stock.getCostPrice())));
         if (stock.getStockStatus() != null && stock.getStockStatus() == 3) {
             stock.setStockStatus(stock.getQuantity().compareTo(new BigDecimal("50")) <= 0 ? 2 : 1);
         }
-        stockMapper.updateById(stock);
+        bizConsumableStockMapper.updateById(stock);
 
         BizConsumableStockLog back = new BizConsumableStockLog();
         back.setStockId(stock.getId());
@@ -267,19 +260,19 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         back.setSourceNo(trace.getTraceNo());
         back.setOperatorName(operatorName);
         back.setRemark("高值耗材作废退库");
-        stockLogMapper.insert(back);
+        bizConsumableStockLogMapper.insert(back);
 
         trace.setStatus(2);
-        trace.setVoidTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
-        trace.setVoidReason(cut(reason, VOID_REASON_MAX));
-        traceMapper.updateById(trace);
-        return toVo(traceMapper.selectById(traceId));
+        trace.setVoidTime(TimeUtil.nowSeconds());
+        trace.setVoidReason(TextUtil.cut(reason, VOID_REASON_MAX));
+        bizConsumableTraceMapper.updateById(trace);
+        return toVo(bizConsumableTraceMapper.selectById(traceId));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizConsumableTraceVO traceRecharge(Long traceId, String operatorName) {
-        BizConsumableTrace trace = traceMapper.selectById(traceId);
+        BizConsumableTrace trace = bizConsumableTraceMapper.selectById(traceId);
         if (trace == null) {
             throw new BusinessException("溯源记录不存在");
         }
@@ -293,20 +286,20 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
             throw new BusinessException("登记时单价快照为 0，请先核对耗材字典零售价后重新登记");
         }
         tryCharge(trace);
-        traceMapper.updateById(trace);
-        return toVo(traceMapper.selectById(traceId));
+        bizConsumableTraceMapper.updateById(trace);
+        return toVo(bizConsumableTraceMapper.selectById(traceId));
     }
 
     private void deductBatch(BizConsumableStock stock, BizConsumableTrace trace, String operatorName) {
         BigDecimal before = stock.getQuantity();
         stock.setQuantity(before.subtract(ONE));
-        stock.setTotalAmount(stock.getQuantity().multiply(nz(stock.getCostPrice())));
+        stock.setTotalAmount(stock.getQuantity().multiply(NumUtil.orZero(stock.getCostPrice())));
         if (stock.getQuantity().compareTo(BigDecimal.ZERO) <= 0) {
             stock.setStockStatus(3);
         } else if (stock.getQuantity().compareTo(new BigDecimal("50")) <= 0) {
             stock.setStockStatus(2);
         }
-        stockMapper.updateById(stock);
+        bizConsumableStockMapper.updateById(stock);
 
         BizConsumableStockLog out = new BizConsumableStockLog();
         out.setStockId(stock.getId());
@@ -321,7 +314,7 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         out.setSourceNo(trace.getTraceNo());
         out.setOperatorName(operatorName);
         out.setRemark("高值耗材使用出库（" + trace.getPatientName() + "）");
-        stockLogMapper.insert(out);
+        bizConsumableStockLogMapper.insert(out);
     }
 
     /**
@@ -334,12 +327,12 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
                 && ((visitType == 1 && trace.getRegistId() != null) || (visitType == 2 && trace.getAdmissionId() != null));
         if (!anchored) {
             trace.setChargeStatus(0);
-            trace.setChargeFailReason(cut("未关联就诊（缺门诊挂号或住院锚点），请在收费窗口手工计费", FAIL_REASON_MAX));
+            trace.setChargeFailReason(TextUtil.cut("未关联就诊（缺门诊挂号或住院锚点），请在收费窗口手工计费", FAIL_REASON_MAX));
             return;
         }
         if (trace.getPatientId() == null || !StringUtils.hasText(trace.getPatientName())) {
             trace.setChargeStatus(2);
-            trace.setChargeFailReason(cut("缺少患者快照，这笔费用落不到人，本次未记账，请补全后点补记", FAIL_REASON_MAX));
+            trace.setChargeFailReason(TextUtil.cut("缺少患者快照，这笔费用落不到人，本次未记账，请补全后点补记", FAIL_REASON_MAX));
             return;
         }
         EncounterTypeEnum encounter = EncounterTypeEnum.fromCode(visitType);
@@ -360,7 +353,7 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         fee.setItemName(trace.getConsumableName());
         fee.setSpecification(trace.getSpecification());
         fee.setUnit(StringUtils.hasText(trace.getUnit()) ? trace.getUnit() : "件");
-        fee.setPrice(nz(trace.getRetailPrice()));
+        fee.setPrice(NumUtil.orZero(trace.getRetailPrice()));
         fee.setQuantity(ONE);
         fee.setSourceType(FeeSourceTypeEnum.CONSUMABLE.getCode());
         // ★ 幂等锚点 = 溯源台账行：一行台账 = 一件耗材 = 一条记账行，补记重入时记账层按它挡重
@@ -380,7 +373,7 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         } catch (Exception e) {
             log.error("高值耗材计费异常 traceNo={}", trace.getTraceNo(), e);
             trace.setChargeStatus(2);
-            trace.setChargeFailReason(cut("计费异常：" + e.getMessage(), FAIL_REASON_MAX));
+            trace.setChargeFailReason(TextUtil.cut("计费异常：" + e.getMessage(), FAIL_REASON_MAX));
         }
     }
 

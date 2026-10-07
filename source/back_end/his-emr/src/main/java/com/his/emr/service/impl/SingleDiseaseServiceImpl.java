@@ -1,11 +1,13 @@
 package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TimeUtil;
 import com.his.emr.dto.SingleDiseaseDTO;
 import com.his.emr.entity.BizSingleDiseaseCase;
 import com.his.emr.entity.SysSingleDisease;
@@ -28,7 +30,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 单病种质控服务（M4）。
@@ -39,14 +40,14 @@ import java.util.Map;
  */
 @Service
 @RequiredArgsConstructor
-public class SingleDiseaseServiceImpl implements SingleDiseaseService {
-    private final SysSingleDiseaseMapper diseaseMapper;
-    private final BizSingleDiseaseCaseMapper caseMapper;
+public class SingleDiseaseServiceImpl extends ServiceImpl<BizSingleDiseaseCaseMapper, BizSingleDiseaseCase> implements SingleDiseaseService {
+    private final SysSingleDiseaseMapper sysSingleDiseaseMapper;
+    private final BizSingleDiseaseCaseMapper bizSingleDiseaseCaseMapper;
     private final RedisSequenceService redisSequenceService;
     private DictCacheService dictCacheService;
 
     public List<SingleDiseaseVO.Disease> diseaseList() {
-        List<SysSingleDisease> diseases = diseaseMapper.selectList(
+        List<SysSingleDisease> diseases = sysSingleDiseaseMapper.selectList(
                 new LambdaQueryWrapper<SysSingleDisease>().orderByAsc(SysSingleDisease::getDiseaseCode));
         return diseases.stream().map(d -> {
             SingleDiseaseVO.Disease vo = new SingleDiseaseVO.Disease();
@@ -55,7 +56,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
             vo.setDiseaseName(d.getDiseaseName());
             vo.setIcd10Prefix(d.getIcd10Prefix());
             vo.setRemark(d.getRemark());
-            vo.setCaseCount(caseMapper.selectCount(new LambdaQueryWrapper<BizSingleDiseaseCase>()
+            vo.setCaseCount(bizSingleDiseaseCaseMapper.selectCount(new LambdaQueryWrapper<BizSingleDiseaseCase>()
                     .eq(BizSingleDiseaseCase::getDiseaseId, d.getId())));
             return vo;
         }).toList();
@@ -73,15 +74,15 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         entity.setRemark(dto.getRemark());
         entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (dto.getId() != null) {
-            SysSingleDisease exist = diseaseMapper.selectById(dto.getId());
+            SysSingleDisease exist = sysSingleDiseaseMapper.selectById(dto.getId());
             if (exist == null) {
                 throw new BusinessException("病种不存在");
             }
             entity.setId(dto.getId());
-            diseaseMapper.updateById(entity);
+            sysSingleDiseaseMapper.updateById(entity);
         } else {
             entity.setCreateBy(UserUtils.getCurrentUser().getRealName());
-            diseaseMapper.insert(entity);
+            sysSingleDiseaseMapper.insert(entity);
         }
         SingleDiseaseVO.Disease vo = new SingleDiseaseVO.Disease();
         vo.setId(entity.getId());
@@ -97,12 +98,12 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void diseaseDelete(Long id) {
-        Long cases = caseMapper.selectCount(new LambdaQueryWrapper<BizSingleDiseaseCase>()
+        Long cases = bizSingleDiseaseCaseMapper.selectCount(new LambdaQueryWrapper<BizSingleDiseaseCase>()
                 .eq(BizSingleDiseaseCase::getDiseaseId, id));
         if (cases > 0) {
             throw new BusinessException("该病种已纳入 " + cases + " 例病例，不能删除（可停用维护）");
         }
-        diseaseMapper.purgeById(id);
+        sysSingleDiseaseMapper.purgeById(id);
     }
 
     /**
@@ -133,7 +134,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
      */
     @Transactional(rollbackFor = Exception.class)
     public SingleDiseaseVO.Case enroll(SingleDiseaseDTO.Enroll dto) {
-        SysSingleDisease disease = diseaseMapper.selectById(dto.getDiseaseId());
+        SysSingleDisease disease = sysSingleDiseaseMapper.selectById(dto.getDiseaseId());
         if (disease == null) {
             throw new BusinessException("病种不存在");
         }
@@ -145,11 +146,11 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
      */
     @Transactional(rollbackFor = Exception.class)
     public SingleDiseaseAutoEnrollStatVO autoEnroll(SingleDiseaseDTO.AutoEnroll dto) {
-        SysSingleDisease disease = diseaseMapper.selectById(dto.getDiseaseId());
+        SysSingleDisease disease = sysSingleDiseaseMapper.selectById(dto.getDiseaseId());
         if (disease == null) {
             throw new BusinessException("病种不存在");
         }
-        List<SingleDiseaseCandidateVO> candidates = caseMapper.selectAutoEnrollCandidates(
+        List<SingleDiseaseCandidateVO> candidates = bizSingleDiseaseCaseMapper.selectAutoEnrollCandidates(
                 disease.getId(),
                 java.util.Arrays.stream(disease.getIcd10Prefix().split(",")).map(String::trim).toList(),
                 dto.getBeginDate(), dto.getEndDate());
@@ -175,7 +176,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
      * 纳入主体：取首页快照、唯一校验、建底账行。
      */
     private SingleDiseaseVO.Case doEnroll(SysSingleDisease disease, Long admissionId, int enrollWay) {
-        InpatientSummarySnapshotVO snap = caseMapper.selectSummarySnapshot(admissionId);
+        InpatientSummarySnapshotVO snap = bizSingleDiseaseCaseMapper.selectSummarySnapshot(admissionId);
         if (snap == null) {
             throw new BusinessException("该住院记录无病案首页（或住院记录不存在），不能纳入");
         }
@@ -184,7 +185,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
             throw new BusinessException("首页主要诊断 " + diagCode + " 不在病种纳入范围（"
                     + disease.getIcd10Prefix() + "），不能纳入");
         }
-        Long dup = caseMapper.selectCount(new LambdaQueryWrapper<BizSingleDiseaseCase>()
+        Long dup = bizSingleDiseaseCaseMapper.selectCount(new LambdaQueryWrapper<BizSingleDiseaseCase>()
                 .eq(BizSingleDiseaseCase::getDiseaseId, disease.getId())
                 .eq(BizSingleDiseaseCase::getAdmissionId, admissionId));
         if (dup > 0) {
@@ -206,7 +207,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         c.setQcStatus(SingleDiseaseQcStatusEnum.PENDING.getCode());
         c.setReportStatus(YesOrNoEnum.NO.getCode());
         c.setCreateBy(UserUtils.getCurrentUser().getRealName());
-        caseMapper.insert(c);
+        bizSingleDiseaseCaseMapper.insert(c);
         return toCaseVO(c, disease.getDiseaseName());
     }
 
@@ -235,7 +236,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
      */
     @Transactional(rollbackFor = Exception.class)
     public SingleDiseaseVO.Case qc(SingleDiseaseDTO.Qc dto) {
-        BizSingleDiseaseCase c = caseMapper.selectById(dto.getId());
+        BizSingleDiseaseCase c = bizSingleDiseaseCaseMapper.selectById(dto.getId());
         if (c == null) {
             throw new BusinessException("病例不存在");
         }
@@ -265,7 +266,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         }
         c.setRemark(dto.getRemark());
         c.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        caseMapper.updateById(c);
+        bizSingleDiseaseCaseMapper.updateById(c);
         return toCaseVO(c, diseaseName(c.getDiseaseId()));
     }
 
@@ -274,7 +275,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
      */
     @Transactional(rollbackFor = Exception.class)
     public SingleDiseaseVO.Case report(Long id) {
-        BizSingleDiseaseCase c = caseMapper.selectById(id);
+        BizSingleDiseaseCase c = bizSingleDiseaseCaseMapper.selectById(id);
         if (c == null) {
             throw new BusinessException("病例不存在");
         }
@@ -285,9 +286,9 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
             throw new BusinessException("病例已上报，不要重复上报");
         }
         c.setReportStatus(YesOrNoEnum.YES.getCode());
-        c.setReportTime(java.time.LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        c.setReportTime(TimeUtil.nowSeconds());
         c.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        caseMapper.updateById(c);
+        bizSingleDiseaseCaseMapper.updateById(c);
         return toCaseVO(c, diseaseName(c.getDiseaseId()));
     }
 
@@ -302,7 +303,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
                         .like(BizSingleDiseaseCase::getPatientName, query.getKeyword())
                         .or().like(BizSingleDiseaseCase::getCaseNo, query.getKeyword()))
                 .orderByDesc(BizSingleDiseaseCase::getId);
-        var page = caseMapper.selectPage(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(
+        var page = bizSingleDiseaseCaseMapper.selectPage(new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(
                 query.getPageNum(), query.getPageSize()), wrapper);
         List<SingleDiseaseVO.Case> vos = page.getRecords().stream()
                 .map(c -> toCaseVO(c, diseaseName(c.getDiseaseId()))).toList();
@@ -316,7 +317,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         List<SingleDiseaseVO.Disease> diseases = diseaseList();
         List<SingleDiseaseVO.Metric> list = new ArrayList<>();
         for (SingleDiseaseVO.Disease d : diseases) {
-            List<BizSingleDiseaseCase> cases = caseMapper.selectList(
+            List<BizSingleDiseaseCase> cases = bizSingleDiseaseCaseMapper.selectList(
                     new LambdaQueryWrapper<BizSingleDiseaseCase>()
                             .eq(BizSingleDiseaseCase::getDiseaseId, d.getId()));
             SingleDiseaseVO.Metric m = new SingleDiseaseVO.Metric();
@@ -350,7 +351,7 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
     // 工具
 
     private String diseaseName(Long diseaseId) {
-        SysSingleDisease d = diseaseMapper.selectById(diseaseId);
+        SysSingleDisease d = sysSingleDiseaseMapper.selectById(diseaseId);
         return d == null ? null : d.getDiseaseName();
     }
 

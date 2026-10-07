@@ -32,6 +32,8 @@ import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.BizPatientService;
@@ -68,11 +70,11 @@ import java.util.Map;
 public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizAppointInfo> implements AppointService {
     private final DeptScopeProvider deptScopeProvider;
 
-    private final BizScheduleMapper scheduleMapper;
-    private final BizScheduleSlotMapper slotMapper;
-    private final BizQueueMapper queueMapper;
+    private final BizScheduleMapper bizScheduleMapper;
+    private final BizScheduleSlotMapper bizScheduleSlotMapper;
+    private final BizQueueMapper bizQueueMapper;
     private final RedisSequenceService redisSequenceService;
-    private final BizPatientMapper patientMapper;
+    private final BizPatientMapper bizPatientMapper;
     private final PatientGuardianService patientGuardianService;
     private final BizPatientService bizPatientService;
     private final ShiftService shiftService;
@@ -81,10 +83,6 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
     private final ObjectProvider<MedicalRecordRefGateway> medicalRecordRefGateway;
     private final RevisitFeePolicyService revisitFeePolicyService;
     private final DayEndSettleTrigger dayEndSettleTrigger;
-
-    private static BigDecimal nzAmount(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
 
     private static String visitDatePastReason(BizAppointInfo regist, String action) {
         LocalDate visitDate = regist.getVisitDate();
@@ -189,7 +187,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
         vo.setRefunded(countByStatus(queryDTO, AppointStatusEnum.CANCELLED.getCode()));
         vo.setOverdue(countByStatus(queryDTO, AppointStatusEnum.OVERDUE.getCode()));
         vo.setScopeLabel(buildScopeLabel(queryDTO));
-        vo.setStatsTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+        vo.setStatsTime(TimeUtil.nowSeconds());
         return vo;
     }
 
@@ -299,7 +297,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
         // 批量查询队列记录：挂号表本身没有排队号与队列状态，
         // 分诊台要显示真实排队状态就必须关联候诊队列（历史上前端拿 registStatus 顶替，状态列整体串位）
         Map<Long, BizQueue> queueMap = new HashMap<>();
-        List<BizQueue> queues = queueMapper.selectList(
+        List<BizQueue> queues = bizQueueMapper.selectList(
                 new LambdaQueryWrapper<BizQueue>().in(BizQueue::getRegistId, registIds));
         for (BizQueue queue : queues) {
             // 同一挂号可能对应多条队列记录（过号后重入队），取 id 最大的一条作为当前队列
@@ -391,7 +389,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
         // 幂等性校验：检查是否已存在相同挂号记录
         checkIdempotent(upsertDTO, revisit);
 
-        BizPatient bizPatient = patientMapper.selectById(upsertDTO.getPatientId());
+        BizPatient bizPatient = bizPatientMapper.selectById(upsertDTO.getPatientId());
         // D类（业务规则）：查库后的关联实体存在性判定，不是字段填没填
         if (bizPatient == null) {
             throw new BusinessException("患者信息为空，请检查后重试");
@@ -429,7 +427,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
             if (noSchedule) {
                 throw new BusinessException("当日回诊不占号源，请勿选择排班");
             }
-            schedule = scheduleMapper.selectById(appointInfo.getScheduleId());
+            schedule = bizScheduleMapper.selectById(appointInfo.getScheduleId());
             if (schedule == null) {
                 throw new BusinessException("排班信息不存在");
             }
@@ -459,7 +457,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
             // 时间片段：传了 slotId 必须命中该排班下的正常段
             // （段余量够不够由扣减 SQL 原子兜底，这里只挡「段不存在/不属于该排班/已停用」）
             if (upsertDTO.getSlotId() != null) {
-                slot = slotMapper.selectById(upsertDTO.getSlotId());
+                slot = bizScheduleSlotMapper.selectById(upsertDTO.getSlotId());
                 if (slot == null || !schedule.getId().equals(slot.getScheduleId())) {
                     throw new BusinessException("所选时间段不存在或已调整，请重新选择");
                 }
@@ -482,7 +480,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
         }
 
         // 查询患者信息，自动填充挂号记录
-        BizPatient patient = patientMapper.selectById(appointInfo.getPatientId());
+        BizPatient patient = bizPatientMapper.selectById(appointInfo.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
@@ -504,7 +502,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
                 needUpdate = true;
             }
             if (needUpdate) {
-                patientMapper.updateById(patient);
+                bizPatientMapper.updateById(patient);
             }
         }
 
@@ -545,22 +543,22 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
             boolean appt = registSource == 4;
             if (slot != null) {
                 int deductedSlot = appt
-                        ? slotMapper.deductSlotSourceForAppointment(slot.getId())
-                        : slotMapper.deductSlotSourceForWalkin(slot.getId());
+                        ? bizScheduleSlotMapper.deductSlotSourceForAppointment(slot.getId())
+                        : bizScheduleSlotMapper.deductSlotSourceForWalkin(slot.getId());
                 if (deductedSlot == 0) {
                     throw new BusinessException(appt ? "该时间段的预约号源已满" : "该时间段号源已满");
                 }
                 int deductedMain = appt
-                        ? scheduleMapper.deductScheduleSourceForAppointment(schedule.getId())
-                        : scheduleMapper.deductScheduleSourceForWalkin(schedule.getId());
+                        ? bizScheduleMapper.deductScheduleSourceForAppointment(schedule.getId())
+                        : bizScheduleMapper.deductScheduleSourceForWalkin(schedule.getId());
                 if (deductedMain == 0) {
                     // 段有余但主表 Σ 扣不动（数据不一致）：抛异常回滚整个事务，不做静默半扣
                     throw new BusinessException("号源状态异常（排班汇总与时间段不一致），请稍后重试");
                 }
             } else {
                 int deducted = appt
-                        ? scheduleMapper.deductScheduleSourceForAppointment(schedule.getId())
-                        : scheduleMapper.deductScheduleSourceForWalkin(schedule.getId());
+                        ? bizScheduleMapper.deductScheduleSourceForAppointment(schedule.getId())
+                        : bizScheduleMapper.deductScheduleSourceForWalkin(schedule.getId());
                 if (deducted == 0) {
                     throw new BusinessException(appt ? "预约号源已满" : "号源已满");
                 }
@@ -649,7 +647,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
             if (previewDTO.getScheduleId() == null) {
                 throw new BusinessException("请选择号源");
             }
-            schedule = scheduleMapper.selectById(previewDTO.getScheduleId());
+            schedule = bizScheduleMapper.selectById(previewDTO.getScheduleId());
             if (schedule == null) {
                 throw new BusinessException("排班信息不存在");
             }
@@ -873,10 +871,10 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
         // 更新排队状态：退号≠过号，队列同样置「已退号」
         LambdaQueryWrapper<BizQueue> queueWrapper = new LambdaQueryWrapper<>();
         queueWrapper.eq(BizQueue::getRegistId, registId);
-        BizQueue queue = queueMapper.selectOne(queueWrapper);
+        BizQueue queue = bizQueueMapper.selectOne(queueWrapper);
         if (queue != null) {
             queue.setQueueStatus(QueueStatusEnum.CANCELLED.getCode());
-            queueMapper.updateById(queue);
+            bizQueueMapper.updateById(queue);
         }
 
         // 原子释放号源（按挂号渠道还池：预约渠道退号时预约池已用同步递减；
@@ -887,17 +885,17 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
             boolean appt = registInfo.getRegistSource() != null && registInfo.getRegistSource() == 4;
             if (registInfo.getSlotId() != null) {
                 int releasedSlot = appt
-                        ? slotMapper.releaseSlotSourceForAppointment(registInfo.getSlotId())
-                        : slotMapper.releaseSlotSourceForWalkin(registInfo.getSlotId());
+                        ? bizScheduleSlotMapper.releaseSlotSourceForAppointment(registInfo.getSlotId())
+                        : bizScheduleSlotMapper.releaseSlotSourceForWalkin(registInfo.getSlotId());
                 if (releasedSlot == 0 && appt) {
-                    slotMapper.releaseSlotSourceForWalkin(registInfo.getSlotId());
+                    bizScheduleSlotMapper.releaseSlotSourceForWalkin(registInfo.getSlotId());
                 }
             }
             int released = appt
-                    ? scheduleMapper.releaseScheduleSourceForAppointment(registInfo.getScheduleId())
-                    : scheduleMapper.releaseScheduleSourceForWalkin(registInfo.getScheduleId());
+                    ? bizScheduleMapper.releaseScheduleSourceForAppointment(registInfo.getScheduleId())
+                    : bizScheduleMapper.releaseScheduleSourceForWalkin(registInfo.getScheduleId());
             if (released == 0 && appt) {
-                scheduleMapper.releaseScheduleSourceForWalkin(registInfo.getScheduleId());
+                bizScheduleMapper.releaseScheduleSourceForWalkin(registInfo.getScheduleId());
             }
         }
 
@@ -933,7 +931,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
         if (bill == null) {
             return;
         }
-        BigDecimal paid = nzAmount(bill.getPaidAmount());
+        BigDecimal paid = NumUtil.orZero(bill.getPaidAmount());
         if (paid.signum() <= 0) {
             return;
         }
@@ -1006,7 +1004,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
                 && registInfo.getSlotId() != null
                 && !registInfo.getSlotId().equals(oldSlotId);
         if (slotChanging) {
-            BizScheduleSlot newSlot = slotMapper.selectById(registInfo.getSlotId());
+            BizScheduleSlot newSlot = bizScheduleSlotMapper.selectById(registInfo.getSlotId());
             if (newSlot == null || !existing.getScheduleId().equals(newSlot.getScheduleId())) {
                 throw new BusinessException("新时间段不存在或已调整，请重新选择");
             }
@@ -1015,15 +1013,15 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
             }
             if (oldSlotId != null) {
                 int releasedSlot = apptChannel
-                        ? slotMapper.releaseSlotSourceForAppointment(oldSlotId)
-                        : slotMapper.releaseSlotSourceForWalkin(oldSlotId);
+                        ? bizScheduleSlotMapper.releaseSlotSourceForAppointment(oldSlotId)
+                        : bizScheduleSlotMapper.releaseSlotSourceForWalkin(oldSlotId);
                 if (releasedSlot == 0 && apptChannel) {
-                    slotMapper.releaseSlotSourceForWalkin(oldSlotId);
+                    bizScheduleSlotMapper.releaseSlotSourceForWalkin(oldSlotId);
                 }
             }
             int deductedSlot = apptChannel
-                    ? slotMapper.deductSlotSourceForAppointment(newSlot.getId())
-                    : slotMapper.deductSlotSourceForWalkin(newSlot.getId());
+                    ? bizScheduleSlotMapper.deductSlotSourceForAppointment(newSlot.getId())
+                    : bizScheduleSlotMapper.deductSlotSourceForWalkin(newSlot.getId());
             if (deductedSlot == 0) {
                 throw new BusinessException(apptChannel ? "新时间段的预约号已满" : "新时间段号源已满");
             }
@@ -1039,27 +1037,27 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
             if (existing.getScheduleId() != null) {
                 if (oldSlotId != null) {
                     int releasedSlot = apptChannel
-                            ? slotMapper.releaseSlotSourceForAppointment(oldSlotId)
-                            : slotMapper.releaseSlotSourceForWalkin(oldSlotId);
+                            ? bizScheduleSlotMapper.releaseSlotSourceForAppointment(oldSlotId)
+                            : bizScheduleSlotMapper.releaseSlotSourceForWalkin(oldSlotId);
                     if (releasedSlot == 0 && apptChannel) {
-                        slotMapper.releaseSlotSourceForWalkin(oldSlotId);
+                        bizScheduleSlotMapper.releaseSlotSourceForWalkin(oldSlotId);
                     }
                 }
                 int released = apptChannel
-                        ? scheduleMapper.releaseScheduleSourceForAppointment(existing.getScheduleId())
-                        : scheduleMapper.releaseScheduleSourceForWalkin(existing.getScheduleId());
+                        ? bizScheduleMapper.releaseScheduleSourceForAppointment(existing.getScheduleId())
+                        : bizScheduleMapper.releaseScheduleSourceForWalkin(existing.getScheduleId());
                 if (released == 0 && apptChannel) {
-                    scheduleMapper.releaseScheduleSourceForWalkin(existing.getScheduleId());
+                    bizScheduleMapper.releaseScheduleSourceForWalkin(existing.getScheduleId());
                 }
             }
 
-            BizSchedule newSchedule = scheduleMapper.selectById(registInfo.getScheduleId());
+            BizSchedule newSchedule = bizScheduleMapper.selectById(registInfo.getScheduleId());
             if (newSchedule == null) {
                 throw new BusinessException("新排班信息不存在");
             }
             BizScheduleSlot newSlot = null;
             if (registInfo.getSlotId() != null) {
-                newSlot = slotMapper.selectById(registInfo.getSlotId());
+                newSlot = bizScheduleSlotMapper.selectById(registInfo.getSlotId());
                 if (newSlot == null || !newSchedule.getId().equals(newSlot.getScheduleId())) {
                     throw new BusinessException("新时间段不存在或已调整，请重新选择");
                 }
@@ -1067,15 +1065,15 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
                     throw new BusinessException("新时间段已停用，请重新选择");
                 }
                 int deductedSlot = apptChannel
-                        ? slotMapper.deductSlotSourceForAppointment(newSlot.getId())
-                        : slotMapper.deductSlotSourceForWalkin(newSlot.getId());
+                        ? bizScheduleSlotMapper.deductSlotSourceForAppointment(newSlot.getId())
+                        : bizScheduleSlotMapper.deductSlotSourceForWalkin(newSlot.getId());
                 if (deductedSlot == 0) {
                     throw new BusinessException(apptChannel ? "新时间段的预约号已满" : "新时间段号源已满");
                 }
             }
             int deducted = apptChannel
-                    ? scheduleMapper.deductScheduleSourceForAppointment(newSchedule.getId())
-                    : scheduleMapper.deductScheduleSourceForWalkin(newSchedule.getId());
+                    ? bizScheduleMapper.deductScheduleSourceForAppointment(newSchedule.getId())
+                    : bizScheduleMapper.deductScheduleSourceForWalkin(newSchedule.getId());
             if (deducted == 0) {
                 throw new BusinessException(apptChannel ? "新号源的预约号已满" : "新号源已满");
             }

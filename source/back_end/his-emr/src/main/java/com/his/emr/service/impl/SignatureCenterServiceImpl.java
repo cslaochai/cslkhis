@@ -35,10 +35,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SignatureCenterServiceImpl implements SignatureCenterService {
 
-    private final EmrSignatureService signatureService;
+    private final EmrSignatureService emrSignatureService;
     private final SignCertService signCertService;
     private final SignProperties signProperties;
-    private final ExternalCaChannelService externalCaChannel;
+    private final ExternalCaChannelService externalCaChannelService;
 
     private static SignOptionVO opt(Integer code, String text) {
         return new SignOptionVO(String.valueOf(code), text);
@@ -122,13 +122,13 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
         cmd.setSignScene(dto.getSignScene() == null ? SignSceneEnum.MAKEUP.getCode() : dto.getSignScene());
         fillSigner(cmd, user);
         cmd.setRemark("补签：" + (dto.getRemark() == null ? "" : dto.getRemark()));
-        return signatureService.sign(cmd);
+        return emrSignatureService.sign(cmd);
     }
 
     @Override
     public SignatureVO invalidate(SignatureInvalidateDTO dto) {
         CurrentUser user = UserUtils.getCurrentUser();
-        return signatureService.invalidate(dto.getSignId(), dto.getReason(), employeeIdOf(user), nameOf(user));
+        return emrSignatureService.invalidate(dto.getSignId(), dto.getReason(), employeeIdOf(user), nameOf(user));
     }
 
     @Override
@@ -156,9 +156,9 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
     public SignCaStatusVO signCaStatus() {
         SignCaStatusVO status = new SignCaStatusVO();
         status.setCaMode(signProperties.getCaMode());
-        status.setProviderName(externalCaChannel.available() ? externalCaChannel.name() : null);
-        status.setAvailable(externalCaChannel.available());
-        status.setHint(externalCaChannel.available()
+        status.setProviderName(externalCaChannelService.available() ? externalCaChannelService.name() : null);
+        status.setAvailable(externalCaChannelService.available());
+        status.setHint(externalCaChannelService.available()
                 ? "外部 CA 模式：证书签发会先本地生成密钥对、向适配器提交 CSR（当前为控制台打印桩，提交后中断签发，不回退自签）"
                 : "内部自签模式（G6/G6b 形态）：证书由院内 KeyPairFactory 签发，信任根为院内，不对外声称法律效力");
         return status;
@@ -166,17 +166,17 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
 
     @Override
     public SignCaProbeOutboundVO probeCaOutbound() {
-        if (!externalCaChannel.available()) {
+        if (!externalCaChannelService.available()) {
             throw new BusinessException("当前为内部自签模式（his.sign.ca-mode=internal），没有外部 CA 外发动作可探；"
                     + "配置 external 并重启后可探测");
         }
         // 一次性密钥对：只为让探针打印的公钥指纹真实，用完即弃，不落库、不注册
         KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate();
         String subjectDn = "CN=CA外发探针（非签名人）, O=长沙市麓康医院";
-        ExternalCaChannelService.IssuedCert issued = externalCaChannel.issueCert(
+        ExternalCaChannelService.IssuedCert issued = externalCaChannelService.issueCert(
                 new ExternalCaChannelService.IssueRequest(subjectDn, pair.publicPem(), 365));
         SignCaProbeOutboundVO result = new SignCaProbeOutboundVO();
-        result.setProviderName(externalCaChannel.name());
+        result.setProviderName(externalCaChannelService.name());
         result.setCsrPrinted(true);
         result.setCertReturned(issued != null);
         result.setConclusion("CSR 已按适配器口径提交并打印到服务端控制台（[M8真CA口子] 标记段）；"

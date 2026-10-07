@@ -6,31 +6,31 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
+import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.UserTypeEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
-import com.his.system.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
 import com.his.system.dto.SysUserPasswordUpsertDTO;
 import com.his.system.dto.SysUserQueryPageDTO;
 import com.his.system.dto.SysUserUpsertDTO;
+import com.his.system.entity.CurrentUser;
+import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysRole;
 import com.his.system.entity.SysUser;
-import com.his.system.entity.SysEmployee;
+import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.mapper.SysRoleMapper;
 import com.his.system.mapper.SysUserMapper;
-import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.service.EmployeePostService;
+import com.his.system.service.FieldChangeRecorder;
 import com.his.system.service.SysUserService;
-import com.his.system.vo.SysUserListVO;
+import com.his.system.support.FieldSpec;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.EmployeePostVO;
 import com.his.system.vo.RoleNameVO;
+import com.his.system.vo.SysUserListVO;
 import com.his.system.vo.UserDetailVO;
-import com.his.common.enums.EnableStatusEnum;
-import com.his.system.service.FieldChangeRecorder;
-import com.his.system.support.FieldSpec;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -55,7 +55,9 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
     public static final String DEFAULT_PASSWORD = "123456";
 
-    /** 对象类型：系统用户 */
+    /**
+     * 对象类型：系统用户
+     */
     private static final String USER = "USER";
 
     /**
@@ -76,11 +78,21 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     );
 
     private final PasswordEncoder passwordEncoder;
-    private final SysRoleMapper roleMapper;
-    private final SysEmployeeMapper employeeMapper;
+    private final SysRoleMapper sysRoleMapper;
+    private final SysEmployeeMapper sysEmployeeMapper;
     private final RedisSequenceService redisSequenceService;
     private final EmployeePostService employeePostService;
     private final FieldChangeRecorder fieldChangeRecorder;
+
+    /**
+     * 患者(3)/其他(4) 类型账号不归用户管理维护
+     */
+    private static boolean isPatientOrOther(SysUser user) {
+        return Integer.valueOf(3).equals(user.getUserType()) || Integer.valueOf(4).equals(user.getUserType());
+    }
+
+    // 字段级留痕：账号是权限的载体 —— 把某个账号的用户类型从"普通用户"改成"管理员"、
+    // 或者把停用的人重新启用，本质就是一次授权变更，正是审计要点名的"重要安全事件"。
 
     @Override
     public PageResult<SysUserListVO> queryUserPage(SysUserQueryPageDTO queryDTO) {
@@ -94,9 +106,6 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         }).collect(Collectors.toList());
         return PageResult.of(result.getTotal(), result.getPageNum(), result.getPageSize(), result.getPages(), voList);
     }
-
-    // 字段级留痕：账号是权限的载体 —— 把某个账号的用户类型从"普通用户"改成"管理员"、
-    // 或者把停用的人重新启用，本质就是一次授权变更，正是审计要点名的"重要安全事件"。
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -180,11 +189,6 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         fieldChangeRecorder.recordAction(USER, user.getId(), user.getUserName(), user.getRealName(), "重置密码");
     }
 
-    /** 患者(3)/其他(4) 类型账号不归用户管理维护 */
-    private static boolean isPatientOrOther(SysUser user) {
-        return Integer.valueOf(3).equals(user.getUserType()) || Integer.valueOf(4).equals(user.getUserType());
-    }
-
     @Override
     public PageResult<SysUser> selectUserPage(String userName, Long deptId, Integer status, int pageNum, int pageSize) {
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
@@ -237,7 +241,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             employee.setIsExpert(upsertDTO.getIsExpert());
             employee.setExpertPrice(upsertDTO.getExpertPrice());
             employee.setStatus(YesOrNoEnum.YES.getCode());
-            employeeMapper.insert(employee);
+            sysEmployeeMapper.insert(employee);
             sysUser.setEmpId(employee.getId());
 
             // 岗位（角色 × 科室）整体替换，角色表由岗位镜像派生，主科室由主岗位回填
@@ -283,7 +287,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                     .set(SysEmployee::getBirthDate, upsertDTO.getBirthDate())
                     .set(SysEmployee::getIdCard, upsertDTO.getIdCard())
                     .set(SysEmployee::getUpdateTime, LocalDateTime.now());
-            employeeMapper.update(empUpdateWrapper);
+            sysEmployeeMapper.update(empUpdateWrapper);
 
             // 岗位（角色 × 科室）整体替换：主科室随之由主岗位回填，不再接收前端传值
             employeePostService.replacePosts(sysUser.getEmpId(), upsertDTO.getPosts());
@@ -363,7 +367,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                 throw new BusinessException("院内用户出现员工为空");
             }
             //查询员工信息（院内用户）
-            SysEmployee emp = employeeMapper.selectById(user.getEmpId());
+            SysEmployee emp = sysEmployeeMapper.selectById(user.getEmpId());
             if (emp == null) {
                 throw new BusinessException("院内用户出现员工为空");
             }
@@ -426,10 +430,11 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     }
 
     @Override
-    public List<RoleNameVO> selectRoleNames(List<String> roleCodes) {        if (CollectionUtils.isEmpty(roleCodes)) {
+    public List<RoleNameVO> selectRoleNames(List<String> roleCodes) {
+        if (CollectionUtils.isEmpty(roleCodes)) {
             return Collections.emptyList();
         }
-        List<SysRole> roles = roleMapper.selectList(new LambdaQueryWrapper<SysRole>()
+        List<SysRole> roles = sysRoleMapper.selectList(new LambdaQueryWrapper<SysRole>()
                 .select(SysRole::getRoleCode, SysRole::getRoleName)
                 .in(SysRole::getRoleCode, roleCodes)
                 .orderByAsc(SysRole::getSortOrder));

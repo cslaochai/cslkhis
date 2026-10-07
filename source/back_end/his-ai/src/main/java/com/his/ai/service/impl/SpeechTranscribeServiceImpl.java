@@ -55,9 +55,9 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
             "audio/wav", "wav",
             "audio/x-wav", "wav");
 
-    private final AiConfigProvider configProvider;
+    private final AiConfigProvider aiConfigProvider;
 
-    private final AiAuditService auditService;
+    private final AiAuditService aiAuditService;
 
     /**
      * 按「地址 + 超时」缓存连接工厂，与 LlmClient 同口径
@@ -69,21 +69,21 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
         String capabilityKey = AiCapabilityKeys.VOICE_TRANSCRIBE;
         long start = System.currentTimeMillis();
         try {
-            if (!configProvider.isCapabilityEnabled(capabilityKey)) {
-                throw new BusinessException(configProvider.capabilityDisabledReason(capabilityKey));
+            if (!aiConfigProvider.isCapabilityEnabled(capabilityKey)) {
+                throw new BusinessException(aiConfigProvider.capabilityDisabledReason(capabilityKey));
             }
             if (audioFile == null || audioFile.isEmpty()) {
                 throw new BusinessException("请先录制或上传音频");
             }
             String format = resolveFormat(audioFile.getContentType());
-            int maxBytes = configProvider.get().getAsr().getMaxAudioMb() * 1024 * 1024;
+            int maxBytes = aiConfigProvider.get().getAsr().getMaxAudioMb() * 1024 * 1024;
             if (audioFile.getSize() > maxBytes) {
-                throw new BusinessException("音频超过 " + configProvider.get().getAsr().getMaxAudioMb() + "MB 上限，请缩短口述时长");
+                throw new BusinessException("音频超过 " + aiConfigProvider.get().getAsr().getMaxAudioMb() + "MB 上限，请缩短口述时长");
             }
 
             byte[] bytes = audioFile.getBytes();
-            String model = configProvider.asrModel();
-            String content = callAsr(bytes, format, model, configProvider.timeoutOf(capabilityKey));
+            String model = aiConfigProvider.asrModel();
+            String content = callAsr(bytes, format, model, aiConfigProvider.timeoutOf(capabilityKey));
             if (!StringUtils.hasText(content)) {
                 throw new BusinessException("未能从音频中识别出语音内容");
             }
@@ -100,19 +100,19 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
             return vo;
         } catch (BusinessException ex) {
             recordAudit(capabilityKey, AiCallStatusEnum.FAILED,
-                    (int) (System.currentTimeMillis() - start), configProvider.asrModel(), ex.getMessage(),
+                    (int) (System.currentTimeMillis() - start), aiConfigProvider.asrModel(), ex.getMessage(),
                     audioFile == null ? "audioFile=empty" : audioMeta(audioFile, null, durationSeconds), null);
             throw ex;
         } catch (IOException ex) {
             String reason = "读取音频失败：" + ex.getMessage();
             recordAudit(capabilityKey, AiCallStatusEnum.FAILED,
-                    (int) (System.currentTimeMillis() - start), configProvider.asrModel(), reason, null, null);
+                    (int) (System.currentTimeMillis() - start), aiConfigProvider.asrModel(), reason, null, null);
             throw new BusinessException(reason);
         }
     }
 
     private String callAsr(byte[] bytes, String format, String model, int timeoutMs) {
-        AiConfigProvider cfg = configProvider;
+        AiConfigProvider cfg = aiConfigProvider;
         if (!StringUtils.hasText(cfg.get().getBaseUrl())) {
             throw new BusinessException("AI 服务地址未配置（application.yml: ai.base-url）");
         }
@@ -198,7 +198,7 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
             SysAiCallLog entity = new SysAiCallLog();
             entity.setCapabilityKey(capabilityKey);
             entity.setBizType("emr_voice");
-            entity.setProvider(configProvider.get().getProvider());
+            entity.setProvider(aiConfigProvider.get().getProvider());
             entity.setStatus(status.getCode());
             entity.setLatencyMs(latencyMs);
             entity.setModel(model);
@@ -212,7 +212,7 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
                 entity.setErrorMsg(AiMaskUtils.digest(errorMsg, 480));
             }
             entity.setOperator(operator);
-            auditService.record(entity);
+            aiAuditService.record(entity);
         } catch (Exception ex) {
             // 审计失败不能反过来打断转写主流程
             log.warn("[AI] {} 审计落库失败：{}", capabilityKey, ex.getMessage());

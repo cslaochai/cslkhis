@@ -9,6 +9,7 @@ import com.his.ai.service.EmrDraftCapability;
 import com.his.ai.vo.EmrDraftPromptVariablesVO;
 import com.his.ai.vo.EmrDraftResultVO;
 import com.his.common.enums.SysGenderEnum;
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 病历草拟（P1-3）：由主诉 + 查体 + 体征整理出「现病史」草稿。
@@ -66,7 +69,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
      */
     private static final String PRESENT_ILLNESS_LABEL = "现病史";
 
-    private final BizMedicalRecordMapper medicalRecordMapper;
+    private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
     private final AiExecutionService aiExecutionService;
 
@@ -98,7 +101,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
                 value = value.substring(1);
             }
         }
-        return truncate(value, MAX_PRESENT_ILLNESS_LENGTH, "");
+        return TextUtil.cut(value, MAX_PRESENT_ILLNESS_LENGTH, "");
     }
 
     private static List<String> cleanMissingPoints(List<String> points) {
@@ -110,7 +113,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
             if (result.size() >= MAX_MISSING_POINTS) {
                 break;
             }
-            String value = truncate(point, MAX_MISSING_POINT_LENGTH, "");
+            String value = TextUtil.cut(point, MAX_MISSING_POINT_LENGTH, "");
             if (StringUtils.hasText(value) && !result.contains(value)) {
                 result.add(value);
             }
@@ -122,23 +125,11 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
         if (!StringUtils.hasText(input.systolicPressure()) && !StringUtils.hasText(input.diastolicPressure())) {
             return "（未填写）";
         }
-        return nullToDash(input.systolicPressure()) + "/" + nullToDash(input.diastolicPressure()) + " mmHg";
+        return TextUtil.blankToDefault(input.systolicPressure(), "（未填写）") + "/" + TextUtil.blankToDefault(input.diastolicPressure(), "（未填写）") + " mmHg";
     }
 
     private static String unitOrDash(String value, String unit) {
         return StringUtils.hasText(value) ? value + unit : "（未填写）";
-    }
-
-    private static String nullToDash(String text) {
-        return StringUtils.hasText(text) ? text : "（未填写）";
-    }
-
-    private static String truncate(String text, int maxLength, String fallback) {
-        if (!StringUtils.hasText(text)) {
-            return fallback;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
     }
 
     public EmrDraftResultVO execute(EmrDraftDTO dto) {
@@ -170,7 +161,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
         EmrDraftLlmOutputDTO llmOutput = output.get();
         vo.setPresentIllness(cleanPresentIllness(llmOutput.getPresentIllness()));
         vo.setMissingPoints(cleanMissingPoints(llmOutput.getMissingPoints()));
-        vo.setSummary(truncate(llmOutput.getSummary(), MAX_SUMMARY_LENGTH, ""));
+        vo.setSummary(TextUtil.cut(llmOutput.getSummary(), MAX_SUMMARY_LENGTH, ""));
 
         if (!StringUtils.hasText(vo.getPresentIllness())) {
             vo.setSummary(StringUtils.hasText(vo.getSummary())
@@ -191,7 +182,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
     private DraftInput mergeInput(EmrDraftDTO dto) {
         BizMedicalRecord record = dto.getRecordId() == null
                 ? null
-                : medicalRecordMapper.selectById(dto.getRecordId());
+                : bizMedicalRecordMapper.selectById(dto.getRecordId());
         return new DraftInput(
                 pick(dto.getGender(), record == null ? null : record.getGender()),
                 pick(dto.getAge(), record == null ? null : record.getAge()),
@@ -220,24 +211,24 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
         EmrDraftPromptVariablesVO variables = new EmrDraftPromptVariablesVO();
         variables.setGender(SysGenderEnum.getText(input.gender()));
         variables.setAge(input.age() == null ? "（未填写）" : input.age() + "岁");
-        variables.setChiefComplaint(nullToDash(input.chiefComplaint()));
-        variables.setPresentIllness(nullToDash(input.presentIllness()));
-        variables.setPastHistory(nullToDash(input.pastHistory()));
-        variables.setAllergyHistory(nullToDash(input.allergyHistory()));
+        variables.setChiefComplaint(TextUtil.blankToDefault(input.chiefComplaint(), "（未填写）"));
+        variables.setPresentIllness(TextUtil.blankToDefault(input.presentIllness(), "（未填写）"));
+        variables.setPastHistory(TextUtil.blankToDefault(input.pastHistory(), "（未填写）"));
+        variables.setAllergyHistory(TextUtil.blankToDefault(input.allergyHistory(), "（未填写）"));
         variables.setTemperature(unitOrDash(input.temperature(), "℃"));
         variables.setPulse(unitOrDash(input.pulse(), "次/分"));
         variables.setRespiration(unitOrDash(input.respiration(), "次/分"));
         variables.setBloodPressure(bloodPressureText(input));
-        variables.setGeneralCondition(nullToDash(input.generalCondition()));
-        variables.setSkinMucosa(nullToDash(input.skinMucosa()));
-        variables.setHeadNeck(nullToDash(input.headNeck()));
-        variables.setChestLung(nullToDash(input.chestLung()));
-        variables.setHeart(nullToDash(input.heart()));
-        variables.setAbdomen(nullToDash(input.abdomen()));
-        variables.setSpineLimbs(nullToDash(input.spineLimbs()));
-        variables.setNervousSystem(nullToDash(input.nervousSystem()));
-        variables.setSpecialistExam(nullToDash(input.specialistExam()));
-        variables.setAuxiliaryExam(nullToDash(input.auxiliaryExam()));
+        variables.setGeneralCondition(TextUtil.blankToDefault(input.generalCondition(), "（未填写）"));
+        variables.setSkinMucosa(TextUtil.blankToDefault(input.skinMucosa(), "（未填写）"));
+        variables.setHeadNeck(TextUtil.blankToDefault(input.headNeck(), "（未填写）"));
+        variables.setChestLung(TextUtil.blankToDefault(input.chestLung(), "（未填写）"));
+        variables.setHeart(TextUtil.blankToDefault(input.heart(), "（未填写）"));
+        variables.setAbdomen(TextUtil.blankToDefault(input.abdomen(), "（未填写）"));
+        variables.setSpineLimbs(TextUtil.blankToDefault(input.spineLimbs(), "（未填写）"));
+        variables.setNervousSystem(TextUtil.blankToDefault(input.nervousSystem(), "（未填写）"));
+        variables.setSpecialistExam(TextUtil.blankToDefault(input.specialistExam(), "（未填写）"));
+        variables.setAuxiliaryExam(TextUtil.blankToDefault(input.auxiliaryExam(), "（未填写）"));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.EMR_DRAFT)
@@ -246,7 +237,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
                 .bizType(BIZ_TYPE)
                 .bizId(dto.getRecordId())
                 // 只把主诉作为摘要 —— 病历全文没必要为了审计再存一遍
-                .inputDigest(nullToDash(input.chiefComplaint()))
+                .inputDigest(TextUtil.blankToDefault(input.chiefComplaint(), "（未填写）"))
                 .maxTokens(OUTPUT_TOKEN_LIMIT)
                 .build();
 

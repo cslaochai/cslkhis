@@ -1,12 +1,13 @@
 package com.his.operation.support;
 
-import com.his.common.enums.EncounterTypeEnum;
-import com.his.common.enums.FeeSourceTypeEnum;
-import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.support.FeeCatalogResolver;
-import com.his.operation.support.AnesthesiaCalcs;
+import com.his.common.enums.EncounterTypeEnum;
+import com.his.common.enums.FeeSourceTypeEnum;
+import com.his.common.enums.PaymentItemTypeEnum;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TimeUtil;
 import com.his.operation.entity.BizAnesthesiaPacu;
 import com.his.operation.entity.BizAnesthesiaRecord;
 import com.his.operation.entity.BizOperationChargeItem;
@@ -25,8 +26,6 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -64,25 +63,10 @@ public class OperationChargeBiller {
     private static final String ITEM_INTUBATION = "AN007";
     private static final String ITEM_PACU = "AN008";
 
-    private final BizOperationChargeItemMapper chargeItemMapper;
+    private final BizOperationChargeItemMapper bizOperationChargeItemMapper;
     private final OperationChargeInvoker invoker;
 
-    /**
-     * 分钟差（两端都要有值；顺序反了或为负 → null，不替业务圆回来）
-     */
-    private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
-        if (from == null || to == null) {
-            return null;
-        }
-        long m = Duration.between(from, to).toMinutes();
-        return m < 0 ? null : m;
-    }
-
     // 内部：单项计费（幂等 + 落痕）
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
 
     /**
      * 按麻醉记录单计费（麻醉费 + 麻醉监护 + 气管插管）。
@@ -108,9 +92,9 @@ public class OperationChargeBiller {
         }
 
         // ② 麻醉监护（按小时）
-        Long minutes = minutesBetween(record.getAnesthesiaStartTime(), record.getAnesthesiaEndTime());
+        Long minutes = TimeUtil.elapsedMinutes(record.getAnesthesiaStartTime(), record.getAnesthesiaEndTime());
         if (minutes == null) {
-            minutes = minutesBetween(record.getOperationStartTime(), record.getOperationEndTime());
+            minutes = TimeUtil.elapsedMinutes(record.getOperationStartTime(), record.getOperationEndTime());
         }
         if (minutes == null) {
             fail(summary, record, ITEM_MONITOR, "无麻醉/手术起止时间，算不出监护时长", basis, record.getRecordNo());
@@ -140,7 +124,7 @@ public class OperationChargeBiller {
             summary.getMessages().add("PACU 记录不存在，无法计费");
             return summary;
         }
-        Long minutes = minutesBetween(pacu.getEnterTime(), pacu.getLeaveTime());
+        Long minutes = TimeUtil.elapsedMinutes(pacu.getEnterTime(), pacu.getLeaveTime());
         if (minutes == null) {
             failPacu(summary, pacu, "PACU 尚未登记入室/出室时间，算不出复苏时长");
             return summary;
@@ -166,7 +150,7 @@ public class OperationChargeBiller {
             return;
         }
 
-        TreatmentItemPriceVO price = chargeItemMapper.selectTreatmentItem(itemCode);
+        TreatmentItemPriceVO price = bizOperationChargeItemMapper.selectTreatmentItem(itemCode);
         if (price == null) {
             markFail(summary, row, "价目表中不存在可用项目 " + itemCode + "（未取到单价，不计费）", itemCode);
             return;
@@ -246,10 +230,10 @@ public class OperationChargeBiller {
         row.setFeeRecordId(booked.getId());
         row.setFeeNo(booked.getFeeNo());
         row.setFailReason(null);
-        chargeItemMapper.updateById(row);
+        bizOperationChargeItemMapper.updateById(row);
 
         summary.setSuccessItems(summary.getSuccessItems() + 1);
-        summary.setAmount(summary.getAmount().add(nz(booked.getAmount())));
+        summary.setAmount(summary.getAmount().add(NumUtil.orZero(booked.getAmount())));
         summary.setFeeNo(booked.getFeeNo());
         summary.getMessages().add(String.format("%s「%s」× %s = %s 元 → %s",
                 itemCode, row.getItemName(), quantity.stripTrailingZeros().toPlainString(),
@@ -267,7 +251,7 @@ public class OperationChargeBiller {
     private BizOperationChargeItem upsert(Long admissionId, Long patientId, String patientNo, String patientName,
                                           Long applyId, String applyNo, int sourceType, Long sourceId,
                                           String sourceNo, String itemCode) {
-        List<BizOperationChargeItem> existing = chargeItemMapper.selectBySource(sourceType, sourceId).stream()
+        List<BizOperationChargeItem> existing = bizOperationChargeItemMapper.selectBySource(sourceType, sourceId).stream()
                 .filter(r -> itemCode.equals(r.getItemCode()))
                 .toList();
         if (!existing.isEmpty()) {
@@ -290,7 +274,7 @@ public class OperationChargeBiller {
         row.setItemCode(itemCode);
         row.setItemType(7);
         row.setChargeStatus(AnesthesiaChargeStatusEnum.PENDING.getCode());
-        chargeItemMapper.insert(row);
+        bizOperationChargeItemMapper.insert(row);
         return row;
     }
 
@@ -304,7 +288,7 @@ public class OperationChargeBiller {
             // ★ 截到列宽：失败原因里带着原始 SQL 异常文本，超长会把这次 update 打成
             //   Data too long → "记账失败"升级成 500，反而看不到失败原因了
             row.setFailReason(AnesthesiaCalcs.clipReason(reason));
-            chargeItemMapper.updateById(row);
+            bizOperationChargeItemMapper.updateById(row);
         }
         log.warn("手术麻醉计费失败：{}", reason);
     }

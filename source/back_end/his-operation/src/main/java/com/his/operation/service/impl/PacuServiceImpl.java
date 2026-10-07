@@ -3,8 +3,10 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.BizAnesthesiaPacu;
@@ -29,11 +31,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
@@ -55,29 +54,13 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PacuServiceImpl implements PacuService {
+public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAnesthesiaPacu> implements PacuService {
 
     private final BizAnesthesiaPacuMapper bizAnesthesiaPacuMapper;
     private final BizAnesthesiaRecordMapper bizAnesthesiaRecordMapper;
     private final BizOperationApplyMapper bizOperationApplyMapper;
     private final OperationChargeBiller operationChargeBiller;
     private DictCacheService dictCacheService;
-
-    private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
-        if (from == null || to == null) {
-            return null;
-        }
-        long m = Duration.between(from, to).toMinutes();
-        return m < 0 ? null : m;
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
 
     @Override
     public IPage<PacuRecordVO> listPage(PacuQueryPageDTO query) {
@@ -148,7 +131,7 @@ public class PacuServiceImpl implements PacuService {
         entity.setPatientName(apply.getPatientName());
         entity.setGender(apply.getGender());
         entity.setAge(apply.getAge());
-        entity.setEnterTime(now());
+        entity.setEnterTime(TimeUtil.nowSeconds());
         entity.setNurseId(dto.getNurseId());
         entity.setNurseName(employeeNameOf(dto.getNurseId()));
         entity.setAnesthetistId(dto.getAnesthetistId() != null ? dto.getAnesthetistId() : record.getAnesthetistId());
@@ -227,7 +210,7 @@ public class PacuServiceImpl implements PacuService {
             throw new BusinessException("复苏期间发生并发症，出室去向不能是「回病房」");
         }
 
-        entity.setLeaveTime(TimeUtil.toSeconds(dto.getLeaveTime() == null ? now() : dto.getLeaveTime()));
+        entity.setLeaveTime(TimeUtil.toSeconds(dto.getLeaveTime() == null ? TimeUtil.nowSeconds() : dto.getLeaveTime()));
         entity.setDisposition(dto.getDisposition());
         entity.setLeaveCriteriaMet(criteriaMet ? 1 : 0);
         entity.setStatus(PacuStatusEnum.OUT.getCode());
@@ -287,7 +270,7 @@ public class PacuServiceImpl implements PacuService {
             entity.setChargeFailReason("本次没有可计费项目");
             return;
         }
-        entity.setChargedAmount(nz(entity.getChargedAmount()).add(summary.getAmount()));
+        entity.setChargedAmount(NumUtil.orZero(entity.getChargedAmount()).add(summary.getAmount()));
         if (summary.hasFailure()) {
             entity.setChargeStatus(AnesthesiaChargeStatusEnum.FAILED.getCode());
             entity.setChargeFailReason(AnesthesiaCalcs.clipReason(String.join("；", summary.getMessages())));
@@ -343,8 +326,7 @@ public class PacuServiceImpl implements PacuService {
         vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
 
         boolean inRoom = Objects.equals(PacuStatusEnum.IN.getCode(), vo.getStatus());
-        Long stay = minutesBetween(vo.getEnterTime(),
-                vo.getLeaveTime() == null ? LocalDateTime.now() : vo.getLeaveTime());
+        Long stay = TimeUtil.elapsedMinutes(vo.getEnterTime(), vo.getLeaveTime() == null ? LocalDateTime.now() : vo.getLeaveTime());
         vo.setStayMinutes(stay);
         vo.setStayDurationText(AnesthesiaCalcs.durationText(stay));
         vo.setBillHours(AnesthesiaCalcs.billHours(stay));

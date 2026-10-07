@@ -51,7 +51,7 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
     private static final ObjectMapper RESPONSE_MAPPER = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    private final AiConfigProvider configProvider;
+    private final AiConfigProvider aiConfigProvider;
 
     /**
      * 按「地址 + 超时」缓存，避免每次调用都重建连接工厂
@@ -70,7 +70,7 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
 
     @Override
     public LlmResultDTO complete(AiChatRequestDTO request, int timeoutMs) {
-        AiProperties properties = configProvider.get();
+        AiProperties properties = aiConfigProvider.get();
         guardConfig(properties);
 
         String model = StringUtils.hasText(request.getModel()) ? request.getModel() : properties.getModel();

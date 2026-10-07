@@ -2,10 +2,12 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.SpecialDrugFlagEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TimeUtil;
 import com.his.emr.dto.AmpouleReturnDTO;
 import com.his.emr.dto.NarcoticRegisterQueryPageDTO;
 import com.his.emr.entity.BizDrugDispensing;
@@ -29,7 +31,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -53,7 +54,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class NarcoticControlServiceImpl implements NarcoticControlService {
+public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapper, BizNarcoticRegister> implements NarcoticControlService {
 
     /**
      * 违规级别
@@ -107,8 +108,8 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
      */
     private final Map<String, Integer> registerSeqCache = new ConcurrentHashMap<>();
     private final NarcoticRegisterMapper narcoticRegisterMapper;
-    private final BizPrescriptionMapper prescriptionMapper;
-    private final BizPrescriptionDetailMapper prescriptionDetailMapper;
+    private final BizPrescriptionMapper bizPrescriptionMapper;
+    private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
 
     // 规则口径
 
@@ -165,10 +166,6 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
             return "控缓释制剂";
         }
         return StringUtils.hasText(dosageForm) ? dosageForm : "其他剂型";
-    }
-
-    private static String nvl(String value, String fallback) {
-        return StringUtils.hasText(value) ? value : fallback;
     }
 
     // 处方限量校验
@@ -241,11 +238,11 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
         if (prescriptionId == null) {
             throw new BusinessException("处方ID不能为空");
         }
-        BizPrescription rx = prescriptionMapper.selectById(prescriptionId);
+        BizPrescription rx = bizPrescriptionMapper.selectById(prescriptionId);
         if (rx == null) {
             throw new BusinessException("处方不存在（处方ID：" + prescriptionId + "）");
         }
-        List<BizPrescriptionDetail> details = prescriptionDetailMapper.selectList(
+        List<BizPrescriptionDetail> details = bizPrescriptionDetailMapper.selectList(
                 new LambdaQueryWrapper<BizPrescriptionDetail>()
                         .eq(BizPrescriptionDetail::getPrescriptionId, prescriptionId)
                         .orderByAsc(BizPrescriptionDetail::getId));
@@ -463,13 +460,13 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
             return null;   // 普通药品不进专册
         }
         BizPrescriptionDetail detail = dispensing.getPrescriptionDetailId() == null
-                ? null : prescriptionDetailMapper.selectById(dispensing.getPrescriptionDetailId());
+                ? null : bizPrescriptionDetailMapper.selectById(dispensing.getPrescriptionDetailId());
         BizPrescription rx = dispensing.getPrescriptionId() == null
-                ? null : prescriptionMapper.selectById(dispensing.getPrescriptionId());
+                ? null : bizPrescriptionMapper.selectById(dispensing.getPrescriptionId());
         String dosageForm = detail != null && StringUtils.hasText(detail.getDosageForm())
                 ? detail.getDosageForm() : row.getDosageForm();
 
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         BizNarcoticRegister entity = new BizNarcoticRegister();
         entity.setRegisterNo(nextRegisterNo(now));
 
@@ -617,7 +614,7 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
         patch.setAmpouleDestroyed(dto.getAmpouleDestroyed());
         patch.setReturnRemark(dto.getReturnRemark());
         patch.setReturnBy(UserUtils.getCurrentUser().getRealName());
-        patch.setReturnTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+        patch.setReturnTime(TimeUtil.nowSeconds());
         narcoticRegisterMapper.updateById(patch);
 
         return toVO(narcoticRegisterMapper.selectById(exists.getId()));
@@ -671,11 +668,11 @@ public class NarcoticControlServiceImpl implements NarcoticControlService {
         if (prescriptionId == null) {
             throw new BusinessException("处方ID不能为空");
         }
-        BizPrescription rx = prescriptionMapper.selectById(prescriptionId);
+        BizPrescription rx = bizPrescriptionMapper.selectById(prescriptionId);
         if (rx == null) {
             throw new BusinessException("处方不存在（处方ID：" + prescriptionId + "）");
         }
-        List<BizPrescriptionDetail> details = prescriptionDetailMapper.selectList(
+        List<BizPrescriptionDetail> details = bizPrescriptionDetailMapper.selectList(
                 new LambdaQueryWrapper<BizPrescriptionDetail>()
                         .eq(BizPrescriptionDetail::getPrescriptionId, prescriptionId)
                         .orderByAsc(BizPrescriptionDetail::getId));

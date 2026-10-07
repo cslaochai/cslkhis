@@ -13,6 +13,7 @@ import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.ClinicalTextMatcher;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizQualityControl;
 import com.his.emr.mapper.BizMedicalRecordMapper;
@@ -98,9 +99,9 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
             new RequiredFieldRule("处理意见", BizMedicalRecord::getTreatmentPlan, 2),
             new RequiredFieldRule("专科检查", BizMedicalRecord::getSpecialistExam, 1));
 
-    private final BizMedicalRecordMapper medicalRecordMapper;
+    private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
-    private final BizQualityControlMapper qualityControlMapper;
+    private final BizQualityControlMapper bizQualityControlMapper;
 
     private final AiExecutionService aiExecutionService;
 
@@ -121,10 +122,10 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
             // 维度取值必须归一，否则前端的维度筛选会漏掉拼错的值
             issue.setDimension(normalizeDimension(raw.getDimension()));
             issue.setSeverity(clampSeverity(raw.getSeverity()));
-            issue.setFieldName(truncate(raw.getFieldName(), 30, "未指明字段"));
-            issue.setErrorDetail(truncate(raw.getErrorDetail(), 200, ""));
-            issue.setSuggestion(truncate(raw.getSuggestion(), 200, ""));
-            issue.setEvidence(truncate(raw.getEvidence(), 80, ""));
+            issue.setFieldName(TextUtil.cut(raw.getFieldName(), 30, "未指明字段"));
+            issue.setErrorDetail(TextUtil.cut(raw.getErrorDetail(), 200, ""));
+            issue.setSuggestion(TextUtil.cut(raw.getSuggestion(), 200, ""));
+            issue.setEvidence(TextUtil.cut(raw.getEvidence(), 80, ""));
             issues.add(issue);
         }
         return issues;
@@ -165,7 +166,7 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
                     .append(issue.getFieldName()).append('：')
                     .append(issue.getErrorDetail()).append('；');
         }
-        return truncate(builder.toString(), maxLength, "");
+        return TextUtil.cut(builder.toString(), maxLength, "");
     }
 
     private static List<EmrQcIssueVO> dedupeAndSort(List<EmrQcIssueVO> issues) {
@@ -195,25 +196,13 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
         return prefix + timestamp + tail;
     }
 
-    private static String truncate(String text, int maxLength, String fallback) {
-        if (!StringUtils.hasText(text)) {
-            return fallback;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
-    private static String nullToDash(String text) {
-        return StringUtils.hasText(text) ? text : "（未填写）";
-    }
-
     /**
      * 执行病历内涵质控
      */
     public EmrQcResultVO execute(EmrQcExecuteDTO dto) {
         long start = System.currentTimeMillis();
 
-        BizMedicalRecord record = medicalRecordMapper.selectById(dto.getRecordId());
+        BizMedicalRecord record = bizMedicalRecordMapper.selectById(dto.getRecordId());
         if (record == null) {
             throw new BusinessException("病历不存在或已作废：" + dto.getRecordId());
         }
@@ -224,7 +213,7 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
         Optional<EmrQcLlmOutputDTO> llmOutput = callModel(record);
         if (llmOutput.isPresent()) {
             issues.addAll(toIssues(llmOutput.get()));
-            vo.setSummary(truncate(llmOutput.get().getSummary(), 200, ""));
+            vo.setSummary(TextUtil.cut(llmOutput.get().getSummary(), 200, ""));
         } else {
             vo.setDegraded(true);
             vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.EMR_QC)
@@ -273,7 +262,7 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
             issue.setSuggestion(String.format("请补充%s的具体内容，避免使用「无」「正常」等笼统表述",
                     rule.fieldName()));
             issue.setEvidence(StringUtils.hasText(value)
-                    ? truncate(value.replaceAll("\\s+", " ").trim(), 40, "")
+                    ? TextUtil.cut(value.replaceAll("\\s+", " ").trim(), 40, "")
                     : "（空）");
             issues.add(issue);
         }
@@ -284,24 +273,24 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
         EmrQcPromptVariablesVO variables = new EmrQcPromptVariablesVO();
         variables.setGender(SysGenderEnum.getText(record.getGender()));
         variables.setAge(record.getAge() == null ? "（未填写）" : record.getAge() + "岁");
-        variables.setChiefComplaint(nullToDash(record.getChiefComplaint()));
-        variables.setPresentIllness(nullToDash(record.getPresentIllness()));
-        variables.setPastHistory(nullToDash(record.getPastHistory()));
-        variables.setPersonalHistory(nullToDash(record.getPersonalHistory()));
-        variables.setFamilyHistory(nullToDash(record.getFamilyHistory()));
-        variables.setAllergyHistory(nullToDash(record.getAllergyHistory()));
-        variables.setGeneralCondition(nullToDash(record.getGeneralCondition()));
-        variables.setSkinMucosa(nullToDash(record.getSkinMucosa()));
-        variables.setHeadNeck(nullToDash(record.getHeadNeck()));
-        variables.setChestLung(nullToDash(record.getChestLung()));
-        variables.setHeart(nullToDash(record.getHeart()));
-        variables.setAbdomen(nullToDash(record.getAbdomen()));
-        variables.setSpineLimbs(nullToDash(record.getSpineLimbs()));
-        variables.setNervousSystem(nullToDash(record.getNervousSystem()));
-        variables.setSpecialistExam(nullToDash(record.getSpecialistExam()));
-        variables.setAuxiliaryExam(nullToDash(record.getAuxiliaryExam()));
-        variables.setDiagnosis(nullToDash(record.getDiagnosis()));
-        variables.setTreatmentPlan(nullToDash(record.getTreatmentPlan()));
+        variables.setChiefComplaint(TextUtil.blankToDefault(record.getChiefComplaint(), "（未填写）"));
+        variables.setPresentIllness(TextUtil.blankToDefault(record.getPresentIllness(), "（未填写）"));
+        variables.setPastHistory(TextUtil.blankToDefault(record.getPastHistory(), "（未填写）"));
+        variables.setPersonalHistory(TextUtil.blankToDefault(record.getPersonalHistory(), "（未填写）"));
+        variables.setFamilyHistory(TextUtil.blankToDefault(record.getFamilyHistory(), "（未填写）"));
+        variables.setAllergyHistory(TextUtil.blankToDefault(record.getAllergyHistory(), "（未填写）"));
+        variables.setGeneralCondition(TextUtil.blankToDefault(record.getGeneralCondition(), "（未填写）"));
+        variables.setSkinMucosa(TextUtil.blankToDefault(record.getSkinMucosa(), "（未填写）"));
+        variables.setHeadNeck(TextUtil.blankToDefault(record.getHeadNeck(), "（未填写）"));
+        variables.setChestLung(TextUtil.blankToDefault(record.getChestLung(), "（未填写）"));
+        variables.setHeart(TextUtil.blankToDefault(record.getHeart(), "（未填写）"));
+        variables.setAbdomen(TextUtil.blankToDefault(record.getAbdomen(), "（未填写）"));
+        variables.setSpineLimbs(TextUtil.blankToDefault(record.getSpineLimbs(), "（未填写）"));
+        variables.setNervousSystem(TextUtil.blankToDefault(record.getNervousSystem(), "（未填写）"));
+        variables.setSpecialistExam(TextUtil.blankToDefault(record.getSpecialistExam(), "（未填写）"));
+        variables.setAuxiliaryExam(TextUtil.blankToDefault(record.getAuxiliaryExam(), "（未填写）"));
+        variables.setDiagnosis(TextUtil.blankToDefault(record.getDiagnosis(), "（未填写）"));
+        variables.setTreatmentPlan(TextUtil.blankToDefault(record.getTreatmentPlan(), "（未填写）"));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.EMR_QC)
@@ -310,7 +299,7 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
                 .bizType(BIZ_TYPE)
                 .bizId(record.getId())
                 // 只把主诉与诊断作为摘要 —— 病历全文很长，且没必要为了审计再存一遍
-                .inputDigest(nullToDash(record.getChiefComplaint()) + " | " + nullToDash(record.getDiagnosis()))
+                .inputDigest(TextUtil.blankToDefault(record.getChiefComplaint(), "（未填写）") + " | " + TextUtil.blankToDefault(record.getDiagnosis(), "（未填写）"))
                 .maxTokens(OUTPUT_TOKEN_LIMIT)
                 .build();
 
@@ -344,7 +333,7 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
             qc.setCreateBy(operator);
             qc.setRemark(vo.isDegraded() ? "模型未参与，仅必填项规则结果" : null);
 
-            qualityControlMapper.insert(qc);
+            bizQualityControlMapper.insert(qc);
             vo.setQcId(qc.getId());
             vo.setQcNo(qc.getQcNo());
         } catch (Exception ex) {

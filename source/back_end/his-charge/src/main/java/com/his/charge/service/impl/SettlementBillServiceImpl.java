@@ -23,6 +23,8 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.system.service.InsurancePolicyService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -78,27 +80,12 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     private final FeeRecordService feeRecordService;
     private final InsuranceSettlementService insuranceSettlementService;
     private final SourceAdvanceService sourceAdvanceService;
-    private final BizSettlementBillItemMapper billItemMapper;
-    private final BizPaymentTxnMapper paymentTxnMapper;
+    private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
+    private final BizPaymentTxnMapper bizPaymentTxnMapper;
     private final PatientGateway patientGateway;
     private final InsurancePolicyService insurancePolicyService;
     private final RedisSequenceService redisSequenceService;
-    private final BizInsuranceCatalogRuleMapper catalogRuleMapper;
-
-    private static BigDecimal scale(BigDecimal value) {
-        return nz(value).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
-
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() <= max ? value : value.substring(0, max);
-    }
+    private final BizInsuranceCatalogRuleMapper bizInsuranceCatalogRuleMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -112,19 +99,19 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         BizFeeRecord first = rows.get(0);
 
         BizSettlementBill bill = new BizSettlementBill();
-        bill.setBillNo(cut(redisSequenceService.generateBillNo(), W_BILL_NO));
+        bill.setBillNo(TextUtil.cut(redisSequenceService.generateBillNo(), W_BILL_NO));
         bill.setPatientId(first.getPatientId());
-        bill.setPatientNo(cut(first.getPatientNo(), W_PATIENT_NO));
-        bill.setPatientName(cut(first.getPatientName(), W_PATIENT_NAME));
+        bill.setPatientNo(TextUtil.cut(first.getPatientNo(), W_PATIENT_NO));
+        bill.setPatientName(TextUtil.cut(first.getPatientName(), W_PATIENT_NAME));
         bill.setEncounterType(first.getEncounterType());
         bill.setEncounterId(first.getEncounterId());
-        bill.setEncounterNo(cut(first.getEncounterNo(), W_ENCOUNTER_NO));
+        bill.setEncounterNo(TextUtil.cut(first.getEncounterNo(), W_ENCOUNTER_NO));
         bill.setBillType(resolveBillType(dto.getBillType(), first.getEncounterType()).getCode());
         bill.setFeeCount(items.size());
         bill.setTotalAmount(total);
         bill.setDiscountAmount(discount);
         bill.setSettlementMode(insurance.mode().getCode());
-        bill.setInsuranceType(cut(insurance.type(), W_INSURANCE_TYPE));
+        bill.setInsuranceType(TextUtil.cut(insurance.type(), W_INSURANCE_TYPE));
         bill.setPoolAmount(draft.pool());
         bill.setAccountAmount(draft.account());
         bill.setSelfAmount(draft.self());
@@ -135,7 +122,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         if (draft.payable().signum() == 0) {
             bill.setBillStatus(BillStatusEnum.PAID.getCode());
             bill.setPayTime(LocalDateTime.now());
-            bill.setCloseReason(cut("医保全额报销，个人无应缴", W_CLOSE_REASON));
+            bill.setCloseReason(TextUtil.cut("医保全额报销，个人无应缴", W_CLOSE_REASON));
         } else if (BillTypeEnum.DISCHARGE.getCode().equals(bill.getBillType()) && draft.payable().signum() > 0) {
             // 出院结算且有欠费：设为 6-挂账/欠费，联动住院欠费管控策略欠费追缴流程
             bill.setBillStatus(6);
@@ -145,14 +132,14 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         bill.setBillDate(LocalDate.now());
         bill.setBillTime(LocalDateTime.now());
         bill.setBillById(UserUtils.getCurrentUser().getEmployeeId());
-        bill.setBillByName(cut(UserUtils.getCurrentUser().getRealName(), W_BILL_BY_NAME));
-        bill.setRemark(cut(dto.getRemark(), W_REMARK));
+        bill.setBillByName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_BILL_BY_NAME));
+        bill.setRemark(TextUtil.cut(dto.getRemark(), W_REMARK));
         this.save(bill);
 
         for (BizSettlementBillItem item : items) {
             item.setBillId(bill.getId());
             item.setBillNo(bill.getBillNo());
-            billItemMapper.insert(item);
+            bizSettlementBillItemMapper.insert(item);
         }
         // 锁定放最后：任何一个环节异常都会整笔回滚，不会留下"账单生成了、费用还没锁"的空账单
         List<Long> feeIds = new ArrayList<>();
@@ -215,9 +202,9 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         List<BizFeeRecord> rows = pickRows(dto);
         BigDecimal total = BigDecimal.ZERO;
         for (BizFeeRecord row : rows) {
-            total = total.add(nz(row.getAmount()));
+            total = total.add(NumUtil.orZero(row.getAmount()));
         }
-        total = scale(total);
+        total = NumUtil.scale(total, AMOUNT_SCALE);
         if (total.signum() < 0) {
             throw new BusinessException("本次选中费用的净额为负（" + total.toPlainString() + "），红冲行请随其原行一起结算");
         }
@@ -226,7 +213,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             throw new BusinessException("本次结算金额为 0，无需出账（免收请改为不记账，而不是记一笔 0 元）");
         }
 
-        BigDecimal discount = scale(dto.getDiscountAmount() == null ? BigDecimal.ZERO : dto.getDiscountAmount());
+        BigDecimal discount = NumUtil.scale(dto.getDiscountAmount() == null ? BigDecimal.ZERO : dto.getDiscountAmount(), AMOUNT_SCALE);
         if (discount.signum() < 0) {
             throw new BusinessException("优惠金额不能为负");
         }
@@ -241,7 +228,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         BigDecimal pool = sum(items, BizSettlementBillItem::getPoolAmount);
         BigDecimal account = sum(items, BizSettlementBillItem::getAccountAmount);
         BigDecimal self = sum(items, BizSettlementBillItem::getSelfAmount);
-        BigDecimal payable = scale(total.subtract(discount).subtract(pool).subtract(account));
+        BigDecimal payable = NumUtil.scale(total.subtract(discount).subtract(pool).subtract(account), AMOUNT_SCALE);
         return new Draft(rows, items, insurance, total, discount, pool, account, self, payable);
     }
 
@@ -261,10 +248,10 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         if (BillStatusEnum.VOIDED.getCode().equals(bill.getBillStatus())) {
             return;
         }
-        if (nz(bill.getPaidAmount()).subtract(nz(bill.getRefundAmount())).signum() > 0) {
+        if (NumUtil.orZero(bill.getPaidAmount()).subtract(NumUtil.orZero(bill.getRefundAmount())).signum() > 0) {
             throw new BusinessException("该账单已有收款，作废会把已收的钱凭空抹掉，请走退费");
         }
-        List<BizSettlementBillItem> items = billItemMapper.selectByBill(bill.getId());
+        List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectByBill(bill.getId());
         List<Long> feeIds = new ArrayList<>();
         for (BizSettlementBillItem item : items) {
             feeIds.add(item.getFeeRecordId());
@@ -272,9 +259,9 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
 
         bill.setBillStatus(BillStatusEnum.VOIDED.getCode());
         bill.setVoidById(UserUtils.getCurrentUser().getEmployeeId());
-        bill.setVoidByName(cut(UserUtils.getCurrentUser().getRealName(), W_BILL_BY_NAME));
+        bill.setVoidByName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_BILL_BY_NAME));
         bill.setVoidTime(LocalDateTime.now());
-        bill.setVoidReason(cut(dto.getReason(), W_VOID_REASON));
+        bill.setVoidReason(TextUtil.cut(dto.getReason(), W_VOID_REASON));
         this.updateById(bill);
 
         if (!feeIds.isEmpty()) {
@@ -312,10 +299,10 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         if (bill == null) {
             throw new BusinessException("账单不存在");
         }
-        BigDecimal charged = scale(nz(paymentTxnMapper.sumChargedByBill(billId)));
-        BigDecimal refunded = scale(nz(paymentTxnMapper.sumRefundedByBill(billId)));
-        BigDecimal net = scale(charged.subtract(refunded));
-        BigDecimal payable = scale(nz(bill.getPayableAmount()));
+        BigDecimal charged = NumUtil.scale(NumUtil.orZero(bizPaymentTxnMapper.sumChargedByBill(billId)), AMOUNT_SCALE);
+        BigDecimal refunded = NumUtil.scale(NumUtil.orZero(bizPaymentTxnMapper.sumRefundedByBill(billId)), AMOUNT_SCALE);
+        BigDecimal net = NumUtil.scale(charged.subtract(refunded), AMOUNT_SCALE);
+        BigDecimal payable = NumUtil.scale(NumUtil.orZero(bill.getPayableAmount()), AMOUNT_SCALE);
 
         bill.setPaidAmount(charged);
         bill.setRefundAmount(refunded);
@@ -368,7 +355,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             BizFeeRecordVO vo = new BizFeeRecordVO();
             BeanUtils.copyProperties(row, vo);
             fees.add(vo);
-            total = total.add(nz(row.getAmount()));
+            total = total.add(NumUtil.orZero(row.getAmount()));
         }
         PendingFeeVO result = new PendingFeeVO();
         result.setFees(fees);
@@ -382,7 +369,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         if (encounterType == null || encounterId == null) {
             return BigDecimal.ZERO;
         }
-        return scale(nz(baseMapper.sumUnpaidGap(encounterType, encounterId)));
+        return NumUtil.scale(NumUtil.orZero(baseMapper.sumUnpaidGap(encounterType, encounterId)), AMOUNT_SCALE);
     }
 
     @Override
@@ -452,7 +439,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             vo.setPayableAmount(bill.getPayableAmount());
             vo.setBillTime(bill.getBillTime());
             vo.setBillStatus(bill.getBillStatus());
-            List<BizSettlementBillItem> items = billItemMapper.selectByBill(bill.getId());
+            List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectByBill(bill.getId());
             vo.setDetails(toPendingBillItems(items));
             vo.setPoolAmount(sumColumn(items, BizSettlementBillItem::getPoolAmount));
             vo.setAccountAmount(sumColumn(items, BizSettlementBillItem::getAccountAmount));
@@ -501,7 +488,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         if (patientId == null) {
             return List.of();
         }
-        List<BizSettlementBillItem> rows = billItemMapper.selectList(new LambdaQueryWrapper<BizSettlementBillItem>()
+        List<BizSettlementBillItem> rows = bizSettlementBillItemMapper.selectList(new LambdaQueryWrapper<BizSettlementBillItem>()
                 .eq(BizSettlementBillItem::getPatientId, patientId)
                 .orderByDesc(BizSettlementBillItem::getId));
         List<BizSettlementBillItemVO> vos = new ArrayList<>(rows.size());
@@ -522,8 +509,8 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         BizSettlementBillDetailVO vo = new BizSettlementBillDetailVO();
         BeanUtils.copyProperties(bill, vo);
         vo.setUnpaidAmount(unpaidOf(bill));
-        List<BizSettlementBillItem> items = billItemMapper.selectByBill(billId);
-        List<BizPaymentTxn> txns = paymentTxnMapper.selectByBill(billId);
+        List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectByBill(billId);
+        List<BizPaymentTxn> txns = bizPaymentTxnMapper.selectByBill(billId);
         vo.setItems(items);
         vo.setTxns(txns);
         return vo;
@@ -552,18 +539,18 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         Map<Long, BigDecimal> reversedByOrig = new HashMap<>();
         for (BizFeeRecord row : rows) {
             if (row.getOrigFeeId() != null) {
-                reversedByOrig.merge(row.getOrigFeeId(), nz(row.getAmount()), BigDecimal::add);
+                reversedByOrig.merge(row.getOrigFeeId(), NumUtil.orZero(row.getAmount()), BigDecimal::add);
             }
         }
         List<RefundableLineVO> result = new ArrayList<>();
         for (BizFeeRecord row : rows) {
             if (row.getOrigFeeId() != null
-                    || nz(row.getAmount()).signum() <= 0
+                    || NumUtil.orZero(row.getAmount()).signum() <= 0
                     || FeeStatusEnum.REVERSED.getCode().equals(row.getFeeStatus())
                     || !type.covers(row.getItemType())) {
                 continue;
             }
-            BigDecimal remaining = scale(nz(row.getAmount()).add(nz(reversedByOrig.get(row.getId()))));
+            BigDecimal remaining = NumUtil.scale(NumUtil.orZero(row.getAmount()).add(NumUtil.orZero(reversedByOrig.get(row.getId()))), AMOUNT_SCALE);
             if (remaining.signum() <= 0) {
                 continue;
             }
@@ -632,7 +619,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         Map<String, BizInsuranceCatalogRule> ruleByItem = new HashMap<>();
         if (!itemCodes.isEmpty()) {
             LocalDate settleDate = LocalDate.now();
-            List<BizInsuranceCatalogRule> rules = catalogRuleMapper.selectBatchRules(
+            List<BizInsuranceCatalogRule> rules = bizInsuranceCatalogRuleMapper.selectBatchRules(
                     itemCodes, first.getEncounterType(), insurance.type(), settleDate);
             for (BizInsuranceCatalogRule rule : rules) {
                 // 同一项目可能有多条规则（不同 catalog_type），只取第一条（优先级最高）
@@ -648,16 +635,16 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             item.setEncounterType(row.getEncounterType());
             item.setEncounterId(row.getEncounterId());
             item.setDeptId(row.getDeptId());
-            item.setDeptName(cut(row.getDeptName(), W_DEPT_NAME));
+            item.setDeptName(TextUtil.cut(row.getDeptName(), W_DEPT_NAME));
             item.setItemType(row.getItemType());
-            item.setItemCode(cut(row.getItemCode(), W_ITEM_CODE));
-            item.setItemName(cut(row.getItemName(), W_ITEM_NAME));
-            item.setSpecification(cut(row.getSpecification(), W_SPEC));
-            item.setUnit(cut(row.getUnit(), W_UNIT));
-            item.setPrice(nz(row.getPrice()));
-            item.setQuantity(nz(row.getQuantity()));
+            item.setItemCode(TextUtil.cut(row.getItemCode(), W_ITEM_CODE));
+            item.setItemName(TextUtil.cut(row.getItemName(), W_ITEM_NAME));
+            item.setSpecification(TextUtil.cut(row.getSpecification(), W_SPEC));
+            item.setUnit(TextUtil.cut(row.getUnit(), W_UNIT));
+            item.setPrice(NumUtil.orZero(row.getPrice()));
+            item.setQuantity(NumUtil.orZero(row.getQuantity()));
             item.setCatalogType(row.getCatalogType() == null ? CATALOG_SELF_PAY : row.getCatalogType());
-            BigDecimal amount = scale(nz(row.getAmount()));
+            BigDecimal amount = NumUtil.scale(NumUtil.orZero(row.getAmount()), AMOUNT_SCALE);
             item.setAmount(amount);
             item.setDiscountAmount(BigDecimal.ZERO);
 
@@ -669,7 +656,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             // 个账是"刷参保人卡扣的额度"，是一笔真实收款（pay_method=4），不是账单层的分摊：
             // 报盘没回这个数之前恒为 0，绝不拿估算值去充门面
             item.setAccountAmount(BigDecimal.ZERO);
-            item.setSelfAmount(scale(amount.subtract(pool)));
+            item.setSelfAmount(NumUtil.scale(amount.subtract(pool), AMOUNT_SCALE));
             items.add(item);
         }
         allocateDiscount(items, discount);
@@ -766,7 +753,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             BizSettlementBillItem item = positives.get(i);
             BigDecimal share = i == positives.size() - 1
                     ? left
-                    : scale(item.getAmount().multiply(discount).divide(positiveTotal, AMOUNT_SCALE, RoundingMode.HALF_UP));
+                    : NumUtil.scale(item.getAmount().multiply(discount).divide(positiveTotal, AMOUNT_SCALE, RoundingMode.HALF_UP), AMOUNT_SCALE);
             if (share.compareTo(left) > 0) {
                 share = left;
             }
@@ -774,8 +761,8 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
                 share = item.getSelfAmount();
             }
             item.setDiscountAmount(share);
-            item.setSelfAmount(scale(item.getAmount().subtract(item.getPoolAmount()).subtract(share)));
-            left = scale(left.subtract(share));
+            item.setSelfAmount(NumUtil.scale(item.getAmount().subtract(item.getPoolAmount()).subtract(share), AMOUNT_SCALE));
+            left = NumUtil.scale(left.subtract(share), AMOUNT_SCALE);
         }
     }
 
@@ -801,9 +788,9 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         BigDecimal coverage = BigDecimal.ZERO;
         BigDecimal selfPay = BigDecimal.ZERO;
         if (settlementType != null && settlementType > 1) {
-            coverage = nz(insurancePolicyService.getCoverageRatio(settlementType, insuranceType));
+            coverage = NumUtil.orZero(insurancePolicyService.getCoverageRatio(settlementType, insuranceType));
             if (coverage.signum() > 0) {
-                selfPay = nz(insurancePolicyService.getSelfPayRatio(settlementType, insuranceType));
+                selfPay = NumUtil.orZero(insurancePolicyService.getSelfPayRatio(settlementType, insuranceType));
             }
         }
         return new PatientInsurance(SettlementModeEnum.INSURANCE, insuranceType, coverage, selfPay);
@@ -860,19 +847,19 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         if (BillStatusEnum.PAID.getCode().equals(bill.getBillStatus())
                 || BillStatusEnum.REFUNDED.getCode().equals(bill.getBillStatus())
                 || BillStatusEnum.VOIDED.getCode().equals(bill.getBillStatus())) {
-            return scale(BigDecimal.ZERO);
+            return NumUtil.scale(BigDecimal.ZERO, AMOUNT_SCALE);
         }
-        BigDecimal net = nz(bill.getPaidAmount()).subtract(nz(bill.getRefundAmount()));
-        return scale(nz(bill.getPayableAmount()).subtract(net));
+        BigDecimal net = NumUtil.orZero(bill.getPaidAmount()).subtract(NumUtil.orZero(bill.getRefundAmount()));
+        return NumUtil.scale(NumUtil.orZero(bill.getPayableAmount()).subtract(net), AMOUNT_SCALE);
     }
 
     private BigDecimal sum(List<BizSettlementBillItem> items,
                            java.util.function.Function<BizSettlementBillItem, BigDecimal> getter) {
         BigDecimal total = BigDecimal.ZERO;
         for (BizSettlementBillItem item : items) {
-            total = total.add(nz(getter.apply(item)));
+            total = total.add(NumUtil.orZero(getter.apply(item)));
         }
-        return scale(total);
+        return NumUtil.scale(total, AMOUNT_SCALE);
     }
 
     /**

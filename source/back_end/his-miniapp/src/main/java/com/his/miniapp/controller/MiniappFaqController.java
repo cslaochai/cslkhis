@@ -28,40 +28,40 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MiniappFaqController {
 
-    private final MiniappFaqService faqService;
+    private final MiniappFaqService miniappFaqService;
 
     @Operation(summary = "常见问题分类（带条数）")
     @GetMapping("/categories")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<List<FaqCategoryVO>> categories() {
-        return Result.success(faqService.categories());
+        return Result.success(miniappFaqService.categories());
     }
 
     @Operation(summary = "常见问题检索（关键词切词匹配 + 分类过滤）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<PageResult<FaqListVO>> listPage(@RequestBody @Valid FaqPageQueryDTO dto) {
-        return Result.success(faqService.search(dto));
+        return Result.success(miniappFaqService.search(dto));
     }
 
     @Operation(summary = "常见问题详情（累计查看次数）")
     @GetMapping("/getById")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<FaqListVO> getById(@RequestParam Long faqId) {
-        return Result.success(faqService.getById(faqId));
+        return Result.success(miniappFaqService.getById(faqId));
     }
 
     @Operation(summary = "热门问题（客服页首屏）")
     @GetMapping("/hotList")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<List<FaqListVO>> hotList(@RequestParam(required = false) Integer limit) {
-        return Result.success(faqService.hotList(limit));
+        return Result.success(miniappFaqService.hotList(limit));
     }
 
     @Operation(summary = "有用反馈（helpful=1 有帮助，0 没帮助）")
     @PostMapping("/feedback")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<Integer> feedback(@RequestBody @Valid FaqFeedbackDTO dto) {
-        return Result.success(faqService.feedback(dto.getFaqId(), dto.getHelpful()));
+        return Result.success(miniappFaqService.feedback(dto.getFaqId(), dto.getHelpful()));
     }
 }

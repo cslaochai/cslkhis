@@ -23,26 +23,26 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasAnyAuthority('emr:archiveBorrow:list', 'emr:archive:list')")
 public class MedicalRecordArchiveController {
 
-    private final MedicalRecordArchiveService archiveService;
+    private final MedicalRecordArchiveService medicalRecordArchiveService;
 
     @Operation(summary = "分页查询归档记录")
     @PostMapping("/listPage")
     public Result<PageResult<BizMedicalRecordArchiveVO>> listPage(@Valid @RequestBody ArchiveQueryPageDTO queryDTO) {
-        return Result.success(archiveService.selectArchivePage(queryDTO.getPatientId(), queryDTO.getArchiveStatus(),
+        return Result.success(medicalRecordArchiveService.selectArchivePage(queryDTO.getPatientId(), queryDTO.getArchiveStatus(),
                 queryDTO.getKeyword(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }
 
     @Operation(summary = "获取归档详情")
     @GetMapping("/getById")
     public Result<BizMedicalRecordArchiveVO> getById(@RequestParam Long id) {
-        return Result.success(archiveService.getArchiveDetail(id));
+        return Result.success(medicalRecordArchiveService.getArchiveDetail(id));
     }
 
     @PreAuthorize("hasAuthority('emr:archive:edit')")
     @Operation(summary = "归档病历")
     @PostMapping("/archive")
     public Result<Void> archive(@RequestParam Long id) {
-        boolean success = archiveService.archive(id);
+        boolean success = medicalRecordArchiveService.archive(id);
         return success ? Result.success("归档成功", null) : Result.error("归档失败");
     }
 
@@ -50,21 +50,21 @@ public class MedicalRecordArchiveController {
     @Operation(summary = "封存病历")
     @PostMapping("/seal")
     public Result<Void> seal(@RequestParam Long id) {
-        boolean success = archiveService.seal(id);
+        boolean success = medicalRecordArchiveService.seal(id);
         return success ? Result.success("封存成功", null) : Result.error("封存失败");
     }
 
     @Operation(summary = "归档三态计数（待归档 / 已归档 / 已封存）")
     @GetMapping("/statusCount")
     public Result<MedicalRecordArchiveCountVO> statusCount() {
-        return Result.success(archiveService.statusCount());
+        return Result.success(medicalRecordArchiveService.statusCount());
     }
 
     @PreAuthorize("hasAuthority('emr:archive:edit')")
     @Operation(summary = "手动补跑归档超期提醒")
     @PostMapping("/notifyOverdue")
     public Result<Integer> notifyOverdue() {
-        int sent = archiveService.notifyOverdueArchives();
+        int sent = medicalRecordArchiveService.notifyOverdueArchives();
         return Result.success("已发送 " + sent + " 条归档超期提醒", sent);
     }
 }

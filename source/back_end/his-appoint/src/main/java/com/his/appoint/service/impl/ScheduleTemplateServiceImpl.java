@@ -50,10 +50,10 @@ import java.util.stream.Collectors;
 public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplateMapper, BizScheduleTemplate>
         implements ScheduleTemplateService {
 
-    private final BizScheduleTemplateMapper templateMapper;
-    private final BizScheduleMapper scheduleMapper;
-    private final BizScheduleSlotTemplateMapper slotTemplateMapper;
-    private final ScheduleSlotService slotService;
+    private final BizScheduleTemplateMapper bizScheduleTemplateMapper;
+    private final BizScheduleMapper bizScheduleMapper;
+    private final BizScheduleSlotTemplateMapper bizScheduleSlotTemplateMapper;
+    private final ScheduleSlotService scheduleSlotService;
     /**
      * 出诊计划的写口径（出勤事实派生、岗位类别以人事为准）与手工排班共用同一条，模板不另算一遍
      */
@@ -74,7 +74,7 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
                 .orderByAsc(BizScheduleTemplate::getDoctorId)
                 .orderByAsc(BizScheduleTemplate::getWeekDay)
                 .orderByAsc(BizScheduleTemplate::getStartTime);
-        return templateMapper.selectList(wrapper);
+        return bizScheduleTemplateMapper.selectList(wrapper);
     }
 
     @Override
@@ -241,12 +241,12 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
             template.setStatus(1);
         }
         if (template.getId() == null) {
-            return templateMapper.insert(template) > 0;
+            return bizScheduleTemplateMapper.insert(template) > 0;
         }
-        if (templateMapper.selectById(template.getId()) == null) {
+        if (bizScheduleTemplateMapper.selectById(template.getId()) == null) {
             throw new BusinessException("模板不存在");
         }
-        return templateMapper.updateById(template) > 0;
+        return bizScheduleTemplateMapper.updateById(template) > 0;
     }
 
     /**
@@ -288,7 +288,7 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
             throw new BusinessException("出勤模板不放号源，不需要按段细化");
         }
         if (slots.isEmpty()) {
-            slotTemplateMapper.purgeByTemplateId(template.getId());
+            bizScheduleSlotTemplateMapper.purgeByTemplateId(template.getId());
             return;
         }
         int winStart = minuteOf(template.getStartTime(), "班次开始时间");
@@ -349,9 +349,9 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
         }
 
         // 校验全过才替换：物理删（uk_tpl_slot 不含 del_flag，软删行会撞唯一键）再按新段插入
-        slotTemplateMapper.purgeByTemplateId(template.getId());
+        bizScheduleSlotTemplateMapper.purgeByTemplateId(template.getId());
         for (BizScheduleSlotTemplate row : rows) {
-            slotTemplateMapper.insert(row);
+            bizScheduleSlotTemplateMapper.insert(row);
         }
     }
 
@@ -377,7 +377,7 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
         if (voList == null || voList.isEmpty()) {
             return;
         }
-        List<BizScheduleSlotTemplate> rows = slotTemplateMapper.selectList(
+        List<BizScheduleSlotTemplate> rows = bizScheduleSlotTemplateMapper.selectList(
                 new LambdaQueryWrapper<BizScheduleSlotTemplate>()
                         .in(BizScheduleSlotTemplate::getTemplateId,
                                 voList.stream().map(ScheduleTemplateVO::getId).toList())
@@ -408,13 +408,13 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteTemplate(Long id) {
-        if (templateMapper.selectById(id) == null) {
+        if (bizScheduleTemplateMapper.selectById(id) == null) {
             throw new BusinessException("模板不存在");
         }
-        boolean ok = templateMapper.deleteById(id) > 0;
+        boolean ok = bizScheduleTemplateMapper.deleteById(id) > 0;
         if (ok) {
             // 模板已逻辑删、不会再生成排班，段配置留着只会被误读成有效配置 → 跟着清掉
-            slotTemplateMapper.purgeByTemplateId(id);
+            bizScheduleSlotTemplateMapper.purgeByTemplateId(id);
         }
         return ok;
     }
@@ -424,7 +424,7 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
         BizScheduleTemplate tpl = new BizScheduleTemplate();
         tpl.setId(id);
         tpl.setStatus(status);
-        return templateMapper.updateById(tpl) > 0;
+        return bizScheduleTemplateMapper.updateById(tpl) > 0;
     }
 
     @Override
@@ -492,7 +492,7 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
                 log.warn("模板 {}（{} {}）挂不上岗位排班事实，跳过：{}", tpl.getId(), tpl.getDoctorName(), date, e.getMessage());
                 continue;
             }
-            scheduleMapper.insert(s);
+            bizScheduleMapper.insert(s);
             try {
                 // 段生成：模板配置了片段 → 按配置；否则按半小时自动切分均分（与手工排班同一规则）。
                 // 只有医生岗切片（sql/195）：出勤岗号源恒 0，切出来是一堆永远挂不上的空段。
@@ -502,8 +502,8 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
                 }
             } catch (Exception e) {
                 skippedInvalid++;
-                slotService.physicalDeleteByScheduleId(s.getId());
-                scheduleMapper.physicalDeleteById(s.getId());
+                scheduleSlotService.physicalDeleteByScheduleId(s.getId());
+                bizScheduleMapper.physicalDeleteById(s.getId());
                 log.warn("模板生成排班失败（{} {} {}）：{}", tpl.getDoctorName(), date,
                         shift.getStartTime() + "-" + shift.getEndTime(), e.getMessage());
                 continue;
@@ -539,18 +539,18 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
 
     /**
      * 给一条新排班生成时间片段：模板配置了片段（排班模板时段）→ 按配置；
-     * 否则按半小时自动切分均分（余数给前面的段）。Σ段写回主表由 slotService 收口。
+     * 否则按半小时自动切分均分（余数给前面的段）。Σ段写回主表由 scheduleSlotService 收口。
      */
     private void generateSlotsForSchedule(BizSchedule schedule, Long templateId) {
-        List<BizScheduleSlotTemplate> tplSlots = slotTemplateMapper.selectList(
+        List<BizScheduleSlotTemplate> tplSlots = bizScheduleSlotTemplateMapper.selectList(
                 new LambdaQueryWrapper<BizScheduleSlotTemplate>()
                         .eq(BizScheduleSlotTemplate::getTemplateId, templateId)
                         .orderByAsc(BizScheduleSlotTemplate::getSeq));
         if (tplSlots.isEmpty()) {
-            slotService.generateSlots(schedule.getId(), schedule.getStartTime(), schedule.getEndTime(),
+            scheduleSlotService.generateSlots(schedule.getId(), schedule.getStartTime(), schedule.getEndTime(),
                     schedule.getTotalSource(), schedule.getAppointmentSource());
         } else {
-            slotService.generateFromTemplate(schedule.getId(), tplSlots);
+            scheduleSlotService.generateFromTemplate(schedule.getId(), tplSlots);
         }
     }
 
@@ -607,11 +607,11 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
         tw.eq(BizScheduleTemplate::getStatus, 1);
         tw.eq(deptId != null, BizScheduleTemplate::getDeptId, deptId);
         tw.eq(staffType != null, BizScheduleTemplate::getStaffType, staffType);
-        return templateMapper.selectList(tw);
+        return bizScheduleTemplateMapper.selectList(tw);
     }
 
     private List<BizSchedule> loadWeekSchedules(LocalDate monday, LocalDate sunday) {
-        return scheduleMapper.selectList(new LambdaQueryWrapper<BizSchedule>()
+        return bizScheduleMapper.selectList(new LambdaQueryWrapper<BizSchedule>()
                 .ge(BizSchedule::getScheduleDate, monday)
                 .le(BizSchedule::getScheduleDate, sunday));
     }
@@ -719,7 +719,7 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
                 .eq(BizScheduleTemplate::getWeekDay, template.getWeekDay())
                 .eq(BizScheduleTemplate::getShiftId, template.getShiftId())
                 .ne(template.getId() != null, BizScheduleTemplate::getId, template.getId());
-        if (templateMapper.selectCount(wrapper) > 0) {
+        if (bizScheduleTemplateMapper.selectCount(wrapper) > 0) {
             throw new BusinessException("该" + StaffTypeEnum.getText(template.getStaffType())
                     + "在此星期已排过同一班次");
         }

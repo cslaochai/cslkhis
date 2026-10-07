@@ -1,6 +1,7 @@
 package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.operation.dto.OperationRoomUpsertDTO;
 import com.his.operation.entity.SysOperationRoom;
@@ -25,11 +26,11 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OperationRoomServiceImpl implements OperationRoomService {
+public class OperationRoomServiceImpl extends ServiceImpl<SysOperationRoomMapper, SysOperationRoom> implements OperationRoomService {
 
     private static final int STATUS_ENABLED = 1;
 
-    private final SysOperationRoomMapper roomMapper;
+    private final SysOperationRoomMapper sysOperationRoomMapper;
 
     // C-非 DTO 字段校验：既校验必填又做 trim 归一化，返回值参与编码/名称唯一性比对与落库，
     // 若下沉为纯 @NotBlank 会丢失 trim，保留（@Valid 已挡 null，此处负责归一化）
@@ -42,7 +43,7 @@ public class OperationRoomServiceImpl implements OperationRoomService {
 
     @Override
     public List<OperationRoomVO> listAll() {
-        return roomMapper.selectList(new LambdaQueryWrapper<SysOperationRoom>()
+        return sysOperationRoomMapper.selectList(new LambdaQueryWrapper<SysOperationRoom>()
                         .orderByAsc(SysOperationRoom::getSortOrder)
                         .orderByAsc(SysOperationRoom::getRoomCode))
                 .stream().map(this::toVO).toList();
@@ -50,7 +51,7 @@ public class OperationRoomServiceImpl implements OperationRoomService {
 
     @Override
     public List<OperationRoomVO> selectEnabled() {
-        return roomMapper.selectList(new LambdaQueryWrapper<SysOperationRoom>()
+        return sysOperationRoomMapper.selectList(new LambdaQueryWrapper<SysOperationRoom>()
                         .eq(SysOperationRoom::getStatus, STATUS_ENABLED)
                         .orderByAsc(SysOperationRoom::getSortOrder)
                         .orderByAsc(SysOperationRoom::getRoomCode))
@@ -71,13 +72,13 @@ public class OperationRoomServiceImpl implements OperationRoomService {
         }
 
         Long selfId = dto.getId();
-        long dupCode = roomMapper.selectCount(new LambdaQueryWrapper<SysOperationRoom>()
+        long dupCode = sysOperationRoomMapper.selectCount(new LambdaQueryWrapper<SysOperationRoom>()
                 .eq(SysOperationRoom::getRoomCode, code)
                 .ne(selfId != null, SysOperationRoom::getId, selfId));
         if (dupCode > 0) {
             throw new BusinessException("手术间编码「" + code + "」已存在（编码全局唯一，撞了排台总表会出现两列同名台）");
         }
-        long dupName = roomMapper.selectCount(new LambdaQueryWrapper<SysOperationRoom>()
+        long dupName = sysOperationRoomMapper.selectCount(new LambdaQueryWrapper<SysOperationRoom>()
                 .eq(SysOperationRoom::getRoomName, name)
                 .ne(selfId != null, SysOperationRoom::getId, selfId));
         if (dupName > 0) {
@@ -89,7 +90,7 @@ public class OperationRoomServiceImpl implements OperationRoomService {
             entity = new SysOperationRoom();
             entity.setRoomCode(code);
         } else {
-            entity = roomMapper.selectById(selfId);
+            entity = sysOperationRoomMapper.selectById(selfId);
             if (entity == null) {
                 throw new BusinessException("手术间不存在");
             }
@@ -104,10 +105,10 @@ public class OperationRoomServiceImpl implements OperationRoomService {
         }
 
         if (selfId == null) {
-            roomMapper.insert(entity);
+            sysOperationRoomMapper.insert(entity);
             log.info("新增手术间 {}（{}）", entity.getRoomCode(), entity.getRoomName());
         } else {
-            roomMapper.updateById(entity);
+            sysOperationRoomMapper.updateById(entity);
             log.info("修改手术间 {}（{}）", entity.getRoomCode(), entity.getRoomName());
         }
         return String.valueOf(entity.getId());
@@ -119,11 +120,11 @@ public class OperationRoomServiceImpl implements OperationRoomService {
         if (roomId == null) {
             throw new BusinessException("手术间ID不能为空");
         }
-        SysOperationRoom entity = roomMapper.selectById(roomId);
+        SysOperationRoom entity = sysOperationRoomMapper.selectById(roomId);
         if (entity == null) {
             throw new BusinessException("手术间不存在");
         }
-        roomMapper.purgeById(roomId);
+        sysOperationRoomMapper.purgeById(roomId);
         log.info("物理删除手术间 {}（{}），操作不影响历史申请单的文本快照", entity.getRoomCode(), entity.getRoomName());
     }
 

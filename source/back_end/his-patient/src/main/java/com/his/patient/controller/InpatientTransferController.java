@@ -35,38 +35,38 @@ import java.util.List;
 @PreAuthorize("hasAuthority('ipd:transfer:list')")
 public class InpatientTransferController {
 
-    private final InpatientTransferService transferService;
+    private final InpatientTransferService inpatientTransferService;
 
     @Operation(summary = "转科记录分页（toDeptId 用于转入科室工作台过滤）")
     @GetMapping("/listPage")
     public Result<IPage<InpatientTransferVO>> listPage(@Valid InpatientTransferQueryPageDTO query) {
-        return Result.success(transferService.listPage(query));
+        return Result.success(inpatientTransferService.listPage(query));
     }
 
     @Operation(summary = "转科详情")
     @GetMapping("/getDetailById")
     public Result<InpatientTransferVO> getDetailById(@RequestParam Long transferId) {
-        return Result.success(transferService.getDetailById(transferId));
+        return Result.success(inpatientTransferService.getDetailById(transferId));
     }
 
     @Operation(summary = "某次住院的转科轨迹（按发生顺序升序）")
     @GetMapping("/listByAdmission")
     public Result<List<InpatientTransferVO>> listByAdmission(@RequestParam Long admissionId) {
-        return Result.success(transferService.listByAdmission(admissionId));
+        return Result.success(inpatientTransferService.listByAdmission(admissionId));
     }
 
     @PreAuthorize("hasAuthority('ipd:transfer:add')")
     @Operation(summary = "发起转科（返回转科单号；此时未生效，需转入科室接收）")
     @PostMapping("/save")
     public Result<String> save(@RequestBody @Valid InpatientTransferUpsertDTO dto) {
-        return Result.success("转科申请已提交，等待转入科室接收", transferService.save(dto));
+        return Result.success("转科申请已提交，等待转入科室接收", inpatientTransferService.save(dto));
     }
 
     @PreAuthorize("hasAuthority('ipd:transfer:edit')")
     @Operation(summary = "转入科室接收（转科真正生效：停原长期医嘱 + 换科室换床 + 回写病历）")
     @PostMapping("/accept")
     public Result<Void> accept(@RequestBody @Valid InpatientTransferAcceptDTO dto) {
-        transferService.accept(dto);
+        inpatientTransferService.accept(dto);
         return Result.success("已接收，转科生效", null);
     }
 
@@ -74,7 +74,7 @@ public class InpatientTransferController {
     @Operation(summary = "取消转科申请（仅「待接收」；已接收的必须再发起一次转科）")
     @PostMapping("/cancel")
     public Result<Void> cancel(@RequestBody @Valid InpatientTransferCancelDTO dto) {
-        transferService.cancel(dto);
+        inpatientTransferService.cancel(dto);
         return Result.success("转科申请已取消", null);
     }
 
@@ -82,6 +82,6 @@ public class InpatientTransferController {
     @GetMapping("/countPending")
     public Result<Long> countPending(@RequestParam(required = false) Long toDeptId,
                                      @RequestParam(required = false) Long admissionId) {
-        return Result.success(transferService.countPending(toDeptId, admissionId));
+        return Result.success(inpatientTransferService.countPending(toDeptId, admissionId));
     }
 }

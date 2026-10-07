@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.service.ArrearsControlGate;
@@ -55,7 +56,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InpatientOrderServiceImpl implements InpatientOrderService {
+public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapper, BizInpatientOrder> implements InpatientOrderService {
 
     private static final int BACKFILL_LIMIT = 500;
 
@@ -67,7 +68,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
 
     private final BizPatientMapper bizPatientMapper;
 
-    private final SysBedMapper bedMapper;
+    private final SysBedMapper sysBedMapper;
 
     private final OrderChargeInvoker orderChargeInvoker;
     /**
@@ -77,7 +78,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     /**
      * 电子签名（P5.5）：开立签名 + 校对签名双签
      */
-    private final EmrSignatureService signatureService;
+    private final EmrSignatureService emrSignatureService;
     /**
      * 站内信（inpat-order 发送方）：医嘱校对完成 → 通知开嘱医生
      */
@@ -89,7 +90,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
     /**
      * 技术授权准入闸（sql/155）：无手术资质的人不能开手术医嘱
      */
-    private final EmployeeTechAuthService techAuthService;
+    private final EmployeeTechAuthService employeeTechAuthService;
 
     private DictCacheService dictCacheService;
 
@@ -165,7 +166,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             authGate.setItemCode(items.stream().map(InpatientOrderItemDTO::getItemCode)
                     .filter(StringUtils::hasText).findFirst().orElse(null));
             authGate.setEmergency(false);
-            techAuthService.gate(authGate);
+            employeeTechAuthService.gate(authGate);
         }
 
         // 修改：仅「待校对」的单条医嘱，且不允许改动整组共享字段
@@ -184,7 +185,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         String deptName = null;
         String wardName = null;
         if (admission.getWardId() != null) {
-            WardVO ward = bedMapper.selectWardById(admission.getWardId());
+            WardVO ward = sysBedMapper.selectWardById(admission.getWardId());
             if (ward != null) {
                 wardName = ward.getWardName();
                 deptName = ward.getDeptName();
@@ -195,7 +196,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         }
         String bedNo = null;
         if (admission.getBedId() != null) {
-            SysBed bed = bedMapper.selectById(admission.getBedId());
+            SysBed bed = sysBedMapper.selectById(admission.getBedId());
             if (bed != null) {
                 bedNo = bed.getBedNo();
             }
@@ -351,7 +352,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         if (order.getDoctorSignId() == null) {
             return;
         }
-        signatureService.invalidate(order.getDoctorSignId(), reason, currentEmpId(), operatorUser.getRealName());
+        emrSignatureService.invalidate(order.getDoctorSignId(), reason, currentEmpId(), operatorUser.getRealName());
         order.setDoctorSignId(null);
         order.setDoctorSignedTime(null);
     }
@@ -375,7 +376,7 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
         cmd.setSignerDeptId(currentDeptId());
         cmd.setSignerDeptName(currentDeptName());
         try {
-            SignatureVO sig = signatureService.sign(cmd);
+            SignatureVO sig = emrSignatureService.sign(cmd);
             if (scene == SignSceneEnum.ORDER_VERIFY) {
                 order.setNurseSignId(sig.getId());
                 order.setNurseSignedTime(sig.getSignedTime());

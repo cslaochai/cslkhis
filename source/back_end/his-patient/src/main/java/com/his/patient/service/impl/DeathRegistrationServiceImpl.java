@@ -1,10 +1,12 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DeathRegistrationDTO;
 import com.his.patient.entity.BizDeathRegistration;
@@ -22,9 +24,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 
@@ -45,12 +44,12 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DeathRegistrationServiceImpl implements DeathRegistrationService {
+public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrationMapper, BizDeathRegistration> implements DeathRegistrationService {
 
     private static final int DESC_MAX = 500;
     private static final int UNIT_MAX = 100;
 
-    private final BizDeathRegistrationMapper registerMapper;
+    private final BizDeathRegistrationMapper bizDeathRegistrationMapper;
     private final RedisSequenceService redisSequenceService;
 
     /**
@@ -88,60 +87,25 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
         return set.isEmpty() ? null : String.join(",", set);
     }
 
-    private static String statusText(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-        return DeathRegisterStatusEnum.labelOrUnknown(status);
-    }
-
-    private static LocalDateTime atStart(LocalDate date) {
-        return date == null ? null : date.atStartOfDay();
-    }
-
-    private static LocalDateTime atEnd(LocalDate date) {
-        return date == null ? null : date.atTime(23, 59, 59);
-    }
-
     // 内部
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
 
     private static Integer flag(Integer value) {
         return value == null ? 0 : (Objects.equals(value, 1) ? 1 : 0);
     }
 
-    private static int nvl(Integer value, int fallback) {
-        return value == null ? fallback : value;
-    }
-
-    private static String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
-    private static String cutToNull(String text, int max) {
-        return StringUtils.hasText(text) ? cut(text.trim(), max) : null;
-    }
-
-    private static String cut(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
     @Override
     public PageResult<DeathRegisterVO.Row> listPage(DeathRegistrationDTO.QueryPage query) {
         DeathRegistrationDTO.QueryPage q = query == null ? new DeathRegistrationDTO.QueryPage() : query;
-        Page<DeathRegisterVO.Row> page = new Page<>(nvl(q.getPageNum(), 1), nvl(q.getPageSize(), 10));
-        List<DeathRegisterVO.Row> records = registerMapper.selectRegisterPage(page, trimToNull(q.getKeyword()),
+        Page<DeathRegisterVO.Row> page = new Page<>(q.getPageNum(), q.getPageSize());
+        List<DeathRegisterVO.Row> records = bizDeathRegistrationMapper.selectRegisterPage(page, TextUtil.trimToNull(q.getKeyword()),
                 q.getRegisterStatus(), q.getDeathType(), q.getPoliceFlag(), q.getDisputeFlag(),
-                atStart(q.getStartDate()), atEnd(q.getEndDate()));
+                TimeUtil.dayStart(q.getStartDate()), TimeUtil.dayEnd(q.getEndDate()));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
     public DeathRegisterVO.Detail getDetailById(Long id) {
-        DeathRegisterVO.Detail detail = registerMapper.selectRegisterDetail(id);
+        DeathRegisterVO.Detail detail = bizDeathRegistrationMapper.selectRegisterDetail(id);
         if (detail == null) {
             throw new BusinessException("死亡登记不存在或已删除");
         }
@@ -153,7 +117,7 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
      */
     @Override
     public DeathRegisterVO.Base base(Long admissionId) {
-        DeathRegisterVO.Base base = registerMapper.selectRegisterBase(admissionId);
+        DeathRegisterVO.Base base = bizDeathRegistrationMapper.selectRegisterBase(admissionId);
         if (base == null) {
             throw new BusinessException("住院记录不存在");
         }
@@ -163,13 +127,13 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
     @Override
     public List<DeathRegisterVO.Base> admissionCandidates(String keyword, Integer limit) {
         int size = limit == null || limit <= 0 || limit > 200 ? 50 : limit;
-        return registerMapper.selectDeathAdmissions(trimToNull(keyword), size);
+        return bizDeathRegistrationMapper.selectDeathAdmissions(TextUtil.trimToNull(keyword), size);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(DeathRegistrationDTO.Upsert dto) {
-        DeathRegisterVO.Base base = registerMapper.selectRegisterBase(dto.getAdmissionId());
+        DeathRegisterVO.Base base = bizDeathRegistrationMapper.selectRegisterBase(dto.getAdmissionId());
         if (base == null) {
             throw new BusinessException("住院记录不存在");
         }
@@ -180,7 +144,7 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
 
         BizDeathRegistration register;
         if (dto.getId() == null) {
-            if (registerMapper.countActiveByAdmission(dto.getAdmissionId(), null) > 0) {
+            if (bizDeathRegistrationMapper.countActiveByAdmission(dto.getAdmissionId(), null) > 0) {
                 throw new BusinessException("该次住院已有死亡登记（一次住院只允许一条有效登记，登错请作废后重登）");
             }
             register = new BizDeathRegistration();
@@ -193,9 +157,9 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
                 throw new BusinessException("死亡登记不允许改挂到另一次住院");
             }
             if (!Objects.equals(register.getRegisterStatus(), DeathRegisterStatusEnum.DRAFT.getCode())) {
-                throw new BusinessException(statusText(register.getRegisterStatus()) + "的登记不能修改，只能作废后重登");
+                throw new BusinessException(DeathRegisterStatusEnum.labelOrUnknown(register.getRegisterStatus()) + "的登记不能修改，只能作废后重登");
             }
-            if (registerMapper.countActiveByAdmission(dto.getAdmissionId(), register.getId()) > 0) {
+            if (bizDeathRegistrationMapper.countActiveByAdmission(dto.getAdmissionId(), register.getId()) > 0) {
                 throw new BusinessException("该次住院已有另一条死亡登记");
             }
         }
@@ -204,31 +168,31 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
         register.setPatientName(base.getPatientName());
         register.setDeathTime(base.getDeathTime());
         register.setDeathDeptId(base.getDeathDeptId());
-        register.setDeathDeptName(cutToNull(base.getDeathDeptName(), UNIT_MAX));
-        register.setDeathBedNo(cutToNull(base.getDeathBedNo(), 16));
+        register.setDeathDeptName(TextUtil.cutToNull(base.getDeathDeptName(), UNIT_MAX));
+        register.setDeathBedNo(TextUtil.cutToNull(base.getDeathBedNo(), 16));
         register.setCertId(resolveCertId(dto.getCertId(), base));
         register.setDeathType(deathType);
         register.setPoliceFlag(flag(dto.getPoliceFlag()));
-        register.setPoliceOrg(cutToNull(dto.getPoliceOrg(), UNIT_MAX));
-        register.setPoliceCaseNo(cutToNull(dto.getPoliceCaseNo(), 64));
+        register.setPoliceOrg(TextUtil.cutToNull(dto.getPoliceOrg(), UNIT_MAX));
+        register.setPoliceCaseNo(TextUtil.cutToNull(dto.getPoliceCaseNo(), 64));
         register.setPoliceReportTime(TimeUtil.toSeconds(dto.getPoliceReportTime()));
         register.setForensicFlag(flag(dto.getForensicFlag()));
         register.setBodyDisposal(dto.getBodyDisposal());
-        register.setBodyUnit(cutToNull(dto.getBodyUnit(), UNIT_MAX));
+        register.setBodyUnit(TextUtil.cutToNull(dto.getBodyUnit(), UNIT_MAX));
         register.setBodyTransportTime(TimeUtil.toSeconds(dto.getBodyTransportTime()));
-        register.setRelativeName(cutToNull(dto.getRelativeName(), 50));
-        register.setRelativeRelation(cutToNull(dto.getRelativeRelation(), 20));
-        register.setRelativePhone(cutToNull(dto.getRelativePhone(), 20));
+        register.setRelativeName(TextUtil.cutToNull(dto.getRelativeName(), 50));
+        register.setRelativeRelation(TextUtil.cutToNull(dto.getRelativeRelation(), 20));
+        register.setRelativePhone(TextUtil.cutToNull(dto.getRelativePhone(), 20));
         register.setReceivedCopies(normalizeCopies(dto.getReceivedCopies()));
         register.setReceiveTime(TimeUtil.toSeconds(dto.getReceiveTime()));
         register.setDisputeFlag(flag(dto.getDisputeFlag()));
-        register.setDisputeDesc(cutToNull(dto.getDisputeDesc(), DESC_MAX));
-        register.setRemark(cutToNull(dto.getRemark(), DESC_MAX));
+        register.setDisputeDesc(TextUtil.cutToNull(dto.getDisputeDesc(), DESC_MAX));
+        register.setRemark(TextUtil.cutToNull(dto.getRemark(), DESC_MAX));
         // 报了案就得有报案时间兜底：只勾「已报公安」却填不出公安信息的，等同于没报
         if (Objects.equals(register.getPoliceFlag(), 1) && register.getPoliceReportTime() == null) {
             throw new BusinessException("已报公安的必须填写报案时间（否则事后无法与公安记录对上）");
         }
-        save(register);
+        upsert(register);
         return register.getId();
     }
 
@@ -241,7 +205,7 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
         }
         BizDeathRegistration register = requireRegister(dto.getId());
         if (!Objects.equals(register.getRegisterStatus(), DeathRegisterStatusEnum.DRAFT.getCode())) {
-            throw new BusinessException("只有草稿登记可确认（当前：" + statusText(register.getRegisterStatus()) + "）");
+            throw new BusinessException("只有草稿登记可确认（当前：" + DeathRegisterStatusEnum.labelOrUnknown(register.getRegisterStatus()) + "）");
         }
         if (register.getDeathType() != null && register.getDeathType() != DeathTypeEnum.DISEASE.getCode()
                 && !Objects.equals(register.getPoliceFlag(), YesOrNoEnum.YES.getCode())) {
@@ -255,8 +219,8 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
         register.setRegisterStatus(DeathRegisterStatusEnum.DONE.getCode());
         register.setRegistrarId(operatorUser.getEmployeeId());
         register.setRegistrarName(operatorUser.getRealName());
-        register.setRegisterTime(now());
-        save(register);
+        register.setRegisterTime(TimeUtil.nowSeconds());
+        upsert(register);
     }
 
     @Override
@@ -267,23 +231,23 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
             throw new BusinessException("该登记已作废，无需重复作废");
         }
         register.setRegisterStatus(DeathRegisterStatusEnum.VOIDED.getCode());
-        register.setVoidReason(cut(dto.getReason().trim(), DESC_MAX));
-        register.setVoidTime(now());
-        save(register);
+        register.setVoidReason(TextUtil.cut(dto.getReason().trim(), DESC_MAX));
+        register.setVoidTime(TimeUtil.nowSeconds());
+        upsert(register);
     }
 
     private BizDeathRegistration requireRegister(Long id) {
-        BizDeathRegistration register = id == null ? null : registerMapper.selectById(id);
+        BizDeathRegistration register = id == null ? null : bizDeathRegistrationMapper.selectById(id);
         if (register == null) {
             throw new BusinessException("死亡登记不存在或已删除");
         }
         return register;
     }
 
-    private void save(BizDeathRegistration register) {
+    private void upsert(BizDeathRegistration register) {
         if (register.getId() == null) {
-            registerMapper.insert(register);
-        } else if (registerMapper.updateById(register) <= 0) {
+            bizDeathRegistrationMapper.insert(register);
+        } else if (bizDeathRegistrationMapper.updateById(register) <= 0) {
             throw new BusinessException("死亡登记保存失败，请重试");
         }
     }

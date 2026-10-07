@@ -3,6 +3,7 @@ package com.his.charge.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.YbAutoMatchDTO;
 import com.his.charge.dto.YbMapDTO;
 import com.his.charge.dto.YbMappingQueryPageDTO;
@@ -17,12 +18,12 @@ import com.his.charge.vo.YbMappingStatsVO;
 import com.his.charge.vo.YbUnmappedItemVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -35,19 +36,19 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class YbMappingServiceImpl implements YbMappingService {
+public class YbMappingServiceImpl extends ServiceImpl<BizYbMappingMapper, BizYbMapping> implements YbMappingService {
 
-    private final BizYbMappingMapper mappingMapper;
-    private final BizYbCatalogMapper catalogMapper;
+    private final BizYbMappingMapper bizYbMappingMapper;
+    private final BizYbCatalogMapper bizYbCatalogMapper;
 
     @Override
     public PageResult<YbMappingListVO> listPage(YbMappingQueryPageDTO queryDTO) {
         IPage<YbMappingListVO> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
         page = switch (queryDTO.getItemType() == null ? 0 : queryDTO.getItemType()) {
-            case 1 -> mappingMapper.selectDrugPage(page, queryDTO);
-            case 2 -> mappingMapper.selectTreatmentPage(page, queryDTO);
-            case 3 -> mappingMapper.selectLaboratoryPage(page, queryDTO);
-            case 4 -> mappingMapper.selectConsumablePage(page, queryDTO);
+            case 1 -> bizYbMappingMapper.selectDrugPage(page, queryDTO);
+            case 2 -> bizYbMappingMapper.selectTreatmentPage(page, queryDTO);
+            case 3 -> bizYbMappingMapper.selectLaboratoryPage(page, queryDTO);
+            case 4 -> bizYbMappingMapper.selectConsumablePage(page, queryDTO);
             default -> throw new BusinessException("项目类型不合法（1-药品 2-诊疗项目 3-检验项目 4-耗材）");
         };
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
@@ -55,7 +56,7 @@ public class YbMappingServiceImpl implements YbMappingService {
 
     @Override
     public List<YbMappingStatsVO> stats() {
-        return mappingMapper.selectStats();
+        return bizYbMappingMapper.selectStats();
     }
 
     @Override
@@ -63,7 +64,7 @@ public class YbMappingServiceImpl implements YbMappingService {
     public YbMappingListVO map(YbMapDTO dto) {
         checkItemType(dto.getItemType());
         checkItemExists(dto.getItemType(), dto.getItemId());
-        BizYbCatalog catalog = catalogMapper.selectById(dto.getCatalogId());
+        BizYbCatalog catalog = bizYbCatalogMapper.selectById(dto.getCatalogId());
         if (catalog == null) {
             throw new BusinessException("医保目录不存在或已删除");
         }
@@ -73,7 +74,7 @@ public class YbMappingServiceImpl implements YbMappingService {
         String operator = UserUtils.getCurrentUser().getRealName();
 
         // 换对照 = 覆盖（uk_item 唯一，天然一对一）
-        BizYbMapping mapping = mappingMapper.selectOne(new LambdaQueryWrapper<BizYbMapping>()
+        BizYbMapping mapping = bizYbMappingMapper.selectOne(new LambdaQueryWrapper<BizYbMapping>()
                 .eq(BizYbMapping::getItemType, dto.getItemType())
                 .eq(BizYbMapping::getItemId, dto.getItemId())
                 .last("LIMIT 1"));
@@ -92,12 +93,12 @@ public class YbMappingServiceImpl implements YbMappingService {
         mapping.setYbName(catalog.getYbName());
         mapping.setMatchType(2);
         mapping.setMappedBy(operator);
-        mapping.setMappedTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        mapping.setMappedTime(TimeUtil.nowSeconds());
         mapping.setUpdateBy(operator);
         if (fresh) {
-            mappingMapper.insert(mapping);
+            bizYbMappingMapper.insert(mapping);
         } else {
-            mappingMapper.updateById(mapping);
+            bizYbMappingMapper.updateById(mapping);
         }
 
         YbMappingListVO vo = new YbMappingListVO();
@@ -120,7 +121,7 @@ public class YbMappingServiceImpl implements YbMappingService {
     @Transactional(rollbackFor = Exception.class)
     public void unmap(Integer itemType, Long itemId) {
         checkItemType(itemType);
-        int removed = mappingMapper.purgeByItem(itemType, itemId);
+        int removed = bizYbMappingMapper.purgeByItem(itemType, itemId);
         if (removed == 0) {
             throw new BusinessException("该院内项目没有对照关系，无需解除");
         }
@@ -140,15 +141,15 @@ public class YbMappingServiceImpl implements YbMappingService {
                 : List.of(dto.getItemType());
         for (Integer type : types) {
             List<YbUnmappedItemVO> items = switch (type) {
-                case 1 -> mappingMapper.selectUnmappedDrugs();
-                case 2 -> mappingMapper.selectUnmappedTreatments();
-                case 3 -> mappingMapper.selectUnmappedLaboratories();
-                case 4 -> mappingMapper.selectUnmappedConsumables();
+                case 1 -> bizYbMappingMapper.selectUnmappedDrugs();
+                case 2 -> bizYbMappingMapper.selectUnmappedTreatments();
+                case 3 -> bizYbMappingMapper.selectUnmappedLaboratories();
+                case 4 -> bizYbMappingMapper.selectUnmappedConsumables();
                 default -> throw new BusinessException("项目类型不合法（1-药品 2-诊疗项目 3-检验项目 4-耗材）");
             };
             for (YbUnmappedItemVO item : items) {
                 List<Integer> catalogTypes = candidateCatalogTypes(type, item.getSubType());
-                List<BizYbCatalog> hits = catalogMapper.selectList(new LambdaQueryWrapper<BizYbCatalog>()
+                List<BizYbCatalog> hits = bizYbCatalogMapper.selectList(new LambdaQueryWrapper<BizYbCatalog>()
                         .in(BizYbCatalog::getCatalogType, catalogTypes)
                         .eq(BizYbCatalog::getStatus, 1)
                         .eq(BizYbCatalog::getYbName, item.getItemName()));
@@ -169,9 +170,9 @@ public class YbMappingServiceImpl implements YbMappingService {
                     mapping.setYbName(catalog.getYbName());
                     mapping.setMatchType(1);
                     mapping.setMappedBy(operator);
-                    mapping.setMappedTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+                    mapping.setMappedTime(TimeUtil.nowSeconds());
                     mapping.setCreateBy(operator);
-                    mappingMapper.insert(mapping);
+                    bizYbMappingMapper.insert(mapping);
                     matched++;
                 }
             }
@@ -179,7 +180,7 @@ public class YbMappingServiceImpl implements YbMappingService {
         result.setMatched(matched);
         result.setAmbiguous(ambiguous);
         result.setNoMatch(noMatch);
-        int afterTotal = (int) mappingMapper.selectStats().stream()
+        int afterTotal = (int) bizYbMappingMapper.selectStats().stream()
                 .mapToLong(s -> s.getTotal() - s.getMapped()).sum();
         result.setAfterTotal(afterTotal);
         result.setBeforeTotal(afterTotal + matched);
@@ -196,10 +197,10 @@ public class YbMappingServiceImpl implements YbMappingService {
 
     private void checkItemExists(Integer itemType, Long itemId) {
         long count = switch (itemType) {
-            case 1 -> mappingMapper.countDrug(itemId);
-            case 2 -> mappingMapper.countTreatment(itemId);
-            case 3 -> mappingMapper.countLaboratory(itemId);
-            case 4 -> mappingMapper.countConsumable(itemId);
+            case 1 -> bizYbMappingMapper.countDrug(itemId);
+            case 2 -> bizYbMappingMapper.countTreatment(itemId);
+            case 3 -> bizYbMappingMapper.countLaboratory(itemId);
+            case 4 -> bizYbMappingMapper.countConsumable(itemId);
             default -> 0;
         };
         if (count == 0) {
@@ -218,10 +219,10 @@ public class YbMappingServiceImpl implements YbMappingService {
 
     private ItemSnapshot loadSnapshot(Integer itemType, Long itemId) {
         YbUnmappedItemVO v = switch (itemType) {
-            case 1 -> mappingMapper.selectDrugSnapshot(itemId);
-            case 2 -> mappingMapper.selectTreatmentSnapshot(itemId);
-            case 3 -> mappingMapper.selectLaboratorySnapshot(itemId);
-            case 4 -> mappingMapper.selectConsumableSnapshot(itemId);
+            case 1 -> bizYbMappingMapper.selectDrugSnapshot(itemId);
+            case 2 -> bizYbMappingMapper.selectTreatmentSnapshot(itemId);
+            case 3 -> bizYbMappingMapper.selectLaboratorySnapshot(itemId);
+            case 4 -> bizYbMappingMapper.selectConsumableSnapshot(itemId);
             default -> null;
         };
         if (v == null) {

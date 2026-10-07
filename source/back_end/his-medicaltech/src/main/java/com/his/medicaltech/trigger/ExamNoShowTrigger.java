@@ -21,12 +21,12 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ExamNoShowTrigger {
 
-    private final ExamAppointmentService appointmentService;
+    private final ExamAppointmentService examAppointmentService;
 
     @Scheduled(cron = "0 */10 * * * ?")
     public void scheduledNoShow() {
         try {
-            int n = appointmentService.autoNoShow();
+            int n = examAppointmentService.autoNoShow();
             if (n > 0) {
                 log.info("[检查预约] 定时扫描判定爽约 {} 张", n);
             }

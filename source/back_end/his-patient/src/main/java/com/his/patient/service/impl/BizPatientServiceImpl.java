@@ -20,13 +20,8 @@ import com.his.patient.mapper.BizPatientTagRelationMapper;
 import com.his.patient.service.*;
 import com.his.patient.support.PatientProfileValidator;
 import com.his.patient.support.PatientSearchScopeMode;
-import com.his.system.service.DictCacheService;
 import com.his.patient.support.PatientSearchScopeResolver;
-import com.his.patient.vo.PatientDetailVO;
-import com.his.patient.vo.PatientHealthProfileVO;
-import com.his.patient.vo.PatientRegistCountVO;
-import com.his.patient.vo.PatientRegisterVO;
-import com.his.patient.vo.PatientVO;
+import com.his.patient.vo.*;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysPatientTag;
 import com.his.system.entity.SysUser;
@@ -99,13 +94,13 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             FieldSpec.render("status", "状态", v -> EnableStatusEnum.getText((Integer) v))
     );
     private final RedisSequenceService redisSequenceService;
-    private final BizPatientTagRelationMapper tagRelationMapper;
+    private final BizPatientTagRelationMapper bizPatientTagRelationMapper;
     private final PatientTagService patientTagService;
     /**
      * 健康档案六组的唯一写入口。建档时把主档的「过敏史 / 既往病史 / 联系人」文本
      * 落成结构化明细并回算投影，见 {@code syncAfterPatientSave}。
      */
-    private final PatientHealthProfileService healthProfileService;
+    private final PatientHealthProfileService patientHealthProfileService;
     /**
      * 患者自助注册写登录账号用：建档后同步开通患者类型的登录账号。
      */
@@ -123,7 +118,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
     /**
      * 患者-标签关系的读取归它（标签口径只允许有一处，见该服务注释）。
      */
-    private final BizPatientTagRelationService tagRelationService;
+    private final BizPatientTagRelationService bizPatientTagRelationService;
     /**
      * 「今日就诊」提供者（实现在就诊域 his-appoint）。
      *
@@ -137,7 +132,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * <p>身份由它自己从 SecurityContext 取，调用方不传任何参数 ——
      * 不允许调用方声明自己的搜索范围。
      */
-    private final PatientSearchScopeResolver scopeResolver;
+    private final PatientSearchScopeResolver patientSearchScopeResolver;
     /**
      * 字段级修改日志落库器。
      *
@@ -145,19 +140,6 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * 改过敏史都会直接影响后续诊疗。这里把「改之前是啥、改之后是啥」钉进表里。
      */
     private final FieldChangeRecorder fieldChangeRecorder;
-
-    /**
-     * 字典码值取文案，供 {@link #PATIENT_FIELDS} 的 render 回调。
-     *
-     * <p>为什么不直接在初始化器里写 {@code dictCacheService.getDicDataLabel(...)}：
-     * {@code dictCacheService} 是构造器注入的 blank final 字段，而 {@code PATIENT_FIELDS}
-     * 是**实例字段初始化器** —— Java 的确定赋值规则禁止初始化器读取尚未初始化的 final 字段
-     * （编译期报"可能尚未初始化变量"，加 import 也解决不了）。
-     * 绕一层实例方法，读操作就推迟到 render 真正被调用时，那时构造早已完成。
-     */
-    private String dictText(String dictType, Object code) {
-        return dictCacheService.getDicDataLabel(dictType, (Integer) code);
-    }
 
     /**
      * 联系电话脱敏：11 位手机号保留前 3 后 4（138****5678）；
@@ -190,6 +172,19 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * 字典码值取文案，供 {@link #PATIENT_FIELDS} 的 render 回调。
+     *
+     * <p>为什么不直接在初始化器里写 {@code dictCacheService.getDicDataLabel(...)}：
+     * {@code dictCacheService} 是构造器注入的 blank final 字段，而 {@code PATIENT_FIELDS}
+     * 是**实例字段初始化器** —— Java 的确定赋值规则禁止初始化器读取尚未初始化的 final 字段
+     * （编译期报"可能尚未初始化变量"，加 import 也解决不了）。
+     * 绕一层实例方法，读操作就推迟到 render 真正被调用时，那时构造早已完成。
+     */
+    private String dictText(String dictType, Object code) {
+        return dictCacheService.getDicDataLabel(dictType, (Integer) code);
     }
 
     @Override
@@ -314,13 +309,13 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             return result;
         }
         // 新增患者成功后同步健康档案：主档表单里的「过敏史 / 既往病史 / 联系人」是快速录入入口，
-        // 由 healthProfileService 落成结构化明细行，并回算主档文本投影（口径见该服务注释）。
+        // 由 patientHealthProfileService 落成结构化明细行，并回算主档文本投影（口径见该服务注释）。
         //
         // 这里**删掉了原来那段直接插患者联系方式的代码**：它把
         // `patient.getContactRelation()`（"配偶" 这样的文本）塞进 `relationship`
         //（tinyint 码值列），MySQL 隐式转换后静默存成 0 —— 页面上关系显示成 0，
         // 且不抛任何异常。现在 relationship 是 Integer，类型上就写不进去了。
-        healthProfileService.syncAfterPatientSave(patient);
+        patientHealthProfileService.syncAfterPatientSave(patient);
 
         // 自动打静态标签（根据年龄判断）
         autoAddStaticTags(patient);
@@ -363,12 +358,12 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         LambdaQueryWrapper<BizPatientTagRelation> checkWrapper = new LambdaQueryWrapper<>();
         checkWrapper.eq(BizPatientTagRelation::getPatientId, patientId)
                 .eq(BizPatientTagRelation::getTagId, tagId);
-        if (tagRelationMapper.selectCount(checkWrapper) == 0) {
+        if (bizPatientTagRelationMapper.selectCount(checkWrapper) == 0) {
             BizPatientTagRelation relation = new BizPatientTagRelation();
             relation.setPatientId(patientId);
             relation.setTagId(tagId);
             relation.setSourceType(2); // 系统自动打标
-            tagRelationMapper.insert(relation);
+            bizPatientTagRelationMapper.insert(relation);
         }
     }
 
@@ -391,7 +386,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         // 如果有标签过滤，先查询有该标签的患者ID列表
         List<Long> tagPatientIds = null;
         if (queryDTO.getTagId() != null) {
-            tagPatientIds = tagRelationService.listPatientIdsByTagId(queryDTO.getTagId());
+            tagPatientIds = bizPatientTagRelationService.listPatientIdsByTagId(queryDTO.getTagId());
             if (tagPatientIds.isEmpty()) {
                 return PageResult.of(0, 0, 0, 0, List.of());
             }
@@ -404,7 +399,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         // 非门诊岗位（病案/质控/医保/审计/管理员…）搜人就是查档案：
         // 既不置顶、也不标注，顺带省掉每次敲键都全表扫一遍排队表。
         // 注意两者必须一起关：只关分组不关置顶 = 顶上几个患者没头没尾地排在前面，像随机排序。
-        PatientSearchScopeMode scopeMode = scopeResolver.resolve();
+        PatientSearchScopeMode scopeMode = patientSearchScopeResolver.resolve();
         Map<Long, PatientTodayVisit> todayVisits = scopeMode == PatientSearchScopeMode.TODAY_FIRST
                 ? loadTodayVisits()
                 : Collections.emptyMap();
@@ -465,7 +460,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         // 六组健康档案一次取回。这里**不再自己拼查询**：此前这个接口用四个 mapper 各查一次，
         // 只带回四组（缺用药史与联系人），排序与字段映射也各写一套 —— 于是「患者详情」和
         // 「健康档案页」对同一个患者能给出两套不一致的列表。现在两者共用同一个读实现。
-        PatientHealthProfileVO profile = healthProfileService.getProfile(patientId);
+        PatientHealthProfileVO profile = patientHealthProfileService.getProfile(patientId);
         detailVO.setAllergies(profile.getAllergies());
         detailVO.setPastDiseases(profile.getPastDiseases());
         detailVO.setSurgeryHistories(profile.getSurgeryHistories());
@@ -475,7 +470,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
 
         // 患者标签：运营标记（VIP / 高血压 / 建档提醒…），与列表页同一实现、同一口径，
         // 且**不参与下面的临床裁剪** —— 收费窗口认 VIP、护士看注意事项都要用它。
-        detailVO.setTags(tagRelationService.mapTagsByPatientIds(List.of(patientId))
+        detailVO.setTags(bizPatientTagRelationService.mapTagsByPatientIds(List.of(patientId))
                 .getOrDefault(patientId, List.of()));
 
         // 按岗位裁剪临床字段（服务端裁剪，不是"前端不渲染"）
@@ -530,7 +525,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             // 主档表单里的「过敏史 / 既往病史 / 联系人」是快速录入入口：
             // 该组还没有明细时落成明细，已有明细时按明细回算文本（口径见 PatientHealthProfileService）。
             // 不跑这一步的话，用户在主档里改完过敏史、健康档案页纹丝不动，两处又开始各说各话。
-            healthProfileService.syncAfterPatientSave(patient);
+            patientHealthProfileService.syncAfterPatientSave(patient);
             // 拿落库后的真实值比对，而不是拿 DTO 比：DTO 里 null 的字段 updateById 根本不会写，
             // 拿 DTO 比会把"这次没传"误记成"被清空了"；syncAfterPatientSave 的回算也只有落库后才看得见。
             BizPatient after = this.getById(patientUpsertDTO.getId());
@@ -647,7 +642,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         List<Long> patientIds = voList.stream().map(PatientVO::getId).collect(Collectors.toList());
 
         // 1) 标签：患者-标签关系 → 标签字典
-        Map<Long, List<SysPatientTagVO>> tagsMap = tagRelationService.mapTagsByPatientIds(patientIds);
+        Map<Long, List<SysPatientTagVO>> tagsMap = bizPatientTagRelationService.mapTagsByPatientIds(patientIds);
 
         // 2) 预约（挂号）次数
         Map<Long, Integer> appointCountMap = mapAppointCount(patientIds);

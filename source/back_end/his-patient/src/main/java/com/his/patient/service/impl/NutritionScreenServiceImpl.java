@@ -1,10 +1,12 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.NutritionScreenQueryPageDTO;
 import com.his.patient.dto.NutritionScreenUpsertDTO;
@@ -47,35 +49,21 @@ import java.util.Set;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class NutritionScreenServiceImpl implements NutritionScreenService {
+public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMapper, BizNutritionScreen> implements NutritionScreenService {
     private static final String PREFIX_SCREEN = "NS";
     private final DeptScopeProvider deptScopeProvider;
-    private final BizNutritionScreenMapper screenMapper;
-    private final BizAdmissionMapper admissionMapper;
-    private final BizPatientMapper patientMapper;
-    private final SysBedMapper bedMapper;
-    private final NutritionStatMapper statMapper;
-
-    private static String trim(String v) {
-        return v == null ? null : v.trim();
-    }
-
-    /**
-     * 入库前截到列宽：超长文本让 insert 报 Data too long 会把"备注太长"升级成 500
-     */
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        return v.length() <= max ? v : v.substring(0, max);
-    }
+    private final BizNutritionScreenMapper bizNutritionScreenMapper;
+    private final BizAdmissionMapper bizAdmissionMapper;
+    private final BizPatientMapper bizPatientMapper;
+    private final SysBedMapper sysBedMapper;
+    private final NutritionStatMapper nutritionStatMapper;
 
     @Override
     public PageResult<NutritionScreenVO> screenListPage(NutritionScreenQueryPageDTO query) {
-        query.setKeyword(trim(query.getKeyword()));
+        query.setKeyword(TextUtil.trim(query.getKeyword()));
         applyDeptScope(query);
         Page<NutritionScreenVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        Page<NutritionScreenVO> result = (Page<NutritionScreenVO>) screenMapper.selectScreenPage(page, query);
+        Page<NutritionScreenVO> result = (Page<NutritionScreenVO>) bizNutritionScreenMapper.selectScreenPage(page, query);
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
                 result.getRecords());
     }
@@ -88,7 +76,7 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        return screenMapper.selectByAdmission(admissionId);
+        return bizNutritionScreenMapper.selectByAdmission(admissionId);
     }
 
     @Override
@@ -108,12 +96,12 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
             throw new BusinessException(NutritionScreenTypeEnum.labelOrUnknown(type) + " 需提交评定总分");
         }
 
-        BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
         BizPatient patient = admission.getPatientId() == null ? null
-                : patientMapper.selectById(admission.getPatientId());
+                : bizPatientMapper.selectById(admission.getPatientId());
 
         // 年龄项只认患者档案里的真实年龄：≥70 岁 1 分，其余 0 分
         int ageScore = patient != null && patient.getAge() != null && patient.getAge() >= 70 ? 1 : 0;
@@ -131,10 +119,10 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         boolean insert = dto.getId() == null;
         if (insert) {
             row = new BizNutritionScreen();
-            row.setScreenNo(nextNo(PREFIX_SCREEN, screenMapper.maxScreenSeq(PREFIX_SCREEN
+            row.setScreenNo(nextNo(PREFIX_SCREEN, bizNutritionScreenMapper.maxScreenSeq(PREFIX_SCREEN
                     + (screenTime == null ? LocalDate.now() : screenTime.toLocalDate()).format(DateFormats.COMPACT_DATE))));
         } else {
-            row = screenMapper.selectById(dto.getId());
+            row = bizNutritionScreenMapper.selectById(dto.getId());
             if (row == null) {
                 throw new BusinessException("筛查记录不存在或已删除");
             }
@@ -145,7 +133,7 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         row.setPatientNo(patient == null ? null : patient.getPatientNo());
         row.setPatientName(patient == null ? null : patient.getPatientName());
         row.setDeptId(admission.getDeptId());
-        row.setDeptName(admission.getDeptId() == null ? null : statMapper.selectDeptName(admission.getDeptId()));
+        row.setDeptName(admission.getDeptId() == null ? null : nutritionStatMapper.selectDeptName(admission.getDeptId()));
         row.setWardId(admission.getWardId());
         row.setWardName(wardName(admission.getWardId()));
         row.setBedNo(bedNo(admission.getBedId()));
@@ -165,27 +153,27 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         row.setScreenTime(screenTime);
         row.setScreenerId(operatorUser.getEmployeeId());
         row.setScreenerName(operatorUser.getRealName());
-        row.setRemark(cut(trim(dto.getRemark()), 500));
+        row.setRemark(TextUtil.cut(TextUtil.trim(dto.getRemark()), 500));
 
         if (insert) {
-            screenMapper.insert(row);
+            bizNutritionScreenMapper.insert(row);
             log.info("营养筛查登记 住院={} 量表={} 总分={} 判定={} 操作人={}", admission.getAdmissionNo(),
                     type, total, risk, operatorUser.getRealName());
         } else {
-            screenMapper.updateById(row);
+            bizNutritionScreenMapper.updateById(row);
             log.info("营养筛查修改 id={} 总分={} 判定={} 操作人={}", row.getId(), total, risk, operatorUser.getRealName());
         }
-        return screenMapper.selectVoById(row.getId());
+        return bizNutritionScreenMapper.selectVoById(row.getId());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int screenDeleteById(Long id) {
-        BizNutritionScreen row = screenMapper.selectById(id);
+        BizNutritionScreen row = bizNutritionScreenMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("筛查记录不存在或已删除");
         }
-        return screenMapper.deleteById(id);
+        return bizNutritionScreenMapper.deleteById(id);
     }
 
     /**
@@ -220,7 +208,7 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         if (wardId == null) {
             return null;
         }
-        WardVO ward = bedMapper.selectWardById(wardId);
+        WardVO ward = sysBedMapper.selectWardById(wardId);
         return ward == null ? null : ward.getWardName();
     }
 
@@ -228,7 +216,7 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
         if (bedId == null) {
             return null;
         }
-        SysBed bed = bedMapper.selectById(bedId);
+        SysBed bed = sysBedMapper.selectById(bedId);
         return bed == null ? null : bed.getBedNo();
     }
 

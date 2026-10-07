@@ -3,8 +3,10 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.CssdDTO;
 import com.his.pharmacy.entity.BizCssdPack;
@@ -37,16 +39,12 @@ import java.util.Objects;
  */
 @Service
 @RequiredArgsConstructor
-public class CssdServiceImpl implements CssdService {
+public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack> implements CssdService {
     private final DictCacheService dictCacheService;
-    private final BizCssdPackMapper packMapper;
-    private final BizCssdTraceMapper traceMapper;
+    private final BizCssdPackMapper bizCssdPackMapper;
+    private final BizCssdTraceMapper bizCssdTraceMapper;
 
     // 回收登记
-
-    private static String tr(String s) {
-        return s == null ? null : s.trim();
-    }
 
     // 流转
 
@@ -57,17 +55,17 @@ public class CssdServiceImpl implements CssdService {
         int method = dto.getSterilizeMethod() == null ? 1 : dto.getSterilizeMethod();
         BizCssdPack p = new BizCssdPack();
         p.setPackNo(StringUtils.hasText(dto.getPackNo()) ? dto.getPackNo().trim() : nextPackNo());
-        if (packMapper.selectIdByNoAny(p.getPackNo()) != null) {
+        if (bizCssdPackMapper.selectIdByNoAny(p.getPackNo()) != null) {
             throw new BusinessException("器械包条码已存在：" + p.getPackNo());
         }
         p.setPackName(dto.getPackName().trim());
         p.setDeptId(dto.getDeptId());
-        p.setDeptName(tr(dto.getDeptName()));
+        p.setDeptName(TextUtil.trim(dto.getDeptName()));
         p.setSterilizeMethod(method);
         p.setStatus(CssdNodeStatusEnum.RECEIVED.getCode());
         p.setLastNodeTime(TimeUtil.nowSeconds());
         p.setCreateBy(UserUtils.getCurrentUser().getRealName());
-        packMapper.insert(p);
+        bizCssdPackMapper.insert(p);
 
         insertTrace(p, CssdNodeStatusEnum.RECEIVED.getCode(), dto.getRemark(), null, null, CssdCheckResultEnum.OK.getCode(),
                 StringUtils.hasText(dto.getOperatorName()) ? dto.getOperatorName().trim()
@@ -111,13 +109,13 @@ public class CssdServiceImpl implements CssdService {
         p.setStatus(target);
         p.setLastNodeTime(TimeUtil.nowSeconds());
         p.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        packMapper.updateById(p);
+        bizCssdPackMapper.updateById(p);
 
         // 灭菌完成判不合格 → 包退回清洗（重新打包灭菌），追溯节点如实记录不合格
         if (CssdNodeStatusEnum.STORED.is(target) && CssdCheckResultEnum.NG.is(result)) {
             p.setStatus(CssdNodeStatusEnum.WASHING.getCode());
             p.setLastNodeTime(TimeUtil.nowSeconds());
-            packMapper.updateById(p);
+            bizCssdPackMapper.updateById(p);
         }
         insertTrace(p, target, dto.getRemark(), p.getSterilizerNo(), p.getBatchNo(), result, operator);
         return toVo(p, loadTraces(p.getId()));
@@ -126,7 +124,7 @@ public class CssdServiceImpl implements CssdService {
     // 私有
 
     public IPage<CssdPackVO> listPage(CssdDTO.QueryPage q) {
-        String kw = tr(q.getKeyword());
+        String kw = TextUtil.trim(q.getKeyword());
         LambdaQueryWrapper<BizCssdPack> w = new LambdaQueryWrapper<BizCssdPack>()
                 .eq(q.getStatus() != null, BizCssdPack::getStatus, q.getStatus())
                 .and(StringUtils.hasText(kw), x -> x
@@ -135,7 +133,7 @@ public class CssdServiceImpl implements CssdService {
                         .or().like(BizCssdPack::getDeptName, kw))
                 .orderByDesc(BizCssdPack::getLastNodeTime)
                 .orderByDesc(BizCssdPack::getId);
-        return packMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
+        return bizCssdPackMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
                 .convert(p -> toVo(p, null));
     }
 
@@ -145,7 +143,7 @@ public class CssdServiceImpl implements CssdService {
     }
 
     private BizCssdPack requirePack(Long packId) {
-        BizCssdPack p = packMapper.selectById(packId);
+        BizCssdPack p = bizCssdPackMapper.selectById(packId);
         if (p == null || Objects.equals(p.getDelFlag(), 1)) {
             throw new BusinessException("器械包不存在（id=" + packId + "）");
         }
@@ -163,12 +161,12 @@ public class CssdServiceImpl implements CssdService {
         t.setSterilizerNo(sterilizerNo);
         t.setBatchNo(batchNo);
         t.setResult(result);
-        t.setRemark(tr(remark));
-        traceMapper.insert(t);
+        t.setRemark(TextUtil.trim(remark));
+        bizCssdTraceMapper.insert(t);
     }
 
     private List<CssdTraceVO> loadTraces(Long packId) {
-        return traceMapper.selectList(new LambdaQueryWrapper<BizCssdTrace>()
+        return bizCssdTraceMapper.selectList(new LambdaQueryWrapper<BizCssdTrace>()
                         .eq(BizCssdTrace::getPackId, packId)
                         .orderByAsc(BizCssdTrace::getNodeTime)
                         .orderByAsc(BizCssdTrace::getId))
@@ -183,7 +181,7 @@ public class CssdServiceImpl implements CssdService {
         long seq = 1;
         for (int i = 0; i < 20; i++) {
             String no = "CSSD" + date + String.format("%03d", seq);
-            if (packMapper.selectIdByNoAny(no) == null) {
+            if (bizCssdPackMapper.selectIdByNoAny(no) == null) {
                 return no;
             }
             seq++;

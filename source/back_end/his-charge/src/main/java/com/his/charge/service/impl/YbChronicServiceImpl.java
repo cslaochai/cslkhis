@@ -3,6 +3,7 @@ package com.his.charge.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.api.PatientGateway;
 import com.his.charge.dto.*;
 import com.his.charge.entity.BizYbChronicCatalog;
@@ -18,6 +19,7 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
+import com.his.common.util.TextUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -39,7 +41,7 @@ import java.util.Objects;
  */
 @Service
 @RequiredArgsConstructor
-public class YbChronicServiceImpl implements YbChronicService {
+public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, BizYbChronicReg> implements YbChronicService {
 
     /**
      * 备案状态：1-有效 2-已注销 3-已驳回
@@ -53,14 +55,14 @@ public class YbChronicServiceImpl implements YbChronicService {
      */
     private static final int DISPLAY_EXPIRED = 4;
 
-    private final BizYbChronicCatalogMapper catalogMapper;
-    private final BizYbChronicRegMapper regMapper;
+    private final BizYbChronicCatalogMapper bizYbChronicCatalogMapper;
+    private final BizYbChronicRegMapper bizYbChronicRegMapper;
     private final PatientGateway patientGateway;
-    private final RedisSequenceService sequenceService;
+    private final RedisSequenceService redisSequenceService;
 
     @Override
     public PageResult<ChronicCatalogVO> catalogListPage(ChronicCatalogQueryPageDTO queryDTO) {
-        IPage<BizYbChronicCatalog> page = catalogMapper.selectPage(
+        IPage<BizYbChronicCatalog> page = bizYbChronicCatalogMapper.selectPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), catalogWrapper(queryDTO));
         List<ChronicCatalogVO> voList = page.getRecords().stream().map(this::toCatalogVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);
@@ -70,14 +72,14 @@ public class YbChronicServiceImpl implements YbChronicService {
     public List<ChronicCatalogVO> selectCatalogList() {
         ChronicCatalogQueryPageDTO query = new ChronicCatalogQueryPageDTO();
         query.setStatus(1);
-        return catalogMapper.selectList(catalogWrapper(query)).stream().map(this::toCatalogVO).toList();
+        return bizYbChronicCatalogMapper.selectList(catalogWrapper(query)).stream().map(this::toCatalogVO).toList();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ChronicCatalogVO catalogUpsert(ChronicCatalogUpsertDTO dto) {
         String code = dto.getDiseaseCode().trim();
-        BizYbChronicCatalog dup = catalogMapper.selectOne(new LambdaQueryWrapper<BizYbChronicCatalog>()
+        BizYbChronicCatalog dup = bizYbChronicCatalogMapper.selectOne(new LambdaQueryWrapper<BizYbChronicCatalog>()
                 .eq(BizYbChronicCatalog::getDiseaseCode, code)
                 .ne(dto.getId() != null, BizYbChronicCatalog::getId, dto.getId())
                 .last("LIMIT 1"));
@@ -96,16 +98,16 @@ public class YbChronicServiceImpl implements YbChronicService {
             }
         }
         entity.setDiseaseCode(code);
-        entity.setDiseaseName(cut(dto.getDiseaseName(), 200));
+        entity.setDiseaseName(TextUtil.cut(dto.getDiseaseName(), 200));
         entity.setDiseaseType(dto.getDiseaseType());
-        entity.setIcdCode(cut(dto.getIcdCode(), 32));
+        entity.setIcdCode(TextUtil.cut(dto.getIcdCode(), 32));
         entity.setDefaultValidMonths(dto.getDefaultValidMonths());
-        entity.setRemark(cut(dto.getRemark(), 500));
+        entity.setRemark(TextUtil.cut(dto.getRemark(), 500));
         entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (creating) {
-            catalogMapper.insert(entity);
+            bizYbChronicCatalogMapper.insert(entity);
         } else {
-            catalogMapper.updateById(entity);
+            bizYbChronicCatalogMapper.updateById(entity);
         }
         return toCatalogVO(entity);
     }
@@ -120,7 +122,7 @@ public class YbChronicServiceImpl implements YbChronicService {
         BizYbChronicCatalog entity = requireCatalog(id);
         entity.setStatus(status);
         entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        catalogMapper.updateById(entity);
+        bizYbChronicCatalogMapper.updateById(entity);
     }
 
     @Override
@@ -147,7 +149,7 @@ public class YbChronicServiceImpl implements YbChronicService {
                     .isNotNull(BizYbChronicReg::getValidEnd)
                     .lt(BizYbChronicReg::getValidEnd, today);
         }
-        IPage<BizYbChronicReg> page = regMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
+        IPage<BizYbChronicReg> page = bizYbChronicRegMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         List<ChronicRegListVO> voList = page.getRecords().stream().map(entity -> toRegVO(entity, today)).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);
     }
@@ -163,7 +165,7 @@ public class YbChronicServiceImpl implements YbChronicService {
             return List.of();
         }
         LocalDate today = LocalDate.now();
-        return regMapper.selectList(new LambdaQueryWrapper<BizYbChronicReg>()
+        return bizYbChronicRegMapper.selectList(new LambdaQueryWrapper<BizYbChronicReg>()
                         .eq(BizYbChronicReg::getPatientId, patientId)
                         .eq(BizYbChronicReg::getRegStatus, REG_VALID)
                         .orderByDesc(BizYbChronicReg::getRegisterDate))
@@ -172,7 +174,7 @@ public class YbChronicServiceImpl implements YbChronicService {
 
     @Override
     public ChronicRegSummaryVO regSummary() {
-        ChronicRegSummaryVO vo = regMapper.summary();
+        ChronicRegSummaryVO vo = bizYbChronicRegMapper.summary();
         return vo == null ? new ChronicRegSummaryVO() : vo;
     }
 
@@ -196,7 +198,7 @@ public class YbChronicServiceImpl implements YbChronicService {
         if (creating) {
             assertNoActiveDuplicate(dto.getPatientId(), catalog.getDiseaseCode(), validEndKey, null);
             entity = new BizYbChronicReg();
-            entity.setRegNo(sequenceService.generateChronicRegNo());
+            entity.setRegNo(redisSequenceService.generateChronicRegNo());
             entity.setRegStatus(REG_VALID);
         } else {
             entity = requireReg(dto.getId());
@@ -206,31 +208,31 @@ public class YbChronicServiceImpl implements YbChronicService {
             assertNoActiveDuplicate(dto.getPatientId(), catalog.getDiseaseCode(), validEndKey, entity.getId());
         }
         entity.setPatientId(patient.getId());
-        entity.setPatientName(cut(patient.getPatientName(), 50));
-        entity.setPatientNo(cut(patient.getPatientNo(), 32));
-        entity.setMedicalInsuranceNo(cut(patient.getMedicalInsuranceNo(), 32));
+        entity.setPatientName(TextUtil.cut(patient.getPatientName(), 50));
+        entity.setPatientNo(TextUtil.cut(patient.getPatientNo(), 32));
+        entity.setMedicalInsuranceNo(TextUtil.cut(patient.getMedicalInsuranceNo(), 32));
         entity.setCatalogId(catalog.getId());
         entity.setDiseaseCode(catalog.getDiseaseCode());
         entity.setDiseaseName(catalog.getDiseaseName());
         entity.setDiseaseType(catalog.getDiseaseType());
         entity.setCertifyDeptId(dto.getCertifyDeptId());
-        entity.setCertifyDeptName(cut(dto.getCertifyDeptName(), 100));
-        entity.setCertifyDoctorName(cut(dto.getCertifyDoctorName(), 64));
+        entity.setCertifyDeptName(TextUtil.cut(dto.getCertifyDeptName(), 100));
+        entity.setCertifyDoctorName(TextUtil.cut(dto.getCertifyDoctorName(), 64));
         entity.setCertifyDate(dto.getCertifyDate());
-        entity.setCertifyBasis(cut(dto.getCertifyBasis(), 500));
+        entity.setCertifyBasis(TextUtil.cut(dto.getCertifyBasis(), 500));
         entity.setRegisterDeptId(dto.getRegisterDeptId());
-        entity.setRegisterDeptName(cut(dto.getRegisterDeptName(), 100));
+        entity.setRegisterDeptName(TextUtil.cut(dto.getRegisterDeptName(), 100));
         applyRegisterEmployee(entity, dto, creating);
         entity.setRegisterDate(dto.getRegisterDate());
         entity.setValidStart(dto.getValidStart());
         entity.setValidEnd(dto.getValidEnd());
         entity.setValidEndKey(validEndKey);
-        entity.setRemark(cut(dto.getRemark(), 500));
+        entity.setRemark(TextUtil.cut(dto.getRemark(), 500));
         entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (creating) {
-            regMapper.insert(entity);
+            bizYbChronicRegMapper.insert(entity);
         } else {
-            regMapper.updateById(entity);
+            bizYbChronicRegMapper.updateById(entity);
         }
         return toRegVO(entity, LocalDate.now());
     }
@@ -244,11 +246,11 @@ public class YbChronicServiceImpl implements YbChronicService {
         }
         String operator = UserUtils.getCurrentUser().getRealName();
         entity.setRegStatus(REG_CANCELLED);
-        entity.setCancelReason(cut(dto.getReason(), 500));
+        entity.setCancelReason(TextUtil.cut(dto.getReason(), 500));
         entity.setCancelBy(operator);
         entity.setCancelTime(LocalDateTime.now());
         entity.setUpdateBy(operator);
-        regMapper.updateById(entity);
+        bizYbChronicRegMapper.updateById(entity);
     }
 
     @Override
@@ -260,11 +262,11 @@ public class YbChronicServiceImpl implements YbChronicService {
         }
         String operator = UserUtils.getCurrentUser().getRealName();
         entity.setRegStatus(REG_REJECTED);
-        entity.setRejectReason(cut(dto.getReason(), 500));
+        entity.setRejectReason(TextUtil.cut(dto.getReason(), 500));
         entity.setRejectBy(operator);
         entity.setRejectTime(LocalDateTime.now());
         entity.setUpdateBy(operator);
-        regMapper.updateById(entity);
+        bizYbChronicRegMapper.updateById(entity);
     }
 
     /**
@@ -274,14 +276,14 @@ public class YbChronicServiceImpl implements YbChronicService {
     private void applyRegisterEmployee(BizYbChronicReg entity, ChronicRegUpsertDTO dto, boolean creating) {
         String inputName = dto.getRegisterEmpName() == null ? null : dto.getRegisterEmpName().trim();
         if (inputName == null || inputName.isEmpty()) {
-            entity.setRegisterEmpName(cut(UserUtils.getCurrentUser().getRealName(), 64));
+            entity.setRegisterEmpName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), 64));
             entity.setRegisterEmpId(UserUtils.getCurrentUser().getEmployeeId());
             return;
         }
         if (creating && !Objects.equals(inputName, UserUtils.getCurrentUser().getRealName()) && !isText(dto.getRemark())) {
             throw new BusinessException("经办人不是当前登录人（外部机构代办）时，必须在备注写明原因，例如「XX市医保中心窗口张XX代办」");
         }
-        entity.setRegisterEmpName(cut(inputName, 64));
+        entity.setRegisterEmpName(TextUtil.cut(inputName, 64));
         entity.setRegisterEmpId(Objects.equals(inputName, UserUtils.getCurrentUser().getRealName())
                 ? UserUtils.getCurrentUser().getEmployeeId() : null);
     }
@@ -292,7 +294,7 @@ public class YbChronicServiceImpl implements YbChronicService {
      */
     private void assertNoActiveDuplicate(Long patientId, String diseaseCode, LocalDate validEndKey, Long excludeId) {
         LocalDate today = LocalDate.now();
-        List<BizYbChronicReg> actives = regMapper.selectList(new LambdaQueryWrapper<BizYbChronicReg>()
+        List<BizYbChronicReg> actives = bizYbChronicRegMapper.selectList(new LambdaQueryWrapper<BizYbChronicReg>()
                 .eq(BizYbChronicReg::getPatientId, patientId)
                 .eq(BizYbChronicReg::getDiseaseCode, diseaseCode)
                 .eq(BizYbChronicReg::getRegStatus, REG_VALID)
@@ -305,7 +307,7 @@ public class YbChronicServiceImpl implements YbChronicService {
                     + "），不能重复备案；如需变更请先注销原单");
         }
         // 唯一键含 valid_end_key，同一终止日的两条有效单会直接撞库，先给出可读提示
-        BizYbChronicReg sameKey = regMapper.selectOne(new LambdaQueryWrapper<BizYbChronicReg>()
+        BizYbChronicReg sameKey = bizYbChronicRegMapper.selectOne(new LambdaQueryWrapper<BizYbChronicReg>()
                 .eq(BizYbChronicReg::getPatientId, patientId)
                 .eq(BizYbChronicReg::getDiseaseCode, diseaseCode)
                 .eq(BizYbChronicReg::getRegStatus, REG_VALID)
@@ -318,7 +320,7 @@ public class YbChronicServiceImpl implements YbChronicService {
     }
 
     private BizYbChronicCatalog requireCatalog(Long id) {
-        BizYbChronicCatalog entity = id == null ? null : catalogMapper.selectById(id);
+        BizYbChronicCatalog entity = id == null ? null : bizYbChronicCatalogMapper.selectById(id);
         if (entity == null) {
             throw new BusinessException("慢特病病种目录不存在或已删除");
         }
@@ -326,7 +328,7 @@ public class YbChronicServiceImpl implements YbChronicService {
     }
 
     private BizYbChronicReg requireReg(Long id) {
-        BizYbChronicReg entity = id == null ? null : regMapper.selectById(id);
+        BizYbChronicReg entity = id == null ? null : bizYbChronicRegMapper.selectById(id);
         if (entity == null) {
             throw new BusinessException("慢特病备案不存在或已删除");
         }
@@ -369,11 +371,4 @@ public class YbChronicServiceImpl implements YbChronicService {
         return text != null && !text.isBlank();
     }
 
-    private String cut(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        String trimmed = text.trim();
-        return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
-    }
 }

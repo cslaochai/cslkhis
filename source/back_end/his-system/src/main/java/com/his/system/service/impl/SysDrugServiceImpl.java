@@ -2,6 +2,7 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.system.dto.SysDrugQueryPageDTO;
 import com.his.system.dto.SysDrugSelectDTO;
@@ -21,9 +22,9 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class SysDrugServiceImpl implements SysDrugService {
+public class SysDrugServiceImpl extends ServiceImpl<SysDrugMapper, SysDrug> implements SysDrugService {
 
-    private final SysDrugMapper drugMapper;
+    private final SysDrugMapper sysDrugMapper;
 
     @Override
     public PageResult<SysDrugVO> listPage(SysDrugQueryPageDTO queryDTO) {
@@ -33,7 +34,7 @@ public class SysDrugServiceImpl implements SysDrugService {
                 .eq(queryDTO.getSpecialFlag() != null, SysDrug::getSpecialFlag, queryDTO.getSpecialFlag())
                 .orderByAsc(SysDrug::getDrugCode);
 
-        Page<SysDrug> page = drugMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
+        Page<SysDrug> page = sysDrugMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         List<SysDrugVO> voList = page.getRecords().stream().map(d -> {
             SysDrugVO vo = new SysDrugVO();
             BeanUtils.copyProperties(d, vo);
@@ -48,7 +49,7 @@ public class SysDrugServiceImpl implements SysDrugService {
         wrapper.eq(queryDTO.getDrugType() != null, SysDrug::getDrugType, queryDTO.getDrugType())
                 .eq(SysDrug::getStatus, 1)
                 .orderByAsc(SysDrug::getDrugCode);
-        return drugMapper.selectList(wrapper).stream().map(d -> {
+        return sysDrugMapper.selectList(wrapper).stream().map(d -> {
             SysDrugSelectListVO vo = new SysDrugSelectListVO();
             BeanUtils.copyProperties(d, vo);
             return vo;
@@ -57,7 +58,7 @@ public class SysDrugServiceImpl implements SysDrugService {
 
     @Override
     public SysDrugVO getInfo(Long drugId) {
-        SysDrug drug = drugMapper.selectById(drugId);
+        SysDrug drug = sysDrugMapper.selectById(drugId);
         SysDrugVO vo = new SysDrugVO();
         BeanUtils.copyProperties(drug, vo);
         return vo;
@@ -68,14 +69,14 @@ public class SysDrugServiceImpl implements SysDrugService {
         SysDrug drug = new SysDrug();
         BeanUtils.copyProperties(upsertDTO, drug);
         if (upsertDTO.getId() == null) {
-            drugMapper.insert(drug);
+            sysDrugMapper.insert(drug);
         } else {
-            drugMapper.updateById(drug);
+            sysDrugMapper.updateById(drug);
         }
     }
 
     @Override
     public void delete(Long drugId) {
-        drugMapper.deleteById(drugId);
+        sysDrugMapper.deleteById(drugId);
     }
 }

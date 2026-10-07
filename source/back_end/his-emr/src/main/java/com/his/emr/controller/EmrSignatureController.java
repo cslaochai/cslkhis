@@ -40,7 +40,7 @@ import java.util.List;
 @PreAuthorize("hasAnyAuthority('sign:center:list', 'pharmacy:prescriptionAudit:list')")
 public class EmrSignatureController {
 
-    private final EmrSignatureService signatureService;
+    private final EmrSignatureService emrSignatureService;
     private final SignCertService signCertService;
     private final TsaService tsaService;
     private final SignatureCenterService signatureCenterService;
@@ -50,7 +50,7 @@ public class EmrSignatureController {
     @Operation(summary = "签名记录分页（可按对象类型/场景/签名人/状态/验签结果/时间过滤）")
     @GetMapping("/emr/signature/listPage")
     public Result<PageResult<SignatureVO>> listPage(@Valid SignatureQueryPageDTO query) {
-        var page = signatureService.listPage(query);
+        var page = emrSignatureService.listPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(),
                 page.getPages(), page.getRecords()));
     }
@@ -58,25 +58,25 @@ public class EmrSignatureController {
     @Operation(summary = "签名详情（含被签内容快照全文）")
     @GetMapping("/emr/signature/getById")
     public Result<SignatureVO> getById(@RequestParam Long id) {
-        return Result.success(signatureService.getById(id));
+        return Result.success(emrSignatureService.getById(id));
     }
 
     @Operation(summary = "某个对象的签名链（含已作废的，按 chain_no 升序）")
     @GetMapping("/emr/signature/listByBiz")
     public Result<List<SignatureVO>> listByBiz(@RequestParam Integer bizType, @RequestParam Long bizId) {
-        return Result.success(signatureService.listByBiz(bizType, bizId));
+        return Result.success(emrSignatureService.listByBiz(bizType, bizId));
     }
 
     @Operation(summary = "某对象的签名情况（当前锚点状态 / 签名链 / 能否补签及原因）")
     @GetMapping("/emr/signature/objectStatus")
     public Result<ObjectSignatureVO> objectStatus(@RequestParam Integer bizType, @RequestParam Long bizId) {
-        return Result.success(signatureService.objectStatus(bizType, bizId));
+        return Result.success(emrSignatureService.objectStatus(bizType, bizId));
     }
 
     @Operation(summary = "签名概览（有效/作废/未校验/验签失败 + 各类型覆盖率 + 时间来源与证书信任级别说明）")
     @GetMapping("/emr/signature/summary")
     public Result<SignatureSummaryVO> summary() {
-        return Result.success(signatureService.summary());
+        return Result.success(emrSignatureService.summary());
     }
 
     @Operation(summary = "下拉选项（对象类型/场景/签名状态/验签状态/时间来源）")
@@ -89,13 +89,13 @@ public class EmrSignatureController {
     @Operation(summary = "按 ID 验签（返回签名值校验与内容比对两个独立结论）")
     @PostMapping("/emr/signature/verify")
     public Result<SignVerifyVO> verify(@Valid @RequestBody SignatureVerifyDTO dto) {
-        return Result.success(signatureService.verify(dto.getSignId()));
+        return Result.success(emrSignatureService.verify(dto.getSignId()));
     }
 
     @Operation(summary = "按对象批量验签（含已作废签名）")
     @PostMapping("/emr/signature/verifyByBiz")
     public Result<List<SignVerifyVO>> verifyByBiz(@Valid @RequestBody SignatureVerifyByBizDTO dto) {
-        return Result.success(signatureService.verifyByBiz(dto.getBizType(), dto.getBizId()));
+        return Result.success(emrSignatureService.verifyByBiz(dto.getBizType(), dto.getBizId()));
     }
 
     @PreAuthorize("hasAuthority('sign:center:edit')")

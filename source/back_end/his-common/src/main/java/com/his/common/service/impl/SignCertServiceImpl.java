@@ -3,6 +3,7 @@ package com.his.common.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.config.SignProperties;
 import com.his.common.dto.SignCertIssueDTO;
 import com.his.common.dto.SignCertQueryPageDTO;
@@ -16,11 +17,7 @@ import com.his.common.mapper.SysSignCertMapper;
 import com.his.common.service.ExternalCaChannelService;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.service.SignCertService;
-import com.his.common.util.DateFormats;
-import com.his.common.util.KeyPairFactory;
-import com.his.common.util.KeyProtectorUtil;
-import com.his.common.util.SignCryptoUtil;
-import com.his.common.util.TimeUtil;
+import com.his.common.util.*;
 import com.his.common.vo.SignCertVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,21 +49,21 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SignCertServiceImpl implements SignCertService {
+public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignCert> implements SignCertService {
 
     private static final String CERT_NO_PREFIX = "CERT";
     private static final String CFG_VALID_DAYS = "sign.cert.valid_days";
     private static final String CFG_AUTO_ISSUE = "sign.cert.auto_issue";
 
-    private final SysSignCertMapper certMapper;
-    private final SignConfigMapper configMapper;
+    private final SysSignCertMapper sysSignCertMapper;
+    private final SignConfigMapper signConfigMapper;
     private final KeyProtectorUtil keyProtectorUtil;
-    private final SignProperties properties;
-    private final RedisSequenceService sequenceService;
+    private final SignProperties signProperties;
+    private final RedisSequenceService redisSequenceService;
     /**
      * 外部 CA 适配器（M8 留口子）：无实现/未配置 external 时为 null，走院内自签
      */
-    private final ExternalCaChannelService externalCaChannel;
+    private final ExternalCaChannelService externalCaChannelService;
 
     // 取证书 / 自动签发
 
@@ -90,7 +87,7 @@ public class SignCertServiceImpl implements SignCertService {
                     + "签名留痕必须落到员工，不能落成系统账号");
         }
         LocalDateTime now = TimeUtil.nowSeconds();
-        SysSignCert exist = certMapper.selectActiveByEmp(empId, now);
+        SysSignCert exist = sysSignCertMapper.selectActiveByEmp(empId, now);
         if (exist != null) {
             return exist;
         }
@@ -115,7 +112,7 @@ public class SignCertServiceImpl implements SignCertService {
         if (!StringUtils.hasText(dto.getEmpName())) {
             throw new BusinessException("员工姓名不能为空（证书上必须能看出这是谁）");
         }
-        SysSignCert exist = certMapper.selectActiveByEmp(dto.getEmpId(), TimeUtil.nowSeconds());
+        SysSignCert exist = sysSignCertMapper.selectActiveByEmp(dto.getEmpId(), TimeUtil.nowSeconds());
         if (exist != null) {
             throw new BusinessException("员工「" + dto.getEmpName() + "」已持有有效证书 "
                     + exist.getCertNo() + "（有效期至 " + exist.getValidTo() + "）；"
@@ -136,13 +133,13 @@ public class SignCertServiceImpl implements SignCertService {
         // M8 留口子：外部 CA 模式下先本地生成密钥对、把 Subject+公钥交给 CA 适配器
         //（PKCS#10 常规流程：私钥不出本地，CA 只签公钥）。当前适配器是控制台打印桩，
         // 打印 CSR 后返回 null —— 中断签发，绝不静默回退院内自签（那等于伪造信任根）。
-        if (externalCaChannel.available()) {
+        if (externalCaChannelService.available()) {
             issueViaExternalCa(empName, deptName, validDays);
         }
 
         KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate();
         String salt = keyProtectorUtil.newSalt();
-        String protectedKey = keyProtectorUtil.protect(pair.privatePem(), salt, properties.getIterations());
+        String protectedKey = keyProtectorUtil.protect(pair.privatePem(), salt, signProperties.getIterations());
 
         LocalDateTime now = TimeUtil.nowSeconds();
         LocalDateTime to = now.plusDays(validDays);
@@ -161,7 +158,7 @@ public class SignCertServiceImpl implements SignCertService {
             cert.setKeyFingerprint(SignCryptoUtil.fingerprint(pair.publicPem()));
             cert.setProtectedPrivateKey(protectedKey);
             cert.setKeySalt(salt);
-            cert.setKeyIterations(properties.getIterations());
+            cert.setKeyIterations(signProperties.getIterations());
             cert.setIssuedMode(mode.getCode());
             cert.setCertStatus(CertStatusEnum.ACTIVE.getCode());
             cert.setValidFrom(now);
@@ -169,7 +166,7 @@ public class SignCertServiceImpl implements SignCertService {
             cert.setSignCount(0);
             cert.setRemark(remark);
             try {
-                certMapper.insert(cert);
+                sysSignCertMapper.insert(cert);
                 log.info("签发签名证书 certNo={} empId={} 有效期至={} 方式={}",
                         cert.getCertNo(), empId, to, mode.getText());
                 return cert;
@@ -197,10 +194,10 @@ public class SignCertServiceImpl implements SignCertService {
         String subjectDn = "CN=" + (StringUtils.hasText(empName) ? empName : "unknown")
                 + ", O=长沙市麓康医院"
                 + (StringUtils.hasText(deptName) ? ", OU=" + deptName : "");
-        ExternalCaChannelService.IssuedCert issued = externalCaChannel.issueCert(
+        ExternalCaChannelService.IssuedCert issued = externalCaChannelService.issueCert(
                 new ExternalCaChannelService.IssueRequest(subjectDn, pair.publicPem(), validDays));
         if (issued == null) {
-            throw new BusinessException("外部 CA（" + externalCaChannel.name() + "）未返回证书，签发已中断；"
+            throw new BusinessException("外部 CA（" + externalCaChannelService.name() + "）未返回证书，签发已中断；"
                     + "未接入真 CA 前请将 his.sign.ca-mode 改回 internal 使用院内自签");
         }
         // 拿到证书也故意不落库：M8 只留出口子形态，真 CA 到位前必须中断，
@@ -219,7 +216,7 @@ public class SignCertServiceImpl implements SignCertService {
         if (!StringUtils.hasText(dto.getReason())) {
             throw new BusinessException("吊销原因必填（吊销会直接废止后续签名能力，必须写明依据）");
         }
-        SysSignCert cert = certMapper.selectById(dto.getCertId());
+        SysSignCert cert = sysSignCertMapper.selectById(dto.getCertId());
         if (cert == null) {
             throw new BusinessException("证书不存在");
         }
@@ -231,7 +228,7 @@ public class SignCertServiceImpl implements SignCertService {
         cert.setRevokeTime(TimeUtil.nowSeconds());
         cert.setRevokeBy(operatorId);
         cert.setRevokeByName(operatorName);
-        certMapper.updateById(cert);
+        sysSignCertMapper.updateById(cert);
         log.info("吊销签名证书 certNo={} empId={} 原因={} 操作人={}",
                 cert.getCertNo(), cert.getEmpId(), dto.getReason(), operatorName);
         return toVO(cert, true);
@@ -239,7 +236,7 @@ public class SignCertServiceImpl implements SignCertService {
 
     @Override
     public SignCertVO getById(Long id) {
-        SysSignCert cert = certMapper.selectById(id);
+        SysSignCert cert = sysSignCertMapper.selectById(id);
         if (cert == null) {
             throw new BusinessException("证书不存在");
         }
@@ -260,7 +257,7 @@ public class SignCertServiceImpl implements SignCertService {
         }
         w.orderByDesc(SysSignCert::getId);
 
-        IPage<SysSignCert> page = certMapper.selectPage(
+        IPage<SysSignCert> page = sysSignCertMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), w);
         Page<SignCertVO> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         List<SignCertVO> rows = new ArrayList<>(page.getRecords().size());
@@ -281,7 +278,7 @@ public class SignCertServiceImpl implements SignCertService {
         }
         w.orderByDesc(SysSignCert::getId).last("LIMIT 50");
         List<SignCertVO> list = new ArrayList<>();
-        for (SysSignCert c : certMapper.selectList(w)) {
+        for (SysSignCert c : sysSignCertMapper.selectList(w)) {
             list.add(toVO(c, false));
         }
         return list;
@@ -301,12 +298,12 @@ public class SignCertServiceImpl implements SignCertService {
                     + " 过期，不能用于签名；请重新签发");
         }
         return keyProtectorUtil.unprotect(cert.getProtectedPrivateKey(), cert.getKeySalt(),
-                cert.getKeyIterations() == null ? properties.getIterations() : cert.getKeyIterations());
+                cert.getKeyIterations() == null ? signProperties.getIterations() : cert.getKeyIterations());
     }
 
     @Override
     public long countByStatus(Integer certStatus) {
-        return certMapper.selectCount(new LambdaQueryWrapper<SysSignCert>()
+        return sysSignCertMapper.selectCount(new LambdaQueryWrapper<SysSignCert>()
                 .eq(SysSignCert::getCertStatus, certStatus));
     }
 
@@ -314,13 +311,13 @@ public class SignCertServiceImpl implements SignCertService {
 
     @Override
     public long countAutoIssued() {
-        return certMapper.selectCount(new LambdaQueryWrapper<SysSignCert>()
+        return sysSignCertMapper.selectCount(new LambdaQueryWrapper<SysSignCert>()
                 .eq(SysSignCert::getIssuedMode, CertIssuedModeEnum.AUTO.getCode()));
     }
 
     @Override
     public long countActiveEmployees() {
-        List<SysSignCert> list = certMapper.selectList(new LambdaQueryWrapper<SysSignCert>()
+        List<SysSignCert> list = sysSignCertMapper.selectList(new LambdaQueryWrapper<SysSignCert>()
                 .select(SysSignCert::getEmpId)
                 .eq(SysSignCert::getCertStatus, CertStatusEnum.ACTIVE.getCode()));
         return list.stream().map(SysSignCert::getEmpId).filter(Objects::nonNull).distinct().count();
@@ -333,24 +330,24 @@ public class SignCertServiceImpl implements SignCertService {
         if (fromDto != null && fromDto > 0) {
             return fromDto;
         }
-        Integer cfg = intValue(configMapper.selectValue(CFG_VALID_DAYS));
+        Integer cfg = intValue(signConfigMapper.selectValue(CFG_VALID_DAYS));
         if (cfg != null && cfg > 0) {
             return cfg;
         }
-        return properties.getDefaultValidDays() > 0 ? properties.getDefaultValidDays() : 365;
+        return signProperties.getDefaultValidDays() > 0 ? signProperties.getDefaultValidDays() : 365;
     }
 
     private boolean autoIssueEnabled() {
-        String v = configMapper.selectValue(CFG_AUTO_ISSUE);
+        String v = signConfigMapper.selectValue(CFG_AUTO_ISSUE);
         if (StringUtils.hasText(v)) {
             return !"0".equals(v.trim());
         }
-        return properties.isAutoIssueCert();
+        return signProperties.isAutoIssueCert();
     }
 
     private String nextCertNo() {
         String prefix = CERT_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        return prefix + String.format("%04d", certMapper.countByCertNoPrefix(prefix) + 1);
+        return prefix + String.format("%04d", sysSignCertMapper.countByCertNoPrefix(prefix) + 1);
     }
 
     private SignCertVO toVO(SysSignCert c, boolean withPublicKey) {

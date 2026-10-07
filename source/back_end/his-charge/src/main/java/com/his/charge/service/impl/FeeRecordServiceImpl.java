@@ -19,6 +19,8 @@ import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.FeeStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -68,17 +70,6 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
 
     private final RedisSequenceService redisSequenceService;
 
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
-
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() <= max ? value : value.substring(0, max);
-    }
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizFeeRecord book(FeeBookDTO dto) {
@@ -91,8 +82,8 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         if (FeeSourceTypeEnum.fromCode(dto.getSourceType()) == null) {
             throw new BusinessException("费用来源不合法");
         }
-        BigDecimal price = nz(dto.getPrice());
-        BigDecimal quantity = nz(dto.getQuantity());
+        BigDecimal price = NumUtil.orZero(dto.getPrice());
+        BigDecimal quantity = NumUtil.orZero(dto.getQuantity());
         if (price.signum() < 0) {
             throw new BusinessException("单价不能为负");
         }
@@ -109,15 +100,15 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         }
 
         BizFeeRecord row = new BizFeeRecord();
-        row.setFeeNo(cut(redisSequenceService.generateFeeNo(), W_FEE_NO));
+        row.setFeeNo(TextUtil.cut(redisSequenceService.generateFeeNo(), W_FEE_NO));
         applySnapshot(row, dto);
         // 金额由服务端现算：信调用方传来的金额等于把应收交给调用方定义
         row.setAmount(price.multiply(quantity).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP));
         row.setFeeStatus(FeeStatusEnum.PENDING.getCode());
         row.setBookTime(LocalDateTime.now());
         row.setBookById(UserUtils.getCurrentUser().getEmployeeId());
-        row.setBookByName(cut(UserUtils.getCurrentUser().getRealName(), W_BOOK_BY_NAME));
-        row.setRemark(cut(dto.getRemark(), W_REMARK));
+        row.setBookByName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_BOOK_BY_NAME));
+        row.setRemark(TextUtil.cut(dto.getRemark(), W_REMARK));
         this.save(row);
         log.info("[记账] {} 患者 {} 项目 {} 数量 {} 金额 ¥{}", row.getFeeNo(), row.getPatientName(),
                 row.getItemName(), quantity.toPlainString(), row.getAmount().toPlainString());
@@ -191,7 +182,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
 
     @Override
     public BigDecimal sumPendingAmount(Integer encounterType, Long encounterId) {
-        return nz(baseMapper.sumPendingAmount(encounterType, encounterId));
+        return NumUtil.orZero(baseMapper.sumPendingAmount(encounterType, encounterId));
     }
 
     @Override
@@ -206,7 +197,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
 
     @Override
     public BigDecimal sumNetAmount(Integer encounterType, Long encounterId) {
-        return nz(baseMapper.sumNetByEncounter(encounterType, encounterId));
+        return NumUtil.orZero(baseMapper.sumNetByEncounter(encounterType, encounterId));
     }
 
     @Override
@@ -271,8 +262,8 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
             return null;
         }
         for (BizFeeRecord row : baseMapper.selectBySource(sourceType, sourceId)) {
-            boolean amountPositive = nz(row.getAmount()).signum() > 0;
-            boolean sameItem = itemCode == null || Objects.equals(cut(row.getItemCode(), W_ITEM_CODE), cut(itemCode, W_ITEM_CODE));
+            boolean amountPositive = NumUtil.orZero(row.getAmount()).signum() > 0;
+            boolean sameItem = itemCode == null || Objects.equals(TextUtil.cut(row.getItemCode(), W_ITEM_CODE), TextUtil.cut(itemCode, W_ITEM_CODE));
             if (sameItem && amountPositive && !FeeStatusEnum.REVERSED.getCode().equals(row.getFeeStatus())) {
                 return row;
             }
@@ -298,9 +289,9 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         }
         BizFeeRecordDetailVO vo = new BizFeeRecordDetailVO();
         BeanUtils.copyProperties(row, vo);
-        BigDecimal reversed = nz(baseMapper.sumReversalAmount(id));
+        BigDecimal reversed = NumUtil.orZero(baseMapper.sumReversalAmount(id));
         vo.setReversedAmount(reversed);
-        vo.setRemainingAmount(nz(row.getAmount()).add(reversed));
+        vo.setRemainingAmount(NumUtil.orZero(row.getAmount()).add(reversed));
         if (row.getOrigFeeId() != null) {
             BizFeeRecord orig = this.getById(row.getOrigFeeId());
             vo.setReverseOf(orig == null ? null : toVO(orig));
@@ -324,8 +315,8 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
             return null;
         }
         for (BizFeeRecord exist : baseMapper.selectBySource(dto.getSourceType(), dto.getSourceId())) {
-            boolean sameItem = Objects.equals(cut(exist.getItemCode(), W_ITEM_CODE), cut(dto.getItemCode(), W_ITEM_CODE));
-            if (sameItem && nz(exist.getAmount()).signum() > 0
+            boolean sameItem = Objects.equals(TextUtil.cut(exist.getItemCode(), W_ITEM_CODE), TextUtil.cut(dto.getItemCode(), W_ITEM_CODE));
+            if (sameItem && NumUtil.orZero(exist.getAmount()).signum() > 0
                     && !FeeStatusEnum.REVERSED.getCode().equals(exist.getFeeStatus())) {
                 return exist;
             }
@@ -348,7 +339,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         if (orig == null) {
             throw new BusinessException("记账行不存在");
         }
-        if (nz(orig.getAmount()).signum() < 0) {
+        if (NumUtil.orZero(orig.getAmount()).signum() < 0) {
             throw new BusinessException("红冲行不能再被红冲");
         }
         FeeStatusEnum status = FeeStatusEnum.fromCode(orig.getFeeStatus());
@@ -376,15 +367,15 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         }
         BigDecimal leftQty = remainingQuantity(orig);
         boolean full = quantity.compareTo(leftQty) >= 0;
-        BigDecimal remainingAmount = nz(orig.getAmount()).add(nz(baseMapper.sumReversalAmount(orig.getId())));
+        BigDecimal remainingAmount = NumUtil.orZero(orig.getAmount()).add(NumUtil.orZero(baseMapper.sumReversalAmount(orig.getId())));
         BigDecimal amount = full ? remainingAmount
-                : nz(orig.getPrice()).multiply(quantity).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
+                : NumUtil.orZero(orig.getPrice()).multiply(quantity).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
 
         BizFeeRecord neg = new BizFeeRecord();
-        neg.setFeeNo(cut(redisSequenceService.generateFeeNo(), W_FEE_NO));
+        neg.setFeeNo(TextUtil.cut(redisSequenceService.generateFeeNo(), W_FEE_NO));
         neg.setPatientId(orig.getPatientId());
         neg.setPatientNo(orig.getPatientNo());
-        neg.setPatientName(cut(orig.getPatientName(), W_PATIENT_NAME));
+        neg.setPatientName(TextUtil.cut(orig.getPatientName(), W_PATIENT_NAME));
         neg.setEncounterType(orig.getEncounterType());
         neg.setEncounterId(orig.getEncounterId());
         neg.setEncounterNo(orig.getEncounterNo());
@@ -394,7 +385,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         neg.setDoctorName(orig.getDoctorName());
         neg.setItemType(orig.getItemType());
         neg.setItemCode(orig.getItemCode());
-        neg.setItemName(cut(orig.getItemName(), W_ITEM_NAME));
+        neg.setItemName(TextUtil.cut(orig.getItemName(), W_ITEM_NAME));
         neg.setSpecification(orig.getSpecification());
         neg.setUnit(orig.getUnit());
         neg.setCatalogType(orig.getCatalogType());
@@ -409,8 +400,8 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         neg.setOrigFeeId(orig.getId());
         neg.setBookTime(LocalDateTime.now());
         neg.setBookById(UserUtils.getCurrentUser().getEmployeeId());
-        neg.setBookByName(cut(UserUtils.getCurrentUser().getRealName(), W_BOOK_BY_NAME));
-        neg.setRemark(cut(reason, W_REMARK));
+        neg.setBookByName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_BOOK_BY_NAME));
+        neg.setRemark(TextUtil.cut(reason, W_REMARK));
         this.save(neg);
 
         if (full) {
@@ -423,13 +414,13 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
                     .set(BizFeeRecord::getFeeStatus, FeeStatusEnum.REVERSED.getCode())
                     .eq(BizFeeRecord::getOrigFeeId, orig.getId()));
             // 同步更新原行的 refunded_amount = SUM(ABS(负行amount))
-            BigDecimal totalRefunded = nz(orig.getAmount()).abs();
+            BigDecimal totalRefunded = NumUtil.orZero(orig.getAmount()).abs();
             baseMapper.update(null, new LambdaUpdateWrapper<BizFeeRecord>()
                     .set(BizFeeRecord::getRefundedAmount, totalRefunded)
                     .eq(BizFeeRecord::getId, orig.getId()));
         } else {
             // 部分冲减：累加 refunded_amount
-            BigDecimal currentRefunded = nz(orig.getRefundedAmount());
+            BigDecimal currentRefunded = NumUtil.orZero(orig.getRefundedAmount());
             BigDecimal thisRefund = amount.abs();
             baseMapper.update(null, new LambdaUpdateWrapper<BizFeeRecord>()
                     .set(BizFeeRecord::getRefundedAmount, currentRefunded.add(thisRefund))
@@ -445,31 +436,31 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
      * 本行剩余可冲数量 = 原行数量 + Σ(负行数量)（负行数量为负）
      */
     private BigDecimal remainingQuantity(BizFeeRecord orig) {
-        return nz(orig.getQuantity()).add(nz(baseMapper.sumReversalQuantity(orig.getId())));
+        return NumUtil.orZero(orig.getQuantity()).add(NumUtil.orZero(baseMapper.sumReversalQuantity(orig.getId())));
     }
 
     private void applySnapshot(BizFeeRecord row, FeeBookDTO dto) {
         row.setPatientId(dto.getPatientId());
-        row.setPatientNo(cut(dto.getPatientNo(), W_PATIENT_NO));
-        row.setPatientName(cut(dto.getPatientName(), W_PATIENT_NAME));
+        row.setPatientNo(TextUtil.cut(dto.getPatientNo(), W_PATIENT_NO));
+        row.setPatientName(TextUtil.cut(dto.getPatientName(), W_PATIENT_NAME));
         row.setEncounterType(dto.getEncounterType());
         row.setEncounterId(dto.getEncounterId());
-        row.setEncounterNo(cut(dto.getEncounterNo(), W_ENCOUNTER_NO));
+        row.setEncounterNo(TextUtil.cut(dto.getEncounterNo(), W_ENCOUNTER_NO));
         row.setDeptId(dto.getDeptId());
-        row.setDeptName(cut(dto.getDeptName(), W_DEPT_NAME));
+        row.setDeptName(TextUtil.cut(dto.getDeptName(), W_DEPT_NAME));
         row.setDoctorId(dto.getDoctorId());
-        row.setDoctorName(cut(dto.getDoctorName(), W_DOCTOR_NAME));
+        row.setDoctorName(TextUtil.cut(dto.getDoctorName(), W_DOCTOR_NAME));
         row.setItemType(dto.getItemType());
-        row.setItemCode(cut(dto.getItemCode(), W_ITEM_CODE));
-        row.setItemName(cut(dto.getItemName(), W_ITEM_NAME));
-        row.setSpecification(cut(dto.getSpecification(), W_SPEC));
-        row.setUnit(cut(dto.getUnit(), W_UNIT));
+        row.setItemCode(TextUtil.cut(dto.getItemCode(), W_ITEM_CODE));
+        row.setItemName(TextUtil.cut(dto.getItemName(), W_ITEM_NAME));
+        row.setSpecification(TextUtil.cut(dto.getSpecification(), W_SPEC));
+        row.setUnit(TextUtil.cut(dto.getUnit(), W_UNIT));
         row.setCatalogType(dto.getCatalogType() == null ? 0 : dto.getCatalogType());
         row.setPrice(dto.getPrice());
         row.setQuantity(dto.getQuantity());
         row.setSourceType(dto.getSourceType());
         row.setSourceId(dto.getSourceId());
-        row.setSourceNo(cut(dto.getSourceNo(), W_SOURCE_NO));
+        row.setSourceNo(TextUtil.cut(dto.getSourceNo(), W_SOURCE_NO));
     }
 
     private List<Long> requireIds(List<Long> feeIds) {

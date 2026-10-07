@@ -27,24 +27,24 @@ import java.util.List;
 @PreAuthorize("isAuthenticated()")
 public class DepartmentController {
 
-    private final SysDepartmentService departmentService;
+    private final SysDepartmentService sysDepartmentService;
 
     @Operation(summary = "查询科室树")
     @GetMapping("/tree")
     public Result<List<DepartmentVO>> tree() {
-        return Result.success(departmentService.tree());
+        return Result.success(sysDepartmentService.tree());
     }
 
     @Operation(summary = "分页查询科室列表")
     @PostMapping("/listPage")
     public Result<PageResult<DepartmentVO>> listPage(@Valid @RequestBody DepartmentQueryDTO queryDTO) {
-        return Result.success(departmentService.listPage(queryDTO));
+        return Result.success(sysDepartmentService.listPage(queryDTO));
     }
 
     @Operation(summary = "查询科室列表（不分页）")
     @PostMapping("/list")
     public Result<List<DepartmentVO>> list(@Valid @RequestBody DepartmentQueryDTO queryDTO) {
-        return Result.success(departmentService.list(queryDTO));
+        return Result.success(sysDepartmentService.list(queryDTO));
     }
 
     /**
@@ -59,27 +59,27 @@ public class DepartmentController {
     @Operation(summary = "科室下拉（scope 控制是否按当前人过滤，默认按当前人）")
     @GetMapping("/selectList")
     public Result<List<DepartmentSelectListVO>> selectList(@Valid DepartmentSelectDTO selectDTO) {
-        return Result.success(departmentService.selectList(selectDTO));
+        return Result.success(sysDepartmentService.selectList(selectDTO));
     }
 
     @Operation(summary = "获取科室详情")
     @GetMapping("/getById")
     public Result<DepartmentVO> getInfo(@RequestParam Long deptId) {
-        return Result.success(departmentService.getInfo(deptId));
+        return Result.success(sysDepartmentService.getInfo(deptId));
     }
 
     @Operation(summary = "新增或修改科室")
     @PreAuthorize("hasAuthority('org:dept:add')")
     @PostMapping("/departmentUpsert")
     public Result<Void> departmentUpsert(@Valid @RequestBody DepartmentUpsertDTO upsertDTO) {
-        return Result.success(departmentService.upsert(upsertDTO), null);
+        return Result.success(sysDepartmentService.upsert(upsertDTO), null);
     }
 
     @Operation(summary = "删除科室")
     @PreAuthorize("hasAuthority('org:dept:delete')")
     @DeleteMapping("/deleteById")
     public Result<Void> remove(@RequestParam Long deptId) {
-        departmentService.delete(deptId);
+        sysDepartmentService.delete(deptId);
         return Result.success("删除成功", null);
     }
 }

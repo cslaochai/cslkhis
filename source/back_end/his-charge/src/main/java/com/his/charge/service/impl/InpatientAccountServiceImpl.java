@@ -2,6 +2,7 @@ package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.api.PatientGateway;
 import com.his.charge.dto.*;
 import com.his.charge.entity.BizAlert;
@@ -15,6 +16,7 @@ import com.his.charge.vo.*;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.entity.SysEmployee;
 import com.his.system.enums.BizTypeEnum;
@@ -28,11 +30,13 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * 住院账务服务实现（P3，四层口径）。
@@ -64,7 +68,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InpatientAccountServiceImpl implements InpatientAccountService {
+public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, BizAlert> implements InpatientAccountService {
     /**
      * 金额统一两位小数（元）
      */
@@ -83,8 +87,8 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
      * 欠费告警类型（写入预警记录.alert_type）
      */
     private static final String ALERT_ARREARS = "ARREARS";
-    private final BizPaymentTxnMapper paymentTxnMapper;
-    private final BizAlertMapper alertMapper;
+    private final BizPaymentTxnMapper bizPaymentTxnMapper;
+    private final BizAlertMapper bizAlertMapper;
     private final PatientGateway patientGateway;
     private final PaymentService paymentService;
     private final FundAccountService fundAccountService;
@@ -125,15 +129,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
 
     // 日清单（L1 记账行按天汇总）
 
-    private static BigDecimal scale(BigDecimal value) {
-        return nz(value).setScale(SCALE, RoundingMode.HALF_UP);
-    }
-
     // 出院结算（L2 出账单 + L3 余额抵扣/退差）
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
 
     /**
      * DATETIME(0) 是四舍五入不是截断：落库又要比较的时间统一截到秒
@@ -142,7 +138,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
     public IPage<PrepayVO> prepayListPage(PrepayQueryPageDTO query) {
         PrepayQueryPageDTO q = query != null ? query : new PrepayQueryPageDTO();
         Page<PrepayVO> page = new Page<>(q.getPageNum(), q.getPageSize());
-        IPage<PrepayVO> raw = paymentTxnMapper.selectPrepayPage(page, q);
+        IPage<PrepayVO> raw = bizPaymentTxnMapper.selectPrepayPage(page, q);
         // 文案由后端给：前端判码值就会有第二套口径（支付方式码值前端就抄错过一次，把 4 当银行卡）
         for (PrepayVO vo : raw.getRecords()) {
             vo.setPrepayTypeText(dictCacheService.getDicDataLabel("biz_charge_prepayTypeEnum", vo.getPrepayType()));
@@ -160,12 +156,12 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         PrepayBalanceVO vo = new PrepayBalanceVO();
         vo.setAdmissionId(admission.getAdmissionId());
         vo.setPatientName(patient != null ? patient.getPatientName() : null);
-        vo.setRechargeTotal(scale(paymentTxnMapper.sumPrepayRecharge(admission.getAdmissionId())));
-        vo.setRefundTotal(scale(paymentTxnMapper.sumPrepayRefunded(admission.getAdmissionId())));
+        vo.setRechargeTotal(NumUtil.scale(bizPaymentTxnMapper.sumPrepayRecharge(admission.getAdmissionId()), SCALE));
+        vo.setRefundTotal(NumUtil.scale(bizPaymentTxnMapper.sumPrepayRefunded(admission.getAdmissionId()), SCALE));
         // 余额取资金账户：那才是"还能用、还能退多少"（已扣掉中途结算的余额抵扣与出院退差）。
         // 它不等于净预交流水，两者相等只发生在没抵扣过的住院上
-        vo.setBalance(scale(fundAccountService.admissionBalance(admission.getAdmissionId())));
-        vo.setFlowCount(Math.toIntExact(paymentTxnMapper.countPrepay(admission.getAdmissionId())));
+        vo.setBalance(NumUtil.scale(fundAccountService.admissionBalance(admission.getAdmissionId()), SCALE));
+        vo.setFlowCount(Math.toIntExact(bizPaymentTxnMapper.countPrepay(admission.getAdmissionId())));
         return vo;
     }
 
@@ -191,7 +187,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
                 ? List.of(paymentService.prepayDeposit(spec))
                 : paymentService.prepayRefund(spec);
 
-        BigDecimal after = scale(fundAccountService.admissionBalance(admission.getAdmissionId()));
+        BigDecimal after = NumUtil.scale(fundAccountService.admissionBalance(admission.getAdmissionId()), SCALE);
         List<PrepayVO> rows = new ArrayList<>();
         for (BizPaymentTxn txn : txns) {
             rows.add(toPrepayVO(txn, after));
@@ -232,9 +228,9 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
             DailyBillDayVO dayVO = new DailyBillDayVO();
             dayVO.setDate(e.getKey());
             dayVO.setItems(e.getValue());
-            dayVO.setDayTotal(scale(e.getValue().stream()
+            dayVO.setDayTotal(NumUtil.scale(e.getValue().stream()
                     .map(DailyBillItemVO::getAmount)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add)));
+                    .reduce(BigDecimal.ZERO, BigDecimal::add), SCALE));
             days.add(dayVO);
         }
 
@@ -244,7 +240,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         vo.setPatientName(patient != null ? patient.getPatientName() : null);
         vo.setBeginDate(days.isEmpty() ? null : days.get(0).getDate());
         vo.setEndDate(days.isEmpty() ? null : days.get(days.size() - 1).getDate());
-        vo.setTotalAmount(scale(total));
+        vo.setTotalAmount(NumUtil.scale(total, SCALE));
         vo.setItemCount(itemCount);
         vo.setDays(days);
         return vo;
@@ -257,11 +253,11 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         assertNotSettled(admission.getAdmissionId());
 
         BillPreviewVO draft = settlementBillService.previewSettlement(settleDraft(admission, settleMode));
-        BigDecimal payable = scale(draft.getPayableAmount());
-        BigDecimal balance = scale(fundAccountService.admissionBalance(admission.getAdmissionId()));
+        BigDecimal payable = NumUtil.scale(draft.getPayableAmount(), SCALE);
+        BigDecimal balance = NumUtil.scale(fundAccountService.admissionBalance(admission.getAdmissionId()), SCALE);
         BigDecimal used = payable.min(balance);
-        BigDecimal refund = scale(balance.subtract(used));
-        BigDecimal arrears = scale(payable.subtract(used));
+        BigDecimal refund = NumUtil.scale(balance.subtract(used), SCALE);
+        BigDecimal arrears = NumUtil.scale(payable.subtract(used), SCALE);
 
         InpatientSettlementPreviewVO vo = new InpatientSettlementPreviewVO();
         vo.setAdmissionId(admission.getAdmissionId());
@@ -270,14 +266,14 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         // 展示行就是草稿挑中的那批待结算记账行；钱一律以试算结果为准，这里不再自己加总一遍
         vo.setFeeRows(toItems(feeRecordService.listPending(
                 EncounterTypeEnum.INPATIENT.getCode(), admission.getAdmissionId())));
-        vo.setTotalAmount(scale(draft.getTotalAmount()));
-        vo.setDiscountAmount(scale(draft.getDiscountAmount()));
-        vo.setPoolAmount(scale(draft.getPoolAmount()));
-        vo.setAccountAmount(scale(draft.getAccountAmount()));
-        vo.setSelfAmount(scale(draft.getSelfAmount()));
+        vo.setTotalAmount(NumUtil.scale(draft.getTotalAmount(), SCALE));
+        vo.setDiscountAmount(NumUtil.scale(draft.getDiscountAmount(), SCALE));
+        vo.setPoolAmount(NumUtil.scale(draft.getPoolAmount(), SCALE));
+        vo.setAccountAmount(NumUtil.scale(draft.getAccountAmount(), SCALE));
+        vo.setSelfAmount(NumUtil.scale(draft.getSelfAmount(), SCALE));
         vo.setPayableAmount(payable);
         vo.setPrepayBalance(balance);
-        vo.setBalanceUsed(scale(used));
+        vo.setBalanceUsed(NumUtil.scale(used, SCALE));
         vo.setRefundAmount(refund);
         vo.setArrearsAmount(arrears);
         vo.setSettleMode(draft.getSettlementMode());
@@ -297,8 +293,8 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         PatientBriefVO patient = patientGateway.findPatient(admission.getPatientId());
 
         BizSettlementBill bill = settlementBillService.settle(settleDraft(admission, dto.getSettleMode()));
-        BigDecimal payable = scale(nz(bill.getPayableAmount()));
-        BigDecimal balance = scale(preview.getPrepayBalance());
+        BigDecimal payable = NumUtil.scale(NumUtil.orZero(bill.getPayableAmount()), SCALE);
+        BigDecimal balance = NumUtil.scale(preview.getPrepayBalance(), SCALE);
 
         // 先用住院账户里的钱抵（一笔余额支付流水：钱从这次住院的账户进账单）。
         // 抵不完的部分留在账单上成为欠费 —— 出院门禁读的就是这个未付清差额
@@ -308,14 +304,14 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         }
         // 抵完还剩的钱转进患者的院内余额账户：它离开这次住院但没离开医院，
         // 所以既不是收入也不该进收银员的点钞数（患者要取现，再从余额走一次柜面退款）
-        BigDecimal refund = scale(balance.subtract(used));
+        BigDecimal refund = NumUtil.scale(balance.subtract(used), SCALE);
         if (refund.signum() > 0) {
             paymentService.dischargeRemainder(prepaySpec(admission, patient, refund, null, null, null, null,
                     "出院结算退差（账单 " + bill.getBillNo() + "）"));
         }
 
         BizSettlementBill settled = settlementBillService.getById(bill.getId());
-        BigDecimal arrears = scale(nz(settled.getPayableAmount()).subtract(nz(settled.getPaidAmount())));
+        BigDecimal arrears = NumUtil.scale(NumUtil.orZero(settled.getPayableAmount()).subtract(NumUtil.orZero(settled.getPaidAmount())), SCALE);
         if (arrears.signum() > 0) {
             writeArrearsAlert(admission, patient, payable, balance, arrears);
         }
@@ -337,22 +333,22 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
             return null;
         }
         // 抵扣额按流水现算：账单 paid_amount 里可能还混着柜面补的现金，两个数不能互相代替
-        BigDecimal used = scale(paymentTxnMapper.sumBalanceDeductByBill(bill.getId()));
-        BigDecimal refund = scale(paymentTxnMapper.sumDischargeDiff(bill.getEncounterId()));
-        BigDecimal arrears = scale(nz(bill.getPayableAmount()).subtract(nz(bill.getPaidAmount())));
+        BigDecimal used = NumUtil.scale(bizPaymentTxnMapper.sumBalanceDeductByBill(bill.getId()), SCALE);
+        BigDecimal refund = NumUtil.scale(bizPaymentTxnMapper.sumDischargeDiff(bill.getEncounterId()), SCALE);
+        BigDecimal arrears = NumUtil.scale(NumUtil.orZero(bill.getPayableAmount()).subtract(NumUtil.orZero(bill.getPaidAmount())), SCALE);
         return toSettlementVO(bill, used, refund, arrears);
     }
 
     @Override
     public ArrearsView arrearsView(Long admissionId) {
         Integer inpatient = EncounterTypeEnum.INPATIENT.getCode();
-        BigDecimal total = scale(feeRecordService.sumNetAmount(inpatient, admissionId));
-        BigDecimal balance = scale(fundAccountService.admissionBalance(admissionId));
+        BigDecimal total = NumUtil.scale(feeRecordService.sumNetAmount(inpatient, admissionId), SCALE);
+        BigDecimal balance = NumUtil.scale(fundAccountService.admissionBalance(admissionId), SCALE);
         // 已收 = 净预交（充值 − 柜面退款）+ 在账单上直接收的钱。后者必须排除余额抵扣：
         // 那笔钱就是预交金，再算一遍等于同一笔钱计两次，欠 800 的人会被显示成不欠
-        BigDecimal collected = scale(nz(paymentTxnMapper.sumPrepayNet(admissionId))
-                .add(nz(paymentTxnMapper.sumDirectChargedByEncounter(inpatient, admissionId))));
-        return new ArrearsView(total, collected, balance, scale(total.subtract(collected).max(BigDecimal.ZERO)));
+        BigDecimal collected = NumUtil.scale(NumUtil.orZero(bizPaymentTxnMapper.sumPrepayNet(admissionId))
+                .add(NumUtil.orZero(bizPaymentTxnMapper.sumDirectChargedByEncounter(inpatient, admissionId))), SCALE);
+        return new ArrearsView(total, collected, balance, NumUtil.scale(total.subtract(collected).max(BigDecimal.ZERO), SCALE));
     }
 
     @Override
@@ -368,7 +364,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
 
         BizSettlementBill discharge = settlementBillService.latestDischargeBill(admission.getAdmissionId());
         Integer settleStatus = discharge == null ? null
-                : (nz(discharge.getPayableAmount()).subtract(nz(discharge.getPaidAmount())).signum() > 0
+                : (NumUtil.orZero(discharge.getPayableAmount()).subtract(NumUtil.orZero(discharge.getPaidAmount())).signum() > 0
                 ? SETTLE_ARREARS : SETTLE_CLEARED);
 
         InpatientAccountSummaryVO vo = new InpatientAccountSummaryVO();
@@ -454,7 +450,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         return new PaymentService.PrepaySpec(admission.getAdmissionId(), admission.getPatientId(),
                 patient != null ? patient.getPatientNo() : null,
                 patient != null ? patient.getPatientName() : null,
-                scale(amount), payMethod, receiptNo, channelTxnNo, txnTime, remark);
+                NumUtil.scale(amount, SCALE), payMethod, receiptNo, channelTxnNo, txnTime, remark);
     }
 
     private AdmissionBriefVO requireAdmission(Long admissionId) {
@@ -484,7 +480,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         alert.setNotifyUserId(admission.getAdmitDoctorId());
         alert.setNotifyTime(TimeUtil.nowSeconds());
         alert.setRemark("admissionId=" + admission.getAdmissionId());
-        alertMapper.insert(alert);
+        bizAlertMapper.insert(alert);
         notifyArrears(admission, patient, "出院结算", payable, balance, arrears);
     }
 
@@ -494,7 +490,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
     private boolean writeArrearsAlertDaily(AdmissionBriefVO admission, PatientBriefVO patient,
                                            BigDecimal total, BigDecimal balance, BigDecimal arrears) {
         LocalDateTime since = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
-        long exists = alertMapper.countRecent(ALERT_ARREARS, "admissionId=" + admission.getAdmissionId(), since);
+        long exists = bizAlertMapper.countRecent(ALERT_ARREARS, "admissionId=" + admission.getAdmissionId(), since);
         if (exists > 0) {
             return false;
         }
@@ -509,7 +505,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         alert.setNotifyUserId(admission.getAdmitDoctorId());
         alert.setNotifyTime(TimeUtil.nowSeconds());
         alert.setRemark("admissionId=" + admission.getAdmissionId());
-        alertMapper.insert(alert);
+        bizAlertMapper.insert(alert);
         notifyArrears(admission, patient, "在院余额预警", total, balance, arrears);
         return true;
     }
@@ -558,7 +554,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
 
     private String nextAlertNo() {
         String prefix = "BJ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        return prefix + String.format("%04d", alertMapper.countByAlertNoPrefix(prefix) + 1);
+        return prefix + String.format("%04d", bizAlertMapper.countByAlertNoPrefix(prefix) + 1);
     }
 
     /**
@@ -611,7 +607,7 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         item.setQuantity(row.getQuantity());
         item.setPrice(row.getPrice());
         // 记账行金额本身就是净额：红冲另写一行负数、不改原行，所以这里不做任何减法
-        item.setAmount(scale(row.getAmount()));
+        item.setAmount(NumUtil.scale(row.getAmount(), SCALE));
         item.setOccurTime(row.getBookTime() == null ? null : row.getBookTime().format(DateFormats.DATETIME));
         item.setSourceNo(row.getSourceNo());
         return item;
@@ -630,16 +626,16 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
         vo.setPatientNo(bill.getPatientNo());
         vo.setPatientName(bill.getPatientName());
         vo.setFeeCount(bill.getFeeCount());
-        vo.setTotalAmount(scale(nz(bill.getTotalAmount())));
-        vo.setDiscountAmount(scale(nz(bill.getDiscountAmount())));
-        vo.setPoolAmount(scale(nz(bill.getPoolAmount())));
-        vo.setAccountAmount(scale(nz(bill.getAccountAmount())));
-        vo.setSelfAmount(scale(nz(bill.getSelfAmount())));
-        vo.setPayableAmount(scale(nz(bill.getPayableAmount())));
-        vo.setPaidAmount(scale(nz(bill.getPaidAmount())));
-        vo.setBalanceUsed(scale(balanceUsed));
-        vo.setRefundAmount(scale(refund));
-        vo.setArrearsAmount(scale(arrears));
+        vo.setTotalAmount(NumUtil.scale(NumUtil.orZero(bill.getTotalAmount()), SCALE));
+        vo.setDiscountAmount(NumUtil.scale(NumUtil.orZero(bill.getDiscountAmount()), SCALE));
+        vo.setPoolAmount(NumUtil.scale(NumUtil.orZero(bill.getPoolAmount()), SCALE));
+        vo.setAccountAmount(NumUtil.scale(NumUtil.orZero(bill.getAccountAmount()), SCALE));
+        vo.setSelfAmount(NumUtil.scale(NumUtil.orZero(bill.getSelfAmount()), SCALE));
+        vo.setPayableAmount(NumUtil.scale(NumUtil.orZero(bill.getPayableAmount()), SCALE));
+        vo.setPaidAmount(NumUtil.scale(NumUtil.orZero(bill.getPaidAmount()), SCALE));
+        vo.setBalanceUsed(NumUtil.scale(balanceUsed, SCALE));
+        vo.setRefundAmount(NumUtil.scale(refund, SCALE));
+        vo.setArrearsAmount(NumUtil.scale(arrears, SCALE));
         vo.setSettleStatus(arrears.signum() > 0 ? SETTLE_ARREARS : SETTLE_CLEARED);
         vo.setSettleStatusText(dictCacheService.getDicDataLabel("biz_charge_inpatientSettleResultEnum", vo.getSettleStatus()));
         vo.setSettleMode(bill.getSettlementMode());

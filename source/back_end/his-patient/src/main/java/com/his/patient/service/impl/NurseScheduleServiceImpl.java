@@ -4,21 +4,23 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.OrgUnitTypeEnum;
 import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffScheduleSourceEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.patient.dto.NurseScheduleDTO;
 import com.his.patient.entity.BizNurseSchedule;
 import com.his.patient.mapper.BizNurseScheduleMapper;
 import com.his.patient.service.NurseScheduleService;
 import com.his.patient.vo.NurseScheduleVO;
-import com.his.system.provider.DeptScopeProvider;
 import com.his.system.dto.StaffPlanRuleUpsertDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.BizStaffPlanRule;
+import com.his.system.provider.DeptScopeProvider;
 import com.his.system.service.StaffPlanRuleService;
 import com.his.system.service.StaffScheduleService;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +35,6 @@ import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.function.Predicate;
-
 
 /**
  * 病区护理排班服务实现（sql/166）。
@@ -60,9 +61,7 @@ import java.util.function.Predicate;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class NurseScheduleServiceImpl implements NurseScheduleService {
-    private final DeptScopeProvider deptScopeProvider;
-
+public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper, BizNurseSchedule> implements NurseScheduleService {
     private static final int REMARK_MAX = 500;
     private static final int NURSE_LIMIT = 500;
     /**
@@ -82,14 +81,14 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
      * 排班单元类型：2-门诊科室（sql/209）
      */
     private static final int UNIT_CLINIC = 2;
-
-    private final BizNurseScheduleMapper scheduleMapper;
+    private final DeptScopeProvider deptScopeProvider;
+    private final BizNurseScheduleMapper bizNurseScheduleMapper;
     private final StaffScheduleService staffScheduleService;
     /**
      * 人力配置标准的唯一维护口（G-08：护理排班页不再自己建一套 biz_nurse_schedule_rule，
      * 改维护 biz_staff_plan_rule 里「病区 × 护理岗」那一批，与全院排班的人力闸门同源）。
      */
-    private final StaffPlanRuleService planRuleService;
+    private final StaffPlanRuleService staffPlanRuleService;
 
     // 参照数据
 
@@ -169,25 +168,6 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         return (int) warnings.stream().filter(w -> w.getLevel() != null && w.getLevel() == level).count();
     }
 
-    private static String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() <= max ? value : value.substring(0, max);
-    }
-
-    private static int nvl(Integer value, int fallback) {
-        return value == null ? fallback : value;
-    }
-
     // 人力配置标准
 
     private static int nvlInt(Integer value) {
@@ -196,21 +176,21 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
 
     @Override
     public List<NurseScheduleVO.Ward> wardSelectList(String keyword) {
-        return scheduleMapper.selectWardOptions(scopedDeptIds(null), trimToNull(keyword));
+        return bizNurseScheduleMapper.selectWardOptions(scopedDeptIds(null), TextUtil.trimToNull(keyword));
     }
 
     @Override
     public List<NurseScheduleVO.Ward> unitSelectList(String keyword) {
         List<NurseScheduleVO.Ward> units = new ArrayList<>();
-        units.addAll(scheduleMapper.selectWardOptions(scopedDeptIds(null), trimToNull(keyword)));
-        units.addAll(scheduleMapper.selectDeptOptions(scopedDeptIds(null), trimToNull(keyword)));
+        units.addAll(bizNurseScheduleMapper.selectWardOptions(scopedDeptIds(null), TextUtil.trimToNull(keyword)));
+        units.addAll(bizNurseScheduleMapper.selectDeptOptions(scopedDeptIds(null), TextUtil.trimToNull(keyword)));
         return units;
     }
 
     @Override
     public List<NurseScheduleVO.Nurse> nurseSelectList(Integer unitType, Long unitId, String keyword) {
         NurseScheduleVO.Ward ward = requireUnit(unitType, unitId);
-        return scheduleMapper.selectNurses(ward.getDeptId(), trimToNull(keyword), NURSE_LIMIT);
+        return bizNurseScheduleMapper.selectNurses(ward.getDeptId(), TextUtil.trimToNull(keyword), NURSE_LIMIT);
     }
 
     @Override
@@ -223,10 +203,10 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         LocalDate start = mondayOf(query.getWeekStart() == null ? LocalDate.now() : query.getWeekStart());
         LocalDate end = start.plusDays(6);
 
-        List<NurseScheduleVO.Nurse> nurses = scheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
+        List<NurseScheduleVO.Nurse> nurses = bizNurseScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
         List<NurseScheduleVO.Cell> cells = selectCells(ward, start, end);
         cells.forEach(c -> c.setScheduleStatusText(StaffDutyStatusEnum.getText(c.getScheduleStatus())));
-        List<NurseScheduleVO.ShiftOption> shifts = scheduleMapper.selectNursingShifts();
+        List<NurseScheduleVO.ShiftOption> shifts = bizNurseScheduleMapper.selectNursingShifts();
         shifts.forEach(s -> s.setNight(isNightShift(s.getStartTime())));
 
         NurseScheduleVO.Matrix matrix = new NurseScheduleVO.Matrix();
@@ -252,10 +232,10 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
     @Override
     public PageResult<NurseScheduleVO.Row> listPage(NurseScheduleDTO.QueryPage query) {
         NurseScheduleDTO.QueryPage q = query == null ? new NurseScheduleDTO.QueryPage() : query;
-        IPage<NurseScheduleVO.Row> page = new Page<>(nvl(q.getPageNum(), 1), nvl(q.getPageSize(), 10));
+        IPage<NurseScheduleVO.Row> page = new Page<>(q.getPageNum(), q.getPageSize());
         Long deptId = deptScopeProvider.resolveDeptId(q.getDeptId());
         List<Long> deptIds = scopedDeptIds(q.getDeptId());
-        List<NurseScheduleVO.Row> records = scheduleMapper.selectSchedulePage(page, trimToNull(q.getKeyword()),
+        List<NurseScheduleVO.Row> records = bizNurseScheduleMapper.selectSchedulePage(page, TextUtil.trimToNull(q.getKeyword()),
                 q.getWardId(), deptId, q.getScheduleStatus(), q.getStartDate(), q.getEndDate(), deptIds);
         for (NurseScheduleVO.Row row : records) {
             row.setScheduleStatusText(StaffDutyStatusEnum.getText(row.getScheduleStatus()));
@@ -271,7 +251,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         if (status == null) {
             throw new BusinessException("排班状态只允许 " + StaffDutyStatusEnum.whitelistText());
         }
-        NurseScheduleVO.Nurse nurse = scheduleMapper.selectNurse(dto.getEmployeeId());
+        NurseScheduleVO.Nurse nurse = bizNurseScheduleMapper.selectNurse(dto.getEmployeeId());
         if (nurse == null) {
             throw new BusinessException("该员工不在在册护士名单里（需为在职的护士/护师，工号可在员工档案核对）");
         }
@@ -285,7 +265,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
             if (dto.getShiftId() == null) {
                 throw new BusinessException("排「上班」必须选班次：不然这一天既没有时段也没有工时，月度统计无从算起");
             }
-            shift = scheduleMapper.selectNursingShift(dto.getShiftId());
+            shift = bizNurseScheduleMapper.selectNursingShift(dto.getShiftId());
             if (shift == null) {
                 throw new BusinessException("所选班次不存在、已停用或不是病区护理班次（护理班次在班次字典里按「病区护理」册维护）");
             }
@@ -293,22 +273,22 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
 
         LocalDate date = dto.getScheduleDate();
         Integer workMinutes = shift == null ? 0 : shift.getDurationMinutes();
-        String remark = cut(trimToNull(dto.getRemark()), REMARK_MAX);
-        BizNurseSchedule prevRow = scheduleMapper.selectOne(new LambdaQueryWrapper<BizNurseSchedule>()
+        String remark = TextUtil.cut(TextUtil.trimToNull(dto.getRemark()), REMARK_MAX);
+        BizNurseSchedule prevRow = bizNurseScheduleMapper.selectOne(new LambdaQueryWrapper<BizNurseSchedule>()
                 .eq(BizNurseSchedule::getEmployeeId, dto.getEmployeeId())
                 .eq(BizNurseSchedule::getScheduleDate, date)
                 .last("LIMIT 1"));
         Long coreScheduleId = syncDayAttendance(ward, nurse.getEmployeeId(), date, status,
                 shift == null ? null : shift.getShiftId(), remark, StaffScheduleSourceEnum.MANUAL,
                 prevRow == null ? null : prevRow.getStaffScheduleId());
-        NurseScheduleVO.Cell exist = scheduleMapper.selectByKey(dto.getEmployeeId(), date);
+        NurseScheduleVO.Cell exist = bizNurseScheduleMapper.selectByKey(dto.getEmployeeId(), date);
 
         Long rowId;
         if (exist == null) {
             BizNurseSchedule row = new BizNurseSchedule();
             fillSnapshot(row, ward, nurse, shift, status, date, workMinutes, remark,
                     StaffScheduleSourceEnum.MANUAL.getCode(), coreScheduleId);
-            scheduleMapper.insert(row);
+            bizNurseScheduleMapper.insert(row);
             rowId = row.getId();
         } else {
             rowId = exist.getId();
@@ -337,11 +317,11 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
                     .set(BizNurseSchedule::getScheduleSource, StaffScheduleSourceEnum.MANUAL.getCode())
                     .set(BizNurseSchedule::getStaffScheduleId, coreScheduleId)
                     .set(BizNurseSchedule::getRemark, remark);
-            scheduleMapper.update(null, upd);
+            bizNurseScheduleMapper.update(null, upd);
         }
 
         LocalDate weekStart = mondayOf(date);
-        BigDecimal weekHours = hours(scheduleMapper.selectWorkMinutes(nurse.getEmployeeId(), weekStart, weekStart.plusDays(6)));
+        BigDecimal weekHours = hours(bizNurseScheduleMapper.selectWorkMinutes(nurse.getEmployeeId(), weekStart, weekStart.plusDays(6)));
         NurseScheduleVO.SaveResult result = new NurseScheduleVO.SaveResult();
         result.setId(rowId);
         result.setScheduleDate(date.toString());
@@ -366,14 +346,14 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         if (id == null) {
             throw new BusinessException("缺少排班行ID");
         }
-        BizNurseSchedule row = scheduleMapper.selectById(id);
+        BizNurseSchedule row = bizNurseScheduleMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("排班行不存在或已删除");
         }
         if (!deptScopeProvider.canAccessDept(row.getDeptId())) {
             throw new BusinessException("无权删除该病区的排班（不在当前岗位的数据范围内）");
         }
-        scheduleMapper.purgeById(id);
+        bizNurseScheduleMapper.purgeById(id);
         // 格子删掉 = 这个人这天在这个病区没班了：那条在岗事实一并收掉，
         // 否则「今日在岗」还会把他算进病区人数，而他其实已经排空了
         staffScheduleService.purgeDayAttendance(coreOrgTypeOfByType(row.getUnitType()),
@@ -396,7 +376,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         if (sourceStart.equals(targetStart)) {
             throw new BusinessException("来源周与目标周是同一周，复制没有意义");
         }
-        List<NurseScheduleVO.Nurse> nurses = scheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
+        List<NurseScheduleVO.Nurse> nurses = bizNurseScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
         List<NurseScheduleVO.Cell> source = selectCells(ward, sourceStart, sourceStart.plusDays(6));
         List<NurseScheduleVO.Cell> target = selectCells(ward, targetStart, targetStart.plusDays(6));
 
@@ -444,7 +424,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
                 row.setNurseTitle(nurse.getNurseTitle());
                 // 班次快照按「今天仍可用的班次」重取：来源周的班次若已停用，照抄会让新周带着废班次
                 if (status == StaffDutyStatusEnum.WORK && from.getShiftId() != null) {
-                    NurseScheduleVO.ShiftOption shift = scheduleMapper.selectNursingShift(from.getShiftId());
+                    NurseScheduleVO.ShiftOption shift = bizNurseScheduleMapper.selectNursingShift(from.getShiftId());
                     if (shift != null) {
                         row.setShiftId(shift.getShiftId());
                         row.setShiftName(shift.getShiftName());
@@ -467,7 +447,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
                 row.setStaffScheduleId(syncDayAttendance(ward, nurse.getEmployeeId(), date,
                         StaffDutyStatusEnum.fromCode(row.getScheduleStatus()), row.getShiftId(),
                         row.getRemark(), StaffScheduleSourceEnum.COPY, null));
-                scheduleMapper.insert(row);
+                bizNurseScheduleMapper.insert(row);
                 copied++;
             }
         }
@@ -541,7 +521,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
      */
     private List<NurseScheduleVO.Warning> warningsOf(NurseScheduleVO.Ward ward, LocalDate startDate, LocalDate endDate) {
         List<NurseScheduleVO.Cell> cells = selectCells(ward, startDate, endDate);
-        List<NurseScheduleVO.Nurse> nurses = scheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
+        List<NurseScheduleVO.Nurse> nurses = bizNurseScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
         return buildWarnings(ward, startDate, endDate, nurses, cells);
     }
 
@@ -554,9 +534,9 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         LocalDate end = ym.atEndOfMonth();
         int days = ym.lengthOfMonth();
 
-        List<NurseScheduleVO.Nurse> nurses = scheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
+        List<NurseScheduleVO.Nurse> nurses = bizNurseScheduleMapper.selectNurses(ward.getDeptId(), null, NURSE_LIMIT);
         Map<Long, NurseScheduleVO.Workload> byEmployee = new LinkedHashMap<>();
-        for (NurseScheduleVO.Workload w : scheduleMapper.selectWorkload(
+        for (NurseScheduleVO.Workload w : bizNurseScheduleMapper.selectWorkload(
                 unitTypeOf(ward), ward.getWardId(), start, end)) {
             byEmployee.put(w.getEmployeeId(), w);
         }
@@ -616,7 +596,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
      * 护理页配的下限不进底座校验、底座配的护理页看不见。
      */
     private List<NurseScheduleVO.Rule> rulesOfWard(Long wardId) {
-        return toRules(wardId, planRuleService.listByUnit(OrgUnitTypeEnum.WARD.getCode(), wardId,
+        return toRules(wardId, staffPlanRuleService.listByUnit(OrgUnitTypeEnum.WARD.getCode(), wardId,
                 StaffTypeEnum.NURSE.getCode()));
     }
 
@@ -634,7 +614,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
     }
 
     private List<NurseScheduleVO.Rule> toRules(Long wardId, List<BizStaffPlanRule> rows) {
-        NurseScheduleVO.Ward ward = scheduleMapper.selectWard(wardId);
+        NurseScheduleVO.Ward ward = bizNurseScheduleMapper.selectWard(wardId);
         String wardName = ward == null ? null : ward.getWardName();
         List<NurseScheduleVO.Rule> out = new ArrayList<>(rows.size());
         for (BizStaffPlanRule r : rows) {
@@ -663,7 +643,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         if (shiftId == null || shiftId == WARD_LEVEL_SHIFT) {
             return "病区合计";
         }
-        NurseScheduleVO.ShiftOption shift = scheduleMapper.selectNursingShift(shiftId);
+        NurseScheduleVO.ShiftOption shift = bizNurseScheduleMapper.selectNursingShift(shiftId);
         return shift == null ? "班次已失效" : shift.getShiftName();
     }
 
@@ -677,7 +657,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         if (wardLevel) {
             shiftName = "病区合计";
         } else {
-            NurseScheduleVO.ShiftOption shift = scheduleMapper.selectNursingShift(shiftId);
+            NurseScheduleVO.ShiftOption shift = bizNurseScheduleMapper.selectNursingShift(shiftId);
             if (shift == null) {
                 throw new BusinessException("所选班次不存在、已停用或不是病区护理班次");
             }
@@ -708,7 +688,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
             throw new BusinessException("单周工时上限必须在 0~168 小时之间");
         }
 
-        String remark = cut(trimToNull(dto.getRemark()), REMARK_MAX);
+        String remark = TextUtil.cut(TextUtil.trimToNull(dto.getRemark()), REMARK_MAX);
         // 病区护理页维护的只是「病区 × 护理岗」这一段格子：托给唯一维护口去落，
         // 查重、单元名与班次真实性的校验都在那边，这里不再自己造一份规则。
         StaffPlanRuleUpsertDTO core = new StaffPlanRuleUpsertDTO();
@@ -724,7 +704,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         core.setMaxConsecutiveWorkDays(maxWork);
         core.setStatus(status);
         core.setRemark(remark);
-        planRuleService.upsert(core);
+        staffPlanRuleService.upsert(core);
     }
 
     @Override
@@ -733,16 +713,16 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         if (id == null) {
             throw new BusinessException("缺少标准行ID");
         }
-        BizStaffPlanRule rule = planRuleService.requireById(id);
+        BizStaffPlanRule rule = staffPlanRuleService.requireById(id);
         if (!Objects.equals(rule.getOrgType(), OrgUnitTypeEnum.WARD.getCode())) {
             throw new BusinessException("这条标准不是病区护理标准，请到「人力配置标准」里维护");
         }
         // 标准只存单元 id，科室归属从病区现取（不在标准行上冗余 dept 列，避免调科后两处不一致）
-        NurseScheduleVO.Ward ward = scheduleMapper.selectWard(rule.getOrgId());
+        NurseScheduleVO.Ward ward = bizNurseScheduleMapper.selectWard(rule.getOrgId());
         if (ward == null || !deptScopeProvider.canAccessDept(ward.getDeptId())) {
             throw new BusinessException("无权维护该病区的人力标准（不在当前岗位的数据范围内）");
         }
-        planRuleService.deleteById(id);
+        staffPlanRuleService.deleteById(id);
     }
 
     /**
@@ -848,7 +828,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
                 }
                 for (Map.Entry<LocalDate, Integer> w : minutesByWeek.entrySet()) {
                     // 跨病区也要算上：本病区取到的行可能只是这个人当周的一部分，所以按人回查全周
-                    int realMinutes = scheduleMapper.selectWorkMinutes(employeeId, w.getKey(), w.getKey().plusDays(6));
+                    int realMinutes = bizNurseScheduleMapper.selectWorkMinutes(employeeId, w.getKey(), w.getKey().plusDays(6));
                     BigDecimal hours = hours(realMinutes);
                     if (hours.compareTo(wardRule.getMaxWeekHours()) > 0) {
                         out.add(personWarning(1, "WEEK_HOURS", sampleDate.get(w.getKey()), null,
@@ -1029,7 +1009,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         if (type != UNIT_WARD && type != UNIT_CLINIC) {
             throw new BusinessException("排班单元类型只允许 1-病区 / 2-门诊科室");
         }
-        NurseScheduleVO.Ward unit = scheduleMapper.selectUnit(type, unitId);
+        NurseScheduleVO.Ward unit = bizNurseScheduleMapper.selectUnit(type, unitId);
         if (unit == null) {
             throw new BusinessException(type == UNIT_WARD ? "病区不存在或已停用" : "门诊科室不存在或已停用");
         }
@@ -1043,7 +1023,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
      * 单元矩阵取格：类型 + id 一起给，避免只认 id 造成的串单元
      */
     private List<NurseScheduleVO.Cell> selectCells(NurseScheduleVO.Ward ward, LocalDate startDate, LocalDate endDate) {
-        return scheduleMapper.selectCells(unitTypeOf(ward), ward.getWardId(), startDate, endDate);
+        return bizNurseScheduleMapper.selectCells(unitTypeOf(ward), ward.getWardId(), startDate, endDate);
     }
 
     private NurseScheduleVO.Ward requireWard(Long wardId) {
@@ -1051,7 +1031,7 @@ public class NurseScheduleServiceImpl implements NurseScheduleService {
         if (wardId == null) {
             throw new BusinessException("请选择病区");
         }
-        NurseScheduleVO.Ward ward = scheduleMapper.selectWard(wardId);
+        NurseScheduleVO.Ward ward = bizNurseScheduleMapper.selectWard(wardId);
         if (ward == null) {
             throw new BusinessException("病区不存在或已停用");
         }

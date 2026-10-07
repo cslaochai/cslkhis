@@ -1,7 +1,7 @@
 package com.his.system.service.impl;
 
-import com.his.system.service.RolePermissionCache;
 import com.his.system.mapper.SysUserMapper;
+import com.his.system.service.RolePermissionCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
@@ -39,12 +39,16 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class RolePermissionCacheImpl implements RolePermissionCache {
-    /** TTL 兜底:失效点遗漏时最多 10 分钟后自愈 */
+    /**
+     * TTL 兜底:失效点遗漏时最多 10 分钟后自愈
+     */
     private static final Duration TTL = Duration.ofMinutes(10);
 
-    private final SysUserMapper userMapper;
+    private final SysUserMapper sysUserMapper;
 
-    /** 可选注入:Redis 不可用时(his-system 单独跑、Redis 宕机)降级直查库 */
+    /**
+     * 可选注入:Redis 不可用时(his-system 单独跑、Redis 宕机)降级直查库
+     */
     private final ObjectProvider<StringRedisTemplate> redisProvider;
 
     /**
@@ -68,7 +72,7 @@ public class RolePermissionCacheImpl implements RolePermissionCache {
             }
         }
 
-        List<String> permissions = userMapper.selectPermissionsByRoleCode(roleCode);
+        List<String> permissions = sysUserMapper.selectPermissionsByRoleCode(roleCode);
         List<String> result = permissions == null ? Collections.emptyList() : permissions;
 
         if (redis != null) {
@@ -81,7 +85,9 @@ public class RolePermissionCacheImpl implements RolePermissionCache {
         return result;
     }
 
-    /** 失效单个角色的权限缓存(角色授权保存 / 角色删除后调用) */
+    /**
+     * 失效单个角色的权限缓存(角色授权保存 / 角色删除后调用)
+     */
     public void invalidate(String roleCode) {
         if (roleCode == null || roleCode.isBlank()) {
             return;
@@ -98,7 +104,9 @@ public class RolePermissionCacheImpl implements RolePermissionCache {
         }
     }
 
-    /** 失效全部角色权限缓存(菜单权限码变更后调用;角色数级,量小 keys 可接受) */
+    /**
+     * 失效全部角色权限缓存(菜单权限码变更后调用;角色数级,量小 keys 可接受)
+     */
     public void invalidateAll() {
         StringRedisTemplate redis = redisProvider.getIfAvailable();
         if (redis == null) {

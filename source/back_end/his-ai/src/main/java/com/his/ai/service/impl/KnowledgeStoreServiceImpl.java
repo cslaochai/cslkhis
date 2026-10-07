@@ -43,11 +43,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
 
-    private final SysKnowledgeDocMapper docMapper;
-    private final SysKnowledgeChunkMapper chunkMapper;
+    private final SysKnowledgeDocMapper sysKnowledgeDocMapper;
+    private final SysKnowledgeChunkMapper sysKnowledgeChunkMapper;
     private final EmbeddingProviderSelector embeddingSelector;
     private final TextSplitter textSplitter;
-    private final InMemoryVectorStore vectorStore;
+    private final InMemoryVectorStore inMemoryVectorStore;
     private final AiProperties aiProperties;
     private final ResourceLoader resourceLoader;
 
@@ -70,11 +70,11 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
             doc.setStatus(0);
         }
         doc.setChunkCount(0);
-        docMapper.insert(doc);
+        sysKnowledgeDocMapper.insert(doc);
 
         // 幂等：清掉该文档旧切块（软删）与内存索引，再重新建
-        chunkMapper.delete(new QueryWrapper<SysKnowledgeChunk>().eq("doc_id", doc.getId()));
-        vectorStore.removeByDocId(doc.getId());
+        sysKnowledgeChunkMapper.delete(new QueryWrapper<SysKnowledgeChunk>().eq("doc_id", doc.getId()));
+        inMemoryVectorStore.removeByDocId(doc.getId());
 
         int chunkSize = aiProperties.getRag().getChunkSize();
         int overlap = aiProperties.getRag().getChunkOverlap();
@@ -88,14 +88,14 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
             chunk.setCategory(doc.getCategory());
             chunk.setChunkIndex(idx);
             chunk.setContent(piece);
-            chunkMapper.insert(chunk);
-            vectorStore.upsert(chunk.getId(), doc.getId(), piece, doc.getTitle(),
+            sysKnowledgeChunkMapper.insert(chunk);
+            inMemoryVectorStore.upsert(chunk.getId(), doc.getId(), piece, doc.getTitle(),
                     doc.getCategory(),
                     embeddingSelector.select().embed(piece));
             idx++;
         }
         doc.setChunkCount(pieces.size());
-        docMapper.updateById(doc);
+        sysKnowledgeDocMapper.updateById(doc);
         return doc.getId();
     }
 
@@ -110,7 +110,7 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
             w.eq("category", dto.getCategory());
         }
         w.eq("del_flag", 0).orderByDesc("create_time");
-        return docMapper.selectPage(page, w).convert(this::toListVo);
+        return sysKnowledgeDocMapper.selectPage(page, w).convert(this::toListVo);
     }
 
     private KnowledgeDocListVO toListVo(SysKnowledgeDoc d) {
@@ -127,7 +127,7 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
 
     @Override
     public KnowledgeDocVO getById(Long id) {
-        SysKnowledgeDoc d = docMapper.selectById(id);
+        SysKnowledgeDoc d = sysKnowledgeDocMapper.selectById(id);
         if (d == null) {
             return null;
         }
@@ -145,21 +145,21 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
 
     @Override
     public void deleteById(Long id) {
-        docMapper.deleteById(id); // 逻辑删
-        chunkMapper.delete(new QueryWrapper<SysKnowledgeChunk>().eq("doc_id", id)); // 逻辑删
-        vectorStore.removeByDocId(id);
+        sysKnowledgeDocMapper.deleteById(id); // 逻辑删
+        sysKnowledgeChunkMapper.delete(new QueryWrapper<SysKnowledgeChunk>().eq("doc_id", id)); // 逻辑删
+        inMemoryVectorStore.removeByDocId(id);
     }
 
     @Override
     public void rebuild() {
-        vectorStore.clear();
-        List<SysKnowledgeChunk> all = chunkMapper.selectList(null); // del_flag=0 自动生效
+        inMemoryVectorStore.clear();
+        List<SysKnowledgeChunk> all = sysKnowledgeChunkMapper.selectList(null); // del_flag=0 自动生效
         int count = 0;
         for (SysKnowledgeChunk c : all) {
             if (c.getContent() == null) {
                 continue;
             }
-            vectorStore.upsert(c.getId(), c.getDocId(), c.getContent(), c.getDocTitle(),
+            inMemoryVectorStore.upsert(c.getId(), c.getDocId(), c.getContent(), c.getDocTitle(),
                     c.getCategory(),
                     embeddingSelector.select().embed(c.getContent()));
             count++;
@@ -172,7 +172,7 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
         if (!aiProperties.getRag().isAutoSeed()) {
             return 0;
         }
-        Long cnt = docMapper.selectCount(new QueryWrapper<SysKnowledgeDoc>().eq("del_flag", 0));
+        Long cnt = sysKnowledgeDocMapper.selectCount(new QueryWrapper<SysKnowledgeDoc>().eq("del_flag", 0));
         if (cnt != null && cnt > 0) {
             return 0;
         }

@@ -24,41 +24,41 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class YbDeductNoticeController {
 
-    private final YbDeductNoticeService noticeService;
+    private final YbDeductNoticeService ybDeductNoticeService;
 
     @PreAuthorize("hasAuthority('finance:insuranceDeduct:list')")
     @Operation(summary = "扣款通知分页（附超期展示态）")
     @GetMapping("/listPage")
     public Result<PageResult<DeductNoticeListVO>> listPage(@Valid DeductNoticeQueryPageDTO queryDTO) {
-        return Result.success(noticeService.listPage(queryDTO));
+        return Result.success(ybDeductNoticeService.listPage(queryDTO));
     }
 
     @PreAuthorize("hasAuthority('finance:insuranceDeduct:list')")
     @Operation(summary = "扣款通知详情（含全过程留痕）")
     @GetMapping("/getDetailById")
     public Result<DeductNoticeDetailVO> getDetailById(@RequestParam Long id) {
-        return Result.success(noticeService.getDetailById(id));
+        return Result.success(ybDeductNoticeService.getDetailById(id));
     }
 
     @PreAuthorize("hasAuthority('finance:insuranceDeduct:list')")
     @Operation(summary = "台账汇总（待确认/申诉中/待缴/已缴回/超期/金额）")
     @GetMapping("/summary")
     public Result<DeductSummaryVO> summary() {
-        return Result.success(noticeService.summary());
+        return Result.success(ybDeductNoticeService.summary());
     }
 
     @PreAuthorize("hasAuthority('finance:insuranceDeduct:add')")
     @Operation(summary = "通知单新增/修改（仅待确认可改）")
     @PostMapping("/upsert")
     public Result<DeductNoticeListVO> upsert(@Valid @RequestBody DeductNoticeUpsertDTO dto) {
-        return Result.success(noticeService.upsert(dto));
+        return Result.success(ybDeductNoticeService.upsert(dto));
     }
 
     @PreAuthorize("hasAuthority('finance:insuranceDeduct:edit')")
     @Operation(summary = "发起申诉（待确认 → 申诉中）")
     @PostMapping("/appeal")
     public Result<Void> appeal(@Valid @RequestBody DeductAppealDTO dto) {
-        noticeService.appeal(dto);
+        ybDeductNoticeService.appeal(dto);
         return Result.success(null);
     }
 
@@ -66,7 +66,7 @@ public class YbDeductNoticeController {
     @Operation(summary = "录入申诉结果（申诉中 → 申诉成功 / 待缴）")
     @PostMapping("/appealResult")
     public Result<Void> appealResult(@Valid @RequestBody DeductAppealResultDTO dto) {
-        noticeService.appealResult(dto);
+        ybDeductNoticeService.appealResult(dto);
         return Result.success(null);
     }
 
@@ -74,7 +74,7 @@ public class YbDeductNoticeController {
     @Operation(summary = "确认扣款并追责（→ 维持扣款待缴）")
     @PostMapping("/confirm")
     public Result<Void> confirm(@Valid @RequestBody DeductConfirmDTO dto) {
-        noticeService.confirm(dto);
+        ybDeductNoticeService.confirm(dto);
         return Result.success(null);
     }
 
@@ -82,7 +82,7 @@ public class YbDeductNoticeController {
     @Operation(summary = "录入缴回（待缴 → 已缴回，金额须等于扣款金额）")
     @PostMapping("/payback")
     public Result<Void> payback(@Valid @RequestBody DeductPaybackDTO dto) {
-        noticeService.payback(dto);
+        ybDeductNoticeService.payback(dto);
         return Result.success(null);
     }
 
@@ -90,7 +90,7 @@ public class YbDeductNoticeController {
     @Operation(summary = "作废（仅待确认可作废）")
     @PostMapping("/cancel")
     public Result<Void> cancel(@Valid @RequestBody YbCancelDTO dto) {
-        noticeService.cancel(dto);
+        ybDeductNoticeService.cancel(dto);
         return Result.success(null);
     }
 }

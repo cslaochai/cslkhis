@@ -66,14 +66,14 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
      */
     private static final int MAX_RETRY = 3;
 
-    private final BizEmrSignatureMapper signMapper;
-    private final SysSignCertMapper certMapper;
-    private final SignCertService certService;
-    private final SignatureStoreService store;
-    private final SignProperties properties;
-    private final SignConfigMapper configMapper;
-    private final RedisSequenceService sequenceService;
-    private final TsaChannelService tsaChannel;
+    private final BizEmrSignatureMapper bizEmrSignatureMapper;
+    private final SysSignCertMapper sysSignCertMapper;
+    private final SignCertService signCertService;
+    private final SignatureStoreService signatureStoreService;
+    private final SignProperties signProperties;
+    private final SignConfigMapper signConfigMapper;
+    private final RedisSequenceService redisSequenceService;
+    private final TsaChannelService tsaChannelService;
     private final com.his.common.mapper.BizTsaTokenMapper tsaTokenMapper;
     private final ObjectProvider<SignableContentProvider> providers;
     private final ObjectProvider<SignCoverageProvider> coverageProviders;
@@ -139,14 +139,14 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             throw new BusinessException(block);
         }
 
-        SysSignCert cert = certService.ensureActiveCert(cmd.getSignerId(), cmd.getSignerName(),
+        SysSignCert cert = signCertService.ensureActiveCert(cmd.getSignerId(), cmd.getSignerName(),
                 cmd.getSignerDeptId(), cmd.getSignerDeptName());
-        String privatePem = certService.privatePemOf(cert);
+        String privatePem = signCertService.privatePemOf(cert);
 
         for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
             BizEmrSignature entity = buildSignature(cmd, scene, subject, cert, privatePem);
             try {
-                store.insertAndAnchor(entity, provider, scene, cert);
+                signatureStoreService.insertAndAnchor(entity, provider, scene, cert);
                 log.info("签名成功 signNo={} {} id={} 场景={} 签名人={} 证书={} 摘要={}",
                         entity.getSignNo(), bizType.getText(), subject.bizId(), scene.getText(),
                         entity.getSignerName(), entity.getCertNo(), shortDigest(entity.getContentDigest()));
@@ -166,7 +166,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
 
     private BizEmrSignature buildSignature(SignCommandDTO cmd, SignSceneEnum scene, SignSubject subject,
                                            SysSignCert cert, String privatePem) {
-        BizEmrSignature prev = signMapper.selectLastByBiz(cmd.getBizType(), cmd.getBizId());
+        BizEmrSignature prev = bizEmrSignatureMapper.selectLastByBiz(cmd.getBizType(), cmd.getBizId());
         String prevDigest = prev == null ? null : prev.getContentDigest();
 
         String content = subject.contentWithPrev(prevDigest);
@@ -184,7 +184,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         e.setDeptId(subject.deptId());
         e.setDeptName(subject.deptName());
         e.setSignScene(scene.getCode());
-        e.setChainNo(signMapper.countByBiz(cmd.getBizType(), cmd.getBizId()) + 1);
+        e.setChainNo(bizEmrSignatureMapper.countByBiz(cmd.getBizType(), cmd.getBizId()) + 1);
         e.setPrevSignId(prev == null ? null : prev.getId());
         e.setPrevDigest(prevDigest);
         e.setSignerId(cmd.getSignerId());
@@ -204,7 +204,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         // 可信时间戳（G6）：配置了 TSA 且适配器在线，就在签名时刻之后盖一枚令牌。
         // 盖章失败（网络/服务异常）不允许签名失败：TSA 通道已收敛成 null，这里降级本机时钟。
         int effectiveTs = effectiveTimeSource();
-        TsaChannelService.Stamp stamp = effectiveTs == TimeSourceEnum.TSA.getCode() ? tsaChannel.stamp(digest) : null;
+        TsaChannelService.Stamp stamp = effectiveTs == TimeSourceEnum.TSA.getCode() ? tsaChannelService.stamp(digest) : null;
         if (stamp != null) {
             e.setTimeSource(TimeSourceEnum.TSA.getCode());
             e.setTsaSerial(stamp.serial());
@@ -230,7 +230,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         if (signId == null) {
             throw new BusinessException("签名ID不能为空");
         }
-        BizEmrSignature sig = signMapper.selectById(signId);
+        BizEmrSignature sig = bizEmrSignatureMapper.selectById(signId);
         if (sig == null) {
             throw new BusinessException("签名记录不存在");
         }
@@ -261,7 +261,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         vo.setCheckedAt(TimeUtil.nowSeconds());
 
         // 断言一：签名值本身（用签名时留存的内容快照，不用当前内容）
-        SysSignCert cert = sig.getCertId() == null ? null : certMapper.selectById(sig.getCertId());
+        SysSignCert cert = sig.getCertId() == null ? null : sysSignCertMapper.selectById(sig.getCertId());
         boolean signatureValid;
         String signFailReason = null;
         if (cert == null) {
@@ -314,7 +314,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
                 tsaNote = "签名记录标记为 TSA 时间来源，但缺少序列号/授时时刻/令牌（写入侧校验被绕过或数据被删改）";
             } else {
                 try {
-                    tsaValid = tsaChannel.verifyToken(sig.getTsaSerial(), sig.getContentDigest(),
+                    tsaValid = tsaChannelService.verifyToken(sig.getTsaSerial(), sig.getContentDigest(),
                             sig.getTsaTime(), sig.getTsaToken());
                 } catch (Exception ex) {
                     tsaValid = false;
@@ -361,7 +361,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
 
         // 落地核查结果（两个断言同时成立才算"验签通过"）
         try {
-            store.updateVerifyResult(sig.getId(),
+            signatureStoreService.updateVerifyResult(sig.getId(),
                     signatureValid && contentMatched ? SignVerifyStatusEnum.PASSED.getCode()
                             : SignVerifyStatusEnum.FAILED.getCode(),
                     vo.getCheckedAt());
@@ -397,7 +397,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         if (!StringUtils.hasText(reason)) {
             throw new BusinessException("作废原因必填（作废会解除病历的内容锁定，必须写明依据）");
         }
-        BizEmrSignature sig = signMapper.selectById(signId);
+        BizEmrSignature sig = bizEmrSignatureMapper.selectById(signId);
         if (sig == null) {
             throw new BusinessException("签名记录不存在");
         }
@@ -405,7 +405,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             throw new BusinessException("签名 " + sig.getSignNo() + " 已作废，不能重复作废");
         }
         LocalDateTime now = TimeUtil.nowSeconds();
-        store.updateInvalidate(signId, reason, now, operatorId, operatorName);
+        signatureStoreService.updateInvalidate(signId, reason, now, operatorId, operatorName);
 
         SignableContentProvider provider = findProvider(sig.getBizType());
         if (provider != null) {
@@ -421,13 +421,13 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         log.info("作废签名 signNo={} 对象={}:{} 原因={} 操作人={}",
                 sig.getSignNo(), SignBizTypeEnum.textOf(sig.getBizType()), sig.getBizId(), reason, operatorName);
 
-        BizEmrSignature after = signMapper.selectById(signId);
+        BizEmrSignature after = bizEmrSignatureMapper.selectById(signId);
         return toVO(after, true);
     }
 
     @Override
     public SignatureVO getById(Long id) {
-        BizEmrSignature sig = signMapper.selectById(id);
+        BizEmrSignature sig = bizEmrSignatureMapper.selectById(id);
         if (sig == null) {
             throw new BusinessException("签名记录不存在");
         }
@@ -460,7 +460,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         }
         w.orderByDesc(BizEmrSignature::getSignedTime).orderByDesc(BizEmrSignature::getId);
 
-        IPage<BizEmrSignature> page = signMapper.selectPage(
+        IPage<BizEmrSignature> page = bizEmrSignatureMapper.selectPage(
                 new Page<>(q.getPageNum(), q.getPageSize()), w);
         Page<SignatureVO> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         List<SignatureVO> rows = new ArrayList<>(page.getRecords().size());
@@ -509,7 +509,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             vo.setBlockReason("该对象类型在当前部署里没有内容提供者，无法签名（仅能查看历史签名）");
         }
 
-        BizEmrSignature current = signMapper.selectCurrentByBiz(bizType, bizId);
+        BizEmrSignature current = bizEmrSignatureMapper.selectCurrentByBiz(bizType, bizId);
         if (current != null) {
             vo.setCurrentSignId(current.getId());
             vo.setCurrentSignNo(current.getSignNo());
@@ -517,7 +517,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             vo.setObjectSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
             vo.setObjectSignStatusText(ObjectSignStatusEnum.SIGNED.getText());
         } else {
-            BizEmrSignature last = signMapper.selectLastByBiz(bizType, bizId);
+            BizEmrSignature last = bizEmrSignatureMapper.selectLastByBiz(bizType, bizId);
             if (last != null && Objects.equals(SignStatusEnum.INVALID.getCode(), last.getSignStatus())) {
                 vo.setLastSignedTime(last.getSignedTime());
                 vo.setObjectSignStatus(ObjectSignStatusEnum.INVALIDATED.getCode());
@@ -535,7 +535,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     public SignatureSummaryVO summary() {
         SignatureSummaryVO vo = new SignatureSummaryVO();
 
-        List<BizEmrSignature> all = signMapper.selectList(new LambdaQueryWrapper<BizEmrSignature>()
+        List<BizEmrSignature> all = bizEmrSignatureMapper.selectList(new LambdaQueryWrapper<BizEmrSignature>()
                 .select(BizEmrSignature::getId, BizEmrSignature::getSignStatus,
                         BizEmrSignature::getVerifyStatus, BizEmrSignature::getBizType,
                         BizEmrSignature::getSignedTime));
@@ -565,8 +565,8 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         vo.setInvalidSign(invalid);
         vo.setVerifyUnchecked(unchecked);
         vo.setVerifyFailed(failed);
-        vo.setTodaySign(signMapper.countSignedAfter(LocalDate.now().atStartOfDay()));
-        vo.setLastSignTime(signMapper.selectLastSignedTime());
+        vo.setTodaySign(bizEmrSignatureMapper.countSignedAfter(LocalDate.now().atStartOfDay()));
+        vo.setLastSignTime(bizEmrSignatureMapper.selectLastSignedTime());
         vo.setBizTypeCount(types.size());
         StringBuilder tb = new StringBuilder();
         for (Integer t : types) {
@@ -578,10 +578,10 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         vo.setBizTypeTexts(tb.length() == 0 ? "—" : tb.toString());
 
         vo.setCertTotal(certTotal());
-        vo.setCertActive(certService.countByStatus(CertStatusEnum.ACTIVE.getCode()));
-        vo.setCertRevoked(certService.countByStatus(CertStatusEnum.REVOKED.getCode()));
-        vo.setCertAutoIssued(certService.countAutoIssued());
-        vo.setCertEmployeeCount(certService.countActiveEmployees());
+        vo.setCertActive(signCertService.countByStatus(CertStatusEnum.ACTIVE.getCode()));
+        vo.setCertRevoked(signCertService.countByStatus(CertStatusEnum.REVOKED.getCode()));
+        vo.setCertAutoIssued(signCertService.countAutoIssued());
+        vo.setCertEmployeeCount(signCertService.countActiveEmployees());
 
         // 覆盖率：按业务类型分别统计，分母为 0 时显示"—"（不显示 0%，也不显示 100%）
         List<SignatureSummaryVO.Coverage> coverages = new ArrayList<>();
@@ -601,8 +601,8 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         coverages.sort(Comparator.comparing(SignatureSummaryVO.Coverage::getBizType));
         vo.setCoverages(coverages);
 
-        vo.setTsaAvailable(tsaChannel.available());
-        vo.setTsaName(tsaChannel.readyName());
+        vo.setTsaAvailable(tsaChannelService.available());
+        vo.setTsaName(tsaChannelService.readyName());
         vo.setTsaTokenCount(tsaTokenMapper.selectCount(null));
 
         TimeSourceEnum ts = TimeSourceEnum.parse(effectiveTimeSource());
@@ -626,14 +626,14 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
 
     @Override
     public int effectiveTimeSource() {
-        Integer cfg = intValue(configMapper.selectValue(CFG_TIME_SOURCE));
-        TimeSourceEnum ts = TimeSourceEnum.parse(cfg != null ? cfg : properties.getTimeSource());
+        Integer cfg = intValue(signConfigMapper.selectValue(CFG_TIME_SOURCE));
+        TimeSourceEnum ts = TimeSourceEnum.parse(cfg != null ? cfg : signProperties.getTimeSource());
         if (ts == null) {
             ts = TimeSourceEnum.LOCAL;
         }
         if (ts == TimeSourceEnum.TSA) {
             // 适配器在线才允许写 3 —— 没有 TSA 实现就降级：写 3 等于给可随手修改的时间盖上"可信时间戳"的章
-            if (tsaChannel.available()) {
+            if (tsaChannelService.available()) {
                 return TimeSourceEnum.TSA.getCode();
             }
             log.warn("配置 sign.time_source=3（第三方 TSA），但当前部署未接入 TSA 服务，"
@@ -667,7 +667,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     }
 
     private List<BizEmrSignature> signaturesOf(Integer bizType, Long bizId) {
-        return signMapper.selectList(new LambdaQueryWrapper<BizEmrSignature>()
+        return bizEmrSignatureMapper.selectList(new LambdaQueryWrapper<BizEmrSignature>()
                 .eq(BizEmrSignature::getBizType, bizType)
                 .eq(BizEmrSignature::getBizId, bizId)
                 .orderByAsc(BizEmrSignature::getChainNo)
@@ -697,7 +697,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     }
 
     private long certTotal() {
-        return certMapper.selectCount(null);
+        return sysSignCertMapper.selectCount(null);
     }
 
     private String nextSignNo() {
@@ -707,11 +707,11 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         // （事务已被标记 rollback-only，重试只会得到 "Transaction silently rolled back"），
         // 所以 Redis 是正常路径，count 只是"Redis 挂了也要能签名"的兜底。
         try {
-            long seq = sequenceService.next("SIGN");
+            long seq = redisSequenceService.next("SIGN");
             return prefix + String.format("%06d", seq);
         } catch (Exception e) {
             log.warn("签名号取号失败，回落为计数方式（{}）", e.getMessage());
-            return prefix + String.format("%06d", signMapper.countBySignNoPrefix(prefix) + 1);
+            return prefix + String.format("%06d", bizEmrSignatureMapper.countBySignNoPrefix(prefix) + 1);
         }
     }
 

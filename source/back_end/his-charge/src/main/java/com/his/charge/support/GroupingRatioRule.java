@@ -1,9 +1,9 @@
 package com.his.charge.support;
 
-
 import com.his.charge.config.ComplianceProperties;
 import com.his.charge.entity.SysDrgGroup;
 import com.his.charge.enums.RuleCatalogEnum;
+import com.his.common.util.TextUtil;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -24,10 +24,6 @@ import java.util.List;
  */
 @Component
 public class GroupingRatioRule implements ComplianceRule {
-
-    private static String safe(String s) {
-        return s == null ? "" : s;
-    }
 
     @Override
     public String group() {
@@ -116,6 +112,6 @@ public class GroupingRatioRule implements ComplianceRule {
             return;
         }
         findings.add(RuleFinding.pass(RuleCatalogEnum.D02,
-                "已入组且分组有效：" + drgCode + " " + safe(ctx.getDrgGroup().getDrgName())));
+                "已入组且分组有效：" + drgCode + " " + TextUtil.nullToEmpty(ctx.getDrgGroup().getDrgName())));
     }
 }

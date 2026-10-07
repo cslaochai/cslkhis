@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.dto.TsaTokenQueryPageDTO;
 import com.his.common.entity.BizTsaToken;
 import com.his.common.entity.SysTsaServer;
@@ -17,6 +18,7 @@ import com.his.common.service.RedisSequenceService;
 import com.his.common.service.TsaChannelService;
 import com.his.common.service.TsaService;
 import com.his.common.util.SignCryptoUtil;
+import com.his.common.util.TimeUtil;
 import com.his.common.vo.TsaStatusVO;
 import com.his.common.vo.TsaTokenVO;
 import com.his.common.vo.TsaTokenVerifyVO;
@@ -26,8 +28,6 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,16 +40,16 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TsaServiceImpl implements TsaService {
+public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer> implements TsaService {
 
     private static final String CFG_TIME_SOURCE = "sign.time_source";
 
-    private final TsaChannelService tsaChannel;
-    private final SysTsaServerMapper serverMapper;
-    private final BizTsaTokenMapper tokenMapper;
-    private final SignConfigMapper configMapper;
-    private final EmrSignatureService signatureService;
-    private final RedisSequenceService sequenceService;
+    private final TsaChannelService tsaChannelService;
+    private final SysTsaServerMapper sysTsaServerMapper;
+    private final BizTsaTokenMapper bizTsaTokenMapper;
+    private final SignConfigMapper signConfigMapper;
+    private final EmrSignatureService emrSignatureService;
+    private final RedisSequenceService redisSequenceService;
 
     private static Integer parseCfg(String v) {
         if (!StringUtils.hasText(v)) {
@@ -65,14 +65,14 @@ public class TsaServiceImpl implements TsaService {
     @Override
     public TsaStatusVO status() {
         TsaStatusVO vo = new TsaStatusVO();
-        boolean available = tsaChannel.available();
+        boolean available = tsaChannelService.available();
         vo.setAvailable(available);
 
-        String readyName = tsaChannel.readyName();
+        String readyName = tsaChannelService.readyName();
         if (readyName != null) {
             vo.setTsaName(readyName);
         }
-        SysTsaServer server = serverMapper.selectOne(new LambdaQueryWrapper<SysTsaServer>()
+        SysTsaServer server = sysTsaServerMapper.selectOne(new LambdaQueryWrapper<SysTsaServer>()
                 .eq(SysTsaServer::getTsaCode, "LOCAL"));
         if (server != null) {
             vo.setKeyFingerprintGroups(SignCryptoUtil.fingerprintGroups(server.getKeyFingerprint()));
@@ -81,14 +81,14 @@ public class TsaServiceImpl implements TsaService {
             }
         }
 
-        Integer cfg = parseCfg(configMapper.selectValue(CFG_TIME_SOURCE));
+        Integer cfg = parseCfg(signConfigMapper.selectValue(CFG_TIME_SOURCE));
         vo.setConfigTimeSource(cfg);
-        int effective = signatureService.effectiveTimeSource();
+        int effective = emrSignatureService.effectiveTimeSource();
         vo.setEffectiveTimeSource(effective);
         vo.setEffectiveTimeSourceText(TimeSourceEnum.textOf(effective));
 
-        vo.setTokenCount(tokenMapper.selectCount(null));
-        BizTsaToken last = tokenMapper.selectOne(new LambdaQueryWrapper<BizTsaToken>()
+        vo.setTokenCount(bizTsaTokenMapper.selectCount(null));
+        BizTsaToken last = bizTsaTokenMapper.selectOne(new LambdaQueryWrapper<BizTsaToken>()
                 .orderByDesc(BizTsaToken::getTsaTime)
                 .orderByDesc(BizTsaToken::getId)
                 .last("LIMIT 1"));
@@ -123,7 +123,7 @@ public class TsaServiceImpl implements TsaService {
             w.like(BizTsaToken::getDigestHex, query.getKeyword().trim());
         }
         w.orderByDesc(BizTsaToken::getTsaTime).orderByDesc(BizTsaToken::getId);
-        IPage<BizTsaToken> page = tokenMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), w);
+        IPage<BizTsaToken> page = bizTsaTokenMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), w);
         Page<TsaTokenVO> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         List<TsaTokenVO> rows = new ArrayList<>(page.getRecords().size());
         for (BizTsaToken t : page.getRecords()) {
@@ -149,7 +149,7 @@ public class TsaServiceImpl implements TsaService {
         if (tsaStatus == null || (tsaStatus != 0 && tsaStatus != 1)) {
             throw new BusinessException("目标状态只允许 0（停用）或 1（启用）");
         }
-        int updated = serverMapper.update(null, new LambdaUpdateWrapper<SysTsaServer>()
+        int updated = sysTsaServerMapper.update(null, new LambdaUpdateWrapper<SysTsaServer>()
                 .eq(SysTsaServer::getTsaCode, "LOCAL")
                 .set(SysTsaServer::getTsaStatus, tsaStatus));
         if (updated == 0) {
@@ -158,7 +158,7 @@ public class TsaServiceImpl implements TsaService {
             throw new BusinessException("本地 TSA 服务行不存在（尚未自举），无法直接启停");
         }
         // 失效实现方缓存：available()/盖章下一次调用重读库，操作即时生效
-        tsaChannel.invalidate();
+        tsaChannelService.invalidate();
         log.info("TSA服务{}（G6b 运维操作）", tsaStatus == 1 ? "启用" : "停用");
         return status();
     }
@@ -175,12 +175,12 @@ public class TsaServiceImpl implements TsaService {
                 ? "3（第三方可信时间戳，经本地内置TSA适配）"
                 : "1（本机时钟）";
         // config_id 非自增：先更后插，插不进（并发新建撞唯一键）就再更一次兜底
-        if (configMapper.updateValue(CFG_TIME_SOURCE, String.valueOf(timeSource)) == 0) {
+        if (signConfigMapper.updateValue(CFG_TIME_SOURCE, String.valueOf(timeSource)) == 0) {
             try {
-                configMapper.insertValue(sequenceService.next("SYS_CONFIG"), CFG_TIME_SOURCE,
+                signConfigMapper.insertValue(redisSequenceService.next("SYS_CONFIG"), CFG_TIME_SOURCE,
                         String.valueOf(timeSource), "签名时间来源", "G6b 运维接口写入：" + text);
             } catch (DuplicateKeyException e) {
-                configMapper.updateValue(CFG_TIME_SOURCE, String.valueOf(timeSource));
+                signConfigMapper.updateValue(CFG_TIME_SOURCE, String.valueOf(timeSource));
             }
         }
         log.info("签名时间来源切换为 {}（G6b 运维操作）", text);
@@ -189,9 +189,9 @@ public class TsaServiceImpl implements TsaService {
 
     @Override
     public TsaTokenVerifyVO verifyToken(Long id) {
-        BizTsaToken t = id == null ? null : tokenMapper.selectById(id);
+        BizTsaToken t = id == null ? null : bizTsaTokenMapper.selectById(id);
         TsaTokenVerifyVO vo = new TsaTokenVerifyVO();
-        vo.setVerifyTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+        vo.setVerifyTime(TimeUtil.nowSeconds());
         if (t == null) {
             vo.setValid(false);
             vo.setFailReason("令牌不存在（台账中无此 ID）");
@@ -202,7 +202,7 @@ public class TsaServiceImpl implements TsaService {
         vo.setDigestHex(t.getDigestHex());
         vo.setTsaTime(t.getTsaTime());
         vo.setAlgo(t.getAlgo());
-        boolean ok = tsaChannel.verifyToken(t.getSerial(), t.getDigestHex(), t.getTsaTime(), t.getTokenValue());
+        boolean ok = tsaChannelService.verifyToken(t.getSerial(), t.getDigestHex(), t.getTsaTime(), t.getTokenValue());
         vo.setValid(ok);
         if (!ok) {
             vo.setFailReason("令牌验证不通过：签名值与「序列号+摘要+时刻」对不上，"

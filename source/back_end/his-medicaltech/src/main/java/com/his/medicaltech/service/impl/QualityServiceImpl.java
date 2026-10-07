@@ -4,11 +4,11 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.medicaltech.dto.QualityIssueQueryPageDTO;
-import com.his.medicaltech.mapper.QualityMapper;
-import com.his.medicaltech.service.QualityService;
 import com.his.medicaltech.enums.QualityDimension;
 import com.his.medicaltech.enums.QualityRule;
 import com.his.medicaltech.enums.QualitySeverity;
+import com.his.medicaltech.mapper.QualityMapper;
+import com.his.medicaltech.service.QualityService;
 import com.his.medicaltech.vo.*;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -224,8 +224,8 @@ public class QualityServiceImpl implements QualityService {
                         .thenComparing(v -> v.getOccurredTime() == null ? "" : v.getOccurredTime(), Comparator.reverseOrder()))
                 .collect(Collectors.toList());
 
-        int pageNum = Math.max(1, dto.getPageNum());
-        int pageSize = dto.getPageSize() <= 0 ? 10 : Math.min(dto.getPageSize(), 200);
+        int pageNum = dto.getPageNum();
+        int pageSize = dto.getPageSize();
         int from = Math.min((pageNum - 1) * pageSize, filtered.size());
         int to = Math.min(from + pageSize, filtered.size());
         long pages = (filtered.size() + pageSize - 1) / pageSize;

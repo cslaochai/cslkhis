@@ -1,37 +1,34 @@
 package com.his.miniapp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.appoint.entity.BizAppointInfo;
+import com.his.appoint.service.AppointService;
 import com.his.charge.dto.BillPayDTO;
 import com.his.charge.dto.PrepayUpsertDTO;
 import com.his.charge.entity.BizSettlementBill;
 import com.his.charge.service.InpatientAccountService;
 import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.PaymentMethodEnum;
 import com.his.common.enums.TxnSourceEnum;
 import com.his.common.exception.BusinessException;
-import com.his.appoint.entity.BizAppointInfo;
-import com.his.appoint.service.AppointService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
-import com.his.miniapp.service.WxLoginChannelService;
-import com.his.miniapp.dto.WxLoginDTO;
-import com.his.miniapp.mapper.MiniappSysUserMapper;
-import com.his.miniapp.vo.MiniappUserRowVO;
-import com.his.miniapp.vo.WxLoginVO;
-import com.his.miniapp.service.WxPayChannelService;
-import com.his.miniapp.dto.PayUpsertDTO;
+import com.his.common.util.NumUtil;
 import com.his.miniapp.dto.PayRefundDTO;
+import com.his.miniapp.dto.PayUpsertDTO;
+import com.his.miniapp.dto.WxLoginDTO;
 import com.his.miniapp.entity.BizPayOrder;
 import com.his.miniapp.mapper.BizPayOrderMapper;
+import com.his.miniapp.mapper.MiniappSysUserMapper;
 import com.his.miniapp.service.MiniappPayService;
-import com.his.miniapp.vo.PayOrderListVO;
-import com.his.miniapp.vo.PayOrderVO;
-import com.his.miniapp.vo.PendingBillItemVO;
-import com.his.miniapp.vo.PendingBillListVO;
+import com.his.miniapp.service.WxLoginChannelService;
+import com.his.miniapp.service.WxPayChannelService;
+import com.his.miniapp.vo.*;
+import com.his.system.service.SysMessageService;
 import com.his.system.utils.JwtUtils;
 import com.his.system.utils.UserUtils;
-import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -61,14 +58,14 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MiniappPayServiceImpl implements MiniappPayService {
+public class MiniappPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPayOrder> implements MiniappPayService {
 
     private final WxLoginChannelService wxLoginChannelService;
     private final WxPayChannelService wxPayChannelService;
-    private final BizPayOrderMapper payOrderMapper;
+    private final BizPayOrderMapper bizPayOrderMapper;
     private final MiniappSysUserMapper miniappSysUserMapper;
     private final JwtUtils jwtUtils;
-    private final RedisSequenceService sequenceService;
+    private final RedisSequenceService redisSequenceService;
     private final SettlementBillService settlementBillService;
     private final PaymentService paymentService;
     private final InpatientAccountService inpatientAccountService;
@@ -115,7 +112,7 @@ public class MiniappPayServiceImpl implements MiniappPayService {
     @Transactional(rollbackFor = Exception.class)
     public PayOrderVO createOrder(PayUpsertDTO dto) {
         // 幂等：同业务单已有待支付/已支付的有效单，直接返回它（防重复拉起收银台）
-        BizPayOrder exist = payOrderMapper.selectOne(new LambdaQueryWrapper<BizPayOrder>()
+        BizPayOrder exist = bizPayOrderMapper.selectOne(new LambdaQueryWrapper<BizPayOrder>()
                 .eq(BizPayOrder::getBizType, dto.getBizType())
                 .eq(BizPayOrder::getBizId, dto.getBizId())
                 .in(BizPayOrder::getPayStatus, 0, 1)
@@ -128,7 +125,7 @@ public class MiniappPayServiceImpl implements MiniappPayService {
         var current = UserUtils.getCurrentUser();
         BizPayOrder order = new BizPayOrder();
         order.setPayNo("PAY" + LocalDate.now().format(DateFormats.COMPACT_DATE)
-                + String.format("%05d", sequenceService.next("PAY")));
+                + String.format("%05d", redisSequenceService.next("PAY")));
         order.setBizType(dto.getBizType());
         order.setBizId(dto.getBizId());
         order.setPatientId(current.getPatientId());
@@ -137,7 +134,7 @@ public class MiniappPayServiceImpl implements MiniappPayService {
         order.setChannel(1);
         order.setPayStatus(0);
         order.setRemark("患者端小程序支付");
-        payOrderMapper.insert(order);
+        bizPayOrderMapper.insert(order);
 
         WxPayChannelService.PayUnifiedResult unified = wxPayChannelService.unifiedOrder(order);
         if (unified.errMsg() != null) {
@@ -169,7 +166,7 @@ public class MiniappPayServiceImpl implements MiniappPayService {
         order.setPayStatus(1);
         order.setOutTradeNo(outTradeNo);
         order.setPayTime(LocalDateTime.now());
-        payOrderMapper.updateById(order);
+        bizPayOrderMapper.updateById(order);
 
         switch (order.getBizType()) {
             case 1 -> advanceOutpatientCharge(order);
@@ -203,7 +200,7 @@ public class MiniappPayServiceImpl implements MiniappPayService {
     @Override
     public List<PayOrderListVO> myOrders() {
         var current = UserUtils.getCurrentUser();
-        return payOrderMapper.selectList(new LambdaQueryWrapper<BizPayOrder>()
+        return bizPayOrderMapper.selectList(new LambdaQueryWrapper<BizPayOrder>()
                         .eq(BizPayOrder::getPatientId, current.getPatientId())
                         .orderByDesc(BizPayOrder::getId)
                         .last("LIMIT 50"))
@@ -285,7 +282,7 @@ public class MiniappPayServiceImpl implements MiniappPayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void refundByBiz(PayRefundDTO dto) {
-        BizPayOrder order = payOrderMapper.selectOne(new LambdaQueryWrapper<BizPayOrder>()
+        BizPayOrder order = bizPayOrderMapper.selectOne(new LambdaQueryWrapper<BizPayOrder>()
                 .eq(BizPayOrder::getBizType, dto.getBizType())
                 .eq(BizPayOrder::getBizId, dto.getBizId())
                 .eq(BizPayOrder::getPayStatus, 1)
@@ -304,7 +301,7 @@ public class MiniappPayServiceImpl implements MiniappPayService {
         order.setPayStatus(3);
         order.setRefundTime(LocalDateTime.now());
         order.setRemark("退款原因：" + (dto.getReason() == null ? "患者退号" : dto.getReason()));
-        payOrderMapper.updateById(order);
+        bizPayOrderMapper.updateById(order);
     }
 
     // 私有
@@ -316,7 +313,7 @@ public class MiniappPayServiceImpl implements MiniappPayService {
             if (bill == null) {
                 throw new BusinessException("结算账单不存在：" + dto.getBizId());
             }
-            BigDecimal unpaid = nz(bill.getPayableAmount()).subtract(nz(bill.getPaidAmount()));
+            BigDecimal unpaid = NumUtil.orZero(bill.getPayableAmount()).subtract(NumUtil.orZero(bill.getPaidAmount()));
             if (unpaid.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new BusinessException("该账单已无应缴金额");
             }
@@ -349,7 +346,7 @@ public class MiniappPayServiceImpl implements MiniappPayService {
         if (bill == null) {
             throw new BusinessException(scene + "推进失败：结算账单不存在（" + billId + "）");
         }
-        BigDecimal unpaid = nz(bill.getPayableAmount()).subtract(nz(bill.getPaidAmount()));
+        BigDecimal unpaid = NumUtil.orZero(bill.getPayableAmount()).subtract(NumUtil.orZero(bill.getPaidAmount()));
         if (unpaid.compareTo(BigDecimal.ZERO) <= 0) {
             log.info("[微信支付口子] {} 账单 {} 已无应缴（可能窗口已收），支付单 {} 仅留档 payNo={}",
                     scene, billId, order.getPayNo(), order.getPayNo());
@@ -367,10 +364,6 @@ public class MiniappPayServiceImpl implements MiniappPayService {
         paymentService.pay(dto);
         log.info("[微信支付口子] {}已入账账单 payNo={} billId={} amount=￥{}",
                 scene, order.getPayNo(), billId, unpaid.toPlainString());
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
     }
 
     /**
@@ -413,7 +406,7 @@ public class MiniappPayServiceImpl implements MiniappPayService {
     }
 
     private BizPayOrder getByPayNo(String payNo) {
-        return payOrderMapper.selectOne(new LambdaQueryWrapper<BizPayOrder>()
+        return bizPayOrderMapper.selectOne(new LambdaQueryWrapper<BizPayOrder>()
                 .eq(BizPayOrder::getPayNo, payNo)
                 .last("LIMIT 1"));
     }

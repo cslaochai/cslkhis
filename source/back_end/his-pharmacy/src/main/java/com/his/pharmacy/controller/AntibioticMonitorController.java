@@ -32,54 +32,54 @@ import java.util.List;
 @RequiredArgsConstructor
 public class AntibioticMonitorController {
 
-    private final AntibioticMonitorService monitorService;
+    private final AntibioticMonitorService antibioticMonitorService;
 
     @Operation(summary = "已生成的监测指标分页")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:monitor')")
     @PostMapping("/statsListPage")
     public Result<PageResult<AntibioticStatsVO>> statsListPage(@Valid @RequestBody AntibioticStatsQueryPageDTO query) {
-        return Result.success(monitorService.statsListPage(query));
+        return Result.success(antibioticMonitorService.statsListPage(query));
     }
 
     @Operation(summary = "实时试算（不落库；报数以快照为准）")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:monitor')")
     @GetMapping("/previewStats")
     public Result<AntibioticStatsVO> previewStats(@RequestParam String statMonth) {
-        return Result.success(monitorService.previewStats(statMonth));
+        return Result.success(antibioticMonitorService.previewStats(statMonth));
     }
 
     @Operation(summary = "生成/重算月度监测快照（同月同范围覆盖）")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:statGenerate')")
     @PostMapping("/generateStats")
     public Result<List<AntibioticStatsVO>> generateStats(@Valid @RequestBody AntibioticStatsGenerateDTO dto) {
-        return Result.success(monitorService.generateStats(dto));
+        return Result.success(antibioticMonitorService.generateStats(dto));
     }
 
     @Operation(summary = "导出监测指标 CSV（BOM，上限 5000 行）")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:statExport')")
     @PostMapping("/statsExportCsv")
     public Result<String> statsExportCsv(@Valid @RequestBody AntibioticStatsQueryPageDTO query) {
-        return Result.success(monitorService.statsExportCsv(query));
+        return Result.success(antibioticMonitorService.statsExportCsv(query));
     }
 
     @Operation(summary = "待点评的 I 类切口手术（含围手术期抗菌药物医嘱证据）")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:incision')")
     @GetMapping("/incisionCandidates")
     public Result<List<IncisionCandidateVO>> incisionCandidates() {
-        return Result.success(monitorService.incisionCandidates());
+        return Result.success(antibioticMonitorService.incisionCandidates());
     }
 
     @Operation(summary = "I 类切口点评记录分页")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:incision')")
     @PostMapping("/incisionReviewListPage")
     public Result<PageResult<IncisionReviewVO>> incisionReviewListPage(@Valid @RequestBody IncisionReviewQueryPageDTO query) {
-        return Result.success(monitorService.incisionReviewListPage(query));
+        return Result.success(antibioticMonitorService.incisionReviewListPage(query));
     }
 
     @Operation(summary = "提交/重评 I 类切口预防用药点评结论")
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:incisionReview')")
     @PostMapping("/incisionReviewUpsert")
     public Result<IncisionReviewVO> incisionReviewUpsert(@Valid @RequestBody IncisionReviewUpsertDTO dto) {
-        return Result.success(monitorService.incisionReviewUpsert(dto));
+        return Result.success(antibioticMonitorService.incisionReviewUpsert(dto));
     }
 }

@@ -14,6 +14,7 @@ import com.his.ai.vo.LabTrendVO;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.mapper.BizLabResultMapper;
@@ -92,9 +93,9 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
 
     private static final int CONCLUSION_MAX_LENGTH = 500;
 
-    private final BizLaboratoryRecordMapper laboratoryRecordMapper;
+    private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
 
-    private final BizLabResultMapper labResultMapper;
+    private final BizLabResultMapper bizLabResultMapper;
 
     private final AiExecutionService aiExecutionService;
 
@@ -150,8 +151,8 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
         int budget = Math.max(0, CONCLUSION_MAX_LENGTH - tail.length());
 
         if (vo.getAbnormalCount() != null && vo.getAbnormalCount() == 0) {
-            return truncate(String.format("%s：本次共 %d 项结果，均在参考范围内。",
-                    nullToDash(vo.getLaboratoryItemName()), vo.getItemCount()), budget) + tail;
+            return TextUtil.cut(String.format("%s：本次共 %d 项结果，均在参考范围内。",
+                    TextUtil.blankToDefault(vo.getLaboratoryItemName(), "（未填写）"), vo.getItemCount()), budget) + tail;
         }
         StringBuilder builder = new StringBuilder();
         if (vo.getCriticalCount() != null && vo.getCriticalCount() > 0) {
@@ -164,7 +165,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
             builder.append('\n');
         }
         builder.append(String.format("%s：共 %d 项结果，其中 %d 项异常 —— ",
-                nullToDash(vo.getLaboratoryItemName()), vo.getItemCount(), vo.getAbnormalCount()));
+                TextUtil.blankToDefault(vo.getLaboratoryItemName(), "（未填写）"), vo.getItemCount(), vo.getAbnormalCount()));
         for (LabItemOverviewVO item : vo.getItems()) {
             if (item.getAbnormalFlag() == null || item.getAbnormalFlag() == LabAbnormalJudge.NORMAL) {
                 continue;
@@ -172,8 +173,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
             builder.append(item.getItemName()).append(item.getAbnormalFlagText()).append('、');
         }
         String text = builder.toString();
-        return truncate(text.endsWith("、") ? text.substring(0, text.length() - 1) : text,
-                budget) + tail;
+        return TextUtil.cut(text.endsWith("、") ? text.substring(0, text.length() - 1) : text, budget) + tail;
     }
 
     /**
@@ -232,7 +232,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
                 if (item.getAbnormalFlag() != null && item.getAbnormalFlag() != LabAbnormalJudge.NORMAL) {
                     points.add(String.format("%s%s：%s（参考 %s）", item.getItemName(),
                             item.getAbnormalFlagText(), item.getResultValue(),
-                            nullToDash(item.getReferenceRange())));
+                            TextUtil.blankToDefault(item.getReferenceRange(), "（未填写）")));
                 }
                 if (points.size() >= MAX_ATTENTION_ITEMS) {
                     break;
@@ -265,8 +265,8 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
                 case 2 -> "【关注】";
                 default -> "";
             };
-            points.add(String.format("%s%s：%s", level, nullToDash(raw.getItemName()),
-                    truncate(raw.getInterpretation(), 120)));
+            points.add(String.format("%s%s：%s", level, TextUtil.blankToDefault(raw.getItemName(), "（未填写）"),
+                    TextUtil.cut(raw.getInterpretation(), 120)));
         }
         return points;
     }
@@ -281,28 +281,16 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
                 break;
             }
             if (StringUtils.hasText(value)) {
-                result.add(truncate(value, maxLength));
+                result.add(TextUtil.cut(value, maxLength));
             }
         }
         return result;
     }
 
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return text;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
-    private static String nullToDash(String text) {
-        return StringUtils.hasText(text) ? text : "（未填写）";
-    }
-
     public LabInterpretResultVO execute(LabInterpretExecuteDTO dto) {
         long start = System.currentTimeMillis();
 
-        BizLaboratoryRecord record = laboratoryRecordMapper.selectById(dto.getRecordId());
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(dto.getRecordId());
         if (record == null) {
             throw new BusinessException("检验记录不存在：" + dto.getRecordId());
         }
@@ -351,8 +339,8 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
             if (llmOutput.isPresent()) {
                 LabInterpretLlmOutputDTO output = llmOutput.get();
                 vo.setSource("model");
-                vo.setTrendSummary(truncate(output.getTrendSummary(), 300));
-                vo.setConclusion(truncate(output.getConclusion(), CONCLUSION_MAX_LENGTH));
+                vo.setTrendSummary(TextUtil.cut(output.getTrendSummary(), 300));
+                vo.setConclusion(TextUtil.cut(output.getConclusion(), CONCLUSION_MAX_LENGTH));
                 vo.setSuggestions(limitStrings(output.getSuggestions(), MAX_SUGGESTIONS, 120));
                 vo.setAttentionPoints(toAttentionPoints(output, items));
             } else {
@@ -393,7 +381,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
     // 降级时的规则结论
 
     private List<BizLabResult> loadResults(Long recordId) {
-        List<BizLabResult> results = labResultMapper.selectList(
+        List<BizLabResult> results = bizLabResultMapper.selectList(
                 new LambdaQueryWrapper<BizLabResult>()
                         .eq(BizLabResult::getRecordId, recordId)
                         .orderByAsc(BizLabResult::getSortOrder)
@@ -430,7 +418,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
      * 把「阴性 → 阳性」硬算成趋势只会误导。
      */
     private List<LabTrendVO> buildTrends(BizLaboratoryRecord current, List<BizLabResult> currentResults) {
-        List<BizLaboratoryRecord> history = laboratoryRecordMapper.selectList(
+        List<BizLaboratoryRecord> history = bizLaboratoryRecordMapper.selectList(
                 new LambdaQueryWrapper<BizLaboratoryRecord>()
                         .eq(BizLaboratoryRecord::getPatientId, current.getPatientId())
                         .eq(current.getLaboratoryItemId() != null,
@@ -513,8 +501,8 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
         LabInterpretPromptVariablesVO variables = new LabInterpretPromptVariablesVO();
         variables.setGender(SysGenderEnum.getText(record.getGender()));
         variables.setAge(record.getAge() == null ? "（未填写）" : record.getAge() + "岁");
-        variables.setItemName(nullToDash(record.getLaboratoryItemName()));
-        variables.setDiagnosis(nullToDash(record.getDiagnosis()));
+        variables.setItemName(TextUtil.blankToDefault(record.getLaboratoryItemName(), "（未填写）"));
+        variables.setDiagnosis(TextUtil.blankToDefault(record.getDiagnosis(), "（未填写）"));
         variables.setResults(renderItems(items));
         variables.setAbnormalResults(renderAbnormal(items));
         variables.setUnjudgedResults(renderUnjudged(items));
@@ -527,8 +515,8 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
                 .variables(variables)
                 .bizType(BIZ_TYPE)
                 .bizId(record.getId())
-                .inputDigest(nullToDash(record.getPatientName()) + " | "
-                        + nullToDash(record.getLaboratoryItemName()) + " | 异常 "
+                .inputDigest(TextUtil.blankToDefault(record.getPatientName(), "（未填写）") + " | "
+                        + TextUtil.blankToDefault(record.getLaboratoryItemName(), "（未填写）") + " | 异常 "
                         + items.stream().filter(item -> item.getAbnormalFlag() != null
                         && item.getAbnormalFlag() != LabAbnormalJudge.NORMAL).count() + " 项")
                 .maxTokens(OUTPUT_TOKEN_LIMIT)
@@ -550,7 +538,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
             if (StringUtils.hasText(item.getResultUnit())) {
                 builder.append(' ').append(item.getResultUnit());
             }
-            builder.append("（参考 ").append(nullToDash(item.getReferenceRange())).append("，")
+            builder.append("（参考 ").append(TextUtil.blankToDefault(item.getReferenceRange(), "（未填写）")).append("，")
                     .append(item.getAbnormalFlagText()).append("）");
             if (StringUtils.hasText(item.getJudgeNote())) {
                 builder.append(" [未判定：").append(item.getJudgeNote()).append(']');
@@ -572,7 +560,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
             if (StringUtils.hasText(item.getResultUnit())) {
                 builder.append(' ').append(item.getResultUnit());
             }
-            builder.append("（参考 ").append(nullToDash(item.getReferenceRange())).append("）\n");
+            builder.append("（参考 ").append(TextUtil.blankToDefault(item.getReferenceRange(), "（未填写）")).append("）\n");
         }
         return builder.length() == 0 ? "（无异常项）" : builder.toString();
     }
@@ -630,11 +618,11 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
      */
     private boolean writeBack(BizLaboratoryRecord record, LabInterpretResultVO vo) {
         try {
-            record.setDiagnosis(truncate(vo.getConclusion(), 2000));
+            record.setDiagnosis(TextUtil.cut(vo.getConclusion(), 2000));
             record.setSuggestions(vo.getSuggestions() == null || vo.getSuggestions().isEmpty()
                     ? null : String.join("\n", vo.getSuggestions()));
             record.setUpdateTime(LocalDateTime.now());
-            laboratoryRecordMapper.updateById(record);
+            bizLaboratoryRecordMapper.updateById(record);
             return true;
         } catch (Exception ex) {
             log.error("[AI-检验解读] 结论写回失败，草稿仍正常返回", ex);

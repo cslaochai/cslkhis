@@ -5,6 +5,8 @@ import com.his.common.enums.ApplyStatusEnum;
 import com.his.common.enums.PrescriptionPayStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.*;
 import com.his.emr.enums.DispensingStatusEnum;
 import com.his.emr.mapper.*;
@@ -34,38 +36,27 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SourcePaidAdvanceServiceImpl implements SourcePaidAdvanceService {
 
-    private final BizPrescriptionMapper prescriptionMapper;
-    private final BizPrescriptionDetailMapper prescriptionDetailMapper;
-    private final BizInspectionApplyMapper inspectionApplyMapper;
-    private final BizLaboratoryApplyMapper laboratoryApplyMapper;
-    private final BizDrugDispensingMapper drugDispensingMapper;
+    private final BizPrescriptionMapper bizPrescriptionMapper;
+    private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
+    private final BizInspectionApplyMapper bizInspectionApplyMapper;
+    private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
+    private final BizDrugDispensingMapper bizDrugDispensingMapper;
     private final RedisSequenceService redisSequenceService;
-
-    private static int nz(Integer v) {
-        return v == null ? 0 : v;
-    }
-
-    private static String cut(String s) {
-        if (s == null) {
-            return null;
-        }
-        return s.length() <= 500 ? s : s.substring(0, 500);
-    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void advancePrescriptionDetail(Long prescriptionDetailId, BigDecimal paidAmount, Integer payMethod) {
-        BizPrescriptionDetail detail = prescriptionDetailMapper.selectById(prescriptionDetailId);
+        BizPrescriptionDetail detail = bizPrescriptionDetailMapper.selectById(prescriptionDetailId);
         if (detail == null) {
             throw new BusinessException("处方明细不存在，无法推进缴费（明细ID：" + prescriptionDetailId + "）");
         }
-        BizPrescription prescription = prescriptionMapper.selectById(detail.getPrescriptionId());
+        BizPrescription prescription = bizPrescriptionMapper.selectById(detail.getPrescriptionId());
         if (prescription == null) {
             throw new BusinessException("处方不存在，无法推进缴费（处方ID：" + detail.getPrescriptionId() + "）");
         }
 
         detail.setPaymentStatus(PrescriptionPayStatusEnum.PAID.getCode());
-        prescriptionDetailMapper.updateById(detail);
+        bizPrescriptionDetailMapper.updateById(detail);
         createPendingDispensing(detail, prescription);
         syncPrescriptionPayStatus(prescription.getId(), paidAmount, payMethod);
     }
@@ -73,25 +64,25 @@ public class SourcePaidAdvanceServiceImpl implements SourcePaidAdvanceService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void revertPrescriptionDetail(Long prescriptionDetailId, String reason) {
-        BizPrescriptionDetail detail = prescriptionDetailMapper.selectById(prescriptionDetailId);
+        BizPrescriptionDetail detail = bizPrescriptionDetailMapper.selectById(prescriptionDetailId);
         if (detail == null) {
             log.warn("[退费推进] 处方明细 {} 已不存在，跳过（退款不因单据缺失回滚）", prescriptionDetailId);
             return;
         }
         detail.setPaymentStatus(PrescriptionPayStatusEnum.REFUNDED.getCode());
-        prescriptionDetailMapper.updateById(detail);
+        bizPrescriptionDetailMapper.updateById(detail);
 
         LambdaQueryWrapper<BizDrugDispensing> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizDrugDispensing::getPrescriptionDetailId, prescriptionDetailId);
-        for (BizDrugDispensing dispensing : drugDispensingMapper.selectList(wrapper)) {
+        for (BizDrugDispensing dispensing : bizDrugDispensingMapper.selectList(wrapper)) {
             if (dispensing.getDispensingStatus() == null || dispensing.getDispensingStatus() != DispensingStatusEnum.PENDING.getCode()) {
                 // 已经发出去的药不在这里回库存：那是「退药」动作（DrugDispensingService.returnDrug），
                 // 要药师实物验收并落库存流水。退费只把钱退掉，绝不静默替药师办退药。
                 continue;
             }
             dispensing.setDispensingStatus(DispensingStatusEnum.CANCELLED.getCode());
-            dispensing.setRemark(cut("退费取消：" + reason));
-            drugDispensingMapper.updateById(dispensing);
+            dispensing.setRemark(TextUtil.cut("退费取消：" + reason, 500));
+            bizDrugDispensingMapper.updateById(dispensing);
         }
         syncPrescriptionPayStatus(detail.getPrescriptionId(), null, null);
     }
@@ -101,7 +92,7 @@ public class SourcePaidAdvanceServiceImpl implements SourcePaidAdvanceService {
         if (prescriptionDetailIds == null || prescriptionDetailIds.isEmpty()) {
             return;
         }
-        List<BizDrugDispensing> stuck = drugDispensingMapper.selectDispensedByDetailIds(prescriptionDetailIds);
+        List<BizDrugDispensing> stuck = bizDrugDispensingMapper.selectDispensedByDetailIds(prescriptionDetailIds);
         if (stuck.isEmpty()) {
             return;
         }
@@ -116,62 +107,62 @@ public class SourcePaidAdvanceServiceImpl implements SourcePaidAdvanceService {
 
     @Override
     public void advanceInspectionApply(Long applyId) {
-        BizInspectionApply apply = inspectionApplyMapper.selectById(applyId);
+        BizInspectionApply apply = bizInspectionApplyMapper.selectById(applyId);
         if (apply == null) {
             throw new BusinessException("检查申请单不存在，无法推进缴费（申请ID：" + applyId + "）");
         }
-        if (ApplyStatusEnum.CANCELLED.getCode() == nz(apply.getApplyStatus())) {
+        if (ApplyStatusEnum.CANCELLED.getCode() == NumUtil.orZero(apply.getApplyStatus())) {
             throw new BusinessException("检查申请单已取消，不能缴费（申请号：" + apply.getApplyNo() + "）");
         }
-        if (ApplyStatusEnum.PAID.getCode() == nz(apply.getApplyStatus())) {
+        if (ApplyStatusEnum.PAID.getCode() == NumUtil.orZero(apply.getApplyStatus())) {
             return;
         }
         apply.setApplyStatus(ApplyStatusEnum.PAID.getCode());
-        inspectionApplyMapper.updateById(apply);
+        bizInspectionApplyMapper.updateById(apply);
     }
 
     @Override
     public void revertInspectionApply(Long applyId) {
-        BizInspectionApply apply = inspectionApplyMapper.selectById(applyId);
+        BizInspectionApply apply = bizInspectionApplyMapper.selectById(applyId);
         if (apply == null) {
             log.warn("[退费推进] 检查申请单 {} 已不存在，跳过", applyId);
             return;
         }
-        if (ApplyStatusEnum.PAID.getCode() != nz(apply.getApplyStatus())) {
+        if (ApplyStatusEnum.PAID.getCode() != NumUtil.orZero(apply.getApplyStatus())) {
             return;
         }
         apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode());
-        inspectionApplyMapper.updateById(apply);
+        bizInspectionApplyMapper.updateById(apply);
     }
 
     @Override
     public void advanceLaboratoryApply(Long applyId) {
-        BizLaboratoryApply apply = laboratoryApplyMapper.selectById(applyId);
+        BizLaboratoryApply apply = bizLaboratoryApplyMapper.selectById(applyId);
         if (apply == null) {
             throw new BusinessException("检验申请单不存在，无法推进缴费（申请ID：" + applyId + "）");
         }
-        if (ApplyStatusEnum.CANCELLED.getCode() == nz(apply.getApplyStatus())) {
+        if (ApplyStatusEnum.CANCELLED.getCode() == NumUtil.orZero(apply.getApplyStatus())) {
             throw new BusinessException("检验申请单已取消，不能缴费（申请号：" + apply.getApplyNo() + "）");
         }
-        if (ApplyStatusEnum.PAID.getCode() == nz(apply.getApplyStatus())) {
+        if (ApplyStatusEnum.PAID.getCode() == NumUtil.orZero(apply.getApplyStatus())) {
             return;
         }
         apply.setApplyStatus(ApplyStatusEnum.PAID.getCode());
-        laboratoryApplyMapper.updateById(apply);
+        bizLaboratoryApplyMapper.updateById(apply);
     }
 
     @Override
     public void revertLaboratoryApply(Long applyId) {
-        BizLaboratoryApply apply = laboratoryApplyMapper.selectById(applyId);
+        BizLaboratoryApply apply = bizLaboratoryApplyMapper.selectById(applyId);
         if (apply == null) {
             log.warn("[退费推进] 检验申请单 {} 已不存在，跳过", applyId);
             return;
         }
-        if (ApplyStatusEnum.PAID.getCode() != nz(apply.getApplyStatus())) {
+        if (ApplyStatusEnum.PAID.getCode() != NumUtil.orZero(apply.getApplyStatus())) {
             return;
         }
         apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode());
-        laboratoryApplyMapper.updateById(apply);
+        bizLaboratoryApplyMapper.updateById(apply);
     }
 
     /**
@@ -181,13 +172,13 @@ public class SourcePaidAdvanceServiceImpl implements SourcePaidAdvanceService {
      * 刷早了等于允许欠费发药。
      */
     private void syncPrescriptionPayStatus(Long prescriptionId, BigDecimal paidAmount, Integer payMethod) {
-        BizPrescription prescription = prescriptionMapper.selectById(prescriptionId);
+        BizPrescription prescription = bizPrescriptionMapper.selectById(prescriptionId);
         if (prescription == null) {
             return;
         }
         LambdaQueryWrapper<BizPrescriptionDetail> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizPrescriptionDetail::getPrescriptionId, prescriptionId);
-        List<BizPrescriptionDetail> details = prescriptionDetailMapper.selectList(wrapper);
+        List<BizPrescriptionDetail> details = bizPrescriptionDetailMapper.selectList(wrapper);
         if (details.isEmpty()) {
             return;
         }
@@ -212,7 +203,7 @@ public class SourcePaidAdvanceServiceImpl implements SourcePaidAdvanceService {
         } else {
             return;
         }
-        prescriptionMapper.updateById(prescription);
+        bizPrescriptionMapper.updateById(prescription);
         if (paidAmount != null) {
             log.debug("[缴费推进] 处方 {} 本次账单内实缴 ¥{}", prescription.getPrescriptionNo(), paidAmount.toPlainString());
         }
@@ -224,7 +215,7 @@ public class SourcePaidAdvanceServiceImpl implements SourcePaidAdvanceService {
     private void createPendingDispensing(BizPrescriptionDetail detail, BizPrescription prescription) {
         LambdaQueryWrapper<BizDrugDispensing> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizDrugDispensing::getPrescriptionDetailId, detail.getId());
-        if (drugDispensingMapper.selectCount(wrapper) > 0) {
+        if (bizDrugDispensingMapper.selectCount(wrapper) > 0) {
             return;
         }
         BizDrugDispensing dispensing = new BizDrugDispensing();
@@ -245,6 +236,6 @@ public class SourcePaidAdvanceServiceImpl implements SourcePaidAdvanceService {
         dispensing.setPrice(detail.getPrice());
         dispensing.setAmount(detail.getAmount());
         dispensing.setDispensingStatus(DispensingStatusEnum.PENDING.getCode());
-        drugDispensingMapper.insert(dispensing);
+        bizDrugDispensingMapper.insert(dispensing);
     }
 }

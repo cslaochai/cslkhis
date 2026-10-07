@@ -5,6 +5,7 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
+import com.his.common.util.NumUtil;
 import com.his.common.util.SignCryptoUtil;
 import com.his.patient.entity.BizInpatientRecord;
 
@@ -33,13 +34,13 @@ public interface InpatientRecordSignProvider extends SignableContentProvider {
                 .put("personalHistory", r.getPersonalHistory())
                 .put("familyHistory", r.getFamilyHistory())
                 .put("allergyHistory", r.getAllergyHistory())
-                .put("temperature", plain(r.getTemperature()))
+                .put("temperature", NumUtil.plain(r.getTemperature()))
                 .put("pulse", r.getPulse())
                 .put("respiration", r.getRespiration())
                 .put("systolicPressure", r.getSystolicPressure())
                 .put("diastolicPressure", r.getDiastolicPressure())
-                .put("height", plain(r.getHeight()))
-                .put("weight", plain(r.getWeight()))
+                .put("height", NumUtil.plain(r.getHeight()))
+                .put("weight", NumUtil.plain(r.getWeight()))
                 .put("generalCondition", r.getGeneralCondition())
                 .put("skinMucosa", r.getSkinMucosa())
                 .put("headNeck", r.getHeadNeck())
@@ -64,13 +65,6 @@ public interface InpatientRecordSignProvider extends SignableContentProvider {
      */
     public static String digestOf(BizInpatientRecord r) {
         return SignCryptoUtil.sha256Hex(canonical(r));
-    }
-
-    /**
-     * BigDecimal 一律去掉尾部零再转字符串：{@code 36.50} 与 {@code 36.5} 是同一个值，摘要必须一致
-     */
-    static String plain(java.math.BigDecimal v) {
-        return v == null ? null : v.stripTrailingZeros().toPlainString();
     }
 
     SignBizTypeEnum bizType();

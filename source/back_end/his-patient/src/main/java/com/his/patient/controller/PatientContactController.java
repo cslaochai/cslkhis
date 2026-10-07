@@ -32,32 +32,32 @@ import java.util.List;
 @PreAuthorize("hasAuthority('patient:profile:list')")
 public class PatientContactController {
 
-    private final PatientHealthProfileService healthProfileService;
+    private final PatientHealthProfileService patientHealthProfileService;
 
     @Operation(summary = "查询患者的联系人列表")
     @PostMapping("/list")
     public Result<List<PatientContactVO>> list(@Valid @RequestBody PatientContactQueryDTO queryDTO) {
-        return Result.success(healthProfileService.getProfile(queryDTO.getPatientId()).getContacts());
+        return Result.success(patientHealthProfileService.getProfile(queryDTO.getPatientId()).getContacts());
     }
 
     @Operation(summary = "根据ID查询联系人")
     @GetMapping("/getById")
     public Result<PatientContactVO> getById(@RequestParam Long contactId) {
-        return Result.success(healthProfileService.getContact(contactId));
+        return Result.success(patientHealthProfileService.getContact(contactId));
     }
 
     @PreAuthorize("hasAuthority('patient:profile:add')")
     @Operation(summary = "新增或修改联系人")
     @PostMapping("/contactUpsert")
     public Result<PatientContactVO> contactUpsert(@RequestBody @Valid PatientContactUpsertDTO contactUpsertDTO) {
-        return Result.success(healthProfileService.saveContact(contactUpsertDTO));
+        return Result.success(patientHealthProfileService.saveContact(contactUpsertDTO));
     }
 
     @PreAuthorize("hasAuthority('patient:profile:delete')")
     @Operation(summary = "根据ID删除联系人")
     @DeleteMapping("/deleteById")
     public Result<Void> deleteById(@RequestParam Long contactId) {
-        healthProfileService.deleteContact(contactId);
+        patientHealthProfileService.deleteContact(contactId);
         return Result.success();
     }
 }

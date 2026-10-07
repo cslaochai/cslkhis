@@ -36,7 +36,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PatientTodayVisitProviderImpl implements PatientTodayVisitProvider {
 
-    private final BizQueueMapper queueMapper;
+    private final BizQueueMapper bizQueueMapper;
 
     @Override
     public Map<Long, PatientTodayVisit> todayVisits() {
@@ -48,7 +48,7 @@ public class PatientTodayVisitProviderImpl implements PatientTodayVisitProvider 
                         QueueStatusEnum.CONSULTING.getCode(),
                         QueueStatusEnum.COMPLETED.getCode())
                 .orderByDesc(BizQueue::getArriveTime);
-        List<BizQueue> list = queueMapper.selectList(wrapper);
+        List<BizQueue> list = bizQueueMapper.selectList(wrapper);
         if (list == null || list.isEmpty()) {
             return Collections.emptyMap();
         }

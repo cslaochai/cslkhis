@@ -16,6 +16,7 @@ import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.ClinicalTextMatcher;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizClinicalRuleCheck;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizPrescription;
@@ -96,21 +97,21 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
 
     private static final int OUTPUT_TOKEN_LIMIT = 1536;
 
-    private final BizPrescriptionMapper prescriptionMapper;
+    private final BizPrescriptionMapper bizPrescriptionMapper;
 
-    private final BizPrescriptionDetailMapper prescriptionDetailMapper;
+    private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
 
-    private final BizMedicalRecordMapper medicalRecordMapper;
+    private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
-    private final BizPatientMapper patientMapper;
+    private final BizPatientMapper bizPatientMapper;
 
-    private final BizPatientAllergyMapper patientAllergyMapper;
+    private final BizPatientAllergyMapper bizPatientAllergyMapper;
 
-    private final SysDrugMapper drugMapper;
+    private final SysDrugMapper sysDrugMapper;
 
-    private final BizClinicalRuleCheckMapper clinicalRuleCheckMapper;
+    private final BizClinicalRuleCheckMapper bizClinicalRuleCheckMapper;
 
-    private final DrugHardRuleChecker hardRuleChecker;
+    private final DrugHardRuleChecker drugHardRuleChecker;
 
     private final AiExecutionService aiExecutionService;
 
@@ -151,16 +152,16 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         int index = 1;
         for (BizPrescriptionDetail detail : context.details()) {
             SysDrug drug = detail.getDrugId() == null ? null : context.drugIndex().get(detail.getDrugId());
-            builder.append(index++).append(". ").append(nullToDash(detail.getDrugName()));
+            builder.append(index++).append(". ").append(TextUtil.blankToDefault(detail.getDrugName(), "-"));
             if (StringUtils.hasText(detail.getSpecification())) {
                 builder.append(' ').append(detail.getSpecification());
             }
             if (drug != null && StringUtils.hasText(drug.getGenericName())) {
                 builder.append("（通用名：").append(drug.getGenericName()).append('）');
             }
-            builder.append(" 单次剂量=").append(nullToDash(detail.getSingleDosage()));
-            builder.append(" 频次=").append(nullToDash(detail.getFrequency()));
-            builder.append(" 途径=").append(nullToDash(detail.getRoute()));
+            builder.append(" 单次剂量=").append(TextUtil.blankToDefault(detail.getSingleDosage(), "-"));
+            builder.append(" 频次=").append(TextUtil.blankToDefault(detail.getFrequency(), "-"));
+            builder.append(" 途径=").append(TextUtil.blankToDefault(detail.getRoute(), "-"));
             builder.append(" 疗程=").append(detail.getDuration() == null ? "-" : detail.getDuration() + "天");
             builder.append(" 数量=").append(detail.getQuantity() == null ? "-" : detail.getQuantity());
             builder.append('\n');
@@ -229,7 +230,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         for (DrugAuditFindingVO finding : findings) {
             builder.append(index++).append('.').append(tag(finding)).append(finding.getErrorDetail()).append('；');
         }
-        return truncate(builder.toString(), maxLength, "");
+        return TextUtil.cut(builder.toString(), maxLength, "");
     }
 
     private static String joinSuggestions(List<DrugAuditFindingVO> findings, int maxLength) {
@@ -238,7 +239,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         for (DrugAuditFindingVO finding : findings) {
             builder.append(index++).append('.').append(tag(finding)).append(finding.getSuggestion()).append('；');
         }
-        return truncate(builder.toString(), maxLength, "");
+        return TextUtil.cut(builder.toString(), maxLength, "");
     }
 
     private static String tag(DrugAuditFindingVO finding) {
@@ -277,25 +278,13 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         return prefix + timestamp + tail;
     }
 
-    private static String truncate(String text, int maxLength, String fallback) {
-        if (!StringUtils.hasText(text)) {
-            return fallback;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
-    private static String nullToDash(String text) {
-        return StringUtils.hasText(text) ? text : "-";
-    }
-
     /**
      * 执行处方审核
      */
     public DrugAuditResultVO execute(DrugAuditExecuteDTO dto) {
         long start = System.currentTimeMillis();
 
-        BizPrescription prescription = prescriptionMapper.selectById(dto.getPrescriptionId());
+        BizPrescription prescription = bizPrescriptionMapper.selectById(dto.getPrescriptionId());
         if (prescription == null) {
             throw new BusinessException("处方不存在或已作废：" + dto.getPrescriptionId());
         }
@@ -308,7 +297,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         DrugAuditResultVO vo = new DrugAuditResultVO();
 
         // 第一层：硬规则。任何情况下都要跑 —— 它不依赖模型
-        List<DrugAuditFindingVO> findings = new ArrayList<>(hardRuleChecker.check(context));
+        List<DrugAuditFindingVO> findings = new ArrayList<>(drugHardRuleChecker.check(context));
         vo.setHardRuleCount(findings.size());
 
         // 第二层：模型长尾审核
@@ -345,7 +334,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
      * 不查姓名以外的身份信息、不查身份证手机号，从源头减少脱敏压力。
      */
     private DrugAuditContextDTO buildContext(BizPrescription prescription) {
-        List<BizPrescriptionDetail> details = prescriptionDetailMapper.selectList(
+        List<BizPrescriptionDetail> details = bizPrescriptionDetailMapper.selectList(
                 new LambdaQueryWrapper<BizPrescriptionDetail>()
                         .eq(BizPrescriptionDetail::getPrescriptionId, prescription.getId()));
 
@@ -357,13 +346,13 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         }
         Map<Long, SysDrug> drugIndex = new LinkedHashMap<>();
         if (!drugIds.isEmpty()) {
-            for (SysDrug drug : drugMapper.selectBatchIds(drugIds)) {
+            for (SysDrug drug : sysDrugMapper.selectBatchIds(drugIds)) {
                 drugIndex.put(drug.getId(), drug);
             }
         }
 
         BizMedicalRecord record = prescription.getRecordId() == null
-                ? null : medicalRecordMapper.selectById(prescription.getRecordId());
+                ? null : bizMedicalRecordMapper.selectById(prescription.getRecordId());
 
         return new DrugAuditContextDTO(prescription, details, drugIndex, record,
                 buildAllergyText(prescription, record),
@@ -383,13 +372,13 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         }
 
         BizPatient patient = prescription.getPatientId() == null
-                ? null : patientMapper.selectById(prescription.getPatientId());
+                ? null : bizPatientMapper.selectById(prescription.getPatientId());
         if (patient != null) {
             appendIfMeaningful(builder, patient.getAllergyHistory(), "过敏史");
         }
 
         if (prescription.getPatientId() != null) {
-            List<BizPatientAllergy> allergies = patientAllergyMapper.selectList(
+            List<BizPatientAllergy> allergies = bizPatientAllergyMapper.selectList(
                     new LambdaQueryWrapper<BizPatientAllergy>()
                             .eq(BizPatientAllergy::getPatientId, prescription.getPatientId()));
             for (BizPatientAllergy allergy : allergies) {
@@ -461,9 +450,9 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
             vo.setSource("LLM");
             // 净化一：模型永远不能给拦截级
             vo.setErrorLevel(clampLlmLevel(raw.getErrorLevel()));
-            vo.setCategory(truncate(raw.getCategory(), 40, "其他"));
-            vo.setErrorDetail(truncate(raw.getErrorDetail(), 200, ""));
-            vo.setSuggestion(truncate(raw.getSuggestion(), 200, ""));
+            vo.setCategory(TextUtil.cut(raw.getCategory(), 40, "其他"));
+            vo.setErrorDetail(TextUtil.cut(raw.getErrorDetail(), 200, ""));
+            vo.setSuggestion(TextUtil.cut(raw.getSuggestion(), 200, ""));
             // 净化二：只保留处方里真实存在的药品名，模型幻想的药名一律剔除
             vo.setRelatedDrugs(sanitizeRelatedDrugs(raw.getRelatedDrugs(), knownDrugNames));
             vo.setEvidence("模型基于处方明细与诊断的合理性判断");
@@ -510,7 +499,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
             check.setCheckTime(LocalDateTime.now());
             check.setCreateBy(operator);
 
-            clinicalRuleCheckMapper.insert(check);
+            bizClinicalRuleCheckMapper.insert(check);
             vo.setCheckId(check.getId());
             vo.setCheckNo(check.getCheckNo());
         } catch (Exception ex) {

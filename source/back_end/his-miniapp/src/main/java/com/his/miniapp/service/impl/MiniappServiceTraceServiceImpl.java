@@ -1,5 +1,7 @@
 package com.his.miniapp.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.util.TextUtil;
 import com.his.miniapp.dto.ServiceTraceDTO;
 import com.his.miniapp.entity.SysServiceTrace;
 import com.his.miniapp.mapper.MiniappServiceTraceMapper;
@@ -9,7 +11,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 /**
  * 客服页自助行为埋点。
@@ -20,13 +21,13 @@ import org.springframework.util.StringUtils;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MiniappServiceTraceServiceImpl implements MiniappServiceTraceService {
+public class MiniappServiceTraceServiceImpl extends ServiceImpl<MiniappServiceTraceMapper, SysServiceTrace> implements MiniappServiceTraceService {
 
     private static final int EVENT_KEY_MAX = 200;
 
     private static final int SESSION_ID_MAX = 64;
 
-    private final MiniappServiceTraceMapper traceMapper;
+    private final MiniappServiceTraceMapper miniappServiceTraceMapper;
 
     @Override
     public void record(ServiceTraceDTO dto) {
@@ -38,23 +39,16 @@ public class MiniappServiceTraceServiceImpl implements MiniappServiceTraceServic
                 entity.setPatientId(user.getPatientId());
                 entity.setCreateBy(user.getUsername());
             }
-            entity.setSessionId(cut(dto.getSessionId(), SESSION_ID_MAX));
-            entity.setEventType(cut(dto.getEventType(), 32));
-            entity.setEventKey(cut(dto.getEventKey(), EVENT_KEY_MAX));
+            entity.setSessionId(TextUtil.cutToNull(dto.getSessionId(), SESSION_ID_MAX));
+            entity.setEventType(TextUtil.cutToNull(dto.getEventType(), 32));
+            entity.setEventKey(TextUtil.cutToNull(dto.getEventKey(), EVENT_KEY_MAX));
             entity.setFaqId(dto.getFaqId());
             entity.setHitCount(dto.getHitCount());
-            traceMapper.insert(entity);
+            miniappServiceTraceMapper.insert(entity);
         } catch (Exception ex) {
             log.warn("[客服埋点] 写入失败，忽略 type={} key={} err={}",
                     dto.getEventType(), dto.getEventKey(), ex.getMessage());
         }
     }
 
-    private static String cut(String text, int max) {
-        if (!StringUtils.hasText(text)) {
-            return null;
-        }
-        String value = text.trim();
-        return value.length() <= max ? value : value.substring(0, max);
-    }
 }

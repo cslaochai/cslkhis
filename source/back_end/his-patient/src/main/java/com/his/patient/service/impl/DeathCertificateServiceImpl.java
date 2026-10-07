@@ -2,11 +2,13 @@ package com.his.patient.service.impl;
 
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DeathCertificateDTO;
 import com.his.patient.entity.BizDeathCertificate;
@@ -63,7 +65,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DeathCertificateServiceImpl implements DeathCertificateService {
+public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificateMapper, BizDeathCertificate> implements DeathCertificateService {
 
     /**
      * 上报时限天数（院内口径，见类注释第 7 条）
@@ -91,8 +93,8 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
      * 上报报文里的时间统一空格分隔（全项目入参与展示同一口径，不留 ISO 的 T 分隔去二次转义）
      */
 
-    private final BizDeathCertificateMapper certMapper;
-    private final BizDeathCertificateCauseMapper causeMapper;
+    private final BizDeathCertificateMapper bizDeathCertificateMapper;
+    private final BizDeathCertificateCauseMapper bizDeathCertificateCauseMapper;
     private final RedisSequenceService redisSequenceService;
     private final SysMessageService sysMessageService;
 
@@ -101,13 +103,6 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     private static boolean editable(Integer status) {
         return Objects.equals(status, DeathCertStatusEnum.DRAFT.getCode())
                 || Objects.equals(status, DeathCertStatusEnum.AUDITED.getCode());
-    }
-
-    private static String statusText(Integer status) {
-        if (status == null) {
-            return "未知";
-        }
-        return DeathCertStatusEnum.labelOrUnknown(status);
     }
 
     /**
@@ -163,17 +158,17 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         if (tail == null) {
             return;
         }
-        String tailCode = trimToNull(tail.getIcdCode());
+        String tailCode = TextUtil.trimToNull(tail.getIcdCode());
         if (!StringUtils.hasText(cert.getUnderlyingIcdCode())) {
-            cert.setUnderlyingIcdCode(cutToNull(tailCode, ICD_CODE_MAX));
-            cert.setUnderlyingIcdName(cutToNull(tail.getIcdName(), ICD_NAME_MAX));
+            cert.setUnderlyingIcdCode(TextUtil.cutToNull(tailCode, ICD_CODE_MAX));
+            cert.setUnderlyingIcdName(TextUtil.cutToNull(tail.getIcdName(), ICD_NAME_MAX));
             return;
         }
         if (tailCode != null && !tailCode.equals(cert.getUnderlyingIcdCode())) {
             throw new BusinessException("根本死因必须等于死因链Ⅰ部分最后一行（链尾是 " + tailCode
                     + " " + tail.getIcdName() + "）；若链填错了请调整顺序，不要把根本死因单独改成别的编码");
         }
-        cert.setUnderlyingIcdName(cutToNull(tail.getIcdName(), ICD_NAME_MAX));
+        cert.setUnderlyingIcdName(TextUtil.cutToNull(tail.getIcdName(), ICD_NAME_MAX));
     }
 
     /**
@@ -208,29 +203,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         return years < 0 ? null : years;
     }
 
-    private static String requireText(String text, String message) {
-        if (!StringUtils.hasText(text)) {
-            throw new BusinessException(message);
-        }
-        return text.trim();
-    }
-
-    private static LocalDateTime atStart(LocalDate date) {
-        return date == null ? null : date.atStartOfDay();
-    }
-
-    /**
-     * 按日期过滤必须补全天边界：datetime 恒大于当日 00:00:00 字符串，直接用 'yyyy-MM-dd' 会把当天全滤掉
-     */
-    private static LocalDateTime atEnd(LocalDate date) {
-        return date == null ? null : date.atTime(23, 59, 59);
-    }
-
     // 死因监测上报（外发段预留：当前组装报文落库留痕）
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
 
     // 出院流程前置校验（反向约束）
 
@@ -240,29 +213,13 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
 
     // 内部
 
-    private static int nvl(Integer value, int fallback) {
-        return value == null ? fallback : value;
-    }
-
-    private static String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
-    private static String cutToNull(String text, int max) {
-        return StringUtils.hasText(text) ? cut(text.trim(), max) : null;
-    }
-
-    private static String cut(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
     @Override
     public PageResult<DeathCertificateVO.Row> listPage(DeathCertificateDTO.QueryPage query) {
         DeathCertificateDTO.QueryPage q = query == null ? new DeathCertificateDTO.QueryPage() : query;
-        Page<DeathCertificateVO.Row> page = new Page<>(nvl(q.getPageNum(), 1), nvl(q.getPageSize(), 10));
-        List<DeathCertificateVO.Row> records = certMapper.selectCertPage(page, trimToNull(q.getKeyword()),
+        Page<DeathCertificateVO.Row> page = new Page<>(q.getPageNum(), q.getPageSize());
+        List<DeathCertificateVO.Row> records = bizDeathCertificateMapper.selectCertPage(page, TextUtil.trimToNull(q.getKeyword()),
                 q.getCertStatus(), q.getReportStatus(), q.getDeathPlace(), q.getDeathDeptId(),
-                atStart(q.getStartDate()), atEnd(q.getEndDate()), q.getOverdue());
+                TimeUtil.dayStart(q.getStartDate()), TimeUtil.dayEnd(q.getEndDate()), q.getOverdue());
         records.forEach(DeathCertificateServiceImpl::fillDeadline);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -270,25 +227,25 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     @Override
     public PageResult<DeathCertificateVO.PendingRow> pendingListPage(DeathCertificateDTO.QueryPage query) {
         DeathCertificateDTO.QueryPage q = query == null ? new DeathCertificateDTO.QueryPage() : query;
-        Page<DeathCertificateVO.PendingRow> page = new Page<>(nvl(q.getPageNum(), 1), nvl(q.getPageSize(), 10));
-        List<DeathCertificateVO.PendingRow> records = certMapper.selectPendingPage(page,
-                trimToNull(q.getKeyword()), atStart(q.getStartDate()), atEnd(q.getEndDate()));
+        Page<DeathCertificateVO.PendingRow> page = new Page<>(q.getPageNum(), q.getPageSize());
+        List<DeathCertificateVO.PendingRow> records = bizDeathCertificateMapper.selectPendingPage(page,
+                TextUtil.trimToNull(q.getKeyword()), TimeUtil.dayStart(q.getStartDate()), TimeUtil.dayEnd(q.getEndDate()));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
     public DeathCertificateVO.Detail getDetailById(Long id) {
-        DeathCertificateVO.Detail detail = certMapper.selectCertDetail(id);
+        DeathCertificateVO.Detail detail = bizDeathCertificateMapper.selectCertDetail(id);
         if (detail == null) {
             throw new BusinessException("死亡证明不存在或已删除");
         }
-        detail.setCauses(causeMapper.selectByCertId(id));
+        detail.setCauses(bizDeathCertificateCauseMapper.selectByCertId(id));
         return detail;
     }
 
     @Override
     public DeathCertificateVO.PatientSnapshot admissionBase(Long admissionId) {
-        DeathCertificateVO.PatientSnapshot snapshot = certMapper.selectPatientSnapshot(admissionId);
+        DeathCertificateVO.PatientSnapshot snapshot = bizDeathCertificateMapper.selectPatientSnapshot(admissionId);
         if (snapshot == null) {
             throw new BusinessException("住院记录不存在");
         }
@@ -297,7 +254,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
 
     @Override
     public DeathCertificateVO.Stats stats() {
-        DeathCertificateVO.Stats stats = certMapper.selectStats();
+        DeathCertificateVO.Stats stats = bizDeathCertificateMapper.selectStats();
         return stats == null ? new DeathCertificateVO.Stats() : stats;
     }
 
@@ -308,11 +265,11 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        DeathCertificateVO.PatientSnapshot snapshot = certMapper.selectPatientSnapshot(dto.getAdmissionId());
+        DeathCertificateVO.PatientSnapshot snapshot = bizDeathCertificateMapper.selectPatientSnapshot(dto.getAdmissionId());
         if (snapshot == null) {
             throw new BusinessException("住院记录不存在");
         }
-        if (dto.getDeathTime().isAfter(now())) {
+        if (dto.getDeathTime().isAfter(TimeUtil.nowSeconds())) {
             throw new BusinessException("死亡时间不能晚于当前时间");
         }
         if (snapshot.getAdmitTime() != null && dto.getDeathTime().isBefore(TimeUtil.toSeconds(snapshot.getAdmitTime()))) {
@@ -326,7 +283,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         BizDeathCertificate cert;
         boolean isNew = dto.getId() == null;
         if (isNew) {
-            if (certMapper.countActiveByAdmission(dto.getAdmissionId(), null) > 0) {
+            if (bizDeathCertificateMapper.countActiveByAdmission(dto.getAdmissionId(), null) > 0) {
                 throw new BusinessException("该次住院已有死亡证明（一张住院只允许一张有效证明，改错请作废后重开）");
             }
             cert = new BizDeathCertificate();
@@ -342,9 +299,9 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
                 throw new BusinessException("死亡证明不允许改挂到另一次住院");
             }
             if (!editable(cert.getCertStatus())) {
-                throw new BusinessException(statusText(cert.getCertStatus()) + "的证明不能修改，改错请作废后重开");
+                throw new BusinessException(DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "的证明不能修改，改错请作废后重开");
             }
-            if (certMapper.countActiveByAdmission(dto.getAdmissionId(), cert.getId()) > 0) {
+            if (bizDeathCertificateMapper.countActiveByAdmission(dto.getAdmissionId(), cert.getId()) > 0) {
                 throw new BusinessException("该次住院已有另一张死亡证明");
             }
         }
@@ -353,33 +310,33 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         cert.setPatientId(snapshot.getPatientId());
         cert.setPatientName(snapshot.getPatientName());
         cert.setGender(snapshot.getGender());
-        cert.setNation(cutToNull(snapshot.getNation(), UNIT_MAX));
+        cert.setNation(TextUtil.cutToNull(snapshot.getNation(), UNIT_MAX));
         cert.setBirthDate(snapshot.getBirthDate());
         cert.setAge(ageAt(snapshot.getBirthDate(), dto.getDeathTime()));
-        cert.setIdCard(cutToNull(snapshot.getIdCard(), 18));
-        cert.setOccupation(cutToNull(snapshot.getOccupation(), UNIT_MAX));
+        cert.setIdCard(TextUtil.cutToNull(snapshot.getIdCard(), 18));
+        cert.setOccupation(TextUtil.cutToNull(snapshot.getOccupation(), UNIT_MAX));
         cert.setMaritalStatus(snapshot.getMaritalStatus());
         cert.setDeathTime(TimeUtil.toSeconds(dto.getDeathTime()));
         cert.setDeathPlace(deathPlace);
         applyDeathDept(cert, deathPlace, dto.getDeathDeptId(), snapshot);
-        cert.setClinicalDiagnosis(cut(trimToNull(dto.getClinicalDiagnosis()), DIAG_MAX));
+        cert.setClinicalDiagnosis(TextUtil.cut(TextUtil.trimToNull(dto.getClinicalDiagnosis()), DIAG_MAX));
         // 根本死因先接住前端值，再由 applyUnderlying 按链尾校验/带出。
         // 不在这里落地，编辑时 cert 上挂着的是库里的旧值，改完死因链就永远对不上链尾（改一次报一次错）。
-        cert.setUnderlyingIcdCode(cutToNull(dto.getUnderlyingIcdCode(), ICD_CODE_MAX));
-        cert.setUnderlyingIcdName(cutToNull(dto.getUnderlyingIcdName(), ICD_NAME_MAX));
-        cert.setPastHistory(cutToNull(dto.getPastHistory(), DIAG_MAX));
+        cert.setUnderlyingIcdCode(TextUtil.cutToNull(dto.getUnderlyingIcdCode(), ICD_CODE_MAX));
+        cert.setUnderlyingIcdName(TextUtil.cutToNull(dto.getUnderlyingIcdName(), ICD_NAME_MAX));
+        cert.setPastHistory(TextUtil.cutToNull(dto.getPastHistory(), DIAG_MAX));
         cert.setAutopsyFlag(flag(dto.getAutopsyFlag()));
-        cert.setAutopsyResult(cutToNull(dto.getAutopsyResult(), DIAG_MAX));
-        cert.setRelativeName(cutToNull(dto.getRelativeName(), 50));
-        cert.setRelativeRelation(cutToNull(dto.getRelativeRelation(), 20));
-        cert.setRelativePhone(cutToNull(dto.getRelativePhone(), 20));
+        cert.setAutopsyResult(TextUtil.cutToNull(dto.getAutopsyResult(), DIAG_MAX));
+        cert.setRelativeName(TextUtil.cutToNull(dto.getRelativeName(), 50));
+        cert.setRelativeRelation(TextUtil.cutToNull(dto.getRelativeRelation(), 20));
+        cert.setRelativePhone(TextUtil.cutToNull(dto.getRelativePhone(), 20));
         cert.setPhysicianId(dto.getPhysicianId() != null ? dto.getPhysicianId() : UserUtils.getCurrentUser().getEmployeeId());
         // ②非web入口口径：校验对象是「入参姓名 或 当前登录人」的合并值，不是纯 DTO 字段，注解表达不了
-        cert.setPhysicianName(cut(requireText(
+        cert.setPhysicianName(TextUtil.cut(TextUtil.requireTrimmed(
                 StringUtils.hasText(dto.getPhysicianName()) ? dto.getPhysicianName() : UserUtils.getCurrentUser().getRealName(),
                 "填表医师不能为空"), 50));
-        cert.setFillTime(dto.getFillTime() != null ? TimeUtil.toSeconds(dto.getFillTime()) : (isNew ? now() : cert.getFillTime()));
-        cert.setRemark(cutToNull(dto.getRemark(), DIAG_MAX));
+        cert.setFillTime(dto.getFillTime() != null ? TimeUtil.toSeconds(dto.getFillTime()) : (isNew ? TimeUtil.nowSeconds() : cert.getFillTime()));
+        cert.setRemark(TextUtil.cutToNull(dto.getRemark(), DIAG_MAX));
         // 时限起算点是死亡时间，每次保存都按最新死亡时间重算（改了死亡时间时限必须跟着走）
         cert.setReportDeadline(cert.getDeathTime().plusDays(REPORT_DEADLINE_DAYS));
 
@@ -389,19 +346,19 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         saveCert(cert);
 
         // 死因链整体替换：本表无 del_flag，唯一键不含 del_flag，必须先物理删再插（软删会占键）
-        causeMapper.purgeByCertId(cert.getId());
-        LocalDateTime createTime = now();
+        bizDeathCertificateCauseMapper.purgeByCertId(cert.getId());
+        LocalDateTime createTime = TimeUtil.nowSeconds();
         for (DeathCertificateDTO.CauseRow row : causes) {
             BizDeathCertificateCause cause = new BizDeathCertificateCause();
             cause.setCertId(cert.getId());
             cause.setPart(row.getPart());
             cause.setSeqNo(row.getSeqNo());
-            cause.setIcdCode(cutToNull(row.getIcdCode(), ICD_CODE_MAX));
-            cause.setIcdName(cut(trimToNull(row.getIcdName()), ICD_NAME_MAX));
-            cause.setIntervalText(cutToNull(row.getIntervalText(), INTERVAL_MAX));
+            cause.setIcdCode(TextUtil.cutToNull(row.getIcdCode(), ICD_CODE_MAX));
+            cause.setIcdName(TextUtil.cut(TextUtil.trimToNull(row.getIcdName()), ICD_NAME_MAX));
+            cause.setIntervalText(TextUtil.cutToNull(row.getIntervalText(), INTERVAL_MAX));
             cause.setCreateBy(operatorUser.getRealName());
             cause.setCreateTime(createTime);
-            causeMapper.insert(cause);
+            bizDeathCertificateCauseMapper.insert(cause);
         }
         return cert.getId();
     }
@@ -415,12 +372,12 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         }
         BizDeathCertificate cert = requireCert(dto.getId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.DRAFT.getCode())) {
-            throw new BusinessException("只有草稿状态的证明可以提交审核（当前：" + statusText(cert.getCertStatus()) + "）");
+            throw new BusinessException("只有草稿状态的证明可以提交审核（当前：" + DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "）");
         }
         cert.setReviewerId(operatorUser.getEmployeeId());
         cert.setReviewerName(operatorUser.getRealName());
-        cert.setReviewTime(now());
-        cert.setReviewOpinion(cutToNull(dto.getOpinion(), REASON_MAX));
+        cert.setReviewTime(TimeUtil.nowSeconds());
+        cert.setReviewOpinion(TextUtil.cutToNull(dto.getOpinion(), REASON_MAX));
         cert.setCertStatus(DeathCertStatusEnum.AUDITED.getCode());
         saveCert(cert);
     }
@@ -433,9 +390,9 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     public void issue(DeathCertificateDTO.Issue dto) {
         BizDeathCertificate cert = requireCert(dto.getId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.AUDITED.getCode())) {
-            throw new BusinessException("只有「已审核」的证明可以签发（当前：" + statusText(cert.getCertStatus()) + "）");
+            throw new BusinessException("只有「已审核」的证明可以签发（当前：" + DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "）");
         }
-        DeathCertificateVO.DischargeSnapshot discharge = certMapper.selectDeathDischarge(cert.getAdmissionId());
+        DeathCertificateVO.DischargeSnapshot discharge = bizDeathCertificateMapper.selectDeathDischarge(cert.getAdmissionId());
         if (discharge == null) {
             throw new BusinessException("该住院尚未办理「死亡」离院，不能签发死亡证明（先走出院办理，离院方式选「死亡」）");
         }
@@ -444,25 +401,25 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
             throw new BusinessException("死亡时间与死亡离院时间不一致：出院办理记录为 "
                     + discharge.getDischargeTime() + "，两者必须是同一时点，请把证明的死亡时间改成它");
         }
-        if (causeMapper.countChainRows(cert.getId()) == 0) {
+        if (bizDeathCertificateCauseMapper.countChainRows(cert.getId()) == 0) {
             throw new BusinessException("签发前必须填写死因链Ⅰ部分（直接死因→…→根本死因）");
         }
         if (!StringUtils.hasText(cert.getUnderlyingIcdCode())) {
             throw new BusinessException("签发前必须确定根本死因（ICD-10），死因统计只认这一列");
         }
-        if (causeMapper.countChainRowsMissingIcd(cert.getId()) > 0) {
+        if (bizDeathCertificateCauseMapper.countChainRowsMissingIcd(cert.getId()) > 0) {
             throw new BusinessException("签发前死因链Ⅰ部分每行的 ICD-10 编码必须补全");
         }
         if (Objects.equals(cert.getDeathPlace(), DeathPlaceEnum.HOSPITAL.getCode()) && cert.getDeathDeptId() == null) {
             throw new BusinessException("医院内死亡必须填写死亡科室");
         }
         cert.setCertStatus(DeathCertStatusEnum.ISSUED.getCode());
-        cert.setIssueTime(now());
+        cert.setIssueTime(TimeUtil.nowSeconds());
         cert.setDischargeId(discharge.getDischargeId());
         cert.setReportDeadline(cert.getDeathTime().plusDays(REPORT_DEADLINE_DAYS));
         saveCert(cert);
         // 病案首页「死亡患者尸检」以证明为准回写（国家标准首页项目，两处各填必然漂移）
-        certMapper.updateSummaryAutopsyFlag(cert.getAdmissionId(), cert.getAutopsyFlag());
+        bizDeathCertificateMapper.updateSummaryAutopsyFlag(cert.getAdmissionId(), cert.getAutopsyFlag());
     }
 
     @Override
@@ -477,9 +434,9 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
             throw new BusinessException("该证明已作废，无需重复作废");
         }
         cert.setCertStatus(DeathCertStatusEnum.VOIDED.getCode());
-        cert.setVoidReason(cut(trimToNull(dto.getReason()), REASON_MAX));
+        cert.setVoidReason(TextUtil.cut(TextUtil.trimToNull(dto.getReason()), REASON_MAX));
         cert.setVoidBy(operatorUser.getRealName());
-        cert.setVoidTime(now());
+        cert.setVoidTime(TimeUtil.nowSeconds());
         saveCert(cert);
     }
 
@@ -496,9 +453,9 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         }
         BizDeathCertificate orig = requireCert(origCertId);
         if (!Objects.equals(orig.getCertStatus(), DeathCertStatusEnum.VOIDED.getCode())) {
-            throw new BusinessException("只有已作废的证明才能重开（当前：" + statusText(orig.getCertStatus()) + "）");
+            throw new BusinessException("只有已作废的证明才能重开（当前：" + DeathCertStatusEnum.labelOrUnknown(orig.getCertStatus()) + "）");
         }
-        if (certMapper.countActiveByAdmission(orig.getAdmissionId(), null) > 0) {
+        if (bizDeathCertificateMapper.countActiveByAdmission(orig.getAdmissionId(), null) > 0) {
             throw new BusinessException("该次住院已有新的有效证明，请直接修改它");
         }
         BizDeathCertificate cert = new BizDeathCertificate();
@@ -530,7 +487,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         cert.setRelativePhone(orig.getRelativePhone());
         cert.setPhysicianId(orig.getPhysicianId());
         cert.setPhysicianName(orig.getPhysicianName());
-        cert.setFillTime(now());
+        cert.setFillTime(TimeUtil.nowSeconds());
         cert.setCertStatus(DeathCertStatusEnum.DRAFT.getCode());
         cert.setReportStatus(DeathCertReportEnum.NONE.getCode());
         cert.setReportDeadline(cert.getDeathTime().plusDays(REPORT_DEADLINE_DAYS));
@@ -539,7 +496,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         cert.setRemark("由 " + orig.getCertNo() + " 作废后重开");
         saveCert(cert);
 
-        for (DeathCertificateVO.CauseVO row : causeMapper.selectByCertId(orig.getId())) {
+        for (DeathCertificateVO.CauseVO row : bizDeathCertificateCauseMapper.selectByCertId(orig.getId())) {
             BizDeathCertificateCause cause = new BizDeathCertificateCause();
             cause.setCertId(cert.getId());
             cause.setPart(row.getPart());
@@ -548,8 +505,8 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
             cause.setIcdName(row.getIcdName());
             cause.setIntervalText(row.getIntervalText());
             cause.setCreateBy(operatorUser.getRealName());
-            cause.setCreateTime(now());
-            causeMapper.insert(cause);
+            cause.setCreateTime(TimeUtil.nowSeconds());
+            bizDeathCertificateCauseMapper.insert(cause);
         }
         return cert.getId();
     }
@@ -563,11 +520,11 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         }
         BizDeathCertificate cert = requireCert(dto.getId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.ISSUED.getCode())) {
-            throw new BusinessException("只有「已开具」的证明才打印（" + statusText(cert.getCertStatus()) + "的表样不能作为凭证）");
+            throw new BusinessException("只有「已开具」的证明才打印（" + DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "的表样不能作为凭证）");
         }
         cert.setPrinterName(operatorUser.getRealName());
         cert.setPrintCount((cert.getPrintCount() == null ? 0 : cert.getPrintCount()) + 1);
-        cert.setLastPrintTime(now());
+        cert.setLastPrintTime(TimeUtil.nowSeconds());
         saveCert(cert);
     }
 
@@ -580,7 +537,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     public String report(Long id) {
         BizDeathCertificate cert = requireCert(id);
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.ISSUED.getCode())) {
-            throw new BusinessException("未签发的证明不能上报（当前：" + statusText(cert.getCertStatus()) + "）");
+            throw new BusinessException("未签发的证明不能上报（当前：" + DeathCertStatusEnum.labelOrUnknown(cert.getCertStatus()) + "）");
         }
         if (Objects.equals(cert.getReportStatus(), DeathCertReportEnum.DONE.getCode())) {
             throw new BusinessException("该证明已上报，报文已冻结（订正请作废重开后再报）");
@@ -591,7 +548,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         String payload = buildReportPayload(cert);
         cert.setReportStatus(DeathCertReportEnum.DONE.getCode());
         cert.setReportPayload(payload);
-        cert.setReportTime(now());
+        cert.setReportTime(TimeUtil.nowSeconds());
         // 当前不对接外部平台：回执号即证明编号本身（再造一个 "DC" 前缀会得到 DCDC2024... 这种看着像 bug 的号）
         cert.setReportNo(cert.getCertNo());
         cert.setReportError(null);
@@ -601,7 +558,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
 
     @Override
     public int notifyOverdue() {
-        List<BizDeathCertificate> overdue = certMapper.selectOverdueForNotify(NOTIFY_BATCH);
+        List<BizDeathCertificate> overdue = bizDeathCertificateMapper.selectOverdueForNotify(NOTIFY_BATCH);
         int sent = 0;
         for (BizDeathCertificate r : overdue) {
             try {
@@ -617,8 +574,8 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
                         r.getPatientName() + "（" + r.getCertNo() + "）已开具但超过上报时限 " + lateDays + " 天，请尽快上报死因监测",
                         BizTypeEnum.DEATH_CERT.getType(), r.getId(), "warning", JSONUtil.toJsonStr(payload), 0);
                 if (ok) {
-                    r.setNotifyTime(now());
-                    certMapper.updateById(r);
+                    r.setNotifyTime(TimeUtil.nowSeconds());
+                    bizDeathCertificateMapper.updateById(r);
                     sent++;
                 }
             } catch (Exception ex) {
@@ -633,7 +590,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
 
     @Override
     public void assertDischargeConsistent(Long admissionId, LocalDateTime dischargeTime) {
-        Long certId = certMapper.selectActiveIdByAdmission(admissionId);
+        Long certId = bizDeathCertificateMapper.selectActiveIdByAdmission(admissionId);
         if (certId == null || dischargeTime == null) {
             return;
         }
@@ -645,7 +602,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     }
 
     private BizDeathCertificate requireCert(Long id) {
-        BizDeathCertificate cert = id == null ? null : certMapper.selectById(id);
+        BizDeathCertificate cert = id == null ? null : bizDeathCertificateMapper.selectById(id);
         if (cert == null) {
             throw new BusinessException("死亡证明不存在或已删除");
         }
@@ -671,16 +628,16 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         cert.setDeathDeptId(useDeptId);
         // 死亡科室可以与出院时所在科室不同（死于 ICU、办出院在普通病房），名字服务端查，不采信前端字符串
         cert.setDeathDeptName(Objects.equals(useDeptId, snapshot.getDeptId())
-                ? cutToNull(snapshot.getDeptName(), UNIT_MAX)
-                : cutToNull(certMapper.selectDeptName(useDeptId), UNIT_MAX));
-        cert.setDeathWardName(cutToNull(snapshot.getWardName(), UNIT_MAX));
-        cert.setDeathBedNo(cutToNull(snapshot.getBedNo(), 16));
+                ? TextUtil.cutToNull(snapshot.getDeptName(), UNIT_MAX)
+                : TextUtil.cutToNull(bizDeathCertificateMapper.selectDeptName(useDeptId), UNIT_MAX));
+        cert.setDeathWardName(TextUtil.cutToNull(snapshot.getWardName(), UNIT_MAX));
+        cert.setDeathBedNo(TextUtil.cutToNull(snapshot.getBedNo(), 16));
     }
 
     private void saveCert(BizDeathCertificate cert) {
         if (cert.getId() == null) {
-            certMapper.insert(cert);
-        } else if (certMapper.updateById(cert) <= 0) {
+            bizDeathCertificateMapper.insert(cert);
+        } else if (bizDeathCertificateMapper.updateById(cert) <= 0) {
             throw new BusinessException("死亡证明保存失败，请重试");
         }
     }
@@ -692,7 +649,7 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     private String buildReportPayload(BizDeathCertificate cert) {
         List<DeathCertReportPayloadVO.CauseItem> chain = new ArrayList<>();
         List<DeathCertReportPayloadVO.CauseItem> other = new ArrayList<>();
-        for (DeathCertificateVO.CauseVO row : causeMapper.selectByCertId(cert.getId())) {
+        for (DeathCertificateVO.CauseVO row : bizDeathCertificateCauseMapper.selectByCertId(cert.getId())) {
             DeathCertReportPayloadVO.CauseItem item = new DeathCertReportPayloadVO.CauseItem();
             item.setSeqNo(row.getSeqNo());
             item.setIcdCode(row.getIcdCode());

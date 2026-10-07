@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.*;
 import com.his.pharmacy.entity.BizPurchaseOrder;
 import com.his.pharmacy.entity.BizPurchaseOrderDetail;
@@ -28,7 +29,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -50,10 +50,10 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
         implements PurchaseOrderService {
     private final DictCacheService dictCacheService;
 
-    private final BizPurchaseOrderMapper orderMapper;
-    private final BizPurchaseOrderDetailMapper detailMapper;
-    private final SysSupplierMapper supplierMapper;
-    private final BizDrugInboundMapper inboundMapper;
+    private final BizPurchaseOrderMapper bizPurchaseOrderMapper;
+    private final BizPurchaseOrderDetailMapper bizPurchaseOrderDetailMapper;
+    private final SysSupplierMapper sysSupplierMapper;
+    private final BizDrugInboundMapper bizDrugInboundMapper;
     private final DrugInboundService drugInboundService;
     private final RedisSequenceService redisSequenceService;
 
@@ -63,7 +63,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
 
     @Override
     public PageResult<PurchaseOrderVO> page(PurchaseOrderQueryPageDTO queryDTO) {
-        Page<PurchaseOrderVO> page = orderMapper.selectOrderPage(
+        Page<PurchaseOrderVO> page = bizPurchaseOrderMapper.selectOrderPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),
                 emptyToNull(queryDTO.getOrderNo()),
                 queryDTO.getSupplierId(),
@@ -76,18 +76,18 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
 
     @Override
     public PurchaseOrderVO getDetailById(Long orderId) {
-        PurchaseOrderVO vo = orderMapper.selectOrderById(orderId);
+        PurchaseOrderVO vo = bizPurchaseOrderMapper.selectOrderById(orderId);
         if (vo == null) {
             throw new BusinessException("采购订单不存在或已删除");
         }
-        vo.setItems(detailMapper.selectDetailWithDrug(orderId));
+        vo.setItems(bizPurchaseOrderDetailMapper.selectDetailWithDrug(orderId));
         return vo;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(PurchaseOrderUpsertDTO dto) {
-        SysSupplier supplier = supplierMapper.selectById(dto.getSupplierId());
+        SysSupplier supplier = sysSupplierMapper.selectById(dto.getSupplierId());
         if (supplier == null) {
             throw new BusinessException("供应商不存在或已删除");
         }
@@ -101,8 +101,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         String operator = UserUtils.getCurrentUser().getRealName();
-        LocalDateTime orderTime = (dto.getOrderTime() != null ? dto.getOrderTime() : LocalDateTime.now())
-                .truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime orderTime = TimeUtil.toSeconds((dto.getOrderTime() != null ? dto.getOrderTime() : LocalDateTime.now()));
 
         if (dto.getOrderId() == null) {
             BizPurchaseOrder entity = new BizPurchaseOrder();
@@ -128,7 +127,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
         if (exist.getApprovalStatus() != null && exist.getApprovalStatus() == 1) {
             throw new BusinessException("订单已审批通过，不能修改；确需修改请先驳回");
         }
-        if (inboundMapper.countActiveByPurchaseOrder(exist.getOrderId()) > 0) {
+        if (bizDrugInboundMapper.countActiveByPurchaseOrder(exist.getOrderId()) > 0) {
             throw new BusinessException("订单已生成入库单，不能修改；如入库单有误请先取消");
         }
         // 修改 = 重新提交：审批状态回到待审批，并清空上一轮审批人。
@@ -144,7 +143,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
                 .set(BizPurchaseOrder::getUpdateBy, operator)
                 .update();
         // 明细全量替换：物理删旧（表上 UK 不含 del_flag，逻辑删会撞键）
-        detailMapper.deleteByOrderIdPhysically(exist.getOrderId());
+        bizPurchaseOrderDetailMapper.deleteByOrderIdPhysically(exist.getOrderId());
         insertDetails(exist.getOrderId(), details, operator);
         return exist.getOrderId();
     }
@@ -152,7 +151,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void audit(PurchaseOrderAuditDTO dto) {
-        BizPurchaseOrder order = orderMapper.selectByIdForUpdate(dto.getOrderId());
+        BizPurchaseOrder order = bizPurchaseOrderMapper.selectByIdForUpdate(dto.getOrderId());
         if (order == null) {
             throw new BusinessException("采购订单不存在或已删除");
         }
@@ -163,7 +162,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
         if (dto.getApprovalStatus() == 2 && !StringUtils.hasText(dto.getRemark())) {
             throw new BusinessException("驳回订单必须填写驳回原因");
         }
-        if (detailMapper.countByOrder(order.getOrderId()) == 0) {
+        if (bizPurchaseOrderDetailMapper.countByOrder(order.getOrderId()) == 0) {
             throw new BusinessException("订单没有明细，不能审批");
         }
         String operator = UserUtils.getCurrentUser().getRealName();
@@ -180,7 +179,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
     @Transactional(rollbackFor = Exception.class)
     public DrugInboundVO generateInbound(Long orderId) {
         // 行锁：防并发对同一张订单生成两张入库单
-        BizPurchaseOrder order = orderMapper.selectByIdForUpdate(orderId);
+        BizPurchaseOrder order = bizPurchaseOrderMapper.selectByIdForUpdate(orderId);
         if (order == null) {
             throw new BusinessException("采购订单不存在或已删除");
         }
@@ -188,12 +187,12 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
             throw new BusinessException("只有审批通过的采购订单才能生成入库单（当前审批：" + dictCacheService.getDicDataLabel("biz_pharmacy_purchaseApprovalStatusEnum", order.getApprovalStatus()) + "）");
         }
 
-        List<PurchaseOrderDetailVO> details = detailMapper.selectDetailWithDrug(orderId);
+        List<PurchaseOrderDetailVO> details = bizPurchaseOrderDetailMapper.selectDetailWithDrug(orderId);
         if (details.isEmpty()) {
             throw new BusinessException("订单没有明细，不能生成入库单");
         }
 
-        SysSupplier supplier = supplierMapper.selectById(order.getSupplierId());
+        SysSupplier supplier = sysSupplierMapper.selectById(order.getSupplierId());
         String supplierName = supplier != null ? supplier.getSupplierName() : null;
 
         DrugInboundCreateDTO dto = new DrugInboundCreateDTO();
@@ -224,10 +223,10 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
         if (order == null) {
             throw new BusinessException("采购订单不存在或已删除");
         }
-        if (inboundMapper.countActiveByPurchaseOrder(orderId) > 0) {
+        if (bizDrugInboundMapper.countActiveByPurchaseOrder(orderId) > 0) {
             throw new BusinessException("订单已生成入库单，不能删除（删除会留下孤儿入库单）；请先取消入库单");
         }
-        detailMapper.deleteByOrderIdPhysically(orderId);
+        bizPurchaseOrderDetailMapper.deleteByOrderIdPhysically(orderId);
         if (!this.removeById(orderId)) {
             throw new BusinessException("删除采购订单失败");
         }
@@ -245,7 +244,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
             if (!seen.add(key)) {
                 throw new BusinessException("同一张订单里，同一药品同一批号只能出现一次（药品#" + i.getDrugId() + "，批号 " + batchNo + "）");
             }
-            if (detailMapper.countDrugById(i.getDrugId()) == 0) {
+            if (bizPurchaseOrderDetailMapper.countDrugById(i.getDrugId()) == 0) {
                 throw new BusinessException("药品不存在或已停用，请从药品字典重新选择（药品#" + i.getDrugId() + "）");
             }
             if (i.getProductionDate() != null && i.getExpiryDate() != null
@@ -272,7 +271,7 @@ public class PurchaseOrderServiceImpl extends ServiceImpl<BizPurchaseOrderMapper
             d.setOrderId(orderId);
             d.setCreateBy(operator);
             d.setUpdateBy(operator);
-            detailMapper.insert(d);
+            bizPurchaseOrderDetailMapper.insert(d);
         }
     }
 }

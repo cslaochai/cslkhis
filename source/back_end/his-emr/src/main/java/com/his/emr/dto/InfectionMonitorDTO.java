@@ -1,11 +1,13 @@
 package com.his.emr.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.his.common.base.PageParam;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -117,12 +119,8 @@ public class InfectionMonitorDTO {
      * 病例分页查询
      */
     @Data
-    public static class CaseQueryPage {
-        private Long pageNo = 1L;
-        /**
-         * 每页条数
-         */
-        private Long pageSize = 10L;
+    @EqualsAndHashCode(callSuper = true)
+    public static class CaseQueryPage extends PageParam {
         private Integer caseStatus;
         private Integer caseSource;
         private Integer leakFlag;
@@ -249,12 +247,8 @@ public class InfectionMonitorDTO {
      * 监测分页查询
      */
     @Data
-    public static class MonitorQueryPage {
-        private Long pageNo = 1L;
-        /**
-         * 每页条数
-         */
-        private Long pageSize = 10L;
+    @EqualsAndHashCode(callSuper = true)
+    public static class MonitorQueryPage extends PageParam {
         /**
          * 监测类型
          */
@@ -316,12 +310,8 @@ public class InfectionMonitorDTO {
      * 观察记录分页查询
      */
     @Data
-    public static class HandObsQueryPage {
-        private Long pageNo = 1L;
-        /**
-         * 每页条数
-         */
-        private Long pageSize = 10L;
+    @EqualsAndHashCode(callSuper = true)
+    public static class HandObsQueryPage extends PageParam {
         /**
          * 监测科室ID
          */

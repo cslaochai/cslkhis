@@ -4,43 +4,21 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.enums.AttendModeEnum;
-import com.his.common.enums.EnableStatusEnum;
-import com.his.common.enums.OrgUnitTypeEnum;
-import com.his.common.enums.ScheduleChangeTypeEnum;
-import com.his.common.enums.StaffDutyStatusEnum;
-import com.his.common.enums.StaffScheduleSourceEnum;
-import com.his.common.enums.StaffTypeEnum;
-import com.his.common.enums.YesOrNoEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
-import com.his.system.provider.DeptScopeProvider;
 import com.his.system.dto.StaffScheduleCopyDTO;
 import com.his.system.dto.StaffScheduleQueryPageDTO;
 import com.his.system.dto.StaffScheduleSwapDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
-import com.his.system.entity.BizShift;
-import com.his.system.entity.BizStaffSchedule;
-import com.his.system.entity.SysDepartment;
-import com.his.system.entity.SysEmployee;
-import com.his.system.entity.SysEmployeePost;
-import com.his.system.entity.SysRole;
-import com.his.system.entity.SysWard;
-import com.his.system.mapper.BizStaffScheduleMapper;
-import com.his.system.mapper.SysDepartmentMapper;
-import com.his.system.mapper.SysEmployeeMapper;
-import com.his.system.mapper.SysEmployeePostMapper;
-import com.his.system.mapper.SysRoleMapper;
-import com.his.system.mapper.SysWardMapper;
+import com.his.system.entity.*;
+import com.his.system.mapper.*;
+import com.his.system.provider.DeptScopeProvider;
 import com.his.system.service.ScheduleChangeLogService;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffPlanRuleService;
 import com.his.system.service.StaffScheduleService;
-import com.his.system.vo.StaffOnDutyVO;
-import com.his.system.vo.StaffScheduleVO;
-import com.his.system.vo.StaffTypeDayWorkingVO;
-import com.his.system.vo.StaffWorkingGroupVO;
-import com.his.system.vo.UnitDayWorkingVO;
+import com.his.system.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,14 +27,7 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 全院岗位排班服务实现 —— 排班事实的唯一写入口。
@@ -75,22 +46,48 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper, BizStaffSchedule>
         implements StaffScheduleService {
-    private final DeptScopeProvider deptScopeProvider;
-
-    /** 无班次（休息/请假/培训/停班）与全院级的单元ID都用 0 表达，NULL 会让唯一键失效 */
+    /**
+     * 无班次（休息/请假/培训/停班）与全院级的单元ID都用 0 表达，NULL 会让唯一键失效
+     */
     private static final long ID_NONE = 0L;
-    /** 一周七天，复制周期按星期对齐 */
+    /**
+     * 一周七天，复制周期按星期对齐
+     */
     private static final int DAYS_OF_WEEK = 7;
     private static final String[] WEEK_DAY_TEXTS = {"周一", "周二", "周三", "周四", "周五", "周六", "周日"};
-
-    private final SysEmployeeMapper employeeMapper;
-    private final SysEmployeePostMapper employeePostMapper;
-    private final SysRoleMapper roleMapper;
-    private final SysDepartmentMapper departmentMapper;
-    private final SysWardMapper wardMapper;
+    private final DeptScopeProvider deptScopeProvider;
+    private final SysEmployeeMapper sysEmployeeMapper;
+    private final SysEmployeePostMapper sysEmployeePostMapper;
+    private final SysRoleMapper sysRoleMapper;
+    private final SysDepartmentMapper sysDepartmentMapper;
+    private final SysWardMapper sysWardMapper;
     private final ShiftService shiftService;
-    private final StaffPlanRuleService planRuleService;
-    private final ScheduleChangeLogService changeLogService;
+    private final StaffPlanRuleService staffPlanRuleService;
+    private final ScheduleChangeLogService scheduleChangeLogService;
+
+    private static String tipJoin(String... tips) {
+        StringBuilder sb = new StringBuilder();
+        for (String t : tips) {
+            if (t == null || t.isBlank()) {
+                continue;
+            }
+            if (sb.length() > 0) {
+                sb.append("；");
+            }
+            sb.append(t);
+        }
+        return sb.length() == 0 ? null : sb.toString();
+    }
+
+    private static boolean isCrossDay(String startTime, String endTime) {
+        LocalTime start = ShiftCoverUtil.parseShiftTime(startTime);
+        LocalTime end = ShiftCoverUtil.parseShiftTime(endTime);
+        return start != null && end != null && !end.isAfter(start);
+    }
+
+    private static boolean isDisabled(Integer status) {
+        return status != null && status == EnableStatusEnum.DISABLED.getCode();
+    }
 
     @Override
     public PageResult<StaffScheduleVO> pageVO(StaffScheduleQueryPageDTO dto) {
@@ -133,30 +130,18 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         // 新增和「改成上班」是往里加人，越加越多，拿下限去卡等于让排班员排不出第一版。
         BizStaffSchedule before = dto.getId() == null ? null : getById(dto.getId());
         saveOrUpdate(schedule);
-        String unitTip = planRuleService.reviewAfterChange(schedule.getOrgType(), schedule.getOrgId(),
+        String unitTip = staffPlanRuleService.reviewAfterChange(schedule.getOrgType(), schedule.getOrgId(),
                 schedule.getShiftId(), schedule.getStaffType(), schedule.getScheduleDate(),
                 headcountDrops(before, schedule));
         return tipJoin(unitTip, reviewEmployee(schedule));
     }
 
-    /** 人力闸门的两半：单元够不够人 + 这个人被排得狠不狠，两句话合成一段提示给页面 */
+    /**
+     * 人力闸门的两半：单元够不够人 + 这个人被排得狠不狠，两句话合成一段提示给页面
+     */
     private String reviewEmployee(BizStaffSchedule schedule) {
-        return planRuleService.reviewEmployee(schedule.getId(), schedule.getEmployeeId(),
+        return staffPlanRuleService.reviewEmployee(schedule.getId(), schedule.getEmployeeId(),
                 schedule.getOrgType(), schedule.getOrgId(), schedule.getStaffType(), schedule.getScheduleDate());
-    }
-
-    private static String tipJoin(String... tips) {
-        StringBuilder sb = new StringBuilder();
-        for (String t : tips) {
-            if (t == null || t.isBlank()) {
-                continue;
-            }
-            if (sb.length() > 0) {
-                sb.append("；");
-            }
-            sb.append(t);
-        }
-        return sb.length() == 0 ? null : sb.toString();
     }
 
     /**
@@ -233,7 +218,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             assertTimeFree(schedule);
             saveOrUpdate(schedule);
             // 落完立刻把人力闸门走一遍：单元够不够人（reviewAfterChange）+ 这个人被排得狠不狠（reviewEmployee）
-            planRuleService.reviewAfterChange(schedule.getOrgType(), schedule.getOrgId(),
+            staffPlanRuleService.reviewAfterChange(schedule.getOrgType(), schedule.getOrgId(),
                     schedule.getShiftId(), schedule.getStaffType(), schedule.getScheduleDate(), false);
             String personTip = reviewEmployee(schedule);
             if (personTip != null) {
@@ -366,7 +351,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         // 唯一键不含删除标志 → 物理删（软删行继续占键，「删了再重排同一天同一班」必撞重复键）
         baseMapper.purgeById(id);
         // 删完再核一次人力：把人删到「这个班没人接」必须当场拦住，而不是等明天出事故
-        planRuleService.reviewAfterChange(row.getOrgType(), row.getOrgId(),
+        staffPlanRuleService.reviewAfterChange(row.getOrgType(), row.getOrgId(),
                 row.getShiftId(), row.getStaffType(), row.getScheduleDate(), true);
     }
 
@@ -411,9 +396,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             assertNoOverlap(to, from.getId());
             updateById(from);
             updateById(to);
-            changeLogService.record(from.getId(), ScheduleChangeTypeEnum.SWAP, fromEmpId,
+            scheduleChangeLogService.record(from.getId(), ScheduleChangeTypeEnum.SWAP, fromEmpId,
                     to.getEmployeeId(), fromShiftId, from.getShiftId(), null, reason);
-            changeLogService.record(to.getId(), ScheduleChangeTypeEnum.SWAP, to.getEmployeeId(),
+            scheduleChangeLogService.record(to.getId(), ScheduleChangeTypeEnum.SWAP, to.getEmployeeId(),
                     fromEmpId, toShiftId, to.getShiftId(), null, reason);
             return;
         }
@@ -431,7 +416,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         assertSwappable(from);
         assertNoOverlap(from);
         updateById(from);
-        changeLogService.record(from.getId(), ScheduleChangeTypeEnum.SUBSTITUTE, originEmpId,
+        scheduleChangeLogService.record(from.getId(), ScheduleChangeTypeEnum.SUBSTITUTE, originEmpId,
                 from.getEmployeeId(), shiftId, shiftId, null, reason);
     }
 
@@ -574,6 +559,8 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
                 && Objects.equals(YesOrNoEnum.YES.getCode(), schedule.getClinicFlag());
     }
 
+    // 写入口的内部收口：单元 / 人 / 班 三段快照全部服务端重查
+
     @Override
     public List<UnitDayWorkingVO> listUnitDayWorking(LocalDate begin, LocalDate end) {
         // 单元 × 日 = 聚合行再按 (date, org) 折叠（班次与岗位两个维度在这里合掉）
@@ -618,8 +605,6 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         return new ArrayList<>(merged.values());
     }
 
-    // 写入口的内部收口：单元 / 人 / 班 三段快照全部服务端重查
-
     private BizStaffSchedule requireById(Long id) {
         BizStaffSchedule row = id == null ? null : getById(id);
         if (row == null) {
@@ -650,11 +635,11 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             throw new BusinessException("请选择" + unitType.getLabel());
         }
         if (unitType == OrgUnitTypeEnum.WARD) {
-            SysWard ward = wardMapper.selectById(orgId);
+            SysWard ward = sysWardMapper.selectById(orgId);
             if (ward == null || isDisabled(ward.getStatus())) {
                 throw new BusinessException("所选" + unitType.getLabel() + "不存在或已停用");
             }
-            SysDepartment dept = departmentMapper.selectById(ward.getDeptId());
+            SysDepartment dept = sysDepartmentMapper.selectById(ward.getDeptId());
             if (dept == null || isDisabled(dept.getStatus())) {
                 throw new BusinessException("病区所属科室不存在或已停用，请先修正主数据");
             }
@@ -664,7 +649,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             schedule.setDeptName(dept.getDeptName());
             return;
         }
-        SysDepartment dept = departmentMapper.selectById(orgId);
+        SysDepartment dept = sysDepartmentMapper.selectById(orgId);
         if (dept == null || isDisabled(dept.getStatus())) {
             throw new BusinessException("所选" + unitType.getLabel() + "不存在或已停用");
         }
@@ -678,7 +663,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
      * 排班对象与岗位类别：姓名/工号取员工快照，岗位类别由「人 × 科室 × 角色」上的角色派生。
      */
     private void applyEmployee(BizStaffSchedule schedule, Long employeeId, Long employeePostId) {
-        SysEmployee employee = employeeId == null ? null : employeeMapper.selectById(employeeId);
+        SysEmployee employee = employeeId == null ? null : sysEmployeeMapper.selectById(employeeId);
         if (employee == null) {
             throw new BusinessException("所选排班对象不存在或已删除，请重新选择");
         }
@@ -695,13 +680,13 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
 
     private SysEmployeePost resolvePost(SysEmployee employee, Long deptId, Long employeePostId) {
         if (employeePostId != null) {
-            SysEmployeePost post = employeePostMapper.selectById(employeePostId);
+            SysEmployeePost post = sysEmployeePostMapper.selectById(employeePostId);
             if (post == null || !Objects.equals(post.getEmployeeId(), employee.getId())) {
                 throw new BusinessException("所选岗位不属于这个人，请重新选择");
             }
             return post;
         }
-        List<SysEmployeePost> posts = employeePostMapper.selectList(new LambdaQueryWrapper<SysEmployeePost>()
+        List<SysEmployeePost> posts = sysEmployeePostMapper.selectList(new LambdaQueryWrapper<SysEmployeePost>()
                 .eq(SysEmployeePost::getEmployeeId, employee.getId())
                 .orderByAsc(SysEmployeePost::getId));
         if (posts.isEmpty()) {
@@ -728,7 +713,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             throw new BusinessException("「" + employee.getEmpName() + "」的岗位没有挂角色，"
                     + "无法判定岗位类别，请先在岗位配置里补齐角色");
         }
-        SysRole role = roleMapper.selectById(post.getRoleId());
+        SysRole role = sysRoleMapper.selectById(post.getRoleId());
         if (role == null) {
             throw new BusinessException("岗位上的角色不存在或已删除，请先修正岗位配置");
         }
@@ -822,7 +807,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
                 .notIn(!skip.isEmpty(), BizStaffSchedule::getId, skip)) > 0;
     }
 
-    /** 换班/代班落库前：承接的人不能已经排过这个班，那天也不能已经请了假 */
+    /**
+     * 换班/代班落库前：承接的人不能已经排过这个班，那天也不能已经请了假
+     */
     private void assertSwappable(BizStaffSchedule schedule, Long... exceptIds) {
         if (isDuplicated(schedule, exceptIds)) {
             throw new BusinessException("「" + schedule.getEmployeeName() + "」在 " + schedule.getScheduleDate()
@@ -911,11 +898,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         }
     }
 
-    /** 一条排班摊开后的时间段 */
-    private record TimeRange(LocalDateTime from, LocalDateTime to) {
-    }
-
-    /** 排班行摊成时间段：跨零点（结束不晚于开始）的结束点算到次日；时间脏了返回 null（不猜） */
+    /**
+     * 排班行摊成时间段：跨零点（结束不晚于开始）的结束点算到次日；时间脏了返回 null（不猜）
+     */
     private TimeRange intervalOf(BizStaffSchedule row, LocalDate date) {
         LocalTime start = ShiftCoverUtil.parseShiftTime(row.getStartTime());
         LocalTime end = ShiftCoverUtil.parseShiftTime(row.getEndTime());
@@ -1006,16 +991,6 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
         return weekDay == null || weekDay < 1 || weekDay > DAYS_OF_WEEK ? null : WEEK_DAY_TEXTS[weekDay - 1];
     }
 
-    private static boolean isCrossDay(String startTime, String endTime) {
-        LocalTime start = ShiftCoverUtil.parseShiftTime(startTime);
-        LocalTime end = ShiftCoverUtil.parseShiftTime(endTime);
-        return start != null && end != null && !end.isAfter(start);
-    }
-
-    private static boolean isDisabled(Integer status) {
-        return status != null && status == EnableStatusEnum.DISABLED.getCode();
-    }
-
     private String shiftLabelOf(BizStaffSchedule schedule) {
         if (schedule.getShiftId() == null || schedule.getShiftId() == ID_NONE) {
             return StaffDutyStatusEnum.getText(schedule.getDutyStatus());
@@ -1046,5 +1021,11 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             BizShift shift = shifts.get(vo.getShiftId());
             vo.setShiftName(shift == null ? null : shift.getShiftName());
         }
+    }
+
+    /**
+     * 一条排班摊开后的时间段
+     */
+    private record TimeRange(LocalDateTime from, LocalDateTime to) {
     }
 }

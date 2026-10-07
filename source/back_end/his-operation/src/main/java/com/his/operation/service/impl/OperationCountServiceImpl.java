@@ -1,8 +1,11 @@
 package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TimeUtil;
 import com.his.operation.dto.CountItemInputUpsertDTO;
 import com.his.operation.dto.CountPhaseDTO;
 import com.his.operation.dto.CountQtyDTO;
@@ -32,7 +35,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -58,7 +60,7 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OperationCountServiceImpl implements OperationCountService {
+public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItemMapper, BizOperationCountItem> implements OperationCountService {
 
     private final DictCacheService dictCacheService;
 
@@ -70,16 +72,8 @@ public class OperationCountServiceImpl implements OperationCountService {
 
     private final BizOperationApplyMapper bizOperationApplyMapper;
 
-    private static int nz(Integer value) {
-        return value == null ? 0 : value;
-    }
-
     private static String textOr(String value, String fallback) {
         return StringUtils.hasText(value) ? value : fallback;
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
     @Override
@@ -207,7 +201,7 @@ public class OperationCountServiceImpl implements OperationCountService {
         }
 
         String nurseName = employeeNameOf(dto.getNurseId());
-        LocalDateTime time = now();
+        LocalDateTime time = TimeUtil.nowSeconds();
         List<String> diffs = new ArrayList<>();
 
         for (BizOperationCountItem item : items) {
@@ -358,9 +352,9 @@ public class OperationCountServiceImpl implements OperationCountService {
                 itemVo.setConsistent(null);
             }
             vos.add(itemVo);
-            totalBefore += nz(item.getBeforeQty());
-            totalClosure += nz(item.getClosureQty());
-            totalFinal += nz(item.getFinalQty());
+            totalBefore += NumUtil.orZero(item.getBeforeQty());
+            totalClosure += NumUtil.orZero(item.getClosureQty());
+            totalFinal += NumUtil.orZero(item.getFinalQty());
         }
         vo.setItems(vos);
         vo.setItemCount(vos.size());

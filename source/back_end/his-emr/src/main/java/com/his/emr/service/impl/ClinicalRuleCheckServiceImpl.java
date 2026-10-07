@@ -7,6 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.CheckResultEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.emr.dto.RuleCheckQueryPageDTO;
 import com.his.emr.entity.BizClinicalRuleCheck;
 import com.his.emr.enums.RuleCheckStatusEnum;
 import com.his.emr.mapper.BizClinicalRuleCheckMapper;
@@ -32,15 +33,14 @@ public class ClinicalRuleCheckServiceImpl extends ServiceImpl<BizClinicalRuleChe
     private static final AtomicInteger SEQ = new AtomicInteger(0);
 
     @Override
-    public PageResult<BizClinicalRuleCheckVO> selectCheckPage(Long patientId, Integer ruleType,
-                                                              Integer checkStatus, int pageNum, int pageSize) {
+    public PageResult<BizClinicalRuleCheckVO> listPage(RuleCheckQueryPageDTO queryPageDTO) {
         LambdaQueryWrapper<BizClinicalRuleCheck> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(patientId != null, BizClinicalRuleCheck::getPatientId, patientId)
-                .eq(ruleType != null, BizClinicalRuleCheck::getRuleType, ruleType)
-                .eq(checkStatus != null, BizClinicalRuleCheck::getCheckStatus, checkStatus)
+        wrapper.eq(queryPageDTO.getPatientId() != null, BizClinicalRuleCheck::getPatientId, queryPageDTO.getPatientId())
+                .eq(queryPageDTO.getRuleType() != null, BizClinicalRuleCheck::getRuleType, queryPageDTO.getRuleType())
+                .eq(queryPageDTO.getCheckStatus() != null, BizClinicalRuleCheck::getCheckStatus, queryPageDTO.getCheckStatus())
                 .orderByDesc(BizClinicalRuleCheck::getCreateTime);
 
-        Page<BizClinicalRuleCheck> page = this.page(new Page<>(pageNum, pageSize), wrapper);
+        Page<BizClinicalRuleCheck> page = this.page(new Page<>(queryPageDTO.getPageNum(), queryPageDTO.getPageSize()), wrapper);
         List<BizClinicalRuleCheckVO> voList = page.getRecords().stream()
                 .map(this::toVo).collect(Collectors.toList());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);

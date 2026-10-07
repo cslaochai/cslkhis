@@ -2,10 +2,13 @@ package com.his.emr.service.impl;
 
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.emr.dto.ArchiveBorrowApplyDTO;
 import com.his.emr.dto.ArchiveBorrowAuditDTO;
 import com.his.emr.dto.ArchiveBorrowQueryPageDTO;
@@ -32,7 +35,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 
@@ -45,24 +47,16 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
+public class ArchiveBorrowServiceImpl extends ServiceImpl<BizArchiveBorrowMapper, BizArchiveBorrow> implements ArchiveBorrowService {
 
-    private final BizArchiveBorrowMapper borrowMapper;
-    private final BizMedicalRecordArchiveMapper archiveMapper;
-    private final RedisSequenceService sequenceService;
+    private final BizArchiveBorrowMapper bizArchiveBorrowMapper;
+    private final BizMedicalRecordArchiveMapper bizMedicalRecordArchiveMapper;
+    private final RedisSequenceService redisSequenceService;
     private final SysMessageService sysMessageService;
-
-    private static String trimToNull(String s) {
-        if (s == null) {
-            return null;
-        }
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
-    }
 
     @Override
     public PageResult<ArchiveBorrowVO> page(ArchiveBorrowQueryPageDTO q) {
-        Page<ArchiveBorrowVO> page = borrowMapper.selectBorrowPage(
+        Page<ArchiveBorrowVO> page = bizArchiveBorrowMapper.selectBorrowPage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 q.getBorrowNo(), q.getBorrowType(), q.getStatus(), q.getKeyword());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
@@ -70,7 +64,7 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
 
     @Override
     public ArchiveBorrowVO getDetailById(Long id) {
-        ArchiveBorrowVO vo = borrowMapper.selectBorrowById(id);
+        ArchiveBorrowVO vo = bizArchiveBorrowMapper.selectBorrowById(id);
         if (vo == null) {
             throw new BusinessException("借阅/复印单不存在或已删除");
         }
@@ -79,7 +73,7 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
 
     @Override
     public ArchiveBorrowStatsVO stats() {
-        return borrowMapper.selectStats();
+        return bizArchiveBorrowMapper.selectStats();
     }
 
     @Override
@@ -88,7 +82,7 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
         if (dto.getBorrowType() != BorrowTypeEnum.BORROW.getCode() && dto.getBorrowType() != BorrowTypeEnum.COPY.getCode()) {
             throw new BusinessException("类型只能为 1 借阅 / 2 复印");
         }
-        BizMedicalRecordArchive archive = archiveMapper.selectById(dto.getArchiveId());
+        BizMedicalRecordArchive archive = bizMedicalRecordArchiveMapper.selectById(dto.getArchiveId());
         if (archive == null || archive.getDelFlag() != 0) {
             throw new BusinessException("归档记录不存在");
         }
@@ -115,16 +109,16 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
             throw new BusinessException("复印无需填写应归还日期");
         }
         // 同一份病历同类型存在未结单（待审核/已借出）不允许重复申请
-        if (borrowMapper.countOpenByArchive(dto.getArchiveId(), dto.getBorrowType()) > 0) {
+        if (bizArchiveBorrowMapper.countOpenByArchive(dto.getArchiveId(), dto.getBorrowType()) > 0) {
             throw new BusinessException("该病历已有同类型在途申请（待审核或未归还），请勿重复申请");
         }
 
         Long operatorId = UserUtils.getCurrentUser().getEmployeeId();
         String operatorName = UserUtils.getCurrentUser().getRealName();
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
 
         BizArchiveBorrow b = new BizArchiveBorrow();
-        b.setBorrowNo(sequenceService.generateArchiveBorrowNo());
+        b.setBorrowNo(redisSequenceService.generateArchiveBorrowNo());
         b.setBorrowType(dto.getBorrowType());
         b.setArchiveId(archive.getId());
         b.setRecordNo(archive.getRecordNo());
@@ -138,7 +132,7 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
         b.setDelFlag(DelFlagEnum.NORMAL.getCode());
         b.setCreateTime(now);
         b.setUpdateTime(now);
-        if (borrowMapper.insert(b) != 1) {
+        if (bizArchiveBorrowMapper.insert(b) != 1) {
             throw new BusinessException("申请失败");
         }
         return b.getId();
@@ -147,7 +141,7 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void audit(ArchiveBorrowAuditDTO dto) {
-        BizArchiveBorrow b = borrowMapper.selectByIdForUpdate(dto.getId());
+        BizArchiveBorrow b = bizArchiveBorrowMapper.selectByIdForUpdate(dto.getId());
         if (b == null || b.getDelFlag() != 0) {
             throw new BusinessException("借阅/复印单不存在或已删除");
         }
@@ -159,10 +153,10 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
         if (!approve && (dto.getRemark() == null || dto.getRemark().isBlank())) {
             throw new BusinessException("拒绝必须填写审核意见");
         }
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         b.setAuditById(UserUtils.getCurrentUser().getEmployeeId());
         b.setAuditByName(UserUtils.getCurrentUser().getRealName());
-        b.setAuditRemark(trimToNull(dto.getRemark()));
+        b.setAuditRemark(TextUtil.trimToNull(dto.getRemark()));
         b.setAuditTime(now);
         if (approve) {
             if (b.getBorrowType() == BorrowTypeEnum.BORROW.getCode()) {
@@ -175,7 +169,7 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
             b.setStatus(BorrowStatusEnum.REJECTED.getCode());
         }
         b.setUpdateTime(now);
-        if (borrowMapper.updateById(b) != 1) {
+        if (bizArchiveBorrowMapper.updateById(b) != 1) {
             throw new BusinessException("审核失败");
         }
     }
@@ -183,18 +177,18 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void giveBack(Long id) {
-        BizArchiveBorrow b = borrowMapper.selectByIdForUpdate(id);
+        BizArchiveBorrow b = bizArchiveBorrowMapper.selectByIdForUpdate(id);
         if (b == null || b.getDelFlag() != 0) {
             throw new BusinessException("借阅/复印单不存在或已删除");
         }
         if (b.getStatus() == null || b.getStatus() != BorrowStatusEnum.LENT.getCode()) {
             throw new BusinessException("当前状态不允许归还（期望状态=2 已借出，实际状态=" + b.getStatus() + "）");
         }
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         b.setStatus(BorrowStatusEnum.RETURNED.getCode());
         b.setReturnTime(now);
         b.setUpdateTime(now);
-        if (borrowMapper.updateById(b) != 1) {
+        if (bizArchiveBorrowMapper.updateById(b) != 1) {
             throw new BusinessException("归还失败");
         }
     }
@@ -204,7 +198,7 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
-        BizArchiveBorrow b = borrowMapper.selectById(id);
+        BizArchiveBorrow b = bizArchiveBorrowMapper.selectById(id);
         if (b == null || b.getDelFlag() != 0) {
             throw new BusinessException("借阅/复印单不存在或已删除");
         }
@@ -218,7 +212,7 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
         }
         // ⚠ MP 全局 logic-delete-field=delFlag：updateById 不允许 set del_flag（静默跳过），
         // 软删必须走 MP 的 deleteById → UPDATE ... SET del_flag=1 WHERE id=? AND del_flag=0
-        if (borrowMapper.deleteById(id) != 1) {
+        if (bizArchiveBorrowMapper.deleteById(id) != 1) {
             throw new BusinessException("删除失败");
         }
     }
@@ -227,7 +221,7 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
 
     @Override
     public int notifyOverdue() {
-        List<BizArchiveBorrow> overdueList = borrowMapper.selectList(
+        List<BizArchiveBorrow> overdueList = bizArchiveBorrowMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BizArchiveBorrow>()
                         .eq(BizArchiveBorrow::getStatus, BorrowStatusEnum.LENT.getCode())
                         .eq(BizArchiveBorrow::getDelFlag, 0)

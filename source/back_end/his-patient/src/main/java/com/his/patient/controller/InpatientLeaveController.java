@@ -28,27 +28,27 @@ import java.util.List;
 @RequiredArgsConstructor
 public class InpatientLeaveController {
 
-    private final InpatientLeaveService leaveService;
+    private final InpatientLeaveService inpatientLeaveService;
 
     @PreAuthorize("hasAuthority('ipd:leave:list')")
     @Operation(summary = "请假台账分页（overdueOnly=true 只看超期未归，超期是查询时算的展示态）")
     @PostMapping("/listPage")
     public Result<PageResult<InpatientLeaveVO.Row>> listPage(@Valid @RequestBody(required = false) InpatientLeaveDTO.QueryPage dto) {
-        return Result.success(leaveService.listPage(dto == null ? new InpatientLeaveDTO.QueryPage() : dto));
+        return Result.success(inpatientLeaveService.listPage(dto == null ? new InpatientLeaveDTO.QueryPage() : dto));
     }
 
     @PreAuthorize("hasAuthority('ipd:leave:list')")
     @Operation(summary = "请假单详情（离院登记/打印数据源，电话已脱敏，含签名证据摘要与动作可用性）")
     @GetMapping("/getById")
     public Result<InpatientLeaveVO.Detail> getById(@RequestParam Long id) {
-        return Result.success(leaveService.getDetailById(id));
+        return Result.success(inpatientLeaveService.getDetailById(id));
     }
 
     @PreAuthorize("hasAuthority('ipd:leave:list')")
     @Operation(summary = "开单底稿（按住院带出患者快照与在途请假单张数）")
     @GetMapping("/base")
     public Result<InpatientLeaveVO.Base> base(@RequestParam Long admissionId) {
-        return Result.success(leaveService.base(admissionId));
+        return Result.success(inpatientLeaveService.base(admissionId));
     }
 
     @PreAuthorize("hasAuthority('ipd:leave:list')")
@@ -56,14 +56,14 @@ public class InpatientLeaveController {
     @GetMapping("/inpatients")
     public Result<List<InpatientLeaveVO.Inpatient>> inpatients(@RequestParam(required = false) String keyword,
                                                                @RequestParam(required = false) Integer limit) {
-        return Result.success(leaveService.inpatients(keyword, limit));
+        return Result.success(inpatientLeaveService.inpatients(keyword, limit));
     }
 
     @PreAuthorize("hasAuthority('ipd:leave:list')")
     @Operation(summary = "统计卡（待审批/已批准待离院/在院外/超期未归/今日返回）")
     @GetMapping("/stats")
     public Result<InpatientLeaveVO.Stats> stats() {
-        return Result.success(leaveService.stats());
+        return Result.success(inpatientLeaveService.stats());
     }
 
     @PreAuthorize("hasAuthority('ipd:leave:add')")
@@ -71,7 +71,7 @@ public class InpatientLeaveController {
     @PostMapping("/upsert")
     public Result<String> upsert(@Valid @RequestBody InpatientLeaveDTO.Upsert dto) {
         // 雪花 ID 19 位，裸 Long 出 JSON number 会在前端丢精度，统一字符串出参
-        return Result.success("请假单已保存", String.valueOf(leaveService.upsert(dto)));
+        return Result.success("请假单已保存", String.valueOf(inpatientLeaveService.upsert(dto)));
     }
 
     @PreAuthorize("hasAuthority('ipd:leave:edit')")
@@ -79,7 +79,7 @@ public class InpatientLeaveController {
     @PostMapping("/approve")
     public Result<Void> approve(@Valid @RequestBody InpatientLeaveDTO.Approve dto, HttpServletRequest request) {
         dto.setClientIp(request.getRemoteAddr());
-        leaveService.approve(dto);
+        inpatientLeaveService.approve(dto);
         return Result.success("已审批", null);
     }
 
@@ -87,7 +87,7 @@ public class InpatientLeaveController {
     @Operation(summary = "登记离院 = 患方签署风险承诺书三要素（姓名/关系/手写签名）+ 实际离院时间")
     @PostMapping("/confirmLeave")
     public Result<Void> confirmLeave(@Valid @RequestBody InpatientLeaveDTO.Confirm dto) {
-        leaveService.confirmLeave(dto);
+        inpatientLeaveService.confirmLeave(dto);
         return Result.success("患方已签署承诺书并登记离院", null);
     }
 
@@ -95,7 +95,7 @@ public class InpatientLeaveController {
     @Operation(summary = "返回销假（登记实际返回时间，闭环成立）")
     @PostMapping("/confirmBack")
     public Result<Void> confirmBack(@Valid @RequestBody InpatientLeaveDTO.Back dto) {
-        leaveService.confirmBack(dto);
+        inpatientLeaveService.confirmBack(dto);
         return Result.success("已销假", null);
     }
 
@@ -103,7 +103,7 @@ public class InpatientLeaveController {
     @Operation(summary = "取消（仅待审批/已批准；已离院的单不许取消）")
     @PostMapping("/cancel")
     public Result<Void> cancel(@Valid @RequestBody InpatientLeaveDTO.Cancel dto) {
-        leaveService.cancel(dto);
+        inpatientLeaveService.cancel(dto);
         return Result.success("已取消", null);
     }
 
@@ -111,7 +111,7 @@ public class InpatientLeaveController {
     @Operation(summary = "超期处置记录（仅已离院且超期的单；联系不上必须升级上报）")
     @PostMapping("/recordContact")
     public Result<Void> recordContact(@Valid @RequestBody InpatientLeaveDTO.Contact dto) {
-        leaveService.recordContact(dto);
+        inpatientLeaveService.recordContact(dto);
         return Result.success("超期处置已记录", null);
     }
 
@@ -119,7 +119,7 @@ public class InpatientLeaveController {
     @Operation(summary = "承诺书打印计数（已离院/已返回可打印，打印一次计数一次）")
     @PostMapping("/print")
     public Result<Void> print(@Valid @RequestBody InpatientLeaveDTO.Print dto) {
-        leaveService.print(dto);
+        inpatientLeaveService.print(dto);
         return Result.success("已记录打印", null);
     }
 }

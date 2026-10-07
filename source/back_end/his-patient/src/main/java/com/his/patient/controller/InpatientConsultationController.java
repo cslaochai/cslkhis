@@ -28,18 +28,18 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasAuthority('ipd:consultation:list')")
 public class InpatientConsultationController {
 
-    private final InpatientConsultationService consultationService;
+    private final InpatientConsultationService inpatientConsultationService;
 
     @Operation(summary = "会诊分页（unfinishedOnly=1 只看未完成；toDeptId 用会诊科室工作台过滤）")
     @GetMapping("/listPage")
     public Result<IPage<ConsultationVO>> listPage(@Valid ConsultationQueryPageDTO query) {
-        return Result.success(consultationService.listPage(query));
+        return Result.success(inpatientConsultationService.listPage(query));
     }
 
     @Operation(summary = "会诊详情")
     @GetMapping("/getDetailById")
     public Result<ConsultationVO> getDetailById(@RequestParam Long consultationId) {
-        return Result.success(consultationService.getDetailById(consultationId));
+        return Result.success(inpatientConsultationService.getDetailById(consultationId));
     }
 
     @PreAuthorize("hasAuthority('ipd:consultation:add')")
@@ -48,14 +48,14 @@ public class InpatientConsultationController {
     public Result<String> save(@RequestBody @Valid ConsultationUpsertDTO dto) {
         // 本接口只发起普通科间会诊；营养会诊走 /patient/inpatient/nutrition/consultApply
         dto.setConsultCategory(ConsultCategoryEnum.NORMAL.getCode());
-        return Result.success("会诊申请已提交", consultationService.save(dto));
+        return Result.success("会诊申请已提交", inpatientConsultationService.save(dto));
     }
 
     @PreAuthorize("hasAuthority('ipd:consultation:edit')")
     @Operation(summary = "会诊科室应答（接诊人 = 当前登录用户，不允许替别人接诊）")
     @PostMapping("/accept")
     public Result<Void> accept(@RequestBody @Valid ConsultationAcceptDTO dto) {
-        consultationService.accept(dto);
+        inpatientConsultationService.accept(dto);
         return Result.success("已接诊", null);
     }
 
@@ -63,14 +63,14 @@ public class InpatientConsultationController {
     @Operation(summary = "完成会诊（必须带结论；完成即回写住院病历，返回回写的病历ID）")
     @PostMapping("/finish")
     public Result<String> finish(@RequestBody @Valid ConsultationFinishDTO dto) {
-        return Result.success("会诊已完成并回写病历", consultationService.finish(dto));
+        return Result.success("会诊已完成并回写病历", inpatientConsultationService.finish(dto));
     }
 
     @PreAuthorize("hasAuthority('ipd:consultation:delete')")
     @Operation(summary = "取消会诊申请（仅「待应答」；已接诊的必须走完成）")
     @PostMapping("/cancel")
     public Result<Void> cancel(@RequestBody @Valid ConsultationCancelDTO dto) {
-        consultationService.cancel(dto);
+        inpatientConsultationService.cancel(dto);
         return Result.success("会诊申请已取消", null);
     }
 
@@ -78,6 +78,6 @@ public class InpatientConsultationController {
     @GetMapping("/countUnfinished")
     public Result<Long> countUnfinished(@RequestParam(required = false) Long toDeptId,
                                         @RequestParam(required = false) Long admissionId) {
-        return Result.success(consultationService.countUnfinished(toDeptId, admissionId));
+        return Result.success(inpatientConsultationService.countUnfinished(toDeptId, admissionId));
     }
 }

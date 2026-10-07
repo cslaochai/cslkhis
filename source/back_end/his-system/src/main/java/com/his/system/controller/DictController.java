@@ -29,27 +29,27 @@ import java.util.List;
 @PreAuthorize("isAuthenticated()")
 public class DictController {
 
-    private final SysDictTypeService dictTypeService;
-    private final SysDictDataService dictDataService;
+    private final SysDictTypeService sysDictTypeService;
+    private final SysDictDataService sysDictDataService;
     private final DictCacheService dictCacheService;
 
     @Operation(summary = "查询字典类型列表（下拉/字典缓存取数）")
     @GetMapping("/type/selectList")
     public Result<List<SysDictTypeVO>> typeList() {
-        return Result.success(dictTypeService.selectList());
+        return Result.success(sysDictTypeService.selectList());
     }
 
     @Operation(summary = "获取字典类型详情")
     @GetMapping("/type/getById")
     public Result<SysDictTypeVO> getTypeInfo(@RequestParam Long typeId) {
-        return Result.success(dictTypeService.getInfo(typeId));
+        return Result.success(sysDictTypeService.getInfo(typeId));
     }
 
     @Operation(summary = "新增或修改字典类型")
     @PreAuthorize("hasAuthority('system:dict:add')")
     @PostMapping("/typeUpsert")
     public Result<Void> typeUpsert(@Valid @RequestBody SysDictTypeUpsertDTO upsertDTO) {
-        dictTypeService.upsert(upsertDTO);
+        sysDictTypeService.upsert(upsertDTO);
         return Result.success("操作成功", null);
     }
 
@@ -57,33 +57,33 @@ public class DictController {
     @PreAuthorize("hasAuthority('system:dict:delete')")
     @DeleteMapping("/type/deleteById")
     public Result<Void> removeType(@RequestParam Long typeId) {
-        dictTypeService.delete(typeId);
+        sysDictTypeService.delete(typeId);
         return Result.success("删除成功", null);
     }
 
     @Operation(summary = "根据字典类型查询字典数据（优先从Redis缓存获取）")
     @PostMapping("/data/selectList")
     public Result<List<SysDictDataVO>> getDictDataByType(@Valid @RequestBody DictDataQueryDTO queryDTO) {
-        return Result.success(dictDataService.selectList(queryDTO));
+        return Result.success(sysDictDataService.selectList(queryDTO));
     }
 
     @Operation(summary = "批量获取字典数据（按字典类型分组）")
     @PostMapping("/data/selectGroup")
     public Result<List<DictTypeGroupVO>> getDictDataMap(@Valid @RequestBody DictDataQueryDTO queryDTO) {
-        return Result.success(dictDataService.selectGroup(queryDTO));
+        return Result.success(sysDictDataService.selectGroup(queryDTO));
     }
 
     @Operation(summary = "获取字典数据详情")
     @GetMapping("/data/detail/getById")
     public Result<SysDictDataVO> getDataInfo(@RequestParam Long dataId) {
-        return Result.success(dictDataService.getInfo(dataId));
+        return Result.success(sysDictDataService.getInfo(dataId));
     }
 
     @Operation(summary = "新增或修改字典数据")
     @PreAuthorize("hasAuthority('system:dict:add')")
     @PostMapping("/dataUpsert")
     public Result<Void> dataUpsert(@Valid @RequestBody SysDictDataUpsertDTO upsertDTO) {
-        dictDataService.upsert(upsertDTO);
+        sysDictDataService.upsert(upsertDTO);
         return Result.success("操作成功", null);
     }
 
@@ -91,7 +91,7 @@ public class DictController {
     @PreAuthorize("hasAuthority('system:dict:delete')")
     @DeleteMapping("/data/deleteById")
     public Result<Void> removeData(@RequestParam Long dataId) {
-        dictDataService.delete(dataId);
+        sysDictDataService.delete(dataId);
         return Result.success("删除成功", null);
     }
 

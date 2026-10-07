@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.OrderDictQueryPageDTO;
@@ -41,9 +42,9 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OrderDictServiceImpl implements OrderDictService {
+public class OrderDictServiceImpl extends ServiceImpl<SysOrderDictDataMapper, SysOrderDictData> implements OrderDictService {
 
-    private final SysOrderDictDataMapper dictMapper;
+    private final SysOrderDictDataMapper sysOrderDictDataMapper;
     private final DictCacheService dictCacheService;
 
     @Override
@@ -60,7 +61,7 @@ public class OrderDictServiceImpl implements OrderDictService {
                 .orderByAsc(SysOrderDictData::getId);
 
         Map<String, Long> usage = loadUsage(dictType);
-        return dictMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper)
+        return sysOrderDictDataMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper)
                 .convert(entity -> {
                     OrderDictListVO vo = new OrderDictListVO();
                     BeanUtils.copyProperties(entity, vo);
@@ -76,7 +77,7 @@ public class OrderDictServiceImpl implements OrderDictService {
     @Override
     public List<OrderDictListVO> selectList(String dictType) {
         String type = requireType(dictType);
-        List<SysOrderDictData> list = dictMapper.selectList(new LambdaQueryWrapper<SysOrderDictData>()
+        List<SysOrderDictData> list = sysOrderDictDataMapper.selectList(new LambdaQueryWrapper<SysOrderDictData>()
                 .eq(SysOrderDictData::getDictType, type)
                 .eq(SysOrderDictData::getStatus, 1)
                 .orderByAsc(SysOrderDictData::getDictSort)
@@ -139,13 +140,13 @@ public class OrderDictServiceImpl implements OrderDictService {
             entity.setDictSource(2);
             entity.setCreateBy(operator);
             entity.setUpdateBy(operator);
-            dictMapper.insert(entity);
+            sysOrderDictDataMapper.insert(entity);
             refreshCache(dictType);
             log.info("新增医嘱字典 {} = {}（{}）操作人={}", dictType, value, label, operator);
             return entity.getId();
         }
 
-        SysOrderDictData entity = dictMapper.selectById(dto.getId());
+        SysOrderDictData entity = sysOrderDictDataMapper.selectById(dto.getId());
         if (entity == null || !dictType.equals(entity.getDictType())) {
             throw new BusinessException("字典项不存在");
         }
@@ -159,7 +160,7 @@ public class OrderDictServiceImpl implements OrderDictService {
         }
         entity.setRemark(trimRemark(dto.getRemark()));
         entity.setUpdateBy(operator);
-        dictMapper.updateById(entity);
+        sysOrderDictDataMapper.updateById(entity);
         refreshCache(dictType);
         log.info("修改医嘱字典 id={} {} = {} 状态={} 操作人={}", entity.getId(), dictType, entity.getDictValue(), status, operator);
         return entity.getId();
@@ -176,12 +177,12 @@ public class OrderDictServiceImpl implements OrderDictService {
         if (id == null) {
             throw new BusinessException("字典项ID不能为空");
         }
-        SysOrderDictData entity = dictMapper.selectById(id);
+        SysOrderDictData entity = sysOrderDictDataMapper.selectById(id);
         if (entity == null || !type.equals(entity.getDictType())) {
             throw new BusinessException("字典项不存在");
         }
         // 逻辑删：字典行留着，历史医嘱按原值仍能渲染出文案
-        dictMapper.deleteById(id);
+        sysOrderDictDataMapper.deleteById(id);
         refreshCache(type);
         log.info("删除医嘱字典 id={} {} = {} 操作人={}", id, type, entity.getDictValue(), operatorUser.getRealName());
     }
@@ -199,7 +200,7 @@ public class OrderDictServiceImpl implements OrderDictService {
      * 字典数据没有 (dict_type, dict_value) 唯一键，重复值只能服务端拦
      */
     private void assertValueNotDuplicated(String dictType, String value, Long excludeId) {
-        Long hits = dictMapper.selectCount(new LambdaQueryWrapper<SysOrderDictData>()
+        Long hits = sysOrderDictDataMapper.selectCount(new LambdaQueryWrapper<SysOrderDictData>()
                 .eq(SysOrderDictData::getDictType, dictType)
                 .eq(SysOrderDictData::getDictValue, value)
                 .ne(excludeId != null, SysOrderDictData::getId, excludeId));
@@ -215,7 +216,7 @@ public class OrderDictServiceImpl implements OrderDictService {
         if (sort != null && sort > 0) {
             return sort;
         }
-        List<SysOrderDictData> list = dictMapper.selectList(new LambdaQueryWrapper<SysOrderDictData>()
+        List<SysOrderDictData> list = sysOrderDictDataMapper.selectList(new LambdaQueryWrapper<SysOrderDictData>()
                 .eq(SysOrderDictData::getDictType, dictType)
                 .orderByDesc(SysOrderDictData::getDictSort)
                 .last("LIMIT 1"));
@@ -233,7 +234,7 @@ public class OrderDictServiceImpl implements OrderDictService {
             return usage;
         }
         try {
-            for (OrderDictUsageCountVO row : dictMapper.countOrderUsage(column)) {
+            for (OrderDictUsageCountVO row : sysOrderDictDataMapper.countOrderUsage(column)) {
                 if (row.getDictValue() == null) {
                     continue;
                 }

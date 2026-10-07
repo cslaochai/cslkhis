@@ -28,34 +28,34 @@ import java.util.List;
 @RequiredArgsConstructor
 public class YbMappingController {
 
-    private final YbMappingService mappingService;
+    private final YbMappingService ybMappingService;
 
     @PreAuthorize("hasAuthority('finance:insuranceMapping:list')")
     @Operation(summary = "对照工作台分页（itemType 必填；未对照行医保字段为 null）")
     @GetMapping("/listPage")
     public Result<PageResult<YbMappingListVO>> listPage(@Valid YbMappingQueryPageDTO queryDTO) {
-        return Result.success(mappingService.listPage(queryDTO));
+        return Result.success(ybMappingService.listPage(queryDTO));
     }
 
     @PreAuthorize("hasAuthority('finance:insuranceMapping:list')")
     @Operation(summary = "各类型对照率统计")
     @GetMapping("/stats")
     public Result<List<YbMappingStatsVO>> stats() {
-        return Result.success(mappingService.stats());
+        return Result.success(ybMappingService.stats());
     }
 
     @PreAuthorize("hasAuthority('finance:insuranceMapping:edit')")
     @Operation(summary = "人工对照（已存在旧对照=换对照覆盖）")
     @PostMapping("/map")
     public Result<YbMappingListVO> map(@Valid @RequestBody YbMapDTO dto) {
-        return Result.success(mappingService.map(dto));
+        return Result.success(ybMappingService.map(dto));
     }
 
     @PreAuthorize("hasAuthority('finance:insuranceMapping:edit')")
     @Operation(summary = "解对照（物理删）")
     @PostMapping("/unmap")
     public Result<Void> unmap(@RequestParam Integer itemType, @RequestParam Long itemId) {
-        mappingService.unmap(itemType, itemId);
+        ybMappingService.unmap(itemType, itemId);
         return Result.success(null);
     }
 
@@ -63,6 +63,6 @@ public class YbMappingController {
     @Operation(summary = "自动对照（名称精确匹配且唯一命中才落；itemType 空=全部）")
     @PostMapping("/autoMatch")
     public Result<YbAutoMatchResultVO> autoMatch(@Valid @RequestBody YbAutoMatchDTO dto) {
-        return Result.success(mappingService.autoMatch(dto));
+        return Result.success(ybMappingService.autoMatch(dto));
     }
 }

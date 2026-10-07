@@ -79,7 +79,7 @@ public class Icd10RecallServiceImpl implements Icd10RecallService {
 
     private final Icd10Service icd10Service;
 
-    private final AiConfigProvider configProvider;
+    private final AiConfigProvider aiConfigProvider;
 
     private static Icd10SelectListVO toOption(SysIcd10 entity) {
         Icd10SelectListVO vo = new Icd10SelectListVO();
@@ -212,7 +212,7 @@ public class Icd10RecallServiceImpl implements Icd10RecallService {
         if (override != null && override > 0) {
             return override;
         }
-        int configured = configProvider.get().getRetrieveTopN();
+        int configured = aiConfigProvider.get().getRetrieveTopN();
         return configured > 0 ? configured : 50;
     }
 

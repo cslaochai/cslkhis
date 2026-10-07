@@ -2,11 +2,7 @@ package com.his.miniapp.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
-import com.his.miniapp.dto.ServiceMessageUpsertDTO;
-import com.his.miniapp.dto.ServiceTicketActionDTO;
-import com.his.miniapp.dto.ServiceTicketAppendDTO;
-import com.his.miniapp.dto.ServiceTraceDTO;
-import com.his.miniapp.dto.MessagePageDTO;
+import com.his.miniapp.dto.*;
 import com.his.miniapp.service.MiniappServiceMessageService;
 import com.his.miniapp.service.MiniappServiceTraceService;
 import com.his.miniapp.vo.ServiceMessageListVO;
@@ -31,14 +27,14 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class MiniappServiceController {
 
-    private final MiniappServiceMessageService messageService;
-    private final MiniappServiceTraceService traceService;
+    private final MiniappServiceMessageService miniappServiceMessageService;
+    private final MiniappServiceTraceService miniappServiceTraceService;
 
     @Operation(summary = "提交留言（归属由登录态决定）")
     @PostMapping("/messageUpsert")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<String> messageUpsert(@RequestBody @Valid ServiceMessageUpsertDTO dto) {
-        return Result.success(messageService.submit(dto));
+        return Result.success(miniappServiceMessageService.submit(dto));
     }
 
     @Operation(summary = "我的工单（分页，含处理状态与受理人）")
@@ -46,21 +42,21 @@ public class MiniappServiceController {
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<PageResult<ServiceMessageListVO>> myMessages(@Valid @RequestBody MessagePageDTO dto) {
         MessagePageDTO query = dto == null ? new MessagePageDTO() : dto;
-        return Result.success(messageService.myPage(query.getPageNum(), query.getPageSize()));
+        return Result.success(miniappServiceMessageService.myPage(query));
     }
 
     @Operation(summary = "工单详情（含流转时间轴，只能看自己的）")
     @GetMapping("/ticketDetail")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<ServiceTicketDetailVO> ticketDetail(@RequestParam Long id) {
-        return Result.success(messageService.myDetail(id));
+        return Result.success(miniappServiceMessageService.myDetail(id));
     }
 
     @Operation(summary = "补充留言（已办结的单补充会自动重开）")
     @PostMapping("/ticketAppend")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<Integer> ticketAppend(@RequestBody @Valid ServiceTicketAppendDTO dto) {
-        messageService.append(dto);
+        miniappServiceMessageService.append(dto);
         return Result.success(1);
     }
 
@@ -68,7 +64,7 @@ public class MiniappServiceController {
     @PostMapping("/ticketAction")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<Integer> ticketAction(@RequestBody @Valid ServiceTicketActionDTO dto) {
-        messageService.patientAction(dto);
+        miniappServiceMessageService.patientAction(dto);
         return Result.success(1);
     }
 
@@ -76,7 +72,7 @@ public class MiniappServiceController {
     @PostMapping("/trace")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<Integer> trace(@RequestBody @Valid ServiceTraceDTO dto) {
-        traceService.record(dto);
+        miniappServiceTraceService.record(dto);
         return Result.success(1);
     }
 

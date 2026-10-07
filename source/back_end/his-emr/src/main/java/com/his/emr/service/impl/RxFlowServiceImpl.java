@@ -2,6 +2,7 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
@@ -39,21 +40,21 @@ import java.util.concurrent.atomic.AtomicLong;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class RxFlowServiceImpl implements RxFlowService {
+public class RxFlowServiceImpl extends ServiceImpl<BizRxFlowMapper, BizRxFlow> implements RxFlowService {
 
     private static final AtomicLong SEQ = new AtomicLong();
 
-    private final BizRxFlowMapper rxFlowMapper;
-    private final BizPrescriptionMapper prescriptionMapper;
+    private final BizRxFlowMapper bizRxFlowMapper;
+    private final BizPrescriptionMapper bizPrescriptionMapper;
 
     @Override
     public RxFlowListVO createFlow(RxFlowUpsertDTO dto) {
-        BizPrescription prescription = prescriptionMapper.selectById(dto.getPrescriptionId());
+        BizPrescription prescription = bizPrescriptionMapper.selectById(dto.getPrescriptionId());
         if (prescription == null) {
             throw new BusinessException("处方不存在");
         }
         // 同一处方至多一张有效流转单（1-已流转）
-        Long active = rxFlowMapper.selectCount(new LambdaQueryWrapper<BizRxFlow>()
+        Long active = bizRxFlowMapper.selectCount(new LambdaQueryWrapper<BizRxFlow>()
                 .eq(BizRxFlow::getPrescriptionId, dto.getPrescriptionId())
                 .eq(BizRxFlow::getFlowStatus, 1));
         if (active != null && active > 0) {
@@ -74,7 +75,7 @@ public class RxFlowServiceImpl implements RxFlowService {
         flow.setFlowTime(LocalDateTime.now());
         flow.setTotalAmount(prescription.getTotalAmount());
         flow.setRemark(dto.getRemark());
-        rxFlowMapper.insert(flow);
+        bizRxFlowMapper.insert(flow);
         log.info("[处方流转口子] ===== 打印桩：处方流转单已创建（外发外联渠道，占位不真发） ===== flowNo={} prescriptionNo={} org={}",
                 flow.getFlowNo(), flow.getPrescriptionNo(), flow.getOrgName());
         return toVO(flow);
@@ -85,7 +86,7 @@ public class RxFlowServiceImpl implements RxFlowService {
         BizRxFlow flow = requireActive(dto.getFlowId());
         flow.setFlowStatus(2);
         flow.setFinishTime(LocalDateTime.now());
-        rxFlowMapper.updateById(flow);
+        bizRxFlowMapper.updateById(flow);
         log.info("[处方流转口子] ===== 打印桩：院外取药回执 ===== flowNo={} prescriptionNo={} org={}",
                 flow.getFlowNo(), flow.getPrescriptionNo(), flow.getOrgName());
     }
@@ -98,7 +99,7 @@ public class RxFlowServiceImpl implements RxFlowService {
         if (dto.getReason() != null && !dto.getReason().isBlank()) {
             flow.setRemark(flow.getRemark() == null ? dto.getReason() : flow.getRemark() + "；取消原因：" + dto.getReason());
         }
-        rxFlowMapper.updateById(flow);
+        bizRxFlowMapper.updateById(flow);
     }
 
     @Override
@@ -114,7 +115,7 @@ public class RxFlowServiceImpl implements RxFlowService {
             wrapper.eq(BizRxFlow::getFlowStatus, dto.getFlowStatus());
         }
         wrapper.orderByDesc(BizRxFlow::getId);
-        Page<BizRxFlow> page = rxFlowMapper.selectPage(
+        Page<BizRxFlow> page = bizRxFlowMapper.selectPage(
                 Page.of(dto.getPageNum(), dto.getPageSize()), wrapper);
         List<RxFlowListVO> vos = new ArrayList<>(page.getRecords().size());
         for (BizRxFlow row : page.getRecords()) {
@@ -131,7 +132,7 @@ public class RxFlowServiceImpl implements RxFlowService {
     }
 
     private BizRxFlow requireActive(Long flowId) {
-        BizRxFlow flow = rxFlowMapper.selectById(flowId);
+        BizRxFlow flow = bizRxFlowMapper.selectById(flowId);
         if (flow == null) {
             throw new BusinessException("流转单不存在");
         }

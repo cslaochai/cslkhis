@@ -1,6 +1,7 @@
 package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.PayChannelService;
@@ -39,9 +40,9 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PayChannelServiceImpl implements PayChannelService {
+public class PayChannelServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaymentTxn> implements PayChannelService {
 
-    private final BizPaymentTxnMapper paymentTxnMapper;
+    private final BizPaymentTxnMapper bizPaymentTxnMapper;
 
     /**
      * 拉取指定渠道、指定账单日的渠道侧流水。
@@ -55,7 +56,7 @@ public class PayChannelServiceImpl implements PayChannelService {
         // 反造口径：本地当日、该渠道、成功状态的支付流水，逐笔生成渠道流水。
         // 已冲正流水（txn_status=2）不进账单 —— 真渠道也不会为它出一笔钱。
         // 金额带符号照抄：退费在渠道侧同样是一笔负数，勾对时两侧同符号才比得上。
-        List<BizPaymentTxn> txns = paymentTxnMapper.selectList(new LambdaQueryWrapper<BizPaymentTxn>()
+        List<BizPaymentTxn> txns = bizPaymentTxnMapper.selectList(new LambdaQueryWrapper<BizPaymentTxn>()
                 .eq(BizPaymentTxn::getPayMethod, channel)
                 .eq(BizPaymentTxn::getTxnStatus, PayTxnStatusEnum.SUCCESS.getCode())
                 .eq(BizPaymentTxn::getTxnDate, billDate)

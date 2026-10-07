@@ -5,10 +5,10 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
+import com.his.common.util.NumUtil;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.enums.InsRecordStatusEnum;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public interface InspectionReportSignProvider extends SignableContentProvider {
@@ -46,17 +46,10 @@ public interface InspectionReportSignProvider extends SignableContentProvider {
                 .put("bodyPart", r.getBodyPart())
                 .put("inspectionPurpose", r.getInspectionPurpose())
                 .put("clinicalDiagnosis", r.getClinicalDiagnosis())
-                .put("price", plain(r.getPrice()))
+                .put("price", NumUtil.plain(r.getPrice()))
                 .put("resultDescription", r.getResultDescription())
                 .put("resultConclusion", r.getResultConclusion())
                 .build();
-    }
-
-    /**
-     * BigDecimal 去尾零：金额 {@code 10.00} 与 {@code 10.0} 必须算出同一个摘要
-     */
-    static String plain(BigDecimal v) {
-        return v == null ? null : v.stripTrailingZeros().toPlainString();
     }
 
     SignBizTypeEnum bizType();

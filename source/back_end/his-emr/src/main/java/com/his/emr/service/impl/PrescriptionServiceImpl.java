@@ -10,6 +10,7 @@ import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
@@ -47,14 +48,14 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
     static final String[] HUIFANG_TYPE = {"糖尿病", "高血压", "冠心病"};
     private static final AtomicInteger TASK_SEQ = new AtomicInteger(0);
     private static final AtomicInteger SEQ = new AtomicInteger(0);
-    private final BizPrescriptionMapper prescriptionMapper;
-    private final BizPrescriptionDetailMapper prescriptionDetailMapper;
-    private final BizInspectionApplyMapper inspectionApplyMapper;
-    private final BizLaboratoryApplyMapper laboratoryApplyMapper;
-    private final BizMedicalRecordLogMapper recordLogMapper;
-    private final EmrSignatureService signatureService;
+    private final BizPrescriptionMapper bizPrescriptionMapper;
+    private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
+    private final BizInspectionApplyMapper bizInspectionApplyMapper;
+    private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
+    private final BizMedicalRecordLogMapper bizMedicalRecordLogMapper;
+    private final EmrSignatureService emrSignatureService;
     private final SysMessageService sysMessageService;
-    private final BizPrescriptionAuditLogMapper auditLogMapper;
+    private final BizPrescriptionAuditLogMapper bizPrescriptionAuditLogMapper;
     private final DrugRationalCheckService drugRationalCheckService;
 
     @Override
@@ -63,7 +64,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         wrapper.eq(BizPrescription::getPatientId, queryDTO.getPatientId())
                 .eq(BizPrescription::getRegistId, queryDTO.getRegistId())
                 .orderByDesc(BizPrescription::getCreateTime);
-        List<BizPrescription> bizPrescriptions = prescriptionMapper.selectList(wrapper);
+        List<BizPrescription> bizPrescriptions = bizPrescriptionMapper.selectList(wrapper);
         if (CollectionUtils.isEmpty(bizPrescriptions)) {
             return Collections.emptyList();
         }
@@ -72,7 +73,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         LambdaQueryWrapper<BizPrescriptionDetail> queryDetailWrapper = new LambdaQueryWrapper<>();
         queryDetailWrapper.in(BizPrescriptionDetail::getPrescriptionId, ids)
                 .orderByDesc(BizPrescriptionDetail::getCreateTime);
-        Map<Long, List<BizPrescriptionDetail>> bizPrescriptionMap = prescriptionDetailMapper
+        Map<Long, List<BizPrescriptionDetail>> bizPrescriptionMap = bizPrescriptionDetailMapper
                 .selectList(queryDetailWrapper).stream().collect(Collectors.groupingBy(BizPrescriptionDetail::getPrescriptionId));
 
         List<BizPrescriptionVO> resultList = BeanUtil.copyToList(bizPrescriptions, BizPrescriptionVO.class);
@@ -90,7 +91,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         wrapper.eq(BizPrescription::getPatientId, patientId)
                 .ne(BizPrescription::getPrescriptionStatus, PrescriptionStatusEnum.DRAFT.getCode())
                 .orderByDesc(BizPrescription::getCreateTime);
-        List<BizPrescription> prescriptions = prescriptionMapper.selectList(wrapper);
+        List<BizPrescription> prescriptions = bizPrescriptionMapper.selectList(wrapper);
         if (CollectionUtils.isEmpty(prescriptions)) {
             return Collections.emptyList();
         }
@@ -99,7 +100,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         LambdaQueryWrapper<BizPrescriptionDetail> detailWrapper = new LambdaQueryWrapper<>();
         detailWrapper.in(BizPrescriptionDetail::getPrescriptionId, ids)
                 .orderByAsc(BizPrescriptionDetail::getId);
-        Map<Long, List<BizPrescriptionDetail>> detailMap = prescriptionDetailMapper.selectList(detailWrapper)
+        Map<Long, List<BizPrescriptionDetail>> detailMap = bizPrescriptionDetailMapper.selectList(detailWrapper)
                 .stream().collect(Collectors.groupingBy(BizPrescriptionDetail::getPrescriptionId));
 
         return prescriptions.stream().map(rx -> {
@@ -131,7 +132,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
                         .or().like(BizPrescription::getPatientNo, query.getKeyword()))
                 .orderByDesc(BizPrescription::getCreateTime);
 
-        Page<BizPrescription> page = prescriptionMapper.selectPage(
+        Page<BizPrescription> page = bizPrescriptionMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         if (CollectionUtils.isEmpty(page.getRecords())) {
             return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), Collections.emptyList());
@@ -139,7 +140,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
 
         // 批量查明细：药师审方要看得到具体药品，而逐条查会是 N+1
         List<Long> ids = page.getRecords().stream().map(BizPrescription::getId).toList();
-        Map<Long, List<BizPrescriptionDetail>> detailMap = prescriptionDetailMapper.selectList(
+        Map<Long, List<BizPrescriptionDetail>> detailMap = bizPrescriptionDetailMapper.selectList(
                         new LambdaQueryWrapper<BizPrescriptionDetail>()
                                 .in(BizPrescriptionDetail::getPrescriptionId, ids)
                                 .orderByAsc(BizPrescriptionDetail::getId))
@@ -158,7 +159,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
     @Transactional(rollbackFor = Exception.class)
     public BizPrescriptionVO auditPrescription(PrescriptionAuditDTO dto, Long auditorId, String auditorName,
                                                Long auditorDeptId, String auditorDeptName) {
-        BizPrescription p = prescriptionMapper.selectById(dto.getPrescriptionId());
+        BizPrescription p = bizPrescriptionMapper.selectById(dto.getPrescriptionId());
         if (p == null) {
             throw new BusinessException("处方不存在或已被删除");
         }
@@ -193,7 +194,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
             }
         }
         // 流水轮次 = 同病历下已有动作数 + 1（重提 = 处方先删后增，id 换了靠 record_id 串轮次）
-        Long roundNo = auditLogMapper.selectCount(new LambdaQueryWrapper<BizPrescriptionAuditLog>()
+        Long roundNo = bizPrescriptionAuditLogMapper.selectCount(new LambdaQueryWrapper<BizPrescriptionAuditLog>()
                 .eq(BizPrescriptionAuditLog::getRecordId, p.getRecordId())) + 1;
 
         if (pass) {
@@ -210,7 +211,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
             cmd.setRemark("审方：" + (opinion == null ? "" : opinion));
             SignatureVO sig;
             try {
-                sig = signatureService.sign(cmd);
+                sig = emrSignatureService.sign(cmd);
             } catch (BusinessException e) {
                 throw new BusinessException("处方 " + p.getPrescriptionNo() + " 审方失败：" + e.getMessage());
             }
@@ -221,7 +222,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
             patch.setAuditResult(RxAuditActionEnum.PASS.getCode());
             patch.setAuditBy(auditorName);
             patch.setAuditTime(sig.getSignedTime());
-            prescriptionMapper.updateById(patch);
+            bizPrescriptionMapper.updateById(patch);
             insertAuditLog(p, roundNo.longValue(), RxAuditActionEnum.PASS.getCode(), auditorId, auditorName, opinion);
             notifyDoctor(p, auditorName, true, opinion, null);
         } else {
@@ -232,16 +233,16 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
             patch.setPrescriptionStatus(PrescriptionStatusEnum.RETURNED_AUDIT.getCode());
             patch.setAuditResult(RxAuditActionEnum.RETURN.getCode());
             patch.setReturnReason(opinion.trim());
-            patch.setReturnTime(java.time.LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+            patch.setReturnTime(TimeUtil.nowSeconds());
             patch.setReturnCount((p.getReturnCount() == null ? 0 : p.getReturnCount()) + 1);
-            prescriptionMapper.updateById(patch);
+            bizPrescriptionMapper.updateById(patch);
             insertAuditLog(p, roundNo.longValue(), RxAuditActionEnum.RETURN.getCode(), auditorId, auditorName, opinion.trim());
             notifyDoctor(p, auditorName, false, opinion.trim(), patch.getReturnCount());
         }
 
-        BizPrescription fresh = prescriptionMapper.selectById(p.getId());
+        BizPrescription fresh = bizPrescriptionMapper.selectById(p.getId());
         if (fresh != null) {
-            fresh.setDetails(prescriptionDetailMapper.selectList(
+            fresh.setDetails(bizPrescriptionDetailMapper.selectList(
                     new LambdaQueryWrapper<BizPrescriptionDetail>()
                             .eq(BizPrescriptionDetail::getPrescriptionId, p.getId())
                             .orderByAsc(BizPrescriptionDetail::getId)));
@@ -256,7 +257,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         }
         // 入参可能带重复 id（前端整页勾选 + 单行点击同时触发），Set 保序去重，返回顺序与入参一致
         List<Long> ids = new ArrayList<>(new LinkedHashSet<>(prescriptionIds));
-        Map<Long, List<BizPrescriptionDetail>> detailMap = prescriptionDetailMapper.selectList(
+        Map<Long, List<BizPrescriptionDetail>> detailMap = bizPrescriptionDetailMapper.selectList(
                         new LambdaQueryWrapper<BizPrescriptionDetail>()
                                 .in(BizPrescriptionDetail::getPrescriptionId, ids)
                                 .ne(BizPrescriptionDetail::getDetailStatus, PrescriptionDetailStatusEnum.RETURNED.getCode())
@@ -322,7 +323,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         logRow.setAuditorName(auditorName);
         // 写库文本先截到列宽，防止 Data too long 把业务失败升级成 500
         logRow.setOpinion(opinion != null && opinion.length() > 500 ? opinion.substring(0, 500) : opinion);
-        auditLogMapper.insert(logRow);
+        bizPrescriptionAuditLogMapper.insert(logRow);
     }
 
     /**
@@ -380,7 +381,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         LambdaQueryWrapper<BizInspectionApply> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizInspectionApply::getPatientId, queryDTO.getPatientId())
                 .orderByDesc(BizInspectionApply::getCreateTime);
-        return inspectionApplyMapper.selectList(wrapper);
+        return bizInspectionApplyMapper.selectList(wrapper);
     }
 
     @Override
@@ -388,7 +389,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         LambdaQueryWrapper<BizLaboratoryApply> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizLaboratoryApply::getPatientId, queryDTO.getPatientId())
                 .orderByDesc(BizLaboratoryApply::getCreateTime);
-        return laboratoryApplyMapper.selectList(wrapper);
+        return bizLaboratoryApplyMapper.selectList(wrapper);
     }
 
     private void addRecordLog(Long recordId, String recordNo, String operation,
@@ -400,6 +401,6 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         log.setFieldName(fieldName);
         log.setOldValue(oldValue);
         log.setNewValue(newValue);
-        recordLogMapper.insert(log);
+        bizMedicalRecordLogMapper.insert(log);
     }
 }

@@ -1,40 +1,18 @@
 package com.his.system.service.impl;
 
-import com.his.system.service.DutyRosterService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.enums.AttendModeEnum;
-import com.his.common.enums.DutyLevelEnum;
-import com.his.common.enums.DutyRoleTypeEnum;
-import com.his.common.enums.DutyScopeEnum;
-import com.his.common.enums.DutyShiftTypeEnum;
-import com.his.common.enums.EnableStatusEnum;
-import com.his.common.enums.OrgUnitTypeEnum;
-import com.his.common.enums.ShiftUseScopeEnum;
-import com.his.common.enums.StaffDutyStatusEnum;
-import com.his.common.enums.StaffScheduleSourceEnum;
-import com.his.common.enums.StaffTypeEnum;
-import com.his.common.enums.YesOrNoEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.system.dto.DutyRosterQueryPageDTO;
-import com.his.system.dto.DutyRosterUpsertDTO;
-import com.his.system.dto.DutySubstituteDTO;
-import com.his.system.dto.StaffScheduleSwapDTO;
-import com.his.system.dto.StaffScheduleUpsertDTO;
-import com.his.system.entity.BizDutyPost;
-import com.his.system.entity.BizDutyRoster;
-import com.his.system.entity.BizShift;
-import com.his.system.entity.BizStaffSchedule;
-import com.his.system.entity.SysDepartment;
-import com.his.system.entity.SysEmployee;
-import com.his.system.mapper.BizDutyPostMapper;
-import com.his.system.mapper.BizDutyRosterMapper;
-import com.his.system.mapper.BizShiftMapper;
-import com.his.system.mapper.SysDepartmentMapper;
-import com.his.system.mapper.SysEmployeeMapper;
+import com.his.common.util.TextUtil;
+import com.his.system.dto.*;
+import com.his.system.entity.*;
+import com.his.system.mapper.*;
+import com.his.system.service.DutyRosterService;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffScheduleService;
 import com.his.system.vo.DutyOfficerVO;
@@ -47,11 +25,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * 全院总值班排班服务。
@@ -82,32 +56,40 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DutyRosterServiceImpl implements DutyRosterService {
+public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizDutyRoster> implements DutyRosterService {
 
-    /** 白班起点 / 夜班起点（解析「此刻属于哪一段」用，与班次字典的值守册同口径） */
+    /**
+     * 白班起点 / 夜班起点（解析「此刻属于哪一段」用，与班次字典的值守册同口径）
+     */
     private static final int DAY_START_HOUR = 8;
     private static final int NIGHT_START_HOUR = 18;
 
-    /** 列表默认窗口：昨天（凌晨解析用）起，往后 30 天 */
+    /**
+     * 列表默认窗口：昨天（凌晨解析用）起，往后 30 天
+     */
     private static final int DEFAULT_BACK_DAYS = 1;
     private static final int DEFAULT_FORWARD_DAYS = 30;
 
-    private final BizDutyRosterMapper rosterMapper;
-    private final BizDutyPostMapper dutyPostMapper;
-    private final BizShiftMapper shiftMapper;
-    private final SysEmployeeMapper employeeMapper;
-    private final SysDepartmentMapper departmentMapper;
+    private final BizDutyRosterMapper bizDutyRosterMapper;
+    private final BizDutyPostMapper bizDutyPostMapper;
+    private final BizShiftMapper bizShiftMapper;
+    private final SysEmployeeMapper sysEmployeeMapper;
+    private final SysDepartmentMapper sysDepartmentMapper;
     private final ShiftService shiftService;
     private final StaffScheduleService staffScheduleService;
 
     // 「今天谁负责」—— 三条链路共同依赖的唯一入口
 
-    /** 当前时刻的总值班（跨自然日的夜班按开始日解析） */
+    /**
+     * 当前时刻的总值班（跨自然日的夜班按开始日解析）
+     */
     public DutyOfficerVO current() {
         return currentAt(LocalDateTime.now());
     }
 
-    /** 指定时刻的总值班（定时任务的补跑 / 验证脚本要能按点验算，所以显式开放） */
+    /**
+     * 指定时刻的总值班（定时任务的补跑 / 验证脚本要能按点验算，所以显式开放）
+     */
     public DutyOfficerVO currentAt(LocalDateTime at) {
         LocalDate date;
         int shift;
@@ -166,7 +148,7 @@ public class DutyRosterServiceImpl implements DutyRosterService {
      * 要看科室医师值班请走 {@code listPage} 带 {@code dutyScope=6}。
      */
     private List<DutyRosterVO> listOf(LocalDate date, Boolean adminOnly) {
-        List<BizDutyRoster> rows = rosterMapper.selectList(new LambdaQueryWrapper<BizDutyRoster>()
+        List<BizDutyRoster> rows = bizDutyRosterMapper.selectList(new LambdaQueryWrapper<BizDutyRoster>()
                 .eq(BizDutyRoster::getDutyDate, date)
                 .orderByAsc(BizDutyRoster::getShiftType)
                 .orderByAsc(BizDutyRoster::getRoleType)
@@ -209,14 +191,16 @@ public class DutyRosterServiceImpl implements DutyRosterService {
                 .orderByAsc(BizDutyRoster::getShiftType)
                 .orderByAsc(BizDutyRoster::getRoleType)
                 .orderByAsc(BizDutyRoster::getId);
-        IPage<BizDutyRoster> page = rosterMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
+        IPage<BizDutyRoster> page = bizDutyRosterMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
         List<DutyRosterVO> list = toRosterVOs(page.getRecords());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), list);
     }
 
-    /** 某个责任范围下的全部点位ID（临床=6 一次能捞出 24 个科室位） */
+    /**
+     * 某个责任范围下的全部点位ID（临床=6 一次能捞出 24 个科室位）
+     */
     private List<Long> postIdsOfScope(Integer dutyScope) {
-        List<BizDutyPost> posts = dutyPostMapper.selectList(new LambdaQueryWrapper<BizDutyPost>()
+        List<BizDutyPost> posts = bizDutyPostMapper.selectList(new LambdaQueryWrapper<BizDutyPost>()
                 .eq(BizDutyPost::getDutyScope, dutyScope)
                 .eq(BizDutyPost::getStatus, EnableStatusEnum.ENABLED.getCode()));
         List<Long> ids = new ArrayList<>();
@@ -234,7 +218,7 @@ public class DutyRosterServiceImpl implements DutyRosterService {
                 .filter(Objects::nonNull).distinct().toList();
         Map<Long, BizDutyPost> posts = new HashMap<>();
         if (!postIds.isEmpty()) {
-            for (BizDutyPost p : dutyPostMapper.selectBatchIds(postIds)) {
+            for (BizDutyPost p : bizDutyPostMapper.selectBatchIds(postIds)) {
                 posts.put(p.getId(), p);
             }
         }
@@ -256,7 +240,7 @@ public class DutyRosterServiceImpl implements DutyRosterService {
         if (post != null) {
             assertPostStaffType(post, emp);
         }
-        BizShift shift = post != null ? shiftMapper.selectById(post.getShiftId()) : dutyShiftOf(shiftType);
+        BizShift shift = post != null ? bizShiftMapper.selectById(post.getShiftId()) : dutyShiftOf(shiftType);
         if (post != null && shift == null) {
             throw new BusinessException("点位「" + post.getPostName() + "」绑定的班次不存在，请先到点位维护里重新绑定班次");
         }
@@ -284,8 +268,8 @@ public class DutyRosterServiceImpl implements DutyRosterService {
         row.setShiftId(shift == null ? null : shift.getId());
         row.setPostId(post == null ? null : post.getId());
         // 时刻一律以班次为准，手填只在值守册还没配班次时兜底（历史行就是这个形状）
-        row.setStartTime(shift != null ? shift.getStartTime() : trimToNull(dto.getStartTime()));
-        row.setEndTime(shift != null ? shift.getEndTime() : trimToNull(dto.getEndTime()));
+        row.setStartTime(shift != null ? shift.getStartTime() : TextUtil.trimToNull(dto.getStartTime()));
+        row.setEndTime(shift != null ? shift.getEndTime() : TextUtil.trimToNull(dto.getEndTime()));
         row.setStatus(enabled ? EnableStatusEnum.ENABLED.getCode() : EnableStatusEnum.DISABLED.getCode());
         row.setRemark(dto.getRemark());
         row.setStaffScheduleId(enabled && shift != null
@@ -321,13 +305,15 @@ public class DutyRosterServiceImpl implements DutyRosterService {
         row.setSubstituteReason(dto.getSubstituteReason().trim());
         // 换班后联系电话跟着人走：留了新号码就用新的，否则回落新员工档案手机
         row.setPhone(StringUtils.hasText(dto.getPhone()) ? dto.getPhone().trim() : emp.getPhone());
-        rosterMapper.updateById(row);
+        bizDutyRosterMapper.updateById(row);
         log.info("总值班换班 date={} shift={} role={} 原={} 现={} 原因={}",
                 row.getDutyDate(), row.getShiftType(), row.getRoleType(),
                 row.getEmployeeName(), emp.getEmpName(), row.getSubstituteReason());
     }
 
-    /** 取消换班：恢复成原排班人（换班错了要能撤回，但撤回本身也留痕） */
+    /**
+     * 取消换班：恢复成原排班人（换班错了要能撤回，但撤回本身也留痕）
+     */
     @Transactional(rollbackFor = Exception.class)
     public void cancelSubstitute(Long id) {
         BizDutyRoster row = requireRow(id);
@@ -339,8 +325,8 @@ public class DutyRosterServiceImpl implements DutyRosterService {
         // 结果是"撤回"静默无效 —— 界面显示已撤回，解析出来还是换班后的人（本项目最典型的静默错误）。
         // 电话必须一并还原：换班时 phone 被改成了换班人的号码，不清回去，
         // 「撤回」之后打通的还是已经不值班那个人的手机 —— 应急链路上这是致命的。
-        SysEmployee origin = employeeMapper.selectById(row.getEmployeeId());
-        rosterMapper.update(null, new LambdaUpdateWrapper<BizDutyRoster>()
+        SysEmployee origin = sysEmployeeMapper.selectById(row.getEmployeeId());
+        bizDutyRosterMapper.update(null, new LambdaUpdateWrapper<BizDutyRoster>()
                 .eq(BizDutyRoster::getId, row.getId())
                 .set(BizDutyRoster::getSubstituteEmpId, null)
                 .set(BizDutyRoster::getSubstituteEmpName, null)
@@ -349,15 +335,17 @@ public class DutyRosterServiceImpl implements DutyRosterService {
                 .set(BizDutyRoster::getPhone, origin == null ? null : origin.getPhone()));
     }
 
-    /** 删除排班（物理删：唯一键不含 del_flag，软删后同日同班次同角色再也排不上） */
+    /**
+     * 删除排班（物理删：唯一键不含 del_flag，软删后同日同班次同角色再也排不上）
+     */
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
-        BizDutyRoster row = rosterMapper.selectById(id);
+        BizDutyRoster row = bizDutyRosterMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("排班记录不存在");
         }
         Long factId = row.getStaffScheduleId();
-        rosterMapper.purgeById(id);
+        bizDutyRosterMapper.purgeById(id);
         if (factId != null) {
             releaseFactIfUnused(factId);
         }
@@ -366,7 +354,7 @@ public class DutyRosterServiceImpl implements DutyRosterService {
     // 内部
 
     private BizDutyRoster requireRow(Long id) {
-        BizDutyRoster row = id == null ? null : rosterMapper.selectById(id);
+        BizDutyRoster row = id == null ? null : bizDutyRosterMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("排班记录不存在");
         }
@@ -380,10 +368,10 @@ public class DutyRosterServiceImpl implements DutyRosterService {
      */
     private void saveRow(BizDutyRoster row, boolean insert) {
         if (insert) {
-            rosterMapper.insert(row);
+            bizDutyRosterMapper.insert(row);
             return;
         }
-        rosterMapper.update(null, new LambdaUpdateWrapper<BizDutyRoster>()
+        bizDutyRosterMapper.update(null, new LambdaUpdateWrapper<BizDutyRoster>()
                 .eq(BizDutyRoster::getId, row.getId())
                 .set(BizDutyRoster::getEmployeeId, row.getEmployeeId())
                 .set(BizDutyRoster::getEmployeeName, row.getEmployeeName())
@@ -432,7 +420,9 @@ public class DutyRosterServiceImpl implements DutyRosterService {
         return staffScheduleService.ensureAttendance(core, StaffScheduleSourceEnum.MANUAL);
     }
 
-    /** 把这条位的在岗事实交给承接的人（人没变就不动，避免每次都记一条换班留痕） */
+    /**
+     * 把这条位的在岗事实交给承接的人（人没变就不动，避免每次都记一条换班留痕）
+     */
     private void transferAttendance(BizDutyRoster row, Long toEmployeeId, String reason) {
         if (row.getStaffScheduleId() == null || toEmployeeId == null) {
             // 绑不上事实的两种情形：收敛之前建的历史行、这条位已停用。位上的记录照写，
@@ -451,9 +441,11 @@ public class DutyRosterServiceImpl implements DutyRosterService {
         staffScheduleService.swap(swap);
     }
 
-    /** 这条在岗事实不再被任何值守位引用时，把事实收掉（同一个人主班副班共用一条时不能误删） */
+    /**
+     * 这条在岗事实不再被任何值守位引用时，把事实收掉（同一个人主班副班共用一条时不能误删）
+     */
     private void releaseFactIfUnused(Long staffScheduleId) {
-        Long holding = rosterMapper.selectCount(new LambdaQueryWrapper<BizDutyRoster>()
+        Long holding = bizDutyRosterMapper.selectCount(new LambdaQueryWrapper<BizDutyRoster>()
                 .eq(BizDutyRoster::getStaffScheduleId, staffScheduleId));
         if (holding == null || holding == 0L) {
             staffScheduleService.deleteById(staffScheduleId);
@@ -489,7 +481,7 @@ public class DutyRosterServiceImpl implements DutyRosterService {
      */
     private BizDutyPost resolvePost(DutyRosterUpsertDTO dto, DutyRoleTypeEnum roleType) {
         if (dto.getPostId() != null) {
-            BizDutyPost post = dutyPostMapper.selectById(dto.getPostId());
+            BizDutyPost post = bizDutyPostMapper.selectById(dto.getPostId());
             if (post == null || Objects.equals(1, post.getDelFlag())) {
                 throw new BusinessException("值班点位不存在或已删除");
             }
@@ -502,7 +494,7 @@ public class DutyRosterServiceImpl implements DutyRosterService {
         if (shift == null) {
             return null;
         }
-        List<BizDutyPost> posts = dutyPostMapper.selectList(new LambdaQueryWrapper<BizDutyPost>()
+        List<BizDutyPost> posts = bizDutyPostMapper.selectList(new LambdaQueryWrapper<BizDutyPost>()
                 .eq(BizDutyPost::getShiftId, shift.getId())
                 .eq(BizDutyPost::getRoleType, roleType.getCode())
                 .eq(BizDutyPost::getDutyScope, DutyScopeEnum.ADMIN.getCode())
@@ -530,9 +522,11 @@ public class DutyRosterServiceImpl implements DutyRosterService {
         }
     }
 
-    /** 全部「全院行政」点位ID —— 「此刻谁负责」只在这些位上解析 */
+    /**
+     * 全部「全院行政」点位ID —— 「此刻谁负责」只在这些位上解析
+     */
     private List<Long> adminPostIds() {
-        List<BizDutyPost> posts = dutyPostMapper.selectList(new LambdaQueryWrapper<BizDutyPost>()
+        List<BizDutyPost> posts = bizDutyPostMapper.selectList(new LambdaQueryWrapper<BizDutyPost>()
                 .eq(BizDutyPost::getDutyScope, DutyScopeEnum.ADMIN.getCode())
                 .eq(BizDutyPost::getStatus, EnableStatusEnum.ENABLED.getCode()));
         List<Long> ids = new ArrayList<>();
@@ -566,7 +560,7 @@ public class DutyRosterServiceImpl implements DutyRosterService {
                 })
                 .orderByAsc(BizDutyRoster::getId)
                 .last("LIMIT 1");
-        List<BizDutyRoster> rows = rosterMapper.selectList(w);
+        List<BizDutyRoster> rows = bizDutyRosterMapper.selectList(w);
         return rows.isEmpty() ? null : rows.get(0);
     }
 
@@ -587,7 +581,7 @@ public class DutyRosterServiceImpl implements DutyRosterService {
                     .isNull(BizDutyRoster::getPostId);
         }
         w.orderByAsc(BizDutyRoster::getId).last("LIMIT 1");
-        List<BizDutyRoster> rows = rosterMapper.selectList(w);
+        List<BizDutyRoster> rows = bizDutyRosterMapper.selectList(w);
         return rows.isEmpty() ? null : rows.get(0);
     }
 
@@ -664,7 +658,9 @@ public class DutyRosterServiceImpl implements DutyRosterService {
         return vo;
     }
 
-    /** 联系电话：行内电话（换班后就是换班人的）→ 员工档案手机。都为空返回 null，不编造号码 */
+    /**
+     * 联系电话：行内电话（换班后就是换班人的）→ 员工档案手机。都为空返回 null，不编造号码
+     */
     private String resolvePhone(BizDutyRoster r, Long empId) {
         if (StringUtils.hasText(r.getPhone())) {
             return r.getPhone();
@@ -672,12 +668,12 @@ public class DutyRosterServiceImpl implements DutyRosterService {
         if (empId == null) {
             return null;
         }
-        SysEmployee emp = employeeMapper.selectById(empId);
+        SysEmployee emp = sysEmployeeMapper.selectById(empId);
         return emp == null ? null : emp.getPhone();
     }
 
     private SysEmployee requireOnDutyEmployee(Long empId) {
-        SysEmployee emp = employeeMapper.selectById(empId);
+        SysEmployee emp = sysEmployeeMapper.selectById(empId);
         if (emp == null || (emp.getDelFlag() != null && emp.getDelFlag() == 1)) {
             throw new BusinessException("值班人不存在");
         }
@@ -696,12 +692,8 @@ public class DutyRosterServiceImpl implements DutyRosterService {
         if (emp.getDeptId() == null) {
             return null;
         }
-        SysDepartment dept = departmentMapper.selectById(emp.getDeptId());
+        SysDepartment dept = sysDepartmentMapper.selectById(emp.getDeptId());
         return dept == null ? null : dept.getDeptName();
-    }
-
-    private String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
     }
 
     private String shiftText(Integer shift) {
@@ -709,7 +701,9 @@ public class DutyRosterServiceImpl implements DutyRosterService {
                 ? DutyShiftTypeEnum.NIGHT.getLabel() : DutyShiftTypeEnum.DAY.getLabel();
     }
 
-    /** 班内角色文案：角色码认不出来时按副班显示（与「主班优先、其余顶上」的解析口径一致） */
+    /**
+     * 班内角色文案：角色码认不出来时按副班显示（与「主班优先、其余顶上」的解析口径一致）
+     */
     private String roleText(Integer roleType) {
         DutyRoleTypeEnum role = DutyRoleTypeEnum.fromCode(roleType);
         return role == null ? DutyRoleTypeEnum.SECONDARY.getLabel() : role.getLabel();

@@ -1,5 +1,6 @@
 package com.his.medicaltech.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
@@ -38,14 +39,14 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class CdrServiceImpl implements CdrService {
+public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> implements CdrService {
 
     private static final String ANCHOR_REGIST = "REGIST";
     private static final String ANCHOR_ADMISSION = "ADMISSION";
     private static final String ANCHOR_EMERGENCY = "EMERGENCY";
     private static final String ANCHOR_PATIENT = "PATIENT";
     private final CdrMapper cdrMapper;
-    private final BizPatientMapper patientMapper;
+    private final BizPatientMapper bizPatientMapper;
     private final PatientIndexService patientIndexService;
     private DictCacheService dictCacheService;
 
@@ -124,7 +125,7 @@ public class CdrServiceImpl implements CdrService {
             throw new BusinessException("患者ID不能为空");
         }
         Long pid = dto.getPatientId();
-        BizPatient main = patientMapper.selectById(pid);
+        BizPatient main = bizPatientMapper.selectById(pid);
         if (main == null) {
             throw new BusinessException("患者不存在或已删除");
         }

@@ -19,6 +19,7 @@ import com.his.common.enums.RefundApplyStatusEnum;
 import com.his.common.enums.TxnSourceEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -68,7 +69,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
     /**
      * 列表/详情回显"钱是怎么退出去的"（退款流水在 L3，一笔申请可能拆成多笔）
      */
-    private final BizPaymentTxnMapper paymentTxnMapper;
+    private final BizPaymentTxnMapper bizPaymentTxnMapper;
     /**
      * 发起前的药品退费闸（L1 记账行的来源锚点 + 发药状态，见 sql/154）
      */
@@ -94,13 +95,6 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         RefundApplyStatusEnum current = RefundApplyStatusEnum.getByCode(applyStatus);
         return "当前状态是「" + (current == null ? applyStatus : current.getDesc()) + "」，不允许" + action
                 + "（审核只认待审核、执行只认审核通过、作废只认待审核或审核通过）";
-    }
-
-    private static String cut(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        return text.length() <= max ? text : text.substring(0, max);
     }
 
     @Override
@@ -139,7 +133,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
             return result;
         }
         Map<Long, List<BizPaymentTxn>> refunds = new HashMap<>();
-        List<BizPaymentTxn> txns = paymentTxnMapper.selectRefundsByApplyIds(
+        List<BizPaymentTxn> txns = bizPaymentTxnMapper.selectRefundsByApplyIds(
                 applies.stream().map(BizRefundApply::getId).collect(Collectors.toList()));
         for (BizPaymentTxn txn : txns) {
             refunds.computeIfAbsent(txn.getApplyId(), k -> new ArrayList<>()).add(txn);
@@ -287,7 +281,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         apply.setCancelBy(operatorUser.getRealName());
         apply.setCancelTime(LocalDateTime.now());
         // 先截到列宽再落库：超长会让这句"作废"本身变成 500，用户连申请单都关不掉
-        apply.setCancelReason(cut(reason.trim(), W_CANCEL_REASON));
+        apply.setCancelReason(TextUtil.cut(reason.trim(), W_CANCEL_REASON));
         return this.updateById(apply);
     }
 
@@ -323,7 +317,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         BillRefundDTO dto = new BillRefundDTO();
         dto.setBillId(apply.getBillId());
         dto.setFeeIds(targets.stream().map(RefundableLineVO::getFeeRecordId).collect(Collectors.toList()));
-        dto.setReason(cut("退费申请 " + apply.getRefundApplyNo() + "：" + apply.getRefundReason(), 500));
+        dto.setReason(TextUtil.cut("退费申请 " + apply.getRefundApplyNo() + "：" + apply.getRefundReason(), 500));
         dto.setSourceType(TxnSourceEnum.REFUND_APPLY.getCode());
         dto.setApplyId(apply.getId());
         dto.setApplyNo(apply.getRefundApplyNo());

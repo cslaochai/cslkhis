@@ -3,9 +3,11 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DietConfirmDTO;
 import com.his.patient.dto.DietPlanQueryPageDTO;
@@ -54,15 +56,15 @@ import java.util.Set;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DietPlanServiceImpl implements DietPlanService {
+public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietPlan> implements DietPlanService {
     private static final String PREFIX_PLAN = "DP";
     private final DeptScopeProvider deptScopeProvider;
-    private final BizDietPlanMapper planMapper;
-    private final BizMealOrderMapper mealMapper;
-    private final BizAdmissionMapper admissionMapper;
-    private final BizPatientMapper patientMapper;
-    private final SysBedMapper bedMapper;
-    private final NutritionStatMapper statMapper;
+    private final BizDietPlanMapper bizDietPlanMapper;
+    private final BizMealOrderMapper bizMealOrderMapper;
+    private final BizAdmissionMapper bizAdmissionMapper;
+    private final BizPatientMapper bizPatientMapper;
+    private final SysBedMapper sysBedMapper;
+    private final NutritionStatMapper nutritionStatMapper;
 
     // 下拉 / 查询
 
@@ -71,17 +73,6 @@ public class DietPlanServiceImpl implements DietPlanService {
             return add;
         }
         return origin.trim() + "；" + add;
-    }
-
-    private static String trim(String v) {
-        return v == null ? null : v.trim();
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        return v.length() <= max ? v : v.substring(0, max);
     }
 
     @Override
@@ -113,16 +104,16 @@ public class DietPlanServiceImpl implements DietPlanService {
 
     @Override
     public List<WardVO> wardOptions() {
-        return bedMapper.selectWardList();
+        return sysBedMapper.selectWardList();
     }
 
     @Override
     public PageResult<DietPlanVO> planListPage(DietPlanQueryPageDTO query) {
-        query.setKeyword(trim(query.getKeyword()));
-        query.setDietCode(trim(query.getDietCode()));
+        query.setKeyword(TextUtil.trim(query.getKeyword()));
+        query.setDietCode(TextUtil.trim(query.getDietCode()));
         applyDeptScope(query);
         Page<DietPlanVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        Page<DietPlanVO> result = (Page<DietPlanVO>) planMapper.selectPlanPage(page, query);
+        Page<DietPlanVO> result = (Page<DietPlanVO>) bizDietPlanMapper.selectPlanPage(page, query);
         result.getRecords().forEach(this::decorate);
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
                 result.getRecords());
@@ -136,7 +127,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        List<DietPlanVO> rows = planMapper.selectByAdmission(admissionId);
+        List<DietPlanVO> rows = bizDietPlanMapper.selectByAdmission(admissionId);
         rows.forEach(this::decorate);
         return rows;
     }
@@ -153,7 +144,7 @@ public class DietPlanServiceImpl implements DietPlanService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DietPlanVO planUpsert(DietPlanUpsertDTO dto) {
-        String code = trim(dto.getDietCode());
+        String code = TextUtil.trim(dto.getDietCode());
         NutritionRules.Diet diet = NutritionRules.dietOf(code);
         if (diet == null) {
             throw new BusinessException("饮食类型码不合法，请从饮食目录中选择");
@@ -171,15 +162,15 @@ public class DietPlanServiceImpl implements DietPlanService {
         if (insert) {
             BizAdmission admission = requireAdmission(dto.getAdmissionId());
             BizPatient patient = admission.getPatientId() == null ? null
-                    : patientMapper.selectById(admission.getPatientId());
+                    : bizPatientMapper.selectById(admission.getPatientId());
             row = new BizDietPlan();
-            row.setDietNo(nextNo(PREFIX_PLAN, planMapper.maxDietSeq(PREFIX_PLAN + LocalDate.now().format(DateFormats.COMPACT_DATE))));
+            row.setDietNo(nextNo(PREFIX_PLAN, bizDietPlanMapper.maxDietSeq(PREFIX_PLAN + LocalDate.now().format(DateFormats.COMPACT_DATE))));
             row.setAdmissionId(admission.getAdmissionId());
             row.setPatientId(admission.getPatientId());
             row.setPatientNo(patient == null ? null : patient.getPatientNo());
             row.setPatientName(patient == null ? null : patient.getPatientName());
             row.setDeptId(admission.getDeptId());
-            row.setDeptName(admission.getDeptId() == null ? null : statMapper.selectDeptName(admission.getDeptId()));
+            row.setDeptName(admission.getDeptId() == null ? null : nutritionStatMapper.selectDeptName(admission.getDeptId()));
             row.setWardId(admission.getWardId());
             row.setWardName(wardName(admission.getWardId()));
             row.setBedNo(bedNo(admission.getBedId()));
@@ -191,7 +182,7 @@ public class DietPlanServiceImpl implements DietPlanService {
             row.setConfirmerId(UserUtils.getCurrentUser().getEmployeeId());
             row.setConfirmerName(operatorUser.getRealName());
         } else {
-            row = planMapper.selectById(dto.getId());
+            row = bizDietPlanMapper.selectById(dto.getId());
             if (row == null) {
                 throw new BusinessException("膳食方案不存在或已删除");
             }
@@ -207,9 +198,9 @@ public class DietPlanServiceImpl implements DietPlanService {
 
         row.setDietCode(diet.code());
         row.setDietCategory(diet.category());
-        row.setDietName(StringUtils.hasText(dto.getDietName()) ? trim(dto.getDietName()) : diet.name());
+        row.setDietName(StringUtils.hasText(dto.getDietName()) ? TextUtil.trim(dto.getDietName()) : diet.name());
         row.setRoute(diet.route());
-        row.setFeedWay(cut(trim(dto.getFeedWay()), 100));
+        row.setFeedWay(TextUtil.cut(TextUtil.trim(dto.getFeedWay()), 100));
         row.setCalorieTarget(dto.getCalorieTarget() == null ? diet.calorie() : dto.getCalorieTarget());
         row.setProteinTarget(dto.getProteinTarget() == null ? diet.protein() : dto.getProteinTarget());
         row.setFluidTarget(dto.getFluidTarget());
@@ -217,21 +208,21 @@ public class DietPlanServiceImpl implements DietPlanService {
         if (row.getStartTime() == null) {
             row.setStartTime(TimeUtil.toSeconds(dto.getStartTime() == null ? LocalDateTime.now() : dto.getStartTime()));
         }
-        row.setRemark(cut(trim(dto.getRemark()), 500));
+        row.setRemark(TextUtil.cut(TextUtil.trim(dto.getRemark()), 500));
 
         if (insert) {
             try {
-                planMapper.insert(row);
+                bizDietPlanMapper.insert(row);
             } catch (DuplicateKeyException e) {
                 throw new BusinessException("膳食方案号生成冲突（并发登记），请重试");
             }
             log.info("膳食方案登记 住院={} 饮食={} 途径={} 操作人={}", row.getAdmissionId(), diet.code(),
                     diet.route(), operatorUser.getRealName());
         } else {
-            planMapper.updateById(row);
+            bizDietPlanMapper.updateById(row);
             log.info("膳食方案修改 id={} 饮食={} 操作人={}", row.getId(), diet.code(), operatorUser.getRealName());
         }
-        return planMapper.selectVoById(row.getId());
+        return bizDietPlanMapper.selectVoById(row.getId());
     }
 
     // 医嘱链钩子
@@ -260,7 +251,7 @@ public class DietPlanServiceImpl implements DietPlanService {
             throw new BusinessException("当前用户信息不存在");
         }
         boolean accept = Boolean.TRUE.equals(dto.getAccept());
-        String reason = cut(trim(dto.getRejectReason()), 500);
+        String reason = TextUtil.cut(TextUtil.trim(dto.getRejectReason()), 500);
         if (!accept && !StringUtils.hasText(reason)) {
             // ①条件必填：只有退回（accept=false）才必填原因，@NotBlank 会把合法的接收请求挡成 400
             throw new BusinessException("退回膳食方案必须填写原因");
@@ -275,7 +266,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         // 批量要么全成要么全不动：一半接收一半报错，营养科说不清哪些单子已经生效
         List<BizDietPlan> rows = new ArrayList<>(ids.size());
         for (Long id : ids) {
-            BizDietPlan row = planMapper.selectById(id);
+            BizDietPlan row = bizDietPlanMapper.selectById(id);
             if (row == null) {
                 throw new BusinessException("膳食方案不存在（ID=" + id + "）");
             }
@@ -299,7 +290,7 @@ public class DietPlanServiceImpl implements DietPlanService {
             row.setConfirmerId(UserUtils.getCurrentUser().getEmployeeId());
             row.setConfirmerName(operatorUser.getRealName());
             row.setRejectReason(accept ? null : reason);
-            planMapper.updateById(row);
+            bizDietPlanMapper.updateById(row);
         }
         log.info("膳食方案{} 条数={} 操作人={} ids={}", accept ? "接收" : "退回", rows.size(), operatorUser.getRealName(), ids);
         return rows.size();
@@ -308,7 +299,7 @@ public class DietPlanServiceImpl implements DietPlanService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DietPlanVO planStop(DietPlanStopDTO dto) {
-        BizDietPlan row = planMapper.selectById(dto.getId());
+        BizDietPlan row = bizDietPlanMapper.selectById(dto.getId());
         if (row == null) {
             throw new BusinessException("膳食方案不存在或已删除");
         }
@@ -317,8 +308,8 @@ public class DietPlanServiceImpl implements DietPlanService {
                     + PlanStatusEnum.labelOrUnknown(row.getPlanStatus()) + "」，不需要再停止");
         }
         LocalDateTime stopTime = TimeUtil.toSeconds(dto.getStopTime() == null ? LocalDateTime.now() : dto.getStopTime());
-        applyStop(row, stopTime, trim(dto.getReason()));
-        return planMapper.selectVoById(row.getId());
+        applyStop(row, stopTime, TextUtil.trim(dto.getReason()));
+        return bizDietPlanMapper.selectVoById(row.getId());
     }
 
     // 内部
@@ -326,12 +317,12 @@ public class DietPlanServiceImpl implements DietPlanService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int planDeleteById(Long id) {
-        BizDietPlan row = planMapper.selectById(id);
+        BizDietPlan row = bizDietPlanMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("膳食方案不存在或已删除");
         }
         // 物理删：uk_diet_plan_order 不含 del_flag，软删会占住这条医嘱的键位
-        return planMapper.purgeById(id);
+        return bizDietPlanMapper.purgeById(id);
     }
 
     @Override
@@ -340,7 +331,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         if (order == null || order.getId() == null) {
             return null;
         }
-        BizDietPlan exist = planMapper.selectOne(new LambdaQueryWrapper<BizDietPlan>()
+        BizDietPlan exist = bizDietPlanMapper.selectOne(new LambdaQueryWrapper<BizDietPlan>()
                 .eq(BizDietPlan::getOrderId, order.getId())
                 .last("LIMIT 1"));
         if (exist != null) {
@@ -353,7 +344,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         String code = diet == null ? NutritionRules.CODE_TO_DETERMINE : diet.code();
 
         BizDietPlan row = new BizDietPlan();
-        row.setDietNo(nextNo(PREFIX_PLAN, planMapper.maxDietSeq(PREFIX_PLAN + LocalDate.now().format(DateFormats.COMPACT_DATE))));
+        row.setDietNo(nextNo(PREFIX_PLAN, bizDietPlanMapper.maxDietSeq(PREFIX_PLAN + LocalDate.now().format(DateFormats.COMPACT_DATE))));
         row.setAdmissionId(order.getAdmissionId());
         row.setPatientId(order.getPatientId());
         row.setPatientNo(order.getPatientNo());
@@ -369,21 +360,21 @@ public class DietPlanServiceImpl implements DietPlanService {
         row.setDietCode(code);
         row.setDietCategory(diet == null ? DietCategoryEnum.BASIC.getCode() : diet.category());
         // 名称一律用医嘱原文（"个体化糖尿病饮食"这类描述比目录名更准），认不出时给占位文案
-        row.setDietName(cut(StringUtils.hasText(order.getItemName())
+        row.setDietName(TextUtil.cut(StringUtils.hasText(order.getItemName())
                 ? order.getItemName().trim() : (diet == null ? "待指定饮食" : diet.name()), 100));
         row.setRoute(diet == null ? DietRouteEnum.ORAL.getCode() : diet.route());
-        row.setFeedWay(cut(trim(order.getRoute()), 100));
+        row.setFeedWay(TextUtil.cut(TextUtil.trim(order.getRoute()), 100));
         row.setCalorieTarget(diet == null ? null : diet.calorie());
         row.setProteinTarget(diet == null ? null : diet.protein());
         row.setMealTypes(diet == null ? null : normalizeMealTypes(null, diet));
         row.setStartTime(TimeUtil.toSeconds(order.getStartTime() == null ? LocalDateTime.now() : order.getStartTime()));
         row.setPlanStatus(PlanStatusEnum.RUNNING.getCode());
         row.setConfirmStatus(DietConfirmStatusEnum.PENDING.getCode());
-        row.setRemark(cut("由医嘱 " + order.getOrderNo() + " 校对派生", 500));
+        row.setRemark(TextUtil.cut("由医嘱 " + order.getOrderNo() + " 校对派生", 500));
         try {
-            planMapper.insert(row);
+            bizDietPlanMapper.insert(row);
         } catch (DuplicateKeyException e) {
-            BizDietPlan race = planMapper.selectOne(new LambdaQueryWrapper<BizDietPlan>()
+            BizDietPlan race = bizDietPlanMapper.selectOne(new LambdaQueryWrapper<BizDietPlan>()
                     .eq(BizDietPlan::getOrderId, order.getId()).last("LIMIT 1"));
             log.warn("膳食方案派生撞唯一键（并发校对）orderNo={} 已存在方案={}", order.getOrderNo(),
                     race == null ? null : race.getDietNo());
@@ -414,8 +405,8 @@ public class DietPlanServiceImpl implements DietPlanService {
         LocalDateTime now = TimeUtil.nowSeconds();
         row.setPlanStatus(PlanStatusEnum.CANCELED.getCode());
         row.setStopTime(now);
-        row.setRemark(cut(appendRemark(row.getRemark(), "来源医嘱已作废"), 500));
-        planMapper.updateById(row);
+        row.setRemark(TextUtil.cut(appendRemark(row.getRemark(), "来源医嘱已作废"), 500));
+        bizDietPlanMapper.updateById(row);
         cancelFutureMeals(row.getId(), now.toLocalDate(), "来源膳食医嘱作废，方案同步作废");
         log.info("膳食方案作废 方案={} 医嘱ID={}", row.getDietNo(), orderId);
     }
@@ -424,7 +415,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         if (orderId == null) {
             return null;
         }
-        return planMapper.selectOne(new LambdaQueryWrapper<BizDietPlan>()
+        return bizDietPlanMapper.selectOne(new LambdaQueryWrapper<BizDietPlan>()
                 .eq(BizDietPlan::getOrderId, orderId).last("LIMIT 1"));
     }
 
@@ -438,11 +429,11 @@ public class DietPlanServiceImpl implements DietPlanService {
         }
         row.setPlanStatus(PlanStatusEnum.STOPPED.getCode());
         row.setStopTime(stopTime);
-        row.setRemark(cut(appendRemark(row.getRemark(),
+        row.setRemark(TextUtil.cut(appendRemark(row.getRemark(),
                 "停止：" + (StringUtils.hasText(reason) ? reason.trim() : "营养师手工停餐")), 500));
-        planMapper.updateById(row);
+        bizDietPlanMapper.updateById(row);
         cancelFutureMeals(row.getId(), stopTime.toLocalDate(),
-                cut("方案停止（" + row.getDietNo() + "）" + (StringUtils.hasText(reason) ? reason.trim() : ""), 500));
+                TextUtil.cut("方案停止（" + row.getDietNo() + "）" + (StringUtils.hasText(reason) ? reason.trim() : ""), 500));
         log.info("膳食方案停止 方案={} 停止时间={} 操作人={}", row.getDietNo(), stopTime, operatorUser.getRealName());
     }
 
@@ -454,7 +445,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        int n = mealMapper.update(null, new LambdaUpdateWrapper<BizMealOrder>()
+        int n = bizMealOrderMapper.update(null, new LambdaUpdateWrapper<BizMealOrder>()
                 .eq(BizMealOrder::getDietPlanId, dietPlanId)
                 .ge(BizMealOrder::getMealDate, fromDate)
                 .in(BizMealOrder::getDeliverStatus, MealDeliverStatusEnum.PENDING.getCode(), MealDeliverStatusEnum.PREPARED.getCode())
@@ -476,7 +467,7 @@ public class DietPlanServiceImpl implements DietPlanService {
     }
 
     private BizAdmission requireAdmission(Long admissionId) {
-        BizAdmission admission = admissionMapper.selectById(admissionId);
+        BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
@@ -487,7 +478,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         if (wardId == null) {
             return null;
         }
-        WardVO ward = bedMapper.selectWardById(wardId);
+        WardVO ward = sysBedMapper.selectWardById(wardId);
         return ward == null ? null : ward.getWardName();
     }
 
@@ -495,7 +486,7 @@ public class DietPlanServiceImpl implements DietPlanService {
         if (bedId == null) {
             return null;
         }
-        SysBed bed = bedMapper.selectById(bedId);
+        SysBed bed = sysBedMapper.selectById(bedId);
         return bed == null ? null : bed.getBedNo();
     }
 

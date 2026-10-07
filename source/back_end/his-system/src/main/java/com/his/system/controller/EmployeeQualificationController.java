@@ -9,13 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -32,20 +26,20 @@ import java.util.List;
 @PreAuthorize("isAuthenticated()")
 public class EmployeeQualificationController {
 
-    private final EmployeeQualificationService qualificationService;
+    private final EmployeeQualificationService employeeQualificationService;
 
     @Operation(summary = "查询员工的资格证书列表")
     @PreAuthorize("hasAuthority('org:employee:list')")
     @GetMapping("/listByEmployee")
     public Result<List<EmployeeQualificationVO>> listByEmployee(@RequestParam Long employeeId) {
-        return Result.success(qualificationService.listByEmployee(employeeId));
+        return Result.success(employeeQualificationService.listByEmployee(employeeId));
     }
 
     @Operation(summary = "新增或修改资格证书")
     @PreAuthorize("hasAuthority('org:employee:add')")
     @PostMapping("/qualificationUpsert")
     public Result<Void> qualificationUpsert(@RequestBody @Valid EmployeeQualificationUpsertDTO upsertDTO) {
-        qualificationService.upsert(upsertDTO);
+        employeeQualificationService.upsert(upsertDTO);
         return Result.success(upsertDTO.getId() == null ? "新增成功" : "修改成功", null);
     }
 
@@ -53,7 +47,7 @@ public class EmployeeQualificationController {
     @PreAuthorize("hasAuthority('org:employee:delete')")
     @DeleteMapping("/deleteById")
     public Result<Void> deleteById(@RequestParam Long id) {
-        qualificationService.deleteById(id);
+        employeeQualificationService.deleteById(id);
         return Result.success("删除成功", null);
     }
 }

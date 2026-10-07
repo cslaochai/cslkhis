@@ -7,6 +7,7 @@ import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
+import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
 import com.his.emr.service.InspectionApplySignProvider;
@@ -15,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
@@ -34,7 +34,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class InspectionApplySignProviderImpl implements SignableContentProvider, InspectionApplySignProvider {
 
-    private final BizInspectionApplyMapper applyMapper;
+    private final BizInspectionApplyMapper bizInspectionApplyMapper;
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -43,7 +43,7 @@ public class InspectionApplySignProviderImpl implements SignableContentProvider,
 
     @Override
     public SignSubject load(Long bizId) {
-        BizInspectionApply a = applyMapper.selectById(bizId);
+        BizInspectionApply a = bizInspectionApplyMapper.selectById(bizId);
         if (a == null) {
             return null;
         }
@@ -64,7 +64,7 @@ public class InspectionApplySignProviderImpl implements SignableContentProvider,
         if (scene != SignSceneEnum.APPLY_CREATE) {
             return "检查申请单只支持「申请开立签名」场景，当前场景「" + scene.getText() + "」不适用";
         }
-        BizInspectionApply a = applyMapper.selectById(subject.bizId());
+        BizInspectionApply a = bizInspectionApplyMapper.selectById(subject.bizId());
         if (a == null) {
             return "检查申请单不存在或已被删除，无法签名";
         }
@@ -84,17 +84,17 @@ public class InspectionApplySignProviderImpl implements SignableContentProvider,
         patch.setId(bizId);
         patch.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
         patch.setSignId(signId);
-        patch.setSignedTime(signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS));
-        applyMapper.updateById(patch);
+        patch.setSignedTime(signedTime == null ? null : TimeUtil.toSeconds(signedTime));
+        bizInspectionApplyMapper.updateById(patch);
     }
 
     @Override
     public void revokeSignAnchor(Long bizId, Long signId) {
-        BizInspectionApply a = applyMapper.selectById(bizId);
+        BizInspectionApply a = bizInspectionApplyMapper.selectById(bizId);
         if (a == null || !Objects.equals(signId, a.getSignId())) {
             return;
         }
-        applyMapper.update(null, new LambdaUpdateWrapper<BizInspectionApply>()
+        bizInspectionApplyMapper.update(null, new LambdaUpdateWrapper<BizInspectionApply>()
                 .eq(BizInspectionApply::getId, bizId)
                 .set(BizInspectionApply::getSignStatus, ObjectSignStatusEnum.INVALIDATED.getCode())
                 .set(BizInspectionApply::getSignId, null));

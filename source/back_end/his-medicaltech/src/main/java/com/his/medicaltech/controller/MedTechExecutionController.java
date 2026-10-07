@@ -24,12 +24,12 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("isAuthenticated()")
 public class MedTechExecutionController {
 
-    private final MedTechExecutionService executionService;
+    private final MedTechExecutionService medTechExecutionService;
 
     @Operation(summary = "分页查询待执行列表")
     @PostMapping("/listPage")
     public Result<PageResult<BizMedTechExecutionVO>> listPage(@Valid @RequestBody ExecutionQueryPageDTO queryDTO) {
-        return Result.success(executionService.listPageVO(queryDTO.getPatientId(), queryDTO.getApplyType(),
+        return Result.success(medTechExecutionService.listPageVO(queryDTO.getPatientId(), queryDTO.getApplyType(),
                 queryDTO.getExecutionStatus(), queryDTO.getPageNum(), queryDTO.getPageSize()));
     }
 
@@ -37,7 +37,7 @@ public class MedTechExecutionController {
     @Operation(summary = "开始执行")
     @PostMapping("/startExecution")
     public Result<Void> startExecution(@Valid @RequestBody ExecutionStartDTO actionDTO) {
-        boolean success = executionService.startExecution(actionDTO.getId(), actionDTO.getExecutorId(), actionDTO.getExecutorName());
+        boolean success = medTechExecutionService.startExecution(actionDTO.getId(), actionDTO.getExecutorId(), actionDTO.getExecutorName());
         return success ? Result.success("开始执行", null) : Result.error("操作失败");
     }
 
@@ -45,7 +45,7 @@ public class MedTechExecutionController {
     @Operation(summary = "完成执行")
     @PostMapping("/completeExecution")
     public Result<Void> completeExecution(@RequestParam Long id) {
-        boolean success = executionService.completeExecution(id);
+        boolean success = medTechExecutionService.completeExecution(id);
         return success ? Result.success("执行完成", null) : Result.error("操作失败");
     }
 
@@ -53,7 +53,7 @@ public class MedTechExecutionController {
     @Operation(summary = "审核执行")
     @PostMapping("/reviewExecution")
     public Result<Void> reviewExecution(@Valid @RequestBody ExecutionReviewDTO actionDTO) {
-        boolean success = executionService.reviewExecution(actionDTO.getId(), actionDTO.getReviewerId(), actionDTO.getReviewerName());
+        boolean success = medTechExecutionService.reviewExecution(actionDTO.getId(), actionDTO.getReviewerId(), actionDTO.getReviewerName());
         return success ? Result.success("审核通过", null) : Result.error("审核失败");
     }
 }

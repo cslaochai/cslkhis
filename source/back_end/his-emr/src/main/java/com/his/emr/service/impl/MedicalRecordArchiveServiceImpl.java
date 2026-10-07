@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizMedicalRecordArchive;
 import com.his.emr.enums.ArchiveStatusEnum;
 import com.his.emr.mapper.BizMedicalRecordArchiveMapper;
@@ -25,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -87,7 +87,7 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
         }
 
         archive.setArchiveStatus(ArchiveStatusEnum.ARCHIVED.getCode());
-        archive.setArchiveTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+        archive.setArchiveTime(TimeUtil.nowSeconds());
         return this.updateById(archive);
     }
 
@@ -103,7 +103,7 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
         }
 
         archive.setArchiveStatus(ArchiveStatusEnum.SEALED.getCode());
-        archive.setSealTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+        archive.setSealTime(TimeUtil.nowSeconds());
         return this.updateById(archive);
     }
 

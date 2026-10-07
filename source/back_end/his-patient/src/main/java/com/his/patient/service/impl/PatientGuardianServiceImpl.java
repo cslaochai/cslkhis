@@ -2,6 +2,7 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.UserTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.GuardianBindDTO;
@@ -39,7 +40,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PatientGuardianServiceImpl implements PatientGuardianService {
+public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMapper, BizPatientGuardian> implements PatientGuardianService {
 
     /**
      * 1 个账号最多绑定的就诊人数（风控上限）
@@ -50,13 +51,13 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
      */
     private static final int MAX_BINDERS_PER_PATIENT = 3;
 
-    private final BizPatientGuardianMapper guardianMapper;
-    private final BizPatientMapper patientMapper;
+    private final BizPatientGuardianMapper bizPatientGuardianMapper;
+    private final BizPatientMapper bizPatientMapper;
     private final BizPatientService bizPatientService;
     private final SysUserMapper sysUserMapper;
     private final SysMessageService sysMessageService;
     private final SmsCodeService smsCodeService;
-    private final SysAuditLogService auditLogService;
+    private final SysAuditLogService sysAuditLogService;
 
     private static String normalizeIdCard(String idCard) {
         String s = idCard == null ? "" : idCard.trim().toUpperCase();
@@ -107,7 +108,7 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
         LambdaQueryWrapper<BizPatientGuardian> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizPatientGuardian::getUserId, user.getUserId())
                 .eq(BizPatientGuardian::getStatus, 1);
-        guardianMapper.selectList(wrapper).forEach(g -> ids.add(g.getPatientId()));
+        bizPatientGuardianMapper.selectList(wrapper).forEach(g -> ids.add(g.getPatientId()));
         if (user.getPatientId() != null) {
             ids.add(user.getPatientId());
         }
@@ -139,7 +140,7 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
                 .eq(BizPatientGuardian::getStatus, 1)
                 .orderByDesc(BizPatientGuardian::getIsDefault)
                 .orderByAsc(BizPatientGuardian::getCreateTime);
-        List<BizPatientGuardian> bindings = guardianMapper.selectList(wrapper);
+        List<BizPatientGuardian> bindings = bizPatientGuardianMapper.selectList(wrapper);
 
         List<GuardianPatientVO> list = new ArrayList<>();
         Set<Long> seen = new LinkedHashSet<>();
@@ -152,7 +153,7 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
                 .orElse(null);
         // 「本人」置顶：优先用用户的患者ID 口径，即使关系表还没回填也能看到
         if (user.getPatientId() != null) {
-            BizPatient self = patientMapper.selectById(user.getPatientId());
+            BizPatient self = bizPatientMapper.selectById(user.getPatientId());
             if (self != null) {
                 seen.add(self.getId());
                 boolean selfIsDefault = defaultPatientId == null || defaultPatientId.equals(self.getId());
@@ -163,7 +164,7 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
             if (seen.contains(g.getPatientId())) {
                 continue;
             }
-            BizPatient p = patientMapper.selectById(g.getPatientId());
+            BizPatient p = bizPatientMapper.selectById(g.getPatientId());
             if (p == null) {
                 continue;
             }
@@ -282,7 +283,7 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
         }
         patient.setCreateBy("mini-guardian");
         patient.setCreateTime(LocalDateTime.now());
-        patientMapper.insert(patient);
+        bizPatientMapper.insert(patient);
 
         BizPatientGuardian g = insertBinding(user, patient.getId(), dto.getRelation());
         auditGuardian(user, "addPatient", patient.getId(), true,
@@ -303,8 +304,8 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
         if (binding == null) {
             throw new BusinessException("未找到该就诊人绑定");
         }
-        guardianMapper.deleteById(binding.getId());
-        BizPatient patient = patientMapper.selectById(patientId);
+        bizPatientGuardianMapper.deleteById(binding.getId());
+        BizPatient patient = bizPatientMapper.selectById(patientId);
         auditGuardian(user, "unbindPatient", patientId, true,
                 "patient=" + (patient == null ? "?" : patient.getPatientName()));
         // 解绑的正是默认项时，把「本人」（若已绑）或剩余最早一条顶上为默认
@@ -320,13 +321,13 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
         if (!patientId.equals(user.getPatientId()) && findBinding(user.getUserId(), patientId) == null) {
             throw new BusinessException("未找到该就诊人绑定");
         }
-        guardianMapper.update(null, new LambdaUpdateWrapper<BizPatientGuardian>()
+        bizPatientGuardianMapper.update(null, new LambdaUpdateWrapper<BizPatientGuardian>()
                 .eq(BizPatientGuardian::getUserId, user.getUserId())
                 .set(BizPatientGuardian::getIsDefault, 0));
         if (!patientId.equals(user.getPatientId())) {
             BizPatientGuardian binding = findBinding(user.getUserId(), patientId);
             binding.setIsDefault(1);
-            guardianMapper.updateById(binding);
+            bizPatientGuardianMapper.updateById(binding);
         }
     }
 
@@ -379,17 +380,17 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
                 .eq(BizPatientGuardian::getPatientId, patientId)
                 .eq(BizPatientGuardian::getStatus, 1)
                 .last("LIMIT 1");
-        return guardianMapper.selectOne(wrapper);
+        return bizPatientGuardianMapper.selectOne(wrapper);
     }
 
     private BizPatientGuardian insertBinding(CurrentUser user, Long patientId, Integer relation) {
         // 解绑是软删，uk_user_patient(user_id, patient_id) 仍占位 —— 重绑必须复活旧行，
         // 直接 insert 会撞唯一键（且报错完全无法向用户解释）。复活只能走裸 SQL（见 mapper 注释）。
-        BizPatientGuardian softDeleted = guardianMapper.selectSoftDeleted(user.getUserId(), patientId);
+        BizPatientGuardian softDeleted = bizPatientGuardianMapper.selectSoftDeleted(user.getUserId(), patientId);
         // 账号名下第一条绑定（且「本人」不占位时）自动顶为默认，小程序首启免手动设置
         boolean firstBinding = user.getPatientId() == null && countActiveBindings(user.getUserId()) == 0;
         if (softDeleted != null) {
-            guardianMapper.reviveSoftDeleted(softDeleted.getId(), relation, firstBinding ? 1 : 0);
+            bizPatientGuardianMapper.reviveSoftDeleted(softDeleted.getId(), relation, firstBinding ? 1 : 0);
             BizPatientGuardian revived = findBinding(user.getUserId(), patientId);
             if (revived != null) {
                 return revived;
@@ -403,7 +404,7 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
         g.setIsDefault(firstBinding ? 1 : 0);
         g.setCreateBy("mini-guardian");
         g.setCreateTime(LocalDateTime.now());
-        guardianMapper.insert(g);
+        bizPatientGuardianMapper.insert(g);
         return g;
     }
 
@@ -411,14 +412,14 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
         LambdaQueryWrapper<BizPatientGuardian> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizPatientGuardian::getUserId, userId)
                 .eq(BizPatientGuardian::getStatus, 1);
-        return guardianMapper.selectCount(wrapper);
+        return bizPatientGuardianMapper.selectCount(wrapper);
     }
 
     private long countBoundUsers(Long patientId) {
         LambdaQueryWrapper<BizPatientGuardian> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizPatientGuardian::getPatientId, patientId)
                 .eq(BizPatientGuardian::getStatus, 1);
-        return guardianMapper.selectCount(wrapper);
+        return bizPatientGuardianMapper.selectCount(wrapper);
     }
 
     private void checkBindQuota(CurrentUser user, BizPatient patient) {
@@ -431,7 +432,7 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
     }
 
     private void auditGuardian(CurrentUser user, String operation, Long patientId, boolean success, String detail) {
-        auditLogService.record(user.getUserId(), user.getUsername(), "患者端-就诊人", operation,
+        sysAuditLogService.record(user.getUserId(), user.getUsername(), "患者端-就诊人", operation,
                 "biz_patient", patientId, detail, success, success ? null : detail);
     }
 
@@ -442,10 +443,10 @@ public class PatientGuardianServiceImpl implements PatientGuardianService {
                 .ne(user.getPatientId() != null, BizPatientGuardian::getPatientId, user.getPatientId())
                 .orderByAsc(BizPatientGuardian::getCreateTime)
                 .last("LIMIT 1");
-        BizPatientGuardian fallback = guardianMapper.selectOne(wrapper);
+        BizPatientGuardian fallback = bizPatientGuardianMapper.selectOne(wrapper);
         if (fallback != null) {
             fallback.setIsDefault(1);
-            guardianMapper.updateById(fallback);
+            bizPatientGuardianMapper.updateById(fallback);
         }
     }
 

@@ -2,10 +2,13 @@ package com.his.emr.service.impl;
 
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.emr.dto.CodeTaskAssignUpsertDTO;
 import com.his.emr.dto.CodeTaskAuditDTO;
 import com.his.emr.dto.CodeTaskQueryPageDTO;
@@ -27,10 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 病案编码任务服务实现
@@ -41,23 +41,15 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
+public class ArchiveCodeTaskServiceImpl extends ServiceImpl<BizArchiveCodeTaskMapper, BizArchiveCodeTask> implements ArchiveCodeTaskService {
 
-    private final BizArchiveCodeTaskMapper taskMapper;
-    private final RedisSequenceService sequenceService;
+    private final BizArchiveCodeTaskMapper bizArchiveCodeTaskMapper;
+    private final RedisSequenceService redisSequenceService;
     private final SysMessageService sysMessageService;
-
-    private static String trimToNull(String s) {
-        if (s == null) {
-            return null;
-        }
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
-    }
 
     @Override
     public PageResult<ArchiveCodeTaskVO> page(CodeTaskQueryPageDTO q) {
-        Page<ArchiveCodeTaskVO> page = taskMapper.selectTaskPage(
+        Page<ArchiveCodeTaskVO> page = bizArchiveCodeTaskMapper.selectTaskPage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 q.getTaskNo(), q.getStatus(), q.getCoderId(), q.getKeyword());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
@@ -65,7 +57,7 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
 
     @Override
     public ArchiveCodeTaskVO getDetailById(Long id) {
-        ArchiveCodeTaskVO vo = taskMapper.selectTaskById(id);
+        ArchiveCodeTaskVO vo = bizArchiveCodeTaskMapper.selectTaskById(id);
         if (vo == null) {
             throw new BusinessException("编码任务不存在或已删除");
         }
@@ -74,21 +66,21 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
 
     @Override
     public ArchiveCodeTaskStatsVO stats() {
-        return taskMapper.selectStats();
+        return bizArchiveCodeTaskMapper.selectStats();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int syncTasks() {
-        List<ArchiveSyncCandidateVO> unsynced = taskMapper.selectUnsyncedArchives();
+        List<ArchiveSyncCandidateVO> unsynced = bizArchiveCodeTaskMapper.selectUnsyncedArchives();
         if (unsynced.isEmpty()) {
             return 0;
         }
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         int created = 0;
         for (ArchiveSyncCandidateVO row : unsynced) {
             BizArchiveCodeTask t = new BizArchiveCodeTask();
-            t.setTaskNo(sequenceService.generateCodeTaskNo());
+            t.setTaskNo(redisSequenceService.generateCodeTaskNo());
             t.setArchiveId(row.getId());
             t.setRecordNo(row.getRecordNo());
             t.setPatientName(row.getPatientName());
@@ -99,7 +91,7 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
             t.setDelFlag(DelFlagEnum.NORMAL.getCode());
             t.setCreateTime(now);
             t.setUpdateTime(now);
-            if (taskMapper.insert(t) == 1) {
+            if (bizArchiveCodeTaskMapper.insert(t) == 1) {
                 created++;
             }
         }
@@ -110,23 +102,23 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void assign(CodeTaskAssignUpsertDTO dto) {
-        BizArchiveCodeTask t = taskMapper.selectByIdForUpdate(dto.getId());
+        BizArchiveCodeTask t = bizArchiveCodeTaskMapper.selectByIdForUpdate(dto.getId());
         if (t == null || t.getDelFlag() != 0) {
             throw new BusinessException("编码任务不存在或已删除");
         }
         if (t.getStatus() == null || t.getStatus() != CodeTaskStatusEnum.PENDING.getCode()) {
             throw new BusinessException("当前状态不允许分配（期望状态=1，实际状态=" + t.getStatus() + "）");
         }
-        String coderName = taskMapper.selectEmployeeName(dto.getCoderId());
+        String coderName = bizArchiveCodeTaskMapper.selectEmployeeName(dto.getCoderId());
         if (coderName == null) {
             throw new BusinessException("编码员不存在或已离职：" + dto.getCoderId());
         }
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         t.setCoderId(dto.getCoderId());
         t.setCoderName(coderName);
         t.setAssignTime(now);
         t.setUpdateTime(now);
-        if (taskMapper.updateById(t) != 1) {
+        if (bizArchiveCodeTaskMapper.updateById(t) != 1) {
             throw new BusinessException("分配失败");
         }
     }
@@ -134,14 +126,14 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void submit(CodeTaskSubmitDTO dto) {
-        BizArchiveCodeTask t = taskMapper.selectByIdForUpdate(dto.getId());
+        BizArchiveCodeTask t = bizArchiveCodeTaskMapper.selectByIdForUpdate(dto.getId());
         if (t == null || t.getDelFlag() != 0) {
             throw new BusinessException("编码任务不存在或已删除");
         }
         if (t.getStatus() == null || (t.getStatus() != CodeTaskStatusEnum.PENDING.getCode() && t.getStatus() != CodeTaskStatusEnum.REWORK.getCode())) {
             throw new BusinessException("当前状态不允许提交编码（期望状态=1 待编码 或 4 已退修，实际状态=" + t.getStatus() + "）");
         }
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         // 未分配的任务提交即认领：编码员自己领活是任务池的正常形态
         if (t.getCoderId() == null) {
             t.setCoderId(UserUtils.getCurrentUser().getEmployeeId());
@@ -150,11 +142,11 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
         }
         t.setMainIcdCode(dto.getMainIcdCode().trim());
         t.setMainIcdName(dto.getMainIcdName().trim());
-        t.setOtherIcdText(trimToNull(dto.getOtherIcdText()));
+        t.setOtherIcdText(TextUtil.trimToNull(dto.getOtherIcdText()));
         t.setSubmitTime(now);
         t.setStatus(CodeTaskStatusEnum.SUBMITTED.getCode());
         t.setUpdateTime(now);
-        if (taskMapper.updateById(t) != 1) {
+        if (bizArchiveCodeTaskMapper.updateById(t) != 1) {
             throw new BusinessException("提交失败");
         }
     }
@@ -164,7 +156,7 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void audit(CodeTaskAuditDTO dto) {
-        BizArchiveCodeTask t = taskMapper.selectByIdForUpdate(dto.getId());
+        BizArchiveCodeTask t = bizArchiveCodeTaskMapper.selectByIdForUpdate(dto.getId());
         if (t == null || t.getDelFlag() != 0) {
             throw new BusinessException("编码任务不存在或已删除");
         }
@@ -176,10 +168,10 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
         if (!approve && (dto.getRemark() == null || dto.getRemark().isBlank())) {
             throw new BusinessException("退修必须填写审核意见");
         }
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         t.setAuditById(UserUtils.getCurrentUser().getEmployeeId());
         t.setAuditByName(UserUtils.getCurrentUser().getRealName());
-        t.setAuditRemark(trimToNull(dto.getRemark()));
+        t.setAuditRemark(TextUtil.trimToNull(dto.getRemark()));
         t.setAuditTime(now);
         if (approve) {
             t.setStatus(CodeTaskStatusEnum.DONE.getCode());
@@ -188,7 +180,7 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
             t.setReturnCount((t.getReturnCount() == null ? 0 : t.getReturnCount()) + 1);
         }
         t.setUpdateTime(now);
-        if (taskMapper.updateById(t) != 1) {
+        if (bizArchiveCodeTaskMapper.updateById(t) != 1) {
             throw new BusinessException("审核失败");
         }
         if (!approve) {

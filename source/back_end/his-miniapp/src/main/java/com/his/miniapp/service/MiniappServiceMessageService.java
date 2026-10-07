@@ -1,6 +1,7 @@
 package com.his.miniapp.service;
 
 import com.his.common.base.PageResult;
+import com.his.miniapp.dto.MessagePageDTO;
 import com.his.miniapp.dto.ServiceMessageUpsertDTO;
 import com.his.miniapp.dto.ServiceTicketActionDTO;
 import com.his.miniapp.dto.ServiceTicketAppendDTO;
@@ -12,11 +13,15 @@ import com.his.miniapp.vo.ServiceTicketDetailVO;
  */
 public interface MiniappServiceMessageService {
 
-    /** 提交工单，返回工单号 */
+    /**
+     * 提交工单，返回工单号
+     */
     String submit(ServiceMessageUpsertDTO dto);
 
-    /** 我的工单（分页，含处理状态与结果） */
-    PageResult<ServiceMessageListVO> myPage(Integer pageNum, Integer pageSize);
+    /**
+     * 我的工单（分页，含处理状态与结果）
+     */
+    PageResult<ServiceMessageListVO> myPage(MessagePageDTO dto);
 
     /**
      * 工单详情（含流转时间轴）。
@@ -24,9 +29,13 @@ public interface MiniappServiceMessageService {
      */
     ServiceTicketDetailVO myDetail(Long id);
 
-    /** 患者补充留言 */
+    /**
+     * 患者补充留言
+     */
     void append(ServiceTicketAppendDTO dto);
 
-    /** 患者动作：撤单 / 确认解决 / 重开 */
+    /**
+     * 患者动作：撤单 / 确认解决 / 重开
+     */
     void patientAction(ServiceTicketActionDTO dto);
 }

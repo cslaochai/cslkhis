@@ -27,12 +27,12 @@ import java.util.List;
 @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'pharmacy:stock:list', 'pharmacy:purchase:list')")
 public class DrugController {
 
-    private final SysDrugService drugService;
+    private final SysDrugService sysDrugService;
 
     @Operation(summary = "分页查询药品列表")
     @PostMapping("/listPage")
     public Result<PageResult<SysDrugVO>> listPage(@Valid @RequestBody SysDrugQueryPageDTO queryDTO) {
-        return Result.success(drugService.listPage(queryDTO));
+        return Result.success(sysDrugService.listPage(queryDTO));
     }
 
     /**
@@ -43,20 +43,20 @@ public class DrugController {
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/selectList")
     public Result<List<SysDrugSelectListVO>> selectList(@Valid SysDrugSelectDTO queryDTO) {
-        return Result.success(drugService.selectList(queryDTO));
+        return Result.success(sysDrugService.selectList(queryDTO));
     }
 
     @Operation(summary = "获取药品详情")
     @GetMapping("/getById")
     public Result<SysDrugVO> getInfo(@RequestParam Long drugId) {
-        return Result.success(drugService.getInfo(drugId));
+        return Result.success(sysDrugService.getInfo(drugId));
     }
 
     @PreAuthorize("hasAuthority('pharmacy:stock:add')")
     @Operation(summary = "新增或修改药品")
     @PostMapping("/drugUpsert")
     public Result<Void> drugUpsert(@Valid @RequestBody SysDrugUpsertDTO upsertDTO) {
-        drugService.upsert(upsertDTO);
+        sysDrugService.upsert(upsertDTO);
         return Result.success("操作成功", null);
     }
 
@@ -64,7 +64,7 @@ public class DrugController {
     @Operation(summary = "删除药品")
     @DeleteMapping("/deleteById")
     public Result<Void> remove(@RequestParam Long drugId) {
-        drugService.delete(drugId);
+        sysDrugService.delete(drugId);
         return Result.success("删除成功", null);
     }
 }

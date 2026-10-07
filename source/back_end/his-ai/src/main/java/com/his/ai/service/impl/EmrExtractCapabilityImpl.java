@@ -14,6 +14,7 @@ import com.his.ai.vo.EmrExtractPromptVariablesVO;
 import com.his.ai.vo.EmrExtractResultVO;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import lombok.RequiredArgsConstructor;
@@ -104,7 +105,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
      */
     private static final char[] CN_DIGITS = {'零', '一', '二', '三', '四', '五', '六', '七', '八', '九'};
 
-    private final BizMedicalRecordMapper medicalRecordMapper;
+    private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
     private final AiExecutionService aiExecutionService;
 
@@ -132,7 +133,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
 
             if (!EmrFieldCatalog.isTextKey(key)) {
                 rejected++;
-                reject(notes, String.format("字段「%s」不在可写白名单内", truncate(key, 20, "（空）")));
+                reject(notes, String.format("字段「%s」不在可写白名单内", TextUtil.cut(key, 20, "（空）")));
                 continue;
             }
             String label = EmrFieldCatalog.getText(key);
@@ -213,17 +214,17 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
             if (StringUtils.hasText(ruleValue)) {
                 // 规则命中即胜出：逐字原文优先于模型转述
                 vo.getFields().add(build(field.key(), field.label(),
-                        truncate(ruleValue, MAX_VALUE_LENGTH, ""),
+                        TextUtil.cut(ruleValue, MAX_VALUE_LENGTH, ""),
                         SOURCE_HARD_RULE,
-                        truncate(ruleValue, MAX_EVIDENCE_LENGTH, "")));
+                        TextUtil.cut(ruleValue, MAX_EVIDENCE_LENGTH, "")));
                 continue;
             }
             EmrExtractLlmOutputDTO.Field llmField = byLlm.get(field.key());
             if (llmField != null) {
                 vo.getFields().add(build(field.key(), field.label(),
-                        truncate(llmField.getValue(), MAX_VALUE_LENGTH, ""),
+                        TextUtil.cut(llmField.getValue(), MAX_VALUE_LENGTH, ""),
                         SOURCE_LLM,
-                        truncate(llmField.getEvidence(), MAX_EVIDENCE_LENGTH, "")));
+                        TextUtil.cut(llmField.getEvidence(), MAX_EVIDENCE_LENGTH, "")));
             }
         }
 
@@ -312,14 +313,6 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
         return false;
     }
 
-    private static String truncate(String text, int maxLength, String fallback) {
-        if (!StringUtils.hasText(text)) {
-            return fallback;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
     public EmrExtractResultVO execute(EmrExtractDTO dto) {
         long start = System.currentTimeMillis();
 
@@ -369,7 +362,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
         Integer gender = dto.getGender();
         Integer age = dto.getAge();
         if (dto.getRecordId() != null) {
-            BizMedicalRecord record = medicalRecordMapper.selectById(dto.getRecordId());
+            BizMedicalRecord record = bizMedicalRecordMapper.selectById(dto.getRecordId());
             if (record != null) {
                 gender = record.getGender();
                 age = record.getAge();

@@ -8,6 +8,9 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
@@ -17,9 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 
@@ -43,8 +44,8 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class PrescriptionSignProviderImpl implements SignableContentProvider, PrescriptionSignProvider {
 
-    private final BizPrescriptionMapper prescriptionMapper;
-    private final BizPrescriptionDetailMapper detailMapper;
+    private final BizPrescriptionMapper bizPrescriptionMapper;
+    private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
 
     /**
      * 明细逐条一行，字段用 {@code |} 分隔、行间换行 —— 全部为"用药内容"，不含明细行的流程状态
@@ -58,35 +59,24 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
         for (BizPrescriptionDetail d : details) {
             i++;
             sb.append(i).append('|')
-                    .append(nz(d.getDrugCode())).append('|')
-                    .append(nz(d.getDrugName())).append('|')
-                    .append(nz(d.getGenericName())).append('|')
-                    .append(nz(d.getSpecification())).append('|')
-                    .append(nz(d.getDosageForm())).append('|')
-                    .append(nz(d.getUnit())).append('|')
-                    .append(plain(d.getQuantity())).append('|')
-                    .append(plain(d.getPrice())).append('|')
-                    .append(plain(d.getAmount())).append('|')
-                    .append(nz(d.getSingleDosage())).append('|')
-                    .append(nz(d.getUsageDosage())).append('|')
-                    .append(nz(d.getFrequency())).append('|')
-                    .append(nz(d.getRoute())).append('|')
+                    .append(TextUtil.nullToEmpty(d.getDrugCode())).append('|')
+                    .append(TextUtil.nullToEmpty(d.getDrugName())).append('|')
+                    .append(TextUtil.nullToEmpty(d.getGenericName())).append('|')
+                    .append(TextUtil.nullToEmpty(d.getSpecification())).append('|')
+                    .append(TextUtil.nullToEmpty(d.getDosageForm())).append('|')
+                    .append(TextUtil.nullToEmpty(d.getUnit())).append('|')
+                    .append(NumUtil.plain(d.getQuantity())).append('|')
+                    .append(NumUtil.plain(d.getPrice())).append('|')
+                    .append(NumUtil.plain(d.getAmount())).append('|')
+                    .append(TextUtil.nullToEmpty(d.getSingleDosage())).append('|')
+                    .append(TextUtil.nullToEmpty(d.getUsageDosage())).append('|')
+                    .append(TextUtil.nullToEmpty(d.getFrequency())).append('|')
+                    .append(TextUtil.nullToEmpty(d.getRoute())).append('|')
                     .append(d.getDuration() == null ? "" : d.getDuration()).append('|')
                     .append(d.getIsSkinTest() == null ? "" : d.getIsSkinTest())
                     .append('\n');
         }
         return sb.toString();
-    }
-
-    private static String nz(String s) {
-        return s == null ? "" : s;
-    }
-
-    /**
-     * BigDecimal 去尾零：金额 `10.00` 与 `10.0` 必须算出同一个摘要
-     */
-    private static String plain(BigDecimal v) {
-        return v == null ? null : v.stripTrailingZeros().toPlainString();
     }
 
     @Override
@@ -96,7 +86,7 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
 
     @Override
     public SignSubject load(Long bizId) {
-        BizPrescription p = prescriptionMapper.selectById(bizId);
+        BizPrescription p = bizPrescriptionMapper.selectById(bizId);
         if (p == null) {
             return null;
         }
@@ -114,7 +104,7 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
 
     @Override
     public String blockReason(SignSubject subject, SignSceneEnum scene) {
-        BizPrescription p = prescriptionMapper.selectById(subject.bizId());
+        BizPrescription p = bizPrescriptionMapper.selectById(subject.bizId());
         if (p == null) {
             return "处方不存在或已被删除，无法签名";
         }
@@ -151,7 +141,7 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
     public void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime) {
         BizPrescription patch = new BizPrescription();
         patch.setId(bizId);
-        LocalDateTime t = signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime t = signedTime == null ? null : TimeUtil.toSeconds(signedTime);
         if (scene == SignSceneEnum.RX_AUDIT) {
             patch.setAuditSignId(signId);
             patch.setAuditSignedTime(t);
@@ -159,12 +149,12 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
             patch.setDoctorSignId(signId);
             patch.setDoctorSignedTime(t);
         }
-        prescriptionMapper.updateById(patch);
+        bizPrescriptionMapper.updateById(patch);
     }
 
     @Override
     public void revokeSignAnchor(Long bizId, Long signId) {
-        BizPrescription p = prescriptionMapper.selectById(bizId);
+        BizPrescription p = bizPrescriptionMapper.selectById(bizId);
         if (p == null) {
             return;
         }
@@ -172,14 +162,14 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
         // MyBatis-Plus 的 updateById 只更新非 null 字段（set null 等于"不改"），
         // 所以必须用 UpdateWrapper 显式 set null，否则签名作废了、处方上还挂着旧签名ID。
         if (Objects.equals(signId, p.getDoctorSignId())) {
-            prescriptionMapper.update(null, new LambdaUpdateWrapper<BizPrescription>()
+            bizPrescriptionMapper.update(null, new LambdaUpdateWrapper<BizPrescription>()
                     .eq(BizPrescription::getId, bizId)
                     .set(BizPrescription::getDoctorSignId, null)
                     .set(BizPrescription::getDoctorSignedTime, null));
             log.info("已清除处方开方签名指针 rxNo={} signId={}", p.getPrescriptionNo(), signId);
         }
         if (Objects.equals(signId, p.getAuditSignId())) {
-            prescriptionMapper.update(null, new LambdaUpdateWrapper<BizPrescription>()
+            bizPrescriptionMapper.update(null, new LambdaUpdateWrapper<BizPrescription>()
                     .eq(BizPrescription::getId, bizId)
                     .set(BizPrescription::getAuditSignId, null)
                     .set(BizPrescription::getAuditSignedTime, null));
@@ -193,7 +183,7 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
      * <p>明细按 {@code id} 升序拼装 —— 顺序必须确定，否则同一张处方两次签名摘要不同。
      */
     public String canonical(BizPrescription p) {
-        List<BizPrescriptionDetail> details = detailMapper.selectList(
+        List<BizPrescriptionDetail> details = bizPrescriptionDetailMapper.selectList(
                 new LambdaQueryWrapper<BizPrescriptionDetail>()
                         .eq(BizPrescriptionDetail::getPrescriptionId, p.getId())
                         .orderByAsc(BizPrescriptionDetail::getId));
@@ -212,7 +202,7 @@ public class PrescriptionSignProviderImpl implements SignableContentProvider, Pr
                 .put("prescriptionType", p.getPrescriptionType())
                 .put("prescriptionSource", p.getPrescriptionSource())
                 .put("diagnosis", p.getDiagnosis())
-                .put("totalAmount", plain(p.getTotalAmount()))
+                .put("totalAmount", NumUtil.plain(p.getTotalAmount()))
                 .put("drugCount", p.getDrugCount())
                 .put("usageInstruction", p.getUsageInstruction())
                 .put("isUrgent", p.getIsUrgent())

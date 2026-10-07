@@ -1,6 +1,7 @@
 package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.charge.entity.BizInsuranceReport;
@@ -41,9 +42,9 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InsuranceChannelServiceImpl implements InsuranceChannelService {
+public class InsuranceChannelServiceImpl extends ServiceImpl<BizInsuranceReportMapper, BizInsuranceReport> implements InsuranceChannelService {
 
-    private final BizInsuranceReportMapper reportMapper;
+    private final BizInsuranceReportMapper bizInsuranceReportMapper;
     private final ObjectMapper objectMapper;
 
     /**
@@ -97,7 +98,7 @@ public class InsuranceChannelServiceImpl implements InsuranceChannelService {
     public List<RemoteSettlement> queryDayBill(LocalDate billDate) {
         // —— M9 留口子：对账"拉取医保侧账单"动作的占位打印 ——
         log.info("[M9医保外发口子] ===== 模拟从医保前置机拉取当日账单 ===== billDate={}（真实接入=调前置机对账接口）", billDate);
-        List<BizInsuranceReport> records = reportMapper.selectList(new LambdaQueryWrapper<BizInsuranceReport>()
+        List<BizInsuranceReport> records = bizInsuranceReportMapper.selectList(new LambdaQueryWrapper<BizInsuranceReport>()
                 .eq(BizInsuranceReport::getBillDate, billDate)
                 .eq(BizInsuranceReport::getReportType, InsuranceReportTypeEnum.UPLOAD.getCode())
                 .eq(BizInsuranceReport::getStatus, InsuranceReportStatusEnum.SUCCESS.getCode())

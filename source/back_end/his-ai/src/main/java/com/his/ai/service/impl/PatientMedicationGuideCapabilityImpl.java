@@ -83,11 +83,11 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
     private static final String CAUTION_MISSED =
             "漏服时：想起来就补一次；如果已经快到下一次吃药的时间，就跳过这次，不要一次吃两份。";
 
-    private final BizPrescriptionMapper prescriptionMapper;
+    private final BizPrescriptionMapper bizPrescriptionMapper;
 
-    private final BizPrescriptionDetailMapper detailMapper;
+    private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
 
-    private final SysDrugGuideMapper drugGuideMapper;
+    private final SysDrugGuideMapper sysDrugGuideMapper;
 
     private final PatientGuardianService patientGuardianService;
 
@@ -219,7 +219,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
             throw new BusinessException("未获取到就诊人身份，请重新登录");
         }
 
-        BizPrescription prescription = prescriptionMapper.selectById(dto.getPrescriptionId());
+        BizPrescription prescription = bizPrescriptionMapper.selectById(dto.getPrescriptionId());
         if (prescription == null) {
             throw new BusinessException("处方不存在：" + dto.getPrescriptionId());
         }
@@ -228,7 +228,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
             throw new BusinessException("处方不存在或无权查看：" + dto.getPrescriptionId());
         }
 
-        List<BizPrescriptionDetail> details = detailMapper.selectList(
+        List<BizPrescriptionDetail> details = bizPrescriptionDetailMapper.selectList(
                 new LambdaQueryWrapper<BizPrescriptionDetail>()
                         .eq(BizPrescriptionDetail::getPrescriptionId, prescription.getId())
                         .orderByAsc(BizPrescriptionDetail::getId));
@@ -279,12 +279,12 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
 
     private SysDrugGuide drugOf(BizPrescriptionDetail detail) {
         if (detail.getDrugId() != null) {
-            SysDrugGuide byId = drugGuideMapper.selectGuideById(detail.getDrugId());
+            SysDrugGuide byId = sysDrugGuideMapper.selectGuideById(detail.getDrugId());
             if (byId != null) {
                 return byId;
             }
         }
         return StringUtils.hasText(detail.getDrugCode())
-                ? drugGuideMapper.selectGuideByCode(detail.getDrugCode().trim()) : null;
+                ? sysDrugGuideMapper.selectGuideByCode(detail.getDrugCode().trim()) : null;
     }
 }

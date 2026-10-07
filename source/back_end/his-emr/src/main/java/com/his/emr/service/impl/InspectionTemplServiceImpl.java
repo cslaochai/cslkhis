@@ -33,8 +33,8 @@ public class InspectionTemplServiceImpl implements InspectionTemplService {
     static final String[] HUIFANG_TYPE = {"糖尿病", "高血压", "冠心病"};
     private static final AtomicInteger TASK_SEQ = new AtomicInteger(0);
     private static final AtomicInteger SEQ = new AtomicInteger(0);
-    private final BizInspectionTemplateMapper inspectionTemplateMapper;
-    private final BizLaboratoryTemplateMapper laboratoryTemplateMapper;
+    private final BizInspectionTemplateMapper bizInspectionTemplateMapper;
+    private final BizLaboratoryTemplateMapper bizLaboratoryTemplateMapper;
 
     @Override
     public List<BizInspectionTemplateVO> getInspectionTemplateList() {
@@ -45,7 +45,7 @@ public class InspectionTemplServiceImpl implements InspectionTemplService {
         LambdaQueryWrapper<BizInspectionTemplate> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizInspectionTemplate::getDoctorId, doctorId)
                 .orderByAsc(BizInspectionTemplate::getSortOrder);
-        List<BizInspectionTemplate> list = inspectionTemplateMapper.selectList(wrapper);
+        List<BizInspectionTemplate> list = bizInspectionTemplateMapper.selectList(wrapper);
         if (list == null) {
             return new ArrayList<>();
         }
@@ -63,13 +63,13 @@ public class InspectionTemplServiceImpl implements InspectionTemplService {
         BizInspectionTemplate template = new BizInspectionTemplate();
         BeanUtils.copyProperties(upsertDTO, template);
         template.setDoctorId(doctorId);
-        return inspectionTemplateMapper.insert(template) > 0;
+        return bizInspectionTemplateMapper.insert(template) > 0;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteInspectionTemplate(Long id) {
-        return inspectionTemplateMapper.deleteById(id) > 0;
+        return bizInspectionTemplateMapper.deleteById(id) > 0;
     }
 
     // 检验申请模板
@@ -82,7 +82,7 @@ public class InspectionTemplServiceImpl implements InspectionTemplService {
         LambdaQueryWrapper<BizLaboratoryTemplate> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(BizLaboratoryTemplate::getDoctorId, doctorId)
                 .orderByAsc(BizLaboratoryTemplate::getSortOrder);
-        List<BizLaboratoryTemplate> list = laboratoryTemplateMapper.selectList(wrapper);
+        List<BizLaboratoryTemplate> list = bizLaboratoryTemplateMapper.selectList(wrapper);
         if (list == null) {
             return new ArrayList<>();
         }
@@ -100,13 +100,13 @@ public class InspectionTemplServiceImpl implements InspectionTemplService {
         BizLaboratoryTemplate template = new BizLaboratoryTemplate();
         BeanUtils.copyProperties(upsertDTO, template);
         template.setDoctorId(doctorId);
-        return laboratoryTemplateMapper.insert(template) > 0;
+        return bizLaboratoryTemplateMapper.insert(template) > 0;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteLaboratoryTemplate(Long id) {
-        return laboratoryTemplateMapper.deleteById(id) > 0;
+        return bizLaboratoryTemplateMapper.deleteById(id) > 0;
     }
 
     private Long currentEmployeeIdOrNull() {

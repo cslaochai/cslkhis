@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
@@ -52,14 +53,14 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InpatientRecordServiceImpl implements InpatientRecordService {
+public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMapper, BizInpatientRecord> implements InpatientRecordService {
     private final DeptScopeProvider deptScopeProvider;
-    private final BizInpatientRecordMapper recordMapper;
-    private final BizInpatientRecordLogMapper logMapper;
-    private final BizNursingRecordMapper nursingRecordMapper;
-    private final BizAdmissionMapper admissionMapper;
-    private final BizPatientMapper patientMapper;
-    private final SysBedMapper bedMapper;
+    private final BizInpatientRecordMapper bizInpatientRecordMapper;
+    private final BizInpatientRecordLogMapper bizInpatientRecordLogMapper;
+    private final BizNursingRecordMapper bizNursingRecordMapper;
+    private final BizAdmissionMapper bizAdmissionMapper;
+    private final BizPatientMapper bizPatientMapper;
+    private final SysBedMapper sysBedMapper;
     /**
      * 电子签名（P5.5）：提交即签名、归档补签、签名即锁定
      */
@@ -140,11 +141,11 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
-        BizPatient patient = patientMapper.selectById(admission.getPatientId());
+        BizPatient patient = bizPatientMapper.selectById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
@@ -163,7 +164,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         String deptName = null;
         String wardName = null;
         if (admission.getWardId() != null) {
-            WardVO ward = bedMapper.selectWardById(admission.getWardId());
+            WardVO ward = sysBedMapper.selectWardById(admission.getWardId());
             if (ward != null) {
                 wardName = ward.getWardName();
                 deptName = ward.getDeptName();
@@ -178,7 +179,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         record.setWardName(wardName);
         String bedNo = null;
         if (admission.getBedId() != null) {
-            SysBed bed = bedMapper.selectById(admission.getBedId());
+            SysBed bed = sysBedMapper.selectById(admission.getBedId());
             if (bed != null) {
                 bedNo = bed.getBedNo();
             }
@@ -205,7 +206,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         }
 
         validateContent(record);
-        recordMapper.insert(record);
+        bizInpatientRecordMapper.insert(record);
         writeActionLog(record, "创建");
         log.info("新建病历文书 recordNo={} admissionId={} type={} 医生={}",
                 record.getRecordNo(), record.getAdmissionId(),
@@ -214,7 +215,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
     }
 
     private InpatientRecordDetailVO update(InpatientRecordUpsertDTO dto) {
-        BizInpatientRecord record = recordMapper.selectById(dto.getId());
+        BizInpatientRecord record = bizInpatientRecordMapper.selectById(dto.getId());
         if (record == null) {
             throw new BusinessException("病历文书不存在");
         }
@@ -246,9 +247,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         applyContent(record, dto);
 
         validateContent(record);
-        recordMapper.updateById(record);
+        bizInpatientRecordMapper.updateById(record);
         for (BizInpatientRecordLog row : changes) {
-            logMapper.insert(row);
+            bizInpatientRecordLogMapper.insert(row);
         }
         if (!changes.isEmpty()) {
             CurrentUser operatorUser = UserUtils.getCurrentUser();
@@ -378,7 +379,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
 
     @Override
     public InpatientRecordDetailVO detail(Long id) {
-        BizInpatientRecord record = recordMapper.selectById(id);
+        BizInpatientRecord record = bizInpatientRecordMapper.selectById(id);
         if (record == null) {
             throw new BusinessException("病历文书不存在");
         }
@@ -391,7 +392,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         // scopeDeptIds 是服务端专用字段，先清掉前端可能伪造的值。
         query.setScopeDeptIds(deptScopeProvider.isScoped()
                 ? List.copyOf(deptScopeProvider.allowedDeptIds()) : null);
-        IPage<BizInpatientRecord> page = recordMapper.selectRecordPage(
+        IPage<BizInpatientRecord> page = bizInpatientRecordMapper.selectRecordPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         List<InpatientRecordVO> rows = new ArrayList<>(page.getRecords().size());
         for (BizInpatientRecord r : page.getRecords()) {
@@ -570,7 +571,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
             // 提交动作会被自己的签名校验拦死（这条不是理论，是实测踩出来的）。
             r.setRecordStatus(RecordStatusEnum.SUBMITTED.getCode());
             r.setSubmitTime(now);
-            recordMapper.updateById(r);
+            bizInpatientRecordMapper.updateById(r);
 
             com.his.common.vo.SignatureVO sig = signOrFail(r, SignSceneEnum.SUBMIT,
                     "病历提交");
@@ -581,13 +582,13 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
                 r.setSignStatus(1);
                 r.setSignId(sig.getId());
                 r.setSignedTime(sig.getSignedTime());
-                recordMapper.updateById(r);
+                bizInpatientRecordMapper.updateById(r);
             }
             BizInpatientRecordLog row = actionLog(r, "提交");
             row.setUserId(empId);
             row.setUserName(name);
             row.setRemark(dto.getRemark());
-            logMapper.insert(row);
+            bizInpatientRecordLogMapper.insert(row);
         }
         log.info("提交病历文书 {} 份：{}", records.size(),
                 records.stream().map(BizInpatientRecord::getRecordNo).toList());
@@ -635,12 +636,12 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
             r.setArchiveTime(now);
             r.setArchiveBy(empId);
             r.setArchiveByName(name);
-            recordMapper.updateById(r);
+            bizInpatientRecordMapper.updateById(r);
             BizInpatientRecordLog row = actionLog(r, "归档");
             row.setUserId(empId);
             row.setUserName(name);
             row.setRemark(dto.getRemark());
-            logMapper.insert(row);
+            bizInpatientRecordLogMapper.insert(row);
         }
         log.info("归档病历文书 {} 份：{}", records.size(),
                 records.stream().map(BizInpatientRecord::getRecordNo).toList());
@@ -684,7 +685,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
     private List<BizInpatientRecord> loadForBatch(List<Long> ids) {
         List<BizInpatientRecord> records = new ArrayList<>(ids.size());
         for (Long id : ids) {
-            BizInpatientRecord r = recordMapper.selectById(id);
+            BizInpatientRecord r = bizInpatientRecordMapper.selectById(id);
             if (r == null) {
                 throw new BusinessException("病历文书不存在（id=" + id + "）");
             }
@@ -705,10 +706,10 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
             // 除非显式指定了 docType —— 查"这次住院"的人关心的是轨迹，不是单据类型）
             List<String> nos = new ArrayList<>();
             if (query.getDocType() == null || query.getDocType() == RecordDocTypeEnum.MEDICAL.getCode()) {
-                nos.addAll(recordMapper.selectRecordNosByAdmission(query.getAdmissionId()));
+                nos.addAll(bizInpatientRecordMapper.selectRecordNosByAdmission(query.getAdmissionId()));
             }
             if (query.getDocType() == null || query.getDocType() == 2) {
-                nos.addAll(nursingRecordMapper.selectRecordNosByAdmission(query.getAdmissionId()));
+                nos.addAll(bizNursingRecordMapper.selectRecordNosByAdmission(query.getAdmissionId()));
             }
             if (nos.isEmpty()) {
                 return new Page<>(query.getPageNum(), query.getPageSize());
@@ -717,7 +718,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         }
         wrapper.orderByDesc(BizInpatientRecordLog::getCreateTime).orderByDesc(BizInpatientRecordLog::getId);
 
-        IPage<BizInpatientRecordLog> page = logMapper.selectPage(
+        IPage<BizInpatientRecordLog> page = bizInpatientRecordLogMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         Page<InpatientRecordLogVO> result = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         List<InpatientRecordLogVO> rows = new ArrayList<>(page.getRecords().size());
@@ -736,7 +737,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         if (docType == null || recordId == null) {
             throw new BusinessException("单据类型与单据ID不能为空");
         }
-        List<BizInpatientRecordLog> list = logMapper.selectByRecord(docType, recordId);
+        List<BizInpatientRecordLog> list = bizInpatientRecordLogMapper.selectByRecord(docType, recordId);
         List<InpatientRecordLogVO> rows = new ArrayList<>(list.size());
         for (BizInpatientRecordLog l : list) {
             rows.add(toLogVO(l));
@@ -799,11 +800,11 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        BizAdmission admission = admissionMapper.selectById(admissionId);
+        BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
-        List<BizInpatientRecord> records = recordMapper.selectByAdmission(admissionId);
+        List<BizInpatientRecord> records = bizInpatientRecordMapper.selectByAdmission(admissionId);
 
         RecordQualityStatVO stat = new RecordQualityStatVO();
         stat.setAdmissionId(admissionId);
@@ -925,7 +926,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
     @Transactional(rollbackFor = Exception.class)
     public BizInpatientRecord appendClosedLoopRecord(BizInpatientRecord record) {
         record.setRecordNo(nextRecordNo());
-        recordMapper.insert(record);
+        bizInpatientRecordMapper.insert(record);
         return record;
     }
 
@@ -1011,7 +1012,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
     }
 
     private void writeActionLog(BizInpatientRecord record, String operation) {
-        logMapper.insert(actionLog(record, operation));
+        bizInpatientRecordLogMapper.insert(actionLog(record, operation));
     }
 
     private void fillStructured(BizInpatientRecord r,
@@ -1043,7 +1044,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
     }
 
     private String patientNameOf(Long patientId) {
-        BizPatient p = patientMapper.selectById(patientId);
+        BizPatient p = bizPatientMapper.selectById(patientId);
         return p == null ? null : p.getPatientName();
     }
 
@@ -1071,7 +1072,7 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
 
     private String nextRecordNo() {
         String prefix = "BL" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = recordMapper.countByRecordNoPrefix(prefix) + 1;
+        long seq = bizInpatientRecordMapper.countByRecordNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 

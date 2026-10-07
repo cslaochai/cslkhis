@@ -33,46 +33,46 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("isAuthenticated()")
 public class AiKnowledgeController {
 
-    private final KnowledgeQaCapability qaCapability;
-    private final KnowledgeStoreService storeService;
+    private final KnowledgeQaCapability knowledgeQaCapability;
+    private final KnowledgeStoreService knowledgeStoreService;
 
     @PostMapping("/ask")
     @Operation(summary = "知识库问答（RAG 检索增强生成；模型不可用降级返回检索原文）")
-    public Result<KnowledgeAskVO> ask(@Valid @RequestBody KnowledgeAskDTO dto) {
-        return Result.success(qaCapability.ask(dto));
+    public Result<KnowledgeAskVO> ask(@Valid @RequestBody KnowledgeAskDTO askDTO) {
+        return Result.success(knowledgeQaCapability.ask(askDTO));
     }
 
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/ingest")
     @Operation(summary = "录入/更新知识文档（手工或文件导入；自动切块建索引）")
-    public Result<Long> ingest(@Valid @RequestBody KnowledgeIngestDTO dto) {
+    public Result<Long> ingest(@Valid @RequestBody KnowledgeIngestDTO ingestDTO) {
         SysKnowledgeDoc doc = new SysKnowledgeDoc();
-        doc.setTitle(dto.getTitle());
-        doc.setCategory(StringUtils.hasText(dto.getCategory()) ? dto.getCategory() : dto.getTitle());
-        doc.setContent(dto.getContent());
-        doc.setSourceType(dto.getSourceType() == null ? 2 : dto.getSourceType());
-        return Result.success(storeService.ingest(doc));
+        doc.setTitle(ingestDTO.getTitle());
+        doc.setCategory(StringUtils.hasText(ingestDTO.getCategory()) ? ingestDTO.getCategory() : ingestDTO.getTitle());
+        doc.setContent(ingestDTO.getContent());
+        doc.setSourceType(ingestDTO.getSourceType() == null ? 2 : ingestDTO.getSourceType());
+        return Result.success(knowledgeStoreService.ingest(doc));
     }
 
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/listPage")
     @Operation(summary = "知识文档分页列表")
     public Result<IPage<KnowledgeDocListVO>> listPage(@Valid @RequestBody KnowledgeDocQueryPageDTO dto) {
-        return Result.success(storeService.listPage(dto));
+        return Result.success(knowledgeStoreService.listPage(dto));
     }
 
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/getById")
     @Operation(summary = "知识文档详情（含原文）")
     public Result<KnowledgeDocVO> getById(@Valid @RequestBody KnowledgeIdDTO dto) {
-        return Result.success(storeService.getById(dto.getId()));
+        return Result.success(knowledgeStoreService.getById(dto.getId()));
     }
 
     @PreAuthorize("hasAuthority('ai:knowledge:manage')")
     @PostMapping("/deleteById")
     @Operation(summary = "删除知识文档（同步删除切块与索引）")
     public Result<Void> deleteById(@Valid @RequestBody KnowledgeIdDTO dto) {
-        storeService.deleteById(dto.getId());
+        knowledgeStoreService.deleteById(dto.getId());
         return Result.success("已删除", null);
     }
 
@@ -80,7 +80,7 @@ public class AiKnowledgeController {
     @PostMapping("/rebuild")
     @Operation(summary = "重建向量索引（从 chunk 表全量重载）")
     public Result<Void> rebuild() {
-        storeService.rebuild();
+        knowledgeStoreService.rebuild();
         return Result.success("索引已重建", null);
     }
 
@@ -88,6 +88,6 @@ public class AiKnowledgeController {
     @PostMapping("/seed")
     @Operation(summary = "灌入内置示例语料（若库为空）")
     public Result<Integer> seed() {
-        return Result.success(storeService.seedIfEmpty());
+        return Result.success(knowledgeStoreService.seedIfEmpty());
     }
 }

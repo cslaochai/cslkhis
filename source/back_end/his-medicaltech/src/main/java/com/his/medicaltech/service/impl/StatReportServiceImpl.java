@@ -3,23 +3,17 @@ package com.his.medicaltech.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.StatReportDTO;
 import com.his.medicaltech.entity.BizStatReport;
 import com.his.medicaltech.mapper.BizStatReportMapper;
 import com.his.medicaltech.mapper.StatReportAggMapper;
 import com.his.medicaltech.service.StatReportService;
-import com.his.medicaltech.vo.StatCohortCaseRowVO;
-import com.his.medicaltech.vo.StatCohortFeesRowVO;
-import com.his.medicaltech.vo.StatCohortSummaryRowVO;
-import com.his.medicaltech.vo.StatInsuranceDistRowVO;
-import com.his.medicaltech.vo.StatOperationLevelRowVO;
-import com.his.medicaltech.vo.StatOperationRowVO;
-import com.his.medicaltech.vo.StatReportPayloadVO;
-import com.his.medicaltech.vo.StatReportVO;
-import com.his.medicaltech.vo.StatTopDiagnosisRowVO;
+import com.his.medicaltech.vo.*;
 import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
@@ -42,11 +36,11 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 @Service
 @RequiredArgsConstructor
-public class StatReportServiceImpl implements StatReportService {
+public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizStatReport> implements StatReportService {
 
-    private final BizStatReportMapper reportMapper;
+    private final BizStatReportMapper bizStatReportMapper;
 
-    private final StatReportAggMapper aggMapper;
+    private final StatReportAggMapper statReportAggMapper;
 
     private final ObjectMapper objectMapper;
 
@@ -81,11 +75,6 @@ public class StatReportServiceImpl implements StatReportService {
     }
 
     // 查询
-    private static String cut(String s, int max) {
-        if (s == null) return null;
-        String t = s.trim();
-        return t.length() > max ? t.substring(0, max) : t;
-    }
 
     @Transactional(rollbackFor = Exception.class)
     public StatReportVO.Detail generate(StatReportDTO.Generate dto) {
@@ -118,7 +107,7 @@ public class StatReportServiceImpl implements StatReportService {
         String endStr = end.atTime(LocalTime.MAX).format(DateFormats.DATETIME);
 
         Long deptId = dto.getDeptId();
-        BizStatReport dup = reportMapper.selectOne(new LambdaQueryWrapper<BizStatReport>()
+        BizStatReport dup = bizStatReportMapper.selectOne(new LambdaQueryWrapper<BizStatReport>()
                 .eq(BizStatReport::getReportType, dto.getReportType())
                 .eq(BizStatReport::getPeriodValue, period)
                 .in(BizStatReport::getStatus, 0, 1)
@@ -132,29 +121,29 @@ public class StatReportServiceImpl implements StatReportService {
 
         String deptName = null;
         if (deptId != null) {
-            deptName = aggMapper.selectDeptName(deptId);
+            deptName = statReportAggMapper.selectDeptName(deptId);
             if (!StringUtils.hasText(deptName)) {
                 throw new BusinessException("所选科室不存在");
             }
         }
         Long deptFilter = deptId == null ? 0L : deptId;
 
-        StatCohortSummaryRowVO summary = aggMapper.cohortSummary(startStr, endStr, deptFilter);
+        StatCohortSummaryRowVO summary = statReportAggMapper.cohortSummary(startStr, endStr, deptFilter);
         if (summary == null) {
             summary = emptySummary();
         }
-        StatOperationRowVO opStats = aggMapper.operationStats(startStr, endStr, deptFilter);
+        StatOperationRowVO opStats = statReportAggMapper.operationStats(startStr, endStr, deptFilter);
         if (opStats == null) {
             opStats = emptyOperation();
         }
-        StatCohortFeesRowVO fees = aggMapper.cohortFees(startStr, endStr, deptFilter);
+        StatCohortFeesRowVO fees = statReportAggMapper.cohortFees(startStr, endStr, deptFilter);
         if (fees == null) {
             fees = emptyFees();
         }
-        List<StatOperationLevelRowVO> levelDist = aggMapper.operationLevelDist(startStr, endStr, deptFilter);
-        List<StatInsuranceDistRowVO> insurance = aggMapper.insuranceDist(startStr, endStr, deptFilter);
-        List<StatTopDiagnosisRowVO> topDx = aggMapper.topDiagnoses(startStr, endStr, deptFilter);
-        List<StatCohortCaseRowVO> cases = aggMapper.cohortCases(startStr, endStr, deptFilter);
+        List<StatOperationLevelRowVO> levelDist = statReportAggMapper.operationLevelDist(startStr, endStr, deptFilter);
+        List<StatInsuranceDistRowVO> insurance = statReportAggMapper.insuranceDist(startStr, endStr, deptFilter);
+        List<StatTopDiagnosisRowVO> topDx = statReportAggMapper.topDiagnoses(startStr, endStr, deptFilter);
+        List<StatCohortCaseRowVO> cases = statReportAggMapper.cohortCases(startStr, endStr, deptFilter);
 
         String typeName = dictCacheService.getDicDataLabel("biz_medicaltech_statReportTypeEnum", dto.getReportType());
         String title = (deptName == null ? "" : deptName) + typeName + "（" + period + "）";
@@ -243,7 +232,7 @@ public class StatReportServiceImpl implements StatReportService {
         try {
             payloadJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload);
         } catch (Exception e) {
-            throw new BusinessException("上报报文序列化失败：" + cut(e.getMessage(), 200));
+            throw new BusinessException("上报报文序列化失败：" + TextUtil.cut(e.getMessage(), 200));
         }
 
         BizStatReport r = new BizStatReport();
@@ -264,9 +253,9 @@ public class StatReportServiceImpl implements StatReportService {
         r.setStatus(0);
         r.setGenerateTime(now);
         r.setOperatorName(operator);
-        r.setRemark(cut(dto.getRemark(), 500));
+        r.setRemark(TextUtil.cut(dto.getRemark(), 500));
         r.setCreateBy(operator);
-        reportMapper.insert(r);
+        bizStatReportMapper.insert(r);
         return toDetail(r);
     }
 
@@ -283,7 +272,7 @@ public class StatReportServiceImpl implements StatReportService {
         r.setStatus(1);
         r.setSubmitTime(LocalDateTime.now());
         r.setSubmitByName(operatorUser.getRealName());
-        reportMapper.updateById(r);
+        bizStatReportMapper.updateById(r);
         return toRow(r);
     }
 
@@ -295,8 +284,8 @@ public class StatReportServiceImpl implements StatReportService {
         }
         r.setStatus(2);
         r.setVoidTime(LocalDateTime.now());
-        r.setVoidReason(cut(reason, 200));
-        reportMapper.updateById(r);
+        r.setVoidReason(TextUtil.cut(reason, 200));
+        bizStatReportMapper.updateById(r);
         return toRow(r);
     }
 
@@ -315,7 +304,7 @@ public class StatReportServiceImpl implements StatReportService {
                 .le(q.getEndDate() != null, BizStatReport::getGenerateTime, q.getEndDate())
                 .orderByDesc(BizStatReport::getGenerateTime)
                 .orderByDesc(BizStatReport::getId);
-        return reportMapper.selectPage(Page.of(q.getPageNum(), q.getPageSize()), qw)
+        return bizStatReportMapper.selectPage(Page.of(q.getPageNum(), q.getPageSize()), qw)
                 .convert(this::toRow);
     }
 
@@ -324,7 +313,7 @@ public class StatReportServiceImpl implements StatReportService {
     }
 
     private BizStatReport mustGet(Long id) {
-        BizStatReport r = reportMapper.selectById(id);
+        BizStatReport r = bizStatReportMapper.selectById(id);
         if (r == null) {
             throw new BusinessException("上报台账不存在");
         }

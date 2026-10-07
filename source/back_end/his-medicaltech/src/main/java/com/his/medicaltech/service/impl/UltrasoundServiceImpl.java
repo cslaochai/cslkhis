@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.UltrasoundDTO;
 import com.his.medicaltech.entity.BizUltrasoundMeasure;
 import com.his.medicaltech.entity.BizUltrasoundRecord;
@@ -46,9 +47,9 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
     private static final String DICT_STATUS = "his_endous_status";
     private static final String DICT_US_TYPE = "his_ultrasound_type";
 
-    private final BizUltrasoundRecordMapper recordMapper;
-    private final BizUltrasoundMeasureMapper measureMapper;
-    private final DictCacheService dictText;
+    private final BizUltrasoundRecordMapper bizUltrasoundRecordMapper;
+    private final BizUltrasoundMeasureMapper bizUltrasoundMeasureMapper;
+    private final DictCacheService dictCacheService;
 
     // 查询
 
@@ -58,11 +59,11 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
                 .eq(q.getPatientId() != null, BizUltrasoundRecord::getPatientId, q.getPatientId())
                 .eq(q.getUsType() != null, BizUltrasoundRecord::getUsType, q.getUsType())
                 .eq(q.getStatus() != null, BizUltrasoundRecord::getStatus, q.getStatus())
-                .like(StringUtils.hasText(q.getPatientName()), BizUltrasoundRecord::getPatientName, tr(q.getPatientName()))
+                .like(StringUtils.hasText(q.getPatientName()), BizUltrasoundRecord::getPatientName, TextUtil.trim(q.getPatientName()))
                 .ge(q.getStartDate() != null, BizUltrasoundRecord::getVisitDate, q.getStartDate())
                 .le(q.getEndDate() != null, BizUltrasoundRecord::getVisitDate, q.getEndDate())
                 .orderByDesc(BizUltrasoundRecord::getId);
-        Page<BizUltrasoundRecord> page = recordMapper.selectPage(
+        Page<BizUltrasoundRecord> page = bizUltrasoundRecordMapper.selectPage(
                 new Page<>(q.getPageNum(), q.getPageSize()), w);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 toListVo(page.getRecords()));
@@ -70,33 +71,33 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
 
     public UltrasoundVO.StatsVO stats() {
         UltrasoundVO.StatsVO vo = new UltrasoundVO.StatsVO();
-        vo.setTotal(recordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
+        vo.setTotal(bizUltrasoundRecordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
                 .ne(BizUltrasoundRecord::getStatus, InsRecordStatusEnum.CANCELLED.getCode())));
         vo.setPending(count(InsRecordStatusEnum.REGISTERED.getCode()) + count(InsRecordStatusEnum.SIGNED_IN.getCode()));
         vo.setExamining(count(InsRecordStatusEnum.CHECKING.getCode()));
         vo.setPendingAudit(count(InsRecordStatusEnum.RESULTED.getCode()));
         vo.setPublished(count(InsRecordStatusEnum.PUBLISHED.getCode()));
-        vo.setTodayCount(recordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
+        vo.setTodayCount(bizUltrasoundRecordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
                 .ge(BizUltrasoundRecord::getCreateTime, LocalDate.now().atStartOfDay())));
         return vo;
     }
 
     private long count(int status) {
-        return recordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>().eq(BizUltrasoundRecord::getStatus, status));
+        return bizUltrasoundRecordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>().eq(BizUltrasoundRecord::getStatus, status));
     }
 
     public UltrasoundVO.DetailVO getDetail(Long recordId) {
         BizUltrasoundRecord r = require(recordId);
         UltrasoundVO.DetailVO vo = new UltrasoundVO.DetailVO();
         BeanUtils.copyProperties(r, vo);
-        vo.setStatusText(dictText.getDicDataLabel(DICT_STATUS, r.getStatus()));
-        vo.setUsTypeText(dictText.getDicDataLabel(DICT_US_TYPE, r.getUsType()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()));
+        vo.setUsTypeText(dictCacheService.getDicDataLabel(DICT_US_TYPE, r.getUsType()));
         vo.setMeasures(listMeasures(recordId));
         return vo;
     }
 
     public List<UltrasoundVO.MeasureVO> listMeasures(Long recordId) {
-        List<BizUltrasoundMeasure> list = measureMapper.selectList(new LambdaQueryWrapper<BizUltrasoundMeasure>()
+        List<BizUltrasoundMeasure> list = bizUltrasoundMeasureMapper.selectList(new LambdaQueryWrapper<BizUltrasoundMeasure>()
                 .eq(BizUltrasoundMeasure::getRecordId, recordId)
                 .orderByAsc(BizUltrasoundMeasure::getSortOrder)
                 .orderByAsc(BizUltrasoundMeasure::getId));
@@ -115,8 +116,8 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         for (BizUltrasoundRecord r : records) {
             UltrasoundVO.ListVO v = new UltrasoundVO.ListVO();
             BeanUtils.copyProperties(r, v);
-            v.setStatusText(dictText.getDicDataLabel(DICT_STATUS, r.getStatus()));
-            v.setUsTypeText(dictText.getDicDataLabel(DICT_US_TYPE, r.getUsType()));
+            v.setStatusText(dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()));
+            v.setUsTypeText(dictCacheService.getDicDataLabel(DICT_US_TYPE, r.getUsType()));
             out.add(v);
         }
         return out;
@@ -141,7 +142,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         }
         r.setStatus(InsRecordStatusEnum.REGISTERED.getCode());
         r.setRecordNo(nextRecordNo(visitDate));
-        recordMapper.insert(r);
+        bizUltrasoundRecordMapper.insert(r);
         return r;
     }
 
@@ -149,11 +150,11 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         BizUltrasoundRecord r = require(dto.getId());
         assertMutable(r);
         if (!InsRecordStatusEnum.REGISTERED.is(r.getStatus()) && !InsRecordStatusEnum.SIGNED_IN.is(r.getStatus())) {
-            throw new BusinessException("已开始检查的记录不可修改登记信息（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("已开始检查的记录不可修改登记信息（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         BeanUtils.copyProperties(dto, r);
         r.setId(dto.getId());
-        recordMapper.updateById(r);
+        bizUltrasoundRecordMapper.updateById(r);
         return r;
     }
 
@@ -162,10 +163,10 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         BizUltrasoundRecord r = require(recordId);
         assertMutable(r);
         if (!InsRecordStatusEnum.REGISTERED.is(r.getStatus())) {
-            throw new BusinessException("仅「已登记」可签到（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("仅「已登记」可签到（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         r.setStatus(InsRecordStatusEnum.SIGNED_IN.getCode());
-        recordMapper.updateById(r);
+        bizUltrasoundRecordMapper.updateById(r);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -177,7 +178,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         BizUltrasoundRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.SIGNED_IN.is(r.getStatus()) && !InsRecordStatusEnum.CHECKING.is(r.getStatus())) {
-            throw new BusinessException("请先签到再执行检查（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("请先签到再执行检查（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         r.setSonographer(StringUtils.hasText(dto.getSonographer()) ? dto.getSonographer() : operatorUser.getRealName());
         if (StringUtils.hasText(dto.getBodyPart())) {
@@ -187,7 +188,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
             r.setStatus(InsRecordStatusEnum.CHECKING.getCode());
             r.setExecuteTime(LocalDateTime.now().withNano(0));
         }
-        recordMapper.updateById(r);
+        bizUltrasoundRecordMapper.updateById(r);
     }
 
     /**
@@ -213,7 +214,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         if (!keepIds.isEmpty()) {
             del.notIn(BizUltrasoundMeasure::getId, keepIds);
         }
-        measureMapper.delete(del);
+        bizUltrasoundMeasureMapper.delete(del);
 
         int sort = 0;
         for (UltrasoundDTO.MeasureItem it : items) {
@@ -222,7 +223,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
             }
             BizUltrasoundMeasure m = new BizUltrasoundMeasure();
             if (it.getId() != null) {
-                BizUltrasoundMeasure old = measureMapper.selectById(it.getId());
+                BizUltrasoundMeasure old = bizUltrasoundMeasureMapper.selectById(it.getId());
                 if (old != null && r.getId().equals(old.getRecordId())) {
                     m = old;
                 }
@@ -236,9 +237,9 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
             m.setSortOrder(it.getSortOrder() != null ? it.getSortOrder() : ++sort);
             m.setAbnormalFlag(judgeAbnormal(it.getMeasureValue(), it.getReferenceRange()));
             if (m.getId() == null) {
-                measureMapper.insert(m);
+                bizUltrasoundMeasureMapper.insert(m);
             } else {
-                measureMapper.updateById(m);
+                bizUltrasoundMeasureMapper.updateById(m);
             }
         }
         return items.size();
@@ -253,7 +254,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         BizUltrasoundRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.CHECKING.is(r.getStatus())) {
-            throw new BusinessException("仅「检查中」的记录可出具报告（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("仅「检查中」的记录可出具报告（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         r.setFindings(dto.getFindings());
         r.setConclusion(dto.getConclusion());
@@ -261,7 +262,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         r.setStatus(InsRecordStatusEnum.RESULTED.getCode());
         r.setReportBy(operatorUser.getRealName());
         r.setReportTime(LocalDateTime.now().withNano(0));
-        recordMapper.updateById(r);
+        bizUltrasoundRecordMapper.updateById(r);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -273,7 +274,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         BizUltrasoundRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.RESULTED.is(r.getStatus())) {
-            throw new BusinessException("仅「已出报告」可审核（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("仅「已出报告」可审核（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         String who = operatorUser.getRealName();
         if (who != null && who.equals(r.getReportBy())) {
@@ -283,9 +284,9 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         r.setAuditBy(who);
         r.setAuditTime(LocalDateTime.now().withNano(0));
         if (StringUtils.hasText(dto.getAuditOpinion())) {
-            r.setRemark(clip((r.getRemark() == null ? "" : r.getRemark() + " | 审核意见：") + dto.getAuditOpinion()));
+            r.setRemark(TextUtil.cut((r.getRemark() == null ? "" : r.getRemark() + " | 审核意见：") + dto.getAuditOpinion(), 480));
         }
-        recordMapper.updateById(r);
+        bizUltrasoundRecordMapper.updateById(r);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -299,12 +300,12 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
             throw new BusinessException("该报告已发布");
         }
         if (!InsRecordStatusEnum.REVIEWED.is(r.getStatus())) {
-            throw new BusinessException("发布前必须完成审核（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("发布前必须完成审核（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         r.setStatus(InsRecordStatusEnum.PUBLISHED.getCode());
         r.setPublishBy(operatorUser.getRealName());
         r.setPublishTime(LocalDateTime.now().withNano(0));
-        recordMapper.updateById(r);
+        bizUltrasoundRecordMapper.updateById(r);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -317,9 +318,9 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
             throw new BusinessException("该记录已取消");
         }
         r.setStatus(InsRecordStatusEnum.CANCELLED.getCode());
-        r.setCancelReason(clip(dto.getCancelReason()));
+        r.setCancelReason(TextUtil.cut(dto.getCancelReason(), 480));
         r.setCancelTime(LocalDateTime.now().withNano(0));
-        recordMapper.updateById(r);
+        bizUltrasoundRecordMapper.updateById(r);
     }
 
     // 内部
@@ -329,7 +330,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         if (id == null) {
             throw new BusinessException("检查记录ID不能为空");
         }
-        BizUltrasoundRecord r = recordMapper.selectById(id);
+        BizUltrasoundRecord r = bizUltrasoundRecordMapper.selectById(id);
         if (r == null) {
             throw new BusinessException("超声检查记录不存在：" + id);
         }
@@ -417,12 +418,12 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
 
     private String nextRecordNo(LocalDate date) {
         String day = date.format(DateFormats.COMPACT_DATE);
-        long base = recordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
+        long base = bizUltrasoundRecordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
                 .ge(BizUltrasoundRecord::getCreateTime, date.atStartOfDay())
                 .lt(BizUltrasoundRecord::getCreateTime, date.plusDays(1).atStartOfDay())) + 1;
         for (int i = 0; i < 20; i++) {
             String no = "CS" + day + String.format("%03d", base + i);
-            if (recordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
+            if (bizUltrasoundRecordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
                     .eq(BizUltrasoundRecord::getRecordNo, no)) == 0) {
                 return no;
             }
@@ -430,17 +431,4 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         return "CS" + day + System.currentTimeMillis() % 100000;
     }
 
-    /**
-     * null 安全 trim：查询条件的 value 参数是急切求值的，直接 x.trim() 会在 x 为 null 时 NPE
-     */
-    private String tr(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private String clip(String s) {
-        if (s == null) {
-            return null;
-        }
-        return s.length() > 480 ? s.substring(0, 480) : s;
-    }
 }

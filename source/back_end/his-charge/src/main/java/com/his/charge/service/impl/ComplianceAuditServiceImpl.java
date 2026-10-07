@@ -20,6 +20,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysIcd10;
 import com.his.system.mapper.SysIcd10Mapper;
@@ -47,16 +48,16 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ComplianceAuditServiceImpl implements ComplianceAuditService {
-    private final BizInsuranceSettlementMapper settlementMapper;
+    private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
     private final AppointGateway appointGateway;
-    private final SysIcd10Mapper icd10Mapper;
-    private final BizSettlementDiagnosisMapper diagnosisMapper;
-    private final BizSettlementOperationMapper operationMapper;
-    private final BizComplianceAuditMapper auditMapper;
-    private final BizComplianceAuditItemMapper auditItemMapper;
-    private final SysDrgGroupMapper drgGroupMapper;
-    private final SettlementEvidenceService evidenceService;
-    private final ComplianceProperties properties;
+    private final SysIcd10Mapper sysIcd10Mapper;
+    private final BizSettlementDiagnosisMapper bizSettlementDiagnosisMapper;
+    private final BizSettlementOperationMapper bizSettlementOperationMapper;
+    private final BizComplianceAuditMapper bizComplianceAuditMapper;
+    private final BizComplianceAuditItemMapper bizComplianceAuditItemMapper;
+    private final SysDrgGroupMapper sysDrgGroupMapper;
+    private final SettlementEvidenceService settlementEvidenceService;
+    private final ComplianceProperties complianceProperties;
     /**
      * 全部规则实现，Spring 自动注入
      */
@@ -84,9 +85,9 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
 
         Long settlementId = dto.getSettlementId();
         // 整单覆盖：先删旧明细（@TableLogic 生效，走逻辑删除，查询侧自动过滤 del_flag=0），再插入新明细
-        diagnosisMapper.delete(new LambdaQueryWrapper<BizSettlementDiagnosis>()
+        bizSettlementDiagnosisMapper.delete(new LambdaQueryWrapper<BizSettlementDiagnosis>()
                 .eq(BizSettlementDiagnosis::getSettlementId, settlementId));
-        operationMapper.delete(new LambdaQueryWrapper<BizSettlementOperation>()
+        bizSettlementOperationMapper.delete(new LambdaQueryWrapper<BizSettlementOperation>()
                 .eq(BizSettlementOperation::getSettlementId, settlementId));
 
         if (!CollectionUtils.isEmpty(dto.getDiagnoses())) {
@@ -100,7 +101,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
                 if (entity.getDiagType() == null) {
                     entity.setDiagType(1);
                 }
-                diagnosisMapper.insert(entity);
+                bizSettlementDiagnosisMapper.insert(entity);
             }
         }
 
@@ -115,7 +116,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
                 if (entity.getIsMain() == null) {
                     entity.setIsMain(0);
                 }
-                operationMapper.insert(entity);
+                bizSettlementOperationMapper.insert(entity);
             }
         }
     }
@@ -126,9 +127,9 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     @Transactional(rollbackFor = Exception.class)
     public void clearCoding(Long settlementId) {
         requireSettlement(settlementId);
-        diagnosisMapper.delete(new LambdaQueryWrapper<BizSettlementDiagnosis>()
+        bizSettlementDiagnosisMapper.delete(new LambdaQueryWrapper<BizSettlementDiagnosis>()
                 .eq(BizSettlementDiagnosis::getSettlementId, settlementId));
-        operationMapper.delete(new LambdaQueryWrapper<BizSettlementOperation>()
+        bizSettlementOperationMapper.delete(new LambdaQueryWrapper<BizSettlementOperation>()
                 .eq(BizSettlementOperation::getSettlementId, settlementId));
     }
 
@@ -139,13 +140,13 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        if (!properties.isEnabled()) {
+        if (!complianceProperties.isEnabled()) {
             throw new BusinessException("医保合规审核功能已关闭（insurance.compliance.enabled=false）");
         }
         BizInsuranceSettlement settlement = requireSettlement(settlementId);
 
         // 1. 聚合依据包（以 regist_id 为锚点）
-        SettlementEvidence evidence = evidenceService.aggregate(settlement);
+        SettlementEvidence evidence = settlementEvidenceService.aggregate(settlement);
 
         // 2. 加载审核对象
         List<BizSettlementDiagnosis> diagnoses = loadDiagnoses(settlementId);
@@ -157,9 +158,9 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         ctx.setEvidence(evidence);
         ctx.setDiagnoses(diagnoses);
         ctx.setOperations(operations);
-        ctx.setProperties(properties);
+        ctx.setProperties(complianceProperties);
         ctx.setEnabledIcdCodes(loadEnabledIcdCodes());
-        ctx.setDrgTableReady(drgGroupMapper.selectCount(null) > 0);
+        ctx.setDrgTableReady(sysDrgGroupMapper.selectCount(null) > 0);
         ctx.setDrgGroup(loadDrgGroup(settlement.getDrgCode()));
         ctx.setRecentSettlements(loadRecentSettlements(settlement));
 
@@ -230,7 +231,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
 
         audit.setAuditBy(operatorUser.getRealName());
         audit.setAuditTime(LocalDateTime.now());
-        auditMapper.insert(audit);
+        bizComplianceAuditMapper.insert(audit);
 
         for (RuleFinding f : findings) {
             BizComplianceAuditItem item = new BizComplianceAuditItem();
@@ -244,10 +245,9 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
             item.setTargetId(f.getTargetId());
             item.setTargetCode(f.getTargetCode());
             item.setTargetName(f.getTargetName());
-            item.setEvidence(truncate(f.getEvidence(), 1000));
-            item.setSuggestion(truncate(
-                    StringUtils.hasText(f.getSuggestion()) ? f.getSuggestion() : f.getRule().getSuggestion(), 500));
-            auditItemMapper.insert(item);
+            item.setEvidence(TextUtil.cut(f.getEvidence(), 1000));
+            item.setSuggestion(TextUtil.cut(StringUtils.hasText(f.getSuggestion()) ? f.getSuggestion() : f.getRule().getSuggestion(), 500));
+            bizComplianceAuditItemMapper.insert(item);
         }
 
         // 7. 回写诊断/手术的依据核对结果（三态），供清单编辑页直接看到
@@ -300,14 +300,14 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
                 .eq(queryDTO.getAuditType() != null, BizComplianceAudit::getAuditType, queryDTO.getAuditType())
                 .orderByDesc(BizComplianceAudit::getCreateTime);
 
-        Page<BizComplianceAudit> page = auditMapper.selectPage(
+        Page<BizComplianceAudit> page = bizComplianceAuditMapper.selectPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
 
         List<ComplianceAuditVO> voList = page.getRecords().stream().map(entity -> {
             ComplianceAuditVO vo = new ComplianceAuditVO();
             BeanUtils.copyProperties(entity, vo);
             fillAuditText(vo);
-            BizInsuranceSettlement settlement = settlementMapper.selectById(entity.getSettlementId());
+            BizInsuranceSettlement settlement = bizInsuranceSettlementMapper.selectById(entity.getSettlementId());
             if (settlement != null) {
                 vo.setSettlementNo(settlement.getSettlementNo());
                 if (!StringUtils.hasText(vo.getDrgCode())) {
@@ -322,7 +322,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
 
     @Override
     public ComplianceAuditDetailVO getAuditDetail(Long auditId) {
-        BizComplianceAudit audit = auditMapper.selectById(auditId);
+        BizComplianceAudit audit = bizComplianceAuditMapper.selectById(auditId);
         if (audit == null) {
             throw new BusinessException("审核记录不存在");
         }
@@ -333,7 +333,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
                 .collect(Collectors.toList());
         vo.setItems(items);
         vo.setHitItemCount((int) items.stream().filter(i -> i.getResult() != null && i.getResult() == 1).count());
-        BizInsuranceSettlement settlement = settlementMapper.selectById(audit.getSettlementId());
+        BizInsuranceSettlement settlement = bizInsuranceSettlementMapper.selectById(audit.getSettlementId());
         if (settlement != null) {
             vo.setSettlementNo(settlement.getSettlementNo());
         }
@@ -346,12 +346,12 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
 
     @Override
     public ComplianceEvidenceNarrativeVO getAiEvidenceNarrative(Long auditId) {
-        BizComplianceAudit audit = auditMapper.selectById(auditId);
+        BizComplianceAudit audit = bizComplianceAuditMapper.selectById(auditId);
         if (audit == null) {
             throw new BusinessException("审核记录不存在");
         }
         BizInsuranceSettlement settlement = requireSettlement(audit.getSettlementId());
-        SettlementEvidence evidence = evidenceService.aggregate(settlement);
+        SettlementEvidence evidence = settlementEvidenceService.aggregate(settlement);
 
         ComplianceEvidenceNarrativeVO vo = new ComplianceEvidenceNarrativeVO();
         vo.setSettlementId(settlement.getId());
@@ -361,8 +361,8 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         vo.setDiagnosisText(buildDiagnosisText(settlement));
         // 送模型前截断：病历叙述是事实主体放宽到 1500，项目名与检验摘要 800，
         // 提示词总长可控，超长部分不是判定命中规则的关键依据
-        vo.setRecordNarrative(truncate(evidence.recordNarrative(), 1500));
-        vo.setOrderNames(truncate(evidence.allOrderNames(), 800));
+        vo.setRecordNarrative(TextUtil.cut(evidence.recordNarrative(), 1500));
+        vo.setOrderNames(TextUtil.cut(evidence.allOrderNames(), 800));
         vo.setLabSummary(buildLabSummary(evidence));
         vo.setMissingList(new ArrayList<>(evidence.getMissing()));
         return vo;
@@ -418,7 +418,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
             count++;
         }
         String text = sb.toString();
-        return !StringUtils.hasText(text) ? "无" : truncate(text, 800);
+        return !StringUtils.hasText(text) ? "无" : TextUtil.cut(text, 800);
     }
 
     // 内部方法
@@ -477,9 +477,9 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
                 update.setEvidenceNote("无规则覆盖该诊断，未评估");
             } else {
                 update.setEvidenceStatus(worst(list).getCode());
-                update.setEvidenceNote(truncate(buildNote(list), 500));
+                update.setEvidenceNote(TextUtil.cut(buildNote(list), 500));
             }
-            diagnosisMapper.updateById(update);
+            bizSettlementDiagnosisMapper.updateById(update);
         }
 
         for (BizSettlementOperation o : operations) {
@@ -491,9 +491,9 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
                 update.setEvidenceNote("无规则覆盖该手术操作，未评估");
             } else {
                 update.setEvidenceStatus(worst(list).getCode());
-                update.setEvidenceNote(truncate(buildNote(list), 500));
+                update.setEvidenceNote(TextUtil.cut(buildNote(list), 500));
             }
-            operationMapper.updateById(update);
+            bizSettlementOperationMapper.updateById(update);
         }
     }
 
@@ -539,7 +539,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     }
 
     private Set<String> loadEnabledIcdCodes() {
-        List<SysIcd10> list = icd10Mapper.selectList(new LambdaQueryWrapper<SysIcd10>()
+        List<SysIcd10> list = sysIcd10Mapper.selectList(new LambdaQueryWrapper<SysIcd10>()
                 .eq(SysIcd10::getStatus, 1));
         Set<String> codes = new HashSet<>();
         for (SysIcd10 icd : list) {
@@ -554,7 +554,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         if (!StringUtils.hasText(drgCode)) {
             return null;
         }
-        List<SysDrgGroup> list = drgGroupMapper.selectList(new LambdaQueryWrapper<SysDrgGroup>()
+        List<SysDrgGroup> list = sysDrgGroupMapper.selectList(new LambdaQueryWrapper<SysDrgGroup>()
                 .eq(SysDrgGroup::getDrgCode, drgCode)
                 .eq(SysDrgGroup::getStatus, 1));
         return CollectionUtils.isEmpty(list) ? null : list.get(0);
@@ -564,7 +564,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         if (settlement.getPatientId() == null) {
             return new ArrayList<>();
         }
-        int window = properties.getReadmitWindowDays();
+        int window = complianceProperties.getReadmitWindowDays();
         LocalDateTime baseline = null;
         if (settlement.getRegistId() != null) {
             RegistBriefVO regist = appointGateway.findRegist(settlement.getRegistId());
@@ -575,12 +575,12 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         if (baseline == null) {
             baseline = settlement.getCreateTime() == null ? LocalDateTime.now() : settlement.getCreateTime();
         }
-        return evidenceService.recentSamePatientSettlements(
+        return settlementEvidenceService.recentSamePatientSettlements(
                 settlement.getPatientId(), baseline.minusDays(window), settlement.getId());
     }
 
     private List<BizSettlementDiagnosis> loadDiagnoses(Long settlementId) {
-        return diagnosisMapper.selectList(new LambdaQueryWrapper<BizSettlementDiagnosis>()
+        return bizSettlementDiagnosisMapper.selectList(new LambdaQueryWrapper<BizSettlementDiagnosis>()
                 .eq(BizSettlementDiagnosis::getSettlementId, settlementId)
                 .orderByAsc(BizSettlementDiagnosis::getDiagType)
                 .orderByAsc(BizSettlementDiagnosis::getSeqNo)
@@ -588,7 +588,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     }
 
     private List<BizSettlementOperation> loadOperations(Long settlementId) {
-        return operationMapper.selectList(new LambdaQueryWrapper<BizSettlementOperation>()
+        return bizSettlementOperationMapper.selectList(new LambdaQueryWrapper<BizSettlementOperation>()
                 .eq(BizSettlementOperation::getSettlementId, settlementId)
                 .orderByDesc(BizSettlementOperation::getIsMain)
                 .orderByAsc(BizSettlementOperation::getSeqNo)
@@ -596,7 +596,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     }
 
     private List<BizComplianceAuditItem> loadAuditItems(Long auditId) {
-        return auditItemMapper.selectList(new LambdaQueryWrapper<BizComplianceAuditItem>()
+        return bizComplianceAuditItemMapper.selectList(new LambdaQueryWrapper<BizComplianceAuditItem>()
                 .eq(BizComplianceAuditItem::getAuditId, auditId)
                 .orderByAsc(BizComplianceAuditItem::getRuleGroup)
                 .orderByAsc(BizComplianceAuditItem::getRuleCode)
@@ -608,7 +608,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         if (settlementId == null) {
             throw new BusinessException("结算清单ID不能为空");
         }
-        BizInsuranceSettlement settlement = settlementMapper.selectById(settlementId);
+        BizInsuranceSettlement settlement = bizInsuranceSettlementMapper.selectById(settlementId);
         if (settlement == null) {
             throw new BusinessException("结算清单不存在");
         }
@@ -647,10 +647,4 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         return vo;
     }
 
-    private String truncate(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        return text.length() <= max ? text : text.substring(0, max);
-    }
 }

@@ -3,8 +3,10 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.dto.WasteDTO;
 import com.his.system.entity.BizMedicalWaste;
@@ -20,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
@@ -31,15 +32,11 @@ import java.util.Objects;
  */
 @Service
 @RequiredArgsConstructor
-public class WasteServiceImpl implements WasteService {
+public class WasteServiceImpl extends ServiceImpl<BizMedicalWasteMapper, BizMedicalWaste> implements WasteService {
 
-    private final BizMedicalWasteMapper wasteMapper;
+    private final BizMedicalWasteMapper bizMedicalWasteMapper;
 
     private final DictCacheService dictCacheService;
-
-    private static String tr(String s) {
-        return s == null ? null : s.trim();
-    }
 
     @Transactional(rollbackFor = Exception.class)
     public WasteVO create(WasteDTO.Create dto) {
@@ -52,13 +49,13 @@ public class WasteServiceImpl implements WasteService {
         w.setWasteType(dto.getWasteType());
         w.setWeightKg(dto.getWeightKg());
         w.setDeptId(dto.getDeptId());
-        w.setDeptName(tr(dto.getDeptName()));
-        w.setCollectTime(dto.getCollectTime().truncatedTo(ChronoUnit.SECONDS));
+        w.setDeptName(TextUtil.trim(dto.getDeptName()));
+        w.setCollectTime(TimeUtil.toSeconds(dto.getCollectTime()));
         w.setCollectorName(StringUtils.hasText(dto.getCollectorName()) ? dto.getCollectorName().trim()
                 : UserUtils.getCurrentUser().getRealName());
         w.setStatus(WasteStatusEnum.REGISTERED.getCode());
         w.setCreateBy(UserUtils.getCurrentUser().getRealName());
-        wasteMapper.insert(w);
+        bizMedicalWasteMapper.insert(w);
         return toVo(w);
     }
 
@@ -73,7 +70,7 @@ public class WasteServiceImpl implements WasteService {
         w.setHandoverTime(TimeUtil.nowSeconds());
         w.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         w.setUpdateTime(w.getHandoverTime());
-        wasteMapper.updateById(w);
+        bizMedicalWasteMapper.updateById(w);
         return toVo(w);
     }
 
@@ -88,7 +85,7 @@ public class WasteServiceImpl implements WasteService {
         w.setDisposalTime(TimeUtil.nowSeconds());
         w.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         w.setUpdateTime(w.getDisposalTime());
-        wasteMapper.updateById(w);
+        bizMedicalWasteMapper.updateById(w);
         return toVo(w);
     }
 
@@ -100,11 +97,11 @@ public class WasteServiceImpl implements WasteService {
         if (!WasteStatusEnum.REGISTERED.is(w.getStatus())) {
             throw new BusinessException("已交接/已处置的医废记录不可删除（交接单是对外凭证）");
         }
-        wasteMapper.deleteById(id);
+        bizMedicalWasteMapper.deleteById(id);
     }
 
     public IPage<WasteVO> listPage(WasteDTO.QueryPage q) {
-        String kw = tr(q.getKeyword());
+        String kw = TextUtil.trim(q.getKeyword());
         LocalDate begin = q.getCollectDateBegin();
         LocalDate end = q.getCollectDateEnd();
         LambdaQueryWrapper<BizMedicalWaste> w = new LambdaQueryWrapper<BizMedicalWaste>()
@@ -118,12 +115,12 @@ public class WasteServiceImpl implements WasteService {
                 .le(end != null, BizMedicalWaste::getCollectTime, end == null ? null : end.atTime(23, 59, 59))
                 .orderByDesc(BizMedicalWaste::getCollectTime)
                 .orderByDesc(BizMedicalWaste::getId);
-        return wasteMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
+        return bizMedicalWasteMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
                 .convert(this::toVo);
     }
 
     private BizMedicalWaste requireWaste(Long id) {
-        BizMedicalWaste w = wasteMapper.selectById(id);
+        BizMedicalWaste w = bizMedicalWasteMapper.selectById(id);
         if (w == null || Objects.equals(w.getDelFlag(), 1)) {
             throw new BusinessException("医废登记不存在（id=" + id + "）");
         }
@@ -139,7 +136,7 @@ public class WasteServiceImpl implements WasteService {
         long seq = 1;
         for (int i = 0; i < 20; i++) {
             String no = "MW" + date + String.format("%03d", seq);
-            if (wasteMapper.selectIdByNoAny(no) == null) {
+            if (bizMedicalWasteMapper.selectIdByNoAny(no) == null) {
                 return no;
             }
             seq++;

@@ -19,14 +19,14 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final SysUserMapper userMapper;
-    private final SysEmployeeMapper employeeMapper;
+    private final SysUserMapper sysUserMapper;
+    private final SysEmployeeMapper sysEmployeeMapper;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysUser::getUserName, username);
-        SysUser user = userMapper.selectOne(wrapper);
+        SysUser user = sysUserMapper.selectOne(wrapper);
 
         if (user == null) {
             throw new UsernameNotFoundException("用户不存在: " + username);
@@ -47,15 +47,15 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         // 根据用户类型处理
         if (user.getUserType() != null && user.getUserType() == 1 && user.getEmpId() != null) {
             // 院内用户：通过employee_id关联员工表
-            SysEmployee employee = employeeMapper.selectById(user.getEmpId());
+            SysEmployee employee = sysEmployeeMapper.selectById(user.getEmpId());
             if (Objects.isNull(employee)) {
                 throw new UsernameNotFoundException("员工数据不存在: " + username);
             }
             currentUser.setEmployeeName(employee.getEmpName());
             // 通过员工ID查询角色
-            List<String> empRoles = userMapper.selectRolesByEmployeeId(user.getEmpId());
+            List<String> empRoles = sysUserMapper.selectRolesByEmployeeId(user.getEmpId());
             // 通过员工ID查询权限
-            List<String> permissions = userMapper.selectPermissionsByEmployeeId(user.getEmpId());
+            List<String> permissions = sysUserMapper.selectPermissionsByEmployeeId(user.getEmpId());
             // 获取员工的主科室信息
             currentUser.setDeptId(employee.getDeptId());
             currentUser.setDeptName(employee.getDeptName());

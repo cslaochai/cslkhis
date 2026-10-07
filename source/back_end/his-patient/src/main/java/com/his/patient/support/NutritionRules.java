@@ -1,8 +1,9 @@
 package com.his.patient.support;
 
+import com.his.common.util.NumUtil;
+import com.his.patient.enums.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import com.his.patient.enums.*;
 
 import java.util.*;
 
@@ -115,9 +116,9 @@ public final class NutritionRules {
     public static int totalScore(Integer screenType, Integer impair, Integer severity, Integer ageScore,
                                  Integer submittedTotal) {
         if (screenType != null && screenType == NutritionScreenTypeEnum.NRS2002.getCode()) {
-            return nz(impair) + nz(severity) + nz(ageScore);
+            return NumUtil.orZero(impair) + NumUtil.orZero(severity) + NumUtil.orZero(ageScore);
         }
-        return nz(submittedTotal);
+        return NumUtil.orZero(submittedTotal);
     }
 
     /**
@@ -269,10 +270,6 @@ public final class NutritionRules {
 
     public static boolean isMealStatus(Integer status) {
         return status != null && status >= MealDeliverStatusEnum.PENDING.getCode() && status <= MealDeliverStatusEnum.CANCELED.getCode();
-    }
-
-    private static int nz(Integer v) {
-        return v == null ? 0 : v;
     }
 
     /**

@@ -15,12 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -31,11 +26,13 @@ import java.util.stream.Collectors;
 public class ScheduleChangeLogServiceImpl extends ServiceImpl<BizScheduleChangeLogMapper, BizScheduleChangeLog>
         implements ScheduleChangeLogService {
 
-    /** 留痕原因列宽：超长直接截断，避免「原始报错塞进原因列」把整笔业务顶成 500 */
+    /**
+     * 留痕原因列宽：超长直接截断，避免「原始报错塞进原因列」把整笔业务顶成 500
+     */
     private static final int W_REASON = 200;
 
     private final ShiftService shiftService;
-    private final SysEmployeeMapper employeeMapper;
+    private final SysEmployeeMapper sysEmployeeMapper;
 
     @Override
     public Long record(Long staffScheduleId, ScheduleChangeTypeEnum actionType,
@@ -106,7 +103,7 @@ public class ScheduleChangeLogServiceImpl extends ServiceImpl<BizScheduleChangeL
         if (ids.isEmpty()) {
             return Map.of();
         }
-        return employeeMapper.selectBatchIds(ids).stream()
+        return sysEmployeeMapper.selectBatchIds(ids).stream()
                 .collect(Collectors.toMap(SysEmployee::getId, e -> e));
     }
 

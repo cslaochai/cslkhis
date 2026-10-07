@@ -20,14 +20,14 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AppointGatewayImpl implements AppointGateway {
 
-    private final BizAppointInfoMapper appointInfoMapper;
+    private final BizAppointInfoMapper bizAppointInfoMapper;
 
     @Override
     public RegistBriefVO findRegist(Long registId) {
         if (registId == null) {
             return null;
         }
-        return toBrief(appointInfoMapper.selectById(registId));
+        return toBrief(bizAppointInfoMapper.selectById(registId));
     }
 
     @Override
@@ -35,7 +35,7 @@ public class AppointGatewayImpl implements AppointGateway {
         if (registNo == null || registNo.isBlank()) {
             return null;
         }
-        BizAppointInfo row = appointInfoMapper.selectOne(new LambdaQueryWrapper<BizAppointInfo>()
+        BizAppointInfo row = bizAppointInfoMapper.selectOne(new LambdaQueryWrapper<BizAppointInfo>()
                 .eq(BizAppointInfo::getRegistNo, registNo)
                 .last("LIMIT 1"));
         return row == null ? null

@@ -1,10 +1,10 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.his.charge.vo.AdmissionBriefVO;
-import com.his.charge.support.ChargeDeptResolver;
-import com.his.charge.vo.PatientBriefVO;
 import com.his.charge.api.PatientGateway;
+import com.his.charge.support.ChargeDeptResolver;
+import com.his.charge.vo.AdmissionBriefVO;
+import com.his.charge.vo.PatientBriefVO;
 import com.his.patient.entity.BizAdmission;
 import com.his.patient.entity.BizInpatientOrder;
 import com.his.patient.entity.BizPatient;
@@ -34,16 +34,16 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class PatientGatewayImpl implements PatientGateway {
 
-    private final BizPatientMapper patientMapper;
-    private final BizAdmissionMapper admissionMapper;
-    private final BizInpatientOrderMapper inpatientOrderMapper;
+    private final BizPatientMapper bizPatientMapper;
+    private final BizAdmissionMapper bizAdmissionMapper;
+    private final BizInpatientOrderMapper bizInpatientOrderMapper;
 
     @Override
     public PatientBriefVO findPatient(Long patientId) {
         if (patientId == null) {
             return null;
         }
-        return toBrief(patientMapper.selectById(patientId));
+        return toBrief(bizPatientMapper.selectById(patientId));
     }
 
     @Override
@@ -51,7 +51,7 @@ public class PatientGatewayImpl implements PatientGateway {
         if (admissionId == null) {
             return null;
         }
-        return toBrief(admissionMapper.selectById(admissionId));
+        return toBrief(bizAdmissionMapper.selectById(admissionId));
     }
 
     @Override
@@ -59,7 +59,7 @@ public class PatientGatewayImpl implements PatientGateway {
         if (orderNo == null || orderNo.isBlank()) {
             return null;
         }
-        BizInpatientOrder order = inpatientOrderMapper.selectOne(new LambdaQueryWrapper<BizInpatientOrder>()
+        BizInpatientOrder order = bizInpatientOrderMapper.selectOne(new LambdaQueryWrapper<BizInpatientOrder>()
                 .eq(BizInpatientOrder::getOrderNo, orderNo)
                 .last("LIMIT 1"));
         return order == null ? null

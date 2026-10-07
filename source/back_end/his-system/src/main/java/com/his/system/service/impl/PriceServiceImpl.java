@@ -3,17 +3,19 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.system.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
+import com.his.common.util.TimeUtil;
 import com.his.system.dto.PriceChangeDTO;
 import com.his.system.dto.PriceHistoryQueryPageDTO;
 import com.his.system.dto.PriceQueryPageDTO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysPriceChangeHistory;
 import com.his.system.mapper.PriceMapper;
 import com.his.system.mapper.SysPriceChangeHistoryMapper;
 import com.his.system.service.PriceService;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.PriceChangeHistoryVO;
 import com.his.system.vo.PriceItemVO;
 import lombok.RequiredArgsConstructor;
@@ -24,8 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -38,13 +38,13 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PriceServiceImpl implements PriceService {
+public class PriceServiceImpl extends ServiceImpl<SysPriceChangeHistoryMapper, SysPriceChangeHistory> implements PriceService {
 
     private static final List<String> SUPPORTED_TYPES =
             Arrays.asList("DRUG", "CONSUMABLE", "INSPECTION", "LABORATORY", "TREATMENT");
 
     private final PriceMapper priceMapper;
-    private final SysPriceChangeHistoryMapper priceChangeHistoryMapper;
+    private final SysPriceChangeHistoryMapper sysPriceChangeHistoryMapper;
 
     @Override
     public PageResult<PriceItemVO> listPage(PriceQueryPageDTO queryDTO) {
@@ -95,8 +95,8 @@ public class PriceServiceImpl implements PriceService {
         history.setChangeReason(changeDTO.getReason());
         fillOperator(history);
         // DATETIME(0)：截断到秒，避免四舍五入
-        history.setChangeTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-        priceChangeHistoryMapper.insert(history);
+        history.setChangeTime(TimeUtil.nowSeconds());
+        sysPriceChangeHistoryMapper.insert(history);
 
         before.setPrice(newPrice);
         log.info("调价成功：type={}, id={}, {} -> {}, 原因={}",
@@ -119,7 +119,7 @@ public class PriceServiceImpl implements PriceService {
                 .orderByDesc(SysPriceChangeHistory::getId);
 
         Page<SysPriceChangeHistory> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
-        priceChangeHistoryMapper.selectPage(page, wrapper);
+        sysPriceChangeHistoryMapper.selectPage(page, wrapper);
         List<PriceChangeHistoryVO> voList = page.getRecords().stream().map(h -> {
             PriceChangeHistoryVO vo = new PriceChangeHistoryVO();
             BeanUtils.copyProperties(h, vo);

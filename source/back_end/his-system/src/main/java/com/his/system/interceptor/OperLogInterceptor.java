@@ -1,13 +1,14 @@
 package com.his.system.interceptor;
 
+import com.his.common.util.TextUtil;
+import com.his.system.entity.CurrentUser;
+import com.his.system.entity.SysOperLog;
 import com.his.system.filter.OperLogCachingFilter;
+import com.his.system.mapper.SysOperLogMapper;
 import com.his.system.support.OperLogExceptionResolver;
 import com.his.system.support.OperLogResultMarker;
 import com.his.system.utils.RequestInfoUtils;
 import com.his.system.utils.UserUtils;
-import com.his.system.entity.CurrentUser;
-import com.his.system.entity.SysOperLog;
-import com.his.system.mapper.SysOperLogMapper;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -89,7 +90,7 @@ public class OperLogInterceptor implements HandlerInterceptor {
 
     private static final int PARAM_MAX = 2000;
 
-    private final SysOperLogMapper operLogMapper;
+    private final SysOperLogMapper sysOperLogMapper;
 
     private static String tail(String uri) {
         if (uri == null) {
@@ -173,16 +174,16 @@ public class OperLogInterceptor implements HandlerInterceptor {
         if (handler instanceof HandlerMethod hm) {
             Tag tag = AnnotationUtils.findAnnotation(hm.getBeanType(), Tag.class);
             if (tag != null && tag.name() != null && !tag.name().isBlank()) {
-                return cut(tag.name(), 100);
+                return TextUtil.cut(tag.name(), 100);
             }
             String simple = hm.getBeanType().getSimpleName();
-            return cut(simple.endsWith("Controller") ? simple.substring(0, simple.length() - 10) : simple, 100);
+            return TextUtil.cut(simple.endsWith("Controller") ? simple.substring(0, simple.length() - 10) : simple, 100);
         }
         return "系统";
     }
 
     private static String resolveMethodName(Object handler) {
-        return handler instanceof HandlerMethod hm ? cut(hm.getMethod().getName(), 200) : null;
+        return handler instanceof HandlerMethod hm ? TextUtil.cut(hm.getMethod().getName(), 200) : null;
     }
 
     /**
@@ -218,10 +219,6 @@ public class OperLogInterceptor implements HandlerInterceptor {
             return json;
         }
         return SECRET_PATTERN.matcher(json).replaceAll("\"$1\":\"******\"");
-    }
-
-    private static String cut(String s, int max) {
-        return s == null || s.length() <= max ? s : s.substring(0, max);
     }
 
     @Override
@@ -278,11 +275,11 @@ public class OperLogInterceptor implements HandlerInterceptor {
             boolean failed = real != null || businessFailed || response.getStatus() >= 400;
             row.setStatus(failed ? 1 : 0);
             row.setErrorMsg(real != null
-                    ? cut(real.getClass().getSimpleName() + ": " + real.getMessage(), 1000)
-                    : (failMsg == null ? null : cut(String.valueOf(failMsg), 1000)));
-            row.setOperParam(cut(mask(readParam(request)), PARAM_MAX));
+                    ? TextUtil.cut(real.getClass().getSimpleName() + ": " + real.getMessage(), 1000)
+                    : (failMsg == null ? null : TextUtil.cut(String.valueOf(failMsg), 1000)));
+            row.setOperParam(TextUtil.cut(mask(readParam(request)), PARAM_MAX));
             row.setCreateBy(row.getOperName());
-            operLogMapper.insert(row);
+            sysOperLogMapper.insert(row);
         } catch (Exception e) {
             log.error("操作日志写入失败 uri={}", request.getRequestURI(), e);
         } finally {

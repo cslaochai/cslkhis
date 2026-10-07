@@ -3,6 +3,7 @@ package com.his.ai.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.ai.dto.LabPlainItemSearchDTO;
 import com.his.ai.dto.LabPlainItemUpsertDTO;
 import com.his.ai.entity.SysLabPlainItem;
@@ -15,6 +16,7 @@ import com.his.ai.vo.LabPlainCoverageVO;
 import com.his.ai.vo.LabPlainItemAdminVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,9 +34,9 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
+public class LabPlainItemAdminServiceImpl extends ServiceImpl<SysLabPlainItemMapper, SysLabPlainItem> implements LabPlainItemAdminService {
 
-    private final SysLabPlainItemMapper plainMapper;
+    private final SysLabPlainItemMapper sysLabPlainItemMapper;
     private final LabResultRefCountMapper labResultRefCountMapper;
     private final PatientTextGuard patientTextGuard;
 
@@ -51,20 +53,6 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
         vo.setSortOrder(e.getSortOrder());
         vo.setRemark(e.getRemark());
         return vo;
-    }
-
-    private static String trim(String value) {
-        return value == null ? null : value.trim();
-    }
-
-    /**
-     * 写库前先截列宽：Data too long 会把业务失败升级成 500
-     */
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() <= max ? value : value.substring(0, max);
     }
 
     /**
@@ -96,7 +84,7 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
                 .orderByAsc(SysLabPlainItem::getSortOrder)
                 .orderByAsc(SysLabPlainItem::getId);
 
-        IPage<SysLabPlainItem> page = plainMapper.selectPage(new Page<>(pageNum, pageSize), w);
+        IPage<SysLabPlainItem> page = sysLabPlainItemMapper.selectPage(new Page<>(pageNum, pageSize), w);
         List<LabPlainItemAdminVO> records = new ArrayList<>();
         for (SysLabPlainItem e : page.getRecords()) {
             records.add(toVO(e));
@@ -110,12 +98,12 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
 
     @Override
     public List<String> selectGroupNames() {
-        return plainMapper.selectGroupNames();
+        return sysLabPlainItemMapper.selectGroupNames();
     }
 
     @Override
     public LabPlainItemAdminVO adminGetById(Long id) {
-        SysLabPlainItem e = plainMapper.selectById(id);
+        SysLabPlainItem e = sysLabPlainItemMapper.selectById(id);
         if (e == null || !Objects.equals(e.getDelFlag(), 0)) {
             throw new BusinessException("词条不存在或已删除");
         }
@@ -124,7 +112,7 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
 
     @Override
     public String adminUpsert(LabPlainItemUpsertDTO dto) {
-        String itemName = trim(dto.getItemName());
+        String itemName = TextUtil.trim(dto.getItemName());
         if (!StringUtils.hasText(itemName)) {
             throw new BusinessException("检验项目名称不能为空");
         }
@@ -133,26 +121,26 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
         checkPatientText(itemName, dto.getLowText());
 
         Long id = dto.getId();
-        SysLabPlainItem exist = plainMapper.selectByItemName(itemName);
+        SysLabPlainItem exist = sysLabPlainItemMapper.selectByItemName(itemName);
         if (exist != null && (id == null || !exist.getId().equals(id))) {
             // 唯一键不含 del_flag，撞键只会得到一个看不懂的 SQL 异常
             throw new BusinessException("检验项目名称已存在：" + itemName);
         }
 
-        SysLabPlainItem entity = id != null ? plainMapper.selectById(id) : null;
+        SysLabPlainItem entity = id != null ? sysLabPlainItemMapper.selectById(id) : null;
         boolean isNew = entity == null;
         if (isNew) {
             entity = new SysLabPlainItem();
             entity.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
             entity.setSortOrder(dto.getSortOrder() == null ? 999 : dto.getSortOrder());
         }
-        entity.setGroupName(cut(trim(dto.getGroupName()), 32));
+        entity.setGroupName(TextUtil.cut(TextUtil.trim(dto.getGroupName()), 32));
         entity.setItemName(itemName);
-        entity.setPlainName(cut(trim(dto.getPlainName()), 64));
-        entity.setWhatIsIt(cut(trim(dto.getWhatIsIt()), 200));
-        entity.setHighText(cut(trim(dto.getHighText()), 200));
-        entity.setLowText(cut(trim(dto.getLowText()), 200));
-        entity.setRemark(cut(trim(dto.getRemark()), 500));
+        entity.setPlainName(TextUtil.cut(TextUtil.trim(dto.getPlainName()), 64));
+        entity.setWhatIsIt(TextUtil.cut(TextUtil.trim(dto.getWhatIsIt()), 200));
+        entity.setHighText(TextUtil.cut(TextUtil.trim(dto.getHighText()), 200));
+        entity.setLowText(TextUtil.cut(TextUtil.trim(dto.getLowText()), 200));
+        entity.setRemark(TextUtil.cut(TextUtil.trim(dto.getRemark()), 500));
         if (dto.getStatus() != null) {
             entity.setStatus(dto.getStatus());
         }
@@ -161,19 +149,19 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
         }
 
         if (isNew) {
-            plainMapper.insert(entity);
+            sysLabPlainItemMapper.insert(entity);
         } else {
-            plainMapper.updateById(entity);
+            sysLabPlainItemMapper.updateById(entity);
         }
         return String.valueOf(entity.getId());
     }
 
     @Override
     public void adminDelete(Long id) {
-        if (plainMapper.selectById(id) == null) {
+        if (sysLabPlainItemMapper.selectById(id) == null) {
             throw new BusinessException("词条不存在或已删除");
         }
-        plainMapper.purgeById(id);
+        sysLabPlainItemMapper.purgeById(id);
     }
 
     @Override
@@ -184,7 +172,7 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
         // 分子：词典里有的项目名。停用条目单独记一笔，因为它对患者端等于没配
         Map<String, Integer> enabledMap = new HashMap<>();
         Map<String, Integer> allMap = new HashMap<>();
-        List<SysLabPlainItem> dict = plainMapper.selectList(
+        List<SysLabPlainItem> dict = sysLabPlainItemMapper.selectList(
                 new LambdaQueryWrapper<SysLabPlainItem>());
         for (SysLabPlainItem e : dict) {
             if (e.getItemName() == null || e.getItemName().isEmpty()) {
@@ -225,7 +213,7 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
         vo.setCoveredCount(covered);
         vo.setMissingCount(missing.size());
         vo.setCoverageRate(total == 0 ? 100 : (int) Math.round(covered * 100.0 / total));
-        vo.setGroupNames(plainMapper.selectGroupNames());
+        vo.setGroupNames(sysLabPlainItemMapper.selectGroupNames());
         vo.setMissingList(missing);
         return vo;
     }

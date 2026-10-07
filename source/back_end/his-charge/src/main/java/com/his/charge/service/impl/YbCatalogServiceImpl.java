@@ -3,6 +3,7 @@ package com.his.charge.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.YbCatalogQueryPageDTO;
 import com.his.charge.dto.YbCatalogUpsertDTO;
 import com.his.charge.entity.BizYbCatalog;
@@ -12,6 +13,7 @@ import com.his.charge.vo.BizYbCatalogVO;
 import com.his.charge.vo.YbImportResultVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -31,9 +33,9 @@ import java.util.Objects;
  */
 @Service
 @RequiredArgsConstructor
-public class YbCatalogServiceImpl implements YbCatalogService {
+public class YbCatalogServiceImpl extends ServiceImpl<BizYbCatalogMapper, BizYbCatalog> implements YbCatalogService {
 
-    private final BizYbCatalogMapper catalogMapper;
+    private final BizYbCatalogMapper bizYbCatalogMapper;
 
     @Override
     public PageResult<BizYbCatalogVO> listPage(YbCatalogQueryPageDTO queryDTO) {
@@ -45,7 +47,7 @@ public class YbCatalogServiceImpl implements YbCatalogService {
                         .or().like(BizYbCatalog::getYbName, queryDTO.getKeyword()))
                 .orderByAsc(BizYbCatalog::getCatalogType)
                 .orderByAsc(BizYbCatalog::getYbCode);
-        IPage<BizYbCatalog> page = catalogMapper.selectPage(
+        IPage<BizYbCatalog> page = bizYbCatalogMapper.selectPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         List<BizYbCatalogVO> voList = page.getRecords().stream().map(this::toVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);
@@ -61,7 +63,7 @@ public class YbCatalogServiceImpl implements YbCatalogService {
             entity.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
             entity.setCreateBy(UserUtils.getCurrentUser().getRealName());
         } else {
-            entity = catalogMapper.selectById(dto.getId());
+            entity = bizYbCatalogMapper.selectById(dto.getId());
             if (entity == null) {
                 throw new BusinessException("目录不存在或已删除");
             }
@@ -69,9 +71,9 @@ public class YbCatalogServiceImpl implements YbCatalogService {
         entity.setCatalogType(dto.getCatalogType());
         entity.setYbCode(dto.getYbCode().trim());
         entity.setYbName(dto.getYbName().trim());
-        entity.setSpec(cut(dto.getSpec(), 100));
-        entity.setUnit(cut(dto.getUnit(), 20));
-        entity.setDosageForm(cut(dto.getDosageForm(), 50));
+        entity.setSpec(TextUtil.cut(dto.getSpec(), 100));
+        entity.setUnit(TextUtil.cut(dto.getUnit(), 20));
+        entity.setDosageForm(TextUtil.cut(dto.getDosageForm(), 50));
         entity.setInsuranceLevel(dto.getInsuranceLevel());
         entity.setPayRatio(dto.getPayRatio());
         entity.setEffectiveDate(parseDate(dto.getEffectiveDate()));
@@ -79,12 +81,12 @@ public class YbCatalogServiceImpl implements YbCatalogService {
         if (dto.getStatus() != null) {
             entity.setStatus(dto.getStatus());
         }
-        entity.setRemark(cut(dto.getRemark(), 500));
+        entity.setRemark(TextUtil.cut(dto.getRemark(), 500));
         entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (dto.getId() == null) {
-            catalogMapper.insert(entity);
+            bizYbCatalogMapper.insert(entity);
         } else {
-            catalogMapper.updateById(entity);
+            bizYbCatalogMapper.updateById(entity);
         }
         return toVO(entity);
     }
@@ -103,7 +105,7 @@ public class YbCatalogServiceImpl implements YbCatalogService {
                 continue;
             }
             item.setId(null);
-            BizYbCatalog existed = catalogMapper.selectOne(new LambdaQueryWrapper<BizYbCatalog>()
+            BizYbCatalog existed = bizYbCatalogMapper.selectOne(new LambdaQueryWrapper<BizYbCatalog>()
                     .eq(BizYbCatalog::getYbCode, item.getYbCode().trim())
                     .last("LIMIT 1"));
             if (existed != null) {
@@ -129,13 +131,13 @@ public class YbCatalogServiceImpl implements YbCatalogService {
         if (id == null || status == null || (status != 0 && status != 1)) {
             throw new BusinessException("参数不合法：id 与 status(0/1) 必填");
         }
-        BizYbCatalog entity = catalogMapper.selectById(id);
+        BizYbCatalog entity = bizYbCatalogMapper.selectById(id);
         if (entity == null) {
             throw new BusinessException("目录不存在或已删除");
         }
         entity.setStatus(status);
         entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        catalogMapper.updateById(entity);
+        bizYbCatalogMapper.updateById(entity);
     }
 
     private void validate(YbCatalogUpsertDTO dto) {
@@ -144,7 +146,7 @@ public class YbCatalogServiceImpl implements YbCatalogService {
         }
         // yb_code 唯一校验（排除自身）
         Long id = dto.getId();
-        BizYbCatalog dup = catalogMapper.selectOne(new LambdaQueryWrapper<BizYbCatalog>()
+        BizYbCatalog dup = bizYbCatalogMapper.selectOne(new LambdaQueryWrapper<BizYbCatalog>()
                 .eq(BizYbCatalog::getYbCode, dto.getYbCode().trim())
                 .ne(id != null, BizYbCatalog::getId, id)
                 .last("LIMIT 1"));
@@ -167,13 +169,4 @@ public class YbCatalogServiceImpl implements YbCatalogService {
         return s == null || s.isBlank();
     }
 
-    /**
-     * 写库文本先截列宽（铁律：Data too long 会把业务失败升级 500）
-     */
-    private String cut(String s, int max) {
-        if (s == null) {
-            return null;
-        }
-        return s.length() <= max ? s : s.substring(0, max);
-    }
 }

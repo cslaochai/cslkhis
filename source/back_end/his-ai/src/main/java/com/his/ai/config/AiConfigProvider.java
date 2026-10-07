@@ -27,7 +27,7 @@ public class AiConfigProvider {
 
     public static final String ENV_API_KEY = "HIS_AI_API_KEY";
 
-    private final AiProperties properties;
+    private final AiProperties aiProperties;
 
     private final Environment environment;
 
@@ -35,7 +35,7 @@ public class AiConfigProvider {
      * 获取当前生效配置（启动时绑定，运行期不变）
      */
     public AiProperties get() {
-        return properties;
+        return aiProperties;
     }
 
     /**
@@ -50,7 +50,7 @@ public class AiConfigProvider {
      * 「开关状态」和「可用状态」是两个问题，不能合成一个字段回答。
      */
     public boolean switchedOn(String capabilityKey) {
-        Boolean feature = properties.getFeatures().get(capabilityKey);
+        Boolean feature = aiProperties.getFeatures().get(capabilityKey);
         return feature == null || feature;
     }
 
@@ -59,10 +59,10 @@ public class AiConfigProvider {
      * 未单独配置的能力默认视为开启（总开关已控制）。
      */
     public boolean isCapabilityEnabled(String capabilityKey) {
-        if (!properties.isReady()) {
+        if (!aiProperties.isReady()) {
             return false;
         }
-        Boolean feature = properties.getFeatures().get(capabilityKey);
+        Boolean feature = aiProperties.getFeatures().get(capabilityKey);
         return feature == null || feature;
     }
 
@@ -73,16 +73,16 @@ public class AiConfigProvider {
      * 文案里必须带上配置项的真实位置，否则运维照着系统参数找一个已经不存在的键。
      */
     public String notReadyReason() {
-        if (!properties.isEnabled()) {
+        if (!aiProperties.isEnabled()) {
             return "AI 总开关已关闭（application.yml: ai.enabled）";
         }
-        if (!StringUtils.hasText(properties.getBaseUrl())) {
+        if (!StringUtils.hasText(aiProperties.getBaseUrl())) {
             return "模型服务地址未配置（application.yml: ai.base-url）";
         }
-        if (!StringUtils.hasText(properties.getApiKey())) {
+        if (!StringUtils.hasText(aiProperties.getApiKey())) {
             return "模型访问密钥未配置（环境变量 " + ENV_API_KEY + "）";
         }
-        if (!StringUtils.hasText(properties.getModel())) {
+        if (!StringUtils.hasText(aiProperties.getModel())) {
             return "模型名称未配置（application.yml: ai.model）";
         }
         return "";
@@ -100,7 +100,7 @@ public class AiConfigProvider {
         if (StringUtils.hasText(notReady)) {
             return notReady;
         }
-        Boolean feature = properties.getFeatures().get(capabilityKey);
+        Boolean feature = aiProperties.getFeatures().get(capabilityKey);
         if (feature != null && !feature) {
             return "能力开关已关闭（application.yml: ai.features." + capabilityKey + "）";
         }
@@ -118,8 +118,8 @@ public class AiConfigProvider {
      * 取某能力的超时时间，未单独配置则回落全局超时
      */
     public int timeoutOf(String capabilityKey) {
-        Integer override = properties.getTimeouts().get(capabilityKey);
-        return override != null && override > 0 ? override : properties.getTimeoutMs();
+        Integer override = aiProperties.getTimeouts().get(capabilityKey);
+        return override != null && override > 0 ? override : aiProperties.getTimeoutMs();
     }
 
     /**
@@ -128,28 +128,28 @@ public class AiConfigProvider {
      * 否则 lite=true 且配了轻量模型 → 轻量模型；再否则回落主模型。
      */
     public String modelOf(String capabilityKey, boolean lite) {
-        String override = properties.getModels().get(capabilityKey);
+        String override = aiProperties.getModels().get(capabilityKey);
         if (StringUtils.hasText(override)) {
             return override;
         }
-        if (lite && StringUtils.hasText(properties.getModelLite())) {
-            return properties.getModelLite();
+        if (lite && StringUtils.hasText(aiProperties.getModelLite())) {
+            return aiProperties.getModelLite();
         }
-        return properties.getModel();
+        return aiProperties.getModel();
     }
 
     /**
      * ASR 模型名（语音转写与 chat 模型分属两个端点，不允许混用）
      */
     public String asrModel() {
-        return properties.getAsr().getModel();
+        return aiProperties.getAsr().getModel();
     }
 
     /**
      * ASR 访问密钥：未单独配置时回落 chat 密钥（同一把 HIS_AI_API_KEY）
      */
     public String asrApiKey() {
-        String key = properties.getAsr().getApiKey();
-        return StringUtils.hasText(key) ? key : properties.getApiKey();
+        String key = aiProperties.getAsr().getApiKey();
+        return StringUtils.hasText(key) ? key : aiProperties.getApiKey();
     }
 }

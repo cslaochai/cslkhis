@@ -30,34 +30,34 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class MiniappServiceTicketAdminController {
 
-    private final MiniappServiceTicketAdminService ticketAdminService;
+    private final MiniappServiceTicketAdminService miniappServiceTicketAdminService;
 
     @Operation(summary = "工单列表（待受理优先排序）")
     @PostMapping("/listPage")
     @PreAuthorize("hasAuthority('service:ticket:list')")
     public Result<PageResult<ServiceMessageListVO>> listPage(@Valid @RequestBody TicketSearchDTO dto) {
-        return Result.success(ticketAdminService.adminPage(dto));
+        return Result.success(miniappServiceTicketAdminService.adminPage(dto));
     }
 
     @Operation(summary = "工作台统计（待受理 / 处理中 / 已办结 / 超时未受理）")
     @PostMapping("/stats")
     @PreAuthorize("hasAuthority('service:ticket:list')")
     public Result<TicketStatsVO> stats() {
-        return Result.success(ticketAdminService.stats());
+        return Result.success(miniappServiceTicketAdminService.stats());
     }
 
     @Operation(summary = "工单详情（含全量流转记录，含内部备注）")
     @GetMapping("/getById")
     @PreAuthorize("hasAuthority('service:ticket:list')")
     public Result<ServiceTicketDetailVO> getById(@RequestParam Long id) {
-        return Result.success(ticketAdminService.detail(id));
+        return Result.success(miniappServiceTicketAdminService.detail(id));
     }
 
     @Operation(summary = "受理 / 回复 / 办结 / 关闭 / 内部备注（操作人取登录人）")
     @PostMapping("/handle")
     @PreAuthorize("hasAuthority('service:ticket:handle')")
     public Result<Integer> handle(@RequestBody @Valid TicketHandleDTO dto) {
-        ticketAdminService.handle(dto);
+        miniappServiceTicketAdminService.handle(dto);
         return Result.success(1);
     }
 }

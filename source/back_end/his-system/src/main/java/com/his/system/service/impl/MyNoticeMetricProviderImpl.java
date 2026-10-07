@@ -1,12 +1,13 @@
 package com.his.system.service.impl;
 
 import cn.hutool.core.bean.BeanUtil;
-import com.his.system.service.MyNoticeMetricProvider;
-import com.his.system.service.MessageMetricSupport;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.WorkbenchMetricProvider;
 import com.his.system.entity.SysMessage;
+import com.his.system.provider.WorkbenchMetricProvider;
+import com.his.system.service.MessageMetricSupport;
+import com.his.system.service.MyNoticeMetricProvider;
+import com.his.system.service.MyTodoMetricProvider;
 import com.his.system.service.SysMessageService;
 import com.his.system.vo.WorkbenchMyNoticeVO;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import com.his.system.service.MyTodoMetricProvider;
 
 /**
  * 卡片 {@code myNotice}：我未读的通知型站内信。
@@ -33,7 +33,7 @@ public class MyNoticeMetricProviderImpl implements WorkbenchMetricProvider, MyNo
 
     private static final int TOP_N = 8;
 
-    private final SysMessageService messageService;
+    private final SysMessageService sysMessageService;
 
     @Override
     public String widgetCode() {
@@ -53,8 +53,8 @@ public class MyNoticeMetricProviderImpl implements WorkbenchMetricProvider, MyNo
 
         Long receiverId = MessageMetricSupport.receiverId(user);
         if (receiverId != null) {
-            vo.setTotal(messageService.count(unreadNotice(receiverId)));
-            List<SysMessage> rows = messageService.list(unreadNotice(receiverId)
+            vo.setTotal(sysMessageService.count(unreadNotice(receiverId)));
+            List<SysMessage> rows = sysMessageService.list(unreadNotice(receiverId)
                     .last("ORDER BY FIELD(severity, 'urgent', 'warning', 'info'), send_time DESC, message_id DESC LIMIT " + TOP_N));
             vo.setItems(rows.stream().map(MessageMetricSupport::of).collect(Collectors.toList()));
         }

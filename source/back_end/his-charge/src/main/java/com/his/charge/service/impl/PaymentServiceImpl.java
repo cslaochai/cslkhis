@@ -19,6 +19,8 @@ import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,8 +69,8 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
     private final FeeRecordService feeRecordService;
     private final SourceAdvanceService sourceAdvanceService;
     private final FundAccountService fundAccountService;
-    private final BizFundAccountTxnMapper fundAccountTxnMapper;
-    private final BizSettlementBillItemMapper billItemMapper;
+    private final BizFundAccountTxnMapper bizFundAccountTxnMapper;
+    private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
     private final PayRefundService payRefundService;
     private final RedisSequenceService redisSequenceService;
     private final InsuranceSettlementService insuranceSettlementService;
@@ -81,21 +83,6 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             records.add(vo);
         }
         return records;
-    }
-
-    private static BigDecimal scale(BigDecimal value) {
-        return nz(value).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
-
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() <= max ? value : value.substring(0, max);
     }
 
     @Override
@@ -113,13 +100,13 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             throw new BusinessException("收款流水的来源不能是退费类");
         }
 
-        BigDecimal remaining = scale(bill.getPayableAmount()
-                .subtract(nz(bill.getPaidAmount())).add(nz(bill.getRefundAmount())));
+        BigDecimal remaining = NumUtil.scale(bill.getPayableAmount()
+                .subtract(NumUtil.orZero(bill.getPaidAmount())).add(NumUtil.orZero(bill.getRefundAmount())), AMOUNT_SCALE);
         BigDecimal total = BigDecimal.ZERO;
         for (BillPayDTO.PayItem item : dto.getItems()) {
-            total = total.add(nz(item.getAmount()));
+            total = total.add(NumUtil.orZero(item.getAmount()));
         }
-        total = scale(total);
+        total = NumUtil.scale(total, AMOUNT_SCALE);
         if (total.compareTo(remaining) > 0) {
             throw new BusinessException("收款合计 " + total.toPlainString() + " 超过尚需缴纳的 " + remaining.toPlainString());
         }
@@ -158,7 +145,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             throw new BusinessException("退费流水的来源必须是退费类（退费申请执行/收费处直退/退号联动/出院结算退差）");
         }
 
-        List<BizSettlementBillItem> items = billItemMapper.selectByBill(bill.getId());
+        List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectByBill(bill.getId());
         List<Long> feeIds = resolveRefundFeeIds(items, dto.getFeeIds());
         // 没点名记账行 = 整单全退；点了名但要退的行数正好等于账单全部行，也算整单
         boolean wholeBill = CollectionUtils.isEmpty(dto.getFeeIds()) || feeIds.size() >= items.size();
@@ -174,16 +161,16 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         BigDecimal paidPart = BigDecimal.ZERO;
         for (Long feeId : feeIds) {
             BizFeeRecord neg = feeRecordService.reverseForRefund(feeId, dto.getReason());
-            BigDecimal gross = nz(neg.getAmount()).abs();
+            BigDecimal gross = NumUtil.orZero(neg.getAmount()).abs();
             refundTotal = refundTotal.add(gross);
             paidPart = paidPart.add(patientShare(itemByFee.get(feeId), gross));
         }
-        refundTotal = scale(refundTotal);
-        paidPart = scale(paidPart);
+        refundTotal = NumUtil.scale(refundTotal, AMOUNT_SCALE);
+        paidPart = NumUtil.scale(paidPart, AMOUNT_SCALE);
         if (refundTotal.signum() == 0) {
             throw new BusinessException("本次退费金额为 0，不生成退费流水");
         }
-        BigDecimal charged = scale(nz(bill.getPaidAmount()).subtract(nz(bill.getRefundAmount())));
+        BigDecimal charged = NumUtil.scale(NumUtil.orZero(bill.getPaidAmount()).subtract(NumUtil.orZero(bill.getRefundAmount())), AMOUNT_SCALE);
         if (paidPart.compareTo(charged) > 0) {
             // 比的是「患者掏的那部分」而不是记账行全额：医保账单里统筹那一段从来没收进柜面，
             // 拿它去比净已收，任何一张有统筹记账的账单都退不掉（关键口径，别改回 refundTotal）
@@ -232,7 +219,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         List<BizFeeRecord> rows = feeRecordService.listByBill(billId);
         // 药品闸门：撤销也是退钱，药已发未退同样不能撤（挂号单没有处方锚点，天然放行）
         sourceAdvanceService.assertDrugReturnedForRefund(rows, "撤销账单");
-        BigDecimal net = scale(nz(bill.getPaidAmount()).subtract(nz(bill.getRefundAmount())));
+        BigDecimal net = NumUtil.scale(NumUtil.orZero(bill.getPaidAmount()).subtract(NumUtil.orZero(bill.getRefundAmount())), AMOUNT_SCALE);
 
         BillRefundDTO refundDTO = new BillRefundDTO();
         refundDTO.setBillId(billId);
@@ -253,7 +240,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         int reversed = 0;
         List<Long> reversedFeeIds = new ArrayList<>();
         for (BizFeeRecord row : rows) {
-            if (nz(row.getAmount()).signum() > 0 && !FeeStatusEnum.REVERSED.getCode().equals(row.getFeeStatus())) {
+            if (NumUtil.orZero(row.getAmount()).signum() > 0 && !FeeStatusEnum.REVERSED.getCode().equals(row.getFeeStatus())) {
                 feeRecordService.reverse(row.getId(), reason);
                 reversedFeeIds.add(row.getId());
                 reversed++;
@@ -326,11 +313,11 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         }
         LocalDateTime txnTime = spec.txnTime() == null ? LocalDateTime.now() : spec.txnTime();
         BizPaymentTxn txn = new BizPaymentTxn();
-        txn.setTxnNo(cut(redisSequenceService.generatePayTxnNo(), W_TXN_NO));
+        txn.setTxnNo(TextUtil.cut(redisSequenceService.generatePayTxnNo(), W_TXN_NO));
         // bill_id / bill_no 留空：这笔钱没有对应账单（为什么不为它造一张 0 元账单，见接口注释）
         txn.setPatientId(spec.patientId());
-        txn.setPatientNo(cut(spec.patientNo(), W_PATIENT_NO));
-        txn.setPatientName(cut(spec.patientName(), W_PATIENT_NAME));
+        txn.setPatientNo(TextUtil.cut(spec.patientNo(), W_PATIENT_NO));
+        txn.setPatientName(TextUtil.cut(spec.patientName(), W_PATIENT_NAME));
         txn.setEncounterType(EncounterTypeEnum.INPATIENT.getCode());
         txn.setEncounterId(spec.admissionId());
         txn.setDirection(PayDirectionEnum.CHARGE.getCode());
@@ -338,13 +325,13 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         txn.setAmount(amount);
         txn.setTxnStatus(PayTxnStatusEnum.SUCCESS.getCode());
         txn.setSourceType(TxnSourceEnum.PREPAY.getCode());
-        txn.setChannelTxnNo(cut(channelNoOf(payMethod, null, spec.channelTxnNo(), txn), W_CHANNEL_TXN_NO));
+        txn.setChannelTxnNo(TextUtil.cut(channelNoOf(payMethod, null, spec.channelTxnNo(), txn), W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
-        txn.setCashierName(cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
+        txn.setCashierName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
         txn.setTxnTime(txnTime);
         txn.setTxnDate(txnTime.toLocalDate());
-        txn.setReceiptNo(cut(spec.receiptNo(), W_RECEIPT_NO));
-        txn.setRemark(cut(spec.remark(), W_REMARK));
+        txn.setReceiptNo(TextUtil.cut(spec.receiptNo(), W_RECEIPT_NO));
+        txn.setRemark(TextUtil.cut(spec.remark(), W_REMARK));
         this.save(txn);
 
         fundAccountService.apply(new FundAccountService.FundTxnSpec(
@@ -362,7 +349,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
     @Transactional(rollbackFor = Exception.class)
     public List<BizPaymentTxn> prepayRefund(PrepaySpec spec) {
         BigDecimal amount = requirePrepayAmount(spec);
-        BigDecimal balance = scale(nz(fundAccountService.admissionBalance(spec.admissionId())));
+        BigDecimal balance = NumUtil.scale(NumUtil.orZero(fundAccountService.admissionBalance(spec.admissionId())), AMOUNT_SCALE);
         if (amount.compareTo(balance) > 0) {
             throw new BusinessException("退款金额 " + amount.toPlainString() + " 超过当前预交金余额 "
                     + balance.toPlainString() + "，不能退款");
@@ -374,7 +361,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
     @Transactional(rollbackFor = Exception.class)
     public List<BizPaymentTxn> dischargeRemainder(PrepaySpec spec) {
         BigDecimal amount = requirePrepayAmount(spec);
-        BigDecimal balance = scale(nz(fundAccountService.admissionBalance(spec.admissionId())));
+        BigDecimal balance = NumUtil.scale(NumUtil.orZero(fundAccountService.admissionBalance(spec.admissionId())), AMOUNT_SCALE);
         if (amount.compareTo(balance) > 0) {
             throw new BusinessException("出院退差 " + amount.toPlainString() + " 超过住院账户余额 "
                     + balance.toPlainString() + "，请先核对本次结算");
@@ -392,13 +379,13 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
             if (left.signum() <= 0) {
                 break;
             }
-            BigDecimal refundable = scale(nz(baseMapper.sumRefundableByTxn(orig.getId())));
+            BigDecimal refundable = NumUtil.scale(NumUtil.orZero(baseMapper.sumRefundableByTxn(orig.getId())), AMOUNT_SCALE);
             if (refundable.signum() <= 0) {
                 continue;
             }
             BigDecimal part = refundable.compareTo(left) >= 0 ? left : refundable;
             refunds.add(refundPrepayOne(spec, orig, part, toPatientWallet));
-            left = scale(left.subtract(part));
+            left = NumUtil.scale(left.subtract(part), AMOUNT_SCALE);
         }
         if (left.signum() > 0) {
             // 账户说还有这么多钱，可退的充值流水却摊不完 —— 两边已经不一致，宁可拒绝也不许硬退
@@ -409,7 +396,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
 
     private BizPaymentTxn refundPrepayOne(PrepaySpec spec, BizPaymentTxn orig, BigDecimal amount, boolean toPatientWallet) {
         LocalDateTime txnTime = spec.txnTime() == null ? LocalDateTime.now() : spec.txnTime();
-        String txnNo = cut(redisSequenceService.generateRefundTxnNo(), W_TXN_NO);
+        String txnNo = TextUtil.cut(redisSequenceService.generateRefundTxnNo(), W_TXN_NO);
         Integer origMethod = orig.getPayMethod();
         BizFundAccountTxn walletTxn = null;
         String channelRefundNo;
@@ -428,7 +415,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
                     origMethod, orig.getTxnNo(), txnNo, amount, spec.remark()));
             if (receipt == null || !receipt.success()) {
                 String err = receipt == null ? "渠道无响应" : receipt.errMsg();
-                throw new BusinessException("渠道原路退回失败，本次预交金退款已撤销：" + cut(err, 200));
+                throw new BusinessException("渠道原路退回失败，本次预交金退款已撤销：" + TextUtil.cut(err, 200));
             }
             channelRefundNo = receipt.channelRefundNo();
         } else {
@@ -440,8 +427,8 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         BizPaymentTxn txn = new BizPaymentTxn();
         txn.setTxnNo(txnNo);
         txn.setPatientId(spec.patientId());
-        txn.setPatientNo(cut(spec.patientNo(), W_PATIENT_NO));
-        txn.setPatientName(cut(spec.patientName(), W_PATIENT_NAME));
+        txn.setPatientNo(TextUtil.cut(spec.patientNo(), W_PATIENT_NO));
+        txn.setPatientName(TextUtil.cut(spec.patientName(), W_PATIENT_NAME));
         txn.setEncounterType(EncounterTypeEnum.INPATIENT.getCode());
         txn.setEncounterId(spec.admissionId());
         txn.setDirection(PayDirectionEnum.REFUND.getCode());
@@ -454,12 +441,12 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         txn.setSourceType(toPatientWallet ? TxnSourceEnum.DISCHARGE_DIFF.getCode() : TxnSourceEnum.PREPAY.getCode());
         txn.setRefundMethod(toPatientWallet ? RefundMethodEnum.BALANCE.getCode()
                 : RefundMethodEnum.ofPayMethod(origMethod).getCode());
-        txn.setChannelTxnNo(cut(channelRefundNo, W_CHANNEL_TXN_NO));
+        txn.setChannelTxnNo(TextUtil.cut(channelRefundNo, W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
-        txn.setCashierName(cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
+        txn.setCashierName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
         txn.setTxnTime(txnTime);
         txn.setTxnDate(txnTime.toLocalDate());
-        txn.setRemark(cut(spec.remark(), W_REMARK));
+        txn.setRemark(TextUtil.cut(spec.remark(), W_REMARK));
         this.save(txn);
 
         fundAccountService.apply(new FundAccountService.FundTxnSpec(
@@ -471,7 +458,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         if (walletTxn != null) {
             // 两条账户流水指同一条支付流水：住院侧扣、患者侧入，缺任何一条这笔钱就凭空消失或多出来
             walletTxn.setPaymentTxnId(txn.getId());
-            fundAccountTxnMapper.updateById(walletTxn);
+            bizFundAccountTxnMapper.updateById(walletTxn);
         }
         log.info("[预交金退款] 入院 {} 流水 {} ¥{} 原流水={} 去向={} 操作人={}", spec.admissionId(), txn.getTxnNo(),
                 amount.toPlainString(), orig.getTxnNo(), toPatientWallet ? "患者院内余额" : "原路退回", txn.getCashierName());
@@ -490,7 +477,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         if (spec.amount() == null) {
             throw new BusinessException("缺少变动金额");
         }
-        BigDecimal amount = scale(spec.amount());
+        BigDecimal amount = NumUtil.scale(spec.amount(), AMOUNT_SCALE);
         if (amount.signum() <= 0) {
             throw new BusinessException("预交金金额必须大于 0，方向由接口决定（退款也传正数）");
         }
@@ -505,11 +492,11 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         if (payMethod == null) {
             throw new BusinessException("支付方式不合法");
         }
-        BigDecimal amount = scale(item.getAmount());
+        BigDecimal amount = NumUtil.scale(item.getAmount(), AMOUNT_SCALE);
         if (amount.signum() <= 0) {
             throw new BusinessException("收款金额必须大于 0");
         }
-        String txnNo = cut(redisSequenceService.generatePayTxnNo(), W_TXN_NO);
+        String txnNo = TextUtil.cut(redisSequenceService.generatePayTxnNo(), W_TXN_NO);
         BizFundAccountTxn accountTxn = null;
         if (payMethod == PaymentMethodEnum.BALANCE) {
             accountTxn = deductBalance(bill, item, amount, txnNo);
@@ -518,10 +505,10 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         BizPaymentTxn txn = new BizPaymentTxn();
         txn.setTxnNo(txnNo);
         txn.setBillId(bill.getId());
-        txn.setBillNo(cut(bill.getBillNo(), W_BILL_NO));
+        txn.setBillNo(TextUtil.cut(bill.getBillNo(), W_BILL_NO));
         txn.setPatientId(bill.getPatientId());
-        txn.setPatientNo(cut(bill.getPatientNo(), W_PATIENT_NO));
-        txn.setPatientName(cut(bill.getPatientName(), W_PATIENT_NAME));
+        txn.setPatientNo(TextUtil.cut(bill.getPatientNo(), W_PATIENT_NO));
+        txn.setPatientName(TextUtil.cut(bill.getPatientName(), W_PATIENT_NAME));
         txn.setEncounterType(bill.getEncounterType());
         txn.setEncounterId(bill.getEncounterId());
         txn.setDirection(PayDirectionEnum.CHARGE.getCode());
@@ -529,18 +516,18 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         txn.setAmount(amount);
         txn.setTxnStatus(PayTxnStatusEnum.SUCCESS.getCode());
         txn.setSourceType(source.getCode());
-        txn.setChannelTxnNo(cut(channelNoOf(payMethod, accountTxn, item.getChannelTxnNo(), txn), W_CHANNEL_TXN_NO));
+        txn.setChannelTxnNo(TextUtil.cut(channelNoOf(payMethod, accountTxn, item.getChannelTxnNo(), txn), W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
-        txn.setCashierName(cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
+        txn.setCashierName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
         txn.setTxnTime(LocalDateTime.now());
         txn.setTxnDate(LocalDate.now());
         txn.setReason(null);
-        txn.setRemark(cut(item.getRemark(), W_REMARK));
+        txn.setRemark(TextUtil.cut(item.getRemark(), W_REMARK));
         this.save(txn);
         if (accountTxn != null) {
             // 账户流水与支付流水互相指认：缺任何一条都是"钱动了账没动"，同事务里补上指针
             accountTxn.setPaymentTxnId(txn.getId());
-            fundAccountTxnMapper.updateById(accountTxn);
+            bizFundAccountTxnMapper.updateById(accountTxn);
         }
         return txn;
     }
@@ -601,13 +588,13 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
                     || !PayTxnStatusEnum.SUCCESS.getCode().equals(orig.getTxnStatus())) {
                 continue;
             }
-            BigDecimal refundable = scale(nz(baseMapper.sumRefundableByTxn(orig.getId())));
+            BigDecimal refundable = NumUtil.scale(NumUtil.orZero(baseMapper.sumRefundableByTxn(orig.getId())), AMOUNT_SCALE);
             if (refundable.signum() <= 0) {
                 continue;
             }
             BigDecimal part = refundable.compareTo(left) >= 0 ? left : refundable;
             refunds.add(refundOne(bill, orig, part, source, dto));
-            left = scale(left.subtract(part));
+            left = NumUtil.scale(left.subtract(part), AMOUNT_SCALE);
         }
         if (left.signum() > 0) {
             // 账单镜像说收过这么多钱，流水里却退不出来 —— 说明两边已经不一致，宁可拒绝也不许硬退
@@ -622,7 +609,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         if (payMethod == null) {
             throw new BusinessException("原收款流水的支付方式无法识别，不能退费");
         }
-        String txnNo = cut(redisSequenceService.generateRefundTxnNo(), W_TXN_NO);
+        String txnNo = TextUtil.cut(redisSequenceService.generateRefundTxnNo(), W_TXN_NO);
         RefundMethodEnum refundMethod = RefundMethodEnum.ofPayMethod(orig.getPayMethod());
 
         // 渠道请求放在落库之前：失败就整笔回滚，不允许出现"台账冲了、钱没退出去"
@@ -633,7 +620,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
                     orig.getPayMethod(), bill.getBillNo(), txnNo, amount, dto.getReason()));
             if (receipt == null || !receipt.success()) {
                 String err = receipt == null ? "渠道无响应" : receipt.errMsg();
-                throw new BusinessException("渠道原路退回失败，本次退费已撤销：" + cut(err, 200));
+                throw new BusinessException("渠道原路退回失败，本次退费已撤销：" + TextUtil.cut(err, 200));
             }
             channelRefundNo = receipt.channelRefundNo();
         } else if (payMethod == PaymentMethodEnum.BALANCE) {
@@ -645,10 +632,10 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         BizPaymentTxn txn = new BizPaymentTxn();
         txn.setTxnNo(txnNo);
         txn.setBillId(bill.getId());
-        txn.setBillNo(cut(bill.getBillNo(), W_BILL_NO));
+        txn.setBillNo(TextUtil.cut(bill.getBillNo(), W_BILL_NO));
         txn.setPatientId(bill.getPatientId());
-        txn.setPatientNo(cut(bill.getPatientNo(), W_PATIENT_NO));
-        txn.setPatientName(cut(bill.getPatientName(), W_PATIENT_NAME));
+        txn.setPatientNo(TextUtil.cut(bill.getPatientNo(), W_PATIENT_NO));
+        txn.setPatientName(TextUtil.cut(bill.getPatientName(), W_PATIENT_NAME));
         txn.setEncounterType(bill.getEncounterType());
         txn.setEncounterId(bill.getEncounterId());
         txn.setDirection(PayDirectionEnum.REFUND.getCode());
@@ -658,18 +645,18 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         txn.setOrigTxnId(orig.getId());
         txn.setSourceType(source.getCode());
         txn.setRefundMethod(refundMethod.getCode());
-        txn.setChannelTxnNo(cut(channelRefundNo, W_CHANNEL_TXN_NO));
+        txn.setChannelTxnNo(TextUtil.cut(channelRefundNo, W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
-        txn.setCashierName(cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
+        txn.setCashierName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
         txn.setTxnTime(LocalDateTime.now());
         txn.setTxnDate(LocalDate.now());
-        txn.setReason(cut(dto.getReason(), W_REASON));
+        txn.setReason(TextUtil.cut(dto.getReason(), W_REASON));
         txn.setApplyId(dto.getApplyId());
-        txn.setApplyNo(cut(dto.getApplyNo(), W_APPLY_NO));
+        txn.setApplyNo(TextUtil.cut(dto.getApplyNo(), W_APPLY_NO));
         this.save(txn);
         if (accountTxn != null) {
             accountTxn.setPaymentTxnId(txn.getId());
-            fundAccountTxnMapper.updateById(accountTxn);
+            bizFundAccountTxnMapper.updateById(accountTxn);
         }
         return txn;
     }
@@ -709,16 +696,16 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
      */
     private BigDecimal patientShare(BizSettlementBillItem item, BigDecimal reversed) {
         if (item == null) {
-            return scale(nz(reversed));
+            return NumUtil.scale(NumUtil.orZero(reversed), AMOUNT_SCALE);
         }
-        BigDecimal amount = nz(item.getAmount());
+        BigDecimal amount = NumUtil.orZero(item.getAmount());
         if (amount.signum() == 0) {
             return BigDecimal.ZERO;
         }
-        BigDecimal gross = nz(reversed);
-        BigDecimal discount = gross.multiply(nz(item.getDiscountAmount())).divide(amount, AMOUNT_SCALE, RoundingMode.HALF_UP);
-        BigDecimal pool = gross.multiply(nz(item.getPoolAmount())).divide(amount, AMOUNT_SCALE, RoundingMode.HALF_UP);
-        return scale(gross.subtract(discount).subtract(pool));
+        BigDecimal gross = NumUtil.orZero(reversed);
+        BigDecimal discount = gross.multiply(NumUtil.orZero(item.getDiscountAmount())).divide(amount, AMOUNT_SCALE, RoundingMode.HALF_UP);
+        BigDecimal pool = gross.multiply(NumUtil.orZero(item.getPoolAmount())).divide(amount, AMOUNT_SCALE, RoundingMode.HALF_UP);
+        return NumUtil.scale(gross.subtract(discount).subtract(pool), AMOUNT_SCALE);
     }
 
     private List<Long> resolveRefundFeeIds(List<BizSettlementBillItem> items, List<Long> feeIds) {

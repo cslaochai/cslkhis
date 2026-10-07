@@ -3,6 +3,7 @@ package com.his.medicaltech.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.service.FeeRecordService;
@@ -11,6 +12,7 @@ import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
 import com.his.medicaltech.dto.ExamFilmQueryPageDTO;
@@ -61,45 +63,25 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ExamFilmServiceImpl implements ExamFilmService {
-    /**
-     * 分页每页条数上限（技术阈值，防止前端传入超大值把库拖垮；DTO 迁 PageParam 后在此夹取）
-     */
-    private static final int MAX_PAGE_SIZE = 200;
-
-
+public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamFilm> implements ExamFilmService {
     private static final int AMOUNT_SCALE = 2;
 
-    private final BizExamFilmMapper filmMapper;
-    private final BizFilmSpecMapper specMapper;
-    private final BizInspectionRecordMapper recordMapper;
-    private final BizInspectionApplyMapper applyMapper;
-    private final DictCacheService subDictText;
+    private final BizExamFilmMapper bizExamFilmMapper;
+    private final BizFilmSpecMapper bizFilmSpecMapper;
+    private final BizInspectionRecordMapper bizInspectionRecordMapper;
+    private final BizInspectionApplyMapper bizInspectionApplyMapper;
+    private final DictCacheService dictCacheService;
     private final SysAuditLogService sysAuditLogService;
     private final FeeRecordService feeRecordService;
 
     // 查询
 
-    private static String trim(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static String cut(String s, int max) {
-        if (s == null) {
-            return null;
-        }
-        String v = s.trim();
-        return v.length() <= max ? v : v.substring(0, max);
-    }
-
     @Override
     public PageResult<ExamFilmVO> listPage(ExamFilmQueryPageDTO query) {
-        int pageNum = Math.max(query.getPageNum(), 1);
-        int pageSize = Math.min(Math.max(query.getPageSize(), 1), MAX_PAGE_SIZE);
-        IPage<ExamFilmVO> page = new Page<>(pageNum, pageSize);
-        List<ExamFilmVO> list = filmMapper.selectFilmPage(page,
-                trim(query.getKeyword()), query.getRecordId(), query.getFilmStatus(),
-                query.getChargeFlag(), trim(query.getStartDate()), trim(query.getEndDate()));
+        IPage<ExamFilmVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<ExamFilmVO> list = bizExamFilmMapper.selectFilmPage(page,
+                TextUtil.trim(query.getKeyword()), query.getRecordId(), query.getFilmStatus(),
+                query.getChargeFlag(), TextUtil.trim(query.getStartDate()), TextUtil.trim(query.getEndDate()));
         list.forEach(this::fillText);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), list);
     }
@@ -111,7 +93,7 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         if (recordId == null) {
             return new ArrayList<>();
         }
-        List<ExamFilmVO> list = filmMapper.selectList(new LambdaQueryWrapper<BizExamFilm>()
+        List<ExamFilmVO> list = bizExamFilmMapper.selectList(new LambdaQueryWrapper<BizExamFilm>()
                         .eq(BizExamFilm::getRecordId, recordId)
                         .orderByDesc(BizExamFilm::getId))
                 .stream().map(this::toVO).collect(Collectors.toList());
@@ -123,17 +105,17 @@ public class ExamFilmServiceImpl implements ExamFilmService {
     public ExamFilmVO.FilmStats stats(String startDate, String endDate) {
         String from = StringUtils.hasText(startDate) ? startDate.trim() : LocalDate.now().toString();
         String to = StringUtils.hasText(endDate) ? endDate.trim() : from;
-        return filmMapper.selectStats(from, to);
+        return bizExamFilmMapper.selectStats(from, to);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ExamFilmVO upsert(ExamFilmUpsertDTO dto) {
-        BizInspectionRecord record = recordMapper.selectById(dto.getRecordId());
+        BizInspectionRecord record = bizInspectionRecordMapper.selectById(dto.getRecordId());
         if (record == null) {
             throw new BusinessException("检查记录不存在或已被删除");
         }
-        BizFilmSpec spec = specMapper.selectById(dto.getSpecId());
+        BizFilmSpec spec = bizFilmSpecMapper.selectById(dto.getSpecId());
         if (spec == null) {
             throw new BusinessException("胶片规格不存在或已被删除");
         }
@@ -149,7 +131,7 @@ public class ExamFilmServiceImpl implements ExamFilmService {
             film.setChargeFlag(0);
             fillSnapshot(film, record, spec);
         } else {
-            film = filmMapper.selectById(dto.getId());
+            film = bizExamFilmMapper.selectById(dto.getId());
             if (film == null) {
                 throw new BusinessException("胶片记录不存在或已被删除");
             }
@@ -167,12 +149,12 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         BigDecimal price = spec.getUnitPrice() == null ? BigDecimal.ZERO : spec.getUnitPrice();
         film.setAmount(price.multiply(BigDecimal.valueOf(dto.getQuantity()))
                 .setScale(AMOUNT_SCALE, RoundingMode.HALF_UP));
-        film.setRemark(cut(dto.getRemark(), 500));
+        film.setRemark(TextUtil.cut(dto.getRemark(), 500));
 
         if (film.getId() == null) {
-            filmMapper.insert(film);
+            bizExamFilmMapper.insert(film);
         } else {
-            filmMapper.updateById(film);
+            bizExamFilmMapper.updateById(film);
         }
         return fillText(toVO(film));
     }
@@ -188,10 +170,10 @@ public class ExamFilmServiceImpl implements ExamFilmService {
             throw new BusinessException("已作废的胶片不能记账");
         }
 
-        BizInspectionRecord record = recordMapper.selectById(film.getRecordId());
+        BizInspectionRecord record = bizInspectionRecordMapper.selectById(film.getRecordId());
         // 就诊标识只能从申请单上取（检查记录自身没有挂号ID）：取不到就拒绝，
         // 而不是塞一个 0 进去 —— 记出一笔「不知道是谁的就诊」的费用，比报错更糟。
-        BizInspectionApply apply = film.getApplyId() == null ? null : applyMapper.selectById(film.getApplyId());
+        BizInspectionApply apply = film.getApplyId() == null ? null : bizInspectionApplyMapper.selectById(film.getApplyId());
         if (apply == null || apply.getRegistId() == null) {
             throw new BusinessException("找不到该检查对应的就诊/挂号信息，无法记账（申请单缺失或已清理）");
         }
@@ -224,17 +206,17 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         // 胶片按自费记：各地医保对胶片是否报销口径不一，宁可按自费记进账单，
         // 由结算层按当地政策处理，也不要在记账层写一个可能错的报销类别。
         dto.setCatalogType(0);
-        dto.setRemark(cut("检查胶片 " + film.getFilmNo() + "（记录号 " + film.getRecordNo() + "）", 500));
+        dto.setRemark(TextUtil.cut("检查胶片 " + film.getFilmNo() + "（记录号 " + film.getRecordNo() + "）", 500));
 
         BizFeeRecord fee = feeRecordService.book(dto);
         film.setChargeFlag(1);
         film.setFeeId(fee.getId());
         film.setFeeNo(fee.getFeeNo());
-        filmMapper.updateById(film);
+        bizExamFilmMapper.updateById(film);
 
         sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "检查胶片", "胶片记账", "biz_exam_film", film.getId(),
-                cut("胶片单号=" + film.getFilmNo() + " 规格=" + film.getSpecName()
+                TextUtil.cut("胶片单号=" + film.getFilmNo() + " 规格=" + film.getSpecName()
                         + " 张数=" + film.getQuantity() + " 金额=" + film.getAmount()
                         + " 记账流水=" + fee.getFeeNo(), 2000),
                 true, null);
@@ -254,7 +236,7 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         film.setFilmStatus(FilmStatusEnum.PRINTED.getCode());
         film.setPrintBy(UserUtils.getCurrentUser().getRealName());
         film.setPrintTime(LocalDateTime.now());
-        filmMapper.updateById(film);
+        bizExamFilmMapper.updateById(film);
         return fillText(toVO(film));
     }
 
@@ -273,7 +255,7 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         film.setFilmStatus(FilmStatusEnum.DELIVERED.getCode());
         film.setDeliverBy(UserUtils.getCurrentUser().getRealName());
         film.setDeliverTime(LocalDateTime.now());
-        filmMapper.updateById(film);
+        bizExamFilmMapper.updateById(film);
         return fillText(toVO(film));
     }
 
@@ -291,20 +273,20 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         // 留痕必须在改状态之前：作废后这行的快照还在，但"是谁因为什么作废的"只有审计里有
         sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "检查胶片", "作废胶片", "biz_exam_film", film.getId(),
-                cut("胶片单号=" + film.getFilmNo() + " 规格=" + film.getSpecName()
+                TextUtil.cut("胶片单号=" + film.getFilmNo() + " 规格=" + film.getSpecName()
                         + " 张数=" + film.getQuantity() + " 金额=" + film.getAmount()
                         + " 原因=" + (StringUtils.hasText(reason) ? reason : "未填写"), 2000),
                 true, null);
         BizExamFilm update = new BizExamFilm();
         update.setId(film.getId());
         update.setFilmStatus(FilmStatusEnum.INVALID.getCode());
-        update.setRemark(cut("作废：" + (StringUtils.hasText(reason) ? reason : "未填写原因"), 500));
-        return filmMapper.updateById(update) > 0;
+        update.setRemark(TextUtil.cut("作废：" + (StringUtils.hasText(reason) ? reason : "未填写原因"), 500));
+        return bizExamFilmMapper.updateById(update) > 0;
     }
 
     @Override
     public List<FilmSpecSelectListVO> specSelectList() {
-        return specMapper.selectList(new LambdaQueryWrapper<BizFilmSpec>()
+        return bizFilmSpecMapper.selectList(new LambdaQueryWrapper<BizFilmSpec>()
                         .eq(BizFilmSpec::getStatus, 1)
                         .orderByAsc(BizFilmSpec::getSortOrder)
                         .orderByAsc(BizFilmSpec::getId))
@@ -316,24 +298,24 @@ public class ExamFilmServiceImpl implements ExamFilmService {
     @Override
     public FilmSpecSelectListVO upsertSpec(ExamFilmSpecUpsertDTO dto) {
         BizFilmSpec spec = new BizFilmSpec();
-        spec.setSpecCode(cut(dto.getSpecCode(), 32));
-        spec.setSpecName(cut(dto.getSpecName(), 100));
+        spec.setSpecCode(TextUtil.cut(dto.getSpecCode(), 32));
+        spec.setSpecName(TextUtil.cut(dto.getSpecName(), 100));
         spec.setUnitPrice(dto.getUnitPrice());
-        spec.setUnit(StringUtils.hasText(dto.getUnit()) ? cut(dto.getUnit(), 20) : "张");
+        spec.setUnit(StringUtils.hasText(dto.getUnit()) ? TextUtil.cut(dto.getUnit(), 20) : "张");
         spec.setSortOrder(dto.getSortOrder() == null ? 0 : dto.getSortOrder());
         spec.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
         if (dto.getId() == null) {
-            long dup = specMapper.selectCount(new LambdaQueryWrapper<BizFilmSpec>()
+            long dup = bizFilmSpecMapper.selectCount(new LambdaQueryWrapper<BizFilmSpec>()
                     .eq(BizFilmSpec::getSpecCode, spec.getSpecCode()));
             if (dup > 0) {
                 throw new BusinessException("规格编码 " + spec.getSpecCode() + " 已存在");
             }
-            specMapper.insert(spec);
+            bizFilmSpecMapper.insert(spec);
         } else {
             spec.setId(dto.getId());
-            specMapper.updateById(spec);
+            bizFilmSpecMapper.updateById(spec);
         }
-        return toSpecVO(specMapper.selectById(spec.getId()));
+        return toSpecVO(bizFilmSpecMapper.selectById(spec.getId()));
     }
 
     @Override
@@ -343,16 +325,16 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         }
         // 已经用过的规格不允许删：删掉之后历史胶片行的 spec_name 还在，
         // 但「这个规格当年多少钱」这条链就断了，对账时会查不到价。
-        long used = filmMapper.selectCount(new LambdaQueryWrapper<BizExamFilm>()
+        long used = bizExamFilmMapper.selectCount(new LambdaQueryWrapper<BizExamFilm>()
                 .eq(BizExamFilm::getSpecId, id));
         if (used > 0) {
             throw new BusinessException("该规格已被 " + used + " 条胶片用量引用，不能删除；请改为「停用」");
         }
-        return specMapper.purgeById(id) > 0;
+        return bizFilmSpecMapper.purgeById(id) > 0;
     }
 
     private BizExamFilm loadFilm(Long filmId) {
-        BizExamFilm film = filmId == null ? null : filmMapper.selectById(filmId);
+        BizExamFilm film = filmId == null ? null : bizExamFilmMapper.selectById(filmId);
         if (film == null) {
             throw new BusinessException("胶片记录不存在或已被删除");
         }
@@ -395,7 +377,7 @@ public class ExamFilmServiceImpl implements ExamFilmService {
     private String newFilmNo() {
         String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
         String prefix = "FM" + day;
-        long seq = filmMapper.selectMaxSeqOfDay(prefix) + 1;
+        long seq = bizExamFilmMapper.selectMaxSeqOfDay(prefix) + 1;
         return prefix + String.format("%05d", seq);
     }
 
@@ -409,9 +391,9 @@ public class ExamFilmServiceImpl implements ExamFilmService {
         if (vo == null) {
             return null;
         }
-        vo.setFilmStatusText(subDictText.getDicDataLabel("his_film_status", vo.getFilmStatus()));
+        vo.setFilmStatusText(dictCacheService.getDicDataLabel("his_film_status", vo.getFilmStatus()));
         vo.setModalityText(vo.getModality() == null ? null
-                : subDictText.getDicDataLabel("his_exam_device_type", vo.getModality()));
+                : dictCacheService.getDicDataLabel("his_exam_device_type", vo.getModality()));
         return vo;
     }
 

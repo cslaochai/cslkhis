@@ -2,10 +2,14 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
 import com.his.emr.enums.*;
@@ -36,7 +40,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class RxReviewServiceImpl implements RxReviewService {
+public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, BizRxReviewBatch> implements RxReviewService {
 
     private static final int EXPORT_MAX = 5000;
 
@@ -53,17 +57,13 @@ public class RxReviewServiceImpl implements RxReviewService {
      */
     private static final long NEED_TALK_ABNORMAL_THRESHOLD = 3;
 
-    private final BizRxReviewBatchMapper batchMapper;
-    private final BizRxReviewItemMapper itemMapper;
-    private final BizRxDoctorTalkMapper talkMapper;
-    private final BizPrescriptionMapper prescriptionMapper;
-    private final BizPrescriptionDetailMapper prescriptionDetailMapper;
+    private final BizRxReviewBatchMapper bizRxReviewBatchMapper;
+    private final BizRxReviewItemMapper bizRxReviewItemMapper;
+    private final BizRxDoctorTalkMapper bizRxDoctorTalkMapper;
+    private final BizPrescriptionMapper bizPrescriptionMapper;
+    private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
 
     // 批次
-
-    private static long nz(Long v) {
-        return v == null ? 0L : v;
-    }
 
     /**
      * 百分比（分母 0 记 0.00），scale 2
@@ -96,14 +96,6 @@ public class RxReviewServiceImpl implements RxReviewService {
         return v;
     }
 
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        String t = v.trim();
-        return t.length() <= max ? t : t.substring(0, max);
-    }
-
     @Override
     public PageResult<RxReviewBatchVO> batchListPage(RxReviewBatchQueryPageDTO query) {
         LambdaQueryWrapper<BizRxReviewBatch> wrapper = new LambdaQueryWrapper<>();
@@ -115,7 +107,7 @@ public class RxReviewServiceImpl implements RxReviewService {
                 .eq(query.getReviewType() != null, BizRxReviewBatch::getReviewType, query.getReviewType())
                 .orderByDesc(BizRxReviewBatch::getId);
 
-        Page<BizRxReviewBatch> page = batchMapper.selectPage(
+        Page<BizRxReviewBatch> page = bizRxReviewBatchMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         if (CollectionUtils.isEmpty(page.getRecords())) {
             return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), Collections.emptyList());
@@ -148,7 +140,7 @@ public class RxReviewServiceImpl implements RxReviewService {
             throw new BusinessException("抽样数至少 1 张");
         }
 
-        List<BizPrescription> sampled = batchMapper.samplePrescriptions(
+        List<BizPrescription> sampled = bizRxReviewBatchMapper.samplePrescriptions(
                 dto.getDateStart(), dto.getDateEnd(), dto.getSampleCount());
         if (CollectionUtils.isEmpty(sampled)) {
             throw new BusinessException("该日期范围内没有可点评的处方（已审核/已发药且未被其他批次收录）");
@@ -168,16 +160,16 @@ public class RxReviewServiceImpl implements RxReviewService {
         batch.setReviewerName(UserUtils.getCurrentUser().getRealName());
         batch.setCreateBy(UserUtils.getCurrentUser().getRealName());
         batch.setRemark(StringUtils.hasText(dto.getRemark()) ? dto.getRemark().trim() : null);
-        batchMapper.insert(batch);
+        bizRxReviewBatchMapper.insert(batch);
 
         for (BizPrescription p : sampled) {
-            itemMapper.insert(toItemEntity(batch, p));
+            bizRxReviewItemMapper.insert(toItemEntity(batch, p));
         }
         return toBatchVO(batch);
     }
 
     private RxReviewBatchVO updateBatch(RxReviewBatchUpsertDTO dto) {
-        BizRxReviewBatch batch = batchMapper.selectById(dto.getId());
+        BizRxReviewBatch batch = bizRxReviewBatchMapper.selectById(dto.getId());
         if (batch == null) {
             throw new BusinessException("点评批次不存在");
         }
@@ -191,13 +183,13 @@ public class RxReviewServiceImpl implements RxReviewService {
         if (StringUtils.hasText(dto.getRemark())) {
             batch.setRemark(dto.getRemark().trim());
         }
-        batchMapper.updateById(batch);
+        bizRxReviewBatchMapper.updateById(batch);
         return toBatchVO(batch);
     }
 
     @Override
     public void completeBatch(Long id) {
-        BizRxReviewBatch batch = batchMapper.selectById(id);
+        BizRxReviewBatch batch = bizRxReviewBatchMapper.selectById(id);
         if (batch == null) {
             throw new BusinessException("点评批次不存在");
         }
@@ -205,31 +197,31 @@ public class RxReviewServiceImpl implements RxReviewService {
             return;
         }
         batch.setStatus(RxReviewBatchStatusEnum.DONE.getCode());
-        batchMapper.updateById(batch);
+        bizRxReviewBatchMapper.updateById(batch);
     }
 
     @Override
     @Transactional
     public void batchDeleteById(Long id) {
-        BizRxReviewBatch batch = batchMapper.selectById(id);
+        BizRxReviewBatch batch = bizRxReviewBatchMapper.selectById(id);
         if (batch == null) {
             return;
         }
-        Long reviewed = itemMapper.selectCount(new LambdaQueryWrapper<BizRxReviewItem>()
+        Long reviewed = bizRxReviewItemMapper.selectCount(new LambdaQueryWrapper<BizRxReviewItem>()
                 .eq(BizRxReviewItem::getBatchId, id)
                 .eq(BizRxReviewItem::getReviewStatus, RxReviewItemStatusEnum.DONE.getCode()));
         if (reviewed != null && reviewed > 0) {
             throw new BusinessException("批次下已有 " + reviewed + " 张已点评处方，点评结论是评审台账，禁止删除");
         }
-        itemMapper.purgeByBatchId(id);
-        batchMapper.deleteById(id);
+        bizRxReviewItemMapper.purgeByBatchId(id);
+        bizRxReviewBatchMapper.deleteById(id);
     }
 
     // 公示
 
     @Override
     public PageResult<RxReviewItemVO> itemListPage(RxReviewItemPageDTO query) {
-        Page<BizRxReviewItem> page = itemMapper.selectPage(
+        Page<BizRxReviewItem> page = bizRxReviewItemMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), itemWrapper(query));
         if (CollectionUtils.isEmpty(page.getRecords())) {
             return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), Collections.emptyList());
@@ -257,7 +249,7 @@ public class RxReviewServiceImpl implements RxReviewService {
     @Override
     @Transactional
     public void itemUpsert(RxReviewItemUpsertDTO dto) {
-        BizRxReviewItem item = itemMapper.selectById(dto.getId());
+        BizRxReviewItem item = bizRxReviewItemMapper.selectById(dto.getId());
         if (item == null) {
             throw new BusinessException("点评明细不存在");
         }
@@ -302,11 +294,11 @@ public class RxReviewServiceImpl implements RxReviewService {
         item.setReviewOpinion(opinion);
         item.setReviewerId(UserUtils.getCurrentUser().getEmployeeId());
         item.setReviewerName(UserUtils.getCurrentUser().getRealName());
-        item.setReviewTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
-        itemMapper.updateById(item);
+        item.setReviewTime(TimeUtil.nowSeconds());
+        bizRxReviewItemMapper.updateById(item);
 
         if (firstReview) {
-            batchMapper.increaseReviewed(item.getBatchId());
+            bizRxReviewBatchMapper.increaseReviewed(item.getBatchId());
         }
         autoFinishBatchIfDone(item.getBatchId());
     }
@@ -315,25 +307,25 @@ public class RxReviewServiceImpl implements RxReviewService {
      * 批次下明细全部点评 → 批次自动置已完成（保留手动关闭入口，抽样数没点完也能归档）
      */
     private void autoFinishBatchIfDone(Long batchId) {
-        BizRxReviewBatch batch = batchMapper.selectById(batchId);
+        BizRxReviewBatch batch = bizRxReviewBatchMapper.selectById(batchId);
         if (batch == null || batch.getStatus() == RxReviewBatchStatusEnum.DONE.getCode()) {
             return;
         }
-        Long total = itemMapper.selectCount(new LambdaQueryWrapper<BizRxReviewItem>()
+        Long total = bizRxReviewItemMapper.selectCount(new LambdaQueryWrapper<BizRxReviewItem>()
                 .eq(BizRxReviewItem::getBatchId, batchId));
-        Long reviewed = itemMapper.selectCount(new LambdaQueryWrapper<BizRxReviewItem>()
+        Long reviewed = bizRxReviewItemMapper.selectCount(new LambdaQueryWrapper<BizRxReviewItem>()
                 .eq(BizRxReviewItem::getBatchId, batchId)
                 .eq(BizRxReviewItem::getReviewStatus, RxReviewItemStatusEnum.DONE.getCode()));
         if (total != null && total > 0 && total.equals(reviewed)) {
             batch.setStatus(RxReviewBatchStatusEnum.DONE.getCode());
-            batchMapper.updateById(batch);
+            bizRxReviewBatchMapper.updateById(batch);
         }
     }
 
     @Override
     @Transactional
     public void itemAddByNo(Long batchId, String prescriptionNo) {
-        BizRxReviewBatch batch = batchMapper.selectById(batchId);
+        BizRxReviewBatch batch = bizRxReviewBatchMapper.selectById(batchId);
         if (batch == null) {
             throw new BusinessException("点评批次不存在");
         }
@@ -345,7 +337,7 @@ public class RxReviewServiceImpl implements RxReviewService {
         if (!StringUtils.hasText(no)) {
             throw new BusinessException("处方号不能为空");
         }
-        BizPrescription p = prescriptionMapper.selectOne(new LambdaQueryWrapper<BizPrescription>()
+        BizPrescription p = bizPrescriptionMapper.selectOne(new LambdaQueryWrapper<BizPrescription>()
                 .eq(BizPrescription::getPrescriptionNo, no));
         if (p == null) {
             throw new BusinessException("处方 " + no + " 不存在");
@@ -354,26 +346,26 @@ public class RxReviewServiceImpl implements RxReviewService {
         if (status == null || (status != 3 && status != 4)) {
             throw new BusinessException("处方 " + no + " 未完成审核/发药，不在点评范围");
         }
-        BizRxReviewItem existed = itemMapper.selectOne(new LambdaQueryWrapper<BizRxReviewItem>()
+        BizRxReviewItem existed = bizRxReviewItemMapper.selectOne(new LambdaQueryWrapper<BizRxReviewItem>()
                 .eq(BizRxReviewItem::getPrescriptionId, p.getId())
                 .last("LIMIT 1"));
         if (existed != null) {
             throw new BusinessException("处方 " + no + " 已收录于批次 " + existed.getBatchNo() + "，一处方只点评一次");
         }
-        itemMapper.insert(toItemEntity(batch, p));
+        bizRxReviewItemMapper.insert(toItemEntity(batch, p));
     }
 
     @Override
     @Transactional
     public int publicity(RxReviewPublicityDTO dto) {
         List<Long> ids = dto.getItemIds().stream().distinct().toList();
-        List<BizRxReviewItem> items = itemMapper.selectList(new LambdaQueryWrapper<BizRxReviewItem>()
+        List<BizRxReviewItem> items = bizRxReviewItemMapper.selectList(new LambdaQueryWrapper<BizRxReviewItem>()
                 .in(BizRxReviewItem::getId, ids));
         if (items.size() != ids.size()) {
             throw new BusinessException("存在无效的点评明细");
         }
         String operator = UserUtils.getCurrentUser().getRealName();
-        LocalDateTime now = LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         for (BizRxReviewItem item : items) {
             if (item.getReviewStatus() == null || item.getReviewStatus() != RxReviewItemStatusEnum.DONE.getCode()) {
                 throw new BusinessException("处方 " + item.getPrescriptionNo() + " 尚未点评，不能公示");
@@ -389,7 +381,7 @@ public class RxReviewServiceImpl implements RxReviewService {
             item.setPublicityStatus(PublicityStatusEnum.PUBLISHED.getCode());
             item.setPublicityBy(operator);
             item.setPublicityTime(now);
-            itemMapper.updateById(item);
+            bizRxReviewItemMapper.updateById(item);
         }
         return items.size();
     }
@@ -399,7 +391,7 @@ public class RxReviewServiceImpl implements RxReviewService {
     @Override
     public PageResult<RxReviewItemVO> publicityListPage(RxReviewItemPageDTO query) {
         query.setPublicityStatus(PublicityStatusEnum.PUBLISHED.getCode());
-        Page<BizRxReviewItem> page = itemMapper.selectPage(
+        Page<BizRxReviewItem> page = bizRxReviewItemMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), itemWrapper(query));
         if (CollectionUtils.isEmpty(page.getRecords())) {
             return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), Collections.emptyList());
@@ -410,7 +402,7 @@ public class RxReviewServiceImpl implements RxReviewService {
 
     @Override
     public List<RxPublicityDoctorVO> publicityStats(LocalDate dateStart, LocalDate dateEnd) {
-        List<RxPublicityDoctorVO> list = itemMapper.selectPublicityDoctorStats(dateStart, dateEnd);
+        List<RxPublicityDoctorVO> list = bizRxReviewItemMapper.selectPublicityDoctorStats(dateStart, dateEnd);
         for (RxPublicityDoctorVO vo : list) {
             vo.setNeedTalk(vo.getAbnormalCount() != null && vo.getAbnormalCount() >= NEED_TALK_ABNORMAL_THRESHOLD);
         }
@@ -428,14 +420,14 @@ public class RxReviewServiceImpl implements RxReviewService {
         LocalDate start = ym.atDay(1);
         LocalDate end = ym.atEndOfMonth();
 
-        RxReviewMonthStatVO itemStats = itemMapper.selectMonthlyStats(start, end);
-        long totalPrescriptions = itemMapper.countPrescriptions(start, end);
+        RxReviewMonthStatVO itemStats = bizRxReviewItemMapper.selectMonthlyStats(start, end);
+        long totalPrescriptions = bizRxReviewItemMapper.countPrescriptions(start, end);
 
-        long reviewed = nz(itemStats.getReviewed());
-        long unreasonable = nz(itemStats.getUnreasonable());
-        long abnormal = nz(itemStats.getAbnormal());
-        long publicized = nz(itemStats.getPublicized());
-        long pending = nz(itemStats.getPending());
+        long reviewed = NumUtil.orZero(itemStats.getReviewed());
+        long unreasonable = NumUtil.orZero(itemStats.getUnreasonable());
+        long abnormal = NumUtil.orZero(itemStats.getAbnormal());
+        long publicized = NumUtil.orZero(itemStats.getPublicized());
+        long pending = NumUtil.orZero(itemStats.getPending());
 
         RxReviewStatsVO vo = new RxReviewStatsVO();
         vo.setMonth(ym.toString());
@@ -466,7 +458,7 @@ public class RxReviewServiceImpl implements RxReviewService {
                 .orderByDesc(BizRxDoctorTalk::getTalkTime)
                 .orderByDesc(BizRxDoctorTalk::getId);
 
-        Page<BizRxDoctorTalk> page = talkMapper.selectPage(
+        Page<BizRxDoctorTalk> page = bizRxDoctorTalkMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         if (CollectionUtils.isEmpty(page.getRecords())) {
             return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), Collections.emptyList());
@@ -489,7 +481,7 @@ public class RxReviewServiceImpl implements RxReviewService {
             talk.setRectifyStatus(dto.getRectifyStatus() == null
                     ? RectifyStatusEnum.PENDING.getCode() : dto.getRectifyStatus());
         } else {
-            talk = talkMapper.selectById(dto.getId());
+            talk = bizRxDoctorTalkMapper.selectById(dto.getId());
             if (talk == null) {
                 throw new BusinessException("约谈记录不存在");
             }
@@ -510,16 +502,16 @@ public class RxReviewServiceImpl implements RxReviewService {
         talk.setTalkerOrg(StringUtils.hasText(dto.getTalkerOrg()) ? dto.getTalkerOrg().trim() : null);
         talk.setRelatedCount(ctx.items().size());
         talk.setRelatedReviewIds(ctx.idsText());
-        talk.setProblemSummary(cut(dto.getProblemSummary(), 500));
-        talk.setTalkContent(cut(dto.getTalkContent(), 1000));
-        talk.setRectifyRequire(cut(dto.getRectifyRequire(), 500));
-        talk.setRectifyRemark(cut(dto.getRectifyRemark(), 500));
+        talk.setProblemSummary(TextUtil.cut(dto.getProblemSummary(), 500));
+        talk.setTalkContent(TextUtil.cut(dto.getTalkContent(), 1000));
+        talk.setRectifyRequire(TextUtil.cut(dto.getRectifyRequire(), 500));
+        talk.setRectifyRemark(TextUtil.cut(dto.getRectifyRemark(), 500));
         talk.setRemark(StringUtils.hasText(dto.getRemark()) ? dto.getRemark().trim() : null);
 
         if (dto.getId() == null) {
-            talkMapper.insert(talk);
+            bizRxDoctorTalkMapper.insert(talk);
         } else {
-            talkMapper.updateById(talk);
+            bizRxDoctorTalkMapper.updateById(talk);
         }
         return toTalkVO(talk);
     }
@@ -533,7 +525,7 @@ public class RxReviewServiceImpl implements RxReviewService {
         if (ids.isEmpty()) {
             return new RelatedContext(doctorId, null, List.of(), null);
         }
-        List<BizRxReviewItem> items = itemMapper.selectList(new LambdaQueryWrapper<BizRxReviewItem>()
+        List<BizRxReviewItem> items = bizRxReviewItemMapper.selectList(new LambdaQueryWrapper<BizRxReviewItem>()
                 .in(BizRxReviewItem::getId, ids));
         if (items.size() != ids.size()) {
             throw new BusinessException("存在无效的点评明细引用");
@@ -570,7 +562,7 @@ public class RxReviewServiceImpl implements RxReviewService {
         if (!StringUtils.hasText(confirmBy)) {
             throw new BusinessException("请填写医师确认人（签字）");
         }
-        BizRxDoctorTalk talk = talkMapper.selectById(id);
+        BizRxDoctorTalk talk = bizRxDoctorTalkMapper.selectById(id);
         if (talk == null) {
             throw new BusinessException("约谈记录不存在");
         }
@@ -579,20 +571,20 @@ public class RxReviewServiceImpl implements RxReviewService {
         }
         talk.setDoctorConfirm(YesOrNoEnum.YES.getCode());
         talk.setDoctorConfirmBy(confirmBy.trim());
-        talk.setDoctorConfirmTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
-        talkMapper.updateById(talk);
+        talk.setDoctorConfirmTime(TimeUtil.nowSeconds());
+        bizRxDoctorTalkMapper.updateById(talk);
     }
 
     @Override
     public void talkDeleteById(Long id) {
-        BizRxDoctorTalk talk = talkMapper.selectById(id);
+        BizRxDoctorTalk talk = bizRxDoctorTalkMapper.selectById(id);
         if (talk == null) {
             return;
         }
         if (talk.getDoctorConfirm() != null && talk.getDoctorConfirm() == 1) {
             throw new BusinessException("医师已确认签字的约谈记录不可删除");
         }
-        talkMapper.deleteById(id);
+        bizRxDoctorTalkMapper.deleteById(id);
     }
 
     @Override
@@ -625,7 +617,7 @@ public class RxReviewServiceImpl implements RxReviewService {
 
     private String nextBatchNo() {
         String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
-        String max = batchMapper.selectMaxBatchNo(day);
+        String max = bizRxReviewBatchMapper.selectMaxBatchNo(day);
         int seq = max == null ? 0 : Integer.parseInt(max.substring(max.length() - 4));
         return "RXRB" + day + String.format("%04d", seq + 1);
     }
@@ -634,7 +626,7 @@ public class RxReviewServiceImpl implements RxReviewService {
 
     private String nextTalkNo() {
         String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
-        String max = talkMapper.selectMaxTalkNo(day);
+        String max = bizRxDoctorTalkMapper.selectMaxTalkNo(day);
         int seq = max == null ? 0 : Integer.parseInt(max.substring(max.length() - 4));
         return "YT" + day + String.format("%04d", seq + 1);
     }
@@ -653,7 +645,7 @@ public class RxReviewServiceImpl implements RxReviewService {
         item.setDoctorId(p.getDoctorId());
         item.setDoctorName(p.getDoctorName());
         item.setVisitDate(p.getVisitDate());
-        item.setDiagnosis(cut(p.getDiagnosis(), 500));
+        item.setDiagnosis(TextUtil.cut(p.getDiagnosis(), 500));
         item.setDrugCount(p.getDrugCount());
         item.setTotalAmount(p.getTotalAmount());
         item.setPrescriptionType(p.getPrescriptionType());
@@ -688,7 +680,7 @@ public class RxReviewServiceImpl implements RxReviewService {
     private List<RxReviewItemVO> toItemVOs(List<BizRxReviewItem> records) {
         List<Long> prescriptionIds = records.stream()
                 .map(BizRxReviewItem::getPrescriptionId).distinct().toList();
-        Map<Long, List<BizPrescriptionDetail>> detailMap = prescriptionDetailMapper.selectList(
+        Map<Long, List<BizPrescriptionDetail>> detailMap = bizPrescriptionDetailMapper.selectList(
                         new LambdaQueryWrapper<BizPrescriptionDetail>()
                                 .in(BizPrescriptionDetail::getPrescriptionId, prescriptionIds)
                                 .orderByAsc(BizPrescriptionDetail::getId))
@@ -764,7 +756,7 @@ public class RxReviewServiceImpl implements RxReviewService {
                 .distinct()
                 .toList();
         Map<Long, RxReviewItemVO> itemMap = allIds.isEmpty() ? Map.of()
-                : toItemVOs(itemMapper.selectList(new LambdaQueryWrapper<BizRxReviewItem>()
+                : toItemVOs(bizRxReviewItemMapper.selectList(new LambdaQueryWrapper<BizRxReviewItem>()
                 .in(BizRxReviewItem::getId, allIds))).stream()
                 .collect(Collectors.toMap(RxReviewItemVO::getId, v -> v, (a, b) -> a));
 

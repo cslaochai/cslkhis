@@ -25,18 +25,18 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasAuthority('system:user:list')")
 public class UserController {
 
-    private final SysUserService userService;
+    private final SysUserService sysUserService;
 
     @Operation(summary = "分页查询用户列表")
     @PostMapping("/listPage")
     public Result<PageResult<SysUserListVO>> listPage(@Valid @RequestBody SysUserQueryPageDTO queryDTO) {
-        return Result.success(userService.queryUserPage(queryDTO));
+        return Result.success(sysUserService.queryUserPage(queryDTO));
     }
 
     @Operation(summary = "获取用户详情")
     @GetMapping("/getById")
     public Result<UserDetailVO> getById(@RequestParam Long id) {
-        UserDetailVO userDetailVO = userService.getUserDetail(id);
+        UserDetailVO userDetailVO = sysUserService.getUserDetail(id);
         return Result.success(userDetailVO);
     }
 
@@ -50,14 +50,14 @@ public class UserController {
     @Operation(summary = "本人档案（敏感字段已脱敏）")
     @GetMapping("/selfProfile")
     public Result<UserDetailVO> selfProfile() {
-        return Result.success(userService.getSelfProfile());
+        return Result.success(sysUserService.getSelfProfile());
     }
 
     @PreAuthorize("hasAuthority('system:user:add')")
     @Operation(summary = "新增或修改用户")
     @PostMapping("/userUpsert")
     public Result<Void> userUpsert(@RequestBody @Valid SysUserUpsertDTO upsertDTO) {
-        userService.upsertUser(upsertDTO);
+        sysUserService.upsertUser(upsertDTO);
         return Result.success();
     }
 
@@ -65,7 +65,7 @@ public class UserController {
     @Operation(summary = "删除用户")
     @DeleteMapping("/deleteById")
     public Result<Void> remove(@RequestParam Long userId) {
-        userService.removeUser(userId);
+        sysUserService.removeUser(userId);
         return Result.success();
     }
 
@@ -73,7 +73,7 @@ public class UserController {
     @Operation(summary = "重置密码")
     @PostMapping("/resetPassword")
     public Result<Void> resetPassword(@Valid @RequestBody SysUserPasswordUpsertDTO resetDTO) {
-        userService.resetUserPassword(resetDTO);
+        sysUserService.resetUserPassword(resetDTO);
         return Result.success();
     }
 }

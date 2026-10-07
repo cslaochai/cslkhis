@@ -5,11 +5,12 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.enums.LabRecordStatusEnum;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -48,7 +49,7 @@ public interface LaboratoryReportSignProvider extends SignableContentProvider {
                 .put("laboratoryDeptName", r.getLaboratoryDeptName())
                 .put("specimenType", r.getSpecimenType())
                 .put("specimenNo", r.getSpecimenNo())
-                .put("price", plain(r.getPrice()))
+                .put("price", NumUtil.plain(r.getPrice()))
                 .put("diagnosis", r.getDiagnosis())
                 .put("suggestions", r.getSuggestions())
                 .put("results", resultsText(results))
@@ -67,23 +68,15 @@ public interface LaboratoryReportSignProvider extends SignableContentProvider {
         for (BizLabResult r : results) {
             i++;
             sb.append(i).append('|')
-                    .append(nz(r.getLaboratoryItemCode())).append('|')
-                    .append(nz(r.getLaboratoryItemName())).append('|')
-                    .append(nz(r.getResultValue())).append('|')
-                    .append(nz(r.getResultUnit())).append('|')
-                    .append(nz(r.getReferenceRange())).append('|')
+                    .append(TextUtil.nullToEmpty(r.getLaboratoryItemCode())).append('|')
+                    .append(TextUtil.nullToEmpty(r.getLaboratoryItemName())).append('|')
+                    .append(TextUtil.nullToEmpty(r.getResultValue())).append('|')
+                    .append(TextUtil.nullToEmpty(r.getResultUnit())).append('|')
+                    .append(TextUtil.nullToEmpty(r.getReferenceRange())).append('|')
                     .append(r.getAbnormalFlag() == null ? "" : r.getAbnormalFlag())
                     .append('\n');
         }
         return sb.toString();
-    }
-
-    static String plain(BigDecimal v) {
-        return v == null ? null : v.stripTrailingZeros().toPlainString();
-    }
-
-    static String nz(String s) {
-        return s == null ? "" : s;
     }
 
     SignBizTypeEnum bizType();

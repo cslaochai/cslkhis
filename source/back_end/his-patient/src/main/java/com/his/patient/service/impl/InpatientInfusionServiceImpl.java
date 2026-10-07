@@ -1,5 +1,6 @@
 package com.his.patient.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.ExecStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TimeUtil;
@@ -22,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 
@@ -42,16 +42,16 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InpatientInfusionServiceImpl implements InpatientInfusionService {
+public class InpatientInfusionServiceImpl extends ServiceImpl<BizInpatientOrderExecMapper, BizInpatientOrderExec> implements InpatientInfusionService {
 
     /**
      * 静脉类给药途径关键词（口径单点：VO 的 infusion 布尔与闭环校验共用本方法）
      */
     private static final String[] INFUSION_KEYWORDS = {"静滴", "静注", "静推", "静脉", "泵入"};
 
-    private final BizInpatientOrderExecMapper execMapper;
-    private final BizInpatientOrderMapper orderMapper;
-    private final BizInfusionRoundMapper roundMapper;
+    private final BizInpatientOrderExecMapper bizInpatientOrderExecMapper;
+    private final BizInpatientOrderMapper bizInpatientOrderMapper;
+    private final BizInfusionRoundMapper bizInfusionRoundMapper;
 
     /**
      * 给药途径是否静脉类（唯一口径，InpatientOrderServiceImpl.decorateExec 也走这里）
@@ -84,7 +84,7 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         }
         exec.setInfusionStartTime(TimeUtil.nowSeconds());
         exec.setDripRate(requireDripRate(dto.getDripRate()));
-        execMapper.updateById(exec);
+        bizInpatientOrderExecMapper.updateById(exec);
         log.info("输液开始 execId={} dripRate={} 护士={}", exec.getId(), exec.getDripRate(), operatorUser.getRealName());
         return toVO(exec);
     }
@@ -101,7 +101,7 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         if (exec.getInfusionEndTime() != null) {
             throw new BusinessException("该袋已于 " + exec.getInfusionEndTime() + " 结束输注，不能补录巡视（结束后补的观察是假记录）");
         }
-        LocalDateTime roundTime = dto.getRoundTime() == null ? TimeUtil.nowSeconds() : dto.getRoundTime().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime roundTime = dto.getRoundTime() == null ? TimeUtil.nowSeconds() : TimeUtil.toSeconds(dto.getRoundTime());
         if (roundTime.isBefore(exec.getInfusionStartTime())) {
             throw new BusinessException("巡视时间（" + roundTime + "）早于开始输注时间（"
                     + exec.getInfusionStartTime() + "）——落在外面的巡视是无效观察");
@@ -123,7 +123,7 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         round.setRoundNurseId(operatorUser.getEmployeeId());
         round.setRoundNurseName(operatorUser.getRealName());
         round.setRemark(dto.getRemark());
-        roundMapper.insert(round);
+        bizInfusionRoundMapper.insert(round);
         log.info("输液巡视 execId={} time={} dripRate={} 护士={}",
                 exec.getId(), roundTime, dto.getDripRate(), round.getRoundNurseName());
         return toRoundVO(round);
@@ -154,7 +154,7 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         exec.setInfusionEndTime(endTime);
         exec.setAdverseFlag(adverse ? 1 : 0);
         exec.setAdverseNote(adverse ? dto.getAdverseNote() : null);
-        execMapper.updateById(exec);
+        bizInpatientOrderExecMapper.updateById(exec);
         log.info("输液结束 execId={} adverse={} 护士={}", exec.getId(), adverse, operatorUser.getRealName());
         return toVO(exec);
     }
@@ -167,12 +167,12 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
         if (execId == null) {
             throw new BusinessException("执行行ID不能为空");
         }
-        return roundMapper.selectRoundsByExecId(execId);
+        return bizInfusionRoundMapper.selectRoundsByExecId(execId);
     }
 
     private BizInpatientOrderExec requireExec(Long execId) {
         // 非空已由三处入参 DTO 的 @NotNull + @Valid 收口（仅 start/round/finish 调用），此处不重复判空
-        BizInpatientOrderExec exec = execMapper.selectById(execId);
+        BizInpatientOrderExec exec = bizInpatientOrderExecMapper.selectById(execId);
         if (exec == null || Integer.valueOf(1).equals(exec.getDelFlag())) {
             throw new BusinessException("执行记录不存在");
         }
@@ -180,7 +180,7 @@ public class InpatientInfusionServiceImpl implements InpatientInfusionService {
     }
 
     private void requireInfusion(BizInpatientOrderExec exec) {
-        BizInpatientOrder order = orderMapper.selectById(exec.getOrderId());
+        BizInpatientOrder order = bizInpatientOrderMapper.selectById(exec.getOrderId());
         String route = order == null ? null : order.getRoute();
         if (!isInfusionRoute(route)) {
             throw new BusinessException("给药途径「" + (route == null ? "空" : route)

@@ -2,6 +2,7 @@ package com.his.pharmacy.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
@@ -38,13 +39,13 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class AntibioticServiceImpl implements AntibioticService {
+public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper, BizAntibioticAlias> implements AntibioticService {
 
     private final DictCacheService dictCacheService;
-    private final AntibioticCatalogMapper catalogMapper;
-    private final AntibioticEmployeeMapper employeeMapper;
-    private final BizAntibioticAuthMapper authMapper;
-    private final BizAntibioticAliasMapper aliasMapper;
+    private final AntibioticCatalogMapper antibioticCatalogMapper;
+    private final AntibioticEmployeeMapper antibioticEmployeeMapper;
+    private final BizAntibioticAuthMapper bizAntibioticAuthMapper;
+    private final BizAntibioticAliasMapper bizAntibioticAliasMapper;
 
     // 分级目录
 
@@ -52,7 +53,7 @@ public class AntibioticServiceImpl implements AntibioticService {
     public PageResult<AntibioticCatalogVO> catalogListPage(AntibioticCatalogQueryPageDTO query) {
         String keyword = query.getKeyword() == null ? null : query.getKeyword().trim();
         Page<AntibioticCatalogVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        List<AntibioticCatalogVO> list = catalogMapper.selectCatalogPage(page, keyword, query.getLevelFilter());
+        List<AntibioticCatalogVO> list = antibioticCatalogMapper.selectCatalogPage(page, keyword, query.getLevelFilter());
         for (AntibioticCatalogVO vo : list) {
             fillLevelText(vo);
         }
@@ -79,7 +80,7 @@ public class AntibioticServiceImpl implements AntibioticService {
             dto.setDddValue(null);
             dto.setDddUnitGram(null);
         }
-        int rows = catalogMapper.updateLevel(dto.getId(), level, dto.getDddValue(), dto.getDddUnitGram());
+        int rows = antibioticCatalogMapper.updateLevel(dto.getId(), level, dto.getDddValue(), dto.getDddUnitGram());
         if (rows == 0) {
             throw new BusinessException("药品不存在或已删除");
         }
@@ -99,14 +100,14 @@ public class AntibioticServiceImpl implements AntibioticService {
         LambdaQueryWrapper<BizAntibioticAlias> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(drugId != null, BizAntibioticAlias::getDrugId, drugId)
                 .orderByAsc(BizAntibioticAlias::getId);
-        return aliasMapper.selectList(wrapper).stream().map(this::toAliasVO).toList();
+        return bizAntibioticAliasMapper.selectList(wrapper).stream().map(this::toAliasVO).toList();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public AntibioticAliasVO aliasUpsert(AntibioticAliasUpsertDTO dto) {
         String alias = dto.getAliasName() == null ? null : dto.getAliasName().trim();
-        AntibioticDrugSelectListVO drug = catalogMapper.selectAntibioticDrugs().stream()
+        AntibioticDrugSelectListVO drug = antibioticCatalogMapper.selectAntibioticDrugs().stream()
                 .filter(d -> d.getId().equals(dto.getDrugId()))
                 .findFirst().orElse(null);
         if (drug == null) {
@@ -114,7 +115,7 @@ public class AntibioticServiceImpl implements AntibioticService {
         }
         BizAntibioticAlias entity;
         if (dto.getId() != null) {
-            entity = aliasMapper.selectById(dto.getId());
+            entity = bizAntibioticAliasMapper.selectById(dto.getId());
             if (entity == null) {
                 throw new BusinessException("别名记录不存在");
             }
@@ -127,25 +128,25 @@ public class AntibioticServiceImpl implements AntibioticService {
         entity.setAliasName(alias);
         entity.setRemark(StringUtils.hasText(dto.getRemark()) ? dto.getRemark().trim() : null);
         if (entity.getId() == null) {
-            aliasMapper.insert(entity);
+            bizAntibioticAliasMapper.insert(entity);
         } else {
-            aliasMapper.updateById(entity);
+            bizAntibioticAliasMapper.updateById(entity);
         }
         return toAliasVO(entity);
     }
 
     @Override
     public void aliasDeleteById(Long id) {
-        BizAntibioticAlias entity = aliasMapper.selectById(id);
+        BizAntibioticAlias entity = bizAntibioticAliasMapper.selectById(id);
         if (entity == null) {
             throw new BusinessException("别名记录不存在");
         }
-        aliasMapper.deleteById(id);
+        bizAntibioticAliasMapper.deleteById(id);
     }
 
     @Override
     public List<AntibioticDrugSelectListVO> antibioticDrugSelectList() {
-        List<AntibioticDrugSelectListVO> list = catalogMapper.selectAntibioticDrugs();
+        List<AntibioticDrugSelectListVO> list = antibioticCatalogMapper.selectAntibioticDrugs();
         for (AntibioticDrugSelectListVO vo : list) {
             vo.setAntibioticLevelText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", vo.getAntibioticLevel()));
         }
@@ -155,7 +156,7 @@ public class AntibioticServiceImpl implements AntibioticService {
     @Override
     public List<AntibioticDoctorSelectListVO> doctorSelectList(String keyword) {
         String kw = keyword == null ? null : keyword.trim();
-        return employeeMapper.selectDoctors(kw);
+        return antibioticEmployeeMapper.selectDoctors(kw);
     }
 
     // 处方权授权
@@ -175,7 +176,7 @@ public class AntibioticServiceImpl implements AntibioticService {
             wrapper.eq(BizAntibioticAuth::getStatus, BizAntibioticAuth.STATUS_VALID)
                     .ge(BizAntibioticAuth::getExpireDate, LocalDate.now());
         }
-        Page<BizAntibioticAuth> page = authMapper.selectPage(
+        Page<BizAntibioticAuth> page = bizAntibioticAuthMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         if (CollectionUtils.isEmpty(page.getRecords())) {
             return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), Collections.emptyList());
@@ -195,14 +196,14 @@ public class AntibioticServiceImpl implements AntibioticService {
         if (status != BizAntibioticAuth.STATUS_VALID && !StringUtils.hasText(dto.getRevokeReason())) {
             throw new BusinessException("暂停或取消授权必须填写原因");
         }
-        AntibioticDoctorSelectListVO doctor = employeeMapper.selectDoctorById(dto.getDoctorId());
+        AntibioticDoctorSelectListVO doctor = antibioticEmployeeMapper.selectDoctorById(dto.getDoctorId());
         if (doctor == null) {
             throw new BusinessException("医师不存在（请从医师下拉里选择在职医师）");
         }
 
         BizAntibioticAuth auth;
         if (dto.getId() != null) {
-            auth = authMapper.selectById(dto.getId());
+            auth = bizAntibioticAuthMapper.selectById(dto.getId());
             if (auth == null) {
                 throw new BusinessException("授权记录不存在");
             }
@@ -211,7 +212,7 @@ public class AntibioticServiceImpl implements AntibioticService {
                 throw new BusinessException("不允许改换医师或授权级别：请另立一条授权记录");
             }
         } else {
-            BizAntibioticAuth exist = authMapper.selectOne(new LambdaQueryWrapper<BizAntibioticAuth>()
+            BizAntibioticAuth exist = bizAntibioticAuthMapper.selectOne(new LambdaQueryWrapper<BizAntibioticAuth>()
                     .eq(BizAntibioticAuth::getDoctorId, dto.getDoctorId())
                     .eq(BizAntibioticAuth::getAuthLevel, dto.getAuthLevel()));
             if (exist != null) {
@@ -238,9 +239,9 @@ public class AntibioticServiceImpl implements AntibioticService {
         auth.setRemark(StringUtils.hasText(dto.getRemark()) ? dto.getRemark().trim() : null);
 
         if (auth.getId() == null) {
-            authMapper.insert(auth);
+            bizAntibioticAuthMapper.insert(auth);
         } else {
-            authMapper.updateById(auth);
+            bizAntibioticAuthMapper.updateById(auth);
         }
         return toAuthVO(auth);
     }
@@ -260,7 +261,7 @@ public class AntibioticServiceImpl implements AntibioticService {
         vo.setAuthLevel(authLevel);
         vo.setAuthLevelText(authLevel == null ? "无有效授权" : dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", authLevel));
 
-        List<AntibioticDrugSelectListVO> drugs = catalogMapper.selectAntibioticByIds(drugIds);
+        List<AntibioticDrugSelectListVO> drugs = antibioticCatalogMapper.selectAntibioticByIds(drugIds);
         for (AntibioticDrugSelectListVO drug : drugs) {
             if (authLevel == null || authLevel < drug.getAntibioticLevel()) {
                 AntibioticAuthCheckVO.BlockedDrug b = new AntibioticAuthCheckVO.BlockedDrug();
@@ -305,14 +306,14 @@ public class AntibioticServiceImpl implements AntibioticService {
         if (doctorId == null) {
             return null;
         }
-        return authMapper.selectMaxValidLevel(doctorId, LocalDate.now());
+        return bizAntibioticAuthMapper.selectMaxValidLevel(doctorId, LocalDate.now());
     }
 
     // 内部
 
     private String nextAuthNo() {
         String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
-        String max = authMapper.selectMaxAuthNo(day);
+        String max = bizAntibioticAuthMapper.selectMaxAuthNo(day);
         int seq = 1;
         if (StringUtils.hasText(max) && max.length() >= 4) {
             try {

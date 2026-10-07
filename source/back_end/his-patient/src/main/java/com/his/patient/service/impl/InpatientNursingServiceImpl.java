@@ -66,7 +66,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
     private final BizPatientMapper bizPatientMapper;
 
-    private final SysBedMapper bedMapper;
+    private final SysBedMapper sysBedMapper;
 
     private final BizNursingAssessmentMapper bizNursingAssessmentMapper;
 
@@ -157,7 +157,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         String deptName = null;
         String wardName = null;
         if (admission.getWardId() != null) {
-            WardVO ward = bedMapper.selectWardById(admission.getWardId());
+            WardVO ward = sysBedMapper.selectWardById(admission.getWardId());
             if (ward != null) {
                 wardName = ward.getWardName();
                 deptName = ward.getDeptName();
@@ -171,7 +171,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         record.setWardId(admission.getWardId());
         record.setWardName(wardName);
         if (admission.getBedId() != null) {
-            SysBed bed = bedMapper.selectById(admission.getBedId());
+            SysBed bed = sysBedMapper.selectById(admission.getBedId());
             if (bed != null) {
                 record.setBedNo(bed.getBedNo());
             }
@@ -480,11 +480,11 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             row.setPatientName(patient == null ? null : patient.getPatientName());
             row.setWardId(admission.getWardId());
             if (admission.getWardId() != null) {
-                WardVO ward = bedMapper.selectWardById(admission.getWardId());
+                WardVO ward = sysBedMapper.selectWardById(admission.getWardId());
                 row.setWardName(ward == null ? null : ward.getWardName());
             }
             if (admission.getBedId() != null) {
-                SysBed bed = bedMapper.selectById(admission.getBedId());
+                SysBed bed = sysBedMapper.selectById(admission.getBedId());
                 row.setBedNo(bed == null ? null : bed.getBedNo());
             }
             row.setAssessType(dto.getAssessType());
@@ -779,7 +779,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         }
         WardNursingFactsVO vo = new WardNursingFactsVO();
         vo.setWardId(wardId);
-        WardVO ward = bedMapper.selectWardById(wardId);
+        WardVO ward = sysBedMapper.selectWardById(wardId);
         vo.setWardName(ward == null ? null : ward.getWardName());
         vo.setShift(shift);
         vo.setShiftText(dictCacheService.getDicDataLabel("biz_patient_nursingShiftEnum", shift));
@@ -957,7 +957,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     }
 
     private String bedNoOf(Long bedId) {
-        SysBed b = bedMapper.selectById(bedId);
+        SysBed b = sysBedMapper.selectById(bedId);
         return b == null ? null : b.getBedNo();
     }
 

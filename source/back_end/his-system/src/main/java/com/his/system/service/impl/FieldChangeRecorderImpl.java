@@ -1,6 +1,7 @@
 package com.his.system.service.impl;
 
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysFieldChangeLog;
 import com.his.system.enums.MaskEnum;
@@ -54,7 +55,7 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
      */
     private static final Map<Class<?>, Map<String, Method>> GETTER_CACHE = new ConcurrentHashMap<>();
 
-    private final SysFieldChangeLogMapper fieldChangeLogMapper;
+    private final SysFieldChangeLogMapper sysFieldChangeLogMapper;
 
     private static Object readProperty(Object bean, String name) {
         Method getter = GETTER_CACHE
@@ -141,10 +142,6 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
                 + String.format("%06d", RANDOM.nextInt(1_000_000));
     }
 
-    private static String cut(String s, int max) {
-        return s == null || s.length() <= max ? s : s.substring(0, max);
-    }
-
     @Override
     public String record(String bizType, Object bizId, String bizNo, String bizName,
                          Object oldObj, Object newObj, List<FieldSpec> specs) {
@@ -174,7 +171,7 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
             String batchNo = newBatchNo();
             for (SysFieldChangeLog row : rows) {
                 row.setBatchNo(batchNo);
-                fieldChangeLogMapper.insert(row);
+                sysFieldChangeLogMapper.insert(row);
             }
             return batchNo;
         } catch (Exception e) {
@@ -194,7 +191,7 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
                     new FieldSpec("-", operation, MaskEnum.NONE, null), null, null,
                     TYPE_ACTION, null);
             row.setBatchNo(newBatchNo());
-            fieldChangeLogMapper.insert(row);
+            sysFieldChangeLogMapper.insert(row);
         } catch (Exception e) {
             log.error("字段变更日志（操作留痕）写入失败 bizType={} bizId={}", bizType, bizId, e);
         }
@@ -204,16 +201,16 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
                                     FieldSpec spec, String oldText, String newText,
                                     String changeType, String remark) {
         SysFieldChangeLog row = new SysFieldChangeLog();
-        row.setBizType(cut(bizType, 32));
-        row.setBizId(cut(String.valueOf(bizId), 64));
-        row.setBizNo(cut(bizNo, 64));
-        row.setBizName(cut(bizName, 128));
-        row.setFieldName(cut(spec.name(), 64));
-        row.setFieldLabel(cut(spec.label(), 64));
-        row.setOldValue(cut(oldText, VALUE_MAX));
-        row.setNewValue(cut(newText, VALUE_MAX));
+        row.setBizType(TextUtil.cut(bizType, 32));
+        row.setBizId(TextUtil.cut(String.valueOf(bizId), 64));
+        row.setBizNo(TextUtil.cut(bizNo, 64));
+        row.setBizName(TextUtil.cut(bizName, 128));
+        row.setFieldName(TextUtil.cut(spec.name(), 64));
+        row.setFieldLabel(TextUtil.cut(spec.label(), 64));
+        row.setOldValue(TextUtil.cut(oldText, VALUE_MAX));
+        row.setNewValue(TextUtil.cut(newText, VALUE_MAX));
         row.setChangeType(changeType);
-        row.setRemark(cut(remark, 500));
+        row.setRemark(TextUtil.cut(remark, 500));
         row.setChangeTime(LocalDateTime.now());
         row.setDelFlag(0);
         // 操作人一律服务端取，不接受调用方传 —— 传进来的可以被伪造，等于没有审计
@@ -222,9 +219,9 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
             row.setOperatorId(user.getUserId());
             // 姓名单一口径取 realName：employeeName/username 回落会让同一张表里
             // 不同来源的操作人格式不一致，事后按人名检索会漏
-            row.setOperatorName(cut(user.getRealName(), 64));
+            row.setOperatorName(TextUtil.cut(user.getRealName(), 64));
             row.setDeptId(user.getDeptId());
-            row.setDeptName(cut(user.getDeptName(), 64));
+            row.setDeptName(TextUtil.cut(user.getDeptName(), 64));
         }
         return row;
     }

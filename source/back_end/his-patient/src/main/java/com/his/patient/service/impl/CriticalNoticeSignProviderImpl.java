@@ -6,6 +6,7 @@ import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
+import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizCriticalNotice;
 import com.his.patient.enums.NoticeStatusEnum;
 import com.his.patient.mapper.BizCriticalNoticeMapper;
@@ -15,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
@@ -37,7 +37,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class CriticalNoticeSignProviderImpl implements SignableContentProvider, CriticalNoticeSignProvider {
 
-    private final BizCriticalNoticeMapper noticeMapper;
+    private final BizCriticalNoticeMapper bizCriticalNoticeMapper;
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -46,7 +46,7 @@ public class CriticalNoticeSignProviderImpl implements SignableContentProvider, 
 
     @Override
     public SignSubject load(Long bizId) {
-        BizCriticalNotice n = noticeMapper.selectById(bizId);
+        BizCriticalNotice n = bizCriticalNoticeMapper.selectById(bizId);
         if (n == null) {
             return null;
         }
@@ -67,7 +67,7 @@ public class CriticalNoticeSignProviderImpl implements SignableContentProvider, 
         if (scene != SignSceneEnum.NOTICE_ISSUE && scene != SignSceneEnum.NOTICE_MAKEUP) {
             return "病危重通知只支持「告知签发签名/告知补签」场景，当前场景「" + scene.getText() + "」不适用";
         }
-        BizCriticalNotice n = noticeMapper.selectById(subject.bizId());
+        BizCriticalNotice n = bizCriticalNoticeMapper.selectById(subject.bizId());
         if (n == null) {
             return "病危重通知单不存在或已被删除，无法签名";
         }
@@ -93,17 +93,17 @@ public class CriticalNoticeSignProviderImpl implements SignableContentProvider, 
         patch.setId(bizId);
         patch.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
         patch.setSignId(signId);
-        patch.setSignedTime(signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS));
-        noticeMapper.updateById(patch);
+        patch.setSignedTime(signedTime == null ? null : TimeUtil.toSeconds(signedTime));
+        bizCriticalNoticeMapper.updateById(patch);
     }
 
     @Override
     public void revokeSignAnchor(Long bizId, Long signId) {
-        BizCriticalNotice n = noticeMapper.selectById(bizId);
+        BizCriticalNotice n = bizCriticalNoticeMapper.selectById(bizId);
         if (n == null || !Objects.equals(signId, n.getSignId())) {
             return;
         }
-        noticeMapper.update(null, new LambdaUpdateWrapper<BizCriticalNotice>()
+        bizCriticalNoticeMapper.update(null, new LambdaUpdateWrapper<BizCriticalNotice>()
                 .eq(BizCriticalNotice::getId, bizId)
                 .set(BizCriticalNotice::getSignStatus, ObjectSignStatusEnum.INVALIDATED.getCode())
                 .set(BizCriticalNotice::getSignId, null));

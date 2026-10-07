@@ -37,16 +37,16 @@ public class ApplyExecStatusGatewayImpl implements ApplyExecStatusGateway {
      */
     private static final int LAB_STARTED_FROM = LabRecordStatusEnum.SAMPLED.getCode();
 
-    private final BizInspectionRecordMapper inspectionRecordMapper;
-    private final BizLaboratoryRecordMapper laboratoryRecordMapper;
-    private final BizCriticalValueMapper criticalValueMapper;
+    private final BizInspectionRecordMapper bizInspectionRecordMapper;
+    private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
+    private final BizCriticalValueMapper bizCriticalValueMapper;
 
     @Override
     public List<ExecStatus> listInspectionExecStatus(List<Long> applyIds) {
         if (CollectionUtils.isEmpty(applyIds)) {
             return Collections.emptyList();
         }
-        List<BizInspectionRecord> records = inspectionRecordMapper.selectList(
+        List<BizInspectionRecord> records = bizInspectionRecordMapper.selectList(
                 new LambdaQueryWrapper<BizInspectionRecord>()
                         .in(BizInspectionRecord::getApplyId, applyIds)
                         .orderByAsc(BizInspectionRecord::getId));
@@ -82,7 +82,7 @@ public class ApplyExecStatusGatewayImpl implements ApplyExecStatusGateway {
         if (CollectionUtils.isEmpty(applyIds)) {
             return Collections.emptyList();
         }
-        List<BizLaboratoryRecord> records = laboratoryRecordMapper.selectList(
+        List<BizLaboratoryRecord> records = bizLaboratoryRecordMapper.selectList(
                 new LambdaQueryWrapper<BizLaboratoryRecord>()
                         .in(BizLaboratoryRecord::getApplyId, applyIds)
                         .orderByAsc(BizLaboratoryRecord::getId));
@@ -117,7 +117,7 @@ public class ApplyExecStatusGatewayImpl implements ApplyExecStatusGateway {
         if (CollectionUtils.isEmpty(recordIds)) {
             return Collections.emptySet();
         }
-        List<BizCriticalValue> list = criticalValueMapper.selectList(
+        List<BizCriticalValue> list = bizCriticalValueMapper.selectList(
                 new LambdaQueryWrapper<BizCriticalValue>()
                         .in(BizCriticalValue::getRecordId, recordIds)
                         .ne(BizCriticalValue::getStatus, 4));

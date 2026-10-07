@@ -41,7 +41,7 @@ public class AiHealthServiceImpl implements AiHealthService {
             AiCapabilityKeys.DETERIORATION_ALERT, AiCapabilityKeys.NURSING_HANDOVER,
             AiCapabilityKeys.VOICE_TRANSCRIBE);
 
-    private final AiConfigProvider configProvider;
+    private final AiConfigProvider aiConfigProvider;
 
     private final AiDegradeGuard degradeGuard;
 
@@ -51,18 +51,18 @@ public class AiHealthServiceImpl implements AiHealthService {
      * 运行时状态快照（只读配置，不产生模型调用）
      */
     public AiHealthVO runtimeStatus() {
-        AiProperties properties = configProvider.get();
+        AiProperties properties = aiConfigProvider.get();
 
         AiHealthVO vo = new AiHealthVO();
         vo.setEnabled(properties.isEnabled());
         vo.setReady(properties.isReady());
-        vo.setNotReadyReason(configProvider.notReadyReason());
+        vo.setNotReadyReason(aiConfigProvider.notReadyReason());
         vo.setProvider(properties.getProvider());
         vo.setBaseUrl(properties.getBaseUrl());
         vo.setModel(properties.getModel());
         vo.setModelLite(properties.getModelLite());
         vo.setApiKeyConfigured(StringUtils.hasText(properties.getApiKey()));
-        vo.setApiKeySource(configProvider.apiKeyFromEnv() ? "env" : "yml");
+        vo.setApiKeySource(aiConfigProvider.apiKeyFromEnv() ? "env" : "yml");
         vo.setTimeoutMs(properties.getTimeoutMs());
         vo.setRetrieveTopN(properties.getRetrieveTopN());
 
@@ -75,9 +75,9 @@ public class AiHealthServiceImpl implements AiHealthService {
         for (String capability : TRACKED_CAPABILITIES) {
             // 开关状态与可用状态分开报：true 只代表「配置里允许」，
             // 是否真能用还要看上面顶层的 ready / notReadyReason。
-            features.put(capability, configProvider.switchedOn(capability));
-            timeouts.put(capability, configProvider.timeoutOf(capability));
-            models.put(capability, configProvider.modelOf(capability, false));
+            features.put(capability, aiConfigProvider.switchedOn(capability));
+            timeouts.put(capability, aiConfigProvider.timeoutOf(capability));
+            models.put(capability, aiConfigProvider.modelOf(capability, false));
             circuitOpen.put(capability, degradeGuard.isOpen(capability));
             degradedCount.put(capability, degradeGuard.degradedCountOf(capability));
             lastFailureReason.put(capability, degradeGuard.lastFailureReason(capability));

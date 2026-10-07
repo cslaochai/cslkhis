@@ -12,6 +12,7 @@ import com.his.appoint.service.RevisitFeePolicyService;
 import com.his.appoint.vo.RevisitFeePolicyVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.NumUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -48,8 +49,8 @@ public class RevisitFeePolicyServiceImpl
     @Override
     public RevisitFeeDecision decide(RevisitFeeContext context) {
         RevisitFeeDecision decision = new RevisitFeeDecision();
-        BigDecimal registFee = nvl(context == null ? null : context.getRegistFee());
-        BigDecimal diagnosisFee = nvl(context == null ? null : context.getDiagnosisFee());
+        BigDecimal registFee = NumUtil.orZero(context == null ? null : context.getRegistFee());
+        BigDecimal diagnosisFee = NumUtil.orZero(context == null ? null : context.getDiagnosisFee());
         // 默认全额收费：没有策略、来源未知、判不出比对结果，都走这里。
         // 方向性很关键 —— 兜底若是「免」，等于任何异常路径都在替医院漏收挂号费。
         decision.setRegistFee(registFee);
@@ -215,7 +216,4 @@ public class RevisitFeePolicyServiceImpl
         return vo;
     }
 
-    private BigDecimal nvl(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
 }

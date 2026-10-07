@@ -1,19 +1,21 @@
 package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.entity.BizLaboratoryApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
 import com.his.emr.mapper.BizLaboratoryApplyMapper;
+import com.his.medicaltech.config.ExamImageProperties;
 import com.his.medicaltech.dto.ExamImageMockImportDTO;
 import com.his.medicaltech.dto.ExamImageUploadDTO;
 import com.his.medicaltech.entity.BizExamImage;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.entity.BizReport;
-import com.his.medicaltech.config.ExamImageProperties;
 import com.his.medicaltech.enums.ExamImageSourceEnum;
 import com.his.medicaltech.enums.ReportTypeEnum;
 import com.his.medicaltech.mapper.BizExamImageMapper;
@@ -40,7 +42,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
 
 /**
  * 简化 PACS 影像帧服务（sql/137）
@@ -48,7 +53,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ExamImageServiceImpl implements ExamImageService {
+public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExamImage> implements ExamImageService {
 
     private final ExamImageProperties examImageProperties;
 
@@ -69,13 +74,6 @@ public class ExamImageServiceImpl implements ExamImageService {
     private final DictCacheService dictCacheService;
 
     private final SysAuditLogService sysAuditLogService;
-
-    private static String cut(String s, int max) {
-        if (s == null) {
-            return null;
-        }
-        return s.length() <= max ? s : s.substring(0, max);
-    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -100,10 +98,10 @@ public class ExamImageServiceImpl implements ExamImageService {
         BizExamImage row = newAnchorRow(anchor, uploadDTO.getBizType(), uploadDTO.getApplyId(),
                 uploadDTO.getModality());
         row.setSeq(nextSeq(uploadDTO.getBizType(), uploadDTO.getApplyId()));
-        row.setFileName(cut(originalName, 255));
+        row.setFileName(TextUtil.cut(originalName, 255));
         row.setFileUrl(relativeUrl);
         row.setFileSize(file.getSize());
-        row.setMimeType(cut(file.getContentType(), 64));
+        row.setMimeType(TextUtil.cut(file.getContentType(), 64));
         row.setSource(ExamImageSourceEnum.UPLOAD.getCode());
         bizExamImageMapper.insert(row);
         return toVO(row);
@@ -134,7 +132,7 @@ public class ExamImageServiceImpl implements ExamImageService {
                 row.setFileSize((long) png.length);
                 row.setMimeType("image/png");
                 row.setSource(ExamImageSourceEnum.MOCK_DICOM.getCode());
-                row.setRemark(cut("模拟 DICOM 导入（非真实影像）", 500));
+                row.setRemark(TextUtil.cut("模拟 DICOM 导入（非真实影像）", 500));
                 bizExamImageMapper.insert(row);
                 created.add(toVO(row));
             }
@@ -178,7 +176,7 @@ public class ExamImageServiceImpl implements ExamImageService {
         // 留痕必须在删之前拿得到内容：物理删之后这行就没了，审计是唯一的历史
         sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "检查影像", "删除影像帧", "biz_exam_image", row.getId(),
-                cut("apply=" + row.getBizType() + "#" + row.getApplyId() + " seq=" + row.getSeq()
+                TextUtil.cut("apply=" + row.getBizType() + "#" + row.getApplyId() + " seq=" + row.getSeq()
                         + " file=" + row.getFileName() + " url=" + row.getFileUrl()
                         + " 原因=" + (StringUtils.hasText(reason) ? reason : "未填写"), 2000),
                 true, null);
@@ -224,11 +222,11 @@ public class ExamImageServiceImpl implements ExamImageService {
         BizExamImage row = new BizExamImage();
         row.setBizType(bizType);
         row.setApplyId(applyId);
-        row.setApplyNo(cut(anchor.applyNo, 64));
+        row.setApplyNo(TextUtil.cut(anchor.applyNo, 64));
         row.setPatientId(anchor.patientId);
-        row.setPatientName(cut(anchor.patientName, 64));
-        row.setItemName(cut(anchor.itemName, 200));
-        row.setBodyPart(cut(anchor.bodyPart, 100));
+        row.setPatientName(TextUtil.cut(anchor.patientName, 64));
+        row.setItemName(TextUtil.cut(anchor.itemName, 200));
+        row.setBodyPart(TextUtil.cut(anchor.bodyPart, 100));
         row.setModality(modality);
         return row;
     }

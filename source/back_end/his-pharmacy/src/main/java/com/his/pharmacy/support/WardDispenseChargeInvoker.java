@@ -1,12 +1,12 @@
 package com.his.pharmacy.support;
 
-import com.his.common.enums.EncounterTypeEnum;
-import com.his.common.enums.FeeSourceTypeEnum;
-import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.service.FeeRecordService;
 import com.his.charge.support.FeeCatalogResolver;
+import com.his.common.enums.EncounterTypeEnum;
+import com.his.common.enums.FeeSourceTypeEnum;
+import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.pharmacy.entity.BizWardDispenseItem;
 import com.his.pharmacy.mapper.BizWardDispenseItemMapper;
 import com.his.pharmacy.vo.WardDispenseOrderDeptVO;
@@ -45,7 +45,7 @@ import java.math.BigDecimal;
 public class WardDispenseChargeInvoker {
 
     private final FeeRecordService feeRecordService;
-    private final BizWardDispenseItemMapper itemMapper;
+    private final BizWardDispenseItemMapper bizWardDispenseItemMapper;
 
     /**
      * 配药记账（独立事务）
@@ -78,7 +78,7 @@ public class WardDispenseChargeInvoker {
         dto.setEncounterId(item.getAdmissionId());
         // 归科按医嘱号反查开立科室，反查不到就留空由日结单列「无科室归属」，不兜底成病区
         WardDispenseOrderDeptVO dept = StringUtils.hasText(item.getOrderNo())
-                ? itemMapper.selectOrderDept(item.getOrderNo()) : null;
+                ? bizWardDispenseItemMapper.selectOrderDept(item.getOrderNo()) : null;
         if (dept != null) {
             dto.setDeptId(dept.getDeptId());
             dto.setDeptName(dept.getDeptName());

@@ -6,6 +6,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.PrescriptionStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.TcmGramUnits;
+import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizDrugDispensing;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.enums.DispensingStatusEnum;
@@ -28,7 +29,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -53,10 +53,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapper, BizDrugDispensing> implements DrugDispensingService {
 
-    private final BizPrescriptionMapper prescriptionMapper;
+    private final BizPrescriptionMapper bizPrescriptionMapper;
     private final PharmacyService pharmacyService;
     private final NarcoticControlService narcoticControlService;
-    private final SysDrugMapper drugMapper;
+    private final SysDrugMapper sysDrugMapper;
     private final TcmDecoctService tcmDecoctService;
 
     /**
@@ -73,7 +73,7 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         if (quantity == null || dispensing.getDrugId() == null) {
             return quantity;
         }
-        SysDrug drug = drugMapper.selectById(dispensing.getDrugId());
+        SysDrug drug = sysDrugMapper.selectById(dispensing.getDrugId());
         BigDecimal gramPerUnit = drug == null ? null : drug.getGramPerUnit();
         if (!TcmGramUnits.gramDosed(gramPerUnit)) {
             return quantity;
@@ -191,13 +191,13 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         }
 
         // 处方联动：任一明细退药 → 处方置 6 + refund_*
-        BizPrescription rx = prescriptionMapper.selectById(dispensing.getPrescriptionId());
+        BizPrescription rx = bizPrescriptionMapper.selectById(dispensing.getPrescriptionId());
         if (rx != null) {
             rx.setPrescriptionStatus(PrescriptionStatusEnum.RETURNED.getCode());
-            rx.setRefundTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+            rx.setRefundTime(TimeUtil.nowSeconds());
             rx.setRefundBy(operatorName);
             rx.setRefundReason(reason);
-            prescriptionMapper.updateById(rx);
+            bizPrescriptionMapper.updateById(rx);
         }
         // sql/139：药退回了架上，还没开煎的代煎单必须跟着停掉 ——
         // 否则煎药室照着台账煎出一袋没人取的汤液（建单时机选在发药后，退药就是它的逆动作）
@@ -231,7 +231,7 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
             throw new BusinessException("当前状态不允许发药");
         }
         // 审方闸门：处方未审核（1草稿/2已提交）或已取消（5）禁止发药
-        BizPrescription rx = prescriptionMapper.selectById(dispensing.getPrescriptionId());
+        BizPrescription rx = bizPrescriptionMapper.selectById(dispensing.getPrescriptionId());
         if (rx == null) {
             throw new BusinessException("关联处方不存在");
         }
@@ -259,7 +259,7 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
         dispensing.setDispensingStatus(DispensingStatusEnum.DISPENSED.getCode());
         dispensing.setPharmacistId(pharmacistId);
         dispensing.setPharmacistName(pharmacistName);
-        dispensing.setDispensingTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        dispensing.setDispensingTime(TimeUtil.nowSeconds());
         boolean updated = this.updateById(dispensing);
         if (!updated) {
             throw new BusinessException("发药更新失败");
@@ -280,14 +280,14 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
     }
 
     private void markPrescriptionDispensed(Long prescriptionId, Long pharmacistId, String pharmacistName) {
-        BizPrescription rx = prescriptionMapper.selectById(prescriptionId);
+        BizPrescription rx = bizPrescriptionMapper.selectById(prescriptionId);
         if (rx == null) {
             return;
         }
         rx.setPrescriptionStatus(PrescriptionStatusEnum.DISPENSED.getCode());
-        rx.setDispenseTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        rx.setDispenseTime(TimeUtil.nowSeconds());
         rx.setDispenseBy(pharmacistName);
-        prescriptionMapper.updateById(rx);
+        bizPrescriptionMapper.updateById(rx);
         // sql/139：药已经全部调剂出去，才谈得上代煎 —— 在这里（而不是医生开方时）建单，
         // 才不会出现在途单据「单子在、药被退了」。建单幂等，非代煎方返回 null。
         tcmDecoctService.createOnDispensed(prescriptionId);

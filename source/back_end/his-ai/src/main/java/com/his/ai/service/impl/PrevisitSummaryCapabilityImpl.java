@@ -11,6 +11,7 @@ import com.his.ai.service.PrevisitSummaryCapability;
 import com.his.ai.vo.PrevisitSummaryPromptVariablesVO;
 import com.his.ai.vo.PrevisitSummaryVO;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.emr.enums.PrevisitSummarySourceEnum;
 import com.his.emr.service.PrevisitRecordService;
 import com.his.emr.vo.PrevisitDetailVO;
@@ -19,7 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 预问诊病史摘要实现。
@@ -54,14 +57,6 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
 
     private final ObjectMapper objectMapper;
 
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
     // ---------------------------------------------------------------- 模型层
 
     @Override
@@ -83,7 +78,7 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
         if (output.isEmpty()) {
             vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.PREVISIT_SUMMARY));
         } else {
-            String summary = truncate(output.get().getSummary(), SUMMARY_MAX);
+            String summary = TextUtil.cut(output.get().getSummary(), SUMMARY_MAX, "");
             if (StringUtils.hasText(summary)) {
                 vo.setSummary(summary);
                 vo.setSource("model");
@@ -112,7 +107,7 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
                 .templateName(TEMPLATE_NAME)
                 .variables(variables)
                 .bizType(BIZ_TYPE)
-                .inputDigest(truncate(mainSymptom, 60))
+                .inputDigest(TextUtil.cut(mainSymptom, 60, ""))
                 .useLiteModel(true)
                 .maxTokens(256)
                 .build();
@@ -144,7 +139,7 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
             log.warn("[AI-预问诊摘要] 问答明细解析失败，跳过该段 json={}", answersJson, e);
             return "";
         }
-        return truncate(String.join("；", parts), ANSWERS_TEXT_MAX);
+        return TextUtil.cut(String.join("；", parts), ANSWERS_TEXT_MAX, "");
     }
 
     /**
@@ -161,6 +156,6 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
         if (StringUtils.hasText(freeText)) {
             builder.append("患者补充：").append(freeText.trim()).append("。");
         }
-        return truncate(builder.toString(), SUMMARY_MAX);
+        return TextUtil.cut(builder.toString(), SUMMARY_MAX, "");
     }
 }

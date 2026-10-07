@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class InpatientRecordSignCoverageProviderImpl implements SignCoverageProvider, InpatientRecordSignCoverageProvider {
 
-    private final BizInpatientRecordMapper recordMapper;
+    private final BizInpatientRecordMapper bizInpatientRecordMapper;
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -30,12 +30,12 @@ public class InpatientRecordSignCoverageProviderImpl implements SignCoverageProv
 
     @Override
     public SignCoverage coverage() {
-        long total = recordMapper.selectCount(null);
-        long signed = recordMapper.selectCount(new LambdaQueryWrapper<BizInpatientRecord>()
+        long total = bizInpatientRecordMapper.selectCount(null);
+        long signed = bizInpatientRecordMapper.selectCount(new LambdaQueryWrapper<BizInpatientRecord>()
                 .eq(BizInpatientRecord::getSignStatus, ObjectSignStatusEnum.SIGNED.getCode()));
-        long invalidated = recordMapper.selectCount(new LambdaQueryWrapper<BizInpatientRecord>()
+        long invalidated = bizInpatientRecordMapper.selectCount(new LambdaQueryWrapper<BizInpatientRecord>()
                 .eq(BizInpatientRecord::getSignStatus, ObjectSignStatusEnum.INVALIDATED.getCode()));
-        long pending = recordMapper.selectCount(new LambdaQueryWrapper<BizInpatientRecord>()
+        long pending = bizInpatientRecordMapper.selectCount(new LambdaQueryWrapper<BizInpatientRecord>()
                 .eq(BizInpatientRecord::getSignStatus, ObjectSignStatusEnum.UNSIGNED.getCode()));
         return new SignCoverage(SignBizTypeEnum.INPATIENT_RECORD.getCode(), SignBizTypeEnum.INPATIENT_RECORD.getText(),
                 total, signed, pending, invalidated);

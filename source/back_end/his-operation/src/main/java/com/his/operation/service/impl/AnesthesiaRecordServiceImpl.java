@@ -3,8 +3,10 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.*;
@@ -27,11 +29,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,20 +55,20 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
-    private final BizAnesthesiaRecordMapper recordMapper;
+public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecordMapper, BizAnesthesiaRecord> implements AnesthesiaRecordService {
+    private final BizAnesthesiaRecordMapper bizAnesthesiaRecordMapper;
 
-    private final BizAnesthesiaVitalMapper vitalMapper;
+    private final BizAnesthesiaVitalMapper bizAnesthesiaVitalMapper;
 
-    private final BizAnesthesiaMedMapper medMapper;
+    private final BizAnesthesiaMedMapper bizAnesthesiaMedMapper;
 
-    private final BizOperationApplyMapper applyMapper;
+    private final BizOperationApplyMapper bizOperationApplyMapper;
 
-    private final BizOperationChargeItemMapper chargeItemMapper;
+    private final BizOperationChargeItemMapper bizOperationChargeItemMapper;
 
     private final BizPatientService bizPatientService;
 
-    private final AnesthesiaVisitService visitService;
+    private final AnesthesiaVisitService anesthesiaVisitService;
 
     private final OperationChargeBiller operationChargeBiller;
 
@@ -81,26 +80,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         return incoming != null ? incoming : existing;
     }
 
-    private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
-        if (from == null || to == null) {
-            return null;
-        }
-        long m = Duration.between(from, to).toMinutes();
-        return m < 0 ? null : m;
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
     // 开立 / 更新
-
-    /**
-     * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
-     */
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
 
     // 生命体征 / 用药（只增不改，且仅"记录中"可增）
 
@@ -109,7 +89,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (query == null) {
             query = new AnesthesiaRecordQueryPageDTO();
         }
-        IPage<AnesthesiaRecordVO> page = recordMapper.selectRecordPage(
+        IPage<AnesthesiaRecordVO> page = bizAnesthesiaRecordMapper.selectRecordPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         page.getRecords().forEach(this::decorate);
         return page;
@@ -121,7 +101,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (recordId == null) {
             throw new BusinessException("麻醉记录单ID不能为空");
         }
-        AnesthesiaRecordVO vo = recordMapper.selectVOById(recordId);
+        AnesthesiaRecordVO vo = bizAnesthesiaRecordMapper.selectVOById(recordId);
         if (vo == null) {
             throw new BusinessException("麻醉记录单不存在");
         }
@@ -135,7 +115,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (applyId == null) {
             throw new BusinessException("手术申请单ID不能为空");
         }
-        AnesthesiaRecordVO vo = recordMapper.selectVOByApply(applyId);
+        AnesthesiaRecordVO vo = bizAnesthesiaRecordMapper.selectVOByApply(applyId);
         if (vo != null) {
             decorateDetail(vo);
         }
@@ -149,15 +129,15 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizOperationApply apply = applyMapper.selectById(dto.getApplyId());
+        BizOperationApply apply = bizOperationApplyMapper.selectById(dto.getApplyId());
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
         }
         if (Integer.valueOf(OperationApplyStatusEnum.CANCELLED.getCode()).equals(apply.getOperationStatus())) {
             throw new BusinessException("手术单 " + apply.getApplyNo() + " 已取消，不能开立麻醉记录");
         }
-        if (recordMapper.selectVOByApply(apply.getId()) != null) {
-            throw new BusinessException("该手术已有麻醉记录单 " + recordMapper.selectVOByApply(apply.getId()).getRecordNo()
+        if (bizAnesthesiaRecordMapper.selectVOByApply(apply.getId()) != null) {
+            throw new BusinessException("该手术已有麻醉记录单 " + bizAnesthesiaRecordMapper.selectVOByApply(apply.getId()).getRecordNo()
                     + "，不能重复开立（一台手术一份麻醉记录）");
         }
 
@@ -166,7 +146,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         boolean emergency = Integer.valueOf(1).equals(apply.getIsEmergency());
         AnesthesiaVisitVO existingVisit;
         try {
-            existingVisit = visitService.getByApply(apply.getId());
+            existingVisit = anesthesiaVisitService.getByApply(apply.getId());
         } catch (BusinessException e) {
             // 没有访视单是正常的（getByApply 对"不存在"返回 null，抛错说明别的问题，往上抛）
             throw e;
@@ -208,7 +188,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         entity.setAnesthetistId(dto.getAnesthetistId() != null ? dto.getAnesthetistId() : operatorUser.getEmployeeId());
         entity.setAnesthetistName(employeeNameOf(entity.getAnesthetistId()));
         entity.setAssistantAnesthetistName(dto.getAssistantAnesthetistName());
-        entity.setEnterRoomTime(TimeUtil.toSeconds(dto.getEnterRoomTime() == null ? now() : dto.getEnterRoomTime()));
+        entity.setEnterRoomTime(TimeUtil.toSeconds(dto.getEnterRoomTime() == null ? TimeUtil.nowSeconds() : dto.getEnterRoomTime()));
         entity.setRecordStatus(AnesthesiaRecordStatusEnum.DRAFT.getCode());
         entity.setChargeStatus(AnesthesiaChargeStatusEnum.PENDING.getCode());
         // 「急诊超前麻醉」的状态靠 visit_id 为空来表达，不额外加一列：
@@ -216,7 +196,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
-        recordMapper.insert(entity);
+        bizAnesthesiaRecordMapper.insert(entity);
 
         log.info("开立麻醉记录 recordNo={} applyNo={} 麻醉方式={} 急诊={} 访视ID={} 待补访视={} 开立人={}",
                 entity.getRecordNo(), apply.getApplyNo(),
@@ -236,7 +216,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
             throw new BusinessException("已标记发生麻醉不良事件，必须填写经过与处理");
         }
         copyNotNullIgnoring(dto, entity);
-        recordMapper.updateById(entity);
+        bizAnesthesiaRecordMapper.updateById(entity);
     }
 
     @Override
@@ -244,7 +224,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     public void addVital(AnesthesiaVitalUpsertDTO dto) {
         BizAnesthesiaRecord record = mustEditable(dto == null ? null : dto.getRecordId());
         LocalDateTime sampleTime = TimeUtil.toSeconds(dto.getSampleTime());
-        if (vitalMapper.countSameTime(record.getId(), sampleTime) > 0) {
+        if (bizAnesthesiaVitalMapper.countSameTime(record.getId(), sampleTime) > 0) {
             throw new BusinessException("采样时刻 " + dto.getSampleTime()
                     + " 已有生命体征记录；同一时刻一个点只能有一组真值（要改请先看是不是采样时刻填错了）");
         }
@@ -259,7 +239,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         vital.setSpo2(dto.getSpo2());
         vital.setEtco2(dto.getEtco2());
         vital.setRemark(dto.getRemark());
-        vitalMapper.insert(vital);
+        bizAnesthesiaVitalMapper.insert(vital);
     }
 
     @Override
@@ -268,7 +248,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (recordId == null) {
             throw new BusinessException("麻醉记录单ID不能为空");
         }
-        List<BizAnesthesiaVital> list = vitalMapper.selectList(
+        List<BizAnesthesiaVital> list = bizAnesthesiaVitalMapper.selectList(
                 new LambdaQueryWrapper<BizAnesthesiaVital>()
                         .eq(BizAnesthesiaVital::getRecordId, recordId)
                         .orderByAsc(BizAnesthesiaVital::getSampleTime)
@@ -297,7 +277,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         med.setUnit(dto.getUnit());
         med.setRoute(dto.getRoute());
         med.setRemark(dto.getRemark());
-        medMapper.insert(med);
+        bizAnesthesiaMedMapper.insert(med);
     }
 
     @Override
@@ -306,7 +286,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (recordId == null) {
             throw new BusinessException("麻醉记录单ID不能为空");
         }
-        List<BizAnesthesiaMed> list = medMapper.selectList(
+        List<BizAnesthesiaMed> list = bizAnesthesiaMedMapper.selectList(
                 new LambdaQueryWrapper<BizAnesthesiaMed>()
                         .eq(BizAnesthesiaMed::getRecordId, recordId)
                         .orderByAsc(BizAnesthesiaMed::getMedTime)
@@ -345,7 +325,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (entity.getAnesthesiaStartTime() == null || entity.getAnesthesiaEndTime() == null) {
             throw new BusinessException("未登记麻醉开始/结束时间，不能提交（算不出麻醉时长，也没法计监护费）");
         }
-        long vitalCount = vitalMapper.selectCount(
+        long vitalCount = bizAnesthesiaVitalMapper.selectCount(
                 new LambdaQueryWrapper<BizAnesthesiaVital>().eq(BizAnesthesiaVital::getRecordId, entity.getId()));
         if (vitalCount == 0) {
             throw new BusinessException("一条生命体征都没有，不能提交 —— "
@@ -359,7 +339,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         entity.setRecordStatus(AnesthesiaRecordStatusEnum.SUBMITTED.getCode());
         entity.setSubmitDoctorId(operatorUser.getEmployeeId());
         entity.setSubmitDoctorName(operatorUser.getRealName());
-        entity.setSubmitTime(now());
+        entity.setSubmitTime(TimeUtil.nowSeconds());
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
@@ -374,7 +354,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
             summary.setFailedItems(summary.getFailedItems() + 1);
         }
         applyChargeResult(entity, summary);
-        recordMapper.updateById(entity);
+        bizAnesthesiaRecordMapper.updateById(entity);
         log.info("提交麻醉记录 recordNo={} 状态=已提交 计费=成功{}项/失败{}项 金额={} 提交人={}",
                 entity.getRecordNo(), summary.getSuccessItems(), summary.getFailedItems(),
                 summary.getAmount(), operatorUser.getRealName());
@@ -396,11 +376,11 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         entity.setRecordStatus(AnesthesiaRecordStatusEnum.AUDITED.getCode());
         entity.setAuditDoctorId(operatorUser.getEmployeeId());
         entity.setAuditDoctorName(operatorUser.getRealName());
-        entity.setAuditTime(now());
+        entity.setAuditTime(TimeUtil.nowSeconds());
         if (dto != null && StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
-        recordMapper.updateById(entity);
+        bizAnesthesiaRecordMapper.updateById(entity);
         log.info("审核麻醉记录 recordNo={} 审核人={}", entity.getRecordNo(), operatorUser.getRealName());
     }
 
@@ -422,13 +402,13 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
             summary.setFailedItems(1);
         }
         applyChargeResult(entity, summary);
-        recordMapper.updateById(entity);
+        bizAnesthesiaRecordMapper.updateById(entity);
         return summary;
     }
 
     @Override
     public long countUncharged() {
-        return recordMapper.selectCount(new LambdaQueryWrapper<BizAnesthesiaRecord>()
+        return bizAnesthesiaRecordMapper.selectCount(new LambdaQueryWrapper<BizAnesthesiaRecord>()
                 .ne(BizAnesthesiaRecord::getChargeStatus, AnesthesiaChargeStatusEnum.DONE.getCode()));
     }
 
@@ -439,7 +419,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
             throw new BusinessException("手术申请单ID不能为空");
         }
         List<OperationChargeItemVO> vos = new ArrayList<>();
-        for (BizOperationChargeItem row : chargeItemMapper.selectByApply(applyId)) {
+        for (BizOperationChargeItem row : bizOperationChargeItemMapper.selectByApply(applyId)) {
             OperationChargeItemVO vo = new OperationChargeItemVO();
             BeanUtils.copyProperties(row, vo);
             vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(row.getChargeStatus()));
@@ -455,7 +435,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
             entity.setChargeFailReason("本次没有可计费项目");
             return;
         }
-        entity.setChargedAmount(nz(entity.getChargedAmount()).add(summary.getAmount()));
+        entity.setChargedAmount(NumUtil.orZero(entity.getChargedAmount()).add(summary.getAmount()));
         if (summary.hasFailure()) {
             entity.setChargeStatus(AnesthesiaChargeStatusEnum.FAILED.getCode());
             entity.setChargeFailReason(AnesthesiaCalcs.clipReason(String.join("；", summary.getMessages())));
@@ -479,7 +459,7 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (recordId == null) {
             throw new BusinessException("麻醉记录单ID不能为空");
         }
-        BizAnesthesiaRecord entity = recordMapper.selectById(recordId);
+        BizAnesthesiaRecord entity = bizAnesthesiaRecordMapper.selectById(recordId);
         if (entity == null) {
             throw new BusinessException("麻醉记录单不存在");
         }
@@ -575,13 +555,13 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         if (empId == null) {
             return null;
         }
-        String name = applyMapper.selectEmployeeName(empId);
+        String name = bizOperationApplyMapper.selectEmployeeName(empId);
         return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
     private String nextRecordNo() {
         String prefix = "MZ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = recordMapper.countByNoPrefix(prefix) + 1;
+        long seq = bizAnesthesiaRecordMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 
@@ -599,10 +579,10 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
         vo.setEmergencyText(dictCacheService.getDicDataLabel("biz_operation_operationEmergencyEnum", vo.getIsEmergency()));
         vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
 
-        Long anesthesiaMinutes = minutesBetween(vo.getAnesthesiaStartTime(), vo.getAnesthesiaEndTime());
+        Long anesthesiaMinutes = TimeUtil.elapsedMinutes(vo.getAnesthesiaStartTime(), vo.getAnesthesiaEndTime());
         vo.setAnesthesiaMinutes(anesthesiaMinutes);
         vo.setAnesthesiaDurationText(AnesthesiaCalcs.durationText(anesthesiaMinutes));
-        Long operationMinutes = minutesBetween(vo.getOperationStartTime(), vo.getOperationEndTime());
+        Long operationMinutes = TimeUtil.elapsedMinutes(vo.getOperationStartTime(), vo.getOperationEndTime());
         vo.setOperationMinutes(operationMinutes);
         vo.setOperationDurationText(AnesthesiaCalcs.durationText(operationMinutes));
         Long billBase = anesthesiaMinutes != null ? anesthesiaMinutes : operationMinutes;

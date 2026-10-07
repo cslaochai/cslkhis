@@ -3,11 +3,13 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.DrugStockChangeTypeEnum;
 import com.his.common.enums.StockRoomEnum;
 import com.his.common.enums.StockStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.pharmacy.dto.BizDrugStockUpsertDTO;
 import com.his.pharmacy.dto.StockBatchMoveDTO;
 import com.his.pharmacy.dto.StockDeductResultDTO;
@@ -39,7 +41,7 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
 
     private final DrugStockCacheService drugStockCacheService;
     private final RedisSequenceService redisSequenceService;
-    private final BizDrugStockLogMapper stockLogMapper;
+    private final BizDrugStockLogMapper bizDrugStockLogMapper;
 
     @Override
     public PageResult<BizDrugStockVO> selectStockPage(String drugName, Integer stockStatus, Integer stockRoom,
@@ -52,12 +54,14 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
 
     @Override
     public List<BizDrugStockVO> selectBatchCandidates(Integer stockRoom, String keyword, boolean onlyWithSupplier) {
-        List<BizDrugStockVO> rows = baseMapper.selectBatchCandidates(stockRoom, trimToNull(keyword), onlyWithSupplier);
+        List<BizDrugStockVO> rows = baseMapper.selectBatchCandidates(stockRoom, TextUtil.trimToNull(keyword), onlyWithSupplier);
         rows.forEach(this::fillRoomText);
         return rows;
     }
 
-    /** 库位文字在服务端算：前端再抄一份 1/2→药库/药房的映射迟早和枚举漂移 */
+    /**
+     * 库位文字在服务端算：前端再抄一份 1/2→药库/药房的映射迟早和枚举漂移
+     */
     private void fillRoomText(BizDrugStockVO vo) {
         vo.setStockRoomText(StockRoomEnum.getText(vo.getStockRoom()));
     }
@@ -178,7 +182,7 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
         }
         BigDecimal available = BigDecimal.ZERO;
         for (BizDrugStock b : batches) {
-            available = available.add(nvl(b.getAvailableQuantity()));
+            available = available.add(NumUtil.orZero(b.getAvailableQuantity()));
         }
         if (available.compareTo(quantity) < 0) {
             String drugName = baseMapper.selectDrugNameById(drugId);
@@ -190,12 +194,12 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
             if (remain.compareTo(BigDecimal.ZERO) <= 0) {
                 break;
             }
-            BigDecimal take = nvl(batch.getAvailableQuantity()).min(remain);
+            BigDecimal take = NumUtil.orZero(batch.getAvailableQuantity()).min(remain);
             if (take.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
-            batch.setAvailableQuantity(nvl(batch.getAvailableQuantity()).subtract(take));
-            batch.setLockedQuantity(nvl(batch.getLockedQuantity()).add(take));
+            batch.setAvailableQuantity(NumUtil.orZero(batch.getAvailableQuantity()).subtract(take));
+            batch.setLockedQuantity(NumUtil.orZero(batch.getLockedQuantity()).add(take));
             this.updateById(batch);
             remain = remain.subtract(take);
         }
@@ -215,20 +219,16 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
                 break;
             }
             // 只退实际锁着的量：发药时锁定量已随扣库放掉，此后再撤方/删病历不能把可用量凭空加回来
-            BigDecimal release = nvl(batch.getLockedQuantity()).min(remain);
+            BigDecimal release = NumUtil.orZero(batch.getLockedQuantity()).min(remain);
             if (release.compareTo(BigDecimal.ZERO) <= 0) {
                 continue;
             }
-            batch.setLockedQuantity(nvl(batch.getLockedQuantity()).subtract(release));
-            batch.setAvailableQuantity(nvl(batch.getAvailableQuantity()).add(release));
+            batch.setLockedQuantity(NumUtil.orZero(batch.getLockedQuantity()).subtract(release));
+            batch.setAvailableQuantity(NumUtil.orZero(batch.getAvailableQuantity()).add(release));
             this.updateById(batch);
             remain = remain.subtract(release);
         }
         drugStockCacheService.evictCache(drugId);
-    }
-
-    private BigDecimal nvl(BigDecimal v) {
-        return v == null ? BigDecimal.ZERO : v;
     }
 
     @Override
@@ -239,7 +239,7 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
     @Override
     @Transactional(rollbackFor = Exception.class)
     public StockDeductResultDTO deductStockFefo(Long drugId, BigDecimal quantity, String sourceType,
-                                             Long sourceId, String sourceNo, String operatorName) {
+                                                Long sourceId, String sourceNo, String operatorName) {
         // C 类：发药扣库是跨模块内部指令（形参入参，不经 HTTP 绑定），注解够不到
         if (drugId == null) {
             throw new BusinessException("药品ID不能为空");
@@ -464,15 +464,15 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
             throw new BusinessException(label + " 实际在「" + StockRoomEnum.getText(stock.getStockRoom())
                     + "」，与本单指定的「" + StockRoomEnum.getText(move.getStockRoom()) + "」不符，请重新选择批次");
         }
-        BigDecimal available = nvl(stock.getAvailableQuantity());
+        BigDecimal available = NumUtil.orZero(stock.getAvailableQuantity());
         if (available.compareTo(quantity) < 0) {
-            throw new BusinessException(label + " 可用量只有 " + plain(available) + "，不够扣 " + plain(quantity)
-                    + "（已锁定 " + plain(nvl(stock.getLockedQuantity())) + " 是已开方未发药的量，不许调拨也不许退货）");
+            throw new BusinessException(label + " 可用量只有 " + NumUtil.plain(NumUtil.orZero(available)) + "，不够扣 " + NumUtil.plain(NumUtil.orZero(quantity))
+                    + "（已锁定 " + NumUtil.plain(NumUtil.orZero(NumUtil.orZero(stock.getLockedQuantity()))) + " 是已开方未发药的量，不许调拨也不许退货）");
         }
-        BigDecimal before = nvl(stock.getQuantity());
+        BigDecimal before = NumUtil.orZero(stock.getQuantity());
         stock.setQuantity(before.subtract(quantity));
         stock.setAvailableQuantity(available.subtract(quantity));
-        stock.setTotalAmount(stock.getQuantity().multiply(nvl(stock.getCostPrice())).setScale(2, RoundingMode.HALF_UP));
+        stock.setTotalAmount(stock.getQuantity().multiply(NumUtil.orZero(stock.getCostPrice())).setScale(2, RoundingMode.HALF_UP));
         recalcStockStatus(stock);
         this.updateById(stock);
         drugStockCacheService.evictCache(stock.getDrugId());
@@ -504,16 +504,16 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
         if (StockRoomEnum.fromCode(room) == null) {
             throw new BusinessException("库存地点只能是 1-药库 / 2-药房");
         }
-        BigDecimal costPrice = nvl(move.getCostPrice());
+        BigDecimal costPrice = NumUtil.orZero(move.getCostPrice());
 
         BizDrugStock exist = baseMapper.selectByDrugAndBatchForUpdate(move.getDrugId(), move.getBatchNo(), room);
         if (exist != null) {
-            BigDecimal before = nvl(exist.getQuantity());
+            BigDecimal before = NumUtil.orZero(exist.getQuantity());
             // 成本按"货随价走"累加再加权：调拨本身不是新进货，但同一批号两侧成本价可能已被
             // 各自的入库加权拉出差异，直接沿用接收方旧成本会把这批货的真实成本差抹掉。
             exist.setQuantity(before.add(quantity));
-            exist.setAvailableQuantity(nvl(exist.getAvailableQuantity()).add(quantity));
-            exist.setTotalAmount(nvl(exist.getTotalAmount()).add(quantity.multiply(costPrice))
+            exist.setAvailableQuantity(NumUtil.orZero(exist.getAvailableQuantity()).add(quantity));
+            exist.setTotalAmount(NumUtil.orZero(exist.getTotalAmount()).add(quantity.multiply(costPrice))
                     .setScale(2, RoundingMode.HALF_UP));
             if (exist.getQuantity().compareTo(BigDecimal.ZERO) > 0) {
                 exist.setCostPrice(exist.getTotalAmount().divide(exist.getQuantity(), 2, RoundingMode.HALF_UP));
@@ -542,7 +542,7 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
         stock.setStockStatus(StockStatusEnum.NORMAL.getCode());
         stock.setCreateBy(move.getOperatorName());
         stock.setUpdateBy(move.getOperatorName());
-        stock.setRemark(cut(move.getReason(), 500));
+        stock.setRemark(TextUtil.cut(move.getReason(), 500));
         this.save(stock);
         drugStockCacheService.evictCache(stock.getDrugId());
         insertLog(stock, changeType.getCode(), quantity, BigDecimal.ZERO, quantity,
@@ -565,7 +565,9 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
         return quantity.setScale(2, RoundingMode.HALF_UP);
     }
 
-    /** 报错文案里的批次标识：药名 + 批号 + 库位，三者缺一都没法去现场找那一箱药 */
+    /**
+     * 报错文案里的批次标识：药名 + 批号 + 库位，三者缺一都没法去现场找那一箱药
+     */
     private String batchLabel(BizDrugStock stock) {
         String drugName = baseMapper.selectDrugNameById(stock.getDrugId());
         StringBuilder sb = new StringBuilder(drugName == null ? "药品#" + stock.getDrugId() : drugName);
@@ -579,13 +581,15 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
     @Override
     public PageResult<BizDrugStockLogVO> selectStockLogPage(String drugName, Integer changeType,
                                                             int pageNum, int pageSize) {
-        Page<BizDrugStockLogVO> page = stockLogMapper.selectLogPageWithDrug(
+        Page<BizDrugStockLogVO> page = bizDrugStockLogMapper.selectLogPageWithDrug(
                 new Page<>(pageNum, pageSize), drugName, changeType);
         page.getRecords().forEach(this::fillLogText);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
 
-    /** 流水的类型与库位文字都在服务端算（前端抄映射必漂移） */
+    /**
+     * 流水的类型与库位文字都在服务端算（前端抄映射必漂移）
+     */
     private void fillLogText(BizDrugStockLogVO vo) {
         vo.fillTexts();
     }
@@ -641,25 +645,8 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
         log.setSourceNo(sourceNo);
         log.setOperatorName(operatorName);
         // remark 列宽 500：把盘点差异说明原样拼进来可能超长，超长会把「过账」升级成 500（AGENTS §3）
-        log.setRemark(cut(remark, 500));
-        stockLogMapper.insert(log);
+        log.setRemark(TextUtil.cut(remark, 500));
+        bizDrugStockLogMapper.insert(log);
     }
 
-    /** 截到列宽（列宽是事实，入参层不做长度校验，避免把「说明写长了」变成请求失败） */
-    private static String cut(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        String t = text.trim();
-        return t.length() <= max ? t : t.substring(0, max);
-    }
-
-    private static String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
-    /** 数量显示：5.00 → 5，2.50 → 2.5（报错文案里不想看到一串尾零） */
-    private static String plain(BigDecimal value) {
-        return value == null ? "0" : value.stripTrailingZeros().toPlainString();
-    }
 }

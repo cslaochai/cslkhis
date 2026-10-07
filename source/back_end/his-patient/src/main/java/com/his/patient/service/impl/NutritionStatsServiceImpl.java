@@ -1,9 +1,11 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.NutritionStatsGenerateDTO;
 import com.his.patient.dto.NutritionStatsQueryPageDTO;
 import com.his.patient.entity.BizNutritionStats;
@@ -47,33 +49,33 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class NutritionStatsServiceImpl implements NutritionStatsService {
+public class NutritionStatsServiceImpl extends ServiceImpl<BizNutritionStatsMapper, BizNutritionStats> implements NutritionStatsService {
 
-    private final BizNutritionStatsMapper statsMapper;
-    private final NutritionStatMapper statMapper;
+    private final BizNutritionStatsMapper bizNutritionStatsMapper;
+    private final NutritionStatMapper nutritionStatMapper;
 
     @Override
     public NutritionOverviewVO overview() {
         LocalDate today = LocalDate.now();
         NutritionOverviewVO vo = new NutritionOverviewVO();
 
-        int inHospital = (int) statMapper.countInHospital();
-        int screened = (int) statMapper.countInHospitalScreened();
+        int inHospital = (int) nutritionStatMapper.countInHospital();
+        int screened = (int) nutritionStatMapper.countInHospitalScreened();
         vo.setInHospitalCount(inHospital);
         vo.setInHospitalScreenedCount(screened);
         vo.setMissedScreenCount(Math.max(inHospital - screened, 0));
-        vo.setInHospitalRiskCount((int) statMapper.countInHospitalRisk());
-        vo.setReScreenDueCount((int) statMapper.countReScreenDue());
-        vo.setPendingConfirmPlanCount((int) statMapper.countPendingConfirmPlan());
+        vo.setInHospitalRiskCount((int) nutritionStatMapper.countInHospitalRisk());
+        vo.setReScreenDueCount((int) nutritionStatMapper.countReScreenDue());
+        vo.setPendingConfirmPlanCount((int) nutritionStatMapper.countPendingConfirmPlan());
 
-        int meals = (int) statMapper.countMealOfDay(today);
+        int meals = (int) nutritionStatMapper.countMealOfDay(today);
         vo.setTodayMealCount(meals);
-        vo.setTodayMealSignedCount((int) statMapper.countMealSignedOfDay(today));
-        vo.setTodayMealPendingCount((int) statMapper.countMealPendingOfDay(today));
+        vo.setTodayMealSignedCount((int) nutritionStatMapper.countMealSignedOfDay(today));
+        vo.setTodayMealPendingCount((int) nutritionStatMapper.countMealPendingOfDay(today));
         vo.setTodayMealSignRate(rate(vo.getTodayMealSignedCount(), meals));
 
-        vo.setConsultUnfinishedCount((int) statMapper.countConsultUnfinished());
-        vo.setConsultOverdueCount((int) statMapper.countConsultOverdue());
+        vo.setConsultUnfinishedCount((int) nutritionStatMapper.countConsultUnfinished());
+        vo.setConsultOverdueCount((int) nutritionStatMapper.countConsultOverdue());
         return vo;
     }
 
@@ -99,7 +101,7 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
 
         // scopeType 合法性由 DTO 的 @InEnum 把关（1-全院 2-科室），这里只分派
         if (Objects.equals(StatsScopeEnum.DEPT.getCode(), dto.getScopeType())) {
-            List<DeptStatRowVO> depts = statMapper.selectDischargeDepts(from(ym), to(ym));
+            List<DeptStatRowVO> depts = nutritionStatMapper.selectDischargeDepts(from(ym), to(ym));
             if (CollectionUtils.isEmpty(depts)) {
                 throw new BusinessException(ym + " 没有已出院患者，无法按科室生成快照");
             }
@@ -119,7 +121,7 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
     @Override
     public PageResult<NutritionStatsVO> statsListPage(NutritionStatsQueryPageDTO query) {
         Page<NutritionStatsVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        Page<NutritionStatsVO> result = (Page<NutritionStatsVO>) statsMapper.selectStatsPage(page, query);
+        Page<NutritionStatsVO> result = (Page<NutritionStatsVO>) bizNutritionStatsMapper.selectStatsPage(page, query);
         result.getRecords().forEach(this::applyTargets);
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
                 result.getRecords());
@@ -127,7 +129,7 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
 
     @Override
     public String statsExportCsv(NutritionStatsQueryPageDTO query) {
-        List<NutritionStatsVO> rows = statsMapper.selectStatsForExport(query);
+        List<NutritionStatsVO> rows = bizNutritionStatsMapper.selectStatsForExport(query);
         StringBuilder sb = new StringBuilder(1024);
         sb.append('\uFEFF'); // BOM：Excel 打开中文不乱码
         sb.append("统计月份,范围,科室,出院患者数,已筛查人数,筛查率(%),筛查阳性人数,阳性率(%),"
@@ -175,16 +177,16 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
         row.setDeptId(deptId);
         row.setDeptName(deptName);
 
-        long discharge = statMapper.countDischarge(from, to, deptId);
-        long screened = statMapper.countScreened(from, to, deptId);
-        long risk = statMapper.countRisk(from, to, deptId);
-        long plans = statMapper.countDietPlan(from, to, deptId);
-        long confirmed = statMapper.countDietConfirm(from, to, deptId);
-        long consults = statMapper.countConsult(from, to, deptId);
-        long consultOnTime = statMapper.countConsultOnTime(from, to, deptId);
-        long meals = statMapper.countMeal(fromDate, toDate, deptId);
-        long mealSigned = statMapper.countMealSigned(fromDate, toDate, deptId);
-        long mealCancel = statMapper.countMealCancel(fromDate, toDate, deptId);
+        long discharge = nutritionStatMapper.countDischarge(from, to, deptId);
+        long screened = nutritionStatMapper.countScreened(from, to, deptId);
+        long risk = nutritionStatMapper.countRisk(from, to, deptId);
+        long plans = nutritionStatMapper.countDietPlan(from, to, deptId);
+        long confirmed = nutritionStatMapper.countDietConfirm(from, to, deptId);
+        long consults = nutritionStatMapper.countConsult(from, to, deptId);
+        long consultOnTime = nutritionStatMapper.countConsultOnTime(from, to, deptId);
+        long meals = nutritionStatMapper.countMeal(fromDate, toDate, deptId);
+        long mealSigned = nutritionStatMapper.countMealSigned(fromDate, toDate, deptId);
+        long mealCancel = nutritionStatMapper.countMealCancel(fromDate, toDate, deptId);
 
         row.setDischargeCount((int) discharge);
         row.setScreenedCount((int) screened);
@@ -208,17 +210,17 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
      * 同月同范围覆盖（唯一键 uk_nutrition_stats，本表无 del_flag，重算只更新同一行）
      */
     private BizNutritionStats upsertRow(BizNutritionStats row, String operator) {
-        BizNutritionStats exist = statsMapper.selectOneSnapshot(row.getStatMonth(), row.getScopeType(),
+        BizNutritionStats exist = bizNutritionStatsMapper.selectOneSnapshot(row.getStatMonth(), row.getScopeType(),
                 row.getDeptId());
         row.setGenerateBy(operator);
-        row.setGenerateTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        row.setGenerateTime(TimeUtil.nowSeconds());
         if (exist == null) {
-            statsMapper.insert(row);
+            bizNutritionStatsMapper.insert(row);
             return row;
         }
         row.setId(exist.getId());
         row.setCreateTime(exist.getCreateTime());
-        statsMapper.updateById(row);
+        bizNutritionStatsMapper.updateById(row);
         return row;
     }
 

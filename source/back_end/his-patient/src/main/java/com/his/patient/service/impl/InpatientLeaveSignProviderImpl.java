@@ -6,6 +6,7 @@ import com.his.common.enums.ObjectSignStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
+import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizInpatientLeave;
 import com.his.patient.enums.LeaveStatusEnum;
 import com.his.patient.mapper.BizInpatientLeaveMapper;
@@ -15,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
@@ -34,7 +34,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class InpatientLeaveSignProviderImpl implements SignableContentProvider, InpatientLeaveSignProvider {
 
-    private final BizInpatientLeaveMapper leaveMapper;
+    private final BizInpatientLeaveMapper bizInpatientLeaveMapper;
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -43,7 +43,7 @@ public class InpatientLeaveSignProviderImpl implements SignableContentProvider, 
 
     @Override
     public SignSubject load(Long bizId) {
-        BizInpatientLeave l = leaveMapper.selectById(bizId);
+        BizInpatientLeave l = bizInpatientLeaveMapper.selectById(bizId);
         if (l == null) {
             return null;
         }
@@ -64,7 +64,7 @@ public class InpatientLeaveSignProviderImpl implements SignableContentProvider, 
         if (scene != SignSceneEnum.LEAVE_APPROVE) {
             return "住院请假单只支持「请假审批签名」场景，当前场景「" + scene.getText() + "」不适用";
         }
-        BizInpatientLeave l = leaveMapper.selectById(subject.bizId());
+        BizInpatientLeave l = bizInpatientLeaveMapper.selectById(subject.bizId());
         if (l == null) {
             return "请假单不存在或已被删除，无法签名";
         }
@@ -85,17 +85,17 @@ public class InpatientLeaveSignProviderImpl implements SignableContentProvider, 
         patch.setId(bizId);
         patch.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
         patch.setSignId(signId);
-        patch.setSignedTime(signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS));
-        leaveMapper.updateById(patch);
+        patch.setSignedTime(signedTime == null ? null : TimeUtil.toSeconds(signedTime));
+        bizInpatientLeaveMapper.updateById(patch);
     }
 
     @Override
     public void revokeSignAnchor(Long bizId, Long signId) {
-        BizInpatientLeave l = leaveMapper.selectById(bizId);
+        BizInpatientLeave l = bizInpatientLeaveMapper.selectById(bizId);
         if (l == null || !Objects.equals(signId, l.getSignId())) {
             return;
         }
-        leaveMapper.update(null, new LambdaUpdateWrapper<BizInpatientLeave>()
+        bizInpatientLeaveMapper.update(null, new LambdaUpdateWrapper<BizInpatientLeave>()
                 .eq(BizInpatientLeave::getId, bizId)
                 .set(BizInpatientLeave::getSignStatus, ObjectSignStatusEnum.INVALIDATED.getCode())
                 .set(BizInpatientLeave::getSignId, null));

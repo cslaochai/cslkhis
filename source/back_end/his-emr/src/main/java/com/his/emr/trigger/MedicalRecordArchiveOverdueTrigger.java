@@ -22,12 +22,12 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MedicalRecordArchiveOverdueTrigger {
 
-    private final MedicalRecordArchiveService archiveService;
+    private final MedicalRecordArchiveService medicalRecordArchiveService;
 
     @Scheduled(cron = "0 0 8 * * ?")
     public void scheduledNotifyOverdue() {
         try {
-            archiveService.notifyOverdueArchives();
+            medicalRecordArchiveService.notifyOverdueArchives();
         } catch (Exception e) {
             // 定时任务失败只记日志：提醒是催办手段，不能影响任何业务线程
             log.error("[病历归档] 归档超期提醒定时任务失败：{}", e.getMessage(), e);

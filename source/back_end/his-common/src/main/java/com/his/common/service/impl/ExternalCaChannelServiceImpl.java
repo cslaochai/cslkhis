@@ -34,7 +34,7 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class ExternalCaChannelServiceImpl implements ExternalCaChannelService {
 
-    private final SignProperties properties;
+    private final SignProperties signProperties;
 
     /**
      * 通道名称（状态接口展示）
@@ -47,7 +47,7 @@ public class ExternalCaChannelServiceImpl implements ExternalCaChannelService {
      * 是否就绪（配置为 external）。未就绪时签发直接走院内自签，不降级冒充真 CA
      */
     public boolean available() {
-        return "external".equalsIgnoreCase(properties.getCaMode());
+        return "external".equalsIgnoreCase(signProperties.getCaMode());
     }
 
     /**

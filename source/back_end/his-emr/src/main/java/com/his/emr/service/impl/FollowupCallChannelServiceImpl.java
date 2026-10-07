@@ -17,12 +17,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class FollowupCallChannelServiceImpl implements FollowupCallChannelService {
 
-    private final FollowupCallProperties callProperties;
+    private final FollowupCallProperties followupCallProperties;
 
     @Override
     public FollowupCallChannelEnum dial(BizFollowupTask task) {
-        if (!callProperties.isMockChannel()) {
-            throw new BusinessException("自动外呼通道（followup.call-channel=" + callProperties.effectiveCallChannel()
+        if (!followupCallProperties.isMockChannel()) {
+            throw new BusinessException("自动外呼通道（followup.call-channel=" + followupCallProperties.effectiveCallChannel()
                     + "）尚未对接真实线路：拨号分支待线路凭据到位后按手册 G-15 施工，当前请走人工电话拨打");
         }
         return FollowupCallChannelEnum.MANUAL;

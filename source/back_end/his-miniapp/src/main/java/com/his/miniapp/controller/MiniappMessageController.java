@@ -25,24 +25,24 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasAuthority('PATIENT')")
 public class MiniappMessageController {
 
-    private final MiniappMessageService messageService;
+    private final MiniappMessageService miniappMessageService;
 
     @Operation(summary = "我的消息（分页）")
     @PostMapping("/listPage")
     public Result<PageResult<MessageListVO>> listPage(@Valid @RequestBody MessagePageDTO dto) {
-        return Result.success(messageService.myPage(dto.getPageNum(), dto.getPageSize()));
+        return Result.success(miniappMessageService.myPage(dto));
     }
 
     @Operation(summary = "未读数（角标）")
     @GetMapping("/unreadCount")
     public Result<Long> unreadCount() {
-        return Result.success(messageService.unreadCount());
+        return Result.success(miniappMessageService.unreadCount());
     }
 
     @Operation(summary = "标记已读（只允许标自己的消息）")
     @PostMapping("/markRead")
     public Result<Integer> markRead(@RequestBody @Valid MarkReadDTO dto) {
-        return Result.success(messageService.markRead(dto.getMessageIds()));
+        return Result.success(miniappMessageService.markRead(dto.getMessageIds()));
     }
 
 

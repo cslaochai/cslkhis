@@ -28,41 +28,41 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EmployeeTechAuthController {
 
-    private final EmployeeTechAuthService techAuthService;
+    private final EmployeeTechAuthService employeeTechAuthService;
 
     @Operation(summary = "分页查询授权台账")
     @PreAuthorize("hasAuthority('org:techAuth:list')")
     @PostMapping("/listPage")
     public Result<PageResult<EmployeeTechAuthVO>> listPage(@Valid @RequestBody TechAuthQueryPageDTO query) {
-        return Result.success(techAuthService.listPage(query));
+        return Result.success(employeeTechAuthService.listPage(query));
     }
 
     @Operation(summary = "授权详情")
     @PreAuthorize("hasAuthority('org:techAuth:list')")
     @GetMapping("/getById")
     public Result<EmployeeTechAuthVO> getById(@RequestParam Long id) {
-        return Result.success(techAuthService.getById(id));
+        return Result.success(employeeTechAuthService.getById(id));
     }
 
     @Operation(summary = "按人查授权（员工档案与开单提示共用）")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/listByEmployee")
     public Result<List<EmployeeTechAuthVO>> listByEmployee(@RequestParam Long employeeId) {
-        return Result.success(techAuthService.listByEmployee(employeeId));
+        return Result.success(employeeTechAuthService.listByEmployee(employeeId));
     }
 
     @Operation(summary = "当前登录人的授权")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/mine")
     public Result<List<EmployeeTechAuthVO>> mine() {
-        return Result.success(techAuthService.mine());
+        return Result.success(employeeTechAuthService.mine());
     }
 
     @Operation(summary = "登记或修改授权（仅待审批/已驳回可改）")
     @PreAuthorize("hasAuthority('org:techAuth:add')")
     @PostMapping("/techAuthUpsert")
     public Result<Void> techAuthUpsert(@RequestBody @Valid TechAuthUpsertDTO dto) {
-        techAuthService.upsert(dto);
+        employeeTechAuthService.upsert(dto);
         return Result.success(dto.getId() == null ? "登记成功，待委员会审批" : "修改成功", null);
     }
 
@@ -70,7 +70,7 @@ public class EmployeeTechAuthController {
     @PreAuthorize("hasAuthority('org:techAuth:edit')")
     @PostMapping("/approve")
     public Result<Void> approve(@RequestBody @Valid TechAuthApproveDTO dto) {
-        techAuthService.approve(dto);
+        employeeTechAuthService.approve(dto);
         return Result.success(Boolean.TRUE.equals(dto.getApproved()) ? "已授权" : "已驳回", null);
     }
 
@@ -78,7 +78,7 @@ public class EmployeeTechAuthController {
     @PreAuthorize("hasAuthority('org:techAuth:edit')")
     @PostMapping("/revoke")
     public Result<Void> revoke(@RequestBody @Valid TechAuthRevokeDTO dto) {
-        techAuthService.revoke(dto);
+        employeeTechAuthService.revoke(dto);
         return Result.success("已收回", null);
     }
 
@@ -86,7 +86,7 @@ public class EmployeeTechAuthController {
     @PreAuthorize("hasAuthority('org:techAuth:delete')")
     @DeleteMapping("/deleteById")
     public Result<Void> deleteById(@RequestParam Long id) {
-        techAuthService.deleteById(id);
+        employeeTechAuthService.deleteById(id);
         return Result.success("删除成功", null);
     }
 
@@ -94,14 +94,14 @@ public class EmployeeTechAuthController {
     @PreAuthorize("hasAuthority('org:techAuth:list')")
     @PostMapping("/overrideListPage")
     public Result<PageResult<TechAuthOverrideVO>> overrideListPage(@Valid @RequestBody TechAuthOverrideQueryPageDTO query) {
-        return Result.success(techAuthService.overrideListPage(query));
+        return Result.success(employeeTechAuthService.overrideListPage(query));
     }
 
     @Operation(summary = "越权登记上级确认")
     @PreAuthorize("hasAuthority('org:techAuth:override')")
     @PostMapping("/overrideConfirm")
     public Result<Void> overrideConfirm(@RequestBody @Valid TechAuthOverrideConfirmDTO dto) {
-        techAuthService.confirmOverride(dto);
+        employeeTechAuthService.confirmOverride(dto);
         return Result.success("已确认", null);
     }
 }

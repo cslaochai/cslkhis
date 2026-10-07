@@ -4,12 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.util.TextUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.medicaltech.dto.*;
 import com.his.medicaltech.entity.*;
@@ -54,19 +56,14 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class EcgServiceImpl implements EcgService {
-    /**
-     * 分页每页条数上限（技术阈值，防止前端传入超大值把库拖垮；DTO 迁 PageParam 后在此夹取）
-     */
-    private static final int MAX_PAGE_SIZE = 200;
-
+public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizInspectionRecord> implements EcgService {
     private final EcgMapper ecgMapper;
 
-    private final BizReportMapper reportMapper;
+    private final BizReportMapper bizReportMapper;
 
-    private final BizInspectionRecordMapper inspectionRecordMapper;
+    private final BizInspectionRecordMapper bizInspectionRecordMapper;
 
-    private final EmrSignatureService signatureService;
+    private final EmrSignatureService emrSignatureService;
 
     private final DictCacheService dictCacheService;
 
@@ -74,39 +71,26 @@ public class EcgServiceImpl implements EcgService {
 
     private final SysMessageService sysMessageService;
 
-    private final BizEcgWaveformMapper waveformMapper;
+    private final BizEcgWaveformMapper bizEcgWaveformMapper;
 
-    private final BizEcgMeasureMapper measureMapper;
+    private final BizEcgMeasureMapper bizEcgMeasureMapper;
 
-    private final BizEcgHolterMapper holterMapper;
+    private final BizEcgHolterMapper bizEcgHolterMapper;
 
-    private final BizEcgTemplateMapper templateMapper;
+    private final BizEcgTemplateMapper bizEcgTemplateMapper;
 
     private final EcgWaveSimulator waveSimulator;
 
     private final RadioReportMapper radioReportMapper;
 
     // 查询
-    private static String trim(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static String cut(String s, int max) {
-        if (s == null) {
-            return null;
-        }
-        String v = s.trim();
-        return v.length() <= max ? v : v.substring(0, max);
-    }
 
     @Override
     public PageResult<EcgListVO> listPage(EcgQueryPageDTO query) {
-        int pageNum = Math.max(query.getPageNum(), 1);
-        int pageSize = Math.min(Math.max(query.getPageSize(), 1), MAX_PAGE_SIZE);
-        IPage<EcgListVO> page = new Page<>(pageNum, pageSize);
+        IPage<EcgListVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<EcgListVO> list = ecgMapper.selectWorkbenchPage(page,
-                trim(query.getKeyword()), query.getCollectPending(), query.getOnlyUnwritten(),
-                query.getReportStatus(), trim(query.getStartDate()), trim(query.getEndDate()));
+                TextUtil.trim(query.getKeyword()), query.getCollectPending(), query.getOnlyUnwritten(),
+                query.getReportStatus(), TextUtil.trim(query.getStartDate()), TextUtil.trim(query.getEndDate()));
         fillText(list);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), list);
     }
@@ -114,10 +98,10 @@ public class EcgServiceImpl implements EcgService {
     @Override
     public EcgDetailVO getDetailByRecordId(Long recordId) {
         EcgListVO row = loadWorkbenchRow(recordId);
-        BizReport report = row.getReportId() == null ? null : reportMapper.selectById(row.getReportId());
-        BizEcgWaveform wave = row.getWaveId() == null ? null : waveformMapper.selectById(row.getWaveId());
-        BizEcgMeasure measure = row.getMeasureId() == null ? null : measureMapper.selectById(row.getMeasureId());
-        BizEcgHolter holter = row.getHolterId() == null ? null : holterMapper.selectById(row.getHolterId());
+        BizReport report = row.getReportId() == null ? null : bizReportMapper.selectById(row.getReportId());
+        BizEcgWaveform wave = row.getWaveId() == null ? null : bizEcgWaveformMapper.selectById(row.getWaveId());
+        BizEcgMeasure measure = row.getMeasureId() == null ? null : bizEcgMeasureMapper.selectById(row.getMeasureId());
+        BizEcgHolter holter = row.getHolterId() == null ? null : bizEcgHolterMapper.selectById(row.getHolterId());
         return toDetail(row, wave, measure, holter, report);
     }
 
@@ -131,7 +115,7 @@ public class EcgServiceImpl implements EcgService {
         }
         record.setRecordStatus(InsRecordStatusEnum.SIGNED_IN.getCode());
         record.setCheckInTime(LocalDateTime.now());
-        inspectionRecordMapper.updateById(record);
+        bizInspectionRecordMapper.updateById(record);
         return getDetailByRecordId(recordId);
     }
 
@@ -159,7 +143,7 @@ public class EcgServiceImpl implements EcgService {
     }
 
     private EcgDetailVO persistWave(BizInspectionRecord record, Integer ecgType, String waveData, String deviceNo) {
-        BizEcgWaveform wave = waveformMapper.selectOne(new LambdaQueryWrapper<BizEcgWaveform>()
+        BizEcgWaveform wave = bizEcgWaveformMapper.selectOne(new LambdaQueryWrapper<BizEcgWaveform>()
                 .eq(BizEcgWaveform::getRecordId, record.getId())
                 .last("LIMIT 1"));
         LocalDateTime now = LocalDateTime.now();
@@ -185,20 +169,20 @@ public class EcgServiceImpl implements EcgService {
         wave.setUpdateTime(now);
         wave.setUpdateBy(me);
         if (wave.getId() == null) {
-            waveformMapper.insert(wave);
+            bizEcgWaveformMapper.insert(wave);
         } else {
-            waveformMapper.updateById(wave);
+            bizEcgWaveformMapper.updateById(wave);
         }
 
         // 采集完成 = 该检查已出结果（心电的「拍片」就是采集波形这一步）
         record.setRecordStatus(InsRecordStatusEnum.RESULTED.getCode());
         record.setExecuteTime(now);
         record.setExecuteBy(me);
-        inspectionRecordMapper.updateById(record);
+        bizInspectionRecordMapper.updateById(record);
 
         sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), me,
                 "心电波形", ecgType != null && ecgType == 2 ? "Holter波形采集" : "波形采集", "biz_ecg_waveform", wave.getId(),
-                cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
+                TextUtil.cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
                         + " 类型=" + wave.getEcgType() + " 设备=" + deviceNo, 2000),
                 true, null);
         return getDetailByRecordId(record.getId());
@@ -210,10 +194,10 @@ public class EcgServiceImpl implements EcgService {
     @Transactional(rollbackFor = Exception.class)
     public EcgDetailVO saveMeasure(EcgMeasureUpsertDTO dto) {
         loadEcgRecord(dto.getRecordId());
-        BizEcgMeasure m = measureMapper.selectOne(new LambdaQueryWrapper<BizEcgMeasure>()
+        BizEcgMeasure m = bizEcgMeasureMapper.selectOne(new LambdaQueryWrapper<BizEcgMeasure>()
                 .eq(BizEcgMeasure::getRecordId, dto.getRecordId())
                 .last("LIMIT 1"));
-        BizEcgWaveform wave = waveformMapper.selectOne(new LambdaQueryWrapper<BizEcgWaveform>()
+        BizEcgWaveform wave = bizEcgWaveformMapper.selectOne(new LambdaQueryWrapper<BizEcgWaveform>()
                 .eq(BizEcgWaveform::getRecordId, dto.getRecordId())
                 .last("LIMIT 1"));
         LocalDateTime now = LocalDateTime.now();
@@ -233,15 +217,15 @@ public class EcgServiceImpl implements EcgService {
         m.setPAxis(dto.getPAxis());
         m.setQrsAxis(dto.getQrsAxis());
         m.setTAxis(dto.getTAxis());
-        m.setRhythmText(cut(dto.getRhythmText(), 100));
+        m.setRhythmText(TextUtil.cut(dto.getRhythmText(), 100));
         m.setMeasureBy(me);
         m.setMeasureTime(now);
         m.setUpdateTime(now);
         m.setUpdateBy(me);
         if (m.getId() == null) {
-            measureMapper.insert(m);
+            bizEcgMeasureMapper.insert(m);
         } else {
-            measureMapper.updateById(m);
+            bizEcgMeasureMapper.updateById(m);
         }
         return getDetailByRecordId(dto.getRecordId());
     }
@@ -250,10 +234,10 @@ public class EcgServiceImpl implements EcgService {
     @Transactional(rollbackFor = Exception.class)
     public EcgDetailVO saveHolter(EcgHolterUpsertDTO dto) {
         loadEcgRecord(dto.getRecordId());
-        BizEcgWaveform wave = waveformMapper.selectOne(new LambdaQueryWrapper<BizEcgWaveform>()
+        BizEcgWaveform wave = bizEcgWaveformMapper.selectOne(new LambdaQueryWrapper<BizEcgWaveform>()
                 .eq(BizEcgWaveform::getRecordId, dto.getRecordId())
                 .last("LIMIT 1"));
-        BizEcgHolter h = holterMapper.selectOne(new LambdaQueryWrapper<BizEcgHolter>()
+        BizEcgHolter h = bizEcgHolterMapper.selectOne(new LambdaQueryWrapper<BizEcgHolter>()
                 .eq(BizEcgHolter::getRecordId, dto.getRecordId())
                 .last("LIMIT 1"));
         LocalDateTime now = LocalDateTime.now();
@@ -270,9 +254,9 @@ public class EcgServiceImpl implements EcgService {
         h.setTotalBeats(dto.getTotalBeats());
         h.setAvgHr(dto.getAvgHr());
         h.setMaxHr(dto.getMaxHr());
-        h.setMaxHrTime(cut(dto.getMaxHrTime(), 16));
+        h.setMaxHrTime(TextUtil.cut(dto.getMaxHrTime(), 16));
         h.setMinHr(dto.getMinHr());
-        h.setMinHrTime(cut(dto.getMinHrTime(), 16));
+        h.setMinHrTime(TextUtil.cut(dto.getMinHrTime(), 16));
         h.setAfibFlag(dto.getAfibFlag());
         h.setAfibBeats(dto.getAfibBeats());
         h.setSvcCount(dto.getSvcCount());
@@ -287,9 +271,9 @@ public class EcgServiceImpl implements EcgService {
         h.setUpdateTime(now);
         h.setUpdateBy(me);
         if (h.getId() == null) {
-            holterMapper.insert(h);
+            bizEcgHolterMapper.insert(h);
         } else {
-            holterMapper.updateById(h);
+            bizEcgHolterMapper.updateById(h);
         }
         return getDetailByRecordId(dto.getRecordId());
     }
@@ -324,7 +308,7 @@ public class EcgServiceImpl implements EcgService {
         }
 
         // 波形成文闸门：没有波形的报告没有临床证据，审不了也发不出
-        BizEcgWaveform wave = waveformMapper.selectOne(new LambdaQueryWrapper<BizEcgWaveform>()
+        BizEcgWaveform wave = bizEcgWaveformMapper.selectOne(new LambdaQueryWrapper<BizEcgWaveform>()
                 .eq(BizEcgWaveform::getRecordId, record.getId())
                 .last("LIMIT 1"));
         if (wave == null) {
@@ -332,7 +316,7 @@ public class EcgServiceImpl implements EcgService {
         }
         // Holter 闸门：动态心电必须先有分析结果（心搏统计/事件），否则报告没有内容依据
         if (wave.getEcgType() != null && wave.getEcgType() == 2) {
-            BizEcgHolter holter = holterMapper.selectOne(new LambdaQueryWrapper<BizEcgHolter>()
+            BizEcgHolter holter = bizEcgHolterMapper.selectOne(new LambdaQueryWrapper<BizEcgHolter>()
                     .eq(BizEcgHolter::getRecordId, record.getId())
                     .last("LIMIT 1"));
             if (holter == null) {
@@ -360,11 +344,11 @@ public class EcgServiceImpl implements EcgService {
         report.setReportStatus(ReportStatusEnum.PENDING_REVIEW.getCode());
         report.setRejectReason(null);
         saveOrUpdateReport(report);
-        inspectionRecordMapper.updateById(record);
+        bizInspectionRecordMapper.updateById(record);
 
         sysAuditLogService.record(employeeId, UserUtils.getCurrentUser().getRealName(),
                 "心电报告", "提交报告待审核", "biz_report", report.getId(),
-                cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
+                TextUtil.cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
                         + " 项目=" + record.getInspectionItemName()
                         + " 阴阳性=" + report.getPositiveFlag()
                         + " 签名=" + sign.getId(), 2000),
@@ -393,20 +377,20 @@ public class EcgServiceImpl implements EcgService {
         record.setAuditBy(UserUtils.getCurrentUser().getRealName());
         record.setAuditTime(sign.getSignedTime());
         record.setRecordStatus(InsRecordStatusEnum.REVIEWED.getCode());
-        inspectionRecordMapper.updateById(record);
+        bizInspectionRecordMapper.updateById(record);
 
         report.setReportStatus(ReportStatusEnum.REVIEWED.getCode());
         report.setAuditBy(UserUtils.getCurrentUser().getRealName());
         report.setAuditTime(sign.getSignedTime());
         report.setRejectReason(null);
         if (StringUtils.hasText(dto.getReason())) {
-            report.setRemark(cut("审核意见：" + dto.getReason(), 500));
+            report.setRemark(TextUtil.cut("审核意见：" + dto.getReason(), 500));
         }
-        reportMapper.updateById(report);
+        bizReportMapper.updateById(report);
 
         sysAuditLogService.record(current, UserUtils.getCurrentUser().getRealName(),
                 "心电报告", "审核通过", "biz_report", report.getId(),
-                cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
+                TextUtil.cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
                         + " 意见=" + (StringUtils.hasText(dto.getReason()) ? dto.getReason() : "无")
                         + " 签名=" + sign.getId(), 2000),
                 true, null);
@@ -429,14 +413,14 @@ public class EcgServiceImpl implements EcgService {
         }
 
         report.setReportStatus(ReportStatusEnum.DRAFT.getCode());
-        report.setRejectReason(cut(dto.getReason(), 500));
+        report.setRejectReason(TextUtil.cut(dto.getReason(), 500));
         report.setReportVersion(report.getReportVersion() == null ? 2 : report.getReportVersion() + 1);
-        reportMapper.updateById(report);
+        bizReportMapper.updateById(report);
 
         Long current = UserUtils.getCurrentUser().getEmployeeId();
         sysAuditLogService.record(current, UserUtils.getCurrentUser().getRealName(),
                 "心电报告", "退回重写", "biz_report", report.getId(),
-                cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
+                TextUtil.cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
                         + " 原因=" + dto.getReason(), 2000),
                 true, null);
         // 退回清签名指针必须显式 set null：MP 的 updateById 会跳过所有 null 字段
@@ -449,7 +433,7 @@ public class EcgServiceImpl implements EcgService {
                 .set(BizInspectionRecord::getAuditBy, null)
                 .set(BizInspectionRecord::getAuditTime, null)
                 .set(BizInspectionRecord::getRecordStatus, InsRecordStatusEnum.RESULTED.getCode());
-        inspectionRecordMapper.update(null, uw);
+        bizInspectionRecordMapper.update(null, uw);
         return getDetailByRecordId(record.getId());
     }
 
@@ -466,12 +450,12 @@ public class EcgServiceImpl implements EcgService {
         report.setReportStatus(ReportStatusEnum.PUBLISHED.getCode());
         report.setPublishBy(UserUtils.getCurrentUser().getRealName());
         report.setPublishTime(now);
-        reportMapper.updateById(report);
+        bizReportMapper.updateById(report);
 
         record.setRecordStatus(InsRecordStatusEnum.PUBLISHED.getCode());
         record.setReportTime(now);
         record.setReportBy(UserUtils.getCurrentUser().getRealName());
-        inspectionRecordMapper.updateById(record);
+        bizInspectionRecordMapper.updateById(record);
 
         if (record.getApplyDoctorId() != null) {
             sysMessageService.sendSystemMessage(record.getApplyDoctorId(), record.getApplyDoctorName(),
@@ -481,7 +465,7 @@ public class EcgServiceImpl implements EcgService {
         }
         sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "心电报告", "发布报告", "biz_report", report.getId(),
-                cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName(), 2000),
+                TextUtil.cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName(), 2000),
                 true, null);
         return getDetailByRecordId(record.getId());
     }
@@ -502,7 +486,7 @@ public class EcgServiceImpl implements EcgService {
 
     private BizInspectionRecord loadEcgRecord(Long recordId) {
         EcgListVO row = loadWorkbenchRow(recordId);
-        BizInspectionRecord record = inspectionRecordMapper.selectById(recordId);
+        BizInspectionRecord record = bizInspectionRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("检查记录不存在或已被删除");
         }
@@ -528,7 +512,7 @@ public class EcgServiceImpl implements EcgService {
     }
 
     private BizReport requireReport(Long reportId) {
-        BizReport report = reportId == null ? null : reportMapper.selectById(reportId);
+        BizReport report = reportId == null ? null : bizReportMapper.selectById(reportId);
         if (report == null) {
             throw new BusinessException("报告不存在或已被删除");
         }
@@ -545,7 +529,7 @@ public class EcgServiceImpl implements EcgService {
     }
 
     private BizReport ensureReport(BizInspectionRecord record) {
-        BizReport exists = reportMapper.selectOne(new LambdaQueryWrapper<BizReport>()
+        BizReport exists = bizReportMapper.selectOne(new LambdaQueryWrapper<BizReport>()
                 .eq(BizReport::getRecordId, record.getId())
                 .eq(BizReport::getReportType, ReportTypeEnum.INSPECTION.getCode())
                 .orderByDesc(BizReport::getId)
@@ -577,9 +561,9 @@ public class EcgServiceImpl implements EcgService {
 
     private void saveOrUpdateReport(BizReport report) {
         if (report.getId() == null) {
-            reportMapper.insert(report);
+            bizReportMapper.insert(report);
         } else {
-            reportMapper.updateById(report);
+            bizReportMapper.updateById(report);
         }
     }
 
@@ -587,7 +571,7 @@ public class EcgServiceImpl implements EcgService {
         report.setTemplateId(dto.getTemplateId());
         report.setReportContent(dto.getReportContent());
         report.setConclusion(dto.getConclusion());
-        report.setSuggestions(cut(dto.getSuggestions(), 1000));
+        report.setSuggestions(TextUtil.cut(dto.getSuggestions(), 1000));
         report.setPositiveFlag(dto.getPositiveFlag() == null ? 0 : dto.getPositiveFlag());
         report.setIsCritical(dto.getIsCritical() == null ? 0 : dto.getIsCritical());
     }
@@ -606,7 +590,7 @@ public class EcgServiceImpl implements EcgService {
         cmd.setSignerDeptId(record.getInspectionDeptId());
         cmd.setSignerDeptName(record.getInspectionDeptName());
         try {
-            return signatureService.sign(cmd);
+            return emrSignatureService.sign(cmd);
         } catch (BusinessException e) {
             throw new BusinessException("心电报告 " + record.getRecordNo() + " " + scene.getText()
                     + "失败：" + e.getMessage());
@@ -650,7 +634,7 @@ public class EcgServiceImpl implements EcgService {
         vo.setClinicalDiagnosis(row.getClinicalDiagnosis());
         vo.setRecordStatus(row.getRecordStatus());
         vo.setRecordStatusText(dictCacheService.getDicDataLabel("his_inspection_record_status", row.getRecordStatus()));
-        BizInspectionRecord rec = inspectionRecordMapper.selectById(row.getRecordId());
+        BizInspectionRecord rec = bizInspectionRecordMapper.selectById(row.getRecordId());
         if (rec != null) {
             vo.setCheckInTime(rec.getCheckInTime());
             vo.setExecuteBy(rec.getExecuteBy());
@@ -740,7 +724,7 @@ public class EcgServiceImpl implements EcgService {
         LambdaQueryWrapper<BizEcgTemplate> w = new LambdaQueryWrapper<>();
         w.eq(BizEcgTemplate::getStatus, 1);
         w.orderByAsc(BizEcgTemplate::getSortOrder).orderByAsc(BizEcgTemplate::getId);
-        List<EcgTemplateVO> all = templateMapper.selectList(w).stream()
+        List<EcgTemplateVO> all = bizEcgTemplateMapper.selectList(w).stream()
                 .map(this::toTemplateVO).collect(Collectors.toList());
         // 与放射同款：ecgType 过滤在内存做，通用模板（ecgType 为空）任何类型都能用
         if (ecgType == null) {
@@ -753,7 +737,7 @@ public class EcgServiceImpl implements EcgService {
 
     @Override
     public List<EcgTemplateVO> templateList() {
-        return templateMapper.selectList(new LambdaQueryWrapper<BizEcgTemplate>()
+        return bizEcgTemplateMapper.selectList(new LambdaQueryWrapper<BizEcgTemplate>()
                         .orderByAsc(BizEcgTemplate::getSortOrder)
                         .orderByAsc(BizEcgTemplate::getId))
                 .stream().map(this::toTemplateVO).collect(Collectors.toList());
@@ -767,17 +751,17 @@ public class EcgServiceImpl implements EcgService {
             entity.setStatus(1);
         }
         if (dto.getId() == null) {
-            long dup = templateMapper.selectCount(new LambdaQueryWrapper<BizEcgTemplate>()
+            long dup = bizEcgTemplateMapper.selectCount(new LambdaQueryWrapper<BizEcgTemplate>()
                     .eq(BizEcgTemplate::getTemplateCode, entity.getTemplateCode()));
             if (dup > 0) {
                 throw new BusinessException("模板编码 " + entity.getTemplateCode() + " 已存在");
             }
-            templateMapper.insert(entity);
+            bizEcgTemplateMapper.insert(entity);
         } else {
             entity.setId(dto.getId());
-            templateMapper.updateById(entity);
+            bizEcgTemplateMapper.updateById(entity);
         }
-        return toTemplateVO(templateMapper.selectById(entity.getId()));
+        return toTemplateVO(bizEcgTemplateMapper.selectById(entity.getId()));
     }
 
     @Override
@@ -785,7 +769,7 @@ public class EcgServiceImpl implements EcgService {
         if (id == null) {
             throw new BusinessException("缺少模板ID");
         }
-        return templateMapper.purgeById(id) > 0;
+        return bizEcgTemplateMapper.purgeById(id) > 0;
     }
 
     private EcgTemplateVO toTemplateVO(BizEcgTemplate e) {

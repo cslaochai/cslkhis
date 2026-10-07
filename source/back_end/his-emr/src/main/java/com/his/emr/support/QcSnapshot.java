@@ -5,6 +5,7 @@ import com.his.emr.enums.QcRecordSourceEnum;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.enums.InpatientRecordTypeEnum;
 import lombok.Data;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -117,7 +118,7 @@ public class QcSnapshot {
         s.diagnosisName = r.getDiagnosisName();
         s.diagnosisCode = r.getDiagnosisCode();
         // 门诊的 diagnosis 是诊断文本；缺失时退回 diagnosis_name
-        s.diagnosisText = hasText(r.getDiagnosis()) ? r.getDiagnosis() : r.getDiagnosisName();
+        s.diagnosisText = StringUtils.hasText(r.getDiagnosis()) ? r.getDiagnosis() : r.getDiagnosisName();
         s.treatmentPlan = r.getTreatmentPlan();
         s.temperature = parseDecimal(r.getTemperature());
         s.pulse = parseInteger(r.getPulse());
@@ -171,12 +172,8 @@ public class QcSnapshot {
         return s;
     }
 
-    private static boolean hasText(String text) {
-        return text != null && !text.isBlank();
-    }
-
     private static BigDecimal parseDecimal(String text) {
-        if (!hasText(text)) {
+        if (!StringUtils.hasText(text)) {
             return null;
         }
         try {
@@ -188,7 +185,7 @@ public class QcSnapshot {
     }
 
     private static Integer parseInteger(String text) {
-        if (!hasText(text)) {
+        if (!StringUtils.hasText(text)) {
             return null;
         }
         // 先原样试，再剥掉非数字字符试（「72次/分」）

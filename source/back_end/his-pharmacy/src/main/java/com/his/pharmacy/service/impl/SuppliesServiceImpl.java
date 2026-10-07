@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.ConsumableUpsertDTO;
 import com.his.pharmacy.entity.BizConsumableConsume;
 import com.his.pharmacy.entity.BizConsumableStock;
@@ -38,23 +39,23 @@ import java.util.concurrent.ThreadLocalRandom;
 public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, BizConsumableStock> implements SuppliesService {
     private final DeptScopeProvider deptScopeProvider;
 
-    private final SysConsumableMapper consumableMapper;
-    private final BizConsumableStockLogMapper stockLogMapper;
-    private final BizConsumableConsumeMapper consumeMapper;
+    private final SysConsumableMapper sysConsumableMapper;
+    private final BizConsumableStockLogMapper bizConsumableStockLogMapper;
+    private final BizConsumableConsumeMapper bizConsumableConsumeMapper;
 
     // 字典
 
     @Override
     public PageResult<SysConsumableVO> selectConsumablePage(String keyword, Integer category, Integer status,
                                                             int pageNum, int pageSize) {
-        Page<SysConsumableVO> page = consumableMapper.selectConsumablePage(
+        Page<SysConsumableVO> page = sysConsumableMapper.selectConsumablePage(
                 new Page<>(pageNum, pageSize), keyword, category, status);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
 
     @Override
     public SysConsumableVO getConsumableById(Long id) {
-        SysConsumable entity = consumableMapper.selectById(id);
+        SysConsumable entity = sysConsumableMapper.selectById(id);
         if (entity == null) {
             return null;
         }
@@ -66,7 +67,7 @@ public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, B
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean consumableUpsert(ConsumableUpsertDTO dto) {
-        if (consumableMapper.countByCode(dto.getConsumableCode(), dto.getId()) > 0) {
+        if (sysConsumableMapper.countByCode(dto.getConsumableCode(), dto.getId()) > 0) {
             throw new BusinessException("耗材编码已存在：" + dto.getConsumableCode());
         }
         SysConsumable entity = new SysConsumable();
@@ -84,17 +85,17 @@ public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, B
         entity.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
         entity.setRemark(dto.getRemark());
         if (dto.getId() == null) {
-            return consumableMapper.insert(entity) > 0;
+            return sysConsumableMapper.insert(entity) > 0;
         }
-        if (consumableMapper.selectById(dto.getId()) == null) {
+        if (sysConsumableMapper.selectById(dto.getId()) == null) {
             throw new BusinessException("待修改的耗材不存在");
         }
-        return consumableMapper.updateById(entity) > 0;
+        return sysConsumableMapper.updateById(entity) > 0;
     }
 
     @Override
     public List<ConsumableSelectListVO> selectEnabledConsumables() {
-        return consumableMapper.selectEnabledList();
+        return sysConsumableMapper.selectEnabledList();
     }
 
     // 库存
@@ -216,11 +217,11 @@ public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, B
             record.setDeptName(baseMapper.selectDeptNameById(deptId));
         }
         record.setPurpose(purpose);
-        record.setConsumeTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        record.setConsumeTime(TimeUtil.nowSeconds());
         record.setOperatorName(operatorName);
         record.setStockBefore(totalBefore);
         record.setStockAfter(totalBefore.subtract(quantity));
-        consumeMapper.insert(record);
+        bizConsumableConsumeMapper.insert(record);
 
         BigDecimal remain = quantity;
         for (BizConsumableStock batch : batches) {
@@ -251,7 +252,7 @@ public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, B
         }
         List<Long> scopeDeptIds = (deptScopeProvider.isScoped() && scopedDeptId == null)
                 ? List.copyOf(deptScopeProvider.allowedDeptIds()) : null;
-        Page<BizConsumableConsumeVO> page = consumeMapper.selectConsumePage(
+        Page<BizConsumableConsumeVO> page = bizConsumableConsumeMapper.selectConsumePage(
                 new Page<>(pageNum, pageSize), keyword, deptId, scopeDeptIds);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
@@ -259,7 +260,7 @@ public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, B
     @Override
     public PageResult<BizConsumableStockLogVO> selectStockLogPage(String keyword, Integer changeType,
                                                                   int pageNum, int pageSize) {
-        Page<BizConsumableStockLogVO> page = stockLogMapper.selectLogPage(
+        Page<BizConsumableStockLogVO> page = bizConsumableStockLogMapper.selectLogPage(
                 new Page<>(pageNum, pageSize), keyword, changeType);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
@@ -303,7 +304,7 @@ public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, B
         log.setSourceId(sourceId);
         log.setSourceNo(sourceNo);
         log.setOperatorName(operatorName);
-        stockLogMapper.insert(log);
+        bizConsumableStockLogMapper.insert(log);
     }
 
     private String nextConsumeNo() {

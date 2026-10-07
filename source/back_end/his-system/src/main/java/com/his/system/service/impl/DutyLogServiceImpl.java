@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.DutyShiftTypeEnum;
 import com.his.common.exception.BusinessException;
@@ -54,14 +55,14 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DutyLogServiceImpl implements DutyLogService {
+public class DutyLogServiceImpl extends ServiceImpl<BizDutyLogMapper, BizDutyLog> implements DutyLogService {
     /**
      * 列表默认窗口：近 7 天（交班本是流水账，翻三个月前没意义，当天和前一天必须带出来）
      */
     private static final int DEFAULT_BACK_DAYS = 7;
     private final DictCacheService dictCacheService;
-    private final BizDutyLogMapper logMapper;
-    private final SysEmployeeMapper employeeMapper;
+    private final BizDutyLogMapper bizDutyLogMapper;
+    private final SysEmployeeMapper sysEmployeeMapper;
     private final DutyRosterService dutyRosterService;
     private final SysMessageService sysMessageService;
 
@@ -82,7 +83,7 @@ public class DutyLogServiceImpl implements DutyLogService {
                 .orderByDesc(BizDutyLog::getShiftType)
                 // 二级键收口：同一天同班次内顺序必须稳定，否则分页会重复/漏行
                 .orderByDesc(BizDutyLog::getId);
-        IPage<BizDutyLog> page = logMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
+        IPage<BizDutyLog> page = bizDutyLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
         List<DutyLogVO> list = page.getRecords().stream().map(this::toVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), list);
     }
@@ -95,7 +96,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         if (empId == null) {
             return List.of();
         }
-        List<BizDutyLog> rows = logMapper.selectList(new LambdaQueryWrapper<BizDutyLog>()
+        List<BizDutyLog> rows = bizDutyLogMapper.selectList(new LambdaQueryWrapper<BizDutyLog>()
                 .eq(BizDutyLog::getHandoverEmpId, empId)
                 .eq(BizDutyLog::getStatus, DutyLogStatusEnum.HANDED.getCode())
                 .orderByAsc(BizDutyLog::getDutyDate)
@@ -129,14 +130,14 @@ public class DutyLogServiceImpl implements DutyLogService {
             empId = cur.getEmployeeId();
             empName = cur.getEmployeeName();
         } else {
-            SysEmployee emp = employeeMapper.selectById(empId);
+            SysEmployee emp = sysEmployeeMapper.selectById(empId);
             if (emp == null || (emp.getDelFlag() != null && emp.getDelFlag() == 1)) {
                 throw new BusinessException("值班人不存在");
             }
             empName = emp.getEmpName();
         }
 
-        BizDutyLog row = dto.getId() == null ? null : logMapper.selectById(dto.getId());
+        BizDutyLog row = dto.getId() == null ? null : bizDutyLogMapper.selectById(dto.getId());
         boolean insert = row == null;
         if (insert) {
             row = new BizDutyLog();
@@ -161,10 +162,10 @@ public class DutyLogServiceImpl implements DutyLogService {
         String operator = UserUtils.getCurrentUser().getRealName();
         if (insert) {
             row.setCreateBy(operator);
-            logMapper.insert(row);
+            bizDutyLogMapper.insert(row);
         } else {
             row.setUpdateBy(operator);
-            logMapper.updateById(row);
+            bizDutyLogMapper.updateById(row);
         }
         log.info("值班日志{} id={} date={} shift={} 值班人={} 类型={} 状态={}",
                 insert ? "登记" : "修改", row.getId(), row.getDutyDate(), row.getShiftType(), empName,
@@ -177,14 +178,14 @@ public class DutyLogServiceImpl implements DutyLogService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
-        BizDutyLog row = logMapper.selectById(id);
+        BizDutyLog row = bizDutyLogMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("值班日志记录不存在");
         }
         if (row.getStatus() != null && row.getStatus() == DutyLogStatusEnum.ACKED.getCode()) {
             throw new BusinessException("已签收的记录不能删除（交接已完成，删除等于抹掉交接凭据）");
         }
-        logMapper.deleteById(id);
+        bizDutyLogMapper.deleteById(id);
     }
 
     // 交班 / 签收 —— 交班本的闭环
@@ -196,7 +197,7 @@ public class DutyLogServiceImpl implements DutyLogService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void handover(DutyLogHandoverDTO dto) {
-        BizDutyLog row = logMapper.selectById(dto.getId());
+        BizDutyLog row = bizDutyLogMapper.selectById(dto.getId());
         if (row == null) {
             throw new BusinessException("值班日志记录不存在");
         }
@@ -207,7 +208,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         Long nextEmpId = dto.getHandoverEmpId();
         String nextEmpName;
         if (nextEmpId != null) {
-            SysEmployee emp = employeeMapper.selectById(nextEmpId);
+            SysEmployee emp = sysEmployeeMapper.selectById(nextEmpId);
             if (emp == null || (emp.getDelFlag() != null && emp.getDelFlag() == 1)) {
                 throw new BusinessException("接班人不存在");
             }
@@ -225,7 +226,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         LocalDateTime now = LocalDateTime.now();
         String handle = StringUtils.hasText(dto.getHandleResult()) ? dto.getHandleResult().trim() : row.getHandleResult();
         // ⚠ UpdateWrapper 显式 set：updateById 走 NOT_NULL 策略，把 ack_time 之类从有值改回 null 会被跳过
-        logMapper.update(null, new LambdaUpdateWrapper<BizDutyLog>()
+        bizDutyLogMapper.update(null, new LambdaUpdateWrapper<BizDutyLog>()
                 .eq(BizDutyLog::getId, row.getId())
                 .set(BizDutyLog::getStatus, DutyLogStatusEnum.HANDED.getCode())
                 .set(BizDutyLog::getHandoverEmpId, nextEmpId)
@@ -247,7 +248,7 @@ public class DutyLogServiceImpl implements DutyLogService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void ack(Long id) {
-        BizDutyLog row = logMapper.selectById(id);
+        BizDutyLog row = bizDutyLogMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("值班日志记录不存在");
         }
@@ -258,7 +259,7 @@ public class DutyLogServiceImpl implements DutyLogService {
         if (me == null || !me.equals(row.getHandoverEmpId())) {
             throw new BusinessException("只有接班人本人能签收（当前登录人不是交班对象）");
         }
-        logMapper.update(null, new LambdaUpdateWrapper<BizDutyLog>()
+        bizDutyLogMapper.update(null, new LambdaUpdateWrapper<BizDutyLog>()
                 .eq(BizDutyLog::getId, row.getId())
                 .set(BizDutyLog::getStatus, DutyLogStatusEnum.ACKED.getCode())
                 .set(BizDutyLog::getAckTime, LocalDateTime.now()));

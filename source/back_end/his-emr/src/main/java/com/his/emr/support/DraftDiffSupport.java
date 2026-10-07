@@ -1,5 +1,6 @@
 package com.his.emr.support;
 
+import com.his.common.util.TextUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -55,14 +56,6 @@ public class DraftDiffSupport {
         return builder.toString();
     }
 
-    private static String cut(String text, int max) {
-        if (text == null) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= max ? value : value.substring(0, max);
-    }
-
     /**
      * 计算差异分段。
      *
@@ -70,8 +63,8 @@ public class DraftDiffSupport {
      */
     public List<Segment> diff(String draft, String finalText) {
         List<Segment> segments = new ArrayList<>();
-        String left = cut(draft, TEXT_MAX);
-        String right = cut(finalText, TEXT_MAX);
+        String left = TextUtil.cut(draft, TEXT_MAX, "");
+        String right = TextUtil.cut(finalText, TEXT_MAX, "");
         if (left.equals(right)) {
             if (!left.isEmpty()) {
                 segments.add(new Segment(0, left));

@@ -9,6 +9,8 @@ import com.his.common.enums.TcmDecoctStatusEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.emr.dto.TcmDecoctAdvanceDTO;
 import com.his.emr.dto.TcmDecoctCancelDTO;
 import com.his.emr.dto.TcmDecoctQueryPageDTO;
@@ -35,7 +37,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -66,18 +67,11 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
      */
     private static final int W_CANCEL_REASON = 200;
 
-    private final BizPrescriptionMapper prescriptionMapper;
-    private final BizPrescriptionDetailMapper prescriptionDetailMapper;
+    private final BizPrescriptionMapper bizPrescriptionMapper;
+    private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
     private final RedisSequenceService redisSequenceService;
     private final DecoctReceiptPrinter decoctReceiptPrinter;
     private final SysAuditLogService sysAuditLogService;
-
-    private static String cut(String s, int max) {
-        if (s == null || s.length() <= max) {
-            return s;
-        }
-        return s.substring(0, max);
-    }
 
     @Override
     public PageResult<TcmDecoctVO> listPage(TcmDecoctQueryPageDTO query) {
@@ -118,7 +112,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
         if (exists != null) {
             return exists;
         }
-        BizPrescription rx = prescriptionMapper.selectById(prescriptionId);
+        BizPrescription rx = bizPrescriptionMapper.selectById(prescriptionId);
         if (rx == null || !Objects.equals(PrescriptionTypeEnum.TCM.getCode(), rx.getPrescriptionType())
                 || !Objects.equals(YesOrNoEnum.YES.getCode(), rx.getDecoctFlag())) {
             // 自煎方 / 非饮片方：本来就不该有代煎单，静默返回 null（调用方据此不建单，不报错）
@@ -175,7 +169,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
             throw new BusinessException("状态只能逐级推进（当前 "
                     + TcmDecoctStatusEnum.getText(from) + "，不能直接到 " + TcmDecoctStatusEnum.getText(target) + "）");
         }
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         row.setDecoctStatus(target);
         row.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());
         row.setOperatorName(UserUtils.getCurrentUser().getRealName());
@@ -208,7 +202,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
             // 已取 = 汤液已经交到患者手上，事后作废只会让台账和实物对不上
             throw new BusinessException("代煎单已被患者取走，不能作废（请先走退药流程）");
         }
-        String reason = cut(dto.getReason().trim(), W_CANCEL_REASON);
+        String reason = TextUtil.cut(dto.getReason().trim(), W_CANCEL_REASON);
         row.setDecoctStatus(TcmDecoctStatusEnum.CANCELLED.getCode());
         row.setCancelReason(reason);
         row.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());
@@ -255,7 +249,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
             return;
         }
         row.setDecoctStatus(TcmDecoctStatusEnum.CANCELLED.getCode());
-        row.setCancelReason(cut("发药已退，代煎单自动作废", W_CANCEL_REASON));
+        row.setCancelReason(TextUtil.cut("发药已退，代煎单自动作废", W_CANCEL_REASON));
         row.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());
         row.setOperatorName(UserUtils.getCurrentUser().getRealName());
         row.setUpdateBy(UserUtils.getCurrentUser().getRealName());
@@ -288,11 +282,11 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
         String summary = grouped.entrySet().stream()
                 .map(e -> e.getKey() + "：" + String.join("、", e.getValue()))
                 .collect(Collectors.joining("；"));
-        return cut(summary, 500);
+        return TextUtil.cut(summary, 500);
     }
 
     private List<BizPrescriptionDetail> listDetails(Long prescriptionId) {
-        return prescriptionDetailMapper.selectList(new LambdaQueryWrapper<BizPrescriptionDetail>()
+        return bizPrescriptionDetailMapper.selectList(new LambdaQueryWrapper<BizPrescriptionDetail>()
                 .eq(BizPrescriptionDetail::getPrescriptionId, prescriptionId)
                 .orderByAsc(BizPrescriptionDetail::getId));
     }

@@ -1,5 +1,6 @@
 package com.his.ai.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.ai.entity.SysAiCallLog;
 import com.his.ai.mapper.SysAiCallLogMapper;
 import com.his.ai.service.AiAuditService;
@@ -19,7 +20,7 @@ import java.time.LocalDateTime;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AiAuditServiceImpl implements AiAuditService {
+public class AiAuditServiceImpl extends ServiceImpl<SysAiCallLogMapper, SysAiCallLog> implements AiAuditService {
 
     private final SysAiCallLogMapper sysAiCallLogMapper;
 

@@ -2,9 +2,11 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.*;
@@ -45,7 +47,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class VteServiceImpl implements VteService {
+public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> implements VteService {
     private static final int EXPORT_MAX = 5000;
     /**
      * 评审/VTE 防治中心建设常用阈值，只作提示不判定
@@ -54,14 +56,14 @@ public class VteServiceImpl implements VteService {
     private static final BigDecimal TARGET_PREVENT_RATE = new BigDecimal("90.00");
     private static final String PREFIX_PREVENT = "VP";
     private static final String PREFIX_EVENT = "VE";
-    private final VteStatMapper statMapper;
-    private final BizVtePreventMapper preventMapper;
-    private final BizVteEventMapper eventMapper;
-    private final BizVteStatsMapper statsMapper;
-    private final BizAdmissionMapper admissionMapper;
-    private final BizPatientMapper patientMapper;
-    private final BizNursingAssessmentMapper assessmentMapper;
-    private final SysBedMapper bedMapper;
+    private final VteStatMapper vteStatMapper;
+    private final BizVtePreventMapper bizVtePreventMapper;
+    private final BizVteEventMapper bizVteEventMapper;
+    private final BizVteStatsMapper bizVteStatsMapper;
+    private final BizAdmissionMapper bizAdmissionMapper;
+    private final BizPatientMapper bizPatientMapper;
+    private final BizNursingAssessmentMapper bizNursingAssessmentMapper;
+    private final SysBedMapper sysBedMapper;
     private DictCacheService dictCacheService;
 
     // 看板
@@ -69,10 +71,10 @@ public class VteServiceImpl implements VteService {
     @Override
     public VteOverviewVO overview() {
         VteOverviewVO vo = new VteOverviewVO();
-        long inHospital = statMapper.countInHospital();
-        long assessed = statMapper.countInHospitalAssessed();
-        long highRisk = statMapper.countInHospitalHighRisk();
-        long pending = statMapper.countHighRiskPending();
+        long inHospital = vteStatMapper.countInHospital();
+        long assessed = vteStatMapper.countInHospitalAssessed();
+        long highRisk = vteStatMapper.countInHospitalHighRisk();
+        long pending = vteStatMapper.countHighRiskPending();
         LocalDate now = LocalDate.now();
         LocalDate monthBegin = now.withDayOfMonth(1);
         LocalDate monthEnd = now.withDayOfMonth(now.lengthOfMonth());
@@ -82,8 +84,8 @@ public class VteServiceImpl implements VteService {
         vo.setHighRiskPendingCount((int) pending);
         vo.setHighRiskPreventRate(rate(highRisk - pending, highRisk));
         vo.setMissedAssessCount((int) Math.max(0, inHospital - assessed));
-        vo.setMonthVteEventCount((int) statMapper.countVteEventByDiagnoseDate(monthBegin, monthEnd));
-        vo.setMonthBleedCount((int) statMapper.countBleedByDiagnoseDate(monthBegin, monthEnd));
+        vo.setMonthVteEventCount((int) vteStatMapper.countVteEventByDiagnoseDate(monthBegin, monthEnd));
+        vo.setMonthBleedCount((int) vteStatMapper.countBleedByDiagnoseDate(monthBegin, monthEnd));
         return vo;
     }
 
@@ -97,7 +99,7 @@ public class VteServiceImpl implements VteService {
         String kw = query.getKeyword() == null ? null : query.getKeyword().trim();
         query.setKeyword(kw);
         Page<VteRiskListVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        Page<VteRiskListVO> result = (Page<VteRiskListVO>) preventMapper.selectRiskPage(page, query);
+        Page<VteRiskListVO> result = (Page<VteRiskListVO>) bizVtePreventMapper.selectRiskPage(page, query);
         List<VteRiskListVO> records = result.getRecords();
         if (!CollectionUtils.isEmpty(records)) {
             List<Long> ids = records.stream().map(VteRiskListVO::getAdmissionId).filter(Objects::nonNull).toList();
@@ -106,7 +108,7 @@ public class VteServiceImpl implements VteService {
                 states.put(id, new ArrayList<>());
             }
             if (!CollectionUtils.isEmpty(ids)) {
-                for (VteMeasureStateVO s : preventMapper.selectMeasureStates(ids)) {
+                for (VteMeasureStateVO s : bizVtePreventMapper.selectMeasureStates(ids)) {
                     states.computeIfAbsent(s.getAdmissionId(), k -> new ArrayList<>()).add(s);
                 }
             }
@@ -146,7 +148,7 @@ public class VteServiceImpl implements VteService {
         String kw = query.getKeyword() == null ? null : query.getKeyword().trim();
         query.setKeyword(kw);
         Page<VtePreventVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        Page<VtePreventVO> result = (Page<VtePreventVO>) preventMapper.selectPreventPage(page, query);
+        Page<VtePreventVO> result = (Page<VtePreventVO>) bizVtePreventMapper.selectPreventPage(page, query);
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
                 result.getRecords());
     }
@@ -157,7 +159,7 @@ public class VteServiceImpl implements VteService {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        return preventMapper.selectByAdmission(admissionId);
+        return bizVtePreventMapper.selectByAdmission(admissionId);
     }
 
     @Override
@@ -200,7 +202,7 @@ public class VteServiceImpl implements VteService {
             reason = reason.substring(0, 500);
         }
 
-        BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
@@ -212,10 +214,10 @@ public class VteServiceImpl implements VteService {
                     + "如病情变化请先重评 Caprini");
         }
 
-        BizPatient patient = admission.getPatientId() == null ? null : patientMapper.selectById(admission.getPatientId());
+        BizPatient patient = admission.getPatientId() == null ? null : bizPatientMapper.selectById(admission.getPatientId());
         LocalDateTime executeTime = dto.getExecuteTime();
         if (status == VtePreventStatusEnum.DONE.getCode() && executeTime == null) {
-            executeTime = LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+            executeTime = TimeUtil.nowSeconds();
         }
         if (status != VtePreventStatusEnum.DONE.getCode()) {
             executeTime = null;
@@ -225,10 +227,10 @@ public class VteServiceImpl implements VteService {
         boolean insert;
         if (dto.getId() == null) {
             row = new BizVtePrevent();
-            row.setPreventNo(nextNo(PREFIX_PREVENT, preventMapper.maxPreventSeq(PREFIX_PREVENT + LocalDate.now().format(DateFormats.COMPACT_DATE))));
+            row.setPreventNo(nextNo(PREFIX_PREVENT, bizVtePreventMapper.maxPreventSeq(PREFIX_PREVENT + LocalDate.now().format(DateFormats.COMPACT_DATE))));
             insert = true;
         } else {
-            row = preventMapper.selectById(dto.getId());
+            row = bizVtePreventMapper.selectById(dto.getId());
             if (row == null || row.getDelFlag() == null || row.getDelFlag() == 1) {
                 throw new BusinessException("措施记录不存在或已删除");
             }
@@ -239,7 +241,7 @@ public class VteServiceImpl implements VteService {
         row.setPatientNo(patient == null ? null : patient.getPatientNo());
         row.setPatientName(patient == null ? null : patient.getPatientName());
         row.setDeptId(admission.getDeptId());
-        row.setDeptName(admission.getDeptId() == null ? null : statMapper.selectDeptName(admission.getDeptId()));
+        row.setDeptName(admission.getDeptId() == null ? null : vteStatMapper.selectDeptName(admission.getDeptId()));
         row.setWardId(admission.getWardId());
         row.setWardName(wardName(admission.getWardId()));
         row.setBedNo(bedNo(admission.getBedId()));
@@ -259,14 +261,14 @@ public class VteServiceImpl implements VteService {
 
         if (insert) {
             try {
-                preventMapper.insert(row);
+                bizVtePreventMapper.insert(row);
             } catch (DuplicateKeyException e) {
                 throw new BusinessException("该患者已登记过「" + measure.name() + "」，请改为修改已有记录");
             }
             log.info("VTE 措施登记 住院={} 措施={} 状态={} 操作人={}", admission.getAdmissionNo(),
                     measure.code(), status, operatorUser.getRealName());
         } else {
-            preventMapper.updateById(row);
+            bizVtePreventMapper.updateById(row);
             log.info("VTE 措施修改 id={} 措施={} 状态={} 操作人={}", row.getId(), measure.code(), status, operatorUser.getRealName());
         }
         return toPreventVO(row);
@@ -275,12 +277,12 @@ public class VteServiceImpl implements VteService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int preventDeleteById(Long id) {
-        BizVtePrevent row = preventMapper.selectById(id);
+        BizVtePrevent row = bizVtePreventMapper.selectById(id);
         if (row == null || row.getDelFlag() == null || row.getDelFlag() == 1) {
             throw new BusinessException("措施记录不存在或已删除");
         }
         // 物理删：uk_vte_prevent 不含 del_flag，软删会占住键位（二次删除/重登记必撞唯一键）
-        return preventMapper.purgeById(id);
+        return bizVtePreventMapper.purgeById(id);
     }
 
     // VTE 事件
@@ -290,7 +292,7 @@ public class VteServiceImpl implements VteService {
         String kw = query.getKeyword() == null ? null : query.getKeyword().trim();
         query.setKeyword(kw);
         Page<VteEventVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        Page<VteEventVO> result = (Page<VteEventVO>) eventMapper.selectEventPage(page, query);
+        Page<VteEventVO> result = (Page<VteEventVO>) bizVteEventMapper.selectEventPage(page, query);
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
                 result.getRecords());
     }
@@ -301,7 +303,7 @@ public class VteServiceImpl implements VteService {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        return eventMapper.selectByAdmission(admissionId);
+        return bizVteEventMapper.selectByAdmission(admissionId);
     }
 
     @Override
@@ -320,20 +322,20 @@ public class VteServiceImpl implements VteService {
             throw new BusinessException("预防相关出血不存在「入院时已存在」的情况，请改为院内发生");
         }
 
-        BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
-        BizPatient patient = admission.getPatientId() == null ? null : patientMapper.selectById(admission.getPatientId());
+        BizPatient patient = admission.getPatientId() == null ? null : bizPatientMapper.selectById(admission.getPatientId());
 
         BizVteEvent row;
         boolean insert;
         if (dto.getId() == null) {
             row = new BizVteEvent();
-            row.setEventNo(nextNo(PREFIX_EVENT, eventMapper.maxEventSeq(PREFIX_EVENT + LocalDate.now().format(DateFormats.COMPACT_DATE))));
+            row.setEventNo(nextNo(PREFIX_EVENT, bizVteEventMapper.maxEventSeq(PREFIX_EVENT + LocalDate.now().format(DateFormats.COMPACT_DATE))));
             insert = true;
         } else {
-            row = eventMapper.selectById(dto.getId());
+            row = bizVteEventMapper.selectById(dto.getId());
             if (row == null || row.getDelFlag() == null || row.getDelFlag() == 1) {
                 throw new BusinessException("事件记录不存在或已删除");
             }
@@ -344,7 +346,7 @@ public class VteServiceImpl implements VteService {
         row.setPatientNo(patient == null ? null : patient.getPatientNo());
         row.setPatientName(patient == null ? null : patient.getPatientName());
         row.setDeptId(admission.getDeptId());
-        row.setDeptName(admission.getDeptId() == null ? null : statMapper.selectDeptName(admission.getDeptId()));
+        row.setDeptName(admission.getDeptId() == null ? null : vteStatMapper.selectDeptName(admission.getDeptId()));
         row.setWardId(admission.getWardId());
         row.setWardName(wardName(admission.getWardId()));
         row.setEventType(dto.getEventType());
@@ -356,15 +358,15 @@ public class VteServiceImpl implements VteService {
         row.setDrugPreventFlag(dto.getDrugPreventFlag() == null ? 0 : dto.getDrugPreventFlag());
         row.setReporterId(operatorUser.getEmployeeId());
         row.setReporterName(operatorUser.getRealName());
-        row.setReportTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        row.setReportTime(TimeUtil.nowSeconds());
         row.setRemark(dto.getRemark() == null ? null : dto.getRemark().trim());
 
         if (insert) {
-            eventMapper.insert(row);
+            bizVteEventMapper.insert(row);
             log.info("VTE 事件登记 住院={} 类型={} 时机={} 操作人={}", admission.getAdmissionNo(),
                     dto.getEventType(), dto.getOnsetType(), operatorUser.getRealName());
         } else {
-            eventMapper.updateById(row);
+            bizVteEventMapper.updateById(row);
         }
         VteEventVO vo = toEventVO(row);
         vo.setCounted(counted(row));
@@ -374,11 +376,11 @@ public class VteServiceImpl implements VteService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int eventDeleteById(Long id) {
-        BizVteEvent row = eventMapper.selectById(id);
+        BizVteEvent row = bizVteEventMapper.selectById(id);
         if (row == null || row.getDelFlag() == null || row.getDelFlag() == 1) {
             throw new BusinessException("事件记录不存在或已删除");
         }
-        return eventMapper.deleteById(id);
+        return bizVteEventMapper.deleteById(id);
     }
 
     // 月度指标
@@ -408,7 +410,7 @@ public class VteServiceImpl implements VteService {
         List<VteStatsVO> result = new ArrayList<>();
         // scopeType 合法性由 DTO 的 @InEnum 把关（1-全院 2-科室），这里只分派
         if (Objects.equals(StatsScopeEnum.DEPT.getCode(), dto.getScopeType())) {
-            List<DeptCountRowVO> depts = statMapper.selectDischargeDepts(from, to);
+            List<DeptCountRowVO> depts = vteStatMapper.selectDischargeDepts(from, to);
             if (CollectionUtils.isEmpty(depts)) {
                 throw new BusinessException(ym + " 没有已出院患者，无法按科室生成快照");
             }
@@ -434,7 +436,7 @@ public class VteServiceImpl implements VteService {
                 .orderByDesc(BizVteStats::getStatMonth)
                 .orderByAsc(BizVteStats::getScopeType)
                 .orderByAsc(BizVteStats::getId);
-        Page<BizVteStats> page = statsMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
+        Page<BizVteStats> page = bizVteStatsMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         if (CollectionUtils.isEmpty(page.getRecords())) {
             return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                     Collections.emptyList());
@@ -452,7 +454,7 @@ public class VteServiceImpl implements VteService {
                 .orderByAsc(BizVteStats::getScopeType)
                 .orderByAsc(BizVteStats::getId)
                 .last("LIMIT " + EXPORT_MAX);
-        List<BizVteStats> rows = statsMapper.selectList(wrapper);
+        List<BizVteStats> rows = bizVteStatsMapper.selectList(wrapper);
 
         StringBuilder sb = new StringBuilder(1024);
         sb.append('\uFEFF'); // BOM：Excel 打开中文不乱码
@@ -491,12 +493,12 @@ public class VteServiceImpl implements VteService {
         row.setDeptId(deptId);
         row.setDeptName(deptName);
 
-        long discharge = statMapper.countDischarge(from, to, deptId);
-        long assessed = statMapper.countAssessed(from, to, deptId);
-        long highRisk = statMapper.countHighRisk(from, to, deptId);
-        long preventDone = statMapper.countPreventDone(from, to, deptId);
-        long vteEvent = statMapper.countVteEvent(from, to, deptId);
-        long bleed = statMapper.countBleed(from, to, deptId);
+        long discharge = vteStatMapper.countDischarge(from, to, deptId);
+        long assessed = vteStatMapper.countAssessed(from, to, deptId);
+        long highRisk = vteStatMapper.countHighRisk(from, to, deptId);
+        long preventDone = vteStatMapper.countPreventDone(from, to, deptId);
+        long vteEvent = vteStatMapper.countVteEvent(from, to, deptId);
+        long bleed = vteStatMapper.countBleed(from, to, deptId);
 
         row.setDischargeCount((int) discharge);
         row.setAssessedCount((int) assessed);
@@ -515,21 +517,21 @@ public class VteServiceImpl implements VteService {
      * 同月同范围覆盖（唯一键 uk_vte_stats，不含 del_flag，不走软删）
      */
     private BizVteStats upsertRow(BizVteStats row, String operator, String remark) {
-        BizVteStats exist = statsMapper.selectOne(new LambdaQueryWrapper<BizVteStats>()
+        BizVteStats exist = bizVteStatsMapper.selectOne(new LambdaQueryWrapper<BizVteStats>()
                 .eq(BizVteStats::getStatMonth, row.getStatMonth())
                 .eq(BizVteStats::getScopeType, row.getScopeType())
                 .eq(row.getDeptId() != null, BizVteStats::getDeptId, row.getDeptId())
                 .isNull(row.getDeptId() == null, BizVteStats::getDeptId)
                 .last("LIMIT 1"));
         row.setGenerateBy(operator);
-        row.setGenerateTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        row.setGenerateTime(TimeUtil.nowSeconds());
         row.setRemark(StringUtils.hasText(remark) ? remark.trim() : null);
         if (exist == null) {
-            statsMapper.insert(row);
+            bizVteStatsMapper.insert(row);
             return row;
         }
         row.setId(exist.getId());
-        statsMapper.updateById(row);
+        bizVteStatsMapper.updateById(row);
         return row;
     }
 
@@ -567,7 +569,7 @@ public class VteServiceImpl implements VteService {
     }
 
     private NursingAssessmentVO latestCaprini(Long admissionId) {
-        List<NursingAssessmentVO> list = assessmentMapper.selectLatestByAdmission(admissionId);
+        List<NursingAssessmentVO> list = bizNursingAssessmentMapper.selectLatestByAdmission(admissionId);
         if (CollectionUtils.isEmpty(list)) {
             return null;
         }
@@ -583,7 +585,7 @@ public class VteServiceImpl implements VteService {
         if (wardId == null) {
             return null;
         }
-        WardVO ward = bedMapper.selectWardById(wardId);
+        WardVO ward = sysBedMapper.selectWardById(wardId);
         return ward == null ? null : ward.getWardName();
     }
 
@@ -591,7 +593,7 @@ public class VteServiceImpl implements VteService {
         if (bedId == null) {
             return null;
         }
-        SysBed bed = bedMapper.selectById(bedId);
+        SysBed bed = sysBedMapper.selectById(bedId);
         return bed == null ? null : bed.getBedNo();
     }
 

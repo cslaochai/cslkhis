@@ -13,12 +13,15 @@ import com.his.ai.service.KnowledgeQaCapability;
 import com.his.ai.vo.KnowledgeAskVO;
 import com.his.ai.vo.KnowledgeQaPromptVariablesVO;
 import com.his.ai.vo.KnowledgeSourceVO;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 知识库问答能力实现。
@@ -41,17 +44,9 @@ public class KnowledgeQaCapabilityImpl implements KnowledgeQaCapability {
     private static final int OUTPUT_TOKEN_LIMIT = 1024;
 
     private final EmbeddingProviderSelector embeddingSelector;
-    private final InMemoryVectorStore vectorStore;
+    private final InMemoryVectorStore inMemoryVectorStore;
     private final AiExecutionService aiExecutionService;
     private final AiProperties aiProperties;
-
-    private static String truncate(String text, int max) {
-        if (text == null) {
-            return "";
-        }
-        String t = text.trim();
-        return t.length() <= max ? t : t.substring(0, max) + "…";
-    }
 
     @Override
     public KnowledgeAskVO ask(KnowledgeAskDTO dto) {
@@ -61,7 +56,7 @@ public class KnowledgeQaCapabilityImpl implements KnowledgeQaCapability {
 
         float[] queryVector = embeddingSelector.select()
                 .embed(dto.getQuestion());
-        List<RetrievedChunk> hits = vectorStore.search(queryVector, aiProperties.getRag().getTopK());
+        List<RetrievedChunk> hits = inMemoryVectorStore.search(queryVector, aiProperties.getRag().getTopK());
 
         if (hits.isEmpty()) {
             vo.setDegraded(true);
@@ -82,7 +77,7 @@ public class KnowledgeQaCapabilityImpl implements KnowledgeQaCapability {
             s.setDocId(h.docId());
             s.setDocTitle(h.docTitle());
             s.setCategory(h.category());
-            s.setSnippet(truncate(h.content(), SNIPPET_MAX));
+            s.setSnippet(TextUtil.ellipsis(h.content(), SNIPPET_MAX));
             sources.add(s);
             i++;
         }

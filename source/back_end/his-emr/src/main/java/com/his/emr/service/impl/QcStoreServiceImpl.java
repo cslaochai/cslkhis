@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.enums.CheckResultEnum;
 import com.his.common.enums.RecordQcTypeEnum;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizQualityControl;
 import com.his.emr.entity.BizQualityControlIssue;
 import com.his.emr.enums.QcDimensionEnum;
@@ -21,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
@@ -59,9 +60,9 @@ public class QcStoreServiceImpl implements QcStoreService {
      */
     private static final int ERROR_DETAIL_MAX_LENGTH = 1000;
 
-    private final BizQualityControlMapper qualityControlMapper;
+    private final BizQualityControlMapper bizQualityControlMapper;
 
-    private final BizQualityControlIssueMapper qualityControlIssueMapper;
+    private final BizQualityControlIssueMapper bizQualityControlIssueMapper;
 
     /**
      * 检查内容：跑的是哪几个维度由 qcType 决定，写成文字供列表页直接读
@@ -90,14 +91,7 @@ public class QcStoreServiceImpl implements QcStoreService {
                 break;
             }
         }
-        return truncate(builder.toString(), ERROR_DETAIL_MAX_LENGTH);
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (text == null) {
-            return null;
-        }
-        return text.length() <= maxLength ? text : text.substring(0, maxLength);
+        return TextUtil.cut(builder.toString(), ERROR_DETAIL_MAX_LENGTH);
     }
 
     /**
@@ -106,7 +100,7 @@ public class QcStoreServiceImpl implements QcStoreService {
      */
     @Transactional(rollbackFor = Exception.class)
     public BizQualityControl save(QcSnapshot snapshot, QcResult result, Integer qcType, String operator) {
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
 
         BizQualityControl qc = new BizQualityControl();
         qc.setQcNo(nextQcNo());
@@ -125,7 +119,7 @@ public class QcStoreServiceImpl implements QcStoreService {
         qc.setQcTime(now);
         qc.setCreateBy(operator);
         qc.setCreateTime(now);
-        qualityControlMapper.insert(qc);
+        bizQualityControlMapper.insert(qc);
 
         List<QcIssue> issues = result.getIssues();
         int written = 0;
@@ -146,11 +140,11 @@ public class QcStoreServiceImpl implements QcStoreService {
             row.setSeverity(issue.getSeverity());
             row.setDeduct(issue.getDeduct());
             row.setFieldName(issue.getFieldName());
-            row.setErrorDetail(truncate(issue.getErrorDetail(), 500));
-            row.setSuggestion(truncate(issue.getSuggestion(), 500));
-            row.setEvidence(truncate(issue.getEvidence(), 200));
+            row.setErrorDetail(TextUtil.cut(issue.getErrorDetail(), 500));
+            row.setSuggestion(TextUtil.cut(issue.getSuggestion(), 500));
+            row.setEvidence(TextUtil.cut(issue.getEvidence(), 200));
             row.setCreateTime(now);
-            qualityControlIssueMapper.insert(row);
+            bizQualityControlIssueMapper.insert(row);
             written++;
         }
         return qc;
@@ -162,7 +156,7 @@ public class QcStoreServiceImpl implements QcStoreService {
      */
     private String nextQcNo() {
         String dayPrefix = NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long base = qualityControlMapper.countByQcNoPrefix(dayPrefix);
+        long base = bizQualityControlMapper.countByQcNoPrefix(dayPrefix);
         for (int offset = 1; offset <= 50; offset++) {
             String candidate = dayPrefix + String.format("%04d", (base + offset) % 10000);
             if (!exists(candidate)) {
@@ -181,7 +175,7 @@ public class QcStoreServiceImpl implements QcStoreService {
     }
 
     private boolean exists(String qcNo) {
-        return qualityControlMapper.selectCount(
+        return bizQualityControlMapper.selectCount(
                 new LambdaQueryWrapper<BizQualityControl>().eq(BizQualityControl::getQcNo, qcNo)) > 0;
     }
 }

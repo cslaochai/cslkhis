@@ -19,6 +19,8 @@ import com.his.common.enums.PayTxnStatusEnum;
 import com.his.common.enums.PaymentMethodEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,15 +63,8 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
     private static final List<Integer> CHANNELS = Arrays.stream(PaymentMethodEnum.values())
             .filter(PaymentMethodEnum::channelBacked).map(PaymentMethodEnum::getCode).toList();
 
-    private final BizPaymentTxnMapper paymentTxnMapper;
+    private final BizPaymentTxnMapper bizPaymentTxnMapper;
     private final PayChannelService payChannelService;
-
-    private static String cut(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        return text.length() <= max ? text : text.substring(0, max);
-    }
 
     private static List<PayChannelBillVO> toVOList(List<BizPayChannelBill> bills) {
         List<PayChannelBillVO> vos = new ArrayList<>(bills.size());
@@ -154,7 +149,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
         bill.setImportWay(2);
         bill.setMatchStatus(0);
         bill.setImportBatchNo("MANUAL");
-        bill.setRemark(StringUtils.hasText(dto.getRemark()) ? cut(dto.getRemark(), 490) : null);
+        bill.setRemark(StringUtils.hasText(dto.getRemark()) ? TextUtil.cut(dto.getRemark(), 490) : null);
         try {
             return this.save(bill);
         } catch (DuplicateKeyException e) {
@@ -180,8 +175,8 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
             throw new BusinessException("渠道不一致：流水是「" + PaymentMethodEnum.labelOrUnknown(bill.getChannel())
                     + "」，支付流水渠道是「" + PaymentMethodEnum.labelOrUnknown(txn.getPayMethod()) + "」");
         }
-        BigDecimal remote = nz(bill.getAmount());
-        BigDecimal local = nz(txn.getAmount());
+        BigDecimal remote = NumUtil.orZero(bill.getAmount());
+        BigDecimal local = NumUtil.orZero(txn.getAmount());
         if (remote.compareTo(local) != 0) {
             throw new BusinessException("金额不符，拒绝勾对：渠道 " + remote + " vs 本地 " + local
                     + "，差额 " + remote.subtract(local) + "；如确认为长短款请用「差额处理」登记定性");
@@ -219,7 +214,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
         bill.setMatchTime(LocalDateTime.now());
         bill.setMatchedById(UserUtils.getCurrentUser().getEmployeeId());
         bill.setMatchedByName(UserUtils.getCurrentUser().getRealName());
-        bill.setHandleRemark(cut(dto.getHandleRemark(), 490));
+        bill.setHandleRemark(TextUtil.cut(dto.getHandleRemark(), 490));
         return this.updateById(bill);
     }
 
@@ -230,7 +225,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
         vo.setBillDate(day.toString());
 
         // 本地口径：当日该渠道的成功支付流水（收正退负，SUM 即净额）
-        List<BizPaymentTxn> localTxns = paymentTxnMapper.selectList(new LambdaQueryWrapper<BizPaymentTxn>()
+        List<BizPaymentTxn> localTxns = bizPaymentTxnMapper.selectList(new LambdaQueryWrapper<BizPaymentTxn>()
                 .in(BizPaymentTxn::getPayMethod, CHANNELS)
                 .eq(BizPaymentTxn::getTxnStatus, PayTxnStatusEnum.SUCCESS.getCode())
                 .eq(BizPaymentTxn::getTxnDate, day));
@@ -251,7 +246,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
 
             List<BizPaymentTxn> locals = localByChannel.getOrDefault(channel, List.of());
             row.setLocalCount((long) locals.size());
-            row.setLocalAmount(locals.stream().map(t -> nz(t.getAmount())).reduce(BigDecimal.ZERO, BigDecimal::add));
+            row.setLocalAmount(locals.stream().map(t -> NumUtil.orZero(t.getAmount())).reduce(BigDecimal.ZERO, BigDecimal::add));
 
             List<BizPayChannelBill> flows = billByChannel.getOrDefault(channel, List.of());
             row.setFlowTotal((long) flows.size());
@@ -279,7 +274,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
         if (bill == null) {
             throw new BusinessException("台账行不存在");
         }
-        List<BizPaymentTxn> txns = paymentTxnMapper.selectList(new LambdaQueryWrapper<BizPaymentTxn>()
+        List<BizPaymentTxn> txns = bizPaymentTxnMapper.selectList(new LambdaQueryWrapper<BizPaymentTxn>()
                 .eq(BizPaymentTxn::getPayMethod, bill.getChannel())
                 .eq(BizPaymentTxn::getTxnStatus, PayTxnStatusEnum.SUCCESS.getCode())
                 .eq(BizPaymentTxn::getTxnDate, bill.getBillDate())
@@ -297,8 +292,8 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
         List<BizPaymentTxn> candidates = txns.stream()
                 .filter(t -> !used.contains(t.getTxnNo()))
                 .collect(Collectors.toCollection(ArrayList::new));
-        BigDecimal remote = nz(bill.getAmount());
-        candidates.sort(Comparator.comparing((BizPaymentTxn t) -> nz(t.getAmount()).compareTo(remote) != 0 ? 1 : 0));
+        BigDecimal remote = NumUtil.orZero(bill.getAmount());
+        candidates.sort(Comparator.comparing((BizPaymentTxn t) -> NumUtil.orZero(t.getAmount()).compareTo(remote) != 0 ? 1 : 0));
         List<PayChannelCandidateVO> vos = new ArrayList<>(candidates.size());
         for (BizPaymentTxn txn : candidates) {
             PayChannelCandidateVO vo = new PayChannelCandidateVO();
@@ -318,7 +313,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
      * 按流水号取支付流水：号段唯一（uk_txn_no），非渠道/余额等一律照常拒绝
      */
     private BizPaymentTxn findTxn(String txnNo) {
-        BizPaymentTxn txn = paymentTxnMapper.selectOne(new LambdaQueryWrapper<BizPaymentTxn>()
+        BizPaymentTxn txn = bizPaymentTxnMapper.selectOne(new LambdaQueryWrapper<BizPaymentTxn>()
                 .eq(BizPaymentTxn::getTxnNo, txnNo)
                 .last("LIMIT 1"));
         if (txn == null) {
@@ -334,10 +329,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
     }
 
     private BigDecimal sum(List<BizPayChannelBill> bills) {
-        return bills.stream().map(b -> nz(b.getAmount())).reduce(BigDecimal.ZERO, BigDecimal::add);
+        return bills.stream().map(b -> NumUtil.orZero(b.getAmount())).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
 }

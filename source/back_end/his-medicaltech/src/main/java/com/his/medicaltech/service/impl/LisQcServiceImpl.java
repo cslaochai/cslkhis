@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.LisQcDTO;
 import com.his.medicaltech.entity.BizLisQcPlan;
 import com.his.medicaltech.entity.BizLisQcRecord;
@@ -47,19 +48,19 @@ public class LisQcServiceImpl implements LisQcService {
     private static final String DICT_STATUS = "his_lis_qc_status";
     private static final String DICT_HANDLE = "his_lis_qc_handle_status";
 
-    private final BizLisQcPlanMapper planMapper;
-    private final BizLisQcRecordMapper recordMapper;
-    private final DictCacheService dictText;
+    private final BizLisQcPlanMapper bizLisQcPlanMapper;
+    private final BizLisQcRecordMapper bizLisQcRecordMapper;
+    private final DictCacheService dictCacheService;
 
     // 计划
 
     public PageResult<LisQcVO.PlanVO> planPage(LisQcDTO.PlanQuery q) {
         LambdaQueryWrapper<BizLisQcPlan> w = new LambdaQueryWrapper<>();
-        w.like(StringUtils.hasText(q.getItemName()), BizLisQcPlan::getItemName, tr(q.getItemName()))
-                .like(StringUtils.hasText(q.getInstrumentName()), BizLisQcPlan::getInstrumentName, tr(q.getInstrumentName()))
+        w.like(StringUtils.hasText(q.getItemName()), BizLisQcPlan::getItemName, TextUtil.trim(q.getItemName()))
+                .like(StringUtils.hasText(q.getInstrumentName()), BizLisQcPlan::getInstrumentName, TextUtil.trim(q.getInstrumentName()))
                 .eq(q.getStatus() != null, BizLisQcPlan::getStatus, q.getStatus())
                 .orderByDesc(BizLisQcPlan::getId);
-        Page<BizLisQcPlan> page = planMapper.selectPage(
+        Page<BizLisQcPlan> page = bizLisQcPlanMapper.selectPage(
                 new Page<>(q.getPageNum(), q.getPageSize()), w);
         List<LisQcVO.PlanVO> vos = new ArrayList<>();
         for (BizLisQcPlan p : page.getRecords()) {
@@ -71,13 +72,13 @@ public class LisQcServiceImpl implements LisQcService {
     private LisQcVO.PlanVO toPlanVo(BizLisQcPlan p) {
         LisQcVO.PlanVO vo = new LisQcVO.PlanVO();
         BeanUtils.copyProperties(p, vo);
-        vo.setQcLevelText(dictText.getDicDataLabel(DICT_LEVEL, p.getQcLevel()));
+        vo.setQcLevelText(dictCacheService.getDicDataLabel(DICT_LEVEL, p.getQcLevel()));
         vo.setStatusText(p.getStatus() != null && p.getStatus() == 1 ? "启用" : "停用");
         if (p.getMeanValue() != null && p.getSdValue() != null && p.getMeanValue().compareTo(BigDecimal.ZERO) != 0) {
             vo.setCvActual(p.getSdValue().divide(p.getMeanValue().abs(), 4, RoundingMode.HALF_UP)
                     .multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP));
         }
-        vo.setRecordCount(recordMapper.selectCount(
+        vo.setRecordCount(bizLisQcRecordMapper.selectCount(
                 new LambdaQueryWrapper<BizLisQcRecord>().eq(BizLisQcRecord::getPlanId, p.getId())).intValue());
         return vo;
     }
@@ -91,7 +92,7 @@ public class LisQcServiceImpl implements LisQcService {
         if (dto.getId() == null) {
             // 同（项目+仪器+水平）只允许一条启用中的计划 —— 否则录入结果时不知道挂哪份靶值
             if (StringUtils.hasText(dto.getItemCode())) {
-                long dup = planMapper.selectCount(new LambdaQueryWrapper<BizLisQcPlan>()
+                long dup = bizLisQcPlanMapper.selectCount(new LambdaQueryWrapper<BizLisQcPlan>()
                         .eq(BizLisQcPlan::getItemCode, dto.getItemCode())
                         .eq(StringUtils.hasText(dto.getInstrumentName()), BizLisQcPlan::getInstrumentName, dto.getInstrumentName())
                         .eq(BizLisQcPlan::getQcLevel, dto.getQcLevel() == null ? 2 : dto.getQcLevel())
@@ -110,13 +111,13 @@ public class LisQcServiceImpl implements LisQcService {
                 p.setStatus(1);
             }
             p.setPlanNo(nextPlanNo(dto.getItemCode(), p.getQcLevel()));
-            planMapper.insert(p);
+            bizLisQcPlanMapper.insert(p);
         } else {
             p = requirePlan(dto.getId());
             BeanUtils.copyProperties(dto, p);
             p.setId(dto.getId());
             p.setPlanNo(requirePlan(dto.getId()).getPlanNo());
-            planMapper.updateById(p);
+            bizLisQcPlanMapper.updateById(p);
         }
         return p.getPlanNo();
     }
@@ -125,7 +126,7 @@ public class LisQcServiceImpl implements LisQcService {
     public void planToggle(Long planId, Integer status) {
         BizLisQcPlan p = requirePlan(planId);
         p.setStatus(status);
-        planMapper.updateById(p);
+        bizLisQcPlanMapper.updateById(p);
     }
 
     // 结果录入（服务端判定）
@@ -157,7 +158,7 @@ public class LisQcServiceImpl implements LisQcService {
         r.setResultValue(dto.getResultValue());
         r.setZScore(z);
         r.setOperator(operatorUser.getRealName());
-        r.setRemark(clip(dto.getRemark()));
+        r.setRemark(TextUtil.cut(dto.getRemark(), 480));
 
         if (z == null) {
             // 算不出 Z 绝不判在控：落到「未判定」（status=0），并提示补靶值
@@ -171,7 +172,7 @@ public class LisQcServiceImpl implements LisQcService {
             r.setViolatedRules(StringUtils.hasText(verdict.ruleText()) ? verdict.ruleText() : null);
             r.setHandleStatus(verdict.getStatus() == WestgardRuleEngine.OUT_OF_CONTROL ? 1 : 0);
         }
-        recordMapper.insert(r);
+        bizLisQcRecordMapper.insert(r);
         return toRecordVo(r);
     }
 
@@ -179,7 +180,7 @@ public class LisQcServiceImpl implements LisQcService {
      * 该计划最近 n 个点（时间升序，不含当前点）。同秒多点必须补 id 二级键，否则「前一点」取错，2-2s/7-T 全部失真
      */
     private List<WestgardRuleEngine.QcPoint> historyAsc(Long planId, int n) {
-        List<BizLisQcRecord> latest = recordMapper.selectList(new LambdaQueryWrapper<BizLisQcRecord>()
+        List<BizLisQcRecord> latest = bizLisQcRecordMapper.selectList(new LambdaQueryWrapper<BizLisQcRecord>()
                 .eq(BizLisQcRecord::getPlanId, planId)
                 .isNotNull(BizLisQcRecord::getZScore)
                 .orderByDesc(BizLisQcRecord::getQcTime)
@@ -196,14 +197,14 @@ public class LisQcServiceImpl implements LisQcService {
      * R-4s 用：同项目+同仪器、同日其它水平的最近一点
      */
     private List<WestgardRuleEngine.QcPoint> batchOthers(BizLisQcPlan plan, LocalDate date) {
-        List<BizLisQcPlan> siblings = planMapper.selectList(new LambdaQueryWrapper<BizLisQcPlan>()
+        List<BizLisQcPlan> siblings = bizLisQcPlanMapper.selectList(new LambdaQueryWrapper<BizLisQcPlan>()
                 .eq(BizLisQcPlan::getItemCode, plan.getItemCode())
                 .eq(StringUtils.hasText(plan.getInstrumentName()), BizLisQcPlan::getInstrumentName, plan.getInstrumentName())
                 .ne(BizLisQcPlan::getId, plan.getId())
                 .eq(BizLisQcPlan::getStatus, 1));
         List<WestgardRuleEngine.QcPoint> out = new ArrayList<>();
         for (BizLisQcPlan s : siblings) {
-            List<BizLisQcRecord> rec = recordMapper.selectList(new LambdaQueryWrapper<BizLisQcRecord>()
+            List<BizLisQcRecord> rec = bizLisQcRecordMapper.selectList(new LambdaQueryWrapper<BizLisQcRecord>()
                     .eq(BizLisQcRecord::getPlanId, s.getId())
                     .eq(BizLisQcRecord::getQcDate, date)
                     .isNotNull(BizLisQcRecord::getZScore)
@@ -219,15 +220,15 @@ public class LisQcServiceImpl implements LisQcService {
     public PageResult<LisQcVO.RecordVO> recordPage(LisQcDTO.RecordQuery q) {
         LambdaQueryWrapper<BizLisQcRecord> w = new LambdaQueryWrapper<>();
         w.eq(q.getPlanId() != null, BizLisQcRecord::getPlanId, q.getPlanId())
-                .like(StringUtils.hasText(q.getItemName()), BizLisQcRecord::getItemName, tr(q.getItemName()))
-                .like(StringUtils.hasText(q.getInstrumentName()), BizLisQcRecord::getInstrumentName, tr(q.getInstrumentName()))
+                .like(StringUtils.hasText(q.getItemName()), BizLisQcRecord::getItemName, TextUtil.trim(q.getItemName()))
+                .like(StringUtils.hasText(q.getInstrumentName()), BizLisQcRecord::getInstrumentName, TextUtil.trim(q.getInstrumentName()))
                 .eq(q.getStatus() != null, BizLisQcRecord::getStatus, q.getStatus())
                 .eq(q.getHandleStatus() != null, BizLisQcRecord::getHandleStatus, q.getHandleStatus())
                 .ge(q.getStartDate() != null, BizLisQcRecord::getQcDate, q.getStartDate())
                 .le(q.getEndDate() != null, BizLisQcRecord::getQcDate, q.getEndDate())
                 .orderByDesc(BizLisQcRecord::getQcTime)
                 .orderByDesc(BizLisQcRecord::getId);
-        Page<BizLisQcRecord> page = recordMapper.selectPage(
+        Page<BizLisQcRecord> page = bizLisQcRecordMapper.selectPage(
                 new Page<>(q.getPageNum(), q.getPageSize()), w);
         List<LisQcVO.RecordVO> vos = new ArrayList<>();
         for (BizLisQcRecord r : page.getRecords()) {
@@ -239,10 +240,10 @@ public class LisQcServiceImpl implements LisQcService {
     private LisQcVO.RecordVO toRecordVo(BizLisQcRecord r) {
         LisQcVO.RecordVO vo = new LisQcVO.RecordVO();
         BeanUtils.copyProperties(r, vo);
-        vo.setQcLevelText(dictText.getDicDataLabel(DICT_LEVEL, r.getQcLevel()));
+        vo.setQcLevelText(dictCacheService.getDicDataLabel(DICT_LEVEL, r.getQcLevel()));
         vo.setStatusText(r.getStatus() == null || r.getStatus() == 0 ? "未判定"
-                : dictText.getDicDataLabel(DICT_STATUS, r.getStatus()));
-        vo.setHandleStatusText(dictText.getDicDataLabel(DICT_HANDLE, r.getHandleStatus()));
+                : dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()));
+        vo.setHandleStatusText(dictCacheService.getDicDataLabel(DICT_HANDLE, r.getHandleStatus()));
         return vo;
     }
 
@@ -260,11 +261,11 @@ public class LisQcServiceImpl implements LisQcService {
             throw new BusinessException("该失控记录已处理，不可重复处理");
         }
         r.setHandleStatus(2);
-        r.setHandleCause(clip(dto.getHandleCause()));
-        r.setHandleMeasure(clip(dto.getHandleMeasure()));
+        r.setHandleCause(TextUtil.cut(dto.getHandleCause(), 480));
+        r.setHandleMeasure(TextUtil.cut(dto.getHandleMeasure(), 480));
         r.setHandleBy(operatorUser.getRealName());
         r.setHandleTime(LocalDateTime.now().withNano(0));
-        recordMapper.updateById(r);
+        bizLisQcRecordMapper.updateById(r);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -278,7 +279,7 @@ public class LisQcServiceImpl implements LisQcService {
             throw new BusinessException("仅「失控」记录需要复核");
         }
         if (r.getHandleStatus() == null || r.getHandleStatus() != 2) {
-            throw new BusinessException("复核前必须先完成处理（当前：" + dictText.getDicDataLabel(DICT_HANDLE, r.getHandleStatus()) + "）");
+            throw new BusinessException("复核前必须先完成处理（当前：" + dictCacheService.getDicDataLabel(DICT_HANDLE, r.getHandleStatus()) + "）");
         }
         String who = operatorUser.getRealName();
         if (who != null && who.equals(r.getHandleBy())) {
@@ -286,24 +287,24 @@ public class LisQcServiceImpl implements LisQcService {
         }
         r.setReviewBy(who);
         r.setReviewTime(LocalDateTime.now().withNano(0));
-        recordMapper.updateById(r);
+        bizLisQcRecordMapper.updateById(r);
     }
 
     // 统计
 
     public LisQcVO.StatsVO stats() {
         LisQcVO.StatsVO vo = new LisQcVO.StatsVO();
-        vo.setPlanCount(planMapper.selectCount(new LambdaQueryWrapper<BizLisQcPlan>()
+        vo.setPlanCount(bizLisQcPlanMapper.selectCount(new LambdaQueryWrapper<BizLisQcPlan>()
                 .eq(BizLisQcPlan::getStatus, 1)));
-        vo.setTodayCount(recordMapper.selectCount(new LambdaQueryWrapper<BizLisQcRecord>()
+        vo.setTodayCount(bizLisQcRecordMapper.selectCount(new LambdaQueryWrapper<BizLisQcRecord>()
                 .eq(BizLisQcRecord::getQcDate, LocalDate.now())));
-        vo.setInControl(recordMapper.selectCount(new LambdaQueryWrapper<BizLisQcRecord>()
+        vo.setInControl(bizLisQcRecordMapper.selectCount(new LambdaQueryWrapper<BizLisQcRecord>()
                 .eq(BizLisQcRecord::getQcDate, LocalDate.now()).eq(BizLisQcRecord::getStatus, 1)));
-        vo.setWarning(recordMapper.selectCount(new LambdaQueryWrapper<BizLisQcRecord>()
+        vo.setWarning(bizLisQcRecordMapper.selectCount(new LambdaQueryWrapper<BizLisQcRecord>()
                 .eq(BizLisQcRecord::getQcDate, LocalDate.now()).eq(BizLisQcRecord::getStatus, 2)));
-        vo.setOutOfControl(recordMapper.selectCount(new LambdaQueryWrapper<BizLisQcRecord>()
+        vo.setOutOfControl(bizLisQcRecordMapper.selectCount(new LambdaQueryWrapper<BizLisQcRecord>()
                 .eq(BizLisQcRecord::getQcDate, LocalDate.now()).eq(BizLisQcRecord::getStatus, 3)));
-        vo.setPendingHandle(recordMapper.selectCount(new LambdaQueryWrapper<BizLisQcRecord>()
+        vo.setPendingHandle(bizLisQcRecordMapper.selectCount(new LambdaQueryWrapper<BizLisQcRecord>()
                 .eq(BizLisQcRecord::getHandleStatus, 1)));
         if (vo.getTodayCount() > 0) {
             vo.setInControlRate(BigDecimal.valueOf(vo.getInControl())
@@ -322,7 +323,7 @@ public class LisQcServiceImpl implements LisQcService {
         if (id == null) {
             throw new BusinessException("质控计划ID不能为空");
         }
-        BizLisQcPlan p = planMapper.selectById(id);
+        BizLisQcPlan p = bizLisQcPlanMapper.selectById(id);
         if (p == null) {
             throw new BusinessException("质控计划不存在：" + id);
         }
@@ -334,7 +335,7 @@ public class LisQcServiceImpl implements LisQcService {
         if (id == null) {
             throw new BusinessException("质控记录ID不能为空");
         }
-        BizLisQcRecord r = recordMapper.selectById(id);
+        BizLisQcRecord r = bizLisQcRecordMapper.selectById(id);
         if (r == null) {
             throw new BusinessException("质控记录不存在：" + id);
         }
@@ -342,19 +343,12 @@ public class LisQcServiceImpl implements LisQcService {
     }
 
     private String voStatusText(Integer status) {
-        return status == null || status == 0 ? "未判定" : dictText.getDicDataLabel(DICT_STATUS, status);
-    }
-
-    /**
-     * null 安全 trim：查询条件的 value 参数是急切求值的，直接 x.trim() 会在 x 为 null 时 NPE
-     */
-    private String tr(String s) {
-        return s == null ? null : s.trim();
+        return status == null || status == 0 ? "未判定" : dictCacheService.getDicDataLabel(DICT_STATUS, status);
     }
 
     private String nextPlanNo(String itemCode, Integer qcLevel) {
         String base = "QC" + (itemCode == null ? "NA" : itemCode) + "-" + qcLevel;
-        BizLisQcPlan same = planMapper.selectOne(new LambdaQueryWrapper<BizLisQcPlan>()
+        BizLisQcPlan same = bizLisQcPlanMapper.selectOne(new LambdaQueryWrapper<BizLisQcPlan>()
                 .eq(BizLisQcPlan::getPlanNo, base).last("LIMIT 1"));
         if (same == null) {
             return base;
@@ -362,10 +356,4 @@ public class LisQcServiceImpl implements LisQcService {
         return base + "-" + System.currentTimeMillis() % 100000;
     }
 
-    private String clip(String s) {
-        if (s == null) {
-            return null;
-        }
-        return s.length() > 480 ? s.substring(0, 480) : s;
-    }
 }

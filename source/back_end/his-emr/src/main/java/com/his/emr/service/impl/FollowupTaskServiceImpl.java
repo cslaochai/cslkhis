@@ -12,8 +12,7 @@ import com.his.appoint.enums.VisitTypeEnum;
 import com.his.appoint.service.AppointService;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
-import com.his.common.util.SensitiveMaskUtil;
+import com.his.common.util.*;
 import com.his.emr.dto.FollowupQueryDTO;
 import com.his.emr.dto.FollowupTaskDTO;
 import com.his.emr.entity.BizFollowupTask;
@@ -22,14 +21,7 @@ import com.his.emr.mapper.BizFollowupTaskMapper;
 import com.his.emr.service.FollowupTaskService;
 import com.his.emr.service.SurveyService;
 import com.his.emr.support.FollowupTaskSnapshot;
-import com.his.emr.vo.BizFollowupTaskVO;
-import com.his.emr.vo.DischargePendingFollowupVO;
-import com.his.emr.vo.DischargeSnapshotVO;
-import com.his.emr.vo.FollowupDeptPendingVO;
-import com.his.emr.vo.FollowupStatCountVO;
-import com.his.emr.vo.FollowupStatVO;
-import com.his.emr.vo.FollowupTypeCountVO;
-import com.his.emr.vo.PatientSnapshotVO;
+import com.his.emr.vo.*;
 import com.his.system.provider.DeptScopeProvider;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -75,7 +67,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     private final DeptScopeProvider deptScopeProvider;
     private final AppointService appointService;
 
-    private final BizFollowupTaskMapper taskMapper;
+    private final BizFollowupTaskMapper bizFollowupTaskMapper;
 
     /**
      * 满意度评价：随访完成时自动发一张卷（方向单向，评价侧不回依赖本服务，见 FollowupTaskSnapshot）
@@ -91,25 +83,6 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
      * 电话外呼通道（G-15）：mock=人工登记待呼，真实线路接入前绝不假装已呼出
      */
     private final com.his.emr.service.FollowupCallChannelService followupCallChannelService;
-
-    private static long nz(Long v) {
-        return v == null ? 0L : v;
-    }
-
-    private static long nz(Integer v) {
-        return v == null ? 0L : v.longValue();
-    }
-
-    /**
-     * 写库前先截到列宽：超长原因让服务端截断，而不是让 insert 报 Data too long 变成 500
-     */
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        String s = v.trim();
-        return s.length() <= max ? s : s.substring(0, max);
-    }
 
     @Override
     public PageResult<BizFollowupTaskVO> listPage(FollowupQueryDTO dto) {
@@ -143,20 +116,20 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     public FollowupStatVO stat() {
         List<Long> scope = scopedDeptIds(null);
         FollowupStatVO vo = new FollowupStatVO();
-        FollowupStatCountVO row = taskMapper.statOverview(scope);
-        long pending = nz(row.getPending());
-        long doing = nz(row.getDoing());
-        long done = nz(row.getDone());
-        long cancelled = nz(row.getCancelled());
+        FollowupStatCountVO row = bizFollowupTaskMapper.statOverview(scope);
+        long pending = NumUtil.orZero(row.getPending());
+        long doing = NumUtil.orZero(row.getDoing());
+        long done = NumUtil.orZero(row.getDone());
+        long cancelled = NumUtil.orZero(row.getCancelled());
         vo.setPendingCount(pending);
         vo.setDoingCount(doing);
         vo.setDoneCount(done);
         vo.setCancelledCount(cancelled);
-        vo.setTotalCount(nz(row.getTotal()));
-        vo.setTodayDueCount(nz(row.getTodayDue()));
-        vo.setOverdueCount(nz(row.getOverdue()));
-        vo.setDoneTodayCount(nz(row.getDoneToday()));
-        vo.setRevisitCount(nz(row.getRevisitCnt()));
+        vo.setTotalCount(NumUtil.orZero(row.getTotal()));
+        vo.setTodayDueCount(NumUtil.orZero(row.getTodayDue()));
+        vo.setOverdueCount(NumUtil.orZero(row.getOverdue()));
+        vo.setDoneTodayCount(NumUtil.orZero(row.getDoneToday()));
+        vo.setRevisitCount(NumUtil.orZero(row.getRevisitCnt()));
         long shouldDo = pending + doing + done;
         vo.setCompleteRate(shouldDo == 0 ? BigDecimal.ZERO
                 : BigDecimal.valueOf(done).multiply(new BigDecimal("100"))
@@ -165,8 +138,8 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         // 类型分布必须四档全出（含 0）：GROUP BY 只回有任务的类型，看板上"少了两档"
         // 会被读成「本院没有这类随访」，而事实是这类今天恰好没活。
         Map<Integer, Long> typeCount = new HashMap<>();
-        for (FollowupTypeCountVO r : taskMapper.countByType(scope)) {
-            typeCount.put(r.getFollowupType(), nz(r.getCnt()));
+        for (FollowupTypeCountVO r : bizFollowupTaskMapper.countByType(scope)) {
+            typeCount.put(r.getFollowupType(), NumUtil.orZero(r.getCnt()));
         }
         // 按码值升序出，与旧 Map 键序一致（枚举声明序不等于码值序，不能直接 values()）
         List<FollowupStatVO.StatItem> byType = new ArrayList<>();
@@ -180,16 +153,16 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         vo.setByType(byType);
 
         List<FollowupStatVO.DeptPending> byDept = new ArrayList<>();
-        for (FollowupDeptPendingVO r : taskMapper.countDeptPending(scope)) {
+        for (FollowupDeptPendingVO r : bizFollowupTaskMapper.countDeptPending(scope)) {
             FollowupStatVO.DeptPending item = new FollowupStatVO.DeptPending();
             item.setDeptId(r.getDeptId());
             item.setDeptName(r.getDeptName());
-            item.setPendingCount(nz(r.getPendingCount()));
-            item.setDoneCount(nz(r.getDoneCount()));
+            item.setPendingCount(NumUtil.orZero(r.getPendingCount()));
+            item.setDoneCount(NumUtil.orZero(r.getDoneCount()));
             byDept.add(item);
         }
         vo.setByDeptPending(byDept);
-        vo.setStatTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        vo.setStatTime(TimeUtil.nowSeconds());
         return vo;
     }
 
@@ -218,7 +191,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             }
         }
         task.setFollowupType(dto.getFollowupType());
-        task.setFollowupTime(dto.getFollowupTime().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        task.setFollowupTime(TimeUtil.toSeconds(dto.getFollowupTime()));
         task.setFollowupContent(dto.getFollowupContent());
         if (StringUtils.hasText(dto.getPhone())) {
             task.setPhone(dto.getPhone().trim());
@@ -232,7 +205,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             this.save(task);
         } else {
             task.setUpdateBy(who);
-            task.setUpdateTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+            task.setUpdateTime(TimeUtil.nowSeconds());
             this.updateById(task);
         }
         return toVo(task, true);
@@ -247,7 +220,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizFollowupTask createFromDischarge(FollowupTaskDTO.FromDischarge dto, String operator) {
-        DischargeSnapshotVO snap = taskMapper.selectDischargeSnapshot(dto.getDischargeId());
+        DischargeSnapshotVO snap = bizFollowupTaskMapper.selectDischargeSnapshot(dto.getDischargeId());
         if (snap == null || snap.getPatientId() == null) {
             throw new BusinessException("出院记录不存在（dischargeId=" + dto.getDischargeId() + "）");
         }
@@ -277,7 +250,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         String diagnosis = snap.getDiagnosis();
         task.setDiagnosis(diagnosis);
         task.setFollowupType(type);
-        task.setFollowupTime(dischargeTime.plusDays(days).truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        task.setFollowupTime(TimeUtil.toSeconds(dischargeTime.plusDays(days)));
         task.setFollowupContent(StringUtils.hasText(dto.getFollowupContent())
                 ? dto.getFollowupContent() : buildDefaultContent(type, diagnosis));
         task.setFollowupStatus(FollowupTaskStatusEnum.PENDING.getCode());
@@ -295,7 +268,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
 
     @Override
     public int autoCreateFromDischarge(int limit) {
-        List<DischargePendingFollowupVO> rows = taskMapper.selectDischargesWithoutTask(limit);
+        List<DischargePendingFollowupVO> rows = bizFollowupTaskMapper.selectDischargesWithoutTask(limit);
         int created = 0;
         for (DischargePendingFollowupVO row : rows) {
             Long dischargeId = row.getDischargeId();
@@ -305,7 +278,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             try {
                 FollowupTaskDTO.FromDischarge dto = new FollowupTaskDTO.FromDischarge();
                 dto.setDischargeId(dischargeId);
-                dto.setFollowupType(nz(row.getHasOperation()) > 0 ? 4 : 1);
+                dto.setFollowupType(NumUtil.orZero(row.getHasOperation()) > 0 ? 4 : 1);
                 createFromDischarge(dto, SYSTEM_AUTO_FOLLOWUP_OPERATOR);
                 created++;
             } catch (Exception e) {
@@ -380,7 +353,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         }
 
         task.setFollowupStatus(FollowupTaskStatusEnum.DONE.getCode());
-        task.setExecuteTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        task.setExecuteTime(TimeUtil.nowSeconds());
         task.setExecuteResult(result);
         boolean updated = this.updateById(task);
         try {
@@ -401,7 +374,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         }
 
         task.setFollowupStatus(FollowupTaskStatusEnum.CANCELLED.getCode());
-        task.setRemark(StringUtils.hasText(reason) ? cut(reason, 512) : "已取消");
+        task.setRemark(StringUtils.hasText(reason) ? TextUtil.cut(reason, 512) : "已取消");
         return this.updateById(task);
     }
 
@@ -429,8 +402,8 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         if (Integer.valueOf(FollowupTaskStatusEnum.CANCELLED.getCode()).equals(task.getFollowupStatus())) {
             throw new BusinessException("已取消的随访任务不再收集反馈");
         }
-        task.setPatientReply(cut(replyText, 500));
-        task.setPatientReplyTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        task.setPatientReply(TextUtil.cut(replyText, 500));
+        task.setPatientReplyTime(TimeUtil.nowSeconds());
         return this.updateById(task);
     }
 
@@ -448,7 +421,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         FollowupCallChannelEnum channel = followupCallChannelService.dial(task);
         task.setCallChannel(channel.getCode());
         task.setCallStatus(FollowupCallStatusEnum.WAITING.getCode());
-        task.setCallTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        task.setCallTime(TimeUtil.nowSeconds());
         task.setCallAttempts(task.getCallAttempts() == null ? 1 : task.getCallAttempts() + 1);
         touch(task);
         this.updateById(task);
@@ -465,11 +438,11 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         boolean connected = Boolean.TRUE.equals(dto.getConnected());
         task.setCallStatus(connected ? FollowupCallStatusEnum.CONNECTED.getCode()
                 : FollowupCallStatusEnum.NO_ANSWER.getCode());
-        task.setCallTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        task.setCallTime(TimeUtil.nowSeconds());
         // 追加不覆盖：出院自动生成的任务靠 remark 前缀锚定幂等，整列覆写会把锚洗掉
         if (StringUtils.hasText(dto.getRemark())) {
-            String extra = "[外呼" + (connected ? "已接通" : "未接通") + "] " + cut(dto.getRemark(), 200);
-            task.setRemark(cut(StringUtils.hasText(task.getRemark())
+            String extra = "[外呼" + (connected ? "已接通" : "未接通") + "] " + TextUtil.cut(dto.getRemark(), 200);
+            task.setRemark(TextUtil.cut(StringUtils.hasText(task.getRemark())
                     ? task.getRemark() + "\n" + extra : extra, 512));
         }
         touch(task);
@@ -484,7 +457,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
 
     private void touch(BizFollowupTask task) {
         task.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        task.setUpdateTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        task.setUpdateTime(TimeUtil.nowSeconds());
     }
 
     /**
@@ -525,7 +498,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         task.setRevisitRecordId(dto.getRevisitRecordId());
         task.setRevisitAppointId(appoint.getId());
         task.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        task.setUpdateTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        task.setUpdateTime(TimeUtil.nowSeconds());
         this.updateById(task);
         return toVo(task, true);
     }
@@ -571,7 +544,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
      * 当前登录岗位所在科室 —— 没有科室的任务对受限角色永久不可见，等于把人刚建的单子藏起来。
      */
     private void fillPatientSnapshot(BizFollowupTask task) {
-        PatientSnapshotVO snap = taskMapper.selectPatientSnapshot(task.getPatientId());
+        PatientSnapshotVO snap = bizFollowupTaskMapper.selectPatientSnapshot(task.getPatientId());
         if (snap == null) {
             throw new BusinessException("患者不存在（patientId=" + task.getPatientId() + "）");
         }
@@ -586,7 +559,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         } else {
             Long ownDept = UserUtils.getCurrentUser() == null ? null : UserUtils.getCurrentUser().getDeptId();
             task.setDeptId(ownDept);
-            task.setDeptName(ownDept == null ? null : taskMapper.selectDeptName(ownDept));
+            task.setDeptName(ownDept == null ? null : bizFollowupTaskMapper.selectDeptName(ownDept));
         }
     }
 

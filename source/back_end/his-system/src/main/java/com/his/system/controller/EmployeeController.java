@@ -25,38 +25,38 @@ import java.util.List;
 @PreAuthorize("isAuthenticated()")
 public class EmployeeController {
 
-    private final SysEmployeeService employeeService;
+    private final SysEmployeeService sysEmployeeService;
 
     @Operation(summary = "分页查询员工列表")
     @GetMapping("/listPage")
     public Result<PageResult<EmployeeVO>> listPage(@Valid EmployeeQueryDTO queryDTO) {
-        return Result.success(employeeService.listPage(queryDTO));
+        return Result.success(sysEmployeeService.listPage(queryDTO));
     }
 
     @Operation(summary = "分页查询员工列表")
     @GetMapping("/selectList")
     public Result<List<EmployeeVO>> selectList(@Valid EmployeeQueryDTO queryDTO) {
-        return Result.success(employeeService.selectList(queryDTO));
+        return Result.success(sysEmployeeService.selectList(queryDTO));
     }
 
     @Operation(summary = "获取员工详情")
     @GetMapping("/getById")
     public Result<EmployeeVO> getInfo(@RequestParam Long id) {
-        return Result.success(employeeService.getInfo(id));
+        return Result.success(sysEmployeeService.getInfo(id));
     }
 
     @Operation(summary = "新增或修改员工")
     @PreAuthorize("hasAuthority('org:employee:add')")
     @PostMapping("/employeeUpsert")
     public Result<Void> employeeUpsert(@RequestBody @Valid EmployeeUpsertDTO upsertDTO) {
-        return Result.success(employeeService.upsert(upsertDTO), null);
+        return Result.success(sysEmployeeService.upsert(upsertDTO), null);
     }
 
     @Operation(summary = "删除员工")
     @PreAuthorize("hasAuthority('org:employee:delete')")
     @DeleteMapping("/deleteById")
     public Result<Void> remove(@RequestParam Long id) {
-        employeeService.delete(id);
+        sysEmployeeService.delete(id);
         return Result.success("删除成功", null);
     }
 }

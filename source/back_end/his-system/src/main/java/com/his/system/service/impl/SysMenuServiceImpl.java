@@ -1,14 +1,15 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
-import com.his.system.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
 import com.his.system.dto.MenuUpsertDTO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysMenu;
 import com.his.system.mapper.SysMenuMapper;
 import com.his.system.service.RolePermissionCache;
 import com.his.system.service.SysMenuService;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.MenuVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -22,14 +23,14 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class SysMenuServiceImpl implements SysMenuService {
+public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> implements SysMenuService {
 
-    private final SysMenuMapper menuMapper;
+    private final SysMenuMapper sysMenuMapper;
     private final RolePermissionCache rolePermissionCache;
 
     @Override
     public List<MenuVO> tree() {
-        List<SysMenu> allMenus = menuMapper.selectList(
+        List<SysMenu> allMenus = sysMenuMapper.selectList(
                 new LambdaQueryWrapper<SysMenu>().orderByAsc(SysMenu::getSortOrder)
                         .orderByAsc(SysMenu::getId));
         List<MenuVO> voList = allMenus.stream().map(this::toVO).collect(Collectors.toList());
@@ -38,7 +39,7 @@ public class SysMenuServiceImpl implements SysMenuService {
 
     @Override
     public MenuVO getInfo(Long menuId) {
-        SysMenu menu = menuMapper.selectById(menuId);
+        SysMenu menu = sysMenuMapper.selectById(menuId);
         return toVO(menu);
     }
 
@@ -50,8 +51,8 @@ public class SysMenuServiceImpl implements SysMenuService {
         }
         String roleCode = user.getCurrentRole();
         List<SysMenu> menus = StringUtils.hasText(roleCode)
-                ? menuMapper.selectMenusByEmployeeIdAndRole(user.getEmployeeId(), roleCode)
-                : menuMapper.selectMenusByEmployeeId(user.getEmployeeId());
+                ? sysMenuMapper.selectMenusByEmployeeIdAndRole(user.getEmployeeId(), roleCode)
+                : sysMenuMapper.selectMenusByEmployeeId(user.getEmployeeId());
         List<MenuVO> voList = menus.stream().map(this::toVO).collect(Collectors.toList());
         return buildMenuTree(voList, 0L);
     }
@@ -61,12 +62,12 @@ public class SysMenuServiceImpl implements SysMenuService {
         SysMenu menu = new SysMenu();
         BeanUtils.copyProperties(upsertDTO, menu);
         if (menu.getId() == null) {
-            menuMapper.insert(menu);
+            sysMenuMapper.insert(menu);
             // 菜单新增会改变各角色可见的按钮集合，全量失效
             rolePermissionCache.invalidateAll();
             return "新增成功";
         }
-        menuMapper.updateById(menu);
+        sysMenuMapper.updateById(menu);
         // 菜单的权限码可能被改了:所有角色的权限集合都可能变化,全量失效(角色数级,量小)
         rolePermissionCache.invalidateAll();
         return "修改成功";
@@ -74,13 +75,13 @@ public class SysMenuServiceImpl implements SysMenuService {
 
     @Override
     public void delete(Long menuId) {
-        Long childCount = menuMapper.selectCount(new LambdaQueryWrapper<SysMenu>()
+        Long childCount = sysMenuMapper.selectCount(new LambdaQueryWrapper<SysMenu>()
                 .eq(SysMenu::getParentId, menuId));
         if (childCount > 0) {
             throw new BusinessException("该菜单下有子菜单，不能删除");
         }
 
-        menuMapper.deleteById(menuId);
+        sysMenuMapper.deleteById(menuId);
         // 菜单没了,持有它的角色权限集合变小,全量失效
         rolePermissionCache.invalidateAll();
     }

@@ -4,10 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.InpatientTransferAcceptDTO;
 import com.his.patient.dto.InpatientTransferCancelDTO;
@@ -58,7 +60,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InpatientTransferServiceImpl implements InpatientTransferService {
+public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransferMapper, BizInpatientTransfer> implements InpatientTransferService {
 
     // 转科状态
 
@@ -72,14 +74,14 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
 
     // 病案首页
 
-    private final BizInpatientTransferMapper transferMapper;
-    private final BizAdmissionMapper admissionMapper;
-    private final SysBedMapper bedMapper;
-    private final BizPatientMapper patientMapper;
-    private final BizInpatientRecordMapper recordMapper;
-    private final BizInpatientSummaryMapper summaryMapper;
-    private final BizInpatientOrderMapper orderMapper;
-    private final InpatientOrderService orderService;
+    private final BizInpatientTransferMapper bizInpatientTransferMapper;
+    private final BizAdmissionMapper bizAdmissionMapper;
+    private final SysBedMapper sysBedMapper;
+    private final BizPatientMapper bizPatientMapper;
+    private final BizInpatientRecordMapper bizInpatientRecordMapper;
+    private final BizInpatientSummaryMapper bizInpatientSummaryMapper;
+    private final BizInpatientOrderMapper bizInpatientOrderMapper;
+    private final InpatientOrderService inpatientOrderService;
 
     // 查询
 
@@ -88,7 +90,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (query == null) {
             query = new InpatientTransferQueryPageDTO();
         }
-        IPage<BizInpatientTransfer> page = transferMapper.selectTransferPage(
+        IPage<BizInpatientTransfer> page = bizInpatientTransferMapper.selectTransferPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         List<BizInpatientTransfer> records = page.getRecords();
 
@@ -106,7 +108,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (transferId == null) {
             throw new BusinessException("转科记录ID不能为空");
         }
-        BizInpatientTransfer entity = transferMapper.selectById(transferId);
+        BizInpatientTransfer entity = bizInpatientTransferMapper.selectById(transferId);
         if (entity == null) {
             throw new BusinessException("转科记录不存在");
         }
@@ -121,7 +123,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        List<BizInpatientTransfer> list = transferMapper.selectByAdmission(admissionId);
+        List<BizInpatientTransfer> list = bizInpatientTransferMapper.selectByAdmission(admissionId);
         if (list.isEmpty()) {
             return List.of();
         }
@@ -134,7 +136,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
 
     @Override
     public long countPending(Long toDeptId, Long admissionId) {
-        return transferMapper.countPending(toDeptId, admissionId);
+        return bizInpatientTransferMapper.countPending(toDeptId, admissionId);
     }
 
     // 发起
@@ -148,7 +150,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         }
         int type = dto.getTransferType() == null ? 1 : dto.getTransferType();
 
-        BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
@@ -160,17 +162,17 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (Objects.equals(admission.getDeptId(), dto.getToDeptId())) {
             throw new BusinessException("转入科室与原科室相同，同科室挪床请走「换床」");
         }
-        if (transferMapper.countPendingByAdmission(dto.getAdmissionId()) > 0) {
+        if (bizInpatientTransferMapper.countPendingByAdmission(dto.getAdmissionId()) > 0) {
             throw new BusinessException("该患者已有一条待接收的转科申请，请先由转入科室接收或取消");
         }
 
-        SysBed bed = bedMapper.selectById(dto.getToBedId());
+        SysBed bed = sysBedMapper.selectById(dto.getToBedId());
         if (bed == null) {
             throw new BusinessException("转入床位不存在");
         }
         checkTargetBed(bed, dto.getToDeptId(), dto.getToWardId());
 
-        WardVO toWard = bedMapper.selectWardById(dto.getToWardId());
+        WardVO toWard = sysBedMapper.selectWardById(dto.getToWardId());
         if (toWard == null) {
             throw new BusinessException("转入病区不存在");
         }
@@ -179,7 +181,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
                     + "」属于 " + toWard.getDeptName() + "）");
         }
 
-        BizPatient patient = patientMapper.selectById(admission.getPatientId());
+        BizPatient patient = bizPatientMapper.selectById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
@@ -220,7 +222,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
-        transferMapper.insert(entity);
+        bizInpatientTransferMapper.insert(entity);
 
         log.info("转科申请已提交 transferNo={} admissionId={} {} → {} 床位 {} 发起人={}",
                 entity.getTransferNo(), admission.getAdmissionId(),
@@ -237,7 +239,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizInpatientTransfer entity = transferMapper.selectById(dto.getTransferId());
+        BizInpatientTransfer entity = bizInpatientTransferMapper.selectById(dto.getTransferId());
         if (entity == null) {
             throw new BusinessException("转科记录不存在");
         }
@@ -247,7 +249,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
                     + "」，只有「待接收」可以接收");
         }
 
-        BizAdmission admission = admissionMapper.selectById(entity.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(entity.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在，无法接收转科");
         }
@@ -256,7 +258,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         }
 
         // ★ 关键：重新校验目标床位。save 时它空闲，现在可能已被别人占用。
-        SysBed newBed = bedMapper.selectById(entity.getToBedId());
+        SysBed newBed = sysBedMapper.selectById(entity.getToBedId());
         if (newBed == null) {
             throw new BusinessException("转入床位已不存在，请取消本次转科并重新申请");
         }
@@ -279,16 +281,16 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         admission.setDeptId(entity.getToDeptId());
         admission.setWardId(newBed.getWardId());
         admission.setBedId(newBed.getBedId());
-        admissionMapper.updateById(admission);
+        bizAdmissionMapper.updateById(admission);
         if (oldWardId != null && !Objects.equals(oldWardId, newBed.getWardId())) {
-            bedMapper.syncWardOccupied(oldWardId);
+            sysBedMapper.syncWardOccupied(oldWardId);
         }
 
         // 4) 病案首页：草稿态才同步（dept = 出院科别），并补入院科别
         String summaryNote = syncSummary(entity, admission, newBed);
 
         // 5) 回写转科记录病历（record_type=10）
-        BizPatient patient = patientMapper.selectById(admission.getPatientId());
+        BizPatient patient = bizPatientMapper.selectById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在，无法回写转科病历");
         }
@@ -308,7 +310,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (summaryNote != null) {
             entity.setRemark(appendNote(entity.getRemark(), summaryNote));
         }
-        transferMapper.updateById(entity);
+        bizInpatientTransferMapper.updateById(entity);
 
         log.info("转科已生效 transferNo={} admissionId={} {} → {} 停医嘱={} 回写病历={} 接收人={}",
                 entity.getTransferNo(), admission.getAdmissionId(), entity.getFromDeptName(),
@@ -325,7 +327,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizInpatientTransfer entity = transferMapper.selectById(dto.getTransferId());
+        BizInpatientTransfer entity = bizInpatientTransferMapper.selectById(dto.getTransferId());
         if (entity == null) {
             throw new BusinessException("转科记录不存在");
         }
@@ -336,7 +338,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         }
         entity.setTransferStatus(TransferStatusEnum.CANCELLED.getCode());
         entity.setCancelReason(dto.getCancelReason());
-        transferMapper.updateById(entity);
+        bizInpatientTransferMapper.updateById(entity);
 
         log.info("转科申请已取消 transferNo={} 原因={} 操作人={}",
                 entity.getTransferNo(), dto.getCancelReason(), operatorUser.getRealName());
@@ -353,10 +355,10 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
      */
     private String settleLongOrders(BizInpatientTransfer entity) {
         String reason = "转科：" + entity.getFromDeptName() + " → " + entity.getToDeptName();
-        int affected = orderService.stopLongOrders(entity.getAdmissionId(), reason);
+        int affected = inpatientOrderService.stopLongOrders(entity.getAdmissionId(), reason);
 
         // 再查一次：仍有「待校对」的长期医嘱就是没处置掉的（stop 刻意不碰它们）
-        List<BizInpatientOrder> left = orderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
+        List<BizInpatientOrder> left = bizInpatientOrderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
                 .eq(BizInpatientOrder::getAdmissionId, entity.getAdmissionId())
                 .eq(BizInpatientOrder::getOrderType, OrderTypeEnum.LONG.getCode())
                 .in(BizInpatientOrder::getOrderStatus, InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), InpatientOrderStatusEnum.VERIFIED.getCode(), InpatientOrderStatusEnum.EXECUTING.getCode())
@@ -413,12 +415,12 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
      * 病区.occupied_beds 只是冗余展示字段）—— 改一处必须两处一起改。
      */
     private void occupyBed(SysBed bed, Long patientId, Long wardId) {
-        bedMapper.update(null, new LambdaUpdateWrapper<SysBed>()
+        sysBedMapper.update(null, new LambdaUpdateWrapper<SysBed>()
                 .eq(SysBed::getBedId, bed.getBedId())
                 .set(SysBed::getBedStatus, BedStatusEnum.OCCUPIED.getCode())
                 .set(SysBed::getPatientId, patientId)
                 .set(SysBed::getUpdateTime, LocalDateTime.now()));
-        bedMapper.syncWardOccupied(wardId);
+        sysBedMapper.syncWardOccupied(wardId);
     }
 
     /**
@@ -430,16 +432,16 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (bedId == null) {
             return;
         }
-        SysBed bed = bedMapper.selectById(bedId);
+        SysBed bed = sysBedMapper.selectById(bedId);
         if (bed == null) {
             return;
         }
-        bedMapper.update(null, new LambdaUpdateWrapper<SysBed>()
+        sysBedMapper.update(null, new LambdaUpdateWrapper<SysBed>()
                 .eq(SysBed::getBedId, bedId)
                 .set(SysBed::getBedStatus, BedStatusEnum.FREE.getCode())
                 .set(SysBed::getPatientId, null)
                 .set(SysBed::getUpdateTime, LocalDateTime.now()));
-        bedMapper.syncWardOccupied(bed.getWardId());
+        sysBedMapper.syncWardOccupied(bed.getWardId());
     }
 
     // 内部：病案首页
@@ -452,7 +454,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
      * 但要把这件事写进转科单备注 —— 悄悄不更新最危险：出院科别会永远停在入院科室。
      */
     private String syncSummary(BizInpatientTransfer entity, BizAdmission admission, SysBed newBed) {
-        BizInpatientSummary summary = summaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
+        BizInpatientSummary summary = bizInpatientSummaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
                 .eq(BizInpatientSummary::getAdmissionId, admission.getAdmissionId()));
         if (summary == null) {
             return null;
@@ -473,7 +475,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         summary.setWardId(entity.getToWardId());
         summary.setWardName(entity.getToWardName());
         summary.setBedNo(entity.getToBedNo());
-        summaryMapper.updateById(summary);
+        bizInpatientSummaryMapper.updateById(summary);
         return null;
     }
 
@@ -507,19 +509,19 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         record.setWardName(entity.getToWardName());
         record.setBedNo(entity.getToBedNo());
         record.setRecordType(InpatientRecordTypeEnum.TRANSFER.getCode());
-        record.setRecordTitle(truncate(entity.getFromDeptName() + " → " + entity.getToDeptName() + " 转科记录", 200));
+        record.setRecordTitle(TextUtil.cut(entity.getFromDeptName() + " → " + entity.getToDeptName() + " 转科记录", 200));
         record.setRecordTime(now);
 
         StringBuilder body = new StringBuilder();
-        body.append("转出：").append(nvl(entity.getFromDeptName()))
-                .append(" ").append(nvl(entity.getFromWardName()))
-                .append(" ").append(nvl(entity.getFromBedNo())).append("床\n");
-        body.append("转入：").append(nvl(entity.getToDeptName()))
-                .append(" ").append(nvl(entity.getToWardName()))
-                .append(" ").append(nvl(entity.getToBedNo())).append("床\n");
+        body.append("转出：").append(TextUtil.blankToDefault(entity.getFromDeptName(), "—"))
+                .append(" ").append(TextUtil.blankToDefault(entity.getFromWardName(), "—"))
+                .append(" ").append(TextUtil.blankToDefault(entity.getFromBedNo(), "—")).append("床\n");
+        body.append("转入：").append(TextUtil.blankToDefault(entity.getToDeptName(), "—"))
+                .append(" ").append(TextUtil.blankToDefault(entity.getToWardName(), "—"))
+                .append(" ").append(TextUtil.blankToDefault(entity.getToBedNo(), "—")).append("床\n");
         body.append("转科类型：").append(TransferTypeEnum.getText(entity.getTransferType()))
                 .append("；发起时已住院 ").append(entity.getHospitalDays() == null ? "—" : entity.getHospitalDays()).append(" 天\n");
-        body.append("医嘱处置：").append(nvl(orderRemark));
+        body.append("医嘱处置：").append(TextUtil.blankToDefault(orderRemark, "—"));
         record.setCourseNote(body.toString());
         // 转科原因写在 remark（结构化要素清单取的也是这一列，与会诊记录同口径）
         record.setRemark("系统回写：转科单号 " + entity.getTransferNo()
@@ -528,7 +530,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         record.setDoctorId(entity.getReceiveDoctorId() != null ? entity.getReceiveDoctorId() : operatorUser.getEmployeeId());
         record.setDoctorName(entity.getReceiveDoctorName() != null ? entity.getReceiveDoctorName() : operatorUser.getRealName());
         record.setSubmitTime(now);
-        recordMapper.insert(record);
+        bizInpatientRecordMapper.insert(record);
         return record;
     }
 
@@ -536,13 +538,13 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
 
     private String nextTransferNo() {
         String prefix = "ZK" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = transferMapper.countByNoPrefix(prefix) + 1;
+        long seq = bizInpatientTransferMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 
     private String nextRecordNo() {
         String prefix = "BL" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = recordMapper.countByRecordNoPrefix(prefix) + 1;
+        long seq = bizInpatientRecordMapper.countByRecordNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 
@@ -561,7 +563,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (deptId == null) {
             return "未知科室";
         }
-        String name = transferMapper.selectDeptName(deptId);
+        String name = bizInpatientTransferMapper.selectDeptName(deptId);
         return StringUtils.hasText(name) ? name : "未知科室(ID=" + deptId + ")";
     }
 
@@ -569,7 +571,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (wardId == null) {
             return null;
         }
-        WardVO ward = bedMapper.selectWardById(wardId);
+        WardVO ward = sysBedMapper.selectWardById(wardId);
         return ward == null ? null : ward.getWardName();
     }
 
@@ -577,7 +579,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (bedId == null) {
             return null;
         }
-        SysBed bed = bedMapper.selectById(bedId);
+        SysBed bed = sysBedMapper.selectById(bedId);
         return bed == null ? null : bed.getBedNo();
     }
 
@@ -591,7 +593,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
             // 调用方按主键取值，主键本身可能就是 null（如待接收/已取消的转科还没有回写病历，record_id 为 null）。
             return Collections.emptyMap();
         }
-        List<BizInpatientRecord> records = recordMapper.selectBatchIds(ids);
+        List<BizInpatientRecord> records = bizInpatientRecordMapper.selectBatchIds(ids);
         Map<Long, String> map = new LinkedHashMap<>();
         for (BizInpatientRecord r : records) {
             map.put(r.getId(), r.getRecordNo());
@@ -607,7 +609,7 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         if (ids.isEmpty()) {
             return Collections.emptyMap();
         }
-        List<BizAdmission> admissions = admissionMapper.selectBatchIds(ids);
+        List<BizAdmission> admissions = bizAdmissionMapper.selectBatchIds(ids);
         Map<Long, Integer> map = new LinkedHashMap<>();
         for (BizAdmission a : admissions) {
             map.put(a.getAdmissionId(), a.getAdmitStatus() == null ? 0 : a.getAdmitStatus());
@@ -642,14 +644,4 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
         return StringUtils.hasText(original) ? original + "；" + note : note;
     }
 
-    private String nvl(String s) {
-        return StringUtils.hasText(s) ? s : "—";
-    }
-
-    private String truncate(String s, int max) {
-        if (s == null) {
-            return null;
-        }
-        return s.length() <= max ? s : s.substring(0, max);
-    }
 }

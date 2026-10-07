@@ -26,11 +26,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SupplierServiceImpl extends ServiceImpl<SysSupplierMapper, SysSupplier> implements SupplierService {
 
-    private final SysSupplierMapper supplierMapper;
+    private final SysSupplierMapper sysSupplierMapper;
 
     @Override
     public PageResult<SysSupplierVO> page(SupplierQueryPageDTO queryDTO) {
-        Page<SysSupplierVO> page = supplierMapper.selectSupplierPage(
+        Page<SysSupplierVO> page = sysSupplierMapper.selectSupplierPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),
                 queryDTO.getKeyword(), queryDTO.getStatus());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
@@ -51,7 +51,7 @@ public class SupplierServiceImpl extends ServiceImpl<SysSupplierMapper, SysSuppl
 
     @Override
     public SysSupplierVO getDetailById(Long supplierId) {
-        SysSupplierVO vo = supplierMapper.selectSupplierById(supplierId);
+        SysSupplierVO vo = sysSupplierMapper.selectSupplierById(supplierId);
         if (vo == null) {
             throw new BusinessException("供应商不存在或已删除");
         }
@@ -62,7 +62,7 @@ public class SupplierServiceImpl extends ServiceImpl<SysSupplierMapper, SysSuppl
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(SupplierUpsertDTO dto) {
         String code = dto.getSupplierCode() == null ? null : dto.getSupplierCode().trim();
-        if (supplierMapper.countByCode(code, dto.getSupplierId()) > 0) {
+        if (sysSupplierMapper.countByCode(code, dto.getSupplierId()) > 0) {
             throw new BusinessException("供应商编码已存在：" + code);
         }
 
@@ -120,7 +120,7 @@ public class SupplierServiceImpl extends ServiceImpl<SysSupplierMapper, SysSuppl
         if (exist == null) {
             throw new BusinessException("供应商不存在或已删除");
         }
-        if (supplierMapper.countOrderRef(supplierId) > 0) {
+        if (sysSupplierMapper.countOrderRef(supplierId) > 0) {
             throw new BusinessException("该供应商已被采购订单引用，不能删除；如需停供请把状态改为「停用」");
         }
         if (!this.removeById(supplierId)) {

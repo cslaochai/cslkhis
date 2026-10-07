@@ -66,16 +66,16 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     private static final java.util.concurrent.atomic.AtomicInteger EXECUTION_SEQ =
             new java.util.concurrent.atomic.AtomicInteger(0);
 
-    private final BizInspectionRecordMapper inspectionRecordMapper;
-    private final BizLaboratoryRecordMapper laboratoryRecordMapper;
-    private final BizLabResultMapper labResultMapper;
-    private final BizReportMapper reportMapper;
-    private final BizInspectionApplyMapper inspectionApplyMapper;
-    private final BizLaboratoryApplyMapper laboratoryApplyMapper;
+    private final BizInspectionRecordMapper bizInspectionRecordMapper;
+    private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
+    private final BizLabResultMapper bizLabResultMapper;
+    private final BizReportMapper bizReportMapper;
+    private final BizInspectionApplyMapper bizInspectionApplyMapper;
+    private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
     private final SysMessageService sysMessageService;
-    private final LabReferenceRangeResolver referenceRangeResolver;
+    private final LabReferenceRangeResolver labReferenceRangeResolver;
     private final CriticalValueService criticalValueService;
-    private final EmrSignatureService signatureService;
+    private final EmrSignatureService emrSignatureService;
     /**
      * 放射分岗（sql/138）：只有它知道某个检查项目是不是放射（检查项目字典的项目类型）
      */
@@ -149,7 +149,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         // 查询关联报告
         LambdaQueryWrapper<BizReport> reportWrapper = new LambdaQueryWrapper<>();
         reportWrapper.eq(BizReport::getRecordId, recordId);
-        BizReport report = reportMapper.selectOne(reportWrapper);
+        BizReport report = bizReportMapper.selectOne(reportWrapper);
 
         InspectionDetailVO vo = new InspectionDetailVO();
         vo.setRecord(toInspectionRecordVO(record));
@@ -238,7 +238,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         report.setConclusion(resultConclusion);
         report.setSuggestions(suggestions);
         report.setReportStatus(ReportStatusEnum.PENDING_REVIEW.getCode());
-        reportMapper.insert(report);
+        bizReportMapper.insert(report);
 
         // 批次E（E4）：不再回写申请单 apply_status。原来这里把申请单写成「已出报告」，
         // 而申请单口径只有 1已提交/2已缴费/6已取消 —— 「已出报告」是执行态，
@@ -303,12 +303,12 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         // 更新关联的报告状态为已审核
         LambdaQueryWrapper<BizReport> reportWrapper = new LambdaQueryWrapper<>();
         reportWrapper.eq(BizReport::getRecordId, recordId);
-        BizReport report = reportMapper.selectOne(reportWrapper);
+        BizReport report = bizReportMapper.selectOne(reportWrapper);
         if (report != null) {
             report.setReportStatus(ReportStatusEnum.PUBLISHED.getCode()); // 已审核
             report.setAuditBy(auditBy);
             report.setAuditTime(LocalDateTime.now());
-            reportMapper.updateById(report);
+            bizReportMapper.updateById(report);
         }
 
         // 发送通知给开单医生
@@ -325,7 +325,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                 .eq(laboratoryDeptId != null, BizLaboratoryRecord::getLaboratoryDeptId, laboratoryDeptId)
                 .orderByDesc(BizLaboratoryRecord::getCreateTime);
 
-        Page<BizLaboratoryRecord> page = laboratoryRecordMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        Page<BizLaboratoryRecord> page = bizLaboratoryRecordMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
 
@@ -335,7 +335,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         wrapper.eq(patientId != null, BizLaboratoryRecord::getPatientId, patientId)
                 .eq(laboratoryDeptId != null, BizLaboratoryRecord::getLaboratoryDeptId, laboratoryDeptId)
                 .orderByDesc(BizLaboratoryRecord::getCreateTime);
-        return laboratoryRecordMapper.selectList(wrapper);
+        return bizLaboratoryRecordMapper.selectList(wrapper);
     }
 
     @Override
@@ -360,7 +360,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
 
     @Override
     public LaboratoryDetailVO getLaboratoryDetail(Long recordId) {
-        BizLaboratoryRecord record = laboratoryRecordMapper.selectById(recordId);
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("检验记录不存在");
         }
@@ -369,7 +369,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         LambdaQueryWrapper<BizLabResult> resultWrapper = new LambdaQueryWrapper<>();
         resultWrapper.eq(BizLabResult::getRecordId, recordId)
                 .orderByAsc(BizLabResult::getSortOrder);
-        List<BizLabResult> results = labResultMapper.selectList(resultWrapper);
+        List<BizLabResult> results = bizLabResultMapper.selectList(resultWrapper);
 
         LaboratoryDetailVO result = new LaboratoryDetailVO();
         result.setRecord(toLaboratoryRecordVO(record));
@@ -378,7 +378,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         // 查询关联报告
         LambdaQueryWrapper<BizReport> reportWrapper = new LambdaQueryWrapper<>();
         reportWrapper.eq(BizReport::getRecordId, recordId);
-        BizReport report = reportMapper.selectOne(reportWrapper);
+        BizReport report = bizReportMapper.selectOne(reportWrapper);
         result.setReport(toReportVO(report));
         result.setImages(examImageService.listByApply(ReportTypeEnum.LAB_TEST.getCode(), record.getApplyId()));
         return result;
@@ -445,7 +445,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     @Override
     public boolean saveResult(LabResultSaveDTO labResultSaveDTO) {
         // 查询检验记录，获取检验项目信息
-        BizLaboratoryRecord record = laboratoryRecordMapper.selectById(labResultSaveDTO.getRecordId());
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(labResultSaveDTO.getRecordId());
         if (record == null) {
             throw new BusinessException("检验记录不存在");
         }
@@ -478,14 +478,14 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean receiveSpecimen(Long recordId, String receiveBy) {
-        BizLaboratoryRecord record = laboratoryRecordMapper.selectById(recordId);
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("检验记录不存在");
         }
         record.setReceiveTime(LocalDateTime.now());
         record.setReceiveBy(receiveBy);
         record.setRecordStatus(3);
-        laboratoryRecordMapper.updateById(record);
+        bizLaboratoryRecordMapper.updateById(record);
         // 批次E：不再回写申请单（医技侧只维护自己的执行记录状态）
         return true;
     }
@@ -494,7 +494,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     @Transactional(rollbackFor = Exception.class)
     public boolean inputLabResult(Long recordId, String executeBy, List<BizLabResult> results,
                                   String diagnosis, String suggestions) {
-        BizLaboratoryRecord record = laboratoryRecordMapper.selectById(recordId);
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("检验记录不存在");
         }
@@ -504,7 +504,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setDiagnosis(diagnosis);
         record.setSuggestions(suggestions);
         record.setRecordStatus(LabRecordStatusEnum.RESULTED.getCode());
-        laboratoryRecordMapper.updateById(record);
+        bizLaboratoryRecordMapper.updateById(record);
 
         // 保存检验结果
         for (BizLabResult result : results) {
@@ -517,7 +517,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                 result.setLaboratoryItemName(record.getLaboratoryItemName());
             }
             judgeAbnormal(result, record);
-            labResultMapper.insert(result);
+            bizLabResultMapper.insert(result);
         }
 
         // 危急值识别与上报。放在结果落库之后、状态流转之前 ——
@@ -555,7 +555,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
      */
     private void judgeAbnormal(BizLabResult result, BizLaboratoryRecord record) {
         try {
-            LabReferenceRange range = referenceRangeResolver.resolve(
+            LabReferenceRange range = labReferenceRangeResolver.resolve(
                     result.getReferenceRange(),
                     result.getLaboratoryItemCode(),
                     result.getLaboratoryItemName(),
@@ -585,7 +585,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean auditLaboratory(Long recordId, String auditBy) {
-        BizLaboratoryRecord record = laboratoryRecordMapper.selectById(recordId);
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("检验记录不存在");
         }
@@ -596,7 +596,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setAuditBy(auditBy);
         record.setAuditTime(sign.getSignedTime());
         record.setRecordStatus(LabRecordStatusEnum.RELEASED.getCode());
-        laboratoryRecordMapper.updateById(record);
+        bizLaboratoryRecordMapper.updateById(record);
 
         // 发送通知给开单医生
         sendNotification(record.getApplyDoctorId(), record.getApplyDoctorName(), BizTypeEnum.REPORT.getType(), "检验报告",
@@ -658,7 +658,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         cmd.setSignerDeptId(deptId);
         cmd.setSignerDeptName(deptName);
         try {
-            return signatureService.sign(cmd);
+            return emrSignatureService.sign(cmd);
         } catch (BusinessException e) {
             throw new BusinessException(bizLabel + " " + bizNo + " " + scene.getText() + "失败：" + e.getMessage());
         }
@@ -673,7 +673,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                 .eq(reportStatus != null, BizReport::getReportStatus, reportStatus)
                 .orderByDesc(BizReport::getCreateTime);
 
-        Page<BizReport> page = reportMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        Page<BizReport> page = bizReportMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
 
@@ -690,7 +690,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
 
     @Override
     public BizReport getReportDetail(Long reportId) {
-        return reportMapper.selectById(reportId);
+        return bizReportMapper.selectById(reportId);
     }
 
     @Override
@@ -715,7 +715,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         if (report.getRecordId() == null || !ReportTypeEnum.LAB_TEST.getCode().equals(report.getReportType())) {
             return List.of();
         }
-        return labResultMapper.selectList(new LambdaQueryWrapper<BizLabResult>()
+        return bizLabResultMapper.selectList(new LambdaQueryWrapper<BizLabResult>()
                         .eq(BizLabResult::getRecordId, report.getRecordId())
                         .orderByAsc(BizLabResult::getSortOrder)
                         .orderByAsc(BizLabResult::getId))
@@ -725,14 +725,14 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean publishReport(Long reportId, String publishBy) {
-        BizReport report = reportMapper.selectById(reportId);
+        BizReport report = bizReportMapper.selectById(reportId);
         if (report == null) {
             throw new BusinessException("报告不存在");
         }
         report.setReportStatus(4);
         report.setPublishBy(publishBy);
         report.setPublishTime(LocalDateTime.now());
-        boolean ok = reportMapper.updateById(report) > 0;
+        boolean ok = bizReportMapper.updateById(report) > 0;
         if (ok) {
             // 订阅消息口子（小程序一期）：报告出具通知。通道未启用/患者未注册时实现内部留痕/跳过，
             // 发送失败绝不让发布回滚 —— 通知只是「让患者更快知道」。
@@ -765,7 +765,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                         .or().like(BizLaboratoryRecord::getPatientNo, keyword))
                 .orderByDesc(BizLaboratoryRecord::getCreateTime);
 
-        Page<BizLaboratoryRecord> page = laboratoryRecordMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        Page<BizLaboratoryRecord> page = bizLaboratoryRecordMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
 
@@ -780,20 +780,20 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean assignBarcode(Long recordId, String specimenNo) {
-        BizLaboratoryRecord record = laboratoryRecordMapper.selectById(recordId);
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("检验记录不存在");
         }
         record.setSpecimenNo(specimenNo);
         record.setSpecimenStatus(1); // 已分配条码
-        laboratoryRecordMapper.updateById(record);
+        bizLaboratoryRecordMapper.updateById(record);
         return true;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean sampleSpecimen(Long recordId, String sampleBy) {
-        BizLaboratoryRecord record = laboratoryRecordMapper.selectById(recordId);
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("检验记录不存在");
         }
@@ -801,7 +801,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setSampleBy(sampleBy);
         record.setRecordStatus(2); // 已采样
         record.setSpecimenStatus(2); // 已采集
-        laboratoryRecordMapper.updateById(record);
+        bizLaboratoryRecordMapper.updateById(record);
         // 批次E：不再回写申请单。原来这里把申请单写成「已缴费（2）」并注释「已缴费/已采样」，
         // 在「采样」这个动作里去改「缴费」字段，是这次口径收口要消灭的典型写法。
         return true;
@@ -810,13 +810,13 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean rejectSpecimen(Long recordId, String reason) {
-        BizLaboratoryRecord record = laboratoryRecordMapper.selectById(recordId);
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("检验记录不存在");
         }
         record.setSpecimenStatus(99); // 异常/退回
         record.setSuggestions(reason);
-        laboratoryRecordMapper.updateById(record);
+        bizLaboratoryRecordMapper.updateById(record);
         return true;
     }
 
@@ -825,16 +825,16 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         // 今日标本总数
         LambdaQueryWrapper<BizLaboratoryRecord> todayWrapper = new LambdaQueryWrapper<>();
         todayWrapper.ge(BizLaboratoryRecord::getCreateTime, java.time.LocalDate.now().atStartOfDay());
-        long todayCount = laboratoryRecordMapper.selectCount(todayWrapper);
+        long todayCount = bizLaboratoryRecordMapper.selectCount(todayWrapper);
 
         // 各状态数量
-        long pendingSample = laboratoryRecordMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryRecord>()
+        long pendingSample = bizLaboratoryRecordMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryRecord>()
                 .eq(BizLaboratoryRecord::getRecordStatus, 1));
-        long sampled = laboratoryRecordMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryRecord>()
+        long sampled = bizLaboratoryRecordMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryRecord>()
                 .eq(BizLaboratoryRecord::getRecordStatus, 2));
-        long testing = laboratoryRecordMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryRecord>()
+        long testing = bizLaboratoryRecordMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryRecord>()
                 .in(BizLaboratoryRecord::getRecordStatus, 3, 4));
-        long abnormal = laboratoryRecordMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryRecord>()
+        long abnormal = bizLaboratoryRecordMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryRecord>()
                 .eq(BizLaboratoryRecord::getSpecimenStatus, 99));
 
         SpecimenStatsVO stats = new SpecimenStatsVO();
@@ -882,7 +882,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
             return exists.getId();
         }
 
-        BizInspectionApply apply = inspectionApplyMapper.selectById(applyId);
+        BizInspectionApply apply = bizInspectionApplyMapper.selectById(applyId);
         if (apply == null) {
             throw new BusinessException("未能找到对应的检查申请数据");
         }
@@ -913,7 +913,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setRecordStatus(InsRecordStatusEnum.REGISTERED.getCode()); // 1-已登记
         record.setCreateBy(operatorUser.getRealName());
         record.setCreateTime(LocalDateTime.now());
-        inspectionRecordMapper.insert(record);
+        bizInspectionRecordMapper.insert(record);
         return record.getId();
     }
 
@@ -927,13 +927,13 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizLaboratoryRecord exists = laboratoryRecordMapper.selectOne(new LambdaQueryWrapper<BizLaboratoryRecord>()
+        BizLaboratoryRecord exists = bizLaboratoryRecordMapper.selectOne(new LambdaQueryWrapper<BizLaboratoryRecord>()
                 .eq(BizLaboratoryRecord::getApplyId, applyId)
                 .orderByAsc(BizLaboratoryRecord::getId)
                 .last("LIMIT 1"));
         if (exists != null) {
             if (LabRecordStatusEnum.CANCELLED.getCode() == (exists.getRecordStatus() == null ? -1 : exists.getRecordStatus())) {
-                laboratoryRecordMapper.update(null, new LambdaUpdateWrapper<BizLaboratoryRecord>()
+                bizLaboratoryRecordMapper.update(null, new LambdaUpdateWrapper<BizLaboratoryRecord>()
                         .eq(BizLaboratoryRecord::getId, exists.getId())
                         .set(BizLaboratoryRecord::getRecordStatus, LabRecordStatusEnum.REGISTERED.getCode())
                         .set(BizLaboratoryRecord::getCancelTime, null)
@@ -948,7 +948,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
             return exists.getId();
         }
 
-        BizLaboratoryApply apply = laboratoryApplyMapper.selectById(applyId);
+        BizLaboratoryApply apply = bizLaboratoryApplyMapper.selectById(applyId);
         if (apply == null) {
             throw new BusinessException("未能找到对应的检验申请数据");
         }
@@ -977,7 +977,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         record.setRecordStatus(LabRecordStatusEnum.REGISTERED.getCode()); // 1-已登记
         record.setCreateBy(operatorUser.getRealName());
         record.setCreateTime(LocalDateTime.now());
-        laboratoryRecordMapper.insert(record);
+        bizLaboratoryRecordMapper.insert(record);
         return record.getId();
     }
 
@@ -1018,7 +1018,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         if (applyId == null) {
             return false;
         }
-        BizLaboratoryRecord record = laboratoryRecordMapper.selectOne(new LambdaQueryWrapper<BizLaboratoryRecord>()
+        BizLaboratoryRecord record = bizLaboratoryRecordMapper.selectOne(new LambdaQueryWrapper<BizLaboratoryRecord>()
                 .eq(BizLaboratoryRecord::getApplyId, applyId)
                 .orderByAsc(BizLaboratoryRecord::getId)
                 .last("LIMIT 1"));
@@ -1036,7 +1036,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                     + LabRecordStatusEnum.getByCode(record.getRecordStatus()).getDescription()
                     + "），不允许退费；如确需取消请走检验作废流程");
         }
-        laboratoryRecordMapper.update(null, new LambdaUpdateWrapper<BizLaboratoryRecord>()
+        bizLaboratoryRecordMapper.update(null, new LambdaUpdateWrapper<BizLaboratoryRecord>()
                 .eq(BizLaboratoryRecord::getId, record.getId())
                 .set(BizLaboratoryRecord::getRecordStatus, LabRecordStatusEnum.CANCELLED.getCode())
                 .set(BizLaboratoryRecord::getSpecimenStatus, 6) // 已退回

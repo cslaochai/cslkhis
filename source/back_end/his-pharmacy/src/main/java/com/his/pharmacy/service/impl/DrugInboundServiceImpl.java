@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.*;
 import com.his.pharmacy.entity.BizDrugInbound;
 import com.his.pharmacy.entity.BizDrugInboundDetail;
@@ -25,8 +26,6 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -40,8 +39,8 @@ import java.util.Set;
 public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, BizDrugInbound> implements DrugInboundService {
     private final DictCacheService dictCacheService;
 
-    private final BizDrugInboundMapper inboundMapper;
-    private final BizDrugInboundDetailMapper detailMapper;
+    private final BizDrugInboundMapper bizDrugInboundMapper;
+    private final BizDrugInboundDetailMapper bizDrugInboundDetailMapper;
     private final PharmacyService pharmacyService;
     private final RedisSequenceService redisSequenceService;
 
@@ -51,7 +50,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
 
     @Override
     public PageResult<DrugInboundVO> page(DrugInboundQueryPageDTO queryDTO) {
-        Page<DrugInboundVO> page = inboundMapper.selectInboundPage(
+        Page<DrugInboundVO> page = bizDrugInboundMapper.selectInboundPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),
                 emptyToNull(queryDTO.getInboundNo()),
                 queryDTO.getInboundType(),
@@ -64,11 +63,11 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
 
     @Override
     public DrugInboundVO getDetailById(Long inboundId) {
-        DrugInboundVO vo = inboundMapper.selectInboundById(inboundId);
+        DrugInboundVO vo = bizDrugInboundMapper.selectInboundById(inboundId);
         if (vo == null) {
             throw new BusinessException("入库单不存在或已删除");
         }
-        vo.setItems(detailMapper.selectByInboundId(inboundId));
+        vo.setItems(bizDrugInboundDetailMapper.selectByInboundId(inboundId));
         return vo;
     }
 
@@ -80,7 +79,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("入库明细不能为空，至少要有一条");
         }
         // 一张采购订单只允许一张「未取消」的入库单：否则同一批采购能被反复入库，库存凭空翻倍
-        if (dto.getPurchaseOrderId() != null && inboundMapper.countActiveByPurchaseOrder(dto.getPurchaseOrderId()) > 0) {
+        if (dto.getPurchaseOrderId() != null && bizDrugInboundMapper.countActiveByPurchaseOrder(dto.getPurchaseOrderId()) > 0) {
             throw new BusinessException("该采购订单已生成过入库单（未取消），不能重复生成；如原单有误请先取消");
         }
 
@@ -98,7 +97,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             if (!seen.add(key)) {
                 throw new BusinessException("同一张入库单里，同一药品同一批号只能出现一次（药品#" + item.getDrugId() + "，批号 " + batchNo + "）");
             }
-            DrugBriefVO drug = detailMapper.selectDrugBrief(item.getDrugId());
+            DrugBriefVO drug = bizDrugInboundDetailMapper.selectDrugBrief(item.getDrugId());
             if (drug == null || !StringUtils.hasText(drug.getDrugName())) {
                 throw new BusinessException("药品不存在或已停用，请从药品字典重新选择（药品#" + item.getDrugId() + "）");
             }
@@ -149,7 +148,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             d.setId(null);
             d.setInboundId(entity.getId());
             d.setInboundNo(inboundNo);
-            detailMapper.insert(d);
+            bizDrugInboundDetailMapper.insert(d);
         }
         return getDetailById(entity.getId());
     }
@@ -157,14 +156,14 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void audit(DrugInboundIdDTO dto) {
-        BizDrugInbound in = inboundMapper.selectByIdForUpdate(dto.getInboundId());
+        BizDrugInbound in = bizDrugInboundMapper.selectByIdForUpdate(dto.getInboundId());
         if (in == null) {
             throw new BusinessException("入库单不存在或已删除");
         }
         if (in.getInboundStatus() == null || in.getInboundStatus() != 1) {
             throw new BusinessException("只有待审核的入库单可以审核（当前：" + dictCacheService.getDicDataLabel("biz_pharmacy_drugInboundStatusEnum", in.getInboundStatus()) + "）");
         }
-        if (detailMapper.countActiveByInbound(in.getId()) == 0) {
+        if (bizDrugInboundDetailMapper.countActiveByInbound(in.getId()) == 0) {
             throw new BusinessException("入库单没有有效明细，不能审核");
         }
         String operator = UserUtils.getCurrentUser().getRealName();
@@ -172,7 +171,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
                 .eq(BizDrugInbound::getId, in.getId())
                 .set(BizDrugInbound::getInboundStatus, 2)
                 .set(BizDrugInbound::getAuditBy, operator)
-                .set(BizDrugInbound::getAuditTime, LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+                .set(BizDrugInbound::getAuditTime, TimeUtil.nowSeconds())
                 .set(BizDrugInbound::getUpdateBy, operator)
                 .update();
     }
@@ -181,7 +180,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
     @Transactional(rollbackFor = Exception.class)
     public DrugInboundVO stockIn(DrugInboundIdDTO dto) {
         // 行锁：入库是「判状态 → 建批次 → 回写状态」三步，并发下不锁行会同一张单入两次库
-        BizDrugInbound in = inboundMapper.selectByIdForUpdate(dto.getInboundId());
+        BizDrugInbound in = bizDrugInboundMapper.selectByIdForUpdate(dto.getInboundId());
         if (in == null) {
             throw new BusinessException("入库单不存在或已删除");
         }
@@ -189,7 +188,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("只有已审核的入库单可以入库（当前：" + dictCacheService.getDicDataLabel("biz_pharmacy_drugInboundStatusEnum", in.getInboundStatus()) + "）");
         }
 
-        List<DrugInboundDetailVO> details = detailMapper.selectByInboundId(in.getId());
+        List<DrugInboundDetailVO> details = bizDrugInboundDetailMapper.selectByInboundId(in.getId());
         List<DrugInboundDetailVO> active = details.stream()
                 .filter(d -> d.getDetailStatus() == null || d.getDetailStatus() != 3)
                 .toList();
@@ -211,12 +210,12 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
                     "drugInbound", in.getId(), in.getInboundNo(), operator);
         }
 
-        detailMapper.markStockedIn(in.getId());
+        bizDrugInboundDetailMapper.markStockedIn(in.getId());
         this.lambdaUpdate()
                 .eq(BizDrugInbound::getId, in.getId())
                 .set(BizDrugInbound::getInboundStatus, 3)
                 .set(BizDrugInbound::getInboundBy, operator)
-                .set(BizDrugInbound::getInboundTime, LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+                .set(BizDrugInbound::getInboundTime, TimeUtil.nowSeconds())
                 .set(BizDrugInbound::getUpdateBy, operator)
                 .update();
         return getDetailById(in.getId());
@@ -225,7 +224,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(DrugInboundCancelDTO dto) {
-        BizDrugInbound in = inboundMapper.selectByIdForUpdate(dto.getInboundId());
+        BizDrugInbound in = bizDrugInboundMapper.selectByIdForUpdate(dto.getInboundId());
         if (in == null) {
             throw new BusinessException("入库单不存在或已删除");
         }
@@ -234,12 +233,12 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
                     + "）；已入库的入库单要冲销请走退货入库");
         }
         String operator = UserUtils.getCurrentUser().getRealName();
-        detailMapper.markCancelled(in.getId());
+        bizDrugInboundDetailMapper.markCancelled(in.getId());
         this.lambdaUpdate()
                 .eq(BizDrugInbound::getId, in.getId())
                 .set(BizDrugInbound::getInboundStatus, 4)
                 .set(BizDrugInbound::getCancelBy, operator)
-                .set(BizDrugInbound::getCancelTime, LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS))
+                .set(BizDrugInbound::getCancelTime, TimeUtil.nowSeconds())
                 .set(BizDrugInbound::getCancelReason, dto.getCancelReason())
                 .set(BizDrugInbound::getUpdateBy, operator)
                 .update();
@@ -255,7 +254,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
         if (in.getInboundStatus() != null && in.getInboundStatus() == 3) {
             throw new BusinessException("已入库的入库单不能删除（批次与库存流水已生成）");
         }
-        detailMapper.markCancelled(inboundId);
+        bizDrugInboundDetailMapper.markCancelled(inboundId);
         if (!this.removeById(inboundId)) {
             throw new BusinessException("删除入库单失败");
         }

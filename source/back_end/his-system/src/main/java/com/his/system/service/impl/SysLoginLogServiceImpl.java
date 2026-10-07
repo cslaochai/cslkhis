@@ -1,6 +1,8 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.SysLoginLog;
 import com.his.system.entity.SysUser;
 import com.his.system.mapper.SysLoginLogMapper;
@@ -25,10 +27,10 @@ import java.time.LocalDateTime;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SysLoginLogServiceImpl implements SysLoginLogService {
+public class SysLoginLogServiceImpl extends ServiceImpl<SysLoginLogMapper, SysLoginLog> implements SysLoginLogService {
 
-    private final SysLoginLogMapper loginLogMapper;
-    private final SysUserMapper userMapper;
+    private final SysLoginLogMapper sysLoginLogMapper;
+    private final SysUserMapper sysUserMapper;
 
     @Override
     public void record(String userName, HttpServletRequest request, boolean success, String msg) {
@@ -51,19 +53,19 @@ public class SysLoginLogServiceImpl implements SysLoginLogService {
             String ip = RequestInfoUtils.clientIp(request);
             String ua = request == null ? null : request.getHeader("User-Agent");
             SysLoginLog row = new SysLoginLog();
-            row.setUserName(cut(userName, 64));
+            row.setUserName(TextUtil.cut(userName, 64));
             row.setUserId(userId);
-            row.setRealName(cut(realName, 64));
-            row.setLoginIp(cut(ip, 50));
+            row.setRealName(TextUtil.cut(realName, 64));
+            row.setLoginIp(TextUtil.cut(ip, 50));
             row.setLoginLocation(ip == null ? null : (RequestInfoUtils.isPrivateIp(ip) ? "内网" : "外网"));
-            row.setBrowser(cut(RequestInfoUtils.parseBrowser(ua), 100));
-            row.setOs(cut(RequestInfoUtils.parseOs(ua), 100));
-            row.setUserAgent(cut(ua, 500));
+            row.setBrowser(TextUtil.cut(RequestInfoUtils.parseBrowser(ua), 100));
+            row.setOs(TextUtil.cut(RequestInfoUtils.parseOs(ua), 100));
+            row.setUserAgent(TextUtil.cut(ua, 500));
             row.setLoginStatus(success ? 0 : 1);
-            row.setMsg(cut(msg, 200));
+            row.setMsg(TextUtil.cut(msg, 200));
             row.setLoginTime(LocalDateTime.now());
-            row.setCreateBy(cut(userName, 64));
-            loginLogMapper.insert(row);
+            row.setCreateBy(TextUtil.cut(userName, 64));
+            sysLoginLogMapper.insert(row);
         } catch (Exception e) {
             log.error("登录日志写入失败 userName={} success={}", userName, success, e);
         }
@@ -73,14 +75,11 @@ public class SysLoginLogServiceImpl implements SysLoginLogService {
         try {
             LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(SysUser::getUserName, userName).last("LIMIT 1");
-            return userMapper.selectOne(wrapper);
+            return sysUserMapper.selectOne(wrapper);
         } catch (Exception e) {
             log.warn("登录日志回填用户信息失败 userName={}", userName, e);
             return null;
         }
     }
 
-    private static String cut(String s, int max) {
-        return s == null || s.length() <= max ? s : s.substring(0, max);
-    }
 }

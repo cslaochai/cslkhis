@@ -1,11 +1,12 @@
 package com.his.pharmacy.service.impl;
 
-import com.his.pharmacy.service.DrugStockCacheService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.pharmacy.entity.BizDrugStock;
 import com.his.pharmacy.mapper.BizDrugStockMapper;
+import com.his.pharmacy.service.DrugStockCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -19,12 +20,12 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DrugStockCacheServiceImpl implements DrugStockCacheService {
+public class DrugStockCacheServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrugStock> implements DrugStockCacheService {
 
     private static final String CACHE_PREFIX = "DRUG_STOCK:";
     private static final long CACHE_TTL_HOURS = 24;
     private final StringRedisTemplate stringRedisTemplate;
-    private final BizDrugStockMapper drugStockMapper;
+    private final BizDrugStockMapper bizDrugStockMapper;
     private final ObjectMapper objectMapper;
 
     /**
@@ -48,7 +49,7 @@ public class DrugStockCacheServiceImpl implements DrugStockCacheService {
         wrapper.eq(BizDrugStock::getDrugId, drugId)
                 .orderByAsc(BizDrugStock::getExpiryDate)
                 .last("LIMIT 1");
-        BizDrugStock stock = drugStockMapper.selectOne(wrapper);
+        BizDrugStock stock = bizDrugStockMapper.selectOne(wrapper);
         if (stock != null) {
             putCache(drugId, stock);
         }

@@ -1,7 +1,7 @@
 package com.his.system.service.impl;
 
-import com.his.system.service.SmsCodeService;
 import com.his.system.config.SmsProperties;
+import com.his.system.service.SmsCodeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -23,68 +23,14 @@ public class SmsCodeServiceImpl implements SmsCodeService {
 
     private static final String CODE_KEY = "sms:code:%s:%s";
     private static final String LIMIT_KEY = "sms:limit:%s:%s";
-    /** 同一验证码最多试错次数，超过即作废，防穷举 */
+    /**
+     * 同一验证码最多试错次数，超过即作废，防穷举
+     */
     private static final int MAX_RETRY = 5;
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    private final SmsProperties properties;
-    private final StringRedisTemplate redisTemplate;
-
-    /**
-     * 发送验证码。
-     *
-     * @param phone 手机号
-     * @param scene 业务场景码（如 register），与校验时必须是同一个
-     * @return 发送结果，mock 模式下编码非空供联调回显
-     */
-    public SendResult send(String phone, String scene) {
-        String codeKey = codeKey(scene, phone);
-        String limitKey = limitKey(scene, phone);
-        Boolean first = redisTemplate.opsForValue()
-                .setIfAbsent(limitKey, "1", properties.getResendSeconds(), TimeUnit.SECONDS);
-        if (!Boolean.TRUE.equals(first)) {
-            Long ttl = redisTemplate.getExpire(limitKey, TimeUnit.SECONDS);
-            long wait = ttl == null || ttl < 0 ? properties.getResendSeconds() : ttl;
-            return SendResult.fail("发送过于频繁，请 " + wait + " 秒后再试");
-        }
-
-        String code = randomCode(properties.getLength());
-        if (!properties.isMock()) {
-            log.warn("短信网关未接入，验证码不下发 phone={} scene={}", maskPhone(phone), scene);
-            return SendResult.fail("短信通道未开通");
-        }
-        redisTemplate.opsForValue().set(codeKey, code, properties.getTtlSeconds(), TimeUnit.SECONDS);
-        log.info("[SMS-MOCK] phone={} scene={} code={}", maskPhone(phone), scene, code);
-        return SendResult.ok(code);
-    }
-
-    /**
-     * 校验并消费验证码（一次一用，校验通过即删除）。
-     *
-     * @return null=校验通过；非 null=失败原因
-     */
-    public String verify(String phone, String scene, String code) {
-        if (code == null || code.isBlank()) {
-            return "请输入验证码";
-        }
-        String codeKey = codeKey(scene, phone);
-        String cached = redisTemplate.opsForValue().get(codeKey);
-        if (cached == null) {
-            return "验证码已失效，请重新获取";
-        }
-        if (!cached.equals(code.trim())) {
-            Long times = redisTemplate.opsForValue().increment(failKey(scene, phone));
-            redisTemplate.expire(failKey(scene, phone), properties.getTtlSeconds(), TimeUnit.SECONDS);
-            if (times != null && times >= MAX_RETRY) {
-                redisTemplate.delete(codeKey);
-                return "验证码错误次数过多，请重新获取";
-            }
-            return "验证码不正确";
-        }
-        redisTemplate.delete(codeKey);
-        redisTemplate.delete(failKey(scene, phone));
-        return null;
-    }
+    private final SmsProperties smsProperties;
+    private final StringRedisTemplate stringRedisTemplate;
 
     private static String randomCode(int length) {
         StringBuilder sb = new StringBuilder(length);
@@ -106,11 +52,69 @@ public class SmsCodeServiceImpl implements SmsCodeService {
         return String.format("sms:fail:%s:%s", scene, phone);
     }
 
-    /** 日志脱敏，避免手机号明文进日志 */
+    /**
+     * 日志脱敏，避免手机号明文进日志
+     */
     private static String maskPhone(String phone) {
         if (phone == null || phone.length() < 7) {
             return "***";
         }
         return phone.substring(0, 3) + "****" + phone.substring(phone.length() - 4);
+    }
+
+    /**
+     * 发送验证码。
+     *
+     * @param phone 手机号
+     * @param scene 业务场景码（如 register），与校验时必须是同一个
+     * @return 发送结果，mock 模式下编码非空供联调回显
+     */
+    public SendResult send(String phone, String scene) {
+        String codeKey = codeKey(scene, phone);
+        String limitKey = limitKey(scene, phone);
+        Boolean first = stringRedisTemplate.opsForValue()
+                .setIfAbsent(limitKey, "1", smsProperties.getResendSeconds(), TimeUnit.SECONDS);
+        if (!Boolean.TRUE.equals(first)) {
+            Long ttl = stringRedisTemplate.getExpire(limitKey, TimeUnit.SECONDS);
+            long wait = ttl == null || ttl < 0 ? smsProperties.getResendSeconds() : ttl;
+            return SendResult.fail("发送过于频繁，请 " + wait + " 秒后再试");
+        }
+
+        String code = randomCode(smsProperties.getLength());
+        if (!smsProperties.isMock()) {
+            log.warn("短信网关未接入，验证码不下发 phone={} scene={}", maskPhone(phone), scene);
+            return SendResult.fail("短信通道未开通");
+        }
+        stringRedisTemplate.opsForValue().set(codeKey, code, smsProperties.getTtlSeconds(), TimeUnit.SECONDS);
+        log.info("[SMS-MOCK] phone={} scene={} code={}", maskPhone(phone), scene, code);
+        return SendResult.ok(code);
+    }
+
+    /**
+     * 校验并消费验证码（一次一用，校验通过即删除）。
+     *
+     * @return null=校验通过；非 null=失败原因
+     */
+    public String verify(String phone, String scene, String code) {
+        if (code == null || code.isBlank()) {
+            return "请输入验证码";
+        }
+        String codeKey = codeKey(scene, phone);
+        String cached = stringRedisTemplate.opsForValue().get(codeKey);
+        if (cached == null) {
+            return "验证码已失效，请重新获取";
+        }
+        if (!cached.equals(code.trim())) {
+            Long times = stringRedisTemplate.opsForValue().increment(failKey(scene, phone));
+            stringRedisTemplate.expire(failKey(scene, phone), smsProperties.getTtlSeconds(), TimeUnit.SECONDS);
+            if (times != null && times >= MAX_RETRY) {
+                stringRedisTemplate.delete(codeKey);
+                return "验证码错误次数过多，请重新获取";
+            }
+            return "验证码不正确";
+        }
+        stringRedisTemplate.delete(codeKey);
+        stringRedisTemplate.delete(failKey(scene, phone));
+        return null;
     }
 }

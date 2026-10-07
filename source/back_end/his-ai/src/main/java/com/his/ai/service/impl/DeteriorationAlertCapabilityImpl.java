@@ -10,6 +10,7 @@ import com.his.ai.vo.DeteriorationAlertPromptVariablesVO;
 import com.his.ai.vo.DeteriorationExplainVO;
 import com.his.ai.vo.DeteriorationScanVO;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.patient.service.InpatientNursingService;
 import com.his.patient.vo.NursingVitalFactVO;
 import com.his.system.service.DictCacheService;
@@ -19,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 危重预警实现（G-12）。
@@ -44,14 +47,6 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
     private final AiExecutionService aiExecutionService;
     private final InpatientNursingService inpatientNursingService;
     private DictCacheService dictCacheService;
-
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
 
     @Override
     public List<DeteriorationScanVO> wardScan(Long wardId) {
@@ -121,7 +116,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
             vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.DETERIORATION_ALERT));
             return vo;
         }
-        vo.setAdvice(truncate(output.get().getAdvice(), ADVICE_MAX));
+        vo.setAdvice(TextUtil.cut(output.get().getAdvice(), ADVICE_MAX, ""));
         return vo;
     }
 

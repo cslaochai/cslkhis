@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -64,7 +66,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class BedCenterServiceImpl implements BedCenterService {
+public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWait> implements BedCenterService {
     /**
      * 等待超时的最长天数；缺失或非法一律回落 7 天（不回落成"永不超时"）
      */
@@ -80,21 +82,21 @@ public class BedCenterServiceImpl implements BedCenterService {
     private static final String DUTY_BED_WAIT_HOURS_KEY = "duty.coord.bed_wait_hours";
     private static final int DUTY_BED_WAIT_HOURS_FALLBACK = 24;
 
-    private final BizBedWaitMapper waitMapper;
+    private final BizBedWaitMapper bizBedWaitMapper;
 
-    private final BedCenterMapper allocateMapper;
+    private final BedCenterMapper bedCenterMapper;
 
-    private final SysBedMapper bedMapper;
+    private final SysBedMapper sysBedMapper;
     /**
      * 床位图聚合（与护士站共用，护士看在院患者，这里看可调配性）
      */
     private final BedMapMapper bedMapMapper;
 
-    private final BizPatientMapper patientMapper;
+    private final BizPatientMapper bizPatientMapper;
 
-    private final BizAdmissionOrderMapper orderMapper;
+    private final BizAdmissionOrderMapper bizAdmissionOrderMapper;
 
-    private final BizAdmissionMapper admissionMapper;
+    private final BizAdmissionMapper bizAdmissionMapper;
 
     private final SysConfigMapper sysConfigMapper;
     /**
@@ -122,17 +124,6 @@ public class BedCenterServiceImpl implements BedCenterService {
             }
         }
         return 0;
-    }
-
-    private static String defaultStr(String value, String fallback) {
-        return StringUtils.hasText(value) ? value : fallback;
-    }
-
-    private static long hoursBetween(LocalDateTime from, LocalDateTime to) {
-        if (from == null || to == null) {
-            return 0;
-        }
-        return Math.max(0, Duration.between(TimeUtil.toSeconds(from), TimeUtil.toSeconds(to)).toHours());
     }
 
     /**
@@ -178,13 +169,13 @@ public class BedCenterServiceImpl implements BedCenterService {
         wrapper.last("ORDER BY (wait_status IN (0,1)) DESC, priority DESC, register_time ASC, id ASC");
 
         Page<BizBedWait> page = new Page<>(query.getPageNum(), query.getPageSize());
-        IPage<BizBedWait> result = waitMapper.selectPage(page, wrapper);
+        IPage<BizBedWait> result = bizBedWaitMapper.selectPage(page, wrapper);
 
         // 全局位次：一次拉齐等待中的顺序，避免 offset 分页里序号从页首重新数。
         // 正常院区的等待队列是几十条量级；这里一次拉齐是为了让翻到第 2 页时序号不重新从 1 开始。
         List<Long> waitingIds = Collections.emptyList();
         try {
-            waitingIds = waitMapper.selectWaitingIds();
+            waitingIds = bizBedWaitMapper.selectWaitingIds();
         } catch (Exception e) {
             log.warn("[床位中心] 排队位次计算失败，本次不返回 seq", e);
         }
@@ -202,7 +193,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         // 详情页也要给全局位次：拿空列表进来 seq 恒为 0，页面上「排第几位」就成了假的
         List<Long> ids = Collections.emptyList();
         try {
-            ids = waitMapper.selectWaitingIds();
+            ids = bizBedWaitMapper.selectWaitingIds();
         } catch (Exception e) {
             log.warn("[床位中心] 排队位次计算失败，详情本次不返回 seq", e);
         }
@@ -216,14 +207,14 @@ public class BedCenterServiceImpl implements BedCenterService {
         if (dto == null) {
             throw new BusinessException("登记内容不能为空");
         }
-        BizPatient patient = patientMapper.selectById(dto.getPatientId());
+        BizPatient patient = bizPatientMapper.selectById(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
 
         BizAdmissionOrder order = null;
         if (dto.getAdmissionOrderId() != null) {
-            order = orderMapper.selectById(dto.getAdmissionOrderId());
+            order = bizAdmissionOrderMapper.selectById(dto.getAdmissionOrderId());
             if (order == null) {
                 throw new BusinessException("住院证不存在");
             }
@@ -245,7 +236,7 @@ public class BedCenterServiceImpl implements BedCenterService {
 
     private Long insertWait(BedWaitUpsertDTO dto, BizAdmissionOrder order) {
         // 同一患者在同一时刻只能排一次队：两条"等待中"的记录会让床位分配的对象变得不确定
-        long active = waitMapper.selectCount(new LambdaQueryWrapper<BizBedWait>()
+        long active = bizBedWaitMapper.selectCount(new LambdaQueryWrapper<BizBedWait>()
                 .eq(BizBedWait::getDelFlag, 0)
                 .eq(BizBedWait::getPatientId, dto.getPatientId())
                 .in(BizBedWait::getWaitStatus, BedWaitStatusEnum.PENDING.getCode(), BedWaitStatusEnum.ARRANGED.getCode()));
@@ -265,7 +256,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         wait.setApplyDeptId(resolveApplyDeptId(dto, order));
         wait.setApplyDeptName(resolveApplyDeptName(dto, order, wait.getApplyDeptId()));
         wait.setExpectWardId(dto.getExpectWardId());
-        wait.setBedType(defaultStr(dto.getBedType(), "normal"));
+        wait.setBedType(TextUtil.blankToDefault(dto.getBedType(), "normal"));
         wait.setPriority(dto.getPriority() == null ? 1 : dto.getPriority());
         wait.setGenderLimit(dto.getGenderLimit() == null ? 0 : dto.getGenderLimit());
         wait.setIsolationFlag(dto.getIsolationFlag() == null ? 0 : dto.getIsolationFlag());
@@ -275,7 +266,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         wait.setWaitStatus(BedWaitStatusEnum.PENDING.getCode());
         wait.setRegisterTime(TimeUtil.nowSeconds());
         wait.setRemark(dto.getRemark());
-        waitMapper.insert(wait);
+        bizBedWaitMapper.insert(wait);
 
         log.info("床位排队登记 waitNo={} waitId={} patient={} applyDept={} priority={} 床型={}",
                 wait.getWaitNo(), wait.getId(), wait.getPatientName(), wait.getApplyDeptName(),
@@ -295,7 +286,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         upd.setId(wait.getId());
         upd.setApplyDeptId(resolveApplyDeptId(dto, order));
         upd.setExpectWardId(dto.getExpectWardId());
-        upd.setBedType(defaultStr(dto.getBedType(), wait.getBedType()));
+        upd.setBedType(TextUtil.blankToDefault(dto.getBedType(), wait.getBedType()));
         upd.setPriority(dto.getPriority() == null ? wait.getPriority() : dto.getPriority());
         upd.setGenderLimit(dto.getGenderLimit() == null ? wait.getGenderLimit() : dto.getGenderLimit());
         upd.setIsolationFlag(dto.getIsolationFlag() == null ? wait.getIsolationFlag() : dto.getIsolationFlag());
@@ -304,7 +295,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         upd.setPhone(dto.getPhone());
         upd.setRemark(dto.getRemark());
         // 改的是"需求"，不是"事实"：assigned_* / wait_status / register_time 一概不在这里动
-        waitMapper.updateById(upd);
+        bizBedWaitMapper.updateById(upd);
 
         log.info("床位排队修改 waitNo={} waitId={} priority={} 床型={}", wait.getWaitNo(), wait.getId(),
                 upd.getPriority(), upd.getBedType());
@@ -326,7 +317,7 @@ public class BedCenterServiceImpl implements BedCenterService {
             throw new BusinessException("该排队记录已取消，请先重新登记");
         }
 
-        SysBed bed = bedMapper.selectById(dto.getBedId());
+        SysBed bed = sysBedMapper.selectById(dto.getBedId());
         if (bed == null || !Objects.equals(0, bed.getDelFlag())) {
             throw new BusinessException("床位不存在");
         }
@@ -356,7 +347,7 @@ public class BedCenterServiceImpl implements BedCenterService {
                 .set(SysBed::getBedStatus, BedStatusEnum.LOCKED.getCode())
                 .set(SysBed::getPatientId, wait.getPatientId())
                 .set(SysBed::getRemark, "床位中心预留：" + wait.getPatientName() + "（等待号 " + wait.getWaitNo() + "）");
-        bedMapper.update(null, upd);
+        sysBedMapper.update(null, upd);
         // 锁定的床不计入病区占用数 —— 占用数的定义是 bed_status=2（人真的住进去了）
 
         LocalDateTime now = TimeUtil.nowSeconds();
@@ -371,7 +362,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         arrange.setAssignedDeptName(deptName);
         arrange.setAssignedTime(now);
         arrange.setAssignedBy(operatorUser.getRealName());
-        waitMapper.updateById(arrange);
+        bizBedWaitMapper.updateById(arrange);
 
         boolean cross = wait.getApplyDeptId() != null && !Objects.equals(wait.getApplyDeptId(), bed.getDeptId());
         BizBedAllocate alloc = new BizBedAllocate();
@@ -394,7 +385,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         alloc.setOperatorName(operatorUser.getRealName());
         alloc.setOperateTime(now);
         alloc.setRemark(dto.getRemark());
-        allocateMapper.insert(alloc);
+        bedCenterMapper.insert(alloc);
 
         log.info("床位安排成功 waitNo={} patient={} bed={}{} 归属科室={} 使用科室={} 类型={}",
                 wait.getWaitNo(), wait.getPatientName(), deptName, bed.getBedNo(),
@@ -452,7 +443,7 @@ public class BedCenterServiceImpl implements BedCenterService {
     public int escalateWaitToDuty() {
         int hours = dutyBedWaitHours();
         LocalDateTime deadLine = LocalDateTime.now().minusHours(hours);
-        List<BizBedWait> overdue = waitMapper.selectList(new LambdaQueryWrapper<BizBedWait>()
+        List<BizBedWait> overdue = bizBedWaitMapper.selectList(new LambdaQueryWrapper<BizBedWait>()
                 .eq(BizBedWait::getWaitStatus, BedWaitStatusEnum.PENDING.getCode())
                 .lt(BizBedWait::getRegisterTime, deadLine)
                 .orderByAsc(BizBedWait::getRegisterTime));
@@ -585,7 +576,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         upd.setWaitStatus(BedWaitStatusEnum.CANCELLED.getCode());
         upd.setCancelReason(dto.getReason());
         upd.setCancelTime(TimeUtil.nowSeconds());
-        waitMapper.updateById(upd);
+        bizBedWaitMapper.updateById(upd);
         log.info("床位排队取消 waitNo={} waitId={} 原因={}", wait.getWaitNo(), wait.getId(), dto.getReason());
     }
 
@@ -629,14 +620,14 @@ public class BedCenterServiceImpl implements BedCenterService {
         upd.setWaitStatus(BedWaitStatusEnum.ADMITTED.getCode());
         upd.setAdmissionId(admissionId);
         upd.setAdmitTime(admitTime);
-        waitMapper.updateById(upd);
+        bizBedWaitMapper.updateById(upd);
 
         LambdaUpdateWrapper<BizBedAllocate> allocUpd = new LambdaUpdateWrapper<>();
         allocUpd.eq(BizBedAllocate::getWaitId, wait.getId())
                 .eq(BizBedAllocate::getAllocStatus, BedAllocateStatusEnum.RESERVED.getCode())
                 .set(BizBedAllocate::getAllocStatus, BedAllocateStatusEnum.ADMITTED.getCode())
                 .set(BizBedAllocate::getAdmissionId, admissionId);
-        allocateMapper.update(null, allocUpd);
+        bedCenterMapper.update(null, allocUpd);
 
         log.info("床位中心收治成功 waitNo={} waitId={} admissionId={} patient={}",
                 wait.getWaitNo(), wait.getId(), admissionId, wait.getPatientName());
@@ -658,32 +649,32 @@ public class BedCenterServiceImpl implements BedCenterService {
         LocalDate today = LocalDate.now();
         vo.setAdmittedToday(countToday(today, BedWaitStatusEnum.ADMITTED.getCode(), "admit_time"));
         vo.setCancelledToday(countToday(today, BedWaitStatusEnum.CANCELLED.getCode(), "cancel_time"));
-        vo.setOverdueCount(waitMapper.selectCount(new LambdaQueryWrapper<BizBedWait>()
+        vo.setOverdueCount(bizBedWaitMapper.selectCount(new LambdaQueryWrapper<BizBedWait>()
                 .eq(BizBedWait::getDelFlag, 0)
                 .eq(BizBedWait::getWaitStatus, BedWaitStatusEnum.PENDING.getCode())
                 .lt(BizBedWait::getRegisterTime, LocalDateTime.now().minusDays(maxDays))));
 
-        List<BizBedWait> waiting = waitMapper.selectList(new LambdaQueryWrapper<BizBedWait>()
+        List<BizBedWait> waiting = bizBedWaitMapper.selectList(new LambdaQueryWrapper<BizBedWait>()
                 .eq(BizBedWait::getDelFlag, 0)
                 .eq(BizBedWait::getWaitStatus, BedWaitStatusEnum.PENDING.getCode()));
         LocalDateTime now = LocalDateTime.now();
         long sum = 0;
         long max = 0;
         for (BizBedWait w : waiting) {
-            long hours = hoursBetween(w.getRegisterTime(), now);
+            long hours = TimeUtil.elapsedHours(w.getRegisterTime(), now);
             sum += hours;
             max = Math.max(max, hours);
         }
         vo.setAvgWaitHours(waiting.isEmpty() ? 0 : sum / waiting.size());
         vo.setMaxWaitHours(max);
 
-        BedOverviewVO.Summary summary = allocateMapper.selectHospitalSummary();
+        BedOverviewVO.Summary summary = bedCenterMapper.selectHospitalSummary();
         vo.setTotalBeds(summary.getTotalBeds());
         vo.setFreeBeds(summary.getFreeBeds());
         vo.setLockedBeds(summary.getLockedBeds());
         vo.setOccupiedBeds(summary.getOccupiedBeds());
 
-        vo.setCrossDeptCount(allocateMapper.selectCount(new LambdaQueryWrapper<BizBedAllocate>()
+        vo.setCrossDeptCount(bedCenterMapper.selectCount(new LambdaQueryWrapper<BizBedAllocate>()
                 .eq(BizBedAllocate::getDelFlag, 0)
                 .eq(BizBedAllocate::getAllocStatus, BedAllocateStatusEnum.RESERVED.getCode())
                 .eq(BizBedAllocate::getAllocType, 2)));
@@ -704,8 +695,8 @@ public class BedCenterServiceImpl implements BedCenterService {
             throw new BusinessException("该排队记录已结束（"
                     + BedWaitStatusEnum.labelOrUnknown(wait.getWaitStatus()) + "），不需要再匹配床位");
         }
-        String need = defaultStr(wait.getBedType(), "normal");
-        List<BedMatchVO> candidates = allocateMapper.selectMatchableBeds();
+        String need = TextUtil.blankToDefault(wait.getBedType(), "normal");
+        List<BedMatchVO> candidates = bedCenterMapper.selectMatchableBeds();
         List<BedMatchVO> result = new ArrayList<>();
         for (BedMatchVO b : candidates) {
             if (!usableFor(need, b.getBedType())) {
@@ -757,10 +748,10 @@ public class BedCenterServiceImpl implements BedCenterService {
         String keyword = StringUtils.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
 
         BedPoolVO vo = new BedPoolVO();
-        vo.setTotal(allocateMapper.countBedPool(deptId, wardId, bedStatus, bedType, keyword));
-        long offset = (Math.max(1L, query.getPageNum()) - 1) * Math.max(1L, query.getPageSize());
-        List<BedPoolVO.BedRow> rows = allocateMapper.selectBedPool(deptId, wardId, bedStatus, bedType,
-                keyword, offset, Math.max(1L, query.getPageSize()));
+        vo.setTotal(bedCenterMapper.countBedPool(deptId, wardId, bedStatus, bedType, keyword));
+        long offset = (query.getPageNum() - 1L) * query.getPageSize();
+        List<BedPoolVO.BedRow> rows = bedCenterMapper.selectBedPool(deptId, wardId, bedStatus, bedType,
+                keyword, offset, query.getPageSize());
         for (BedPoolVO.BedRow row : rows) {
             row.setBedStatusText(BedStatusEnum.getText(row.getBedStatus()));
             row.setBedTypeText(BedTypeEnum.getText(row.getBedType()));
@@ -876,17 +867,17 @@ public class BedCenterServiceImpl implements BedCenterService {
     @Override
     public BedOverviewVO overview() {
         BedOverviewVO vo = new BedOverviewVO();
-        BedOverviewVO.Summary summary = allocateMapper.selectHospitalSummary();
+        BedOverviewVO.Summary summary = bedCenterMapper.selectHospitalSummary();
         summary.setUsableBeds(summary.getTotalBeds() - summary.getRepairBeds());
         summary.setUsageRate(summary.getUsableBeds() <= 0 ? BigDecimal.ZERO
                 : BigDecimal.valueOf(summary.getOccupiedBeds())
                 .multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(summary.getUsableBeds()), 1, RoundingMode.HALF_UP));
-        summary.setLentOutBeds(allocateMapper.selectCount(new LambdaQueryWrapper<BizBedAllocate>()
+        summary.setLentOutBeds(bedCenterMapper.selectCount(new LambdaQueryWrapper<BizBedAllocate>()
                 .eq(BizBedAllocate::getDelFlag, 0)
                 .eq(BizBedAllocate::getAllocStatus, BedAllocateStatusEnum.RESERVED.getCode())));
         vo.setSummary(summary);
-        vo.setDeptRows(allocateMapper.selectDeptRows());
+        vo.setDeptRows(bedCenterMapper.selectDeptRows());
         return vo;
     }
 
@@ -901,7 +892,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         // 患者已经有一条无证排队的记录 → 把这张证接上去，而不是新建一个平行的队列。
         // 「有证无队」是数据断裂（拿这张证去入院处收治时，队列里查不到人在等），
         // 一张证在系统里必须有且只有一条排队记录对应的事实。
-        BizBedWait pending = waitMapper.selectOne(new LambdaQueryWrapper<BizBedWait>()
+        BizBedWait pending = bizBedWaitMapper.selectOne(new LambdaQueryWrapper<BizBedWait>()
                 .eq(BizBedWait::getDelFlag, 0)
                 .eq(BizBedWait::getPatientId, order.getPatientId())
                 .isNull(BizBedWait::getAdmissionOrderId)
@@ -912,12 +903,12 @@ public class BedCenterServiceImpl implements BedCenterService {
             linkUpd.setId(pending.getId());
             linkUpd.setAdmissionOrderId(order.getId());
             linkUpd.setRemark("系统补充：关联住院证 " + order.getOrderNo());
-            waitMapper.updateById(linkUpd);
+            bizBedWaitMapper.updateById(linkUpd);
             log.info("已有排队记录关联住院证 waitNo={} orderNo={} patient={}",
                     pending.getWaitNo(), order.getOrderNo(), order.getPatientName());
             return;
         }
-        long active = waitMapper.selectCount(new LambdaQueryWrapper<BizBedWait>()
+        long active = bizBedWaitMapper.selectCount(new LambdaQueryWrapper<BizBedWait>()
                 .eq(BizBedWait::getDelFlag, 0)
                 .eq(BizBedWait::getPatientId, order.getPatientId())
                 .in(BizBedWait::getWaitStatus, BedWaitStatusEnum.PENDING.getCode(), BedWaitStatusEnum.ARRANGED.getCode()));
@@ -946,7 +937,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         wait.setWaitStatus(BedWaitStatusEnum.PENDING.getCode());
         wait.setRegisterTime(TimeUtil.toSeconds(order.getOrderTime() != null ? order.getOrderTime() : LocalDateTime.now()));
         wait.setRemark("系统自动：随住院证 " + order.getOrderNo() + " 入队");
-        waitMapper.insert(wait);
+        bizBedWaitMapper.insert(wait);
         log.info("住院证自动入床队列 waitNo={} orderNo={} patient={}", wait.getWaitNo(), order.getOrderNo(), order.getPatientName());
     }
 
@@ -956,7 +947,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         if (orderId == null) {
             return;
         }
-        BizBedWait wait = waitMapper.selectOne(new LambdaQueryWrapper<BizBedWait>()
+        BizBedWait wait = bizBedWaitMapper.selectOne(new LambdaQueryWrapper<BizBedWait>()
                 .eq(BizBedWait::getDelFlag, 0)
                 .eq(BizBedWait::getAdmissionOrderId, orderId)
                 .in(BizBedWait::getWaitStatus, BedWaitStatusEnum.PENDING.getCode(), BedWaitStatusEnum.ARRANGED.getCode())
@@ -973,7 +964,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         upd.setWaitStatus(BedWaitStatusEnum.CANCELLED.getCode());
         upd.setCancelReason(reason);
         upd.setCancelTime(TimeUtil.nowSeconds());
-        waitMapper.updateById(upd);
+        bizBedWaitMapper.updateById(upd);
         log.info("住院证作废联动退出队列 waitNo={} waitId={} 原因={}", wait.getWaitNo(), wait.getId(), reason);
     }
 
@@ -982,7 +973,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         if (patientId == null || admissionId == null) {
             return;
         }
-        List<BizBedWait> rows = waitMapper.selectList(new LambdaQueryWrapper<BizBedWait>()
+        List<BizBedWait> rows = bizBedWaitMapper.selectList(new LambdaQueryWrapper<BizBedWait>()
                 .eq(BizBedWait::getDelFlag, 0)
                 .eq(BizBedWait::getPatientId, patientId)
                 .in(BizBedWait::getWaitStatus, BedWaitStatusEnum.PENDING.getCode(), BedWaitStatusEnum.ARRANGED.getCode()));
@@ -996,14 +987,14 @@ public class BedCenterServiceImpl implements BedCenterService {
             upd.setWaitStatus(BedWaitStatusEnum.ADMITTED.getCode());
             upd.setAdmissionId(admissionId);
             upd.setAdmitTime(time);
-            waitMapper.updateById(upd);
+            bizBedWaitMapper.updateById(upd);
 
             LambdaUpdateWrapper<BizBedAllocate> allocUpd = new LambdaUpdateWrapper<>();
             allocUpd.eq(BizBedAllocate::getWaitId, w.getId())
                     .eq(BizBedAllocate::getAllocStatus, BedAllocateStatusEnum.RESERVED.getCode())
                     .set(BizBedAllocate::getAllocStatus, BedAllocateStatusEnum.ADMITTED.getCode())
                     .set(BizBedAllocate::getAdmissionId, admissionId);
-            allocateMapper.update(null, allocUpd);
+            bedCenterMapper.update(null, allocUpd);
         }
         log.info("入院回填队列：patientId={} 收治={} 条，admissionId={}", patientId, rows.size(), admissionId);
     }
@@ -1015,7 +1006,7 @@ public class BedCenterServiceImpl implements BedCenterService {
     private void doRelease(BizBedWait wait, String reason, int allocEndStatus) {
         Long bedId = wait.getAssignedBedId();
         if (bedId != null) {
-            SysBed bed = bedMapper.selectById(bedId);
+            SysBed bed = sysBedMapper.selectById(bedId);
             if (bed != null && Objects.equals(BedStatusEnum.LOCKED.getCode(), bed.getBedStatus())) {
                 // 必须显式 set null：updateById 的 NOT_NULL 策略会跳过 null，留下"床空了人还挂着"的脏数据
                 LambdaUpdateWrapper<SysBed> upd = new LambdaUpdateWrapper<>();
@@ -1023,7 +1014,7 @@ public class BedCenterServiceImpl implements BedCenterService {
                         .set(SysBed::getBedStatus, BedStatusEnum.FREE.getCode())
                         .set(SysBed::getPatientId, null)
                         .set(SysBed::getRemark, null);
-                bedMapper.update(null, upd);
+                sysBedMapper.update(null, upd);
             }
             LambdaUpdateWrapper<BizBedAllocate> allocUpd = new LambdaUpdateWrapper<>();
             allocUpd.eq(BizBedAllocate::getBedId, bedId)
@@ -1032,7 +1023,7 @@ public class BedCenterServiceImpl implements BedCenterService {
                     .set(BizBedAllocate::getAllocStatus, allocEndStatus)
                     .set(BizBedAllocate::getReleaseTime, TimeUtil.nowSeconds())
                     .set(BizBedAllocate::getReleaseReason, reason);
-            allocateMapper.update(null, allocUpd);
+            bedCenterMapper.update(null, allocUpd);
         }
 
         LambdaUpdateWrapper<BizBedWait> upd = new LambdaUpdateWrapper<>();
@@ -1047,7 +1038,7 @@ public class BedCenterServiceImpl implements BedCenterService {
                 .set(BizBedWait::getAssignedDeptName, null)
                 .set(BizBedWait::getAssignedTime, null)
                 .set(BizBedWait::getAssignedBy, null);
-        waitMapper.update(null, upd);
+        bizBedWaitMapper.update(null, upd);
     }
 
     private BedWaitVO decorate(BizBedWait wait, List<Long> waitingIds) {
@@ -1059,7 +1050,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         vo.setGenderLimitText(BedGenderLimitEnum.getText(wait.getGenderLimit()));
         vo.setWaitStatusText(BedWaitStatusEnum.getText(wait.getWaitStatus()));
 
-        long hours = hoursBetween(wait.getRegisterTime(), LocalDateTime.now());
+        long hours = TimeUtil.elapsedHours(wait.getRegisterTime(), LocalDateTime.now());
         vo.setWaitHours(hours);
         vo.setWaitDurationText(waitDurationText(hours));
         // 超时是查询时算出来的展示态：wait_status 仍然是「等待中」，
@@ -1075,7 +1066,7 @@ public class BedCenterServiceImpl implements BedCenterService {
             vo.setAdmissionNo(admissionNo(wait.getAdmissionId()));
         }
         if (wait.getAdmissionOrderId() != null) {
-            BizAdmissionOrder order = orderMapper.selectById(wait.getAdmissionOrderId());
+            BizAdmissionOrder order = bizAdmissionOrderMapper.selectById(wait.getAdmissionOrderId());
             vo.setAdmissionOrderNo(order == null ? null : order.getOrderNo());
         }
 
@@ -1095,7 +1086,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         if (waitId == null) {
             throw new BusinessException("排队记录ID不能为空");
         }
-        BizBedWait wait = waitMapper.selectById(waitId);
+        BizBedWait wait = bizBedWaitMapper.selectById(waitId);
         if (wait == null) {
             throw new BusinessException("排队记录不存在");
         }
@@ -1111,7 +1102,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         if (excludeWaitId != null) {
             w.ne(BizBedWait::getId, excludeWaitId);
         }
-        BizBedWait dup = waitMapper.selectOne(w.orderByDesc(BizBedWait::getId).last("LIMIT 1"));
+        BizBedWait dup = bizBedWaitMapper.selectOne(w.orderByDesc(BizBedWait::getId).last("LIMIT 1"));
         return dup == null ? null : dup.getWaitNo();
     }
 
@@ -1119,7 +1110,7 @@ public class BedCenterServiceImpl implements BedCenterService {
      * 该床位是否已有在途预留（返回调配单号）
      */
     private String existReservedAllocate(Long bedId) {
-        BizBedAllocate alloc = allocateMapper.selectOne(new LambdaQueryWrapper<BizBedAllocate>()
+        BizBedAllocate alloc = bedCenterMapper.selectOne(new LambdaQueryWrapper<BizBedAllocate>()
                 .eq(BizBedAllocate::getDelFlag, 0)
                 .eq(BizBedAllocate::getBedId, bedId)
                 .eq(BizBedAllocate::getAllocStatus, BedAllocateStatusEnum.RESERVED.getCode())
@@ -1134,7 +1125,7 @@ public class BedCenterServiceImpl implements BedCenterService {
      * 这是"资源被低效占用"，比让普通患者多等两天严重得多。
      */
     private boolean usableFor(String need, String bedType) {
-        String type = defaultStr(bedType, "normal");
+        String type = TextUtil.blankToDefault(bedType, "normal");
         if (Objects.equals(need, "ICU")) {
             return Objects.equals("ICU", type);
         }
@@ -1160,7 +1151,7 @@ public class BedCenterServiceImpl implements BedCenterService {
         if (priority != null) {
             w.eq(BizBedWait::getPriority, priority);
         }
-        return waitMapper.selectCount(w);
+        return bizBedWaitMapper.selectCount(w);
     }
 
     private long countToday(LocalDate today, int waitStatus, String timeCol) {
@@ -1170,12 +1161,12 @@ public class BedCenterServiceImpl implements BedCenterService {
                 .eq(BizBedWait::getWaitStatus, waitStatus)
                 .ge(waitStatus == BedWaitStatusEnum.ADMITTED.getCode() ? BizBedWait::getAdmitTime : BizBedWait::getCancelTime, start)
                 .lt(waitStatus == BedWaitStatusEnum.ADMITTED.getCode() ? BizBedWait::getAdmitTime : BizBedWait::getCancelTime, start.plusDays(1));
-        return waitMapper.selectCount(w);
+        return bizBedWaitMapper.selectCount(w);
     }
 
     private String admissionNo(Long admissionId) {
         try {
-            BizAdmission admission = admissionMapper.selectById(admissionId);
+            BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
             return admission == null ? null : admission.getAdmissionNo();
         } catch (Exception e) {
             log.warn("[床位中心] 住院号查询失败 admissionId={}", admissionId, e);
@@ -1184,7 +1175,7 @@ public class BedCenterServiceImpl implements BedCenterService {
     }
 
     private String wardName(Long wardId) {
-        return wardId == null ? null : allocateMapper.selectWardName(wardId);
+        return wardId == null ? null : bedCenterMapper.selectWardName(wardId);
     }
 
     /**
@@ -1193,7 +1184,7 @@ public class BedCenterServiceImpl implements BedCenterService {
      * 所以这里只能单查，不能拿 SysBedMapper.selectWardById 顶。
      */
     private String deptName(Long deptId) {
-        return deptId == null ? null : allocateMapper.selectDeptName(deptId);
+        return deptId == null ? null : bedCenterMapper.selectDeptName(deptId);
     }
 
     private Long resolveApplyDeptId(BedWaitUpsertDTO dto, BizAdmissionOrder order) {
@@ -1218,12 +1209,12 @@ public class BedCenterServiceImpl implements BedCenterService {
 
     private String nextWaitNo() {
         String prefix = "DC" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        return prefix + String.format("%03d", waitMapper.countByWaitNoPrefix(prefix) + 1);
+        return prefix + String.format("%03d", bizBedWaitMapper.countByWaitNoPrefix(prefix) + 1);
     }
 
     private String nextAllocateNo() {
         String prefix = "TP" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        return prefix + String.format("%03d", allocateMapper.countByAllocateNoPrefix(prefix) + 1);
+        return prefix + String.format("%03d", bedCenterMapper.countByAllocateNoPrefix(prefix) + 1);
     }
 
     /**

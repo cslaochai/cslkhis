@@ -28,12 +28,12 @@ import java.util.List;
 @PreAuthorize("hasAnyAuthority('org:employee:list', 'system:role:list', 'system:user:list')")
 public class RoleController {
 
-    private final SysRoleService roleService;
+    private final SysRoleService sysRoleService;
 
     @Operation(summary = "查询角色列表")
     @PostMapping("/listPage")
     public Result<PageResult<RoleVO>> listPage(@Valid @RequestBody SysRoleQueryPageDTO queryDTO) {
-        return Result.success(roleService.listPage(queryDTO));
+        return Result.success(sysRoleService.listPage(queryDTO));
     }
 
     /**
@@ -44,41 +44,41 @@ public class RoleController {
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/selectList")
     public Result<List<RoleSelectListVO>> selectList(@Valid @RequestBody SysRoleQueryDTO queryDTO) {
-        return Result.success(roleService.selectList(queryDTO));
+        return Result.success(sysRoleService.selectList(queryDTO));
     }
 
     @Operation(summary = "获取角色详情")
     @GetMapping("/getById")
     public Result<RoleVO> getInfo(@RequestParam Long roleId) {
-        return Result.success(roleService.getInfo(roleId));
+        return Result.success(sysRoleService.getInfo(roleId));
     }
 
     @PreAuthorize("hasAuthority('system:role:add')")
     @Operation(summary = "新增或修改角色")
     @PostMapping("/roleUpsert")
     public Result<Void> roleUpsert(@Valid @RequestBody SysRoleUpsertDTO upsertDTO) {
-        return Result.success(roleService.upsert(upsertDTO), null);
+        return Result.success(sysRoleService.upsert(upsertDTO), null);
     }
 
     @PreAuthorize("hasAuthority('system:role:delete')")
     @Operation(summary = "删除角色")
     @DeleteMapping("/deleteById")
     public Result<Void> remove(@RequestParam Long roleId) {
-        roleService.delete(roleId);
+        sysRoleService.delete(roleId);
         return Result.success("删除成功", null);
     }
 
     @Operation(summary = "查询角色已配置的菜单ID")
     @GetMapping("/getMenuIds")
     public Result<List<Long>> getMenuIds(@RequestParam Long roleId) {
-        return Result.success(roleService.getMenuIds(roleId));
+        return Result.success(sysRoleService.getMenuIds(roleId));
     }
 
     @PreAuthorize("hasAuthority('system:role:add')")
     @Operation(summary = "保存角色菜单权限")
     @PostMapping("/saveRoleMenu")
     public Result<Void> saveRoleMenu(@RequestBody @Valid RoleMenuUpsertDTO upsertDTO) {
-        roleService.saveRoleMenu(upsertDTO);
+        sysRoleService.saveRoleMenu(upsertDTO);
         return Result.success("保存成功", null);
     }
 }

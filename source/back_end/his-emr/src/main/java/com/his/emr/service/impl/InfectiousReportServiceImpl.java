@@ -2,9 +2,12 @@ package com.his.emr.service.impl;
 
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.emr.dto.InfectiousReportDTO;
 import com.his.emr.dto.InfectiousReportQueryPageDTO;
 import com.his.emr.entity.BizInfectiousReport;
@@ -14,11 +17,7 @@ import com.his.emr.enums.InfectiousReportStatusEnum;
 import com.his.emr.mapper.BizInfectiousReportMapper;
 import com.his.emr.mapper.SysInfectiousDiseaseMapper;
 import com.his.emr.service.InfectiousReportService;
-import com.his.emr.vo.DeptSnapshotVO;
-import com.his.emr.vo.InfectiousReportPayloadVO;
-import com.his.emr.vo.InfectiousReportVO;
-import com.his.emr.vo.MessagePayloadVO;
-import com.his.emr.vo.PatientSnapshotVO;
+import com.his.emr.vo.*;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,9 +25,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * 传染病报告卡服务实现
@@ -40,18 +41,14 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InfectiousReportServiceImpl implements InfectiousReportService {
+public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReportMapper, BizInfectiousReport> implements InfectiousReportService {
 
-    private final BizInfectiousReportMapper reportMapper;
-    private final SysInfectiousDiseaseMapper diseaseMapper;
-    private final RedisSequenceService sequenceService;
+    private final BizInfectiousReportMapper bizInfectiousReportMapper;
+    private final SysInfectiousDiseaseMapper sysInfectiousDiseaseMapper;
+    private final RedisSequenceService redisSequenceService;
     private final com.his.system.service.SysMessageService sysMessageService;
 
     // 查询
-
-    private static String tr(String s) {
-        return s == null ? null : s.trim();
-    }
 
     @Override
     public PageResult<InfectiousReportVO.Row> page(InfectiousReportQueryPageDTO q) {
@@ -59,14 +56,14 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
                 .eq(q.getReportStatus() != null, BizInfectiousReport::getReportStatus, q.getReportStatus())
                 .eq(q.getInfectiousClass() != null, BizInfectiousReport::getInfectiousClass, q.getInfectiousClass())
                 .and(StringUtils.hasText(q.getKeyword()), x -> x
-                        .like(BizInfectiousReport::getReportNo, tr(q.getKeyword()))
-                        .or().like(BizInfectiousReport::getPatientName, tr(q.getKeyword()))
-                        .or().like(BizInfectiousReport::getDiseaseName, tr(q.getKeyword())))
+                        .like(BizInfectiousReport::getReportNo, TextUtil.trim(q.getKeyword()))
+                        .or().like(BizInfectiousReport::getPatientName, TextUtil.trim(q.getKeyword()))
+                        .or().like(BizInfectiousReport::getDiseaseName, TextUtil.trim(q.getKeyword())))
                 .ge(q.getReportTimeStart() != null, BizInfectiousReport::getReportTime, q.getReportTimeStart())
                 .le(q.getReportTimeEnd() != null, BizInfectiousReport::getReportTime, q.getReportTimeEnd())
                 .orderByDesc(BizInfectiousReport::getReportTime)
                 .orderByDesc(BizInfectiousReport::getId);
-        List<BizInfectiousReport> list = reportMapper.selectList(w);
+        List<BizInfectiousReport> list = bizInfectiousReportMapper.selectList(w);
         // 筛选口径里"逾期未报"要在内存里按 deadline 比（状态 1 且已过期），MP 条件构造器表达不了"现在"比较两列
         if (q.getOverdue() != null && q.getOverdue() == 1) {
             list = list.stream().filter(r -> isOverdue(r)).toList();
@@ -82,7 +79,7 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
 
     @Override
     public InfectiousReportVO.Detail getDetailById(Long id) {
-        BizInfectiousReport r = reportMapper.selectById(id);
+        BizInfectiousReport r = bizInfectiousReportMapper.selectById(id);
         if (r == null || r.getDelFlag() != 0) {
             throw new BusinessException("报卡不存在或已删除");
         }
@@ -98,12 +95,12 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
                 .eq(SysInfectiousDisease::getStatus, 1)
                 .eq(SysInfectiousDisease::getDelFlag, 0)
                 .and(StringUtils.hasText(keyword), x -> x
-                        .like(SysInfectiousDisease::getDiseaseName, tr(keyword))
-                        .or().like(SysInfectiousDisease::getDiseaseCode, tr(keyword)))
+                        .like(SysInfectiousDisease::getDiseaseName, TextUtil.trim(keyword))
+                        .or().like(SysInfectiousDisease::getDiseaseCode, TextUtil.trim(keyword)))
                 .orderByAsc(SysInfectiousDisease::getInfectiousClass)
                 .orderByAsc(SysInfectiousDisease::getDiseaseCode)
                 .last("LIMIT 50");
-        return diseaseMapper.selectList(w).stream().map(d -> {
+        return sysInfectiousDiseaseMapper.selectList(w).stream().map(d -> {
             InfectiousReportVO.DiseaseSelectListVO r = new InfectiousReportVO.DiseaseSelectListVO();
             r.setId(String.valueOf(d.getId()));
             r.setDiseaseCode(d.getDiseaseCode());
@@ -118,10 +115,10 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
 
     @Override
     public InfectiousReportVO.Stats stats() {
-        List<BizInfectiousReport> all = reportMapper.selectList(
+        List<BizInfectiousReport> all = bizInfectiousReportMapper.selectList(
                 new LambdaQueryWrapper<BizInfectiousReport>().eq(BizInfectiousReport::getDelFlag, 0));
         InfectiousReportVO.Stats s = new InfectiousReportVO.Stats();
-        LocalDateTime todayStart = LocalDateTime.now().truncatedTo(ChronoUnit.DAYS);
+        LocalDateTime todayStart = TimeUtil.dayStart(LocalDate.now());
         for (BizInfectiousReport r : all) {
             Integer reportStatus = r.getReportStatus();
             if (Objects.equals(InfectiousReportStatusEnum.PENDING.getCode(), reportStatus)) {
@@ -152,11 +149,11 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         if (dto.getRegistId() == null && dto.getInpId() == null) {
             throw new BusinessException("门诊就诊与住院记录至少填一项（报卡必须能追到具体就诊）");
         }
-        SysInfectiousDisease disease = diseaseMapper.selectById(dto.getDiseaseId());
+        SysInfectiousDisease disease = sysInfectiousDiseaseMapper.selectById(dto.getDiseaseId());
         if (disease == null || disease.getDelFlag() != 0 || disease.getStatus() != 1) {
             throw new BusinessException("传染病病种不存在或已停用：" + dto.getDiseaseId());
         }
-        PatientSnapshotVO patient = reportMapper.selectPatientSnapshot(dto.getPatientId());
+        PatientSnapshotVO patient = bizInfectiousReportMapper.selectPatientSnapshot(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在：" + dto.getPatientId());
         }
@@ -165,17 +162,17 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
 
         if (dto.getId() == null) {
             BizInfectiousReport r = new BizInfectiousReport();
-            r.setReportNo(sequenceService.generateInfectiousReportNo());
+            r.setReportNo(redisSequenceService.generateInfectiousReportNo());
             fillCard(r, dto, disease, patient, operatorId, operatorName);
             r.setReportCount(1);
             r.setReportStatus(InfectiousReportStatusEnum.PENDING.getCode());
-            r.setReportTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+            r.setReportTime(TimeUtil.nowSeconds());
             r.setRemark(null);
-            reportMapper.insert(r);
+            bizInfectiousReportMapper.insert(r);
             return r.getId();
         }
 
-        BizInfectiousReport exists = reportMapper.selectById(dto.getId());
+        BizInfectiousReport exists = bizInfectiousReportMapper.selectById(dto.getId());
         if (exists == null || exists.getDelFlag() != 0) {
             throw new BusinessException("报卡不存在或已删除");
         }
@@ -195,10 +192,10 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         exists.setReturnReason(null);
         if (resubmit) {
             exists.setReportCount(exists.getReportCount() + 1);
-            exists.setRemark("第 " + exists.getReportCount() + " 次重报：" + tr(dto.getResubmitRemark()));
+            exists.setRemark("第 " + exists.getReportCount() + " 次重报：" + TextUtil.trim(dto.getResubmitRemark()));
         }
-        exists.setReportTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-        reportMapper.updateById(exists);
+        exists.setReportTime(TimeUtil.nowSeconds());
+        bizInfectiousReportMapper.updateById(exists);
         return exists.getId();
     }
 
@@ -214,9 +211,9 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         String name = StringUtils.hasText(dto.getAuditByName()) ? dto.getAuditByName() : UserUtils.getCurrentUser().getRealName();
         r.setReportStatus(InfectiousReportStatusEnum.AUDITED.getCode());
         r.setAuditByName(name);
-        r.setAuditTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-        r.setAuditOpinion(tr(dto.getOpinion()));
-        reportMapper.updateById(r);
+        r.setAuditTime(TimeUtil.nowSeconds());
+        r.setAuditOpinion(TextUtil.trim(dto.getOpinion()));
+        bizInfectiousReportMapper.updateById(r);
     }
 
     // 内部
@@ -233,10 +230,10 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         }
         String name = StringUtils.hasText(dto.getAuditByName()) ? dto.getAuditByName() : UserUtils.getCurrentUser().getRealName();
         r.setReportStatus(InfectiousReportStatusEnum.RETURNED.getCode());
-        r.setReturnReason(tr(dto.getReason()));
+        r.setReturnReason(TextUtil.trim(dto.getReason()));
         r.setAuditByName(name);
-        r.setAuditTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-        reportMapper.updateById(r);
+        r.setAuditTime(TimeUtil.nowSeconds());
+        bizInfectiousReportMapper.updateById(r);
     }
 
     /**
@@ -253,14 +250,14 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         String payload = buildDirectPayload(r);
         r.setReportStatus(InfectiousReportStatusEnum.DIRECT.getCode());
         r.setDirectPayload(payload);
-        r.setDirectTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-        reportMapper.updateById(r);
+        r.setDirectTime(TimeUtil.nowSeconds());
+        bizInfectiousReportMapper.updateById(r);
         return payload;
     }
 
     @Override
     public int notifyOverdue() {
-        List<BizInfectiousReport> overdue = reportMapper.selectList(
+        List<BizInfectiousReport> overdue = bizInfectiousReportMapper.selectList(
                 new LambdaQueryWrapper<BizInfectiousReport>()
                         .eq(BizInfectiousReport::getReportStatus, InfectiousReportStatusEnum.PENDING.getCode())
                         .eq(BizInfectiousReport::getDelFlag, 0)
@@ -269,7 +266,7 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         if (overdue.isEmpty()) {
             return 0;
         }
-        LocalDateTime todayStart = LocalDateTime.now().truncatedTo(ChronoUnit.DAYS);
+        LocalDateTime todayStart = TimeUtil.dayStart(LocalDate.now());
         int sent = 0;
         for (BizInfectiousReport r : overdue) {
             try {
@@ -291,8 +288,8 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
                         "传染病报卡超时：" + r.getReportNo(), content,
                         com.his.system.enums.BizTypeEnum.INFECTIOUS_REPORT.getType(), r.getId(), "warning", payload, null);
                 if (ok) {
-                    r.setNotifyTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-                    reportMapper.updateById(r);
+                    r.setNotifyTime(TimeUtil.nowSeconds());
+                    bizInfectiousReportMapper.updateById(r);
                     sent++;
                 }
             } catch (Exception ex) {
@@ -314,23 +311,23 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         r.setInpId(dto.getInpId());
         // 发现科室：挂号单科室兜底，允许填卡人指定（报卡的发现科室是填卡人认定的事实）
         if (dto.getRegistId() != null) {
-            DeptSnapshotVO dept = reportMapper.selectRegistDept(dto.getRegistId());
+            DeptSnapshotVO dept = bizInfectiousReportMapper.selectRegistDept(dto.getRegistId());
             if (dept != null) {
                 r.setVisitDeptId(dept.getDeptId());
                 r.setVisitDeptName(dept.getDeptName());
             }
         }
         if (StringUtils.hasText(dto.getVisitDeptName())) {
-            r.setVisitDeptName(tr(dto.getVisitDeptName()));
+            r.setVisitDeptName(TextUtil.trim(dto.getVisitDeptName()));
         }
         r.setDiseaseId(disease.getId());
         r.setDiseaseCode(disease.getDiseaseCode());
         r.setDiseaseName(disease.getDiseaseName());
         r.setInfectiousClass(disease.getInfectiousClass());
         r.setIcd10(disease.getIcd10());
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         r.setReportDeadline(now.plusHours(disease.getDeadlineHours()));
-        r.setClinicalDesc(tr(dto.getClinicalDesc()));
+        r.setClinicalDesc(TextUtil.trim(dto.getClinicalDesc()));
         r.setReportBy(reportBy);
         r.setReportByName(reportByName);
     }
@@ -372,7 +369,7 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
     }
 
     private BizInfectiousReport requireCard(Long id) {
-        BizInfectiousReport r = reportMapper.selectById(id);
+        BizInfectiousReport r = bizInfectiousReportMapper.selectById(id);
         if (r == null || r.getDelFlag() != 0) {
             throw new BusinessException("报卡不存在或已删除");
         }

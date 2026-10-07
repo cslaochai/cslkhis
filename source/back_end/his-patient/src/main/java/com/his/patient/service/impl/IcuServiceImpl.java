@@ -1,10 +1,14 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.BizIcuMonitor;
 import com.his.patient.entity.BizIcuStay;
@@ -26,7 +30,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 
@@ -48,14 +51,14 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class IcuServiceImpl implements IcuService {
+public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> implements IcuService {
 
     private static final int REASON_MAX = 200;
     private static final int DIAG_MAX = 255;
     private static final int DESC_MAX = 400;
 
-    private final BizIcuStayMapper stayMapper;
-    private final BizIcuMonitorMapper monitorMapper;
+    private final BizIcuStayMapper bizIcuStayMapper;
+    private final BizIcuMonitorMapper bizIcuMonitorMapper;
     private final RedisSequenceService redisSequenceService;
 
     private static void assertGcs(Integer gcs) {
@@ -68,42 +71,18 @@ public class IcuServiceImpl implements IcuService {
         if (intake == null && output == null) {
             return null;
         }
-        return nvl(intake).subtract(nvl(output)).setScale(1, RoundingMode.HALF_UP);
+        return NumUtil.orZero(intake).subtract(NumUtil.orZero(output)).setScale(1, RoundingMode.HALF_UP);
     }
 
     private static Integer flag(Integer value) {
         return value == null ? 0 : (value == 1 ? 1 : 0);
     }
 
-    private static BigDecimal nvl(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
-
-    private static int nvl(Integer value, int fallback) {
-        return value == null ? fallback : value;
-    }
-
-    private static String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
-    private static String cutToNull(String text, int max) {
-        return StringUtils.hasText(text) ? cut(text.trim(), max) : null;
-    }
-
-    private static String cut(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
     @Override
     public PageResult<IcuVO.StayVO> stayListPage(IcuStayQueryPageDTO query) {
-        Page<IcuVO.StayVO> page = new Page<>(nvl(query.getPageNum(), 1), nvl(query.getPageSize(), 10));
-        List<IcuVO.StayVO> records = stayMapper.selectStayPage(page,
-                trimToNull(query.getStayNo()), trimToNull(query.getPatientName()),
+        Page<IcuVO.StayVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<IcuVO.StayVO> records = bizIcuStayMapper.selectStayPage(page,
+                TextUtil.trimToNull(query.getStayNo()), TextUtil.trimToNull(query.getPatientName()),
                 query.getStartDate(), query.getEndDate(), query.getWardId(),
                 query.getCareLevel(), query.getStatus());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
@@ -113,7 +92,7 @@ public class IcuServiceImpl implements IcuService {
 
     @Override
     public IcuVO.StayVO stayGetById(Long id) {
-        IcuVO.StayVO vo = stayMapper.selectStayById(id);
+        IcuVO.StayVO vo = bizIcuStayMapper.selectStayById(id);
         if (vo == null) {
             throw new BusinessException("入科记录不存在或已删除");
         }
@@ -123,20 +102,20 @@ public class IcuServiceImpl implements IcuService {
     @Override
     public List<IcuVO.AdmissionVO> admissionsForIcu(String keyword, Integer limit) {
         int size = limit == null || limit <= 0 || limit > 200 ? 50 : limit;
-        return stayMapper.selectAdmissionCandidates(trimToNull(keyword), size);
+        return bizIcuStayMapper.selectAdmissionCandidates(TextUtil.trimToNull(keyword), size);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public IcuVO.StayVO stayUpsert(IcuStayUpsertDTO dto) {
-        IcuVO.AdmissionVO admission = stayMapper.selectAdmissionSnapshot(dto.getAdmissionId());
+        IcuVO.AdmissionVO admission = bizIcuStayMapper.selectAdmissionSnapshot(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
         }
         if (!Objects.equals(admission.getAdmitStatus(), AdmitStatusEnum.IN_HOSPITAL.getCode())) {
             throw new BusinessException("患者已出院，不能办理 ICU 入科");
         }
-        if (dto.getInTime().isAfter(now())) {
+        if (dto.getInTime().isAfter(TimeUtil.nowSeconds())) {
             throw new BusinessException("入科时间不能晚于当前时间");
         }
         if (admission.getAdmitTime() != null && dto.getInTime().isBefore(admission.getAdmitTime())) {
@@ -151,10 +130,10 @@ public class IcuServiceImpl implements IcuService {
 
         BizIcuStay stay;
         if (dto.getId() == null) {
-            if (stayMapper.countActiveByAdmission(dto.getAdmissionId()) > 0) {
+            if (bizIcuStayMapper.countActiveByAdmission(dto.getAdmissionId()) > 0) {
                 throw new BusinessException("该次住院已有在科记录（一次住院同时仅一条）");
             }
-            if (stayMapper.countActiveByBed(bed.getBedId(), null) > 0) {
+            if (bizIcuStayMapper.countActiveByBed(bed.getBedId(), null) > 0) {
                 throw new BusinessException("床位 " + bed.getBedNo() + " 已有在科患者，请先安排出科或换床");
             }
             stay = new BizIcuStay();
@@ -174,7 +153,7 @@ public class IcuServiceImpl implements IcuService {
                 throw new BusinessException("入科记录不允许改挂到另一次住院");
             }
             if (!Objects.equals(stay.getBedId(), bed.getBedId())
-                    && stayMapper.countActiveByBed(bed.getBedId(), stay.getId()) > 0) {
+                    && bizIcuStayMapper.countActiveByBed(bed.getBedId(), stay.getId()) > 0) {
                 throw new BusinessException("床位 " + bed.getBedNo() + " 已有在科患者，请换床");
             }
         }
@@ -187,10 +166,10 @@ public class IcuServiceImpl implements IcuService {
         stay.setBedId(bed.getBedId());
         stay.setBedNo(bed.getBedNo());
         stay.setCareLevel(careLevel);
-        stay.setInTime(dto.getInTime().truncatedTo(ChronoUnit.SECONDS));
-        stay.setInDiag(cutToNull(dto.getInDiag(), DIAG_MAX));
+        stay.setInTime(TimeUtil.toSeconds(dto.getInTime()));
+        stay.setInDiag(TextUtil.cutToNull(dto.getInDiag(), DIAG_MAX));
         stay.setInGcs(dto.getInGcs());
-        stay.setRemark(cutToNull(dto.getRemark(), DIAG_MAX * 2));
+        stay.setRemark(TextUtil.cutToNull(dto.getRemark(), DIAG_MAX * 2));
         saveStay(stay);
         return stayGetById(stay.getId());
     }
@@ -203,8 +182,8 @@ public class IcuServiceImpl implements IcuService {
             throw new BusinessException("当前用户信息不存在");
         }
         BizIcuStay stay = requireActiveStay(dto.getId());
-        LocalDateTime outTime = dto.getOutTime().truncatedTo(ChronoUnit.SECONDS);
-        if (outTime.isAfter(now())) {
+        LocalDateTime outTime = TimeUtil.toSeconds(dto.getOutTime());
+        if (outTime.isAfter(TimeUtil.nowSeconds())) {
             throw new BusinessException("出科时间不能晚于当前时间");
         }
         if (outTime.isBefore(stay.getInTime())) {
@@ -226,10 +205,10 @@ public class IcuServiceImpl implements IcuService {
         stay.setStatus(IcuStayStatusEnum.OUT.getCode());
         stay.setOutTime(outTime);
         stay.setOutDest(dest);
-        stay.setOutReason(cutToNull(dto.getOutReason(), REASON_MAX));
+        stay.setOutReason(TextUtil.cutToNull(dto.getOutReason(), REASON_MAX));
         stay.setOutGcs(dto.getOutGcs());
         stay.setOutBy(operatorUser.getRealName());
-        if (stayMapper.updateById(stay) <= 0) {
+        if (bizIcuStayMapper.updateById(stay) <= 0) {
             throw new BusinessException("出科登记失败");
         }
         return stayGetById(stay.getId());
@@ -237,13 +216,13 @@ public class IcuServiceImpl implements IcuService {
 
     @Override
     public List<IcuVO.BedVO> bedBoard(Long wardId) {
-        return stayMapper.selectBedBoard(wardId);
+        return bizIcuStayMapper.selectBedBoard(wardId);
     }
 
     @Override
     public PageResult<IcuVO.MonitorVO> monitorListPage(IcuMonitorQueryPageDTO query) {
-        Page<IcuVO.MonitorVO> page = new Page<>(nvl(query.getPageNum(), 1), nvl(query.getPageSize(), 10));
-        List<IcuVO.MonitorVO> records = monitorMapper.selectMonitorPage(page, query.getStayId(),
+        Page<IcuVO.MonitorVO> page = new Page<>(query.getPageNum(), query.getPageSize());
+        List<IcuVO.MonitorVO> records = bizIcuMonitorMapper.selectMonitorPage(page, query.getStayId(),
                 query.getStartDate(), query.getEndDate());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -251,8 +230,8 @@ public class IcuServiceImpl implements IcuService {
     @Override
     public List<IcuVO.MonitorVO> monitorTrend(Long stayId, Integer hours) {
         requireStay(stayId);
-        LocalDateTime since = hours == null || hours <= 0 ? null : now().minusHours(hours);
-        return monitorMapper.selectMonitorTrend(stayId, since, null);
+        LocalDateTime since = hours == null || hours <= 0 ? null : TimeUtil.nowSeconds().minusHours(hours);
+        return bizIcuMonitorMapper.selectMonitorTrend(stayId, since, null);
     }
 
     @Override
@@ -262,14 +241,14 @@ public class IcuServiceImpl implements IcuService {
         if (stay.getStatus() != IcuStayStatusEnum.IN.getCode()) {
             throw new BusinessException("患者已出科，监护记录已封账，不能再登记");
         }
-        LocalDateTime recordTime = dto.getRecordTime().truncatedTo(ChronoUnit.SECONDS);
-        if (recordTime.isAfter(now())) {
+        LocalDateTime recordTime = TimeUtil.toSeconds(dto.getRecordTime());
+        if (recordTime.isAfter(TimeUtil.nowSeconds())) {
             throw new BusinessException("记录时刻不能晚于当前时间");
         }
         if (recordTime.isBefore(stay.getInTime())) {
             throw new BusinessException("记录时刻不能早于入科时间");
         }
-        if (monitorMapper.countAtTime(stay.getId(), recordTime, dto.getId()) > 0) {
+        if (bizIcuMonitorMapper.countAtTime(stay.getId(), recordTime, dto.getId()) > 0) {
             throw new BusinessException("该时刻已有监护记录，请核对记录时刻");
         }
         Integer gcsTotal = resolveGcsTotal(dto);
@@ -291,7 +270,7 @@ public class IcuServiceImpl implements IcuService {
             monitor.setRecorderId(operatorUser.getEmployeeId());
             monitor.setRecorderName(operatorUser.getRealName());
         } else {
-            monitor = monitorMapper.selectById(dto.getId());
+            monitor = bizIcuMonitorMapper.selectById(dto.getId());
             if (monitor == null) {
                 throw new BusinessException("监护记录不存在或已删除");
             }
@@ -311,7 +290,7 @@ public class IcuServiceImpl implements IcuService {
         monitor.setGcsVerbal(dto.getGcsVerbal());
         monitor.setGcsMotor(dto.getGcsMotor());
         monitor.setGcsTotal(gcsTotal);
-        monitor.setPupil(cutToNull(dto.getPupil(), 128));
+        monitor.setPupil(TextUtil.cutToNull(dto.getPupil(), 128));
         monitor.setCvp(dto.getCvp());
         monitor.setVentMode(dto.getVentMode());
         monitor.setFio2(dto.getFio2());
@@ -325,15 +304,15 @@ public class IcuServiceImpl implements IcuService {
         monitor.setHasArterial(flag(dto.getHasArterial()));
         monitor.setHasCatheter(flag(dto.getHasCatheter()));
         monitor.setHasDrain(flag(dto.getHasDrain()));
-        monitor.setConditionDesc(cutToNull(dto.getConditionDesc(), DESC_MAX));
-        monitor.setHandling(cutToNull(dto.getHandling(), DESC_MAX));
-        monitor.setRemark(cutToNull(dto.getRemark(), DIAG_MAX * 2));
-        boolean ok = monitor.getId() == null ? monitorMapper.insert(monitor) > 0 : monitorMapper.updateById(monitor) > 0;
+        monitor.setConditionDesc(TextUtil.cutToNull(dto.getConditionDesc(), DESC_MAX));
+        monitor.setHandling(TextUtil.cutToNull(dto.getHandling(), DESC_MAX));
+        monitor.setRemark(TextUtil.cutToNull(dto.getRemark(), DIAG_MAX * 2));
+        boolean ok = monitor.getId() == null ? bizIcuMonitorMapper.insert(monitor) > 0 : bizIcuMonitorMapper.updateById(monitor) > 0;
         if (!ok) {
             throw new BusinessException("监护记录保存失败");
         }
         refreshMonitorCount(stay.getId());
-        return monitorMapper.selectMonitorById(monitor.getId());
+        return bizIcuMonitorMapper.selectMonitorById(monitor.getId());
     }
 
     @Override
@@ -342,43 +321,43 @@ public class IcuServiceImpl implements IcuService {
         LocalDate end = endDate == null ? LocalDate.now() : endDate;
         LocalDate earliest = end.minusDays(29);
         LocalDate start = startDate == null || startDate.isBefore(earliest) ? earliest : startDate;
-        IcuVO.StatsVO stats = stayMapper.selectRangeSummary(start.atStartOfDay(), end.atTime(23, 59, 59));
+        IcuVO.StatsVO stats = bizIcuStayMapper.selectRangeSummary(start.atStartOfDay(), end.atTime(23, 59, 59));
         if (stats == null) {
             stats = new IcuVO.StatsVO();
         }
         stats.setStartDate(start);
         stats.setEndDate(end);
-        int inCount = stayMapper.countInDept();
-        int bedTotal = monitorMapper.countIcuBeds();
+        int inCount = bizIcuStayMapper.countInDept();
+        int bedTotal = bizIcuMonitorMapper.countIcuBeds();
         stats.setInCount(inCount);
         stats.setBedTotal(bedTotal);
         stats.setBedUseRate(bedTotal == 0 ? null
                 : BigDecimal.valueOf(inCount).multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(bedTotal), 1, RoundingMode.HALF_UP));
-        stats.setMonitorTotalRange(monitorMapper.countRange(start.atStartOfDay(), end.atTime(23, 59, 59)));
-        int stays = nvl(stats.getInCountRange(), 0) + nvl(stats.getOutCountRange(), 0);
+        stats.setMonitorTotalRange(bizIcuMonitorMapper.countRange(start.atStartOfDay(), end.atTime(23, 59, 59)));
+        int stays = NumUtil.orDefault(stats.getInCountRange(), 0) + NumUtil.orDefault(stats.getOutCountRange(), 0);
         stats.setMonitorsPerStay(stays == 0 ? null
-                : BigDecimal.valueOf(nvl(stats.getMonitorTotalRange(), 0))
+                : BigDecimal.valueOf(NumUtil.orDefault(stats.getMonitorTotalRange(), 0))
                 .divide(BigDecimal.valueOf(stays), 2, RoundingMode.HALF_UP));
-        stats.setCareLevels(stayMapper.selectCareLevelBoard());
-        stats.setVentModes(monitorMapper.selectLatestVentModes());
-        IcuVO.StatsVO tubes = monitorMapper.selectTubeSummary();
+        stats.setCareLevels(bizIcuStayMapper.selectCareLevelBoard());
+        stats.setVentModes(bizIcuMonitorMapper.selectLatestVentModes());
+        IcuVO.StatsVO tubes = bizIcuMonitorMapper.selectTubeSummary();
         if (tubes == null) {
             // 在科患者一条监护记录都没有时 SUM() 出全 NULL 行，MyBatis 返回 null 对象；
             // 带管人数是护理质量口径的计数，出参要 0 而不是 null（前端卡片直接渲染）
             tubes = new IcuVO.StatsVO();
         }
-        stats.setAirwayCount(nvl(tubes.getAirwayCount(), 0));
-        stats.setCvcCount(nvl(tubes.getCvcCount(), 0));
-        stats.setArterialCount(nvl(tubes.getArterialCount(), 0));
-        stats.setCatheterCount(nvl(tubes.getCatheterCount(), 0));
-        stats.setDrainCount(nvl(tubes.getDrainCount(), 0));
-        stats.setMonitorLagCount(stayMapper.countMonitorLag(lagHours == null || lagHours <= 0 ? 6 : lagHours));
+        stats.setAirwayCount(NumUtil.orDefault(tubes.getAirwayCount(), 0));
+        stats.setCvcCount(NumUtil.orDefault(tubes.getCvcCount(), 0));
+        stats.setArterialCount(NumUtil.orDefault(tubes.getArterialCount(), 0));
+        stats.setCatheterCount(NumUtil.orDefault(tubes.getCatheterCount(), 0));
+        stats.setDrainCount(NumUtil.orDefault(tubes.getDrainCount(), 0));
+        stats.setMonitorLagCount(bizIcuStayMapper.countMonitorLag(lagHours == null || lagHours <= 0 ? 6 : lagHours));
         return stats;
     }
 
     private IcuVO.BedVO requireIcuBed(Long bedId) {
-        IcuVO.BedVO bed = stayMapper.selectBedSnapshot(bedId);
+        IcuVO.BedVO bed = bizIcuStayMapper.selectBedSnapshot(bedId);
         if (bed == null) {
             throw new BusinessException("床位不存在或已停用");
         }
@@ -392,7 +371,7 @@ public class IcuServiceImpl implements IcuService {
     }
 
     private BizIcuStay requireStay(Long id) {
-        BizIcuStay stay = stayMapper.selectById(id);
+        BizIcuStay stay = bizIcuStayMapper.selectById(id);
         if (stay == null) {
             throw new BusinessException("入科记录不存在或已删除");
         }
@@ -408,19 +387,19 @@ public class IcuServiceImpl implements IcuService {
     }
 
     private void saveStay(BizIcuStay stay) {
-        boolean ok = stay.getId() == null ? stayMapper.insert(stay) > 0 : stayMapper.updateById(stay) > 0;
+        boolean ok = stay.getId() == null ? bizIcuStayMapper.insert(stay) > 0 : bizIcuStayMapper.updateById(stay) > 0;
         if (!ok) {
             throw new BusinessException("入科记录保存失败");
         }
     }
 
     private void refreshMonitorCount(Long stayId) {
-        BizIcuStay stay = stayMapper.selectById(stayId);
+        BizIcuStay stay = bizIcuStayMapper.selectById(stayId);
         if (stay == null) {
             return;
         }
-        stay.setMonitorCount(monitorMapper.countByStay(stayId));
-        stayMapper.updateById(stay);
+        stay.setMonitorCount(bizIcuMonitorMapper.countByStay(stayId));
+        bizIcuStayMapper.updateById(stay);
     }
 
     /**

@@ -11,6 +11,7 @@ import com.his.charge.service.FeeRecordService;
 import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
 import com.his.common.enums.*;
+import com.his.common.util.NumUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,14 +42,10 @@ public class AppointChargeGatewayImpl implements AppointChargeGateway {
      */
     private static final int CATALOG_DIAGNOSIS_FEE = 1;
 
-    private final BizSettlementBillMapper settlementBillMapper;
+    private final BizSettlementBillMapper bizSettlementBillMapper;
     private final FeeRecordService feeRecordService;
     private final SettlementBillService settlementBillService;
     private final PaymentService paymentService;
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
 
     @Override
     public Map<Long, BillBrief> mapBillsByIds(Collection<Long> billIds) {
@@ -56,7 +53,7 @@ public class AppointChargeGatewayImpl implements AppointChargeGateway {
         if (billIds == null || billIds.isEmpty()) {
             return result;
         }
-        for (BizSettlementBill bill : settlementBillMapper.selectBatchIds(billIds)) {
+        for (BizSettlementBill bill : bizSettlementBillMapper.selectBatchIds(billIds)) {
             result.put(bill.getId(), toBrief(bill));
         }
         return result;
@@ -67,7 +64,7 @@ public class AppointChargeGatewayImpl implements AppointChargeGateway {
         if (billId == null) {
             return null;
         }
-        BizSettlementBill bill = settlementBillMapper.selectById(billId);
+        BizSettlementBill bill = bizSettlementBillMapper.selectById(billId);
         return bill == null ? null : toBrief(bill);
     }
 
@@ -86,8 +83,8 @@ public class AppointChargeGatewayImpl implements AppointChargeGateway {
             return null;
         }
 
-        BigDecimal registFee = nz(command.getRegistFee());
-        BigDecimal diagnosisFee = nz(command.getDiagnosisFee());
+        BigDecimal registFee = NumUtil.orZero(command.getRegistFee());
+        BigDecimal diagnosisFee = NumUtil.orZero(command.getDiagnosisFee());
         List<FeeBookDTO> books = new ArrayList<>(2);
         if (registFee.signum() > 0) {
             books.add(buildBook(command, "挂号费", "GHF", registFee, CATALOG_REGIST_FEE));
@@ -165,7 +162,7 @@ public class AppointChargeGatewayImpl implements AppointChargeGateway {
         brief.setBillNo(bill.getBillNo());
         brief.setBillStatus(bill.getBillStatus());
         brief.setPayableAmount(bill.getPayableAmount());
-        BigDecimal paid = nz(bill.getPaidAmount()).subtract(nz(bill.getRefundAmount()));
+        BigDecimal paid = NumUtil.orZero(bill.getPaidAmount()).subtract(NumUtil.orZero(bill.getRefundAmount()));
         brief.setPaidAmount(paid.signum() < 0 ? BigDecimal.ZERO : paid);
         return brief;
     }

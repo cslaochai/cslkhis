@@ -3,6 +3,7 @@ package com.his.charge.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.*;
 import com.his.charge.entity.BizCashierSettlement;
 import com.his.charge.entity.BizDaySettlement;
@@ -14,6 +15,8 @@ import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TimeUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -25,8 +28,10 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * 财务班结 / 日结 / 三级对账实现。
@@ -55,7 +60,7 @@ import java.util.*;
  */
 @Service
 @RequiredArgsConstructor
-public class FinanceSettlementServiceImpl implements FinanceSettlementService {
+public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettlementMapper, BizCashierSettlement> implements FinanceSettlementService {
 
     /**
      * 支付方式（{@code PaymentMethodEnum}）：1-现金 2-微信 3-支付宝 4-医保个账 5-院内余额 6-银行卡 7-转账。
@@ -71,8 +76,8 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
 
     private static final int SCALE = 2;
 
-    private final BizCashierSettlementMapper cashierMapper;
-    private final BizDaySettlementMapper dayMapper;
+    private final BizCashierSettlementMapper bizCashierSettlementMapper;
+    private final BizDaySettlementMapper bizDaySettlementMapper;
     /**
      * 只调它一个归集动作（{@code claimForShift}），聚合一律走本层自己的 Mapper 现算 ——
      * 日结不能靠"问 L3 要一个合计"，那样三条链就塌成一条，对账等于自查。
@@ -117,14 +122,6 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
 
     // 日结
 
-    private static int pageNum(Integer v) {
-        return v == null || v < 1 ? 1 : v;
-    }
-
-    private static int pageSize(Integer v) {
-        return v == null || v < 1 || v > 200 ? 10 : v;
-    }
-
     private static LocalDate parseDate(String s) {
         // C 类保留：日期解析工具被多个入口共用（@RequestParam 与非 web 调用），空值兜底留在原地，注解挂不到私有方法上
         if (!StringUtils.hasText(s)) {
@@ -155,15 +152,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         return StringUtils.hasText(date) ? parseDate(date).atTime(23, 59, 59) : null;
     }
 
-    private static BigDecimal nz(BigDecimal v) {
-        return v == null ? BigDecimal.ZERO : v;
-    }
-
     // 三级对账
-
-    private static BigDecimal scale(BigDecimal v) {
-        return nz(v).setScale(SCALE, RoundingMode.HALF_UP);
-    }
 
     // 上下文构建
 
@@ -198,11 +187,11 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
             cashierName = "未知收费员";
         }
 
-        LocalDateTime periodEnd = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime periodEnd = TimeUtil.nowSeconds();
         // 滚动区间：起点 = 上次交班时刻。首次交班回落到当日 00:00:00。
         // ⚠ 它只是凭证上的时间说明与"不足 1 秒"闸门的依据，**不决定本班的行集**
         //   （行集由下面的归集指针定义，见 claimForShift 的注释）。
-        LocalDateTime lastEnd = cashierMapper.selectLastPeriodEnd(cashierId);
+        LocalDateTime lastEnd = bizCashierSettlementMapper.selectLastPeriodEnd(cashierId);
         LocalDateTime periodBegin = lastEnd != null ? lastEnd : LocalDate.now().atStartOfDay();
         if (!periodEnd.isAfter(periodBegin)) {
             throw new BusinessException("距上次交班（" + periodBegin + "）不足 1 秒，无需重复交班");
@@ -220,7 +209,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         entity.setPeriodEnd(periodEnd);
         entity.setSettleStatus(1);
         entity.setRemark(dto.getRemark());
-        cashierMapper.insert(entity);
+        bizCashierSettlementMapper.insert(entity);
 
         // 归集指针：把"这个班认领了哪些流水"登记下来。金额不参与统计，
         // 它只服务两件事 —— 班结/一级复算按同一集合取数，日结一眼看出还有哪些钱没人交班
@@ -229,22 +218,22 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         paymentService.claimForShift(cashierId, periodEnd, entity.getId());
 
         // 系统账：本班认领的收款流水，按支付方式分桶
-        List<PaymentMethodSumVO> payRows = cashierMapper.sumPaidBySettlement(entity.getId());
+        List<PaymentMethodSumVO> payRows = bizCashierSettlementMapper.sumPaidBySettlement(entity.getId());
         PayBuckets buckets = new PayBuckets();
         for (PaymentMethodSumVO row : payRows) {
-            buckets.add(row.getPaymentMethod(), nz(row.getAmount()), cntOf(row.getCnt()));
+            buckets.add(row.getPaymentMethod(), NumUtil.orZero(row.getAmount()), cntOf(row.getCnt()));
         }
         int chargeCount = buckets.count;
         BigDecimal chargeAmount = buckets.amount;
         BigDecimal cash = buckets.cash;
 
         // 本班经手的退费（掏出去的钱）
-        CountAmountVO refundRow = cashierMapper.sumRefundBySettlement(entity.getId());
+        CountAmountVO refundRow = bizCashierSettlementMapper.sumRefundBySettlement(entity.getId());
         int refundCount = cntOf(refundRow.getCnt());
-        BigDecimal refundAmount = nz(refundRow.getAmount());
+        BigDecimal refundAmount = NumUtil.orZero(refundRow.getAmount());
 
         // 票据
-        InvoiceCountVO invoiceRow = cashierMapper.sumInvoiceBySettlement(entity.getId());
+        InvoiceCountVO invoiceRow = bizCashierSettlementMapper.sumInvoiceBySettlement(entity.getId());
         int invoiceCount = cntOf(invoiceRow.getCnt());
         int invoiceVoidCount = cntOf(invoiceRow.getVoidCnt());
 
@@ -273,7 +262,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         entity.setHandinCash(handin);
         entity.setCashDiff(cashDiff);
         entity.setDiffReason(dto.getDiffReason());
-        cashierMapper.updateById(entity);
+        bizCashierSettlementMapper.updateById(entity);
         return toCashierVO(entity);
     }
 
@@ -287,8 +276,8 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
                 // 排序必须补唯一二级键：同一秒交班的两条（换班交接）顺序不稳定 → 翻页重复 + 丢行且不报错
                 .orderByDesc(BizCashierSettlement::getPeriodEnd)
                 .orderByDesc(BizCashierSettlement::getId);
-        Page<BizCashierSettlement> page = cashierMapper.selectPage(
-                new Page<>(pageNum(dto.getPageNum()), pageSize(dto.getPageSize())), w);
+        Page<BizCashierSettlement> page = bizCashierSettlementMapper.selectPage(
+                new Page<>(dto.getPageNum(), dto.getPageSize()), w);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 toCashierVOList(page.getRecords()));
     }
@@ -299,7 +288,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         if (id == null) {
             throw new BusinessException("交班单ID不能为空");
         }
-        BizCashierSettlement row = cashierMapper.selectById(id);
+        BizCashierSettlement row = bizCashierSettlementMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("交班单不存在");
         }
@@ -316,12 +305,12 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         vo.setCashierAudited(countCashier(3));
         vo.setDayPendingAudit(countDay(1));
         vo.setDayAudited(countDay(2));
-        vo.setDayWithDiff(dayMapper.selectCount(new LambdaQueryWrapper<BizDaySettlement>()
+        vo.setDayWithDiff(bizDaySettlementMapper.selectCount(new LambdaQueryWrapper<BizDaySettlement>()
                 .eq(BizDaySettlement::getReconcileStatus, 2)));
         BigDecimal pendingAmount = BigDecimal.ZERO;
-        for (BizCashierSettlement s : cashierMapper.selectList(new LambdaQueryWrapper<BizCashierSettlement>()
+        for (BizCashierSettlement s : bizCashierSettlementMapper.selectList(new LambdaQueryWrapper<BizCashierSettlement>()
                 .eq(BizCashierSettlement::getSettleStatus, 1))) {
-            pendingAmount = pendingAmount.add(nz(s.getChargeAmount()));
+            pendingAmount = pendingAmount.add(NumUtil.orZero(s.getChargeAmount()));
         }
         vo.setCashierPendingAmount(pendingAmount.setScale(SCALE, RoundingMode.HALF_UP));
         return vo;
@@ -332,7 +321,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
     public DaySettlementVO runDaySettlement(DaySettlementRunDTO dto) {
         LocalDate day = parseDate(dto.getSettleDate());
 
-        BizDaySettlement existing = dayMapper.selectOne(new LambdaQueryWrapper<BizDaySettlement>()
+        BizDaySettlement existing = bizDaySettlementMapper.selectOne(new LambdaQueryWrapper<BizDaySettlement>()
                 .eq(BizDaySettlement::getSettleDate, day)
                 .last("LIMIT 1"));
         if (existing != null && Objects.equals(existing.getSettleStatus(), 2)) {
@@ -366,12 +355,12 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         entity.setRefundCount(ctx.txRefundCount);
         entity.setRefundAmount(ctx.txRefundAmount);
         entity.setNetAmount(ctx.txChargeAmount.subtract(ctx.txRefundAmount));
-        entity.setCashAmount(scale(ctx.buckets.cash));
-        entity.setWechatAmount(scale(ctx.buckets.wechat));
-        entity.setAlipayAmount(scale(ctx.buckets.alipay));
-        entity.setInsuranceAmount(scale(ctx.buckets.insurance));
-        entity.setBalanceAmount(scale(ctx.buckets.balance));
-        entity.setUnknownPayAmount(scale(ctx.buckets.unknownPay));
+        entity.setCashAmount(NumUtil.scale(ctx.buckets.cash, SCALE));
+        entity.setWechatAmount(NumUtil.scale(ctx.buckets.wechat, SCALE));
+        entity.setAlipayAmount(NumUtil.scale(ctx.buckets.alipay, SCALE));
+        entity.setInsuranceAmount(NumUtil.scale(ctx.buckets.insurance, SCALE));
+        entity.setBalanceAmount(NumUtil.scale(ctx.buckets.balance, SCALE));
+        entity.setUnknownPayAmount(NumUtil.scale(ctx.buckets.unknownPay, SCALE));
         // 统筹是医保局后付的钱，只在这里出现一次；不进 netAmount，不参与任何一级差额
         entity.setPoolAmount(ctx.poolAmount);
         entity.setInvoiceCount(ctx.invoiceCount);
@@ -388,14 +377,14 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         entity.setDiffDetail(reconcile.getSummary());
         entity.setSettleStatus(1);
         entity.setSettleBy(UserUtils.getCurrentUser().getRealName());
-        entity.setSettleTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+        entity.setSettleTime(TimeUtil.nowSeconds());
         if (dto.getRemark() != null) {
             entity.setRemark(dto.getRemark());
         }
         if (existing == null) {
-            dayMapper.insert(entity);
+            bizDaySettlementMapper.insert(entity);
         } else {
-            dayMapper.updateById(entity);
+            bizDaySettlementMapper.updateById(entity);
         }
 
         // 反写凭证链：班结单 → 日结单（并能双向查），同时把状态推进到"已日结"。
@@ -404,7 +393,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         BizCashierSettlement patch = new BizCashierSettlement();
         patch.setDaySettlementId(entity.getId());
         patch.setSettleStatus(2);
-        cashierMapper.update(patch, new LambdaUpdateWrapper<BizCashierSettlement>()
+        bizCashierSettlementMapper.update(patch, new LambdaUpdateWrapper<BizCashierSettlement>()
                 .ge(BizCashierSettlement::getPeriodEnd, day.atStartOfDay())
                 .lt(BizCashierSettlement::getPeriodEnd, day.plusDays(1).atStartOfDay())
                 // 已审核（3）的不动：日结可重算，但已审核的班结单不该被重算顺手动到
@@ -426,8 +415,8 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
                 // settle_date 本身唯一，这里补 id 只是统一写法（别的表同秒多行才是真问题）
                 .orderByDesc(BizDaySettlement::getSettleDate)
                 .orderByDesc(BizDaySettlement::getId);
-        Page<BizDaySettlement> page = dayMapper.selectPage(
-                new Page<>(pageNum(dto.getPageNum()), pageSize(dto.getPageSize())), w);
+        Page<BizDaySettlement> page = bizDaySettlementMapper.selectPage(
+                new Page<>(dto.getPageNum(), dto.getPageSize()), w);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 toDayVOList(page.getRecords()));
     }
@@ -438,7 +427,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         if (id == null) {
             throw new BusinessException("日结单ID不能为空");
         }
-        BizDaySettlement row = dayMapper.selectById(id);
+        BizDaySettlement row = bizDaySettlementMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("日结单不存在");
         }
@@ -448,7 +437,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
     @Override
     public DaySettlementDetailVO getDayDetailByDate(String date) {
         LocalDate day = parseDate(date);
-        BizDaySettlement row = dayMapper.selectOne(new LambdaQueryWrapper<BizDaySettlement>()
+        BizDaySettlement row = bizDaySettlementMapper.selectOne(new LambdaQueryWrapper<BizDaySettlement>()
                 .eq(BizDaySettlement::getSettleDate, day)
                 .last("LIMIT 1"));
         return buildDetail(day, row);
@@ -457,7 +446,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void auditDaySettlement(DaySettlementAuditDTO dto) {
-        BizDaySettlement row = dayMapper.selectById(dto.getId());
+        BizDaySettlement row = bizDaySettlementMapper.selectById(dto.getId());
         if (row == null) {
             throw new BusinessException("日结单不存在");
         }
@@ -466,23 +455,23 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         }
         row.setSettleStatus(2);
         row.setAuditBy(UserUtils.getCurrentUser().getRealName());
-        row.setAuditTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+        row.setAuditTime(TimeUtil.nowSeconds());
         row.setAuditRemark(dto.getAuditRemark());
         if (dto.getRemark() != null) {
             row.setRemark(dto.getRemark());
         }
-        dayMapper.updateById(row);
+        bizDaySettlementMapper.updateById(row);
 
         // 交班单同步置"已审核"，让收费员那边看得出"这个班已经结完、不用再来问"。
         // 按 day_settlement_id 取而不是按日期扫：日期相同但**不属于本单**的班结单
         // （日结之后才交的班）不该被这次审核顺带改成已审核。
-        for (BizCashierSettlement s : cashierMapper.selectList(new LambdaQueryWrapper<BizCashierSettlement>()
+        for (BizCashierSettlement s : bizCashierSettlementMapper.selectList(new LambdaQueryWrapper<BizCashierSettlement>()
                 .eq(BizCashierSettlement::getDaySettlementId, row.getId()))) {
             s.setSettleStatus(3);
             s.setAuditBy(row.getAuditBy());
             s.setAuditTime(row.getAuditTime());
             s.setAuditRemark(dto.getAuditRemark());
-            cashierMapper.updateById(s);
+            bizCashierSettlementMapper.updateById(s);
         }
     }
 
@@ -515,12 +504,12 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         StringBuilder shiftBadMsg = new StringBuilder();
         for (BizCashierSettlement s : ctx.shifts) {
             BigDecimal recomputed = BigDecimal.ZERO;
-            for (PaymentMethodSumVO row : cashierMapper.sumPaidBySettlement(s.getId())) {
-                recomputed = recomputed.add(nz(row.getAmount()));
+            for (PaymentMethodSumVO row : bizCashierSettlementMapper.sumPaidBySettlement(s.getId())) {
+                recomputed = recomputed.add(NumUtil.orZero(row.getAmount()));
             }
             recomputed = recomputed.setScale(SCALE, RoundingMode.HALF_UP);
             shiftRecomputedTotal = shiftRecomputedTotal.add(recomputed);
-            BigDecimal snap = nz(s.getChargeAmount());
+            BigDecimal snap = NumUtil.orZero(s.getChargeAmount());
             if (recomputed.compareTo(snap) != 0) {
                 shiftBad++;
                 BigDecimal d = recomputed.subtract(snap).abs();
@@ -665,57 +654,57 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
 
         // 凭证链：Σ交班单定格金额（不重新汇总渠道，班结当时已经点过一遍）
         for (BizCashierSettlement s : ctx.shifts) {
-            ctx.shiftSumAmount = ctx.shiftSumAmount.add(nz(s.getChargeAmount()));
+            ctx.shiftSumAmount = ctx.shiftSumAmount.add(NumUtil.orZero(s.getChargeAmount()));
         }
         ctx.shiftSumAmount = ctx.shiftSumAmount.setScale(SCALE, RoundingMode.HALF_UP);
 
         // 资金链：全院支付流水现算（区间 = ctx.begin / ctx.end，取法见上面的说明）
-        ctx.txChargeAmount = nz(dayMapper.sumPaidAmount(ctx.begin, ctx.end)).setScale(SCALE, RoundingMode.HALF_UP);
-        ctx.txChargeCount = (int) dayMapper.countPaid(ctx.begin, ctx.end);
-        ctx.billCount = (int) dayMapper.countPaidBills(ctx.begin, ctx.end);
-        CountAmountVO refund = dayMapper.sumRefund(ctx.begin, ctx.end);
+        ctx.txChargeAmount = NumUtil.orZero(bizDaySettlementMapper.sumPaidAmount(ctx.begin, ctx.end)).setScale(SCALE, RoundingMode.HALF_UP);
+        ctx.txChargeCount = (int) bizDaySettlementMapper.countPaid(ctx.begin, ctx.end);
+        ctx.billCount = (int) bizDaySettlementMapper.countPaidBills(ctx.begin, ctx.end);
+        CountAmountVO refund = bizDaySettlementMapper.sumRefund(ctx.begin, ctx.end);
         ctx.txRefundCount = cntOf(refund.getCnt());
-        ctx.txRefundAmount = nz(refund.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
-        for (PaymentMethodSumVO row : dayMapper.sumPaidByPaymentMethod(ctx.begin, ctx.end)) {
-            ctx.buckets.add(row.getPaymentMethod(), nz(row.getAmount()), cntOf(row.getCnt()));
+        ctx.txRefundAmount = NumUtil.orZero(refund.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
+        for (PaymentMethodSumVO row : bizDaySettlementMapper.sumPaidByPaymentMethod(ctx.begin, ctx.end)) {
+            ctx.buckets.add(row.getPaymentMethod(), NumUtil.orZero(row.getAmount()), cntOf(row.getCnt()));
         }
-        ctx.poolAmount = nz(dayMapper.sumPoolAmount(ctx.begin, ctx.end)).setScale(SCALE, RoundingMode.HALF_UP);
+        ctx.poolAmount = NumUtil.orZero(bizDaySettlementMapper.sumPoolAmount(ctx.begin, ctx.end)).setScale(SCALE, RoundingMode.HALF_UP);
 
         // 交班归集缺口
-        CountAmountVO unassigned = dayMapper.sumUnassigned(ctx.begin, ctx.end);
+        CountAmountVO unassigned = bizDaySettlementMapper.sumUnassigned(ctx.begin, ctx.end);
         ctx.unassignedCount = cntOf(unassigned.getCnt());
-        ctx.unassignedAmount = nz(unassigned.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
-        CountAmountVO system = dayMapper.sumSystemCollected(ctx.begin, ctx.end);
+        ctx.unassignedAmount = NumUtil.orZero(unassigned.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
+        CountAmountVO system = bizDaySettlementMapper.sumSystemCollected(ctx.begin, ctx.end);
         ctx.systemCount = cntOf(system.getCnt());
-        ctx.systemAmount = nz(system.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
+        ctx.systemAmount = NumUtil.orZero(system.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
 
         // 账单链：当日收讫账单的单头 ↔ 摊行 ↔ 科室
-        List<DeptAmountSumVO> deptRows = dayMapper.sumDetailByDept(ctx.begin, ctx.end);
+        List<DeptAmountSumVO> deptRows = bizDaySettlementMapper.sumDetailByDept(ctx.begin, ctx.end);
         ctx.deptCount = deptRows.size();
         BigDecimal deptSum = BigDecimal.ZERO;
         for (DeptAmountSumVO row : deptRows) {
-            deptSum = deptSum.add(nz(row.getAmount()));
+            deptSum = deptSum.add(NumUtil.orZero(row.getAmount()));
         }
         ctx.deptAmount = deptSum.setScale(SCALE, RoundingMode.HALF_UP);
-        CountAmountVO unattr = dayMapper.sumDetailUnattributed(ctx.begin, ctx.end);
+        CountAmountVO unattr = bizDaySettlementMapper.sumDetailUnattributed(ctx.begin, ctx.end);
         ctx.unattributedCount = cntOf(unattr.getCnt());
-        ctx.unattributedAmount = nz(unattr.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
-        CountAmountVO all = dayMapper.sumDetailAll(ctx.begin, ctx.end);
-        ctx.detailAllAmount = nz(all.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
-        CountAmountVO header = dayMapper.sumBillHeader(ctx.begin, ctx.end);
+        ctx.unattributedAmount = NumUtil.orZero(unattr.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
+        CountAmountVO all = bizDaySettlementMapper.sumDetailAll(ctx.begin, ctx.end);
+        ctx.detailAllAmount = NumUtil.orZero(all.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
+        CountAmountVO header = bizDaySettlementMapper.sumBillHeader(ctx.begin, ctx.end);
         ctx.billHeaderCount = cntOf(header.getCnt());
-        ctx.billHeaderAmount = nz(header.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
+        ctx.billHeaderAmount = NumUtil.orZero(header.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
         ctx.deptRows = deptRows;
 
         // 票据：票跟着账单走（当日收讫账单所开的票）
-        InvoiceCountVO invoice = dayMapper.sumInvoice(ctx.begin, ctx.end);
+        InvoiceCountVO invoice = bizDaySettlementMapper.sumInvoice(ctx.begin, ctx.end);
         ctx.invoiceCount = cntOf(invoice.getCnt());
         ctx.invoiceVoidCount = cntOf(invoice.getVoidCnt());
         return ctx;
     }
 
     private List<BizCashierSettlement> shiftsOf(LocalDate day) {
-        return cashierMapper.selectList(new LambdaQueryWrapper<BizCashierSettlement>()
+        return bizCashierSettlementMapper.selectList(new LambdaQueryWrapper<BizCashierSettlement>()
                 .ge(BizCashierSettlement::getPeriodEnd, day.atStartOfDay())
                 .lt(BizCashierSettlement::getPeriodEnd, day.plusDays(1).atStartOfDay())
                 .orderByAsc(BizCashierSettlement::getPeriodEnd)
@@ -730,7 +719,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
             vo.setDeptId(row.getDeptId());
             vo.setDeptName(row.getDeptName());
             vo.setItemCount(cntOf(row.getCnt()));
-            BigDecimal amount = nz(row.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
+            BigDecimal amount = NumUtil.orZero(row.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
             vo.setAmount(amount);
             vo.setRatio(ratio(amount, denominator));
             vo.setUnattributed(false);
@@ -769,17 +758,17 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         // 与 EmrServiceImpl 的取号同理：按"当天已用序号"取，不用进程内自增 ——
         // 进程内自增在服务重启后当天第一单必然撞唯一索引。
         String prefix = "JS" + LocalDateTime.now().format(DateFormats.COMPACT_DATE);
-        long used = cashierMapper.countByNoPrefix(prefix);
+        long used = bizCashierSettlementMapper.countByNoPrefix(prefix);
         return prefix + String.format("%04d", (used + 1) % 10000);
     }
 
     private long countCashier(int status) {
-        return cashierMapper.selectCount(new LambdaQueryWrapper<BizCashierSettlement>()
+        return bizCashierSettlementMapper.selectCount(new LambdaQueryWrapper<BizCashierSettlement>()
                 .eq(BizCashierSettlement::getSettleStatus, status));
     }
 
     private long countDay(int status) {
-        return dayMapper.selectCount(new LambdaQueryWrapper<BizDaySettlement>()
+        return bizDaySettlementMapper.selectCount(new LambdaQueryWrapper<BizDaySettlement>()
                 .eq(BizDaySettlement::getSettleStatus, status));
     }
 

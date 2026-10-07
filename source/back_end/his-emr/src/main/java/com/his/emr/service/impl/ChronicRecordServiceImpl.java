@@ -2,6 +2,7 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
@@ -36,17 +37,17 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @Service
 @RequiredArgsConstructor
-public class ChronicRecordServiceImpl implements ChronicRecordService {
+public class ChronicRecordServiceImpl extends ServiceImpl<BizChronicRecordMapper, BizChronicRecord> implements ChronicRecordService {
 
     private static final AtomicLong SEQ = new AtomicLong();
 
-    private final BizChronicRecordMapper chronicRecordMapper;
+    private final BizChronicRecordMapper bizChronicRecordMapper;
 
     @Override
     public ChronicRecordListVO upsert(ChronicUpsertDTO dto) {
         var current = UserUtils.getCurrentUser();
         // 同患者同慢病唯一有效档案
-        Long exist = chronicRecordMapper.selectCount(new LambdaQueryWrapper<BizChronicRecord>()
+        Long exist = bizChronicRecordMapper.selectCount(new LambdaQueryWrapper<BizChronicRecord>()
                 .eq(BizChronicRecord::getPatientId, dto.getPatientId())
                 .eq(BizChronicRecord::getDiseaseCode, dto.getDiseaseCode())
                 .eq(BizChronicRecord::getConfirmStatus, 1));
@@ -68,13 +69,13 @@ public class ChronicRecordServiceImpl implements ChronicRecordService {
         record.setConfirmStatus(ChronicConfirmStatusEnum.CONFIRMED.getCode());
         record.setConfirmTime(LocalDateTime.now());
         record.setRemark(dto.getRemark());
-        chronicRecordMapper.insert(record);
+        bizChronicRecordMapper.insert(record);
         return toVO(record);
     }
 
     @Override
     public void cancel(ChronicCancelDTO dto) {
-        BizChronicRecord record = chronicRecordMapper.selectById(dto.getRecordId());
+        BizChronicRecord record = bizChronicRecordMapper.selectById(dto.getRecordId());
         if (record == null) {
             throw new BusinessException("慢病档案不存在");
         }
@@ -83,7 +84,7 @@ public class ChronicRecordServiceImpl implements ChronicRecordService {
         }
         record.setConfirmStatus(ChronicConfirmStatusEnum.CANCELLED.getCode());
         record.setConfirmTime(LocalDateTime.now());
-        chronicRecordMapper.updateById(record);
+        bizChronicRecordMapper.updateById(record);
     }
 
     @Override
@@ -107,7 +108,7 @@ public class ChronicRecordServiceImpl implements ChronicRecordService {
             wrapper.eq(BizChronicRecord::getConfirmStatus, dto.getConfirmStatus());
         }
         wrapper.orderByDesc(BizChronicRecord::getId);
-        Page<BizChronicRecord> page = chronicRecordMapper.selectPage(
+        Page<BizChronicRecord> page = bizChronicRecordMapper.selectPage(
                 Page.of(dto.getPageNum(), dto.getPageSize()), wrapper);
         return PageResult.of(page.getTotal(), page.getCurrent(),
                 page.getSize(), page.getPages(), toVOList(page.getRecords()));
@@ -115,7 +116,7 @@ public class ChronicRecordServiceImpl implements ChronicRecordService {
 
     @Override
     public List<ChronicRecordListVO> activeList(Long patientId) {
-        return toVOList(chronicRecordMapper.selectList(new LambdaQueryWrapper<BizChronicRecord>()
+        return toVOList(bizChronicRecordMapper.selectList(new LambdaQueryWrapper<BizChronicRecord>()
                 .eq(BizChronicRecord::getPatientId, patientId)
                 .eq(BizChronicRecord::getConfirmStatus, 1)
                 .orderByDesc(BizChronicRecord::getId)));
@@ -127,7 +128,7 @@ public class ChronicRecordServiceImpl implements ChronicRecordService {
         if (patientId == null) {
             return List.of();
         }
-        List<BizChronicRecord> rows = chronicRecordMapper.selectList(new LambdaQueryWrapper<BizChronicRecord>()
+        List<BizChronicRecord> rows = bizChronicRecordMapper.selectList(new LambdaQueryWrapper<BizChronicRecord>()
                 .eq(BizChronicRecord::getPatientId, patientId)
                 .orderByDesc(BizChronicRecord::getId));
         return toVOList(rows);

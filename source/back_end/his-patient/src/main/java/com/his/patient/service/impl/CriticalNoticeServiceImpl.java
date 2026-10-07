@@ -1,6 +1,7 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.AdmitStatusEnum;
@@ -10,6 +11,8 @@ import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.patient.dto.CriticalNoticeDTO;
@@ -28,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -53,7 +55,7 @@ import java.util.Set;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CriticalNoticeServiceImpl implements CriticalNoticeService {
+public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapper, BizCriticalNotice> implements CriticalNoticeService {
     private static final int DIAG_MAX = 500;
     private static final int TEXT_MAX = 1000;
     private static final int REASON_MAX = 500;
@@ -72,74 +74,28 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
      */
     private static final Set<Integer> RELATIONS = Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 99);
     private final DeptScopeProvider deptScopeProvider;
-    private final BizCriticalNoticeMapper noticeMapper;
+    private final BizCriticalNoticeMapper bizCriticalNoticeMapper;
     private final RedisSequenceService redisSequenceService;
-    private final EmrSignatureService signatureService;
+    private final EmrSignatureService emrSignatureService;
 
     // 查询
 
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime atStart(java.time.LocalDate date) {
-        return date == null ? null : date.atStartOfDay();
-    }
-
-    /**
-     * 按日期过滤必须补全天边界（AGENTS §3：datetime 恒大于当日 00:00 字符串）
-     */
-    private static LocalDateTime atEnd(java.time.LocalDate date) {
-        return date == null ? null : date.atTime(23, 59, 59);
-    }
-
-    private static Integer nvl(Integer v, int d) {
-        return v == null ? d : v;
-    }
-
-    private static String requireText(String text, String message) {
-        String t = trimToNull(text);
-        if (t == null) {
-            throw new BusinessException(message);
-        }
-        return t;
-    }
-
     // 填写 / 签发 / 签收 / 作废 / 打印
-
-    private static String trimToNull(String text) {
-        if (!StringUtils.hasText(text)) {
-            return null;
-        }
-        return text.trim();
-    }
-
-    private static String cut(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
-    private static String cutToNull(String text, int max) {
-        String t = trimToNull(text);
-        return t == null ? null : cut(t, max);
-    }
 
     @Override
     public PageResult<CriticalNoticeVO.Row> listPage(CriticalNoticeDTO.QueryPage query) {
         CriticalNoticeDTO.QueryPage q = query == null ? new CriticalNoticeDTO.QueryPage() : query;
-        Page<CriticalNoticeVO.Row> page = new Page<>(nvl(q.getPageNum(), 1), nvl(q.getPageSize(), 10));
+        Page<CriticalNoticeVO.Row> page = new Page<>(q.getPageNum(), q.getPageSize());
         List<Long> deptIds = scopedDeptIds(q.getDeptId());
-        List<CriticalNoticeVO.Row> records = noticeMapper.selectNoticePage(page,
-                trimToNull(q.getKeyword()), q.getNoticeType(), q.getNoticeStatus(),
-                atStart(q.getStartDate()), atEnd(q.getEndDate()), q.getDeptId(), deptIds);
+        List<CriticalNoticeVO.Row> records = bizCriticalNoticeMapper.selectNoticePage(page,
+                TextUtil.trimToNull(q.getKeyword()), q.getNoticeType(), q.getNoticeStatus(),
+                TimeUtil.dayStart(q.getStartDate()), TimeUtil.dayEnd(q.getEndDate()), q.getDeptId(), deptIds);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
     public CriticalNoticeVO.Detail getDetailById(Long id) {
-        CriticalNoticeVO.Detail detail = noticeMapper.selectNoticeDetail(id);
+        CriticalNoticeVO.Detail detail = bizCriticalNoticeMapper.selectNoticeDetail(id);
         if (detail == null) {
             throw new BusinessException("病危重通知单不存在或已删除");
         }
@@ -150,7 +106,7 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
 
     @Override
     public CriticalNoticeVO.Base base(Long admissionId) {
-        CriticalNoticeVO.Base base = noticeMapper.selectAdmissionBase(admissionId);
+        CriticalNoticeVO.Base base = bizCriticalNoticeMapper.selectAdmissionBase(admissionId);
         if (base == null) {
             throw new BusinessException("住院记录不存在");
         }
@@ -160,24 +116,24 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
     @Override
     public List<CriticalNoticeVO.Inpatient> inpatients(String keyword, Integer limit) {
         int n = limit == null || limit <= 0 ? 200 : Math.min(limit, 200);
-        return noticeMapper.selectInpatientCandidates(trimToNull(keyword), scopedDeptIds(null), n);
+        return bizCriticalNoticeMapper.selectInpatientCandidates(TextUtil.trimToNull(keyword), scopedDeptIds(null), n);
     }
 
     @Override
     public List<CriticalNoticeVO.DoctorOption> doctorOptions() {
-        return noticeMapper.selectDoctorOptions();
+        return bizCriticalNoticeMapper.selectDoctorOptions();
     }
 
     @Override
     public CriticalNoticeVO.Stats stats() {
-        CriticalNoticeVO.Stats stats = noticeMapper.selectStats(scopedDeptIds(null));
+        CriticalNoticeVO.Stats stats = bizCriticalNoticeMapper.selectStats(scopedDeptIds(null));
         return stats == null ? new CriticalNoticeVO.Stats() : stats;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(CriticalNoticeDTO.Upsert dto) {
-        CriticalNoticeVO.Base snapshot = noticeMapper.selectAdmissionBase(dto.getAdmissionId());
+        CriticalNoticeVO.Base snapshot = bizCriticalNoticeMapper.selectAdmissionBase(dto.getAdmissionId());
         if (snapshot == null) {
             throw new BusinessException("住院记录不存在");
         }
@@ -186,7 +142,7 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         }
         // 写路径与签发/作废同一口径收口：不校验就能给别科患者开单，等于绕过了岗位数据范围
         assertDeptAccessible(snapshot.getDeptId());
-        LocalDateTime now = now();
+        LocalDateTime now = TimeUtil.nowSeconds();
         LocalDateTime notifyTime = TimeUtil.toSeconds(dto.getNotifyTime());
         // 保留（类别③）：告知时间要落在「入院之后、此刻之前」，是时间轴业务规则，不是入参是否为空
         if (notifyTime.isAfter(now)) {
@@ -224,32 +180,32 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         // 一般项目一律取服务端快照，不采信前端
         notice.setPatientId(snapshot.getPatientId());
         notice.setPatientName(snapshot.getPatientName());
-        notice.setPatientNo(cutToNull(snapshot.getPatientNo(), 32));
+        notice.setPatientNo(TextUtil.cutToNull(snapshot.getPatientNo(), 32));
         notice.setGender(snapshot.getGender());
         notice.setAge(snapshot.getAge());
         notice.setDeptId(snapshot.getDeptId());
-        notice.setDeptName(cutToNull(snapshot.getDeptName(), 100));
-        notice.setWardName(cutToNull(snapshot.getWardName(), 64));
-        notice.setBedNo(cutToNull(snapshot.getBedNo(), 16));
-        notice.setAdmissionNo(cutToNull(snapshot.getAdmissionNo(), 32));
+        notice.setDeptName(TextUtil.cutToNull(snapshot.getDeptName(), 100));
+        notice.setWardName(TextUtil.cutToNull(snapshot.getWardName(), 64));
+        notice.setBedNo(TextUtil.cutToNull(snapshot.getBedNo(), 16));
+        notice.setAdmissionNo(TextUtil.cutToNull(snapshot.getAdmissionNo(), 32));
 
         notice.setNoticeType(dto.getNoticeType());
         notice.setConsciousnessStatus(dto.getConsciousnessStatus());
-        notice.setClinicalDiagnosis(cut(trimToNull(dto.getClinicalDiagnosis()), DIAG_MAX));
-        notice.setConditionDesc(cut(trimToNull(dto.getConditionDesc()), TEXT_MAX));
-        notice.setWarningMatters(cut(trimToNull(dto.getWarningMatters()), TEXT_MAX));
-        notice.setDoctorMeasures(cutToNull(dto.getDoctorMeasures(), TEXT_MAX));
+        notice.setClinicalDiagnosis(TextUtil.cut(TextUtil.trimToNull(dto.getClinicalDiagnosis()), DIAG_MAX));
+        notice.setConditionDesc(TextUtil.cut(TextUtil.trimToNull(dto.getConditionDesc()), TEXT_MAX));
+        notice.setWarningMatters(TextUtil.cut(TextUtil.trimToNull(dto.getWarningMatters()), TEXT_MAX));
+        notice.setDoctorMeasures(TextUtil.cutToNull(dto.getDoctorMeasures(), TEXT_MAX));
         notice.setNotifyTime(notifyTime);
         if (isNew || notice.getDoctorId() == null) {
             Long me = UserUtils.getCurrentUser().getEmployeeId();
             notice.setDoctorId(me != null ? me : dto.getDoctorId());
             // 保留（类别②）：校验对象是服务端快照/登录上下文带出的医师名，不是入参字段，注解覆盖不到
-            notice.setDoctorName(cut(requireText(
+            notice.setDoctorName(TextUtil.cut(TextUtil.requireTrimmed(
                     StringUtils.hasText(notice.getDoctorName()) ? notice.getDoctorName()
                             : UserUtils.getCurrentUser().getRealName(), "告知医师不能为空"), NAME_MAX));
         }
         applyWitness(notice, dto.getWitnessDoctorId(), dto.getWitnessDoctorName());
-        notice.setRemark(cutToNull(dto.getRemark(), REASON_MAX));
+        notice.setRemark(TextUtil.cutToNull(dto.getRemark(), REASON_MAX));
         saveNotice(notice, isNew);
         return notice.getId();
     }
@@ -264,7 +220,7 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         }
         requireUnsigned(notice);
         assertDeptAccessible(notice.getDeptId());
-        CriticalNoticeVO.Base snapshot = noticeMapper.selectAdmissionBase(notice.getAdmissionId());
+        CriticalNoticeVO.Base snapshot = bizCriticalNoticeMapper.selectAdmissionBase(notice.getAdmissionId());
         if (snapshot == null || !Objects.equals(snapshot.getAdmitStatus(), AdmitStatusEnum.IN_HOSPITAL.getCode())) {
             throw new BusinessException("患者已不在院，不能签发病危重通知（告知必须发生在住院期间）");
         }
@@ -280,7 +236,7 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
                     + "电子签名的落款人必须是本人，请用填写医师的账号签发");
         }
         notice.setDoctorId(me);
-        notice.setDoctorName(cut(myName, NAME_MAX));
+        notice.setDoctorName(TextUtil.cut(myName, NAME_MAX));
 
         SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(SignBizTypeEnum.CRITICAL_NOTICE.getCode());
@@ -293,11 +249,11 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
             cmd.setSignerDeptId(user.getDeptId());
             cmd.setSignerDeptName(user.getDeptName());
         }
-        cmd.setSignerTitle(cutToNull(noticeMapper.selectEmployeeTitle(me), 50));
+        cmd.setSignerTitle(TextUtil.cutToNull(bizCriticalNoticeMapper.selectEmployeeTitle(me), 50));
         cmd.setClientIp(dto.getClientIp());
         cmd.setRemark("病危重通知签发（" + BizCriticalNotice.typeText(notice.getNoticeType()) + "）");
         try {
-            SignatureVO sig = signatureService.sign(cmd);
+            SignatureVO sig = emrSignatureService.sign(cmd);
             // 锚点三件套必须在这里一起写：provider 的 applySignAnchor 已把 sign_status 置 1，
             // 但本方法随后用**签发前读出的实体**整行 updateById，漏写就把它冲回 0（签名失效、单据像没锁）。
             notice.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
@@ -307,7 +263,7 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
             throw new BusinessException("通知单签发失败（" + notice.getNoticeNo() + "）：" + e.getMessage());
         }
         notice.setNoticeStatus(NoticeStatusEnum.ISSUED.getCode());
-        notice.setIssueTime(now());
+        notice.setIssueTime(TimeUtil.nowSeconds());
         saveNotice(notice, false);
     }
 
@@ -324,19 +280,19 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         if (dto.getSignerRelation() == null || !RELATIONS.contains(dto.getSignerRelation())) {
             throw new BusinessException("签收人与患者的关系取值不合法（见字典 his_notice_relation，法定必填）");
         }
-        String signature = trimToNull(dto.getSignerSignature());
+        String signature = TextUtil.trimToNull(dto.getSignerSignature());
         if (!signature.startsWith("data:image/png;base64,")) {
             throw new BusinessException("手写签名必须是画板生成的 PNG 图片");
         }
         if (signature.length() > SIGNATURE_MAX) {
             throw new BusinessException("手写签名图片过大，请清空画板后重新签名");
         }
-        notice.setSignerName(cut(trimToNull(dto.getSignerName()), NAME_MAX));
+        notice.setSignerName(TextUtil.cut(TextUtil.trimToNull(dto.getSignerName()), NAME_MAX));
         notice.setSignerRelation(dto.getSignerRelation());
-        notice.setSignerIdCard(cutToNull(trimToNull(dto.getSignerIdCard()), 20));
-        notice.setSignerPhone(cutToNull(trimToNull(dto.getSignerPhone()), PHONE_MAX));
+        notice.setSignerIdCard(TextUtil.cutToNull(TextUtil.trimToNull(dto.getSignerIdCard()), 20));
+        notice.setSignerPhone(TextUtil.cutToNull(TextUtil.trimToNull(dto.getSignerPhone()), PHONE_MAX));
         notice.setSignerSignature(signature);
-        notice.setAcknowledgeTime(now());
+        notice.setAcknowledgeTime(TimeUtil.nowSeconds());
         notice.setNoticeStatus(NoticeStatusEnum.ACKED.getCode());
         saveNotice(notice, false);
     }
@@ -361,9 +317,9 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
         }
         assertDeptAccessible(notice.getDeptId());
         notice.setNoticeStatus(NoticeStatusEnum.VOIDED.getCode());
-        notice.setVoidReason(cut(trimToNull(dto.getVoidReason()), REASON_MAX));
+        notice.setVoidReason(TextUtil.cut(TextUtil.trimToNull(dto.getVoidReason()), REASON_MAX));
         notice.setVoidBy(operatorUser.getRealName());
-        notice.setVoidTime(now());
+        notice.setVoidTime(TimeUtil.nowSeconds());
         saveNotice(notice, false);
     }
 
@@ -379,13 +335,13 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
             throw new BusinessException("只有「已签收」的通知单打印回执（未签收的告知尚未闭环）");
         }
         notice.setPrinterName(operatorUser.getRealName());
-        notice.setPrintCount(nvl(notice.getPrintCount(), 0) + 1);
-        notice.setLastPrintTime(now());
+        notice.setPrintCount(NumUtil.orDefault(notice.getPrintCount(), 0) + 1);
+        notice.setLastPrintTime(TimeUtil.nowSeconds());
         saveNotice(notice, false);
     }
 
     private void applyWitness(BizCriticalNotice notice, Long witnessId, String witnessNameArg) {
-        String name = trimToNull(witnessNameArg);
+        String name = TextUtil.trimToNull(witnessNameArg);
         if (witnessId == null && name == null) {
             notice.setWitnessDoctorId(null);
             notice.setWitnessDoctorName(null);
@@ -396,11 +352,11 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
             throw new BusinessException("见证医师不能与告知医师是同一人（见证的意义在于第二双眼）");
         }
         notice.setWitnessDoctorId(witnessId);
-        notice.setWitnessDoctorName(cutToNull(name, NAME_MAX));
+        notice.setWitnessDoctorName(TextUtil.cutToNull(name, NAME_MAX));
     }
 
     private BizCriticalNotice requireNotice(Long id) {
-        BizCriticalNotice notice = id == null ? null : noticeMapper.selectById(id);
+        BizCriticalNotice notice = id == null ? null : bizCriticalNoticeMapper.selectById(id);
         if (notice == null) {
             throw new BusinessException("病危重通知单不存在或已删除");
         }
@@ -437,9 +393,9 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
 
     private void saveNotice(BizCriticalNotice notice, boolean isNew) {
         if (isNew) {
-            noticeMapper.insert(notice);
+            bizCriticalNoticeMapper.insert(notice);
         } else {
-            noticeMapper.updateById(notice);
+            bizCriticalNoticeMapper.updateById(notice);
         }
     }
 

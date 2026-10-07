@@ -2,6 +2,7 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
@@ -23,9 +24,9 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
-public class SysEmployeeServiceImpl implements SysEmployeeService {
+public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEmployee> implements SysEmployeeService {
 
-    private final SysEmployeeMapper employeeMapper;
+    private final SysEmployeeMapper sysEmployeeMapper;
     private final RedisSequenceService redisSequenceService;
     private final EmployeePostService employeePostService;
 
@@ -37,7 +38,7 @@ public class SysEmployeeServiceImpl implements SysEmployeeService {
         applyStaffTypeFilter(wrapper, queryDTO);
         wrapper.orderByAsc(SysEmployee::getEmpCode);
 
-        Page<SysEmployee> page = employeeMapper.selectPage(
+        Page<SysEmployee> page = sysEmployeeMapper.selectPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
 
         List<EmployeeVO> resultList = page.getRecords().stream()
@@ -62,7 +63,7 @@ public class SysEmployeeServiceImpl implements SysEmployeeService {
         // ⚠️ 用 last() 就不要再叠 orderByAsc：两者都会生成 ORDER BY，拼成两段 ORDER BY 是语法错误。
         wrapper.last("ORDER BY id ASC");
 
-        return employeeMapper.selectList(wrapper).stream()
+        return sysEmployeeMapper.selectList(wrapper).stream()
                 .map(this::convertToVO)
                 .peek(this::maskSensitive)
                 .toList();
@@ -70,7 +71,7 @@ public class SysEmployeeServiceImpl implements SysEmployeeService {
 
     @Override
     public EmployeeVO getInfo(Long id) {
-        SysEmployee emp = employeeMapper.selectById(id);
+        SysEmployee emp = sysEmployeeMapper.selectById(id);
         return convertToVO(emp);
     }
 
@@ -102,11 +103,11 @@ public class SysEmployeeServiceImpl implements SysEmployeeService {
         boolean isNew = empId == null;
         if (isNew) {
             emp.setEmpCode(redisSequenceService.generateEmployeeNo());
-            employeeMapper.insert(emp);
+            sysEmployeeMapper.insert(emp);
             empId = emp.getId();
         } else {
             emp.setId(empId);
-            employeeMapper.updateById(emp);
+            sysEmployeeMapper.updateById(emp);
         }
 
         // 岗位（角色 × 科室）整体替换：鉴权直接 join 岗位表，主科室由主岗位回填。
@@ -119,7 +120,7 @@ public class SysEmployeeServiceImpl implements SysEmployeeService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
-        employeeMapper.deleteById(id);
+        sysEmployeeMapper.deleteById(id);
         // 岗位一并清掉（显式空集合 = 清空，见 replacePosts 的 null/空语义）
         employeePostService.replacePosts(id, List.of());
     }

@@ -1,10 +1,12 @@
 package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.appoint.entity.BizAppointInfo;
 import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.emr.dto.PrevisitSubmitDTO;
 import com.his.emr.entity.BizPrevisitRecord;
 import com.his.emr.mapper.BizPrevisitRecordMapper;
@@ -15,32 +17,23 @@ import com.his.emr.vo.PrevisitQuestionnaireVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class PrevisitRecordServiceImpl implements PrevisitRecordService {
+public class PrevisitRecordServiceImpl extends ServiceImpl<BizPrevisitRecordMapper, BizPrevisitRecord> implements PrevisitRecordService {
 
     /**
      * 补充描述入库上限：患者粘贴长文时截断，不让 TEXT 列被单条问卷撑爆
      */
     private static final int FREE_TEXT_MAX = 1000;
 
-    private final BizPrevisitRecordMapper previsitRecordMapper;
+    private final BizPrevisitRecordMapper bizPrevisitRecordMapper;
 
-    private final BizAppointInfoMapper appointInfoMapper;
+    private final BizAppointInfoMapper bizAppointInfoMapper;
 
     private final ObjectMapper objectMapper;
-
-    private static String cut(String text, int max) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= max ? value : value.substring(0, max);
-    }
 
     @Override
     public PrevisitQuestionnaireVO questionnaire() {
@@ -54,12 +47,12 @@ public class PrevisitRecordServiceImpl implements PrevisitRecordService {
 
     @Override
     public PrevisitDetailVO submit(PrevisitSubmitDTO dto) {
-        BizAppointInfo appointInfo = appointInfoMapper.selectById(dto.getRegistId());
+        BizAppointInfo appointInfo = bizAppointInfoMapper.selectById(dto.getRegistId());
         if (appointInfo == null) {
             throw new BusinessException("挂号记录不存在");
         }
         // 归属再闸一道：入口（小程序端点）已按登录态校验过，这里按挂号记录反查患者落快照
-        BizPrevisitRecord record = previsitRecordMapper.selectOne(
+        BizPrevisitRecord record = bizPrevisitRecordMapper.selectOne(
                 new LambdaQueryWrapper<BizPrevisitRecord>()
                         .eq(BizPrevisitRecord::getRegistId, dto.getRegistId()));
         boolean isNew = record == null;
@@ -74,21 +67,21 @@ public class PrevisitRecordServiceImpl implements PrevisitRecordService {
         record.setDeptName(appointInfo.getDeptName());
         record.setMainSymptom(dto.getMainSymptom().trim());
         record.setAnswersJson(toJson(dto.getAnswers()));
-        record.setFreeText(cut(dto.getFreeText(), FREE_TEXT_MAX));
+        record.setFreeText(TextUtil.cut(dto.getFreeText(), FREE_TEXT_MAX, ""));
         // 重新提交即重算：旧摘要作废，等 AI 环节重出
         record.setSummaryAi(null);
         record.setSummarySource(null);
         if (isNew) {
-            previsitRecordMapper.insert(record);
+            bizPrevisitRecordMapper.insert(record);
         } else {
-            previsitRecordMapper.updateById(record);
+            bizPrevisitRecordMapper.updateById(record);
         }
         return toVo(record);
     }
 
     @Override
     public PrevisitDetailVO getByRegist(Long registId) {
-        BizPrevisitRecord record = previsitRecordMapper.selectOne(
+        BizPrevisitRecord record = bizPrevisitRecordMapper.selectOne(
                 new LambdaQueryWrapper<BizPrevisitRecord>()
                         .eq(BizPrevisitRecord::getRegistId, registId));
         return record == null ? null : toVo(record);
@@ -96,7 +89,7 @@ public class PrevisitRecordServiceImpl implements PrevisitRecordService {
 
     @Override
     public void saveSummary(Long registId, String summary, Integer source) {
-        BizPrevisitRecord record = previsitRecordMapper.selectOne(
+        BizPrevisitRecord record = bizPrevisitRecordMapper.selectOne(
                 new LambdaQueryWrapper<BizPrevisitRecord>()
                         .eq(BizPrevisitRecord::getRegistId, registId));
         if (record == null) {
@@ -104,7 +97,7 @@ public class PrevisitRecordServiceImpl implements PrevisitRecordService {
         }
         record.setSummaryAi(summary);
         record.setSummarySource(source);
-        previsitRecordMapper.updateById(record);
+        bizPrevisitRecordMapper.updateById(record);
     }
 
     private PrevisitDetailVO toVo(BizPrevisitRecord record) {

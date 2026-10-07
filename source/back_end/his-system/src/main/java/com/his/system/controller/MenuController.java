@@ -28,40 +28,40 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MenuController {
 
-    private final SysMenuService menuService;
+    private final SysMenuService sysMenuService;
 
     @Operation(summary = "查询菜单树")
     @PreAuthorize("hasAnyAuthority('system:menu:list', 'system:role:list')")
     @GetMapping("/tree")
     public Result<List<MenuVO>> tree() {
-        return Result.success(menuService.tree());
+        return Result.success(sysMenuService.tree());
     }
 
     @Operation(summary = "获取菜单详情")
     @PreAuthorize("hasAnyAuthority('system:menu:list', 'system:role:list')")
     @GetMapping("/getById")
     public Result<MenuVO> getInfo(@RequestParam Long menuId) {
-        return Result.success(menuService.getInfo(menuId));
+        return Result.success(sysMenuService.getInfo(menuId));
     }
 
     @Operation(summary = "获取当前用户菜单")
     @GetMapping("/userMenus")
     public Result<List<MenuVO>> userMenus() {
-        return Result.success(menuService.userMenus());
+        return Result.success(sysMenuService.userMenus());
     }
 
     @PreAuthorize("hasAuthority('system:menu:add')")
     @Operation(summary = "新增或修改菜单")
     @PostMapping("/menuUpsert")
     public Result<Void> menuUpsert(@Valid @RequestBody MenuUpsertDTO upsertDTO) {
-        return Result.success(menuService.upsert(upsertDTO), null);
+        return Result.success(sysMenuService.upsert(upsertDTO), null);
     }
 
     @PreAuthorize("hasAuthority('system:menu:delete')")
     @Operation(summary = "删除菜单")
     @DeleteMapping("/deleteById")
     public Result<Void> remove(@RequestParam Long menuId) {
-        menuService.delete(menuId);
+        sysMenuService.delete(menuId);
         return Result.success("删除成功", null);
     }
 }

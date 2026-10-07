@@ -57,10 +57,10 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     private static final BigDecimal TARGET_OP_USAGE_RATE = new BigDecimal("20.00");
     private static final BigDecimal TARGET_IP_USAGE_RATE = new BigDecimal("60.00");
     private static final BigDecimal TARGET_MICRO_RATE = new BigDecimal("50.00");
-    private final AntibioticStatMapper statMapper;
-    private final BizAntibioticStatsMapper statsMapper;
-    private final BizAntibioticIncisionReviewMapper incisionMapper;
-    private final AntibioticCatalogMapper catalogMapper;
+    private final AntibioticStatMapper antibioticStatMapper;
+    private final BizAntibioticStatsMapper bizAntibioticStatsMapper;
+    private final BizAntibioticIncisionReviewMapper bizAntibioticIncisionReviewMapper;
+    private final AntibioticCatalogMapper antibioticCatalogMapper;
     private DictCacheService dictCacheService;
 
     // 监测指标
@@ -73,7 +73,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                 .orderByDesc(BizAntibioticStats::getStatMonth)
                 .orderByAsc(BizAntibioticStats::getScopeType)
                 .orderByAsc(BizAntibioticStats::getId);
-        Page<BizAntibioticStats> page = statsMapper.selectPage(
+        Page<BizAntibioticStats> page = bizAntibioticStatsMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         if (CollectionUtils.isEmpty(page.getRecords())) {
             return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), Collections.emptyList());
@@ -102,7 +102,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
 
         List<AntibioticStatsVO> result = new ArrayList<>();
         if (dto.getScopeType() == BizAntibioticStats.SCOPE_DEPT) {
-            List<DeptCountRowVO> depts = statMapper.selectDischargeDepts(from, to);
+            List<DeptCountRowVO> depts = antibioticStatMapper.selectDischargeDepts(from, to);
             if (CollectionUtils.isEmpty(depts)) {
                 throw new BusinessException(ym + " 没有出院患者，无法按科室生成监测指标");
             }
@@ -126,11 +126,11 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                 .eq(query.getScopeType() != null, BizAntibioticStats::getScopeType, query.getScopeType())
                 .orderByDesc(BizAntibioticStats::getStatMonth)
                 .orderByAsc(BizAntibioticStats::getId);
-        long total = statsMapper.selectCount(wrapper);
+        long total = bizAntibioticStatsMapper.selectCount(wrapper);
         if (total > EXPORT_MAX) {
             throw new BusinessException("导出上限 " + EXPORT_MAX + " 行，当前 " + total + " 行，请先按月筛选");
         }
-        List<BizAntibioticStats> rows = statsMapper.selectList(wrapper);
+        List<BizAntibioticStats> rows = bizAntibioticStatsMapper.selectList(wrapper);
 
         StringBuilder sb = new StringBuilder();
         sb.append('\uFEFF'); // BOM：Excel 打开中文不乱码
@@ -173,14 +173,14 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         row.setDeptId(deptId);
         row.setDeptName(deptName);
 
-        long opRx = statMapper.countOpRx(from, to, deptId);
-        long opAbxRx = statMapper.countOpAbxRx(from, to, deptId);
-        long ipDischarge = statMapper.countIpDischarge(from, to, deptId);
-        long ipAbx = statMapper.countIpAbxPatient(from, to, deptId);
-        long patientDays = statMapper.sumPatientDays(from, to, deptId);
-        BigDecimal ddds = statMapper.sumIpDdds(from, to, deptId);
-        long micro = statMapper.countMicroSubmit(from, to, deptId);
-        long unmatched = statMapper.countUnmatchedOrders(from, to, deptId);
+        long opRx = antibioticStatMapper.countOpRx(from, to, deptId);
+        long opAbxRx = antibioticStatMapper.countOpAbxRx(from, to, deptId);
+        long ipDischarge = antibioticStatMapper.countIpDischarge(from, to, deptId);
+        long ipAbx = antibioticStatMapper.countIpAbxPatient(from, to, deptId);
+        long patientDays = antibioticStatMapper.sumPatientDays(from, to, deptId);
+        BigDecimal ddds = antibioticStatMapper.sumIpDdds(from, to, deptId);
+        long micro = antibioticStatMapper.countMicroSubmit(from, to, deptId);
+        long unmatched = antibioticStatMapper.countUnmatchedOrders(from, to, deptId);
 
         row.setOpRxCount((int) opRx);
         row.setOpAbxRxCount((int) opAbxRx);
@@ -202,7 +202,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
      * 同月同范围覆盖（唯一键 uk_antibiotic_stats，不含 del_flag，不走软删）
      */
     private BizAntibioticStats upsertRow(BizAntibioticStats row, String operator, String remark) {
-        BizAntibioticStats exist = statsMapper.selectOne(new LambdaQueryWrapper<BizAntibioticStats>()
+        BizAntibioticStats exist = bizAntibioticStatsMapper.selectOne(new LambdaQueryWrapper<BizAntibioticStats>()
                 .eq(BizAntibioticStats::getStatMonth, row.getStatMonth())
                 .eq(BizAntibioticStats::getScopeType, row.getScopeType())
                 .eq(row.getDeptId() != null, BizAntibioticStats::getDeptId, row.getDeptId())
@@ -212,11 +212,11 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         row.setGenerateTime(LocalDateTime.now());
         row.setRemark(StringUtils.hasText(remark) ? remark.trim() : null);
         if (exist == null) {
-            statsMapper.insert(row);
+            bizAntibioticStatsMapper.insert(row);
             return row;
         }
         row.setId(exist.getId());
-        statsMapper.updateById(row);
+        bizAntibioticStatsMapper.updateById(row);
         return row;
     }
 
@@ -224,10 +224,10 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
 
     @Override
     public List<IncisionCandidateVO> incisionCandidates() {
-        List<IncisionCandidateVO> list = statMapper.selectIncisionCandidates(200);
+        List<IncisionCandidateVO> list = antibioticStatMapper.selectIncisionCandidates(200);
         for (IncisionCandidateVO vo : list) {
             if (vo.getAdmissionId() != null && vo.getOperationTime() != null) {
-                List<IncisionDrugCandidateVO> drugs = statMapper.selectPeriopAntibioticOrders(
+                List<IncisionDrugCandidateVO> drugs = antibioticStatMapper.selectPeriopAntibioticOrders(
                         vo.getAdmissionId(), vo.getOperationTime());
                 for (IncisionDrugCandidateVO d : drugs) {
                     d.setAntibioticLevelText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", d.getAntibioticLevel()));
@@ -251,7 +251,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                         .or().like(BizAntibioticIncisionReview::getOperationName, keyword))
                 .eq(query.getReviewResult() != null, BizAntibioticIncisionReview::getReviewResult, query.getReviewResult())
                 .orderByDesc(BizAntibioticIncisionReview::getId);
-        Page<BizAntibioticIncisionReview> page = incisionMapper.selectPage(
+        Page<BizAntibioticIncisionReview> page = bizAntibioticIncisionReviewMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         if (CollectionUtils.isEmpty(page.getRecords())) {
             return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), Collections.emptyList());
@@ -290,19 +290,19 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
 
         BizAntibioticIncisionReview entity;
         if (dto.getId() != null) {
-            entity = incisionMapper.selectById(dto.getId());
+            entity = bizAntibioticIncisionReviewMapper.selectById(dto.getId());
             if (entity == null) {
                 throw new BusinessException("点评记录不存在");
             }
         } else {
-            BizAntibioticIncisionReview exist = incisionMapper.selectOne(
+            BizAntibioticIncisionReview exist = bizAntibioticIncisionReviewMapper.selectOne(
                     new LambdaQueryWrapper<BizAntibioticIncisionReview>()
                             .eq(BizAntibioticIncisionReview::getOperationApplyId, dto.getOperationApplyId())
                             .last("LIMIT 1"));
             if (exist != null) {
                 throw new BusinessException("该手术已点评过（" + exist.getReviewNo() + "），请直接修改那条");
             }
-            IncisionCandidateVO candidate = statMapper.selectIncisionCandidates(200).stream()
+            IncisionCandidateVO candidate = antibioticStatMapper.selectIncisionCandidates(200).stream()
                     .filter(c -> c.getOperationApplyId().equals(dto.getOperationApplyId()))
                     .findFirst().orElse(null);
             entity = new BizAntibioticIncisionReview();
@@ -327,7 +327,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
 
         entity.setDrugId(dto.getDrugId());
         if (dto.getDrugId() != null) {
-            var drug = catalogMapper.selectAntibioticDrugs().stream()
+            var drug = antibioticCatalogMapper.selectAntibioticDrugs().stream()
                     .filter(d -> d.getId().equals(dto.getDrugId())).findFirst().orElse(null);
             entity.setDrugName(drug == null ? null : drug.getDrugName());
             entity.setAntibioticLevel(drug == null ? null : drug.getAntibioticLevel());
@@ -358,9 +358,9 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         }
 
         if (entity.getId() == null) {
-            incisionMapper.insert(entity);
+            bizAntibioticIncisionReviewMapper.insert(entity);
         } else {
-            incisionMapper.updateById(entity);
+            bizAntibioticIncisionReviewMapper.updateById(entity);
         }
         return toIncisionVO(entity);
     }
@@ -381,7 +381,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
 
     private String nextReviewNo() {
         String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
-        String max = incisionMapper.selectMaxReviewNo(day);
+        String max = bizAntibioticIncisionReviewMapper.selectMaxReviewNo(day);
         int seq = 1;
         if (StringUtils.hasText(max) && max.length() >= 4) {
             try {

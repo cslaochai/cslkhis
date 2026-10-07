@@ -3,9 +3,12 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.patient.dto.NursingQcDTO;
 import com.his.patient.entity.BizNursingQcCheck;
 import com.his.patient.entity.BizNursingQcCheckItem;
@@ -59,24 +62,24 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class NursingQcServiceImpl implements NursingQcService {
+public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, BizNursingQcCheck> implements NursingQcService {
     private static final int TEXT_MAX = 500;
     private static final int OPERATOR_MAX = 64;
     private static final int INSPECTOR_LIMIT = 200;
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
     private static final String REMARK_AUTO = "合格率与得分由检查明细求和生成（sql/168 口径 d）";
     private final DeptScopeProvider deptScopeProvider;
-    private final BizNursingQcCheckMapper checkMapper;
-    private final BizNursingQcCheckItemMapper checkItemMapper;
-    private final SysNursingQcItemMapper itemMapper;
-    private final BizNursingQcIndicatorMapper indicatorMapper;
+    private final BizNursingQcCheckMapper bizNursingQcCheckMapper;
+    private final BizNursingQcCheckItemMapper bizNursingQcCheckItemMapper;
+    private final SysNursingQcItemMapper sysNursingQcItemMapper;
+    private final BizNursingQcIndicatorMapper bizNursingQcIndicatorMapper;
     private final DictCacheService dictCacheService;
 
     // 参照数据
 
     private static String requireMonth(String month, String label) {
         // ②非web入口：共用守卫，主要职责是 yyyy-MM 解析；HTTP 侧非空已由 DTO @NotNull + @Valid 收口
-        String value = trimToNull(month);
+        String value = TextUtil.trimToNull(month);
         if (value == null) {
             throw new BusinessException("请选择" + label);
         }
@@ -150,41 +153,22 @@ public class NursingQcServiceImpl implements NursingQcService {
 
     // 台账与看板
 
-    private static String trimToNull(String value) {
-        if (value == null) {
-            return null;
-        }
-        String trimmed = value.trim();
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() <= max ? value : value.substring(0, max);
-    }
-
-    private static int nvl(Integer value, int fallback) {
-        return value == null ? fallback : value;
-    }
-
     @Override
     public List<NurseQcVO.Ward> wardSelectList(String keyword) {
-        return checkMapper.selectWardOptions(scopedDeptIds(null), trimToNull(keyword));
+        return bizNursingQcCheckMapper.selectWardOptions(scopedDeptIds(null), TextUtil.trimToNull(keyword));
     }
 
     @Override
     public List<NurseQcVO.Inspector> inspectorSelectList(Long wardId, String keyword) {
         NurseQcVO.Ward ward = requireWard(wardId);
-        return checkMapper.selectInspectors(ward.getDeptId(), trimToNull(keyword), INSPECTOR_LIMIT);
+        return bizNursingQcCheckMapper.selectInspectors(ward.getDeptId(), TextUtil.trimToNull(keyword), INSPECTOR_LIMIT);
     }
 
     @Override
     public List<NurseQcVO.ItemDef> itemSelectList(Integer category) {
         List<NurseQcVO.ItemDef> items = category == null
-                ? itemMapper.selectAllEnabledItems()
-                : itemMapper.selectItemsByCategory(requireCategory(category));
+                ? sysNursingQcItemMapper.selectAllEnabledItems()
+                : sysNursingQcItemMapper.selectItemsByCategory(requireCategory(category));
         items.forEach(this::fillItemDefText);
         return items;
     }
@@ -194,10 +178,10 @@ public class NursingQcServiceImpl implements NursingQcService {
     @Override
     public PageResult<NurseQcVO.CheckRow> checkListPage(NursingQcDTO.CheckQueryPage query) {
         NursingQcDTO.CheckQueryPage q = query == null ? new NursingQcDTO.CheckQueryPage() : query;
-        IPage<NurseQcVO.CheckRow> page = new Page<>(nvl(q.getPageNum(), 1), nvl(q.getPageSize(), 10));
-        List<NurseQcVO.CheckRow> records = checkMapper.selectCheckPage(page, trimToNull(q.getKeyword()),
+        IPage<NurseQcVO.CheckRow> page = new Page<>(q.getPageNum(), q.getPageSize());
+        List<NurseQcVO.CheckRow> records = bizNursingQcCheckMapper.selectCheckPage(page, TextUtil.trimToNull(q.getKeyword()),
                 q.getWardId(), deptScopeProvider.resolveDeptId(q.getDeptId()), q.getCategory(), q.getStatus(),
-                trimToNull(q.getStartMonth()), trimToNull(q.getEndMonth()), scopedDeptIds(q.getDeptId()));
+                TextUtil.trimToNull(q.getStartMonth()), TextUtil.trimToNull(q.getEndMonth()), scopedDeptIds(q.getDeptId()));
         records.forEach(this::fillCheckText);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -207,8 +191,8 @@ public class NursingQcServiceImpl implements NursingQcService {
     @Override
     public NurseQcVO.CheckDetail getDetailById(Long id) {
         NurseQcVO.CheckRow row = requireCheck(id);
-        List<NurseQcVO.CheckItemRow> items = checkItemMapper.selectItemsByCheckId(row.getId());
-        List<NurseQcVO.ItemDef> catalog = itemMapper.selectItemsByCategory(row.getCategory());
+        List<NurseQcVO.CheckItemRow> items = bizNursingQcCheckItemMapper.selectItemsByCheckId(row.getId());
+        List<NurseQcVO.ItemDef> catalog = sysNursingQcItemMapper.selectItemsByCategory(row.getCategory());
         catalog.forEach(this::fillItemDefText);
         Set<Long> recorded = new HashSet<>();
         items.forEach(i -> recorded.add(i.getItemId()));
@@ -231,14 +215,14 @@ public class NursingQcServiceImpl implements NursingQcService {
         int category = requireCategory(dto.getCategory());
         NurseQcVO.Ward ward = requireWard(dto.getWardId());
         String checkMonth = requireMonth(dto.getCheckMonth(), "检查月份");
-        NurseQcVO.CheckRow existing = checkMapper.selectCheckByUk(ward.getWardId(), checkMonth, category);
-        if (existing != null && NursingQcStatusEnum.CONFIRMED.getCode() == nvl(existing.getStatus(), 1)) {
+        NurseQcVO.CheckRow existing = bizNursingQcCheckMapper.selectCheckByUk(ward.getWardId(), checkMonth, category);
+        if (existing != null && NursingQcStatusEnum.CONFIRMED.getCode() == NumUtil.orDefault(existing.getStatus(), 1)) {
             throw new BusinessException("「" + ward.getWardName() + "」" + checkMonth + " 的"
                     + NursingQcCategoryEnum.getText(category) + "检查单已确认，请先退回草稿再修改");
         }
 
         Map<Long, NurseQcVO.ItemDef> catalog = new LinkedHashMap<>();
-        itemMapper.selectItemsByCategory(category).forEach(i -> catalog.put(i.getItemId(), i));
+        sysNursingQcItemMapper.selectItemsByCategory(category).forEach(i -> catalog.put(i.getItemId(), i));
 
         int sampleCount = 0;
         int qualifiedCount = 0;
@@ -255,8 +239,8 @@ public class NursingQcServiceImpl implements NursingQcService {
             if (!used.add(def.getItemId())) {
                 throw new BusinessException("「" + def.getItemName() + "」重复录入，同一项目一行只能记一次");
             }
-            int checked = nvl(input.getCheckedNum(), 0);
-            int qualified = nvl(input.getQualifiedNum(), 0);
+            int checked = NumUtil.orDefault(input.getCheckedNum(), 0);
+            int qualified = NumUtil.orDefault(input.getQualifiedNum(), 0);
             if (qualified > checked) {
                 throw new BusinessException("「" + def.getItemName() + "」合格例数（" + qualified
                         + "）不能大于抽查例数（" + checked + "）");
@@ -273,10 +257,10 @@ public class NursingQcServiceImpl implements NursingQcService {
             item.setQualifiedNum(qualified);
             item.setFullScore(def.getFullScore());
             item.setScore(score);
-            item.setProblem(cut(input.getProblem(), TEXT_MAX));
-            item.setCauseAnalysis(cut(input.getCauseAnalysis(), TEXT_MAX));
-            item.setRectifyMeasure(cut(input.getRectifyMeasure(), TEXT_MAX));
-            item.setRemark(cut(input.getRemark(), TEXT_MAX));
+            item.setProblem(TextUtil.cut(input.getProblem(), TEXT_MAX));
+            item.setCauseAnalysis(TextUtil.cut(input.getCauseAnalysis(), TEXT_MAX));
+            item.setRectifyMeasure(TextUtil.cut(input.getRectifyMeasure(), TEXT_MAX));
+            item.setRemark(TextUtil.cut(input.getRemark(), TEXT_MAX));
             rows.add(item);
             sampleCount += checked;
             qualifiedCount += qualified;
@@ -289,7 +273,7 @@ public class NursingQcServiceImpl implements NursingQcService {
 
         BigDecimal qualifiedRate = percent(BigDecimal.valueOf(qualifiedCount), BigDecimal.valueOf(sampleCount));
         BigDecimal scoreRate = percent(totalScore, fullScore);
-        String summary = trimToNull(dto.getSummary());
+        String summary = TextUtil.trimToNull(dto.getSummary());
 
         BizNursingQcCheck entity = new BizNursingQcCheck();
         if (existing != null) {
@@ -315,22 +299,22 @@ public class NursingQcServiceImpl implements NursingQcService {
         entity.setFullScore(fullScore);
         entity.setTotalScore(totalScore);
         entity.setScoreRate(scoreRate);
-        entity.setStatus(existing == null ? NursingQcStatusEnum.DRAFT.getCode() : nvl(existing.getStatus(), 1));
-        entity.setSummary(cut(summary == null ? autoSummary(category, sampleCount, qualifiedCount, qualifiedRate,
+        entity.setStatus(existing == null ? NursingQcStatusEnum.DRAFT.getCode() : NumUtil.orDefault(existing.getStatus(), 1));
+        entity.setSummary(TextUtil.cut(summary == null ? autoSummary(category, sampleCount, qualifiedCount, qualifiedRate,
                 scoreRate, rows) : summary, TEXT_MAX));
-        entity.setRemark(cut(REMARK_AUTO, TEXT_MAX));
+        entity.setRemark(TextUtil.cut(REMARK_AUTO, TEXT_MAX));
         if (existing != null) {
-            checkMapper.updateById(entity);
+            bizNursingQcCheckMapper.updateById(entity);
         } else {
-            checkMapper.insert(entity);
+            bizNursingQcCheckMapper.insert(entity);
         }
 
         // 唯一键不含 del_flag ⇒ 先物理清明细再重插，软删会让第二步撞键
-        checkItemMapper.purgeByCheckId(entity.getId());
+        bizNursingQcCheckItemMapper.purgeByCheckId(entity.getId());
         for (BizNursingQcCheckItem item : rows) {
             item.setId(IdWorker.getId());
             item.setCheckId(entity.getId());
-            checkItemMapper.insert(item);
+            bizNursingQcCheckItemMapper.insert(item);
         }
 
         NurseQcVO.SaveResult result = new NurseQcVO.SaveResult();
@@ -366,14 +350,14 @@ public class NursingQcServiceImpl implements NursingQcService {
         NurseQcVO.CheckRow row = requireCheck(dto.getId());
         if (target == NursingQcStatusEnum.CONFIRMED) {
             // ③业务规则：确认闸门查的是库里已存的明细，不是本次入参，DTO 注解表达不了
-            if (checkItemMapper.selectItemsByCheckId(row.getId()).isEmpty()) {
+            if (bizNursingQcCheckItemMapper.selectItemsByCheckId(row.getId()).isEmpty()) {
                 throw new BusinessException("这张单还没有明细，不能确认");
             }
         }
         BizNursingQcCheck entity = new BizNursingQcCheck();
         entity.setId(row.getId());
         entity.setStatus(target.getCode());
-        checkMapper.updateById(entity);
+        bizNursingQcCheckMapper.updateById(entity);
 
         NurseQcVO.SaveResult result = new NurseQcVO.SaveResult();
         result.setId(row.getId());
@@ -390,18 +374,18 @@ public class NursingQcServiceImpl implements NursingQcService {
     @Transactional(rollbackFor = Exception.class)
     public void checkDeleteById(Long id) {
         NurseQcVO.CheckRow row = requireCheck(id);
-        checkItemMapper.purgeByCheckId(row.getId());
-        checkMapper.purgeById(row.getId());
+        bizNursingQcCheckItemMapper.purgeByCheckId(row.getId());
+        bizNursingQcCheckMapper.purgeById(row.getId());
     }
 
     @Override
     public PageResult<NurseQcVO.LedgerRow> ledgerListPage(NursingQcDTO.LedgerQueryPage query) {
         NursingQcDTO.LedgerQueryPage q = query == null ? new NursingQcDTO.LedgerQueryPage() : query;
-        IPage<NurseQcVO.LedgerRow> page = new Page<>(nvl(q.getPageNum(), 1), nvl(q.getPageSize(), 10));
-        List<NurseQcVO.LedgerRow> records = indicatorMapper.selectLedgerPage(page, trimToNull(q.getKeyword()),
-                q.getWardId(), deptScopeProvider.resolveDeptId(q.getDeptId()), trimToNull(q.getIndicatorCode()),
-                q.getReportStatus(), trimToNull(q.getStatMonth()), trimToNull(q.getStartMonth()),
-                trimToNull(q.getEndMonth()), scopedDeptIds(q.getDeptId()));
+        IPage<NurseQcVO.LedgerRow> page = new Page<>(q.getPageNum(), q.getPageSize());
+        List<NurseQcVO.LedgerRow> records = bizNursingQcIndicatorMapper.selectLedgerPage(page, TextUtil.trimToNull(q.getKeyword()),
+                q.getWardId(), deptScopeProvider.resolveDeptId(q.getDeptId()), TextUtil.trimToNull(q.getIndicatorCode()),
+                q.getReportStatus(), TextUtil.trimToNull(q.getStatMonth()), TextUtil.trimToNull(q.getStartMonth()),
+                TextUtil.trimToNull(q.getEndMonth()), scopedDeptIds(q.getDeptId()));
         records.forEach(this::fillLedgerText);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -415,7 +399,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         String statMonth = requireMonth(query.getStatMonth(), "统计月份");
         NurseQcVO.Ward ward = query.getWardId() == null ? null : requireVisibleWard(query.getWardId());
         Map<String, NurseQcVO.Kpi> byCode = new LinkedHashMap<>();
-        indicatorMapper.selectMonthKpi(statMonth, ward == null ? null : ward.getWardId(),
+        bizNursingQcIndicatorMapper.selectMonthKpi(statMonth, ward == null ? null : ward.getWardId(),
                         ward == null ? scopedDeptIds(null) : null)
                 .forEach(k -> byCode.put(k.getIndicatorCode(), k));
         // 四条指标永远都在看板上：没有台账的月份显示「未重算」而不是消失
@@ -452,12 +436,12 @@ public class NursingQcServiceImpl implements NursingQcService {
         }
         NursingIndicatorEnum indicator = requireIndicator(query.getIndicatorCode());
         NurseQcVO.Ward ward = query.getWardId() == null ? null : requireVisibleWard(query.getWardId());
-        String start = trimToNull(query.getStartMonth());
-        String end = trimToNull(query.getEndMonth());
+        String start = TextUtil.trimToNull(query.getStartMonth());
+        String end = TextUtil.trimToNull(query.getEndMonth());
         if (start != null && end != null && start.compareTo(end) > 0) {
             throw new BusinessException("起始月份不能晚于结束月份");
         }
-        List<NurseQcVO.Kpi> points = indicatorMapper.selectTrend(indicator.getCode(),
+        List<NurseQcVO.Kpi> points = bizNursingQcIndicatorMapper.selectTrend(indicator.getCode(),
                 ward == null ? null : ward.getWardId(), start, end, ward == null ? scopedDeptIds(null) : null);
         points.forEach(p -> {
             p.setIndicatorName(indicator.getLabel());
@@ -477,7 +461,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         }
         String statMonth = requireMonth(query.getStatMonth(), "统计月份");
         NursingIndicatorEnum indicator = requireIndicator(query.getIndicatorCode());
-        List<NurseQcVO.LedgerRow> rows = indicatorMapper.selectWardCompare(statMonth, indicator.getCode(),
+        List<NurseQcVO.LedgerRow> rows = bizNursingQcIndicatorMapper.selectWardCompare(statMonth, indicator.getCode(),
                 scopedDeptIds(null));
         rows.forEach(this::fillLedgerText);
         return rows;
@@ -500,7 +484,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         }
 
         List<NurseQcVO.Ward> wards = command.getWardId() == null
-                ? indicatorMapper.selectCalcWards(scopedDeptIds(null))
+                ? bizNursingQcIndicatorMapper.selectCalcWards(scopedDeptIds(null))
                 : List.of(requireVisibleWard(command.getWardId()));
         // 「全部病区」是护理部一键月度动作，全院 49 个启用病区里多数当月既没收过检查也没有住院事实：
         // 给它们写「0 床日、发生率 NULL」的空行不会说谎，但会把病区对比图挤满四十多个无意义落点。
@@ -512,14 +496,14 @@ public class NursingQcServiceImpl implements NursingQcService {
         int wardDone = 0;
         int skippedEmptyWard = 0;
         for (NurseQcVO.Ward ward : wards) {
-            int bedDays = indicatorMapper.selectBedDays(ward.getWardId(), monthStart, statEnd);
-            if (sweep && bedDays <= 0 && checkMapper.countByWardMonth(ward.getWardId(), statMonth) == 0) {
+            int bedDays = bizNursingQcIndicatorMapper.selectBedDays(ward.getWardId(), monthStart, statEnd);
+            if (sweep && bedDays <= 0 && bizNursingQcCheckMapper.countByWardMonth(ward.getWardId(), statMonth) == 0) {
                 skippedEmptyWard++;
                 continue;
             }
             wardDone++;
             bedDaysTotal += bedDays;
-            Set<String> reported = new HashSet<>(indicatorMapper.selectReportedCodes(statMonth, ward.getWardId()));
+            Set<String> reported = new HashSet<>(bizNursingQcIndicatorMapper.selectReportedCodes(statMonth, ward.getWardId()));
             for (NursingIndicatorEnum e : NursingIndicatorEnum.values()) {
                 if (reported.contains(e.getCode())) {
                     skipped++;
@@ -529,7 +513,7 @@ public class NursingQcServiceImpl implements NursingQcService {
                 if (row == null) {
                     continue;
                 }
-                indicatorMapper.upsertIndicator(row);
+                bizNursingQcIndicatorMapper.upsertIndicator(row);
                 calculated++;
             }
         }
@@ -565,8 +549,8 @@ public class NursingQcServiceImpl implements NursingQcService {
             throw new BusinessException("上报状态只能是 1-退回未上报 或 2-已上报");
         }
         NurseQcVO.Ward ward = command.getWardId() == null ? null : requireVisibleWard(command.getWardId());
-        int affected = indicatorMapper.updateReportStatus(statMonth, ward == null ? null : ward.getWardId(),
-                target.getCode(), ward == null ? scopedDeptIds(null) : null, cut(operatorUser.getRealName(), OPERATOR_MAX));
+        int affected = bizNursingQcIndicatorMapper.updateReportStatus(statMonth, ward == null ? null : ward.getWardId(),
+                target.getCode(), ward == null ? scopedDeptIds(null) : null, TextUtil.cut(operatorUser.getRealName(), OPERATOR_MAX));
         NurseQcVO.ReportResult result = new NurseQcVO.ReportResult();
         result.setStatMonth(statMonth);
         result.setAffectedCount(affected);
@@ -586,14 +570,14 @@ public class NursingQcServiceImpl implements NursingQcService {
         if (id == null) {
             throw new BusinessException("缺少台账行ID");
         }
-        NurseQcVO.LedgerRow row = indicatorMapper.selectLedgerById(id);
+        NurseQcVO.LedgerRow row = bizNursingQcIndicatorMapper.selectLedgerById(id);
         if (row == null) {
             throw new BusinessException("台账行不存在");
         }
         if (!deptScopeProvider.canAccessDept(row.getDeptId())) {
             throw new BusinessException("无权删除「" + row.getWardName() + "」的台账（不在当前岗位的数据范围内）");
         }
-        indicatorMapper.purgeById(id);
+        bizNursingQcIndicatorMapper.purgeById(id);
     }
 
     /**
@@ -611,16 +595,16 @@ public class NursingQcServiceImpl implements NursingQcService {
         BigDecimal denominator;
         String remark;
         if (e.getSourceType() == QcIndicatorSourceEnum.CHECK.getCode()) {
-            NurseQcVO.CheckRow check = checkMapper.selectCheckByUk(ward.getWardId(), statMonth, e.getCheckCategory());
+            NurseQcVO.CheckRow check = bizNursingQcCheckMapper.selectCheckByUk(ward.getWardId(), statMonth, e.getCheckCategory());
             if (check == null) {
                 return null;
             }
-            numerator = BigDecimal.valueOf(nvl(check.getQualifiedCount(), 0));
-            denominator = BigDecimal.valueOf(nvl(check.getSampleCount(), 0));
+            numerator = BigDecimal.valueOf(NumUtil.orDefault(check.getQualifiedCount(), 0));
+            denominator = BigDecimal.valueOf(NumUtil.orDefault(check.getSampleCount(), 0));
             remark = "来源：检查单 " + check.getCheckNo() + "（类别 " + check.getCategory()
                     + "、" + NursingQcStatusEnum.getText(check.getStatus()) + "）由明细求和";
         } else {
-            int count = indicatorMapper.selectEventCount(ward.getWardId(), monthStart, statEnd,
+            int count = bizNursingQcIndicatorMapper.selectEventCount(ward.getWardId(), monthStart, statEnd,
                     e.getAdverseEventType(),
                     e == NursingIndicatorEnum.UPPR_RATE ? AdverseAcquiredEnum.HOSPITAL_ACQUIRED.getCode() : null);
             numerator = BigDecimal.valueOf(count);
@@ -651,10 +635,10 @@ public class NursingQcServiceImpl implements NursingQcService {
         row.setSourceType(e.getSourceType());
         row.setReportStatus(NursingQcReportEnum.UNREPORTED.getCode());
         row.setCalcTime(LocalDateTime.now());
-        String operator = cut(operatorUser.getRealName(), OPERATOR_MAX);
+        String operator = TextUtil.cut(operatorUser.getRealName(), OPERATOR_MAX);
         row.setCreateBy(operator);
         row.setUpdateBy(operator);
-        row.setRemark(cut(remark, TEXT_MAX));
+        row.setRemark(TextUtil.cut(remark, TEXT_MAX));
         return row;
     }
 
@@ -663,7 +647,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         if (id == null) {
             throw new BusinessException("缺少检查单ID");
         }
-        NurseQcVO.CheckRow row = checkMapper.selectCheckById(id);
+        NurseQcVO.CheckRow row = bizNursingQcCheckMapper.selectCheckById(id);
         if (row == null) {
             throw new BusinessException("检查单不存在");
         }
@@ -679,7 +663,7 @@ public class NursingQcServiceImpl implements NursingQcService {
         if (wardId == null) {
             throw new BusinessException("请选择病区");
         }
-        NurseQcVO.Ward ward = checkMapper.selectWard(wardId);
+        NurseQcVO.Ward ward = bizNursingQcCheckMapper.selectWard(wardId);
         if (ward == null) {
             throw new BusinessException("病区不存在或已停用");
         }
@@ -700,7 +684,7 @@ public class NursingQcServiceImpl implements NursingQcService {
     /**
      * 检查人：空=当前登录人；传了就必须是在职人员，姓名一律取库里的快照。
      *
-     * <p>留空分支也必须过 {@link #checkMapper} 的 selectInspector 同一道在职闸 —— 曾经直接拿
+     * <p>留空分支也必须过 {@link #bizNursingQcCheckMapper} 的 selectInspector 同一道在职闸 —— 曾经直接拿
      * {@code UserUtils.getCurrentUser().getEmployeeId()} 落库，admin 的 emp_id=1 在员工里是
      * <b>status=0 的停用员工</b>，写出一张 inspector_id 过不了自己校验的检查单：
      * 下次编辑回传就被「检查人不存在或已停用」拒掉，这张单从此改不动。写入侧与校验侧必须同一把尺子，
@@ -709,9 +693,9 @@ public class NursingQcServiceImpl implements NursingQcService {
     private NurseQcVO.Inspector resolveInspector(Long inspectorId) {
         if (inspectorId == null) {
             Long currentEmpId = UserUtils.getCurrentUser().getEmployeeId();
-            return currentEmpId == null ? null : checkMapper.selectInspector(currentEmpId);
+            return currentEmpId == null ? null : bizNursingQcCheckMapper.selectInspector(currentEmpId);
         }
-        NurseQcVO.Inspector inspector = checkMapper.selectInspector(inspectorId);
+        NurseQcVO.Inspector inspector = bizNursingQcCheckMapper.selectInspector(inspectorId);
         if (inspector == null) {
             throw new BusinessException("检查人不存在或已停用");
         }
@@ -727,7 +711,7 @@ public class NursingQcServiceImpl implements NursingQcService {
     }
 
     private NursingIndicatorEnum requireIndicator(String code) {
-        NursingIndicatorEnum e = NursingIndicatorEnum.fromCode(trimToNull(code));
+        NursingIndicatorEnum e = NursingIndicatorEnum.fromCode(TextUtil.trimToNull(code));
         if (e == null) {
             throw new BusinessException("统计指标非法（" + NursingIndicatorEnum.whitelistText() + "）");
         }

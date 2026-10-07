@@ -29,12 +29,12 @@ public class ArrearsControlGateImpl implements ArrearsControlGate {
      */
     private static final Set<Integer> NEVER_STOP_CLASSES = Set.of(1, 6, 7);
 
-    private final BizArrearsPolicyMapper policyMapper;
+    private final BizArrearsPolicyMapper bizArrearsPolicyMapper;
     private final InpatientAccountService inpatientAccountService;
 
     @Override
     public CheckResult checkNewOrder(OrderCheck command) {
-        BizArrearsPolicy policy = policyMapper.selectById(1L);
+        BizArrearsPolicy policy = bizArrearsPolicyMapper.selectById(1L);
         if (policy == null || policy.getStopEnabled() == null || policy.getStopEnabled() != 1) {
             return CheckResult.allow();
         }

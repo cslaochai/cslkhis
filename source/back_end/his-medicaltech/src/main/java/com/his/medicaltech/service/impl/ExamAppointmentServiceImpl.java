@@ -2,9 +2,11 @@ package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.mapper.BizInspectionApplyMapper;
 import com.his.medicaltech.dto.ExamApptDTO;
@@ -38,7 +40,10 @@ import org.springframework.util.StringUtils;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 检查预约服务：待预约申请、占号/改约/取消/到检/完成/爽约，以及设备与患者两侧的冲突检测。
@@ -59,7 +64,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ExamAppointmentServiceImpl implements ExamAppointmentService {
+public class ExamAppointmentServiceImpl extends ServiceImpl<BizExamAppointmentMapper, BizExamAppointment> implements ExamAppointmentService {
 
     private static final int APPT_BOOKED = 1;
     private static final int APPT_ARRIVED = 2;
@@ -92,44 +97,26 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
             "SELECT 1 FROM biz_exam_appointment ea WHERE ea.apply_id = biz_inspection_apply.id "
                     + "AND ea.active_flag = 1 AND ea.del_flag = 0";
 
-    private final BizInspectionApplyMapper applyMapper;
-    private final SysInspectionItemMapper inspectionItemMapper;
-    private final BizExamDeviceMapper deviceMapper;
-    private final BizExamDeviceItemMapper deviceItemMapper;
-    private final BizExamAppointmentMapper appointmentMapper;
-    private final ExamApplyWriterMapper applyWriterMapper;
-    private final ExamSlotService slotService;
+    private final BizInspectionApplyMapper bizInspectionApplyMapper;
+    private final SysInspectionItemMapper sysInspectionItemMapper;
+    private final BizExamDeviceMapper bizExamDeviceMapper;
+    private final BizExamDeviceItemMapper bizExamDeviceItemMapper;
+    private final BizExamAppointmentMapper bizExamAppointmentMapper;
+    private final ExamApplyWriterMapper examApplyWriterMapper;
+    private final ExamSlotService examSlotService;
     private final RedisSequenceService redisSequenceService;
     private final SysMessageService sysMessageService;
-    private final DictCacheService dictText;
+    private final DictCacheService dictCacheService;
 
     // 待预约申请
 
-    private static String trim(String s) {
-        return s == null ? null : s.trim();
-    }
-
     // 预约台账
-
-    private static int nz(Integer v, int dft) {
-        return v == null ? dft : v;
-    }
-
-    /**
-     * 写库前先截到列宽：把数据库报错升级成 500 是没必要的
-     */
-    private static String clip(String s) {
-        if (s == null) {
-            return null;
-        }
-        return s.length() > 480 ? s.substring(0, 480) : s;
-    }
 
     public PageResult<ExamApptVO.ApplyVO> pendingListPage(ExamApptDTO.ApplyQuery q) {
         LambdaQueryWrapper<BizInspectionApply> w = new LambdaQueryWrapper<BizInspectionApply>()
                 .in(BizInspectionApply::getApplyStatus, APPLY_SUBMITTED, APPLY_PAID)
                 .notExists(NO_ACTIVE_APPOINTMENT);
-        String kw = trim(q.getKeyword());
+        String kw = TextUtil.trim(q.getKeyword());
         w.and(StringUtils.hasText(kw), x -> x.like(BizInspectionApply::getApplyNo, kw)
                         .or().like(BizInspectionApply::getPatientName, kw)
                         .or().like(BizInspectionApply::getInspectionItemName, kw))
@@ -139,14 +126,14 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
                 .le(q.getEndDate() != null, BizInspectionApply::getVisitDate, q.getEndDate())
                 .orderByDesc(BizInspectionApply::getIsEmergency)
                 .orderByAsc(BizInspectionApply::getId);
-        Page<BizInspectionApply> page = applyMapper.selectPage(
+        Page<BizInspectionApply> page = bizInspectionApplyMapper.selectPage(
                 new Page<>(q.getPageNum(), q.getPageSize()), w);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 toApplyVos(page.getRecords()));
     }
 
     public PageResult<ExamApptVO.ApptVO> listPage(ExamApptDTO.ApptQuery q) {
-        Page<BizExamAppointment> page = appointmentMapper.selectPage(
+        Page<BizExamAppointment> page = bizExamAppointmentMapper.selectPage(
                 new Page<>(q.getPageNum(), q.getPageSize()), apptFilter(q));
         List<ExamApptVO.ApptVO> records = new ArrayList<>();
         for (BizExamAppointment a : page.getRecords()) {
@@ -168,11 +155,11 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         long total = 0;
         for (int status = APPT_BOOKED; status <= APPT_NOSHOW; status++) {
             LambdaQueryWrapper<BizExamAppointment> w = apptFilter(q).eq(BizExamAppointment::getStatus, status);
-            long n = appointmentMapper.selectCount(w);
+            long n = bizExamAppointmentMapper.selectCount(w);
             total += n;
             ExamApptVO.StatusCountVO v = new ExamApptVO.StatusCountVO();
             v.setStatus(status);
-            v.setStatusText(dictText.getDicDataLabel(DICT_APPT_STATUS, status));
+            v.setStatusText(dictCacheService.getDicDataLabel(DICT_APPT_STATUS, status));
             v.setCount(n);
             out.add(v);
         }
@@ -188,7 +175,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         BizExamAppointment a = requireAppt(apptId);
         ExamApptVO.ApptDetailVO vo = new ExamApptVO.ApptDetailVO();
         BeanUtils.copyProperties(toApptVo(a), vo);
-        vo.setPrevApplyStatusText(dictText.getDicDataLabel(DICT_APPLY_STATUS, a.getPrevApplyStatus()));
+        vo.setPrevApplyStatusText(dictCacheService.getDicDataLabel(DICT_APPLY_STATUS, a.getPrevApplyStatus()));
         vo.setApplyNoSnapshot(a.getApplyNo());
         return vo;
     }
@@ -210,15 +197,15 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
                 }
             }
         }
-        vo.setPendingApplies(applyMapper.selectCount(new LambdaQueryWrapper<BizInspectionApply>()
+        vo.setPendingApplies(bizInspectionApplyMapper.selectCount(new LambdaQueryWrapper<BizInspectionApply>()
                 .in(BizInspectionApply::getApplyStatus, APPLY_SUBMITTED, APPLY_PAID)
                 .notExists(NO_ACTIVE_APPOINTMENT)));
-        vo.setActiveTotal(appointmentMapper.selectCount(new LambdaQueryWrapper<BizExamAppointment>()
+        vo.setActiveTotal(bizExamAppointmentMapper.selectCount(new LambdaQueryWrapper<BizExamAppointment>()
                 .eq(BizExamAppointment::getActiveFlag, 1)
                 .in(BizExamAppointment::getStatus, APPT_BOOKED, APPT_ARRIVED)));
-        vo.setDeviceOpen(deviceMapper.selectCount(new LambdaQueryWrapper<BizExamDevice>()
+        vo.setDeviceOpen(bizExamDeviceMapper.selectCount(new LambdaQueryWrapper<BizExamDevice>()
                 .eq(BizExamDevice::getStatus, DEVICE_OPEN)));
-        vo.setDevicePaused(deviceMapper.selectCount(new LambdaQueryWrapper<BizExamDevice>()
+        vo.setDevicePaused(bizExamDeviceMapper.selectCount(new LambdaQueryWrapper<BizExamDevice>()
                 .ne(BizExamDevice::getStatus, DEVICE_OPEN)));
         return vo;
     }
@@ -255,7 +242,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         }
         if (old.getStatus() != APPT_BOOKED) {
             throw new BusinessException("仅「已预约」可改约（当前："
-                    + dictText.getDicDataLabel(DICT_APPT_STATUS, old.getStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DICT_APPT_STATUS, old.getStatus()) + "）");
         }
         BizInspectionApply apply = requireApply(old.getApplyId());
         int prevStatus = old.getPrevApplyStatus() == null ? APPLY_PAID : old.getPrevApplyStatus();
@@ -284,7 +271,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         }
         if (appt.getStatus() != APPT_BOOKED) {
             throw new BusinessException("仅「已预约」可取消（当前："
-                    + dictText.getDicDataLabel(DICT_APPT_STATUS, appt.getStatus()) + "）；已到检请在检查工作站取消登记");
+                    + dictCacheService.getDicDataLabel(DICT_APPT_STATUS, appt.getStatus()) + "）；已到检请在检查工作站取消登记");
         }
         releaseOld(appt, dto.getCancelReason(), APPT_CANCELLED, operatorUser.getRealName());
     }
@@ -303,14 +290,14 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         BizExamAppointment appt = requireAppt(dto.getApptId());
         if (appt.getStatus() != APPT_BOOKED) {
             throw new BusinessException("仅「已预约」可签到（当前："
-                    + dictText.getDicDataLabel(DICT_APPT_STATUS, appt.getStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DICT_APPT_STATUS, appt.getStatus()) + "）");
         }
         BizExamAppointment update = new BizExamAppointment();
         update.setId(appt.getId());
         update.setStatus(APPT_ARRIVED);
         update.setArriveTime(LocalDateTime.now().withNano(0));
-        appointmentMapper.updateById(update);
-        int moved = applyWriterMapper.markArrived(appt.getApplyId(), operatorUser.getRealName());
+        bizExamAppointmentMapper.updateById(update);
+        int moved = examApplyWriterMapper.markArrived(appt.getApplyId(), operatorUser.getRealName());
         if (moved == 0) {
             log.warn("[检查预约] {} 到检时申请单 {} 未停在「已预约」，不覆盖其当前状态",
                     appt.getApptNo(), appt.getApplyNo());
@@ -324,13 +311,13 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         BizExamAppointment appt = requireAppt(dto.getApptId());
         if (appt.getStatus() != APPT_ARRIVED) {
             throw new BusinessException("请先签到再完成检查（当前："
-                    + dictText.getDicDataLabel(DICT_APPT_STATUS, appt.getStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DICT_APPT_STATUS, appt.getStatus()) + "）");
         }
         BizExamAppointment update = new BizExamAppointment();
         update.setId(appt.getId());
         update.setStatus(APPT_FINISHED);
         update.setFinishTime(LocalDateTime.now().withNano(0));
-        appointmentMapper.updateById(update);
+        bizExamAppointmentMapper.updateById(update);
     }
 
     /**
@@ -341,7 +328,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
      */
     @Transactional(rollbackFor = Exception.class)
     public int autoNoShow() {
-        List<BizExamAppointment> overdue = appointmentMapper.selectOverdueNoShow();
+        List<BizExamAppointment> overdue = bizExamAppointmentMapper.selectOverdueNoShow();
         int done = 0;
         for (BizExamAppointment appt : overdue) {
             try {
@@ -367,7 +354,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         vo.setApplyId(apply.getId());
         vo.setItemName(apply.getInspectionItemName());
 
-        List<BizExamDeviceItem> maps = deviceItemMapper.selectList(new LambdaQueryWrapper<BizExamDeviceItem>()
+        List<BizExamDeviceItem> maps = bizExamDeviceItemMapper.selectList(new LambdaQueryWrapper<BizExamDeviceItem>()
                 .eq(BizExamDeviceItem::getItemId, apply.getInspectionItemId()));
         if (maps.isEmpty()) {
             vo.setMessage("项目「" + apply.getInspectionItemName() + "」尚未配置可承接设备，请到「设备与号源」页维护映射");
@@ -380,7 +367,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         List<ExamApptVO.SlotOptionVO> options = new ArrayList<>();
         Integer shownMinutes = null;
         for (BizExamDeviceItem map : maps) {
-            BizExamDevice device = deviceMapper.selectForUpdate(map.getDeviceId());
+            BizExamDevice device = bizExamDeviceMapper.selectForUpdate(map.getDeviceId());
             if (device == null || device.getStatus() != DEVICE_OPEN
                     || (dto.getDeviceId() != null && !dto.getDeviceId().equals(device.getId()))) {
                 continue;
@@ -406,7 +393,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
                     o.setDeviceId(device.getId());
                     o.setDeviceCode(device.getDeviceCode());
                     o.setDeviceName(device.getDeviceName());
-                    o.setDeviceTypeText(dictText.getDicDataLabel(DICT_DEVICE_TYPE, device.getDeviceType()));
+                    o.setDeviceTypeText(dictCacheService.getDicDataLabel(DICT_DEVICE_TYPE, device.getDeviceType()));
                     o.setRoomName(device.getRoomName());
                     o.setExamDate(date);
                     o.setStartTime(cell.getStartTime());
@@ -438,15 +425,15 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizExamDevice device = deviceMapper.selectForUpdate(deviceId);
+        BizExamDevice device = bizExamDeviceMapper.selectForUpdate(deviceId);
         if (device == null) {
             throw new BusinessException("预约设备不存在：" + deviceId);
         }
         if (device.getStatus() != DEVICE_OPEN) {
             throw new BusinessException("设备「" + device.getDeviceName() + "」"
-                    + dictText.getDicDataLabel("his_exam_device_status", device.getStatus()) + "，暂不受理预约");
+                    + dictCacheService.getDicDataLabel("his_exam_device_status", device.getStatus()) + "，暂不受理预约");
         }
-        BizExamDeviceItem map = deviceItemMapper.selectOne(new LambdaQueryWrapper<BizExamDeviceItem>()
+        BizExamDeviceItem map = bizExamDeviceItemMapper.selectOne(new LambdaQueryWrapper<BizExamDeviceItem>()
                 .eq(BizExamDeviceItem::getDeviceId, device.getId())
                 .eq(BizExamDeviceItem::getItemId, apply.getInspectionItemId()));
         if (map == null) {
@@ -472,13 +459,13 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
             throw new BusinessException("开始时刻已过：" + examDate + " " + startTime + "，请选择之后的时段");
         }
 
-        List<BizExamSlot> cells = slotService.ensureLockedDay(device, examDate);
+        List<BizExamSlot> cells = examSlotService.ensureLockedDay(device, examDate);
         if (cells.isEmpty()) {
             throw new BusinessException("设备「" + device.getDeviceName() + "」在 " + examDate + " 切不出号源格子");
         }
-        int[] span = slotService.spanOf(cells, startMin, endMin);
+        int[] span = examSlotService.spanOf(cells, startMin, endMin);
 
-        List<BizExamAppointment> occupants = appointmentMapper.selectOccupants(device.getId(), examDate);
+        List<BizExamAppointment> occupants = bizExamAppointmentMapper.selectOccupants(device.getId(), examDate);
         for (int i = span[0]; i <= span[1]; i++) {
             BizExamSlot cell = cells.get(i);
             if (cell.getStatus() != null && cell.getStatus() == SLOT_LOCKED) {
@@ -495,7 +482,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         }
 
         // 患者侧冲突：同一患者同一天两段检查重叠
-        List<BizExamAppointment> samePatient = appointmentMapper
+        List<BizExamAppointment> samePatient = bizExamAppointmentMapper
                 .selectPatientDayForUpdate(apply.getPatientId(), examDate);
         for (BizExamAppointment other : samePatient) {
             if (other.getApplyId().equals(apply.getId())) {
@@ -545,13 +532,13 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         appt.setStatus(APPT_BOOKED);
         appt.setBookBy(operatorUser.getRealName());
         appt.setBookTime(now);
-        appt.setRemark(clip(remark));
-        appointmentMapper.insert(appt);
+        appt.setRemark(TextUtil.cut(remark, 480));
+        bizExamAppointmentMapper.insert(appt);
 
-        slotService.claim(device, examDate, cells, span);
+        examSlotService.claim(device, examDate, cells, span);
 
         LocalDateTime appointmentTime = LocalDateTime.of(examDate, LocalTime.of(startMin / 60, startMin % 60));
-        if (applyWriterMapper.markBooked(apply.getId(), appointmentTime, operatorUser.getRealName()) == 0) {
+        if (examApplyWriterMapper.markBooked(apply.getId(), appointmentTime, operatorUser.getRealName()) == 0) {
             throw new BusinessException("申请单状态推进失败（可能已被他人处理），预约已回滚，请刷新后重试");
         }
         return appt;
@@ -564,13 +551,13 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
      * 口径不同（见 {@link #SYSTEM_NOSHOW_OPERATOR}）。
      */
     private void releaseOld(BizExamAppointment appt, String reason, int targetStatus, String operator) {
-        BizExamDevice device = deviceMapper.selectForUpdate(appt.getDeviceId());
+        BizExamDevice device = bizExamDeviceMapper.selectForUpdate(appt.getDeviceId());
         LocalDate date = appt.getExamDate();
         if (device != null) {
-            List<BizExamSlot> cells = slotService.ensureLockedDay(device, date);
+            List<BizExamSlot> cells = examSlotService.ensureLockedDay(device, date);
             int[] span = safeSpan(cells, appt);
             if (span != null) {
-                slotService.release(device, date, cells, span);
+                examSlotService.release(device, date, cells, span);
             }
         }
         LocalDateTime now = LocalDateTime.now().withNano(0);
@@ -582,11 +569,11 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         } else {
             update.setCancelTime(now);
         }
-        update.setCancelReason(clip(reason));
-        appointmentMapper.updateById(update);
-        appointmentMapper.markInactive(appt.getId());
+        update.setCancelReason(TextUtil.cut(reason, 480));
+        bizExamAppointmentMapper.updateById(update);
+        bizExamAppointmentMapper.markInactive(appt.getId());
         int prev = appt.getPrevApplyStatus() == null ? APPLY_PAID : appt.getPrevApplyStatus();
-        if (applyWriterMapper.revertBooked(appt.getApplyId(), prev, operator) == 0) {
+        if (examApplyWriterMapper.revertBooked(appt.getApplyId(), prev, operator) == 0) {
             log.warn("[检查预约] {} 终结后申请单 {} 未停在「已预约」，状态不回退（可能已进入执行链）",
                     appt.getApptNo(), appt.getApplyNo());
         }
@@ -600,7 +587,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
      */
     private int[] safeSpan(List<BizExamSlot> cells, BizExamAppointment appt) {
         try {
-            return slotService.spanOf(cells, ExamGrid.toMin(appt.getStartTime()), ExamGrid.toMin(appt.getEndTime()));
+            return examSlotService.spanOf(cells, ExamGrid.toMin(appt.getStartTime()), ExamGrid.toMin(appt.getEndTime()));
         } catch (BusinessException e) {
             log.warn("[检查预约] {} 的时段已不在设备 {} 当前号源网格内，跳过退号（交给对账修平）：{}",
                     appt.getApptNo(), appt.getDeviceName(), e.getMessage());
@@ -614,7 +601,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
     private int gateApplyStatus(BizInspectionApply apply) {
         int status = apply.getApplyStatus() == null ? 0 : apply.getApplyStatus();
         if (status == APPLY_BOOKED) {
-            BizExamAppointment active = appointmentMapper.selectOne(new LambdaQueryWrapper<BizExamAppointment>()
+            BizExamAppointment active = bizExamAppointmentMapper.selectOne(new LambdaQueryWrapper<BizExamAppointment>()
                     .eq(BizExamAppointment::getApplyId, apply.getId())
                     .eq(BizExamAppointment::getActiveFlag, 1));
             if (active != null) {
@@ -630,13 +617,13 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
             return APPLY_SUBMITTED;
         }
         throw new BusinessException("申请单 " + apply.getApplyNo() + " 当前状态「"
-                + dictText.getDicDataLabel(DICT_APPLY_STATUS, status) + "」不可预约："
+                + dictCacheService.getDicDataLabel(DICT_APPLY_STATUS, status) + "」不可预约："
                 + (status == APPLY_SUBMITTED ? "检查须先缴费再预约（急诊可走绿色通道）" : "只有已缴费或急诊已提交的申请单可预约"));
     }
 
     private List<BizExamSlot> freeCells(BizExamDevice device, LocalDate date, int minutes,
                                         int afterMin, boolean checkPast) {
-        List<BizExamSlot> cells = slotService.ensureLockedDay(device, date);
+        List<BizExamSlot> cells = examSlotService.ensureLockedDay(device, date);
         List<BizExamSlot> out = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
         for (BizExamSlot cell : cells) {
@@ -650,7 +637,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
             int[] span;
             try {
                 // 落不进完整格子（跨过午休或超出开放窗口）的起点不是可选项
-                span = slotService.spanOf(cells, startMin, startMin + minutes);
+                span = examSlotService.spanOf(cells, startMin, startMin + minutes);
             } catch (BusinessException e) {
                 continue;
             }
@@ -691,7 +678,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         if (map.getExamMinutes() != null && map.getExamMinutes() > 0) {
             return map.getExamMinutes();
         }
-        SysInspectionItem item = map.getItemId() == null ? null : inspectionItemMapper.selectById(map.getItemId());
+        SysInspectionItem item = map.getItemId() == null ? null : sysInspectionItemMapper.selectById(map.getItemId());
         if (item == null || item.getDuration() == null || item.getDuration() <= 0) {
             throw new BusinessException("项目「" + map.getItemName() + "」的检查时长未维护，无法计算占号区间");
         }
@@ -724,7 +711,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
     }
 
     private LambdaQueryWrapper<BizExamAppointment> apptFilter(ExamApptDTO.ApptQuery q) {
-        String kw = trim(q.getKeyword());
+        String kw = TextUtil.trim(q.getKeyword());
         LambdaQueryWrapper<BizExamAppointment> w = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(q.getApptNo())) {
             w.eq(BizExamAppointment::getApptNo, q.getApptNo().trim());
@@ -742,7 +729,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
                 .orderByDesc(BizExamAppointment::getExamDate)
                 .orderByAsc(BizExamAppointment::getStartTime);
         if (q.getDeviceType() != null) {
-            List<Long> deviceIds = deviceMapper.selectList(new LambdaQueryWrapper<BizExamDevice>()
+            List<Long> deviceIds = bizExamDeviceMapper.selectList(new LambdaQueryWrapper<BizExamDevice>()
                             .eq(BizExamDevice::getDeviceType, q.getDeviceType()))
                     .stream().map(BizExamDevice::getId).toList();
             if (deviceIds.isEmpty()) {
@@ -766,7 +753,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
         List<Long> ids = applies.stream().map(BizInspectionApply::getId).toList();
         Map<Long, BizExamAppointment> activeByApply = new HashMap<>();
         if (!ids.isEmpty()) {
-            for (BizExamAppointment a : appointmentMapper.selectList(new LambdaQueryWrapper<BizExamAppointment>()
+            for (BizExamAppointment a : bizExamAppointmentMapper.selectList(new LambdaQueryWrapper<BizExamAppointment>()
                     .in(BizExamAppointment::getApplyId, ids)
                     .eq(BizExamAppointment::getActiveFlag, 1))) {
                 activeByApply.put(a.getApplyId(), a);
@@ -792,7 +779,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
             v.setPrice(a.getPrice());
             v.setIsEmergency(a.getIsEmergency());
             v.setApplyStatus(a.getApplyStatus());
-            v.setApplyStatusText(dictText.getDicDataLabel(DICT_APPLY_STATUS, a.getApplyStatus()));
+            v.setApplyStatusText(dictCacheService.getDicDataLabel(DICT_APPLY_STATUS, a.getApplyStatus()));
             v.setDeviceCount(deviceCounts.getOrDefault(a.getInspectionItemId(), 0));
             v.setExamMinutes(dictMinutes(a.getInspectionItemId()));
             BizExamAppointment active = activeByApply.get(a.getId());
@@ -808,13 +795,13 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
     }
 
     private Integer dictMinutes(Long itemId) {
-        SysInspectionItem item = itemId == null ? null : inspectionItemMapper.selectById(itemId);
+        SysInspectionItem item = itemId == null ? null : sysInspectionItemMapper.selectById(itemId);
         return item == null ? null : item.getDuration();
     }
 
     private Map<Long, Integer> deviceItemCountMap() {
         Map<Long, Integer> map = new HashMap<>();
-        for (BizExamDeviceItem m : deviceItemMapper.selectList(new LambdaQueryWrapper<>())) {
+        for (BizExamDeviceItem m : bizExamDeviceItemMapper.selectList(new LambdaQueryWrapper<>())) {
             map.merge(m.getItemId(), 1, Integer::sum);
         }
         return map;
@@ -823,13 +810,13 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
     private ExamApptVO.ApptVO toApptVo(BizExamAppointment a) {
         ExamApptVO.ApptVO v = new ExamApptVO.ApptVO();
         BeanUtils.copyProperties(a, v);
-        v.setStatusText(dictText.getDicDataLabel(DICT_APPT_STATUS, a.getStatus()));
+        v.setStatusText(dictCacheService.getDicDataLabel(DICT_APPT_STATUS, a.getStatus()));
         v.setTimeRange(a.getStartTime() + "-" + a.getEndTime());
         return v;
     }
 
     private BizInspectionApply requireApply(Long applyId) {
-        BizInspectionApply apply = applyId == null ? null : applyMapper.selectById(applyId);
+        BizInspectionApply apply = applyId == null ? null : bizInspectionApplyMapper.selectById(applyId);
         if (apply == null) {
             throw new BusinessException("检查申请单不存在：" + applyId);
         }
@@ -843,7 +830,7 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
     }
 
     private BizExamAppointment requireAppt(Long apptId) {
-        BizExamAppointment appt = apptId == null ? null : appointmentMapper.selectById(apptId);
+        BizExamAppointment appt = apptId == null ? null : bizExamAppointmentMapper.selectById(apptId);
         if (appt == null) {
             throw new BusinessException("检查预约单不存在：" + apptId);
         }

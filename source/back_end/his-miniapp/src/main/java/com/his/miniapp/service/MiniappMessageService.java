@@ -1,6 +1,7 @@
 package com.his.miniapp.service;
 
 import com.his.common.base.PageResult;
+import com.his.miniapp.dto.MessagePageDTO;
 import com.his.miniapp.vo.MessageListVO;
 
 import java.util.List;
@@ -10,7 +11,7 @@ import java.util.List;
  */
 public interface MiniappMessageService {
 
-    PageResult<MessageListVO> myPage(Integer pageNum, Integer pageSize);
+    PageResult<MessageListVO> myPage(MessagePageDTO dto);
 
     long unreadCount();
 

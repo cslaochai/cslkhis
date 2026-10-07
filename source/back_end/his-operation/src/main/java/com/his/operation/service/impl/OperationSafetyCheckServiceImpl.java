@@ -1,7 +1,9 @@
 package com.his.operation.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TimeUtil;
 import com.his.operation.dto.SafetyCheckSignDTO;
 import com.his.operation.entity.BizOperationApply;
 import com.his.operation.entity.BizOperationSafetyCheck;
@@ -21,7 +23,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -41,14 +42,10 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckService {
+public class OperationSafetyCheckServiceImpl extends ServiceImpl<BizOperationSafetyCheckMapper, BizOperationSafetyCheck> implements OperationSafetyCheckService {
 
-    private final BizOperationSafetyCheckMapper checkMapper;
-    private final BizOperationApplyMapper applyMapper;
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
+    private final BizOperationSafetyCheckMapper bizOperationSafetyCheckMapper;
+    private final BizOperationApplyMapper bizOperationApplyMapper;
 
     @Override
     public List<SafetyCheckVO.PhaseCard> cardsByApply(Long applyId) {
@@ -56,12 +53,12 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
         if (applyId == null) {
             throw new BusinessException("手术申请单ID不能为空");
         }
-        BizOperationApply apply = applyMapper.selectById(applyId);
+        BizOperationApply apply = bizOperationApplyMapper.selectById(applyId);
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
         }
         Map<Integer, SafetyCheckVO> signedByPhase = new HashMap<>();
-        checkMapper.selectByApply(applyId).forEach(row -> signedByPhase.put(row.getPhase(), toVO(row)));
+        bizOperationSafetyCheckMapper.selectByApply(applyId).forEach(row -> signedByPhase.put(row.getPhase(), toVO(row)));
 
         List<SafetyCheckVO.PhaseCard> cards = new ArrayList<>();
         for (Integer phase : SafetyCheckItems.ALL_PHASES) {
@@ -99,7 +96,7 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
         }
         int phase = dto.getPhase();
 
-        BizOperationApply apply = applyMapper.selectById(dto.getApplyId());
+        BizOperationApply apply = bizOperationApplyMapper.selectById(dto.getApplyId());
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
         }
@@ -116,7 +113,7 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
                     + " 已完成，不能再补签安全核查 —— 术后补一条核查记录是伪造，核查的价值就在「在切皮之前核过」");
         }
 
-        List<BizOperationSafetyCheck> signed = checkMapper.selectByApply(apply.getId());
+        List<BizOperationSafetyCheck> signed = bizOperationSafetyCheckMapper.selectByApply(apply.getId());
         int maxPhase = 0;
         for (BizOperationSafetyCheck row : signed) {
             maxPhase = Math.max(maxPhase, row.getPhase());
@@ -155,7 +152,7 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
             throw new BusinessException("三方签名必须是三个互不同的人（一个人包签三方 = 没有核查）");
         }
 
-        LocalDateTime now = now();
+        LocalDateTime now = TimeUtil.nowSeconds();
         BizOperationSafetyCheck entity = new BizOperationSafetyCheck();
         entity.setCheckNo(nextCheckNo());
         entity.setApplyId(apply.getId());
@@ -183,7 +180,7 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
         if (dto.getRemark() != null) {
             entity.setRemark(dto.getRemark());
         }
-        checkMapper.insert(entity);
+        bizOperationSafetyCheckMapper.insert(entity);
         log.info("安全核查签单 applyNo={} 时段={} 术者={} 麻醉={} 护士={} 录入人={}",
                 apply.getApplyNo(), SafetyCheckItems.phaseText(phase),
                 entity.getSurgeonName(), entity.getAnesthetistName(), entity.getNurseName(), operatorUser.getRealName());
@@ -229,13 +226,13 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
     }
 
     private String employeeNameOf(Long empId) {
-        String name = checkMapper.selectEmployeeName(empId);
+        String name = bizOperationSafetyCheckMapper.selectEmployeeName(empId);
         return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
     private String nextCheckNo() {
         String prefix = "HC" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = checkMapper.countByNoPrefix(prefix) + 1;
+        long seq = bizOperationSafetyCheckMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 

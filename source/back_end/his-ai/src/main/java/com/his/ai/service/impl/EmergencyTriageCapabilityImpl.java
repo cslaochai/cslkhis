@@ -15,6 +15,7 @@ import com.his.appoint.support.EmergencyTriageRules.RedFlag;
 import com.his.appoint.support.EmergencyTriageRules.VitalSigns;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -65,7 +66,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
 
     private static final String CHANNEL_NONE = "无";
 
-    private final BizEmergencyMapper emergencyMapper;
+    private final BizEmergencyMapper bizEmergencyMapper;
 
     private final AiExecutionService aiExecutionService;
 
@@ -161,7 +162,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         List<String> result = new ArrayList<>();
         for (String value : values) {
             if (StringUtils.hasText(value)) {
-                result.add(truncate(value.trim(), 120));
+                result.add(TextUtil.cut(value.trim(), 120));
             }
         }
         return result;
@@ -185,23 +186,11 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         return new ArrayList<>(values.subList(0, max));
     }
 
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return text;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
-    private static String nullToDash(String text) {
-        return StringUtils.hasText(text) ? text : "（未填写）";
-    }
-
     public EmergencyTriageResultVO suggest(EmergencyTriageDTO dto) {
         long start = System.currentTimeMillis();
 
         BizEmergency entity = dto.getEmergencyId() == null
-                ? null : emergencyMapper.selectById(dto.getEmergencyId());
+                ? null : bizEmergencyMapper.selectById(dto.getEmergencyId());
         if (dto.getEmergencyId() != null && entity == null) {
             throw new BusinessException("急诊记录不存在：" + dto.getEmergencyId());
         }
@@ -259,7 +248,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
                 if (EmergencyTriageRules.isValidChannel(value.getSuggestGreenChannel())) {
                     llmChannel = value.getSuggestGreenChannel().trim();
                 }
-                llmReasoning = truncate(value.getReasoning(), 400);
+                llmReasoning = TextUtil.cut(value.getReasoning(), 400);
                 llmActions = limit(nonBlank(value.getRecommendActions()), MAX_ACTIONS);
                 llmRedFlags = limit(nonBlank(value.getRedFlags()), MAX_RED_FLAGS);
                 // 模型报出的红旗只做补充展示，不参与级别计算 —— 级别计算必须可复现
@@ -308,7 +297,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         EmergencyTriagePromptVariablesVO variables = new EmergencyTriagePromptVariablesVO();
         variables.setGender(vo.getGenderText());
         variables.setAge(vo.getAge() == null ? "（未填写）" : vo.getAge() + "岁");
-        variables.setChiefComplaint(nullToDash(vo.getChiefComplaint()));
+        variables.setChiefComplaint(TextUtil.blankToDefault(vo.getChiefComplaint(), "（未填写）"));
         variables.setVitalSigns(vitals.describe());
         variables.setCurrentLevel(vo.getCurrentLevelText());
         variables.setHardLevel(vo.getHardLevelText());
@@ -323,7 +312,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
                 .variables(variables)
                 .bizType(BIZ_TYPE)
                 .bizId(vo.getEmergencyId())
-                .inputDigest(nullToDash(vo.getChiefComplaint()) + " | " + vitals.describe())
+                .inputDigest(TextUtil.blankToDefault(vo.getChiefComplaint(), "（未填写）") + " | " + vitals.describe())
                 .maxTokens(OUTPUT_TOKEN_LIMIT)
                 .build();
 

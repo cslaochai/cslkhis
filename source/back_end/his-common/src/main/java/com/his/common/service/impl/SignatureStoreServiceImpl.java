@@ -1,5 +1,6 @@
 package com.his.common.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.entity.BizEmrSignature;
 import com.his.common.entity.SysSignCert;
 import com.his.common.enums.SignSceneEnum;
@@ -28,20 +29,20 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SignatureStoreServiceImpl implements SignatureStoreService {
+public class SignatureStoreServiceImpl extends ServiceImpl<BizEmrSignatureMapper, BizEmrSignature> implements SignatureStoreService {
 
-    private final BizEmrSignatureMapper signMapper;
-    private final SysSignCertMapper certMapper;
+    private final BizEmrSignatureMapper bizEmrSignatureMapper;
+    private final SysSignCertMapper sysSignCertMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public void insertAndAnchor(BizEmrSignature entity, SignableContentProvider provider, SignSceneEnum scene,
                                 SysSignCert cert) {
-        signMapper.insert(entity);
+        bizEmrSignatureMapper.insert(entity);
         provider.applySignAnchor(entity.getBizId(), scene, entity.getId(), entity.getSignedTime());
         if (cert != null) {
             cert.setLastUsedTime(entity.getSignedTime());
             cert.setSignCount(cert.getSignCount() == null ? 1 : cert.getSignCount() + 1);
-            certMapper.updateById(cert);
+            sysSignCertMapper.updateById(cert);
         }
     }
 
@@ -57,9 +58,9 @@ public class SignatureStoreServiceImpl implements SignatureStoreService {
         patch.setId(signId);
         patch.setVerifyStatus(verifyStatus);
         patch.setVerifyTime(verifyTime);
-        BizEmrSignature old = signMapper.selectById(signId);
+        BizEmrSignature old = bizEmrSignatureMapper.selectById(signId);
         patch.setVerifyCount(old == null || old.getVerifyCount() == null ? 1 : old.getVerifyCount() + 1);
-        signMapper.updateById(patch);
+        bizEmrSignatureMapper.updateById(patch);
     }
 
     /**
@@ -75,6 +76,6 @@ public class SignatureStoreServiceImpl implements SignatureStoreService {
         patch.setInvalidTime(time);
         patch.setInvalidBy(operatorId);
         patch.setInvalidByName(operatorName);
-        signMapper.updateById(patch);
+        bizEmrSignatureMapper.updateById(patch);
     }
 }

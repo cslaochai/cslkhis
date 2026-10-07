@@ -45,10 +45,10 @@ public class AttendingRelationServiceImpl
      */
     private static final int STATUS_ENDED = 0;
 
-    private final BizAdmissionMapper admissionMapper;
-    private final BizPatientMapper patientMapper;
-    private final SysEmployeeMapper employeeMapper;
-    private final SysDepartmentMapper departmentMapper;
+    private final BizAdmissionMapper bizAdmissionMapper;
+    private final BizPatientMapper bizPatientMapper;
+    private final SysEmployeeMapper sysEmployeeMapper;
+    private final SysDepartmentMapper sysDepartmentMapper;
 
     @Override
     public List<AttendingRelationVO> listByAdmission(Long admissionId, Integer status) {
@@ -78,7 +78,7 @@ public class AttendingRelationServiceImpl
 
     @Override
     public Long bind(AttendingBindDTO dto) {
-        BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
+        BizAdmission admission = bizAdmissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("住院登记不存在或已删除");
         }
@@ -86,7 +86,7 @@ public class AttendingRelationServiceImpl
         if (admission.getAdmitStatus() == null || admission.getAdmitStatus() != 1) {
             throw new BusinessException("该住院已结束，不能再建立或转交管床关系");
         }
-        SysEmployee doctor = employeeMapper.selectById(dto.getEmployeeId());
+        SysEmployee doctor = sysEmployeeMapper.selectById(dto.getEmployeeId());
         if (doctor == null) {
             throw new BusinessException("所选医生不存在或已删除");
         }
@@ -207,7 +207,7 @@ public class AttendingRelationServiceImpl
         if (patientId == null) {
             return "";
         }
-        BizPatient patient = patientMapper.selectById(patientId);
+        BizPatient patient = bizPatientMapper.selectById(patientId);
         return patient == null ? "" : patient.getPatientName();
     }
 
@@ -215,7 +215,7 @@ public class AttendingRelationServiceImpl
         if (deptId == null) {
             return "";
         }
-        SysDepartment dept = departmentMapper.selectById(deptId);
+        SysDepartment dept = sysDepartmentMapper.selectById(deptId);
         return dept == null ? "" : dept.getDeptName();
     }
 

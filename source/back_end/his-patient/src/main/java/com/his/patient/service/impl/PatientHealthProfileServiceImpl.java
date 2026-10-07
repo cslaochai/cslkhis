@@ -2,7 +2,9 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.mapper.*;
@@ -30,7 +32,7 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class PatientHealthProfileServiceImpl implements PatientHealthProfileService {
+public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientContactMapper, BizPatientContact> implements PatientHealthProfileService {
 
     /**
      * 与患者关系字典（患者联系方式.relationship 的码值来源）
@@ -47,13 +49,13 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
      */
     private static final String MIGRATED_NOTE = "由主档自由文本迁移生成";
 
-    private final BizPatientMapper patientMapper;
-    private final BizPatientAllergyMapper allergyMapper;
-    private final BizPatientPastDiseaseMapper pastDiseaseMapper;
-    private final BizPatientSurgeryHistoryMapper surgeryMapper;
-    private final BizPatientFamilyHistoryMapper familyMapper;
-    private final BizPatientMedicationHistoryMapper medicationMapper;
-    private final BizPatientContactMapper contactMapper;
+    private final BizPatientMapper bizPatientMapper;
+    private final BizPatientAllergyMapper bizPatientAllergyMapper;
+    private final BizPatientPastDiseaseMapper bizPatientPastDiseaseMapper;
+    private final BizPatientSurgeryHistoryMapper bizPatientSurgeryHistoryMapper;
+    private final BizPatientFamilyHistoryMapper bizPatientFamilyHistoryMapper;
+    private final BizPatientMedicationHistoryMapper bizPatientMedicationHistoryMapper;
+    private final BizPatientContactMapper bizPatientContactMapper;
     private final DictCacheService dictCacheService;
 
     /* ==================== 读 ==================== */
@@ -64,7 +66,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         if (patientId == null) {
             throw new BusinessException("患者信息不能为空");
         }
-        BizPatient patient = patientMapper.selectById(patientId);
+        BizPatient patient = bizPatientMapper.selectById(patientId);
         if (patient == null) {
             throw new BusinessException("患者不存在或已删除");
         }
@@ -104,7 +106,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         // 只按 id 倒序。**不按 allergySeverity 排序** —— 那是 varchar，
         // 排序结果是「未/危/轻/重」的字符序，看着像按严重程度排、实际毫无临床含义。
         // 真要按严重程度排，得用 CASE 显式定义档位，别让字符序冒充业务序。
-        return allergyMapper.selectList(new LambdaQueryWrapper<BizPatientAllergy>()
+        return bizPatientAllergyMapper.selectList(new LambdaQueryWrapper<BizPatientAllergy>()
                         .eq(BizPatientAllergy::getPatientId, patientId)
                         .orderByDesc(BizPatientAllergy::getId))
                 .stream().map(e -> {
@@ -115,7 +117,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     }
 
     private List<PatientPastDiseaseVO> listPastDiseases(Long patientId) {
-        return pastDiseaseMapper.selectList(new LambdaQueryWrapper<BizPatientPastDisease>()
+        return bizPatientPastDiseaseMapper.selectList(new LambdaQueryWrapper<BizPatientPastDisease>()
                         .eq(BizPatientPastDisease::getPatientId, patientId)
                         .orderByDesc(BizPatientPastDisease::getId))
                 .stream().map(e -> {
@@ -126,7 +128,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     }
 
     private List<PatientSurgeryHistoryVO> listSurgeries(Long patientId) {
-        return surgeryMapper.selectList(new LambdaQueryWrapper<BizPatientSurgeryHistory>()
+        return bizPatientSurgeryHistoryMapper.selectList(new LambdaQueryWrapper<BizPatientSurgeryHistory>()
                         .eq(BizPatientSurgeryHistory::getPatientId, patientId)
                         .orderByDesc(BizPatientSurgeryHistory::getSurgeryDate)
                         .orderByDesc(BizPatientSurgeryHistory::getId))
@@ -138,7 +140,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     }
 
     private List<PatientFamilyHistoryVO> listFamilies(Long patientId) {
-        return familyMapper.selectList(new LambdaQueryWrapper<BizPatientFamilyHistory>()
+        return bizPatientFamilyHistoryMapper.selectList(new LambdaQueryWrapper<BizPatientFamilyHistory>()
                         .eq(BizPatientFamilyHistory::getPatientId, patientId)
                         .orderByAsc(BizPatientFamilyHistory::getId))
                 .stream().map(e -> {
@@ -149,7 +151,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     }
 
     private List<PatientMedicationHistoryVO> listMedications(Long patientId) {
-        return medicationMapper.selectList(new LambdaQueryWrapper<BizPatientMedicationHistory>()
+        return bizPatientMedicationHistoryMapper.selectList(new LambdaQueryWrapper<BizPatientMedicationHistory>()
                         .eq(BizPatientMedicationHistory::getPatientId, patientId)
                         .orderByDesc(BizPatientMedicationHistory::getStartDate)
                         .orderByDesc(BizPatientMedicationHistory::getId))
@@ -161,7 +163,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     }
 
     private List<PatientContactVO> listContacts(Long patientId) {
-        return contactMapper.selectList(new LambdaQueryWrapper<BizPatientContact>()
+        return bizPatientContactMapper.selectList(new LambdaQueryWrapper<BizPatientContact>()
                         .eq(BizPatientContact::getPatientId, patientId)
                         .orderByDesc(BizPatientContact::getIsPrimary)
                         .orderByAsc(BizPatientContact::getId))
@@ -200,14 +202,14 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         BeanUtils.copyProperties(dto, entity);
         Long patientId = resolvePatientId(dto.getId(), dto.getPatientId(),
                 id -> {
-                    BizPatientAllergy old = allergyMapper.selectById(id);
+                    BizPatientAllergy old = bizPatientAllergyMapper.selectById(id);
                     return old == null ? null : old.getPatientId();
                 }, "过敏史");
         entity.setPatientId(patientId);
         if (entity.getOccurrenceCount() == null) {
             entity.setOccurrenceCount(1);
         }
-        persist(entity, dto.getId(), allergyMapper::insert, allergyMapper::updateById);
+        persist(entity, dto.getId(), bizPatientAllergyMapper::insert, bizPatientAllergyMapper::updateById);
         syncAllergyProjection(patientId);
 
         PatientAllergyVO vo = new PatientAllergyVO();
@@ -218,9 +220,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteAllergy(Long id) {
-        Long patientId = requireExistingPatientId(id, "过敏史", allergyMapper::selectById,
+        Long patientId = requireExistingPatientId(id, "过敏史", bizPatientAllergyMapper::selectById,
                 BizPatientAllergy::getPatientId);
-        allergyMapper.deleteById(id);
+        bizPatientAllergyMapper.deleteById(id);
         syncAllergyProjection(patientId);
     }
 
@@ -255,14 +257,14 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         BeanUtils.copyProperties(dto, entity);
         Long patientId = resolvePatientId(dto.getId(), dto.getPatientId(),
                 id -> {
-                    BizPatientPastDisease old = pastDiseaseMapper.selectById(id);
+                    BizPatientPastDisease old = bizPatientPastDiseaseMapper.selectById(id);
                     return old == null ? null : old.getPatientId();
                 }, "既往疾病史");
         entity.setPatientId(patientId);
         if (entity.getRelapseCount() == null) {
             entity.setRelapseCount(0);
         }
-        persist(entity, dto.getId(), pastDiseaseMapper::insert, pastDiseaseMapper::updateById);
+        persist(entity, dto.getId(), bizPatientPastDiseaseMapper::insert, bizPatientPastDiseaseMapper::updateById);
         syncPastDiseaseProjection(patientId);
 
         PatientPastDiseaseVO vo = new PatientPastDiseaseVO();
@@ -273,9 +275,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deletePastDisease(Long id) {
-        Long patientId = requireExistingPatientId(id, "既往疾病史", pastDiseaseMapper::selectById,
+        Long patientId = requireExistingPatientId(id, "既往疾病史", bizPatientPastDiseaseMapper::selectById,
                 BizPatientPastDisease::getPatientId);
-        pastDiseaseMapper.deleteById(id);
+        bizPatientPastDiseaseMapper.deleteById(id);
         syncPastDiseaseProjection(patientId);
     }
 
@@ -304,10 +306,10 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         BeanUtils.copyProperties(dto, entity);
         entity.setPatientId(resolvePatientId(dto.getId(), dto.getPatientId(),
                 id -> {
-                    BizPatientSurgeryHistory old = surgeryMapper.selectById(id);
+                    BizPatientSurgeryHistory old = bizPatientSurgeryHistoryMapper.selectById(id);
                     return old == null ? null : old.getPatientId();
                 }, "手术外伤史"));
-        persist(entity, dto.getId(), surgeryMapper::insert, surgeryMapper::updateById);
+        persist(entity, dto.getId(), bizPatientSurgeryHistoryMapper::insert, bizPatientSurgeryHistoryMapper::updateById);
 
         PatientSurgeryHistoryVO vo = new PatientSurgeryHistoryVO();
         BeanUtils.copyProperties(entity, vo);
@@ -317,9 +319,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteSurgeryHistory(Long id) {
-        requireExistingPatientId(id, "手术外伤史", surgeryMapper::selectById,
+        requireExistingPatientId(id, "手术外伤史", bizPatientSurgeryHistoryMapper::selectById,
                 BizPatientSurgeryHistory::getPatientId);
-        surgeryMapper.deleteById(id);
+        bizPatientSurgeryHistoryMapper.deleteById(id);
     }
 
     /* ==================== 家族史 ==================== */
@@ -340,13 +342,13 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         BeanUtils.copyProperties(dto, entity);
         entity.setPatientId(resolvePatientId(dto.getId(), dto.getPatientId(),
                 id -> {
-                    BizPatientFamilyHistory old = familyMapper.selectById(id);
+                    BizPatientFamilyHistory old = bizPatientFamilyHistoryMapper.selectById(id);
                     return old == null ? null : old.getPatientId();
                 }, "家族史"));
         if (entity.getIsAlive() == null) {
             entity.setIsAlive(1);
         }
-        persist(entity, dto.getId(), familyMapper::insert, familyMapper::updateById);
+        persist(entity, dto.getId(), bizPatientFamilyHistoryMapper::insert, bizPatientFamilyHistoryMapper::updateById);
 
         PatientFamilyHistoryVO vo = new PatientFamilyHistoryVO();
         BeanUtils.copyProperties(entity, vo);
@@ -356,9 +358,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteFamilyHistory(Long id) {
-        requireExistingPatientId(id, "家族史", familyMapper::selectById,
+        requireExistingPatientId(id, "家族史", bizPatientFamilyHistoryMapper::selectById,
                 BizPatientFamilyHistory::getPatientId);
-        familyMapper.deleteById(id);
+        bizPatientFamilyHistoryMapper.deleteById(id);
     }
 
     /* ==================== 既往用药史 ==================== */
@@ -382,14 +384,14 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         BeanUtils.copyProperties(dto, entity);
         entity.setPatientId(resolvePatientId(dto.getId(), dto.getPatientId(),
                 id -> {
-                    BizPatientMedicationHistory old = medicationMapper.selectById(id);
+                    BizPatientMedicationHistory old = bizPatientMedicationHistoryMapper.selectById(id);
                     return old == null ? null : old.getPatientId();
                 }, "用药史"));
         // 不依赖表列 DEFAULT '已完成'（那个值不在列注释的状态枚举里），显式给默认状态
         if (!StringUtils.hasText(entity.getStatus())) {
             entity.setStatus(HealthProfileEnums.DEFAULT_MEDICATION_STATUS);
         }
-        persist(entity, dto.getId(), medicationMapper::insert, medicationMapper::updateById);
+        persist(entity, dto.getId(), bizPatientMedicationHistoryMapper::insert, bizPatientMedicationHistoryMapper::updateById);
 
         PatientMedicationHistoryVO vo = new PatientMedicationHistoryVO();
         BeanUtils.copyProperties(entity, vo);
@@ -399,9 +401,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteMedication(Long id) {
-        requireExistingPatientId(id, "用药史", medicationMapper::selectById,
+        requireExistingPatientId(id, "用药史", bizPatientMedicationHistoryMapper::selectById,
                 BizPatientMedicationHistory::getPatientId);
-        medicationMapper.deleteById(id);
+        bizPatientMedicationHistoryMapper.deleteById(id);
     }
 
     /* ==================== 联系人 ==================== */
@@ -428,7 +430,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         BeanUtils.copyProperties(dto, entity);
         Long patientId = resolvePatientId(dto.getId(), dto.getPatientId(),
                 id -> {
-                    BizPatientContact old = contactMapper.selectById(id);
+                    BizPatientContact old = bizPatientContactMapper.selectById(id);
                     return old == null ? null : old.getPatientId();
                 }, "联系人");
         entity.setPatientId(patientId);
@@ -443,7 +445,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         if (Integer.valueOf(1).equals(entity.getIsPrimary())) {
             clearOtherPrimary(patientId, dto.getId());
         }
-        persist(entity, dto.getId(), contactMapper::insert, contactMapper::updateById);
+        persist(entity, dto.getId(), bizPatientContactMapper::insert, bizPatientContactMapper::updateById);
         syncContactProjection(patientId);
 
         PatientContactVO vo = new PatientContactVO();
@@ -458,7 +460,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         if (contactId == null) {
             throw new BusinessException("联系人ID不能为空");
         }
-        BizPatientContact row = contactMapper.selectById(contactId);
+        BizPatientContact row = bizPatientContactMapper.selectById(contactId);
         if (row == null) {
             throw new BusinessException("联系人不存在或已删除");
         }
@@ -471,9 +473,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteContact(Long id) {
-        Long patientId = requireExistingPatientId(id, "联系人", contactMapper::selectById,
+        Long patientId = requireExistingPatientId(id, "联系人", bizPatientContactMapper::selectById,
                 BizPatientContact::getPatientId);
-        contactMapper.deleteById(id);
+        bizPatientContactMapper.deleteById(id);
         syncContactProjection(patientId);
     }
 
@@ -491,7 +493,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
     }
 
     private void clearOtherPrimary(Long patientId, Long keepId) {
-        contactMapper.update(null, new LambdaUpdateWrapper<BizPatientContact>()
+        bizPatientContactMapper.update(null, new LambdaUpdateWrapper<BizPatientContact>()
                 .eq(BizPatientContact::getPatientId, patientId)
                 .ne(keepId != null, BizPatientContact::getId, keepId)
                 .set(BizPatientContact::getIsPrimary, 0));
@@ -522,7 +524,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
             // 「未评估」至少在页面上说的是实话。
             BizPatientAllergy a = new BizPatientAllergy();
             a.setPatientId(patientId);
-            a.setAllergenName(truncate(patient.getAllergyHistory().trim(), 200));
+            a.setAllergenName(TextUtil.cut(patient.getAllergyHistory().trim(), 200));
             a.setAllergyType(HealthProfileEnums.guessAllergyType(patient.getAllergyHistory()));
             a.setAllergySeverity(HealthProfileEnums.SEVERITY_UNKNOWN);
             a.setAllergySymptoms("");
@@ -530,7 +532,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
             a.setRemark(MIGRATED_NOTE + "（严重程度未评估）");
             a.setCreateBy(operator);
             a.setUpdateBy(operator);
-            allergyMapper.insert(a);
+            bizPatientAllergyMapper.insert(a);
             syncAllergyProjection(patientId);
         }
         // else：明细为空且文本也为空 —— **什么都不做**。
@@ -545,12 +547,12 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         } else if (StringUtils.hasText(patient.getMedicalHistory())) {
             BizPatientPastDisease d = new BizPatientPastDisease();
             d.setPatientId(patientId);
-            d.setDiseaseName(truncate(patient.getMedicalHistory().trim(), 200));
+            d.setDiseaseName(TextUtil.cut(patient.getMedicalHistory().trim(), 200));
             d.setRelapseCount(0);
             d.setRemark(MIGRATED_NOTE + "（整句作为病名，未拆分）");
             d.setCreateBy(operator);
             d.setUpdateBy(operator);
-            pastDiseaseMapper.insert(d);
+            bizPatientPastDiseaseMapper.insert(d);
             syncPastDiseaseProjection(patientId);
         }
         // else：同上，明细与文本都空时不动（理由见过敏史那段）
@@ -563,7 +565,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
             BizPatientContact c = new BizPatientContact();
             c.setPatientId(patientId);
             c.setContactName(StringUtils.hasText(patient.getContactName())
-                    ? truncate(patient.getContactName().trim(), 100) : "未填姓名");
+                    ? TextUtil.cut(patient.getContactName().trim(), 100) : "未填姓名");
             c.setRelationship(relationCode(patient.getContactRelation()));
             c.setPhone(patient.getContactPhone());
             c.setIsPrimary(1);
@@ -571,7 +573,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
             c.setRemark(MIGRATED_NOTE);
             c.setCreateBy(operator);
             c.setUpdateBy(operator);
-            contactMapper.insert(c);
+            bizPatientContactMapper.insert(c);
             syncContactProjection(patientId);
         }
         // else：同上，明细与文本都空时不动（理由见过敏史那段）
@@ -596,7 +598,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
             wrapper.set(BizPatient::getMedicalHistory, text);
         }
         wrapper.set(BizPatient::getUpdateBy, operatorUser.getRealName());
-        patientMapper.update(null, wrapper);
+        bizPatientMapper.update(null, wrapper);
     }
 
     private void writePatientContact(Long patientId, String name, String phone, String relationText) {
@@ -604,7 +606,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        patientMapper.update(null, new LambdaUpdateWrapper<BizPatient>()
+        bizPatientMapper.update(null, new LambdaUpdateWrapper<BizPatient>()
                 .eq(BizPatient::getId, patientId)
                 .set(BizPatient::getContactName, name)
                 .set(BizPatient::getContactPhone, phone)
@@ -626,7 +628,7 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
                 // ①条件必填：只有新增（id==null）才必填 patientId，修改时以库中记录为准，@NotNull 会把合法修改挡成 400
                 throw new BusinessException("患者信息不能为空");
             }
-            BizPatient patient = patientMapper.selectById(paramPatientId);
+            BizPatient patient = bizPatientMapper.selectById(paramPatientId);
             if (patient == null) {
                 throw new BusinessException("患者不存在或已删除");
             }
@@ -698,10 +700,6 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
             throw new BusinessException(label + "取值不合法：" + value + "（可选："
                     + String.join("/", allowed) + "）");
         }
-    }
-
-    private String truncate(String s, int max) {
-        return s.length() <= max ? s : s.substring(0, max);
     }
 
     /* ---- 与患者关系字典 ---- */

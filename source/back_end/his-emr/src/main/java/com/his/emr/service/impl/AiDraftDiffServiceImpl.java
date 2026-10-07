@@ -2,6 +2,7 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.emr.dto.AiDraftDiffQueryPageDTO;
 import com.his.emr.entity.BizAiDraftDiff;
@@ -19,9 +20,9 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class AiDraftDiffServiceImpl implements AiDraftDiffService {
+public class AiDraftDiffServiceImpl extends ServiceImpl<BizAiDraftDiffMapper, BizAiDraftDiff> implements AiDraftDiffService {
 
-    private final BizAiDraftDiffMapper draftDiffMapper;
+    private final BizAiDraftDiffMapper bizAiDraftDiffMapper;
 
     private final DraftDiffSupport draftDiffSupport;
 
@@ -49,7 +50,7 @@ public class AiDraftDiffServiceImpl implements AiDraftDiffService {
         entity.setFinalText(finalText.trim());
         entity.setDiffJson(draftDiffSupport.toJson(segments));
         entity.setChanged(changed ? 1 : 0);
-        draftDiffMapper.insert(entity);
+        bizAiDraftDiffMapper.insert(entity);
         return true;
     }
 
@@ -64,7 +65,7 @@ public class AiDraftDiffServiceImpl implements AiDraftDiffService {
                 .eq(q.getChanged() != null, BizAiDraftDiff::getChanged, q.getChanged())
                 .orderByDesc(BizAiDraftDiff::getCreateTime)
                 .orderByDesc(BizAiDraftDiff::getId);
-        Page<BizAiDraftDiff> page = draftDiffMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        Page<BizAiDraftDiff> page = bizAiDraftDiffMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
         List<AiDraftDiffListVO> voList = page.getRecords().stream()
                 .map(entity -> {
                     AiDraftDiffListVO vo = new AiDraftDiffListVO();

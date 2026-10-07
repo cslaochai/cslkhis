@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.LongAdder;
 @RequiredArgsConstructor
 public class AiDegradeGuard {
 
-    private final AiConfigProvider configProvider;
+    private final AiConfigProvider aiConfigProvider;
 
     private final Map<String, CircuitState> states = new ConcurrentHashMap<>();
 
@@ -119,7 +119,7 @@ public class AiDegradeGuard {
     }
 
     public void recordFailure(String capabilityKey) {
-        AiProperties properties = configProvider.get();
+        AiProperties properties = aiConfigProvider.get();
         CircuitState state = states.computeIfAbsent(capabilityKey, key -> new CircuitState());
         int failures = state.failures.incrementAndGet();
         int threshold = Math.max(1, properties.getCircuitFailureThreshold());

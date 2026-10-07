@@ -3,12 +3,15 @@ package com.his.medicaltech.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.DelFlagEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.InfusionRoomDTO;
 import com.his.medicaltech.entity.BizInfusionSeat;
 import com.his.medicaltech.entity.BizOutpInfusion;
@@ -45,17 +48,17 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class InfusionRoomServiceImpl implements InfusionRoomService {
+public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, BizOutpInfusion> implements InfusionRoomService {
 
     /**
      * 皮试判读最小观察窗（分钟）
      */
     private static final long SKIN_TEST_OBSERVE_MINUTES = 15;
 
-    private final BizInfusionSeatMapper seatMapper;
-    private final BizOutpInfusionMapper infusionMapper;
-    private final BizOutpInfusionRoundMapper roundMapper;
-    private final BizSkinTestMapper skinTestMapper;
+    private final BizInfusionSeatMapper bizInfusionSeatMapper;
+    private final BizOutpInfusionMapper bizOutpInfusionMapper;
+    private final BizOutpInfusionRoundMapper bizOutpInfusionRoundMapper;
+    private final BizSkinTestMapper bizSkinTestMapper;
     private final RedisSequenceService redisSequenceService;
 
     // 座位
@@ -64,11 +67,11 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
      * 座位图（含占用输液单摘要）
      */
     public List<InfusionRoomVO.Seat> seats() {
-        List<BizInfusionSeat> seats = seatMapper.selectList(new LambdaQueryWrapper<BizInfusionSeat>()
+        List<BizInfusionSeat> seats = bizInfusionSeatMapper.selectList(new LambdaQueryWrapper<BizInfusionSeat>()
                 .orderByAsc(BizInfusionSeat::getArea).orderByAsc(BizInfusionSeat::getSeatNo));
         List<Long> seatIds = seats.stream().map(BizInfusionSeat::getId).toList();
         Map<Long, BizOutpInfusion> occupying = seatIds.isEmpty() ? Map.of()
-                : infusionMapper.selectList(new LambdaQueryWrapper<BizOutpInfusion>()
+                : bizOutpInfusionMapper.selectList(new LambdaQueryWrapper<BizOutpInfusion>()
                         .in(BizOutpInfusion::getSeatId, seatIds)
                         .in(BizOutpInfusion::getStatus,
                                 InfusionStatusEnum.PENDING_TEST.getCode(),
@@ -103,7 +106,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         }
         BizInfusionSeat seat;
         if (dto.getId() != null) {
-            seat = seatMapper.selectById(dto.getId());
+            seat = bizInfusionSeatMapper.selectById(dto.getId());
             if (seat == null || seat.getDelFlag() == DelFlagEnum.DELETED.getCode()) {
                 throw new BusinessException("座位不存在");
             }
@@ -115,7 +118,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
             seat = new BizInfusionSeat();
             seat.setSeatStatus(dto.getSeatStatus());
         }
-        Long dupId = seatMapper.selectCount(new LambdaQueryWrapper<BizInfusionSeat>()
+        Long dupId = bizInfusionSeatMapper.selectCount(new LambdaQueryWrapper<BizInfusionSeat>()
                 .eq(BizInfusionSeat::getSeatNo, dto.getSeatNo())
                 .ne(dto.getId() != null, BizInfusionSeat::getId, dto.getId())
                 .eq(BizInfusionSeat::getDelFlag, DelFlagEnum.NORMAL.getCode()));
@@ -127,10 +130,10 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         seat.setRemark(dto.getRemark());
         seat.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (dto.getId() != null) {
-            seatMapper.updateById(seat);
+            bizInfusionSeatMapper.updateById(seat);
         } else {
             seat.setCreateBy(UserUtils.getCurrentUser().getRealName());
-            seatMapper.insert(seat);
+            bizInfusionSeatMapper.insert(seat);
         }
         InfusionRoomVO.Seat vo = new InfusionRoomVO.Seat();
         vo.setId(seat.getId());
@@ -148,7 +151,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
      */
     @Transactional(rollbackFor = Exception.class)
     public InfusionRoomVO.Infusion admit(InfusionRoomDTO.Admit dto) {
-        BizInfusionSeat seat = seatMapper.selectById(dto.getSeatId());
+        BizInfusionSeat seat = bizInfusionSeatMapper.selectById(dto.getSeatId());
         if (seat == null || seat.getDelFlag() == DelFlagEnum.DELETED.getCode()) {
             throw new BusinessException("座位不存在");
         }
@@ -173,11 +176,11 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         inf.setNurseName(UserUtils.getCurrentUser().getRealName());
         inf.setRemark(dto.getRemark());
         inf.setCreateBy(inf.getNurseName());
-        infusionMapper.insert(inf);
+        bizOutpInfusionMapper.insert(inf);
 
         seat.setSeatStatus(InfusionSeatStatusEnum.OCCUPIED.getCode());
         seat.setUpdateBy(inf.getNurseName());
-        seatMapper.updateById(seat);
+        bizInfusionSeatMapper.updateById(seat);
         return toInfusionVO(inf);
     }
 
@@ -189,7 +192,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
      * 患者快照（服务端重查，不信任前端）。
      */
     private void fillPatientSnapshot(BizOutpInfusion inf) {
-        InfusionPatientSnapshotVO row = infusionMapper.selectPatientSnapshot(inf.getPatientId());
+        InfusionPatientSnapshotVO row = bizOutpInfusionMapper.selectPatientSnapshot(inf.getPatientId());
         if (row == null) {
             throw new BusinessException("患者不存在（ID " + inf.getPatientId() + "）");
         }
@@ -216,17 +219,17 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         st.setPatientName(inf.getPatientName());
         st.setDrugName(dto.getDrugName());
         st.setTreatmentRecordId(inf.getTreatmentRecordId());
-        st.setTestTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        st.setTestTime(TimeUtil.nowSeconds());
         st.setResult(SkinTestResultEnum.PENDING.getCode());
         st.setNurseId(UserUtils.getCurrentUser().getEmployeeId());
         st.setNurseName(UserUtils.getCurrentUser().getRealName());
         st.setRemark(dto.getRemark());
         st.setCreateBy(st.getNurseName());
-        skinTestMapper.insert(st);
+        bizSkinTestMapper.insert(st);
 
         inf.setSkinTestId(st.getId());
         inf.setUpdateBy(st.getNurseName());
-        infusionMapper.updateById(inf);
+        bizOutpInfusionMapper.updateById(inf);
         return toInfusionVO(inf);
     }
 
@@ -235,7 +238,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
      */
     @Transactional(rollbackFor = Exception.class)
     public InfusionRoomVO.Infusion skinTestResult(InfusionRoomDTO.SkinTestResult dto) {
-        BizSkinTest st = skinTestMapper.selectById(dto.getSkinTestId());
+        BizSkinTest st = bizSkinTestMapper.selectById(dto.getSkinTestId());
         if (st == null || st.getDelFlag() == DelFlagEnum.DELETED.getCode()) {
             throw new BusinessException("皮试记录不存在");
         }
@@ -248,12 +251,12 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
                     + " 分钟），不能判读");
         }
         st.setResult(dto.getResult());
-        st.setResultTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        st.setResultTime(TimeUtil.nowSeconds());
         st.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        skinTestMapper.updateById(st);
+        bizSkinTestMapper.updateById(st);
 
         // 皮试表不持有输液单外键（输液单持 skinTestId），反查进行中的输液单
-        BizOutpInfusion inf = infusionMapper.selectOne(new LambdaQueryWrapper<BizOutpInfusion>()
+        BizOutpInfusion inf = bizOutpInfusionMapper.selectOne(new LambdaQueryWrapper<BizOutpInfusion>()
                 .eq(BizOutpInfusion::getSkinTestId, st.getId())
                 .eq(BizOutpInfusion::getDelFlag, DelFlagEnum.NORMAL.getCode())
                 .orderByDesc(BizOutpInfusion::getId)
@@ -264,10 +267,10 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
             } else {
                 inf.setStatus(InfusionStatusEnum.WAITING.getCode());
                 inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-                infusionMapper.updateById(inf);
+                bizOutpInfusionMapper.updateById(inf);
             }
         }
-        BizOutpInfusion latest = inf == null ? null : infusionMapper.selectById(inf.getId());
+        BizOutpInfusion latest = inf == null ? null : bizOutpInfusionMapper.selectById(inf.getId());
         return latest == null ? null : toInfusionVO(latest);
     }
 
@@ -283,16 +286,16 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
             throw new BusinessException("输液单不在待输注状态（状态 " + inf.getStatus() + "）");
         }
         if (inf.getSkinTestId() != null) {
-            BizSkinTest st = skinTestMapper.selectById(inf.getSkinTestId());
+            BizSkinTest st = bizSkinTestMapper.selectById(inf.getSkinTestId());
             if (st == null || st.getResult() == null || st.getResult() != SkinTestResultEnum.NEGATIVE.getCode()) {
                 throw new BusinessException("皮试未判读阴性，不能开始输注");
             }
         }
         inf.setStatus(InfusionStatusEnum.INFUSING.getCode());
-        inf.setStartTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        inf.setStartTime(TimeUtil.nowSeconds());
         inf.setDripRate(dto.getDripRate());
         inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        infusionMapper.updateById(inf);
+        bizOutpInfusionMapper.updateById(inf);
         return toInfusionVO(inf);
     }
 
@@ -307,14 +310,14 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         }
         BizOutpInfusionRound r = new BizOutpInfusionRound();
         r.setInfusionId(inf.getId());
-        r.setRoundTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        r.setRoundTime(TimeUtil.nowSeconds());
         r.setDripRate(dto.getDripRate());
         r.setRemainingVolume(dto.getRemainingVolume());
         r.setNurseId(UserUtils.getCurrentUser().getEmployeeId());
         r.setNurseName(UserUtils.getCurrentUser().getRealName());
         r.setRemark(dto.getRemark());
         r.setCreateBy(r.getNurseName());
-        roundMapper.insert(r);
+        bizOutpInfusionRoundMapper.insert(r);
         InfusionRoomVO.Round vo = new InfusionRoomVO.Round();
         vo.setId(r.getId());
         vo.setInfusionId(r.getInfusionId());
@@ -340,11 +343,11 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
             throw new BusinessException("有不良反应时描述必填");
         }
         inf.setStatus(InfusionStatusEnum.FINISHED.getCode());
-        inf.setEndTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        inf.setEndTime(TimeUtil.nowSeconds());
         inf.setAdverseFlag(dto.getAdverseFlag());
         inf.setAdverseDesc(dto.getAdverseDesc());
         inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        infusionMapper.updateById(inf);
+        bizOutpInfusionMapper.updateById(inf);
         releaseSeat(inf);
         return toInfusionVO(inf);
     }
@@ -360,15 +363,15 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
             throw new BusinessException("输液单已终态，不能取消");
         }
         cancelInternal(inf, dto.getCancelReason());
-        return toInfusionVO(infusionMapper.selectById(inf.getId()));
+        return toInfusionVO(bizOutpInfusionMapper.selectById(inf.getId()));
     }
 
     private void cancelInternal(BizOutpInfusion inf, String reason) {
         inf.setStatus(InfusionStatusEnum.CANCELLED.getCode());
-        inf.setCancelReason(cut(reason, 500));
-        inf.setEndTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        inf.setCancelReason(TextUtil.cut(reason, 500));
+        inf.setEndTime(TimeUtil.nowSeconds());
         inf.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        infusionMapper.updateById(inf);
+        bizOutpInfusionMapper.updateById(inf);
         releaseSeat(inf);
     }
 
@@ -379,11 +382,11 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         if (inf.getSeatId() == null) {
             return;
         }
-        BizInfusionSeat seat = seatMapper.selectById(inf.getSeatId());
+        BizInfusionSeat seat = bizInfusionSeatMapper.selectById(inf.getSeatId());
         if (seat == null) {
             return;
         }
-        Long ongoing = infusionMapper.selectCount(new LambdaQueryWrapper<BizOutpInfusion>()
+        Long ongoing = bizOutpInfusionMapper.selectCount(new LambdaQueryWrapper<BizOutpInfusion>()
                 .eq(BizOutpInfusion::getSeatId, seat.getId())
                 .in(BizOutpInfusion::getStatus,
                         InfusionStatusEnum.PENDING_TEST.getCode(),
@@ -394,7 +397,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         if (ongoing == 0 && seat.getSeatStatus() == InfusionSeatStatusEnum.OCCUPIED.getCode()) {
             seat.setSeatStatus(InfusionSeatStatusEnum.FREE.getCode());
             seat.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-            seatMapper.updateById(seat);
+            bizInfusionSeatMapper.updateById(seat);
         }
     }
 
@@ -412,7 +415,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
                         .or().like(BizOutpInfusion::getInfusionNo, query.getKeyword()))
                 .orderByAsc(BizOutpInfusion::getStatus)
                 .orderByDesc(BizOutpInfusion::getId);
-        IPage<BizOutpInfusion> page = infusionMapper.selectPage(
+        IPage<BizOutpInfusion> page = bizOutpInfusionMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         List<InfusionRoomVO.Infusion> vos = page.getRecords().stream().map(this::toInfusionVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), vos);
@@ -422,7 +425,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
      * 巡视记录（时间升序）。
      */
     public List<InfusionRoomVO.Round> rounds(Long infusionId) {
-        return roundMapper.selectList(new LambdaQueryWrapper<BizOutpInfusionRound>()
+        return bizOutpInfusionRoundMapper.selectList(new LambdaQueryWrapper<BizOutpInfusionRound>()
                         .eq(BizOutpInfusionRound::getInfusionId, infusionId)
                         .orderByAsc(BizOutpInfusionRound::getRoundTime))
                 .stream().map(r -> {
@@ -444,7 +447,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
     public InfusionRoomVO.Board board() {
         InfusionRoomVO.Board board = new InfusionRoomVO.Board();
         board.setSeats(seats());
-        List<BizOutpInfusion> today = infusionMapper.selectList(new LambdaQueryWrapper<BizOutpInfusion>()
+        List<BizOutpInfusion> today = bizOutpInfusionMapper.selectList(new LambdaQueryWrapper<BizOutpInfusion>()
                 .apply("DATE(create_time) = {0}", LocalDate.now()));
         board.setPendingTest((int) today.stream().filter(i -> i.getStatus() == InfusionStatusEnum.PENDING_TEST.getCode()).count());
         board.setWaiting((int) today.stream().filter(i -> i.getStatus() == InfusionStatusEnum.WAITING.getCode()).count());
@@ -457,7 +460,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
     // 工具
 
     private BizOutpInfusion mustInfusing(Long id) {
-        BizOutpInfusion inf = infusionMapper.selectById(id);
+        BizOutpInfusion inf = bizOutpInfusionMapper.selectById(id);
         if (inf == null || inf.getDelFlag() == DelFlagEnum.DELETED.getCode()) {
             throw new BusinessException("输液单不存在");
         }
@@ -489,7 +492,7 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
         vo.setCreateTime(inf.getCreateTime());
         vo.setRemark(inf.getRemark());
         if (inf.getSkinTestId() != null) {
-            BizSkinTest st = skinTestMapper.selectById(inf.getSkinTestId());
+            BizSkinTest st = bizSkinTestMapper.selectById(inf.getSkinTestId());
             if (st != null) {
                 vo.setSkinTestResult(st.getResult());
                 vo.setSkinTestDrug(st.getDrugName());
@@ -506,10 +509,4 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
                 + String.format("%05d", redisSequenceService.next("INFUSION_" + prefix));
     }
 
-    private String cut(String s, int max) {
-        if (s == null || s.length() <= max) {
-            return s;
-        }
-        return s.substring(0, max);
-    }
 }

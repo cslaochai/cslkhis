@@ -6,6 +6,7 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
+import com.his.common.util.NumUtil;
 import com.his.emr.entity.BizInspectionApply;
 
 import java.time.LocalDateTime;
@@ -44,12 +45,8 @@ public interface InspectionApplySignProvider extends SignableContentProvider {
                 .put("diseaseSummary", a.getDiseaseSummary())
                 .put("specialRequirements", a.getSpecialRequirements())
                 .put("isEmergency", a.getIsEmergency())
-                .put("price", plain(a.getPrice()))
+                .put("price", NumUtil.plain(a.getPrice()))
                 .build();
-    }
-
-    static String plain(java.math.BigDecimal v) {
-        return v == null ? null : v.stripTrailingZeros().toPlainString();
     }
 
     SignBizTypeEnum bizType();

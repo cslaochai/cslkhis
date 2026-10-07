@@ -29,19 +29,19 @@ import java.util.List;
 @PreAuthorize("hasAnyAuthority('opd:doctorWorkstation:list', 'patient:list')")
 public class PatientTagRelationController {
 
-    private final BizPatientTagRelationService tagRelationService;
+    private final BizPatientTagRelationService bizPatientTagRelationService;
 
     @Operation(summary = "查询患者的标签列表")
     @GetMapping("/getByPatientId")
     public Result<List<SysPatientTagVO>> getByPatientId(@Valid PatientTagQueryDTO queryDTO) {
-        return Result.success(tagRelationService.listTagsByPatientId(queryDTO.getPatientId()));
+        return Result.success(bizPatientTagRelationService.listTagsByPatientId(queryDTO.getPatientId()));
     }
 
     @PreAuthorize("hasAuthority('patient:tag:add')")
     @Operation(summary = "给患者添加标签")
     @PostMapping("/add")
     public Result<Void> add(@Valid @RequestBody PatientTagUpsertDTO tagDTO) {
-        tagRelationService.addTag(tagDTO);
+        bizPatientTagRelationService.addTag(tagDTO);
         return Result.success();
     }
 
@@ -49,7 +49,7 @@ public class PatientTagRelationController {
     @Operation(summary = "移除患者的标签")
     @PostMapping("/delete")
     public Result<Void> delete(@Valid @RequestBody PatientTagDelDTO delDTO) {
-        tagRelationService.deleteTag(delDTO);
+        bizPatientTagRelationService.deleteTag(delDTO);
         return Result.success();
     }
 
@@ -57,7 +57,7 @@ public class PatientTagRelationController {
     @Operation(summary = "批量给患者添加标签")
     @PostMapping("/batchAdd")
     public Result<Void> batchAdd(@Valid @RequestBody PatientTagBatchUpsertDTO batchDTO) {
-        tagRelationService.batchAdd(batchDTO);
+        bizPatientTagRelationService.batchAdd(batchDTO);
         return Result.success();
     }
 }

@@ -29,7 +29,7 @@ public class MyTodoMetricProviderImpl implements WorkbenchMetricProvider, MyTodo
      */
     private static final int TOP_N = 8;
 
-    private final SysMessageService messageService;
+    private final SysMessageService sysMessageService;
 
     @Override
     public String widgetCode() {
@@ -50,9 +50,9 @@ public class MyTodoMetricProviderImpl implements WorkbenchMetricProvider, MyTodo
 
         Long receiverId = MessageMetricSupport.receiverId(user);
         if (receiverId != null) {
-            vo.setTotal(messageService.count(pending(receiverId)));
-            vo.setUrgentTotal(messageService.count(pending(receiverId).eq(SysMessage::getSeverity, "urgent")));
-            List<SysMessage> rows = messageService.list(pending(receiverId)
+            vo.setTotal(sysMessageService.count(pending(receiverId)));
+            vo.setUrgentTotal(sysMessageService.count(pending(receiverId).eq(SysMessage::getSeverity, "urgent")));
+            List<SysMessage> rows = sysMessageService.list(pending(receiverId)
                     .last("ORDER BY FIELD(severity, 'urgent', 'warning', 'info'), send_time DESC, message_id DESC LIMIT " + TOP_N));
             vo.setItems(rows.stream().map(MessageMetricSupport::of).collect(Collectors.toList()));
         }

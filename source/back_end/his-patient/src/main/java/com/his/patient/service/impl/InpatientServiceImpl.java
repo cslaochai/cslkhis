@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.api.InpatientSettlementGateway;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
@@ -66,17 +67,17 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InpatientServiceImpl implements InpatientService {
+public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper, BizInpatientSummary> implements InpatientService {
     private final DeptScopeProvider deptScopeProvider;
     private final BizAdmissionMapper bizAdmissionMapper;
     private final BizDischargeMapper bizDischargeMapper;
-    private final SysBedMapper bedMapper;
+    private final SysBedMapper sysBedMapper;
     private final BedMapMapper bedMapMapper;
-    private final BizPatientMapper patientMapper;
-    private final BizInpatientSummaryMapper summaryMapper;
-    private final BizInpatientDiagnosisMapper diagnosisMapper;
-    private final BizInpatientOperationMapper operationMapper;
-    private final BizVisitMapper visitMapper;
+    private final BizPatientMapper bizPatientMapper;
+    private final BizInpatientSummaryMapper bizInpatientSummaryMapper;
+    private final BizInpatientDiagnosisMapper bizInpatientDiagnosisMapper;
+    private final BizInpatientOperationMapper bizInpatientOperationMapper;
+    private final BizVisitMapper bizVisitMapper;
     /**
      * 住院证服务：门诊转住院时用来取「可收治的证」并回填收治结果
      */
@@ -192,7 +193,7 @@ public class InpatientServiceImpl implements InpatientService {
         InpatientDetailVO vo = new InpatientDetailVO();
         vo.setAdmission(info);
 
-        BizInpatientSummary summary = summaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
+        BizInpatientSummary summary = bizInpatientSummaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
                 .eq(BizInpatientSummary::getAdmissionId, admissionId));
         if (summary != null) {
             InpatientDetailVO.SummaryInfo si = new InpatientDetailVO.SummaryInfo();
@@ -208,7 +209,7 @@ public class InpatientServiceImpl implements InpatientService {
         }
 
         List<InpatientDetailVO.DiagnosisInfo> diagnoses = new ArrayList<>();
-        for (BizInpatientDiagnosis d : diagnosisMapper.selectList(new LambdaQueryWrapper<BizInpatientDiagnosis>()
+        for (BizInpatientDiagnosis d : bizInpatientDiagnosisMapper.selectList(new LambdaQueryWrapper<BizInpatientDiagnosis>()
                 .eq(BizInpatientDiagnosis::getAdmissionId, admissionId)
                 .orderByAsc(BizInpatientDiagnosis::getDiagType)
                 .orderByAsc(BizInpatientDiagnosis::getSeqNo))) {
@@ -219,7 +220,7 @@ public class InpatientServiceImpl implements InpatientService {
         vo.setDiagnoses(diagnoses);
 
         List<InpatientDetailVO.OperationInfo> operations = new ArrayList<>();
-        for (BizInpatientOperation o : operationMapper.selectList(new LambdaQueryWrapper<BizInpatientOperation>()
+        for (BizInpatientOperation o : bizInpatientOperationMapper.selectList(new LambdaQueryWrapper<BizInpatientOperation>()
                 .eq(BizInpatientOperation::getAdmissionId, admissionId)
                 .orderByAsc(BizInpatientOperation::getSeqNo))) {
             InpatientDetailVO.OperationInfo oi = new InpatientDetailVO.OperationInfo();
@@ -272,7 +273,7 @@ public class InpatientServiceImpl implements InpatientService {
         }
         int admitWay = order != null ? 1 : dto.getAdmitWay();
 
-        BizPatient patient = patientMapper.selectById(dto.getPatientId());
+        BizPatient patient = bizPatientMapper.selectById(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
@@ -280,7 +281,7 @@ public class InpatientServiceImpl implements InpatientService {
             throw new BusinessException("该患者已有在院记录，不能重复办理入院");
         }
 
-        SysBed bed = bedMapper.selectById(dto.getBedId());
+        SysBed bed = sysBedMapper.selectById(dto.getBedId());
         if (bed == null) {
             throw new BusinessException("床位不存在");
         }
@@ -297,7 +298,7 @@ public class InpatientServiceImpl implements InpatientService {
             throw new BusinessException("床位当前不可用（" + BedStatusEnum.labelOrUnknown(bed.getBedStatus()) + "），请选择空闲床位");
         }
 
-        WardVO ward = bedMapper.selectWardById(dto.getWardId());
+        WardVO ward = sysBedMapper.selectWardById(dto.getWardId());
         if (ward == null) {
             throw new BusinessException("病区不存在");
         }
@@ -419,7 +420,7 @@ public class InpatientServiceImpl implements InpatientService {
         if (Objects.equals(admission.getBedId(), dto.getNewBedId())) {
             throw new BusinessException("目标床位与原床位相同");
         }
-        SysBed newBed = bedMapper.selectById(dto.getNewBedId());
+        SysBed newBed = sysBedMapper.selectById(dto.getNewBedId());
         if (newBed == null) {
             throw new BusinessException("目标床位不存在");
         }
@@ -444,7 +445,7 @@ public class InpatientServiceImpl implements InpatientService {
         bizAdmissionMapper.updateById(admission);
 
         if (!Objects.equals(oldWardId, newBed.getWardId())) {
-            bedMapper.syncWardOccupied(oldWardId);
+            sysBedMapper.syncWardOccupied(oldWardId);
         }
         log.info("换床成功 admissionId={} bedId {} -> {}", dto.getAdmissionId(), oldBedId, dto.getNewBedId());
     }
@@ -538,7 +539,7 @@ public class InpatientServiceImpl implements InpatientService {
         if (summary.getSummaryStatus() == null || summary.getSummaryStatus() == SummaryStatusEnum.DRAFT.getCode()) {
             summary.setSummaryStatus(SummaryStatusEnum.SUBMITTED.getCode());
         }
-        summaryMapper.updateById(summary);
+        bizInpatientSummaryMapper.updateById(summary);
 
         log.info("出院办理成功 admissionId={} dischargeNo={} days={} way={} readmit31d={}",
                 admission.getAdmissionId(), discharge.getDischargeNo(), days, dto.getDischargeWay(), readmit31d);
@@ -593,10 +594,10 @@ public class InpatientServiceImpl implements InpatientService {
                 summary.setMainDiagnosisName(main.getIcdName());
             }
         }
-        summaryMapper.updateById(summary);
+        bizInpatientSummaryMapper.updateById(summary);
 
         if (diagnoses != null) {
-            diagnosisMapper.delete(new LambdaQueryWrapper<BizInpatientDiagnosis>()
+            bizInpatientDiagnosisMapper.delete(new LambdaQueryWrapper<BizInpatientDiagnosis>()
                     .eq(BizInpatientDiagnosis::getAdmissionId, dto.getAdmissionId()));
             List<InpatientSummaryUpsertDTO.DiagnosisItem> sorted = new ArrayList<>(diagnoses);
             // 主要诊断恒为第 1 条
@@ -612,7 +613,7 @@ public class InpatientServiceImpl implements InpatientService {
                 entity.setAdmitCondition(item.getAdmitCondition());
                 entity.setCcLevel(item.getCcLevel());
                 entity.setDiagnosisBasis(item.getDiagnosisBasis());
-                diagnosisMapper.insert(entity);
+                bizInpatientDiagnosisMapper.insert(entity);
             }
         }
 
@@ -623,12 +624,12 @@ public class InpatientServiceImpl implements InpatientService {
             // "手术做了、状态也已完成，但首页查不到这条手术明细" —— 四核对当场失败。
             // 区分靠 apply_id：非空 = 闭环回写（表单不得删除/覆盖），为空 = 表单手工行。
             // 刻意不靠 remark 文本前缀判断 —— 文本会被改、会被人抄，列不会。
-            List<BizInpatientOperation> systemRows = operationMapper.selectList(
+            List<BizInpatientOperation> systemRows = bizInpatientOperationMapper.selectList(
                     new LambdaQueryWrapper<BizInpatientOperation>()
                             .eq(BizInpatientOperation::getAdmissionId, dto.getAdmissionId())
                             .isNotNull(BizInpatientOperation::getApplyId));
 
-            operationMapper.delete(new LambdaQueryWrapper<BizInpatientOperation>()
+            bizInpatientOperationMapper.delete(new LambdaQueryWrapper<BizInpatientOperation>()
                     .eq(BizInpatientOperation::getAdmissionId, dto.getAdmissionId())
                     .isNull(BizInpatientOperation::getApplyId));
 
@@ -676,10 +677,10 @@ public class InpatientServiceImpl implements InpatientService {
                 entity.setOperationBasis(item.getOperationBasis());
                 // 手工行：apply_id 必须保持 null，它是"可被表单删除"的唯一标记
                 entity.setApplyId(null);
-                operationMapper.insert(entity);
+                bizInpatientOperationMapper.insert(entity);
             }
             // 两个写入方共用同一套序号规则（主要手术恒为第 1 条），必须一处实现
-            SummaryOperationSeq.reseq(operationMapper, dto.getAdmissionId());
+            SummaryOperationSeq.reseq(bizInpatientOperationMapper, dto.getAdmissionId());
         }
 
         log.info("病案首页保存成功 admissionId={} 诊断={} 手术={}",
@@ -705,9 +706,9 @@ public class InpatientServiceImpl implements InpatientService {
         vo.setTodayDischarged(bizAdmissionMapper.countTodayDischarged(scopeDeptIds));
         vo.setPendingAdmissionOrderCount(admissionOrderService.countPending());
 
-        long total = bedMapper.selectCount(null);
-        long free = bedMapper.countByStatus(BedStatusEnum.FREE.getCode());
-        long occupied = bedMapper.countByStatus(BedStatusEnum.OCCUPIED.getCode());
+        long total = sysBedMapper.selectCount(null);
+        long free = sysBedMapper.countByStatus(BedStatusEnum.FREE.getCode());
+        long occupied = sysBedMapper.countByStatus(BedStatusEnum.OCCUPIED.getCode());
         vo.setTotalBeds(total);
         vo.setFreeBeds(free);
         vo.setOccupiedBeds(occupied);
@@ -717,7 +718,7 @@ public class InpatientServiceImpl implements InpatientService {
 
     @Override
     public List<WardVO> listWards() {
-        List<WardVO> wards = bedMapper.selectWardList();
+        List<WardVO> wards = sysBedMapper.selectWardList();
         for (WardVO w : wards) {
             int total = w.getTotalBeds() == null ? 0 : w.getTotalBeds();
             int occupied = w.getOccupiedBeds() == null ? 0 : w.getOccupiedBeds();
@@ -728,7 +729,7 @@ public class InpatientServiceImpl implements InpatientService {
 
     @Override
     public List<BedVO> listBeds(Long wardId, Long deptId, Integer bedStatus) {
-        List<BedVO> beds = bedMapper.selectBedList(wardId, deptId, bedStatus);
+        List<BedVO> beds = sysBedMapper.selectBedList(wardId, deptId, bedStatus);
         for (BedVO b : beds) {
             b.setBedStatusText(BedStatusEnum.getText(b.getBedStatus()));
         }
@@ -869,7 +870,7 @@ public class InpatientServiceImpl implements InpatientService {
         if (bedId == null || patientId == null) {
             throw new BusinessException("留观占床需要床位与患者");
         }
-        SysBed bed = bedMapper.selectById(bedId);
+        SysBed bed = sysBedMapper.selectById(bedId);
         if (bed == null) {
             throw new BusinessException("床位不存在");
         }
@@ -885,7 +886,7 @@ public class InpatientServiceImpl implements InpatientService {
         if (bedId == null) {
             return;
         }
-        SysBed bed = bedMapper.selectById(bedId);
+        SysBed bed = sysBedMapper.selectById(bedId);
         if (bed == null || !Objects.equals(bed.getPatientId(), patientId)) {
             return;
         }
@@ -893,12 +894,12 @@ public class InpatientServiceImpl implements InpatientService {
     }
 
     private void occupyBed(SysBed bed, Long patientId, Long wardId) {
-        bedMapper.update(null, new LambdaUpdateWrapper<SysBed>()
+        sysBedMapper.update(null, new LambdaUpdateWrapper<SysBed>()
                 .eq(SysBed::getBedId, bed.getBedId())
                 .set(SysBed::getBedStatus, BedStatusEnum.OCCUPIED.getCode())
                 .set(SysBed::getPatientId, patientId)
                 .set(SysBed::getUpdateTime, LocalDateTime.now()));
-        bedMapper.syncWardOccupied(wardId);
+        sysBedMapper.syncWardOccupied(wardId);
     }
 
     /**
@@ -910,16 +911,16 @@ public class InpatientServiceImpl implements InpatientService {
         if (bedId == null) {
             return;
         }
-        SysBed bed = bedMapper.selectById(bedId);
+        SysBed bed = sysBedMapper.selectById(bedId);
         if (bed == null) {
             return;
         }
-        bedMapper.update(null, new LambdaUpdateWrapper<SysBed>()
+        sysBedMapper.update(null, new LambdaUpdateWrapper<SysBed>()
                 .eq(SysBed::getBedId, bedId)
                 .set(SysBed::getBedStatus, BedStatusEnum.FREE.getCode())
                 .set(SysBed::getPatientId, null)
                 .set(SysBed::getUpdateTime, LocalDateTime.now()));
-        bedMapper.syncWardOccupied(bed.getWardId());
+        sysBedMapper.syncWardOccupied(bed.getWardId());
     }
 
     /**
@@ -962,7 +963,7 @@ public class InpatientServiceImpl implements InpatientService {
         LocalDateTime dayStart = now.toLocalDate().atStartOfDay();
         LocalDateTime dayEnd = now.toLocalDate().plusDays(1).atStartOfDay();
 
-        BizVisit existing = visitMapper.selectOne(new LambdaQueryWrapper<BizVisit>()
+        BizVisit existing = bizVisitMapper.selectOne(new LambdaQueryWrapper<BizVisit>()
                 .eq(BizVisit::getPatientId, patientId)
                 .eq(BizVisit::getVisitStatus, VisitStatusEnum.OPEN.getCode())
                 .ge(BizVisit::getStartTime, dayStart)
@@ -974,7 +975,7 @@ public class InpatientServiceImpl implements InpatientService {
                 existing.setRegistIds(StringUtils.hasText(existing.getRegistIds())
                         ? existing.getRegistIds() + "," + registId
                         : String.valueOf(registId));
-                visitMapper.updateById(existing);
+                bizVisitMapper.updateById(existing);
             }
             return existing.getVisitId();
         }
@@ -987,7 +988,7 @@ public class InpatientServiceImpl implements InpatientService {
         visit.setVisitStatus(VisitStatusEnum.OPEN.getCode());
         visit.setRegistIds(registId == null ? null : String.valueOf(registId));
         visit.setRemark("住院收治时建立的就诊次");
-        visitMapper.insert(visit);
+        bizVisitMapper.insert(visit);
         log.info("新建就诊次 visitNo={} visitId={} patientId={} registId={}",
                 visit.getVisitNo(), visit.getVisitId(), patientId, registId);
         return visit.getVisitId();
@@ -995,7 +996,7 @@ public class InpatientServiceImpl implements InpatientService {
 
     private String nextVisitNo() {
         String prefix = "VISIT" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = visitMapper.countByVisitNoPrefix(prefix) + 1;
+        long seq = bizVisitMapper.countByVisitNoPrefix(prefix) + 1;
         return prefix + String.format("%03d", seq);
     }
 
@@ -1019,7 +1020,7 @@ public class InpatientServiceImpl implements InpatientService {
      * 取病案首页，不存在则补建（兼容第 1 期上线前就已入院的既有数据）
      */
     private BizInpatientSummary getOrCreateSummary(BizAdmission admission) {
-        BizInpatientSummary summary = summaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
+        BizInpatientSummary summary = bizInpatientSummaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
                 .eq(BizInpatientSummary::getAdmissionId, admission.getAdmissionId()));
         if (summary == null) {
             summary = new BizInpatientSummary();
@@ -1029,7 +1030,7 @@ public class InpatientServiceImpl implements InpatientService {
             summary.setAdmitWay(admission.getAdmitWay());
             summary.setMainDiagnosisName(admission.getDiagnosis());
             summary.setSummaryStatus(SummaryStatusEnum.DRAFT.getCode());
-            summaryMapper.insert(summary);
+            bizInpatientSummaryMapper.insert(summary);
         }
         return summary;
     }
@@ -1065,7 +1066,7 @@ public class InpatientServiceImpl implements InpatientService {
         summary.setMainDiagnosisName(StringUtils.hasText(admission.getAdmitDiagnosisName())
                 ? admission.getAdmitDiagnosisName() : admission.getDiagnosis());
         summary.setSummaryStatus(SummaryStatusEnum.DRAFT.getCode());
-        summaryMapper.insert(summary);
+        bizInpatientSummaryMapper.insert(summary);
     }
 
     /**
@@ -1144,7 +1145,7 @@ public class InpatientServiceImpl implements InpatientService {
 
     @Override
     public WardVO getWardById(Long wardId) {
-        return wardId == null ? null : bedMapper.selectWardById(wardId);
+        return wardId == null ? null : sysBedMapper.selectWardById(wardId);
     }
 
     @Override
@@ -1152,13 +1153,13 @@ public class InpatientServiceImpl implements InpatientService {
         if (bedId == null) {
             return null;
         }
-        SysBed bed = bedMapper.selectById(bedId);
+        SysBed bed = sysBedMapper.selectById(bedId);
         return bed == null ? null : bed.getBedNo();
     }
 
     @Override
     public boolean isSummaryArchived(Long admissionId) {
-        BizInpatientSummary summary = summaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
+        BizInpatientSummary summary = bizInpatientSummaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
                 .eq(BizInpatientSummary::getAdmissionId, admissionId)
                 .last("LIMIT 1"));
         return summary != null && Objects.equals(SummaryStatusEnum.ARCHIVED.getCode(), summary.getSummaryStatus());
@@ -1167,7 +1168,7 @@ public class InpatientServiceImpl implements InpatientService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizInpatientOperation appendSurgeryOperation(BizInpatientOperation operation) {
-        List<BizInpatientOperation> existing = operationMapper.selectList(
+        List<BizInpatientOperation> existing = bizInpatientOperationMapper.selectList(
                 new LambdaQueryWrapper<BizInpatientOperation>()
                         .eq(BizInpatientOperation::getAdmissionId, operation.getAdmissionId()));
 
@@ -1188,10 +1189,10 @@ public class InpatientServiceImpl implements InpatientService {
         }
 
         operation.setSeqNo(existing.size() + 1);          // 先占位，插完统一重排
-        operationMapper.insert(operation);
-        SummaryOperationSeq.reseq(operationMapper, operation.getAdmissionId());
+        bizInpatientOperationMapper.insert(operation);
+        SummaryOperationSeq.reseq(bizInpatientOperationMapper, operation.getAdmissionId());
 
-        BizInpatientSummary summary = summaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
+        BizInpatientSummary summary = bizInpatientSummaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
                 .eq(BizInpatientSummary::getAdmissionId, operation.getAdmissionId())
                 .last("LIMIT 1"));
         // 只标记手术事实，不碰费用列：手术费用要走收费明细，不在这里猜价格
@@ -1199,7 +1200,7 @@ public class InpatientServiceImpl implements InpatientService {
             BizInpatientSummary upd = new BizInpatientSummary();
             upd.setId(summary.getId());
             upd.setIsSurgery(1);
-            summaryMapper.updateById(upd);
+            bizInpatientSummaryMapper.updateById(upd);
         }
         return operation;
     }
@@ -1207,7 +1208,7 @@ public class InpatientServiceImpl implements InpatientService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void markSummaryTransfused(Long admissionId) {
-        BizInpatientSummary summary = summaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
+        BizInpatientSummary summary = bizInpatientSummaryMapper.selectOne(new LambdaQueryWrapper<BizInpatientSummary>()
                 .eq(BizInpatientSummary::getAdmissionId, admissionId)
                 .last("LIMIT 1"));
         // 只标记输血事实，不碰费用列：输血费用要走收费明细，不在这里猜价格
@@ -1215,7 +1216,7 @@ public class InpatientServiceImpl implements InpatientService {
             BizInpatientSummary upd = new BizInpatientSummary();
             upd.setId(summary.getId());
             upd.setIsTransfusion(1);
-            summaryMapper.updateById(upd);
+            bizInpatientSummaryMapper.updateById(upd);
         }
     }
 }

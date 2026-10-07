@@ -10,6 +10,7 @@ import com.his.ai.service.Icd10RecallService;
 import com.his.ai.vo.Icd10PredictItemVO;
 import com.his.ai.vo.Icd10PredictVO;
 import com.his.ai.vo.Icd10PromptVariablesVO;
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.system.entity.SysIcd10;
@@ -66,11 +67,11 @@ public class Icd10CapabilityImpl implements Icd10Capability {
 
     private static final int RULE_CONFIDENCE_MIN = 52;
 
-    private final Icd10RecallService recallService;
+    private final Icd10RecallService icd10RecallService;
 
     private final AiExecutionService aiExecutionService;
 
-    private final BizMedicalRecordMapper medicalRecordMapper;
+    private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
     private static int ruleConfidence(int score) {
         if (score >= 100) {
@@ -113,31 +114,12 @@ public class Icd10CapabilityImpl implements Icd10Capability {
         return Math.max(MIN_CONFIDENCE, Math.min(MAX_CONFIDENCE, confidence));
     }
 
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength) + "…";
-    }
-
-    private static String nullToDash(String text) {
-        return StringUtils.hasText(text) ? text : "（未填写）";
-    }
-
     private static String firstNonBlank(String preferred, String fallback) {
         return StringUtils.hasText(preferred) ? preferred : fallback;
     }
 
     private static boolean isBlank(String text) {
         return !StringUtils.hasText(text);
-    }
-
-    private static String trimToNull(String text) {
-        if (!StringUtils.hasText(text)) {
-            return null;
-        }
-        return text.trim();
     }
 
     /**
@@ -149,7 +131,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
 
         NoteText note = resolveNoteText(dto);
 
-        List<Icd10RecallService.RecallHit> hits = recallService.recall(note.merged(), dto.getTopN());
+        List<Icd10RecallService.RecallHit> hits = icd10RecallService.recall(note.merged(), dto.getTopN());
         vo.setCandidateCount(hits.size());
 
         if (hits.isEmpty()) {
@@ -195,7 +177,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
         boolean missingAny = isBlank(chiefComplaint) || isBlank(presentIllness)
                 || isBlank(specialistExam) || isBlank(diagnosis);
         if (dto.getRecordId() != null && missingAny) {
-            BizMedicalRecord record = medicalRecordMapper.selectById(dto.getRecordId());
+            BizMedicalRecord record = bizMedicalRecordMapper.selectById(dto.getRecordId());
             if (record != null) {
                 chiefComplaint = firstNonBlank(chiefComplaint, record.getChiefComplaint());
                 presentIllness = firstNonBlank(presentIllness, record.getPresentIllness());
@@ -213,10 +195,10 @@ public class Icd10CapabilityImpl implements Icd10Capability {
         Icd10PromptVariablesVO variables = new Icd10PromptVariablesVO();
         variables.setCandidateCount(String.valueOf(hits.size()));
         variables.setCandidates(formatCandidates(hits));
-        variables.setChiefComplaint(nullToDash(note.chiefComplaint()));
-        variables.setPresentIllness(nullToDash(note.presentIllness()));
-        variables.setSpecialistExam(nullToDash(note.specialistExam()));
-        variables.setDiagnosis(nullToDash(note.diagnosis()));
+        variables.setChiefComplaint(TextUtil.blankToDefault(note.chiefComplaint(), "（未填写）"));
+        variables.setPresentIllness(TextUtil.blankToDefault(note.presentIllness(), "（未填写）"));
+        variables.setSpecialistExam(TextUtil.blankToDefault(note.specialistExam(), "（未填写）"));
+        variables.setDiagnosis(TextUtil.blankToDefault(note.diagnosis(), "（未填写）"));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.ICD10)
@@ -245,7 +227,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
         List<Icd10LlmOutputDTO.Prediction> predictions = output.getPredictions() == null
                 ? List.<Icd10LlmOutputDTO.Prediction>of() : output.getPredictions();
         for (Icd10LlmOutputDTO.Prediction prediction : predictions) {
-            String code = trimToNull(prediction.getIcdCode());
+            String code = TextUtil.trimToNull(prediction.getIcdCode());
             if (code == null) {
                 continue;
             }
@@ -263,7 +245,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
             item.setIcdName(dict.getIcdName());
             item.setIcdCategory(dict.getIcdCategory());
             item.setConfidence(clampConfidence(prediction.getConfidence()));
-            item.setReasoning(truncate(prediction.getReasoning(), REASONING_MAX_LENGTH));
+            item.setReasoning(TextUtil.ellipsis(prediction.getReasoning(), REASONING_MAX_LENGTH));
             item.setSource("LLM");
             items.add(item);
         }

@@ -2,11 +2,13 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.Constants;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.emr.dto.SurveyTemplateQueryPageDTO;
 import com.his.emr.dto.SurveyTemplateUpsertDTO;
 import com.his.emr.entity.BizSurveyDispatch;
@@ -28,7 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -41,43 +42,28 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SurveyTemplateServiceImpl implements SurveyTemplateService {
+public class SurveyTemplateServiceImpl extends ServiceImpl<BizSurveyTemplateMapper, BizSurveyTemplate> implements SurveyTemplateService {
 
-    private final BizSurveyTemplateMapper templateMapper;
-    private final BizSurveyItemMapper itemMapper;
-    private final BizSurveyDispatchMapper dispatchMapper;
-    private final RedisSequenceService sequenceService;
-
-    /**
-     * 入库前截到列宽：超长文本让服务端截断，而不是让 insert 报 Data too long 变成 500
-     */
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        String s = v.trim();
-        return s.length() <= max ? s : s.substring(0, max);
-    }
-
-    private static String trimToNull(String v) {
-        return StringUtils.hasText(v) ? v.trim() : null;
-    }
+    private final BizSurveyTemplateMapper bizSurveyTemplateMapper;
+    private final BizSurveyItemMapper bizSurveyItemMapper;
+    private final BizSurveyDispatchMapper bizSurveyDispatchMapper;
+    private final RedisSequenceService redisSequenceService;
 
     @Override
     public PageResult<SurveyTemplateVO> listPage(SurveyTemplateQueryPageDTO dto) {
         LambdaQueryWrapper<BizSurveyTemplate> wrapper = new LambdaQueryWrapper<>();
-        String keyword = trimToNull(dto.getKeyword());
+        String keyword = TextUtil.trimToNull(dto.getKeyword());
         wrapper.and(keyword != null, w -> w.like(BizSurveyTemplate::getTemplateName, keyword)
                         .or().like(BizSurveyTemplate::getTemplateNo, keyword))
                 .eq(dto.getScene() != null, BizSurveyTemplate::getScene, dto.getScene())
                 .eq(dto.getStatus() != null, BizSurveyTemplate::getStatus, dto.getStatus())
                 .orderByDesc(BizSurveyTemplate::getId);
-        Page<BizSurveyTemplate> page = templateMapper.selectPage(
+        Page<BizSurveyTemplate> page = bizSurveyTemplateMapper.selectPage(
                 new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
         List<Long> ids = page.getRecords().stream().map(BizSurveyTemplate::getId).collect(Collectors.toList());
         // 题目数一次批量捞：逐行 count 会在「一页 20 张卷」时打出 20 条 SQL
         Map<Long, Integer> itemCounts = ids.isEmpty() ? Map.of()
-                : itemMapper.countByTemplates(ids).stream().collect(Collectors.toMap(
+                : bizSurveyItemMapper.countByTemplates(ids).stream().collect(Collectors.toMap(
                 SurveyTemplateItemCountVO::getTemplateId,
                 r -> r.getCnt() == null ? 0 : r.getCnt().intValue(), (a, b) -> a));
         List<SurveyTemplateVO> records = page.getRecords().stream().map(t -> {
@@ -91,7 +77,7 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
 
     @Override
     public List<SurveyTemplateSelectListVO> selectEnabled(Integer scene) {
-        List<BizSurveyTemplate> list = templateMapper.selectList(new LambdaQueryWrapper<BizSurveyTemplate>()
+        List<BizSurveyTemplate> list = bizSurveyTemplateMapper.selectList(new LambdaQueryWrapper<BizSurveyTemplate>()
                 .eq(BizSurveyTemplate::getStatus, SurveyTemplateStatusEnum.ENABLED.getCode())
                 .eq(scene != null, BizSurveyTemplate::getScene, scene)
                 .orderByDesc(BizSurveyTemplate::getId));
@@ -102,7 +88,7 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
             vo.setTemplateName(t.getTemplateName());
             vo.setScene(t.getScene());
             vo.setStatus(t.getStatus());
-            vo.setItemCount(Math.toIntExact(itemMapper.selectCount(new LambdaQueryWrapper<BizSurveyItem>()
+            vo.setItemCount(Math.toIntExact(bizSurveyItemMapper.selectCount(new LambdaQueryWrapper<BizSurveyItem>()
                     .eq(BizSurveyItem::getTemplateId, t.getId()))));
             return vo;
         }).collect(Collectors.toList());
@@ -113,7 +99,7 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
         BizSurveyTemplate template = requireTemplate(id);
         SurveyTemplateVO vo = new SurveyTemplateVO();
         BeanUtils.copyProperties(template, vo);
-        vo.setItems(itemMapper.selectByTemplate(id));
+        vo.setItems(bizSurveyItemMapper.selectByTemplate(id));
         return vo;
     }
 
@@ -138,23 +124,23 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
                 template.setStatus(dto.getStatus());
             }
         }
-        template.setTemplateName(trimToNull(dto.getTemplateName()));
+        template.setTemplateName(TextUtil.trimToNull(dto.getTemplateName()));
         template.setScene(dto.getScene());
-        template.setDescription(cut(dto.getDescription(), 500));
-        template.setRemark(cut(dto.getRemark(), 512));
+        template.setDescription(TextUtil.cut(dto.getDescription(), 500));
+        template.setRemark(TextUtil.cut(dto.getRemark(), 512));
         validateItems(dto.getItems());
 
         if (isNew) {
             template.setCreateBy(operatorUser.getRealName());
-            templateMapper.insert(template);
+            bizSurveyTemplateMapper.insert(template);
         } else {
-            templateMapper.updateById(template);
+            bizSurveyTemplateMapper.updateById(template);
         }
 
         // 整卷覆盖：物理删旧题再插 —— uk_survey_item(template_id,seq_no) 不含 del_flag，软删必撞键
-        itemMapper.purgeByTemplate(template.getId());
+        bizSurveyItemMapper.purgeByTemplate(template.getId());
         for (SurveyTemplateUpsertDTO.Item src : dto.getItems()) {
-            itemMapper.insert(toItem(template.getId(), src));
+            bizSurveyItemMapper.insert(toItem(template.getId(), src));
         }
         return getDetailById(template.getId());
     }
@@ -165,19 +151,19 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
         requireTemplate(id);
         // 已被发放引用就不许删：历史答卷要能回答「当时问的是哪张卷」，
         // 删了模板，报表上的模板名与题目快照就成了无源之水。改用停用。
-        Long used = dispatchMapper.selectCount(new LambdaQueryWrapper<BizSurveyDispatch>()
+        Long used = bizSurveyDispatchMapper.selectCount(new LambdaQueryWrapper<BizSurveyDispatch>()
                 .eq(BizSurveyDispatch::getTemplateId, id));
         if (used != null && used > 0) {
             throw new BusinessException("该问卷已发放 " + used + " 次，不能删除，请改为「停用」");
         }
         // 题目物理删（模板没了，题目留着只会被 uk 继续占位），模板本身走 MP 软删
-        itemMapper.purgeByTemplate(id);
-        return templateMapper.deleteById(id) > 0;
+        bizSurveyItemMapper.purgeByTemplate(id);
+        return bizSurveyTemplateMapper.deleteById(id) > 0;
     }
 
     @Override
     public SurveyTemplateVO findEnabledForScene(Integer scene) {
-        BizSurveyTemplate template = templateMapper.selectOne(new LambdaQueryWrapper<BizSurveyTemplate>()
+        BizSurveyTemplate template = bizSurveyTemplateMapper.selectOne(new LambdaQueryWrapper<BizSurveyTemplate>()
                 .eq(BizSurveyTemplate::getStatus, SurveyTemplateStatusEnum.ENABLED.getCode())
                 .eq(BizSurveyTemplate::getScene, scene)
                 .orderByDesc(BizSurveyTemplate::getId)
@@ -187,7 +173,7 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
         }
         SurveyTemplateVO vo = new SurveyTemplateVO();
         BeanUtils.copyProperties(template, vo);
-        vo.setItems(itemMapper.selectByTemplate(template.getId()));
+        vo.setItems(bizSurveyItemMapper.selectByTemplate(template.getId()));
         return vo;
     }
 
@@ -223,7 +209,7 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
         item.setSeqNo(src.getSeqNo());
         item.setDimension(src.getDimension());
         item.setQuestionType(src.getQuestionType());
-        item.setTitle(cut(src.getTitle(), 255));
+        item.setTitle(TextUtil.cut(src.getTitle(), 255));
         item.setRequired(src.getRequired() == null ? 1 : src.getRequired());
         item.setWeight(src.getWeight() == null ? BigDecimal.ONE : src.getWeight());
         item.setMaxScore(src.getMaxScore() == null ? defaultMaxScore(src.getQuestionType()) : src.getMaxScore());
@@ -245,7 +231,7 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
     }
 
     private BizSurveyTemplate requireTemplate(Long id) {
-        BizSurveyTemplate template = id == null ? null : templateMapper.selectById(id);
+        BizSurveyTemplate template = id == null ? null : bizSurveyTemplateMapper.selectById(id);
         if (template == null) {
             throw new BusinessException("问卷模板不存在");
         }
@@ -254,6 +240,6 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
 
     private String nextNo() {
         return Constants.SURVEY_TEMPLATE_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
-                + String.format("%04d", sequenceService.next(Constants.SURVEY_TEMPLATE_NO_KEY_PREFIX));
+                + String.format("%04d", redisSequenceService.next(Constants.SURVEY_TEMPLATE_NO_KEY_PREFIX));
     }
 }

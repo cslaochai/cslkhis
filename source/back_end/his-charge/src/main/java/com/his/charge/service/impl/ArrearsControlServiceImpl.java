@@ -2,6 +2,8 @@ package com.his.charge.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.charge.dto.ArrearsBoardQueryDTO;
 import com.his.charge.dto.ArrearsPolicyUpsertDTO;
 import com.his.charge.entity.BizArrearsPolicy;
 import com.his.charge.mapper.BizArrearsPolicyMapper;
@@ -9,6 +11,7 @@ import com.his.charge.service.ArrearsControlService;
 import com.his.charge.vo.ArrearsPatientVO;
 import com.his.charge.vo.ArrearsPolicyVO;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -16,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
 
 /**
  * 欠费管控服务：策略（单行）读写 + 在院欠费患者榜。
@@ -28,9 +30,9 @@ import java.time.LocalDateTime;
  */
 @Service
 @RequiredArgsConstructor
-public class ArrearsControlServiceImpl implements ArrearsControlService {
+public class ArrearsControlServiceImpl extends ServiceImpl<BizArrearsPolicyMapper, BizArrearsPolicy> implements ArrearsControlService {
 
-    private final BizArrearsPolicyMapper policyMapper;
+    private final BizArrearsPolicyMapper bizArrearsPolicyMapper;
 
     public ArrearsPolicyVO getPolicy() {
         return toVo(requirePolicy());
@@ -54,24 +56,22 @@ public class ArrearsControlServiceImpl implements ArrearsControlService {
         }
         p.setRemark(dto.getRemark());
         p.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        p.setUpdateTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
-        policyMapper.updateById(p);
+        p.setUpdateTime(TimeUtil.nowSeconds());
+        bizArrearsPolicyMapper.updateById(p);
         return toVo(p);
     }
 
-    public IPage<ArrearsPatientVO> arrearsBoard(String keyword, Integer pageNum, Integer pageSize) {
-        int pn = pageNum == null || pageNum < 1 ? 1 : pageNum;
-        int ps = pageSize == null || pageSize < 1 || pageSize > 100 ? 10 : pageSize;
-        String kw = keyword == null ? null : keyword.trim();
+    public IPage<ArrearsPatientVO> arrearsBoard(ArrearsBoardQueryDTO query) {
+        String kw = query.getKeyword() == null ? null : query.getKeyword().trim();
         if (kw != null && kw.isEmpty()) {
             kw = null;
         }
-        return policyMapper.selectArrearsBoard(new Page<>(pn, ps), kw);
+        return bizArrearsPolicyMapper.selectArrearsBoard(new Page<>(query.getPageNum(), query.getPageSize()), kw);
     }
 
 
     private BizArrearsPolicy requirePolicy() {
-        BizArrearsPolicy p = policyMapper.selectById(1L);
+        BizArrearsPolicy p = bizArrearsPolicyMapper.selectById(1L);
         if (p == null) {
             throw new BusinessException("欠费管控策略不存在（biz_arrears_policy id=1，请先执行 sql/85）");
         }

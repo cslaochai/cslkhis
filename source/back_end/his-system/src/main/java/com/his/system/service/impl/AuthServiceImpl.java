@@ -1,6 +1,7 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.system.dto.ChangePasswordDTO;
 import com.his.system.dto.LoginRequestDTO;
@@ -8,11 +9,11 @@ import com.his.system.dto.SwitchPostDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysUser;
 import com.his.system.mapper.SysUserMapper;
-import com.his.system.support.PasswordCipherService;
 import com.his.system.service.AuthService;
 import com.his.system.service.EmployeePostService;
-import com.his.system.service.SysUserService;
 import com.his.system.service.SysLoginLogService;
+import com.his.system.service.SysUserService;
+import com.his.system.support.PasswordCipherService;
 import com.his.system.utils.JwtUtils;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.*;
@@ -31,14 +32,14 @@ import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
-public class AuthServiceImpl implements AuthService {
+public class AuthServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements AuthService {
 
     private final AuthenticationManager authenticationManager;
     private final JwtUtils jwtUtils;
-    private final SysUserService userService;
+    private final SysUserService sysUserService;
     private final EmployeePostService employeePostService;
-    private final SysUserMapper userMapper;
-    private final SysLoginLogService loginLogService;
+    private final SysUserMapper sysUserMapper;
+    private final SysLoginLogService sysLoginLogService;
     private final PasswordCipherService passwordCipherService;
 
     @Override
@@ -49,7 +50,7 @@ public class AuthServiceImpl implements AuthService {
         try {
             password = passwordCipherService.decrypt(cipherPassword);
         } catch (RuntimeException e) {
-            loginLogService.record(username, request, false, "口令密文非法：" + e.getMessage());
+            sysLoginLogService.record(username, request, false, "口令密文非法：" + e.getMessage());
             throw e;
         }
 
@@ -60,7 +61,7 @@ public class AuthServiceImpl implements AuthService {
             );
             currentUser = (CurrentUser) authentication.getPrincipal();
         } catch (AuthenticationException e) {
-            loginLogService.record(username, request, false, "认证失败：" + e.getMessage());
+            sysLoginLogService.record(username, request, false, "认证失败：" + e.getMessage());
             throw e;
         }
 
@@ -71,7 +72,7 @@ public class AuthServiceImpl implements AuthService {
             String msg = (loginRequestDTO.getRoleCode() == null || loginRequestDTO.getRoleCode().isEmpty())
                     ? "当前用户未能分配任何角色，请联系管理员分配角色"
                     : "您没有该角色权限，请使用其他角色进行登录";
-            loginLogService.record(username, currentUser.getUserId(), currentUser.getRealName(), request, false, msg);
+            sysLoginLogService.record(username, currentUser.getUserId(), currentUser.getRealName(), request, false, msg);
             throw new BusinessException(msg);
         }
 
@@ -83,7 +84,7 @@ public class AuthServiceImpl implements AuthService {
             EmployeePostVO post = employeePostService.resolvePrimaryPost(currentUser.getEmployeeId(), currentRole);
             if (post == null) {
                 String msg = "该角色尚未分配任何科室岗位，请联系管理员在员工档案中配置";
-                loginLogService.record(username, currentUser.getUserId(), currentUser.getRealName(), request, false, msg);
+                sysLoginLogService.record(username, currentUser.getUserId(), currentUser.getRealName(), request, false, msg);
                 throw new BusinessException(msg);
             }
             landingDeptId = post.getDeptId();
@@ -103,7 +104,7 @@ public class AuthServiceImpl implements AuthService {
         vo.setPatientId(currentUser.getPatientId());
         vo.setUserType(currentUser.getUserType());
 
-        loginLogService.record(username, currentUser.getUserId(), currentUser.getRealName(), request, true,
+        sysLoginLogService.record(username, currentUser.getUserId(), currentUser.getRealName(), request, true,
                 "登录成功（角色 " + currentRole + "，" + landingDeptName + "）");
         return vo;
     }
@@ -119,7 +120,7 @@ public class AuthServiceImpl implements AuthService {
         vo.setDeptId(currentUser.getDeptId());
         vo.setDeptName(currentUser.getDeptName());
         vo.setRoles(currentUser.getRoles());
-        vo.setRoleNames(userService.selectRoleNames(currentUser.getRoles()));
+        vo.setRoleNames(sysUserService.selectRoleNames(currentUser.getRoles()));
         vo.setPermissions(currentUser.getPermissions());
         vo.setCurrentRole(currentUser.getCurrentRole());
         return vo;
@@ -167,7 +168,7 @@ public class AuthServiceImpl implements AuthService {
         String oldPassword = passwordCipherService.decrypt(changePasswordDTO == null ? null : changePasswordDTO.getOldPassword());
         String newPassword = passwordCipherService.decrypt(changePasswordDTO == null ? null : changePasswordDTO.getNewPassword());
 
-        boolean success = userService.changePassword(userId, oldPassword, newPassword);
+        boolean success = sysUserService.changePassword(userId, oldPassword, newPassword);
 
         if (!success) {
             throw new BusinessException("旧密码错误");
@@ -176,14 +177,14 @@ public class AuthServiceImpl implements AuthService {
         LambdaUpdateWrapper<SysUser> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(SysUser::getId, userId)
                 .set(SysUser::getPasswordUpdateTime, LocalDateTime.now());
-        userMapper.update(null, updateWrapper);
+        sysUserMapper.update(null, updateWrapper);
     }
 
     @Override
     public void logout(HttpServletRequest request) {
         CurrentUser currentUser = UserUtils.getCurrentUser();
         if (currentUser != null) {
-            loginLogService.record(currentUser.getUsername(), currentUser.getUserId(), currentUser.getRealName(),
+            sysLoginLogService.record(currentUser.getUsername(), currentUser.getUserId(), currentUser.getRealName(),
                     request, true, "退出登录");
         }
     }
@@ -194,7 +195,7 @@ public class AuthServiceImpl implements AuthService {
                 .set(SysUser::getLastLoginTime, LocalDateTime.now())
                 .set(SysUser::getLastLoginIp, clientIp)
                 .set(SysUser::getLoginCount, currentUser.getLoginCount() != null ? currentUser.getLoginCount() + 1 : 1);
-        userMapper.update(updateWrapper);
+        sysUserMapper.update(updateWrapper);
     }
 
     private CurrentUser requireLogin() {

@@ -2,20 +2,17 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
-import com.his.system.entity.CurrentUser;
-import com.his.system.utils.JwtUtils;
-import com.his.system.service.SysAuditLogService;
 import com.his.system.dto.EmployeePostDTO;
-import com.his.system.entity.SysDepartment;
-import com.his.system.entity.SysEmployee;
-import com.his.system.entity.SysEmployeePost;
-import com.his.system.entity.SysRole;
+import com.his.system.entity.*;
 import com.his.system.mapper.SysDepartmentMapper;
-import com.his.system.mapper.SysEmployeePostMapper;
 import com.his.system.mapper.SysEmployeeMapper;
+import com.his.system.mapper.SysEmployeePostMapper;
 import com.his.system.mapper.SysRoleMapper;
 import com.his.system.service.EmployeePostService;
+import com.his.system.service.SysAuditLogService;
+import com.his.system.utils.JwtUtils;
 import com.his.system.vo.EmployeePostVO;
 import com.his.system.vo.SwitchPostVO;
 import lombok.RequiredArgsConstructor;
@@ -24,12 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -47,36 +39,19 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class EmployeePostServiceImpl implements EmployeePostService {
+public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, SysEmployeePost> implements EmployeePostService {
 
     private static final Integer PRIMARY_YES = 1;
     private static final Integer PRIMARY_NO = 0;
     private static final Integer STATUS_ACTIVE = 1;
     private static final Integer STATUS_EXPIRED = 2;
 
-    private final SysEmployeePostMapper employeePostMapper;
-    private final SysEmployeeMapper employeeMapper;
-    private final SysRoleMapper roleMapper;
-    private final SysDepartmentMapper departmentMapper;
+    private final SysEmployeePostMapper sysEmployeePostMapper;
+    private final SysEmployeeMapper sysEmployeeMapper;
+    private final SysRoleMapper sysRoleMapper;
+    private final SysDepartmentMapper sysDepartmentMapper;
     private final JwtUtils jwtUtils;
-    private final SysAuditLogService auditLogService;
-
-    @Override
-    public List<EmployeePostVO> listPosts(Long employeeId) {
-        if (employeeId == null) {
-            return List.of();
-        }
-        List<EmployeePostVO> posts = employeePostMapper.getEmployeePosts(employeeId);
-        LocalDate today = LocalDate.now();
-        posts.forEach(p -> p.setPostStatus(statusOf(p, today)));
-        return posts;
-    }
-
-    @Override
-    public List<EmployeePostVO> listActivePosts(Long employeeId) {
-        LocalDate today = LocalDate.now();
-        return listPosts(employeeId).stream().filter(p -> onDuty(p, today)).toList();
-    }
+    private final SysAuditLogService sysAuditLogService;
 
     /**
      * 岗位当前是否生效（sql/113）：两侧 NULL = 不限，存量数据行为中性。
@@ -93,6 +68,23 @@ public class EmployeePostServiceImpl implements EmployeePostService {
     private static Integer statusOf(EmployeePostVO post, LocalDate today) {
         return post.getExpireDate() != null && today.isAfter(post.getExpireDate())
                 ? STATUS_EXPIRED : STATUS_ACTIVE;
+    }
+
+    @Override
+    public List<EmployeePostVO> listPosts(Long employeeId) {
+        if (employeeId == null) {
+            return List.of();
+        }
+        List<EmployeePostVO> posts = sysEmployeePostMapper.getEmployeePosts(employeeId);
+        LocalDate today = LocalDate.now();
+        posts.forEach(p -> p.setPostStatus(statusOf(p, today)));
+        return posts;
+    }
+
+    @Override
+    public List<EmployeePostVO> listActivePosts(Long employeeId) {
+        LocalDate today = LocalDate.now();
+        return listPosts(employeeId).stream().filter(p -> onDuty(p, today)).toList();
     }
 
     /**
@@ -142,7 +134,7 @@ public class EmployeePostServiceImpl implements EmployeePostService {
         } catch (BusinessException e) {
             // 被拒的切换正是要留痕的那一类：谁试图以什么身份出现在哪个科室。
             // 目标解析不出名字（正因为不是他的岗位），只能记编码，但比一个 "?" 强 —— 事后查的人看得懂。
-            auditLogService.record(user.getUserId(), user.getUsername(), "认证", "切换岗位",
+            sysAuditLogService.record(user.getUserId(), user.getUsername(), "认证", "切换岗位",
                     "employee", user.getEmployeeId(),
                     from + " → 试图切换 " + roleCode + "/" + deptId, false, e.getMessage());
             throw e;
@@ -161,7 +153,7 @@ public class EmployeePostServiceImpl implements EmployeePostService {
         vo.setToken(jwtUtils.generateToken(user.getUserId(), user.getUsername(),
                 target.getRoleCode(), target.getDeptId(), target.getDeptName()));
 
-        auditLogService.record(user.getUserId(), user.getUsername(), "认证", "切换岗位",
+        sysAuditLogService.record(user.getUserId(), user.getUsername(), "认证", "切换岗位",
                 "employee", user.getEmployeeId(), from + " → " + label(target), true, null);
         return vo;
     }
@@ -193,7 +185,7 @@ public class EmployeePostServiceImpl implements EmployeePostService {
         Map<String, SysRole> roleByCode = loadRoles(rows);
         Map<Long, SysDepartment> deptById = loadDepts(rows);
 
-        employeePostMapper.delete(new LambdaQueryWrapper<SysEmployeePost>()
+        sysEmployeePostMapper.delete(new LambdaQueryWrapper<SysEmployeePost>()
                 .eq(SysEmployeePost::getEmployeeId, employeeId));
 
         // 主岗位是**人**的属性，一人只留一条（人事主科室的本义）：
@@ -219,7 +211,7 @@ public class EmployeePostServiceImpl implements EmployeePostService {
             post.setIsPrimary(primary ? PRIMARY_YES : PRIMARY_NO);
             post.setEffectiveDate(row.getEffectiveDate());
             post.setExpireDate(row.getExpireDate());
-            employeePostMapper.insert(post);
+            sysEmployeePostMapper.insert(post);
             saved.add(post);
         }
 
@@ -236,7 +228,7 @@ public class EmployeePostServiceImpl implements EmployeePostService {
      * 谁写岗位谁负责回填，否则两边会漂：改了岗位、员工表还停在旧科室。
      */
     private void syncPrimaryDept(Long employeeId, EmployeePostVO primary) {
-        employeeMapper.update(null, new LambdaUpdateWrapper<SysEmployee>()
+        sysEmployeeMapper.update(null, new LambdaUpdateWrapper<SysEmployee>()
                 .eq(SysEmployee::getId, employeeId)
                 .set(SysEmployee::getDeptId, primary == null ? null : primary.getDeptId())
                 .set(SysEmployee::getDeptName, primary == null ? null : primary.getDeptName()));
@@ -312,7 +304,7 @@ public class EmployeePostServiceImpl implements EmployeePostService {
         if (codes.isEmpty()) {
             return Map.of();
         }
-        Map<String, SysRole> byCode = roleMapper.selectList(
+        Map<String, SysRole> byCode = sysRoleMapper.selectList(
                         new LambdaQueryWrapper<SysRole>().in(SysRole::getRoleCode, codes)).stream()
                 .collect(Collectors.toMap(SysRole::getRoleCode, Function.identity(), (a, b) -> a));
         for (String code : codes) {
@@ -329,7 +321,7 @@ public class EmployeePostServiceImpl implements EmployeePostService {
         if (ids.isEmpty()) {
             return Map.of();
         }
-        Map<Long, SysDepartment> byId = departmentMapper.selectBatchIds(ids).stream()
+        Map<Long, SysDepartment> byId = sysDepartmentMapper.selectBatchIds(ids).stream()
                 .collect(Collectors.toMap(SysDepartment::getId, Function.identity(), (a, b) -> a));
         for (Long id : ids) {
             if (!byId.containsKey(id)) {

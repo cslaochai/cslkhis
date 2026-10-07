@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
@@ -48,7 +49,7 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AdmissionOrderServiceImpl implements AdmissionOrderService {
+public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapper, BizAdmissionOrder> implements AdmissionOrderService {
 
     private static final String VALID_DAYS_CONFIG_KEY = "admission_order.valid_days";
 
@@ -57,9 +58,9 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
      */
     private static final int VALID_DAYS_FALLBACK = 7;
 
-    private final BizAdmissionOrderMapper orderMapper;
-    private final BizAdmissionMapper admissionMapper;
-    private final BizPatientMapper patientMapper;
+    private final BizAdmissionOrderMapper bizAdmissionOrderMapper;
+    private final BizAdmissionMapper bizAdmissionMapper;
+    private final BizPatientMapper bizPatientMapper;
     private final SysConfigMapper sysConfigMapper;
 
     /**
@@ -83,19 +84,19 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long create(AdmissionOrderUpsertDTO dto) {
-        BizPatient patient = patientMapper.selectById(dto.getPatientId());
+        BizPatient patient = bizPatientMapper.selectById(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
 
         // 同一挂号只能有一张有效证（作废/过期后可重开）
-        if (dto.getRegistId() != null && orderMapper.countActiveByRegist(dto.getRegistId()) > 0) {
+        if (dto.getRegistId() != null && bizAdmissionOrderMapper.countActiveByRegist(dto.getRegistId()) > 0) {
             throw new BusinessException("该挂号已存在有效的住院证，无需重复开证；如需变更请先作废原证");
         }
 
         // 同一患者也不该同时拿两张「待收治」的证：患者拿着两张证到入院处，
         // 入院处无从判断该收哪一科，最后只能打电话问医生。这里直接拦下来，并说清是哪张证挡着。
-        BizAdmissionOrder pendingOfPatient = orderMapper.selectOne(new LambdaQueryWrapper<BizAdmissionOrder>()
+        BizAdmissionOrder pendingOfPatient = bizAdmissionOrderMapper.selectOne(new LambdaQueryWrapper<BizAdmissionOrder>()
                 .eq(BizAdmissionOrder::getPatientId, dto.getPatientId())
                 .eq(BizAdmissionOrder::getOrderStatus, AdmissionOrderStatusEnum.PENDING.getCode())
                 .and(w -> w.isNull(BizAdmissionOrder::getValidUntil)
@@ -111,7 +112,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
 
         // 已在院的患者不需要再开住院证（他已经在床上了）。不拦的话会出现
         // "某人在院 + 同时手持一张待收治住院证"的怪状态，入院处查半天查不明白。
-        if (admissionMapper.countInHospitalByPatient(dto.getPatientId()) > 0) {
+        if (bizAdmissionMapper.countInHospitalByPatient(dto.getPatientId()) > 0) {
             throw new BusinessException("该患者当前在院，无需再开住院证");
         }
 
@@ -161,7 +162,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
         order.setValidUntil(now.plusDays(validDays));
         order.setRemark(dto.getRemark());
 
-        orderMapper.insert(order);
+        bizAdmissionOrderMapper.insert(order);
 
         // 开证 = 进等床队列（同一事务）：「有人要住院」和「有人在床位队伍里排队」在系统里
         // 必须是同一次动作。分成两步写，就一定会出现"有证无队"或"有队无证"。
@@ -186,7 +187,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
     @Override
     public IPage<AdmissionOrderVO> listPage(AdmissionOrderQueryPageDTO query) {
         Page<AdmissionOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        IPage<AdmissionOrderVO> result = orderMapper.selectOrderPage(page, query);
+        IPage<AdmissionOrderVO> result = bizAdmissionOrderMapper.selectOrderPage(page, query);
         result.getRecords().forEach(this::decorate);
         return result;
     }
@@ -197,7 +198,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
         if (id == null) {
             throw new BusinessException("住院证ID不能为空");
         }
-        AdmissionOrderVO vo = orderMapper.selectOrderDetail(id);
+        AdmissionOrderVO vo = bizAdmissionOrderMapper.selectOrderDetail(id);
         if (vo == null) {
             throw new BusinessException("住院证不存在");
         }
@@ -209,7 +210,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
 
     @Override
     public long countPending() {
-        return orderMapper.countPending();
+        return bizAdmissionOrderMapper.countPending();
     }
 
     // 收治流程回调
@@ -217,7 +218,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(AdmissionOrderCancelDTO dto) {
-        BizAdmissionOrder order = orderMapper.selectById(dto.getId());
+        BizAdmissionOrder order = bizAdmissionOrderMapper.selectById(dto.getId());
         if (order == null) {
             throw new BusinessException("住院证不存在");
         }
@@ -230,7 +231,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
 
         order.setOrderStatus(AdmissionOrderStatusEnum.VOIDED.getCode());
         order.setCancelReason(dto.getCancelReason());
-        orderMapper.updateById(order);
+        bizAdmissionOrderMapper.updateById(order);
 
         // 证作废 = 退出等床队列（同一事务）：留着一条"还在等床"的记录，
         // 这张床会一直被锁着等一个永远不会来的人。
@@ -252,7 +253,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
         if (orderId == null) {
             throw new BusinessException("住院证ID不能为空");
         }
-        BizAdmissionOrder order = orderMapper.selectById(orderId);
+        BizAdmissionOrder order = bizAdmissionOrderMapper.selectById(orderId);
         if (order == null) {
             throw new BusinessException("住院证不存在");
         }
@@ -273,7 +274,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
     @Transactional(rollbackFor = Exception.class)
     public void markAdmitted(BizAdmissionOrder order, Long admissionId, Long admitDeptId, LocalDateTime admitTime) {
         // 重新取一次并再判状态：并发下两个入院处同时点"收治"时，靠这里的乐观判断挡住第二个人
-        BizAdmissionOrder latest = orderMapper.selectById(order.getId());
+        BizAdmissionOrder latest = bizAdmissionOrderMapper.selectById(order.getId());
         if (latest == null) {
             throw new BusinessException("住院证不存在");
         }
@@ -284,7 +285,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
         latest.setAdmissionId(admissionId);
         latest.setAdmitTime(admitTime);
         latest.setAdmitDeptId(admitDeptId);
-        orderMapper.updateById(latest);
+        bizAdmissionOrderMapper.updateById(latest);
         log.info("住院证已收治 orderNo={} admissionId={} admitDeptId={}",
                 latest.getOrderNo(), admissionId, admitDeptId);
     }
@@ -338,7 +339,7 @@ public class AdmissionOrderServiceImpl implements AdmissionOrderService {
 
     private String nextOrderNo() {
         String prefix = "RZ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = orderMapper.countByOrderNoPrefix(prefix) + 1;
+        long seq = bizAdmissionOrderMapper.countByOrderNoPrefix(prefix) + 1;
         return prefix + String.format("%03d", seq);
     }
 }

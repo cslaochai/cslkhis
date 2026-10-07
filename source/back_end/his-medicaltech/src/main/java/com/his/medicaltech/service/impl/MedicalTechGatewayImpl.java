@@ -34,9 +34,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MedicalTechGatewayImpl implements MedicalTechGateway {
 
-    private final BizLaboratoryRecordMapper laboratoryRecordMapper;
-    private final BizLabResultMapper labResultMapper;
-    private final BizInspectionRecordMapper inspectionRecordMapper;
+    private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
+    private final BizLabResultMapper bizLabResultMapper;
+    private final BizInspectionRecordMapper bizInspectionRecordMapper;
     private final MedicalTechService medicalTechService;
 
     @Override
@@ -50,7 +50,7 @@ public class MedicalTechGatewayImpl implements MedicalTechGateway {
         if (visitDate != null) {
             wrapper.eq(BizLaboratoryRecord::getVisitDate, visitDate);
         }
-        return laboratoryRecordMapper.selectList(wrapper).stream()
+        return bizLaboratoryRecordMapper.selectList(wrapper).stream()
                 .map(this::toBrief)
                 .toList();
     }
@@ -63,7 +63,7 @@ public class MedicalTechGatewayImpl implements MedicalTechGateway {
         if (recordIds.isEmpty()) {
             return List.of();
         }
-        return labResultMapper.selectList(new LambdaQueryWrapper<BizLabResult>()
+        return bizLabResultMapper.selectList(new LambdaQueryWrapper<BizLabResult>()
                         .in(BizLabResult::getRecordId, recordIds)
                         .orderByAsc(BizLabResult::getSortOrder)).stream()
                 .map(this::toBrief)
@@ -81,7 +81,7 @@ public class MedicalTechGatewayImpl implements MedicalTechGateway {
         if (visitDate != null) {
             wrapper.eq(BizInspectionRecord::getVisitDate, visitDate);
         }
-        return inspectionRecordMapper.selectList(wrapper).stream()
+        return bizInspectionRecordMapper.selectList(wrapper).stream()
                 .map(this::toBrief)
                 .toList();
     }

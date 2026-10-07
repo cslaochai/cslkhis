@@ -11,11 +11,7 @@ import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.system.dto.StaffPlanRuleQueryPageDTO;
 import com.his.system.dto.StaffPlanRuleUpsertDTO;
-import com.his.system.entity.BizShift;
-import com.his.system.entity.BizStaffPlanRule;
-import com.his.system.entity.BizStaffSchedule;
-import com.his.system.entity.SysDepartment;
-import com.his.system.entity.SysWard;
+import com.his.system.entity.*;
 import com.his.system.mapper.BizStaffPlanRuleMapper;
 import com.his.system.mapper.BizStaffScheduleMapper;
 import com.his.system.mapper.SysDepartmentMapper;
@@ -34,13 +30,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 人力配置标准服务实现。
@@ -50,13 +40,38 @@ import java.util.Set;
 public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper, BizStaffPlanRule>
         implements StaffPlanRuleService {
 
-    /** 标准上「该单元全部班次共用」的班次位置取值 */
+    /**
+     * 标准上「该单元全部班次共用」的班次位置取值
+     */
     private static final long SHIFT_ANY = 0L;
-
-    private final BizStaffScheduleMapper scheduleMapper;
+    /**
+     * 人的约束往前看几天、往后看几天。
+     *
+     * <p>取 14 天而不是 7 天：连续上班上限最大可能配到 7 天以上，
+     * 而「是不是连续」要从这天向两侧数到断口为止，窗口必须比上限大。
+     */
+    private static final int PERSON_WINDOW_DAYS = 14;
+    private final BizStaffScheduleMapper bizStaffScheduleMapper;
     private final ShiftService shiftService;
-    private final SysWardMapper wardMapper;
-    private final SysDepartmentMapper departmentMapper;
+    private final SysWardMapper sysWardMapper;
+    private final SysDepartmentMapper sysDepartmentMapper;
+
+    private static boolean isNight(BizShift shift) {
+        return shift.getIsNight() != null && shift.getIsNight() == 1;
+    }
+
+    private static double restHoursOf(BizShift shift) {
+        return shift.getNeedRestHours() == null ? 0D : shift.getNeedRestHours().doubleValue();
+    }
+
+    private static LocalDateTime startAt(LocalDate date, BizShift shift) {
+        return LocalDateTime.of(date, LocalTime.parse(shift.getStartTime()));
+    }
+
+    private static LocalDateTime endAt(LocalDate date, BizShift shift) {
+        LocalDateTime end = LocalDateTime.of(date, LocalTime.parse(shift.getEndTime()));
+        return Integer.valueOf(1).equals(shift.getCrossDay()) ? end.plusDays(1) : end;
+    }
 
     @Override
     public PageResult<StaffPlanRuleVO> pageVO(StaffPlanRuleQueryPageDTO dto) {
@@ -192,14 +207,6 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         return null;
     }
 
-    /**
-     * 人的约束往前看几天、往后看几天。
-     *
-     * <p>取 14 天而不是 7 天：连续上班上限最大可能配到 7 天以上，
-     * 而「是不是连续」要从这天向两侧数到断口为止，窗口必须比上限大。
-     */
-    private static final int PERSON_WINDOW_DAYS = 14;
-
     @Override
     public String reviewEmployee(Long currentScheduleId, Long employeeId, Integer orgType, Long orgId,
                                  Integer staffType, LocalDate date) {
@@ -209,7 +216,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         }
         LocalDate from = date.minusDays(PERSON_WINDOW_DAYS);
         LocalDate to = date.plusDays(PERSON_WINDOW_DAYS);
-        List<BizStaffSchedule> rows = scheduleMapper.selectList(new LambdaQueryWrapper<BizStaffSchedule>()
+        List<BizStaffSchedule> rows = bizStaffScheduleMapper.selectList(new LambdaQueryWrapper<BizStaffSchedule>()
                 .eq(BizStaffSchedule::getEmployeeId, employeeId)
                 .ge(BizStaffSchedule::getScheduleDate, from)
                 .le(BizStaffSchedule::getScheduleDate, to)
@@ -279,7 +286,9 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         }
     }
 
-    /** 连续夜班天数上限（劳动安全，拦） */
+    /**
+     * 连续夜班天数上限（劳动安全，拦）
+     */
     private void assertNightStreak(Long currentId, BizStaffPlanRule rule, List<BizStaffSchedule> rows,
                                    Map<Long, BizShift> shifts, String nurse, LocalDate date) {
         int limit = rule.getMaxConsecutiveNightDays() == null ? 0 : rule.getMaxConsecutiveNightDays();
@@ -296,7 +305,9 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         }
     }
 
-    /** 连续上班天数上限（总量控制，提示） */
+    /**
+     * 连续上班天数上限（总量控制，提示）
+     */
     private String workStreakTip(Long currentId, BizStaffPlanRule rule, List<BizStaffSchedule> rows,
                                  String nurse, LocalDate date) {
         int limit = rule.getMaxConsecutiveWorkDays() == null ? 0 : rule.getMaxConsecutiveWorkDays();
@@ -315,7 +326,9 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         return null;
     }
 
-    /** 单周工时上限（总量控制，提示） */
+    /**
+     * 单周工时上限（总量控制，提示）
+     */
     private String weekHoursTip(BizStaffPlanRule rule, List<BizStaffSchedule> rows,
                                 Map<Long, BizShift> shifts, String nurse, LocalDate date) {
         BigDecimal limit = rule.getMaxWeekHours();
@@ -385,23 +398,6 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         return shift != null && isNight(shift);
     }
 
-    private static boolean isNight(BizShift shift) {
-        return shift.getIsNight() != null && shift.getIsNight() == 1;
-    }
-
-    private static double restHoursOf(BizShift shift) {
-        return shift.getNeedRestHours() == null ? 0D : shift.getNeedRestHours().doubleValue();
-    }
-
-    private static LocalDateTime startAt(LocalDate date, BizShift shift) {
-        return LocalDateTime.of(date, LocalTime.parse(shift.getStartTime()));
-    }
-
-    private static LocalDateTime endAt(LocalDate date, BizShift shift) {
-        LocalDateTime end = LocalDateTime.of(date, LocalTime.parse(shift.getEndTime()));
-        return Integer.valueOf(1).equals(shift.getCrossDay()) ? end.plusDays(1) : end;
-    }
-
     /**
      * 命中的标准：先认「这个班次」的那条，没有才退到「全部班次共用」的那条。
      * 顺序不能反——共用标准是兜底，具体班次的标准才是事实。
@@ -428,7 +424,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         if (rule.getShiftId() != null && rule.getShiftId() != SHIFT_ANY) {
             wrapper.eq(BizStaffSchedule::getShiftId, rule.getShiftId());
         }
-        return scheduleMapper.selectCount(wrapper);
+        return bizStaffScheduleMapper.selectCount(wrapper);
     }
 
     private String applyUnit(Integer orgType, Long orgId) {
@@ -453,10 +449,10 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
             return OrgUnitTypeEnum.HOSPITAL.getLabel();
         }
         if (OrgUnitTypeEnum.WARD.getCode() == orgType) {
-            SysWard ward = wardMapper.selectById(orgId);
+            SysWard ward = sysWardMapper.selectById(orgId);
             return ward == null ? null : ward.getWardName();
         }
-        SysDepartment dept = departmentMapper.selectById(orgId);
+        SysDepartment dept = sysDepartmentMapper.selectById(orgId);
         return dept == null ? null : dept.getDeptName();
     }
 
@@ -474,7 +470,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         Map<String, Long> byShift = new HashMap<>();
         Map<String, Long> byUnit = new HashMap<>();
         Map<String, String> orgNames = new HashMap<>();
-        for (StaffWorkingGroupVO row : scheduleMapper.groupWorkingByUnitShift(begin, end)) {
+        for (StaffWorkingGroupVO row : bizStaffScheduleMapper.groupWorkingByUnitShift(begin, end)) {
             LocalDate date = row.getScheduleDate();
             Integer orgType = row.getOrgType();
             Long orgId = row.getOrgId();
@@ -522,7 +518,9 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         return vos;
     }
 
-    /** 班次名：0 表示全部班次共用，出参要能看出来是「整册标准」而不是某个班 */
+    /**
+     * 班次名：0 表示全部班次共用，出参要能看出来是「整册标准」而不是某个班
+     */
     private String shiftNameOf(Long shiftId, BizShift shift) {
         if (shiftId == null || shiftId == SHIFT_ANY) {
             return "全部班次";

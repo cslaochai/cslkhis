@@ -5,6 +5,7 @@ import com.his.common.entity.SignSubject;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
+import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizInpatientOrder;
 import com.his.patient.enums.InpatientOrderStatusEnum;
 import com.his.patient.mapper.BizInpatientOrderMapper;
@@ -14,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
@@ -37,7 +37,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class InpatientOrderSignProviderImpl implements SignableContentProvider, InpatientOrderSignProvider {
 
-    private final BizInpatientOrderMapper orderMapper;
+    private final BizInpatientOrderMapper bizInpatientOrderMapper;
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -46,7 +46,7 @@ public class InpatientOrderSignProviderImpl implements SignableContentProvider, 
 
     @Override
     public SignSubject load(Long bizId) {
-        BizInpatientOrder o = orderMapper.selectById(bizId);
+        BizInpatientOrder o = bizInpatientOrderMapper.selectById(bizId);
         if (o == null) {
             return null;
         }
@@ -64,7 +64,7 @@ public class InpatientOrderSignProviderImpl implements SignableContentProvider, 
 
     @Override
     public String blockReason(SignSubject subject, SignSceneEnum scene) {
-        BizInpatientOrder o = orderMapper.selectById(subject.bizId());
+        BizInpatientOrder o = bizInpatientOrderMapper.selectById(subject.bizId());
         if (o == null) {
             return "医嘱不存在或已被删除，无法签名";
         }
@@ -94,7 +94,7 @@ public class InpatientOrderSignProviderImpl implements SignableContentProvider, 
     public void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime) {
         BizInpatientOrder patch = new BizInpatientOrder();
         patch.setId(bizId);
-        LocalDateTime t = signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime t = signedTime == null ? null : TimeUtil.toSeconds(signedTime);
         if (scene == SignSceneEnum.ORDER_VERIFY) {
             patch.setNurseSignId(signId);
             patch.setNurseSignedTime(t);
@@ -102,12 +102,12 @@ public class InpatientOrderSignProviderImpl implements SignableContentProvider, 
             patch.setDoctorSignId(signId);
             patch.setDoctorSignedTime(t);
         }
-        orderMapper.updateById(patch);
+        bizInpatientOrderMapper.updateById(patch);
     }
 
     @Override
     public void revokeSignAnchor(Long bizId, Long signId) {
-        BizInpatientOrder o = orderMapper.selectById(bizId);
+        BizInpatientOrder o = bizInpatientOrderMapper.selectById(bizId);
         if (o == null) {
             return;
         }
@@ -115,14 +115,14 @@ public class InpatientOrderSignProviderImpl implements SignableContentProvider, 
         // MyBatis-Plus 的 updateById 只更新非 null 字段（set null 等于"不改"），
         // 所以必须用 UpdateWrapper 显式 set null，否则签名作废了、医嘱上却还挂着旧签名ID。
         if (Objects.equals(signId, o.getDoctorSignId())) {
-            orderMapper.update(null, new LambdaUpdateWrapper<BizInpatientOrder>()
+            bizInpatientOrderMapper.update(null, new LambdaUpdateWrapper<BizInpatientOrder>()
                     .eq(BizInpatientOrder::getId, bizId)
                     .set(BizInpatientOrder::getDoctorSignId, null)
                     .set(BizInpatientOrder::getDoctorSignedTime, null));
             log.info("已清除医嘱开立签名指针 orderNo={} signId={}", o.getOrderNo(), signId);
         }
         if (Objects.equals(signId, o.getNurseSignId())) {
-            orderMapper.update(null, new LambdaUpdateWrapper<BizInpatientOrder>()
+            bizInpatientOrderMapper.update(null, new LambdaUpdateWrapper<BizInpatientOrder>()
                     .eq(BizInpatientOrder::getId, bizId)
                     .set(BizInpatientOrder::getNurseSignId, null)
                     .set(BizInpatientOrder::getNurseSignedTime, null));

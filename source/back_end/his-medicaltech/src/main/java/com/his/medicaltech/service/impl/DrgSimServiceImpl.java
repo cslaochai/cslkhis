@@ -3,7 +3,9 @@ package com.his.medicaltech.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.DrgSimDTO;
 import com.his.medicaltech.entity.DrgSimResult;
 import com.his.medicaltech.enums.DrgSimStatusEnum;
@@ -34,9 +36,9 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class DrgSimServiceImpl implements DrgSimService {
+public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> implements DrgSimService {
 
-    private final DrgSimMapper simMapper;
+    private final DrgSimMapper drgSimMapper;
     private final DrgGrouper grouper;
 
     /**
@@ -50,13 +52,9 @@ public class DrgSimServiceImpl implements DrgSimService {
         return (v == null ? BigDecimal.ZERO : v).setScale(2, RoundingMode.HALF_UP);
     }
 
-    private static String tr(String s) {
-        return s == null ? "" : s.trim();
-    }
-
     @Transactional(rollbackFor = Exception.class)
     public DrgSimVO.SimResult simulate(DrgSimDTO.Simulate dto) {
-        DrgSummaryRowVO s = simMapper.selectSummary(dto.getSummaryId());
+        DrgSummaryRowVO s = drgSimMapper.selectSummary(dto.getSummaryId());
         if (s == null) {
             throw new BusinessException("病案首页不存在");
         }
@@ -77,7 +75,7 @@ public class DrgSimServiceImpl implements DrgSimService {
         BigDecimal pay = null;
         String drgName = null;
         if (grouped) {
-            groupRow = simMapper.groupList().stream()
+            groupRow = drgSimMapper.groupList().stream()
                     .filter(x -> g.drgCode().equals(x.getDrgCode()))
                     .findFirst().orElse(null);
             if (groupRow == null) {
@@ -90,7 +88,7 @@ public class DrgSimServiceImpl implements DrgSimService {
         BigDecimal profit = grouped ? pay.subtract(actual) : null;
 
         // upsert：每首页一条，重跑覆盖（含软删行复活）
-        DrgSimResult r = simMapper.selectOne(new LambdaQueryWrapper<DrgSimResult>()
+        DrgSimResult r = drgSimMapper.selectOne(new LambdaQueryWrapper<DrgSimResult>()
                 .eq(DrgSimResult::getSummaryId, dto.getSummaryId())
                 .last("LIMIT 1"));
         boolean create = r == null;
@@ -115,9 +113,9 @@ public class DrgSimServiceImpl implements DrgSimService {
         r.setRuleNote(g.ruleNote());
         r.setUpdateBy(UserUtils.getCurrentUser().getUsername());
         if (create) {
-            simMapper.insert(r);
+            drgSimMapper.insert(r);
         } else {
-            simMapper.updateById(r);
+            drgSimMapper.updateById(r);
         }
         return toSimVo(r);
     }
@@ -132,14 +130,14 @@ public class DrgSimServiceImpl implements DrgSimService {
         if (ids != null && !ids.isEmpty()) {
             summaries = new ArrayList<>();
             for (Long id : ids) {
-                DrgSummaryRowVO s = simMapper.selectSummary(id);
+                DrgSummaryRowVO s = drgSimMapper.selectSummary(id);
                 if (s == null) {
                     throw new BusinessException("病案首页不存在：" + id);
                 }
                 summaries.add(s);
             }
         } else {
-            summaries = simMapper.selectSummaries(50);
+            summaries = drgSimMapper.selectSummaries(50);
         }
         int skipped = 0;
         for (DrgSummaryRowVO s : summaries) {
@@ -158,11 +156,11 @@ public class DrgSimServiceImpl implements DrgSimService {
         LambdaQueryWrapper<DrgSimResult> qw = new LambdaQueryWrapper<DrgSimResult>()
                 .eq(dto.getSimStatus() != null, DrgSimResult::getSimStatus, dto.getSimStatus())
                 .and(StringUtils.hasText(dto.getKeyword()), w -> w
-                        .like(DrgSimResult::getPatientName, tr(dto.getKeyword()))
-                        .or().like(DrgSimResult::getDrgCode, tr(dto.getKeyword())))
+                        .like(DrgSimResult::getPatientName, TextUtil.trimToEmpty(dto.getKeyword()))
+                        .or().like(DrgSimResult::getDrgCode, TextUtil.trimToEmpty(dto.getKeyword())))
                 .orderByDesc(DrgSimResult::getUpdateTime)
                 .orderByDesc(DrgSimResult::getId);
-        IPage<DrgSimResult> page = simMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw);
+        IPage<DrgSimResult> page = drgSimMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw);
         return page.convert(this::toRow);
     }
 
@@ -170,7 +168,7 @@ public class DrgSimServiceImpl implements DrgSimService {
      * 可模拟首页列表 + 汇总统计
      */
     public DrgSimVO.SummaryListVO summaryList(Integer limit, Integer extraSkipped) {
-        List<DrgSummaryListRowVO> rows = simMapper.summaryList(limit == null ? 50 : limit);
+        List<DrgSummaryListRowVO> rows = drgSimMapper.summaryList(limit == null ? 50 : limit);
         List<DrgSimVO.SummaryRow> list = rows.stream().map(m -> {
             DrgSimVO.SummaryRow r = new DrgSimVO.SummaryRow();
             r.setSummaryId(m.getSummaryId());
@@ -185,7 +183,7 @@ public class DrgSimServiceImpl implements DrgSimService {
             return r;
         }).collect(Collectors.toList());
 
-        List<DrgSimResult> all = simMapper.selectList(new LambdaQueryWrapper<DrgSimResult>()
+        List<DrgSimResult> all = drgSimMapper.selectList(new LambdaQueryWrapper<DrgSimResult>()
                 .eq(DrgSimResult::getDelFlag, 0));
         DrgSimVO.SimStat stat = new DrgSimVO.SimStat();
         stat.setTotal((long) all.size());
@@ -207,7 +205,7 @@ public class DrgSimServiceImpl implements DrgSimService {
     }
 
     public List<DrgSimVO.GroupRow> groupList() {
-        return simMapper.groupList().stream().map(m -> {
+        return drgSimMapper.groupList().stream().map(m -> {
             DrgSimVO.GroupRow r = new DrgSimVO.GroupRow();
             r.setId(m.getId());
             r.setDrgCode(m.getDrgCode());

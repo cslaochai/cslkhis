@@ -1,6 +1,7 @@
 package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.emr.dto.BizDiagTemplateUpsertDTO;
 import com.his.emr.dto.BizDrugPackageUpsertDTO;
@@ -24,13 +25,13 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class OtherTemplateServiceImpl implements OtherTemplateService {
+public class OtherTemplateServiceImpl extends ServiceImpl<BizDiagTemplateMapper, BizDiagTemplate> implements OtherTemplateService {
 
-    private final BizDiagTemplateMapper diagTemplateMapper;
-    private final BizRxTemplateMapper rxTemplateMapper;
-    private final BizRxTemplateDetailMapper rxTemplateDetailMapper;
-    private final BizDrugPackageMapper drugPackageMapper;
-    private final BizDrugPackageDetailMapper drugPackageDetailMapper;
+    private final BizDiagTemplateMapper bizDiagTemplateMapper;
+    private final BizRxTemplateMapper bizRxTemplateMapper;
+    private final BizRxTemplateDetailMapper bizRxTemplateDetailMapper;
+    private final BizDrugPackageMapper bizDrugPackageMapper;
+    private final BizDrugPackageDetailMapper bizDrugPackageDetailMapper;
 
     // 常用诊断
 
@@ -40,7 +41,7 @@ public class OtherTemplateServiceImpl implements OtherTemplateService {
         if (doctorId == null) {
             return new ArrayList<>();
         }
-        List<BizDiagTemplate> list = diagTemplateMapper.selectList(
+        List<BizDiagTemplate> list = bizDiagTemplateMapper.selectList(
                 new LambdaQueryWrapper<BizDiagTemplate>()
                         .eq(BizDiagTemplate::getDoctorId, doctorId)
                         .orderByAsc(BizDiagTemplate::getSortOrder)
@@ -67,7 +68,7 @@ public class OtherTemplateServiceImpl implements OtherTemplateService {
             return entity;
         }).collect(Collectors.toList());
         // 先删后插
-        diagTemplateMapper.delete(
+        bizDiagTemplateMapper.delete(
                 new LambdaQueryWrapper<BizDiagTemplate>()
                         .eq(BizDiagTemplate::getDoctorId, doctorId)
         );
@@ -76,14 +77,14 @@ public class OtherTemplateServiceImpl implements OtherTemplateService {
             t.setId(null);
             t.setDoctorId(doctorId);
             t.setSortOrder(i);
-            diagTemplateMapper.insert(t);
+            bizDiagTemplateMapper.insert(t);
         }
         return true;
     }
 
     @Override
     public boolean deleteDiagTemplate(Long id) {
-        return diagTemplateMapper.deleteById(id) > 0;
+        return bizDiagTemplateMapper.deleteById(id) > 0;
     }
 
     // 处方模板
@@ -94,7 +95,7 @@ public class OtherTemplateServiceImpl implements OtherTemplateService {
         if (doctorId == null) {
             return new ArrayList<>();
         }
-        List<BizRxTemplate> list = rxTemplateMapper.selectList(
+        List<BizRxTemplate> list = bizRxTemplateMapper.selectList(
                 new LambdaQueryWrapper<BizRxTemplate>()
                         .eq(BizRxTemplate::getDoctorId, doctorId)
                         .orderByDesc(BizRxTemplate::getCreateTime)
@@ -107,9 +108,9 @@ public class OtherTemplateServiceImpl implements OtherTemplateService {
 
     @Override
     public BizRxTemplateVO getRxTemplateDetail(Long templateId) {
-        BizRxTemplate tpl = rxTemplateMapper.selectById(templateId);
+        BizRxTemplate tpl = bizRxTemplateMapper.selectById(templateId);
         if (tpl != null) {
-            tpl.setDetails(rxTemplateDetailMapper.selectList(
+            tpl.setDetails(bizRxTemplateDetailMapper.selectList(
                     new LambdaQueryWrapper<BizRxTemplateDetail>()
                             .eq(BizRxTemplateDetail::getTemplateId, templateId)
             ));
@@ -140,12 +141,12 @@ public class OtherTemplateServiceImpl implements OtherTemplateService {
             template.setDrugCount(count);
             template.setTotalAmount(total);
         }
-        rxTemplateMapper.insert(template);
+        bizRxTemplateMapper.insert(template);
         // 插入明细
         if (template.getDetails() != null) {
             for (BizRxTemplateDetail d : template.getDetails()) {
                 d.setTemplateId(template.getId());
-                rxTemplateDetailMapper.insert(d);
+                bizRxTemplateDetailMapper.insert(d);
             }
         }
         return true;
@@ -154,11 +155,11 @@ public class OtherTemplateServiceImpl implements OtherTemplateService {
     @Override
     @Transactional
     public boolean deleteRxTemplate(Long id) {
-        rxTemplateDetailMapper.delete(
+        bizRxTemplateDetailMapper.delete(
                 new LambdaQueryWrapper<BizRxTemplateDetail>()
                         .eq(BizRxTemplateDetail::getTemplateId, id)
         );
-        return rxTemplateMapper.deleteById(id) > 0;
+        return bizRxTemplateMapper.deleteById(id) > 0;
     }
 
     // 药品套餐
@@ -169,7 +170,7 @@ public class OtherTemplateServiceImpl implements OtherTemplateService {
         if (doctorId == null) {
             return new ArrayList<>();
         }
-        List<BizDrugPackage> list = drugPackageMapper.selectList(
+        List<BizDrugPackage> list = bizDrugPackageMapper.selectList(
                 new LambdaQueryWrapper<BizDrugPackage>()
                         .eq(BizDrugPackage::getDoctorId, doctorId)
                         .orderByDesc(BizDrugPackage::getCreateTime)
@@ -182,9 +183,9 @@ public class OtherTemplateServiceImpl implements OtherTemplateService {
 
     @Override
     public BizDrugPackageVO getDrugPackageDetail(Long packageId) {
-        BizDrugPackage pkg = drugPackageMapper.selectById(packageId);
+        BizDrugPackage pkg = bizDrugPackageMapper.selectById(packageId);
         if (pkg != null) {
-            pkg.setDetails(drugPackageDetailMapper.selectList(
+            pkg.setDetails(bizDrugPackageDetailMapper.selectList(
                     new LambdaQueryWrapper<BizDrugPackageDetail>()
                             .eq(BizDrugPackageDetail::getPackageId, packageId)
             ));
@@ -206,11 +207,11 @@ public class OtherTemplateServiceImpl implements OtherTemplateService {
                 return detail;
             }).collect(Collectors.toList()));
         }
-        drugPackageMapper.insert(pkg);
+        bizDrugPackageMapper.insert(pkg);
         if (pkg.getDetails() != null) {
             for (BizDrugPackageDetail d : pkg.getDetails()) {
                 d.setPackageId(pkg.getId());
-                drugPackageDetailMapper.insert(d);
+                bizDrugPackageDetailMapper.insert(d);
             }
         }
         return true;
@@ -219,11 +220,11 @@ public class OtherTemplateServiceImpl implements OtherTemplateService {
     @Override
     @Transactional
     public boolean deleteDrugPackage(Long id) {
-        drugPackageDetailMapper.delete(
+        bizDrugPackageDetailMapper.delete(
                 new LambdaQueryWrapper<BizDrugPackageDetail>()
                         .eq(BizDrugPackageDetail::getPackageId, id)
         );
-        return drugPackageMapper.deleteById(id) > 0;
+        return bizDrugPackageMapper.deleteById(id) > 0;
     }
 
     private Long currentDoctorIdOrNull() {

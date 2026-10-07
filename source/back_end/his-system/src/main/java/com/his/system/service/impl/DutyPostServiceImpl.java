@@ -4,15 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.enums.AttendModeEnum;
-import com.his.common.enums.DutyLevelEnum;
-import com.his.common.enums.DutyRoleTypeEnum;
-import com.his.common.enums.DutyScopeEnum;
-import com.his.common.enums.EnableStatusEnum;
-import com.his.common.enums.OrgUnitTypeEnum;
-import com.his.common.enums.StaffTypeEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
-import com.his.system.provider.DeptScopeProvider;
 import com.his.system.dto.DutyPostQueryPageDTO;
 import com.his.system.dto.DutyPostUpsertDTO;
 import com.his.system.entity.BizDutyPost;
@@ -22,6 +15,7 @@ import com.his.system.entity.SysWard;
 import com.his.system.mapper.BizDutyPostMapper;
 import com.his.system.mapper.SysDepartmentMapper;
 import com.his.system.mapper.SysWardMapper;
+import com.his.system.provider.DeptScopeProvider;
 import com.his.system.service.DutyPostService;
 import com.his.system.service.ShiftService;
 import com.his.system.vo.DutyPostSelectListVO;
@@ -30,11 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 值守点位服务实现。
@@ -45,8 +35,15 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
     private final DeptScopeProvider deptScopeProvider;
 
     private final ShiftService shiftService;
-    private final SysWardMapper wardMapper;
-    private final SysDepartmentMapper departmentMapper;
+    private final SysWardMapper sysWardMapper;
+    private final SysDepartmentMapper sysDepartmentMapper;
+
+    /**
+     * 停用判定：状态为空视为未停用（缺省启用），只有显式停用才拦
+     */
+    private static boolean disabled(Integer status) {
+        return status != null && status == EnableStatusEnum.DISABLED.getCode();
+    }
 
     @Override
     public List<DutyPostSelectListVO> selectListVO(Integer dutyScope, Integer orgType, Long orgId) {
@@ -238,12 +235,12 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
             throw new BusinessException("请选择值守点位所属的" + OrgUnitTypeEnum.getText(post.getOrgType()));
         }
         if (OrgUnitTypeEnum.WARD.getCode() == post.getOrgType()) {
-            SysWard ward = wardMapper.selectById(post.getOrgId());
+            SysWard ward = sysWardMapper.selectById(post.getOrgId());
             if (ward == null || disabled(ward.getStatus())) {
                 throw new BusinessException("所选病区不存在或已停用");
             }
         } else {
-            SysDepartment dept = departmentMapper.selectById(post.getOrgId());
+            SysDepartment dept = sysDepartmentMapper.selectById(post.getOrgId());
             if (dept == null || disabled(dept.getStatus())) {
                 throw new BusinessException("所选科室不存在或已停用");
             }
@@ -267,10 +264,10 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
 
     private String unitNameOf(Integer orgType, Long orgId) {
         if (OrgUnitTypeEnum.WARD.getCode() == orgType) {
-            SysWard ward = wardMapper.selectById(orgId);
+            SysWard ward = sysWardMapper.selectById(orgId);
             return ward == null ? null : ward.getWardName();
         }
-        SysDepartment dept = departmentMapper.selectById(orgId);
+        SysDepartment dept = sysDepartmentMapper.selectById(orgId);
         return dept == null ? null : dept.getDeptName();
     }
 
@@ -282,10 +279,5 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
             }
         }
         return ids;
-    }
-
-    /** 停用判定：状态为空视为未停用（缺省启用），只有显式停用才拦 */
-    private static boolean disabled(Integer status) {
-        return status != null && status == EnableStatusEnum.DISABLED.getCode();
     }
 }

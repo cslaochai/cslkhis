@@ -2,6 +2,7 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.AdmitStatusEnum;
@@ -12,6 +13,8 @@ import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.patient.dto.InpatientLeaveDTO;
@@ -32,7 +35,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -59,7 +61,7 @@ import java.util.Set;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InpatientLeaveServiceImpl implements InpatientLeaveService {
+public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapper, BizInpatientLeave> implements InpatientLeaveService {
     private static final int REASON_MAX = 500;
     private static final int DEST_MAX = 200;
     private static final int NOTE_MAX = 500;
@@ -88,16 +90,12 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
      */
     private static final int MAX_HOURS_FALLBACK = 72;
     private final DeptScopeProvider deptScopeProvider;
-    private final BizInpatientLeaveMapper leaveMapper;
+    private final BizInpatientLeaveMapper bizInpatientLeaveMapper;
     private final RedisSequenceService redisSequenceService;
-    private final EmrSignatureService signatureService;
+    private final EmrSignatureService emrSignatureService;
     private final SysConfigMapper sysConfigMapper;
 
     // 查询
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
 
     private static LocalDateTime parse(String text) {
         if (text == null || text.isEmpty()) {
@@ -107,58 +105,16 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
                 DateFormats.DATETIME);
     }
 
-    private static LocalDateTime atStart(java.time.LocalDate date) {
-        return date == null ? null : date.atStartOfDay();
-    }
-
-    /**
-     * 按日期过滤必须补全天边界（AGENTS §3：datetime 恒大于当日 00:00 字符串）
-     */
-    private static LocalDateTime atEnd(java.time.LocalDate date) {
-        return date == null ? null : date.atTime(23, 59, 59);
-    }
-
     // 填写 / 审批 / 离院 / 销假 / 取消 / 超期处置 / 打印
-
-    private static Integer nvl(Integer v, int d) {
-        return v == null ? d : v;
-    }
-
-    private static String requireText(String text, String message) {
-        String t = trimToNull(text);
-        if (t == null) {
-            throw new BusinessException(message);
-        }
-        return t;
-    }
-
-    private static String trimToNull(String text) {
-        if (!StringUtils.hasText(text)) {
-            return null;
-        }
-        return text.trim();
-    }
-
-    private static String cut(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
-    private static String cutToNull(String text, int max) {
-        String t = trimToNull(text);
-        return t == null ? null : cut(t, max);
-    }
 
     @Override
     public PageResult<InpatientLeaveVO.Row> listPage(InpatientLeaveDTO.QueryPage query) {
         InpatientLeaveDTO.QueryPage q = query == null ? new InpatientLeaveDTO.QueryPage() : query;
-        Page<InpatientLeaveVO.Row> page = new Page<>(nvl(q.getPageNum(), 1), nvl(q.getPageSize(), 10));
+        Page<InpatientLeaveVO.Row> page = new Page<>(q.getPageNum(), q.getPageSize());
         List<Long> deptIds = scopedDeptIds(q.getDeptId());
-        List<InpatientLeaveVO.Row> records = leaveMapper.selectLeavePage(page,
-                trimToNull(q.getKeyword()), q.getLeaveType(), q.getLeaveStatus(), q.getOverdueOnly(),
-                atStart(q.getStartDate()), atEnd(q.getEndDate()), q.getDeptId(), deptIds);
+        List<InpatientLeaveVO.Row> records = bizInpatientLeaveMapper.selectLeavePage(page,
+                TextUtil.trimToNull(q.getKeyword()), q.getLeaveType(), q.getLeaveStatus(), q.getOverdueOnly(),
+                TimeUtil.dayStart(q.getStartDate()), TimeUtil.dayEnd(q.getEndDate()), q.getDeptId(), deptIds);
         for (InpatientLeaveVO.Row row : records) {
             applyOverdue(row);
         }
@@ -168,7 +124,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     @Override
     public InpatientLeaveVO.Detail getDetailById(Long id) {
         // 详情同样是数据范围内的东西：手写签名图、患方姓名关系、医师意见都在里面，读侧必须收口
-        InpatientLeaveVO.Detail detail = leaveMapper.selectLeaveDetail(id, scopedDeptIds(null));
+        InpatientLeaveVO.Detail detail = bizInpatientLeaveMapper.selectLeaveDetail(id, scopedDeptIds(null));
         if (detail == null) {
             throw new BusinessException("请假单不存在、已删除，或不在当前岗位的数据范围内");
         }
@@ -181,7 +137,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
 
     @Override
     public InpatientLeaveVO.Base base(Long admissionId) {
-        InpatientLeaveVO.Base base = leaveMapper.selectAdmissionBase(admissionId);
+        InpatientLeaveVO.Base base = bizInpatientLeaveMapper.selectAdmissionBase(admissionId);
         if (base == null) {
             throw new BusinessException("住院记录不存在");
         }
@@ -191,19 +147,19 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     @Override
     public List<InpatientLeaveVO.Inpatient> inpatients(String keyword, Integer limit) {
         int n = limit == null || limit <= 0 ? 200 : Math.min(limit, 200);
-        return leaveMapper.selectInpatientCandidates(trimToNull(keyword), scopedDeptIds(null), n);
+        return bizInpatientLeaveMapper.selectInpatientCandidates(TextUtil.trimToNull(keyword), scopedDeptIds(null), n);
     }
 
     @Override
     public InpatientLeaveVO.Stats stats() {
-        InpatientLeaveVO.Stats stats = leaveMapper.selectStats(scopedDeptIds(null));
+        InpatientLeaveVO.Stats stats = bizInpatientLeaveMapper.selectStats(scopedDeptIds(null));
         return stats == null ? new InpatientLeaveVO.Stats() : stats;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(InpatientLeaveDTO.Upsert dto) {
-        InpatientLeaveVO.Base snapshot = leaveMapper.selectAdmissionBase(dto.getAdmissionId());
+        InpatientLeaveVO.Base snapshot = bizInpatientLeaveMapper.selectAdmissionBase(dto.getAdmissionId());
         if (snapshot == null) {
             throw new BusinessException("住院记录不存在");
         }
@@ -257,19 +213,19 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         // 一般项目一律取服务端快照，不采信前端
         leave.setPatientId(snapshot.getPatientId());
         leave.setPatientName(snapshot.getPatientName());
-        leave.setPatientNo(cutToNull(snapshot.getPatientNo(), 32));
+        leave.setPatientNo(TextUtil.cutToNull(snapshot.getPatientNo(), 32));
         leave.setGender(snapshot.getGender());
         leave.setAge(snapshot.getAge());
         leave.setDeptId(snapshot.getDeptId());
-        leave.setDeptName(cutToNull(snapshot.getDeptName(), 100));
-        leave.setWardName(cutToNull(snapshot.getWardName(), 64));
-        leave.setBedNo(cutToNull(snapshot.getBedNo(), 16));
-        leave.setAdmissionNo(cutToNull(snapshot.getAdmissionNo(), 32));
+        leave.setDeptName(TextUtil.cutToNull(snapshot.getDeptName(), 100));
+        leave.setWardName(TextUtil.cutToNull(snapshot.getWardName(), 64));
+        leave.setBedNo(TextUtil.cutToNull(snapshot.getBedNo(), 16));
+        leave.setAdmissionNo(TextUtil.cutToNull(snapshot.getAdmissionNo(), 32));
 
         leave.setLeaveType(dto.getLeaveType());
-        leave.setReason(cut(trimToNull(dto.getReason()), REASON_MAX));
-        leave.setDestination(cut(trimToNull(dto.getDestination()), DEST_MAX));
-        leave.setCompanionName(cut(trimToNull(dto.getCompanionName()), NAME_MAX));
+        leave.setReason(TextUtil.cut(TextUtil.trimToNull(dto.getReason()), REASON_MAX));
+        leave.setDestination(TextUtil.cut(TextUtil.trimToNull(dto.getDestination()), DEST_MAX));
+        leave.setCompanionName(TextUtil.cut(TextUtil.trimToNull(dto.getCompanionName()), NAME_MAX));
         if (dto.getCompanionRelation() != null && !RELATIONS.contains(dto.getCompanionRelation())) {
             throw new BusinessException("随行人与患者的关系取值不合法（见字典 his_notice_relation）");
         }
@@ -279,7 +235,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         // —— 现象像「编辑功能坏了」。口径：编辑时留空＝沿用原值（电话是必填项，没有「清空」语义）；
         // 新建时留空＝参数错误。
         if (StringUtils.hasText(dto.getCompanionPhone())) {
-            leave.setCompanionPhone(cut(dto.getCompanionPhone().trim(), PHONE_MAX));
+            leave.setCompanionPhone(TextUtil.cut(dto.getCompanionPhone().trim(), PHONE_MAX));
         } else if (!StringUtils.hasText(leave.getCompanionPhone())) {
             // ①条件必填：编辑留空＝沿用原值，只有新建（原值也为空）才报错，DTO 注解表达不了这层分支
             throw new BusinessException("随行人联系电话不能为空");
@@ -287,14 +243,14 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         leave.setExpectedLeaveTime(expectedLeave);
         leave.setExpectedReturnTime(expectedReturn);
         if (isNew) {
-            leave.setApplyTime(now());
+            leave.setApplyTime(TimeUtil.nowSeconds());
             CurrentUser operatorUser = UserUtils.getCurrentUser();
             if (operatorUser == null) {
                 throw new BusinessException("当前用户信息不存在");
             }
-            leave.setApplyBy(cutToNull(operatorUser.getRealName(), 64));
+            leave.setApplyBy(TextUtil.cutToNull(operatorUser.getRealName(), 64));
         }
-        leave.setRemark(cutToNull(dto.getRemark(), REASON_MAX));
+        leave.setRemark(TextUtil.cutToNull(dto.getRemark(), REASON_MAX));
         saveLeave(leave, isNew);
         return leave.getId();
     }
@@ -308,7 +264,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
                     + BizInpatientLeave.statusText(leave.getLeaveStatus()) + "」");
         }
         // 审批必须患者在院：人已出院再批一张外出单是编造医疗行为
-        InpatientLeaveVO.Base snapshot = leaveMapper.selectAdmissionBase(leave.getAdmissionId());
+        InpatientLeaveVO.Base snapshot = bizInpatientLeaveMapper.selectAdmissionBase(leave.getAdmissionId());
         if (snapshot == null || !Objects.equals(snapshot.getAdmitStatus(), AdmitStatusEnum.IN_HOSPITAL.getCode())) {
             throw new BusinessException("患者已不在院，不能审批请假单（请假必须发生在住院期间）");
         }
@@ -328,14 +284,14 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         boolean contentSaved = false;
         if (Boolean.TRUE.equals(dto.getAllow())) {
             // ①条件必填：仅批准分支必填，@NotNull 会把合法的拒绝请求挡成 400
-            String advice = requireText(dto.getDoctorAdvice(), "批准必须填写医师意见（病情评估：是否允许外出、外出期间注意事项）");
+            String advice = TextUtil.requireTrimmed(dto.getDoctorAdvice(), "批准必须填写医师意见（病情评估：是否允许外出、外出期间注意事项）");
             // 医师意见＋审批医师必须**先落库**再签名：provider 的 load() 是从库里读记录算摘要的，
             // 先签名后落库会让「批的是什么、谁批的」在签名那一刻是空值，事后验签必报内容已变更。
             // （同 sql/161：那里 doctorName 在签发前已在库且强制同一个人，所以天然不会漂）
-            leave.setDoctorAdvice(cut(advice, ADVICE_MAX));
+            leave.setDoctorAdvice(TextUtil.cut(advice, ADVICE_MAX));
             leave.setRejectReason(null);
             leave.setDoctorId(me);
-            leave.setDoctorName(cut(myName, NAME_MAX));
+            leave.setDoctorName(TextUtil.cut(myName, NAME_MAX));
             saveLeave(leave, false);
             contentSaved = true;
 
@@ -351,17 +307,17 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
                 cmd.setSignerDeptId(user.getDeptId());
                 cmd.setSignerDeptName(user.getDeptName());
             }
-            cmd.setSignerTitle(cutToNull(leaveMapper.selectEmployeeTitle(me), 50));
+            cmd.setSignerTitle(TextUtil.cutToNull(bizInpatientLeaveMapper.selectEmployeeTitle(me), 50));
             cmd.setClientIp(dto.getClientIp());
             cmd.setRemark("住院请假单审批（" + BizInpatientLeave.typeText(leave.getLeaveType()) + "）");
             try {
-                SignatureVO sig = signatureService.sign(cmd);
+                SignatureVO sig = emrSignatureService.sign(cmd);
                 // 锚点三件套必须在这里一起写：provider 的 applySignAnchor 已把 sign_status 置 1，
                 // 但下面还要用**签名前读出的实体**整行 updateById，漏写就把它冲回 0（签名失效、单据像没锁）。
                 leave.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
                 leave.setSignId(sig.getId());
                 leave.setSignedTime(sig.getSignedTime() == null ? null
-                        : sig.getSignedTime().truncatedTo(ChronoUnit.SECONDS));
+                        : TimeUtil.toSeconds(sig.getSignedTime()));
             } catch (BusinessException e) {
                 throw new BusinessException("请假单审批签名失败（" + leave.getLeaveNo() + "）：" + e.getMessage());
             }
@@ -369,12 +325,12 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         } else {
             leave.setLeaveStatus(LeaveStatusEnum.REJECTED.getCode());
             // ①条件必填：仅拒绝分支必填理由，@NotNull 会把合法的批准请求挡成 400
-            leave.setRejectReason(cut(requireText(dto.getRejectReason(), "拒绝必须填写理由（写清病情为什么不允许外出）"), REASON_MAX));
-            leave.setDoctorAdvice(cutToNull(dto.getDoctorAdvice(), ADVICE_MAX));
+            leave.setRejectReason(TextUtil.cut(TextUtil.requireTrimmed(dto.getRejectReason(), "拒绝必须填写理由（写清病情为什么不允许外出）"), REASON_MAX));
+            leave.setDoctorAdvice(TextUtil.cutToNull(dto.getDoctorAdvice(), ADVICE_MAX));
             leave.setDoctorId(me);
-            leave.setDoctorName(cut(myName, NAME_MAX));
+            leave.setDoctorName(TextUtil.cut(myName, NAME_MAX));
         }
-        leave.setApproveTime(now());
+        leave.setApproveTime(TimeUtil.nowSeconds());
         // contentSaved 分支已写过一次，这里补写状态/时间；幂等无害
         saveLeave(leave, false);
         if (contentSaved) {
@@ -390,7 +346,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
             throw new BusinessException("只有「已批准」的请假单能登记离院，当前为「"
                     + BizInpatientLeave.statusText(leave.getLeaveStatus()) + "」（未批准不可放人）");
         }
-        InpatientLeaveVO.Base snapshot = leaveMapper.selectAdmissionBase(leave.getAdmissionId());
+        InpatientLeaveVO.Base snapshot = bizInpatientLeaveMapper.selectAdmissionBase(leave.getAdmissionId());
         if (snapshot == null || !Objects.equals(snapshot.getAdmitStatus(), AdmitStatusEnum.IN_HOSPITAL.getCode())) {
             throw new BusinessException("患者已不在院，不能登记离院");
         }
@@ -400,24 +356,24 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
             // ③业务规则：码值合法性（非空已由 DTO @NotNull 收口）
             throw new BusinessException("确认人与患者的关系取值不合法（见字典 his_notice_relation，责任界定必填）");
         }
-        String signature = trimToNull(dto.getConfirmSignature());
+        String signature = TextUtil.trimToNull(dto.getConfirmSignature());
         if (!signature.startsWith("data:image/png;base64,")) {
             throw new BusinessException("手写签名必须是画板生成的 PNG 图片");
         }
         if (signature.length() > SIGNATURE_MAX) {
             throw new BusinessException("手写签名图片过大，请清空画板后重新签名");
         }
-        LocalDateTime actualLeave = dto.getActualLeaveTime() == null ? now() : TimeUtil.toSeconds(dto.getActualLeaveTime());
-        if (actualLeave.isAfter(now())) {
+        LocalDateTime actualLeave = dto.getActualLeaveTime() == null ? TimeUtil.nowSeconds() : TimeUtil.toSeconds(dto.getActualLeaveTime());
+        if (actualLeave.isAfter(TimeUtil.nowSeconds())) {
             throw new BusinessException("实际离院时间不能晚于当前时间");
         }
         if (leave.getExpectedLeaveTime() != null
                 && actualLeave.isBefore(leave.getExpectedLeaveTime().minusHours(2))) {
             throw new BusinessException("实际离院时间比预计离院时间早 2 小时以上，请核对（登记错了会造成在途时间虚增）");
         }
-        leave.setConfirmName(cut(trimToNull(dto.getConfirmName()), NAME_MAX));
+        leave.setConfirmName(TextUtil.cut(TextUtil.trimToNull(dto.getConfirmName()), NAME_MAX));
         leave.setConfirmRelation(dto.getConfirmRelation());
-        leave.setConfirmPhone(cut(trimToNull(dto.getConfirmPhone()), PHONE_MAX));
+        leave.setConfirmPhone(TextUtil.cut(TextUtil.trimToNull(dto.getConfirmPhone()), PHONE_MAX));
         leave.setConfirmSignature(signature);
         leave.setConfirmTime(actualLeave);
         leave.setActualLeaveTime(actualLeave);
@@ -438,13 +394,13 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
                     + BizInpatientLeave.statusText(leave.getLeaveStatus()) + "」");
         }
         assertDeptAccessible(leave.getDeptId());
-        LocalDateTime now = now();
+        LocalDateTime now = TimeUtil.nowSeconds();
         if (leave.getActualLeaveTime() != null && now.isBefore(leave.getActualLeaveTime())) {
             throw new BusinessException("返回时间不能早于实际离院时间");
         }
         leave.setActualReturnTime(now);
-        leave.setReturnNote(cutToNull(dto.getReturnNote(), NOTE_MAX));
-        leave.setReturnBy(cutToNull(operatorUser.getRealName(), 64));
+        leave.setReturnNote(TextUtil.cutToNull(dto.getReturnNote(), NOTE_MAX));
+        leave.setReturnBy(TextUtil.cutToNull(operatorUser.getRealName(), 64));
         leave.setLeaveStatus(LeaveStatusEnum.RETURNED.getCode());
         saveLeave(leave, false);
     }
@@ -467,9 +423,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         }
         assertDeptAccessible(leave.getDeptId());
         leave.setLeaveStatus(LeaveStatusEnum.CANCELLED.getCode());
-        leave.setCancelReason(cut(trimToNull(dto.getCancelReason()), REASON_MAX));
-        leave.setCancelBy(cutToNull(operatorUser.getRealName(), 64));
-        leave.setCancelTime(now());
+        leave.setCancelReason(TextUtil.cut(TextUtil.trimToNull(dto.getCancelReason()), REASON_MAX));
+        leave.setCancelBy(TextUtil.cutToNull(operatorUser.getRealName(), 64));
+        leave.setCancelTime(TimeUtil.nowSeconds());
         saveLeave(leave, false);
     }
 
@@ -495,9 +451,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
             throw new BusinessException("上报对象取值不合法（见字典 his_leave_report；联系不上必须升级上报）");
         }
         leave.setOverdueContactResult(dto.getContactResult());
-        leave.setOverdueContactNote(cutToNull(dto.getContactNote(), NOTE_MAX));
-        leave.setOverdueContactTime(now());
-        leave.setOverdueContactBy(cutToNull(operatorUser.getRealName(), 64));
+        leave.setOverdueContactNote(TextUtil.cutToNull(dto.getContactNote(), NOTE_MAX));
+        leave.setOverdueContactTime(TimeUtil.nowSeconds());
+        leave.setOverdueContactBy(TextUtil.cutToNull(operatorUser.getRealName(), 64));
         leave.setReportTo(dto.getReportTo());
         saveLeave(leave, false);
     }
@@ -515,13 +471,13 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
             throw new BusinessException("只有「已离院/已返回」的请假单打印承诺书（未离院的是没有患方签字的半张纸）");
         }
         leave.setPrinterName(operatorUser.getRealName());
-        leave.setPrintCount(nvl(leave.getPrintCount(), 0) + 1);
-        leave.setLastPrintTime(now());
+        leave.setPrintCount(NumUtil.orDefault(leave.getPrintCount(), 0) + 1);
+        leave.setLastPrintTime(TimeUtil.nowSeconds());
         saveLeave(leave, false);
     }
 
     private List<BizInpatientLeave> selectActiveLeaves(Long admissionId) {
-        return leaveMapper.selectList(new LambdaQueryWrapper<BizInpatientLeave>()
+        return bizInpatientLeaveMapper.selectList(new LambdaQueryWrapper<BizInpatientLeave>()
                 .eq(BizInpatientLeave::getAdmissionId, admissionId)
                 .in(BizInpatientLeave::getLeaveStatus,
                         LeaveStatusEnum.PENDING.getCode(), LeaveStatusEnum.APPROVED.getCode(), LeaveStatusEnum.LEFT.getCode())
@@ -530,7 +486,7 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     }
 
     private BizInpatientLeave requireLeave(Long id) {
-        BizInpatientLeave leave = id == null ? null : leaveMapper.selectById(id);
+        BizInpatientLeave leave = id == null ? null : bizInpatientLeaveMapper.selectById(id);
         if (leave == null) {
             throw new BusinessException("请假单不存在或已删除");
         }
@@ -635,9 +591,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
 
     private void saveLeave(BizInpatientLeave leave, boolean isNew) {
         if (isNew) {
-            leaveMapper.insert(leave);
+            bizInpatientLeaveMapper.insert(leave);
         } else {
-            leaveMapper.updateById(leave);
+            bizInpatientLeaveMapper.updateById(leave);
         }
     }
 

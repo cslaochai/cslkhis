@@ -2,9 +2,11 @@ package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TimeUtil;
 import com.his.operation.dto.AnesthesiaVisitFinishDTO;
 import com.his.operation.dto.AnesthesiaVisitQueryPageDTO;
 import com.his.operation.dto.AnesthesiaVisitUpsertDTO;
@@ -28,8 +30,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
@@ -38,24 +38,20 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
+public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMapper, BizAnesthesiaVisit> implements AnesthesiaVisitService {
 
-    private final BizAnesthesiaVisitMapper visitMapper;
+    private final BizAnesthesiaVisitMapper bizAnesthesiaVisitMapper;
 
-    private final BizOperationApplyMapper applyMapper;
+    private final BizOperationApplyMapper bizOperationApplyMapper;
 
     private DictCacheService dictCacheService;
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
 
     @Override
     public IPage<AnesthesiaVisitVO> listPage(AnesthesiaVisitQueryPageDTO query) {
         if (query == null) {
             query = new AnesthesiaVisitQueryPageDTO();
         }
-        IPage<AnesthesiaVisitVO> page = visitMapper.selectVisitPage(
+        IPage<AnesthesiaVisitVO> page = bizAnesthesiaVisitMapper.selectVisitPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         page.getRecords().forEach(this::decorate);
         return page;
@@ -67,7 +63,7 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
         if (visitId == null) {
             throw new BusinessException("访视单ID不能为空");
         }
-        AnesthesiaVisitVO vo = visitMapper.selectVOById(visitId);
+        AnesthesiaVisitVO vo = bizAnesthesiaVisitMapper.selectVOById(visitId);
         if (vo == null) {
             throw new BusinessException("麻醉术前访视单不存在");
         }
@@ -81,7 +77,7 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
         if (applyId == null) {
             throw new BusinessException("手术申请单ID不能为空");
         }
-        AnesthesiaVisitVO vo = visitMapper.selectVOByApply(applyId);
+        AnesthesiaVisitVO vo = bizAnesthesiaVisitMapper.selectVOByApply(applyId);
         if (vo != null) {
             decorate(vo);
         }
@@ -97,7 +93,7 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
         }
         validateHighRisk(dto);
 
-        BizOperationApply apply = applyMapper.selectById(dto.getApplyId());
+        BizOperationApply apply = bizOperationApplyMapper.selectById(dto.getApplyId());
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
         }
@@ -108,7 +104,7 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
         boolean create = dto.getId() == null;
         BizAnesthesiaVisit entity;
         if (create) {
-            if (visitMapper.countByApply(dto.getApplyId()) > 0) {
+            if (bizAnesthesiaVisitMapper.countByApply(dto.getApplyId()) > 0) {
                 throw new BusinessException("该手术已有术前访视单，不能重复建档（一台手术一份评估，重复会打架）");
             }
             entity = new BizAnesthesiaVisit();
@@ -130,7 +126,7 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
             entity.setVisitDoctorId(operatorUser.getEmployeeId());
             entity.setVisitDoctorName(operatorUser.getRealName());
         } else {
-            entity = visitMapper.selectById(dto.getId());
+            entity = bizAnesthesiaVisitMapper.selectById(dto.getId());
             if (entity == null) {
                 throw new BusinessException("麻醉术前访视单不存在");
             }
@@ -168,9 +164,9 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
         entity.setVisitDoctorName(operatorUser.getRealName());
 
         if (create) {
-            visitMapper.insert(entity);
+            bizAnesthesiaVisitMapper.insert(entity);
         } else {
-            visitMapper.updateById(entity);
+            bizAnesthesiaVisitMapper.updateById(entity);
         }
         log.info("{}麻醉术前访视 visitNo={} applyNo={} ASA={} 困难气道={} 结论={} 访视医师={}",
                 create ? "新建" : "修改", entity.getVisitNo(), apply.getApplyNo(),
@@ -187,7 +183,7 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizAnesthesiaVisit entity = visitMapper.selectById(dto.getVisitId());
+        BizAnesthesiaVisit entity = bizAnesthesiaVisitMapper.selectById(dto.getVisitId());
         if (entity == null) {
             throw new BusinessException("麻醉术前访视单不存在");
         }
@@ -204,8 +200,8 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
         entity.setVisitStatus(1);
         entity.setVisitDoctorId(operatorUser.getEmployeeId());
         entity.setVisitDoctorName(operatorUser.getRealName());
-        entity.setVisitTime(now());
-        visitMapper.updateById(entity);
+        entity.setVisitTime(TimeUtil.nowSeconds());
+        bizAnesthesiaVisitMapper.updateById(entity);
         log.info("完成麻醉术前访视 visitNo={} 结论={}（{}）访视医师={}",
                 entity.getVisitNo(), VisitConclusionEnum.labelOrUnknown(dto.getConclusion()),
                 StringUtils.hasText(dto.getConclusionNote()) ? dto.getConclusionNote() : "无补充说明", operatorUser.getRealName());
@@ -216,7 +212,7 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
         if (applyId == null) {
             return false;
         }
-        AnesthesiaVisitVO vo = visitMapper.selectVOByApply(applyId);
+        AnesthesiaVisitVO vo = bizAnesthesiaVisitMapper.selectVOByApply(applyId);
         return vo != null
                 && Integer.valueOf(1).equals(vo.getVisitStatus())
                 && Integer.valueOf(VisitConclusionEnum.OK.getCode()).equals(vo.getConclusion());
@@ -226,7 +222,7 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
 
     @Override
     public long countFinishedWithoutVisit() {
-        return visitMapper.countFinishedWithoutVisit();
+        return bizAnesthesiaVisitMapper.countFinishedWithoutVisit();
     }
 
     private void decorate(AnesthesiaVisitVO vo) {
@@ -299,7 +295,7 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
 
     private String nextVisitNo() {
         String prefix = "MF" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = visitMapper.countByNoPrefix(prefix) + 1;
+        long seq = bizAnesthesiaVisitMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 

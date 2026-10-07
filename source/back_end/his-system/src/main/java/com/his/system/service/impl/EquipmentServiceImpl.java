@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.*;
 import com.his.system.entity.BizEquipmentMaintain;
 import com.his.system.entity.BizEquipmentMetering;
@@ -45,18 +46,15 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class EquipmentServiceImpl implements EquipmentService {
-    private final SysEquipmentMapper equipmentMapper;
-    private final BizEquipmentMaintainMapper maintainMapper;
-    private final BizEquipmentMeteringMapper meteringMapper;
+    private final SysEquipmentMapper sysEquipmentMapper;
+    private final BizEquipmentMaintainMapper bizEquipmentMaintainMapper;
+    private final BizEquipmentMeteringMapper bizEquipmentMeteringMapper;
     private DictCacheService dictCacheService;
 
     // 设备台账
-    private static String tr(String s) {
-        return s == null ? null : s.trim();
-    }
 
     public IPage<EquipmentVO> listPage(EquipmentQueryPageDTO q) {
-        String kw = tr(q.getKeyword());
+        String kw = TextUtil.trim(q.getKeyword());
         LambdaQueryWrapper<SysEquipment> w = new LambdaQueryWrapper<SysEquipment>()
                 .eq(q.getCategory() != null, SysEquipment::getCategory, q.getCategory())
                 .eq(q.getStatus() != null, SysEquipment::getStatus, q.getStatus())
@@ -66,7 +64,7 @@ public class EquipmentServiceImpl implements EquipmentService {
                         .or().like(SysEquipment::getModel, kw)
                         .or().like(SysEquipment::getDeptName, kw))
                 .orderByDesc(SysEquipment::getId);
-        IPage<SysEquipment> page = equipmentMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
+        IPage<SysEquipment> page = sysEquipmentMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
         Map<Long, LocalDate> meteringMap = latestMeteringValidMap(
                 page.getRecords().stream().map(SysEquipment::getId).toList());
         return page.convert(e -> toVo(e, meteringMap.get(e.getId())));
@@ -75,13 +73,13 @@ public class EquipmentServiceImpl implements EquipmentService {
     public EquipmentVO getDetailById(Long equipmentId) {
         SysEquipment e = requireEquipment(equipmentId);
         EquipmentVO vo = toVo(e, latestMeteringValidMap(List.of(equipmentId)).get(equipmentId));
-        vo.setRecentMaintains(maintainMapper.selectList(new LambdaQueryWrapper<BizEquipmentMaintain>()
+        vo.setRecentMaintains(bizEquipmentMaintainMapper.selectList(new LambdaQueryWrapper<BizEquipmentMaintain>()
                         .eq(BizEquipmentMaintain::getEquipmentId, equipmentId)
                         .orderByDesc(BizEquipmentMaintain::getMaintainDate)
                         .orderByDesc(BizEquipmentMaintain::getId)
                         .last("LIMIT 10"))
                 .stream().map(this::toMaintainVo).toList());
-        vo.setRecentMeterings(meteringMapper.selectList(new LambdaQueryWrapper<BizEquipmentMetering>()
+        vo.setRecentMeterings(bizEquipmentMeteringMapper.selectList(new LambdaQueryWrapper<BizEquipmentMetering>()
                         .eq(BizEquipmentMetering::getEquipmentId, equipmentId)
                         .orderByDesc(BizEquipmentMetering::getMeteringDate)
                         .orderByDesc(BizEquipmentMetering::getId)
@@ -97,7 +95,7 @@ public class EquipmentServiceImpl implements EquipmentService {
                 .eq(q.getMaintainType() != null, BizEquipmentMaintain::getMaintainType, q.getMaintainType())
                 .orderByDesc(BizEquipmentMaintain::getMaintainDate)
                 .orderByDesc(BizEquipmentMaintain::getId);
-        return maintainMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
+        return bizEquipmentMaintainMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
                 .convert(this::toMaintainVo);
     }
 
@@ -119,43 +117,43 @@ public class EquipmentServiceImpl implements EquipmentService {
         m.setMaintainDate(dto.getMaintainDate());
         m.setNextMaintainDate(dto.getNextMaintainDate());
         m.setCost(dto.getCost());
-        m.setFaultDesc(tr(dto.getFaultDesc()));
-        m.setHandleResult(tr(dto.getHandleResult()));
+        m.setFaultDesc(TextUtil.trim(dto.getFaultDesc()));
+        m.setHandleResult(TextUtil.trim(dto.getHandleResult()));
         m.setMaintainResult(dto.getMaintainResult() == null
                 ? MaintainResultEnum.NORMAL.getCode() : dto.getMaintainResult());
         m.setHandlerName(StringUtils.hasText(dto.getHandlerName()) ? dto.getHandlerName().trim()
                 : UserUtils.getCurrentUser().getRealName());
         m.setCreateBy(UserUtils.getCurrentUser().getRealName());
-        maintainMapper.insert(m);
+        bizEquipmentMaintainMapper.insert(m);
 
         // 回写档案最近维保日期（维保闭环的关键动作）；updateTime 由实体 @TableField 自动填充
         e.setLastMaintainDate(dto.getMaintainDate());
         e.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        equipmentMapper.updateById(e);
+        sysEquipmentMapper.updateById(e);
         return toMaintainVo(m);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void maintainDelete(Long id) {
-        BizEquipmentMaintain m = maintainMapper.selectById(id);
+        BizEquipmentMaintain m = bizEquipmentMaintainMapper.selectById(id);
         if (m == null || Objects.equals(m.getDelFlag(), 1)) {
             throw new BusinessException("维保记录不存在或已删除");
         }
-        maintainMapper.deleteById(id);
+        bizEquipmentMaintainMapper.deleteById(id);
         // 按剩余记录重算最近维保日期；无剩余记录时保留原值（不猜史实）
-        BizEquipmentMaintain latest = maintainMapper.selectList(new LambdaQueryWrapper<BizEquipmentMaintain>()
+        BizEquipmentMaintain latest = bizEquipmentMaintainMapper.selectList(new LambdaQueryWrapper<BizEquipmentMaintain>()
                         .eq(BizEquipmentMaintain::getEquipmentId, m.getEquipmentId())
                         .orderByDesc(BizEquipmentMaintain::getMaintainDate)
                         .orderByDesc(BizEquipmentMaintain::getId)
                         .last("LIMIT 1"))
                 .stream().findFirst().orElse(null);
         if (latest != null) {
-            SysEquipment e = equipmentMapper.selectById(m.getEquipmentId());
+            SysEquipment e = sysEquipmentMapper.selectById(m.getEquipmentId());
             if (e != null && !Objects.equals(e.getDelFlag(), 1)
                     && !Objects.equals(e.getLastMaintainDate(), latest.getMaintainDate())) {
                 e.setLastMaintainDate(latest.getMaintainDate());
                 e.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-                equipmentMapper.updateById(e);
+                sysEquipmentMapper.updateById(e);
             }
         }
     }
@@ -167,7 +165,7 @@ public class EquipmentServiceImpl implements EquipmentService {
                 .eq(q.getMeteringType() != null, BizEquipmentMetering::getMeteringType, q.getMeteringType())
                 .orderByDesc(BizEquipmentMetering::getMeteringDate)
                 .orderByDesc(BizEquipmentMetering::getId);
-        return meteringMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
+        return bizEquipmentMeteringMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
                 .convert(this::toMeteringVo);
     }
 
@@ -189,24 +187,24 @@ public class EquipmentServiceImpl implements EquipmentService {
         m.setValidUntil(dto.getValidUntil());
         m.setMeteringResult(dto.getMeteringResult() == null
                 ? MeteringResultEnum.QUALIFIED.getCode() : dto.getMeteringResult());
-        m.setCertNo(tr(dto.getCertNo()));
-        m.setAgency(tr(dto.getAgency()));
+        m.setCertNo(TextUtil.trim(dto.getCertNo()));
+        m.setAgency(TextUtil.trim(dto.getAgency()));
         m.setCreateBy(UserUtils.getCurrentUser().getRealName());
-        meteringMapper.insert(m);
+        bizEquipmentMeteringMapper.insert(m);
         return toMeteringVo(m);
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void meteringDelete(Long id) {
-        BizEquipmentMetering m = meteringMapper.selectById(id);
+        BizEquipmentMetering m = bizEquipmentMeteringMapper.selectById(id);
         if (m == null || Objects.equals(m.getDelFlag(), 1)) {
             throw new BusinessException("计量记录不存在或已删除");
         }
-        meteringMapper.deleteById(id);
+        bizEquipmentMeteringMapper.deleteById(id);
     }
 
     private SysEquipment requireEquipment(Long equipmentId) {
-        SysEquipment e = equipmentMapper.selectById(equipmentId);
+        SysEquipment e = sysEquipmentMapper.selectById(equipmentId);
         if (e == null || Objects.equals(e.getDelFlag(), 1)) {
             throw new BusinessException("设备档案不存在（id=" + equipmentId + "）");
         }
@@ -220,7 +218,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         if (equipmentIds.isEmpty()) {
             return Map.of();
         }
-        return meteringMapper.selectList(new LambdaQueryWrapper<BizEquipmentMetering>()
+        return bizEquipmentMeteringMapper.selectList(new LambdaQueryWrapper<BizEquipmentMetering>()
                         .in(BizEquipmentMetering::getEquipmentId, equipmentIds)
                         .orderByAsc(BizEquipmentMetering::getValidUntil))
                 .stream()

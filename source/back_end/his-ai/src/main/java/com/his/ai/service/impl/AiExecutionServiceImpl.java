@@ -44,7 +44,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
     private static final String SELF_CORRECT_HINT =
             "上一次输出无法解析为 JSON：%s。请只输出合法 JSON 对象，不要任何解释文字，不要用 markdown 代码块包裹。";
 
-    private final AiConfigProvider configProvider;
+    private final AiConfigProvider aiConfigProvider;
 
     private final PromptTemplate promptTemplate;
 
@@ -54,7 +54,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
 
     private final AiDegradeGuard degradeGuard;
 
-    private final AiAuditService auditService;
+    private final AiAuditService aiAuditService;
 
     /**
      * 执行一次 AI 能力调用。
@@ -71,9 +71,9 @@ public class AiExecutionServiceImpl implements AiExecutionService {
         String capabilityKey = call.getCapabilityKey();
         String operator = operatorUser.getRealName();
 
-        if (!configProvider.isCapabilityEnabled(capabilityKey)) {
+        if (!aiConfigProvider.isCapabilityEnabled(capabilityKey)) {
             record(call, operator, null, AiCallStatusEnum.DEGRADED, 0,
-                    configProvider.capabilityDisabledReason(capabilityKey));
+                    aiConfigProvider.capabilityDisabledReason(capabilityKey));
             degradeGuard.recordDegrade(capabilityKey);
             return Optional.empty();
         }
@@ -99,8 +99,8 @@ public class AiExecutionServiceImpl implements AiExecutionService {
         messages.add(AiMessageDTO.system(prompt.getSystemText()));
         messages.add(AiMessageDTO.user(prompt.getUserText()));
 
-        int timeoutMs = configProvider.timeoutOf(capabilityKey);
-        String model = configProvider.modelOf(capabilityKey, call.isUseLiteModel());
+        int timeoutMs = aiConfigProvider.timeoutOf(capabilityKey);
+        String model = aiConfigProvider.modelOf(capabilityKey, call.isUseLiteModel());
         long start = System.currentTimeMillis();
 
         try {
@@ -131,7 +131,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
             entity.setPromptTokens(result.getPromptTokens());
             entity.setCompletionTokens(result.getCompletionTokens());
             entity.setOutputDigest(AiAuditDigestSupport.buildDigest(parsed));
-            auditService.record(entity);
+            aiAuditService.record(entity);
 
             return Optional.ofNullable(parsed);
         } catch (LlmException ex) {
@@ -172,7 +172,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
         entity.setCapabilityKey(call.getCapabilityKey());
         entity.setBizType(call.getBizType());
         entity.setBizId(call.getBizId());
-        entity.setProvider(configProvider.get().getProvider());
+        entity.setProvider(aiConfigProvider.get().getProvider());
         entity.setPromptVersion(promptVersion);
         entity.setInputDigest(AiMaskUtils.digest(call.getInputDigest()));
         entity.setOperator(operator);
@@ -194,7 +194,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
         entity.setLatencyMs(latencyMs);
         entity.setModel(model);
         entity.setErrorMsg(AiMaskUtils.digest(errorMsg, 480));
-        auditService.record(entity);
+        aiAuditService.record(entity);
     }
 
     /**
@@ -205,7 +205,7 @@ public class AiExecutionServiceImpl implements AiExecutionService {
      * 所以这里按「配置问题 → 熔断 → 具体失败原因」三段递进地往下找原因。
      */
     public String degradeReasonOf(String capabilityKey) {
-        String disabled = configProvider.capabilityDisabledReason(capabilityKey);
+        String disabled = aiConfigProvider.capabilityDisabledReason(capabilityKey);
         if (StringUtils.hasText(disabled)) {
             return disabled;
         }

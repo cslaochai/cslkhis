@@ -3,11 +3,7 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.system.dto.SysInspectionItemQueryPageDTO;
-import com.his.system.dto.SysInspectionItemUpsertDTO;
-import com.his.system.dto.SysLaboratoryItemDetailUpsertDTO;
-import com.his.system.dto.SysLaboratoryItemQueryPageDTO;
-import com.his.system.dto.SysLaboratoryItemUpsertDTO;
+import com.his.system.dto.*;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.entity.SysLaboratoryItem;
 import com.his.system.entity.SysLaboratoryItemDetail;
@@ -15,11 +11,7 @@ import com.his.system.mapper.SysInspectionItemMapper;
 import com.his.system.mapper.SysLaboratoryItemDetailMapper;
 import com.his.system.mapper.SysLaboratoryItemMapper;
 import com.his.system.service.MedicalItemService;
-import com.his.system.vo.SysInspectionItemSelectListVO;
-import com.his.system.vo.SysInspectionItemVO;
-import com.his.system.vo.SysLaboratoryItemDetailVO;
-import com.his.system.vo.SysLaboratoryItemSelectListVO;
-import com.his.system.vo.SysLaboratoryItemVO;
+import com.his.system.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -32,9 +24,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MedicalItemServiceImpl implements MedicalItemService {
 
-    private final SysInspectionItemMapper inspectionItemMapper;
-    private final SysLaboratoryItemMapper laboratoryItemMapper;
-    private final SysLaboratoryItemDetailMapper laboratoryItemDetailMapper;
+    private final SysInspectionItemMapper sysInspectionItemMapper;
+    private final SysLaboratoryItemMapper sysLaboratoryItemMapper;
+    private final SysLaboratoryItemDetailMapper sysLaboratoryItemDetailMapper;
 
     @Override
     public PageResult<SysInspectionItemVO> inspectionListPage(SysInspectionItemQueryPageDTO queryDTO) {
@@ -42,7 +34,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
         wrapper.like(StringUtils.hasText(queryDTO.getKeyword()), SysInspectionItem::getItemName, queryDTO.getKeyword())
                 .eq(queryDTO.getItemType() != null, SysInspectionItem::getItemType, queryDTO.getItemType())
                 .orderByAsc(SysInspectionItem::getItemCode);
-        Page<SysInspectionItem> page = inspectionItemMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
+        Page<SysInspectionItem> page = sysInspectionItemMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         List<SysInspectionItemVO> voList = page.getRecords().stream().map(i -> {
             SysInspectionItemVO vo = new SysInspectionItemVO();
             BeanUtils.copyProperties(i, vo);
@@ -62,7 +54,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
         if (limit != null && limit > 0) {
             wrapper.last("LIMIT " + Math.min(limit, 200));
         }
-        return inspectionItemMapper.selectList(wrapper).stream().map(i -> {
+        return sysInspectionItemMapper.selectList(wrapper).stream().map(i -> {
             SysInspectionItemSelectListVO vo = new SysInspectionItemSelectListVO();
             BeanUtils.copyProperties(i, vo);
             return vo;
@@ -71,7 +63,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
 
     @Override
     public SysInspectionItemVO getInspectionItem(Long id) {
-        SysInspectionItem item = inspectionItemMapper.selectById(id);
+        SysInspectionItem item = sysInspectionItemMapper.selectById(id);
         SysInspectionItemVO vo = new SysInspectionItemVO();
         BeanUtils.copyProperties(item, vo);
         return vo;
@@ -82,15 +74,15 @@ public class MedicalItemServiceImpl implements MedicalItemService {
         SysInspectionItem item = new SysInspectionItem();
         BeanUtils.copyProperties(upsertDTO, item);
         if (upsertDTO.getId() == null) {
-            inspectionItemMapper.insert(item);
+            sysInspectionItemMapper.insert(item);
         } else {
-            inspectionItemMapper.updateById(item);
+            sysInspectionItemMapper.updateById(item);
         }
     }
 
     @Override
     public void deleteInspectionItem(Long id) {
-        inspectionItemMapper.deleteById(id);
+        sysInspectionItemMapper.deleteById(id);
     }
 
     @Override
@@ -99,7 +91,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
         wrapper.like(StringUtils.hasText(queryDTO.getKeyword()), SysLaboratoryItem::getItemName, queryDTO.getKeyword())
                 .eq(queryDTO.getItemType() != null, SysLaboratoryItem::getItemType, queryDTO.getItemType())
                 .orderByAsc(SysLaboratoryItem::getItemCode);
-        Page<SysLaboratoryItem> page = laboratoryItemMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
+        Page<SysLaboratoryItem> page = sysLaboratoryItemMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         List<SysLaboratoryItemVO> voList = page.getRecords().stream().map(i -> {
             SysLaboratoryItemVO vo = new SysLaboratoryItemVO();
             BeanUtils.copyProperties(i, vo);
@@ -119,7 +111,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
         if (limit != null && limit > 0) {
             wrapper.last("LIMIT " + Math.min(limit, 200));
         }
-        return laboratoryItemMapper.selectList(wrapper).stream().map(i -> {
+        return sysLaboratoryItemMapper.selectList(wrapper).stream().map(i -> {
             SysLaboratoryItemSelectListVO vo = new SysLaboratoryItemSelectListVO();
             BeanUtils.copyProperties(i, vo);
             return vo;
@@ -128,7 +120,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
 
     @Override
     public SysLaboratoryItemVO getLaboratoryItem(Long id) {
-        SysLaboratoryItem item = laboratoryItemMapper.selectById(id);
+        SysLaboratoryItem item = sysLaboratoryItemMapper.selectById(id);
         SysLaboratoryItemVO vo = new SysLaboratoryItemVO();
         BeanUtils.copyProperties(item, vo);
         return vo;
@@ -139,15 +131,15 @@ public class MedicalItemServiceImpl implements MedicalItemService {
         SysLaboratoryItem item = new SysLaboratoryItem();
         BeanUtils.copyProperties(upsertDTO, item);
         if (upsertDTO.getId() == null) {
-            laboratoryItemMapper.insert(item);
+            sysLaboratoryItemMapper.insert(item);
         } else {
-            laboratoryItemMapper.updateById(item);
+            sysLaboratoryItemMapper.updateById(item);
         }
     }
 
     @Override
     public void deleteLaboratoryItem(Long id) {
-        laboratoryItemMapper.deleteById(id);
+        sysLaboratoryItemMapper.deleteById(id);
     }
 
     @Override
@@ -156,7 +148,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
         wrapper.eq(SysLaboratoryItemDetail::getLaboratoryItemId, laboratoryItemId)
                 .eq(SysLaboratoryItemDetail::getStatus, 1)
                 .orderByAsc(SysLaboratoryItemDetail::getSortOrder);
-        return laboratoryItemDetailMapper.selectList(wrapper).stream().map(d -> {
+        return sysLaboratoryItemDetailMapper.selectList(wrapper).stream().map(d -> {
             SysLaboratoryItemDetailVO vo = new SysLaboratoryItemDetailVO();
             BeanUtils.copyProperties(d, vo);
             return vo;
@@ -168,14 +160,14 @@ public class MedicalItemServiceImpl implements MedicalItemService {
         SysLaboratoryItemDetail detail = new SysLaboratoryItemDetail();
         BeanUtils.copyProperties(upsertDTO, detail);
         if (upsertDTO.getId() == null) {
-            laboratoryItemDetailMapper.insert(detail);
+            sysLaboratoryItemDetailMapper.insert(detail);
         } else {
-            laboratoryItemDetailMapper.updateById(detail);
+            sysLaboratoryItemDetailMapper.updateById(detail);
         }
     }
 
     @Override
     public void deleteLaboratoryDetail(Long id) {
-        laboratoryItemDetailMapper.deleteById(id);
+        sysLaboratoryItemDetailMapper.deleteById(id);
     }
 }

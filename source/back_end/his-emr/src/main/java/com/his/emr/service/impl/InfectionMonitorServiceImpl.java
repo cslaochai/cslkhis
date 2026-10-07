@@ -5,6 +5,8 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.emr.dto.InfectionMonitorDTO;
 import com.his.emr.entity.BizHandHygieneObs;
 import com.his.emr.entity.BizInfectionCase;
@@ -31,7 +33,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -51,11 +52,11 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InfectionMonitorServiceImpl implements InfectionMonitorService {
-    private final BizInfectionCaseMapper caseMapper;
-    private final BizInfectionMonitorMapper monitorMapper;
-    private final BizInfectionMonitorDailyMapper dailyMapper;
-    private final BizHandHygieneObsMapper handObsMapper;
-    private final RedisSequenceService sequenceService;
+    private final BizInfectionCaseMapper bizInfectionCaseMapper;
+    private final BizInfectionMonitorMapper bizInfectionMonitorMapper;
+    private final BizInfectionMonitorDailyMapper bizInfectionMonitorDailyMapper;
+    private final BizHandHygieneObsMapper bizHandHygieneObsMapper;
+    private final RedisSequenceService redisSequenceService;
     private DictCacheService dictCacheService;
 
     /**
@@ -65,13 +66,9 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         return den <= 0 ? 0.0 : (double) num / den;
     }
 
-    private static String tr(String s) {
-        return s == null ? null : s.trim();
-    }
-
     @Override
     public InfectionMonitorVO.CaseStats caseStats() {
-        List<BizInfectionCase> all = caseMapper.selectList(
+        List<BizInfectionCase> all = bizInfectionCaseMapper.selectList(
                 new LambdaQueryWrapper<BizInfectionCase>().orderByDesc(BizInfectionCase::getId));
         InfectionMonitorVO.CaseStats s = new InfectionMonitorVO.CaseStats();
         LocalDate today = LocalDate.now();
@@ -104,15 +101,15 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
                 .eq(q.getCaseSource() != null, BizInfectionCase::getCaseSource, q.getCaseSource())
                 .eq(q.getLeakFlag() != null, BizInfectionCase::getLeakFlag, q.getLeakFlag())
                 .and(StringUtils.hasText(q.getKeyword()), x -> x
-                        .like(BizInfectionCase::getCaseNo, tr(q.getKeyword()))
-                        .or().like(BizInfectionCase::getPatientName, tr(q.getKeyword()))
-                        .or().like(BizInfectionCase::getInfectionDiag, tr(q.getKeyword())))
+                        .like(BizInfectionCase::getCaseNo, TextUtil.trim(q.getKeyword()))
+                        .or().like(BizInfectionCase::getPatientName, TextUtil.trim(q.getKeyword()))
+                        .or().like(BizInfectionCase::getInfectionDiag, TextUtil.trim(q.getKeyword())))
                 .ge(q.getReportTimeStart() != null, BizInfectionCase::getReportTime, q.getReportTimeStart())
                 .le(q.getReportTimeEnd() != null, BizInfectionCase::getReportTime, q.getReportTimeEnd())
                 .orderByDesc(BizInfectionCase::getReportTime)
                 .orderByDesc(BizInfectionCase::getId);
-        List<BizInfectionCase> list = caseMapper.selectList(w);
-        return pageOf(list, q.getPageNo(), q.getPageSize(), this::toCaseRow);
+        List<BizInfectionCase> list = bizInfectionCaseMapper.selectList(w);
+        return pageOf(list, q.getPageNum(), q.getPageSize(), this::toCaseRow);
     }
 
     @Override
@@ -132,22 +129,22 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         if (dto.getVisitType() == 2 && dto.getInpId() == null) {
             throw new BusinessException("住院病例必须关联住院记录（inpId）");
         }
-        PatientSnapshotVO patient = caseMapper.selectPatientSnapshot(dto.getPatientId());
+        PatientSnapshotVO patient = bizInfectionCaseMapper.selectPatientSnapshot(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在：" + dto.getPatientId());
         }
         Long operatorId = UserUtils.getCurrentUser().getEmployeeId();
         String operatorName = UserUtils.getCurrentUser().getRealName();
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
 
         if (dto.getId() == null) {
             BizInfectionCase c = new BizInfectionCase();
-            c.setCaseNo(sequenceService.generateInfectionCaseNo());
+            c.setCaseNo(redisSequenceService.generateInfectionCaseNo());
             fillCase(c, dto, patient, operatorId, operatorName);
             c.setCaseStatus(InfectionCaseStatusEnum.PENDING.getCode());
             c.setLeakFlag(Integer.valueOf(1).equals(dto.getLeakFlag()) ? 1 : 0);
             c.setReportTime(now);
-            caseMapper.insert(c);
+            bizInfectionCaseMapper.insert(c);
             return c.getId();
         }
 
@@ -160,7 +157,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
             exists.setLeakFlag(YesOrNoEnum.YES.getCode());
         }
         exists.setReportTime(now);
-        caseMapper.updateById(exists);
+        bizInfectionCaseMapper.updateById(exists);
         return exists.getId();
     }
 
@@ -173,9 +170,9 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         }
         c.setCaseStatus(dto.getAuditResult());
         c.setAuditName(UserUtils.getCurrentUser().getRealName());
-        c.setAuditTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-        c.setAuditRemark(tr(dto.getAuditRemark()));
-        caseMapper.updateById(c);
+        c.setAuditTime(TimeUtil.nowSeconds());
+        c.setAuditRemark(TextUtil.trim(dto.getAuditRemark()));
+        bizInfectionCaseMapper.updateById(c);
     }
 
     private void fillCase(BizInfectionCase c, InfectionMonitorDTO.CaseUpsert dto,
@@ -190,25 +187,25 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         c.setInpId(dto.getInpId());
         // 发现科室：就诊锚点兜底，允许上报人改口径（上报人认定的事实优先）
         DeptSnapshotVO dept = dto.getVisitType() == 1
-                ? caseMapper.selectRegistDept(dto.getRegistId())
-                : caseMapper.selectInpDept(dto.getInpId());
+                ? bizInfectionCaseMapper.selectRegistDept(dto.getRegistId())
+                : bizInfectionCaseMapper.selectInpDept(dto.getInpId());
         if (dept != null) {
             c.setDeptId(dept.getDeptId());
             c.setDeptName(dept.getDeptName());
         }
         c.setCaseSource(dto.getCaseSource());
-        c.setInfectionSite(tr(dto.getInfectionSite()));
-        c.setInfectionDiag(tr(dto.getInfectionDiag()));
-        c.setPathogen(tr(dto.getPathogen()));
-        c.setSpecimen(tr(dto.getSpecimen()));
+        c.setInfectionSite(TextUtil.trim(dto.getInfectionSite()));
+        c.setInfectionDiag(TextUtil.trim(dto.getInfectionDiag()));
+        c.setPathogen(TextUtil.trim(dto.getPathogen()));
+        c.setSpecimen(TextUtil.trim(dto.getSpecimen()));
         c.setInfectDate(dto.getInfectDate());
         c.setReportBy(reportBy);
         c.setReportName(reportName);
-        c.setRemark(tr(dto.getRemark()));
+        c.setRemark(TextUtil.trim(dto.getRemark()));
     }
 
     private BizInfectionCase requireCase(Long id) {
-        BizInfectionCase c = caseMapper.selectById(id);
+        BizInfectionCase c = bizInfectionCaseMapper.selectById(id);
         if (c == null) {
             throw new BusinessException("院感病例不存在或已删除");
         }
@@ -222,12 +219,12 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
                 .eq(q.getStatus() != null, BizInfectionMonitor::getStatus, q.getStatus())
                 .eq(q.getInfectionFlag() != null, BizInfectionMonitor::getInfectionFlag, q.getInfectionFlag())
                 .and(StringUtils.hasText(q.getKeyword()), x -> x
-                        .like(BizInfectionMonitor::getMonitorNo, tr(q.getKeyword()))
-                        .or().like(BizInfectionMonitor::getPatientName, tr(q.getKeyword())))
+                        .like(BizInfectionMonitor::getMonitorNo, TextUtil.trim(q.getKeyword()))
+                        .or().like(BizInfectionMonitor::getPatientName, TextUtil.trim(q.getKeyword())))
                 .orderByDesc(BizInfectionMonitor::getInsertDate)
                 .orderByDesc(BizInfectionMonitor::getId);
-        List<BizInfectionMonitor> list = monitorMapper.selectList(w);
-        return pageOf(list, q.getPageNo(), q.getPageSize(), this::toMonitorRow);
+        List<BizInfectionMonitor> list = bizInfectionMonitorMapper.selectList(w);
+        return pageOf(list, q.getPageNum(), q.getPageSize(), this::toMonitorRow);
     }
 
     @Override
@@ -238,7 +235,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long monitorAdd(InfectionMonitorDTO.MonitorAdd dto) {
-        PatientSnapshotVO patient = caseMapper.selectPatientSnapshot(dto.getPatientId());
+        PatientSnapshotVO patient = bizInfectionCaseMapper.selectPatientSnapshot(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在：" + dto.getPatientId());
         }
@@ -246,12 +243,12 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
             throw new BusinessException("置入日期不能是未来");
         }
         BizInfectionMonitor m = new BizInfectionMonitor();
-        m.setMonitorNo(sequenceService.generateInfectionMonitorNo());
+        m.setMonitorNo(redisSequenceService.generateInfectionMonitorNo());
         m.setPatientId(dto.getPatientId());
         m.setPatientNo(patient.getPatientNo());
         m.setPatientName(patient.getPatientName());
         m.setMonitorType(dto.getMonitorType());
-        DeptSnapshotVO dept = monitorMapper.selectInpDept(dto.getInpId());
+        DeptSnapshotVO dept = bizInfectionMonitorMapper.selectInpDept(dto.getInpId());
         if (dept != null) {
             m.setDeptId(dept.getDeptId());
             m.setDeptName(dept.getDeptName());
@@ -259,8 +256,8 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         m.setInsertDate(dto.getInsertDate());
         m.setStatus(DeviceMonitorStatusEnum.IN_USE.getCode());
         m.setInfectionFlag(YesOrNoEnum.NO.getCode());
-        m.setRemark(tr(dto.getRemark()));
-        monitorMapper.insert(m);
+        m.setRemark(TextUtil.trim(dto.getRemark()));
+        bizInfectionMonitorMapper.insert(m);
         return m.getId();
     }
 
@@ -279,7 +276,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
             throw new BusinessException("打卡日期不能早于置入日期 " + m.getInsertDate());
         }
         // 打卡只增禁删：查重必须含软删行（无唯一键，防重全靠这一查）
-        if (dailyMapper.countByMonitorAndDate(m.getId(), date.toString()) > 0) {
+        if (bizInfectionMonitorDailyMapper.countByMonitorAndDate(m.getId(), date.toString()) > 0) {
             throw new BusinessException(date + " 已打卡，勿重复记录");
         }
         BizInfectionMonitorDaily d = new BizInfectionMonitorDaily();
@@ -287,9 +284,9 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         d.setMonitorDate(date);
         d.setRecorderId(UserUtils.getCurrentUser().getEmployeeId());
         d.setRecorderName(UserUtils.getCurrentUser().getRealName());
-        d.setRecordTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-        d.setRemark(tr(dto.getRemark()));
-        dailyMapper.insert(d);
+        d.setRecordTime(TimeUtil.nowSeconds());
+        d.setRemark(TextUtil.trim(dto.getRemark()));
+        bizInfectionMonitorDailyMapper.insert(d);
     }
 
     @Override
@@ -308,9 +305,9 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         m.setStatus(DeviceMonitorStatusEnum.REMOVED.getCode());
         m.setRemoveDate(dto.getRemoveDate());
         if (StringUtils.hasText(dto.getRemark())) {
-            m.setRemark(tr(dto.getRemark()));
+            m.setRemark(TextUtil.trim(dto.getRemark()));
         }
-        monitorMapper.updateById(m);
+        bizInfectionMonitorMapper.updateById(m);
     }
 
     @Override
@@ -328,16 +325,16 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         }
         m.setInfectionFlag(YesOrNoEnum.YES.getCode());
         m.setInfectionDate(dto.getInfectionDate());
-        m.setInfectionSite(tr(dto.getInfectionSite()));
-        m.setInfectionDiag(tr(dto.getInfectionDiag()));
-        monitorMapper.updateById(m);
+        m.setInfectionSite(TextUtil.trim(dto.getInfectionSite()));
+        m.setInfectionDiag(TextUtil.trim(dto.getInfectionDiag()));
+        bizInfectionMonitorMapper.updateById(m);
     }
 
     // 手卫生依从性
 
     @Override
     public InfectionMonitorVO.MonitorStats monitorStats() {
-        List<BizInfectionMonitor> all = monitorMapper.selectList(
+        List<BizInfectionMonitor> all = bizInfectionMonitorMapper.selectList(
                 new LambdaQueryWrapper<BizInfectionMonitor>().orderByDesc(BizInfectionMonitor::getId));
         InfectionMonitorVO.MonitorStats s = new InfectionMonitorVO.MonitorStats();
         Map<Integer, long[]> byType = new HashMap<>();
@@ -347,7 +344,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
             } else {
                 s.setRemoved(s.getRemoved() + 1);
             }
-            int days = dailyMapper.countCatheterDays(m.getId());
+            int days = bizInfectionMonitorDailyMapper.countCatheterDays(m.getId());
             s.setCatheterDays(s.getCatheterDays() + days);
             if (Integer.valueOf(1).equals(m.getInfectionFlag())) {
                 s.setInfectionConfirmed(s.getInfectionConfirmed() + 1);
@@ -377,7 +374,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     }
 
     private BizInfectionMonitor requireMonitor(Long id) {
-        BizInfectionMonitor m = monitorMapper.selectById(id);
+        BizInfectionMonitor m = bizInfectionMonitorMapper.selectById(id);
         if (m == null) {
             throw new BusinessException("监测登记不存在或已删除");
         }
@@ -387,7 +384,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     @Override
     public java.util.List<InfectionMonitorVO.DailyRow> monitorDailyList(Long monitorId) {
         requireMonitor(monitorId);
-        return dailyMapper.selectList(new LambdaQueryWrapper<BizInfectionMonitorDaily>()
+        return bizInfectionMonitorDailyMapper.selectList(new LambdaQueryWrapper<BizInfectionMonitorDaily>()
                         .eq(BizInfectionMonitorDaily::getMonitorId, monitorId)
                         .orderByDesc(BizInfectionMonitorDaily::getMonitorDate)
                         .orderByDesc(BizInfectionMonitorDaily::getId))
@@ -423,7 +420,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         vo.setInfectionSite(m.getInfectionSite());
         vo.setInfectionSiteText(infectionSiteText(m.getInfectionSite()));
         vo.setInfectionDiag(m.getInfectionDiag());
-        vo.setCatheterDays(dailyMapper.countCatheterDays(m.getId()));
+        vo.setCatheterDays(bizInfectionMonitorDailyMapper.countCatheterDays(m.getId()));
         vo.setRemark(m.getRemark());
         return vo;
     }
@@ -437,8 +434,8 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
                 .le(q.getObsDateEnd() != null, BizHandHygieneObs::getObsDate, q.getObsDateEnd())
                 .orderByDesc(BizHandHygieneObs::getObsDate)
                 .orderByDesc(BizHandHygieneObs::getId);
-        List<BizHandHygieneObs> list = handObsMapper.selectList(w);
-        return pageOf(list, q.getPageNo(), q.getPageSize(), this::toHandObsRow);
+        List<BizHandHygieneObs> list = bizHandHygieneObsMapper.selectList(w);
+        return pageOf(list, q.getPageNum(), q.getPageSize(), this::toHandObsRow);
     }
 
     // 内部工具
@@ -465,15 +462,15 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         o.setComplyCount(dto.getComplyCount());
         o.setObserverId(UserUtils.getCurrentUser().getEmployeeId());
         o.setObserverName(UserUtils.getCurrentUser().getRealName());
-        o.setObsTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-        o.setRemark(tr(dto.getRemark()));
-        handObsMapper.insert(o);
+        o.setObsTime(TimeUtil.nowSeconds());
+        o.setRemark(TextUtil.trim(dto.getRemark()));
+        bizHandHygieneObsMapper.insert(o);
         return o.getId();
     }
 
     @Override
     public InfectionMonitorVO.HandObsRow handObsGetDetailById(Long id) {
-        BizHandHygieneObs o = handObsMapper.selectById(id);
+        BizHandHygieneObs o = bizHandHygieneObsMapper.selectById(id);
         if (o == null) {
             throw new BusinessException("观察记录不存在或已删除");
         }
@@ -484,7 +481,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     public InfectionMonitorVO.HandObsStats handObsStats(InfectionMonitorDTO.HandObsStatsQuery q) {
         LocalDate end = q.getObsDateEnd() == null ? LocalDate.now() : q.getObsDateEnd();
         LocalDate start = q.getObsDateStart() == null ? end.minusDays(30) : q.getObsDateStart();
-        List<BizHandHygieneObs> list = handObsMapper.selectList(
+        List<BizHandHygieneObs> list = bizHandHygieneObsMapper.selectList(
                 new LambdaQueryWrapper<BizHandHygieneObs>()
                         .ge(BizHandHygieneObs::getObsDate, start)
                         .le(BizHandHygieneObs::getObsDate, end)
@@ -517,13 +514,11 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     }
 
     private DeptSnapshotVO selectDeptName(Long deptId) {
-        return caseMapper.selectDeptName(deptId);
+        return bizInfectionCaseMapper.selectDeptName(deptId);
     }
 
-    private <T, R> PageResult<R> pageOf(List<T> list, Long pageNo, Long pageSize, RowMapper<T, R> mapper) {
+    private <T, R> PageResult<R> pageOf(List<T> list, int pn, int ps, RowMapper<T, R> mapper) {
         int total = list.size();
-        int ps = pageSize == null || pageSize < 1 ? 10 : pageSize.intValue();
-        int pn = pageNo == null || pageNo < 1 ? 1 : pageNo.intValue();
         int from = Math.min((pn - 1) * ps, total);
         int to = Math.min(from + ps, total);
         List<R> rows = list.subList(from, to).stream().map(mapper::map).toList();

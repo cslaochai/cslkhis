@@ -27,6 +27,7 @@ import com.his.common.service.EmrSignatureService;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.support.TcmGramUnits;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.emr.api.ApplyExecStatusGateway;
 import com.his.emr.dto.*;
@@ -79,35 +80,34 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     private static final AtomicInteger TASK_SEQ = new AtomicInteger(0);
     private static final AtomicInteger SEQ = new AtomicInteger(0);
     private final DeptScopeProvider deptScopeProvider;
-    private final BizPrescriptionMapper prescriptionMapper;
-    private final BizPrescriptionDetailMapper prescriptionDetailMapper;
-    private final BizPrescriptionAuditLogMapper prescriptionAuditLogMapper;
-    private final BizInspectionApplyMapper inspectionApplyMapper;
-    private final BizLaboratoryApplyMapper laboratoryApplyMapper;
-    private final BizMedicalRecordLogMapper recordLogMapper;
+    private final BizPrescriptionMapper bizPrescriptionMapper;
+    private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
+    private final BizPrescriptionAuditLogMapper bizPrescriptionAuditLogMapper;
+    private final BizInspectionApplyMapper bizInspectionApplyMapper;
+    private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
+    private final BizMedicalRecordLogMapper bizMedicalRecordLogMapper;
     private final PharmacyService pharmacyService;
     private final FeeRecordService feeRecordService;
-    private final BizMedicalRecordArchiveMapper archiveMapper;
-    private final BizPatientMapper patientMapper;
+    private final BizPatientMapper bizPatientMapper;
     /**
      * 就诊人越权闸：员工放行，患者只能读自己绑定的就诊人
      */
     private final PatientGuardianService patientGuardianService;
-    private final BizAppointInfoMapper appointInfoMapper;
-    private final BizQueueMapper queueMapper;
-    private final SysInspectionItemMapper inspectionItemMapper;
-    private final SysLaboratoryItemMapper laboratoryItemMapper;
-    private final SysDrugMapper drugMapper;
+    private final BizAppointInfoMapper bizAppointInfoMapper;
+    private final BizQueueMapper bizQueueMapper;
+    private final SysInspectionItemMapper sysInspectionItemMapper;
+    private final SysLaboratoryItemMapper sysLaboratoryItemMapper;
+    private final SysDrugMapper sysDrugMapper;
     /**
      * 电子签名（P5.5）：结诊提交即签名，签名即锁定
      */
-    private final EmrSignatureService signatureService;
-    private final RedisSequenceService sequenceService;
+    private final EmrSignatureService emrSignatureService;
+    private final RedisSequenceService redisSequenceService;
     private final DoctorStatusCacheService doctorStatusCacheService;
-    private final BizMedicalRecordArchiveMapper medicalRecordArchiveMapper;
+    private final BizMedicalRecordArchiveMapper bizMedicalRecordArchiveMapper;
     private final QualityControlService qualityControlService;
-    private final BizFollowupTaskMapper followupTaskMapper;
-    private final BizChronicRecordMapper chronicRecordMapper;
+    private final BizFollowupTaskMapper bizFollowupTaskMapper;
+    private final BizChronicRecordMapper bizChronicRecordMapper;
     /**
      * 抗菌药物处方权闸（sql/161）：开方落库前校验医师授权级别 ≥ 药品分级。
      * 只在这里闸一次 —— 目录和授权表本身只是台账，闸不住就等于"系统里谁都能开限制级"。
@@ -131,10 +131,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         return Objects.equals(PaymentItemTypeEnum.WESTERN_MEDICINE.getCode(), itemType)
                 || Objects.equals(PaymentItemTypeEnum.CHINESE_PATENT_MEDICINE.getCode(), itemType)
                 || Objects.equals(PaymentItemTypeEnum.CHINESE_HERBAL_MEDICINE.getCode(), itemType);
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
     }
 
     @Override
@@ -242,17 +238,17 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         // 查询处方列表
         LambdaQueryWrapper<BizPrescription> prescriptionWrapper = new LambdaQueryWrapper<>();
         prescriptionWrapper.eq(BizPrescription::getRecordId, recordId);
-        List<BizPrescription> prescriptions = prescriptionMapper.selectList(prescriptionWrapper);
+        List<BizPrescription> prescriptions = bizPrescriptionMapper.selectList(prescriptionWrapper);
 
         // 查询检查申请列表
         LambdaQueryWrapper<BizInspectionApply> inspectionWrapper = new LambdaQueryWrapper<>();
         inspectionWrapper.eq(BizInspectionApply::getRecordId, recordId);
-        List<BizInspectionApply> inspectionApplies = inspectionApplyMapper.selectList(inspectionWrapper);
+        List<BizInspectionApply> inspectionApplies = bizInspectionApplyMapper.selectList(inspectionWrapper);
 
         // 查询检验申请列表
         LambdaQueryWrapper<BizLaboratoryApply> laboratoryWrapper = new LambdaQueryWrapper<>();
         laboratoryWrapper.eq(BizLaboratoryApply::getRecordId, recordId);
-        List<BizLaboratoryApply> laboratoryApplies = laboratoryApplyMapper.selectList(laboratoryWrapper);
+        List<BizLaboratoryApply> laboratoryApplies = bizLaboratoryApplyMapper.selectList(laboratoryWrapper);
 
         EmrRecordDetailVO vo = new EmrRecordDetailVO();
         vo.setRecord(toRecordVO(record));
@@ -395,7 +391,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         prescription.setPrescriptionStatus(PrescriptionStatusEnum.DRAFT.getCode());
 
         // 保存处方主表
-        this.prescriptionMapper.insert(prescription);
+        this.bizPrescriptionMapper.insert(prescription);
 
         // 保存处方明细并锁定库存
         if (prescription.getDetails() != null && !prescription.getDetails().isEmpty()) {
@@ -403,7 +399,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 detail.setPrescriptionId(prescription.getId());
                 detail.setPrescriptionNo(prescription.getPrescriptionNo());
                 detail.setDetailStatus(PrescriptionDetailStatusEnum.NORMAL.getCode());
-                this.prescriptionDetailMapper.insert(detail);
+                this.bizPrescriptionDetailMapper.insert(detail);
 
                 // 锁定库存（按药品跨批次，与发药 FEFO 同一口径）
                 if (detail.getDrugId() != null && detail.getQuantity() != null) {
@@ -434,7 +430,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         cmd.setSignerDeptId(p.getDeptId());
         cmd.setSignerDeptName(p.getDeptName());
         try {
-            SignatureVO sig = signatureService.sign(cmd);
+            SignatureVO sig = emrSignatureService.sign(cmd);
             // 同步回内存实体：本方法之后若还有 updateById(prescription)，旧值会把锚点覆盖掉
             p.setDoctorSignId(sig.getId());
             p.setDoctorSignedTime(sig.getSignedTime());
@@ -455,7 +451,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      * 但在这里先滤掉可以让"已签的处方"不参与，避免整批回滚。
      */
     private void signPrescriptionsOfRecord(BizMedicalRecord r) {
-        List<BizPrescription> list = prescriptionMapper.selectList(
+        List<BizPrescription> list = bizPrescriptionMapper.selectList(
                 new LambdaQueryWrapper<BizPrescription>()
                         .eq(BizPrescription::getRecordId, r.getId())
                         .isNull(BizPrescription::getDoctorSignId)
@@ -467,11 +463,11 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
     @Override
     public BizPrescription getPrescriptionDetail(Long prescriptionId) {
-        BizPrescription prescription = prescriptionMapper.selectById(prescriptionId);
+        BizPrescription prescription = bizPrescriptionMapper.selectById(prescriptionId);
         if (prescription != null) {
             LambdaQueryWrapper<BizPrescriptionDetail> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(BizPrescriptionDetail::getPrescriptionId, prescriptionId);
-            List<BizPrescriptionDetail> details = prescriptionDetailMapper.selectList(wrapper);
+            List<BizPrescriptionDetail> details = bizPrescriptionDetailMapper.selectList(wrapper);
             prescription.setDetails(details);
         }
         return prescription;
@@ -484,7 +480,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 .eq(doctorId != null, BizPrescription::getDoctorId, doctorId)
                 .eq(prescriptionStatus != null, BizPrescription::getPrescriptionStatus, prescriptionStatus)
                 .orderByDesc(BizPrescription::getCreateTime);
-        return prescriptionMapper.selectList(wrapper);
+        return bizPrescriptionMapper.selectList(wrapper);
     }
 
     @Override
@@ -495,7 +491,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 + String.format("%04d", SEQ.incrementAndGet() % 10000));
         apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode());
         apply.setSubmitTime(LocalDateTime.now());
-        return inspectionApplyMapper.insert(apply) > 0;
+        return bizInspectionApplyMapper.insert(apply) > 0;
         // 注意：检查记录在患者缴费后才创建（由 ChargeController.processPayment 处理）
     }
 
@@ -505,7 +501,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         wrapper.eq(patientId != null, BizInspectionApply::getPatientId, patientId)
                 .eq(doctorId != null, BizInspectionApply::getDoctorId, doctorId)
                 .orderByDesc(BizInspectionApply::getCreateTime);
-        return inspectionApplyMapper.selectList(wrapper);
+        return bizInspectionApplyMapper.selectList(wrapper);
     }
 
     @Override
@@ -516,7 +512,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 + String.format("%04d", SEQ.incrementAndGet() % 10000));
         apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode()); // 1-已提交（未缴费）
         apply.setSubmitTime(LocalDateTime.now());
-        return laboratoryApplyMapper.insert(apply) > 0;
+        return bizLaboratoryApplyMapper.insert(apply) > 0;
         // 注意：检验记录在患者缴费后才创建（由 ChargeController.processPayment 处理）
     }
 
@@ -526,7 +522,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         wrapper.eq(patientId != null, BizLaboratoryApply::getPatientId, patientId)
                 .eq(doctorId != null, BizLaboratoryApply::getDoctorId, doctorId)
                 .orderByDesc(BizLaboratoryApply::getCreateTime);
-        return laboratoryApplyMapper.selectList(wrapper);
+        return bizLaboratoryApplyMapper.selectList(wrapper);
     }
 
     /**
@@ -555,7 +551,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                     log.setFieldName(labels[i]);
                     log.setOldValue(oldStr);
                     log.setNewValue(newStr);
-                    recordLogMapper.insert(log);
+                    bizMedicalRecordLogMapper.insert(log);
                 }
             } catch (Exception ignored) {
             }
@@ -581,7 +577,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         log.setFieldName(fieldName);
         log.setOldValue(oldValue);
         log.setNewValue(newValue);
-        recordLogMapper.insert(log);
+        bizMedicalRecordLogMapper.insert(log);
     }
 
     @Override
@@ -591,12 +587,12 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         // 删除处方明细并解锁库存
         LambdaQueryWrapper<BizPrescription> prescriptionWrapper = new LambdaQueryWrapper<>();
         prescriptionWrapper.eq(BizPrescription::getRecordId, recordId);
-        List<BizPrescription> prescriptions = prescriptionMapper.selectList(prescriptionWrapper);
+        List<BizPrescription> prescriptions = bizPrescriptionMapper.selectList(prescriptionWrapper);
         for (BizPrescription prescription : prescriptions) {
             // 查询处方明细
             LambdaQueryWrapper<BizPrescriptionDetail> detailWrapper = new LambdaQueryWrapper<>();
             detailWrapper.eq(BizPrescriptionDetail::getPrescriptionId, prescription.getId());
-            List<BizPrescriptionDetail> details = prescriptionDetailMapper.selectList(detailWrapper);
+            List<BizPrescriptionDetail> details = bizPrescriptionDetailMapper.selectList(detailWrapper);
 
             // 解锁库存（跨批次退回，只退实际锁着的量）
             for (BizPrescriptionDetail detail : details) {
@@ -606,10 +602,10 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             }
 
             // 删除处方明细
-            prescriptionDetailMapper.delete(detailWrapper);
+            bizPrescriptionDetailMapper.delete(detailWrapper);
         }
         // 删除处方主表
-        return prescriptionMapper.delete(prescriptionWrapper) >= 0;
+        return bizPrescriptionMapper.delete(prescriptionWrapper) >= 0;
     }
 
     // 检查/检验申请单（批次E：开单即落库 + 删除保护 + 结果回显）
@@ -621,7 +617,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         // 批次E/E2：按 recordId 全删是个危险动作（会把已缴费、已出报告的申请单一起抹掉），
         // 现在逐条走带保护的 deleteInspectionApply —— 任何一个删不掉就整批失败并说明原因。
         // 注意：saveMedicalRecord 已经不再调用本方法（申请单改为「开单即落库 + 结诊回填」）。
-        List<BizInspectionApply> list = inspectionApplyMapper.selectList(new LambdaQueryWrapper<BizInspectionApply>()
+        List<BizInspectionApply> list = bizInspectionApplyMapper.selectList(new LambdaQueryWrapper<BizInspectionApply>()
                 .eq(BizInspectionApply::getRecordId, recordId));
         for (BizInspectionApply apply : list) {
             deleteInspectionApply(apply.getId());
@@ -633,7 +629,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteLaboratoryAppliesByRecordId(Long recordId) {
         if (recordId == null) return false;
-        List<BizLaboratoryApply> list = laboratoryApplyMapper.selectList(new LambdaQueryWrapper<BizLaboratoryApply>()
+        List<BizLaboratoryApply> list = bizLaboratoryApplyMapper.selectList(new LambdaQueryWrapper<BizLaboratoryApply>()
                 .eq(BizLaboratoryApply::getRecordId, recordId));
         for (BizLaboratoryApply apply : list) {
             deleteLaboratoryApply(apply.getId());
@@ -646,14 +642,14 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     public BizInspectionApplyVO upsertInspectionApply(InspectionApplyUpsertDTO dto) {
         BizAppointInfo appoint = requireAppoint(dto.getRegistId());
         BizPatient patient = requirePatient(dto.getPatientId());
-        SysInspectionItem item = inspectionItemMapper.selectById(dto.getInspectionItemId());
+        SysInspectionItem item = sysInspectionItemMapper.selectById(dto.getInspectionItemId());
         if (item == null) {
             throw new BusinessException("检查项目不存在: " + dto.getInspectionItemId());
         }
 
         BizInspectionApply apply;
         if (dto.getId() != null) {
-            apply = inspectionApplyMapper.selectById(dto.getId());
+            apply = bizInspectionApplyMapper.selectById(dto.getId());
             if (apply == null) {
                 throw new BusinessException("检查申请单不存在");
             }
@@ -680,9 +676,9 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         bindRecord(apply, dto.getRecordId(), appoint.getId());
 
         if (apply.getId() != null) {
-            inspectionApplyMapper.updateById(apply);
+            bizInspectionApplyMapper.updateById(apply);
         } else {
-            inspectionApplyMapper.insert(apply);
+            bizInspectionApplyMapper.insert(apply);
         }
         // 开单即签：签名失败整单回滚（与门诊病历"结诊即签"同一口径，不留"开了单没签名"的半成品）
         signInspectionApply(apply);
@@ -694,14 +690,14 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     public BizLaboratoryApplyVO upsertLaboratoryApply(LaboratoryApplyUpsertDTO dto) {
         BizAppointInfo appoint = requireAppoint(dto.getRegistId());
         BizPatient patient = requirePatient(dto.getPatientId());
-        SysLaboratoryItem item = laboratoryItemMapper.selectById(dto.getLaboratoryItemId());
+        SysLaboratoryItem item = sysLaboratoryItemMapper.selectById(dto.getLaboratoryItemId());
         if (item == null) {
             throw new BusinessException("检验项目不存在: " + dto.getLaboratoryItemId());
         }
 
         BizLaboratoryApply apply;
         if (dto.getId() != null) {
-            apply = laboratoryApplyMapper.selectById(dto.getId());
+            apply = bizLaboratoryApplyMapper.selectById(dto.getId());
             if (apply == null) {
                 throw new BusinessException("检验申请单不存在");
             }
@@ -730,9 +726,9 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         bindRecord(apply, dto.getRecordId(), appoint.getId());
 
         if (apply.getId() != null) {
-            laboratoryApplyMapper.updateById(apply);
+            bizLaboratoryApplyMapper.updateById(apply);
         } else {
-            laboratoryApplyMapper.insert(apply);
+            bizLaboratoryApplyMapper.insert(apply);
         }
         signLaboratoryApply(apply);
         return toLaboratoryApplyVO(apply);
@@ -744,7 +740,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (id == null) {
             return false;
         }
-        BizInspectionApply apply = inspectionApplyMapper.selectById(id);
+        BizInspectionApply apply = bizInspectionApplyMapper.selectById(id);
         if (apply == null) {
             throw new BusinessException("检查申请单不存在或已删除");
         }
@@ -753,7 +749,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (block != null) {
             throw new BusinessException("检查申请单 " + apply.getApplyNo() + " 不允许删除：" + block);
         }
-        return inspectionApplyMapper.deleteById(id) > 0;
+        return bizInspectionApplyMapper.deleteById(id) > 0;
     }
 
     @Override
@@ -762,7 +758,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (id == null) {
             return false;
         }
-        BizLaboratoryApply apply = laboratoryApplyMapper.selectById(id);
+        BizLaboratoryApply apply = bizLaboratoryApplyMapper.selectById(id);
         if (apply == null) {
             throw new BusinessException("检验申请单不存在或已删除");
         }
@@ -771,7 +767,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (block != null) {
             throw new BusinessException("检验申请单 " + apply.getApplyNo() + " 不允许删除：" + block);
         }
-        return laboratoryApplyMapper.deleteById(id) > 0;
+        return bizLaboratoryApplyMapper.deleteById(id) > 0;
     }
 
     // 申请单：内部辅助
@@ -783,7 +779,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
         // 按**挂号**过滤而不是按患者：同一个患者这次开的检查和上次的检查必须分开，
         // 原实现只按 patientId 查，切到新患者身上还会显示上一次就诊的检查单。
-        List<BizInspectionApply> list = inspectionApplyMapper.selectList(new LambdaQueryWrapper<BizInspectionApply>()
+        List<BizInspectionApply> list = bizInspectionApplyMapper.selectList(new LambdaQueryWrapper<BizInspectionApply>()
                 .eq(BizInspectionApply::getRegistId, registId)
                 .orderByDesc(BizInspectionApply::getCreateTime)
                 .orderByDesc(BizInspectionApply::getId));
@@ -804,7 +800,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (registId == null) {
             return new ArrayList<>();
         }
-        List<BizLaboratoryApply> list = laboratoryApplyMapper.selectList(new LambdaQueryWrapper<BizLaboratoryApply>()
+        List<BizLaboratoryApply> list = bizLaboratoryApplyMapper.selectList(new LambdaQueryWrapper<BizLaboratoryApply>()
                 .eq(BizLaboratoryApply::getRegistId, registId)
                 .orderByDesc(BizLaboratoryApply::getCreateTime)
                 .orderByDesc(BizLaboratoryApply::getId));
@@ -825,7 +821,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (registId == null) {
             throw new BusinessException("挂号ID不能为空");
         }
-        BizAppointInfo appoint = appointInfoMapper.selectById(registId);
+        BizAppointInfo appoint = bizAppointInfoMapper.selectById(registId);
         if (appoint == null) {
             throw new BusinessException("挂号记录不存在");
         }
@@ -837,7 +833,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (patientId == null) {
             throw new BusinessException("患者ID不能为空");
         }
-        BizPatient patient = patientMapper.selectById(patientId);
+        BizPatient patient = bizPatientMapper.selectById(patientId);
         if (patient == null) {
             throw new BusinessException("患者不存在");
         }
@@ -878,7 +874,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         cmd.setSignerDeptId(apply.getDeptId());
         cmd.setSignerDeptName(apply.getDeptName());
         try {
-            SignatureVO sig = signatureService.sign(cmd);
+            SignatureVO sig = emrSignatureService.sign(cmd);
             apply.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
             apply.setSignId(sig.getId());
             apply.setSignedTime(sig.getSignedTime());
@@ -900,7 +896,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         cmd.setSignerDeptId(apply.getDeptId());
         cmd.setSignerDeptName(apply.getDeptName());
         try {
-            SignatureVO sig = signatureService.sign(cmd);
+            SignatureVO sig = emrSignatureService.sign(cmd);
             apply.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
             apply.setSignId(sig.getId());
             apply.setSignedTime(sig.getSignedTime());
@@ -1205,12 +1201,12 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         if (registId == null || recordId == null) {
             return;
         }
-        inspectionApplyMapper.update(null, new LambdaUpdateWrapper<BizInspectionApply>()
+        bizInspectionApplyMapper.update(null, new LambdaUpdateWrapper<BizInspectionApply>()
                 .eq(BizInspectionApply::getRegistId, registId)
                 .isNull(BizInspectionApply::getRecordId)
                 .set(BizInspectionApply::getRecordId, recordId)
                 .set(BizInspectionApply::getRecordNo, recordNo));
-        laboratoryApplyMapper.update(null, new LambdaUpdateWrapper<BizLaboratoryApply>()
+        bizLaboratoryApplyMapper.update(null, new LambdaUpdateWrapper<BizLaboratoryApply>()
                 .eq(BizLaboratoryApply::getRegistId, registId)
                 .isNull(BizLaboratoryApply::getRecordId)
                 .set(BizLaboratoryApply::getRecordId, recordId)
@@ -1232,13 +1228,13 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             if (dto.getItemId() == null) {
                 continue;
             }
-            Long exists = inspectionApplyMapper.selectCount(new LambdaQueryWrapper<BizInspectionApply>()
+            Long exists = bizInspectionApplyMapper.selectCount(new LambdaQueryWrapper<BizInspectionApply>()
                     .eq(BizInspectionApply::getRegistId, registId)
                     .eq(BizInspectionApply::getInspectionItemId, dto.getItemId()));
             if (exists != null && exists > 0) {
                 continue;
             }
-            SysInspectionItem item = inspectionItemMapper.selectById(dto.getItemId());
+            SysInspectionItem item = sysInspectionItemMapper.selectById(dto.getItemId());
             if (item == null) {
                 throw new BusinessException("检查项目不存在: " + dto.getItemId());
             }
@@ -1256,7 +1252,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             apply.setInspectionPurpose(dto.getPurpose());
             apply.setClinicalDiagnosis(dto.getClinicalDiagnosis());
             apply.setIsEmergency(dto.getIsEmergency() == null ? 0 : dto.getIsEmergency());
-            inspectionApplyMapper.insert(apply);
+            bizInspectionApplyMapper.insert(apply);
         }
     }
 
@@ -1269,13 +1265,13 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             if (dto.getItemId() == null) {
                 continue;
             }
-            Long exists = laboratoryApplyMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryApply>()
+            Long exists = bizLaboratoryApplyMapper.selectCount(new LambdaQueryWrapper<BizLaboratoryApply>()
                     .eq(BizLaboratoryApply::getRegistId, registId)
                     .eq(BizLaboratoryApply::getLaboratoryItemId, dto.getItemId()));
             if (exists != null && exists > 0) {
                 continue;
             }
-            SysLaboratoryItem item = laboratoryItemMapper.selectById(dto.getItemId());
+            SysLaboratoryItem item = sysLaboratoryItemMapper.selectById(dto.getItemId());
             if (item == null) {
                 throw new BusinessException("检验项目不存在: " + dto.getItemId());
             }
@@ -1295,7 +1291,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             apply.setClinicalDiagnosis(dto.getClinicalDiagnosis());
             apply.setIsFasting(dto.getIsFasting() == null ? 0 : dto.getIsFasting());
             apply.setIsEmergency(dto.getIsEmergency() == null ? 0 : dto.getIsEmergency());
-            laboratoryApplyMapper.insert(apply);
+            bizLaboratoryApplyMapper.insert(apply);
         }
     }
 
@@ -1338,13 +1334,13 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         }
 
         // 从患者表查询患者信息
-        BizPatient patientInfo = patientMapper.selectById(recordSaveDTO.getPatientId());
+        BizPatient patientInfo = bizPatientMapper.selectById(recordSaveDTO.getPatientId());
         if (patientInfo == null) {
             throw new BusinessException("患者不存在");
         }
 
         // 从挂号表查询挂号信息（科室、医生）
-        BizAppointInfo appointInfo = appointInfoMapper.selectById(recordSaveDTO.getRegistId());
+        BizAppointInfo appointInfo = bizAppointInfoMapper.selectById(recordSaveDTO.getRegistId());
         if (appointInfo == null) {
             throw new BusinessException("挂号记录不存在");
         }
@@ -1411,7 +1407,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
         // 2. 保存处方（先删后增）。L7 审方退回重开闭环：删除前先看该病历下被退回（7）的旧单 ——
         // 医生改方重新保存 = 重提，新处方继承历史退回次数，并落一条「退回后重提」流水（record_id 串轮次）
-        List<BizPrescription> returnedOld = prescriptionMapper.selectList(
+        List<BizPrescription> returnedOld = bizPrescriptionMapper.selectList(
                 new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BizPrescription>()
                         .eq(BizPrescription::getRecordId, recordId)
                         .eq(BizPrescription::getPrescriptionStatus,
@@ -1464,7 +1460,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                     if (days == null || days < 1 || days > 90) {
                         throw new BusinessException("长处方用药天数必须在 1~90 天之间");
                     }
-                    Long chronicCount = chronicRecordMapper.selectCount(
+                    Long chronicCount = bizChronicRecordMapper.selectCount(
                             new LambdaQueryWrapper<BizChronicRecord>()
                                     .eq(BizChronicRecord::getPatientId, patientInfo.getId())
                                     .eq(BizChronicRecord::getConfirmStatus, 1));
@@ -1482,7 +1478,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 }
                 prescription.setPrescriptionNo("RX" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                         + String.format("%04d", SEQ.incrementAndGet() % 10000));
-                this.prescriptionMapper.insert(prescription);
+                this.bizPrescriptionMapper.insert(prescription);
 
                 // L7 重提流水（只增）：仅当旧单里存在被退回的处方，本次保存才视为「退回后重提」
                 if (!returnedOld.isEmpty()) {
@@ -1491,14 +1487,14 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                     resubmit.setPrescriptionNo(prescription.getPrescriptionNo());
                     resubmit.setRecordId(recordId);
                     resubmit.setRegistId(prescription.getRegistId());
-                    resubmit.setRoundNo((int) (prescriptionAuditLogMapper.selectCount(
+                    resubmit.setRoundNo((int) (bizPrescriptionAuditLogMapper.selectCount(
                             new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<BizPrescriptionAuditLog>()
                                     .eq(BizPrescriptionAuditLog::getRecordId, recordId)) + 1));
                     resubmit.setAction(RxAuditActionEnum.RESUBMIT.getCode());
                     resubmit.setAuditorId(prescription.getDoctorId());
                     resubmit.setAuditorName(prescription.getDoctorName());
                     resubmit.setOpinion("医生修改处方后重新提交");
-                    prescriptionAuditLogMapper.insert(resubmit);
+                    bizPrescriptionAuditLogMapper.insert(resubmit);
                 }
 
                 // 保存处方明细
@@ -1519,7 +1515,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                         detail.setDetailStatus(PrescriptionDetailStatusEnum.NORMAL.getCode());
 
                         // 从药品信息表获取编码、价格并计算金额
-                        SysDrug drug = drugMapper.selectById(detail.getDrugId());
+                        SysDrug drug = sysDrugMapper.selectById(detail.getDrugId());
                         // sql/139：饮片方的 quantity 一律是「每剂克数 × 剂数」的总克数，
                         // 界面传进来的 quantity（历史上是剂数）一律作废，不看它。
                         boolean gramDosed = false;
@@ -1549,7 +1545,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                             detail.setAmount(TcmGramUnits.amountOf(price, detail.getQuantity()));
                         }
 
-                        this.prescriptionDetailMapper.insert(detail);
+                        this.bizPrescriptionDetailMapper.insert(detail);
 
                         // 锁定库存：锁的是**档案单位**（kg/袋），不是克数 —— 105g 黄芪要锁 0.11kg
                         if (detail.getDrugId() != null && detail.getQuantity() != null) {
@@ -1563,7 +1559,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                     // 更新处方主表的总金额和药品数量
                     LambdaQueryWrapper<BizPrescriptionDetail> detailWrapper = new LambdaQueryWrapper<>();
                     detailWrapper.eq(BizPrescriptionDetail::getPrescriptionId, prescription.getId());
-                    List<BizPrescriptionDetail> savedDetails = prescriptionDetailMapper.selectList(detailWrapper);
+                    List<BizPrescriptionDetail> savedDetails = bizPrescriptionDetailMapper.selectList(detailWrapper);
                     BigDecimal totalAmount = BigDecimal.ZERO;
                     int drugCount = 0;
                     for (BizPrescriptionDetail savedDetail : savedDetails) {
@@ -1574,7 +1570,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                     }
                     prescription.setTotalAmount(totalAmount);
                     prescription.setDrugCount(drugCount);
-                    this.prescriptionMapper.updateById(prescription);
+                    this.bizPrescriptionMapper.updateById(prescription);
                 }
             }
         }
@@ -1596,15 +1592,15 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             // 将预约的状态改成已完成
             if (appointInfo != null) {
                 appointInfo.setRegistStatus(AppointStatusEnum.COMPLETED.getCode());
-                appointInfoMapper.updateById(appointInfo);
+                bizAppointInfoMapper.updateById(appointInfo);
             }
 
             // 将排队状态改成已就诊完成
-            BizQueue queue = queueMapper.selectById(recordSaveDTO.getQueueId());
+            BizQueue queue = bizQueueMapper.selectById(recordSaveDTO.getQueueId());
             if (queue != null) {
                 queue.setQueueStatus(QueueStatusEnum.COMPLETED.getCode());
                 queue.setEndTime(LocalDateTime.now());
-                queueMapper.updateById(queue);
+                bizQueueMapper.updateById(queue);
 
                 // 清除医生接诊状态缓存
                 if (queue.getDoctorId() != null) {
@@ -1646,7 +1642,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 task.setFollowupStatus(FollowupTaskStatusEnum.PENDING.getCode());
                 task.setCreateBy(currentUser.getRealName());
                 task.setCreateTime(LocalDateTime.now());
-                followupTaskMapper.insert(task);
+                bizFollowupTaskMapper.insert(task);
             }
 
             // 11. 生成病历归档记录
@@ -1668,7 +1664,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             archive.setArchiveStatus(ArchiveStatusEnum.PENDING.getCode());
             archive.setCreateBy(bizMedicalRecord.getDoctorName());
             archive.setCreateTime(LocalDateTime.now());
-            medicalRecordArchiveMapper.insert(archive);
+            bizMedicalRecordArchiveMapper.insert(archive);
 
             // 12. 提交即质控：跑一次**真实**的规则质控（原来的实现是写死 qc_result=1、
             //     error_count=0，而且 record_id 塞的是归档单 ID —— 那条质控单无法定位到病历）。
@@ -1719,7 +1715,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         cmd.setSignerDeptId(r.getDeptId());
         cmd.setSignerDeptName(r.getDeptName());
         try {
-            SignatureVO sig = signatureService.sign(cmd);
+            SignatureVO sig = emrSignatureService.sign(cmd);
             r.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
             r.setSignId(sig.getId());
             r.setSignedTime(sig.getSignedTime());
@@ -1758,7 +1754,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      */
     private void generateChargeRecords(BizMedicalRecord record, MedicalRecordSaveDTO recordSaveDTO) {
         // 查询挂号记录获取 registNo
-        BizAppointInfo appointInfo = appointInfoMapper.selectById(record.getRegistId());
+        BizAppointInfo appointInfo = bizAppointInfoMapper.selectById(record.getRegistId());
         if (Objects.isNull(appointInfo)) {
             throw new BusinessException("未能找到挂号记录");
         }
@@ -1769,14 +1765,14 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         // 1. 检查明细
         LambdaQueryWrapper<BizInspectionApply> inspectionWrapper = new LambdaQueryWrapper<>();
         inspectionWrapper.eq(BizInspectionApply::getRecordId, record.getId());
-        List<BizInspectionApply> inspections = inspectionApplyMapper.selectList(inspectionWrapper);
+        List<BizInspectionApply> inspections = bizInspectionApplyMapper.selectList(inspectionWrapper);
         for (BizInspectionApply apply : inspections) {
             FeeBookDTO fee = newVisitFee(record, registNo, PaymentItemTypeEnum.EXAMINATION.getCode());
             fee.setSourceType(FeeSourceTypeEnum.EXAM_APPLY.getCode());
             fee.setItemCode(apply.getInspectionItemCode());
             fee.setItemName(apply.getInspectionItemName());
             fee.setQuantity(BigDecimal.ONE);
-            fee.setPrice(nz(apply.getPrice()));
+            fee.setPrice(NumUtil.orZero(apply.getPrice()));
             fee.setSourceId(apply.getId());
             fee.setSourceNo(apply.getApplyNo());
             books.add(fee);
@@ -1785,14 +1781,14 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         // 2. 检验明细
         LambdaQueryWrapper<BizLaboratoryApply> laboratoryWrapper = new LambdaQueryWrapper<>();
         laboratoryWrapper.eq(BizLaboratoryApply::getRecordId, record.getId());
-        List<BizLaboratoryApply> laboratories = laboratoryApplyMapper.selectList(laboratoryWrapper);
+        List<BizLaboratoryApply> laboratories = bizLaboratoryApplyMapper.selectList(laboratoryWrapper);
         for (BizLaboratoryApply apply : laboratories) {
             FeeBookDTO fee = newVisitFee(record, registNo, PaymentItemTypeEnum.LABORATORY_TEST.getCode());
             fee.setSourceType(FeeSourceTypeEnum.LAB_APPLY.getCode());
             fee.setItemCode(apply.getLaboratoryItemCode());
             fee.setItemName(apply.getLaboratoryItemName());
             fee.setQuantity(BigDecimal.ONE);
-            fee.setPrice(nz(apply.getPrice()));
+            fee.setPrice(NumUtil.orZero(apply.getPrice()));
             fee.setSourceId(apply.getId());
             fee.setSourceNo(apply.getApplyNo());
             books.add(fee);
@@ -1801,11 +1797,11 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         // 3. 药品明细（从所有处方获取，锚点仍是处方明细ID，与申请单口径一致）
         LambdaQueryWrapper<BizPrescription> prescriptionWrapper = new LambdaQueryWrapper<>();
         prescriptionWrapper.eq(BizPrescription::getRecordId, record.getId());
-        List<BizPrescription> prescriptions = prescriptionMapper.selectList(prescriptionWrapper);
+        List<BizPrescription> prescriptions = bizPrescriptionMapper.selectList(prescriptionWrapper);
         for (BizPrescription prescription : prescriptions) {
             LambdaQueryWrapper<BizPrescriptionDetail> detailWrapper = new LambdaQueryWrapper<>();
             detailWrapper.eq(BizPrescriptionDetail::getPrescriptionId, prescription.getId());
-            List<BizPrescriptionDetail> prescriptionDetails = prescriptionDetailMapper.selectList(detailWrapper);
+            List<BizPrescriptionDetail> prescriptionDetails = bizPrescriptionDetailMapper.selectList(detailWrapper);
             for (BizPrescriptionDetail pd : prescriptionDetails) {
                 FeeBookDTO fee = newVisitFee(record, registNo, PaymentItemTypeEnum.WESTERN_MEDICINE.getCode());
                 fee.setSourceType(FeeSourceTypeEnum.PRESCRIPTION.getCode());
@@ -1814,7 +1810,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 fee.setSpecification(pd.getSpecification());
                 fee.setUnit(pd.getUnit());
                 fee.setQuantity(pd.getQuantity() == null ? BigDecimal.ONE : pd.getQuantity());
-                fee.setPrice(nz(pd.getPrice()));
+                fee.setPrice(NumUtil.orZero(pd.getPrice()));
                 fee.setSourceId(pd.getId());
                 fee.setSourceNo(prescription.getPrescriptionNo());
                 books.add(fee);
@@ -1888,11 +1884,11 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         // 查询检验检查项目
         LambdaQueryWrapper<BizLaboratoryApply> labWrapper = new LambdaQueryWrapper<>();
         labWrapper.eq(BizLaboratoryApply::getRecordId, record.getId());
-        List<BizLaboratoryApply> labApplies = laboratoryApplyMapper.selectList(labWrapper);
+        List<BizLaboratoryApply> labApplies = bizLaboratoryApplyMapper.selectList(labWrapper);
 
         LambdaQueryWrapper<BizInspectionApply> insWrapper = new LambdaQueryWrapper<>();
         insWrapper.eq(BizInspectionApply::getRecordId, record.getId());
-        List<BizInspectionApply> insApplies = inspectionApplyMapper.selectList(insWrapper);
+        List<BizInspectionApply> insApplies = bizInspectionApplyMapper.selectList(insWrapper);
 
         try {
             // 创建PDF文档
@@ -2066,6 +2062,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         archive.setDiagnosis(record.getDiagnosisName());
         archive.setArchiveStatus(ArchiveStatusEnum.PENDING.getCode());
         archive.setArchiveTime(LocalDateTime.now());
-        archiveMapper.insert(archive);
+        bizMedicalRecordArchiveMapper.insert(archive);
     }
 }

@@ -2,10 +2,12 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.MealGenerateDTO;
 import com.his.patient.dto.MealOrderQueryPageDTO;
@@ -53,36 +55,25 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MealOrderServiceImpl implements MealOrderService {
+public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMealOrder> implements MealOrderService {
     private static final String PREFIX_MEAL = "MO";
     private final DeptScopeProvider deptScopeProvider;
-    private final BizMealOrderMapper mealMapper;
-    private final BizDietPlanMapper planMapper;
+    private final BizMealOrderMapper bizMealOrderMapper;
+    private final BizDietPlanMapper bizDietPlanMapper;
     private final DictCacheService dictCacheService;
-
-    private static String trim(String v) {
-        return v == null ? null : v.trim();
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        return v.length() <= max ? v : v.substring(0, max);
-    }
 
     // 批量生成
 
     @Override
     public PageResult<MealOrderVO> mealListPage(MealOrderQueryPageDTO query) {
-        query.setKeyword(trim(query.getKeyword()));
-        query.setDietCode(trim(query.getDietCode()));
+        query.setKeyword(TextUtil.trim(query.getKeyword()));
+        query.setDietCode(TextUtil.trim(query.getDietCode()));
         Set<Long> allowed = deptScopeProvider.allowedDeptIds();
         if (allowed != null) {
             query.setScopeDeptIds(new ArrayList<>(allowed));
         }
         Page<MealOrderVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        Page<MealOrderVO> result = (Page<MealOrderVO>) mealMapper.selectMealPage(page, query);
+        Page<MealOrderVO> result = (Page<MealOrderVO>) bizMealOrderMapper.selectMealPage(page, query);
         result.getRecords().forEach(this::decorate);
         return PageResult.of(result.getTotal(), result.getCurrent(), result.getSize(), result.getPages(),
                 result.getRecords());
@@ -96,7 +87,7 @@ public class MealOrderServiceImpl implements MealOrderService {
         if (dietPlanId == null) {
             throw new BusinessException("膳食方案ID不能为空");
         }
-        List<MealOrderVO> rows = mealMapper.selectByPlan(dietPlanId);
+        List<MealOrderVO> rows = bizMealOrderMapper.selectByPlan(dietPlanId);
         rows.forEach(this::decorate);
         return rows;
     }
@@ -133,7 +124,7 @@ public class MealOrderServiceImpl implements MealOrderService {
             throw new BusinessException("当前用户信息不存在");
         }
 
-        List<BizDietPlan> plans = planMapper.selectList(new LambdaQueryWrapper<BizDietPlan>()
+        List<BizDietPlan> plans = bizDietPlanMapper.selectList(new LambdaQueryWrapper<BizDietPlan>()
                 .eq(BizDietPlan::getPlanStatus, PlanStatusEnum.RUNNING.getCode())
                 .eq(BizDietPlan::getRoute, DietRouteEnum.ORAL.getCode())
                 // 出院/转科不自动停方案（本系统出院流程不停医嘱），但人走了还继续送饭是错的：
@@ -163,7 +154,7 @@ public class MealOrderServiceImpl implements MealOrderService {
 
         // 已配送/已签收的餐是既成事实 → 这些人整体跳过，并把跳过数报回界面
         Set<Long> lockedAdmissions = new HashSet<>();
-        List<BizMealOrder> existing = mealMapper.selectList(new LambdaQueryWrapper<BizMealOrder>()
+        List<BizMealOrder> existing = bizMealOrderMapper.selectList(new LambdaQueryWrapper<BizMealOrder>()
                 .eq(BizMealOrder::getMealDate, mealDate)
                 .in(BizMealOrder::getAdmissionId, admissionIds));
         for (BizMealOrder m : existing) {
@@ -174,7 +165,7 @@ public class MealOrderServiceImpl implements MealOrderService {
         if (overwrite) {
             List<Long> purgeIds = admissionIds.stream().filter(id -> !lockedAdmissions.contains(id)).toList();
             if (!purgeIds.isEmpty()) {
-                mealMapper.purgePendingByDate(mealDate, purgeIds);
+                bizMealOrderMapper.purgePendingByDate(mealDate, purgeIds);
             }
         }
         Set<String> exists = new HashSet<>();
@@ -184,7 +175,7 @@ public class MealOrderServiceImpl implements MealOrderService {
             }
         }
 
-        long seq = mealMapper.maxMealSeq(PREFIX_MEAL + mealDate.format(DateFormats.COMPACT_DATE));
+        long seq = bizMealOrderMapper.maxMealSeq(PREFIX_MEAL + mealDate.format(DateFormats.COMPACT_DATE));
         int generated = 0;
         // 同一个人可能同时有两条口服方案（如"糖尿病饮食 + 口服营养补充"），
         // 而 uk_meal_order 只认「人 + 日期 + 餐次」—— 批内必须去重，否则整批生成撞唯一键
@@ -224,10 +215,10 @@ public class MealOrderServiceImpl implements MealOrderService {
                 row.setQuantity(1);
                 row.setDeliverStatus(MealDeliverStatusEnum.PENDING.getCode());
                 row.setSource(MealOrderSourceEnum.GENERATE.getCode());
-                row.setRemark(cut("按膳食方案 " + plan.getDietNo() + " 生成", 500));
+                row.setRemark(TextUtil.cut("按膳食方案 " + plan.getDietNo() + " 生成", 500));
                 row.setCreateBy(operator);
                 row.setCreateTime(now);
-                mealMapper.insert(row);
+                bizMealOrderMapper.insert(row);
                 generated++;
             }
         }
@@ -259,7 +250,7 @@ public class MealOrderServiceImpl implements MealOrderService {
             throw new BusinessException("目标状态不合法（1-已配餐 2-已配送 3-已签收 4-已取消）");
         }
         boolean cancel = Objects.equals(MealDeliverStatusEnum.CANCELED.getCode(), target);
-        String cancelReason = cut(trim(dto.getCancelReason()), 500);
+        String cancelReason = TextUtil.cut(TextUtil.trim(dto.getCancelReason()), 500);
         if (cancel && !StringUtils.hasText(cancelReason)) {
             // ①条件必填：只有退订（目标状态=4-已取消）才必填原因，@NotBlank 会把正常的配餐/配送/签收请求挡成 400
             throw new BusinessException("退订必须填写原因（停餐/出院/拒餐/转科等）");
@@ -275,7 +266,7 @@ public class MealOrderServiceImpl implements MealOrderService {
         // 批量要么全推要么全不动：食堂按病区整批点"配送"，一半成功会让人以为都送出去了
         List<BizMealOrder> rows = new ArrayList<>(ids.size());
         for (Long id : ids) {
-            BizMealOrder row = mealMapper.selectById(id);
+            BizMealOrder row = bizMealOrderMapper.selectById(id);
             if (row == null) {
                 throw new BusinessException("订餐不存在（ID=" + id + "）");
             }
@@ -306,7 +297,7 @@ public class MealOrderServiceImpl implements MealOrderService {
             if (Objects.equals(MealDeliverStatusEnum.PREPARED.getCode(), target)) {
                 row.setPrepareTime(now);
                 if (StringUtils.hasText(dto.getDishContent())) {
-                    row.setDishContent(cut(trim(dto.getDishContent()), 200));
+                    row.setDishContent(TextUtil.cut(TextUtil.trim(dto.getDishContent()), 200));
                 }
             } else if (Objects.equals(MealDeliverStatusEnum.DELIVERED.getCode(), target)) {
                 row.setDeliverTime(now);
@@ -314,13 +305,13 @@ public class MealOrderServiceImpl implements MealOrderService {
                 row.setDeliverByName(operator);
             } else if (Objects.equals(MealDeliverStatusEnum.SIGNED.getCode(), target)) {
                 row.setSignTime(now);
-                row.setSignBy(cut(StringUtils.hasText(dto.getSignBy()) ? trim(dto.getSignBy())
+                row.setSignBy(TextUtil.cut(StringUtils.hasText(dto.getSignBy()) ? TextUtil.trim(dto.getSignBy())
                         : (row.getPatientName() == null ? "病区护士" : row.getPatientName() + "（病区代签）"), 50));
             } else if (cancel) {
                 row.setCancelTime(now);
                 row.setCancelReason(cancelReason);
             }
-            mealMapper.updateById(row);
+            bizMealOrderMapper.updateById(row);
         }
         log.info("订餐状态推进 目标={} 条数={} 操作人={} ids={}", target, rows.size(), operator, ids);
         return rows.size();
@@ -329,7 +320,7 @@ public class MealOrderServiceImpl implements MealOrderService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int mealDeleteById(Long id) {
-        BizMealOrder row = mealMapper.selectById(id);
+        BizMealOrder row = bizMealOrderMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("订餐不存在或已删除");
         }
@@ -340,7 +331,7 @@ public class MealOrderServiceImpl implements MealOrderService {
             throw new BusinessException("该餐已" + st + "，不能删除；删除只用于误生成的行（" + row.getMealNo() + "）");
         }
         // 物理删：uk_meal_order 不含 del_flag，软删会占住"一人一天一餐"的键位
-        return mealMapper.purgeById(id);
+        return bizMealOrderMapper.purgeById(id);
     }
 
 }

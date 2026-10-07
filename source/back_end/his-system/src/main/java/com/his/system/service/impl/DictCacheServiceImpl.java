@@ -1,6 +1,7 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.system.entity.SysDictData;
@@ -24,12 +25,12 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DictCacheServiceImpl implements CommandLineRunner, DictCacheService {
+public class DictCacheServiceImpl extends ServiceImpl<SysDictDataMapper, SysDictData> implements CommandLineRunner, DictCacheService {
 
     private static final String DICT_CACHE_PREFIX = "sys:dict:";
     private static final long CACHE_EXPIRE_HOURS = 24; // 缓存24小时
-    private final StringRedisTemplate redisTemplate;
-    private final SysDictDataMapper dictDataMapper;
+    private final StringRedisTemplate stringRedisTemplate;
+    private final SysDictDataMapper sysDictDataMapper;
     private final ObjectMapper objectMapper;
 
     /**
@@ -50,7 +51,7 @@ public class DictCacheServiceImpl implements CommandLineRunner, DictCacheService
             // 查询所有字典数据
             LambdaQueryWrapper<SysDictData> wrapper = new LambdaQueryWrapper<>();
             wrapper.orderByAsc(SysDictData::getDictSort);
-            List<SysDictData> allDictData = dictDataMapper.selectList(wrapper);
+            List<SysDictData> allDictData = sysDictDataMapper.selectList(wrapper);
 
             // 按字典类型分组并缓存
             allDictData.stream()
@@ -59,7 +60,7 @@ public class DictCacheServiceImpl implements CommandLineRunner, DictCacheService
                         try {
                             String key = DICT_CACHE_PREFIX + dictType;
                             String json = objectMapper.writeValueAsString(dataList);
-                            redisTemplate.opsForValue().set(key, json, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
+                            stringRedisTemplate.opsForValue().set(key, json, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
                         } catch (Exception e) {
                             log.error("缓存字典数据失败: {}", dictType, e);
                         }
@@ -81,11 +82,11 @@ public class DictCacheServiceImpl implements CommandLineRunner, DictCacheService
             LambdaQueryWrapper<SysDictData> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(SysDictData::getDictType, dictType)
                     .orderByAsc(SysDictData::getDictSort);
-            List<SysDictData> dataList = dictDataMapper.selectList(wrapper);
+            List<SysDictData> dataList = sysDictDataMapper.selectList(wrapper);
 
             String key = DICT_CACHE_PREFIX + dictType;
             String json = objectMapper.writeValueAsString(dataList);
-            redisTemplate.opsForValue().set(key, json, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
+            stringRedisTemplate.opsForValue().set(key, json, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
 
             log.info("已刷新字典缓存: {}，共 {} 条数据", dictType, dataList.size());
         } catch (Exception e) {
@@ -103,7 +104,7 @@ public class DictCacheServiceImpl implements CommandLineRunner, DictCacheService
 
         try {
             String key = DICT_CACHE_PREFIX + dictType;
-            String json = redisTemplate.opsForValue().get(key);
+            String json = stringRedisTemplate.opsForValue().get(key);
 
             if (json != null) {
                 return objectMapper.readValue(json, new TypeReference<List<SysDictData>>() {
@@ -114,12 +115,12 @@ public class DictCacheServiceImpl implements CommandLineRunner, DictCacheService
             LambdaQueryWrapper<SysDictData> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(SysDictData::getDictType, dictType)
                     .orderByAsc(SysDictData::getDictSort);
-            List<SysDictData> dataList = dictDataMapper.selectList(wrapper);
+            List<SysDictData> dataList = sysDictDataMapper.selectList(wrapper);
 
             // 写入缓存
             if (!dataList.isEmpty()) {
                 json = objectMapper.writeValueAsString(dataList);
-                redisTemplate.opsForValue().set(key, json, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
+                stringRedisTemplate.opsForValue().set(key, json, CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
             }
 
             return dataList;
@@ -129,7 +130,7 @@ public class DictCacheServiceImpl implements CommandLineRunner, DictCacheService
             LambdaQueryWrapper<SysDictData> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(SysDictData::getDictType, dictType)
                     .orderByAsc(SysDictData::getDictSort);
-            return dictDataMapper.selectList(wrapper);
+            return sysDictDataMapper.selectList(wrapper);
         }
     }
 
@@ -158,7 +159,7 @@ public class DictCacheServiceImpl implements CommandLineRunner, DictCacheService
      */
     public void removeDictCache(String dictType) {
         String key = DICT_CACHE_PREFIX + dictType;
-        redisTemplate.delete(key);
+        stringRedisTemplate.delete(key);
         log.info("已删除字典缓存: {}", dictType);
     }
 
@@ -166,9 +167,9 @@ public class DictCacheServiceImpl implements CommandLineRunner, DictCacheService
      * 清空所有字典缓存
      */
     public void clearAllDictCache() {
-        var keys = redisTemplate.keys(DICT_CACHE_PREFIX + "*");
+        var keys = stringRedisTemplate.keys(DICT_CACHE_PREFIX + "*");
         if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
+            stringRedisTemplate.delete(keys);
             log.info("已清空所有字典缓存，共 {} 个key", keys.size());
         }
     }

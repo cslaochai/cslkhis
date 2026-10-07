@@ -33,7 +33,7 @@ public class LabReferenceRangeResolver {
 
     private static final long CACHE_TTL_MS = 300_000L;
 
-    private final SysLaboratoryItemDetailMapper detailMapper;
+    private final SysLaboratoryItemDetailMapper sysLaboratoryItemDetailMapper;
     private final AtomicLong loadedAt = new AtomicLong(0L);
     private volatile Map<String, String> byCode = Collections.emptyMap();
     private volatile Map<String, String> byName = Collections.emptyMap();
@@ -102,7 +102,7 @@ public class LabReferenceRangeResolver {
                 return;
             }
             try {
-                List<SysLaboratoryItemDetail> rows = detailMapper.selectList(
+                List<SysLaboratoryItemDetail> rows = sysLaboratoryItemDetailMapper.selectList(
                         new LambdaQueryWrapper<SysLaboratoryItemDetail>()
                                 .eq(SysLaboratoryItemDetail::getStatus, 1));
                 Map<String, String> codes = new HashMap<>();

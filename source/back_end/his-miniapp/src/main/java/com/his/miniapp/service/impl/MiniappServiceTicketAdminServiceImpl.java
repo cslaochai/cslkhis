@@ -1,9 +1,11 @@
 package com.his.miniapp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.miniapp.dto.TicketHandleDTO;
 import com.his.miniapp.dto.TicketSearchDTO;
 import com.his.miniapp.entity.BizServiceMessage;
@@ -37,21 +39,28 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicketAdminService {
+public class MiniappServiceTicketAdminServiceImpl extends ServiceImpl<MiniappServiceMessageMapper, BizServiceMessage> implements MiniappServiceTicketAdminService {
 
-    /** 超过这个时长仍未受理算超时 */
+    /**
+     * 超过这个时长仍未受理算超时
+     */
     private static final int OVERDUE_HOURS = 24;
 
     private static final int LOG_CONTENT_MAX = 1000;
 
-    private final MiniappServiceMessageMapper messageMapper;
-    private final MiniappServiceTicketLogMapper ticketLogMapper;
+    private final MiniappServiceMessageMapper miniappServiceMessageMapper;
+    private final MiniappServiceTicketLogMapper miniappServiceTicketLogMapper;
+
+    private static String currentUsername() {
+        CurrentUser user = UserUtils.getCurrentUser();
+        return user == null ? null : user.getUsername();
+    }
 
     @Override
     public PageResult<ServiceMessageListVO> adminPage(TicketSearchDTO dto) {
         TicketSearchDTO query = dto == null ? new TicketSearchDTO() : dto;
-        int pageNum = Math.max(1, query.getPageNum());
-        int pageSize = Math.min(Math.max(1, query.getPageSize()), 200);
+        int pageNum = query.getPageNum();
+        int pageSize = query.getPageSize();
 
         String keyword = StringUtils.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
         String mine = Boolean.TRUE.equals(query.getOnlyMine()) ? currentUsername() : null;
@@ -70,8 +79,8 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
                 // 分页补唯一二级键
                 .orderByDesc(BizServiceMessage::getId);
 
-        long total = messageMapper.selectCount(w);
-        List<BizServiceMessage> rows = messageMapper.selectList(
+        long total = miniappServiceMessageMapper.selectCount(w);
+        List<BizServiceMessage> rows = miniappServiceMessageMapper.selectList(
                 w.last("LIMIT " + (pageNum - 1) * pageSize + ", " + pageSize));
         List<ServiceMessageListVO> records = new ArrayList<>();
         for (BizServiceMessage row : rows) {
@@ -101,7 +110,7 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
         vo.setClosed(countBy(null, ServiceTicketStatus.CLOSED));
 
         LocalDateTime deadline = LocalDateTime.now().minusHours(OVERDUE_HOURS);
-        Long overdue = messageMapper.selectCount(new LambdaQueryWrapper<BizServiceMessage>()
+        Long overdue = miniappServiceMessageMapper.selectCount(new LambdaQueryWrapper<BizServiceMessage>()
                 .eq(BizServiceMessage::getStatus, ServiceTicketStatus.WAIT_ACCEPT)
                 .lt(BizServiceMessage::getCreateTime, deadline));
         vo.setOverdueWaitAccept(overdue == null ? 0 : overdue.intValue());
@@ -130,6 +139,8 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
         return vo;
     }
 
+    // 私有
+
     @Override
     public void handle(TicketHandleDTO dto) {
         BizServiceMessage ticket = requireTicket(dto.getId());
@@ -137,7 +148,7 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
         CurrentUser user = UserUtils.getCurrentUser();
         String operator = user == null ? null : user.getUsername();
         String operatorName = user == null ? null : user.getRealName();
-        String content = cut(dto.getContent(), LOG_CONTENT_MAX);
+        String content = TextUtil.cut(dto.getContent(), LOG_CONTENT_MAX);
 
         switch (action) {
             case "accept" -> {
@@ -150,7 +161,7 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
                 ticket.setAcceptByName(operatorName);
                 ticket.setAcceptTime(LocalDateTime.now());
                 ticket.setHandleBy(operator);
-                messageMapper.updateById(ticket);
+                miniappServiceMessageMapper.updateById(ticket);
                 writeLog(ticket, ServiceTicketStatus.ACT_ACCEPT, operatorName + " 受理了这张工单", 1, operator, operatorName);
             }
             case "reply" -> {
@@ -170,7 +181,7 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
                 ticket.setReplyCount((ticket.getReplyCount() == null ? 0 : ticket.getReplyCount()) + 1);
                 ticket.setLastReplyTime(LocalDateTime.now());
                 ticket.setHandleBy(operator);
-                messageMapper.updateById(ticket);
+                miniappServiceMessageMapper.updateById(ticket);
                 int visible = dto.getVisibleToPatient() == null ? 1 : dto.getVisibleToPatient();
                 writeLog(ticket, ServiceTicketStatus.ACT_REPLY, content, visible, operator, operatorName);
             }
@@ -186,7 +197,7 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
                 ticket.setHandleResult(content);
                 ticket.setHandleBy(operator);
                 ticket.setHandleTime(LocalDateTime.now());
-                messageMapper.updateById(ticket);
+                miniappServiceMessageMapper.updateById(ticket);
                 writeLog(ticket, ServiceTicketStatus.ACT_FINISH, content, 1, operator, operatorName);
             }
             case "close" -> {
@@ -200,7 +211,7 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
                 ticket.setCloseBy(operator);
                 ticket.setCloseTime(LocalDateTime.now());
                 ticket.setCloseReason(content);
-                messageMapper.updateById(ticket);
+                miniappServiceMessageMapper.updateById(ticket);
                 writeLog(ticket, ServiceTicketStatus.ACT_CLOSE, content, 1, operator, operatorName);
             }
             case "note" -> {
@@ -215,13 +226,11 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
         log.info("[院内工单] 单号={} 动作={} 操作人={}", ticket.getMessageNo(), action, operator);
     }
 
-    // 私有
-
     private BizServiceMessage requireTicket(Long id) {
         if (id == null) {
             throw new BusinessException("工单ID不合法");
         }
-        BizServiceMessage ticket = messageMapper.selectById(id);
+        BizServiceMessage ticket = miniappServiceMessageMapper.selectById(id);
         if (ticket == null) {
             throw new BusinessException("工单不存在");
         }
@@ -234,12 +243,12 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
         if (StringUtils.hasText(acceptBy)) {
             w.eq(BizServiceMessage::getAcceptBy, acceptBy);
         }
-        Long n = messageMapper.selectCount(w);
+        Long n = miniappServiceMessageMapper.selectCount(w);
         return n == null ? 0 : n.intValue();
     }
 
     private List<ServiceTicketLogVO> allLogs(Long messageId) {
-        List<BizServiceTicketLog> rows = ticketLogMapper.selectList(
+        List<BizServiceTicketLog> rows = miniappServiceTicketLogMapper.selectList(
                 new LambdaQueryWrapper<BizServiceTicketLog>()
                         .eq(BizServiceTicketLog::getMessageId, messageId)
                         .orderByAsc(BizServiceTicketLog::getCreateTime)
@@ -271,19 +280,7 @@ public class MiniappServiceTicketAdminServiceImpl implements MiniappServiceTicke
         logEntity.setOperator(operator);
         logEntity.setOperatorName(operatorName);
         logEntity.setCreateBy(operator);
-        ticketLogMapper.insert(logEntity);
+        miniappServiceTicketLogMapper.insert(logEntity);
     }
 
-    private static String currentUsername() {
-        CurrentUser user = UserUtils.getCurrentUser();
-        return user == null ? null : user.getUsername();
-    }
-
-    private static String cut(String text, int max) {
-        if (!StringUtils.hasText(text)) {
-            return text;
-        }
-        String value = text.trim();
-        return value.length() <= max ? value : value.substring(0, max);
-    }
 }

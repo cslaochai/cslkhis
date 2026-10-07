@@ -2,6 +2,7 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.support.FeeCatalogResolver;
@@ -12,6 +13,9 @@ import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.emr.dto.TreatmentDTO;
 import com.his.emr.entity.BizTreatmentApply;
 import com.his.emr.entity.BizTreatmentRecord;
@@ -38,7 +42,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -62,7 +65,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class TreatmentServiceImpl implements TreatmentService {
+public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, BizTreatmentRecord> implements TreatmentService {
 
     private static final int AMOUNT_SCALE = 2;
     private static final String UNIT_TIMES = "次";
@@ -81,36 +84,17 @@ public class TreatmentServiceImpl implements TreatmentService {
     private static final String DICT_EXEC_STATUS = "his_treatment_exec_status";
     private static final String DICT_CHARGE_STATUS = "his_treatment_charge_status";
 
-    private final BizTreatmentApplyMapper applyMapper;
-    private final BizTreatmentRecordMapper execMapper;
-    private final SysTreatmentItemMapper itemMapper;
-    private final RedisSequenceService sequenceService;
-    private final DictCacheService dictText;
+    private final BizTreatmentApplyMapper bizTreatmentApplyMapper;
+    private final BizTreatmentRecordMapper bizTreatmentRecordMapper;
+    private final SysTreatmentItemMapper sysTreatmentItemMapper;
+    private final RedisSequenceService redisSequenceService;
+    private final DictCacheService dictCacheService;
     /**
      * 记账经 Invoker 走 REQUIRES_NEW 独立事务：记账失败不拖垮打卡，留痕与补记入口都在流水行上
      */
     private final TreatmentChargeInvoker chargeInvoker;
 
     // 查询
-
-    private static String trim(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static int nz(Integer v, int dft) {
-        return v == null ? dft : v;
-    }
-
-    /**
-     * 写库前一律截到列宽：超长会把整条 update 顶成 500，用户连失败原因都看不到
-     */
-    private static String cut(String s, int max) {
-        String t = trim(s);
-        if (t == null) {
-            return null;
-        }
-        return t.length() <= max ? t : t.substring(0, max);
-    }
 
     private static String str(Object o) {
         return o == null ? null : String.valueOf(o);
@@ -148,7 +132,7 @@ public class TreatmentServiceImpl implements TreatmentService {
 
     public PageResult<TreatmentVO.ApplyVO> listPageApplies(TreatmentDTO.ApplyQuery q) {
         LambdaQueryWrapper<BizTreatmentApply> w = new LambdaQueryWrapper<>();
-        String kw = trim(q.getKeyword());
+        String kw = TextUtil.trim(q.getKeyword());
         w.and(StringUtils.hasText(kw), x -> x.like(BizTreatmentApply::getPatientName, kw)
                         .or().like(BizTreatmentApply::getPatientNo, kw)
                         .or().like(BizTreatmentApply::getApplyNo, kw)
@@ -160,7 +144,7 @@ public class TreatmentServiceImpl implements TreatmentService {
                 .ge(q.getStartDate() != null, BizTreatmentApply::getStartDate, q.getStartDate())
                 .le(q.getEndDate() != null, BizTreatmentApply::getStartDate, q.getEndDate())
                 .orderByDesc(BizTreatmentApply::getApplyId);
-        Page<BizTreatmentApply> page = applyMapper.selectPage(new Page<>(nz(q.getPageNum(), 1), nz(q.getPageSize(), 20)), w);
+        Page<BizTreatmentApply> page = bizTreatmentApplyMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
         List<TreatmentVO.ApplyVO> records = new ArrayList<>();
         for (BizTreatmentApply a : page.getRecords()) {
             records.add(toApplyVo(a));
@@ -172,7 +156,7 @@ public class TreatmentServiceImpl implements TreatmentService {
         BizTreatmentApply apply = requireApply(applyId);
         TreatmentVO.ApplyDetailVO detail = new TreatmentVO.ApplyDetailVO();
         detail.setApply(toApplyVo(apply));
-        List<BizTreatmentRecord> rows = execMapper.selectList(new LambdaQueryWrapper<BizTreatmentRecord>()
+        List<BizTreatmentRecord> rows = bizTreatmentRecordMapper.selectList(new LambdaQueryWrapper<BizTreatmentRecord>()
                 .eq(BizTreatmentRecord::getApplyId, applyId)
                 .orderByAsc(BizTreatmentRecord::getExecSeq));
         Map<Long, BizTreatmentApply> one = new HashMap<>();
@@ -185,7 +169,7 @@ public class TreatmentServiceImpl implements TreatmentService {
      * 按次流水分页（治疗台与台账共用一套过滤口径）
      */
     public PageResult<TreatmentVO.ExecVO> listPageExecs(TreatmentDTO.ExecQuery q) {
-        Page<BizTreatmentRecord> page = execPage(q, nz(q.getPageNum(), 1), nz(q.getPageSize(), 20));
+        Page<BizTreatmentRecord> page = execPage(q, q.getPageNum(), q.getPageSize());
         Map<Long, BizTreatmentApply> applies = applyMap(page.getRecords());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 toExecVos(page.getRecords(), applies));
@@ -204,14 +188,14 @@ public class TreatmentServiceImpl implements TreatmentService {
         for (int s = 0; s <= 2; s++) {
             TreatmentDTO.ExecQuery one = copy(ex);
             one.setExecStatus(s);
-            out.add(countVo("exec-" + s, dictText.getDicDataLabel(DICT_EXEC_STATUS, s), execPage(one, 1, 1).getTotal()));
+            out.add(countVo("exec-" + s, dictCacheService.getDicDataLabel(DICT_EXEC_STATUS, s), execPage(one, 1, 1).getTotal()));
         }
         TreatmentDTO.ExecQuery ch = copy(q);
         ch.setChargeStatus(null);
         for (int s = 0; s <= 3; s++) {
             TreatmentDTO.ExecQuery one = copy(ch);
             one.setChargeStatus(s);
-            out.add(countVo("charge-" + s, dictText.getDicDataLabel(DICT_CHARGE_STATUS, s), execPage(one, 1, 1).getTotal()));
+            out.add(countVo("charge-" + s, dictCacheService.getDicDataLabel(DICT_CHARGE_STATUS, s), execPage(one, 1, 1).getTotal()));
         }
         return out;
     }
@@ -219,7 +203,7 @@ public class TreatmentServiceImpl implements TreatmentService {
     public TreatmentVO.StatsVO stats() {
         LocalDate today = LocalDate.now();
         TreatmentVO.StatsVO v = new TreatmentVO.StatsVO();
-        v.setRunningApplies(applyMapper.selectCount(new LambdaQueryWrapper<BizTreatmentApply>()
+        v.setRunningApplies(bizTreatmentApplyMapper.selectCount(new LambdaQueryWrapper<BizTreatmentApply>()
                 .eq(BizTreatmentApply::getApplyStatus, TreatmentExecStatusEnum.PENDING.getCode())));
         Page<BizTreatmentRecord> todayPlan = execPage(queryOf(null, today, null), 1, 1);
         v.setTodayPlan(todayPlan.getTotal());
@@ -243,13 +227,13 @@ public class TreatmentServiceImpl implements TreatmentService {
      */
     public List<TreatmentVO.ItemSelectListVO> itemSelectList(String keyword, Integer limit) {
         List<TreatmentVO.ItemSelectListVO> out = new ArrayList<>();
-        for (TreatmentItemSnapshotVO row : itemMapper.selectOptions(trim(keyword), Math.min(nz(limit, 50), 200))) {
+        for (TreatmentItemSnapshotVO row : sysTreatmentItemMapper.selectOptions(TextUtil.trim(keyword), Math.min(NumUtil.orDefault(limit, 50), 200))) {
             TreatmentVO.ItemSelectListVO v = new TreatmentVO.ItemSelectListVO();
             v.setItemId(row.getItemId());
             v.setItemCode(row.getItemCode());
             v.setItemName(row.getItemName());
             v.setItemType(row.getItemType());
-            v.setItemTypeText(dictText.getDicDataLabel(DICT_ITEM_TYPE, v.getItemType()));
+            v.setItemTypeText(dictCacheService.getDicDataLabel(DICT_ITEM_TYPE, v.getItemType()));
             v.setPrice(row.getPrice());
             v.setDuration(row.getDuration());
             v.setUsageMethod(row.getUsageMethod());
@@ -270,23 +254,23 @@ public class TreatmentServiceImpl implements TreatmentService {
     public TreatmentVO.ApplyDetailVO upsertApply(TreatmentDTO.ApplyUpsert dto) {
         LocalDate start = dto.getStartDate();
         checkDateWindow(start, "疗程开始日期");
-        int totalTimes = nz(dto.getTotalTimes(), 1);
+        int totalTimes = NumUtil.orDefault(dto.getTotalTimes(), 1);
         if (totalTimes < 1 || totalTimes > 60) {
             throw new BusinessException("疗程总次数应在 1~60 之间，当前：" + totalTimes);
         }
-        int interval = nz(dto.getIntervalDays(), 1);
+        int interval = NumUtil.orDefault(dto.getIntervalDays(), 1);
         if (interval < 1 || interval > 30) {
             throw new BusinessException("间隔天数应在 1~30 之间，当前：" + interval);
         }
 
-        RegistSnapshotVO regist = applyMapper.selectRegistSnapshot(dto.getRegistId());
+        RegistSnapshotVO regist = bizTreatmentApplyMapper.selectRegistSnapshot(dto.getRegistId());
         if (regist == null || regist.getRegistId() == null) {
             throw new BusinessException("挂号记录不存在：" + dto.getRegistId());
         }
         if (regist.getRefundTime() != null || Integer.valueOf(5).equals(regist.getRegistStatus())) {
             throw new BusinessException("该挂号已退号/已取消，不能在已作废的就诊上开治疗");
         }
-        TreatmentItemSnapshotVO item = itemMapper.selectApplySnapshot(dto.getTreatmentItemId());
+        TreatmentItemSnapshotVO item = sysTreatmentItemMapper.selectApplySnapshot(dto.getTreatmentItemId());
         if (item == null || item.getItemId() == null) {
             throw new BusinessException("治疗项目不存在或已删除：" + dto.getTreatmentItemId());
         }
@@ -303,8 +287,8 @@ public class TreatmentServiceImpl implements TreatmentService {
         BizTreatmentApply apply;
         if (applyId == null) {
             apply = new BizTreatmentApply();
-            apply.setApplyNo(sequenceService.generateTreatmentApplyNo());
-            apply.setApplyTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+            apply.setApplyNo(redisSequenceService.generateTreatmentApplyNo());
+            apply.setApplyTime(TimeUtil.nowSeconds());
             apply.setApplyStatus(TreatmentExecStatusEnum.PENDING.getCode());
             apply.setDoneTimes(0);
         } else {
@@ -312,18 +296,18 @@ public class TreatmentServiceImpl implements TreatmentService {
             if (Integer.valueOf(TreatmentExecStatusEnum.CANCELLED.getCode()).equals(apply.getApplyStatus())) {
                 throw new BusinessException("疗程已取消，不能重新排期");
             }
-            if (nz(apply.getDoneTimes(), 0) > 0) {
+            if (NumUtil.orDefault(apply.getDoneTimes(), 0) > 0) {
                 throw new BusinessException("疗程已完成 " + apply.getDoneTimes() + " 次，不能再整体改次数/改期，"
                         + "请对未执行的那几次单独改期");
             }
             // 一次没打过：待执行流水全部作废重建（这些行不可能有收费痕迹，物理删不留脏记录）
-            long billed = execMapper.selectCount(new LambdaQueryWrapper<BizTreatmentRecord>()
+            long billed = bizTreatmentRecordMapper.selectCount(new LambdaQueryWrapper<BizTreatmentRecord>()
                     .eq(BizTreatmentRecord::getApplyId, applyId)
                     .in(BizTreatmentRecord::getChargeStatus, BillingStatusEnum.BILLED.getCode(), BillingStatusEnum.FAILED.getCode()));
             if (billed > 0) {
                 throw new BusinessException("该疗程已有 " + billed + " 次产生过计费痕迹，不能整体重排");
             }
-            execMapper.delete(new LambdaQueryWrapper<BizTreatmentRecord>()
+            bizTreatmentRecordMapper.delete(new LambdaQueryWrapper<BizTreatmentRecord>()
                     .eq(BizTreatmentRecord::getApplyId, applyId));
         }
 
@@ -352,12 +336,12 @@ public class TreatmentServiceImpl implements TreatmentService {
         if (apply.getDoneTimes() == null) {
             apply.setDoneTimes(0);
         }
-        apply.setRemark(cut(dto.getRemark(), 500));
+        apply.setRemark(TextUtil.cut(dto.getRemark(), 500));
 
         if (applyId == null) {
-            applyMapper.insert(apply);
+            bizTreatmentApplyMapper.insert(apply);
         } else {
-            applyMapper.updateById(apply);
+            bizTreatmentApplyMapper.updateById(apply);
         }
         buildSchedule(apply);
         log.info("门诊治疗开单成功 applyNo={} 项目={} 共 {} 次 开始 {} 单价 {}",
@@ -383,9 +367,9 @@ public class TreatmentServiceImpl implements TreatmentService {
         checkDateWindow(dto.getPlanDate(), "计划执行日期");
         LocalDate old = exec.getPlanDate();
         exec.setPlanDate(dto.getPlanDate());
-        exec.setRemark(cut("改期 " + (old == null ? "—" : old) + " → " + dto.getPlanDate()
-                + "：" + trim(dto.getReason()), 500));
-        execMapper.updateById(exec);
+        exec.setRemark(TextUtil.cut("改期 " + (old == null ? "—" : old) + " → " + dto.getPlanDate()
+                + "：" + TextUtil.trim(dto.getReason()), 500));
+        bizTreatmentRecordMapper.updateById(exec);
         return toExecVo(exec, apply);
     }
 
@@ -404,17 +388,17 @@ public class TreatmentServiceImpl implements TreatmentService {
         if (blocked != null) {
             throw new BusinessException(blocked);
         }
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         exec.setExecStatus(TreatmentExecStatusEnum.DONE.getCode());
         exec.setExecuteTime(now);
         exec.setRecordStatus(Integer.valueOf(0).equals(dto.getRecordStatus()) ? 0 : 1);
-        exec.setResult(cut(StringUtils.hasText(dto.getResult()) ? dto.getResult()
+        exec.setResult(TextUtil.cut(StringUtils.hasText(dto.getResult()) ? dto.getResult()
                 : ("第 " + exec.getExecSeq() + " 次治疗完成，过程顺利"), 1000));
-        exec.setRemark(cut(dto.getRemark(), 500));
+        exec.setRemark(TextUtil.cut(dto.getRemark(), 500));
         Long employeeId = UserUtils.getCurrentUser().getEmployeeId();
         exec.setNurseId(employeeId);
-        exec.setExecutorName(cut(UserUtils.getCurrentUser().getRealName(), 50));
-        execMapper.updateById(exec);
+        exec.setExecutorName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), 50));
+        bizTreatmentRecordMapper.updateById(exec);
 
         String chargeNote = billOnce(exec, apply);
         refreshApplyProgress(apply, now);
@@ -454,18 +438,18 @@ public class TreatmentServiceImpl implements TreatmentService {
         if (Integer.valueOf(TreatmentExecStatusEnum.CANCELLED.getCode()).equals(apply.getApplyStatus())) {
             throw new BusinessException("疗程已是取消状态，无需重复取消");
         }
-        String reason = cut(trim(dto.getReason()), 500);
-        List<BizTreatmentRecord> pending = execMapper.selectList(new LambdaQueryWrapper<BizTreatmentRecord>()
+        String reason = TextUtil.cut(TextUtil.trim(dto.getReason()), 500);
+        List<BizTreatmentRecord> pending = bizTreatmentRecordMapper.selectList(new LambdaQueryWrapper<BizTreatmentRecord>()
                 .eq(BizTreatmentRecord::getApplyId, apply.getApplyId())
                 .eq(BizTreatmentRecord::getExecStatus, TreatmentExecStatusEnum.PENDING.getCode()));
         for (BizTreatmentRecord r : pending) {
             r.setExecStatus(TreatmentExecStatusEnum.CANCELLED.getCode());
-            r.setRemark(cut("疗程取消：" + reason, 500));
-            execMapper.updateById(r);
+            r.setRemark(TextUtil.cut("疗程取消：" + reason, 500));
+            bizTreatmentRecordMapper.updateById(r);
         }
         apply.setApplyStatus(TreatmentExecStatusEnum.CANCELLED.getCode());
-        apply.setRemark(cut((apply.getRemark() == null ? "" : apply.getRemark() + " | ") + "取消：" + reason, 500));
-        applyMapper.updateById(apply);
+        apply.setRemark(TextUtil.cut((apply.getRemark() == null ? "" : apply.getRemark() + " | ") + "取消：" + reason, 500));
+        bizTreatmentApplyMapper.updateById(apply);
         log.info("门诊治疗疗程已取消 applyNo={} 连带取消未执行 {} 次", apply.getApplyNo(), pending.size());
         return pending.size();
     }
@@ -476,14 +460,14 @@ public class TreatmentServiceImpl implements TreatmentService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteApply(Long applyId) {
         BizTreatmentApply apply = requireApply(applyId);
-        long done = execMapper.selectCount(new LambdaQueryWrapper<BizTreatmentRecord>()
+        long done = bizTreatmentRecordMapper.selectCount(new LambdaQueryWrapper<BizTreatmentRecord>()
                 .eq(BizTreatmentRecord::getApplyId, applyId)
                 .eq(BizTreatmentRecord::getExecStatus, TreatmentExecStatusEnum.DONE.getCode()));
         if (done > 0) {
             throw new BusinessException("该疗程已执行 " + done + " 次，执行流水是收费凭据的来源，不能删除（只能取消未执行的部分）");
         }
-        execMapper.delete(new LambdaQueryWrapper<BizTreatmentRecord>().eq(BizTreatmentRecord::getApplyId, applyId));
-        applyMapper.deleteById(applyId);
+        bizTreatmentRecordMapper.delete(new LambdaQueryWrapper<BizTreatmentRecord>().eq(BizTreatmentRecord::getApplyId, applyId));
+        bizTreatmentApplyMapper.deleteById(applyId);
     }
 
     /**
@@ -533,7 +517,7 @@ public class TreatmentServiceImpl implements TreatmentService {
             // 记账失败不能否认"这次治疗做了"：留痕 + 给人补记的机会，而不是把打卡一起回滚
             log.error("门诊治疗按次计费失败 recordId={} applyNo={}", exec.getRecordId(), apply.getApplyNo(), e);
             markCharge(exec, BillingStatusEnum.FAILED.getCode(), null, null, null, "计费异常：" + e.getMessage());
-            return "已打卡，但记账失败：" + cut(e.getMessage(), 200) + "（可点「补记」重试）";
+            return "已打卡，但记账失败：" + TextUtil.cut(e.getMessage(), 200) + "（可点「补记」重试）";
         }
     }
 
@@ -550,15 +534,15 @@ public class TreatmentServiceImpl implements TreatmentService {
         exec.setChargeAmount(amount);
         // MP 默认 NOT_NULL 更新策略：null 不会写库，所以"清掉失败原因"必须传空串，
         // 否则补记成功后页面上还挂着上一次的失败原因（看起来像又失败了一次）。
-        exec.setChargeFailReason(done ? "" : cut(reason, BizTreatmentRecord.REASON_MAX));
-        exec.setChargeTime(done ? LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS) : null);
-        execMapper.updateById(exec);
+        exec.setChargeFailReason(done ? "" : TextUtil.cut(reason, BizTreatmentRecord.REASON_MAX));
+        exec.setChargeTime(done ? TimeUtil.nowSeconds() : null);
+        bizTreatmentRecordMapper.updateById(exec);
     }
 
     private void buildSchedule(BizTreatmentApply apply) {
         LocalDate start = apply.getStartDate() == null ? LocalDate.now() : apply.getStartDate();
-        int interval = nz(apply.getIntervalDays(), 1);
-        int total = nz(apply.getTotalTimes(), 1);
+        int interval = NumUtil.orDefault(apply.getIntervalDays(), 1);
+        int total = NumUtil.orDefault(apply.getTotalTimes(), 1);
         for (int seq = 1; seq <= total; seq++) {
             BizTreatmentRecord r = new BizTreatmentRecord();
             r.setRecordNo(apply.getApplyNo() + "-" + String.format("%02d", seq));
@@ -569,12 +553,12 @@ public class TreatmentServiceImpl implements TreatmentService {
             r.setExecStatus(TreatmentExecStatusEnum.PENDING.getCode());
             r.setChargeStatus(BillingStatusEnum.UNBILLED.getCode());
             r.setRecordStatus(TreatmentRecordStatusEnum.NORMAL.getCode());
-            execMapper.insert(r);
+            bizTreatmentRecordMapper.insert(r);
         }
     }
 
     private void refreshApplyProgress(BizTreatmentApply apply, LocalDateTime execTime) {
-        long done = execMapper.selectCount(new LambdaQueryWrapper<BizTreatmentRecord>()
+        long done = bizTreatmentRecordMapper.selectCount(new LambdaQueryWrapper<BizTreatmentRecord>()
                 .eq(BizTreatmentRecord::getApplyId, apply.getApplyId())
                 .eq(BizTreatmentRecord::getExecStatus, TreatmentExecStatusEnum.DONE.getCode()));
         apply.setDoneTimes((int) done);
@@ -582,7 +566,7 @@ public class TreatmentServiceImpl implements TreatmentService {
         if (!Integer.valueOf(TreatmentExecStatusEnum.CANCELLED.getCode()).equals(apply.getApplyStatus())) {
             apply.setApplyStatus(done > 0 ? TreatmentExecStatusEnum.DONE.getCode() : TreatmentExecStatusEnum.PENDING.getCode());
         }
-        applyMapper.updateById(apply);
+        bizTreatmentApplyMapper.updateById(apply);
     }
 
     /**
@@ -608,7 +592,7 @@ public class TreatmentServiceImpl implements TreatmentService {
         if (plan.isAfter(today)) {
             return "未到执行日期（计划 " + plan + "），不能提前打卡";
         }
-        BizTreatmentRecord earlier = execMapper.selectOne(new LambdaQueryWrapper<BizTreatmentRecord>()
+        BizTreatmentRecord earlier = bizTreatmentRecordMapper.selectOne(new LambdaQueryWrapper<BizTreatmentRecord>()
                 .eq(BizTreatmentRecord::getApplyId, exec.getApplyId())
                 .eq(BizTreatmentRecord::getExecStatus, TreatmentExecStatusEnum.PENDING.getCode())
                 .lt(BizTreatmentRecord::getExecSeq, exec.getExecSeq())
@@ -623,10 +607,10 @@ public class TreatmentServiceImpl implements TreatmentService {
     private TreatmentVO.ApplyVO toApplyVo(BizTreatmentApply a) {
         TreatmentVO.ApplyVO v = new TreatmentVO.ApplyVO();
         BeanUtils.copyProperties(a, v);
-        v.setItemTypeText(dictText.getDicDataLabel(DICT_ITEM_TYPE, a.getItemType()));
-        v.setApplyStatusText(dictText.getDicDataLabel(DICT_APPLY_STATUS, a.getApplyStatus()));
-        int total = nz(a.getTotalTimes(), 1);
-        int done = nz(a.getDoneTimes(), 0);
+        v.setItemTypeText(dictCacheService.getDicDataLabel(DICT_ITEM_TYPE, a.getItemType()));
+        v.setApplyStatusText(dictCacheService.getDicDataLabel(DICT_APPLY_STATUS, a.getApplyStatus()));
+        int total = NumUtil.orDefault(a.getTotalTimes(), 1);
+        int done = NumUtil.orDefault(a.getDoneTimes(), 0);
         v.setDoneTimes(done);
         v.setProgressText(done + "/" + total);
         v.setPendingTimes(Math.max(total - done, 0));
@@ -647,14 +631,14 @@ public class TreatmentServiceImpl implements TreatmentService {
     private TreatmentVO.ExecVO toExecVo(BizTreatmentRecord r, BizTreatmentApply apply) {
         TreatmentVO.ExecVO v = new TreatmentVO.ExecVO();
         BeanUtils.copyProperties(r, v);
-        v.setExecStatusText(dictText.getDicDataLabel(DICT_EXEC_STATUS, r.getExecStatus()));
-        v.setChargeStatusText(dictText.getDicDataLabel(DICT_CHARGE_STATUS, r.getChargeStatus()));
+        v.setExecStatusText(dictCacheService.getDicDataLabel(DICT_EXEC_STATUS, r.getExecStatus()));
+        v.setChargeStatusText(dictCacheService.getDicDataLabel(DICT_CHARGE_STATUS, r.getChargeStatus()));
         // execute_time / record_status 在老库是 NOT NULL 带默认值，未执行的行上是 MySQL 填的默认值，
         // 只有真的打过卡才有意义 —— 不按时机清空就会把"排期"显示成"已做"。
         boolean done = Integer.valueOf(TreatmentExecStatusEnum.DONE.getCode()).equals(r.getExecStatus());
         v.setExecuteTime(done ? r.getExecuteTime() : null);
         v.setRecordStatus(done ? r.getRecordStatus() : null);
-        v.setRecordStatusText(done ? dictText.getDicDataLabel(DICT_RECORD_STATUS, r.getRecordStatus()) : null);
+        v.setRecordStatusText(done ? dictCacheService.getDicDataLabel(DICT_RECORD_STATUS, r.getRecordStatus()) : null);
         LocalDate plan = r.getPlanDate();
         v.setOverdue(!done && plan != null && plan.isBefore(LocalDate.now()));
         if (apply != null) {
@@ -664,7 +648,7 @@ public class TreatmentServiceImpl implements TreatmentService {
             v.setPatientName(apply.getPatientName());
             v.setItemName(apply.getItemName());
             v.setItemType(apply.getItemType());
-            v.setItemTypeText(dictText.getDicDataLabel(DICT_ITEM_TYPE, apply.getItemType()));
+            v.setItemTypeText(dictCacheService.getDicDataLabel(DICT_ITEM_TYPE, apply.getItemType()));
             v.setPrice(apply.getPrice());
             v.setDeptId(apply.getDeptId());
             v.setDeptName(apply.getDeptName());
@@ -694,8 +678,8 @@ public class TreatmentServiceImpl implements TreatmentService {
             w.eq(BizTreatmentRecord::getExecStatus, TreatmentExecStatusEnum.DONE.getCode())
                     .in(BizTreatmentRecord::getChargeStatus, BillingStatusEnum.UNBILLED.getCode(), BillingStatusEnum.FAILED.getCode());
         }
-        if (q.getPatientId() != null || StringUtils.hasText(trim(q.getKeyword()))) {
-            List<Long> applyIds = applyIds(q.getPatientId(), trim(q.getKeyword()));
+        if (q.getPatientId() != null || StringUtils.hasText(TextUtil.trim(q.getKeyword()))) {
+            List<Long> applyIds = applyIds(q.getPatientId(), TextUtil.trim(q.getKeyword()));
             if (applyIds.isEmpty()) {
                 return new Page<>(pageNum, pageSize);
             }
@@ -703,7 +687,7 @@ public class TreatmentServiceImpl implements TreatmentService {
         }
         w.orderByAsc(BizTreatmentRecord::getPlanDate).orderByAsc(BizTreatmentRecord::getApplyId)
                 .orderByAsc(BizTreatmentRecord::getExecSeq);
-        return execMapper.selectPage(new Page<>(pageNum, pageSize), w);
+        return bizTreatmentRecordMapper.selectPage(new Page<>(pageNum, pageSize), w);
     }
 
     /**
@@ -718,7 +702,7 @@ public class TreatmentServiceImpl implements TreatmentService {
                         .or().like(BizTreatmentApply::getApplyNo, kw)
                         .or().like(BizTreatmentApply::getItemName, kw));
         List<Long> ids = new ArrayList<>();
-        for (BizTreatmentApply a : applyMapper.selectList(w)) {
+        for (BizTreatmentApply a : bizTreatmentApplyMapper.selectList(w)) {
             ids.add(a.getApplyId());
         }
         return ids;
@@ -735,14 +719,14 @@ public class TreatmentServiceImpl implements TreatmentService {
         if (ids.isEmpty()) {
             return map;
         }
-        for (BizTreatmentApply a : applyMapper.selectBatchIds(ids)) {
+        for (BizTreatmentApply a : bizTreatmentApplyMapper.selectBatchIds(ids)) {
             map.put(a.getApplyId(), a);
         }
         return map;
     }
 
     private BigDecimal sumTodayChargeAmount(LocalDate today) {
-        List<BizTreatmentRecord> rows = execMapper.selectList(new LambdaQueryWrapper<BizTreatmentRecord>()
+        List<BizTreatmentRecord> rows = bizTreatmentRecordMapper.selectList(new LambdaQueryWrapper<BizTreatmentRecord>()
                 .select(BizTreatmentRecord::getChargeAmount)
                 .eq(BizTreatmentRecord::getExecStatus, TreatmentExecStatusEnum.DONE.getCode())
                 .eq(BizTreatmentRecord::getChargeStatus, BillingStatusEnum.BILLED.getCode())
@@ -783,7 +767,7 @@ public class TreatmentServiceImpl implements TreatmentService {
         if (applyId == null) {
             throw new BusinessException("治疗申请单ID不能为空");
         }
-        BizTreatmentApply a = applyMapper.selectById(applyId);
+        BizTreatmentApply a = bizTreatmentApplyMapper.selectById(applyId);
         if (a == null) {
             throw new BusinessException("治疗申请单不存在：" + applyId);
         }
@@ -795,7 +779,7 @@ public class TreatmentServiceImpl implements TreatmentService {
         if (recordId == null) {
             throw new BusinessException("执行流水ID不能为空");
         }
-        BizTreatmentRecord r = execMapper.selectById(recordId);
+        BizTreatmentRecord r = bizTreatmentRecordMapper.selectById(recordId);
         if (r == null) {
             throw new BusinessException("治疗执行流水不存在：" + recordId);
         }
@@ -817,6 +801,6 @@ public class TreatmentServiceImpl implements TreatmentService {
     }
 
     private String execStatusText(Integer status) {
-        return dictText.getDicDataLabel(DICT_EXEC_STATUS, status);
+        return dictCacheService.getDicDataLabel(DICT_EXEC_STATUS, status);
     }
 }

@@ -8,6 +8,7 @@ import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.EndoscopyDTO;
 import com.his.medicaltech.dto.PathologyDTO;
 import com.his.medicaltech.entity.BizEndoscopyRecord;
@@ -54,10 +55,10 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
     private static final String DICT_ENDO_TYPE = "his_endoscopy_type";
     private static final String DICT_ANESTHESIA = "his_endoscopy_anesthesia";
 
-    private final BizEndoscopyRecordMapper recordMapper;
+    private final BizEndoscopyRecordMapper bizEndoscopyRecordMapper;
     private final PathologyService pathologyService;
-    private final DictCacheService dictText;
-    private final EmployeeTechAuthService techAuthService;
+    private final DictCacheService dictCacheService;
+    private final EmployeeTechAuthService employeeTechAuthService;
 
     /**
      * ERCP=4 级；取活检=2 级；其余诊断性镜检=1 级
@@ -78,11 +79,11 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
                 .eq(q.getPatientId() != null, BizEndoscopyRecord::getPatientId, q.getPatientId())
                 .eq(q.getEndoType() != null, BizEndoscopyRecord::getEndoType, q.getEndoType())
                 .eq(q.getStatus() != null, BizEndoscopyRecord::getStatus, q.getStatus())
-                .like(StringUtils.hasText(q.getPatientName()), BizEndoscopyRecord::getPatientName, tr(q.getPatientName()))
+                .like(StringUtils.hasText(q.getPatientName()), BizEndoscopyRecord::getPatientName, TextUtil.trim(q.getPatientName()))
                 .ge(q.getStartDate() != null, BizEndoscopyRecord::getVisitDate, q.getStartDate())
                 .le(q.getEndDate() != null, BizEndoscopyRecord::getVisitDate, q.getEndDate())
                 .orderByDesc(BizEndoscopyRecord::getId);
-        Page<BizEndoscopyRecord> page = recordMapper.selectPage(
+        Page<BizEndoscopyRecord> page = bizEndoscopyRecordMapper.selectPage(
                 new Page<>(q.getPageNum(), q.getPageSize()), w);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 toListVo(page.getRecords()));
@@ -90,19 +91,19 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
 
     public EndoscopyVO.StatsVO stats() {
         EndoscopyVO.StatsVO vo = new EndoscopyVO.StatsVO();
-        vo.setTotal(recordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
+        vo.setTotal(bizEndoscopyRecordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
                 .ne(BizEndoscopyRecord::getStatus, InsRecordStatusEnum.CANCELLED.getCode())));
         vo.setPending(count(InsRecordStatusEnum.REGISTERED.getCode()) + count(InsRecordStatusEnum.SIGNED_IN.getCode()));
         vo.setExamining(count(InsRecordStatusEnum.CHECKING.getCode()));
         vo.setPendingAudit(count(InsRecordStatusEnum.RESULTED.getCode()));
         vo.setPublished(count(InsRecordStatusEnum.PUBLISHED.getCode()));
-        vo.setBiopsyCount(recordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
+        vo.setBiopsyCount(bizEndoscopyRecordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
                 .eq(BizEndoscopyRecord::getBiopsyFlag, 1)));
         return vo;
     }
 
     private long count(int status) {
-        return recordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>().eq(BizEndoscopyRecord::getStatus, status));
+        return bizEndoscopyRecordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>().eq(BizEndoscopyRecord::getStatus, status));
     }
 
     public EndoscopyVO.DetailVO getDetail(Long recordId) {
@@ -118,9 +119,9 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         for (BizEndoscopyRecord r : records) {
             EndoscopyVO.ListVO v = new EndoscopyVO.ListVO();
             BeanUtils.copyProperties(r, v);
-            v.setStatusText(dictText.getDicDataLabel(DICT_STATUS, r.getStatus()));
-            v.setEndoTypeText(dictText.getDicDataLabel(DICT_ENDO_TYPE, r.getEndoType()));
-            v.setAnesthesiaMethodText(dictText.getDicDataLabel(DICT_ANESTHESIA, r.getAnesthesiaMethod()));
+            v.setStatusText(dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()));
+            v.setEndoTypeText(dictCacheService.getDicDataLabel(DICT_ENDO_TYPE, r.getEndoType()));
+            v.setAnesthesiaMethodText(dictCacheService.getDicDataLabel(DICT_ANESTHESIA, r.getAnesthesiaMethod()));
             out.add(v);
         }
         return out;
@@ -129,10 +130,10 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
     // 写入
 
     private void fillText(EndoscopyVO.DetailVO vo) {
-        vo.setStatusText(dictText.getDicDataLabel(DICT_STATUS, vo.getStatus()));
-        vo.setEndoTypeText(dictText.getDicDataLabel(DICT_ENDO_TYPE, vo.getEndoType()));
-        vo.setAnesthesiaMethodText(dictText.getDicDataLabel(DICT_ANESTHESIA, vo.getAnesthesiaMethod()));
-        vo.setHpResultText(dictText.getDicDataLabel("biz_medicaltech_endoscopyHpResultEnum", vo.getHpResult()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DICT_STATUS, vo.getStatus()));
+        vo.setEndoTypeText(dictCacheService.getDicDataLabel(DICT_ENDO_TYPE, vo.getEndoType()));
+        vo.setAnesthesiaMethodText(dictCacheService.getDicDataLabel(DICT_ANESTHESIA, vo.getAnesthesiaMethod()));
+        vo.setHpResultText(dictCacheService.getDicDataLabel("biz_medicaltech_endoscopyHpResultEnum", vo.getHpResult()));
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -157,7 +158,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         r.setBiopsyCount(0);
         r.setStatus(InsRecordStatusEnum.REGISTERED.getCode());
         r.setRecordNo(nextRecordNo(visitDate));
-        recordMapper.insert(r);
+        bizEndoscopyRecordMapper.insert(r);
         return r;
     }
 
@@ -165,11 +166,11 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         BizEndoscopyRecord r = require(dto.getId());
         assertMutable(r);
         if (!InsRecordStatusEnum.REGISTERED.is(r.getStatus()) && !InsRecordStatusEnum.SIGNED_IN.is(r.getStatus())) {
-            throw new BusinessException("已开始检查的记录不可修改登记信息（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("已开始检查的记录不可修改登记信息（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         BeanUtils.copyProperties(dto, r);
         r.setId(dto.getId());
-        recordMapper.updateById(r);
+        bizEndoscopyRecordMapper.updateById(r);
         return r;
     }
 
@@ -178,10 +179,10 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         BizEndoscopyRecord r = require(recordId);
         assertMutable(r);
         if (!InsRecordStatusEnum.REGISTERED.is(r.getStatus())) {
-            throw new BusinessException("仅「已登记」可签到（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("仅「已登记」可签到（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         r.setStatus(InsRecordStatusEnum.SIGNED_IN.getCode());
-        recordMapper.updateById(r);
+        bizEndoscopyRecordMapper.updateById(r);
     }
 
     /**
@@ -196,7 +197,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         BizEndoscopyRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.SIGNED_IN.is(r.getStatus()) && !InsRecordStatusEnum.CHECKING.is(r.getStatus())) {
-            throw new BusinessException("请先签到再执行检查（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("请先签到再执行检查（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         r.setEndoscopist(StringUtils.hasText(dto.getEndoscopist()) ? dto.getEndoscopist() : operatorUser.getRealName());
         if (dto.getBowelPrepScore() != null) {
@@ -238,7 +239,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
             r.setStatus(InsRecordStatusEnum.CHECKING.getCode());
             r.setExecuteTime(LocalDateTime.now().withNano(0));
         }
-        recordMapper.updateById(r);
+        bizEndoscopyRecordMapper.updateById(r);
     }
 
     /**
@@ -272,7 +273,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         r.setBiopsyPart(dto.getBiopsyPart());
         r.setBiopsyCount(count);
         r.setPathologyOrderNo(order.getOrderNo());
-        recordMapper.updateById(r);
+        bizEndoscopyRecordMapper.updateById(r);
         return order.getOrderNo();
     }
 
@@ -288,7 +289,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         BizEndoscopyRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.CHECKING.is(r.getStatus())) {
-            throw new BusinessException("仅「检查中」的记录可出具报告（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("仅「检查中」的记录可出具报告（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         r.setFindings(dto.getFindings());
         r.setDiagnosis(dto.getDiagnosis());
@@ -296,7 +297,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         r.setStatus(InsRecordStatusEnum.RESULTED.getCode());
         r.setReportBy(operatorUser.getRealName());
         r.setReportTime(LocalDateTime.now().withNano(0));
-        recordMapper.updateById(r);
+        bizEndoscopyRecordMapper.updateById(r);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -308,7 +309,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         BizEndoscopyRecord r = require(dto.getRecordId());
         assertMutable(r);
         if (!InsRecordStatusEnum.RESULTED.is(r.getStatus())) {
-            throw new BusinessException("仅「已出报告」可审核（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("仅「已出报告」可审核（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         String who = operatorUser.getRealName();
         if (who != null && who.equals(r.getReportBy())) {
@@ -318,9 +319,9 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         r.setAuditBy(who);
         r.setAuditTime(LocalDateTime.now().withNano(0));
         if (StringUtils.hasText(dto.getAuditOpinion())) {
-            r.setRemark(clip((r.getRemark() == null ? "" : r.getRemark() + " | 审核意见：") + dto.getAuditOpinion()));
+            r.setRemark(TextUtil.cut((r.getRemark() == null ? "" : r.getRemark() + " | 审核意见：") + dto.getAuditOpinion(), 480));
         }
-        recordMapper.updateById(r);
+        bizEndoscopyRecordMapper.updateById(r);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -334,12 +335,12 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
             throw new BusinessException("该报告已发布");
         }
         if (!InsRecordStatusEnum.REVIEWED.is(r.getStatus())) {
-            throw new BusinessException("发布前必须完成审核（当前：" + dictText.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
+            throw new BusinessException("发布前必须完成审核（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()) + "）");
         }
         r.setStatus(InsRecordStatusEnum.PUBLISHED.getCode());
         r.setPublishBy(operatorUser.getRealName());
         r.setPublishTime(LocalDateTime.now().withNano(0));
-        recordMapper.updateById(r);
+        bizEndoscopyRecordMapper.updateById(r);
     }
 
     // 内部
@@ -354,9 +355,9 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
             throw new BusinessException("该记录已取消");
         }
         r.setStatus(InsRecordStatusEnum.CANCELLED.getCode());
-        r.setCancelReason(clip(dto.getCancelReason()));
+        r.setCancelReason(TextUtil.cut(dto.getCancelReason(), 480));
         r.setCancelTime(LocalDateTime.now().withNano(0));
-        recordMapper.updateById(r);
+        bizEndoscopyRecordMapper.updateById(r);
     }
 
     private BizEndoscopyRecord require(Long id) {
@@ -364,7 +365,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         if (id == null) {
             throw new BusinessException("检查记录ID不能为空");
         }
-        BizEndoscopyRecord r = recordMapper.selectById(id);
+        BizEndoscopyRecord r = bizEndoscopyRecordMapper.selectById(id);
         if (r == null) {
             throw new BusinessException("内镜检查记录不存在：" + id);
         }
@@ -379,12 +380,12 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
 
     private String nextRecordNo(LocalDate date) {
         String day = date.format(DateFormats.COMPACT_DATE);
-        long base = recordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
+        long base = bizEndoscopyRecordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
                 .ge(BizEndoscopyRecord::getCreateTime, date.atStartOfDay())
                 .lt(BizEndoscopyRecord::getCreateTime, date.plusDays(1).atStartOfDay())) + 1;
         for (int i = 0; i < 20; i++) {
             String no = "NJ" + day + String.format("%03d", base + i);
-            if (recordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
+            if (bizEndoscopyRecordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
                     .eq(BizEndoscopyRecord::getRecordNo, no)) == 0) {
                 return no;
             }
@@ -414,23 +415,10 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         gate.setSourceId(r.getId());
         gate.setSourceNo(r.getRecordNo());
         try {
-            techAuthService.gate(gate);
+            employeeTechAuthService.gate(gate);
         } catch (BusinessException e) {
             throw new BusinessException("内镜术者「" + operator + "」" + e.getMessage());
         }
     }
 
-    /**
-     * null 安全 trim：查询条件的 value 参数是急切求值的，直接 x.trim() 会在 x 为 null 时 NPE
-     */
-    private String tr(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private String clip(String s) {
-        if (s == null) {
-            return null;
-        }
-        return s.length() > 480 ? s.substring(0, 480) : s;
-    }
 }

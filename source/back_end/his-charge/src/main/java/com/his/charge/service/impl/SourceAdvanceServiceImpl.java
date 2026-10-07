@@ -1,6 +1,7 @@
 package com.his.charge.service.impl;
 
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.api.EmrGateway;
 import com.his.charge.api.MedicalTechGateway;
 import com.his.charge.entity.BizFeeRecord;
@@ -33,10 +34,10 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SourceAdvanceServiceImpl implements SourceAdvanceService {
+public class SourceAdvanceServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaymentTxn> implements SourceAdvanceService {
 
     private final FeeRecordService feeRecordService;
-    private final BizPaymentTxnMapper paymentTxnMapper;
+    private final BizPaymentTxnMapper bizPaymentTxnMapper;
     private final EmrGateway emrGateway;
     private final MedicalTechGateway medicalTechGateway;
 
@@ -166,7 +167,7 @@ public class SourceAdvanceServiceImpl implements SourceAdvanceService {
      */
     private Integer primaryPayMethod(Long billId) {
         Map<Integer, BigDecimal> byMethod = new HashMap<>();
-        for (BizPaymentTxn txn : paymentTxnMapper.selectByBill(billId)) {
+        for (BizPaymentTxn txn : bizPaymentTxnMapper.selectByBill(billId)) {
             if (!PayDirectionEnum.CHARGE.getCode().equals(txn.getDirection())
                     || !PayTxnStatusEnum.SUCCESS.getCode().equals(txn.getTxnStatus())
                     || txn.getPayMethod() == null) {

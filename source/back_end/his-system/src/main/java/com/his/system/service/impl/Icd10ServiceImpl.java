@@ -1,6 +1,7 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.system.dto.Icd10PredictDTO;
 import com.his.system.entity.SysIcd10;
 import com.his.system.mapper.SysIcd10Mapper;
@@ -14,18 +15,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class Icd10ServiceImpl implements Icd10Service {
+public class Icd10ServiceImpl extends ServiceImpl<SysIcd10Mapper, SysIcd10> implements Icd10Service {
 
     /**
      * 精确/前缀命中池上限。这一池是"高置信"的（比如输入「肺炎」时名称以肺炎开头的 31 条），
@@ -46,11 +43,9 @@ public class Icd10ServiceImpl implements Icd10Service {
      */
     private static final long CACHE_TTL_MS = 300_000L;
 
-    private final SysIcd10Mapper icd10Mapper;
-
-    private volatile List<SysIcd10> cachedCodes;
-
+    private final SysIcd10Mapper sysIcd10Mapper;
     private final AtomicLong cachedAt = new AtomicLong(0L);
+    private volatile List<SysIcd10> cachedCodes;
 
     // 检索
 
@@ -146,7 +141,7 @@ public class Icd10ServiceImpl implements Icd10Service {
 
     private List<SysIcd10> safeSelect(LambdaQueryWrapper<SysIcd10> wrapper) {
         try {
-            List<SysIcd10> list = icd10Mapper.selectList(wrapper);
+            List<SysIcd10> list = sysIcd10Mapper.selectList(wrapper);
             return list == null ? List.of() : list;
         } catch (Exception ex) {
             log.error("[ICD] 检索 sys_icd10 失败，本次返回空结果", ex);
@@ -179,7 +174,7 @@ public class Icd10ServiceImpl implements Icd10Service {
 
     private List<SysIcd10> load() {
         try {
-            List<SysIcd10> list = icd10Mapper.selectList(new LambdaQueryWrapper<SysIcd10>()
+            List<SysIcd10> list = sysIcd10Mapper.selectList(new LambdaQueryWrapper<SysIcd10>()
                     .eq(SysIcd10::getStatus, 1)
                     .orderByAsc(SysIcd10::getSortOrder)
                     .orderByAsc(SysIcd10::getIcdCode));

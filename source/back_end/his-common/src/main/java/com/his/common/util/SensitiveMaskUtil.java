@@ -20,7 +20,7 @@ public final class SensitiveMaskUtil {
      * 手机号：18878885878 → 188****5878；带区号固话保住区号 0731-****6666
      */
     public static String maskPhone(String v) {
-        String s = trimToEmpty(v);
+        String s = TextUtil.trimToEmpty(v);
         if (s.isEmpty()) {
             return null;
         }
@@ -35,7 +35,7 @@ public final class SensitiveMaskUtil {
      * 身份证号：430726199709180511 → 4307**********0511（前 4 是省市，后 4 足以核对是否同一张证）
      */
     public static String maskIdCard(String v) {
-        String s = trimToEmpty(v);
+        String s = TextUtil.trimToEmpty(v);
         return s.isEmpty() ? null : maskMiddle(s, 4, 4);
     }
 
@@ -43,7 +43,7 @@ public final class SensitiveMaskUtil {
      * 邮箱：1688888@qq.com → 168****8@qq.com（域名保留，用户名打码）
      */
     public static String maskEmail(String v) {
-        String s = trimToEmpty(v);
+        String s = TextUtil.trimToEmpty(v);
         if (s.isEmpty()) {
             return null;
         }
@@ -59,7 +59,7 @@ public final class SensitiveMaskUtil {
      * <p>短号只留首尾各 2 位，7 位以下全遮 —— 露出过半就不算脱敏了。
      */
     public static String maskCardNo(String v) {
-        String s = trimToEmpty(v);
+        String s = TextUtil.trimToEmpty(v);
         if (s.isEmpty()) {
             return null;
         }
@@ -79,7 +79,7 @@ public final class SensitiveMaskUtil {
      * <p>长度不足 head+tail 时退化为只留首尾各一位，避免出现「全露出」或「负数星号」。
      */
     public static String maskMiddle(String v, int head, int tail) {
-        String s = trimToEmpty(v);
+        String s = TextUtil.trimToEmpty(v);
         if (s.isEmpty()) {
             return "";
         }
@@ -97,7 +97,4 @@ public final class SensitiveMaskUtil {
         return n <= 0 ? "" : String.valueOf(c).repeat(n);
     }
 
-    private static String trimToEmpty(String v) {
-        return v == null ? "" : v.trim();
-    }
 }

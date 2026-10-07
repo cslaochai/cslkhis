@@ -47,7 +47,7 @@ public class ArrearsControlController {
     @PostMapping("/board")
     public Result<PageResult<ArrearsPatientVO>> board(@Valid @RequestBody(required = false) ArrearsBoardQueryDTO q) {
         ArrearsBoardQueryDTO query = q == null ? new ArrearsBoardQueryDTO() : q;
-        var page = arrearsControlService.arrearsBoard(query.getKeyword(), query.getPageNum(), query.getPageSize());
+        var page = arrearsControlService.arrearsBoard(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
     }

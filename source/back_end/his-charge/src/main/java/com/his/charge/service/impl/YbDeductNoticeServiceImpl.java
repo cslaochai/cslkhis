@@ -3,6 +3,7 @@ package com.his.charge.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.api.PatientGateway;
 import com.his.charge.dto.*;
 import com.his.charge.entity.BizInsuranceSettlement;
@@ -19,6 +20,7 @@ import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
@@ -41,7 +43,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
+public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapper, BizYbDeductNotice> implements YbDeductNoticeService {
 
     /**
      * 留痕动作（字典 his_yb_deduct_action）
@@ -61,12 +63,12 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
     private static final int BEAR_EMP = 3;
     private static final int BEAR_BOTH = 4;
 
-    private final BizYbDeductNoticeMapper noticeMapper;
-    private final BizYbDeductLogMapper logMapper;
-    private final BizYbInspectionMapper inspectionMapper;
-    private final InsuranceSettlementService settlementService;
+    private final BizYbDeductNoticeMapper bizYbDeductNoticeMapper;
+    private final BizYbDeductLogMapper bizYbDeductLogMapper;
+    private final BizYbInspectionMapper bizYbInspectionMapper;
+    private final InsuranceSettlementService insuranceSettlementService;
     private final PatientGateway patientGateway;
-    private final RedisSequenceService sequenceService;
+    private final RedisSequenceService redisSequenceService;
 
     @Override
     public PageResult<DeductNoticeListVO> listPage(DeductNoticeQueryPageDTO queryDTO) {
@@ -89,7 +91,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
             wrapper.in(BizYbDeductNotice::getDeductStatus, YbDeductStatusEnum.PENDING_CONFIRM.getCode(), YbDeductStatusEnum.APPEALING.getCode())
                     .lt(BizYbDeductNotice::getHandleDeadline, today);
         }
-        IPage<BizYbDeductNotice> page = noticeMapper.selectPage(
+        IPage<BizYbDeductNotice> page = bizYbDeductNoticeMapper.selectPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         List<DeductNoticeListVO> voList = page.getRecords().stream()
                 .map(entity -> toVO(entity, today)).toList();
@@ -104,7 +106,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         LocalDate today = LocalDate.now();
         vo.setOverdue(isOverdue(entity, today));
         vo.setDeadlineDays(deadlineDays(entity, today));
-        vo.setLogs(logMapper.selectList(new LambdaQueryWrapper<BizYbDeductLog>()
+        vo.setLogs(bizYbDeductLogMapper.selectList(new LambdaQueryWrapper<BizYbDeductLog>()
                         .eq(BizYbDeductLog::getNoticeId, entity.getId())
                         .orderByAsc(BizYbDeductLog::getOperateTime, BizYbDeductLog::getId))
                 .stream().map(this::toLogVO).toList());
@@ -113,7 +115,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
 
     @Override
     public DeductSummaryVO summary() {
-        DeductSummaryVO vo = noticeMapper.summary();
+        DeductSummaryVO vo = bizYbDeductNoticeMapper.summary();
         return vo == null ? new DeductSummaryVO() : vo;
     }
 
@@ -130,7 +132,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         boolean creating = dto.getId() == null;
         if (creating) {
             entity = new BizYbDeductNotice();
-            entity.setDeductNo(sequenceService.generateYbDeductNo());
+            entity.setDeductNo(redisSequenceService.generateYbDeductNo());
             entity.setDeductStatus(YbDeductStatusEnum.PENDING_CONFIRM.getCode());
         } else {
             entity = require(dto.getId());
@@ -151,24 +153,24 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         if (dto.getPatientId() != null && patient == null) {
             throw new BusinessException("患者不存在或已删除");
         }
-        entity.setPatientName(cut(patient == null ? dto.getPatientName() : patient.getPatientName(), 50));
-        entity.setPatientNo(cut(patient == null ? dto.getPatientNo() : patient.getPatientNo(), 32));
+        entity.setPatientName(TextUtil.cut(patient == null ? dto.getPatientName() : patient.getPatientName(), 50));
+        entity.setPatientNo(TextUtil.cut(patient == null ? dto.getPatientNo() : patient.getPatientNo(), 32));
         entity.setDeptId(dto.getDeptId());
-        entity.setDeptName(cut(dto.getDeptName(), 100));
-        entity.setDoctorName(cut(dto.getDoctorName(), 50));
+        entity.setDeptName(TextUtil.cut(dto.getDeptName(), 100));
+        entity.setDoctorName(TextUtil.cut(dto.getDoctorName(), 50));
         entity.setViolationType(dto.getViolationType());
-        entity.setViolationDesc(cut(dto.getViolationDesc(), 500));
+        entity.setViolationDesc(TextUtil.cut(dto.getViolationDesc(), 500));
         entity.setDeductAmount(dto.getDeductAmount());
         entity.setNoticeDate(dto.getNoticeDate());
         entity.setHandleDeadline(dto.getHandleDeadline());
-        entity.setRemark(cut(dto.getRemark(), 500));
+        entity.setRemark(TextUtil.cut(dto.getRemark(), 500));
         entity.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         if (creating) {
-            noticeMapper.insert(entity);
+            bizYbDeductNoticeMapper.insert(entity);
             writeLog(entity.getId(), ACTION_CREATE, "扣款通知录入：" + entity.getDeductNo()
                     + "，金额 " + entity.getDeductAmount() + " 元", null);
         } else {
-            noticeMapper.updateById(entity);
+            bizYbDeductNoticeMapper.updateById(entity);
         }
         return toVO(entity, LocalDate.now());
     }
@@ -181,13 +183,13 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
             throw new BusinessException("仅「待确认」的扣款通知可发起申诉");
         }
         String operator = UserUtils.getCurrentUser().getRealName();
-        entity.setAppealReason(cut(dto.getAppealReason(), 500));
-        entity.setAppealMaterial(cut(dto.getAppealMaterial(), 500));
+        entity.setAppealReason(TextUtil.cut(dto.getAppealReason(), 500));
+        entity.setAppealMaterial(TextUtil.cut(dto.getAppealMaterial(), 500));
         entity.setAppealBy(operator);
         entity.setAppealTime(LocalDateTime.now());
         entity.setDeductStatus(YbDeductStatusEnum.APPEALING.getCode());
         entity.setUpdateBy(operator);
-        noticeMapper.updateById(entity);
+        bizYbDeductNoticeMapper.updateById(entity);
         writeLog(entity.getId(), ACTION_APPEAL, "提交申诉：" + entity.getAppealReason(), null);
     }
 
@@ -204,12 +206,12 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         }
         String operator = UserUtils.getCurrentUser().getRealName();
         entity.setAppealResult(result);
-        entity.setAppealResultRemark(cut(dto.getAppealResultRemark(), 500));
+        entity.setAppealResultRemark(TextUtil.cut(dto.getAppealResultRemark(), 500));
         entity.setAppealResultBy(operator);
         entity.setAppealResultTime(LocalDateTime.now());
         entity.setDeductStatus(result == 1 ? YbDeductStatusEnum.APPEAL_SUCCESS.getCode() : YbDeductStatusEnum.WAIT_PAY.getCode());
         entity.setUpdateBy(operator);
-        noticeMapper.updateById(entity);
+        bizYbDeductNoticeMapper.updateById(entity);
         writeLog(entity.getId(), ACTION_APPEAL_RESULT,
                 (result == 1 ? "医保局回复：申诉成功，扣款撤销" : "医保局回复：申诉驳回，维持扣款待缴")
                         + (isText(entity.getAppealResultRemark()) ? "（" + entity.getAppealResultRemark() + "）" : ""),
@@ -247,8 +249,8 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         }
         String operator = UserUtils.getCurrentUser().getRealName();
         entity.setLiableDeptId(dto.getLiableDeptId());
-        entity.setLiableDeptName(cut(dto.getLiableDeptName(), 100));
-        entity.setLiableEmpName(cut(dto.getLiableEmpName(), 64));
+        entity.setLiableDeptName(TextUtil.cut(dto.getLiableDeptName(), 100));
+        entity.setLiableEmpName(TextUtil.cut(dto.getLiableEmpName(), 64));
         entity.setLossBearType(dto.getLossBearType());
         entity.setBearDeptAmount(deptAmount);
         entity.setBearEmpAmount(empAmount);
@@ -256,7 +258,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         entity.setConfirmTime(LocalDateTime.now());
         entity.setDeductStatus(YbDeductStatusEnum.WAIT_PAY.getCode());
         entity.setUpdateBy(operator);
-        noticeMapper.updateById(entity);
+        bizYbDeductNoticeMapper.updateById(entity);
         writeLog(entity.getId(), ACTION_CONFIRM, "确认扣款并追责：承担方式 " + entity.getLossBearType()
                 + "，科室 " + deptAmount + " 元 / 个人 " + empAmount + " 元", deduct);
     }
@@ -278,12 +280,12 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         String operator = UserUtils.getCurrentUser().getRealName();
         entity.setPaidAmount(dto.getPaidAmount());
         entity.setPaybackDate(dto.getPaybackDate());
-        entity.setPaybackVoucher(cut(dto.getPaybackVoucher(), 100));
+        entity.setPaybackVoucher(TextUtil.cut(dto.getPaybackVoucher(), 100));
         entity.setPaybackBy(operator);
         entity.setPaybackTime(LocalDateTime.now());
         entity.setDeductStatus(YbDeductStatusEnum.PAID_BACK.getCode());
         entity.setUpdateBy(operator);
-        noticeMapper.updateById(entity);
+        bizYbDeductNoticeMapper.updateById(entity);
         writeLog(entity.getId(), ACTION_PAYBACK, "财务缴回医保基金：" + entity.getPaidAmount()
                 + " 元，凭证 " + entity.getPaybackVoucher(), entity.getPaidAmount());
     }
@@ -296,17 +298,17 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
             throw new BusinessException("仅「待确认」的扣款通知可作废；已进入申诉或缴回流程的请走对应动作");
         }
         String operator = UserUtils.getCurrentUser().getRealName();
-        entity.setCancelReason(cut(dto.getReason(), 500));
+        entity.setCancelReason(TextUtil.cut(dto.getReason(), 500));
         entity.setCancelBy(operator);
         entity.setCancelTime(LocalDateTime.now());
         entity.setDeductStatus(YbDeductStatusEnum.CANCELLED.getCode());
         entity.setUpdateBy(operator);
-        noticeMapper.updateById(entity);
+        bizYbDeductNoticeMapper.updateById(entity);
         writeLog(entity.getId(), ACTION_CANCEL, "作废：" + entity.getCancelReason(), null);
     }
 
     private BizYbDeductNotice require(Long id) {
-        BizYbDeductNotice entity = id == null ? null : noticeMapper.selectById(id);
+        BizYbDeductNotice entity = id == null ? null : bizYbDeductNoticeMapper.selectById(id);
         if (entity == null) {
             throw new BusinessException("扣款通知不存在或已删除");
         }
@@ -323,7 +325,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
             }
             return null;
         }
-        BizYbInspection inspection = inspectionMapper.selectById(inspectionId);
+        BizYbInspection inspection = bizYbInspectionMapper.selectById(inspectionId);
         if (inspection == null) {
             throw new BusinessException("关联的飞检批次不存在或已删除");
         }
@@ -334,7 +336,7 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         if (settlementId == null) {
             return null;
         }
-        BizInsuranceSettlement settlement = settlementService.getSettlementDetail(settlementId);
+        BizInsuranceSettlement settlement = insuranceSettlementService.getSettlementDetail(settlementId);
         if (settlement == null) {
             throw new BusinessException("关联的医保结算清单不存在");
         }
@@ -345,11 +347,11 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         BizYbDeductLog log = new BizYbDeductLog();
         log.setNoticeId(noticeId);
         log.setAction(action);
-        log.setDetail(cut(detail, 1000));
+        log.setDetail(TextUtil.cut(detail, 1000));
         log.setAmount(amount);
         log.setOperator(UserUtils.getCurrentUser().getRealName());
         log.setOperateTime(LocalDateTime.now());
-        logMapper.insert(log);
+        bizYbDeductLogMapper.insert(log);
     }
 
     private DeductNoticeListVO toVO(BizYbDeductNotice entity, LocalDate today) {
@@ -387,11 +389,4 @@ public class YbDeductNoticeServiceImpl implements YbDeductNoticeService {
         return text != null && !text.isBlank();
     }
 
-    private String cut(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        String trimmed = text.trim();
-        return trimmed.length() <= max ? trimmed : trimmed.substring(0, max);
-    }
 }

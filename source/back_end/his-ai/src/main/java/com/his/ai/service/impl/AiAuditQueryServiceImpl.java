@@ -2,6 +2,7 @@ package com.his.ai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.ai.dto.AiAuditLogQueryPageDTO;
 import com.his.ai.entity.SysAiCallLog;
 import com.his.ai.enums.AiCallStatusEnum;
@@ -30,7 +31,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class AiAuditQueryServiceImpl implements AiAuditQueryService {
+public class AiAuditQueryServiceImpl extends ServiceImpl<SysAiCallLogMapper, SysAiCallLog> implements AiAuditQueryService {
 
     private final SysAiCallLogMapper sysAiCallLogMapper;
 

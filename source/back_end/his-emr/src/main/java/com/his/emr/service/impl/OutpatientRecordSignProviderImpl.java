@@ -6,6 +6,7 @@ import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
+import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.service.OutpatientRecordSignProvider;
@@ -14,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
@@ -31,7 +31,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class OutpatientRecordSignProviderImpl implements SignableContentProvider, OutpatientRecordSignProvider {
 
-    private final BizMedicalRecordMapper recordMapper;
+    private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -40,7 +40,7 @@ public class OutpatientRecordSignProviderImpl implements SignableContentProvider
 
     @Override
     public SignSubject load(Long bizId) {
-        BizMedicalRecord r = recordMapper.selectById(bizId);
+        BizMedicalRecord r = bizMedicalRecordMapper.selectById(bizId);
         if (r == null) {
             return null;
         }
@@ -58,7 +58,7 @@ public class OutpatientRecordSignProviderImpl implements SignableContentProvider
 
     @Override
     public String blockReason(SignSubject subject, SignSceneEnum scene) {
-        BizMedicalRecord r = recordMapper.selectById(subject.bizId());
+        BizMedicalRecord r = bizMedicalRecordMapper.selectById(subject.bizId());
         if (r == null) {
             return "门诊病历不存在或已被删除，无法签名";
         }
@@ -83,19 +83,19 @@ public class OutpatientRecordSignProviderImpl implements SignableContentProvider
         patch.setId(bizId);
         patch.setSignStatus(ObjectSignStatusEnum.SIGNED.getCode());
         patch.setSignId(signId);
-        patch.setSignedTime(signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS));
-        recordMapper.updateById(patch);
+        patch.setSignedTime(signedTime == null ? null : TimeUtil.toSeconds(signedTime));
+        bizMedicalRecordMapper.updateById(patch);
     }
 
     @Override
     public void revokeSignAnchor(Long bizId, Long signId) {
-        BizMedicalRecord r = recordMapper.selectById(bizId);
+        BizMedicalRecord r = bizMedicalRecordMapper.selectById(bizId);
         if (r == null || !Objects.equals(signId, r.getSignId())) {
             return;
         }
         BizMedicalRecord patch = new BizMedicalRecord();
         patch.setId(bizId);
         patch.setSignStatus(ObjectSignStatusEnum.INVALIDATED.getCode());
-        recordMapper.updateById(patch);
+        bizMedicalRecordMapper.updateById(patch);
     }
 }

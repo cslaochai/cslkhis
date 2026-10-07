@@ -7,17 +7,13 @@ import com.his.common.mapper.BizTsaTokenMapper;
 import com.his.common.mapper.SysTsaServerMapper;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.service.TsaChannelService;
-import com.his.common.util.DateFormats;
-import com.his.common.util.KeyPairFactory;
-import com.his.common.util.KeyProtectorUtil;
-import com.his.common.util.SignCryptoUtil;
+import com.his.common.util.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 /**
  * 可信时间戳通道（本地内置 TSA —— G6 的演示信任根）。
@@ -153,7 +149,7 @@ public class TsaChannelServiceImpl implements TsaChannelService {
         String privatePem = privatePemOf(server);
 
         for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
-            LocalDateTime tsaTime = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+            LocalDateTime tsaTime = TimeUtil.nowSeconds();
             String serial;
             try {
                 long seq = sequenceService.next("TSA_TOKEN");
@@ -208,7 +204,7 @@ public class TsaChannelServiceImpl implements TsaChannelService {
             return false;
         }
         return SignCryptoUtil.verify(server.getPublicPem(),
-                canonical(serial, digestHex, tsaTime.truncatedTo(ChronoUnit.SECONDS)), tokenValue);
+                canonical(serial, digestHex, TimeUtil.toSeconds(tsaTime)), tokenValue);
     }
 
     private SysTsaServer peekServer() {

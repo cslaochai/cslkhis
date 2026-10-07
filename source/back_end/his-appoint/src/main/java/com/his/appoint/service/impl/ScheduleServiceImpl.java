@@ -54,17 +54,17 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
 
     private final DeptScopeProvider deptScopeProvider;
 
-    private final BizScheduleMapper scheduleMapper;
+    private final BizScheduleMapper bizScheduleMapper;
 
-    private final BizAppointInfoMapper appointInfoMapper;
+    private final BizAppointInfoMapper bizAppointInfoMapper;
 
     private final AppointService appointService;
 
-    private final ScheduleSlotService slotService;
+    private final ScheduleSlotService scheduleSlotService;
 
-    private final BizQueueMapper queueMapper;
+    private final BizQueueMapper bizQueueMapper;
 
-    private final SysClinicRoomService clinicRoomService;
+    private final SysClinicRoomService sysClinicRoomService;
 
     private final ShiftService shiftService;
 
@@ -84,7 +84,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
                 .ge(queryDTO.getStartDate() != null, BizSchedule::getScheduleDate, queryDTO.getStartDate())
                 .le(queryDTO.getEndDate() != null, BizSchedule::getScheduleDate, queryDTO.getEndDate());
         wrapper.last("ORDER BY schedule_date ASC, start_time ASC, doctor_id ASC, id ASC");
-        return scheduleMapper.selectList(wrapper);
+        return bizScheduleMapper.selectList(wrapper);
     }
 
     @Override
@@ -107,7 +107,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
                 .gt(BizSchedule::getAvailableSource, 0)
                 .eq(BizSchedule::getStatus, ScheduleStatusEnum.NORMAL.getCode())
                 .orderByAsc(BizSchedule::getStartTime);
-        return scheduleMapper.selectList(wrapper);
+        return bizScheduleMapper.selectList(wrapper);
     }
 
     @Override
@@ -125,9 +125,9 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         if (schedule.getStatus() == null) {
             schedule.setStatus(ScheduleStatusEnum.NORMAL.getCode());
         }
-        boolean ok = scheduleMapper.insert(schedule) > 0;
+        boolean ok = bizScheduleMapper.insert(schedule) > 0;
         if (ok && StaffTypeEnum.hasSource(schedule.getStaffType())) {
-            slotService.generateSlots(schedule.getId(), schedule.getStartTime(), schedule.getEndTime(),
+            scheduleSlotService.generateSlots(schedule.getId(), schedule.getStartTime(), schedule.getEndTime(),
                     schedule.getTotalSource(), schedule.getAppointmentSource());
         }
         return ok;
@@ -171,7 +171,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         if (staffScheduleId == null) {
             return;
         }
-        Long holding = scheduleMapper.selectCount(new LambdaQueryWrapper<BizSchedule>()
+        Long holding = bizScheduleMapper.selectCount(new LambdaQueryWrapper<BizSchedule>()
                 .eq(BizSchedule::getStaffScheduleId, staffScheduleId));
         if (holding == null || holding == 0) {
             staffScheduleService.deleteById(staffScheduleId);
@@ -181,7 +181,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateSchedule(BizSchedule schedule) {
-        BizSchedule existing = scheduleMapper.selectById(schedule.getId());
+        BizSchedule existing = bizScheduleMapper.selectById(schedule.getId());
         if (existing == null) {
             throw new BusinessException("排班记录不存在");
         }
@@ -208,12 +208,12 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         }
         boolean roomChanged = !Objects.equals(existing.getRoomId(), schedule.getRoomId())
                 || !Objects.equals(existing.getRoomName(), schedule.getRoomName());
-        boolean ok = scheduleMapper.updateById(schedule) > 0;
+        boolean ok = bizScheduleMapper.updateById(schedule) > 0;
         if (ok) {
             if (StaffTypeEnum.hasSource(schedule.getStaffType())) {
-                slotService.regenerateForSchedule(schedule, schedule.getTotalSource(), schedule.getAppointmentSource());
+                scheduleSlotService.regenerateForSchedule(schedule, schedule.getTotalSource(), schedule.getAppointmentSource());
             } else {
-                slotService.physicalDeleteByScheduleId(schedule.getId());
+                scheduleSlotService.physicalDeleteByScheduleId(schedule.getId());
             }
             if (roomChanged) {
                 syncRoomToTodayWorklist(schedule);
@@ -235,21 +235,21 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         Long roomId = schedule.getRoomId();
         String roomName = schedule.getRoomName();
         if (roomId != null && !StringUtils.hasText(roomName)) {
-            var room = clinicRoomService.getById(roomId);
+            var room = sysClinicRoomService.getById(roomId);
             if (room != null) {
                 roomName = room.getName();
                 schedule.setRoomName(roomName);
-                scheduleMapper.updateById(schedule);
+                bizScheduleMapper.updateById(schedule);
             }
         }
-        queueMapper.updateRoomBySchedule(schedule.getId(), today, roomId, roomName);
-        appointInfoMapper.updateRoomBySchedule(schedule.getId(), today, roomId, roomName);
+        bizQueueMapper.updateRoomBySchedule(schedule.getId(), today, roomId, roomName);
+        bizAppointInfoMapper.updateRoomBySchedule(schedule.getId(), today, roomId, roomName);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteSchedule(Long id) {
-        BizSchedule existing = scheduleMapper.selectById(id);
+        BizSchedule existing = bizScheduleMapper.selectById(id);
         if (existing == null) {
             throw new BusinessException("排班记录不存在");
         }
@@ -257,8 +257,8 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
             throw new BusinessException("该排班已有挂号记录，无法删除");
         }
         assertNotPast(existing.getScheduleDate(), "删除");
-        slotService.physicalDeleteByScheduleId(id);
-        boolean ok = scheduleMapper.physicalDeleteById(id) > 0;
+        scheduleSlotService.physicalDeleteByScheduleId(id);
+        boolean ok = bizScheduleMapper.physicalDeleteById(id) > 0;
         if (ok) {
             releaseCoreSchedule(existing.getStaffScheduleId());
         }
@@ -466,7 +466,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         wrapper.eq(BizSchedule::getDoctorId, schedule.getDoctorId())
                 .eq(BizSchedule::getScheduleDate, schedule.getScheduleDate())
                 .ne(excludeId != null, BizSchedule::getId, excludeId);
-        List<BizSchedule> existing = scheduleMapper.selectList(wrapper);
+        List<BizSchedule> existing = bizScheduleMapper.selectList(wrapper);
         for (BizSchedule s : existing) {
             if (s.getStartTime().compareTo(schedule.getEndTime()) < 0
                     && schedule.getStartTime().compareTo(s.getEndTime()) < 0) {
@@ -483,7 +483,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
                 .eq(BizSchedule::getStaffType, StaffTypeEnum.DOCTOR.getCode())
                 .eq(BizSchedule::getStatus, ScheduleStatusEnum.NORMAL.getCode())
                 .orderByAsc(BizSchedule::getStartTime);
-        return scheduleMapper.selectList(wrapper);
+        return bizScheduleMapper.selectList(wrapper);
     }
 
     @Override
@@ -492,18 +492,18 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         if (ConsultStatusEnum.fromCode(consultStatus) == null) {
             throw new BusinessException("就诊状态只允许 " + ConsultStatusEnum.whitelistText());
         }
-        BizSchedule schedule = scheduleMapper.selectById(scheduleId);
+        BizSchedule schedule = bizScheduleMapper.selectById(scheduleId);
         if (schedule == null) {
             throw new BusinessException("排班记录不存在");
         }
         schedule.setConsultStatus(consultStatus);
-        return scheduleMapper.updateById(schedule) > 0;
+        return bizScheduleMapper.updateById(schedule) > 0;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateStatus(Long scheduleId, Integer status) {
-        BizSchedule old = scheduleMapper.selectById(scheduleId);
+        BizSchedule old = bizScheduleMapper.selectById(scheduleId);
         if (old == null) {
             throw new BusinessException("排班记录不存在");
         }
@@ -511,20 +511,20 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         BizSchedule schedule = new BizSchedule();
         schedule.setId(scheduleId);
         schedule.setStatus(status);
-        boolean ok = scheduleMapper.updateById(schedule) > 0;
+        boolean ok = bizScheduleMapper.updateById(schedule) > 0;
         if (ok) {
             // 段状态随主表联动：停诊 → 段全停（扣减 SQL 带 status=1，停用段不可再挂）；启用 → 段恢复
-            slotService.syncStatusToSlots(scheduleId, status);
+            scheduleSlotService.syncStatusToSlots(scheduleId, status);
         }
         return ok;
     }
 
     @Override
     public List<StopImpactItemVO> stopImpact(Long scheduleId) {
-        if (scheduleMapper.selectById(scheduleId) == null) {
+        if (bizScheduleMapper.selectById(scheduleId) == null) {
             throw new BusinessException("排班记录不存在");
         }
-        List<BizAppointInfo> regs = appointInfoMapper.selectList(
+        List<BizAppointInfo> regs = bizAppointInfoMapper.selectList(
                 new LambdaQueryWrapper<BizAppointInfo>()
                         .eq(BizAppointInfo::getScheduleId, scheduleId)
                         .notIn(BizAppointInfo::getRegistStatus, 5, 6) // 5-已退号 6-已爽约
@@ -639,7 +639,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
             wrapper.eq(BizSchedule::getStaffType, staffType);
         }
         wrapper.orderByAsc(BizSchedule::getStartTime);
-        return scheduleMapper.selectList(wrapper);
+        return bizScheduleMapper.selectList(wrapper);
     }
 
     private OnDutyStaffVO toOnDutyVO(BizSchedule s, LocalTime moment) {
@@ -679,7 +679,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean addSource(Long scheduleId, Integer addNum, String reason) {
-        BizSchedule schedule = scheduleMapper.selectById(scheduleId);
+        BizSchedule schedule = bizScheduleMapper.selectById(scheduleId);
         if (schedule == null) {
             throw new BusinessException("排班记录不存在");
         }
@@ -703,10 +703,10 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         update.setAvailableSource((schedule.getAvailableSource() == null ? 0 : schedule.getAvailableSource()) + addNum);
         update.setAddedSource(added + addNum);
         update.setRemark(newRemark);
-        boolean ok = scheduleMapper.updateById(update) > 0;
+        boolean ok = bizScheduleMapper.updateById(update) > 0;
         if (ok) {
             // 加号摊到段（余数给前面的段），Σ段写回主表——号源事实在段上，主表只是汇总
-            slotService.spreadAddSource(scheduleId, addNum);
+            scheduleSlotService.spreadAddSource(scheduleId, addNum);
         }
         return ok;
     }

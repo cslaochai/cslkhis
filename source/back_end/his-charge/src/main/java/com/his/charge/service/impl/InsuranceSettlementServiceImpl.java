@@ -9,18 +9,20 @@ import com.his.charge.api.AppointGateway;
 import com.his.charge.api.EmrGateway;
 import com.his.charge.api.PatientGateway;
 import com.his.charge.entity.*;
+import com.his.charge.enums.InsuranceReportStatusEnum;
+import com.his.charge.enums.InsuranceReportTypeEnum;
 import com.his.charge.mapper.*;
 import com.his.charge.service.InsuranceChannelService;
 import com.his.charge.service.InsuranceSettlementService;
-import com.his.charge.enums.InsuranceReportStatusEnum;
-import com.his.charge.enums.InsuranceReportTypeEnum;
 import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
 import com.his.common.util.SensitiveMaskUtil;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -30,10 +32,12 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -58,25 +62,17 @@ public class InsuranceSettlementServiceImpl
 
     private final PatientGateway patientGateway;
     private final AppointGateway appointGateway;
-    private final BizSettlementBillMapper settlementBillMapper;
-    private final BizSettlementBillItemMapper billItemMapper;
-    private final BizPaymentTxnMapper paymentTxnMapper;
-    private final BizInvoiceMapper invoiceMapper;
-    private final BizInsuranceReportMapper reportMapper;
+    private final BizSettlementBillMapper bizSettlementBillMapper;
+    private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
+    private final BizPaymentTxnMapper bizPaymentTxnMapper;
+    private final BizInvoiceMapper bizInvoiceMapper;
+    private final BizInsuranceReportMapper bizInsuranceReportMapper;
     private final InsuranceChannelService insuranceChannelService;
     private final RedisSequenceService redisSequenceService;
     private final ObjectMapper objectMapper;
     private final EmrGateway emrGateway;
 
     // 查询
-
-    private static BigDecimal scale(BigDecimal value) {
-        return nz(value).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
 
     @Override
     public PageResult<BizInsuranceSettlementVO> selectSettlementPage(Long patientId, String patientName,
@@ -194,21 +190,21 @@ public class InsuranceSettlementServiceImpl
 
         // 4. 关联账单与账单行：应收/优惠/统筹/应缴/已收各来自哪一列，页面上要能一句话对上
         BizSettlementBill bill = settlement.getBillId() == null ? null
-                : settlementBillMapper.selectById(settlement.getBillId());
+                : bizSettlementBillMapper.selectById(settlement.getBillId());
         if (bill != null) {
             vo.setBillId(bill.getId());
             vo.setBillNo(bill.getBillNo());
             vo.setBillStatus(bill.getBillStatus());
-            vo.setBillTotalAmount(nz(bill.getTotalAmount()));
-            vo.setDiscountAmount(nz(bill.getDiscountAmount()));
-            vo.setPayableAmount(nz(bill.getPayableAmount()));
-            vo.setPaidAmount(nz(bill.getPaidAmount()));
-            vo.setRefundAmount(nz(bill.getRefundAmount()));
+            vo.setBillTotalAmount(NumUtil.orZero(bill.getTotalAmount()));
+            vo.setDiscountAmount(NumUtil.orZero(bill.getDiscountAmount()));
+            vo.setPayableAmount(NumUtil.orZero(bill.getPayableAmount()));
+            vo.setPaidAmount(NumUtil.orZero(bill.getPaidAmount()));
+            vo.setRefundAmount(NumUtil.orZero(bill.getRefundAmount()));
             vo.setBillDate(bill.getBillDate());
             vo.setPayTime(bill.getPayTime());
             vo.setBillByName(bill.getBillByName());
             vo.setInvoiceNo(latestInvoiceNo(bill.getId()));
-            List<BizSettlementBillItem> items = billItemMapper.selectByBill(bill.getId());
+            List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectByBill(bill.getId());
             vo.setItems(items);
         }
         // 5. 脱敏：清单详情只用于看，没有编辑回显，所以明文一律不出响应体
@@ -243,7 +239,7 @@ public class InsuranceSettlementServiceImpl
         if (bill == null || bill.getId() == null) {
             throw new BusinessException("缺少结算账单，无法生成医保清单");
         }
-        BigDecimal pool = scale(nz(bill.getPoolAmount()));
+        BigDecimal pool = NumUtil.scale(NumUtil.orZero(bill.getPoolAmount()), AMOUNT_SCALE);
         if (pool.signum() <= 0) {
             // 没有统筹记账就没有要报给医保局的钱：出一张 0 元清单等于让医保替你归档自费单据
             return null;
@@ -274,7 +270,7 @@ public class InsuranceSettlementServiceImpl
         fillPatientIdentity(settlement, bill.getPatientId() == null ? null : patientGateway.findPatient(bill.getPatientId()));
         fillDiagnosis(settlement);
 
-        BigDecimal net = scale(nz(bill.getTotalAmount()).subtract(nz(bill.getDiscountAmount())));
+        BigDecimal net = NumUtil.scale(NumUtil.orZero(bill.getTotalAmount()).subtract(NumUtil.orZero(bill.getDiscountAmount())), AMOUNT_SCALE);
         settlement.setTotalAmount(net);
         fillCategoryAmounts(settlement, items);
         // 三个数里只有统筹此刻已成事实（L2 逐行 split 的结果）；个账与自付是「钱怎么进来的」，
@@ -361,7 +357,7 @@ public class InsuranceSettlementServiceImpl
         settlement.setPersonalPay(BigDecimal.ZERO);
         settlement.setSelfPay(BigDecimal.ZERO);
         settlement.setAuditStatus(0);
-        settlement.setAuditRemark(cut("账单发生部分退费，医保结算作废重做：" + reason, 500));
+        settlement.setAuditRemark(TextUtil.cut("账单发生部分退费，医保结算作废重做：" + reason, 500));
         this.updateById(settlement);
         // updateById 跳过 null 字段：审核时间要显式清空，否则待结算的清单上还挂着一次审核记录
         this.update(new LambdaUpdateWrapper<BizInsuranceSettlement>()
@@ -380,7 +376,7 @@ public class InsuranceSettlementServiceImpl
         result.setTotalAmount(fund.total());
         result.setInsurancePay(fund.pool());
         // 预结算口径的「自付」= 个人应缴合计（个账 + 现金类），与医保局 2304 试算的字段含义一致
-        result.setSelfPay(scale(fund.account().add(fund.cash())));
+        result.setSelfPay(NumUtil.scale(fund.account().add(fund.cash()), AMOUNT_SCALE));
         result.setCoverageRatio(settlement.getCoverageRatio());
         return result;
     }
@@ -395,7 +391,7 @@ public class InsuranceSettlementServiceImpl
         }
         FundSplit fund = computeFund(settlement);
         // 费用分类每次结算重算：账单行才是分类的事实来源，清单上的数只是快照
-        List<BizSettlementBillItem> items = billItemMapper.selectByBill(settlement.getBillId());
+        List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectByBill(settlement.getBillId());
         fillCategoryAmounts(settlement, items);
 
         settlement.setTotalAmount(fund.total());
@@ -431,11 +427,11 @@ public class InsuranceSettlementServiceImpl
             throw new BusinessException("当前状态是「"
                     + InsuranceSettlementStatusEnum.descOf(settlement.getSettlementStatus()) + "」，只有已结算的清单才能报盘");
         }
-        BizSettlementBill bill = settlementBillMapper.selectById(settlement.getBillId());
+        BizSettlementBill bill = bizSettlementBillMapper.selectById(settlement.getBillId());
         if (bill == null) {
             throw new BusinessException("清单关联的结算账单不存在，无法报盘");
         }
-        List<BizSettlementBillItem> items = billItemMapper.selectByBill(bill.getId());
+        List<BizSettlementBillItem> items = bizSettlementBillItemMapper.selectByBill(bill.getId());
 
         String tradeNo = nextTradeNo();
         BizInsuranceReport report = newReport(settlement, InsuranceReportTypeEnum.UPLOAD.getCode(), "2304", tradeNo);
@@ -444,13 +440,13 @@ public class InsuranceSettlementServiceImpl
         report.setInsurancePay(settlement.getInsurancePay());
         report.setPersonalPay(settlement.getPersonalPay());
         report.setSelfPay(settlement.getSelfPay());
-        reportMapper.insert(report);
+        bizInsuranceReportMapper.insert(report);
 
         InsuranceChannelService.Receipt receipt = insuranceChannelService.send(
                 new InsuranceChannelService.OutboundMessage("2304", tradeNo, report.getPayload()));
         applyReceipt(report, receipt);
         if (!receipt.isSuccess()) {
-            throw new BusinessException("医保报盘被拒：" + truncate(receipt.getErrMsg(), 200));
+            throw new BusinessException("医保报盘被拒：" + TextUtil.cut(receipt.getErrMsg(), 200));
         }
         settlement.setSettlementStatus(InsuranceSettlementStatusEnum.UPLOADED.getCode());
         settlement.setUploadTime(LocalDateTime.now());
@@ -481,7 +477,7 @@ public class InsuranceSettlementServiceImpl
      * <p>供收费员点「撤销报盘」与账单作废联动两处共用 —— 后者没有第二个入口可点。
      */
     private void sendCancel(BizInsuranceSettlement settlement, String reason) {
-        List<BizInsuranceReport> uploads = reportMapper.selectList(new LambdaQueryWrapper<BizInsuranceReport>()
+        List<BizInsuranceReport> uploads = bizInsuranceReportMapper.selectList(new LambdaQueryWrapper<BizInsuranceReport>()
                 .eq(BizInsuranceReport::getSettlementId, settlement.getId())
                 .eq(BizInsuranceReport::getReportType, InsuranceReportTypeEnum.UPLOAD.getCode())
                 .eq(BizInsuranceReport::getStatus, InsuranceReportStatusEnum.SUCCESS.getCode())
@@ -507,21 +503,21 @@ public class InsuranceSettlementServiceImpl
         BizInsuranceReport cancel = newReport(settlement, InsuranceReportTypeEnum.CANCEL.getCode(), "2305", tradeNo);
         cancel.setOrigTradeNo(original.getTradeNo());
         cancel.setPayload(toPrettyJson(payload));
-        cancel.setRemark(truncate(cutReason, 490));
+        cancel.setRemark(TextUtil.cut(cutReason, 490));
         cancel.setTotalAmount(settlement.getTotalAmount());
         cancel.setInsurancePay(settlement.getInsurancePay());
         cancel.setPersonalPay(settlement.getPersonalPay());
         cancel.setSelfPay(settlement.getSelfPay());
-        reportMapper.insert(cancel);
+        bizInsuranceReportMapper.insert(cancel);
 
         InsuranceChannelService.Receipt receipt = insuranceChannelService.send(
                 new InsuranceChannelService.OutboundMessage("2305", tradeNo, cancel.getPayload()));
         applyReceipt(cancel, receipt);
         if (!receipt.isSuccess()) {
-            throw new BusinessException("医保撤销被拒：" + truncate(receipt.getErrMsg(), 200));
+            throw new BusinessException("医保撤销被拒：" + TextUtil.cut(receipt.getErrMsg(), 200));
         }
         original.setStatus(InsuranceReportStatusEnum.CANCELLED.getCode());
-        reportMapper.updateById(original);
+        bizInsuranceReportMapper.updateById(original);
     }
 
     @Override
@@ -534,7 +530,7 @@ public class InsuranceSettlementServiceImpl
                 .select(BizInsuranceReport.class, fi ->
                         !"payload".equals(fi.getProperty()) && !"replyPayload".equals(fi.getProperty()))
                 .orderByDesc(BizInsuranceReport::getId);
-        Page<BizInsuranceReport> page = reportMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        Page<BizInsuranceReport> page = bizInsuranceReportMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
         List<BizInsuranceReportVO> records = new ArrayList<>(page.getRecords().size());
         for (BizInsuranceReport row : page.getRecords()) {
             BizInsuranceReportVO vo = new BizInsuranceReportVO();
@@ -546,7 +542,7 @@ public class InsuranceSettlementServiceImpl
 
     @Override
     public BizInsuranceReportVO getReportDetail(Long reportId) {
-        BizInsuranceReport report = reportMapper.selectById(reportId);
+        BizInsuranceReport report = bizInsuranceReportMapper.selectById(reportId);
         if (report == null) {
             throw new BusinessException("报文记录不存在");
         }
@@ -575,7 +571,7 @@ public class InsuranceSettlementServiceImpl
         vo.setRemoteTotal(sum(remotes, InsuranceChannelService.RemoteSettlement::getTotalAmount));
         vo.setRemoteInsurancePay(sum(remotes, InsuranceChannelService.RemoteSettlement::getInsurancePay));
 
-        List<BizInsuranceReport> dayReports = reportMapper.selectList(new LambdaQueryWrapper<BizInsuranceReport>()
+        List<BizInsuranceReport> dayReports = bizInsuranceReportMapper.selectList(new LambdaQueryWrapper<BizInsuranceReport>()
                 .eq(BizInsuranceReport::getBillDate, billDate)
                 .select(BizInsuranceReport.class, fi ->
                         !"payload".equals(fi.getProperty()) && !"replyPayload".equals(fi.getProperty())));
@@ -615,7 +611,7 @@ public class InsuranceSettlementServiceImpl
         }
         settlement.setAuditStatus(approved ? 1 : 2);
         settlement.setAuditTime(LocalDateTime.now());
-        settlement.setAuditRemark(cut(remark, 500));
+        settlement.setAuditRemark(TextUtil.cut(remark, 500));
         if (approved) {
             settlement.setSettlementStatus(InsuranceSettlementStatusEnum.AUDITED.getCode());
         }
@@ -629,7 +625,7 @@ public class InsuranceSettlementServiceImpl
      * 没收清就来结算，报给医保的自付会比患者实际掏的钱少，日结必然差一块。
      */
     private FundSplit computeFund(BizInsuranceSettlement settlement) {
-        BizSettlementBill bill = settlementBillMapper.selectById(settlement.getBillId());
+        BizSettlementBill bill = bizSettlementBillMapper.selectById(settlement.getBillId());
         if (bill == null) {
             throw new BusinessException("清单关联的结算账单不存在");
         }
@@ -637,29 +633,29 @@ public class InsuranceSettlementServiceImpl
         if (billStatus == BillStatusEnum.VOIDED) {
             throw new BusinessException("结算账单 " + bill.getBillNo() + " 已作废，清单不能结算");
         }
-        BigDecimal payable = scale(nz(bill.getPayableAmount()));
+        BigDecimal payable = NumUtil.scale(NumUtil.orZero(bill.getPayableAmount()), AMOUNT_SCALE);
         BigDecimal account = BigDecimal.ZERO;
         BigDecimal cash = BigDecimal.ZERO;
-        for (BizPaymentTxn txn : paymentTxnMapper.selectByBill(bill.getId())) {
+        for (BizPaymentTxn txn : bizPaymentTxnMapper.selectByBill(bill.getId())) {
             if (!PayTxnStatusEnum.SUCCESS.getCode().equals(txn.getTxnStatus())) {
                 continue;
             }
             // 流水带符号（收款正、退款负），直接累加即为净实付
             if (PaymentMethodEnum.INSURANCE_ACCOUNT.getCode().equals(txn.getPayMethod())) {
-                account = account.add(nz(txn.getAmount()));
+                account = account.add(NumUtil.orZero(txn.getAmount()));
             } else {
-                cash = cash.add(nz(txn.getAmount()));
+                cash = cash.add(NumUtil.orZero(txn.getAmount()));
             }
         }
-        account = scale(account);
-        cash = scale(cash);
-        BigDecimal paid = scale(account.add(cash));
+        account = NumUtil.scale(account, AMOUNT_SCALE);
+        cash = NumUtil.scale(cash, AMOUNT_SCALE);
+        BigDecimal paid = NumUtil.scale(account.add(cash), AMOUNT_SCALE);
         if (paid.compareTo(payable) < 0) {
             throw new BusinessException("结算账单 " + bill.getBillNo() + " 尚未收清（已收 ¥"
                     + paid.toPlainString() + " / 应缴 ¥" + payable.toPlainString() + "），医保结算要等钱收齐后再做");
         }
-        return new FundSplit(scale(nz(bill.getTotalAmount()).subtract(nz(bill.getDiscountAmount()))),
-                scale(nz(bill.getPoolAmount())), account, cash);
+        return new FundSplit(NumUtil.scale(NumUtil.orZero(bill.getTotalAmount()).subtract(NumUtil.orZero(bill.getDiscountAmount())), AMOUNT_SCALE),
+                NumUtil.scale(NumUtil.orZero(bill.getPoolAmount()), AMOUNT_SCALE), account, cash);
     }
 
     /**
@@ -675,16 +671,16 @@ public class InsuranceSettlementServiceImpl
             if (type == null) {
                 type = PaymentItemTypeEnum.TREATMENT;
             }
-            BigDecimal net = scale(nz(item.getAmount()).subtract(nz(item.getDiscountAmount())));
+            BigDecimal net = NumUtil.scale(NumUtil.orZero(item.getAmount()).subtract(NumUtil.orZero(item.getDiscountAmount())), AMOUNT_SCALE);
             buckets.merge(type, net, BigDecimal::add);
         }
-        settlement.setDrugAmount(scale(bucket(buckets, PaymentItemTypeEnum.WESTERN_MEDICINE,
-                PaymentItemTypeEnum.CHINESE_PATENT_MEDICINE, PaymentItemTypeEnum.CHINESE_HERBAL_MEDICINE)));
-        settlement.setInspectionAmount(scale(bucket(buckets, PaymentItemTypeEnum.EXAMINATION)));
-        settlement.setLaboratoryAmount(scale(bucket(buckets, PaymentItemTypeEnum.LABORATORY_TEST)));
-        settlement.setTreatmentAmount(scale(bucket(buckets, PaymentItemTypeEnum.TREATMENT)));
-        settlement.setMaterialAmount(scale(bucket(buckets, PaymentItemTypeEnum.CONSUMABLE)));
-        settlement.setOtherAmount(scale(bucket(buckets, PaymentItemTypeEnum.REGISTRATION_FEE)));
+        settlement.setDrugAmount(NumUtil.scale(bucket(buckets, PaymentItemTypeEnum.WESTERN_MEDICINE,
+                PaymentItemTypeEnum.CHINESE_PATENT_MEDICINE, PaymentItemTypeEnum.CHINESE_HERBAL_MEDICINE), AMOUNT_SCALE));
+        settlement.setInspectionAmount(NumUtil.scale(bucket(buckets, PaymentItemTypeEnum.EXAMINATION), AMOUNT_SCALE));
+        settlement.setLaboratoryAmount(NumUtil.scale(bucket(buckets, PaymentItemTypeEnum.LABORATORY_TEST), AMOUNT_SCALE));
+        settlement.setTreatmentAmount(NumUtil.scale(bucket(buckets, PaymentItemTypeEnum.TREATMENT), AMOUNT_SCALE));
+        settlement.setMaterialAmount(NumUtil.scale(bucket(buckets, PaymentItemTypeEnum.CONSUMABLE), AMOUNT_SCALE));
+        settlement.setOtherAmount(NumUtil.scale(bucket(buckets, PaymentItemTypeEnum.REGISTRATION_FEE), AMOUNT_SCALE));
     }
 
     private BigDecimal bucket(Map<PaymentItemTypeEnum, BigDecimal> buckets, PaymentItemTypeEnum... types) {
@@ -826,9 +822,9 @@ public class InsuranceSettlementServiceImpl
         report.setStatus(receipt.isSuccess() ? InsuranceReportStatusEnum.SUCCESS.getCode() : InsuranceReportStatusEnum.FAIL.getCode());
         report.setReceiptNo(receipt.getReceiptNo());
         report.setReplyPayload(receipt.getReplyPayload());
-        report.setErrMsg(truncate(receipt.getErrMsg(), 500));
+        report.setErrMsg(TextUtil.cut(receipt.getErrMsg(), 500));
         report.setReplyTime(LocalDateTime.now());
-        reportMapper.updateById(report);
+        bizInsuranceReportMapper.updateById(report);
     }
 
     private BizInsuranceSettlement requireSettlement(Long settlementId) {
@@ -859,7 +855,7 @@ public class InsuranceSettlementServiceImpl
     }
 
     private String latestInvoiceNo(Long billId) {
-        List<BizInvoice> invoices = invoiceMapper.selectList(new LambdaQueryWrapper<BizInvoice>()
+        List<BizInvoice> invoices = bizInvoiceMapper.selectList(new LambdaQueryWrapper<BizInvoice>()
                 .eq(BizInvoice::getBillId, billId)
                 .orderByDesc(BizInvoice::getId));
         return CollectionUtils.isEmpty(invoices) ? null : invoices.get(0).getInvoiceNo();
@@ -901,17 +897,6 @@ public class InsuranceSettlementServiceImpl
         }
     }
 
-    private String truncate(String text, int max) {
-        return cut(text, max);
-    }
-
-    private String cut(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
     /**
      * 医保工作台统计（首屏四个数）。
      *
@@ -923,8 +908,8 @@ public class InsuranceSettlementServiceImpl
         List<BizInsuranceSettlement> today = this.list(new LambdaQueryWrapper<BizInsuranceSettlement>()
                 .ge(BizInsuranceSettlement::getCreateTime, LocalDate.now().atStartOfDay()));
         InsuranceStatsVO vo = new InsuranceStatsVO();
-        vo.setTodayTotal(scale(sum(today, BizInsuranceSettlement::getTotalAmount)));
-        vo.setTodayInsurancePay(scale(sum(today, BizInsuranceSettlement::getInsurancePay)));
+        vo.setTodayTotal(NumUtil.scale(sum(today, BizInsuranceSettlement::getTotalAmount), AMOUNT_SCALE));
+        vo.setTodayInsurancePay(NumUtil.scale(sum(today, BizInsuranceSettlement::getInsurancePay), AMOUNT_SCALE));
         vo.setTodayCount(today.size());
         vo.setPendingCount(this.count(new LambdaQueryWrapper<BizInsuranceSettlement>()
                 .eq(BizInsuranceSettlement::getSettlementStatus, InsuranceSettlementStatusEnum.PENDING.getCode())));

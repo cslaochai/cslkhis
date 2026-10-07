@@ -23,7 +23,7 @@ import java.util.List;
 public class ScheduleController {
 
     private final ScheduleService scheduleService;
-    private final ScheduleSlotService slotService;
+    private final ScheduleSlotService scheduleSlotService;
 
     @PreAuthorize("hasAuthority('org:schedule:add')")
     @Operation(summary = "新增或修改排班（新增/修改合一）")
@@ -105,13 +105,13 @@ public class ScheduleController {
     @Operation(summary = "查询排班时间片段（半小时一档，挂号选段用）")
     @GetMapping("/slotList")
     public Result<List<ScheduleSlotVO>> slotList(@RequestParam Long scheduleId) {
-        return Result.success(slotService.listVOByScheduleId(scheduleId));
+        return Result.success(scheduleSlotService.listVOByScheduleId(scheduleId));
     }
 
     @Operation(summary = "批量查询排班时间片段（日视图看板「医生 × 半小时段」一次拉全）")
     @PostMapping("/slotListBatch")
     public Result<List<ScheduleSlotVO>> slotListBatch(@Valid @RequestBody ScheduleSlotBatchQueryDTO dto) {
-        return Result.success(slotService.listVOByScheduleIds(dto == null ? null : dto.getScheduleIds()));
+        return Result.success(scheduleSlotService.listVOByScheduleIds(dto == null ? null : dto.getScheduleIds()));
     }
 
     @PreAuthorize("hasAuthority('org:schedule:add')")
@@ -126,7 +126,7 @@ public class ScheduleController {
     @Operation(summary = "段级号源编辑（每段号源/预约池/停用状态，Σ段写回主表并留痕）")
     @PostMapping("/slotUpsert")
     public Result<Void> slotUpsert(@Valid @RequestBody ScheduleSlotUpsertDTO dto) {
-        slotService.updateSlotSources(dto);
+        scheduleSlotService.updateSlotSources(dto);
         return Result.success();
     }
 

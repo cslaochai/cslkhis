@@ -2,9 +2,11 @@ package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.AnesthesiaFollowupQueryPageDTO;
 import com.his.operation.dto.AnesthesiaFollowupUpsertDTO;
@@ -48,7 +50,7 @@ import java.util.Set;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService {
+public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFollowupMapper, BizAnesthesiaFollowup> implements AnesthesiaFollowupService {
 
     /**
      * 麻醉记录状态：已提交
@@ -64,25 +66,10 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
      * 随访状态：唯一口径 AnesthesiaFollowupStatusEnum（0草稿 1已完成）
      */
 
-    private final BizAnesthesiaFollowupMapper followupMapper;
-    private final BizAnesthesiaRecordMapper recordMapper;
+    private final BizAnesthesiaFollowupMapper bizAnesthesiaFollowupMapper;
+    private final BizAnesthesiaRecordMapper bizAnesthesiaRecordMapper;
 
     // 查询
-
-    /**
-     * 写库长文本一律先截到列宽（超长 insert 失败会让用户连草稿都存不下）
-     */
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        String s = value.trim();
-        return s.length() <= max ? s : s.substring(0, max - 1) + "…";
-    }
-
-    private static LocalDateTime now() {
-        return TimeUtil.nowSeconds();
-    }
 
     /**
      * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)）
@@ -92,7 +79,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         if (query == null) {
             query = new AnesthesiaFollowupQueryPageDTO();
         }
-        IPage<AnesthesiaFollowupVO> page = followupMapper.selectFollowupPage(
+        IPage<AnesthesiaFollowupVO> page = bizAnesthesiaFollowupMapper.selectFollowupPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), query);
         page.getRecords().forEach(this::decorate);
         return page;
@@ -104,7 +91,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         if (id == null) {
             throw new BusinessException("随访单ID不能为空");
         }
-        AnesthesiaFollowupVO vo = followupMapper.selectFollowupById(id);
+        AnesthesiaFollowupVO vo = bizAnesthesiaFollowupMapper.selectFollowupById(id);
         if (vo == null) {
             throw new BusinessException("随访单不存在");
         }
@@ -121,14 +108,14 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         if (recordId == null) {
             throw new BusinessException("麻醉记录ID不能为空");
         }
-        List<AnesthesiaFollowupVO> list = followupMapper.selectByRecord(recordId);
+        List<AnesthesiaFollowupVO> list = bizAnesthesiaFollowupMapper.selectByRecord(recordId);
         list.forEach(this::decorate);
         return list;
     }
 
     @Override
     public long countOverduePending() {
-        return followupMapper.countOverduePending();
+        return bizAnesthesiaFollowupMapper.countOverduePending();
     }
 
     @Override
@@ -172,7 +159,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
             entity.setPatientName(record.getPatientName());
             entity.setGender(record.getGender());
             entity.setAge(record.getAge());
-            entity.setRoundNo(followupMapper.maxRoundOf(record.getId()) + 1);
+            entity.setRoundNo(bizAnesthesiaFollowupMapper.maxRoundOf(record.getId()) + 1);
             entity.setFollowupNo(nextFollowupNo());
             entity.setFollowupStatus(AnesthesiaFollowupStatusEnum.DRAFT.getCode());
             entity.setFollowupDoctorId(operatorUser.getEmployeeId());
@@ -189,16 +176,16 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         entity.setPainScore(dto.getPainScore());
         entity.setRecovery(dto.getRecovery());
         entity.setAdverseItems(FollowupAdverseItems.serialize(adverse));
-        entity.setAdverseNote(cut(dto.getAdverseNote(), 1000));
-        entity.setHandling(cut(dto.getHandling(), 1000));
+        entity.setAdverseNote(TextUtil.ellipsis(dto.getAdverseNote(), 1000));
+        entity.setHandling(TextUtil.ellipsis(dto.getHandling(), 1000));
         if (dto.getRemark() != null) {
-            entity.setRemark(cut(dto.getRemark(), 500));
+            entity.setRemark(TextUtil.ellipsis(dto.getRemark(), 500));
         }
 
         if (dto.getId() == null) {
-            followupMapper.insert(entity);
+            bizAnesthesiaFollowupMapper.insert(entity);
         } else {
-            followupMapper.updateById(entity);
+            bizAnesthesiaFollowupMapper.updateById(entity);
         }
         log.info("{}麻醉随访 followupNo={} recordNo={} 轮次={} 恢复={} 并发症={} 随访人={}",
                 dto.getId() == null ? "新建" : "修改", entity.getFollowupNo(), entity.getRecordNo(),
@@ -241,12 +228,12 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         validateTimeAgainstAnesthesia(entity.getFollowupTime(), entity.getRecordId());
 
         entity.setFollowupStatus(AnesthesiaFollowupStatusEnum.DONE.getCode());
-        entity.setFinishTime(now());
+        entity.setFinishTime(TimeUtil.nowSeconds());
         if (entity.getFollowupDoctorId() == null) {
             entity.setFollowupDoctorId(operatorUser.getEmployeeId());
             entity.setFollowupDoctorName(operatorUser.getRealName());
         }
-        followupMapper.updateById(entity);
+        bizAnesthesiaFollowupMapper.updateById(entity);
         log.info("麻醉随访完成 followupNo={} 轮次={} 疼痛={} 恢复={} 完成人={}",
                 entity.getFollowupNo(), entity.getRoundNo(), entity.getPainScore(),
                 FollowupAdverseItems.recoveryText(entity.getRecovery()), operatorUser.getRealName());
@@ -260,7 +247,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
             throw new BusinessException("当前用户信息不存在");
         }
         BizAnesthesiaFollowup entity = mustGetDraft(id);
-        followupMapper.deleteById(entity.getId());
+        bizAnesthesiaFollowupMapper.deleteById(entity.getId());
         log.info("删除麻醉随访草稿 followupNo={} 操作人={}", entity.getFollowupNo(), operatorUser.getRealName());
     }
 
@@ -268,7 +255,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
      * 麻醉记录必须存在且已提交/已审核（未定稿的麻醉过程没有"术后"可言）
      */
     private BizAnesthesiaRecord followableRecord(Long recordId) {
-        BizAnesthesiaRecord record = recordMapper.selectById(recordId);
+        BizAnesthesiaRecord record = bizAnesthesiaRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("麻醉记录不存在");
         }
@@ -286,7 +273,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
      * 随访时间不得早于麻醉结束时间（时间轴上的自相矛盾必须拦）
      */
     private void validateTimeAgainstAnesthesia(LocalDateTime followupTime, Long recordId) {
-        BizAnesthesiaRecord record = recordMapper.selectById(recordId);
+        BizAnesthesiaRecord record = bizAnesthesiaRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("麻醉记录不存在（recordId=" + recordId + "）");
         }
@@ -305,7 +292,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
         if (id == null) {
             throw new BusinessException("随访单ID不能为空");
         }
-        BizAnesthesiaFollowup entity = followupMapper.selectById(id);
+        BizAnesthesiaFollowup entity = bizAnesthesiaFollowupMapper.selectById(id);
         if (entity == null) {
             throw new BusinessException("随访单不存在");
         }
@@ -335,7 +322,7 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
 
     private String nextFollowupNo() {
         String prefix = "MS" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = followupMapper.countByNoPrefix(prefix) + 1;
+        long seq = bizAnesthesiaFollowupMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
 

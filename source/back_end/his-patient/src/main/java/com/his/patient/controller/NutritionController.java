@@ -42,9 +42,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NutritionController {
 
-    private final NutritionScreenService screenService;
-    private final NutritionStatsService statsService;
-    private final InpatientConsultationService consultationService;
+    private final NutritionScreenService nutritionScreenService;
+    private final NutritionStatsService nutritionStatsService;
+    private final InpatientConsultationService inpatientConsultationService;
 
     // 筛查
 
@@ -52,35 +52,35 @@ public class NutritionController {
     @PreAuthorize("hasAuthority('ipd:nutrition:screen')")
     @GetMapping("/overview")
     public Result<NutritionOverviewVO> overview() {
-        return Result.success(statsService.overview());
+        return Result.success(nutritionStatsService.overview());
     }
 
     @Operation(summary = "筛查评定分页（dueOnly=1 只看到期未复筛）")
     @PreAuthorize("hasAuthority('ipd:nutrition:screen')")
     @PostMapping("/screenListPage")
     public Result<PageResult<NutritionScreenVO>> screenListPage(@Valid @RequestBody NutritionScreenQueryPageDTO query) {
-        return Result.success(screenService.screenListPage(query));
+        return Result.success(nutritionScreenService.screenListPage(query));
     }
 
     @Operation(summary = "某次住院的筛查历史（按筛查时间倒序）")
     @PreAuthorize("hasAuthority('ipd:nutrition:screen')")
     @GetMapping("/screenListByAdmission")
     public Result<List<NutritionScreenVO>> screenListByAdmission(@RequestParam Long admissionId) {
-        return Result.success(screenService.screenListByAdmission(admissionId));
+        return Result.success(nutritionScreenService.screenListByAdmission(admissionId));
     }
 
     @Operation(summary = "登记/修改筛查评定（总分、风险判定、BMI、复筛日期全部服务端算）")
     @PreAuthorize("hasAuthority('ipd:nutrition:screenEdit')")
     @PostMapping("/screenUpsert")
     public Result<NutritionScreenVO> screenUpsert(@Valid @RequestBody NutritionScreenUpsertDTO dto) {
-        return Result.success("筛查记录已保存", screenService.screenUpsert(dto));
+        return Result.success("筛查记录已保存", nutritionScreenService.screenUpsert(dto));
     }
 
     @Operation(summary = "删除筛查记录（仅限误录）")
     @PreAuthorize("hasAuthority('ipd:nutrition:screenDelete')")
     @DeleteMapping("/screenDeleteById")
     public Result<Integer> screenDeleteById(@RequestParam Long id) {
-        return Result.success("已删除", screenService.screenDeleteById(id));
+        return Result.success("已删除", nutritionScreenService.screenDeleteById(id));
     }
 
     // 营养会诊（复用住院会诊闭环，类别钉死为营养）
@@ -90,7 +90,7 @@ public class NutritionController {
     @PostMapping("/consultListPage")
     public Result<PageResult<ConsultationVO>> consultListPage(@Valid @RequestBody ConsultationQueryPageDTO query) {
         query.setConsultCategory(ConsultCategoryEnum.NUTRITION.getCode());
-        IPage<ConsultationVO> page = consultationService.listPage(query);
+        IPage<ConsultationVO> page = inpatientConsultationService.listPage(query);
         return Result.success(PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 page.getRecords()));
     }
@@ -99,7 +99,7 @@ public class NutritionController {
     @PreAuthorize("hasAuthority('ipd:nutrition:consult')")
     @GetMapping("/consultGetById")
     public Result<ConsultationVO> consultGetById(@RequestParam Long consultationId) {
-        return Result.success(consultationService.getDetailById(consultationId));
+        return Result.success(inpatientConsultationService.getDetailById(consultationId));
     }
 
     @Operation(summary = "发起营养会诊（筛查阳性患者一键发起；类别服务端写死为 2）")
@@ -108,14 +108,14 @@ public class NutritionController {
     public Result<String> consultApply(@RequestBody @Valid ConsultationUpsertDTO dto) {
         dto.setId(null);
         dto.setConsultCategory(ConsultCategoryEnum.NUTRITION.getCode());
-        return Result.success("营养会诊已申请", consultationService.save(dto));
+        return Result.success("营养会诊已申请", inpatientConsultationService.save(dto));
     }
 
     @Operation(summary = "应答营养会诊（接诊人 = 当前登录用户）")
     @PreAuthorize("hasAuthority('ipd:nutrition:consultEdit')")
     @PostMapping("/consultAccept")
     public Result<Void> consultAccept(@RequestBody @Valid ConsultationAcceptDTO dto) {
-        consultationService.accept(dto);
+        inpatientConsultationService.accept(dto);
         return Result.success("已接诊", null);
     }
 
@@ -123,14 +123,14 @@ public class NutritionController {
     @PreAuthorize("hasAuthority('ipd:nutrition:consultEdit')")
     @PostMapping("/consultFinish")
     public Result<String> consultFinish(@RequestBody @Valid ConsultationFinishDTO dto) {
-        return Result.success("会诊已完成并回写病历", consultationService.finish(dto));
+        return Result.success("会诊已完成并回写病历", inpatientConsultationService.finish(dto));
     }
 
     @Operation(summary = "取消营养会诊（必填原因）")
     @PreAuthorize("hasAuthority('ipd:nutrition:consultEdit')")
     @PostMapping("/consultCancel")
     public Result<Void> consultCancel(@RequestBody @Valid ConsultationCancelDTO dto) {
-        consultationService.cancel(dto);
+        inpatientConsultationService.cancel(dto);
         return Result.success("已取消", null);
     }
 
@@ -140,14 +140,14 @@ public class NutritionController {
     @PreAuthorize("hasAuthority('ipd:nutrition:stats')")
     @GetMapping("/previewStats")
     public Result<NutritionStatsVO> previewStats(@RequestParam String statMonth) {
-        return Result.success(statsService.previewStats(statMonth));
+        return Result.success(nutritionStatsService.previewStats(statMonth));
     }
 
     @Operation(summary = "生成/重算月度营养指标快照（同月同范围覆盖）")
     @PreAuthorize("hasAuthority('ipd:nutrition:statGenerate')")
     @PostMapping("/generateStats")
     public Result<List<NutritionStatsVO>> generateStats(@Valid @RequestBody NutritionStatsGenerateDTO dto) {
-        List<NutritionStatsVO> rows = statsService.generateStats(dto);
+        List<NutritionStatsVO> rows = nutritionStatsService.generateStats(dto);
         return Result.success("已生成 " + rows.size() + " 条快照", rows);
     }
 
@@ -155,13 +155,13 @@ public class NutritionController {
     @PreAuthorize("hasAuthority('ipd:nutrition:stats')")
     @PostMapping("/statsListPage")
     public Result<PageResult<NutritionStatsVO>> statsListPage(@Valid @RequestBody NutritionStatsQueryPageDTO query) {
-        return Result.success(statsService.statsListPage(query));
+        return Result.success(nutritionStatsService.statsListPage(query));
     }
 
     @Operation(summary = "导出营养指标 CSV（BOM，上限 5000 行）")
     @PreAuthorize("hasAuthority('ipd:nutrition:statExport')")
     @PostMapping("/statsExportCsv")
     public Result<String> statsExportCsv(@Valid @RequestBody NutritionStatsQueryPageDTO query) {
-        return Result.success(statsService.statsExportCsv(query));
+        return Result.success(nutritionStatsService.statsExportCsv(query));
     }
 }

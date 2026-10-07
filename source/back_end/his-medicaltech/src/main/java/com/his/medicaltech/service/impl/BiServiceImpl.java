@@ -1,17 +1,10 @@
 package com.his.medicaltech.service.impl;
 
+import com.his.common.util.NumUtil;
 import com.his.medicaltech.mapper.BiMapper;
 import com.his.medicaltech.service.BiService;
 import com.his.medicaltech.support.DrgGrouper;
-import com.his.medicaltech.vo.BiBedStatRowVO;
-import com.his.medicaltech.vo.BiCodedSummaryRowVO;
-import com.his.medicaltech.vo.BiDayAmountRowVO;
-import com.his.medicaltech.vo.BiDayCountRowVO;
-import com.his.medicaltech.vo.BiDeptAmountRowVO;
-import com.his.medicaltech.vo.BiDischargeWindowRowVO;
-import com.his.medicaltech.vo.BiDrgWeightRowVO;
-import com.his.medicaltech.vo.BiNationalVO;
-import com.his.medicaltech.vo.BiOverviewVO;
+import com.his.medicaltech.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -33,31 +26,23 @@ public class BiServiceImpl implements BiService {
     private final BiMapper biMapper;
     private final DrgGrouper drgGrouper;
 
-    private static long nz(Long v) {
-        return v == null ? 0L : v;
-    }
-
-    private static BigDecimal nz(BigDecimal v) {
-        return v == null ? BigDecimal.ZERO : v;
-    }
-
     public BiOverviewVO overview() {
         BiOverviewVO vo = new BiOverviewVO();
-        vo.setTodayAppointments(nz(biMapper.countTodayAppointments()));
-        vo.setInHospitalCount(nz(biMapper.countInHospital()));
-        vo.setTodayDischargeCount(nz(biMapper.countTodayDischarge()));
+        vo.setTodayAppointments(NumUtil.orZero(biMapper.countTodayAppointments()));
+        vo.setInHospitalCount(NumUtil.orZero(biMapper.countInHospital()));
+        vo.setTodayDischargeCount(NumUtil.orZero(biMapper.countTodayDischarge()));
 
-        BigDecimal revenue = nz(biMapper.sumTodayRevenue());
-        BigDecimal drug = nz(biMapper.sumTodayDrugRevenue());
+        BigDecimal revenue = NumUtil.orZero(biMapper.sumTodayRevenue());
+        BigDecimal drug = NumUtil.orZero(biMapper.sumTodayDrugRevenue());
         vo.setTodayRevenue(revenue);
         vo.setTodayDrugRevenue(drug);
         vo.setDrugRatio(revenue.signum() > 0
                 ? drug.divide(revenue, 4, RoundingMode.HALF_UP) : BigDecimal.ZERO);
 
         BiBedStatRowVO bed = biMapper.bedStat();
-        long occupied = nz(bed.getOccupied());
-        long total = nz(bed.getTotal());
-        long usable = total - nz(bed.getRepair());
+        long occupied = NumUtil.orZero(bed.getOccupied());
+        long total = NumUtil.orZero(bed.getTotal());
+        long usable = total - NumUtil.orZero(bed.getRepair());
         vo.setBedTotal(total);
         vo.setBedOccupied(occupied);
         vo.setBedOccupancy(usable > 0
@@ -70,7 +55,7 @@ public class BiServiceImpl implements BiService {
         for (BiDeptAmountRowVO m : biMapper.deptTop()) {
             BiOverviewVO.DeptRevenue d = new BiOverviewVO.DeptRevenue();
             d.setDeptName(m.getDeptName());
-            d.setAmount(nz(m.getAmount()));
+            d.setAmount(NumUtil.orZero(m.getAmount()));
             top.add(d);
         }
         vo.setDeptTop(top);
@@ -86,8 +71,8 @@ public class BiServiceImpl implements BiService {
 
         // 平均住院日 / 床位周转
         BiDischargeWindowRowVO d = biMapper.dischargeWindow30d();
-        long dischargeCount = nz(d.getDischargeCount());
-        long bedDays = nz(d.getBedDays());
+        long dischargeCount = NumUtil.orZero(d.getDischargeCount());
+        long bedDays = NumUtil.orZero(d.getBedDays());
         vo.setDischargeCount(dischargeCount);
         vo.setTotalBedDays(bedDays);
         vo.setAvgLengthOfStay(dischargeCount > 0
@@ -100,8 +85,8 @@ public class BiServiceImpl implements BiService {
                 : BigDecimal.ZERO);
 
         // 耗占比
-        BigDecimal revenue = nz(biMapper.sumWindow30dRevenue());
-        BigDecimal material = nz(biMapper.sumWindow30dMaterialRevenue());
+        BigDecimal revenue = NumUtil.orZero(biMapper.sumWindow30dRevenue());
+        BigDecimal material = NumUtil.orZero(biMapper.sumWindow30dMaterialRevenue());
         vo.setRevenue(revenue);
         vo.setMaterialRevenue(material);
         vo.setMaterialRatio(revenue.signum() > 0
@@ -110,7 +95,7 @@ public class BiServiceImpl implements BiService {
         // CMI：QY（未入组）权重按 0 计入分母，与国考口径一致
         Map<String, BigDecimal> weightByCode = new HashMap<>();
         for (BiDrgWeightRowVO g : biMapper.drgWeights()) {
-            weightByCode.put(g.getDrgCode(), nz(g.getWeight()));
+            weightByCode.put(g.getDrgCode(), NumUtil.orZero(g.getWeight()));
         }
         List<BiCodedSummaryRowVO> samples = biMapper.codedSummaries30d();
         long grouped = 0;
@@ -136,7 +121,7 @@ public class BiServiceImpl implements BiService {
 
     private long usableBeds() {
         BiBedStatRowVO bed = biMapper.bedStat();
-        return Math.max(nz(bed.getTotal()) - nz(bed.getRepair()), 0);
+        return Math.max(NumUtil.orZero(bed.getTotal()) - NumUtil.orZero(bed.getRepair()), 0);
     }
 
     /**
@@ -149,7 +134,7 @@ public class BiServiceImpl implements BiService {
         for (BiDayCountRowVO m : rows) {
             BiOverviewVO.TrendPoint p = new BiOverviewVO.TrendPoint();
             p.setDate(m.getStatDate());
-            p.setCount(nz(m.getCnt()));
+            p.setCount(NumUtil.orZero(m.getCnt()));
             p.setAmount(BigDecimal.ZERO);
             list.add(p);
         }
@@ -165,7 +150,7 @@ public class BiServiceImpl implements BiService {
             BiOverviewVO.TrendPoint p = new BiOverviewVO.TrendPoint();
             p.setDate(m.getStatDate());
             p.setCount(0L);
-            p.setAmount(nz(m.getAmount()));
+            p.setAmount(NumUtil.orZero(m.getAmount()));
             list.add(p);
         }
         return list;

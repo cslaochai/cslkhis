@@ -3,6 +3,7 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.emr.dto.OutpatientLogQueryDTO;
@@ -32,7 +33,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OutpatientLogServiceImpl implements OutpatientLogService {
+public class OutpatientLogServiceImpl extends ServiceImpl<SysInfectiousDiseaseMapper, SysInfectiousDisease> implements OutpatientLogService {
 
     /**
      * 目录为空时的正则哨兵：^$ 永不命中任何诊断编码（空串命中会被当成"什么都能报"）
@@ -40,7 +41,7 @@ public class OutpatientLogServiceImpl implements OutpatientLogService {
     private static final String NO_MATCH_REGEX = "^$";
 
     private final OutpatientLogMapper outpatientLogMapper;
-    private final SysInfectiousDiseaseMapper diseaseMapper;
+    private final SysInfectiousDiseaseMapper sysInfectiousDiseaseMapper;
 
     @Override
     public PageResult<OutpatientLogListVO> listPage(OutpatientLogQueryDTO query) {
@@ -70,7 +71,7 @@ public class OutpatientLogServiceImpl implements OutpatientLogService {
      * ICD 前缀 → 病种名（同名多前缀时后者覆盖无所谓，展示用 best effort）
      */
     private Map<String, String> loadReportablePrefixes() {
-        List<SysInfectiousDisease> diseases = diseaseMapper.selectList(
+        List<SysInfectiousDisease> diseases = sysInfectiousDiseaseMapper.selectList(
                 new LambdaQueryWrapper<SysInfectiousDisease>()
                         .eq(SysInfectiousDisease::getStatus, 1));
         Map<String, String> prefixes = new LinkedHashMap<>();

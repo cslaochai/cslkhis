@@ -1,15 +1,13 @@
 package com.his.pharmacy.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
-import com.his.pharmacy.dto.DrugTraceCollectDTO;
-import com.his.pharmacy.dto.DrugTraceDispenseDTO;
-import com.his.pharmacy.dto.DrugTraceQueryPageDTO;
-import com.his.pharmacy.dto.DrugTraceScanDTO;
-import com.his.pharmacy.dto.DrugTraceUploadDTO;
-import com.his.pharmacy.dto.DrugTraceVoidDTO;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
+import com.his.pharmacy.dto.*;
 import com.his.pharmacy.entity.BizDrugStock;
 import com.his.pharmacy.entity.BizDrugTrace;
 import com.his.pharmacy.enums.DrugTraceStatusEnum;
@@ -18,15 +16,7 @@ import com.his.pharmacy.mapper.BizDrugTraceMapper;
 import com.his.pharmacy.service.DrugTraceService;
 import com.his.pharmacy.service.DrugTraceUploadChannelService;
 import com.his.pharmacy.support.DrugTraceParser;
-import com.his.pharmacy.vo.DrugDictSnapshotVO;
-import com.his.pharmacy.vo.DrugDispensingSnapshotVO;
-import com.his.pharmacy.vo.DrugInboundSnapshotVO;
-import com.his.pharmacy.vo.DrugStockOptionVO;
-import com.his.pharmacy.vo.DrugTraceReconcileVO;
-import com.his.pharmacy.vo.DrugTraceScanVO;
-import com.his.pharmacy.vo.DrugTraceStatVO;
-import com.his.pharmacy.vo.DrugTraceUploadResultVO;
-import com.his.pharmacy.vo.DrugTraceVO;
+import com.his.pharmacy.vo.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,7 +25,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -54,13 +43,17 @@ import java.util.concurrent.ThreadLocalRandom;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DrugTraceServiceImpl implements DrugTraceService {
+public class DrugTraceServiceImpl extends ServiceImpl<BizDrugTraceMapper, BizDrugTrace> implements DrugTraceService {
 
-    /** 采集场景 / 核销场景 */
+    /**
+     * 采集场景 / 核销场景
+     */
     private static final int SCENE_COLLECT = 1;
     private static final int SCENE_DISPENSE = 2;
 
-    /** 上传状态 */
+    /**
+     * 上传状态
+     */
     private static final int UPLOAD_PENDING = 0;
     private static final int UPLOAD_DONE = 1;
     private static final int UPLOAD_FAILED = 2;
@@ -69,9 +62,13 @@ public class DrugTraceServiceImpl implements DrugTraceService {
     private static final int VOID_REASON_MAX = 200;
     private static final int MAX_UPLOAD_LIMIT = 500;
 
-    private final BizDrugTraceMapper traceMapper;
-    private final BizDrugStockMapper stockMapper;
-    private final DrugTraceUploadChannelService uploadGateway;
+    private final BizDrugTraceMapper bizDrugTraceMapper;
+    private final BizDrugStockMapper bizDrugStockMapper;
+    private final DrugTraceUploadChannelService drugTraceUploadChannelService;
+
+    private static String blankToNull(String v) {
+        return StringUtils.hasText(v) ? v.trim() : null;
+    }
 
     @Override
     public DrugTraceScanVO scan(DrugTraceScanDTO dto) {
@@ -90,11 +87,11 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         // 药品字典命中：解析出产品标识才查，查不到留给人工指定
         DrugDictSnapshotVO drug = null;
         if (parts.isParsed()) {
-            drug = traceMapper.selectDrugByTraceKey(parts.getDrugDi());
+            drug = bizDrugTraceMapper.selectDrugByTraceKey(parts.getDrugDi());
         }
         if (drug == null && dto.getDrugId() != null) {
             // 人工指定药品（码识别不出时的兜底路径，采集按这个药品挂靠）
-            drug = traceMapper.selectDrugSnapshot(dto.getDrugId());
+            drug = bizDrugTraceMapper.selectDrugSnapshot(dto.getDrugId());
         }
         if (drug == null && dto.getDrugId() == null && !parts.isParsed()) {
             vo.setTip("未能识别该码的药品标识（不是 GS1 码也不是 20 位药品追溯码），请人工选择药品后再采集");
@@ -105,7 +102,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         }
 
         // 该码在台账的现状
-        DrugTraceVO exist = traceMapper.selectByTraceCode(code);
+        DrugTraceVO exist = bizDrugTraceMapper.selectByTraceCode(code);
         if (exist != null) {
             vo.setExists(true);
             vo.setExistTraceId(exist.getId());
@@ -116,7 +113,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         // 批次候选（采集挂靠）
         Long drugId = vo.getDrugId();
         if (drugId != null) {
-            vo.setBatches(traceMapper.selectStockOptions(drugId).stream().map(this::toBatchOption).toList());
+            vo.setBatches(bizDrugTraceMapper.selectStockOptions(drugId).stream().map(this::toBatchOption).toList());
         }
 
         // 采集闸门
@@ -132,7 +129,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
             if (dto.getDispensingId() == null) {
                 vo.setTip("核销场景必须指定发药记录");
             } else {
-                DrugDispensingSnapshotVO dp = traceMapper.selectDispensingSnapshot(dto.getDispensingId());
+                DrugDispensingSnapshotVO dp = bizDrugTraceMapper.selectDispensingSnapshot(dto.getDispensingId());
                 if (dp == null) {
                     vo.setTip("发药记录不存在，请重新选择");
                 } else {
@@ -174,14 +171,14 @@ public class DrugTraceServiceImpl implements DrugTraceService {
     @Transactional(rollbackFor = Exception.class)
     public DrugTraceVO collect(DrugTraceCollectDTO dto, String operatorName) {
         String code = dto.getTraceCode().trim();
-        if (traceMapper.selectByTraceCode(code) != null) {
+        if (bizDrugTraceMapper.selectByTraceCode(code) != null) {
             throw new BusinessException("该追溯码已采集过，同一码不允许重复采集（采集有误请先删除再重采）");
         }
         DrugTraceParser.TraceParts parts = DrugTraceParser.parse(code);
 
         DrugDictSnapshotVO drug;
         if (dto.getDrugId() != null) {
-            drug = traceMapper.selectDrugSnapshot(dto.getDrugId());
+            drug = bizDrugTraceMapper.selectDrugSnapshot(dto.getDrugId());
             if (drug == null) {
                 throw new BusinessException("药品字典中不存在该药品");
             }
@@ -189,7 +186,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
             if (!parts.isParsed()) {
                 throw new BusinessException("未能识别该码的药品标识，请人工选择药品后再采集");
             }
-            drug = traceMapper.selectDrugByTraceKey(parts.getDrugDi());
+            drug = bizDrugTraceMapper.selectDrugByTraceKey(parts.getDrugDi());
             if (drug == null) {
                 throw new BusinessException("追溯标识 " + parts.getDrugDi() + " 未命中药品字典，请先在药品字典录入该追溯标识，或人工选择药品");
             }
@@ -199,7 +196,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
             throw new BusinessException("药品「" + drug.getDrugName() + "」已停用，不能采集");
         }
 
-        BizDrugStock stock = stockMapper.selectById(dto.getStockId());
+        BizDrugStock stock = bizDrugStockMapper.selectById(dto.getStockId());
         if (stock == null) {
             throw new BusinessException("挂靠批次不存在");
         }
@@ -237,7 +234,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         t.setSourceType(sourceType);
 
         if (dto.getInboundId() != null) {
-            DrugInboundSnapshotVO ib = traceMapper.selectInboundSnapshot(dto.getInboundId());
+            DrugInboundSnapshotVO ib = bizDrugTraceMapper.selectInboundSnapshot(dto.getInboundId());
             if (ib == null) {
                 throw new BusinessException("来源入库单不存在");
             }
@@ -249,26 +246,26 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         }
 
         t.setStatus(DrugTraceStatusEnum.IN_STOCK.getCode());
-        t.setScanTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+        t.setScanTime(TimeUtil.nowSeconds());
         t.setOperatorName(operatorName);
         t.setUploadStatus(UPLOAD_PENDING);
         t.setRemark(dto.getRemark());
-        traceMapper.insert(t);
-        return traceMapper.selectTraceById(t.getId());
+        bizDrugTraceMapper.insert(t);
+        return bizDrugTraceMapper.selectTraceById(t.getId());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DrugTraceVO verifyDispense(DrugTraceDispenseDTO dto, String operatorName) {
         String code = dto.getTraceCode().trim();
-        DrugDispensingSnapshotVO dp = traceMapper.selectDispensingSnapshot(dto.getDispensingId());
+        DrugDispensingSnapshotVO dp = bizDrugTraceMapper.selectDispensingSnapshot(dto.getDispensingId());
         if (dp == null) {
             throw new BusinessException("发药记录不存在");
         }
         if (dp.getDispensingStatus() == null || dp.getDispensingStatus() != DrugTraceStatusEnum.DISPENSED.getCode()) {
             throw new BusinessException("仅「已发药」的记录可以核销追溯码");
         }
-        DrugTraceVO exist = traceMapper.selectByTraceCode(code);
+        DrugTraceVO exist = bizDrugTraceMapper.selectByTraceCode(code);
         if (exist == null) {
             throw new BusinessException("该追溯码尚未入库采集，不能核销（请先完成入库采集）");
         }
@@ -290,20 +287,20 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         t.setPatientId(dp.getPatientId());
         t.setPatientNo(dp.getPatientNo());
         t.setPatientName(dp.getPatientName());
-        t.setDispenseTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
+        t.setDispenseTime(TimeUtil.nowSeconds());
         t.setDispenseOperator(operatorName);
         // 核销是一次新事件，必须重新上传（上传过的是"采集"事件，不是"核销"事件）
         t.setUploadStatus(UPLOAD_PENDING);
         t.setUploadBatchNo("");
         t.setUploadFailReason("");
-        traceMapper.updateById(t);
-        return traceMapper.selectTraceById(exist.getId());
+        bizDrugTraceMapper.updateById(t);
+        return bizDrugTraceMapper.selectTraceById(exist.getId());
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DrugTraceVO voidTrace(DrugTraceVoidDTO dto, String operatorName) {
-        DrugTraceVO exist = traceMapper.selectTraceById(dto.getTraceId());
+        DrugTraceVO exist = bizDrugTraceMapper.selectTraceById(dto.getTraceId());
         if (exist == null) {
             throw new BusinessException("追溯码记录不存在");
         }
@@ -314,14 +311,14 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         t.setId(exist.getId());
         t.setStatus(DrugTraceStatusEnum.VOID.getCode());
         t.setVoidType(dto.getVoidType());
-        t.setVoidTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-        t.setVoidReason(cut(StringUtils.hasText(dto.getReason()) ? dto.getReason() : "未填写原因", VOID_REASON_MAX));
+        t.setVoidTime(TimeUtil.nowSeconds());
+        t.setVoidReason(TextUtil.cut(StringUtils.hasText(dto.getReason()) ? dto.getReason() : "未填写原因", VOID_REASON_MAX));
         // 作废也是要上报的变更事件
         t.setUploadStatus(UPLOAD_PENDING);
         t.setUploadBatchNo("");
         t.setUploadFailReason("");
-        traceMapper.updateById(t);
-        return traceMapper.selectTraceById(exist.getId());
+        bizDrugTraceMapper.updateById(t);
+        return bizDrugTraceMapper.selectTraceById(exist.getId());
     }
 
     @Override
@@ -332,7 +329,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
             ids.addAll(dto.getIds());
         } else {
             int limit = Math.min(dto.getLimit() == null || dto.getLimit() <= 0 ? 200 : dto.getLimit(), MAX_UPLOAD_LIMIT);
-            ids.addAll(traceMapper.selectUploadCandidates(limit));
+            ids.addAll(bizDrugTraceMapper.selectUploadCandidates(limit));
         }
         DrugTraceUploadResultVO result = new DrugTraceUploadResultVO();
         String batchNo = nextUploadBatchNo();
@@ -348,7 +345,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         List<BizDrugTrace> rows = new ArrayList<>();
         List<DrugTraceUploadChannelService.UploadLine> lines = new ArrayList<>();
         for (Long id : ids) {
-            BizDrugTrace t = traceMapper.selectById(id);
+            BizDrugTrace t = bizDrugTraceMapper.selectById(id);
             if (t == null) {
                 continue;
             }
@@ -371,8 +368,8 @@ public class DrugTraceServiceImpl implements DrugTraceService {
             lines.add(line);
         }
 
-        List<DrugTraceUploadChannelService.UploadAck> acks = uploadGateway.upload(lines);
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        List<DrugTraceUploadChannelService.UploadAck> acks = drugTraceUploadChannelService.upload(lines);
+        LocalDateTime now = TimeUtil.nowSeconds();
         int ok = 0;
         int fail = 0;
         for (int i = 0; i < rows.size(); i++) {
@@ -389,7 +386,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
                 ok++;
             } else {
                 upd.setUploadStatus(UPLOAD_FAILED);
-                upd.setUploadFailReason(cut(ack == null ? "上传通道无回执" : ack.getMessage(), FAIL_REASON_MAX));
+                upd.setUploadFailReason(TextUtil.cut(ack == null ? "上传通道无回执" : ack.getMessage(), FAIL_REASON_MAX));
                 fail++;
                 DrugTraceUploadResultVO.FailItem item = new DrugTraceUploadResultVO.FailItem();
                 item.setTraceId(t.getId());
@@ -398,7 +395,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
                 item.setReason(upd.getUploadFailReason());
                 result.getFailures().add(item);
             }
-            traceMapper.updateById(upd);
+            bizDrugTraceMapper.updateById(upd);
         }
         result.setTotal(rows.size());
         result.setSuccess(ok);
@@ -409,7 +406,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
 
     @Override
     public PageResult<DrugTraceVO> page(DrugTraceQueryPageDTO q) {
-        Page<DrugTraceVO> page = traceMapper.selectTracePage(
+        Page<DrugTraceVO> page = bizDrugTraceMapper.selectTracePage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 blankToNull(q.getKeyword()), q.getDrugId(), q.getStockId(), q.getStatus(),
                 q.getUploadStatus(), q.getCodeType(), q.getSourceType(), q.getPatientId(), q.getDispensingId());
@@ -418,7 +415,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
 
     @Override
     public DrugTraceVO getDetailById(Long id) {
-        DrugTraceVO vo = traceMapper.selectTraceById(id);
+        DrugTraceVO vo = bizDrugTraceMapper.selectTraceById(id);
         if (vo == null) {
             throw new BusinessException("追溯码记录不存在");
         }
@@ -427,7 +424,7 @@ public class DrugTraceServiceImpl implements DrugTraceService {
 
     @Override
     public DrugTraceReconcileVO reconcileStats() {
-        DrugTraceStatVO s = traceMapper.selectTraceStats();
+        DrugTraceStatVO s = bizDrugTraceMapper.selectTraceStats();
         DrugTraceReconcileVO vo = new DrugTraceReconcileVO();
         vo.setTotal(s.getTotal());
         vo.setInStock(s.getInStock());
@@ -437,19 +434,19 @@ public class DrugTraceServiceImpl implements DrugTraceService {
         vo.setUploaded(s.getUploaded());
         vo.setUploadFailed(s.getUploadFailed());
         vo.setDrugKinds(s.getDrugKinds());
-        vo.setUnTracedDispense(traceMapper.countUnTracedDispense());
-        vo.setRequiredUnTracedDispense(traceMapper.countRequiredUnTracedDispense());
-        vo.setRecentDispenseTotal(traceMapper.countRecentDispense());
+        vo.setUnTracedDispense(bizDrugTraceMapper.countUnTracedDispense());
+        vo.setRequiredUnTracedDispense(bizDrugTraceMapper.countRequiredUnTracedDispense());
+        vo.setRecentDispenseTotal(bizDrugTraceMapper.countRecentDispense());
         return vo;
     }
 
     @Override
     public void deleteById(Long id) {
-        DrugTraceVO exist = traceMapper.selectTraceById(id);
+        DrugTraceVO exist = bizDrugTraceMapper.selectTraceById(id);
         if (exist == null) {
             throw new BusinessException("追溯码记录不存在");
         }
-        int n = traceMapper.purgeById(id);
+        int n = bizDrugTraceMapper.purgeById(id);
         if (n == 0) {
             throw new BusinessException("只能删除「在库且未上传」的误采记录；已核销或已上传的码属于医保数据，不允许删除");
         }
@@ -509,16 +506,5 @@ public class DrugTraceServiceImpl implements DrugTraceService {
     private String nextUploadBatchNo() {
         return "UP" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
                 + String.format("%02d", ThreadLocalRandom.current().nextInt(100));
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        return v.length() <= max ? v : v.substring(0, max);
-    }
-
-    private static String blankToNull(String v) {
-        return StringUtils.hasText(v) ? v.trim() : null;
     }
 }

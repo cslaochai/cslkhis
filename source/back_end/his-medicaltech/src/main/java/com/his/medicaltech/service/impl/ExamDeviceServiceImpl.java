@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.ExamApptDTO;
 import com.his.medicaltech.entity.BizExamAppointment;
 import com.his.medicaltech.entity.BizExamDevice;
@@ -56,21 +58,17 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
     private static final int OPEN = 1;
     private static final int PAUSED = 2;
 
-    private final BizExamDeviceMapper deviceMapper;
-    private final BizExamDeviceItemMapper deviceItemMapper;
-    private final BizExamSlotMapper slotMapper;
-    private final BizExamAppointmentMapper appointmentMapper;
-    private final SysInspectionItemMapper inspectionItemMapper;
-    private final DictCacheService dictText;
+    private final BizExamDeviceMapper bizExamDeviceMapper;
+    private final BizExamDeviceItemMapper bizExamDeviceItemMapper;
+    private final BizExamSlotMapper bizExamSlotMapper;
+    private final BizExamAppointmentMapper bizExamAppointmentMapper;
+    private final SysInspectionItemMapper sysInspectionItemMapper;
+    private final DictCacheService dictCacheService;
 
     // 查询
 
-    private static String trim(String s) {
-        return s == null ? null : s.trim();
-    }
-
     private static String upper(String s) {
-        String t = trim(s);
+        String t = TextUtil.trim(s);
         return t == null ? null : t.toUpperCase();
     }
 
@@ -78,15 +76,11 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         return java.util.Objects.equals(a == null || a.isEmpty() ? null : a, b == null || b.isEmpty() ? null : b);
     }
 
-    private static int nz(Integer v, int dft) {
-        return v == null ? dft : v;
-    }
-
     // 写入
 
     public PageResult<ExamApptVO.DeviceVO> listPage(ExamApptDTO.DeviceQuery q) {
         LambdaQueryWrapper<BizExamDevice> w = new LambdaQueryWrapper<>();
-        String kw = trim(q.getKeyword());
+        String kw = TextUtil.trim(q.getKeyword());
         w.and(StringUtils.hasText(kw), x -> x.like(BizExamDevice::getDeviceName, kw)
                         .or().like(BizExamDevice::getDeviceCode, kw)
                         .or().like(BizExamDevice::getRoomName, kw))
@@ -94,7 +88,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
                 .eq(q.getDeptId() != null, BizExamDevice::getDeptId, q.getDeptId())
                 .eq(q.getStatus() != null, BizExamDevice::getStatus, q.getStatus())
                 .orderByAsc(BizExamDevice::getDeviceCode);
-        Page<BizExamDevice> page = deviceMapper.selectPage(
+        Page<BizExamDevice> page = bizExamDeviceMapper.selectPage(
                 new Page<>(q.getPageNum(), q.getPageSize()), w);
         Map<Long, Integer> itemCounts = itemCountByDevice();
         Map<Long, String> equipmentNames = equipmentNameMap();
@@ -112,7 +106,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
                 .orderByAsc(BizExamDevice::getDeviceCode);
         if (itemId != null) {
             // 只给"确实能做这个项目"的设备：路由事实源是映射表，不是项目表的 dept_id
-            List<Long> deviceIds = deviceItemMapper.selectList(new LambdaQueryWrapper<BizExamDeviceItem>()
+            List<Long> deviceIds = bizExamDeviceItemMapper.selectList(new LambdaQueryWrapper<BizExamDeviceItem>()
                             .eq(BizExamDeviceItem::getItemId, itemId))
                     .stream().map(BizExamDeviceItem::getDeviceId).distinct().toList();
             if (deviceIds.isEmpty()) {
@@ -121,10 +115,10 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
             w.in(BizExamDevice::getId, deviceIds);
         }
         List<ExamApptVO.DeviceSelectListVO> out = new ArrayList<>();
-        for (BizExamDevice d : deviceMapper.selectList(w)) {
+        for (BizExamDevice d : bizExamDeviceMapper.selectList(w)) {
             ExamApptVO.DeviceSelectListVO v = new ExamApptVO.DeviceSelectListVO();
             BeanUtils.copyProperties(d, v);
-            v.setDeviceTypeText(dictText.getDicDataLabel(DICT_DEVICE_TYPE, d.getDeviceType()));
+            v.setDeviceTypeText(dictCacheService.getDicDataLabel(DICT_DEVICE_TYPE, d.getDeviceType()));
             out.add(v);
         }
         return out;
@@ -140,14 +134,14 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
     }
 
     public List<ExamApptVO.DeviceItemVO> itemList(Long deviceId) {
-        List<BizExamDeviceItem> maps = deviceItemMapper.selectList(new LambdaQueryWrapper<BizExamDeviceItem>()
+        List<BizExamDeviceItem> maps = bizExamDeviceItemMapper.selectList(new LambdaQueryWrapper<BizExamDeviceItem>()
                 .eq(BizExamDeviceItem::getDeviceId, deviceId)
                 .orderByAsc(BizExamDeviceItem::getItemCode));
         List<ExamApptVO.DeviceItemVO> out = new ArrayList<>();
         for (BizExamDeviceItem m : maps) {
             ExamApptVO.DeviceItemVO v = new ExamApptVO.DeviceItemVO();
             BeanUtils.copyProperties(m, v);
-            SysInspectionItem item = m.getItemId() == null ? null : inspectionItemMapper.selectById(m.getItemId());
+            SysInspectionItem item = m.getItemId() == null ? null : sysInspectionItemMapper.selectById(m.getItemId());
             v.setItemDictMinutes(item == null ? null : item.getDuration());
             out.add(v);
         }
@@ -158,13 +152,13 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
      * 检查项目候选（供设备配项目时挑选）
      */
     public List<ExamApptVO.ItemSelectListVO> itemCandidates(String keyword, Integer limit) {
-        String kw = trim(keyword);
-        List<SysInspectionItem> items = inspectionItemMapper.selectList(
+        String kw = TextUtil.trim(keyword);
+        List<SysInspectionItem> items = sysInspectionItemMapper.selectList(
                 new LambdaQueryWrapper<SysInspectionItem>()
                         .and(StringUtils.hasText(kw), x -> x.like(SysInspectionItem::getItemName, kw)
                                 .or().like(SysInspectionItem::getItemCode, kw))
                         .orderByAsc(SysInspectionItem::getItemCode)
-                        .last("LIMIT " + Math.min(nz(limit, 50), 200)));
+                        .last("LIMIT " + Math.min(NumUtil.orDefault(limit, 50), 200)));
         List<ExamApptVO.ItemSelectListVO> out = new ArrayList<>();
         for (SysInspectionItem i : items) {
             ExamApptVO.ItemSelectListVO v = new ExamApptVO.ItemSelectListVO();
@@ -179,7 +173,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
 
     public List<ExamApptVO.EquipmentSelectListVO> equipmentOptions() {
         List<ExamApptVO.EquipmentSelectListVO> out = new ArrayList<>();
-        for (ExamEquipmentOptionRowVO row : deviceMapper.selectEquipmentOptions()) {
+        for (ExamEquipmentOptionRowVO row : bizExamDeviceMapper.selectEquipmentOptions()) {
             ExamApptVO.EquipmentSelectListVO v = new ExamApptVO.EquipmentSelectListVO();
             v.setId(row.getId());
             v.setEquipmentCode(row.getEquipmentCode());
@@ -199,12 +193,12 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         applyDefaults(device);
         validateGrid(device);
 
-        if (deviceMapper.selectCount(new LambdaQueryWrapper<BizExamDevice>()
+        if (bizExamDeviceMapper.selectCount(new LambdaQueryWrapper<BizExamDevice>()
                 .eq(BizExamDevice::getDeviceCode, device.getDeviceCode())
                 .ne(dto.getId() != null, BizExamDevice::getId, dto.getId())) > 0) {
             throw new BusinessException("设备编码已存在：" + device.getDeviceCode());
         }
-        if (deviceMapper.countDeletedByCode(device.getDeviceCode()) > 0) {
+        if (bizExamDeviceMapper.countDeletedByCode(device.getDeviceCode()) > 0) {
             throw new BusinessException("设备编码 " + device.getDeviceCode()
                     + " 已被一条已删除的档位占用（编码位随历史留痕一并保留，不复用），请改用其他编码");
         }
@@ -212,13 +206,13 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         String warning = null;
         Long savedId;
         if (dto.getId() == null) {
-            deviceMapper.insert(device);
+            bizExamDeviceMapper.insert(device);
             savedId = device.getId();
         } else {
             BizExamDevice old = require(dto.getId());
             device.setId(old.getId());
             boolean gridChanged = !sameGrid(old, device);
-            deviceMapper.updateById(device);
+            bizExamDeviceMapper.updateById(device);
             savedId = old.getId();
             if (gridChanged) {
                 warning = "开放时间/号源粒度已变更，历史号源格子不自动重排（已约患者不能被静默挪走）；"
@@ -233,11 +227,11 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long deviceId) {
         BizExamDevice d = require(deviceId);
-        long active = appointmentMapper.selectCount(new LambdaQueryWrapper<BizExamAppointment>()
+        long active = bizExamAppointmentMapper.selectCount(new LambdaQueryWrapper<BizExamAppointment>()
                 .eq(BizExamAppointment::getDeviceId, deviceId)
                 .eq(BizExamAppointment::getExamDate, LocalDate.now())
                 .in(BizExamAppointment::getStatus, 1, 2));
-        long future = appointmentMapper.selectCount(new LambdaQueryWrapper<BizExamAppointment>()
+        long future = bizExamAppointmentMapper.selectCount(new LambdaQueryWrapper<BizExamAppointment>()
                 .eq(BizExamAppointment::getDeviceId, deviceId)
                 .ge(BizExamAppointment::getExamDate, LocalDate.now())
                 .in(BizExamAppointment::getStatus, 1, 2));
@@ -245,9 +239,9 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
             throw new BusinessException("设备「" + d.getDeviceName() + "」还有 " + future + " 张未完成的预约"
                     + "（其中今天 " + active + " 张），请先改约或取消后再删除档位");
         }
-        deviceItemMapper.hardDeleteByDevice(deviceId);
-        slotMapper.delete(new LambdaQueryWrapper<BizExamSlot>().eq(BizExamSlot::getDeviceId, deviceId));
-        deviceMapper.deleteById(deviceId);
+        bizExamDeviceItemMapper.hardDeleteByDevice(deviceId);
+        bizExamSlotMapper.delete(new LambdaQueryWrapper<BizExamSlot>().eq(BizExamSlot::getDeviceId, deviceId));
+        bizExamDeviceMapper.deleteById(deviceId);
     }
 
     /**
@@ -265,13 +259,13 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         }
         Map<Long, SysInspectionItem> items = new HashMap<>();
         for (Long id : itemIds) {
-            SysInspectionItem it = inspectionItemMapper.selectById(id);
+            SysInspectionItem it = sysInspectionItemMapper.selectById(id);
             if (it == null) {
                 throw new BusinessException("检查项目不存在或已删除：" + id);
             }
             items.put(id, it);
         }
-        deviceItemMapper.hardDeleteByDevice(device.getId());
+        bizExamDeviceItemMapper.hardDeleteByDevice(device.getId());
         for (ExamApptDTO.ItemRef r : refs) {
             if (r.getItemId() == null) {
                 continue;
@@ -283,7 +277,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
             m.setItemCode(it.getItemCode());
             m.setItemName(it.getItemName());
             m.setExamMinutes(r.getExamMinutes());
-            deviceItemMapper.insert(m);
+            bizExamDeviceItemMapper.insert(m);
         }
         return items.size();
     }
@@ -293,7 +287,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         if (deviceId == null) {
             throw new BusinessException("设备ID不能为空");
         }
-        BizExamDevice d = deviceMapper.selectById(deviceId);
+        BizExamDevice d = bizExamDeviceMapper.selectById(deviceId);
         if (d == null) {
             throw new BusinessException("预约设备不存在：" + deviceId);
         }
@@ -372,8 +366,8 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
                                            Map<Long, String> equipmentNames) {
         ExamApptVO.DeviceVO v = new ExamApptVO.DeviceVO();
         BeanUtils.copyProperties(d, v);
-        v.setDeviceTypeText(dictText.getDicDataLabel(DICT_DEVICE_TYPE, d.getDeviceType()));
-        v.setStatusText(dictText.getDicDataLabel(DICT_DEVICE_STATUS, d.getStatus()));
+        v.setDeviceTypeText(dictCacheService.getDicDataLabel(DICT_DEVICE_TYPE, d.getDeviceType()));
+        v.setStatusText(dictCacheService.getDicDataLabel(DICT_DEVICE_STATUS, d.getStatus()));
         v.setItemCount(itemCounts.getOrDefault(d.getId(), 0));
         v.setEquipmentName(d.getEquipmentId() == null ? null : equipmentNames.get(d.getEquipmentId()));
         v.setOpenRangeText(openRangeText(d));
@@ -388,7 +382,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
 
     private Map<Long, Integer> itemCountByDevice() {
         Map<Long, Integer> map = new HashMap<>();
-        for (ExamDeviceItemCountRowVO row : deviceMapper.countItemsByDevice()) {
+        for (ExamDeviceItemCountRowVO row : bizExamDeviceMapper.countItemsByDevice()) {
             map.put(row.getDeviceId(), row.getItemCount() == null ? 0 : row.getItemCount().intValue());
         }
         return map;
@@ -399,7 +393,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
      */
     private Map<Long, String> equipmentNameMap() {
         Map<Long, String> map = new HashMap<>();
-        for (ExamEquipmentOptionRowVO row : deviceMapper.selectEquipmentOptions()) {
+        for (ExamEquipmentOptionRowVO row : bizExamDeviceMapper.selectEquipmentOptions()) {
             map.put(row.getId(), row.getEquipmentName());
         }
         return map;

@@ -1,6 +1,7 @@
 package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.dto.ExamApptDTO;
 import com.his.medicaltech.entity.BizExamAppointment;
@@ -38,17 +39,17 @@ import java.util.*;
  */
 @Service
 @RequiredArgsConstructor
-public class ExamSlotServiceImpl implements ExamSlotService {
+public class ExamSlotServiceImpl extends ServiceImpl<BizExamSlotMapper, BizExamSlot> implements ExamSlotService {
 
     private static final String DICT_DEVICE_STATUS = "his_exam_device_status";
     private static final int SLOT_LOCKED = 0;
     private static final int SLOT_OPEN = 1;
     private static final int RECALC_DETAIL_LIMIT = 50;
 
-    private final BizExamDeviceMapper deviceMapper;
-    private final BizExamSlotMapper slotMapper;
-    private final BizExamAppointmentMapper appointmentMapper;
-    private final DictCacheService dictText;
+    private final BizExamDeviceMapper bizExamDeviceMapper;
+    private final BizExamSlotMapper bizExamSlotMapper;
+    private final BizExamAppointmentMapper bizExamAppointmentMapper;
+    private final DictCacheService dictCacheService;
 
     // 生成 / 看板
 
@@ -78,7 +79,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
      */
     @Transactional(rollbackFor = Exception.class)
     public ExamApptVO.SlotEnsureVO ensureSlots(ExamApptDTO.SlotEnsure dto) {
-        BizExamDevice device = deviceMapper.selectForUpdate(dto.getDeviceId());
+        BizExamDevice device = bizExamDeviceMapper.selectForUpdate(dto.getDeviceId());
         if (device == null) {
             throw new BusinessException("预约设备不存在：" + dto.getDeviceId());
         }
@@ -117,12 +118,12 @@ public class ExamSlotServiceImpl implements ExamSlotService {
      * 号源看板：格子计数 + 实际占号者（谁占了这一格要能指认出来）
      */
     public ExamApptVO.SlotBoardVO board(ExamApptDTO.SlotQuery dto) {
-        BizExamDevice device = deviceMapper.selectById(dto.getDeviceId());
+        BizExamDevice device = bizExamDeviceMapper.selectById(dto.getDeviceId());
         if (device == null) {
             throw new BusinessException("预约设备不存在：" + dto.getDeviceId());
         }
         List<BizExamSlot> cells = currentGridCells(device, dto.getSlotDate());
-        List<BizExamAppointment> occupants = appointmentMapper.selectOccupants(device.getId(), dto.getSlotDate());
+        List<BizExamAppointment> occupants = bizExamAppointmentMapper.selectOccupants(device.getId(), dto.getSlotDate());
         LocalDateTime now = LocalDateTime.now();
 
         ExamApptVO.SlotBoardVO vo = new ExamApptVO.SlotBoardVO();
@@ -132,7 +133,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
         vo.setDeptName(device.getDeptName());
         vo.setRoomName(device.getRoomName());
         vo.setDeviceStatus(device.getStatus());
-        vo.setDeviceStatusText(dictText.getDicDataLabel(DICT_DEVICE_STATUS, device.getStatus()));
+        vo.setDeviceStatusText(dictCacheService.getDicDataLabel(DICT_DEVICE_STATUS, device.getStatus()));
         vo.setSlotDate(dto.getSlotDate());
         vo.setSlotMinutes(device.getSlotMinutes());
         vo.setParallelCount(device.getParallelCount());
@@ -155,7 +156,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
             List<String> names = new ArrayList<>();
             for (BizExamAppointment a : occupants) {
                 if (overlaps(cell, a)) {
-                    nos.add(a.getApptNo() + "(" + dictText.getDicDataLabel("his_exam_appoint_status", a.getStatus()) + ")");
+                    nos.add(a.getApptNo() + "(" + dictCacheService.getDicDataLabel("his_exam_appoint_status", a.getStatus()) + ")");
                     names.add(a.getPatientName());
                 }
             }
@@ -189,16 +190,16 @@ public class ExamSlotServiceImpl implements ExamSlotService {
         if (dto.getStatus() == null || (dto.getStatus() != SLOT_LOCKED && dto.getStatus() != SLOT_OPEN)) {
             throw new BusinessException("号源状态只能是 0-锁号 或 1-正常");
         }
-        BizExamSlot cell = slotMapper.selectById(dto.getSlotId());
+        BizExamSlot cell = bizExamSlotMapper.selectById(dto.getSlotId());
         if (cell == null) {
             throw new BusinessException("号源格子不存在：" + dto.getSlotId());
         }
-        BizExamDevice device = deviceMapper.selectForUpdate(cell.getDeviceId());
+        BizExamDevice device = bizExamDeviceMapper.selectForUpdate(cell.getDeviceId());
         if (device == null) {
             throw new BusinessException("预约设备不存在：" + cell.getDeviceId());
         }
         ensureDayLocked(device, cell.getSlotDate());
-        List<BizExamSlot> cells = slotMapper.selectDayForUpdate(device.getId(), cell.getSlotDate());
+        List<BizExamSlot> cells = bizExamSlotMapper.selectDayForUpdate(device.getId(), cell.getSlotDate());
         BizExamSlot target = cells.stream().filter(x -> x.getId().equals(dto.getSlotId())).findFirst()
                 .orElseThrow(() -> new BusinessException("号源格子不属于该设备该日，请刷新后重试"));
         if (dto.getStatus() == SLOT_LOCKED && target.getUsedSource() != null && target.getUsedSource() > 0) {
@@ -210,7 +211,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
         update.setId(target.getId());
         update.setStatus(dto.getStatus());
         update.setAvailableSource(dto.getStatus() == SLOT_LOCKED ? 0 : Math.max(0, total - used));
-        slotMapper.updateById(update);
+        bizExamSlotMapper.updateById(update);
     }
 
     /**
@@ -225,18 +226,18 @@ public class ExamSlotServiceImpl implements ExamSlotService {
             throw new BusinessException("一次对账的日期跨度不得超过 92 天");
         }
         List<BizExamDevice> devices = dto.getDeviceId() == null
-                ? deviceMapper.selectList(new LambdaQueryWrapper<BizExamDevice>().orderByAsc(BizExamDevice::getDeviceCode))
+                ? bizExamDeviceMapper.selectList(new LambdaQueryWrapper<BizExamDevice>().orderByAsc(BizExamDevice::getDeviceCode))
                 : List.of(requireDevice(dto.getDeviceId()));
 
         int checked = 0;
         List<ExamApptVO.SlotDriftVO> drifts = new ArrayList<>();
         for (BizExamDevice device : devices) {
             // 与占号同一把设备行锁 + 同日格子锁：对账要改计数，不锁就等于和预约互相踩
-            BizExamDevice locked = deviceMapper.selectForUpdate(device.getId());
+            BizExamDevice locked = bizExamDeviceMapper.selectForUpdate(device.getId());
             if (locked == null) {
                 continue;
             }
-            List<BizExamAppointment> appts = appointmentMapper
+            List<BizExamAppointment> appts = bizExamAppointmentMapper
                     .selectRangeOccupants(locked.getId(), dto.getDateFrom(), dto.getDateTo());
             Map<LocalDate, List<BizExamAppointment>> byDate = new HashMap<>();
             for (BizExamAppointment a : appts) {
@@ -265,7 +266,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
                     if (total != (cell.getTotalSource() == null ? 0 : cell.getTotalSource())) {
                         fix.setTotalSource(total);
                     }
-                    slotMapper.updateById(fix);
+                    bizExamSlotMapper.updateById(fix);
                     if (drifts.size() < RECALC_DETAIL_LIMIT) {
                         ExamApptVO.SlotDriftVO d = new ExamApptVO.SlotDriftVO();
                         d.setSlotId(cell.getId());
@@ -296,7 +297,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
      */
     public List<BizExamSlot> ensureLockedDay(BizExamDevice device, LocalDate date) {
         ensureDayLocked(device, date);
-        List<BizExamSlot> rows = slotMapper.selectDayForUpdate(device.getId(), date);
+        List<BizExamSlot> rows = bizExamSlotMapper.selectDayForUpdate(device.getId(), date);
         Map<String, BizExamSlot> byStart = new LinkedHashMap<>();
         for (BizExamSlot row : rows) {
             byStart.put(row.getStartTime(), row);
@@ -344,7 +345,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
     }
 
     public BizExamDevice requireDevice(Long deviceId) {
-        BizExamDevice device = deviceId == null ? null : deviceMapper.selectById(deviceId);
+        BizExamDevice device = deviceId == null ? null : bizExamDeviceMapper.selectById(deviceId);
         if (device == null) {
             throw new BusinessException("预约设备不存在：" + deviceId);
         }
@@ -363,7 +364,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
             }
             int available = cell.getStatus() != null && cell.getStatus() == SLOT_LOCKED
                     ? 0 : Math.max(0, total - next);
-            if (slotMapper.updateUsed(cell.getId(), used, next, available) == 0) {
+            if (bizExamSlotMapper.updateUsed(cell.getId(), used, next, available) == 0) {
                 throw new BusinessException("号源已被并发修改，请重试：" + date + " " + cell.getStartTime());
             }
             cell.setUsedSource(next);
@@ -376,7 +377,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
      */
     private int[] ensureDayLocked(BizExamDevice device, LocalDate date) {
         List<int[]> grid = ExamGrid.daySlots(device);
-        List<BizExamSlot> rows = slotMapper.selectDayForUpdate(device.getId(), date);
+        List<BizExamSlot> rows = bizExamSlotMapper.selectDayForUpdate(device.getId(), date);
         Map<String, BizExamSlot> byStart = new HashMap<>();
         for (BizExamSlot row : rows) {
             byStart.put(row.getStartTime(), row);
@@ -399,7 +400,7 @@ public class ExamSlotServiceImpl implements ExamSlotService {
                 insert.setUsedSource(0);
                 insert.setAvailableSource(device.getParallelCount());
                 insert.setStatus(SLOT_OPEN);
-                slotMapper.insert(insert);
+                bizExamSlotMapper.insert(insert);
                 created++;
             } else {
                 existing++;
@@ -435,18 +436,18 @@ public class ExamSlotServiceImpl implements ExamSlotService {
                     ? 0 : Math.max(0, target - used));
             cell.setTotalSource(target);
         }
-        slotMapper.updateById(update);
+        bizExamSlotMapper.updateById(update);
     }
 
     private List<BizExamSlot> currentGridCells(BizExamDevice device, LocalDate date) {
-        return filterGrid(device, slotMapper.selectList(new LambdaQueryWrapper<BizExamSlot>()
+        return filterGrid(device, bizExamSlotMapper.selectList(new LambdaQueryWrapper<BizExamSlot>()
                 .eq(BizExamSlot::getDeviceId, device.getId())
                 .eq(BizExamSlot::getSlotDate, date)
                 .orderByAsc(BizExamSlot::getStartTime)));
     }
 
     private List<BizExamSlot> lockedGridCells(BizExamDevice device, LocalDate date) {
-        return filterGrid(device, slotMapper.selectDayForUpdate(device.getId(), date));
+        return filterGrid(device, bizExamSlotMapper.selectDayForUpdate(device.getId(), date));
     }
 
     /**

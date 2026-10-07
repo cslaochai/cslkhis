@@ -9,12 +9,15 @@ import com.his.ai.service.PatientTriageNormalizeCapability;
 import com.his.ai.support.PatientTextGuard;
 import com.his.ai.vo.PatientTriageNormalizePromptVariablesVO;
 import com.his.ai.vo.PatientTriageNormalizeVO;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 患者端导诊口语归一实现。
@@ -87,14 +90,6 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
 
     // ---------------------------------------------------------------- 模型层
 
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return text == null ? "" : text;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
     // ---------------------------------------------------------------- 清洗层
 
     @Override
@@ -138,7 +133,7 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
                 .templateName(TEMPLATE_NAME)
                 .variables(variables)
                 .bizType(BIZ_TYPE)
-                .inputDigest(truncate(description, 60))
+                .inputDigest(TextUtil.cut(description, 60))
                 .useLiteModel(true)
                 .maxTokens(256)
                 .build();
@@ -155,7 +150,7 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
     private String buildSearchText(String raw, String fromModel, List<String> terms) {
         StringBuilder builder = new StringBuilder(raw);
         if (StringUtils.hasText(fromModel)) {
-            String value = truncate(fromModel.trim(), SEARCH_TEXT_MAX);
+            String value = TextUtil.cut(fromModel.trim(), SEARCH_TEXT_MAX);
             if (!raw.contains(value)) {
                 builder.append('，').append(value);
             }
@@ -165,7 +160,7 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
                 builder.append('，').append(term);
             }
         }
-        return truncate(builder.toString(), SEARCH_TEXT_MAX * 2);
+        return TextUtil.cut(builder.toString(), SEARCH_TEXT_MAX * 2);
     }
 
     /**
@@ -183,7 +178,7 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
             if (!StringUtils.hasText(item)) {
                 continue;
             }
-            String guarded = textGuard.guard(truncate(item.trim(), FOLLOW_UP_MAX_LENGTH),
+            String guarded = textGuard.guard(TextUtil.cut(item.trim(), FOLLOW_UP_MAX_LENGTH),
                     AiCapabilityKeys.PATIENT_TRIAGE_NORMALIZE);
             if (StringUtils.hasText(guarded) && !result.contains(guarded)) {
                 result.add(guarded);

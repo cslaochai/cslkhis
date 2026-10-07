@@ -25,13 +25,12 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class DeptScopeProviderImpl implements DeptScopeProvider {
 
-    private final SysEmployeePostMapper employeePostMapper;
-    private final SysRoleMapper roleMapper;
-
     /**
      * 全部数据 —— 不受科室范围限制
      */
     private static final int DATA_SCOPE_ALL = 1;
+    private final SysEmployeePostMapper sysEmployeePostMapper;
+    private final SysRoleMapper sysRoleMapper;
 
     @Override
     public Set<Long> deptIdsOfEmployee(Long employeeId, Long primaryDeptId, String roleCode) {
@@ -43,7 +42,7 @@ public class DeptScopeProviderImpl implements DeptScopeProvider {
         // 角色为空（老 token / 未走过滤器）时 selectDeptIdsByRole 查不到行，
         // 与「配了角色但一个岗位都没有」走同一条兜底：退回主科室，不放开全院。
         List<Long> authorized = StringUtils.hasText(roleCode)
-                ? employeePostMapper.selectDeptIdsByRole(employeeId, roleCode)
+                ? sysEmployeePostMapper.selectDeptIdsByRole(employeeId, roleCode)
                 : List.of();
 
         Set<Long> deptIds = new LinkedHashSet<>(authorized);
@@ -64,7 +63,7 @@ public class DeptScopeProviderImpl implements DeptScopeProvider {
         if (roleCode == null || roleCode.isBlank()) {
             return false;
         }
-        SysRole role = roleMapper.selectOne(
+        SysRole role = sysRoleMapper.selectOne(
                 new LambdaQueryWrapper<SysRole>().eq(SysRole::getRoleCode, roleCode).last("LIMIT 1"));
         return role != null && role.getDataScope() != null && role.getDataScope() == DATA_SCOPE_ALL;
     }

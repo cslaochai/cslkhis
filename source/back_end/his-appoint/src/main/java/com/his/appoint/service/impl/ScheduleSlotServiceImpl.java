@@ -16,6 +16,7 @@ import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.ScheduleStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.NumUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,8 +36,8 @@ import java.util.*;
 public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, BizScheduleSlot>
         implements ScheduleSlotService {
 
-    private final BizScheduleSlotMapper slotMapper;
-    private final BizScheduleMapper scheduleMapper;
+    private final BizScheduleSlotMapper bizScheduleSlotMapper;
+    private final BizScheduleMapper bizScheduleMapper;
 
     @Override
     public List<BizScheduleSlot> generateSlots(Long scheduleId, String startTime, String endTime,
@@ -82,11 +83,11 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
             slot.setSeq(seq++);
             slot.setStartTime(tpl.getStartTime());
             slot.setEndTime(tpl.getEndTime());
-            slot.setTotalSource(nz(tpl.getTotalSource()));
+            slot.setTotalSource(NumUtil.orZero(tpl.getTotalSource()));
             slot.setUsedSource(0);
-            slot.setAvailableSource(nz(tpl.getTotalSource()));
+            slot.setAvailableSource(NumUtil.orZero(tpl.getTotalSource()));
             slot.setAddedSource(0);
-            slot.setAppointmentSource(nz(tpl.getAppointmentSource()));
+            slot.setAppointmentSource(NumUtil.orZero(tpl.getAppointmentSource()));
             slot.setUsedAppointmentSource(0);
             slot.setStatus(1);
             this.save(slot);
@@ -100,7 +101,7 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
     public void regenerateForSchedule(BizSchedule schedule, Integer newTotal, Integer newAppointment) {
         Long scheduleId = schedule.getId();
         List<BizScheduleSlot> old = listByScheduleId(scheduleId);
-        int usedSum = old.stream().mapToInt(s -> nz(s.getUsedSource())).sum();
+        int usedSum = old.stream().mapToInt(s -> NumUtil.orZero(s.getUsedSource())).sum();
 
         List<String[]> newSegs = splitHalfHour(schedule.getStartTime(), schedule.getEndTime());
         boolean sameWindow = old.size() == newSegs.size();
@@ -138,7 +139,7 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
         int[] totals = splitEven(total, n);
         int[] usedArr = new int[n];
         for (int i = 0; i < n; i++) {
-            usedArr[i] = nz(old.get(i).getUsedSource());
+            usedArr[i] = NumUtil.orZero(old.get(i).getUsedSource());
         }
         int deficit = 0;
         for (int i = 0; i < n; i++) {
@@ -164,7 +165,7 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
             up.setTotalSource(totals[i]);
             up.setAvailableSource(totals[i] - usedArr[i]);
             up.setAppointmentSource(appts[i]);
-            slotMapper.updateById(up);
+            bizScheduleSlotMapper.updateById(up);
         }
         syncSumToSchedule(scheduleId);
     }
@@ -188,10 +189,10 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
             BizScheduleSlot s = slots.get(i);
             BizScheduleSlot up = new BizScheduleSlot();
             up.setId(s.getId());
-            up.setTotalSource(nz(s.getTotalSource()) + add[i]);
-            up.setAvailableSource(nz(s.getAvailableSource()) + add[i]);
-            up.setAddedSource(nz(s.getAddedSource()) + add[i]);
-            slotMapper.updateById(up);
+            up.setTotalSource(NumUtil.orZero(s.getTotalSource()) + add[i]);
+            up.setAvailableSource(NumUtil.orZero(s.getAvailableSource()) + add[i]);
+            up.setAddedSource(NumUtil.orZero(s.getAddedSource()) + add[i]);
+            bizScheduleSlotMapper.updateById(up);
         }
         syncSumToSchedule(scheduleId);
     }
@@ -199,7 +200,7 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateSlotSources(ScheduleSlotUpsertDTO dto) {
-        BizSchedule schedule = scheduleMapper.selectById(dto.getScheduleId());
+        BizSchedule schedule = bizScheduleMapper.selectById(dto.getScheduleId());
         if (schedule == null) {
             throw new BusinessException("排班记录不存在");
         }
@@ -228,7 +229,7 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
             if (EnableStatusEnum.fromCode(item.getStatus()) == null) {
                 throw new BusinessException("段状态只允许 0-停用 / 1-正常");
             }
-            int used = nz(slot.getUsedSource());
+            int used = NumUtil.orZero(slot.getUsedSource());
             if (item.getTotalSource() < used) {
                 throw new BusinessException(slot.getStartTime() + " 段号源不能小于已挂号数（" + used + "）");
             }
@@ -236,7 +237,7 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
             if (appt > item.getTotalSource()) {
                 throw new BusinessException(slot.getStartTime() + " 段预约预留不能大于段号源");
             }
-            int usedAppt = nz(slot.getUsedAppointmentSource());
+            int usedAppt = NumUtil.orZero(slot.getUsedAppointmentSource());
             if (appt < usedAppt) {
                 throw new BusinessException(slot.getStartTime() + " 段预约预留不能小于预约已用（" + usedAppt + "）");
             }
@@ -247,10 +248,10 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
             BizScheduleSlot up = new BizScheduleSlot();
             up.setId(slot.getId());
             up.setTotalSource(item.getTotalSource());
-            up.setAvailableSource(item.getTotalSource() - nz(slot.getUsedSource()));
+            up.setAvailableSource(item.getTotalSource() - NumUtil.orZero(slot.getUsedSource()));
             up.setAppointmentSource(item.getAppointmentSource() == null ? 0 : item.getAppointmentSource());
             up.setStatus(item.getStatus());
-            slotMapper.updateById(up);
+            bizScheduleSlotMapper.updateById(up);
         }
         syncSumToSchedule(dto.getScheduleId());
 
@@ -258,10 +259,10 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
         List<String> changes = new ArrayList<>();
         for (ScheduleSlotItemUpsertDTO item : dto.getSlots()) {
             BizScheduleSlot slot = byId.get(item.getId());
-            if (!Objects.equals(nz(slot.getTotalSource()), item.getTotalSource())) {
+            if (!Objects.equals(NumUtil.orZero(slot.getTotalSource()), item.getTotalSource())) {
                 changes.add(slot.getStartTime() + " 号源" + slot.getTotalSource() + "→" + item.getTotalSource());
             }
-            int oldAppt = nz(slot.getAppointmentSource());
+            int oldAppt = NumUtil.orZero(slot.getAppointmentSource());
             int newAppt = item.getAppointmentSource() == null ? 0 : item.getAppointmentSource();
             if (oldAppt != newAppt) {
                 changes.add(slot.getStartTime() + " 预约池" + oldAppt + "→" + newAppt);
@@ -281,7 +282,7 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
             BizSchedule up = new BizSchedule();
             up.setId(schedule.getId());
             up.setRemark(newRemark);
-            scheduleMapper.updateById(up);
+            bizScheduleMapper.updateById(up);
         }
     }
 
@@ -294,11 +295,11 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
         int appt = 0;
         int usedAppt = 0;
         for (BizScheduleSlot s : slots) {
-            total += nz(s.getTotalSource());
-            used += nz(s.getUsedSource());
-            added += nz(s.getAddedSource());
-            appt += nz(s.getAppointmentSource());
-            usedAppt += nz(s.getUsedAppointmentSource());
+            total += NumUtil.orZero(s.getTotalSource());
+            used += NumUtil.orZero(s.getUsedSource());
+            added += NumUtil.orZero(s.getAddedSource());
+            appt += NumUtil.orZero(s.getAppointmentSource());
+            usedAppt += NumUtil.orZero(s.getUsedAppointmentSource());
         }
         BizSchedule up = new BizSchedule();
         up.setId(scheduleId);
@@ -308,7 +309,7 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
         up.setAddedSource(added);
         up.setAppointmentSource(appt);
         up.setUsedAppointmentSource(usedAppt);
-        scheduleMapper.updateById(up);
+        bizScheduleMapper.updateById(up);
     }
 
     @Override
@@ -323,12 +324,12 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
 
     @Override
     public void physicalDeleteByScheduleId(Long scheduleId) {
-        slotMapper.physicalDeleteByScheduleId(scheduleId);
+        bizScheduleSlotMapper.physicalDeleteByScheduleId(scheduleId);
     }
 
     @Override
     public List<BizScheduleSlot> listByScheduleId(Long scheduleId) {
-        return slotMapper.selectList(new LambdaQueryWrapper<BizScheduleSlot>()
+        return bizScheduleSlotMapper.selectList(new LambdaQueryWrapper<BizScheduleSlot>()
                 .eq(BizScheduleSlot::getScheduleId, scheduleId)
                 .orderByAsc(BizScheduleSlot::getSeq)
                 .orderByAsc(BizScheduleSlot::getId));
@@ -344,7 +345,7 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
         if (ids.isEmpty()) {
             return new ArrayList<>();
         }
-        return slotMapper.selectList(new LambdaQueryWrapper<BizScheduleSlot>()
+        return bizScheduleSlotMapper.selectList(new LambdaQueryWrapper<BizScheduleSlot>()
                 .in(BizScheduleSlot::getScheduleId, ids)
                 .orderByAsc(BizScheduleSlot::getScheduleId)
                 .orderByAsc(BizScheduleSlot::getSeq)
@@ -450,7 +451,4 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
         return String.format("%02d:%02d", minute / 60, minute % 60);
     }
 
-    private int nz(Integer v) {
-        return v == null ? 0 : v;
-    }
 }

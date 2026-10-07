@@ -2,14 +2,15 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.system.provider.DeptScopeProvider;
 import com.his.system.dto.DepartmentQueryDTO;
 import com.his.system.dto.DepartmentSelectDTO;
 import com.his.system.dto.DepartmentUpsertDTO;
 import com.his.system.entity.SysDepartment;
 import com.his.system.mapper.SysDepartmentMapper;
+import com.his.system.provider.DeptScopeProvider;
 import com.his.system.service.SysDepartmentService;
 import com.his.system.vo.DepartmentSelectListVO;
 import com.his.system.vo.DepartmentVO;
@@ -25,26 +26,24 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class SysDepartmentServiceImpl implements SysDepartmentService {
-    private final DeptScopeProvider deptScopeProvider;
-
+public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, SysDepartment> implements SysDepartmentService {
     /**
      * 顶级部门的固定编码：它既是树根也是「不许删、不许改父节点」的判据。
      */
     private static final String ROOT_DEPT_CODE = "1001";
-
-    private final SysDepartmentMapper departmentMapper;
+    private final DeptScopeProvider deptScopeProvider;
+    private final SysDepartmentMapper sysDepartmentMapper;
 
     @Override
     public List<DepartmentVO> tree() {
-        List<SysDepartment> allDepts = departmentMapper.selectList(null);
+        List<SysDepartment> allDepts = sysDepartmentMapper.selectList(null);
         List<DepartmentVO> voList = allDepts.stream().map(this::toVO).collect(Collectors.toList());
         return buildDeptTree(voList, 0L);
     }
 
     @Override
     public PageResult<DepartmentVO> listPage(DepartmentQueryDTO queryDTO) {
-        Page<SysDepartment> page = departmentMapper.selectPage(
+        Page<SysDepartment> page = sysDepartmentMapper.selectPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), buildWrapper(queryDTO));
         List<DepartmentVO> voList = page.getRecords().stream().map(this::toVO).collect(Collectors.toList());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);
@@ -52,7 +51,7 @@ public class SysDepartmentServiceImpl implements SysDepartmentService {
 
     @Override
     public List<DepartmentVO> list(DepartmentQueryDTO queryDTO) {
-        return departmentMapper.selectList(buildWrapper(queryDTO)).stream()
+        return sysDepartmentMapper.selectList(buildWrapper(queryDTO)).stream()
                 .map(this::toVO).collect(Collectors.toList());
     }
 
@@ -75,12 +74,12 @@ public class SysDepartmentServiceImpl implements SysDepartmentService {
             }
         }
 
-        return departmentMapper.selectList(wrapper).stream().map(this::toSelectVO).collect(Collectors.toList());
+        return sysDepartmentMapper.selectList(wrapper).stream().map(this::toSelectVO).collect(Collectors.toList());
     }
 
     @Override
     public DepartmentVO getInfo(Long deptId) {
-        return toVO(departmentMapper.selectById(deptId));
+        return toVO(sysDepartmentMapper.selectById(deptId));
     }
 
     @Override
@@ -89,25 +88,25 @@ public class SysDepartmentServiceImpl implements SysDepartmentService {
         BeanUtils.copyProperties(upsertDTO, dept);
         if (dept.getId() == null) {
             dept.setDeptCode(generateDeptCode(dept.getParentId()));
-            departmentMapper.insert(dept);
+            sysDepartmentMapper.insert(dept);
             return "新增成功";
         }
         if (dept.getId().equals(dept.getParentId())) {
             throw new BusinessException("上级部门不能是自己");
         }
 
-        SysDepartment existingDept = departmentMapper.selectById(dept.getId());
+        SysDepartment existingDept = sysDepartmentMapper.selectById(dept.getId());
         if (existingDept != null && ROOT_DEPT_CODE.equals(existingDept.getDeptCode())) {
             dept.setParentId(existingDept.getParentId());
         }
 
-        departmentMapper.updateById(dept);
+        sysDepartmentMapper.updateById(dept);
         return "修改成功";
     }
 
     @Override
     public void delete(Long deptId) {
-        SysDepartment dept = departmentMapper.selectById(deptId);
+        SysDepartment dept = sysDepartmentMapper.selectById(deptId);
         if (dept == null) {
             throw new BusinessException("部门不存在");
         }
@@ -115,13 +114,13 @@ public class SysDepartmentServiceImpl implements SysDepartmentService {
             throw new BusinessException("顶级部门不允许删除");
         }
 
-        Long childCount = departmentMapper.selectCount(new LambdaQueryWrapper<SysDepartment>()
+        Long childCount = sysDepartmentMapper.selectCount(new LambdaQueryWrapper<SysDepartment>()
                 .eq(SysDepartment::getParentId, deptId));
         if (childCount > 0) {
             throw new BusinessException("该部门下有子部门，不能删除");
         }
 
-        departmentMapper.deleteById(deptId);
+        sysDepartmentMapper.deleteById(deptId);
     }
 
     private LambdaQueryWrapper<SysDepartment> buildWrapper(DepartmentQueryDTO queryDTO) {
@@ -132,7 +131,9 @@ public class SysDepartmentServiceImpl implements SysDepartmentService {
         return wrapper;
     }
 
-    /** scope 是否为「显式索取全部」 */
+    /**
+     * scope 是否为「显式索取全部」
+     */
     private boolean isAllScope(String scope) {
         return "ALL".equalsIgnoreCase(scope);
     }
@@ -172,7 +173,7 @@ public class SysDepartmentServiceImpl implements SysDepartmentService {
         if (parentId == null || parentId == 0L) {
             prefix = ROOT_DEPT_CODE;
         } else {
-            SysDepartment parent = departmentMapper.selectById(parentId);
+            SysDepartment parent = sysDepartmentMapper.selectById(parentId);
             if (parent == null || parent.getDeptCode() == null) {
                 throw new RuntimeException("上级部门不存在");
             }
@@ -183,7 +184,7 @@ public class SysDepartmentServiceImpl implements SysDepartmentService {
         wrapper.likeRight(SysDepartment::getDeptCode, prefix)
                 .orderByDesc(SysDepartment::getDeptCode)
                 .last("LIMIT 1");
-        SysDepartment maxDept = departmentMapper.selectOne(wrapper);
+        SysDepartment maxDept = sysDepartmentMapper.selectOne(wrapper);
 
         int nextNum = 1;
         if (maxDept != null && maxDept.getDeptCode() != null && maxDept.getDeptCode().length() > prefix.length()) {

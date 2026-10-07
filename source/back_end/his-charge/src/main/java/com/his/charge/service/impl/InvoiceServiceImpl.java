@@ -19,6 +19,8 @@ import com.his.common.enums.PayDirectionEnum;
 import com.his.common.enums.PayTxnStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,10 +55,6 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
     private final PaymentService paymentService;
     private final RedisSequenceService redisSequenceService;
 
-    private static BigDecimal scale(BigDecimal value) {
-        return (value == null ? BigDecimal.ZERO : value).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
-    }
-
     private static List<BizInvoiceVO> toVOList(List<BizInvoice> entities) {
         List<BizInvoiceVO> vos = new ArrayList<>(entities.size());
         for (BizInvoice entity : entities) {
@@ -73,13 +70,6 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
         BizInvoiceVO vo = new BizInvoiceVO();
         BeanUtils.copyProperties(entity, vo);
         return vo;
-    }
-
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() <= max ? value : value.substring(0, max);
     }
 
     @Override
@@ -105,7 +95,7 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
                 .orderByDesc(BizInvoice::getId));
         if (!live.isEmpty()) {
             BizInvoice old = live.get(0);
-            if (scale(old.getTotalAmount()).compareTo(net) != 0) {
+            if (NumUtil.scale(old.getTotalAmount(), AMOUNT_SCALE).compareTo(net) != 0) {
                 // 票比钱多是常事：开完票又退了一笔。这时候第二张票只会把差额藏得更深
                 throw new BusinessException("该账单已有有效发票 " + old.getInvoiceNo()
                         + "（票面 " + old.getTotalAmount().toPlainString() + "，当前净实收 " + net.toPlainString()
@@ -115,19 +105,19 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
         }
 
         BizInvoice invoice = new BizInvoice();
-        invoice.setInvoiceNo(cut(redisSequenceService.generateInvoiceNo(), W_INVOICE_NO));
+        invoice.setInvoiceNo(TextUtil.cut(redisSequenceService.generateInvoiceNo(), W_INVOICE_NO));
         invoice.setInvoiceType(dto.getInvoiceType() == null ? 1 : dto.getInvoiceType());
         invoice.setBillId(bill.getId());
-        invoice.setBillNo(cut(bill.getBillNo(), W_BILL_NO));
+        invoice.setBillNo(TextUtil.cut(bill.getBillNo(), W_BILL_NO));
         invoice.setPatientId(bill.getPatientId());
-        invoice.setPatientNo(cut(bill.getPatientNo(), W_PATIENT_NO));
-        invoice.setPatientName(cut(bill.getPatientName(), W_PATIENT_NAME));
+        invoice.setPatientNo(TextUtil.cut(bill.getPatientNo(), W_PATIENT_NO));
+        invoice.setPatientName(TextUtil.cut(bill.getPatientName(), W_PATIENT_NAME));
         invoice.setTotalAmount(net);
         invoice.setInvoiceStatus(InvoiceStatusEnum.ISSUED.getCode());
         invoice.setInvoiceTime(LocalDateTime.now());
-        invoice.setCreateBy(cut(UserUtils.getCurrentUser().getRealName(), 64));
+        invoice.setCreateBy(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), 64));
         invoice.setCreateTime(LocalDateTime.now());
-        invoice.setRemark(cut(dto.getRemark(), W_REMARK));
+        invoice.setRemark(TextUtil.cut(dto.getRemark(), W_REMARK));
         // 作废后重开：新票指回被作废的那张，红冲链在票这一层也留痕
         BizInvoice lastVoided = this.getOne(new LambdaQueryWrapper<BizInvoice>()
                 .eq(BizInvoice::getBillId, bill.getId())
@@ -198,7 +188,7 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
         }
         invoice.setInvoiceStatus(InvoiceStatusEnum.VOIDED.getCode());
         invoice.setVoidTime(LocalDateTime.now());
-        invoice.setVoidReason(cut(reason, W_VOID_REASON));
+        invoice.setVoidReason(TextUtil.cut(reason, W_VOID_REASON));
         this.updateById(invoice);
         log.info("[作废发票] 发票 {} 票面 ¥{} 原因：{}", invoice.getInvoiceNo(),
                 invoice.getTotalAmount().toPlainString(), reason);
@@ -218,7 +208,7 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
             net = net.add(PayDirectionEnum.REFUND.getCode().equals(txn.getDirection())
                     ? txn.getAmount().abs().negate() : txn.getAmount());
         }
-        return scale(net);
+        return NumUtil.scale(net, AMOUNT_SCALE);
     }
 
     private BizInvoice requireInvoice(Long invoiceId) {

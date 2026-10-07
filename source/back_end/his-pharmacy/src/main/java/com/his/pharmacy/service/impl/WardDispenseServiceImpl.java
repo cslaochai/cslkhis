@@ -2,10 +2,12 @@ package com.his.pharmacy.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.StockDeductResultDTO;
 import com.his.pharmacy.dto.WardDispenseActionDTO;
 import com.his.pharmacy.dto.WardDispenseGenerateDTO;
@@ -32,9 +34,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -61,25 +60,13 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class WardDispenseServiceImpl implements WardDispenseService {
+public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapper, BizWardDispenseItem> implements WardDispenseService {
 
-    private final BizWardDispenseMapper dispenseMapper;
-    private final BizWardDispenseItemMapper itemMapper;
+    private final BizWardDispenseMapper bizWardDispenseMapper;
+    private final BizWardDispenseItemMapper bizWardDispenseItemMapper;
     private final PharmacyService pharmacyService;
     private final WardDispenseChargeInvoker chargeInvoker;
-    private final RedisSequenceService sequenceService;
-
-    private static LocalDateTime dayStart(LocalDate day) {
-        return day.atStartOfDay();
-    }
-
-    private static LocalDateTime dayEnd(LocalDate day) {
-        return day.atTime(LocalTime.MAX).truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
+    private final RedisSequenceService redisSequenceService;
 
     @Override
     public List<WardDispenseCandidateVO> candidates(Long wardId, Long admissionId, LocalDate dispenseDate) {
@@ -88,7 +75,7 @@ public class WardDispenseServiceImpl implements WardDispenseService {
             throw new BusinessException("病区不能为空");
         }
         LocalDate day = dispenseDate != null ? dispenseDate : LocalDate.now();
-        return itemMapper.selectCandidates(wardId, day, dayStart(day), dayEnd(day), admissionId);
+        return bizWardDispenseItemMapper.selectCandidates(wardId, day, TimeUtil.dayStart(day), TimeUtil.dayEnd(day), admissionId);
     }
 
     @Override
@@ -103,8 +90,8 @@ public class WardDispenseServiceImpl implements WardDispenseService {
             throw new BusinessException("摆药日期不能是未来日期");
         }
         List<WardDispenseCandidateVO> cands = candidates(dto.getWardId(), dto.getAdmissionId(), day);
-        long unmatched = itemMapper.countUnmatchedCandidates(dto.getWardId(), day,
-                dayStart(day), dayEnd(day), dto.getAdmissionId());
+        long unmatched = bizWardDispenseItemMapper.countUnmatchedCandidates(dto.getWardId(), day,
+                TimeUtil.dayStart(day), TimeUtil.dayEnd(day), dto.getAdmissionId());
 
         // 幂等回退：重跑同一 generate 请求时（候选已被摆过、全部排除），返回既有主单而不是报错
         if (cands.isEmpty()) {
@@ -135,7 +122,7 @@ public class WardDispenseServiceImpl implements WardDispenseService {
             item.setDispenseDate(day);
             // 重摆序号：同医嘱同日含已退药明细取 max+1（已退药不占坑，旧明细留痕不动）；
             // 并发同 seq 撞唯一键 uk_order_date_seq，catch 跳过即可
-            item.setDispenseSeq(itemMapper.nextDispenseSeq(c.getOrderId(), day));
+            item.setDispenseSeq(bizWardDispenseItemMapper.nextDispenseSeq(c.getOrderId(), day));
             item.setOrderId(c.getOrderId());
             item.setOrderNo(c.getOrderNo());
             item.setAdmissionId(c.getAdmissionId());
@@ -154,7 +141,7 @@ public class WardDispenseServiceImpl implements WardDispenseService {
             item.setAmount(amount);
             item.setStatus(BizWardDispenseItem.STATUS_PENDING);
             try {
-                itemMapper.insert(item);
+                bizWardDispenseItemMapper.insert(item);
             } catch (DuplicateKeyException e) {
                 // 并发生成撞唯一索引 (order_id, dispense_date)：同医嘱同日已被别的请求摆过，跳过即可
                 log.info("摆药明细已存在（医嘱 {} 摆药日 {}），跳过重复生成", c.getOrderNo(), day);
@@ -175,18 +162,18 @@ public class WardDispenseServiceImpl implements WardDispenseService {
     @Override
     public PageResult<WardDispenseVO> listPage(WardDispenseQueryPageDTO dto) {
         Page<WardDispenseVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
-        List<WardDispenseVO> records = dispenseMapper.selectDispensePage(
+        List<WardDispenseVO> records = bizWardDispenseMapper.selectDispensePage(
                 page, dto.getWardId(), dto.getDispenseDate(), dto.getPatientName(), dto.getStatus());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
     public WardDispenseVO getDetailById(Long id) {
-        WardDispenseVO vo = dispenseMapper.selectDispenseById(id);
+        WardDispenseVO vo = bizWardDispenseMapper.selectDispenseById(id);
         if (vo == null) {
             throw new BusinessException("摆药单不存在或已删除");
         }
-        vo.setItems(itemMapper.selectItemsByDispenseId(id));
+        vo.setItems(bizWardDispenseItemMapper.selectItemsByDispenseId(id));
         return vo;
     }
 
@@ -216,7 +203,7 @@ public class WardDispenseServiceImpl implements WardDispenseService {
         item.setStatus(BizWardDispenseItem.STATUS_DISPENSED);
         item.setDispenserId(operatorId);
         item.setDispenserName(operatorName);
-        item.setDispenseTime(now());
+        item.setDispenseTime(TimeUtil.nowSeconds());
         if (charge != null) {
             // 记账行的 (id, feeNo)
             item.setFeeRecordId(charge.getId());
@@ -224,7 +211,7 @@ public class WardDispenseServiceImpl implements WardDispenseService {
         } else {
             log.warn("摆药明细 {} 配药成功但未计费（记账入参不全或被拒），fee_record_id 留空待补", item.getId());
         }
-        if (itemMapper.updateById(item) <= 0) {
+        if (bizWardDispenseItemMapper.updateById(item) <= 0) {
             throw new BusinessException("配药更新失败");
         }
         applyAggregatedStatus(item.getDispenseId());
@@ -247,11 +234,11 @@ public class WardDispenseServiceImpl implements WardDispenseService {
         item.setStatus(BizWardDispenseItem.STATUS_CHECKED);
         item.setCheckerId(operatorUser.getEmployeeId());
         item.setCheckerName(operatorUser.getRealName());
-        item.setCheckTime(now());
+        item.setCheckTime(TimeUtil.nowSeconds());
         if (StringUtils.hasText(dto.getRemark())) {
             item.setRemark(dto.getRemark());
         }
-        if (itemMapper.updateById(item) <= 0) {
+        if (bizWardDispenseItemMapper.updateById(item) <= 0) {
             throw new BusinessException("核对更新失败");
         }
         applyAggregatedStatus(item.getDispenseId());
@@ -287,12 +274,12 @@ public class WardDispenseServiceImpl implements WardDispenseService {
         // ③ 明细推进 → 4（终态不可逆）
         item.setStatus(BizWardDispenseItem.STATUS_RETURNED);
         item.setReturnBy(operatorName);
-        item.setReturnTime(now());
+        item.setReturnTime(TimeUtil.nowSeconds());
         item.setReturnReason(dto.getReason());
         if (refund == null) {
             log.warn("摆药明细 {} 退药回库成功但红冲未落（当初未记账或红冲被拒），待人工核对账务", item.getId());
         }
-        if (itemMapper.updateById(item) <= 0) {
+        if (bizWardDispenseItemMapper.updateById(item) <= 0) {
             throw new BusinessException("退药更新失败");
         }
         applyAggregatedStatus(item.getDispenseId());
@@ -307,14 +294,14 @@ public class WardDispenseServiceImpl implements WardDispenseService {
         vo.setDispensed(countItems(day, wardId, BizWardDispenseItem.STATUS_DISPENSED));
         vo.setChecked(countItems(day, wardId, BizWardDispenseItem.STATUS_CHECKED));
         vo.setReturned(countItems(day, wardId, BizWardDispenseItem.STATUS_RETURNED));
-        vo.setDispenseCount(dispenseMapper.selectCount(new LambdaQueryWrapper<BizWardDispense>()
+        vo.setDispenseCount(bizWardDispenseMapper.selectCount(new LambdaQueryWrapper<BizWardDispense>()
                 .eq(BizWardDispense::getDispenseDate, day)
                 .eq(wardId != null, BizWardDispense::getWardId, wardId)));
         return vo;
     }
 
     private long countItems(LocalDate day, Long wardId, int status) {
-        return itemMapper.selectCount(new LambdaQueryWrapper<BizWardDispenseItem>()
+        return bizWardDispenseItemMapper.selectCount(new LambdaQueryWrapper<BizWardDispenseItem>()
                 .eq(BizWardDispenseItem::getDispenseDate, day)
                 .eq(wardId != null, BizWardDispenseItem::getWardId, wardId)
                 .eq(BizWardDispenseItem::getStatus, status));
@@ -331,7 +318,7 @@ public class WardDispenseServiceImpl implements WardDispenseService {
         } else {
             w.eq(BizWardDispense::getWardId, dto.getWardId());
         }
-        return dispenseMapper.selectOne(w.orderByDesc(BizWardDispense::getId).last("LIMIT 1"));
+        return bizWardDispenseMapper.selectOne(w.orderByDesc(BizWardDispense::getId).last("LIMIT 1"));
     }
 
     /**
@@ -339,7 +326,7 @@ public class WardDispenseServiceImpl implements WardDispenseService {
      * 并发窗口由明细唯一索引 (order_id, dispense_date, dispense_seq) 兜底。
      */
     private BizWardDispense findOrCreateDispense(WardDispenseCandidateVO first, LocalDate day, String operator) {
-        BizWardDispense existing = dispenseMapper.selectOne(new LambdaQueryWrapper<BizWardDispense>()
+        BizWardDispense existing = bizWardDispenseMapper.selectOne(new LambdaQueryWrapper<BizWardDispense>()
                 .eq(BizWardDispense::getAdmissionId, first.getAdmissionId())
                 .eq(BizWardDispense::getDispenseDate, day)
                 .orderByDesc(BizWardDispense::getId)
@@ -348,18 +335,18 @@ public class WardDispenseServiceImpl implements WardDispenseService {
             return existing;
         }
         BizWardDispense d = new BizWardDispense();
-        d.setDispenseNo(sequenceService.generateWardDispenseNo());
+        d.setDispenseNo(redisSequenceService.generateWardDispenseNo());
         d.setDispenseDate(day);
         d.setAdmissionId(first.getAdmissionId());
         d.setPatientId(first.getPatientId());
         d.setPatientNo(first.getPatientNo());
         d.setPatientName(first.getPatientName());
         d.setWardId(first.getWardId());
-        d.setWardName(dispenseMapper.selectWardName(first.getWardId()));
+        d.setWardName(bizWardDispenseMapper.selectWardName(first.getWardId()));
         d.setStatus(1);
         d.setGenerateBy(operator);
-        d.setGenerateTime(now());
-        dispenseMapper.insert(d);
+        d.setGenerateTime(TimeUtil.nowSeconds());
+        bizWardDispenseMapper.insert(d);
         return d;
     }
 
@@ -369,7 +356,7 @@ public class WardDispenseServiceImpl implements WardDispenseService {
      * 无 1 无 2 有 3 → 4-已核对；全 4 → 5-已退药。
      */
     private void applyAggregatedStatus(Long dispenseId) {
-        List<BizWardDispenseItem> items = itemMapper.selectList(new LambdaQueryWrapper<BizWardDispenseItem>()
+        List<BizWardDispenseItem> items = bizWardDispenseItemMapper.selectList(new LambdaQueryWrapper<BizWardDispenseItem>()
                 .eq(BizWardDispenseItem::getDispenseId, dispenseId));
         if (items.isEmpty()) {
             return;
@@ -386,15 +373,15 @@ public class WardDispenseServiceImpl implements WardDispenseService {
         } else {
             agg = 5;
         }
-        BizWardDispense d = dispenseMapper.selectById(dispenseId);
+        BizWardDispense d = bizWardDispenseMapper.selectById(dispenseId);
         if (d != null && !Objects.equals(d.getStatus(), agg)) {
             d.setStatus(agg);
-            dispenseMapper.updateById(d);
+            bizWardDispenseMapper.updateById(d);
         }
     }
 
     private BizWardDispenseItem requireItem(Long itemId) {
-        BizWardDispenseItem item = itemMapper.selectById(itemId);
+        BizWardDispenseItem item = bizWardDispenseItemMapper.selectById(itemId);
         if (item == null) {
             throw new BusinessException("摆药明细不存在或已删除");
         }

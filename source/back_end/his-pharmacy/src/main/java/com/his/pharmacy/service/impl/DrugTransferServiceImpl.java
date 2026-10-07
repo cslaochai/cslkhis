@@ -2,13 +2,17 @@ package com.his.pharmacy.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.DrugStockChangeTypeEnum;
 import com.his.common.enums.DrugTransferStatusEnum;
 import com.his.common.enums.DrugTransferTypeEnum;
 import com.his.common.enums.StockRoomEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.DrugTransferActionDTO;
 import com.his.pharmacy.dto.DrugTransferQueryPageDTO;
 import com.his.pharmacy.dto.DrugTransferUpsertDTO;
@@ -32,15 +36,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -60,38 +57,53 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class DrugTransferServiceImpl implements DrugTransferService {
+public class DrugTransferServiceImpl extends ServiceImpl<BizDrugTransferMapper, BizDrugTransfer> implements DrugTransferService {
 
-    /** 库存流水的来源单据类型（与药品库存流水的「来源单据类型」取值一致） */
+    /**
+     * 库存流水的来源单据类型（与药品库存流水的「来源单据类型」取值一致）
+     */
     private static final String SOURCE_TYPE = "drugTransfer";
 
-    private final BizDrugTransferMapper transferMapper;
-    private final BizDrugTransferItemMapper itemMapper;
-    private final BizDrugStockMapper stockMapper;
-    private final BizDrugStockLogMapper stockLogMapper;
+    private final BizDrugTransferMapper bizDrugTransferMapper;
+    private final BizDrugTransferItemMapper bizDrugTransferItemMapper;
+    private final BizDrugStockMapper bizDrugStockMapper;
+    private final BizDrugStockLogMapper bizDrugStockLogMapper;
     private final PharmacyService pharmacyService;
     private final RedisSequenceService redisSequenceService;
+
+    /**
+     * 抽屉里的流水要带库位与类型文案，和流水台账同一口径（前端不许自己映射）
+     */
+    private static List<BizDrugStockLogVO> logsWithTexts(List<BizDrugStockLogVO> logs) {
+        logs.forEach(BizDrugStockLogVO::fillTexts);
+        return logs;
+    }
+
+    private static String batchLabel(BizDrugStockVO batch) {
+        String label = StringUtils.hasText(batch.getDrugName()) ? batch.getDrugName() : "药品#" + batch.getDrugId();
+        return StringUtils.hasText(batch.getBatchNo()) ? label + "（批号 " + batch.getBatchNo() + "）" : label;
+    }
 
     @Override
     public PageResult<DrugTransferVO> listPage(DrugTransferQueryPageDTO query) {
         DrugTransferQueryPageDTO q = query == null ? new DrugTransferQueryPageDTO() : query;
-        Page<DrugTransferVO> page = transferMapper.selectTransferPage(
+        Page<DrugTransferVO> page = bizDrugTransferMapper.selectTransferPage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
-                trimToNull(q.getTransferNo()), q.getTransferType(), q.getStatus(),
-                trimToNull(q.getKeyword()), trimToNull(q.getDateStart()), trimToNull(q.getDateEnd()));
+                TextUtil.trimToNull(q.getTransferNo()), q.getTransferType(), q.getStatus(),
+                TextUtil.trimToNull(q.getKeyword()), TextUtil.trimToNull(q.getDateStart()), TextUtil.trimToNull(q.getDateEnd()));
         page.getRecords().forEach(this::fillText);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), page.getRecords());
     }
 
     @Override
     public DrugTransferVO getDetailById(Long id) {
-        DrugTransferVO vo = transferMapper.selectTransferById(id);
+        DrugTransferVO vo = bizDrugTransferMapper.selectTransferById(id);
         if (vo == null) {
             throw new BusinessException("调拨单不存在或已删除");
         }
         fillText(vo);
-        vo.setItems(itemMapper.selectByTransferId(id));
-        vo.setLogs(logsWithTexts(stockLogMapper.selectBySource(SOURCE_TYPE, id)));
+        vo.setItems(bizDrugTransferItemMapper.selectByTransferId(id));
+        vo.setLogs(logsWithTexts(bizDrugStockLogMapper.selectBySource(SOURCE_TYPE, id)));
         return vo;
     }
 
@@ -99,9 +111,9 @@ public class DrugTransferServiceImpl implements DrugTransferService {
     @Transactional(rollbackFor = Exception.class)
     public DrugTransferVO upsert(DrugTransferUpsertDTO dto) {
         DrugTransferTypeEnum type = DrugTransferTypeEnum.fromCode(dto.getTransferType());
-        String reason = requireText(dto.getReason(), "调拨事由", 200);
+        String reason = TextUtil.cut(TextUtil.requireTrimmed(dto.getReason(), "调拨事由不能为空"), 200);
         String operator = UserUtils.getCurrentUser().getRealName();
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         List<BizDrugTransferItem> rows = buildItems(dto.getItems(), type, operator);
 
         if (dto.getId() == null) {
@@ -117,16 +129,16 @@ public class DrugTransferServiceImpl implements DrugTransferService {
             head.setOutQuantity(BigDecimal.ZERO);
             head.setInQuantity(BigDecimal.ZERO);
             head.setTotalAmount(BigDecimal.ZERO);
-            head.setRemark(cut(dto.getRemark(), 500));
+            head.setRemark(TextUtil.cut(dto.getRemark(), 500));
             head.setCreateBy(operator);
             head.setUpdateBy(operator);
             head.setCreateTime(now);
             head.setUpdateTime(now);
-            if (transferMapper.insert(head) != 1) {
+            if (bizDrugTransferMapper.insert(head) != 1) {
                 throw new BusinessException("生成调拨单失败");
             }
             rows.forEach(row -> row.setTransferId(head.getId()));
-            rows.forEach(itemMapper::insert);
+            rows.forEach(bizDrugTransferItemMapper::insert);
             refreshSummary(head.getId(), operator, now);
             return getDetailById(head.getId());
         }
@@ -134,18 +146,18 @@ public class DrugTransferServiceImpl implements DrugTransferService {
         BizDrugTransfer cur = lock(dto.getId());
         requireStatus(cur, DrugTransferStatusEnum.PENDING_OUT, "修改调拨明细");
         // 整单替换明细：uk_transfer_stock(transfer_id, stock_id) 不含 del_flag，软删再插必撞键
-        itemMapper.purgeByTransferId(cur.getId());
-        transferMapper.update(null, Wrappers.<BizDrugTransfer>lambdaUpdate()
+        bizDrugTransferItemMapper.purgeByTransferId(cur.getId());
+        bizDrugTransferMapper.update(null, Wrappers.<BizDrugTransfer>lambdaUpdate()
                 .eq(BizDrugTransfer::getId, cur.getId())
                 .set(BizDrugTransfer::getTransferType, type.getCode())
                 .set(BizDrugTransfer::getFromRoom, type.getFromRoom().getCode())
                 .set(BizDrugTransfer::getToRoom, type.getToRoom().getCode())
                 .set(BizDrugTransfer::getReason, reason)
-                .set(BizDrugTransfer::getRemark, cut(dto.getRemark(), 500))
+                .set(BizDrugTransfer::getRemark, TextUtil.cut(dto.getRemark(), 500))
                 .set(BizDrugTransfer::getUpdateBy, operator)
                 .set(BizDrugTransfer::getUpdateTime, now));
         rows.forEach(row -> row.setTransferId(cur.getId()));
-        rows.forEach(itemMapper::insert);
+        rows.forEach(bizDrugTransferItemMapper::insert);
         refreshSummary(cur.getId(), operator, now);
         return getDetailById(cur.getId());
     }
@@ -156,7 +168,7 @@ public class DrugTransferServiceImpl implements DrugTransferService {
         BizDrugTransfer head = lock(dto.getId());
         requireStatus(head, DrugTransferStatusEnum.PENDING_OUT, "确认发出");
         String operator = UserUtils.getCurrentUser().getRealName();
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         List<BizDrugTransferItem> items = listItems(head.getId());
         if (items.isEmpty()) {
             throw new BusinessException("这张调拨单没有明细，先把批次选进来再发出");
@@ -174,9 +186,9 @@ public class DrugTransferServiceImpl implements DrugTransferService {
             move.setOperatorName(operator);
             move.setReason(transferLabel(head, item, "发出"));
             pharmacyService.deductStockBatch(move);
-            itemMapper.markOut(item.getId(), operator, now);
+            bizDrugTransferItemMapper.markOut(item.getId(), operator, now);
         }
-        transferMapper.update(null, Wrappers.<BizDrugTransfer>lambdaUpdate()
+        bizDrugTransferMapper.update(null, Wrappers.<BizDrugTransfer>lambdaUpdate()
                 .eq(BizDrugTransfer::getId, head.getId())
                 .set(BizDrugTransfer::getStatus, DrugTransferStatusEnum.PENDING_IN.getCode())
                 .set(BizDrugTransfer::getOutBy, operator)
@@ -193,7 +205,7 @@ public class DrugTransferServiceImpl implements DrugTransferService {
         BizDrugTransfer head = lock(dto.getId());
         requireStatus(head, DrugTransferStatusEnum.PENDING_IN, "确认接收");
         String operator = UserUtils.getCurrentUser().getRealName();
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         List<BizDrugTransferItem> items = listItems(head.getId());
         long pending = items.stream().filter(i -> !Integer.valueOf(1).equals(i.getInFlag())).count();
         if (pending == 0) {
@@ -205,7 +217,7 @@ public class DrugTransferServiceImpl implements DrugTransferService {
             }
             // 供应商随货走：接收方新建批次时要带上原批次的供应商，否则这一层库存从此无从退货。
             // 原批次此时数量为 0 但行还在（发完的批次不删），查不到只可能是被人物理删了。
-            BizDrugStock from = stockMapper.selectById(item.getStockId());
+            BizDrugStock from = bizDrugStockMapper.selectById(item.getStockId());
             if (from == null) {
                 throw new BusinessException("发出方批次已不存在（" + item.getDrugName() + " 批号 "
                         + item.getBatchNo() + "），无法确定随货供应商，请先核对该批次的出入库流水");
@@ -228,9 +240,9 @@ public class DrugTransferServiceImpl implements DrugTransferService {
             move.setOperatorName(operator);
             move.setReason(transferLabel(head, item, "接收"));
             BizDrugStock landed = pharmacyService.addStockToRoom(move);
-            itemMapper.markIn(item.getId(), landed.getId(), operator, now);
+            bizDrugTransferItemMapper.markIn(item.getId(), landed.getId(), operator, now);
         }
-        transferMapper.update(null, Wrappers.<BizDrugTransfer>lambdaUpdate()
+        bizDrugTransferMapper.update(null, Wrappers.<BizDrugTransfer>lambdaUpdate()
                 .eq(BizDrugTransfer::getId, head.getId())
                 .set(BizDrugTransfer::getStatus, DrugTransferStatusEnum.DONE.getCode())
                 .set(BizDrugTransfer::getInBy, operator)
@@ -246,12 +258,13 @@ public class DrugTransferServiceImpl implements DrugTransferService {
     public DrugTransferVO cancel(DrugTransferActionDTO dto) {
         BizDrugTransfer head = lock(dto.getId());
         requireStatus(head, DrugTransferStatusEnum.PENDING_OUT, "作废");
-        String reason = requireText(dto.getReason(), "作废原因", 200);
+        // ①条件必填：作废原因只在取消入口必填（同一动作 DTO 被确认入口复用），注解一刀切会挡掉合法的确认
+        String reason = TextUtil.cut(TextUtil.requireTrimmed(dto.getReason(), "作废原因不能为空"), 200);
         String operator = UserUtils.getCurrentUser().getRealName();
-        LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
         // 待发出=一行库存都没动过，作废只是把单子关掉；一旦发出就成了在途，作废会让药凭空消失，
         // 想收回去只有一条路：开一张反向调拨单，让流水把它讲清楚。
-        transferMapper.update(null, Wrappers.<BizDrugTransfer>lambdaUpdate()
+        bizDrugTransferMapper.update(null, Wrappers.<BizDrugTransfer>lambdaUpdate()
                 .eq(BizDrugTransfer::getId, head.getId())
                 .set(BizDrugTransfer::getStatus, DrugTransferStatusEnum.CANCELLED.getCode())
                 .set(BizDrugTransfer::getCancelBy, operator)
@@ -272,8 +285,8 @@ public class DrugTransferServiceImpl implements DrugTransferService {
                     + DrugTransferStatusEnum.getText(head.getStatus()) + "）；已发出请先完成接收，"
                     + "已完成是留档凭证不能抹");
         }
-        itemMapper.purgeByTransferId(head.getId());
-        if (transferMapper.purgeById(head.getId()) != 1) {
+        bizDrugTransferItemMapper.purgeByTransferId(head.getId());
+        if (bizDrugTransferMapper.purgeById(head.getId()) != 1) {
             throw new BusinessException("删除调拨单失败");
         }
     }
@@ -295,7 +308,7 @@ public class DrugTransferServiceImpl implements DrugTransferService {
             }
             stockIds.add(row.getStockId());
         }
-        Map<Long, BizDrugStockVO> byId = stockMapper.selectBatchSnapshots(stockIds).stream()
+        Map<Long, BizDrugStockVO> byId = bizDrugStockMapper.selectBatchSnapshots(stockIds).stream()
                 .collect(Collectors.toMap(BizDrugStockVO::getId, Function.identity(), (a, b) -> a));
         List<BizDrugTransferItem> items = new ArrayList<>(rows.size());
         for (DrugTransferUpsertDTO.Item row : rows) {
@@ -307,14 +320,14 @@ public class DrugTransferServiceImpl implements DrugTransferService {
                 throw new BusinessException(batchLabel(batch) + " 实际在「" + StockRoomEnum.getText(batch.getStockRoom())
                         + "」，与本单方向「" + type.getLabel() + "」的发出库位不符，请重新选择批次");
             }
-            BigDecimal quantity = scale(row.getApplyQuantity());
+            BigDecimal quantity = NumUtil.scale(row.getApplyQuantity(), 2);
             if (quantity.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new BusinessException(batchLabel(batch) + " 的调拨数量必须大于 0");
             }
-            BigDecimal available = nvl(batch.getAvailableQuantity());
+            BigDecimal available = NumUtil.orZero(batch.getAvailableQuantity());
             if (available.compareTo(quantity) < 0) {
-                throw new BusinessException(batchLabel(batch) + " 可用量只有 " + plain(available) + "，不够调 "
-                        + plain(quantity) + "（已锁定 " + plain(nvl(batch.getLockedQuantity()))
+                throw new BusinessException(batchLabel(batch) + " 可用量只有 " + NumUtil.plain(NumUtil.orZero(available)) + "，不够调 "
+                        + NumUtil.plain(NumUtil.orZero(quantity)) + "（已锁定 " + NumUtil.plain(NumUtil.orZero(NumUtil.orZero(batch.getLockedQuantity())))
                         + " 是已开方未发药的量，不许调拨）");
             }
             BizDrugTransferItem item = new BizDrugTransferItem();
@@ -327,12 +340,12 @@ public class DrugTransferServiceImpl implements DrugTransferService {
             item.setBatchNo(batch.getBatchNo());
             item.setProductionDate(batch.getProductionDate());
             item.setExpiryDate(batch.getExpiryDate());
-            item.setCostPrice(nvl(batch.getCostPrice()));
+            item.setCostPrice(NumUtil.orZero(batch.getCostPrice()));
             item.setApplyQuantity(quantity);
-            item.setLockedQuantity(nvl(batch.getLockedQuantity()));
+            item.setLockedQuantity(NumUtil.orZero(batch.getLockedQuantity()));
             item.setOutFlag(0);
             item.setInFlag(0);
-            item.setRemark(cut(row.getRemark(), 500));
+            item.setRemark(TextUtil.cut(row.getRemark(), 500));
             item.setCreateBy(operator);
             item.setUpdateBy(operator);
             items.add(item);
@@ -340,28 +353,30 @@ public class DrugTransferServiceImpl implements DrugTransferService {
         return items;
     }
 
-    /** 把明细汇总的五个口径数回写主单（列表页直接读主单，不再逐单算明细） */
+    /**
+     * 把明细汇总的五个口径数回写主单（列表页直接读主单，不再逐单算明细）
+     */
     private void refreshSummary(Long transferId, String operator, LocalDateTime now) {
-        BizDrugTransfer sum = itemMapper.selectSummary(transferId);
-        transferMapper.update(null, Wrappers.<BizDrugTransfer>lambdaUpdate()
+        BizDrugTransfer sum = bizDrugTransferItemMapper.selectSummary(transferId);
+        bizDrugTransferMapper.update(null, Wrappers.<BizDrugTransfer>lambdaUpdate()
                 .eq(BizDrugTransfer::getId, transferId)
                 .set(BizDrugTransfer::getTotalItems, sum.getTotalItems())
-                .set(BizDrugTransfer::getTotalQuantity, nvl(sum.getTotalQuantity()))
-                .set(BizDrugTransfer::getOutQuantity, nvl(sum.getOutQuantity()))
-                .set(BizDrugTransfer::getInQuantity, nvl(sum.getInQuantity()))
-                .set(BizDrugTransfer::getTotalAmount, nvl(sum.getTotalAmount()))
+                .set(BizDrugTransfer::getTotalQuantity, NumUtil.orZero(sum.getTotalQuantity()))
+                .set(BizDrugTransfer::getOutQuantity, NumUtil.orZero(sum.getOutQuantity()))
+                .set(BizDrugTransfer::getInQuantity, NumUtil.orZero(sum.getInQuantity()))
+                .set(BizDrugTransfer::getTotalAmount, NumUtil.orZero(sum.getTotalAmount()))
                 .set(BizDrugTransfer::getUpdateBy, operator)
                 .set(BizDrugTransfer::getUpdateTime, now));
     }
 
     private List<BizDrugTransferItem> listItems(Long transferId) {
-        return itemMapper.selectList(Wrappers.<BizDrugTransferItem>lambdaQuery()
+        return bizDrugTransferItemMapper.selectList(Wrappers.<BizDrugTransferItem>lambdaQuery()
                 .eq(BizDrugTransferItem::getTransferId, transferId)
                 .orderByAsc(BizDrugTransferItem::getId));
     }
 
     private BizDrugTransfer lock(Long id) {
-        BizDrugTransfer head = transferMapper.selectByIdForUpdate(id);
+        BizDrugTransfer head = bizDrugTransferMapper.selectByIdForUpdate(id);
         if (head == null) {
             throw new BusinessException("调拨单不存在或已删除");
         }
@@ -379,61 +394,19 @@ public class DrugTransferServiceImpl implements DrugTransferService {
                 + DrugTransferStatusEnum.getText(head.getStatus()) + "）" + hint);
     }
 
-    /** 方向、单号、批次、数量都写进流水备注：只写「调拨」两字，事后对着流水想不起来搬的是什么 */
+    /**
+     * 方向、单号、批次、数量都写进流水备注：只写「调拨」两字，事后对着流水想不起来搬的是什么
+     */
     private String transferLabel(BizDrugTransfer head, BizDrugTransferItem item, String stage) {
         return DrugTransferTypeEnum.getText(head.getTransferType()) + stage + "：" + head.getTransferNo()
                 + " " + item.getDrugName() + " 批号" + item.getBatchNo()
-                + " 数量" + plain(item.getApplyQuantity()) + "；事由：" + head.getReason();
+                + " 数量" + NumUtil.plain(NumUtil.orZero(item.getApplyQuantity())) + "；事由：" + head.getReason();
     }
 
-    /** 抽屉里的流水要带库位与类型文案，和流水台账同一口径（前端不许自己映射） */
-    private static List<BizDrugStockLogVO> logsWithTexts(List<BizDrugStockLogVO> logs) {
-        logs.forEach(BizDrugStockLogVO::fillTexts);
-        return logs;
-    }
-
-    private void fillText(DrugTransferVO vo) {        vo.setTransferTypeText(DrugTransferTypeEnum.getText(vo.getTransferType()));
+    private void fillText(DrugTransferVO vo) {
+        vo.setTransferTypeText(DrugTransferTypeEnum.getText(vo.getTransferType()));
         vo.setFromRoomText(StockRoomEnum.getText(vo.getFromRoom()));
         vo.setToRoomText(StockRoomEnum.getText(vo.getToRoom()));
         vo.setStatusText(DrugTransferStatusEnum.getText(vo.getStatus()));
-    }
-
-    private static String batchLabel(BizDrugStockVO batch) {
-        String label = StringUtils.hasText(batch.getDrugName()) ? batch.getDrugName() : "药品#" + batch.getDrugId();
-        return StringUtils.hasText(batch.getBatchNo()) ? label + "（批号 " + batch.getBatchNo() + "）" : label;
-    }
-
-    /** 必填文本：trim + 截到列宽（超长会把业务失败升级成 500，AGENTS §3） */
-    private static String requireText(String text, String label, int max) {
-        // B 类：作废原因只在取消入口必填（同一动作 DTO 被确认入口复用），条件必填留 service；事由一侧注解已兜住，此处只兼做截断
-        if (!StringUtils.hasText(text)) {
-            throw new BusinessException(label + "不能为空");
-        }
-        return cut(text, max);
-    }
-
-    private static String cut(String text, int max) {
-        if (text == null) {
-            return null;
-        }
-        String t = text.trim();
-        return t.length() <= max ? t : t.substring(0, max);
-    }
-
-    private static String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
-    private static BigDecimal scale(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value.setScale(2, RoundingMode.HALF_UP);
-    }
-
-    private static BigDecimal nvl(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
-
-    /** 数量显示：5.00 → 5，2.50 → 2.5（报错文案里不想看到一串尾零） */
-    private static String plain(BigDecimal value) {
-        return value == null ? "0" : value.stripTrailingZeros().toPlainString();
     }
 }

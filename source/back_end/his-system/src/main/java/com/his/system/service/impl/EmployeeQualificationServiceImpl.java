@@ -1,6 +1,7 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.system.dto.EmployeeQualificationUpsertDTO;
 import com.his.system.entity.SysEmployee;
@@ -19,10 +20,10 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
-public class EmployeeQualificationServiceImpl implements EmployeeQualificationService {
+public class EmployeeQualificationServiceImpl extends ServiceImpl<SysEmployeeQualificationMapper, SysEmployeeQualification> implements EmployeeQualificationService {
 
-    private final SysEmployeeQualificationMapper qualificationMapper;
-    private final SysEmployeeMapper employeeMapper;
+    private final SysEmployeeQualificationMapper sysEmployeeQualificationMapper;
+    private final SysEmployeeMapper sysEmployeeMapper;
 
     @Override
     public List<EmployeeQualificationVO> listByEmployee(Long employeeId) {
@@ -33,12 +34,12 @@ public class EmployeeQualificationServiceImpl implements EmployeeQualificationSe
         wrapper.eq(SysEmployeeQualification::getEmployeeId, employeeId)
                 .orderByAsc(SysEmployeeQualification::getCertType)
                 .orderByAsc(SysEmployeeQualification::getIssueDate);
-        return qualificationMapper.selectList(wrapper).stream().map(this::toVO).toList();
+        return sysEmployeeQualificationMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
     @Override
     public void upsert(EmployeeQualificationUpsertDTO upsertDTO) {
-        SysEmployee emp = employeeMapper.selectById(upsertDTO.getEmployeeId());
+        SysEmployee emp = sysEmployeeMapper.selectById(upsertDTO.getEmployeeId());
         if (emp == null) {
             throw new BusinessException("员工不存在");
         }
@@ -58,28 +59,28 @@ public class EmployeeQualificationServiceImpl implements EmployeeQualificationSe
                 .eq(SysEmployeeQualification::getCertType, entity.getCertType())
                 .eq(SysEmployeeQualification::getCertNo, entity.getCertNo())
                 .ne(upsertDTO.getId() != null, SysEmployeeQualification::getId, upsertDTO.getId());
-        if (qualificationMapper.exists(dup)) {
+        if (sysEmployeeQualificationMapper.exists(dup)) {
             throw new BusinessException("该员工已登记同类型、同号的证书，请勿重复添加");
         }
 
         if (upsertDTO.getId() == null) {
-            qualificationMapper.insert(entity);
+            sysEmployeeQualificationMapper.insert(entity);
         } else {
-            SysEmployeeQualification old = qualificationMapper.selectById(upsertDTO.getId());
+            SysEmployeeQualification old = sysEmployeeQualificationMapper.selectById(upsertDTO.getId());
             if (old == null) {
                 throw new BusinessException("证书记录不存在");
             }
             // 证书不允许改挂到另一个人名下：id 来自前端，员工归属只认库里原值
             entity.setEmployeeId(old.getEmployeeId());
             entity.setId(upsertDTO.getId());
-            qualificationMapper.updateById(entity);
+            sysEmployeeQualificationMapper.updateById(entity);
         }
     }
 
     @Override
     public void deleteById(Long id) {
         // 本表无 del_flag，deleteById 即物理删（不会占着唯一键，见 sql/112 注释）
-        qualificationMapper.deleteById(id);
+        sysEmployeeQualificationMapper.deleteById(id);
     }
 
     private EmployeeQualificationVO toVO(SysEmployeeQualification entity) {

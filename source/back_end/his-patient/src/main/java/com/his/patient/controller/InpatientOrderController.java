@@ -29,71 +29,71 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasAnyAuthority('ipd:order:list', 'ipd:nurse:list')")
 public class InpatientOrderController {
 
-    private final InpatientOrderService orderService;
+    private final InpatientOrderService inpatientOrderService;
 
     @Operation(summary = "医嘱分页（医生站 / 护士站共用；pendingVerifyOnly=1 只看待校对）")
     @GetMapping("/listPage")
     public Result<IPage<InpatientOrderVO>> listPage(@Valid InpatientOrderQueryPageDTO query) {
-        return Result.success(orderService.listPage(query));
+        return Result.success(inpatientOrderService.listPage(query));
     }
 
     @PreAuthorize("hasAuthority('ipd:order:add')")
     @Operation(summary = "开立/修改医嘱（一次提交 = 一个组套），返回组套号")
     @PostMapping("/save")
     public Result<String> save(@RequestBody @Valid InpatientOrderUpsertDTO dto) {
-        return Result.success("医嘱已保存", orderService.save(dto));
+        return Result.success("医嘱已保存", inpatientOrderService.save(dto));
     }
 
     @PreAuthorize("hasAuthority('ipd:order:edit')")
     @Operation(summary = "护士医嘱校对（批量，未校对不可执行）")
     @PostMapping("/verify")
     public Result<Integer> verify(@Valid @RequestBody InpatientOrderVerifyDTO dto) {
-        return Result.success("医嘱校对成功", orderService.verify(dto));
+        return Result.success("医嘱校对成功", inpatientOrderService.verify(dto));
     }
 
     @PreAuthorize("hasAuthority('ipd:order:edit')")
     @Operation(summary = "停止医嘱（同组套整组停；长期医嘱只能停不能作废）")
     @PostMapping("/stop")
     public Result<Integer> stop(@Valid @RequestBody InpatientOrderStopDTO dto) {
-        return Result.success("医嘱已停止", orderService.stop(dto));
+        return Result.success("医嘱已停止", inpatientOrderService.stop(dto));
     }
 
     @PreAuthorize("hasAuthority('ipd:order:delete')")
     @Operation(summary = "作废医嘱（仅「待校对」；属组套的整组作废）")
     @PostMapping("/cancel")
     public Result<Void> cancel(@RequestBody @Valid InpatientOrderCancelDTO dto) {
-        orderService.cancel(dto);
+        inpatientOrderService.cancel(dto);
         return Result.success("医嘱已作废", null);
     }
 
     @Operation(summary = "护士待执行队列（加急优先、按计划时间升序；会补当天长期医嘱计划）")
     @GetMapping("/execPendingList")
     public Result<IPage<InpatientOrderExecVO>> execPendingList(@Valid OrderExecQueryPageDTO query) {
-        return Result.success(orderService.execPendingList(query));
+        return Result.success(inpatientOrderService.execPendingList(query));
     }
 
     @PreAuthorize("hasAuthority('ipd:order:edit')")
     @Operation(summary = "医嘱执行（批量：2-已执行并计费 / 3-已跳过并留原因）")
     @PostMapping("/exec/complete")
     public Result<Integer> execComplete(@Valid @RequestBody OrderExecCompleteDTO dto) {
-        return Result.success("医嘱执行已记录", orderService.execComplete(dto));
+        return Result.success("医嘱执行已记录", inpatientOrderService.execComplete(dto));
     }
 
     @Operation(summary = "执行记录查询（含已执行 / 已跳过，留痕不删除）")
     @GetMapping("/execList")
     public Result<IPage<InpatientOrderExecVO>> execList(@Valid OrderExecQueryPageDTO query) {
-        return Result.success(orderService.execList(query));
+        return Result.success(inpatientOrderService.execList(query));
     }
 
     @Operation(summary = "待校对医嘱数（护士站卡片）")
     @GetMapping("/countPendingVerify")
     public Result<Long> countPendingVerify(@RequestParam(required = false) Long admissionId) {
-        return Result.success(orderService.countPendingVerify(admissionId));
+        return Result.success(inpatientOrderService.countPendingVerify(admissionId));
     }
 
     @Operation(summary = "待执行医嘱数（护士站卡片）")
     @GetMapping("/countPendingExec")
     public Result<Long> countPendingExec(@RequestParam(required = false) Long admissionId) {
-        return Result.success(orderService.countPendingExec(admissionId));
+        return Result.success(inpatientOrderService.countPendingExec(admissionId));
     }
 }

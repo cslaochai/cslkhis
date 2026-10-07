@@ -17,6 +17,8 @@ import com.his.common.enums.AccountOwnerTypeEnum;
 import com.his.common.enums.AccountTxnTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,7 +54,7 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
     private static final int W_OPERATOR_NAME = 50;
     private static final int W_REMARK = 500;
 
-    private final BizFundAccountTxnMapper accountTxnMapper;
+    private final BizFundAccountTxnMapper bizFundAccountTxnMapper;
     private final RedisSequenceService redisSequenceService;
 
     private static List<FundAccountTxnListVO> toTxnVOList(List<BizFundAccountTxn> rows) {
@@ -63,17 +65,6 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
             vos.add(vo);
         }
         return vos;
-    }
-
-    private static BigDecimal nz(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
-
-    private static String cut(String value, int max) {
-        if (value == null) {
-            return null;
-        }
-        return value.length() <= max ? value : value.substring(0, max);
     }
 
     @Override
@@ -94,8 +85,8 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
         account.setOwnerType(ownerType);
         account.setOwnerId(ownerId);
         account.setPatientId(patientId);
-        account.setPatientNo(cut(patientNo, W_PATIENT_NO));
-        account.setPatientName(cut(patientName, W_PATIENT_NAME));
+        account.setPatientNo(TextUtil.cut(patientNo, W_PATIENT_NO));
+        account.setPatientName(TextUtil.cut(patientName, W_PATIENT_NAME));
         account.setBalance(BigDecimal.ZERO);
         account.setTotalRecharge(BigDecimal.ZERO);
         account.setTotalConsume(BigDecimal.ZERO);
@@ -117,7 +108,7 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
     @Override
     public BigDecimal balance(Integer ownerType, Long ownerId) {
         BizFundAccount account = baseMapper.selectByOwner(ownerType, ownerId);
-        return account == null ? BigDecimal.ZERO : nz(account.getBalance());
+        return account == null ? BigDecimal.ZERO : NumUtil.orZero(account.getBalance());
     }
 
     @Override
@@ -125,7 +116,7 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
         if (admissionId == null) {
             return BigDecimal.ZERO;
         }
-        return nz(accountTxnMapper.sumAdmissionBalance(admissionId));
+        return NumUtil.orZero(bizFundAccountTxnMapper.sumAdmissionBalance(admissionId));
     }
 
     @Override
@@ -159,14 +150,14 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
                 .eq(query.getTxnStatus() != null, BizFundAccountTxn::getTxnStatus, query.getTxnStatus())
                 .orderByDesc(BizFundAccountTxn::getTxnTime)
                 .orderByDesc(BizFundAccountTxn::getId);
-        Page<BizFundAccountTxn> page = accountTxnMapper.selectPage(
+        Page<BizFundAccountTxn> page = bizFundAccountTxnMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), toTxnVOList(page.getRecords()));
     }
 
     @Override
     public List<FundAccountTxnListVO> listTxnByAccount(Long accountId) {
-        return toTxnVOList(accountTxnMapper.selectList(new LambdaQueryWrapper<BizFundAccountTxn>()
+        return toTxnVOList(bizFundAccountTxnMapper.selectList(new LambdaQueryWrapper<BizFundAccountTxn>()
                 .eq(BizFundAccountTxn::getAccountId, accountId)
                 .orderByDesc(BizFundAccountTxn::getTxnTime)
                 .orderByDesc(BizFundAccountTxn::getId)));
@@ -196,11 +187,11 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
             if (account.getAccountStatus() != null && account.getAccountStatus() != ACCOUNT_STATUS_NORMAL) {
                 throw new BusinessException("该账户已冻结，不收不抵");
             }
-            after = nz(account.getBalance()).add(signed).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
+            after = NumUtil.orZero(account.getBalance()).add(signed).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
             if (after.signum() < 0) {
                 // 余额是医院欠患者的钱，扣成负数等于凭空多收一笔，绝不能放行
                 throw new BusinessException((AccountOwnerTypeEnum.ADMISSION.getCode().equals(account.getOwnerType())
-                        ? "住院预交金" : "账户余额") + "不足，当前 " + nz(account.getBalance()).toPlainString()
+                        ? "住院预交金" : "账户余额") + "不足，当前 " + NumUtil.orZero(account.getBalance()).toPlainString()
                         + "，本次需要 " + signed.abs().toPlainString());
             }
 
@@ -219,7 +210,7 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
         }
 
         BizFundAccountTxn txn = new BizFundAccountTxn();
-        txn.setTxnNo(cut(redisSequenceService.generateFundTxnNo(), W_TXN_NO));
+        txn.setTxnNo(TextUtil.cut(redisSequenceService.generateFundTxnNo(), W_TXN_NO));
         txn.setAccountId(account.getId());
         txn.setPatientId(account.getPatientId());
         txn.setOwnerType(account.getOwnerType());
@@ -231,13 +222,13 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
         txn.setBillId(spec.billId());
         txn.setPaymentTxnId(spec.paymentTxnId());
         txn.setPayMethod(spec.payMethod());
-        txn.setChannelTxnNo(cut(spec.channelTxnNo(), W_CHANNEL_TXN_NO));
+        txn.setChannelTxnNo(TextUtil.cut(spec.channelTxnNo(), W_CHANNEL_TXN_NO));
         txn.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());
-        txn.setOperatorName(cut(UserUtils.getCurrentUser().getRealName(), W_OPERATOR_NAME));
+        txn.setOperatorName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_OPERATOR_NAME));
         txn.setTxnTime(LocalDateTime.now());
         txn.setTxnStatus(TXN_STATUS_SUCCESS);
-        txn.setRemark(cut(spec.reason(), W_REMARK));
-        accountTxnMapper.insert(txn);
+        txn.setRemark(TextUtil.cut(spec.reason(), W_REMARK));
+        bizFundAccountTxnMapper.insert(txn);
 
         log.info("[账户流水] {} 账户 {} {} 变动 ¥{} 后余额 ¥{}", txn.getTxnNo(), account.getId(),
                 type.getDesc(), signed.toPlainString(), after.toPlainString());

@@ -5,6 +5,7 @@ import cn.hutool.crypto.asymmetric.KeyType;
 import cn.hutool.crypto.asymmetric.SM2;
 import cn.hutool.crypto.digest.DigestUtil;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.config.PasswordCryptoProperties;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
@@ -51,7 +52,7 @@ public class PasswordCipherService {
 
     private static final Pattern HEX = Pattern.compile("^[0-9a-fA-F]+$");
 
-    private final PasswordCryptoProperties properties;
+    private final PasswordCryptoProperties passwordCryptoProperties;
 
     @Getter
     private volatile String privateKeyHex;
@@ -63,9 +64,52 @@ public class PasswordCipherService {
     @Getter
     private volatile String keyId;
 
+    /**
+     * 密钥构造
+     *
+     * @return
+     */
+    private static String[] generateKeyPair() {
+        ECDomainParameters domain = sm2Domain();
+        ECKeyPairGenerator generator = new ECKeyPairGenerator();
+        generator.init(new ECKeyGenerationParameters(domain, new SecureRandom()));
+        AsymmetricCipherKeyPair pair = generator.generateKeyPair();
+        ECPrivateKeyParameters priv = (ECPrivateKeyParameters) pair.getPrivate();
+        ECPublicKeyParameters pub = (ECPublicKeyParameters) pair.getPublic();
+        String prvHex = leftPad64(priv.getD().toString(16));
+        return new String[]{prvHex, pointToHex(pub.getQ())};
+    }
+
+    /**
+     * 由私钥推导公钥：Q = dG
+     */
+    private static String derivePublicKey(String privateKeyHex) {
+        ECDomainParameters domain = sm2Domain();
+        ECPoint q = domain.getG().multiply(new BigInteger(privateKeyHex, 16)).normalize();
+        return pointToHex(q);
+    }
+
+    private static String pointToHex(ECPoint point) {
+        return C1_PREFIX
+                + leftPad64(point.getAffineXCoord().toBigInteger().toString(16))
+                + leftPad64(point.getAffineYCoord().toBigInteger().toString(16));
+    }
+
+    private static ECDomainParameters sm2Domain() {
+        X9ECParameters params = GMNamedCurves.getByName("sm2p256v1");
+        return new ECDomainParameters(params.getCurve(), params.getG(), params.getN(), params.getH());
+    }
+
+    private static String leftPad64(String hex) {
+        if (hex.length() >= 64) {
+            return hex;
+        }
+        return "0".repeat(64 - hex.length()) + hex;
+    }
+
     @PostConstruct
     public void init() {
-        String prv = trimToNull(properties.getPrivateKey());
+        String prv = TextUtil.trimToNull(passwordCryptoProperties.getPrivateKey());
         if (prv == null) {
             String[] pair = generateKeyPair();
             prv = pair[0];
@@ -75,7 +119,7 @@ public class PasswordCipherService {
                     + "多实例部署必须显式配置同一对，否则会出现随机的登录失败。");
         } else {
             this.privateKeyHex = prv.toLowerCase();
-            String pub = trimToNull(properties.getPublicKey());
+            String pub = TextUtil.trimToNull(passwordCryptoProperties.getPublicKey());
             this.publicKeyHex = (pub == null ? derivePublicKey(prv) : pub.toLowerCase());
         }
         this.keyId = DigestUtil.sha256Hex(this.publicKeyHex).substring(0, 16);
@@ -122,54 +166,4 @@ public class PasswordCipherService {
         }
     }
 
-    /**
-     * 密钥构造
-     *
-     * @return
-     */
-    private static String[] generateKeyPair() {
-        ECDomainParameters domain = sm2Domain();
-        ECKeyPairGenerator generator = new ECKeyPairGenerator();
-        generator.init(new ECKeyGenerationParameters(domain, new SecureRandom()));
-        AsymmetricCipherKeyPair pair = generator.generateKeyPair();
-        ECPrivateKeyParameters priv = (ECPrivateKeyParameters) pair.getPrivate();
-        ECPublicKeyParameters pub = (ECPublicKeyParameters) pair.getPublic();
-        String prvHex = leftPad64(priv.getD().toString(16));
-        return new String[]{prvHex, pointToHex(pub.getQ())};
-    }
-
-    /**
-     * 由私钥推导公钥：Q = dG
-     */
-    private static String derivePublicKey(String privateKeyHex) {
-        ECDomainParameters domain = sm2Domain();
-        ECPoint q = domain.getG().multiply(new BigInteger(privateKeyHex, 16)).normalize();
-        return pointToHex(q);
-    }
-
-    private static String pointToHex(ECPoint point) {
-        return C1_PREFIX
-                + leftPad64(point.getAffineXCoord().toBigInteger().toString(16))
-                + leftPad64(point.getAffineYCoord().toBigInteger().toString(16));
-    }
-
-    private static ECDomainParameters sm2Domain() {
-        X9ECParameters params = GMNamedCurves.getByName("sm2p256v1");
-        return new ECDomainParameters(params.getCurve(), params.getG(), params.getN(), params.getH());
-    }
-
-    private static String leftPad64(String hex) {
-        if (hex.length() >= 64) {
-            return hex;
-        }
-        return "0".repeat(64 - hex.length()) + hex;
-    }
-
-    private static String trimToNull(String s) {
-        if (s == null) {
-            return null;
-        }
-        String v = s.trim();
-        return v.isEmpty() ? null : v;
-    }
 }

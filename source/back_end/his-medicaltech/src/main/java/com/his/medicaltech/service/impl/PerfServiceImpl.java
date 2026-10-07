@@ -3,7 +3,9 @@ package com.his.medicaltech.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.NumUtil;
 import com.his.medicaltech.dto.PerfDTO;
 import com.his.medicaltech.entity.BizDeptCostMonth;
 import com.his.medicaltech.entity.BizPerfResult;
@@ -32,13 +34,13 @@ import java.math.RoundingMode;
  */
 @Service
 @RequiredArgsConstructor
-public class PerfServiceImpl implements PerfService {
+public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfResult> implements PerfService {
 
     private static final BigDecimal DEFAULT_BONUS_RATE = new BigDecimal("0.06");
 
-    private final BizDeptCostMonthMapper costMapper;
-    private final BizPerfResultMapper perfMapper;
-    private final PerfMapper perfMapper2;
+    private final BizDeptCostMonthMapper bizDeptCostMonthMapper;
+    private final BizPerfResultMapper bizPerfResultMapper;
+    private final PerfMapper perfMapper;
 
     // 成本
 
@@ -53,16 +55,12 @@ public class PerfServiceImpl implements PerfService {
         return t;
     }
 
-    private static BigDecimal nz(BigDecimal v) {
-        return v == null ? BigDecimal.ZERO : v;
-    }
-
     // 核算
 
     @Transactional(rollbackFor = Exception.class)
     public PerfVO.CostRow saveCost(PerfDTO.CostSave dto) {
         String month = normalizeMonth(dto.getCostMonth());
-        BizDeptCostMonth exists = costMapper.selectOne(new LambdaQueryWrapper<BizDeptCostMonth>()
+        BizDeptCostMonth exists = bizDeptCostMonthMapper.selectOne(new LambdaQueryWrapper<BizDeptCostMonth>()
                 .eq(BizDeptCostMonth::getDeptId, dto.getDeptId())
                 .eq(BizDeptCostMonth::getCostMonth, month)
                 .last("LIMIT 1"));
@@ -74,16 +72,16 @@ public class PerfServiceImpl implements PerfService {
         c.setDeptId(dto.getDeptId());
         c.setDeptName(StringUtils.hasText(dto.getDeptName()) ? dto.getDeptName().trim() : "科室" + dto.getDeptId());
         c.setCostMonth(month);
-        c.setLaborCost(nz(dto.getLaborCost()));
-        c.setDrugCost(nz(dto.getDrugCost()));
-        c.setMaterialCost(nz(dto.getMaterialCost()));
-        c.setDepreciation(nz(dto.getDepreciation()));
-        c.setOtherCost(nz(dto.getOtherCost()));
+        c.setLaborCost(NumUtil.orZero(dto.getLaborCost()));
+        c.setDrugCost(NumUtil.orZero(dto.getDrugCost()));
+        c.setMaterialCost(NumUtil.orZero(dto.getMaterialCost()));
+        c.setDepreciation(NumUtil.orZero(dto.getDepreciation()));
+        c.setOtherCost(NumUtil.orZero(dto.getOtherCost()));
         c.setTotalCost(c.getLaborCost().add(c.getDrugCost()).add(c.getMaterialCost())
                 .add(c.getDepreciation()).add(c.getOtherCost()));
         c.setCreateBy(UserUtils.getCurrentUser().getUsername());
         c.setRemark(dto.getRemark());
-        costMapper.insert(c);
+        bizDeptCostMonthMapper.insert(c);
         return toCostRow(c);
     }
 
@@ -96,7 +94,7 @@ public class PerfServiceImpl implements PerfService {
                         normalizeMonth(dto.getCostMonth()))
                 .orderByDesc(BizDeptCostMonth::getCostMonth)
                 .orderByAsc(BizDeptCostMonth::getDeptId);
-        IPage<BizDeptCostMonth> page = costMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw);
+        IPage<BizDeptCostMonth> page = bizDeptCostMonthMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw);
         return page.convert(this::toCostRow);
     }
 
@@ -105,8 +103,8 @@ public class PerfServiceImpl implements PerfService {
      */
     public PerfVO.RevenueInfo revenueInfo(Long deptId, String month) {
         String m = normalizeMonth(month);
-        PerfDeptRevenueRowVO r = perfMapper2.sumDeptRevenue(deptId, m);
-        BizDeptCostMonth cost = costMapper.selectOne(new LambdaQueryWrapper<BizDeptCostMonth>()
+        PerfDeptRevenueRowVO r = perfMapper.sumDeptRevenue(deptId, m);
+        BizDeptCostMonth cost = bizDeptCostMonthMapper.selectOne(new LambdaQueryWrapper<BizDeptCostMonth>()
                 .eq(BizDeptCostMonth::getDeptId, deptId)
                 .eq(BizDeptCostMonth::getCostMonth, m)
                 .last("LIMIT 1"));
@@ -141,7 +139,7 @@ public class PerfServiceImpl implements PerfService {
         BigDecimal ratio = info.getRevenue().signum() > 0
                 ? info.getDrugRevenue().divide(info.getRevenue(), 4, RoundingMode.HALF_UP) : BigDecimal.ZERO;
 
-        BizPerfResult p = perfMapper.selectOne(new LambdaQueryWrapper<BizPerfResult>()
+        BizPerfResult p = bizPerfResultMapper.selectOne(new LambdaQueryWrapper<BizPerfResult>()
                 .eq(BizPerfResult::getDeptId, dto.getDeptId())
                 .eq(BizPerfResult::getCostMonth, month)
                 .last("LIMIT 1"));
@@ -165,9 +163,9 @@ public class PerfServiceImpl implements PerfService {
         p.setCostId(info.getCostId());
         p.setUpdateBy(UserUtils.getCurrentUser().getUsername());
         if (create) {
-            perfMapper.insert(p);
+            bizPerfResultMapper.insert(p);
         } else {
-            perfMapper.updateById(p);
+            bizPerfResultMapper.updateById(p);
         }
         return toPerfRow(p);
     }
@@ -180,7 +178,7 @@ public class PerfServiceImpl implements PerfService {
                 .orderByDesc(BizPerfResult::getCostMonth)
                 .orderByDesc(BizPerfResult::getPerfAmount)
                 .orderByDesc(BizPerfResult::getId);
-        IPage<BizPerfResult> page = perfMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw);
+        IPage<BizPerfResult> page = bizPerfResultMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw);
         return page.convert(this::toPerfRow);
     }
 

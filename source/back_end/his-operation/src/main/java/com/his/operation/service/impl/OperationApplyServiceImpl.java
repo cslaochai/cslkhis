@@ -3,6 +3,7 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
@@ -75,7 +76,7 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class OperationApplyServiceImpl implements OperationApplyService {
+public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapper, BizOperationApply> implements OperationApplyService {
     /**
      * 术前核对完成后多久没结束算"卡住"（查询时算，不落状态列）
      */
@@ -102,10 +103,6 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     // 查询
     private static String textOr(String value, String fallback) {
         return StringUtils.hasText(value) ? value : fallback;
-    }
-
-    private static LocalDateTime now() {
-        return TimeUtil.nowSeconds();
     }
 
     /**
@@ -363,7 +360,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
             entity.setApplyBedNo(bedNoOf(admission.getBedId()));
             entity.setApplyDoctorId(operatorUser.getEmployeeId());
             entity.setApplyDoctorName(operatorUser.getRealName());
-            entity.setApplyTime(now());
+            entity.setApplyTime(TimeUtil.nowSeconds());
             entity.setApplyNo(nextApplyNo());
             entity.setOperationStatus(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode());
         } else {
@@ -466,7 +463,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         entity.setAnesthetistName(employeeNameOf(dto.getAnesthetistId()));
         entity.setScheduleDoctorId(operatorUser.getEmployeeId());
         entity.setScheduleDoctorName(operatorUser.getRealName());
-        entity.setScheduleTime(now());
+        entity.setScheduleTime(TimeUtil.nowSeconds());
         entity.setScheduleRemark(dto.getScheduleRemark());
         entity.setOperationStatus(OperationApplyStatusEnum.SCHEDULED.getCode());
         bizOperationApplyMapper.updateById(entity);
@@ -517,7 +514,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         entity.setPreopNote(dto.getPreopNote());
         entity.setPreopCheckDoctorId(operatorUser.getEmployeeId());
         entity.setPreopCheckDoctorName(operatorUser.getRealName());
-        entity.setPreopCheckTime(now());
+        entity.setPreopCheckTime(TimeUtil.nowSeconds());
         entity.setOperationStatus(OperationApplyStatusEnum.PREOP_CHECKED.getCode());
         if (StringUtils.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
@@ -581,7 +578,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         // 一轮都没签不拦（核查单目前允许不建，学习阶段先把"建了却没签完"这种最危险状态拦住）。
         guardSafetyCheck(entity);
 
-        LocalDateTime now = now();
+        LocalDateTime now = TimeUtil.nowSeconds();
         String actualName = dto.getActualOperationName().trim();
         String basis = buildOperationBasis(dto);
 
@@ -657,7 +654,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         entity.setCancelReason(dto.getCancelReason());
         entity.setCancelDoctorId(operatorUser.getEmployeeId());
         entity.setCancelDoctorName(operatorUser.getRealName());
-        entity.setCancelTime(now());
+        entity.setCancelTime(TimeUtil.nowSeconds());
         bizOperationApplyMapper.updateById(entity);
         log.info("取消手术 applyNo={} 原因={} 操作人={}",
                 entity.getApplyNo(), dto.getCancelReason(), operatorUser.getRealName());
@@ -831,7 +828,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
         }
         vo.setWaitText(waitText(vo, pending, scheduled, checked));
 
-        LocalDateTime now = now();
+        LocalDateTime now = TimeUtil.nowSeconds();
         boolean stalled = checked && vo.getPreopCheckTime() != null
                 && now.isAfter(vo.getPreopCheckTime().plusHours(STALLED_HOURS));
         vo.setStalled(stalled);
@@ -849,7 +846,7 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     }
 
     private String waitText(OperationApplyVO vo, boolean pending, boolean scheduled, boolean checked) {
-        LocalDateTime now = now();
+        LocalDateTime now = TimeUtil.nowSeconds();
         if (pending && vo.getApplyTime() != null) {
             long m = Math.max(0, Duration.between(vo.getApplyTime(), now).toMinutes());
             return "申请后已等待 " + AnesthesiaCalcs.durationText(m) + " 未排台";

@@ -3,6 +3,7 @@ package com.his.ai.support;
 import com.his.ai.dto.DrugAuditContextDTO;
 import com.his.ai.vo.DrugAuditFindingVO;
 import com.his.common.support.ClinicalTextMatcher;
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizPrescriptionDetail;
 import com.his.system.dto.DrugRationalItemDTO;
 import com.his.system.entity.SysDrug;
@@ -134,8 +135,8 @@ public class DrugHardRuleChecker {
         if (drug != null && StringUtils.hasText(drug.getGenericName())) {
             return drug.getGenericName().trim();
         }
-        String fromDetail = trimToNull(detail.getGenericName());
-        return fromDetail != null ? fromDetail : trimToNull(detail.getDrugName());
+        String fromDetail = TextUtil.trimToNull(detail.getGenericName());
+        return fromDetail != null ? fromDetail : TextUtil.trimToNull(detail.getDrugName());
     }
 
     // R4 皮试要求（警告级）
@@ -179,14 +180,6 @@ public class DrugHardRuleChecker {
         List<DrugAuditFindingVO> result = new ArrayList<>(unique.values());
         result.sort(Comparator.comparingInt(DrugAuditFindingVO::getErrorLevel).reversed());
         return result.size() > MAX_FINDINGS ? new ArrayList<>(result.subList(0, MAX_FINDINGS)) : result;
-    }
-
-    private static String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
-    private static String nullToDash(String text) {
-        return StringUtils.hasText(text) ? text : "-";
     }
 
     private static String firstNonBlank(String preferred, String fallback) {
@@ -282,11 +275,11 @@ public class DrugHardRuleChecker {
             if (sameDrug.size() < 2) {
                 continue;
             }
-            String drugName = trimToNull(sameDrug.get(0).getDrugName());
+            String drugName = TextUtil.trimToNull(sameDrug.get(0).getDrugName());
             findings.add(finding(LEVEL_WARN, "重复用药",
-                    String.format("「%s」在同一张处方中重复开具 %d 次", nullToDash(drugName), sameDrug.size()),
+                    String.format("「%s」在同一张处方中重复开具 %d 次", TextUtil.blankToDefault(drugName, "-"), sameDrug.size()),
                     "建议合并为一条，避免重复收费与超量用药",
-                    nullToDash(drugName),
+                    TextUtil.blankToDefault(drugName, "-"),
                     "处方明细中 drug_id 重复出现"));
         }
 
@@ -420,7 +413,7 @@ public class DrugHardRuleChecker {
             boolean interaction = HIT_INTERACTION.equals(hit.getHitType());
             String related = interaction
                     ? hit.getDrugNameA() + "、" + hit.getDrugNameB()
-                    : nullToDash(hit.getDrugNameA());
+                    : TextUtil.blankToDefault(hit.getDrugNameA(), "-");
             findings.add(finding(interaction && Boolean.TRUE.equals(hit.getBlocked()) ? LEVEL_BLOCK : LEVEL_WARN,
                     interaction ? "药物相互作用" : "剂量上限",
                     hit.getMessage(),

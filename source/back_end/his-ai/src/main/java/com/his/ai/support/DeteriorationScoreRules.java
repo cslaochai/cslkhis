@@ -1,6 +1,7 @@
 package com.his.ai.support;
 
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
 import com.his.patient.vo.NursingVitalFactVO;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -58,7 +59,7 @@ public final class DeteriorationScoreRules {
         s.setRespiration(rr);
         s.setTemperature(temp);
         s.setSpo2(spo2);
-        s.setTotalScore(nz(sbp) + nz(pulse) + nz(rr) + nz(temp) + nz(spo2));
+        s.setTotalScore(NumUtil.orZero(sbp) + NumUtil.orZero(pulse) + NumUtil.orZero(rr) + NumUtil.orZero(temp) + NumUtil.orZero(spo2));
         return s;
     }
 
@@ -186,10 +187,6 @@ public final class DeteriorationScoreRules {
         if (spo2 <= 93) return 2;
         if (spo2 <= 95) return 1;
         return 0;
-    }
-
-    private static int nz(Integer v) {
-        return v == null ? 0 : v;
     }
 
     /**

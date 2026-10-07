@@ -9,6 +9,7 @@ import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.EmpTitleCode;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.CriticalValueHandleDTO;
 import com.his.medicaltech.dto.CriticalValueQueryPageDTO;
 import com.his.medicaltech.dto.CriticalValueReceiveDTO;
@@ -154,14 +155,6 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         return NO_PREFIX + timestamp + tail;
     }
 
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return text;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int detectAndReport(BizLaboratoryRecord record, List<BizLabResult> results) {
@@ -199,8 +192,8 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             entity.setResultUnit(result.getResultUnit());
             entity.setReferenceRange(result.getReferenceRange());
             entity.setCriticalType(value.type());
-            entity.setThresholdText(truncate(value.threshold(), 100));
-            entity.setCriticalDesc(truncate(value.description(), 300));
+            entity.setThresholdText(TextUtil.cut(value.threshold(), 100));
+            entity.setCriticalDesc(TextUtil.cut(value.description(), 300));
             entity.setReportDeptId(record.getLaboratoryDeptId());
             entity.setReportDeptName(record.getLaboratoryDeptName());
             entity.setReportBy(operatorUser.getRealName());
@@ -336,7 +329,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
      */
     private void markRemark(BizCriticalValue entity, String remark) {
         try {
-            entity.setRemark(truncate(remark, 500));
+            entity.setRemark(TextUtil.cut(remark, 500));
             updateById(entity);
         } catch (Exception ex) {
             log.warn("[危急值] {} 通知留痕写入失败，原因为：{}", entity.getCriticalNo(), remark);
@@ -461,7 +454,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         entity.setStatus(CriticalValueStatusEnum.HANDLED.getCode());
         entity.setHandleBy(StringUtils.hasText(dto.getHandleBy()) ? dto.getHandleBy() : operatorUser.getRealName());
         entity.setHandleTime(LocalDateTime.now());
-        entity.setHandleMeasure(truncate(dto.getHandleMeasure(), 500));
+        entity.setHandleMeasure(TextUtil.cut(dto.getHandleMeasure(), 500));
         // 未显式接收就直接处置时，把接收人也补上：闭环链条不能断在中间
         if (!StringUtils.hasText(entity.getReceiveBy())) {
             entity.setReceiveBy(entity.getHandleBy());
@@ -659,7 +652,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             patch.setId(entity.getId());
             patch.setEscalateStatus(1);
             patch.setEscalateTime(LocalDateTime.now());
-            patch.setRemark(truncate(remark, 500));
+            patch.setRemark(TextUtil.cut(remark, 500));
             updateById(patch);
         } catch (Exception ex) {
             log.error("[危急值] {} 升级标记写入失败", entity.getCriticalNo(), ex);

@@ -9,6 +9,7 @@ import com.his.ai.service.FollowupComposeCapability;
 import com.his.ai.support.PatientTextGuard;
 import com.his.ai.vo.FollowupComposePromptVariablesVO;
 import com.his.ai.vo.FollowupComposeVO;
+import com.his.common.util.TextUtil;
 import com.his.emr.enums.FollowupTypeEnum;
 import com.his.emr.service.ChronicRecordService;
 import com.his.emr.vo.ChronicRecordListVO;
@@ -54,14 +55,6 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
 
     private final PatientTextGuard textGuard;
 
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
     // ---------------------------------------------------------------- 模型层
 
     @Override
@@ -82,7 +75,7 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
         if (output.isEmpty()) {
             vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.FOLLOWUP_COMPOSE));
         } else {
-            String guarded = textGuard.guard(truncate(output.get().getContent(), CONTENT_MAX),
+            String guarded = textGuard.guard(TextUtil.cut(output.get().getContent(), CONTENT_MAX, ""),
                     AiCapabilityKeys.FOLLOWUP_COMPOSE);
             if (guarded == null) {
                 vo.setDegradeReason("模型文案越界被患者文案硬闸拦下，已回落类型模板");
@@ -107,7 +100,7 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
                 .templateName(TEMPLATE_NAME)
                 .variables(variables)
                 .bizType(BIZ_TYPE)
-                .inputDigest(truncate(typeLabel + " " + diseaseContext, 60))
+                .inputDigest(TextUtil.cut(typeLabel + " " + diseaseContext, 60, ""))
                 .useLiteModel(true)
                 .maxTokens(256)
                 .build();
@@ -137,7 +130,7 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
             // 病种上下文只是增益项：读不到就空着，话术照常拟
             log.warn("[AI-随访话术] 病种上下文读取失败 patientId={}", dto.getPatientId(), e);
         }
-        return diseases.isEmpty() ? "暂无慢病档案与诊断信息" : truncate(String.join("、", diseases), 120);
+        return diseases.isEmpty() ? "暂无慢病档案与诊断信息" : TextUtil.cut(String.join("、", diseases), 120, "");
     }
 
     /**

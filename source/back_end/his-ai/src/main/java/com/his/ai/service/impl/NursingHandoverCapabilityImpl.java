@@ -10,6 +10,7 @@ import com.his.ai.support.DeteriorationScoreRules;
 import com.his.ai.vo.NursingHandoverPromptVariablesVO;
 import com.his.ai.vo.WardHandoverVO;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.patient.service.InpatientNursingService;
 import com.his.patient.vo.NursingAssessmentVO;
 import com.his.patient.vo.WardNursingFactsVO;
@@ -20,7 +21,9 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 护理交接班摘要实现（G-13）。
@@ -56,14 +59,6 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
     private final AiExecutionService aiExecutionService;
 
     private final InpatientNursingService inpatientNursingService;
-
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
 
     // ---------------------------------------------------------------- 事实文本
 
@@ -125,7 +120,7 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
             return vo;
         }
         vo.setSource(1);
-        vo.setSummary(truncate(output.get().getSummary(), SUMMARY_MAX));
+        vo.setSummary(TextUtil.cut(output.get().getSummary(), SUMMARY_MAX, ""));
         return vo;
     }
 
@@ -142,7 +137,7 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
     private List<String> eventLines(List<String> events) {
         List<String> lines = new ArrayList<>();
         for (String e : events) {
-            lines.add(truncate(e, EVENT_MAX));
+            lines.add(TextUtil.cut(e, EVENT_MAX, ""));
         }
         return lines;
     }

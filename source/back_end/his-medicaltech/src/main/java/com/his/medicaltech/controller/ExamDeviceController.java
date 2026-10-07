@@ -26,13 +26,13 @@ import java.util.List;
 @PreAuthorize("hasAuthority('medtech:examAppoint:list')")
 public class ExamDeviceController {
 
-    private final ExamDeviceService deviceService;
-    private final ExamSlotService slotService;
+    private final ExamDeviceService examDeviceService;
+    private final ExamSlotService examSlotService;
 
     @Operation(summary = "分页查询预约设备")
     @PostMapping("/listPage")
     public Result<PageResult<ExamApptVO.DeviceVO>> listPage(@Valid @RequestBody ExamApptDTO.DeviceQuery query) {
-        return Result.success(deviceService.listPage(query));
+        return Result.success(examDeviceService.listPage(query));
     }
 
     @Operation(summary = "设备下拉（itemId 传入时只返回能做该项目的设备）")
@@ -40,14 +40,14 @@ public class ExamDeviceController {
     @GetMapping("/selectList")
     public Result<List<ExamApptVO.DeviceSelectListVO>> selectList(@RequestParam(required = false) Integer deviceType,
                                                                   @RequestParam(required = false) Long itemId) {
-        return Result.success(deviceService.selectList(deviceType, itemId));
+        return Result.success(examDeviceService.selectList(deviceType, itemId));
     }
 
     @Operation(summary = "设备台账候选（只读挂接 sys_equipment）")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/equipment/selectList")
     public Result<List<ExamApptVO.EquipmentSelectListVO>> equipmentOptions() {
-        return Result.success(deviceService.equipmentOptions());
+        return Result.success(examDeviceService.equipmentOptions());
     }
 
     @Operation(summary = "检查项目候选下拉（配可开展项目用）")
@@ -55,20 +55,20 @@ public class ExamDeviceController {
     @GetMapping("/item/selectList")
     public Result<List<ExamApptVO.ItemSelectListVO>> itemCandidates(@RequestParam(required = false) String keyword,
                                                                     @RequestParam(required = false) Integer limit) {
-        return Result.success(deviceService.itemCandidates(keyword, limit));
+        return Result.success(examDeviceService.itemCandidates(keyword, limit));
     }
 
     @Operation(summary = "设备详情（含可开展项目）")
     @GetMapping("/getDetailById")
     public Result<ExamApptVO.DeviceVO> getDetailById(@RequestParam Long deviceId) {
-        return Result.success(deviceService.getDetail(deviceId));
+        return Result.success(examDeviceService.getDetail(deviceId));
     }
 
     @PreAuthorize("hasAuthority('medtech:examAppoint:add')")
     @Operation(summary = "新增/修改设备档位")
     @PostMapping("/deviceUpsert")
     public Result<ExamApptVO.DeviceVO> deviceUpsert(@Valid @RequestBody ExamApptDTO.DeviceUpsert dto) {
-        ExamApptVO.DeviceVO vo = deviceService.upsert(dto);
+        ExamApptVO.DeviceVO vo = examDeviceService.upsert(dto);
         return StringUtils.hasText(vo.getWarning()) ? Result.success(vo.getWarning(), vo) : Result.success(vo);
     }
 
@@ -76,21 +76,21 @@ public class ExamDeviceController {
     @Operation(summary = "删除设备档位（有未完成预约时拒绝）")
     @DeleteMapping("/deleteById")
     public Result<Boolean> deleteById(@RequestParam Long deviceId) {
-        deviceService.deleteById(deviceId);
+        examDeviceService.deleteById(deviceId);
         return Result.success("设备档位已删除", true);
     }
 
     @Operation(summary = "设备可开展项目列表")
     @GetMapping("/itemList")
     public Result<List<ExamApptVO.DeviceItemVO>> itemList(@RequestParam Long deviceId) {
-        return Result.success(deviceService.itemList(deviceId));
+        return Result.success(examDeviceService.itemList(deviceId));
     }
 
     @PreAuthorize("hasAuthority('medtech:examAppoint:add')")
     @Operation(summary = "保存设备可开展项目（覆盖式）")
     @PostMapping("/itemSave")
     public Result<Integer> itemSave(@Valid @RequestBody ExamApptDTO.DeviceItemSave dto) {
-        int n = deviceService.saveItems(dto);
+        int n = examDeviceService.saveItems(dto);
         return Result.success("已保存 " + n + " 个可开展项目", n);
     }
 
@@ -98,20 +98,20 @@ public class ExamDeviceController {
     @Operation(summary = "生成（补齐）分时段号源")
     @PostMapping("/slotGenerate")
     public Result<ExamApptVO.SlotEnsureVO> slotGenerate(@Valid @RequestBody ExamApptDTO.SlotEnsure dto) {
-        return Result.success(slotService.ensureSlots(dto));
+        return Result.success(examSlotService.ensureSlots(dto));
     }
 
     @Operation(summary = "号源看板")
     @PostMapping("/slotBoard")
     public Result<ExamApptVO.SlotBoardVO> slotBoard(@Valid @RequestBody ExamApptDTO.SlotQuery dto) {
-        return Result.success(slotService.board(dto));
+        return Result.success(examSlotService.board(dto));
     }
 
     @PreAuthorize("hasAuthority('medtech:examAppoint:edit')")
     @Operation(summary = "锁号/放号")
     @PostMapping("/slotToggle")
     public Result<Boolean> slotToggle(@Valid @RequestBody ExamApptDTO.SlotToggle dto) {
-        slotService.toggle(dto);
+        examSlotService.toggle(dto);
         return Result.success(dto.getStatus() == 0 ? "该时段已锁号" : "该时段已放号", true);
     }
 
@@ -119,6 +119,6 @@ public class ExamDeviceController {
     @Operation(summary = "号源对账（以预约单为事实复算计数）")
     @PostMapping("/slotRecalc")
     public Result<ExamApptVO.SlotRecalcVO> slotRecalc(@Valid @RequestBody ExamApptDTO.SlotRecalc dto) {
-        return Result.success(slotService.recalc(dto));
+        return Result.success(examSlotService.recalc(dto));
     }
 }

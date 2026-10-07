@@ -3,8 +3,10 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DischargeDrugDTO;
 import com.his.patient.entity.BizDischargeDrug;
@@ -33,12 +35,12 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class DischargeDrugServiceImpl implements DischargeDrugService {
+public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper, BizDischargeDrug> implements DischargeDrugService {
 
     private static final String DICT_STATUS = "his_discharge_drug_status";
 
-    private final BizDischargeDrugMapper drugMapper;
-    private final DictCacheService dictText;
+    private final BizDischargeDrugMapper bizDischargeDrugMapper;
+    private final DictCacheService dictCacheService;
 
     @Transactional(rollbackFor = Exception.class)
     public DischargeDrugVO upsert(DischargeDrugDTO.Upsert dto) {
@@ -51,7 +53,7 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
             fillPatientSnapshot(d);
             d.setDispenseStatus(DischargeDrugStatusEnum.PENDING.getCode());
         } else {
-            d = drugMapper.selectById(dto.getId());
+            d = bizDischargeDrugMapper.selectById(dto.getId());
             if (d == null || (d.getDelFlag() != null && d.getDelFlag() == 1)) {
                 throw new BusinessException("带药单不存在");
             }
@@ -74,9 +76,9 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
             d.setUpdateTime(TimeUtil.nowSeconds());
         }
         if (dto.getId() == null) {
-            drugMapper.insert(d);
+            bizDischargeDrugMapper.insert(d);
         } else {
-            drugMapper.updateById(d);
+            bizDischargeDrugMapper.updateById(d);
         }
         return toVo(d);
     }
@@ -85,10 +87,10 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
         LambdaQueryWrapper<BizDischargeDrug> w = new LambdaQueryWrapper<BizDischargeDrug>()
                 .eq(q.getAdmissionId() != null, BizDischargeDrug::getAdmissionId, q.getAdmissionId())
                 .eq(q.getPatientId() != null, BizDischargeDrug::getPatientId, q.getPatientId())
-                .like(StringUtils.hasText(q.getDrugName()), BizDischargeDrug::getDrugName, tr(q.getDrugName()))
+                .like(StringUtils.hasText(q.getDrugName()), BizDischargeDrug::getDrugName, TextUtil.trim(q.getDrugName()))
                 .eq(q.getDispenseStatus() != null, BizDischargeDrug::getDispenseStatus, q.getDispenseStatus())
                 .orderByDesc(BizDischargeDrug::getId);
-        IPage<BizDischargeDrug> page = drugMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
+        IPage<BizDischargeDrug> page = bizDischargeDrugMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
         return page.convert(this::toVo);
     }
 
@@ -96,14 +98,14 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
      * 按入院次列全部带药单（出院带药页选药下拉用）
      */
     public List<DischargeDrugSelectListVO> listByAdmission(Long admissionId) {
-        return drugMapper.selectList(new LambdaQueryWrapper<BizDischargeDrug>()
+        return bizDischargeDrugMapper.selectList(new LambdaQueryWrapper<BizDischargeDrug>()
                         .eq(BizDischargeDrug::getAdmissionId, admissionId)
                         .orderByDesc(BizDischargeDrug::getId))
                 .stream().map(this::toSelectVo).collect(Collectors.toList());
     }
 
     public DischargeDrugVO getDetailById(Long id) {
-        BizDischargeDrug d = drugMapper.selectById(id);
+        BizDischargeDrug d = bizDischargeDrugMapper.selectById(id);
         if (d == null || (d.getDelFlag() != null && d.getDelFlag() == 1)) {
             throw new BusinessException("带药单不存在");
         }
@@ -117,7 +119,7 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
     public List<DischargeDrugVO> dispense(DischargeDrugDTO.Dispense dto) {
         // 「请选择要发药的带药单」已收口到 DTO @NotEmpty + Controller @Valid
         List<BizDischargeDrug> list = dto.getIds().stream()
-                .map(drugMapper::selectById).collect(Collectors.toList());
+                .map(bizDischargeDrugMapper::selectById).collect(Collectors.toList());
         for (BizDischargeDrug d : list) {
             if (d == null || (d.getDelFlag() != null && d.getDelFlag() == 1)) {
                 throw new BusinessException("带药单不存在或已删除");
@@ -139,32 +141,25 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
             }
             d.setUpdateBy(who);
             d.setUpdateTime(now);
-            drugMapper.updateById(d);
+            bizDischargeDrugMapper.updateById(d);
         }
         return list.stream().map(this::toVo).collect(Collectors.toList());
     }
 
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
-        BizDischargeDrug d = drugMapper.selectById(id);
+        BizDischargeDrug d = bizDischargeDrugMapper.selectById(id);
         if (d == null || (d.getDelFlag() != null && d.getDelFlag() == 1)) {
             throw new BusinessException("带药单不存在");
         }
         if (!java.util.Objects.equals(d.getDispenseStatus(), DischargeDrugStatusEnum.PENDING.getCode())) {
             throw new BusinessException("已发药的带药单不能删除");
         }
-        drugMapper.deleteById(id);
-    }
-
-    /**
-     * MP 全局逻辑删除下 deleteById 自动走软删，这里只需要查活单时对齐 del_flag=0
-     */
-    private String tr(String s) {
-        return s == null ? null : s.trim();
+        bizDischargeDrugMapper.deleteById(id);
     }
 
     private Long requirePatientId(Long admissionId) {
-        Long patientId = drugMapper.selectPatientIdByAdmission(admissionId);
+        Long patientId = bizDischargeDrugMapper.selectPatientIdByAdmission(admissionId);
         if (patientId == null) {
             throw new BusinessException("入院记录不存在（admissionId=" + admissionId + "）");
         }
@@ -172,7 +167,7 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
     }
 
     private void fillPatientSnapshot(BizDischargeDrug d) {
-        BizDischargeDrug snap = drugMapper.selectPatientSnapshot(d.getAdmissionId());
+        BizDischargeDrug snap = bizDischargeDrugMapper.selectPatientSnapshot(d.getAdmissionId());
         if (snap != null) {
             d.setPatientNo(snap.getPatientNo());
             d.setPatientName(snap.getPatientName());
@@ -190,7 +185,7 @@ public class DischargeDrugServiceImpl implements DischargeDrugService {
     private DischargeDrugVO toVo(BizDischargeDrug d) {
         DischargeDrugVO vo = new DischargeDrugVO();
         org.springframework.beans.BeanUtils.copyProperties(d, vo);
-        vo.setDispenseStatusText(dictText.getDicDataLabel(DICT_STATUS, d.getDispenseStatus()));
+        vo.setDispenseStatusText(dictCacheService.getDicDataLabel(DICT_STATUS, d.getDispenseStatus()));
         return vo;
     }
 

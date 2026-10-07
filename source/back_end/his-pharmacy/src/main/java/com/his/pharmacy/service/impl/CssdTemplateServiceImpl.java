@@ -3,7 +3,9 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.pharmacy.dto.CssdDTO;
 import com.his.pharmacy.entity.BizCssdPackTemplate;
 import com.his.pharmacy.entity.BizCssdPackTemplateItem;
@@ -35,23 +37,19 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class CssdTemplateServiceImpl implements CssdTemplateService {
+public class CssdTemplateServiceImpl extends ServiceImpl<BizCssdPackTemplateMapper, BizCssdPackTemplate> implements CssdTemplateService {
     private final DictCacheService dictCacheService;
 
-    private final BizCssdPackTemplateMapper templateMapper;
-    private final BizCssdPackTemplateItemMapper itemMapper;
+    private final BizCssdPackTemplateMapper bizCssdPackTemplateMapper;
+    private final BizCssdPackTemplateItemMapper bizCssdPackTemplateItemMapper;
 
     // 查询
-
-    private static String tr(String s) {
-        return s == null ? null : s.trim();
-    }
 
     /**
      * 回收登记下拉数据源：仅启用模板
      */
     public List<CssdPackTemplateSelectListVO> selectList() {
-        return templateMapper.selectList(new LambdaQueryWrapper<BizCssdPackTemplate>()
+        return bizCssdPackTemplateMapper.selectList(new LambdaQueryWrapper<BizCssdPackTemplate>()
                         .eq(BizCssdPackTemplate::getDelFlag, 0)
                         .eq(BizCssdPackTemplate::getStatus, 1)
                         .orderByAsc(BizCssdPackTemplate::getTemplateCode))
@@ -63,7 +61,7 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
     }
 
     public IPage<CssdPackTemplateVO> listPage(CssdDTO.TemplateQueryPage q) {
-        String kw = tr(q.getKeyword());
+        String kw = TextUtil.trim(q.getKeyword());
         LambdaQueryWrapper<BizCssdPackTemplate> w = new LambdaQueryWrapper<BizCssdPackTemplate>()
                 .eq(BizCssdPackTemplate::getDelFlag, 0)
                 .eq(q.getStatus() != null, BizCssdPackTemplate::getStatus, q.getStatus())
@@ -71,11 +69,11 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
                         .like(BizCssdPackTemplate::getTemplateCode, kw)
                         .or().like(BizCssdPackTemplate::getPackName, kw))
                 .orderByAsc(BizCssdPackTemplate::getTemplateCode);
-        Page<BizCssdPackTemplate> page = templateMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
+        Page<BizCssdPackTemplate> page = bizCssdPackTemplateMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
 
         List<Long> ids = page.getRecords().stream().map(BizCssdPackTemplate::getId).toList();
         Map<Long, Long> countMap = ids.isEmpty() ? Map.of()
-                : itemMapper.selectList(new LambdaQueryWrapper<BizCssdPackTemplateItem>()
+                : bizCssdPackTemplateItemMapper.selectList(new LambdaQueryWrapper<BizCssdPackTemplateItem>()
                         .in(BizCssdPackTemplateItem::getTemplateId, ids))
                 .stream().collect(Collectors.groupingBy(BizCssdPackTemplateItem::getTemplateId, Collectors.counting()));
         return page.convert(t -> {
@@ -96,7 +94,7 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
      * 模板编辑器组成明细下拉：启用模板下的器械名称去重汇总（带出规格/单位）
      */
     public List<CssdPackTemplateItemSelectListVO> itemSelectList() {
-        return itemMapper.selectDistinctItemSummary().stream().map(i -> {
+        return bizCssdPackTemplateItemMapper.selectDistinctItemSummary().stream().map(i -> {
             CssdPackTemplateItemSelectListVO vo = new CssdPackTemplateItemSelectListVO();
             BeanUtils.copyProperties(i, vo);
             return vo;
@@ -105,19 +103,19 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
 
     @Transactional(rollbackFor = Exception.class)
     public CssdPackTemplateVO upsert(CssdDTO.TemplateUpsert dto) {
-        String code = tr(dto.getTemplateCode());
-        String name = tr(dto.getPackName());
+        String code = TextUtil.trim(dto.getTemplateCode());
+        String name = TextUtil.trim(dto.getPackName());
 
         BizCssdPackTemplate self = dto.getId() == null ? null : requireTemplate(dto.getId());
 
-        Long dupCode = templateMapper.selectCount(new LambdaQueryWrapper<BizCssdPackTemplate>()
+        Long dupCode = bizCssdPackTemplateMapper.selectCount(new LambdaQueryWrapper<BizCssdPackTemplate>()
                 .eq(BizCssdPackTemplate::getDelFlag, 0)
                 .eq(BizCssdPackTemplate::getTemplateCode, code)
                 .ne(self != null, BizCssdPackTemplate::getId, self == null ? null : self.getId()));
         if (dupCode > 0) {
             throw new BusinessException("包编码已存在：" + code);
         }
-        Long dupName = templateMapper.selectCount(new LambdaQueryWrapper<BizCssdPackTemplate>()
+        Long dupName = bizCssdPackTemplateMapper.selectCount(new LambdaQueryWrapper<BizCssdPackTemplate>()
                 .eq(BizCssdPackTemplate::getDelFlag, 0)
                 .eq(BizCssdPackTemplate::getPackName, name)
                 .ne(self != null, BizCssdPackTemplate::getId, self == null ? null : self.getId()));
@@ -130,29 +128,29 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
         t.setPackName(name);
         t.setSterilizeMethod(dto.getSterilizeMethod());
         t.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
-        t.setRemark(tr(dto.getRemark()));
+        t.setRemark(TextUtil.trim(dto.getRemark()));
         if (self == null) {
             t.setCreateBy(UserUtils.getCurrentUser().getRealName());
-            templateMapper.insert(t);
+            bizCssdPackTemplateMapper.insert(t);
         } else {
             t.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-            templateMapper.updateById(t);
-            itemMapper.delete(new LambdaQueryWrapper<BizCssdPackTemplateItem>()
+            bizCssdPackTemplateMapper.updateById(t);
+            bizCssdPackTemplateItemMapper.delete(new LambdaQueryWrapper<BizCssdPackTemplateItem>()
                     .eq(BizCssdPackTemplateItem::getTemplateId, t.getId()));
         }
 
         List<BizCssdPackTemplateItem> items = dto.getItems().stream().map(i -> {
             BizCssdPackTemplateItem it = new BizCssdPackTemplateItem();
             it.setTemplateId(t.getId());
-            it.setItemName(tr(i.getItemName()));
-            it.setSpec(tr(i.getSpec()));
+            it.setItemName(TextUtil.trim(i.getItemName()));
+            it.setSpec(TextUtil.trim(i.getSpec()));
             it.setUnit(StringUtils.hasText(i.getUnit()) ? i.getUnit().trim() : "件");
             it.setQuantity(i.getQuantity());
             return it;
         }).toList();
         for (int i = 0; i < items.size(); i++) {
             items.get(i).setSortNo(i + 1);
-            itemMapper.insert(items.get(i));
+            bizCssdPackTemplateItemMapper.insert(items.get(i));
         }
         return toVo(t, loadItems(t.getId()));
     }
@@ -167,11 +165,11 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
         t.setDelFlag(1);
         t.setStatus(0);
         t.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        templateMapper.updateById(t);
+        bizCssdPackTemplateMapper.updateById(t);
     }
 
     private BizCssdPackTemplate requireTemplate(Long templateId) {
-        BizCssdPackTemplate t = templateMapper.selectById(templateId);
+        BizCssdPackTemplate t = bizCssdPackTemplateMapper.selectById(templateId);
         if (t == null || Objects.equals(t.getDelFlag(), 1)) {
             throw new BusinessException("器械包模板不存在（id=" + templateId + "）");
         }
@@ -179,7 +177,7 @@ public class CssdTemplateServiceImpl implements CssdTemplateService {
     }
 
     private List<CssdPackTemplateItemVO> loadItems(Long templateId) {
-        return itemMapper.selectList(new LambdaQueryWrapper<BizCssdPackTemplateItem>()
+        return bizCssdPackTemplateItemMapper.selectList(new LambdaQueryWrapper<BizCssdPackTemplateItem>()
                         .eq(BizCssdPackTemplateItem::getTemplateId, templateId)
                         .orderByAsc(BizCssdPackTemplateItem::getSortNo)
                         .orderByAsc(BizCssdPackTemplateItem::getId))

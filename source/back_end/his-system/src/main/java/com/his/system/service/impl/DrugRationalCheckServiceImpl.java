@@ -18,11 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * 合理用药审查实现
@@ -44,14 +40,16 @@ public class DrugRationalCheckServiceImpl implements DrugRationalCheckService {
     private static final String TYPE_DOSE_SINGLE = "DOSE_SINGLE";
     private static final String TYPE_DOSE_DAILY = "DOSE_DAILY";
 
-    /** 只有禁忌级能拦（sql/130 文件头第三条） */
+    /**
+     * 只有禁忌级能拦（sql/130 文件头第三条）
+     */
     private static final int SEVERITY_FORBIDDEN = 1;
     private static final int SEVERITY_CAUTION = 2;
 
     private static final BigDecimal THOUSAND = new BigDecimal("1000");
 
-    private final SysDrugInteractionMapper interactionMapper;
-    private final SysDrugDoseLimitMapper doseLimitMapper;
+    private final SysDrugInteractionMapper sysDrugInteractionMapper;
+    private final SysDrugDoseLimitMapper sysDrugDoseLimitMapper;
 
     @Override
     public List<DrugRationalHitVO> check(List<DrugRationalItemDTO> items) {
@@ -97,7 +95,7 @@ public class DrugRationalCheckServiceImpl implements DrugRationalCheckService {
     // 相互作用
 
     private void collectInteractionHits(Knowledge knowledge, List<DrugRationalItemDTO> items,
-                                       List<DrugRationalHitVO> hits) {
+                                        List<DrugRationalHitVO> hits) {
         for (SysDrugInteraction rule : knowledge.interactions()) {
             int indexA = -1;
             for (int i = 0; i < items.size(); i++) {
@@ -125,7 +123,7 @@ public class DrugRationalCheckServiceImpl implements DrugRationalCheckService {
     }
 
     private DrugRationalHitVO buildInteractionHit(SysDrugInteraction rule, DrugRationalItemDTO a,
-                                                 DrugRationalItemDTO b) {
+                                                  DrugRationalItemDTO b) {
         DrugRationalHitVO hit = new DrugRationalHitVO();
         hit.setHitType(TYPE_INTERACTION);
         hit.setSeverity(rule.getSeverity());
@@ -146,7 +144,7 @@ public class DrugRationalCheckServiceImpl implements DrugRationalCheckService {
     // 剂量上限
 
     private void collectDoseHits(Knowledge knowledge, List<DrugRationalItemDTO> items,
-                                List<DrugRationalHitVO> hits) {
+                                 List<DrugRationalHitVO> hits) {
         for (DrugRationalItemDTO item : items) {
             BigDecimal singleMg = DosageTextParser.singleDoseMg(item.getSingleDosage(), item.getSpecification());
             if (singleMg == null) {
@@ -204,7 +202,9 @@ public class DrugRationalCheckServiceImpl implements DrugRationalCheckService {
 
     // 公共件
 
-    /** 药品名称或通用名包含成分关键字即命中（大小写无关，字典里拉丁字母写法不统一） */
+    /**
+     * 药品名称或通用名包含成分关键字即命中（大小写无关，字典里拉丁字母写法不统一）
+     */
     private boolean matches(DrugRationalItemDTO item, String component) {
         if (!StringUtils.hasText(component)) {
             return false;
@@ -230,10 +230,12 @@ public class DrugRationalCheckServiceImpl implements DrugRationalCheckService {
         iw.eq(SysDrugInteraction::getStatus, 1).orderByAsc(SysDrugInteraction::getSeverity);
         LambdaQueryWrapper<SysDrugDoseLimit> dw = new LambdaQueryWrapper<>();
         dw.eq(SysDrugDoseLimit::getStatus, 1);
-        return new Knowledge(interactionMapper.selectList(iw), doseLimitMapper.selectList(dw));
+        return new Knowledge(sysDrugInteractionMapper.selectList(iw), sysDrugDoseLimitMapper.selectList(dw));
     }
 
-    /** 数值显示：整千克显示成 g，其余保持 mg，别在提示里写一串 0 */
+    /**
+     * 数值显示：整千克显示成 g，其余保持 mg，别在提示里写一串 0
+     */
     private String mgText(BigDecimal mg) {
         BigDecimal value = mg.stripTrailingZeros();
         if (value.compareTo(THOUSAND) >= 0 && value.remainder(THOUSAND).compareTo(BigDecimal.ZERO) == 0) {

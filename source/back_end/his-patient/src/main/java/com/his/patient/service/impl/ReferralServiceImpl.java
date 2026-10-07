@@ -3,8 +3,10 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.ReferralDTO;
 import com.his.patient.entity.BizReferral;
@@ -12,11 +14,7 @@ import com.his.patient.enums.ReferralDirectionEnum;
 import com.his.patient.enums.ReferralStatusEnum;
 import com.his.patient.mapper.BizReferralMapper;
 import com.his.patient.service.ReferralService;
-import com.his.patient.vo.DeptSnapshotVO;
-import com.his.patient.vo.ReferralEscalatePayloadVO;
-import com.his.patient.vo.ReferralNotifyPayloadVO;
-import com.his.patient.vo.ReferralPatientSnapshotVO;
-import com.his.patient.vo.ReferralVO;
+import com.his.patient.vo.*;
 import com.his.system.entity.SysConfig;
 import com.his.system.entity.SysMessage;
 import com.his.system.enums.BizTypeEnum;
@@ -48,7 +46,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ReferralServiceImpl implements ReferralService {
+public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizReferral> implements ReferralService {
 
     private static final String DICT_DIRECTION = "his_referral_direction";
     private static final String DICT_STATUS = "his_referral_status";
@@ -57,8 +55,8 @@ public class ReferralServiceImpl implements ReferralService {
      */
     private static final String DUTY_REFERRAL_HOURS_KEY = "duty.coord.referral_pending_hours";
     private static final int DUTY_REFERRAL_HOURS_FALLBACK = 2;
-    private final BizReferralMapper referralMapper;
-    private final DictCacheService dictText;
+    private final BizReferralMapper bizReferralMapper;
+    private final DictCacheService dictCacheService;
     /**
      * 全院当天谁负责：转诊挂住没人接时的兜底收口人（sql/169）
      */
@@ -79,7 +77,7 @@ public class ReferralServiceImpl implements ReferralService {
         r.setAdmissionId(dto.getAdmissionId());
         r.setFromDeptId(dto.getFromDeptId());
         r.setToDeptId(dto.getToDeptId());
-        r.setToHospital(tr(dto.getToHospital()));
+        r.setToHospital(TextUtil.trim(dto.getToHospital()));
         r.setReason(dto.getReason().trim());
         r.setDirection(direction);
         r.setDiagnosis(dto.getDiagnosis());
@@ -88,7 +86,7 @@ public class ReferralServiceImpl implements ReferralService {
         r.setReferralTime(TimeUtil.nowSeconds());
         r.setRemark(dto.getRemark());
         r.setCreateBy(UserUtils.getCurrentUser().getRealName());
-        referralMapper.insert(r);
+        bizReferralMapper.insert(r);
         // 转诊是跨院动作，协调人是总值班而不是开单科室：登记即让他知道，别等患者家属来问
         notifyDutyOnCreate(r);
         return toVo(r, loadDeptNames());
@@ -99,10 +97,10 @@ public class ReferralServiceImpl implements ReferralService {
                 .eq(q.getPatientId() != null, BizReferral::getPatientId, q.getPatientId())
                 .eq(q.getDirection() != null, BizReferral::getDirection, q.getDirection())
                 .eq(q.getReferralStatus() != null, BizReferral::getReferralStatus, q.getReferralStatus())
-                .like(StringUtils.hasText(q.getToHospital()), BizReferral::getToHospital, tr(q.getToHospital()))
+                .like(StringUtils.hasText(q.getToHospital()), BizReferral::getToHospital, TextUtil.trim(q.getToHospital()))
                 .orderByDesc(BizReferral::getReferralTime)
                 .orderByDesc(BizReferral::getReferralId);
-        IPage<BizReferral> page = referralMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
+        IPage<BizReferral> page = bizReferralMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
         Map<Long, String> deptNames = loadDeptNames();
         return page.convert(r -> toVo(r, deptNames));
     }
@@ -128,7 +126,7 @@ public class ReferralServiceImpl implements ReferralService {
         r.setAuditRemark(dto.getAuditRemark());
         r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         r.setUpdateTime(r.getAuditTime());
-        referralMapper.updateById(r);
+        bizReferralMapper.updateById(r);
         return toVo(r, loadDeptNames());
     }
 
@@ -143,7 +141,7 @@ public class ReferralServiceImpl implements ReferralService {
         r.setFinishRemark(dto.getFinishRemark());
         r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         r.setUpdateTime(r.getFinishTime());
-        referralMapper.updateById(r);
+        bizReferralMapper.updateById(r);
         return toVo(r, loadDeptNames());
     }
 
@@ -160,7 +158,7 @@ public class ReferralServiceImpl implements ReferralService {
         r.setRemark((r.getRemark() == null ? "" : r.getRemark() + "；") + "取消原因：" + dto.getCancelReason().trim());
         r.setUpdateBy(UserUtils.getCurrentUser().getRealName());
         r.setUpdateTime(TimeUtil.nowSeconds());
-        referralMapper.updateById(r);
+        bizReferralMapper.updateById(r);
         return toVo(r, loadDeptNames());
     }
 
@@ -212,7 +210,7 @@ public class ReferralServiceImpl implements ReferralService {
     public int escalatePendingToDuty() {
         int hours = dutyReferralHours();
         LocalDateTime deadLine = LocalDateTime.now().minusHours(hours);
-        List<BizReferral> pending = referralMapper.selectList(new LambdaQueryWrapper<BizReferral>()
+        List<BizReferral> pending = bizReferralMapper.selectList(new LambdaQueryWrapper<BizReferral>()
                 .eq(BizReferral::getReferralStatus, ReferralStatusEnum.PENDING.getCode())
                 .lt(BizReferral::getReferralTime, deadLine)
                 .orderByAsc(BizReferral::getReferralTime));
@@ -292,12 +290,8 @@ public class ReferralServiceImpl implements ReferralService {
         }
     }
 
-    private String tr(String s) {
-        return s == null ? null : s.trim();
-    }
-
     private BizReferral requireReferral(Long id) {
-        BizReferral r = referralMapper.selectById(id);
+        BizReferral r = bizReferralMapper.selectById(id);
         if (r == null || (r.getDelFlag() != null && r.getDelFlag() == 1)) {
             throw new BusinessException("转诊单不存在");
         }
@@ -305,7 +299,7 @@ public class ReferralServiceImpl implements ReferralService {
     }
 
     private String statusText(BizReferral r) {
-        return dictText.getDicDataLabel(DICT_STATUS, r.getReferralStatus());
+        return dictCacheService.getDicDataLabel(DICT_STATUS, r.getReferralStatus());
     }
 
     /**
@@ -317,7 +311,7 @@ public class ReferralServiceImpl implements ReferralService {
     }
 
     private Map<Long, String> loadDeptNames() {
-        return referralMapper.selectDeptMap().stream()
+        return bizReferralMapper.selectDeptMap().stream()
                 .filter(m -> m.getId() != null)
                 .collect(Collectors.toMap(DeptSnapshotVO::getId,
                         m -> m.getDeptName() == null ? "" : m.getDeptName(),
@@ -327,12 +321,12 @@ public class ReferralServiceImpl implements ReferralService {
     private ReferralVO toVo(BizReferral r, Map<Long, String> deptNames) {
         ReferralVO vo = new ReferralVO();
         org.springframework.beans.BeanUtils.copyProperties(r, vo);
-        vo.setDirectionText(dictText.getDicDataLabel(DICT_DIRECTION, r.getDirection()));
-        vo.setReferralStatusText(dictText.getDicDataLabel(DICT_STATUS, r.getReferralStatus()));
+        vo.setDirectionText(dictCacheService.getDicDataLabel(DICT_DIRECTION, r.getDirection()));
+        vo.setReferralStatusText(dictCacheService.getDicDataLabel(DICT_STATUS, r.getReferralStatus()));
         vo.setFromDeptName(r.getFromDeptId() == null ? null : deptNames.get(r.getFromDeptId()));
         vo.setToDeptName(r.getToDeptId() == null ? null : deptNames.get(r.getToDeptId()));
         // 患者快照现查（患者基本信息 / 入院记录属本域，量级单条）
-        ReferralPatientSnapshotVO snap = referralMapper.selectPatientSnapshot(r.getPatientId(), r.getAdmissionId());
+        ReferralPatientSnapshotVO snap = bizReferralMapper.selectPatientSnapshot(r.getPatientId(), r.getAdmissionId());
         if (snap != null) {
             vo.setPatientNo(snap.getPatientNo());
             vo.setPatientName(snap.getPatientName());

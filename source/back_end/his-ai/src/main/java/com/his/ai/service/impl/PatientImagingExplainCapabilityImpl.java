@@ -13,6 +13,7 @@ import com.his.ai.support.PatientTextGuard;
 import com.his.ai.vo.PatientImagingExplainPromptVariablesVO;
 import com.his.ai.vo.PatientImagingExplainVO;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.entity.BizReport;
 import com.his.medicaltech.enums.ReportStatusEnum;
 import com.his.medicaltech.enums.ReportTypeEnum;
@@ -62,21 +63,17 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
                     + "报告原文请以页面展示为准；有疑问请咨询接诊医生；"
                     + "若报告标注为危急，请立即联系医生或前往急诊。";
 
-    private final BizReportMapper reportMapper;
+    private final BizReportMapper bizReportMapper;
 
     private final DictCacheService dictCacheService;
 
-    private final SysImagingPlainItemMapper imagingPlainItemMapper;
+    private final SysImagingPlainItemMapper sysImagingPlainItemMapper;
 
     private final AiExecutionService aiExecutionService;
 
     private final PatientTextGuard textGuard;
 
     private final PatientGuardianService patientGuardianService;
-
-    private static String nullToDash(String text) {
-        return StringUtils.hasText(text) ? text : "（未填写）";
-    }
 
     @Override
     public PatientImagingExplainVO execute(PatientImagingExplainDTO dto) {
@@ -85,7 +82,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
             throw new BusinessException("未获取到就诊人身份，请重新登录");
         }
 
-        BizReport report = reportMapper.selectById(dto.getReportId());
+        BizReport report = bizReportMapper.selectById(dto.getReportId());
         if (report == null) {
             throw new BusinessException("报告不存在：" + dto.getReportId());
         }
@@ -177,7 +174,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
      * 更长的关键词语义更具体）。项目名未命中再看检查方法——有的报告项目名写部位、方法在 examMethod。
      */
     private SysImagingPlainItem matchDictionary(BizReport report) {
-        List<SysImagingPlainItem> all = imagingPlainItemMapper.selectList(
+        List<SysImagingPlainItem> all = sysImagingPlainItemMapper.selectList(
                 new LambdaQueryWrapper<SysImagingPlainItem>()
                         .eq(SysImagingPlainItem::getStatus, 1));
         if (all == null || all.isEmpty()) {
@@ -203,13 +200,13 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
 
     private Optional<PatientImagingLlmOutputDTO> callModel(BizReport report, SysImagingPlainItem plain) {
         PatientImagingExplainPromptVariablesVO variables = new PatientImagingExplainPromptVariablesVO();
-        variables.setItemName(nullToDash(report.getItemName()));
-        variables.setExamMethod(nullToDash(report.getExamMethod()));
-        variables.setPositiveText(nullToDash(dictCacheService.getDicDataLabel("biz_common_positiveFlagEnum", report.getPositiveFlag())));
+        variables.setItemName(TextUtil.blankToDefault(report.getItemName(), "（未填写）"));
+        variables.setExamMethod(TextUtil.blankToDefault(report.getExamMethod(), "（未填写）"));
+        variables.setPositiveText(TextUtil.blankToDefault(dictCacheService.getDicDataLabel("biz_common_positiveFlagEnum", report.getPositiveFlag()), "（未填写）"));
         variables.setHasDictIntro(String.valueOf(plain != null));
-        variables.setFindings(nullToDash(report.getReportContent()));
-        variables.setConclusions(nullToDash(report.getConclusion()));
-        variables.setSuggestions(nullToDash(report.getSuggestions()));
+        variables.setFindings(TextUtil.blankToDefault(report.getReportContent(), "（未填写）"));
+        variables.setConclusions(TextUtil.blankToDefault(report.getConclusion(), "（未填写）"));
+        variables.setSuggestions(TextUtil.blankToDefault(report.getSuggestions(), "（未填写）"));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.PATIENT_IMAGING_EXPLAIN)
@@ -217,8 +214,8 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
                 .variables(variables)
                 .bizType(BIZ_TYPE)
                 .bizId(report.getId())
-                .inputDigest(nullToDash(report.getPatientName()) + " | "
-                        + nullToDash(report.getItemName()))
+                .inputDigest(TextUtil.blankToDefault(report.getPatientName(), "（未填写）") + " | "
+                        + TextUtil.blankToDefault(report.getItemName(), "（未填写）"))
                 .maxTokens(2048)
                 .build();
 

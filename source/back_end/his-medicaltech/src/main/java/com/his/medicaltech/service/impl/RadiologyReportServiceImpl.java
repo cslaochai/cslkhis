@@ -4,12 +4,14 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.util.TextUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.medicaltech.dto.RadioReportAuditDTO;
 import com.his.medicaltech.dto.RadioReportQueryPageDTO;
@@ -58,45 +60,25 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class RadiologyReportServiceImpl implements RadiologyReportService {
-    /**
-     * 分页每页条数上限（技术阈值，防止前端传入超大值把库拖垮；DTO 迁 PageParam 后在此夹取）
-     */
-    private static final int MAX_PAGE_SIZE = 200;
-
-
+public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, BizReport> implements RadiologyReportService {
     private final RadioReportMapper radioReportMapper;
-    private final BizReportMapper reportMapper;
-    private final BizInspectionRecordMapper inspectionRecordMapper;
-    private final BizRadioReportTemplateMapper templateMapper;
+    private final BizReportMapper bizReportMapper;
+    private final BizInspectionRecordMapper bizInspectionRecordMapper;
+    private final BizRadioReportTemplateMapper bizRadioReportTemplateMapper;
     private final ExamImageService examImageService;
-    private final EmrSignatureService signatureService;
-    private final DictCacheService subDictText;
+    private final EmrSignatureService emrSignatureService;
+    private final DictCacheService dictCacheService;
     private final SysAuditLogService sysAuditLogService;
     private final SysMessageService sysMessageService;
 
     // 查询
 
-    private static String trim(String s) {
-        return s == null ? null : s.trim();
-    }
-
-    private static String cut(String s, int max) {
-        if (s == null) {
-            return null;
-        }
-        String v = s.trim();
-        return v.length() <= max ? v : v.substring(0, max);
-    }
-
     @Override
     public PageResult<RadioReportListVO> listPage(RadioReportQueryPageDTO query) {
-        int pageNum = Math.max(query.getPageNum(), 1);
-        int pageSize = Math.min(Math.max(query.getPageSize(), 1), MAX_PAGE_SIZE);
-        IPage<RadioReportListVO> page = new Page<>(pageNum, pageSize);
+        IPage<RadioReportListVO> page = new Page<>(query.getPageNum(), query.getPageSize());
         List<RadioReportListVO> list = radioReportMapper.selectWorkbenchPage(page,
-                trim(query.getKeyword()), query.getReportStatus(), query.getPositiveFlag(),
-                query.getOnlyUnwritten(), trim(query.getStartDate()), trim(query.getEndDate()));
+                TextUtil.trim(query.getKeyword()), query.getReportStatus(), query.getPositiveFlag(),
+                query.getOnlyUnwritten(), TextUtil.trim(query.getStartDate()), TextUtil.trim(query.getEndDate()));
         fillText(list);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), list);
     }
@@ -106,7 +88,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
     @Override
     public RadioReportDetailVO getDetailByRecordId(Long recordId) {
         BizInspectionRecord record = loadRadiologyRecord(recordId);
-        BizReport report = reportMapper.selectOne(new LambdaQueryWrapper<BizReport>()
+        BizReport report = bizReportMapper.selectOne(new LambdaQueryWrapper<BizReport>()
                 .eq(BizReport::getRecordId, recordId)
                 .eq(BizReport::getReportType, ReportTypeEnum.INSPECTION.getCode())
                 .orderByDesc(BizReport::getId)
@@ -116,7 +98,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
 
     @Override
     public RadioReportDetailVO getDetailByReportId(Long reportId) {
-        BizReport report = reportId == null ? null : reportMapper.selectById(reportId);
+        BizReport report = reportId == null ? null : bizReportMapper.selectById(reportId);
         if (report == null) {
             throw new BusinessException("报告不存在或已被删除");
         }
@@ -157,7 +139,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         if (record.getRecordStatus() == null
                 || record.getRecordStatus() < InsRecordStatusEnum.RESULTED.getCode()) {
             throw new BusinessException("该检查还没拍片完成（当前状态："
-                    + subDictText.getDicDataLabel("his_inspection_record_status", record.getRecordStatus())
+                    + dictCacheService.getDicDataLabel("his_inspection_record_status", record.getRecordStatus())
                     + "），请先由技师完成拍片");
         }
 
@@ -178,11 +160,11 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         report.setReportStatus(ReportStatusEnum.PENDING_REVIEW.getCode());
         report.setRejectReason(null);
         saveOrUpdateReport(report);
-        inspectionRecordMapper.updateById(record);
+        bizInspectionRecordMapper.updateById(record);
 
         sysAuditLogService.record(employeeId, UserUtils.getCurrentUser().getRealName(),
                 "放射报告", "提交报告待审核", "biz_report", report.getId(),
-                cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
+                TextUtil.cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
                         + " 项目=" + record.getInspectionItemName()
                         + " 阴阳性=" + report.getPositiveFlag()
                         + " 签名=" + sign.getId(), 2000),
@@ -197,7 +179,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         BizInspectionRecord record = loadRadiologyRecord(report.getRecordId());
         if (!Objects.equals(ReportStatusEnum.PENDING_REVIEW.getCode(), report.getReportStatus())) {
             throw new BusinessException("只有「待审核」的报告能审核（当前："
-                    + subDictText.getDicDataLabel("his_report_status", report.getReportStatus()) + "）");
+                    + dictCacheService.getDicDataLabel("his_report_status", report.getReportStatus()) + "）");
         }
         // 双签制度：谁写的报告谁不能自己审。用员工ID 比，不用姓名比 ——
         // 同名同姓的两个医师用姓名判会互相误判，要么拦错人要么放过去。
@@ -214,20 +196,20 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         record.setAuditBy(UserUtils.getCurrentUser().getRealName());
         record.setAuditTime(sign.getSignedTime());
         record.setRecordStatus(InsRecordStatusEnum.REVIEWED.getCode());
-        inspectionRecordMapper.updateById(record);
+        bizInspectionRecordMapper.updateById(record);
 
         report.setReportStatus(ReportStatusEnum.REVIEWED.getCode());
         report.setAuditBy(UserUtils.getCurrentUser().getRealName());
         report.setAuditTime(sign.getSignedTime());
         report.setRejectReason(null);
         if (StringUtils.hasText(dto.getReason())) {
-            report.setRemark(cut("审核意见：" + dto.getReason(), 500));
+            report.setRemark(TextUtil.cut("审核意见：" + dto.getReason(), 500));
         }
-        reportMapper.updateById(report);
+        bizReportMapper.updateById(report);
 
         sysAuditLogService.record(current, UserUtils.getCurrentUser().getRealName(),
                 "放射报告", "审核通过", "biz_report", report.getId(),
-                cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
+                TextUtil.cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
                         + " 意见=" + (StringUtils.hasText(dto.getReason()) ? dto.getReason() : "无")
                         + " 签名=" + sign.getId(), 2000),
                 true, null);
@@ -243,16 +225,16 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         BizInspectionRecord record = loadRadiologyRecord(report.getRecordId());
         if (!Objects.equals(ReportStatusEnum.PENDING_REVIEW.getCode(), report.getReportStatus())) {
             throw new BusinessException("只有「待审核」的报告能退回（当前："
-                    + subDictText.getDicDataLabel("his_report_status", report.getReportStatus()) + "）");
+                    + dictCacheService.getDicDataLabel("his_report_status", report.getReportStatus()) + "）");
         }
         if (!StringUtils.hasText(dto.getReason())) {
             throw new BusinessException("退回必须写明原因：医师要照着这个原因改报告，没有原因的退回没法执行");
         }
 
         report.setReportStatus(ReportStatusEnum.DRAFT.getCode());
-        report.setRejectReason(cut(dto.getReason(), 500));
+        report.setRejectReason(TextUtil.cut(dto.getReason(), 500));
         report.setReportVersion(report.getReportVersion() == null ? 2 : report.getReportVersion() + 1);
-        reportMapper.updateById(report);
+        bizReportMapper.updateById(report);
 
         // 退回后必须清掉签名指针，否则医师改完再提交会被签名层挡住
         // （"已有报告医师签名，不能重复签名"）。签名记录本身没删 —— 它仍在签名链上，
@@ -260,7 +242,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         Long current = UserUtils.getCurrentUser().getEmployeeId();
         sysAuditLogService.record(current, UserUtils.getCurrentUser().getRealName(),
                 "放射报告", "退回重写", "biz_report", report.getId(),
-                cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
+                TextUtil.cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
                         + " 原因=" + dto.getReason()
                         + " 原报告签名=" + record.getReportSignId()
                         + "（已作废，重写后可重新签名）", 2000),
@@ -276,7 +258,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
                 .set(BizInspectionRecord::getAuditBy, null)
                 .set(BizInspectionRecord::getAuditTime, null)
                 .set(BizInspectionRecord::getRecordStatus, InsRecordStatusEnum.RESULTED.getCode());
-        inspectionRecordMapper.update(null, uw);
+        bizInspectionRecordMapper.update(null, uw);
         record.setReportSignId(null);
         record.setReportSignedTime(null);
         record.setAuditSignId(null);
@@ -293,19 +275,19 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         // 这正是本次分岗要堵掉的口子。
         if (!Objects.equals(ReportStatusEnum.REVIEWED.getCode(), report.getReportStatus())) {
             throw new BusinessException("只有「已审核」的报告能发布（当前："
-                    + subDictText.getDicDataLabel("his_report_status", report.getReportStatus())
+                    + dictCacheService.getDicDataLabel("his_report_status", report.getReportStatus())
                     + "）：请先完成审核");
         }
         LocalDateTime now = LocalDateTime.now();
         report.setReportStatus(ReportStatusEnum.PUBLISHED.getCode());
         report.setPublishBy(UserUtils.getCurrentUser().getRealName());
         report.setPublishTime(now);
-        reportMapper.updateById(report);
+        bizReportMapper.updateById(report);
 
         record.setRecordStatus(InsRecordStatusEnum.PUBLISHED.getCode());
         record.setReportTime(now);
         record.setReportBy(UserUtils.getCurrentUser().getRealName());
-        inspectionRecordMapper.updateById(record);
+        bizInspectionRecordMapper.updateById(record);
 
         if (record.getApplyDoctorId() != null) {
             sysMessageService.sendSystemMessage(record.getApplyDoctorId(), record.getApplyDoctorName(),
@@ -315,7 +297,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         }
         sysAuditLogService.record(UserUtils.getCurrentUser().getEmployeeId(), UserUtils.getCurrentUser().getRealName(),
                 "放射报告", "发布报告", "biz_report", report.getId(),
-                cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName(), 2000),
+                TextUtil.cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName(), 2000),
                 true, null);
         return toDetail(record, report);
     }
@@ -330,7 +312,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         if (recordId == null) {
             throw new BusinessException("缺少检查记录ID");
         }
-        BizInspectionRecord record = inspectionRecordMapper.selectById(recordId);
+        BizInspectionRecord record = bizInspectionRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("检查记录不存在或已被删除");
         }
@@ -351,7 +333,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
     }
 
     private BizReport requireReport(Long reportId) {
-        BizReport report = reportId == null ? null : reportMapper.selectById(reportId);
+        BizReport report = reportId == null ? null : bizReportMapper.selectById(reportId);
         if (report == null) {
             throw new BusinessException("报告不存在或已被删除");
         }
@@ -366,7 +348,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         if (Objects.equals(ReportStatusEnum.PUBLISHED.getCode(), st)
                 || Objects.equals(ReportStatusEnum.INVALID.getCode(), st)) {
             throw new BusinessException("报告已"
-                    + subDictText.getDicDataLabel("his_report_status", st) + "，不能再修改");
+                    + dictCacheService.getDicDataLabel("his_report_status", st) + "，不能再修改");
         }
     }
 
@@ -374,7 +356,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
      * 找已有报告，没有就按记录建一条空壳（报告号服务端生成）
      */
     private BizReport ensureReport(BizInspectionRecord record) {
-        BizReport exists = reportMapper.selectOne(new LambdaQueryWrapper<BizReport>()
+        BizReport exists = bizReportMapper.selectOne(new LambdaQueryWrapper<BizReport>()
                 .eq(BizReport::getRecordId, record.getId())
                 .eq(BizReport::getReportType, ReportTypeEnum.INSPECTION.getCode())
                 .orderByDesc(BizReport::getId)
@@ -413,9 +395,9 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
      */
     private void saveOrUpdateReport(BizReport report) {
         if (report.getId() == null) {
-            reportMapper.insert(report);
+            bizReportMapper.insert(report);
         } else {
-            reportMapper.updateById(report);
+            bizReportMapper.updateById(report);
         }
     }
 
@@ -426,10 +408,10 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
      */
     private void applyContent(BizInspectionRecord record, BizReport report, RadioReportUpsertDTO dto) {
         report.setTemplateId(dto.getTemplateId());
-        report.setExamMethod(cut(dto.getExamMethod(), 200));
+        report.setExamMethod(TextUtil.cut(dto.getExamMethod(), 200));
         report.setReportContent(dto.getReportContent());
         report.setConclusion(dto.getConclusion());
-        report.setSuggestions(cut(dto.getSuggestions(), 1000));
+        report.setSuggestions(TextUtil.cut(dto.getSuggestions(), 1000));
         report.setPositiveFlag(dto.getPositiveFlag() == null ? 0 : dto.getPositiveFlag());
         report.setIsCritical(dto.getIsCritical() == null ? 0 : dto.getIsCritical());
         // 胶片张数是**事实**不是入参：从检查胶片用量现算，前端传什么都不认。
@@ -456,7 +438,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         cmd.setSignerDeptId(record.getInspectionDeptId());
         cmd.setSignerDeptName(record.getInspectionDeptName());
         try {
-            return signatureService.sign(cmd);
+            return emrSignatureService.sign(cmd);
         } catch (BusinessException e) {
             throw new BusinessException("检查报告 " + record.getRecordNo() + " " + scene.getText()
                     + "失败：" + e.getMessage());
@@ -468,11 +450,11 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
             return;
         }
         for (RadioReportListVO v : list) {
-            v.setRecordStatusText(subDictText.getDicDataLabel("his_inspection_record_status", v.getRecordStatus()));
+            v.setRecordStatusText(dictCacheService.getDicDataLabel("his_inspection_record_status", v.getRecordStatus()));
             v.setReportStatusText(v.getReportStatus() == null ? "未写报告"
-                    : subDictText.getDicDataLabel("his_report_status", v.getReportStatus()));
+                    : dictCacheService.getDicDataLabel("his_report_status", v.getReportStatus()));
             v.setPositiveFlagText(v.getPositiveFlag() == null ? null
-                    : subDictText.getDicDataLabel("his_positive_flag", v.getPositiveFlag()));
+                    : dictCacheService.getDicDataLabel("his_positive_flag", v.getPositiveFlag()));
         }
     }
 
@@ -486,7 +468,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         vo.setPatientNo(record.getPatientNo());
         vo.setPatientName(record.getPatientName());
         vo.setGender(record.getGender());
-        vo.setGenderText(record.getGender() == null ? null : subDictText.getDicDataLabel("sys_gender", record.getGender()));
+        vo.setGenderText(record.getGender() == null ? null : dictCacheService.getDicDataLabel("sys_gender", record.getGender()));
         vo.setAge(record.getAge());
         vo.setVisitDate(record.getVisitDate());
         vo.setItemCode(record.getInspectionItemCode());
@@ -496,7 +478,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         vo.setApplyDoctorName(record.getApplyDoctorName());
         vo.setClinicalDiagnosis(record.getClinicalDiagnosis());
         vo.setRecordStatus(record.getRecordStatus());
-        vo.setRecordStatusText(subDictText.getDicDataLabel("his_inspection_record_status", record.getRecordStatus()));
+        vo.setRecordStatusText(dictCacheService.getDicDataLabel("his_inspection_record_status", record.getRecordStatus()));
         vo.setReportSignId(record.getReportSignId());
         vo.setAuditSignId(record.getAuditSignId());
         // 影像帧挂在申请单上（sql/137），这里顺着 apply_id 取，详情页不用二次请求
@@ -512,7 +494,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
             vo.setReportId(report.getId());
             vo.setReportNo(report.getReportNo());
             vo.setReportStatus(report.getReportStatus());
-            vo.setReportStatusText(subDictText.getDicDataLabel("his_report_status", report.getReportStatus()));
+            vo.setReportStatusText(dictCacheService.getDicDataLabel("his_report_status", report.getReportStatus()));
             vo.setTemplateId(report.getTemplateId());
             vo.setExamMethod(report.getExamMethod());
             vo.setReportContent(report.getReportContent());
@@ -520,7 +502,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
             vo.setSuggestions(report.getSuggestions());
             vo.setPositiveFlag(report.getPositiveFlag());
             vo.setPositiveFlagText(report.getPositiveFlag() == null ? null
-                    : subDictText.getDicDataLabel("his_positive_flag", report.getPositiveFlag()));
+                    : dictCacheService.getDicDataLabel("his_positive_flag", report.getPositiveFlag()));
             vo.setIsCritical(report.getIsCritical());
             vo.setWriteBy(report.getWriteBy());
             vo.setWriteById(report.getWriteById());
@@ -551,7 +533,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         }
         w.orderByAsc(BizRadioReportTemplate::getSortOrder)
                 .orderByAsc(BizRadioReportTemplate::getId);
-        List<RadioReportTemplateVO> all = templateMapper.selectList(w).stream()
+        List<RadioReportTemplateVO> all = bizRadioReportTemplateMapper.selectList(w).stream()
                 .map(this::toTemplateVO).collect(Collectors.toList());
         // 模态过滤放在内存里做：modality 为空的「通用模板」任何模态都能用，
         // 写成 SQL 的 `modality = ?` 会把通用模板滤掉，而写 `modality = ? OR modality IS NULL`
@@ -566,7 +548,7 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
 
     @Override
     public List<RadioReportTemplateVO> templateList() {
-        return templateMapper.selectList(new LambdaQueryWrapper<BizRadioReportTemplate>()
+        return bizRadioReportTemplateMapper.selectList(new LambdaQueryWrapper<BizRadioReportTemplate>()
                         .orderByAsc(BizRadioReportTemplate::getSortOrder)
                         .orderByAsc(BizRadioReportTemplate::getId))
                 .stream().map(this::toTemplateVO).collect(Collectors.toList());
@@ -586,17 +568,17 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
             entity.setStatus(1);
         }
         if (dto.getId() == null) {
-            long dup = templateMapper.selectCount(new LambdaQueryWrapper<BizRadioReportTemplate>()
+            long dup = bizRadioReportTemplateMapper.selectCount(new LambdaQueryWrapper<BizRadioReportTemplate>()
                     .eq(BizRadioReportTemplate::getTemplateCode, entity.getTemplateCode()));
             if (dup > 0) {
                 throw new BusinessException("模板编码 " + entity.getTemplateCode() + " 已存在");
             }
-            templateMapper.insert(entity);
+            bizRadioReportTemplateMapper.insert(entity);
         } else {
             entity.setId(dto.getId());
-            templateMapper.updateById(entity);
+            bizRadioReportTemplateMapper.updateById(entity);
         }
-        return toTemplateVO(templateMapper.selectById(entity.getId()));
+        return toTemplateVO(bizRadioReportTemplateMapper.selectById(entity.getId()));
     }
 
     @Override
@@ -604,14 +586,14 @@ public class RadiologyReportServiceImpl implements RadiologyReportService {
         if (id == null) {
             throw new BusinessException("缺少模板ID");
         }
-        return templateMapper.purgeById(id) > 0;
+        return bizRadioReportTemplateMapper.purgeById(id) > 0;
     }
 
     private RadioReportTemplateVO toTemplateVO(BizRadioReportTemplate e) {
         RadioReportTemplateVO vo = new RadioReportTemplateVO();
         BeanUtils.copyProperties(e, vo);
         vo.setModalityText(e.getModality() == null ? null
-                : subDictText.getDicDataLabel("his_exam_device_type", e.getModality()));
+                : dictCacheService.getDicDataLabel("his_exam_device_type", e.getModality()));
         if (!StringUtils.hasText(vo.getTemplateName())) {
             vo.setTemplateName(e.getTemplateCode());
         }

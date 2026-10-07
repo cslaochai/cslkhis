@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.YesOrNoEnum;
@@ -64,7 +65,7 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class InpatientConsultationServiceImpl implements InpatientConsultationService {
+public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultationMapper, BizConsultation> implements InpatientConsultationService {
     /**
      * 申请时未指定会诊医生：既有列 doctor_id 是 NOT NULL，用 0 表示"未指定"
      */
@@ -92,12 +93,6 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
     private final SysEmployeeMapper sysEmployeeMapper;
 
     // 申请 / 修改
-    private static Long minutesBetween(LocalDateTime from, LocalDateTime to) {
-        if (from == null || to == null) {
-            return null;
-        }
-        return Duration.between(from, to).toMinutes();
-    }
 
     /**
      * 会诊是否按时应答：急会诊 ≤10 分钟、普通 ≤24 小时；未应答按超时计。
@@ -353,7 +348,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         closeConsultTodo(entity.getConsultationId(), 1);
 
         // 急会诊超时只提醒、不阻断：临床已经接诊了，再拒绝反而是把病人放下
-        Long waitMinutes = minutesBetween(entity.getApplyTime(), now);
+        Long waitMinutes = TimeUtil.minutesBetween(entity.getApplyTime(), now);
         boolean overdue = Objects.equals(YesOrNoEnum.YES.getCode(), entity.getIsUrgent()) && waitMinutes != null
                 && waitMinutes > URGENT_RESPONSE_MINUTES;
         if (overdue) {
@@ -574,7 +569,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         LocalDateTime now = TimeUtil.nowSeconds();
         LocalDateTime from = vo.getApplyTime();
         LocalDateTime to = vo.getAcceptTime() != null ? vo.getAcceptTime() : now;
-        vo.setResponseMinutes(from == null ? null : minutesBetween(from, to));
+        vo.setResponseMinutes(from == null ? null : TimeUtil.minutesBetween(from, to));
 
         // 急会诊超时**查询时算**：只看"还没应答的急会诊"
         boolean overdue = Objects.equals(YesOrNoEnum.YES.getCode(), vo.getIsUrgent()) && pending
@@ -582,7 +577,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
                 && now.isAfter(vo.getApplyTime().plusMinutes(URGENT_RESPONSE_MINUTES));
         vo.setOverdue(overdue);
         if (overdue) {
-            vo.setOverdueText("急会诊已等待 " + minutesBetween(vo.getApplyTime(), now) + " 分钟未应答（时限 "
+            vo.setOverdueText("急会诊已等待 " + TimeUtil.minutesBetween(vo.getApplyTime(), now) + " 分钟未应答（时限 "
                     + URGENT_RESPONSE_MINUTES + " 分钟）");
         }
     }

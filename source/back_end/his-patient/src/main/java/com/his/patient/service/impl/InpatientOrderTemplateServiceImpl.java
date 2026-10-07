@@ -58,8 +58,8 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
      */
     private static final int SELECT_LIMIT = 50;
 
-    private final BizInpatientOrderTemplateMapper templateMapper;
-    private final BizInpatientOrderTemplateItemMapper itemMapper;
+    private final BizInpatientOrderTemplateMapper bizInpatientOrderTemplateMapper;
+    private final BizInpatientOrderTemplateItemMapper bizInpatientOrderTemplateItemMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -110,19 +110,19 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
             template.setDoctorId(doctorId);
             template.setDoctorName(operatorUser.getRealName());
             template.setDeptId(currentDeptId());
-            templateMapper.insert(template);
+            bizInpatientOrderTemplateMapper.insert(template);
         } else {
             BizInpatientOrderTemplate owned = requireOwned(dto.getId(), doctorId);
             // 归属与创建时科室不随修改漂移：模板属于谁、在哪个科室建的，是当时的事实
             template.setId(owned.getId());
-            templateMapper.updateById(template);
+            bizInpatientOrderTemplateMapper.updateById(template);
         }
 
-        itemMapper.delete(new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
+        bizInpatientOrderTemplateItemMapper.delete(new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
                 .eq(BizInpatientOrderTemplateItem::getTemplateId, template.getId()));
         int sort = 1;
         for (InpatientOrderItemDTO item : items) {
-            itemMapper.insert(toItemEntity(template.getId(), sort++, item));
+            bizInpatientOrderTemplateItemMapper.insert(toItemEntity(template.getId(), sort++, item));
         }
 
         log.info("保存医嘱模板 id={} 名称={} 医生={} 明细={} 条",
@@ -137,7 +137,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
             throw new BusinessException("当前用户信息不存在");
         }
         BizInpatientOrderTemplate template = requireOwned(id, operatorUser.getEmployeeId());
-        List<BizInpatientOrderTemplateItem> items = itemMapper.selectList(
+        List<BizInpatientOrderTemplateItem> items = bizInpatientOrderTemplateItemMapper.selectList(
                 new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
                         .eq(BizInpatientOrderTemplateItem::getTemplateId, template.getId())
                         .orderByAsc(BizInpatientOrderTemplateItem::getSortNo));
@@ -171,7 +171,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
                         .or().like(BizInpatientOrderTemplate::getRemark, keyword))
                 .orderByDesc(BizInpatientOrderTemplate::getCreateTime);
 
-        return templateMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper)
+        return bizInpatientOrderTemplateMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper)
                 .convert(entity -> {
                     InpatientOrderTemplateListVO vo = new InpatientOrderTemplateListVO();
                     BeanUtils.copyProperties(entity, vo);
@@ -187,7 +187,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
             throw new BusinessException("当前用户信息不存在");
         }
         Long doctorId = operatorUser.getEmployeeId();
-        List<BizInpatientOrderTemplate> list = templateMapper.selectList(
+        List<BizInpatientOrderTemplate> list = bizInpatientOrderTemplateMapper.selectList(
                 new LambdaQueryWrapper<BizInpatientOrderTemplate>()
                         .eq(BizInpatientOrderTemplate::getDoctorId, doctorId)
                         .orderByDesc(BizInpatientOrderTemplate::getCreateTime)
@@ -211,9 +211,9 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         }
         BizInpatientOrderTemplate template = requireOwned(id, operatorUser.getEmployeeId());
         // 明细无软删列，物理删；主表走 @TableLogic 逻辑删，历史医嘱上"来自模板"的痕迹不受影响
-        itemMapper.delete(new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
+        bizInpatientOrderTemplateItemMapper.delete(new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
                 .eq(BizInpatientOrderTemplateItem::getTemplateId, template.getId()));
-        templateMapper.deleteById(template.getId());
+        bizInpatientOrderTemplateMapper.deleteById(template.getId());
         log.info("删除医嘱模板 id={} 名称={} 医生={}", template.getId(), template.getTemplateName(), template.getDoctorName());
     }
 
@@ -232,7 +232,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         if (doctorId == null) {
             throw new BusinessException("未获取到当前登录医生");
         }
-        BizInpatientOrderTemplate template = templateMapper.selectById(id);
+        BizInpatientOrderTemplate template = bizInpatientOrderTemplateMapper.selectById(id);
         if (template == null || !Objects.equals(doctorId, template.getDoctorId())) {
             throw new BusinessException("医嘱模板不存在");
         }
@@ -240,7 +240,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
     }
 
     private void assertNameNotDuplicated(String templateName, Long excludeId, Long doctorId) {
-        Long hits = templateMapper.selectCount(new LambdaQueryWrapper<BizInpatientOrderTemplate>()
+        Long hits = bizInpatientOrderTemplateMapper.selectCount(new LambdaQueryWrapper<BizInpatientOrderTemplate>()
                 .eq(BizInpatientOrderTemplate::getDoctorId, doctorId)
                 .eq(BizInpatientOrderTemplate::getTemplateName, templateName)
                 .ne(excludeId != null, BizInpatientOrderTemplate::getId, excludeId));

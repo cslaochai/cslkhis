@@ -5,6 +5,7 @@ import com.his.common.entity.SignSubject;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
+import com.his.common.util.TimeUtil;
 import com.his.medicaltech.entity.BizInspectionRecord;
 import com.his.medicaltech.enums.InsRecordStatusEnum;
 import com.his.medicaltech.mapper.BizInspectionRecordMapper;
@@ -14,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
@@ -36,7 +36,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class InspectionReportSignProviderImpl implements SignableContentProvider, InspectionReportSignProvider {
 
-    private final BizInspectionRecordMapper recordMapper;
+    private final BizInspectionRecordMapper bizInspectionRecordMapper;
 
     @Override
     public SignBizTypeEnum bizType() {
@@ -45,7 +45,7 @@ public class InspectionReportSignProviderImpl implements SignableContentProvider
 
     @Override
     public SignSubject load(Long bizId) {
-        BizInspectionRecord r = recordMapper.selectById(bizId);
+        BizInspectionRecord r = bizInspectionRecordMapper.selectById(bizId);
         if (r == null) {
             return null;
         }
@@ -63,7 +63,7 @@ public class InspectionReportSignProviderImpl implements SignableContentProvider
 
     @Override
     public String blockReason(SignSubject subject, SignSceneEnum scene) {
-        BizInspectionRecord r = recordMapper.selectById(subject.bizId());
+        BizInspectionRecord r = bizInspectionRecordMapper.selectById(subject.bizId());
         if (r == null) {
             return "检查记录不存在或已被删除，无法签名";
         }
@@ -105,7 +105,7 @@ public class InspectionReportSignProviderImpl implements SignableContentProvider
     public void applySignAnchor(Long bizId, SignSceneEnum scene, Long signId, LocalDateTime signedTime) {
         BizInspectionRecord patch = new BizInspectionRecord();
         patch.setId(bizId);
-        LocalDateTime t = signedTime == null ? null : signedTime.truncatedTo(ChronoUnit.SECONDS);
+        LocalDateTime t = signedTime == null ? null : TimeUtil.toSeconds(signedTime);
         if (scene == SignSceneEnum.REPORT_AUDIT) {
             patch.setAuditSignId(signId);
             patch.setAuditSignedTime(t);
@@ -113,26 +113,26 @@ public class InspectionReportSignProviderImpl implements SignableContentProvider
             patch.setReportSignId(signId);
             patch.setReportSignedTime(t);
         }
-        recordMapper.updateById(patch);
+        bizInspectionRecordMapper.updateById(patch);
     }
 
     @Override
     public void revokeSignAnchor(Long bizId, Long signId) {
-        BizInspectionRecord r = recordMapper.selectById(bizId);
+        BizInspectionRecord r = bizInspectionRecordMapper.selectById(bizId);
         if (r == null) {
             return;
         }
         // 表里没有 sign_status 列，表达"没有有效签名"只能清指针；
         // updateById 不更新 null 字段，所以 set null 必须用 UpdateWrapper。
         if (Objects.equals(signId, r.getReportSignId())) {
-            recordMapper.update(null, new LambdaUpdateWrapper<BizInspectionRecord>()
+            bizInspectionRecordMapper.update(null, new LambdaUpdateWrapper<BizInspectionRecord>()
                     .eq(BizInspectionRecord::getId, bizId)
                     .set(BizInspectionRecord::getReportSignId, null)
                     .set(BizInspectionRecord::getReportSignedTime, null));
             log.info("已清除检查报告签名指针 recordNo={} signId={}", r.getRecordNo(), signId);
         }
         if (Objects.equals(signId, r.getAuditSignId())) {
-            recordMapper.update(null, new LambdaUpdateWrapper<BizInspectionRecord>()
+            bizInspectionRecordMapper.update(null, new LambdaUpdateWrapper<BizInspectionRecord>()
                     .eq(BizInspectionRecord::getId, bizId)
                     .set(BizInspectionRecord::getAuditSignId, null)
                     .set(BizInspectionRecord::getAuditSignedTime, null));

@@ -2,9 +2,11 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TimeUtil;
 import com.his.emr.dto.*;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizRecordQcFlow;
@@ -26,8 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
@@ -42,24 +42,24 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class RecordQcFlowServiceImpl implements RecordQcFlowService {
-    private final BizRecordQcFlowMapper flowMapper;
-    private final BizRecordQcFlowActionMapper actionMapper;
-    private final BizMedicalRecordMapper medicalRecordMapper;
-    private final RedisSequenceService sequenceService;
+public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, BizRecordQcFlow> implements RecordQcFlowService {
+    private final BizRecordQcFlowMapper bizRecordQcFlowMapper;
+    private final BizRecordQcFlowActionMapper bizRecordQcFlowActionMapper;
+    private final BizMedicalRecordMapper bizMedicalRecordMapper;
+    private final RedisSequenceService redisSequenceService;
     private DictCacheService dictCacheService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public RecordQcFlowVO start(RecordQcFlowStartDTO dto) {
-        BizMedicalRecord record = medicalRecordMapper.selectById(dto.getRecordId());
+        BizMedicalRecord record = bizMedicalRecordMapper.selectById(dto.getRecordId());
         if (record == null || (record.getDelFlag() != null && record.getDelFlag() == 1)) {
             throw new BusinessException("病历不存在或已删除");
         }
         if (record.getRecordStatus() != null && record.getRecordStatus() == 4) {
             throw new BusinessException("病历已作废，不能发起质控流转");
         }
-        if (flowMapper.countActiveByRecordId(dto.getRecordId()) > 0) {
+        if (bizRecordQcFlowMapper.countActiveByRecordId(dto.getRecordId()) > 0) {
             throw new BusinessException("该病历已有在途质控流转（未终审通过），不能重复发起");
         }
 
@@ -75,11 +75,11 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         flow.setCurrentLevel(RecordQcLevelEnum.DEPT.getCode());
         flow.setCreateBy(UserUtils.getCurrentUser().getRealName());
         flow.setRemark(dto.getRemark());
-        flowMapper.insert(flow);
+        bizRecordQcFlowMapper.insert(flow);
 
         insertAction(flow.getId(), RecordQcLevelEnum.DEPT.getCode(), RecordQcActionEnum.START.getCode(), "发起三级质控流转",
                 null, null);
-        return decorate(flowMapper.selectFlowById(flow.getId()));
+        return decorate(bizRecordQcFlowMapper.selectFlowById(flow.getId()));
     }
 
     @Override
@@ -102,7 +102,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         flow.setFlowStatus(nextStatus);
         flow.setCurrentLevel(nextLevel);
         flow.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        flowMapper.updateById(flow);
+        bizRecordQcFlowMapper.updateById(flow);
 
         insertAction(flow.getId(), levelOfStatus(flow.getFlowStatus()), RecordQcActionEnum.APPROVE.getCode(),
                 dto.getOpinion(), null, null);
@@ -121,7 +121,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         flow.setReturnRequirement(dto.getRequirement());
         flow.setReturnDeadline(dto.getReturnDeadline());
         flow.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        flowMapper.updateById(flow);
+        bizRecordQcFlowMapper.updateById(flow);
 
         insertAction(flow.getId(), flow.getReturnLevel(), RecordQcActionEnum.RETURN.getCode(),
                 dto.getOpinion(), dto.getDefectDetail(), dto.getRequirement());
@@ -139,7 +139,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         flow.setFlowStatus(statusOfLevel(flow.getReturnLevel() == null ? RecordQcLevelEnum.DEPT.getCode() : flow.getReturnLevel()));
         flow.setCurrentLevel(flow.getReturnLevel() == null ? RecordQcLevelEnum.DEPT.getCode() : flow.getReturnLevel());
         flow.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        flowMapper.updateById(flow);
+        bizRecordQcFlowMapper.updateById(flow);
 
         insertAction(flow.getId(), RecordQcLevelEnum.DEPT.getCode(), RecordQcActionEnum.RESUBMIT.getCode(), dto.getOpinion(), null, null);
     }
@@ -159,7 +159,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         flow.setFinalScore(dto.getFinalScore());
         flow.setFinalOpinion(dto.getFinalOpinion());
         flow.setUpdateBy(UserUtils.getCurrentUser().getRealName());
-        flowMapper.updateById(flow);
+        bizRecordQcFlowMapper.updateById(flow);
 
         insertAction(flow.getId(), RecordQcLevelEnum.MEDAFFAIRS.getCode(), RecordQcActionEnum.FINAL.getCode(),
                 dto.getFinalOpinion(), null, null);
@@ -167,7 +167,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
 
     @Override
     public PageResult<RecordQcFlowVO> page(RecordQcFlowQueryPageDTO q) {
-        Page<RecordQcFlowVO> page = flowMapper.selectFlowPage(
+        Page<RecordQcFlowVO> page = bizRecordQcFlowMapper.selectFlowPage(
                 new Page<>(q.getPageNum(), q.getPageSize()),
                 q.getFlowNo(), q.getFlowStatus(), q.getCurrentLevel(), q.getRecordSource(), q.getKeyword());
         page.getRecords().forEach(this::decorate);
@@ -176,7 +176,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
 
     @Override
     public RecordQcFlowVO getDetailById(Long id) {
-        RecordQcFlowVO vo = flowMapper.selectFlowById(id);
+        RecordQcFlowVO vo = bizRecordQcFlowMapper.selectFlowById(id);
         if (vo == null) {
             throw new BusinessException("流转单不存在或已删除");
         }
@@ -185,7 +185,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
 
     @Override
     public List<RecordQcFlowActionVO> listActions(Long flowId) {
-        List<BizRecordQcFlowAction> list = actionMapper.selectList(
+        List<BizRecordQcFlowAction> list = bizRecordQcFlowActionMapper.selectList(
                 new LambdaQueryWrapper<BizRecordQcFlowAction>()
                         .eq(BizRecordQcFlowAction::getFlowId, flowId)
                         .eq(BizRecordQcFlowAction::getDelFlag, 0)
@@ -197,7 +197,7 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
     // 私有
 
     private String nextFlowNo() {
-        return sequenceService.generateRecordQcFlowNo();
+        return redisSequenceService.generateRecordQcFlowNo();
     }
 
     private void insertAction(Long flowId, int level, int action,
@@ -211,15 +211,15 @@ public class RecordQcFlowServiceImpl implements RecordQcFlowService {
         a.setRequirement(requirement);
         a.setOperatorId(UserUtils.getCurrentUser().getEmployeeId());
         a.setOperatorName(UserUtils.getCurrentUser().getRealName());
-        a.setActionTime(LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS));
-        actionMapper.insert(a);
+        a.setActionTime(TimeUtil.nowSeconds());
+        bizRecordQcFlowActionMapper.insert(a);
     }
 
     /**
      * 取流转单（行锁）并校验存在
      */
     private BizRecordQcFlow lockAndCheck(Long flowId) {
-        BizRecordQcFlow flow = flowMapper.selectByIdForUpdate(flowId);
+        BizRecordQcFlow flow = bizRecordQcFlowMapper.selectByIdForUpdate(flowId);
         if (flow == null) {
             throw new BusinessException("流转单不存在或已删除");
         }

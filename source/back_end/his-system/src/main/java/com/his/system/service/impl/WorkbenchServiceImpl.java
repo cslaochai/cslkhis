@@ -2,24 +2,21 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.system.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
-import com.his.system.provider.WorkbenchMetricProvider;
 import com.his.system.dto.WorkbenchRoleConfigUpsertDTO;
 import com.his.system.dto.WorkbenchRoleWidgetDTO;
 import com.his.system.dto.WorkbenchWidgetQueryPageDTO;
 import com.his.system.dto.WorkbenchWidgetUpsertDTO;
-import com.his.system.entity.SysMenu;
-import com.his.system.entity.SysRole;
-import com.his.system.entity.SysWorkbenchRole;
-import com.his.system.entity.SysWorkbenchWidget;
+import com.his.system.entity.*;
 import com.his.system.mapper.SysMenuMapper;
 import com.his.system.mapper.SysRoleMapper;
 import com.his.system.mapper.SysWorkbenchRoleMapper;
 import com.his.system.mapper.SysWorkbenchWidgetMapper;
+import com.his.system.provider.WorkbenchMetricProvider;
 import com.his.system.service.WorkbenchService;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.WorkbenchConfigVO;
 import com.his.system.vo.WorkbenchDataVO;
 import com.his.system.vo.WorkbenchRoleConfigVO;
@@ -32,11 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -49,15 +42,17 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class WorkbenchServiceImpl implements WorkbenchService {
+public class WorkbenchServiceImpl extends ServiceImpl<SysWorkbenchWidgetMapper, SysWorkbenchWidget> implements WorkbenchService {
 
-    /** 卡片区域枚举，与工作台卡片注册表.area 列注释一致 */
+    /**
+     * 卡片区域枚举，与工作台卡片注册表.area 列注释一致
+     */
     private static final Set<String> AREAS = Set.of("todo", "notice", "entry", "kpi", "domain");
 
-    private final SysWorkbenchWidgetMapper widgetMapper;
-    private final SysWorkbenchRoleMapper workbenchRoleMapper;
-    private final SysRoleMapper roleMapper;
-    private final SysMenuMapper menuMapper;
+    private final SysWorkbenchWidgetMapper sysWorkbenchWidgetMapper;
+    private final SysWorkbenchRoleMapper sysWorkbenchRoleMapper;
+    private final SysRoleMapper sysRoleMapper;
+    private final SysMenuMapper sysMenuMapper;
     /**
      * 各业务域的取数 bean。用 {@link ObjectProvider} 而不是直接注入 {@code List}：
      * 一是本模块编译期不认识任何业务域，二是首次取数才解析，避免启动期把各域
@@ -79,13 +74,13 @@ public class WorkbenchServiceImpl implements WorkbenchService {
         }
         String roleCode = user.getCurrentRole();
         vo.setRoleCode(roleCode);
-        Integer landingScope = widgetMapper.selectLandingScope(roleCode);
+        Integer landingScope = sysWorkbenchWidgetMapper.selectLandingScope(roleCode);
         vo.setLandingScope(landingScope == null ? 0 : landingScope);
 
-        List<WorkbenchWidgetVO> widgets = widgetMapper.selectRoleWidgets(roleCode);
+        List<WorkbenchWidgetVO> widgets = sysWorkbenchWidgetMapper.selectRoleWidgets(roleCode);
         if (widgets.isEmpty()) {
             // 新角色漏配时只回落通用三张：它们不依赖角色专属数据，首页不会开天窗
-            widgets = widgetMapper.selectFallbackWidgets(roleCode);
+            widgets = sysWorkbenchWidgetMapper.selectFallbackWidgets(roleCode);
         }
         vo.setWidgets(widgets);
         return vo;
@@ -128,7 +123,7 @@ public class WorkbenchServiceImpl implements WorkbenchService {
                 .eq(queryDTO.getStatus() != null, SysWorkbenchWidget::getStatus, queryDTO.getStatus())
                 .orderByAsc(SysWorkbenchWidget::getArea)
                 .orderByAsc(SysWorkbenchWidget::getSortOrder);
-        Page<SysWorkbenchWidget> page = widgetMapper.selectPage(
+        Page<SysWorkbenchWidget> page = sysWorkbenchWidgetMapper.selectPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         List<WorkbenchWidgetVO> voList = page.getRecords().stream().map(this::toVO).collect(Collectors.toList());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);
@@ -150,35 +145,35 @@ public class WorkbenchServiceImpl implements WorkbenchService {
 
         Long id = widget.getId();
         if (id == null) {
-            Long duplicated = widgetMapper.selectCount(new LambdaQueryWrapper<SysWorkbenchWidget>()
+            Long duplicated = sysWorkbenchWidgetMapper.selectCount(new LambdaQueryWrapper<SysWorkbenchWidget>()
                     .eq(SysWorkbenchWidget::getWidgetCode, widget.getWidgetCode()));
             if (duplicated != null && duplicated > 0) {
                 throw new BusinessException("卡片编码已存在：" + widget.getWidgetCode());
             }
-            widgetMapper.insert(widget);
+            sysWorkbenchWidgetMapper.insert(widget);
             return;
         }
-        if (widgetMapper.selectById(id) == null) {
+        if (sysWorkbenchWidgetMapper.selectById(id) == null) {
             throw new BusinessException("卡片不存在");
         }
-        widgetMapper.updateById(widget);
+        sysWorkbenchWidgetMapper.updateById(widget);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void widgetDelete(Long widgetId) {
-        SysWorkbenchWidget widget = widgetMapper.selectById(widgetId);
+        SysWorkbenchWidget widget = sysWorkbenchWidgetMapper.selectById(widgetId);
         if (widget == null) {
             throw new BusinessException("卡片不存在");
         }
-        widgetMapper.purgeById(widgetId);
+        sysWorkbenchWidgetMapper.purgeById(widgetId);
         // 注册表删了，角色配置里的引用必须一起清掉，否则留下指向已删卡片的孤儿行
-        workbenchRoleMapper.purgeByWidget(widgetId);
+        sysWorkbenchRoleMapper.purgeByWidget(widgetId);
     }
 
     @Override
     public WorkbenchRoleConfigVO roleConfig(Long roleId) {
-        SysRole role = roleMapper.selectById(roleId);
+        SysRole role = sysRoleMapper.selectById(roleId);
         if (role == null) {
             throw new BusinessException("角色不存在");
         }
@@ -186,16 +181,16 @@ public class WorkbenchServiceImpl implements WorkbenchService {
         vo.setRoleId(roleId);
         vo.setRoleCode(role.getRoleCode());
         vo.setRoleName(role.getRoleName());
-        Integer landingScope = widgetMapper.selectLandingScope(role.getRoleCode());
+        Integer landingScope = sysWorkbenchWidgetMapper.selectLandingScope(role.getRoleCode());
         vo.setLandingScope(landingScope == null ? 0 : landingScope);
-        vo.setWidgets(widgetMapper.selectAllWidgetsForRole(roleId));
+        vo.setWidgets(sysWorkbenchWidgetMapper.selectAllWidgetsForRole(roleId));
         return vo;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void roleConfigUpsert(WorkbenchRoleConfigUpsertDTO upsertDTO) {
-        SysRole role = roleMapper.selectById(upsertDTO.getRoleId());
+        SysRole role = sysRoleMapper.selectById(upsertDTO.getRoleId());
         if (role == null) {
             throw new BusinessException("角色不存在");
         }
@@ -212,7 +207,7 @@ public class WorkbenchServiceImpl implements WorkbenchService {
         items.forEach(item -> unique.put(item.getWidgetId(), item));
 
         // 整体替换：先物理清空再插。用软删会撞 uk_workbench_role_widget（唯一键不含 del_flag），见 Mapper 注释
-        workbenchRoleMapper.purgeByRole(upsertDTO.getRoleId());
+        sysWorkbenchRoleMapper.purgeByRole(upsertDTO.getRoleId());
         unique.forEach((widgetId, item) -> {
             SysWorkbenchRole row = new SysWorkbenchRole();
             row.setRoleId(upsertDTO.getRoleId());
@@ -220,7 +215,7 @@ public class WorkbenchServiceImpl implements WorkbenchService {
             row.setSortOrder(item.getSortOrder());
             row.setVisible(item.getVisible());
             row.setLandingScope(landingScope);
-            workbenchRoleMapper.insert(row);
+            sysWorkbenchRoleMapper.insert(row);
         });
     }
 
@@ -240,7 +235,7 @@ public class WorkbenchServiceImpl implements WorkbenchService {
     }
 
     private boolean permissionExists(String permission) {
-        Long count = menuMapper.selectCount(new LambdaQueryWrapper<SysMenu>().eq(SysMenu::getPermission, permission));
+        Long count = sysMenuMapper.selectCount(new LambdaQueryWrapper<SysMenu>().eq(SysMenu::getPermission, permission));
         return count != null && count > 0;
     }
 

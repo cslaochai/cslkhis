@@ -40,9 +40,9 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
     private final PatientGateway patientGateway;
     private final MedicalTechGateway medicalTechGateway;
     private final EmrGateway emrGateway;
-    private final BizSettlementBillMapper billMapper;
-    private final BizSettlementBillItemMapper billItemMapper;
-    private final BizInsuranceSettlementMapper settlementMapper;
+    private final BizSettlementBillMapper bizSettlementBillMapper;
+    private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
+    private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
 
     private static <T> T first(List<T> list) {
         return CollectionUtils.isEmpty(list) ? null : list.get(0);
@@ -96,7 +96,7 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
         BizSettlementBill bill = resolveBill(settlement, regist, patientId);
         ev.setBill(bill);
         if (bill != null) {
-            ev.setBillItems(billItemMapper.selectByBill(bill.getId()));
+            ev.setBillItems(bizSettlementBillItemMapper.selectByBill(bill.getId()));
         } else {
             ev.markMissing("未找到关联结算账单");
         }
@@ -146,12 +146,12 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
         if (excludeId != null) {
             wrapper.ne(BizInsuranceSettlement::getId, excludeId);
         }
-        return settlementMapper.selectList(wrapper.orderByDesc(BizInsuranceSettlement::getCreateTime));
+        return bizInsuranceSettlementMapper.selectList(wrapper.orderByDesc(BizInsuranceSettlement::getCreateTime));
     }
 
     private BizSettlementBill resolveBill(BizInsuranceSettlement settlement, RegistBriefVO regist, Long patientId) {
         if (settlement.getBillId() != null) {
-            BizSettlementBill bill = billMapper.selectById(settlement.getBillId());
+            BizSettlementBill bill = bizSettlementBillMapper.selectById(settlement.getBillId());
             if (bill != null) {
                 return bill;
             }
@@ -160,7 +160,7 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
         Long registId = settlement.getRegistId() != null ? settlement.getRegistId()
                 : (regist != null ? regist.getId() : null);
         if (registId != null) {
-            BizSettlementBill bill = first(billMapper.selectList(new LambdaQueryWrapper<BizSettlementBill>()
+            BizSettlementBill bill = first(bizSettlementBillMapper.selectList(new LambdaQueryWrapper<BizSettlementBill>()
                     .eq(BizSettlementBill::getEncounterType, EncounterTypeEnum.OUTPATIENT.getCode())
                     .eq(BizSettlementBill::getEncounterId, registId)
                     .ne(BizSettlementBill::getBillStatus, BillStatusEnum.VOIDED.getCode())
@@ -170,7 +170,7 @@ public class SettlementEvidenceServiceImpl implements SettlementEvidenceService 
             }
         }
         if (patientId != null) {
-            return first(billMapper.selectList(new LambdaQueryWrapper<BizSettlementBill>()
+            return first(bizSettlementBillMapper.selectList(new LambdaQueryWrapper<BizSettlementBill>()
                     .eq(BizSettlementBill::getPatientId, patientId)
                     .ne(BizSettlementBill::getBillStatus, BillStatusEnum.VOIDED.getCode())
                     .orderByDesc(BizSettlementBill::getCreateTime)));

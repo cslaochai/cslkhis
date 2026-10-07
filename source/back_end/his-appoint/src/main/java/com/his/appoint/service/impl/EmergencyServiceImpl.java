@@ -23,6 +23,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.support.EmpTitleCode;
 import com.his.common.util.ShiftCoverUtil;
+import com.his.common.util.TextUtil;
 import com.his.patient.dto.InpatientAdmitDTO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
@@ -70,10 +71,10 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
      */
     private static final String FALLBACK_RECEIVER_CONFIG_KEY = "emergency.wait_fallback_receiver";
 
-    private final BizQueueMapper queueMapper;
-    private final BizAppointInfoMapper appointInfoMapper;
+    private final BizQueueMapper bizQueueMapper;
+    private final BizAppointInfoMapper bizAppointInfoMapper;
     private final BizPatientMapper bizPatientMapper;
-    private final RedisSequenceService sequenceService;
+    private final RedisSequenceService redisSequenceService;
     private final InpatientService inpatientService;
     private final ScheduleService scheduleService;
     private final EmergencyWaitPolicy waitPolicy;
@@ -88,8 +89,8 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
      */
     private final DutyRosterService dutyRosterService;
     private final BizShiftMapper bizShiftMapper;
-    private final BizEmergencyHandoverMapper handoverMapper;
-    private final BizEmergencyHandoverItemMapper handoverItemMapper;
+    private final BizEmergencyHandoverMapper bizEmergencyHandoverMapper;
+    private final BizEmergencyHandoverItemMapper bizEmergencyHandoverItemMapper;
 
     @Override
     public PageResult<BizEmergencyVO> listPage(EmergencyQueryDTO queryDTO) {
@@ -185,7 +186,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         // 新患者模式：patientId为空时，先创建患者记录
         if (upsertDTO.getPatientId() == null) {
             bizPatient = new BizPatient();
-            bizPatient.setPatientNo(sequenceService.generatePatientNo());
+            bizPatient.setPatientNo(redisSequenceService.generatePatientNo());
             bizPatient.setPatientName(upsertDTO.getPatientName());
             bizPatient.setGender(upsertDTO.getGender());
             bizPatient.setAge(upsertDTO.getAge());
@@ -211,7 +212,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         }
 
         BizEmergency emergency = BeanUtil.copyProperties(upsertDTO, BizEmergency.class);
-        emergency.setEmergencyNo(sequenceService.generateEmergencyNo());
+        emergency.setEmergencyNo(redisSequenceService.generateEmergencyNo());
         emergency.setEmergencyStatus(EmergencyStatusEnum.WAITING.getCode()); // 候诊
         emergency.setAdmissionTime(LocalDateTime.now());
         // 新患者模式下，使用新创建的患者信息
@@ -240,7 +241,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
 
         // 创建挂号记录（急诊号），保持数据一致性
         BizAppointInfo appointInfo = new BizAppointInfo();
-        appointInfo.setRegistNo(sequenceService.generateAppointNo());
+        appointInfo.setRegistNo(redisSequenceService.generateAppointNo());
         // 新患者模式下 patientId 为 null，需要先创建患者记录
         appointInfo.setPatientId(emergency.getPatientId());
 
@@ -261,7 +262,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         appointInfo.setArriveTime(LocalDateTime.now());
         appointInfo.setVisitDate(LocalDate.now());
         appointInfo.setRegistStatus(AppointStatusEnum.REGISTERED.getCode()); // 已挂号（未签到，急诊直录不签）
-        appointInfoMapper.insert(appointInfo);
+        bizAppointInfoMapper.insert(appointInfo);
 
         // 同步创建就诊队列，让医生工作站可以看到急诊患者。
         // 叫号号码用短号「急+当日5位流水」（如急00035）：原先直接塞整张 JZ2026092600035 单号，
@@ -292,7 +293,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         queue.setTriageStatus(emergency.getTriageLevel() != null ? 1 : 0);
         queue.setIsOverdue(YesOrNoEnum.NO.getCode());
         queue.setCallCount(0);
-        queueMapper.insert(queue);
+        bizQueueMapper.insert(queue);
 
         return true;
     }
@@ -341,7 +342,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                 ? emergency.getUnassignedReason().trim()
                 : "当日该科室无在岗排班医生，入待派单池";
         // 入参层不加 @Size：超长由服务端截断，不能让"粘贴了一长段说明"变成 400
-        emergency.setUnassignedReason(cut(reason, 200));
+        emergency.setUnassignedReason(TextUtil.cut(reason, 200));
     }
 
     /**
@@ -385,10 +386,6 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
      * 急诊派单、交班班次名、今日在岗、分诊当班护士四处共用同一份实现，
      * 免得同一个时刻在四个地方算出四份不同的在岗名单。
      */
-
-    private String cut(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max);
-    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -553,7 +550,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         }
         LambdaQueryWrapper<BizQueue> queueWrapper = new LambdaQueryWrapper<>();
         queueWrapper.eq(BizQueue::getRegistId, appointInfo.getId());
-        BizQueue queue = queueMapper.selectOne(queueWrapper);
+        BizQueue queue = bizQueueMapper.selectOne(queueWrapper);
 
         if (queue != null) {
             if (status == 2) {
@@ -571,7 +568,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                 queue.setQueueStatus(QueueStatusEnum.COMPLETED.getCode());
                 queue.setEndTime(LocalDateTime.now());
             }
-            queueMapper.updateById(queue);
+            bizQueueMapper.updateById(queue);
         }
         if (status == 2) {
             appointInfo.setRegistStatus(AppointStatusEnum.ACCEPTED.getCode());
@@ -579,10 +576,10 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                 appointInfo.setDoctorId(emergency.getDoctorId());
                 appointInfo.setDoctorName(emergency.getDoctorName());
             }
-            appointInfoMapper.updateById(appointInfo);
+            bizAppointInfoMapper.updateById(appointInfo);
         } else if (status >= 4) {
             appointInfo.setRegistStatus(AppointStatusEnum.COMPLETED.getCode());
-            appointInfoMapper.updateById(appointInfo);
+            bizAppointInfoMapper.updateById(appointInfo);
         }
     }
 
@@ -595,7 +592,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                 .eq(BizAppointInfo::getRegistType, 3) // 急诊号
                 .orderByDesc(BizAppointInfo::getCreateTime)
                 .last("LIMIT 1");
-        return appointInfoMapper.selectOne(appointWrapper);
+        return bizAppointInfoMapper.selectOne(appointWrapper);
     }
 
     @Override
@@ -1033,7 +1030,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         handover.setTakeEmpName(takeEmp.getEmpName());
         handover.setShiftName(currentShiftName(deptId, fromEmpId));
         // 滚动区间：从我上一次交班那一刻到现在（首次取当日 00:00），与班结单同一口径
-        LocalDateTime lastEnd = handoverMapper.selectLastPeriodEnd(fromEmpId, deptId);
+        LocalDateTime lastEnd = bizEmergencyHandoverMapper.selectLastPeriodEnd(fromEmpId, deptId);
         handover.setPeriodBegin(lastEnd == null ? now.toLocalDate().atStartOfDay() : lastEnd);
         handover.setPeriodEnd(now);
         handover.setRemark(cutText(submitDTO.getRemark(), 500));
@@ -1045,12 +1042,12 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                 .filter(e -> Objects.equals(e.getEmergencyStatus(), EmergencyStatusEnum.OBSERVATION.getCode())).count());
         handover.setObsOverLimitCount((int) scope.values().stream()
                 .filter(e -> obsLevelOf(e) >= 2).count());
-        handoverMapper.insert(handover);
+        bizEmergencyHandoverMapper.insert(handover);
 
         for (BizEmergency emergency : scope.values()) {
             EmergencyHandoverItemDTO item = submitted.get(emergency.getId());
             SysEmployee taker = takers.get(takeOf.get(emergency.getId()));
-            handoverItemMapper.insert(toHandoverItem(handover, emergency, item, taker, fromEmpId));
+            bizEmergencyHandoverItemMapper.insert(toHandoverItem(handover, emergency, item, taker, fromEmpId));
             transferResponsibility(emergency, taker, fromEmpId);
         }
         notifyTakers(handover, scope, submitted, takeOf, takers);
@@ -1151,13 +1148,13 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         if (queue.getDoctorId() == null || queue.getDoctorId().equals(fromEmpId)) {
             queue.setDoctorId(taker.getId());
             queue.setDoctorName(taker.getEmpName());
-            queueMapper.updateById(queue);
+            bizQueueMapper.updateById(queue);
         }
-        BizAppointInfo appointInfo = appointInfoMapper.selectById(queue.getRegistId());
+        BizAppointInfo appointInfo = bizAppointInfoMapper.selectById(queue.getRegistId());
         if (appointInfo != null && (appointInfo.getDoctorId() == null || appointInfo.getDoctorId().equals(fromEmpId))) {
             appointInfo.setDoctorId(taker.getId());
             appointInfo.setDoctorName(taker.getEmpName());
-            appointInfoMapper.updateById(appointInfo);
+            bizAppointInfoMapper.updateById(appointInfo);
         }
     }
 
@@ -1169,7 +1166,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         if (!StringUtils.hasText(erNo) || erNo.length() < 5) {
             return null;
         }
-        return queueMapper.selectOne(new LambdaQueryWrapper<BizQueue>()
+        return bizQueueMapper.selectOne(new LambdaQueryWrapper<BizQueue>()
                 .eq(BizQueue::getQueueNo, "急" + erNo.substring(erNo.length() - 5))
                 .eq(BizQueue::getPatientId, emergency.getPatientId())
                 .orderByDesc(BizQueue::getId)
@@ -1230,7 +1227,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                                         + "AND (i.patient_name LIKE CONCAT('%', {0}, '%') OR i.emergency_no LIKE CONCAT('%', {0}, '%')))",
                                 queryDTO.getKeyword()))
                 .orderByDesc(BizEmergencyHandover::getPeriodEnd);
-        Page<BizEmergencyHandover> page = handoverMapper.selectPage(
+        Page<BizEmergencyHandover> page = bizEmergencyHandoverMapper.selectPage(
                 new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         List<EmergencyHandoverVO> records = page.getRecords() == null ? List.of()
                 : page.getRecords().stream().map(h -> BeanUtil.copyProperties(h, EmergencyHandoverVO.class))
@@ -1240,13 +1237,13 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
 
     @Override
     public EmergencyHandoverDetailVO handoverDetailById(Long id) {
-        BizEmergencyHandover handover = handoverMapper.selectById(id);
+        BizEmergencyHandover handover = bizEmergencyHandoverMapper.selectById(id);
         if (handover == null) {
             throw new BusinessException("交班单不存在");
         }
         EmergencyHandoverDetailVO detail = new EmergencyHandoverDetailVO();
         detail.setHandover(BeanUtil.copyProperties(handover, EmergencyHandoverVO.class));
-        detail.setItems(handoverItemMapper.selectList(new LambdaQueryWrapper<BizEmergencyHandoverItem>()
+        detail.setItems(bizEmergencyHandoverItemMapper.selectList(new LambdaQueryWrapper<BizEmergencyHandoverItem>()
                         .eq(BizEmergencyHandoverItem::getHandoverId, id)
                         .orderByAsc(BizEmergencyHandoverItem::getId))
                 .stream().map(this::toItemVO).collect(Collectors.toList()));
@@ -1467,7 +1464,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
      */
     private String generateHandoverNo() {
         String dateStr = LocalDate.now().toString().replace("-", "");
-        long seq = sequenceService.next("EMERGENCY_HANDOVER");
+        long seq = redisSequenceService.next("EMERGENCY_HANDOVER");
         return "EJ" + dateStr + String.format("%04d", seq);
     }
 

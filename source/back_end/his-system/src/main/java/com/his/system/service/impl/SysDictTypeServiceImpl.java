@@ -1,5 +1,6 @@
 package com.his.system.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.system.dto.SysDictTypeUpsertDTO;
 import com.his.system.entity.SysDictType;
 import com.his.system.mapper.SysDictTypeMapper;
@@ -14,13 +15,13 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class SysDictTypeServiceImpl implements SysDictTypeService {
+public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDictType> implements SysDictTypeService {
 
-    private final SysDictTypeMapper dictTypeMapper;
+    private final SysDictTypeMapper sysDictTypeMapper;
 
     @Override
     public List<SysDictTypeVO> selectList() {
-        return dictTypeMapper.selectList(null).stream().map(t -> {
+        return sysDictTypeMapper.selectList(null).stream().map(t -> {
             SysDictTypeVO vo = new SysDictTypeVO();
             BeanUtils.copyProperties(t, vo);
             return vo;
@@ -29,7 +30,7 @@ public class SysDictTypeServiceImpl implements SysDictTypeService {
 
     @Override
     public SysDictTypeVO getInfo(Long typeId) {
-        SysDictType dictType = dictTypeMapper.selectById(typeId);
+        SysDictType dictType = sysDictTypeMapper.selectById(typeId);
         SysDictTypeVO vo = new SysDictTypeVO();
         BeanUtils.copyProperties(dictType, vo);
         return vo;
@@ -40,14 +41,14 @@ public class SysDictTypeServiceImpl implements SysDictTypeService {
         SysDictType dictType = new SysDictType();
         BeanUtils.copyProperties(upsertDTO, dictType);
         if (upsertDTO.getId() == null) {
-            dictTypeMapper.insert(dictType);
+            sysDictTypeMapper.insert(dictType);
         } else {
-            dictTypeMapper.updateById(dictType);
+            sysDictTypeMapper.updateById(dictType);
         }
     }
 
     @Override
     public void delete(Long typeId) {
-        dictTypeMapper.deleteById(typeId);
+        sysDictTypeMapper.deleteById(typeId);
     }
 }

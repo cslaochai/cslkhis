@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.emr.dto.*;
 import com.his.emr.entity.BizPathway;
 import com.his.emr.entity.BizPathwayEnroll;
@@ -30,7 +32,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.List;
@@ -61,11 +62,11 @@ public class PathwayServiceImpl implements PathwayService {
      */
     private static final int REASON_MAX = 200;
     private final DeptScopeProvider deptScopeProvider;
-    private final BizPathwayMapper pathwayMapper;
-    private final BizPathwayStepMapper stepMapper;
-    private final BizPathwayEnrollMapper enrollMapper;
-    private final BizPathwayVarianceMapper varianceMapper;
-    private final RedisSequenceService sequenceService;
+    private final BizPathwayMapper bizPathwayMapper;
+    private final BizPathwayStepMapper bizPathwayStepMapper;
+    private final BizPathwayEnrollMapper bizPathwayEnrollMapper;
+    private final BizPathwayVarianceMapper bizPathwayVarianceMapper;
+    private final RedisSequenceService redisSequenceService;
 
     // 模板
 
@@ -115,55 +116,36 @@ public class PathwayServiceImpl implements PathwayService {
         }
     }
 
-    private static String trimToNull(String text) {
-        return StringUtils.hasText(text) ? text.trim() : null;
-    }
-
     // 入径 / 变异 / 终态
-
-    private static String cutToNull(String text, int max) {
-        if (!StringUtils.hasText(text)) {
-            return null;
-        }
-        return cut(text.trim(), max);
-    }
-
-    private static String cut(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
 
     @Override
     public PageResult<PathwayVO> listPage(PathwayQueryPageDTO dto) {
         Page<PathwayVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         // mapper 返回 List 时结果只在返回值里，page.getRecords() 不会被 MP 回填
-        List<PathwayVO> records = pathwayMapper.selectPathwayPage(page, trimToNull(dto.getKeyword()),
+        List<PathwayVO> records = bizPathwayMapper.selectPathwayPage(page, TextUtil.trimToNull(dto.getKeyword()),
                 dto.getStatus(), dto.getDeptId());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
     public PathwayVO getDetailById(Long id) {
-        PathwayVO vo = pathwayMapper.selectPathwayById(id);
+        PathwayVO vo = bizPathwayMapper.selectPathwayById(id);
         if (vo == null) {
             throw new BusinessException("路径模板不存在或已删除");
         }
-        vo.setSteps(stepMapper.selectStepsByPathwayId(id));
+        vo.setSteps(bizPathwayStepMapper.selectStepsByPathwayId(id));
         return vo;
     }
 
     @Override
     public List<PathwayVO> activeSelectList(Long deptId) {
-        return pathwayMapper.selectActiveList(deptId);
+        return bizPathwayMapper.selectActiveList(deptId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PathwayVO pathwayUpsert(PathwayUpsertDTO dto) {
-        String code = trimToNull(dto.getPathwayCode());
+        String code = TextUtil.trimToNull(dto.getPathwayCode());
         BizPathway entity;
         if (dto.getId() == null) {
             entity = new BizPathway();
@@ -178,22 +160,22 @@ public class PathwayServiceImpl implements PathwayService {
         }
         entity.setPathwayName(dto.getPathwayName().trim());
         entity.setPathwayCode(code);
-        entity.setDiagnosis(trimToNull(dto.getDiagnosis()));
+        entity.setDiagnosis(TextUtil.trimToNull(dto.getDiagnosis()));
         entity.setVersion(StringUtils.hasText(dto.getVersion()) ? dto.getVersion().trim() : "V1");
         entity.setRemark(dto.getRemark());
         // updateById 跳过 null 字段：科室只支持改值，不支持清空
         if (dto.getDeptId() != null) {
             entity.setDeptId(dto.getDeptId());
-            entity.setDeptName(pathwayMapper.selectDeptName(dto.getDeptId()));
+            entity.setDeptName(bizPathwayMapper.selectDeptName(dto.getDeptId()));
         }
         if (entity.getId() == null) {
-            pathwayMapper.insert(entity);
+            bizPathwayMapper.insert(entity);
         } else {
-            pathwayMapper.updateById(entity);
+            bizPathwayMapper.updateById(entity);
         }
 
         // 步骤整组替换（逻辑删旧行再插新行），草稿同步回算总日数供预览
-        stepMapper.delete(new LambdaQueryWrapper<BizPathwayStep>()
+        bizPathwayStepMapper.delete(new LambdaQueryWrapper<BizPathwayStep>()
                 .eq(BizPathwayStep::getPathwayId, entity.getId()));
         if (dto.getSteps() != null) {
             int sort = 0;
@@ -203,10 +185,10 @@ public class PathwayServiceImpl implements PathwayService {
                 step.setDayNo(s.getDayNo());
                 step.setItemType(s.getItemType());
                 step.setItemName(s.getItemName().trim());
-                step.setItemCode(trimToNull(s.getItemCode()));
-                step.setContent(trimToNull(s.getContent()));
+                step.setItemCode(TextUtil.trimToNull(s.getItemCode()));
+                step.setContent(TextUtil.trimToNull(s.getContent()));
                 step.setSortNo(s.getSortNo() != null ? s.getSortNo() : ++sort);
-                stepMapper.insert(step);
+                bizPathwayStepMapper.insert(step);
             }
         }
         applyTotalDays(entity);
@@ -226,18 +208,18 @@ public class PathwayServiceImpl implements PathwayService {
         if (!Objects.equals(pathway.getStatus(), PathwayStatusEnum.DRAFT.getCode())) {
             throw new BusinessException("仅草稿模板允许发布");
         }
-        Integer maxDay = stepMapper.selectMaxDayNo(pathway.getId());
+        Integer maxDay = bizPathwayStepMapper.selectMaxDayNo(pathway.getId());
         if (maxDay == null || maxDay <= 0) {
             throw new BusinessException("模板还没有路径步骤，请先维护步骤再发布");
         }
-        if (pathwayMapper.countOtherActiveByCode(pathway.getPathwayCode(), pathway.getId()) > 0) {
+        if (bizPathwayMapper.countOtherActiveByCode(pathway.getPathwayCode(), pathway.getId()) > 0) {
             throw new BusinessException("编码 " + pathway.getPathwayCode() + " 已有使用中版本，请先停用或升版本号");
         }
         pathway.setTotalDays(maxDay);
         pathway.setStatus(PathwayStatusEnum.ACTIVE.getCode());
         pathway.setPublishBy(operatorUser.getRealName());
-        pathway.setPublishTime(now());
-        if (pathwayMapper.updateById(pathway) <= 0) {
+        pathway.setPublishTime(TimeUtil.nowSeconds());
+        if (bizPathwayMapper.updateById(pathway) <= 0) {
             throw new BusinessException("发布失败");
         }
         return getDetailById(pathway.getId());
@@ -253,7 +235,7 @@ public class PathwayServiceImpl implements PathwayService {
             throw new BusinessException("仅使用中模板允许停用");
         }
         pathway.setStatus(PathwayStatusEnum.DEPRECATED.getCode());
-        if (pathwayMapper.updateById(pathway) <= 0) {
+        if (bizPathwayMapper.updateById(pathway) <= 0) {
             throw new BusinessException("停用失败");
         }
         return getDetailById(pathway.getId());
@@ -262,8 +244,8 @@ public class PathwayServiceImpl implements PathwayService {
     @Override
     public PageResult<PathwayEnrollVO> enrollListPage(EnrollQueryPageDTO dto) {
         Page<PathwayEnrollVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
-        List<PathwayEnrollVO> records = enrollMapper.selectEnrollPage(page, dto.getPathwayId(),
-                dto.getDeptId(), dto.getStatus(), dto.getEnrollDate(), trimToNull(dto.getPatientName()));
+        List<PathwayEnrollVO> records = bizPathwayEnrollMapper.selectEnrollPage(page, dto.getPathwayId(),
+                dto.getDeptId(), dto.getStatus(), dto.getEnrollDate(), TextUtil.trimToNull(dto.getPatientName()));
         records.forEach(v -> v.setCurrentDay(deriveCurrentDay(v.getStatus(), v.getEnrollDate(),
                 v.getFinishDate(), v.getTotalDays())));
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
@@ -273,20 +255,20 @@ public class PathwayServiceImpl implements PathwayService {
 
     @Override
     public PathwayEnrollVO enrollGetDetailById(Long id) {
-        PathwayEnrollVO vo = enrollMapper.selectEnrollById(id);
+        PathwayEnrollVO vo = bizPathwayEnrollMapper.selectEnrollById(id);
         if (vo == null) {
             throw new BusinessException("入径记录不存在或已删除");
         }
         vo.setCurrentDay(deriveCurrentDay(vo.getStatus(), vo.getEnrollDate(), vo.getFinishDate(), vo.getTotalDays()));
-        vo.setSteps(stepMapper.selectStepsByPathwayId(vo.getPathwayId()));
-        vo.setVariances(varianceMapper.selectVariancesByEnrollId(id));
+        vo.setSteps(bizPathwayStepMapper.selectStepsByPathwayId(vo.getPathwayId()));
+        vo.setVariances(bizPathwayVarianceMapper.selectVariancesByEnrollId(id));
         return vo;
     }
 
     @Override
     public List<PathwayAdmissionVO> admissionsForEnroll(String keyword, Integer limit) {
         int n = limit != null && limit > 0 && limit <= 200 ? limit : 20;
-        return enrollMapper.selectAdmissionCandidates(trimToNull(keyword), n);
+        return bizPathwayEnrollMapper.selectAdmissionCandidates(TextUtil.trimToNull(keyword), n);
     }
 
     @Override
@@ -294,28 +276,28 @@ public class PathwayServiceImpl implements PathwayService {
     public PathwayEnrollVO enrollUpsert(EnrollUpsertDTO dto) {
         BizPathwayEnroll enroll;
         if (dto.getId() == null) {
-            BizPathway pathway = pathwayMapper.selectById(dto.getPathwayId());
+            BizPathway pathway = bizPathwayMapper.selectById(dto.getPathwayId());
             if (pathway == null) {
                 throw new BusinessException("路径模板不存在或已删除");
             }
             if (!Objects.equals(pathway.getStatus(), PathwayStatusEnum.ACTIVE.getCode())) {
                 throw new BusinessException("仅「使用中」模板允许入径");
             }
-            PathwayAdmissionVO snap = enrollMapper.selectAdmissionSnapshot(dto.getAdmissionId());
+            PathwayAdmissionVO snap = bizPathwayEnrollMapper.selectAdmissionSnapshot(dto.getAdmissionId());
             if (snap == null) {
                 throw new BusinessException("入院记录不存在");
             }
             if (!Objects.equals(snap.getAdmitStatus(), 1)) {
                 throw new BusinessException("患者不在院，不能入径");
             }
-            if (enrollMapper.countActiveByAdmission(dto.getAdmissionId()) > 0) {
+            if (bizPathwayEnrollMapper.countActiveByAdmission(dto.getAdmissionId()) > 0) {
                 throw new BusinessException("该次住院已有在径记录（一次住院同时仅一条）");
             }
             LocalDate admitDate = parseDate(snap.getAdmitTime());
             validateEnrollDate(dto.getEnrollDate(), admitDate);
 
             enroll = new BizPathwayEnroll();
-            enroll.setEnrollNo(sequenceService.generatePathwayNo());
+            enroll.setEnrollNo(redisSequenceService.generatePathwayNo());
             enroll.setPathwayId(pathway.getId());
             enroll.setPathwayCode(pathway.getPathwayCode());
             enroll.setPathwayName(pathway.getPathwayName());
@@ -334,23 +316,23 @@ public class PathwayServiceImpl implements PathwayService {
                 throw new BusinessException("当前用户信息不存在");
             }
             enroll.setEnrollBy(operatorUser.getRealName());
-            enroll.setEnrollTime(now());
+            enroll.setEnrollTime(TimeUtil.nowSeconds());
             enroll.setStatus(PathwayEnrollStatusEnum.ENROLLED.getCode());
             enroll.setVarianceCount(0);
             enroll.setRemark(dto.getRemark());
-            enrollMapper.insert(enroll);
+            bizPathwayEnrollMapper.insert(enroll);
         } else {
             enroll = requireEnroll(dto.getId());
             if (!Objects.equals(enroll.getStatus(), PathwayEnrollStatusEnum.ENROLLED.getCode())) {
                 throw new BusinessException("仅在径记录允许修改");
             }
-            PathwayAdmissionVO snap = enrollMapper.selectAdmissionSnapshot(enroll.getAdmissionId());
+            PathwayAdmissionVO snap = bizPathwayEnrollMapper.selectAdmissionSnapshot(enroll.getAdmissionId());
             validateEnrollDate(dto.getEnrollDate(), snap != null ? parseDate(snap.getAdmitTime()) : null);
             enroll.setEnrollDate(dto.getEnrollDate());
             if (StringUtils.hasText(dto.getRemark())) {
                 enroll.setRemark(dto.getRemark());
             }
-            if (enrollMapper.updateById(enroll) <= 0) {
+            if (bizPathwayEnrollMapper.updateById(enroll) <= 0) {
                 throw new BusinessException("入径更新失败");
             }
         }
@@ -381,13 +363,13 @@ public class PathwayServiceImpl implements PathwayService {
         variance.setDayNo(dto.getDayNo());
         variance.setVarianceType(dto.getVarianceType());
         // 原因截到列宽内：超长会把"登记失败"升级成 Data too long 的 500
-        variance.setVarianceReason(cut(dto.getVarianceReason().trim(), REASON_MAX));
-        variance.setHandling(cutToNull(dto.getHandling(), REASON_MAX));
+        variance.setVarianceReason(TextUtil.cut(dto.getVarianceReason().trim(), REASON_MAX));
+        variance.setHandling(TextUtil.cutToNull(dto.getHandling(), REASON_MAX));
         variance.setOccurredDate(dto.getOccurredDate());
         variance.setRecorderId(operatorUser.getEmployeeId());
         variance.setRecorderName(operatorUser.getRealName());
-        variance.setRecordTime(now());
-        varianceMapper.insert(variance);
+        variance.setRecordTime(TimeUtil.nowSeconds());
+        bizPathwayVarianceMapper.insert(variance);
 
         recountVariance(enroll);
         return enrollGetDetailById(enroll.getId());
@@ -409,9 +391,9 @@ public class PathwayServiceImpl implements PathwayService {
         enroll.setFinishDate(LocalDate.now());
         enroll.setFinishBy(operatorUser.getRealName());
         if (StringUtils.hasText(dto.getReason())) {
-            enroll.setRemark(cut(dto.getReason().trim(), 500));
+            enroll.setRemark(TextUtil.cut(dto.getReason().trim(), 500));
         }
-        if (enrollMapper.updateById(enroll) <= 0) {
+        if (bizPathwayEnrollMapper.updateById(enroll) <= 0) {
             throw new BusinessException("完成更新失败");
         }
         return enrollGetDetailById(enroll.getId());
@@ -435,8 +417,8 @@ public class PathwayServiceImpl implements PathwayService {
         enroll.setStatus(PathwayEnrollStatusEnum.ABORTED.getCode());
         enroll.setFinishDate(LocalDate.now());
         enroll.setFinishBy(operatorUser.getRealName());
-        enroll.setAbortReason(cut(dto.getReason().trim(), REASON_MAX));
-        if (enrollMapper.updateById(enroll) <= 0) {
+        enroll.setAbortReason(TextUtil.cut(dto.getReason().trim(), REASON_MAX));
+        if (bizPathwayEnrollMapper.updateById(enroll) <= 0) {
             throw new BusinessException("退径更新失败");
         }
         return enrollGetDetailById(enroll.getId());
@@ -445,7 +427,7 @@ public class PathwayServiceImpl implements PathwayService {
     @Override
     public PathwayAnalysisVO analysis(Long pathwayId) {
         PathwayAnalysisVO vo = new PathwayAnalysisVO();
-        List<PathwayAnalysisVO.Row> rows = varianceMapper.selectEnrollStats(pathwayId);
+        List<PathwayAnalysisVO.Row> rows = bizPathwayVarianceMapper.selectEnrollStats(pathwayId);
         rows.forEach(r -> r.setFinishRate(rate(r.getFinishCount(), r.getEnrollCount())));
         vo.setRows(rows);
         vo.setEnrollCount(sum(rows.stream().map(PathwayAnalysisVO.Row::getEnrollCount).toList()));
@@ -453,28 +435,28 @@ public class PathwayServiceImpl implements PathwayService {
         vo.setAbortCount(sum(rows.stream().map(PathwayAnalysisVO.Row::getAbortCount).toList()));
         vo.setVarianceCount(sum(rows.stream().map(PathwayAnalysisVO.Row::getVarianceCount).toList()));
         vo.setFinishRate(rate(vo.getFinishCount(), vo.getEnrollCount()));
-        vo.setTypeStats(varianceMapper.selectVarianceTypeStats(pathwayId));
-        vo.setTopReasons(varianceMapper.selectTopReasons(pathwayId, 10));
+        vo.setTypeStats(bizPathwayVarianceMapper.selectVarianceTypeStats(pathwayId));
+        vo.setTopReasons(bizPathwayVarianceMapper.selectTopReasons(pathwayId, 10));
         return vo;
     }
 
     @Override
     public PathwayEnrollVO activeEnrollByAdmission(Long admissionId) {
-        BizPathwayEnroll enroll = enrollMapper.selectActiveByAdmission(admissionId);
+        BizPathwayEnroll enroll = bizPathwayEnrollMapper.selectActiveByAdmission(admissionId);
         if (enroll == null) {
             return null;
         }
         checkDeptAccess(enroll.getDeptId());
-        PathwayEnrollVO vo = enrollMapper.selectEnrollById(enroll.getId());
+        PathwayEnrollVO vo = bizPathwayEnrollMapper.selectEnrollById(enroll.getId());
         vo.setCurrentDay(deriveCurrentDay(vo.getStatus(), vo.getEnrollDate(), vo.getFinishDate(), vo.getTotalDays()));
-        vo.setSteps(stepMapper.selectStepsByPathwayId(vo.getPathwayId()));
+        vo.setSteps(bizPathwayStepMapper.selectStepsByPathwayId(vo.getPathwayId()));
         return vo;
     }
 
     @Override
     public OrderCheckVO orderCheck(OrderCheckDTO dto) {
         OrderCheckVO vo = new OrderCheckVO();
-        BizPathwayEnroll enroll = enrollMapper.selectActiveByAdmission(dto.getAdmissionId());
+        BizPathwayEnroll enroll = bizPathwayEnrollMapper.selectActiveByAdmission(dto.getAdmissionId());
         if (enroll == null) {
             vo.setEnrolled(false);
             return vo;
@@ -489,7 +471,7 @@ public class PathwayServiceImpl implements PathwayService {
                 enroll.getTotalDays());
         vo.setDayNo(day);
 
-        List<PathwayStepVO> steps = stepMapper.selectStepsByPathwayId(enroll.getPathwayId());
+        List<PathwayStepVO> steps = bizPathwayStepMapper.selectStepsByPathwayId(enroll.getPathwayId());
         vo.setPlanSteps(steps.stream().filter(s -> Objects.equals(s.getDayNo(), day)).toList());
         // 纯文书模板（没有任何带编码步骤）不做偏离比对，避免自由文本模糊匹配误报刷屏
         List<PathwayStepVO> coded = steps.stream().filter(s -> StringUtils.hasText(s.getItemCode())).toList();
@@ -497,8 +479,8 @@ public class PathwayServiceImpl implements PathwayService {
         if (vo.getComparable() && dto.getItems() != null) {
             Set<String> seen = new HashSet<>();
             for (OrderCheckDTO.CheckItem item : dto.getItems()) {
-                String code = trimToNull(item.getItemCode());
-                String name = trimToNull(item.getItemName());
+                String code = TextUtil.trimToNull(item.getItemCode());
+                String name = TextUtil.trimToNull(item.getItemName());
                 if (code == null && name == null) {
                     continue;
                 }
@@ -527,25 +509,25 @@ public class PathwayServiceImpl implements PathwayService {
      * 草稿步骤变化后回算总日数（发布时再固化一次）
      */
     private void applyTotalDays(BizPathway pathway) {
-        Integer maxDay = stepMapper.selectMaxDayNo(pathway.getId());
+        Integer maxDay = bizPathwayStepMapper.selectMaxDayNo(pathway.getId());
         int total = maxDay != null && maxDay > 0 ? maxDay : 0;
         if (!Objects.equals(pathway.getTotalDays(), total)) {
             pathway.setTotalDays(total);
-            pathwayMapper.updateById(pathway);
+            bizPathwayMapper.updateById(pathway);
         }
     }
 
     private void recountVariance(BizPathwayEnroll enroll) {
-        long cnt = varianceMapper.selectCount(new LambdaQueryWrapper<BizPathwayVariance>()
+        long cnt = bizPathwayVarianceMapper.selectCount(new LambdaQueryWrapper<BizPathwayVariance>()
                 .eq(BizPathwayVariance::getEnrollId, enroll.getId()));
         if (!Objects.equals(enroll.getVarianceCount(), (int) cnt)) {
             enroll.setVarianceCount((int) cnt);
-            enrollMapper.updateById(enroll);
+            bizPathwayEnrollMapper.updateById(enroll);
         }
     }
 
     private BizPathway requirePathway(Long id) {
-        BizPathway pathway = pathwayMapper.selectById(id);
+        BizPathway pathway = bizPathwayMapper.selectById(id);
         if (pathway == null) {
             throw new BusinessException("路径模板不存在或已删除");
         }
@@ -553,7 +535,7 @@ public class PathwayServiceImpl implements PathwayService {
     }
 
     private BizPathwayEnroll requireEnroll(Long id) {
-        BizPathwayEnroll enroll = enrollMapper.selectById(id);
+        BizPathwayEnroll enroll = bizPathwayEnrollMapper.selectById(id);
         if (enroll == null) {
             throw new BusinessException("入径记录不存在或已删除");
         }

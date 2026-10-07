@@ -2,12 +2,12 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.Constants;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
-import com.his.common.util.DateFormats;
-import com.his.common.util.SensitiveMaskUtil;
+import com.his.common.util.*;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
 import com.his.emr.enums.*;
@@ -30,8 +30,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
@@ -54,17 +52,17 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SurveyServiceImpl implements SurveyService {
+public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSurveyAnswer> implements SurveyService {
     private static final BigDecimal HUNDRED = new BigDecimal("100");
     private final DeptScopeProvider deptScopeProvider;
-    private final BizSurveyDispatchMapper dispatchMapper;
-    private final BizSurveyAnswerMapper answerMapper;
-    private final BizSurveyAnswerItemMapper answerItemMapper;
-    private final BizSurveyItemMapper itemMapper;
-    private final BizFollowupTaskMapper followupTaskMapper;
-    private final SurveyTemplateService templateService;
+    private final BizSurveyDispatchMapper bizSurveyDispatchMapper;
+    private final BizSurveyAnswerMapper bizSurveyAnswerMapper;
+    private final BizSurveyAnswerItemMapper bizSurveyAnswerItemMapper;
+    private final BizSurveyItemMapper bizSurveyItemMapper;
+    private final BizFollowupTaskMapper bizFollowupTaskMapper;
+    private final SurveyTemplateService surveyTemplateService;
     private final DisputeService disputeService;
-    private final RedisSequenceService sequenceService;
+    private final RedisSequenceService redisSequenceService;
 
     // 发放与回收
 
@@ -76,47 +74,19 @@ public class SurveyServiceImpl implements SurveyService {
                 .divide(BigDecimal.valueOf(denominator), 1, RoundingMode.HALF_UP);
     }
 
-    private static long nz(Long v) {
-        return v == null ? 0L : v;
-    }
-
-    private static long nz(Integer v) {
-        return v == null ? 0L : v.longValue();
-    }
-
-    private static int nzInt(Integer v) {
-        return v == null ? 0 : v;
-    }
-
     private static int maxScoreOf(BizSurveyItem item) {
         return item.getMaxScore() == null ? 5 : item.getMaxScore();
     }
 
     // 答卷
 
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        String s = v.trim();
-        return s.length() <= max ? s : s.substring(0, max);
-    }
-
-    private static String trimToNull(String v) {
-        return StringUtils.hasText(v) ? v.trim() : null;
-    }
-
     @Override
     public PageResult<SurveyDispatchVO> dispatchListPage(SurveyDispatchQueryPageDTO dto) {
         Page<SurveyDispatchVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
-        List<SurveyDispatchVO> records = dispatchMapper.selectDispatchPage(page,
-                trimToNull(dto.getKeyword()), dto.getPatientId(), dto.getSourceType(),
+        List<SurveyDispatchVO> records = bizSurveyDispatchMapper.selectDispatchPage(page,
+                TextUtil.trimToNull(dto.getKeyword()), dto.getPatientId(), dto.getSourceType(),
                 dto.getDispatchStatus(), dto.getChannel(), dto.getOverdueOnly(),
-                trimToNull(dto.getDateFrom()), trimToNull(dto.getDateTo()),
+                TextUtil.trimToNull(dto.getDateFrom()), TextUtil.trimToNull(dto.getDateTo()),
                 scopedDeptIds(dto.getDeptId()));
         // 列表一律脱敏并清空明文：抓包拿到全量手机号等于没做脱敏
         records.forEach(vo -> decorateDispatch(vo, false));
@@ -141,7 +111,7 @@ public class SurveyServiceImpl implements SurveyService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SurveyDispatchVO issueFromFollowup(SurveyDispatchIssueDTO dto) {
-        BizFollowupTask task = followupTaskMapper.selectById(dto.getFollowupTaskId());
+        BizFollowupTask task = bizFollowupTaskMapper.selectById(dto.getFollowupTaskId());
         if (task == null) {
             throw new BusinessException("随访任务不存在或已删除");
         }
@@ -170,14 +140,14 @@ public class SurveyServiceImpl implements SurveyService {
             throw new BusinessException("当前用户信息不存在");
         }
         int src = sourceType == null ? SurveySourceEnum.FOLLOWUP.getCode() : sourceType;
-        SurveyTemplateVO template = templateService.findEnabledForScene(SurveySceneEnum.DISCHARGE_FOLLOWUP.getCode());
+        SurveyTemplateVO template = surveyTemplateService.findEnabledForScene(SurveySceneEnum.DISCHARGE_FOLLOWUP.getCode());
         // 没配卷就不发：评价域是随访的旁路，绝不能反过来把随访卡死
         if (template == null || template.getItems() == null || template.getItems().isEmpty()) {
             log.warn("[满意度] 随访任务 {} 未发放评价：场景 {} 没有启用中的问卷", task.getTaskId(),
                     SurveySceneEnum.DISCHARGE_FOLLOWUP.getCode());
             return null;
         }
-        BizSurveyDispatch existed = dispatchMapper.selectBySource(src, task.getTaskId(), template.getId());
+        BizSurveyDispatch existed = bizSurveyDispatchMapper.selectBySource(src, task.getTaskId(), template.getId());
         if (existed != null) {
             return dispatchGetById(existed.getId());
         }
@@ -187,22 +157,22 @@ public class SurveyServiceImpl implements SurveyService {
         BizSurveyDispatch entity = new BizSurveyDispatch();
         entity.setDispatchNo(nextNo(Constants.SURVEY_DISPATCH_NO_PREFIX, Constants.SURVEY_DISPATCH_NO_KEY_PREFIX));
         entity.setTemplateId(template.getId());
-        entity.setTemplateName(cut(template.getTemplateName(), 128));
+        entity.setTemplateName(TextUtil.cut(template.getTemplateName(), 128));
         entity.setScene(template.getScene());
         entity.setSourceType(src);
         entity.setSourceId(task.getTaskId());
         entity.setPatientId(task.getPatientId());
-        entity.setPatientNo(cut(task.getPatientNo(), 64));
-        entity.setPatientName(cut(task.getPatientName(), 128));
-        entity.setPhone(cut(task.getPhone(), 20));
+        entity.setPatientNo(TextUtil.cut(task.getPatientNo(), 64));
+        entity.setPatientName(TextUtil.cut(task.getPatientName(), 128));
+        entity.setPhone(TextUtil.cut(task.getPhone(), 20));
         entity.setDeptId(task.getDeptId());
-        entity.setDeptName(cut(task.getDeptName(), 128));
+        entity.setDeptName(TextUtil.cut(task.getDeptName(), 128));
         entity.setChannel(ch);
         // 短信/微信没有真实网关，只能落「待推送」等人工外呼 —— 状态诚实比好看重要
         entity.setDispatchStatus(SurveyDispatchStatusEnum.PENDING_PUSH.getCode());
-        entity.setExpireTime(now().plusDays(days));
+        entity.setExpireTime(TimeUtil.nowSeconds().plusDays(days));
         entity.setCreateBy(operatorUser.getRealName());
-        dispatchMapper.insert(entity);
+        bizSurveyDispatchMapper.insert(entity);
         return dispatchGetById(entity.getId());
     }
 
@@ -211,14 +181,14 @@ public class SurveyServiceImpl implements SurveyService {
     public SurveyDispatchVO markDispatch(SurveyDispatchActionDTO dto) {
         BizSurveyDispatch entity = requireDispatch(dto.getId());
         assertDeptAccessible(entity.getDeptId());
-        String remark = cut(dto.getRemark(), 512);
+        String remark = TextUtil.cut(dto.getRemark(), 512);
         if (Objects.equals(dto.getAction(), 1)) {
             if (!Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.PENDING_PUSH.getCode())) {
                 throw new BusinessException("仅「待推送」的发放单可标记已推送（当前："
                         + SurveyDispatchStatusEnum.getText(entity.getDispatchStatus()) + "）");
             }
             entity.setDispatchStatus(SurveyDispatchStatusEnum.PUSHED.getCode());
-            entity.setPushTime(now());
+            entity.setPushTime(TimeUtil.nowSeconds());
         } else if (Objects.equals(dto.getAction(), 2)) {
             if (Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.RECYCLED.getCode())) {
                 throw new BusinessException("已回收的发放单不能标记拒答（要更正请先作废答卷）");
@@ -233,30 +203,30 @@ public class SurveyServiceImpl implements SurveyService {
             throw new BusinessException("动作不合法：1-标记已推送 2-标记已拒答（「已回收」只能由答卷写入）");
         }
         entity.setRemark(remark);
-        dispatchMapper.updateById(entity);
+        bizSurveyDispatchMapper.updateById(entity);
         return dispatchGetById(entity.getId());
     }
 
     @Override
     public PageResult<SurveyAnswerVO> answerListPage(SurveyAnswerQueryPageDTO dto) {
         Page<SurveyAnswerVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
-        List<SurveyAnswerVO> records = answerMapper.selectAnswerPage(page,
-                trimToNull(dto.getKeyword()), dto.getPatientId(), dto.getTemplateId(), dto.getScene(),
+        List<SurveyAnswerVO> records = bizSurveyAnswerMapper.selectAnswerPage(page,
+                TextUtil.trimToNull(dto.getKeyword()), dto.getPatientId(), dto.getTemplateId(), dto.getScene(),
                 dto.getAnswerStatus(), dto.getFillSource(), dto.getLowScoreOnly(),
-                trimToNull(dto.getDateFrom()), trimToNull(dto.getDateTo()), scopedDeptIds(dto.getDeptId()));
+                TextUtil.trimToNull(dto.getDateFrom()), TextUtil.trimToNull(dto.getDateTo()), scopedDeptIds(dto.getDeptId()));
         records.forEach(this::decorateAnswer);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
     public SurveyAnswerVO answerGetById(Long id) {
-        SurveyAnswerVO vo = answerMapper.selectAnswerById(id);
+        SurveyAnswerVO vo = bizSurveyAnswerMapper.selectAnswerById(id);
         if (vo == null) {
             throw new BusinessException("答卷不存在或已删除");
         }
         assertDeptAccessible(vo.getDeptId());
         decorateAnswer(vo);
-        vo.setItems(answerItemMapper.selectByAnswer(id));
+        vo.setItems(bizSurveyAnswerItemMapper.selectByAnswer(id));
         return vo;
     }
 
@@ -273,7 +243,7 @@ public class SurveyServiceImpl implements SurveyService {
             throw new BusinessException("该发放单已过期");
         }
 
-        BizSurveyAnswer answer = dispatch.getAnswerId() == null ? null : answerMapper.selectById(dispatch.getAnswerId());
+        BizSurveyAnswer answer = dispatch.getAnswerId() == null ? null : bizSurveyAnswerMapper.selectById(dispatch.getAnswerId());
         if (answer != null && Objects.equals(answer.getAnswerStatus(), AnswerStatusEnum.VALID.getCode())
                 && answer.getDisputeCaseId() != null) {
             throw new BusinessException("该答卷已转出投诉单，禁止重填（改分数等于改掉投诉的由来）");
@@ -300,21 +270,21 @@ public class SurveyServiceImpl implements SurveyService {
         answer.setFillSource(dto.getFillSource() == null ? FillSourceEnum.AGENT.getCode() : dto.getFillSource());
         answer.setAnonymousFlag(Objects.equals(dto.getAnonymousFlag(), 1) ? 1 : 0);
         answer.setFillEmployeeId(operatorUser.getEmployeeId());
-        answer.setFillEmployeeName(cut(operatorUser.getRealName(), 64));
-        answer.setFillTime(now());
-        answer.setCommentText(cut(dto.getCommentText(), 1000));
-        answer.setRemark(cut(dto.getRemark(), 512));
+        answer.setFillEmployeeName(TextUtil.cut(operatorUser.getRealName(), 64));
+        answer.setFillTime(TimeUtil.nowSeconds());
+        answer.setCommentText(TextUtil.cut(dto.getCommentText(), 1000));
+        answer.setRemark(TextUtil.cut(dto.getRemark(), 512));
         scoreOf(submitted, paper, answer);
 
         if (isNew) {
-            answerMapper.insert(answer);
+            bizSurveyAnswerMapper.insert(answer);
         } else {
-            answerMapper.updateById(answer);
+            bizSurveyAnswerMapper.updateById(answer);
         }
         // 重填覆盖明细：uk_survey_answer_item(answer_id,item_id) 不含 del_flag，软删必撞键
-        answerItemMapper.purgeByAnswer(answer.getId());
+        bizSurveyAnswerItemMapper.purgeByAnswer(answer.getId());
         for (SurveyAnswerItemVO item : submitted) {
-            answerItemMapper.insert(toAnswerItem(answer.getId(), dispatch.getTemplateId(), item));
+            bizSurveyAnswerItemMapper.insert(toAnswerItem(answer.getId(), dispatch.getTemplateId(), item));
         }
 
         dispatch.setDispatchStatus(SurveyDispatchStatusEnum.RECYCLED.getCode());
@@ -323,14 +293,14 @@ public class SurveyServiceImpl implements SurveyService {
         if (dispatch.getPushTime() == null) {
             dispatch.setPushTime(answer.getFillTime());
         }
-        dispatchMapper.updateById(dispatch);
+        bizSurveyDispatchMapper.updateById(dispatch);
 
         // 低分转投诉：同一事务内完成，转单失败就整体回滚 ——
         // 「打了低分但投诉台账里没有」是最难发现的漏，宁可让录入员看到报错重来
         if (answer.getDisputeCaseId() == null && isLowScore(answer, submitted)) {
             Long caseId = disputeService.caseUpsert(buildDispute(dispatch, answer, submitted)).getId();
             answer.setDisputeCaseId(caseId);
-            answerMapper.updateById(answer);
+            bizSurveyAnswerMapper.updateById(answer);
         }
         return answerGetById(answer.getId());
     }
@@ -342,7 +312,7 @@ public class SurveyServiceImpl implements SurveyService {
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        BizSurveyAnswer answer = answerMapper.selectById(dto.getId());
+        BizSurveyAnswer answer = bizSurveyAnswerMapper.selectById(dto.getId());
         if (answer == null) {
             throw new BusinessException("答卷不存在或已删除");
         }
@@ -350,23 +320,23 @@ public class SurveyServiceImpl implements SurveyService {
         if (!Objects.equals(answer.getAnswerStatus(), AnswerStatusEnum.VALID.getCode())) {
             throw new BusinessException("答卷已是作废状态");
         }
-        String reason = cut(dto.getReason(), 400);
+        String reason = TextUtil.cut(dto.getReason(), 400);
         answer.setAnswerStatus(AnswerStatusEnum.VOID.getCode());
-        answer.setRemark(cut((answer.getRemark() == null ? "" : answer.getRemark() + "；")
+        answer.setRemark(TextUtil.cut((answer.getRemark() == null ? "" : answer.getRemark() + "；")
                 + "作废：" + reason + "（" + operatorUser.getRealName() + " " + LocalDate.now() + "）", 512));
-        answerMapper.updateById(answer);
+        bizSurveyAnswerMapper.updateById(answer);
 
         // 发放单退回未回收：作废不等于「没问过」，回收率的分母不能跟着缩
-        BizSurveyDispatch dispatch = dispatchMapper.selectById(answer.getDispatchId());
+        BizSurveyDispatch dispatch = bizSurveyDispatchMapper.selectById(answer.getDispatchId());
         if (dispatch != null && Objects.equals(dispatch.getAnswerId(), answer.getId())) {
             dispatch.setDispatchStatus(dispatch.getPushTime() == null
                     ? SurveyDispatchStatusEnum.PENDING_PUSH.getCode() : SurveyDispatchStatusEnum.PUSHED.getCode());
-            dispatchMapper.updateById(dispatch);
+            bizSurveyDispatchMapper.updateById(dispatch);
         }
         if (answer.getDisputeCaseId() != null) {
-            String withTrace = cut((answer.getRemark() == null ? "" : answer.getRemark() + "；")
+            String withTrace = TextUtil.cut((answer.getRemark() == null ? "" : answer.getRemark() + "；")
                     + "原转投诉单 " + answer.getDisputeCaseId() + " 继续有效（本答卷已作废重填）", 512);
-            answerMapper.update(null, new LambdaUpdateWrapper<BizSurveyAnswer>()
+            bizSurveyAnswerMapper.update(null, new LambdaUpdateWrapper<BizSurveyAnswer>()
                     .eq(BizSurveyAnswer::getId, answer.getId())
                     .set(BizSurveyAnswer::getRemark, withTrace)
                     .set(BizSurveyAnswer::getDisputeCaseId, null));
@@ -377,15 +347,15 @@ public class SurveyServiceImpl implements SurveyService {
 
     @Override
     public SurveyStatVO stat(Long templateId, Integer scene, String dateFrom, String dateTo) {
-        String from = trimToNull(dateFrom);
-        String to = trimToNull(dateTo);
+        String from = TextUtil.trimToNull(dateFrom);
+        String to = TextUtil.trimToNull(dateTo);
         List<Long> scope = scopedDeptIds(null);
         SurveyStatVO vo = new SurveyStatVO();
 
         long pendingPush = 0, pushed = 0, recycled = 0, expired = 0, refused = 0;
-        for (SurveyDispatchCountVO row : dispatchMapper.countByStatus(templateId, null, from, to, scope)) {
-            int k = nzInt(row.getK());
-            long c = nz(row.getC());
+        for (SurveyDispatchCountVO row : bizSurveyDispatchMapper.countByStatus(templateId, null, from, to, scope)) {
+            int k = NumUtil.orZero(row.getK());
+            long c = NumUtil.orZero(row.getC());
             if (k == SurveyDispatchStatusEnum.PENDING_PUSH.getCode()) {
                 pendingPush = c;
             } else if (k == SurveyDispatchStatusEnum.PUSHED.getCode()) {
@@ -405,68 +375,68 @@ public class SurveyServiceImpl implements SurveyService {
         vo.setRecycledCount(recycled);
         vo.setRefusedCount(refused);
         // 过期是派生态：状态列里没有 4 也照样可能已过截止，看板必须现算
-        vo.setOverdueCount(nz(dispatchMapper.countOverdue(templateId, null, scope)));
+        vo.setOverdueCount(NumUtil.orZero(bizSurveyDispatchMapper.countOverdue(templateId, null, scope)));
         vo.setRecycleRate(rate(recycled, dispatchTotal));
 
-        SurveyOverallStatVO overall = answerMapper.statOverall(templateId, scene, from, to, scope);
+        SurveyOverallStatVO overall = bizSurveyAnswerMapper.statOverall(templateId, scene, from, to, scope);
         if (overall != null) {
-            long total = nz(overall.getTotal());
+            long total = NumUtil.orZero(overall.getTotal());
             vo.setAnswerTotal(total);
-            vo.setVoidCount(nz(overall.getVoided()));
+            vo.setVoidCount(NumUtil.orZero(overall.getVoided()));
             vo.setAvgScore(overall.getAvgScore());
             vo.setAvgScore100(overall.getAvgScore100());
-            vo.setLowScoreCount(nz(overall.getLowScore()));
-            vo.setDisputedCount(nz(overall.getDisputed()));
-            vo.setSatisfiedRate(rate(nz(overall.getSatisfied()), total));
+            vo.setLowScoreCount(NumUtil.orZero(overall.getLowScore()));
+            vo.setDisputedCount(NumUtil.orZero(overall.getDisputed()));
+            vo.setSatisfiedRate(rate(NumUtil.orZero(overall.getSatisfied()), total));
         } else {
             vo.setAnswerTotal(0L);
             vo.setSatisfiedRate(BigDecimal.ZERO);
         }
 
-        SurveyNpsStatVO nps = answerMapper.statNps(templateId, from, to, scope);
+        SurveyNpsStatVO nps = bizSurveyAnswerMapper.statNps(templateId, from, to, scope);
         if (nps != null) {
-            long rated = nz(nps.getRated());
+            long rated = NumUtil.orZero(nps.getRated());
             vo.setNps(rated == 0 ? BigDecimal.ZERO
-                    : BigDecimal.valueOf(nz(nps.getPromoter()) - nz(nps.getDetractor()))
+                    : BigDecimal.valueOf(NumUtil.orZero(nps.getPromoter()) - NumUtil.orZero(nps.getDetractor()))
                     .multiply(HUNDRED).divide(BigDecimal.valueOf(rated), 1, RoundingMode.HALF_UP));
         } else {
             vo.setNps(BigDecimal.ZERO);
         }
 
         List<SurveyStatItemVO> byDimension = new ArrayList<>();
-        for (SurveyDimensionStatVO row : answerMapper.statByDimension(templateId, from, to, scope)) {
-            int k = nzInt(row.getDimension());
+        for (SurveyDimensionStatVO row : bizSurveyAnswerMapper.statByDimension(templateId, from, to, scope)) {
+            int k = NumUtil.orZero(row.getDimension());
             SurveyStatItemVO item = new SurveyStatItemVO(String.valueOf(k),
-                    SurveyDimensionEnum.getText(k), nz(row.getCnt()));
+                    SurveyDimensionEnum.getText(k), NumUtil.orZero(row.getCnt()));
             item.setAvgScore(row.getAvgScore());
             byDimension.add(item);
         }
         vo.setByDimension(byDimension);
 
         List<SurveyStatItemVO> byDept = new ArrayList<>();
-        for (SurveyDeptScoreVO row : answerMapper.statByDeptBottom(templateId, from, to, scope)) {
+        for (SurveyDeptScoreVO row : bizSurveyAnswerMapper.statByDeptBottom(templateId, from, to, scope)) {
             SurveyStatItemVO item = new SurveyStatItemVO(String.valueOf(row.getDeptId()),
-                    row.getDeptName(), nz(row.getCnt()));
+                    row.getDeptName(), NumUtil.orZero(row.getCnt()));
             item.setAvgScore(row.getAvgScore100());
             byDept.add(item);
         }
         vo.setByDeptBottom(byDept);
 
         List<SurveyStatItemVO> byChannel = new ArrayList<>();
-        for (SurveyChannelStatVO row : dispatchMapper.countByChannel(templateId, from, to, scope)) {
-            int k = nzInt(row.getK());
-            long total = nz(row.getTotal());
+        for (SurveyChannelStatVO row : bizSurveyDispatchMapper.countByChannel(templateId, from, to, scope)) {
+            int k = NumUtil.orZero(row.getK());
+            long total = NumUtil.orZero(row.getTotal());
             SurveyStatItemVO item = new SurveyStatItemVO(String.valueOf(k),
                     SurveyChannelEnum.getText(k), total);
-            item.setRate(rate(nz(row.getRecycled()), total));
+            item.setRate(rate(NumUtil.orZero(row.getRecycled()), total));
             byChannel.add(item);
         }
         vo.setByChannel(byChannel);
 
         List<SurveyStatItemVO> byDay = new ArrayList<>();
-        for (SurveyDayTrendVO row : answerMapper.statByDay(templateId, scope)) {
+        for (SurveyDayTrendVO row : bizSurveyAnswerMapper.statByDay(templateId, scope)) {
             SurveyStatItemVO item = new SurveyStatItemVO(row.getStatDate(),
-                    row.getStatDate(), nz(row.getCnt()));
+                    row.getStatDate(), NumUtil.orZero(row.getCnt()));
             item.setAvgScore(row.getAvgScore100());
             byDay.add(item);
         }
@@ -481,7 +451,7 @@ public class SurveyServiceImpl implements SurveyService {
      */
     private Map<Long, BizSurveyItem> paperOf(Long templateId) {
         Map<Long, BizSurveyItem> paper = new HashMap<>();
-        for (BizSurveyItem item : itemMapper.selectByTemplate(templateId)) {
+        for (BizSurveyItem item : bizSurveyItemMapper.selectByTemplate(templateId)) {
             paper.put(item.getId(), item);
         }
         if (paper.isEmpty()) {
@@ -515,8 +485,8 @@ public class SurveyServiceImpl implements SurveyService {
             vo.setTitle(item.getTitle());
             vo.setQuestionType(item.getQuestionType());
             vo.setScore(src.getScore());
-            vo.setOptionLabel(cut(src.getOptionLabel(), 128));
-            vo.setTextValue(cut(src.getTextValue(), 1000));
+            vo.setOptionLabel(TextUtil.cut(src.getOptionLabel(), 128));
+            vo.setTextValue(TextUtil.cut(src.getTextValue(), 1000));
             built.put(item.getId(), vo);
         }
         for (BizSurveyItem item : paper.values()) {
@@ -702,7 +672,7 @@ public class SurveyServiceImpl implements SurveyService {
      */
     private boolean isOverdue(BizSurveyDispatch entity) {
         return !Objects.equals(entity.getDispatchStatus(), SurveyDispatchStatusEnum.RECYCLED.getCode())
-                && entity.getExpireTime() != null && entity.getExpireTime().isBefore(now());
+                && entity.getExpireTime() != null && entity.getExpireTime().isBefore(TimeUtil.nowSeconds());
     }
 
     /**
@@ -729,7 +699,7 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     private BizSurveyDispatch requireDispatch(Long id) {
-        BizSurveyDispatch entity = id == null ? null : dispatchMapper.selectDispatchById(id);
+        BizSurveyDispatch entity = id == null ? null : bizSurveyDispatchMapper.selectDispatchById(id);
         if (entity == null) {
             throw new BusinessException("发放单不存在或已删除");
         }
@@ -762,6 +732,6 @@ public class SurveyServiceImpl implements SurveyService {
 
     private String nextNo(String prefix, String module) {
         return prefix + LocalDate.now().format(DateFormats.COMPACT_DATE)
-                + String.format("%04d", sequenceService.next(module));
+                + String.format("%04d", redisSequenceService.next(module));
     }
 }

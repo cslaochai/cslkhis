@@ -26,19 +26,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MiniappTriageController {
 
-    private final MiniappTriageService triageService;
+    private final MiniappTriageService miniappTriageService;
 
     @Operation(summary = "按主诉推荐科室（规则匹配，急症置顶）")
     @PostMapping("/recommend")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<List<TriageDeptVO>> recommend(@RequestBody @Valid TriageRecommendDTO dto) {
-        return Result.success(triageService.recommend(dto.getDescription()));
+        return Result.success(miniappTriageService.recommend(dto.getDescription()));
     }
 
     @Operation(summary = "常见症状快捷标签")
     @GetMapping("/hotSymptoms")
     @PreAuthorize("hasAuthority('PATIENT')")
     public Result<List<TriageSymptomVO>> hotSymptoms() {
-        return Result.success(triageService.hotSymptoms());
+        return Result.success(miniappTriageService.hotSymptoms());
     }
 }

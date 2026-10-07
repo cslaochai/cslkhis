@@ -2,6 +2,7 @@ package com.his.medicaltech.service.impl;
 
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.NumUtil;
 import com.his.medicaltech.mapper.StatsMapper;
 import com.his.medicaltech.service.StatsService;
 import com.his.medicaltech.vo.StatsOverviewVO;
@@ -54,10 +55,6 @@ public class StatsServiceImpl implements StatsService {
         return v == null ? 0L : v;
     }
 
-    private static BigDecimal nz(BigDecimal v) {
-        return v == null ? BigDecimal.ZERO : v;
-    }
-
     @Override
     public StatsOverviewVO overview(String startDate, String endDate) {
         LocalDate end = parseDate(endDate);
@@ -107,7 +104,7 @@ public class StatsServiceImpl implements StatsService {
         vo.setIpAdmitCount(z(statsMapper.countAdmit(s, e)));
         long discharges = z(statsMapper.countDischarge(s, e));
         vo.setIpDischargeCount(discharges);
-        BigDecimal bedDays = nz(statsMapper.sumBedDays(s, e));
+        BigDecimal bedDays = NumUtil.orZero(statsMapper.sumBedDays(s, e));
         vo.setIpBedDays(bedDays.setScale(0, RoundingMode.HALF_UP).longValue());
         vo.setIpAvgLosDays(discharges > 0
                 ? bedDays.divide(BigDecimal.valueOf(discharges), 1, RoundingMode.HALF_UP)
@@ -130,19 +127,19 @@ public class StatsServiceImpl implements StatsService {
     }
 
     private void fillRevenue(StatsOverviewVO vo, String s, String e) {
-        BigDecimal total = nz(statsMapper.sumRevenue(s, e));
-        BigDecimal drug = nz(statsMapper.sumDrugRevenue(s, e));
+        BigDecimal total = NumUtil.orZero(statsMapper.sumRevenue(s, e));
+        BigDecimal drug = NumUtil.orZero(statsMapper.sumDrugRevenue(s, e));
         vo.setRevTotal(total);
         vo.setRevDrug(drug);
         vo.setDrugRatio(rate(drug, total));
-        vo.setRevMaterial(nz(statsMapper.sumMaterialRevenue(s, e)));
-        vo.setRevOutpatient(nz(statsMapper.sumOutpatientRevenue(s, e)));
-        vo.setRevInpatient(nz(statsMapper.sumInpatientRevenue(s, e)));
+        vo.setRevMaterial(NumUtil.orZero(statsMapper.sumMaterialRevenue(s, e)));
+        vo.setRevOutpatient(NumUtil.orZero(statsMapper.sumOutpatientRevenue(s, e)));
+        vo.setRevInpatient(NumUtil.orZero(statsMapper.sumInpatientRevenue(s, e)));
         vo.setRevTrend(statsMapper.revTrend(s, e));
         vo.setRevTypeDist(statsMapper.revTypeDist(s, e));
         vo.setRevDeptTop(statsMapper.revDeptTop(s, e));
         vo.setRevPayDist(statsMapper.revPayDist(s, e));
-        vo.setRevRefundAmount(nz(statsMapper.sumRefundAmount(s, e)));
+        vo.setRevRefundAmount(NumUtil.orZero(statsMapper.sumRefundAmount(s, e)));
         vo.setRevRefundCount(z(statsMapper.countRefundBill(s, e)));
     }
 
@@ -158,7 +155,7 @@ public class StatsServiceImpl implements StatsService {
         StatsOverviewVO.ReturnStat ret = statsMapper.phReturnStat(s, e);
         if (ret != null) {
             vo.setPhReturnCount(ret.getCnt() == null ? 0L : ret.getCnt());
-            vo.setPhReturnAmount(nz(ret.getAmt()));
+            vo.setPhReturnAmount(NumUtil.orZero(ret.getAmt()));
         }
     }
 }

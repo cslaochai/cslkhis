@@ -1,5 +1,6 @@
 package com.his.system.service.impl;
 
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.system.dto.DictDataQueryDTO;
 import com.his.system.dto.SysDictDataUpsertDTO;
@@ -19,9 +20,9 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class SysDictDataServiceImpl implements SysDictDataService {
+public class SysDictDataServiceImpl extends ServiceImpl<SysDictDataMapper, SysDictData> implements SysDictDataService {
 
-    private final SysDictDataMapper dictDataMapper;
+    private final SysDictDataMapper sysDictDataMapper;
     private final DictCacheService dictCacheService;
 
     @Override
@@ -55,7 +56,7 @@ public class SysDictDataServiceImpl implements SysDictDataService {
 
     @Override
     public SysDictDataVO getInfo(Long dataId) {
-        SysDictData dictData = dictDataMapper.selectById(dataId);
+        SysDictData dictData = sysDictDataMapper.selectById(dataId);
         SysDictDataVO vo = new SysDictDataVO();
         BeanUtils.copyProperties(dictData, vo);
         return vo;
@@ -66,18 +67,18 @@ public class SysDictDataServiceImpl implements SysDictDataService {
         SysDictData dictData = new SysDictData();
         BeanUtils.copyProperties(upsertDTO, dictData);
         if (upsertDTO.getId() == null) {
-            dictDataMapper.insert(dictData);
+            sysDictDataMapper.insert(dictData);
         } else {
-            dictDataMapper.updateById(dictData);
+            sysDictDataMapper.updateById(dictData);
         }
         dictCacheService.refreshDictCache(dictData.getDictType());
     }
 
     @Override
     public void delete(Long dataId) {
-        SysDictData dictData = dictDataMapper.selectById(dataId);
+        SysDictData dictData = sysDictDataMapper.selectById(dataId);
         if (dictData != null) {
-            dictDataMapper.deleteById(dataId);
+            sysDictDataMapper.deleteById(dataId);
             dictCacheService.refreshDictCache(dictData.getDictType());
         }
     }

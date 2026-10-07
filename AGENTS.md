@@ -845,3 +845,68 @@
   33 处是行内 `format(ofPattern(...))` —— 每次调用新建一个 formatter，且全落在「生成业务单号」热路径上。
   改后 `ofPattern` 归零，常量被 197 个引用点复用。脚本：`workspace/_refactor_date_formats.py`（pattern→常量映射表在文件头）。
   连带把 `DateTimeFormatter.BASIC_ISO_DATE`（== `yyyyMMdd`）的私有字段 + 行内用法也一并收进 `COMPACT_DATE`。
+
+## 22. 依赖字段名 = 被注入类型的首字母小写全称（2026-10-07 全仓收口 712 处 / 296 文件）
+- `@Resource` / `@Autowired` 注入的字段，以及 `@RequiredArgsConstructor` 的 `private final` 依赖字段，
+  一律命名为**类型名的首字母小写全称**：`DictCacheService dictCacheService`、
+  `BizExamFilmMapper bizExamFilmMapper`、`SysUserService sysUserService`。
+- **禁止功能别名**（`dictText` / `subDictText` / `store` / `tsaChannel` / `perfMapper2` 这类），
+  **禁止省前缀的短名**（`filmMapper` / `userService`）。理由：一个 Service 里常常注入十几个依赖，
+  别名让「这个字段到底是哪个类」必须跳类型才能知道；按类名 grep 找不到依赖点，评审与改造（例如某接口收口、
+  某 Mapper 换实现）时点不齐；`@Resource` 的解析顺序是「先按字段名找 bean」，名字与类型对齐后
+  这条路径才是可预期的，而不是永远靠按类型兜底。
+- **同一类型不许注入两次**：出现即合并成一个字段（本次实锤 `EmrServiceImpl` 注入
+  `BizMedicalRecordArchiveMapper` 两份 —— `archiveMapper` 与 `medicalRecordArchiveMapper`，已删成一份）。
+  不要为了避开重名而去写 `xxx2` / `subXxx`：那是把「重复注入」这个 bug 固化成命名。
+- **只管依赖，不管数据字段**：entity / DTO / VO 的业务字段名跟**列名**对齐（那是第 1 节的事），
+  局部变量、`static final` 技术阈值常量不在本条范围内。
+- 机械判据：`python workspace/_scan_dep_field_names.py` 必须输出 `total mismatches: 0`
+  （脚本按 `@Resource/@Autowired/@Qualifier` + `@RequiredArgsConstructor` 的 final 字段收集，
+  比对 `name == decap(type)`；`@ConfigurationProperties`/`@TableName` 类自身的字段自动跳过，
+  因为它们的字段名是配置键 / 列名）。改造脚本 `workspace/_apply_dep_field_rename.py`（含 `--apply`），
+  改完验收口径 = `mvn -o -DskipTests clean install` 通过 + 真启动 + 跨模块接口实测（本次 10 模块 26 个接口 200）。
+
+## 23. 洗字符串/兜数值/归一时间的小工具只许有三个家（2026-10-07 全仓收口，现 185 文件 / 1835 处调用走三件套）
+- **三个收口点**（`his-common/util`，除此之外不许出现第四个同名工具）：
+  | 类 | 只管这件事 | 方法 |
+  |---|---|---|
+  | `TextUtil` | 空白清洗与截断 | `trim` / `trimToNull` / `trimToEmpty` / `nullToEmpty` / `blankToDefault` / `cut(v,max)` / `cut(v,max,blank)` / `cutToNull` / `ellipsis` / `requireTrimmed` |
+  | `NumUtil` | null 兜底、金额舍入、数量文本 | `orZero(Integer/Long/BigDecimal)` / `orDefault` / `scale(v,位数)` / `plain(v)` |
+  | `TimeUtil` | 归一到秒与日边界、时长 | `toSeconds` / `nowSeconds` / `dayStart` / `dayEnd` / `minutesBetween` / `elapsedMinutes` / `elapsedHours` |
+- **禁止在 service / support / controller / 接口里写私有副本**，方法名叫什么都算：
+  `trimToNull` `tr` `trim` `safe` `defaultStr` `nullToDash` `nvl` `nz` `nzAmount` `nzInt` `cut` `clip` `truncate`
+  `plain` `scale` `requireText` `now` `atStart` `atEnd` `dayStart` `dayEnd` `minutesBetween` `hoursBetween`。
+  危害不是重复代码，是**同名不同实现**：`nz(Integer)` 有的文件返回 `int` 有的返回 `long`；
+  `cut` 有的返回 `null` 有的返回 `""`；`nvl(x,"-")` 有的判 `hasText` 有的只判 `null` ——
+  同一个入参洗完落库成什么，取决于这段代码恰好写在哪个文件里。要新方法就先往上面三个类加，
+  **加的时候在 javadoc 写清它和相邻方法差在哪**（`trim` vs `trimToNull` vs `trimToEmpty` 是三种落库结果）。
+- **不要用 Spring 的 `StringTrimmerEditor` 代替**（用户 2026-10-07 问过，结论是不行）：
+  ① 它只作用于**表单/查询参数绑定**（`@ModelAttribute`/`@RequestParam`），本仓 DTO 绝大多数走
+  `@RequestBody` JSON，Jackson 不查 `PropertyEditor`，注册了也不生效；
+  ② `emptyAsNull=true` 会把「传空串清空该字段」变成传 `null`，而 MyBatis-Plus `updateById`
+  **跳过 null 列** —— 等于静默改掉更新语义，用户点了保存但库里没变，零报错。
+- **`NumUtil.orDefault` 只允许一个重载** `(Integer, Integer)`：本仓分页参数是原始 `int`
+  （`PageParam.getPageNum()`），再配一个 `(Integer, int)` 会在装箱阶段同时可用且互不更特 →
+  javac「对 orDefault 的引用不明确」。要原始 `int` 就地拆箱。
+- **`plain` 的 null 语义是刻意的**：签名/哈希用的数量文本必须能区分「没有这个值」和「值为 0」，
+  所以 `NumUtil.plain(null)` 返回 `null`；展示与报错文案要 `"0"` 的写 `plain(orZero(v))`。
+  为什么必须 `stripTrailingZeros().toPlainString()`：`1E+2` 的 `toString()` 带 `E`，
+  同一数量从除法来和从字面量来会得到两个不同字符串，而它已经是历史签名的一部分。
+- **纯转发的私有文案壳直接删，调用点写枚举**：`private static String statusText(Integer s){ return XxxEnum.getText(s); }`
+  这种一层包装（含 `status == null ? "未知" : XxxEnum.labelOrUnknown(s)` —— `labelOrUnknown` 自己就管 null→「未知」）
+  属第 13 节「集中式文案壳」的同族，内联成 `XxxEnum.getText(...)` / `labelOrUnknown(...)`。
+  **例外**：喂给规范化签名（`CanonicalText`）的 `statusText` 是哈希输入，改动=历史签名全部校验不上，不许动。
+- **含业务语义的不算副本，留在原地**：文件格式转义（PDF 的 `safe`/`escape`）、
+  数字转文本的临床判据、按列名/动作拼提示语的私有方法 —— 它们不是「洗一个通用类型」。
+  判据一句话：**把方法体抄到另一个模块里还成立吗？成立就进三件套，不成立就留着。**
+- 机械判据：
+  ```bash
+  grep -rnE "private (static )?(String|BigDecimal|Integer|Long|LocalDateTime|boolean) " \
+    --include=*.java source/back_end | grep -E "(trimToNull|trimToEmpty|defaultStr|nullToDash|nvl|nz|cut|clip|truncate|plain|scale|requireText|now|atStart|atEnd|dayStart|dayEnd|minutesBetween|hoursBetween)\("
+  grep -rn "truncatedTo" --include=*.java source/back_end
+  ```
+  第一条必须只剩「含业务语义」那一类（逐条核对），第二条**只允许输出 `his-common/util/TimeUtil.java` 一个文件**。
+  改造脚本：`workspace/_apply_helper_collapse.mjs`（先 dry 再 `--apply`，映射表在 `mapDef`）、
+  `workspace/_apply_truncation_sweep.mjs`、`workspace/_inline_statustext_shells.mjs`。
+  ⚠ 引擎**必须跳过 `*/util/*` 目录**：否则 `TimeUtil` 自己会进流水线，删掉自己的方法并 import 自己
+  （2026-10-07 真踩过：`toSeconds` 改成调 `toSeconds` 的无限递归）。

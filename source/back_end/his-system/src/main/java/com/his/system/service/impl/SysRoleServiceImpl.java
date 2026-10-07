@@ -3,8 +3,8 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.dto.RoleMenuUpsertDTO;
 import com.his.system.dto.SysRoleQueryDTO;
 import com.his.system.dto.SysRoleQueryPageDTO;
@@ -24,11 +24,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,9 +36,9 @@ public class SysRoleServiceImpl implements SysRoleService {
      */
     private static final String SYSTEM_ADMIN_ROLE_CODE = "10012";
 
-    private final SysRoleMapper roleMapper;
-    private final SysRoleMenuMapper roleMenuMapper;
-    private final SysMenuMapper menuMapper;
+    private final SysRoleMapper sysRoleMapper;
+    private final SysRoleMenuMapper sysRoleMenuMapper;
+    private final SysMenuMapper sysMenuMapper;
     private final RedisSequenceService redisSequenceService;
     private final RolePermissionCache rolePermissionCache;
 
@@ -52,7 +48,7 @@ public class SysRoleServiceImpl implements SysRoleService {
         wrapper.like(StringUtils.hasText(queryDTO.getRoleName()), SysRole::getRoleName, queryDTO.getRoleName())
                 .eq(queryDTO.getStatus() != null, SysRole::getStatus, queryDTO.getStatus())
                 .orderByAsc(SysRole::getSortOrder);
-        Page<SysRole> page = roleMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
+        Page<SysRole> page = sysRoleMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
         List<RoleVO> voList = page.getRecords().stream().map(role -> {
             RoleVO vo = new RoleVO();
             BeanUtils.copyProperties(role, vo);
@@ -67,7 +63,7 @@ public class SysRoleServiceImpl implements SysRoleService {
         wrapper.like(StringUtils.hasText(queryDTO.getRoleName()), SysRole::getRoleName, queryDTO.getRoleName())
                 .eq(queryDTO.getStatus() != null, SysRole::getStatus, queryDTO.getStatus())
                 .orderByAsc(SysRole::getSortOrder);
-        List<SysRole> roles = roleMapper.selectList(wrapper);
+        List<SysRole> roles = sysRoleMapper.selectList(wrapper);
         return roles.stream().map(role -> {
             RoleSelectListVO vo = new RoleSelectListVO();
             BeanUtils.copyProperties(role, vo);
@@ -77,7 +73,7 @@ public class SysRoleServiceImpl implements SysRoleService {
 
     @Override
     public RoleVO getInfo(Long roleId) {
-        SysRole role = roleMapper.selectById(roleId);
+        SysRole role = sysRoleMapper.selectById(roleId);
         RoleVO vo = new RoleVO();
         BeanUtils.copyProperties(role, vo);
         return vo;
@@ -95,23 +91,23 @@ public class SysRoleServiceImpl implements SysRoleService {
                 role.setRoleType(0);
             }
 
-            roleMapper.insert(role);
+            sysRoleMapper.insert(role);
             return "新增成功";
         }
         // 系统角色不允许修改角色类型
-        SysRole existingRole = roleMapper.selectById(role.getId());
+        SysRole existingRole = sysRoleMapper.selectById(role.getId());
         if (existingRole != null && existingRole.getRoleType() == 1) {
             role.setRoleType(1);
             role.setRoleCode(existingRole.getRoleCode());
         }
 
-        roleMapper.updateById(role);
+        sysRoleMapper.updateById(role);
         return "修改成功";
     }
 
     @Override
     public void delete(Long roleId) {
-        SysRole role = roleMapper.selectById(roleId);
+        SysRole role = sysRoleMapper.selectById(roleId);
         if (role == null) {
             throw new BusinessException("角色不存在");
         }
@@ -119,9 +115,9 @@ public class SysRoleServiceImpl implements SysRoleService {
             throw new BusinessException("系统角色不允许删除");
         }
 
-        roleMapper.deleteById(roleId);
+        sysRoleMapper.deleteById(roleId);
         // 同步清理该角色的菜单权限关联，避免留下指向已删角色的孤儿记录
-        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
+        sysRoleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
                 .eq(SysRoleMenu::getRoleId, roleId));
         // 角色删了,它的权限缓存必须失效(下个同码角色不能继承旧权限)
         rolePermissionCache.invalidate(role.getRoleCode());
@@ -129,14 +125,14 @@ public class SysRoleServiceImpl implements SysRoleService {
 
     @Override
     public List<Long> getMenuIds(Long roleId) {
-        List<SysRoleMenu> list = roleMenuMapper.selectList(
+        List<SysRoleMenu> list = sysRoleMenuMapper.selectList(
                 new LambdaQueryWrapper<SysRoleMenu>().eq(SysRoleMenu::getRoleId, roleId));
         return list.stream().map(SysRoleMenu::getMenuId).collect(Collectors.toList());
     }
 
     @Override
     public void saveRoleMenu(RoleMenuUpsertDTO upsertDTO) {
-        SysRole role = roleMapper.selectById(upsertDTO.getRoleId());
+        SysRole role = sysRoleMapper.selectById(upsertDTO.getRoleId());
         if (role == null) {
             throw new BusinessException("角色不存在");
         }
@@ -152,13 +148,13 @@ public class SysRoleServiceImpl implements SysRoleService {
         // 菜单树按父子逐级挂载，若只勾了二级菜单而漏掉所属目录，该菜单在侧边栏不会显示
         Set<Long> finalMenuIds = empty ? new HashSet<>() : resolveWithParents(menuIds);
 
-        roleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
+        sysRoleMenuMapper.delete(new LambdaQueryWrapper<SysRoleMenu>()
                 .eq(SysRoleMenu::getRoleId, upsertDTO.getRoleId()));
         for (Long menuId : finalMenuIds) {
             SysRoleMenu roleMenu = new SysRoleMenu();
             roleMenu.setRoleId(upsertDTO.getRoleId());
             roleMenu.setMenuId(menuId);
-            roleMenuMapper.insert(roleMenu);
+            sysRoleMenuMapper.insert(roleMenu);
         }
         // 授权变更即时生效:失效该角色的权限缓存(下一个请求重查)
         rolePermissionCache.invalidate(role.getRoleCode());
@@ -169,7 +165,7 @@ public class SysRoleServiceImpl implements SysRoleService {
      */
     private Set<Long> resolveWithParents(List<Long> menuIds) {
         Map<Long, Long> parentMap = new HashMap<>();
-        for (SysMenu menu : menuMapper.selectList(null)) {
+        for (SysMenu menu : sysMenuMapper.selectList(null)) {
             parentMap.put(menu.getId(), menu.getParentId());
         }
         Set<Long> result = new HashSet<>(menuIds);

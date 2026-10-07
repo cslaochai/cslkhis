@@ -1,5 +1,6 @@
 package com.his.medicaltech.support;
 
+import com.his.common.util.TextUtil;
 import org.springframework.stereotype.Component;
 
 import javax.imageio.ImageIO;
@@ -25,10 +26,6 @@ public class MockExamImageSource {
 
     private static final int SIZE = 512;
     private static final Font LABEL_FONT = new Font("SansSerif", Font.PLAIN, 14);
-
-    private static String cut(String s, int max) {
-        return s.length() <= max ? s : s.substring(0, max);
-    }
 
     /**
      * 生成第 seq 帧的 PNG 字节。
@@ -101,10 +98,10 @@ public class MockExamImageSource {
             g.drawString("MOD " + modalityText, 12, 62);
         }
         if (patientName != null) {
-            g.drawString(cut(patientName, 12), SIZE - 150, 22);
+            g.drawString(TextUtil.cut(patientName, 12), SIZE - 150, 22);
         }
         if (itemName != null) {
-            g.drawString(cut(itemName, 14), SIZE - 180, 42);
+            g.drawString(TextUtil.cut(itemName, 14), SIZE - 180, 42);
         }
         // 标尺：10cm 对应 100px，用来目测窗宽窗位是否生效
         g.setStroke(new BasicStroke(2f));

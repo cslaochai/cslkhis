@@ -1,9 +1,9 @@
 package com.his.charge.support;
 
-
 import com.his.charge.entity.BizSettlementDiagnosis;
 import com.his.charge.enums.RuleCatalogEnum;
 import com.his.common.enums.SysGenderEnum;
+import com.his.common.util.TextUtil;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -49,10 +49,6 @@ public class LogicExclusionRule implements ComplianceRule {
 
     private static final int NEONATE_MAX_AGE = 1;
     private static final int ELDERLY_MIN_AGE = 60;
-
-    private static String safe(String s) {
-        return s == null ? "" : s;
-    }
 
     @Override
     public String group() {
@@ -197,7 +193,7 @@ public class LogicExclusionRule implements ComplianceRule {
         }
         if (cond == 4) {
             findings.add(RuleFinding.hit(RuleCatalogEnum.B04,
-                            "主要诊断「" + safe(main.getIcdName()) + "」入院病情为「无」，"
+                            "主要诊断「" + TextUtil.nullToEmpty(main.getIcdName()) + "」入院病情为「无」，"
                                     + "表示入院时并不存在该情况，不能作为主要诊断")
                     .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
             return;
@@ -227,7 +223,7 @@ public class LogicExclusionRule implements ComplianceRule {
         if (otherCount == 0) {
             for (BizSettlementDiagnosis d : ccDiags) {
                 findings.add(RuleFinding.hit(RuleCatalogEnum.B05,
-                                "诊断「" + safe(d.getIcdName()) + "」标注为 " + d.getCcLevel()
+                                "诊断「" + TextUtil.nullToEmpty(d.getIcdName()) + "」标注为 " + d.getCcLevel()
                                         + "（会提升病组权重），但清单无任何其他诊断作为并发症/合并症依据")
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
             }

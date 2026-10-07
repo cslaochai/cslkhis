@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class DoctorStatusCacheServiceImpl implements DoctorStatusCacheService {      // 暂停
     private static final String CACHE_PREFIX = "doctor:status:";
     private static final long CACHE_EXPIRE_HOURS = 24;
-    private final StringRedisTemplate redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
     /**
      * 生成缓存key
@@ -40,7 +40,7 @@ public class DoctorStatusCacheServiceImpl implements DoctorStatusCacheService { 
     public void setStatus(Long doctorId, int status) {
         try {
             String key = generateKey(doctorId);
-            redisTemplate.opsForValue().set(key, String.valueOf(status), CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
+            stringRedisTemplate.opsForValue().set(key, String.valueOf(status), CACHE_EXPIRE_HOURS, TimeUnit.HOURS);
             log.debug("设置医生{}状态为{}", doctorId, status);
         } catch (Exception e) {
             log.error("设置医生状态缓存失败: doctorId={}", doctorId, e);
@@ -56,7 +56,7 @@ public class DoctorStatusCacheServiceImpl implements DoctorStatusCacheService { 
     public int getStatus(Long doctorId) {
         try {
             String key = generateKey(doctorId);
-            String value = redisTemplate.opsForValue().get(key);
+            String value = stringRedisTemplate.opsForValue().get(key);
             if (value != null) {
                 return Integer.parseInt(value);
             }
@@ -74,7 +74,7 @@ public class DoctorStatusCacheServiceImpl implements DoctorStatusCacheService { 
     public void clearStatus(Long doctorId) {
         try {
             String key = generateKey(doctorId);
-            redisTemplate.delete(key);
+            stringRedisTemplate.delete(key);
             log.debug("清除医生{}状态", doctorId);
         } catch (Exception e) {
             log.error("清除医生状态缓存失败: doctorId={}", doctorId, e);

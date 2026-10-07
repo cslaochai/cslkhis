@@ -2,12 +2,14 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechAuthStatusEnum;
 import com.his.common.enums.TechLevelEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.*;
 import com.his.system.entity.BizTechAuthOverride;
 import com.his.system.entity.SysEmployee;
@@ -49,7 +51,7 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
+public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuthMapper, SysEmployeeTechAuth> implements EmployeeTechAuthService {
     /** 授权状态：1-待审批 2-已授权 3-已驳回 4-已收回（唯一口径 TechAuthStatusEnum） */
     /**
      * 越权登记状态：1-待上级确认 2-已确认
@@ -61,32 +63,17 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
     private static final int BASIS_MAX = 200;
 
     private final DictCacheService dictCacheService;
-    private final SysEmployeeTechAuthMapper authMapper;
-    private final BizTechAuthOverrideMapper overrideMapper;
-    private final SysEmployeeMapper employeeMapper;
+    private final SysEmployeeTechAuthMapper sysEmployeeTechAuthMapper;
+    private final BizTechAuthOverrideMapper bizTechAuthOverrideMapper;
+    private final SysEmployeeMapper sysEmployeeMapper;
 
     // 一、台账查询
-
-    private static String trim(String value) {
-        return StringUtils.hasText(value) ? value.trim() : null;
-    }
-
-    /**
-     * 写库的原因/依据一律先截到列宽：超长会让 insert 报 Data too long，把「提示」升级成 500
-     */
-    private static String clip(String value, int max) {
-        if (!StringUtils.hasText(value)) {
-            return null;
-        }
-        String v = value.trim();
-        return v.length() <= max ? v : v.substring(0, max);
-    }
 
     @Override
     public PageResult<EmployeeTechAuthVO> listPage(TechAuthQueryPageDTO query) {
         TechAuthQueryPageDTO q = query == null ? new TechAuthQueryPageDTO() : query;
         LambdaQueryWrapper<SysEmployeeTechAuth> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(q.getEmployeeName()), SysEmployeeTechAuth::getEmployeeName, trim(q.getEmployeeName()))
+        wrapper.like(StringUtils.hasText(q.getEmployeeName()), SysEmployeeTechAuth::getEmployeeName, TextUtil.trimToNull(q.getEmployeeName()))
                 .eq(q.getEmployeeId() != null, SysEmployeeTechAuth::getEmployeeId, q.getEmployeeId())
                 .eq(q.getAuthCategory() != null, SysEmployeeTechAuth::getAuthCategory, q.getAuthCategory())
                 .eq(q.getTechLevel() != null, SysEmployeeTechAuth::getTechLevel, q.getTechLevel())
@@ -99,7 +86,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
                 .orderByAsc(SysEmployeeTechAuth::getAuthCategory)
                 .orderByDesc(SysEmployeeTechAuth::getId);
 
-        Page<SysEmployeeTechAuth> page = authMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        Page<SysEmployeeTechAuth> page = sysEmployeeTechAuthMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
         List<EmployeeTechAuthVO> records = page.getRecords().stream().map(this::toVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -119,7 +106,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         LambdaQueryWrapper<SysEmployeeTechAuth> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysEmployeeTechAuth::getEmployeeId, employeeId)
                 .orderByAsc(SysEmployeeTechAuth::getAuthCategory);
-        return authMapper.selectList(wrapper).stream().map(this::toVO).toList();
+        return sysEmployeeTechAuthMapper.selectList(wrapper).stream().map(this::toVO).toList();
     }
 
     @Override
@@ -141,7 +128,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
             throw new BusinessException("有效期至不能早于生效日期");
         }
 
-        SysEmployee emp = employeeMapper.selectById(dto.getEmployeeId());
+        SysEmployee emp = sysEmployeeMapper.selectById(dto.getEmployeeId());
         if (emp == null) {
             throw new BusinessException("员工不存在");
         }
@@ -183,19 +170,19 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         entity.setTitle(emp.getTitle());
         entity.setAuthCategory(dto.getAuthCategory());
         entity.setTechLevel(dto.getTechLevel());
-        entity.setItemScope(clip(trim(dto.getItemScope()), 500));
+        entity.setItemScope(TextUtil.cutToNull(TextUtil.trimToNull(dto.getItemScope()), 500));
         entity.setAuthType(dto.getAuthType() == null ? 1 : dto.getAuthType());
-        entity.setAuthBasis(clip(dto.getAuthBasis(), BASIS_MAX));
+        entity.setAuthBasis(TextUtil.cutToNull(dto.getAuthBasis(), BASIS_MAX));
         entity.setValidFrom(dto.getValidFrom());
         entity.setValidUntil(dto.getValidUntil());
-        entity.setRemark(clip(dto.getRemark(), REASON_MAX));
+        entity.setRemark(TextUtil.cutToNull(dto.getRemark(), REASON_MAX));
         if (create) {
             entity.setAuthStatus(TechAuthStatusEnum.PENDING.getCode());
             entity.setApplyBy(UserUtils.getCurrentUser().getRealName());
             entity.setApplyTime(LocalDateTime.now());
-            authMapper.insert(entity);
+            sysEmployeeTechAuthMapper.insert(entity);
         } else {
-            authMapper.updateById(entity);
+            sysEmployeeTechAuthMapper.updateById(entity);
         }
         log.info("{}技术授权 emp={} {} 上限={} {}~{}",
                 create ? "登记" : "修改", emp.getEmpName(),
@@ -215,9 +202,9 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         entity.setApproverId(UserUtils.getCurrentUser().getEmployeeId());
         entity.setApproverName(UserUtils.getCurrentUser().getRealName());
         entity.setApproveTime(LocalDateTime.now());
-        entity.setApproveOpinion(clip(dto.getApproveOpinion(), REASON_MAX));
+        entity.setApproveOpinion(TextUtil.cutToNull(dto.getApproveOpinion(), REASON_MAX));
         // 审批即生效：原记录若授到更晚日期，收回旧的一律由人工做，这里不自动覆盖
-        authMapper.updateById(entity);
+        sysEmployeeTechAuthMapper.updateById(entity);
         log.info("技术授权审批 id={} 结论={} 审批人={}", entity.getId(),
                 TechAuthStatusEnum.getText(entity.getAuthStatus()), entity.getApproverName());
     }
@@ -235,8 +222,8 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         entity.setAuthStatus(TechAuthStatusEnum.REVOKED.getCode());
         entity.setRevokeBy(UserUtils.getCurrentUser().getRealName());
         entity.setRevokeTime(LocalDateTime.now());
-        entity.setRevokeReason(clip(dto.getRevokeReason(), REASON_MAX));
-        authMapper.updateById(entity);
+        entity.setRevokeReason(TextUtil.cutToNull(dto.getRevokeReason(), REASON_MAX));
+        sysEmployeeTechAuthMapper.updateById(entity);
         log.info("技术授权收回 id={} emp={} {} 原因={}", entity.getId(), entity.getEmployeeName(),
                 TechAuthCategoryEnum.getText(entity.getAuthCategory()), entity.getRevokeReason());
     }
@@ -249,7 +236,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
             throw new BusinessException("已授权/已收回的授权记录不许删除（台账留痕），请走「收回」");
         }
         // 本表无 del_flag，deleteById 即物理删，不会占着 uk_emp_cat_from
-        authMapper.deleteById(id);
+        sysEmployeeTechAuthMapper.deleteById(id);
     }
 
     @Override
@@ -264,7 +251,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
                 .eq(SysEmployeeTechAuth::getAuthStatus, TechAuthStatusEnum.GRANTED.getCode());
         applyEffective(wrapper, date);
         wrapper.orderByDesc(SysEmployeeTechAuth::getTechLevel).last("LIMIT 1");
-        return authMapper.selectOne(wrapper);
+        return sysEmployeeTechAuthMapper.selectOne(wrapper);
     }
 
     // 四、越权登记台账
@@ -284,7 +271,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
             vo.setMessage("当前登录人没有关联员工档案，无法判定技术授权，请先在系统管理里补员工的员工档案");
             return vo;
         }
-        SysEmployee emp = employeeMapper.selectById(employeeId);
+        SysEmployee emp = sysEmployeeMapper.selectById(employeeId);
         vo.setEmployeeName(emp == null ? null : emp.getEmpName());
         if (emp == null) {
             vo.setMessage("操作者（员工ID " + employeeId + "）档案不存在，无法判定技术授权");
@@ -351,11 +338,11 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         override.setAuthCategory(gate.getAuthCategory());
         override.setRequiredLevel(gate.getRequiredLevel() == null ? 0 : gate.getRequiredLevel());
         override.setHeldLevel(check.getHeldLevel());
-        override.setReason(clip(StringUtils.hasText(gate.getReason())
+        override.setReason(TextUtil.cutToNull(StringUtils.hasText(gate.getReason())
                 ? gate.getReason() : "急诊/抢救越权：" + check.getMessage(), REASON_MAX));
         override.setOccurTime(LocalDateTime.now());
         override.setOverrideStatus(OV_PENDING);
-        overrideMapper.insert(override);
+        bizTechAuthOverrideMapper.insert(override);
         check.setPassed(true);
         check.setOverrideId(override.getId());
         log.warn("急诊越权放行：emp={} {} 要求={} 现有={} 单据={} 登记ID={}",
@@ -371,12 +358,12 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
     public PageResult<TechAuthOverrideVO> overrideListPage(TechAuthOverrideQueryPageDTO query) {
         TechAuthOverrideQueryPageDTO q = query == null ? new TechAuthOverrideQueryPageDTO() : query;
         LambdaQueryWrapper<BizTechAuthOverride> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(q.getEmployeeName()), BizTechAuthOverride::getEmployeeName, trim(q.getEmployeeName()))
+        wrapper.like(StringUtils.hasText(q.getEmployeeName()), BizTechAuthOverride::getEmployeeName, TextUtil.trimToNull(q.getEmployeeName()))
                 .eq(q.getAuthCategory() != null, BizTechAuthOverride::getAuthCategory, q.getAuthCategory())
                 .eq(q.getSourceType() != null, BizTechAuthOverride::getSourceType, q.getSourceType())
                 .eq(q.getOverrideStatus() != null, BizTechAuthOverride::getOverrideStatus, q.getOverrideStatus())
                 .orderByDesc(BizTechAuthOverride::getId);
-        Page<BizTechAuthOverride> page = overrideMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        Page<BizTechAuthOverride> page = bizTechAuthOverrideMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
         List<TechAuthOverrideVO> records = page.getRecords().stream().map(this::toOverrideVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -384,7 +371,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void confirmOverride(TechAuthOverrideConfirmDTO dto) {
-        BizTechAuthOverride entity = overrideMapper.selectById(dto.getId());
+        BizTechAuthOverride entity = bizTechAuthOverrideMapper.selectById(dto.getId());
         if (entity == null) {
             throw new BusinessException("越权登记不存在");
         }
@@ -399,8 +386,8 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         entity.setSupervisorId(supervisorId);
         entity.setSupervisorName(UserUtils.getCurrentUser().getRealName());
         entity.setConfirmTime(LocalDateTime.now());
-        entity.setConfirmOpinion(clip(dto.getConfirmOpinion(), REASON_MAX));
-        overrideMapper.updateById(entity);
+        entity.setConfirmOpinion(TextUtil.cutToNull(dto.getConfirmOpinion(), REASON_MAX));
+        bizTechAuthOverrideMapper.updateById(entity);
         log.info("越权登记确认 id={} emp={} 确认人={}", entity.getId(), entity.getEmployeeName(), entity.getSupervisorName());
     }
 
@@ -410,13 +397,13 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
      * 两种情况下放行都是「闸门形同虚设」。
      */
     private Long resolveEmployeeIdByName(String employeeName) {
-        String name = trim(employeeName);
+        String name = TextUtil.trimToNull(employeeName);
         if (name == null) {
             return null;
         }
         LambdaQueryWrapper<SysEmployee> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysEmployee::getEmpName, name);
-        List<SysEmployee> hits = employeeMapper.selectList(wrapper);
+        List<SysEmployee> hits = sysEmployeeMapper.selectList(wrapper);
         if (hits.isEmpty()) {
             throw new BusinessException("未找到医师「" + name + "」的员工档案，无法校验技术授权（请先在系统管理→员工档案建档，或改由选择具体员工）");
         }
@@ -441,7 +428,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
                 .eq(SysEmployeeTechAuth::getAuthCategory, category)
                 .eq(SysEmployeeTechAuth::getValidFrom, validFrom)
                 .ne(excludeId != null, SysEmployeeTechAuth::getId, excludeId);
-        return authMapper.exists(wrapper);
+        return sysEmployeeTechAuthMapper.exists(wrapper);
     }
 
     private boolean scopeContains(String itemScope, String itemCode) {
@@ -455,7 +442,7 @@ public class EmployeeTechAuthServiceImpl implements EmployeeTechAuthService {
         if (id == null) {
             throw new BusinessException("授权记录ID不能为空");
         }
-        SysEmployeeTechAuth entity = authMapper.selectById(id);
+        SysEmployeeTechAuth entity = sysEmployeeTechAuthMapper.selectById(id);
         if (entity == null) {
             throw new BusinessException("授权记录不存在或已删除");
         }

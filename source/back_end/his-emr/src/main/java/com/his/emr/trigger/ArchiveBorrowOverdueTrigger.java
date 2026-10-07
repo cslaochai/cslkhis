@@ -20,12 +20,12 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ArchiveBorrowOverdueTrigger {
 
-    private final ArchiveBorrowService borrowService;
+    private final ArchiveBorrowService archiveBorrowService;
 
     @Scheduled(cron = "0 30 8 * * ?")
     public void scheduledNotifyOverdue() {
         try {
-            borrowService.notifyOverdue();
+            archiveBorrowService.notifyOverdue();
         } catch (Exception e) {
             // 定时任务失败只记日志：提醒是催办手段，不能影响任何业务线程
             log.error("[病案借阅] 超期提醒定时任务失败：{}", e.getMessage(), e);

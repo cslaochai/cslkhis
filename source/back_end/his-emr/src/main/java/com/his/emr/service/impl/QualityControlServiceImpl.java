@@ -71,9 +71,9 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
      */
     private static final int MAX_BATCH_SIZE = 200;
 
-    private final BizMedicalRecordMapper medicalRecordMapper;
+    private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
-    private final BizInpatientRecordMapper inpatientRecordMapper;
+    private final BizInpatientRecordMapper bizInpatientRecordMapper;
 
     private final QcRuleEngine qcRuleEngine;
 
@@ -382,13 +382,13 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     private QcSnapshot loadSnapshot(QcRecordSourceEnum source, Long recordId) {
         if (source == QcRecordSourceEnum.OUTPATIENT) {
-            BizMedicalRecord record = medicalRecordMapper.selectById(recordId);
+            BizMedicalRecord record = bizMedicalRecordMapper.selectById(recordId);
             if (record == null) {
                 throw new BusinessException("门诊病历不存在或已删除：" + recordId);
             }
             return QcSnapshot.ofOutpatient(record);
         }
-        BizInpatientRecord record = inpatientRecordMapper.selectById(recordId);
+        BizInpatientRecord record = bizInpatientRecordMapper.selectById(recordId);
         if (record == null) {
             throw new BusinessException("住院文书不存在或已删除：" + recordId);
         }

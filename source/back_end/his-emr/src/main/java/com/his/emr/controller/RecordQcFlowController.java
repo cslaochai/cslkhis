@@ -27,20 +27,20 @@ import java.util.List;
 @PreAuthorize("hasAuthority('qc:recordQc:list')")
 public class RecordQcFlowController {
 
-    private final RecordQcFlowService flowService;
+    private final RecordQcFlowService recordQcFlowService;
 
     @PreAuthorize("hasAuthority('qc:recordQc:edit')")
     @Operation(summary = "发起三级质控流转（同一病历同时只允许一条在途）")
     @PostMapping("/start")
     public Result<RecordQcFlowVO> start(@Valid @RequestBody RecordQcFlowStartDTO dto) {
-        return Result.success("已发起，进入科级待审", flowService.start(dto));
+        return Result.success("已发起，进入科级待审", recordQcFlowService.start(dto));
     }
 
     @PreAuthorize("hasAuthority('qc:recordQc:edit')")
     @Operation(summary = "当前级审核通过（科级/病案室；医务处请走 finalApprove）")
     @PostMapping("/approve")
     public Result<Void> approve(@Valid @RequestBody RecordQcFlowOpinionDTO dto) {
-        flowService.approve(dto);
+        recordQcFlowService.approve(dto);
         return Result.success("审核通过", null);
     }
 
@@ -48,7 +48,7 @@ public class RecordQcFlowController {
     @Operation(summary = "当前级退回整改（缺陷明细 + 整改要求必填）")
     @PostMapping("/return")
     public Result<Void> returnForRework(@Valid @RequestBody RecordQcFlowReturnDTO dto) {
-        flowService.returnForRework(dto);
+        recordQcFlowService.returnForRework(dto);
         return Result.success("已退回整改", null);
     }
 
@@ -56,7 +56,7 @@ public class RecordQcFlowController {
     @Operation(summary = "科室整改提交（回到退回发生级待审）")
     @PostMapping("/resubmit")
     public Result<Void> resubmit(@Valid @RequestBody RecordQcFlowOpinionDTO dto) {
-        flowService.resubmit(dto);
+        recordQcFlowService.resubmit(dto);
         return Result.success("整改已提交", null);
     }
 
@@ -64,25 +64,25 @@ public class RecordQcFlowController {
     @Operation(summary = "医务处终审（定级必填，终态）")
     @PostMapping("/finalApprove")
     public Result<Void> finalApprove(@Valid @RequestBody RecordQcFlowFinalDTO dto) {
-        flowService.finalApprove(dto);
+        recordQcFlowService.finalApprove(dto);
         return Result.success("终审通过", null);
     }
 
     @Operation(summary = "流转单分页")
     @PostMapping("/listPage")
     public Result<PageResult<RecordQcFlowVO>> listPage(@Valid @RequestBody RecordQcFlowQueryPageDTO queryDTO) {
-        return Result.success(flowService.page(queryDTO));
+        return Result.success(recordQcFlowService.page(queryDTO));
     }
 
     @Operation(summary = "流转单详情")
     @GetMapping("/getDetailById")
     public Result<RecordQcFlowVO> getDetailById(@RequestParam Long id) {
-        return Result.success(flowService.getDetailById(id));
+        return Result.success(recordQcFlowService.getDetailById(id));
     }
 
     @Operation(summary = "流转时间线（动作升序）")
     @GetMapping("/listActions")
     public Result<List<RecordQcFlowActionVO>> listActions(@RequestParam Long flowId) {
-        return Result.success(flowService.listActions(flowId));
+        return Result.success(recordQcFlowService.listActions(flowId));
     }
 }

@@ -1,6 +1,7 @@
 package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.Constants;
 import com.his.common.base.PageResult;
 import com.his.common.enums.TechAuthCategoryEnum;
@@ -8,6 +9,8 @@ import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.BizDaySurgeryApply;
 import com.his.operation.entity.BizDaySurgeryFollow;
@@ -16,12 +19,7 @@ import com.his.operation.mapper.BizDaySurgeryApplyMapper;
 import com.his.operation.mapper.BizDaySurgeryFollowMapper;
 import com.his.operation.mapper.BizDaySurgeryItemMapper;
 import com.his.operation.service.DaySurgeryService;
-import com.his.operation.vo.DaySurgeryApplyVO;
-import com.his.operation.vo.DaySurgeryItemCountVO;
-import com.his.operation.vo.DaySurgeryItemTopRowVO;
-import com.his.operation.vo.DaySurgeryItemVO;
-import com.his.operation.vo.DaySurgeryStatVO;
-import com.his.operation.vo.DaySurgeryStatusCountVO;
+import com.his.operation.vo.*;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.service.BizPatientService;
 import com.his.system.dto.TechAuthGateDTO;
@@ -59,26 +57,22 @@ import java.util.Objects;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class DaySurgeryServiceImpl implements DaySurgeryService {
+public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper, BizDaySurgeryApply> implements DaySurgeryService {
 
-    private final BizDaySurgeryItemMapper itemMapper;
-    private final BizDaySurgeryApplyMapper applyMapper;
-    private final BizDaySurgeryFollowMapper followMapper;
+    private final BizDaySurgeryItemMapper bizDaySurgeryItemMapper;
+    private final BizDaySurgeryApplyMapper bizDaySurgeryApplyMapper;
+    private final BizDaySurgeryFollowMapper bizDaySurgeryFollowMapper;
     private final BizPatientService bizPatientService;
-    private final RedisSequenceService sequenceService;
+    private final RedisSequenceService redisSequenceService;
     /**
      * 手术分级授权闸门（G21）：his-system 提供，择期手术不够级别直接拒单
      */
-    private final EmployeeTechAuthService techAuthService;
+    private final EmployeeTechAuthService employeeTechAuthService;
 
     // 准入目录
 
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
     private static LocalDate parseDate(String v) {
-        String s = trimToNull(v);
+        String s = TextUtil.trimToNull(v);
         if (s == null) {
             return null;
         }
@@ -92,7 +86,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     // 登记单
 
     private static LocalDateTime parseDateTime(String v) {
-        String s = trimToNull(v);
+        String s = TextUtil.trimToNull(v);
         if (s == null) {
             return null;
         }
@@ -103,35 +97,23 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         }
     }
 
-    private static String cut(String v, int max) {
-        if (v == null) {
-            return null;
-        }
-        String s = v.trim();
-        return s.length() <= max ? s : s.substring(0, max);
-    }
-
-    private static String trimToNull(String v) {
-        return StringUtils.hasText(v) ? v.trim() : null;
-    }
-
     @Override
     public PageResult<DaySurgeryItemVO> itemListPage(DaySurgeryItemQueryPageDTO dto) {
         Page<DaySurgeryItemVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
-        List<DaySurgeryItemVO> records = itemMapper.selectItemPage(page, trimToNull(dto.getKeyword()),
+        List<DaySurgeryItemVO> records = bizDaySurgeryItemMapper.selectItemPage(page, TextUtil.trimToNull(dto.getKeyword()),
                 dto.getDeptId(), dto.getEnabledOnly());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
 
     @Override
     public List<DaySurgeryItemVO> itemSelectList(Long deptId) {
-        return itemMapper.selectEnabledList(deptId);
+        return bizDaySurgeryItemMapper.selectEnabledList(deptId);
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public DaySurgeryItemVO itemUpsert(DaySurgeryItemUpsertDTO dto) {
-        String code = trimToNull(dto.getItemCode());
+        String code = TextUtil.trimToNull(dto.getItemCode());
         BizDaySurgeryItem entity;
         boolean isNew = dto.getId() == null;
         if (isNew) {
@@ -141,7 +123,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         } else {
             entity = requireItem(dto.getId());
             if (StringUtils.hasText(code) && !Objects.equals(code, entity.getItemCode())) {
-                if (itemMapper.countByCode(code, entity.getId()) > 0) {
+                if (bizDaySurgeryItemMapper.countByCode(code, entity.getId()) > 0) {
                     throw new BusinessException("术式编码已存在：" + code);
                 }
                 entity.setItemCode(code);
@@ -152,21 +134,21 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         }
         entity.setItemName(dto.getItemName().trim());
         entity.setDeptId(dto.getDeptId());
-        entity.setDeptName(dto.getDeptId() == null ? null : itemMapper.selectDeptName(dto.getDeptId()));
+        entity.setDeptName(dto.getDeptId() == null ? null : bizDaySurgeryItemMapper.selectDeptName(dto.getDeptId()));
         // maxStayHours 不填按 48：0 会让每一床都判超期，绝不能静默落到 0
         Integer hours = dto.getMaxStayHours() == null || dto.getMaxStayHours() <= 0 ? 48 : dto.getMaxStayHours();
         entity.setMaxStayHours(hours);
         entity.setAnesthesiaType(dto.getAnesthesiaType());
         entity.setStandardFee(dto.getStandardFee());
         entity.setOperationLevel(dto.getOperationLevel());
-        entity.setRemark(cut(dto.getRemark(), 512));
+        entity.setRemark(TextUtil.cut(dto.getRemark(), 512));
         if (isNew) {
-            if (itemMapper.countByCode(code, 0L) > 0) {
+            if (bizDaySurgeryItemMapper.countByCode(code, 0L) > 0) {
                 throw new BusinessException("术式编码已存在：" + code);
             }
-            itemMapper.insert(entity);
+            bizDaySurgeryItemMapper.insert(entity);
         } else {
-            itemMapper.updateById(entity);
+            bizDaySurgeryItemMapper.updateById(entity);
         }
         return requireItemVo(entity.getId());
     }
@@ -179,16 +161,16 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
             throw new BusinessException("状态只能为 1（启用）或 0（停用）");
         }
         entity.setStatus(status);
-        itemMapper.updateById(entity);
+        bizDaySurgeryItemMapper.updateById(entity);
         return requireItemVo(entity.getId());
     }
 
     @Override
     public PageResult<DaySurgeryApplyVO> listPage(DaySurgeryQueryPageDTO dto) {
         Page<DaySurgeryApplyVO> page = new Page<>(dto.getPageNum(), dto.getPageSize());
-        List<DaySurgeryApplyVO> records = applyMapper.selectApplyPage(page, trimToNull(dto.getKeyword()),
+        List<DaySurgeryApplyVO> records = bizDaySurgeryApplyMapper.selectApplyPage(page, TextUtil.trimToNull(dto.getKeyword()),
                 dto.getStatus(), dto.getItemId(), dto.getDeptId(), dto.getOpenOnly(), dto.getOverdueOnly(),
-                trimToNull(dto.getDateFrom()), trimToNull(dto.getDateTo()));
+                TextUtil.trimToNull(dto.getDateFrom()), TextUtil.trimToNull(dto.getDateTo()));
         records.forEach(this::decorate);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -196,7 +178,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     @Override
     public DaySurgeryApplyVO getDetailById(Long id) {
         DaySurgeryApplyVO vo = requireApplyVo(id);
-        vo.setFollows(followMapper.selectByApplyId(id));
+        vo.setFollows(bizDaySurgeryFollowMapper.selectByApplyId(id));
         return vo;
     }
 
@@ -233,17 +215,17 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         entity.setPatientNo(patient.getPatientNo());
         entity.setPatientName(patient.getPatientName());
         entity.setDeptId(dto.getDeptId());
-        entity.setDeptName(dto.getDeptId() == null ? null : applyMapper.selectDeptName(dto.getDeptId()));
+        entity.setDeptName(dto.getDeptId() == null ? null : bizDaySurgeryApplyMapper.selectDeptName(dto.getDeptId()));
         entity.setDoctorId(dto.getDoctorId());
         entity.setDoctorName(operatorUser.getRealName());
         entity.setPlanSurgeryDate(parseDate(dto.getPlanSurgeryDate()));
-        entity.setRemark(cut(dto.getRemark(), 512));
+        entity.setRemark(TextUtil.cut(dto.getRemark(), 512));
         // G21 手术分级授权：日间手术全是择期，术者没有该类别授权或级别不够 → 直接拒单，不留越权通道
         gateTechAuth(item, entity);
         if (isNew) {
-            applyMapper.insert(entity);
+            bizDaySurgeryApplyMapper.insert(entity);
         } else {
-            applyMapper.updateById(entity);
+            bizDaySurgeryApplyMapper.updateById(entity);
         }
         return requireApplyVo(entity.getId());
     }
@@ -265,12 +247,12 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         }
         entity.setEvalResult(result);
         entity.setEvalBy(operatorUser.getRealName());
-        entity.setEvalTime(now());
-        entity.setEvalRemark(cut(dto.getEvalRemark(), 500));
+        entity.setEvalTime(TimeUtil.nowSeconds());
+        entity.setEvalRemark(TextUtil.cut(dto.getEvalRemark(), 500));
         // 不通过仍留在「待评估」可重评；通过才推进到「评估通过」（安排手术的前置条件）
         entity.setStatus(Objects.equals(result, BizDaySurgeryApply.EVAL_PASS)
                 ? BizDaySurgeryApply.STATUS_EVAL_PASSED : BizDaySurgeryApply.STATUS_WAIT_EVAL);
-        applyMapper.updateById(entity);
+        bizDaySurgeryApplyMapper.updateById(entity);
         return requireApplyVo(entity.getId());
     }
 
@@ -290,13 +272,13 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         }
         entity.setStatus(BizDaySurgeryApply.STATUS_ARRANGED);
         entity.setSurgeryTime(parseDateTime(dto.getSurgeryTime()));
-        entity.setOperatingRoom(cut(dto.getOperatingRoom(), 64));
+        entity.setOperatingRoom(TextUtil.cut(dto.getOperatingRoom(), 64));
         entity.setSeqNo(dto.getSeqNo());
         entity.setAnesthesiaType(dto.getAnesthesiaType());
-        entity.setSurgeon(cut(dto.getSurgeon(), 64));
+        entity.setSurgeon(TextUtil.cut(dto.getSurgeon(), 64));
         entity.setArrangeBy(operatorUser.getRealName());
-        entity.setArrangeTime(now());
-        applyMapper.updateById(entity);
+        entity.setArrangeTime(TimeUtil.nowSeconds());
+        bizDaySurgeryApplyMapper.updateById(entity);
         return requireApplyVo(entity.getId());
     }
 
@@ -310,8 +292,8 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
             throw new BusinessException("仅「已安排」的登记单可登记完成（当前：" + statusName(entity.getStatus()) + "）");
         }
         entity.setStatus(BizDaySurgeryApply.STATUS_OBSERVING);
-        entity.setSurgeryEndTime(dto.getSurgeryEndTime() == null ? now() : parseDateTime(dto.getSurgeryEndTime()));
-        applyMapper.updateById(entity);
+        entity.setSurgeryEndTime(dto.getSurgeryEndTime() == null ? TimeUtil.nowSeconds() : parseDateTime(dto.getSurgeryEndTime()));
+        bizDaySurgeryApplyMapper.updateById(entity);
         return requireApplyVo(entity.getId());
     }
 
@@ -333,10 +315,10 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         }
         entity.setStatus(BizDaySurgeryApply.STATUS_DISCHARGED);
         entity.setLeaveType(leaveType);
-        entity.setDischargeTime(dto.getDischargeTime() == null ? now() : parseDateTime(dto.getDischargeTime()));
+        entity.setDischargeTime(dto.getDischargeTime() == null ? TimeUtil.nowSeconds() : parseDateTime(dto.getDischargeTime()));
         entity.setDischargeBy(operatorUser.getRealName());
-        entity.setDischargeRemark(cut(dto.getDischargeRemark(), 500));
-        applyMapper.updateById(entity);
+        entity.setDischargeRemark(TextUtil.cut(dto.getDischargeRemark(), 500));
+        bizDaySurgeryApplyMapper.updateById(entity);
         return requireApplyVo(entity.getId());
     }
 
@@ -351,16 +333,16 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         if (!Objects.equals(entity.getStatus(), BizDaySurgeryApply.STATUS_OBSERVING)) {
             throw new BusinessException("仅「术后观察」的登记单可转住院（当前：" + statusName(entity.getStatus()) + "）");
         }
-        if (applyMapper.countAdmission(dto.getTransferAdmissionId()) == 0) {
+        if (bizDaySurgeryApplyMapper.countAdmission(dto.getTransferAdmissionId()) == 0) {
             throw new BusinessException("转住院的住院记录不存在或已删除");
         }
         entity.setStatus(BizDaySurgeryApply.STATUS_TRANSFERRED);
         entity.setLeaveType(BizDaySurgeryApply.LEAVE_TRANSFER);
         entity.setTransferAdmissionId(dto.getTransferAdmissionId());
-        entity.setTransferRemark(cut(dto.getTransferRemark(), 500));
-        entity.setDischargeTime(now());
+        entity.setTransferRemark(TextUtil.cut(dto.getTransferRemark(), 500));
+        entity.setDischargeTime(TimeUtil.nowSeconds());
         entity.setDischargeBy(operatorUser.getRealName());
-        applyMapper.updateById(entity);
+        bizDaySurgeryApplyMapper.updateById(entity);
         return requireApplyVo(entity.getId());
     }
 
@@ -371,10 +353,10 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         if (isTerminal(entity.getStatus())) {
             throw new BusinessException("已出院/已取消/已转住院的登记单不可再取消");
         }
-        String reason = trimToNull(dto.getContent());
+        String reason = TextUtil.trimToNull(dto.getContent());
         entity.setStatus(BizDaySurgeryApply.STATUS_CANCELED);
-        entity.setCancelReason(cut(reason, 500));
-        applyMapper.updateById(entity);
+        entity.setCancelReason(TextUtil.cut(reason, 500));
+        bizDaySurgeryApplyMapper.updateById(entity);
         return requireApplyVo(entity.getId());
     }
 
@@ -395,14 +377,14 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         follow.setApplyId(entity.getId());
         follow.setFollowType(dto.getFollowType());
         follow.setResult(dto.getResult());
-        follow.setContent(cut(dto.getContent(), 500));
+        follow.setContent(TextUtil.cut(dto.getContent(), 500));
         follow.setOperatorId(operatorUser.getEmployeeId());
         follow.setOperator(operatorUser.getRealName());
-        follow.setFollowTime(now());
+        follow.setFollowTime(TimeUtil.nowSeconds());
         follow.setDelFlag(0);
-        followMapper.insert(follow);
-        entity.setFollowCount(followMapper.countByApplyId(entity.getId()));
-        applyMapper.updateById(entity);
+        bizDaySurgeryFollowMapper.insert(follow);
+        entity.setFollowCount(bizDaySurgeryFollowMapper.countByApplyId(entity.getId()));
+        bizDaySurgeryApplyMapper.updateById(entity);
         return requireApplyVo(entity.getId());
     }
 
@@ -412,17 +394,17 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         if (!Objects.equals(entity.getStatus(), BizDaySurgeryApply.STATUS_WAIT_EVAL)) {
             throw new BusinessException("仅「待评估」的登记单可删除");
         }
-        if (followMapper.countByApplyId(id) > 0) {
+        if (bizDaySurgeryFollowMapper.countByApplyId(id) > 0) {
             throw new BusinessException("已有随访记录，不允许删除");
         }
-        return applyMapper.deleteById(id) > 0;
+        return bizDaySurgeryApplyMapper.deleteById(id) > 0;
     }
 
     @Override
     public DaySurgeryStatVO stat() {
         DaySurgeryStatVO vo = new DaySurgeryStatVO();
         long w = 0, e = 0, a = 0, o = 0, d = 0, c = 0, t = 0;
-        for (DaySurgeryStatusCountVO row : applyMapper.countByStatus()) {
+        for (DaySurgeryStatusCountVO row : bizDaySurgeryApplyMapper.countByStatus()) {
             long cnt = row.getCnt() == null ? 0L : row.getCnt();
             switch (row.getStatus() == null ? 0 : row.getStatus()) {
                 case 1 -> w = cnt;
@@ -444,14 +426,14 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         vo.setCanceledCount(c);
         vo.setTransferredCount(t);
         vo.setTotal(w + e + a + o + d + c + t);
-        vo.setOverdueCount(applyMapper.countOverdue());
-        vo.setFollowOverdueCount(applyMapper.countFollowOverdue());
-        vo.setReadmitCount(applyMapper.countReadmit());
-        BigDecimal rate = applyMapper.onTimeLeaveRate();
+        vo.setOverdueCount(bizDaySurgeryApplyMapper.countOverdue());
+        vo.setFollowOverdueCount(bizDaySurgeryApplyMapper.countFollowOverdue());
+        vo.setReadmitCount(bizDaySurgeryApplyMapper.countReadmit());
+        BigDecimal rate = bizDaySurgeryApplyMapper.onTimeLeaveRate();
         vo.setOnTimeLeaveRate(rate == null ? BigDecimal.ZERO : rate);
 
         List<DaySurgeryItemCountVO> top = new ArrayList<>();
-        for (DaySurgeryItemTopRowVO row : applyMapper.countByItemTop()) {
+        for (DaySurgeryItemTopRowVO row : bizDaySurgeryApplyMapper.countByItemTop()) {
             DaySurgeryItemCountVO item = new DaySurgeryItemCountVO();
             item.setItemId(row.getItemId());
             item.setName(row.getItemName());
@@ -520,14 +502,14 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         gate.setSourceId(entity.getId());
         gate.setSourceNo(entity.getApplyNo());
         try {
-            techAuthService.gate(gate);
+            employeeTechAuthService.gate(gate);
         } catch (BusinessException e) {
             throw new BusinessException("术式「" + item.getItemName() + "」" + e.getMessage());
         }
     }
 
     private BizDaySurgeryItem requireItem(Long id) {
-        BizDaySurgeryItem item = itemMapper.selectById(id);
+        BizDaySurgeryItem item = bizDaySurgeryItemMapper.selectById(id);
         if (item == null || !Objects.equals(item.getDelFlag(), 0)) {
             throw new BusinessException("日间手术准入术式不存在或已删除");
         }
@@ -535,7 +517,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     }
 
     private DaySurgeryItemVO requireItemVo(Long id) {
-        DaySurgeryItemVO vo = itemMapper.selectItemById(id);
+        DaySurgeryItemVO vo = bizDaySurgeryItemMapper.selectItemById(id);
         if (vo == null) {
             throw new BusinessException("日间手术准入术式不存在或已删除");
         }
@@ -543,7 +525,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     }
 
     private DaySurgeryApplyVO requireApplyVo(Long id) {
-        DaySurgeryApplyVO vo = applyMapper.selectApplyById(id);
+        DaySurgeryApplyVO vo = bizDaySurgeryApplyMapper.selectApplyById(id);
         if (vo == null) {
             throw new BusinessException("日间手术登记单不存在或已删除");
         }
@@ -552,7 +534,7 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     }
 
     private BizDaySurgeryApply requireApply(Long id) {
-        BizDaySurgeryApply entity = applyMapper.selectById(id);
+        BizDaySurgeryApply entity = bizDaySurgeryApplyMapper.selectById(id);
         if (entity == null || !Objects.equals(entity.getDelFlag(), 0)) {
             throw new BusinessException("日间手术登记单不存在或已删除");
         }
@@ -588,6 +570,6 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
 
     private String nextApplyNo() {
         return Constants.DAY_SURGERY_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
-                + String.format("%04d", sequenceService.next("DAY_SURGERY"));
+                + String.format("%04d", redisSequenceService.next("DAY_SURGERY"));
     }
 }

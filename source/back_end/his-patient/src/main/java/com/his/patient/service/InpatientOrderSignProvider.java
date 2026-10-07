@@ -5,9 +5,9 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.service.SignableContentProvider;
 import com.his.common.support.CanonicalText;
+import com.his.common.util.NumUtil;
 import com.his.patient.entity.BizInpatientOrder;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public interface InpatientOrderSignProvider extends SignableContentProvider {
@@ -28,13 +28,13 @@ public interface InpatientOrderSignProvider extends SignableContentProvider {
                 .put("itemName", o.getItemName())
                 .put("spec", o.getSpec())
                 .put("unit", o.getUnit())
-                .put("dosage", plain(o.getDosage()))
+                .put("dosage", NumUtil.plain(o.getDosage()))
                 .put("dosageUnit", o.getDosageUnit())
                 .put("route", o.getRoute())
                 .put("frequency", o.getFrequency())
-                .put("quantity", plain(o.getQuantity()))
-                .put("price", plain(o.getPrice()))
-                .put("amount", plain(o.getAmount()))
+                .put("quantity", NumUtil.plain(o.getQuantity()))
+                .put("price", NumUtil.plain(o.getPrice()))
+                .put("amount", NumUtil.plain(o.getAmount()))
                 .put("startTime", o.getStartTime())
                 .put("planEndTime", o.getPlanEndTime())
                 .put("orderTime", o.getOrderTime())
@@ -43,13 +43,6 @@ public interface InpatientOrderSignProvider extends SignableContentProvider {
                 .put("isUrgent", o.getIsUrgent())
                 .put("source", o.getSource())
                 .build();
-    }
-
-    /**
-     * BigDecimal 去尾零：金额 `10.00` 与 `10.0` 必须算出同一个摘要
-     */
-    static String plain(BigDecimal v) {
-        return v == null ? null : v.stripTrailingZeros().toPlainString();
     }
 
     SignBizTypeEnum bizType();

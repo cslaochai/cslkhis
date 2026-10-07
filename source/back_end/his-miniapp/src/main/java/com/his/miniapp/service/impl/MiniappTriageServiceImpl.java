@@ -1,7 +1,9 @@
 package com.his.miniapp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.ScheduleSelectQueryDTO;
+import com.his.common.util.NumUtil;
 import com.his.miniapp.entity.BizTriageRule;
 import com.his.miniapp.mapper.BizTriageRuleMapper;
 import com.his.miniapp.service.MiniappDirectoryService;
@@ -13,11 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * 患者端智能导诊实现。
@@ -30,13 +28,15 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class MiniappTriageServiceImpl implements MiniappTriageService {
+public class MiniappTriageServiceImpl extends ServiceImpl<BizTriageRuleMapper, BizTriageRule> implements MiniappTriageService {
 
-    /** 最多推荐几个科室（给太多等于没推荐） */
+    /**
+     * 最多推荐几个科室（给太多等于没推荐）
+     */
     private static final int MAX_RESULT = 3;
 
-    private final BizTriageRuleMapper triageRuleMapper;
-    private final MiniappDirectoryService directoryService;
+    private final BizTriageRuleMapper bizTriageRuleMapper;
+    private final MiniappDirectoryService miniappDirectoryService;
 
     @Override
     public List<TriageDeptVO> recommend(String description) {
@@ -73,7 +73,7 @@ public class MiniappTriageServiceImpl implements MiniappTriageService {
         enabledRules().stream()
                 // 急症不让患者当普通症状点：它是命中后的提示，不是入口
                 .filter(r -> !Integer.valueOf(1).equals(r.getUrgentFlag()))
-                .sorted(Comparator.comparing(r -> nz(r.getSortOrder())))
+                .sorted(Comparator.comparing(r -> NumUtil.orZero(r.getSortOrder())))
                 .forEach(r -> map.putIfAbsent(r.getSymptomCode(), toSymptomVO(r)));
         return new ArrayList<>(map.values());
     }
@@ -81,7 +81,7 @@ public class MiniappTriageServiceImpl implements MiniappTriageService {
     // 私有
 
     private List<BizTriageRule> enabledRules() {
-        return triageRuleMapper.selectList(new LambdaQueryWrapper<BizTriageRule>()
+        return bizTriageRuleMapper.selectList(new LambdaQueryWrapper<BizTriageRule>()
                 .eq(BizTriageRule::getStatus, 1)
                 .orderByAsc(BizTriageRule::getSortOrder)
                 .orderByAsc(BizTriageRule::getId));
@@ -102,17 +102,19 @@ public class MiniappTriageServiceImpl implements MiniappTriageService {
         return false;
     }
 
-    /** 排序口径：急症优先 → 权重降序 → 排序号升序 */
+    /**
+     * 排序口径：急症优先 → 权重降序 → 排序号升序
+     */
     private int cmp(BizTriageRule a, BizTriageRule b) {
-        int c = Integer.compare(nz(b.getUrgentFlag()), nz(a.getUrgentFlag()));
+        int c = Integer.compare(NumUtil.orZero(b.getUrgentFlag()), NumUtil.orZero(a.getUrgentFlag()));
         if (c != 0) {
             return c;
         }
-        c = Integer.compare(nz(b.getWeight()), nz(a.getWeight()));
+        c = Integer.compare(NumUtil.orZero(b.getWeight()), NumUtil.orZero(a.getWeight()));
         if (c != 0) {
             return c;
         }
-        return Integer.compare(nz(a.getSortOrder()), nz(b.getSortOrder()));
+        return Integer.compare(NumUtil.orZero(a.getSortOrder()), NumUtil.orZero(b.getSortOrder()));
     }
 
     private TriageDeptVO toDeptVO(BizTriageRule r) {
@@ -120,9 +122,9 @@ public class MiniappTriageServiceImpl implements MiniappTriageService {
         vo.setDeptId(String.valueOf(r.getDeptId()));
         vo.setDeptName(r.getDeptName());
         vo.setSymptomName(r.getSymptomName());
-        vo.setUrgent(nz(r.getUrgentFlag()));
+        vo.setUrgent(NumUtil.orZero(r.getUrgentFlag()));
         vo.setAdvice(r.getAdvice());
-        vo.setWeight(nz(r.getWeight()));
+        vo.setWeight(NumUtil.orZero(r.getWeight()));
         vo.setBookableCount(countBookable(r.getDeptId()));
         return vo;
     }
@@ -137,9 +139,9 @@ public class MiniappTriageServiceImpl implements MiniappTriageService {
         try {
             ScheduleSelectQueryDTO query = new ScheduleSelectQueryDTO();
             query.setDeptId(deptId);
-            return (int) directoryService.schedules(query).stream()
+            return (int) miniappDirectoryService.schedules(query).stream()
                     .filter(s -> Integer.valueOf(1).equals(s.getIsAppointment()))
-                    .filter(s -> nz(s.getAppointmentSource()) - nz(s.getUsedAppointmentSource()) > 0)
+                    .filter(s -> NumUtil.orZero(s.getAppointmentSource()) - NumUtil.orZero(s.getUsedAppointmentSource()) > 0)
                     .count();
         } catch (Exception e) {
             log.warn("[智能导诊] 号源余量查询失败 deptId={} err={}", deptId, e.getMessage());
@@ -154,7 +156,4 @@ public class MiniappTriageServiceImpl implements MiniappTriageService {
         return vo;
     }
 
-    private static int nz(Integer value) {
-        return value == null ? 0 : value;
-    }
 }

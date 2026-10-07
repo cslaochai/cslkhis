@@ -6,6 +6,7 @@ import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.PatientReportExplainDTO;
 import com.his.ai.dto.PatientReportLlmOutputDTO;
 import com.his.ai.entity.SysLabPlainItem;
+import com.his.ai.enums.PatientLabExplainStatusEnum;
 import com.his.ai.mapper.SysLabPlainItemMapper;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.PatientReportExplainCapability;
@@ -14,10 +15,10 @@ import com.his.ai.vo.PatientLabItemPlainVO;
 import com.his.ai.vo.PatientReportExplainPromptVariablesVO;
 import com.his.ai.vo.PatientReportExplainVO;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.entity.BizLabResult;
 import com.his.medicaltech.entity.BizLaboratoryRecord;
 import com.his.medicaltech.entity.BizReport;
-import com.his.ai.enums.PatientLabExplainStatusEnum;
 import com.his.medicaltech.enums.ReportTypeEnum;
 import com.his.medicaltech.mapper.BizLabResultMapper;
 import com.his.medicaltech.mapper.BizLaboratoryRecordMapper;
@@ -87,13 +88,13 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
 
     private static final String FALLBACK_UNJUDGED = "这项系统没能自动判断（参考区间不可用），既不能算异常也不能算正常，请让医生核对。";
 
-    private final BizReportMapper reportMapper;
+    private final BizReportMapper bizReportMapper;
 
-    private final BizLaboratoryRecordMapper laboratoryRecordMapper;
+    private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
 
-    private final BizLabResultMapper labResultMapper;
+    private final BizLabResultMapper bizLabResultMapper;
 
-    private final SysLabPlainItemMapper plainItemMapper;
+    private final SysLabPlainItemMapper sysLabPlainItemMapper;
 
     private final AiExecutionService aiExecutionService;
 
@@ -117,10 +118,6 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
     }
 
     // ---------------------------------------------------------------- 规则层
-
-    private static String statusText(Integer status) {
-        return PatientLabExplainStatusEnum.getText(status);
-    }
 
     /**
      * 单项白话说明。
@@ -179,18 +176,6 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
         return builder.toString();
     }
 
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return text;
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
-    private static String nullToDash(String text) {
-        return StringUtils.hasText(text) ? text : "（未填写）";
-    }
-
     // ---------------------------------------------------------------- 模型层
 
     public PatientReportExplainVO execute(PatientReportExplainDTO dto) {
@@ -199,7 +184,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
             throw new BusinessException("未获取到就诊人身份，请重新登录");
         }
 
-        BizReport report = reportMapper.selectById(dto.getReportId());
+        BizReport report = bizReportMapper.selectById(dto.getReportId());
         if (report == null) {
             throw new BusinessException("报告不存在：" + dto.getReportId());
         }
@@ -212,11 +197,11 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
         }
 
         BizLaboratoryRecord record = report.getRecordId() == null
-                ? null : laboratoryRecordMapper.selectById(report.getRecordId());
+                ? null : bizLaboratoryRecordMapper.selectById(report.getRecordId());
         if (record == null) {
             throw new BusinessException("该报告未关联检验记录，无法逐项解读");
         }
-        List<BizLabResult> results = labResultMapper.selectList(
+        List<BizLabResult> results = bizLabResultMapper.selectList(
                 new LambdaQueryWrapper<BizLabResult>()
                         .eq(BizLabResult::getRecordId, record.getId())
                         .orderByAsc(BizLabResult::getSortOrder)
@@ -257,7 +242,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
             Integer flag = result.getAbnormalFlag() == null ? LabAbnormalJudge.NORMAL : result.getAbnormalFlag();
             Integer status = toStatus(flag, unjudged);
             item.setStatus(status);
-            item.setStatusText(statusText(status));
+            item.setStatusText(PatientLabExplainStatusEnum.getText(status));
             item.setArrow(PatientLabExplainStatusEnum.HIGH.getCode().equals(status) ? "↑"
                     : PatientLabExplainStatusEnum.LOW.getCode().equals(status) ? "↓" : "");
 
@@ -300,7 +285,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
             String guarded = textGuard.guard(llmOutput.get().getSummary(),
                     AiCapabilityKeys.PATIENT_REPORT_EXPLAIN);
             if (StringUtils.hasText(guarded)) {
-                vo.setSummary(truncate(guarded, SUMMARY_MAX_LENGTH));
+                vo.setSummary(TextUtil.cut(guarded, SUMMARY_MAX_LENGTH));
                 vo.setSource("model");
                 vo.setDegraded(false);
             } else {
@@ -321,7 +306,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
     }
 
     private Map<String, SysLabPlainItem> loadDictionary() {
-        List<SysLabPlainItem> all = plainItemMapper.selectList(
+        List<SysLabPlainItem> all = sysLabPlainItemMapper.selectList(
                 new LambdaQueryWrapper<SysLabPlainItem>()
                         .eq(SysLabPlainItem::getStatus, 1));
         Map<String, SysLabPlainItem> map = new HashMap<>();
@@ -339,7 +324,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
                                                           List<PatientLabItemPlainVO> items,
                                                           String ruleSummary) {
         PatientReportExplainPromptVariablesVO variables = new PatientReportExplainPromptVariablesVO();
-        variables.setItemName(nullToDash(record.getLaboratoryItemName()));
+        variables.setItemName(TextUtil.blankToDefault(record.getLaboratoryItemName(), "（未填写）"));
         variables.setRuleSummary(ruleSummary);
         variables.setItems(renderItems(items));
 
@@ -349,8 +334,8 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
                 .variables(variables)
                 .bizType(BIZ_TYPE)
                 .bizId(record.getId())
-                .inputDigest(nullToDash(record.getPatientName()) + " | "
-                        + nullToDash(record.getLaboratoryItemName()))
+                .inputDigest(TextUtil.blankToDefault(record.getPatientName(), "（未填写）") + " | "
+                        + TextUtil.blankToDefault(record.getLaboratoryItemName(), "（未填写）"))
                 .maxTokens(OUTPUT_TOKEN_LIMIT)
                 .build();
 
@@ -360,15 +345,15 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
     private String renderItems(List<PatientLabItemPlainVO> items) {
         StringBuilder builder = new StringBuilder();
         for (PatientLabItemPlainVO item : items) {
-            builder.append("- ").append(nullToDash(item.getItemName()));
+            builder.append("- ").append(TextUtil.blankToDefault(item.getItemName(), "（未填写）"));
             if (StringUtils.hasText(item.getPlainName())) {
                 builder.append("（俗称").append(item.getPlainName()).append("）");
             }
-            builder.append(" = ").append(nullToDash(item.getResultValue()));
+            builder.append(" = ").append(TextUtil.blankToDefault(item.getResultValue(), "（未填写）"));
             if (StringUtils.hasText(item.getUnit())) {
                 builder.append(' ').append(item.getUnit());
             }
-            builder.append("（参考 ").append(nullToDash(item.getReferenceRange()))
+            builder.append("（参考 ").append(TextUtil.blankToDefault(item.getReferenceRange(), "（未填写）"))
                     .append("，").append(item.getStatusText()).append("）");
             if (StringUtils.hasText(item.getPlainText())) {
                 builder.append(" 已给出的白话说明：").append(item.getPlainText());

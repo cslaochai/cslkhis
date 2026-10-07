@@ -15,6 +15,7 @@ import com.his.charge.vo.ComplianceAuditDetailVO;
 import com.his.charge.vo.ComplianceAuditItemVO;
 import com.his.charge.vo.ComplianceEvidenceNarrativeVO;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -64,14 +65,6 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
 
     private final ComplianceAuditService complianceAuditService;
 
-    private static String truncate(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength);
-    }
-
     // ---------------------------------------------------------------- 模型层
 
     @Override
@@ -102,7 +95,7 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
             return vo;
         }
         vo.setJudgments(judgments);
-        vo.setOverall(truncate(output.get().getOverall(), OVERALL_MAX));
+        vo.setOverall(TextUtil.cut(output.get().getOverall(), OVERALL_MAX, ""));
         vo.setDegraded(false);
         return vo;
     }
@@ -115,7 +108,7 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
                 .templateName(TEMPLATE_NAME)
                 .variables(buildVariables(hits, narrative))
                 .bizType(BIZ_TYPE)
-                .inputDigest(truncate(auditNo, 60))
+                .inputDigest(TextUtil.cut(auditNo, 60, ""))
                 .maxTokens(OUTPUT_TOKEN_LIMIT)
                 .build();
         return aiExecutionService.call(call, InsuranceEvidenceLlmOutputDTO.class);
@@ -193,8 +186,8 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
             jv.setRuleName(hit.getRuleName());
             jv.setVerdict(verdict.getCode());
             jv.setVerdictText(verdict.getLabel());
-            jv.setReason(truncate(j.getReason(), REASON_MAX));
-            jv.setQuote(truncate(j.getQuote(), QUOTE_MAX));
+            jv.setReason(TextUtil.cut(j.getReason(), REASON_MAX, ""));
+            jv.setQuote(TextUtil.cut(j.getQuote(), QUOTE_MAX, ""));
             judgments.add(jv);
         }
         return judgments;

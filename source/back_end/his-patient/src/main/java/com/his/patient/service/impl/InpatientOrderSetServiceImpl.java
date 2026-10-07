@@ -1,5 +1,4 @@
 package com.his.patient.service.impl;
-import com.his.patient.enums.OrderClassEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -10,6 +9,7 @@ import com.his.patient.dto.OrderSetQueryPageDTO;
 import com.his.patient.dto.OrderSetUpsertDTO;
 import com.his.patient.entity.BizInpatientOrderTemplate;
 import com.his.patient.entity.BizInpatientOrderTemplateItem;
+import com.his.patient.enums.OrderClassEnum;
 import com.his.patient.enums.OrderTypeEnum;
 import com.his.patient.enums.TemplateScopeEnum;
 import com.his.patient.mapper.BizInpatientOrderTemplateItemMapper;
@@ -20,8 +20,8 @@ import com.his.patient.vo.InpatientOrderTemplateItemVO;
 import com.his.patient.vo.OrderSetDetailVO;
 import com.his.patient.vo.OrderSetListVO;
 import com.his.patient.vo.OrderSetSelectListVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -58,8 +58,8 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
      */
     private static final int SELECT_LIMIT = 50;
 
-    private final BizInpatientOrderTemplateMapper templateMapper;
-    private final BizInpatientOrderTemplateItemMapper itemMapper;
+    private final BizInpatientOrderTemplateMapper bizInpatientOrderTemplateMapper;
+    private final BizInpatientOrderTemplateItemMapper bizInpatientOrderTemplateItemMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -108,7 +108,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
             template.setScope(scope);
             applyOwner(template, scope, empId, deptId);
             assertNameNotDuplicated(templateName, null, scope, empId, deptId);
-            templateMapper.insert(template);
+            bizInpatientOrderTemplateMapper.insert(template);
         } else {
             BizInpatientOrderTemplate owned = requireWritable(dto.getId());
             if (!Objects.equals(scope, owned.getScope())) {
@@ -117,14 +117,14 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
             // 归属不随修改漂移：组套属于谁、在哪个科室建的，是当时的事实
             applyOwner(template, scope, owned.getDoctorId(), owned.getDeptId());
             assertNameNotDuplicated(templateName, owned.getId(), scope, empId, deptId);
-            templateMapper.updateById(template);
+            bizInpatientOrderTemplateMapper.updateById(template);
         }
 
-        itemMapper.delete(new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
+        bizInpatientOrderTemplateItemMapper.delete(new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
                 .eq(BizInpatientOrderTemplateItem::getTemplateId, template.getId()));
         int sort = 1;
         for (InpatientOrderItemDTO item : items) {
-            itemMapper.insert(toItemEntity(template.getId(), sort++, item));
+            bizInpatientOrderTemplateItemMapper.insert(toItemEntity(template.getId(), sort++, item));
         }
 
         log.info("保存医嘱组套 id={} 名称={} scope={} 明细={} 条",
@@ -135,7 +135,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
     @Override
     public OrderSetDetailVO getDetailById(Long id) {
         BizInpatientOrderTemplate template = requireVisible(id);
-        List<BizInpatientOrderTemplateItem> items = itemMapper.selectList(
+        List<BizInpatientOrderTemplateItem> items = bizInpatientOrderTemplateItemMapper.selectList(
                 new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
                         .eq(BizInpatientOrderTemplateItem::getTemplateId, template.getId())
                         .orderByAsc(BizInpatientOrderTemplateItem::getSortNo));
@@ -167,14 +167,14 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
                 .orderByDesc(BizInpatientOrderTemplate::getId);
 
         Map<Long, String> deptNames = new HashMap<>();
-        IPage<OrderSetListVO> page = templateMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper)
+        IPage<OrderSetListVO> page = bizInpatientOrderTemplateMapper.selectPage(new Page<>(query.getPageNum(), query.getPageSize()), wrapper)
                 .convert(entity -> {
                     OrderSetListVO vo = new OrderSetListVO();
                     fill(vo, entity);
                     if (entity.getDeptId() != null) {
                         vo.setDeptName(deptNames.computeIfAbsent(entity.getDeptId(), k -> {
                             try {
-                                return templateMapper.selectDeptName(k);
+                                return bizInpatientOrderTemplateMapper.selectDeptName(k);
                             } catch (Exception e) {
                                 return null;
                             }
@@ -188,7 +188,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
     @Override
     public List<OrderSetSelectListVO> selectList() {
         CurrentUser user = currentUserOrNull();
-        List<BizInpatientOrderTemplate> list = templateMapper.selectList(visibleWrapper(user)
+        List<BizInpatientOrderTemplate> list = bizInpatientOrderTemplateMapper.selectList(visibleWrapper(user)
                 // 全院在前、科室其次、自己的最后：最常用的共享口径先被看到
                 .orderByDesc(BizInpatientOrderTemplate::getScope)
                 .orderByDesc(BizInpatientOrderTemplate::getCreateTime)
@@ -201,7 +201,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
             vo.setOrderTypeText(OrderTypeEnum.getText(entity.getOrderType()));
             if (entity.getDeptId() != null) {
                 try {
-                    vo.setDeptName(templateMapper.selectDeptName(entity.getDeptId()));
+                    vo.setDeptName(bizInpatientOrderTemplateMapper.selectDeptName(entity.getDeptId()));
                 } catch (Exception e) {
                     vo.setDeptName(null);
                 }
@@ -216,9 +216,9 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
     public void deleteById(Long id) {
         BizInpatientOrderTemplate template = requireWritable(id);
         // 明细无软删列，物理删；主表逻辑删，历史医嘱上「来自组套」的痕迹不受影响
-        itemMapper.delete(new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
+        bizInpatientOrderTemplateItemMapper.delete(new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
                 .eq(BizInpatientOrderTemplateItem::getTemplateId, template.getId()));
-        templateMapper.deleteById(template.getId());
+        bizInpatientOrderTemplateMapper.deleteById(template.getId());
         log.info("删除医嘱组套 id={} 名称={} scope={}", template.getId(), template.getTemplateName(), template.getScope());
     }
 
@@ -256,7 +256,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         if (id == null) {
             throw new BusinessException("组套ID不能为空");
         }
-        BizInpatientOrderTemplate template = templateMapper.selectOne(visibleWrapper(currentUserOrNull())
+        BizInpatientOrderTemplate template = bizInpatientOrderTemplateMapper.selectOne(visibleWrapper(currentUserOrNull())
                 .eq(BizInpatientOrderTemplate::getId, id));
         if (template == null) {
             throw new BusinessException("医嘱组套不存在");
@@ -333,7 +333,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
         } else if (Objects.equals(TemplateScopeEnum.DEPT.getCode(), scope)) {
             wrapper.eq(BizInpatientOrderTemplate::getDeptId, deptId);
         }
-        Long hits = templateMapper.selectCount(wrapper);
+        Long hits = bizInpatientOrderTemplateMapper.selectCount(wrapper);
         if (hits != null && hits > 0) {
             throw new BusinessException("同范围内已有同名组套「" + templateName + "」，请改个名字或直接修改原组套");
         }

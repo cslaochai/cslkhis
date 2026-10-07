@@ -1,6 +1,5 @@
 package com.his.charge.support;
 
-
 import com.his.charge.entity.BizSettlementBillItem;
 import com.his.charge.entity.BizSettlementDiagnosis;
 import com.his.charge.entity.BizSettlementOperation;
@@ -9,6 +8,7 @@ import com.his.charge.vo.InspectionRecordBriefVO;
 import com.his.charge.vo.LabResultBriefVO;
 import com.his.charge.vo.LaboratoryRecordBriefVO;
 import com.his.charge.vo.MedicalRecordBriefVO;
+import com.his.common.util.TextUtil;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -35,10 +35,6 @@ public class CodingEvidenceRule implements ComplianceRule {
             "手术", "切除", "吻合", "置换", "置入", "植入", "镜", "造影", "引流",
             "缝合", "固定", "修补", "成形", "结扎", "穿刺", "造口", "清创", "复位"
     };
-
-    private static String safe(String s) {
-        return s == null ? "" : s;
-    }
 
     @Override
     public String group() {
@@ -72,12 +68,12 @@ public class CodingEvidenceRule implements ComplianceRule {
         }
         if (!StringUtils.hasText(main.getIcdCode())) {
             findings.add(RuleFinding.hit(RuleCatalogEnum.A01,
-                            "主要诊断「" + safe(main.getIcdName()) + "」未填 ICD-10 编码")
+                            "主要诊断「" + TextUtil.nullToEmpty(main.getIcdName()) + "」未填 ICD-10 编码")
                     .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
             return;
         }
         findings.add(RuleFinding.pass(RuleCatalogEnum.A01,
-                        "主要诊断已编码：" + main.getIcdCode() + " " + safe(main.getIcdName()))
+                        "主要诊断已编码：" + main.getIcdCode() + " " + TextUtil.nullToEmpty(main.getIcdName()))
                 .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
     }
 
@@ -121,7 +117,7 @@ public class CodingEvidenceRule implements ComplianceRule {
         }
         if (!StringUtils.hasText(record.getDiagnosisCode())) {
             findings.add(RuleFinding.na(RuleCatalogEnum.A03,
-                            "病历（" + safe(record.getRecordNo()) + "）未填诊断编码，无法比对")
+                            "病历（" + TextUtil.nullToEmpty(record.getRecordNo()) + "）未填诊断编码，无法比对")
                     .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
             return;
         }
@@ -149,7 +145,7 @@ public class CodingEvidenceRule implements ComplianceRule {
         for (BizSettlementDiagnosis d : others) {
             if (!StringUtils.hasText(d.getIcdCode())) {
                 findings.add(RuleFinding.hit(RuleCatalogEnum.A04,
-                                "其他诊断「" + safe(d.getIcdName()) + "」未填 ICD-10 编码")
+                                "其他诊断「" + TextUtil.nullToEmpty(d.getIcdName()) + "」未填 ICD-10 编码")
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
             } else {
                 findings.add(RuleFinding.pass(RuleCatalogEnum.A04, "其他诊断已编码：" + d.getIcdCode())
@@ -169,7 +165,7 @@ public class CodingEvidenceRule implements ComplianceRule {
         for (BizSettlementOperation o : ctx.getOperations()) {
             if (!StringUtils.hasText(o.getOperCode())) {
                 findings.add(RuleFinding.hit(RuleCatalogEnum.A05,
-                                "手术操作「" + safe(o.getOperName()) + "」未填 ICD-9-CM-3 编码")
+                                "手术操作「" + TextUtil.nullToEmpty(o.getOperName()) + "」未填 ICD-9-CM-3 编码")
                         .on(2, o.getId(), o.getOperCode(), o.getOperName()));
             } else {
                 findings.add(RuleFinding.pass(RuleCatalogEnum.A05, "手术操作已编码：" + o.getOperCode())
@@ -248,7 +244,7 @@ public class CodingEvidenceRule implements ComplianceRule {
             return;
         }
         String names = surgical.stream()
-                .map(d -> safe(d.getItemName()) + "(" + d.getAmount() + "元)")
+                .map(d -> TextUtil.nullToEmpty(d.getItemName()) + "(" + d.getAmount() + "元)")
                 .limit(5)
                 .collect(Collectors.joining("、"));
         findings.add(RuleFinding.hit(RuleCatalogEnum.A07,
@@ -304,20 +300,20 @@ public class CodingEvidenceRule implements ComplianceRule {
     private String labInspectionText(SettlementEvidence ev) {
         StringBuilder sb = new StringBuilder();
         for (LabResultBriefVO r : ev.getLabResults()) {
-            sb.append(safe(r.getLaboratoryItemName())).append(' ')
-                    .append(safe(r.getResultValue())).append(' ')
-                    .append(safe(r.getAbnormalDesc())).append(' ')
-                    .append(safe(r.getJudgeNote())).append(' ');
+            sb.append(TextUtil.nullToEmpty(r.getLaboratoryItemName())).append(' ')
+                    .append(TextUtil.nullToEmpty(r.getResultValue())).append(' ')
+                    .append(TextUtil.nullToEmpty(r.getAbnormalDesc())).append(' ')
+                    .append(TextUtil.nullToEmpty(r.getJudgeNote())).append(' ');
         }
         for (LaboratoryRecordBriefVO r : ev.getLabRecords()) {
-            sb.append(safe(r.getLaboratoryItemName())).append(' ')
-                    .append(safe(r.getDiagnosis())).append(' ')
-                    .append(safe(r.getSuggestions())).append(' ');
+            sb.append(TextUtil.nullToEmpty(r.getLaboratoryItemName())).append(' ')
+                    .append(TextUtil.nullToEmpty(r.getDiagnosis())).append(' ')
+                    .append(TextUtil.nullToEmpty(r.getSuggestions())).append(' ');
         }
         for (InspectionRecordBriefVO r : ev.getInspections()) {
-            sb.append(safe(r.getInspectionItemName())).append(' ')
-                    .append(safe(r.getClinicalDiagnosis())).append(' ')
-                    .append(safe(r.getResultConclusion())).append(' ');
+            sb.append(TextUtil.nullToEmpty(r.getInspectionItemName())).append(' ')
+                    .append(TextUtil.nullToEmpty(r.getClinicalDiagnosis())).append(' ')
+                    .append(TextUtil.nullToEmpty(r.getResultConclusion())).append(' ');
         }
         return sb.toString().trim();
     }

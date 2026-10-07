@@ -24,26 +24,25 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("isAuthenticated()")
 public class ClinicalRuleCheckController {
 
-    private final ClinicalRuleCheckService ruleCheckService;
+    private final ClinicalRuleCheckService clinicalRuleCheckService;
 
     @Operation(summary = "分页查询校验记录")
     @PostMapping("/listPage")
     public Result<PageResult<BizClinicalRuleCheckVO>> listPage(@Valid @RequestBody RuleCheckQueryPageDTO queryDTO) {
-        return Result.success(ruleCheckService.selectCheckPage(queryDTO.getPatientId(), queryDTO.getRuleType(),
-                queryDTO.getCheckStatus(), queryDTO.getPageNum(), queryDTO.getPageSize()));
+        return Result.success(clinicalRuleCheckService.listPage(queryDTO));
     }
 
     @Operation(summary = "获取校验详情")
     @GetMapping("/getById")
     public Result<BizClinicalRuleCheckVO> getById(@RequestParam Long id) {
-        return Result.success(ruleCheckService.getCheckDetail(id));
+        return Result.success(clinicalRuleCheckService.getCheckDetail(id));
     }
 
     @PreAuthorize("hasAuthority('emr:medicalReview:edit')")
     @Operation(summary = "执行临床规则校验")
     @PostMapping("/executeCheck")
     public Result<BizClinicalRuleCheckVO> executeCheck(@Valid @RequestBody RuleCheckExecuteDTO actionDTO) {
-        return Result.success(ruleCheckService.executeCheck(actionDTO.getRecordId(), actionDTO.getRuleType(),
+        return Result.success(clinicalRuleCheckService.executeCheck(actionDTO.getRecordId(), actionDTO.getRuleType(),
                 actionDTO.getCheckBy()));
     }
 
@@ -51,7 +50,7 @@ public class ClinicalRuleCheckController {
     @Operation(summary = "处理校验问题")
     @PostMapping("/handleCheck")
     public Result<Void> handleCheck(@Valid @RequestBody RuleCheckHandleDTO actionDTO) {
-        boolean success = ruleCheckService.handleCheck(actionDTO.getId(), actionDTO.getIgnore(), actionDTO.getRemark());
+        boolean success = clinicalRuleCheckService.handleCheck(actionDTO.getId(), actionDTO.getIgnore(), actionDTO.getRemark());
         return success ? Result.success("处理成功", null) : Result.error("处理失败");
     }
 }

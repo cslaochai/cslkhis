@@ -1,8 +1,8 @@
 package com.his.charge.support;
 
-
 import com.his.charge.entity.BizInsuranceSettlement;
 import com.his.charge.enums.RuleCatalogEnum;
+import com.his.common.util.TextUtil;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -24,10 +24,6 @@ public class AdmissionIndicationRule implements ComplianceRule {
 
     private static String dateOf(BizInsuranceSettlement s) {
         return s.getCreateTime() == null ? "日期不详" : s.getCreateTime().toLocalDate().toString();
-    }
-
-    private static String safe(String s) {
-        return s == null ? "" : s;
     }
 
     @Override
@@ -117,7 +113,7 @@ public class AdmissionIndicationRule implements ComplianceRule {
                     ? other.getDiagnosisCode()
                     : other.getDiagnosis();
             if (StringUtils.hasText(otherCode) && otherCode.equalsIgnoreCase(diagCode)) {
-                dups.add(safe(other.getSettlementNo()) + "(" + dateOf(other) + ")");
+                dups.add(TextUtil.nullToEmpty(other.getSettlementNo()) + "(" + dateOf(other) + ")");
             }
         }
         if (dups.isEmpty()) {

@@ -2,6 +2,7 @@ package com.his.emr.support;
 
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.support.ClinicalTextMatcher;
+import com.his.common.util.TextUtil;
 import com.his.emr.enums.*;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -181,25 +182,13 @@ public class QcRuleEngine {
      * 界面上"没有证据"和"证据是空字符串"必须能区分开。
      */
     private static String evidenceOf(String text) {
-        if (!hasText(text)) {
+        if (!StringUtils.hasText(text)) {
             return "（空）";
         }
-        return truncate(text.replaceAll("\\s+", " ").trim(), EVIDENCE_MAX_LENGTH);
+        return TextUtil.ellipsis(text.replaceAll("\\s+", " ").trim(), EVIDENCE_MAX_LENGTH);
     }
 
     // 辅助
-
-    private static boolean hasText(String text) {
-        return StringUtils.hasText(text);
-    }
-
-    private static String truncate(String text, int maxLength) {
-        if (text == null) {
-            return "";
-        }
-        String value = text.trim();
-        return value.length() <= maxLength ? value : value.substring(0, maxLength) + "…";
-    }
 
     /**
      * 启动自检：规则的"存在性"必须能被观测到。
@@ -305,17 +294,17 @@ public class QcRuleEngine {
                             || ClinicalTextMatcher.isLabelRepeatOnly(s.getAllergyHistory(), "过敏史"), "过敏史")
                     .map(detail -> QcIssue.of(rule, detail, evidenceOf(s.getAllergyHistory())));
 
-            case C05 -> missing(hasText(s.getDiagnosisText()) ? s.getDiagnosisText() : s.getDiagnosisCode(),
+            case C05 -> missing(StringUtils.hasText(s.getDiagnosisText()) ? s.getDiagnosisText() : s.getDiagnosisCode(),
                     ClinicalTextMatcher.isPlaceholderOnly(s.getDiagnosisText(), "诊断"), "诊断")
                     .map(detail -> QcIssue.of(rule, detail, evidenceOf(s.getDiagnosisText())));
 
             case C06 -> {
-                if (!hasText(s.getDiagnosisName()) || hasText(s.getDiagnosisCode())) {
+                if (!StringUtils.hasText(s.getDiagnosisName()) || StringUtils.hasText(s.getDiagnosisCode())) {
                     yield Optional.empty();
                 }
                 yield Optional.of(QcIssue.of(rule,
                         String.format("诊断「%s」只有名称没有 ICD 编码，病案首页与 DRG 无法入组",
-                                truncate(s.getDiagnosisName(), 40)),
+                                TextUtil.ellipsis(s.getDiagnosisName(), 40)),
                         evidenceOf(s.getDiagnosisCode())));
             }
 
@@ -326,7 +315,7 @@ public class QcRuleEngine {
                     .map(detail -> QcIssue.of(rule, detail, evidenceOf(s.getTreatmentPlan())));
 
             case C08 -> {
-                if (s.getDoctorId() != null || hasText(s.getDoctorName())) {
+                if (s.getDoctorId() != null || StringUtils.hasText(s.getDoctorName())) {
                     yield Optional.empty();
                 }
                 yield Optional.of(QcIssue.of(rule, "「书写医生」未记录，无签名病历不得归档", "（空）"));
@@ -346,7 +335,7 @@ public class QcRuleEngine {
                     yield Optional.empty();
                 }
                 yield Optional.of(QcIssue.of(rule,
-                        String.format("主诉「%s」未写明症状持续时间", truncate(s.getChiefComplaint(), 30)),
+                        String.format("主诉「%s」未写明症状持续时间", TextUtil.ellipsis(s.getChiefComplaint(), 30)),
                         evidenceOf(s.getChiefComplaint())));
             }
 
@@ -377,7 +366,7 @@ public class QcRuleEngine {
             }
 
             case F04 -> {
-                if (hasText(s.getRecordTitle())) {
+                if (StringUtils.hasText(s.getRecordTitle())) {
                     yield Optional.empty();
                 }
                 yield Optional.of(QcIssue.of(rule,
@@ -386,7 +375,7 @@ public class QcRuleEngine {
 
             case F05 -> {
                 List<String> lacks = new ArrayList<>();
-                if (!hasText(s.getDeptName())) {
+                if (!StringUtils.hasText(s.getDeptName())) {
                     lacks.add("就诊科室");
                 }
                 if (s.getRecordTime() == null) {
@@ -401,7 +390,7 @@ public class QcRuleEngine {
             }
 
             case L01 -> {
-                if (s.getGender() == null || !hasText(s.getDiagnosisText())) {
+                if (s.getGender() == null || !StringUtils.hasText(s.getDiagnosisText())) {
                     yield Optional.empty();
                 }
                 // 性别码值按被查表本身的口径：住院病历文书 / 门诊病历是 1-男 2-女

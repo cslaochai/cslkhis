@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.LogQueryPageDTO;
 import com.his.system.entity.SysAuditLog;
 import com.his.system.entity.SysFieldChangeLog;
@@ -54,27 +55,15 @@ public class SysLogServiceImpl implements SysLogService {
     private static final int BRUTE_FORCE_THRESHOLD = 5;
 
     private final DictCacheService dictCacheService;
-    private final SysOperLogMapper operLogMapper;
-    private final SysLoginLogMapper loginLogMapper;
-    private final SysAuditLogMapper auditLogMapper;
-    private final SysFieldChangeLogMapper fieldChangeLogMapper;
+    private final SysOperLogMapper sysOperLogMapper;
+    private final SysLoginLogMapper sysLoginLogMapper;
+    private final SysAuditLogMapper sysAuditLogMapper;
+    private final SysFieldChangeLogMapper sysFieldChangeLogMapper;
 
     // 操作日志
 
     private static LogQueryPageDTO orEmpty(LogQueryPageDTO query) {
         return query == null ? new LogQueryPageDTO() : query;
-    }
-
-    /**
-     * 先 trim 再判空：MP 的 {@code like(condition, column, value)} 是普通方法调用，
-     * 实参里的 {@code xx.trim()} 无论 condition 真假都会先求值 —— 传 null 就 NPE（本轮实测踩到）。
-     */
-    private static String trim(String s) {
-        if (s == null) {
-            return null;
-        }
-        String t = s.trim();
-        return t.isEmpty() ? null : t;
     }
 
     // 登录日志
@@ -153,16 +142,12 @@ public class SysLogServiceImpl implements SysLogService {
 
     // 统计
 
-    private static String cut(String s, int max) {
-        return s == null || s.length() <= max ? s : s.substring(0, max);
-    }
-
     @Override
     public PageResult<OperLogListVO> operLogListPage(LogQueryPageDTO query) {
         LogQueryPageDTO q = orEmpty(query);
-        String operator = trim(q.getOperator());
-        String module = trim(q.getModule());
-        String keyword = trim(q.getKeyword());
+        String operator = TextUtil.trimToNull(q.getOperator());
+        String module = TextUtil.trimToNull(q.getModule());
+        String keyword = TextUtil.trimToNull(q.getKeyword());
         LambdaQueryWrapper<SysOperLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysOperLog::getDelFlag, 0)
                 .like(operator != null, SysOperLog::getOperName, operator)
@@ -177,7 +162,7 @@ public class SysLogServiceImpl implements SysLogService {
         applyRange(wrapper, q, SysOperLog::getOperTime);
         wrapper.orderByDesc(SysOperLog::getOperTime).orderByDesc(SysOperLog::getId);
 
-        IPage<SysOperLog> page = operLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        IPage<SysOperLog> page = sysOperLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
         List<OperLogListVO> records = page.getRecords().stream().map(this::toOperVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -188,7 +173,7 @@ public class SysLogServiceImpl implements SysLogService {
         if (id == null) {
             throw new BusinessException("日志ID不能为空");
         }
-        SysOperLog row = operLogMapper.selectById(id);
+        SysOperLog row = sysOperLogMapper.selectById(id);
         if (row == null || (row.getDelFlag() != null && row.getDelFlag() == 1)) {
             throw new BusinessException("操作日志不存在：" + id);
         }
@@ -221,8 +206,8 @@ public class SysLogServiceImpl implements SysLogService {
     @Override
     public PageResult<LoginLogVO> loginLogListPage(LogQueryPageDTO query) {
         LogQueryPageDTO q = orEmpty(query);
-        String operator = trim(q.getOperator());
-        String keyword = trim(q.getKeyword());
+        String operator = TextUtil.trimToNull(q.getOperator());
+        String keyword = TextUtil.trimToNull(q.getKeyword());
         LambdaQueryWrapper<SysLoginLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysLoginLog::getDelFlag, 0)
                 .eq(q.getStatus() != null, SysLoginLog::getLoginStatus, q.getStatus());
@@ -235,7 +220,7 @@ public class SysLogServiceImpl implements SysLogService {
         applyRange(wrapper, q, SysLoginLog::getLoginTime);
         wrapper.orderByDesc(SysLoginLog::getLoginTime).orderByDesc(SysLoginLog::getId);
 
-        IPage<SysLoginLog> page = loginLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        IPage<SysLoginLog> page = sysLoginLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
         List<LoginLogVO> records = page.getRecords().stream().map(this::toLoginVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -243,12 +228,12 @@ public class SysLogServiceImpl implements SysLogService {
     @Override
     public PageResult<AuditLogVO> auditLogListPage(LogQueryPageDTO query) {
         LogQueryPageDTO q = orEmpty(query);
-        String operator = trim(q.getOperator());
-        String module = trim(q.getModule());
-        String operation = trim(q.getOperation());
-        String targetType = trim(q.getTargetType());
-        String targetId = trim(q.getTargetId());
-        String keyword = trim(q.getKeyword());
+        String operator = TextUtil.trimToNull(q.getOperator());
+        String module = TextUtil.trimToNull(q.getModule());
+        String operation = TextUtil.trimToNull(q.getOperation());
+        String targetType = TextUtil.trimToNull(q.getTargetType());
+        String targetId = TextUtil.trimToNull(q.getTargetId());
+        String keyword = TextUtil.trimToNull(q.getKeyword());
         LambdaQueryWrapper<SysAuditLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysAuditLog::getDelFlag, 0)
                 .like(module != null, SysAuditLog::getModule, module)
@@ -268,7 +253,7 @@ public class SysLogServiceImpl implements SysLogService {
         applyRange(wrapper, q, SysAuditLog::getCreateTime);
         wrapper.orderByDesc(SysAuditLog::getCreateTime).orderByDesc(SysAuditLog::getId);
 
-        IPage<SysAuditLog> page = auditLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+        IPage<SysAuditLog> page = sysAuditLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
         List<AuditLogVO> records = page.getRecords().stream().map(this::toAuditVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -281,7 +266,7 @@ public class SysLogServiceImpl implements SysLogService {
         if (id == null) {
             throw new BusinessException("日志ID不能为空");
         }
-        SysAuditLog row = auditLogMapper.selectById(id);
+        SysAuditLog row = sysAuditLogMapper.selectById(id);
         if (row == null || (row.getDelFlag() != null && row.getDelFlag() == 1)) {
             throw new BusinessException("审计日志不存在：" + id);
         }
@@ -291,11 +276,11 @@ public class SysLogServiceImpl implements SysLogService {
     @Override
     public PageResult<FieldChangeVO> fieldChangeListPage(LogQueryPageDTO query) {
         LogQueryPageDTO q = orEmpty(query);
-        String bizType = trim(q.getTargetType());
-        String bizId = trim(q.getTargetId());
-        String field = trim(q.getFieldName());
-        String operator = trim(q.getOperator());
-        String keyword = trim(q.getKeyword());
+        String bizType = TextUtil.trimToNull(q.getTargetType());
+        String bizId = TextUtil.trimToNull(q.getTargetId());
+        String field = TextUtil.trimToNull(q.getFieldName());
+        String operator = TextUtil.trimToNull(q.getOperator());
+        String keyword = TextUtil.trimToNull(q.getKeyword());
         LambdaQueryWrapper<SysFieldChangeLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysFieldChangeLog::getDelFlag, 0)
                 .eq(bizType != null, SysFieldChangeLog::getBizType, bizType)
@@ -319,7 +304,7 @@ public class SysLogServiceImpl implements SysLogService {
         wrapper.orderByDesc(SysFieldChangeLog::getChangeTime).orderByDesc(SysFieldChangeLog::getId);
 
         IPage<SysFieldChangeLog> page =
-                fieldChangeLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
+                sysFieldChangeLogMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), wrapper);
         List<FieldChangeVO> records = page.getRecords().stream().map(this::toFieldChangeVO).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), records);
     }
@@ -334,7 +319,7 @@ public class SysLogServiceImpl implements SysLogService {
         wrapper.eq(SysFieldChangeLog::getDelFlag, 0)
                 .eq(SysFieldChangeLog::getBatchNo, batchNo.trim())
                 .orderByAsc(SysFieldChangeLog::getId);
-        return fieldChangeLogMapper.selectList(wrapper).stream().map(this::toFieldChangeVO).toList();
+        return sysFieldChangeLogMapper.selectList(wrapper).stream().map(this::toFieldChangeVO).toList();
     }
 
     @Override
@@ -345,38 +330,38 @@ public class SysLogServiceImpl implements SysLogService {
         LocalDateTime weekStart = today.minusDays(6).atStartOfDay();
 
         LogStatVO vo = new LogStatVO();
-        vo.setOperTotal(count(new LambdaQueryWrapper<SysOperLog>().eq(SysOperLog::getDelFlag, 0), operLogMapper));
+        vo.setOperTotal(count(new LambdaQueryWrapper<SysOperLog>().eq(SysOperLog::getDelFlag, 0), sysOperLogMapper));
         vo.setOperToday(count(new LambdaQueryWrapper<SysOperLog>().eq(SysOperLog::getDelFlag, 0)
-                .ge(SysOperLog::getOperTime, dayStart), operLogMapper));
+                .ge(SysOperLog::getOperTime, dayStart), sysOperLogMapper));
         vo.setOperFailToday(count(new LambdaQueryWrapper<SysOperLog>().eq(SysOperLog::getDelFlag, 0)
-                .eq(SysOperLog::getStatus, 1).ge(SysOperLog::getOperTime, dayStart), operLogMapper));
+                .eq(SysOperLog::getStatus, 1).ge(SysOperLog::getOperTime, dayStart), sysOperLogMapper));
         vo.setOper7d(count(new LambdaQueryWrapper<SysOperLog>().eq(SysOperLog::getDelFlag, 0)
-                .ge(SysOperLog::getOperTime, weekStart), operLogMapper));
+                .ge(SysOperLog::getOperTime, weekStart), sysOperLogMapper));
 
-        vo.setLoginTotal(count(new LambdaQueryWrapper<SysLoginLog>().eq(SysLoginLog::getDelFlag, 0), loginLogMapper));
+        vo.setLoginTotal(count(new LambdaQueryWrapper<SysLoginLog>().eq(SysLoginLog::getDelFlag, 0), sysLoginLogMapper));
         vo.setLoginToday(count(new LambdaQueryWrapper<SysLoginLog>().eq(SysLoginLog::getDelFlag, 0)
-                .ge(SysLoginLog::getLoginTime, dayStart), loginLogMapper));
+                .ge(SysLoginLog::getLoginTime, dayStart), sysLoginLogMapper));
         vo.setLoginFailToday(count(new LambdaQueryWrapper<SysLoginLog>().eq(SysLoginLog::getDelFlag, 0)
-                .eq(SysLoginLog::getLoginStatus, 1).ge(SysLoginLog::getLoginTime, dayStart), loginLogMapper));
+                .eq(SysLoginLog::getLoginStatus, 1).ge(SysLoginLog::getLoginTime, dayStart), sysLoginLogMapper));
         vo.setLogin7d(count(new LambdaQueryWrapper<SysLoginLog>().eq(SysLoginLog::getDelFlag, 0)
-                .ge(SysLoginLog::getLoginTime, weekStart), loginLogMapper));
+                .ge(SysLoginLog::getLoginTime, weekStart), sysLoginLogMapper));
 
-        vo.setAuditTotal(count(new LambdaQueryWrapper<SysAuditLog>().eq(SysAuditLog::getDelFlag, 0), auditLogMapper));
+        vo.setAuditTotal(count(new LambdaQueryWrapper<SysAuditLog>().eq(SysAuditLog::getDelFlag, 0), sysAuditLogMapper));
         vo.setAuditToday(count(new LambdaQueryWrapper<SysAuditLog>().eq(SysAuditLog::getDelFlag, 0)
-                .ge(SysAuditLog::getCreateTime, dayStart), auditLogMapper));
+                .ge(SysAuditLog::getCreateTime, dayStart), sysAuditLogMapper));
         vo.setAuditFailToday(count(new LambdaQueryWrapper<SysAuditLog>().eq(SysAuditLog::getDelFlag, 0)
-                .eq(SysAuditLog::getStatus, 0).ge(SysAuditLog::getCreateTime, dayStart), auditLogMapper));
+                .eq(SysAuditLog::getStatus, 0).ge(SysAuditLog::getCreateTime, dayStart), sysAuditLogMapper));
         vo.setAudit7d(count(new LambdaQueryWrapper<SysAuditLog>().eq(SysAuditLog::getDelFlag, 0)
-                .ge(SysAuditLog::getCreateTime, weekStart), auditLogMapper));
+                .ge(SysAuditLog::getCreateTime, weekStart), sysAuditLogMapper));
 
         vo.setFieldChangeTotal(count(new LambdaQueryWrapper<SysFieldChangeLog>()
-                .eq(SysFieldChangeLog::getDelFlag, 0), fieldChangeLogMapper));
+                .eq(SysFieldChangeLog::getDelFlag, 0), sysFieldChangeLogMapper));
         vo.setFieldChangeToday(count(new LambdaQueryWrapper<SysFieldChangeLog>()
                 .eq(SysFieldChangeLog::getDelFlag, 0)
-                .ge(SysFieldChangeLog::getChangeTime, dayStart), fieldChangeLogMapper));
+                .ge(SysFieldChangeLog::getChangeTime, dayStart), sysFieldChangeLogMapper));
         vo.setFieldChange7d(count(new LambdaQueryWrapper<SysFieldChangeLog>()
                 .eq(SysFieldChangeLog::getDelFlag, 0)
-                .ge(SysFieldChangeLog::getChangeTime, weekStart), fieldChangeLogMapper));
+                .ge(SysFieldChangeLog::getChangeTime, weekStart), sysFieldChangeLogMapper));
 
         vo.setRiskyAccounts(riskyAccounts(now.minusHours(24)));
         return vo;
@@ -389,7 +374,7 @@ public class SysLogServiceImpl implements SysLogService {
      */
     private List<LogStatVO.RiskAccount> riskyAccounts(LocalDateTime since) {
         try {
-            List<LoginFailAccountVO> rows = loginLogMapper.selectFailAccounts(since, BRUTE_FORCE_THRESHOLD);
+            List<LoginFailAccountVO> rows = sysLoginLogMapper.selectFailAccounts(since, BRUTE_FORCE_THRESHOLD);
             List<LogStatVO.RiskAccount> list = new ArrayList<>();
             for (LoginFailAccountVO row : rows) {
                 LogStatVO.RiskAccount a = new LogStatVO.RiskAccount();
@@ -517,7 +502,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setStatusText(dictCacheService.getDicDataLabel("biz_system_operStatusEnum", row.getStatus()));
         vo.setOperTime(row.getOperTime());
         vo.setCostTime(row.getCostTime());
-        vo.setErrorMsg(row.getErrorMsg() == null ? null : cut(row.getErrorMsg(), 200));
+        vo.setErrorMsg(row.getErrorMsg() == null ? null : TextUtil.cut(row.getErrorMsg(), 200));
         return vo;
     }
 

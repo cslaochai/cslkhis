@@ -28,11 +28,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EmrGatewayImpl implements EmrGateway {
 
-    private final BizMedicalRecordMapper medicalRecordMapper;
-    private final BizPrescriptionMapper prescriptionMapper;
-    private final BizPrescriptionDetailMapper prescriptionDetailMapper;
-    private final BizInspectionApplyMapper inspectionApplyMapper;
-    private final BizLaboratoryApplyMapper laboratoryApplyMapper;
+    private final BizMedicalRecordMapper bizMedicalRecordMapper;
+    private final BizPrescriptionMapper bizPrescriptionMapper;
+    private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
+    private final BizInspectionApplyMapper bizInspectionApplyMapper;
+    private final BizLaboratoryApplyMapper bizLaboratoryApplyMapper;
     private final SourcePaidAdvanceService sourcePaidAdvanceService;
 
     @Override
@@ -40,7 +40,7 @@ public class EmrGatewayImpl implements EmrGateway {
         if (registId == null) {
             return null;
         }
-        return first(medicalRecordMapper.selectList(new LambdaQueryWrapper<BizMedicalRecord>()
+        return first(bizMedicalRecordMapper.selectList(new LambdaQueryWrapper<BizMedicalRecord>()
                 .eq(BizMedicalRecord::getRegistId, registId)
                 .orderByDesc(BizMedicalRecord::getCreateTime)));
     }
@@ -50,7 +50,7 @@ public class EmrGatewayImpl implements EmrGateway {
         if (patientId == null) {
             return null;
         }
-        return first(medicalRecordMapper.selectList(new LambdaQueryWrapper<BizMedicalRecord>()
+        return first(bizMedicalRecordMapper.selectList(new LambdaQueryWrapper<BizMedicalRecord>()
                 .eq(BizMedicalRecord::getPatientId, patientId)
                 .orderByDesc(BizMedicalRecord::getCreateTime)));
     }
@@ -61,7 +61,7 @@ public class EmrGatewayImpl implements EmrGateway {
         if (registId == null) {
             return List.of();
         }
-        return prescriptionMapper.selectList(new LambdaQueryWrapper<BizPrescription>()
+        return bizPrescriptionMapper.selectList(new LambdaQueryWrapper<BizPrescription>()
                         .eq(BizPrescription::getRegistId, registId)
                         .orderByAsc(BizPrescription::getId)).stream()
                 .map(this::toBrief)
@@ -73,7 +73,7 @@ public class EmrGatewayImpl implements EmrGateway {
         if (patientId == null) {
             return List.of();
         }
-        return prescriptionMapper.selectList(new LambdaQueryWrapper<BizPrescription>()
+        return bizPrescriptionMapper.selectList(new LambdaQueryWrapper<BizPrescription>()
                         .eq(BizPrescription::getPatientId, patientId)
                         .orderByDesc(BizPrescription::getCreateTime)).stream()
                 .map(this::toBrief)
@@ -85,7 +85,7 @@ public class EmrGatewayImpl implements EmrGateway {
         if (prescriptionIds == null || prescriptionIds.isEmpty()) {
             return List.of();
         }
-        return prescriptionDetailMapper.selectList(new LambdaQueryWrapper<BizPrescriptionDetail>()
+        return bizPrescriptionDetailMapper.selectList(new LambdaQueryWrapper<BizPrescriptionDetail>()
                         .in(BizPrescriptionDetail::getPrescriptionId, prescriptionIds)
                         .orderByAsc(BizPrescriptionDetail::getId)).stream()
                 .map(e -> {
@@ -109,7 +109,7 @@ public class EmrGatewayImpl implements EmrGateway {
         if (isBlank(prescriptionNo)) {
             return null;
         }
-        BizPrescription row = prescriptionMapper.selectOne(new LambdaQueryWrapper<BizPrescription>()
+        BizPrescription row = bizPrescriptionMapper.selectOne(new LambdaQueryWrapper<BizPrescription>()
                 .eq(BizPrescription::getPrescriptionNo, prescriptionNo)
                 .last("LIMIT 1"));
         return row == null ? null : new ChargeDeptResolver.DeptRef(row.getDeptId(), row.getDeptName());
@@ -120,7 +120,7 @@ public class EmrGatewayImpl implements EmrGateway {
         if (isBlank(applyNo)) {
             return null;
         }
-        BizInspectionApply row = inspectionApplyMapper.selectOne(new LambdaQueryWrapper<BizInspectionApply>()
+        BizInspectionApply row = bizInspectionApplyMapper.selectOne(new LambdaQueryWrapper<BizInspectionApply>()
                 .eq(BizInspectionApply::getApplyNo, applyNo)
                 .last("LIMIT 1"));
         return row == null ? null : new ChargeDeptResolver.DeptRef(row.getDeptId(), row.getDeptName());
@@ -131,7 +131,7 @@ public class EmrGatewayImpl implements EmrGateway {
         if (isBlank(applyNo)) {
             return null;
         }
-        BizLaboratoryApply row = laboratoryApplyMapper.selectOne(new LambdaQueryWrapper<BizLaboratoryApply>()
+        BizLaboratoryApply row = bizLaboratoryApplyMapper.selectOne(new LambdaQueryWrapper<BizLaboratoryApply>()
                 .eq(BizLaboratoryApply::getApplyNo, applyNo)
                 .last("LIMIT 1"));
         return row == null ? null : new ChargeDeptResolver.DeptRef(row.getDeptId(), row.getDeptName());

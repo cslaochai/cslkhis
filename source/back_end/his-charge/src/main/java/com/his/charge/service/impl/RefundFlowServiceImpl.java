@@ -32,8 +32,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RefundFlowServiceImpl implements RefundFlowService {
 
-    private final BizPaymentTxnMapper paymentTxnMapper;
-    private final BizSettlementBillItemMapper billItemMapper;
+    private final BizPaymentTxnMapper bizPaymentTxnMapper;
+    private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
 
     @Override
     public PageResult<BizRefundFlowVO> selectFlowPage(RefundFlowQueryPageDTO query) {
@@ -58,7 +58,7 @@ public class RefundFlowServiceImpl implements RefundFlowService {
                 // 同毫秒退多笔翻页会重复/漏行，补 id 作二级键
                 .orderByDesc(BizPaymentTxn::getTxnTime)
                 .orderByDesc(BizPaymentTxn::getId);
-        Page<BizPaymentTxn> page = paymentTxnMapper.selectPage(
+        Page<BizPaymentTxn> page = bizPaymentTxnMapper.selectPage(
                 new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
         List<BizRefundFlowVO> records = page.getRecords().stream()
                 .map(this::toVO).collect(Collectors.toList());
@@ -67,13 +67,13 @@ public class RefundFlowServiceImpl implements RefundFlowService {
 
     @Override
     public BizRefundFlowDetailVO getFlowDetail(Long refundId) {
-        BizPaymentTxn txn = paymentTxnMapper.selectById(refundId);
+        BizPaymentTxn txn = bizPaymentTxnMapper.selectById(refundId);
         if (txn == null) {
             throw new BusinessException("退费流水不存在");
         }
         BizRefundFlowDetailVO vo = new BizRefundFlowDetailVO();
         BeanUtils.copyProperties(toVO(txn), vo);
-        List<BizRefundFlowItemVO> items = billItemMapper.selectList(new LambdaQueryWrapper<BizSettlementBillItem>()
+        List<BizRefundFlowItemVO> items = bizSettlementBillItemMapper.selectList(new LambdaQueryWrapper<BizSettlementBillItem>()
                         .eq(BizSettlementBillItem::getBillId, txn.getBillId())
                         .orderByAsc(BizSettlementBillItem::getId))
                 .stream().map(this::toItem).collect(Collectors.toList());

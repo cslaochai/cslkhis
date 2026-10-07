@@ -3,12 +3,15 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.his.common.base.PageResult;
+import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.PatientIndexQueryDTO;
 import com.his.patient.dto.PatientMergeDTO;
 import com.his.patient.dto.PatientMergeRevertDTO;
@@ -21,11 +24,10 @@ import com.his.patient.mapper.BizPatientMergeLogMapper;
 import com.his.patient.mapper.PatientIndexMapper;
 import com.his.patient.service.PatientIndexService;
 import com.his.patient.support.PatientDataTables;
-import com.his.common.enums.SysGenderEnum;
 import com.his.patient.support.PatientProfileFields;
 import com.his.patient.vo.*;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -44,13 +46,13 @@ import java.util.*;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class PatientIndexServiceImpl implements PatientIndexService {
+public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> implements PatientIndexService {
 
     private static final String NO_PREFIX = "HB";
 
-    private final BizPatientMapper patientMapper;
-    private final BizPatientMergeLogMapper mergeLogMapper;
-    private final PatientIndexMapper indexMapper;
+    private final BizPatientMapper bizPatientMapper;
+    private final BizPatientMergeLogMapper bizPatientMergeLogMapper;
+    private final PatientIndexMapper patientIndexMapper;
     private final ObjectMapper objectMapper;
 
     // 列表 / 详情
@@ -79,14 +81,14 @@ public class PatientIndexServiceImpl implements PatientIndexService {
                     .or().like(BizPatient::getIdCard, kw));
         }
         w.orderByDesc(BizPatient::getId);
-        Page<BizPatient> page = patientMapper.selectPage(new Page<>(dto.getPageNum(), dto.getPageSize()), w);
+        Page<BizPatient> page = bizPatientMapper.selectPage(new Page<>(dto.getPageNum(), dto.getPageSize()), w);
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(),
                 enrich(page.getRecords()));
     }
 
     @Override
     public PatientIndexVO getIndexDetail(Long patientId) {
-        BizPatient p = patientMapper.selectById(patientId);
+        BizPatient p = bizPatientMapper.selectById(patientId);
         if (p == null) {
             throw new BusinessException("患者不存在");
         }
@@ -95,7 +97,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         Long masterId = p.getMasterId() != null ? p.getMasterId() : p.getId();
         LambdaQueryWrapper<BizPatient> w = new LambdaQueryWrapper<>();
         w.eq(BizPatient::getMasterId, masterId).orderByDesc(BizPatient::getId);
-        List<BizPatient> shadows = patientMapper.selectList(w);
+        List<BizPatient> shadows = bizPatientMapper.selectList(w);
         vo.setShadowCount(shadows.size());
         vo.setSiblingPatients(shadows.stream().map(this::briefOf).toList());
         return vo;
@@ -121,7 +123,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
 
     @Override
     public List<PatientDuplicateGroupVO> detectDuplicates(PatientIndexQueryDTO dto) {
-        List<BizPatient> suspects = indexMapper.selectSuspectPatients(
+        List<BizPatient> suspects = patientIndexMapper.selectSuspectPatients(
                 StringUtils.hasText(dto.getKeyword()) ? dto.getKeyword().trim() : null);
         if (suspects.isEmpty()) {
             return List.of();
@@ -219,8 +221,8 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         if (dto.getMasterId().equals(dto.getMergedId())) {
             throw new BusinessException("不能把一份档案合并到它自己");
         }
-        BizPatient master = patientMapper.selectById(dto.getMasterId());
-        BizPatient merged = patientMapper.selectById(dto.getMergedId());
+        BizPatient master = bizPatientMapper.selectById(dto.getMasterId());
+        BizPatient merged = bizPatientMapper.selectById(dto.getMergedId());
         if (master == null || merged == null) {
             throw new BusinessException("主档或被并档案不存在（可能已被删除）");
         }
@@ -247,7 +249,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         }
 
         CurrentUser user = UserUtils.getCurrentUser();
-        LocalDateTime now = LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+        LocalDateTime now = TimeUtil.nowSeconds();
 
         // 数据量快照：合并前后"这个档案名下有多少业务数据"必须有纸面记录
         Map<Long, Map<String, Integer>> counts = loadDataCounts(List.of(master.getId(), merged.getId()));
@@ -270,9 +272,9 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         merged.setMergeTime(now);
         // 停用：否则它还能被挂号/开单选中，等于合并没生效
         merged.setStatus(0);
-        patientMapper.updateById(merged);
+        bizPatientMapper.updateById(merged);
         if (!filledFields.isEmpty()) {
-            patientMapper.updateById(master);
+            bizPatientMapper.updateById(master);
         }
 
         BizPatientMergeLog logEntity = new BizPatientMergeLog();
@@ -293,7 +295,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         logEntity.setOperatorName(user == null ? null : user.getEmployeeName());
         logEntity.setMergeTime(now);
         logEntity.setLogStatus(1);
-        mergeLogMapper.insert(logEntity);
+        bizPatientMergeLogMapper.insert(logEntity);
 
         log.info("患者档案合并 master={}({}) 合并 merged={}({}) 级别={} 补全字段={} 操作人={}",
                 master.getPatientNo(), master.getId(), merged.getPatientNo(), merged.getId(),
@@ -304,14 +306,14 @@ public class PatientIndexServiceImpl implements PatientIndexService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientMergeLogVO revert(PatientMergeRevertDTO dto) {
-        BizPatientMergeLog logEntity = mergeLogMapper.selectById(dto.getLogId());
+        BizPatientMergeLog logEntity = bizPatientMergeLogMapper.selectById(dto.getLogId());
         if (logEntity == null) {
             throw new BusinessException("合并记录不存在");
         }
         if (!Objects.equals(logEntity.getLogStatus(), 1)) {
             throw new BusinessException("该合并记录已撤销，不能重复撤销");
         }
-        BizPatient merged = patientMapper.selectById(logEntity.getMergedId());
+        BizPatient merged = bizPatientMapper.selectById(logEntity.getMergedId());
         if (merged == null) {
             throw new BusinessException("被并档案不存在，无法撤销");
         }
@@ -326,7 +328,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         // NOT_NULL —— 只 set 非空字段。写成 merged.setMasterId(null) + updateById，
         // master_id 根本不会被写进 SQL，于是"撤销"看起来成功（返回 200、log 也标了已撤销），
         // 但库里 master_id 仍然指着主档，患者还是影子。这类静默不生效只有回读数据库才能发现。
-        patientMapper.update(new BizPatient(), new LambdaUpdateWrapper<BizPatient>()
+        bizPatientMapper.update(new BizPatient(), new LambdaUpdateWrapper<BizPatient>()
                 .set(BizPatient::getMasterId, null)
                 .set(BizPatient::getMergeStatus, PatientMergeStatusEnum.NORMAL.getCode())
                 .set(BizPatient::getMergeTime, null)
@@ -335,9 +337,9 @@ public class PatientIndexServiceImpl implements PatientIndexService {
 
         logEntity.setLogStatus(2);
         logEntity.setRevertBy(UserUtils.getCurrentUser().getRealName());
-        logEntity.setRevertTime(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
+        logEntity.setRevertTime(TimeUtil.nowSeconds());
         logEntity.setRevertReason(dto.getRevertReason().trim());
-        mergeLogMapper.updateById(logEntity);
+        bizPatientMergeLogMapper.updateById(logEntity);
 
         log.info("撤销患者档案合并 mergeNo={} merged={} 理由={}",
                 logEntity.getMergeNo(), merged.getPatientNo(), dto.getRevertReason());
@@ -351,14 +353,14 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         if (patientId == null) {
             return List.of();
         }
-        BizPatient p = patientMapper.selectById(patientId);
+        BizPatient p = bizPatientMapper.selectById(patientId);
         if (p == null) {
             return List.of(patientId);
         }
         Long masterId = p.getMasterId() != null ? p.getMasterId() : p.getId();
         LambdaQueryWrapper<BizPatient> w = new LambdaQueryWrapper<>();
         w.and(q -> q.eq(BizPatient::getId, masterId).or().eq(BizPatient::getMasterId, masterId));
-        List<BizPatient> all = patientMapper.selectList(w);
+        List<BizPatient> all = bizPatientMapper.selectList(w);
         Set<Long> ids = new LinkedHashSet<>();
         ids.add(masterId);
         all.forEach(x -> ids.add(x.getId()));
@@ -377,7 +379,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
                     .or().like(BizPatientMergeLog::getMergedNo, kw));
         }
         w.orderByDesc(BizPatientMergeLog::getMergeTime);
-        Page<BizPatientMergeLog> page = mergeLogMapper.selectPage(
+        Page<BizPatientMergeLog> page = bizPatientMergeLogMapper.selectPage(
                 new Page<>(dto.getPageNum(), dto.getPageSize()), w);
         List<PatientMergeLogVO> vos = page.getRecords().stream().map(x -> toLogVO(x, true)).toList();
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), vos);
@@ -386,7 +388,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
     @Override
     public PatientIndexStatVO stats() {
         // 6 个标量子查询恒返回一行且 COUNT(*) 不会为 null，直接取值
-        PatientIndexCountVO raw = indexMapper.selectIndexStats();
+        PatientIndexCountVO raw = patientIndexMapper.selectIndexStats();
         long total = raw.getPatientTotal();
         long strongDup = raw.getStrongDupGroups();
         long merged = raw.getMergedCount();
@@ -407,7 +409,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         vo.setPhoneCompleteRate(rate(total - phoneMissing, total));
         vo.setAllergyCompleteRate(rate(total - allergyMissing, total));
         // 合并动作本身也是"唯一性治理"的进展指标
-        vo.setMergeActions(mergeLogMapper.selectCount(null));
+        vo.setMergeActions(bizPatientMergeLogMapper.selectCount(null));
         return vo;
     }
 
@@ -471,7 +473,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         if (ids == null || ids.isEmpty()) {
             return m;
         }
-        for (PatientDataCountVO row : indexMapper.countDataByPatientIds(ids)) {
+        for (PatientDataCountVO row : patientIndexMapper.countDataByPatientIds(ids)) {
             if (row.getPatientId() == null || row.getDataTable() == null) {
                 continue;
             }
@@ -489,7 +491,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         }
         LambdaQueryWrapper<BizPatient> w = new LambdaQueryWrapper<>();
         w.select(BizPatient::getMasterId).in(BizPatient::getMasterId, ids);
-        for (BizPatient s : patientMapper.selectList(w)) {
+        for (BizPatient s : bizPatientMapper.selectList(w)) {
             m.merge(s.getMasterId(), 1, Integer::sum);
         }
         return m;
@@ -505,7 +507,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         if (masterIds.isEmpty()) {
             return m;
         }
-        for (BizPatient p : patientMapper.selectBatchIds(masterIds)) {
+        for (BizPatient p : bizPatientMapper.selectBatchIds(masterIds)) {
             m.put(p.getId(), p);
         }
         return m;
@@ -574,7 +576,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
 
     private String nextMergeNo() {
         String prefix = NO_PREFIX + LocalDateTime.now().format(DateFormats.COMPACT_DATE);
-        long n = mergeLogMapper.countByNoPrefix(prefix) + 1;
+        long n = bizPatientMergeLogMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", n % 10000);
     }
 
@@ -596,7 +598,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
             vo.setCanRevert(false);
             return;
         }
-        BizPatient merged = patientMapper.selectById(e.getMergedId());
+        BizPatient merged = bizPatientMapper.selectById(e.getMergedId());
         vo.setCanRevert(merged != null
                 && Objects.equals(merged.getMasterId(), e.getMasterId())
                 && Objects.equals(merged.getMergeStatus(), PatientMergeStatusEnum.MERGED.getCode()));

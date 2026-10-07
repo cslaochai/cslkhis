@@ -23,14 +23,14 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MedicalRecordRefGatewayImpl implements MedicalRecordRefGateway {
 
-    private final BizMedicalRecordMapper medicalRecordMapper;
+    private final BizMedicalRecordMapper bizMedicalRecordMapper;
 
     @Override
     public RecordBrief getRecord(Long recordId) {
         if (recordId == null) {
             return null;
         }
-        BizMedicalRecord record = medicalRecordMapper.selectById(recordId);
+        BizMedicalRecord record = bizMedicalRecordMapper.selectById(recordId);
         return record == null ? null : toBrief(record);
     }
 
@@ -47,7 +47,7 @@ public class MedicalRecordRefGatewayImpl implements MedicalRecordRefGateway {
                 .orderByDesc(BizMedicalRecord::getId)
                 // limit 是 int 常量拼接，不走用户输入，无注入面
                 .last("LIMIT " + (limit <= 0 ? 20 : limit));
-        return medicalRecordMapper.selectList(wrapper).stream().map(this::toBrief).collect(Collectors.toList());
+        return bizMedicalRecordMapper.selectList(wrapper).stream().map(this::toBrief).collect(Collectors.toList());
     }
 
     private RecordBrief toBrief(BizMedicalRecord record) {

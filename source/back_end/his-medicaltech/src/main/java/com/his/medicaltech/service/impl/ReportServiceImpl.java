@@ -32,15 +32,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReportServiceImpl implements ReportService {
 
-    private final BizAppointInfoMapper registInfoMapper;
-    private final BizSettlementBillMapper settlementBillMapper;
+    private final BizAppointInfoMapper bizAppointInfoMapper;
+    private final BizSettlementBillMapper bizSettlementBillMapper;
 
     @Override
     public OutpatientStatsVO getOutpatientStats(String startDate, String endDate) {
         LambdaQueryWrapper<BizAppointInfo> wrapper = new LambdaQueryWrapper<>();
         wrapper.ge(startDate != null, BizAppointInfo::getVisitDate, startDate)
                 .le(endDate != null, BizAppointInfo::getVisitDate, endDate);
-        List<BizAppointInfo> registList = registInfoMapper.selectList(wrapper);
+        List<BizAppointInfo> registList = bizAppointInfoMapper.selectList(wrapper);
 
         long totalCount = registList.size();
         long maleCount = registList.stream().filter(r -> r.getGender() != null && r.getGender() == 1).count();
@@ -65,7 +65,7 @@ public class ReportServiceImpl implements ReportService {
         wrapper.ge(startDate != null, BizSettlementBill::getBillDate, startDate)
                 .le(endDate != null, BizSettlementBill::getBillDate, endDate)
                 .eq(BizSettlementBill::getBillStatus, BillStatusEnum.PAID.getCode());
-        List<BizSettlementBill> bills = settlementBillMapper.selectList(wrapper);
+        List<BizSettlementBill> bills = bizSettlementBillMapper.selectList(wrapper);
 
         BigDecimal totalAmount = bills.stream()
                 .map(b -> b.getPayableAmount() == null ? BigDecimal.ZERO : b.getPayableAmount())
