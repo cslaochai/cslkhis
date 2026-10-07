@@ -7,6 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.StaffScheduleCopyDTO;
 import com.his.system.dto.StaffScheduleQueryPageDTO;
 import com.his.system.dto.StaffScheduleSwapDTO;
@@ -22,7 +23,6 @@ import com.his.system.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -68,7 +68,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     private static String tipJoin(String... tips) {
         StringBuilder sb = new StringBuilder();
         for (String t : tips) {
-            if (t == null || t.isBlank()) {
+            if (!TextUtil.hasText(t)) {
                 continue;
             }
             if (sb.length() > 0) {
@@ -100,7 +100,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
                 .eq(dto.getStaffType() != null, BizStaffSchedule::getStaffType, dto.getStaffType())
                 .eq(dto.getDutyStatus() != null, BizStaffSchedule::getDutyStatus, dto.getDutyStatus())
                 .eq(dto.getClinicFlag() != null, BizStaffSchedule::getClinicFlag, dto.getClinicFlag()));
-        if (StringUtils.hasText(dto.getKeyword())) {
+        if (TextUtil.hasText(dto.getKeyword())) {
             String keyword = dto.getKeyword().trim();
             wrapper.and(w -> w.like(BizStaffSchedule::getEmployeeName, keyword)
                     .or().like(BizStaffSchedule::getEmpCode, keyword));

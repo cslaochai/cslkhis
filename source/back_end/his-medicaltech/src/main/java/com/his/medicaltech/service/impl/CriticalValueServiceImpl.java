@@ -10,6 +10,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.support.EmpTitleCode;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.CriticalValueHandleDTO;
 import com.his.medicaltech.dto.CriticalValueQueryPageDTO;
 import com.his.medicaltech.dto.CriticalValueReceiveDTO;
@@ -37,7 +38,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -115,7 +115,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     private static String buildResultText(BizCriticalValue entity) {
         StringBuilder builder = new StringBuilder();
         builder.append(entity.getResultValue() == null ? "" : entity.getResultValue());
-        if (StringUtils.hasText(entity.getResultUnit())) {
+        if (TextUtil.hasText(entity.getResultUnit())) {
             builder.append(' ').append(entity.getResultUnit());
         }
         if (entity.getCriticalType() != null) {
@@ -140,11 +140,11 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
     }
 
     private static LocalDateTime startOfDay(String text) {
-        return LocalDate.parse(text.trim(), DateFormats.DATE).atStartOfDay();
+        return TimeUtil.dayStart(LocalDate.parse(text.trim(), DateFormats.DATE));
     }
 
     private static LocalDateTime endOfDay(String text) {
-        return LocalDate.parse(text.trim(), DateFormats.DATE).atTime(23, 59, 59);
+        return TimeUtil.dayEnd(LocalDate.parse(text.trim(), DateFormats.DATE));
     }
 
     // 查询
@@ -298,7 +298,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
                     new LambdaQueryWrapper<SysConfig>()
                             .eq(SysConfig::getConfigKey, FALLBACK_RECEIVER_CONFIG_KEY)
                             .last("LIMIT 1"));
-            if (config == null || !StringUtils.hasText(config.getConfigValue())) {
+            if (config == null || !TextUtil.hasText(config.getConfigValue())) {
                 return null;
             }
             String raw = config.getConfigValue().trim();
@@ -310,7 +310,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
                     log.warn("[危急值] 兜底接收人 {} 没有关联员工档案，无法接收站内信", raw);
                     return null;
                 }
-                String name = StringUtils.hasText(user.getRealName()) ? user.getRealName() : user.getUserName();
+                String name = TextUtil.hasText(user.getRealName()) ? user.getRealName() : user.getUserName();
                 return new Receiver(user.getEmpId(), name);
             }
             // 兼容直接填员工ID
@@ -343,7 +343,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
                 .eq(dto.getStatus() != null, BizCriticalValue::getStatus, dto.getStatus())
                 .eq(dto.getCriticalType() != null, BizCriticalValue::getCriticalType, dto.getCriticalType());
 
-        if (StringUtils.hasText(dto.getKeyword())) {
+        if (TextUtil.hasText(dto.getKeyword())) {
             String keyword = dto.getKeyword().trim();
             wrapper.and(w -> w.like(BizCriticalValue::getCriticalNo, keyword)
                     .or().like(BizCriticalValue::getPatientName, keyword)
@@ -353,11 +353,11 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         // 日期参数先判空再解析 —— MyBatis-Plus 的 condition 重载会提前求值 value，
         // 把 startOfDay(null) 写在参数里一样会炸（本项目已踩过一次）。
         String startDate = dto.getStartDate();
-        if (StringUtils.hasText(startDate)) {
+        if (TextUtil.hasText(startDate)) {
             wrapper.ge(BizCriticalValue::getReportTime, startOfDay(startDate));
         }
         String endDate = dto.getEndDate();
-        if (StringUtils.hasText(endDate)) {
+        if (TextUtil.hasText(endDate)) {
             wrapper.le(BizCriticalValue::getReportTime, endOfDay(endDate));
         }
 
@@ -389,7 +389,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
 
     @Override
     public CriticalValueStatsVO stats() {
-        LocalDateTime monthStart = YearMonth.now().atDay(1).atStartOfDay();
+        LocalDateTime monthStart = TimeUtil.dayStart(YearMonth.now().atDay(1));
         LocalDateTime now = LocalDateTime.now();
 
         CriticalValueStatsVO vo = new CriticalValueStatsVO();
@@ -432,7 +432,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             throw new BusinessException("当前状态不允许接收（状态：" + statusText(entity.getStatus()) + "）");
         }
         entity.setStatus(CriticalValueStatusEnum.RECEIVED.getCode());
-        entity.setReceiveBy(StringUtils.hasText(dto.getReceiveBy()) ? dto.getReceiveBy() : operatorUser.getRealName());
+        entity.setReceiveBy(TextUtil.hasText(dto.getReceiveBy()) ? dto.getReceiveBy() : operatorUser.getRealName());
         entity.setReceiveTime(LocalDateTime.now());
         entity.setUpdateBy(operatorUser.getRealName());
         return updateById(entity);
@@ -452,11 +452,11 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
             throw new BusinessException("当前状态不允许处置（状态：" + statusText(entity.getStatus()) + "）");
         }
         entity.setStatus(CriticalValueStatusEnum.HANDLED.getCode());
-        entity.setHandleBy(StringUtils.hasText(dto.getHandleBy()) ? dto.getHandleBy() : operatorUser.getRealName());
+        entity.setHandleBy(TextUtil.hasText(dto.getHandleBy()) ? dto.getHandleBy() : operatorUser.getRealName());
         entity.setHandleTime(LocalDateTime.now());
         entity.setHandleMeasure(TextUtil.cut(dto.getHandleMeasure(), 500));
         // 未显式接收就直接处置时，把接收人也补上：闭环链条不能断在中间
-        if (!StringUtils.hasText(entity.getReceiveBy())) {
+        if (!TextUtil.hasText(entity.getReceiveBy())) {
             entity.setReceiveBy(entity.getHandleBy());
             entity.setReceiveTime(entity.getHandleTime());
         }
@@ -599,7 +599,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
                                BizCriticalValue entity, int toLeader) {
         try {
             SysEmployee emp = sysEmployeeMapper.selectById(receiverId);
-            String name = emp != null && StringUtils.hasText(emp.getEmpName()) ? emp.getEmpName() : "站内用户";
+            String name = emp != null && TextUtil.hasText(emp.getEmpName()) ? emp.getEmpName() : "站内用户";
             boolean ok = sysMessageService.sendSystemMessage(
                     receiverId, name, title, content,
                     BizTypeEnum.CRITICAL.getType(), entity.getId(),
@@ -708,7 +708,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
         try {
             SysConfig config = sysConfigMapper.selectOne(
                     new LambdaQueryWrapper<SysConfig>().eq(SysConfig::getConfigKey, DEADLINE_CONFIG_KEY).last("LIMIT 1"));
-            if (config != null && StringUtils.hasText(config.getConfigValue())) {
+            if (config != null && TextUtil.hasText(config.getConfigValue())) {
                 minutes = Integer.parseInt(config.getConfigValue().trim());
             }
         } catch (Exception ex) {

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.SysDrugQueryPageDTO;
 import com.his.system.dto.SysDrugSelectDTO;
 import com.his.system.dto.SysDrugUpsertDTO;
@@ -15,7 +16,6 @@ import com.his.system.vo.SysDrugVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,7 +29,7 @@ public class SysDrugServiceImpl extends ServiceImpl<SysDrugMapper, SysDrug> impl
     @Override
     public PageResult<SysDrugVO> listPage(SysDrugQueryPageDTO queryDTO) {
         LambdaQueryWrapper<SysDrug> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getDrugName()), SysDrug::getDrugName, queryDTO.getDrugName())
+        wrapper.like(TextUtil.hasText(queryDTO.getDrugName()), SysDrug::getDrugName, queryDTO.getDrugName())
                 .eq(queryDTO.getDrugType() != null, SysDrug::getDrugType, queryDTO.getDrugType())
                 .eq(queryDTO.getSpecialFlag() != null, SysDrug::getSpecialFlag, queryDTO.getSpecialFlag())
                 .orderByAsc(SysDrug::getDrugCode);

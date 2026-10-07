@@ -12,6 +12,7 @@ import com.his.ai.service.PatientImagingExplainCapability;
 import com.his.ai.support.PatientTextGuard;
 import com.his.ai.vo.PatientImagingExplainPromptVariablesVO;
 import com.his.ai.vo.PatientImagingExplainVO;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.medicaltech.entity.BizReport;
@@ -25,7 +26,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Optional;
@@ -104,7 +104,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
         vo.setItemName(report.getItemName());
         vo.setExamMethod(report.getExamMethod());
         vo.setReportTime(report.getPublishTime());
-        vo.setPositiveText(dictCacheService.getDicDataLabel("biz_common_positiveFlagEnum", report.getPositiveFlag()));
+        vo.setPositiveText(dictCacheService.getDicDataLabel(DictType.POSITIVE_FLAG, report.getPositiveFlag()));
         // 危急是代码事实，置顶提示不经过模型——这是整个 VO 里唯一允许「催促」的字段
         if (Integer.valueOf(1).equals(report.getIsCritical())) {
             vo.setCriticalAlert("报告已由诊断医生标注为危急，请立即联系接诊医生或前往急诊。");
@@ -182,10 +182,10 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
         }
         SysImagingPlainItem best = null;
         int bestLength = 0;
-        String itemName = StringUtils.hasText(report.getItemName()) ? report.getItemName() : "";
-        String examMethod = StringUtils.hasText(report.getExamMethod()) ? report.getExamMethod() : "";
+        String itemName = TextUtil.hasText(report.getItemName()) ? report.getItemName() : "";
+        String examMethod = TextUtil.hasText(report.getExamMethod()) ? report.getExamMethod() : "";
         for (SysImagingPlainItem item : all) {
-            if (!StringUtils.hasText(item.getItemName())) {
+            if (!TextUtil.hasText(item.getItemName())) {
                 continue;
             }
             String keyword = item.getItemName().trim();
@@ -202,7 +202,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
         PatientImagingExplainPromptVariablesVO variables = new PatientImagingExplainPromptVariablesVO();
         variables.setItemName(TextUtil.blankToDefault(report.getItemName(), "（未填写）"));
         variables.setExamMethod(TextUtil.blankToDefault(report.getExamMethod(), "（未填写）"));
-        variables.setPositiveText(TextUtil.blankToDefault(dictCacheService.getDicDataLabel("biz_common_positiveFlagEnum", report.getPositiveFlag()), "（未填写）"));
+        variables.setPositiveText(TextUtil.blankToDefault(dictCacheService.getDicDataLabel(DictType.POSITIVE_FLAG, report.getPositiveFlag()), "（未填写）"));
         variables.setHasDictIntro(String.valueOf(plain != null));
         variables.setFindings(TextUtil.blankToDefault(report.getReportContent(), "（未填写）"));
         variables.setConclusions(TextUtil.blankToDefault(report.getConclusion(), "（未填写）"));

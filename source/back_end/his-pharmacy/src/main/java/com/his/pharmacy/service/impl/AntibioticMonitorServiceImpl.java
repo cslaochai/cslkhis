@@ -3,8 +3,10 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.pharmacy.dto.AntibioticStatsGenerateDTO;
 import com.his.pharmacy.dto.AntibioticStatsQueryPageDTO;
 import com.his.pharmacy.dto.IncisionReviewQueryPageDTO;
@@ -24,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -71,7 +72,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     @Override
     public PageResult<AntibioticStatsVO> listPage(AntibioticStatsQueryPageDTO query) {
         LambdaQueryWrapper<BizAntibioticStats> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StringUtils.hasText(query.getStatMonth()), BizAntibioticStats::getStatMonth, query.getStatMonth())
+        wrapper.eq(TextUtil.hasText(query.getStatMonth()), BizAntibioticStats::getStatMonth, query.getStatMonth())
                 .eq(query.getScopeType() != null, BizAntibioticStats::getScopeType, query.getScopeType())
                 .orderByDesc(BizAntibioticStats::getStatMonth)
                 .orderByAsc(BizAntibioticStats::getScopeType)
@@ -125,7 +126,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     @Override
     public String statsExportCsv(AntibioticStatsQueryPageDTO query) {
         LambdaQueryWrapper<BizAntibioticStats> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StringUtils.hasText(query.getStatMonth()), BizAntibioticStats::getStatMonth, query.getStatMonth())
+        wrapper.eq(TextUtil.hasText(query.getStatMonth()), BizAntibioticStats::getStatMonth, query.getStatMonth())
                 .eq(query.getScopeType() != null, BizAntibioticStats::getScopeType, query.getScopeType())
                 .orderByDesc(BizAntibioticStats::getStatMonth)
                 .orderByAsc(BizAntibioticStats::getId);
@@ -213,7 +214,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                 .last("LIMIT 1"));
         row.setGenerateBy(operator);
         row.setGenerateTime(LocalDateTime.now());
-        row.setRemark(StringUtils.hasText(remark) ? remark.trim() : null);
+        row.setRemark(TextUtil.hasText(remark) ? remark.trim() : null);
         if (exist == null) {
             bizAntibioticStatsMapper.insert(row);
             return row;
@@ -233,7 +234,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                 List<IncisionDrugCandidateVO> drugs = antibioticStatMapper.selectPeriopAntibioticOrders(
                         vo.getAdmissionId(), vo.getOperationTime());
                 for (IncisionDrugCandidateVO d : drugs) {
-                    d.setAntibioticLevelText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", d.getAntibioticLevel()));
+                    d.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, d.getAntibioticLevel()));
                     d.setMinutesFromIncision(d.getStartTime() == null ? null
                             : java.time.Duration.between(vo.getOperationTime(), d.getStartTime()).toMinutes());
                 }
@@ -249,7 +250,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     public PageResult<IncisionReviewVO> incisionReviewListPage(IncisionReviewQueryPageDTO query) {
         String keyword = query.getKeyword() == null ? null : query.getKeyword().trim();
         LambdaQueryWrapper<BizAntibioticIncisionReview> wrapper = new LambdaQueryWrapper<>();
-        wrapper.and(StringUtils.hasText(keyword), w -> w
+        wrapper.and(TextUtil.hasText(keyword), w -> w
                         .like(BizAntibioticIncisionReview::getPatientName, keyword)
                         .or().like(BizAntibioticIncisionReview::getOperationName, keyword))
                 .eq(query.getReviewResult() != null, BizAntibioticIncisionReview::getReviewResult, query.getReviewResult())
@@ -269,11 +270,11 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         boolean unreasonable = dto.getReviewResult() == BizAntibioticIncisionReview.RESULT_UNREASONABLE;
         // B 类：问题码与点评意见只在「结论=不合理」时必填，条件必填留在 service
         if (unreasonable) {
-            if (!StringUtils.hasText(dto.getProblemTypes())) {
+            if (!TextUtil.hasText(dto.getProblemTypes())) {
                 throw new BusinessException("结论为不合理时必须选择问题码");
             }
             List<String> codes = Arrays.stream(dto.getProblemTypes().split(","))
-                    .map(String::trim).filter(StringUtils::hasText).toList();
+                    .map(String::trim).filter(TextUtil::hasText).toList();
             if (codes.isEmpty()) {
                 throw new BusinessException("结论为不合理时必须选择问题码");
             }
@@ -282,12 +283,12 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                     throw new BusinessException("问题码非法：" + c + "（允许 41~48）");
                 }
             }
-            if (!StringUtils.hasText(dto.getReviewOpinion())) {
+            if (!TextUtil.hasText(dto.getReviewOpinion())) {
                 throw new BusinessException("结论为不合理时必须填写点评意见");
             }
         }
         // B 类：只有勾了联合用药才必填理由，条件必填
-        if (dto.getComboFlag() != null && dto.getComboFlag() == 1 && !StringUtils.hasText(dto.getComboReason())) {
+        if (dto.getComboFlag() != null && dto.getComboFlag() == 1 && !TextUtil.hasText(dto.getComboReason())) {
             throw new BusinessException("联合用药必须填写联合理由");
         }
 
@@ -342,15 +343,15 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         entity.setTimingType(dto.getTimingType());
         entity.setCourseHours(dto.getCourseHours());
         entity.setComboFlag(dto.getComboFlag() == null ? 0 : dto.getComboFlag());
-        entity.setComboReason(StringUtils.hasText(dto.getComboReason()) ? dto.getComboReason().trim() : null);
+        entity.setComboReason(TextUtil.hasText(dto.getComboReason()) ? dto.getComboReason().trim() : null);
         entity.setConsultFlag(dto.getConsultFlag() == null ? 0 : dto.getConsultFlag());
         entity.setReviewResult(dto.getReviewResult());
         entity.setProblemTypes(unreasonable ? dto.getProblemTypes().trim() : null);
-        entity.setReviewOpinion(StringUtils.hasText(dto.getReviewOpinion()) ? dto.getReviewOpinion().trim() : null);
+        entity.setReviewOpinion(TextUtil.hasText(dto.getReviewOpinion()) ? dto.getReviewOpinion().trim() : null);
         entity.setReviewerId(UserUtils.getCurrentUser().getEmployeeId());
         entity.setReviewerName(UserUtils.getCurrentUser().getRealName());
         entity.setReviewTime(LocalDateTime.now());
-        entity.setRemark(StringUtils.hasText(dto.getRemark()) ? dto.getRemark().trim() : null);
+        entity.setRemark(TextUtil.hasText(dto.getRemark()) ? dto.getRemark().trim() : null);
 
         // 一致性兜底：用了特殊使用级却没会诊同意 → 问题码必须挂 47
         if (unreasonable && entity.getAntibioticLevel() != null && entity.getAntibioticLevel() == 3
@@ -372,7 +373,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
 
     private YearMonth requireMonth(String month) {
         // C 类：实时试算入口只有 @RequestParam 的裸字符串，没有 DTO 可挂注解；生成入口的必填已由 DTO 兜住
-        if (!StringUtils.hasText(month)) {
+        if (!TextUtil.hasText(month)) {
             throw new BusinessException("统计月份不能为空");
         }
         try {
@@ -386,7 +387,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
         String max = bizAntibioticIncisionReviewMapper.selectMaxReviewNo(day);
         int seq = 1;
-        if (StringUtils.hasText(max) && max.length() >= 4) {
+        if (TextUtil.hasText(max) && max.length() >= 4) {
             try {
                 seq = Integer.parseInt(max.substring(max.length() - 4)) + 1;
             } catch (NumberFormatException ignored) {
@@ -468,10 +469,10 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         vo.setDrugId(e.getDrugId());
         vo.setDrugName(e.getDrugName());
         vo.setAntibioticLevel(e.getAntibioticLevel());
-        vo.setAntibioticLevelText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticLevelEnum", e.getAntibioticLevel()));
+        vo.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, e.getAntibioticLevel()));
         vo.setIndicationFlag(e.getIndicationFlag());
         vo.setTimingType(e.getTimingType());
-        vo.setTimingTypeText(dictCacheService.getDicDataLabel("biz_pharmacy_antibioticTimingEnum", e.getTimingType()));
+        vo.setTimingTypeText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_TIMING, e.getTimingType()));
         vo.setCourseHours(e.getCourseHours());
         vo.setComboFlag(e.getComboFlag());
         vo.setComboReason(e.getComboReason());
@@ -492,14 +493,14 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     }
 
     private String problemText(String codes) {
-        if (!StringUtils.hasText(codes)) {
+        if (!TextUtil.hasText(codes)) {
             return null;
         }
         return Arrays.stream(codes.split(","))
                 .map(String::trim)
-                .filter(StringUtils::hasText)
+                .filter(TextUtil::hasText)
                 .map(AntibioticProblemTypeEnum::getText)
-                .filter(StringUtils::hasText)
+                .filter(TextUtil::hasText)
                 .reduce((a, b) -> a + "、" + b).orElse(null);
     }
 

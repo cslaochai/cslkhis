@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.util.TextUtil;
 import com.his.emr.dto.AiDraftDiffQueryPageDTO;
 import com.his.emr.entity.BizAiDraftDiff;
 import com.his.emr.mapper.BizAiDraftDiffMapper;
@@ -13,7 +14,6 @@ import com.his.emr.vo.AiDraftDiffListVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,7 +30,7 @@ public class AiDraftDiffServiceImpl extends ServiceImpl<BizAiDraftDiffMapper, Bi
     public boolean record(Long recordId, Long registId, Long patientId, String patientNo, String patientName,
                           Long deptId, String deptName, Long doctorId, String doctorName,
                           String draftText, String finalText) {
-        if (!StringUtils.hasText(draftText) || !StringUtils.hasText(finalText)) {
+        if (!TextUtil.hasText(draftText) || !TextUtil.hasText(finalText)) {
             return false;
         }
         List<DraftDiffSupport.Segment> segments = draftDiffSupport.diff(draftText, finalText);
@@ -58,9 +58,9 @@ public class AiDraftDiffServiceImpl extends ServiceImpl<BizAiDraftDiffMapper, Bi
     public PageResult<AiDraftDiffListVO> listPage(AiDraftDiffQueryPageDTO dto) {
         AiDraftDiffQueryPageDTO q = dto == null ? new AiDraftDiffQueryPageDTO() : dto;
         LambdaQueryWrapper<BizAiDraftDiff> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(q.getPatientName()), BizAiDraftDiff::getPatientName,
+        wrapper.like(TextUtil.hasText(q.getPatientName()), BizAiDraftDiff::getPatientName,
                         q.getPatientName() == null ? null : q.getPatientName().trim())
-                .like(StringUtils.hasText(q.getDoctorName()), BizAiDraftDiff::getDoctorName,
+                .like(TextUtil.hasText(q.getDoctorName()), BizAiDraftDiff::getDoctorName,
                         q.getDoctorName() == null ? null : q.getDoctorName().trim())
                 .eq(q.getChanged() != null, BizAiDraftDiff::getChanged, q.getChanged())
                 .orderByDesc(BizAiDraftDiff::getCreateTime)

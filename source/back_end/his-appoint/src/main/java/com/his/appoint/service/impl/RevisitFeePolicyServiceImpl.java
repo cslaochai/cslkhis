@@ -13,11 +13,11 @@ import com.his.appoint.vo.RevisitFeePolicyVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.Comparator;
@@ -142,7 +142,7 @@ public class RevisitFeePolicyServiceImpl
     @Override
     public PageResult<RevisitFeePolicyVO> listPage(RevisitFeePolicyQueryPageDTO queryDTO) {
         LambdaQueryWrapper<BizRevisitFeePolicy> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getPolicyName()),
+        wrapper.like(TextUtil.hasText(queryDTO.getPolicyName()),
                         BizRevisitFeePolicy::getPolicyName, queryDTO.getPolicyName())
                 .eq(queryDTO.getRevisitSource() != null,
                         BizRevisitFeePolicy::getRevisitSource, queryDTO.getRevisitSource())

@@ -1,5 +1,6 @@
 package com.his.medicaltech.enums;
 
+import com.his.common.util.TextUtil;
 import lombok.Getter;
 
 import java.util.ArrayList;
@@ -39,7 +40,7 @@ public enum TransfusionReactionTypeEnum {
     }
 
     public static TransfusionReactionTypeEnum fromCode(String code) {
-        if (code == null || code.isBlank()) {
+        if (!TextUtil.hasText(code)) {
             return null;
         }
         String trimmed = code.trim();
@@ -65,7 +66,7 @@ public enum TransfusionReactionTypeEnum {
      */
     public static String labelOrUnknown(String code) {
         TransfusionReactionTypeEnum item = fromCode(code);
-        return item == null ? (code == null || code.isBlank() ? "未知" : "未知(" + code + ")") : item.label;
+        return item == null ? (!TextUtil.hasText(code) ? "未知" : "未知(" + code + ")") : item.label;
     }
 
     /**

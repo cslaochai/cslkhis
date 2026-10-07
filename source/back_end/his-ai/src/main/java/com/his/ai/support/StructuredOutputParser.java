@@ -3,9 +3,9 @@ package com.his.ai.support;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.ai.exception.LlmException;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 /**
  * 结构化输出解析器。
@@ -27,7 +27,7 @@ public class StructuredOutputParser {
      * 从模型返回中抠出 JSON 主体
      */
     public static String extractJson(String raw) {
-        if (!StringUtils.hasText(raw)) {
+        if (!TextUtil.hasText(raw)) {
             throw new LlmException("模型返回内容为空");
         }
         String text = raw.trim();

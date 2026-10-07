@@ -16,7 +16,6 @@ import com.his.emr.vo.ChronicRecordListVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashSet;
 import java.util.Optional;
@@ -114,12 +113,12 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
      */
     private String buildDiseaseContext(FollowupComposeDTO dto) {
         Set<String> diseases = new LinkedHashSet<>();
-        if (StringUtils.hasText(dto.getDiagnosis())) {
+        if (TextUtil.hasText(dto.getDiagnosis())) {
             diseases.add(dto.getDiagnosis().trim());
         }
         try {
             for (ChronicRecordListVO record : chronicRecordService.activeList(dto.getPatientId())) {
-                if (StringUtils.hasText(record.getDiseaseName())) {
+                if (TextUtil.hasText(record.getDiseaseName())) {
                     diseases.add(record.getDiseaseName().trim());
                 }
                 if (diseases.size() >= MAX_DISEASES) {

@@ -1,5 +1,6 @@
 package com.his.system.filter;
 
+import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.RolePermissionProvider;
 import com.his.system.utils.JwtUtils;
@@ -17,7 +18,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -48,7 +48,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = getTokenFromRequest(request);
 
-        if (StringUtils.hasText(token) && jwtUtils.validateToken(token)) {
+        if (TextUtil.hasText(token) && jwtUtils.validateToken(token)) {
             String username = jwtUtils.getUsernameFromToken(token);
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
@@ -58,14 +58,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 // 切角色会重新签发 token，所以 token 里的 currentRole 就是用户此刻选的身份
                 String currentRole = jwtUtils.getCurrentRoleFromToken(token);
-                if (!StringUtils.hasText(currentRole)) {
+                if (!TextUtil.hasText(currentRole)) {
                     List<String> roles = currentUser.getRoles();
                     if (roles != null && !roles.isEmpty()) {
                         currentRole = roles.get(0);
                     }
                 }
 
-                if (StringUtils.hasText(currentRole)) {
+                if (TextUtil.hasText(currentRole)) {
                     currentUser.setCurrentRole(currentRole);
                     applyRolePermissions(currentUser, currentRole);
                 }
@@ -78,7 +78,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (deptId != null) {
                     currentUser.setDeptId(deptId);
                     String deptName = jwtUtils.getDeptNameFromToken(token);
-                    if (StringUtils.hasText(deptName)) {
+                    if (TextUtil.hasText(deptName)) {
                         currentUser.setDeptName(deptName);
                     }
                 }
@@ -127,7 +127,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private String getTokenFromRequest(HttpServletRequest request) {
         String bearerToken = request.getHeader("Authorization");
-        if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
+        if (TextUtil.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
         return null;

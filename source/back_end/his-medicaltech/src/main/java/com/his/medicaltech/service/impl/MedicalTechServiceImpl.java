@@ -11,6 +11,7 @@ import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.entity.BizLaboratoryApply;
@@ -819,7 +820,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     public SpecimenStatsVO getSpecimenStats() {
         // 今日标本总数
         LambdaQueryWrapper<BizLaboratoryRecord> todayWrapper = new LambdaQueryWrapper<>();
-        todayWrapper.ge(BizLaboratoryRecord::getCreateTime, java.time.LocalDate.now().atStartOfDay());
+        todayWrapper.ge(BizLaboratoryRecord::getCreateTime, TimeUtil.dayStart(java.time.LocalDate.now()));
         long todayCount = bizLaboratoryRecordMapper.selectCount(todayWrapper);
 
         // 各状态数量

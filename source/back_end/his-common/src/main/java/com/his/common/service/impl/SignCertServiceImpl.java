@@ -18,13 +18,13 @@ import com.his.common.service.ExternalCaChannelService;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.service.SignCertService;
 import com.his.common.util.*;
+import com.his.common.util.TextUtil;
 import com.his.common.vo.SignCertVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -68,7 +68,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     // 取证书 / 自动签发
 
     private static Integer intValue(String s) {
-        if (!StringUtils.hasText(s)) {
+        if (!TextUtil.hasText(s)) {
             return null;
         }
         try {
@@ -92,7 +92,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
             return exist;
         }
         if (!autoIssueEnabled()) {
-            throw new BusinessException("员工「" + (StringUtils.hasText(empName) ? empName : empId)
+            throw new BusinessException("员工「" + (TextUtil.hasText(empName) ? empName : empId)
                     + "」没有有效的签名证书，且系统已关闭自动签发；"
                     + "请先在「签名中心 → 证书管理」为其签发证书");
         }
@@ -109,7 +109,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         if (dto == null || dto.getEmpId() == null) {
             throw new BusinessException("员工ID不能为空");
         }
-        if (!StringUtils.hasText(dto.getEmpName())) {
+        if (!TextUtil.hasText(dto.getEmpName())) {
             throw new BusinessException("员工姓名不能为空（证书上必须能看出这是谁）");
         }
         SysSignCert exist = sysSignCertMapper.selectActiveByEmp(dto.getEmpId(), TimeUtil.nowSeconds());
@@ -191,9 +191,9 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     private SysSignCert issueViaExternalCa(String empName, String deptName,
                                            int validDays) {
         KeyPairFactory.KeyPairPem pair = KeyPairFactory.generate();
-        String subjectDn = "CN=" + (StringUtils.hasText(empName) ? empName : "unknown")
+        String subjectDn = "CN=" + (TextUtil.hasText(empName) ? empName : "unknown")
                 + ", O=长沙市麓康医院"
-                + (StringUtils.hasText(deptName) ? ", OU=" + deptName : "");
+                + (TextUtil.hasText(deptName) ? ", OU=" + deptName : "");
         ExternalCaChannelService.IssuedCert issued = externalCaChannelService.issueCert(
                 new ExternalCaChannelService.IssueRequest(subjectDn, pair.publicPem(), validDays));
         if (issued == null) {
@@ -213,7 +213,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         if (dto == null || dto.getCertId() == null) {
             throw new BusinessException("证书ID不能为空");
         }
-        if (!StringUtils.hasText(dto.getReason())) {
+        if (!TextUtil.hasText(dto.getReason())) {
             throw new BusinessException("吊销原因必填（吊销会直接废止后续签名能力，必须写明依据）");
         }
         SysSignCert cert = sysSignCertMapper.selectById(dto.getCertId());
@@ -249,7 +249,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         w.eq(query.getEmpId() != null, SysSignCert::getEmpId, query.getEmpId());
         w.eq(query.getCertStatus() != null, SysSignCert::getCertStatus, query.getCertStatus());
         w.eq(query.getIssuedMode() != null, SysSignCert::getIssuedMode, query.getIssuedMode());
-        if (StringUtils.hasText(query.getKeyword())) {
+        if (TextUtil.hasText(query.getKeyword())) {
             String kw = query.getKeyword().trim();
             w.and(x -> x.like(SysSignCert::getCertNo, kw)
                     .or().like(SysSignCert::getEmpName, kw)
@@ -272,7 +272,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     public List<SignCertVO> selectList(String keyword) {
         LambdaQueryWrapper<SysSignCert> w = new LambdaQueryWrapper<>();
         w.eq(SysSignCert::getCertStatus, CertStatusEnum.ACTIVE.getCode());
-        if (StringUtils.hasText(keyword)) {
+        if (TextUtil.hasText(keyword)) {
             String kw = keyword.trim();
             w.and(x -> x.like(SysSignCert::getCertNo, kw).or().like(SysSignCert::getEmpName, kw));
         }
@@ -339,7 +339,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
 
     private boolean autoIssueEnabled() {
         String v = signConfigMapper.selectValue(CFG_AUTO_ISSUE);
-        if (StringUtils.hasText(v)) {
+        if (TextUtil.hasText(v)) {
             return !"0".equals(v.trim());
         }
         return signProperties.isAutoIssueCert();

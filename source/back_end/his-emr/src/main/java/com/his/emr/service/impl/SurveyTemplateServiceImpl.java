@@ -3,7 +3,7 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.base.Constants;
+import com.his.common.base.BizCodeConstants;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
@@ -239,7 +239,7 @@ public class SurveyTemplateServiceImpl extends ServiceImpl<BizSurveyTemplateMapp
     }
 
     private String nextNo() {
-        return Constants.SURVEY_TEMPLATE_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
-                + String.format("%04d", redisSequenceService.next(Constants.SURVEY_TEMPLATE_NO_KEY_PREFIX));
+        return BizCodeConstants.SURVEY_TEMPLATE_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
+                + String.format("%04d", redisSequenceService.next(BizCodeConstants.SURVEY_TEMPLATE_NO_KEY_PREFIX));
     }
 }

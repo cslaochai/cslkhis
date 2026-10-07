@@ -14,13 +14,13 @@ import com.his.charge.mapper.BizSettlementBillMapper;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.patient.service.PatientGuardianService;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -171,7 +171,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         if (insurance != null) {
             vo.setInsuranceType(insurance.getInsuranceType());
             vo.setCoverageRatio(insurance.getCoverageRatio());
-        } else if (StringUtils.hasText(bill.getInsuranceType())) {
+        } else if (TextUtil.hasText(bill.getInsuranceType())) {
             vo.setInsuranceType(bill.getInsuranceType());
         }
 
@@ -230,7 +230,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
                 if (names.size() >= MAX_ITEM_NAMES) {
                     break;
                 }
-                if (StringUtils.hasText(item.getItemName()) && !names.contains(item.getItemName())) {
+                if (TextUtil.hasText(item.getItemName()) && !names.contains(item.getItemName())) {
                     names.add(item.getItemName());
                 }
             }

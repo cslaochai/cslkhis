@@ -17,6 +17,7 @@ import com.his.common.mapper.SysSignCertMapper;
 import com.his.common.service.*;
 import com.his.common.util.DateFormats;
 import com.his.common.util.SignCryptoUtil;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.common.vo.ObjectSignatureVO;
 import com.his.common.vo.SignVerifyVO;
@@ -27,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -81,7 +81,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
     // 验签
 
     private static Integer intValue(String s) {
-        if (!StringUtils.hasText(s)) {
+        if (!TextUtil.hasText(s)) {
             return null;
         }
         try {
@@ -95,14 +95,14 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
      * 支持 "yyyy-MM-dd" 与 "yyyy-MM-dd HH:mm:ss"；只给日期时，起始补 00:00:00、结束补 23:59:59
      */
     private static LocalDateTime parseTime(String s, boolean endOfDay) {
-        if (!StringUtils.hasText(s)) {
+        if (!TextUtil.hasText(s)) {
             return null;
         }
         String v = s.trim();
         try {
             if (v.length() == 10) {
                 LocalDate d = LocalDate.parse(v);
-                return endOfDay ? d.atTime(23, 59, 59) : d.atStartOfDay();
+                return endOfDay ? TimeUtil.dayEnd(d) : TimeUtil.dayStart(d);
             }
             String norm = v.replace('T', ' ');
             if (norm.length() == 16) {
@@ -135,7 +135,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             throw new BusinessException("签名对象不存在（" + bizType.getText() + " id=" + cmd.getBizId() + "）");
         }
         String block = provider.blockReason(subject, scene);
-        if (StringUtils.hasText(block)) {
+        if (TextUtil.hasText(block)) {
             throw new BusinessException(block);
         }
 
@@ -188,7 +188,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         e.setPrevSignId(prev == null ? null : prev.getId());
         e.setPrevDigest(prevDigest);
         e.setSignerId(cmd.getSignerId());
-        e.setSignerName(StringUtils.hasText(cmd.getSignerName()) ? cmd.getSignerName() : String.valueOf(cmd.getSignerId()));
+        e.setSignerName(TextUtil.hasText(cmd.getSignerName()) ? cmd.getSignerName() : String.valueOf(cmd.getSignerId()));
         e.setSignerDeptId(cmd.getSignerDeptId());
         e.setSignerDeptName(cmd.getSignerDeptName());
         e.setSignerTitle(cmd.getSignerTitle());
@@ -267,7 +267,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         if (cert == null) {
             signatureValid = false;
             signFailReason = "签名所用证书（certId=" + sig.getCertId() + "）不存在，无法校验签名值";
-        } else if (!StringUtils.hasText(sig.getContentSnapshot())) {
+        } else if (!TextUtil.hasText(sig.getContentSnapshot())) {
             signatureValid = false;
             signFailReason = "该签名未留存被签内容快照（历史数据），无法校验签名值";
         } else {
@@ -306,9 +306,9 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         Boolean tsaValid = null;
         String tsaNote = null;
         if (Objects.equals(TimeSourceEnum.TSA.getCode(), sig.getTimeSource())) {
-            boolean hasToken = StringUtils.hasText(sig.getTsaSerial())
+            boolean hasToken = TextUtil.hasText(sig.getTsaSerial())
                     && sig.getTsaTime() != null
-                    && StringUtils.hasText(sig.getTsaToken());
+                    && TextUtil.hasText(sig.getTsaToken());
             if (!hasToken) {
                 tsaValid = false;
                 tsaNote = "签名记录标记为 TSA 时间来源，但缺少序列号/授时时刻/令牌（写入侧校验被绕过或数据被删改）";
@@ -394,7 +394,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         if (signId == null) {
             throw new BusinessException("签名ID不能为空");
         }
-        if (!StringUtils.hasText(reason)) {
+        if (!TextUtil.hasText(reason)) {
             throw new BusinessException("作废原因必填（作废会解除病历的内容锁定，必须写明依据）");
         }
         BizEmrSignature sig = bizEmrSignatureMapper.selectById(signId);
@@ -441,7 +441,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         LambdaQueryWrapper<BizEmrSignature> w = new LambdaQueryWrapper<>();
         w.eq(q.getBizType() != null, BizEmrSignature::getBizType, q.getBizType());
         w.eq(q.getBizId() != null, BizEmrSignature::getBizId, q.getBizId());
-        w.like(StringUtils.hasText(q.getBizNo()), BizEmrSignature::getBizNo, q.getBizNo());
+        w.like(TextUtil.hasText(q.getBizNo()), BizEmrSignature::getBizNo, q.getBizNo());
         w.eq(q.getSignerId() != null, BizEmrSignature::getSignerId, q.getSignerId());
         w.eq(q.getSignScene() != null, BizEmrSignature::getSignScene, q.getSignScene());
         w.eq(q.getSignStatus() != null, BizEmrSignature::getSignStatus, q.getSignStatus());
@@ -451,7 +451,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         LocalDateTime end = parseTime(q.getEndTime(), true);
         w.ge(begin != null, BizEmrSignature::getSignedTime, begin);
         w.le(end != null, BizEmrSignature::getSignedTime, end);
-        if (StringUtils.hasText(q.getKeyword())) {
+        if (TextUtil.hasText(q.getKeyword())) {
             String kw = q.getKeyword().trim();
             w.and(x -> x.like(BizEmrSignature::getSignerName, kw)
                     .or().like(BizEmrSignature::getPatientName, kw)
@@ -503,7 +503,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
             vo.setBizStatusText(s.bizStatusText());
             vo.setCanSign(true);
             vo.setBlockReason(provider.blockReason(s, SignSceneEnum.MAKEUP));
-            vo.setCanSign(!StringUtils.hasText(vo.getBlockReason()));
+            vo.setCanSign(!TextUtil.hasText(vo.getBlockReason()));
         } else {
             vo.setCanSign(false);
             vo.setBlockReason("该对象类型在当前部署里没有内容提供者，无法签名（仅能查看历史签名）");
@@ -565,7 +565,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         vo.setInvalidSign(invalid);
         vo.setVerifyUnchecked(unchecked);
         vo.setVerifyFailed(failed);
-        vo.setTodaySign(bizEmrSignatureMapper.countSignedAfter(LocalDate.now().atStartOfDay()));
+        vo.setTodaySign(bizEmrSignatureMapper.countSignedAfter(TimeUtil.dayStart(LocalDate.now())));
         vo.setLastSignTime(bizEmrSignatureMapper.selectLastSignedTime());
         vo.setBizTypeCount(types.size());
         StringBuilder tb = new StringBuilder();
@@ -756,7 +756,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         vo.setInvalidReason(s.getInvalidReason());
         vo.setInvalidTime(s.getInvalidTime());
         vo.setInvalidByName(s.getInvalidByName());
-        vo.setHasSnapshot(StringUtils.hasText(s.getContentSnapshot()));
+        vo.setHasSnapshot(TextUtil.hasText(s.getContentSnapshot()));
         if (withSnapshot) {
             vo.setContentSnapshot(s.getContentSnapshot());
         }

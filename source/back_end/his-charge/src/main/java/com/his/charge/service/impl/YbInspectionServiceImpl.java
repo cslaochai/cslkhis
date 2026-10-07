@@ -58,7 +58,7 @@ public class YbInspectionServiceImpl extends ServiceImpl<BizYbInspectionMapper, 
         LambdaQueryWrapper<BizYbInspection> wrapper = new LambdaQueryWrapper<BizYbInspection>()
                 .eq(queryDTO.getInspectType() != null, BizYbInspection::getInspectType, queryDTO.getInspectType())
                 .eq(queryDTO.getStatus() != null, BizYbInspection::getStatus, queryDTO.getStatus())
-                .and(isText(queryDTO.getKeyword()), w -> w
+                .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
                         .like(BizYbInspection::getInspectNo, queryDTO.getKeyword())
                         .or().like(BizYbInspection::getFundOrg, queryDTO.getKeyword())
                         .or().like(BizYbInspection::getInspectTeam, queryDTO.getKeyword())
@@ -190,9 +190,4 @@ public class YbInspectionServiceImpl extends ServiceImpl<BizYbInspectionMapper, 
         BeanUtils.copyProperties(entity, vo);
         return vo;
     }
-
-    private boolean isText(String text) {
-        return text != null && !text.isBlank();
-    }
-
 }

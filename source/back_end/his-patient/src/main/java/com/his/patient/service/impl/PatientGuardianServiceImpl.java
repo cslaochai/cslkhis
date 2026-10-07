@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.UserTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.patient.dto.GuardianBindDTO;
 import com.his.patient.dto.GuardianSendAddCodeDTO;
 import com.his.patient.dto.GuardianSendBindCodeDTO;
@@ -30,7 +31,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -185,7 +185,7 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
             // 与 bindPatient 同口径的合并文案，不区分哪种不匹配，避免探测建档
             throw new BusinessException("未找到匹配的就诊档案，请核对姓名与身份证号");
         }
-        if (!StringUtils.hasText(patient.getPhone())) {
+        if (!TextUtil.hasText(patient.getPhone())) {
             throw new BusinessException("该就诊人建档未预留手机号，请持有效证件到窗口办理绑定");
         }
         SmsCodeService.SendResult send = smsCodeService.send(patient.getPhone(), SmsCodeService.SCENE_BIND);
@@ -221,7 +221,7 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
 
         // 收码号码只认档案预留手机号（前端传不了）：能收到码即视为本人授权
         String recordPhone = patient.getPhone();
-        if (!StringUtils.hasText(recordPhone)) {
+        if (!TextUtil.hasText(recordPhone)) {
             throw new BusinessException("该就诊人建档未预留手机号，请持有效证件到窗口办理绑定");
         }
         // 验证码一次一用：放在其他校验之后，别让码白烧在配额这种提示上
@@ -336,7 +336,7 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
     @Override
     public void bindOpenid(String openid) {
         CurrentUser user = requirePatientUser();
-        if (openid == null || openid.isBlank() || openid.length() > 64) {
+        if (!TextUtil.hasText(openid) || openid.length() > 64) {
             throw new BusinessException("openid 不合法");
         }
         // 只更新自己账号的 openid；唯一性冲突（该微信已绑别的账号）直接拒绝，不做抢占

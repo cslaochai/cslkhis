@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.SysDictData;
 import com.his.system.mapper.SysDictDataMapper;
 import com.his.system.service.DictCacheService;
@@ -98,7 +99,7 @@ public class DictCacheServiceImpl extends ServiceImpl<SysDictDataMapper, SysDict
      * 从缓存获取字典数据，缓存未命中则从数据库加载
      */
     public List<SysDictData> getDictDataByType(String dictType) {
-        if (StringUtils.isBlank(dictType)) {
+        if (!TextUtil.hasText(dictType)) {
             return Collections.emptyList();
         }
 
@@ -135,7 +136,7 @@ public class DictCacheServiceImpl extends ServiceImpl<SysDictDataMapper, SysDict
     }
 
     /**
-     * 字典码值 → 文案。取不到渲染「未知(n)」，绝不回落成看似合法的值。
+     * 字典码值 → 文案。取不到一律空串（与枚举 {@code getText} 同口径），不伪造「未知(n)」，也不回落到某个合法文案。
      */
     @Override
     public String getDicDataLabel(String dictType, Object value) {

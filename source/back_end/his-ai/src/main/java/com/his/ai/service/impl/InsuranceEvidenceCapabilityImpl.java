@@ -19,7 +19,6 @@ import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -123,24 +122,24 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
             hitText.append("- 规则码 ").append(item.getRuleCode())
                     .append("｜").append(item.getRuleName())
                     .append("｜规则判定依据：")
-                    .append(StringUtils.hasText(item.getEvidence()) ? item.getEvidence() : "无")
+                    .append(TextUtil.hasText(item.getEvidence()) ? item.getEvidence() : "无")
                     .append("\n");
         }
         InsuranceEvidencePromptVariablesVO variables = new InsuranceEvidencePromptVariablesVO();
-        variables.setSettlementNo(StringUtils.hasText(narrative.getSettlementNo())
+        variables.setSettlementNo(TextUtil.hasText(narrative.getSettlementNo())
                 ? narrative.getSettlementNo() : "未知");
-        variables.setDrgCode(StringUtils.hasText(narrative.getDrgCode())
+        variables.setDrgCode(TextUtil.hasText(narrative.getDrgCode())
                 ? narrative.getDrgCode() : "未分组");
-        variables.setPatientTag(StringUtils.hasText(narrative.getPatientTag())
+        variables.setPatientTag(TextUtil.hasText(narrative.getPatientTag())
                 ? narrative.getPatientTag() : "未知");
-        variables.setDiagnosisText(StringUtils.hasText(narrative.getDiagnosisText())
+        variables.setDiagnosisText(TextUtil.hasText(narrative.getDiagnosisText())
                 ? narrative.getDiagnosisText() : "未填写");
         variables.setHitItemsText(hitText.toString());
-        variables.setRecordNarrative(StringUtils.hasText(narrative.getRecordNarrative())
+        variables.setRecordNarrative(TextUtil.hasText(narrative.getRecordNarrative())
                 ? narrative.getRecordNarrative() : "无病历文本");
-        variables.setOrderNames(StringUtils.hasText(narrative.getOrderNames())
+        variables.setOrderNames(TextUtil.hasText(narrative.getOrderNames())
                 ? narrative.getOrderNames() : "无");
-        variables.setLabSummary(StringUtils.hasText(narrative.getLabSummary())
+        variables.setLabSummary(TextUtil.hasText(narrative.getLabSummary())
                 ? narrative.getLabSummary() : "无");
         variables.setMissingText(narrative.getMissingList() == null || narrative.getMissingList().isEmpty()
                 ? "无" : String.join("；", narrative.getMissingList()));
@@ -163,7 +162,7 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
                                                            List<ComplianceAuditItemVO> hits) {
         Map<String, ComplianceAuditItemVO> byCode = new HashMap<>();
         for (ComplianceAuditItemVO hit : hits) {
-            if (StringUtils.hasText(hit.getRuleCode())) {
+            if (TextUtil.hasText(hit.getRuleCode())) {
                 byCode.putIfAbsent(hit.getRuleCode(), hit);
             }
         }
@@ -172,7 +171,7 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
             return judgments;
         }
         for (InsuranceEvidenceLlmOutputDTO.LlmJudgment j : output.getJudgments()) {
-            ComplianceAuditItemVO hit = byCode.get(StringUtils.hasText(j.getRuleCode())
+            ComplianceAuditItemVO hit = byCode.get(TextUtil.hasText(j.getRuleCode())
                     ? j.getRuleCode().trim() : "");
             if (hit == null) {
                 continue;

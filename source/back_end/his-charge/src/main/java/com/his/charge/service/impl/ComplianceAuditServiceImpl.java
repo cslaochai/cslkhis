@@ -17,10 +17,12 @@ import com.his.charge.support.RuleFinding;
 import com.his.charge.support.SettlementEvidence;
 import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysIcd10;
 import com.his.system.mapper.SysIcd10Mapper;
@@ -32,7 +34,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -246,7 +247,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
             item.setTargetCode(f.getTargetCode());
             item.setTargetName(f.getTargetName());
             item.setEvidence(TextUtil.cut(f.getEvidence(), 1000));
-            item.setSuggestion(TextUtil.cut(StringUtils.hasText(f.getSuggestion()) ? f.getSuggestion() : f.getRule().getSuggestion(), 500));
+            item.setSuggestion(TextUtil.cut(TextUtil.hasText(f.getSuggestion()) ? f.getSuggestion() : f.getRule().getSuggestion(), 500));
             bizComplianceAuditItemMapper.insert(item);
         }
 
@@ -310,7 +311,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
             BizInsuranceSettlement settlement = bizInsuranceSettlementMapper.selectById(entity.getSettlementId());
             if (settlement != null) {
                 vo.setSettlementNo(settlement.getSettlementNo());
-                if (!StringUtils.hasText(vo.getDrgCode())) {
+                if (!TextUtil.hasText(vo.getDrgCode())) {
                     vo.setDrgCode(settlement.getDrgCode());
                 }
             }
@@ -380,12 +381,12 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     }
 
     private String buildDiagnosisText(BizInsuranceSettlement settlement) {
-        String name = StringUtils.hasText(settlement.getDiagnosisName())
+        String name = TextUtil.hasText(settlement.getDiagnosisName())
                 ? settlement.getDiagnosisName() : settlement.getDiagnosis();
-        if (!StringUtils.hasText(name)) {
+        if (!TextUtil.hasText(name)) {
             return "未填写";
         }
-        return StringUtils.hasText(settlement.getDiagnosisCode())
+        return TextUtil.hasText(settlement.getDiagnosisCode())
                 ? name + "（" + settlement.getDiagnosisCode() + "）" : name;
     }
 
@@ -403,22 +404,22 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
             if (count >= 30) {
                 break;
             }
-            if (!StringUtils.hasText(r.getLaboratoryItemName())) {
+            if (!TextUtil.hasText(r.getLaboratoryItemName())) {
                 continue;
             }
             sb.append(r.getLaboratoryItemName()).append("：")
-                    .append(StringUtils.hasText(r.getResultValue()) ? r.getResultValue() : "无结果");
-            if (StringUtils.hasText(r.getResultUnit())) {
+                    .append(TextUtil.hasText(r.getResultValue()) ? r.getResultValue() : "无结果");
+            if (TextUtil.hasText(r.getResultUnit())) {
                 sb.append(r.getResultUnit());
             }
-            if (StringUtils.hasText(r.getReferenceRange())) {
+            if (TextUtil.hasText(r.getReferenceRange())) {
                 sb.append("（参考 ").append(r.getReferenceRange()).append("）");
             }
             sb.append("；");
             count++;
         }
         String text = sb.toString();
-        return !StringUtils.hasText(text) ? "无" : TextUtil.cut(text, 800);
+        return !TextUtil.hasText(text) ? "无" : TextUtil.cut(text, 800);
     }
 
     // 内部方法
@@ -535,7 +536,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
 
     private void fillAuditText(ComplianceAuditVO vo) {
         vo.setRiskLevelText(RuleCatalogEnum.riskLabel(vo.getRiskLevel()));
-        vo.setAuditTypeText(dictCacheService.getDicDataLabel("biz_charge_complianceAuditTypeEnum", vo.getAuditType()));
+        vo.setAuditTypeText(dictCacheService.getDicDataLabel(DictType.COMPLIANCE_AUDIT_TYPE, vo.getAuditType()));
     }
 
     private Set<String> loadEnabledIcdCodes() {
@@ -543,7 +544,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
                 .eq(SysIcd10::getStatus, 1));
         Set<String> codes = new HashSet<>();
         for (SysIcd10 icd : list) {
-            if (StringUtils.hasText(icd.getIcdCode())) {
+            if (TextUtil.hasText(icd.getIcdCode())) {
                 codes.add(icd.getIcdCode().toUpperCase());
             }
         }
@@ -551,7 +552,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     }
 
     private SysDrgGroup loadDrgGroup(String drgCode) {
-        if (!StringUtils.hasText(drgCode)) {
+        if (!TextUtil.hasText(drgCode)) {
             return null;
         }
         List<SysDrgGroup> list = sysDrgGroupMapper.selectList(new LambdaQueryWrapper<SysDrgGroup>()
@@ -569,7 +570,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         if (settlement.getRegistId() != null) {
             RegistBriefVO regist = appointGateway.findRegist(settlement.getRegistId());
             if (regist != null && regist.getVisitDate() != null) {
-                baseline = regist.getVisitDate().atStartOfDay();
+                baseline = TimeUtil.dayStart(regist.getVisitDate());
             }
         }
         if (baseline == null) {
@@ -625,7 +626,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
         BeanUtils.copyProperties(entity, vo);
         vo.setDiagTypeText(entity.getDiagType() == null ? ""
                 : (entity.getDiagType() == 1 ? "主要诊断" : "其他诊断"));
-        vo.setAdmitConditionText(dictCacheService.getDicDataLabel("biz_common_admitConditionEnum", entity.getAdmitCondition()));
+        vo.setAdmitConditionText(dictCacheService.getDicDataLabel(DictType.ADMIT_CONDITION, entity.getAdmitCondition()));
         // 三态中文一律走 getText，禁止在这里拼「通过」
         vo.setEvidenceStatusText(AuditResultStateEnum.getText(entity.getEvidenceStatus()));
         return vo;

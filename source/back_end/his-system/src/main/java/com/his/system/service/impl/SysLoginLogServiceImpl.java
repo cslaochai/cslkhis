@@ -13,7 +13,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 
@@ -36,7 +35,7 @@ public class SysLoginLogServiceImpl extends ServiceImpl<SysLoginLogMapper, SysLo
     public void record(String userName, HttpServletRequest request, boolean success, String msg) {
         Long userId = null;
         String realName = null;
-        if (StringUtils.hasText(userName)) {
+        if (TextUtil.hasText(userName)) {
             SysUser user = findUser(userName);
             if (user != null) {
                 userId = user.getId();

@@ -18,7 +18,6 @@ import com.his.emr.vo.PrevisitDetailVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,7 +78,7 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
             vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.PREVISIT_SUMMARY));
         } else {
             String summary = TextUtil.cut(output.get().getSummary(), SUMMARY_MAX, "");
-            if (StringUtils.hasText(summary)) {
+            if (TextUtil.hasText(summary)) {
                 vo.setSummary(summary);
                 vo.setSource("model");
                 vo.setDegraded(false);
@@ -98,9 +97,9 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
 
     private Optional<PrevisitSummaryLlmOutputDTO> callModel(String mainSymptom, String answersText, String freeText) {
         PrevisitSummaryPromptVariablesVO variables = new PrevisitSummaryPromptVariablesVO();
-        variables.setMainSymptom(StringUtils.hasText(mainSymptom) ? mainSymptom : "未填写");
-        variables.setAnswersText(StringUtils.hasText(answersText) ? answersText : "无");
-        variables.setFreeText(StringUtils.hasText(freeText) ? freeText : "无");
+        variables.setMainSymptom(TextUtil.hasText(mainSymptom) ? mainSymptom : "未填写");
+        variables.setAnswersText(TextUtil.hasText(answersText) ? answersText : "无");
+        variables.setFreeText(TextUtil.hasText(freeText) ? freeText : "无");
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.PREVISIT_SUMMARY)
@@ -120,7 +119,7 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
      * 解析失败不拦流程：主症状和补充描述还能兜住规则摘要。
      */
     private String buildAnswersText(String answersJson) {
-        if (!StringUtils.hasText(answersJson)) {
+        if (!TextUtil.hasText(answersJson)) {
             return "";
         }
         List<String> parts = new ArrayList<>();
@@ -130,7 +129,7 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
                 for (JsonNode item : root) {
                     String label = item.path("label").asText("");
                     String value = item.path("value").asText("");
-                    if (StringUtils.hasText(label) && StringUtils.hasText(value)) {
+                    if (TextUtil.hasText(label) && TextUtil.hasText(value)) {
                         parts.add(label + "：" + value.trim());
                     }
                 }
@@ -147,13 +146,13 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
      */
     private String buildRuleSummary(String mainSymptom, String answersText, String freeText) {
         StringBuilder builder = new StringBuilder();
-        if (StringUtils.hasText(mainSymptom)) {
+        if (TextUtil.hasText(mainSymptom)) {
             builder.append("患者主诉：").append(mainSymptom.trim()).append("。");
         }
-        if (StringUtils.hasText(answersText)) {
+        if (TextUtil.hasText(answersText)) {
             builder.append("问诊要点：").append(answersText).append("。");
         }
-        if (StringUtils.hasText(freeText)) {
+        if (TextUtil.hasText(freeText)) {
             builder.append("患者补充：").append(freeText.trim()).append("。");
         }
         return TextUtil.cut(builder.toString(), SUMMARY_MAX, "");

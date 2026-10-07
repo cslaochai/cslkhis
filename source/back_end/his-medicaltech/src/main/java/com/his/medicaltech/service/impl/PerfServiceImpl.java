@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.PerfDTO;
 import com.his.medicaltech.entity.BizDeptCostMonth;
 import com.his.medicaltech.entity.BizPerfResult;
@@ -19,7 +20,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -45,7 +45,7 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
     // 成本
 
     private static String normalizeMonth(String m) {
-        if (!StringUtils.hasText(m)) {
+        if (!TextUtil.hasText(m)) {
             return null;
         }
         String t = m.trim();
@@ -70,7 +70,7 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
         }
         BizDeptCostMonth c = new BizDeptCostMonth();
         c.setDeptId(dto.getDeptId());
-        c.setDeptName(StringUtils.hasText(dto.getDeptName()) ? dto.getDeptName().trim() : "科室" + dto.getDeptId());
+        c.setDeptName(TextUtil.hasText(dto.getDeptName()) ? dto.getDeptName().trim() : "科室" + dto.getDeptId());
         c.setCostMonth(month);
         c.setLaborCost(NumUtil.orZero(dto.getLaborCost()));
         c.setDrugCost(NumUtil.orZero(dto.getDrugCost()));
@@ -90,7 +90,7 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
     public IPage<PerfVO.CostRow> costPage(PerfDTO.CostQuery dto) {
         LambdaQueryWrapper<BizDeptCostMonth> qw = new LambdaQueryWrapper<BizDeptCostMonth>()
                 .eq(dto.getDeptId() != null, BizDeptCostMonth::getDeptId, dto.getDeptId())
-                .eq(StringUtils.hasText(dto.getCostMonth()), BizDeptCostMonth::getCostMonth,
+                .eq(TextUtil.hasText(dto.getCostMonth()), BizDeptCostMonth::getCostMonth,
                         normalizeMonth(dto.getCostMonth()))
                 .orderByDesc(BizDeptCostMonth::getCostMonth)
                 .orderByAsc(BizDeptCostMonth::getDeptId);
@@ -173,7 +173,7 @@ public class PerfServiceImpl extends ServiceImpl<BizPerfResultMapper, BizPerfRes
     public IPage<PerfVO.PerfRow> perfPage(PerfDTO.PerfQuery dto) {
         LambdaQueryWrapper<BizPerfResult> qw = new LambdaQueryWrapper<BizPerfResult>()
                 .eq(dto.getDeptId() != null, BizPerfResult::getDeptId, dto.getDeptId())
-                .eq(StringUtils.hasText(dto.getCostMonth()), BizPerfResult::getCostMonth,
+                .eq(TextUtil.hasText(dto.getCostMonth()), BizPerfResult::getCostMonth,
                         normalizeMonth(dto.getCostMonth()))
                 .orderByDesc(BizPerfResult::getCostMonth)
                 .orderByDesc(BizPerfResult::getPerfAmount)

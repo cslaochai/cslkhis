@@ -29,7 +29,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -69,7 +68,7 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
     // 下拉 / 查询
 
     private static String appendRemark(String origin, String add) {
-        if (!StringUtils.hasText(origin)) {
+        if (!TextUtil.hasText(origin)) {
             return add;
         }
         return origin.trim() + "；" + add;
@@ -198,7 +197,7 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
 
         row.setDietCode(diet.code());
         row.setDietCategory(diet.category());
-        row.setDietName(StringUtils.hasText(dto.getDietName()) ? TextUtil.trim(dto.getDietName()) : diet.name());
+        row.setDietName(TextUtil.hasText(dto.getDietName()) ? TextUtil.trim(dto.getDietName()) : diet.name());
         row.setRoute(diet.route());
         row.setFeedWay(TextUtil.cut(TextUtil.trim(dto.getFeedWay()), 100));
         row.setCalorieTarget(dto.getCalorieTarget() == null ? diet.calorie() : dto.getCalorieTarget());
@@ -231,7 +230,7 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
      * 餐次：提交值优先但必须落在 1~4 且去重；不合法一律回退目录默认（订餐据此拆行，脏值会让整批生成漏餐）
      */
     private String normalizeMealTypes(String submitted, NutritionRules.Diet diet) {
-        String base = StringUtils.hasText(submitted) ? submitted : diet.mealTypes();
+        String base = TextUtil.hasText(submitted) ? submitted : diet.mealTypes();
         List<Integer> types = NutritionRules.mealTypesOf(base);
         if (types.isEmpty()) {
             return null;
@@ -252,7 +251,7 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
         }
         boolean accept = Boolean.TRUE.equals(dto.getAccept());
         String reason = TextUtil.cut(TextUtil.trim(dto.getRejectReason()), 500);
-        if (!accept && !StringUtils.hasText(reason)) {
+        if (!accept && !TextUtil.hasText(reason)) {
             // ①条件必填：只有退回（accept=false）才必填原因，@NotBlank 会把合法的接收请求挡成 400
             throw new BusinessException("退回膳食方案必须填写原因");
         }
@@ -360,7 +359,7 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
         row.setDietCode(code);
         row.setDietCategory(diet == null ? DietCategoryEnum.BASIC.getCode() : diet.category());
         // 名称一律用医嘱原文（"个体化糖尿病饮食"这类描述比目录名更准），认不出时给占位文案
-        row.setDietName(TextUtil.cut(StringUtils.hasText(order.getItemName())
+        row.setDietName(TextUtil.cut(TextUtil.hasText(order.getItemName())
                 ? order.getItemName().trim() : (diet == null ? "待指定饮食" : diet.name()), 100));
         row.setRoute(diet == null ? DietRouteEnum.ORAL.getCode() : diet.route());
         row.setFeedWay(TextUtil.cut(TextUtil.trim(order.getRoute()), 100));
@@ -430,10 +429,10 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
         row.setPlanStatus(PlanStatusEnum.STOPPED.getCode());
         row.setStopTime(stopTime);
         row.setRemark(TextUtil.cut(appendRemark(row.getRemark(),
-                "停止：" + (StringUtils.hasText(reason) ? reason.trim() : "营养师手工停餐")), 500));
+                "停止：" + (TextUtil.hasText(reason) ? reason.trim() : "营养师手工停餐")), 500));
         bizDietPlanMapper.updateById(row);
         cancelFutureMeals(row.getId(), stopTime.toLocalDate(),
-                TextUtil.cut("方案停止（" + row.getDietNo() + "）" + (StringUtils.hasText(reason) ? reason.trim() : ""), 500));
+                TextUtil.cut("方案停止（" + row.getDietNo() + "）" + (TextUtil.hasText(reason) ? reason.trim() : ""), 500));
         log.info("膳食方案停止 方案={} 停止时间={} 操作人={}", row.getDietNo(), stopTime, operatorUser.getRealName());
     }
 

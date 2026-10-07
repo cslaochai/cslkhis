@@ -7,6 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.SpecialDrugFlagEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.AmpouleReturnDTO;
 import com.his.emr.dto.NarcoticRegisterQueryPageDTO;
@@ -26,7 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -114,18 +114,18 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
     // 规则口径
 
     private static boolean isInjection(String dosageForm) {
-        return StringUtils.hasText(dosageForm)
+        return TextUtil.hasText(dosageForm)
                 && (dosageForm.contains("注射") || dosageForm.contains("大输液") || dosageForm.contains("输液"));
     }
 
     private static boolean isControlledRelease(String dosageForm) {
         // 只认「缓释/控释」——「肠溶片」常被误当成控缓释制剂，但法条里控缓释制剂不含肠溶制剂
-        return StringUtils.hasText(dosageForm)
+        return TextUtil.hasText(dosageForm)
                 && (dosageForm.contains("缓释") || dosageForm.contains("控释"));
     }
 
     private static BigDecimal firstNumber(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return null;
         }
         Matcher m = P_FIRST_NUMBER.matcher(text);
@@ -165,7 +165,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
         if (isControlledRelease(dosageForm)) {
             return "控缓释制剂";
         }
-        return StringUtils.hasText(dosageForm) ? dosageForm : "其他剂型";
+        return TextUtil.hasText(dosageForm) ? dosageForm : "其他剂型";
     }
 
     // 处方限量校验
@@ -264,20 +264,20 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
         List<NarcoticViolationVO> violations = new ArrayList<>();
 
         // 麻精处方必须含临床诊断
-        if (!StringUtils.hasText(rx.getDiagnosis())) {
+        if (!TextUtil.hasText(rx.getDiagnosis())) {
             NarcoticViolationVO v = new NarcoticViolationVO();
             v.setLevel(LEVEL_BLOCK);
             v.setCode("NO_DIAGNOSIS");
             v.setMessage("处方 " + rx.getPrescriptionNo() + " 含麻精药品，但未填写临床诊断，不得发药");
             v.setDrugName(controlled.stream().map(BizPrescriptionDetail::getDrugName)
-                    .filter(StringUtils::hasText).collect(Collectors.joining("、")));
+                    .filter(TextUtil::hasText).collect(Collectors.joining("、")));
             violations.add(v);
         }
 
         for (BizPrescriptionDetail detail : controlled) {
             NarcoticRegisterMapper.DrugSpecialRow row = drugMap.get(detail.getDrugId());
             Integer specialFlag = row.getSpecialFlag();
-            String dosageForm = StringUtils.hasText(detail.getDosageForm()) ? detail.getDosageForm() : row.getDosageForm();
+            String dosageForm = TextUtil.hasText(detail.getDosageForm()) ? detail.getDosageForm() : row.getDosageForm();
 
             // 分类值不在 1~4 之内 = 字典没有这一档，此时 limitDaysOf 返回 null。
             // 不能因为"规则不认识它"就放行 —— 那等于给未来新增的管制档位留了一个后门。
@@ -313,7 +313,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
                 continue;
             }
 
-            boolean canWaive = specialFlag == SpecialDrugFlagEnum.PSYCHOTROPIC_2.getCode() && StringUtils.hasText(overLimitReason);
+            boolean canWaive = specialFlag == SpecialDrugFlagEnum.PSYCHOTROPIC_2.getCode() && TextUtil.hasText(overLimitReason);
             NarcoticViolationVO v = new NarcoticViolationVO();
             v.setLevel(canWaive ? LEVEL_WARN : LEVEL_BLOCK);
             v.setCode("OVER_LIMIT");
@@ -367,7 +367,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
      * 频次文字 → 每日次数；解析不出返回 {@code null}
      */
     private Integer timesPerDay(String frequency) {
-        if (!StringUtils.hasText(frequency)) {
+        if (!TextUtil.hasText(frequency)) {
             return null;
         }
         String text = frequency.trim().toLowerCase().replace(" ", "");
@@ -439,7 +439,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
         // 姓名由服务端反查：前端传的姓名不采信。
         // 查不到 = 该员工不存在 / 已停用 / **不是药剂师岗位**（三选一，都该拒）。
         String checkerName = narcoticRegisterMapper.selectActivePharmacistName(checkerId);
-        if (!StringUtils.hasText(checkerName)) {
+        if (!TextUtil.hasText(checkerName)) {
             throw new BusinessException("复核人无效（ID：" + checkerId
                     + "）—— 复核人须为在职且具有药师以上技术职称（药剂师岗位）的员工，请重新选择");
         }
@@ -463,7 +463,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
                 ? null : bizPrescriptionDetailMapper.selectById(dispensing.getPrescriptionDetailId());
         BizPrescription rx = dispensing.getPrescriptionId() == null
                 ? null : bizPrescriptionMapper.selectById(dispensing.getPrescriptionId());
-        String dosageForm = detail != null && StringUtils.hasText(detail.getDosageForm())
+        String dosageForm = detail != null && TextUtil.hasText(detail.getDosageForm())
                 ? detail.getDosageForm() : row.getDosageForm();
 
         LocalDateTime now = TimeUtil.nowSeconds();
@@ -494,10 +494,10 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
         }
 
         entity.setDrugId(dispensing.getDrugId());
-        entity.setDrugCode(StringUtils.hasText(row.getDrugCode()) ? row.getDrugCode() : dispensing.getDrugCode());
-        entity.setDrugName(StringUtils.hasText(row.getDrugName()) ? row.getDrugName() : dispensing.getDrugName());
-        entity.setSpecification(StringUtils.hasText(row.getSpecification()) ? row.getSpecification() : dispensing.getSpecification());
-        entity.setUnit(StringUtils.hasText(row.getUnit()) ? row.getUnit() : dispensing.getUnit());
+        entity.setDrugCode(TextUtil.hasText(row.getDrugCode()) ? row.getDrugCode() : dispensing.getDrugCode());
+        entity.setDrugName(TextUtil.hasText(row.getDrugName()) ? row.getDrugName() : dispensing.getDrugName());
+        entity.setSpecification(TextUtil.hasText(row.getSpecification()) ? row.getSpecification() : dispensing.getSpecification());
+        entity.setUnit(TextUtil.hasText(row.getUnit()) ? row.getUnit() : dispensing.getUnit());
         entity.setSpecialFlag(row.getSpecialFlag());
         entity.setDosageForm(dosageForm);
         entity.setQuantity(dispensing.getQuantity());
@@ -523,7 +523,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
         entity.setDispenseTime(dispensing.getDispensingTime() != null ? dispensing.getDispensingTime() : now);
         entity.setCheckerId(checkerId);
         entity.setCheckerName(checkerName);
-        entity.setCheckTime(checkerId != null || StringUtils.hasText(checkerName) ? now : null);
+        entity.setCheckTime(checkerId != null || TextUtil.hasText(checkerName) ? now : null);
 
         if (requiresAmpouleTracking(row.getSpecialFlag(), dosageForm)) {
             entity.setAmpouleStatus(AmpouleStatusEnum.PENDING.getCode());
@@ -531,7 +531,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
         } else {
             entity.setAmpouleStatus(AmpouleStatusEnum.NA.getCode());
         }
-        if (StringUtils.hasText(overLimitReason)) {
+        if (TextUtil.hasText(overLimitReason)) {
             entity.setRemark("超量理由：" + overLimitReason);
         }
 
@@ -571,7 +571,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
         }
         Map<String, BigDecimal> byBatch = new LinkedHashMap<>();
         for (NarcoticRegisterMapper.BatchRow r : rows) {
-            if (!StringUtils.hasText(r.getBatchNo())) {
+            if (!TextUtil.hasText(r.getBatchNo())) {
                 continue;
             }
             byBatch.merge(r.getBatchNo(), r.getQty() == null ? BigDecimal.ZERO : r.getQty(), BigDecimal::add);
@@ -625,7 +625,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
     @Override
     public PageResult<BizNarcoticRegisterVO> listPage(NarcoticRegisterQueryPageDTO query) {
         LambdaQueryWrapper<BizNarcoticRegister> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(query.getKeyword())) {
+        if (TextUtil.hasText(query.getKeyword())) {
             String kw = query.getKeyword().trim();
             wrapper.and(w -> w.like(BizNarcoticRegister::getPatientName, kw)
                     .or().like(BizNarcoticRegister::getPatientNo, kw)
@@ -638,9 +638,9 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
                 .eq(query.getAmpouleStatus() != null, BizNarcoticRegister::getAmpouleStatus, query.getAmpouleStatus())
                 .eq(query.getPatientId() != null, BizNarcoticRegister::getPatientId, query.getPatientId())
                 .ge(query.getDispenseDateStart() != null, BizNarcoticRegister::getDispenseTime,
-                        query.getDispenseDateStart() == null ? null : query.getDispenseDateStart().atStartOfDay())
+                        TimeUtil.dayStart(query.getDispenseDateStart()))
                 .le(query.getDispenseDateEnd() != null, BizNarcoticRegister::getDispenseTime,
-                        query.getDispenseDateEnd() == null ? null : query.getDispenseDateEnd().atTime(23, 59, 59))
+                        TimeUtil.dayEnd(query.getDispenseDateEnd()))
                 // 二级键 id：dispense_time 是 DATETIME(0) 秒精度，同秒多行顺序不稳 → 翻页会重复/丢行且不报错
                 .orderByDesc(BizNarcoticRegister::getDispenseTime)
                 .orderByDesc(BizNarcoticRegister::getId);
@@ -680,7 +680,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
         NarcoticPrecheckVO vo = new NarcoticPrecheckVO();
         vo.setPrescriptionId(prescriptionId);
         vo.setPrescriptionNo(rx.getPrescriptionNo());
-        vo.setHasDiagnosis(StringUtils.hasText(rx.getDiagnosis()));
+        vo.setHasDiagnosis(TextUtil.hasText(rx.getDiagnosis()));
 
         // ① 管制明细清单（合规的也要带出来：窗口要知道"这单要不要选复核药师"）
         List<ControlledDrugVO> controlled = new ArrayList<>();
@@ -691,7 +691,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
                 if (row == null || !isControlled(row.getSpecialFlag())) {
                     continue;
                 }
-                String dosageForm = StringUtils.hasText(detail.getDosageForm())
+                String dosageForm = TextUtil.hasText(detail.getDosageForm())
                         ? detail.getDosageForm() : row.getDosageForm();
                 ControlledDrugVO item = new ControlledDrugVO();
                 item.setPrescriptionDetailId(detail.getId());
@@ -723,7 +723,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
         // ③ 卡点是否只是"缺一个二类精神超量理由"——
         //    只有全部 BLOCK 都属这一类且还没给理由时才算，否则填了理由照样发不出去，
         //    那时提示"可填写理由后放行"就是骗人。
-        boolean onlyOverLimitWaivable = !blocks.isEmpty() && !StringUtils.hasText(overLimitReason)
+        boolean onlyOverLimitWaivable = !blocks.isEmpty() && !TextUtil.hasText(overLimitReason)
                 && blocks.stream().allMatch(b -> "OVER_LIMIT".equals(b.getCode())
                 && b.getSpecialFlag() != null && b.getSpecialFlag() == SpecialDrugFlagEnum.PSYCHOTROPIC_2.getCode());
         vo.setOverLimitReasonRequired(onlyOverLimitWaivable);

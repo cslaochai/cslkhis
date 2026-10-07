@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
@@ -43,7 +44,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -131,17 +131,17 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
 
         applyContent(record, report, dto);
         // B类共用 DTO：该 DTO 同时服务 saveDraft（草稿允许空白），必填只在提交口生效，注解一刀切会挡掉存草稿
-        if (!StringUtils.hasText(report.getReportContent())) {
+        if (!TextUtil.hasText(report.getReportContent())) {
             throw new BusinessException("影像所见不能为空：没有所见的报告审不了，也不能发给临床");
         }
         // B类共用 DTO：同上，诊断/印象只在提交口必填，存草稿允许空白
-        if (!StringUtils.hasText(report.getConclusion())) {
+        if (!TextUtil.hasText(report.getConclusion())) {
             throw new BusinessException("影像诊断/印象不能为空");
         }
         if (record.getRecordStatus() == null
                 || record.getRecordStatus() < InsRecordStatusEnum.RESULTED.getCode()) {
             throw new BusinessException("该检查还没拍片完成（当前状态："
-                    + dictCacheService.getDicDataLabel("his_inspection_record_status", record.getRecordStatus())
+                    + dictCacheService.getDicDataLabel(DictType.INSPECTION_RECORD_STATUS, record.getRecordStatus())
                     + "），请先由技师完成拍片");
         }
 
@@ -181,7 +181,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         BizInspectionRecord record = loadRadiologyRecord(report.getRecordId());
         if (!Objects.equals(ReportStatusEnum.PENDING_REVIEW.getCode(), report.getReportStatus())) {
             throw new BusinessException("只有「待审核」的报告能审核（当前："
-                    + dictCacheService.getDicDataLabel("his_report_status", report.getReportStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DictType.REPORT_STATUS, report.getReportStatus()) + "）");
         }
         // 双签制度：谁写的报告谁不能自己审。用员工ID 比，不用姓名比 ——
         // 同名同姓的两个医师用姓名判会互相误判，要么拦错人要么放过去。
@@ -204,7 +204,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         report.setAuditBy(UserUtils.getCurrentUser().getRealName());
         report.setAuditTime(sign.getSignedTime());
         report.setRejectReason(null);
-        if (StringUtils.hasText(dto.getReason())) {
+        if (TextUtil.hasText(dto.getReason())) {
             report.setRemark(TextUtil.cut("审核意见：" + dto.getReason(), 500));
         }
         bizReportMapper.updateById(report);
@@ -212,7 +212,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         sysAuditLogService.record(current, UserUtils.getCurrentUser().getRealName(),
                 "放射报告", "审核通过", "biz_report", report.getId(),
                 TextUtil.cut("记录号=" + record.getRecordNo() + " 患者=" + record.getPatientName()
-                        + " 意见=" + (StringUtils.hasText(dto.getReason()) ? dto.getReason() : "无")
+                        + " 意见=" + (TextUtil.hasText(dto.getReason()) ? dto.getReason() : "无")
                         + " 签名=" + sign.getId(), 2000),
                 true, null);
         return toDetail(record, report);
@@ -227,9 +227,9 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         BizInspectionRecord record = loadRadiologyRecord(report.getRecordId());
         if (!Objects.equals(ReportStatusEnum.PENDING_REVIEW.getCode(), report.getReportStatus())) {
             throw new BusinessException("只有「待审核」的报告能退回（当前："
-                    + dictCacheService.getDicDataLabel("his_report_status", report.getReportStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DictType.REPORT_STATUS, report.getReportStatus()) + "）");
         }
-        if (!StringUtils.hasText(dto.getReason())) {
+        if (!TextUtil.hasText(dto.getReason())) {
             throw new BusinessException("退回必须写明原因：医师要照着这个原因改报告，没有原因的退回没法执行");
         }
 
@@ -277,7 +277,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         // 这正是本次分岗要堵掉的口子。
         if (!Objects.equals(ReportStatusEnum.REVIEWED.getCode(), report.getReportStatus())) {
             throw new BusinessException("只有「已审核」的报告能发布（当前："
-                    + dictCacheService.getDicDataLabel("his_report_status", report.getReportStatus())
+                    + dictCacheService.getDicDataLabel(DictType.REPORT_STATUS, report.getReportStatus())
                     + "）：请先完成审核");
         }
         LocalDateTime now = LocalDateTime.now();
@@ -350,7 +350,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         if (Objects.equals(ReportStatusEnum.PUBLISHED.getCode(), st)
                 || Objects.equals(ReportStatusEnum.INVALID.getCode(), st)) {
             throw new BusinessException("报告已"
-                    + dictCacheService.getDicDataLabel("his_report_status", st) + "，不能再修改");
+                    + dictCacheService.getDicDataLabel(DictType.REPORT_STATUS, st) + "，不能再修改");
         }
     }
 
@@ -452,11 +452,11 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
             return;
         }
         for (RadioReportListVO v : list) {
-            v.setRecordStatusText(dictCacheService.getDicDataLabel("his_inspection_record_status", v.getRecordStatus()));
+            v.setRecordStatusText(dictCacheService.getDicDataLabel(DictType.INSPECTION_RECORD_STATUS, v.getRecordStatus()));
             v.setReportStatusText(v.getReportStatus() == null ? "未写报告"
-                    : dictCacheService.getDicDataLabel("his_report_status", v.getReportStatus()));
+                    : dictCacheService.getDicDataLabel(DictType.REPORT_STATUS, v.getReportStatus()));
             v.setPositiveFlagText(v.getPositiveFlag() == null ? null
-                    : dictCacheService.getDicDataLabel("his_positive_flag", v.getPositiveFlag()));
+                    : dictCacheService.getDicDataLabel(DictType.POSITIVE_FLAG, v.getPositiveFlag()));
         }
     }
 
@@ -470,7 +470,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         vo.setPatientNo(record.getPatientNo());
         vo.setPatientName(record.getPatientName());
         vo.setGender(record.getGender());
-        vo.setGenderText(record.getGender() == null ? null : dictCacheService.getDicDataLabel("sys_gender", record.getGender()));
+        vo.setGenderText(record.getGender() == null ? null : dictCacheService.getDicDataLabel(DictType.GENDER, record.getGender()));
         vo.setAge(record.getAge());
         vo.setVisitDate(record.getVisitDate());
         vo.setItemCode(record.getInspectionItemCode());
@@ -480,7 +480,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         vo.setApplyDoctorName(record.getApplyDoctorName());
         vo.setClinicalDiagnosis(record.getClinicalDiagnosis());
         vo.setRecordStatus(record.getRecordStatus());
-        vo.setRecordStatusText(dictCacheService.getDicDataLabel("his_inspection_record_status", record.getRecordStatus()));
+        vo.setRecordStatusText(dictCacheService.getDicDataLabel(DictType.INSPECTION_RECORD_STATUS, record.getRecordStatus()));
         vo.setReportSignId(record.getReportSignId());
         vo.setAuditSignId(record.getAuditSignId());
         // 影像帧挂在申请单上（sql/137），这里顺着 apply_id 取，详情页不用二次请求
@@ -496,7 +496,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
             vo.setReportId(report.getId());
             vo.setReportNo(report.getReportNo());
             vo.setReportStatus(report.getReportStatus());
-            vo.setReportStatusText(dictCacheService.getDicDataLabel("his_report_status", report.getReportStatus()));
+            vo.setReportStatusText(dictCacheService.getDicDataLabel(DictType.REPORT_STATUS, report.getReportStatus()));
             vo.setTemplateId(report.getTemplateId());
             vo.setExamMethod(report.getExamMethod());
             vo.setReportContent(report.getReportContent());
@@ -504,7 +504,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
             vo.setSuggestions(report.getSuggestions());
             vo.setPositiveFlag(report.getPositiveFlag());
             vo.setPositiveFlagText(report.getPositiveFlag() == null ? null
-                    : dictCacheService.getDicDataLabel("his_positive_flag", report.getPositiveFlag()));
+                    : dictCacheService.getDicDataLabel(DictType.POSITIVE_FLAG, report.getPositiveFlag()));
             vo.setIsCritical(report.getIsCritical());
             vo.setWriteBy(report.getWriteBy());
             vo.setWriteById(report.getWriteById());
@@ -595,8 +595,8 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         RadioReportTemplateVO vo = new RadioReportTemplateVO();
         BeanUtils.copyProperties(e, vo);
         vo.setModalityText(e.getModality() == null ? null
-                : dictCacheService.getDicDataLabel("his_exam_device_type", e.getModality()));
-        if (!StringUtils.hasText(vo.getTemplateName())) {
+                : dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_TYPE, e.getModality()));
+        if (!TextUtil.hasText(vo.getTemplateName())) {
             vo.setTemplateName(e.getTemplateCode());
         }
         return vo;

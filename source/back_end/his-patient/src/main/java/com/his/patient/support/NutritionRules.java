@@ -1,6 +1,7 @@
 package com.his.patient.support;
 
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.patient.enums.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -161,7 +162,7 @@ public final class NutritionRules {
      * 订餐拆行用的餐次列表；mealTypes 为空则返回空表（该方案不订餐）
      */
     public static List<Integer> mealTypesOf(String mealTypes) {
-        if (mealTypes == null || mealTypes.isBlank()) {
+        if (!TextUtil.hasText(mealTypes)) {
             return List.of();
         }
         List<Integer> list = new ArrayList<>();

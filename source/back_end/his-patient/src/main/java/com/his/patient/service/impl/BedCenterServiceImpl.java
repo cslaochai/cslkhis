@@ -13,6 +13,8 @@ import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.*;
+import com.his.patient.enums.BedAllocTypeEnum;
+import com.his.patient.enums.BedMatchLevelEnum;
 import com.his.patient.mapper.*;
 import com.his.patient.service.BedCenterService;
 import com.his.patient.service.InpatientService;
@@ -21,7 +23,6 @@ import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysConfigMapper;
-import com.his.system.service.DictCacheService;
 import com.his.system.service.DutyRosterService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
@@ -31,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -110,7 +110,6 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
 
     private final SysMessageService sysMessageService;
 
-    private final DictCacheService dictCacheService;
 
     // 等床队列
 
@@ -157,7 +156,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
                 .eq(query.getApplyDeptId() != null, BizBedWait::getApplyDeptId, query.getApplyDeptId())
                 .eq(query.getPriority() != null, BizBedWait::getPriority, query.getPriority())
                 .eq(query.getBedType() != null, BizBedWait::getBedType, query.getBedType())
-                .and(StringUtils.hasText(query.getKeyword()), w -> w
+                .and(TextUtil.hasText(query.getKeyword()), w -> w
                         .like(BizBedWait::getPatientName, query.getKeyword())
                         .or().like(BizBedWait::getWaitNo, query.getKeyword())
                         .or().like(BizBedWait::getPhone, query.getKeyword()));
@@ -529,7 +528,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         try {
             SysConfig cfg = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
                     .eq(SysConfig::getConfigKey, DUTY_BED_WAIT_HOURS_KEY).last("LIMIT 1"));
-            if (cfg == null || !StringUtils.hasText(cfg.getConfigValue())) {
+            if (cfg == null || !TextUtil.hasText(cfg.getConfigValue())) {
                 return DUTY_BED_WAIT_HOURS_FALLBACK;
             }
             int v = Integer.parseInt(cfg.getConfigValue().trim());
@@ -547,7 +546,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
             throw new BusinessException("只有「已安排床位」的排队记录可以退回队列（当前："
                     + BedWaitStatusEnum.labelOrUnknown(wait.getWaitStatus()) + "）");
         }
-        String reason = StringUtils.hasText(dto.getReason()) ? dto.getReason() : "床位中心退回队列";
+        String reason = TextUtil.hasText(dto.getReason()) ? dto.getReason() : "床位中心退回队列";
         doRelease(wait, reason, BedAllocateStatusEnum.RELEASED.getCode());
         log.info("床位退回队列 waitNo={} waitId={} 原因={}", wait.getWaitNo(), wait.getId(), reason);
     }
@@ -564,7 +563,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         }
         // 保留（类别①条件必填）：同一 DTO 被「退回队列」接口复用，那里原因是选填（服务端兜默认值），
         // 字段上加 @NotBlank 会把那条合法请求一起挡成 400
-        if (!StringUtils.hasText(dto.getReason())) {
+        if (!TextUtil.hasText(dto.getReason())) {
             throw new BusinessException("取消原因不能为空（患者去了别的医院还是转为门诊随访，对床位周转的解释完全不同）");
         }
         // 取消前先还床：否则这张床会一直锁着一个再也不会来的人
@@ -606,7 +605,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         admitDto.setAdmitTime(dto.getAdmitTime());
         admitDto.setAdmitWay(dto.getAdmitWay());
         admitDto.setAdmitDiagnosisName(wait.getDiagnosisName());
-        admitDto.setRemark(StringUtils.hasText(dto.getRemark())
+        admitDto.setRemark(TextUtil.hasText(dto.getRemark())
                 ? dto.getRemark() : "床位中心收治：" + wait.getWaitNo());
         // deptId 故意不传：入院科室由床位所属病区推导。
         // 跨科调配时这一步尤其重要 —— 人躺在哪个科就归哪个科，
@@ -704,25 +703,27 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
             }
             boolean sameDept = wait.getApplyDeptId() != null && Objects.equals(wait.getApplyDeptId(), b.getDeptId());
             boolean sameType = Objects.equals(need, b.getBedType());
-            int level = sameDept ? (sameType ? 1 : 2) : (sameType ? 3 : 4);
-            int score = switch (level) {
-                case 1 -> 100;
-                case 2 -> 80;
-                case 3 -> 50;
-                default -> 30;
+            BedMatchLevelEnum grade = sameDept
+                    ? (sameType ? BedMatchLevelEnum.SAME_DEPT_SAME_TYPE : BedMatchLevelEnum.SAME_DEPT_OTHER_TYPE)
+                    : (sameType ? BedMatchLevelEnum.CROSS_DEPT_SAME_TYPE : BedMatchLevelEnum.CROSS_DEPT_OTHER_TYPE);
+            int score = switch (grade) {
+                case SAME_DEPT_SAME_TYPE -> 100;
+                case SAME_DEPT_OTHER_TYPE -> 80;
+                case CROSS_DEPT_SAME_TYPE -> 50;
+                case CROSS_DEPT_OTHER_TYPE -> 30;
             };
             boolean expectMatched = wait.getExpectWardId() != null && Objects.equals(wait.getExpectWardId(), b.getWardId());
             if (expectMatched) {
                 score += 20;
             }
-            b.setMatchLevel(level);
-            b.setMatchLevelText(dictCacheService.getDicDataLabel("biz_patient_bedMatchLevelEnum", level));
+            b.setMatchLevel(grade.getCode());
+            b.setMatchLevelText(grade.getLabel());
             b.setMatchScore(score);
             b.setBedTypeText(BedTypeEnum.getText(b.getBedType()));
             b.setExpectWardMatched(expectMatched);
             b.setGenderHint(wait.getGenderLimit() != null && !Objects.equals(0, wait.getGenderLimit()));
             b.setIsolationHint(Objects.equals(1, wait.getIsolationFlag()));
-            b.setMatchReason(matchReason(level, expectMatched, sameDept, b));
+            b.setMatchReason(matchReason(grade, expectMatched, b));
             result.add(b);
         }
         // deptName / bedNo 在候选里可能为 null（靠 LEFT JOIN 出来的都有可能造不出名字），nullsFirst 顶住
@@ -744,8 +745,8 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         // 左边是 int 常量、右边是 Integer，Java 会把右边拆箱 —— 前端不传 bedStatus 时直接 NPE，
         // 被兜成 500，报错文案完全不指向这里（已踩过一次）
         Integer bedStatus = Boolean.TRUE.equals(query.getAvailableOnly()) ? Integer.valueOf(BedStatusEnum.FREE.getCode()) : query.getBedStatus();
-        String bedType = StringUtils.hasText(query.getBedType()) ? query.getBedType() : null;
-        String keyword = StringUtils.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
+        String bedType = TextUtil.hasText(query.getBedType()) ? query.getBedType() : null;
+        String keyword = TextUtil.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
 
         BedPoolVO vo = new BedPoolVO();
         vo.setTotal(bedCenterMapper.countBedPool(deptId, wardId, bedStatus, bedType, keyword));
@@ -812,7 +813,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
                 bed.setReservedPriorityText(BedPriorityEnum.getText(bed.getReservedPriority()));
             }
             if (bed.getAllocType() != null) {
-                bed.setAllocTypeText(dictCacheService.getDicDataLabel("biz_patient_bedAllocTypeEnum", bed.getAllocType()));
+                bed.setAllocTypeText(BedAllocTypeEnum.getText(bed.getAllocType()));
             }
             // 动作可用性一律服务端算：前端不自判状态机，避免"页面说能点、接口说不行"
             Integer st = bed.getBedStatus();
@@ -1135,12 +1136,12 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         return Objects.equals("normal", type);
     }
 
-    private String matchReason(int level, boolean expectMatched, boolean sameDept, BedMatchVO bed) {
-        String base = switch (level) {
-            case 1 -> "本科室 " + bed.getDeptName() + "，床位类型完全匹配";
-            case 2 -> "本科室 " + bed.getDeptName() + "，床位类型降级可用";
-            case 3 -> "跨科调配（归属 " + bed.getDeptName() + "），床位类型完全匹配";
-            default -> "跨科调配（归属 " + bed.getDeptName() + "），床位类型降级可用";
+    private String matchReason(BedMatchLevelEnum grade, boolean expectMatched, BedMatchVO bed) {
+        String base = switch (grade) {
+            case SAME_DEPT_SAME_TYPE -> "本科室 " + bed.getDeptName() + "，床位类型完全匹配";
+            case SAME_DEPT_OTHER_TYPE -> "本科室 " + bed.getDeptName() + "，床位类型降级可用";
+            case CROSS_DEPT_SAME_TYPE -> "跨科调配（归属 " + bed.getDeptName() + "），床位类型完全匹配";
+            case CROSS_DEPT_OTHER_TYPE -> "跨科调配（归属 " + bed.getDeptName() + "），床位类型降级可用";
         };
         return expectMatched ? base + "，且命中期望病区 " + bed.getWardName() : base;
     }
@@ -1155,7 +1156,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     }
 
     private long countToday(LocalDate today, int waitStatus, String timeCol) {
-        LocalDateTime start = today.atStartOfDay();
+        LocalDateTime start = TimeUtil.dayStart(today);
         LambdaQueryWrapper<BizBedWait> w = new LambdaQueryWrapper<>();
         w.eq(BizBedWait::getDelFlag, 0)
                 .eq(BizBedWait::getWaitStatus, waitStatus)
@@ -1198,10 +1199,10 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     }
 
     private String resolveApplyDeptName(BedWaitUpsertDTO dto, BizAdmissionOrder order, Long deptId) {
-        if (StringUtils.hasText(dto.getApplyDeptName())) {
+        if (TextUtil.hasText(dto.getApplyDeptName())) {
             return dto.getApplyDeptName();
         }
-        if (order != null && StringUtils.hasText(order.getApplyDeptName())) {
+        if (order != null && TextUtil.hasText(order.getApplyDeptName())) {
             return order.getApplyDeptName();
         }
         return deptId == null ? null : deptName(deptId);
@@ -1224,7 +1225,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         try {
             SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
                     .eq(SysConfig::getConfigKey, MAX_WAIT_DAYS_KEY));
-            if (config == null || !StringUtils.hasText(config.getConfigValue())) {
+            if (config == null || !TextUtil.hasText(config.getConfigValue())) {
                 return MAX_WAIT_DAYS_FALLBACK;
             }
             int days = Integer.parseInt(config.getConfigValue().trim());

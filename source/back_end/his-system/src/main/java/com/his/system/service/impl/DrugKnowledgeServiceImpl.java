@@ -24,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -55,12 +54,12 @@ public class DrugKnowledgeServiceImpl implements DrugKnowledgeService {
     @Override
     public PageResult<DrugInteractionVO> interactionListPage(DrugInteractionQueryPageDTO queryDTO) {
         LambdaQueryWrapper<SysDrugInteraction> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(queryDTO.getComponent())) {
+        if (TextUtil.hasText(queryDTO.getComponent())) {
             String kw = queryDTO.getComponent().trim();
             wrapper.and(w -> w.like(SysDrugInteraction::getComponentA, kw)
                     .or().like(SysDrugInteraction::getComponentB, kw));
         }
-        if (StringUtils.hasText(queryDTO.getKeyword())) {
+        if (TextUtil.hasText(queryDTO.getKeyword())) {
             String kw = queryDTO.getKeyword().trim();
             wrapper.and(w -> w.like(SysDrugInteraction::getInteractionDesc, kw)
                     .or().like(SysDrugInteraction::getSuggestion, kw));
@@ -120,13 +119,13 @@ public class DrugKnowledgeServiceImpl implements DrugKnowledgeService {
             entity.setUpdateBy(operator);
             sysDrugInteractionMapper.updateById(entity);
             // updateById 只写非 null 字段，等于「清空建议」这个动作会被静默忽略；显式置空补齐
-            if (!StringUtils.hasText(upsertDTO.getSuggestion()) || !StringUtils.hasText(upsertDTO.getRemark())) {
+            if (!TextUtil.hasText(upsertDTO.getSuggestion()) || !TextUtil.hasText(upsertDTO.getRemark())) {
                 LambdaUpdateWrapper<SysDrugInteraction> uw = new LambdaUpdateWrapper<>();
                 uw.eq(SysDrugInteraction::getId, entity.getId());
-                if (!StringUtils.hasText(upsertDTO.getSuggestion())) {
+                if (!TextUtil.hasText(upsertDTO.getSuggestion())) {
                     uw.set(SysDrugInteraction::getSuggestion, null);
                 }
-                if (!StringUtils.hasText(upsertDTO.getRemark())) {
+                if (!TextUtil.hasText(upsertDTO.getRemark())) {
                     uw.set(SysDrugInteraction::getRemark, null);
                 }
                 sysDrugInteractionMapper.update(null, uw);
@@ -154,10 +153,10 @@ public class DrugKnowledgeServiceImpl implements DrugKnowledgeService {
     @Override
     public PageResult<DoseLimitVO> doseLimitListPage(DoseLimitQueryPageDTO queryDTO) {
         LambdaQueryWrapper<SysDrugDoseLimit> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(queryDTO.getComponent())) {
+        if (TextUtil.hasText(queryDTO.getComponent())) {
             wrapper.like(SysDrugDoseLimit::getComponent, queryDTO.getComponent().trim());
         }
-        if (StringUtils.hasText(queryDTO.getKeyword())) {
+        if (TextUtil.hasText(queryDTO.getKeyword())) {
             wrapper.like(SysDrugDoseLimit::getNote, queryDTO.getKeyword().trim());
         }
         wrapper.eq(queryDTO.getStatus() != null, SysDrugDoseLimit::getStatus, queryDTO.getStatus())

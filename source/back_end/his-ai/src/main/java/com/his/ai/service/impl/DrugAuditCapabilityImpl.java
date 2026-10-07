@@ -36,7 +36,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -118,7 +117,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     private final RedisSequenceService redisSequenceService;
 
     private static void appendIfMeaningful(StringBuilder builder, String text, String fieldLabel) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return;
         }
         if (ClinicalTextMatcher.isPlaceholderOnly(text, fieldLabel)) {
@@ -128,7 +127,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     }
 
     private static void appendIfText(StringBuilder builder, String text) {
-        if (StringUtils.hasText(text)) {
+        if (TextUtil.hasText(text)) {
             builder.append(text.replaceAll("\\s+", " ").trim()).append("；");
         }
     }
@@ -155,10 +154,10 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         for (BizPrescriptionDetail detail : context.details()) {
             SysDrug drug = detail.getDrugId() == null ? null : context.drugIndex().get(detail.getDrugId());
             builder.append(index++).append(". ").append(TextUtil.blankToDefault(detail.getDrugName(), "-"));
-            if (StringUtils.hasText(detail.getSpecification())) {
+            if (TextUtil.hasText(detail.getSpecification())) {
                 builder.append(' ').append(detail.getSpecification());
             }
-            if (drug != null && StringUtils.hasText(drug.getGenericName())) {
+            if (drug != null && TextUtil.hasText(drug.getGenericName())) {
                 builder.append("（通用名：").append(drug.getGenericName()).append('）');
             }
             builder.append(" 单次剂量=").append(TextUtil.blankToDefault(detail.getSingleDosage(), "-"));
@@ -189,7 +188,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
      * 问题描述看起来合理，但涉及的药根本没开。
      */
     private static String sanitizeRelatedDrugs(String relatedDrugs, Set<String> knownDrugNames) {
-        if (!StringUtils.hasText(relatedDrugs)) {
+        if (!TextUtil.hasText(relatedDrugs)) {
             return "";
         }
         List<String> kept = new ArrayList<>();
@@ -215,11 +214,11 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     private static Set<String> knownDrugNames(DrugAuditContextDTO context) {
         Set<String> names = new LinkedHashSet<>();
         for (BizPrescriptionDetail detail : context.details()) {
-            if (StringUtils.hasText(detail.getDrugName())) {
+            if (TextUtil.hasText(detail.getDrugName())) {
                 names.add(detail.getDrugName().trim());
             }
             SysDrug drug = detail.getDrugId() == null ? null : context.drugIndex().get(detail.getDrugId());
-            if (drug != null && StringUtils.hasText(drug.getGenericName())) {
+            if (drug != null && TextUtil.hasText(drug.getGenericName())) {
                 names.add(drug.getGenericName().trim());
             }
         }
@@ -406,9 +405,9 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         DrugAuditPromptVariablesVO variables = new DrugAuditPromptVariablesVO();
         variables.setGender(SysGenderEnum.getText(context.gender()));
         variables.setAge(context.age() == null ? "（未填写）" : context.age() + "岁");
-        variables.setAllergyHistory(StringUtils.hasText(context.allergyText())
+        variables.setAllergyHistory(TextUtil.hasText(context.allergyText())
                 ? context.allergyText() : "（无已知过敏史记录）");
-        variables.setDiagnosis(StringUtils.hasText(context.conditionText())
+        variables.setDiagnosis(TextUtil.hasText(context.conditionText())
                 ? context.conditionText() : "（未填写）");
         variables.setPrescriptions(formatPrescriptions(context));
         variables.setHardRuleHints(formatHardRuleHints(hardRuleFindings));
@@ -439,7 +438,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
             if (findings.size() >= MAX_LLM_FINDINGS) {
                 break;
             }
-            if (!StringUtils.hasText(raw.getErrorDetail())) {
+            if (!TextUtil.hasText(raw.getErrorDetail())) {
                 continue;
             }
             DrugAuditFindingVO vo = new DrugAuditFindingVO();

@@ -12,11 +12,11 @@ import com.his.charge.service.PaymentService;
 import com.his.charge.service.SettlementBillService;
 import com.his.common.enums.*;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -107,7 +107,7 @@ public class AppointChargeGatewayImpl implements AppointChargeGateway {
         settleDTO.setFeeIds(feeIds);
         settleDTO.setBillType(BillTypeEnum.REGISTRATION.getCode());
         // 部分免收（只免挂号费、诊查费照收）时账单仍要缴，但备注里必须留「免了哪一项、依据哪条策略」
-        settleDTO.setRemark(StringUtils.hasText(command.getWaiveReason()) ? command.getWaiveReason() : null);
+        settleDTO.setRemark(TextUtil.hasText(command.getWaiveReason()) ? command.getWaiveReason() : null);
         BizSettlementBill bill = settlementBillService.settle(settleDTO);
         log.info("[挂号费] 记账出账完成 registNo={} 账单={} 应缴 ¥{}",
                 command.getRegistNo(), bill.getBillNo(), bill.getPayableAmount().toPlainString());
@@ -121,7 +121,7 @@ public class AppointChargeGatewayImpl implements AppointChargeGateway {
             return false;
         }
         boolean closed = paymentService.closeBill(command.getBillId(),
-                StringUtils.hasText(command.getReason()) ? command.getReason() : "退号",
+                TextUtil.hasText(command.getReason()) ? command.getReason() : "退号",
                 TxnSourceEnum.CANCEL_REGIST.getCode());
         if (closed) {
             log.info("[挂号费] 退号联动整单撤销：billId={} 操作人={}",

@@ -33,6 +33,7 @@ import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
@@ -50,7 +51,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -469,7 +469,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
                 appointInfo.setSlotEnd(slot.getEndTime());
                 // slotTime（旧轻量分时字段）与段开始保持同一口径
                 appointInfo.setSlotTime(slot.getStartTime());
-            } else if (StringUtils.hasText(upsertDTO.getSlotTime())) {
+            } else if (TextUtil.hasText(upsertDTO.getSlotTime())) {
                 // 旧路径：只传就诊时段，不做段级扣减（历史挂号无段）
                 validateSlotTime(upsertDTO.getSlotTime(), schedule);
                 appointInfo.setSlotTime(upsertDTO.getSlotTime());
@@ -491,13 +491,13 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
         appointInfo.setPhone(patient.getPhone());
 
         // 如果挂号时设置了医保信息且患者之前没有，回填到患者信息
-        if (StringUtils.hasText(appointInfo.getMedicalInsuranceType()) || StringUtils.hasText(appointInfo.getMedicalInsuranceNo())) {
+        if (TextUtil.hasText(appointInfo.getMedicalInsuranceType()) || TextUtil.hasText(appointInfo.getMedicalInsuranceNo())) {
             boolean needUpdate = false;
-            if (StringUtils.hasText(appointInfo.getMedicalInsuranceType()) && !StringUtils.hasText(patient.getMedicalInsuranceType())) {
+            if (TextUtil.hasText(appointInfo.getMedicalInsuranceType()) && !TextUtil.hasText(patient.getMedicalInsuranceType())) {
                 patient.setMedicalInsuranceType(appointInfo.getMedicalInsuranceType());
                 needUpdate = true;
             }
-            if (StringUtils.hasText(appointInfo.getMedicalInsuranceNo()) && !StringUtils.hasText(patient.getMedicalInsuranceNo())) {
+            if (TextUtil.hasText(appointInfo.getMedicalInsuranceNo()) && !TextUtil.hasText(patient.getMedicalInsuranceNo())) {
                 patient.setMedicalInsuranceNo(appointInfo.getMedicalInsuranceNo());
                 needUpdate = true;
             }
@@ -748,7 +748,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
         }
         String start = schedule.getStartTime();
         String end = schedule.getEndTime();
-        if (StringUtils.hasText(start) && StringUtils.hasText(end)
+        if (TextUtil.hasText(start) && TextUtil.hasText(end)
                 && (slotTime.compareTo(start) < 0 || slotTime.compareTo(end) >= 0)) {
             throw new BusinessException("就诊时段不在班次时间范围内（" + start + "-" + end + "）");
         }
@@ -961,7 +961,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
             throw new BusinessException("当前用户信息不存在");
         }
         command.setBillId(registInfo.getBillId());
-        command.setReason(StringUtils.hasText(reason) ? reason : "退号");
+        command.setReason(TextUtil.hasText(reason) ? reason : "退号");
         command.setOperator(operatorUser.getRealName());
         boolean closed = gateway.cancelRegistCharge(command);
         log.info("退号联动账单：registId={}，billId={}，撤销={}",
@@ -1197,7 +1197,7 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
 
     @Override
     public void cancelRegist(AppointCancelDTO appointCancelDTO) {
-        String reason = StringUtils.hasText(appointCancelDTO.getReason())
+        String reason = TextUtil.hasText(appointCancelDTO.getReason())
                 ? appointCancelDTO.getReason() : "患者主动退号";
         if (!cancelRegist(appointCancelDTO.getRegistId(), reason)) {
             throw new BusinessException("退号失败");

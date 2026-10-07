@@ -21,6 +21,7 @@ import com.his.appoint.vo.StopImpactItemVO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.ShiftCoverUtil;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.BizShift;
 import com.his.system.entity.BizStaffSchedule;
@@ -35,7 +36,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -234,7 +234,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         }
         Long roomId = schedule.getRoomId();
         String roomName = schedule.getRoomName();
-        if (roomId != null && !StringUtils.hasText(roomName)) {
+        if (roomId != null && !TextUtil.hasText(roomName)) {
             var room = sysClinicRoomService.getById(roomId);
             if (room != null) {
                 roomName = room.getName();
@@ -272,7 +272,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         boolean enabled = !ScheduleStatusEnum.stopped(schedule.getStatus());
         // B类（条件必填）：必填性取决于同一请求里的状态与岗位类别，声明式注解做不到一刀切
         if (enabled && StaffTypeEnum.hasSource(schedule.getStaffType())
-                && schedule.getRoomId() == null && !StringUtils.hasText(schedule.getRoomName())) {
+                && schedule.getRoomId() == null && !TextUtil.hasText(schedule.getRoomName())) {
             throw new BusinessException("启用状态的医生排班必须指定诊室：分诊台按诊室编号发号，缺诊室患者找不到房间");
         }
     }
@@ -459,7 +459,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
      */
     private void checkScheduleOverlap(BizSchedule schedule, Long excludeId) {
         if (schedule.getDoctorId() == null || schedule.getScheduleDate() == null
-                || !StringUtils.hasText(schedule.getStartTime()) || !StringUtils.hasText(schedule.getEndTime())) {
+                || !TextUtil.hasText(schedule.getStartTime()) || !TextUtil.hasText(schedule.getEndTime())) {
             return;
         }
         LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<>();
@@ -546,7 +546,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
 
     @Override
     public String batchCancel(List<Long> registIds, String reason) {
-        String cancelReason = StringUtils.hasText(reason) ? reason : "班次停诊，批量退号";
+        String cancelReason = TextUtil.hasText(reason) ? reason : "班次停诊，批量退号";
         int ok = 0;
         for (Long id : registIds) {
             try {
@@ -696,7 +696,7 @@ public class ScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSched
         }
         int added = schedule.getAddedSource() == null ? 0 : schedule.getAddedSource();
         String stamp = LocalDate.now() + " 加号" + addNum + "（" + reason + "）";
-        String newRemark = StringUtils.hasText(schedule.getRemark()) ? schedule.getRemark() + "；" + stamp : stamp;
+        String newRemark = TextUtil.hasText(schedule.getRemark()) ? schedule.getRemark() + "；" + stamp : stamp;
         BizSchedule update = new BizSchedule();
         update.setId(scheduleId);
         update.setTotalSource((schedule.getTotalSource() == null ? 0 : schedule.getTotalSource()) + addNum);

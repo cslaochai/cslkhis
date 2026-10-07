@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -201,7 +200,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
             notice.setDoctorId(me != null ? me : dto.getDoctorId());
             // 保留（类别②）：校验对象是服务端快照/登录上下文带出的医师名，不是入参字段，注解覆盖不到
             notice.setDoctorName(TextUtil.cut(TextUtil.requireTrimmed(
-                    StringUtils.hasText(notice.getDoctorName()) ? notice.getDoctorName()
+                    TextUtil.hasText(notice.getDoctorName()) ? notice.getDoctorName()
                             : UserUtils.getCurrentUser().getRealName(), "告知医师不能为空"), NAME_MAX));
         }
         applyWitness(notice, dto.getWitnessDoctorId(), dto.getWitnessDoctorName());
@@ -228,7 +227,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
         // 落款人 = 当前登录职工：法定签名的责任主体不许前端冒充
         Long me = UserUtils.getCurrentUser().getEmployeeId();
         String myName = UserUtils.getCurrentUser().getRealName();
-        if (me == null || !StringUtils.hasText(myName)) {
+        if (me == null || !TextUtil.hasText(myName)) {
             throw new BusinessException("当前登录账号未绑定员工档案，无法以医师身份签发");
         }
         if (notice.getDoctorId() != null && !Objects.equals(notice.getDoctorId(), me)) {

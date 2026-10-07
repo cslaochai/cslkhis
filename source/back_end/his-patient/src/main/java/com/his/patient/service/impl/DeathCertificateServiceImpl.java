@@ -31,7 +31,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -159,7 +158,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
             return;
         }
         String tailCode = TextUtil.trimToNull(tail.getIcdCode());
-        if (!StringUtils.hasText(cert.getUnderlyingIcdCode())) {
+        if (!TextUtil.hasText(cert.getUnderlyingIcdCode())) {
             cert.setUnderlyingIcdCode(TextUtil.cutToNull(tailCode, ICD_CODE_MAX));
             cert.setUnderlyingIcdName(TextUtil.cutToNull(tail.getIcdName(), ICD_NAME_MAX));
             return;
@@ -333,7 +332,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         cert.setPhysicianId(dto.getPhysicianId() != null ? dto.getPhysicianId() : UserUtils.getCurrentUser().getEmployeeId());
         // ②非web入口口径：校验对象是「入参姓名 或 当前登录人」的合并值，不是纯 DTO 字段，注解表达不了
         cert.setPhysicianName(TextUtil.cut(TextUtil.requireTrimmed(
-                StringUtils.hasText(dto.getPhysicianName()) ? dto.getPhysicianName() : UserUtils.getCurrentUser().getRealName(),
+                TextUtil.hasText(dto.getPhysicianName()) ? dto.getPhysicianName() : UserUtils.getCurrentUser().getRealName(),
                 "填表医师不能为空"), 50));
         cert.setFillTime(dto.getFillTime() != null ? TimeUtil.toSeconds(dto.getFillTime()) : (isNew ? TimeUtil.nowSeconds() : cert.getFillTime()));
         cert.setRemark(TextUtil.cutToNull(dto.getRemark(), DIAG_MAX));
@@ -404,7 +403,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         if (bizDeathCertificateCauseMapper.countChainRows(cert.getId()) == 0) {
             throw new BusinessException("签发前必须填写死因链Ⅰ部分（直接死因→…→根本死因）");
         }
-        if (!StringUtils.hasText(cert.getUnderlyingIcdCode())) {
+        if (!TextUtil.hasText(cert.getUnderlyingIcdCode())) {
             throw new BusinessException("签发前必须确定根本死因（ICD-10），死因统计只认这一列");
         }
         if (bizDeathCertificateCauseMapper.countChainRowsMissingIcd(cert.getId()) > 0) {
@@ -542,7 +541,7 @@ public class DeathCertificateServiceImpl extends ServiceImpl<BizDeathCertificate
         if (Objects.equals(cert.getReportStatus(), DeathCertReportEnum.DONE.getCode())) {
             throw new BusinessException("该证明已上报，报文已冻结（订正请作废重开后再报）");
         }
-        if (!StringUtils.hasText(cert.getUnderlyingIcdCode())) {
+        if (!TextUtil.hasText(cert.getUnderlyingIcdCode())) {
             throw new BusinessException("根本死因编码为空，无法上报");
         }
         String payload = buildReportPayload(cert);

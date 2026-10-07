@@ -8,11 +8,14 @@ import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.service.ArrearsControlGate;
 import com.his.charge.support.FeeCatalogResolver;
+import com.his.common.constant.DictType;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.*;
+import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.patient.dto.*;
@@ -42,7 +45,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -102,7 +104,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     }
 
     private static String appendNote(String origin, String extra) {
-        if (!StringUtils.hasText(origin)) {
+        if (!TextUtil.hasText(origin)) {
             return extra;
         }
         return origin + "；" + extra;
@@ -164,7 +166,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             authGate.setAuthCategory(TechAuthCategoryEnum.SURGERY.getCode());
             authGate.setRequiredLevel(1);
             authGate.setItemCode(items.stream().map(InpatientOrderItemDTO::getItemCode)
-                    .filter(StringUtils::hasText).findFirst().orElse(null));
+                    .filter(TextUtil::hasText).findFirst().orElse(null));
             authGate.setEmergency(false);
             employeeTechAuthService.gate(authGate);
         }
@@ -202,7 +204,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             }
         }
 
-        String orderGroup = StringUtils.hasText(dto.getOrderGroup()) ? dto.getOrderGroup() : nextOrderGroup();
+        String orderGroup = TextUtil.hasText(dto.getOrderGroup()) ? dto.getOrderGroup() : nextOrderGroup();
         LocalDateTime startTime = TimeUtil.toSeconds(dto.getStartTime() != null ? dto.getStartTime() : now);
         LocalDateTime planEndTime = TimeUtil.toSeconds(dto.getPlanEndTime());
         if (planEndTime != null && planEndTime.isBefore(startTime)) {
@@ -514,7 +516,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
-        if (!StringUtils.hasText(reason)) {
+        if (!TextUtil.hasText(reason)) {
             throw new BusinessException("停止原因不能为空（停止是一个医疗决定，必须有人负责）");
         }
         List<BizInpatientOrder> longs = bizInpatientOrderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
@@ -531,7 +533,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         int affected = 0;
         int failed = 0;
         for (BizInpatientOrder order : longs) {
-            if (StringUtils.hasText(order.getOrderGroup())) {
+            if (TextUtil.hasText(order.getOrderGroup())) {
                 if (!handledGroups.add(order.getOrderGroup())) {
                     continue;
                 }
@@ -564,7 +566,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         if (dto == null || dto.getOrderId() == null) {
             throw new BusinessException("医嘱ID不能为空");
         }
-        if (!StringUtils.hasText(dto.getStopReason())) {
+        if (!TextUtil.hasText(dto.getStopReason())) {
             throw new BusinessException("停止原因不能为空（停止是一个医疗决定，必须有人负责）");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
@@ -597,7 +599,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         String doctorName = operatorUser.getRealName();
 
         List<BizInpatientOrder> targets = new ArrayList<>();
-        if (StringUtils.hasText(target.getOrderGroup())) {
+        if (TextUtil.hasText(target.getOrderGroup())) {
             // 同组套同起同停：不允许"一组药停一半"
             targets = bizInpatientOrderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
                     .eq(BizInpatientOrder::getAdmissionId, target.getAdmissionId())
@@ -650,7 +652,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         }
 
         List<BizInpatientOrder> targets;
-        if (StringUtils.hasText(target.getOrderGroup())) {
+        if (TextUtil.hasText(target.getOrderGroup())) {
             // 组套是一个「开立单元」：开错就是整组开错，所以整组作废。
             // 但组内只要有一条已经进到校对之后，就不允许整组抹掉 —— 那是停止的地盘。
             targets = bizInpatientOrderMapper.selectList(new LambdaQueryWrapper<BizInpatientOrder>()
@@ -763,7 +765,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             throw new BusinessException("当前用户信息不存在");
         }
         int status = dto.getExecStatus() != null ? dto.getExecStatus() : ExecStatusEnum.EXECUTED.getCode();
-        if (Objects.equals(ExecStatusEnum.SKIPPED.getCode(), status) && !StringUtils.hasText(dto.getExecNote())) {
+        if (Objects.equals(ExecStatusEnum.SKIPPED.getCode(), status) && !TextUtil.hasText(dto.getExecNote())) {
             throw new BusinessException("跳过必须写明原因（飞检问的是「这条医嘱为什么没有执行记录」，答「删了」不成立）");
         }
         List<Long> ids = dto.getExecIds().stream().filter(Objects::nonNull).distinct().toList();
@@ -786,7 +788,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             }
             if (!Objects.equals(ExecStatusEnum.PENDING.getCode(), exec.getExecStatus())) {
                 throw new BusinessException("该执行记录已是「"
-                        + dictCacheService.getDicDataLabel("biz_patient_orderExecStatusEnum", exec.getExecStatus()) + "」，不能重复处理");
+                        + dictCacheService.getDicDataLabel(DictType.ORDER_EXEC_STATUS, exec.getExecStatus()) + "」，不能重复处理");
             }
             BizInpatientOrder order = bizInpatientOrderMapper.selectById(exec.getOrderId());
             if (order == null) {
@@ -809,7 +811,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             exec.setExecTime(execTime);
             exec.setExecNurseId(nurseId);
             exec.setExecNurseName(nurseName);
-            if (StringUtils.hasText(dto.getExecNote())) {
+            if (TextUtil.hasText(dto.getExecNote())) {
                 exec.setExecNote(dto.getExecNote());
             }
 
@@ -852,7 +854,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
             processed++;
         }
         log.info("医嘱执行处理完成 条数={} 结果={} 护士={}", processed,
-                dictCacheService.getDicDataLabel("biz_patient_orderExecStatusEnum", status), nurseName);
+                dictCacheService.getDicDataLabel(DictType.ORDER_EXEC_STATUS, status), nurseName);
         return processed;
     }
 
@@ -897,7 +899,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
                     order.getAmount().toPlainString(), computed.toPlainString());
         }
         dto.setItemType(itemType);
-        dto.setItemCode(StringUtils.hasText(order.getItemCode()) ? order.getItemCode() : order.getOrderNo());
+        dto.setItemCode(TextUtil.hasText(order.getItemCode()) ? order.getItemCode() : order.getOrderNo());
         dto.setItemName(order.getItemName());
         dto.setSpecification(order.getSpec());
         dto.setUnit(order.getUnit());
@@ -1014,8 +1016,8 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
         vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
         vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
-        vo.setSourceText(dictCacheService.getDicDataLabel("biz_patient_orderSourceEnum", vo.getSource()));
-        vo.setIsUrgentText(dictCacheService.getDicDataLabel("biz_patient_orderUrgentEnum", vo.getIsUrgent()));
+        vo.setSourceText(dictCacheService.getDicDataLabel(DictType.INPATIENT_ORDER_SOURCE, vo.getSource()));
+        vo.setIsUrgentText(YesOrNoEnum.getText(vo.getIsUrgent()));
 
         boolean pendingVerify = Objects.equals(InpatientOrderStatusEnum.PENDING_VERIFY.getCode(), vo.getOrderStatus());
         vo.setCanVerify(pendingVerify);
@@ -1049,7 +1051,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
         vo.setOrderTypeText(OrderTypeEnum.getText(vo.getOrderType()));
         vo.setOrderClassText(OrderClassEnum.getText(vo.getOrderClass()));
         vo.setOrderStatusText(InpatientOrderStatusEnum.getText(vo.getOrderStatus()));
-        vo.setExecStatusText(dictCacheService.getDicDataLabel("biz_patient_orderExecStatusEnum", vo.getExecStatus()));
+        vo.setExecStatusText(dictCacheService.getDicDataLabel(DictType.ORDER_EXEC_STATUS, vo.getExecStatus()));
         vo.setCharged(vo.getFeeRecordId() != null);
         vo.setInfusion(InpatientInfusionServiceImpl.isInfusionRoute(vo.getRoute()));
     }

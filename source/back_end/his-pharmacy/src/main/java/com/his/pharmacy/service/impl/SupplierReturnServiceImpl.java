@@ -32,7 +32,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -70,8 +69,8 @@ public class SupplierReturnServiceImpl extends ServiceImpl<BizDrugSupplierReturn
     private final RedisSequenceService redisSequenceService;
 
     private static String batchLabel(BizDrugStockVO batch) {
-        String label = StringUtils.hasText(batch.getDrugName()) ? batch.getDrugName() : "药品#" + batch.getDrugId();
-        return StringUtils.hasText(batch.getBatchNo()) ? label + "（批号 " + batch.getBatchNo() + "）" : label;
+        String label = TextUtil.hasText(batch.getDrugName()) ? batch.getDrugName() : "药品#" + batch.getDrugId();
+        return TextUtil.hasText(batch.getBatchNo()) ? label + "（批号 " + batch.getBatchNo() + "）" : label;
     }
 
     @Override
@@ -105,7 +104,7 @@ public class SupplierReturnServiceImpl extends ServiceImpl<BizDrugSupplierReturn
     @Transactional(rollbackFor = Exception.class)
     public SupplierReturnVO upsert(SupplierReturnUpsertDTO dto) {
         String supplierName = bizDrugStockMapper.selectSupplierNameById(dto.getSupplierId());
-        if (!StringUtils.hasText(supplierName)) {
+        if (!TextUtil.hasText(supplierName)) {
             throw new BusinessException("供应商不存在或已停用（供应商#" + dto.getSupplierId() + "）");
         }
         String reason = TextUtil.cut(TextUtil.requireTrimmed(dto.getReturnReason(), "退货原因不能为空"), 200);

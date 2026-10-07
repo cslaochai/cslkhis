@@ -1,5 +1,6 @@
 package com.his.emr.enums;
 
+import com.his.common.util.TextUtil;
 import com.his.emr.support.QcRuleEngine;
 
 /**
@@ -171,7 +172,7 @@ public enum QcRuleEnum {
      * 按编码取规则，取不到即返 null（调用方负责报错，不做静默兜底）
      */
     public static QcRuleEnum ofCode(String code) {
-        if (code == null || code.isBlank()) {
+        if (!TextUtil.hasText(code)) {
             return null;
         }
         for (QcRuleEnum rule : values()) {

@@ -20,7 +20,6 @@ import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -72,12 +71,12 @@ public class LabPlainItemAdminServiceImpl extends ServiceImpl<SysLabPlainItemMap
 
         LambdaQueryWrapper<SysLabPlainItem> w = new LambdaQueryWrapper<>();
         // like(cond, col, v)：实参先求值，这里先判空再取 trim，传空不会 NPE
-        boolean hasKeyword = StringUtils.hasText(dto.getKeyword());
+        boolean hasKeyword = TextUtil.hasText(dto.getKeyword());
         String keyword = hasKeyword ? dto.getKeyword().trim() : null;
         w.and(hasKeyword, q -> q.like(SysLabPlainItem::getItemName, keyword)
                         .or()
                         .like(SysLabPlainItem::getPlainName, keyword))
-                .eq(StringUtils.hasText(dto.getGroupName()), SysLabPlainItem::getGroupName, dto.getGroupName())
+                .eq(TextUtil.hasText(dto.getGroupName()), SysLabPlainItem::getGroupName, dto.getGroupName())
                 .eq(dto.getStatus() != null, SysLabPlainItem::getStatus, dto.getStatus())
                 // 分页补唯一二级键 id，避免同 sort_order 的行在第二页重复出现
                 .orderByAsc(SysLabPlainItem::getGroupName)
@@ -113,7 +112,7 @@ public class LabPlainItemAdminServiceImpl extends ServiceImpl<SysLabPlainItemMap
     @Override
     public String adminUpsert(LabPlainItemUpsertDTO dto) {
         String itemName = TextUtil.trim(dto.getItemName());
-        if (!StringUtils.hasText(itemName)) {
+        if (!TextUtil.hasText(itemName)) {
             throw new BusinessException("检验项目名称不能为空");
         }
         checkPatientText(itemName, dto.getWhatIsIt());
@@ -219,7 +218,7 @@ public class LabPlainItemAdminServiceImpl extends ServiceImpl<SysLabPlainItemMap
     }
 
     private void checkPatientText(String itemName, String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return;
         }
         if (!patientTextGuard.isSafe(text)) {

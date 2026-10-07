@@ -1,5 +1,6 @@
 package com.his.patient.support;
 
+import com.his.common.constant.DictType;
 import com.his.patient.enums.OrderDictTypeEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -24,15 +25,15 @@ public final class OrderDictTypes {
     /**
      * 给药途径
      */
-    public static final String ROUTE = "his_order_route";
+    public static final String ROUTE = DictType.ORDER_ROUTE;
     /**
      * 用药频次
      */
-    public static final String FREQ = "his_order_freq";
+    public static final String FREQ = DictType.ORDER_FREQ;
     /**
      * 剂量单位
      */
-    public static final String DOSE_UNIT = "his_dose_unit";
+    public static final String DOSE_UNIT = DictType.DOSE_UNIT;
     public static final List<String> ALL = List.of(ROUTE, FREQ, DOSE_UNIT);
 
     /**

@@ -12,7 +12,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
@@ -145,7 +144,7 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
     @Override
     public String record(String bizType, Object bizId, String bizNo, String bizName,
                          Object oldObj, Object newObj, List<FieldSpec> specs) {
-        if (!StringUtils.hasText(bizType) || bizId == null || specs == null || specs.isEmpty()) {
+        if (!TextUtil.hasText(bizType) || bizId == null || specs == null || specs.isEmpty()) {
             return null;
         }
         try {
@@ -183,7 +182,7 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
 
     @Override
     public void recordAction(String bizType, Object bizId, String bizNo, String bizName, String operation) {
-        if (!StringUtils.hasText(bizType) || bizId == null || !StringUtils.hasText(operation)) {
+        if (!TextUtil.hasText(bizType) || bizId == null || !TextUtil.hasText(operation)) {
             return;
         }
         try {

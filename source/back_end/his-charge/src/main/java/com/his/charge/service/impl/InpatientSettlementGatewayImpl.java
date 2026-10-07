@@ -2,6 +2,7 @@ package com.his.charge.service.impl;
 
 import com.his.charge.api.InpatientSettlementGateway;
 import com.his.charge.entity.BizSettlementBill;
+import com.his.charge.enums.InpatientSettleStatusEnum;
 import com.his.charge.service.FundAccountService;
 import com.his.charge.service.SettlementBillService;
 import com.his.common.enums.BillStatusEnum;
@@ -60,8 +61,8 @@ public class InpatientSettlementGatewayImpl implements InpatientSettlementGatewa
         state.setSettled(true);
         state.setSettlementNo(discharge.getBillNo());
         state.setArrearsAmount(paidOff ? BigDecimal.ZERO : NumUtil.orZero(discharge.getPayableAmount()).subtract(NumUtil.orZero(discharge.getPaidAmount())));
-        // settle_status 是旧表字段语义，四层后由账单状态推导：3-已结清 2-欠费
-        state.setSettleStatus(paidOff ? 1 : 2);
+        // settle_status 是旧表字段语义，四层后由账单状态推导：1-已结清 2-欠费
+        state.setSettleStatus(paidOff ? InpatientSettleStatusEnum.CLEARED.getCode() : InpatientSettleStatusEnum.ARREARS.getCode());
         state.setText("已结算（" + (paidOff ? "已结清" : "欠费 " + state.getArrearsAmount().toPlainString() + " 元")
                 + "，账单号 " + discharge.getBillNo() + "，" + BillStatusEnum.descOf(discharge.getBillStatus())
                 + "，预交金余额 " + balance.toPlainString() + " 元）");

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.appoint.dto.ScheduleSelectQueryDTO;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.miniapp.entity.BizTriageRule;
 import com.his.miniapp.mapper.BizTriageRuleMapper;
 import com.his.miniapp.service.MiniappDirectoryService;
@@ -13,7 +14,6 @@ import com.his.miniapp.vo.TriageSymptomVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -40,7 +40,7 @@ public class MiniappTriageServiceImpl extends ServiceImpl<BizTriageRuleMapper, B
 
     @Override
     public List<TriageDeptVO> recommend(String description) {
-        if (!StringUtils.hasText(description)) {
+        if (!TextUtil.hasText(description)) {
             return List.of();
         }
         String text = description.trim();
@@ -91,11 +91,11 @@ public class MiniappTriageServiceImpl extends ServiceImpl<BizTriageRuleMapper, B
      * 关键词命中：keywords 顿号分隔，任一命中即算中；未配关键词时退化为症状名包含。
      */
     private boolean matches(BizTriageRule rule, String text) {
-        if (!StringUtils.hasText(rule.getKeywords())) {
-            return StringUtils.hasText(rule.getSymptomName()) && text.contains(rule.getSymptomName().trim());
+        if (!TextUtil.hasText(rule.getKeywords())) {
+            return TextUtil.hasText(rule.getSymptomName()) && text.contains(rule.getSymptomName().trim());
         }
         for (String kw : rule.getKeywords().split("、")) {
-            if (StringUtils.hasText(kw) && text.contains(kw.trim())) {
+            if (TextUtil.hasText(kw) && text.contains(kw.trim())) {
                 return true;
             }
         }

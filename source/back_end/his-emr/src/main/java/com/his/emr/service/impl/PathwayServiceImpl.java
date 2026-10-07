@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -101,7 +100,7 @@ public class PathwayServiceImpl implements PathwayService {
     }
 
     private static LocalDate parseDate(String dateTimeText) {
-        if (!StringUtils.hasText(dateTimeText) || dateTimeText.length() < 10) {
+        if (!TextUtil.hasText(dateTimeText) || dateTimeText.length() < 10) {
             return null;
         }
         return LocalDate.parse(dateTimeText.substring(0, 10));
@@ -161,7 +160,7 @@ public class PathwayServiceImpl implements PathwayService {
         entity.setPathwayName(dto.getPathwayName().trim());
         entity.setPathwayCode(code);
         entity.setDiagnosis(TextUtil.trimToNull(dto.getDiagnosis()));
-        entity.setVersion(StringUtils.hasText(dto.getVersion()) ? dto.getVersion().trim() : "V1");
+        entity.setVersion(TextUtil.hasText(dto.getVersion()) ? dto.getVersion().trim() : "V1");
         entity.setRemark(dto.getRemark());
         // updateById 跳过 null 字段：科室只支持改值，不支持清空
         if (dto.getDeptId() != null) {
@@ -329,7 +328,7 @@ public class PathwayServiceImpl implements PathwayService {
             PathwayAdmissionVO snap = bizPathwayEnrollMapper.selectAdmissionSnapshot(enroll.getAdmissionId());
             validateEnrollDate(dto.getEnrollDate(), snap != null ? parseDate(snap.getAdmitTime()) : null);
             enroll.setEnrollDate(dto.getEnrollDate());
-            if (StringUtils.hasText(dto.getRemark())) {
+            if (TextUtil.hasText(dto.getRemark())) {
                 enroll.setRemark(dto.getRemark());
             }
             if (bizPathwayEnrollMapper.updateById(enroll) <= 0) {
@@ -390,7 +389,7 @@ public class PathwayServiceImpl implements PathwayService {
         enroll.setStatus(PathwayEnrollStatusEnum.FINISHED.getCode());
         enroll.setFinishDate(LocalDate.now());
         enroll.setFinishBy(operatorUser.getRealName());
-        if (StringUtils.hasText(dto.getReason())) {
+        if (TextUtil.hasText(dto.getReason())) {
             enroll.setRemark(TextUtil.cut(dto.getReason().trim(), 500));
         }
         if (bizPathwayEnrollMapper.updateById(enroll) <= 0) {
@@ -411,7 +410,7 @@ public class PathwayServiceImpl implements PathwayService {
             throw new BusinessException("仅在径记录允许退径");
         }
         // B 类保留：条件必填——动作 DTO 为在径多个动作共用，仅退径要求原因
-        if (!StringUtils.hasText(dto.getReason())) {
+        if (!TextUtil.hasText(dto.getReason())) {
             throw new BusinessException("退径必须填写原因");
         }
         enroll.setStatus(PathwayEnrollStatusEnum.ABORTED.getCode());
@@ -474,7 +473,7 @@ public class PathwayServiceImpl implements PathwayService {
         List<PathwayStepVO> steps = bizPathwayStepMapper.selectStepsByPathwayId(enroll.getPathwayId());
         vo.setPlanSteps(steps.stream().filter(s -> Objects.equals(s.getDayNo(), day)).toList());
         // 纯文书模板（没有任何带编码步骤）不做偏离比对，避免自由文本模糊匹配误报刷屏
-        List<PathwayStepVO> coded = steps.stream().filter(s -> StringUtils.hasText(s.getItemCode())).toList();
+        List<PathwayStepVO> coded = steps.stream().filter(s -> TextUtil.hasText(s.getItemCode())).toList();
         vo.setComparable(!coded.isEmpty());
         if (vo.getComparable() && dto.getItems() != null) {
             Set<String> seen = new HashSet<>();

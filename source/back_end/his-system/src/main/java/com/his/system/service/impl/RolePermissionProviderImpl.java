@@ -1,5 +1,6 @@
 package com.his.system.service.impl;
 
+import com.his.common.util.TextUtil;
 import com.his.system.provider.RolePermissionProvider;
 import com.his.system.service.RolePermissionCache;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +17,7 @@ public class RolePermissionProviderImpl implements RolePermissionProvider {
 
     @Override
     public List<String> permissionsOfRole(String roleCode) {
-        if (roleCode == null || roleCode.isBlank()) {
+        if (!TextUtil.hasText(roleCode)) {
             return Collections.emptyList();
         }
         List<String> permissions = rolePermissionCache.permissionsOfRole(roleCode);

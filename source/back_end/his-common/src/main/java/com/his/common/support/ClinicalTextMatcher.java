@@ -1,8 +1,9 @@
 package com.his.common.support;
 
+import com.his.common.util.TextUtil;
+
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.Set;
 
@@ -65,7 +66,7 @@ public final class ClinicalTextMatcher {
      * 「青霉素过敏」返回 true。
      */
     public static boolean containsAffirmed(String text, String keyword) {
-        if (!StringUtils.hasText(text) || !StringUtils.hasText(keyword)) {
+        if (!TextUtil.hasText(text) || !TextUtil.hasText(keyword)) {
             return false;
         }
         String needle = keyword.trim();
@@ -115,7 +116,7 @@ public final class ClinicalTextMatcher {
      * 否则会把正常写「无过敏史」的病历整片误判为不合格。
      */
     public static boolean isBlank(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return true;
         }
         return strip(text).isEmpty();
@@ -125,7 +126,7 @@ public final class ClinicalTextMatcher {
      * 字段是否只用占位词敷衍（「无」「未见异常」「遵医嘱」…），不含「没填」。
      */
     public static boolean isPlaceholderWord(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return false;
         }
         return PLACEHOLDER_WORDS.contains(strip(text));
@@ -149,7 +150,7 @@ public final class ClinicalTextMatcher {
      * （它们允许写「无」，但不允许留着「过敏史 *」这种模板残渣）。
      */
     public static boolean isLabelRepeatOnly(String text, String fieldLabel) {
-        if (!StringUtils.hasText(text) || !StringUtils.hasText(fieldLabel)) {
+        if (!TextUtil.hasText(text) || !TextUtil.hasText(fieldLabel)) {
             return false;
         }
         String label = strip(fieldLabel);
@@ -163,7 +164,7 @@ public final class ClinicalTextMatcher {
      * 去掉空白与常见占位符号后的长度，用于判断字段是否被真正填写
      */
     public static int effectiveLength(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return 0;
         }
         return strip(text).length();

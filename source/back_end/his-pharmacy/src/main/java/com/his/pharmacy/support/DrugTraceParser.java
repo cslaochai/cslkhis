@@ -1,5 +1,6 @@
 package com.his.pharmacy.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -69,7 +70,7 @@ public final class DrugTraceParser {
      */
     public static TraceParts parse(String traceCode) {
         TraceParts parts = new TraceParts();
-        if (traceCode == null || traceCode.isBlank()) {
+        if (!TextUtil.hasText(traceCode)) {
             return parts;
         }
         String raw = traceCode.trim();
@@ -88,7 +89,7 @@ public final class DrugTraceParser {
                 }
             }
         }
-        if (hasBrackets && parts.drugDi != null && !parts.drugDi.isBlank()) {
+        if (hasBrackets && TextUtil.hasText(parts.drugDi)) {
             parts.codeType = CODE_TYPE_GS1;
             parts.parsed = true;
             return parts;

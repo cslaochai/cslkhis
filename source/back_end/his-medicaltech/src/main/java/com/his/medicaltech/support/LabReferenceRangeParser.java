@@ -1,9 +1,9 @@
 package com.his.medicaltech.support;
 
 import com.his.common.enums.SysGenderEnum;
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -55,7 +55,7 @@ public final class LabReferenceRangeParser {
      */
     public static LabReferenceRange parse(String rawRange, Integer gender) {
         String text = normalize(rawRange);
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return LabReferenceRange.unparsable(rawRange);
         }
 
@@ -78,7 +78,7 @@ public final class LabReferenceRangeParser {
      */
     public static String normalizeQualitative(String value) {
         String text = normalize(value);
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return "";
         }
         for (String[] entry : QUALITATIVE_SYMBOLS) {
@@ -93,7 +93,7 @@ public final class LabReferenceRangeParser {
      * 取结果值里的第一个数字，取不到返回 null
      */
     public static Double firstNumber(String value) {
-        if (!StringUtils.hasText(value)) {
+        if (!TextUtil.hasText(value)) {
             return null;
         }
         Matcher matcher = FIRST_NUMBER.matcher(normalize(value));
@@ -123,7 +123,7 @@ public final class LabReferenceRangeParser {
             malePart = text.substring(maleIndex + 1);
         }
 
-        if (!StringUtils.hasText(malePart) && !StringUtils.hasText(femalePart)) {
+        if (!TextUtil.hasText(malePart) && !TextUtil.hasText(femalePart)) {
             // 只有「根据性别及生理期不同」这类描述，没有实际数值
             return LabReferenceRange.unparsable(rawRange);
         }
@@ -134,7 +134,7 @@ public final class LabReferenceRangeParser {
             return LabReferenceRange.unparsable(rawRange);
         }
         String chosen = g == SysGenderEnum.MALE ? malePart : femalePart;
-        if (!StringUtils.hasText(chosen)) {
+        if (!TextUtil.hasText(chosen)) {
             return LabReferenceRange.unparsable(rawRange);
         }
         chosen = trimSeparators(chosen);
@@ -144,7 +144,7 @@ public final class LabReferenceRangeParser {
 
     private static LabReferenceRange parseSingle(String text, String rawRange) {
         String value = trimSeparators(stripUnitSuffix(text));
-        if (!StringUtils.hasText(value)) {
+        if (!TextUtil.hasText(value)) {
             return LabReferenceRange.unparsable(rawRange);
         }
 
@@ -224,7 +224,7 @@ public final class LabReferenceRangeParser {
 
     private static Double parseNumber(String text) {
         String value = trimSeparators(text);
-        if (!StringUtils.hasText(value)) {
+        if (!TextUtil.hasText(value)) {
             return null;
         }
         try {

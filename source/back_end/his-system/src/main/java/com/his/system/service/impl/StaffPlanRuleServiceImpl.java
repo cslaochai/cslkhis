@@ -9,6 +9,7 @@ import com.his.common.enums.OrgUnitTypeEnum;
 import com.his.common.enums.StaffDutyStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.StaffPlanRuleQueryPageDTO;
 import com.his.system.dto.StaffPlanRuleUpsertDTO;
 import com.his.system.entity.*;
@@ -23,7 +24,6 @@ import com.his.system.vo.StaffShortfallVO;
 import com.his.system.vo.StaffWorkingGroupVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -504,7 +504,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
                 vo.setScheduleDate(date);
                 vo.setOrgType(rule.getOrgType());
                 vo.setOrgId(rule.getOrgId());
-                vo.setOrgName(StringUtils.hasText(rule.getOrgName())
+                vo.setOrgName(TextUtil.hasText(rule.getOrgName())
                         ? rule.getOrgName() : orgNames.getOrDefault(orgKey, unitNameOf(rule.getOrgType(), rule.getOrgId())));
                 vo.setShiftId(rule.getShiftId());
                 vo.setShiftName(shiftNameOf(rule.getShiftId(), shifts.get(rule.getShiftId())));

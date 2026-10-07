@@ -7,6 +7,7 @@ import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.operation.entity.BizAnesthesiaPacu;
 import com.his.operation.entity.BizAnesthesiaRecord;
@@ -22,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -177,11 +177,11 @@ public class OperationChargeBiller {
             return;
         }
         // 没有手术锚点的麻醉费用 = 一笔说不清来源的账，宁可先不记
-        if (!StringUtils.hasText(applyNo) && applyId == null) {
+        if (!TextUtil.hasText(applyNo) && applyId == null) {
             markFail(summary, row, "缺少手术申请单，本次不计费", itemCode);
             return;
         }
-        if (patientId == null || !StringUtils.hasText(patientName)) {
+        if (patientId == null || !TextUtil.hasText(patientName)) {
             markFail(summary, row, "缺少患者快照，这笔费用落不到人，本次不计费", itemCode);
             return;
         }
@@ -211,9 +211,9 @@ public class OperationChargeBiller {
         fee.setSourceId(row.getId());
         // ★ 四核对锚点：这台手术。麻醉费不属于任何一条医嘱，锚到那台手术才答得出「这是哪台手术的钱」；
         //   来源编号不能留空（该列 NOT NULL 且无默认）。
-        fee.setSourceNo(StringUtils.hasText(applyNo) ? applyNo : ("APPLY-" + applyId));
+        fee.setSourceNo(TextUtil.hasText(applyNo) ? applyNo : ("APPLY-" + applyId));
         fee.setCatalogType(FeeCatalogResolver.byItemType(fee.getItemType()));
-        fee.setRemark(StringUtils.hasText(remark) ? remark
+        fee.setRemark(TextUtil.hasText(remark) ? remark
                 : ("手术麻醉记账（项目 " + itemCode + "，手术申请 " + fee.getSourceNo() + "）"));
 
         BizFeeRecord booked;

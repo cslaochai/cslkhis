@@ -5,10 +5,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.his.common.constant.DictType;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -25,7 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -274,7 +275,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             }
         }
         // 保留（类别①条件必填）：仅「护理记录单」类型必填正文，其余类型不适用
-        if (Objects.equals(NursingDocTypeEnum.NOTE.getCode(), type) && !StringUtils.hasText(dto.getNursingContent())) {
+        if (Objects.equals(NursingDocTypeEnum.NOTE.getCode(), type) && !TextUtil.hasText(dto.getNursingContent())) {
             throw new BusinessException("护理记录单必须填写护理记录正文");
         }
         if (dto.getTemperature() != null
@@ -338,7 +339,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             throw new BusinessException("入院记录不存在");
         }
         List<BizNursingRecord> list = bizNursingRecordMapper.selectByAdmissionAndType(admissionId, NursingDocTypeEnum.TEMP.getCode(), beginDate,
-                StringUtils.hasText(endDate) ? endDate + " 23:59:59" : null);
+                TextUtil.hasText(endDate) ? endDate + " 23:59:59" : null);
 
         TempSheetVO sheet = new TempSheetVO();
         sheet.setAdmissionId(admissionId);
@@ -358,7 +359,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             p.setMeasureTime(r.getMeasureTime());
             p.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DateFormats.DATE));
             p.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(DateFormats.TIME_MINUTE));
-            p.setShiftText(dictCacheService.getDicDataLabel("biz_patient_nursingShiftEnum", r.getShift()));
+            p.setShiftText(dictCacheService.getDicDataLabel(DictType.NURSING_SHIFT, r.getShift()));
             p.setTemperature(r.getTemperature());
             p.setPulse(r.getPulse());
             p.setRespiration(r.getRespiration());
@@ -621,7 +622,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setAssessTypeText(NursingAssessTypeEnum.getText(row.getAssessType()));
         vo.setTotalScore(row.getTotalScore());
         vo.setRiskLevel(row.getRiskLevel());
-        vo.setRiskLevelText(dictCacheService.getDicDataLabel("biz_patient_nursingRiskLevelEnum", row.getRiskLevel()));
+        vo.setRiskLevelText(dictCacheService.getDicDataLabel(DictType.ASSESS_RISK_LEVEL, row.getRiskLevel()));
         vo.setItemsJson(row.getItemsJson());
         vo.setAssessTime(row.getAssessTime());
         vo.setAssessNurseId(row.getAssessNurseId());
@@ -650,7 +651,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         }
         // endDate 是日期字符串，直接 `measure_time <= 'yyyy-MM-dd'` 会把当天全部时点滤掉
         // （datetime 恒大于当日 00:00:00 字符串）→ 补全天边界
-        String endBoundary = StringUtils.hasText(endDate) ? endDate + " 23:59:59" : null;
+        String endBoundary = TextUtil.hasText(endDate) ? endDate + " 23:59:59" : null;
         List<BizNursingRecord> list = bizNursingRecordMapper.selectByAdmissionAndTypes(
                 admissionId, List.of(NursingDocTypeEnum.TEMP.getCode(), NursingDocTypeEnum.VITAL.getCode()), beginDate, endBoundary);
 
@@ -782,7 +783,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         WardVO ward = sysBedMapper.selectWardById(wardId);
         vo.setWardName(ward == null ? null : ward.getWardName());
         vo.setShift(shift);
-        vo.setShiftText(dictCacheService.getDicDataLabel("biz_patient_nursingShiftEnum", shift));
+        vo.setShiftText(dictCacheService.getDicDataLabel(DictType.NURSING_SHIFT, shift));
         vo.setWindowBegin(begin);
         vo.setWindowEnd(end);
 
@@ -865,7 +866,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setMeasureDate(r.getMeasureTime() == null ? null : r.getMeasureTime().toLocalDate().format(DateFormats.DATE));
         vo.setMeasureClock(r.getMeasureTime() == null ? null : r.getMeasureTime().format(DateFormats.TIME_MINUTE));
         vo.setShift(r.getShift());
-        vo.setShiftText(dictCacheService.getDicDataLabel("biz_patient_nursingShiftEnum", r.getShift()));
+        vo.setShiftText(dictCacheService.getDicDataLabel(DictType.NURSING_SHIFT, r.getShift()));
         vo.setTemperature(r.getTemperature());
         vo.setPulse(r.getPulse());
         vo.setRespiration(r.getRespiration());
@@ -879,7 +880,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         vo.setIntakeVolume(r.getIntakeVolume());
         vo.setOutputVolume(r.getOutputVolume());
         vo.setNursingLevel(r.getNursingLevel());
-        vo.setNursingLevelText(dictCacheService.getDicDataLabel("biz_patient_nursingLevelEnum", r.getNursingLevel()));
+        vo.setNursingLevelText(dictCacheService.getDicDataLabel(DictType.NURSING_LEVEL, r.getNursingLevel()));
         vo.setNursingContent(r.getNursingContent());
         vo.setNurseId(r.getNurseId());
         vo.setNurseName(r.getNurseName());

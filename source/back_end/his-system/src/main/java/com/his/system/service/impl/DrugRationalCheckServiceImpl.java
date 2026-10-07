@@ -1,6 +1,7 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.DrugRationalGroupDTO;
 import com.his.system.dto.DrugRationalItemDTO;
 import com.his.system.entity.SysDrugDoseLimit;
@@ -15,7 +16,6 @@ import com.his.system.vo.DrugRationalHitVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -195,7 +195,7 @@ public class DrugRationalCheckServiceImpl implements DrugRationalCheckService {
         hit.setDrugNameA(item.getDrugName());
         hit.setMessage(item.getDrugName() + (single ? " 单次" : " 每日累计")
                 + mgText(takenMg) + "，超过剂量上限 " + mgText(limitMg)
-                + (StringUtils.hasText(limit.getNote()) ? "（口径：" + limit.getNote() + "）" : ""));
+                + (TextUtil.hasText(limit.getNote()) ? "（口径：" + limit.getNote() + "）" : ""));
         hit.setSuggestion(limit.getNote());
         hits.add(hit);
     }
@@ -206,7 +206,7 @@ public class DrugRationalCheckServiceImpl implements DrugRationalCheckService {
      * 药品名称或通用名包含成分关键字即命中（大小写无关，字典里拉丁字母写法不统一）
      */
     private boolean matches(DrugRationalItemDTO item, String component) {
-        if (!StringUtils.hasText(component)) {
+        if (!TextUtil.hasText(component)) {
             return false;
         }
         String key = component.trim().toLowerCase(Locale.ROOT);
@@ -214,7 +214,7 @@ public class DrugRationalCheckServiceImpl implements DrugRationalCheckService {
     }
 
     private boolean contains(String text, String lowerKey) {
-        return StringUtils.hasText(text) && text.toLowerCase(Locale.ROOT).contains(lowerKey);
+        return TextUtil.hasText(text) && text.toLowerCase(Locale.ROOT).contains(lowerKey);
     }
 
     private String joinBlockMessage(List<DrugRationalHitVO> hits) {

@@ -11,7 +11,6 @@ import com.his.charge.vo.MedicalRecordBriefVO;
 import com.his.common.util.TextUtil;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,7 +65,7 @@ public class CodingEvidenceRule implements ComplianceRule {
             findings.add(RuleFinding.na(RuleCatalogEnum.A01, "清单无诊断明细，无法评估主诊断编码"));
             return;
         }
-        if (!StringUtils.hasText(main.getIcdCode())) {
+        if (!TextUtil.hasText(main.getIcdCode())) {
             findings.add(RuleFinding.hit(RuleCatalogEnum.A01,
                             "主要诊断「" + TextUtil.nullToEmpty(main.getIcdName()) + "」未填 ICD-10 编码")
                     .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
@@ -81,7 +80,7 @@ public class CodingEvidenceRule implements ComplianceRule {
      * A02 主要诊断编码不在医保目录内
      */
     private void evaluateA02(RuleContext ctx, BizSettlementDiagnosis main, List<RuleFinding> findings) {
-        if (main == null || !StringUtils.hasText(main.getIcdCode())) {
+        if (main == null || !TextUtil.hasText(main.getIcdCode())) {
             findings.add(RuleFinding.na(RuleCatalogEnum.A02, "主诊断未编码，无从校验目录归属"));
             return;
         }
@@ -111,11 +110,11 @@ public class CodingEvidenceRule implements ComplianceRule {
             findings.add(RuleFinding.na(RuleCatalogEnum.A03, "查无病历记录，无法比对清单与病历诊断"));
             return;
         }
-        if (main == null || !StringUtils.hasText(main.getIcdCode())) {
+        if (main == null || !TextUtil.hasText(main.getIcdCode())) {
             findings.add(RuleFinding.na(RuleCatalogEnum.A03, "清单主诊断未编码，无从比对"));
             return;
         }
-        if (!StringUtils.hasText(record.getDiagnosisCode())) {
+        if (!TextUtil.hasText(record.getDiagnosisCode())) {
             findings.add(RuleFinding.na(RuleCatalogEnum.A03,
                             "病历（" + TextUtil.nullToEmpty(record.getRecordNo()) + "）未填诊断编码，无法比对")
                     .on(1, main.getId(), main.getIcdCode(), main.getIcdName()));
@@ -143,7 +142,7 @@ public class CodingEvidenceRule implements ComplianceRule {
             return;
         }
         for (BizSettlementDiagnosis d : others) {
-            if (!StringUtils.hasText(d.getIcdCode())) {
+            if (!TextUtil.hasText(d.getIcdCode())) {
                 findings.add(RuleFinding.hit(RuleCatalogEnum.A04,
                                 "其他诊断「" + TextUtil.nullToEmpty(d.getIcdName()) + "」未填 ICD-10 编码")
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
@@ -163,7 +162,7 @@ public class CodingEvidenceRule implements ComplianceRule {
             return;
         }
         for (BizSettlementOperation o : ctx.getOperations()) {
-            if (!StringUtils.hasText(o.getOperCode())) {
+            if (!TextUtil.hasText(o.getOperCode())) {
                 findings.add(RuleFinding.hit(RuleCatalogEnum.A05,
                                 "手术操作「" + TextUtil.nullToEmpty(o.getOperName()) + "」未填 ICD-9-CM-3 编码")
                         .on(2, o.getId(), o.getOperCode(), o.getOperName()));
@@ -184,7 +183,7 @@ public class CodingEvidenceRule implements ComplianceRule {
         }
         SettlementEvidence ev = ctx.getEvidence();
         String text = ev.surgicalEvidenceText();
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             findings.add(RuleFinding.na(RuleCatalogEnum.A06,
                     "本次就诊无病历与收费/诊疗项目数据，无法核对手术依据"));
             return;
@@ -192,8 +191,8 @@ public class CodingEvidenceRule implements ComplianceRule {
 
         for (BizSettlementOperation o : ctx.getOperations()) {
             String name = o.getOperName();
-            if (!StringUtils.hasText(name)) {
-                if (!StringUtils.hasText(o.getOperCode())) {
+            if (!TextUtil.hasText(name)) {
+                if (!TextUtil.hasText(o.getOperCode())) {
                     findings.add(RuleFinding.na(RuleCatalogEnum.A06, "手术操作无名称无编码，无法核对依据")
                             .on(2, o.getId(), o.getOperCode(), o.getOperName()));
                     continue;
@@ -203,7 +202,7 @@ public class CodingEvidenceRule implements ComplianceRule {
             // 退化「术」「手术」等泛词后再匹配，避免靠一个「术」字就判过
             String core = name.replaceAll("(手术|术式|术|治疗)$", "");
             boolean exact = EvidenceKeywordMatcher.hits(text, name)
-                    || (StringUtils.hasText(core) && !core.equals(name) && EvidenceKeywordMatcher.hits(text, core));
+                    || (TextUtil.hasText(core) && !core.equals(name) && EvidenceKeywordMatcher.hits(text, core));
             boolean action = !exact && EvidenceKeywordMatcher.hits(text, SURGERY_ACTIONS);
 
             if (exact) {
@@ -228,7 +227,7 @@ public class CodingEvidenceRule implements ComplianceRule {
     private void evaluateA07(RuleContext ctx, List<RuleFinding> findings) {
         SettlementEvidence ev = ctx.getEvidence();
         boolean anyCoded = ctx.getOperations().stream()
-                .anyMatch(o -> StringUtils.hasText(o.getOperCode()));
+                .anyMatch(o -> TextUtil.hasText(o.getOperCode()));
         if (anyCoded) {
             findings.add(RuleFinding.pass(RuleCatalogEnum.A07,
                     "已编 " + ctx.getOperations().size() + " 条手术操作，费用与编码齐备"));
@@ -257,7 +256,7 @@ public class CodingEvidenceRule implements ComplianceRule {
     private void evaluateA08(RuleContext ctx, List<RuleFinding> findings) {
         SettlementEvidence ev = ctx.getEvidence();
         String evidenceText = labInspectionText(ev);
-        if (!StringUtils.hasText(evidenceText)) {
+        if (!TextUtil.hasText(evidenceText)) {
             findings.add(RuleFinding.na(RuleCatalogEnum.A08,
                     "本次就诊无检验检查数据，无法评估是否存在漏编诊断"));
             return;
@@ -270,7 +269,7 @@ public class CodingEvidenceRule implements ComplianceRule {
                 continue;
             }
             boolean coded = ctx.getDiagnoses().stream().anyMatch(d ->
-                    StringUtils.hasText(d.getIcdCode())
+                    TextUtil.hasText(d.getIcdCode())
                             && entry.getIcdPrefix() != null
                             && d.getIcdCode().toUpperCase().startsWith(entry.getIcdPrefix().toUpperCase()));
             if (!coded) {

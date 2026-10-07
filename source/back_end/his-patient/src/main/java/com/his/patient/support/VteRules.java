@@ -1,5 +1,6 @@
 package com.his.patient.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import com.his.patient.enums.VteMeasureTypeEnum;
@@ -86,7 +87,7 @@ public final class VteRules {
      * 解析前端传入的措施码串（空返回空列表）
      */
     public static List<String> parseCodes(String raw) {
-        if (raw == null || raw.isBlank()) {
+        if (!TextUtil.hasText(raw)) {
             return List.of();
         }
         return Arrays.stream(raw.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();

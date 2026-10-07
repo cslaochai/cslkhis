@@ -25,7 +25,6 @@ import com.his.medicaltech.support.LabReferenceRangeParser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -257,7 +256,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
             if (points.size() >= MAX_ATTENTION_ITEMS + 3) {
                 break;
             }
-            if (!StringUtils.hasText(raw.getItemName()) && !StringUtils.hasText(raw.getInterpretation())) {
+            if (!TextUtil.hasText(raw.getItemName()) && !TextUtil.hasText(raw.getInterpretation())) {
                 continue;
             }
             String level = raw.getLevel() == null ? "" : switch (raw.getLevel()) {
@@ -280,7 +279,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
             if (result.size() >= max) {
                 break;
             }
-            if (StringUtils.hasText(value)) {
+            if (TextUtil.hasText(value)) {
                 result.add(TextUtil.cut(value, maxLength));
             }
         }
@@ -361,7 +360,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
 
         // 可选写回
         boolean overwrite = Boolean.TRUE.equals(dto.getOverwriteConclusion());
-        if (overwrite && StringUtils.hasText(vo.getConclusion())) {
+        if (overwrite && TextUtil.hasText(vo.getConclusion())) {
             vo.setConclusionSaved(writeBack(record, vo));
             if (Boolean.TRUE.equals(vo.getConclusionSaved())) {
                 vo.setSaveTip("结论与建议已写回检验记录：" + record.getRecordNo()
@@ -455,7 +454,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
                 if (numeric == null) {
                     continue;
                 }
-                String key = StringUtils.hasText(result.getLaboratoryItemCode())
+                String key = TextUtil.hasText(result.getLaboratoryItemCode())
                         ? result.getLaboratoryItemCode().trim().toUpperCase()
                         : String.valueOf(result.getLaboratoryItemName());
                 labelByKey.putIfAbsent(key, result.getLaboratoryItemName());
@@ -535,12 +534,12 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
             }
             builder.append("- ").append(item.getItemName()).append(" = ")
                     .append(item.getResultValue());
-            if (StringUtils.hasText(item.getResultUnit())) {
+            if (TextUtil.hasText(item.getResultUnit())) {
                 builder.append(' ').append(item.getResultUnit());
             }
             builder.append("（参考 ").append(TextUtil.blankToDefault(item.getReferenceRange(), "（未填写）")).append("，")
                     .append(item.getAbnormalFlagText()).append("）");
-            if (StringUtils.hasText(item.getJudgeNote())) {
+            if (TextUtil.hasText(item.getJudgeNote())) {
                 builder.append(" [未判定：").append(item.getJudgeNote()).append(']');
             }
             builder.append('\n');
@@ -557,7 +556,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
             builder.append("- ").append(item.getItemName()).append(' ')
                     .append(item.getAbnormalFlagText()).append("：")
                     .append(item.getResultValue());
-            if (StringUtils.hasText(item.getResultUnit())) {
+            if (TextUtil.hasText(item.getResultUnit())) {
                 builder.append(' ').append(item.getResultUnit());
             }
             builder.append("（参考 ").append(TextUtil.blankToDefault(item.getReferenceRange(), "（未填写）")).append("）\n");
@@ -575,7 +574,7 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
             if (LabAbnormalJudge.isUnjudged(item.getJudgeNote())) {
                 builder.append("- ").append(item.getItemName()).append(" = ")
                         .append(item.getResultValue());
-                if (StringUtils.hasText(item.getResultUnit())) {
+                if (TextUtil.hasText(item.getResultUnit())) {
                     builder.append(' ').append(item.getResultUnit());
                 }
                 builder.append("（").append(item.getJudgeNote()).append("）\n");
@@ -602,10 +601,10 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
         for (LabTrendVO trend : trends) {
             builder.append("- ").append(trend.getItemName()).append("：")
                     .append(trend.getChangeText());
-            if (StringUtils.hasText(trend.getUnit())) {
+            if (TextUtil.hasText(trend.getUnit())) {
                 builder.append(' ').append(trend.getUnit());
             }
-            if (StringUtils.hasText(trend.getMagnitudeText())) {
+            if (TextUtil.hasText(trend.getMagnitudeText())) {
                 builder.append('，').append(trend.getMagnitudeText());
             }
             builder.append('\n');

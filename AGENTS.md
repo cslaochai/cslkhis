@@ -391,7 +391,7 @@
   Bean Validation 只在 HTTP 参数绑定时跑，内部调用根本不过这一层。
   ③ **业务规则**——状态机（「只有草稿可提交」）、码值合法性、关联实体存在性（「入院记录不存在」）、
   临床取值范围与单位提示。这些与"字段填没填"无关，DTO 注解无处安放。
-  机械判据：`grep -A1 "if (dto.get.*== null\|if (!StringUtils.hasText(dto.get" service/impl/*.java`
+  机械判据：`grep -A1 "if (dto.get.*== null\|if (!TextUtil.hasText(dto.get" service/impl/*.java`
   里抛「不能为空/必填」的行，除上述三类（带注释标注类别）之外为 0。
 - **查询接口的 GET/`@RequestParam` 不做"必填装饰"**：`@RequestParam` 默认 `required=true` 已经是必填
   （缺参由 Spring 抛 `MissingServletRequestParameterException`），不要再补 `if (x == null) throw`；
@@ -494,6 +494,14 @@
   `his-common/enums`；同名字段在不同表里表达不同含义时是两个不同枚举，各自带业务主语
   （`BedWaitStatusEnum` / `BedAllocateStatusEnum`，不是一个 `StatusEnum` 通吃）。
   **禁止**按表名造 `BizXxxStatusEnum`，**禁止**无主语的 `StatusEnum`/`TypeEnum`/`ResultEnum`。
+- **撞上两个同义枚举时，留「拿码值做业务判断」的那个当主**，不是留名字更贴切的：
+  只做展示的副本通常只有一两个调用点，而做状态机的副本的码值**已经写进库里**（改它等于改数据口径）。
+  合并前先逐字核对码值与文案（`getText` 口径按上一条：脏值出空串，展示侧原来靠「未知状态」占位的档位在合并后变空串，
+  属预期的口径纠正）。公共兜底档（如 `UNKNOWN(0)`）**不是业务码值**：`isValid`/`getText` 都要把它排除，
+  否则 `isValid(0)` 为真 = 允许往一个库里从不存在的档位写。
+  实例（2026-10-07）：`EmergencyStatusEnum`（his-common，20 处调用点，appoint 拿它流转状态）
+  vs `CdrEmergencyStatusEnum`（his-medicaltech，1 处展示调用点）→ 删后者、CDR 两处改指前者，
+  码值 1-6 与 `biz_emergency` 列注释和字典 `his_emergency_status` 逐字一致，故合并零数据风险。
 - **码值 → 文案的映射一律进枚举或字典，禁止独立的「码值→文案」反模式**：任何把码值翻译成文案的
   `switch` / `Map` / `getOrDefault` + `未知(code)` 兜底，**无论它叫什么名字**
   （`XxxLabels` / `XxxText` / `XxxTexts` / `XxxItems` / `XxxRules`，还是 service impl 里的一段内联 `switch`、
@@ -878,7 +886,7 @@
 - **三个收口点**（`his-common/util`，除此之外不许出现第四个同名工具）：
   | 类 | 只管这件事 | 方法 |
   |---|---|---|
-  | `TextUtil` | 空白清洗与截断 | `trim` / `trimToNull` / `trimToEmpty` / `nullToEmpty` / `blankToDefault` / `cut(v,max)` / `cut(v,max,blank)` / `cutToNull` / `ellipsis` / `requireTrimmed` |
+  | `TextUtil` | 空白清洗与截断、判空布尔 | `hasText(CharSequence)`（反向写 `!hasText`） / `trim` / `trimToNull` / `trimToEmpty` / `nullToEmpty` / `blankToDefault` / `cut(v,max)` / `cut(v,max,blank)` / `cutToNull` / `ellipsis` / `requireTrimmed` |
   | `NumUtil` | null 兜底、金额舍入、数量文本 | `orZero(Integer/Long/BigDecimal)` / `orDefault` / `scale(v,位数)` / `plain(v)` |
   | `TimeUtil` | 归一到秒与日边界、时长 | `toSeconds` / `nowSeconds` / `dayStart` / `dayEnd` / `minutesBetween` / `elapsedMinutes` / `elapsedHours` |
 - **禁止在 service / support / controller / 接口里写私有副本**，方法名叫什么都算：
@@ -893,6 +901,40 @@
   `@RequestBody` JSON，Jackson 不查 `PropertyEditor`，注册了也不生效；
   ② `emptyAsNull=true` 会把「传空串清空该字段」变成传 `null`，而 MyBatis-Plus `updateById`
   **跳过 null 列** —— 等于静默改掉更新语义，用户点了保存但库里没变，零报错。
+- **也不要在 DTO 字段上加 Jackson 注解做绑定层 trim**（用户 2026-10-07 提过两条，均已实测否决）：
+  ① Jackson **没有**内置的 trim 反序列化器 —— 实测 `jackson-databind 2.15.4`（Boot 3.2.5）里字符串相关
+  只有 `deser.std.StringDeserializer`（不 trim）/ `FromStringDeserializer` / `util.StdConverter`，
+  教程里的 `TrimStringDeserializer` 是要自己写的那一个；
+  ② HV 8.0.1 的 `@Normalized` 只在**送进校验器那一刻**归一，字段值不变，service 拿到的还是 `" 张三 "`，
+  比不写更骗人；
+  ③ 绑定层只覆盖 `@RequestBody` 一条路 —— 实测另有 **83 处 service 内部 `new XxxDTO()`、
+  13 处 `@RequestParam String`、5 处手写 `readValue`** 完全不经过 Jackson，
+  洗完之后 service 侧那 300 余处 `TextUtil` 调用一处也删不掉，等于凭空多出「看进门方式决定洗不洗」的第二套口径。
+- **判空布尔只有 `hasText` 一个语义**，反向一律写 `!hasText(x)`，**不提供 `isBlank` 第二个方法**
+  （2026-10-07 收口：删掉私有副本 `isText`×3、`isBlank`×3、`notBlank`×1、`firstNonBlank`×2（归 `blankToDefault`），
+  行内 `x != null && !x.isBlank()` 21 处改判；正向与取反成对写时，改口径必须找齐两份，漏一份就是脏数据入口）。
+- **外部库的同义谓词也算「散落的第二套口径」，一律走 `TextUtil.hasText`**（2026-10-07 全仓迁移 1122 处 / 231 文件：
+  Spring `StringUtils.hasText` 1109、`StringUtils::hasText` 方法引用 15、`StringUtils.isBlank/isNotBlank` 各 1（后者是
+  commons-lang3，与前者的 import 来源不同 —— 迁移前先 `grep "import .*StringUtils"` 认清是哪个包）、
+  hutool `StrUtil.isBlank` 2）。
+  原先记「存量 1066 处 `StringUtils.hasText` 不迁（同一实现）」是错的：**同一实现 ≠ 同一口径**，
+  两套拼写在同一文件里并存时，「改判空规则」这件事就没有可 grep 的落点，且新代码会照抄邻近的那一种。
+  迁移后 `StringUtils` 只剩三处**非谓词**用法（`TextUtil` 内部的委托、`getFilenameExtension`、`StringUtils.EMPTY`），
+  `TextUtil.java` 本身是全库唯一还引用 Spring `StringUtils` 的业务代码。
+  ⚠ `hasText` 的形参必须是 `CharSequence` 而不是 `String`：Spring 的版本收 `CharSequence`，
+  收窄会让 `instanceof CharSequence cs` 分支和 `Stream<CharSequence>` 的 filter 编译失败（实踩 his-patient 一处）。
+  **唯一豁免：`ClinicalTextMatcher.isBlank`** —— 它除空白还剥「—」「/」这类占位符号，是病历质控的临床语义，
+  不是判空副本，不许并进 `TextUtil`（`QcRuleEnum` 的注释依赖这个区别）；它内部的纯判空仍走 `TextUtil.hasText`。
+  **另一种不算副本的形状**：`x == null || x.isEmpty()`（不收全空白）与 `hasText` 语义不同，
+  改成 `hasText` 会让「粘贴了一段空格的备注」从"有内容"变成"无内容"，属行为变更，逐处确认后才动
+  （`EvidenceKeywordMatcher`、`TextSplitter` 等命中即按此处理，不许顺手批量替换）。
+- **日边界只有 `TimeUtil.dayStart` / `dayEnd` 两种拼写**（2026-10-07 收口 65 处 / 29 文件）：
+  `d.atStartOfDay()`、`d.atTime(23, 59, 59)`、以及 `d == null ? null : d.atXxx()` 这类自带 null 守卫的三元，
+  全部换成 `TimeUtil.dayStart(d)` / `TimeUtil.dayEnd(d)`（这两个方法本来就 null 安全，守卫是重复劳动）。
+  收口时抓到一处真 bug：`AiAuditQueryServiceImpl` 用 `atTime(LocalTime.MAX)` 当 `.le(create_time)` 的右边界 ——
+  `23:59:59.999999999` 在本库全为 `DATETIME(0)` 的列上会被 MySQL **四舍五入进次日**，于是「查某一天」多捞一行，
+  且零报错（同一坑 §3 已写过一次，这次是它第三次回来，所以判据要 grep 表达式而不是只查私有方法名）。
+  **不许合并的例外**：`atTime(8, 0)` / `atTime(16, 0)` / `atTime(start.toLocalTime())` 是业务时刻，不是日边界。
 - **`NumUtil.orDefault` 只允许一个重载** `(Integer, Integer)`：本仓分页参数是原始 `int`
   （`PageParam.getPageNum()`），再配一个 `(Integer, int)` 会在装箱阶段同时可用且互不更特 →
   javac「对 orDefault 的引用不明确」。要原始 `int` 就地拆箱。
@@ -910,11 +952,65 @@
 - 机械判据：
   ```bash
   grep -rnE "private (static )?(String|BigDecimal|Integer|Long|LocalDateTime|boolean) " \
-    --include=*.java source/back_end | grep -E "(trimToNull|trimToEmpty|defaultStr|nullToDash|nvl|nz|cut|clip|truncate|plain|scale|requireText|now|atStart|atEnd|dayStart|dayEnd|minutesBetween|hoursBetween)\("
+    --include=*.java source/back_end | grep -E "\b(trimToNull|trimToEmpty|defaultStr|nullToDash|nvl|nz|cut|clip|truncate|plain|scale|requireText|now|atStart|atEnd|dayStart|dayEnd|minutesBetween|hoursBetween|isText|isBlank|notBlank|firstNonBlank)\("
   grep -rn "truncatedTo" --include=*.java source/back_end
+  grep -rnE "!= *null *&& *![a-zA-Z().]+\.isBlank\(\)" --include=*.java source/back_end
+  grep -rnE "StringUtils\.(hasText|isBlank|isNotBlank)|StringUtils::hasText|StrUtil\.(is)?Blank" --include=*.java source/back_end
+  grep -rnE "\.atStartOfDay\(\)|\.atTime\(23, *59, *59\)|\.atTime\(LocalTime\.MAX\)" --include=*.java source/back_end
   ```
-  第一条必须只剩「含业务语义」那一类（逐条核对），第二条**只允许输出 `his-common/util/TimeUtil.java` 一个文件**。
+  第一条必须只剩「含业务语义」那一类（逐条核对），第二条**只允许输出 `his-common/util/TimeUtil.java` 一个文件**，
+  第三条（行内自己写判空）必须为 **0** —— 一律 `TextUtil.hasText(x)` / `!TextUtil.hasText(x)`，
+  第四条只允许 `TextUtil.java`（委托实现）+ `getFilenameExtension` + `StringUtils.EMPTY` 这三处非谓词用法，
+  第五条只允许 `TimeUtil.java` 的方法体。
   改造脚本：`workspace/_apply_helper_collapse.mjs`（先 dry 再 `--apply`，映射表在 `mapDef`）、
-  `workspace/_apply_truncation_sweep.mjs`、`workspace/_inline_statustext_shells.mjs`。
+  `workspace/_apply_truncation_sweep.mjs`、`workspace/_inline_statustext_shells.mjs`、
+  `workspace/_collapse_blank_predicates.mjs`（判空谓词收口，`EXCLUDE` 里必须留着 `ClinicalTextMatcher` 的方法定义与 `TextUtil`）、
+  `workspace/_collapse_day_bounds.mjs`（日边界表达式收口）。
   ⚠ 引擎**必须跳过 `*/util/*` 目录**：否则 `TimeUtil` 自己会进流水线，删掉自己的方法并 import 自己
   （2026-10-07 真踩过：`toSeconds` 改成调 `toSeconds` 的无限递归）。
+  ⚠ 替换 `Foo.bar(` 这类带包名的调用时**先去限定名**，否则 `org.springframework.util.StringUtils.hasText`
+  会被改成 `org.springframework.util.TextUtil.hasText`（不存在的类，编译期才报出来）。
+- **尚未收口的一族（下一步，不是豁免）**：私有「日期文本 → `LocalDate`」解析方法 9 处
+  （`parseDate`/`parseDateTime`/`parseDateOrNull`，散在 ai/appoint/charge/emr×2/medicaltech/operation×2），
+  **四种子口径互不等价**：`LocalDate.parse(text)`（不 trim）、`parse(text.trim(), DateFormats.DATE)`、
+  `text.substring(0,10)`（容忍带时间的文本）、`LocalDateTime.parse(s.replace(' ','T'))`（容忍空格分隔）。
+  并成一个 `TimeUtil` 方法等于替所有人选一种容错度 + 把「格式错」从 `DateTimeParseException`(500)
+  或 `BusinessException`(400 中文) 里改成另一种，是行为变更，必须先定口径再动，**不许照上面的脚本套路批量替换**。
+
+## 24. 字典类型编码只有一个来源：`com.his.common.constant.DictType`（2026-10-07 全仓收口 202 处引用 / 79 个键）
+- **调用点禁止写字典类型字面量**，一律 `dictCacheService.getDicDataLabel(DictType.XXX, code)` /
+  `getDictDataByType(DictType.XXX)`。私有 `private static final String DICT_XXX = "his_xxx";`（全仓曾有 37 个）也算散落，删掉。
+- **常量名 = 编码去掉 `his_`/`sys_` 前缀后大写**（`his_prepay_type` → `PREPAY_TYPE`），机械可逆，
+  所以「按名字就能 grep 到字典」，不需要第二张对照表。`DictType.java` **由脚本生成、不许手写**：
+  `node workspace/_gen_dict_type_class.mjs` 扫代码里的 `DictType.X` 引用反查库内字典类型，
+  常量名冲突或库里不存在该类型时**直接抛错**（手写就会漂成假事实）。
+- **只收代码真用到的**（现在 79 个）：库里另有 406 个类型是后台字典页给操作员自取的，**不许抄进来** ——
+  抄了就是用副本冒充全量，改库时没人同步这里，反而制造第二个真相。
+- **写错键名不会报错，这是它最危险的地方**：`getDicDataLabel` 取不到行返回 **空串**（不抛异常、不返回 null），
+  现象是那一片 `xxxText` 字段整列空白，与「这个码值本来就没文案」一模一样；编译、启动、接口全绿。
+  所以口径是：**取不到一律空串**（与枚举 `getText` 同口径，见 §13），要保留脏码值排查是枚举 `labelOrUnknown` 的事。
+- **`biz_<模块>_<某Enum>` 这种形状的键名本身就是 bug 证据**（表名前缀 + `Enum` 后缀，字典编码从不长这样）。
+  本次实锤来源：一次「枚举治理」提交把 `XxxEnum.getText(code)` 批量替换成
+  `getDicDataLabel("biz_<模块>_<XxxEnum>", code)`，而**这些字典类型从未被创建**，码值→文案全变空白。
+  处置结论（35 个残留假键，逐键拿库内列注释与字典行核对后定）：**8 个**指回真实字典类型、
+  **20 个**走新建枚举、**7 个**复用既有枚举（3 个 0/1 标志 → `YesOrNoEnum`，`cdrRegistStatus` →
+  `AppointStatusEnum`，`cdrEmergencyStatus` → `EmergencyStatusEnum`，`opdLogStatus` → 从 git 恢复被误删的
+  `OpdLogStatusEnum`）。
+- **遇到陌生键名按这个顺序判，不许猜**：① `SELECT DISTINCT dict_type FROM sys_dict_data` 查有没有这个类型；
+  ② 有 → 用 `DictType` 常量，并核对字典行的码值/文案与宿主列注释**逐字一致**（不一致就是两套口径）；
+  ③ 没有 → 按 §13 选落点：后端拿码值做分支/集合封闭 → **枚举**（先找现有的复用，同含义全仓只许有一个），
+  纯展示但形状固定 → 枚举；确属操作员维护的才补字典并同步 `sql/xxx` 字典段；
+  ④ 新建枚举的码值**一律取宿主列注释原文**，不凭业务直觉补码值。
+- **改完回头清死依赖**：类里不再出现 `dictCacheService.` 调用，就删掉它的字段与 import（本次删了 16 处）——
+  留着就是 §22 说的「注入了但没人用」，而 `@RequiredArgsConstructor` 类里漏 `final` 的依赖会在第一次调用时 NPE。
+- 机械判据：
+  ```bash
+  node workspace/_check_dict_type_gate.mjs          # 必须 PASS
+  grep -rn "getDicDataLabel(\"" --include=*.java source/back_end      # 必须 0
+  grep -rn "getDictDataByType(\"" --include=*.java source/back_end    # 必须 0（DictCacheServiceImpl 内的 sys:dict: 前缀除外）
+  grep -rn "static final String DICT_" --include=*.java source/back_end  # 只允许 DICT_CACHE_PREFIX（Redis key 前缀，不是字典类型）
+  grep -rnE '"(biz|sys)_[a-z]+_[A-Za-z]+Enum"' --include=*.java source/back_end  # 必须 0
+  ```
+  改造脚本：`workspace/_apply_dict_type_const.mjs`（字面量/私有常量 → `DictType`）、
+  `workspace/_apply_enum_retarget.mjs` + `workspace/_enum_retarget.json`（假键 → 枚举/真实字典，含新建枚举模板）、
+  `workspace/_sweep_dead_dict_dep.mjs`（删死依赖）。

@@ -1,11 +1,11 @@
 package com.his.patient.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.InpatientOrderItemDTO;
 import com.his.patient.enums.OrderClassEnum;
-import org.springframework.util.StringUtils;
 
 /**
  * 住院医嘱明细行的硬规则（开立医嘱与「保存为模板」共用同一份）。
@@ -58,7 +58,7 @@ public final class InpatientOrderItemRules {
         if (item == null) {
             throw new BusinessException("医嘱明细存在空项");
         }
-        if (!StringUtils.hasText(item.getItemName())) {
+        if (!TextUtil.hasText(item.getItemName())) {
             throw new BusinessException("医嘱项目名称不能为空");
         }
         if (item.getOrderClass() == null) {
@@ -77,10 +77,10 @@ public final class InpatientOrderItemRules {
             if (item.getDosage() == null) {
                 throw new BusinessException("药品医嘱必须填写单次剂量：" + item.getItemName());
             }
-            if (!StringUtils.hasText(item.getDosageUnit())) {
+            if (!TextUtil.hasText(item.getDosageUnit())) {
                 throw new BusinessException("药品医嘱必须填写剂量单位：" + item.getItemName());
             }
-            if (!StringUtils.hasText(item.getRoute())) {
+            if (!TextUtil.hasText(item.getRoute())) {
                 throw new BusinessException("药品医嘱必须填写给药途径：" + item.getItemName());
             }
         }

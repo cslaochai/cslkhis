@@ -1,5 +1,6 @@
 package com.his.operation.support;
 
+import com.his.common.util.TextUtil;
 import com.his.operation.enums.AnesthesiaFollowupAdverseEnum;
 import com.his.operation.enums.AnesthesiaFollowupRecoveryEnum;
 import com.his.operation.enums.AnesthesiaFollowupRoundEnum;
@@ -60,7 +61,7 @@ public final class FollowupAdverseItems {
      */
     public static Set<Integer> parse(String raw) {
         Set<Integer> set = new TreeSet<>();
-        if (raw == null || raw.isBlank()) {
+        if (!TextUtil.hasText(raw)) {
             return set;
         }
         for (String part : raw.split(",")) {
@@ -90,7 +91,7 @@ public final class FollowupAdverseItems {
      * 列表展示文案："恶心呕吐、尿潴留"；空 → null（渲染侧按"无并发症"处理）
      */
     public static String summaryText(String raw) {
-        if (raw == null || raw.isBlank()) {
+        if (!TextUtil.hasText(raw)) {
             return null;
         }
         return parse(raw).stream()

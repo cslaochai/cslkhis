@@ -11,13 +11,13 @@ import com.his.charge.service.ArrearsControlService;
 import com.his.charge.vo.ArrearsPatientVO;
 import com.his.charge.vo.ArrearsPolicyVO;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 
 /**
@@ -51,7 +51,7 @@ public class ArrearsControlServiceImpl extends ServiceImpl<BizArrearsPolicyMappe
         p.setWarnLine(dto.getWarnLine());
         p.setStopLine(dto.getStopLine());
         p.setStopEnabled(dto.getStopEnabled());
-        if (StringUtils.hasText(dto.getStopClasses())) {
+        if (TextUtil.hasText(dto.getStopClasses())) {
             p.setStopClasses(dto.getStopClasses().trim());
         }
         p.setRemark(dto.getRemark());

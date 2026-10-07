@@ -7,7 +7,6 @@ import com.his.emr.enums.*;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -182,7 +181,7 @@ public class QcRuleEngine {
      * 界面上"没有证据"和"证据是空字符串"必须能区分开。
      */
     private static String evidenceOf(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return "（空）";
         }
         return TextUtil.ellipsis(text.replaceAll("\\s+", " ").trim(), EVIDENCE_MAX_LENGTH);
@@ -294,12 +293,12 @@ public class QcRuleEngine {
                             || ClinicalTextMatcher.isLabelRepeatOnly(s.getAllergyHistory(), "过敏史"), "过敏史")
                     .map(detail -> QcIssue.of(rule, detail, evidenceOf(s.getAllergyHistory())));
 
-            case C05 -> missing(StringUtils.hasText(s.getDiagnosisText()) ? s.getDiagnosisText() : s.getDiagnosisCode(),
+            case C05 -> missing(TextUtil.hasText(s.getDiagnosisText()) ? s.getDiagnosisText() : s.getDiagnosisCode(),
                     ClinicalTextMatcher.isPlaceholderOnly(s.getDiagnosisText(), "诊断"), "诊断")
                     .map(detail -> QcIssue.of(rule, detail, evidenceOf(s.getDiagnosisText())));
 
             case C06 -> {
-                if (!StringUtils.hasText(s.getDiagnosisName()) || StringUtils.hasText(s.getDiagnosisCode())) {
+                if (!TextUtil.hasText(s.getDiagnosisName()) || TextUtil.hasText(s.getDiagnosisCode())) {
                     yield Optional.empty();
                 }
                 yield Optional.of(QcIssue.of(rule,
@@ -315,7 +314,7 @@ public class QcRuleEngine {
                     .map(detail -> QcIssue.of(rule, detail, evidenceOf(s.getTreatmentPlan())));
 
             case C08 -> {
-                if (s.getDoctorId() != null || StringUtils.hasText(s.getDoctorName())) {
+                if (s.getDoctorId() != null || TextUtil.hasText(s.getDoctorName())) {
                     yield Optional.empty();
                 }
                 yield Optional.of(QcIssue.of(rule, "「书写医生」未记录，无签名病历不得归档", "（空）"));
@@ -366,7 +365,7 @@ public class QcRuleEngine {
             }
 
             case F04 -> {
-                if (StringUtils.hasText(s.getRecordTitle())) {
+                if (TextUtil.hasText(s.getRecordTitle())) {
                     yield Optional.empty();
                 }
                 yield Optional.of(QcIssue.of(rule,
@@ -375,7 +374,7 @@ public class QcRuleEngine {
 
             case F05 -> {
                 List<String> lacks = new ArrayList<>();
-                if (!StringUtils.hasText(s.getDeptName())) {
+                if (!TextUtil.hasText(s.getDeptName())) {
                     lacks.add("就诊科室");
                 }
                 if (s.getRecordTime() == null) {
@@ -390,7 +389,7 @@ public class QcRuleEngine {
             }
 
             case L01 -> {
-                if (s.getGender() == null || !StringUtils.hasText(s.getDiagnosisText())) {
+                if (s.getGender() == null || !TextUtil.hasText(s.getDiagnosisText())) {
                     yield Optional.empty();
                 }
                 // 性别码值按被查表本身的口径：住院病历文书 / 门诊病历是 1-男 2-女

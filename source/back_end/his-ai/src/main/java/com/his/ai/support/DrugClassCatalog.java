@@ -1,8 +1,8 @@
 package com.his.ai.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -82,7 +82,7 @@ public final class DrugClassCatalog {
      */
     public static Set<String> expandAllergen(String allergen) {
         Set<String> expanded = new LinkedHashSet<>();
-        if (!StringUtils.hasText(allergen)) {
+        if (!TextUtil.hasText(allergen)) {
             return expanded;
         }
         String token = allergen.trim();
@@ -105,7 +105,7 @@ public final class DrugClassCatalog {
      */
     public static List<String> classesOf(String drugName) {
         List<String> names = new ArrayList<>();
-        if (!StringUtils.hasText(drugName)) {
+        if (!TextUtil.hasText(drugName)) {
             return names;
         }
         for (DrugClass drugClass : CLASSES) {
@@ -121,7 +121,7 @@ public final class DrugClassCatalog {
      */
     public static Set<String> expandCondition(String keyword) {
         Set<String> expanded = new LinkedHashSet<>();
-        if (!StringUtils.hasText(keyword)) {
+        if (!TextUtil.hasText(keyword)) {
             return expanded;
         }
         String token = keyword.trim();
@@ -143,7 +143,7 @@ public final class DrugClassCatalog {
      * 是否为无意义的泛指过敏原
      */
     public static boolean isGenericAllergenToken(String token) {
-        if (!StringUtils.hasText(token)) {
+        if (!TextUtil.hasText(token)) {
             return true;
         }
         String value = token.trim();

@@ -1,5 +1,6 @@
 package com.his.patient.support;
 
+import com.his.common.util.TextUtil;
 import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
 import org.springframework.stereotype.Component;
@@ -59,7 +60,7 @@ public class PatientSearchScopeResolver {
             return PatientSearchScopeMode.ARCHIVE_ONLY;
         }
         String currentRole = user.getCurrentRole();
-        if (currentRole == null || currentRole.isBlank()) {
+        if (!TextUtil.hasText(currentRole)) {
             return PatientSearchScopeMode.ARCHIVE_ONLY;
         }
         return OUTPATIENT_TODAY_ROLES.contains(currentRole)

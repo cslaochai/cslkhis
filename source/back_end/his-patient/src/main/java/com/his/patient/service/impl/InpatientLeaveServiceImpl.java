@@ -32,7 +32,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -172,7 +171,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
             throw new BusinessException("预计离院时间不能晚于预计返回时间");
         }
         // 注意：Base.admitTime 是 SQL DATE_FORMAT 出的字符串，必须先 parse 才能与时间比较
-        LocalDateTime admitTime = StringUtils.hasText(snapshot.getAdmitTime()) ? parse(snapshot.getAdmitTime()) : null;
+        LocalDateTime admitTime = TextUtil.hasText(snapshot.getAdmitTime()) ? parse(snapshot.getAdmitTime()) : null;
         if (admitTime != null && expectedLeave.isBefore(TimeUtil.toSeconds(admitTime))) {
             throw new BusinessException("预计离院时间不能早于入院时间（人还没入院就开始请假是编造事实）");
         }
@@ -234,9 +233,9 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         // 于是编辑草稿时这一格必然是空的。若照旧强校验，用户点「编辑」什么都不改直接保存会 400
         // —— 现象像「编辑功能坏了」。口径：编辑时留空＝沿用原值（电话是必填项，没有「清空」语义）；
         // 新建时留空＝参数错误。
-        if (StringUtils.hasText(dto.getCompanionPhone())) {
+        if (TextUtil.hasText(dto.getCompanionPhone())) {
             leave.setCompanionPhone(TextUtil.cut(dto.getCompanionPhone().trim(), PHONE_MAX));
-        } else if (!StringUtils.hasText(leave.getCompanionPhone())) {
+        } else if (!TextUtil.hasText(leave.getCompanionPhone())) {
             // ①条件必填：编辑留空＝沿用原值，只有新建（原值也为空）才报错，DTO 注解表达不了这层分支
             throw new BusinessException("随行人联系电话不能为空");
         }
@@ -277,7 +276,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         }
         Long me = currentUser.getEmployeeId();
         String myName = currentUser.getRealName();
-        if (me == null || !StringUtils.hasText(myName)) {
+        if (me == null || !TextUtil.hasText(myName)) {
             throw new BusinessException("当前登录账号未绑定员工档案，无法以医师身份审批");
         }
 
@@ -499,7 +498,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
     private long resolveMaxHours() {
         SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
                 .eq(SysConfig::getConfigKey, MAX_HOURS_CONFIG_KEY));
-        if (config == null || !StringUtils.hasText(config.getConfigValue())) {
+        if (config == null || !TextUtil.hasText(config.getConfigValue())) {
             log.warn("未配置 {}，请假时长上限按兜底值 {} 小时", MAX_HOURS_CONFIG_KEY, MAX_HOURS_FALLBACK);
             return MAX_HOURS_FALLBACK;
         }

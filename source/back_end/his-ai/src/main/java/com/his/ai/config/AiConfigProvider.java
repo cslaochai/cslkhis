@@ -1,10 +1,10 @@
 package com.his.ai.config;
 
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 /**
  * AI 配置的语义化读取入口。
@@ -76,13 +76,13 @@ public class AiConfigProvider {
         if (!aiProperties.isEnabled()) {
             return "AI 总开关已关闭（application.yml: ai.enabled）";
         }
-        if (!StringUtils.hasText(aiProperties.getBaseUrl())) {
+        if (!TextUtil.hasText(aiProperties.getBaseUrl())) {
             return "模型服务地址未配置（application.yml: ai.base-url）";
         }
-        if (!StringUtils.hasText(aiProperties.getApiKey())) {
+        if (!TextUtil.hasText(aiProperties.getApiKey())) {
             return "模型访问密钥未配置（环境变量 " + ENV_API_KEY + "）";
         }
-        if (!StringUtils.hasText(aiProperties.getModel())) {
+        if (!TextUtil.hasText(aiProperties.getModel())) {
             return "模型名称未配置（application.yml: ai.model）";
         }
         return "";
@@ -97,7 +97,7 @@ public class AiConfigProvider {
      */
     public String capabilityDisabledReason(String capabilityKey) {
         String notReady = notReadyReason();
-        if (StringUtils.hasText(notReady)) {
+        if (TextUtil.hasText(notReady)) {
             return notReady;
         }
         Boolean feature = aiProperties.getFeatures().get(capabilityKey);
@@ -111,7 +111,7 @@ public class AiConfigProvider {
      * 密钥是否来自环境变量（用于健康检查回显来源，不涉及密钥内容）
      */
     public boolean apiKeyFromEnv() {
-        return StringUtils.hasText(environment.getProperty(ENV_API_KEY));
+        return TextUtil.hasText(environment.getProperty(ENV_API_KEY));
     }
 
     /**
@@ -129,10 +129,10 @@ public class AiConfigProvider {
      */
     public String modelOf(String capabilityKey, boolean lite) {
         String override = aiProperties.getModels().get(capabilityKey);
-        if (StringUtils.hasText(override)) {
+        if (TextUtil.hasText(override)) {
             return override;
         }
-        if (lite && StringUtils.hasText(aiProperties.getModelLite())) {
+        if (lite && TextUtil.hasText(aiProperties.getModelLite())) {
             return aiProperties.getModelLite();
         }
         return aiProperties.getModel();
@@ -150,6 +150,6 @@ public class AiConfigProvider {
      */
     public String asrApiKey() {
         String key = aiProperties.getAsr().getApiKey();
-        return StringUtils.hasText(key) ? key : aiProperties.getApiKey();
+        return TextUtil.hasText(key) ? key : aiProperties.getApiKey();
     }
 }

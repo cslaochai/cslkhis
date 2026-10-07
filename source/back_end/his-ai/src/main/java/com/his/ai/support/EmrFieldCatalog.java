@@ -1,8 +1,8 @@
 package com.his.ai.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -139,7 +139,7 @@ public final class EmrFieldCatalog {
      * 白名单校验：key 是否是可写的文本字段
      */
     public static boolean isTextKey(String key) {
-        return StringUtils.hasText(key) && TEXT_BY_KEY.containsKey(key.trim());
+        return TextUtil.hasText(key) && TEXT_BY_KEY.containsKey(key.trim());
     }
 
     /**
@@ -156,7 +156,7 @@ public final class EmrFieldCatalog {
      * 白名单校验：key 是否是可写的体征字段
      */
     public static boolean isVitalKey(String key) {
-        if (!StringUtils.hasText(key)) {
+        if (!TextUtil.hasText(key)) {
             return false;
         }
         String value = key.trim();
@@ -165,7 +165,7 @@ public final class EmrFieldCatalog {
     }
 
     public static String getText(String key) {
-        if (!StringUtils.hasText(key)) {
+        if (!TextUtil.hasText(key)) {
             return "";
         }
         TextField text = TEXT_BY_KEY.get(key.trim());
@@ -208,7 +208,7 @@ public final class EmrFieldCatalog {
      * 血压提取，返回 [收缩压, 舒张压]，未匹配或超出合理范围返回 null
      */
     public static String[] extractBloodPressure(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return null;
         }
         Matcher matcher = BLOOD_PRESSURE.matcher(text);

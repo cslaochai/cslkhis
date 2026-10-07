@@ -7,6 +7,7 @@ import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.SingleDiseaseDTO;
 import com.his.emr.entity.BizSingleDiseaseCase;
@@ -19,7 +20,6 @@ import com.his.emr.vo.InpatientSummarySnapshotVO;
 import com.his.emr.vo.SingleDiseaseAutoEnrollStatVO;
 import com.his.emr.vo.SingleDiseaseCandidateVO;
 import com.his.emr.vo.SingleDiseaseVO;
-import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -47,7 +47,6 @@ public class SingleDiseaseServiceImpl extends ServiceImpl<BizSingleDiseaseCaseMa
 
     private final RedisSequenceService redisSequenceService;
 
-    private final DictCacheService dictCacheService;
 
     public List<SingleDiseaseVO.Disease> diseaseList() {
         List<SysSingleDisease> diseases = sysSingleDiseaseMapper.selectList(
@@ -247,7 +246,7 @@ public class SingleDiseaseServiceImpl extends ServiceImpl<BizSingleDiseaseCaseMa
             throw new BusinessException("病例已上报，质控不可再改");
         }
         List<String> issues = new ArrayList<>();
-        if (c.getMainDiagnosisCode() == null || c.getMainDiagnosisCode().isBlank()) {
+        if (!TextUtil.hasText(c.getMainDiagnosisCode())) {
             issues.add("主要诊断编码缺失");
         }
         if (c.getInpatientDays() == null || c.getInpatientDays() <= 0) {
@@ -302,7 +301,7 @@ public class SingleDiseaseServiceImpl extends ServiceImpl<BizSingleDiseaseCaseMa
         wrapper.eq(query.getDiseaseId() != null, BizSingleDiseaseCase::getDiseaseId, query.getDiseaseId())
                 .eq(query.getQcStatus() != null, BizSingleDiseaseCase::getQcStatus, query.getQcStatus())
                 .eq(query.getReportStatus() != null, BizSingleDiseaseCase::getReportStatus, query.getReportStatus())
-                .and(query.getKeyword() != null && !query.getKeyword().isBlank(), w -> w
+                .and(TextUtil.hasText(query.getKeyword()), w -> w
                         .like(BizSingleDiseaseCase::getPatientName, query.getKeyword())
                         .or().like(BizSingleDiseaseCase::getCaseNo, query.getKeyword()))
                 .orderByDesc(BizSingleDiseaseCase::getId);

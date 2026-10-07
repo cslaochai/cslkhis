@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -149,7 +148,7 @@ public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMa
         row.setRiskFlag(risk);
         row.setScreenSource(dto.getScreenSource());
         row.setNextScreenDate(nextScreenDate);
-        row.setItemsJson(StringUtils.hasText(dto.getItemsJson()) ? dto.getItemsJson().trim() : null);
+        row.setItemsJson(TextUtil.hasText(dto.getItemsJson()) ? dto.getItemsJson().trim() : null);
         row.setScreenTime(screenTime);
         row.setScreenerId(operatorUser.getEmployeeId());
         row.setScreenerName(operatorUser.getRealName());

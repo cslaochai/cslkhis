@@ -16,13 +16,13 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -124,7 +124,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
 
     private static LocalDate parseDate(String s) {
         // C 类保留：日期解析工具被多个入口共用（@RequestParam 与非 web 调用），空值兜底留在原地，注解挂不到私有方法上
-        if (!StringUtils.hasText(s)) {
+        if (!TextUtil.hasText(s)) {
             throw new BusinessException("日期不能为空");
         }
         try {
@@ -135,7 +135,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
     }
 
     private static LocalDateTime startOf(String date) {
-        return StringUtils.hasText(date) ? parseDate(date).atStartOfDay() : null;
+        return TextUtil.hasText(date) ? TimeUtil.dayStart(parseDate(date)) : null;
     }
 
     /**
@@ -145,11 +145,11 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
      * 无论条件真假都会被求值，用会抛异常的 parseDate 会让"不传日期"变成 500。
      */
     private static LocalDate parseDateOrNull(String date) {
-        return StringUtils.hasText(date) ? parseDate(date) : null;
+        return TextUtil.hasText(date) ? parseDate(date) : null;
     }
 
     private static LocalDateTime endOf(String date) {
-        return StringUtils.hasText(date) ? parseDate(date).atTime(23, 59, 59) : null;
+        return TextUtil.hasText(date) ? TimeUtil.dayEnd(parseDate(date)) : null;
     }
 
     // 三级对账
@@ -183,7 +183,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
             throw new BusinessException("无法识别当前收费员工号，交班失败");
         }
         String cashierName = UserUtils.getCurrentUser().getRealName();
-        if (!StringUtils.hasText(cashierName)) {
+        if (!TextUtil.hasText(cashierName)) {
             cashierName = "未知收费员";
         }
 
@@ -192,7 +192,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
         // ⚠ 它只是凭证上的时间说明与"不足 1 秒"闸门的依据，**不决定本班的行集**
         //   （行集由下面的归集指针定义，见 claimForShift 的注释）。
         LocalDateTime lastEnd = bizCashierSettlementMapper.selectLastPeriodEnd(cashierId);
-        LocalDateTime periodBegin = lastEnd != null ? lastEnd : LocalDate.now().atStartOfDay();
+        LocalDateTime periodBegin = lastEnd != null ? lastEnd : TimeUtil.dayStart(LocalDate.now());
         if (!periodEnd.isAfter(periodBegin)) {
             throw new BusinessException("距上次交班（" + periodBegin + "）不足 1 秒，无需重复交班");
         }
@@ -240,7 +240,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
         // 现金差异
         BigDecimal handin = dto.getHandinCash().setScale(SCALE, RoundingMode.HALF_UP);
         BigDecimal cashDiff = handin.subtract(cash).setScale(SCALE, RoundingMode.HALF_UP);
-        if (cashDiff.compareTo(BigDecimal.ZERO) != 0 && !StringUtils.hasText(dto.getDiffReason())) {
+        if (cashDiff.compareTo(BigDecimal.ZERO) != 0 && !TextUtil.hasText(dto.getDiffReason())) {
             throw new BusinessException("现金差异 " + cashDiff.toPlainString()
                     + " 元（实交 " + handin.toPlainString() + " / 系统 " + cash.toPlainString()
                     + "），必须填写差异说明");
@@ -271,8 +271,8 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
         LambdaQueryWrapper<BizCashierSettlement> w = new LambdaQueryWrapper<>();
         w.eq(dto.getCashierId() != null, BizCashierSettlement::getCashierId, dto.getCashierId())
                 .eq(dto.getSettleStatus() != null, BizCashierSettlement::getSettleStatus, dto.getSettleStatus())
-                .ge(StringUtils.hasText(dto.getDateStart()), BizCashierSettlement::getPeriodEnd, startOf(dto.getDateStart()))
-                .le(StringUtils.hasText(dto.getDateEnd()), BizCashierSettlement::getPeriodEnd, endOf(dto.getDateEnd()))
+                .ge(TextUtil.hasText(dto.getDateStart()), BizCashierSettlement::getPeriodEnd, startOf(dto.getDateStart()))
+                .le(TextUtil.hasText(dto.getDateEnd()), BizCashierSettlement::getPeriodEnd, endOf(dto.getDateEnd()))
                 // 排序必须补唯一二级键：同一秒交班的两条（换班交接）顺序不稳定 → 翻页重复 + 丢行且不报错
                 .orderByDesc(BizCashierSettlement::getPeriodEnd)
                 .orderByDesc(BizCashierSettlement::getId);
@@ -338,7 +338,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
                     + "（确认无误可勾选「放行差异」并填写理由）");
         }
         // B 类保留：条件必填——只有三级对账不平、勾选放行差异时才要求理由
-        if (!Boolean.TRUE.equals(reconcile.getPassed()) && !StringUtils.hasText(dto.getRemark())) {
+        if (!Boolean.TRUE.equals(reconcile.getPassed()) && !TextUtil.hasText(dto.getRemark())) {
             throw new BusinessException("放行差异必须填写理由");
         }
 
@@ -394,8 +394,8 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
         patch.setDaySettlementId(entity.getId());
         patch.setSettleStatus(2);
         bizCashierSettlementMapper.update(patch, new LambdaUpdateWrapper<BizCashierSettlement>()
-                .ge(BizCashierSettlement::getPeriodEnd, day.atStartOfDay())
-                .lt(BizCashierSettlement::getPeriodEnd, day.plusDays(1).atStartOfDay())
+                .ge(BizCashierSettlement::getPeriodEnd, TimeUtil.dayStart(day))
+                .lt(BizCashierSettlement::getPeriodEnd, TimeUtil.dayStart(day.plusDays(1)))
                 // 已审核（3）的不动：日结可重算，但已审核的班结单不该被重算顺手动到
                 .ne(BizCashierSettlement::getSettleStatus, 3));
         return toDayVO(entity);
@@ -410,8 +410,8 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
                 // Java 会**先求值**再传进去 —— 写成 parseDate(dto.getDateStart()) 时，
                 // 前端不传日期（null）也会执行 parseDate(null) 直接抛"日期不能为空"，
                 // 表现为"分页接口不传日期就 500"。这是没在前端引用过的接口最容易漏的一种坏法。
-                .ge(StringUtils.hasText(dto.getDateStart()), BizDaySettlement::getSettleDate, parseDateOrNull(dto.getDateStart()))
-                .le(StringUtils.hasText(dto.getDateEnd()), BizDaySettlement::getSettleDate, parseDateOrNull(dto.getDateEnd()))
+                .ge(TextUtil.hasText(dto.getDateStart()), BizDaySettlement::getSettleDate, parseDateOrNull(dto.getDateStart()))
+                .le(TextUtil.hasText(dto.getDateEnd()), BizDaySettlement::getSettleDate, parseDateOrNull(dto.getDateEnd()))
                 // settle_date 本身唯一，这里补 id 只是统一写法（别的表同秒多行才是真问题）
                 .orderByDesc(BizDaySettlement::getSettleDate)
                 .orderByDesc(BizDaySettlement::getId);
@@ -644,13 +644,13 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
 
         LocalDateTime begin;
         if (ctx.shifts.isEmpty()) {
-            begin = day.atStartOfDay().minusSeconds(1);
+            begin = TimeUtil.dayStart(day).minusSeconds(1);
         } else {
             begin = ctx.shifts.stream().map(BizCashierSettlement::getPeriodBegin)
-                    .filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(day.atStartOfDay().minusSeconds(1));
+                    .filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(TimeUtil.dayStart(day).minusSeconds(1));
         }
         ctx.begin = begin;
-        ctx.end = day.atTime(23, 59, 59);
+        ctx.end = TimeUtil.dayEnd(day);
 
         // 凭证链：Σ交班单定格金额（不重新汇总渠道，班结当时已经点过一遍）
         for (BizCashierSettlement s : ctx.shifts) {
@@ -705,8 +705,8 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
 
     private List<BizCashierSettlement> shiftsOf(LocalDate day) {
         return bizCashierSettlementMapper.selectList(new LambdaQueryWrapper<BizCashierSettlement>()
-                .ge(BizCashierSettlement::getPeriodEnd, day.atStartOfDay())
-                .lt(BizCashierSettlement::getPeriodEnd, day.plusDays(1).atStartOfDay())
+                .ge(BizCashierSettlement::getPeriodEnd, TimeUtil.dayStart(day))
+                .lt(BizCashierSettlement::getPeriodEnd, TimeUtil.dayStart(day.plusDays(1)))
                 .orderByAsc(BizCashierSettlement::getPeriodEnd)
                 .orderByAsc(BizCashierSettlement::getId));
     }

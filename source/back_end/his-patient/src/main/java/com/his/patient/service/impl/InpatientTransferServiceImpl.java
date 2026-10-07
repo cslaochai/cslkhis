@@ -29,7 +29,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -219,7 +218,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
         entity.setApplyDoctorName(operatorUser.getEmployeeName());
         entity.setApplyTime(now);
         entity.setTransferStatus(TransferStatusEnum.PENDING.getCode());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
         bizInpatientTransferMapper.insert(entity);
@@ -304,7 +303,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
         entity.setRecordId(record.getId());
         entity.setStopOrdersCount(countStoppedFromRemark(orderRemark));
         entity.setOrderRemark(orderRemark);
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(appendNote(entity.getRemark(), dto.getRemark()));
         }
         if (summaryNote != null) {
@@ -383,7 +382,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
      * 从 order_remark 文案里取回"已停止 N 条"的 N —— 只解析自己写的那一种句式，取不到就当 0
      */
     private int countStoppedFromRemark(String remark) {
-        if (!StringUtils.hasText(remark)) {
+        if (!TextUtil.hasText(remark)) {
             return 0;
         }
         java.util.regex.Matcher m = java.util.regex.Pattern
@@ -564,7 +563,7 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
             return "未知科室";
         }
         String name = bizInpatientTransferMapper.selectDeptName(deptId);
-        return StringUtils.hasText(name) ? name : "未知科室(ID=" + deptId + ")";
+        return TextUtil.hasText(name) ? name : "未知科室(ID=" + deptId + ")";
     }
 
     private String wardNameOf(Long wardId) {
@@ -638,10 +637,10 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
     }
 
     private String appendNote(String original, String note) {
-        if (!StringUtils.hasText(note)) {
+        if (!TextUtil.hasText(note)) {
             return original;
         }
-        return StringUtils.hasText(original) ? original + "；" + note : note;
+        return TextUtil.hasText(original) ? original + "；" + note : note;
     }
 
 }

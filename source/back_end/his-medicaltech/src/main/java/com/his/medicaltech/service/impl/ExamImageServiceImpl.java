@@ -2,6 +2,7 @@ package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -81,7 +82,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
         if (file == null || file.isEmpty()) {
             throw new BusinessException("请选择要上传的影像文件");
         }
-        String originalName = StringUtils.hasText(file.getOriginalFilename())
+        String originalName = TextUtil.hasText(file.getOriginalFilename())
                 ? Paths.get(file.getOriginalFilename()).getFileName().toString() : "image";
         String ext = StringUtils.getFilenameExtension(originalName);
         ext = ext == null ? "" : ext.toLowerCase(Locale.ROOT);
@@ -116,7 +117,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
                 : Math.min(importDTO.getFrameCount(), examImageProperties.getMaxFrameCount());
         int startSeq = nextSeq(importDTO.getBizType(), importDTO.getApplyId());
         String modalityText = importDTO.getModality() == null ? null
-                : dictCacheService.getDicDataLabel("his_exam_device_type", importDTO.getModality());
+                : dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_TYPE, importDTO.getModality());
 
         List<ExamImageVO> created = new ArrayList<>();
         try {
@@ -178,7 +179,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
                 "检查影像", "删除影像帧", "biz_exam_image", row.getId(),
                 TextUtil.cut("apply=" + row.getBizType() + "#" + row.getApplyId() + " seq=" + row.getSeq()
                         + " file=" + row.getFileName() + " url=" + row.getFileUrl()
-                        + " 原因=" + (StringUtils.hasText(reason) ? reason : "未填写"), 2000),
+                        + " 原因=" + (TextUtil.hasText(reason) ? reason : "未填写"), 2000),
                 true, null);
         deleteFileQuietly(row.getFileUrl());
         return bizExamImageMapper.purgeById(id) > 0;
@@ -292,7 +293,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
      * 只允许删本模块自己目录下的文件，防止 file_url 被改成任意路径后借删除接口删服务器文件
      */
     private void deleteFileQuietly(String fileUrl) {
-        if (!StringUtils.hasText(fileUrl) || !fileUrl.startsWith(uploadRoot() + "/")) {
+        if (!TextUtil.hasText(fileUrl) || !fileUrl.startsWith(uploadRoot() + "/")) {
             log.warn("[影像删除] file_url 不在影像目录内，跳过磁盘删除：{}", fileUrl);
             return;
         }
@@ -318,7 +319,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
         ExamImageVO vo = new ExamImageVO();
         BeanUtils.copyProperties(row, vo);
         vo.setModalityText(row.getModality() == null ? null
-                : dictCacheService.getDicDataLabel("his_exam_device_type", row.getModality()));
+                : dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_TYPE, row.getModality()));
         vo.setSourceText(ExamImageSourceEnum.getText(row.getSource()));
         return vo;
     }

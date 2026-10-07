@@ -6,8 +6,10 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.enums.DutyShiftTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.DutyLogHandoverDTO;
 import com.his.system.dto.DutyLogQueryPageDTO;
 import com.his.system.dto.DutyLogUpsertDTO;
@@ -28,7 +30,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -114,7 +115,7 @@ public class DutyLogServiceImpl extends ServiceImpl<BizDutyLogMapper, BizDutyLog
             throw new BusinessException("状态只能登记为待处理或已处理（已交班/已签收须走交班与签收动作）");
         }
         // B 类保留（条件必填）：只有标记为已处理时才要求填写，一刀切的 @NotBlank 会把待处理的登记挡成 400
-        if (status == DutyLogStatusEnum.DONE.getCode() && !StringUtils.hasText(dto.getHandleResult())) {
+        if (status == DutyLogStatusEnum.DONE.getCode() && !TextUtil.hasText(dto.getHandleResult())) {
             throw new BusinessException("标记为已处理时必须填写处理情况");
         }
 
@@ -224,7 +225,7 @@ public class DutyLogServiceImpl extends ServiceImpl<BizDutyLogMapper, BizDutyLog
         }
 
         LocalDateTime now = LocalDateTime.now();
-        String handle = StringUtils.hasText(dto.getHandleResult()) ? dto.getHandleResult().trim() : row.getHandleResult();
+        String handle = TextUtil.hasText(dto.getHandleResult()) ? dto.getHandleResult().trim() : row.getHandleResult();
         // ⚠ UpdateWrapper 显式 set：updateById 走 NOT_NULL 策略，把 ack_time 之类从有值改回 null 会被跳过
         bizDutyLogMapper.update(null, new LambdaUpdateWrapper<BizDutyLog>()
                 .eq(BizDutyLog::getId, row.getId())
@@ -238,7 +239,7 @@ public class DutyLogServiceImpl extends ServiceImpl<BizDutyLogMapper, BizDutyLog
                 "值班交班：" + row.getTitle(),
                 String.format("%s %s 的遗留事项交给你跟进。%s 请到「总值班排班 → 值班日志」签收确认。",
                         row.getDutyDate(), shiftText(row.getShiftType()),
-                        StringUtils.hasText(row.getContent()) ? row.getContent() : ""),
+                        TextUtil.hasText(row.getContent()) ? row.getContent() : ""),
                 BizTypeEnum.DUTY_COORD.getType(), row.getId(), "warning", null, 0);
         log.info("值班交班 id={} 值班人={} 接班人={}", row.getId(), row.getEmployeeName(), nextEmpName);
     }
@@ -305,7 +306,7 @@ public class DutyLogServiceImpl extends ServiceImpl<BizDutyLogMapper, BizDutyLog
         if (t == null) {
             return "-";
         }
-        return dictCacheService.getDicDataLabel("biz_system_dutyLogTypeEnum", t);
+        return dictCacheService.getDicDataLabel(DictType.DUTY_LOG_TYPE, t);
     }
 
     private String statusText(Integer s) {

@@ -5,7 +5,6 @@ import com.his.charge.enums.RuleCatalogEnum;
 import com.his.common.util.TextUtil;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -75,7 +74,7 @@ public class AdmissionIndicationRule implements ComplianceRule {
         if (!hasTreatment && !hasLabOrInspection) {
             List<String> names = ev.getBillItems().stream()
                     .map(d -> d.getItemName())
-                    .filter(StringUtils::hasText)
+                    .filter(TextUtil::hasText)
                     .limit(5)
                     .collect(Collectors.toList());
             findings.add(RuleFinding.hit(RuleCatalogEnum.C02,
@@ -98,7 +97,7 @@ public class AdmissionIndicationRule implements ComplianceRule {
             return;
         }
         String diagCode = currentMainDiagCode(ctx);
-        if (!StringUtils.hasText(diagCode)) {
+        if (!TextUtil.hasText(diagCode)) {
             findings.add(RuleFinding.na(RuleCatalogEnum.C03, "主诊断编码为空，无法比对是否分解住院"));
             return;
         }
@@ -109,10 +108,10 @@ public class AdmissionIndicationRule implements ComplianceRule {
         }
         List<String> dups = new ArrayList<>();
         for (BizInsuranceSettlement other : ctx.getRecentSettlements()) {
-            String otherCode = StringUtils.hasText(other.getDiagnosisCode())
+            String otherCode = TextUtil.hasText(other.getDiagnosisCode())
                     ? other.getDiagnosisCode()
                     : other.getDiagnosis();
-            if (StringUtils.hasText(otherCode) && otherCode.equalsIgnoreCase(diagCode)) {
+            if (TextUtil.hasText(otherCode) && otherCode.equalsIgnoreCase(diagCode)) {
                 dups.add(TextUtil.nullToEmpty(other.getSettlementNo()) + "(" + dateOf(other) + ")");
             }
         }
@@ -127,14 +126,14 @@ public class AdmissionIndicationRule implements ComplianceRule {
     }
 
     private String currentMainDiagCode(RuleContext ctx) {
-        if (ctx.mainDiagnosis() != null && StringUtils.hasText(ctx.mainDiagnosis().getIcdCode())) {
+        if (ctx.mainDiagnosis() != null && TextUtil.hasText(ctx.mainDiagnosis().getIcdCode())) {
             return ctx.mainDiagnosis().getIcdCode();
         }
         BizInsuranceSettlement s = ctx.getSettlement();
         if (s == null) {
             return null;
         }
-        return StringUtils.hasText(s.getDiagnosisCode()) ? s.getDiagnosisCode() : null;
+        return TextUtil.hasText(s.getDiagnosisCode()) ? s.getDiagnosisCode() : null;
     }
 
     private int windowDays(RuleContext ctx) {

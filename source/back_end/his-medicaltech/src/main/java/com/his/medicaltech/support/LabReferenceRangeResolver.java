@@ -1,12 +1,12 @@
 package com.his.medicaltech.support;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.SysLaboratoryItemDetail;
 import com.his.system.mapper.SysLaboratoryItemDetailMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -53,7 +53,7 @@ public class LabReferenceRangeResolver {
         }
 
         String masterRange = masterRangeOf(itemCode, itemName);
-        if (StringUtils.hasText(masterRange)) {
+        if (TextUtil.hasText(masterRange)) {
             LabReferenceRange fromMaster = LabReferenceRangeParser.parse(masterRange, gender);
             if (fromMaster.usable()) {
                 return fromMaster;
@@ -63,9 +63,9 @@ public class LabReferenceRangeResolver {
         }
 
         // 把「传入为什么没用上」如实带到 note 里，方便事后追为什么没判定
-        return LabReferenceRange.unparsable(StringUtils.hasText(rawRange)
+        return LabReferenceRange.unparsable(TextUtil.hasText(rawRange)
                 ? rawRange
-                : (StringUtils.hasText(masterRange) ? masterRange : ""));
+                : (TextUtil.hasText(masterRange) ? masterRange : ""));
     }
 
     /**
@@ -77,15 +77,15 @@ public class LabReferenceRangeResolver {
 
     private String masterRangeOf(String itemCode, String itemName) {
         ensureLoaded();
-        if (StringUtils.hasText(itemCode)) {
+        if (TextUtil.hasText(itemCode)) {
             String hit = byCode.get(itemCode.trim().toUpperCase());
-            if (StringUtils.hasText(hit)) {
+            if (TextUtil.hasText(hit)) {
                 return hit;
             }
         }
-        if (StringUtils.hasText(itemName)) {
+        if (TextUtil.hasText(itemName)) {
             String hit = byName.get(itemName.trim());
-            if (StringUtils.hasText(hit)) {
+            if (TextUtil.hasText(hit)) {
                 return hit;
             }
         }
@@ -108,13 +108,13 @@ public class LabReferenceRangeResolver {
                 Map<String, String> codes = new HashMap<>();
                 Map<String, String> names = new HashMap<>();
                 for (SysLaboratoryItemDetail row : rows) {
-                    if (!StringUtils.hasText(row.getReferenceRange())) {
+                    if (!TextUtil.hasText(row.getReferenceRange())) {
                         continue;
                     }
-                    if (StringUtils.hasText(row.getItemCode())) {
+                    if (TextUtil.hasText(row.getItemCode())) {
                         codes.putIfAbsent(row.getItemCode().trim().toUpperCase(), row.getReferenceRange());
                     }
-                    if (StringUtils.hasText(row.getItemName())) {
+                    if (TextUtil.hasText(row.getItemName())) {
                         names.putIfAbsent(row.getItemName().trim(), row.getReferenceRange());
                     }
                 }

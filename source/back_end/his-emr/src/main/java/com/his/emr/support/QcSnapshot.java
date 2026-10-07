@@ -1,11 +1,12 @@
 package com.his.emr.support;
 
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.enums.QcRecordSourceEnum;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.enums.InpatientRecordTypeEnum;
 import lombok.Data;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -118,7 +119,7 @@ public class QcSnapshot {
         s.diagnosisName = r.getDiagnosisName();
         s.diagnosisCode = r.getDiagnosisCode();
         // 门诊的 diagnosis 是诊断文本；缺失时退回 diagnosis_name
-        s.diagnosisText = StringUtils.hasText(r.getDiagnosis()) ? r.getDiagnosis() : r.getDiagnosisName();
+        s.diagnosisText = TextUtil.hasText(r.getDiagnosis()) ? r.getDiagnosis() : r.getDiagnosisName();
         s.treatmentPlan = r.getTreatmentPlan();
         s.temperature = parseDecimal(r.getTemperature());
         s.pulse = parseInteger(r.getPulse());
@@ -126,7 +127,7 @@ public class QcSnapshot {
         s.systolicPressure = parseInteger(r.getSystolicPressure());
         s.diastolicPressure = parseInteger(r.getDiastolicPressure());
         // 门诊没有 record_time，就诊日期即记录时间
-        s.recordTime = r.getVisitDate() == null ? null : r.getVisitDate().atStartOfDay();
+        s.recordTime = TimeUtil.dayStart(r.getVisitDate());
         s.submitTime = r.getSubmitTime();
         // 门诊没有归档时间列（归档另记病历归档），留空即"未归档"，
         // 归档类规则（L05/L06）本来也只适用于住院文书
@@ -173,7 +174,7 @@ public class QcSnapshot {
     }
 
     private static BigDecimal parseDecimal(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return null;
         }
         try {
@@ -185,7 +186,7 @@ public class QcSnapshot {
     }
 
     private static Integer parseInteger(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return null;
         }
         // 先原样试，再剥掉非数字字符试（「72次/分」）

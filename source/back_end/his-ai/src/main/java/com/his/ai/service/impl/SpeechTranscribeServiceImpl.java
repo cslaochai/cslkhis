@@ -15,6 +15,7 @@ import com.his.ai.support.AiAuditDigestSupport;
 import com.his.ai.support.AiMaskUtils;
 import com.his.ai.vo.VoiceTranscribeResultVO;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
@@ -84,7 +84,7 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
             byte[] bytes = audioFile.getBytes();
             String model = aiConfigProvider.asrModel();
             String content = callAsr(bytes, format, model, aiConfigProvider.timeoutOf(capabilityKey));
-            if (!StringUtils.hasText(content)) {
+            if (!TextUtil.hasText(content)) {
                 throw new BusinessException("未能从音频中识别出语音内容");
             }
 
@@ -113,10 +113,10 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
 
     private String callAsr(byte[] bytes, String format, String model, int timeoutMs) {
         AiConfigProvider cfg = aiConfigProvider;
-        if (!StringUtils.hasText(cfg.get().getBaseUrl())) {
+        if (!TextUtil.hasText(cfg.get().getBaseUrl())) {
             throw new BusinessException("AI 服务地址未配置（application.yml: ai.base-url）");
         }
-        if (!StringUtils.hasText(cfg.asrApiKey())) {
+        if (!TextUtil.hasText(cfg.asrApiKey())) {
             throw new BusinessException("语音转写密钥未配置（环境变量 " + AiConfigProvider.ENV_API_KEY + "）");
         }
         String baseUrl = cfg.get().getBaseUrl().trim();
@@ -160,11 +160,11 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
             throw new BusinessException("语音服务返回解析失败：" + ex.getOriginalMessage());
         } catch (RestClientResponseException ex) {
             String detail = ex.getResponseBodyAsString();
-            if (StringUtils.hasText(detail) && detail.length() > 300) {
+            if (TextUtil.hasText(detail) && detail.length() > 300) {
                 detail = detail.substring(0, 300) + "...";
             }
             throw new BusinessException("语音服务返回 " + ex.getStatusCode().value()
-                    + (StringUtils.hasText(detail) ? "：" + detail : ""));
+                    + (TextUtil.hasText(detail) ? "：" + detail : ""));
         } catch (RestClientException ex) {
             throw new BusinessException("语音服务不可达：" + ex.getMessage());
         }
@@ -202,13 +202,13 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
             entity.setStatus(status.getCode());
             entity.setLatencyMs(latencyMs);
             entity.setModel(model);
-            if (StringUtils.hasText(inputMeta)) {
+            if (TextUtil.hasText(inputMeta)) {
                 entity.setInputDigest(AiMaskUtils.digest(inputMeta));
             }
-            if (StringUtils.hasText(outputDigest)) {
+            if (TextUtil.hasText(outputDigest)) {
                 entity.setOutputDigest(outputDigest);
             }
-            if (StringUtils.hasText(errorMsg)) {
+            if (TextUtil.hasText(errorMsg)) {
                 entity.setErrorMsg(AiMaskUtils.digest(errorMsg, 480));
             }
             entity.setOperator(operator);

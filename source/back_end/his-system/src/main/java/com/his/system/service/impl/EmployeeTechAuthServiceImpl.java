@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechAuthStatusEnum;
 import com.his.common.enums.TechLevelEnum;
@@ -27,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -73,7 +73,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
     public PageResult<EmployeeTechAuthVO> listPage(TechAuthQueryPageDTO query) {
         TechAuthQueryPageDTO q = query == null ? new TechAuthQueryPageDTO() : query;
         LambdaQueryWrapper<SysEmployeeTechAuth> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(q.getEmployeeName()), SysEmployeeTechAuth::getEmployeeName, TextUtil.trimToNull(q.getEmployeeName()))
+        wrapper.like(TextUtil.hasText(q.getEmployeeName()), SysEmployeeTechAuth::getEmployeeName, TextUtil.trimToNull(q.getEmployeeName()))
                 .eq(q.getEmployeeId() != null, SysEmployeeTechAuth::getEmployeeId, q.getEmployeeId())
                 .eq(q.getAuthCategory() != null, SysEmployeeTechAuth::getAuthCategory, q.getAuthCategory())
                 .eq(q.getTechLevel() != null, SysEmployeeTechAuth::getTechLevel, q.getTechLevel())
@@ -296,7 +296,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
                     + "，低于本次要求的" + TechLevelEnum.getText(requiredLevel) + "，不能开展");
             return vo;
         }
-        if (StringUtils.hasText(held.getItemScope()) && StringUtils.hasText(itemCode)
+        if (TextUtil.hasText(held.getItemScope()) && TextUtil.hasText(itemCode)
                 && !scopeContains(held.getItemScope(), itemCode)) {
             vo.setMessage(emp.getEmpName() + " 的「" + TechAuthCategoryEnum.getText(authCategory)
                     + "」为限制授权，仅限术式【" + held.getItemScope() + "】，不含本次的 " + itemCode);
@@ -338,7 +338,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         override.setAuthCategory(gate.getAuthCategory());
         override.setRequiredLevel(gate.getRequiredLevel() == null ? 0 : gate.getRequiredLevel());
         override.setHeldLevel(check.getHeldLevel());
-        override.setReason(TextUtil.cutToNull(StringUtils.hasText(gate.getReason())
+        override.setReason(TextUtil.cutToNull(TextUtil.hasText(gate.getReason())
                 ? gate.getReason() : "急诊/抢救越权：" + check.getMessage(), REASON_MAX));
         override.setOccurTime(LocalDateTime.now());
         override.setOverrideStatus(OV_PENDING);
@@ -358,7 +358,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
     public PageResult<TechAuthOverrideVO> overrideListPage(TechAuthOverrideQueryPageDTO query) {
         TechAuthOverrideQueryPageDTO q = query == null ? new TechAuthOverrideQueryPageDTO() : query;
         LambdaQueryWrapper<BizTechAuthOverride> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(q.getEmployeeName()), BizTechAuthOverride::getEmployeeName, TextUtil.trimToNull(q.getEmployeeName()))
+        wrapper.like(TextUtil.hasText(q.getEmployeeName()), BizTechAuthOverride::getEmployeeName, TextUtil.trimToNull(q.getEmployeeName()))
                 .eq(q.getAuthCategory() != null, BizTechAuthOverride::getAuthCategory, q.getAuthCategory())
                 .eq(q.getSourceType() != null, BizTechAuthOverride::getSourceType, q.getSourceType())
                 .eq(q.getOverrideStatus() != null, BizTechAuthOverride::getOverrideStatus, q.getOverrideStatus())
@@ -525,6 +525,6 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
         if (type == null) {
             return "—";
         }
-        return dictCacheService.getDicDataLabel("biz_common_techAuthTypeEnum", type);
+        return dictCacheService.getDicDataLabel(DictType.TECH_AUTH_TYPE, type);
     }
 }

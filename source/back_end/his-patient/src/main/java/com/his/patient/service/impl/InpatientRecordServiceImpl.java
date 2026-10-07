@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -22,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -187,7 +187,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
         record.setBedNo(bedNo);
 
         record.setRecordType(dto.getRecordType());
-        record.setRecordTitle(StringUtils.hasText(dto.getRecordTitle())
+        record.setRecordTitle(TextUtil.hasText(dto.getRecordTitle())
                 ? dto.getRecordTitle() : InpatientRecordTypeEnum.getText(dto.getRecordType()));
         record.setRecordTime(TimeUtil.toSeconds(dto.getRecordTime() != null ? dto.getRecordTime() : LocalDateTime.now()));
 
@@ -200,8 +200,8 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
         // 新建入院记录时把患者档案里的过敏史带出来当初始值 —— 仍是医生可改的快照，
         // 但"忘填过敏史"这种最危险的缺项从源头少一次
         if (Objects.equals(1, dto.getRecordType())
-                && !StringUtils.hasText(record.getAllergyHistory())
-                && StringUtils.hasText(patient.getAllergyHistory())) {
+                && !TextUtil.hasText(record.getAllergyHistory())
+                && TextUtil.hasText(patient.getAllergyHistory())) {
             record.setAllergyHistory(patient.getAllergyHistory());
         }
 
@@ -238,7 +238,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
 
         // 逐字段 diff：先留痕，再落库（顺序反过来，异常时日志和库会不一致）
         List<BizInpatientRecordLog> changes = diffContent(record, dto);
-        record.setRecordTitle(StringUtils.hasText(dto.getRecordTitle())
+        record.setRecordTitle(TextUtil.hasText(dto.getRecordTitle())
                 ? dto.getRecordTitle() : record.getRecordTitle());
         if (dto.getRecordTime() != null) {
             record.setRecordTime(TimeUtil.toSeconds(dto.getRecordTime()));
@@ -321,19 +321,19 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
         // 且校验对象是服务端组装好的文书实体（不是入参字段），注解校验覆盖不到
         if (type == 1) {
             List<String> missing = new ArrayList<>();
-            if (!StringUtils.hasText(record.getChiefComplaint())) {
+            if (!TextUtil.hasText(record.getChiefComplaint())) {
                 missing.add("主诉");
             }
-            if (!StringUtils.hasText(record.getPresentIllness())) {
+            if (!TextUtil.hasText(record.getPresentIllness())) {
                 missing.add("现病史");
             }
-            if (!StringUtils.hasText(record.getPastHistory())) {
+            if (!TextUtil.hasText(record.getPastHistory())) {
                 missing.add("既往史");
             }
-            if (!StringUtils.hasText(record.getAllergyHistory())) {
+            if (!TextUtil.hasText(record.getAllergyHistory())) {
                 missing.add("过敏史（无过敏史也必须显式写「否认」，不允许留空代替）");
             }
-            if (!StringUtils.hasText(record.getDiagnosisName())) {
+            if (!TextUtil.hasText(record.getDiagnosisName())) {
                 missing.add("诊断名称");
             }
             if (record.getTemperature() == null) {
@@ -354,7 +354,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
         }
 
         // 保留（类别①条件必填）：诊断名称只对「要求诊断的文书类型」必填，是否必填取决于同批内容
-        if (InpatientRecordTypeEnum.requiresDiagnosis(type) && !StringUtils.hasText(record.getDiagnosisName())) {
+        if (InpatientRecordTypeEnum.requiresDiagnosis(type) && !TextUtil.hasText(record.getDiagnosisName())) {
             throw new BusinessException(InpatientRecordTypeEnum.labelOrUnknown(type) + "必须填写诊断名称");
         }
 
@@ -699,7 +699,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
         LambdaQueryWrapper<BizInpatientRecordLog> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(query.getDocType() != null, BizInpatientRecordLog::getDocType, query.getDocType());
         wrapper.eq(query.getRecordId() != null, BizInpatientRecordLog::getRecordId, query.getRecordId());
-        wrapper.eq(StringUtils.hasText(query.getRecordNo()),
+        wrapper.eq(TextUtil.hasText(query.getRecordNo()),
                 BizInpatientRecordLog::getRecordNo, query.getRecordNo());
         if (query.getAdmissionId() != null) {
             // 日志表不存 admission_id：按"这次住院全部文书的号"圈定范围（病历 + 护理一起给，

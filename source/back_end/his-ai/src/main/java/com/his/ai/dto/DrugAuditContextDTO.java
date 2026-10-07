@@ -1,5 +1,6 @@
 package com.his.ai.dto;
 
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
@@ -33,7 +34,7 @@ public record DrugAuditContextDTO(BizPrescription prescription,
      * 过敏史是否具备可比对的内容。全是「无」「未见」这类占位词时视为无过敏史。
      */
     public boolean hasUsableAllergyText() {
-        return allergyText != null && !allergyText.isBlank();
+        return TextUtil.hasText(allergyText);
     }
 
     /**

@@ -13,12 +13,12 @@ import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.LlmClient;
 import com.his.ai.support.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -206,14 +206,14 @@ public class AiExecutionServiceImpl implements AiExecutionService {
      */
     public String degradeReasonOf(String capabilityKey) {
         String disabled = aiConfigProvider.capabilityDisabledReason(capabilityKey);
-        if (StringUtils.hasText(disabled)) {
+        if (TextUtil.hasText(disabled)) {
             return disabled;
         }
         if (degradeGuard.isOpen(capabilityKey)) {
             return "该能力连续调用失败已触发熔断，正在冷却，本次直接降级";
         }
         String lastFailure = degradeGuard.lastFailureReason(capabilityKey);
-        if (StringUtils.hasText(lastFailure)) {
+        if (TextUtil.hasText(lastFailure)) {
             return "模型调用未成功：" + lastFailure;
         }
         return "模型调用未成功（超时、限流，或返回内容无法解析为约定 JSON）";

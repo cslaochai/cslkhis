@@ -10,10 +10,10 @@ import com.his.charge.enums.InsuranceReportTypeEnum;
 import com.his.charge.mapper.BizInsuranceReportMapper;
 import com.his.charge.service.InsuranceChannelService;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -61,7 +61,7 @@ public class InsuranceChannelServiceImpl extends ServiceImpl<BizInsuranceReportM
             BigDecimal totalAmount = root.path("fees").path("total").isNumber()
                     ? root.path("fees").path("total").decimalValue() : null;
 
-            if (!StringUtils.hasText(settlementNo)) {
+            if (!TextUtil.hasText(settlementNo)) {
                 return fail("2304/2305 报文缺少结算清单号 settlementNo", replyTime, message);
             }
             if ("2304".equals(message.getMsgType())
@@ -70,7 +70,7 @@ public class InsuranceChannelServiceImpl extends ServiceImpl<BizInsuranceReportM
                 // 统一校验会把撤销链路全部拒掉（G7 验证抓出）
                 return fail("总费用必须大于 0，实际: " + root.path("fees").path("total").asText(), replyTime, message);
             }
-            if ("2305".equals(message.getMsgType()) && !StringUtils.hasText(text(root, "origTradeNo"))) {
+            if ("2305".equals(message.getMsgType()) && !TextUtil.hasText(text(root, "origTradeNo"))) {
                 return fail("撤销报文缺少被撤销单据 origTradeNo", replyTime, message);
             }
 

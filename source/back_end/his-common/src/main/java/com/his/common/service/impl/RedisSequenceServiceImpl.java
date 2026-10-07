@@ -1,6 +1,6 @@
 package com.his.common.service.impl;
 
-import com.his.common.base.Constants;
+import com.his.common.base.BizCodeConstants;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
@@ -45,82 +45,82 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
 
     @Override
     public String generatePatientNo() {
-        return no(Constants.PATIENT_NO_PREFIX, Constants.PATIENT_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.PATIENT_NO_PREFIX, BizCodeConstants.PATIENT_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateRoleCode() {
-        return no(Constants.ROLE_NO_PREFIX, Constants.ROLE_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.ROLE_NO_PREFIX, BizCodeConstants.ROLE_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateAppointNo() {
-        return no(Constants.APPOINT_NO_PREFIX, Constants.APPOINT_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.APPOINT_NO_PREFIX, BizCodeConstants.APPOINT_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateEmployeeNo() {
-        return no(Constants.EMPLOYEE_NO_PREFIX, Constants.EMPLOYEE_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.EMPLOYEE_NO_PREFIX, BizCodeConstants.EMPLOYEE_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateEmergencyNo() {
-        return no(Constants.EMERGENCY_NO_PREFIX, Constants.EMERGENCY_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.EMERGENCY_NO_PREFIX, BizCodeConstants.EMERGENCY_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generatePurchaseNo() {
-        return no(Constants.PURCHASE_NO_PREFIX, Constants.PURCHASE_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.PURCHASE_NO_PREFIX, BizCodeConstants.PURCHASE_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateInboundNo() {
-        return no(Constants.INBOUND_NO_PREFIX, Constants.INBOUND_NO_KEY_PREFIX, 3);
+        return no(BizCodeConstants.INBOUND_NO_PREFIX, BizCodeConstants.INBOUND_NO_KEY_PREFIX, 3);
     }
 
     @Override
     public String generateAdverseEventNo() {
-        return no(Constants.ADVERSE_EVENT_NO_PREFIX, Constants.ADVERSE_EVENT_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.ADVERSE_EVENT_NO_PREFIX, BizCodeConstants.ADVERSE_EVENT_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateArchiveBorrowNo() {
-        return no(Constants.ARCHIVE_BORROW_NO_PREFIX, Constants.ARCHIVE_BORROW_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.ARCHIVE_BORROW_NO_PREFIX, BizCodeConstants.ARCHIVE_BORROW_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateCodeTaskNo() {
-        return no(Constants.CODE_TASK_NO_PREFIX, Constants.CODE_TASK_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.CODE_TASK_NO_PREFIX, BizCodeConstants.CODE_TASK_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateWardDispenseNo() {
-        return no(Constants.WARD_DISPENSE_NO_PREFIX, Constants.WARD_DISPENSE_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.WARD_DISPENSE_NO_PREFIX, BizCodeConstants.WARD_DISPENSE_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generatePivasNo() {
-        return no(Constants.PIVAS_NO_PREFIX, Constants.PIVAS_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.PIVAS_NO_PREFIX, BizCodeConstants.PIVAS_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateStocktakeNo() {
-        return no(Constants.STOCKTAKE_NO_PREFIX, Constants.STOCKTAKE_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.STOCKTAKE_NO_PREFIX, BizCodeConstants.STOCKTAKE_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateDrugTransferNo() {
-        return no(Constants.DRUG_TRANSFER_NO_PREFIX, Constants.DRUG_TRANSFER_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.DRUG_TRANSFER_NO_PREFIX, BizCodeConstants.DRUG_TRANSFER_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateSupplierReturnNo() {
-        return no(Constants.SUPPLIER_RETURN_NO_PREFIX, Constants.SUPPLIER_RETURN_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.SUPPLIER_RETURN_NO_PREFIX, BizCodeConstants.SUPPLIER_RETURN_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateTcmDecoctNo() {
-        return no(Constants.TCM_DECOCT_NO_PREFIX, Constants.TCM_DECOCT_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.TCM_DECOCT_NO_PREFIX, BizCodeConstants.TCM_DECOCT_NO_KEY_PREFIX, 4);
     }
 
     /**
@@ -129,216 +129,216 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
      */
     @Override
     public String generateRecordQcFlowNo() {
-        return no(Constants.RECORD_QC_FLOW_NO_PREFIX, Constants.RECORD_QC_FLOW_NO_PREFIX, 4);
+        return no(BizCodeConstants.RECORD_QC_FLOW_NO_PREFIX, BizCodeConstants.RECORD_QC_FLOW_NO_PREFIX, 4);
     }
 
     @Override
     public String generateExamAppointNo() {
-        return no(Constants.EXAM_APPOINT_NO_PREFIX, Constants.EXAM_APPOINT_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.EXAM_APPOINT_NO_PREFIX, BizCodeConstants.EXAM_APPOINT_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateTreatmentApplyNo() {
-        return no(Constants.TREATMENT_APPLY_NO_PREFIX, Constants.TREATMENT_APPLY_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.TREATMENT_APPLY_NO_PREFIX, BizCodeConstants.TREATMENT_APPLY_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateDispensingNo() {
-        return no(Constants.DISPENSING_NO_PREFIX, Constants.DISPENSING_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.DISPENSING_NO_PREFIX, BizCodeConstants.DISPENSING_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateInfectiousReportNo() {
-        return no(Constants.INFECTIOUS_REPORT_NO_PREFIX, Constants.INFECTIOUS_REPORT_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.INFECTIOUS_REPORT_NO_PREFIX, BizCodeConstants.INFECTIOUS_REPORT_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateInfectionCaseNo() {
-        return no(Constants.INFECTION_CASE_NO_PREFIX, Constants.INFECTION_CASE_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.INFECTION_CASE_NO_PREFIX, BizCodeConstants.INFECTION_CASE_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateDeathCertNo() {
-        return no(Constants.DEATH_CERT_NO_PREFIX, Constants.DEATH_CERT_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.DEATH_CERT_NO_PREFIX, BizCodeConstants.DEATH_CERT_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateDeathRegisterNo() {
-        return no(Constants.DEATH_REGISTER_NO_PREFIX, Constants.DEATH_REGISTER_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.DEATH_REGISTER_NO_PREFIX, BizCodeConstants.DEATH_REGISTER_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateCriticalNoticeNo() {
-        return no(Constants.CRITICAL_NOTICE_NO_PREFIX, Constants.CRITICAL_NOTICE_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.CRITICAL_NOTICE_NO_PREFIX, BizCodeConstants.CRITICAL_NOTICE_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateInpatientLeaveNo() {
-        return no(Constants.LEAVE_RECORD_NO_PREFIX, Constants.LEAVE_RECORD_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.LEAVE_RECORD_NO_PREFIX, BizCodeConstants.LEAVE_RECORD_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generatePathwayNo() {
-        return no(Constants.PATHWAY_NO_PREFIX, Constants.PATHWAY_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.PATHWAY_NO_PREFIX, BizCodeConstants.PATHWAY_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateDialysisPatientNo() {
-        return no(Constants.DIALYSIS_PATIENT_NO_PREFIX, Constants.DIALYSIS_PATIENT_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.DIALYSIS_PATIENT_NO_PREFIX, BizCodeConstants.DIALYSIS_PATIENT_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateDialysisSessionNo() {
-        return no(Constants.DIALYSIS_SESSION_NO_PREFIX, Constants.DIALYSIS_SESSION_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.DIALYSIS_SESSION_NO_PREFIX, BizCodeConstants.DIALYSIS_SESSION_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateIcuStayNo() {
-        return no(Constants.ICU_STAY_NO_PREFIX, Constants.ICU_STAY_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.ICU_STAY_NO_PREFIX, BizCodeConstants.ICU_STAY_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateInfectionMonitorNo() {
-        return no(Constants.INFECTION_MONITOR_NO_PREFIX, Constants.INFECTION_MONITOR_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.INFECTION_MONITOR_NO_PREFIX, BizCodeConstants.INFECTION_MONITOR_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateFeeNo() {
-        return no(Constants.FEE_NO_PREFIX, Constants.FEE_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.FEE_NO_PREFIX, BizCodeConstants.FEE_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateBillNo() {
-        return no(Constants.BILL_NO_PREFIX, Constants.BILL_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.BILL_NO_PREFIX, BizCodeConstants.BILL_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generatePayTxnNo() {
-        return no(Constants.PAY_TXN_NO_PREFIX, Constants.PAY_TXN_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.PAY_TXN_NO_PREFIX, BizCodeConstants.PAY_TXN_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateRefundTxnNo() {
-        return no(Constants.REFUND_TXN_NO_PREFIX, Constants.REFUND_TXN_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.REFUND_TXN_NO_PREFIX, BizCodeConstants.REFUND_TXN_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateFundTxnNo() {
-        return no(Constants.FUND_TXN_NO_PREFIX, Constants.FUND_TXN_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.FUND_TXN_NO_PREFIX, BizCodeConstants.FUND_TXN_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateInvoiceNo() {
-        return no(Constants.INVOICE_NO_PREFIX, Constants.INVOICE_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.INVOICE_NO_PREFIX, BizCodeConstants.INVOICE_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateInsuranceSettlementNo() {
-        return no(Constants.ISB_NO_PREFIX, Constants.ISB_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.ISB_NO_PREFIX, BizCodeConstants.ISB_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateYbInspectNo() {
-        return no(Constants.YB_INSPECT_NO_PREFIX, Constants.YB_INSPECT_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.YB_INSPECT_NO_PREFIX, BizCodeConstants.YB_INSPECT_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateYbDeductNo() {
-        return no(Constants.YB_DEDUCT_NO_PREFIX, Constants.YB_DEDUCT_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.YB_DEDUCT_NO_PREFIX, BizCodeConstants.YB_DEDUCT_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateChronicRegNo() {
-        return no(Constants.CHRONIC_REG_NO_PREFIX, Constants.CHRONIC_REG_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.CHRONIC_REG_NO_PREFIX, BizCodeConstants.CHRONIC_REG_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateRuleCheckNo() {
-        return no(Constants.RULE_CHECK_NO_PREFIX, Constants.RULE_CHECK_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.RULE_CHECK_NO_PREFIX, BizCodeConstants.RULE_CHECK_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateRuleCheckAiNo() {
-        return no(Constants.RULE_CHECK_AI_NO_PREFIX, Constants.RULE_CHECK_AI_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.RULE_CHECK_AI_NO_PREFIX, BizCodeConstants.RULE_CHECK_AI_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateChronicRecordNo() {
-        return no(Constants.CHRONIC_RECORD_NO_PREFIX, Constants.CHRONIC_RECORD_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.CHRONIC_RECORD_NO_PREFIX, BizCodeConstants.CHRONIC_RECORD_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateRefundApplyNo() {
-        return no(Constants.REFUND_APPLY_NO_PREFIX, Constants.REFUND_APPLY_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.REFUND_APPLY_NO_PREFIX, BizCodeConstants.REFUND_APPLY_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateRxFlowNo() {
-        return no(Constants.RX_FLOW_NO_PREFIX, Constants.RX_FLOW_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.RX_FLOW_NO_PREFIX, BizCodeConstants.RX_FLOW_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generatePublicHealthReportNo() {
-        return no(Constants.PUBLIC_HEALTH_REPORT_NO_PREFIX, Constants.PUBLIC_HEALTH_REPORT_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.PUBLIC_HEALTH_REPORT_NO_PREFIX, BizCodeConstants.PUBLIC_HEALTH_REPORT_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generatePrescriptionNo() {
-        return no(Constants.PRESCRIPTION_NO_PREFIX, Constants.PRESCRIPTION_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.PRESCRIPTION_NO_PREFIX, BizCodeConstants.PRESCRIPTION_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateInspectionApplyNo() {
-        return no(Constants.INSPECTION_APPLY_NO_PREFIX, Constants.INSPECTION_APPLY_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.INSPECTION_APPLY_NO_PREFIX, BizCodeConstants.INSPECTION_APPLY_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateLaboratoryApplyNo() {
-        return no(Constants.LABORATORY_APPLY_NO_PREFIX, Constants.LABORATORY_APPLY_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.LABORATORY_APPLY_NO_PREFIX, BizCodeConstants.LABORATORY_APPLY_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateMedicalRecordNo() {
-        return no(Constants.MEDICAL_RECORD_NO_PREFIX, Constants.MEDICAL_RECORD_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.MEDICAL_RECORD_NO_PREFIX, BizCodeConstants.MEDICAL_RECORD_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateFollowupTaskNo() {
-        return no(Constants.FOLLOWUP_TASK_NO_PREFIX, Constants.FOLLOWUP_TASK_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.FOLLOWUP_TASK_NO_PREFIX, BizCodeConstants.FOLLOWUP_TASK_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateMedicalRecordArchiveNo() {
-        return no(Constants.MEDICAL_RECORD_ARCHIVE_NO_PREFIX, Constants.MEDICAL_RECORD_ARCHIVE_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.MEDICAL_RECORD_ARCHIVE_NO_PREFIX, BizCodeConstants.MEDICAL_RECORD_ARCHIVE_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateInspectionRecordNo() {
-        return no(Constants.INSPECTION_RECORD_NO_PREFIX, Constants.INSPECTION_RECORD_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.INSPECTION_RECORD_NO_PREFIX, BizCodeConstants.INSPECTION_RECORD_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateLaboratoryRecordNo() {
-        return no(Constants.LABORATORY_RECORD_NO_PREFIX, Constants.LABORATORY_RECORD_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.LABORATORY_RECORD_NO_PREFIX, BizCodeConstants.LABORATORY_RECORD_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateReportNo() {
-        return no(Constants.REPORT_NO_PREFIX, Constants.REPORT_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.REPORT_NO_PREFIX, BizCodeConstants.REPORT_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateEcgWaveNo() {
-        return no(Constants.ECG_WAVE_NO_PREFIX, Constants.ECG_WAVE_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.ECG_WAVE_NO_PREFIX, BizCodeConstants.ECG_WAVE_NO_KEY_PREFIX, 4);
     }
 
     @Override
     public String generateMessageNo() {
-        return no(Constants.MESSAGE_NO_PREFIX, Constants.MESSAGE_NO_KEY_PREFIX, 5);
+        return no(BizCodeConstants.MESSAGE_NO_PREFIX, BizCodeConstants.MESSAGE_NO_KEY_PREFIX, 5);
     }
 
     @Override
     public String generateStatReportNo() {
-        return no(Constants.STAT_REPORT_NO_PREFIX, Constants.STAT_REPORT_NO_KEY_PREFIX, 4);
+        return no(BizCodeConstants.STAT_REPORT_NO_PREFIX, BizCodeConstants.STAT_REPORT_NO_KEY_PREFIX, 4);
     }
 }

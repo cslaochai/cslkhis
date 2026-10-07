@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -20,7 +21,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -37,7 +37,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper, BizDischargeDrug> implements DischargeDrugService {
 
-    private static final String DICT_STATUS = "his_discharge_drug_status";
 
     private final BizDischargeDrugMapper bizDischargeDrugMapper;
     private final DictCacheService dictCacheService;
@@ -87,7 +86,7 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
         LambdaQueryWrapper<BizDischargeDrug> w = new LambdaQueryWrapper<BizDischargeDrug>()
                 .eq(q.getAdmissionId() != null, BizDischargeDrug::getAdmissionId, q.getAdmissionId())
                 .eq(q.getPatientId() != null, BizDischargeDrug::getPatientId, q.getPatientId())
-                .like(StringUtils.hasText(q.getDrugName()), BizDischargeDrug::getDrugName, TextUtil.trim(q.getDrugName()))
+                .like(TextUtil.hasText(q.getDrugName()), BizDischargeDrug::getDrugName, TextUtil.trim(q.getDrugName()))
                 .eq(q.getDispenseStatus() != null, BizDischargeDrug::getDispenseStatus, q.getDispenseStatus())
                 .orderByDesc(BizDischargeDrug::getId);
         IPage<BizDischargeDrug> page = bizDischargeDrugMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
@@ -136,7 +135,7 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
             d.setDispenseBy(empId);
             d.setDispenseName(who);
             d.setDispenseTime(now);
-            if (StringUtils.hasText(dto.getRemark())) {
+            if (TextUtil.hasText(dto.getRemark())) {
                 d.setRemark((d.getRemark() == null ? "" : d.getRemark() + "；") + "发药备注：" + dto.getRemark().trim());
             }
             d.setUpdateBy(who);
@@ -185,7 +184,7 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
     private DischargeDrugVO toVo(BizDischargeDrug d) {
         DischargeDrugVO vo = new DischargeDrugVO();
         org.springframework.beans.BeanUtils.copyProperties(d, vo);
-        vo.setDispenseStatusText(dictCacheService.getDicDataLabel(DICT_STATUS, d.getDispenseStatus()));
+        vo.setDispenseStatusText(dictCacheService.getDicDataLabel(DictType.DISCHARGE_DRUG_STATUS, d.getDispenseStatus()));
         return vo;
     }
 

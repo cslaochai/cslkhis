@@ -1,11 +1,11 @@
 package com.his.patient.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.patient.entity.BizPatient;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.Set;
@@ -40,7 +40,7 @@ public final class PatientProfileValidator {
         }
         requireName(p);
         requireGender(p);
-        if (!StringUtils.hasText(p.getIdCard())) {
+        if (!TextUtil.hasText(p.getIdCard())) {
             throw new BusinessException("身份证号不能为空");
         }
         String idCard = p.getIdCard().trim();
@@ -67,7 +67,7 @@ public final class PatientProfileValidator {
         }
         requireName(p);
         requireGender(p);
-        if (!StringUtils.hasText(p.getIdCard())) {
+        if (!TextUtil.hasText(p.getIdCard())) {
             throw new BusinessException("身份证号不能为空");
         }
         if (!isFormatLegalIdCard(p.getIdCard().trim())) {
@@ -88,13 +88,13 @@ public final class PatientProfileValidator {
         requireName(p);
         requireGender(p);
         checkPhoneIfPresent(p);
-        if (StringUtils.hasText(p.getIdCard()) && !isFormatLegalIdCard(p.getIdCard().trim())) {
+        if (TextUtil.hasText(p.getIdCard()) && !isFormatLegalIdCard(p.getIdCard().trim())) {
             throw new BusinessException("身份证号格式不正确：应为 18 位（前 17 位数字，末位为数字或 X）");
         }
     }
 
     private static void requireName(BizPatient p) {
-        if (!StringUtils.hasText(p.getPatientName())) {
+        if (!TextUtil.hasText(p.getPatientName())) {
             throw new BusinessException("患者姓名不能为空");
         }
     }
@@ -109,7 +109,7 @@ public final class PatientProfileValidator {
     }
 
     private static void checkPhoneIfPresent(BizPatient p) {
-        if (StringUtils.hasText(p.getPhone()) && !isLegalPhone(p.getPhone().trim())) {
+        if (TextUtil.hasText(p.getPhone()) && !isLegalPhone(p.getPhone().trim())) {
             throw new BusinessException("手机号格式不正确：应为 11 位手机号（1 开头）");
         }
     }

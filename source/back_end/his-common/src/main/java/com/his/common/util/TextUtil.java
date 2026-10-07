@@ -26,6 +26,20 @@ import org.springframework.util.StringUtils;
 public final class TextUtil {
 
     /**
+     * 判「有没有内容」：null 或全空白为 {@code false}。只管给布尔，不改写值 —— 要洗值用 {@link #trimToNull(String)}。
+     *
+     * <p>反向一律写 {@code !hasText(x)}，**不提供 {@code isBlank} 第二个谓词**：
+     * 收口前全库有 7 份私有副本（{@code isText} 3 份、{@code isBlank} 3 份、{@code notBlank} 1 份），
+     * 正向与取反两种形状各写各的，改判空口径时必须同时找齐两份，漏一份就是一个脏数据入口。
+     *
+     * <p>形参用 {@code CharSequence} 而非 {@code String}：判空与值的类型无关，而调用侧有的是
+     * {@code StringBuilder}/{@code Stream<CharSequence>}（收窄成 String 会让这些点编译不过）。
+     */
+    public static boolean hasText(CharSequence value) {
+        return StringUtils.hasText(value);
+    }
+
+    /**
      * 去首尾空白；null 进 null 出（不把 null 变成空串）。
      */
     public static String trim(String value) {

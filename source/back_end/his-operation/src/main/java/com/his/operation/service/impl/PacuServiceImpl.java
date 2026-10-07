@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.BizAnesthesiaPacu;
@@ -14,7 +15,9 @@ import com.his.operation.entity.BizAnesthesiaRecord;
 import com.his.operation.entity.BizOperationApply;
 import com.his.operation.enums.AnesthesiaChargeStatusEnum;
 import com.his.operation.enums.AnesthesiaRecordStatusEnum;
+import com.his.operation.enums.AwarenessLevelEnum;
 import com.his.operation.enums.OperationAnesthesiaMethodEnum;
+import com.his.operation.enums.PacuDispositionEnum;
 import com.his.operation.enums.PacuStatusEnum;
 import com.his.operation.mapper.BizAnesthesiaPacuMapper;
 import com.his.operation.mapper.BizAnesthesiaRecordMapper;
@@ -24,12 +27,10 @@ import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.support.OperationChargeBiller;
 import com.his.operation.vo.OperationChargeSummaryVO;
 import com.his.operation.vo.PacuRecordVO;
-import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -60,7 +61,6 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     private final BizAnesthesiaRecordMapper bizAnesthesiaRecordMapper;
     private final BizOperationApplyMapper bizOperationApplyMapper;
     private final OperationChargeBiller operationChargeBiller;
-    private final DictCacheService dictCacheService;
 
     @Override
     public IPage<PacuRecordVO> listPage(PacuQueryPageDTO query) {
@@ -139,7 +139,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
         entity.setStatus(PacuStatusEnum.IN.getCode());
         entity.setChargeStatus(AnesthesiaChargeStatusEnum.PENDING.getCode());
         entity.setComplicationFlag(0);
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
         bizAnesthesiaPacuMapper.insert(entity);
@@ -155,7 +155,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     public void score(PacuScoreDTO dto) {
         BizAnesthesiaPacu entity = mustInRoom(dto == null ? null : dto.getPacuId());
         // B-条件必填：标记发生并发症时才要求经过与处理，跨字段条件，DTO 注解无法表达，保留
-        if (Integer.valueOf(1).equals(dto.getComplicationFlag()) && !StringUtils.hasText(dto.getComplicationNote())) {
+        if (Integer.valueOf(1).equals(dto.getComplicationFlag()) && !TextUtil.hasText(dto.getComplicationNote())) {
             throw new BusinessException("已标记发生并发症，必须填写经过与处理");
         }
         Integer total;
@@ -196,7 +196,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
         boolean criteriaMet = entity.getAldreteTotal() >= AnesthesiaCalcs.ALDRETE_DISCHARGE_MIN;
         if (!criteriaMet) {
             // B-条件必填：Aldrete 未达出室标准时才要求写明出室原因，依赖运行时评分，DTO 注解无法表达，保留
-            if (!StringUtils.hasText(dto.getNote())) {
+            if (!TextUtil.hasText(dto.getNote())) {
                 throw new BusinessException("Aldrete 评分 " + entity.getAldreteTotal() + " 未达出室标准 "
                         + AnesthesiaCalcs.ALDRETE_DISCHARGE_MIN + " 分，出室必须写明原因");
             }
@@ -214,8 +214,8 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
         entity.setDisposition(dto.getDisposition());
         entity.setLeaveCriteriaMet(criteriaMet ? 1 : 0);
         entity.setStatus(PacuStatusEnum.OUT.getCode());
-        if (StringUtils.hasText(dto.getNote())) {
-            entity.setRemark(StringUtils.hasText(entity.getRemark())
+        if (TextUtil.hasText(dto.getNote())) {
+            entity.setRemark(TextUtil.hasText(entity.getRemark())
                     ? entity.getRemark() + "；出室说明：" + dto.getNote() : "出室说明：" + dto.getNote());
         } else if (dto.getRemark() != null) {
             entity.setRemark(dto.getRemark());
@@ -235,7 +235,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
         bizAnesthesiaPacuMapper.updateById(entity);
         log.info("出PACU pacuNo={} Aldrete={} 去向={} 计费=成功{}项/失败{}项 金额={}",
                 entity.getPacuNo(), entity.getAldreteTotal(),
-                dictCacheService.getDicDataLabel("biz_operation_pacuDispositionEnum", dto.getDisposition()),
+                PacuDispositionEnum.getText(dto.getDisposition()),
                 summary.getSuccessItems(), summary.getFailedItems(), summary.getAmount());
         return summary;
     }
@@ -309,7 +309,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
             return null;
         }
         String name = bizOperationApplyMapper.selectEmployeeName(empId);
-        return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
+        return TextUtil.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
     private String nextPacuNo() {
@@ -320,8 +320,8 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
 
     private void decorate(PacuRecordVO vo) {
         vo.setStatusText(PacuStatusEnum.getText(vo.getStatus()));
-        vo.setAwarenessText(dictCacheService.getDicDataLabel("biz_operation_awarenessLevelEnum", vo.getAwareness()));
-        vo.setDispositionText(dictCacheService.getDicDataLabel("biz_operation_pacuDispositionEnum", vo.getDisposition()));
+        vo.setAwarenessText(AwarenessLevelEnum.getText(vo.getAwareness()));
+        vo.setDispositionText(PacuDispositionEnum.getText(vo.getDisposition()));
         vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(vo.getChargeStatus()));
         vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
 

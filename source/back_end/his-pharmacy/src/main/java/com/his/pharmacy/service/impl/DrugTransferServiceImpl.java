@@ -33,7 +33,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -80,8 +79,8 @@ public class DrugTransferServiceImpl extends ServiceImpl<BizDrugTransferMapper, 
     }
 
     private static String batchLabel(BizDrugStockVO batch) {
-        String label = StringUtils.hasText(batch.getDrugName()) ? batch.getDrugName() : "药品#" + batch.getDrugId();
-        return StringUtils.hasText(batch.getBatchNo()) ? label + "（批号 " + batch.getBatchNo() + "）" : label;
+        String label = TextUtil.hasText(batch.getDrugName()) ? batch.getDrugName() : "药品#" + batch.getDrugId();
+        return TextUtil.hasText(batch.getBatchNo()) ? label + "（批号 " + batch.getBatchNo() + "）" : label;
     }
 
     @Override

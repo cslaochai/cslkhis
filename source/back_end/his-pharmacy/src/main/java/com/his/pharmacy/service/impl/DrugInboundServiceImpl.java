@@ -5,11 +5,13 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.*;
 import com.his.pharmacy.entity.BizDrugInbound;
 import com.his.pharmacy.entity.BizDrugInboundDetail;
 import com.his.pharmacy.entity.BizDrugStock;
+import com.his.pharmacy.enums.DrugInboundStatusEnum;
 import com.his.pharmacy.mapper.BizDrugInboundDetailMapper;
 import com.his.pharmacy.mapper.BizDrugInboundMapper;
 import com.his.pharmacy.service.DrugInboundService;
@@ -17,12 +19,10 @@ import com.his.pharmacy.service.PharmacyService;
 import com.his.pharmacy.vo.DrugBriefVO;
 import com.his.pharmacy.vo.DrugInboundDetailVO;
 import com.his.pharmacy.vo.DrugInboundVO;
-import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -37,7 +37,6 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, BizDrugInbound> implements DrugInboundService {
-    private final DictCacheService dictCacheService;
 
     private final BizDrugInboundMapper bizDrugInboundMapper;
     private final BizDrugInboundDetailMapper bizDrugInboundDetailMapper;
@@ -45,7 +44,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
     private final RedisSequenceService redisSequenceService;
 
     private static String emptyToNull(String s) {
-        return StringUtils.hasText(s) ? s.trim() : null;
+        return TextUtil.hasText(s) ? s.trim() : null;
     }
 
     @Override
@@ -98,7 +97,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
                 throw new BusinessException("同一张入库单里，同一药品同一批号只能出现一次（药品#" + item.getDrugId() + "，批号 " + batchNo + "）");
             }
             DrugBriefVO drug = bizDrugInboundDetailMapper.selectDrugBrief(item.getDrugId());
-            if (drug == null || !StringUtils.hasText(drug.getDrugName())) {
+            if (drug == null || !TextUtil.hasText(drug.getDrugName())) {
                 throw new BusinessException("药品不存在或已停用，请从药品字典重新选择（药品#" + item.getDrugId() + "）");
             }
             if (item.getProductionDate() != null && item.getExpiryDate() != null
@@ -111,7 +110,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             d.setDrugCode(drug.getDrugCode());
             d.setDrugName(drug.getDrugName());
             d.setSpecification(drug.getSpecification());
-            d.setUnit(StringUtils.hasText(drug.getUnit()) ? drug.getUnit() : "—");
+            d.setUnit(TextUtil.hasText(drug.getUnit()) ? drug.getUnit() : "—");
             d.setBatchNo(batchNo);
             d.setProductionDate(item.getProductionDate());
             d.setExpiryDate(item.getExpiryDate());
@@ -161,7 +160,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("入库单不存在或已删除");
         }
         if (in.getInboundStatus() == null || in.getInboundStatus() != 1) {
-            throw new BusinessException("只有待审核的入库单可以审核（当前：" + dictCacheService.getDicDataLabel("biz_pharmacy_drugInboundStatusEnum", in.getInboundStatus()) + "）");
+            throw new BusinessException("只有待审核的入库单可以审核（当前：" + DrugInboundStatusEnum.getText(in.getInboundStatus()) + "）");
         }
         if (bizDrugInboundDetailMapper.countActiveByInbound(in.getId()) == 0) {
             throw new BusinessException("入库单没有有效明细，不能审核");
@@ -185,7 +184,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("入库单不存在或已删除");
         }
         if (in.getInboundStatus() == null || in.getInboundStatus() != 2) {
-            throw new BusinessException("只有已审核的入库单可以入库（当前：" + dictCacheService.getDicDataLabel("biz_pharmacy_drugInboundStatusEnum", in.getInboundStatus()) + "）");
+            throw new BusinessException("只有已审核的入库单可以入库（当前：" + DrugInboundStatusEnum.getText(in.getInboundStatus()) + "）");
         }
 
         List<DrugInboundDetailVO> details = bizDrugInboundDetailMapper.selectByInboundId(in.getId());
@@ -229,7 +228,7 @@ public class DrugInboundServiceImpl extends ServiceImpl<BizDrugInboundMapper, Bi
             throw new BusinessException("入库单不存在或已删除");
         }
         if (in.getInboundStatus() == null || (in.getInboundStatus() != 1 && in.getInboundStatus() != 2)) {
-            throw new BusinessException("只有待审核或已审核的入库单可以取消（当前：" + dictCacheService.getDicDataLabel("biz_pharmacy_drugInboundStatusEnum", in.getInboundStatus())
+            throw new BusinessException("只有待审核或已审核的入库单可以取消（当前：" + DrugInboundStatusEnum.getText(in.getInboundStatus())
                     + "）；已入库的入库单要冲销请走退货入库");
         }
         String operator = UserUtils.getCurrentUser().getRealName();

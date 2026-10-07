@@ -22,7 +22,6 @@ import com.his.patient.service.NursingQcService;
 import com.his.patient.vo.NurseQcVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeProvider;
-import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -79,7 +78,6 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
 
     private final BizNursingQcIndicatorMapper bizNursingQcIndicatorMapper;
 
-    private final DictCacheService dictCacheService;
 
     // 参照数据
 

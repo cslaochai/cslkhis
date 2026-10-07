@@ -28,7 +28,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -82,8 +81,8 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
         wrapper.eq(query.getChannel() != null, BizPayChannelBill::getChannel, query.getChannel())
                 .eq(query.getMatchStatus() != null, BizPayChannelBill::getMatchStatus, query.getMatchStatus())
                 .eq(query.getBillDate() != null, BizPayChannelBill::getBillDate, query.getBillDate())
-                .eq(StringUtils.hasText(query.getLocalTxnNo()), BizPayChannelBill::getLocalTxnNo, query.getLocalTxnNo())
-                .like(StringUtils.hasText(query.getChannelTradeNo()), BizPayChannelBill::getChannelTradeNo, query.getChannelTradeNo())
+                .eq(TextUtil.hasText(query.getLocalTxnNo()), BizPayChannelBill::getLocalTxnNo, query.getLocalTxnNo())
+                .like(TextUtil.hasText(query.getChannelTradeNo()), BizPayChannelBill::getChannelTradeNo, query.getChannelTradeNo())
                 .orderByDesc(BizPayChannelBill::getBillDate)
                 .orderByDesc(BizPayChannelBill::getId);
         Page<BizPayChannelBill> page = this.page(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
@@ -149,7 +148,7 @@ public class PayChannelBillServiceImpl extends ServiceImpl<BizPayChannelBillMapp
         bill.setImportWay(2);
         bill.setMatchStatus(0);
         bill.setImportBatchNo("MANUAL");
-        bill.setRemark(StringUtils.hasText(dto.getRemark()) ? TextUtil.cut(dto.getRemark(), 490) : null);
+        bill.setRemark(TextUtil.hasText(dto.getRemark()) ? TextUtil.cut(dto.getRemark(), 490) : null);
         try {
             return this.save(bill);
         } catch (DuplicateKeyException e) {

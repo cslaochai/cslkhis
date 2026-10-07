@@ -2,7 +2,7 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.base.Constants;
+import com.his.common.base.BizCodeConstants;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
@@ -26,7 +26,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -99,7 +98,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
         boolean isNew = dto.getId() == null;
         if (isNew) {
             entity = new BizTeleConsult();
-            entity.setConsultNo(nextNo(Constants.TELE_CONSULT_NO_PREFIX, "TELE_CONSULT"));
+            entity.setConsultNo(nextNo(BizCodeConstants.TELE_CONSULT_NO_PREFIX, "TELE_CONSULT"));
             entity.setStatus(TeleConsultStatusEnum.PENDING.getCode());
             entity.setIsUrgent(dto.getIsUrgent() == null ? 0 : dto.getIsUrgent());
         } else {
@@ -150,16 +149,16 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
         entity.setDurationMin(dto.getDurationMin());
         entity.setPlatform(TextUtil.cut(dto.getPlatform(), 64));
         entity.setMeetNo(TextUtil.cut(dto.getMeetNo(), 64));
-        if (StringUtils.hasText(dto.getExpertHospital())) {
+        if (TextUtil.hasText(dto.getExpertHospital())) {
             entity.setExpertHospital(TextUtil.cut(dto.getExpertHospital(), 128));
         }
-        if (StringUtils.hasText(dto.getExpertDept())) {
+        if (TextUtil.hasText(dto.getExpertDept())) {
             entity.setExpertDept(TextUtil.cut(dto.getExpertDept(), 128));
         }
-        if (StringUtils.hasText(dto.getExpertName())) {
+        if (TextUtil.hasText(dto.getExpertName())) {
             entity.setExpertName(TextUtil.cut(dto.getExpertName(), 64));
         }
-        if (StringUtils.hasText(dto.getExpertTitle())) {
+        if (TextUtil.hasText(dto.getExpertTitle())) {
             entity.setExpertTitle(TextUtil.cut(dto.getExpertTitle(), 32));
         }
         entity.setArrangeBy(operatorUser.getRealName());
@@ -237,7 +236,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
         }
         BizPatient patient = requirePatient(dto.getPatientId());
         BizOnlineConsult entity = new BizOnlineConsult();
-        entity.setConsultNo(nextNo(Constants.ONLINE_CONSULT_NO_PREFIX, "ONLINE_CONSULT"));
+        entity.setConsultNo(nextNo(BizCodeConstants.ONLINE_CONSULT_NO_PREFIX, "ONLINE_CONSULT"));
         entity.setPatientId(patient.getId());
         entity.setPatientNo(patient.getPatientNo());
         entity.setPatientName(patient.getPatientName());
@@ -273,7 +272,7 @@ public class TeleConsultServiceImpl extends ServiceImpl<BizTeleConsultMapper, Bi
         if (entity.getDoctorId() == null) {
             entity.setDoctorId(operatorUser.getEmployeeId());
         }
-        if (!StringUtils.hasText(entity.getDoctorName())) {
+        if (!TextUtil.hasText(entity.getDoctorName())) {
             entity.setDoctorName(operatorUser.getRealName());
         }
         bizOnlineConsultMapper.updateById(entity);

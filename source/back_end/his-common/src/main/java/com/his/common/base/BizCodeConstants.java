@@ -1,73 +1,153 @@
 package com.his.common.base;
 
-public interface Constants {
+/**
+ * <h2>两类"前缀"是一对，但落在完全不同的地方</h2>
+ *
+ * <ul>
+ *   <li>{@code XXX_NO_KEY_PREFIX} —— <b>Redis 计数器的 key 名</b>，只进 {@code next(module)}，
+ *       真实 key 是 {@code {KEY_PREFIX}:{yyyyMMdd}}（如 {@code EMPLOYEE:20261007}）。
+ *       它<em>不会</em>出现在任何单号里、也不落库。</li>
+ *   <li>{@code XXX_NO_PREFIX} —— <b>单号正文的头几个字母</b>，落进 {@code xxx_no} 列给人看
+ *       （如 {@code PATIENT_NO_PREFIX = "P"} → {@code P2026100700001}）。</li>
+ * </ul>
+ */
+public interface BizCodeConstants {
 
     /**
-     * <h2>两类"前缀"是一对，但落在完全不同的地方</h2>
-     *
-     * <ul>
-     *   <li>{@code XXX_NO_KEY_PREFIX} —— <b>Redis 计数器的 key 名</b>，只进 {@code next(module)}，
-     *       真实 key 是 {@code {KEY_PREFIX}:{yyyyMMdd}}（如 {@code EMPLOYEE:20261007}）。
-     *       它<em>不会</em>出现在任何单号里、也不落库。</li>
-     *   <li>{@code XXX_NO_PREFIX} —— <b>单号正文的头几个字母</b>，落进 {@code xxx_no} 列给人看
-     *       （如 {@code PATIENT_NO_PREFIX = "P"} → {@code P2026100700001}）。</li>
-     * </ul>
-     *
-     * 一对两个是因为「给人看的短前缀」和「机器用的长名字」诉求相反：单号要短要好认（P/AE/ICASE），
-     * key 要能一眼看出是哪个业务的号段（PATIENT/ADVERSE_EVENT/INFECTION_CASE）。
-     *
-     * <p><b>⚠ key 名的值是运行事实，不能改：</b>换 key 名 = 当天计数器从 1 重启 = 与当天已发出的号
-     * 撞 {@code uk_xxx_no} 唯一索引，而且零报错（现象是「保存失败/系统内部错误」，真因查不出来）。
-     * 要新号段就新增常量，别动老常量的值。
+     * 患者档案号
      */
     String PATIENT_NO_KEY_PREFIX = "PATIENT";
+    /**
+     * 门诊挂号单号
+     */
     String APPOINT_NO_KEY_PREFIX = "APPOINT";
+    /**
+     * 员工档案号
+     */
     String EMPLOYEE_NO_KEY_PREFIX = "EMPLOYEE";
+    /**
+     * 药品编码。<b>本对常量已无引用</b>：药品编码是药品主档里的业务输入（按本位码/厂家编码录入），
+     * 从来不走 Redis 发号器。
+     */
     String DRUG_NO_KEY_PREFIX = "DRUG";
+    /**
+     * 候诊排队号。<b>本对常量已无引用</b>：排队号实发的是「诊室呼叫代号 + 当日该诊室序号」
+     * （按诊室分号段，见叫号 service），既不用 Q 前缀也不走这个 key。
+     */
     String QUEUE_NO_KEY_PREFIX = "QUEUE";
+    /**
+     * 角色编码
+     */
     String ROLE_NO_KEY_PREFIX = "ROLE";
+    /**
+     * 急诊单号
+     */
     String EMERGENCY_NO_KEY_PREFIX = "EMERGENCY";
+    /**
+     * 药品采购订单号
+     */
     String PURCHASE_NO_KEY_PREFIX = "PURCHASE";
+    /**
+     * 药品入库单号
+     */
     String INBOUND_NO_KEY_PREFIX = "INBOUND";
+    /**
+     * 药品不良反应上报单号
+     */
     String ADVERSE_EVENT_NO_KEY_PREFIX = "ADVERSE_EVENT";
+    /**
+     * 病案借阅单号
+     */
     String ARCHIVE_BORROW_NO_KEY_PREFIX = "ARCHIVE_BORROW";
+    /**
+     * 病案编码任务单号（ICD 编码流水线：待编码 → 已提交 → 已完成/已退修）
+     */
     String CODE_TASK_NO_KEY_PREFIX = "CODE_TASK";
+    /**
+     * 病区摆药单号
+     */
     String WARD_DISPENSE_NO_KEY_PREFIX = "WARD_DISPENSE";
+    /**
+     * 静配中心冲配批次号（PIVAS = Pharmacy Intravenous Admixture Services）
+     */
     String PIVAS_NO_KEY_PREFIX = "PIVAS";
+    /**
+     * 药房盘点单号
+     */
     String STOCKTAKE_NO_KEY_PREFIX = "STOCKTAKE";
     /**
-     * 药品调拨单 / 供应商退货单（sql/154）
+     * 药品调拨单
      */
     String DRUG_TRANSFER_NO_KEY_PREFIX = "DRUG_TRANSFER";
+
+    /**
+     * 供应商退货单
+     */
     String SUPPLIER_RETURN_NO_KEY_PREFIX = "SUPPLIER_RETURN";
     /**
-     * 中药代煎单号（sql/139）
+     * 中药代煎单号
      */
     String TCM_DECOCT_NO_KEY_PREFIX = "TCM_DECOCT";
     /**
-     * 三级质控流转单：本常量声明的 key 是 RECORD_QC_FLOW，但历史上这张单是按 "QCF"（前缀常量）取号的。
-     * 值不能就地纠正 —— 换 key = 当天序号归 1 = 与当天已发的 QCF 号撞唯一索引，见 generateRecordQcFlowNo
+     * 三级质控流转单
      */
     String RECORD_QC_FLOW_NO_KEY_PREFIX = "RECORD_QC_FLOW";
+    /**
+     * 检查预约单号（医技时段占用）
+     */
     String EXAM_APPOINT_NO_KEY_PREFIX = "EXAM_APPOINT";
+    /**
+     * 治疗申请单号
+     */
     String TREATMENT_APPLY_NO_KEY_PREFIX = "TREATMENT_APPLY";
+    /**
+     * 待发药记录号（药房处方流转位）
+     */
     String DISPENSING_NO_KEY_PREFIX = "DISPENSING";
+    /**
+     * 临床路径入径单号
+     */
     String PATHWAY_NO_KEY_PREFIX = "PATHWAY";
+    /**
+     * 透析患者档案号
+     */
     String DIALYSIS_PATIENT_NO_KEY_PREFIX = "DIALYSIS_PATIENT";
+    /**
+     * 透析治疗单号
+     */
     String DIALYSIS_SESSION_NO_KEY_PREFIX = "DIALYSIS_SESSION";
+    /**
+     * ICU 入科单号
+     */
     String ICU_STAY_NO_KEY_PREFIX = "ICU_STAY";
 
     /**
-     * 收费四层（sql/125）：记账行 / 结算账单 / 支付流水（收、退各自独立序号） / 账户流水
+     * 记账行号（临床单据产生的应收流水）
      */
     String FEE_NO_KEY_PREFIX = "FEE";
+    /**
+     * 结算账单号（一批应收合并出账的合计凭证）
+     */
     String BILL_NO_KEY_PREFIX = "BILL";
+    /**
+     * 收款流水号
+     */
     String PAY_TXN_NO_KEY_PREFIX = "PAY_TXN";
+    /**
+     * 退款流水号（与收款分号段，退这笔钱不复用收款序号）
+     */
     String REFUND_TXN_NO_KEY_PREFIX = "REFUND_TXN";
+    /**
+     * 账户（余额）变动流水号
+     */
     String FUND_TXN_NO_KEY_PREFIX = "FUND_TXN";
+    /**
+     * 发票号（L4 票据，票号是财政序列）
+     */
     String INVOICE_NO_KEY_PREFIX = "INVOICE";
     /**
-     * 医保结算清单号（sql/136 起由 L2 出账生成，不再用时间戳+随机数：同秒两张单会撞号，报盘后医保侧无从追溯）
+     * 医保结算清单号（sql/136 起由 L2 出账生成，不再用时间戳+随机数：同秒两张单会撞号，报盘后医保侧无从追溯）。
+     * key 名是全称 INSURANCE_SETTLEMENT，与常量名 ISB_* 不同名，属历史 key，值不能改。
      */
     String ISB_NO_KEY_PREFIX = "INSURANCE_SETTLEMENT";
     /**
@@ -83,11 +163,18 @@ public interface Constants {
      */
     String CHRONIC_REG_NO_KEY_PREFIX = "CHRONIC_REG";
 
+    /**
+     * 传染病报告卡编号（网络直报送出的卡号）
+     */
     String INFECTIOUS_REPORT_NO_KEY_PREFIX = "INFECTIOUS_REPORT";
-
+    /**
+     * 院感病例编号
+     */
     String INFECTION_CASE_NO_KEY_PREFIX = "INFECTION_CASE";
+    /**
+     * 院感目标性监测编号
+     */
     String INFECTION_MONITOR_NO_KEY_PREFIX = "INFECTION_MONITOR";
-
     /**
      * 死亡证明编号（sql/157）
      */
@@ -101,49 +188,154 @@ public interface Constants {
      */
     String CRITICAL_NOTICE_NO_KEY_PREFIX = "CRITICAL_NOTICE";
     /**
-     * 住院请假单号（sql/162）
+     * 住院请假单号（sql/162）。key 名是 INPATIENT_LEAVE，与常量名 LEAVE_RECORD_* 不同名，属历史 key，值不能改。
      */
     String LEAVE_RECORD_NO_KEY_PREFIX = "INPATIENT_LEAVE";
 
     /**
-     * 医生工作站/医技/消息侧单号（原先在各自 service 里用进程内 AtomicInteger + 秒级时间戳发号，
-     * 重启归零、多实例并存必撞各表的 xxx_no 唯一索引）
+     * 临床规则校验流水号（用药禁忌/合理性校验留痕）
      */
     String RULE_CHECK_NO_KEY_PREFIX = "RULE_CHECK";
+    /**
+     * 慢病建档记录号
+     */
     String CHRONIC_RECORD_NO_KEY_PREFIX = "CHRONIC_RECORD";
+    /**
+     * 退费申请单号（审批单，不是资金流水）
+     */
     String REFUND_APPLY_NO_KEY_PREFIX = "REFUND_APPLY";
+    /**
+     * 处方流转单号（开方到配药/发药之间的流转记录）
+     */
     String RX_FLOW_NO_KEY_PREFIX = "RX_FLOW";
+    /**
+     * 公共卫生报告单号
+     */
     String PUBLIC_HEALTH_REPORT_NO_KEY_PREFIX = "PUBLIC_HEALTH_REPORT";
+    /**
+     * 处方号
+     */
     String PRESCRIPTION_NO_KEY_PREFIX = "PRESCRIPTION";
+    /**
+     * 检查申请单号（影像/心电等医技申请）
+     */
     String INSPECTION_APPLY_NO_KEY_PREFIX = "INSPECTION_APPLY";
+    /**
+     * 检验申请单号（标本申请）
+     */
     String LABORATORY_APPLY_NO_KEY_PREFIX = "LABORATORY_APPLY";
+    /**
+     * 病历号（住院病历标识）
+     */
     String MEDICAL_RECORD_NO_KEY_PREFIX = "MEDICAL_RECORD";
+    /**
+     * 随访任务号
+     */
     String FOLLOWUP_TASK_NO_KEY_PREFIX = "FOLLOWUP_TASK";
+    /**
+     * 病案归档编号
+     */
     String MEDICAL_RECORD_ARCHIVE_NO_KEY_PREFIX = "MEDICAL_RECORD_ARCHIVE";
+    /**
+     * 检查记录号（一次检查执行）
+     */
     String INSPECTION_RECORD_NO_KEY_PREFIX = "INSPECTION_RECORD";
+    /**
+     * 检验记录号（一次标本检验）
+     */
     String LABORATORY_RECORD_NO_KEY_PREFIX = "LABORATORY_RECORD";
+    /**
+     * 医技报告号
+     */
     String REPORT_NO_KEY_PREFIX = "REPORT";
+    /**
+     * 心电波形记录号（一次采样的波形数据）
+     */
     String ECG_WAVE_NO_KEY_PREFIX = "ECG_WAVE";
+    /**
+     * 站内消息号
+     */
     String MESSAGE_NO_KEY_PREFIX = "MESSAGE";
+    /**
+     * 统计报表号
+     */
     String STAT_REPORT_NO_KEY_PREFIX = "STAT_REPORT";
+    /**
+     * AI 药审的校验流水（与人工校验分号段，见 RULE_CHECK_AI_NO_PREFIX）
+     */
     String RULE_CHECK_AI_NO_KEY_PREFIX = "RULE_CHECK_AI";
 
     /**
-     * 单号正文前缀（落库给人看的那几个字母），与上面每组 KEY_PREFIX 一一配对，分工见类注释
+     * ST问卷卷号
      */
-    String PATIENT_NO_PREFIX = "P";
-    String APPOINT_NO_PREFIX = "A";
+    String SURVEY_TEMPLATE_NO_KEY_PREFIX = "SURVEY_TEMPLATE";
+
+    /**
+     * SD发放单号
+     */
+    String SURVEY_DISPATCH_NO_KEY_PREFIX = "SURVEY_DISPATCH";
+
+    /**
+     * SV答卷号
+     */
+    String SURVEY_ANSWER_NO_KEY_PREFIX = "SURVEY_ANSWER";
+
+    /**
+     * --------------------------------------------------------------------------------------编号前缀---------------------------------------------------------------------------------------------
+     * 患者档案号前缀
+     */
+    String PATIENT_NO_PREFIX = "PA";
+    /**
+     * 挂号单号前缀
+     */
+    String APPOINT_NO_PREFIX = "AP";
+    /**
+     * 药品编码前缀
+     */
     String DRUG_NO_PREFIX = "D";
+    /**
+     * 排队号前缀
+     */
     String QUEUE_NO_PREFIX = "Q";
+    /**
+     * 角色编码前缀
+     */
     String ROLE_NO_PREFIX = "R";
+    /**
+     * 员工档案号前缀
+     */
     String EMPLOYEE_NO_PREFIX = "E";
+    /**
+     * 急诊单号前缀（JZ = 急诊）
+     */
     String EMERGENCY_NO_PREFIX = "JZ";
+    /**
+     * 采购订单号前缀（CG = 采购）
+     */
     String PURCHASE_NO_PREFIX = "CG";
+    /**
+     * 入库单号前缀
+     */
     String INBOUND_NO_PREFIX = "IN";
+    /**
+     * 不良反应单号前缀（AE = Adverse Event）
+     */
     String ADVERSE_EVENT_NO_PREFIX = "AE";
+    /**
+     * 病案借阅单号前缀（BR = Borrow）
+     */
     String ARCHIVE_BORROW_NO_PREFIX = "BR";
+    /**
+     * 病案编码任务单号前缀（CT = Code Task）
+     */
     String CODE_TASK_NO_PREFIX = "CT";
+    /**
+     * 病区摆药单号前缀（WD）
+     */
     String WARD_DISPENSE_NO_PREFIX = "WD";
+    /**
+     * 静配批次号前缀（PV = PIVAS）
+     */
     String PIVAS_NO_PREFIX = "PV";
     /**
      * 药房盘点单号前缀（PD = 盘点）
@@ -161,105 +353,124 @@ public interface Constants {
      * 中药代煎单号前缀（TCMD = 中药代煎）
      */
     String TCM_DECOCT_NO_PREFIX = "TCMD";
+    /**
+     * 三级质控流转单号前缀（QCF）
+     */
     String RECORD_QC_FLOW_NO_PREFIX = "QCF";
 
     /**
-     * 死亡证明编号前缀（DC = Death Certificate，sql/157；区域死因监测系统另发编号，落 report_no）
+     * 死亡证明编号前缀
      */
     String DEATH_CERT_NO_PREFIX = "DC";
     /**
-     * 死亡登记号前缀（RG = ReGiSter，sql/157）
+     * 死亡登记号前缀
      */
     String DEATH_REGISTER_NO_PREFIX = "RG";
     /**
-     * 病危重通知单号前缀（BT = 病重/病危通知「危」字拼音首音节，避让死亡证明 DC，sql/161）
+     * 病危重通知单号前缀
      */
     String CRITICAL_NOTICE_NO_PREFIX = "BT";
     /**
-     * 住院请假单号前缀（LV = Leave，避让 BT病危/DC死亡证明/RG死亡登记，sql/162）
+     * 住院请假单号前缀
      */
     String LEAVE_RECORD_NO_PREFIX = "LV";
+    /**
+     * SV答卷号前缀
+     */
+    String SURVEY_TEMPLATE_NO_PREFIX = "ST";
 
     /**
-     * 满意度三件套单号（sql/164）：ST问卷卷号 / SD发放单号 / SV答卷号
+     * SD发放单号前缀
      */
-    String SURVEY_TEMPLATE_NO_KEY_PREFIX = "SURVEY_TEMPLATE";
-    String SURVEY_DISPATCH_NO_KEY_PREFIX = "SURVEY_DISPATCH";
-    String SURVEY_ANSWER_NO_KEY_PREFIX = "SURVEY_ANSWER";
-    String SURVEY_TEMPLATE_NO_PREFIX = "ST";
     String SURVEY_DISPATCH_NO_PREFIX = "SD";
+    /**
+     * SV答卷号前缀
+     */
     String SURVEY_ANSWER_NO_PREFIX = "SV";
 
     /**
-     * 收费四层单号前缀。收/退用不同前缀（PT/RT）是刻意的：
-     * 流水号在渠道对账里会被人和渠道账单逐行比对，看号就知道这笔钱的方向，
-     * 少一次"还得回去查 direction 字段"。
+     * 记账行号前缀：FR + yyyyMMdd + 5 位
      */
     String FEE_NO_PREFIX = "FR";
+    /**
+     * 账单号前缀：SB + yyyyMMdd + 5 位
+     */
     String BILL_NO_PREFIX = "SB";
+    /**
+     * 收款流水号前缀
+     */
     String PAY_TXN_NO_PREFIX = "PT";
+    /**
+     * 退款流水号前缀
+     */
     String REFUND_TXN_NO_PREFIX = "RT";
+    /**
+     * 账户余额流水号前缀
+     */
     String FUND_TXN_NO_PREFIX = "AT";
     /**
-     * 发票号前缀：IV + yyyyMMdd + 5 位。票号是财政序列，一天一号，绝不带秒级随机数
+     * 发票号前缀
      */
     String INVOICE_NO_PREFIX = "IV";
     /**
-     * 医保结算清单号前缀：IS + yyyyMMdd + 5 位（报盘的唯一业务键，医保侧按它追这笔结算）
+     * 医保结算清单号前缀
      */
     String ISB_NO_PREFIX = "IS";
     /**
-     * 飞检批次号前缀：FI + yyyyMMdd + 4 位（Flying Inspection）
+     * 飞检批次号前缀
      */
     String YB_INSPECT_NO_PREFIX = "FI";
     /**
-     * 扣款通知单号前缀：DK + yyyyMMdd + 4 位（Deduct）
+     * 扣款通知单号前缀
      */
     String YB_DEDUCT_NO_PREFIX = "DK";
     /**
-     * 慢特病备案单号前缀：MT + yyyyMMdd + 4 位（MenTe 门特）
+     * 慢特病备案单号前缀
      */
     String CHRONIC_REG_NO_PREFIX = "MT";
 
     /**
-     * 检查预约单号前缀：YY + yyyyMMdd + 4 位（与挂号预约的 A 前缀区分开）
+     * 检查预约单号前缀
      */
     String EXAM_APPOINT_NO_PREFIX = "YY";
 
     /**
-     * 治疗申请单号前缀：与 sql/11 铺底单号（TAPPLY20240101001）同族，新旧单号一眼是一类单据
+     * 治疗申请单号前缀
      */
     String TREATMENT_APPLY_NO_PREFIX = "TAPPLY";
     /**
-     * 待发药记录号前缀：DSP + yyyyMMdd + 4 位（DP 已被透析号占用，两个 DP 在单号检索里会互相命中）
+     * 待发药记录号前缀
      */
     String DISPENSING_NO_PREFIX = "DSP";
     /**
-     * 临床路径入径单号前缀：LP + yyyyMMdd + 4 位
+     * 临床路径入径单号前缀
      */
     String PATHWAY_NO_PREFIX = "LP";
     /**
-     * 透析号前缀：DP + yyyyMMdd + 4 位（透析室患者档案号，与住院号/门诊号无关）
+     * 透析号前缀
      */
     String DIALYSIS_PATIENT_NO_PREFIX = "DP";
     /**
-     * 透析单号前缀：HD + yyyyMMdd + 4 位（一次治疗单元一单）
+     * 透析单号前缀
      */
     String DIALYSIS_SESSION_NO_PREFIX = "HD";
     /**
-     * ICU 入科单号前缀：ICU + yyyyMMdd + 4 位（与院感 ICASE 前缀区分开）
+     * ICU 入科单号前缀
      */
     String ICU_STAY_NO_PREFIX = "ICU";
 
+    /**
+     * 传染病报告卡编号前缀
+     */
     String INFECTIOUS_REPORT_NO_PREFIX = "INF";
 
     /**
-     * 院感病例编号前缀：ICASE + yyyyMMdd + 4 位
+     * 院感病例编号前缀
      */
     String INFECTION_CASE_NO_PREFIX = "ICASE";
 
     /**
-     * 目标性监测编号前缀：IMON + yyyyMMdd + 4 位
+     * 目标性监测编号前缀
      */
     String INFECTION_MONITOR_NO_PREFIX = "IMON";
 
@@ -281,29 +492,73 @@ public interface Constants {
     String DAY_SURGERY_NO_PREFIX = "DA";
 
     /**
-     * 单号宽度口径：日均量能上千的（处方、病历号、检查/检验申请与记录、报告、消息）用 5 位，
-     * 其余低频单据用 4 位。4 位一旦当天发满，第 10001 单会撞唯一索引（发号器不会自己报错）。
+     * 临床规则校验单号前缀（人工校验）
      */
     String RULE_CHECK_NO_PREFIX = "RC";
+    /**
+     * 慢病建档记录号前缀（CHR = Chronic Record）
+     */
     String CHRONIC_RECORD_NO_PREFIX = "CHR";
+    /**
+     * 退费申请单号前缀（RA）
+     */
     String REFUND_APPLY_NO_PREFIX = "RA";
+    /**
+     * 处方流转单号前缀（RXF，与处方号 RX 分两条流水）
+     */
     String RX_FLOW_NO_PREFIX = "RXF";
+    /**
+     * 公共卫生报告单号前缀（PH = Public Health）
+     */
     String PUBLIC_HEALTH_REPORT_NO_PREFIX = "PH";
+    /**
+     * 处方号前缀（RX = 处方）
+     */
     String PRESCRIPTION_NO_PREFIX = "RX";
+    /**
+     * 检查申请单号前缀（INS = Inspection）
+     */
     String INSPECTION_APPLY_NO_PREFIX = "INS";
+    /**
+     * 检验申请单号前缀（LAB = Laboratory）
+     */
     String LABORATORY_APPLY_NO_PREFIX = "LAB";
+    /**
+     * 病历号前缀（MR = Medical Record）
+     */
     String MEDICAL_RECORD_NO_PREFIX = "MR";
+    /**
+     * 随访任务号前缀（FT = Followup Task）
+     */
     String FOLLOWUP_TASK_NO_PREFIX = "FT";
     /**
      * 归档编号前缀：MA + yyyyMMdd + 4 位。原先两条归档路径一个写 MA 一个写 ARC，
      * 同一张表的同一列长出两种格式，按号检索要猜前缀。统一成 MA。
      */
     String MEDICAL_RECORD_ARCHIVE_NO_PREFIX = "MA";
+    /**
+     * 检查记录号前缀（IR = Inspection Record）
+     */
     String INSPECTION_RECORD_NO_PREFIX = "IR";
+    /**
+     * 检验记录号前缀（LR = Laboratory Record）
+     */
     String LABORATORY_RECORD_NO_PREFIX = "LR";
+    /**
+     * 医技报告号前缀（RPT = Report）
+     */
     String REPORT_NO_PREFIX = "RPT";
+    /**
+     * 心电波形记录号前缀（ECG，一次采样一条波形数据）
+     */
     String ECG_WAVE_NO_PREFIX = "ECG";
+    /**
+     * 站内消息号前缀（MSG）
+     */
     String MESSAGE_NO_PREFIX = "MSG";
+    /**
+     * 统计报表号前缀（TJ = 统计）
+     */
     String STAT_REPORT_NO_PREFIX = "TJ";
     /**
      * AI 药审写进校验表的单号：与人工校验的 RC 分前缀也分号段，

@@ -1,5 +1,6 @@
 package com.his.common.util;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -64,7 +65,7 @@ public final class SignCryptoUtil {
      * @return true=签名值与公钥匹配；false=不匹配（内容被改过，或签名值被换过）
      */
     public static boolean verify(String publicKeyPem, String content, String signBase64) {
-        if (signBase64 == null || signBase64.isBlank()) {
+        if (!TextUtil.hasText(signBase64)) {
             return false;
         }
         try {

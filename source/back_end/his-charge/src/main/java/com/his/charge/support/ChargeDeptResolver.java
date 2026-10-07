@@ -4,9 +4,9 @@ import com.his.charge.api.AppointGateway;
 import com.his.charge.api.EmrGateway;
 import com.his.charge.api.PatientGateway;
 import com.his.common.enums.PaymentItemTypeEnum;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 /**
  * 收费明细 → 开单科室的**唯一**反查出口。
@@ -50,7 +50,7 @@ public class ChargeDeptResolver {
      * @return 查不到返回 {@code null}（调用方应保持 dept 为空，不要兜底）
      */
     public DeptRef resolve(Integer itemType, String sourceNo) {
-        if (itemType == null || !StringUtils.hasText(sourceNo)) {
+        if (itemType == null || !TextUtil.hasText(sourceNo)) {
             return null;
         }
         PaymentItemTypeEnum type = PaymentItemTypeEnum.getByCode(itemType);
@@ -105,7 +105,7 @@ public class ChargeDeptResolver {
      */
     public record DeptRef(Long deptId, String deptName) {
         public boolean isEmpty() {
-            return deptId == null && !StringUtils.hasText(deptName);
+            return deptId == null && !TextUtil.hasText(deptName);
         }
     }
 }

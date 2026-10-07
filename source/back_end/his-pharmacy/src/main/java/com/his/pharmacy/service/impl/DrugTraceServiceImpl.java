@@ -21,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -67,7 +66,7 @@ public class DrugTraceServiceImpl extends ServiceImpl<BizDrugTraceMapper, BizDru
     private final DrugTraceUploadChannelService drugTraceUploadChannelService;
 
     private static String blankToNull(String v) {
-        return StringUtils.hasText(v) ? v.trim() : null;
+        return TextUtil.hasText(v) ? v.trim() : null;
     }
 
     @Override
@@ -120,7 +119,7 @@ public class DrugTraceServiceImpl extends ServiceImpl<BizDrugTraceMapper, BizDru
         boolean canCollect = vo.isMatched() && vo.getDrugStatus() != null && vo.getDrugStatus() == 1
                 && !vo.isExists() && vo.getBatches() != null && !vo.getBatches().isEmpty();
         vo.setCanCollect(canCollect);
-        if (!canCollect && !StringUtils.hasText(vo.getTip())) {
+        if (!canCollect && !TextUtil.hasText(vo.getTip())) {
             vo.setTip(collectTip(vo, parts));
         }
 
@@ -240,7 +239,7 @@ public class DrugTraceServiceImpl extends ServiceImpl<BizDrugTraceMapper, BizDru
             }
             t.setInboundId(ib.getId());
             t.setInboundNo(ib.getInboundNo());
-            if (!StringUtils.hasText(t.getSupplier())) {
+            if (!TextUtil.hasText(t.getSupplier())) {
                 t.setSupplier(ib.getSupplier());
             }
         }
@@ -312,7 +311,7 @@ public class DrugTraceServiceImpl extends ServiceImpl<BizDrugTraceMapper, BizDru
         t.setStatus(DrugTraceStatusEnum.VOID.getCode());
         t.setVoidType(dto.getVoidType());
         t.setVoidTime(TimeUtil.nowSeconds());
-        t.setVoidReason(TextUtil.cut(StringUtils.hasText(dto.getReason()) ? dto.getReason() : "未填写原因", VOID_REASON_MAX));
+        t.setVoidReason(TextUtil.cut(TextUtil.hasText(dto.getReason()) ? dto.getReason() : "未填写原因", VOID_REASON_MAX));
         // 作废也是要上报的变更事件
         t.setUploadStatus(UPLOAD_PENDING);
         t.setUploadBatchNo("");
@@ -361,7 +360,7 @@ public class DrugTraceServiceImpl extends ServiceImpl<BizDrugTraceMapper, BizDru
             line.setDrugCode(t.getDrugCode());
             line.setDrugName(t.getDrugName());
             line.setApprovalNumber(t.getApprovalNumber());
-            line.setBatchNo(StringUtils.hasText(t.getStockBatchNo()) ? t.getStockBatchNo() : t.getCodeBatchNo());
+            line.setBatchNo(TextUtil.hasText(t.getStockBatchNo()) ? t.getStockBatchNo() : t.getCodeBatchNo());
             line.setEventType(t.getStatus() == null ? 1 : t.getStatus());
             line.setEventTime(t.getStatus() != null && t.getStatus() == DrugTraceStatusEnum.DISPENSED.getCode() ? t.getDispenseTime() : t.getScanTime());
             line.setPatientName(t.getPatientName());

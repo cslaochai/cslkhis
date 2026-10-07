@@ -31,7 +31,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -127,7 +126,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
      */
     private static String buildPlainText(Integer status, boolean unjudged, SysLabPlainItem plain,
                                          String criticalDesc) {
-        if (StringUtils.hasText(criticalDesc)) {
+        if (TextUtil.hasText(criticalDesc)) {
             return "【需要尽快处理】" + criticalDesc + "。请立即联系接诊医生或前往急诊。";
         }
         if (unjudged) {
@@ -143,7 +142,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
             return plain == null ? FALLBACK_ABNORMAL : plain.getHighText();
         }
         // 正常：说清这项是查什么的，比说「一切正常」有用；也不必加任何判断
-        if (plain != null && StringUtils.hasText(plain.getWhatIsIt())) {
+        if (plain != null && TextUtil.hasText(plain.getWhatIsIt())) {
             return "你的结果在参考范围内。这项是" + plain.getWhatIsIt() + "。";
         }
         return "你的结果在参考范围内。";
@@ -255,13 +254,13 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
                 criticalCount++;
                 // 点名到项目：写「本次有 1 项达到危急值」患者还得自己去表里找是哪一项，
                 // 而这条提示存在的唯一目的就是让他立刻行动
-                if (StringUtils.hasText(result.getLaboratoryItemName())
+                if (TextUtil.hasText(result.getLaboratoryItemName())
                         && !criticalNames.contains(result.getLaboratoryItemName())) {
                     criticalNames.add(result.getLaboratoryItemName());
                 }
             }
 
-            SysLabPlainItem plain = StringUtils.hasText(result.getLaboratoryItemName())
+            SysLabPlainItem plain = TextUtil.hasText(result.getLaboratoryItemName())
                     ? dict.get(result.getLaboratoryItemName().trim()) : null;
             item.setPlainName(plain == null ? null : plain.getPlainName());
             item.setWhatIsIt(plain == null ? null : plain.getWhatIsIt());
@@ -284,7 +283,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
         if (llmOutput.isPresent()) {
             String guarded = textGuard.guard(llmOutput.get().getSummary(),
                     AiCapabilityKeys.PATIENT_REPORT_EXPLAIN);
-            if (StringUtils.hasText(guarded)) {
+            if (TextUtil.hasText(guarded)) {
                 vo.setSummary(TextUtil.cut(guarded, SUMMARY_MAX_LENGTH));
                 vo.setSource("model");
                 vo.setDegraded(false);
@@ -312,7 +311,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
         Map<String, SysLabPlainItem> map = new HashMap<>();
         if (all != null) {
             for (SysLabPlainItem item : all) {
-                if (StringUtils.hasText(item.getItemName())) {
+                if (TextUtil.hasText(item.getItemName())) {
                     map.put(item.getItemName().trim(), item);
                 }
             }
@@ -346,16 +345,16 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
         StringBuilder builder = new StringBuilder();
         for (PatientLabItemPlainVO item : items) {
             builder.append("- ").append(TextUtil.blankToDefault(item.getItemName(), "（未填写）"));
-            if (StringUtils.hasText(item.getPlainName())) {
+            if (TextUtil.hasText(item.getPlainName())) {
                 builder.append("（俗称").append(item.getPlainName()).append("）");
             }
             builder.append(" = ").append(TextUtil.blankToDefault(item.getResultValue(), "（未填写）"));
-            if (StringUtils.hasText(item.getUnit())) {
+            if (TextUtil.hasText(item.getUnit())) {
                 builder.append(' ').append(item.getUnit());
             }
             builder.append("（参考 ").append(TextUtil.blankToDefault(item.getReferenceRange(), "（未填写）"))
                     .append("，").append(item.getStatusText()).append("）");
-            if (StringUtils.hasText(item.getPlainText())) {
+            if (TextUtil.hasText(item.getPlainText())) {
                 builder.append(" 已给出的白话说明：").append(item.getPlainText());
             }
             builder.append('\n');

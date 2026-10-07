@@ -1,5 +1,6 @@
 package com.his.system.service.impl;
 
+import com.his.common.util.TextUtil;
 import com.his.system.mapper.SysUserMapper;
 import com.his.system.service.RolePermissionCache;
 import lombok.RequiredArgsConstructor;
@@ -56,7 +57,7 @@ public class RolePermissionCacheImpl implements RolePermissionCache {
      * 返回空集合是合法结果(该角色确实没配任何权限码),调用方按「真没权限」处理。
      */
     public List<String> permissionsOfRole(String roleCode) {
-        if (roleCode == null || roleCode.isBlank()) {
+        if (!TextUtil.hasText(roleCode)) {
             return Collections.emptyList();
         }
         String key = KEY_PREFIX + roleCode;
@@ -89,7 +90,7 @@ public class RolePermissionCacheImpl implements RolePermissionCache {
      * 失效单个角色的权限缓存(角色授权保存 / 角色删除后调用)
      */
     public void invalidate(String roleCode) {
-        if (roleCode == null || roleCode.isBlank()) {
+        if (!TextUtil.hasText(roleCode)) {
             return;
         }
         StringRedisTemplate redis = redisProvider.getIfAvailable();

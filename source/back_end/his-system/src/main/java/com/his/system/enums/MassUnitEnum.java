@@ -1,5 +1,6 @@
 package com.his.system.enums;
 
+import com.his.common.util.TextUtil;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -66,7 +67,7 @@ public enum MassUnitEnum {
      * @return null 表示该写法不是质量单位（ml / IU / 片 / 空 / null）
      */
     public static MassUnitEnum fromUnit(String unit) {
-        if (unit == null || unit.isBlank()) {
+        if (!TextUtil.hasText(unit)) {
             return null;
         }
         String key = unit.trim().toLowerCase();

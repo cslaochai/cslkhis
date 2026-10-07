@@ -23,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -55,7 +54,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
         LambdaQueryWrapper<BizInfectiousReport> w = new LambdaQueryWrapper<BizInfectiousReport>()
                 .eq(q.getReportStatus() != null, BizInfectiousReport::getReportStatus, q.getReportStatus())
                 .eq(q.getInfectiousClass() != null, BizInfectiousReport::getInfectiousClass, q.getInfectiousClass())
-                .and(StringUtils.hasText(q.getKeyword()), x -> x
+                .and(TextUtil.hasText(q.getKeyword()), x -> x
                         .like(BizInfectiousReport::getReportNo, TextUtil.trim(q.getKeyword()))
                         .or().like(BizInfectiousReport::getPatientName, TextUtil.trim(q.getKeyword()))
                         .or().like(BizInfectiousReport::getDiseaseName, TextUtil.trim(q.getKeyword())))
@@ -94,7 +93,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
         LambdaQueryWrapper<SysInfectiousDisease> w = new LambdaQueryWrapper<SysInfectiousDisease>()
                 .eq(SysInfectiousDisease::getStatus, 1)
                 .eq(SysInfectiousDisease::getDelFlag, 0)
-                .and(StringUtils.hasText(keyword), x -> x
+                .and(TextUtil.hasText(keyword), x -> x
                         .like(SysInfectiousDisease::getDiseaseName, TextUtil.trim(keyword))
                         .or().like(SysInfectiousDisease::getDiseaseCode, TextUtil.trim(keyword)))
                 .orderByAsc(SysInfectiousDisease::getInfectiousClass)
@@ -184,7 +183,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
         }
         // 1 待审核 = 直接改；4 已退报 = 修改后重报，计数+1 并留重报说明
         boolean resubmit = exists.getReportStatus() == InfectiousReportStatusEnum.RETURNED.getCode();
-        if (resubmit && !StringUtils.hasText(dto.getResubmitRemark())) {
+        if (resubmit && !TextUtil.hasText(dto.getResubmitRemark())) {
             throw new BusinessException("退报重报必须说明修改内容");
         }
         fillCard(exists, dto, disease, patient, exists.getReportBy(), exists.getReportByName());
@@ -208,7 +207,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
         if (r.getReportStatus() != InfectiousReportStatusEnum.PENDING.getCode()) {
             throw new BusinessException(statusText(r.getReportStatus()) + "的卡不能审核（仅待审核可审）");
         }
-        String name = StringUtils.hasText(dto.getAuditByName()) ? dto.getAuditByName() : UserUtils.getCurrentUser().getRealName();
+        String name = TextUtil.hasText(dto.getAuditByName()) ? dto.getAuditByName() : UserUtils.getCurrentUser().getRealName();
         r.setReportStatus(InfectiousReportStatusEnum.AUDITED.getCode());
         r.setAuditByName(name);
         r.setAuditTime(TimeUtil.nowSeconds());
@@ -228,7 +227,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
         if (r.getReportStatus() == InfectiousReportStatusEnum.RETURNED.getCode()) {
             throw new BusinessException("已是退报状态，无需重复退报");
         }
-        String name = StringUtils.hasText(dto.getAuditByName()) ? dto.getAuditByName() : UserUtils.getCurrentUser().getRealName();
+        String name = TextUtil.hasText(dto.getAuditByName()) ? dto.getAuditByName() : UserUtils.getCurrentUser().getRealName();
         r.setReportStatus(InfectiousReportStatusEnum.RETURNED.getCode());
         r.setReturnReason(TextUtil.trim(dto.getReason()));
         r.setAuditByName(name);
@@ -317,7 +316,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
                 r.setVisitDeptName(dept.getDeptName());
             }
         }
-        if (StringUtils.hasText(dto.getVisitDeptName())) {
+        if (TextUtil.hasText(dto.getVisitDeptName())) {
             r.setVisitDeptName(TextUtil.trim(dto.getVisitDeptName()));
         }
         r.setDiseaseId(disease.getId());

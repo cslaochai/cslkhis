@@ -9,14 +9,17 @@ import com.his.charge.entity.BizAlert;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.entity.BizPaymentTxn;
 import com.his.charge.entity.BizSettlementBill;
+import com.his.charge.enums.InpatientSettleStatusEnum;
 import com.his.charge.mapper.BizAlertMapper;
 import com.his.charge.mapper.BizPaymentTxnMapper;
 import com.his.charge.service.*;
 import com.his.charge.vo.*;
+import com.his.common.constant.DictType;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.entity.SysEmployee;
 import com.his.system.enums.BizTypeEnum;
@@ -27,7 +30,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -79,11 +81,6 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     private static final int PREPAY_IN = 1;
     private static final int PREPAY_OUT = 2;
     /**
-     * 结算状态（派生值，库里没有这一列）
-     */
-    private static final int SETTLE_CLEARED = 1;
-    private static final int SETTLE_ARREARS = 2;
-    /**
      * 欠费告警类型（写入预警记录.alert_type）
      */
     private static final String ALERT_ARREARS = "ARREARS";
@@ -117,10 +114,10 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     }
 
     private static boolean outOfRange(String day, String beginDate, String endDate) {
-        if (StringUtils.hasText(beginDate) && day.compareTo(beginDate) < 0) {
+        if (TextUtil.hasText(beginDate) && day.compareTo(beginDate) < 0) {
             return true;
         }
-        return StringUtils.hasText(endDate) && day.compareTo(endDate) > 0;
+        return TextUtil.hasText(endDate) && day.compareTo(endDate) > 0;
     }
 
     private static String dayOf(LocalDateTime time) {
@@ -141,7 +138,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         IPage<PrepayVO> raw = bizPaymentTxnMapper.selectPrepayPage(page, q);
         // 文案由后端给：前端判码值就会有第二套口径（支付方式码值前端就抄错过一次，把 4 当银行卡）
         for (PrepayVO vo : raw.getRecords()) {
-            vo.setPrepayTypeText(dictCacheService.getDicDataLabel("biz_charge_prepayTypeEnum", vo.getPrepayType()));
+            vo.setPrepayTypeText(dictCacheService.getDicDataLabel(DictType.PREPAY_TYPE, vo.getPrepayType()));
             vo.setPayMethodText(PaymentMethodEnum.getText(vo.getPayMethod()));
         }
         return raw;
@@ -365,7 +362,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         BizSettlementBill discharge = settlementBillService.latestDischargeBill(admission.getAdmissionId());
         Integer settleStatus = discharge == null ? null
                 : (NumUtil.orZero(discharge.getPayableAmount()).subtract(NumUtil.orZero(discharge.getPaidAmount())).signum() > 0
-                ? SETTLE_ARREARS : SETTLE_CLEARED);
+                ? InpatientSettleStatusEnum.ARREARS.getCode() : InpatientSettleStatusEnum.CLEARED.getCode());
 
         InpatientAccountSummaryVO vo = new InpatientAccountSummaryVO();
         vo.setAdmissionId(admission.getAdmissionId());
@@ -377,7 +374,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         vo.setArrearsAmount(arrearsAmount);
         vo.setSettled(discharge != null);
         vo.setSettlementNo(discharge != null ? discharge.getBillNo() : null);
-        vo.setSettleStatusText(dictCacheService.getDicDataLabel("biz_charge_inpatientSettleResultEnum", settleStatus));
+        vo.setSettleStatusText(InpatientSettleStatusEnum.getText(settleStatus));
         vo.setHintText(arrears
                 ? "住院费用已发生 " + total.toPlainString() + " 元，已收 " + state.collected().toPlainString()
                 + " 元（住院账户余额 " + balance.toPlainString() + " 元），欠费 "
@@ -526,9 +523,9 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         }
         try {
             SysEmployee doctor = sysEmployeeMapper.selectById(doctorId);
-            String doctorName = doctor != null && StringUtils.hasText(doctor.getEmpName())
+            String doctorName = doctor != null && TextUtil.hasText(doctor.getEmpName())
                     ? doctor.getEmpName() : "站内用户";
-            String patientName = patient != null && StringUtils.hasText(patient.getPatientName())
+            String patientName = patient != null && TextUtil.hasText(patient.getPatientName())
                     ? patient.getPatientName() : "患者";
             String content = String.format(
                     "患者 %s（住院号 %s）%s欠费 %s 元：应付 %s 元，住院账户余额 %s 元。欠费仅提示、不阻断诊疗，请关注催缴或补缴预交金。",
@@ -574,7 +571,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         vo.setPatientNo(t.getPatientNo());
         vo.setPatientName(t.getPatientName());
         vo.setPrepayType(prepayType);
-        vo.setPrepayTypeText(dictCacheService.getDicDataLabel("biz_charge_prepayTypeEnum", prepayType));
+        vo.setPrepayTypeText(dictCacheService.getDicDataLabel(DictType.PREPAY_TYPE, prepayType));
         vo.setAmount(t.getAmount());
         vo.setBalanceAfter(balanceAfter);
         vo.setPayMethod(t.getPayMethod());
@@ -636,8 +633,8 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         vo.setBalanceUsed(NumUtil.scale(balanceUsed, SCALE));
         vo.setRefundAmount(NumUtil.scale(refund, SCALE));
         vo.setArrearsAmount(NumUtil.scale(arrears, SCALE));
-        vo.setSettleStatus(arrears.signum() > 0 ? SETTLE_ARREARS : SETTLE_CLEARED);
-        vo.setSettleStatusText(dictCacheService.getDicDataLabel("biz_charge_inpatientSettleResultEnum", vo.getSettleStatus()));
+        vo.setSettleStatus(arrears.signum() > 0 ? InpatientSettleStatusEnum.ARREARS.getCode() : InpatientSettleStatusEnum.CLEARED.getCode());
+        vo.setSettleStatusText(InpatientSettleStatusEnum.getText(vo.getSettleStatus()));
         vo.setSettleMode(bill.getSettlementMode());
         vo.setSettleModeText(SettlementModeEnum.getText(bill.getSettlementMode()));
         vo.setInsuranceType(bill.getInsuranceType());

@@ -33,7 +33,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -238,7 +237,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         if (dto == null || dto.getBillId() == null) {
             throw new BusinessException("缺少账单");
         }
-        if (!StringUtils.hasText(dto.getReason())) {
+        if (!TextUtil.hasText(dto.getReason())) {
             throw new BusinessException("缺少作废原因");
         }
         BizSettlementBill bill = this.getById(dto.getBillId());
@@ -612,7 +611,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         // 批量查规则：避免 N+1
         List<String> itemCodes = new ArrayList<>();
         for (BizFeeRecord row : rows) {
-            if (StringUtils.hasText(row.getItemCode())) {
+            if (TextUtil.hasText(row.getItemCode())) {
                 itemCodes.add(row.getItemCode());
             }
         }
@@ -649,7 +648,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
             item.setDiscountAmount(BigDecimal.ZERO);
 
             // 按规则表逐条算 pool/account/self
-            BizInsuranceCatalogRule rule = StringUtils.hasText(row.getItemCode())
+            BizInsuranceCatalogRule rule = TextUtil.hasText(row.getItemCode())
                     ? ruleByItem.get(row.getItemCode()) : null;
             BigDecimal pool = insurance.covered() ? computePoolFromRule(amount, item.getCatalogType(), rule, insurance) : BigDecimal.ZERO;
             item.setPoolAmount(pool);
@@ -771,7 +770,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
      */
     private PatientInsurance resolveInsurance(Long patientId, Integer settlementMode) {
         PatientBriefVO patient = patientId == null ? null : patientGateway.findPatient(patientId);
-        boolean hasInsurance = patient != null && StringUtils.hasText(patient.getMedicalInsuranceNo());
+        boolean hasInsurance = patient != null && TextUtil.hasText(patient.getMedicalInsuranceNo());
         SettlementModeEnum mode = SettlementModeEnum.getByCode(settlementMode);
         if (mode == null) {
             mode = hasInsurance ? SettlementModeEnum.INSURANCE : SettlementModeEnum.SELF_PAY;
@@ -823,7 +822,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
                 .eq(query.getBillById() != null, BizSettlementBill::getBillById, query.getBillById())
                 .ge(query.getBeginDate() != null, BizSettlementBill::getBillDate, query.getBeginDate())
                 .le(query.getEndDate() != null, BizSettlementBill::getBillDate, query.getEndDate())
-                .and(StringUtils.hasText(keyword), w -> w.like(BizSettlementBill::getBillNo, keyword)
+                .and(TextUtil.hasText(keyword), w -> w.like(BizSettlementBill::getBillNo, keyword)
                         .or().like(BizSettlementBill::getPatientName, keyword)
                         .or().like(BizSettlementBill::getEncounterNo, keyword))
                 .orderByDesc(BizSettlementBill::getBillTime)

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.DepartmentQueryDTO;
 import com.his.system.dto.DepartmentSelectDTO;
 import com.his.system.dto.DepartmentUpsertDTO;
@@ -17,7 +18,6 @@ import com.his.system.vo.DepartmentVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,7 +58,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
     @Override
     public List<DepartmentSelectListVO> selectList(DepartmentSelectDTO selectDTO) {
         LambdaQueryWrapper<SysDepartment> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(selectDTO.getDeptName()), SysDepartment::getDeptName, selectDTO.getDeptName())
+        wrapper.like(TextUtil.hasText(selectDTO.getDeptName()), SysDepartment::getDeptName, selectDTO.getDeptName())
                 .eq(selectDTO.getDeptType() != null, SysDepartment::getDeptType, selectDTO.getDeptType())
                 .orderByAsc(SysDepartment::getSortOrder)
                 // 唯一二级键：排序字段大量并列，缺主键兜底时列表顺序在不同请求间会漂
@@ -125,7 +125,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
 
     private LambdaQueryWrapper<SysDepartment> buildWrapper(DepartmentQueryDTO queryDTO) {
         LambdaQueryWrapper<SysDepartment> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getDeptName()), SysDepartment::getDeptName, queryDTO.getDeptName())
+        wrapper.like(TextUtil.hasText(queryDTO.getDeptName()), SysDepartment::getDeptName, queryDTO.getDeptName())
                 .eq(queryDTO.getDeptType() != null, SysDepartment::getDeptType, queryDTO.getDeptType())
                 .orderByAsc(SysDepartment::getSortOrder);
         return wrapper;

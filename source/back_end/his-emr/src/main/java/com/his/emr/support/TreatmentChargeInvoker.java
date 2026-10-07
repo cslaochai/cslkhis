@@ -3,12 +3,12 @@ package com.his.emr.support;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.service.FeeRecordService;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 /**
  * 门诊治疗按次记账调用器 —— 让「记账失败」不会把「这次治疗做过了」一起拖回滚。
@@ -49,7 +49,7 @@ public class TreatmentChargeInvoker {
             return null;
         }
         // 患者编号/姓名是记账行的必填快照，缺了不是"记一笔难看的账"而是整条写入失败
-        if (!StringUtils.hasText(dto.getPatientNo()) || !StringUtils.hasText(dto.getPatientName())) {
+        if (!TextUtil.hasText(dto.getPatientNo()) || !TextUtil.hasText(dto.getPatientName())) {
             log.warn("门诊治疗记账缺少患者编号/姓名快照，本次不计费（registId={} 来源单 {}）",
                     dto.getEncounterId(), dto.getSourceNo());
             return null;

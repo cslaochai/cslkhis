@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.patient.dto.OrderDictQueryPageDTO;
 import com.his.patient.dto.OrderDictUpsertDTO;
 import com.his.patient.entity.SysOrderDictData;
@@ -21,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -51,7 +51,7 @@ public class OrderDictServiceImpl extends ServiceImpl<SysOrderDictDataMapper, Sy
     @Override
     public IPage<OrderDictListVO> listPage(OrderDictQueryPageDTO query) {
         String dictType = requireType(query.getDictType());
-        String keyword = StringUtils.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
+        String keyword = TextUtil.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
         LambdaQueryWrapper<SysOrderDictData> wrapper = new LambdaQueryWrapper<SysOrderDictData>()
                 .eq(SysOrderDictData::getDictType, dictType)
                 .eq(query.getStatus() != null, SysOrderDictData::getStatus, query.getStatus())
@@ -121,7 +121,7 @@ public class OrderDictServiceImpl extends ServiceImpl<SysOrderDictDataMapper, Sy
         if (dto.getId() == null) {
             String value = dto.getDictValue() == null ? null : dto.getDictValue().trim();
             // ①条件必填：只有新增（id==null）才要求字典值，修改分支允许不传，@NotBlank 会把合法修改挡成 400
-            if (!StringUtils.hasText(value)) {
+            if (!TextUtil.hasText(value)) {
                 throw new BusinessException("字典值不能为空");
             }
             if (value.length() > 100) {

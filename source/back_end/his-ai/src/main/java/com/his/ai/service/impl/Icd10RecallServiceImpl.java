@@ -4,12 +4,12 @@ import com.his.ai.config.AiConfigProvider;
 import com.his.ai.dto.Icd10SelectListDTO;
 import com.his.ai.service.Icd10RecallService;
 import com.his.ai.vo.Icd10SelectListVO;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.SysIcd10;
 import com.his.system.service.Icd10Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -114,7 +114,7 @@ public class Icd10RecallServiceImpl implements Icd10RecallService {
     }
 
     private static String normalize(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return "";
         }
         return NOISE.matcher(text).replaceAll("").toLowerCase();
@@ -220,7 +220,7 @@ public class Icd10RecallServiceImpl implements Icd10RecallService {
      * 单个编码与病历文本的字面关联度
      */
     private int scoreCode(SysIcd10 code, String note) {
-        if (!StringUtils.hasText(note)) {
+        if (!TextUtil.hasText(note)) {
             return 0;
         }
         int score = 0;

@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.SysPatientTagQueryDTO;
 import com.his.system.dto.SysPatientTagUpsertDTO;
 import com.his.system.entity.SysPatientTag;
@@ -14,7 +15,6 @@ import com.his.system.service.PatientTagService;
 import com.his.system.vo.SysPatientTagVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -58,7 +58,7 @@ public class PatientTagServiceImpl extends ServiceImpl<SysPatientTagMapper, SysP
 
     private LambdaQueryWrapper<SysPatientTag> nameLikeWrapper(SysPatientTagQueryDTO queryDTO) {
         LambdaQueryWrapper<SysPatientTag> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getTagName()), SysPatientTag::getTagName, queryDTO.getTagName())
+        wrapper.like(TextUtil.hasText(queryDTO.getTagName()), SysPatientTag::getTagName, queryDTO.getTagName())
                 .orderByAsc(SysPatientTag::getTagId);
         return wrapper;
     }

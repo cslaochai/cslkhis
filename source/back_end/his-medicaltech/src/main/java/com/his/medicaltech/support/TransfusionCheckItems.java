@@ -1,5 +1,6 @@
 package com.his.medicaltech.support;
 
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.enums.TransfusionCheckItemEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -59,7 +60,7 @@ public final class TransfusionCheckItems {
      */
     public static Set<Integer> parse(String items) {
         Set<Integer> set = new LinkedHashSet<>();
-        if (items == null || items.isBlank()) {
+        if (!TextUtil.hasText(items)) {
             return set;
         }
         for (String part : items.split(",")) {

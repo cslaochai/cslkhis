@@ -21,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -263,8 +262,8 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         row.setEmployeeName(emp.getEmpName());
         row.setDeptId(emp.getDeptId());
         row.setDeptName(resolveDeptName(emp));
-        row.setPhone(StringUtils.hasText(dto.getPhone()) ? dto.getPhone().trim()
-                : (post != null && StringUtils.hasText(post.getPhone()) ? post.getPhone() : emp.getPhone()));
+        row.setPhone(TextUtil.hasText(dto.getPhone()) ? dto.getPhone().trim()
+                : (post != null && TextUtil.hasText(post.getPhone()) ? post.getPhone() : emp.getPhone()));
         row.setShiftId(shift == null ? null : shift.getId());
         row.setPostId(post == null ? null : post.getId());
         // 时刻一律以班次为准，手填只在值守册还没配班次时兜底（历史行就是这个形状）
@@ -304,7 +303,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
         row.setSubstituteTime(LocalDateTime.now());
         row.setSubstituteReason(dto.getSubstituteReason().trim());
         // 换班后联系电话跟着人走：留了新号码就用新的，否则回落新员工档案手机
-        row.setPhone(StringUtils.hasText(dto.getPhone()) ? dto.getPhone().trim() : emp.getPhone());
+        row.setPhone(TextUtil.hasText(dto.getPhone()) ? dto.getPhone().trim() : emp.getPhone());
         bizDutyRosterMapper.updateById(row);
         log.info("总值班换班 date={} shift={} role={} 原={} 现={} 原因={}",
                 row.getDutyDate(), row.getShiftType(), row.getRoleType(),
@@ -662,7 +661,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
      * 联系电话：行内电话（换班后就是换班人的）→ 员工档案手机。都为空返回 null，不编造号码
      */
     private String resolvePhone(BizDutyRoster r, Long empId) {
-        if (StringUtils.hasText(r.getPhone())) {
+        if (TextUtil.hasText(r.getPhone())) {
             return r.getPhone();
         }
         if (empId == null) {
@@ -686,7 +685,7 @@ public class DutyRosterServiceImpl extends ServiceImpl<BizDutyRosterMapper, BizD
     }
 
     private String resolveDeptName(SysEmployee emp) {
-        if (StringUtils.hasText(emp.getDeptName())) {
+        if (TextUtil.hasText(emp.getDeptName())) {
             return emp.getDeptName();
         }
         if (emp.getDeptId() == null) {

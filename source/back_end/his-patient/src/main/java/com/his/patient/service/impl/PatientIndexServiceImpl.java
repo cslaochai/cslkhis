@@ -11,6 +11,7 @@ import com.his.common.base.PageResult;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.PatientIndexQueryDTO;
 import com.his.patient.dto.PatientMergeDTO;
@@ -33,7 +34,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -73,7 +73,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
         if (!Boolean.TRUE.equals(dto.getIncludeShadow())) {
             w.eq(BizPatient::getMergeStatus, PatientMergeStatusEnum.NORMAL.getCode());
         }
-        if (StringUtils.hasText(dto.getKeyword())) {
+        if (TextUtil.hasText(dto.getKeyword())) {
             String kw = dto.getKeyword().trim();
             w.and(q -> q.like(BizPatient::getPatientName, kw)
                     .or().like(BizPatient::getPatientNo, kw)
@@ -124,7 +124,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
     @Override
     public List<PatientDuplicateGroupVO> detectDuplicates(PatientIndexQueryDTO dto) {
         List<BizPatient> suspects = patientIndexMapper.selectSuspectPatients(
-                StringUtils.hasText(dto.getKeyword()) ? dto.getKeyword().trim() : null);
+                TextUtil.hasText(dto.getKeyword()) ? dto.getKeyword().trim() : null);
         if (suspects.isEmpty()) {
             return List.of();
         }
@@ -243,7 +243,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
         int minLen = PatientMatchLevelEnum.minReasonLength(level);
         // 保留（类别①条件必填）：合并理由的最小字数由服务端判级动态决定（级别越弱要求越长），
         // 阈值不在入参里，@Size 写不出来
-        if (!StringUtils.hasText(dto.getReason()) || dto.getReason().trim().length() < minLen) {
+        if (!TextUtil.hasText(dto.getReason()) || dto.getReason().trim().length() < minLen) {
             throw new BusinessException("合并理由至少 " + minLen + " 个字（当前级别："
                     + PatientMatchLevelEnum.text(level) + "）。级别越弱，越要写清是谁、依据什么核实的");
         }
@@ -370,7 +370,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
     @Override
     public PageResult<PatientMergeLogVO> selectMergeLogPage(PatientIndexQueryDTO dto) {
         LambdaQueryWrapper<BizPatientMergeLog> w = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(dto.getKeyword())) {
+        if (TextUtil.hasText(dto.getKeyword())) {
             String kw = dto.getKeyword().trim();
             w.and(q -> q.like(BizPatientMergeLog::getMergeNo, kw)
                     .or().like(BizPatientMergeLog::getMasterName, kw)
@@ -522,11 +522,11 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
      */
     private List<String> fillBlankFields(BizPatient master, BizPatient merged) {
         List<String> filled = new ArrayList<>();
-        if (!StringUtils.hasText(master.getIdCard()) && StringUtils.hasText(merged.getIdCard())) {
+        if (!TextUtil.hasText(master.getIdCard()) && TextUtil.hasText(merged.getIdCard())) {
             master.setIdCard(merged.getIdCard());
             filled.add("身份证号");
         }
-        if (!StringUtils.hasText(master.getPhone()) && StringUtils.hasText(merged.getPhone())) {
+        if (!TextUtil.hasText(master.getPhone()) && TextUtil.hasText(merged.getPhone())) {
             master.setPhone(merged.getPhone());
             filled.add("手机号");
         }
@@ -534,23 +534,23 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
             master.setBirthDate(merged.getBirthDate());
             filled.add("出生日期");
         }
-        if (!StringUtils.hasText(master.getAddress()) && StringUtils.hasText(merged.getAddress())) {
+        if (!TextUtil.hasText(master.getAddress()) && TextUtil.hasText(merged.getAddress())) {
             master.setAddress(merged.getAddress());
             filled.add("家庭住址");
         }
-        if (!StringUtils.hasText(master.getAllergyHistory()) && StringUtils.hasText(merged.getAllergyHistory())) {
+        if (!TextUtil.hasText(master.getAllergyHistory()) && TextUtil.hasText(merged.getAllergyHistory())) {
             master.setAllergyHistory(merged.getAllergyHistory());
             filled.add("过敏史");
         }
-        if (!StringUtils.hasText(master.getMedicalHistory()) && StringUtils.hasText(merged.getMedicalHistory())) {
+        if (!TextUtil.hasText(master.getMedicalHistory()) && TextUtil.hasText(merged.getMedicalHistory())) {
             master.setMedicalHistory(merged.getMedicalHistory());
             filled.add("既往病史");
         }
-        if (!StringUtils.hasText(master.getBloodType()) && StringUtils.hasText(merged.getBloodType())) {
+        if (!TextUtil.hasText(master.getBloodType()) && TextUtil.hasText(merged.getBloodType())) {
             master.setBloodType(merged.getBloodType());
             filled.add("血型");
         }
-        if (!StringUtils.hasText(master.getMedicalInsuranceType()) && StringUtils.hasText(merged.getMedicalInsuranceType())) {
+        if (!TextUtil.hasText(master.getMedicalInsuranceType()) && TextUtil.hasText(merged.getMedicalInsuranceType())) {
             master.setMedicalInsuranceType(merged.getMedicalInsuranceType());
             filled.add("医保类型");
         }
@@ -605,7 +605,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
     }
 
     private Integer readIntFromJson(String json, String field) {
-        if (!StringUtils.hasText(json)) {
+        if (!TextUtil.hasText(json)) {
             return null;
         }
         try {

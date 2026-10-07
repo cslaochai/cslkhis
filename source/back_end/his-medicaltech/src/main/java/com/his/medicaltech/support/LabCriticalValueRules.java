@@ -1,9 +1,9 @@
 package com.his.medicaltech.support;
 
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.enums.CriticalTypeEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Locale;
@@ -58,12 +58,12 @@ public final class LabCriticalValueRules {
             return Optional.empty();
         }
         String unit = normalizeUnit(resultUnit);
-        if (!StringUtils.hasText(unit)) {
+        if (!TextUtil.hasText(unit)) {
             // 单位缺失时不做判定：宁可漏报，也不冒按错量纲乱报的风险
             return Optional.empty();
         }
-        String code = StringUtils.hasText(itemCode) ? itemCode.trim().toUpperCase(Locale.ROOT) : "";
-        String name = StringUtils.hasText(itemName) ? itemName.trim() : "";
+        String code = TextUtil.hasText(itemCode) ? itemCode.trim().toUpperCase(Locale.ROOT) : "";
+        String name = TextUtil.hasText(itemName) ? itemName.trim() : "";
 
         for (Rule rule : RULES) {
             if (!matches(rule, code, name)) {
@@ -89,17 +89,17 @@ public final class LabCriticalValueRules {
     }
 
     private static boolean matches(Rule rule, String code, String name) {
-        if (StringUtils.hasText(code) && rule.code().equals(code)) {
+        if (TextUtil.hasText(code) && rule.code().equals(code)) {
             return true;
         }
-        return StringUtils.hasText(name) && name.contains(rule.nameKeyword());
+        return TextUtil.hasText(name) && name.contains(rule.nameKeyword());
     }
 
     /**
      * 单位归一：大小写、空格、上标差异（10^9/L 与 10⁹/L、10*9/L）
      */
     private static String normalizeUnit(String unit) {
-        if (!StringUtils.hasText(unit)) {
+        if (!TextUtil.hasText(unit)) {
             return "";
         }
         return unit.trim().toLowerCase(Locale.ROOT)

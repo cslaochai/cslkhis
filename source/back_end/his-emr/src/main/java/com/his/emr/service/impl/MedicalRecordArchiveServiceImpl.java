@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizMedicalRecordArchive;
 import com.his.emr.enums.ArchiveStatusEnum;
@@ -52,7 +53,7 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
         LambdaQueryWrapper<BizMedicalRecordArchive> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(patientId != null, BizMedicalRecordArchive::getPatientId, patientId)
                 .eq(archiveStatus != null, BizMedicalRecordArchive::getArchiveStatus, archiveStatus)
-                .and(keyword != null && !keyword.isBlank(), w -> w
+                .and(TextUtil.hasText(keyword), w -> w
                         .like(BizMedicalRecordArchive::getRecordNo, keyword)
                         .or().like(BizMedicalRecordArchive::getPatientName, keyword))
                 .orderByDesc(BizMedicalRecordArchive::getCreateTime)
@@ -153,7 +154,7 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
             return 0;
         }
 
-        LocalDateTime sinceToday = LocalDate.now().atStartOfDay();
+        LocalDateTime sinceToday = TimeUtil.dayStart(LocalDate.now());
         int sent = 0;
         for (BizMedicalRecordArchive archive : overdueList) {
             try {

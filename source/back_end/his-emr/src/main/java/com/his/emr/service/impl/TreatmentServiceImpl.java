@@ -7,6 +7,7 @@ import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.support.FeeCatalogResolver;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.enums.BillingStatusEnum;
 import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
@@ -36,7 +37,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -72,11 +72,6 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
     private static final int BACK_DAYS = 31;
     private static final int AHEAD_DAYS = 365;
 
-    private static final String DICT_ITEM_TYPE = "his_treatment_item_type";
-    private static final String DICT_APPLY_STATUS = "his_treatment_apply_status";
-    private static final String DICT_RECORD_STATUS = "his_treatment_record_status";
-    private static final String DICT_EXEC_STATUS = "his_treatment_exec_status";
-    private static final String DICT_CHARGE_STATUS = "his_treatment_charge_status";
 
     private final BizTreatmentApplyMapper bizTreatmentApplyMapper;
 
@@ -121,13 +116,13 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
             return BigDecimal.valueOf(n.doubleValue());
         }
         String s = String.valueOf(o);
-        return StringUtils.hasText(s) ? new BigDecimal(s) : null;
+        return TextUtil.hasText(s) ? new BigDecimal(s) : null;
     }
 
     public PageResult<TreatmentVO.ApplyVO> listPageApplies(TreatmentDTO.ApplyQuery q) {
         LambdaQueryWrapper<BizTreatmentApply> w = new LambdaQueryWrapper<>();
         String kw = TextUtil.trim(q.getKeyword());
-        w.and(StringUtils.hasText(kw), x -> x.like(BizTreatmentApply::getPatientName, kw)
+        w.and(TextUtil.hasText(kw), x -> x.like(BizTreatmentApply::getPatientName, kw)
                         .or().like(BizTreatmentApply::getPatientNo, kw)
                         .or().like(BizTreatmentApply::getApplyNo, kw)
                         .or().like(BizTreatmentApply::getItemName, kw))
@@ -182,14 +177,14 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
         for (int s = 0; s <= 2; s++) {
             TreatmentDTO.ExecQuery one = copy(ex);
             one.setExecStatus(s);
-            out.add(countVo("exec-" + s, dictCacheService.getDicDataLabel(DICT_EXEC_STATUS, s), execPage(one, 1, 1).getTotal()));
+            out.add(countVo("exec-" + s, dictCacheService.getDicDataLabel(DictType.TREATMENT_EXEC_STATUS, s), execPage(one, 1, 1).getTotal()));
         }
         TreatmentDTO.ExecQuery ch = copy(q);
         ch.setChargeStatus(null);
         for (int s = 0; s <= 3; s++) {
             TreatmentDTO.ExecQuery one = copy(ch);
             one.setChargeStatus(s);
-            out.add(countVo("charge-" + s, dictCacheService.getDicDataLabel(DICT_CHARGE_STATUS, s), execPage(one, 1, 1).getTotal()));
+            out.add(countVo("charge-" + s, dictCacheService.getDicDataLabel(DictType.TREATMENT_CHARGE_STATUS, s), execPage(one, 1, 1).getTotal()));
         }
         return out;
     }
@@ -227,7 +222,7 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
             v.setItemCode(row.getItemCode());
             v.setItemName(row.getItemName());
             v.setItemType(row.getItemType());
-            v.setItemTypeText(dictCacheService.getDicDataLabel(DICT_ITEM_TYPE, v.getItemType()));
+            v.setItemTypeText(dictCacheService.getDicDataLabel(DictType.TREATMENT_ITEM_TYPE, v.getItemType()));
             v.setPrice(row.getPrice());
             v.setDuration(row.getDuration());
             v.setUsageMethod(row.getUsageMethod());
@@ -316,7 +311,7 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
         Long loginEmployee = UserUtils.getCurrentUser().getEmployeeId();
         apply.setDoctorId(loginEmployee != null ? loginEmployee : regist.getDoctorId());
         String loginName = UserUtils.getCurrentUser().getRealName();
-        apply.setDoctorName(StringUtils.hasText(loginName) ? loginName : regist.getDoctorName());
+        apply.setDoctorName(TextUtil.hasText(loginName) ? loginName : regist.getDoctorName());
         apply.setTreatmentItemId(item.getItemId());
         apply.setItemCode(item.getItemCode());
         apply.setItemName(item.getItemName());
@@ -386,7 +381,7 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
         exec.setExecStatus(TreatmentExecStatusEnum.DONE.getCode());
         exec.setExecuteTime(now);
         exec.setRecordStatus(Integer.valueOf(0).equals(dto.getRecordStatus()) ? 0 : 1);
-        exec.setResult(TextUtil.cut(StringUtils.hasText(dto.getResult()) ? dto.getResult()
+        exec.setResult(TextUtil.cut(TextUtil.hasText(dto.getResult()) ? dto.getResult()
                 : ("第 " + exec.getExecSeq() + " 次治疗完成，过程顺利"), 1000));
         exec.setRemark(TextUtil.cut(dto.getRemark(), 500));
         Long employeeId = UserUtils.getCurrentUser().getEmployeeId();
@@ -495,7 +490,7 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
         dto.setSourceType(FeeSourceTypeEnum.TREATMENT_APPLY.getCode());
         // 幂等锚点 = 执行流水行ID（一次打卡一行）；用申请单ID会把第 2 次以后的真账抹掉
         dto.setSourceId(exec.getRecordId());
-        dto.setSourceNo(StringUtils.hasText(apply.getApplyNo())
+        dto.setSourceNo(TextUtil.hasText(apply.getApplyNo())
                 ? apply.getApplyNo() : ("EXEC-" + exec.getRecordId()));
         dto.setCatalogType(FeeCatalogResolver.byItemType(dto.getItemType()));
         dto.setRemark("门诊治疗按次计费（" + apply.getItemName() + " 第 " + exec.getExecSeq() + " 次）");
@@ -601,8 +596,8 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
     private TreatmentVO.ApplyVO toApplyVo(BizTreatmentApply a) {
         TreatmentVO.ApplyVO v = new TreatmentVO.ApplyVO();
         BeanUtils.copyProperties(a, v);
-        v.setItemTypeText(dictCacheService.getDicDataLabel(DICT_ITEM_TYPE, a.getItemType()));
-        v.setApplyStatusText(dictCacheService.getDicDataLabel(DICT_APPLY_STATUS, a.getApplyStatus()));
+        v.setItemTypeText(dictCacheService.getDicDataLabel(DictType.TREATMENT_ITEM_TYPE, a.getItemType()));
+        v.setApplyStatusText(dictCacheService.getDicDataLabel(DictType.TREATMENT_APPLY_STATUS, a.getApplyStatus()));
         int total = NumUtil.orDefault(a.getTotalTimes(), 1);
         int done = NumUtil.orDefault(a.getDoneTimes(), 0);
         v.setDoneTimes(done);
@@ -625,14 +620,14 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
     private TreatmentVO.ExecVO toExecVo(BizTreatmentRecord r, BizTreatmentApply apply) {
         TreatmentVO.ExecVO v = new TreatmentVO.ExecVO();
         BeanUtils.copyProperties(r, v);
-        v.setExecStatusText(dictCacheService.getDicDataLabel(DICT_EXEC_STATUS, r.getExecStatus()));
-        v.setChargeStatusText(dictCacheService.getDicDataLabel(DICT_CHARGE_STATUS, r.getChargeStatus()));
+        v.setExecStatusText(dictCacheService.getDicDataLabel(DictType.TREATMENT_EXEC_STATUS, r.getExecStatus()));
+        v.setChargeStatusText(dictCacheService.getDicDataLabel(DictType.TREATMENT_CHARGE_STATUS, r.getChargeStatus()));
         // execute_time / record_status 在老库是 NOT NULL 带默认值，未执行的行上是 MySQL 填的默认值，
         // 只有真的打过卡才有意义 —— 不按时机清空就会把"排期"显示成"已做"。
         boolean done = Integer.valueOf(TreatmentExecStatusEnum.DONE.getCode()).equals(r.getExecStatus());
         v.setExecuteTime(done ? r.getExecuteTime() : null);
         v.setRecordStatus(done ? r.getRecordStatus() : null);
-        v.setRecordStatusText(done ? dictCacheService.getDicDataLabel(DICT_RECORD_STATUS, r.getRecordStatus()) : null);
+        v.setRecordStatusText(done ? dictCacheService.getDicDataLabel(DictType.TREATMENT_RECORD_STATUS, r.getRecordStatus()) : null);
         LocalDate plan = r.getPlanDate();
         v.setOverdue(!done && plan != null && plan.isBefore(LocalDate.now()));
         if (apply != null) {
@@ -642,7 +637,7 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
             v.setPatientName(apply.getPatientName());
             v.setItemName(apply.getItemName());
             v.setItemType(apply.getItemType());
-            v.setItemTypeText(dictCacheService.getDicDataLabel(DICT_ITEM_TYPE, apply.getItemType()));
+            v.setItemTypeText(dictCacheService.getDicDataLabel(DictType.TREATMENT_ITEM_TYPE, apply.getItemType()));
             v.setPrice(apply.getPrice());
             v.setDeptId(apply.getDeptId());
             v.setDeptName(apply.getDeptName());
@@ -672,7 +667,7 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
             w.eq(BizTreatmentRecord::getExecStatus, TreatmentExecStatusEnum.DONE.getCode())
                     .in(BizTreatmentRecord::getChargeStatus, BillingStatusEnum.UNBILLED.getCode(), BillingStatusEnum.FAILED.getCode());
         }
-        if (q.getPatientId() != null || StringUtils.hasText(TextUtil.trim(q.getKeyword()))) {
+        if (q.getPatientId() != null || TextUtil.hasText(TextUtil.trim(q.getKeyword()))) {
             List<Long> applyIds = applyIds(q.getPatientId(), TextUtil.trim(q.getKeyword()));
             if (applyIds.isEmpty()) {
                 return new Page<>(pageNum, pageSize);
@@ -691,7 +686,7 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
         LambdaQueryWrapper<BizTreatmentApply> w = new LambdaQueryWrapper<>();
         w.select(BizTreatmentApply::getApplyId)
                 .eq(patientId != null, BizTreatmentApply::getPatientId, patientId)
-                .and(StringUtils.hasText(kw), x -> x.like(BizTreatmentApply::getPatientName, kw)
+                .and(TextUtil.hasText(kw), x -> x.like(BizTreatmentApply::getPatientName, kw)
                         .or().like(BizTreatmentApply::getPatientNo, kw)
                         .or().like(BizTreatmentApply::getApplyNo, kw)
                         .or().like(BizTreatmentApply::getItemName, kw));
@@ -795,6 +790,6 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
     }
 
     private String execStatusText(Integer status) {
-        return dictCacheService.getDicDataLabel(DICT_EXEC_STATUS, status);
+        return dictCacheService.getDicDataLabel(DictType.TREATMENT_EXEC_STATUS, status);
     }
 }

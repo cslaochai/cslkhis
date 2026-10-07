@@ -4,10 +4,10 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.ai.entity.SysAiCallLog;
 import com.his.ai.mapper.SysAiCallLogMapper;
 import com.his.ai.service.AiAuditService;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 
@@ -32,8 +32,8 @@ public class AiAuditServiceImpl extends ServiceImpl<SysAiCallLogMapper, SysAiCal
             if (entity.getCreateTime() == null) {
                 entity.setCreateTime(LocalDateTime.now());
             }
-            if (!StringUtils.hasText(entity.getCreateBy())) {
-                if (!StringUtils.hasText(entity.getOperator())) {
+            if (!TextUtil.hasText(entity.getCreateBy())) {
+                if (!TextUtil.hasText(entity.getOperator())) {
                     // 调用方没给 operator 就等于「这次 AI 调用不知道谁触发的」，
                     // 塞system 等于伪造审计痕迹；宁可丢这条日志也要让调用方补上
                     log.warn("[AI] 审计日志缺少 operator（capabilityKey={}），本次不落库", entity.getCapabilityKey());

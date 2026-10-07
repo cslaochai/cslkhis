@@ -12,8 +12,10 @@ public interface DictCacheService {
     List<SysDictData> getDictDataByType(String dictType);
 
     /**
-     * 字典码值 → 文案（全工程翻译单点）。
-     * 取不到渲染「未知(n)」，绝不回落成看似合法的值（回落会把脏数据伪装成正常数据）。
+     * 字典码值 → 文案（全工程字典翻译单点）。
+     * 类型编码只许用 {@code com.his.common.constant.DictType} 的常量，不许在调用点写字面量。
+     * 取不到（字典没这个类型、或这个码值没行）返回空串，与枚举 {@code getText} 同口径；
+     * 要保留原始脏码值排查是枚举 {@code labelOrUnknown} 的事，字典侧不伪造文案。
      */
     String getDicDataLabel(String dictType, Object value);
 

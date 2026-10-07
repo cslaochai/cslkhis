@@ -1,5 +1,7 @@
 package com.his.medicaltech.enums;
 
+import com.his.common.util.TextUtil;
+
 /**
  * 数据质量规则集（P5.3）。
  *
@@ -165,7 +167,7 @@ public enum QualityRule {
      * 未知规则码返回 null（调用方需显式报"未知规则(xxx)"，不做静默回落）
      */
     public static QualityRule parse(String code) {
-        if (code == null || code.isBlank()) {
+        if (!TextUtil.hasText(code)) {
             return null;
         }
         for (QualityRule r : values()) {

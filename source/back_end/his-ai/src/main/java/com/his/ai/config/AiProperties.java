@@ -1,10 +1,10 @@
 package com.his.ai.config;
 
 import com.his.ai.constant.AiCapabilityKeys;
+import com.his.common.util.TextUtil;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -110,9 +110,9 @@ public class AiProperties {
      */
     public boolean isReady() {
         return enabled
-                && StringUtils.hasText(baseUrl)
-                && StringUtils.hasText(apiKey)
-                && StringUtils.hasText(model);
+                && TextUtil.hasText(baseUrl)
+                && TextUtil.hasText(apiKey)
+                && TextUtil.hasText(model);
     }
 
     @Data

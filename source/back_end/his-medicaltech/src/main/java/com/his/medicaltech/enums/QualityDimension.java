@@ -1,5 +1,7 @@
 package com.his.medicaltech.enums;
 
+import com.his.common.util.TextUtil;
+
 /**
  * 数据质量五维度（P5.3）。
  *
@@ -35,7 +37,7 @@ public enum QualityDimension {
      * 未知维度码返回 null，由调用方决定如何显式报错，不做静默回落
      */
     public static QualityDimension parse(String code) {
-        if (code == null || code.isBlank()) {
+        if (!TextUtil.hasText(code)) {
             return null;
         }
         for (QualityDimension d : values()) {

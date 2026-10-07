@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.AdmissionOrderCancelDTO;
 import com.his.patient.dto.AdmissionOrderQueryPageDTO;
@@ -27,7 +28,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -318,7 +318,7 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
     private int validDays() {
         SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
                 .eq(SysConfig::getConfigKey, VALID_DAYS_CONFIG_KEY));
-        if (config == null || !StringUtils.hasText(config.getConfigValue())) {
+        if (config == null || !TextUtil.hasText(config.getConfigValue())) {
             log.warn("未配置 {}，住院证有效期按兜底值 {} 天", VALID_DAYS_CONFIG_KEY, VALID_DAYS_FALLBACK);
             return VALID_DAYS_FALLBACK;
         }

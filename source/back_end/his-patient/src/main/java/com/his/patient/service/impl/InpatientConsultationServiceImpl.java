@@ -10,6 +10,7 @@ import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -24,14 +25,12 @@ import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysMessage;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysEmployeeMapper;
-import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -78,7 +77,6 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
 
     private final SysMessageService sysMessageService;
 
-    private final DictCacheService dictCacheService;
 
     private final BizConsultationMapper bizConsultationMapper;
 
@@ -338,7 +336,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
         entity.setAcceptDoctorName(doctorName);
         // 接诊即确定实际会诊医生：申请时指定的（或 0=未指定）在这里被真实的人覆盖
         entity.setDoctorId(doctorId);
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
         bizConsultationMapper.updateById(entity);
@@ -552,7 +550,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
     private void decorate(ConsultationVO vo) {
         vo.setConsultTypeText(ConsultScopeEnum.getText(vo.getConsultType()));
         vo.setConsultStatusText(ConsultationStatusEnum.getText(vo.getConsultStatus()));
-        vo.setIsUrgentText(dictCacheService.getDicDataLabel("biz_patient_consultUrgentEnum", vo.getIsUrgent()));
+        vo.setIsUrgentText(YesOrNoEnum.getText(vo.getIsUrgent()));
         // 类别 null（存量行未填）→ 一律按"普通科间会诊"显示；非 null 脏数据 → 空串，由数据治理修复，不伪装
         vo.setConsultCategoryText(vo.getConsultCategory() == null
                 ? ConsultCategoryEnum.NORMAL.getLabel() : ConsultCategoryEnum.getText(vo.getConsultCategory()));
@@ -614,7 +612,7 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
             return "未知科室";
         }
         String name = bizConsultationMapper.selectDeptName(deptId);
-        return StringUtils.hasText(name) ? name : "未知科室(ID=" + deptId + ")";
+        return TextUtil.hasText(name) ? name : "未知科室(ID=" + deptId + ")";
     }
 
     private String nextConsultationNo() {

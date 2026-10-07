@@ -12,12 +12,12 @@ import com.his.ai.vo.KnowledgeAskVO;
 import com.his.ai.vo.KnowledgeDocListVO;
 import com.his.ai.vo.KnowledgeDocVO;
 import com.his.common.base.Result;
+import com.his.common.util.TextUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,7 +48,7 @@ public class AiKnowledgeController {
     public Result<Long> ingest(@Valid @RequestBody KnowledgeIngestDTO ingestDTO) {
         SysKnowledgeDoc doc = new SysKnowledgeDoc();
         doc.setTitle(ingestDTO.getTitle());
-        doc.setCategory(StringUtils.hasText(ingestDTO.getCategory()) ? ingestDTO.getCategory() : ingestDTO.getTitle());
+        doc.setCategory(TextUtil.hasText(ingestDTO.getCategory()) ? ingestDTO.getCategory() : ingestDTO.getTitle());
         doc.setContent(ingestDTO.getContent());
         doc.setSourceType(ingestDTO.getSourceType() == null ? 2 : ingestDTO.getSourceType());
         return Result.success(knowledgeStoreService.ingest(doc));

@@ -4,9 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.constant.DictType;
 import com.his.common.enums.*;
+import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.BizOperationApply;
@@ -43,7 +46,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -102,7 +104,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
     // 查询
     private static String textOr(String value, String fallback) {
-        return StringUtils.hasText(value) ? value : fallback;
+        return TextUtil.hasText(value) ? value : fallback;
     }
 
     /**
@@ -126,15 +128,15 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
     }
 
     private static Parsed parse(String raw) {
-        if (!StringUtils.hasText(raw)) {
+        if (!TextUtil.hasText(raw)) {
             return null;
         }
         String s = raw.trim();
         try {
             if (s.length() == 10) {
                 LocalDate d = LocalDate.parse(s);
-                return new Parsed(d.atStartOfDay().format(DateFormats.DATETIME),
-                        d.plusDays(1).atStartOfDay().format(DateFormats.DATETIME));
+                return new Parsed(TimeUtil.dayStart(d).format(DateFormats.DATETIME),
+                        TimeUtil.dayStart(d.plusDays(1)).format(DateFormats.DATETIME));
             }
             LocalDateTime t = LocalDateTime.parse(s, DateFormats.DATETIME);
             return new Parsed(t.format(DateFormats.DATETIME), t.format(DateFormats.DATETIME));
@@ -217,7 +219,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
     public OperationScheduleMatrixVO scheduleMatrix(String date) {
         LocalDate day;
         try {
-            day = StringUtils.hasText(date) ? LocalDate.parse(date.trim()) : LocalDate.now();
+            day = TextUtil.hasText(date) ? LocalDate.parse(date.trim()) : LocalDate.now();
         } catch (DateTimeParseException e) {
             throw new BusinessException("日期格式不正确：" + date + "（应为 yyyy-MM-dd）");
         }
@@ -232,8 +234,8 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
                         .orderByAsc(SysOperationRoom::getSortOrder)
                         .orderByAsc(SysOperationRoom::getRoomCode));
 
-        LocalDateTime from = day.atStartOfDay();
-        LocalDateTime to = day.plusDays(1).atStartOfDay();
+        LocalDateTime from = TimeUtil.dayStart(day);
+        LocalDateTime to = TimeUtil.dayStart(day.plusDays(1));
         List<OperationApplyVO> scheduled = bizOperationApplyMapper.selectScheduledBetween(from, to);
         List<OperationApplyVO> pending = bizOperationApplyMapper.selectUnscheduled();
         scheduled.forEach(this::decorate);
@@ -516,13 +518,13 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         entity.setPreopCheckDoctorName(operatorUser.getRealName());
         entity.setPreopCheckTime(TimeUtil.nowSeconds());
         entity.setOperationStatus(OperationApplyStatusEnum.PREOP_CHECKED.getCode());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
         bizOperationApplyMapper.updateById(entity);
         log.info("术前核对完成 applyNo={} 核对项={} 异常说明={} 核对人={}",
                 entity.getApplyNo(), entity.getPreopCheckItems(),
-                StringUtils.hasText(dto.getPreopNote()) ? dto.getPreopNote() : "无", operatorUser.getRealName());
+                TextUtil.hasText(dto.getPreopNote()) ? dto.getPreopNote() : "无", operatorUser.getRealName());
     }
 
     // 展示态
@@ -586,7 +588,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         op.setAdmissionId(entity.getAdmissionId());
         op.setApplyId(entity.getId());
         op.setIsMain(entity.getIsMain());
-        op.setOperationCode(StringUtils.hasText(dto.getActualOperationCode())
+        op.setOperationCode(TextUtil.hasText(dto.getActualOperationCode())
                 ? dto.getActualOperationCode() : entity.getPlannedOperationCode());
         op.setOperationName(actualName);
         op.setOperationDate(start);
@@ -621,7 +623,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         entity.setOperationId(op.getId());
         entity.setRecordId(record.getId());
         entity.setOperationStatus(OperationApplyStatusEnum.FINISHED.getCode());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
         bizOperationApplyMapper.updateById(entity);
@@ -700,10 +702,10 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         if (dto.getBloodLoss() != null) {
             course.append('\n').append("术中出血量：").append(dto.getBloodLoss()).append(" ml");
         }
-        if (StringUtils.hasText(dto.getSpecimenSent())) {
+        if (TextUtil.hasText(dto.getSpecimenSent())) {
             course.append('\n').append("标本送检：").append(dto.getSpecimenSent());
         }
-        if (StringUtils.hasText(entity.getPreopCheckItems())) {
+        if (TextUtil.hasText(entity.getPreopCheckItems())) {
             course.append('\n').append("术前核对：")
                     .append(OperationCheckItems.summaryText(entity.getPreopCheckItems()));
         }
@@ -730,12 +732,12 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
         record.setRemark("系统回写：手术申请单号 " + entity.getApplyNo()
                 + "，主刀 " + textOr(entity.getSurgeonName(), "未指定")
                 + "，麻醉方式 " + OperationAnesthesiaMethodEnum.getText(entity.getAnesthesiaType())
-                + "，手术级别 " + dictCacheService.getDicDataLabel("biz_operation_operationLevelEnum", entity.getOperationLevel())
-                + "，切口等级 " + dictCacheService.getDicDataLabel("biz_operation_operationIncisionEnum", entity.getIncisionLevel()));
+                + "，手术级别 " + dictCacheService.getDicDataLabel(DictType.OPERATION_LEVEL, entity.getOperationLevel())
+                + "，切口等级 " + dictCacheService.getDicDataLabel(DictType.INCISION_LEVEL, entity.getIncisionLevel()));
         record.setRecordStatus(RecordStatusEnum.SUBMITTED.getCode());
         // 签名 = 主刀医师；主刀缺失才回落到录入人（宁可记"谁录的"，也不留空签名）
         record.setDoctorId(entity.getSurgeonId() != null ? entity.getSurgeonId() : operatorUser.getEmployeeId());
-        record.setDoctorName(StringUtils.hasText(entity.getSurgeonName())
+        record.setDoctorName(TextUtil.hasText(entity.getSurgeonName())
                 ? entity.getSurgeonName() : operatorUser.getRealName());
         record.setSubmitTime(now);
         // 病历号取号与落库归病历文书的写入方（手术侧只负责把这台手术写成文书内容）
@@ -794,10 +796,10 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
     private void decorate(OperationApplyVO vo) {
         vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
-        vo.setOperationLevelText(dictCacheService.getDicDataLabel("biz_operation_operationLevelEnum", vo.getOperationLevel()));
-        vo.setIncisionLevelText(dictCacheService.getDicDataLabel("biz_operation_operationIncisionEnum", vo.getIncisionLevel()));
+        vo.setOperationLevelText(dictCacheService.getDicDataLabel(DictType.OPERATION_LEVEL, vo.getOperationLevel()));
+        vo.setIncisionLevelText(dictCacheService.getDicDataLabel(DictType.INCISION_LEVEL, vo.getIncisionLevel()));
         vo.setAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getAnesthesiaType()));
-        vo.setIsEmergencyText(dictCacheService.getDicDataLabel("biz_operation_operationEmergencyEnum", vo.getIsEmergency()));
+        vo.setIsEmergencyText(YesOrNoEnum.getText(vo.getIsEmergency()));
         vo.setIsMainText(vo.getIsMain() == null ? "—" : (vo.getIsMain() == 1 ? "主要手术" : "次要手术"));
         vo.setGenderText(SysGenderEnum.getText(vo.getGender()));
         vo.setAdmitStatusText(AdmitStatusEnum.getText(vo.getAdmitStatus()));
@@ -882,7 +884,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
             return null;
         }
         String name = bizOperationApplyMapper.selectDeptName(deptId);
-        return StringUtils.hasText(name) ? name : "未知科室(ID=" + deptId + ")";
+        return TextUtil.hasText(name) ? name : "未知科室(ID=" + deptId + ")";
     }
 
     private String wardNameOf(Long wardId) {
@@ -905,7 +907,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
             return null;
         }
         String name = bizOperationApplyMapper.selectEmployeeName(empId);
-        return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
+        return TextUtil.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
     private String nextApplyNo() {

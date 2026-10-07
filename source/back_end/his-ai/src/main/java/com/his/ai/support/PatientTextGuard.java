@@ -1,8 +1,8 @@
 package com.his.ai.support;
 
+import com.his.common.util.TextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.regex.Pattern;
@@ -63,7 +63,7 @@ public class PatientTextGuard {
      * @return true-可展示；false-越界，调用方必须回落到规则文案
      */
     public boolean isSafe(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return false;
         }
         return firstHit(text) == null;
@@ -76,7 +76,7 @@ public class PatientTextGuard {
      * @param source 来源标记，只用于日志定位（如 capabilityKey）
      */
     public String guard(String text, String source) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return null;
         }
         Pattern hit = firstHit(text);

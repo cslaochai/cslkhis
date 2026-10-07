@@ -8,6 +8,7 @@ import com.his.common.enums.DelFlagEnum;
 import com.his.common.enums.ReviewStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.emr.dto.PublicHealthSubmitDTO;
 import com.his.emr.entity.BizPublicHealthReport;
 import com.his.emr.mapper.BizPublicHealthReportMapper;
@@ -72,7 +73,7 @@ public class PublicHealthReportServiceImpl extends ServiceImpl<BizPublicHealthRe
         report.setReportNo(redisSequenceService.generatePublicHealthReportNo());
         report.setReportStatus(ReviewStatusEnum.PENDING.getCode());
         report.setReportTime(LocalDateTime.now());
-        if (report.getReportBy() == null || report.getReportBy().isBlank()) {
+        if (!TextUtil.hasText(report.getReportBy())) {
             report.setReportBy(UserUtils.getCurrentUser().getRealName());
         }
         // 本实体不是 BaseEntity 子类，三列不会自动填充，必须显式写
@@ -92,7 +93,7 @@ public class PublicHealthReportServiceImpl extends ServiceImpl<BizPublicHealthRe
     @Transactional(rollbackFor = Exception.class)
     public boolean auditReport(Long reportId, boolean approved, String auditBy, String remark) {
         String auditor = auditBy;
-        if (auditor == null || auditor.isBlank()) {
+        if (!TextUtil.hasText(auditor)) {
             var current = UserUtils.getCurrentUser();
             auditor = current == null ? null : current.getRealName();
         }

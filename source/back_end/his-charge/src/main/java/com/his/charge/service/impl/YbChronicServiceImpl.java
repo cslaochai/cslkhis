@@ -133,7 +133,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
                 .eq(queryDTO.getDiseaseType() != null, BizYbChronicReg::getDiseaseType, queryDTO.getDiseaseType())
                 .eq(queryDTO.getCatalogId() != null, BizYbChronicReg::getCatalogId, queryDTO.getCatalogId())
                 .eq(queryDTO.getPatientId() != null, BizYbChronicReg::getPatientId, queryDTO.getPatientId())
-                .and(isText(queryDTO.getKeyword()), w -> w
+                .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
                         .like(BizYbChronicReg::getRegNo, queryDTO.getKeyword())
                         .or().like(BizYbChronicReg::getPatientName, queryDTO.getKeyword())
                         .or().like(BizYbChronicReg::getPatientNo, queryDTO.getKeyword())
@@ -280,7 +280,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
             entity.setRegisterEmpId(UserUtils.getCurrentUser().getEmployeeId());
             return;
         }
-        if (creating && !Objects.equals(inputName, UserUtils.getCurrentUser().getRealName()) && !isText(dto.getRemark())) {
+        if (creating && !Objects.equals(inputName, UserUtils.getCurrentUser().getRealName()) && !TextUtil.hasText(dto.getRemark())) {
             throw new BusinessException("经办人不是当前登录人（外部机构代办）时，必须在备注写明原因，例如「XX市医保中心窗口张XX代办」");
         }
         entity.setRegisterEmpName(TextUtil.cut(inputName, 64));
@@ -339,7 +339,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
         return new LambdaQueryWrapper<BizYbChronicCatalog>()
                 .eq(queryDTO.getDiseaseType() != null, BizYbChronicCatalog::getDiseaseType, queryDTO.getDiseaseType())
                 .eq(queryDTO.getStatus() != null, BizYbChronicCatalog::getStatus, queryDTO.getStatus())
-                .and(isText(queryDTO.getKeyword()), w -> w
+                .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
                         .like(BizYbChronicCatalog::getDiseaseCode, queryDTO.getKeyword())
                         .or().like(BizYbChronicCatalog::getDiseaseName, queryDTO.getKeyword())
                         .or().like(BizYbChronicCatalog::getIcdCode, queryDTO.getKeyword()))
@@ -366,9 +366,4 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
                 : (int) ChronoUnit.DAYS.between(today, entity.getValidEnd()));
         return vo;
     }
-
-    private boolean isText(String text) {
-        return text != null && !text.isBlank();
-    }
-
 }

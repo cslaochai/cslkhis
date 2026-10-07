@@ -5,7 +5,6 @@ import com.his.charge.entity.SysDrgGroup;
 import com.his.charge.enums.RuleCatalogEnum;
 import com.his.common.util.TextUtil;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -101,7 +100,7 @@ public class GroupingRatioRule implements ComplianceRule {
             return;
         }
         String drgCode = ctx.getSettlement() == null ? null : ctx.getSettlement().getDrgCode();
-        if (!StringUtils.hasText(drgCode)) {
+        if (!TextUtil.hasText(drgCode)) {
             findings.add(RuleFinding.hit(RuleCatalogEnum.D02,
                     "分组方案已接入，但该清单未填 DRG 分组编码（未入组）"));
             return;

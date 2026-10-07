@@ -3,6 +3,7 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.operation.dto.OperationRoomUpsertDTO;
 import com.his.operation.entity.SysOperationRoom;
 import com.his.operation.mapper.SysOperationRoomMapper;
@@ -11,7 +12,6 @@ import com.his.operation.vo.OperationRoomVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
@@ -35,7 +35,7 @@ public class OperationRoomServiceImpl extends ServiceImpl<SysOperationRoomMapper
     // C-非 DTO 字段校验：既校验必填又做 trim 归一化，返回值参与编码/名称唯一性比对与落库，
     // 若下沉为纯 @NotBlank 会丢失 trim，保留（@Valid 已挡 null，此处负责归一化）
     private static String trimRequired(String value, String message) {
-        if (!StringUtils.hasText(value)) {
+        if (!TextUtil.hasText(value)) {
             throw new BusinessException(message);
         }
         return value.trim();

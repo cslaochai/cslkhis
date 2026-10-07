@@ -1,8 +1,8 @@
 package com.his.medicaltech.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.Set;
 
@@ -62,11 +62,11 @@ public final class LabAbnormalJudge {
     public static Verdict judge(String resultValue, LabReferenceRange range) {
         if (range == null || !range.usable()) {
             String raw = range == null ? "" : range.describe();
-            return Verdict.notJudged(StringUtils.hasText(raw)
+            return Verdict.notJudged(TextUtil.hasText(raw)
                     ? "参考区间无法解析（" + raw + "）"
                     : "参考区间缺失");
         }
-        if (!StringUtils.hasText(resultValue)) {
+        if (!TextUtil.hasText(resultValue)) {
             return Verdict.notJudged("结果值为空");
         }
 

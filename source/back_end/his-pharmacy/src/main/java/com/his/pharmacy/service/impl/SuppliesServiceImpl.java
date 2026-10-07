@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.ConsumableUpsertDTO;
 import com.his.pharmacy.entity.BizConsumableConsume;
@@ -22,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -80,7 +80,7 @@ public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, B
         entity.setManufacturer(dto.getManufacturer());
         entity.setRetailPrice(dto.getRetailPrice() == null ? BigDecimal.ZERO : dto.getRetailPrice());
         entity.setIsHighValue(dto.getIsHighValue() == null ? 0 : dto.getIsHighValue());
-        entity.setUdiDi(StringUtils.hasText(dto.getUdiDi()) ? dto.getUdiDi().trim() : null);
+        entity.setUdiDi(TextUtil.hasText(dto.getUdiDi()) ? dto.getUdiDi().trim() : null);
         entity.setRegCertNo(dto.getRegCertNo());
         entity.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
         entity.setRemark(dto.getRemark());

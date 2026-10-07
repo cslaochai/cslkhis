@@ -1,5 +1,6 @@
 package com.his.medicaltech.enums;
 
+import com.his.common.util.TextUtil;
 import lombok.Getter;
 
 /**
@@ -50,7 +51,7 @@ public enum BloodTypeEnum {
      * 字符串码取枚举项：大小写与前后空格一律忽略（"a " 与 "A" 是同一血型）。
      */
     public static BloodTypeEnum fromAbo(String abo) {
-        if (abo == null || abo.isBlank()) {
+        if (!TextUtil.hasText(abo)) {
             return null;
         }
         String trimmed = abo.trim().toUpperCase();

@@ -1,9 +1,9 @@
 package com.his.common.config;
 
+import com.his.common.util.TextUtil;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 /**
  * 签名能力配置（{@code his.sign.*}）。
@@ -60,10 +60,10 @@ public class SignProperties {
      * 概要：拿最终生效的口令（配置项为空时读环境变量）
      */
     public String effectiveSecret() {
-        if (StringUtils.hasText(masterSecret)) {
+        if (TextUtil.hasText(masterSecret)) {
             return masterSecret;
         }
         String env = System.getenv("HIS_SIGN_SECRET");
-        return StringUtils.hasText(env) ? env : null;
+        return TextUtil.hasText(env) ? env : null;
     }
 }

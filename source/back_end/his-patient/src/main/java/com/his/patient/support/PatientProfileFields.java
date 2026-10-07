@@ -1,11 +1,11 @@
 package com.his.patient.support;
 
+import com.his.common.util.TextUtil;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.enums.PatientProfileCoverageEnum;
 import com.his.patient.enums.PatientProfileFieldEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -54,35 +54,35 @@ public final class PatientProfileFields {
             missing.addAll(FIELDS.values());
             return new ProfileScore(0, FIELDS.size(), missing);
         }
-        if (StringUtils.hasText(p.getPatientName())) filled++;
+        if (TextUtil.hasText(p.getPatientName())) filled++;
         else missing.add(FIELDS.get("patientName"));
         if (p.getGender() != null) filled++;
         else missing.add(FIELDS.get("gender"));
         if (p.getBirthDate() != null) filled++;
         else missing.add(FIELDS.get("birthDate"));
-        if (StringUtils.hasText(p.getIdCard())) filled++;
+        if (TextUtil.hasText(p.getIdCard())) filled++;
         else missing.add(FIELDS.get("idCard"));
-        if (StringUtils.hasText(p.getPhone())) filled++;
+        if (TextUtil.hasText(p.getPhone())) filled++;
         else missing.add(FIELDS.get("phone"));
-        if (StringUtils.hasText(p.getAddress())) filled++;
+        if (TextUtil.hasText(p.getAddress())) filled++;
         else missing.add(FIELDS.get("address"));
-        if (StringUtils.hasText(p.getNation())) filled++;
+        if (TextUtil.hasText(p.getNation())) filled++;
         else missing.add(FIELDS.get("nation"));
-        if (StringUtils.hasText(p.getOccupation())) filled++;
+        if (TextUtil.hasText(p.getOccupation())) filled++;
         else missing.add(FIELDS.get("occupation"));
         if (p.getMaritalStatus() != null) filled++;
         else missing.add(FIELDS.get("maritalStatus"));
-        if (StringUtils.hasText(p.getBloodType())) filled++;
+        if (TextUtil.hasText(p.getBloodType())) filled++;
         else missing.add(FIELDS.get("bloodType"));
-        if (StringUtils.hasText(p.getContactName())) filled++;
+        if (TextUtil.hasText(p.getContactName())) filled++;
         else missing.add(FIELDS.get("contactName"));
-        if (StringUtils.hasText(p.getContactPhone())) filled++;
+        if (TextUtil.hasText(p.getContactPhone())) filled++;
         else missing.add(FIELDS.get("contactPhone"));
-        if (StringUtils.hasText(p.getAllergyHistory())) filled++;
+        if (TextUtil.hasText(p.getAllergyHistory())) filled++;
         else missing.add(FIELDS.get("allergyHistory"));
-        if (StringUtils.hasText(p.getMedicalHistory())) filled++;
+        if (TextUtil.hasText(p.getMedicalHistory())) filled++;
         else missing.add(FIELDS.get("medicalHistory"));
-        if (StringUtils.hasText(p.getMedicalInsuranceType())) filled++;
+        if (TextUtil.hasText(p.getMedicalInsuranceType())) filled++;
         else missing.add(FIELDS.get("medicalInsuranceType"));
         return new ProfileScore(filled, FIELDS.size(), missing);
     }

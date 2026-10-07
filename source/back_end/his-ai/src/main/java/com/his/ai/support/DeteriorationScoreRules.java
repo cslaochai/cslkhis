@@ -1,5 +1,6 @@
 package com.his.ai.support;
 
+import com.his.ai.enums.DeteriorationAlertLevelEnum;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.patient.vo.NursingVitalFactVO;
@@ -68,12 +69,12 @@ public final class DeteriorationScoreRules {
      */
     public static int alertLevel(int totalScore) {
         if (totalScore >= CRITICAL_SCORE) {
-            return 2;
+            return DeteriorationAlertLevelEnum.HIGH_RISK.getCode();
         }
         if (totalScore >= WATCH_SCORE) {
-            return 1;
+            return DeteriorationAlertLevelEnum.WATCH.getCode();
         }
-        return 0;
+        return DeteriorationAlertLevelEnum.NOT_TRIGGERED.getCode();
     }
 
     /**

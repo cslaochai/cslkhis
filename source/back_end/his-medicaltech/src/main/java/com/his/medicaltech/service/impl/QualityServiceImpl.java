@@ -3,6 +3,7 @@ package com.his.medicaltech.service.impl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.QualityIssueQueryPageDTO;
 import com.his.medicaltech.enums.QualityDimension;
 import com.his.medicaltech.enums.QualityRule;
@@ -149,12 +150,12 @@ public class QualityServiceImpl implements QualityService {
 
     @Override
     public List<QualityRuleVO> getRuleList(String dimension) {
-        if (dimension != null && !dimension.isBlank() && QualityDimension.parse(dimension) == null) {
+        if (TextUtil.hasText(dimension) && QualityDimension.parse(dimension) == null) {
             throw new BusinessException("未知的数据质量维度：" + dimension);
         }
         Map<String, QualityRuleTotalVO> totals = loadTotals();
         List<QualityRuleVO> list = ruleVOs(totals);
-        if (dimension == null || dimension.isBlank()) {
+        if (!TextUtil.hasText(dimension)) {
             return list;
         }
         QualityDimension d = QualityDimension.parse(dimension);
@@ -181,13 +182,13 @@ public class QualityServiceImpl implements QualityService {
     public PageResult<QualityIssueVO> listIssuePage(QualityIssueQueryPageDTO dto) {
         QualityRule only = null;
         QualityDimension dim = null;
-        if (dto.getRuleCode() != null && !dto.getRuleCode().isBlank()) {
+        if (TextUtil.hasText(dto.getRuleCode())) {
             only = QualityRule.parse(dto.getRuleCode());
             if (only == null) {
                 throw new BusinessException("未知的数据质量规则：" + dto.getRuleCode());
             }
         }
-        if (dto.getDimension() != null && !dto.getDimension().isBlank()) {
+        if (TextUtil.hasText(dto.getDimension())) {
             dim = QualityDimension.parse(dto.getDimension());
             if (dim == null) {
                 throw new BusinessException("未知的数据质量维度：" + dto.getDimension());
@@ -283,13 +284,13 @@ public class QualityServiceImpl implements QualityService {
         v.setSeverityText(rule.getSeverity().getText());
         v.setSuggestion(rule.getSuggestion());
         v.setCheckedTotal(checked);
-        if (v.getTableName() == null || v.getTableName().isBlank()) {
+        if (!TextUtil.hasText(v.getTableName())) {
             v.setTableName(rule.getTableName());
         }
     }
 
     private boolean matchKeyword(QualityIssueVO v, String keyword) {
-        if (keyword == null || keyword.isBlank()) {
+        if (!TextUtil.hasText(keyword)) {
             return true;
         }
         String k = keyword.trim();

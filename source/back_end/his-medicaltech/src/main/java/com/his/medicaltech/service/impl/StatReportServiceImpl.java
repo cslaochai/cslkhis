@@ -5,10 +5,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.StatReportDTO;
 import com.his.medicaltech.entity.BizStatReport;
 import com.his.medicaltech.mapper.BizStatReportMapper;
@@ -21,12 +23,10 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
@@ -105,8 +105,8 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
             start = LocalDate.of(y, 1, 1);
             end = LocalDate.of(y, 12, 31);
         }
-        String startStr = start.atStartOfDay().format(DateFormats.DATETIME);
-        String endStr = end.atTime(LocalTime.MAX).format(DateFormats.DATETIME);
+        String startStr = TimeUtil.dayStart(start).format(DateFormats.DATETIME);
+        String endStr = TimeUtil.dayEnd(end).format(DateFormats.DATETIME);
 
         Long deptId = dto.getDeptId();
         BizStatReport dup = bizStatReportMapper.selectOne(new LambdaQueryWrapper<BizStatReport>()
@@ -124,7 +124,7 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
         String deptName = null;
         if (deptId != null) {
             deptName = statReportAggMapper.selectDeptName(deptId);
-            if (!StringUtils.hasText(deptName)) {
+            if (!TextUtil.hasText(deptName)) {
                 throw new BusinessException("所选科室不存在");
             }
         }
@@ -147,7 +147,7 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
         List<StatTopDiagnosisRowVO> topDx = statReportAggMapper.topDiagnoses(startStr, endStr, deptFilter);
         List<StatCohortCaseRowVO> cases = statReportAggMapper.cohortCases(startStr, endStr, deptFilter);
 
-        String typeName = dictCacheService.getDicDataLabel("biz_medicaltech_statReportTypeEnum", dto.getReportType());
+        String typeName = dictCacheService.getDicDataLabel(DictType.STAT_REPORT_TYPE, dto.getReportType());
         String title = (deptName == null ? "" : deptName) + typeName + "（" + period + "）";
         String operator = operatorUser.getRealName();
         LocalDateTime now = LocalDateTime.now();
@@ -269,7 +269,7 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
         }
         BizStatReport r = mustGet(id);
         if (r.getStatus() != 0) {
-            throw new BusinessException("只有草稿可报出（当前状态：" + dictCacheService.getDicDataLabel("biz_medicaltech_statReportStatusEnum", r.getStatus()) + "）");
+            throw new BusinessException("只有草稿可报出（当前状态：" + dictCacheService.getDicDataLabel(DictType.STAT_REPORT_STATUS, r.getStatus()) + "）");
         }
         r.setStatus(1);
         r.setSubmitTime(LocalDateTime.now());
@@ -295,12 +295,12 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
         StatReportDTO.QueryPage q = dto == null ? new StatReportDTO.QueryPage() : dto;
         LambdaQueryWrapper<BizStatReport> qw = new LambdaQueryWrapper<BizStatReport>()
                 .select(BizStatReport.class, fi -> !"payload".equals(fi.getProperty()))
-                .and(StringUtils.hasText(q.getKeyword()), w -> w
+                .and(TextUtil.hasText(q.getKeyword()), w -> w
                         .like(BizStatReport::getReportNo, q.getKeyword().trim())
                         .or().like(BizStatReport::getTitle, q.getKeyword().trim()))
                 .eq(q.getReportType() != null, BizStatReport::getReportType, q.getReportType())
                 .eq(q.getStatus() != null, BizStatReport::getStatus, q.getStatus())
-                .eq(StringUtils.hasText(q.getPeriodValue()), BizStatReport::getPeriodValue,
+                .eq(TextUtil.hasText(q.getPeriodValue()), BizStatReport::getPeriodValue,
                         q.getPeriodValue() == null ? null : q.getPeriodValue().trim())
                 .ge(q.getStartDate() != null, BizStatReport::getGenerateTime, q.getStartDate())
                 .le(q.getEndDate() != null, BizStatReport::getGenerateTime, q.getEndDate())

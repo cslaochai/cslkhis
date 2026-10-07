@@ -1,7 +1,7 @@
 package com.his.medicaltech.support;
 
+import com.his.common.util.TextUtil;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -49,7 +49,7 @@ public class DrgGrouper {
      * 分组。icdCode 允许带小数点（J18.9 → J18）；空码直接 QY。
      */
     public GroupResult group(String icdCode, boolean surgery, Integer inpatientDays, boolean death) {
-        if (!StringUtils.hasText(icdCode)) {
+        if (!TextUtil.hasText(icdCode)) {
             return new GroupResult(QY_CODE, null, null, "主诊断编码为空，无法入组");
         }
         String cat = icdCode.trim().split("\\.")[0];

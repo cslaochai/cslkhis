@@ -7,6 +7,7 @@ import com.his.charge.support.FeeCatalogResolver;
 import com.his.common.enums.EncounterTypeEnum;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
+import com.his.common.util.TextUtil;
 import com.his.pharmacy.entity.BizWardDispenseItem;
 import com.his.pharmacy.mapper.BizWardDispenseItemMapper;
 import com.his.pharmacy.vo.WardDispenseOrderDeptVO;
@@ -15,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 
@@ -56,7 +56,7 @@ public class WardDispenseChargeInvoker {
             log.warn("住院摆药记账缺少 admissionId，记账行无法归属这次住院，本次不记账（摆药明细 {}）", item.getId());
             return null;
         }
-        if (item.getPatientId() == null || !StringUtils.hasText(item.getPatientName())) {
+        if (item.getPatientId() == null || !TextUtil.hasText(item.getPatientName())) {
             log.warn("住院摆药记账缺少患者快照，本次不记账（admissionId={} 摆药明细 {}）",
                     item.getAdmissionId(), item.getId());
             return null;
@@ -77,7 +77,7 @@ public class WardDispenseChargeInvoker {
         dto.setEncounterType(EncounterTypeEnum.INPATIENT.getCode());
         dto.setEncounterId(item.getAdmissionId());
         // 归科按医嘱号反查开立科室，反查不到就留空由日结单列「无科室归属」，不兜底成病区
-        WardDispenseOrderDeptVO dept = StringUtils.hasText(item.getOrderNo())
+        WardDispenseOrderDeptVO dept = TextUtil.hasText(item.getOrderNo())
                 ? bizWardDispenseItemMapper.selectOrderDept(item.getOrderNo()) : null;
         if (dept != null) {
             dto.setDeptId(dept.getDeptId());
@@ -86,7 +86,7 @@ public class WardDispenseChargeInvoker {
         // 摆药只会是药品医嘱
         Integer itemType = PaymentItemTypeEnum.WESTERN_MEDICINE.getCode();
         dto.setItemType(itemType);
-        dto.setItemCode(StringUtils.hasText(item.getItemCode()) ? item.getItemCode() : item.getOrderNo());
+        dto.setItemCode(TextUtil.hasText(item.getItemCode()) ? item.getItemCode() : item.getOrderNo());
         dto.setItemName(item.getItemName());
         dto.setSpecification(item.getSpec());
         dto.setUnit(item.getUnit());
@@ -94,7 +94,7 @@ public class WardDispenseChargeInvoker {
         dto.setQuantity(quantity);
         dto.setSourceType(FeeSourceTypeEnum.DISPENSE.getCode());
         dto.setSourceId(item.getId());
-        dto.setSourceNo(StringUtils.hasText(item.getOrderNo())
+        dto.setSourceNo(TextUtil.hasText(item.getOrderNo())
                 ? item.getOrderNo() : ("DISP-" + item.getId()));
         dto.setCatalogType(FeeCatalogResolver.byItemType(itemType));
         dto.setRemark("住院摆药配药记账（摆药单 " + item.getDispenseNo()
@@ -112,7 +112,7 @@ public class WardDispenseChargeInvoker {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public BizFeeRecord refund(BizWardDispenseItem item, String reason) {
-        String flushReason = StringUtils.hasText(reason)
+        String flushReason = TextUtil.hasText(reason)
                 ? reason
                 : ("住院摆药退药冲账（摆药单 " + item.getDispenseNo() + "，明细 " + item.getId() + "）");
         BizFeeRecord orig = feeRecordService.findBookedBySource(

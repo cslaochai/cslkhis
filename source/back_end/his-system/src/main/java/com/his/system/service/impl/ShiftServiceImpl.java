@@ -11,6 +11,7 @@ import com.his.common.enums.StaffTypeEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.ShiftQueryPageDTO;
 import com.his.system.dto.ShiftUpsertDTO;
 import com.his.system.entity.BizShift;
@@ -20,7 +21,6 @@ import com.his.system.vo.ShiftSelectListVO;
 import com.his.system.vo.ShiftVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.time.LocalTime;
@@ -58,7 +58,7 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
     @Override
     public PageResult<ShiftVO> pageVO(ShiftQueryPageDTO dto) {
         LambdaQueryWrapper<BizShift> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(dto.getKeyword()), BizShift::getShiftName, dto.getKeyword())
+        wrapper.like(TextUtil.hasText(dto.getKeyword()), BizShift::getShiftName, dto.getKeyword())
                 .eq(dto.getStatus() != null, BizShift::getStatus, dto.getStatus())
                 .eq(dto.getUseScope() != null, BizShift::getUseScope, dto.getUseScope())
                 // 二级键 id：同 start_time 的行顺序不稳定（分页铁律，防翻页重复+丢行）

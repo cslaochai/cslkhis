@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
@@ -28,7 +29,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -52,8 +52,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizExamDevice> implements ExamDeviceService {
 
-    private static final String DICT_DEVICE_TYPE = "his_exam_device_type";
-    private static final String DICT_DEVICE_STATUS = "his_exam_device_status";
 
     private static final int OPEN = 1;
     private static final int PAUSED = 2;
@@ -81,7 +79,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
     public PageResult<ExamApptVO.DeviceVO> listPage(ExamApptDTO.DeviceQuery q) {
         LambdaQueryWrapper<BizExamDevice> w = new LambdaQueryWrapper<>();
         String kw = TextUtil.trim(q.getKeyword());
-        w.and(StringUtils.hasText(kw), x -> x.like(BizExamDevice::getDeviceName, kw)
+        w.and(TextUtil.hasText(kw), x -> x.like(BizExamDevice::getDeviceName, kw)
                         .or().like(BizExamDevice::getDeviceCode, kw)
                         .or().like(BizExamDevice::getRoomName, kw))
                 .eq(q.getDeviceType() != null, BizExamDevice::getDeviceType, q.getDeviceType())
@@ -118,7 +116,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         for (BizExamDevice d : bizExamDeviceMapper.selectList(w)) {
             ExamApptVO.DeviceSelectListVO v = new ExamApptVO.DeviceSelectListVO();
             BeanUtils.copyProperties(d, v);
-            v.setDeviceTypeText(dictCacheService.getDicDataLabel(DICT_DEVICE_TYPE, d.getDeviceType()));
+            v.setDeviceTypeText(dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_TYPE, d.getDeviceType()));
             out.add(v);
         }
         return out;
@@ -155,7 +153,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         String kw = TextUtil.trim(keyword);
         List<SysInspectionItem> items = sysInspectionItemMapper.selectList(
                 new LambdaQueryWrapper<SysInspectionItem>()
-                        .and(StringUtils.hasText(kw), x -> x.like(SysInspectionItem::getItemName, kw)
+                        .and(TextUtil.hasText(kw), x -> x.like(SysInspectionItem::getItemName, kw)
                                 .or().like(SysInspectionItem::getItemCode, kw))
                         .orderByAsc(SysInspectionItem::getItemCode)
                         .last("LIMIT " + Math.min(NumUtil.orDefault(limit, 50), 200)));
@@ -337,9 +335,9 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         if (amE <= amS) {
             throw new BusinessException("上午开放时段不合法：" + d.getAmStart() + "-" + d.getAmEnd());
         }
-        boolean hasPm = StringUtils.hasText(d.getPmStart()) || StringUtils.hasText(d.getPmEnd());
+        boolean hasPm = TextUtil.hasText(d.getPmStart()) || TextUtil.hasText(d.getPmEnd());
         if (hasPm) {
-            if (!StringUtils.hasText(d.getPmStart()) || !StringUtils.hasText(d.getPmEnd())) {
+            if (!TextUtil.hasText(d.getPmStart()) || !TextUtil.hasText(d.getPmEnd())) {
                 throw new BusinessException("下午开放时段的开始与结束必须同时填写");
             }
             int pmS = ExamGrid.toMin(d.getPmStart());
@@ -366,8 +364,8 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
                                            Map<Long, String> equipmentNames) {
         ExamApptVO.DeviceVO v = new ExamApptVO.DeviceVO();
         BeanUtils.copyProperties(d, v);
-        v.setDeviceTypeText(dictCacheService.getDicDataLabel(DICT_DEVICE_TYPE, d.getDeviceType()));
-        v.setStatusText(dictCacheService.getDicDataLabel(DICT_DEVICE_STATUS, d.getStatus()));
+        v.setDeviceTypeText(dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_TYPE, d.getDeviceType()));
+        v.setStatusText(dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_STATUS, d.getStatus()));
         v.setItemCount(itemCounts.getOrDefault(d.getId(), 0));
         v.setEquipmentName(d.getEquipmentId() == null ? null : equipmentNames.get(d.getEquipmentId()));
         v.setOpenRangeText(openRangeText(d));
@@ -377,7 +375,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
 
     private String openRangeText(BizExamDevice d) {
         String am = d.getAmStart() + "-" + d.getAmEnd();
-        return StringUtils.hasText(d.getPmStart()) ? am + "、" + d.getPmStart() + "-" + d.getPmEnd() : am;
+        return TextUtil.hasText(d.getPmStart()) ? am + "、" + d.getPmStart() + "-" + d.getPmEnd() : am;
     }
 
     private Map<Long, Integer> itemCountByDevice() {

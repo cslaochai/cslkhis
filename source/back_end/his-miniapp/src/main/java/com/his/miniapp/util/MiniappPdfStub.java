@@ -1,6 +1,7 @@
 package com.his.miniapp.util;
 
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import java.io.ByteArrayOutputStream;
@@ -79,7 +80,7 @@ public final class MiniappPdfStub {
     }
 
     private static String safe(String s) {
-        return s == null || s.isBlank() ? "-" : s.replaceAll("[()\\\\]", " ");
+        return !TextUtil.hasText(s) ? "-" : s.replaceAll("[()\\\\]", " ");
     }
 
     private static String escape(String s) {

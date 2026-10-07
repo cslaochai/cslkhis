@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.patient.dto.InpatientOrderItemDTO;
 import com.his.patient.dto.InpatientOrderTemplateQueryPageDTO;
 import com.his.patient.dto.InpatientOrderTemplateUpsertDTO;
@@ -26,7 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -75,7 +75,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         }
         List<InpatientOrderItemDTO> items = new ArrayList<>();
         for (InpatientOrderItemDTO item : dto.getItems()) {
-            if (item != null && StringUtils.hasText(item.getItemName())) {
+            if (item != null && TextUtil.hasText(item.getItemName())) {
                 items.add(item);
             }
         }
@@ -163,7 +163,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
             throw new BusinessException("当前用户信息不存在");
         }
         Long doctorId = operatorUser.getEmployeeId();
-        String keyword = StringUtils.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
+        String keyword = TextUtil.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
         LambdaQueryWrapper<BizInpatientOrderTemplate> wrapper = new LambdaQueryWrapper<BizInpatientOrderTemplate>()
                 .eq(BizInpatientOrderTemplate::getDoctorId, doctorId)
                 .eq(query.getOrderType() != null, BizInpatientOrderTemplate::getOrderType, query.getOrderType())
@@ -254,7 +254,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
         entity.setTemplateId(templateId);
         entity.setSortNo(sortNo);
         entity.setOrderClass(item.getOrderClass());
-        entity.setItemCode(StringUtils.hasText(item.getItemCode()) ? item.getItemCode() : null);
+        entity.setItemCode(TextUtil.hasText(item.getItemCode()) ? item.getItemCode() : null);
         entity.setItemName(item.getItemName().trim());
         entity.setSpec(item.getSpec());
         entity.setUnit(item.getUnit());

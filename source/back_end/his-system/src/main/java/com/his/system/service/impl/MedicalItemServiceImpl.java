@@ -3,6 +3,7 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.*;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.entity.SysLaboratoryItem;
@@ -15,7 +16,6 @@ import com.his.system.vo.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -31,7 +31,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
     @Override
     public PageResult<SysInspectionItemVO> inspectionListPage(SysInspectionItemQueryPageDTO queryDTO) {
         LambdaQueryWrapper<SysInspectionItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getKeyword()), SysInspectionItem::getItemName, queryDTO.getKeyword())
+        wrapper.like(TextUtil.hasText(queryDTO.getKeyword()), SysInspectionItem::getItemName, queryDTO.getKeyword())
                 .eq(queryDTO.getItemType() != null, SysInspectionItem::getItemType, queryDTO.getItemType())
                 .orderByAsc(SysInspectionItem::getItemCode);
         Page<SysInspectionItem> page = sysInspectionItemMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
@@ -46,7 +46,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
     @Override
     public List<SysInspectionItemSelectListVO> inspectionSelectList(String keyword, Integer limit) {
         LambdaQueryWrapper<SysInspectionItem> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(keyword)) {
+        if (TextUtil.hasText(keyword)) {
             wrapper.and(w -> w.like(SysInspectionItem::getItemName, keyword)
                     .or().like(SysInspectionItem::getItemCode, keyword));
         }
@@ -88,7 +88,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
     @Override
     public PageResult<SysLaboratoryItemVO> laboratoryListPage(SysLaboratoryItemQueryPageDTO queryDTO) {
         LambdaQueryWrapper<SysLaboratoryItem> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getKeyword()), SysLaboratoryItem::getItemName, queryDTO.getKeyword())
+        wrapper.like(TextUtil.hasText(queryDTO.getKeyword()), SysLaboratoryItem::getItemName, queryDTO.getKeyword())
                 .eq(queryDTO.getItemType() != null, SysLaboratoryItem::getItemType, queryDTO.getItemType())
                 .orderByAsc(SysLaboratoryItem::getItemCode);
         Page<SysLaboratoryItem> page = sysLaboratoryItemMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
@@ -103,7 +103,7 @@ public class MedicalItemServiceImpl implements MedicalItemService {
     @Override
     public List<SysLaboratoryItemSelectListVO> laboratorySelectList(String keyword, Integer limit) {
         LambdaQueryWrapper<SysLaboratoryItem> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(keyword)) {
+        if (TextUtil.hasText(keyword)) {
             wrapper.and(w -> w.like(SysLaboratoryItem::getItemName, keyword)
                     .or().like(SysLaboratoryItem::getItemCode, keyword));
         }

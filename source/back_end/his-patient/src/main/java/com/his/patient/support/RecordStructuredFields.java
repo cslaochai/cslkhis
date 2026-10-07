@@ -1,11 +1,11 @@
 package com.his.patient.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import com.his.patient.entity.BizInpatientRecord;
 import com.his.patient.enums.InpatientRecordTypeEnum;
 import com.his.patient.enums.RecordStructuredGroupEnum;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.function.Function;
@@ -217,7 +217,7 @@ public final class RecordStructuredFields {
             return false;
         }
         if (value instanceof CharSequence cs) {
-            return StringUtils.hasText(cs);
+            return TextUtil.hasText(cs);
         }
         return true;
     }

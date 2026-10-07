@@ -28,7 +28,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -127,7 +126,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         if (dto == null || dto.getBillId() == null) {
             throw new BusinessException("缺少账单");
         }
-        if (!StringUtils.hasText(dto.getReason())) {
+        if (!TextUtil.hasText(dto.getReason())) {
             throw new BusinessException("缺少退费原因");
         }
         BizSettlementBill bill = settlementBillService.getById(dto.getBillId());
@@ -207,7 +206,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
                 || BillStatusEnum.REFUNDED.getCode().equals(bill.getBillStatus())) {
             return false;
         }
-        if (!StringUtils.hasText(reason)) {
+        if (!TextUtil.hasText(reason)) {
             throw new BusinessException("缺少撤销原因");
         }
         TxnSourceEnum source = TxnSourceEnum.fromCode(sourceType);
@@ -564,7 +563,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         if (accountTxn != null) {
             return accountTxn.getTxnNo();
         }
-        if (StringUtils.hasText(provided)) {
+        if (TextUtil.hasText(provided)) {
             return provided;
         }
         if (!payMethod.channelBacked()) {
@@ -758,7 +757,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
                 .le(query.getEndDate() != null, BizPaymentTxn::getTxnDate, query.getEndDate())
                 // 备注也参与检索：押金类流水（source_type=3 住院预交金）不区分渠道，
                 // 「小程序微信充值（支付单 PAY…）」只在备注里 —— 不搜备注，财务就查不出今天小程序收了几笔押金
-                .and(StringUtils.hasText(keyword), w -> w.like(BizPaymentTxn::getTxnNo, keyword)
+                .and(TextUtil.hasText(keyword), w -> w.like(BizPaymentTxn::getTxnNo, keyword)
                         .or().like(BizPaymentTxn::getBillNo, keyword)
                         .or().like(BizPaymentTxn::getPatientName, keyword)
                         .or().like(BizPaymentTxn::getChannelTxnNo, keyword)

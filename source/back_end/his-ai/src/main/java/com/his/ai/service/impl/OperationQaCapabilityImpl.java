@@ -16,13 +16,13 @@ import com.his.ai.vo.OperationQaSummaryPromptVariablesVO;
 import com.his.ai.vo.OperationRowVO;
 import com.his.ai.vo.OperationSchemaVO;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import javax.sql.DataSource;
 import java.sql.Timestamp;
@@ -129,8 +129,8 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
         }
         OperationQaLlmOutputDTO output = generated.get();
         vo.setTitle(output.getTitle());
-        if (!StringUtils.hasText(output.getSql())) {
-            return degrade(vo, StringUtils.hasText(output.getTitle())
+        if (!TextUtil.hasText(output.getSql())) {
+            return degrade(vo, TextUtil.hasText(output.getTitle())
                     ? "未生成查询：" + output.getTitle()
                     : "未生成查询：本功能只回答经营统计类问题", start);
         }
@@ -220,7 +220,7 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
                 .build();
         return aiExecutionService.call(call, OperationQaSummaryLlmOutputDTO.class)
                 .map(OperationQaSummaryLlmOutputDTO::getSummary)
-                .filter(StringUtils::hasText)
+                .filter(TextUtil::hasText)
                 .orElse(null);
     }
 

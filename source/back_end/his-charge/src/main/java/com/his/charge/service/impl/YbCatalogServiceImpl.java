@@ -42,7 +42,7 @@ public class YbCatalogServiceImpl extends ServiceImpl<BizYbCatalogMapper, BizYbC
         LambdaQueryWrapper<BizYbCatalog> wrapper = new LambdaQueryWrapper<BizYbCatalog>()
                 .eq(queryDTO.getCatalogType() != null, BizYbCatalog::getCatalogType, queryDTO.getCatalogType())
                 .eq(queryDTO.getStatus() != null, BizYbCatalog::getStatus, queryDTO.getStatus())
-                .and(queryDTO.getKeyword() != null && !queryDTO.getKeyword().isBlank(), w -> w
+                .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
                         .like(BizYbCatalog::getYbCode, queryDTO.getKeyword())
                         .or().like(BizYbCatalog::getYbName, queryDTO.getKeyword()))
                 .orderByAsc(BizYbCatalog::getCatalogType)
@@ -100,7 +100,7 @@ public class YbCatalogServiceImpl extends ServiceImpl<BizYbCatalogMapper, BizYbC
         int skipped = 0;
         for (YbCatalogUpsertDTO item : items == null ? List.<YbCatalogUpsertDTO>of() : items) {
             if (item == null || item.getCatalogType() == null
-                    || isBlank(item.getYbCode()) || isBlank(item.getYbName())) {
+                    || !TextUtil.hasText(item.getYbCode()) || !TextUtil.hasText(item.getYbName())) {
                 skipped++;
                 continue;
             }
@@ -162,11 +162,6 @@ public class YbCatalogServiceImpl extends ServiceImpl<BizYbCatalogMapper, BizYbC
     }
 
     private LocalDate parseDate(String text) {
-        return isBlank(text) ? null : LocalDate.parse(text.trim(), DateTimeFormatter.ISO_LOCAL_DATE);
+        return !TextUtil.hasText(text) ? null : LocalDate.parse(text.trim(), DateTimeFormatter.ISO_LOCAL_DATE);
     }
-
-    private boolean isBlank(String s) {
-        return s == null || s.isBlank();
-    }
-
 }

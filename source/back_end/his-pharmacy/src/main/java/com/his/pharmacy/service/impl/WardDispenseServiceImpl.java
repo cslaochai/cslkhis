@@ -7,6 +7,7 @@ import com.his.charge.entity.BizFeeRecord;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.StockDeductResultDTO;
 import com.his.pharmacy.dto.WardDispenseActionDTO;
@@ -29,7 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -235,7 +235,7 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
         item.setCheckerId(operatorUser.getEmployeeId());
         item.setCheckerName(operatorUser.getRealName());
         item.setCheckTime(TimeUtil.nowSeconds());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             item.setRemark(dto.getRemark());
         }
         if (bizWardDispenseItemMapper.updateById(item) <= 0) {
@@ -249,7 +249,7 @@ public class WardDispenseServiceImpl extends ServiceImpl<BizWardDispenseItemMapp
     @Transactional(rollbackFor = Exception.class)
     public WardDispenseVO returnItem(WardDispenseActionDTO dto) {
         // B 类：reason 只在退药入口必填，同一 DTO 被配药/核对入口复用，加 @NotBlank 会挡死那两个接口
-        if (!StringUtils.hasText(dto.getReason())) {
+        if (!TextUtil.hasText(dto.getReason())) {
             throw new BusinessException("退药原因必填");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();

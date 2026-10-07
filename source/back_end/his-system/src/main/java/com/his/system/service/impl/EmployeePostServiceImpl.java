@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.EmployeePostDTO;
 import com.his.system.entity.*;
 import com.his.system.mapper.SysDepartmentMapper;
@@ -18,7 +19,6 @@ import com.his.system.vo.SwitchPostVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -96,7 +96,7 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
      */
     @Override
     public EmployeePostVO resolvePrimaryPost(Long employeeId, String roleCode) {
-        if (employeeId == null || !StringUtils.hasText(roleCode)) {
+        if (employeeId == null || !TextUtil.hasText(roleCode)) {
             return null;
         }
         // 登录落点只认生效中的岗位（sql/113）：已失效/尚未生效的角色不能签出 token
@@ -117,7 +117,7 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
 
     @Override
     public SwitchPostVO switchPost(CurrentUser user, String roleCode, Long deptId) {
-        if (!StringUtils.hasText(roleCode) || deptId == null) {
+        if (!TextUtil.hasText(roleCode) || deptId == null) {
             throw new BusinessException(400, "切换岗位必须同时指定角色和科室");
         }
         if (user.getEmployeeId() == null) {
@@ -285,7 +285,7 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
     private void checkNoDuplicate(List<EmployeePostDTO> rows) {
         Set<String> seen = new HashSet<>();
         for (EmployeePostDTO row : rows) {
-            if (!StringUtils.hasText(row.getRoleCode()) || row.getDeptId() == null) {
+            if (!TextUtil.hasText(row.getRoleCode()) || row.getDeptId() == null) {
                 throw new BusinessException(400, "岗位必须同时选定角色和科室");
             }
             if (row.getEffectiveDate() != null && row.getExpireDate() != null
@@ -300,7 +300,7 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
 
     private Map<String, SysRole> loadRoles(List<EmployeePostDTO> rows) {
         Set<String> codes = rows.stream().map(EmployeePostDTO::getRoleCode)
-                .filter(StringUtils::hasText).collect(Collectors.toSet());
+                .filter(TextUtil::hasText).collect(Collectors.toSet());
         if (codes.isEmpty()) {
             return Map.of();
         }
@@ -375,7 +375,7 @@ public class EmployeePostServiceImpl extends ServiceImpl<SysEmployeePostMapper, 
                 .findFirst()
                 .orElse(user.getCurrentRole());
         // 与顶栏「切换岗位」同序：先认在哪个科室，再认以什么身份执业
-        return (StringUtils.hasText(user.getDeptName()) ? user.getDeptName() : "未指定科室")
+        return (TextUtil.hasText(user.getDeptName()) ? user.getDeptName() : "未指定科室")
                 + "·" + roleName;
     }
 

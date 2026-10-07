@@ -23,7 +23,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -62,16 +61,16 @@ public class MiniappServiceTicketAdminServiceImpl extends ServiceImpl<MiniappSer
         int pageNum = query.getPageNum();
         int pageSize = query.getPageSize();
 
-        String keyword = StringUtils.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
+        String keyword = TextUtil.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
         String mine = Boolean.TRUE.equals(query.getOnlyMine()) ? currentUsername() : null;
 
         LambdaQueryWrapper<BizServiceMessage> w = new LambdaQueryWrapper<>();
-        w.and(StringUtils.hasText(keyword), q -> q.like(BizServiceMessage::getMessageNo, keyword)
+        w.and(TextUtil.hasText(keyword), q -> q.like(BizServiceMessage::getMessageNo, keyword)
                         .or().like(BizServiceMessage::getContent, keyword)
                         .or().like(BizServiceMessage::getPatientName, keyword)
                         .or().like(BizServiceMessage::getContactPhone, keyword))
                 .eq(query.getStatus() != null, BizServiceMessage::getStatus, query.getStatus())
-                .eq(StringUtils.hasText(query.getCategoryCode()), BizServiceMessage::getCategoryCode, query.getCategoryCode())
+                .eq(TextUtil.hasText(query.getCategoryCode()), BizServiceMessage::getCategoryCode, query.getCategoryCode())
                 .eq(mine != null, BizServiceMessage::getAcceptBy, mine)
                 // 待受理优先：客服进来是找新单，不是翻历史
                 .orderByAsc(BizServiceMessage::getStatus)
@@ -165,7 +164,7 @@ public class MiniappServiceTicketAdminServiceImpl extends ServiceImpl<MiniappSer
                 writeLog(ticket, ServiceTicketStatus.ACT_ACCEPT, operatorName + " 受理了这张工单", 1, operator, operatorName);
             }
             case "reply" -> {
-                if (!StringUtils.hasText(content)) {
+                if (!TextUtil.hasText(content)) {
                     throw new BusinessException("回复内容不能为空");
                 }
                 if (ServiceTicketStatus.isClosed(ticket.getStatus())) {
@@ -186,7 +185,7 @@ public class MiniappServiceTicketAdminServiceImpl extends ServiceImpl<MiniappSer
                 writeLog(ticket, ServiceTicketStatus.ACT_REPLY, content, visible, operator, operatorName);
             }
             case "finish" -> {
-                if (!StringUtils.hasText(content)) {
+                if (!TextUtil.hasText(content)) {
                     throw new BusinessException("办结必须写处理结果，否则患者不知道你做了什么");
                 }
                 if (ticket.getStatus() != ServiceTicketStatus.HANDLING) {
@@ -201,7 +200,7 @@ public class MiniappServiceTicketAdminServiceImpl extends ServiceImpl<MiniappSer
                 writeLog(ticket, ServiceTicketStatus.ACT_FINISH, content, 1, operator, operatorName);
             }
             case "close" -> {
-                if (!StringUtils.hasText(content)) {
+                if (!TextUtil.hasText(content)) {
                     throw new BusinessException("关闭必须写原因");
                 }
                 if (ServiceTicketStatus.isClosed(ticket.getStatus())) {
@@ -215,7 +214,7 @@ public class MiniappServiceTicketAdminServiceImpl extends ServiceImpl<MiniappSer
                 writeLog(ticket, ServiceTicketStatus.ACT_CLOSE, content, 1, operator, operatorName);
             }
             case "note" -> {
-                if (!StringUtils.hasText(content)) {
+                if (!TextUtil.hasText(content)) {
                     throw new BusinessException("备注内容不能为空");
                 }
                 int visible = dto.getVisibleToPatient() == null ? 0 : dto.getVisibleToPatient();
@@ -240,7 +239,7 @@ public class MiniappServiceTicketAdminServiceImpl extends ServiceImpl<MiniappSer
     private int countBy(String acceptBy, Integer status) {
         LambdaQueryWrapper<BizServiceMessage> w = new LambdaQueryWrapper<BizServiceMessage>()
                 .eq(BizServiceMessage::getStatus, status);
-        if (StringUtils.hasText(acceptBy)) {
+        if (TextUtil.hasText(acceptBy)) {
             w.eq(BizServiceMessage::getAcceptBy, acceptBy);
         }
         Long n = miniappServiceMessageMapper.selectCount(w);

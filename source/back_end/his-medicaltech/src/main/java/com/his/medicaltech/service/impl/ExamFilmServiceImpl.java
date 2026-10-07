@@ -8,6 +8,7 @@ import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.service.FeeRecordService;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
@@ -36,7 +37,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -103,8 +103,8 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
 
     @Override
     public ExamFilmVO.FilmStats stats(String startDate, String endDate) {
-        String from = StringUtils.hasText(startDate) ? startDate.trim() : LocalDate.now().toString();
-        String to = StringUtils.hasText(endDate) ? endDate.trim() : from;
+        String from = TextUtil.hasText(startDate) ? startDate.trim() : LocalDate.now().toString();
+        String to = TextUtil.hasText(endDate) ? endDate.trim() : from;
         return bizExamFilmMapper.selectStats(from, to);
     }
 
@@ -275,12 +275,12 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
                 "检查胶片", "作废胶片", "biz_exam_film", film.getId(),
                 TextUtil.cut("胶片单号=" + film.getFilmNo() + " 规格=" + film.getSpecName()
                         + " 张数=" + film.getQuantity() + " 金额=" + film.getAmount()
-                        + " 原因=" + (StringUtils.hasText(reason) ? reason : "未填写"), 2000),
+                        + " 原因=" + (TextUtil.hasText(reason) ? reason : "未填写"), 2000),
                 true, null);
         BizExamFilm update = new BizExamFilm();
         update.setId(film.getId());
         update.setFilmStatus(FilmStatusEnum.INVALID.getCode());
-        update.setRemark(TextUtil.cut("作废：" + (StringUtils.hasText(reason) ? reason : "未填写原因"), 500));
+        update.setRemark(TextUtil.cut("作废：" + (TextUtil.hasText(reason) ? reason : "未填写原因"), 500));
         return bizExamFilmMapper.updateById(update) > 0;
     }
 
@@ -301,7 +301,7 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
         spec.setSpecCode(TextUtil.cut(dto.getSpecCode(), 32));
         spec.setSpecName(TextUtil.cut(dto.getSpecName(), 100));
         spec.setUnitPrice(dto.getUnitPrice());
-        spec.setUnit(StringUtils.hasText(dto.getUnit()) ? TextUtil.cut(dto.getUnit(), 20) : "张");
+        spec.setUnit(TextUtil.hasText(dto.getUnit()) ? TextUtil.cut(dto.getUnit(), 20) : "张");
         spec.setSortOrder(dto.getSortOrder() == null ? 0 : dto.getSortOrder());
         spec.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
         if (dto.getId() == null) {
@@ -391,9 +391,9 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
         if (vo == null) {
             return null;
         }
-        vo.setFilmStatusText(dictCacheService.getDicDataLabel("his_film_status", vo.getFilmStatus()));
+        vo.setFilmStatusText(dictCacheService.getDicDataLabel(DictType.FILM_STATUS, vo.getFilmStatus()));
         vo.setModalityText(vo.getModality() == null ? null
-                : dictCacheService.getDicDataLabel("his_exam_device_type", vo.getModality()));
+                : dictCacheService.getDicDataLabel(DictType.EXAM_DEVICE_TYPE, vo.getModality()));
         return vo;
     }
 

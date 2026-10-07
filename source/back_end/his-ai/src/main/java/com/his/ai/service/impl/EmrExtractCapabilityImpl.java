@@ -20,7 +20,6 @@ import com.his.emr.mapper.BizMedicalRecordMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -143,7 +142,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
                 reject(notes, String.format("「%s」属于诊疗决策，不接受模型生成（原文带标签时才搬运）", label));
                 continue;
             }
-            if (!StringUtils.hasText(field.getValue())) {
+            if (!TextUtil.hasText(field.getValue())) {
                 rejected++;
                 reject(notes, String.format("「%s」的值为空", label));
                 continue;
@@ -211,7 +210,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
                               Map<String, String> vitals) {
         for (EmrFieldCatalog.TextField field : EmrFieldCatalog.textFields()) {
             String ruleValue = byRule.get(field.key());
-            if (StringUtils.hasText(ruleValue)) {
+            if (TextUtil.hasText(ruleValue)) {
                 // 规则命中即胜出：逐字原文优先于模型转述
                 vo.getFields().add(build(field.key(), field.label(),
                         TextUtil.cut(ruleValue, MAX_VALUE_LENGTH, ""),
@@ -230,7 +229,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
 
         for (EmrFieldCatalog.VitalField field : EmrFieldCatalog.vitalFields()) {
             String value = vitals.get(field.key());
-            if (StringUtils.hasText(value)) {
+            if (TextUtil.hasText(value)) {
                 vo.getFields().add(build(field.key(), field.label(), value, SOURCE_HARD_RULE, value));
             }
         }
@@ -242,7 +241,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
 
     private static void addVital(EmrExtractResultVO vo, Map<String, String> vitals, String key) {
         String value = vitals.get(key);
-        if (StringUtils.hasText(value)) {
+        if (TextUtil.hasText(value)) {
             vo.getFields().add(build(key, EmrFieldCatalog.getText(key), value, SOURCE_HARD_RULE, value));
         }
     }
@@ -270,7 +269,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
      * 所以不会破坏「子串」这个关系，只是把两边拉齐。
      */
     static String normalizeForMatch(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return "";
         }
         String value = text.replaceAll("[\\s\\u3000]", "")
@@ -300,7 +299,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
      * 中文写法的数字（「三年」）也一起归一后再比，不会误伤。
      */
     private static boolean hasFabricatedNumber(String value, String evidence) {
-        if (!StringUtils.hasText(value)) {
+        if (!TextUtil.hasText(value)) {
             return false;
         }
         String normalizedEvidence = normalizeForMatch(evidence);
@@ -317,7 +316,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
         long start = System.currentTimeMillis();
 
         String rawText = dto.getRawText() == null ? "" : dto.getRawText().trim();
-        if (!StringUtils.hasText(rawText)) {
+        if (!TextUtil.hasText(rawText)) {
             throw new BusinessException("待抽取的文本不能为空");
         }
 

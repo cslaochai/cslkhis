@@ -27,7 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -188,7 +187,7 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
         }
         boolean pass = Boolean.TRUE.equals(dto.getPass());
         // B 类：仅退回（pass=false）才必填，条件必填不能下沉成 @NotBlank
-        if (!pass && !StringUtils.hasText(dto.getReason())) {
+        if (!pass && !TextUtil.hasText(dto.getReason())) {
             throw new BusinessException("审方退回必须填写原因");
         }
         item.setAuditorId(operatorUser.getEmployeeId());
@@ -270,7 +269,7 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
         item.setCompounderId(operatorUser.getEmployeeId());
         item.setCompounderName(operatorUser.getRealName());
         item.setCompoundTime(TimeUtil.nowSeconds());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             item.setRemark(dto.getRemark());
         }
         if (bizPivasItemMapper.updateById(item) <= 0) {
@@ -295,7 +294,7 @@ public class PivasServiceImpl extends ServiceImpl<BizPivasItemMapper, BizPivasIt
         item.setVerifierId(operatorUser.getEmployeeId());
         item.setVerifierName(operatorUser.getRealName());
         item.setVerifyTime(TimeUtil.nowSeconds());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             item.setRemark(dto.getRemark());
         }
         if (bizPivasItemMapper.updateById(item) <= 0) {

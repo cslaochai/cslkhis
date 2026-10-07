@@ -1,5 +1,6 @@
 package com.his.pharmacy.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import lombok.Data;
@@ -24,7 +25,7 @@ public final class UdiParser {
      */
     public static UdiParts parse(String udiCode) {
         UdiParts parts = new UdiParts();
-        if (udiCode == null || udiCode.isBlank()) {
+        if (!TextUtil.hasText(udiCode)) {
             return parts;
         }
         String raw = udiCode.trim();
@@ -49,7 +50,7 @@ public final class UdiParser {
                 parts.di = bare.group(1);
             }
         }
-        parts.parsed = parts.di != null && !parts.di.isBlank();
+        parts.parsed = TextUtil.hasText(parts.di);
         return parts;
     }
 

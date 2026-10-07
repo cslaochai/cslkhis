@@ -9,7 +9,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -32,11 +31,11 @@ public class SysAuditLogServiceImpl extends ServiceImpl<SysAuditLogMapper, SysAu
         }
         HttpServletRequest request = attrs.getRequest();
         String forwarded = request.getHeader("X-Forwarded-For");
-        if (StringUtils.hasText(forwarded)) {
+        if (TextUtil.hasText(forwarded)) {
             return forwarded.split(",")[0].trim();
         }
         String real = request.getHeader("X-Real-IP");
-        return StringUtils.hasText(real) ? real : request.getRemoteAddr();
+        return TextUtil.hasText(real) ? real : request.getRemoteAddr();
     }
 
     /**

@@ -26,14 +26,12 @@ import com.his.patient.vo.MealGenerateVO;
 import com.his.patient.vo.MealOrderVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeProvider;
-import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -60,7 +58,6 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
     private final DeptScopeProvider deptScopeProvider;
     private final BizMealOrderMapper bizMealOrderMapper;
     private final BizDietPlanMapper bizDietPlanMapper;
-    private final DictCacheService dictCacheService;
 
     // 批量生成
 
@@ -133,8 +130,8 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
                         + " AND a.del_flag = 0 AND a.admit_status = 1")
                 .in(!CollectionUtils.isEmpty(dto.getWardIds()), BizDietPlan::getWardId, dto.getWardIds())
                 .in(!CollectionUtils.isEmpty(dto.getAdmissionIds()), BizDietPlan::getAdmissionId, dto.getAdmissionIds())
-                .le(BizDietPlan::getStartTime, mealDate.atTime(23, 59, 59))
-                .and(w -> w.isNull(BizDietPlan::getStopTime).or().ge(BizDietPlan::getStopTime, mealDate.atStartOfDay()))
+                .le(BizDietPlan::getStartTime, TimeUtil.dayEnd(mealDate))
+                .and(w -> w.isNull(BizDietPlan::getStopTime).or().ge(BizDietPlan::getStopTime, TimeUtil.dayStart(mealDate)))
                 .orderByAsc(BizDietPlan::getWardId)
                 .orderByAsc(BizDietPlan::getId));
 
@@ -251,7 +248,7 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
         }
         boolean cancel = Objects.equals(MealDeliverStatusEnum.CANCELED.getCode(), target);
         String cancelReason = TextUtil.cut(TextUtil.trim(dto.getCancelReason()), 500);
-        if (cancel && !StringUtils.hasText(cancelReason)) {
+        if (cancel && !TextUtil.hasText(cancelReason)) {
             // ①条件必填：只有退订（目标状态=4-已取消）才必填原因，@NotBlank 会把正常的配餐/配送/签收请求挡成 400
             throw new BusinessException("退订必须填写原因（停餐/出院/拒餐/转科等）");
         }
@@ -296,7 +293,7 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
             row.setUpdateTime(now);
             if (Objects.equals(MealDeliverStatusEnum.PREPARED.getCode(), target)) {
                 row.setPrepareTime(now);
-                if (StringUtils.hasText(dto.getDishContent())) {
+                if (TextUtil.hasText(dto.getDishContent())) {
                     row.setDishContent(TextUtil.cut(TextUtil.trim(dto.getDishContent()), 200));
                 }
             } else if (Objects.equals(MealDeliverStatusEnum.DELIVERED.getCode(), target)) {
@@ -305,7 +302,7 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
                 row.setDeliverByName(operator);
             } else if (Objects.equals(MealDeliverStatusEnum.SIGNED.getCode(), target)) {
                 row.setSignTime(now);
-                row.setSignBy(TextUtil.cut(StringUtils.hasText(dto.getSignBy()) ? TextUtil.trim(dto.getSignBy())
+                row.setSignBy(TextUtil.cut(TextUtil.hasText(dto.getSignBy()) ? TextUtil.trim(dto.getSignBy())
                         : (row.getPatientName() == null ? "病区护士" : row.getPatientName() + "（病区代签）"), 50));
             } else if (cancel) {
                 row.setCancelTime(now);

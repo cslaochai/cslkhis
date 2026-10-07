@@ -2,6 +2,7 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.AttendanceDTO;
 import com.his.system.entity.BizShift;
 import com.his.system.entity.BizStaffAttendance;
@@ -165,7 +166,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         BizStaffSchedule plan = row.getStaffScheduleId() == null ? null
                 : baseMapper.selectPlanById(row.getStaffScheduleId());
         row.setAttendanceStatus(judgeStatus(row, plan, row.getScheduleDate()));
-        if (dto.getRemark() != null && !dto.getRemark().isBlank()) {
+        if (TextUtil.hasText(dto.getRemark())) {
             row.setRemark(normalizeRemark(dto.getRemark()));
         }
         baseMapper.updateById(row);
@@ -554,7 +555,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
     }
 
     private String normalizeRemark(String remark) {
-        return remark == null || remark.isBlank() ? null : remark.trim();
+        return !TextUtil.hasText(remark) ? null : remark.trim();
     }
 
 }

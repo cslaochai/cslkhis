@@ -6,6 +6,7 @@ import com.his.common.enums.AttendingRelationTypeEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.patient.dto.AttendingBindDTO;
 import com.his.patient.entity.BizAdmission;
 import com.his.patient.entity.BizAttendingRelation;
@@ -21,7 +22,6 @@ import com.his.system.mapper.SysDepartmentMapper;
 import com.his.system.mapper.SysEmployeeMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
@@ -114,7 +114,7 @@ public class AttendingRelationServiceImpl
             if (effective != null) {
                 exist.setEffectiveTime(effective);
             }
-            if (StringUtils.hasText(dto.getRemark())) {
+            if (TextUtil.hasText(dto.getRemark())) {
                 exist.setRemark(dto.getRemark());
             }
             updateById(exist);
@@ -223,7 +223,7 @@ public class AttendingRelationServiceImpl
      * 时间解析：兼容「yyyy-MM-dd HH:mm:ss」与「yyyy-MM-dd HH:mm」，都解析不了才报错
      */
     private LocalDateTime parseTime(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return null;
         }
         String value = text.trim();

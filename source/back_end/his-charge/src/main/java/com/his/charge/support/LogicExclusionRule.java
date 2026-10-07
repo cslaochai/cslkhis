@@ -5,7 +5,6 @@ import com.his.charge.enums.RuleCatalogEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.util.TextUtil;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -83,7 +82,7 @@ public class LogicExclusionRule implements ComplianceRule {
         }
         for (BizSettlementDiagnosis d : ctx.getDiagnoses()) {
             String name = d.getIcdName();
-            if (!StringUtils.hasText(name)) {
+            if (!TextUtil.hasText(name)) {
                 findings.add(RuleFinding.na(RuleCatalogEnum.B01, "诊断名称为空，无法做性别排他判定")
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
                 continue;
@@ -122,7 +121,7 @@ public class LogicExclusionRule implements ComplianceRule {
         }
         for (BizSettlementDiagnosis d : ctx.getDiagnoses()) {
             String name = d.getIcdName();
-            if (!StringUtils.hasText(name)) {
+            if (!TextUtil.hasText(name)) {
                 findings.add(RuleFinding.na(RuleCatalogEnum.B02, "诊断名称为空，无法做年龄排他判定")
                         .on(1, d.getId(), d.getIcdCode(), d.getIcdName()));
                 continue;
@@ -154,7 +153,7 @@ public class LogicExclusionRule implements ComplianceRule {
         }
         Map<String, Integer> counter = new HashMap<>();
         for (BizSettlementDiagnosis d : ctx.getDiagnoses()) {
-            if (StringUtils.hasText(d.getIcdCode())) {
+            if (TextUtil.hasText(d.getIcdCode())) {
                 counter.merge(d.getIcdCode().toUpperCase(), 1, Integer::sum);
             }
         }
@@ -209,7 +208,7 @@ public class LogicExclusionRule implements ComplianceRule {
         List<BizSettlementDiagnosis> ccDiags = new ArrayList<>();
         for (BizSettlementDiagnosis d : ctx.getDiagnoses()) {
             String level = d.getCcLevel();
-            if (StringUtils.hasText(level) && ("CC".equalsIgnoreCase(level) || "MCC".equalsIgnoreCase(level))) {
+            if (TextUtil.hasText(level) && ("CC".equalsIgnoreCase(level) || "MCC".equalsIgnoreCase(level))) {
                 ccDiags.add(d);
             }
         }

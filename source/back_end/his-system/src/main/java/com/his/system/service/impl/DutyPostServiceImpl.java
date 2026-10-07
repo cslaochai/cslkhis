@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.DutyPostQueryPageDTO;
 import com.his.system.dto.DutyPostUpsertDTO;
 import com.his.system.entity.BizDutyPost;
@@ -22,7 +23,6 @@ import com.his.system.vo.DutyPostSelectListVO;
 import com.his.system.vo.DutyPostVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -87,7 +87,7 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
                 .eq(dto.getOrgType() != null, BizDutyPost::getOrgType, dto.getOrgType())
                 .eq(dto.getOrgId() != null, BizDutyPost::getOrgId, dto.getOrgId())
                 .eq(dto.getStatus() != null, BizDutyPost::getStatus, dto.getStatus()));
-        if (StringUtils.hasText(dto.getKeyword())) {
+        if (TextUtil.hasText(dto.getKeyword())) {
             String keyword = dto.getKeyword().trim();
             wrapper.and(w -> w.like(BizDutyPost::getPostName, keyword)
                     .or().like(BizDutyPost::getPostCode, keyword));

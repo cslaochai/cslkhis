@@ -21,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -100,7 +99,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
     public PageResult<RxReviewBatchVO> batchListPage(RxReviewBatchQueryPageDTO query) {
         LambdaQueryWrapper<BizRxReviewBatch> wrapper = new LambdaQueryWrapper<>();
         String keyword = query.getKeyword() == null ? null : query.getKeyword().trim();
-        wrapper.and(StringUtils.hasText(keyword), w -> w
+        wrapper.and(TextUtil.hasText(keyword), w -> w
                         .like(BizRxReviewBatch::getBatchName, keyword)
                         .or().like(BizRxReviewBatch::getBatchNo, keyword))
                 .eq(query.getStatus() != null, BizRxReviewBatch::getStatus, query.getStatus())
@@ -133,7 +132,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         }
         boolean special = dto.getReviewType() != null && dto.getReviewType() == RxReviewTypeEnum.SPECIAL.getCode();
         // B 类保留：条件必填——仅专项点评要求专项主题，普通/抽样点评不传
-        if (special && !StringUtils.hasText(dto.getSpecialty())) {
+        if (special && !TextUtil.hasText(dto.getSpecialty())) {
             throw new BusinessException("专项点评必须填写专项主题");
         }
         if (dto.getSampleCount() == null || dto.getSampleCount() < 1) {
@@ -150,7 +149,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         batch.setBatchNo(nextBatchNo());
         batch.setBatchName(dto.getBatchName().trim());
         batch.setReviewType(dto.getReviewType());
-        batch.setSpecialty(StringUtils.hasText(dto.getSpecialty()) ? dto.getSpecialty().trim() : null);
+        batch.setSpecialty(TextUtil.hasText(dto.getSpecialty()) ? dto.getSpecialty().trim() : null);
         batch.setDateStart(dto.getDateStart());
         batch.setDateEnd(dto.getDateEnd());
         batch.setSampleCount(sampled.size());
@@ -159,7 +158,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         batch.setReviewerId(UserUtils.getCurrentUser().getEmployeeId());
         batch.setReviewerName(UserUtils.getCurrentUser().getRealName());
         batch.setCreateBy(UserUtils.getCurrentUser().getRealName());
-        batch.setRemark(StringUtils.hasText(dto.getRemark()) ? dto.getRemark().trim() : null);
+        batch.setRemark(TextUtil.hasText(dto.getRemark()) ? dto.getRemark().trim() : null);
         bizRxReviewBatchMapper.insert(batch);
 
         for (BizPrescription p : sampled) {
@@ -177,10 +176,10 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
             throw new BusinessException("已完成的批次不可修改");
         }
         batch.setBatchName(dto.getBatchName().trim());
-        if (StringUtils.hasText(dto.getSpecialty())) {
+        if (TextUtil.hasText(dto.getSpecialty())) {
             batch.setSpecialty(dto.getSpecialty().trim());
         }
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             batch.setRemark(dto.getRemark().trim());
         }
         bizRxReviewBatchMapper.updateById(batch);
@@ -238,8 +237,8 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         String prescriptionNo = query.getPrescriptionNo() == null ? null : query.getPrescriptionNo().trim();
         String doctorName = query.getDoctorName() == null ? null : query.getDoctorName().trim();
         wrapper.eq(query.getBatchId() != null, BizRxReviewItem::getBatchId, query.getBatchId())
-                .like(StringUtils.hasText(prescriptionNo), BizRxReviewItem::getPrescriptionNo, prescriptionNo)
-                .like(StringUtils.hasText(doctorName), BizRxReviewItem::getDoctorName, doctorName)
+                .like(TextUtil.hasText(prescriptionNo), BizRxReviewItem::getPrescriptionNo, prescriptionNo)
+                .like(TextUtil.hasText(doctorName), BizRxReviewItem::getDoctorName, doctorName)
                 .eq(query.getReviewStatus() != null, BizRxReviewItem::getReviewStatus, query.getReviewStatus())
                 .eq(query.getReviewResult() != null, BizRxReviewItem::getReviewResult, query.getReviewResult())
                 .eq(query.getPublicityStatus() != null, BizRxReviewItem::getPublicityStatus, query.getPublicityStatus());
@@ -260,7 +259,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         int result = dto.getReviewResult();
         List<String> codes = dto.getProblemTypes() == null ? List.of()
                 : dto.getProblemTypes().stream()
-                .filter(StringUtils::hasText)
+                .filter(TextUtil::hasText)
                 .map(String::trim)
                 .distinct()
                 .toList();
@@ -280,7 +279,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
                 }
             }
             // B 类保留：条件必填——仅结论为不合理处方时才要求点评意见
-            if (!StringUtils.hasText(opinion)) {
+            if (!TextUtil.hasText(opinion)) {
                 throw new BusinessException("不合理处方必须填写点评意见");
             }
         }
@@ -334,7 +333,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         }
         String no = prescriptionNo == null ? "" : prescriptionNo.trim();
         // C 类保留：入参是拆开直传的 String（Controller 解 DTO 后调用），Bean Validation 不经过这一层
-        if (!StringUtils.hasText(no)) {
+        if (!TextUtil.hasText(no)) {
             throw new BusinessException("处方号不能为空");
         }
         BizPrescription p = bizPrescriptionMapper.selectOne(new LambdaQueryWrapper<BizPrescription>()
@@ -413,7 +412,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
     public RxReviewStatsVO stats(String month) {
         YearMonth ym;
         try {
-            ym = StringUtils.hasText(month) ? YearMonth.parse(month.trim()) : YearMonth.now();
+            ym = TextUtil.hasText(month) ? YearMonth.parse(month.trim()) : YearMonth.now();
         } catch (Exception e) {
             throw new BusinessException("月份格式应为 yyyy-MM");
         }
@@ -446,15 +445,15 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
     public PageResult<RxReviewTalkVO> talkListPage(RxReviewTalkQueryPageDTO query) {
         LambdaQueryWrapper<BizRxDoctorTalk> wrapper = new LambdaQueryWrapper<>();
         String keyword = query.getKeyword() == null ? null : query.getKeyword().trim();
-        wrapper.and(StringUtils.hasText(keyword), w -> w
+        wrapper.and(TextUtil.hasText(keyword), w -> w
                         .like(BizRxDoctorTalk::getDoctorName, keyword)
                         .or().like(BizRxDoctorTalk::getTalkNo, keyword))
                 .eq(query.getTalkType() != null, BizRxDoctorTalk::getTalkType, query.getTalkType())
                 .eq(query.getRectifyStatus() != null, BizRxDoctorTalk::getRectifyStatus, query.getRectifyStatus())
                 .ge(query.getDateStart() != null, BizRxDoctorTalk::getTalkTime,
-                        query.getDateStart() == null ? null : query.getDateStart().atStartOfDay())
+                        TimeUtil.dayStart(query.getDateStart()))
                 .le(query.getDateEnd() != null, BizRxDoctorTalk::getTalkTime,
-                        query.getDateEnd() == null ? null : query.getDateEnd().atTime(23, 59, 59))
+                        TimeUtil.dayEnd(query.getDateEnd()))
                 .orderByDesc(BizRxDoctorTalk::getTalkTime)
                 .orderByDesc(BizRxDoctorTalk::getId);
 
@@ -494,19 +493,19 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
 
         talk.setDoctorId(ctx.doctorId());
         talk.setDoctorName(dto.getDoctorName().trim());
-        talk.setDeptName(StringUtils.hasText(dto.getDeptName()) ? dto.getDeptName().trim() : ctx.deptName());
+        talk.setDeptName(TextUtil.hasText(dto.getDeptName()) ? dto.getDeptName().trim() : ctx.deptName());
         talk.setTalkType(dto.getTalkType());
         talk.setTalkTime(dto.getTalkTime());
-        talk.setTalkerName(StringUtils.hasText(dto.getTalkerName())
+        talk.setTalkerName(TextUtil.hasText(dto.getTalkerName())
                 ? dto.getTalkerName().trim() : UserUtils.getCurrentUser().getRealName());
-        talk.setTalkerOrg(StringUtils.hasText(dto.getTalkerOrg()) ? dto.getTalkerOrg().trim() : null);
+        talk.setTalkerOrg(TextUtil.hasText(dto.getTalkerOrg()) ? dto.getTalkerOrg().trim() : null);
         talk.setRelatedCount(ctx.items().size());
         talk.setRelatedReviewIds(ctx.idsText());
         talk.setProblemSummary(TextUtil.cut(dto.getProblemSummary(), 500));
         talk.setTalkContent(TextUtil.cut(dto.getTalkContent(), 1000));
         talk.setRectifyRequire(TextUtil.cut(dto.getRectifyRequire(), 500));
         talk.setRectifyRemark(TextUtil.cut(dto.getRectifyRemark(), 500));
-        talk.setRemark(StringUtils.hasText(dto.getRemark()) ? dto.getRemark().trim() : null);
+        talk.setRemark(TextUtil.hasText(dto.getRemark()) ? dto.getRemark().trim() : null);
 
         if (dto.getId() == null) {
             bizRxDoctorTalkMapper.insert(talk);
@@ -546,7 +545,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         if (doctorId != null && !doctorId.equals(ctxDoctorId)) {
             throw new BusinessException("被约谈医师与关联点评明细的开方医师不一致");
         }
-        if (StringUtils.hasText(doctorName) && items.get(0).getDoctorName() != null
+        if (TextUtil.hasText(doctorName) && items.get(0).getDoctorName() != null
                 && !doctorName.trim().equals(items.get(0).getDoctorName())) {
             throw new BusinessException("被约谈医师姓名与关联点评明细的开方医师不一致");
         }
@@ -559,7 +558,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
     @Override
     public void talkConfirm(Long id, String confirmBy) {
         // C 类保留：入参是拆开直传的 String（Controller 解 DTO 后调用），Bean Validation 不经过这一层
-        if (!StringUtils.hasText(confirmBy)) {
+        if (!TextUtil.hasText(confirmBy)) {
             throw new BusinessException("请填写医师确认人（签字）");
         }
         BizRxDoctorTalk talk = bizRxDoctorTalkMapper.selectById(id);
@@ -722,17 +721,17 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
                 for (BizPrescriptionDetail d : details) {
                     StringBuilder sb = new StringBuilder();
                     sb.append(d.getDrugName());
-                    if (StringUtils.hasText(d.getSpecification())) {
+                    if (TextUtil.hasText(d.getSpecification())) {
                         sb.append(' ').append(d.getSpecification());
                     }
                     sb.append('，').append(d.getQuantity().stripTrailingZeros().toPlainString()).append(d.getUnit());
-                    if (StringUtils.hasText(d.getRoute()) || StringUtils.hasText(d.getUsageDosage())) {
+                    if (TextUtil.hasText(d.getRoute()) || TextUtil.hasText(d.getUsageDosage())) {
                         sb.append('，');
-                        if (StringUtils.hasText(d.getUsageDosage())) {
+                        if (TextUtil.hasText(d.getUsageDosage())) {
                             sb.append(d.getUsageDosage());
                         }
-                        if (StringUtils.hasText(d.getFrequency())) {
-                            if (StringUtils.hasText(d.getUsageDosage())) {
+                        if (TextUtil.hasText(d.getFrequency())) {
+                            if (TextUtil.hasText(d.getUsageDosage())) {
                                 sb.append(' ');
                             }
                             sb.append(d.getFrequency());
@@ -750,7 +749,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
     private List<RxReviewTalkVO> toTalkVOs(List<BizRxDoctorTalk> records) {
         // 关联明细结构化回带：一次 IN 查全，按 talk 聚合
         List<Long> allIds = records.stream()
-                .filter(t -> StringUtils.hasText(t.getRelatedReviewIds()))
+                .filter(t -> TextUtil.hasText(t.getRelatedReviewIds()))
                 .flatMap(t -> java.util.Arrays.stream(t.getRelatedReviewIds().split(",")))
                 .map(Long::valueOf)
                 .distinct()
@@ -763,7 +762,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         List<RxReviewTalkVO> vos = new ArrayList<>(records.size());
         for (BizRxDoctorTalk t : records) {
             RxReviewTalkVO vo = toTalkVO(t);
-            if (StringUtils.hasText(t.getRelatedReviewIds())) {
+            if (TextUtil.hasText(t.getRelatedReviewIds())) {
                 List<RxReviewItemVO> related = new ArrayList<>();
                 for (String idStr : t.getRelatedReviewIds().split(",")) {
                     RxReviewItemVO iv = itemMap.get(Long.valueOf(idStr.trim()));

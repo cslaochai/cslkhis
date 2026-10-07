@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -23,7 +24,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -50,7 +50,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
     public CssdPackVO receive(CssdDTO.Receive dto) {
         int method = dto.getSterilizeMethod() == null ? 1 : dto.getSterilizeMethod();
         BizCssdPack p = new BizCssdPack();
-        p.setPackNo(StringUtils.hasText(dto.getPackNo()) ? dto.getPackNo().trim() : nextPackNo());
+        p.setPackNo(TextUtil.hasText(dto.getPackNo()) ? dto.getPackNo().trim() : nextPackNo());
         if (bizCssdPackMapper.selectIdByNoAny(p.getPackNo()) != null) {
             throw new BusinessException("器械包条码已存在：" + p.getPackNo());
         }
@@ -64,7 +64,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         bizCssdPackMapper.insert(p);
 
         insertTrace(p, CssdNodeStatusEnum.RECEIVED.getCode(), dto.getRemark(), null, null, CssdCheckResultEnum.OK.getCode(),
-                StringUtils.hasText(dto.getOperatorName()) ? dto.getOperatorName().trim()
+                TextUtil.hasText(dto.getOperatorName()) ? dto.getOperatorName().trim()
                         : UserUtils.getCurrentUser().getRealName());
         return toVo(p, loadTraces(p.getId()));
     }
@@ -78,12 +78,12 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         }
         int target = from + 1;
         int result = dto.getResult() == null ? CssdCheckResultEnum.OK.getCode() : dto.getResult();
-        String operator = StringUtils.hasText(dto.getOperatorName()) ? dto.getOperatorName().trim()
+        String operator = TextUtil.hasText(dto.getOperatorName()) ? dto.getOperatorName().trim()
                 : UserUtils.getCurrentUser().getRealName();
 
         if (CssdNodeStatusEnum.STERILIZING.is(target)) {
             // ① 条件必填：锅次/批次只在推进到灭菌节点时必填（同一接口服务全部节点），DTO 注解一刀切会挡掉其他节点的合法请求
-            if (!StringUtils.hasText(dto.getSterilizerNo()) || !StringUtils.hasText(dto.getBatchNo())) {
+            if (!TextUtil.hasText(dto.getSterilizerNo()) || !TextUtil.hasText(dto.getBatchNo())) {
                 throw new BusinessException("推进到灭菌节点必须填灭菌锅次与批次号");
             }
             p.setSterilizerNo(dto.getSterilizerNo().trim());
@@ -93,11 +93,11 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
             if (dto.getDeptId() != null) {
                 p.setDeptId(dto.getDeptId());
             }
-            if (StringUtils.hasText(dto.getDeptName())) {
+            if (TextUtil.hasText(dto.getDeptName())) {
                 p.setDeptName(dto.getDeptName().trim());
             }
             // ① 条件必填：仅发放节点要求，且认的是「本次补填 + 包上原有归属」合并后的结果，单看入参不填是合法的
-            if (p.getDeptId() == null && !StringUtils.hasText(p.getDeptName())) {
+            if (p.getDeptId() == null && !TextUtil.hasText(p.getDeptName())) {
                 throw new BusinessException("发放节点必须确认申领科室");
             }
         }
@@ -123,7 +123,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         String kw = TextUtil.trim(q.getKeyword());
         LambdaQueryWrapper<BizCssdPack> w = new LambdaQueryWrapper<BizCssdPack>()
                 .eq(q.getStatus() != null, BizCssdPack::getStatus, q.getStatus())
-                .and(StringUtils.hasText(kw), x -> x
+                .and(TextUtil.hasText(kw), x -> x
                         .like(BizCssdPack::getPackNo, kw)
                         .or().like(BizCssdPack::getPackName, kw)
                         .or().like(BizCssdPack::getDeptName, kw))
@@ -193,7 +193,7 @@ public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack>
         vo.setDeptId(p.getDeptId());
         vo.setDeptName(p.getDeptName());
         vo.setSterilizeMethod(p.getSterilizeMethod());
-        vo.setSterilizeMethodText(dictCacheService.getDicDataLabel("biz_pharmacy_cssdSterilizeMethodEnum", p.getSterilizeMethod()));
+        vo.setSterilizeMethodText(dictCacheService.getDicDataLabel(DictType.CSSD_STERIL_METHOD, p.getSterilizeMethod()));
         vo.setStatus(p.getStatus());
         vo.setStatusText(CssdNodeStatusEnum.getText(p.getStatus()));
         vo.setSterilizerNo(p.getSterilizerNo());

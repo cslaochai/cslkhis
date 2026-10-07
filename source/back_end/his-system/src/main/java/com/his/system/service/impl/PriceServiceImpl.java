@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.dto.PriceChangeDTO;
 import com.his.system.dto.PriceHistoryQueryPageDTO;
@@ -23,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -107,10 +107,10 @@ public class PriceServiceImpl extends ServiceImpl<SysPriceChangeHistoryMapper, S
     @Override
     public PageResult<PriceChangeHistoryVO> historyListPage(PriceHistoryQueryPageDTO queryDTO) {
         LambdaQueryWrapper<SysPriceChangeHistory> wrapper = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(queryDTO.getItemType())) {
+        if (TextUtil.hasText(queryDTO.getItemType())) {
             wrapper.eq(SysPriceChangeHistory::getItemType, normalizeType(queryDTO.getItemType()));
         }
-        if (StringUtils.hasText(queryDTO.getKeyword())) {
+        if (TextUtil.hasText(queryDTO.getKeyword())) {
             String kw = queryDTO.getKeyword();
             wrapper.and(w -> w.like(SysPriceChangeHistory::getItemCode, kw)
                     .or().like(SysPriceChangeHistory::getItemName, kw));
@@ -168,12 +168,12 @@ public class PriceServiceImpl extends ServiceImpl<SysPriceChangeHistoryMapper, S
         }
         history.setOperatorId(Objects.nonNull(currentUser.getEmployeeId())
                 ? currentUser.getEmployeeId() : currentUser.getUserId());
-        history.setOperatorName(StringUtils.hasText(currentUser.getRealName()) ? currentUser.getRealName() : null);
+        history.setOperatorName(TextUtil.hasText(currentUser.getRealName()) ? currentUser.getRealName() : null);
     }
 
     private String normalizeType(String itemType) {
         // D 类保留：必填性与码值白名单在同一段归一化里，且列表接口必填、历史查询把它当可选筛选条件，注解无法一刀切
-        if (!StringUtils.hasText(itemType)) {
+        if (!TextUtil.hasText(itemType)) {
             throw new BusinessException("项目类型不能为空");
         }
         String normalized = itemType.trim().toUpperCase(Locale.ROOT);

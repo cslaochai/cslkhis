@@ -150,7 +150,7 @@ public class ArchiveBorrowServiceImpl extends ServiceImpl<BizArchiveBorrowMapper
         }
         boolean approve = Boolean.TRUE.equals(dto.getApprove());
         // B 类保留：条件必填——仅拒绝时要求审核意见，通过可不填
-        if (!approve && (dto.getRemark() == null || dto.getRemark().isBlank())) {
+        if (!approve && (!TextUtil.hasText(dto.getRemark()))) {
             throw new BusinessException("拒绝必须填写审核意见");
         }
         LocalDateTime now = TimeUtil.nowSeconds();
@@ -232,7 +232,7 @@ public class ArchiveBorrowServiceImpl extends ServiceImpl<BizArchiveBorrowMapper
             return 0;
         }
 
-        LocalDateTime sinceToday = LocalDate.now().atStartOfDay();
+        LocalDateTime sinceToday = TimeUtil.dayStart(LocalDate.now());
         int sent = 0;
         for (BizArchiveBorrow b : overdueList) {
             try {

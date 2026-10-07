@@ -1,8 +1,8 @@
 package com.his.ai.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.regex.Pattern;
 
@@ -31,7 +31,7 @@ public final class AiMaskUtils {
      * 屏蔽身份证号与手机号。先处理 18 位再处理 15 位，避免 18 位被截成 15 位误判。
      */
     public static String mask(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return "";
         }
         String result = ID_CARD_18.matcher(text).replaceAll(MASK_ID_CARD);
@@ -47,7 +47,7 @@ public final class AiMaskUtils {
     }
 
     public static String digest(String text, int maxLength) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return "";
         }
         String value = mask(text).replaceAll("\\s+", " ").trim();

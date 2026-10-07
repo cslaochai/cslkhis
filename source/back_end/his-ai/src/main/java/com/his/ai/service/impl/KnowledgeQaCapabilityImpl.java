@@ -17,7 +17,6 @@ import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -99,7 +98,7 @@ public class KnowledgeQaCapabilityImpl implements KnowledgeQaCapability {
         Optional<KnowledgeQaLlmOutputDTO> out =
                 aiExecutionService.call(call, KnowledgeQaLlmOutputDTO.class);
 
-        if (out.isPresent() && StringUtils.hasText(out.get().getAnswer())) {
+        if (out.isPresent() && TextUtil.hasText(out.get().getAnswer())) {
             vo.setAnswer(out.get().getAnswer());
             vo.setDegraded(false);
         } else {

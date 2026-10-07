@@ -1,6 +1,7 @@
 package com.his.emr.enums;
 
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import lombok.Getter;
 
 /**
@@ -44,7 +45,7 @@ public enum QcRecordSourceEnum {
      * 排查时也看不到到底传了什么。参数错就是参数错，必须回 400 + 可选值。
      */
     public static QcRecordSourceEnum parse(String code) {
-        if (code == null || code.isBlank()) {
+        if (!TextUtil.hasText(code)) {
             return OUTPATIENT;
         }
         String value = code.trim().toUpperCase();
@@ -60,7 +61,7 @@ public enum QcRecordSourceEnum {
      * 纯解析：不兜默认值、不抛异常。null / 空白 / 不在枚举内（脏数据）返回 null。
      */
     public static QcRecordSourceEnum fromCode(String code) {
-        if (code == null || code.isBlank()) {
+        if (!TextUtil.hasText(code)) {
             return null;
         }
         String value = code.trim().toUpperCase();

@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.ExecStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.InfusionActionDTO;
 import com.his.patient.entity.BizInfusionRound;
@@ -20,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -57,7 +57,7 @@ public class InpatientInfusionServiceImpl extends ServiceImpl<BizInpatientOrderE
      * 给药途径是否静脉类（唯一口径，InpatientOrderServiceImpl.decorateExec 也走这里）
      */
     public static boolean isInfusionRoute(String route) {
-        if (!StringUtils.hasText(route)) {
+        if (!TextUtil.hasText(route)) {
             return false;
         }
         for (String kw : INFUSION_KEYWORDS) {
@@ -143,7 +143,7 @@ public class InpatientInfusionServiceImpl extends ServiceImpl<BizInpatientOrderE
                     + exec.getInfusionEndTime() + " 结束输注，不能重复结束");
         }
         boolean adverse = dto.getAdverseFlag() != null && dto.getAdverseFlag() == 1;
-        if (adverse && !StringUtils.hasText(dto.getAdverseNote())) {
+        if (adverse && !TextUtil.hasText(dto.getAdverseNote())) {
             // ①条件必填：只有标记了不良反应才必填描述，@NotBlank 会把无反应的正常结束挡成 400
             throw new BusinessException("标记了输液不良反应，必须填写不良反应描述（事后追溯的起点）");
         }

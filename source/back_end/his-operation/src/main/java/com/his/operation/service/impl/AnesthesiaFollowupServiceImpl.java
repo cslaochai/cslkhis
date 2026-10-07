@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -190,7 +189,7 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
         log.info("{}麻醉随访 followupNo={} recordNo={} 轮次={} 恢复={} 并发症={} 随访人={}",
                 dto.getId() == null ? "新建" : "修改", entity.getFollowupNo(), entity.getRecordNo(),
                 entity.getRoundNo(), FollowupAdverseItems.recoveryText(entity.getRecovery()),
-                StringUtils.hasText(entity.getAdverseItems()) ? entity.getAdverseItems() : "无",
+                TextUtil.hasText(entity.getAdverseItems()) ? entity.getAdverseItems() : "无",
                 entity.getFollowupDoctorName());
         return entity.getFollowupNo();
     }
@@ -218,10 +217,10 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
             throw new BusinessException(e.getMessage());
         }
         if (!adverse.isEmpty()) {
-            if (!StringUtils.hasText(entity.getAdverseNote())) {
+            if (!TextUtil.hasText(entity.getAdverseNote())) {
                 throw new BusinessException("已勾选并发症，必须写明并发症经过（勾了却说不出发生了什么，比不勾更糟）");
             }
-            if (!StringUtils.hasText(entity.getHandling())) {
+            if (!TextUtil.hasText(entity.getHandling())) {
                 throw new BusinessException("已勾选并发症，必须写明处理措施与转归（发现了却没处理记录，是随访里最糟的一条链）");
             }
         }

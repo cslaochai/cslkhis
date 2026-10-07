@@ -24,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -198,7 +197,7 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
         if ((dest == IcuOutDestEnum.TRANSFER_HOSPITAL.getCode()
                 || dest == IcuOutDestEnum.DEATH.getCode()
                 || dest == IcuOutDestEnum.SELF_DISCHARGE.getCode())
-                && !StringUtils.hasText(dto.getOutReason())) {
+                && !TextUtil.hasText(dto.getOutReason())) {
             throw new BusinessException("转院/死亡/自动离院必须填写转归说明");
         }
         assertGcs(dto.getOutGcs());
@@ -321,7 +320,7 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
         LocalDate end = endDate == null ? LocalDate.now() : endDate;
         LocalDate earliest = end.minusDays(29);
         LocalDate start = startDate == null || startDate.isBefore(earliest) ? earliest : startDate;
-        IcuVO.StatsVO stats = bizIcuStayMapper.selectRangeSummary(start.atStartOfDay(), end.atTime(23, 59, 59));
+        IcuVO.StatsVO stats = bizIcuStayMapper.selectRangeSummary(TimeUtil.dayStart(start), TimeUtil.dayEnd(end));
         if (stats == null) {
             stats = new IcuVO.StatsVO();
         }
@@ -334,7 +333,7 @@ public class IcuServiceImpl extends ServiceImpl<BizIcuStayMapper, BizIcuStay> im
         stats.setBedUseRate(bedTotal == 0 ? null
                 : BigDecimal.valueOf(inCount).multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(bedTotal), 1, RoundingMode.HALF_UP));
-        stats.setMonitorTotalRange(bizIcuMonitorMapper.countRange(start.atStartOfDay(), end.atTime(23, 59, 59)));
+        stats.setMonitorTotalRange(bizIcuMonitorMapper.countRange(TimeUtil.dayStart(start), TimeUtil.dayEnd(end)));
         int stays = NumUtil.orDefault(stats.getInCountRange(), 0) + NumUtil.orDefault(stats.getOutCountRange(), 0);
         stats.setMonitorsPerStay(stays == 0 ? null
                 : BigDecimal.valueOf(NumUtil.orDefault(stats.getMonitorTotalRange(), 0))

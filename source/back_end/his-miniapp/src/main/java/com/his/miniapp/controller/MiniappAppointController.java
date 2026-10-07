@@ -8,6 +8,7 @@ import com.his.appoint.service.AppointService;
 import com.his.appoint.vo.BizAppointInfoListVO;
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
+import com.his.common.util.TextUtil;
 import com.his.miniapp.dto.PayRefundDTO;
 import com.his.miniapp.service.MiniappPayService;
 import com.his.patient.service.PatientGuardianService;
@@ -82,7 +83,7 @@ public class MiniappAppointController {
         if (patientGuardianService.patientScopeViolated(regist.getPatientId())) {
             return Result.error("无权退该挂号");
         }
-        String reason = appointCancelDTO.getReason() != null && !appointCancelDTO.getReason().isBlank()
+        String reason = TextUtil.hasText(appointCancelDTO.getReason())
                 ? appointCancelDTO.getReason() : "患者主动退号";
         boolean success = appointService.cancelRegist(registId, reason);
         if (!success) {

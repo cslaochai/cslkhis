@@ -26,7 +26,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -67,13 +66,13 @@ public class StocktakeServiceImpl extends ServiceImpl<BizStocktakeMapper, BizSto
      * 流水上的差异说明：药名 + 批号 + 账面/实盘 + 药师写的原因，够复核与事后审计看一眼就懂
      */
     private static String diffReason(BizStocktakeItem item) {
-        String label = StringUtils.hasText(item.getDrugName()) ? item.getDrugName() : "药品#" + item.getDrugId();
-        if (StringUtils.hasText(item.getBatchNo())) {
+        String label = TextUtil.hasText(item.getDrugName()) ? item.getDrugName() : "药品#" + item.getDrugId();
+        if (TextUtil.hasText(item.getBatchNo())) {
             label = label + " 批号" + item.getBatchNo();
         }
         String reason = "盘点差异：" + label + " 账面" + NumUtil.plain(NumUtil.orZero(item.getBookQuantity()))
                 + "，实盘" + NumUtil.plain(NumUtil.orZero(item.getCountedQuantity())) + "，差" + NumUtil.plain(NumUtil.orZero(item.getDiffQuantity()));
-        return StringUtils.hasText(item.getRemark()) ? reason + "；" + item.getRemark() : reason;
+        return TextUtil.hasText(item.getRemark()) ? reason + "；" + item.getRemark() : reason;
     }
 
     private static String diffText(BigDecimal counted, BigDecimal diff) {
@@ -99,14 +98,14 @@ public class StocktakeServiceImpl extends ServiceImpl<BizStocktakeMapper, BizSto
     }
 
     private static String scopeDesc(Integer drugType, String keyword) {
-        if (drugType == null && !StringUtils.hasText(keyword)) {
+        if (drugType == null && !TextUtil.hasText(keyword)) {
             return "全部库存批次";
         }
         StringBuilder sb = new StringBuilder();
         if (drugType != null) {
             sb.append(drugTypeText(drugType));
         }
-        if (StringUtils.hasText(keyword)) {
+        if (TextUtil.hasText(keyword)) {
             if (sb.length() > 0) {
                 sb.append(" · ");
             }

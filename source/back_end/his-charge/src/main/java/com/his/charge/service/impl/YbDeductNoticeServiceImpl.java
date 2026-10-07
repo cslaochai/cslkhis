@@ -78,7 +78,7 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
                 .eq(queryDTO.getSourceType() != null, BizYbDeductNotice::getSourceType, queryDTO.getSourceType())
                 .eq(queryDTO.getViolationType() != null, BizYbDeductNotice::getViolationType, queryDTO.getViolationType())
                 .eq(queryDTO.getInspectionId() != null, BizYbDeductNotice::getInspectionId, queryDTO.getInspectionId())
-                .and(isText(queryDTO.getKeyword()), w -> w
+                .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
                         .like(BizYbDeductNotice::getDeductNo, queryDTO.getKeyword())
                         .or().like(BizYbDeductNotice::getPatientName, queryDTO.getKeyword())
                         .or().like(BizYbDeductNotice::getDeptName, queryDTO.getKeyword())
@@ -214,7 +214,7 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
         bizYbDeductNoticeMapper.updateById(entity);
         writeLog(entity.getId(), ACTION_APPEAL_RESULT,
                 (result == 1 ? "医保局回复：申诉成功，扣款撤销" : "医保局回复：申诉驳回，维持扣款待缴")
-                        + (isText(entity.getAppealResultRemark()) ? "（" + entity.getAppealResultRemark() + "）" : ""),
+                        + (TextUtil.hasText(entity.getAppealResultRemark()) ? "（" + entity.getAppealResultRemark() + "）" : ""),
                 null);
     }
 
@@ -270,7 +270,7 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
         if (!YbDeductStatusEnum.WAIT_PAY.matches(entity.getDeductStatus())) {
             throw new BusinessException("仅「维持扣款待缴」的扣款通知可录入缴回");
         }
-        if (!isText(entity.getConfirmBy())) {
+        if (!TextUtil.hasText(entity.getConfirmBy())) {
             throw new BusinessException("请先完成「确认扣款并追责」再录入缴回，否则钱退了但没人对这笔扣款负责");
         }
         if (dto.getPaidAmount().compareTo(entity.getDeductAmount()) != 0) {
@@ -384,9 +384,4 @@ public class YbDeductNoticeServiceImpl extends ServiceImpl<BizYbDeductNoticeMapp
     private BigDecimal money(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value;
     }
-
-    private boolean isText(String text) {
-        return text != null && !text.isBlank();
-    }
-
 }

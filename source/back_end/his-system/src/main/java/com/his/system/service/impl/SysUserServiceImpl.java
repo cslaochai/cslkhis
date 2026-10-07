@@ -12,6 +12,7 @@ import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.SysUserPasswordUpsertDTO;
 import com.his.system.dto.SysUserQueryPageDTO;
 import com.his.system.dto.SysUserUpsertDTO;
@@ -37,7 +38,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -192,7 +192,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     public PageResult<SysUser> selectUserPage(String userName, Long deptId, Integer status, int pageNum, int pageSize) {
         LambdaQueryWrapper<SysUser> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(userName), SysUser::getUserName, userName)
+        wrapper.like(TextUtil.hasText(userName), SysUser::getUserName, userName)
                 .eq(status != null, SysUser::getStatus, status)
                 .orderByDesc(SysUser::getCreateTime);
 

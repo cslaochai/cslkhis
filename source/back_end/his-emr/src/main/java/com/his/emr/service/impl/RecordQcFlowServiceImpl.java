@@ -14,6 +14,7 @@ import com.his.emr.entity.BizRecordQcFlowAction;
 import com.his.emr.enums.QcRecordSourceEnum;
 import com.his.emr.enums.RecordQcActionEnum;
 import com.his.emr.enums.RecordQcFlowStatusEnum;
+import com.his.emr.enums.RecordQcGradeEnum;
 import com.his.emr.enums.RecordQcLevelEnum;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.mapper.BizRecordQcFlowActionMapper;
@@ -21,7 +22,6 @@ import com.his.emr.mapper.BizRecordQcFlowMapper;
 import com.his.emr.service.RecordQcFlowService;
 import com.his.emr.vo.RecordQcFlowActionVO;
 import com.his.emr.vo.RecordQcFlowVO;
-import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,7 +51,6 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
 
     private final RedisSequenceService redisSequenceService;
 
-    private final DictCacheService dictCacheService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -293,7 +292,7 @@ public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, 
         vo.setFlowStatusText(RecordQcFlowStatusEnum.getText(vo.getFlowStatus()));
         vo.setCurrentLevelText(RecordQcLevelEnum.getText(vo.getCurrentLevel()));
         vo.setReturnLevelText(RecordQcLevelEnum.getText(vo.getReturnLevel()));
-        vo.setGradeText(dictCacheService.getDicDataLabel("biz_emr_qcGradeEnum", vo.getGrade()));
+        vo.setGradeText(RecordQcGradeEnum.getText(vo.getGrade()));
         vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
         return vo;
     }

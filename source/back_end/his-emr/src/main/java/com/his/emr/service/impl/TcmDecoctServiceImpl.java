@@ -32,7 +32,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -77,7 +76,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
     public PageResult<TcmDecoctVO> listPage(TcmDecoctQueryPageDTO query) {
         Page<BizTcmDecoct> page = baseMapper.selectDecoctPage(
                 new Page<>(query.getPageNum(), query.getPageSize()),
-                query.getDecoctStatus(), StringUtils.hasText(query.getKeyword()) ? query.getKeyword().trim() : null);
+                query.getDecoctStatus(), TextUtil.hasText(query.getKeyword()) ? query.getKeyword().trim() : null);
         List<TcmDecoctVO> voList = page.getRecords().stream().map(this::toVO).collect(Collectors.toList());
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), voList);
     }
@@ -274,7 +273,7 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
                 continue;
             }
             grouped.computeIfAbsent(method, k -> new ArrayList<>())
-                    .add(StringUtils.hasText(d.getDrugName()) ? d.getDrugName() : "未知药味");
+                    .add(TextUtil.hasText(d.getDrugName()) ? d.getDrugName() : "未知药味");
         }
         if (grouped.isEmpty()) {
             return null;

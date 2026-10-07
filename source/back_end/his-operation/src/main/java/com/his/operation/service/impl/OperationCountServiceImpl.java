@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.CountItemInputUpsertDTO;
 import com.his.operation.dto.CountPhaseDTO;
@@ -13,6 +14,7 @@ import com.his.operation.dto.OperationCountUpsertDTO;
 import com.his.operation.entity.BizOperationApply;
 import com.his.operation.entity.BizOperationCount;
 import com.his.operation.entity.BizOperationCountItem;
+import com.his.operation.enums.CountItemCategoryEnum;
 import com.his.operation.enums.CountPhaseEnum;
 import com.his.operation.enums.CountResultEnum;
 import com.his.operation.enums.CountStatusEnum;
@@ -25,13 +27,11 @@ import com.his.operation.vo.CountItemVO;
 import com.his.operation.vo.OperationCountVO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.service.BizPatientService;
-import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -62,7 +62,6 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItemMapper, BizOperationCountItem> implements OperationCountService {
 
-    private final DictCacheService dictCacheService;
 
     private final BizPatientService bizPatientService;
 
@@ -73,7 +72,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
     private final BizOperationApplyMapper bizOperationApplyMapper;
 
     private static String textOr(String value, String fallback) {
-        return StringUtils.hasText(value) ? value : fallback;
+        return TextUtil.hasText(value) ? value : fallback;
     }
 
     @Override
@@ -133,7 +132,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
         entity.setPhase(CountPhaseEnum.NONE.getCode());
         entity.setStatus(CountStatusEnum.RUNNING.getCode());
         entity.setDiscrepancyFlag(0);
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
         bizOperationCountMapper.insert(entity);
@@ -237,7 +236,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
 
         boolean diff = !diffs.isEmpty();
         // B-条件必填：仅当本次清点算出差异时才要求差异说明，依赖运行时比对结果，DTO 注解无法表达，保留
-        if (diff && !StringUtils.hasText(dto.getDiffNote())) {
+        if (diff && !TextUtil.hasText(dto.getDiffNote())) {
             throw new BusinessException("本次清点存在差异：" + String.join("；", diffs)
                     + "。必须填写差异说明（差了什么、怎么处理、结论如何）");
         }
@@ -267,7 +266,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
         if (diff) {
             entity.setDiscrepancyFlag(1);
             entity.setStatus(CountStatusEnum.DIFF.getCode());
-            entity.setDiffNote(StringUtils.hasText(entity.getDiffNote())
+            entity.setDiffNote(TextUtil.hasText(entity.getDiffNote())
                     ? entity.getDiffNote() + "；" + dto.getDiffNote() : dto.getDiffNote());
         } else if (phase == CountPhaseEnum.FINAL.getCode()) {
             entity.setStatus(CountStatusEnum.DONE.getCode());
@@ -343,7 +342,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
         for (BizOperationCountItem item : items) {
             CountItemVO itemVo = new CountItemVO();
             BeanUtils.copyProperties(item, itemVo);
-            itemVo.setItemCategoryText(dictCacheService.getDicDataLabel("biz_operation_countCategoryEnum", item.getItemCategory()));
+            itemVo.setItemCategoryText(CountItemCategoryEnum.getText(item.getItemCategory()));
             // ★ 判定基准是术前基线，不是上一段（连续两次都少一块纱布时，"与上段一致"会显示通过）
             if (item.getBeforeQty() != null && item.getFinalQty() != null) {
                 itemVo.setConsistent(Objects.equals(item.getBeforeQty(), item.getFinalQty()));
@@ -382,7 +381,7 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
             return null;
         }
         String name = bizOperationApplyMapper.selectEmployeeName(empId);
-        return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
+        return TextUtil.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
     private String nextCountNo() {

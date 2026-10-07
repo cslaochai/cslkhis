@@ -165,7 +165,7 @@ public class ArchiveCodeTaskServiceImpl extends ServiceImpl<BizArchiveCodeTaskMa
         }
         boolean approve = Boolean.TRUE.equals(dto.getApprove());
         // B 类保留：条件必填——仅退修时要求审核意见，通过可不填
-        if (!approve && (dto.getRemark() == null || dto.getRemark().isBlank())) {
+        if (!approve && (!TextUtil.hasText(dto.getRemark()))) {
             throw new BusinessException("退修必须填写审核意见");
         }
         LocalDateTime now = TimeUtil.nowSeconds();

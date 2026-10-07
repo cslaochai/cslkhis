@@ -17,10 +17,10 @@ import com.his.common.enums.ScheduleStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -277,7 +277,7 @@ public class ScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, 
                 summary = summary.substring(0, 120) + "…";
             }
             String stamp = LocalDate.now() + " 段级号源调整（" + summary + "）";
-            String newRemark = StringUtils.hasText(schedule.getRemark())
+            String newRemark = TextUtil.hasText(schedule.getRemark())
                     ? schedule.getRemark() + "；" + stamp : stamp;
             BizSchedule up = new BizSchedule();
             up.setId(schedule.getId());

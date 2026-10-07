@@ -1,9 +1,9 @@
 package com.his.ai.rag.embedding;
 
 import com.his.ai.config.AiProperties;
+import com.his.common.util.TextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -35,7 +35,7 @@ public class EmbeddingProviderSelector {
      * 选择实现：配了 embed-base-url 用 remote，否则 local-tf。
      */
     public EmbeddingProvider select() {
-        String name = StringUtils.hasText(aiProperties.getRag().getEmbedBaseUrl()) ? "remote" : "local-tf";
+        String name = TextUtil.hasText(aiProperties.getRag().getEmbedBaseUrl()) ? "remote" : "local-tf";
         EmbeddingProvider p = registry.get(name);
         if (p == null) {
             p = registry.get("local-tf");

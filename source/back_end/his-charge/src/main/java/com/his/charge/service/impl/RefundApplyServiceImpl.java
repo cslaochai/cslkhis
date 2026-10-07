@@ -27,7 +27,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -102,7 +101,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         LambdaQueryWrapper<BizRefundApply> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(patientId != null, BizRefundApply::getPatientId, patientId)
                 .eq(applyStatus != null, BizRefundApply::getApplyStatus, applyStatus)
-                .and(StringUtils.hasText(keyword), w -> w.like(BizRefundApply::getRefundApplyNo, keyword)
+                .and(TextUtil.hasText(keyword), w -> w.like(BizRefundApply::getRefundApplyNo, keyword)
                         .or().like(BizRefundApply::getBillNo, keyword)
                         .or().like(BizRefundApply::getPatientName, keyword))
                 // create_time 大面积重复，必须补 id 二级键，否则分页会重复/漏行
@@ -153,7 +152,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
                 vo.setFlowPayMethod(first.getPayMethod());
                 vo.setFlowChannelRefundNo(rows.stream()
                         .map(BizPaymentTxn::getChannelTxnNo)
-                        .filter(StringUtils::hasText)
+                        .filter(TextUtil::hasText)
                         .collect(Collectors.joining(" / ")));
                 vo.setFlowInsuranceCancelled(rows.stream().anyMatch(t -> Integer.valueOf(1).equals(t.getInsuranceCancelled())) ? 1 : 0);
             }
@@ -178,7 +177,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
         if (BillStatusEnum.VOIDED.getCode().equals(bill.getBillStatus())) {
             throw new BusinessException("该账单已作废（取消结算），没有收过钱，也就没有可退的钱");
         }
-        apply.setBillNo(StringUtils.hasText(apply.getBillNo()) ? apply.getBillNo() : bill.getBillNo());
+        apply.setBillNo(TextUtil.hasText(apply.getBillNo()) ? apply.getBillNo() : bill.getBillNo());
         // 患者快照一律以账单为准：申请单上写着"张三"而账单是李四，审核就成了摆设
         apply.setPatientId(bill.getPatientId());
         apply.setPatientNo(bill.getPatientNo());
@@ -272,7 +271,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
             throw new BusinessException(statusError("作废", apply.getApplyStatus()));
         }
         // C 类保留：入参是拆开的 String 原因（Controller 解 DTO 后调用），Bean Validation 不经过这一层
-        if (!StringUtils.hasText(reason)) {
+        if (!TextUtil.hasText(reason)) {
             throw new BusinessException("请填写作废原因（台账要能回答「为什么批了又退回去」）");
         }
         apply.setApplyStatus(RefundApplyStatusEnum.DISCARDED.getCode());

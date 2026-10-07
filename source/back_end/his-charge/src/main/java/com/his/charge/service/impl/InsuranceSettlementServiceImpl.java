@@ -23,13 +23,13 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.SensitiveMaskUtil;
 import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -80,7 +80,7 @@ public class InsuranceSettlementServiceImpl
                                                                      int pageNum, int pageSize) {
         LambdaQueryWrapper<BizInsuranceSettlement> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(patientId != null, BizInsuranceSettlement::getPatientId, patientId)
-                .like(StringUtils.hasText(patientName), BizInsuranceSettlement::getPatientName, patientName)
+                .like(TextUtil.hasText(patientName), BizInsuranceSettlement::getPatientName, patientName)
                 .eq(settlementStatus != null, BizInsuranceSettlement::getSettlementStatus, settlementStatus)
                 .orderByDesc(BizInsuranceSettlement::getCreateTime);
 
@@ -114,7 +114,7 @@ public class InsuranceSettlementServiceImpl
         PatientBriefVO patient = settlement.getPatientId() == null ? null
                 : patientGateway.findPatient(settlement.getPatientId());
         if (patient != null) {
-            if (!StringUtils.hasText(vo.getPatientName())) {
+            if (!TextUtil.hasText(vo.getPatientName())) {
                 vo.setPatientName(patient.getPatientName());
             }
             if (vo.getGender() == null) {
@@ -123,15 +123,15 @@ public class InsuranceSettlementServiceImpl
             if (vo.getAge() == null) {
                 vo.setAge(patient.getAge());
             }
-            if (!StringUtils.hasText(vo.getIdCard())) {
+            if (!TextUtil.hasText(vo.getIdCard())) {
                 vo.setIdCard(patient.getIdCard());
             }
-            if (!StringUtils.hasText(vo.getMedicalInsuranceNo())) {
+            if (!TextUtil.hasText(vo.getMedicalInsuranceNo())) {
                 vo.setMedicalInsuranceNo(patient.getMedicalInsuranceNo());
             }
             vo.setPhone(patient.getPhone());
             vo.setPatientType(patient.getPatientType());
-            if (!StringUtils.hasText(vo.getInsuranceType())) {
+            if (!TextUtil.hasText(vo.getInsuranceType())) {
                 vo.setInsuranceType(patient.getMedicalInsuranceType());
             }
         }
@@ -144,19 +144,19 @@ public class InsuranceSettlementServiceImpl
             if (vo.getVisitDate() == null) {
                 vo.setVisitDate(regist.getVisitDate());
             }
-            if (!StringUtils.hasText(vo.getDeptName())) {
+            if (!TextUtil.hasText(vo.getDeptName())) {
                 vo.setDeptName(regist.getDeptName());
             }
-            if (!StringUtils.hasText(vo.getDoctorName())) {
+            if (!TextUtil.hasText(vo.getDoctorName())) {
                 vo.setDoctorName(regist.getDoctorName());
             }
-            if (!StringUtils.hasText(vo.getMedicalInsuranceNo())) {
+            if (!TextUtil.hasText(vo.getMedicalInsuranceNo())) {
                 vo.setMedicalInsuranceNo(regist.getMedicalInsuranceNo());
             }
-            if (!StringUtils.hasText(vo.getInsuranceType())) {
+            if (!TextUtil.hasText(vo.getInsuranceType())) {
                 vo.setInsuranceType(regist.getMedicalInsuranceType());
             }
-            if (!StringUtils.hasText(vo.getVisitType())) {
+            if (!TextUtil.hasText(vo.getVisitType())) {
                 vo.setVisitType(visitTypeText(regist.getVisitType()));
             }
         } else if (EncounterTypeEnum.INPATIENT.getCode().equals(settlement.getEncounterType())
@@ -165,24 +165,24 @@ public class InsuranceSettlementServiceImpl
             if (admission != null) {
                 vo.setAdmissionNo(admission.getAdmissionNo());
                 vo.setVisitDate(admission.getAdmitTime() == null ? null : admission.getAdmitTime().toLocalDate());
-                if (!StringUtils.hasText(vo.getDiagnosis())) {
+                if (!TextUtil.hasText(vo.getDiagnosis())) {
                     vo.setDiagnosis(admission.getDiagnosis());
                 }
             }
         }
 
         // 3. 诊断：清单上没有就取该患者最近一次病历（合规审核找的是同一份诊断依据）
-        if (!StringUtils.hasText(vo.getDiagnosisName()) || !StringUtils.hasText(vo.getDiagnosis())) {
+        if (!TextUtil.hasText(vo.getDiagnosisName()) || !TextUtil.hasText(vo.getDiagnosis())) {
             MedicalRecordBriefVO record = settlement.getPatientId() == null ? null
                     : latestMedicalRecord(settlement.getPatientId());
             if (record != null) {
-                if (!StringUtils.hasText(vo.getDiagnosis())) {
+                if (!TextUtil.hasText(vo.getDiagnosis())) {
                     vo.setDiagnosis(record.getDiagnosis());
                 }
-                if (!StringUtils.hasText(vo.getDiagnosisCode())) {
+                if (!TextUtil.hasText(vo.getDiagnosisCode())) {
                     vo.setDiagnosisCode(record.getDiagnosisCode());
                 }
-                if (!StringUtils.hasText(vo.getDiagnosisName())) {
+                if (!TextUtil.hasText(vo.getDiagnosisName())) {
                     vo.setDiagnosisName(record.getDiagnosisName());
                 }
             }
@@ -486,7 +486,7 @@ public class InsuranceSettlementServiceImpl
             throw new BusinessException("未找到回执成功的上传报文，无法撤销");
         }
         BizInsuranceReport original = uploads.get(0);
-        String cutReason = StringUtils.hasText(reason) ? reason : "收费员冲正";
+        String cutReason = TextUtil.hasText(reason) ? reason : "收费员冲正";
 
         String tradeNo = nextTradeNo();
         InsuranceCancelPayloadVO payload = new InsuranceCancelPayloadVO();
@@ -709,7 +709,7 @@ public class InsuranceSettlementServiceImpl
         if (settlement.getAge() == null) {
             settlement.setAge(patient.getAge());
         }
-        if (!StringUtils.hasText(settlement.getInsuranceType())) {
+        if (!TextUtil.hasText(settlement.getInsuranceType())) {
             settlement.setInsuranceType(patient.getMedicalInsuranceType());
         }
     }
@@ -750,7 +750,7 @@ public class InsuranceSettlementServiceImpl
         visit.setDeptName(s.getDeptName());
         visit.setDoctorName(s.getDoctorName());
         visit.setDiagnosisCode(s.getDiagnosisCode());
-        visit.setDiagnosisName(StringUtils.hasText(s.getDiagnosisName()) ? s.getDiagnosisName() : s.getDiagnosis());
+        visit.setDiagnosisName(TextUtil.hasText(s.getDiagnosisName()) ? s.getDiagnosisName() : s.getDiagnosis());
 
         InsuranceUploadPayloadVO.Fees fees = new InsuranceUploadPayloadVO.Fees();
         fees.setTotal(s.getTotalAmount());
@@ -906,7 +906,7 @@ public class InsuranceSettlementServiceImpl
     @Override
     public InsuranceStatsVO stats() {
         List<BizInsuranceSettlement> today = this.list(new LambdaQueryWrapper<BizInsuranceSettlement>()
-                .ge(BizInsuranceSettlement::getCreateTime, LocalDate.now().atStartOfDay()));
+                .ge(BizInsuranceSettlement::getCreateTime, TimeUtil.dayStart(LocalDate.now())));
         InsuranceStatsVO vo = new InsuranceStatsVO();
         vo.setTodayTotal(NumUtil.scale(sum(today, BizInsuranceSettlement::getTotalAmount), AMOUNT_SCALE));
         vo.setTodayInsurancePay(NumUtil.scale(sum(today, BizInsuranceSettlement::getInsurancePay), AMOUNT_SCALE));

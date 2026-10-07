@@ -3,6 +3,7 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.SafetyCheckSignDTO;
 import com.his.operation.entity.BizOperationApply;
@@ -19,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -227,7 +227,7 @@ public class OperationSafetyCheckServiceImpl extends ServiceImpl<BizOperationSaf
 
     private String employeeNameOf(Long empId) {
         String name = bizOperationSafetyCheckMapper.selectEmployeeName(empId);
-        return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
+        return TextUtil.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
     private String nextCheckNo() {

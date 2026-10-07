@@ -2,6 +2,7 @@ package com.his.medicaltech.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.ExamApptDTO;
 import com.his.medicaltech.service.ExamDeviceService;
 import com.his.medicaltech.service.ExamSlotService;
@@ -11,7 +12,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -69,7 +69,7 @@ public class ExamDeviceController {
     @PostMapping("/deviceUpsert")
     public Result<ExamApptVO.DeviceVO> deviceUpsert(@Valid @RequestBody ExamApptDTO.DeviceUpsert dto) {
         ExamApptVO.DeviceVO vo = examDeviceService.upsert(dto);
-        return StringUtils.hasText(vo.getWarning()) ? Result.success(vo.getWarning(), vo) : Result.success(vo);
+        return TextUtil.hasText(vo.getWarning()) ? Result.success(vo.getWarning(), vo) : Result.success(vo);
     }
 
     @PreAuthorize("hasAuthority('medtech:examAppoint:delete')")

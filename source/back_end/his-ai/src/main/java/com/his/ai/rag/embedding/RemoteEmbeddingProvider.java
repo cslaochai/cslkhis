@@ -3,13 +3,13 @@ package com.his.ai.rag.embedding;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.ai.config.AiProperties;
+import com.his.common.util.TextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
@@ -41,10 +41,10 @@ public class RemoteEmbeddingProvider implements EmbeddingProvider {
     @Override
     public float[] embed(String text) {
         AiProperties.Rag rag = properties.getRag();
-        String base = StringUtils.hasText(rag.getEmbedBaseUrl()) ? rag.getEmbedBaseUrl() : properties.getBaseUrl();
-        String key = StringUtils.hasText(rag.getEmbedApiKey()) ? rag.getEmbedApiKey() : properties.getApiKey();
-        String model = StringUtils.hasText(rag.getEmbedModel()) ? rag.getEmbedModel() : properties.getModel();
-        if (!StringUtils.hasText(base) || !StringUtils.hasText(key) || !StringUtils.hasText(model)) {
+        String base = TextUtil.hasText(rag.getEmbedBaseUrl()) ? rag.getEmbedBaseUrl() : properties.getBaseUrl();
+        String key = TextUtil.hasText(rag.getEmbedApiKey()) ? rag.getEmbedApiKey() : properties.getApiKey();
+        String model = TextUtil.hasText(rag.getEmbedModel()) ? rag.getEmbedModel() : properties.getModel();
+        if (!TextUtil.hasText(base) || !TextUtil.hasText(key) || !TextUtil.hasText(model)) {
             throw new IllegalStateException(
                     "remote embedding 未配置（ai.rag.embedding-base-url / embedding-api-key / embedding-model，或回落 ai.base-url/api-key/model）");
         }

@@ -9,12 +9,14 @@ import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.*;
 import com.his.medicaltech.entity.BizTransfusionApply;
 import com.his.medicaltech.entity.BizTransfusionApprove;
 import com.his.medicaltech.entity.BizTransfusionBag;
 import com.his.medicaltech.enums.*;
+import com.his.medicaltech.enums.TransfusionApproveLevelEnum;
 import com.his.medicaltech.mapper.BizTransfusionApplyMapper;
 import com.his.medicaltech.mapper.BizTransfusionApproveMapper;
 import com.his.medicaltech.mapper.BizTransfusionBagMapper;
@@ -32,13 +34,11 @@ import com.his.patient.service.InpatientService;
 import com.his.patient.vo.CodeOptionVO;
 import com.his.patient.vo.WardVO;
 import com.his.system.entity.CurrentUser;
-import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -108,7 +108,6 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
 
     private final InpatientRecordService inpatientRecordService;
 
-    private final DictCacheService dictCacheService;
 
     // 查询
 
@@ -116,8 +115,8 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
      * 追加备注（不覆盖已有内容；超 500 截断，避免超长直接 SQL 报错）
      */
     private static String mergeRemark(String origin, String append) {
-        String text = StringUtils.hasText(origin)
-                ? (StringUtils.hasText(append) ? origin + "；" + append : origin)
+        String text = TextUtil.hasText(origin)
+                ? (TextUtil.hasText(append) ? origin + "；" + append : origin)
                 : append;
         if (text != null && text.length() > 500) {
             return text.substring(0, 497) + "…";
@@ -126,7 +125,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
     }
 
     private static String textOr(String value, String fallback) {
-        return StringUtils.hasText(value) ? value : fallback;
+        return TextUtil.hasText(value) ? value : fallback;
     }
 
     /**
@@ -146,15 +145,15 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
     }
 
     private static Parsed parse(String raw) {
-        if (!StringUtils.hasText(raw)) {
+        if (!TextUtil.hasText(raw)) {
             return null;
         }
         String s = raw.trim();
         try {
             if (s.length() == 10) {
                 LocalDate d = LocalDate.parse(s);
-                return new Parsed(d.atStartOfDay().format(DateFormats.DATETIME),
-                        d.plusDays(1).atStartOfDay().format(DateFormats.DATETIME));
+                return new Parsed(TimeUtil.dayStart(d).format(DateFormats.DATETIME),
+                        TimeUtil.dayStart(d.plusDays(1)).format(DateFormats.DATETIME));
             }
             LocalDateTime t = LocalDateTime.parse(s, DateFormats.DATETIME);
             return new Parsed(t.format(DateFormats.DATETIME), t.format(DateFormats.DATETIME));
@@ -398,9 +397,9 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             log.warn("输血申请血型与档案不一致 admissionId={} 档案={} 本次={}",
                     dto.getAdmissionId(), archiveAbo, abo);
         }
-        String remark = StringUtils.hasText(dto.getRemark()) ? dto.getRemark() : null;
+        String remark = TextUtil.hasText(dto.getRemark()) ? dto.getRemark() : null;
         if (warn != null) {
-            remark = StringUtils.hasText(remark) ? remark + "；" + warn : warn;
+            remark = TextUtil.hasText(remark) ? remark + "；" + warn : warn;
         }
         entity.setRemark(remark);
 
@@ -446,7 +445,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                     + TransfusionApproveStatusEnum.labelOrUnknown(status)
                     + "」，只有「待审批」或「急诊待补审」可以提交审批结论");
         }
-        if (dto.getApproveResult() == 2 && !StringUtils.hasText(dto.getOpinion())) {
+        if (dto.getApproveResult() == 2 && !TextUtil.hasText(dto.getOpinion())) {
             throw new BusinessException("驳回必须写明原因（申请人要知道改什么才能重新提交）");
         }
 
@@ -464,7 +463,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         record.setApproverId(approverId);
         record.setApproverName(operatorUser.getRealName());
         record.setApproverTitle(approverTitle);
-        record.setOpinion(StringUtils.hasText(dto.getOpinion()) ? dto.getOpinion().trim() : null);
+        record.setOpinion(TextUtil.hasText(dto.getOpinion()) ? dto.getOpinion().trim() : null);
         record.setIsMakeup(makeup ? 1 : 0);
         record.setCreateTime(TimeUtil.toSeconds(now));
         bizTransfusionApproveMapper.insert(record);
@@ -505,7 +504,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             TransfusionApplyVO.ApproveRecord row = new TransfusionApplyVO.ApproveRecord();
             row.setId(r.getId());
             row.setApproveLevel(r.getApproveLevel());
-            row.setApproveLevelText(dictCacheService.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", r.getApproveLevel()));
+            row.setApproveLevelText(TransfusionApproveLevelEnum.getText(r.getApproveLevel()));
             row.setApproveResult(r.getApproveResult());
             row.setApproveResultText(Objects.equals(1, r.getApproveResult()) ? "通过" : "驳回");
             row.setApproverId(r.getApproverId());
@@ -540,7 +539,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         for (int level = 1; level <= 3; level++) {
             TransfusionApplyVO.LevelCount lc = new TransfusionApplyVO.LevelCount();
             lc.setApproveLevel(level);
-            lc.setApproveLevelText(dictCacheService.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", level));
+            lc.setApproveLevelText(TransfusionApproveLevelEnum.getText(level));
             lc.setCount(bizTransfusionApplyMapper.selectCount(
                     new LambdaQueryWrapper<BizTransfusionApply>()
                             .eq(BizTransfusionApply::getApproveStatus, TransfusionApproveStatusEnum.APPROVED.getCode())
@@ -572,7 +571,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                     + TransfusionApproveStatusEnum.labelOrUnknown(entity.getApproveStatus())
                     + "」，未通过审批不能配血（申请量 "
                     + (entity.getAmountMl() == null ? "待折算" : entity.getAmountMl() + "ml")
-                    + "，属「" + dictCacheService.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", entity.getApproveLevel()) + "」审核签发范围）");
+                    + "，属「" + TransfusionApproveLevelEnum.getText(entity.getApproveLevel()) + "」审核签发范围）");
         }
         BizAdmission admission = inpatientService.getAdmissionById(entity.getAdmissionId());
         if (admission == null || !Objects.equals(ADMITTED, admission.getAdmitStatus())) {
@@ -675,7 +674,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             // 配血结论相合才置"已配血"；不合的袋停在"待配血"，等换血源重配
             row.setBagStatus(Objects.equals(1, bag.getCrossmatchResult())
                     ? BloodBagStatusEnum.CROSSMATCHED.getCode() : BloodBagStatusEnum.PENDING.getCode());
-            if (StringUtils.hasText(bag.getRemark())) {
+            if (TextUtil.hasText(bag.getRemark())) {
                 row.setRemark(bag.getRemark());
             }
             if (exist == null) {
@@ -698,7 +697,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             // 于是"配了但不合"变成"看起来根本没配过"，安全隐患被自己藏起来。
             // ABO/Rh 不相容则相反：那是操作错误，在入口整批回滚，不留痕。
             entity.setCrossmatchStatus(TransfusionCrossmatchStatusEnum.INCOMPATIBLE.getCode());
-            if (StringUtils.hasText(dto.getCrossmatchNote())) {
+            if (TextUtil.hasText(dto.getCrossmatchNote())) {
                 entity.setRemark(mergeRemark(entity.getRemark(), dto.getCrossmatchNote()));
             }
             bizTransfusionApplyMapper.updateById(entity);
@@ -713,7 +712,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             entity.setCrossmatchDoctorName(empName);
             entity.setCrossmatchTime(now);
             entity.setTransfusionStatus(TransfusionStatusEnum.CROSSMATCHED.getCode());
-            if (StringUtils.hasText(dto.getCrossmatchNote())) {
+            if (TextUtil.hasText(dto.getCrossmatchNote())) {
                 entity.setRemark(mergeRemark(entity.getRemark(), dto.getCrossmatchNote()));
             }
             bizTransfusionApplyMapper.updateById(entity);
@@ -724,7 +723,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
 
         // 只配了一部分：等血站后续到货再配，流程停在「待配血」
         entity.setCrossmatchStatus(TransfusionCrossmatchStatusEnum.PARTIAL.getCode());
-        if (StringUtils.hasText(dto.getCrossmatchNote())) {
+        if (TextUtil.hasText(dto.getCrossmatchNote())) {
             entity.setRemark(mergeRemark(entity.getRemark(), dto.getCrossmatchNote()));
         }
         bizTransfusionApplyMapper.updateById(entity);
@@ -783,7 +782,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         for (BizTransfusionBag bag : bags) {
             bag.setBagStatus(BloodBagStatusEnum.ISSUED.getCode());
             bag.setIssueTime(now);
-            if (StringUtils.hasText(note)) {
+            if (TextUtil.hasText(note)) {
                 bag.setRemark(mergeRemark(bag.getRemark(), note));
             }
             bizTransfusionBagMapper.updateById(bag);
@@ -792,7 +791,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         entity.setIssueDoctorName(operatorUser.getRealName());
         entity.setIssueTime(now);
         entity.setTransfusionStatus(TransfusionStatusEnum.ISSUED.getCode());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(mergeRemark(entity.getRemark(), dto.getRemark()));
         }
         bizTransfusionApplyMapper.updateById(entity);
@@ -855,7 +854,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         entity.setInfusionSpeed(dto.getInfusionSpeed());
         entity.setObservation(dto.getObservation());
         entity.setTransfusionStatus(TransfusionStatusEnum.INFUSING.getCode());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(mergeRemark(entity.getRemark(), dto.getRemark()));
         }
         bizTransfusionApplyMapper.updateById(entity);
@@ -923,7 +922,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         entity.setFinishTime(now);
         entity.setRecordId(record.getId());
         entity.setTransfusionStatus(TransfusionStatusEnum.FINISHED.getCode());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(mergeRemark(entity.getRemark(), dto.getRemark()));
         }
         bizTransfusionApplyMapper.updateById(entity);
@@ -962,7 +961,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         entity.setReactionReporterId(operatorUser.getEmployeeId());
         entity.setReactionReporterName(operatorUser.getRealName());
         entity.setReactionTime(TimeUtil.nowSeconds());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(mergeRemark(entity.getRemark(), dto.getRemark()));
         }
         bizTransfusionApplyMapper.updateById(entity);
@@ -1025,7 +1024,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         StringBuilder course = new StringBuilder();
         course.append("输血成分：")
                 .append(BloodComponentEnum.labelOrUnknown(entity.getBloodComponent()));
-        if (StringUtils.hasText(entity.getComponentSpec())) {
+        if (TextUtil.hasText(entity.getComponentSpec())) {
             course.append("（").append(entity.getComponentSpec()).append("）");
         }
         course.append("，共 ").append(bags.size()).append(" 袋\n");
@@ -1047,18 +1046,18 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                     .append(" ~ ").append(end.format(DateFormats.DATETIME))
                     .append("（").append(TransfusionRules.durationText(minutes)).append("）\n");
         }
-        if (StringUtils.hasText(entity.getInfusionSpeed())) {
+        if (TextUtil.hasText(entity.getInfusionSpeed())) {
             course.append("滴速：").append(entity.getInfusionSpeed()).append('\n');
         }
         course.append("实际输注量：").append(dto.getActualAmount())
-                .append(StringUtils.hasText(entity.getAmountUnit()) ? " " + entity.getAmountUnit() : "")
+                .append(TextUtil.hasText(entity.getAmountUnit()) ? " " + entity.getAmountUnit() : "")
                 .append('\n');
-        if (StringUtils.hasText(entity.getCheckNurseName())) {
+        if (TextUtil.hasText(entity.getCheckNurseName())) {
             course.append("双人核对：").append(entity.getCheckNurseName())
                     .append("、").append(textOr(entity.getCheckNurse2Name(), "未记录"))
                     .append("（").append(TransfusionCheckItems.summaryText(entity.getCheckItems())).append("）\n");
         }
-        if (StringUtils.hasText(entity.getTransfusionPurpose())) {
+        if (TextUtil.hasText(entity.getTransfusionPurpose())) {
             course.append("输血目的：").append(entity.getTransfusionPurpose()).append('\n');
         }
         course.append("输注过程观察：").append(dto.getObservation());
@@ -1116,7 +1115,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         record.setRecordStatus(RECORD_STATUS_SUBMITTED);
         // 签名 = 申请输血的经治医师；缺失才回落到录入人（宁可记"谁录的"，也不留空签名）
         record.setDoctorId(entity.getApplyDoctorId() != null ? entity.getApplyDoctorId() : operatorUser.getEmployeeId());
-        record.setDoctorName(StringUtils.hasText(entity.getApplyDoctorName())
+        record.setDoctorName(TextUtil.hasText(entity.getApplyDoctorName())
                 ? entity.getApplyDoctorName() : operatorUser.getRealName());
         record.setSubmitTime(now);
         // 病历号取号与落库归病历文书的写入方（输血侧只负责把这次输血写成文书内容）
@@ -1136,7 +1135,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         vo.setAdmitStatusText(AdmitStatusEnum.getText(vo.getAdmitStatus()));
         vo.setHasReactionText(Objects.equals(1, vo.getHasReaction()) ? "有反应（已上报）" : "未上报反应");
         vo.setApproveStatusText(TransfusionApproveStatusEnum.getText(vo.getApproveStatus()));
-        vo.setApproveLevelText(dictCacheService.getDicDataLabel("biz_medicaltech_transfusionApproveLevelEnum", vo.getApproveLevel()));
+        vo.setApproveLevelText(TransfusionApproveLevelEnum.getText(vo.getApproveLevel()));
         vo.setCheckItemsText(TransfusionCheckItems.summaryText(vo.getCheckItems()));
         vo.setCheckItemOptions(checkItems());
         vo.setReactionTypeOptions(TransfusionReactionTypeEnum.options());
@@ -1282,7 +1281,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             return null;
         }
         String name = bizTransfusionApplyMapper.selectDeptName(deptId);
-        return StringUtils.hasText(name) ? name : "未知科室(ID=" + deptId + ")";
+        return TextUtil.hasText(name) ? name : "未知科室(ID=" + deptId + ")";
     }
 
     private String wardNameOf(Long wardId) {
@@ -1308,7 +1307,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             return null;
         }
         String name = bizTransfusionApplyMapper.selectEmployeeName(empId);
-        return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
+        return TextUtil.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
     /**

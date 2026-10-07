@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.WorkbenchRoleConfigUpsertDTO;
 import com.his.system.dto.WorkbenchRoleWidgetDTO;
 import com.his.system.dto.WorkbenchWidgetQueryPageDTO;
@@ -27,7 +28,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -115,11 +115,11 @@ public class WorkbenchServiceImpl extends ServiceImpl<SysWorkbenchWidgetMapper, 
     public PageResult<WorkbenchWidgetVO> widgetListPage(WorkbenchWidgetQueryPageDTO queryDTO) {
         String keyword = queryDTO.getKeyword();
         LambdaQueryWrapper<SysWorkbenchWidget> wrapper = new LambdaQueryWrapper<>();
-        wrapper.and(StringUtils.hasText(keyword), w -> w
+        wrapper.and(TextUtil.hasText(keyword), w -> w
                         .like(SysWorkbenchWidget::getWidgetCode, keyword)
                         .or()
                         .like(SysWorkbenchWidget::getWidgetName, keyword))
-                .eq(StringUtils.hasText(queryDTO.getArea()), SysWorkbenchWidget::getArea, queryDTO.getArea())
+                .eq(TextUtil.hasText(queryDTO.getArea()), SysWorkbenchWidget::getArea, queryDTO.getArea())
                 .eq(queryDTO.getStatus() != null, SysWorkbenchWidget::getStatus, queryDTO.getStatus())
                 .orderByAsc(SysWorkbenchWidget::getArea)
                 .orderByAsc(SysWorkbenchWidget::getSortOrder);
@@ -135,7 +135,7 @@ public class WorkbenchServiceImpl extends ServiceImpl<SysWorkbenchWidgetMapper, 
             throw new BusinessException("归属区域只能是 todo/notice/entry/kpi/domain");
         }
         String permission = upsertDTO.getPermission();
-        if (StringUtils.hasText(permission) && !permissionExists(permission)) {
+        if (TextUtil.hasText(permission) && !permissionExists(permission)) {
             // 凭空造的码 = 任何角色都拿不到 = 卡片永久消失，且现场只会看到"卡不见了"
             throw new BusinessException("权限码在菜单表中不存在：" + permission);
         }

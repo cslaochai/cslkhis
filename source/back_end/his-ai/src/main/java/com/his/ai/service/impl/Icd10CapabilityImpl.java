@@ -17,7 +17,6 @@ import com.his.system.entity.SysIcd10;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -91,7 +90,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
         for (Icd10RecallService.RecallHit hit : hits) {
             SysIcd10 code = hit.code();
             builder.append(code.getIcdCode()).append(' ').append(code.getIcdName());
-            if (StringUtils.hasText(code.getIcdCategory())) {
+            if (TextUtil.hasText(code.getIcdCategory())) {
                 builder.append('（').append(code.getIcdCategory()).append('）');
             }
             builder.append('\n');
@@ -112,14 +111,6 @@ public class Icd10CapabilityImpl implements Icd10Capability {
             return MIN_CONFIDENCE;
         }
         return Math.max(MIN_CONFIDENCE, Math.min(MAX_CONFIDENCE, confidence));
-    }
-
-    private static String firstNonBlank(String preferred, String fallback) {
-        return StringUtils.hasText(preferred) ? preferred : fallback;
-    }
-
-    private static boolean isBlank(String text) {
-        return !StringUtils.hasText(text);
     }
 
     /**
@@ -174,15 +165,15 @@ public class Icd10CapabilityImpl implements Icd10Capability {
         String specialistExam = dto.getSpecialistExam();
         String diagnosis = dto.getDiagnosis();
 
-        boolean missingAny = isBlank(chiefComplaint) || isBlank(presentIllness)
-                || isBlank(specialistExam) || isBlank(diagnosis);
+        boolean missingAny = !TextUtil.hasText(chiefComplaint) || !TextUtil.hasText(presentIllness)
+                || !TextUtil.hasText(specialistExam) || !TextUtil.hasText(diagnosis);
         if (dto.getRecordId() != null && missingAny) {
             BizMedicalRecord record = bizMedicalRecordMapper.selectById(dto.getRecordId());
             if (record != null) {
-                chiefComplaint = firstNonBlank(chiefComplaint, record.getChiefComplaint());
-                presentIllness = firstNonBlank(presentIllness, record.getPresentIllness());
-                specialistExam = firstNonBlank(specialistExam, record.getSpecialistExam());
-                diagnosis = firstNonBlank(diagnosis, record.getDiagnosis());
+                chiefComplaint = TextUtil.blankToDefault(chiefComplaint, record.getChiefComplaint());
+                presentIllness = TextUtil.blankToDefault(presentIllness, record.getPresentIllness());
+                specialistExam = TextUtil.blankToDefault(specialistExam, record.getSpecialistExam());
+                diagnosis = TextUtil.blankToDefault(diagnosis, record.getDiagnosis());
             } else {
                 log.warn("[AI-ICD] 病历 {} 不存在，仅使用入参文本", dto.getRecordId());
             }
@@ -289,7 +280,7 @@ public class Icd10CapabilityImpl implements Icd10Capability {
                             String specialistExam, String diagnosis) {
 
         private static void appendIfPresent(StringBuilder builder, String text) {
-            if (StringUtils.hasText(text)) {
+            if (TextUtil.hasText(text)) {
                 builder.append(text).append(' ');
             }
         }

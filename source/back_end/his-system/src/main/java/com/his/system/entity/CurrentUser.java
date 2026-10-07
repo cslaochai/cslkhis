@@ -1,6 +1,7 @@
 package com.his.system.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.his.common.util.TextUtil;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -52,7 +53,7 @@ public class CurrentUser implements UserDetails {
         // ROLE_ 前缀只给「当前角色」，不是全部角色：
         // 多角色账号切成收费员之后 hasRole('DOCTOR') 也必须为假，否则"切了角色但权限还是医生的"。
         // currentRole 为空（未走过滤器，例如登录认证过程中）时退回全部角色。
-        if (currentRole != null && !currentRole.isBlank()) {
+        if (TextUtil.hasText(currentRole)) {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + currentRole));
         } else if (roles != null) {
             roles.stream()

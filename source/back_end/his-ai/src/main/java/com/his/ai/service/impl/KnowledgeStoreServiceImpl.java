@@ -15,6 +15,7 @@ import com.his.ai.rag.store.InMemoryVectorStore;
 import com.his.ai.service.KnowledgeStoreService;
 import com.his.ai.vo.KnowledgeDocListVO;
 import com.his.ai.vo.KnowledgeDocVO;
+import com.his.common.util.TextUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +23,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -103,10 +103,10 @@ public class KnowledgeStoreServiceImpl implements KnowledgeStoreService {
     public IPage<KnowledgeDocListVO> listPage(KnowledgeDocQueryPageDTO dto) {
         Page<SysKnowledgeDoc> page = new Page<>(dto.getPageNum(), dto.getPageSize());
         QueryWrapper<SysKnowledgeDoc> w = new QueryWrapper<>();
-        if (StringUtils.hasText(dto.getTitle())) {
+        if (TextUtil.hasText(dto.getTitle())) {
             w.like("title", dto.getTitle());
         }
-        if (StringUtils.hasText(dto.getCategory())) {
+        if (TextUtil.hasText(dto.getCategory())) {
             w.eq("category", dto.getCategory());
         }
         w.eq("del_flag", 0).orderByDesc("create_time");

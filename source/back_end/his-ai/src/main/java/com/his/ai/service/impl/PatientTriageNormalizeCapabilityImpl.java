@@ -13,7 +13,6 @@ import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,13 +68,13 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
     private final PatientTextGuard textGuard;
 
     private static List<String> splitTerms(String terms) {
-        if (!StringUtils.hasText(terms)) {
+        if (!TextUtil.hasText(terms)) {
             return List.of();
         }
         List<String> result = new ArrayList<>();
         for (String part : terms.split("[、,，;；\\s]+")) {
             String term = part.trim();
-            if (!StringUtils.hasText(term) || term.length() > TERM_MAX_LENGTH) {
+            if (!TextUtil.hasText(term) || term.length() > TERM_MAX_LENGTH) {
                 continue;
             }
             if (!result.contains(term)) {
@@ -149,7 +148,7 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
      */
     private String buildSearchText(String raw, String fromModel, List<String> terms) {
         StringBuilder builder = new StringBuilder(raw);
-        if (StringUtils.hasText(fromModel)) {
+        if (TextUtil.hasText(fromModel)) {
             String value = TextUtil.cut(fromModel.trim(), SEARCH_TEXT_MAX);
             if (!raw.contains(value)) {
                 builder.append('，').append(value);
@@ -175,12 +174,12 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
         }
         List<String> result = new ArrayList<>();
         for (String item : followUps) {
-            if (!StringUtils.hasText(item)) {
+            if (!TextUtil.hasText(item)) {
                 continue;
             }
             String guarded = textGuard.guard(TextUtil.cut(item.trim(), FOLLOW_UP_MAX_LENGTH),
                     AiCapabilityKeys.PATIENT_TRIAGE_NORMALIZE);
-            if (StringUtils.hasText(guarded) && !result.contains(guarded)) {
+            if (TextUtil.hasText(guarded) && !result.contains(guarded)) {
                 result.add(guarded);
             }
             if (result.size() >= MAX_FOLLOW_UPS) {

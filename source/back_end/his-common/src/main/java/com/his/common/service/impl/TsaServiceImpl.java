@@ -18,6 +18,7 @@ import com.his.common.service.RedisSequenceService;
 import com.his.common.service.TsaChannelService;
 import com.his.common.service.TsaService;
 import com.his.common.util.SignCryptoUtil;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.common.vo.TsaStatusVO;
 import com.his.common.vo.TsaTokenVO;
@@ -26,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +52,7 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
     private final RedisSequenceService redisSequenceService;
 
     private static Integer parseCfg(String v) {
-        if (!StringUtils.hasText(v)) {
+        if (!TextUtil.hasText(v)) {
             return null;
         }
         try {
@@ -116,10 +116,10 @@ public class TsaServiceImpl extends ServiceImpl<SysTsaServerMapper, SysTsaServer
     @Override
     public IPage<TsaTokenVO> listPage(TsaTokenQueryPageDTO query) {
         LambdaQueryWrapper<BizTsaToken> w = new LambdaQueryWrapper<>();
-        if (StringUtils.hasText(query.getSerial())) {
+        if (TextUtil.hasText(query.getSerial())) {
             w.eq(BizTsaToken::getSerial, query.getSerial().trim());
         }
-        if (StringUtils.hasText(query.getKeyword())) {
+        if (TextUtil.hasText(query.getKeyword())) {
             w.like(BizTsaToken::getDigestHex, query.getKeyword().trim());
         }
         w.orderByDesc(BizTsaToken::getTsaTime).orderByDesc(BizTsaToken::getId);

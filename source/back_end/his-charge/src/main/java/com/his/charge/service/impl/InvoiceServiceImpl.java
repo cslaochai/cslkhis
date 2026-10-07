@@ -27,7 +27,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -142,7 +141,7 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
         wrapper.eq(patientId != null, BizInvoice::getPatientId, patientId)
                 .eq(billId != null, BizInvoice::getBillId, billId)
                 .eq(invoiceStatus != null, BizInvoice::getInvoiceStatus, invoiceStatus)
-                .and(StringUtils.hasText(keyword), w -> w.like(BizInvoice::getInvoiceNo, keyword)
+                .and(TextUtil.hasText(keyword), w -> w.like(BizInvoice::getInvoiceNo, keyword)
                         .or().like(BizInvoice::getBillNo, keyword)
                         .or().like(BizInvoice::getChargeNo, keyword)
                         .or().like(BizInvoice::getPatientName, keyword))
@@ -183,7 +182,7 @@ public class InvoiceServiceImpl extends ServiceImpl<BizInvoiceMapper, BizInvoice
         if (status == InvoiceStatusEnum.REVERSED) {
             throw new BusinessException("该票已红冲换开，不能重复作废");
         }
-        if (!StringUtils.hasText(reason)) {
+        if (!TextUtil.hasText(reason)) {
             throw new BusinessException("缺少作废原因");
         }
         invoice.setInvoiceStatus(InvoiceStatusEnum.VOIDED.getCode());

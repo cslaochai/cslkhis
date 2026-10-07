@@ -14,6 +14,7 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.*;
+import com.his.common.util.TextUtil;
 import com.his.emr.dto.FollowupQueryDTO;
 import com.his.emr.dto.FollowupTaskDTO;
 import com.his.emr.entity.BizFollowupTask;
@@ -30,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -91,7 +91,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         FollowupQueryDTO q = dto == null ? new FollowupQueryDTO() : dto;
         LambdaQueryWrapper<BizFollowupTask> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(q.getPatientId() != null, BizFollowupTask::getPatientId, q.getPatientId())
-                .like(StringUtils.hasText(q.getPatientName()), BizFollowupTask::getPatientName,
+                .like(TextUtil.hasText(q.getPatientName()), BizFollowupTask::getPatientName,
                         q.getPatientName() == null ? null : q.getPatientName().trim())
                 .eq(q.getFollowupType() != null, BizFollowupTask::getFollowupType, q.getFollowupType())
                 .eq(q.getFollowupStatus() != null, BizFollowupTask::getFollowupStatus, q.getFollowupStatus());
@@ -195,7 +195,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         task.setFollowupType(dto.getFollowupType());
         task.setFollowupTime(TimeUtil.toSeconds(dto.getFollowupTime()));
         task.setFollowupContent(dto.getFollowupContent());
-        if (StringUtils.hasText(dto.getPhone())) {
+        if (TextUtil.hasText(dto.getPhone())) {
             task.setPhone(dto.getPhone().trim());
         }
         if (dto.getRemark() != null) {
@@ -253,7 +253,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         task.setDiagnosis(diagnosis);
         task.setFollowupType(type);
         task.setFollowupTime(TimeUtil.toSeconds(dischargeTime.plusDays(days)));
-        task.setFollowupContent(StringUtils.hasText(dto.getFollowupContent())
+        task.setFollowupContent(TextUtil.hasText(dto.getFollowupContent())
                 ? dto.getFollowupContent() : buildDefaultContent(type, diagnosis));
         task.setFollowupStatus(FollowupTaskStatusEnum.PENDING.getCode());
         task.setRemark(anchor + "按出院记录 " + snap.getDischargeNo() + " 自动生成（出院后 " + days + " 天）");
@@ -318,7 +318,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
 
         task.setFollowupStatus(FollowupTaskStatusEnum.DOING.getCode());
         task.setExecutorId(executorId == null ? UserUtils.getCurrentUser().getEmployeeId() : executorId);
-        task.setExecutorName(StringUtils.hasText(executorName) ? executorName : UserUtils.getCurrentUser().getRealName());
+        task.setExecutorName(TextUtil.hasText(executorName) ? executorName : UserUtils.getCurrentUser().getRealName());
         boolean updated = this.updateById(task);
         if (updated) {
             // 患者触达（G-06）：开始随访即把随访内容推给患者，患者可在小程序「我的随访」反馈。
@@ -328,9 +328,9 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
                 String typeText = FollowupTypeEnum.getText(task.getFollowupType());
                 sysMessageService.sendWechatToPatient(task.getPatientId(), "followup_started",
                         "pages/followup/followup",
-                        Map.of("随访类型", StringUtils.hasText(typeText) ? typeText : "随访"),
+                        Map.of("随访类型", TextUtil.hasText(typeText) ? typeText : "随访"),
                         "随访通知",
-                        StringUtils.hasText(task.getFollowupContent())
+                        TextUtil.hasText(task.getFollowupContent())
                                 ? task.getFollowupContent() : "您有一份随访计划，请查看详情并反馈近况",
                         "followup", task.getId());
             } catch (Exception e) {
@@ -376,7 +376,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         }
 
         task.setFollowupStatus(FollowupTaskStatusEnum.CANCELLED.getCode());
-        task.setRemark(StringUtils.hasText(reason) ? TextUtil.cut(reason, 512) : "已取消");
+        task.setRemark(TextUtil.hasText(reason) ? TextUtil.cut(reason, 512) : "已取消");
         return this.updateById(task);
     }
 
@@ -393,7 +393,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean replyFromPatient(Long taskId, Long patientId, String replyText) {
-        if (!StringUtils.hasText(replyText)) {
+        if (!TextUtil.hasText(replyText)) {
             throw new BusinessException("反馈内容不能为空");
         }
         BizFollowupTask task = this.getById(taskId);
@@ -442,9 +442,9 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
                 : FollowupCallStatusEnum.NO_ANSWER.getCode());
         task.setCallTime(TimeUtil.nowSeconds());
         // 追加不覆盖：出院自动生成的任务靠 remark 前缀锚定幂等，整列覆写会把锚洗掉
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             String extra = "[外呼" + (connected ? "已接通" : "未接通") + "] " + TextUtil.cut(dto.getRemark(), 200);
-            task.setRemark(TextUtil.cut(StringUtils.hasText(task.getRemark())
+            task.setRemark(TextUtil.cut(TextUtil.hasText(task.getRemark())
                     ? task.getRemark() + "\n" + extra : extra, 512));
         }
         touch(task);
@@ -544,7 +544,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         }
         task.setPatientNo(snap.getPatientNo());
         task.setPatientName(snap.getPatientName());
-        if (!StringUtils.hasText(task.getPhone())) {
+        if (!TextUtil.hasText(task.getPhone())) {
             task.setPhone(snap.getPhone());
         }
         if (snap.getDeptId() != null) {
@@ -558,7 +558,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     }
 
     private String buildDefaultContent(int type, String diagnosis) {
-        String d = StringUtils.hasText(diagnosis) ? diagnosis : "出院诊断待补录";
+        String d = TextUtil.hasText(diagnosis) ? diagnosis : "出院诊断待补录";
         return switch (type) {
             case 2 -> "慢病随访：请复诊评估「" + d + "」控制情况，遵医嘱规律用药";
             case 3 -> "用药指导：出院带药用法确认与不良反应随访（" + d + "）";

@@ -11,14 +11,14 @@ import com.his.ai.service.AiAuditQueryService;
 import com.his.ai.vo.AiAuditLogVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -51,17 +51,17 @@ public class AiAuditQueryServiceImpl extends ServiceImpl<SysAiCallLogMapper, Sys
      * 空条件查询直接变成 500。凡是这种「带 condition 的查询方法」，参数构造函数必须自己判空。
      */
     private static LocalDateTime startOfDay(String date) {
-        if (!StringUtils.hasText(date)) {
+        if (!TextUtil.hasText(date)) {
             return null;
         }
-        return parseDate(date).atStartOfDay();
+        return TimeUtil.dayStart(parseDate(date));
     }
 
     private static LocalDateTime endOfDay(String date) {
-        if (!StringUtils.hasText(date)) {
+        if (!TextUtil.hasText(date)) {
             return null;
         }
-        return parseDate(date).atTime(LocalTime.MAX);
+        return TimeUtil.dayEnd(parseDate(date));
     }
 
     private static LocalDate parseDate(String date) {
@@ -76,13 +76,13 @@ public class AiAuditQueryServiceImpl extends ServiceImpl<SysAiCallLogMapper, Sys
 
     public PageResult<AiAuditLogVO> listPage(AiAuditLogQueryPageDTO dto) {
         LambdaQueryWrapper<SysAiCallLog> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StringUtils.hasText(dto.getCapabilityKey()), SysAiCallLog::getCapabilityKey, dto.getCapabilityKey())
+        wrapper.eq(TextUtil.hasText(dto.getCapabilityKey()), SysAiCallLog::getCapabilityKey, dto.getCapabilityKey())
                 .eq(dto.getStatus() != null, SysAiCallLog::getStatus, dto.getStatus())
-                .eq(StringUtils.hasText(dto.getBizType()), SysAiCallLog::getBizType, dto.getBizType())
+                .eq(TextUtil.hasText(dto.getBizType()), SysAiCallLog::getBizType, dto.getBizType())
                 .eq(dto.getBizId() != null, SysAiCallLog::getBizId, dto.getBizId())
-                .like(StringUtils.hasText(dto.getOperator()), SysAiCallLog::getOperator, dto.getOperator())
-                .ge(StringUtils.hasText(dto.getStartDate()), SysAiCallLog::getCreateTime, startOfDay(dto.getStartDate()))
-                .le(StringUtils.hasText(dto.getEndDate()), SysAiCallLog::getCreateTime, endOfDay(dto.getEndDate()))
+                .like(TextUtil.hasText(dto.getOperator()), SysAiCallLog::getOperator, dto.getOperator())
+                .ge(TextUtil.hasText(dto.getStartDate()), SysAiCallLog::getCreateTime, startOfDay(dto.getStartDate()))
+                .le(TextUtil.hasText(dto.getEndDate()), SysAiCallLog::getCreateTime, endOfDay(dto.getEndDate()))
                 .orderByDesc(SysAiCallLog::getCreateTime);
 
         Page<SysAiCallLog> page = sysAiCallLogMapper.selectPage(

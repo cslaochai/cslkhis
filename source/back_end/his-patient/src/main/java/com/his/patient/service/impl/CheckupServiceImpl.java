@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -19,7 +20,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -108,7 +108,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
 
     public IPage<CheckupVO.PackageVO> packagePage(CheckupDTO.PackageQuery dto) {
         LambdaQueryWrapper<SysCheckupPackage> qw = new LambdaQueryWrapper<SysCheckupPackage>()
-                .like(StringUtils.hasText(dto.getKeyword()), SysCheckupPackage::getPackageName, TextUtil.trimToEmpty(dto.getKeyword()))
+                .like(TextUtil.hasText(dto.getKeyword()), SysCheckupPackage::getPackageName, TextUtil.trimToEmpty(dto.getKeyword()))
                 .eq(dto.getStatus() != null, SysCheckupPackage::getStatus, dto.getStatus())
                 .orderByDesc(SysCheckupPackage::getId);
         IPage<SysCheckupPackage> page = sysCheckupPackageMapper.selectPage(Page.of(dto.getPageNum(), dto.getPageSize()), qw);
@@ -154,7 +154,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         }
         if (p.getGenderLimit() != null && p.getGenderLimit() > 0
                 && patient.getGender() != null && !patient.getGender().equals(p.getGenderLimit())) {
-            throw new BusinessException("套餐性别限制：该套餐仅适用于" + dictCacheService.getDicDataLabel("sys_gender", p.getGenderLimit()));
+            throw new BusinessException("套餐性别限制：该套餐仅适用于" + dictCacheService.getDicDataLabel(DictType.GENDER, p.getGenderLimit()));
         }
         BizCheckupRecord r = new BizCheckupRecord();
         r.setRecordNo("CU" + DateFormats.COMPACT_DATETIME.format(LocalDateTime.now())
@@ -198,7 +198,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
 
     public IPage<CheckupVO.RecordVO> recordPage(CheckupDTO.RecordQuery dto) {
         LambdaQueryWrapper<BizCheckupRecord> qw = new LambdaQueryWrapper<BizCheckupRecord>()
-                .and(StringUtils.hasText(dto.getKeyword()), w -> w
+                .and(TextUtil.hasText(dto.getKeyword()), w -> w
                         .like(BizCheckupRecord::getPatientName, TextUtil.trimToEmpty(dto.getKeyword()))
                         .or().like(BizCheckupRecord::getRecordNo, TextUtil.trimToEmpty(dto.getKeyword())))
                 .eq(dto.getRecordStatus() != null, BizCheckupRecord::getRecordStatus, dto.getRecordStatus())

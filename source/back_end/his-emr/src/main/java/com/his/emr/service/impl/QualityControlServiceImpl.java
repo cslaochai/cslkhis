@@ -3,10 +3,12 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.enums.RecordQcTypeEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.emr.dto.QcCandidateQueryPageDTO;
 import com.his.emr.dto.QcExecuteDTO;
 import com.his.emr.dto.QcQueryPageDTO;
@@ -35,7 +37,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -274,7 +275,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         QcSnapshot snapshot = loadSnapshot(QcRecordSourceEnum.parse(dto.getRecordSource()), dto.getRecordId());
         QcResult result = qcRuleEngine.inspect(snapshot, qcType);
 
-        String operator = StringUtils.hasText(dto.getQcBy()) ? dto.getQcBy().trim() : operatorUser.getRealName();
+        String operator = TextUtil.hasText(dto.getQcBy()) ? dto.getQcBy().trim() : operatorUser.getRealName();
         BizQualityControl saved = null;
         for (int attempt = 1; attempt <= MAX_NO_RETRY && saved == null; attempt++) {
             try {
@@ -369,7 +370,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
         }
         if (qc.getQcStatus() == null || qc.getQcStatus() != 1) {
             throw new BusinessException("只有「待处理」的质控单可以处理，当前状态："
-                    + dictCacheService.getDicDataLabel("biz_emr_qcStatusEnum", qc.getQcStatus()));
+                    + dictCacheService.getDicDataLabel(DictType.QC_STATUS, qc.getQcStatus()));
         }
         qc.setQcStatus(ignore ? RuleCheckStatusEnum.IGNORED.getCode() : RuleCheckStatusEnum.HANDLED.getCode());
         qc.setRemark(remark);
@@ -402,8 +403,8 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     private void enrich(BizQualityControlVO vo) {
         vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
         vo.setQcTypeText(RecordQcTypeEnum.getText(vo.getQcType()));
-        vo.setQcStatusText(dictCacheService.getDicDataLabel("biz_emr_qcStatusEnum", vo.getQcStatus()));
-        vo.setQcResultText(dictCacheService.getDicDataLabel("biz_emr_qcResultEnum", vo.getQcResult()));
+        vo.setQcStatusText(dictCacheService.getDicDataLabel(DictType.QC_STATUS, vo.getQcStatus()));
+        vo.setQcResultText(dictCacheService.getDicDataLabel(DictType.QC_RESULT, vo.getQcResult()));
         vo.setRecordStatusText(RecordStatusEnum.getText(vo.getRecordStatus()));
         vo.setRecordTypeText(vo.getRecordType() == null ? null : InpatientRecordTypeEnum.getText(vo.getRecordType()));
         vo.setSeverityMaxText(vo.getSeverityMax() == null ? null : QcSeverityEnum.textOf(vo.getSeverityMax()));

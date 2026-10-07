@@ -1,9 +1,9 @@
 package com.his.emr.config;
 
+import com.his.common.util.TextUtil;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 /**
  * 随访外呼通道配置（{@code followup.*}），对应 {@code config/domain/his-followup.yml}。
@@ -30,7 +30,7 @@ public class FollowupCallProperties {
      * 归一化后的通道值：空/空白一律当 mock，省得每个调用方各写一遍兜底。
      */
     public String effectiveCallChannel() {
-        return StringUtils.hasText(callChannel) ? callChannel.trim() : MOCK;
+        return TextUtil.hasText(callChannel) ? callChannel.trim() : MOCK;
     }
 
     /**

@@ -62,11 +62,11 @@ public class WechatSubscribeSenderImpl implements WechatSubscribeSender {
         if (!wechatProperties.ready()) {
             return "微信通道未启用或未配置 appid/secret";
         }
-        if (openid == null || openid.isBlank()) {
+        if (!TextUtil.hasText(openid)) {
             return "该账号未绑定微信openid";
         }
         String templateId = wechatProperties.templateOf(scene);
-        if (templateId == null || templateId.isBlank()) {
+        if (!TextUtil.hasText(templateId)) {
             return "场景[" + scene + "]未配置订阅消息模板";
         }
         try {
@@ -77,7 +77,7 @@ public class WechatSubscribeSenderImpl implements WechatSubscribeSender {
             WechatSubscribeSendPayloadVO body = new WechatSubscribeSendPayloadVO();
             body.setTouser(openid);
             body.setTemplateId(templateId);
-            if (page != null && !page.isBlank()) {
+            if (TextUtil.hasText(page)) {
                 body.setPage(page);
             }
             Map<String, WechatSubscribeSendPayloadVO.WechatSubscribeFieldVO> fields = new LinkedHashMap<>();
@@ -116,7 +116,7 @@ public class WechatSubscribeSenderImpl implements WechatSubscribeSender {
     private String getAccessToken() {
         try {
             String cached = stringRedisTemplate.opsForValue().get(TOKEN_CACHE_KEY);
-            if (cached != null && !cached.isBlank()) {
+            if (TextUtil.hasText(cached)) {
                 return cached;
             }
             String resp = HttpUtil.get(TOKEN_URL
@@ -125,7 +125,7 @@ public class WechatSubscribeSenderImpl implements WechatSubscribeSender {
                     + "&secret=" + wechatProperties.getAppSecret(), 5000);
             JsonNode node = objectMapper.readTree(resp);
             String token = node.path("access_token").asText(null);
-            if (token != null && !token.isBlank()) {
+            if (TextUtil.hasText(token)) {
                 stringRedisTemplate.opsForValue().set(TOKEN_CACHE_KEY, token, TOKEN_TTL_SECONDS, TimeUnit.SECONDS);
                 return token;
             }

@@ -1,5 +1,6 @@
 package com.his.patient.enums;
 
+import com.his.common.constant.DictType;
 import lombok.Getter;
 
 import java.util.LinkedHashMap;
@@ -14,9 +15,9 @@ import java.util.Map;
 @Getter
 public enum OrderDictTypeEnum {
 
-    ROUTE("his_order_route", "给药途径", "route"),
-    FREQ("his_order_freq", "用药频次", "frequency"),
-    DOSE_UNIT("his_dose_unit", "剂量单位", "dosage_unit");
+    ROUTE(DictType.ORDER_ROUTE, "给药途径", "route"),
+    FREQ(DictType.ORDER_FREQ, "用药频次", "frequency"),
+    DOSE_UNIT(DictType.DOSE_UNIT, "剂量单位", "dosage_unit");
 
     private final String type;
     private final String name;

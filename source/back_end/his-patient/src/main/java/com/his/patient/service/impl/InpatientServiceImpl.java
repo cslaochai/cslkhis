@@ -7,9 +7,11 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.charge.api.InpatientSettlementGateway;
+import com.his.common.constant.DictType;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -37,7 +39,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -117,10 +118,10 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
      * 把系统侧的校验结论并进备注（原有备注在前，系统留痕在后，用「 | 」分隔）
      */
     private static String mergeRemark(String original, String note) {
-        if (!StringUtils.hasText(note)) {
+        if (!TextUtil.hasText(note)) {
             return original;
         }
-        if (!StringUtils.hasText(original)) {
+        if (!TextUtil.hasText(original)) {
             return note;
         }
         return original + " | " + note;
@@ -431,7 +432,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
 
         admission.setBedId(newBed.getBedId());
         admission.setWardId(newBed.getWardId());
-        if (StringUtils.hasText(dto.getReason())) {
+        if (TextUtil.hasText(dto.getReason())) {
             admission.setRemark(dto.getReason());
         }
         bizAdmissionMapper.updateById(admission);
@@ -628,11 +629,11 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
             if (!systemRows.isEmpty()) {
                 Set<String> systemNames = systemRows.stream()
                         .map(BizInpatientOperation::getOperationName)
-                        .filter(StringUtils::hasText)
+                        .filter(TextUtil::hasText)
                         .map(String::trim)
                         .collect(Collectors.toSet());
                 for (InpatientSummaryUpsertDTO.OperationItem o : operations) {
-                    if (StringUtils.hasText(o.getOperationName())
+                    if (TextUtil.hasText(o.getOperationName())
                             && systemNames.contains(o.getOperationName().trim())) {
                         throw new BusinessException("手术「" + o.getOperationName().trim()
                                 + "」已由手术闭环回写（见 biz_inpatient_operation.apply_id），"
@@ -763,7 +764,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         for (BedMapVO.BedCard bed : beds) {
             bed.setBedStatusText(BedStatusEnum.getText(bed.getBedStatus()));
             bed.setNursingLevelText(bed.getNursingLevel() == null
-                    ? "未评估" : dictCacheService.getDicDataLabel("biz_patient_nursingLevelEnum", bed.getNursingLevel()));
+                    ? "未评估" : dictCacheService.getDicDataLabel(DictType.NURSING_LEVEL, bed.getNursingLevel()));
         }
         result.setBeds(beds);
         if (!beds.isEmpty()) {
@@ -802,7 +803,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
             if (Boolean.TRUE.equals(bed.getNewToday())) {
                 s.setNewToday(s.getNewToday() + 1);
             }
-            if (StringUtils.hasText(bed.getAllergyHistory())) {
+            if (TextUtil.hasText(bed.getAllergyHistory())) {
                 s.setAllergyCount(s.getAllergyCount() + 1);
             }
             if (Boolean.TRUE.equals(bed.getCritical())) {
@@ -847,7 +848,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
             // 当前科室一个床位都没有时也要能显示出来，否则下拉里没有它、卡片区却是空的，看着像坏了
             BedMapVO.DeptOption self = new BedMapVO.DeptOption();
             self.setDeptId(currentDeptId);
-            self.setDeptName(StringUtils.hasText(currentDeptName) ? currentDeptName : "当前科室");
+            self.setDeptName(TextUtil.hasText(currentDeptName) ? currentDeptName : "当前科室");
             options.add(0, self);
         }
         return options;
@@ -952,8 +953,8 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
      */
     private Long ensureVisit(Long patientId, Long registId) {
         LocalDateTime now = TimeUtil.nowSeconds();
-        LocalDateTime dayStart = now.toLocalDate().atStartOfDay();
-        LocalDateTime dayEnd = now.toLocalDate().plusDays(1).atStartOfDay();
+        LocalDateTime dayStart = TimeUtil.dayStart(now.toLocalDate());
+        LocalDateTime dayEnd = TimeUtil.dayStart(now.toLocalDate().plusDays(1));
 
         BizVisit existing = bizVisitMapper.selectOne(new LambdaQueryWrapper<BizVisit>()
                 .eq(BizVisit::getPatientId, patientId)
@@ -964,7 +965,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
                 .last("LIMIT 1"));
         if (existing != null) {
             if (registId != null && !containsRegistId(existing.getRegistIds(), registId)) {
-                existing.setRegistIds(StringUtils.hasText(existing.getRegistIds())
+                existing.setRegistIds(TextUtil.hasText(existing.getRegistIds())
                         ? existing.getRegistIds() + "," + registId
                         : String.valueOf(registId));
                 bizVisitMapper.updateById(existing);
@@ -996,7 +997,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
      * regist_ids 是逗号分隔的字符串列；按整段比对，避免 "1" 命中 "11" 这种子串误判
      */
     private boolean containsRegistId(String registIds, Long registId) {
-        if (!StringUtils.hasText(registIds) || registId == null) {
+        if (!TextUtil.hasText(registIds) || registId == null) {
             return false;
         }
         String target = String.valueOf(registId);
@@ -1055,7 +1056,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         summary.setIsRescue(0);
         summary.setIsCritical(0);
         summary.setMainDiagnosisCode(admission.getAdmitDiagnosisCode());
-        summary.setMainDiagnosisName(StringUtils.hasText(admission.getAdmitDiagnosisName())
+        summary.setMainDiagnosisName(TextUtil.hasText(admission.getAdmitDiagnosisName())
                 ? admission.getAdmitDiagnosisName() : admission.getDiagnosis());
         summary.setSummaryStatus(SummaryStatusEnum.DRAFT.getCode());
         bizInpatientSummaryMapper.insert(summary);
@@ -1173,7 +1174,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
         String actualName = operation.getOperationName().trim();
         boolean manualDuplicate = existing.stream()
                 .anyMatch(o -> o.getApplyId() == null
-                        && StringUtils.hasText(o.getOperationName())
+                        && TextUtil.hasText(o.getOperationName())
                         && o.getOperationName().trim().equals(actualName));
         if (manualDuplicate) {
             throw new BusinessException("病案首页已手工录入同名手术「" + actualName

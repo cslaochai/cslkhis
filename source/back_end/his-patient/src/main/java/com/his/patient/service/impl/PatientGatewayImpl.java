@@ -5,6 +5,7 @@ import com.his.charge.api.PatientGateway;
 import com.his.charge.support.ChargeDeptResolver;
 import com.his.charge.vo.AdmissionBriefVO;
 import com.his.charge.vo.PatientBriefVO;
+import com.his.common.util.TextUtil;
 import com.his.patient.entity.BizAdmission;
 import com.his.patient.entity.BizInpatientOrder;
 import com.his.patient.entity.BizPatient;
@@ -56,7 +57,7 @@ public class PatientGatewayImpl implements PatientGateway {
 
     @Override
     public ChargeDeptResolver.DeptRef findDeptByOrderNo(String orderNo) {
-        if (orderNo == null || orderNo.isBlank()) {
+        if (!TextUtil.hasText(orderNo)) {
             return null;
         }
         BizInpatientOrder order = bizInpatientOrderMapper.selectOne(new LambdaQueryWrapper<BizInpatientOrder>()

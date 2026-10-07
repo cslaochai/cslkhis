@@ -10,6 +10,7 @@ import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.emr.dto.*;
@@ -31,7 +32,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -123,7 +123,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
                 .isNull(Boolean.TRUE.equals(query.getUnauditedOnly()), BizPrescription::getAuditSignId)
                 .ne(Boolean.TRUE.equals(query.getUnauditedOnly()), BizPrescription::getPrescriptionStatus,
                         PrescriptionStatusEnum.RETURNED_AUDIT.getCode())
-                .and(StringUtils.hasText(query.getKeyword()), w -> w
+                .and(TextUtil.hasText(query.getKeyword()), w -> w
                         .like(BizPrescription::getPrescriptionNo, query.getKeyword())
                         .or().like(BizPrescription::getPatientName, query.getKeyword())
                         .or().like(BizPrescription::getPatientNo, query.getKeyword()))
@@ -177,7 +177,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
         boolean pass = Integer.valueOf(1).equals(dto.getAuditResult());
         String opinion = dto.getAuditOpinion();
         // B 类保留：条件必填——仅审方退回时要求退回原因，通过可不填
-        if (!pass && !StringUtils.hasText(opinion)) {
+        if (!pass && !TextUtil.hasText(opinion)) {
             throw new BusinessException("审方退回必须填写退回原因");
         }
         // 禁忌配伍硬闸：知识表（药物相互作用知识库）命中禁忌级时拒发「通过」。
@@ -336,7 +336,7 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
             String content = pass
                     ? String.format("您为患者 %s 开具的处方 %s 已由药师 %s 审核通过。%s",
                     p.getPatientName(), p.getPrescriptionNo(), auditorName,
-                    StringUtils.hasText(opinion) ? "审方意见：" + opinion : "")
+                    TextUtil.hasText(opinion) ? "审方意见：" + opinion : "")
                     : String.format("您为患者 %s 开具的处方 %s 被药师 %s 退回（第 %s 次）。退回原因：%s。请修改处方后重新提交。",
                     p.getPatientName(), p.getPrescriptionNo(), auditorName, returnNo, opinion);
             MessagePayloadVO msg = new MessagePayloadVO();

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.LisEqaDTO;
@@ -23,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -53,11 +53,6 @@ import java.util.*;
 @RequiredArgsConstructor
 public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLisEqaSample> implements LisEqaService {
 
-    private static final String DICT_PLAN_STATUS = "his_lis_eqa_plan_status";
-    private static final String DICT_SAMPLE_STATUS = "his_lis_eqa_sample_status";
-    private static final String DICT_RESULT_STATUS = "his_lis_eqa_result_status";
-    private static final String DICT_JUDGE_MODE = "his_lis_eqa_judge_mode";
-    private static final String DICT_COMPARE_STATUS = "his_lis_eqa_compare_status";
 
     /**
      * 批次状态：3-已上报 4-已回报 5-已归档（服务端单向推进）
@@ -84,7 +79,7 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
         LambdaQueryWrapper<BizLisEqaPlan> w = new LambdaQueryWrapper<>();
         w.eq(q.getPlanYear() != null, BizLisEqaPlan::getPlanYear, q.getPlanYear())
                 .eq(q.getBatchNo() != null, BizLisEqaPlan::getBatchNo, q.getBatchNo())
-                .like(StringUtils.hasText(q.getOrgName()), BizLisEqaPlan::getOrgName, TextUtil.trim(q.getOrgName()))
+                .like(TextUtil.hasText(q.getOrgName()), BizLisEqaPlan::getOrgName, TextUtil.trim(q.getOrgName()))
                 .eq(q.getStatus() != null, BizLisEqaPlan::getStatus, q.getStatus())
                 .orderByDesc(BizLisEqaPlan::getPlanYear)
                 .orderByDesc(BizLisEqaPlan::getBatchNo)
@@ -100,7 +95,7 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
     private LisEqaVO.PlanVO toPlanVo(BizLisEqaPlan p) {
         LisEqaVO.PlanVO vo = new LisEqaVO.PlanVO();
         BeanUtils.copyProperties(p, vo);
-        vo.setStatusText(dictCacheService.getDicDataLabel(DICT_PLAN_STATUS, p.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.LIS_EQA_PLAN_STATUS, p.getStatus()));
         vo.setPassFlagText(p.getPassFlag() == null ? "未出成绩"
                 : (p.getPassFlag() == 1 ? "合格" : "不合格"));
         vo.setPendingCount(bizLisEqaSampleMapper.selectCount(new LambdaQueryWrapper<BizLisEqaSample>()
@@ -158,7 +153,7 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
             throw new BusinessException("批次已归档（" + p.getPlanNo() + "），无需重复归档");
         }
         if (p.getStatus() == null || p.getStatus() < PLAN_RETURNED) {
-            throw new BusinessException("批次当前为「" + dictCacheService.getDicDataLabel(DICT_PLAN_STATUS, p.getStatus())
+            throw new BusinessException("批次当前为「" + dictCacheService.getDicDataLabel(DictType.LIS_EQA_PLAN_STATUS, p.getStatus())
                     + "」，须等成绩全部回报后才能归档");
         }
         long todo = bizLisEqaSampleMapper.selectCount(new LambdaQueryWrapper<BizLisEqaSample>()
@@ -185,11 +180,11 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
     public PageResult<LisEqaVO.SampleVO> samplePage(LisEqaDTO.SampleQuery q) {
         LambdaQueryWrapper<BizLisEqaSample> w = new LambdaQueryWrapper<>();
         w.eq(q.getPlanId() != null, BizLisEqaSample::getPlanId, q.getPlanId())
-                .eq(StringUtils.hasText(q.getPlanNo()), BizLisEqaSample::getPlanNo, TextUtil.trim(q.getPlanNo()))
-                .like(StringUtils.hasText(q.getSampleNo()), BizLisEqaSample::getSampleNo, TextUtil.trim(q.getSampleNo()))
+                .eq(TextUtil.hasText(q.getPlanNo()), BizLisEqaSample::getPlanNo, TextUtil.trim(q.getPlanNo()))
+                .like(TextUtil.hasText(q.getSampleNo()), BizLisEqaSample::getSampleNo, TextUtil.trim(q.getSampleNo()))
                 .eq(q.getSampleSeq() != null, BizLisEqaSample::getSampleSeq, q.getSampleSeq())
-                .like(StringUtils.hasText(q.getItemName()), BizLisEqaSample::getItemName, TextUtil.trim(q.getItemName()))
-                .like(StringUtils.hasText(q.getInstrumentName()), BizLisEqaSample::getInstrumentName, TextUtil.trim(q.getInstrumentName()))
+                .like(TextUtil.hasText(q.getItemName()), BizLisEqaSample::getItemName, TextUtil.trim(q.getItemName()))
+                .like(TextUtil.hasText(q.getInstrumentName()), BizLisEqaSample::getInstrumentName, TextUtil.trim(q.getInstrumentName()))
                 .eq(q.getStatus() != null, BizLisEqaSample::getStatus, q.getStatus())
                 .eq(q.getResultStatus() != null, BizLisEqaSample::getResultStatus, q.getResultStatus())
                 .eq(q.getHandleStatus() != null, BizLisEqaSample::getHandleStatus, q.getHandleStatus())
@@ -207,11 +202,11 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
     private LisEqaVO.SampleVO toSampleVo(BizLisEqaSample s) {
         LisEqaVO.SampleVO vo = new LisEqaVO.SampleVO();
         BeanUtils.copyProperties(s, vo);
-        vo.setStatusText(dictCacheService.getDicDataLabel(DICT_SAMPLE_STATUS, s.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.LIS_EQA_SAMPLE_STATUS, s.getStatus()));
         vo.setResultStatusText(s.getResultStatus() == null || s.getResultStatus() == 0
-                ? "未判定" : dictCacheService.getDicDataLabel(DICT_RESULT_STATUS, s.getResultStatus()));
+                ? "未判定" : dictCacheService.getDicDataLabel(DictType.LIS_EQA_RESULT_STATUS, s.getResultStatus()));
         vo.setJudgeModeText(s.getJudgeMode() == null || s.getJudgeMode() == 0
-                ? "—" : dictCacheService.getDicDataLabel(DICT_JUDGE_MODE, s.getJudgeMode()));
+                ? "—" : dictCacheService.getDicDataLabel(DictType.LIS_EQA_JUDGE_MODE, s.getJudgeMode()));
         vo.setHandleStatusText(handleStatusText(s.getHandleStatus(), s.getReviewBy()));
         return vo;
     }
@@ -225,7 +220,7 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
         } else {
             txt = "已整改";
         }
-        return StringUtils.hasText(reviewBy) ? txt + "·已复核" : txt;
+        return TextUtil.hasText(reviewBy) ? txt + "·已复核" : txt;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -324,9 +319,9 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
                     s.setItemCode(TextUtil.trim(item.getItemCode()));
                     s.setItemName(item.getItemName().trim());
                     s.setInstrumentName(instr);
-                    s.setMethodName(StringUtils.hasText(dto.getMethodName()) ? dto.getMethodName().trim() : null);
+                    s.setMethodName(TextUtil.hasText(dto.getMethodName()) ? dto.getMethodName().trim() : null);
                     s.setReceiveDate(dto.getReceiveDate());
-                    s.setReceiveBy(StringUtils.hasText(dto.getReceiveBy()) ? dto.getReceiveBy().trim() : operatorUser.getRealName());
+                    s.setReceiveBy(TextUtil.hasText(dto.getReceiveBy()) ? dto.getReceiveBy().trim() : operatorUser.getRealName());
                     s.setStatus(0);
                     s.setResultStatus(0);
                     s.setHandleStatus(0);
@@ -368,7 +363,7 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
         s.setTestValue(dto.getTestValue());
         s.setTestBy(operatorUser.getRealName());
         s.setTestTime(LocalDateTime.now().withNano(0));
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             s.setRemark(TextUtil.cut(dto.getRemark(), 480));
         }
         s.setStatus(SAMPLE_TESTED);
@@ -499,7 +494,7 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
         int maxSeq = 0;
         int pending = 0;
         for (BizLisEqaSample s : all) {
-            if (StringUtils.hasText(s.getItemCode())) {
+            if (TextUtil.hasText(s.getItemCode())) {
                 items.add(s.getItemCode());
             }
             if (s.getSampleSeq() != null && s.getSampleSeq() > maxSeq) {
@@ -601,7 +596,7 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
     public PageResult<LisEqaVO.CompareVO> comparePage(LisEqaDTO.CompareQuery q) {
         LambdaQueryWrapper<BizLisEqaCompare> w = new LambdaQueryWrapper<>();
         w.eq(q.getPlanId() != null, BizLisEqaCompare::getPlanId, q.getPlanId())
-                .like(StringUtils.hasText(q.getItemName()), BizLisEqaCompare::getItemName, TextUtil.trim(q.getItemName()))
+                .like(TextUtil.hasText(q.getItemName()), BizLisEqaCompare::getItemName, TextUtil.trim(q.getItemName()))
                 .eq(q.getStatus() != null, BizLisEqaCompare::getStatus, q.getStatus())
                 .orderByDesc(BizLisEqaCompare::getId);
         Page<BizLisEqaCompare> page = bizLisEqaCompareMapper.selectPage(page(q.getPageNum(), q.getPageSize()), w);
@@ -609,7 +604,7 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
         for (BizLisEqaCompare c : page.getRecords()) {
             LisEqaVO.CompareVO vo = new LisEqaVO.CompareVO();
             BeanUtils.copyProperties(c, vo);
-            vo.setStatusText(dictCacheService.getDicDataLabel(DICT_COMPARE_STATUS, c.getStatus()));
+            vo.setStatusText(dictCacheService.getDicDataLabel(DictType.LIS_EQA_COMPARE_STATUS, c.getStatus()));
             vo.setAllowSourceText(c.getAllowSource() != null && c.getAllowSource() == 1
                     ? "TEa 折半" : "默认值 " + EqaJudgeEngine.DEFAULT_COMPARE_ALLOW + "%");
             vos.add(vo);
@@ -628,7 +623,7 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
         BizLisEqaSample s = requireSample(dto.getSampleId());
         if (s.getResultStatus() == null || s.getResultStatus() != EqaJudgeEngine.FAILED) {
             throw new BusinessException("仅「不合格」项需要整改（当前："
-                    + dictCacheService.getDicDataLabel(DICT_RESULT_STATUS, s.getResultStatus()) + "）");
+                    + dictCacheService.getDicDataLabel(DictType.LIS_EQA_RESULT_STATUS, s.getResultStatus()) + "）");
         }
         if (s.getHandleStatus() != null && s.getHandleStatus() == 2) {
             throw new BusinessException("该项已整改，不可重复提交");
@@ -742,7 +737,7 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
     private void assertEditable(BizLisEqaPlan plan) {
         if (plan.getStatus() != null && plan.getStatus() >= PLAN_RETURNED) {
             throw new BusinessException("批次「" + plan.getPlanNo() + "」当前为「"
-                    + dictCacheService.getDicDataLabel(DICT_PLAN_STATUS, plan.getStatus()) + "」，盲样台账不可再变更");
+                    + dictCacheService.getDicDataLabel(DictType.LIS_EQA_PLAN_STATUS, plan.getStatus()) + "」，盲样台账不可再变更");
         }
     }
 
@@ -750,7 +745,7 @@ public class LisEqaServiceImpl extends ServiceImpl<BizLisEqaSampleMapper, BizLis
      * 仪器名统一：不填就是空串（列上 NOT NULL DEFAULT ''，让唯一键能生效）
      */
     private String instrumentOf(String raw) {
-        return StringUtils.hasText(raw) ? raw.trim() : "";
+        return TextUtil.hasText(raw) ? raw.trim() : "";
     }
 
     private String nextPlanNo(Integer year, Integer batch) {

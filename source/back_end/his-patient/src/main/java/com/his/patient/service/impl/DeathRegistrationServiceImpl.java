@@ -22,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
@@ -70,7 +69,7 @@ public class DeathRegistrationServiceImpl extends ServiceImpl<BizDeathRegistrati
      * 复数字段（"1,2,3"）@InEnum 校验不了（注解只管单值），逐个 split 调枚举判定
      */
     private static String normalizeCopies(String copies) {
-        if (!StringUtils.hasText(copies)) {
+        if (!TextUtil.hasText(copies)) {
             return null;
         }
         java.util.TreeSet<String> set = new java.util.TreeSet<>();

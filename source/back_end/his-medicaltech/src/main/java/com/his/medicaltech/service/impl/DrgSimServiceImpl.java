@@ -20,7 +20,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -58,9 +57,9 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         if (s == null) {
             throw new BusinessException("病案首页不存在");
         }
-        String icd = StringUtils.hasText(dto.getIcdCode()) ? dto.getIcdCode().trim() : s.getMainDiagnosisCode();
-        String icdName = StringUtils.hasText(dto.getIcdName()) ? dto.getIcdName().trim() : s.getMainDiagnosisName();
-        if (!StringUtils.hasText(icd)) {
+        String icd = TextUtil.hasText(dto.getIcdCode()) ? dto.getIcdCode().trim() : s.getMainDiagnosisCode();
+        String icdName = TextUtil.hasText(dto.getIcdName()) ? dto.getIcdName().trim() : s.getMainDiagnosisName();
+        if (!TextUtil.hasText(icd)) {
             throw new BusinessException("该首页主诊断编码为空，请先补录 ICD 编码再模拟");
         }
         boolean surgery = Integer.valueOf(1).equals(s.getIsSurgery());
@@ -141,7 +140,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
         }
         int skipped = 0;
         for (DrgSummaryRowVO s : summaries) {
-            if (!StringUtils.hasText(s.getMainDiagnosisCode())) {
+            if (!TextUtil.hasText(s.getMainDiagnosisCode())) {
                 skipped++;
                 continue;
             }
@@ -155,7 +154,7 @@ public class DrgSimServiceImpl extends ServiceImpl<DrgSimMapper, DrgSimResult> i
     public IPage<DrgSimVO.ResultRow> resultPage(DrgSimDTO.ResultQuery dto) {
         LambdaQueryWrapper<DrgSimResult> qw = new LambdaQueryWrapper<DrgSimResult>()
                 .eq(dto.getSimStatus() != null, DrgSimResult::getSimStatus, dto.getSimStatus())
-                .and(StringUtils.hasText(dto.getKeyword()), w -> w
+                .and(TextUtil.hasText(dto.getKeyword()), w -> w
                         .like(DrgSimResult::getPatientName, TextUtil.trimToEmpty(dto.getKeyword()))
                         .or().like(DrgSimResult::getDrgCode, TextUtil.trimToEmpty(dto.getKeyword())))
                 .orderByDesc(DrgSimResult::getUpdateTime)

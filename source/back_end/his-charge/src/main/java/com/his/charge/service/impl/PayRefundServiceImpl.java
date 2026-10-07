@@ -2,9 +2,9 @@ package com.his.charge.service.impl;
 
 import com.his.charge.service.PayRefundService;
 import com.his.common.enums.PaymentMethodEnum;
+import com.his.common.util.TextUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.Map;
@@ -40,7 +40,7 @@ public class PayRefundServiceImpl implements PayRefundService {
      * 不能只把台账留着 —— 台账写出去就意味着账已经冲了。
      */
     public RefundReceipt refund(RefundRequest request) {
-        if (request == null || !StringUtils.hasText(request.refundNo())) {
+        if (request == null || !TextUtil.hasText(request.refundNo())) {
             return RefundReceipt.fail("缺少院内退费单号，渠道无法按单号幂等退款");
         }
         BigDecimal amount = request.amount();
@@ -69,7 +69,7 @@ public class PayRefundServiceImpl implements PayRefundService {
         issued.put(request.refundNo(), channelRefundNo);
         log.info("[M7渠道退费口子] ===== 模拟调商户平台原路退回 ===== 渠道={} 原收费单号={} 退费单号={} 金额={} 原因={} → 渠道退费流水号={}",
                 payMethod.getDesc(), request.chargeNo(), request.refundNo(), amount,
-                StringUtils.hasText(request.reason()) ? request.reason() : "收费处退费", channelRefundNo);
+                TextUtil.hasText(request.reason()) ? request.reason() : "收费处退费", channelRefundNo);
         return RefundReceipt.ok(channelRefundNo);
     }
 }

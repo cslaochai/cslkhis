@@ -1,7 +1,7 @@
 package com.his.appoint.mapper;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.his.appoint.dto.OpdLogQueryDTO;
+import com.his.appoint.dto.OpdLogQueryPageDTO;
 import com.his.appoint.vo.OpdLogListVO;
 import com.his.appoint.vo.OpdLogStatsVO;
 import org.apache.ibatis.annotations.Mapper;
@@ -19,10 +19,10 @@ public interface OpdLogMapper {
     /**
      * 门诊日志分页（基表=挂号，LEFT JOIN 队列）。
      */
-    IPage<OpdLogListVO> selectOpdLogPage(IPage<OpdLogListVO> page, @Param("q") OpdLogQueryDTO q);
+    IPage<OpdLogListVO> selectOpdLogPage(IPage<OpdLogListVO> page, @Param("q") OpdLogQueryPageDTO q);
 
     /**
      * 门诊日志统计条，与分页同一套 WHERE，保证「统计跟着筛选走」。
      */
-    OpdLogStatsVO selectOpdLogStats(@Param("q") OpdLogQueryDTO q);
+    OpdLogStatsVO selectOpdLogStats(@Param("q") OpdLogQueryPageDTO q);
 }

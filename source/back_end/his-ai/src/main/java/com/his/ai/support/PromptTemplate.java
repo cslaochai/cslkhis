@@ -1,11 +1,11 @@
 package com.his.ai.support;
 
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,7 +55,7 @@ public class PromptTemplate {
     private final Map<String, ParsedTemplate> cache = new ConcurrentHashMap<>();
 
     private static String substitute(String template, Map<String, String> variables, String name) {
-        if (!StringUtils.hasText(template) || variables.isEmpty()) {
+        if (!TextUtil.hasText(template) || variables.isEmpty()) {
             return template;
         }
         String result = template;
@@ -151,7 +151,7 @@ public class PromptTemplate {
         String systemText = markerIndex >= 0 ? text.substring(0, markerIndex).trim() : text;
         String userText = markerIndex >= 0 ? text.substring(markerIndex + USER_MARKER.length()).trim() : "";
 
-        if (!StringUtils.hasText(systemText)) {
+        if (!TextUtil.hasText(systemText)) {
             throw new IllegalStateException("提示词模板缺少 system 段：" + name);
         }
         return new ParsedTemplate(name, version, systemText, userText);

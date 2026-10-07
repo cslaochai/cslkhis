@@ -1,9 +1,9 @@
 package com.his.system.support;
 
+import com.his.common.util.TextUtil;
 import com.his.system.enums.MassUnitEnum;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -48,7 +48,7 @@ public final class DosageTextParser {
      * 一律不认（返回 null）：没有质量值、有两条质量值（80mg/5mg×7片）、复方制剂、IU/单位类规格。
      */
     public static BigDecimal pieceStrengthMg(String specification) {
-        if (!StringUtils.hasText(specification)) {
+        if (!TextUtil.hasText(specification)) {
             return null;
         }
         String spec = specification.trim();
@@ -80,7 +80,7 @@ public final class DosageTextParser {
      * 含两个数字的区间写法）返回 null，表示<b>这条不判</b>。
      */
     public static BigDecimal singleDoseMg(String singleDosage, String specification) {
-        if (!StringUtils.hasText(singleDosage)) {
+        if (!TextUtil.hasText(singleDosage)) {
             return null;
         }
         String text = singleDosage.trim()
@@ -102,7 +102,7 @@ public final class DosageTextParser {
         String rest = text.substring(head.end());
         String unit = leadingUnit(rest);
 
-        if (StringUtils.hasText(unit)) {
+        if (TextUtil.hasText(unit)) {
             BigDecimal direct = MassUnitEnum.toMg(value, unit);
             if (direct != null) {
                 return direct;
@@ -121,7 +121,7 @@ public final class DosageTextParser {
      * @return null = 频次解析不到、或按需/一次性给药 —— 调用方据此<b>跳过</b>日上限判断，不当作 0 次
      */
     public static BigDecimal timesPerDay(String frequency) {
-        if (!StringUtils.hasText(frequency)) {
+        if (!TextUtil.hasText(frequency)) {
             return null;
         }
         String text = frequency.trim().toLowerCase().replace(" ", "");

@@ -15,7 +15,6 @@ import com.his.emr.mapper.BizMedicalRecordMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -74,7 +73,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
     private final AiExecutionService aiExecutionService;
 
     private static String pick(String fromRequest, String fromDb) {
-        return StringUtils.hasText(fromRequest) ? fromRequest.trim() : fromDb;
+        return TextUtil.hasText(fromRequest) ? fromRequest.trim() : fromDb;
     }
 
     private static Integer pick(Integer fromRequest, Integer fromDb) {
@@ -87,7 +86,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
      * 不做"顺句"或补全 —— 模型产生的内容保持原样，由医生自行修改。
      */
     private static String cleanPresentIllness(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return "";
         }
         String value = text.replace("\r\n", "\n").trim();
@@ -114,7 +113,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
                 break;
             }
             String value = TextUtil.cut(point, MAX_MISSING_POINT_LENGTH, "");
-            if (StringUtils.hasText(value) && !result.contains(value)) {
+            if (TextUtil.hasText(value) && !result.contains(value)) {
                 result.add(value);
             }
         }
@@ -122,14 +121,14 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
     }
 
     private static String bloodPressureText(DraftInput input) {
-        if (!StringUtils.hasText(input.systolicPressure()) && !StringUtils.hasText(input.diastolicPressure())) {
+        if (!TextUtil.hasText(input.systolicPressure()) && !TextUtil.hasText(input.diastolicPressure())) {
             return "（未填写）";
         }
         return TextUtil.blankToDefault(input.systolicPressure(), "（未填写）") + "/" + TextUtil.blankToDefault(input.diastolicPressure(), "（未填写）") + " mmHg";
     }
 
     private static String unitOrDash(String value, String unit) {
-        return StringUtils.hasText(value) ? value + unit : "（未填写）";
+        return TextUtil.hasText(value) ? value + unit : "（未填写）";
     }
 
     public EmrDraftResultVO execute(EmrDraftDTO dto) {
@@ -140,7 +139,7 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
 
         // 主诉都没有就草拟现病史，模型只能靠猜 —— 与其烧一轮 token 换来一段编造的文字，
         // 不如直接说清楚缺什么。这条短路规则也是防止幻觉最省事的一道。
-        if (!StringUtils.hasText(input.chiefComplaint())) {
+        if (!TextUtil.hasText(input.chiefComplaint())) {
             vo.setDegraded(true);
             vo.setDegradeReason("主诉尚未填写，未调用模型；请先填写主诉");
             vo.setSummary("缺少主诉，无法草拟现病史。");
@@ -163,8 +162,8 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
         vo.setMissingPoints(cleanMissingPoints(llmOutput.getMissingPoints()));
         vo.setSummary(TextUtil.cut(llmOutput.getSummary(), MAX_SUMMARY_LENGTH, ""));
 
-        if (!StringUtils.hasText(vo.getPresentIllness())) {
-            vo.setSummary(StringUtils.hasText(vo.getSummary())
+        if (!TextUtil.hasText(vo.getPresentIllness())) {
+            vo.setSummary(TextUtil.hasText(vo.getSummary())
                     ? vo.getSummary()
                     : "现有信息不足以成文，请参照下方待补项补充后再试。");
         }

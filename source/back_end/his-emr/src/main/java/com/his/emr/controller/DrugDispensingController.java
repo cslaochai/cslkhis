@@ -2,6 +2,7 @@ package com.his.emr.controller;
 
 import com.his.common.base.PageResult;
 import com.his.common.base.Result;
+import com.his.common.util.TextUtil;
 import com.his.emr.dto.DrugDispenseDTO;
 import com.his.emr.dto.DrugReturnDTO;
 import com.his.emr.service.DrugDispensingService;
@@ -92,6 +93,6 @@ public class DrugDispensingController {
 
     private String resolvePharmacistName(String fallback) {
         String name = UserUtils.getCurrentUser().getRealName();
-        return (name != null && !name.isBlank()) ? name : fallback;
+        return (TextUtil.hasText(name)) ? name : fallback;
     }
 }

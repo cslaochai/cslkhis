@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -334,7 +333,7 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
         if (batchInfo == null || batchInfo.getDrugId() == null) {
             throw new BusinessException("药品ID不能为空，请从药品字典选择药品");
         }
-        if (!StringUtils.hasText(batchInfo.getBatchNo())) {
+        if (!TextUtil.hasText(batchInfo.getBatchNo())) {
             throw new BusinessException("批号不能为空");
         }
         if (batchInfo.getExpiryDate() == null) {
@@ -418,7 +417,7 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
         }
         String drugName = baseMapper.selectDrugNameById(stock.getDrugId());
         String label = (drugName == null ? "药品#" + stock.getDrugId() : drugName)
-                + (StringUtils.hasText(stock.getBatchNo()) ? "（批号 " + stock.getBatchNo() + "）" : "");
+                + (TextUtil.hasText(stock.getBatchNo()) ? "（批号 " + stock.getBatchNo() + "）" : "");
         BigDecimal before = stock.getQuantity() == null ? BigDecimal.ZERO : stock.getQuantity();
         BigDecimal locked = stock.getLockedQuantity() == null ? BigDecimal.ZERO : stock.getLockedQuantity();
         // 差量叠加、不覆盖余额：快照之后的发药/入库都有自己的流水，覆盖等于把它们抹掉、凭空造药
@@ -494,7 +493,7 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
         }
         BigDecimal quantity = requirePositive(move.getQuantity());
         // C 类：同上，接收落位的批号与效期来自内部指令，缺了就建不了批次，只能在 service 挡
-        if (!StringUtils.hasText(move.getBatchNo())) {
+        if (!TextUtil.hasText(move.getBatchNo())) {
             throw new BusinessException("批号不能为空（不知道批号就落不了批次，事后无从追溯这批药是哪来的）");
         }
         if (move.getExpiryDate() == null) {
@@ -571,7 +570,7 @@ public class PharmacyServiceImpl extends ServiceImpl<BizDrugStockMapper, BizDrug
     private String batchLabel(BizDrugStock stock) {
         String drugName = baseMapper.selectDrugNameById(stock.getDrugId());
         StringBuilder sb = new StringBuilder(drugName == null ? "药品#" + stock.getDrugId() : drugName);
-        if (StringUtils.hasText(stock.getBatchNo())) {
+        if (TextUtil.hasText(stock.getBatchNo())) {
             sb.append("（批号 ").append(stock.getBatchNo()).append("）");
         }
         sb.append("，库位 ").append(StockRoomEnum.getText(stock.getStockRoom()));

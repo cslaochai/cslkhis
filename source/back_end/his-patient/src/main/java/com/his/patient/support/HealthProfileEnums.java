@@ -1,5 +1,6 @@
 package com.his.patient.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import java.util.LinkedHashSet;
@@ -85,7 +86,7 @@ public final class HealthProfileEnums {
      * 猜出的结果连同来源一起写进备注，页面上能分辨它是怎么来的。
      */
     public static String guessAllergyType(String text) {
-        if (text == null || text.isBlank()) {
+        if (!TextUtil.hasText(text)) {
             return "其他";
         }
         String t = text.trim();

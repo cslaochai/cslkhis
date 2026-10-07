@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.emr.dto.ChronicCancelDTO;
 import com.his.emr.dto.ChronicQueryPageDTO;
 import com.his.emr.dto.ChronicUpsertDTO;
@@ -90,15 +91,15 @@ public class ChronicRecordServiceImpl extends ServiceImpl<BizChronicRecordMapper
         if (dto.getPatientId() != null) {
             wrapper.eq(BizChronicRecord::getPatientId, dto.getPatientId());
         }
-        if (dto.getPatientName() != null && !dto.getPatientName().isBlank()) {
+        if (TextUtil.hasText(dto.getPatientName())) {
             wrapper.like(BizChronicRecord::getPatientName, dto.getPatientName().trim());
         }
-        if (dto.getDiseaseKeyword() != null && !dto.getDiseaseKeyword().isBlank()) {
+        if (TextUtil.hasText(dto.getDiseaseKeyword())) {
             String kw = dto.getDiseaseKeyword().trim();
             wrapper.and(w -> w.like(BizChronicRecord::getDiseaseName, kw)
                     .or().like(BizChronicRecord::getDiseaseCode, kw));
         }
-        if (dto.getRecordNo() != null && !dto.getRecordNo().isBlank()) {
+        if (TextUtil.hasText(dto.getRecordNo())) {
             wrapper.like(BizChronicRecord::getRecordNo, dto.getRecordNo().trim());
         }
         if (dto.getConfirmStatus() != null) {

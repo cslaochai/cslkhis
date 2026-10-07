@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.OrgUnitTypeEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.BizStaffDemand;
 import com.his.system.entity.CurrentUser;
 import com.his.system.mapper.BizStaffDemandMapper;
@@ -96,7 +97,7 @@ public class StaffDemandServiceImpl extends ServiceImpl<BizStaffDemandMapper, Bi
         }
         Integer derived = baseMapper.selectRequired(demandDate, orgType, orgId, staffType);
         String basis = "护士长手工调整" + (derived == null ? "" : "（系统派生 " + derived + " 人）")
-                + (remark == null || remark.isBlank() ? "" : "：" + remark.trim());
+                + (!TextUtil.hasText(remark) ? "" : "：" + remark.trim());
 
         Long id = baseMapper.maxDerivedId() + 1L;
         baseMapper.upsertManual(id, demandDate, orgType, orgId, orgName, staffType, requiredCount,

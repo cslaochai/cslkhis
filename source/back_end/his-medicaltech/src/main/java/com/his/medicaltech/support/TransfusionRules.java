@@ -1,9 +1,9 @@
 package com.his.medicaltech.support;
 
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.enums.*;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -84,7 +84,7 @@ public final class TransfusionRules {
      * 折算申请量为毫升数；折不出来返回 null（调用方按最高级处理）。
      */
     public static Integer amountToMl(BigDecimal plannedAmount, String amountUnit) {
-        if (plannedAmount == null || !StringUtils.hasText(amountUnit)) {
+        if (plannedAmount == null || !TextUtil.hasText(amountUnit)) {
             return null;
         }
         return switch (amountUnit.trim()) {

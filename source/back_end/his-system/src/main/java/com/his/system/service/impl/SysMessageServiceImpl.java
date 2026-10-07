@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import com.his.system.enums.BizTypeEnum;
@@ -24,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
@@ -146,8 +146,8 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
                 .eq(SysMessage::getSendStatus, 1)
                 .eq(queryDTO.getReadStatus() != null, SysMessage::getReadStatus, queryDTO.getReadStatus())
                 .eq(queryDTO.getHandleStatus() != null, SysMessage::getHandleStatus, queryDTO.getHandleStatus())
-                .eq(StringUtils.hasText(queryDTO.getBizType()), SysMessage::getBizType, queryDTO.getBizType())
-                .and(StringUtils.hasText(queryDTO.getKeyword()), w -> w
+                .eq(TextUtil.hasText(queryDTO.getBizType()), SysMessage::getBizType, queryDTO.getBizType())
+                .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
                         .like(SysMessage::getTitle, queryDTO.getKeyword())
                         .or().like(SysMessage::getContent, queryDTO.getKeyword()))
                 // 紧急度置顶 + 发送时间倒序，再补主键做二级键：

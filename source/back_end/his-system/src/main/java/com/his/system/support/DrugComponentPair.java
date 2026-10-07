@@ -1,9 +1,9 @@
 package com.his.system.support;
 
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 
@@ -33,7 +33,7 @@ public final class DrugComponentPair {
      * 键拆回两个成分（[a, b]），解析失败返回空列表
      */
     public static List<String> parts(String pairKey) {
-        if (!StringUtils.hasText(pairKey) || !pairKey.contains(SEP)) {
+        if (!TextUtil.hasText(pairKey) || !pairKey.contains(SEP)) {
             return List.of();
         }
         String[] split = pairKey.split(SEP);
@@ -43,7 +43,7 @@ public final class DrugComponentPair {
     private static String normalize(String value, String label) {
         String trimmed = safeTrim(value);
         // C 类保留：入站侧 DTO 已挂 @NotBlank，这里是归一化工具被内部调用时的兜底（注解跑不到这条路上）
-        if (!StringUtils.hasText(trimmed)) {
+        if (!TextUtil.hasText(trimmed)) {
             throw new BusinessException(label + "不能为空");
         }
         if (trimmed.contains(SEP)) {

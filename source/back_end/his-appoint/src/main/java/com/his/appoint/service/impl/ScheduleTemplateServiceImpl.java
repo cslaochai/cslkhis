@@ -23,13 +23,13 @@ import com.his.common.enums.ScheduleStatusEnum;
 import com.his.common.enums.StaffScheduleSourceEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.BizShift;
 import com.his.system.service.ShiftService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.DayOfWeek;
@@ -109,7 +109,7 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
                 .eq(dto.getStaffType() != null, BizScheduleTemplate::getStaffType, dto.getStaffType())
                 .eq(dto.getWeekDay() != null, BizScheduleTemplate::getWeekDay, dto.getWeekDay())
                 .eq(dto.getStatus() != null, BizScheduleTemplate::getStatus, dto.getStatus())
-                .and(StringUtils.hasText(dto.getKeyword()), w -> w
+                .and(TextUtil.hasText(dto.getKeyword()), w -> w
                         .like(BizScheduleTemplate::getDeptName, dto.getKeyword())
                         .or().like(BizScheduleTemplate::getDoctorName, dto.getKeyword())
                         .or().like(BizScheduleTemplate::getRoomName, dto.getKeyword())
@@ -208,7 +208,7 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
     }
 
     private LocalDate parseDate(String date) {
-        if (date == null || date.isBlank()) {
+        if (!TextUtil.hasText(date)) {
             return null;
         }
         return LocalDate.parse(date);
@@ -702,13 +702,13 @@ public class ScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTemplate
      * 时间重叠条件：startTime1 < endTime2 且 startTime2 < endTime1
      */
     private boolean hasTimeOverlap(List<BizSchedule> list, Long doctorId, LocalDate date, String start, String end) {
-        if (!StringUtils.hasText(start) || !StringUtils.hasText(end)) {
+        if (!TextUtil.hasText(start) || !TextUtil.hasText(end)) {
             return false;
         }
         return list.stream().anyMatch(s ->
                 Objects.equals(s.getDoctorId(), doctorId)
                         && date.equals(s.getScheduleDate())
-                        && StringUtils.hasText(s.getStartTime()) && StringUtils.hasText(s.getEndTime())
+                        && TextUtil.hasText(s.getStartTime()) && TextUtil.hasText(s.getEndTime())
                         && s.getStartTime().compareTo(end) < 0
                         && start.compareTo(s.getEndTime()) < 0);
     }

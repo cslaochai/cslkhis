@@ -6,6 +6,7 @@ import com.his.appoint.mapper.BizAppointInfoMapper;
 import com.his.charge.api.AppointGateway;
 import com.his.charge.support.ChargeDeptResolver;
 import com.his.charge.vo.RegistBriefVO;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +33,7 @@ public class AppointGatewayImpl implements AppointGateway {
 
     @Override
     public ChargeDeptResolver.DeptRef findDeptByRegistNo(String registNo) {
-        if (registNo == null || registNo.isBlank()) {
+        if (!TextUtil.hasText(registNo)) {
             return null;
         }
         BizAppointInfo row = bizAppointInfoMapper.selectOne(new LambdaQueryWrapper<BizAppointInfo>()

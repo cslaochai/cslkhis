@@ -19,7 +19,6 @@ import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -110,13 +109,13 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
      * 绿色通道合并：只认非「无」的值，因此永远不会把已确定的通道降回「无」。
      */
     private static String pickChannel(String keywordChannel, String llmChannel, String currentChannel) {
-        if (StringUtils.hasText(keywordChannel) && !CHANNEL_NONE.equals(keywordChannel)) {
+        if (TextUtil.hasText(keywordChannel) && !CHANNEL_NONE.equals(keywordChannel)) {
             return keywordChannel;
         }
-        if (StringUtils.hasText(llmChannel) && !CHANNEL_NONE.equals(llmChannel)) {
+        if (TextUtil.hasText(llmChannel) && !CHANNEL_NONE.equals(llmChannel)) {
             return llmChannel;
         }
-        if (StringUtils.hasText(currentChannel) && !CHANNEL_NONE.equals(currentChannel)) {
+        if (TextUtil.hasText(currentChannel) && !CHANNEL_NONE.equals(currentChannel)) {
             return currentChannel;
         }
         return CHANNEL_NONE;
@@ -161,7 +160,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         }
         List<String> result = new ArrayList<>();
         for (String value : values) {
-            if (StringUtils.hasText(value)) {
+            if (TextUtil.hasText(value)) {
                 result.add(TextUtil.cut(value.trim(), 120));
             }
         }
@@ -195,11 +194,11 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
             throw new BusinessException("急诊记录不存在：" + dto.getEmergencyId());
         }
 
-        String chiefComplaint = StringUtils.hasText(dto.getChiefComplaint())
+        String chiefComplaint = TextUtil.hasText(dto.getChiefComplaint())
                 ? dto.getChiefComplaint() : (entity == null ? null : entity.getChiefComplaint());
-        String rawVitalSigns = StringUtils.hasText(dto.getVitalSigns())
+        String rawVitalSigns = TextUtil.hasText(dto.getVitalSigns())
                 ? dto.getVitalSigns() : (entity == null ? null : entity.getVitalSigns());
-        if (!StringUtils.hasText(chiefComplaint) && !StringUtils.hasText(rawVitalSigns)) {
+        if (!TextUtil.hasText(chiefComplaint) && !TextUtil.hasText(rawVitalSigns)) {
             throw new BusinessException("主诉与生命体征至少需要提供一项，否则无法给出分诊建议");
         }
 
@@ -275,7 +274,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
 
         List<String> actions = new ArrayList<>();
         for (RedFlag flag : flags) {
-            if (StringUtils.hasText(flag.action())) {
+            if (TextUtil.hasText(flag.action())) {
                 actions.add(flag.action());
             }
         }
@@ -283,7 +282,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
         actions.addAll(llmActions);
         vo.setRecommendActions(limit(dedupe(actions), MAX_ACTIONS));
 
-        vo.setReasoning(StringUtils.hasText(llmReasoning) ? llmReasoning : buildRuleReasoning(vo, flags));
+        vo.setReasoning(TextUtil.hasText(llmReasoning) ? llmReasoning : buildRuleReasoning(vo, flags));
         vo.setTip(buildTip(vo));
 
         vo.setLatencyMs(System.currentTimeMillis() - start);

@@ -1,9 +1,9 @@
 package com.his.system.utils;
 
+import com.his.common.util.TextUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 /**
  * 从 HTTP 请求里解析 IP / 浏览器 / 操作系统等环境信息。
@@ -33,7 +33,7 @@ public final class RequestInfoUtils {
         }
         for (String h : IP_HEADERS) {
             String v = request.getHeader(h);
-            if (StringUtils.hasText(v) && !"unknown".equalsIgnoreCase(v)) {
+            if (TextUtil.hasText(v) && !"unknown".equalsIgnoreCase(v)) {
                 return v.split(",")[0].trim();
             }
         }
@@ -44,7 +44,7 @@ public final class RequestInfoUtils {
      * 内网网段判定（10/8、172.16/12、192.168/16、127/8、::1）。不认识的公网 IP 一律"外网"，不猜城市。
      */
     public static boolean isPrivateIp(String ip) {
-        if (!StringUtils.hasText(ip)) {
+        if (!TextUtil.hasText(ip)) {
             return false;
         }
         String v = ip.trim();
@@ -69,7 +69,7 @@ public final class RequestInfoUtils {
      * 浏览器识别：只认主流内核，认不出就留空（不猜）。
      */
     public static String parseBrowser(String ua) {
-        if (!StringUtils.hasText(ua)) {
+        if (!TextUtil.hasText(ua)) {
             return null;
         }
         String u = ua.toLowerCase();
@@ -95,7 +95,7 @@ public final class RequestInfoUtils {
      * 操作系统识别：只认主流系统，认不出就留空（不猜）。
      */
     public static String parseOs(String ua) {
-        if (!StringUtils.hasText(ua)) {
+        if (!TextUtil.hasText(ua)) {
             return null;
         }
         String u = ua.toLowerCase();

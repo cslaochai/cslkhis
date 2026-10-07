@@ -8,10 +8,10 @@ import com.his.charge.service.PayChannelService;
 import com.his.common.enums.PayTxnStatusEnum;
 import com.his.common.enums.PaymentMethodEnum;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -66,7 +66,7 @@ public class PayChannelServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizP
         for (BizPaymentTxn txn : txns) {
             // 收款时已按 SIMU- 前缀记在 channel_txn_no 上（PaymentServiceImpl.channelNoOf），
             // 真渠道就是那个位置存商户平台流水号，所以这里直接复用，不另造一套号。
-            String tradeNo = StringUtils.hasText(txn.getChannelTxnNo())
+            String tradeNo = TextUtil.hasText(txn.getChannelTxnNo())
                     ? txn.getChannelTxnNo()
                     : "SIMU-" + channel + "-" + billDate.format(DateFormats.DATE) + "-" + txn.getTxnNo();
             trades.add(new ChannelTrade(tradeNo, txn.getTxnTime(), txn.getAmount()));

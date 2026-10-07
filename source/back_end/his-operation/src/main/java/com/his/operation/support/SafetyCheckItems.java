@@ -1,5 +1,6 @@
 package com.his.operation.support;
 
+import com.his.common.util.TextUtil;
 import com.his.operation.enums.OperationSafetyCheckItemEnum;
 import com.his.operation.enums.OperationSafetyPhaseEnum;
 import lombok.AccessLevel;
@@ -77,7 +78,7 @@ public final class SafetyCheckItems {
      */
     public static Set<Integer> parse(int phase, String items) {
         Set<Integer> set = new LinkedHashSet<>();
-        if (items == null || items.isBlank()) {
+        if (!TextUtil.hasText(items)) {
             return set;
         }
         for (String part : items.split(",")) {

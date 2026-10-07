@@ -31,7 +31,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -161,7 +160,7 @@ public class DialysisServiceImpl extends ServiceImpl<BizDialysisSessionMapper, B
         if (archive.getStatus() == DialysisPatientStatusEnum.EXITED.getCode()) {
             throw new BusinessException("档案已退出透析，不能再变更");
         }
-        if (target != DialysisPatientStatusEnum.ON.getCode() && !StringUtils.hasText(dto.getReason())) {
+        if (target != DialysisPatientStatusEnum.ON.getCode() && !TextUtil.hasText(dto.getReason())) {
             throw new BusinessException("暂停/退出必须填写原因");
         }
         if (target != DialysisPatientStatusEnum.ON.getCode() && bizDialysisSessionMapper.countUnfinished(archive.getId()) > 0) {
@@ -480,7 +479,7 @@ public class DialysisServiceImpl extends ServiceImpl<BizDialysisSessionMapper, B
         }
         session.setUltraMl(delta.multiply(new BigDecimal("1000")).setScale(1, RoundingMode.HALF_UP));
         session.setStatus(DialysisSessionStatusEnum.DONE.getCode());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             session.setRemark(TextUtil.cut(dto.getRemark().trim(), MAX_TEXT));
         }
         if (bizDialysisSessionMapper.updateById(session) <= 0) {

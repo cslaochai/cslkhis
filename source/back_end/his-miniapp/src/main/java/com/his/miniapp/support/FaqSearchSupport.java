@@ -1,9 +1,9 @@
 package com.his.miniapp.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import com.his.miniapp.entity.SysFaq;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -42,17 +42,17 @@ public final class FaqSearchSupport {
      * <p>先按标点切短语，再对每个短语按 2~MAX_TERM_LENGTH 滑窗取词。
      */
     public static List<String> splitTerms(String keyword) {
-        if (!StringUtils.hasText(keyword)) {
+        if (!TextUtil.hasText(keyword)) {
             return List.of();
         }
         Set<String> terms = new LinkedHashSet<>();
         for (String phrase : keyword.trim().split("[\\s，。？！、；：,.;:?!/]+")) {
-            if (!StringUtils.hasText(phrase)) {
+            if (!TextUtil.hasText(phrase)) {
                 continue;
             }
             // 只处理中文片段：英文/数字串原样作为一个词
             for (String seg : phrase.split("[^一-龥]+")) {
-                if (!StringUtils.hasText(seg)) {
+                if (!TextUtil.hasText(seg)) {
                     continue;
                 }
                 if (seg.length() <= MAX_TERM_LENGTH) {

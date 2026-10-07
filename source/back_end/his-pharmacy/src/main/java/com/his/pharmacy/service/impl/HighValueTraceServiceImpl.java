@@ -35,7 +35,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -66,7 +65,7 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
     private final TraceChargeInvoker chargeInvoker;
 
     private static String blankToNull(String v) {
-        return StringUtils.hasText(v) ? v.trim() : null;
+        return TextUtil.hasText(v) ? v.trim() : null;
     }
 
     @Override
@@ -104,7 +103,7 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
         } else if (dict.getStatus() != null && dict.getStatus() == 0) {
             vo.setTip("命中的耗材「" + dict.getConsumableName() + "」已停用，不能登记使用");
         }
-        if (StringUtils.hasText(vo.getTip())) {
+        if (TextUtil.hasText(vo.getTip())) {
             return vo;
         }
         vo.setBatches(bizConsumableStockMapper.selectInStockBatches(dict.getId()).stream().map(b -> {
@@ -152,13 +151,13 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
         }
         String patientNo = dto.getPatientNo();
         String patientName = dto.getPatientName();
-        if (!StringUtils.hasText(patientNo) || !StringUtils.hasText(patientName)) {
+        if (!TextUtil.hasText(patientNo) || !TextUtil.hasText(patientName)) {
             PatientBriefVO snap = bizConsumableTraceMapper.selectPatientSnapshot(dto.getPatientId());
             if (snap == null) {
                 throw new BusinessException("患者不存在，请重新选择");
             }
-            patientNo = StringUtils.hasText(patientNo) ? patientNo : snap.getPatientNo();
-            patientName = StringUtils.hasText(patientName) ? patientName : snap.getPatientName();
+            patientNo = TextUtil.hasText(patientNo) ? patientNo : snap.getPatientNo();
+            patientName = TextUtil.hasText(patientName) ? patientName : snap.getPatientName();
         }
 
         UdiParser.UdiParts parts = UdiParser.parse(udiCode);
@@ -330,7 +329,7 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
             trace.setChargeFailReason(TextUtil.cut("未关联就诊（缺门诊挂号或住院锚点），请在收费窗口手工计费", FAIL_REASON_MAX));
             return;
         }
-        if (trace.getPatientId() == null || !StringUtils.hasText(trace.getPatientName())) {
+        if (trace.getPatientId() == null || !TextUtil.hasText(trace.getPatientName())) {
             trace.setChargeStatus(2);
             trace.setChargeFailReason(TextUtil.cut("缺少患者快照，这笔费用落不到人，本次未记账，请补全后点补记", FAIL_REASON_MAX));
             return;
@@ -352,7 +351,7 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
         fee.setItemCode(trace.getConsumableCode());
         fee.setItemName(trace.getConsumableName());
         fee.setSpecification(trace.getSpecification());
-        fee.setUnit(StringUtils.hasText(trace.getUnit()) ? trace.getUnit() : "件");
+        fee.setUnit(TextUtil.hasText(trace.getUnit()) ? trace.getUnit() : "件");
         fee.setPrice(NumUtil.orZero(trace.getRetailPrice()));
         fee.setQuantity(ONE);
         fee.setSourceType(FeeSourceTypeEnum.CONSUMABLE.getCode());

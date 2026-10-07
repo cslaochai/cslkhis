@@ -1,5 +1,6 @@
 package com.his.common.util;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -60,7 +61,7 @@ public final class PemCodecUtil {
     }
 
     private static byte[] unwrap(String pem) {
-        if (pem == null || pem.isBlank()) {
+        if (!TextUtil.hasText(pem)) {
             throw new IllegalArgumentException("PEM 内容为空");
         }
         // 逐条去掉头尾标签（公钥/私钥各一套），再抹掉全部空白，剩下的就是 Base64 正文。

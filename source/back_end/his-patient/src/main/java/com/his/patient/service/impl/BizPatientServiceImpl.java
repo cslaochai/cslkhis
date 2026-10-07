@@ -4,11 +4,13 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.enums.EnableStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
+import com.his.common.util.TextUtil;
 import com.his.patient.dto.PatientQueryPageDTO;
 import com.his.patient.dto.PatientRegisterDTO;
 import com.his.patient.dto.PatientSearchScopeDTO;
@@ -38,7 +40,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -81,15 +82,15 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             FieldSpec.masked("address", "家庭住址", MaskEnum.ADDRESS),
             FieldSpec.of("nation", "民族"),
             FieldSpec.of("occupation", "职业"),
-            FieldSpec.render("maritalStatus", "婚姻状况", v -> dictText("biz_patient_maritalStatusEnum", v)),
+            FieldSpec.render("maritalStatus", "婚姻状况", v -> dictText(DictType.MARITAL_STATUS, v)),
             FieldSpec.of("bloodType", "血型"),
             FieldSpec.of("allergyHistory", "过敏史"),
             FieldSpec.of("medicalHistory", "既往病史"),
             FieldSpec.render("patientType", "患者类型",
-                    v -> dictText("biz_patient_patientTypeEnum", v)),
+                    v -> dictText(DictType.PATIENT_TYPE, v)),
             FieldSpec.masked("medicalInsuranceNo", "医保卡号", MaskEnum.BANK_NO),
             FieldSpec.of("medicalInsuranceType", "医保类型"),
-            FieldSpec.render("cardType", "证件类型", v -> dictText("biz_patient_cardTypeEnum", v)),
+            FieldSpec.render("cardType", "证件类型", v -> dictText(DictType.CARD_TYPE, v)),
             FieldSpec.masked("cardNo", "证件号码", MaskEnum.BANK_NO),
             FieldSpec.render("status", "状态", v -> EnableStatusEnum.getText((Integer) v))
     );
@@ -146,7 +147,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * 其他长度（座机/历史脏数据）≥7 位保留前 2 后 2，更短全遮。
      */
     private static String maskPhone(String phone) {
-        if (phone == null || phone.isBlank()) {
+        if (!TextUtil.hasText(phone)) {
             return null;
         }
         String s = phone.trim();
@@ -206,14 +207,14 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
                                                     Integer patientType, String keyword, int pageNum, int pageSize,
                                                     List<Long> tagPatientIds, PatientSearchScopeDTO scope) {
         LambdaQueryWrapper<BizPatient> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(patientName), BizPatient::getPatientName, patientName)
-                .like(StringUtils.hasText(phone), BizPatient::getPhone, phone)
-                .like(StringUtils.hasText(patientNo), BizPatient::getPatientNo, patientNo)
+        wrapper.like(TextUtil.hasText(patientName), BizPatient::getPatientName, patientName)
+                .like(TextUtil.hasText(phone), BizPatient::getPhone, phone)
+                .like(TextUtil.hasText(patientNo), BizPatient::getPatientNo, patientNo)
                 .eq(patientType != null, BizPatient::getPatientType, patientType)
                 .in(tagPatientIds != null && !tagPatientIds.isEmpty(), BizPatient::getId, tagPatientIds);
         // 综合关键字：姓名 / 患者号 / 手机号 / 身份证号四者 OR，必须整体括号包裹，
         // 否则会把前面精确条件的 AND 关系吃掉（OR 优先级低于 AND）
-        if (StringUtils.hasText(keyword)) {
+        if (TextUtil.hasText(keyword)) {
             wrapper.and(w -> w.like(BizPatient::getPatientName, keyword)
                     .or().like(BizPatient::getPatientNo, keyword)
                     .or().like(BizPatient::getPhone, keyword)
@@ -291,7 +292,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         // 放在 service 而不是只在 controller：addPatient 是公开方法，谁能调谁就得受约束
         PatientProfileValidator.validateForCreate(patient);
         // 检查身份证号是否已存在
-        if (StringUtils.hasText(patient.getIdCard())) {
+        if (TextUtil.hasText(patient.getIdCard())) {
             BizPatient existing = selectByIdCard(patient.getIdCard());
             if (existing != null) {
                 throw new BusinessException("该身份证号已存在患者记录");
@@ -720,7 +721,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientRegisterVO register(PatientRegisterDTO dto) {
-        if (dto.getPatientName() == null || dto.getPatientName().isBlank()) {
+        if (!TextUtil.hasText(dto.getPatientName())) {
             throw new BusinessException("请输入姓名");
         }
         if (dto.getIdCard() == null || !dto.getIdCard().matches("^\\d{17}[\\dXx]$")) {

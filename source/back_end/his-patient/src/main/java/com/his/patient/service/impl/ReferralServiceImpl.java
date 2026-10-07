@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -28,7 +29,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -48,8 +48,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizReferral> implements ReferralService {
 
-    private static final String DICT_DIRECTION = "his_referral_direction";
-    private static final String DICT_STATUS = "his_referral_status";
     /**
      * 待确认多久就找总值班（系统参数：duty.coord.referral_pending_hours，缺失/非法回落 2 小时）
      */
@@ -69,7 +67,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     @Transactional(rollbackFor = Exception.class)
     public ReferralVO create(ReferralDTO.Create dto) {
         int direction = dto.getDirection() == null ? ReferralDirectionEnum.UP.getCode() : dto.getDirection();
-        if (!StringUtils.hasText(dto.getToHospital()) && dto.getToDeptId() == null) {
+        if (!TextUtil.hasText(dto.getToHospital()) && dto.getToDeptId() == null) {
             throw new BusinessException("院际转诊必须填转入医院，院内转诊必须选转入科室");
         }
         BizReferral r = new BizReferral();
@@ -99,7 +97,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
                 .eq(q.getPatientId() != null, BizReferral::getPatientId, q.getPatientId())
                 .eq(q.getDirection() != null, BizReferral::getDirection, q.getDirection())
                 .eq(q.getReferralStatus() != null, BizReferral::getReferralStatus, q.getReferralStatus())
-                .like(StringUtils.hasText(q.getToHospital()), BizReferral::getToHospital, TextUtil.trim(q.getToHospital()))
+                .like(TextUtil.hasText(q.getToHospital()), BizReferral::getToHospital, TextUtil.trim(q.getToHospital()))
                 .orderByDesc(BizReferral::getReferralTime)
                 .orderByDesc(BizReferral::getReferralId);
         IPage<BizReferral> page = bizReferralMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w);
@@ -186,10 +184,10 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
                 "转诊单 %s（%s，转入 %s）已登记，请总值班协调：%s。"
                         + "患者诊断：%s；联系电话：%s。上转请确认上级医院接诊科室与转运安排，下转请确认基层机构接收。",
                 r.getReferralNo(), dirText,
-                StringUtils.hasText(r.getToHospital()) ? r.getToHospital() : "院内",
+                TextUtil.hasText(r.getToHospital()) ? r.getToHospital() : "院内",
                 r.getReason(),
-                StringUtils.hasText(r.getDiagnosis()) ? r.getDiagnosis() : "未填",
-                StringUtils.hasText(r.getContactPhone()) ? r.getContactPhone() : "未填");
+                TextUtil.hasText(r.getDiagnosis()) ? r.getDiagnosis() : "未填",
+                TextUtil.hasText(r.getContactPhone()) ? r.getContactPhone() : "未填");
         ReferralNotifyPayloadVO payload = new ReferralNotifyPayloadVO();
         payload.setReferralNo(r.getReferralNo());
         payload.setDirection(dirText);
@@ -238,7 +236,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
                         "转诊单 %s（%s，转入 %s）登记后 %d 小时仍为「待确认」（阈值 %d 小时）。"
                                 + "请总值班推进：联系转入方确认接收，或说明无法转诊的原因并退回开单科室。",
                         r.getReferralNo(), dirText,
-                        StringUtils.hasText(r.getToHospital()) ? r.getToHospital() : "院内",
+                        TextUtil.hasText(r.getToHospital()) ? r.getToHospital() : "院内",
                         waited, hours);
                 ReferralEscalatePayloadVO payload = new ReferralEscalatePayloadVO();
                 payload.setReferralNo(r.getReferralNo());
@@ -282,7 +280,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
         try {
             SysConfig cfg = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
                     .eq(SysConfig::getConfigKey, DUTY_REFERRAL_HOURS_KEY).last("LIMIT 1"));
-            if (cfg == null || !StringUtils.hasText(cfg.getConfigValue())) {
+            if (cfg == null || !TextUtil.hasText(cfg.getConfigValue())) {
                 return DUTY_REFERRAL_HOURS_FALLBACK;
             }
             int v = Integer.parseInt(cfg.getConfigValue().trim());
@@ -301,7 +299,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     }
 
     private String statusText(BizReferral r) {
-        return dictCacheService.getDicDataLabel(DICT_STATUS, r.getReferralStatus());
+        return dictCacheService.getDicDataLabel(DictType.REFERRAL_STATUS, r.getReferralStatus());
     }
 
     /**
@@ -323,8 +321,8 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     private ReferralVO toVo(BizReferral r, Map<Long, String> deptNames) {
         ReferralVO vo = new ReferralVO();
         org.springframework.beans.BeanUtils.copyProperties(r, vo);
-        vo.setDirectionText(dictCacheService.getDicDataLabel(DICT_DIRECTION, r.getDirection()));
-        vo.setReferralStatusText(dictCacheService.getDicDataLabel(DICT_STATUS, r.getReferralStatus()));
+        vo.setDirectionText(dictCacheService.getDicDataLabel(DictType.REFERRAL_DIRECTION, r.getDirection()));
+        vo.setReferralStatusText(dictCacheService.getDicDataLabel(DictType.REFERRAL_STATUS, r.getReferralStatus()));
         vo.setFromDeptName(r.getFromDeptId() == null ? null : deptNames.get(r.getFromDeptId()));
         vo.setToDeptName(r.getToDeptId() == null ? null : deptNames.get(r.getToDeptId()));
         // 患者快照现查（患者基本信息 / 入院记录属本域，量级单条）

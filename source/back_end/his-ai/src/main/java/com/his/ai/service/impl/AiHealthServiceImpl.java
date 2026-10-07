@@ -7,10 +7,10 @@ import com.his.ai.service.AiHealthService;
 import com.his.ai.service.Icd10RecallService;
 import com.his.ai.support.AiDegradeGuard;
 import com.his.ai.vo.AiHealthVO;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -61,7 +61,7 @@ public class AiHealthServiceImpl implements AiHealthService {
         vo.setBaseUrl(properties.getBaseUrl());
         vo.setModel(properties.getModel());
         vo.setModelLite(properties.getModelLite());
-        vo.setApiKeyConfigured(StringUtils.hasText(properties.getApiKey()));
+        vo.setApiKeyConfigured(TextUtil.hasText(properties.getApiKey()));
         vo.setApiKeySource(aiConfigProvider.apiKeyFromEnv() ? "env" : "yml");
         vo.setTimeoutMs(properties.getTimeoutMs());
         vo.setRetrieveTopN(properties.getRetrieveTopN());

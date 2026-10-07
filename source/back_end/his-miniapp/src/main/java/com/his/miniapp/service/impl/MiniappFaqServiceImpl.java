@@ -19,7 +19,6 @@ import com.his.miniapp.vo.FaqListVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 
@@ -97,7 +96,7 @@ public class MiniappFaqServiceImpl extends ServiceImpl<MiniappFaqMapper, SysFaq>
     @Override
     public PageResult<FaqListVO> search(FaqPageQueryDTO dto) {
         List<SysFaq> all = enabledFaqs();
-        if (dto != null && StringUtils.hasText(dto.getCategoryCode())) {
+        if (dto != null && TextUtil.hasText(dto.getCategoryCode())) {
             all = all.stream().filter(f -> dto.getCategoryCode().equals(f.getCategoryCode())).toList();
         }
         String keyword = dto == null ? null : dto.getKeyword();
@@ -176,11 +175,11 @@ public class MiniappFaqServiceImpl extends ServiceImpl<MiniappFaqMapper, SysFaq>
         List<SysFaq> all = miniappFaqMapper.selectList(new LambdaQueryWrapper<SysFaq>()
                 .orderByAsc(SysFaq::getSortOrder)
                 .orderByAsc(SysFaq::getId));
-        if (dto != null && StringUtils.hasText(dto.getCategoryCode())) {
+        if (dto != null && TextUtil.hasText(dto.getCategoryCode())) {
             all = all.stream().filter(f -> dto.getCategoryCode().equals(f.getCategoryCode())).toList();
         }
         String keyword = dto == null ? null : dto.getKeyword();
-        if (StringUtils.hasText(keyword)) {
+        if (TextUtil.hasText(keyword)) {
             all = all.stream()
                     .filter(f -> (f.getQuestion() != null && f.getQuestion().contains(keyword.trim()))
                             || (f.getKeywords() != null && f.getKeywords().contains(keyword.trim())))
@@ -246,7 +245,7 @@ public class MiniappFaqServiceImpl extends ServiceImpl<MiniappFaqMapper, SysFaq>
     private String nextFaqNo() {
         String max = miniappFaqMapper.maxFaqNo();
         int seq = 1;
-        if (StringUtils.hasText(max) && max.length() > 3) {
+        if (TextUtil.hasText(max) && max.length() > 3) {
             try {
                 seq = Integer.parseInt(max.substring(3)) + 1;
             } catch (NumberFormatException ex) {

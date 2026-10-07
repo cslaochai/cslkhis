@@ -339,7 +339,7 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
             throw new BusinessException("输液单不在输注中（状态 " + inf.getStatus() + "）");
         }
         // B类条件必填：仅 adverseFlag=1 时描述必填，DTO 注解一刀切会挡掉无不良反应的合法请求
-        if (dto.getAdverseFlag() == YesOrNoEnum.YES.getCode() && (dto.getAdverseDesc() == null || dto.getAdverseDesc().isBlank())) {
+        if (dto.getAdverseFlag() == YesOrNoEnum.YES.getCode() && (!TextUtil.hasText(dto.getAdverseDesc()))) {
             throw new BusinessException("有不良反应时描述必填");
         }
         inf.setStatus(InfusionStatusEnum.FINISHED.getCode());
@@ -410,7 +410,7 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
         LambdaQueryWrapper<BizOutpInfusion> wrapper = new LambdaQueryWrapper<>();
         wrapper.apply("DATE(create_time) = {0}", LocalDate.now())
                 .eq(query.getStatus() != null, BizOutpInfusion::getStatus, query.getStatus())
-                .and(query.getKeyword() != null && !query.getKeyword().isBlank(), w -> w
+                .and(TextUtil.hasText(query.getKeyword()), w -> w
                         .like(BizOutpInfusion::getPatientName, query.getKeyword())
                         .or().like(BizOutpInfusion::getInfusionNo, query.getKeyword()))
                 .orderByAsc(BizOutpInfusion::getStatus)

@@ -3,6 +3,7 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.system.dto.*;
@@ -25,7 +26,6 @@ import com.his.system.vo.MeteringVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -59,7 +59,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         LambdaQueryWrapper<SysEquipment> w = new LambdaQueryWrapper<SysEquipment>()
                 .eq(q.getCategory() != null, SysEquipment::getCategory, q.getCategory())
                 .eq(q.getStatus() != null, SysEquipment::getStatus, q.getStatus())
-                .and(StringUtils.hasText(kw), x -> x
+                .and(TextUtil.hasText(kw), x -> x
                         .like(SysEquipment::getEquipmentCode, kw)
                         .or().like(SysEquipment::getEquipmentName, kw)
                         .or().like(SysEquipment::getModel, kw)
@@ -122,7 +122,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         m.setHandleResult(TextUtil.trim(dto.getHandleResult()));
         m.setMaintainResult(dto.getMaintainResult() == null
                 ? MaintainResultEnum.NORMAL.getCode() : dto.getMaintainResult());
-        m.setHandlerName(StringUtils.hasText(dto.getHandlerName()) ? dto.getHandlerName().trim()
+        m.setHandlerName(TextUtil.hasText(dto.getHandlerName()) ? dto.getHandlerName().trim()
                 : UserUtils.getCurrentUser().getRealName());
         m.setCreateBy(UserUtils.getCurrentUser().getRealName());
         bizEquipmentMaintainMapper.insert(m);
@@ -233,7 +233,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setEquipmentCode(e.getEquipmentCode());
         vo.setEquipmentName(e.getEquipmentName());
         vo.setCategory(e.getCategory());
-        vo.setCategoryText(dictCacheService.getDicDataLabel("biz_system_equipCategoryEnum", e.getCategory()));
+        vo.setCategoryText(dictCacheService.getDicDataLabel(DictType.EQUIPMENT_CATEGORY, e.getCategory()));
         vo.setDeptId(e.getDeptId());
         vo.setDeptName(e.getDeptName());
         vo.setBrand(e.getBrand());
@@ -241,7 +241,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setPurchaseDate(e.getPurchaseDate());
         vo.setPurchasePrice(e.getPurchasePrice());
         vo.setStatus(e.getStatus());
-        vo.setStatusText(dictCacheService.getDicDataLabel("biz_system_equipStatusEnum", e.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.EQUIPMENT_STATUS, e.getStatus()));
         vo.setMaintainCycleDays(e.getMaintainCycleDays());
         vo.setLastMaintainDate(e.getLastMaintainDate());
         if (e.getLastMaintainDate() != null && e.getMaintainCycleDays() != null && e.getMaintainCycleDays() > 0) {

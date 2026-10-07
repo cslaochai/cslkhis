@@ -3,6 +3,7 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.patient.dto.*;
@@ -21,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,7 +37,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     /**
      * 与患者关系字典（患者联系方式.relationship 的码值来源）
      */
-    public static final String RELATION_DICT = "sys_patient_relation";
+    public static final String RELATION_DICT = DictType.PATIENT_RELATION;
 
     /**
      * 拼摘要时的分隔符：与 CDR 健康档案卡片、页面上的多值展示同一口径
@@ -102,10 +102,10 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
         vo.setContactRelationText(patient.getContactRelation());
 
         // 分叉判据只有一种（见 VO 注释）：明细为空但文本有值 = 只以自由文本存在、页面上不可维护
-        vo.setAllergyTextOnly(allergies.isEmpty() && StringUtils.hasText(patient.getAllergyHistory()));
-        vo.setPastDiseaseTextOnly(pastDiseases.isEmpty() && StringUtils.hasText(patient.getMedicalHistory()));
+        vo.setAllergyTextOnly(allergies.isEmpty() && TextUtil.hasText(patient.getAllergyHistory()));
+        vo.setPastDiseaseTextOnly(pastDiseases.isEmpty() && TextUtil.hasText(patient.getMedicalHistory()));
         vo.setContactTextOnly(contacts.isEmpty()
-                && (StringUtils.hasText(patient.getContactName()) || StringUtils.hasText(patient.getContactPhone())));
+                && (TextUtil.hasText(patient.getContactName()) || TextUtil.hasText(patient.getContactPhone())));
         return vo;
     }
 
@@ -197,7 +197,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
         // 替用户编一个「其他」等于替他做了一次临床判断）；严重程度缺失则落「未评估」
         // —— 与主档文本迁移同一口径，说的是实话而不是编一个档位。
         requireInEnum("过敏类型", dto.getAllergyType(), HealthProfileEnums.ALLERGY_TYPE);
-        if (!StringUtils.hasText(dto.getAllergySeverity())) {
+        if (!TextUtil.hasText(dto.getAllergySeverity())) {
             dto.setAllergySeverity(HealthProfileEnums.SEVERITY_UNKNOWN);
         }
         requireInEnum("过敏严重程度", dto.getAllergySeverity(), HealthProfileEnums.ALLERGY_SEVERITY);
@@ -240,11 +240,11 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
                     // 严重程度为空或「未评估」时不加括号：一行摘要是给警示条读的，
                     // 「青霉素（未评估）」里的括号只增加噪音；详情页照实显示未评估。
                     String sev = a.getAllergySeverity();
-                    boolean showSev = StringUtils.hasText(sev)
+                    boolean showSev = TextUtil.hasText(sev)
                             && !HealthProfileEnums.SEVERITY_UNKNOWN.equals(sev);
                     return showSev ? a.getAllergenName() + "（" + sev + "）" : a.getAllergenName();
                 })
-                .filter(StringUtils::hasText)
+                .filter(TextUtil::hasText)
                 .collect(Collectors.toList());
         writePatientText(patientId, "allergy_history", String.join(JOINER, parts));
     }
@@ -292,7 +292,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     public void syncPastDiseaseProjection(Long patientId) {
         String summary = listPastDiseases(patientId).stream()
                 .map(PatientPastDiseaseVO::getDiseaseName)
-                .filter(StringUtils::hasText)
+                .filter(TextUtil::hasText)
                 .collect(Collectors.joining(JOINER));
         writePatientText(patientId, "medical_history", summary);
     }
@@ -340,7 +340,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
         if (dto == null) {
             throw new BusinessException("家族史内容不能为空");
         }
-        if (Integer.valueOf(0).equals(dto.getIsAlive()) && !StringUtils.hasText(dto.getCauseOfDeath())) {
+        if (Integer.valueOf(0).equals(dto.getIsAlive()) && !TextUtil.hasText(dto.getCauseOfDeath())) {
             // ①条件必填：只有选了「已故」才必填死亡原因，@NotNull 一刀切会挡掉合法的在世提交
             throw new BusinessException("已故亲属必须填写死亡原因");
         }
@@ -395,7 +395,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
                     return old == null ? null : old.getPatientId();
                 }, "用药史"));
         // 不依赖表列 DEFAULT '已完成'（那个值不在列注释的状态枚举里），显式给默认状态
-        if (!StringUtils.hasText(entity.getStatus())) {
+        if (!TextUtil.hasText(entity.getStatus())) {
             entity.setStatus(HealthProfileEnums.DEFAULT_MEDICATION_STATUS);
         }
         persist(entity, dto.getId(), bizPatientMedicationHistoryMapper::insert, bizPatientMedicationHistoryMapper::updateById);
@@ -428,7 +428,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
             throw new BusinessException("与患者关系取值不合法：" + dto.getRelationship()
                     + "（请用字典「与患者关系」的码值，如 2-配偶 3-父亲 99-其他）");
         }
-        if (StringUtils.hasText(dto.getPhone()) && !PatientProfileValidator.isLegalPhone(dto.getPhone().trim())) {
+        if (TextUtil.hasText(dto.getPhone()) && !PatientProfileValidator.isLegalPhone(dto.getPhone().trim())) {
             // ③业务规则：电话是选填项，填了才校格式，不是"必填"判断
             throw new BusinessException("联系人电话格式不正确：应为 11 位手机号（1 开头）");
         }
@@ -525,7 +525,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
         if (!listAllergies(patientId).isEmpty()) {
             // 已有明细 → 明细权威，文本按明细重算（主档那个文本框只是投影）
             syncAllergyProjection(patientId);
-        } else if (StringUtils.hasText(patient.getAllergyHistory())) {
+        } else if (TextUtil.hasText(patient.getAllergyHistory())) {
             // 没有明细 → 文本是快速录入的内容，落成一条明细。
             // 严重程度写「未评估」而不是默认一个「中度」—— 编出来的严重程度会真的被当成临床信息读，
             // 「未评估」至少在页面上说的是实话。
@@ -551,7 +551,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
         // 既往病史
         if (!listPastDiseases(patientId).isEmpty()) {
             syncPastDiseaseProjection(patientId);
-        } else if (StringUtils.hasText(patient.getMedicalHistory())) {
+        } else if (TextUtil.hasText(patient.getMedicalHistory())) {
             BizPatientPastDisease d = new BizPatientPastDisease();
             d.setPatientId(patientId);
             d.setDiseaseName(TextUtil.cut(patient.getMedicalHistory().trim(), 200));
@@ -567,11 +567,11 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
         // 联系人（主档的三列合成一条主要联系人）
         if (!listContacts(patientId).isEmpty()) {
             syncContactProjection(patientId);
-        } else if (StringUtils.hasText(patient.getContactName())
-                || StringUtils.hasText(patient.getContactPhone())) {
+        } else if (TextUtil.hasText(patient.getContactName())
+                || TextUtil.hasText(patient.getContactPhone())) {
             BizPatientContact c = new BizPatientContact();
             c.setPatientId(patientId);
-            c.setContactName(StringUtils.hasText(patient.getContactName())
+            c.setContactName(TextUtil.hasText(patient.getContactName())
                     ? TextUtil.cut(patient.getContactName().trim(), 100) : "未填姓名");
             c.setRelationship(relationCode(patient.getContactRelation()));
             c.setPhone(patient.getContactPhone());
@@ -596,7 +596,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        String text = StringUtils.hasText(value) ? value : null;
+        String text = TextUtil.hasText(value) ? value : null;
         LambdaUpdateWrapper<BizPatient> wrapper = new LambdaUpdateWrapper<BizPatient>()
                 .eq(BizPatient::getId, patientId);
         if ("allergy_history".equals(column)) {
@@ -700,7 +700,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     }
 
     private void requireInEnum(String label, String value, java.util.Set<String> allowed) {
-        if (!StringUtils.hasText(value)) {
+        if (!TextUtil.hasText(value)) {
             return;
         }
         if (!allowed.contains(value)) {
@@ -751,7 +751,7 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
      */
     private Integer relationCode(String text) {
         List<SysDictData> dict = relationDict();
-        if (StringUtils.hasText(text) && dict != null) {
+        if (TextUtil.hasText(text) && dict != null) {
             String t = text.trim();
             for (SysDictData d : dict) {
                 if (t.equals(d.getDictLabel()) || t.equals(d.getDictValue())) {

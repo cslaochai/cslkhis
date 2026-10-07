@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.InsurancePolicyQueryPageDTO;
 import com.his.system.dto.InsurancePolicyUpsertDTO;
 import com.his.system.entity.SysInsurancePolicy;
@@ -15,7 +16,6 @@ import com.his.system.vo.InsurancePolicyVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -35,9 +35,9 @@ public class InsurancePolicyServiceImpl extends ServiceImpl<SysInsurancePolicyMa
     @Override
     public PageResult<InsurancePolicyVO> queryPolicyPage(InsurancePolicyQueryPageDTO queryDTO) {
         LambdaQueryWrapper<SysInsurancePolicy> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getPolicyName()),
+        wrapper.like(TextUtil.hasText(queryDTO.getPolicyName()),
                         SysInsurancePolicy::getPolicyName, queryDTO.getPolicyName())
-                .eq(StringUtils.hasText(queryDTO.getInsuranceType()),
+                .eq(TextUtil.hasText(queryDTO.getInsuranceType()),
                         SysInsurancePolicy::getInsuranceType, queryDTO.getInsuranceType())
                 .eq(Objects.nonNull(queryDTO.getSettlementType()),
                         SysInsurancePolicy::getSettlementType, queryDTO.getSettlementType())

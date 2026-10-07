@@ -12,7 +12,6 @@ import com.his.system.vo.DrugRationalHitVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.regex.Matcher;
@@ -83,7 +82,7 @@ public class DrugHardRuleChecker {
 
     private static Set<String> extractAllergens(String contraindication) {
         Set<String> allergens = new LinkedHashSet<>();
-        if (!StringUtils.hasText(contraindication)) {
+        if (!TextUtil.hasText(contraindication)) {
             return allergens;
         }
         Matcher matcher = ALLERGY_CLAUSE.matcher(contraindication);
@@ -100,7 +99,7 @@ public class DrugHardRuleChecker {
 
     private static Set<String> extractConditions(String contraindication) {
         Set<String> conditions = new LinkedHashSet<>();
-        if (!StringUtils.hasText(contraindication)) {
+        if (!TextUtil.hasText(contraindication)) {
             return conditions;
         }
         Matcher matcher = CONDITION_CLAUSE.matcher(contraindication);
@@ -132,7 +131,7 @@ public class DrugHardRuleChecker {
      */
     private static String resolveGenericName(DrugAuditContextDTO context, BizPrescriptionDetail detail) {
         SysDrug drug = drugOf(context, detail);
-        if (drug != null && StringUtils.hasText(drug.getGenericName())) {
+        if (drug != null && TextUtil.hasText(drug.getGenericName())) {
             return drug.getGenericName().trim();
         }
         String fromDetail = TextUtil.trimToNull(detail.getGenericName());
@@ -180,10 +179,6 @@ public class DrugHardRuleChecker {
         List<DrugAuditFindingVO> result = new ArrayList<>(unique.values());
         result.sort(Comparator.comparingInt(DrugAuditFindingVO::getErrorLevel).reversed());
         return result.size() > MAX_FINDINGS ? new ArrayList<>(result.subList(0, MAX_FINDINGS)) : result;
-    }
-
-    private static String firstNonBlank(String preferred, String fallback) {
-        return StringUtils.hasText(preferred) ? preferred : fallback;
     }
 
     /**
@@ -308,8 +303,8 @@ public class DrugHardRuleChecker {
             if (drug == null || isHerbalPieces(drug)) {
                 continue;
             }
-            String name = firstNonBlank(drug.getGenericName(), drug.getDrugName());
-            if (!StringUtils.hasText(name)) {
+            String name = TextUtil.blankToDefault(drug.getGenericName(), drug.getDrugName());
+            if (!TextUtil.hasText(name)) {
                 continue;
             }
             for (String className : DrugClassCatalog.classesOf(name)) {
@@ -354,7 +349,7 @@ public class DrugHardRuleChecker {
      * 例：诊断为「慢性肾脏病」而处方含「严重肾功能不全者禁用」的二甲双胍。
      */
     private void checkConditionContraindication(DrugAuditContextDTO context, List<DrugAuditFindingVO> findings) {
-        if (!StringUtils.hasText(context.conditionText())) {
+        if (!TextUtil.hasText(context.conditionText())) {
             return;
         }
         String conditionText = context.conditionText();
@@ -417,7 +412,7 @@ public class DrugHardRuleChecker {
             findings.add(finding(interaction && Boolean.TRUE.equals(hit.getBlocked()) ? LEVEL_BLOCK : LEVEL_WARN,
                     interaction ? "药物相互作用" : "剂量上限",
                     hit.getMessage(),
-                    StringUtils.hasText(hit.getSuggestion()) ? hit.getSuggestion()
+                    TextUtil.hasText(hit.getSuggestion()) ? hit.getSuggestion()
                             : (interaction ? "建议修改处方或经医师评估后记录联用理由" : "请核对极量口径后决定是否调整"),
                     related,
                     "知识库条目 " + hit.getKnowledgeId() + "（" + hit.getHitType() + "）"));

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.pharmacy.dto.CssdDTO;
@@ -22,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -61,7 +61,7 @@ public class CssdTemplateServiceImpl extends ServiceImpl<BizCssdPackTemplateMapp
         LambdaQueryWrapper<BizCssdPackTemplate> w = new LambdaQueryWrapper<BizCssdPackTemplate>()
                 .eq(BizCssdPackTemplate::getDelFlag, 0)
                 .eq(q.getStatus() != null, BizCssdPackTemplate::getStatus, q.getStatus())
-                .and(StringUtils.hasText(kw), x -> x
+                .and(TextUtil.hasText(kw), x -> x
                         .like(BizCssdPackTemplate::getTemplateCode, kw)
                         .or().like(BizCssdPackTemplate::getPackName, kw))
                 .orderByAsc(BizCssdPackTemplate::getTemplateCode);
@@ -140,7 +140,7 @@ public class CssdTemplateServiceImpl extends ServiceImpl<BizCssdPackTemplateMapp
             it.setTemplateId(t.getId());
             it.setItemName(TextUtil.trim(i.getItemName()));
             it.setSpec(TextUtil.trim(i.getSpec()));
-            it.setUnit(StringUtils.hasText(i.getUnit()) ? i.getUnit().trim() : "件");
+            it.setUnit(TextUtil.hasText(i.getUnit()) ? i.getUnit().trim() : "件");
             it.setQuantity(i.getQuantity());
             return it;
         }).toList();
@@ -186,7 +186,7 @@ public class CssdTemplateServiceImpl extends ServiceImpl<BizCssdPackTemplateMapp
         vo.setTemplateCode(t.getTemplateCode());
         vo.setPackName(t.getPackName());
         vo.setSterilizeMethod(t.getSterilizeMethod());
-        vo.setSterilizeMethodText(dictCacheService.getDicDataLabel("biz_pharmacy_cssdSterilizeMethodEnum", t.getSterilizeMethod()));
+        vo.setSterilizeMethodText(dictCacheService.getDicDataLabel(DictType.CSSD_STERIL_METHOD, t.getSterilizeMethod()));
         vo.setStatus(t.getStatus());
         vo.setRemark(t.getRemark());
         vo.setItems(items);

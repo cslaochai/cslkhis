@@ -1,5 +1,6 @@
 package com.his.system.service.impl;
 
+import com.his.common.util.TextUtil;
 import com.his.system.config.SmsProperties;
 import com.his.system.service.SmsCodeService;
 import lombok.RequiredArgsConstructor;
@@ -96,7 +97,7 @@ public class SmsCodeServiceImpl implements SmsCodeService {
      * @return null=校验通过；非 null=失败原因
      */
     public String verify(String phone, String scene, String code) {
-        if (code == null || code.isBlank()) {
+        if (!TextUtil.hasText(code)) {
             return "请输入验证码";
         }
         String codeKey = codeKey(scene, phone);

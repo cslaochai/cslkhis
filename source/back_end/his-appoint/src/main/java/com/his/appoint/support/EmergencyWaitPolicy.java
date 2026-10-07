@@ -1,11 +1,11 @@
 package com.his.appoint.support;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -99,7 +99,7 @@ public class EmergencyWaitPolicy {
                     new LambdaQueryWrapper<SysConfig>().likeRight(SysConfig::getConfigKey, CONFIG_KEY_PREFIX));
             for (SysConfig row : rows) {
                 Integer level = levelOfKey(row.getConfigKey());
-                if (level != null && StringUtils.hasText(row.getConfigValue())) {
+                if (level != null && TextUtil.hasText(row.getConfigValue())) {
                     cache.put(level, Integer.parseInt(row.getConfigValue().trim()));
                 }
             }

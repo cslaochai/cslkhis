@@ -11,13 +11,13 @@ import com.his.ai.vo.NursingHandoverPromptVariablesVO;
 import com.his.ai.vo.WardHandoverVO;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.patient.service.InpatientNursingService;
 import com.his.patient.vo.NursingAssessmentVO;
 import com.his.patient.vo.WardNursingFactsVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -74,10 +74,10 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
             }
             case 2 -> {
                 begin = date.atTime(16, 0);
-                end = date.plusDays(1).atStartOfDay();
+                end = TimeUtil.dayStart(date.plusDays(1));
             }
             default -> {
-                begin = date.atStartOfDay();
+                begin = TimeUtil.dayStart(date);
                 end = date.atTime(8, 0);
             }
         }
@@ -112,7 +112,7 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
                         .inputDigest("ward=" + dto.getWardId() + "; window=" + begin.format(DateFormats.DATETIME_MINUTE))
                         .build(),
                 NursingHandoverLlmOutputDTO.class);
-        if (output.isEmpty() || !StringUtils.hasText(output.get().getSummary())) {
+        if (output.isEmpty() || !TextUtil.hasText(output.get().getSummary())) {
             vo.setSource(2);
             vo.setDegraded(true);
             vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.NURSING_HANDOVER));
@@ -129,7 +129,7 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
         for (WardNursingFactsVO.AdmissionBrief a : facts.getCensus().getNewAdmissions()) {
             lines.add((a.getBedNo() == null ? "" : a.getBedNo() + "床 ")
                     + (a.getPatientName() == null ? "" : a.getPatientName() + " ")
-                    + (StringUtils.hasText(a.getAdmitDiagnosisName()) ? "（" + a.getAdmitDiagnosisName() + "）" : ""));
+                    + (TextUtil.hasText(a.getAdmitDiagnosisName()) ? "（" + a.getAdmitDiagnosisName() + "）" : ""));
         }
         return lines;
     }

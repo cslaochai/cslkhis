@@ -2,6 +2,7 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysRole;
 import com.his.system.mapper.SysEmployeePostMapper;
@@ -11,7 +12,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -41,7 +41,7 @@ public class DeptScopeProviderImpl implements DeptScopeProvider {
 
         // 角色为空（老 token / 未走过滤器）时 selectDeptIdsByRole 查不到行，
         // 与「配了角色但一个岗位都没有」走同一条兜底：退回主科室，不放开全院。
-        List<Long> authorized = StringUtils.hasText(roleCode)
+        List<Long> authorized = TextUtil.hasText(roleCode)
                 ? sysEmployeePostMapper.selectDeptIdsByRole(employeeId, roleCode)
                 : List.of();
 
@@ -60,7 +60,7 @@ public class DeptScopeProviderImpl implements DeptScopeProvider {
      */
     @Override
     public boolean isUnrestrictedRole(String roleCode) {
-        if (roleCode == null || roleCode.isBlank()) {
+        if (!TextUtil.hasText(roleCode)) {
             return false;
         }
         SysRole role = sysRoleMapper.selectOne(

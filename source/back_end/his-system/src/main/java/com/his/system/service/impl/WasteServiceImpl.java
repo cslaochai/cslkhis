@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -19,7 +20,6 @@ import com.his.system.vo.WasteVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.util.Objects;
@@ -41,7 +41,7 @@ public class WasteServiceImpl extends ServiceImpl<BizMedicalWasteMapper, BizMedi
     @Transactional(rollbackFor = Exception.class)
     public WasteVO create(WasteDTO.Create dto) {
         // ① 条件必填：科室ID与科室名称二选一即可（前端可只传名称），单字段加 @NotNull 会把合法请求挡成 400
-        if (dto.getDeptId() == null && !StringUtils.hasText(dto.getDeptName())) {
+        if (dto.getDeptId() == null && !TextUtil.hasText(dto.getDeptName())) {
             throw new BusinessException("产生科室不能为空");
         }
         BizMedicalWaste w = new BizMedicalWaste();
@@ -51,7 +51,7 @@ public class WasteServiceImpl extends ServiceImpl<BizMedicalWasteMapper, BizMedi
         w.setDeptId(dto.getDeptId());
         w.setDeptName(TextUtil.trim(dto.getDeptName()));
         w.setCollectTime(TimeUtil.toSeconds(dto.getCollectTime()));
-        w.setCollectorName(StringUtils.hasText(dto.getCollectorName()) ? dto.getCollectorName().trim()
+        w.setCollectorName(TextUtil.hasText(dto.getCollectorName()) ? dto.getCollectorName().trim()
                 : UserUtils.getCurrentUser().getRealName());
         w.setStatus(WasteStatusEnum.REGISTERED.getCode());
         w.setCreateBy(UserUtils.getCurrentUser().getRealName());
@@ -107,12 +107,12 @@ public class WasteServiceImpl extends ServiceImpl<BizMedicalWasteMapper, BizMedi
         LambdaQueryWrapper<BizMedicalWaste> w = new LambdaQueryWrapper<BizMedicalWaste>()
                 .eq(q.getWasteType() != null, BizMedicalWaste::getWasteType, q.getWasteType())
                 .eq(q.getStatus() != null, BizMedicalWaste::getStatus, q.getStatus())
-                .and(StringUtils.hasText(kw), x -> x
+                .and(TextUtil.hasText(kw), x -> x
                         .like(BizMedicalWaste::getWasteNo, kw)
                         .or().like(BizMedicalWaste::getDeptName, kw))
-                .ge(begin != null, BizMedicalWaste::getCollectTime, begin == null ? null : begin.atStartOfDay())
+                .ge(begin != null, BizMedicalWaste::getCollectTime, TimeUtil.dayStart(begin))
                 // 日期边界铁律：按日期过滤必须补全天边界，否则当天时点全被滤掉
-                .le(end != null, BizMedicalWaste::getCollectTime, end == null ? null : end.atTime(23, 59, 59))
+                .le(end != null, BizMedicalWaste::getCollectTime, TimeUtil.dayEnd(end))
                 .orderByDesc(BizMedicalWaste::getCollectTime)
                 .orderByDesc(BizMedicalWaste::getId);
         return bizMedicalWasteMapper.selectPage(new Page<>(q.getPageNum(), q.getPageSize()), w)
@@ -149,7 +149,7 @@ public class WasteServiceImpl extends ServiceImpl<BizMedicalWasteMapper, BizMedi
         vo.setId(w.getId());
         vo.setWasteNo(w.getWasteNo());
         vo.setWasteType(w.getWasteType());
-        vo.setWasteTypeText(dictCacheService.getDicDataLabel("biz_system_wasteTypeEnum", w.getWasteType()));
+        vo.setWasteTypeText(dictCacheService.getDicDataLabel(DictType.WASTE_TYPE, w.getWasteType()));
         vo.setWeightKg(w.getWeightKg());
         vo.setDeptId(w.getDeptId());
         vo.setDeptName(w.getDeptName());

@@ -1,8 +1,8 @@
 package com.his.ai.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -66,7 +66,7 @@ public final class EmrTextTagSplitter {
      */
     public static Map<String, String> split(String rawText) {
         Map<String, String> result = new LinkedHashMap<>();
-        if (!StringUtils.hasText(rawText)) {
+        if (!TextUtil.hasText(rawText)) {
             return result;
         }
 

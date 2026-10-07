@@ -4,9 +4,11 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.PathologyDTO;
 import com.his.medicaltech.entity.BizPathologyBlock;
 import com.his.medicaltech.entity.BizPathologyOrder;
@@ -22,7 +24,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -53,9 +54,6 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
     private static final int EXAM_FROZEN = 2;
     private static final int EXAM_CYTOLOGY = 3;
 
-    private static final String DICT_STATUS = "his_pathology_status";
-    private static final String DICT_EXAM_TYPE = "his_pathology_exam_type";
-    private static final String DICT_BLOCK_STATUS = "his_pathology_block_status";
 
     private final BizPathologyOrderMapper bizPathologyOrderMapper;
     private final BizPathologyBlockMapper bizPathologyBlockMapper;
@@ -65,11 +63,11 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
 
     public PageResult<PathologyVO.ListVO> pageVO(PathologyDTO.Query q) {
         LambdaQueryWrapper<BizPathologyOrder> w = new LambdaQueryWrapper<>();
-        w.eq(StringUtils.hasText(q.getOrderNo()), BizPathologyOrder::getOrderNo, q.getOrderNo())
+        w.eq(TextUtil.hasText(q.getOrderNo()), BizPathologyOrder::getOrderNo, q.getOrderNo())
                 .eq(q.getPatientId() != null, BizPathologyOrder::getPatientId, q.getPatientId())
                 .eq(q.getExamType() != null, BizPathologyOrder::getExamType, q.getExamType())
                 .eq(q.getStatus() != null, BizPathologyOrder::getStatus, q.getStatus())
-                .like(StringUtils.hasText(q.getPatientName()), BizPathologyOrder::getPatientName, TextUtil.trim(q.getPatientName()))
+                .like(TextUtil.hasText(q.getPatientName()), BizPathologyOrder::getPatientName, TextUtil.trim(q.getPatientName()))
                 .ge(q.getStartDate() != null, BizPathologyOrder::getVisitDate, q.getStartDate())
                 .le(q.getEndDate() != null, BizPathologyOrder::getVisitDate, q.getEndDate())
                 // 二级键：同 visit_date 的行顺序不稳 → 翻页会重复/丢行且不报错
@@ -93,7 +91,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         LocalDate today = LocalDate.now();
         long frozenToday = bizPathologyOrderMapper.selectCount(new LambdaQueryWrapper<BizPathologyOrder>()
                 .eq(BizPathologyOrder::getIsFrozen, 1)
-                .ge(BizPathologyOrder::getCreateTime, today.atStartOfDay()));
+                .ge(BizPathologyOrder::getCreateTime, TimeUtil.dayStart(today)));
 
         PathologyVO.StatsVO vo = new PathologyVO.StatsVO();
         vo.setTotal(total);
@@ -113,8 +111,8 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         BizPathologyOrder order = requireOrder(orderId);
         PathologyVO.DetailVO vo = new PathologyVO.DetailVO();
         BeanUtils.copyProperties(order, vo);
-        vo.setStatusText(dictCacheService.getDicDataLabel(DICT_STATUS, order.getStatus()));
-        vo.setExamTypeText(dictCacheService.getDicDataLabel(DICT_EXAM_TYPE, order.getExamType()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, order.getStatus()));
+        vo.setExamTypeText(dictCacheService.getDicDataLabel(DictType.PATHOLOGY_EXAM_TYPE, order.getExamType()));
         vo.setBlocks(listBlocks(orderId));
         return vo;
     }
@@ -127,7 +125,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         for (BizPathologyBlock b : list) {
             PathologyVO.BlockVO v = new PathologyVO.BlockVO();
             BeanUtils.copyProperties(b, v);
-            v.setStatusText(dictCacheService.getDicDataLabel(DICT_BLOCK_STATUS, b.getStatus()));
+            v.setStatusText(dictCacheService.getDicDataLabel(DictType.PATHOLOGY_BLOCK_STATUS, b.getStatus()));
             out.add(v);
         }
         return out;
@@ -138,7 +136,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         for (BizPathologyOrder o : records) {
             PathologyVO.ListVO v = new PathologyVO.ListVO();
             BeanUtils.copyProperties(o, v);
-            v.setStatusText(dictCacheService.getDicDataLabel(DICT_STATUS, o.getStatus()));
+            v.setStatusText(dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()));
             v.setBlockCount(bizPathologyBlockMapper.selectCount(new LambdaQueryWrapper<BizPathologyBlock>()
                     .eq(BizPathologyBlock::getOrderId, o.getId())).intValue());
             out.add(v);
@@ -178,7 +176,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         BizPathologyOrder o = requireOrder(dto.getId());
         assertMutable(o);
         if (!PathologyStatusEnum.REGISTERED.is(o.getStatus())) {
-            throw new BusinessException("仅「已登记」的病理单可修改基本信息（当前状态：" + dictCacheService.getDicDataLabel(DICT_STATUS, o.getStatus()) + "）");
+            throw new BusinessException("仅「已登记」的病理单可修改基本信息（当前状态：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
         }
         BeanUtils.copyProperties(dto, o);
         o.setId(dto.getId());
@@ -202,10 +200,10 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         o.setExamType(1);
         o.setIsFrozen(0);
         o.setSpecimenType("内镜活检");
-        o.setSpecimenPart(StringUtils.hasText(dto.getBiopsyPart()) ? dto.getBiopsyPart() : dto.getSpecimenPart());
+        o.setSpecimenPart(TextUtil.hasText(dto.getBiopsyPart()) ? dto.getBiopsyPart() : dto.getSpecimenPart());
         o.setStatus(PathologyStatusEnum.REGISTERED.getCode());
         o.setOrderNo(nextOrderNo(visitDate));
-        o.setRemark("内镜活检送检" + (StringUtils.hasText(dto.getSourceRecordNo()) ? "（来源：" + dto.getSourceRecordNo() + "）" : ""));
+        o.setRemark("内镜活检送检" + (TextUtil.hasText(dto.getSourceRecordNo()) ? "（来源：" + dto.getSourceRecordNo() + "）" : ""));
         bizPathologyOrderMapper.insert(o);
         return o;
     }
@@ -219,12 +217,12 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         BizPathologyOrder o = requireOrder(dto.getOrderId());
         assertMutable(o);
         if (!PathologyStatusEnum.REGISTERED.is(o.getStatus())) {
-            throw new BusinessException("仅「已登记」的病理单可接收标本（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, o.getStatus()) + "）");
+            throw new BusinessException("仅「已登记」的病理单可接收标本（当前：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
         }
-        if (StringUtils.hasText(dto.getSpecimenType())) {
+        if (TextUtil.hasText(dto.getSpecimenType())) {
             o.setSpecimenType(dto.getSpecimenType());
         }
-        if (StringUtils.hasText(dto.getSpecimenPart())) {
+        if (TextUtil.hasText(dto.getSpecimenPart())) {
             o.setSpecimenPart(dto.getSpecimenPart());
         }
         o.setStatus(PathologyStatusEnum.RECEIVED.getCode());
@@ -248,7 +246,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         boolean skipBlock = isFrozenOrCytology(o);
         if (PathologyStatusEnum.SAMPLED.is(target)) {
             if (!PathologyStatusEnum.RECEIVED.is(o.getStatus())) {
-                throw new BusinessException("取材前必须先接收标本（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, o.getStatus()) + "）");
+                throw new BusinessException("取材前必须先接收标本（当前：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
             }
             if (!skipBlock && countBlocks(o.getId(), 2, 4) == 0) {
                 throw new BusinessException("尚无任何已取材的蜡块，不能把主单推进到「已取材」——请先登记蜡块并完成取材");
@@ -257,7 +255,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
             o.setSamplingTime(LocalDateTime.now().withNano(0));
         } else if (PathologyStatusEnum.SLICED.is(target)) {
             if (!PathologyStatusEnum.SAMPLED.is(o.getStatus())) {
-                throw new BusinessException("制片前必须先完成取材（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, o.getStatus()) + "）");
+                throw new BusinessException("制片前必须先完成取材（当前：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
             }
             if (!skipBlock && countBlocks(o.getId(), 4, 4) == 0) {
                 throw new BusinessException("尚无任何已切片的蜡块，不能把主单推进到「已制片」");
@@ -377,12 +375,12 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         assertMutable(o);
         boolean frozen = isFrozenOrCytology(o);
         if (!frozen && !PathologyStatusEnum.SLICED.is(o.getStatus())) {
-            throw new BusinessException("非冰冻/细胞学单必须先完成制片才能初诊（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, o.getStatus()) + "）");
+            throw new BusinessException("非冰冻/细胞学单必须先完成制片才能初诊（当前：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
         }
         if (frozen && o.getStatus() < PathologyStatusEnum.RECEIVED.getCode()) {
             throw new BusinessException("标本尚未接收，不能出具冰冻诊断");
         }
-        if (Integer.valueOf(1).equals(o.getIsFrozen()) && !StringUtils.hasText(dto.getFrozenResult())) {
+        if (Integer.valueOf(1).equals(o.getIsFrozen()) && !TextUtil.hasText(dto.getFrozenResult())) {
             throw new BusinessException("冰冻单必须填写术中冰冻快速诊断结果");
         }
         o.setGrossFindings(dto.getGrossFindings());
@@ -409,7 +407,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         BizPathologyOrder o = requireOrder(dto.getOrderId());
         assertMutable(o);
         if (!PathologyStatusEnum.REPORTED.is(o.getStatus())) {
-            throw new BusinessException("仅「已初诊」的病理单可审核（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, o.getStatus()) + "）");
+            throw new BusinessException("仅「已初诊」的病理单可审核（当前：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
         }
         String who = operatorUser.getRealName();
         if (who != null && who.equals(o.getReportBy())) {
@@ -418,7 +416,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
         o.setStatus(PathologyStatusEnum.AUDITED.getCode());
         o.setAuditBy(who);
         o.setAuditTime(LocalDateTime.now().withNano(0));
-        if (StringUtils.hasText(dto.getAuditOpinion())) {
+        if (TextUtil.hasText(dto.getAuditOpinion())) {
             o.setRemark(TextUtil.cut(o.getRemark() == null ? "" : o.getRemark() + " | 审核意见：" + dto.getAuditOpinion(), 480));
         }
         bizPathologyOrderMapper.updateById(o);
@@ -438,7 +436,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
             throw new BusinessException("该病理报告已发布");
         }
         if (!PathologyStatusEnum.AUDITED.is(o.getStatus())) {
-            throw new BusinessException("报告发布前必须完成审核（当前：" + dictCacheService.getDicDataLabel(DICT_STATUS, o.getStatus()) + "）");
+            throw new BusinessException("报告发布前必须完成审核（当前：" + dictCacheService.getDicDataLabel(DictType.PATHOLOGY_STATUS, o.getStatus()) + "）");
         }
         o.setStatus(PathologyStatusEnum.PUBLISHED.getCode());
         o.setPublishBy(operatorUser.getRealName());
@@ -500,8 +498,8 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
     private String nextOrderNo(LocalDate date) {
         String day = date.format(DateFormats.COMPACT_DATE);
         long base = bizPathologyOrderMapper.selectCount(new LambdaQueryWrapper<BizPathologyOrder>()
-                .ge(BizPathologyOrder::getCreateTime, date.atStartOfDay())
-                .lt(BizPathologyOrder::getCreateTime, date.plusDays(1).atStartOfDay())) + 1;
+                .ge(BizPathologyOrder::getCreateTime, TimeUtil.dayStart(date))
+                .lt(BizPathologyOrder::getCreateTime, TimeUtil.dayStart(date.plusDays(1)))) + 1;
         for (int i = 0; i < 20; i++) {
             String no = "BL" + day + String.format("%03d", base + i);
             if (bizPathologyOrderMapper.selectCount(new LambdaQueryWrapper<BizPathologyOrder>()
@@ -527,7 +525,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
      * 判断某病理号是否存在（避免重复送检）
      */
     public boolean existsBySource(String sourceRecordNo) {
-        if (!StringUtils.hasText(sourceRecordNo)) {
+        if (!TextUtil.hasText(sourceRecordNo)) {
             return false;
         }
         return bizPathologyOrderMapper.selectCount(new LambdaQueryWrapper<BizPathologyOrder>()

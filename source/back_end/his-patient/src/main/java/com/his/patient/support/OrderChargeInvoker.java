@@ -3,12 +3,12 @@ package com.his.patient.support;
 import com.his.charge.dto.FeeBookDTO;
 import com.his.charge.entity.BizFeeRecord;
 import com.his.charge.service.FeeRecordService;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 /**
  * 医嘱执行记账调用器 —— 让"记账失败"不会把"医嘱执行"一起拖回滚。
@@ -53,7 +53,7 @@ public class OrderChargeInvoker {
             return null;
         }
         // 患者姓名是记账行的必填快照，缺了不是难看而是整条写入失败
-        if (dto.getPatientId() == null || !StringUtils.hasText(dto.getPatientName())) {
+        if (dto.getPatientId() == null || !TextUtil.hasText(dto.getPatientName())) {
             log.warn("住院医嘱记账缺少患者快照，本次不记账（admissionId={} 来源单 {}）",
                     dto.getEncounterId(), dto.getSourceNo());
             return null;

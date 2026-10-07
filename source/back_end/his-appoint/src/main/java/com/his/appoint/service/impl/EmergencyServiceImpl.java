@@ -24,6 +24,7 @@ import com.his.common.service.RedisSequenceService;
 import com.his.common.support.EmpTitleCode;
 import com.his.common.util.ShiftCoverUtil;
 import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.InpatientAdmitDTO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.mapper.BizPatientMapper;
@@ -43,7 +44,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.*;
 import java.util.*;
@@ -97,7 +97,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         LambdaQueryWrapper<BizEmergency> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(queryDTO.getTriageLevel() != null, BizEmergency::getTriageLevel, queryDTO.getTriageLevel())
                 .eq(queryDTO.getEmergencyStatus() != null, BizEmergency::getEmergencyStatus, queryDTO.getEmergencyStatus())
-                .and(StringUtils.hasText(queryDTO.getKeyword()), w -> w
+                .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
                         .like(BizEmergency::getPatientName, queryDTO.getKeyword())
                         .or().like(BizEmergency::getEmergencyNo, queryDTO.getKeyword())
                         .or().like(BizEmergency::getChiefComplaint, queryDTO.getKeyword()));
@@ -229,7 +229,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         }
         // dept_name 是 NOT NULL 无默认值的快照列：只传 deptId 的调用原先直接 500
         // （报「系统内部错误」，连原因都不透出）。科室名属于参照数据，服务端按 ID 补齐比信任客户端更稳。
-        if (!StringUtils.hasText(emergency.getDeptName())) {
+        if (!TextUtil.hasText(emergency.getDeptName())) {
             SysDepartment dept = sysDepartmentMapper.selectById(emergency.getDeptId());
             if (dept == null) {
                 throw new BusinessException("接诊科室不存在：" + emergency.getDeptId());
@@ -320,7 +320,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
             // 医生名同样是快照列：只传 doctorId 的调用（API 直连、别的前端）会留下
             // 「有医生 ID、没有医生名」的行，列表按医生名判定 → 明明是派好了单，
             // 界面却显示成「待派单」。参照数据一律服务端按 ID 补齐。
-            if (!StringUtils.hasText(emergency.getDoctorName())) {
+            if (!TextUtil.hasText(emergency.getDoctorName())) {
                 SysEmployee doctor = sysEmployeeMapper.selectById(emergency.getDoctorId());
                 if (doctor == null) {
                     throw new BusinessException("接诊医生不存在：" + emergency.getDoctorId());
@@ -338,7 +338,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
             return;
         }
         emergency.setAssignType(EmergencyAssignTypeEnum.POOL.getCode());
-        String reason = StringUtils.hasText(emergency.getUnassignedReason())
+        String reason = TextUtil.hasText(emergency.getUnassignedReason())
                 ? emergency.getUnassignedReason().trim()
                 : "当日该科室无在岗排班医生，入待派单池";
         // 入参层不加 @Size：超长由服务端截断，不能让"粘贴了一长段说明"变成 400
@@ -451,7 +451,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
     private void claimDoctor(BizEmergency emergency) {
         Long meEmp = UserUtils.getCurrentUser().getEmployeeId();
         if (emergency.getDoctorId() != null && meEmp != null && !emergency.getDoctorId().equals(meEmp)) {
-            String who = StringUtils.hasText(emergency.getDoctorName()) ? emergency.getDoctorName() : "当班医生";
+            String who = TextUtil.hasText(emergency.getDoctorName()) ? emergency.getDoctorName() : "当班医生";
             throw new BusinessException("该患者已由 " + who + " 接诊，请勿重复接诊");
         }
         if (emergency.getDoctorId() == null && meEmp != null) {
@@ -493,7 +493,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         inpatient.setAdmitWay(2); // 入院途径：2-急诊（病案首页口径）
         inpatient.setRegistId(appoint == null ? null : appoint.getId());
         inpatient.setRegistNo(appoint == null ? null : appoint.getRegistNo());
-        inpatient.setDiagnosis(StringUtils.hasText(admitDTO.getDiagnosis()) ? admitDTO.getDiagnosis() : emergency.getDiagnosis());
+        inpatient.setDiagnosis(TextUtil.hasText(admitDTO.getDiagnosis()) ? admitDTO.getDiagnosis() : emergency.getDiagnosis());
         Long admissionId = inpatientService.admit(inpatient);
 
         emergency.setEmergencyStatus(EmergencyStatusEnum.ADMITTED.getCode());
@@ -600,7 +600,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         EmergencyStatsVO stats = new EmergencyStatsVO();
         // 总急诊量（今日）
         LambdaQueryWrapper<BizEmergency> todayWrapper = new LambdaQueryWrapper<>();
-        todayWrapper.ge(BizEmergency::getCreateTime, LocalDateTime.now().toLocalDate().atStartOfDay());
+        todayWrapper.ge(BizEmergency::getCreateTime, TimeUtil.dayStart(LocalDateTime.now().toLocalDate()));
         stats.setTodayTotal(this.count(todayWrapper));
 
         // 候诊中
@@ -769,7 +769,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                         + "本人无法处理时请在急诊台改派，不要让它留在候诊队列里。"
                         + "本科室无人响应时，本待办会自动升级到当日总值班做全院协调。",
                 emergency.getEmergencyNo(), humanWait(waitMinutes), target, levelText,
-                StringUtils.hasText(emergency.getDeptName()) ? emergency.getDeptName() : "-");
+                TextUtil.hasText(emergency.getDeptName()) ? emergency.getDeptName() : "-");
 
         int sent = 0;
         for (Long receiverId : receivers) {
@@ -798,7 +798,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         String receiverName = "站内用户";
         try {
             SysEmployee emp = sysEmployeeMapper.selectById(receiverId);
-            if (emp != null && StringUtils.hasText(emp.getEmpName())) {
+            if (emp != null && TextUtil.hasText(emp.getEmpName())) {
                 receiverName = emp.getEmpName();
             }
         } catch (Exception ignored) {
@@ -847,7 +847,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
             SysConfig config = sysConfigMapper.selectOne(new LambdaQueryWrapper<SysConfig>()
                     .eq(SysConfig::getConfigKey, FALLBACK_RECEIVER_CONFIG_KEY)
                     .last("LIMIT 1"));
-            if (config == null || !StringUtils.hasText(config.getConfigValue())) {
+            if (config == null || !TextUtil.hasText(config.getConfigValue())) {
                 return null;
             }
             String raw = config.getConfigValue().trim();
@@ -858,7 +858,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                     log.warn("[急诊候诊] 兜底接收人 {} 没有关联员工档案，无法接收站内信", raw);
                     return null;
                 }
-                String name = StringUtils.hasText(user.getRealName()) ? user.getRealName() : user.getUserName();
+                String name = TextUtil.hasText(user.getRealName()) ? user.getRealName() : user.getUserName();
                 return new Receiver(user.getEmpId(), name);
             }
             return new Receiver(Long.parseLong(raw), "兜底接收人");
@@ -925,8 +925,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         vo.setTriageLevel(entity.getTriageLevel());
         vo.setTriageLevelText(EmergencyTriageRules.levelText(entity.getTriageLevel()));
         vo.setEmergencyStatus(entity.getEmergencyStatus());
-        vo.setEmergencyStatusText(EmergencyStatusEnum.fromCode(
-                entity.getEmergencyStatus() == null ? 0 : entity.getEmergencyStatus()).getLabel());
+        vo.setEmergencyStatusText(EmergencyStatusEnum.getText(entity.getEmergencyStatus()));
         vo.setDeptName(entity.getDeptName());
         vo.setChiefComplaint(entity.getChiefComplaint());
         vo.setDiagnosis(entity.getDiagnosis());
@@ -987,7 +986,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
     public Long submitHandover(EmergencyHandoverUpsertDTO submitDTO) {
         Long fromEmpId = requireCurrentEmployee();
         String fromEmpName = UserUtils.getCurrentUser().getRealName();
-        if (!StringUtils.hasText(fromEmpName)) {
+        if (!TextUtil.hasText(fromEmpName)) {
             SysEmployee me = sysEmployeeMapper.selectById(fromEmpId);
             fromEmpName = me == null ? String.valueOf(fromEmpId) : me.getEmpName();
         }
@@ -1031,7 +1030,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         handover.setShiftName(currentShiftName(deptId, fromEmpId));
         // 滚动区间：从我上一次交班那一刻到现在（首次取当日 00:00），与班结单同一口径
         LocalDateTime lastEnd = bizEmergencyHandoverMapper.selectLastPeriodEnd(fromEmpId, deptId);
-        handover.setPeriodBegin(lastEnd == null ? now.toLocalDate().atStartOfDay() : lastEnd);
+        handover.setPeriodBegin(lastEnd == null ? TimeUtil.dayStart(now.toLocalDate()) : lastEnd);
         handover.setPeriodEnd(now);
         handover.setRemark(cutText(submitDTO.getRemark(), 500));
         handover.setPendingCount(scope.size());
@@ -1105,7 +1104,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         row.setTakeDoctorName(taker.getEmpName());
         // 文本先截后存：入参层不设 @Size，超长写库会撞 Data too long → 交班失败还看不出原因
         row.setDisposition(cutText(item.getDisposition().trim(), 100));
-        row.setHandoverNote(StringUtils.hasText(item.getHandoverNote()) ? cutText(item.getHandoverNote().trim(), 300) : null);
+        row.setHandoverNote(TextUtil.hasText(item.getHandoverNote()) ? cutText(item.getHandoverNote().trim(), 300) : null);
         row.setWaitMinutes(waitMinutesOf(emergency));
         row.setObsHours(obsHoursOf(emergency));
         row.setOverdueLevel(overdueOf(emergency));
@@ -1163,7 +1162,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
      */
     private BizQueue findEmergencyQueueOf(BizEmergency emergency) {
         String erNo = emergency.getEmergencyNo();
-        if (!StringUtils.hasText(erNo) || erNo.length() < 5) {
+        if (!TextUtil.hasText(erNo) || erNo.length() < 5) {
             return null;
         }
         return bizQueueMapper.selectOne(new LambdaQueryWrapper<BizQueue>()
@@ -1189,11 +1188,11 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                         BizEmergencyVO computed = toVO(e);
                         String stay = computed.getWaitMinutes() != null ? "候诊 " + computed.getWaitMinutes() + " 分钟" : "";
                         if (computed.getObsHours() != null) {
-                            stay = (StringUtils.hasText(stay) ? stay + "，" : "") + "留观 " + computed.getObsHours() + " 小时";
+                            stay = (TextUtil.hasText(stay) ? stay + "，" : "") + "留观 " + computed.getObsHours() + " 小时";
                         }
                         return e.getPatientName() + "(" + e.getEmergencyNo() + ")："
                                 + submitted.get(e.getId()).getDisposition()
-                                + (StringUtils.hasText(stay) ? "；" + stay : "");
+                                + (TextUtil.hasText(stay) ? "；" + stay : "");
                     })
                     .collect(Collectors.joining("\n"));
             String content = handover.getFromEmpName() + " 在 " + handover.getDeptName()
@@ -1217,7 +1216,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
     public PageResult<EmergencyHandoverVO> handoverListPage(EmergencyHandoverQueryPageDTO queryDTO) {
         LambdaQueryWrapper<BizEmergencyHandover> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(queryDTO.getDeptId() != null, BizEmergencyHandover::getDeptId, queryDTO.getDeptId())
-                .and(StringUtils.hasText(queryDTO.getKeyword()), w -> w
+                .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
                         .like(BizEmergencyHandover::getHandoverNo, queryDTO.getKeyword())
                         .or().like(BizEmergencyHandover::getFromEmpName, queryDTO.getKeyword())
                         .or().like(BizEmergencyHandover::getTakeEmpName, queryDTO.getKeyword())
@@ -1253,8 +1252,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
     private EmergencyHandoverItemVO toItemVO(BizEmergencyHandoverItem item) {
         EmergencyHandoverItemVO vo = BeanUtil.copyProperties(item, EmergencyHandoverItemVO.class);
         vo.setTriageLevelText(EmergencyTriageRules.levelText(item.getTriageLevel()));
-        vo.setEmergencyStatusText(EmergencyStatusEnum.fromCode(
-                item.getEmergencyStatus() == null ? 0 : item.getEmergencyStatus()).getLabel());
+        vo.setEmergencyStatusText(EmergencyStatusEnum.getText(item.getEmergencyStatus()));
         vo.setOverdueText(EmergencyWaitPolicy.overdueText(item.getOverdueLevel() == null ? 0 : item.getOverdueLevel()));
         return vo;
     }
@@ -1347,7 +1345,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
 
     private String employeeNameOf(Long empId) {
         SysEmployee emp = sysEmployeeMapper.selectById(empId);
-        return emp != null && StringUtils.hasText(emp.getEmpName()) ? emp.getEmpName() : "站内用户";
+        return emp != null && TextUtil.hasText(emp.getEmpName()) ? emp.getEmpName() : "站内用户";
     }
 
     /**
@@ -1469,7 +1467,7 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
     }
 
     private String cutText(String text, int max) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return null;
         }
         String trimmed = text.trim();

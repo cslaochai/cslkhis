@@ -4,13 +4,20 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.*;
 import com.his.operation.enums.*;
+import com.his.operation.enums.AnesthesiaEffectEnum;
+import com.his.operation.enums.AnesthesiaMedPhaseEnum;
+import com.his.operation.enums.AnesthesiaMedRouteEnum;
+import com.his.operation.enums.PostopDispositionEnum;
+import com.his.operation.enums.VentilationModeEnum;
 import com.his.operation.mapper.*;
 import com.his.operation.service.AnesthesiaRecordService;
 import com.his.operation.service.AnesthesiaVisitService;
@@ -20,14 +27,12 @@ import com.his.operation.vo.*;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.service.BizPatientService;
 import com.his.system.entity.CurrentUser;
-import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -72,7 +77,6 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
 
     private final OperationChargeBiller operationChargeBiller;
 
-    private final DictCacheService dictCacheService;
 
     // 查询
 
@@ -193,7 +197,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         entity.setChargeStatus(AnesthesiaChargeStatusEnum.PENDING.getCode());
         // 「急诊超前麻醉」的状态靠 visit_id 为空来表达，不额外加一列：
         // 加列就会出现"visit_id 有值但 pending=1"这种自相矛盾的行
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
         bizAnesthesiaRecordMapper.insert(entity);
@@ -212,7 +216,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     public void update(AnesthesiaRecordUpdateUpsertDTO dto) {
         BizAnesthesiaRecord entity = mustEditable(dto == null ? null : dto.getRecordId());
         // B-条件必填：标记发生麻醉不良事件时才要求经过与处理，跨字段条件，DTO 注解无法表达，保留
-        if (Integer.valueOf(1).equals(dto.getAdverseEventFlag()) && !StringUtils.hasText(dto.getAdverseEventNote())) {
+        if (Integer.valueOf(1).equals(dto.getAdverseEventFlag()) && !TextUtil.hasText(dto.getAdverseEventNote())) {
             throw new BusinessException("已标记发生麻醉不良事件，必须填写经过与处理");
         }
         copyNotNullIgnoring(dto, entity);
@@ -295,11 +299,11 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         for (BizAnesthesiaMed m : list) {
             AnesthesiaMedVO vo = new AnesthesiaMedVO();
             BeanUtils.copyProperties(m, vo);
-            vo.setMedPhaseText(dictCacheService.getDicDataLabel("biz_operation_medPhaseEnum", m.getMedPhase()));
-            vo.setRouteText(dictCacheService.getDicDataLabel("biz_operation_medRouteEnum", m.getRoute()));
+            vo.setMedPhaseText(AnesthesiaMedPhaseEnum.getText(m.getMedPhase()));
+            vo.setRouteText(AnesthesiaMedRouteEnum.getText(m.getRoute()));
             vo.setDoseText(m.getDose() == null ? null
                     : m.getDose().stripTrailingZeros().toPlainString()
-                    + (StringUtils.hasText(m.getUnit()) ? " " + m.getUnit() : ""));
+                    + (TextUtil.hasText(m.getUnit()) ? " " + m.getUnit() : ""));
             vos.add(vo);
         }
         return vos;
@@ -332,7 +336,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
                     + "没有体征的麻醉记录单等于「这台手术期间没有人在看着」");
         }
         if (Integer.valueOf(1).equals(entity.getAdverseEventFlag())
-                && !StringUtils.hasText(entity.getAdverseEventNote())) {
+                && !TextUtil.hasText(entity.getAdverseEventNote())) {
             throw new BusinessException("已标记发生麻醉不良事件，请先补写经过与处理再提交");
         }
 
@@ -340,7 +344,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         entity.setSubmitDoctorId(operatorUser.getEmployeeId());
         entity.setSubmitDoctorName(operatorUser.getRealName());
         entity.setSubmitTime(TimeUtil.nowSeconds());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
 
@@ -377,7 +381,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         entity.setAuditDoctorId(operatorUser.getEmployeeId());
         entity.setAuditDoctorName(operatorUser.getRealName());
         entity.setAuditTime(TimeUtil.nowSeconds());
-        if (dto != null && StringUtils.hasText(dto.getRemark())) {
+        if (dto != null && TextUtil.hasText(dto.getRemark())) {
             entity.setRemark(dto.getRemark());
         }
         bizAnesthesiaRecordMapper.updateById(entity);
@@ -556,7 +560,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
             return null;
         }
         String name = bizOperationApplyMapper.selectEmployeeName(empId);
-        return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
+        return TextUtil.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
     private String nextRecordNo() {
@@ -571,12 +575,12 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         vo.setApplyAnesthesiaTypeText(OperationAnesthesiaMethodEnum.getText(vo.getApplyAnesthesiaType()));
         vo.setAsaText(AsaGradeEnum.getText(vo.getAsaGrade()));
         vo.setAirwayDeviceText(AirwayDeviceEnum.getText(vo.getAirwayDevice()));
-        vo.setVentilationText(dictCacheService.getDicDataLabel("biz_operation_ventilationModeEnum", vo.getVentilationMode()));
-        vo.setEffectText(dictCacheService.getDicDataLabel("biz_operation_anesthesiaEffectEnum", vo.getAnesthesiaEffect()));
-        vo.setDispositionText(dictCacheService.getDicDataLabel("biz_operation_postopDispositionEnum", vo.getPostopDisposition()));
+        vo.setVentilationText(VentilationModeEnum.getText(vo.getVentilationMode()));
+        vo.setEffectText(AnesthesiaEffectEnum.getText(vo.getAnesthesiaEffect()));
+        vo.setDispositionText(PostopDispositionEnum.getText(vo.getPostopDisposition()));
         vo.setChargeStatusText(AnesthesiaChargeStatusEnum.getText(vo.getChargeStatus()));
         vo.setVisitConclusionText(VisitConclusionEnum.getText(vo.getVisitConclusion()));
-        vo.setEmergencyText(dictCacheService.getDicDataLabel("biz_operation_operationEmergencyEnum", vo.getIsEmergency()));
+        vo.setEmergencyText(YesOrNoEnum.getText(vo.getIsEmergency()));
         vo.setOperationStatusText(OperationApplyStatusEnum.getText(vo.getOperationStatus()));
 
         Long anesthesiaMinutes = TimeUtil.elapsedMinutes(vo.getAnesthesiaStartTime(), vo.getAnesthesiaEndTime());

@@ -2,6 +2,7 @@ package com.his.emr.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
@@ -29,7 +30,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -100,7 +100,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
                 .eq(q.getCaseStatus() != null, BizInfectionCase::getCaseStatus, q.getCaseStatus())
                 .eq(q.getCaseSource() != null, BizInfectionCase::getCaseSource, q.getCaseSource())
                 .eq(q.getLeakFlag() != null, BizInfectionCase::getLeakFlag, q.getLeakFlag())
-                .and(StringUtils.hasText(q.getKeyword()), x -> x
+                .and(TextUtil.hasText(q.getKeyword()), x -> x
                         .like(BizInfectionCase::getCaseNo, TextUtil.trim(q.getKeyword()))
                         .or().like(BizInfectionCase::getPatientName, TextUtil.trim(q.getKeyword()))
                         .or().like(BizInfectionCase::getInfectionDiag, TextUtil.trim(q.getKeyword())))
@@ -218,7 +218,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
                 .eq(q.getMonitorType() != null, BizInfectionMonitor::getMonitorType, q.getMonitorType())
                 .eq(q.getStatus() != null, BizInfectionMonitor::getStatus, q.getStatus())
                 .eq(q.getInfectionFlag() != null, BizInfectionMonitor::getInfectionFlag, q.getInfectionFlag())
-                .and(StringUtils.hasText(q.getKeyword()), x -> x
+                .and(TextUtil.hasText(q.getKeyword()), x -> x
                         .like(BizInfectionMonitor::getMonitorNo, TextUtil.trim(q.getKeyword()))
                         .or().like(BizInfectionMonitor::getPatientName, TextUtil.trim(q.getKeyword())))
                 .orderByDesc(BizInfectionMonitor::getInsertDate)
@@ -304,7 +304,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         }
         m.setStatus(DeviceMonitorStatusEnum.REMOVED.getCode());
         m.setRemoveDate(dto.getRemoveDate());
-        if (StringUtils.hasText(dto.getRemark())) {
+        if (TextUtil.hasText(dto.getRemark())) {
             m.setRemark(TextUtil.trim(dto.getRemark()));
         }
         bizInfectionMonitorMapper.updateById(m);
@@ -530,11 +530,11 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     }
 
     private String monitorTypeText(Integer t) {
-        return dictCacheService.getDicDataLabel("biz_emr_infectionMonitorTypeEnum", t);
+        return dictCacheService.getDicDataLabel(DictType.INFECTION_MONITOR_TYPE, t);
     }
 
     private String infectionSiteText(String site) {
-        if (!StringUtils.hasText(site)) return null;
+        if (!TextUtil.hasText(site)) return null;
         return switch (site) {
             case "1" -> "下呼吸道";
             case "2" -> "泌尿道";

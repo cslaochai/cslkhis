@@ -28,7 +28,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -362,7 +361,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
      * 否则多次部分冲减各自四舍五入后，链上会留下几分钱永远冲不平。
      */
     private BizFeeRecord doReverse(BizFeeRecord orig, BigDecimal quantity, String reason) {
-        if (!StringUtils.hasText(reason)) {
+        if (!TextUtil.hasText(reason)) {
             throw new BusinessException("缺少红冲原因");
         }
         BigDecimal leftQty = remainingQuantity(orig);
@@ -490,7 +489,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
                 .eq(query.getSourceType() != null, BizFeeRecord::getSourceType, query.getSourceType())
                 .eq(query.getDeptId() != null, BizFeeRecord::getDeptId, query.getDeptId())
                 .eq(query.getBillId() != null, BizFeeRecord::getBillId, query.getBillId())
-                .and(StringUtils.hasText(keyword), w -> w.like(BizFeeRecord::getFeeNo, keyword)
+                .and(TextUtil.hasText(keyword), w -> w.like(BizFeeRecord::getFeeNo, keyword)
                         .or().like(BizFeeRecord::getItemName, keyword)
                         .or().like(BizFeeRecord::getPatientName, keyword)
                         .or().like(BizFeeRecord::getSourceNo, keyword))

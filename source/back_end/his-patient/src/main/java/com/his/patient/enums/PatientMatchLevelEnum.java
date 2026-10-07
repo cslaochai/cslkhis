@@ -3,7 +3,6 @@ package com.his.patient.enums;
 import com.his.common.util.TextUtil;
 import com.his.patient.entity.BizPatient;
 import lombok.Getter;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 
@@ -113,7 +112,7 @@ public enum PatientMatchLevelEnum {
             return MANUAL.getCode();
         }
         // 1 身份证号（去空格、忽略大小写；身份证尾位可能是 X）
-        if (StringUtils.hasText(a.getIdCard()) && StringUtils.hasText(b.getIdCard())
+        if (TextUtil.hasText(a.getIdCard()) && TextUtil.hasText(b.getIdCard())
                 && a.getIdCard().trim().equalsIgnoreCase(b.getIdCard().trim())) {
             return ID_CARD.getCode();
         }
@@ -123,7 +122,7 @@ public enum PatientMatchLevelEnum {
             return NAME_GENDER_BIRTH.getCode();
         }
         // 3 姓名 + 手机号
-        if (nameEquals(a, b) && StringUtils.hasText(a.getPhone()) && StringUtils.hasText(b.getPhone())
+        if (nameEquals(a, b) && TextUtil.hasText(a.getPhone()) && TextUtil.hasText(b.getPhone())
                 && a.getPhone().trim().equals(b.getPhone().trim())) {
             return NAME_PHONE.getCode();
         }
@@ -161,18 +160,18 @@ public enum PatientMatchLevelEnum {
         }
         PatientMatchLevelEnum item = fromCode(level);
         if (item == null) {
-            return StringUtils.hasText(p.getPatientName()) ? "NAME:" + TextUtil.trimToEmpty(p.getPatientName()) : null;
+            return TextUtil.hasText(p.getPatientName()) ? "NAME:" + TextUtil.trimToEmpty(p.getPatientName()) : null;
         }
         return switch (item) {
-            case ID_CARD -> StringUtils.hasText(p.getIdCard())
+            case ID_CARD -> TextUtil.hasText(p.getIdCard())
                     ? "IDC:" + TextUtil.trimToEmpty(p.getIdCard()).toUpperCase() : null;
-            case NAME_GENDER_BIRTH -> (StringUtils.hasText(p.getPatientName())
+            case NAME_GENDER_BIRTH -> (TextUtil.hasText(p.getPatientName())
                     && p.getGender() != null && p.getBirthDate() != null)
                     ? "NGB:" + TextUtil.trimToEmpty(p.getPatientName()) + "|" + p.getGender() + "|" + p.getBirthDate() : null;
-            case NAME_PHONE -> (StringUtils.hasText(p.getPatientName()) && StringUtils.hasText(p.getPhone()))
+            case NAME_PHONE -> (TextUtil.hasText(p.getPatientName()) && TextUtil.hasText(p.getPhone()))
                     ? "NP:" + TextUtil.trimToEmpty(p.getPatientName()) + "|" + TextUtil.trimToEmpty(p.getPhone()) : null;
             case MANUAL ->
-                    StringUtils.hasText(p.getPatientName()) ? "NAME:" + TextUtil.trimToEmpty(p.getPatientName()) : null;
+                    TextUtil.hasText(p.getPatientName()) ? "NAME:" + TextUtil.trimToEmpty(p.getPatientName()) : null;
         };
     }
 
@@ -190,7 +189,7 @@ public enum PatientMatchLevelEnum {
     }
 
     private static boolean nameEquals(BizPatient a, BizPatient b) {
-        return StringUtils.hasText(a.getPatientName()) && StringUtils.hasText(b.getPatientName())
+        return TextUtil.hasText(a.getPatientName()) && TextUtil.hasText(b.getPatientName())
                 && a.getPatientName().trim().equals(b.getPatientName().trim());
     }
 

@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.emr.dto.RxFlowActionDTO;
 import com.his.emr.dto.RxFlowQueryPageDTO;
 import com.his.emr.dto.RxFlowUpsertDTO;
@@ -93,7 +94,7 @@ public class RxFlowServiceImpl extends ServiceImpl<BizRxFlowMapper, BizRxFlow> i
         BizRxFlow flow = requireActive(dto.getFlowId());
         flow.setFlowStatus(3);
         flow.setFinishTime(LocalDateTime.now());
-        if (dto.getReason() != null && !dto.getReason().isBlank()) {
+        if (TextUtil.hasText(dto.getReason())) {
             flow.setRemark(flow.getRemark() == null ? dto.getReason() : flow.getRemark() + "；取消原因：" + dto.getReason());
         }
         bizRxFlowMapper.updateById(flow);

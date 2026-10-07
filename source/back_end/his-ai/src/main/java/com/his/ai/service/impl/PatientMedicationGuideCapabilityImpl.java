@@ -9,6 +9,7 @@ import com.his.ai.service.PatientMedicationGuideCapability;
 import com.his.ai.vo.PatientMedicationGuideVO;
 import com.his.ai.vo.PatientMedicationItemVO;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizPrescription;
 import com.his.emr.entity.BizPrescriptionDetail;
 import com.his.emr.mapper.BizPrescriptionDetailMapper;
@@ -19,7 +20,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -101,10 +101,10 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
         if (herb) {
             return "一剂";
         }
-        if (StringUtils.hasText(detail.getUsageDosage())) {
+        if (TextUtil.hasText(detail.getUsageDosage())) {
             return detail.getUsageDosage().trim();
         }
-        if (StringUtils.hasText(detail.getSingleDosage())) {
+        if (TextUtil.hasText(detail.getSingleDosage())) {
             return "每次 " + detail.getSingleDosage().trim();
         }
         return DOSAGE_UNKNOWN;
@@ -117,7 +117,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
         if (quantity == null) {
             return null;
         }
-        String unit = StringUtils.hasText(detail.getUnit()) ? detail.getUnit().trim() : "";
+        String unit = TextUtil.hasText(detail.getUnit()) ? detail.getUnit().trim() : "";
         // 中药按剂：处方主表的剂数才是"几副药"，明细 quantity 是每味的克数，不能混着显示
         return herb ? null : quantity.stripTrailingZeros().toPlainString() + unit;
     }
@@ -152,7 +152,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
         if (drug != null) {
             if (Integer.valueOf(1).equals(drug.getIsColdChain())) {
                 cautions.add("需要冷藏（2~8℃）：取药后请尽快放进冰箱冷藏室，不要冷冻，也不要贴在冰箱壁上。");
-            } else if (StringUtils.hasText(drug.getStorageCondition())) {
+            } else if (TextUtil.hasText(drug.getStorageCondition())) {
                 cautions.add("储存要求：" + drug.getStorageCondition().trim());
             }
             if (drug.getSpecialFlag() != null && drug.getSpecialFlag() > 0) {
@@ -174,12 +174,12 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
      * <b>查不到就原样返回</b> —— 猜错频次等于告诉患者多吃一倍。
      */
     private static String frequencyText(String frequency) {
-        if (!StringUtils.hasText(frequency)) {
+        if (!TextUtil.hasText(frequency)) {
             return null;
         }
         String raw = frequency.trim();
         String hit = DrugFrequencyEnum.getText(raw);
-        if (StringUtils.hasText(hit)) {
+        if (TextUtil.hasText(hit)) {
             return hit;
         }
         String text = raw.replace("一日", "每天").replace("每日", "每天");
@@ -264,7 +264,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
         item.setQuantityText(quantityText(detail, herb));
         item.setDosageText(dosageText(detail, herb));
         item.setFrequencyText(frequencyText(detail.getFrequency()));
-        item.setRouteText(StringUtils.hasText(detail.getRoute()) ? detail.getRoute().trim() : null);
+        item.setRouteText(TextUtil.hasText(detail.getRoute()) ? detail.getRoute().trim() : null);
         item.setCourseText(courseText(detail, herb, prescription));
         List<String> cautions = cautions(detail, drug);
         if (herb && Integer.valueOf(DECOCT_BY_HOSPITAL).equals(prescription.getDecoctFlag())) {
@@ -272,7 +272,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
             cautions.add(0, "这副药由医院代煎，拿到的是可以直接喝的袋装药液，不用再自己煮。");
         }
         item.setCautions(cautions);
-        item.setSpecText(drug == null || !StringUtils.hasText(drug.getUsageDosage())
+        item.setSpecText(drug == null || !TextUtil.hasText(drug.getUsageDosage())
                 ? null : drug.getUsageDosage().trim());
         return item;
     }
@@ -284,7 +284,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
                 return byId;
             }
         }
-        return StringUtils.hasText(detail.getDrugCode())
+        return TextUtil.hasText(detail.getDrugCode())
                 ? sysDrugGuideMapper.selectGuideByCode(detail.getDrugCode().trim()) : null;
     }
 }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.ClinicRoomQueryDTO;
 import com.his.system.dto.ClinicRoomUpsertDTO;
 import com.his.system.entity.SysClinicRoom;
@@ -12,7 +13,6 @@ import com.his.system.service.SysClinicRoomService;
 import com.his.system.vo.ClinicRoomVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -57,7 +57,7 @@ public class SysClinicRoomServiceImpl extends ServiceImpl<SysClinicRoomMapper, S
 
     private LambdaQueryWrapper<SysClinicRoom> buildWrapper(ClinicRoomQueryDTO queryDTO) {
         LambdaQueryWrapper<SysClinicRoom> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getName()), SysClinicRoom::getName, queryDTO.getName())
+        wrapper.like(TextUtil.hasText(queryDTO.getName()), SysClinicRoom::getName, queryDTO.getName())
                 .eq(queryDTO.getDeptId() != null, SysClinicRoom::getDeptId, queryDTO.getDeptId())
                 .eq(queryDTO.getStatus() != null, SysClinicRoom::getStatus, queryDTO.getStatus())
                 .orderByAsc(SysClinicRoom::getCode);

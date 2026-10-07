@@ -1,5 +1,6 @@
 package com.his.common.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -51,7 +52,7 @@ public final class EmpTitleCode {
      * 职称码是否为副高及以上（3xx/4xx）。null / 空 / 非卫技系列（5xx 及以上）一律 false。
      */
     public static boolean isSenior(String titleCode) {
-        if (titleCode == null || titleCode.isBlank()) {
+        if (!TextUtil.hasText(titleCode)) {
             return false;
         }
         return SENIOR.contains(titleCode.trim());

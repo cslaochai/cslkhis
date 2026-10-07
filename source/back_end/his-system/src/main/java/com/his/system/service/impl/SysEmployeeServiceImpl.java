@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.SensitiveMaskUtil;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.EmployeeQueryDTO;
 import com.his.system.dto.EmployeeUpsertDTO;
 import com.his.system.entity.SysEmployee;
@@ -17,7 +18,6 @@ import com.his.system.vo.EmployeeVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
@@ -33,7 +33,7 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
     @Override
     public PageResult<EmployeeVO> listPage(EmployeeQueryDTO queryDTO) {
         LambdaQueryWrapper<SysEmployee> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getEmpName()), SysEmployee::getEmpName, queryDTO.getEmpName())
+        wrapper.like(TextUtil.hasText(queryDTO.getEmpName()), SysEmployee::getEmpName, queryDTO.getEmpName())
                 .eq(queryDTO.getEmpType() != null, SysEmployee::getEmpType, queryDTO.getEmpType());
         applyStaffTypeFilter(wrapper, queryDTO);
         wrapper.orderByAsc(SysEmployee::getEmpCode);
@@ -52,7 +52,7 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
     @Override
     public List<EmployeeVO> selectList(EmployeeQueryDTO queryDTO) {
         LambdaQueryWrapper<SysEmployee> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getEmpName()), SysEmployee::getEmpName, queryDTO.getEmpName())
+        wrapper.like(TextUtil.hasText(queryDTO.getEmpName()), SysEmployee::getEmpName, queryDTO.getEmpName())
                 .eq(queryDTO.getEmpType() != null, SysEmployee::getEmpType, queryDTO.getEmpType());
         applyStaffTypeFilter(wrapper, queryDTO);
 
@@ -202,9 +202,9 @@ public class SysEmployeeServiceImpl extends ServiceImpl<SysEmployeeMapper, SysEm
             return null;
         }).filter(Objects::nonNull).distinct().toList());
         vo.setDeptNames(posts.stream().map(EmployeePostVO::getDeptName)
-                .filter(StringUtils::hasText).distinct().toList());
+                .filter(TextUtil::hasText).distinct().toList());
         vo.setRoleCodes(posts.stream().map(EmployeePostVO::getRoleCode)
-                .filter(StringUtils::hasText).distinct().toList());
+                .filter(TextUtil::hasText).distinct().toList());
         return vo;
     }
 }

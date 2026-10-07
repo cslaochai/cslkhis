@@ -173,7 +173,7 @@ public class OperLogInterceptor implements HandlerInterceptor {
     private static String resolveTitle(Object handler) {
         if (handler instanceof HandlerMethod hm) {
             Tag tag = AnnotationUtils.findAnnotation(hm.getBeanType(), Tag.class);
-            if (tag != null && tag.name() != null && !tag.name().isBlank()) {
+            if (tag != null && TextUtil.hasText(tag.name())) {
                 return TextUtil.cut(tag.name(), 100);
             }
             String simple = hm.getBeanType().getSimpleName();
@@ -192,7 +192,7 @@ public class OperLogInterceptor implements HandlerInterceptor {
     private static String readParam(HttpServletRequest request) {
         StringBuilder sb = new StringBuilder();
         String qs = request.getQueryString();
-        if (org.springframework.util.StringUtils.hasText(qs)) {
+        if (TextUtil.hasText(qs)) {
             sb.append(qs);
         }
         ContentCachingRequestWrapper wrapper = null;

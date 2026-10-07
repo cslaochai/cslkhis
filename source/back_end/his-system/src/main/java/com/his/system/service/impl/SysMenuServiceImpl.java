@@ -3,6 +3,7 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.MenuUpsertDTO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysMenu;
@@ -14,7 +15,6 @@ import com.his.system.vo.MenuVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -50,7 +50,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
             return Collections.emptyList();
         }
         String roleCode = user.getCurrentRole();
-        List<SysMenu> menus = StringUtils.hasText(roleCode)
+        List<SysMenu> menus = TextUtil.hasText(roleCode)
                 ? sysMenuMapper.selectMenusByEmployeeIdAndRole(user.getEmployeeId(), roleCode)
                 : sysMenuMapper.selectMenusByEmployeeId(user.getEmployeeId());
         List<MenuVO> voList = menus.stream().map(this::toVO).collect(Collectors.toList());

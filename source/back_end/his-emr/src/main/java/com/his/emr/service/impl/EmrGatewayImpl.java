@@ -6,6 +6,7 @@ import com.his.charge.support.ChargeDeptResolver;
 import com.his.charge.vo.MedicalRecordBriefVO;
 import com.his.charge.vo.PrescriptionBriefVO;
 import com.his.charge.vo.PrescriptionDetailBriefVO;
+import com.his.common.util.TextUtil;
 import com.his.emr.entity.*;
 import com.his.emr.mapper.*;
 import com.his.emr.service.SourcePaidAdvanceService;
@@ -106,7 +107,7 @@ public class EmrGatewayImpl implements EmrGateway {
 
     @Override
     public ChargeDeptResolver.DeptRef findDeptByPrescriptionNo(String prescriptionNo) {
-        if (isBlank(prescriptionNo)) {
+        if (!TextUtil.hasText(prescriptionNo)) {
             return null;
         }
         BizPrescription row = bizPrescriptionMapper.selectOne(new LambdaQueryWrapper<BizPrescription>()
@@ -117,7 +118,7 @@ public class EmrGatewayImpl implements EmrGateway {
 
     @Override
     public ChargeDeptResolver.DeptRef findDeptByInspectionApplyNo(String applyNo) {
-        if (isBlank(applyNo)) {
+        if (!TextUtil.hasText(applyNo)) {
             return null;
         }
         BizInspectionApply row = bizInspectionApplyMapper.selectOne(new LambdaQueryWrapper<BizInspectionApply>()
@@ -128,7 +129,7 @@ public class EmrGatewayImpl implements EmrGateway {
 
     @Override
     public ChargeDeptResolver.DeptRef findDeptByLaboratoryApplyNo(String applyNo) {
-        if (isBlank(applyNo)) {
+        if (!TextUtil.hasText(applyNo)) {
             return null;
         }
         BizLaboratoryApply row = bizLaboratoryApplyMapper.selectOne(new LambdaQueryWrapper<BizLaboratoryApply>()
@@ -199,9 +200,5 @@ public class EmrGatewayImpl implements EmrGateway {
 
     private MedicalRecordBriefVO first(List<BizMedicalRecord> list) {
         return list == null || list.isEmpty() ? null : toBrief(list.get(0));
-    }
-
-    private boolean isBlank(String s) {
-        return s == null || s.isBlank();
     }
 }

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.RoleMenuUpsertDTO;
 import com.his.system.dto.SysRoleQueryDTO;
 import com.his.system.dto.SysRoleQueryPageDTO;
@@ -22,7 +23,6 @@ import com.his.system.vo.RoleVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -45,7 +45,7 @@ public class SysRoleServiceImpl implements SysRoleService {
     @Override
     public PageResult<RoleVO> listPage(SysRoleQueryPageDTO queryDTO) {
         LambdaQueryWrapper<SysRole> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getRoleName()), SysRole::getRoleName, queryDTO.getRoleName())
+        wrapper.like(TextUtil.hasText(queryDTO.getRoleName()), SysRole::getRoleName, queryDTO.getRoleName())
                 .eq(queryDTO.getStatus() != null, SysRole::getStatus, queryDTO.getStatus())
                 .orderByAsc(SysRole::getSortOrder);
         Page<SysRole> page = sysRoleMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()), wrapper);
@@ -60,7 +60,7 @@ public class SysRoleServiceImpl implements SysRoleService {
     @Override
     public List<RoleSelectListVO> selectList(SysRoleQueryDTO queryDTO) {
         LambdaQueryWrapper<SysRole> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.hasText(queryDTO.getRoleName()), SysRole::getRoleName, queryDTO.getRoleName())
+        wrapper.like(TextUtil.hasText(queryDTO.getRoleName()), SysRole::getRoleName, queryDTO.getRoleName())
                 .eq(queryDTO.getStatus() != null, SysRole::getStatus, queryDTO.getStatus())
                 .orderByAsc(SysRole::getSortOrder);
         List<SysRole> roles = sysRoleMapper.selectList(wrapper);

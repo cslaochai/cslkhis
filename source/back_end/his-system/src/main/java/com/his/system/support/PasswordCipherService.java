@@ -133,7 +133,7 @@ public class PasswordCipherService {
      * @return 明文口令
      */
     public String decrypt(String cipherHex) {
-        if (cipherHex == null || cipherHex.isBlank()) {
+        if (!TextUtil.hasText(cipherHex)) {
             throw new BusinessException("登录密码不能为空");
         }
         String cipher = cipherHex.trim();

@@ -23,7 +23,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -114,7 +113,7 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
             if (issues.size() >= MAX_LLM_ISSUES) {
                 break;
             }
-            if (!StringUtils.hasText(raw.getErrorDetail())) {
+            if (!TextUtil.hasText(raw.getErrorDetail())) {
                 continue;
             }
             EmrQcIssueVO issue = new EmrQcIssueVO();
@@ -134,7 +133,7 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
     // 硬规则层：必填项
 
     private static String normalizeDimension(String dimension) {
-        if (!StringUtils.hasText(dimension)) {
+        if (!TextUtil.hasText(dimension)) {
             return "completeness";
         }
         String value = dimension.trim().toLowerCase();
@@ -256,12 +255,12 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
             issue.setDimension("completeness");
             issue.setSeverity(rule.severity());
             issue.setFieldName(rule.fieldName());
-            issue.setErrorDetail(StringUtils.hasText(value)
+            issue.setErrorDetail(TextUtil.hasText(value)
                     ? String.format("「%s」仅有占位内容，未记录实质信息", rule.fieldName())
                     : String.format("「%s」未填写", rule.fieldName()));
             issue.setSuggestion(String.format("请补充%s的具体内容，避免使用「无」「正常」等笼统表述",
                     rule.fieldName()));
-            issue.setEvidence(StringUtils.hasText(value)
+            issue.setEvidence(TextUtil.hasText(value)
                     ? TextUtil.cut(value.replaceAll("\\s+", " ").trim(), 40, "")
                     : "（空）");
             issues.add(issue);

@@ -2,7 +2,7 @@ package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.base.Constants;
+import com.his.common.base.BizCodeConstants;
 import com.his.common.base.PageResult;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
@@ -30,7 +30,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -122,7 +121,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
             entity.setStatus(dto.getStatus() == null ? 1 : dto.getStatus());
         } else {
             entity = requireItem(dto.getId());
-            if (StringUtils.hasText(code) && !Objects.equals(code, entity.getItemCode())) {
+            if (TextUtil.hasText(code) && !Objects.equals(code, entity.getItemCode())) {
                 if (bizDaySurgeryItemMapper.countByCode(code, entity.getId()) > 0) {
                     throw new BusinessException("术式编码已存在：" + code);
                 }
@@ -569,7 +568,7 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
     }
 
     private String nextApplyNo() {
-        return Constants.DAY_SURGERY_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
+        return BizCodeConstants.DAY_SURGERY_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
                 + String.format("%04d", redisSequenceService.next("DAY_SURGERY"));
     }
 }

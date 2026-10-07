@@ -28,6 +28,7 @@ import com.his.common.service.RedisSequenceService;
 import com.his.common.support.TcmGramUnits;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.emr.api.ApplyExecStatusGateway;
 import com.his.emr.dto.*;
@@ -59,7 +60,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
@@ -208,7 +208,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 .le(queryDTO.getVisitDateEnd() != null, BizMedicalRecord::getVisitDate, queryDTO.getVisitDateEnd())
                 .eq(queryDTO.getRecordStatus() != null, BizMedicalRecord::getRecordStatus, queryDTO.getRecordStatus())
                 .eq(queryDTO.getReviewStatus() != null, BizMedicalRecord::getReviewStatus, queryDTO.getReviewStatus())
-                .and(StringUtils.hasText(queryDTO.getKeyword()), w -> w
+                .and(TextUtil.hasText(queryDTO.getKeyword()), w -> w
                         .like(BizMedicalRecord::getPatientName, queryDTO.getKeyword())
                         .or().like(BizMedicalRecord::getRecordNo, queryDTO.getKeyword())
                         .or().like(BizMedicalRecord::getRegistNo, queryDTO.getKeyword()))
@@ -708,8 +708,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         apply.setLaboratoryDeptId(item.getDeptId());
         apply.setPrice(item.getPrice() == null ? BigDecimal.ZERO : item.getPrice());
         // 标本类型：字典优先（同一个项目固定同一种标本），医生传了才用医生的，都没有给「血液」
-        apply.setSpecimenType(StringUtils.hasText(item.getSpecimenType()) ? item.getSpecimenType()
-                : (StringUtils.hasText(dto.getSpecimenType()) ? dto.getSpecimenType() : "血液"));
+        apply.setSpecimenType(TextUtil.hasText(item.getSpecimenType()) ? item.getSpecimenType()
+                : (TextUtil.hasText(dto.getSpecimenType()) ? dto.getSpecimenType() : "血液"));
         apply.setLaboratoryPurpose(dto.getLaboratoryPurpose());
         apply.setClinicalDiagnosis(dto.getClinicalDiagnosis());
         apply.setIsFasting(dto.getIsFasting() == null ? 0 : dto.getIsFasting());
@@ -1007,7 +1007,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             text = "待缴费";
         } else if (Objects.equals(ApplyStatusEnum.CANCELLED.getCode(), apply.getApplyStatus())) {
             text = "已取消";
-        } else if (exec != null && StringUtils.hasText(exec.getExecStatusText())) {
+        } else if (exec != null && TextUtil.hasText(exec.getExecStatusText())) {
             text = exec.getExecStatusText();
         } else {
             text = "已缴费待执行";
@@ -1035,7 +1035,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             text = "待缴费";
         } else if (Objects.equals(ApplyStatusEnum.CANCELLED.getCode(), apply.getApplyStatus())) {
             text = "已取消";
-        } else if (exec != null && StringUtils.hasText(exec.getExecStatusText())) {
+        } else if (exec != null && TextUtil.hasText(exec.getExecStatusText())) {
             text = exec.getExecStatusText();
         } else {
             text = "已缴费待执行";
@@ -1271,8 +1271,8 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             apply.setLaboratoryItemName(item.getItemName());
             apply.setLaboratoryDeptId(item.getDeptId());
             apply.setPrice(item.getPrice() == null ? BigDecimal.ZERO : item.getPrice());
-            apply.setSpecimenType(StringUtils.hasText(dto.getSpecimenType()) ? dto.getSpecimenType()
-                    : (StringUtils.hasText(item.getSpecimenType()) ? item.getSpecimenType() : "血液"));
+            apply.setSpecimenType(TextUtil.hasText(dto.getSpecimenType()) ? dto.getSpecimenType()
+                    : (TextUtil.hasText(item.getSpecimenType()) ? item.getSpecimenType() : "血液"));
             apply.setLaboratoryPurpose(dto.getPurpose());
             apply.setClinicalDiagnosis(dto.getClinicalDiagnosis());
             apply.setIsFasting(dto.getIsFasting() == null ? 0 : dto.getIsFasting());

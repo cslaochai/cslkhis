@@ -2,6 +2,7 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.Icd10PredictDTO;
 import com.his.system.entity.SysIcd10;
 import com.his.system.mapper.SysIcd10Mapper;
@@ -12,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -52,7 +52,7 @@ public class Icd10ServiceImpl extends ServiceImpl<SysIcd10Mapper, SysIcd10> impl
     @Override
     public List<SysIcd10> search(String keyword, int limit) {
         int size = limit <= 0 ? 20 : limit;
-        if (!StringUtils.hasText(keyword)) {
+        if (!TextUtil.hasText(keyword)) {
             // 空关键字：按维护顺序给前若干条（与历史行为一致，不按字典序乱跳）
             List<SysIcd10> all = activeCodes();
             return all.size() > size ? new ArrayList<>(all.subList(0, size)) : all;
@@ -218,7 +218,7 @@ public class Icd10ServiceImpl extends ServiceImpl<SysIcd10Mapper, SysIcd10> impl
      * 计算ICD编码与文本的匹配分数
      */
     private int calculateMatchScore(String text, SysIcd10 icd) {
-        if (!StringUtils.hasText(icd.getIcdName())) {
+        if (!TextUtil.hasText(icd.getIcdName())) {
             return 0;
         }
         int score = 0;
@@ -237,7 +237,7 @@ public class Icd10ServiceImpl extends ServiceImpl<SysIcd10Mapper, SysIcd10> impl
             }
         }
 
-        if (StringUtils.hasText(icdCategory) && textLower.contains(icdCategory)) {
+        if (TextUtil.hasText(icdCategory) && textLower.contains(icdCategory)) {
             score += 20;
         }
 

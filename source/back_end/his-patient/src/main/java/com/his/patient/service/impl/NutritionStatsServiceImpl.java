@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.NutritionStatsGenerateDTO;
 import com.his.patient.dto.NutritionStatsQueryPageDTO;
@@ -24,7 +25,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -268,17 +268,17 @@ public class NutritionStatsServiceImpl extends ServiceImpl<BizNutritionStatsMapp
     // 工具
 
     private LocalDateTime from(YearMonth ym) {
-        return ym.atDay(1).atStartOfDay();
+        return TimeUtil.dayStart(ym.atDay(1));
     }
 
     private LocalDateTime to(YearMonth ym) {
-        return ym.atEndOfMonth().atTime(23, 59, 59);
+        return TimeUtil.dayEnd(ym.atEndOfMonth());
     }
 
     private YearMonth requireMonth(String statMonth) {
         // ②非web入口：两个入口共用的「取值+解析」守卫。POST 侧 statMonth 必填已收口到 DTO @NotBlank + @Valid，
         // GET previewStats 用的是 @RequestParam（没有 DTO 字段可挂注解），故这里保留一句兜底
-        if (!StringUtils.hasText(statMonth)) {
+        if (!TextUtil.hasText(statMonth)) {
             throw new BusinessException("统计月份不能为空");
         }
         try {
@@ -300,7 +300,7 @@ public class NutritionStatsServiceImpl extends ServiceImpl<BizNutritionStatsMapp
     }
 
     private String csv(String v) {
-        if (!StringUtils.hasText(v)) {
+        if (!TextUtil.hasText(v)) {
             return "";
         }
         String s = v.trim();

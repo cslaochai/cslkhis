@@ -2,9 +2,9 @@ package com.his.appoint.support;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -98,7 +98,7 @@ public final class EmergencyTriageRules {
      * 两种都认比要求改前端更现实。
      */
     public static VitalSigns parse(String raw) {
-        if (!StringUtils.hasText(raw)) {
+        if (!TextUtil.hasText(raw)) {
             return new VitalSigns(null, null, null, null, null, null, null, null);
         }
         String text = raw.trim();
@@ -284,7 +284,7 @@ public final class EmergencyTriageRules {
      */
     public static List<RedFlag> evaluateChiefComplaint(String chiefComplaint) {
         List<RedFlag> flags = new ArrayList<>();
-        if (!StringUtils.hasText(chiefComplaint)) {
+        if (!TextUtil.hasText(chiefComplaint)) {
             return flags;
         }
         String text = chiefComplaint.replaceAll("\\s+", "");
@@ -318,7 +318,7 @@ public final class EmergencyTriageRules {
      * 依据主诉文本识别绿色通道，识别不到返回无
      */
     public static String detectGreenChannel(String chiefComplaint) {
-        if (!StringUtils.hasText(chiefComplaint)) {
+        if (!TextUtil.hasText(chiefComplaint)) {
             return "无";
         }
         String text = chiefComplaint.replaceAll("\\s+", "");
@@ -336,7 +336,7 @@ public final class EmergencyTriageRules {
      * 该绿色通道对应的启动动作
      */
     public static List<String> channelActions(String channel) {
-        if (!StringUtils.hasText(channel)) {
+        if (!TextUtil.hasText(channel)) {
             return List.of();
         }
         for (ChannelRule rule : CHANNEL_RULES) {
@@ -351,7 +351,7 @@ public final class EmergencyTriageRules {
      * 是否为合法的绿色通道取值（用于校验模型输出）
      */
     public static boolean isValidChannel(String channel) {
-        if (!StringUtils.hasText(channel)) {
+        if (!TextUtil.hasText(channel)) {
             return false;
         }
         if ("无".equals(channel.trim())) {

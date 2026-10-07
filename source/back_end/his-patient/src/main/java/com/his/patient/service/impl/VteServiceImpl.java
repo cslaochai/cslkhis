@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
@@ -23,7 +25,6 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -201,7 +202,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         boolean notDone = status == VtePreventStatusEnum.CONTRAINDICATION.getCode() || status == VtePreventStatusEnum.REFUSED.getCode();
         String reason = dto.getReason() == null ? null : dto.getReason().trim();
         // 保留（类别①条件必填）：reason 只在「禁忌未用 / 患者拒绝」时必填，@NotBlank 会把合法的已落实登记挡成 400
-        if (notDone && !StringUtils.hasText(reason)) {
+        if (notDone && !TextUtil.hasText(reason)) {
             throw new BusinessException("禁忌未用/患者拒绝必须填写原因");
         }
         if (reason != null && reason.length() > 500) {
@@ -256,7 +257,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         row.setRiskLevel(riskLevel);
         row.setMeasureCode(measure.code());
         row.setMeasureType(measure.type());
-        row.setMeasureName(StringUtils.hasText(dto.getMeasureName()) ? dto.getMeasureName().trim() : measure.name());
+        row.setMeasureName(TextUtil.hasText(dto.getMeasureName()) ? dto.getMeasureName().trim() : measure.name());
         row.setPlanDate(dto.getPlanDate() == null ? LocalDate.now() : dto.getPlanDate());
         row.setExecuteStatus(status);
         row.setExecuteTime(executeTime);
@@ -394,8 +395,8 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
     @Override
     public VteStatsVO previewStats(String statMonth) {
         YearMonth ym = requireMonth(statMonth);
-        BizVteStats row = compute(statMonth, ym.atDay(1).atStartOfDay(),
-                ym.atEndOfMonth().atTime(23, 59, 59), StatsScopeEnum.HOSPITAL.getCode(), null, null);
+        BizVteStats row = compute(statMonth, TimeUtil.dayStart(ym.atDay(1)),
+                TimeUtil.dayEnd(ym.atEndOfMonth()), StatsScopeEnum.HOSPITAL.getCode(), null, null);
         VteStatsVO vo = toStatsVO(row);
         vo.setRemark("实时试算（未落库）：与已生成快照可能存在差异，报数请以快照为准");
         return vo;
@@ -409,8 +410,8 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
             throw new BusinessException("当前用户信息不存在");
         }
         YearMonth ym = requireMonth(dto.getStatMonth());
-        LocalDateTime from = ym.atDay(1).atStartOfDay();
-        LocalDateTime to = ym.atEndOfMonth().atTime(23, 59, 59);
+        LocalDateTime from = TimeUtil.dayStart(ym.atDay(1));
+        LocalDateTime to = TimeUtil.dayEnd(ym.atEndOfMonth());
         String operator = operatorUser.getRealName();
 
         List<VteStatsVO> result = new ArrayList<>();
@@ -437,7 +438,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
     @Override
     public PageResult<VteStatsVO> statsListPage(VteStatsQueryPageDTO query) {
         LambdaQueryWrapper<BizVteStats> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StringUtils.hasText(query.getStatMonth()), BizVteStats::getStatMonth, query.getStatMonth())
+        wrapper.eq(TextUtil.hasText(query.getStatMonth()), BizVteStats::getStatMonth, query.getStatMonth())
                 .eq(query.getScopeType() != null, BizVteStats::getScopeType, query.getScopeType())
                 .orderByDesc(BizVteStats::getStatMonth)
                 .orderByAsc(BizVteStats::getScopeType)
@@ -454,7 +455,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
     @Override
     public String statsExportCsv(VteStatsQueryPageDTO query) {
         LambdaQueryWrapper<BizVteStats> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(StringUtils.hasText(query.getStatMonth()), BizVteStats::getStatMonth, query.getStatMonth())
+        wrapper.eq(TextUtil.hasText(query.getStatMonth()), BizVteStats::getStatMonth, query.getStatMonth())
                 .eq(query.getScopeType() != null, BizVteStats::getScopeType, query.getScopeType())
                 .orderByDesc(BizVteStats::getStatMonth)
                 .orderByAsc(BizVteStats::getScopeType)
@@ -531,7 +532,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
                 .last("LIMIT 1"));
         row.setGenerateBy(operator);
         row.setGenerateTime(TimeUtil.nowSeconds());
-        row.setRemark(StringUtils.hasText(remark) ? remark.trim() : null);
+        row.setRemark(TextUtil.hasText(remark) ? remark.trim() : null);
         if (exist == null) {
             bizVteStatsMapper.insert(row);
             return row;
@@ -546,7 +547,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
     private YearMonth requireMonth(String statMonth) {
         // 保留（类别②）：这个工具同时服务实时试算入口（入参是普通 String，GET @RequestParam 绑定），
         // 空串在那条路径上仍然要拦
-        if (!StringUtils.hasText(statMonth)) {
+        if (!TextUtil.hasText(statMonth)) {
             throw new BusinessException("统计月份不能为空");
         }
         try {
@@ -617,7 +618,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         vo.setAssessmentId(r.getAssessmentId());
         vo.setCapriniScore(r.getCapriniScore());
         vo.setRiskLevel(r.getRiskLevel());
-        vo.setRiskLevelText(r.getRiskLevel() == null ? "未评" : dictCacheService.getDicDataLabel("biz_patient_vteRiskLevelEnum", r.getRiskLevel()));
+        vo.setRiskLevelText(r.getRiskLevel() == null ? "未评" : dictCacheService.getDicDataLabel(DictType.ASSESS_RISK_LEVEL, r.getRiskLevel()));
         vo.setMeasureCode(r.getMeasureCode());
         vo.setMeasureCodeText(VteRules.measureCodeText(r.getMeasureCode()));
         vo.setMeasureType(r.getMeasureType());
@@ -649,10 +650,10 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         vo.setOnsetTypeText(VteOnsetEnum.getText(r.getOnsetType()));
         vo.setDiagnoseDate(r.getDiagnoseDate());
         vo.setDiagnosisBasis(r.getDiagnosisBasis());
-        vo.setDiagnosisBasisText(dictCacheService.getDicDataLabel("biz_patient_vteDiagnosisBasisEnum", r.getDiagnosisBasis()));
+        vo.setDiagnosisBasisText(dictCacheService.getDicDataLabel(DictType.VTE_BASIS, r.getDiagnosisBasis()));
         vo.setThrombusSite(r.getThrombusSite());
         vo.setOutcome(r.getOutcome());
-        vo.setOutcomeText(dictCacheService.getDicDataLabel("biz_patient_vteOutcomeEnum", r.getOutcome()));
+        vo.setOutcomeText(dictCacheService.getDicDataLabel(DictType.VTE_OUTCOME, r.getOutcome()));
         vo.setDrugPreventFlag(r.getDrugPreventFlag());
         vo.setReporterName(r.getReporterName());
         vo.setReportTime(r.getReportTime());

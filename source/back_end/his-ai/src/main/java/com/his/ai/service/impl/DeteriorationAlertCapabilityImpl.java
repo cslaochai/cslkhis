@@ -3,6 +3,7 @@ package com.his.ai.service.impl;
 import com.his.ai.constant.AiCapabilityKeys;
 import com.his.ai.dto.AiCallDTO;
 import com.his.ai.dto.DeteriorationLlmOutputDTO;
+import com.his.ai.enums.DeteriorationAlertLevelEnum;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.DeteriorationAlertCapability;
 import com.his.ai.support.DeteriorationScoreRules;
@@ -13,11 +14,9 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.patient.service.InpatientNursingService;
 import com.his.patient.vo.NursingVitalFactVO;
-import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -46,7 +45,6 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
     private static final int ADVICE_MAX = 200;
     private final AiExecutionService aiExecutionService;
     private final InpatientNursingService inpatientNursingService;
-    private final DictCacheService dictCacheService;
 
     @Override
     public List<DeteriorationScanVO> wardScan(Long wardId) {
@@ -64,7 +62,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
             row.setTotalScore(score.getTotalScore());
             int level = DeteriorationScoreRules.alertLevel(score.getTotalScore());
             row.setAlertLevel(level);
-            row.setAlertText(dictCacheService.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
+            row.setAlertText(DeteriorationAlertLevelEnum.getText(level));
             result.add(row);
         }
         // 预警级降序、同级按分数降序 —— 值班护士从最差的看起
@@ -89,7 +87,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
         vo.setTriggeredFacts(new ArrayList<>());
         if (vital == null) {
             vo.setTotalScore(DeteriorationScoreRules.NO_DATA_SCORE);
-            vo.setAlertLevel(0);
+            vo.setAlertLevel(DeteriorationAlertLevelEnum.NOT_TRIGGERED.getCode());
             vo.setAlertText("近24小时无体征数据，无法评分");
             return vo;
         }
@@ -102,16 +100,16 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
         vo.setTotalScore(score.getTotalScore());
         int level = DeteriorationScoreRules.alertLevel(score.getTotalScore());
         vo.setAlertLevel(level);
-        vo.setAlertText(dictCacheService.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
+        vo.setAlertText(DeteriorationAlertLevelEnum.getText(level));
         vo.setTriggeredFacts(triggeredFacts(vital));
-        if (level == 0) {
+        if (level == DeteriorationAlertLevelEnum.NOT_TRIGGERED.getCode()) {
             // 未达预警阈值不调模型：模型只服务预警情形（纪律 2 / 纪律 9 的反向裁剪）
             vo.setAdvice(null);
             return vo;
         }
 
         Optional<DeteriorationLlmOutputDTO> output = callModel(vital, score, level);
-        if (output.isEmpty() || !StringUtils.hasText(output.get().getAdvice())) {
+        if (output.isEmpty() || !TextUtil.hasText(output.get().getAdvice())) {
             vo.setDegraded(true);
             vo.setDegradeReason(aiExecutionService.degradeReasonOf(AiCapabilityKeys.DETERIORATION_ALERT));
             return vo;
@@ -131,7 +129,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
         variables.setVitalText(vitalText(vital));
         variables.setTotalScore(String.valueOf(score.getTotalScore()));
         variables.setAlertLevel(String.valueOf(level));
-        variables.setAlertText(dictCacheService.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
+        variables.setAlertText(DeteriorationAlertLevelEnum.getText(level));
         variables.setItemsText(itemsText(vital));
 
         AiCallDTO call = AiCallDTO.builder()

@@ -1,8 +1,8 @@
 package com.his.ai.support;
 
+import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -55,7 +55,7 @@ public final class OperationSqlGuard {
      * @throws IllegalArgumentException 未通过闸门，message 为面向用户的原因
      */
     public static String enforce(String rawSql) {
-        if (!StringUtils.hasText(rawSql)) {
+        if (!TextUtil.hasText(rawSql)) {
             throw new IllegalArgumentException("没有生成查询语句");
         }
         String sql = rawSql.trim();

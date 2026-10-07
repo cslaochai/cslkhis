@@ -26,7 +26,6 @@ import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -209,10 +208,10 @@ public class MiniappServiceMessageServiceImpl extends ServiceImpl<MiniappService
                 ticket.setStatus(ServiceTicketStatus.CLOSED);
                 ticket.setCloseBy(operator);
                 ticket.setCloseTime(LocalDateTime.now());
-                ticket.setCloseReason(StringUtils.hasText(reason) ? reason : "患者撤单");
+                ticket.setCloseReason(TextUtil.hasText(reason) ? reason : "患者撤单");
                 miniappServiceMessageMapper.updateById(ticket);
                 writeLog(ticket, ServiceTicketStatus.ACT_CANCEL,
-                        StringUtils.hasText(reason) ? reason : "患者撤单", 1, operator, ticket.getPatientName());
+                        TextUtil.hasText(reason) ? reason : "患者撤单", 1, operator, ticket.getPatientName());
             }
             case "confirm" -> {
                 if (!ServiceTicketStatus.canConfirm(ticket.getStatus())) {
@@ -235,7 +234,7 @@ public class MiniappServiceMessageServiceImpl extends ServiceImpl<MiniappService
                 ticket.setCloseReason(null);
                 miniappServiceMessageMapper.updateById(ticket);
                 writeLog(ticket, ServiceTicketStatus.ACT_REOPEN,
-                        StringUtils.hasText(reason) ? reason : "患者认为问题未解决，工单重开", 1, operator, ticket.getPatientName());
+                        TextUtil.hasText(reason) ? reason : "患者认为问题未解决，工单重开", 1, operator, ticket.getPatientName());
             }
             default -> throw new BusinessException("不支持的动作：" + action);
         }
@@ -271,7 +270,7 @@ public class MiniappServiceMessageServiceImpl extends ServiceImpl<MiniappService
         String prefix = NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE);
         String max = miniappServiceMessageMapper.maxMessageNo(prefix);
         int seq = 1;
-        if (StringUtils.hasText(max) && max.length() > prefix.length()) {
+        if (TextUtil.hasText(max) && max.length() > prefix.length()) {
             try {
                 seq = Integer.parseInt(max.substring(prefix.length())) + 1;
             } catch (NumberFormatException ex) {
@@ -289,7 +288,7 @@ public class MiniappServiceMessageServiceImpl extends ServiceImpl<MiniappService
             PatientDetailVO profile = miniappDirectoryService.patientProfile(patientId);
             if (profile != null) {
                 name = profile.getPatientName();
-                if (!StringUtils.hasText(phone)) {
+                if (!TextUtil.hasText(phone)) {
                     phone = profile.getPhone();
                 }
             }

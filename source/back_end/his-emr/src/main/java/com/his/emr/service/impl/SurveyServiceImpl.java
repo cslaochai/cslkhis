@@ -3,11 +3,12 @@ package com.his.emr.service.impl;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.his.common.base.Constants;
+import com.his.common.base.BizCodeConstants;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
 import com.his.common.util.*;
+import com.his.common.util.TextUtil;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
 import com.his.emr.enums.*;
@@ -25,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -155,7 +155,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
         int days = expireDays == null || expireDays <= 0 ? BizSurveyDispatch.DEFAULT_EXPIRE_DAYS : expireDays;
 
         BizSurveyDispatch entity = new BizSurveyDispatch();
-        entity.setDispatchNo(nextNo(Constants.SURVEY_DISPATCH_NO_PREFIX, Constants.SURVEY_DISPATCH_NO_KEY_PREFIX));
+        entity.setDispatchNo(nextNo(BizCodeConstants.SURVEY_DISPATCH_NO_PREFIX, BizCodeConstants.SURVEY_DISPATCH_NO_KEY_PREFIX));
         entity.setTemplateId(template.getId());
         entity.setTemplateName(TextUtil.cut(template.getTemplateName(), 128));
         entity.setScene(template.getScene());
@@ -254,7 +254,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
         boolean isNew = answer == null;
         if (isNew) {
             answer = new BizSurveyAnswer();
-            answer.setAnswerNo(nextNo(Constants.SURVEY_ANSWER_NO_PREFIX, Constants.SURVEY_ANSWER_NO_KEY_PREFIX));
+            answer.setAnswerNo(nextNo(BizCodeConstants.SURVEY_ANSWER_NO_PREFIX, BizCodeConstants.SURVEY_ANSWER_NO_KEY_PREFIX));
             answer.setDispatchId(dispatch.getId());
             answer.setTemplateId(dispatch.getTemplateId());
             answer.setScene(dispatch.getScene());
@@ -514,10 +514,10 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
                 throw new BusinessException("第 " + item.getSeqNo() + " 题推荐度超出范围（0-10）");
             }
         } else if (type == SurveyQuestionTypeEnum.TEXT.getCode()) {
-            if (!StringUtils.hasText(src.getTextValue()) && !StringUtils.hasText(src.getOptionLabel())) {
+            if (!TextUtil.hasText(src.getTextValue()) && !TextUtil.hasText(src.getOptionLabel())) {
                 throw new BusinessException("第 " + item.getSeqNo() + " 题请填写文字内容");
             }
-        } else if (!StringUtils.hasText(src.getOptionLabel())) {
+        } else if (!TextUtil.hasText(src.getOptionLabel())) {
             throw new BusinessException("第 " + item.getSeqNo() + " 题请选择选项");
         }
     }
@@ -610,7 +610,7 @@ public class SurveyServiceImpl extends ServiceImpl<BizSurveyAnswerMapper, BizSur
         if (worst != null) {
             content.append("；最低维度：").append(worst);
         }
-        if (StringUtils.hasText(answer.getCommentText())) {
+        if (TextUtil.hasText(answer.getCommentText())) {
             content.append("；患者原话：").append(answer.getCommentText());
         }
         content.append("（答卷号 ").append(answer.getAnswerNo()).append("）");

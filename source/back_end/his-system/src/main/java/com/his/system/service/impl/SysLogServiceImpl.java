@@ -4,8 +4,10 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.system.dto.LogQueryPageDTO;
 import com.his.system.entity.SysAuditLog;
 import com.his.system.entity.SysFieldChangeLog;
@@ -22,7 +24,6 @@ import com.his.system.vo.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -74,10 +75,10 @@ public class SysLogServiceImpl implements SysLogService {
      */
     private static <T> void applyRange(LambdaQueryWrapper<T> wrapper, LogQueryPageDTO q,
                                        com.baomidou.mybatisplus.core.toolkit.support.SFunction<T, ?> column) {
-        if (StringUtils.hasText(q.getBeginTime())) {
+        if (TextUtil.hasText(q.getBeginTime())) {
             wrapper.ge(column, parseDay(q.getBeginTime(), LocalTime.MIN));
         }
-        if (StringUtils.hasText(q.getEndTime())) {
+        if (TextUtil.hasText(q.getEndTime())) {
             wrapper.le(column, parseDay(q.getEndTime(), LocalTime.MAX.withNano(0)));
         }
     }
@@ -181,7 +182,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setId(row.getId());
         vo.setTitle(row.getTitle());
         vo.setBusinessType(row.getBusinessType());
-        vo.setBusinessTypeText(dictCacheService.getDicDataLabel("biz_system_operBusinessTypeEnum", row.getBusinessType()));
+        vo.setBusinessTypeText(dictCacheService.getDicDataLabel(DictType.OPER_BUSINESS_TYPE, row.getBusinessType()));
         vo.setMethod(row.getMethod());
         vo.setRequestMethod(row.getRequestMethod());
         vo.setOperName(row.getOperName());
@@ -194,7 +195,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setOperParam(row.getOperParam());
         vo.setJsonResult(row.getJsonResult());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(dictCacheService.getDicDataLabel("biz_system_operStatusEnum", row.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.OPER_STATUS, row.getStatus()));
         vo.setErrorMsg(row.getErrorMsg());
         vo.setOperTime(row.getOperTime());
         vo.setCostTime(row.getCostTime());
@@ -312,7 +313,7 @@ public class SysLogServiceImpl implements SysLogService {
     @Override
     public List<FieldChangeVO> fieldChangeBatch(String batchNo) {
         // C 类保留：入参是 GET @RequestParam 标量（纯空格也进得来）而非 request DTO，Bean Validation 注解无处安放
-        if (!StringUtils.hasText(batchNo)) {
+        if (!TextUtil.hasText(batchNo)) {
             throw new BusinessException("批次号不能为空");
         }
         LambdaQueryWrapper<SysFieldChangeLog> wrapper = new LambdaQueryWrapper<>();
@@ -326,8 +327,8 @@ public class SysLogServiceImpl implements SysLogService {
     public LogStatVO stat() {
         LocalDateTime now = LocalDateTime.now();
         LocalDate today = now.toLocalDate();
-        LocalDateTime dayStart = today.atStartOfDay();
-        LocalDateTime weekStart = today.minusDays(6).atStartOfDay();
+        LocalDateTime dayStart = TimeUtil.dayStart(today);
+        LocalDateTime weekStart = TimeUtil.dayStart(today.minusDays(6));
 
         LogStatVO vo = new LogStatVO();
         vo.setOperTotal(count(new LambdaQueryWrapper<SysOperLog>().eq(SysOperLog::getDelFlag, 0), sysOperLogMapper));
@@ -480,7 +481,7 @@ public class SysLogServiceImpl implements SysLogService {
      */
     private String operatorName() {
         var user = UserUtils.getCurrentUser();
-        return user == null || user.getRealName() == null || user.getRealName().isBlank()
+        return user == null || !TextUtil.hasText(user.getRealName())
                 ? "" : user.getRealName();
     }
 
@@ -489,7 +490,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setId(row.getId());
         vo.setTitle(row.getTitle());
         vo.setBusinessType(row.getBusinessType());
-        vo.setBusinessTypeText(dictCacheService.getDicDataLabel("biz_system_operBusinessTypeEnum", row.getBusinessType()));
+        vo.setBusinessTypeText(dictCacheService.getDicDataLabel(DictType.OPER_BUSINESS_TYPE, row.getBusinessType()));
         vo.setMethod(row.getMethod());
         vo.setRequestMethod(row.getRequestMethod());
         vo.setOperName(row.getOperName());
@@ -499,7 +500,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setOperIp(row.getOperIp());
         vo.setOperLocation(row.getOperLocation());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(dictCacheService.getDicDataLabel("biz_system_operStatusEnum", row.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.OPER_STATUS, row.getStatus()));
         vo.setOperTime(row.getOperTime());
         vo.setCostTime(row.getCostTime());
         vo.setErrorMsg(row.getErrorMsg() == null ? null : TextUtil.cut(row.getErrorMsg(), 200));
@@ -517,7 +518,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setBrowser(row.getBrowser());
         vo.setOs(row.getOs());
         vo.setLoginStatus(row.getLoginStatus());
-        vo.setLoginStatusText(dictCacheService.getDicDataLabel("biz_system_loginStatusEnum", row.getLoginStatus()));
+        vo.setLoginStatusText(dictCacheService.getDicDataLabel(DictType.LOGIN_STATUS, row.getLoginStatus()));
         vo.setMsg(row.getMsg());
         vo.setLoginTime(row.getLoginTime());
         vo.setUserAgent(row.getUserAgent());
@@ -536,7 +537,7 @@ public class SysLogServiceImpl implements SysLogService {
         vo.setContent(row.getContent());
         vo.setIp(row.getIp());
         vo.setStatus(row.getStatus());
-        vo.setStatusText(dictCacheService.getDicDataLabel("biz_system_auditLogStatusEnum", row.getStatus()));
+        vo.setStatusText(dictCacheService.getDicDataLabel(DictType.AUDIT_LOG_STATUS, row.getStatus()));
         vo.setErrorMsg(row.getErrorMsg());
         vo.setCreateTime(row.getCreateTime());
         return vo;

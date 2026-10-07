@@ -3,7 +3,6 @@ package com.his.common.util;
 import com.his.common.config.SignProperties;
 import com.his.common.exception.BusinessException;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKeyFactory;
@@ -56,7 +55,7 @@ public class KeyProtectorUtil {
      * 主口令缺失时不允许签发 —— 由调用方在签发入口先调，报错信息直指环境变量名
      */
     public void requireSecret() {
-        if (!StringUtils.hasText(properties.getMasterSecret())) {
+        if (!TextUtil.hasText(properties.getMasterSecret())) {
             throw new BusinessException("未配置签名主口令（环境变量 HIS_SIGN_SECRET），"
                     + "无法安全托管私钥；为避免私钥明文落库，已拒绝签发证书");
         }

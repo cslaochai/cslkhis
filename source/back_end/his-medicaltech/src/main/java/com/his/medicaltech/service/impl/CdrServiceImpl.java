@@ -1,11 +1,16 @@
 package com.his.medicaltech.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.his.appoint.enums.AppointStatusEnum;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
+import com.his.common.util.TextUtil;
+import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.CdrQueryDTO;
+import com.his.common.enums.EmergencyStatusEnum;
+import com.his.medicaltech.enums.CdrEmergencyTriageEnum;
 import com.his.medicaltech.enums.CdrEventTypeEnum;
 import com.his.medicaltech.enums.CdrNodeTypeEnum;
 import com.his.medicaltech.mapper.CdrMapper;
@@ -16,10 +21,8 @@ import com.his.patient.enums.VisitStatusEnum;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.service.PatientIndexService;
 import com.his.patient.support.PatientProfileFields;
-import com.his.system.service.DictCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -52,7 +55,6 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
 
     private final PatientIndexService patientIndexService;
 
-    private final DictCacheService dictCacheService;
 
     /**
      * 事件金额的语义标签。金额不能只给一个数字，得说清这是"实收"还是"总额"
@@ -113,7 +115,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
      * 不是 HTTP 入参 —— HTTP 入参一律走 DTO 的 Long 字段，让 Jackson 在绑定层就报 400。
      */
     private static Long parseRowId(String v) {
-        if (!StringUtils.hasText(v)) {
+        if (!TextUtil.hasText(v)) {
             throw new BusinessException("患者ID不能为空");
         }
         try {
@@ -222,11 +224,11 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
             node.setAnchorNo(str(r.getRegistNo()));
             // 挂号时间缺失时用就诊日期兜底：宁可给个粗粒度时间，也不要让节点没有起始时间
             LocalDateTime start = r.getRegistTime() != null ? r.getRegistTime()
-                    : (r.getVisitDate() == null ? null : r.getVisitDate().atStartOfDay());
+                    : (TimeUtil.dayStart(r.getVisitDate()));
             node.setStartTime(fmt(start));
             node.setDeptName(str(r.getDeptName()));
             node.setOperatorName(str(r.getDoctorName()));
-            node.setStatusText(dictCacheService.getDicDataLabel("biz_medicaltech_cdrRegistStatusEnum", r.getRegistStatus()));
+            node.setStatusText(AppointStatusEnum.getText(r.getRegistStatus()));
             node.setTitle(composeTitle(node.getNodeTypeText(), node.getDeptName(), node.getOperatorName()));
             node.setSubtitle("该挂号未被就诊次收录");
             node.setFromShadow(isShadow(r.getOwnerPid(), pid));
@@ -250,10 +252,10 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
             node.setStatusText(AdmitStatusEnum.getText(a.getAdmitStatus()));
             String ward = str(a.getWardName());
             String bed = str(a.getBedNo());
-            node.setSubtitle(StringUtils.hasText(ward) || StringUtils.hasText(bed)
+            node.setSubtitle(TextUtil.hasText(ward) || TextUtil.hasText(bed)
                     ? ((ward == null ? "" : ward) + " " + (bed == null ? "" : bed)).trim() : null);
             String diag = str(a.getSummaryDiag());
-            node.setOutcome(StringUtils.hasText(diag) ? diag : str(a.getDiagnosis()));
+            node.setOutcome(TextUtil.hasText(diag) ? diag : str(a.getDiagnosis()));
             if (admit != null) {
                 LocalDateTime end = dis != null ? dis : LocalDateTime.now();
                 node.setDurationDays((int) Math.max(1, ChronoUnit.DAYS.between(admit.toLocalDate(), end.toLocalDate())));
@@ -276,10 +278,10 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
             node.setEndTime(fmt(e.getFinishTime()));
             node.setDeptName(str(e.getDeptName()));
             node.setOperatorName(str(e.getDoctorName()));
-            node.setStatusText(dictCacheService.getDicDataLabel("biz_medicaltech_cdrEmergencyStatusEnum", e.getEmergencyStatus()));
-            String triage = dictCacheService.getDicDataLabel("biz_medicaltech_cdrEmergencyTriageEnum", e.getTriageLevel());
+            node.setStatusText(EmergencyStatusEnum.getText(e.getEmergencyStatus()));
+            String triage = CdrEmergencyTriageEnum.getText(e.getTriageLevel());
             String zone = str(e.getZone());
-            node.setSubtitle(StringUtils.hasText(triage) || StringUtils.hasText(zone)
+            node.setSubtitle(TextUtil.hasText(triage) || TextUtil.hasText(zone)
                     ? ((triage == null ? "" : triage) + " " + (zone == null ? "" : zone)).trim() : null);
             node.setOutcome(str(e.getDiagnosis()));
             node.setTitle(composeTitle(node.getNodeTypeText(), node.getDeptName(), node.getOperatorName()));
@@ -349,7 +351,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
                 Comparator.nullsLast(Comparator.naturalOrder())).reversed());
 
         // 过滤（就诊次类型 / 事件类型 / 日期区间）
-        if (StringUtils.hasText(dto.getEventType())) {
+        if (TextUtil.hasText(dto.getEventType())) {
             String want = dto.getEventType().trim();
             // "只看某类事件"必须真的只留这类事件 —— 只筛节点、节点内其它事件照旧显示，
             // 使用者会以为筛没生效。缺口（gaps）刻意保留筛选前的判定结果：
@@ -364,7 +366,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
             visitList = visitList.stream().filter(n -> n.getEventCount() > 0).collect(Collectors.toList());
             unresolved = unresolved.stream().filter(e -> want.equals(e.getEventType())).collect(Collectors.toList());
         }
-        if (StringUtils.hasText(dto.getStartDate()) || StringUtils.hasText(dto.getEndDate())) {
+        if (TextUtil.hasText(dto.getStartDate()) || TextUtil.hasText(dto.getEndDate())) {
             visitList = visitList.stream().filter(n -> inRange(n.getStartTime(),
                     dto.getStartDate(), dto.getEndDate())).collect(Collectors.toList());
         }
@@ -560,7 +562,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
             item.setTitle(str(r.getTitle()));
             item.setSummary(str(r.getSummary()));
             // 档案日期是 date 列（家族史与联系人天然为 null），补成零点让前端时间轴按同一格式渲染
-            item.setTime(fmt(r.getTm() == null ? null : r.getTm().atStartOfDay()));
+            item.setTime(fmt(TimeUtil.dayStart(r.getTm())));
             item.setOwnerPatientId(str(r.getOwnerPid()));
             grouped.get(key).add(item);
         }
@@ -627,7 +629,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
                 gaps.add("该就诊次下没有任何记录");
             }
         } else if (CdrNodeTypeEnum.EMERGENCY.getCode().equals(node.getNodeType())) {
-            if (!StringUtils.hasText(node.getOutcome())) {
+            if (!TextUtil.hasText(node.getOutcome())) {
                 gaps.add("缺初步诊断");
             }
         }
@@ -663,7 +665,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
     private String firstDiagnosis(List<CdrEventVO> evs) {
         // 结算/首页里已经带了权威诊断，优先；否则看有没有诊断类事件写明了诊断名
         for (CdrEventVO e : evs) {
-            if ("inpatientSummary".equals(e.getEventType()) && StringUtils.hasText(e.getTitle())) {
+            if ("inpatientSummary".equals(e.getEventType()) && TextUtil.hasText(e.getTitle())) {
                 return e.getTitle().replaceFirst("^病案首页 ", "");
             }
         }
@@ -682,10 +684,10 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
 
     private String composeTitle(String typeText, String dept, String doctor) {
         StringBuilder sb = new StringBuilder(typeText);
-        if (StringUtils.hasText(dept)) {
+        if (TextUtil.hasText(dept)) {
             sb.append(" · ").append(dept);
         }
-        if (StringUtils.hasText(doctor)) {
+        if (TextUtil.hasText(doctor)) {
             sb.append(" · ").append(doctor);
         }
         return sb.toString();
@@ -696,10 +698,10 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
             return false;
         }
         String day = startTime.length() >= 10 ? startTime.substring(0, 10) : startTime;
-        if (StringUtils.hasText(from) && day.compareTo(from) < 0) {
+        if (TextUtil.hasText(from) && day.compareTo(from) < 0) {
             return false;
         }
-        return !StringUtils.hasText(to) || day.compareTo(to) <= 0;
+        return !TextUtil.hasText(to) || day.compareTo(to) <= 0;
     }
 
     /**

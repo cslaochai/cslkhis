@@ -8,6 +8,7 @@ import com.his.common.service.EmrSignatureService;
 import com.his.common.service.ExternalCaChannelService;
 import com.his.common.service.SignCertService;
 import com.his.common.util.KeyPairFactory;
+import com.his.common.util.TextUtil;
 import com.his.common.vo.SignCertVO;
 import com.his.common.vo.SignOptionVO;
 import com.his.common.vo.SignatureOptionsVO;
@@ -65,7 +66,7 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
         if (user == null) {
             return null;
         }
-        if (user.getEmployeeName() != null && !user.getEmployeeName().isBlank()) {
+        if (TextUtil.hasText(user.getEmployeeName())) {
             return user.getEmployeeName();
         }
         return user.getRealName();

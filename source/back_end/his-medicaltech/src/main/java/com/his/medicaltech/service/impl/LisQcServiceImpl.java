@@ -3,6 +3,7 @@ package com.his.medicaltech.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
+import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.LisQcDTO;
@@ -20,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -44,9 +44,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LisQcServiceImpl implements LisQcService {
 
-    private static final String DICT_LEVEL = "his_lis_qc_level";
-    private static final String DICT_STATUS = "his_lis_qc_status";
-    private static final String DICT_HANDLE = "his_lis_qc_handle_status";
 
     private final BizLisQcPlanMapper bizLisQcPlanMapper;
     private final BizLisQcRecordMapper bizLisQcRecordMapper;
@@ -56,8 +53,8 @@ public class LisQcServiceImpl implements LisQcService {
 
     public PageResult<LisQcVO.PlanVO> planPage(LisQcDTO.PlanQuery q) {
         LambdaQueryWrapper<BizLisQcPlan> w = new LambdaQueryWrapper<>();
-        w.like(StringUtils.hasText(q.getItemName()), BizLisQcPlan::getItemName, TextUtil.trim(q.getItemName()))
-                .like(StringUtils.hasText(q.getInstrumentName()), BizLisQcPlan::getInstrumentName, TextUtil.trim(q.getInstrumentName()))
+        w.like(TextUtil.hasText(q.getItemName()), BizLisQcPlan::getItemName, TextUtil.trim(q.getItemName()))
+                .like(TextUtil.hasText(q.getInstrumentName()), BizLisQcPlan::getInstrumentName, TextUtil.trim(q.getInstrumentName()))
                 .eq(q.getStatus() != null, BizLisQcPlan::getStatus, q.getStatus())
                 .orderByDesc(BizLisQcPlan::getId);
         Page<BizLisQcPlan> page = bizLisQcPlanMapper.selectPage(
@@ -72,7 +69,7 @@ public class LisQcServiceImpl implements LisQcService {
     private LisQcVO.PlanVO toPlanVo(BizLisQcPlan p) {
         LisQcVO.PlanVO vo = new LisQcVO.PlanVO();
         BeanUtils.copyProperties(p, vo);
-        vo.setQcLevelText(dictCacheService.getDicDataLabel(DICT_LEVEL, p.getQcLevel()));
+        vo.setQcLevelText(dictCacheService.getDicDataLabel(DictType.LIS_QC_LEVEL, p.getQcLevel()));
         vo.setStatusText(p.getStatus() != null && p.getStatus() == 1 ? "启用" : "停用");
         if (p.getMeanValue() != null && p.getSdValue() != null && p.getMeanValue().compareTo(BigDecimal.ZERO) != 0) {
             vo.setCvActual(p.getSdValue().divide(p.getMeanValue().abs(), 4, RoundingMode.HALF_UP)
@@ -91,10 +88,10 @@ public class LisQcServiceImpl implements LisQcService {
         BizLisQcPlan p;
         if (dto.getId() == null) {
             // 同（项目+仪器+水平）只允许一条启用中的计划 —— 否则录入结果时不知道挂哪份靶值
-            if (StringUtils.hasText(dto.getItemCode())) {
+            if (TextUtil.hasText(dto.getItemCode())) {
                 long dup = bizLisQcPlanMapper.selectCount(new LambdaQueryWrapper<BizLisQcPlan>()
                         .eq(BizLisQcPlan::getItemCode, dto.getItemCode())
-                        .eq(StringUtils.hasText(dto.getInstrumentName()), BizLisQcPlan::getInstrumentName, dto.getInstrumentName())
+                        .eq(TextUtil.hasText(dto.getInstrumentName()), BizLisQcPlan::getInstrumentName, dto.getInstrumentName())
                         .eq(BizLisQcPlan::getQcLevel, dto.getQcLevel() == null ? 2 : dto.getQcLevel())
                         .eq(BizLisQcPlan::getStatus, 1));
                 if (dup > 0) {
@@ -169,7 +166,7 @@ public class LisQcServiceImpl implements LisQcService {
             WestgardRuleEngine.Verdict verdict = WestgardRuleEngine.evaluate(historyAsc(plan.getId(), 10),
                     z.doubleValue(), batchOthers(plan, r.getQcDate()));
             r.setStatus(verdict.getStatus());
-            r.setViolatedRules(StringUtils.hasText(verdict.ruleText()) ? verdict.ruleText() : null);
+            r.setViolatedRules(TextUtil.hasText(verdict.ruleText()) ? verdict.ruleText() : null);
             r.setHandleStatus(verdict.getStatus() == WestgardRuleEngine.OUT_OF_CONTROL ? 1 : 0);
         }
         bizLisQcRecordMapper.insert(r);
@@ -199,7 +196,7 @@ public class LisQcServiceImpl implements LisQcService {
     private List<WestgardRuleEngine.QcPoint> batchOthers(BizLisQcPlan plan, LocalDate date) {
         List<BizLisQcPlan> siblings = bizLisQcPlanMapper.selectList(new LambdaQueryWrapper<BizLisQcPlan>()
                 .eq(BizLisQcPlan::getItemCode, plan.getItemCode())
-                .eq(StringUtils.hasText(plan.getInstrumentName()), BizLisQcPlan::getInstrumentName, plan.getInstrumentName())
+                .eq(TextUtil.hasText(plan.getInstrumentName()), BizLisQcPlan::getInstrumentName, plan.getInstrumentName())
                 .ne(BizLisQcPlan::getId, plan.getId())
                 .eq(BizLisQcPlan::getStatus, 1));
         List<WestgardRuleEngine.QcPoint> out = new ArrayList<>();
@@ -220,8 +217,8 @@ public class LisQcServiceImpl implements LisQcService {
     public PageResult<LisQcVO.RecordVO> recordPage(LisQcDTO.RecordQuery q) {
         LambdaQueryWrapper<BizLisQcRecord> w = new LambdaQueryWrapper<>();
         w.eq(q.getPlanId() != null, BizLisQcRecord::getPlanId, q.getPlanId())
-                .like(StringUtils.hasText(q.getItemName()), BizLisQcRecord::getItemName, TextUtil.trim(q.getItemName()))
-                .like(StringUtils.hasText(q.getInstrumentName()), BizLisQcRecord::getInstrumentName, TextUtil.trim(q.getInstrumentName()))
+                .like(TextUtil.hasText(q.getItemName()), BizLisQcRecord::getItemName, TextUtil.trim(q.getItemName()))
+                .like(TextUtil.hasText(q.getInstrumentName()), BizLisQcRecord::getInstrumentName, TextUtil.trim(q.getInstrumentName()))
                 .eq(q.getStatus() != null, BizLisQcRecord::getStatus, q.getStatus())
                 .eq(q.getHandleStatus() != null, BizLisQcRecord::getHandleStatus, q.getHandleStatus())
                 .ge(q.getStartDate() != null, BizLisQcRecord::getQcDate, q.getStartDate())
@@ -240,10 +237,10 @@ public class LisQcServiceImpl implements LisQcService {
     private LisQcVO.RecordVO toRecordVo(BizLisQcRecord r) {
         LisQcVO.RecordVO vo = new LisQcVO.RecordVO();
         BeanUtils.copyProperties(r, vo);
-        vo.setQcLevelText(dictCacheService.getDicDataLabel(DICT_LEVEL, r.getQcLevel()));
+        vo.setQcLevelText(dictCacheService.getDicDataLabel(DictType.LIS_QC_LEVEL, r.getQcLevel()));
         vo.setStatusText(r.getStatus() == null || r.getStatus() == 0 ? "未判定"
-                : dictCacheService.getDicDataLabel(DICT_STATUS, r.getStatus()));
-        vo.setHandleStatusText(dictCacheService.getDicDataLabel(DICT_HANDLE, r.getHandleStatus()));
+                : dictCacheService.getDicDataLabel(DictType.LIS_QC_STATUS, r.getStatus()));
+        vo.setHandleStatusText(dictCacheService.getDicDataLabel(DictType.LIS_QC_HANDLE_STATUS, r.getHandleStatus()));
         return vo;
     }
 
@@ -279,7 +276,7 @@ public class LisQcServiceImpl implements LisQcService {
             throw new BusinessException("仅「失控」记录需要复核");
         }
         if (r.getHandleStatus() == null || r.getHandleStatus() != 2) {
-            throw new BusinessException("复核前必须先完成处理（当前：" + dictCacheService.getDicDataLabel(DICT_HANDLE, r.getHandleStatus()) + "）");
+            throw new BusinessException("复核前必须先完成处理（当前：" + dictCacheService.getDicDataLabel(DictType.LIS_QC_HANDLE_STATUS, r.getHandleStatus()) + "）");
         }
         String who = operatorUser.getRealName();
         if (who != null && who.equals(r.getHandleBy())) {
@@ -343,7 +340,7 @@ public class LisQcServiceImpl implements LisQcService {
     }
 
     private String voStatusText(Integer status) {
-        return status == null || status == 0 ? "未判定" : dictCacheService.getDicDataLabel(DICT_STATUS, status);
+        return status == null || status == 0 ? "未判定" : dictCacheService.getDicDataLabel(DictType.LIS_QC_STATUS, status);
     }
 
     private String nextPlanNo(String itemCode, Integer qcLevel) {

@@ -13,10 +13,10 @@ import com.his.charge.vo.BizRefundFlowItemVO;
 import com.his.charge.vo.BizRefundFlowVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -52,7 +52,7 @@ public class RefundFlowServiceImpl implements RefundFlowService {
                         w.apply("1 = 0");
                     }
                 })
-                .and(StringUtils.hasText(query.getKeyword()), w -> w.like(BizPaymentTxn::getTxnNo, query.getKeyword())
+                .and(TextUtil.hasText(query.getKeyword()), w -> w.like(BizPaymentTxn::getTxnNo, query.getKeyword())
                         .or().like(BizPaymentTxn::getBillNo, query.getKeyword())
                         .or().like(BizPaymentTxn::getPatientName, query.getKeyword()))
                 // 同毫秒退多笔翻页会重复/漏行，补 id 作二级键

@@ -1,5 +1,6 @@
 package com.his.patient.enums;
 
+import com.his.common.util.TextUtil;
 import lombok.Getter;
 
 /**
@@ -34,7 +35,7 @@ public enum DeathRegisterCopyEnum {
     }
 
     public static DeathRegisterCopyEnum fromCode(String code) {
-        if (code == null || code.isBlank()) {
+        if (!TextUtil.hasText(code)) {
             return null;
         }
         String trimmed = code.trim();
@@ -58,6 +59,6 @@ public enum DeathRegisterCopyEnum {
     /** 异常 / 审计用：null / 空串 / 联次外返回「未知(n)」（null 本身渲染成「未知」），保留原始值便于排查。 */
     public static String labelOrUnknown(String code) {
         DeathRegisterCopyEnum item = fromCode(code);
-        return item == null ? (code == null || code.isBlank() ? "未知" : "未知(" + code + ")") : item.label;
+        return item == null ? (!TextUtil.hasText(code) ? "未知" : "未知(" + code + ")") : item.label;
     }
 }

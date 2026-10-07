@@ -1,4 +1,5 @@
 package com.his.medicaltech.enums;
+import com.his.appoint.enums.AppointStatusEnum;
 import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.PrescriptionTypeEnum;
 import com.his.emr.enums.FollowupTaskStatusEnum;
@@ -28,7 +29,7 @@ import com.his.medicaltech.enums.CdrChargeTypeEnum;
 import com.his.medicaltech.enums.CdrConsultStatusEnum;
 import com.his.medicaltech.enums.CdrDiagTypeEnum;
 import com.his.medicaltech.enums.CdrDischargeStatusEnum;
-import com.his.medicaltech.enums.CdrEmergencyStatusEnum;
+import com.his.common.enums.EmergencyStatusEnum;
 import com.his.medicaltech.enums.CdrEmergencyTriageEnum;
 import com.his.medicaltech.enums.CdrEventTypeEnum;
 import com.his.medicaltech.enums.CdrInspApplyStatusEnum;
@@ -38,7 +39,6 @@ import com.his.medicaltech.enums.CdrPrescriptionStatusEnum;
 import com.his.medicaltech.enums.CdrPublicHealthReportStatusEnum;
 import com.his.medicaltech.enums.CdrPublicHealthReportTypeEnum;
 import com.his.medicaltech.enums.CdrQueueStatusEnum;
-import com.his.medicaltech.enums.CdrRegistStatusEnum;
 import com.his.emr.enums.QcStatusEnum;
 
 /**
@@ -57,7 +57,7 @@ import com.his.emr.enums.QcStatusEnum;
 public enum CdrEventTypeEnum {
 
     // 门诊域
-    REGIST("regist", "挂号", CdrNodeTypeEnum.OUTPATIENT, CdrRegistStatusEnum::getText, null, null),
+    REGIST("regist", "挂号", CdrNodeTypeEnum.OUTPATIENT, AppointStatusEnum::getText, null, null),
 
     OUTPATIENT_RECORD("outpatientRecord", "门诊病历", CdrNodeTypeEnum.OUTPATIENT,
             RecordStatusEnum::getText, null, null),
@@ -134,7 +134,7 @@ public enum CdrEventTypeEnum {
             BillStatusEnum::getText, null, null),
 
     // 患者级（跨就诊）
-    EMERGENCY("emergency", "急诊", CdrNodeTypeEnum.EMERGENCY, CdrEmergencyStatusEnum::getText, null, null),
+    EMERGENCY("emergency", "急诊", CdrNodeTypeEnum.EMERGENCY, EmergencyStatusEnum::getText, null, null),
 
     CRITICAL_VALUE("criticalValue", "危急值", CdrNodeTypeEnum.PATIENT, CriticalValueStatusEnum::getText,
             CriticalTypeEnum::getText, "偏离方向"),

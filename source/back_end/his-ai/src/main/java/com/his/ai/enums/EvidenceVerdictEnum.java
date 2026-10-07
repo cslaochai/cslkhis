@@ -1,5 +1,6 @@
 package com.his.ai.enums;
 
+import com.his.common.util.TextUtil;
 import lombok.Getter;
 
 /**
@@ -56,7 +57,7 @@ public enum EvidenceVerdictEnum {
      * 模型输出按 verdict 字面匹配；大小写不敏感，匹配不上返回 null（调用侧丢弃该条）
      */
     public static EvidenceVerdictEnum fromName(String name) {
-        if (name == null || name.isBlank()) {
+        if (!TextUtil.hasText(name)) {
             return null;
         }
         for (EvidenceVerdictEnum e : values()) {

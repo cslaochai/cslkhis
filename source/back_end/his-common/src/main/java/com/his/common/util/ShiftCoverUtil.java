@@ -2,7 +2,6 @@ package com.his.common.util;
 
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.springframework.util.StringUtils;
 
 import java.time.LocalTime;
 
@@ -29,7 +28,7 @@ public final class ShiftCoverUtil {
      * @return 解析成功返回 {@link LocalTime}；入参为空或格式非法返回 {@code null}
      */
     public static LocalTime parseShiftTime(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return null;
         }
         String value = text.trim();

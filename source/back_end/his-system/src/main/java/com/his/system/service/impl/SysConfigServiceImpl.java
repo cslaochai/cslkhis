@@ -3,6 +3,7 @@ package com.his.system.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.dto.HospitalInfoUpsertDTO;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
@@ -10,7 +11,6 @@ import com.his.system.service.SysConfigService;
 import com.his.system.vo.HospitalInfoVO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -47,7 +47,7 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
         setValue(KEY_NAME, "医院名称", upsertDTO.getHospitalName());
         setValue(KEY_ADDRESS, "医院地址", upsertDTO.getHospitalAddress());
         setValue(KEY_PHONE, "联系电话", upsertDTO.getHospitalPhone());
-        if (StringUtils.hasText(upsertDTO.getHospitalEmail())) {
+        if (TextUtil.hasText(upsertDTO.getHospitalEmail())) {
             setValue(KEY_EMAIL, "医院邮箱", upsertDTO.getHospitalEmail());
         }
     }
@@ -62,7 +62,7 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
             return;
         }
         // B 类保留（条件必填）：配置行已存在时允许提交空值清空，只有首次建档才必填，注解会把清空挡成 400
-        if (!StringUtils.hasText(configValue)) {
+        if (!TextUtil.hasText(configValue)) {
             throw new BusinessException(configName + "不能为空");
         }
         SysConfig entity = new SysConfig();

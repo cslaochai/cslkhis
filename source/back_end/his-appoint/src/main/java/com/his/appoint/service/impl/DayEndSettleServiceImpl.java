@@ -5,6 +5,7 @@ import com.his.appoint.mapper.DayEndSettleMapper;
 import com.his.appoint.service.DayEndSettleService;
 import com.his.appoint.vo.DayEndSettleResultVO;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -58,7 +59,7 @@ public class DayEndSettleServiceImpl implements DayEndSettleService {
         if (user == null || user.getEmployeeId() == null) {
             return SYSTEM_OPERATOR;
         }
-        return user.getRealName() == null || user.getRealName().isBlank()
+        return !TextUtil.hasText(user.getRealName())
                 ? String.valueOf(user.getEmployeeId())
                 : user.getRealName() + "(" + user.getEmployeeId() + ")";
     }

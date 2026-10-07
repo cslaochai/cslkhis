@@ -1,5 +1,6 @@
 package com.his.system.config;
 
+import com.his.common.util.TextUtil;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -26,12 +27,8 @@ public class WechatProperties {
      */
     private Map<String, String> templates = new HashMap<>();
 
-    private static boolean notBlank(String s) {
-        return s != null && !s.isBlank();
-    }
-
     public boolean ready() {
-        return enabled && notBlank(appId) && notBlank(appSecret);
+        return enabled && TextUtil.hasText(appId) && TextUtil.hasText(appSecret);
     }
 
     public String templateOf(String scene) {

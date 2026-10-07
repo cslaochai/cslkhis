@@ -3,6 +3,7 @@ package com.his.medicaltech.service.impl;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.mapper.StatsMapper;
 import com.his.medicaltech.service.StatsService;
 import com.his.medicaltech.vo.StatsOverviewVO;
@@ -41,7 +42,7 @@ public class StatsServiceImpl implements StatsService {
     }
 
     private static LocalDate parseDate(String text) {
-        if (text == null || text.isBlank()) {
+        if (!TextUtil.hasText(text)) {
             return null;
         }
         try {

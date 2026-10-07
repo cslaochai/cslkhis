@@ -22,7 +22,6 @@ import com.his.common.util.TextUtil;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -125,7 +124,7 @@ public class FundAccountServiceImpl extends ServiceImpl<BizFundAccountMapper, Bi
                 .eq(query.getOwnerType() != null, BizFundAccount::getOwnerType, query.getOwnerType())
                 .eq(query.getAccountStatus() != null, BizFundAccount::getAccountStatus, query.getAccountStatus())
                 .eq(query.getPatientId() != null, BizFundAccount::getPatientId, query.getPatientId())
-                .and(StringUtils.isNotBlank(query.getKeyword()), w -> w
+                .and(TextUtil.hasText(query.getKeyword()), w -> w
                         .like(BizFundAccount::getPatientName, query.getKeyword())
                         .or().like(BizFundAccount::getPatientNo, query.getKeyword()))
                 // create_time 大面积重复（同一批开户），必须补 id 二级键，否则分页重复/漏行

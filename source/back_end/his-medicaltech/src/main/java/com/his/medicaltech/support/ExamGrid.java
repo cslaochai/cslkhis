@@ -1,6 +1,7 @@
 package com.his.medicaltech.support;
 
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TextUtil;
 import com.his.medicaltech.entity.BizExamDevice;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
@@ -59,7 +60,7 @@ public final class ExamGrid {
     }
 
     private static void appendPeriod(List<int[]> out, String start, String end, int step) {
-        if (start == null || start.isBlank() || end == null || end.isBlank()) {
+        if (!TextUtil.hasText(start) || !TextUtil.hasText(end)) {
             return;
         }
         int s = toMin(start);

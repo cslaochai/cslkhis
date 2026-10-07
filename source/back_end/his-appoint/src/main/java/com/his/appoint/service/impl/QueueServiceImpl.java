@@ -2,7 +2,6 @@ package com.his.appoint.service.impl;
 
 
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -14,6 +13,7 @@ import com.his.appoint.entity.BizQueue;
 import com.his.appoint.entity.BizSchedule;
 import com.his.appoint.entity.BizTriageRecord;
 import com.his.appoint.enums.*;
+import com.his.appoint.enums.OpdLogStatusEnum;
 import com.his.appoint.mapper.*;
 import com.his.appoint.service.DoctorStatusCacheService;
 import com.his.appoint.service.QueueService;
@@ -26,11 +26,11 @@ import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.patient.service.BizPatientService;
 import com.his.patient.service.PatientGuardianService;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysClinicRoom;
-import com.his.system.service.DictCacheService;
 import com.his.system.service.InsurancePolicyService;
 import com.his.system.service.SysClinicRoomService;
 import com.his.system.service.SysMessageService;
@@ -70,7 +70,6 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
     private final SysMessageService sysMessageService;
     @Lazy
     private final ScheduleService scheduleService;
-    private final DictCacheService dictCacheService;
 
     @Override
     public List<BizQueueListVO> getTodayQueueList(QueueTodayQueryDTO queueQueryDTO) {
@@ -159,18 +158,18 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
 
         // 日期口径分两种：visit_date 是「今天该看谁」，arrive_time 是「今天几点到的」。
         // 跨日遗留的队列（昨天入队今天还没走完）只有前者能正确排除。
-        if (StrUtil.isNotBlank(queueQueryDTO.getVisitDate())) {
+        if (TextUtil.hasText(queueQueryDTO.getVisitDate())) {
             wrapper.eq(BizQueue::getVisitDate, queueQueryDTO.getVisitDate());
         }
-        if (StrUtil.isNotBlank(queueQueryDTO.getStartTime()) && StrUtil.isNotBlank(queueQueryDTO.getEndTime())) {
+        if (TextUtil.hasText(queueQueryDTO.getStartTime()) && TextUtil.hasText(queueQueryDTO.getEndTime())) {
             wrapper.ge(BizQueue::getArriveTime, queueQueryDTO.getStartTime())
                     .le(BizQueue::getArriveTime, queueQueryDTO.getEndTime());
-        } else if (StrUtil.isNotBlank(queueQueryDTO.getDate())) {
+        } else if (TextUtil.hasText(queueQueryDTO.getDate())) {
             wrapper.ge(BizQueue::getArriveTime, queueQueryDTO.getDate() + " 00:00:00")
                     .le(BizQueue::getArriveTime, queueQueryDTO.getDate() + " 23:59:59");
         }
 
-        if (StrUtil.isNotBlank(queueQueryDTO.getKeyword())) {
+        if (TextUtil.hasText(queueQueryDTO.getKeyword())) {
             String kw = queueQueryDTO.getKeyword().trim();
             List<Long> registIds = bizAppointInfoMapper.selectList(new LambdaQueryWrapper<BizAppointInfo>()
                             .select(BizAppointInfo::getId)
@@ -330,14 +329,14 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
             BizSchedule schedule = scheduleMapper.selectById(scheduleId);
             if (schedule != null && schedule.getRoomId() != null) {
                 SysClinicRoom room = sysClinicRoomService.getById(schedule.getRoomId());
-                if (room != null && StrUtil.isNotBlank(room.getQueuePrefix())) {
+                if (room != null && TextUtil.hasText(room.getQueuePrefix())) {
                     prefix = room.getQueuePrefix();
                 }
             }
         }
 
         // 兜底：前缀绝不能为空。队列号用 D{deptId}（如 D19580005），保证不同科室不串号。
-        if (StrUtil.isBlank(prefix)) {
+        if (!TextUtil.hasText(prefix)) {
             prefix = "D" + deptId;
         }
 
@@ -1053,7 +1052,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
     }
 
     @Override
-    public PageResult<OpdLogListVO> opdLogPage(OpdLogQueryDTO query) {
+    public PageResult<OpdLogListVO> listPage(OpdLogQueryPageDTO queryDTO) {
         // 注意：这里**不**按当前登录用户的科室收窄。门诊日志是跨科室的查询分析页，
         // 而分诊台那套「只看本科室」的口径在 listPage 里（两者故意分开，见 OpdLogQueryDTO 注释）。
         // 之前 /queue/listPage 与 /queue/stats 都硬编码 currentUser.deptId，导致管理员（无科室）
@@ -1061,8 +1060,8 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
         // 顺手把遗留结转掉：门诊日志是「昨天的号在不在」最直观的地方，
         // 打开时若还看到 9 天前的行挂着「已签到」，那就是没人给数据收尾。
         dayEndSettleTrigger.ensureSettledUpToYesterday();
-        Page<OpdLogListVO> page = new Page<>(query.getPageNum(), query.getPageSize());
-        IPage<OpdLogListVO> result = opdLogMapper.selectOpdLogPage(page, query);
+        Page<OpdLogListVO> page = new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize());
+        IPage<OpdLogListVO> result = opdLogMapper.selectOpdLogPage(page, queryDTO);
         List<OpdLogListVO> records = result.getRecords();
         for (OpdLogListVO vo : records) {
             fillLogStatus(vo);
@@ -1071,8 +1070,8 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
     }
 
     @Override
-    public OpdLogStatsVO opdLogStats(OpdLogQueryDTO query) {
-        OpdLogStatsVO stats = opdLogMapper.selectOpdLogStats(query);
+    public OpdLogStatsVO opdLogStats(OpdLogQueryPageDTO queryDTO) {
+        OpdLogStatsVO stats = opdLogMapper.selectOpdLogStats(queryDTO);
         if (stats == null) {
             return new OpdLogStatsVO();
         }
@@ -1087,7 +1086,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
      * 静默贴一个合法文案比显示未知更危险。
      */
     private void fillLogStatus(OpdLogListVO vo) {
-        vo.setLogStatusLabel(dictCacheService.getDicDataLabel("biz_appoint_opdLogStatusEnum", vo.getLogStatus()));
+        vo.setLogStatusLabel(OpdLogStatusEnum.getText(vo.getLogStatus()));
     }
 
     @Override
@@ -1128,7 +1127,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
                 queue.setRoomName(roomName);
             }
         }
-        if (roomId != null && StrUtil.isBlank(roomName)) {
+        if (roomId != null && !TextUtil.hasText(roomName)) {
             SysClinicRoom room = sysClinicRoomService.getById(roomId);
             roomName = room != null ? room.getName() : null;
         }

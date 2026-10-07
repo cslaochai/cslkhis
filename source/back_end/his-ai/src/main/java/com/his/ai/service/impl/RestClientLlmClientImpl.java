@@ -12,13 +12,13 @@ import com.his.ai.dto.OpenAiChatResponseDTO;
 import com.his.ai.exception.LlmException;
 import com.his.ai.service.LlmClient;
 import com.his.ai.service.RestClientLlmClient;
+import com.his.common.util.TextUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
@@ -59,7 +59,7 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
     private final Map<String, RestClient> clientCache = new ConcurrentHashMap<>();
 
     private static String abbreviate(String text) {
-        if (!StringUtils.hasText(text)) {
+        if (!TextUtil.hasText(text)) {
             return "";
         }
         String value = text.replaceAll("\\s+", " ").trim();
@@ -73,7 +73,7 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
         AiProperties properties = aiConfigProvider.get();
         guardConfig(properties);
 
-        String model = StringUtils.hasText(request.getModel()) ? request.getModel() : properties.getModel();
+        String model = TextUtil.hasText(request.getModel()) ? request.getModel() : properties.getModel();
         String baseUrl = normalizeBaseUrl(properties.getBaseUrl());
         int effectiveTimeout = timeoutMs > 0 ? timeoutMs : properties.getTimeoutMs();
 
@@ -105,13 +105,13 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
 
                 OpenAiChatResponseDTO response = RESPONSE_MAPPER.readValue(raw, OpenAiChatResponseDTO.class);
                 String content = response.firstContent();
-                if (!StringUtils.hasText(content)) {
+                if (!TextUtil.hasText(content)) {
                     throw new LlmException("模型返回内容为空");
                 }
 
                 LlmResultDTO result = new LlmResultDTO();
                 result.setContent(content);
-                result.setModel(StringUtils.hasText(response.getModel()) ? response.getModel() : model);
+                result.setModel(TextUtil.hasText(response.getModel()) ? response.getModel() : model);
                 result.setLatencyMs((int) (System.currentTimeMillis() - start));
                 result.setAttempts(attempt);
                 if (response.getUsage() != null) {
@@ -143,13 +143,13 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
     }
 
     private void guardConfig(AiProperties properties) {
-        if (!StringUtils.hasText(properties.getBaseUrl())) {
+        if (!TextUtil.hasText(properties.getBaseUrl())) {
             throw new LlmException("AI 服务地址未配置（application.yml: ai.base-url）");
         }
-        if (!StringUtils.hasText(properties.getApiKey())) {
+        if (!TextUtil.hasText(properties.getApiKey())) {
             throw new LlmException("AI 访问密钥未配置（环境变量 " + AiConfigProvider.ENV_API_KEY + "）");
         }
-        if (!StringUtils.hasText(properties.getModel())) {
+        if (!TextUtil.hasText(properties.getModel())) {
             throw new LlmException("AI 模型未配置（application.yml: ai.model）");
         }
     }
@@ -199,7 +199,7 @@ public class RestClientLlmClientImpl implements LlmClient, RestClientLlmClient {
         if (ex instanceof RestClientResponseException responseException) {
             String detail = abbreviate(responseException.getResponseBodyAsString());
             return new LlmException("模型服务返回 " + responseException.getStatusCode().value()
-                    + (StringUtils.hasText(detail) ? "：" + detail : ""), ex);
+                    + (TextUtil.hasText(detail) ? "：" + detail : ""), ex);
         }
         return new LlmException("模型服务不可达：" + ex.getMessage(), ex);
     }
