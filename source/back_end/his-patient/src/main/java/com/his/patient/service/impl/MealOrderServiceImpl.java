@@ -2,10 +2,10 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.MealGenerateDTO;
 import com.his.patient.dto.MealOrderQueryPageDTO;
 import com.his.patient.dto.MealStatusDTO;
@@ -21,11 +21,13 @@ import com.his.patient.service.MealOrderService;
 import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.MealGenerateVO;
 import com.his.patient.vo.MealOrderVO;
-import com.his.system.provider.DeptScopeProvider;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -35,8 +37,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 订餐配送实现。
@@ -55,15 +55,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class MealOrderServiceImpl implements MealOrderService {
-    @Autowired
-    private DictCacheService dictText;
-    private final DeptScopeProvider deptScopeProvider;
-
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String PREFIX_MEAL = "MO";
-
+    private final DeptScopeProvider deptScopeProvider;
     private final BizMealOrderMapper mealMapper;
     private final BizDietPlanMapper planMapper;
+    @Autowired
+    private DictCacheService dictText;
 
     private static String trim(String v) {
         return v == null ? null : v.trim();
@@ -134,7 +132,9 @@ public class MealOrderServiceImpl implements MealOrderService {
             throw new BusinessException("不能为「" + mealDate + "」之前的日期生成餐单（食堂无法补送过去的餐）");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
 
         List<BizDietPlan> plans = planMapper.selectList(new LambdaQueryWrapper<BizDietPlan>()
                 .eq(BizDietPlan::getPlanStatus, PlanStatusEnum.RUNNING.getCode())
@@ -253,7 +253,9 @@ public class MealOrderServiceImpl implements MealOrderService {
             throw new BusinessException("请选择要处理的订餐");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         Integer target = dto.getDeliverStatus();
         if (target == null || !NutritionRules.isMealStatus(target)
                 || target == MealDeliverStatusEnum.PENDING.getCode()) {

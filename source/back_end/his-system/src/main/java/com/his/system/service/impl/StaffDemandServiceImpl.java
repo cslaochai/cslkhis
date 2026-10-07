@@ -4,11 +4,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.OrgUnitTypeEnum;
 import com.his.common.enums.StaffTypeEnum;
 import com.his.common.exception.BusinessException;
-import com.his.system.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.BizStaffDemand;
+import com.his.system.entity.CurrentUser;
 import com.his.system.mapper.BizStaffDemandMapper;
 import com.his.system.service.StaffDemandService;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.StaffDemandGapVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,23 +18,14 @@ import java.util.List;
 
 /**
  * 人力需求与缺口服务实现。
- *
- * <p>这一层是闭环的第 ① 步：先回答「这天这个单元这个岗位需要多少人」，
- * 后面的排班（人手够不够）、校验（低于下限要拦）、复盘（为什么加班）才有分母。
- *
- * <p>两条硬边界：
- * <ol>
- *   <li><b>重算不盖手工</b>：派生只覆盖 source IN (1,2)，护士长拍板的 source=3 原样留着。</li>
- *   <li><b>单元必须带类型</b>：只传 orgId 不传 orgType 直接拒 —— 病区和科室的 id 不在
- *       同一个空间，只给 id 会把门诊科室的 id 当成病区去查（sql/209 的教训）。</li>
- * </ol>
  */
 @Service
 @RequiredArgsConstructor
-public class StaffDemandServiceImpl extends ServiceImpl<BizStaffDemandMapper, BizStaffDemand>
-        implements StaffDemandService {
+public class StaffDemandServiceImpl extends ServiceImpl<BizStaffDemandMapper, BizStaffDemand> implements StaffDemandService {
 
-    /** 重算一次最多往前铺多少天（防误点：把三年的需求一次性算出来没人看得完） */
+    /**
+     * 重算一次最多往前铺多少天（防误点：把三年的需求一次性算出来没人看得完）
+     */
     private static final int MAX_RECALC_DAYS = 31;
 
     private static final int SOURCE_CLINIC = 1;
@@ -112,7 +103,9 @@ public class StaffDemandServiceImpl extends ServiceImpl<BizStaffDemandMapper, Bi
                 basis, operatorUser.getRealName(), remark);
     }
 
-    /** 缺口行补上给人看的文案：单元类型、岗位类别、需求来源 */
+    /**
+     * 缺口行补上给人看的文案：单元类型、岗位类别、需求来源
+     */
     private void fillText(StaffDemandGapVO row) {
         OrgUnitTypeEnum unit = OrgUnitTypeEnum.fromCode(row.getOrgType());
         if (unit != null) {

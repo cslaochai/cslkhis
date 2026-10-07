@@ -1,9 +1,7 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.ObjectSignStatusEnum;
@@ -11,6 +9,8 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.patient.dto.CriticalNoticeDTO;
 import com.his.patient.entity.BizCriticalNotice;
@@ -18,9 +18,9 @@ import com.his.patient.enums.NoticeStatusEnum;
 import com.his.patient.mapper.BizCriticalNoticeMapper;
 import com.his.patient.service.CriticalNoticeService;
 import com.his.patient.vo.CriticalNoticeVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeProvider;
 import com.his.system.utils.UserUtils;
-import com.his.system.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -54,8 +54,6 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class CriticalNoticeServiceImpl implements CriticalNoticeService {
-    private final DeptScopeProvider deptScopeProvider;
-
     private static final int DIAG_MAX = 500;
     private static final int TEXT_MAX = 1000;
     private static final int REASON_MAX = 500;
@@ -65,7 +63,6 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
      * 手写签名 dataURL 上限 512KB（canvas PNG 正常几十 KB，兜住恶意大串）
      */
     private static final int SIGNATURE_MAX = 512 * 1024;
-
     /**
      * 神志合法码（字典 his_notice_consciousness）
      */
@@ -74,7 +71,7 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
      * 签收人关系合法码（字典 his_notice_relation）
      */
     private static final Set<Integer> RELATIONS = Set.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 99);
-
+    private final DeptScopeProvider deptScopeProvider;
     private final BizCriticalNoticeMapper noticeMapper;
     private final RedisSequenceService redisSequenceService;
     private final EmrSignatureService signatureService;
@@ -348,7 +345,9 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
     @Transactional(rollbackFor = Exception.class)
     public void voidNotice(CriticalNoticeDTO.VoidNotice dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizCriticalNotice notice = requireNotice(dto.getId());
         if (Objects.equals(NoticeStatusEnum.ACKED.getCode(), notice.getNoticeStatus())) {
             throw new BusinessException("已签收的通知单承载患方签字的告知事实，不允许作废；"
@@ -372,7 +371,9 @@ public class CriticalNoticeServiceImpl implements CriticalNoticeService {
     @Transactional(rollbackFor = Exception.class)
     public void print(CriticalNoticeDTO.Print dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizCriticalNotice notice = requireNotice(dto.getId());
         if (!Objects.equals(NoticeStatusEnum.ACKED.getCode(), notice.getNoticeStatus())) {
             throw new BusinessException("只有「已签收」的通知单打印回执（未签收的告知尚未闭环）");

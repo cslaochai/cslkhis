@@ -2,9 +2,9 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.patient.dto.*;
 import com.his.patient.entity.BizIcuMonitor;
 import com.his.patient.entity.BizIcuStay;
@@ -14,8 +14,8 @@ import com.his.patient.mapper.BizIcuMonitorMapper;
 import com.his.patient.mapper.BizIcuStayMapper;
 import com.his.patient.service.IcuService;
 import com.his.patient.vo.IcuVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -164,7 +164,9 @@ public class IcuServiceImpl implements IcuService {
             stay.setStatus(IcuStayStatusEnum.IN.getCode());
             stay.setMonitorCount(0);
             CurrentUser operatorUser = UserUtils.getCurrentUser();
-            if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+            if (operatorUser == null) {
+                throw new BusinessException("当前用户信息不存在");
+            }
             stay.setInBy(operatorUser.getRealName());
         } else {
             stay = requireActiveStay(dto.getId());
@@ -197,7 +199,9 @@ public class IcuServiceImpl implements IcuService {
     @Transactional(rollbackFor = Exception.class)
     public IcuVO.StayVO stayOut(IcuStayOutDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizIcuStay stay = requireActiveStay(dto.getId());
         LocalDateTime outTime = dto.getOutTime().truncatedTo(ChronoUnit.SECONDS);
         if (outTime.isAfter(now())) {
@@ -281,7 +285,9 @@ public class IcuServiceImpl implements IcuService {
             monitor = new BizIcuMonitor();
             monitor.setStayId(stay.getId());
             CurrentUser operatorUser = UserUtils.getCurrentUser();
-            if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+            if (operatorUser == null) {
+                throw new BusinessException("当前用户信息不存在");
+            }
             monitor.setRecorderId(operatorUser.getEmployeeId());
             monitor.setRecorderName(operatorUser.getRealName());
         } else {

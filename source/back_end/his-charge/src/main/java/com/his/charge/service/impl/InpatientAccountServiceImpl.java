@@ -18,9 +18,11 @@ import com.his.common.util.TimeUtil;
 import com.his.system.entity.SysEmployee;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysEmployeeMapper;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -32,8 +34,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 住院账务服务实现（P3，四层口径）。
@@ -66,35 +66,27 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class InpatientAccountServiceImpl implements InpatientAccountService {
-    @Autowired
-    private DictCacheService dictText;
-
     /**
      * 金额统一两位小数（元）
      */
     private static final int SCALE = 2;
-
     /**
      * 流水类型（对外口径，与支付流水 direction 同码值：1-充值 2-退款）
      */
     private static final int PREPAY_IN = 1;
     private static final int PREPAY_OUT = 2;
-
     /**
      * 结算状态（派生值，库里没有这一列）
      */
     private static final int SETTLE_CLEARED = 1;
     private static final int SETTLE_ARREARS = 2;
-
     /**
      * 欠费告警类型（写入预警记录.alert_type）
      */
     private static final String ALERT_ARREARS = "ARREARS";
-
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter SECOND = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
     private final BizPaymentTxnMapper paymentTxnMapper;
     private final BizAlertMapper alertMapper;
     private final PatientGateway patientGateway;
@@ -107,6 +99,8 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
      */
     private final SysMessageService sysMessageService;
     private final SysEmployeeMapper sysEmployeeMapper;
+    @Autowired
+    private DictCacheService dictText;
 
     // 预交金（L3 资金流水 + 住院资金账户）
 

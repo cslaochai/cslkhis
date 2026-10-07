@@ -326,7 +326,9 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
     private void persist(BizMedicalRecord record, EmrQcResultVO vo) {
         try {
             CurrentUser operatorUser = UserUtils.getCurrentUser();
-            if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+            if (operatorUser == null) {
+                throw new BusinessException("当前用户信息不存在");
+            }
             String operator = operatorUser.getRealName();
             BizQualityControl qc = new BizQualityControl();
             qc.setQcNo(buildNo("QCAI"));

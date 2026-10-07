@@ -6,19 +6,17 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
-import com.his.patient.enums.StatsScopeEnum;
-import com.his.patient.enums.VteEventTypeEnum;
-import com.his.patient.enums.VteMeasureTypeEnum;
-import com.his.patient.enums.VteOnsetEnum;
-import com.his.patient.enums.VtePreventStatusEnum;
+import com.his.patient.enums.*;
 import com.his.patient.mapper.*;
 import com.his.patient.service.VteService;
 import com.his.patient.support.VteRules;
 import com.his.patient.vo.*;
 import com.his.system.entity.CurrentUser;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,8 +30,6 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * VTE 防控服务实现。
@@ -51,22 +47,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class VteServiceImpl implements VteService {
-    @Autowired
-    private DictCacheService dictText;
-
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter CSV_TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int EXPORT_MAX = 5000;
-
     /**
      * 评审/VTE 防治中心建设常用阈值，只作提示不判定
      */
     private static final BigDecimal TARGET_ASSESS_RATE = new BigDecimal("90.00");
     private static final BigDecimal TARGET_PREVENT_RATE = new BigDecimal("90.00");
-
     private static final String PREFIX_PREVENT = "VP";
     private static final String PREFIX_EVENT = "VE";
-
     private final VteStatMapper statMapper;
     private final BizVtePreventMapper preventMapper;
     private final BizVteEventMapper eventMapper;
@@ -75,6 +65,8 @@ public class VteServiceImpl implements VteService {
     private final BizPatientMapper patientMapper;
     private final BizNursingAssessmentMapper assessmentMapper;
     private final SysBedMapper bedMapper;
+    @Autowired
+    private DictCacheService dictText;
 
     // 看板
 
@@ -192,7 +184,9 @@ public class VteServiceImpl implements VteService {
     @Transactional(rollbackFor = Exception.class)
     public VtePreventVO preventUpsert(VtePreventUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         VteRules.Measure measure = VteRules.measureOf(dto.getMeasureCode());
         // 保留（类别③）：措施码必须是字典里的三个码之一（能不能解析成措施是业务规则，不是「是否为空」）
         if (measure == null) {
@@ -318,7 +312,9 @@ public class VteServiceImpl implements VteService {
     @Transactional(rollbackFor = Exception.class)
     public VteEventVO eventUpsert(VteEventUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         // 保留（类别③）：确诊日期不能落在未来（是否必填由入参注解负责）
         if (dto.getDiagnoseDate().isAfter(LocalDate.now())) {
             throw new BusinessException("确诊日期不能晚于今天");
@@ -405,7 +401,9 @@ public class VteServiceImpl implements VteService {
     @Transactional(rollbackFor = Exception.class)
     public List<VteStatsVO> generateStats(VteStatsGenerateDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         YearMonth ym = requireMonth(dto.getStatMonth());
         LocalDateTime from = ym.atDay(1).atStartOfDay();
         LocalDateTime to = ym.atEndOfMonth().atTime(23, 59, 59);

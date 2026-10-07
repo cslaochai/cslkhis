@@ -1,14 +1,14 @@
 package com.his.patient.service.impl;
-import com.his.charge.api.InpatientSettlementGateway;
-import com.his.common.util.TimeUtil;
 
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.charge.api.InpatientSettlementGateway;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.BedStatusEnum;
@@ -16,19 +16,24 @@ import com.his.patient.enums.DischargeWayEnum;
 import com.his.patient.enums.SummaryStatusEnum;
 import com.his.patient.enums.VisitStatusEnum;
 import com.his.patient.mapper.*;
-import com.his.patient.service.*;
+import com.his.patient.service.AdmissionOrderService;
+import com.his.patient.service.BedCenterService;
+import com.his.patient.service.DeathCertificateService;
+import com.his.patient.service.InpatientService;
 import com.his.patient.support.SettlementGate;
 import com.his.patient.support.SummaryOperationSeq;
 import com.his.patient.vo.*;
-import com.his.system.provider.DeptScopeProvider;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -41,8 +46,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 住院管理实现（第 1 期）
@@ -65,11 +68,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class InpatientServiceImpl implements InpatientService {
-    @Autowired
-    private DictCacheService dictText;
-    private final DeptScopeProvider deptScopeProvider;
-
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private final DeptScopeProvider deptScopeProvider;
     private final BizAdmissionMapper admissionMapper;
     private final BizDischargeMapper dischargeMapper;
     private final SysBedMapper bedMapper;
@@ -109,6 +109,8 @@ public class InpatientServiceImpl implements InpatientService {
      * 降级为"不回填"，绝不让一次真实入院因为队列记账失败而被回滚。
      */
     private final ObjectProvider<BedCenterService> bedCenterProvider;
+    @Autowired
+    private DictCacheService dictText;
 
     /**
      * 时间精度统一到「秒」。

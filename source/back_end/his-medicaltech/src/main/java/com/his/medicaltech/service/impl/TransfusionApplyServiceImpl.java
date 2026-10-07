@@ -30,9 +30,11 @@ import com.his.patient.service.PatientService;
 import com.his.patient.vo.CodeOptionVO;
 import com.his.patient.vo.WardVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -45,8 +47,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 住院输血闭环服务实现（P4.4）。
@@ -80,39 +80,33 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class TransfusionApplyServiceImpl implements TransfusionApplyService {
-    @Autowired
-    private DictCacheService dictText;
-
     /**
      * 入院状态：在院
      */
     private static final int ADMITTED = 1;
-
     /**
      * 病历文书类型：11-输血记录（本闭环完成时由系统回写）
      */
     private static final int RECORD_TYPE_TRANSFUSION = 11;
-
     /**
      * 文书状态：已提交（输血记录一落库就是正式文书，不留在草稿箱）
      */
     private static final int RECORD_STATUS_SUBMITTED = 2;
-
     /**
      * 已配血/已发血后多久没往下走算"卡住"（查询时算，不落状态列）
      */
     private static final long STALLED_HOURS = 24;
-
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter FULL_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter TIME_HM = DateTimeFormatter.ofPattern("HH:mm");
-
     private final BizTransfusionApplyMapper applyMapper;
     private final BizTransfusionBagMapper bagMapper;
     private final BizTransfusionApproveMapper approveRecordMapper;
     private final PatientService patientService;
     private final InpatientService inpatientService;
     private final InpatientRecordService inpatientRecordService;
+    @Autowired
+    private DictCacheService dictText;
 
     // 查询
 
@@ -1319,7 +1313,9 @@ public class TransfusionApplyServiceImpl implements TransfusionApplyService {
         return StringUtils.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
-    /** 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入） */
+    /**
+     * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
+     */
 
     private String nextApplyNo() {
         String prefix = "SX" + LocalDate.now().format(NO_DATE);

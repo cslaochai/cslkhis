@@ -2,14 +2,14 @@ package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.exception.BusinessException;
-import com.his.system.entity.CurrentUser;
-import com.his.system.utils.UserUtils;
 import com.his.system.dto.AttendanceDTO;
 import com.his.system.entity.BizShift;
 import com.his.system.entity.BizStaffAttendance;
 import com.his.system.entity.BizStaffSchedule;
+import com.his.system.entity.CurrentUser;
 import com.his.system.mapper.BizStaffAttendanceMapper;
 import com.his.system.service.StaffAttendanceService;
+import com.his.system.utils.UserUtils;
 import com.his.system.vo.CalibrationAdviceVO;
 import com.his.system.vo.StaffWorktimeVO;
 import com.his.system.vo.WorktimeSummaryVO;
@@ -26,29 +26,15 @@ import java.util.Objects;
 
 /**
  * 实际出勤服务实现（闭环第 3、4 步）。
- *
- * <p><b>这一层在闭环里负责什么</b>：把"计划了谁"和"实际开展了没"对起来，
- * 让缺口不再是纸面算术 —— 页面说缺 2 人时，能回答"是编制不够"还是"今天两个人都没来"。
- *
- * <p><b>两条铁律，违反任何一条这层数据就不能用于绩效</b>：
- * <ol>
- *   <li><b>系统不许自己判缺勤</b>。查不到出勤记录时的正确结论是"未回填"，
- *       缺勤只能由 {@link #markAbsent} 产生，或将来由考勤机导入。
- *       证据不足时的默认值必须是"不知道"，不能是"有罪"。</li>
- *   <li><b>对计划层零写权限</b>。这里只读 {@code biz_staff_schedule}。
- *       把实际写回计划就等于抹掉了对照的基准 —— 下一次复盘只会看到"计划和实际总是一致"。</li>
- * </ol>
- *
- * <p>迟到/早退的判定与 sql/214 的视图完全同一套口径：宽限取班上配的
- * {@code late_grace_minutes}，跨零点的班把结束时间顺延一天后再比。
- * 判定的依据记录在库里的是状态值，"为什么"由视图的 diff_reason 现场解释。
  */
 @Service
 @RequiredArgsConstructor
 public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMapper, BizStaffAttendance>
         implements StaffAttendanceService {
 
-    /** 出勤状态 */
+    /**
+     * 出勤状态
+     */
     private static final int STATUS_NORMAL = 1;
     private static final int STATUS_LATE = 2;
     private static final int STATUS_EARLY_LEAVE = 3;
@@ -57,7 +43,9 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
     private static final int STATUS_OVERTIME = 6;
     private static final int STATUS_SUPPORT = 7;
 
-    /** 一次最多对照多少天（全量回溯没有意义，也拖不动） */
+    /**
+     * 一次最多对照多少天（全量回溯没有意义，也拖不动）
+     */
     private static final int MAX_QUERY_DAYS = 92;
 
     @Override
@@ -91,7 +79,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
             empCode = plan.getEmpCode();
             if (dto.getOrgType() != null && dto.getOrgId() != null
                     && !(Objects.equals(dto.getOrgType(), plan.getOrgType())
-                         && Objects.equals(dto.getOrgId(), plan.getOrgId()))) {
+                    && Objects.equals(dto.getOrgId(), plan.getOrgId()))) {
                 // 支援：人被派去别的单元干活。单元按**实际**写（在哪儿干活是事实），
                 // 计划那根线还牵着（staff_schedule_id 指向原计划），这样两边都对得上。
                 orgType = dto.getOrgType();
@@ -391,7 +379,9 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         return STATUS_NORMAL;
     }
 
-    /** 找到这次操作针对的那条出勤记录 */
+    /**
+     * 找到这次操作针对的那条出勤记录
+     */
     private BizStaffAttendance locateRow(AttendanceDTO dto, boolean requireExist) {
         Long employeeId = requireEmployee(dto);
         LocalDate date = dto.getWorkDate() == null ? LocalDate.now() : dto.getWorkDate();
@@ -486,7 +476,9 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         return best == null ? plans.get(0) : best;
     }
 
-    /** 班次在指定日期上的开始时刻（跨零点班的结束时间顺延一天，开始时间不变） */
+    /**
+     * 班次在指定日期上的开始时刻（跨零点班的结束时间顺延一天，开始时间不变）
+     */
     private LocalDateTime shiftStartOf(Long shiftId, LocalDate date) {
         if (shiftId == null || shiftId <= 0) {
             return null;

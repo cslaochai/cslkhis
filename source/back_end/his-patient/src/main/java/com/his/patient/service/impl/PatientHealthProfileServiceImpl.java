@@ -10,10 +10,10 @@ import com.his.patient.service.PatientHealthProfileService;
 import com.his.patient.support.HealthProfileEnums;
 import com.his.patient.support.PatientProfileValidator;
 import com.his.patient.vo.*;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysDictData;
 import com.his.system.service.DictCacheService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -507,7 +507,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
         }
         Long patientId = patient.getId();
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         String operator = operatorUser.getRealName();
 
         // 过敏史
@@ -582,7 +584,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
      */
     private void writePatientText(Long patientId, String column, String value) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         String text = StringUtils.hasText(value) ? value : null;
         LambdaUpdateWrapper<BizPatient> wrapper = new LambdaUpdateWrapper<BizPatient>()
                 .eq(BizPatient::getId, patientId);
@@ -597,7 +601,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
 
     private void writePatientContact(Long patientId, String name, String phone, String relationText) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         patientMapper.update(null, new LambdaUpdateWrapper<BizPatient>()
                 .eq(BizPatient::getId, patientId)
                 .set(BizPatient::getContactName, name)
@@ -654,7 +660,9 @@ public class PatientHealthProfileServiceImpl implements PatientHealthProfileServ
                              java.util.function.Function<T, Integer> inserter,
                              java.util.function.Function<T, Integer> updater) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         String operator = operatorUser.getRealName();
         if (id == null) {
             applyCreateBy(entity, operator);

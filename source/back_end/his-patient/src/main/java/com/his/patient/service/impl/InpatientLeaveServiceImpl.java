@@ -2,9 +2,7 @@ package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.ObjectSignStatusEnum;
@@ -12,6 +10,8 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.patient.dto.InpatientLeaveDTO;
 import com.his.patient.entity.BizInpatientLeave;
@@ -19,11 +19,11 @@ import com.his.patient.enums.LeaveStatusEnum;
 import com.his.patient.mapper.BizInpatientLeaveMapper;
 import com.his.patient.service.InpatientLeaveService;
 import com.his.patient.vo.InpatientLeaveVO;
-import com.his.system.provider.DeptScopeProvider;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysConfig;
 import com.his.system.mapper.SysConfigMapper;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -59,8 +59,6 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class InpatientLeaveServiceImpl implements InpatientLeaveService {
-    private final DeptScopeProvider deptScopeProvider;
-
     private static final int REASON_MAX = 500;
     private static final int DEST_MAX = 200;
     private static final int NOTE_MAX = 500;
@@ -71,7 +69,6 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
      * 手写签名 dataURL 上限 512KB（canvas PNG 正常几十 KB，兜住恶意大串）
      */
     private static final int SIGNATURE_MAX = 512 * 1024;
-
     /**
      * 与患者关系合法码（字典 his_notice_relation，与病危重通知同一码表）
      */
@@ -84,13 +81,12 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
      * 上报对象合法码（字典 his_leave_report）
      */
     private static final Set<Integer> REPORT_TOS = Set.of(1, 2, 3);
-
     private static final String MAX_HOURS_CONFIG_KEY = "inpatient.leave.max_hours";
     /**
      * 配置缺失时的兜底上限（小时）。宁可保守，也不回落成「无上限」。
      */
     private static final int MAX_HOURS_FALLBACK = 72;
-
+    private final DeptScopeProvider deptScopeProvider;
     private final BizInpatientLeaveMapper leaveMapper;
     private final RedisSequenceService redisSequenceService;
     private final EmrSignatureService signatureService;
@@ -292,7 +288,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
         if (isNew) {
             leave.setApplyTime(now());
             CurrentUser operatorUser = UserUtils.getCurrentUser();
-            if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+            if (operatorUser == null) {
+                throw new BusinessException("当前用户信息不存在");
+            }
             leave.setApplyBy(cutToNull(operatorUser.getRealName(), 64));
         }
         leave.setRemark(cutToNull(dto.getRemark(), REASON_MAX));
@@ -317,7 +315,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
 
         // 落款人 = 当前登录职工：批准/拒绝都是医疗决定，责任主体不许前端冒充
         CurrentUser currentUser = UserUtils.getCurrentUser();
-        if (currentUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (currentUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         Long me = currentUser.getEmployeeId();
         String myName = currentUser.getRealName();
         if (me == null || !StringUtils.hasText(myName)) {
@@ -428,7 +428,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     @Transactional(rollbackFor = Exception.class)
     public void confirmBack(InpatientLeaveDTO.Back dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (!Objects.equals(LeaveStatusEnum.LEFT.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("只有「已离院」的请假单能销假，当前为「"
@@ -450,7 +452,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     @Transactional(rollbackFor = Exception.class)
     public void cancel(InpatientLeaveDTO.Cancel dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (Objects.equals(LeaveStatusEnum.LEFT.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("已离院的请假单不能取消（人已经出去了，事实不能蒸发）——请等患者返回后销假");
@@ -472,7 +476,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     @Transactional(rollbackFor = Exception.class)
     public void recordContact(InpatientLeaveDTO.Contact dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (!Objects.equals(LeaveStatusEnum.LEFT.getCode(), leave.getLeaveStatus())) {
             throw new BusinessException("只有「已离院」的请假单记录超期处置，当前为「"
@@ -499,7 +505,9 @@ public class InpatientLeaveServiceImpl implements InpatientLeaveService {
     @Transactional(rollbackFor = Exception.class)
     public void print(InpatientLeaveDTO.Print dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientLeave leave = requireLeave(dto.getId());
         if (!Objects.equals(LeaveStatusEnum.LEFT.getCode(), leave.getLeaveStatus())
                 && !Objects.equals(LeaveStatusEnum.RETURNED.getCode(), leave.getLeaveStatus())) {

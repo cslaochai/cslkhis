@@ -2,11 +2,11 @@ package com.his.patient.service.impl;
 
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DeathCertificateDTO;
 import com.his.patient.entity.BizDeathCertificate;
 import com.his.patient.entity.BizDeathCertificateCause;
@@ -18,10 +18,10 @@ import com.his.patient.mapper.BizDeathCertificateCauseMapper;
 import com.his.patient.mapper.BizDeathCertificateMapper;
 import com.his.patient.service.DeathCertificateService;
 import com.his.patient.vo.DeathCertificateVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -304,7 +304,9 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(DeathCertificateDTO.Upsert dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         DeathCertificateVO.PatientSnapshot snapshot = certMapper.selectPatientSnapshot(dto.getAdmissionId());
         if (snapshot == null) {
             throw new BusinessException("住院记录不存在");
@@ -407,7 +409,9 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     @Transactional(rollbackFor = Exception.class)
     public void audit(DeathCertificateDTO.Audit dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDeathCertificate cert = requireCert(dto.getId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.DRAFT.getCode())) {
             throw new BusinessException("只有草稿状态的证明可以提交审核（当前：" + statusText(cert.getCertStatus()) + "）");
@@ -464,7 +468,9 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     @Transactional(rollbackFor = Exception.class)
     public void voidCert(DeathCertificateDTO.VoidCert dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDeathCertificate cert = requireCert(dto.getId());
         if (Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.VOIDED.getCode())) {
             throw new BusinessException("该证明已作废，无需重复作废");
@@ -484,7 +490,9 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     @Transactional(rollbackFor = Exception.class)
     public Long reissue(Long origCertId) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDeathCertificate orig = requireCert(origCertId);
         if (!Objects.equals(orig.getCertStatus(), DeathCertStatusEnum.VOIDED.getCode())) {
             throw new BusinessException("只有已作废的证明才能重开（当前：" + statusText(orig.getCertStatus()) + "）");
@@ -549,7 +557,9 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
     @Transactional(rollbackFor = Exception.class)
     public void print(DeathCertificateDTO.Print dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDeathCertificate cert = requireCert(dto.getId());
         if (!Objects.equals(cert.getCertStatus(), DeathCertStatusEnum.ISSUED.getCode())) {
             throw new BusinessException("只有「已开具」的证明才打印（" + statusText(cert.getCertStatus()) + "的表样不能作为凭证）");

@@ -27,10 +27,12 @@ import com.his.patient.enums.InpatientRecordTypeEnum;
 import com.his.patient.mapper.BizInpatientRecordMapper;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,8 +40,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 病案质控服务实现（P5.4）。
@@ -64,32 +64,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 @RequiredArgsConstructor
 public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapper, BizQualityControl>
         implements QualityControlService {
-    @Autowired
-    private DictCacheService dictText;
-
     /**
      * 单号冲突重试次数
      */
     private static final int MAX_NO_RETRY = 3;
-
     /**
      * 批量质控单次上限，防止前端误传全表 ID
      */
     private static final int MAX_BATCH_SIZE = 200;
-
     private final BizMedicalRecordMapper medicalRecordMapper;
-
     private final BizInpatientRecordMapper inpatientRecordMapper;
-
     private final QcRuleEngine qcRuleEngine;
-
     private final QcStoreService qcStoreService;
-
     /**
      * 站内信（emr-qc 发送方）：质控发现问题 → 通知病历书写医生。
      * 发送失败只记日志——质控留痕是主流程，通知是副产品，不能让一条消息把质控单回滚掉。
      */
     private final SysMessageService sysMessageService;
+    @Autowired
+    private DictCacheService dictText;
 
     // 查询
 

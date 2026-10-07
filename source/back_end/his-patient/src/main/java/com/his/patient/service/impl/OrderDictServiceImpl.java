@@ -12,9 +12,9 @@ import com.his.patient.mapper.SysOrderDictDataMapper;
 import com.his.patient.service.OrderDictService;
 import com.his.patient.support.OrderDictTypes;
 import com.his.patient.vo.OrderDictListVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -102,7 +102,9 @@ public class OrderDictServiceImpl implements OrderDictService {
             throw new BusinessException("字典内容不能为空");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         String dictType = requireType(dto.getDictType());
 
         String label = dto.getDictLabel() == null ? null : dto.getDictLabel().trim();
@@ -165,7 +167,9 @@ public class OrderDictServiceImpl implements OrderDictService {
     @Override
     public void deleteById(Long id, String dictType) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         String type = requireType(dictType);
         // ②非web入口：service 方法参数判空，没有 DTO 字段可挂注解（HTTP 侧 @RequestParam 已必填）
         if (id == null) {

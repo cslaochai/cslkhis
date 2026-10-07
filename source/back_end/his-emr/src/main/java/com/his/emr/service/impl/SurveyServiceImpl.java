@@ -365,14 +365,9 @@ public class SurveyServiceImpl implements SurveyService {
                     ? SurveyDispatchStatusEnum.PENDING_PUSH.getCode() : SurveyDispatchStatusEnum.PUSHED.getCode());
             dispatchMapper.updateById(dispatch);
         }
-        // 投诉单本身不撤（登记时患者确实在电话里表达了不满，作废的是分数不是这条事实），
-        // 但要解除「已转投诉禁止重填」这道锁 —— 留着指针会让这张卷子永远卡在「已回收 + 不许重填」。
-        // 「答过什么 → 转了哪张投诉单」的追溯改由 remark 与投诉单 content 里的答卷号自证。
         if (answer.getDisputeCaseId() != null) {
             String withTrace = cut((answer.getRemark() == null ? "" : answer.getRemark() + "；")
                     + "原转投诉单 " + answer.getDisputeCaseId() + " 继续有效（本答卷已作废重填）", 512);
-            // updateById 的字段策略默认 NOT_NULL，setDisputeCaseId(null) 会被静默忽略 ——
-            // 必须走 UpdateWrapper 显式 SET NULL，否则锁解不掉，这张卷子再也收不回来
             answerMapper.update(null, new LambdaUpdateWrapper<BizSurveyAnswer>()
                     .eq(BizSurveyAnswer::getId, answer.getId())
                     .set(BizSurveyAnswer::getRemark, withTrace)

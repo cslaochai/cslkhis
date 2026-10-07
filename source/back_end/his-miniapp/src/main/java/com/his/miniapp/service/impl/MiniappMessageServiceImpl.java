@@ -3,10 +3,10 @@ package com.his.miniapp.service.impl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniappMessageMapper;
-import com.his.system.entity.CurrentUser;
 import com.his.miniapp.service.MiniappMessageService;
 import com.his.miniapp.support.RawRowValues;
 import com.his.miniapp.vo.MessageListVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,6 +22,24 @@ public class MiniappMessageServiceImpl implements MiniappMessageService {
     private static final int MAX_PAGE_SIZE = 50;
 
     private final MiniappMessageMapper messageMapper;
+
+    private static MessageListVO toVO(Map<String, Object> row) {
+        MessageListVO vo = new MessageListVO();
+        vo.setMessageId(RawRowValues.text(row, "messageId"));
+        vo.setMessageNo(RawRowValues.text(row, "messageNo"));
+        vo.setChannel(RawRowValues.text(row, "channel"));
+        vo.setReceiverId(RawRowValues.text(row, "receiverId"));
+        vo.setReceiverName(RawRowValues.text(row, "receiverName"));
+        vo.setTitle(RawRowValues.text(row, "title"));
+        vo.setContent(RawRowValues.text(row, "content"));
+        vo.setBizType(RawRowValues.text(row, "bizType"));
+        vo.setBizId(RawRowValues.text(row, "bizId"));
+        vo.setSeverity(RawRowValues.text(row, "severity"));
+        vo.setReadStatus(RawRowValues.integer(row, "readStatus"));
+        vo.setSendStatus(RawRowValues.integer(row, "sendStatus"));
+        vo.setSendTime(RawRowValues.text(row, "sendTime"));
+        return vo;
+    }
 
     @Override
     public PageResult<MessageListVO> myPage(Integer pageNum, Integer pageSize) {
@@ -60,23 +78,5 @@ public class MiniappMessageServiceImpl implements MiniappMessageService {
             throw new BusinessException("当前用户信息不存在");
         }
         return messageMapper.markRead(String.join(",", messageIds), operatorUser.getUserId());
-    }
-
-    private static MessageListVO toVO(Map<String, Object> row) {
-        MessageListVO vo = new MessageListVO();
-        vo.setMessageId(RawRowValues.text(row, "messageId"));
-        vo.setMessageNo(RawRowValues.text(row, "messageNo"));
-        vo.setChannel(RawRowValues.text(row, "channel"));
-        vo.setReceiverId(RawRowValues.text(row, "receiverId"));
-        vo.setReceiverName(RawRowValues.text(row, "receiverName"));
-        vo.setTitle(RawRowValues.text(row, "title"));
-        vo.setContent(RawRowValues.text(row, "content"));
-        vo.setBizType(RawRowValues.text(row, "bizType"));
-        vo.setBizId(RawRowValues.text(row, "bizId"));
-        vo.setSeverity(RawRowValues.text(row, "severity"));
-        vo.setReadStatus(RawRowValues.integer(row, "readStatus"));
-        vo.setSendStatus(RawRowValues.integer(row, "sendStatus"));
-        vo.setSendTime(RawRowValues.text(row, "sendTime"));
-        return vo;
     }
 }

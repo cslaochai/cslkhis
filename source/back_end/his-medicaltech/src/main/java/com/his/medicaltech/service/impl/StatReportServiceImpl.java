@@ -12,8 +12,10 @@ import com.his.medicaltech.mapper.StatReportAggMapper;
 import com.his.medicaltech.service.StatReportService;
 import com.his.medicaltech.vo.StatReportVO;
 import com.his.system.entity.CurrentUser;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -29,31 +31,20 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 病案统计上报服务（打印预留）。
- *
- * <p>口径：出院队列 = discharge_time 非空且落在上报期间、排除 7-医嘱取消入院
- * （dev 库存在"有出院时间但状态未流转"的脏数据，故不以 admit_status 判出院）；
- * 主要诊断 = 出院记录(7) 优先 → 入院记录(1) → 入院诊断快照兜底；
- * 费用 = 出院队列的有效结算（排除 3-已作废），按住院单归集而非结算时间归期。
- * generate 聚合落库 JSON 报文即留痕，submit 只冻结留痕（真实对接时换成 http 上报），
- * 同期同类型同口径只允许一条未闭环台账，作废后槽位释放。
  */
 @Service
 @RequiredArgsConstructor
 public class StatReportServiceImpl implements StatReportService {
-    @Autowired
-    private DictCacheService dictText;
-
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-
     private final BizStatReportMapper reportMapper;
     private final StatReportAggMapper aggMapper;
     private final ObjectMapper objectMapper;
+    @Autowired
+    private DictCacheService dictText;
 
     // 生成
 

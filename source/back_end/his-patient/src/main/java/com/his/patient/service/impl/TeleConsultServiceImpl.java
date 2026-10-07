@@ -3,8 +3,8 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.Constants;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.patient.dto.*;
 import com.his.patient.entity.BizOnlineConsult;
 import com.his.patient.entity.BizPatient;
@@ -119,7 +119,9 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     @Transactional(rollbackFor = Exception.class)
     public TeleConsultVO teleUpsert(TeleConsultUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizTeleConsult entity;
         boolean isNew = dto.getId() == null;
         if (isNew) {
@@ -163,7 +165,9 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     @Transactional(rollbackFor = Exception.class)
     public TeleConsultVO teleArrange(TeleArrangeDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizTeleConsult entity = requireTeleEntity(dto.getId());
         if (!Objects.equals(entity.getStatus(), TeleConsultStatusEnum.PENDING.getCode())) {
             throw new BusinessException("仅「待安排」的会诊单可安排（当前：" + teleStatusName(entity.getStatus()) + "）");
@@ -195,7 +199,9 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     @Transactional(rollbackFor = Exception.class)
     public TeleConsultVO teleComplete(TeleActionDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizTeleConsult entity = requireTeleEntity(dto.getId());
         if (!Objects.equals(entity.getStatus(), TeleConsultStatusEnum.ARRANGED.getCode())) {
             throw new BusinessException("仅「已安排」的会诊单可出意见完成（当前：" + teleStatusName(entity.getStatus()) + "）");
@@ -253,7 +259,9 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     @Transactional(rollbackFor = Exception.class)
     public OnlineConsultVO onlineApply(OnlineApplyDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPatient patient = requirePatient(dto.getPatientId());
         BizOnlineConsult entity = new BizOnlineConsult();
         entity.setConsultNo(nextNo(Constants.ONLINE_CONSULT_NO_PREFIX, "ONLINE_CONSULT"));
@@ -279,7 +287,9 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     @Transactional(rollbackFor = Exception.class)
     public OnlineConsultVO onlineAccept(Long id) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizOnlineConsult entity = requireOnlineEntity(id);
         if (!Objects.equals(entity.getStatus(), OnlineConsultStatusEnum.WAITING.getCode())) {
             throw new BusinessException("仅「待接诊」的问诊单可接诊（当前：" + onlineStatusName(entity.getStatus()) + "）");
@@ -301,7 +311,9 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     @Transactional(rollbackFor = Exception.class)
     public OnlineConsultVO onlineReply(OnlineReplyDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizOnlineConsult entity = requireOnlineEntity(dto.getId());
         if (!Objects.equals(entity.getStatus(), OnlineConsultStatusEnum.ACCEPTED.getCode())) {
             throw new BusinessException("仅「接诊中」的问诊单可回复（当前：" + onlineStatusName(entity.getStatus()) + "）");

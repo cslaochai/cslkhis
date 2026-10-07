@@ -3,18 +3,11 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.*;
-import com.his.operation.enums.AirwayDeviceEnum;
-import com.his.operation.enums.AnesthesiaChargeStatusEnum;
-import com.his.operation.enums.AnesthesiaRecordStatusEnum;
-import com.his.operation.enums.AsaGradeEnum;
-import com.his.operation.enums.ChargeSourceEnum;
-import com.his.operation.enums.OperationAnesthesiaMethodEnum;
-import com.his.operation.enums.OperationApplyStatusEnum;
-import com.his.operation.enums.VisitConclusionEnum;
+import com.his.operation.enums.*;
 import com.his.operation.mapper.*;
 import com.his.operation.service.AnesthesiaRecordService;
 import com.his.operation.service.AnesthesiaVisitService;
@@ -23,11 +16,13 @@ import com.his.operation.support.OperationChargeBiller;
 import com.his.operation.vo.*;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.service.PatientService;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
+import com.his.system.service.DictCacheService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -40,8 +35,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 麻醉记录单服务实现（G15 核心）。
@@ -65,11 +58,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
-    @Autowired
-    private DictCacheService dictText;
-
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-
     private final BizAnesthesiaRecordMapper recordMapper;
     private final BizAnesthesiaVitalMapper vitalMapper;
     private final BizAnesthesiaMedMapper medMapper;
@@ -78,6 +67,8 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     private final PatientService patientService;
     private final AnesthesiaVisitService visitService;
     private final OperationChargeBiller biller;
+    @Autowired
+    private DictCacheService dictText;
 
     // 查询
 
@@ -150,7 +141,9 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     @Transactional(rollbackFor = Exception.class)
     public String create(AnesthesiaRecordUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizOperationApply apply = applyMapper.selectById(dto.getApplyId());
         if (apply == null) {
             throw new BusinessException("手术申请单不存在");
@@ -333,7 +326,9 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     @Transactional(rollbackFor = Exception.class)
     public OperationChargeSummaryVO submit(AnesthesiaActionDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizAnesthesiaRecord entity = mustGet(dto == null ? null : dto.getId());
         if (!Integer.valueOf(AnesthesiaRecordStatusEnum.DRAFT.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"
@@ -385,7 +380,9 @@ public class AnesthesiaRecordServiceImpl implements AnesthesiaRecordService {
     @Transactional(rollbackFor = Exception.class)
     public void audit(AnesthesiaActionDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizAnesthesiaRecord entity = mustGet(dto == null ? null : dto.getId());
         if (!Integer.valueOf(AnesthesiaRecordStatusEnum.SUBMITTED.getCode()).equals(entity.getRecordStatus())) {
             throw new BusinessException("麻醉记录单 " + entity.getRecordNo() + " 当前状态为「"

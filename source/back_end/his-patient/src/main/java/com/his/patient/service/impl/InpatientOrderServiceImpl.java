@@ -1,25 +1,24 @@
 package com.his.patient.service.impl;
-import com.his.common.util.TimeUtil;
-import com.his.common.enums.AdmitStatusEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.charge.dto.FeeBookDTO;
+import com.his.charge.entity.BizFeeRecord;
+import com.his.charge.service.ArrearsControlGate;
+import com.his.charge.support.FeeCatalogResolver;
 import com.his.common.dto.SignCommandDTO;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.util.TimeUtil;
 import com.his.common.vo.SignatureVO;
-import com.his.charge.dto.FeeBookDTO;
-import com.his.charge.entity.BizFeeRecord;
-import com.his.charge.support.FeeCatalogResolver;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
 import com.his.patient.enums.InpatientOrderStatusEnum;
 import com.his.patient.enums.OrderClassEnum;
 import com.his.patient.enums.OrderTypeEnum;
 import com.his.patient.mapper.*;
-import com.his.charge.service.ArrearsControlGate;
 import com.his.patient.service.DietPlanService;
 import com.his.patient.service.InpatientOrderService;
 import com.his.patient.support.InpatientOrderItemRules;
@@ -27,15 +26,17 @@ import com.his.patient.support.OrderChargeInvoker;
 import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.patient.vo.InpatientOrderVO;
 import com.his.patient.vo.WardVO;
-import com.his.system.utils.UserUtils;
-import com.his.system.entity.CurrentUser;
 import com.his.system.dto.TechAuthGateDTO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,8 +48,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 住院医嘱服务实现（P1：医嘱 → 校对 → 执行 → 计费）。
@@ -76,24 +75,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class InpatientOrderServiceImpl implements InpatientOrderService {
-    @Autowired
-    private DictCacheService dictText;
+    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     // 医嘱状态
 
     // 执行状态
 
     // 医嘱类型
-
-    private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-
     /**
      * 一次查询最多补多少条计划行。
      * <p>补计划发生在 GET 里，必须有上限：异常数据（比如几百条跨月未执行的长期医嘱）
      * 不能把一次翻页查询拖成批量写。
      */
     private static final int BACKFILL_LIMIT = 500;
-
     private final BizInpatientOrderMapper orderMapper;
     private final BizInpatientOrderExecMapper execMapper;
     private final BizAdmissionMapper admissionMapper;
@@ -120,6 +114,8 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
      * 技术授权准入闸（sql/155）：无手术资质的人不能开手术医嘱
      */
     private final EmployeeTechAuthService techAuthService;
+    @Autowired
+    private DictCacheService dictText;
 
     // 开立 / 修改
 
@@ -146,7 +142,9 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             throw new BusinessException("入院ID不能为空");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         List<InpatientOrderItemDTO> items = dto.getItems();
         for (InpatientOrderItemDTO item : items) {
             InpatientOrderItemRules.validate(item);
@@ -304,7 +302,9 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
      */
     private String updateOne(InpatientOrderUpsertDTO dto, BizAdmission admission, LocalDateTime now) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientOrder order = orderMapper.selectById(dto.getId());
         if (order == null) {
             throw new BusinessException("医嘱不存在");
@@ -369,7 +369,9 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
      */
     private void invalidateDoctorSignIfAny(BizInpatientOrder order, String reason) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         if (order.getDoctorSignId() == null) {
             return;
         }
@@ -385,7 +387,9 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
      */
     private void signOrder(BizInpatientOrder order, SignSceneEnum scene, String actionLabel) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         SignCommandDTO cmd = new SignCommandDTO();
         cmd.setBizType(SignBizTypeEnum.INPATIENT_ORDER.getCode());
         cmd.setBizId(order.getId());
@@ -415,7 +419,9 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             throw new BusinessException("请选择要校对的医嘱");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         List<Long> ids = dto.getOrderIds().stream().filter(Objects::nonNull).distinct().toList();
         if (ids.isEmpty()) {
             throw new BusinessException("请选择要校对的医嘱");
@@ -585,7 +591,9 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             throw new BusinessException("停止原因不能为空（停止是一个医疗决定，必须有人负责）");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientOrder target = orderMapper.selectById(dto.getOrderId());
         if (target == null) {
             throw new BusinessException("医嘱不存在");
@@ -656,7 +664,9 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             throw new BusinessException("医嘱ID不能为空");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientOrder target = orderMapper.selectById(dto.getOrderId());
         if (target == null) {
             throw new BusinessException("医嘱不存在");
@@ -772,7 +782,9 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
             throw new BusinessException("请选择要处理的执行记录");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         int status = dto.getExecStatus() != null ? dto.getExecStatus() : ExecStatusEnum.EXECUTED.getCode();
         if (Objects.equals(ExecStatusEnum.SKIPPED.getCode(), status) && !StringUtils.hasText(dto.getExecNote())) {
             throw new BusinessException("跳过必须写明原因（飞检问的是「这条医嘱为什么没有执行记录」，答「删了」不成立）");

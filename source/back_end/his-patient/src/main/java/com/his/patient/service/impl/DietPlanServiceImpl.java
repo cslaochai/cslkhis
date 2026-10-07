@@ -3,9 +3,9 @@ package com.his.patient.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DietConfirmDTO;
 import com.his.patient.dto.DietPlanQueryPageDTO;
 import com.his.patient.dto.DietPlanStopDTO;
@@ -18,9 +18,9 @@ import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.DietPlanVO;
 import com.his.patient.vo.DietTypeOptionVO;
 import com.his.patient.vo.WardVO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeProvider;
 import com.his.system.utils.UserUtils;
-import com.his.system.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DuplicateKeyException;
@@ -55,11 +55,9 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class DietPlanServiceImpl implements DietPlanService {
-    private final DeptScopeProvider deptScopeProvider;
-
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String PREFIX_PLAN = "DP";
-
+    private final DeptScopeProvider deptScopeProvider;
     private final BizDietPlanMapper planMapper;
     private final BizMealOrderMapper mealMapper;
     private final BizAdmissionMapper admissionMapper;
@@ -166,7 +164,9 @@ public class DietPlanServiceImpl implements DietPlanService {
         }
 
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDietPlan row;
         boolean insert = dto.getId() == null;
         if (insert) {
@@ -257,7 +257,9 @@ public class DietPlanServiceImpl implements DietPlanService {
             throw new BusinessException("请选择要处理的膳食方案");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         boolean accept = Boolean.TRUE.equals(dto.getAccept());
         String reason = cut(trim(dto.getRejectReason()), 500);
         if (!accept && !StringUtils.hasText(reason)) {
@@ -432,7 +434,9 @@ public class DietPlanServiceImpl implements DietPlanService {
      */
     private void applyStop(BizDietPlan row, LocalDateTime stopTime, String reason) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         row.setPlanStatus(PlanStatusEnum.STOPPED.getCode());
         row.setStopTime(stopTime);
         row.setRemark(cut(appendRemark(row.getRemark(),
@@ -448,7 +452,9 @@ public class DietPlanServiceImpl implements DietPlanService {
             return;
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         int n = mealMapper.update(null, new LambdaUpdateWrapper<BizMealOrder>()
                 .eq(BizMealOrder::getDietPlanId, dietPlanId)
                 .ge(BizMealOrder::getMealDate, fromDate)

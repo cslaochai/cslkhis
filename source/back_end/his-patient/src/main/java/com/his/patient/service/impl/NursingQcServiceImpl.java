@@ -17,11 +17,13 @@ import com.his.patient.mapper.BizNursingQcIndicatorMapper;
 import com.his.patient.mapper.SysNursingQcItemMapper;
 import com.his.patient.service.NursingQcService;
 import com.his.patient.vo.NurseQcVO;
-import com.his.system.provider.DeptScopeProvider;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.service.DictCacheService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,8 +34,6 @@ import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
 import java.util.*;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 护理质控服务实现（sql/168）。
@@ -61,20 +61,18 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class NursingQcServiceImpl implements NursingQcService {
-    @Autowired
-    private DictCacheService dictText;
-    private final DeptScopeProvider deptScopeProvider;
-
     private static final int TEXT_MAX = 500;
     private static final int OPERATOR_MAX = 64;
     private static final int INSPECTOR_LIMIT = 200;
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
     private static final String REMARK_AUTO = "合格率与得分由检查明细求和生成（sql/168 口径 d）";
-
+    private final DeptScopeProvider deptScopeProvider;
     private final BizNursingQcCheckMapper checkMapper;
     private final BizNursingQcCheckItemMapper checkItemMapper;
     private final SysNursingQcItemMapper itemMapper;
     private final BizNursingQcIndicatorMapper indicatorMapper;
+    @Autowired
+    private DictCacheService dictText;
 
     // 参照数据
 
@@ -559,7 +557,9 @@ public class NursingQcServiceImpl implements NursingQcService {
             throw new BusinessException("请选择统计月份");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         String statMonth = requireMonth(command.getStatMonth(), "统计月份");
         NursingQcReportEnum target = NursingQcReportEnum.fromCode(command.getReportStatus());
         // ③业务规则：码值合法性（非空已由 DTO @NotNull 收口）
@@ -606,7 +606,9 @@ public class NursingQcServiceImpl implements NursingQcService {
     private BizNursingQcIndicator buildIndicator(NursingIndicatorEnum e, NurseQcVO.Ward ward, String statMonth,
                                                  LocalDate monthStart, LocalDate statEnd, int bedDays) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BigDecimal numerator;
         BigDecimal denominator;
         String remark;

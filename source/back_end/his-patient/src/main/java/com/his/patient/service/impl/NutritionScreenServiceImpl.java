@@ -1,10 +1,10 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.NutritionScreenQueryPageDTO;
 import com.his.patient.dto.NutritionScreenUpsertDTO;
 import com.his.patient.entity.BizAdmission;
@@ -17,8 +17,8 @@ import com.his.patient.service.NutritionScreenService;
 import com.his.patient.support.NutritionRules;
 import com.his.patient.vo.NutritionScreenVO;
 import com.his.patient.vo.WardVO;
-import com.his.system.provider.DeptScopeProvider;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,11 +48,9 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class NutritionScreenServiceImpl implements NutritionScreenService {
-    private final DeptScopeProvider deptScopeProvider;
-
     private static final DateTimeFormatter DAY_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String PREFIX_SCREEN = "NS";
-
+    private final DeptScopeProvider deptScopeProvider;
     private final BizNutritionScreenMapper screenMapper;
     private final BizAdmissionMapper admissionMapper;
     private final BizPatientMapper patientMapper;
@@ -98,7 +96,9 @@ public class NutritionScreenServiceImpl implements NutritionScreenService {
     @Transactional(rollbackFor = Exception.class)
     public NutritionScreenVO screenUpsert(NutritionScreenUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         Integer type = dto.getScreenType();
         // ①条件必填：选了 NRS2002 才必填两个分项评分，换别的量表就必填总分，@NotNull 会误伤另一种量表
         if (type == NutritionScreenTypeEnum.NRS2002.getCode()

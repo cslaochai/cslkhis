@@ -37,12 +37,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 语音口述转写实现（DashScope qwen3-asr-flash，OpenAI 兼容同步调用）。
- * <p>
- * 为什么不走 {@code AiExecutionService}：执行器管的是「提示词渲染 → JSON 结构化输出 → 熔断降级」，
- * 本能力没有提示词、没有结构化契约、没有规则兜底 —— 失败只能如实报错。
- * 审计口径与执行器对齐：成功/失败都落 {@code sys_ai_call_log}，
- * input_digest 只落音频元数据（大小/格式/时长），转写原文以指纹代替（纪律 6）。
- * 不接熔断：失败直接暴露给医生重试，不存在「静默降级成假文本」的风险面。
  */
 @Slf4j
 @Service
@@ -195,10 +189,10 @@ public class SpeechTranscribeServiceImpl implements SpeechTranscribeService {
 
     private void recordAudit(String capabilityKey, AiCallStatusEnum status, int latencyMs, String model,
                              String errorMsg, String inputMeta, String outputDigest) {
-        // 取操作人放在 try 外面：catch 只该兜「审计落库失败」，
-        // 把「取不到当前人」一起吞掉就等于把报错变回静默 warn
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         String operator = operatorUser.getRealName();
         try {
             SysAiCallLog entity = new SysAiCallLog();

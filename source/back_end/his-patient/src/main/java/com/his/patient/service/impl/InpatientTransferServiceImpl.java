@@ -1,12 +1,4 @@
 package com.his.patient.service.impl;
-import com.his.common.util.TimeUtil;
-import com.his.patient.enums.BedStatusEnum;
-import com.his.patient.enums.InpatientOrderStatusEnum;
-import com.his.patient.enums.InpatientRecordTypeEnum;
-import com.his.patient.enums.OrderTypeEnum;
-import com.his.patient.enums.SummaryStatusEnum;
-import com.his.patient.enums.TransferStatusEnum;
-import com.his.patient.enums.TransferTypeEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -15,18 +7,20 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.InpatientTransferAcceptDTO;
 import com.his.patient.dto.InpatientTransferCancelDTO;
 import com.his.patient.dto.InpatientTransferQueryPageDTO;
 import com.his.patient.dto.InpatientTransferUpsertDTO;
 import com.his.patient.entity.*;
+import com.his.patient.enums.*;
 import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientOrderService;
 import com.his.patient.service.InpatientTransferService;
 import com.his.patient.vo.InpatientTransferVO;
 import com.his.patient.vo.WardVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -151,7 +145,9 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     @Transactional(rollbackFor = Exception.class)
     public String save(InpatientTransferUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         int type = dto.getTransferType() == null ? 1 : dto.getTransferType();
 
         BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
@@ -240,7 +236,9 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     @Transactional(rollbackFor = Exception.class)
     public void accept(InpatientTransferAcceptDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientTransfer entity = transferMapper.selectById(dto.getTransferId());
         if (entity == null) {
             throw new BusinessException("转科记录不存在");
@@ -326,7 +324,9 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     @Transactional(rollbackFor = Exception.class)
     public void cancel(InpatientTransferCancelDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientTransfer entity = transferMapper.selectById(dto.getTransferId());
         if (entity == null) {
             throw new BusinessException("转科记录不存在");
@@ -490,7 +490,9 @@ public class InpatientTransferServiceImpl implements InpatientTransferService {
     private BizInpatientRecord writeBackRecord(BizInpatientTransfer entity, BizPatient patient,
                                                String orderRemark, LocalDateTime now) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientRecord record = new BizInpatientRecord();
         record.setRecordNo(nextRecordNo());
         record.setAdmissionId(entity.getAdmissionId());

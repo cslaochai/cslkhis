@@ -2,10 +2,10 @@ package com.his.pharmacy.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
-import com.his.common.exception.BusinessException;
 import com.his.charge.entity.BizFeeRecord;
+import com.his.common.base.PageResult;
+import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.pharmacy.dto.StockDeductResultDTO;
 import com.his.pharmacy.dto.WardDispenseActionDTO;
 import com.his.pharmacy.dto.WardDispenseGenerateDTO;
@@ -68,6 +68,18 @@ public class WardDispenseServiceImpl implements WardDispenseService {
     private final PharmacyService pharmacyService;
     private final WardDispenseChargeInvoker chargeInvoker;
     private final RedisSequenceService sequenceService;
+
+    private static LocalDateTime dayStart(LocalDate day) {
+        return day.atStartOfDay();
+    }
+
+    private static LocalDateTime dayEnd(LocalDate day) {
+        return day.atTime(LocalTime.MAX).truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
 
     @Override
     public List<WardDispenseCandidateVO> candidates(Long wardId, Long admissionId, LocalDate dispenseDate) {
@@ -219,6 +231,8 @@ public class WardDispenseServiceImpl implements WardDispenseService {
         return getDetailById(item.getDispenseId());
     }
 
+    // 内部
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public WardDispenseVO checkItem(WardDispenseActionDTO dto) {
@@ -298,8 +312,6 @@ public class WardDispenseServiceImpl implements WardDispenseService {
                 .eq(wardId != null, BizWardDispense::getWardId, wardId)));
         return vo;
     }
-
-    // 内部
 
     private long countItems(LocalDate day, Long wardId, int status) {
         return itemMapper.selectCount(new LambdaQueryWrapper<BizWardDispenseItem>()
@@ -387,18 +399,6 @@ public class WardDispenseServiceImpl implements WardDispenseService {
             throw new BusinessException("摆药明细不存在或已删除");
         }
         return item;
-    }
-
-    private static LocalDateTime dayStart(LocalDate day) {
-        return day.atStartOfDay();
-    }
-
-    private static LocalDateTime dayEnd(LocalDate day) {
-        return day.atTime(LocalTime.MAX).truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
 }

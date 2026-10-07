@@ -3,10 +3,10 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.Constants;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.operation.dto.*;
 import com.his.operation.entity.BizDaySurgeryApply;
 import com.his.operation.entity.BizDaySurgeryFollow;
@@ -21,10 +21,10 @@ import com.his.operation.vo.DaySurgeryItemVO;
 import com.his.operation.vo.DaySurgeryStatVO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.service.PatientService;
-import com.his.system.utils.UserUtils;
-import com.his.system.entity.CurrentUser;
 import com.his.system.dto.TechAuthGateDTO;
+import com.his.system.entity.CurrentUser;
 import com.his.system.service.EmployeeTechAuthService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -212,7 +212,9 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     @Transactional(rollbackFor = Exception.class)
     public DaySurgeryApplyVO applyUpsert(DaySurgeryApplyUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDaySurgeryItem item = requireItem(dto.getItemId());
         if (!Objects.equals(item.getStatus(), 1)) {
             throw new BusinessException("术式「" + item.getItemName() + "」已停用，不可新预约日间手术");
@@ -258,7 +260,9 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     @Transactional(rollbackFor = Exception.class)
     public DaySurgeryApplyVO evaluate(DaySurgeryEvalDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDaySurgeryApply entity = requireApply(dto.getId());
         if (!Objects.equals(entity.getStatus(), BizDaySurgeryApply.STATUS_WAIT_EVAL)) {
             throw new BusinessException("仅「待评估」的登记单可做术前评估（当前：" + statusName(entity.getStatus()) + "）");
@@ -282,7 +286,9 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     @Transactional(rollbackFor = Exception.class)
     public DaySurgeryApplyVO arrange(DaySurgeryArrangeDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDaySurgeryApply entity = requireApply(dto.getId());
         if (!Objects.equals(entity.getStatus(), BizDaySurgeryApply.STATUS_EVAL_PASSED)) {
             if (Objects.equals(entity.getStatus(), BizDaySurgeryApply.STATUS_WAIT_EVAL)) {
@@ -321,7 +327,9 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     @Transactional(rollbackFor = Exception.class)
     public DaySurgeryApplyVO discharge(DaySurgeryDischargeDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDaySurgeryApply entity = requireApply(dto.getId());
         if (!Objects.equals(entity.getStatus(), BizDaySurgeryApply.STATUS_OBSERVING)) {
             throw new BusinessException("仅「术后观察」的登记单可登记离院（当前：" + statusName(entity.getStatus()) + "）");
@@ -344,7 +352,9 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     @Transactional(rollbackFor = Exception.class)
     public DaySurgeryApplyVO transferToIpd(DaySurgeryTransferDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDaySurgeryApply entity = requireApply(dto.getId());
         if (!Objects.equals(entity.getStatus(), BizDaySurgeryApply.STATUS_OBSERVING)) {
             throw new BusinessException("仅「术后观察」的登记单可转住院（当前：" + statusName(entity.getStatus()) + "）");
@@ -380,7 +390,9 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     @Transactional(rollbackFor = Exception.class)
     public DaySurgeryApplyVO follow(DaySurgeryFollowDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDaySurgeryApply entity = requireApply(dto.getId());
         Integer st = entity.getStatus();
         if (!Objects.equals(st, BizDaySurgeryApply.STATUS_DISCHARGED)

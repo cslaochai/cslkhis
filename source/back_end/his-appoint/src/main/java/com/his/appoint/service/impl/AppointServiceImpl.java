@@ -959,7 +959,9 @@ public class AppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, BizApp
         }
         AppointChargeGateway.CancelCommand command = new AppointChargeGateway.CancelCommand();
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         command.setBillId(registInfo.getBillId());
         command.setReason(StringUtils.hasText(reason) ? reason : "退号");
         command.setOperator(operatorUser.getRealName());

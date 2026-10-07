@@ -3,8 +3,8 @@ package com.his.pharmacy.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.pharmacy.dto.PivasActionDTO;
 import com.his.pharmacy.dto.PivasAuditDTO;
 import com.his.pharmacy.dto.PivasGenerateDTO;
@@ -63,6 +63,22 @@ public class PivasServiceImpl implements PivasService {
     private final BizPivasBatchMapper batchMapper;
     private final BizPivasItemMapper itemMapper;
     private final RedisSequenceService sequenceService;
+
+    private static String cut(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max);
+    }
+
+    private static LocalDateTime dayStart(LocalDate day) {
+        return day.atStartOfDay();
+    }
+
+    private static LocalDateTime dayEnd(LocalDate day) {
+        return day.atTime(LocalTime.MAX).truncatedTo(ChronoUnit.SECONDS);
+    }
+
+    private static LocalDateTime now() {
+        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
+    }
 
     @Override
     public List<PivasCandidateVO> candidates(Long wardId, Long admissionId, LocalDate admixDate) {
@@ -208,6 +224,8 @@ public class PivasServiceImpl implements PivasService {
         return getDetailById(item.getPivasId());
     }
 
+    // 内部
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PivasVO labelBatch(PivasActionDTO dto) {
@@ -319,8 +337,6 @@ public class PivasServiceImpl implements PivasService {
         return vo;
     }
 
-    // 内部
-
     private long countItems(LocalDate day, Long wardId, int status) {
         return itemMapper.selectCount(new LambdaQueryWrapper<BizPivasItem>()
                 .eq(BizPivasItem::getAdmixDate, day)
@@ -421,22 +437,6 @@ public class PivasServiceImpl implements PivasService {
             throw new BusinessException("静配单不存在或已删除");
         }
         return batch;
-    }
-
-    private static String cut(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max);
-    }
-
-    private static LocalDateTime dayStart(LocalDate day) {
-        return day.atStartOfDay();
-    }
-
-    private static LocalDateTime dayEnd(LocalDate day) {
-        return day.atTime(LocalTime.MAX).truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static LocalDateTime now() {
-        return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
     }
 
 }

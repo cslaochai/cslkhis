@@ -66,20 +66,15 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class BedCenterServiceImpl implements BedCenterService {
-    @Autowired
-    private DictCacheService dictText;
-
     /**
      * 等待超时的最长天数；缺失或非法一律回落 7 天（不回落成"永不超时"）
      */
     private static final String MAX_WAIT_DAYS_KEY = "bed.wait.max_days";
     private static final int MAX_WAIT_DAYS_FALLBACK = 7;
-
     /**
      * 匹配候选的数量上限：全院上千张床全列出来等于没列
      */
     private static final int MATCH_LIMIT = 30;
-
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     /**
      * 等床多久没安排就找总值班（系统参数：duty.coord.bed_wait_hours，缺失/非法回落 24）
@@ -106,6 +101,8 @@ public class BedCenterServiceImpl implements BedCenterService {
      */
     private final DutyRosterService dutyRosterService;
     private final SysMessageService sysMessageService;
+    @Autowired
+    private DictCacheService dictText;
 
     // 等床队列
 
@@ -131,6 +128,26 @@ public class BedCenterServiceImpl implements BedCenterService {
         }
         return Math.max(0, Duration.between(TimeUtil.toSeconds(from), TimeUtil.toSeconds(to)).toHours());
     }
+
+    /**
+     * 等待时长的人读文案（时长格式化，不是码值映射）。
+     *
+     * <p>只表达"等了多久"，不做任何判断 —— 是否超时由 {@code expired} 单独给，
+     * 不要在这里把"等了 8 天"直接说成"已超时"（阈值是可配的，写死在文案里改配置就失效）。
+     */
+    private static String waitDurationText(long hours) {
+        if (hours < 1) {
+            return "不足 1 小时";
+        }
+        if (hours < 24) {
+            return hours + " 小时";
+        }
+        long days = hours / 24;
+        long rest = hours % 24;
+        return rest == 0 ? days + " 天" : days + " 天 " + rest + " 小时";
+    }
+
+    // 安排 / 释放 / 取消 / 收治
 
     /**
      * 时间统一截到秒：库表是 DATETIME(0)，写进去会被四舍五入，不截会导致"写进去的 ≠ 读回来的"
@@ -173,8 +190,6 @@ public class BedCenterServiceImpl implements BedCenterService {
                 .collect(Collectors.toList()));
         return voPage;
     }
-
-    // 安排 / 释放 / 取消 / 收治
 
     @Override
     public BedWaitVO queueDetail(Long waitId) {
@@ -482,6 +497,8 @@ public class BedCenterServiceImpl implements BedCenterService {
         return sent;
     }
 
+    // 统计 / 床位池 / 匹配
+
     /**
      * 同一业务单对同一收件人在 {@code hours} 小时内是否发过同类待办。
      *
@@ -507,8 +524,6 @@ public class BedCenterServiceImpl implements BedCenterService {
             return true;
         }
     }
-
-    // 统计 / 床位池 / 匹配
 
     /**
      * 等床催总值班阈值；缺失/非法一律回落 24 小时（不回落成"永不催"）
@@ -674,6 +689,8 @@ public class BedCenterServiceImpl implements BedCenterService {
         return countBy(BedWaitStatusEnum.PENDING.getCode(), null);
     }
 
+    // 与住院证 / 入院的联动
+
     @Override
     public List<BedMatchVO> matchBeds(Long waitId) {
         BizBedWait wait = requireWait(waitId);
@@ -718,8 +735,6 @@ public class BedCenterServiceImpl implements BedCenterService {
                         Comparator.comparingInt(String::length).thenComparing(Comparator.naturalOrder()))));
         return result.size() > MATCH_LIMIT ? result.subList(0, MATCH_LIMIT) : result;
     }
-
-    // 与住院证 / 入院的联动
 
     @Override
     public BedPoolVO bedPool(BedPoolQueryPageDTO query) {
@@ -818,6 +833,8 @@ public class BedCenterServiceImpl implements BedCenterService {
         return result;
     }
 
+    // 内部
+
     /**
      * 调配视角的顶部统计：只算"床能不能用"这一维。
      * 护理级别/术后天数/危重那些是护士站视角的统计，这里不掺 —— 一张图两种诉求混着算，
@@ -849,8 +866,6 @@ public class BedCenterServiceImpl implements BedCenterService {
                 .divide(BigDecimal.valueOf(usable), 1, RoundingMode.HALF_UP));
         return s;
     }
-
-    // 内部
 
     @Override
     public BedOverviewVO overview() {
@@ -1027,24 +1042,6 @@ public class BedCenterServiceImpl implements BedCenterService {
                 .set(BizBedWait::getAssignedTime, null)
                 .set(BizBedWait::getAssignedBy, null);
         waitMapper.update(null, upd);
-    }
-
-    /**
-     * 等待时长的人读文案（时长格式化，不是码值映射）。
-     *
-     * <p>只表达"等了多久"，不做任何判断 —— 是否超时由 {@code expired} 单独给，
-     * 不要在这里把"等了 8 天"直接说成"已超时"（阈值是可配的，写死在文案里改配置就失效）。
-     */
-    private static String waitDurationText(long hours) {
-        if (hours < 1) {
-            return "不足 1 小时";
-        }
-        if (hours < 24) {
-            return hours + " 小时";
-        }
-        long days = hours / 24;
-        long rest = hours % 24;
-        return rest == 0 ? days + " 天" : days + " 天 " + rest + " 小时";
     }
 
     private BedWaitVO decorate(BizBedWait wait, List<Long> waitingIds) {

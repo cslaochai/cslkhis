@@ -92,7 +92,9 @@ public class NutritionStatsServiceImpl implements NutritionStatsService {
     @Transactional(rollbackFor = Exception.class)
     public List<NutritionStatsVO> generateStats(NutritionStatsGenerateDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         YearMonth ym = requireMonth(dto.getStatMonth());
         String operator = operatorUser.getRealName();
         List<NutritionStatsVO> result = new ArrayList<>();

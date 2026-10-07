@@ -10,8 +10,8 @@ import com.his.operation.mapper.BizOperationSafetyCheckMapper;
 import com.his.operation.service.OperationSafetyCheckService;
 import com.his.operation.support.SafetyCheckItems;
 import com.his.operation.vo.SafetyCheckVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -97,7 +97,9 @@ public class OperationSafetyCheckServiceImpl implements OperationSafetyCheckServ
                     + dto.getPhase());
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         int phase = dto.getPhase();
 
         BizOperationApply apply = applyMapper.selectById(dto.getApplyId());

@@ -9,20 +9,18 @@ import com.his.operation.dto.AnesthesiaVisitQueryPageDTO;
 import com.his.operation.dto.AnesthesiaVisitUpsertDTO;
 import com.his.operation.entity.BizAnesthesiaVisit;
 import com.his.operation.entity.BizOperationApply;
-import com.his.operation.enums.AsaGradeEnum;
-import com.his.operation.enums.OperationAnesthesiaMethodEnum;
-import com.his.operation.enums.OperationApplyStatusEnum;
-import com.his.operation.enums.VisitConclusionEnum;
-import com.his.operation.enums.VisitStatusEnum;
+import com.his.operation.enums.*;
 import com.his.operation.mapper.BizAnesthesiaVisitMapper;
 import com.his.operation.mapper.BizOperationApplyMapper;
 import com.his.operation.service.AnesthesiaVisitService;
 import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.vo.AnesthesiaVisitVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
+import com.his.system.service.DictCacheService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -34,8 +32,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 麻醉术前访视服务实现（G15 第一环）。
@@ -57,13 +53,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
-    @Autowired
-    private DictCacheService dictText;
-
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-
     private final BizAnesthesiaVisitMapper visitMapper;
     private final BizOperationApplyMapper applyMapper;
+    @Autowired
+    private DictCacheService dictText;
 
     private static LocalDateTime now() {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
@@ -111,7 +105,9 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
     @Transactional(rollbackFor = Exception.class)
     public String save(AnesthesiaVisitUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         validateHighRisk(dto);
 
         BizOperationApply apply = applyMapper.selectById(dto.getApplyId());
@@ -201,7 +197,9 @@ public class AnesthesiaVisitServiceImpl implements AnesthesiaVisitService {
     @Transactional(rollbackFor = Exception.class)
     public void finish(AnesthesiaVisitFinishDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizAnesthesiaVisit entity = visitMapper.selectById(dto.getVisitId());
         if (entity == null) {
             throw new BusinessException("麻醉术前访视单不存在");

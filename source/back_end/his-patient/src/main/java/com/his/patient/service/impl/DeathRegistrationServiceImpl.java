@@ -1,11 +1,11 @@
 package com.his.patient.service.impl;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
 import com.his.common.base.PageResult;
-import com.his.common.service.RedisSequenceService;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.DeathRegistrationDTO;
 import com.his.patient.entity.BizDeathRegistration;
 import com.his.patient.enums.DeathRegisterCopyEnum;
@@ -14,8 +14,8 @@ import com.his.patient.enums.DeathTypeEnum;
 import com.his.patient.mapper.BizDeathRegistrationMapper;
 import com.his.patient.service.DeathRegistrationService;
 import com.his.patient.vo.DeathRegisterVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -236,7 +236,9 @@ public class DeathRegistrationServiceImpl implements DeathRegistrationService {
     @Transactional(rollbackFor = Exception.class)
     public void confirm(DeathRegistrationDTO.Confirm dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizDeathRegistration register = requireRegister(dto.getId());
         if (!Objects.equals(register.getRegisterStatus(), DeathRegisterStatusEnum.DRAFT.getCode())) {
             throw new BusinessException("只有草稿登记可确认（当前：" + statusText(register.getRegisterStatus()) + "）");

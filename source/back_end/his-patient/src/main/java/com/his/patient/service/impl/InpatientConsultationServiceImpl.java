@@ -1,5 +1,4 @@
 package com.his.patient.service.impl;
-import com.his.common.util.TimeUtil;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -9,26 +8,25 @@ import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
-import com.his.patient.enums.AgeUnitEnum;
-import com.his.patient.enums.ConsultCategoryEnum;
-import com.his.patient.enums.ConsultScopeEnum;
-import com.his.patient.enums.ConsultationStatusEnum;
-import com.his.patient.enums.InpatientRecordTypeEnum;
+import com.his.patient.enums.*;
 import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientConsultationService;
 import com.his.patient.vo.ConsultationVO;
 import com.his.patient.vo.WardVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysEmployee;
 import com.his.system.entity.SysMessage;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysEmployeeMapper;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.SysMessageService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -39,8 +37,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 住院会诊服务实现（P4.1）。
@@ -69,22 +65,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class InpatientConsultationServiceImpl implements InpatientConsultationService {
-    @Autowired
-    private DictCacheService dictText;
-
     /**
      * 申请时未指定会诊医生：既有列 doctor_id 是 NOT NULL，用 0 表示"未指定"
      */
     private static final long DOCTOR_UNSPECIFIED = 0L;
-
     /**
      * 急会诊响应时限（分钟）。
      * <p>只作为**查询时判定**超时的依据，不落状态列 —— 与"危急值超时是查询时算的"同一口径。
      */
     private static final int URGENT_RESPONSE_MINUTES = 10;
-
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
-
     private final BizConsultationMapper consultationMapper;
     private final BizAdmissionMapper admissionMapper;
     private final BizPatientMapper patientMapper;
@@ -95,6 +85,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
      */
     private final SysMessageService sysMessageService;
     private final SysEmployeeMapper sysEmployeeMapper;
+    @Autowired
+    private DictCacheService dictText;
 
     // 申请 / 修改
 
@@ -103,6 +95,22 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
             return null;
         }
         return Duration.between(from, to).toMinutes();
+    }
+
+    /**
+     * 会诊是否按时应答：急会诊 ≤10 分钟、普通 ≤24 小时；未应答按超时计。
+     */
+    private static boolean onTime(Integer urgent, LocalDateTime applyTime, LocalDateTime acceptTime) {
+        if (applyTime == null || acceptTime == null) {
+            return false;
+        }
+        long minutes = Duration.between(applyTime, acceptTime).toMinutes();
+        if (minutes < 0) {
+            return false;
+        }
+        return urgent != null && urgent == YesOrNoEnum.YES.getCode()
+                ? minutes <= URGENT_RESPONSE_MINUTES
+                : minutes <= 24 * 60L;
     }
 
     /**
@@ -116,7 +124,9 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
             throw new BusinessException("入院ID不能为空（会诊必须挂在一次住院上）");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         Integer category = dto.getConsultCategory() == null
                 ? ConsultCategoryEnum.NORMAL.getCode() : dto.getConsultCategory();
 
@@ -187,6 +197,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         return entity.getConsultationNo();
     }
 
+    // 应答
+
     /**
      * consult 发送方：新会诊申请 → 站内信通知会诊方（待办型，接诊/取消时闭环）。
      *
@@ -247,7 +259,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
     }
 
-    // 应答
+    // 完成（回写病历）
 
     /**
      * 修改「待应答」的申请。
@@ -257,7 +269,9 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
      */
     private String updateOne(ConsultationUpsertDTO dto, BizAdmission admission, int isUrgent) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizConsultation entity = consultationMapper.selectById(dto.getId());
         if (entity == null) {
             throw new BusinessException("会诊记录不存在");
@@ -295,7 +309,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         return entity.getConsultationNo();
     }
 
-    // 完成（回写病历）
+    // 取消
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -305,7 +319,9 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
             throw new BusinessException("会诊ID不能为空");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizConsultation entity = mustGet(dto.getConsultationId());
         if (!Objects.equals(ConsultationStatusEnum.PENDING.getCode(), entity.getConsultStatus())) {
             throw new BusinessException("会诊 " + entity.getConsultationNo() + " 当前状态为「"
@@ -345,8 +361,6 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
         log.info("会诊应答 consultationNo={} 接诊医生={} 等待分钟={}", entity.getConsultationNo(), doctorName, waitMinutes);
     }
-
-    // 取消
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -392,6 +406,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
                 dto.getConclusion().length(), recordId, record.getRecordNo());
         return recordId == null ? null : String.valueOf(recordId);
     }
+
+    // 查询
 
     /**
      * 把会诊结论回写成一份住院病历文书（record_type=9 会诊记录，状态直接「已提交」）。
@@ -458,8 +474,6 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         return record;
     }
 
-    // 查询
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(ConsultationCancelDTO dto) {
@@ -468,7 +482,9 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
             throw new BusinessException("会诊ID不能为空");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizConsultation entity = mustGet(dto.getConsultationId());
         if (Objects.equals(ConsultationStatusEnum.CANCELLED.getCode(), entity.getConsultStatus())) {
             throw new BusinessException("会诊 " + entity.getConsultationNo() + " 已取消，不能重复取消");
@@ -505,6 +521,8 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         }
     }
 
+    // 展示态
+
     @Override
     public IPage<ConsultationVO> listPage(ConsultationQueryPageDTO query) {
         Page<ConsultationVO> page = new Page<>(query.getPageNum(), query.getPageSize());
@@ -513,7 +531,7 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         return result;
     }
 
-    // 展示态
+    // 工具
 
     @Override
     public ConsultationVO getDetailById(Long consultationId) {
@@ -528,8 +546,6 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
         decorate(vo);
         return vo;
     }
-
-    // 工具
 
     @Override
     public long countUnfinished(Long toDeptId, Long admissionId) {
@@ -567,22 +583,6 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
             vo.setOverdueText("急会诊已等待 " + minutesBetween(vo.getApplyTime(), now) + " 分钟未应答（时限 "
                     + URGENT_RESPONSE_MINUTES + " 分钟）");
         }
-    }
-
-    /**
-     * 会诊是否按时应答：急会诊 ≤10 分钟、普通 ≤24 小时；未应答按超时计。
-     */
-    private static boolean onTime(Integer urgent, LocalDateTime applyTime, LocalDateTime acceptTime) {
-        if (applyTime == null || acceptTime == null) {
-            return false;
-        }
-        long minutes = Duration.between(applyTime, acceptTime).toMinutes();
-        if (minutes < 0) {
-            return false;
-        }
-        return urgent != null && urgent == YesOrNoEnum.YES.getCode()
-                ? minutes <= URGENT_RESPONSE_MINUTES
-                : minutes <= 24 * 60L;
     }
 
     private BizConsultation mustGet(Long consultationId) {

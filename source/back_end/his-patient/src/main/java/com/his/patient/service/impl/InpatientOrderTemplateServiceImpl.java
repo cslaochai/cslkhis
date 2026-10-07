@@ -1,5 +1,4 @@
 package com.his.patient.service.impl;
-import com.his.patient.enums.OrderClassEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -10,6 +9,7 @@ import com.his.patient.dto.InpatientOrderTemplateQueryPageDTO;
 import com.his.patient.dto.InpatientOrderTemplateUpsertDTO;
 import com.his.patient.entity.BizInpatientOrderTemplate;
 import com.his.patient.entity.BizInpatientOrderTemplateItem;
+import com.his.patient.enums.OrderClassEnum;
 import com.his.patient.enums.OrderTypeEnum;
 import com.his.patient.mapper.BizInpatientOrderTemplateItemMapper;
 import com.his.patient.mapper.BizInpatientOrderTemplateMapper;
@@ -19,8 +19,8 @@ import com.his.patient.vo.InpatientOrderTemplateDetailVO;
 import com.his.patient.vo.InpatientOrderTemplateItemVO;
 import com.his.patient.vo.InpatientOrderTemplateListVO;
 import com.his.patient.vo.InpatientOrderTemplateSelectListVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -70,7 +70,9 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
             throw new BusinessException("模板至少包含一条医嘱明细");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         List<InpatientOrderItemDTO> items = new ArrayList<>();
         for (InpatientOrderItemDTO item : dto.getItems()) {
             if (item != null && StringUtils.hasText(item.getItemName())) {
@@ -131,7 +133,9 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
     @Override
     public InpatientOrderTemplateDetailVO getById(Long id) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientOrderTemplate template = requireOwned(id, operatorUser.getEmployeeId());
         List<BizInpatientOrderTemplateItem> items = itemMapper.selectList(
                 new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()
@@ -155,7 +159,9 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
     @Override
     public IPage<InpatientOrderTemplateListVO> listPage(InpatientOrderTemplateQueryPageDTO query) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         Long doctorId = operatorUser.getEmployeeId();
         String keyword = StringUtils.hasText(query.getKeyword()) ? query.getKeyword().trim() : null;
         LambdaQueryWrapper<BizInpatientOrderTemplate> wrapper = new LambdaQueryWrapper<BizInpatientOrderTemplate>()
@@ -177,7 +183,9 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
     @Override
     public List<InpatientOrderTemplateSelectListVO> selectList() {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         Long doctorId = operatorUser.getEmployeeId();
         List<BizInpatientOrderTemplate> list = templateMapper.selectList(
                 new LambdaQueryWrapper<BizInpatientOrderTemplate>()
@@ -198,7 +206,9 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientOrderTemplate template = requireOwned(id, operatorUser.getEmployeeId());
         // 明细无软删列，物理删；主表走 @TableLogic 逻辑删，历史医嘱上"来自模板"的痕迹不受影响
         itemMapper.delete(new LambdaQueryWrapper<BizInpatientOrderTemplateItem>()

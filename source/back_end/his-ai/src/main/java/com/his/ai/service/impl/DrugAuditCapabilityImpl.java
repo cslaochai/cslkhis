@@ -490,7 +490,9 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
         }
         try {
             CurrentUser operatorUser = UserUtils.getCurrentUser();
-            if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+            if (operatorUser == null) {
+                throw new BusinessException("当前用户信息不存在");
+            }
             String operator = operatorUser.getRealName();
             BizClinicalRuleCheck check = new BizClinicalRuleCheck();
             check.setCheckNo(buildNo("RCAI"));

@@ -22,7 +22,6 @@ import com.his.medicaltech.service.CriticalValueService;
 import com.his.medicaltech.support.LabCriticalValueRules;
 import com.his.medicaltech.vo.BizCriticalValueVO;
 import com.his.medicaltech.vo.CriticalValueStatsVO;
-import com.his.system.entity.CurrentUser;
 import com.his.system.entity.*;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.mapper.SysConfigMapper;

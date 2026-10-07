@@ -1,26 +1,21 @@
 package com.his.patient.service.impl;
-import com.his.common.enums.*;
-import com.his.common.util.TimeUtil;
-import com.his.patient.enums.AgeUnitEnum;
-import com.his.patient.enums.InpatientRecordTypeEnum;
-import com.his.patient.enums.SummaryStatusEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
-import com.his.patient.enums.RecordDocTypeEnum;
+import com.his.patient.enums.*;
 import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientRecordService;
-import com.his.patient.enums.InpatientRecordStatusEnum;
-import com.his.patient.enums.NursingDocFieldEnum;
 import com.his.patient.support.RecordStructuredFields;
 import com.his.patient.vo.*;
+import com.his.system.entity.CurrentUser;
 import com.his.system.provider.DeptScopeProvider;
 import com.his.system.utils.UserUtils;
-import com.his.system.entity.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -58,11 +53,9 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InpatientRecordServiceImpl implements InpatientRecordService {
-    private final DeptScopeProvider deptScopeProvider;
-
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter HM = DateTimeFormatter.ofPattern("HH:mm");
-
+    private final DeptScopeProvider deptScopeProvider;
     private final BizInpatientRecordMapper recordMapper;
     private final BizInpatientRecordLogMapper logMapper;
     private final BizNursingRecordMapper nursingRecordMapper;
@@ -146,7 +139,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         }
 
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
@@ -259,7 +254,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
         }
         if (!changes.isEmpty()) {
             CurrentUser operatorUser = UserUtils.getCurrentUser();
-            if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+            if (operatorUser == null) {
+                throw new BusinessException("当前用户信息不存在");
+            }
             log.info("修改病历文书 recordNo={} 变更字段数={} 医生={}",
                     record.getRecordNo(), changes.size(), operatorUser.getRealName());
         }
@@ -553,7 +550,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
             throw new BusinessException("请选择要提交的文书");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         List<BizInpatientRecord> records = loadForBatch(dto.getIds());
 
         // 先全量校验再写：部分成功会让医生不知道哪些生效了
@@ -607,7 +606,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
             throw new BusinessException("请选择要归档的文书");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         List<BizInpatientRecord> records = loadForBatch(dto.getIds());
 
         for (BizInpatientRecord r : records) {
@@ -660,7 +661,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
                                                      SignSceneEnum scene,
                                                      String actionLabel) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         com.his.common.dto.SignCommandDTO cmd = new com.his.common.dto.SignCommandDTO();
         cmd.setBizType(SignBizTypeEnum.INPATIENT_RECORD.getCode());
         cmd.setBizId(r.getId());
@@ -995,7 +998,9 @@ public class InpatientRecordServiceImpl implements InpatientRecordService {
      */
     private BizInpatientRecordLog actionLog(BizInpatientRecord record, String operation) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientRecordLog row = new BizInpatientRecordLog();
         row.setDocType(RecordDocTypeEnum.MEDICAL.getCode());
         row.setRecordId(record.getId());

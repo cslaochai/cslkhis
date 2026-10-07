@@ -22,10 +22,12 @@ import com.his.common.exception.BusinessException;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysIcd10;
 import com.his.system.mapper.SysIcd10Mapper;
+import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -36,8 +38,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 医保合规审核服务实现。
@@ -48,11 +48,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class ComplianceAuditServiceImpl implements ComplianceAuditService {
-    @Autowired
-    private DictCacheService dictText;
-
     private static final DateTimeFormatter AUDIT_NO_FMT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-
     private final BizInsuranceSettlementMapper settlementMapper;
     private final AppointGateway appointGateway;
     private final SysIcd10Mapper icd10Mapper;
@@ -63,11 +59,12 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     private final SysDrgGroupMapper drgGroupMapper;
     private final SettlementEvidenceService evidenceService;
     private final ComplianceProperties properties;
-
     /**
      * 全部规则实现，Spring 自动注入
      */
     private final List<ComplianceRule> rules;
+    @Autowired
+    private DictCacheService dictText;
 
     // 编码明细维护
 

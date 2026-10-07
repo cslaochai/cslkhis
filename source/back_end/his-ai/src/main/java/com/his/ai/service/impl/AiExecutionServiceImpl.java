@@ -8,11 +8,11 @@ import com.his.ai.dto.LlmResultDTO;
 import com.his.ai.entity.SysAiCallLog;
 import com.his.ai.enums.AiCallStatusEnum;
 import com.his.ai.exception.LlmException;
-import com.his.common.exception.BusinessException;
 import com.his.ai.service.AiAuditService;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.LlmClient;
 import com.his.ai.support.*;
+import com.his.common.exception.BusinessException;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -65,7 +65,9 @@ public class AiExecutionServiceImpl implements AiExecutionService {
      */
     public <T> Optional<T> call(AiCallDTO call, Class<T> resultType) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         String capabilityKey = call.getCapabilityKey();
         String operator = operatorUser.getRealName();
 

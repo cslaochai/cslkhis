@@ -2,9 +2,9 @@ package com.his.operation.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.operation.dto.AnesthesiaFollowupQueryPageDTO;
 import com.his.operation.dto.AnesthesiaFollowupUpsertDTO;
 import com.his.operation.entity.BizAnesthesiaFollowup;
@@ -16,8 +16,8 @@ import com.his.operation.service.AnesthesiaFollowupService;
 import com.his.operation.support.FollowupAdverseItems;
 import com.his.operation.vo.AnesthesiaFollowupVO;
 import com.his.operation.vo.OperationApplyVO;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -152,7 +152,9 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     @Transactional(rollbackFor = Exception.class)
     public String save(AnesthesiaFollowupUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         Set<Integer> adverse;
         try {
             adverse = FollowupAdverseItems.parse(dto.getAdverseItems());
@@ -212,7 +214,9 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     @Transactional(rollbackFor = Exception.class)
     public void finish(Long id) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizAnesthesiaFollowup entity = mustGetDraft(id);
 
         // 完成闸门的分量都在文案里：缺一项都不允许"随访"对外生效
@@ -254,7 +258,9 @@ public class AnesthesiaFollowupServiceImpl implements AnesthesiaFollowupService 
     @Transactional(rollbackFor = Exception.class)
     public void deleteById(Long id) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizAnesthesiaFollowup entity = mustGetDraft(id);
         followupMapper.deleteById(entity.getId());
         log.info("删除麻醉随访草稿 followupNo={} 操作人={}", entity.getFollowupNo(), operatorUser.getRealName());

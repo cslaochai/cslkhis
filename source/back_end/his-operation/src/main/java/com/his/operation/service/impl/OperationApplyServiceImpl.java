@@ -3,13 +3,9 @@ package com.his.operation.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.his.common.util.TimeUtil;
-import com.his.common.enums.AdmitStatusEnum;
-import com.his.common.enums.RecordStatusEnum;
-import com.his.common.enums.SysGenderEnum;
-import com.his.common.enums.TechAuthCategoryEnum;
-import com.his.common.enums.TechOverrideSourceEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.BizOperationApply;
 import com.his.operation.entity.BizOperationCount;
@@ -36,12 +32,14 @@ import com.his.patient.service.InpatientRecordService;
 import com.his.patient.service.InpatientService;
 import com.his.patient.service.PatientService;
 import com.his.patient.vo.WardVO;
-import com.his.system.utils.UserUtils;
-import com.his.system.entity.CurrentUser;
 import com.his.system.dto.TechAuthGateDTO;
+import com.his.system.entity.CurrentUser;
+import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -52,8 +50,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 住院手术闭环服务实现（P4.3）。
@@ -80,18 +76,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class OperationApplyServiceImpl implements OperationApplyService {
-    @Autowired
-    private DictCacheService dictText;
-
     /**
      * 术前核对完成后多久没结束算"卡住"（查询时算，不落状态列）
      */
     private static final long STALLED_HOURS = 24;
-
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter FULL_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter TIME_HM = DateTimeFormatter.ofPattern("HH:mm");
-
     private final BizOperationApplyMapper applyMapper;
     private final PatientService patientService;
     private final InpatientService inpatientService;
@@ -100,6 +91,8 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     private final BizOperationCountMapper operationCountMapper;
     private final SysOperationRoomMapper roomMapper;
     private final BizOperationSafetyCheckMapper safetyCheckMapper;
+    @Autowired
+    private DictCacheService dictText;
 
     // 查询
 
@@ -333,7 +326,9 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     @Transactional(rollbackFor = Exception.class)
     public String save(OperationApplyUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizAdmission admission = inpatientService.getAdmissionById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
@@ -423,7 +418,9 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     @Transactional(rollbackFor = Exception.class)
     public void schedule(OperationScheduleDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         LocalDateTime start = TimeUtil.toSeconds(dto.getPlannedStartTime());
         LocalDateTime end = TimeUtil.toSeconds(dto.getPlannedEndTime());
         // D-业务规则：时间先后关系，DTO 注解无法表达，保留
@@ -486,7 +483,9 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     @Transactional(rollbackFor = Exception.class)
     public void preopCheck(OperationPreopCheckDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizOperationApply entity = mustGet(dto.getApplyId());
         if (Objects.equals(OperationApplyStatusEnum.PENDING_SCHEDULE.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo()
@@ -531,7 +530,9 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     @Transactional(rollbackFor = Exception.class)
     public void finish(OperationFinishDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizOperationApply entity = mustGet(dto.getApplyId());
         if (Objects.equals(OperationApplyStatusEnum.CANCELLED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 已取消，不能完成");
@@ -633,7 +634,9 @@ public class OperationApplyServiceImpl implements OperationApplyService {
     @Transactional(rollbackFor = Exception.class)
     public void cancel(OperationCancelDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizOperationApply entity = mustGet(dto.getApplyId());
         if (Objects.equals(OperationApplyStatusEnum.CANCELLED.getCode(), entity.getOperationStatus())) {
             throw new BusinessException("手术单 " + entity.getApplyNo() + " 已取消，不能重复取消");
@@ -673,7 +676,9 @@ public class OperationApplyServiceImpl implements OperationApplyService {
                                                LocalDateTime start, LocalDateTime end,
                                                String basis, LocalDateTime now) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizPatient patient = patientService.getById(admission.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在，无法回写手术记录");

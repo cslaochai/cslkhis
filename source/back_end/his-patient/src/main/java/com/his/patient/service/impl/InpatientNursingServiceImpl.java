@@ -1,6 +1,4 @@
 package com.his.patient.service.impl;
-import com.his.common.util.TimeUtil;
-import com.his.patient.enums.SummaryStatusEnum;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -10,20 +8,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.util.TimeUtil;
 import com.his.patient.dto.*;
 import com.his.patient.entity.*;
-import com.his.patient.enums.NursingDocTypeEnum;
-import com.his.patient.enums.RecordDocTypeEnum;
+import com.his.patient.enums.*;
 import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientNursingService;
-import com.his.patient.enums.InpatientRecordStatusEnum;
-import com.his.patient.enums.NursingAssessTypeEnum;
 import com.his.patient.vo.*;
-import com.his.system.provider.DeptScopeProvider;
-import com.his.system.utils.UserUtils;
 import com.his.system.entity.CurrentUser;
+import com.his.system.provider.DeptScopeProvider;
+import com.his.system.service.DictCacheService;
+import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,8 +32,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import com.his.system.service.DictCacheService;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * 护理文书服务实现（三测单 / 护理记录单 / 生命体征监测）。
@@ -58,20 +54,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Service
 @RequiredArgsConstructor
 public class InpatientNursingServiceImpl implements InpatientNursingService {
-    @Autowired
-    private DictCacheService dictText;
-    private final DeptScopeProvider deptScopeProvider;
-
     private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final DateTimeFormatter CLOCK = DateTimeFormatter.ofPattern("HH:mm");
-
     /**
      * 体温可信范围（℃）：超出就是录入事故或单位写错，必须拦下
      */
     private static final BigDecimal MIN_TEMP = new BigDecimal("34");
     private static final BigDecimal MAX_TEMP = new BigDecimal("43");
-
+    private final DeptScopeProvider deptScopeProvider;
     private final BizNursingRecordMapper nursingMapper;
     private final BizInpatientRecordLogMapper logMapper;
     private final BizAdmissionMapper admissionMapper;
@@ -79,6 +70,8 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     private final SysBedMapper bedMapper;
     private final BizNursingAssessmentMapper assessmentMapper;
     private final ObjectMapper objectMapper;
+    @Autowired
+    private DictCacheService dictText;
 
     // 录入 / 修改
 
@@ -139,7 +132,9 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             throw new BusinessException("测量/记录时间不能为空（三测单按时点唯一，时间是它的主键语义）");
         }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizAdmission admission = admissionMapper.selectById(dto.getAdmissionId());
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
@@ -209,7 +204,9 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
     private NursingRecordVO update(NursingRecordUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizNursingRecord record = nursingMapper.selectById(dto.getId());
         if (record == null) {
             throw new BusinessException("护理文书不存在");
@@ -400,7 +397,9 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     @Transactional(rollbackFor = Exception.class)
     public int saveBatch(NursingRecordBatchUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         Set<Long> seen = new HashSet<>();
         List<NursingRecordUpsertDTO> prepared = new ArrayList<>(dto.getRows().size());
         for (int i = 0; i < dto.getRows().size(); i++) {
@@ -453,7 +452,9 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     @Transactional(rollbackFor = Exception.class)
     public NursingAssessmentVO saveAssessment(NursingAssessmentUpsertDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         // 保留（类别③）：总分必须能由量表明细推导，是业务一致性规则而非入参非空
         int recomputed = sumItems(dto.getItemsJson());
         if (dto.getTotalScore() == null || dto.getTotalScore() != recomputed) {
@@ -929,7 +930,9 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
     private BizInpatientRecordLog actionLog(BizNursingRecord record, String operation) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
-        if (operatorUser == null) { throw new BusinessException("当前用户信息不存在"); }
+        if (operatorUser == null) {
+            throw new BusinessException("当前用户信息不存在");
+        }
         BizInpatientRecordLog row = new BizInpatientRecordLog();
         row.setDocType(RecordDocTypeEnum.NURSING.getCode());
         row.setRecordId(record.getId());
