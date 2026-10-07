@@ -19,6 +19,7 @@ import com.his.emr.mapper.BizMedicalRecordArchiveMapper;
 import com.his.emr.service.ArchiveBorrowService;
 import com.his.emr.vo.ArchiveBorrowStatsVO;
 import com.his.emr.vo.ArchiveBorrowVO;
+import com.his.emr.vo.MessagePayloadVO;
 import com.his.system.entity.SysMessage;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;
@@ -256,13 +257,12 @@ public class ArchiveBorrowServiceImpl implements ArchiveBorrowService {
                         b.getPatientName() == null ? "未知" : b.getPatientName(),
                         b.getDeptName() == null ? "未知" : b.getDeptName(),
                         b.getExpectReturnDate(), overdueDays);
-                String payload = JSONUtil.toJsonStr(new LinkedHashMap<String, Object>() {{
-                    put("recordNo", b.getRecordNo());
-                    put("borrowNo", b.getBorrowNo());
-                    put("patientName", b.getPatientName());
-                    put("expectReturnDate", b.getExpectReturnDate() == null ? null : b.getExpectReturnDate().toString());
-                    put("overdueDays", overdueDays);
-                }});
+                MessagePayloadVO msg = new MessagePayloadVO();
+                msg.setRecordNo(b.getRecordNo());
+                msg.setPatientName(b.getPatientName());
+                msg.setOverdueDays(overdueDays);
+                msg.setHandlerName(b.getApplicantName());
+                String payload = JSONUtil.toJsonStr(msg);
                 boolean ok = sysMessageService.sendSystemMessage(b.getApplicantId(), b.getApplicantName(),
                         "病案借阅超期：" + b.getBorrowNo(), content,
                         BizTypeEnum.ARCHIVE_BORROW.getType(), b.getId(), "warning", payload, null);

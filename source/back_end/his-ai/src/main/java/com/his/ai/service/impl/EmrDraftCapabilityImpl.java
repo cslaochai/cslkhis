@@ -6,6 +6,7 @@ import com.his.ai.dto.EmrDraftDTO;
 import com.his.ai.dto.EmrDraftLlmOutputDTO;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.EmrDraftCapability;
+import com.his.ai.vo.EmrDraftPromptVariablesVO;
 import com.his.ai.vo.EmrDraftResultVO;
 import com.his.common.enums.SysGenderEnum;
 import com.his.emr.entity.BizMedicalRecord;
@@ -216,27 +217,27 @@ public class EmrDraftCapabilityImpl implements EmrDraftCapability {
     }
 
     private Optional<EmrDraftLlmOutputDTO> callModel(EmrDraftDTO dto, DraftInput input) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("gender", SysGenderEnum.getText(input.gender()));
-        variables.put("age", input.age() == null ? "（未填写）" : input.age() + "岁");
-        variables.put("chiefComplaint", nullToDash(input.chiefComplaint()));
-        variables.put("presentIllness", nullToDash(input.presentIllness()));
-        variables.put("pastHistory", nullToDash(input.pastHistory()));
-        variables.put("allergyHistory", nullToDash(input.allergyHistory()));
-        variables.put("temperature", unitOrDash(input.temperature(), "℃"));
-        variables.put("pulse", unitOrDash(input.pulse(), "次/分"));
-        variables.put("respiration", unitOrDash(input.respiration(), "次/分"));
-        variables.put("bloodPressure", bloodPressureText(input));
-        variables.put("generalCondition", nullToDash(input.generalCondition()));
-        variables.put("skinMucosa", nullToDash(input.skinMucosa()));
-        variables.put("headNeck", nullToDash(input.headNeck()));
-        variables.put("chestLung", nullToDash(input.chestLung()));
-        variables.put("heart", nullToDash(input.heart()));
-        variables.put("abdomen", nullToDash(input.abdomen()));
-        variables.put("spineLimbs", nullToDash(input.spineLimbs()));
-        variables.put("nervousSystem", nullToDash(input.nervousSystem()));
-        variables.put("specialistExam", nullToDash(input.specialistExam()));
-        variables.put("auxiliaryExam", nullToDash(input.auxiliaryExam()));
+        EmrDraftPromptVariablesVO variables = new EmrDraftPromptVariablesVO();
+        variables.setGender(SysGenderEnum.getText(input.gender()));
+        variables.setAge(input.age() == null ? "（未填写）" : input.age() + "岁");
+        variables.setChiefComplaint(nullToDash(input.chiefComplaint()));
+        variables.setPresentIllness(nullToDash(input.presentIllness()));
+        variables.setPastHistory(nullToDash(input.pastHistory()));
+        variables.setAllergyHistory(nullToDash(input.allergyHistory()));
+        variables.setTemperature(unitOrDash(input.temperature(), "℃"));
+        variables.setPulse(unitOrDash(input.pulse(), "次/分"));
+        variables.setRespiration(unitOrDash(input.respiration(), "次/分"));
+        variables.setBloodPressure(bloodPressureText(input));
+        variables.setGeneralCondition(nullToDash(input.generalCondition()));
+        variables.setSkinMucosa(nullToDash(input.skinMucosa()));
+        variables.setHeadNeck(nullToDash(input.headNeck()));
+        variables.setChestLung(nullToDash(input.chestLung()));
+        variables.setHeart(nullToDash(input.heart()));
+        variables.setAbdomen(nullToDash(input.abdomen()));
+        variables.setSpineLimbs(nullToDash(input.spineLimbs()));
+        variables.setNervousSystem(nullToDash(input.nervousSystem()));
+        variables.setSpecialistExam(nullToDash(input.specialistExam()));
+        variables.setAuxiliaryExam(nullToDash(input.auxiliaryExam()));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.EMR_DRAFT)

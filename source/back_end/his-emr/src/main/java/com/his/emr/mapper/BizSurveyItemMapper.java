@@ -2,13 +2,13 @@ package com.his.emr.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.emr.entity.BizSurveyItem;
+import com.his.emr.vo.SurveyTemplateItemCountVO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 满意度问卷题目 Mapper。
@@ -38,11 +38,11 @@ public interface BizSurveyItemMapper extends BaseMapper<BizSurveyItem> {
      */
     @Select("""
             <script>
-            SELECT template_id AS t, COUNT(*) AS c FROM biz_survey_item
+            SELECT template_id AS templateId, COUNT(*) AS cnt FROM biz_survey_item
              WHERE del_flag = 0 AND template_id IN
              <foreach collection="templateIds" item="tid" open="(" separator="," close=")">#{tid}</foreach>
              GROUP BY template_id
             </script>
             """)
-    List<Map<String, Object>> countByTemplates(@Param("templateIds") List<Long> templateIds);
+    List<SurveyTemplateItemCountVO> countByTemplates(@Param("templateIds") List<Long> templateIds);
 }

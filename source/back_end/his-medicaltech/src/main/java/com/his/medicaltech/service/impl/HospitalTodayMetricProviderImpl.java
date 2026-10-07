@@ -1,13 +1,15 @@
 package com.his.medicaltech.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import com.his.medicaltech.mapper.WorkbenchMetricMapper;
 import com.his.medicaltech.service.HospitalTodayMetricProvider;
+import com.his.medicaltech.vo.WorkbenchHospitalAlertRowVO;
+import com.his.medicaltech.vo.WorkbenchHospitalCoreRowVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.WorkbenchMetricProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -27,10 +29,20 @@ public class HospitalTodayMetricProviderImpl implements WorkbenchMetricProvider,
         return "hospitalToday";
     }
 
+    /**
+     * 概况与告警<b>拍平到同一层</b>（而不是嵌套两个段）：前端
+     * {@code METRIC_SPECS.hospitalToday} 把两组指标平铺在同一个 items 数组里，
+     * 嵌套会多一层取值路径。
+     *
+     * <p>两段合到一张 Map 是 SPI 边界上的一次性适配（父接口签名固定为
+     * {@code Map<String, Object>}）；VO 转 Map 用字段名做键，与前端 key 逐项对齐。
+     */
     @Override
     public Map<String, Object> summary(CurrentUser user) {
-        Map<String, Object> data = new LinkedHashMap<>(workbenchMetricMapper.hospitalCoreStats());
-        data.putAll(workbenchMetricMapper.hospitalAlertStats());
+        WorkbenchHospitalCoreRowVO core = workbenchMetricMapper.hospitalCoreStats();
+        WorkbenchHospitalAlertRowVO alert = workbenchMetricMapper.hospitalAlertStats();
+        Map<String, Object> data = BeanUtil.beanToMap(core);
+        data.putAll(BeanUtil.beanToMap(alert));
         return data;
     }
 }

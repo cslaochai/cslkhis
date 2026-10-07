@@ -538,13 +538,15 @@ public class InpatientAccountServiceImpl implements InpatientAccountService {
                     "患者 %s（住院号 %s）%s欠费 %s 元：应付 %s 元，住院账户余额 %s 元。欠费仅提示、不阻断诊疗，请关注催缴或补缴预交金。",
                     patientName, admission.getAdmissionNo(), scene,
                     arrears.toPlainString(), totalAmount.toPlainString(), balance.toPlainString());
-            String payload = cn.hutool.json.JSONUtil.toJsonStr(new LinkedHashMap<String, Object>() {{
-                put("patientName", patientName);
-                put("admissionNo", admission.getAdmissionNo());
-                put("arrears", arrears.toPlainString());
-                put("balance", balance.toPlainString());
-                put("scene", scene);
-            }});
+            ArrearsNoticePayloadVO payloadVO = new ArrearsNoticePayloadVO();
+            payloadVO.setPatientName(patientName);
+            payloadVO.setAdmissionNo(admission.getAdmissionNo());
+            // 金额用字符串形态：站内信要落库留档，也可能被第三方推送转发，
+            // 数字形态会在下游 JSON 解析里被重新解释成浮点，欠多少钱会变形
+            payloadVO.setArrears(arrears.toPlainString());
+            payloadVO.setBalance(balance.toPlainString());
+            payloadVO.setScene(scene);
+            String payload = cn.hutool.json.JSONUtil.toJsonStr(payloadVO);
             sysMessageService.sendSystemMessage(doctorId, doctorName,
                     "欠费提醒：" + patientName, content,
                     BizTypeEnum.ARREARS.getType(), admission.getAdmissionId(), "warning", payload, null);

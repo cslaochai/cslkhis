@@ -12,6 +12,7 @@ import com.his.emr.mapper.BizMedicalRecordArchiveMapper;
 import com.his.emr.service.MedicalRecordArchiveService;
 import com.his.emr.vo.BizMedicalRecordArchiveVO;
 import com.his.emr.vo.MedicalRecordArchiveCountVO;
+import com.his.emr.vo.MessagePayloadVO;
 import com.his.system.entity.SysMessage;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;
@@ -173,12 +174,12 @@ public class MedicalRecordArchiveServiceImpl extends ServiceImpl<BizMedicalRecor
                         archive.getRecordNo(),
                         archive.getDeptName() == null ? "未知" : archive.getDeptName(),
                         OVERDUE_DAYS, overdueDays);
-                String payload = JSONUtil.toJsonStr(new LinkedHashMap<String, Object>() {{
-                    put("patientName", archive.getPatientName());
-                    put("recordNo", archive.getRecordNo());
-                    put("visitDate", archive.getVisitDate() == null ? null : archive.getVisitDate().toString());
-                    put("overdueDays", overdueDays);
-                }});
+                MessagePayloadVO msg = new MessagePayloadVO();
+                msg.setPatientName(archive.getPatientName());
+                msg.setRecordNo(archive.getRecordNo());
+                msg.setVisitDate(archive.getVisitDate() == null ? null : archive.getVisitDate().toString());
+                msg.setOverdueDays(overdueDays);
+                String payload = JSONUtil.toJsonStr(msg);
                 boolean ok = sysMessageService.sendSystemMessage(archive.getDoctorId(), archive.getDoctorName(),
                         "病历归档超期：" + archive.getRecordNo(), content,
                         BizTypeEnum.EMR_ARCHIVE.getType(), archive.getId(), "warning", payload, null);

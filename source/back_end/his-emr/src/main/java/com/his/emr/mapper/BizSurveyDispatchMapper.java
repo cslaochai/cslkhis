@@ -3,13 +3,14 @@ package com.his.emr.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.emr.entity.BizSurveyDispatch;
+import com.his.emr.vo.SurveyChannelStatVO;
+import com.his.emr.vo.SurveyDispatchCountVO;
 import com.his.emr.vo.SurveyDispatchVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 满意度发放/回收台账 Mapper。
@@ -94,11 +95,11 @@ public interface BizSurveyDispatchMapper extends BaseMapper<BizSurveyDispatch> {
              GROUP BY d.dispatch_status
             </script>
             """)
-    List<Map<String, Object>> countByStatus(@Param("templateId") Long templateId,
-                                            @Param("sourceType") Integer sourceType,
-                                            @Param("dateFrom") String dateFrom,
-                                            @Param("dateTo") String dateTo,
-                                            @Param("scopeDeptIds") List<Long> scopeDeptIds);
+    List<SurveyDispatchCountVO> countByStatus(@Param("templateId") Long templateId,
+                                             @Param("sourceType") Integer sourceType,
+                                             @Param("dateFrom") String dateFrom,
+                                             @Param("dateTo") String dateTo,
+                                             @Param("scopeDeptIds") List<Long> scopeDeptIds);
 
     /**
      * 超截止仍未回收的条数（看板「待催办」）
@@ -139,8 +140,8 @@ public interface BizSurveyDispatchMapper extends BaseMapper<BizSurveyDispatch> {
              GROUP BY d.channel ORDER BY d.channel
             </script>
             """)
-    List<Map<String, Object>> countByChannel(@Param("templateId") Long templateId,
-                                             @Param("dateFrom") String dateFrom,
-                                             @Param("dateTo") String dateTo,
-                                             @Param("scopeDeptIds") List<Long> scopeDeptIds);
+    List<SurveyChannelStatVO> countByChannel(@Param("templateId") Long templateId,
+                                              @Param("dateFrom") String dateFrom,
+                                              @Param("dateTo") String dateTo,
+                                              @Param("scopeDeptIds") List<Long> scopeDeptIds);
 }

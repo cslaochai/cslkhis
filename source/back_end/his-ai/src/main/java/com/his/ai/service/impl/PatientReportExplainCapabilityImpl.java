@@ -11,6 +11,7 @@ import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.PatientReportExplainCapability;
 import com.his.ai.support.PatientTextGuard;
 import com.his.ai.vo.PatientLabItemPlainVO;
+import com.his.ai.vo.PatientReportExplainPromptVariablesVO;
 import com.his.ai.vo.PatientReportExplainVO;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.entity.BizLabResult;
@@ -337,10 +338,10 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
     private Optional<PatientReportLlmOutputDTO> callModel(BizLaboratoryRecord record,
                                                           List<PatientLabItemPlainVO> items,
                                                           String ruleSummary) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("itemName", nullToDash(record.getLaboratoryItemName()));
-        variables.put("ruleSummary", ruleSummary);
-        variables.put("items", renderItems(items));
+        PatientReportExplainPromptVariablesVO variables = new PatientReportExplainPromptVariablesVO();
+        variables.setItemName(nullToDash(record.getLaboratoryItemName()));
+        variables.setRuleSummary(ruleSummary);
+        variables.setItems(renderItems(items));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.PATIENT_REPORT_EXPLAIN)

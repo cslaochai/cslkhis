@@ -14,7 +14,11 @@ import com.his.emr.enums.InfectiousReportStatusEnum;
 import com.his.emr.mapper.BizInfectiousReportMapper;
 import com.his.emr.mapper.SysInfectiousDiseaseMapper;
 import com.his.emr.service.InfectiousReportService;
+import com.his.emr.vo.DeptSnapshotVO;
+import com.his.emr.vo.InfectiousReportPayloadVO;
 import com.his.emr.vo.InfectiousReportVO;
+import com.his.emr.vo.MessagePayloadVO;
+import com.his.emr.vo.PatientSnapshotVO;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,14 +51,6 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
 
     private static String tr(String s) {
         return s == null ? null : s.trim();
-    }
-
-    private static Long toLong(Object o) {
-        return o == null ? null : Long.valueOf(String.valueOf(o));
-    }
-
-    private static Integer toInteger(Object o) {
-        return o == null ? null : Integer.valueOf(String.valueOf(o));
     }
 
     @Override
@@ -160,7 +156,7 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
         if (disease == null || disease.getDelFlag() != 0 || disease.getStatus() != 1) {
             throw new BusinessException("传染病病种不存在或已停用：" + dto.getDiseaseId());
         }
-        Map<String, Object> patient = reportMapper.selectPatientSnapshot(dto.getPatientId());
+        PatientSnapshotVO patient = reportMapper.selectPatientSnapshot(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在：" + dto.getPatientId());
         }
@@ -286,13 +282,11 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
                         "传染病报卡 %s（患者 %s，%s %s，%s）已于 %s 超过报卡时限 %d 小时仍未审核上报，请尽快处理。",
                         r.getReportNo(), r.getPatientName(), classText(r.getInfectiousClass()),
                         r.getDiseaseName(), r.getReportByName(), r.getReportDeadline(), lateHours);
-                String payload = JSONUtil.toJsonStr(new LinkedHashMap<String, Object>() {{
-                    put("reportNo", r.getReportNo());
-                    put("diseaseName", r.getDiseaseName());
-                    put("patientName", r.getPatientName());
-                    put("deadline", String.valueOf(r.getReportDeadline()));
-                    put("lateHours", lateHours);
-                }});
+                MessagePayloadVO msg = new MessagePayloadVO();
+                msg.setPatientName(r.getPatientName());
+                msg.setHandlerName(r.getReportByName());
+                msg.setCount(lateHours);
+                String payload = JSONUtil.toJsonStr(msg);
                 boolean ok = sysMessageService.sendSystemMessage(r.getReportBy(), r.getReportByName(),
                         "传染病报卡超时：" + r.getReportNo(), content,
                         com.his.system.enums.BizTypeEnum.INFECTIOUS_REPORT.getType(), r.getId(), "warning", payload, null);
@@ -310,20 +304,20 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
     }
 
     private void fillCard(BizInfectiousReport r, InfectiousReportDTO.Upsert dto, SysInfectiousDisease disease,
-                          Map<String, Object> patient, Long reportBy, String reportByName) {
-        r.setPatientId(toLong(patient.get("patientId")));
-        r.setPatientNo((String) patient.get("patientNo"));
-        r.setPatientName((String) patient.get("patientName"));
-        r.setGender(toInteger(patient.get("gender")));
-        r.setAge(toInteger(patient.get("age")));
+                          PatientSnapshotVO patient, Long reportBy, String reportByName) {
+        r.setPatientId(patient.getPatientId());
+        r.setPatientNo(patient.getPatientNo());
+        r.setPatientName(patient.getPatientName());
+        r.setGender(patient.getGender());
+        r.setAge(patient.getAge());
         r.setRegistId(dto.getRegistId());
         r.setInpId(dto.getInpId());
         // 发现科室：挂号单科室兜底，允许填卡人指定（报卡的发现科室是填卡人认定的事实）
         if (dto.getRegistId() != null) {
-            Map<String, Object> dept = reportMapper.selectRegistDept(dto.getRegistId());
+            DeptSnapshotVO dept = reportMapper.selectRegistDept(dto.getRegistId());
             if (dept != null) {
-                r.setVisitDeptId(toLong(dept.get("deptId")));
-                r.setVisitDeptName((String) dept.get("deptName"));
+                r.setVisitDeptId(dept.getDeptId());
+                r.setVisitDeptName(dept.getDeptName());
             }
         }
         if (StringUtils.hasText(dto.getVisitDeptName())) {
@@ -342,31 +336,38 @@ public class InfectiousReportServiceImpl implements InfectiousReportService {
     }
 
     private String buildDirectPayload(BizInfectiousReport r) {
-        Map<String, Object> m = new HashMap<>();
-        m.put("cardNo", r.getReportNo());
-        m.put("orgCode", "HN-LK-YY");
-        m.put("orgName", "长沙麓康医院");
-        m.put("patient", Map.of(
-                "no", r.getPatientNo() == null ? "" : r.getPatientNo(),
-                "name", r.getPatientName() == null ? "" : r.getPatientName(),
-                "gender", r.getGender() == null ? 9 : r.getGender(),
-                "age", r.getAge() == null ? 0 : r.getAge()));
-        m.put("disease", Map.of(
-                "code", r.getDiseaseCode(),
-                "name", r.getDiseaseName(),
-                "class", r.getInfectiousClass(),
-                "icd10", r.getIcd10() == null ? "" : r.getIcd10()));
-        m.put("visit", Map.of(
-                "registId", r.getRegistId() == null ? "" : String.valueOf(r.getRegistId()),
-                "inpId", r.getInpId() == null ? "" : String.valueOf(r.getInpId()),
-                "deptName", r.getVisitDeptName() == null ? "" : r.getVisitDeptName()));
-        m.put("clinicalDesc", r.getClinicalDesc() == null ? "" : r.getClinicalDesc());
-        m.put("reportBy", r.getReportByName());
-        m.put("reportTime", String.valueOf(r.getReportTime()));
-        m.put("auditBy", r.getAuditByName() == null ? "" : r.getAuditByName());
-        m.put("auditTime", String.valueOf(r.getAuditTime()));
-        m.put("reportCount", r.getReportCount());
-        // 报文即契约：真实对接时按疾控接口规范替换此 map 结构，外层流程不变
+        InfectiousReportPayloadVO m = new InfectiousReportPayloadVO();
+        m.setCardNo(r.getReportNo());
+        m.setOrgCode("HN-LK-YY");
+        m.setOrgName("长沙麓康医院");
+
+        InfectiousReportPayloadVO.Patient patient = new InfectiousReportPayloadVO.Patient();
+        patient.setNo(r.getPatientNo() == null ? "" : r.getPatientNo());
+        patient.setName(r.getPatientName() == null ? "" : r.getPatientName());
+        patient.setGender(r.getGender() == null ? 9 : r.getGender());
+        patient.setAge(r.getAge() == null ? 0 : r.getAge());
+        m.setPatient(patient);
+
+        InfectiousReportPayloadVO.Disease disease = new InfectiousReportPayloadVO.Disease();
+        disease.setCode(r.getDiseaseCode());
+        disease.setName(r.getDiseaseName());
+        disease.setClazz(r.getInfectiousClass());
+        disease.setIcd10(r.getIcd10() == null ? "" : r.getIcd10());
+        m.setDisease(disease);
+
+        InfectiousReportPayloadVO.Visit visit = new InfectiousReportPayloadVO.Visit();
+        visit.setRegistId(r.getRegistId() == null ? "" : String.valueOf(r.getRegistId()));
+        visit.setInpId(r.getInpId() == null ? "" : String.valueOf(r.getInpId()));
+        visit.setDeptName(r.getVisitDeptName() == null ? "" : r.getVisitDeptName());
+        m.setVisit(visit);
+
+        m.setClinicalDesc(r.getClinicalDesc() == null ? "" : r.getClinicalDesc());
+        m.setReportBy(r.getReportByName());
+        m.setReportTime(String.valueOf(r.getReportTime()));
+        m.setAuditBy(r.getAuditByName() == null ? "" : r.getAuditByName());
+        m.setAuditTime(String.valueOf(r.getAuditTime()));
+        m.setReportCount(r.getReportCount());
+        // 报文即契约：真实对接时按疾控接口规范替换本 VO 结构，外层流程不变
         return JSONUtil.toJsonStr(m);
     }
 

@@ -1,7 +1,6 @@
 package com.his.system.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
@@ -30,7 +29,6 @@ import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 日志审计服务实现（sql/158）。
@@ -391,25 +389,13 @@ public class SysLogServiceImpl implements SysLogService {
      */
     private List<LogStatVO.RiskAccount> riskyAccounts(LocalDateTime since) {
         try {
-            QueryWrapper<SysLoginLog> w = new QueryWrapper<>();
-            w.select("user_name", "COUNT(*) AS fail_count", "MAX(login_time) AS last_fail_time")
-                    .eq("del_flag", 0)
-                    .eq("login_status", 1)
-                    .ge("login_time", since)
-                    .isNotNull("user_name")
-                    .ne("user_name", "")
-                    .groupBy("user_name")
-                    .having("COUNT(*) >= {0}", BRUTE_FORCE_THRESHOLD)
-                    .orderByDesc("fail_count");
-            List<Map<String, Object>> maps = loginLogMapper.selectMaps(w);
+            List<LoginFailAccountVO> rows = loginLogMapper.selectFailAccounts(since, BRUTE_FORCE_THRESHOLD);
             List<LogStatVO.RiskAccount> list = new ArrayList<>();
-            for (Map<String, Object> m : maps) {
+            for (LoginFailAccountVO row : rows) {
                 LogStatVO.RiskAccount a = new LogStatVO.RiskAccount();
-                a.setUserName(String.valueOf(m.get("user_name")));
-                Object c = m.get("fail_count");
-                a.setFailCount(c == null ? 0L : Long.valueOf(String.valueOf(c)));
-                Object t = m.get("last_fail_time");
-                a.setLastFailTime(t instanceof LocalDateTime l ? l : null);
+                a.setUserName(row.getUserName());
+                a.setFailCount(row.getFailCount());
+                a.setLastFailTime(row.getLastFailTime());
                 list.add(a);
             }
             return list;

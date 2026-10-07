@@ -8,6 +8,7 @@ import com.his.ai.dto.PrevisitSummaryDTO;
 import com.his.ai.dto.PrevisitSummaryLlmOutputDTO;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.PrevisitSummaryCapability;
+import com.his.ai.vo.PrevisitSummaryPromptVariablesVO;
 import com.his.ai.vo.PrevisitSummaryVO;
 import com.his.common.exception.BusinessException;
 import com.his.emr.enums.PrevisitSummarySourceEnum;
@@ -101,10 +102,10 @@ public class PrevisitSummaryCapabilityImpl implements PrevisitSummaryCapability 
     // ---------------------------------------------------------------- 清洗层
 
     private Optional<PrevisitSummaryLlmOutputDTO> callModel(String mainSymptom, String answersText, String freeText) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("mainSymptom", StringUtils.hasText(mainSymptom) ? mainSymptom : "未填写");
-        variables.put("answersText", StringUtils.hasText(answersText) ? answersText : "无");
-        variables.put("freeText", StringUtils.hasText(freeText) ? freeText : "无");
+        PrevisitSummaryPromptVariablesVO variables = new PrevisitSummaryPromptVariablesVO();
+        variables.setMainSymptom(StringUtils.hasText(mainSymptom) ? mainSymptom : "未填写");
+        variables.setAnswersText(StringUtils.hasText(answersText) ? answersText : "无");
+        variables.setFreeText(StringUtils.hasText(freeText) ? freeText : "无");
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.PREVISIT_SUMMARY)

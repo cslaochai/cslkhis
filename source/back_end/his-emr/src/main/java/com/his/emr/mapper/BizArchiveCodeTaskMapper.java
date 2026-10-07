@@ -5,12 +5,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.emr.entity.BizArchiveCodeTask;
 import com.his.emr.vo.ArchiveCodeTaskStatsVO;
 import com.his.emr.vo.ArchiveCodeTaskVO;
+import com.his.emr.vo.ArchiveSyncCandidateVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 病案编码任务 Mapper
@@ -54,11 +54,12 @@ public interface BizArchiveCodeTaskMapper extends BaseMapper<BizArchiveCodeTask>
     /**
      * 待同步的归档记录：archive_status IN (1,2) 且尚无任务（含已删除任务，避免重建历史脏单）
      */
-    @Select("SELECT a.id, a.record_no, a.patient_name, a.dept_name, a.diagnosis " +
+    @Select("SELECT a.id AS id, a.record_no AS recordNo, a.patient_name AS patientName, "
+            + "a.dept_name AS deptName, a.diagnosis AS diagnosis " +
             "FROM biz_medical_record_archive a " +
             "WHERE a.del_flag = 0 AND a.archive_status IN (1, 2) " +
             "  AND NOT EXISTS (SELECT 1 FROM biz_archive_code_task t WHERE t.archive_id = a.id)")
-    List<Map<String, Object>> selectUnsyncedArchives();
+    List<ArchiveSyncCandidateVO> selectUnsyncedArchives();
 
     /**
      * 编码员姓名（跨模块读 his-system 的员工，铁律用裸 SQL；只认在职）

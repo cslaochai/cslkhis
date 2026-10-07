@@ -10,6 +10,7 @@ import com.his.ai.support.AiMaskUtils;
 import com.his.ai.support.EmrFieldCatalog;
 import com.his.ai.support.EmrTextTagSplitter;
 import com.his.ai.vo.EmrExtractFieldVO;
+import com.his.ai.vo.EmrExtractPromptVariablesVO;
 import com.his.ai.vo.EmrExtractResultVO;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
@@ -375,11 +376,11 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
             }
         }
 
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("gender", SysGenderEnum.getText(gender));
-        variables.put("age", age == null ? "（未填写）" : age + "岁");
-        variables.put("fieldCatalog", EmrFieldCatalog.writableFieldPrompt());
-        variables.put("rawText", promptText);
+        EmrExtractPromptVariablesVO variables = new EmrExtractPromptVariablesVO();
+        variables.setGender(SysGenderEnum.getText(gender));
+        variables.setAge(age == null ? "（未填写）" : age + "岁");
+        variables.setFieldCatalog(EmrFieldCatalog.writableFieldPrompt());
+        variables.setRawText(promptText);
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.EMR_EXTRACT)

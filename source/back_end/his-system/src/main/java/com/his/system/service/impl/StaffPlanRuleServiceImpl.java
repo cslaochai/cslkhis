@@ -24,6 +24,7 @@ import com.his.system.service.ShiftService;
 import com.his.system.service.StaffPlanRuleService;
 import com.his.system.vo.StaffPlanRuleVO;
 import com.his.system.vo.StaffShortfallVO;
+import com.his.system.vo.StaffWorkingGroupVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -473,20 +474,19 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         Map<String, Long> byShift = new HashMap<>();
         Map<String, Long> byUnit = new HashMap<>();
         Map<String, String> orgNames = new HashMap<>();
-        for (Map<String, Object> row : scheduleMapper.groupWorkingByUnitShift(begin, end)) {
-            LocalDate date = LocalDate.parse(String.valueOf(row.get("scheduleDate")));
-            Integer orgType = (Integer) row.get("orgType");
-            Long orgId = ((Number) row.get("orgId")).longValue();
-            Object shiftRaw = row.get("shiftId");
-            Long shiftId = shiftRaw == null ? null : ((Number) shiftRaw).longValue();
-            Integer staffType = (Integer) row.get("staffType");
-            long cnt = ((Number) row.get("cnt")).longValue();
+        for (StaffWorkingGroupVO row : scheduleMapper.groupWorkingByUnitShift(begin, end)) {
+            LocalDate date = row.getScheduleDate();
+            Integer orgType = row.getOrgType();
+            Long orgId = row.getOrgId();
+            Long shiftId = row.getShiftId();
+            Integer staffType = row.getStaffType();
+            long cnt = row.getCnt();
             String unitKey = date + "|" + orgType + "|" + orgId + "|" + staffType;
             byUnit.merge(unitKey, cnt, Long::sum);
             if (shiftId != null) {
                 byShift.merge(unitKey + "|" + shiftId, cnt, Long::sum);
             }
-            orgNames.putIfAbsent(orgType + "|" + orgId, (String) row.get("orgName"));
+            orgNames.putIfAbsent(orgType + "|" + orgId, row.getOrgName());
         }
         List<Long> namedShiftIds = rules.stream()
                 .map(BizStaffPlanRule::getShiftId)

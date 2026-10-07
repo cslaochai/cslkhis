@@ -3,6 +3,7 @@ package com.his.emr.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.emr.entity.BizAdverseEvent;
+import com.his.emr.vo.AdverseEventStatsVO;
 import com.his.emr.vo.AdverseEventVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -105,5 +106,5 @@ public interface BizAdverseEventMapper extends BaseMapper<BizAdverseEvent> {
             "     AND report_time >= DATE_FORMAT(NOW(), '%Y-%m-01')) AS sentinel, " +
             "  (SELECT COUNT(*) FROM biz_adverse_event WHERE del_flag = 0 AND status = 4 " +
             "     AND report_time >= DATE_FORMAT(NOW(), '%Y-%m-01')) AS closed")
-    java.util.Map<String, Object> selectMonthStats();
+    AdverseEventStatsVO selectMonthStats();
 }

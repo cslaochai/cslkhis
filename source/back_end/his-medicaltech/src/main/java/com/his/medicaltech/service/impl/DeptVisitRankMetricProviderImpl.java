@@ -2,6 +2,7 @@ package com.his.medicaltech.service.impl;
 
 import com.his.medicaltech.mapper.WorkbenchMetricMapper;
 import com.his.medicaltech.service.DeptVisitRankMetricProvider;
+import com.his.medicaltech.vo.WorkbenchDeptVisitRankRowVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.provider.WorkbenchMetricProvider;
 import lombok.RequiredArgsConstructor;
@@ -29,9 +30,15 @@ public class DeptVisitRankMetricProviderImpl implements WorkbenchMetricProvider,
         return "deptVisitRank";
     }
 
+    /**
+     * 行本身是有类型的 {@link WorkbenchDeptVisitRankRowVO}（前端 {@code DeptRankWidget.vue}
+     * 按 {@code item.deptName} / {@code item.cnt} 取值，与 VO 字段名一致，故直接交给
+     * Jackson 序列化即可）；外层这层 {@code items} 包装是 SPI 边界上的一次性适配
+     * （父接口签名固定为 {@code Map<String, Object>}）。
+     */
     @Override
     public Map<String, Object> summary(CurrentUser user) {
-        List<Map<String, Object>> rows = workbenchMetricMapper.deptVisitRank();
+        List<WorkbenchDeptVisitRankRowVO> rows = workbenchMetricMapper.deptVisitRank();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("items", rows == null ? Collections.emptyList() : rows);
         return data;

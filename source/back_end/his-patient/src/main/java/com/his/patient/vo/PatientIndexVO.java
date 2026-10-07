@@ -7,7 +7,6 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 患者主索引条目（P5.1 EMPI）
@@ -77,7 +76,7 @@ public class PatientIndexVO {
     /**
      * 详情用：同一主档下的其他档案（"这一串是一个人"）
      */
-    private List<Map<String, Object>> siblingPatients;
+    private List<PatientSiblingVO> siblingPatients;
 
     // 档案完整度（关键字段，不含 photo/balance 这类无关字段）
     private Integer completeCount;

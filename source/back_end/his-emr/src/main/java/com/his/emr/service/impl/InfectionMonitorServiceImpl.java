@@ -18,7 +18,9 @@ import com.his.emr.mapper.BizInfectionCaseMapper;
 import com.his.emr.mapper.BizInfectionMonitorDailyMapper;
 import com.his.emr.mapper.BizInfectionMonitorMapper;
 import com.his.emr.service.InfectionMonitorService;
+import com.his.emr.vo.DeptSnapshotVO;
 import com.his.emr.vo.InfectionMonitorVO;
+import com.his.emr.vo.PatientSnapshotVO;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -65,14 +67,6 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
 
     private static String tr(String s) {
         return s == null ? null : s.trim();
-    }
-
-    private static Long toLong(Object o) {
-        return o == null ? null : Long.valueOf(String.valueOf(o));
-    }
-
-    private static Integer toInteger(Object o) {
-        return o == null ? null : Integer.valueOf(String.valueOf(o));
     }
 
     @Override
@@ -138,7 +132,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         if (dto.getVisitType() == 2 && dto.getInpId() == null) {
             throw new BusinessException("住院病例必须关联住院记录（inpId）");
         }
-        Map<String, Object> patient = caseMapper.selectPatientSnapshot(dto.getPatientId());
+        PatientSnapshotVO patient = caseMapper.selectPatientSnapshot(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在：" + dto.getPatientId());
         }
@@ -185,22 +179,22 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     }
 
     private void fillCase(BizInfectionCase c, InfectionMonitorDTO.CaseUpsert dto,
-                          Map<String, Object> patient, Long reportBy, String reportName) {
-        c.setPatientId(toLong(patient.get("patientId")));
-        c.setPatientNo((String) patient.get("patientNo"));
-        c.setPatientName((String) patient.get("patientName"));
-        c.setGender(toInteger(patient.get("gender")));
-        c.setAge(toInteger(patient.get("age")));
+                          PatientSnapshotVO patient, Long reportBy, String reportName) {
+        c.setPatientId(patient.getPatientId());
+        c.setPatientNo(patient.getPatientNo());
+        c.setPatientName(patient.getPatientName());
+        c.setGender(patient.getGender());
+        c.setAge(patient.getAge());
         c.setVisitType(dto.getVisitType());
         c.setRegistId(dto.getRegistId());
         c.setInpId(dto.getInpId());
         // 发现科室：就诊锚点兜底，允许上报人改口径（上报人认定的事实优先）
-        Map<String, Object> dept = dto.getVisitType() == 1
+        DeptSnapshotVO dept = dto.getVisitType() == 1
                 ? caseMapper.selectRegistDept(dto.getRegistId())
                 : caseMapper.selectInpDept(dto.getInpId());
         if (dept != null) {
-            c.setDeptId(toLong(dept.get("deptId")));
-            c.setDeptName((String) dept.get("deptName"));
+            c.setDeptId(dept.getDeptId());
+            c.setDeptName(dept.getDeptName());
         }
         c.setCaseSource(dto.getCaseSource());
         c.setInfectionSite(tr(dto.getInfectionSite()));
@@ -244,7 +238,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long monitorAdd(InfectionMonitorDTO.MonitorAdd dto) {
-        Map<String, Object> patient = caseMapper.selectPatientSnapshot(dto.getPatientId());
+        PatientSnapshotVO patient = caseMapper.selectPatientSnapshot(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在：" + dto.getPatientId());
         }
@@ -254,13 +248,13 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         BizInfectionMonitor m = new BizInfectionMonitor();
         m.setMonitorNo(sequenceService.generateInfectionMonitorNo());
         m.setPatientId(dto.getPatientId());
-        m.setPatientNo((String) patient.get("patientNo"));
-        m.setPatientName((String) patient.get("patientName"));
+        m.setPatientNo(patient.getPatientNo());
+        m.setPatientName(patient.getPatientName());
         m.setMonitorType(dto.getMonitorType());
-        Map<String, Object> dept = monitorMapper.selectInpDept(dto.getInpId());
+        DeptSnapshotVO dept = monitorMapper.selectInpDept(dto.getInpId());
         if (dept != null) {
-            m.setDeptId(toLong(dept.get("deptId")));
-            m.setDeptName((String) dept.get("deptName"));
+            m.setDeptId(dept.getDeptId());
+            m.setDeptName(dept.getDeptName());
         }
         m.setInsertDate(dto.getInsertDate());
         m.setStatus(DeviceMonitorStatusEnum.IN_USE.getCode());
@@ -458,14 +452,14 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         if (dto.getObsDate().isAfter(LocalDate.now())) {
             throw new BusinessException("观察日期不能是未来");
         }
-        Map<String, Object> dept = selectDeptName(dto.getDeptId());
+        DeptSnapshotVO dept = selectDeptName(dto.getDeptId());
         if (dept == null) {
             throw new BusinessException("科室不存在：" + dto.getDeptId());
         }
         BizHandHygieneObs o = new BizHandHygieneObs();
         o.setObsDate(dto.getObsDate());
         o.setDeptId(dto.getDeptId());
-        o.setDeptName((String) dept.get("deptName"));
+        o.setDeptName(dept.getDeptName());
         o.setObsObject(dto.getObsObject());
         o.setOpportunityCount(dto.getOpportunityCount());
         o.setComplyCount(dto.getComplyCount());
@@ -522,7 +516,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
         return s;
     }
 
-    private Map<String, Object> selectDeptName(Long deptId) {
+    private DeptSnapshotVO selectDeptName(Long deptId) {
         return caseMapper.selectDeptName(deptId);
     }
 

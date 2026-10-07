@@ -2,12 +2,12 @@ package com.his.emr.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.emr.entity.SysTreatmentItem;
+import com.his.emr.vo.TreatmentItemSnapshotVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 @Mapper
 public interface SysTreatmentItemMapper extends BaseMapper<SysTreatmentItem> {
@@ -29,7 +29,7 @@ public interface SysTreatmentItemMapper extends BaseMapper<SysTreatmentItem> {
             + "  FROM sys_treatment_item i "
             + "  LEFT JOIN sys_department d ON d.id = i.dept_id AND d.del_flag = 0 "
             + " WHERE i.id = #{itemId} AND i.del_flag = 0")
-    Map<String, Object> selectApplySnapshot(@Param("itemId") Long itemId);
+    TreatmentItemSnapshotVO selectApplySnapshot(@Param("itemId") Long itemId);
 
     /**
      * 开单候选项目：与 {@link #selectApplySnapshot} 同一套列与同一套 LEFT JOIN 口径，
@@ -48,5 +48,5 @@ public interface SysTreatmentItemMapper extends BaseMapper<SysTreatmentItem> {
             + "   </if>"
             + " ORDER BY i.item_type, i.item_code LIMIT #{limit}"
             + "</script>")
-    List<Map<String, Object>> selectOptions(@Param("kw") String kw, @Param("limit") int limit);
+    List<TreatmentItemSnapshotVO> selectOptions(@Param("kw") String kw, @Param("limit") int limit);
 }

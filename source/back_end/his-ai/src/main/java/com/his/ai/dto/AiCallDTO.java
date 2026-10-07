@@ -1,13 +1,11 @@
 package com.his.ai.dto;
 
 import com.his.ai.constant.AiCapabilityKeys;
+import com.his.ai.support.PromptVariables;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 一次 AI 能力调用的描述（由业务代码构造）。
@@ -32,10 +30,11 @@ public class AiCallDTO {
     private String templateName;
 
     /**
-     * 提示词变量表，占位符写法 {{key}}
+     * 提示词变量表，占位符写法 {{key}}。
+     * <p>各能力传自己的 {@code XxxPromptVariablesVO}，字段名即占位符名。
+     * 留空时模板原样渲染（不替换任何占位符）。
      */
-    @Builder.Default
-    private Map<String, Object> variables = new HashMap<>();
+    private PromptVariables variables;
 
     /**
      * 业务类型，仅用于审计检索

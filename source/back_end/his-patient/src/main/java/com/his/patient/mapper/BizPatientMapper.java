@@ -2,6 +2,7 @@ package com.his.patient.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.patient.entity.BizPatient;
+import com.his.patient.vo.PatientRegistCountVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -10,7 +11,6 @@ import org.apache.ibatis.annotations.Update;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 患者Mapper
@@ -50,7 +50,7 @@ public interface BizPatientMapper extends BaseMapper<BizPatient> {
      * 批量统计患者的挂号（预约）次数。
      *
      * @param ids 患者ID集合
-     * @return [{patientId=xx, cnt=n}, ...]；从未挂过号的患者不会出现在结果里
+     * @return 每行 = 一份患者的挂号次数；从未挂过号的患者不会出现在结果里
      */
     @Select("<script>" +
             "SELECT patient_id AS patientId, COUNT(*) AS cnt FROM biz_appoint_info " +
@@ -58,5 +58,5 @@ public interface BizPatientMapper extends BaseMapper<BizPatient> {
             "<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach> " +
             "GROUP BY patient_id" +
             "</script>")
-    List<Map<String, Object>> countRegistByPatientIds(@Param("ids") Collection<Long> ids);
+    List<PatientRegistCountVO> countRegistByPatientIds(@Param("ids") Collection<Long> ids);
 }

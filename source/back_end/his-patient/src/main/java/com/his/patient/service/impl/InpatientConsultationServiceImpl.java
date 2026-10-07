@@ -16,6 +16,7 @@ import com.his.patient.enums.*;
 import com.his.patient.mapper.*;
 import com.his.patient.service.InpatientConsultationService;
 import com.his.patient.vo.ConsultationVO;
+import com.his.patient.vo.InpatientConsultInvitePayloadVO;
 import com.his.patient.vo.WardVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysEmployee;
@@ -240,19 +241,19 @@ public class InpatientConsultationServiceImpl implements InpatientConsultationSe
                     urgent ? "急" : "",
                     ConsultScopeEnum.getText(entity.getConsultType()),
                     entity.getReason());
-            String payload = cn.hutool.json.JSONUtil.toJsonStr(new java.util.LinkedHashMap<String, Object>() {{
-                put("patientName", patientName);
-                put("consultationNo", entity.getConsultationNo());
-                put("toDeptName", deptNameOf(entity.getToDeptId()));
-                put("reason", entity.getReason());
-                put("isUrgent", urgent);
-            }});
+            InpatientConsultInvitePayloadVO payload = new InpatientConsultInvitePayloadVO();
+            payload.setPatientName(patientName);
+            payload.setConsultationNo(entity.getConsultationNo());
+            payload.setToDeptName(deptNameOf(entity.getToDeptId()));
+            payload.setReason(entity.getReason());
+            payload.setUrgent(urgent);
+            String payloadJson = cn.hutool.json.JSONUtil.toJsonStr(payload);
             for (SysEmployee receiver : receivers) {
                 sysMessageService.sendSystemMessage(receiver.getId(),
                         receiver.getEmpName() == null ? "站内用户" : receiver.getEmpName(),
                         title, content,
                         BizTypeEnum.CONSULT.getType(), entity.getConsultationId(),
-                        urgent ? "urgent" : "warning", payload, 0);
+                        urgent ? "urgent" : "warning", payloadJson, 0);
             }
         } catch (Exception ex) {
             log.warn("[会诊] 邀请通知发送失败 consultationNo={} toDeptId={}",

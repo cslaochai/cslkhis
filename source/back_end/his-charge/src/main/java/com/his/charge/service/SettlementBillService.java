@@ -94,8 +94,10 @@ public interface SettlementBillService extends IService<BizSettlementBill> {
      *
      * <p>四层改造后患者缴费从旧的「收费单」切到「结算账单」，本方法是小程序门诊缴费入口的列表数据源，
      * 与 {@code refundableLines} 同口径只回答"该收多少、每行是什么"，不回答钱到没到（已收以支付流水为准）。
+     *
+     * <p>账单头 + 摊行明细 + 医保拆分三列都在 VO 上，取值不需要再靠 {@code Map} 的 key 名去猜字段。
      */
-    List<Map<String, Object>> pendingBillsForPatient(Long patientId);
+    List<PendingBillVO> pendingBillViews(Long patientId);
 
     /**
      * 收费台首屏：按<b>就诊</b>汇总的待收费榜（待出账的应收 + 未收齐的账单差额，两列分开）。

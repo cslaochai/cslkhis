@@ -7,6 +7,7 @@ import com.his.ai.dto.EmrQcLlmOutputDTO;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.EmrQcCapability;
 import com.his.ai.vo.EmrQcIssueVO;
+import com.his.ai.vo.EmrQcPromptVariablesVO;
 import com.his.ai.vo.EmrQcResultVO;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
@@ -280,27 +281,27 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
     }
 
     private Optional<EmrQcLlmOutputDTO> callModel(BizMedicalRecord record) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("gender", SysGenderEnum.getText(record.getGender()));
-        variables.put("age", record.getAge() == null ? "（未填写）" : record.getAge() + "岁");
-        variables.put("chiefComplaint", nullToDash(record.getChiefComplaint()));
-        variables.put("presentIllness", nullToDash(record.getPresentIllness()));
-        variables.put("pastHistory", nullToDash(record.getPastHistory()));
-        variables.put("personalHistory", nullToDash(record.getPersonalHistory()));
-        variables.put("familyHistory", nullToDash(record.getFamilyHistory()));
-        variables.put("allergyHistory", nullToDash(record.getAllergyHistory()));
-        variables.put("generalCondition", nullToDash(record.getGeneralCondition()));
-        variables.put("skinMucosa", nullToDash(record.getSkinMucosa()));
-        variables.put("headNeck", nullToDash(record.getHeadNeck()));
-        variables.put("chestLung", nullToDash(record.getChestLung()));
-        variables.put("heart", nullToDash(record.getHeart()));
-        variables.put("abdomen", nullToDash(record.getAbdomen()));
-        variables.put("spineLimbs", nullToDash(record.getSpineLimbs()));
-        variables.put("nervousSystem", nullToDash(record.getNervousSystem()));
-        variables.put("specialistExam", nullToDash(record.getSpecialistExam()));
-        variables.put("auxiliaryExam", nullToDash(record.getAuxiliaryExam()));
-        variables.put("diagnosis", nullToDash(record.getDiagnosis()));
-        variables.put("treatmentPlan", nullToDash(record.getTreatmentPlan()));
+        EmrQcPromptVariablesVO variables = new EmrQcPromptVariablesVO();
+        variables.setGender(SysGenderEnum.getText(record.getGender()));
+        variables.setAge(record.getAge() == null ? "（未填写）" : record.getAge() + "岁");
+        variables.setChiefComplaint(nullToDash(record.getChiefComplaint()));
+        variables.setPresentIllness(nullToDash(record.getPresentIllness()));
+        variables.setPastHistory(nullToDash(record.getPastHistory()));
+        variables.setPersonalHistory(nullToDash(record.getPersonalHistory()));
+        variables.setFamilyHistory(nullToDash(record.getFamilyHistory()));
+        variables.setAllergyHistory(nullToDash(record.getAllergyHistory()));
+        variables.setGeneralCondition(nullToDash(record.getGeneralCondition()));
+        variables.setSkinMucosa(nullToDash(record.getSkinMucosa()));
+        variables.setHeadNeck(nullToDash(record.getHeadNeck()));
+        variables.setChestLung(nullToDash(record.getChestLung()));
+        variables.setHeart(nullToDash(record.getHeart()));
+        variables.setAbdomen(nullToDash(record.getAbdomen()));
+        variables.setSpineLimbs(nullToDash(record.getSpineLimbs()));
+        variables.setNervousSystem(nullToDash(record.getNervousSystem()));
+        variables.setSpecialistExam(nullToDash(record.getSpecialistExam()));
+        variables.setAuxiliaryExam(nullToDash(record.getAuxiliaryExam()));
+        variables.setDiagnosis(nullToDash(record.getDiagnosis()));
+        variables.setTreatmentPlan(nullToDash(record.getTreatmentPlan()));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.EMR_QC)

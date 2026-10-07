@@ -61,8 +61,8 @@ public class RxReviewServiceImpl implements RxReviewService {
 
     // 批次
 
-    private static long longOf(Object v) {
-        return v == null ? 0L : ((Number) v).longValue();
+    private static long nz(Long v) {
+        return v == null ? 0L : v;
     }
 
     /**
@@ -428,14 +428,14 @@ public class RxReviewServiceImpl implements RxReviewService {
         LocalDate start = ym.atDay(1);
         LocalDate end = ym.atEndOfMonth();
 
-        Map<String, Object> itemStats = itemMapper.selectMonthlyStats(start, end);
+        RxReviewMonthStatVO itemStats = itemMapper.selectMonthlyStats(start, end);
         long totalPrescriptions = itemMapper.countPrescriptions(start, end);
 
-        long reviewed = longOf(itemStats.get("reviewed"));
-        long unreasonable = longOf(itemStats.get("unreasonable"));
-        long abnormal = longOf(itemStats.get("abnormal"));
-        long publicized = longOf(itemStats.get("publicized"));
-        long pending = longOf(itemStats.get("pending"));
+        long reviewed = nz(itemStats.getReviewed());
+        long unreasonable = nz(itemStats.getUnreasonable());
+        long abnormal = nz(itemStats.getAbnormal());
+        long publicized = nz(itemStats.getPublicized());
+        long pending = nz(itemStats.getPending());
 
         RxReviewStatsVO vo = new RxReviewStatsVO();
         vo.setMonth(ym.toString());

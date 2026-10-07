@@ -39,6 +39,7 @@ import com.his.system.service.StaffScheduleService;
 import com.his.system.vo.StaffOnDutyVO;
 import com.his.system.vo.StaffScheduleVO;
 import com.his.system.vo.StaffTypeDayWorkingVO;
+import com.his.system.vo.StaffWorkingGroupVO;
 import com.his.system.vo.UnitDayWorkingVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -577,22 +578,22 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     public List<UnitDayWorkingVO> listUnitDayWorking(LocalDate begin, LocalDate end) {
         // 单元 × 日 = 聚合行再按 (date, org) 折叠（班次与岗位两个维度在这里合掉）
         Map<String, UnitDayWorkingVO> merged = new LinkedHashMap<>();
-        for (Map<String, Object> row : baseMapper.groupWorkingByUnitShift(begin, end)) {
-            LocalDate date = LocalDate.parse(String.valueOf(row.get("scheduleDate")));
-            Integer orgType = (Integer) row.get("orgType");
-            Long orgId = ((Number) row.get("orgId")).longValue();
+        for (StaffWorkingGroupVO row : baseMapper.groupWorkingByUnitShift(begin, end)) {
+            LocalDate date = row.getScheduleDate();
+            Integer orgType = row.getOrgType();
+            Long orgId = row.getOrgId();
             String key = date + "|" + orgType + "|" + orgId;
             UnitDayWorkingVO vo = merged.get(key);
             if (vo == null) {
                 vo = new UnitDayWorkingVO();
                 vo.setOrgType(orgType);
                 vo.setOrgId(orgId);
-                vo.setOrgName((String) row.get("orgName"));
+                vo.setOrgName(row.getOrgName());
                 vo.setScheduleDate(date);
                 vo.setWorkingCount(0L);
                 merged.put(key, vo);
             }
-            vo.setWorkingCount(vo.getWorkingCount() + ((Number) row.get("cnt")).longValue());
+            vo.setWorkingCount(vo.getWorkingCount() + row.getCnt());
         }
         return new ArrayList<>(merged.values());
     }
@@ -600,9 +601,9 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     @Override
     public List<StaffTypeDayWorkingVO> listStaffTypeDayWorking(LocalDate begin, LocalDate end) {
         Map<String, StaffTypeDayWorkingVO> merged = new LinkedHashMap<>();
-        for (Map<String, Object> row : baseMapper.groupWorkingByUnitShift(begin, end)) {
-            LocalDate date = LocalDate.parse(String.valueOf(row.get("scheduleDate")));
-            Integer staffType = (Integer) row.get("staffType");
+        for (StaffWorkingGroupVO row : baseMapper.groupWorkingByUnitShift(begin, end)) {
+            LocalDate date = row.getScheduleDate();
+            Integer staffType = row.getStaffType();
             String key = date + "|" + staffType;
             StaffTypeDayWorkingVO vo = merged.get(key);
             if (vo == null) {
@@ -612,7 +613,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
                 vo.setWorkingCount(0L);
                 merged.put(key, vo);
             }
-            vo.setWorkingCount(vo.getWorkingCount() + ((Number) row.get("cnt")).longValue());
+            vo.setWorkingCount(vo.getWorkingCount() + row.getCnt());
         }
         return new ArrayList<>(merged.values());
     }

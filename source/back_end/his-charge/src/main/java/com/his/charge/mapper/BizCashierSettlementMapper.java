@@ -2,13 +2,15 @@ package com.his.charge.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.charge.entity.BizCashierSettlement;
+import com.his.charge.vo.CountAmountVO;
+import com.his.charge.vo.InvoiceCountVO;
+import com.his.charge.vo.PaymentMethodSumVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 收费员交班单 Mapper。
@@ -60,7 +62,7 @@ public interface BizCashierSettlementMapper extends BaseMapper<BizCashierSettlem
             " WHERE del_flag = 0 AND txn_status = 1 AND direction = 1 " +
             "   AND cashier_settlement_id = #{settlementId} " +
             " GROUP BY pay_method")
-    List<Map<String, Object>> sumPaidBySettlement(@Param("settlementId") Long settlementId);
+    List<PaymentMethodSumVO> sumPaidBySettlement(@Param("settlementId") Long settlementId);
 
     /**
      * 本班认领的退费（掏出去的钱）。
@@ -72,7 +74,7 @@ public interface BizCashierSettlementMapper extends BaseMapper<BizCashierSettlem
             " FROM biz_payment_txn " +
             " WHERE del_flag = 0 AND txn_status = 1 AND direction = 2 " +
             "   AND cashier_settlement_id = #{settlementId}")
-    Map<String, Object> sumRefundBySettlement(@Param("settlementId") Long settlementId);
+    CountAmountVO sumRefundBySettlement(@Param("settlementId") Long settlementId);
 
     /**
      * 本班认领账单的开票 / 作废张数。
@@ -91,7 +93,7 @@ public interface BizCashierSettlementMapper extends BaseMapper<BizCashierSettlem
             "   AND i.bill_id IN (SELECT DISTINCT t.bill_id FROM biz_payment_txn t " +
             "                      WHERE t.del_flag = 0 AND t.txn_status = 1 AND t.direction = 1 " +
             "                        AND t.cashier_settlement_id = #{settlementId})")
-    Map<String, Object> sumInvoiceBySettlement(@Param("settlementId") Long settlementId);
+    InvoiceCountVO sumInvoiceBySettlement(@Param("settlementId") Long settlementId);
 
     /**
      * 当日已用交班单序号数（生成 JS+日期+序号用）。

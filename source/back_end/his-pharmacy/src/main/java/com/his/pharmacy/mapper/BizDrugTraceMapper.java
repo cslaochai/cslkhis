@@ -3,6 +3,11 @@ package com.his.pharmacy.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.pharmacy.entity.BizDrugTrace;
+import com.his.pharmacy.vo.DrugDictSnapshotVO;
+import com.his.pharmacy.vo.DrugDispensingSnapshotVO;
+import com.his.pharmacy.vo.DrugInboundSnapshotVO;
+import com.his.pharmacy.vo.DrugStockOptionVO;
+import com.his.pharmacy.vo.DrugTraceStatVO;
 import com.his.pharmacy.vo.DrugTraceVO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
@@ -10,7 +15,6 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 药品追溯码台账Mapper
@@ -80,73 +84,80 @@ public interface BizDrugTraceMapper extends BaseMapper<BizDrugTrace> {
             + "FROM sys_drug d "
             + "WHERE d.del_flag = 0 AND (d.trace_di = #{key} OR d.trace_code_prefix = #{key}) "
             + "ORDER BY d.id LIMIT 1")
-    Map<String, Object> selectDrugByTraceKey(@Param("key") String key);
+    DrugDictSnapshotVO selectDrugByTraceKey(@Param("key") String key);
 
     /** 药品字典快照（跨模块裸 SQL，his-system 的药品字典） */
     @Select("SELECT d.id, d.drug_code, d.drug_name, d.generic_name, d.specification, d.dosage_form, d.unit, "
             + "d.manufacturer, d.approval_number, d.is_trace_required, d.status "
             + "FROM sys_drug d WHERE d.del_flag = 0 AND d.id = #{id} LIMIT 1")
-    Map<String, Object> selectDrugSnapshot(@Param("id") Long id);
+    DrugDictSnapshotVO selectDrugSnapshot(@Param("id") Long id);
 
     /** 发药单快照（跨模块裸 SQL，his-emr 的药品发药记录） */
     @Select("SELECT dp.id, dp.dispensing_no, dp.prescription_id, dp.prescription_no, dp.patient_id, dp.patient_no, "
             + "dp.patient_name, dp.drug_id, dp.drug_code, dp.drug_name, dp.specification, dp.unit, dp.quantity, "
             + "dp.dispensing_status, dp.dispensing_time "
             + "FROM biz_drug_dispensing dp WHERE dp.del_flag = 0 AND dp.id = #{id} LIMIT 1")
-    Map<String, Object> selectDispensingSnapshot(@Param("id") Long id);
+    DrugDispensingSnapshotVO selectDispensingSnapshot(@Param("id") Long id);
 
     /** 入库单快照（本模块的药品入库单） */
     @Select("SELECT ib.id, ib.inbound_no, ib.supplier FROM biz_drug_inbound ib "
             + "WHERE ib.del_flag = 0 AND ib.id = #{id} LIMIT 1")
-    Map<String, Object> selectInboundSnapshot(@Param("id") Long id);
+    DrugInboundSnapshotVO selectInboundSnapshot(@Param("id") Long id);
 
     /** 该药品可挂靠批次（采集时选批次，FEFO 序；药库 1 在前、药房 2 在后） */
     @Select("SELECT s.id, s.drug_id, s.batch_no, s.expiry_date, s.quantity, s.available_quantity, "
             + "s.stock_room, s.location, s.supplier, s.supplier_id "
             + "FROM biz_drug_stock s WHERE s.del_flag = 0 AND s.drug_id = #{drugId} "
             + "ORDER BY s.stock_room ASC, s.expiry_date ASC, s.id ASC")
-    List<Map<String, Object>> selectStockOptions(@Param("drugId") Long drugId);
+    List<DrugStockOptionVO> selectStockOptions(@Param("drugId") Long drugId);
 
     /** 待上传 / 上传失败的码（批量上传用） */
     @Select("SELECT t.id FROM biz_drug_trace t WHERE t.del_flag = 0 AND t.upload_status IN (0, 2) "
             + "ORDER BY t.id ASC LIMIT #{limit}")
     List<Long> selectUploadCandidates(@Param("limit") int limit);
 
-    /** 码状态分布 */
-    @Select("SELECT COUNT(*) total, "
-            + "SUM(CASE WHEN t.status = 1 THEN 1 ELSE 0 END) in_stock, "
-            + "SUM(CASE WHEN t.status = 2 THEN 1 ELSE 0 END) dispensed, "
-            + "SUM(CASE WHEN t.status = 3 THEN 1 ELSE 0 END) voided, "
-            + "SUM(CASE WHEN t.upload_status = 0 THEN 1 ELSE 0 END) pending_upload, "
-            + "SUM(CASE WHEN t.upload_status = 1 THEN 1 ELSE 0 END) uploaded, "
-            + "SUM(CASE WHEN t.upload_status = 2 THEN 1 ELSE 0 END) upload_failed, "
-            + "COUNT(DISTINCT t.drug_id) drug_kinds "
+    /**
+     * 码状态分布
+     *
+     * <p>别名一律写成 VO 字段名的驼峰（{@code map-underscore-to-camel-case} 只对 Bean 生效，
+     * 但写齐别名才能让「列名↔字段名」的对应关系在 SQL 里一眼可查）。
+     * {@code SUM} 用 {@code COALESCE(..., 0)} 兜底：零行时 MySQL 的 SUM 返回 NULL，
+     * 空台账必须显示「0 条」而不是「null 条」。
+     */
+    @Select("SELECT COUNT(*) AS total, "
+            + "COALESCE(SUM(CASE WHEN t.status = 1 THEN 1 ELSE 0 END), 0) AS inStock, "
+            + "COALESCE(SUM(CASE WHEN t.status = 2 THEN 1 ELSE 0 END), 0) AS dispensed, "
+            + "COALESCE(SUM(CASE WHEN t.status = 3 THEN 1 ELSE 0 END), 0) AS voided, "
+            + "COALESCE(SUM(CASE WHEN t.upload_status = 0 THEN 1 ELSE 0 END), 0) AS pendingUpload, "
+            + "COALESCE(SUM(CASE WHEN t.upload_status = 1 THEN 1 ELSE 0 END), 0) AS uploaded, "
+            + "COALESCE(SUM(CASE WHEN t.upload_status = 2 THEN 1 ELSE 0 END), 0) AS uploadFailed, "
+            + "COUNT(DISTINCT t.drug_id) AS drugKinds "
             + "FROM biz_drug_trace t WHERE t.del_flag = 0")
-    Map<String, Object> selectTraceStats();
+    DrugTraceStatVO selectTraceStats();
 
     /**
      * 近 30 天已发药但未核销追溯码的发药行数（医保稽核点："发药没扫码"）
      * <p>只算近 30 天：政策前的历史发药本来就没有码，算进来是个永远降不下去的假指标。
      */
-    @Select("SELECT COUNT(*) cnt FROM biz_drug_dispensing dp "
+    @Select("SELECT COUNT(*) FROM biz_drug_dispensing dp "
             + "WHERE dp.del_flag = 0 AND dp.dispensing_status = 2 "
             + "AND COALESCE(dp.dispensing_time, dp.create_time) >= DATE_SUB(NOW(), INTERVAL 30 DAY) "
             + "AND NOT EXISTS (SELECT 1 FROM biz_drug_trace t WHERE t.del_flag = 0 AND t.dispensing_id = dp.id)")
-    Map<String, Object> countUnTracedDispense();
+    long countUnTracedDispense();
 
     /** 其中「必须采集」品种（麻精/集采/医保谈判）的行数 */
-    @Select("SELECT COUNT(*) cnt FROM biz_drug_dispensing dp "
+    @Select("SELECT COUNT(*) FROM biz_drug_dispensing dp "
             + "JOIN sys_drug d ON d.id = dp.drug_id AND d.del_flag = 0 AND d.is_trace_required = 1 "
             + "WHERE dp.del_flag = 0 AND dp.dispensing_status = 2 "
             + "AND COALESCE(dp.dispensing_time, dp.create_time) >= DATE_SUB(NOW(), INTERVAL 30 DAY) "
             + "AND NOT EXISTS (SELECT 1 FROM biz_drug_trace t WHERE t.del_flag = 0 AND t.dispensing_id = dp.id)")
-    Map<String, Object> countRequiredUnTracedDispense();
+    long countRequiredUnTracedDispense();
 
     /** 近 30 天已发药总行数（覆盖率分母） */
-    @Select("SELECT COUNT(*) cnt FROM biz_drug_dispensing dp "
+    @Select("SELECT COUNT(*) FROM biz_drug_dispensing dp "
             + "WHERE dp.del_flag = 0 AND dp.dispensing_status = 2 "
             + "AND COALESCE(dp.dispensing_time, dp.create_time) >= DATE_SUB(NOW(), INTERVAL 30 DAY)")
-    Map<String, Object> countRecentDispense();
+    long countRecentDispense();
 
     /**
      * 物理删除（追溯码原文的唯一键不含删除标记，软删会占键）

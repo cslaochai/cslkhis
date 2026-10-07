@@ -60,6 +60,23 @@
   }
   ```
 
+- **主键入参一律 `Long`，禁止手写 `parseId(String)` 转换层**（2026-10-07 全仓清掉 11 处）：
+  `ToStringSerializer` 是**出参**防 JS 丢精度，**入参**侧前端必然传字符串，而 Jackson 自己就能把 `"1857..."` 反序列化成 `Long` 字段 ——
+  多写这一层只有两个下场，都比不写更糟：
+  ① 正则 `\d{1,20}` + `Long.parseLong`：转化不了返回 `null` **不报错** → 下游 `selectById(null)` 报「数据不存在」，
+     把「你传了个坏 ID」说成「数据没了」，真因被掩盖；
+  ② **正则放行 20 位、`parseLong` 只吃 19 位**，两边不一致的那一格抛 `NumberFormatException` → 走 `GlobalExceptionHandler`
+     的 `Exception` 兜底 = **HTTP 500「系统内部错误」**，调用方传错一个字符，后端说自己崩了。
+  正则 + 手写解析 = 双重真相，天然出裂缝。
+  - ✅ 正确形态：DTO `@NotNull private Long id`（`@NotBlank` 只对 String 有意义）+ Controller `@RequestParam Long id`。
+    非法值自动 400（`MethodArgumentTypeMismatchException` / `HttpMessageNotReadableException` 都已接住）。
+  - **出参一个都不动**（保持 `String id` 或 `Long + @JsonSerialize(ToStringSerializer)`）→ 前端零改动。
+  - 同族：主键用 `List<String>` + `IN (${ids})` 拼接的一律改 `List<Long>` + `<foreach>` 逐个 `#{}`，
+    「非数字白名单 for 循环」整个不需要（入参已是 Long，非数字进不来；拼 IN 反而是给自己开注入面）。
+  - 仅当解析的是**内部裸 SQL 行数据**（`Map` 里 CAST AS CHAR 的列）才留工具方法，名字写明 `parseRowId`。
+  - 机械判据：`grep -rn "parseId\|parseRowId\|\\\\d{1,20}" --include=*.java source/back_end` 只允许命中
+    内部行数据那一处，其余为 0。
+
 ## 2. 前端界面规范
 
 - **禁止使用 `src/components/his/ModulePage.vue`**。它是演示用的硬编码壳（`rows` / `stats` 写死在页面里，不接后端），**不允许新增引用、不允许在其上继续加功能**；存量引用页面（`views/**`，约 20 个）属待删除项，改造时直接换成真实接口驱动的页面，不要"顺手补两个字段"。
@@ -347,10 +364,12 @@
   唯一形态是 `Result<xxxVO>` / `Result<List<xxxVO>>` / `Result<IPage<xxxVO>>`。
   Map 的 key 是**隐式契约**：前端拼错 key 不报错、只渲染空白；改字段名时 IDE 不会带着前端一起改；
   Swagger 出参退化成 `{}`，前端联调只能靠抓包猜字段。`Map<String, Long>` 这类"看着有类型其实没类型"的同样禁。
-  **Mapper 聚合查询返回 `Map<String, Object>` 是允许的**（那是 SQL 结果天然的形状 —— 一行多列没有对应实体），
-  但**必须在 service 里转成 VO 再出**，不许一路透传到 Controller：转换写进 Controller 就违反了上条"Controller 禁止任何处理逻辑"。
-  统计/字典类接口一样要有名字：`XxxStatVO`、`XxxDictVO`、`XxxCountVO`，禁止拿 Map 当 VO。
+  ⚠️ **「Map 在 Mapper 层、VO 在 service 层转换」这条路已经全部走完并封死**（2026-10-07 全仓清零）：
+  「SQL 结果天然没有对应实体」不是理由 —— 那就建 `XxxStatVO` / `XxxCountVO` / `XxxTrendVO` /
+  `XxxSnapshotVO`，一行多列也有对应结构。Mapper 层现在**直接返回 VO**，中间那层 Map 转换全部删除，
+  连带把只服务它的 `toLong(Map,String)` 之类的工具方法一起删掉。统计/字典类接口本来就要有名字，禁止拿 Map 当 VO。
   真需要动态结构（交叉表列头由数据决定）时，用 `List<ColumnVO> + List<RowVO>` 这种**有类型的形状**表达，不要退回 Map。
+  判据与豁免清单见本节末尾「`Map<String, Object>` 一律不许当数据契约用」那一条。
   机械判据：`grep -l "Result<Map\|Result<Object\|PageResult<Map" **/controller/*.java` 必须为空。
 - **Controller 里禁止出现任何处理逻辑**：不写业务 if/else、不做状态兜底、不算统计、不拼多表结果、
   **不注入 Mapper**。方法体只允许「取 DTO → 调一个 service 方法 → 返回 Result」。
@@ -391,6 +410,45 @@
   两者在 `@RequestBody` 上都生效（`ValidationAnnotationUtils` 认 `Validated` 与 simpleName 以 `Valid` 开头的注解），
   但只用 `@Valid` 这一种写法，避免类级注解带来的隐式 AOP 校验。
   机械判据：`grep -rn "@Validated" --include=*Controller.java source/back_end` 为空。
+- **DTO 主键字段是 `String` 的，一律当 Bug 查**：这不是「防精度」的必要写法，而是第 1 节那条
+  「主键入参一律 `Long`」被写歪了（出参的精度要求漏到入参上）。`grep -rn "private String id;\|private String faqId;" --include=*DTO.java source/back_end`
+  应为空；命中就按第 1 节的形态改 `Long + @NotNull`，并删掉 service 里配套的
+  `parseId` 与 `if (id == null) throw`。
+  **豁免**：对接外部厂商 API 的响应体（字段由对方定义，如 `OpenAiChatResponseDTO.id` 是 OpenAI 的
+  `chatcmpl-xxx` 字符串）不是我们的入参，不在判据内 —— 别照着判据把它改成 Long，那会破坏对接。
+- **`Map<String, Object>` 一律不许当数据契约用（2026-10-07 全仓清零，362 处 → 15 行豁免）**：
+  Map 的 key 是**隐式契约** —— 拼错不报错、只渲染空白；改字段名时 IDE 不会带着调用方一起改；
+  Swagger 出参退化成 `{}`。所以：
+  | 场景 | 唯一正确形态 |
+  |---|---|
+  | Mapper 裸 SQL 返回单行快照 | 行的列就是某表 → 直接用该表 entity；只取部分列 → 建 `XxxSnapshotVO` |
+  | Mapper 裸 SQL 返回 `List<Map>`（group by / 趋势 / TOP N） | 建 `XxxCountVO` / `XxxStatVO` / `XxxTrendVO`，**字段名写全**，禁止 `k`/`c`/`d`/`n` 缩写 |
+  | `new LinkedHashMap<>(){{ put(..) }}` 双花括号拼 JSON | 建 `XxxPayloadVO`；**JSON 键名一字不改**（前端契约） |
+  | 外部报文（疾控报卡、医保 2304/2305、微信模板消息） | 建 VO；Java 关键字做字段名用 `@Alias("class")`（Hutool）/ `@JsonProperty`（Jackson） |
+  | service 里 `row.get("x")` 强转取值 | 随 Mapper 一起改成 `row.getX()`，**并删掉只服务 Map 的转换工具**（`toLong(Map,String)`/`asLong(Object)`/`nz(Map)`/`decimal(Object)`）—— 改完必零引用，属第 18 节零引用删除范围 |
+  | 局部 `Map<K,V>` 做分组聚合（`Map<Integer,Long> typeCount`）、JWT claims | **保留** —— 是真字典不是数据契约 |
+  | 跨模块 SPI 边界且对端按 key 动态索引（见下方豁免） | 实现方**内部出参全改有类型 VO**，只在 `return` 一行做 VO→Map 适配 |
+
+  **两条配套铁律**：
+  ① **SQL 列别名必须与 VO 字段名逐字一致**（MyBatis 按列名映射）。`AS k` 改成 `AS followupType` 后
+  VO 字段也得改名。别名别用 `count`/`key`/`value` 做 `ORDER BY` 目标（MySQL 内置含义），用 `cnt` 更安全。
+  ② **改 VO 后 DATETIME 给 `LocalDateTime` 字段，不再 `DATE_FORMAT` 成字符串** —— 那是为绕开裸 Map
+  取日期对象强转才那么干，换成有类型的类之后 MyBatis 自己映射。唯一例外：小程序端出参是
+  `yyyy-MM-dd HH:mm:ss` 文本的字段保持 String（改 LT 会变 ISO `T` 分隔 = 破坏出参契约）。
+
+  **豁免（当前仅存 15 行，逐条有据，不是漏改）**：
+  ① `WorkbenchMetricProvider.summary()` + `WorkbenchDataVO.data` —— 前端 `MetricWidget.vue` 用
+  `props.data?.[item.key]` **按 key 索引**，且 key 集合由前端 `workbench-widgets.js` 的 `METRIC_SPECS`
+  加可增删的 `sys_workbench_widget` 卡片注册表决定 = 真动态结构，改它要同时动前端 + 7 个实现方；
+  ② `OperationQaCapabilityImpl` 的 `queryForList` —— SELECT 列由**模型按问题现场决定**，编译期不存在任何 VO 可建；
+  ③ `PromptTemplate.render(String, PromptVariables)` —— 模板占位符天然动态，各能力改用
+  `XxxPromptVariablesVO implements PromptVariables`，`toMap()` 由 `BeanUtil.beanToMap(this)` **从字段名反射**
+  （人手写键名 = 原地搬 Map，收益归零）；
+  ④ `JwtUtils` 解析 claims —— jjwt `claims(Map)` 的 API 形状，标准 claims 大量可选，收成类更脆。
+
+  机械判据（排除 import 与注释行后应只剩上述豁免）：
+  `grep -rn "Map<String, *Object>" --include=*.java source/back_end | grep -v "import \|:\s*\*\|:\s*//"`
+  Controller 层与 DTO 层必须**各为 0**：`grep -rln "Map<String, *Object>" --include=*.java source/back_end/*/src/main/java/*/controller/`。
 
 ## 11. 禁止 spi / gateway 等间接依赖：一律强制依赖，循环依赖加一层中间 Service
 
@@ -739,3 +797,51 @@
   ```
   只允许命中上表三处定时任务常量、`ChannelEnum.SYSTEM`、`AiMessageDTO.ROLE_SYSTEM`，
   以及 `OperLogInterceptor.resolveTitle` 的 `return "系统"`（那是**操作模块标题**，不是操作人）。
+
+## 21. 时间格式化只认 `DateFormats` 的常量，禁止任何地方 new formatter（2026-10-07 全仓收口）
+- **禁止**在业务代码里出现这两种写法（`import java.time.format.DateTimeFormatter` 也一并禁止）：
+  ```java
+  private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");  // 私有常量副本
+  "RX" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))              // 行内新建
+  ```
+  一律改为引用 `com.his.common.util.DateFormats` 的常量：`DateFormats.COMPACT_DATE` / `DateFormats.DATETIME` / …
+- **为什么连 hutool 的 `DateUtil` 也不用**（老王原本提「要么抽 DateUtil，要么用 hutool 的 Formatter」，已否决）：
+  1. hutool 的 `DatePattern` 是 **`String` 常量**不是 `DateTimeFormatter`，写法是
+     `DateUtil.format(x, DatePattern.PURE_DATETIME_PATTERN)` —— pattern 字面量照样散在每个调用点，
+     「同一格式两处各写一遍、改一处漏一处」原样保留，只是把 `ofPattern` 换了层皮。
+  2. **覆盖不全**：本库要用的 `HH:mm`（hutool 只有 `HH:mm:ss`）和身份证的 `uuuuMMdd + ResolverStyle.STRICT` 都没有。
+  3. `DateUtil` 门面类型是 `java.util.Date`，本库全链路 `java.time`，引入它等于把旧时间类型引回业务代码。
+  4. hutool 只在 `his-common` / `his-emr` / `his-system` 三个 `pom.xml` 里声明了依赖，其余 9 个模块靠传递，不能当全库口径。
+- **9 个常量按用途分四组，不要新增第 10 个同名 pattern**（同一个 pattern 不许出现第二次；确属新形状才往里加）：
+  | 分组 | 常量 | 形态 | 用途 |
+  |---|---|---|---|
+  | 可读格式 | `DATE` | `2026-10-07` | 日期展示、日分组键 |
+  | 可读格式 | `DATETIME` | `2026-10-07 14:30:05` | 导出 CSV / 日志 / 对外文本（最常用） |
+  | 可读格式 | `DATETIME_MINUTE` | `2026-10-07 14:30` | 精确到分钟的展示 |
+  | 可读格式 | `TIME_MINUTE` | `14:30` | 一天内时刻，不带日期 |
+  | 紧凑格式 | `COMPACT_DATE` | `20261007` | 单号日期段 / Redis 日序列 key 后缀 |
+  | 紧凑格式 | `COMPACT_DATETIME` | `20261007143005` | 单号时间段 |
+  | 紧凑格式 | `COMPACT_DATETIME_MS` | `20261007143005123` | 支付渠道流水戳等需同秒再区分的场景 |
+  | 协议格式 | `ISO_DATETIME` | `2026-10-07T14:30:05` | **仅**医保/TSA 通道报文（对方协议要带 `T`） |
+  | 解析专用 | `STRICT_COMPACT_DATE` | `uuuuMMdd` + STRICT | **仅**解析身份证出生日期 |
+- **`COMPACT_*` 系列禁止用于任何展示字段**（单号/键/目录名专用，给人看就用可读格式组）。
+- **`STRICT_COMPACT_DATE` 的两个参数都不能改**：
+  `yyyy` 是 year-of-era，STRICT 下缺 era 会直接抛 `DateTimeParseException`，必须是 `uuuu`；
+  STRICT 才能把身份证里的 `0230110` 当场判非法 —— SMART 会悄悄规整成 2 月 28 日然后放过。
+  这是全库**唯一**该用它的地方；别处解析日期一律走 ISO（`LocalDate.parse(text)`）。
+- **这些常量只管「渲染形状」，不管「入参解析」**：DTO 的 `@JsonFormat` 与 `LocalDate.parse` 的 pattern 由 §3 单独规定
+  （空格分隔 vs ISO `T`），两者必须对齐，**不要因为有 `ISO_DATETIME` 就去改 DTO 上的 pattern**。
+- **`TimeUtil` 与 `DateFormats` 分工，别混**：`TimeUtil` 管**归一到秒**（落库回读比较/签名场景，见 §17），
+  `DateFormats` 管**渲染成什么形状**。要「此刻 + 秒级」写 `TimeUtil.nowSeconds()`，
+  要「此刻 → 字符串」写 `DateFormats.DATETIME.format(TimeUtil.nowSeconds())`，**不要**再加第三个门面类。
+- 机械判据（用 `-l` 只看文件名，别用数字 —— 命中数会随常量增减变化，写死数字会过期）：
+  ```bash
+  grep -rl "DateTimeFormatter.ofPattern(" --include=*.java source/back_end
+  grep -rl "static final DateTimeFormatter" --include=*.java source/back_end
+  ```
+  两条命令都**只能输出 `his-common/util/DateFormats.java` 这一个文件**；出现第二个文件就是有人又自己造了一份。
+  2026-10-07 收口前是 **128 处/ 90 文件 / 10 模块**，其中 95 处私有常量字段用了 **32 个不同名字**
+  （`NO_DATE`×25 / `DAY_FMT`×7 / `TS`×6 / `TIME`×6 / `DAY`×6… 指的就 4 种格式），
+  33 处是行内 `format(ofPattern(...))` —— 每次调用新建一个 formatter，且全落在「生成业务单号」热路径上。
+  改后 `ofPattern` 归零，常量被 197 个引用点复用。脚本：`workspace/_refactor_date_formats.py`（pattern→常量映射表在文件头）。
+  连带把 `DateTimeFormatter.BASIC_ISO_DATE`（== `yyyyMMdd`）的私有字段 + 行内用法也一并收进 `COMPACT_DATE`。

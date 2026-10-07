@@ -17,6 +17,8 @@ import com.his.medicaltech.mapper.BizExamSlotMapper;
 import com.his.medicaltech.service.ExamDeviceService;
 import com.his.medicaltech.support.ExamGrid;
 import com.his.medicaltech.vo.ExamApptVO;
+import com.his.medicaltech.vo.ExamDeviceItemCountRowVO;
+import com.his.medicaltech.vo.ExamEquipmentOptionRowVO;
 import com.his.system.entity.SysInspectionItem;
 import com.his.system.mapper.SysInspectionItemMapper;
 import com.his.system.service.DictCacheService;
@@ -80,25 +82,7 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
         return v == null ? dft : v;
     }
 
-    private static String str(Object o) {
-        return o == null ? null : String.valueOf(o);
-    }
-
-    private static Long toLong(Object o) {
-        if (o == null) {
-            return null;
-        }
-        return o instanceof Number n ? n.longValue() : Long.parseLong(String.valueOf(o));
-    }
-
     // 写入
-
-    private static Integer toInteger(Object o) {
-        if (o == null) {
-            return null;
-        }
-        return o instanceof Number n ? n.intValue() : Integer.parseInt(String.valueOf(o));
-    }
 
     public PageResult<ExamApptVO.DeviceVO> listPage(ExamApptDTO.DeviceQuery q) {
         LambdaQueryWrapper<BizExamDevice> w = new LambdaQueryWrapper<>();
@@ -195,13 +179,13 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
 
     public List<ExamApptVO.EquipmentSelectListVO> equipmentOptions() {
         List<ExamApptVO.EquipmentSelectListVO> out = new ArrayList<>();
-        for (Map<String, Object> row : deviceMapper.selectEquipmentOptions()) {
+        for (ExamEquipmentOptionRowVO row : deviceMapper.selectEquipmentOptions()) {
             ExamApptVO.EquipmentSelectListVO v = new ExamApptVO.EquipmentSelectListVO();
-            v.setId(toLong(row.get("id")));
-            v.setEquipmentCode(str(row.get("equipmentCode")));
-            v.setEquipmentName(str(row.get("equipmentName")));
-            v.setCategory(toInteger(row.get("category")));
-            v.setStatus(toInteger(row.get("status")));
+            v.setId(row.getId());
+            v.setEquipmentCode(row.getEquipmentCode());
+            v.setEquipmentName(row.getEquipmentName());
+            v.setCategory(row.getCategory());
+            v.setStatus(row.getStatus());
             out.add(v);
         }
         return out;
@@ -404,8 +388,8 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
 
     private Map<Long, Integer> itemCountByDevice() {
         Map<Long, Integer> map = new HashMap<>();
-        for (Map<String, Object> row : deviceMapper.countItemsByDevice()) {
-            map.put(toLong(row.get("deviceId")), toInteger(row.get("n")));
+        for (ExamDeviceItemCountRowVO row : deviceMapper.countItemsByDevice()) {
+            map.put(row.getDeviceId(), row.getItemCount() == null ? 0 : row.getItemCount().intValue());
         }
         return map;
     }
@@ -415,8 +399,8 @@ public class ExamDeviceServiceImpl extends ServiceImpl<BizExamDeviceMapper, BizE
      */
     private Map<Long, String> equipmentNameMap() {
         Map<Long, String> map = new HashMap<>();
-        for (Map<String, Object> row : deviceMapper.selectEquipmentOptions()) {
-            map.put(toLong(row.get("id")), str(row.get("equipmentName")));
+        for (ExamEquipmentOptionRowVO row : deviceMapper.selectEquipmentOptions()) {
+            map.put(row.getId(), row.getEquipmentName());
         }
         return map;
     }

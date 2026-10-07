@@ -4,12 +4,16 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.emr.entity.BizSurveyAnswer;
 import com.his.emr.vo.SurveyAnswerVO;
+import com.his.emr.vo.SurveyDayTrendVO;
+import com.his.emr.vo.SurveyDeptScoreVO;
+import com.his.emr.vo.SurveyDimensionStatVO;
+import com.his.emr.vo.SurveyNpsStatVO;
+import com.his.emr.vo.SurveyOverallStatVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 满意度答卷 Mapper（列表 + 看板聚合）。
@@ -71,13 +75,13 @@ public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {
     @Select("""
             <script>
             SELECT COUNT(CASE WHEN a.answer_status = 1 THEN 1 END) AS total,
-                   ROUND(AVG(CASE WHEN a.answer_status = 1 THEN a.avg_score END), 2)  AS avg_score,
-                   ROUND(AVG(CASE WHEN a.answer_status = 1 THEN a.score_100 END), 2)  AS avg_score100,
+                   ROUND(AVG(CASE WHEN a.answer_status = 1 THEN a.avg_score END), 2)  AS avgScore,
+                   ROUND(AVG(CASE WHEN a.answer_status = 1 THEN a.score_100 END), 2)  AS avgScore100,
                    COUNT(CASE WHEN a.answer_status = 1 AND a.avg_score >= 4 THEN 1 END) AS satisfied,
                    COUNT(CASE WHEN a.answer_status = 1 AND (a.score_100 &lt; 60
                         OR EXISTS (SELECT 1 FROM biz_survey_answer_item i
                                     WHERE i.answer_id = a.id AND i.del_flag = 0
-                                      AND i.question_type = 1 AND i.score &lt;= 2)) THEN 1 END) AS low_score,
+                                      AND i.question_type = 1 AND i.score &lt;= 2)) THEN 1 END) AS lowScore,
                    COUNT(CASE WHEN a.answer_status = 1 AND a.dispute_case_id IS NOT NULL THEN 1 END) AS disputed,
                    COUNT(CASE WHEN a.answer_status = 2 THEN 1 END) AS voided
               FROM biz_survey_answer a
@@ -92,7 +96,7 @@ public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {
                </if>
             </script>
             """)
-    Map<String, Object> statOverall(@Param("templateId") Long templateId,
+    SurveyOverallStatVO statOverall(@Param("templateId") Long templateId,
                                     @Param("scene") Integer scene,
                                     @Param("dateFrom") String dateFrom,
                                     @Param("dateTo") String dateTo,
@@ -118,10 +122,10 @@ public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {
                </if>
             </script>
             """)
-    Map<String, Object> statNps(@Param("templateId") Long templateId,
-                                @Param("dateFrom") String dateFrom,
-                                @Param("dateTo") String dateTo,
-                                @Param("scopeDeptIds") List<Long> scopeDeptIds);
+    SurveyNpsStatVO statNps(@Param("templateId") Long templateId,
+                             @Param("dateFrom") String dateFrom,
+                             @Param("dateTo") String dateTo,
+                             @Param("scopeDeptIds") List<Long> scopeDeptIds);
 
     /**
      * 维度均分（升序 = 短板在前）。
@@ -131,7 +135,7 @@ public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {
      */
     @Select("""
             <script>
-            SELECT i.dimension AS k, COUNT(*) AS c, ROUND(AVG(i.score), 2) AS avg_score
+            SELECT i.dimension AS dimension, COUNT(*) AS cnt, ROUND(AVG(i.score), 2) AS avgScore
               FROM biz_survey_answer_item i
               JOIN biz_survey_answer a ON a.id = i.answer_id AND a.del_flag = 0 AND a.answer_status = 1
              WHERE i.del_flag = 0 AND i.question_type = 1 AND i.score IS NOT NULL
@@ -142,13 +146,13 @@ public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {
                  AND a.dept_id IN
                  <foreach collection="scopeDeptIds" item="sd" open="(" separator="," close=")">#{sd}</foreach>
                </if>
-             GROUP BY i.dimension ORDER BY avg_score ASC
+             GROUP BY i.dimension ORDER BY avgScore ASC
             </script>
             """)
-    List<Map<String, Object>> statByDimension(@Param("templateId") Long templateId,
-                                              @Param("dateFrom") String dateFrom,
-                                              @Param("dateTo") String dateTo,
-                                              @Param("scopeDeptIds") List<Long> scopeDeptIds);
+    List<SurveyDimensionStatVO> statByDimension(@Param("templateId") Long templateId,
+                                                    @Param("dateFrom") String dateFrom,
+                                                    @Param("dateTo") String dateTo,
+                                                    @Param("scopeDeptIds") List<Long> scopeDeptIds);
 
     /**
      * 科室短板 TOP10（百分制均分升序 —— 评审要的是短板榜，不是光荣榜）。
@@ -158,10 +162,10 @@ public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {
      */
     @Select("""
             <script>
-            SELECT COALESCE(a.dept_id, 0) AS d,
+            SELECT COALESCE(a.dept_id, 0) AS deptId,
                    COALESCE(NULLIF(dep.dept_name, ''), NULLIF(a.dept_name, ''),
-                            CASE WHEN a.dept_id IS NULL THEN '未指定科室' ELSE CONCAT('科室#', a.dept_id) END) AS n,
-                   COUNT(*) AS c, ROUND(AVG(a.score_100), 2) AS avg_score100
+                            CASE WHEN a.dept_id IS NULL THEN '未指定科室' ELSE CONCAT('科室#', a.dept_id) END) AS deptName,
+                   COUNT(*) AS cnt, ROUND(AVG(a.score_100), 2) AS avgScore100
               FROM biz_survey_answer a
               LEFT JOIN sys_department dep ON dep.id = a.dept_id AND dep.del_flag = 0
              WHERE a.del_flag = 0 AND a.answer_status = 1
@@ -172,22 +176,22 @@ public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {
                  AND a.dept_id IN
                  <foreach collection="scopeDeptIds" item="sd" open="(" separator="," close=")">#{sd}</foreach>
                </if>
-             GROUP BY COALESCE(a.dept_id, 0), n
-             ORDER BY avg_score100 ASC, c DESC LIMIT 10
+             GROUP BY COALESCE(a.dept_id, 0), deptName
+             ORDER BY avgScore100 ASC, cnt DESC LIMIT 10
             </script>
             """)
-    List<Map<String, Object>> statByDeptBottom(@Param("templateId") Long templateId,
-                                               @Param("dateFrom") String dateFrom,
-                                               @Param("dateTo") String dateTo,
-                                               @Param("scopeDeptIds") List<Long> scopeDeptIds);
+    List<SurveyDeptScoreVO> statByDeptBottom(@Param("templateId") Long templateId,
+                                                  @Param("dateFrom") String dateFrom,
+                                                  @Param("dateTo") String dateTo,
+                                                  @Param("scopeDeptIds") List<Long> scopeDeptIds);
 
     /**
      * 近 30 日趋势（按提交日聚合，只认有效卷）
      */
     @Select("""
             <script>
-            SELECT DATE_FORMAT(a.fill_time, '%Y-%m-%d') AS d, COUNT(*) AS c,
-                   ROUND(AVG(a.score_100), 2) AS avg_score100
+            SELECT DATE_FORMAT(a.fill_time, '%Y-%m-%d') AS statDate, COUNT(*) AS cnt,
+                   ROUND(AVG(a.score_100), 2) AS avgScore100
               FROM biz_survey_answer a
              WHERE a.del_flag = 0 AND a.answer_status = 1
                AND a.fill_time >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
@@ -196,9 +200,9 @@ public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {
                  AND a.dept_id IN
                  <foreach collection="scopeDeptIds" item="sd" open="(" separator="," close=")">#{sd}</foreach>
                </if>
-             GROUP BY DATE_FORMAT(a.fill_time, '%Y-%m-%d') ORDER BY d ASC
+             GROUP BY DATE_FORMAT(a.fill_time, '%Y-%m-%d') ORDER BY statDate ASC
             </script>
             """)
-    List<Map<String, Object>> statByDay(@Param("templateId") Long templateId,
-                                        @Param("scopeDeptIds") List<Long> scopeDeptIds);
+    List<SurveyDayTrendVO> statByDay(@Param("templateId") Long templateId,
+                                     @Param("scopeDeptIds") List<Long> scopeDeptIds);
 }

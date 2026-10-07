@@ -18,8 +18,10 @@ import com.his.operation.mapper.BizDaySurgeryItemMapper;
 import com.his.operation.service.DaySurgeryService;
 import com.his.operation.vo.DaySurgeryApplyVO;
 import com.his.operation.vo.DaySurgeryItemCountVO;
+import com.his.operation.vo.DaySurgeryItemTopRowVO;
 import com.his.operation.vo.DaySurgeryItemVO;
 import com.his.operation.vo.DaySurgeryStatVO;
+import com.his.operation.vo.DaySurgeryStatusCountVO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.service.BizPatientService;
 import com.his.system.dto.TechAuthGateDTO;
@@ -38,7 +40,6 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -74,13 +75,6 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
 
     private static LocalDateTime now() {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static long toLong(Object v) {
-        if (v == null) {
-            return 0L;
-        }
-        return new BigDecimal(String.valueOf(v)).longValue();
     }
 
     private static LocalDate parseDate(String v) {
@@ -428,9 +422,9 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
     public DaySurgeryStatVO stat() {
         DaySurgeryStatVO vo = new DaySurgeryStatVO();
         long w = 0, e = 0, a = 0, o = 0, d = 0, c = 0, t = 0;
-        for (Map<String, Object> row : applyMapper.countByStatus()) {
-            long cnt = toLong(row.get("c"));
-            switch ((int) toLong(row.get("k"))) {
+        for (DaySurgeryStatusCountVO row : applyMapper.countByStatus()) {
+            long cnt = row.getCnt() == null ? 0L : row.getCnt();
+            switch (row.getStatus() == null ? 0 : row.getStatus()) {
                 case 1 -> w = cnt;
                 case 2 -> e = cnt;
                 case 3 -> a = cnt;
@@ -457,11 +451,11 @@ public class DaySurgeryServiceImpl implements DaySurgeryService {
         vo.setOnTimeLeaveRate(rate == null ? BigDecimal.ZERO : rate);
 
         List<DaySurgeryItemCountVO> top = new ArrayList<>();
-        for (Map<String, Object> row : applyMapper.countByItemTop()) {
+        for (DaySurgeryItemTopRowVO row : applyMapper.countByItemTop()) {
             DaySurgeryItemCountVO item = new DaySurgeryItemCountVO();
-            item.setItemId(toLong(row.get("i")));
-            item.setName(String.valueOf(row.get("n")));
-            item.setCount(toLong(row.get("c")));
+            item.setItemId(row.getItemId());
+            item.setName(row.getItemName());
+            item.setCount(row.getCnt());
             top.add(item);
         }
         vo.setByItemTop(top);

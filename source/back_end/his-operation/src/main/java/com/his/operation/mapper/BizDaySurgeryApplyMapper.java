@@ -4,12 +4,13 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.operation.entity.BizDaySurgeryApply;
 import com.his.operation.vo.DaySurgeryApplyVO;
+import com.his.operation.vo.DaySurgeryItemTopRowVO;
+import com.his.operation.vo.DaySurgeryStatusCountVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 日间手术登记单 Mapper。
@@ -66,8 +67,9 @@ public interface BizDaySurgeryApplyMapper extends BaseMapper<BizDaySurgeryApply>
 
     // 统计
 
-    @Select("SELECT a.status AS k, COUNT(*) AS c FROM biz_day_surgery_apply a WHERE a.del_flag = 0 GROUP BY a.status")
-    List<Map<String, Object>> countByStatus();
+    @Select("SELECT a.status AS status, COUNT(*) AS cnt FROM biz_day_surgery_apply a "
+            + "WHERE a.del_flag = 0 GROUP BY a.status")
+    List<DaySurgeryStatusCountVO> countByStatus();
 
     /**
      * 术后滞留超期：术后观察中且滞留小时数超过该术式上限
@@ -92,9 +94,9 @@ public interface BizDaySurgeryApplyMapper extends BaseMapper<BizDaySurgeryApply>
             "  FROM biz_day_surgery_apply a WHERE a.del_flag = 0 AND a.status = 5")
     java.math.BigDecimal onTimeLeaveRate();
 
-    @Select("SELECT a.item_id AS i, COALESCE(a.item_name, '未知术式') AS n, COUNT(*) AS c " +
+    @Select("SELECT a.item_id AS itemId, COALESCE(a.item_name, '未知术式') AS itemName, COUNT(*) AS cnt " +
             "  FROM biz_day_surgery_apply a WHERE a.del_flag = 0 " +
             " GROUP BY a.item_id, COALESCE(a.item_name, '未知术式') " +
-            " ORDER BY c DESC, i ASC LIMIT 10")
-    List<Map<String, Object>> countByItemTop();
+            " ORDER BY cnt DESC, itemId ASC LIMIT 10")
+    List<DaySurgeryItemTopRowVO> countByItemTop();
 }

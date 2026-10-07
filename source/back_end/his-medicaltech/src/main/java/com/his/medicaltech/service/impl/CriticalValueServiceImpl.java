@@ -22,6 +22,7 @@ import com.his.medicaltech.mapper.BizCriticalValueMapper;
 import com.his.medicaltech.service.CriticalValueService;
 import com.his.medicaltech.support.LabCriticalValueRules;
 import com.his.medicaltech.vo.BizCriticalValueVO;
+import com.his.medicaltech.vo.CriticalValueMessagePayloadVO;
 import com.his.medicaltech.vo.CriticalValueStatsVO;
 import com.his.system.entity.*;
 import com.his.system.enums.BizTypeEnum;
@@ -271,13 +272,7 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
                     receiverId, receiverName, title, content,
                     BizTypeEnum.CRITICAL.getType(), entity.getId(),
                     "urgent",
-                    cn.hutool.json.JSONUtil.toJsonStr(new java.util.LinkedHashMap<String, Object>() {{
-                        put("patientName", entity.getPatientName());
-                        put("itemName", entity.getItemName());
-                        put("criticalNo", entity.getCriticalNo());
-                        put("criticalDesc", entity.getCriticalDesc());
-                        put("deadlineMinutes", deadlineMinutes());
-                    }}),
+                    cn.hutool.json.JSONUtil.toJsonStr(firstPayload(entity)),
                     0);
             if (sent) {
                 entity.setNotifyStatus(NotifyStatusEnum.SENT.getCode());
@@ -616,20 +611,43 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
                     receiverId, name, title, content,
                     BizTypeEnum.CRITICAL.getType(), entity.getId(),
                     "urgent",
-                    cn.hutool.json.JSONUtil.toJsonStr(new java.util.LinkedHashMap<String, Object>() {{
-                        put("patientName", entity.getPatientName());
-                        put("itemName", entity.getItemName());
-                        put("criticalNo", entity.getCriticalNo());
-                        put("criticalDesc", entity.getCriticalDesc());
-                        put("escalate", true);
-                        put("toLeader", toLeader == 1);
-                    }}),
+                    cn.hutool.json.JSONUtil.toJsonStr(escalatePayload(entity, toLeader == 1)),
                     0);
             return ok ? 1 : 0;
         } catch (Exception ex) {
             log.warn("[危急值] {} 升级消息发送失败（收件人 {}）：{}", entity.getCriticalNo(), receiverId, ex.getMessage());
             return 0;
         }
+    }
+
+    /**
+     * 首次上报催办的载荷。
+     *
+     * <p>带处置时限是这一条特有的：医生要据此判断"现在去处置来不来得及"。
+     */
+    private CriticalValueMessagePayloadVO firstPayload(BizCriticalValue entity) {
+        CriticalValueMessagePayloadVO payload = new CriticalValueMessagePayloadVO();
+        payload.setPatientName(entity.getPatientName());
+        payload.setItemName(entity.getItemName());
+        payload.setCriticalNo(entity.getCriticalNo());
+        payload.setCriticalDesc(entity.getCriticalDesc());
+        payload.setDeadlineMinutes(deadlineMinutes());
+        return payload;
+    }
+
+    /**
+     * 超时升级的载荷。{@code toLeader} 区分"催本人"与"催科主任"，
+     * 两条消息的接收人不同，渲染上要能看出来这是上级督办而不是本人待办。
+     */
+    private CriticalValueMessagePayloadVO escalatePayload(BizCriticalValue entity, boolean toLeader) {
+        CriticalValueMessagePayloadVO payload = new CriticalValueMessagePayloadVO();
+        payload.setPatientName(entity.getPatientName());
+        payload.setItemName(entity.getItemName());
+        payload.setCriticalNo(entity.getCriticalNo());
+        payload.setCriticalDesc(entity.getCriticalDesc());
+        payload.setEscalate(true);
+        payload.setToLeader(toLeader);
+        return payload;
     }
 
     /**

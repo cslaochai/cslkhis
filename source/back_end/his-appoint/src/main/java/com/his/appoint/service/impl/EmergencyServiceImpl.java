@@ -807,13 +807,13 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
         } catch (Exception ignored) {
             // 名字查不到不影响投递
         }
-        LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
-        payload.put("patientName", emergency.getPatientName());
-        payload.put("emergencyNo", emergency.getEmergencyNo());
-        payload.put("triageLevelText", levelText);
-        payload.put("deptName", emergency.getDeptName());
-        payload.put("waitMinutes", waitMinutes);
-        payload.put("targetSeeMinutes", targetMinutes);
+        EmergencyWaitTodoPayloadVO payload = new EmergencyWaitTodoPayloadVO();
+        payload.setPatientName(emergency.getPatientName());
+        payload.setEmergencyNo(emergency.getEmergencyNo());
+        payload.setTriageLevelText(levelText);
+        payload.setDeptName(emergency.getDeptName());
+        payload.setWaitMinutes(waitMinutes);
+        payload.setTargetSeeMinutes(targetMinutes);
         return sysMessageService.sendSystemMessage(
                 receiverId, receiverName, title, content,
                 BizTypeEnum.EMERGENCY_WAIT.getType(), emergency.getId(),
@@ -1201,11 +1201,11 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                     .collect(Collectors.joining("\n"));
             String content = handover.getFromEmpName() + " 在 " + handover.getDeptName()
                     + " 交班，共移交 " + list.size() + " 人，请立即查看病历确认接手：\n" + detail;
-            LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
-            payload.put("handoverNo", handover.getHandoverNo());
-            payload.put("deptName", handover.getDeptName());
-            payload.put("fromEmpName", handover.getFromEmpName());
-            payload.put("count", list.size());
+            EmergencyHandoverPayloadVO payload = new EmergencyHandoverPayloadVO();
+            payload.setHandoverNo(handover.getHandoverNo());
+            payload.setDeptName(handover.getDeptName());
+            payload.setFromEmpName(handover.getFromEmpName());
+            payload.setCount(list.size());
             sysMessageService.sendSystemMessage(takerId,
                     taker == null ? "站内用户" : taker.getEmpName(),
                     "急诊交班接收：" + handover.getFromEmpName() + " → "
@@ -1332,12 +1332,12 @@ public class EmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, BizEme
                 emergency.getEmergencyNo(), emergency.getPatientName(), obsHours, obsPolicy.maxHours());
         int sent = 0;
         for (Long receiverId : receivers) {
-            LinkedHashMap<String, Object> payload = new LinkedHashMap<>();
-            payload.put("patientName", emergency.getPatientName());
-            payload.put("emergencyNo", emergency.getEmergencyNo());
-            payload.put("deptName", emergency.getDeptName());
-            payload.put("obsHours", obsHours);
-            payload.put("observationBed", emergency.getObservationBed());
+            EmergencyObsTimeoutPayloadVO payload = new EmergencyObsTimeoutPayloadVO();
+            payload.setPatientName(emergency.getPatientName());
+            payload.setEmergencyNo(emergency.getEmergencyNo());
+            payload.setDeptName(emergency.getDeptName());
+            payload.setObsHours(obsHours);
+            payload.setObservationBed(emergency.getObservationBed());
             if (sysMessageService.sendSystemMessage(receiverId, employeeNameOf(receiverId),
                     "急诊留观超时限：" + emergency.getPatientName() + "（已 " + obsHours + " 小时）",
                     content, BizTypeEnum.EMERGENCY_OBS.getType(), emergency.getId(),

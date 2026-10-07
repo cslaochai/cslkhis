@@ -22,6 +22,8 @@ import com.his.emr.mapper.BizTreatmentRecordMapper;
 import com.his.emr.mapper.SysTreatmentItemMapper;
 import com.his.emr.service.TreatmentService;
 import com.his.emr.support.TreatmentChargeInvoker;
+import com.his.emr.vo.RegistSnapshotVO;
+import com.his.emr.vo.TreatmentItemSnapshotVO;
 import com.his.emr.vo.TreatmentVO;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
@@ -241,18 +243,18 @@ public class TreatmentServiceImpl implements TreatmentService {
      */
     public List<TreatmentVO.ItemSelectListVO> itemSelectList(String keyword, Integer limit) {
         List<TreatmentVO.ItemSelectListVO> out = new ArrayList<>();
-        for (Map<String, Object> row : itemMapper.selectOptions(trim(keyword), Math.min(nz(limit, 50), 200))) {
+        for (TreatmentItemSnapshotVO row : itemMapper.selectOptions(trim(keyword), Math.min(nz(limit, 50), 200))) {
             TreatmentVO.ItemSelectListVO v = new TreatmentVO.ItemSelectListVO();
-            v.setItemId(toLong(row.get("itemId")));
-            v.setItemCode(str(row.get("itemCode")));
-            v.setItemName(str(row.get("itemName")));
-            v.setItemType(toInt(row.get("itemType")));
+            v.setItemId(row.getItemId());
+            v.setItemCode(row.getItemCode());
+            v.setItemName(row.getItemName());
+            v.setItemType(row.getItemType());
             v.setItemTypeText(dictText.getDicDataLabel(DICT_ITEM_TYPE, v.getItemType()));
-            v.setPrice(toDecimal(row.get("price")));
-            v.setDuration(toInt(row.get("duration")));
-            v.setUsageMethod(str(row.get("usageMethod")));
-            v.setExecDeptId(toLong(row.get("execDeptId")));
-            v.setExecDeptName(str(row.get("execDeptName")));
+            v.setPrice(row.getPrice());
+            v.setDuration(row.getDuration());
+            v.setUsageMethod(row.getUsageMethod());
+            v.setExecDeptId(row.getExecDeptId());
+            v.setExecDeptName(row.getExecDeptName());
             out.add(v);
         }
         return out;
@@ -277,23 +279,23 @@ public class TreatmentServiceImpl implements TreatmentService {
             throw new BusinessException("间隔天数应在 1~30 之间，当前：" + interval);
         }
 
-        Map<String, Object> regist = applyMapper.selectRegistSnapshot(dto.getRegistId());
-        if (regist == null || regist.get("registId") == null) {
+        RegistSnapshotVO regist = applyMapper.selectRegistSnapshot(dto.getRegistId());
+        if (regist == null || regist.getRegistId() == null) {
             throw new BusinessException("挂号记录不存在：" + dto.getRegistId());
         }
-        if (regist.get("refundTime") != null || Integer.valueOf(5).equals(toInt(regist.get("registStatus")))) {
+        if (regist.getRefundTime() != null || Integer.valueOf(5).equals(regist.getRegistStatus())) {
             throw new BusinessException("该挂号已退号/已取消，不能在已作废的就诊上开治疗");
         }
-        Map<String, Object> item = itemMapper.selectApplySnapshot(dto.getTreatmentItemId());
-        if (item == null || item.get("itemId") == null) {
+        TreatmentItemSnapshotVO item = itemMapper.selectApplySnapshot(dto.getTreatmentItemId());
+        if (item == null || item.getItemId() == null) {
             throw new BusinessException("治疗项目不存在或已删除：" + dto.getTreatmentItemId());
         }
-        if (Integer.valueOf(0).equals(toInt(item.get("status")))) {
-            throw new BusinessException("治疗项目「" + str(item.get("itemName")) + "」已停用，请改用其他项目");
+        if (Integer.valueOf(0).equals(item.getStatus())) {
+            throw new BusinessException("治疗项目「" + item.getItemName() + "」已停用，请改用其他项目");
         }
-        BigDecimal price = toDecimal(item.get("price"));
+        BigDecimal price = item.getPrice();
         if (price == null || price.compareTo(BigDecimal.ZERO) < 0) {
-            throw new BusinessException("治疗项目「" + str(item.get("itemName"))
+            throw new BusinessException("治疗项目「" + item.getItemName()
                     + "」未在价表定价，不能开单（无价疗程每次打卡都会计费失败，请先补价）");
         }
 
@@ -325,24 +327,24 @@ public class TreatmentServiceImpl implements TreatmentService {
                     .eq(BizTreatmentRecord::getApplyId, applyId));
         }
 
-        apply.setRegistId(toLong(regist.get("registId")));
-        apply.setRegistNo(str(regist.get("registNo")));
-        apply.setPatientId(toLong(regist.get("patientId")));
-        apply.setPatientNo(str(regist.get("patientNo")));
-        apply.setPatientName(str(regist.get("patientName")));
-        apply.setDeptId(toLong(regist.get("deptId")));
-        apply.setDeptName(str(regist.get("deptName")));
+        apply.setRegistId(regist.getRegistId());
+        apply.setRegistNo(regist.getRegistNo());
+        apply.setPatientId(regist.getPatientId());
+        apply.setPatientNo(regist.getPatientNo());
+        apply.setPatientName(regist.getPatientName());
+        apply.setDeptId(regist.getDeptId());
+        apply.setDeptName(regist.getDeptName());
         // 开单人优先取登录态：入参能传"医生"就等于谁都能替别人开单
         Long loginEmployee = UserUtils.getCurrentUser().getEmployeeId();
-        apply.setDoctorId(loginEmployee != null ? loginEmployee : toLong(regist.get("doctorId")));
+        apply.setDoctorId(loginEmployee != null ? loginEmployee : regist.getDoctorId());
         String loginName = UserUtils.getCurrentUser().getRealName();
-        apply.setDoctorName(StringUtils.hasText(loginName) ? loginName : str(regist.get("doctorName")));
-        apply.setTreatmentItemId(toLong(item.get("itemId")));
-        apply.setItemCode(str(item.get("itemCode")));
-        apply.setItemName(str(item.get("itemName")));
-        apply.setItemType(toInt(item.get("itemType")));
-        apply.setExecDeptId(toLong(item.get("execDeptId")));
-        apply.setExecDeptName(str(item.get("execDeptName")));
+        apply.setDoctorName(StringUtils.hasText(loginName) ? loginName : regist.getDoctorName());
+        apply.setTreatmentItemId(item.getItemId());
+        apply.setItemCode(item.getItemCode());
+        apply.setItemName(item.getItemName());
+        apply.setItemType(item.getItemType());
+        apply.setExecDeptId(item.getExecDeptId());
+        apply.setExecDeptName(item.getExecDeptName());
         apply.setPrice(price.setScale(AMOUNT_SCALE, RoundingMode.HALF_UP));
         apply.setTotalTimes(totalTimes);
         apply.setIntervalDays(interval);

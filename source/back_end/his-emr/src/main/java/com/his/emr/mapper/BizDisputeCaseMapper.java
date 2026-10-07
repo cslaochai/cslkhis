@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.emr.entity.BizDisputeCase;
 import com.his.emr.vo.DisputeCaseVO;
+import com.his.emr.vo.DisputeCloseSumVO;
+import com.his.emr.vo.DisputeCodeCountVO;
+import com.his.emr.vo.DisputeDeptCountVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -94,8 +97,8 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
              GROUP BY c.status
             </script>
             """)
-    List<java.util.Map<String, Object>> countByStatus(@Param("dateFrom") String dateFrom,
-                                                      @Param("dateTo") String dateTo);
+    List<DisputeCodeCountVO> countByStatus(@Param("dateFrom") String dateFrom,
+                                           @Param("dateTo") String dateTo);
 
     @Select("""
             <script>
@@ -107,8 +110,8 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
              GROUP BY c.case_type ORDER BY c DESC
             </script>
             """)
-    List<java.util.Map<String, Object>> countByCaseType(@Param("dateFrom") String dateFrom,
-                                                        @Param("dateTo") String dateTo);
+    List<DisputeCodeCountVO> countByCaseType(@Param("dateFrom") String dateFrom,
+                                             @Param("dateTo") String dateTo);
 
     @Select("""
             <script>
@@ -121,8 +124,8 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
              ORDER BY c DESC, d ASC LIMIT 10
             </script>
             """)
-    List<java.util.Map<String, Object>> countByDeptTop(@Param("dateFrom") String dateFrom,
-                                                       @Param("dateTo") String dateTo);
+    List<DisputeDeptCountVO> countByDeptTop(@Param("dateFrom") String dateFrom,
+                                            @Param("dateTo") String dateTo);
 
     /**
      * 已结案单据的赔偿合计与平均结案天数（未结案不参与平均）
@@ -130,13 +133,13 @@ public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {
     @Select("""
             <script>
             SELECT COALESCE(SUM(c.compensation), 0) AS total,
-                   COALESCE(ROUND(AVG(TIMESTAMPDIFF(DAY, c.accept_time, c.close_time)), 1), 0) AS avg_days
+                   COALESCE(ROUND(AVG(TIMESTAMPDIFF(DAY, c.accept_time, c.close_time)), 1), 0) AS avgDays
               FROM biz_dispute_case c
              WHERE c.del_flag = 0 AND c.status = 4
                <if test="dateFrom != null and dateFrom != ''"> AND c.create_time &gt;= #{dateFrom}</if>
                <if test="dateTo != null and dateTo != ''"> AND c.create_time &lt;= CONCAT(#{dateTo}, ' 23:59:59')</if>
             </script>
             """)
-    java.util.Map<String, Object> sumClosed(@Param("dateFrom") String dateFrom,
-                                            @Param("dateTo") String dateTo);
+    DisputeCloseSumVO sumClosed(@Param("dateFrom") String dateFrom,
+                                 @Param("dateTo") String dateTo);
 }

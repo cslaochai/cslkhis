@@ -2,12 +2,12 @@ package com.his.operation.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.operation.entity.BizOperationChargeItem;
+import com.his.operation.vo.TreatmentItemPriceVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 手术麻醉计费明细 Mapper。
@@ -54,14 +54,15 @@ public interface BizOperationChargeItemMapper extends BaseMapper<BizOperationCha
      * 写上去编译不报错、运行时整条 SQL 报 Unknown column → 被 GlobalExceptionHandler 兜成 500，
      * 现象是"点提交就 500"，看不出是取价挂了。跨模块裸 SQL 一定要先
      * {@code information_schema.COLUMNS} 对列名（与表 RENAME 那次是同一类坑）。
-     * 单位缺失由调用方兜底成"次"，规格缺失就是 null。
+     * 单位缺失由调用方兜底成"次"，规格缺失就是 null —— 这也是 {@link TreatmentItemPriceVO}
+     * 只有两列的原因：表里确实只有这两列。
      *
-     * @return {@code item_name / price} 两列；项目不存在或已停用返回 {@code null}
+     * @return 项目名与单价；项目不存在或已停用返回 {@code null}
      */
     @Select("""
-            SELECT item_name, price FROM sys_treatment_item
+            SELECT item_name AS itemName, price FROM sys_treatment_item
             WHERE item_code = #{itemCode} AND del_flag = 0 AND status = 1
             LIMIT 1
             """)
-    Map<String, Object> selectTreatmentItem(@Param("itemCode") String itemCode);
+    TreatmentItemPriceVO selectTreatmentItem(@Param("itemCode") String itemCode);
 }

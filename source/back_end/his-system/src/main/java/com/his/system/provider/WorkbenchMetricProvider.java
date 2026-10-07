@@ -33,6 +33,17 @@ import java.util.Map;
  *
  * <p>抛异常是安全的：{@code WorkbenchService} 对每个 provider 单独 try-catch，
  * 一张卡取数失败只让那张卡显示「—」，不会把整屏打成 500。
+ *
+ * <p><b>{@code summary()} 为什么返回 {@code Map<String, Object>} 而不是 VO</b>：
+ * 这是跨模块 SPI，实现方散落在 his-system / his-appoint / his-medicaltech 等模块；
+ * 聚合方 {@code WorkbenchServiceImpl} 把返回值<b>原样</b>塞进 {@code WorkbenchDataVO.data}
+ * （类型就是 {@code Map<String, Object>}），前端再按 {@code data.xxx} 取键，而键名与
+ * 前端 {@code workbench-widgets.js} 里该卡的 METRIC_SPECS 一一对应。卡片注册表可增删卡片，
+ * 键集合是动态的，改这个签名要同时动所有实现方与前端。
+ *
+ * <p>因此各实现方应把出参先收进<b>有类型的 VO</b>（{@code com.his.<模块>.vo.XxxVO}），
+ * 只在这条 SPI 边界上做一次 VO → Map 适配（用字段名做键），
+ * 而不是让 {@code LinkedHashMap} 一路拼到底。
  */
 public interface WorkbenchMetricProvider {
 

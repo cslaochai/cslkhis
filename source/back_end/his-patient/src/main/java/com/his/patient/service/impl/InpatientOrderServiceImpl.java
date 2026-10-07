@@ -26,6 +26,7 @@ import com.his.patient.support.InpatientOrderItemRules;
 import com.his.patient.support.OrderChargeInvoker;
 import com.his.patient.vo.InpatientOrderExecVO;
 import com.his.patient.vo.InpatientOrderVO;
+import com.his.patient.vo.InpatientOrderVerifyNotifyPayloadVO;
 import com.his.patient.vo.WardVO;
 import com.his.system.dto.TechAuthGateDTO;
 import com.his.system.entity.CurrentUser;
@@ -473,13 +474,13 @@ public class InpatientOrderServiceImpl implements InpatientOrderService {
                         first.getPatientName(),
                         first.getBedNo() == null ? "在院" : first.getBedNo() + "床",
                         orderNosText, nurseName);
-                String payload = cn.hutool.json.JSONUtil.toJsonStr(new java.util.LinkedHashMap<String, Object>() {{
-                    put("patientName", first.getPatientName());
-                    put("bedNo", first.getBedNo());
-                    put("orderNo", first.getOrderNo());
-                    put("count", group.size());
-                    put("verifyNurse", nurseName);
-                }});
+                InpatientOrderVerifyNotifyPayloadVO notifyPayload = new InpatientOrderVerifyNotifyPayloadVO();
+                notifyPayload.setPatientName(first.getPatientName());
+                notifyPayload.setBedNo(first.getBedNo());
+                notifyPayload.setOrderNo(first.getOrderNo());
+                notifyPayload.setCount(group.size());
+                notifyPayload.setVerifyNurse(nurseName);
+                String payload = cn.hutool.json.JSONUtil.toJsonStr(notifyPayload);
                 sysMessageService.sendSystemMessage(first.getDoctorId(), first.getDoctorName(),
                         "住院医嘱提醒：" + (hasUrgent ? "急嘱已校对" : "医嘱已校对") + " " + group.size() + " 条",
                         content, BizTypeEnum.INPAT_ORDER.getType(), first.getId(),

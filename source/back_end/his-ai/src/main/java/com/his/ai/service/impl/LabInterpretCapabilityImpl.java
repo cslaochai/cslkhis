@@ -7,6 +7,7 @@ import com.his.ai.dto.LabInterpretExecuteDTO;
 import com.his.ai.dto.LabInterpretLlmOutputDTO;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.LabInterpretCapability;
+import com.his.ai.vo.LabInterpretPromptVariablesVO;
 import com.his.ai.vo.LabInterpretResultVO;
 import com.his.ai.vo.LabItemOverviewVO;
 import com.his.ai.vo.LabTrendVO;
@@ -509,16 +510,16 @@ public class LabInterpretCapabilityImpl implements LabInterpretCapability {
     private Optional<LabInterpretLlmOutputDTO> callModel(BizLaboratoryRecord record,
                                                          List<LabItemOverviewVO> items,
                                                          List<LabTrendVO> trends) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("gender", SysGenderEnum.getText(record.getGender()));
-        variables.put("age", record.getAge() == null ? "（未填写）" : record.getAge() + "岁");
-        variables.put("itemName", nullToDash(record.getLaboratoryItemName()));
-        variables.put("diagnosis", nullToDash(record.getDiagnosis()));
-        variables.put("results", renderItems(items));
-        variables.put("abnormalResults", renderAbnormal(items));
-        variables.put("unjudgedResults", renderUnjudged(items));
-        variables.put("criticalResults", renderCritical(items));
-        variables.put("trends", renderTrends(trends));
+        LabInterpretPromptVariablesVO variables = new LabInterpretPromptVariablesVO();
+        variables.setGender(SysGenderEnum.getText(record.getGender()));
+        variables.setAge(record.getAge() == null ? "（未填写）" : record.getAge() + "岁");
+        variables.setItemName(nullToDash(record.getLaboratoryItemName()));
+        variables.setDiagnosis(nullToDash(record.getDiagnosis()));
+        variables.setResults(renderItems(items));
+        variables.setAbnormalResults(renderAbnormal(items));
+        variables.setUnjudgedResults(renderUnjudged(items));
+        variables.setCriticalResults(renderCritical(items));
+        variables.setTrends(renderTrends(trends));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.LAB_INTERPRET)

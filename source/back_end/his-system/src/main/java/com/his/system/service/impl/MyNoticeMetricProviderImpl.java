@@ -1,5 +1,6 @@
 package com.his.system.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import com.his.system.service.MyNoticeMetricProvider;
 import com.his.system.service.MessageMetricSupport;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -7,11 +8,11 @@ import com.his.system.entity.CurrentUser;
 import com.his.system.provider.WorkbenchMetricProvider;
 import com.his.system.entity.SysMessage;
 import com.his.system.service.SysMessageService;
+import com.his.system.vo.WorkbenchMyNoticeVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,21 +40,25 @@ public class MyNoticeMetricProviderImpl implements WorkbenchMetricProvider, MyNo
         return "myNotice";
     }
 
+    /**
+     * VO 转 Map 是 SPI 边界上的一次性适配（父接口 {@code WorkbenchMetricProvider#summary}
+     * 签名固定为 {@code Map<String, Object>}，his-medicaltech 等模块另有 5 个子接口实现它）；
+     * 用字段名做键，与前端 {@code data.total / data.items} 逐项对齐。
+     */
     @Override
     public Map<String, Object> summary(CurrentUser user) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("total", 0);
-        data.put("items", Collections.emptyList());
+        WorkbenchMyNoticeVO vo = new WorkbenchMyNoticeVO();
+        vo.setTotal(0L);
+        vo.setItems(Collections.emptyList());
 
         Long receiverId = MessageMetricSupport.receiverId(user);
-        if (receiverId == null) {
-            return data;
+        if (receiverId != null) {
+            vo.setTotal(messageService.count(unreadNotice(receiverId)));
+            List<SysMessage> rows = messageService.list(unreadNotice(receiverId)
+                    .last("ORDER BY FIELD(severity, 'urgent', 'warning', 'info'), send_time DESC, message_id DESC LIMIT " + TOP_N));
+            vo.setItems(rows.stream().map(MessageMetricSupport::of).collect(Collectors.toList()));
         }
-        data.put("total", messageService.count(unreadNotice(receiverId)));
-        List<SysMessage> rows = messageService.list(unreadNotice(receiverId)
-                .last("ORDER BY FIELD(severity, 'urgent', 'warning', 'info'), send_time DESC, message_id DESC LIMIT " + TOP_N));
-        data.put("items", rows.stream().map(MessageMetricSupport::of).collect(Collectors.toList()));
-        return data;
+        return BeanUtil.beanToMap(vo);
     }
 
     private LambdaQueryWrapper<SysMessage> unreadNotice(Long receiverId) {

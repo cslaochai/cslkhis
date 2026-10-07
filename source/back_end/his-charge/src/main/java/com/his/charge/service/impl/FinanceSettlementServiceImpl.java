@@ -167,52 +167,16 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
 
     // 上下文构建
 
-    private static BigDecimal dec(Object v) {
-        if (v == null) {
-            return BigDecimal.ZERO;
-        }
-        if (v instanceof BigDecimal b) {
-            return b;
-        }
-        if (v instanceof Number n) {
-            return new BigDecimal(n.toString());
-        }
-        return new BigDecimal(v.toString());
-    }
-
-    private static int num(Object v) {
-        if (v == null) {
-            return 0;
-        }
-        if (v instanceof Number n) {
-            return n.intValue();
-        }
-        return Integer.parseInt(v.toString());
-    }
-
-    private static String str(Object v) {
-        return v == null ? null : v.toString();
-    }
-
     /**
-     * 从我方 Select 的 Map 里取值。
+     * {@code COUNT(*)} 列在 MySQL 里是 BIGINT，MyBatis 取回来是 {@link Long}，
+     * 而落库列与上下文口径都是 {@code int} —— 这里统一收口一次（null 当 0）。
      *
-     * <p>忽略大小写：不同驱动/连接参数下 Map 的 key 大小写不保证一致，
-     * 直接 {@code get("paymentMethod")} 在别的环境可能拿到 null，而且**不报错**。
+     * <p>所有笔数都有 {@code COALESCE} 或 {@code COUNT} 兜底，实际不会为 null；
+     * 保留 null 判断是因为这里<b>不做静默截断</b>：真出现空值时应当当 0 记账，
+     * 而不是抛 NPE 让整个日结跑不完（钱没算错，但一整天结不出来）。
      */
-    private static Object pick(Map<String, Object> row, String key) {
-        if (row == null) {
-            return null;
-        }
-        if (row.containsKey(key)) {
-            return row.get(key);
-        }
-        for (Map.Entry<String, Object> e : row.entrySet()) {
-            if (e.getKey() != null && e.getKey().equalsIgnoreCase(key)) {
-                return e.getValue();
-            }
-        }
-        return null;
+    private static int cntOf(Long v) {
+        return v == null ? 0 : v.intValue();
     }
 
     private static BigDecimal ratio(BigDecimal part, BigDecimal total) {
@@ -265,24 +229,24 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         paymentService.claimForShift(cashierId, periodEnd, entity.getId());
 
         // 系统账：本班认领的收款流水，按支付方式分桶
-        List<Map<String, Object>> payRows = cashierMapper.sumPaidBySettlement(entity.getId());
+        List<PaymentMethodSumVO> payRows = cashierMapper.sumPaidBySettlement(entity.getId());
         PayBuckets buckets = new PayBuckets();
-        for (Map<String, Object> row : payRows) {
-            buckets.add(pick(row, "paymentMethod"), dec(pick(row, "amount")), num(pick(row, "cnt")));
+        for (PaymentMethodSumVO row : payRows) {
+            buckets.add(row.getPaymentMethod(), nz(row.getAmount()), cntOf(row.getCnt()));
         }
         int chargeCount = buckets.count;
         BigDecimal chargeAmount = buckets.amount;
         BigDecimal cash = buckets.cash;
 
         // 本班经手的退费（掏出去的钱）
-        Map<String, Object> refundRow = cashierMapper.sumRefundBySettlement(entity.getId());
-        int refundCount = num(pick(refundRow, "cnt"));
-        BigDecimal refundAmount = dec(pick(refundRow, "amount"));
+        CountAmountVO refundRow = cashierMapper.sumRefundBySettlement(entity.getId());
+        int refundCount = cntOf(refundRow.getCnt());
+        BigDecimal refundAmount = nz(refundRow.getAmount());
 
         // 票据
-        Map<String, Object> invoiceRow = cashierMapper.sumInvoiceBySettlement(entity.getId());
-        int invoiceCount = num(pick(invoiceRow, "cnt"));
-        int invoiceVoidCount = num(pick(invoiceRow, "voidCnt"));
+        InvoiceCountVO invoiceRow = cashierMapper.sumInvoiceBySettlement(entity.getId());
+        int invoiceCount = cntOf(invoiceRow.getCnt());
+        int invoiceVoidCount = cntOf(invoiceRow.getVoidCnt());
 
         // 现金差异
         BigDecimal handin = dto.getHandinCash().setScale(SCALE, RoundingMode.HALF_UP);
@@ -551,8 +515,8 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         StringBuilder shiftBadMsg = new StringBuilder();
         for (BizCashierSettlement s : ctx.shifts) {
             BigDecimal recomputed = BigDecimal.ZERO;
-            for (Map<String, Object> row : cashierMapper.sumPaidBySettlement(s.getId())) {
-                recomputed = recomputed.add(dec(pick(row, "amount")));
+            for (PaymentMethodSumVO row : cashierMapper.sumPaidBySettlement(s.getId())) {
+                recomputed = recomputed.add(nz(row.getAmount()));
             }
             recomputed = recomputed.setScale(SCALE, RoundingMode.HALF_UP);
             shiftRecomputedTotal = shiftRecomputedTotal.add(recomputed);
@@ -706,47 +670,47 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         ctx.shiftSumAmount = ctx.shiftSumAmount.setScale(SCALE, RoundingMode.HALF_UP);
 
         // 资金链：全院支付流水现算（区间 = ctx.begin / ctx.end，取法见上面的说明）
-        ctx.txChargeAmount = dec(dayMapper.sumPaidAmount(ctx.begin, ctx.end)).setScale(SCALE, RoundingMode.HALF_UP);
+        ctx.txChargeAmount = nz(dayMapper.sumPaidAmount(ctx.begin, ctx.end)).setScale(SCALE, RoundingMode.HALF_UP);
         ctx.txChargeCount = (int) dayMapper.countPaid(ctx.begin, ctx.end);
         ctx.billCount = (int) dayMapper.countPaidBills(ctx.begin, ctx.end);
-        Map<String, Object> refund = dayMapper.sumRefund(ctx.begin, ctx.end);
-        ctx.txRefundCount = num(pick(refund, "cnt"));
-        ctx.txRefundAmount = dec(pick(refund, "amount")).setScale(SCALE, RoundingMode.HALF_UP);
-        for (Map<String, Object> row : dayMapper.sumPaidByPaymentMethod(ctx.begin, ctx.end)) {
-            ctx.buckets.add(pick(row, "paymentMethod"), dec(pick(row, "amount")), num(pick(row, "cnt")));
+        CountAmountVO refund = dayMapper.sumRefund(ctx.begin, ctx.end);
+        ctx.txRefundCount = cntOf(refund.getCnt());
+        ctx.txRefundAmount = nz(refund.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
+        for (PaymentMethodSumVO row : dayMapper.sumPaidByPaymentMethod(ctx.begin, ctx.end)) {
+            ctx.buckets.add(row.getPaymentMethod(), nz(row.getAmount()), cntOf(row.getCnt()));
         }
-        ctx.poolAmount = dec(dayMapper.sumPoolAmount(ctx.begin, ctx.end)).setScale(SCALE, RoundingMode.HALF_UP);
+        ctx.poolAmount = nz(dayMapper.sumPoolAmount(ctx.begin, ctx.end)).setScale(SCALE, RoundingMode.HALF_UP);
 
         // 交班归集缺口
-        Map<String, Object> unassigned = dayMapper.sumUnassigned(ctx.begin, ctx.end);
-        ctx.unassignedCount = num(pick(unassigned, "cnt"));
-        ctx.unassignedAmount = dec(pick(unassigned, "amount")).setScale(SCALE, RoundingMode.HALF_UP);
-        Map<String, Object> system = dayMapper.sumSystemCollected(ctx.begin, ctx.end);
-        ctx.systemCount = num(pick(system, "cnt"));
-        ctx.systemAmount = dec(pick(system, "amount")).setScale(SCALE, RoundingMode.HALF_UP);
+        CountAmountVO unassigned = dayMapper.sumUnassigned(ctx.begin, ctx.end);
+        ctx.unassignedCount = cntOf(unassigned.getCnt());
+        ctx.unassignedAmount = nz(unassigned.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
+        CountAmountVO system = dayMapper.sumSystemCollected(ctx.begin, ctx.end);
+        ctx.systemCount = cntOf(system.getCnt());
+        ctx.systemAmount = nz(system.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
 
         // 账单链：当日收讫账单的单头 ↔ 摊行 ↔ 科室
-        List<Map<String, Object>> deptRows = dayMapper.sumDetailByDept(ctx.begin, ctx.end);
+        List<DeptAmountSumVO> deptRows = dayMapper.sumDetailByDept(ctx.begin, ctx.end);
         ctx.deptCount = deptRows.size();
         BigDecimal deptSum = BigDecimal.ZERO;
-        for (Map<String, Object> row : deptRows) {
-            deptSum = deptSum.add(dec(pick(row, "amount")));
+        for (DeptAmountSumVO row : deptRows) {
+            deptSum = deptSum.add(nz(row.getAmount()));
         }
         ctx.deptAmount = deptSum.setScale(SCALE, RoundingMode.HALF_UP);
-        Map<String, Object> unattr = dayMapper.sumDetailUnattributed(ctx.begin, ctx.end);
-        ctx.unattributedCount = num(pick(unattr, "cnt"));
-        ctx.unattributedAmount = dec(pick(unattr, "amount")).setScale(SCALE, RoundingMode.HALF_UP);
-        Map<String, Object> all = dayMapper.sumDetailAll(ctx.begin, ctx.end);
-        ctx.detailAllAmount = dec(pick(all, "amount")).setScale(SCALE, RoundingMode.HALF_UP);
-        Map<String, Object> header = dayMapper.sumBillHeader(ctx.begin, ctx.end);
-        ctx.billHeaderCount = num(pick(header, "cnt"));
-        ctx.billHeaderAmount = dec(pick(header, "amount")).setScale(SCALE, RoundingMode.HALF_UP);
+        CountAmountVO unattr = dayMapper.sumDetailUnattributed(ctx.begin, ctx.end);
+        ctx.unattributedCount = cntOf(unattr.getCnt());
+        ctx.unattributedAmount = nz(unattr.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
+        CountAmountVO all = dayMapper.sumDetailAll(ctx.begin, ctx.end);
+        ctx.detailAllAmount = nz(all.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
+        CountAmountVO header = dayMapper.sumBillHeader(ctx.begin, ctx.end);
+        ctx.billHeaderCount = cntOf(header.getCnt());
+        ctx.billHeaderAmount = nz(header.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
         ctx.deptRows = deptRows;
 
         // 票据：票跟着账单走（当日收讫账单所开的票）
-        Map<String, Object> invoice = dayMapper.sumInvoice(ctx.begin, ctx.end);
-        ctx.invoiceCount = num(pick(invoice, "cnt"));
-        ctx.invoiceVoidCount = num(pick(invoice, "voidCnt"));
+        InvoiceCountVO invoice = dayMapper.sumInvoice(ctx.begin, ctx.end);
+        ctx.invoiceCount = cntOf(invoice.getCnt());
+        ctx.invoiceVoidCount = cntOf(invoice.getVoidCnt());
         return ctx;
     }
 
@@ -761,15 +725,12 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
     private List<DeptIncomeVO> buildDeptIncomes(DayContext ctx) {
         BigDecimal denominator = ctx.detailAllAmount;
         List<DeptIncomeVO> list = new ArrayList<>();
-        for (Map<String, Object> row : ctx.deptRows) {
+        for (DeptAmountSumVO row : ctx.deptRows) {
             DeptIncomeVO vo = new DeptIncomeVO();
-            Object deptId = pick(row, "deptId");
-            if (deptId != null) {
-                vo.setDeptId(Long.valueOf(deptId.toString()));
-            }
-            vo.setDeptName(str(pick(row, "deptName")));
-            vo.setItemCount(num(pick(row, "cnt")));
-            BigDecimal amount = dec(pick(row, "amount")).setScale(SCALE, RoundingMode.HALF_UP);
+            vo.setDeptId(row.getDeptId());
+            vo.setDeptName(row.getDeptName());
+            vo.setItemCount(cntOf(row.getCnt()));
+            BigDecimal amount = nz(row.getAmount()).setScale(SCALE, RoundingMode.HALF_UP);
             vo.setAmount(amount);
             vo.setRatio(ratio(amount, denominator));
             vo.setUnattributed(false);
@@ -841,14 +802,14 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         BigDecimal amount = BigDecimal.ZERO;
         int count;
 
-        void add(Object payMethodRaw, BigDecimal value, int cnt) {
+        void add(Integer paymentMethod, BigDecimal value, int cnt) {
             amount = amount.add(value);
             count += cnt;
-            if (payMethodRaw == null) {
+            if (paymentMethod == null) {
                 unknownPay = unknownPay.add(value);
                 return;
             }
-            switch (num(payMethodRaw)) {
+            switch (paymentMethod) {
                 case PAY_CASH -> cash = cash.add(value);
                 case PAY_WECHAT -> wechat = wechat.add(value);
                 case PAY_ALIPAY -> alipay = alipay.add(value);
@@ -905,7 +866,7 @@ public class FinanceSettlementServiceImpl implements FinanceSettlementService {
         BigDecimal deptAmount = BigDecimal.ZERO;
         int unattributedCount;
         BigDecimal unattributedAmount = BigDecimal.ZERO;
-        List<Map<String, Object>> deptRows = List.of();
+        List<DeptAmountSumVO> deptRows = List.of();
 
         int invoiceCount;
         int invoiceVoidCount;

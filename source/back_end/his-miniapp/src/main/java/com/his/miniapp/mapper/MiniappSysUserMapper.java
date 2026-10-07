@@ -1,11 +1,9 @@
 package com.his.miniapp.mapper;
 
+import com.his.miniapp.vo.MiniappUserRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
-import org.apache.ibatis.annotations.Update;
-
-import java.util.Map;
 
 /**
  * 微信登录用用户只读 Mapper（裸 SQL，铁律：跨模块读异模块表用裸 SQL Mapper）。
@@ -22,5 +20,5 @@ public interface MiniappSysUserMapper {
             WHERE openid = #{openid} AND del_flag = 0
             LIMIT 1
             """)
-    Map<String, Object> selectByOpenid(@Param("openid") String openid);
+    MiniappUserRowVO selectByOpenid(@Param("openid") String openid);
 }

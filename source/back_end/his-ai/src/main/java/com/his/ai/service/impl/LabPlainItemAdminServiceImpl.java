@@ -1,21 +1,20 @@
 package com.his.ai.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.ai.dto.LabPlainItemSearchDTO;
 import com.his.ai.dto.LabPlainItemUpsertDTO;
 import com.his.ai.entity.SysLabPlainItem;
+import com.his.ai.mapper.LabResultRefCountMapper;
 import com.his.ai.mapper.SysLabPlainItemMapper;
 import com.his.ai.service.LabPlainItemAdminService;
 import com.his.ai.support.PatientTextGuard;
+import com.his.ai.vo.LabItemRefCountVO;
 import com.his.ai.vo.LabPlainCoverageVO;
 import com.his.ai.vo.LabPlainItemAdminVO;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.medicaltech.entity.BizLabResult;
-import com.his.medicaltech.mapper.BizLabResultMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,7 +35,7 @@ import java.util.*;
 public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
 
     private final SysLabPlainItemMapper plainMapper;
-    private final BizLabResultMapper labResultMapper;
+    private final LabResultRefCountMapper labResultRefCountMapper;
     private final PatientTextGuard patientTextGuard;
 
     private static LabPlainItemAdminVO toVO(SysLabPlainItem e) {
@@ -68,18 +67,13 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
         return value.length() <= max ? value : value.substring(0, max);
     }
 
-    private static int toInt(Object value) {
-        if (value == null) {
-            return 0;
-        }
-        if (value instanceof Number n) {
-            return n.intValue();
-        }
-        try {
-            return Integer.parseInt(value.toString());
-        } catch (NumberFormatException ex) {
-            return 0;
-        }
+    /**
+     * COUNT(*) 在 JDBC 里是 BIGINT，落库到出参字段要收成 int。
+     * <p>原来这个方法还要兼容裸 Map 里「可能是 String 也可能是 Number」的情况，
+     * 改 VO 后类型确定，解析分支已无必要。
+     */
+    private static int toCount(Long value) {
+        return value == null ? 0 : value.intValue();
     }
 
     @Override
@@ -184,15 +178,8 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
 
     @Override
     public LabPlainCoverageVO coverage() {
-        // 分母：库内实际出现过的检验项目名（去重，不含空值）
-        QueryWrapper<BizLabResult> w = new QueryWrapper<>();
-        // 直接写列名：LambdaQueryWrapper 没有公开的 select(String...)，
-        // 而分组统计要同时投影列名和 COUNT(*)，只能用 QueryWrapper
-        w.select("laboratory_item_name", "COUNT(*) AS ref_cnt")
-                .isNotNull("laboratory_item_name")
-                .ne("laboratory_item_name", "")
-                .groupBy("laboratory_item_name");
-        List<Map<String, Object>> rows = labResultMapper.selectMaps(w);
+        // 分母：库内实际出现过的检验项目名（去重，不含空值与软删行）
+        List<LabItemRefCountVO> rows = labResultRefCountMapper.countGroupByItemName();
 
         // 分子：词典里有的项目名。停用条目单独记一笔，因为它对患者端等于没配
         Map<String, Integer> enabledMap = new HashMap<>();
@@ -212,13 +199,9 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
         List<LabPlainCoverageVO.MissingItemVO> missing = new ArrayList<>();
         int total = 0;
         int covered = 0;
-        for (Map<String, Object> row : rows) {
-            Object nameObj = row.get("laboratory_item_name");
-            if (nameObj == null) {
-                continue;
-            }
-            String name = nameObj.toString();
-            if (name.isEmpty()) {
+        for (LabItemRefCountVO row : rows) {
+            String name = row.getLaboratoryItemName();
+            if (name == null || name.isEmpty()) {
                 continue;
             }
             total++;
@@ -228,7 +211,7 @@ public class LabPlainItemAdminServiceImpl implements LabPlainItemAdminService {
             }
             LabPlainCoverageVO.MissingItemVO m = new LabPlainCoverageVO.MissingItemVO();
             m.setItemName(name);
-            m.setRefCount(toInt(row.get("ref_cnt")));
+            m.setRefCount(toCount(row.getRefCount()));
             // 词典里有同名但停用/已删除 → 改启用即可，不用重新写文案
             m.setDisabledOnly(allMap.containsKey(name));
             missing.add(m);

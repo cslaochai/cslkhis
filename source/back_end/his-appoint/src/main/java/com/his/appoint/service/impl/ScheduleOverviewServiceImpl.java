@@ -12,13 +12,11 @@ import com.his.system.vo.UnitDayWorkingVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 排班周总览实现：跨模块只读 his-system 的 service（事实层 / 人力标准 / 总值班），
@@ -78,15 +76,15 @@ public class ScheduleOverviewServiceImpl implements ScheduleOverviewService {
         return vos;
     }
 
-    private List<OverviewClinicDayVO> toClinicDays(List<Map<String, Object>> rows) {
+    private List<OverviewClinicDayVO> toClinicDays(List<ScheduleDaySummaryRowVO> rows) {
         List<OverviewClinicDayVO> vos = new ArrayList<>(rows.size());
-        for (Map<String, Object> row : rows) {
+        for (ScheduleDaySummaryRowVO row : rows) {
             OverviewClinicDayVO vo = new OverviewClinicDayVO();
-            vo.setScheduleDate(LocalDate.parse(String.valueOf(row.get("scheduleDate"))));
-            vo.setShiftCount(asLong(row.get("shiftCount")));
-            vo.setTotalSource(asDecimal(row.get("totalSource")));
-            vo.setUsedSource(asDecimal(row.get("usedSource")));
-            vo.setStoppedCount(asLong(row.get("stoppedCount")));
+            vo.setScheduleDate(row.getScheduleDate());
+            vo.setShiftCount(row.getShiftCount());
+            vo.setTotalSource(row.getTotalSource());
+            vo.setUsedSource(row.getUsedSource());
+            vo.setStoppedCount(row.getStoppedCount());
             vos.add(vo);
         }
         return vos;
@@ -136,16 +134,5 @@ public class ScheduleOverviewServiceImpl implements ScheduleOverviewService {
             }
         }
         return vos;
-    }
-
-    private Long asLong(Object value) {
-        return value == null ? null : ((Number) value).longValue();
-    }
-
-    private BigDecimal asDecimal(Object value) {
-        if (value == null) {
-            return null;
-        }
-        return value instanceof BigDecimal ? (BigDecimal) value : BigDecimal.valueOf(((Number) value).longValue());
     }
 }

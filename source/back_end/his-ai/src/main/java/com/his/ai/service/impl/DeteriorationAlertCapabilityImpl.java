@@ -6,6 +6,7 @@ import com.his.ai.dto.DeteriorationLlmOutputDTO;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.DeteriorationAlertCapability;
 import com.his.ai.support.DeteriorationScoreRules;
+import com.his.ai.vo.DeteriorationAlertPromptVariablesVO;
 import com.his.ai.vo.DeteriorationExplainVO;
 import com.his.ai.vo.DeteriorationScanVO;
 import com.his.common.util.DateFormats;
@@ -129,14 +130,14 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
     private Optional<DeteriorationLlmOutputDTO> callModel(NursingVitalFactVO vital,
                                                           DeteriorationScoreRules.DeteriorationScore score,
                                                           int level) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("patientTag", patientTag(vital));
-        variables.put("measureTime", measureTimeText(vital));
-        variables.put("vitalText", vitalText(vital));
-        variables.put("totalScore", String.valueOf(score.getTotalScore()));
-        variables.put("alertLevel", String.valueOf(level));
-        variables.put("alertText", dictCacheService.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
-        variables.put("itemsText", itemsText(vital));
+        DeteriorationAlertPromptVariablesVO variables = new DeteriorationAlertPromptVariablesVO();
+        variables.setPatientTag(patientTag(vital));
+        variables.setMeasureTime(measureTimeText(vital));
+        variables.setVitalText(vitalText(vital));
+        variables.setTotalScore(String.valueOf(score.getTotalScore()));
+        variables.setAlertLevel(String.valueOf(level));
+        variables.setAlertText(dictCacheService.getDicDataLabel("biz_ai_deteriorationAlertLevelEnum", level));
+        variables.setItemsText(itemsText(vital));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.DETERIORATION_ALERT)

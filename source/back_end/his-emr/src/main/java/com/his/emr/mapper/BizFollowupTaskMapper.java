@@ -2,12 +2,17 @@ package com.his.emr.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.emr.entity.BizFollowupTask;
+import com.his.emr.vo.DischargePendingFollowupVO;
+import com.his.emr.vo.DischargeSnapshotVO;
+import com.his.emr.vo.FollowupDeptPendingVO;
+import com.his.emr.vo.FollowupStatCountVO;
+import com.his.emr.vo.FollowupTypeCountVO;
+import com.his.emr.vo.PatientSnapshotVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 随访任务Mapper
@@ -18,10 +23,10 @@ public interface BizFollowupTaskMapper extends BaseMapper<BizFollowupTask> {
     /**
      * 患者快照（跨模块裸 SQL，患者基本信息列名已对 information_schema 核对）
      */
-    @Select("SELECT id, patient_no AS patientNo, patient_name AS patientName, phone AS phone, "
+    @Select("SELECT id AS patientId, patient_no AS patientNo, patient_name AS patientName, phone AS phone, "
             + "last_visit_dept AS deptId, last_visit_dept_name AS deptName "
             + "FROM biz_patient WHERE id = #{patientId} AND del_flag = 0 LIMIT 1")
-    Map<String, Object> selectPatientSnapshot(@Param("patientId") Long patientId);
+    PatientSnapshotVO selectPatientSnapshot(@Param("patientId") Long patientId);
 
     /**
      * 出院记录快照（跨模块裸 SQL：出院记录/入院记录/患者基本信息/科室，列名已核对）。
@@ -32,8 +37,7 @@ public interface BizFollowupTaskMapper extends BaseMapper<BizFollowupTask> {
      */
     @Select("SELECT d.discharge_id AS dischargeId, d.discharge_no AS dischargeNo, d.admission_id AS admissionId, "
             + "d.patient_id AS patientId, "
-            /* DATETIME 一律 DATE_FORMAT 输出文本：mysql2/mybatis 裸 Map 取值拿到的是各自日期对象，强转必炸 */
-            + "DATE_FORMAT(d.discharge_time, '%Y-%m-%d %H:%i:%s') AS dischargeTime, "
+            + "d.discharge_time AS dischargeTime, "
             + "IFNULL(d.discharge_diagnosis, a.diagnosis) AS diagnosis, "
             + "a.dept_id AS deptId, sd.dept_name AS deptName, "
             + "p.patient_no AS patientNo, p.patient_name AS patientName, p.phone AS phone "
@@ -42,7 +46,7 @@ public interface BizFollowupTaskMapper extends BaseMapper<BizFollowupTask> {
             + "LEFT JOIN biz_admission a ON a.admission_id = d.admission_id "
             + "LEFT JOIN sys_department sd ON sd.id = a.dept_id AND sd.del_flag = 0 "
             + "WHERE d.discharge_id = #{dischargeId} AND d.del_flag = 0 LIMIT 1")
-    Map<String, Object> selectDischargeSnapshot(@Param("dischargeId") Long dischargeId);
+    DischargeSnapshotVO selectDischargeSnapshot(@Param("dischargeId") Long dischargeId);
 
     /**
      * 待补建随访计划的出院记录（存活出院且尚无对应任务，按出院先后取前 N 条）。
@@ -63,7 +67,7 @@ public interface BizFollowupTaskMapper extends BaseMapper<BizFollowupTask> {
              ORDER BY d.discharge_time ASC, d.discharge_id ASC
              LIMIT #{limit}
             """)
-    List<Map<String, Object>> selectDischargesWithoutTask(@Param("limit") int limit);
+    List<DischargePendingFollowupVO> selectDischargesWithoutTask(@Param("limit") int limit);
 
     /**
      * 科室名快照（科室跨模块裸 SQL，列名已核对）
@@ -84,12 +88,12 @@ public interface BizFollowupTaskMapper extends BaseMapper<BizFollowupTask> {
                    COUNT(CASE WHEN t.followup_status = 3 THEN 1 END) AS done,
                    COUNT(CASE WHEN t.followup_status = 4 THEN 1 END) AS cancelled,
                    COUNT(CASE WHEN t.followup_status IN (1, 2) AND DATE(t.followup_time) = CURDATE()
-                        THEN 1 END) AS today_due,
+                        THEN 1 END) AS todayDue,
                    COUNT(CASE WHEN t.followup_status IN (1, 2) AND t.followup_time &lt; NOW()
                         THEN 1 END) AS overdue,
                    COUNT(CASE WHEN t.followup_status = 3 AND DATE(t.execute_time) = CURDATE()
-                        THEN 1 END) AS done_today,
-                   COUNT(CASE WHEN t.revisit_appoint_id IS NOT NULL THEN 1 END) AS revisit_cnt,
+                        THEN 1 END) AS doneToday,
+                   COUNT(CASE WHEN t.revisit_appoint_id IS NOT NULL THEN 1 END) AS revisitCnt,
                    COUNT(*) AS total
               FROM biz_followup_task t
              WHERE t.del_flag = 0
@@ -99,24 +103,24 @@ public interface BizFollowupTaskMapper extends BaseMapper<BizFollowupTask> {
                </if>
             </script>
             """)
-    Map<String, Object> statOverview(@Param("scopeDeptIds") List<Long> scopeDeptIds);
+    FollowupStatCountVO statOverview(@Param("scopeDeptIds") List<Long> scopeDeptIds);
 
     /**
      * 看板：按随访方式分布（字典 his_followup_type）
      */
     @Select("""
             <script>
-            SELECT t.followup_type AS k, COUNT(*) AS c
+            SELECT t.followup_type AS followupType, COUNT(*) AS cnt
               FROM biz_followup_task t
              WHERE t.del_flag = 0
                <if test="scopeDeptIds != null and scopeDeptIds.size() > 0">
                  AND t.dept_id IN
                  <foreach collection="scopeDeptIds" item="sd" open="(" separator="," close=")">#{sd}</foreach>
                </if>
-             GROUP BY t.followup_type ORDER BY c DESC
+             GROUP BY t.followup_type ORDER BY cnt DESC
             </script>
             """)
-    List<Map<String, Object>> countByType(@Param("scopeDeptIds") List<Long> scopeDeptIds);
+    List<FollowupTypeCountVO> countByType(@Param("scopeDeptIds") List<Long> scopeDeptIds);
 
     /**
      * 看板：科室待办 TOP10（未完成口径 = 待随访+随访中）。
@@ -129,11 +133,11 @@ public interface BizFollowupTaskMapper extends BaseMapper<BizFollowupTask> {
      */
     @Select("""
             <script>
-            SELECT COALESCE(t.dept_id, 0) AS d,
+            SELECT COALESCE(t.dept_id, 0) AS deptId,
                    COALESCE(NULLIF(dep.dept_name, ''), NULLIF(t.dept_name, ''),
-                            CASE WHEN t.dept_id IS NULL THEN '未指定科室' ELSE CONCAT('科室#', t.dept_id) END) AS n,
-                   COUNT(*) AS c,
-                   COUNT(CASE WHEN t.followup_status = 3 THEN 1 END) AS done
+                            CASE WHEN t.dept_id IS NULL THEN '未指定科室' ELSE CONCAT('科室#', t.dept_id) END) AS deptName,
+                   COUNT(*) AS pendingCount,
+                   COUNT(CASE WHEN t.followup_status = 3 THEN 1 END) AS doneCount
               FROM biz_followup_task t
               LEFT JOIN sys_department dep ON dep.id = t.dept_id AND dep.del_flag = 0
              WHERE t.del_flag = 0 AND t.followup_status IN (1, 2)
@@ -141,9 +145,9 @@ public interface BizFollowupTaskMapper extends BaseMapper<BizFollowupTask> {
                  AND t.dept_id IN
                  <foreach collection="scopeDeptIds" item="sd" open="(" separator="," close=")">#{sd}</foreach>
                </if>
-             GROUP BY COALESCE(t.dept_id, 0), n
-             ORDER BY c DESC, d ASC LIMIT 10
+             GROUP BY COALESCE(t.dept_id, 0), deptName
+             ORDER BY pendingCount DESC, deptId ASC LIMIT 10
             </script>
             """)
-    List<Map<String, Object>> countDeptPending(@Param("scopeDeptIds") List<Long> scopeDeptIds);
+    List<FollowupDeptPendingVO> countDeptPending(@Param("scopeDeptIds") List<Long> scopeDeptIds);
 }

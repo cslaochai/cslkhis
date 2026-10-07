@@ -16,6 +16,7 @@ import com.his.operation.enums.ChargeSourceEnum;
 import com.his.operation.enums.OperationAnesthesiaMethodEnum;
 import com.his.operation.mapper.BizOperationChargeItemMapper;
 import com.his.operation.vo.OperationChargeSummaryVO;
+import com.his.operation.vo.TreatmentItemPriceVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -27,7 +28,6 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 手术麻醉计费：把"麻醉/复苏做了什么"翻译成"这几项该收多少钱"，并把每一项的落地结果留痕。
@@ -76,13 +76,6 @@ public class OperationChargeBiller {
         }
         long m = Duration.between(from, to).toMinutes();
         return m < 0 ? null : m;
-    }
-
-    private static BigDecimal toDecimal(Object value) {
-        if (value == null) {
-            return BigDecimal.ZERO;
-        }
-        return new BigDecimal(String.valueOf(value));
     }
 
     // 内部：单项计费（幂等 + 落痕）
@@ -173,25 +166,23 @@ public class OperationChargeBiller {
             return;
         }
 
-        Map<String, Object> price = chargeItemMapper.selectTreatmentItem(itemCode);
-        if (price == null || price.isEmpty()) {
+        TreatmentItemPriceVO price = chargeItemMapper.selectTreatmentItem(itemCode);
+        if (price == null) {
             markFail(summary, row, "价目表中不存在可用项目 " + itemCode + "（未取到单价，不计费）", itemCode);
             return;
         }
-        BigDecimal unitPrice = toDecimal(price.get("price"));
+        BigDecimal unitPrice = price.getPrice() == null ? BigDecimal.ZERO : price.getPrice();
         if (unitPrice.compareTo(BigDecimal.ZERO) <= 0) {
             markFail(summary, row, "项目 " + itemCode + " 单价为 " + unitPrice + "，按'金额不明即不计费'不落账", itemCode);
             return;
         }
-        String unit = price.get("unit") == null ? null : String.valueOf(price.get("unit"));
-        String name = price.get("item_name") == null ? null : String.valueOf(price.get("item_name"));
-        String spec = price.get("spec") == null ? null : String.valueOf(price.get("spec"));
 
         BigDecimal amount = unitPrice.multiply(quantity).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
 
-        row.setItemName(name);
-        row.setSpec(spec);
-        row.setUnit(StringUtils.hasText(unit) ? unit : "次");
+        row.setItemName(price.getItemName());
+        // 治疗项目字典没有单位/规格两列（见 Mapper 注释）：单位兜底成「次」，规格只能是 null
+        row.setSpec(null);
+        row.setUnit("次");
         row.setQuantity(quantity);
         row.setPrice(unitPrice);
         row.setAmount(amount);
@@ -261,7 +252,7 @@ public class OperationChargeBiller {
         summary.setAmount(summary.getAmount().add(nz(booked.getAmount())));
         summary.setFeeNo(booked.getFeeNo());
         summary.getMessages().add(String.format("%s「%s」× %s = %s 元 → %s",
-                itemCode, name, quantity.stripTrailingZeros().toPlainString(),
+                itemCode, row.getItemName(), quantity.stripTrailingZeros().toPlainString(),
                 amount.stripTrailingZeros().toPlainString(), booked.getFeeNo()));
     }
 

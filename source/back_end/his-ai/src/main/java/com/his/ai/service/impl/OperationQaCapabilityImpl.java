@@ -10,7 +10,9 @@ import com.his.ai.service.OperationQaCapability;
 import com.his.ai.support.OperationSchemaCatalog;
 import com.his.ai.support.OperationSqlGuard;
 import com.his.ai.vo.OperationColumnVO;
+import com.his.ai.vo.OperationQaPromptVariablesVO;
 import com.his.ai.vo.OperationQaResultVO;
+import com.his.ai.vo.OperationQaSummaryPromptVariablesVO;
 import com.his.ai.vo.OperationRowVO;
 import com.his.ai.vo.OperationSchemaVO;
 import com.his.common.util.DateFormats;
@@ -144,6 +146,10 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
         vo.setSql(executableSql);
 
         // 第三段：执行
+        // 这里保留 List<Map<String, Object>> 是刻意的：SELECT 的列由模型按问题现场决定
+        // （SELECT 出院人数、SELECT 月度收入……），编译期根本不存在对应的实体或 VO 可建，
+        // 建 VO 等于把任意问数能力砍死。行数据在此处立即转成 OperationColumnVO/OperationRowVO，
+        // Map 不会离开本方法。
         List<Map<String, Object>> resultRows;
         try {
             resultRows = queryTemplate.queryForList(executableSql);
@@ -180,10 +186,10 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
     }
 
     private Optional<OperationQaLlmOutputDTO> callGenerate(String question) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("schema", OperationSchemaCatalog.schemaText());
-        variables.put("question", question);
-        variables.put("today", LocalDate.now().format(DateFormats.DATE));
+        OperationQaPromptVariablesVO variables = new OperationQaPromptVariablesVO();
+        variables.setSchema(OperationSchemaCatalog.schemaText());
+        variables.setQuestion(question);
+        variables.setToday(LocalDate.now().format(DateFormats.DATE));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.OPERATION_QA)
@@ -198,9 +204,9 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
     }
 
     private String callSummary(String question, List<OperationColumnVO> columns, List<OperationRowVO> rows) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("question", question);
-        variables.put("table", renderSummaryTable(columns, rows));
+        OperationQaSummaryPromptVariablesVO variables = new OperationQaSummaryPromptVariablesVO();
+        variables.setQuestion(question);
+        variables.setTable(renderSummaryTable(columns, rows));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.OPERATION_QA)
@@ -218,6 +224,12 @@ public class OperationQaCapabilityImpl implements OperationQaCapability {
                 .orElse(null);
     }
 
+    /**
+     * 把 JDBC 原始行转成前端用的列定义 + 行数据。
+     *
+     * <p>入参保留 {@code Map} 的原因见 {@code ask()} 里的说明：列集合由模型现场生成的 SQL 决定，
+     * 只能按「第 i 列叫什么、第 i 格是什么值」的动态形态承载，转完即丢。
+     */
     private void buildTable(OperationQaResultVO vo, List<Map<String, Object>> resultRows) {
         if (resultRows.isEmpty()) {
             vo.setRowCount(0);

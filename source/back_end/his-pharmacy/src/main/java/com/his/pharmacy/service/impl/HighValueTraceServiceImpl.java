@@ -25,6 +25,7 @@ import com.his.pharmacy.support.TraceChargeInvoker;
 import com.his.pharmacy.support.UdiParser;
 import com.his.pharmacy.vo.BizConsumableTraceVO;
 import com.his.pharmacy.vo.ConsumableTraceDetailVO;
+import com.his.pharmacy.vo.PatientBriefVO;
 import com.his.pharmacy.vo.UdiScanVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,7 +36,6 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -60,10 +60,6 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
     private final BizConsumableStockMapper stockMapper;
     private final BizConsumableStockLogMapper stockLogMapper;
     private final TraceChargeInvoker chargeInvoker;
-
-    private static String str(Object v) {
-        return v == null ? null : String.valueOf(v);
-    }
 
     private static BigDecimal nz(BigDecimal v) {
         return v == null ? BigDecimal.ZERO : v;
@@ -164,12 +160,12 @@ public class HighValueTraceServiceImpl implements HighValueTraceService {
         String patientNo = dto.getPatientNo();
         String patientName = dto.getPatientName();
         if (!StringUtils.hasText(patientNo) || !StringUtils.hasText(patientName)) {
-            Map<String, Object> snap = traceMapper.selectPatientSnapshot(dto.getPatientId());
+            PatientBriefVO snap = traceMapper.selectPatientSnapshot(dto.getPatientId());
             if (snap == null) {
                 throw new BusinessException("患者不存在，请重新选择");
             }
-            patientNo = StringUtils.hasText(patientNo) ? patientNo : str(snap.get("patient_no"));
-            patientName = StringUtils.hasText(patientName) ? patientName : str(snap.get("patient_name"));
+            patientNo = StringUtils.hasText(patientNo) ? patientNo : snap.getPatientNo();
+            patientName = StringUtils.hasText(patientName) ? patientName : snap.getPatientName();
         }
 
         UdiParser.UdiParts parts = UdiParser.parse(udiCode);

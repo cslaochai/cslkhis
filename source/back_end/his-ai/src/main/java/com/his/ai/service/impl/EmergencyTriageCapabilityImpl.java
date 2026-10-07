@@ -6,6 +6,7 @@ import com.his.ai.dto.EmergencyTriageDTO;
 import com.his.ai.dto.EmergencyTriageLlmOutputDTO;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.EmergencyTriageCapability;
+import com.his.ai.vo.EmergencyTriagePromptVariablesVO;
 import com.his.ai.vo.EmergencyTriageResultVO;
 import com.his.appoint.entity.BizEmergency;
 import com.his.appoint.mapper.BizEmergencyMapper;
@@ -304,17 +305,17 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
                                                             VitalSigns vitals,
                                                             List<RedFlag> flags,
                                                             String channelByKeyword) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("gender", vo.getGenderText());
-        variables.put("age", vo.getAge() == null ? "（未填写）" : vo.getAge() + "岁");
-        variables.put("chiefComplaint", nullToDash(vo.getChiefComplaint()));
-        variables.put("vitalSigns", vitals.describe());
-        variables.put("currentLevel", vo.getCurrentLevelText());
-        variables.put("hardLevel", vo.getHardLevelText());
-        variables.put("hardRedFlags", flags.isEmpty()
+        EmergencyTriagePromptVariablesVO variables = new EmergencyTriagePromptVariablesVO();
+        variables.setGender(vo.getGenderText());
+        variables.setAge(vo.getAge() == null ? "（未填写）" : vo.getAge() + "岁");
+        variables.setChiefComplaint(nullToDash(vo.getChiefComplaint()));
+        variables.setVitalSigns(vitals.describe());
+        variables.setCurrentLevel(vo.getCurrentLevelText());
+        variables.setHardLevel(vo.getHardLevelText());
+        variables.setHardRedFlags(flags.isEmpty()
                 ? "（无）"
                 : String.join("\n", flags.stream().map(flag -> "- " + flag.label()).toList()));
-        variables.put("keywordChannel", channelByKeyword);
+        variables.setKeywordChannel(channelByKeyword);
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.EMERGENCY_TRIAGE)

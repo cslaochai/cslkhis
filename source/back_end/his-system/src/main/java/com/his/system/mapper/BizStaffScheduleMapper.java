@@ -2,6 +2,7 @@ package com.his.system.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.system.entity.BizStaffSchedule;
+import com.his.system.vo.StaffWorkingGroupVO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -9,7 +10,6 @@ import org.apache.ibatis.annotations.Select;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 全院岗位排班 Mapper。
@@ -42,12 +42,12 @@ public interface BizStaffScheduleMapper extends BaseMapper<BizStaffSchedule> {
      * 在岗人次聚合（日期 × 单元 × 班次 × 岗位）：总览矩阵与人力缺口对比共用一次扫描。
      * org_name 用 MAX 取快照（0 人上班的单元不会出现在结果里，名称缺口由标准行补）。
      */
-    @Select("SELECT DATE_FORMAT(schedule_date, '%Y-%m-%d') AS scheduleDate, org_type AS orgType, org_id AS orgId, "
+    @Select("SELECT schedule_date AS scheduleDate, org_type AS orgType, org_id AS orgId, "
             + "MAX(org_name) AS orgName, shift_id AS shiftId, staff_type AS staffType, COUNT(*) AS cnt "
             + "FROM biz_staff_schedule "
             + "WHERE del_flag = 0 AND duty_status = 1 AND schedule_date BETWEEN #{begin} AND #{end} "
             + "GROUP BY schedule_date, org_type, org_id, shift_id, staff_type")
-    List<Map<String, Object>> groupWorkingByUnitShift(@Param("begin") LocalDate begin,
+    List<StaffWorkingGroupVO> groupWorkingByUnitShift(@Param("begin") LocalDate begin,
                                                       @Param("end") LocalDate end);
 }
 

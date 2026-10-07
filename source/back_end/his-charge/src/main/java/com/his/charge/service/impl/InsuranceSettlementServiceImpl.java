@@ -493,16 +493,16 @@ public class InsuranceSettlementServiceImpl
         String cutReason = StringUtils.hasText(reason) ? reason : "收费员冲正";
 
         String tradeNo = nextTradeNo();
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("msgType", "2305");
-        payload.put("tradeNo", tradeNo);
-        payload.put("origTradeNo", original.getTradeNo());
-        payload.put("settlementNo", settlement.getSettlementNo());
-        payload.put("billNo", settlement.getBillNo());
-        payload.put("patientName", settlement.getPatientName());
-        payload.put("cancelReason", cutReason);
-        payload.put("sendTime", LocalDateTime.now().format(DateFormats.DATETIME));
-        payload.put("note", "撤销报文：正式环境按医保前置机 2305 规范做字段映射");
+        InsuranceCancelPayloadVO payload = new InsuranceCancelPayloadVO();
+        payload.setMsgType("2305");
+        payload.setTradeNo(tradeNo);
+        payload.setOrigTradeNo(original.getTradeNo());
+        payload.setSettlementNo(settlement.getSettlementNo());
+        payload.setBillNo(settlement.getBillNo());
+        payload.setPatientName(settlement.getPatientName());
+        payload.setCancelReason(cutReason);
+        payload.setSendTime(LocalDateTime.now().format(DateFormats.DATETIME));
+        payload.setNote("撤销报文：正式环境按医保前置机 2305 规范做字段映射");
 
         BizInsuranceReport cancel = newReport(settlement, InsuranceReportTypeEnum.CANCEL.getCode(), "2305", tradeNo);
         cancel.setOrigTradeNo(original.getTradeNo());
@@ -738,71 +738,71 @@ public class InsuranceSettlementServiceImpl
      */
     private String buildUploadPayload(BizInsuranceSettlement s, BizSettlementBill bill,
                                       List<BizSettlementBillItem> items, String tradeNo) {
-        Map<String, Object> patient = new LinkedHashMap<>();
-        patient.put("patientNo", s.getPatientNo());
-        patient.put("patientName", s.getPatientName());
-        patient.put("gender", s.getGender());
-        patient.put("age", s.getAge());
-        patient.put("idCard", s.getIdCard());
-        patient.put("insuranceNo", s.getMedicalInsuranceNo());
-        patient.put("insuranceType", s.getInsuranceType());
+        InsuranceUploadPayloadVO.Patient patient = new InsuranceUploadPayloadVO.Patient();
+        patient.setPatientNo(s.getPatientNo());
+        patient.setPatientName(s.getPatientName());
+        patient.setGender(s.getGender());
+        patient.setAge(s.getAge());
+        patient.setIdCard(s.getIdCard());
+        patient.setInsuranceNo(s.getMedicalInsuranceNo());
+        patient.setInsuranceType(s.getInsuranceType());
 
-        Map<String, Object> visit = new LinkedHashMap<>();
-        visit.put("billNo", bill.getBillNo());
-        visit.put("encounterType", EncounterTypeEnum.descOf(bill.getEncounterType()));
-        visit.put("visitType", s.getVisitType());
-        visit.put("deptName", s.getDeptName());
-        visit.put("doctorName", s.getDoctorName());
-        visit.put("diagnosisCode", s.getDiagnosisCode());
-        visit.put("diagnosisName", StringUtils.hasText(s.getDiagnosisName()) ? s.getDiagnosisName() : s.getDiagnosis());
+        InsuranceUploadPayloadVO.Visit visit = new InsuranceUploadPayloadVO.Visit();
+        visit.setBillNo(bill.getBillNo());
+        visit.setEncounterType(EncounterTypeEnum.descOf(bill.getEncounterType()));
+        visit.setVisitType(s.getVisitType());
+        visit.setDeptName(s.getDeptName());
+        visit.setDoctorName(s.getDoctorName());
+        visit.setDiagnosisCode(s.getDiagnosisCode());
+        visit.setDiagnosisName(StringUtils.hasText(s.getDiagnosisName()) ? s.getDiagnosisName() : s.getDiagnosis());
 
-        Map<String, Object> fees = new LinkedHashMap<>();
-        fees.put("total", s.getTotalAmount());
-        fees.put("drug", s.getDrugAmount());
-        fees.put("inspection", s.getInspectionAmount());
-        fees.put("laboratory", s.getLaboratoryAmount());
-        fees.put("treatment", s.getTreatmentAmount());
-        fees.put("material", s.getMaterialAmount());
-        fees.put("other", s.getOtherAmount());
+        InsuranceUploadPayloadVO.Fees fees = new InsuranceUploadPayloadVO.Fees();
+        fees.setTotal(s.getTotalAmount());
+        fees.setDrug(s.getDrugAmount());
+        fees.setInspection(s.getInspectionAmount());
+        fees.setLaboratory(s.getLaboratoryAmount());
+        fees.setTreatment(s.getTreatmentAmount());
+        fees.setMaterial(s.getMaterialAmount());
+        fees.setOther(s.getOtherAmount());
 
-        Map<String, Object> fund = new LinkedHashMap<>();
-        fund.put("coverageRatio", s.getCoverageRatio());
-        fund.put("insurancePay", s.getInsurancePay());
-        fund.put("personalPay", s.getPersonalPay());
-        fund.put("selfPay", s.getSelfPay());
+        InsuranceUploadPayloadVO.Fund fund = new InsuranceUploadPayloadVO.Fund();
+        fund.setCoverageRatio(s.getCoverageRatio());
+        fund.setInsurancePay(s.getInsurancePay());
+        fund.setPersonalPay(s.getPersonalPay());
+        fund.setSelfPay(s.getSelfPay());
 
-        List<Map<String, Object>> lines = new ArrayList<>();
+        List<InsuranceUploadPayloadVO.Item> lines = new ArrayList<>(items.size());
         for (BizSettlementBillItem item : items) {
-            Map<String, Object> line = new LinkedHashMap<>();
-            line.put("itemType", item.getItemType());
-            line.put("itemTypeName", itemTypeText(item.getItemType()));
-            line.put("itemCode", item.getItemCode());
-            line.put("itemName", item.getItemName());
-            line.put("specification", item.getSpecification());
-            line.put("unit", item.getUnit());
-            line.put("quantity", item.getQuantity());
-            line.put("price", item.getPrice());
-            line.put("amount", item.getAmount());
-            line.put("discount", item.getDiscountAmount());
-            line.put("catalogType", item.getCatalogType());
-            line.put("pool", item.getPoolAmount());
-            line.put("self", item.getSelfAmount());
+            InsuranceUploadPayloadVO.Item line = new InsuranceUploadPayloadVO.Item();
+            line.setItemType(item.getItemType());
+            line.setItemTypeName(itemTypeText(item.getItemType()));
+            line.setItemCode(item.getItemCode());
+            line.setItemName(item.getItemName());
+            line.setSpecification(item.getSpecification());
+            line.setUnit(item.getUnit());
+            line.setQuantity(item.getQuantity());
+            line.setPrice(item.getPrice());
+            line.setAmount(item.getAmount());
+            line.setDiscount(item.getDiscountAmount());
+            line.setCatalogType(item.getCatalogType());
+            line.setPool(item.getPoolAmount());
+            line.setSelf(item.getSelfAmount());
             lines.add(line);
         }
 
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("msgType", "2304");
-        payload.put("tradeNo", tradeNo);
-        payload.put("fixMedinsCode", "H4301000001");
-        payload.put("fixMedinsName", "长沙市麓康医院");
-        payload.put("settlementNo", s.getSettlementNo());
-        payload.put("sendTime", LocalDateTime.now().format(DateFormats.DATETIME));
-        payload.put("patient", patient);
-        payload.put("visit", visit);
-        payload.put("fees", fees);
-        payload.put("fund", fund);
-        payload.put("items", lines);
-        payload.put("note", "G7 报盘样例报文：真实对接时按医保前置机规范做字段映射，替换 InsuranceChannelService 即可");
+        InsuranceUploadPayloadVO payload = new InsuranceUploadPayloadVO();
+        payload.setMsgType("2304");
+        payload.setTradeNo(tradeNo);
+        payload.setFixMedinsCode("H4301000001");
+        payload.setFixMedinsName("长沙市麓康医院");
+        payload.setSettlementNo(s.getSettlementNo());
+        payload.setSendTime(LocalDateTime.now().format(DateFormats.DATETIME));
+        payload.setPatient(patient);
+        payload.setVisit(visit);
+        payload.setFees(fees);
+        payload.setFund(fund);
+        payload.setItems(lines);
+        payload.setNote("G7 报盘样例报文：真实对接时按医保前置机规范做字段映射，替换 InsuranceChannelService 即可");
         return toPrettyJson(payload);
     }
 

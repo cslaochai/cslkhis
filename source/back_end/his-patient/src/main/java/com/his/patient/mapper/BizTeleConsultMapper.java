@@ -3,13 +3,13 @@ package com.his.patient.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.patient.entity.BizTeleConsult;
+import com.his.patient.vo.TeleConsultStatusCountVO;
 import com.his.patient.vo.TeleConsultVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 远程会诊 Mapper。科室名走科室裸 SQL（同模块无该实体，不引入依赖）。
@@ -48,6 +48,7 @@ public interface BizTeleConsultMapper extends BaseMapper<BizTeleConsult> {
     @Select("SELECT d.dept_name FROM sys_department d WHERE d.id = #{deptId} AND d.del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
-    @Select("SELECT t.status AS k, COUNT(*) AS c FROM biz_tele_consult t WHERE t.del_flag = 0 GROUP BY t.status")
-    List<Map<String, Object>> countByStatus();
+    @Select("SELECT t.status AS status, COUNT(*) AS cnt FROM biz_tele_consult t "
+            + "WHERE t.del_flag = 0 GROUP BY t.status")
+    List<TeleConsultStatusCountVO> countByStatus();
 }

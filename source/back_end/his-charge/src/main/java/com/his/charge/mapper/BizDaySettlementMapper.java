@@ -2,6 +2,10 @@ package com.his.charge.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.charge.entity.BizDaySettlement;
+import com.his.charge.vo.CountAmountVO;
+import com.his.charge.vo.DeptAmountSumVO;
+import com.his.charge.vo.InvoiceCountVO;
+import com.his.charge.vo.PaymentMethodSumVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -9,7 +13,6 @@ import org.apache.ibatis.annotations.Select;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 院级日结单 Mapper。
@@ -69,7 +72,7 @@ public interface BizDaySettlementMapper extends BaseMapper<BizDaySettlement> {
             " FROM biz_payment_txn " +
             " WHERE del_flag = 0 AND txn_status = 1 AND direction = 2 " +
             "   AND txn_time > #{begin} AND txn_time <= #{end}")
-    Map<String, Object> sumRefund(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
+    CountAmountVO sumRefund(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
 
     /**
      * 当日按支付方式的收款分桶（渠道口径与交班单同源，才能互相复核）。
@@ -80,7 +83,7 @@ public interface BizDaySettlementMapper extends BaseMapper<BizDaySettlement> {
             " WHERE del_flag = 0 AND txn_status = 1 AND direction = 1 " +
             "   AND txn_time > #{begin} AND txn_time <= #{end} " +
             " GROUP BY pay_method")
-    List<Map<String, Object>> sumPaidByPaymentMethod(@Param("begin") LocalDateTime begin,
+    List<PaymentMethodSumVO> sumPaidByPaymentMethod(@Param("begin") LocalDateTime begin,
                                                      @Param("end") LocalDateTime end);
 
     /**
@@ -114,7 +117,7 @@ public interface BizDaySettlementMapper extends BaseMapper<BizDaySettlement> {
             " WHERE t.del_flag = 0 AND t.txn_status = 1 AND t.direction = 1 " +
             "   AND t.txn_time > #{begin} AND t.txn_time <= #{end} " +
             "   AND t.cashier_settlement_id IS NULL AND t.cashier_id > 0")
-    Map<String, Object> sumUnassigned(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
+    CountAmountVO sumUnassigned(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
 
     /**
      * 系统代收的收款流水（{@code cashier_id = 0}：患者端自助缴费、后台任务）。
@@ -126,7 +129,7 @@ public interface BizDaySettlementMapper extends BaseMapper<BizDaySettlement> {
             " FROM biz_payment_txn t " +
             " WHERE t.del_flag = 0 AND t.txn_status = 1 AND t.direction = 1 " +
             "   AND t.txn_time > #{begin} AND t.txn_time <= #{end} AND t.cashier_id = 0")
-    Map<String, Object> sumSystemCollected(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
+    CountAmountVO sumSystemCollected(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
 
     // 账单链：结算账单 + 结算账单行
     // 集合条件统一：当日收讫（pay_time 落在区间内）且状态为 3-已支付 / 5-已退费
@@ -153,7 +156,7 @@ public interface BizDaySettlementMapper extends BaseMapper<BizDaySettlement> {
             " FROM biz_settlement_bill " +
             " WHERE del_flag = 0 AND bill_status IN (3, 5) " +
             "   AND pay_time > #{begin} AND pay_time <= #{end}")
-    Map<String, Object> sumBillHeader(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
+    CountAmountVO sumBillHeader(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
 
     /**
      * 按科室归集明细摊行金额（毛收入，未扣优惠/统筹）。
@@ -170,7 +173,7 @@ public interface BizDaySettlementMapper extends BaseMapper<BizDaySettlement> {
             "   AND i.dept_id IS NOT NULL " +
             " GROUP BY i.dept_id " +
             " ORDER BY amount DESC")
-    List<Map<String, Object>> sumDetailByDept(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
+    List<DeptAmountSumVO> sumDetailByDept(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
 
     /**
      * 无科室归属的摊行（科室对账的差异项，单列）。
@@ -184,7 +187,7 @@ public interface BizDaySettlementMapper extends BaseMapper<BizDaySettlement> {
             " WHERE i.del_flag = 0 AND b.del_flag = 0 AND b.bill_status IN (3, 5) " +
             "   AND b.pay_time > #{begin} AND b.pay_time <= #{end} " +
             "   AND i.dept_id IS NULL")
-    Map<String, Object> sumDetailUnattributed(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
+    CountAmountVO sumDetailUnattributed(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
 
     /**
      * 全部摊行金额（有归属 + 无归属），用于验证"科室归集没漏也没多"。
@@ -194,7 +197,7 @@ public interface BizDaySettlementMapper extends BaseMapper<BizDaySettlement> {
             " JOIN biz_settlement_bill b ON b.id = i.bill_id " +
             " WHERE i.del_flag = 0 AND b.del_flag = 0 AND b.bill_status IN (3, 5) " +
             "   AND b.pay_time > #{begin} AND b.pay_time <= #{end}")
-    Map<String, Object> sumDetailAll(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
+    CountAmountVO sumDetailAll(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
 
     /**
      * 当日收讫账单开出的票据张数 / 作废张数。
@@ -209,5 +212,5 @@ public interface BizDaySettlementMapper extends BaseMapper<BizDaySettlement> {
             " JOIN biz_settlement_bill b ON b.id = i.bill_id " +
             " WHERE i.del_flag = 0 AND b.del_flag = 0 AND b.bill_status IN (3, 5) " +
             "   AND b.pay_time > #{begin} AND b.pay_time <= #{end}")
-    Map<String, Object> sumInvoice(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
+    InvoiceCountVO sumInvoice(@Param("begin") LocalDateTime begin, @Param("end") LocalDateTime end);
 }

@@ -2,11 +2,10 @@ package com.his.emr.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.emr.entity.BizTreatmentApply;
+import com.his.emr.vo.RegistSnapshotVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
-
-import java.util.Map;
 
 @Mapper
 public interface BizTreatmentApplyMapper extends BaseMapper<BizTreatmentApply> {
@@ -26,5 +25,5 @@ public interface BizTreatmentApplyMapper extends BaseMapper<BizTreatmentApply> {
             + "       a.doctor_id AS doctorId, a.doctor_name AS doctorName, "
             + "       a.regist_status AS registStatus, a.refund_time AS refundTime "
             + "  FROM biz_appoint_info a WHERE a.id = #{registId} AND a.del_flag = 0")
-    Map<String, Object> selectRegistSnapshot(@Param("registId") Long registId);
+    RegistSnapshotVO selectRegistSnapshot(@Param("registId") Long registId);
 }

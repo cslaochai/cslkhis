@@ -1,10 +1,10 @@
 package com.his.miniapp.mapper;
 
+import com.his.miniapp.vo.AdmissionRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 住院登记跨模块只读 Mapper（裸 SQL，铁律：跨模块读异模块表用裸 SQL Mapper，
@@ -18,7 +18,7 @@ public interface MiniappAdmissionMapper {
 
     /**
      * 患者的住院记录（最近 10 条，含已出院——押金流水要能回看历史住院）。
-     * admission_id CAST 成字符串：Map 结果不经 ToStringSerializer，直接序列化
+     * admission_id/patient_id CAST 成字符串：Mapper 行不经 ToStringSerializer，直接序列化
      * BIGINT 会在 JS 端丢精度（9007199254740993 以上）。
      */
     @Select("""
@@ -30,5 +30,5 @@ public interface MiniappAdmissionMapper {
             ORDER BY admit_time DESC
             LIMIT 10
             """)
-    List<Map<String, Object>> selectByPatientId(Long patientId);
+    List<AdmissionRowVO> selectByPatientId(Long patientId);
 }

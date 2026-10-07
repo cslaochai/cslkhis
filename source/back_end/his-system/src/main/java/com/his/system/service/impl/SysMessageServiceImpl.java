@@ -27,7 +27,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -219,26 +218,7 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
 
     @Override
     public List<MessageTypeCountVO> typeCounts(Long receiverId) {
-        QueryWrapper<SysMessage> wrapper = new QueryWrapper<>();
-        wrapper.select("biz_type AS bizType", "COUNT(*) AS total", "COALESCE(SUM(read_status = 0), 0) AS unread")
-                .eq("receiver_id", receiverId)
-                .eq("send_status", 1)
-                .groupBy("biz_type");
-        List<MessageTypeCountVO> list = new ArrayList<>();
-        for (Map<String, Object> row : this.listMaps(wrapper)) {
-            MessageTypeCountVO vo = new MessageTypeCountVO();
-            Object bizType = row.get("bizType");
-            vo.setBizType(bizType == null ? null : bizType.toString());
-            vo.setTotal(toCount(row.get("total")));
-            vo.setUnread(toCount(row.get("unread")));
-            list.add(vo);
-        }
-        return list;
-    }
-
-    /** 聚合列在不同驱动下分别回 Long/BigDecimal，统一收到 Long */
-    private static Long toCount(Object value) {
-        return value instanceof Number n ? n.longValue() : 0L;
+        return baseMapper.selectTypeCounts(receiverId);
     }
 
     @Override

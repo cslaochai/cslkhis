@@ -21,11 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -71,101 +67,32 @@ public class CdrServiceImpl implements CdrService {
     /**
      * 该行数据是否来自"非主档"的档案（EMPI 影子档案）
      */
-    private static boolean isShadow(Object ownerPid, Long mainPid) {
-        String owner = str(ownerPid);
-        return owner != null && !owner.equals(String.valueOf(mainPid));
+    private static boolean isShadow(String ownerPid, Long mainPid) {
+        return ownerPid != null && !ownerPid.isEmpty() && !ownerPid.equals(String.valueOf(mainPid));
     }
 
     // 组装
 
-    private static String str(Object v) {
-        if (v == null) {
-            return null;
-        }
-        String s = String.valueOf(v);
-        return s.isEmpty() ? null : s;
-    }
-
-    private static Integer intVal(Object v) {
-        if (v == null) {
-            return null;
-        }
-        if (v instanceof Number n) {
-            return n.intValue();
-        }
-        try {
-            return Integer.valueOf(String.valueOf(v).trim());
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private static BigDecimal dec(Object v) {
-        if (v == null) {
-            return null;
-        }
-        if (v instanceof BigDecimal b) {
-            return b;
-        }
-        if (v instanceof Number n) {
-            return BigDecimal.valueOf(n.doubleValue());
-        }
-        try {
-            return new BigDecimal(String.valueOf(v));
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
-    private static LocalDateTime ldt(Object v) {
-        return ldt(v, null);
-    }
-
-    private static LocalDateTime ldt(Object v, LocalDateTime fallback) {
-        if (v == null) {
-            return fallback;
-        }
-        if (v instanceof LocalDateTime l) {
-            return l;
-        }
-        if (v instanceof Timestamp t) {
-            return t.toLocalDateTime();
-        }
-        if (v instanceof java.sql.Date d) {
-            return d.toLocalDate().atStartOfDay();
-        }
-        if (v instanceof LocalDate d) {
-            return d.atStartOfDay();
-        }
-        if (v instanceof java.util.Date d) {
-            return LocalDateTime.ofInstant(d.toInstant(), ZoneId.systemDefault());
-        }
-        String s = String.valueOf(v).trim();
-        if (s.isEmpty()) {
-            return fallback;
-        }
-        try {
-            return LocalDateTime.parse(s.replace(' ', 'T'));
-        } catch (DateTimeParseException ignore) {
-            // 继续尝试
-        }
-        try {
-            return LocalDate.parse(s).atStartOfDay();
-        } catch (DateTimeParseException e) {
-            return fallback;
-        }
+    /**
+     * 空串归一为 null。
+     *
+     * <p>为什么需要：SQL 里不少列是 {@code CONCAT}/{@code LEFT} 拼出来的，空值会拼成
+     * 空串而不是 null；直接透传会让页面出现"标题存在但内容空白"的行。
+     */
+    private static String str(String v) {
+        return v == null || v.isEmpty() ? null : v;
     }
 
     private static String fmt(LocalDateTime t) {
         return t == null ? null : t.format(DateFormats.DATETIME);
     }
 
-    private static List<String> splitIds(Object v) {
+    private static List<String> splitIds(String v) {
         List<String> out = new ArrayList<>();
         if (v == null) {
             return out;
         }
-        for (String s : String.valueOf(v).split(",")) {
+        for (String s : v.split(",")) {
             String t = s.trim();
             if (!t.isEmpty()) {
                 out.add(t);
@@ -177,8 +104,8 @@ public class CdrServiceImpl implements CdrService {
     /**
      * 解析裸 SQL 行里的 pid 字符串。
      *
-     * <p><b>只用于内部行数据</b>（{@code Map} 里 CAST AS CHAR 的列），不是 HTTP 入参 ——
-     * HTTP 入参一律走 DTO 的 Long 字段，让 Jackson 在绑定层就报 400。
+     * <p><b>只用于内部行数据</b>（{@code CdrArchiveIdentityRowVO#pid}，SQL 里 CAST AS CHAR 的列），
+     * 不是 HTTP 入参 —— HTTP 入参一律走 DTO 的 Long 字段，让 Jackson 在绑定层就报 400。
      */
     private static Long parseRowId(String v) {
         if (!StringUtils.hasText(v)) {
@@ -205,26 +132,24 @@ public class CdrServiceImpl implements CdrService {
         // ① EMPI 归并：合并过的档案，历史数据必须一起出现
         List<Long> ids = resolveIds(pid);
 
-        List<Map<String, Object>> eventRows = cdrMapper.selectTimelineEvents(ids);
-        List<Map<String, Object>> admRows = cdrMapper.selectAdmissions(ids);
-        List<Map<String, Object>> visitRows = cdrMapper.selectVisits(ids);
-        List<Map<String, Object>> registRows = cdrMapper.selectRegistrations(ids);
-        List<Map<String, Object>> emergencyRows = cdrMapper.selectEmergencies(ids);
-        List<Map<String, Object>> archiveRows = cdrMapper.selectArchiveIdentities(ids);
-        List<Map<String, Object>> profileRows = cdrMapper.selectHealthProfile(ids);
+        List<CdrEventRowVO> eventRows = cdrMapper.selectTimelineEvents(ids);
+        List<CdrAdmissionRowVO> admRows = cdrMapper.selectAdmissions(ids);
+        List<CdrVisitRowVO> visitRows = cdrMapper.selectVisits(ids);
+        List<CdrRegistrationRowVO> registRows = cdrMapper.selectRegistrations(ids);
+        List<CdrEmergencyRowVO> emergencyRows = cdrMapper.selectEmergencies(ids);
+        List<CdrArchiveIdentityRowVO> archiveRows = cdrMapper.selectArchiveIdentities(ids);
+        List<CdrProfileRowVO> profileRows = cdrMapper.selectHealthProfile(ids);
 
         // 档案号映射（用于把"这条数据其实挂在影子档案下"说清楚）
         Map<String, String> archiveNo = new HashMap<>();
-        Map<String, String> archiveMergeTime = new HashMap<>();
-        for (Map<String, Object> r : archiveRows) {
-            archiveNo.put(str(r.get("pid")), str(r.get("patient_no")));
-            archiveMergeTime.put(str(r.get("pid")), fmt(ldt(r.get("merge_time"))));
+        for (CdrArchiveIdentityRowVO r : archiveRows) {
+            archiveNo.put(str(r.getPid()), str(r.getPatientNo()));
         }
 
         // 挂号ID → 节点键
-        Map<String, Map<String, Object>> regMap = new LinkedHashMap<>();
-        for (Map<String, Object> r : registRows) {
-            regMap.put(str(r.get("regist_id")), r);
+        Map<String, CdrRegistrationRowVO> regMap = new LinkedHashMap<>();
+        for (CdrRegistrationRowVO r : registRows) {
+            regMap.put(str(r.getRegistId()), r);
         }
 
         Map<String, CdrVisitNodeVO> nodes = new LinkedHashMap<>();
@@ -234,20 +159,20 @@ public class CdrServiceImpl implements CdrService {
         Map<String, String> emgNode = new HashMap<>();
 
         // 门诊就诊次（就诊次收录的挂号）
-        for (Map<String, Object> v : visitRows) {
-            String vid = str(v.get("visit_id"));
+        for (CdrVisitRowVO v : visitRows) {
+            String vid = str(v.getVisitId());
             String key = "V:" + vid;
             CdrVisitNodeVO node = newNode(key, CdrNodeTypeEnum.OUTPATIENT);
             node.setAnchorId(vid);
-            node.setAnchorNo(str(v.get("visit_no")));
-            node.setStartTime(fmt(ldt(v.get("start_time"))));
-            node.setEndTime(fmt(ldt(v.get("end_time"))));
-            node.setStatusText(VisitStatusEnum.getText(intVal(v.get("visit_status"))));
-            node.setTotalAmount(dec(v.get("total_amount")));
+            node.setAnchorNo(str(v.getVisitNo()));
+            node.setStartTime(fmt(v.getStartTime()));
+            node.setEndTime(fmt(v.getEndTime()));
+            node.setStatusText(VisitStatusEnum.getText(v.getVisitStatus()));
+            node.setTotalAmount(v.getTotalAmount());
             node.setTitle(node.getNodeTypeText());
 
             // 本次就诊次包含的挂号：同时建立"挂号 → 就诊次"的映射
-            List<String> rids = splitIds(v.get("regist_ids"));
+            List<String> rids = splitIds(v.getRegistIds());
             node.setSubtitle(rids.size() > 1 ? "含 " + rids.size() + " 张挂号单" : null);
             for (String rid : rids) {
                 registNode.put(rid, key);
@@ -255,20 +180,20 @@ public class CdrServiceImpl implements CdrService {
             // 科室/医生取本次就诊次里最早的那张挂号
             String dept = null;
             String doctor = null;
-            String owner = str(v.get("owner_pid"));
+            String owner = str(v.getOwnerPid());
             for (String rid : rids) {
-                Map<String, Object> rr = regMap.get(rid);
+                CdrRegistrationRowVO rr = regMap.get(rid);
                 if (rr == null) {
                     continue;
                 }
                 if (dept == null) {
-                    dept = str(rr.get("dept_name"));
+                    dept = str(rr.getDeptName());
                 }
                 if (doctor == null) {
-                    doctor = str(rr.get("doctor_name"));
+                    doctor = str(rr.getDoctorName());
                 }
                 if (owner == null) {
-                    owner = str(rr.get("owner_pid"));
+                    owner = str(rr.getOwnerPid());
                 }
             }
             node.setDeptName(dept);
@@ -276,12 +201,12 @@ public class CdrServiceImpl implements CdrService {
             node.setTitle(composeTitle(node.getNodeTypeText(), dept, doctor));
             nodes.put(key, node);
             nodeEvents.put(key, new ArrayList<>());
-            node.setFromShadow(isShadow(v.get("owner_pid"), pid));
+            node.setFromShadow(isShadow(v.getOwnerPid(), pid));
         }
 
         // 没有被任何就诊次收录的挂号：自己成一个节点（不丢）
-        for (Map<String, Object> r : registRows) {
-            String rid = str(r.get("regist_id"));
+        for (CdrRegistrationRowVO r : registRows) {
+            String rid = str(r.getRegistId());
             if (registNode.containsKey(rid)) {
                 continue;
             }
@@ -289,68 +214,71 @@ public class CdrServiceImpl implements CdrService {
             registNode.put(rid, key);
             CdrVisitNodeVO node = newNode(key, CdrNodeTypeEnum.OUTPATIENT);
             node.setAnchorId(rid);
-            node.setAnchorNo(str(r.get("regist_no")));
-            node.setStartTime(fmt(ldt(r.get("regist_time"), ldt(r.get("visit_date")))));
-            node.setDeptName(str(r.get("dept_name")));
-            node.setOperatorName(str(r.get("doctor_name")));
-            node.setStatusText(dictCacheService.getDicDataLabel("biz_medicaltech_cdrRegistStatusEnum", intVal(r.get("regist_status"))));
+            node.setAnchorNo(str(r.getRegistNo()));
+            // 挂号时间缺失时用就诊日期兜底：宁可给个粗粒度时间，也不要让节点没有起始时间
+            LocalDateTime start = r.getRegistTime() != null ? r.getRegistTime()
+                    : (r.getVisitDate() == null ? null : r.getVisitDate().atStartOfDay());
+            node.setStartTime(fmt(start));
+            node.setDeptName(str(r.getDeptName()));
+            node.setOperatorName(str(r.getDoctorName()));
+            node.setStatusText(dictCacheService.getDicDataLabel("biz_medicaltech_cdrRegistStatusEnum", r.getRegistStatus()));
             node.setTitle(composeTitle(node.getNodeTypeText(), node.getDeptName(), node.getOperatorName()));
             node.setSubtitle("该挂号未被就诊次收录");
-            node.setFromShadow(isShadow(r.get("owner_pid"), pid));
+            node.setFromShadow(isShadow(r.getOwnerPid(), pid));
             nodes.put(key, node);
             nodeEvents.put(key, new ArrayList<>());
         }
 
         // 住院
-        for (Map<String, Object> a : admRows) {
-            String aid = str(a.get("admission_id"));
+        for (CdrAdmissionRowVO a : admRows) {
+            String aid = str(a.getAdmissionId());
             String key = "A:" + aid;
             admNode.put(aid, key);
             CdrVisitNodeVO node = newNode(key, CdrNodeTypeEnum.INPATIENT);
             node.setAnchorId(aid);
-            node.setAnchorNo(str(a.get("admission_no")));
-            LocalDateTime admit = ldt(a.get("admit_time"));
-            LocalDateTime dis = ldt(a.get("discharge_time"));
+            node.setAnchorNo(str(a.getAdmissionNo()));
+            LocalDateTime admit = a.getAdmitTime();
+            LocalDateTime dis = a.getDischargeTime();
             node.setStartTime(fmt(admit));
             node.setEndTime(fmt(dis));
-            node.setDeptName(str(a.get("dept_name")));
-            node.setStatusText(AdmitStatusEnum.getText(intVal(a.get("admit_status"))));
-            String ward = str(a.get("ward_name"));
-            String bed = str(a.get("bed_no"));
+            node.setDeptName(str(a.getDeptName()));
+            node.setStatusText(AdmitStatusEnum.getText(a.getAdmitStatus()));
+            String ward = str(a.getWardName());
+            String bed = str(a.getBedNo());
             node.setSubtitle(StringUtils.hasText(ward) || StringUtils.hasText(bed)
                     ? ((ward == null ? "" : ward) + " " + (bed == null ? "" : bed)).trim() : null);
-            String diag = str(a.get("summary_diag"));
-            node.setOutcome(StringUtils.hasText(diag) ? diag : str(a.get("diagnosis")));
+            String diag = str(a.getSummaryDiag());
+            node.setOutcome(StringUtils.hasText(diag) ? diag : str(a.getDiagnosis()));
             if (admit != null) {
                 LocalDateTime end = dis != null ? dis : LocalDateTime.now();
                 node.setDurationDays((int) Math.max(1, ChronoUnit.DAYS.between(admit.toLocalDate(), end.toLocalDate())));
             }
             node.setTitle(composeTitle(node.getNodeTypeText(), node.getDeptName(), null));
-            node.setFromShadow(isShadow(a.get("owner_pid"), pid));
+            node.setFromShadow(isShadow(a.getOwnerPid(), pid));
             nodes.put(key, node);
             nodeEvents.put(key, new ArrayList<>());
         }
 
         // 急诊
-        for (Map<String, Object> e : emergencyRows) {
-            String eid = str(e.get("emergency_id"));
+        for (CdrEmergencyRowVO e : emergencyRows) {
+            String eid = str(e.getEmergencyId());
             String key = "E:" + eid;
             emgNode.put(eid, key);
             CdrVisitNodeVO node = newNode(key, CdrNodeTypeEnum.EMERGENCY);
             node.setAnchorId(eid);
-            node.setAnchorNo(str(e.get("emergency_no")));
-            node.setStartTime(fmt(ldt(e.get("admission_time"))));
-            node.setEndTime(fmt(ldt(e.get("finish_time"))));
-            node.setDeptName(str(e.get("dept_name")));
-            node.setOperatorName(str(e.get("doctor_name")));
-            node.setStatusText(dictCacheService.getDicDataLabel("biz_medicaltech_cdrEmergencyStatusEnum", intVal(e.get("emergency_status"))));
-            String triage = dictCacheService.getDicDataLabel("biz_medicaltech_cdrEmergencyTriageEnum", intVal(e.get("triage_level")));
-            String zone = str(e.get("zone"));
+            node.setAnchorNo(str(e.getEmergencyNo()));
+            node.setStartTime(fmt(e.getAdmissionTime()));
+            node.setEndTime(fmt(e.getFinishTime()));
+            node.setDeptName(str(e.getDeptName()));
+            node.setOperatorName(str(e.getDoctorName()));
+            node.setStatusText(dictCacheService.getDicDataLabel("biz_medicaltech_cdrEmergencyStatusEnum", e.getEmergencyStatus()));
+            String triage = dictCacheService.getDicDataLabel("biz_medicaltech_cdrEmergencyTriageEnum", e.getTriageLevel());
+            String zone = str(e.getZone());
             node.setSubtitle(StringUtils.hasText(triage) || StringUtils.hasText(zone)
                     ? ((triage == null ? "" : triage) + " " + (zone == null ? "" : zone)).trim() : null);
-            node.setOutcome(str(e.get("diagnosis")));
+            node.setOutcome(str(e.getDiagnosis()));
             node.setTitle(composeTitle(node.getNodeTypeText(), node.getDeptName(), node.getOperatorName()));
-            node.setFromShadow(isShadow(e.get("owner_pid"), pid));
+            node.setFromShadow(isShadow(e.getOwnerPid(), pid));
             nodes.put(key, node);
             nodeEvents.put(key, new ArrayList<>());
         }
@@ -358,7 +286,7 @@ public class CdrServiceImpl implements CdrService {
         // 事件归位
         List<CdrEventVO> unresolved = new ArrayList<>();
         Set<String> unknownTypes = new LinkedHashSet<>();
-        for (Map<String, Object> r : eventRows) {
+        for (CdrEventRowVO r : eventRows) {
             CdrEventVO ev = toEvent(r, pid, archiveNo);
             if (ev.getEventTypeText().startsWith("未知事件")) {
                 unknownTypes.add(ev.getEventType());
@@ -523,25 +451,25 @@ public class CdrServiceImpl implements CdrService {
         return list;
     }
 
-    private CdrEventVO toEvent(Map<String, Object> r, Long mainPid, Map<String, String> archiveNo) {
-        String etype = str(r.get("etype"));
+    private CdrEventVO toEvent(CdrEventRowVO r, Long mainPid, Map<String, String> archiveNo) {
+        String etype = str(r.getEtype());
         CdrEventTypeEnum type = CdrEventTypeEnum.parse(etype);
         CdrEventVO ev = new CdrEventVO();
         ev.setEventType(etype);
         ev.setEventTypeText(type == null ? "未知事件(" + etype + ")" : type.getText());
-        ev.setSourceTable(str(r.get("src_table")));
-        ev.setSourceId(str(r.get("src_id")));
-        ev.setEventTime(fmt(ldt(r.get("etime"))));
-        ev.setTitle(str(r.get("title")));
-        ev.setSummary(str(r.get("summary")));
-        ev.setDeptName(str(r.get("dept_name")));
-        ev.setOperatorName(str(r.get("operator_name")));
-        ev.setAnchorType(str(r.get("anchor_type")));
-        ev.setAnchorId(str(r.get("anchor_id")));
-        ev.setAmount(dec(r.get("amount")));
+        ev.setSourceTable(str(r.getSrcTable()));
+        ev.setSourceId(str(r.getSrcId()));
+        ev.setEventTime(fmt(r.getEtime()));
+        ev.setTitle(str(r.getTitle()));
+        ev.setSummary(str(r.getSummary()));
+        ev.setDeptName(str(r.getDeptName()));
+        ev.setOperatorName(str(r.getOperatorName()));
+        ev.setAnchorType(str(r.getAnchorType()));
+        ev.setAnchorId(str(r.getAnchorId()));
+        ev.setAmount(r.getAmount());
         ev.setAmountLabel(amountLabel(etype));
-        Integer status = intVal(r.get("status_code"));
-        Integer second = intVal(r.get("secondary_code"));
+        Integer status = r.getStatusCode();
+        Integer second = r.getSecondaryCode();
         ev.setStatusCode(status);
         ev.setSecondaryCode(second);
         if (type != null) {
@@ -550,7 +478,7 @@ public class CdrServiceImpl implements CdrService {
             ev.setSecondaryText(type.secondaryText(second));
             ev.setSecondaryLabel(type.getSecondaryLabel());
         }
-        String owner = str(r.get("owner_pid"));
+        String owner = str(r.getOwnerPid());
         ev.setOwnerPatientId(owner);
         if (owner != null && !owner.equals(String.valueOf(mainPid))) {
             ev.setOwnerArchiveNo(archiveNo.get(owner));
@@ -558,8 +486,8 @@ public class CdrServiceImpl implements CdrService {
         return ev;
     }
 
-    private CdrPatientVO toPatient(BizPatient p, List<Long> ids, List<Map<String, Object>> archiveRows, Long mainPid,
-                                   List<Map<String, Object>> profileRows) {
+    private CdrPatientVO toPatient(BizPatient p, List<Long> ids, List<CdrArchiveIdentityRowVO> archiveRows, Long mainPid,
+                                   List<CdrProfileRowVO> profileRows) {
         CdrPatientVO vo = new CdrPatientVO();
         vo.setPatientId(p.getId());
         vo.setPatientNo(p.getPatientNo());
@@ -578,24 +506,24 @@ public class CdrServiceImpl implements CdrService {
                 : (p.getMergeStatus() == 1 ? "已并入主档" : "正常（主档）"));
         vo.setResolvedArchiveCount(ids.size());
         List<CdrArchiveVO> shadows = new ArrayList<>();
-        for (Map<String, Object> r : archiveRows) {
-            String rid = str(r.get("pid"));
+        for (CdrArchiveIdentityRowVO r : archiveRows) {
+            String rid = str(r.getPid());
             if (rid == null || rid.equals(String.valueOf(mainPid))) {
                 continue;
             }
             CdrArchiveVO a = new CdrArchiveVO();
             a.setPatientId(parseRowId(rid));
-            a.setPatientNo(str(r.get("patient_no")));
-            a.setPatientName(str(r.get("patient_name")));
-            a.setMergeTime(fmt(ldt(r.get("merge_time"))));
+            a.setPatientNo(str(r.getPatientNo()));
+            a.setPatientName(str(r.getPatientName()));
+            a.setMergeTime(fmt(r.getMergeTime()));
             shadows.add(a);
         }
         vo.setShadowArchives(shadows);
         // 结构化档案表里已有数据的分组，用来修正"文本字段为空"造成的假缺失
         // （详见 PatientProfileFields.applyProfileCoverage 的注释）
         Set<String> covered = new HashSet<>();
-        for (Map<String, Object> r : profileRows) {
-            String k = str(r.get("pkey"));
+        for (CdrProfileRowVO r : profileRows) {
+            String k = str(r.getPkey());
             if (k != null) {
                 covered.add(k);
             }
@@ -607,7 +535,7 @@ public class CdrServiceImpl implements CdrService {
         return vo;
     }
 
-    private List<CdrProfileGroupVO> toProfile(List<Map<String, Object>> rows) {
+    private List<CdrProfileGroupVO> toProfile(List<CdrProfileRowVO> rows) {
         Map<String, String> labels = new LinkedHashMap<>();
         labels.put("allergy", "过敏史");
         labels.put("pastDisease", "既往史");
@@ -617,17 +545,18 @@ public class CdrServiceImpl implements CdrService {
         labels.put("contact", "联系人");
         Map<String, List<CdrProfileGroupVO.CdrProfileItemVO>> grouped = new LinkedHashMap<>();
         labels.keySet().forEach(k -> grouped.put(k, new ArrayList<>()));
-        for (Map<String, Object> r : rows) {
-            String key = str(r.get("pkey"));
+        for (CdrProfileRowVO r : rows) {
+            String key = str(r.getPkey());
             if (!grouped.containsKey(key)) {
                 continue;
             }
             CdrProfileGroupVO.CdrProfileItemVO item = new CdrProfileGroupVO.CdrProfileItemVO();
-            item.setId(str(r.get("sid")));
-            item.setTitle(str(r.get("title")));
-            item.setSummary(str(r.get("summary")));
-            item.setTime(fmt(ldt(r.get("tm"))));
-            item.setOwnerPatientId(str(r.get("owner_pid")));
+            item.setId(str(r.getSid()));
+            item.setTitle(str(r.getTitle()));
+            item.setSummary(str(r.getSummary()));
+            // 档案日期是 date 列（家族史与联系人天然为 null），补成零点让前端时间轴按同一格式渲染
+            item.setTime(fmt(r.getTm() == null ? null : r.getTm().atStartOfDay()));
+            item.setOwnerPatientId(str(r.getOwnerPid()));
             grouped.get(key).add(item);
         }
         List<CdrProfileGroupVO> out = new ArrayList<>();

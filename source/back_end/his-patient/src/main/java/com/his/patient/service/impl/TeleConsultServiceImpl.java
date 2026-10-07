@@ -16,8 +16,10 @@ import com.his.patient.mapper.BizOnlineConsultMapper;
 import com.his.patient.mapper.BizPatientMapper;
 import com.his.patient.mapper.BizTeleConsultMapper;
 import com.his.patient.service.TeleConsultService;
+import com.his.patient.vo.OnlineConsultStatusCountVO;
 import com.his.patient.vo.OnlineConsultVO;
 import com.his.patient.vo.TeleConsultStatVO;
+import com.his.patient.vo.TeleConsultStatusCountVO;
 import com.his.patient.vo.TeleConsultVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
@@ -27,12 +29,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -63,13 +63,6 @@ public class TeleConsultServiceImpl implements TeleConsultService {
 
     private static LocalDateTime now() {
         return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
-    }
-
-    private static long toLong(Object v) {
-        if (v == null) {
-            return 0L;
-        }
-        return new BigDecimal(String.valueOf(v)).longValue();
     }
 
     private static LocalDateTime parseDateTime(String v) {
@@ -354,9 +347,12 @@ public class TeleConsultServiceImpl implements TeleConsultService {
     public TeleConsultStatVO stat() {
         TeleConsultStatVO vo = new TeleConsultStatVO();
         long tp = 0, ta = 0, td = 0, tc = 0;
-        for (Map<String, Object> row : teleMapper.countByStatus()) {
-            long c = toLong(row.get("c"));
-            switch ((int) toLong(row.get("k"))) {
+        for (TeleConsultStatusCountVO row : teleMapper.countByStatus()) {
+            long c = row.getCnt() == null ? 0L : row.getCnt();
+            if (row.getStatus() == null) {
+                continue;
+            }
+            switch (row.getStatus()) {
                 case 1 -> tp = c;
                 case 2 -> ta = c;
                 case 3 -> td = c;
@@ -372,9 +368,12 @@ public class TeleConsultServiceImpl implements TeleConsultService {
         vo.setTeleTotal(tp + ta + td + tc);
 
         long ow = 0, oa = 0, od = 0, orj = 0;
-        for (Map<String, Object> row : onlineMapper.countByStatus()) {
-            long c = toLong(row.get("c"));
-            switch ((int) toLong(row.get("k"))) {
+        for (OnlineConsultStatusCountVO row : onlineMapper.countByStatus()) {
+            long c = row.getCnt() == null ? 0L : row.getCnt();
+            if (row.getStatus() == null) {
+                continue;
+            }
+            switch (row.getStatus()) {
                 case 1 -> ow = c;
                 case 2 -> oa = c;
                 case 3 -> od = c;

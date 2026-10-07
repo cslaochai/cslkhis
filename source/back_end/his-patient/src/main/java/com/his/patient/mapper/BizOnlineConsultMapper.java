@@ -3,13 +3,13 @@ package com.his.patient.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.patient.entity.BizOnlineConsult;
+import com.his.patient.vo.OnlineConsultStatusCountVO;
 import com.his.patient.vo.OnlineConsultVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 互联网线上问诊 Mapper。
@@ -47,6 +47,7 @@ public interface BizOnlineConsultMapper extends BaseMapper<BizOnlineConsult> {
     @Select("SELECT d.dept_name FROM sys_department d WHERE d.id = #{deptId} AND d.del_flag = 0")
     String selectDeptName(@Param("deptId") Long deptId);
 
-    @Select("SELECT o.status AS k, COUNT(*) AS c FROM biz_online_consult o WHERE o.del_flag = 0 GROUP BY o.status")
-    List<Map<String, Object>> countByStatus();
+    @Select("SELECT o.status AS status, COUNT(*) AS cnt FROM biz_online_consult o "
+            + "WHERE o.del_flag = 0 GROUP BY o.status")
+    List<OnlineConsultStatusCountVO> countByStatus();
 }

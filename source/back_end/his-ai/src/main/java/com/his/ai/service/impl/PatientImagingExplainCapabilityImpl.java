@@ -10,6 +10,7 @@ import com.his.ai.mapper.SysImagingPlainItemMapper;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.PatientImagingExplainCapability;
 import com.his.ai.support.PatientTextGuard;
+import com.his.ai.vo.PatientImagingExplainPromptVariablesVO;
 import com.his.ai.vo.PatientImagingExplainVO;
 import com.his.common.exception.BusinessException;
 import com.his.medicaltech.entity.BizReport;
@@ -25,9 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -203,14 +202,14 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
     }
 
     private Optional<PatientImagingLlmOutputDTO> callModel(BizReport report, SysImagingPlainItem plain) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("itemName", nullToDash(report.getItemName()));
-        variables.put("examMethod", nullToDash(report.getExamMethod()));
-        variables.put("positiveText", nullToDash(dictCacheService.getDicDataLabel("biz_common_positiveFlagEnum", report.getPositiveFlag())));
-        variables.put("hasDictIntro", plain != null);
-        variables.put("findings", nullToDash(report.getReportContent()));
-        variables.put("conclusions", nullToDash(report.getConclusion()));
-        variables.put("suggestions", nullToDash(report.getSuggestions()));
+        PatientImagingExplainPromptVariablesVO variables = new PatientImagingExplainPromptVariablesVO();
+        variables.setItemName(nullToDash(report.getItemName()));
+        variables.setExamMethod(nullToDash(report.getExamMethod()));
+        variables.setPositiveText(nullToDash(dictCacheService.getDicDataLabel("biz_common_positiveFlagEnum", report.getPositiveFlag())));
+        variables.setHasDictIntro(String.valueOf(plain != null));
+        variables.setFindings(nullToDash(report.getReportContent()));
+        variables.setConclusions(nullToDash(report.getConclusion()));
+        variables.setSuggestions(nullToDash(report.getSuggestions()));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.PATIENT_IMAGING_EXPLAIN)

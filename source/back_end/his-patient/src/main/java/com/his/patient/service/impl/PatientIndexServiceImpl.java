@@ -62,34 +62,6 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         return Math.round(hit * 1000D / total) / 10D;
     }
 
-    private static long toLong(Object o) {
-        if (o == null) {
-            return 0L;
-        }
-        if (o instanceof Number n) {
-            return n.longValue();
-        }
-        try {
-            return Long.parseLong(o.toString());
-        } catch (NumberFormatException e) {
-            return 0L;
-        }
-    }
-
-    private static Long toNullableLong(Object o) {
-        if (o == null) {
-            return null;
-        }
-        if (o instanceof Number n) {
-            return n.longValue();
-        }
-        try {
-            return Long.parseLong(o.toString());
-        } catch (NumberFormatException e) {
-            return null;
-        }
-    }
-
     // 重复检测
 
     @Override
@@ -134,17 +106,17 @@ public class PatientIndexServiceImpl implements PatientIndexService {
     /**
      * 详情页用的轻量条目（只要认得出是哪份档案）
      */
-    private Map<String, Object> briefOf(BizPatient p) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", String.valueOf(p.getId()));
-        m.put("patientNo", p.getPatientNo());
-        m.put("patientName", p.getPatientName());
-        m.put("genderText", SysGenderEnum.getText(p.getGender()));
-        m.put("idCard", p.getIdCard());
-        m.put("phone", p.getPhone());
-        m.put("mergeStatus", p.getMergeStatus());
-        m.put("mergeTime", p.getMergeTime() == null ? null : p.getMergeTime().toString());
-        return m;
+    private PatientSiblingVO briefOf(BizPatient p) {
+        PatientSiblingVO vo = new PatientSiblingVO();
+        vo.setId(p.getId());
+        vo.setPatientNo(p.getPatientNo());
+        vo.setPatientName(p.getPatientName());
+        vo.setGenderText(SysGenderEnum.getText(p.getGender()));
+        vo.setIdCard(p.getIdCard());
+        vo.setPhone(p.getPhone());
+        vo.setMergeStatus(p.getMergeStatus());
+        vo.setMergeTime(p.getMergeTime() == null ? null : p.getMergeTime().toString());
+        return vo;
     }
 
     @Override
@@ -413,13 +385,14 @@ public class PatientIndexServiceImpl implements PatientIndexService {
 
     @Override
     public PatientIndexStatVO stats() {
-        Map<String, Object> raw = indexMapper.selectIndexStats();
-        long total = toLong(raw.get("patientTotal"));
-        long strongDup = toLong(raw.get("strongDupGroups"));
-        long merged = toLong(raw.get("mergedCount"));
-        long idCardMissing = toLong(raw.get("idCardMissing"));
-        long phoneMissing = toLong(raw.get("phoneMissing"));
-        long allergyMissing = toLong(raw.get("allergyMissing"));
+        // 6 个标量子查询恒返回一行且 COUNT(*) 不会为 null，直接取值
+        PatientIndexCountVO raw = indexMapper.selectIndexStats();
+        long total = raw.getPatientTotal();
+        long strongDup = raw.getStrongDupGroups();
+        long merged = raw.getMergedCount();
+        long idCardMissing = raw.getIdCardMissing();
+        long phoneMissing = raw.getPhoneMissing();
+        long allergyMissing = raw.getAllergyMissing();
 
         PatientIndexStatVO vo = new PatientIndexStatVO();
         vo.setPatientTotal(total);
@@ -434,7 +407,7 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         vo.setPhoneCompleteRate(rate(total - phoneMissing, total));
         vo.setAllergyCompleteRate(rate(total - allergyMissing, total));
         // 合并动作本身也是"唯一性治理"的进展指标
-        vo.setMergeActions(toLong(mergeLogMapper.selectCount(null)));
+        vo.setMergeActions(mergeLogMapper.selectCount(null));
         return vo;
     }
 
@@ -498,13 +471,13 @@ public class PatientIndexServiceImpl implements PatientIndexService {
         if (ids == null || ids.isEmpty()) {
             return m;
         }
-        for (Map<String, Object> row : indexMapper.countDataByPatientIds(ids)) {
-            Long pid = toNullableLong(row.get("pid"));
-            Object k = row.get("k");
-            if (pid == null || k == null) {
+        for (PatientDataCountVO row : indexMapper.countDataByPatientIds(ids)) {
+            if (row.getPatientId() == null || row.getDataTable() == null) {
                 continue;
             }
-            m.computeIfAbsent(pid, x -> new LinkedHashMap<>()).put(String.valueOf(k), (int) toLong(row.get("n")));
+            long cnt = row.getCnt() == null ? 0L : row.getCnt();
+            m.computeIfAbsent(row.getPatientId(), x -> new LinkedHashMap<>())
+                    .put(row.getDataTable(), (int) cnt);
         }
         return m;
     }
@@ -585,18 +558,18 @@ public class PatientIndexServiceImpl implements PatientIndexService {
     /**
      * 档案关键字段快照（撤销时靠它还原，不靠猜）
      */
-    private Map<String, Object> snapshot(BizPatient p) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", String.valueOf(p.getId()));
-        m.put("patientNo", p.getPatientNo());
-        m.put("patientName", p.getPatientName());
-        m.put("gender", p.getGender());
-        m.put("birthDate", p.getBirthDate() == null ? null : p.getBirthDate().toString());
-        m.put("idCard", p.getIdCard());
-        m.put("phone", p.getPhone());
-        m.put("status", p.getStatus());
-        m.put("mergeStatus", p.getMergeStatus());
-        return m;
+    private PatientMergeSnapshotVO snapshot(BizPatient p) {
+        PatientMergeSnapshotVO vo = new PatientMergeSnapshotVO();
+        vo.setId(p.getId());
+        vo.setPatientNo(p.getPatientNo());
+        vo.setPatientName(p.getPatientName());
+        vo.setGender(p.getGender());
+        vo.setBirthDate(p.getBirthDate());
+        vo.setIdCard(p.getIdCard());
+        vo.setPhone(p.getPhone());
+        vo.setStatus(p.getStatus());
+        vo.setMergeStatus(p.getMergeStatus());
+        return vo;
     }
 
     private String nextMergeNo() {

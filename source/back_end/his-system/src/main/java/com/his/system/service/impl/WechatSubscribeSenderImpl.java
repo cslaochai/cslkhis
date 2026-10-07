@@ -5,12 +5,13 @@ import cn.hutool.http.HttpUtil;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.system.config.WechatProperties;
+import com.his.system.vo.WechatSubscribeSendPayloadVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -46,7 +47,10 @@ public class WechatSubscribeSenderImpl implements WechatSubscribeSender {
      * @param openid   收件人 openid
      * @param scene    业务场景码（映射到 yml 模板ID）
      * @param page     点击跳转的小程序页面路径，可空
-     * @param data     模板字段（key 为微信模板里的 thing/character_string 等字段名，value 为纯文本）
+     * @param data     模板字段（key 为微信模板里的 thing/character_string 等字段名，value 为纯文本）。
+     *                 <b>刻意保留 {@code Map<String, String>} 而不建 VO</b>：键由各场景在 yml 里
+     *                 配的模板决定（{@code thing1} / {@code date2} …），编译期无从得知，
+     *                 属于外部契约的动态字典，不是可枚举的数据契约。
      * @return null=发送成功；非 null=失败原因（已截断）
      */
     public String send(String openid, String scene, String page, Map<String, String> data) {
@@ -65,17 +69,22 @@ public class WechatSubscribeSenderImpl implements WechatSubscribeSender {
             if (token == null) {
                 return "获取access_token失败";
             }
-            Map<String, Object> body = new HashMap<>();
-            body.put("touser", openid);
-            body.put("template_id", templateId);
+            WechatSubscribeSendPayloadVO body = new WechatSubscribeSendPayloadVO();
+            body.setTouser(openid);
+            body.setTemplateId(templateId);
             if (page != null && !page.isBlank()) {
-                body.put("page", page);
+                body.setPage(page);
             }
-            Map<String, Object> valueWrapper = new HashMap<>();
+            Map<String, WechatSubscribeSendPayloadVO.WechatSubscribeFieldVO> fields = new LinkedHashMap<>();
             if (data != null) {
-                data.forEach((k, v) -> valueWrapper.put(k, Map.of("value", v == null ? "" : v)));
+                data.forEach((k, v) -> {
+                    WechatSubscribeSendPayloadVO.WechatSubscribeFieldVO field =
+                            new WechatSubscribeSendPayloadVO.WechatSubscribeFieldVO();
+                    field.setValue(v == null ? "" : v);
+                    fields.put(k, field);
+                });
             }
-            body.put("data", valueWrapper);
+            body.setData(fields);
 
             String resp = HttpUtil.createPost(SEND_URL + "?access_token=" + token)
                     .body(objectMapper.writeValueAsString(body))

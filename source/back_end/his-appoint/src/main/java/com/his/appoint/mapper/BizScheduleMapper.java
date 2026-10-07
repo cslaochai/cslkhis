@@ -2,11 +2,11 @@ package com.his.appoint.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.appoint.entity.BizSchedule;
+import com.his.appoint.vo.ScheduleDaySummaryRowVO;
 import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 排班信息Mapper
@@ -64,11 +64,11 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
     /**
      * 门诊号源按日汇总（总览驾驶舱）：班次数 / 总号源 / 已挂 / 停诊班次数。
      */
-    @Select("SELECT DATE_FORMAT(schedule_date, '%Y-%m-%d') AS scheduleDate, COUNT(*) AS shiftCount, "
+    @Select("SELECT schedule_date AS scheduleDate, COUNT(*) AS shiftCount, "
             + "IFNULL(SUM(total_source), 0) AS totalSource, IFNULL(SUM(used_source), 0) AS usedSource, "
             + "SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) AS stoppedCount "
             + "FROM biz_schedule "
             + "WHERE del_flag = 0 AND schedule_date BETWEEN #{begin} AND #{end} "
             + "GROUP BY schedule_date")
-    List<Map<String, Object>> summaryByDay(@Param("begin") LocalDate begin, @Param("end") LocalDate end);
+    List<ScheduleDaySummaryRowVO> summaryByDay(@Param("begin") LocalDate begin, @Param("end") LocalDate end);
 }

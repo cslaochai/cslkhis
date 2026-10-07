@@ -20,9 +20,11 @@ import com.his.patient.mapper.BizPatientTagRelationMapper;
 import com.his.patient.service.*;
 import com.his.patient.support.PatientProfileValidator;
 import com.his.patient.support.PatientSearchScopeMode;
+import com.his.system.service.DictCacheService;
 import com.his.patient.support.PatientSearchScopeResolver;
 import com.his.patient.vo.PatientDetailVO;
 import com.his.patient.vo.PatientHealthProfileVO;
+import com.his.patient.vo.PatientRegistCountVO;
 import com.his.patient.vo.PatientRegisterVO;
 import com.his.patient.vo.PatientVO;
 import com.his.system.entity.CurrentUser;
@@ -84,15 +86,15 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
             FieldSpec.masked("address", "家庭住址", MaskEnum.ADDRESS),
             FieldSpec.of("nation", "民族"),
             FieldSpec.of("occupation", "职业"),
-            FieldSpec.render("maritalStatus", "婚姻状况", v -> dictCacheService.getDicDataLabel("biz_patient_maritalStatusEnum", (Integer) v)),
+            FieldSpec.render("maritalStatus", "婚姻状况", v -> dictText("biz_patient_maritalStatusEnum", v)),
             FieldSpec.of("bloodType", "血型"),
             FieldSpec.of("allergyHistory", "过敏史"),
             FieldSpec.of("medicalHistory", "既往病史"),
             FieldSpec.render("patientType", "患者类型",
-                    v -> dictCacheService.getDicDataLabel("biz_patient_patientTypeEnum", (Integer) v)),
+                    v -> dictText("biz_patient_patientTypeEnum", v)),
             FieldSpec.masked("medicalInsuranceNo", "医保卡号", MaskEnum.BANK_NO),
             FieldSpec.of("medicalInsuranceType", "医保类型"),
-            FieldSpec.render("cardType", "证件类型", v -> dictCacheService.getDicDataLabel("biz_patient_cardTypeEnum", (Integer) v)),
+            FieldSpec.render("cardType", "证件类型", v -> dictText("biz_patient_cardTypeEnum", v)),
             FieldSpec.masked("cardNo", "证件号码", MaskEnum.BANK_NO),
             FieldSpec.render("status", "状态", v -> EnableStatusEnum.getText((Integer) v))
     );
@@ -143,6 +145,19 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
      * 改过敏史都会直接影响后续诊疗。这里把「改之前是啥、改之后是啥」钉进表里。
      */
     private final FieldChangeRecorder fieldChangeRecorder;
+
+    /**
+     * 字典码值取文案，供 {@link #PATIENT_FIELDS} 的 render 回调。
+     *
+     * <p>为什么不直接在初始化器里写 {@code dictCacheService.getDicDataLabel(...)}：
+     * {@code dictCacheService} 是构造器注入的 blank final 字段，而 {@code PATIENT_FIELDS}
+     * 是**实例字段初始化器** —— Java 的确定赋值规则禁止初始化器读取尚未初始化的 final 字段
+     * （编译期报"可能尚未初始化变量"，加 import 也解决不了）。
+     * 绕一层实例方法，读操作就推迟到 render 真正被调用时，那时构造早已完成。
+     */
+    private String dictText(String dictType, Object code) {
+        return dictCacheService.getDicDataLabel(dictType, (Integer) code);
+    }
 
     /**
      * 联系电话脱敏：11 位手机号保留前 3 后 4（138****5678）；
@@ -363,11 +378,9 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         if (patientIds == null || patientIds.isEmpty()) {
             return appointCountMap;
         }
-        for (Map<String, Object> row : baseMapper.countRegistByPatientIds(patientIds)) {
-            Object pid = row.get("patientId");
-            Object cnt = row.get("cnt");
-            if (pid != null && cnt != null) {
-                appointCountMap.put(Long.valueOf(pid.toString()), Integer.valueOf(cnt.toString()));
+        for (PatientRegistCountVO row : baseMapper.countRegistByPatientIds(patientIds)) {
+            if (row.getPatientId() != null && row.getCnt() != null) {
+                appointCountMap.put(row.getPatientId(), row.getCnt().intValue());
             }
         }
         return appointCountMap;

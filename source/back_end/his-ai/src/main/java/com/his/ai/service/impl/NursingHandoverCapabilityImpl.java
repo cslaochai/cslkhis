@@ -7,6 +7,7 @@ import com.his.ai.dto.NursingHandoverLlmOutputDTO;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.NursingHandoverCapability;
 import com.his.ai.support.DeteriorationScoreRules;
+import com.his.ai.vo.NursingHandoverPromptVariablesVO;
 import com.his.ai.vo.WardHandoverVO;
 import com.his.common.util.DateFormats;
 import com.his.patient.service.InpatientNursingService;
@@ -100,11 +101,11 @@ public class NursingHandoverCapabilityImpl implements NursingHandoverCapability 
         vo.setDegraded(false);
         vo.setDegradeReason("");
 
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("wardName", vo.getWardName());
-        variables.put("shiftText", vo.getShiftText());
-        variables.put("windowText", vo.getWindowText());
-        variables.put("factsText", factsText(vo, facts));
+        NursingHandoverPromptVariablesVO variables = new NursingHandoverPromptVariablesVO();
+        variables.setWardName(vo.getWardName());
+        variables.setShiftText(vo.getShiftText());
+        variables.setWindowText(vo.getWindowText());
+        variables.setFactsText(factsText(vo, facts));
 
         Optional<NursingHandoverLlmOutputDTO> output = aiExecutionService.call(
                 AiCallDTO.builder()

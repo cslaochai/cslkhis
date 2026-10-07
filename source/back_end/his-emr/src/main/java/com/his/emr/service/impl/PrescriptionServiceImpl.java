@@ -341,13 +341,12 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
                     StringUtils.hasText(opinion) ? "审方意见：" + opinion : "")
                     : String.format("您为患者 %s 开具的处方 %s 被药师 %s 退回（第 %s 次）。退回原因：%s。请修改处方后重新提交。",
                     p.getPatientName(), p.getPrescriptionNo(), auditorName, returnNo, opinion);
-            String payload = JSONUtil.toJsonStr(new java.util.LinkedHashMap<String, Object>() {{
-                put("patientName", p.getPatientName());
-                put("prescriptionNo", p.getPrescriptionNo());
-                put("auditBy", auditorName);
-                put("auditResult", pass ? 1 : 2);
-                put("opinion", opinion);
-            }});
+            MessagePayloadVO msg = new MessagePayloadVO();
+            msg.setPatientName(p.getPatientName());
+            msg.setPrescriptionNo(p.getPrescriptionNo());
+            msg.setHandlerName(auditorName);
+            msg.setOpinion(opinion);
+            String payload = JSONUtil.toJsonStr(msg);
             sysMessageService.sendSystemMessage(p.getDoctorId(), p.getDoctorName(),
                     "处方审核结果：" + p.getPrescriptionNo(), content,
                     BizTypeEnum.DRUG_AUDIT.getType(), p.getId(), pass ? "warning" : "error", payload, null);

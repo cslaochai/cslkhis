@@ -434,7 +434,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
     }
 
     @Override
-    public List<Map<String, Object>> pendingBillsForPatient(Long patientId) {
+    public List<PendingBillVO> pendingBillViews(Long patientId) {
         if (patientId == null) {
             return List.of();
         }
@@ -443,39 +443,46 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
                 .in(BizSettlementBill::getBillStatus,
                         BillStatusEnum.UNPAID.getCode(), BillStatusEnum.PARTIAL_PAID.getCode())
                 .orderByDesc(BizSettlementBill::getId));
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<PendingBillVO> result = new ArrayList<>(bills.size());
         for (BizSettlementBill bill : bills) {
-            Map<String, Object> m = new LinkedHashMap<>();
-            m.put("id", String.valueOf(bill.getId()));
-            m.put("billNo", bill.getBillNo());
-            m.put("encounterNo", bill.getEncounterNo());
-            m.put("payableAmount", bill.getPayableAmount());
-            m.put("billTime", bill.getBillTime());
-            m.put("billStatus", bill.getBillStatus());
+            PendingBillVO vo = new PendingBillVO();
+            vo.setId(String.valueOf(bill.getId()));
+            vo.setBillNo(bill.getBillNo());
+            vo.setEncounterNo(bill.getEncounterNo());
+            vo.setPayableAmount(bill.getPayableAmount());
+            vo.setBillTime(bill.getBillTime());
+            vo.setBillStatus(bill.getBillStatus());
             List<BizSettlementBillItem> items = billItemMapper.selectByBill(bill.getId());
-            List<Map<String, Object>> details = items.stream().map(it -> {
-                Map<String, Object> d = new LinkedHashMap<>();
-                d.put("itemName", it.getItemName());
-                d.put("amount", it.getAmount());
-                d.put("deptName", it.getDeptName());
-                d.put("specification", it.getSpecification());
-                d.put("unit", it.getUnit());
-                d.put("price", it.getPrice());
-                d.put("quantity", it.getQuantity());
-                // 医保拆分：患者端「自付为什么这么多」的自证依据，行级快照原样透出
-                d.put("poolAmount", it.getPoolAmount());
-                d.put("accountAmount", it.getAccountAmount());
-                d.put("selfAmount", it.getSelfAmount());
-                d.put("catalogType", it.getCatalogType());
-                return d;
-            }).toList();
-            m.put("details", details);
-            m.put("poolAmount", sumColumn(items, BizSettlementBillItem::getPoolAmount));
-            m.put("accountAmount", sumColumn(items, BizSettlementBillItem::getAccountAmount));
-            m.put("selfAmount", sumColumn(items, BizSettlementBillItem::getSelfAmount));
-            result.add(m);
+            vo.setDetails(toPendingBillItems(items));
+            vo.setPoolAmount(sumColumn(items, BizSettlementBillItem::getPoolAmount));
+            vo.setAccountAmount(sumColumn(items, BizSettlementBillItem::getAccountAmount));
+            vo.setSelfAmount(sumColumn(items, BizSettlementBillItem::getSelfAmount));
+            result.add(vo);
         }
         return result;
+    }
+
+    /**
+     * 摊行 → 患者端明细行。医保拆分三列原样透出：患者端「自付为什么这么多」靠它自证。
+     */
+    private List<PendingBillItemVO> toPendingBillItems(List<BizSettlementBillItem> items) {
+        List<PendingBillItemVO> details = new ArrayList<>(items.size());
+        for (BizSettlementBillItem it : items) {
+            PendingBillItemVO d = new PendingBillItemVO();
+            d.setItemName(it.getItemName());
+            d.setAmount(it.getAmount());
+            d.setDeptName(it.getDeptName());
+            d.setSpecification(it.getSpecification());
+            d.setUnit(it.getUnit());
+            d.setPrice(it.getPrice());
+            d.setQuantity(it.getQuantity());
+            d.setPoolAmount(it.getPoolAmount());
+            d.setAccountAmount(it.getAccountAmount());
+            d.setSelfAmount(it.getSelfAmount());
+            d.setCatalogType(it.getCatalogType());
+            details.add(d);
+        }
+        return details;
     }
 
     /**

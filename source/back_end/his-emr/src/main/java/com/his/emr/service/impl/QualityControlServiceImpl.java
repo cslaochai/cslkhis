@@ -322,14 +322,13 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
                     snapshot.getPatientName() == null ? "未知" : snapshot.getPatientName(),
                     saved.getQcNo(), result.getIssueCount(), result.getScore(),
                     result.getGrade() == null ? "未评级" : result.getGrade());
-            String payload = cn.hutool.json.JSONUtil.toJsonStr(new LinkedHashMap<String, Object>() {{
-                put("patientName", snapshot.getPatientName());
-                put("recordNo", snapshot.getRecordNo());
-                put("qcNo", saved.getQcNo());
-                put("issueCount", result.getIssueCount());
-                put("score", result.getScore());
-                put("grade", result.getGrade());
-            }});
+            MessagePayloadVO msg = new MessagePayloadVO();
+            msg.setPatientName(snapshot.getPatientName());
+            msg.setRecordNo(snapshot.getRecordNo());
+            msg.setQcNo(saved.getQcNo());
+            msg.setIssueCount(result.getIssueCount());
+            msg.setGrade(result.getGrade());
+            String payload = cn.hutool.json.JSONUtil.toJsonStr(msg);
             sysMessageService.sendSystemMessage(snapshot.getDoctorId(), snapshot.getDoctorName(),
                     "病历质控问题：" + snapshot.getRecordNo(), content,
                     BizTypeEnum.EMR_QC.getType(), saved.getId(), "warning", payload, null);

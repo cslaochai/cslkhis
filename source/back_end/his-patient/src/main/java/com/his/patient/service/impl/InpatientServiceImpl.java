@@ -389,15 +389,15 @@ public class InpatientServiceImpl implements InpatientService {
                     ward.getWardName() == null ? "" : ward.getWardName(),
                     bed.getBedNo() == null ? String.valueOf(bed.getBedId()) : bed.getBedNo(),
                     admissionNo);
-            String payload = JSONUtil.toJsonStr(new java.util.LinkedHashMap<String, Object>() {{
-                put("patientName", patient.getPatientName());
-                put("orderNo", order.getOrderNo());
-                put("wardName", ward.getWardName());
-                put("bedNo", bed.getBedNo());
-                put("admissionNo", admissionNo);
-            }});
+            InpatientAdmitNotifyPayloadVO payload = new InpatientAdmitNotifyPayloadVO();
+            payload.setPatientName(patient.getPatientName());
+            payload.setOrderNo(order.getOrderNo());
+            payload.setWardName(ward.getWardName());
+            payload.setBedNo(bed.getBedNo());
+            payload.setAdmissionNo(admissionNo);
+            String payloadJson = JSONUtil.toJsonStr(payload);
             sysMessageService.sendSystemMessage(order.getSourceDoctorId(), order.getSourceDoctorName(),
-                    title, content, BizTypeEnum.ADMIT.getType(), order.getId(), "info", payload, null);
+                    title, content, BizTypeEnum.ADMIT.getType(), order.getId(), "info", payloadJson, null);
         } catch (Exception ex) {
             log.warn("[入院登记] 收治通知发送失败 admissionNo={} sourceDoctorId={}",
                     admissionNo, order.getSourceDoctorId(), ex);

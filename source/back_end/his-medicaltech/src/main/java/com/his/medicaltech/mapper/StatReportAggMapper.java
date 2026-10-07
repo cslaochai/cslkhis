@@ -1,11 +1,17 @@
 package com.his.medicaltech.mapper;
 
+import com.his.medicaltech.vo.StatCohortCaseRowVO;
+import com.his.medicaltech.vo.StatCohortFeesRowVO;
+import com.his.medicaltech.vo.StatCohortSummaryRowVO;
+import com.his.medicaltech.vo.StatInsuranceDistRowVO;
+import com.his.medicaltech.vo.StatOperationLevelRowVO;
+import com.his.medicaltech.vo.StatOperationRowVO;
+import com.his.medicaltech.vo.StatTopDiagnosisRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 病案统计上报聚合 Mapper（跨模块裸 SQL 一处收口，列名已按 information_schema 核对）。
@@ -48,7 +54,7 @@ public interface StatReportAggMapper {
             + "  THEN 1 ELSE 0 END), 0) AS deathCount, "
             + "ROUND(IFNULL(AVG(GREATEST(TIMESTAMPDIFF(MINUTE, a.admit_time, a.discharge_time), 0) / 1440), 0), 1) AS avgLosDays "
             + "FROM biz_admission a WHERE " + COHORT)
-    Map<String, Object> cohortSummary(@Param("start") String start, @Param("end") String end,
+    StatCohortSummaryRowVO cohortSummary(@Param("start") String start, @Param("end") String end,
                                       @Param("deptId") Long deptId);
 
     /**
@@ -58,7 +64,7 @@ public interface StatReportAggMapper {
             + "IFNULL(SUM(CASE WHEN o.operation_level >= 3 THEN 1 ELSE 0 END), 0) AS level3upCount "
             + "FROM biz_inpatient_operation o JOIN biz_admission a ON a.admission_id = o.admission_id "
             + "WHERE o.del_flag = 0 AND " + COHORT)
-    Map<String, Object> operationStats(@Param("start") String start, @Param("end") String end,
+    StatOperationRowVO operationStats(@Param("start") String start, @Param("end") String end,
                                        @Param("deptId") Long deptId);
 
     /**
@@ -68,7 +74,7 @@ public interface StatReportAggMapper {
             + "FROM biz_inpatient_operation o JOIN biz_admission a ON a.admission_id = o.admission_id "
             + "WHERE o.del_flag = 0 AND " + COHORT
             + "GROUP BY level ORDER BY level")
-    List<Map<String, Object>> operationLevelDist(@Param("start") String start, @Param("end") String end,
+    List<StatOperationLevelRowVO> operationLevelDist(@Param("start") String start, @Param("end") String end,
                                                  @Param("deptId") Long deptId);
 
     /**
@@ -80,7 +86,7 @@ public interface StatReportAggMapper {
             + "IFNULL(SUM(GREATEST(s.payable_amount - s.paid_amount, 0)), 0) AS arrearsAmount "
             + "FROM biz_settlement_bill s JOIN biz_admission a ON a.admission_id = s.encounter_id "
             + "WHERE s.del_flag = 0 AND s.encounter_type = 2 AND s.bill_type = 4 AND s.bill_status <> 4 AND " + COHORT)
-    Map<String, Object> cohortFees(@Param("start") String start, @Param("end") String end,
+    StatCohortFeesRowVO cohortFees(@Param("start") String start, @Param("end") String end,
                                    @Param("deptId") Long deptId);
 
     /**
@@ -91,7 +97,7 @@ public interface StatReportAggMapper {
             + "FROM biz_settlement_bill s JOIN biz_admission a ON a.admission_id = s.encounter_id "
             + "WHERE s.del_flag = 0 AND s.encounter_type = 2 AND s.bill_type = 4 AND s.bill_status <> 4 AND " + COHORT
             + "GROUP BY insuranceType ORDER BY insuranceType")
-    List<Map<String, Object>> insuranceDist(@Param("start") String start, @Param("end") String end,
+    List<StatInsuranceDistRowVO> insuranceDist(@Param("start") String start, @Param("end") String end,
                                             @Param("deptId") Long deptId);
 
     /**
@@ -101,7 +107,7 @@ public interface StatReportAggMapper {
             + "FROM biz_admission a " + DX_JOIN
             + "WHERE " + COHORT
             + "GROUP BY diagnosisCode, diagnosisName ORDER BY cnt DESC, diagnosisCode LIMIT 10")
-    List<Map<String, Object>> topDiagnoses(@Param("start") String start, @Param("end") String end,
+    List<StatTopDiagnosisRowVO> topDiagnoses(@Param("start") String start, @Param("end") String end,
                                            @Param("deptId") Long deptId);
 
     /**
@@ -110,8 +116,8 @@ public interface StatReportAggMapper {
     @Select("SELECT a.admission_no AS admissionNo, "
             + "IFNULL(p.patient_no, '') AS patientNo, IFNULL(p.patient_name, '') AS patientName, "
             + "IFNULL(d.dept_name, '') AS deptName, "
-            + "DATE_FORMAT(a.admit_time, '%Y-%m-%d %H:%i') AS admitTime, "
-            + "DATE_FORMAT(a.discharge_time, '%Y-%m-%d %H:%i') AS dischargeTime, "
+            + "a.admit_time AS admitTime, "
+            + "a.discharge_time AS dischargeTime, "
             + "ROUND(GREATEST(TIMESTAMPDIFF(MINUTE, a.admit_time, a.discharge_time), 0) / 1440, 1) AS losDays, "
             + DX_CODE + " AS diagnosisCode, " + DX_NAME + " AS diagnosisName, "
             + "IFNULL((SELECT CONCAT(o2.operation_name, '(', IFNULL(o2.operation_level, 0), '级)') "
@@ -126,7 +132,7 @@ public interface StatReportAggMapper {
             + DX_JOIN
             + "WHERE " + COHORT
             + "ORDER BY a.discharge_time LIMIT 500")
-    List<Map<String, Object>> cohortCases(@Param("start") String start, @Param("end") String end,
+    List<StatCohortCaseRowVO> cohortCases(@Param("start") String start, @Param("end") String end,
                                           @Param("deptId") Long deptId);
 
     /**

@@ -8,6 +8,7 @@ import com.his.ai.enums.EvidenceVerdictEnum;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.InsuranceEvidenceCapability;
 import com.his.ai.vo.InsuranceEvidenceJudgmentVO;
+import com.his.ai.vo.InsuranceEvidencePromptVariablesVO;
 import com.his.ai.vo.InsuranceEvidenceVO;
 import com.his.charge.service.ComplianceAuditService;
 import com.his.charge.vo.ComplianceAuditDetailVO;
@@ -122,8 +123,8 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
 
     // ---------------------------------------------------------------- 清洗层
 
-    private Map<String, Object> buildVariables(List<ComplianceAuditItemVO> hits,
-                                               ComplianceEvidenceNarrativeVO narrative) {
+    private InsuranceEvidencePromptVariablesVO buildVariables(List<ComplianceAuditItemVO> hits,
+                                                              ComplianceEvidenceNarrativeVO narrative) {
         StringBuilder hitText = new StringBuilder();
         for (ComplianceAuditItemVO item : hits) {
             hitText.append("- 规则码 ").append(item.getRuleCode())
@@ -132,23 +133,23 @@ public class InsuranceEvidenceCapabilityImpl implements InsuranceEvidenceCapabil
                     .append(StringUtils.hasText(item.getEvidence()) ? item.getEvidence() : "无")
                     .append("\n");
         }
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("settlementNo", StringUtils.hasText(narrative.getSettlementNo())
+        InsuranceEvidencePromptVariablesVO variables = new InsuranceEvidencePromptVariablesVO();
+        variables.setSettlementNo(StringUtils.hasText(narrative.getSettlementNo())
                 ? narrative.getSettlementNo() : "未知");
-        variables.put("drgCode", StringUtils.hasText(narrative.getDrgCode())
+        variables.setDrgCode(StringUtils.hasText(narrative.getDrgCode())
                 ? narrative.getDrgCode() : "未分组");
-        variables.put("patientTag", StringUtils.hasText(narrative.getPatientTag())
+        variables.setPatientTag(StringUtils.hasText(narrative.getPatientTag())
                 ? narrative.getPatientTag() : "未知");
-        variables.put("diagnosisText", StringUtils.hasText(narrative.getDiagnosisText())
+        variables.setDiagnosisText(StringUtils.hasText(narrative.getDiagnosisText())
                 ? narrative.getDiagnosisText() : "未填写");
-        variables.put("hitItemsText", hitText.toString());
-        variables.put("recordNarrative", StringUtils.hasText(narrative.getRecordNarrative())
+        variables.setHitItemsText(hitText.toString());
+        variables.setRecordNarrative(StringUtils.hasText(narrative.getRecordNarrative())
                 ? narrative.getRecordNarrative() : "无病历文本");
-        variables.put("orderNames", StringUtils.hasText(narrative.getOrderNames())
+        variables.setOrderNames(StringUtils.hasText(narrative.getOrderNames())
                 ? narrative.getOrderNames() : "无");
-        variables.put("labSummary", StringUtils.hasText(narrative.getLabSummary())
+        variables.setLabSummary(StringUtils.hasText(narrative.getLabSummary())
                 ? narrative.getLabSummary() : "无");
-        variables.put("missingText", narrative.getMissingList() == null || narrative.getMissingList().isEmpty()
+        variables.setMissingText(narrative.getMissingList() == null || narrative.getMissingList().isEmpty()
                 ? "无" : String.join("；", narrative.getMissingList()));
         return variables;
     }

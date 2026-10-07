@@ -48,6 +48,10 @@ public class JwtUtils {
      */
     public String generateToken(Long userId, String username, String currentRole,
                                 Long deptId, String deptName) {
+        // claims 是 JWT 标准里就有的「动态 JSON 载荷」容器：jjwt 的 claims() 签名要求 Map，
+        // 且标准 claims（iss/sub/exp/iat/nbf/jti）与本系统自定义项大量可选、随签发点增减，
+        // 收成一个 claims 类只会更脆（加一个可选 claim 就得改类 + 改所有读侧）。
+        // 所以这里保留 Map —— 它是 jjwt 的 API 形状，不是我们的数据契约。
         Map<String, Object> claims = new HashMap<>();
         // 大整数 ID 必须以字符串进 claims：jjwt 解析 JSON 数字时经 Double 会丢精度
         // （90000000000009099 → 9000000000000009099），toLong 已兼容字符串入参

@@ -2,12 +2,16 @@ package com.his.emr.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.emr.entity.BizInfectionMonitor;
+import com.his.emr.vo.DeptSnapshotVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
-import java.util.Map;
-
+/**
+ * 目标性监测（导管/呼吸机等）Mapper。
+ *
+ * <p>跨模块读（科室）走裸 SQL，不引入模块依赖；列名以 information_schema 实查为准。
+ */
 @Mapper
 public interface BizInfectionMonitorMapper extends BaseMapper<BizInfectionMonitor> {
 
@@ -20,7 +24,7 @@ public interface BizInfectionMonitorMapper extends BaseMapper<BizInfectionMonito
     /**
      * 住院登记科室（目标性监测主要发生在住院段；入院记录的科室ID = 当前科室，主键 admission_id）。
      */
-    @Select("SELECT dept_id AS deptId, (SELECT dept_name FROM sys_department d WHERE d.id = a.dept_id) AS deptName"
+    @Select("SELECT a.dept_id AS deptId, (SELECT dept_name FROM sys_department d WHERE d.id = a.dept_id) AS deptName"
             + " FROM biz_admission a WHERE a.admission_id = #{inpId} AND a.del_flag = 0")
-    Map<String, Object> selectInpDept(@Param("inpId") Long inpId);
+    DeptSnapshotVO selectInpDept(@Param("inpId") Long inpId);
 }

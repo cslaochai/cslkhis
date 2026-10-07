@@ -7,6 +7,7 @@ import com.his.ai.dto.FollowupComposeLlmOutputDTO;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.FollowupComposeCapability;
 import com.his.ai.support.PatientTextGuard;
+import com.his.ai.vo.FollowupComposePromptVariablesVO;
 import com.his.ai.vo.FollowupComposeVO;
 import com.his.emr.enums.FollowupTypeEnum;
 import com.his.emr.service.ChronicRecordService;
@@ -17,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -98,9 +98,9 @@ public class FollowupComposeCapabilityImpl implements FollowupComposeCapability 
     // ---------------------------------------------------------------- 清洗层
 
     private Optional<FollowupComposeLlmOutputDTO> callModel(String typeLabel, String diseaseContext) {
-        Map<String, Object> variables = Map.of(
-                "followupTypeName", typeLabel,
-                "diseaseContext", diseaseContext);
+        FollowupComposePromptVariablesVO variables = new FollowupComposePromptVariablesVO();
+        variables.setFollowupTypeName(typeLabel);
+        variables.setDiseaseContext(diseaseContext);
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.FOLLOWUP_COMPOSE)

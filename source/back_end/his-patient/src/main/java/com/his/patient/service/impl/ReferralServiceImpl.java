@@ -12,6 +12,10 @@ import com.his.patient.enums.ReferralDirectionEnum;
 import com.his.patient.enums.ReferralStatusEnum;
 import com.his.patient.mapper.BizReferralMapper;
 import com.his.patient.service.ReferralService;
+import com.his.patient.vo.DeptSnapshotVO;
+import com.his.patient.vo.ReferralEscalatePayloadVO;
+import com.his.patient.vo.ReferralNotifyPayloadVO;
+import com.his.patient.vo.ReferralPatientSnapshotVO;
 import com.his.patient.vo.ReferralVO;
 import com.his.system.entity.SysConfig;
 import com.his.system.entity.SysMessage;
@@ -29,7 +33,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -187,12 +190,12 @@ public class ReferralServiceImpl implements ReferralService {
                 r.getReason(),
                 StringUtils.hasText(r.getDiagnosis()) ? r.getDiagnosis() : "未填",
                 StringUtils.hasText(r.getContactPhone()) ? r.getContactPhone() : "未填");
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("referralNo", r.getReferralNo());
-        payload.put("direction", dirText);
-        payload.put("toHospital", r.getToHospital());
-        payload.put("diagnosis", r.getDiagnosis());
-        payload.put("contactPhone", r.getContactPhone());
+        ReferralNotifyPayloadVO payload = new ReferralNotifyPayloadVO();
+        payload.setReferralNo(r.getReferralNo());
+        payload.setDirection(dirText);
+        payload.setToHospital(r.getToHospital());
+        payload.setDiagnosis(r.getDiagnosis());
+        payload.setContactPhone(r.getContactPhone());
         sysMessageService.sendSystemMessage(duty.getEmployeeId(), duty.getEmployeeName(), title, content,
                 BizTypeEnum.DUTY_COORD.getType(), r.getReferralId(),
                 "warning", cn.hutool.json.JSONUtil.toJsonStr(payload), 0);
@@ -237,11 +240,11 @@ public class ReferralServiceImpl implements ReferralService {
                         r.getReferralNo(), dirText,
                         StringUtils.hasText(r.getToHospital()) ? r.getToHospital() : "院内",
                         waited, hours);
-                Map<String, Object> payload = new LinkedHashMap<>();
-                payload.put("referralNo", r.getReferralNo());
-                payload.put("direction", dirText);
-                payload.put("toHospital", r.getToHospital());
-                payload.put("waitedHours", waited);
+                ReferralEscalatePayloadVO payload = new ReferralEscalatePayloadVO();
+                payload.setReferralNo(r.getReferralNo());
+                payload.setDirection(dirText);
+                payload.setToHospital(r.getToHospital());
+                payload.setWaitedHours(waited);
                 if (sysMessageService.sendSystemMessage(duty.getEmployeeId(), duty.getEmployeeName(), title, content,
                         BizTypeEnum.DUTY_COORD.getType(), r.getReferralId(),
                         "urgent", cn.hutool.json.JSONUtil.toJsonStr(payload), 0)) {
@@ -315,9 +318,9 @@ public class ReferralServiceImpl implements ReferralService {
 
     private Map<Long, String> loadDeptNames() {
         return referralMapper.selectDeptMap().stream()
-                .filter(m -> m.get("id") != null)
-                .collect(Collectors.toMap(m -> ((Number) m.get("id")).longValue(),
-                        m -> m.get("deptName") == null ? "" : String.valueOf(m.get("deptName")),
+                .filter(m -> m.getId() != null)
+                .collect(Collectors.toMap(DeptSnapshotVO::getId,
+                        m -> m.getDeptName() == null ? "" : m.getDeptName(),
                         (a, b) -> a));
     }
 
@@ -329,11 +332,11 @@ public class ReferralServiceImpl implements ReferralService {
         vo.setFromDeptName(r.getFromDeptId() == null ? null : deptNames.get(r.getFromDeptId()));
         vo.setToDeptName(r.getToDeptId() == null ? null : deptNames.get(r.getToDeptId()));
         // 患者快照现查（患者基本信息 / 入院记录属本域，量级单条）
-        Map<String, Object> snap = referralMapper.selectPatientSnapshot(r.getPatientId(), r.getAdmissionId());
+        ReferralPatientSnapshotVO snap = referralMapper.selectPatientSnapshot(r.getPatientId(), r.getAdmissionId());
         if (snap != null) {
-            vo.setPatientNo((String) snap.get("patientNo"));
-            vo.setPatientName((String) snap.get("patientName"));
-            vo.setAdmissionNo((String) snap.get("admissionNo"));
+            vo.setPatientNo(snap.getPatientNo());
+            vo.setPatientName(snap.getPatientName());
+            vo.setAdmissionNo(snap.getAdmissionNo());
         }
         return vo;
     }

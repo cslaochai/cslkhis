@@ -1,17 +1,24 @@
 package com.his.medicaltech.mapper;
 
+import com.his.medicaltech.vo.WorkbenchDeptVisitRankRowVO;
+import com.his.medicaltech.vo.WorkbenchDoctorStatsRowVO;
+import com.his.medicaltech.vo.WorkbenchHospitalAlertRowVO;
+import com.his.medicaltech.vo.WorkbenchHospitalCoreRowVO;
+import com.his.medicaltech.vo.WorkbenchNurseStatsRowVO;
+import com.his.medicaltech.vo.WorkbenchWeekTrendRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 工作台卡片取数 Mapper（一期 A 复用旧 {@code DashboardMapper} 的六段 SQL）。
  *
- * <p>全部用 {@code @Select} 直查表、返回 {@code Map}，不 import 任何业务模块的实体 ——
- * his-report 只管"聚合查询"，字段名以 SQL 里的别名（驼峰）为准，Provider 侧按 key 取值。
+ * <p>全部用 {@code @Select} 直查表、不 import 任何业务模块的实体 —— his-report 只管"聚合查询"，
+ * 返回类型是本模块的行 VO，字段名以 SQL 里的别名（驼峰）为准，Provider 侧按 getter 取值。
+ * 这些字段名同时是前端契约（{@code front/src/lib/workbench-widgets.js} 的 METRIC_SPECS），
+ * 改别名等于让工作台对应那张卡的数字变「—」。
  *
  * <p>为什么这些卡先挂在 his-report 而不是各自的业务域：口径与旧首页完全一致地迁过来，
  * 一期 B 再按域拆给 his-appoint/his-patient（工作台卡片注册表的接口标识
@@ -47,7 +54,7 @@ public interface WorkbenchMetricMapper {
               (SELECT COUNT(*) FROM sys_bed b WHERE b.del_flag = 0) AS bedTotal,
               (SELECT COUNT(*) FROM sys_bed b WHERE b.del_flag = 0 AND b.bed_status = 2) AS bedOccupied
             """)
-    Map<String, Object> hospitalCoreStats();
+    WorkbenchHospitalCoreRowVO hospitalCoreStats();
 
     /**
      * 全院异常告警（待处理危急值/待审处方/质控不通过/欠费住院）
@@ -74,7 +81,7 @@ public interface WorkbenchMetricMapper {
                    WHERE a.del_flag = 0 AND a.admit_status = 1
               ) t WHERE t.charged > t.collected) AS arrearsCount
             """)
-    Map<String, Object> hospitalAlertStats();
+    WorkbenchHospitalAlertRowVO hospitalAlertStats();
 
     /**
      * 近 7 天挂号趋势（按 visit_date 分组，缺日不补零，补零在 Provider 侧）
@@ -88,7 +95,7 @@ public interface WorkbenchMetricMapper {
              GROUP BY visit_date
              ORDER BY visit_date
             """)
-    List<Map<String, Object>> weekRegistTrend();
+    List<WorkbenchWeekTrendRowVO> weekRegistTrend();
 
     /**
      * 今日科室就诊排行（top 6）
@@ -101,7 +108,7 @@ public interface WorkbenchMetricMapper {
              ORDER BY cnt DESC
              LIMIT 6
             """)
-    List<Map<String, Object>> deptVisitRank();
+    List<WorkbenchDeptVisitRankRowVO> deptVisitRank();
 
     /**
      * 医生今日诊疗（排班/候诊/住院/待办），按 employeeId 收敛
@@ -134,7 +141,7 @@ public interface WorkbenchMetricMapper {
                 WHERE x.del_flag = 0 AND x.archive_status = 1
                   AND x.doctor_id = #{doctorId}) AS todoArchiveCount
             """)
-    Map<String, Object> doctorStats(@Param("doctorId") Long doctorId, @Param("deptId") Long deptId);
+    WorkbenchDoctorStatsRowVO doctorStats(@Param("doctorId") Long doctorId, @Param("deptId") Long deptId);
 
     /**
      * 病区今日概况（在院/床位/今日入出/待执行），病区=当前 deptId 推导。
@@ -164,5 +171,5 @@ public interface WorkbenchMetricMapper {
                 WHERE e.del_flag = 0 AND e.exec_status = 1
                   AND o.ward_id IN (SELECT w.ward_id FROM sys_ward w WHERE w.dept_id = #{deptId})) AS todoExecCount
             """)
-    Map<String, Object> nurseStats(@Param("deptId") Long deptId);
+    WorkbenchNurseStatsRowVO nurseStats(@Param("deptId") Long deptId);
 }

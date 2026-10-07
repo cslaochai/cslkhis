@@ -2,6 +2,7 @@ package com.his.medicaltech.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.medicaltech.entity.BizExamAppointment;
+import com.his.medicaltech.vo.ExamApptStatusCountRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -9,7 +10,6 @@ import org.apache.ibatis.annotations.Update;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @Mapper
 public interface BizExamAppointmentMapper extends BaseMapper<BizExamAppointment> {
@@ -70,10 +70,10 @@ public interface BizExamAppointmentMapper extends BaseMapper<BizExamAppointment>
     /**
      * 按状态分组统计（deviceId/slotDate 传 null 表示该维度不限；前端不得拿当前页 list 自己数）
      */
-    @Select("SELECT status, COUNT(*) AS n FROM biz_exam_appointment WHERE del_flag = 0 "
+    @Select("SELECT status, COUNT(*) AS cnt FROM biz_exam_appointment WHERE del_flag = 0 "
             + "AND (#{deviceId, jdbcType=BIGINT} IS NULL OR device_id = #{deviceId, jdbcType=BIGINT}) "
             + "AND (#{slotDate, jdbcType=DATE} IS NULL OR exam_date = #{slotDate, jdbcType=DATE}) "
             + "GROUP BY status")
-    List<Map<String, Object>> countGroupByStatus(@Param("deviceId") Long deviceId,
+    List<ExamApptStatusCountRowVO> countGroupByStatus(@Param("deviceId") Long deviceId,
                                                  @Param("slotDate") LocalDate slotDate);
 }

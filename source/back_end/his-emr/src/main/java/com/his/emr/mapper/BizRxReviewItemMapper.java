@@ -3,6 +3,7 @@ package com.his.emr.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.emr.entity.BizRxReviewItem;
 import com.his.emr.vo.RxPublicityDoctorVO;
+import com.his.emr.vo.RxReviewMonthStatVO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -10,7 +11,6 @@ import org.apache.ibatis.annotations.Select;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @Mapper
 public interface BizRxReviewItemMapper extends BaseMapper<BizRxReviewItem> {
@@ -34,8 +34,8 @@ public interface BizRxReviewItemMapper extends BaseMapper<BizRxReviewItem> {
             FROM biz_rx_review_item
             WHERE visit_date BETWEEN #{dateStart} AND #{dateEnd}
             """)
-    Map<String, Object> selectMonthlyStats(@Param("dateStart") LocalDate dateStart,
-                                           @Param("dateEnd") LocalDate dateEnd);
+    RxReviewMonthStatVO selectMonthlyStats(@Param("dateStart") LocalDate dateStart,
+                                                @Param("dateEnd") LocalDate dateEnd);
 
     /**
      * 处方总数（同期已审核/已发药处方量，点评率的分母）。

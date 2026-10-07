@@ -12,6 +12,7 @@ import com.his.patient.mapper.SysOrderDictDataMapper;
 import com.his.patient.service.OrderDictService;
 import com.his.patient.support.OrderDictTypes;
 import com.his.patient.vo.OrderDictListVO;
+import com.his.patient.vo.OrderDictUsageCountVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
@@ -232,19 +233,11 @@ public class OrderDictServiceImpl implements OrderDictService {
             return usage;
         }
         try {
-            for (Map<String, Object> row : dictMapper.countOrderUsage(column)) {
-                Object k = row.get("v");
-                Object c = row.get("c");
-                if (k == null) {
+            for (OrderDictUsageCountVO row : dictMapper.countOrderUsage(column)) {
+                if (row.getDictValue() == null) {
                     continue;
                 }
-                long cnt = 0L;
-                if (c instanceof Number n) {
-                    cnt = n.longValue();
-                } else if (c != null) {
-                    cnt = Long.parseLong(String.valueOf(c));
-                }
-                usage.put(String.valueOf(k), cnt);
+                usage.put(row.getDictValue(), row.getCnt() == null ? 0L : row.getCnt());
             }
         } catch (Exception e) {
             // 统计失败不该让字典页打不开：使用量是辅助信息，置 0 继续

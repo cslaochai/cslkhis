@@ -8,7 +8,7 @@ import com.his.charge.vo.PrepayVO;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniappAdmissionMapper;
 import com.his.miniapp.service.MiniappDepositService;
-import com.his.miniapp.support.RawRowValues;
+import com.his.miniapp.vo.AdmissionRowVO;
 import com.his.miniapp.vo.AdmissionSelectListVO;
 import com.his.patient.service.PatientGuardianService;
 import com.his.system.utils.UserUtils;
@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -64,21 +63,21 @@ public class MiniappDepositServiceImpl implements MiniappDepositService {
         patientGuardianService.canAccessPatient(patientId);
     }
 
-    private List<AdmissionSelectListVO> toAdmissionList(List<Map<String, Object>> rows) {
+    private List<AdmissionSelectListVO> toAdmissionList(List<AdmissionRowVO> rows) {
         if (rows == null) {
             return List.of();
         }
         return rows.stream().map(row -> {
             AdmissionSelectListVO vo = new AdmissionSelectListVO();
-            vo.setAdmissionId(RawRowValues.text(row, "admission_id"));
-            vo.setAdmissionNo(RawRowValues.text(row, "admission_no"));
-            vo.setPatientId(RawRowValues.text(row, "patient_id"));
-            vo.setDeptId(RawRowValues.longValue(row, "dept_id"));
-            vo.setBedId(RawRowValues.longValue(row, "bed_id"));
-            vo.setAdmitTime(RawRowValues.dateTime(row, "admit_time"));
-            vo.setDischargeTime(RawRowValues.dateTime(row, "discharge_time"));
-            vo.setAdmitStatus(RawRowValues.integer(row, "admit_status"));
-            vo.setDiagnosis(RawRowValues.text(row, "diagnosis"));
+            vo.setAdmissionId(row.getAdmissionId());
+            vo.setAdmissionNo(row.getAdmissionNo());
+            vo.setPatientId(row.getPatientId());
+            vo.setDeptId(row.getDeptId());
+            vo.setBedId(row.getBedId());
+            vo.setAdmitTime(row.getAdmitTime());
+            vo.setDischargeTime(row.getDischargeTime());
+            vo.setAdmitStatus(row.getAdmitStatus());
+            vo.setDiagnosis(row.getDiagnosis());
             return vo;
         }).toList();
     }

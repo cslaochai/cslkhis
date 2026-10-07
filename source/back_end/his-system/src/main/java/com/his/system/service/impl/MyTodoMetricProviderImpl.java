@@ -1,34 +1,32 @@
 package com.his.system.service.impl;
 
-import com.his.system.service.MyTodoMetricProvider;
+import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.system.entity.CurrentUser;
-import com.his.system.provider.WorkbenchMetricProvider;
 import com.his.system.entity.SysMessage;
+import com.his.system.provider.WorkbenchMetricProvider;
+import com.his.system.service.MessageMetricSupport;
+import com.his.system.service.MyTodoMetricProvider;
 import com.his.system.service.SysMessageService;
+import com.his.system.vo.WorkbenchMyTodoVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import com.his.system.service.MessageMetricSupport;
 
 /**
  * 卡片 {@code myTodo}：我当前未办结的站内信（待办型）。
- *
- * <p>「待办 vs 通知」在后端没有 kind 列，靠 {@code handle_status} 区分：待办型写入时带
- * {@code handle_status=0}，通知型该列为 NULL（见 {@code SysMessage#handleStatus} 注释）。
- * 所以这里 {@code eq(handle_status,0)} 天然只捞待办，不会把 145 条通知污染进数字。
- * 展示名/归属岗位在前端 {@code lib/messageCatalog.js} 单点定义，本卡不复制映射。
  */
 @Service
 @RequiredArgsConstructor
 public class MyTodoMetricProviderImpl implements WorkbenchMetricProvider, MyTodoMetricProvider {
 
-    /** 卡片只给前 N 条，"查看全部"走消息抽屉的 listPage */
+    /**
+     * 卡片只给前 N 条，"查看全部"走消息抽屉的 listPage
+     */
     private static final int TOP_N = 8;
 
     private final SysMessageService messageService;
@@ -38,24 +36,27 @@ public class MyTodoMetricProviderImpl implements WorkbenchMetricProvider, MyTodo
         return "myTodo";
     }
 
+    /**
+     * VO 转 Map 是 SPI 边界上的一次性适配（父接口 {@code WorkbenchMetricProvider#summary}
+     * 签名固定为 {@code Map<String, Object>}，his-medicaltech 等模块另有 5 个子接口实现它）；
+     * 用字段名做键，与前端 {@code data.total / data.urgentTotal / data.items} 逐项对齐。
+     */
     @Override
     public Map<String, Object> summary(CurrentUser user) {
-        Map<String, Object> data = new LinkedHashMap<>();
-        data.put("total", 0);
-        data.put("urgentTotal", 0);
-        data.put("items", Collections.emptyList());
+        WorkbenchMyTodoVO vo = new WorkbenchMyTodoVO();
+        vo.setTotal(0L);
+        vo.setUrgentTotal(0L);
+        vo.setItems(Collections.emptyList());
 
         Long receiverId = MessageMetricSupport.receiverId(user);
-        if (receiverId == null) {
-            return data;
+        if (receiverId != null) {
+            vo.setTotal(messageService.count(pending(receiverId)));
+            vo.setUrgentTotal(messageService.count(pending(receiverId).eq(SysMessage::getSeverity, "urgent")));
+            List<SysMessage> rows = messageService.list(pending(receiverId)
+                    .last("ORDER BY FIELD(severity, 'urgent', 'warning', 'info'), send_time DESC, message_id DESC LIMIT " + TOP_N));
+            vo.setItems(rows.stream().map(MessageMetricSupport::of).collect(Collectors.toList()));
         }
-        data.put("total", messageService.count(pending(receiverId)));
-        data.put("urgentTotal", messageService.count(pending(receiverId).eq(SysMessage::getSeverity, "urgent")));
-        // 危急值(severity=urgent)永远置顶；二级键 message_id 兜底同秒顺序漂移
-        List<SysMessage> rows = messageService.list(pending(receiverId)
-                .last("ORDER BY FIELD(severity, 'urgent', 'warning', 'info'), send_time DESC, message_id DESC LIMIT " + TOP_N));
-        data.put("items", rows.stream().map(MessageMetricSupport::of).collect(Collectors.toList()));
-        return data;
+        return BeanUtil.beanToMap(vo);
     }
 
     private LambdaQueryWrapper<SysMessage> pending(Long receiverId) {

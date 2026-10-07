@@ -1,13 +1,14 @@
 package com.his.patient.mapper;
 
 import com.his.patient.entity.BizPatient;
+import com.his.patient.vo.PatientDataCountVO;
+import com.his.patient.vo.PatientIndexCountVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 患者主索引统计 Mapper（P5.1 EMPI）
@@ -31,10 +32,10 @@ public interface PatientIndexMapper {
      * 组内所有档案的数据量，N+1 会直接变成请求风暴。
      *
      * @param ids 患者ID集合（调用方需保证非空，空集合会让 IN () 语法出错）
-     * @return [{k=表标识, pid=患者ID, n=条数}, ...]，没有数据的档案不出现在结果里
+     * @return 每行 = 一份档案在一张表下的条数，没有数据的档案不出现在结果里
      */
     @Select("<script>" +
-            "SELECT 'regist' AS k, patient_id AS pid, COUNT(*) AS n FROM biz_appoint_info " +
+            "SELECT 'regist' AS dataTable, patient_id AS patientId, COUNT(*) AS cnt FROM biz_appoint_info " +
             " WHERE del_flag = 0 AND patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach> GROUP BY patient_id " +
             "UNION ALL SELECT 'visit', patient_id, COUNT(*) FROM biz_visit " +
             " WHERE patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach> GROUP BY patient_id " +
@@ -55,7 +56,7 @@ public interface PatientIndexMapper {
             "UNION ALL SELECT 'inpatientRecord', patient_id, COUNT(*) FROM biz_inpatient_record " +
             " WHERE del_flag = 0 AND patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach> GROUP BY patient_id " +
             "</script>")
-    List<Map<String, Object>> countDataByPatientIds(@Param("ids") Collection<Long> ids);
+    List<PatientDataCountVO> countDataByPatientIds(@Param("ids") Collection<Long> ids);
 
     /**
      * 拉出"有可能存在重复"的候选档案（重复检测的输入集）。
@@ -103,5 +104,5 @@ public interface PatientIndexMapper {
             " (SELECT COUNT(*) FROM biz_patient WHERE del_flag = 0 AND (id_card IS NULL OR id_card = '')) AS idCardMissing, " +
             " (SELECT COUNT(*) FROM biz_patient WHERE del_flag = 0 AND (phone IS NULL OR phone = '')) AS phoneMissing, " +
             " (SELECT COUNT(*) FROM biz_patient WHERE del_flag = 0 AND (allergy_history IS NULL OR allergy_history = '')) AS allergyMissing")
-    Map<String, Object> selectIndexStats();
+    PatientIndexCountVO selectIndexStats();
 }

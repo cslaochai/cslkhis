@@ -11,6 +11,7 @@ import com.his.medicaltech.mapper.BizDeptCostMonthMapper;
 import com.his.medicaltech.mapper.BizPerfResultMapper;
 import com.his.medicaltech.mapper.PerfMapper;
 import com.his.medicaltech.service.PerfService;
+import com.his.medicaltech.vo.PerfDeptRevenueRowVO;
 import com.his.medicaltech.vo.PerfVO;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,6 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Map;
 
 /**
  * 绩效成本核算服务。
@@ -59,14 +59,6 @@ public class PerfServiceImpl implements PerfService {
 
     // 核算
 
-    private static String asStr(Object o) {
-        return o == null ? "" : String.valueOf(o);
-    }
-
-    private static BigDecimal asDecimal(Object o) {
-        return o == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(o)).setScale(2, RoundingMode.HALF_UP);
-    }
-
     @Transactional(rollbackFor = Exception.class)
     public PerfVO.CostRow saveCost(PerfDTO.CostSave dto) {
         String month = normalizeMonth(dto.getCostMonth());
@@ -75,7 +67,8 @@ public class PerfServiceImpl implements PerfService {
                 .eq(BizDeptCostMonth::getCostMonth, month)
                 .last("LIMIT 1"));
         if (exists != null) {
-            throw new BusinessException("该科室当月成本已录入（" + asStr(exists.getDeptName()) + " " + month + "），不能重复录入");
+            throw new BusinessException("该科室当月成本已录入（"
+                    + (exists.getDeptName() == null ? "" : exists.getDeptName()) + " " + month + "），不能重复录入");
         }
         BizDeptCostMonth c = new BizDeptCostMonth();
         c.setDeptId(dto.getDeptId());
@@ -112,7 +105,7 @@ public class PerfServiceImpl implements PerfService {
      */
     public PerfVO.RevenueInfo revenueInfo(Long deptId, String month) {
         String m = normalizeMonth(month);
-        Map<String, Object> r = perfMapper2.sumDeptRevenue(deptId, m);
+        PerfDeptRevenueRowVO r = perfMapper2.sumDeptRevenue(deptId, m);
         BizDeptCostMonth cost = costMapper.selectOne(new LambdaQueryWrapper<BizDeptCostMonth>()
                 .eq(BizDeptCostMonth::getDeptId, deptId)
                 .eq(BizDeptCostMonth::getCostMonth, m)
@@ -120,9 +113,9 @@ public class PerfServiceImpl implements PerfService {
         PerfVO.RevenueInfo vo = new PerfVO.RevenueInfo();
         vo.setDeptId(deptId);
         vo.setCostMonth(m);
-        vo.setRevenue(r == null ? BigDecimal.ZERO : asDecimal(r.get("revenue")));
-        vo.setDrugRevenue(r == null ? BigDecimal.ZERO : asDecimal(r.get("drug_revenue")));
-        vo.setDeptName(r == null ? "科室" + deptId : asStr(r.get("dept_name")));
+        vo.setRevenue(r == null ? BigDecimal.ZERO : r.getRevenue());
+        vo.setDrugRevenue(r == null ? BigDecimal.ZERO : r.getDrugRevenue());
+        vo.setDeptName(r == null ? "科室" + deptId : r.getDeptName());
         boolean costExists = cost != null;
         vo.setCostExists(costExists);
         vo.setTotalCost(costExists ? cost.getTotalCost() : BigDecimal.ZERO);

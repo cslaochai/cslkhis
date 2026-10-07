@@ -11,6 +11,7 @@ import com.his.ai.rag.store.RetrievedChunk;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.KnowledgeQaCapability;
 import com.his.ai.vo.KnowledgeAskVO;
+import com.his.ai.vo.KnowledgeQaPromptVariablesVO;
 import com.his.ai.vo.KnowledgeSourceVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -87,9 +88,9 @@ public class KnowledgeQaCapabilityImpl implements KnowledgeQaCapability {
         }
         vo.setSources(sources);
 
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("question", dto.getQuestion());
-        variables.put("context", context.toString());
+        KnowledgeQaPromptVariablesVO variables = new KnowledgeQaPromptVariablesVO();
+        variables.setQuestion(dto.getQuestion());
+        variables.setContext(context.toString());
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.KNOWLEDGE_QA)

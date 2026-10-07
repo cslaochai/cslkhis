@@ -19,6 +19,7 @@ import com.his.medicaltech.mapper.ExamApplyWriterMapper;
 import com.his.medicaltech.service.ExamAppointmentService;
 import com.his.medicaltech.service.ExamSlotService;
 import com.his.medicaltech.support.ExamGrid;
+import com.his.medicaltech.vo.ExamApptMessagePayloadVO;
 import com.his.medicaltech.vo.ExamApptVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysInspectionItem;
@@ -709,11 +710,11 @@ public class ExamAppointmentServiceImpl implements ExamAppointmentService {
                     appt.getExamDate(), appt.getStartTime(), appt.getEndTime(),
                     appt.getDeviceName(), appt.getRoomName() == null ? "" : appt.getRoomName(),
                     appt.getApptNo());
-            Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("apptNo", appt.getApptNo());
-            payload.put("patientName", appt.getPatientName());
-            payload.put("itemName", appt.getItemName());
-            payload.put("deviceName", appt.getDeviceName());
+            ExamApptMessagePayloadVO payload = new ExamApptMessagePayloadVO();
+            payload.setApptNo(appt.getApptNo());
+            payload.setPatientName(appt.getPatientName());
+            payload.setItemName(appt.getItemName());
+            payload.setDeviceName(appt.getDeviceName());
             sysMessageService.sendSystemMessage(appt.getDoctorId(), appt.getDoctorName(), title, content,
                     BizTypeEnum.APPOINTMENT.getType(), appt.getId(), "info",
                     cn.hutool.json.JSONUtil.toJsonStr(payload), null);

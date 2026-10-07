@@ -18,6 +18,8 @@ import com.his.patient.enums.DeathPlaceEnum;
 import com.his.patient.mapper.BizDeathCertificateCauseMapper;
 import com.his.patient.mapper.BizDeathCertificateMapper;
 import com.his.patient.service.DeathCertificateService;
+import com.his.patient.vo.DeathCertOverdueNotifyPayloadVO;
+import com.his.patient.vo.DeathCertReportPayloadVO;
 import com.his.patient.vo.DeathCertificateVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.enums.BizTypeEnum;
@@ -604,12 +606,12 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
         for (BizDeathCertificate r : overdue) {
             try {
                 long lateDays = ChronoUnit.DAYS.between(r.getReportDeadline(), LocalDateTime.now());
-                Map<String, Object> payload = new LinkedHashMap<>();
-                payload.put("certId", String.valueOf(r.getId()));
-                payload.put("certNo", r.getCertNo());
-                payload.put("patientName", r.getPatientName());
-                payload.put("deadline", String.valueOf(r.getReportDeadline()));
-                payload.put("lateDays", lateDays);
+                DeathCertOverdueNotifyPayloadVO payload = new DeathCertOverdueNotifyPayloadVO();
+                payload.setCertId(String.valueOf(r.getId()));
+                payload.setCertNo(r.getCertNo());
+                payload.setPatientName(r.getPatientName());
+                payload.setDeadline(String.valueOf(r.getReportDeadline()));
+                payload.setLateDays(lateDays);
                 boolean ok = sysMessageService.sendSystemMessage(r.getPhysicianId(), r.getPhysicianName(),
                         "死亡证明逾期未上报：" + r.getCertNo(),
                         r.getPatientName() + "（" + r.getCertNo() + "）已开具但超过上报时限 " + lateDays + " 天，请尽快上报死因监测",
@@ -688,44 +690,49 @@ public class DeathCertificateServiceImpl implements DeathCertificateService {
      * 死因链按 Ⅰ(a~d)/Ⅱ 分组带上，回执侧要的就是这一份。
      */
     private String buildReportPayload(BizDeathCertificate cert) {
-        List<Map<String, Object>> chain = new ArrayList<>();
-        List<Map<String, Object>> other = new ArrayList<>();
+        List<DeathCertReportPayloadVO.CauseItem> chain = new ArrayList<>();
+        List<DeathCertReportPayloadVO.CauseItem> other = new ArrayList<>();
         for (DeathCertificateVO.CauseVO row : causeMapper.selectByCertId(cert.getId())) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("seqNo", row.getSeqNo());
-            item.put("icdCode", row.getIcdCode());
-            item.put("name", row.getIcdName());
-            item.put("interval", row.getIntervalText());
+            DeathCertReportPayloadVO.CauseItem item = new DeathCertReportPayloadVO.CauseItem();
+            item.setSeqNo(row.getSeqNo());
+            item.setIcdCode(row.getIcdCode());
+            item.setName(row.getIcdName());
+            item.setInterval(row.getIntervalText());
             (Objects.equals(row.getPart(), DeathCausePartEnum.OTHER.getCode()) ? other : chain).add(item);
         }
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("msgType", "DEATH_CERT_REPORT");
-        payload.put("certNo", cert.getCertNo());
-        payload.put("name", cert.getPatientName());
-        payload.put("gender", cert.getGender());
-        payload.put("nation", cert.getNation());
-        payload.put("birthDate", cert.getBirthDate() == null ? null : cert.getBirthDate().toString());
-        payload.put("age", cert.getAge());
-        payload.put("idCard", cert.getIdCard());
-        payload.put("occupation", cert.getOccupation());
-        payload.put("maritalStatus", cert.getMaritalStatus());
-        payload.put("deathTime", ts(cert.getDeathTime()));
-        payload.put("deathPlace", cert.getDeathPlace());
-        payload.put("deathDept", cert.getDeathDeptName());
-        payload.put("clinicalDiagnosis", cert.getClinicalDiagnosis());
-        payload.put("underlyingCause", Map.of("icdCode", nullToEmpty(cert.getUnderlyingIcdCode()),
-                "name", nullToEmpty(cert.getUnderlyingIcdName())));
-        payload.put("causeChainPartI", chain);
-        payload.put("causeChainPartII", other);
-        payload.put("autopsyFlag", cert.getAutopsyFlag());
-        payload.put("autopsyResult", cert.getAutopsyResult());
-        payload.put("relative", Map.of("name", nullToEmpty(cert.getRelativeName()),
-                "relation", nullToEmpty(cert.getRelativeRelation()),
-                "phone", nullToEmpty(cert.getRelativePhone())));
-        payload.put("physician", cert.getPhysicianName());
-        payload.put("fillTime", ts(cert.getFillTime()));
-        payload.put("issueTime", ts(cert.getIssueTime()));
-        payload.put("reportDeadline", ts(cert.getReportDeadline()));
+        DeathCertReportPayloadVO.UnderlyingCause underlying = new DeathCertReportPayloadVO.UnderlyingCause();
+        underlying.setIcdCode(nullToEmpty(cert.getUnderlyingIcdCode()));
+        underlying.setName(nullToEmpty(cert.getUnderlyingIcdName()));
+        DeathCertReportPayloadVO.Relative relative = new DeathCertReportPayloadVO.Relative();
+        relative.setName(nullToEmpty(cert.getRelativeName()));
+        relative.setRelation(nullToEmpty(cert.getRelativeRelation()));
+        relative.setPhone(nullToEmpty(cert.getRelativePhone()));
+
+        DeathCertReportPayloadVO payload = new DeathCertReportPayloadVO();
+        payload.setMsgType("DEATH_CERT_REPORT");
+        payload.setCertNo(cert.getCertNo());
+        payload.setName(cert.getPatientName());
+        payload.setGender(cert.getGender());
+        payload.setNation(cert.getNation());
+        payload.setBirthDate(cert.getBirthDate() == null ? null : cert.getBirthDate().toString());
+        payload.setAge(cert.getAge());
+        payload.setIdCard(cert.getIdCard());
+        payload.setOccupation(cert.getOccupation());
+        payload.setMaritalStatus(cert.getMaritalStatus());
+        payload.setDeathTime(ts(cert.getDeathTime()));
+        payload.setDeathPlace(cert.getDeathPlace());
+        payload.setDeathDept(cert.getDeathDeptName());
+        payload.setClinicalDiagnosis(cert.getClinicalDiagnosis());
+        payload.setUnderlyingCause(underlying);
+        payload.setCauseChainPartI(chain);
+        payload.setCauseChainPartII(other);
+        payload.setAutopsyFlag(cert.getAutopsyFlag());
+        payload.setAutopsyResult(cert.getAutopsyResult());
+        payload.setRelative(relative);
+        payload.setPhysician(cert.getPhysicianName());
+        payload.setFillTime(ts(cert.getFillTime()));
+        payload.setIssueTime(ts(cert.getIssueTime()));
+        payload.setReportDeadline(ts(cert.getReportDeadline()));
         return JSONUtil.toJsonStr(payload);
     }
 

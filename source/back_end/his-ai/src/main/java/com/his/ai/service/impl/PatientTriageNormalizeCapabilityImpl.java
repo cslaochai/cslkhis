@@ -7,6 +7,7 @@ import com.his.ai.dto.PatientTriageNormalizeLlmOutputDTO;
 import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.PatientTriageNormalizeCapability;
 import com.his.ai.support.PatientTextGuard;
+import com.his.ai.vo.PatientTriageNormalizePromptVariablesVO;
 import com.his.ai.vo.PatientTriageNormalizeVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -129,8 +130,8 @@ public class PatientTriageNormalizeCapabilityImpl implements PatientTriageNormal
     }
 
     private Optional<PatientTriageNormalizeLlmOutputDTO> callModel(String description) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("description", description);
+        PatientTriageNormalizePromptVariablesVO variables = new PatientTriageNormalizePromptVariablesVO();
+        variables.setDescription(description);
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.PATIENT_TRIAGE_NORMALIZE)

@@ -1,12 +1,18 @@
 package com.his.medicaltech.mapper;
 
+import com.his.medicaltech.vo.CdrAdmissionRowVO;
+import com.his.medicaltech.vo.CdrArchiveIdentityRowVO;
+import com.his.medicaltech.vo.CdrEmergencyRowVO;
+import com.his.medicaltech.vo.CdrEventRowVO;
+import com.his.medicaltech.vo.CdrProfileRowVO;
+import com.his.medicaltech.vo.CdrRegistrationRowVO;
+import com.his.medicaltech.vo.CdrVisitRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 /**
  * CDR 患者全景时间轴 Mapper（P5.2）。
@@ -35,22 +41,21 @@ public interface CdrMapper {
     /**
      * 拉取该患者（EMPI 归并后的全部档案）的所有事件。
      *
-     * <p>返回行形状（列名即键）：
-     * {@code etype, src_table, src_id, anchor_type, anchor_id, etime, title, summary,
-     * dept_name, operator_name, status_code, secondary_code, amount, owner_pid}
+     * <p>返回行形状 = {@link CdrEventRowVO} 的字段（UNION 只认第一个分支的列名，
+     * 所以别名全部写在第一分支上，后面各分支按位置对齐）。
      */
     String EVENT_SQL = """
             <script>
-            SELECT 'outpatientRecord' AS etype, 'biz_medical_record' AS src_table, CAST(m.id AS CHAR) AS src_id,
-                   'REGIST' AS anchor_type, CAST(m.regist_id AS CHAR) AS anchor_id,
+            SELECT 'outpatientRecord' AS etype, 'biz_medical_record' AS srcTable, CAST(m.id AS CHAR) AS srcId,
+                   'REGIST' AS anchorType, CAST(m.regist_id AS CHAR) AS anchorId,
                    COALESCE(m.create_time, TIMESTAMP(m.visit_date)) AS etime,
                    CONCAT('门诊病历 ', m.record_no) AS title,
                    NULLIF(TRIM(CONCAT(COALESCE(LEFT(m.chief_complaint, 60), ''),
                      CASE WHEN m.diagnosis_name IS NULL OR m.diagnosis_name = '' THEN ''
                           ELSE CONCAT(' / 诊断：', LEFT(m.diagnosis_name, 40)) END)), '') AS summary,
-                   m.dept_name AS dept_name, m.doctor_name AS operator_name, m.record_status AS status_code,
-                   CAST(NULL AS SIGNED) AS secondary_code, CAST(NULL AS DECIMAL(14,2)) AS amount,
-                   CAST(m.patient_id AS CHAR) AS owner_pid
+                   m.dept_name AS deptName, m.doctor_name AS operatorName, m.record_status AS statusCode,
+                   CAST(NULL AS SIGNED) AS secondaryCode, CAST(NULL AS DECIMAL(14,2)) AS amount,
+                   CAST(m.patient_id AS CHAR) AS ownerPid
               FROM biz_medical_record m
              WHERE m.del_flag = 0
                AND m.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
@@ -468,11 +473,11 @@ public interface CdrMapper {
     /**
      * 健康档案（患者级，不挂就诊次）。
      *
-     * <p>返回行：{@code pkey, sid, owner_pid, title, summary, tm}
+     * <p>返回行 = {@link CdrProfileRowVO} 的字段。别名同样只写在第一分支上。
      */
     String PROFILE_SQL = """
             <script>
-            SELECT 'allergy' AS pkey, CAST(x.id AS CHAR) AS sid, CAST(x.patient_id AS CHAR) AS owner_pid,
+            SELECT 'allergy' AS pkey, CAST(x.id AS CHAR) AS sid, CAST(x.patient_id AS CHAR) AS ownerPid,
                    COALESCE(x.allergen_name, x.allergy_type, '过敏原未填') AS title,
                    NULLIF(TRIM(CONCAT(COALESCE(x.allergy_severity, ''),
                      CASE WHEN x.allergy_symptoms IS NULL OR x.allergy_symptoms = '' THEN ''
@@ -535,86 +540,97 @@ public interface CdrMapper {
             """;
 
     @Select(EVENT_SQL)
-    List<Map<String, Object>> selectTimelineEvents(@Param("ids") Collection<Long> ids);
+    List<CdrEventRowVO> selectTimelineEvents(@Param("ids") Collection<Long> ids);
 
     /**
      * 住院节点（含科室/病区/床位名，入院记录本身只存 ID）
      */
     @Select("""
             <script>
-            SELECT CAST(a.admission_id AS CHAR) AS admission_id, a.admission_no, CAST(a.patient_id AS CHAR) AS owner_pid,
-                   a.admit_time, a.discharge_time, a.admit_status, a.admit_way,
+            SELECT CAST(a.admission_id AS CHAR) AS admissionId, a.admission_no AS admissionNo,
+                   CAST(a.patient_id AS CHAR) AS ownerPid,
+                   a.admit_time AS admitTime, a.discharge_time AS dischargeTime,
+                   a.admit_status AS admitStatus, a.admit_way AS admitWay,
                    COALESCE(a.admit_diagnosis_name, a.diagnosis) AS diagnosis,
-                   (SELECT d.dept_name FROM sys_department d WHERE d.id = a.dept_id) AS dept_name,
-                   (SELECT w.ward_name FROM sys_ward w WHERE w.ward_id = a.ward_id) AS ward_name,
-                   (SELECT b.bed_no FROM sys_bed b WHERE b.bed_id = a.bed_id) AS bed_no,
+                   (SELECT d.dept_name FROM sys_department d WHERE d.id = a.dept_id) AS deptName,
+                   (SELECT w.ward_name FROM sys_ward w WHERE w.ward_id = a.ward_id) AS wardName,
+                   (SELECT b.bed_no FROM sys_bed b WHERE b.bed_id = a.bed_id) AS bedNo,
                    (SELECT s.main_diagnosis_name FROM biz_inpatient_summary s
-                     WHERE s.admission_id = a.admission_id AND s.del_flag = 0 LIMIT 1) AS summary_diag,
+                     WHERE s.admission_id = a.admission_id AND s.del_flag = 0 LIMIT 1) AS summaryDiag,
                    (SELECT s.summary_status FROM biz_inpatient_summary s
-                     WHERE s.admission_id = a.admission_id AND s.del_flag = 0 LIMIT 1) AS summary_status
+                     WHERE s.admission_id = a.admission_id AND s.del_flag = 0 LIMIT 1) AS summaryStatus
               FROM biz_admission a
              WHERE a.del_flag = 0
                AND a.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             </script>
             """)
-    List<Map<String, Object>> selectAdmissions(@Param("ids") Collection<Long> ids);
+    List<CdrAdmissionRowVO> selectAdmissions(@Param("ids") Collection<Long> ids);
 
     /**
      * 门诊就诊次（就诊次记录；其挂号ID清单字段存逗号分隔的多个挂号ID）
      */
     @Select("""
             <script>
-            SELECT CAST(v.visit_id AS CHAR) AS visit_id, v.visit_no, CAST(v.patient_id AS CHAR) AS owner_pid,
-                   v.start_time, v.end_time, v.visit_status, v.total_amount, v.regist_ids
+            SELECT CAST(v.visit_id AS CHAR) AS visitId, v.visit_no AS visitNo,
+                   CAST(v.patient_id AS CHAR) AS ownerPid,
+                   v.start_time AS startTime, v.end_time AS endTime,
+                   v.visit_status AS visitStatus, v.total_amount AS totalAmount,
+                   v.regist_ids AS registIds
               FROM biz_visit v
              WHERE v.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             </script>
             """)
-    List<Map<String, Object>> selectVisits(@Param("ids") Collection<Long> ids);
+    List<CdrVisitRowVO> selectVisits(@Param("ids") Collection<Long> ids);
 
     /**
      * 挂号（门诊节点的锚点，也是"没有被任何就诊次收录的挂号"的兜底来源）
      */
     @Select("""
             <script>
-            SELECT CAST(r.id AS CHAR) AS regist_id, r.regist_no, CAST(r.patient_id AS CHAR) AS owner_pid,
-                   r.regist_time, r.visit_date, r.regist_status, r.dept_name, r.doctor_name,
-                   r.regist_type, r.medical_insurance_type
+            SELECT CAST(r.id AS CHAR) AS registId, r.regist_no AS registNo,
+                   CAST(r.patient_id AS CHAR) AS ownerPid,
+                   r.regist_time AS registTime, r.visit_date AS visitDate,
+                   r.regist_status AS registStatus, r.dept_name AS deptName, r.doctor_name AS doctorName,
+                   r.regist_type AS registType, r.medical_insurance_type AS medicalInsuranceType
               FROM biz_appoint_info r
              WHERE r.del_flag = 0
                AND r.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             </script>
             """)
-    List<Map<String, Object>> selectRegistrations(@Param("ids") Collection<Long> ids);
+    List<CdrRegistrationRowVO> selectRegistrations(@Param("ids") Collection<Long> ids);
 
     /**
      * 急诊节点
      */
     @Select("""
             <script>
-            SELECT CAST(e.id AS CHAR) AS emergency_id, e.emergency_no, CAST(e.patient_id AS CHAR) AS owner_pid,
-                   e.admission_time, e.finish_time, e.emergency_status, e.triage_level, e.zone,
-                   e.dept_name, e.doctor_name, e.diagnosis, e.chief_complaint
+            SELECT CAST(e.id AS CHAR) AS emergencyId, e.emergency_no AS emergencyNo,
+                   CAST(e.patient_id AS CHAR) AS ownerPid,
+                   e.admission_time AS admissionTime, e.finish_time AS finishTime,
+                   e.emergency_status AS emergencyStatus, e.triage_level AS triageLevel, e.zone AS zone,
+                   e.dept_name AS deptName, e.doctor_name AS doctorName,
+                   e.diagnosis AS diagnosis, e.chief_complaint AS chiefComplaint
               FROM biz_emergency e
              WHERE e.del_flag = 0
                AND e.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             </script>
             """)
-    List<Map<String, Object>> selectEmergencies(@Param("ids") Collection<Long> ids);
+    List<CdrEmergencyRowVO> selectEmergencies(@Param("ids") Collection<Long> ids);
 
     @Select(PROFILE_SQL)
-    List<Map<String, Object>> selectHealthProfile(@Param("ids") Collection<Long> ids);
+    List<CdrProfileRowVO> selectHealthProfile(@Param("ids") Collection<Long> ids);
 
     /**
      * 归并进来的档案身份（用于把"数据挂在别的档案号下"这件事说清楚）
      */
     @Select("""
             <script>
-            SELECT CAST(p.id AS CHAR) AS pid, p.patient_no, p.patient_name, p.merge_time, p.merge_status
+            SELECT CAST(p.id AS CHAR) AS pid, p.patient_no AS patientNo, p.patient_name AS patientName,
+                   p.merge_time AS mergeTime, p.merge_status AS mergeStatus
               FROM biz_patient p
              WHERE p.del_flag = 0
                AND p.id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             </script>
             """)
-    List<Map<String, Object>> selectArchiveIdentities(@Param("ids") Collection<Long> ids);
+    List<CdrArchiveIdentityRowVO> selectArchiveIdentities(@Param("ids") Collection<Long> ids);
 }

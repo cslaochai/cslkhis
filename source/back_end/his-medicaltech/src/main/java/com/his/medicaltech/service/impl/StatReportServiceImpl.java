@@ -11,7 +11,15 @@ import com.his.medicaltech.entity.BizStatReport;
 import com.his.medicaltech.mapper.BizStatReportMapper;
 import com.his.medicaltech.mapper.StatReportAggMapper;
 import com.his.medicaltech.service.StatReportService;
+import com.his.medicaltech.vo.StatCohortCaseRowVO;
+import com.his.medicaltech.vo.StatCohortFeesRowVO;
+import com.his.medicaltech.vo.StatCohortSummaryRowVO;
+import com.his.medicaltech.vo.StatInsuranceDistRowVO;
+import com.his.medicaltech.vo.StatOperationLevelRowVO;
+import com.his.medicaltech.vo.StatOperationRowVO;
+import com.his.medicaltech.vo.StatReportPayloadVO;
 import com.his.medicaltech.vo.StatReportVO;
+import com.his.medicaltech.vo.StatTopDiagnosisRowVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
@@ -26,9 +34,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -47,19 +53,31 @@ public class StatReportServiceImpl implements StatReportService {
     private DictCacheService dictCacheService;
 
     /**
-     * selectPage 排除列后字段为 null，聚合 map 兜底空 Map
+     * selectPage 排除列后聚合结果可能为 null
      */
-    private static Map<String, Object> nz(Map<String, Object> m) {
-        return m == null ? Map.of() : m;
+    private static StatCohortSummaryRowVO emptySummary() {
+        StatCohortSummaryRowVO vo = new StatCohortSummaryRowVO();
+        vo.setDischargeCount(0L);
+        vo.setDeathCount(0L);
+        vo.setAvgLosDays(BigDecimal.ZERO);
+        return vo;
     }
 
-    // 报出 / 作废
-    private static long toLong(Object v) {
-        return v == null ? 0L : ((Number) v).longValue();
+    private static StatOperationRowVO emptyOperation() {
+        StatOperationRowVO vo = new StatOperationRowVO();
+        vo.setOperationCount(0L);
+        vo.setLevel3upCount(0L);
+        return vo;
     }
 
-    private static BigDecimal toDecimal(Object v) {
-        return v == null ? BigDecimal.ZERO : new BigDecimal(v.toString());
+    private static StatCohortFeesRowVO emptyFees() {
+        StatCohortFeesRowVO vo = new StatCohortFeesRowVO();
+        vo.setSettleCount(0L);
+        vo.setTotalAmount(BigDecimal.ZERO);
+        vo.setInsuranceAmount(BigDecimal.ZERO);
+        vo.setPatientPayAmount(BigDecimal.ZERO);
+        vo.setArrearsAmount(BigDecimal.ZERO);
+        return vo;
     }
 
     // 查询
@@ -121,92 +139,105 @@ public class StatReportServiceImpl implements StatReportService {
         }
         Long deptFilter = deptId == null ? 0L : deptId;
 
-        Map<String, Object> summary = nz(aggMapper.cohortSummary(startStr, endStr, deptFilter));
-        Map<String, Object> opStats = nz(aggMapper.operationStats(startStr, endStr, deptFilter));
-        Map<String, Object> fees = nz(aggMapper.cohortFees(startStr, endStr, deptFilter));
-        List<Map<String, Object>> levelDist = aggMapper.operationLevelDist(startStr, endStr, deptFilter);
-        List<Map<String, Object>> insurance = aggMapper.insuranceDist(startStr, endStr, deptFilter);
-        List<Map<String, Object>> topDx = aggMapper.topDiagnoses(startStr, endStr, deptFilter);
-        List<Map<String, Object>> cases = aggMapper.cohortCases(startStr, endStr, deptFilter);
+        StatCohortSummaryRowVO summary = aggMapper.cohortSummary(startStr, endStr, deptFilter);
+        if (summary == null) {
+            summary = emptySummary();
+        }
+        StatOperationRowVO opStats = aggMapper.operationStats(startStr, endStr, deptFilter);
+        if (opStats == null) {
+            opStats = emptyOperation();
+        }
+        StatCohortFeesRowVO fees = aggMapper.cohortFees(startStr, endStr, deptFilter);
+        if (fees == null) {
+            fees = emptyFees();
+        }
+        List<StatOperationLevelRowVO> levelDist = aggMapper.operationLevelDist(startStr, endStr, deptFilter);
+        List<StatInsuranceDistRowVO> insurance = aggMapper.insuranceDist(startStr, endStr, deptFilter);
+        List<StatTopDiagnosisRowVO> topDx = aggMapper.topDiagnoses(startStr, endStr, deptFilter);
+        List<StatCohortCaseRowVO> cases = aggMapper.cohortCases(startStr, endStr, deptFilter);
 
         String typeName = dictCacheService.getDicDataLabel("biz_medicaltech_statReportTypeEnum", dto.getReportType());
         String title = (deptName == null ? "" : deptName) + typeName + "（" + period + "）";
         String operator = operatorUser.getRealName();
         LocalDateTime now = LocalDateTime.now();
 
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("reportKind", "WS4-STAT-" + dto.getReportType() + "-" + period);
-        payload.put("reportName", title);
-        Map<String, Object> org = new LinkedHashMap<>();
-        org.put("orgName", "（预留：机构全称，真实对接时填写）");
-        org.put("orgCode", "（预留：卫生统计机构代码）");
-        org.put("regionCode", "（预留：行政区划代码）");
-        payload.put("org", org);
-        Map<String, Object> periodMap = new LinkedHashMap<>();
-        periodMap.put("type", dto.getPeriodType());
-        periodMap.put("typeLabel", dto.getPeriodType() == 1 ? "月报" : "年报");
-        periodMap.put("value", period);
-        periodMap.put("start", startStr);
-        periodMap.put("end", endStr);
-        payload.put("period", periodMap);
-        Map<String, Object> scope = new LinkedHashMap<>();
-        scope.put("deptId", deptId == null ? null : String.valueOf(deptId));
-        scope.put("deptName", deptName == null ? "全院" : deptName);
-        payload.put("scope", scope);
+        // 报文结构见 StatReportPayloadVO：字段名是前端预览/打印与未来对接平台的契约
+        StatReportPayloadVO.Org org = new StatReportPayloadVO.Org();
+        org.setOrgName("（预留：机构全称，真实对接时填写）");
+        org.setOrgCode("（预留：卫生统计机构代码）");
+        org.setRegionCode("（预留：行政区划代码）");
 
-        Map<String, Object> indicators = new LinkedHashMap<>();
-        indicators.put("dischargeCount", toLong(summary.get("dischargeCount")));
-        indicators.put("deathCount", toLong(summary.get("deathCount")));
-        indicators.put("avgLosDays", toDecimal(summary.get("avgLosDays")));
-        indicators.put("operationCount", toLong(opStats.get("operationCount")));
-        indicators.put("level3upCount", toLong(opStats.get("level3upCount")));
-        indicators.put("settleCount", toLong(fees.get("settleCount")));
-        indicators.put("totalAmount", toDecimal(fees.get("totalAmount")));
-        indicators.put("insuranceAmount", toDecimal(fees.get("insuranceAmount")));
-        indicators.put("patientPayAmount", toDecimal(fees.get("patientPayAmount")));
-        indicators.put("arrearsAmount", toDecimal(fees.get("arrearsAmount")));
-        payload.put("indicators", indicators);
+        StatReportPayloadVO.Period periodInfo = new StatReportPayloadVO.Period();
+        periodInfo.setType(dto.getPeriodType());
+        periodInfo.setTypeLabel(dto.getPeriodType() == 1 ? "月报" : "年报");
+        periodInfo.setValue(period);
+        periodInfo.setStart(startStr);
+        periodInfo.setEnd(endStr);
 
-        List<Map<String, Object>> levels = new ArrayList<>();
-        for (Map<String, Object> row : levelDist) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            long lv = toLong(row.get("level"));
-            item.put("level", lv);
-            item.put("levelLabel", lv == 0 ? "未录级别" : lv + "级");
-            item.put("count", toLong(row.get("cnt")));
+        StatReportPayloadVO.Scope scope = new StatReportPayloadVO.Scope();
+        scope.setDeptId(deptId == null ? null : String.valueOf(deptId));
+        scope.setDeptName(deptName == null ? "全院" : deptName);
+
+        StatReportPayloadVO.Indicators indicators = new StatReportPayloadVO.Indicators();
+        indicators.setDischargeCount(summary.getDischargeCount());
+        indicators.setDeathCount(summary.getDeathCount());
+        indicators.setAvgLosDays(summary.getAvgLosDays());
+        indicators.setOperationCount(opStats.getOperationCount());
+        indicators.setLevel3upCount(opStats.getLevel3upCount());
+        indicators.setSettleCount(fees.getSettleCount());
+        indicators.setTotalAmount(fees.getTotalAmount());
+        indicators.setInsuranceAmount(fees.getInsuranceAmount());
+        indicators.setPatientPayAmount(fees.getPatientPayAmount());
+        indicators.setArrearsAmount(fees.getArrearsAmount());
+
+        List<StatReportPayloadVO.OperationLevelItem> levels = new ArrayList<>();
+        for (StatOperationLevelRowVO row : levelDist) {
+            StatReportPayloadVO.OperationLevelItem item = new StatReportPayloadVO.OperationLevelItem();
+            long lv = row.getLevel() == null ? 0L : row.getLevel();
+            item.setLevel(lv);
+            item.setLevelLabel(lv == 0 ? "未录级别" : lv + "级");
+            item.setCount(row.getCnt());
             levels.add(item);
         }
-        payload.put("operationLevels", levels);
 
-        List<Map<String, Object>> ins = new ArrayList<>();
-        for (Map<String, Object> row : insurance) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("type", String.valueOf(row.get("insuranceType")));
-            item.put("count", toLong(row.get("cnt")));
-            item.put("amount", toDecimal(row.get("amount")));
+        List<StatReportPayloadVO.InsuranceItem> ins = new ArrayList<>();
+        for (StatInsuranceDistRowVO row : insurance) {
+            StatReportPayloadVO.InsuranceItem item = new StatReportPayloadVO.InsuranceItem();
+            item.setType(String.valueOf(row.getInsuranceType()));
+            item.setCount(row.getCnt());
+            item.setAmount(row.getAmount());
             ins.add(item);
         }
-        payload.put("insuranceTypes", ins);
 
-        List<Map<String, Object>> dxs = new ArrayList<>();
-        for (Map<String, Object> row : topDx) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("code", row.get("diagnosisCode"));
-            item.put("name", row.get("diagnosisName"));
-            item.put("count", toLong(row.get("cnt")));
+        List<StatReportPayloadVO.TopDiagnosisItem> dxs = new ArrayList<>();
+        for (StatTopDiagnosisRowVO row : topDx) {
+            StatReportPayloadVO.TopDiagnosisItem item = new StatReportPayloadVO.TopDiagnosisItem();
+            item.setCode(row.getDiagnosisCode());
+            item.setName(row.getDiagnosisName());
+            item.setCount(row.getCnt());
             dxs.add(item);
         }
-        payload.put("topDiagnoses", dxs);
-        payload.put("cases", cases);
 
-        Map<String, Object> reserved = new LinkedHashMap<>();
-        reserved.put("sendChannel", "打印预留：未对接外部平台。报出（submit）仅冻结留痕，"
+        StatReportPayloadVO.Reserved reserved = new StatReportPayloadVO.Reserved();
+        reserved.setSendChannel("打印预留：未对接外部平台。报出（submit）仅冻结留痕，"
                 + "真实对接时把报出动作换成 http 上报即可，埋点就在 submit。");
-        reserved.put("receipt", "回执落库与月度对账口径：预留（本台账 payload 冻结即对外承诺内容，可回看）");
-        reserved.put("printTip", "本报文可打印成纸质报表，加盖机构公章后作为上报留档。");
-        payload.put("reserved", reserved);
-        payload.put("operator", operator);
-        payload.put("generatedAt", now.format(DateFormats.DATETIME));
+        reserved.setReceipt("回执落库与月度对账口径：预留（本台账 payload 冻结即对外承诺内容，可回看）");
+        reserved.setPrintTip("本报文可打印成纸质报表，加盖机构公章后作为上报留档。");
+
+        StatReportPayloadVO payload = new StatReportPayloadVO();
+        payload.setReportKind("WS4-STAT-" + dto.getReportType() + "-" + period);
+        payload.setReportName(title);
+        payload.setOrg(org);
+        payload.setPeriod(periodInfo);
+        payload.setScope(scope);
+        payload.setIndicators(indicators);
+        payload.setOperationLevels(levels);
+        payload.setInsuranceTypes(ins);
+        payload.setTopDiagnoses(dxs);
+        payload.setCases(cases);
+        payload.setReserved(reserved);
+        payload.setOperator(operator);
+        payload.setGeneratedAt(now.format(DateFormats.DATETIME));
 
         String payloadJson;
         try {
@@ -223,12 +254,12 @@ public class StatReportServiceImpl implements StatReportService {
         r.setDeptId(deptId);
         r.setDeptName(deptName);
         r.setTitle(title);
-        r.setDischargeCount((int) toLong(summary.get("dischargeCount")));
-        r.setDeathCount((int) toLong(summary.get("deathCount")));
-        r.setOperationCount((int) toLong(opStats.get("operationCount")));
-        r.setLevel3upCount((int) toLong(opStats.get("level3upCount")));
-        r.setAvgLosDays(toDecimal(summary.get("avgLosDays")));
-        r.setTotalAmount(toDecimal(fees.get("totalAmount")));
+        r.setDischargeCount(summary.getDischargeCount().intValue());
+        r.setDeathCount(summary.getDeathCount().intValue());
+        r.setOperationCount(opStats.getOperationCount().intValue());
+        r.setLevel3upCount(opStats.getLevel3upCount().intValue());
+        r.setAvgLosDays(summary.getAvgLosDays());
+        r.setTotalAmount(fees.getTotalAmount());
         r.setPayload(payloadJson);
         r.setStatus(0);
         r.setGenerateTime(now);

@@ -2,12 +2,13 @@ package com.his.medicaltech.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.medicaltech.entity.BizExamDevice;
+import com.his.medicaltech.vo.ExamDeviceItemCountRowVO;
+import com.his.medicaltech.vo.ExamEquipmentOptionRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
-import java.util.Map;
 
 @Mapper
 public interface BizExamDeviceMapper extends BaseMapper<BizExamDevice> {
@@ -36,12 +37,12 @@ public interface BizExamDeviceMapper extends BaseMapper<BizExamDevice> {
     @Select("SELECT id, equipment_code AS equipmentCode, equipment_name AS equipmentName, "
             + "category, status FROM sys_equipment "
             + "WHERE del_flag = 0 ORDER BY equipment_code ASC")
-    List<Map<String, Object>> selectEquipmentOptions();
+    List<ExamEquipmentOptionRowVO> selectEquipmentOptions();
 
     /**
      * 各设备已开展项目数（列表页一次统计，不逐行查）
      */
-    @Select("SELECT device_id AS deviceId, COUNT(*) AS n FROM biz_exam_device_item "
+    @Select("SELECT device_id AS deviceId, COUNT(*) AS itemCount FROM biz_exam_device_item "
             + "WHERE del_flag = 0 GROUP BY device_id")
-    List<Map<String, Object>> countItemsByDevice();
+    List<ExamDeviceItemCountRowVO> countItemsByDevice();
 }

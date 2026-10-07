@@ -7,17 +7,16 @@ import com.his.appoint.vo.ScheduleSelectListVO;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniappDirectoryMapper;
 import com.his.miniapp.service.MiniappDirectoryService;
-import com.his.miniapp.support.RawRowValues;
 import com.his.miniapp.vo.DeptSelectListVO;
 import com.his.miniapp.vo.DoctorSelectListVO;
 import com.his.miniapp.vo.PatientDetailVO;
+import com.his.miniapp.vo.PatientRowVO;
 import com.his.patient.service.PatientGuardianService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -31,10 +30,10 @@ public class MiniappDirectoryServiceImpl implements MiniappDirectoryService {
     public List<DeptSelectListVO> openDepartments() {
         return miniappDirectoryMapper.selectOpenDepartments().stream().map(row -> {
             DeptSelectListVO vo = new DeptSelectListVO();
-            vo.setId(RawRowValues.text(row, "id"));
-            vo.setDeptName(RawRowValues.text(row, "dept_name"));
-            vo.setDeptType(RawRowValues.integer(row, "dept_type"));
-            vo.setDeptDesc(RawRowValues.text(row, "dept_desc"));
+            vo.setId(row.getId());
+            vo.setDeptName(row.getDeptName());
+            vo.setDeptType(row.getDeptType());
+            vo.setDeptDesc(row.getDeptDesc());
             return vo;
         }).toList();
     }
@@ -43,14 +42,14 @@ public class MiniappDirectoryServiceImpl implements MiniappDirectoryService {
     public List<DoctorSelectListVO> doctorsByDept(Long deptId) {
         return miniappDirectoryMapper.selectDoctorsByDept(deptId).stream().map(row -> {
             DoctorSelectListVO vo = new DoctorSelectListVO();
-            vo.setId(RawRowValues.text(row, "id"));
-            vo.setEmpName(RawRowValues.text(row, "emp_name"));
-            vo.setDeptId(RawRowValues.longValue(row, "dept_id"));
-            vo.setDeptName(RawRowValues.text(row, "dept_name"));
-            vo.setTitle(RawRowValues.text(row, "title"));
-            vo.setSpecialty(RawRowValues.text(row, "specialty"));
-            vo.setIsExpert(RawRowValues.integer(row, "is_expert"));
-            vo.setExpertPrice(RawRowValues.decimal(row, "expert_price"));
+            vo.setId(row.getId());
+            vo.setEmpName(row.getEmpName());
+            vo.setDeptId(row.getDeptId());
+            vo.setDeptName(row.getDeptName());
+            vo.setTitle(row.getTitle());
+            vo.setSpecialty(row.getSpecialty());
+            vo.setIsExpert(row.getIsExpert());
+            vo.setExpertPrice(row.getExpertPrice());
             return vo;
         }).toList();
     }
@@ -70,22 +69,21 @@ public class MiniappDirectoryServiceImpl implements MiniappDirectoryService {
         if (!patientGuardianService.canAccessPatient(patientId)) {
             throw new BusinessException("无权查询该就诊人档案");
         }
-        // 裸 SQL 的 Map 键是下划线列名（MyBatis 驼峰映射只对 Bean 生效），出参键名固定为驼峰
-        Map<String, Object> row = miniappDirectoryMapper.selectPatientById(patientId);
+        PatientRowVO row = miniappDirectoryMapper.selectPatientById(patientId);
         if (row == null) {
             return null;
         }
         PatientDetailVO vo = new PatientDetailVO();
-        vo.setId(RawRowValues.text(row, "id"));
-        vo.setPatientNo(RawRowValues.text(row, "patient_no"));
-        vo.setPatientName(RawRowValues.text(row, "patient_name"));
-        vo.setGender(RawRowValues.integer(row, "gender"));
-        vo.setBirthDate(RawRowValues.date(row, "birth_date"));
-        vo.setAge(RawRowValues.integer(row, "age"));
-        vo.setPhone(RawRowValues.text(row, "phone"));
-        vo.setIdCard(RawRowValues.text(row, "id_card"));
-        vo.setBalance(RawRowValues.decimal(row, "balance"));
-        vo.setVisitCount(RawRowValues.integer(row, "visit_count"));
+        vo.setId(row.getId());
+        vo.setPatientNo(row.getPatientNo());
+        vo.setPatientName(row.getPatientName());
+        vo.setGender(row.getGender());
+        vo.setBirthDate(row.getBirthDate());
+        vo.setAge(row.getAge());
+        vo.setPhone(row.getPhone());
+        vo.setIdCard(row.getIdCard());
+        vo.setBalance(row.getBalance());
+        vo.setVisitCount(row.getVisitCount());
         return vo;
     }
 }

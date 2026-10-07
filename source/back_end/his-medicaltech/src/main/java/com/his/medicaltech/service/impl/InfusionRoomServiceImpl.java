@@ -22,6 +22,7 @@ import com.his.medicaltech.mapper.BizOutpInfusionMapper;
 import com.his.medicaltech.mapper.BizOutpInfusionRoundMapper;
 import com.his.medicaltech.mapper.BizSkinTestMapper;
 import com.his.medicaltech.service.InfusionRoomService;
+import com.his.medicaltech.vo.InfusionPatientSnapshotVO;
 import com.his.medicaltech.vo.InfusionRoomVO;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -188,16 +189,14 @@ public class InfusionRoomServiceImpl implements InfusionRoomService {
      * 患者快照（服务端重查，不信任前端）。
      */
     private void fillPatientSnapshot(BizOutpInfusion inf) {
-        Map<String, Object> row = infusionMapper.selectPatientSnapshot(inf.getPatientId());
+        InfusionPatientSnapshotVO row = infusionMapper.selectPatientSnapshot(inf.getPatientId());
         if (row == null) {
             throw new BusinessException("患者不存在（ID " + inf.getPatientId() + "）");
         }
-        inf.setPatientNo((String) row.get("patientNo"));
-        inf.setPatientName((String) row.get("patientName"));
-        Object gender = row.get("gender");
-        inf.setGender(gender == null ? null : Integer.valueOf(String.valueOf(gender)));
-        Object age = row.get("age");
-        inf.setAge(age == null ? null : Integer.valueOf(String.valueOf(age)));
+        inf.setPatientNo(row.getPatientNo());
+        inf.setPatientName(row.getPatientName());
+        inf.setGender(row.getGender());
+        inf.setAge(row.getAge());
     }
 
     // 皮试

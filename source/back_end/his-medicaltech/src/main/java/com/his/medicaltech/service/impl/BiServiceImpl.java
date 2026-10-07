@@ -3,6 +3,13 @@ package com.his.medicaltech.service.impl;
 import com.his.medicaltech.mapper.BiMapper;
 import com.his.medicaltech.service.BiService;
 import com.his.medicaltech.support.DrgGrouper;
+import com.his.medicaltech.vo.BiBedStatRowVO;
+import com.his.medicaltech.vo.BiCodedSummaryRowVO;
+import com.his.medicaltech.vo.BiDayAmountRowVO;
+import com.his.medicaltech.vo.BiDayCountRowVO;
+import com.his.medicaltech.vo.BiDeptAmountRowVO;
+import com.his.medicaltech.vo.BiDischargeWindowRowVO;
+import com.his.medicaltech.vo.BiDrgWeightRowVO;
 import com.his.medicaltech.vo.BiNationalVO;
 import com.his.medicaltech.vo.BiOverviewVO;
 import lombok.RequiredArgsConstructor;
@@ -26,20 +33,6 @@ public class BiServiceImpl implements BiService {
     private final BiMapper biMapper;
     private final DrgGrouper drgGrouper;
 
-    private static int asInt(Object v) {
-        if (v == null) {
-            return 0;
-        }
-        if (v instanceof Number n) {
-            return n.intValue();
-        }
-        try {
-            return Integer.parseInt(String.valueOf(v).trim());
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-    }
-
     private static long nz(Long v) {
         return v == null ? 0L : v;
     }
@@ -61,24 +54,23 @@ public class BiServiceImpl implements BiService {
         vo.setDrugRatio(revenue.signum() > 0
                 ? drug.divide(revenue, 4, RoundingMode.HALF_UP) : BigDecimal.ZERO);
 
-        Map<String, Object> bed = biMapper.bedStat();
-        long repair = bed.get("repair") == null ? 0 : ((Number) bed.get("repair")).longValue();
-        long occupied = bed.get("occupied") == null ? 0 : ((Number) bed.get("occupied")).longValue();
-        long total = bed.get("total") == null ? 0 : ((Number) bed.get("total")).longValue();
-        long usable = total - repair;
+        BiBedStatRowVO bed = biMapper.bedStat();
+        long occupied = nz(bed.getOccupied());
+        long total = nz(bed.getTotal());
+        long usable = total - nz(bed.getRepair());
         vo.setBedTotal(total);
         vo.setBedOccupied(occupied);
         vo.setBedOccupancy(usable > 0
                 ? BigDecimal.valueOf(occupied).divide(BigDecimal.valueOf(usable), 4, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO);
 
-        vo.setAppointmentTrend(toTrend(biMapper.appointmentTrend(), "n", null));
-        vo.setRevenueTrend(toTrend(biMapper.revenueTrend(), "amt", "amt"));
+        vo.setAppointmentTrend(toCountTrend(biMapper.appointmentTrend()));
+        vo.setRevenueTrend(toAmountTrend(biMapper.revenueTrend()));
         List<BiOverviewVO.DeptRevenue> top = new ArrayList<>();
-        for (Map<String, Object> m : biMapper.deptTop()) {
+        for (BiDeptAmountRowVO m : biMapper.deptTop()) {
             BiOverviewVO.DeptRevenue d = new BiOverviewVO.DeptRevenue();
-            d.setDeptName(String.valueOf(m.get("dept_name")));
-            d.setAmount(m.get("amt") == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(m.get("amt"))));
+            d.setDeptName(m.getDeptName());
+            d.setAmount(nz(m.getAmount()));
             top.add(d);
         }
         vo.setDeptTop(top);
@@ -93,9 +85,9 @@ public class BiServiceImpl implements BiService {
         BiNationalVO vo = new BiNationalVO();
 
         // 平均住院日 / 床位周转
-        Map<String, Object> d = biMapper.dischargeWindow30d();
-        long dischargeCount = d.get("discharge_count") == null ? 0 : ((Number) d.get("discharge_count")).longValue();
-        long bedDays = d.get("bed_days") == null ? 0 : new BigDecimal(String.valueOf(d.get("bed_days"))).longValue();
+        BiDischargeWindowRowVO d = biMapper.dischargeWindow30d();
+        long dischargeCount = nz(d.getDischargeCount());
+        long bedDays = nz(d.getBedDays());
         vo.setDischargeCount(dischargeCount);
         vo.setTotalBedDays(bedDays);
         vo.setAvgLengthOfStay(dischargeCount > 0
@@ -117,19 +109,18 @@ public class BiServiceImpl implements BiService {
 
         // CMI：QY（未入组）权重按 0 计入分母，与国考口径一致
         Map<String, BigDecimal> weightByCode = new HashMap<>();
-        for (Map<String, Object> g : biMapper.drgWeights()) {
-            weightByCode.put(String.valueOf(g.get("drg_code")),
-                    g.get("weight") == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(g.get("weight"))));
+        for (BiDrgWeightRowVO g : biMapper.drgWeights()) {
+            weightByCode.put(g.getDrgCode(), nz(g.getWeight()));
         }
-        List<Map<String, Object>> samples = biMapper.codedSummaries30d();
+        List<BiCodedSummaryRowVO> samples = biMapper.codedSummaries30d();
         long grouped = 0;
         BigDecimal weightSum = BigDecimal.ZERO;
-        for (Map<String, Object> s : samples) {
+        for (BiCodedSummaryRowVO s : samples) {
             DrgGrouper.GroupResult r = drgGrouper.group(
-                    String.valueOf(s.get("icd_code")),
-                    asInt(s.get("is_surgery")) == 1,
-                    asInt(s.get("inpatient_days")),
-                    asInt(s.get("death_flag")) == 1);
+                    s.getIcdCode(),
+                    Integer.valueOf(1).equals(s.getIsSurgery()),
+                    s.getInpatientDays(),
+                    Integer.valueOf(1).equals(s.getDeathFlag()));
             if (!DrgGrouper.QY_CODE.equals(r.drgCode())) {
                 grouped++;
                 weightSum = weightSum.add(weightByCode.getOrDefault(r.drgCode(), BigDecimal.ZERO));
@@ -144,20 +135,37 @@ public class BiServiceImpl implements BiService {
     }
 
     private long usableBeds() {
-        Map<String, Object> bed = biMapper.bedStat();
-        long repair = bed.get("repair") == null ? 0 : ((Number) bed.get("repair")).longValue();
-        long total = bed.get("total") == null ? 0 : ((Number) bed.get("total")).longValue();
-        return Math.max(total - repair, 0);
+        BiBedStatRowVO bed = biMapper.bedStat();
+        return Math.max(nz(bed.getTotal()) - nz(bed.getRepair()), 0);
     }
 
-    private List<BiOverviewVO.TrendPoint> toTrend(List<Map<String, Object>> rows, String countKey, String amountKey) {
+    /**
+     * 挂号趋势。缺日不补零：SQL 只对有数据的日期分组，补零要知道日历起止，
+     * 而 BI 总览与工作台折线图的口径本就不同（前者7 天窗口、后者含今日 7 天），
+     * 交给各自调用方按需处理。
+     */
+    private List<BiOverviewVO.TrendPoint> toCountTrend(List<BiDayCountRowVO> rows) {
         List<BiOverviewVO.TrendPoint> list = new ArrayList<>();
-        for (Map<String, Object> m : rows) {
+        for (BiDayCountRowVO m : rows) {
             BiOverviewVO.TrendPoint p = new BiOverviewVO.TrendPoint();
-            p.setDate(String.valueOf(m.get("d")));
-            p.setCount(m.get(countKey) == null ? 0L : new BigDecimal(String.valueOf(m.get(countKey))).longValue());
-            p.setAmount(amountKey != null && m.get("amt") != null
-                    ? new BigDecimal(String.valueOf(m.get("amt"))) : BigDecimal.ZERO);
+            p.setDate(m.getStatDate());
+            p.setCount(nz(m.getCnt()));
+            p.setAmount(BigDecimal.ZERO);
+            list.add(p);
+        }
+        return list;
+    }
+
+    /**
+     * 收入趋势。count 固定 0：这条曲线前端只读 amount，给个真实计数反而会让人误读成"当天笔数"。
+     */
+    private List<BiOverviewVO.TrendPoint> toAmountTrend(List<BiDayAmountRowVO> rows) {
+        List<BiOverviewVO.TrendPoint> list = new ArrayList<>();
+        for (BiDayAmountRowVO m : rows) {
+            BiOverviewVO.TrendPoint p = new BiOverviewVO.TrendPoint();
+            p.setDate(m.getStatDate());
+            p.setCount(0L);
+            p.setAmount(nz(m.getAmount()));
             list.add(p);
         }
         return list;

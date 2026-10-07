@@ -9,6 +9,7 @@ import com.his.ai.service.Icd10Capability;
 import com.his.ai.service.Icd10RecallService;
 import com.his.ai.vo.Icd10PredictItemVO;
 import com.his.ai.vo.Icd10PredictVO;
+import com.his.ai.vo.Icd10PromptVariablesVO;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.system.entity.SysIcd10;
@@ -209,13 +210,13 @@ public class Icd10CapabilityImpl implements Icd10Capability {
 
     private Optional<Icd10LlmOutputDTO> callModel(Icd10PredictDTO dto, NoteText note,
                                                   List<Icd10RecallService.RecallHit> hits) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("candidateCount", hits.size());
-        variables.put("candidates", formatCandidates(hits));
-        variables.put("chiefComplaint", nullToDash(note.chiefComplaint()));
-        variables.put("presentIllness", nullToDash(note.presentIllness()));
-        variables.put("specialistExam", nullToDash(note.specialistExam()));
-        variables.put("diagnosis", nullToDash(note.diagnosis()));
+        Icd10PromptVariablesVO variables = new Icd10PromptVariablesVO();
+        variables.setCandidateCount(String.valueOf(hits.size()));
+        variables.setCandidates(formatCandidates(hits));
+        variables.setChiefComplaint(nullToDash(note.chiefComplaint()));
+        variables.setPresentIllness(nullToDash(note.presentIllness()));
+        variables.setSpecialistExam(nullToDash(note.specialistExam()));
+        variables.setDiagnosis(nullToDash(note.diagnosis()));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.ICD10)

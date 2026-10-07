@@ -236,13 +236,7 @@ public class AdverseEventServiceImpl implements AdverseEventService {
 
     @Override
     public AdverseEventStatsVO monthStats() {
-        Map<String, Object> raw = eventMapper.selectMonthStats();
-        AdverseEventStatsVO vo = new AdverseEventStatsVO();
-        vo.setMonthReported(asLong(raw.get("monthReported")));
-        vo.setPending(asLong(raw.get("pending")));
-        vo.setSentinel(asLong(raw.get("sentinel")));
-        vo.setClosed(asLong(raw.get("closed")));
-        return vo;
+        return eventMapper.selectMonthStats();
     }
 
     /**

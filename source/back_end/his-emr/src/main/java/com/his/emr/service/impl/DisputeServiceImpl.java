@@ -18,6 +18,9 @@ import com.his.emr.mapper.BizDisputeFlowMapper;
 import com.his.emr.service.DisputeService;
 import com.his.emr.service.MedicalRecordArchiveService;
 import com.his.emr.vo.DisputeCaseVO;
+import com.his.emr.vo.DisputeCloseSumVO;
+import com.his.emr.vo.DisputeCodeCountVO;
+import com.his.emr.vo.DisputeDeptCountVO;
 import com.his.emr.vo.DisputeStatItemVO;
 import com.his.emr.vo.DisputeStatVO;
 import com.his.system.entity.CurrentUser;
@@ -69,11 +72,12 @@ public class DisputeServiceImpl implements DisputeService {
 
     // 登记 / 修改
 
-    private static long toLong(Object v) {
-        if (v == null) {
-            return 0L;
-        }
-        return new BigDecimal(String.valueOf(v)).longValue();
+    private static long nz(Long v) {
+        return v == null ? 0L : v;
+    }
+
+    private static int nz(Integer v) {
+        return v == null ? 0 : v;
     }
 
     // 受理（联动封存）
@@ -345,9 +349,9 @@ public class DisputeServiceImpl implements DisputeService {
         String to = trimToNull(dateTo);
         DisputeStatVO vo = new DisputeStatVO();
         long pending = 0, investigating = 0, handling = 0, closed = 0, revoked = 0;
-        for (Map<String, Object> row : caseMapper.countByStatus(from, to)) {
-            long c = toLong(row.get("c"));
-            int k = (int) toLong(row.get("k"));
+        for (DisputeCodeCountVO row : caseMapper.countByStatus(from, to)) {
+            long c = nz(row.getC());
+            int k = nz(row.getK());
             if (k == DisputeStatusEnum.PENDING.getCode()) {
                 pending = c;
             } else if (k == DisputeStatusEnum.INVESTIGATING.getCode()) {
@@ -369,34 +373,27 @@ public class DisputeServiceImpl implements DisputeService {
         vo.setTotal(pending + investigating + handling + closed + revoked);
 
         List<DisputeStatItemVO> byType = new ArrayList<>();
-        for (Map<String, Object> row : caseMapper.countByCaseType(from, to)) {
+        for (DisputeCodeCountVO row : caseMapper.countByCaseType(from, to)) {
             DisputeStatItemVO item = new DisputeStatItemVO();
-            item.setKey(String.valueOf(toLong(row.get("k"))));
-            item.setCount(toLong(row.get("c")));
+            item.setKey(String.valueOf(row.getK()));
+            item.setCount(nz(row.getC()));
             byType.add(item);
         }
         vo.setByCaseType(byType);
 
         List<DisputeStatItemVO> byDept = new ArrayList<>();
-        for (Map<String, Object> row : caseMapper.countByDeptTop(from, to)) {
+        for (DisputeDeptCountVO row : caseMapper.countByDeptTop(from, to)) {
             DisputeStatItemVO item = new DisputeStatItemVO();
-            item.setDeptId(toLong(row.get("d")));
-            item.setName(String.valueOf(row.get("n")));
-            item.setCount(toLong(row.get("c")));
+            item.setDeptId(row.getD());
+            item.setName(row.getN());
+            item.setCount(nz(row.getC()));
             byDept.add(item);
         }
         vo.setByDeptTop(byDept);
 
-        Map<String, Object> sum = caseMapper.sumClosed(from, to);
-        if (sum != null) {
-            Object total = sum.get("total");
-            Object avgDays = sum.get("avg_days");
-            vo.setCompensationTotal(total == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(total)));
-            vo.setAvgCloseDays(avgDays == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(avgDays)));
-        } else {
-            vo.setCompensationTotal(BigDecimal.ZERO);
-            vo.setAvgCloseDays(BigDecimal.ZERO);
-        }
+        DisputeCloseSumVO sum = caseMapper.sumClosed(from, to);
+        vo.setCompensationTotal(sum == null || sum.getTotal() == null ? BigDecimal.ZERO : sum.getTotal());
+        vo.setAvgCloseDays(sum == null || sum.getAvgDays() == null ? BigDecimal.ZERO : sum.getAvgDays());
         return vo;
     }
 

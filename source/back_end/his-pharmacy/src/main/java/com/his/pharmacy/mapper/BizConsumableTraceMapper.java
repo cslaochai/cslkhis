@@ -6,6 +6,7 @@ import com.his.pharmacy.entity.SysConsumable;
 import com.his.pharmacy.entity.BizConsumableTrace;
 import com.his.pharmacy.vo.BizConsumableTraceVO;
 import com.his.pharmacy.vo.ConsumableTraceDetailVO;
+import com.his.pharmacy.vo.PatientBriefVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -81,5 +82,5 @@ public interface BizConsumableTraceMapper extends BaseMapper<BizConsumableTrace>
      * 患者快照兜底（直查患者基本信息不引 his-patient 依赖，同科室口径）
      */
     @Select("SELECT patient_no, patient_name FROM biz_patient WHERE id = #{patientId} AND del_flag = 0")
-    java.util.Map<String, Object> selectPatientSnapshot(@Param("patientId") Long patientId);
+    PatientBriefVO selectPatientSnapshot(@Param("patientId") Long patientId);
 }

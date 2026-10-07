@@ -4,15 +4,14 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniappMessageMapper;
 import com.his.miniapp.service.MiniappMessageService;
-import com.his.miniapp.support.RawRowValues;
 import com.his.miniapp.vo.MessageListVO;
+import com.his.miniapp.vo.MessageRowVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -23,21 +22,21 @@ public class MiniappMessageServiceImpl implements MiniappMessageService {
 
     private final MiniappMessageMapper messageMapper;
 
-    private static MessageListVO toVO(Map<String, Object> row) {
+    private static MessageListVO toVO(MessageRowVO row) {
         MessageListVO vo = new MessageListVO();
-        vo.setMessageId(RawRowValues.text(row, "messageId"));
-        vo.setMessageNo(RawRowValues.text(row, "messageNo"));
-        vo.setChannel(RawRowValues.text(row, "channel"));
-        vo.setReceiverId(RawRowValues.text(row, "receiverId"));
-        vo.setReceiverName(RawRowValues.text(row, "receiverName"));
-        vo.setTitle(RawRowValues.text(row, "title"));
-        vo.setContent(RawRowValues.text(row, "content"));
-        vo.setBizType(RawRowValues.text(row, "bizType"));
-        vo.setBizId(RawRowValues.text(row, "bizId"));
-        vo.setSeverity(RawRowValues.text(row, "severity"));
-        vo.setReadStatus(RawRowValues.integer(row, "readStatus"));
-        vo.setSendStatus(RawRowValues.integer(row, "sendStatus"));
-        vo.setSendTime(RawRowValues.text(row, "sendTime"));
+        vo.setMessageId(row.getMessageId());
+        vo.setMessageNo(row.getMessageNo());
+        vo.setChannel(row.getChannel());
+        vo.setReceiverId(row.getReceiverId());
+        vo.setReceiverName(row.getReceiverName());
+        vo.setTitle(row.getTitle());
+        vo.setContent(row.getContent());
+        vo.setBizType(row.getBizType());
+        vo.setBizId(row.getBizId());
+        vo.setSeverity(row.getSeverity());
+        vo.setReadStatus(row.getReadStatus());
+        vo.setSendStatus(row.getSendStatus());
+        vo.setSendTime(row.getSendTime());
         return vo;
     }
 
@@ -50,7 +49,7 @@ public class MiniappMessageServiceImpl implements MiniappMessageService {
         Long userId = operatorUser.getUserId();
         int size = pageSize == null || pageSize < 1 || pageSize > MAX_PAGE_SIZE ? DEFAULT_PAGE_SIZE : pageSize;
         int current = pageNum == null || pageNum < 1 ? 1 : pageNum;
-        List<Map<String, Object>> rows = messageMapper.selectMyMessages(userId, (current - 1) * size, size);
+        List<MessageRowVO> rows = messageMapper.selectMyMessages(userId, (current - 1) * size, size);
         long total = messageMapper.countMyMessages(userId);
         List<MessageListVO> records = rows.stream().map(MiniappMessageServiceImpl::toVO).toList();
         return PageResult.of(total, current, size, (total + size - 1) / size, records);

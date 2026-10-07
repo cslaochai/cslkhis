@@ -2,12 +2,14 @@ package com.his.emr.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.emr.entity.BizSingleDiseaseCase;
+import com.his.emr.vo.InpatientSummarySnapshotVO;
+import com.his.emr.vo.SingleDiseaseCandidateVO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
-import java.util.Map;
+import java.util.List;
 
 /**
  * 单病种病例 Mapper
@@ -34,7 +36,7 @@ public interface BizSingleDiseaseCaseMapper extends BaseMapper<BizSingleDiseaseC
               LEFT JOIN biz_patient p ON p.id = a.patient_id AND p.del_flag = 0
              WHERE a.admission_id = #{admissionId} AND a.del_flag = 0
             """)
-    Map<String, Object> selectSummarySnapshot(@Param("admissionId") Long admissionId);
+    InpatientSummarySnapshotVO selectSummarySnapshot(@Param("admissionId") Long admissionId);
 
     /**
      * 物理删除底账行：唯一键 {@code (disease_id, admission_id)} 不含 del_flag，
@@ -77,8 +79,8 @@ public interface BizSingleDiseaseCaseMapper extends BaseMapper<BizSingleDiseaseC
              ORDER BY a.admission_id DESC
             </script>
             """)
-    java.util.List<Map<String, Object>> selectAutoEnrollCandidates(@Param("diseaseId") Long diseaseId,
-                                                                   @Param("prefixes") java.util.List<String> prefixes,
-                                                                   @Param("beginDate") String beginDate,
-                                                                   @Param("endDate") String endDate);
+    List<SingleDiseaseCandidateVO> selectAutoEnrollCandidates(@Param("diseaseId") Long diseaseId,
+                                                              @Param("prefixes") List<String> prefixes,
+                                                              @Param("beginDate") String beginDate,
+                                                              @Param("endDate") String endDate);
 }

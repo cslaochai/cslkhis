@@ -23,7 +23,13 @@ import com.his.emr.service.FollowupTaskService;
 import com.his.emr.service.SurveyService;
 import com.his.emr.support.FollowupTaskSnapshot;
 import com.his.emr.vo.BizFollowupTaskVO;
+import com.his.emr.vo.DischargePendingFollowupVO;
+import com.his.emr.vo.DischargeSnapshotVO;
+import com.his.emr.vo.FollowupDeptPendingVO;
+import com.his.emr.vo.FollowupStatCountVO;
 import com.his.emr.vo.FollowupStatVO;
+import com.his.emr.vo.FollowupTypeCountVO;
+import com.his.emr.vo.PatientSnapshotVO;
 import com.his.system.provider.DeptScopeProvider;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -86,9 +92,12 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
      */
     private final com.his.emr.service.FollowupCallChannelService followupCallChannelService;
 
-    private static long toLong(Map<String, Object> row, String key) {
-        Object v = row == null ? null : row.get(key);
-        return v == null ? 0L : new BigDecimal(String.valueOf(v)).longValue();
+    private static long nz(Long v) {
+        return v == null ? 0L : v;
+    }
+
+    private static long nz(Integer v) {
+        return v == null ? 0L : v.longValue();
     }
 
     /**
@@ -134,20 +143,20 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     public FollowupStatVO stat() {
         List<Long> scope = scopedDeptIds(null);
         FollowupStatVO vo = new FollowupStatVO();
-        Map<String, Object> row = taskMapper.statOverview(scope);
-        long pending = toLong(row, "pending");
-        long doing = toLong(row, "doing");
-        long done = toLong(row, "done");
-        long cancelled = toLong(row, "cancelled");
+        FollowupStatCountVO row = taskMapper.statOverview(scope);
+        long pending = nz(row.getPending());
+        long doing = nz(row.getDoing());
+        long done = nz(row.getDone());
+        long cancelled = nz(row.getCancelled());
         vo.setPendingCount(pending);
         vo.setDoingCount(doing);
         vo.setDoneCount(done);
         vo.setCancelledCount(cancelled);
-        vo.setTotalCount(toLong(row, "total"));
-        vo.setTodayDueCount(toLong(row, "today_due"));
-        vo.setOverdueCount(toLong(row, "overdue"));
-        vo.setDoneTodayCount(toLong(row, "done_today"));
-        vo.setRevisitCount(toLong(row, "revisit_cnt"));
+        vo.setTotalCount(nz(row.getTotal()));
+        vo.setTodayDueCount(nz(row.getTodayDue()));
+        vo.setOverdueCount(nz(row.getOverdue()));
+        vo.setDoneTodayCount(nz(row.getDoneToday()));
+        vo.setRevisitCount(nz(row.getRevisitCnt()));
         long shouldDo = pending + doing + done;
         vo.setCompleteRate(shouldDo == 0 ? BigDecimal.ZERO
                 : BigDecimal.valueOf(done).multiply(new BigDecimal("100"))
@@ -156,8 +165,8 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         // 类型分布必须四档全出（含 0）：GROUP BY 只回有任务的类型，看板上"少了两档"
         // 会被读成「本院没有这类随访」，而事实是这类今天恰好没活。
         Map<Integer, Long> typeCount = new HashMap<>();
-        for (Map<String, Object> r : taskMapper.countByType(scope)) {
-            typeCount.put((int) toLong(r, "k"), toLong(r, "c"));
+        for (FollowupTypeCountVO r : taskMapper.countByType(scope)) {
+            typeCount.put(r.getFollowupType(), nz(r.getCnt()));
         }
         // 按码值升序出，与旧 Map 键序一致（枚举声明序不等于码值序，不能直接 values()）
         List<FollowupStatVO.StatItem> byType = new ArrayList<>();
@@ -171,12 +180,12 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         vo.setByType(byType);
 
         List<FollowupStatVO.DeptPending> byDept = new ArrayList<>();
-        for (Map<String, Object> r : taskMapper.countDeptPending(scope)) {
+        for (FollowupDeptPendingVO r : taskMapper.countDeptPending(scope)) {
             FollowupStatVO.DeptPending item = new FollowupStatVO.DeptPending();
-            item.setDeptId(toLong(r, "d"));
-            item.setDeptName(String.valueOf(r.get("n")));
-            item.setPendingCount(toLong(r, "c"));
-            item.setDoneCount(toLong(r, "done"));
+            item.setDeptId(r.getDeptId());
+            item.setDeptName(r.getDeptName());
+            item.setPendingCount(nz(r.getPendingCount()));
+            item.setDoneCount(nz(r.getDoneCount()));
             byDept.add(item);
         }
         vo.setByDeptPending(byDept);
@@ -238,8 +247,8 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public BizFollowupTask createFromDischarge(FollowupTaskDTO.FromDischarge dto, String operator) {
-        Map<String, Object> snap = taskMapper.selectDischargeSnapshot(dto.getDischargeId());
-        if (snap == null || snap.get("patientId") == null) {
+        DischargeSnapshotVO snap = taskMapper.selectDischargeSnapshot(dto.getDischargeId());
+        if (snap == null || snap.getPatientId() == null) {
             throw new BusinessException("出院记录不存在（dischargeId=" + dto.getDischargeId() + "）");
         }
         // 幂等：同一出院记录已生成过任务（remark 前缀锚定 dischargeId）则原样返回，不重复生成。
@@ -253,27 +262,26 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
             return existed;
         }
 
-        LocalDateTime dischargeTime = LocalDateTime.parse((String) snap.get("dischargeTime"),
-                DateFormats.DATETIME);
+        LocalDateTime dischargeTime = snap.getDischargeTime();
         int days = dto.getDaysOffset() == null || dto.getDaysOffset() < 1 ? DEFAULT_DAYS_OFFSET : dto.getDaysOffset();
         int type = dto.getFollowupType() == null ? 1 : dto.getFollowupType();
 
         BizFollowupTask task = new BizFollowupTask();
         task.setTaskNo(nextTaskNo(null));
-        task.setPatientId(((Number) snap.get("patientId")).longValue());
-        task.setPatientNo((String) snap.get("patientNo"));
-        task.setPatientName((String) snap.get("patientName"));
-        task.setPhone((String) snap.get("phone"));
-        task.setDeptId(snap.get("deptId") == null ? null : ((Number) snap.get("deptId")).longValue());
-        task.setDeptName((String) snap.get("deptName"));
-        String diagnosis = (String) snap.get("diagnosis");
+        task.setPatientId(snap.getPatientId());
+        task.setPatientNo(snap.getPatientNo());
+        task.setPatientName(snap.getPatientName());
+        task.setPhone(snap.getPhone());
+        task.setDeptId(snap.getDeptId());
+        task.setDeptName(snap.getDeptName());
+        String diagnosis = snap.getDiagnosis();
         task.setDiagnosis(diagnosis);
         task.setFollowupType(type);
         task.setFollowupTime(dischargeTime.plusDays(days).truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         task.setFollowupContent(StringUtils.hasText(dto.getFollowupContent())
                 ? dto.getFollowupContent() : buildDefaultContent(type, diagnosis));
         task.setFollowupStatus(FollowupTaskStatusEnum.PENDING.getCode());
-        task.setRemark(anchor + "按出院记录 " + snap.get("dischargeNo") + " 自动生成（出院后 " + days + " 天）");
+        task.setRemark(anchor + "按出院记录 " + snap.getDischargeNo() + " 自动生成（出院后 " + days + " 天）");
         task.setCreateBy(operator);
         this.save(task);
         return task;
@@ -287,17 +295,17 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
 
     @Override
     public int autoCreateFromDischarge(int limit) {
-        List<Map<String, Object>> rows = taskMapper.selectDischargesWithoutTask(limit);
+        List<DischargePendingFollowupVO> rows = taskMapper.selectDischargesWithoutTask(limit);
         int created = 0;
-        for (Map<String, Object> row : rows) {
-            Long dischargeId = row.get("dischargeId") == null ? null : ((Number) row.get("dischargeId")).longValue();
+        for (DischargePendingFollowupVO row : rows) {
+            Long dischargeId = row.getDischargeId();
             if (dischargeId == null) {
                 continue;
             }
             try {
                 FollowupTaskDTO.FromDischarge dto = new FollowupTaskDTO.FromDischarge();
                 dto.setDischargeId(dischargeId);
-                dto.setFollowupType(toLong(row, "hasOperation") > 0 ? 4 : 1);
+                dto.setFollowupType(nz(row.getHasOperation()) > 0 ? 4 : 1);
                 createFromDischarge(dto, SYSTEM_AUTO_FOLLOWUP_OPERATOR);
                 created++;
             } catch (Exception e) {
@@ -563,18 +571,18 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
      * 当前登录岗位所在科室 —— 没有科室的任务对受限角色永久不可见，等于把人刚建的单子藏起来。
      */
     private void fillPatientSnapshot(BizFollowupTask task) {
-        Map<String, Object> snap = taskMapper.selectPatientSnapshot(task.getPatientId());
+        PatientSnapshotVO snap = taskMapper.selectPatientSnapshot(task.getPatientId());
         if (snap == null) {
             throw new BusinessException("患者不存在（patientId=" + task.getPatientId() + "）");
         }
-        task.setPatientNo((String) snap.get("patientNo"));
-        task.setPatientName((String) snap.get("patientName"));
+        task.setPatientNo(snap.getPatientNo());
+        task.setPatientName(snap.getPatientName());
         if (!StringUtils.hasText(task.getPhone())) {
-            task.setPhone((String) snap.get("phone"));
+            task.setPhone(snap.getPhone());
         }
-        if (snap.get("deptId") != null) {
-            task.setDeptId(((Number) snap.get("deptId")).longValue());
-            task.setDeptName((String) snap.get("deptName"));
+        if (snap.getDeptId() != null) {
+            task.setDeptId(snap.getDeptId());
+            task.setDeptName(snap.getDeptName());
         } else {
             Long ownDept = UserUtils.getCurrentUser() == null ? null : UserUtils.getCurrentUser().getDeptId();
             task.setDeptId(ownDept);

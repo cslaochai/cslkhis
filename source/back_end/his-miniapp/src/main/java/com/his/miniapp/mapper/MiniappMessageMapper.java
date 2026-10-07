@@ -1,16 +1,16 @@
 package com.his.miniapp.mapper;
 
+import com.his.miniapp.vo.MessageRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 患者端消息中心读侧（消息通知属 his-system，跨模块用裸 SQL）。
- * 注意：message_id/receiver_id 为 BIGINT，Map 直出会丢精度，一律 CAST AS CHAR。
+ * 注意：message_id/receiver_id 为 BIGINT，Mapper 行不经 ToStringSerializer，一律 CAST AS CHAR。
  */
 @Mapper
 public interface MiniappMessageMapper {
@@ -38,9 +38,9 @@ public interface MiniappMessageMapper {
             ORDER BY send_time IS NULL ASC, send_time DESC, message_id DESC
             LIMIT #{offset}, #{size}
             """)
-    List<Map<String, Object>> selectMyMessages(@Param("userId") Long userId,
-                                               @Param("offset") int offset,
-                                               @Param("size") int size);
+    List<MessageRowVO> selectMyMessages(@Param("userId") Long userId,
+                                        @Param("offset") int offset,
+                                        @Param("size") int size);
 
     @Select("SELECT COUNT(*) FROM sys_message WHERE receiver_id = #{userId}")
     long countMyMessages(@Param("userId") Long userId);

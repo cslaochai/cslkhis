@@ -17,6 +17,7 @@ import com.his.common.util.DateFormats;
 import com.his.miniapp.service.WxLoginChannelService;
 import com.his.miniapp.dto.WxLoginDTO;
 import com.his.miniapp.mapper.MiniappSysUserMapper;
+import com.his.miniapp.vo.MiniappUserRowVO;
 import com.his.miniapp.vo.WxLoginVO;
 import com.his.miniapp.service.WxPayChannelService;
 import com.his.miniapp.dto.PayUpsertDTO;
@@ -24,7 +25,6 @@ import com.his.miniapp.dto.PayRefundDTO;
 import com.his.miniapp.entity.BizPayOrder;
 import com.his.miniapp.mapper.BizPayOrderMapper;
 import com.his.miniapp.service.MiniappPayService;
-import com.his.miniapp.support.RawRowValues;
 import com.his.miniapp.vo.PayOrderListVO;
 import com.his.miniapp.vo.PayOrderVO;
 import com.his.miniapp.vo.PendingBillItemVO;
@@ -80,23 +80,23 @@ public class MiniappPayServiceImpl implements MiniappPayService {
     @Override
     public WxLoginVO wxLogin(WxLoginDTO dto) {
         String openid = wxLoginChannelService.code2Session(dto.getCode());
-        Map<String, Object> user = miniappSysUserMapper.selectByOpenid(openid);
+        MiniappUserRowVO user = miniappSysUserMapper.selectByOpenid(openid);
         WxLoginVO vo = new WxLoginVO();
         vo.setBound(false);
         if (user == null) {
             // 未绑定：前端引导账密/短信注册登录后调 /miniapp/auth/bindOpenid
             return vo;
         }
-        if (!Integer.valueOf(3).equals(((Number) user.get("user_type")).intValue())) {
+        if (!Integer.valueOf(3).equals(user.getUserType())) {
             throw new BusinessException("该微信已绑定院内员工账号，患者端不支持该方式登录");
         }
-        if (!Integer.valueOf(1).equals(((Number) user.get("status")).intValue())) {
+        if (!Integer.valueOf(1).equals(user.getStatus())) {
             throw new BusinessException("账号已停用，请联系医院");
         }
-        Long userId = ((Number) user.get("id")).longValue();
-        String username = String.valueOf(user.get("user_name"));
-        String realName = user.get("real_name") == null ? username : String.valueOf(user.get("real_name"));
-        Long patientId = user.get("patient_id") == null ? null : ((Number) user.get("patient_id")).longValue();
+        Long userId = user.getId();
+        String username = user.getUserName();
+        String realName = user.getRealName() == null ? username : user.getRealName();
+        Long patientId = user.getPatientId();
 
         String token = jwtUtils.generateToken(userId, username, "PATIENT", null, null);
         vo.setBound(true);
@@ -223,40 +223,46 @@ public class MiniappPayServiceImpl implements MiniappPayService {
     @Override
     public List<PendingBillListVO> pendingBills() {
         var current = UserUtils.getCurrentUser();
-        return settlementBillService.pendingBillsForPatient(current.getPatientId()).stream().map(row -> {
+        return settlementBillService.pendingBillViews(current.getPatientId()).stream().map(view -> {
             PendingBillListVO vo = new PendingBillListVO();
-            vo.setId(RawRowValues.text(row, "id"));
-            vo.setBillNo(RawRowValues.text(row, "billNo"));
-            vo.setEncounterNo(RawRowValues.text(row, "encounterNo"));
-            vo.setPayableAmount(RawRowValues.decimal(row, "payableAmount"));
-            vo.setBillTime(RawRowValues.dateTime(row, "billTime"));
-            vo.setBillStatus(RawRowValues.integer(row, "billStatus"));
-            vo.setPoolAmount(RawRowValues.decimal(row, "poolAmount"));
-            vo.setAccountAmount(RawRowValues.decimal(row, "accountAmount"));
-            vo.setSelfAmount(RawRowValues.decimal(row, "selfAmount"));
-            vo.setDetails(toPendingBillItems(row.get("details")));
+            vo.setId(view.getId());
+            vo.setBillNo(view.getBillNo());
+            vo.setEncounterNo(view.getEncounterNo());
+            vo.setPayableAmount(view.getPayableAmount());
+            vo.setBillTime(view.getBillTime());
+            vo.setBillStatus(view.getBillStatus());
+            vo.setPoolAmount(view.getPoolAmount());
+            vo.setAccountAmount(view.getAccountAmount());
+            vo.setSelfAmount(view.getSelfAmount());
+            vo.setDetails(toPendingBillItems(view.getDetails()));
             return vo;
         }).toList();
     }
 
-    private List<PendingBillItemVO> toPendingBillItems(Object details) {
-        if (!(details instanceof List<?> rows)) {
+    /**
+     * his-charge 的账单明细 → 患者端明细行。
+     *
+     * <p>入参用全限定名：his-charge 与本模块都有 {@code PendingBillItemVO}（字段同形但归属不同），
+     * 这里入参是收费域的、出参是患者端的，两边名字撞车时必须写全，否则 import 进来的
+     * 是本模块那个，编译能过但取的是空字段。
+     */
+    private List<PendingBillItemVO> toPendingBillItems(List<com.his.charge.vo.PendingBillItemVO> details) {
+        if (details == null) {
             return List.of();
         }
-        return rows.stream().map(row -> {
-            Map<String, Object> item = RawRowValues.asRow(row);
+        return details.stream().map(item -> {
             PendingBillItemVO vo = new PendingBillItemVO();
-            vo.setItemName(RawRowValues.text(item, "itemName"));
-            vo.setAmount(RawRowValues.decimal(item, "amount"));
-            vo.setDeptName(RawRowValues.text(item, "deptName"));
-            vo.setSpecification(RawRowValues.text(item, "specification"));
-            vo.setUnit(RawRowValues.text(item, "unit"));
-            vo.setPrice(RawRowValues.decimal(item, "price"));
-            vo.setQuantity(RawRowValues.decimal(item, "quantity"));
-            vo.setPoolAmount(RawRowValues.decimal(item, "poolAmount"));
-            vo.setAccountAmount(RawRowValues.decimal(item, "accountAmount"));
-            vo.setSelfAmount(RawRowValues.decimal(item, "selfAmount"));
-            vo.setCatalogType(RawRowValues.integer(item, "catalogType"));
+            vo.setItemName(item.getItemName());
+            vo.setAmount(item.getAmount());
+            vo.setDeptName(item.getDeptName());
+            vo.setSpecification(item.getSpecification());
+            vo.setUnit(item.getUnit());
+            vo.setPrice(item.getPrice());
+            vo.setQuantity(item.getQuantity());
+            vo.setPoolAmount(item.getPoolAmount());
+            vo.setAccountAmount(item.getAccountAmount());
+            vo.setSelfAmount(item.getSelfAmount());
+            vo.setCatalogType(item.getCatalogType());
             vo.setCatalogTypeText(catalogText(vo.getCatalogType()));
             return vo;
         }).toList();

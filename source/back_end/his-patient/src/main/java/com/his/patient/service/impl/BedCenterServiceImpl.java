@@ -429,13 +429,13 @@ public class BedCenterServiceImpl implements BedCenterService {
                 wait.getPatientName(), wait.getWaitNo(),
                 wait.getApplyDeptName() == null ? "-" : wait.getApplyDeptName(),
                 ownDeptName, bed.getBedNo(), alloc.getAllocateNo());
-        java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
-        payload.put("waitNo", wait.getWaitNo());
-        payload.put("patientName", wait.getPatientName());
-        payload.put("allocateNo", alloc.getAllocateNo());
-        payload.put("ownDeptName", ownDeptName);
-        payload.put("useDeptName", wait.getApplyDeptName());
-        payload.put("bedNo", bed.getBedNo());
+        BedCrossDeptNotifyPayloadVO payload = new BedCrossDeptNotifyPayloadVO();
+        payload.setWaitNo(wait.getWaitNo());
+        payload.setPatientName(wait.getPatientName());
+        payload.setAllocateNo(alloc.getAllocateNo());
+        payload.setOwnDeptName(ownDeptName);
+        payload.setUseDeptName(wait.getApplyDeptName());
+        payload.setBedNo(bed.getBedNo());
         sysMessageService.sendSystemMessage(duty.getEmployeeId(), duty.getEmployeeName(), title, content,
                 BizTypeEnum.DUTY_COORD.getType(), alloc.getId(),
                 "warning", cn.hutool.json.JSONUtil.toJsonStr(payload), 0);
@@ -483,11 +483,11 @@ public class BedCenterServiceImpl implements BedCenterService {
                         wait.getApplyDeptName() == null ? "-" : wait.getApplyDeptName(),
                         wait.getDiagnosisName() == null ? "诊断未填" : wait.getDiagnosisName(),
                         waited, hours);
-                java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
-                payload.put("waitNo", wait.getWaitNo());
-                payload.put("patientName", wait.getPatientName());
-                payload.put("applyDeptName", wait.getApplyDeptName());
-                payload.put("waitedHours", waited);
+                BedWaitEscalatePayloadVO payload = new BedWaitEscalatePayloadVO();
+                payload.setWaitNo(wait.getWaitNo());
+                payload.setPatientName(wait.getPatientName());
+                payload.setApplyDeptName(wait.getApplyDeptName());
+                payload.setWaitedHours(waited);
                 if (sysMessageService.sendSystemMessage(duty.getEmployeeId(), duty.getEmployeeName(), title, content,
                         BizTypeEnum.DUTY_COORD.getType(), wait.getId(),
                         "urgent", cn.hutool.json.JSONUtil.toJsonStr(payload), 0)) {

@@ -16,6 +16,8 @@ import com.his.emr.mapper.BizArchiveCodeTaskMapper;
 import com.his.emr.service.ArchiveCodeTaskService;
 import com.his.emr.vo.ArchiveCodeTaskStatsVO;
 import com.his.emr.vo.ArchiveCodeTaskVO;
+import com.his.emr.vo.ArchiveSyncCandidateVO;
+import com.his.emr.vo.MessagePayloadVO;
 import com.his.system.enums.BizTypeEnum;
 import com.his.system.service.SysMessageService;
 import com.his.system.utils.UserUtils;
@@ -78,21 +80,20 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int syncTasks() {
-        List<Map<String, Object>> unsynced = taskMapper.selectUnsyncedArchives();
+        List<ArchiveSyncCandidateVO> unsynced = taskMapper.selectUnsyncedArchives();
         if (unsynced.isEmpty()) {
             return 0;
         }
         LocalDateTime now = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS);
         int created = 0;
-        for (Map<String, Object> row : unsynced) {
+        for (ArchiveSyncCandidateVO row : unsynced) {
             BizArchiveCodeTask t = new BizArchiveCodeTask();
             t.setTaskNo(sequenceService.generateCodeTaskNo());
-            t.setArchiveId(Long.parseLong(row.get("id").toString()));
-            t.setRecordNo((String) row.get("record_no"));
-            t.setPatientName((String) row.get("patient_name"));
-            t.setDeptName((String) row.get("dept_name"));
-            Object diag = row.get("diagnosis");
-            t.setDiagnosis(diag == null ? null : diag.toString());
+            t.setArchiveId(row.getId());
+            t.setRecordNo(row.getRecordNo());
+            t.setPatientName(row.getPatientName());
+            t.setDeptName(row.getDeptName());
+            t.setDiagnosis(row.getDiagnosis());
             t.setStatus(CodeTaskStatusEnum.PENDING.getCode());
             t.setReturnCount(0);
             t.setDelFlag(DelFlagEnum.NORMAL.getCode());
@@ -210,12 +211,12 @@ public class ArchiveCodeTaskServiceImpl implements ArchiveCodeTaskService {
                     t.getPatientName() == null ? "未知" : t.getPatientName(),
                     t.getReturnCount(),
                     t.getAuditRemark() == null ? "（无）" : t.getAuditRemark());
-            String payload = JSONUtil.toJsonStr(new LinkedHashMap<String, Object>() {{
-                put("taskNo", t.getTaskNo());
-                put("recordNo", t.getRecordNo());
-                put("patientName", t.getPatientName());
-                put("returnCount", t.getReturnCount());
-            }});
+            MessagePayloadVO msg = new MessagePayloadVO();
+            msg.setRecordNo(t.getRecordNo());
+            msg.setPatientName(t.getPatientName());
+            msg.setCount(t.getReturnCount() == null ? null : t.getReturnCount().longValue());
+            msg.setHandlerName(t.getCoderName());
+            String payload = JSONUtil.toJsonStr(msg);
             sysMessageService.sendSystemMessage(t.getCoderId(), t.getCoderName(),
                     "编码任务退修：" + t.getTaskNo(), content,
                     BizTypeEnum.CODE_TASK.getType(), t.getId(), "warning", payload, null);

@@ -76,16 +76,16 @@ public class SurveyServiceImpl implements SurveyService {
                 .divide(BigDecimal.valueOf(denominator), 1, RoundingMode.HALF_UP);
     }
 
-    private static BigDecimal decimal(Object v) {
-        return v == null ? BigDecimal.ZERO : new BigDecimal(String.valueOf(v));
-    }
-
-    private static long toLong(Object v) {
-        return v == null ? 0L : new BigDecimal(String.valueOf(v)).longValue();
-    }
-
     private static long nz(Long v) {
         return v == null ? 0L : v;
+    }
+
+    private static long nz(Integer v) {
+        return v == null ? 0L : v.longValue();
+    }
+
+    private static int nzInt(Integer v) {
+        return v == null ? 0 : v;
     }
 
     private static int maxScoreOf(BizSurveyItem item) {
@@ -383,9 +383,9 @@ public class SurveyServiceImpl implements SurveyService {
         SurveyStatVO vo = new SurveyStatVO();
 
         long pendingPush = 0, pushed = 0, recycled = 0, expired = 0, refused = 0;
-        for (Map<String, Object> row : dispatchMapper.countByStatus(templateId, null, from, to, scope)) {
-            int k = (int) toLong(row.get("k"));
-            long c = toLong(row.get("c"));
+        for (SurveyDispatchCountVO row : dispatchMapper.countByStatus(templateId, null, from, to, scope)) {
+            int k = nzInt(row.getK());
+            long c = nz(row.getC());
             if (k == SurveyDispatchStatusEnum.PENDING_PUSH.getCode()) {
                 pendingPush = c;
             } else if (k == SurveyDispatchStatusEnum.PUSHED.getCode()) {
@@ -408,66 +408,66 @@ public class SurveyServiceImpl implements SurveyService {
         vo.setOverdueCount(nz(dispatchMapper.countOverdue(templateId, null, scope)));
         vo.setRecycleRate(rate(recycled, dispatchTotal));
 
-        Map<String, Object> overall = answerMapper.statOverall(templateId, scene, from, to, scope);
+        SurveyOverallStatVO overall = answerMapper.statOverall(templateId, scene, from, to, scope);
         if (overall != null) {
-            long total = toLong(overall.get("total"));
+            long total = nz(overall.getTotal());
             vo.setAnswerTotal(total);
-            vo.setVoidCount(toLong(overall.get("voided")));
-            vo.setAvgScore(decimal(overall.get("avg_score")));
-            vo.setAvgScore100(decimal(overall.get("avg_score100")));
-            vo.setLowScoreCount(toLong(overall.get("low_score")));
-            vo.setDisputedCount(toLong(overall.get("disputed")));
-            vo.setSatisfiedRate(rate(toLong(overall.get("satisfied")), total));
+            vo.setVoidCount(nz(overall.getVoided()));
+            vo.setAvgScore(overall.getAvgScore());
+            vo.setAvgScore100(overall.getAvgScore100());
+            vo.setLowScoreCount(nz(overall.getLowScore()));
+            vo.setDisputedCount(nz(overall.getDisputed()));
+            vo.setSatisfiedRate(rate(nz(overall.getSatisfied()), total));
         } else {
             vo.setAnswerTotal(0L);
             vo.setSatisfiedRate(BigDecimal.ZERO);
         }
 
-        Map<String, Object> nps = answerMapper.statNps(templateId, from, to, scope);
+        SurveyNpsStatVO nps = answerMapper.statNps(templateId, from, to, scope);
         if (nps != null) {
-            long rated = toLong(nps.get("rated"));
+            long rated = nz(nps.getRated());
             vo.setNps(rated == 0 ? BigDecimal.ZERO
-                    : BigDecimal.valueOf(toLong(nps.get("promoter")) - toLong(nps.get("detractor")))
+                    : BigDecimal.valueOf(nz(nps.getPromoter()) - nz(nps.getDetractor()))
                     .multiply(HUNDRED).divide(BigDecimal.valueOf(rated), 1, RoundingMode.HALF_UP));
         } else {
             vo.setNps(BigDecimal.ZERO);
         }
 
         List<SurveyStatItemVO> byDimension = new ArrayList<>();
-        for (Map<String, Object> row : answerMapper.statByDimension(templateId, from, to, scope)) {
-            int k = (int) toLong(row.get("k"));
+        for (SurveyDimensionStatVO row : answerMapper.statByDimension(templateId, from, to, scope)) {
+            int k = nzInt(row.getDimension());
             SurveyStatItemVO item = new SurveyStatItemVO(String.valueOf(k),
-                    SurveyDimensionEnum.getText(k), toLong(row.get("c")));
-            item.setAvgScore(decimal(row.get("avg_score")));
+                    SurveyDimensionEnum.getText(k), nz(row.getCnt()));
+            item.setAvgScore(row.getAvgScore());
             byDimension.add(item);
         }
         vo.setByDimension(byDimension);
 
         List<SurveyStatItemVO> byDept = new ArrayList<>();
-        for (Map<String, Object> row : answerMapper.statByDeptBottom(templateId, from, to, scope)) {
-            SurveyStatItemVO item = new SurveyStatItemVO(String.valueOf(toLong(row.get("d"))),
-                    String.valueOf(row.get("n")), toLong(row.get("c")));
-            item.setAvgScore(decimal(row.get("avg_score100")));
+        for (SurveyDeptScoreVO row : answerMapper.statByDeptBottom(templateId, from, to, scope)) {
+            SurveyStatItemVO item = new SurveyStatItemVO(String.valueOf(row.getDeptId()),
+                    row.getDeptName(), nz(row.getCnt()));
+            item.setAvgScore(row.getAvgScore100());
             byDept.add(item);
         }
         vo.setByDeptBottom(byDept);
 
         List<SurveyStatItemVO> byChannel = new ArrayList<>();
-        for (Map<String, Object> row : dispatchMapper.countByChannel(templateId, from, to, scope)) {
-            int k = (int) toLong(row.get("k"));
-            long total = toLong(row.get("total"));
+        for (SurveyChannelStatVO row : dispatchMapper.countByChannel(templateId, from, to, scope)) {
+            int k = nzInt(row.getK());
+            long total = nz(row.getTotal());
             SurveyStatItemVO item = new SurveyStatItemVO(String.valueOf(k),
                     SurveyChannelEnum.getText(k), total);
-            item.setRate(rate(toLong(row.get("recycled")), total));
+            item.setRate(rate(nz(row.getRecycled()), total));
             byChannel.add(item);
         }
         vo.setByChannel(byChannel);
 
         List<SurveyStatItemVO> byDay = new ArrayList<>();
-        for (Map<String, Object> row : answerMapper.statByDay(templateId, scope)) {
-            SurveyStatItemVO item = new SurveyStatItemVO(String.valueOf(row.get("d")),
-                    String.valueOf(row.get("d")), toLong(row.get("c")));
-            item.setAvgScore(decimal(row.get("avg_score100")));
+        for (SurveyDayTrendVO row : answerMapper.statByDay(templateId, scope)) {
+            SurveyStatItemVO item = new SurveyStatItemVO(row.getStatDate(),
+                    row.getStatDate(), nz(row.getCnt()));
+            item.setAvgScore(row.getAvgScore100());
             byDay.add(item);
         }
         vo.setByDay(byDay);

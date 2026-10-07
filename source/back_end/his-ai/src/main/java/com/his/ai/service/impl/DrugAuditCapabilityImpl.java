@@ -10,6 +10,7 @@ import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.DrugAuditCapability;
 import com.his.ai.support.DrugHardRuleChecker;
 import com.his.ai.vo.DrugAuditFindingVO;
+import com.his.ai.vo.DrugAuditPromptVariablesVO;
 import com.his.ai.vo.DrugAuditResultVO;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
@@ -417,15 +418,15 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
 
     private Optional<DrugAuditLlmOutputDTO> callModel(BizPrescription prescription, DrugAuditContextDTO context,
                                                       List<DrugAuditFindingVO> hardRuleFindings) {
-        Map<String, Object> variables = new HashMap<>();
-        variables.put("gender", SysGenderEnum.getText(context.gender()));
-        variables.put("age", context.age() == null ? "（未填写）" : context.age() + "岁");
-        variables.put("allergyHistory", StringUtils.hasText(context.allergyText())
+        DrugAuditPromptVariablesVO variables = new DrugAuditPromptVariablesVO();
+        variables.setGender(SysGenderEnum.getText(context.gender()));
+        variables.setAge(context.age() == null ? "（未填写）" : context.age() + "岁");
+        variables.setAllergyHistory(StringUtils.hasText(context.allergyText())
                 ? context.allergyText() : "（无已知过敏史记录）");
-        variables.put("diagnosis", StringUtils.hasText(context.conditionText())
+        variables.setDiagnosis(StringUtils.hasText(context.conditionText())
                 ? context.conditionText() : "（未填写）");
-        variables.put("prescriptions", formatPrescriptions(context));
-        variables.put("hardRuleHints", formatHardRuleHints(hardRuleFindings));
+        variables.setPrescriptions(formatPrescriptions(context));
+        variables.setHardRuleHints(formatHardRuleHints(hardRuleFindings));
 
         AiCallDTO call = AiCallDTO.builder()
                 .capabilityKey(AiCapabilityKeys.DRUG_AUDIT)
@@ -433,7 +434,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
                 .variables(variables)
                 .bizType(BIZ_TYPE)
                 .bizId(prescription.getId())
-                .inputDigest(formatPrescriptions(context) + " | " + variables.get("diagnosis"))
+                .inputDigest(formatPrescriptions(context) + " | " + variables.getDiagnosis())
                 .maxTokens(OUTPUT_TOKEN_LIMIT)
                 .build();
 

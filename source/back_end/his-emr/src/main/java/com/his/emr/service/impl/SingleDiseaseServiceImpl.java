@@ -13,7 +13,9 @@ import com.his.emr.enums.SingleDiseaseQcStatusEnum;
 import com.his.emr.mapper.BizSingleDiseaseCaseMapper;
 import com.his.emr.mapper.SysSingleDiseaseMapper;
 import com.his.emr.service.SingleDiseaseService;
+import com.his.emr.vo.InpatientSummarySnapshotVO;
 import com.his.emr.vo.SingleDiseaseAutoEnrollStatVO;
+import com.his.emr.vo.SingleDiseaseCandidateVO;
 import com.his.emr.vo.SingleDiseaseVO;
 import com.his.system.service.DictCacheService;
 import com.his.system.utils.UserUtils;
@@ -147,14 +149,14 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         if (disease == null) {
             throw new BusinessException("病种不存在");
         }
-        List<Map<String, Object>> candidates = caseMapper.selectAutoEnrollCandidates(
+        List<SingleDiseaseCandidateVO> candidates = caseMapper.selectAutoEnrollCandidates(
                 disease.getId(),
                 java.util.Arrays.stream(disease.getIcd10Prefix().split(",")).map(String::trim).toList(),
                 dto.getBeginDate(), dto.getEndDate());
         int ok = 0;
         List<String> skipped = new ArrayList<>();
-        for (Map<String, Object> row : candidates) {
-            Long admissionId = Long.valueOf(String.valueOf(row.get("admissionId")));
+        for (SingleDiseaseCandidateVO row : candidates) {
+            Long admissionId = row.getAdmissionId();
             try {
                 doEnroll(disease, admissionId, 1);
                 ok++;
@@ -173,11 +175,11 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
      * 纳入主体：取首页快照、唯一校验、建底账行。
      */
     private SingleDiseaseVO.Case doEnroll(SysSingleDisease disease, Long admissionId, int enrollWay) {
-        Map<String, Object> snap = caseMapper.selectSummarySnapshot(admissionId);
+        InpatientSummarySnapshotVO snap = caseMapper.selectSummarySnapshot(admissionId);
         if (snap == null) {
             throw new BusinessException("该住院记录无病案首页（或住院记录不存在），不能纳入");
         }
-        String diagCode = str(snap.get("mainDiagnosisCode"));
+        String diagCode = snap.getMainDiagnosisCode();
         if (diagCode == null || !matchPrefix(disease.getIcd10Prefix(), diagCode)) {
             throw new BusinessException("首页主要诊断 " + diagCode + " 不在病种纳入范围（"
                     + disease.getIcd10Prefix() + "），不能纳入");
@@ -192,14 +194,14 @@ public class SingleDiseaseServiceImpl implements SingleDiseaseService {
         c.setCaseNo(generateCaseNo());
         c.setDiseaseId(disease.getId());
         c.setAdmissionId(admissionId);
-        c.setPatientId(l(snap.get("patientId")));
-        c.setPatientName(str(snap.get("patientName")) == null ? "未知" : str(snap.get("patientName")));
+        c.setPatientId(snap.getPatientId());
+        c.setPatientName(snap.getPatientName() == null ? "未知" : snap.getPatientName());
         c.setMainDiagnosisCode(diagCode);
-        c.setMainDiagnosisName(str(snap.get("mainDiagnosisName")));
-        c.setInpatientDays(i(snap.get("inpatientDays")));
-        c.setTotalAmount(bd(snap.get("totalAmount")));
-        c.setIsSurgery(i(snap.get("isSurgery")) == null ? 0 : i(snap.get("isSurgery")));
-        c.setDeathFlag(i(snap.get("deathFlag")) == null ? 0 : i(snap.get("deathFlag")));
+        c.setMainDiagnosisName(snap.getMainDiagnosisName());
+        c.setInpatientDays(snap.getInpatientDays());
+        c.setTotalAmount(snap.getTotalAmount());
+        c.setIsSurgery(snap.getIsSurgery() == null ? 0 : snap.getIsSurgery());
+        c.setDeathFlag(snap.getDeathFlag() == null ? 0 : snap.getDeathFlag());
         c.setEnrollWay(enrollWay);
         c.setQcStatus(SingleDiseaseQcStatusEnum.PENDING.getCode());
         c.setReportStatus(YesOrNoEnum.NO.getCode());

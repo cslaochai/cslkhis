@@ -2,11 +2,10 @@ package com.his.medicaltech.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.medicaltech.entity.BizOutpInfusion;
+import com.his.medicaltech.vo.InfusionPatientSnapshotVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
-
-import java.util.Map;
 
 /**
  * 门诊输液单 Mapper
@@ -26,5 +25,5 @@ public interface BizOutpInfusionMapper extends BaseMapper<BizOutpInfusion> {
               FROM biz_patient
              WHERE id = #{patientId} AND del_flag = 0
             """)
-    Map<String, Object> selectPatientSnapshot(@Param("patientId") Long patientId);
+    InfusionPatientSnapshotVO selectPatientSnapshot(@Param("patientId") Long patientId);
 }

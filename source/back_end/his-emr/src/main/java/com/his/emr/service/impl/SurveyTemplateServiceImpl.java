@@ -18,6 +18,7 @@ import com.his.emr.mapper.BizSurveyDispatchMapper;
 import com.his.emr.mapper.BizSurveyItemMapper;
 import com.his.emr.mapper.BizSurveyTemplateMapper;
 import com.his.emr.service.SurveyTemplateService;
+import com.his.emr.vo.SurveyTemplateItemCountVO;
 import com.his.emr.vo.SurveyTemplateSelectListVO;
 import com.his.emr.vo.SurveyTemplateVO;
 import com.his.system.entity.CurrentUser;
@@ -62,13 +63,6 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
         return StringUtils.hasText(v) ? v.trim() : null;
     }
 
-    /**
-     * 聚合列（COUNT/BIGINT）在 JDBC 侧可能是 Long/BigInteger/BigDecimal，统一按字符串转
-     */
-    private static long asLong(Object v) {
-        return v == null ? 0L : new BigDecimal(String.valueOf(v)).longValue();
-    }
-
     @Override
     public PageResult<SurveyTemplateVO> listPage(SurveyTemplateQueryPageDTO dto) {
         LambdaQueryWrapper<BizSurveyTemplate> wrapper = new LambdaQueryWrapper<>();
@@ -84,7 +78,8 @@ public class SurveyTemplateServiceImpl implements SurveyTemplateService {
         // 题目数一次批量捞：逐行 count 会在「一页 20 张卷」时打出 20 条 SQL
         Map<Long, Integer> itemCounts = ids.isEmpty() ? Map.of()
                 : itemMapper.countByTemplates(ids).stream().collect(Collectors.toMap(
-                r -> asLong(r.get("t")), r -> (int) asLong(r.get("c")), (a, b) -> a));
+                SurveyTemplateItemCountVO::getTemplateId,
+                r -> r.getCnt() == null ? 0 : r.getCnt().intValue(), (a, b) -> a));
         List<SurveyTemplateVO> records = page.getRecords().stream().map(t -> {
             SurveyTemplateVO vo = new SurveyTemplateVO();
             BeanUtils.copyProperties(t, vo);

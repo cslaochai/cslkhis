@@ -10,7 +10,10 @@ import com.his.medicaltech.enums.DrgSimStatusEnum;
 import com.his.medicaltech.mapper.DrgSimMapper;
 import com.his.medicaltech.service.DrgSimService;
 import com.his.medicaltech.support.DrgGrouper;
+import com.his.medicaltech.vo.DrgGroupRowVO;
 import com.his.medicaltech.vo.DrgSimVO;
+import com.his.medicaltech.vo.DrgSummaryListRowVO;
+import com.his.medicaltech.vo.DrgSummaryRowVO;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,10 +22,8 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -38,19 +39,15 @@ public class DrgSimServiceImpl implements DrgSimService {
     private final DrgSimMapper simMapper;
     private final DrgGrouper grouper;
 
-    private static String asStr(Object o) {
-        return o == null ? null : String.valueOf(o);
-    }
-
-    private static Integer asInt(Object o) {
-        return o == null ? null : ((Number) o).intValue();
-    }
-
-    private static BigDecimal asDecimal(Object o) {
-        if (o == null) {
-            return BigDecimal.ZERO;
-        }
-        return new BigDecimal(String.valueOf(o)).setScale(2, RoundingMode.HALF_UP);
+    /**
+     * 金额归一到两位小数，空值按 0 计。
+     *
+     * <p>为什么空值兜0 而不是保留 null：盈亏 = 支付标准 - 实际费用，
+     * 组表里某组没维护支付标准时若传null，盈亏这一步会直接 NPE；
+     * 兜 0 算出来的"亏全部实际费用"虽然难看，但至少让页面能显示这组没维护标准。
+     */
+    private static BigDecimal money(BigDecimal v) {
+        return (v == null ? BigDecimal.ZERO : v).setScale(2, RoundingMode.HALF_UP);
     }
 
     private static String tr(String s) {
@@ -59,36 +56,36 @@ public class DrgSimServiceImpl implements DrgSimService {
 
     @Transactional(rollbackFor = Exception.class)
     public DrgSimVO.SimResult simulate(DrgSimDTO.Simulate dto) {
-        Map<String, Object> s = simMapper.selectSummary(dto.getSummaryId());
+        DrgSummaryRowVO s = simMapper.selectSummary(dto.getSummaryId());
         if (s == null) {
             throw new BusinessException("病案首页不存在");
         }
-        String icd = StringUtils.hasText(dto.getIcdCode()) ? dto.getIcdCode().trim() : asStr(s.get("main_diagnosis_code"));
-        String icdName = StringUtils.hasText(dto.getIcdName()) ? dto.getIcdName().trim() : asStr(s.get("main_diagnosis_name"));
+        String icd = StringUtils.hasText(dto.getIcdCode()) ? dto.getIcdCode().trim() : s.getMainDiagnosisCode();
+        String icdName = StringUtils.hasText(dto.getIcdName()) ? dto.getIcdName().trim() : s.getMainDiagnosisName();
         if (!StringUtils.hasText(icd)) {
             throw new BusinessException("该首页主诊断编码为空，请先补录 ICD 编码再模拟");
         }
-        boolean surgery = asInt(s.get("is_surgery")) == 1;
-        Integer days = (Integer) s.get("inpatient_days");
-        boolean death = asInt(s.get("death_flag")) == 1;
-        BigDecimal actual = asDecimal(s.get("actual_amount"));
+        boolean surgery = Integer.valueOf(1).equals(s.getIsSurgery());
+        Integer days = s.getInpatientDays();
+        boolean death = Integer.valueOf(1).equals(s.getDeathFlag());
+        BigDecimal actual = money(s.getActualAmount());
 
         DrgGrouper.GroupResult g = grouper.group(icd, surgery, days, death);
         boolean grouped = !DrgGrouper.QY_CODE.equals(g.drgCode());
-        Map<String, Object> groupRow = null;
+        DrgGroupRowVO groupRow = null;
         BigDecimal weight = null;
         BigDecimal pay = null;
         String drgName = null;
         if (grouped) {
             groupRow = simMapper.groupList().stream()
-                    .filter(x -> g.drgCode().equals(String.valueOf(x.get("drg_code"))))
+                    .filter(x -> g.drgCode().equals(x.getDrgCode()))
                     .findFirst().orElse(null);
             if (groupRow == null) {
                 throw new BusinessException("组表缺少 " + g.drgCode() + "，请检查 sys_drg_group 种子数据");
             }
-            weight = asDecimal(groupRow.get("weight"));
-            pay = asDecimal(groupRow.get("pay_standard"));
-            drgName = String.valueOf(groupRow.get("drg_name"));
+            weight = money(groupRow.getWeight());
+            pay = money(groupRow.getPayStandard());
+            drgName = groupRow.getDrgName();
         }
         BigDecimal profit = grouped ? pay.subtract(actual) : null;
 
@@ -102,7 +99,7 @@ public class DrgSimServiceImpl implements DrgSimService {
             r.setSummaryId(dto.getSummaryId());
             r.setCreateBy(UserUtils.getCurrentUser().getUsername());
         }
-        r.setPatientName(asStr(s.get("patient_name")));
+        r.setPatientName(s.getPatientName());
         r.setMainDiagCode(icd);
         r.setMainDiagName(icdName);
         r.setIsSurgery(surgery ? 1 : 0);
@@ -131,11 +128,11 @@ public class DrgSimServiceImpl implements DrgSimService {
     @Transactional(rollbackFor = Exception.class)
     public DrgSimVO.SummaryListVO simulateBatch(DrgSimDTO.SimulateBatch dto) {
         List<Long> ids = dto == null ? null : dto.getSummaryIds();
-        List<Map<String, Object>> summaries;
+        List<DrgSummaryRowVO> summaries;
         if (ids != null && !ids.isEmpty()) {
             summaries = new ArrayList<>();
             for (Long id : ids) {
-                Map<String, Object> s = simMapper.selectSummary(id);
+                DrgSummaryRowVO s = simMapper.selectSummary(id);
                 if (s == null) {
                     throw new BusinessException("病案首页不存在：" + id);
                 }
@@ -145,13 +142,13 @@ public class DrgSimServiceImpl implements DrgSimService {
             summaries = simMapper.selectSummaries(50);
         }
         int skipped = 0;
-        for (Map<String, Object> s : summaries) {
-            if (!StringUtils.hasText(asStr(s.get("main_diagnosis_code")))) {
+        for (DrgSummaryRowVO s : summaries) {
+            if (!StringUtils.hasText(s.getMainDiagnosisCode())) {
                 skipped++;
                 continue;
             }
             DrgSimDTO.Simulate one = new DrgSimDTO.Simulate();
-            one.setSummaryId(((Number) s.get("summary_id")).longValue());
+            one.setSummaryId(s.getSummaryId());
             simulate(one);
         }
         return summaryList(null, skipped);
@@ -173,18 +170,18 @@ public class DrgSimServiceImpl implements DrgSimService {
      * 可模拟首页列表 + 汇总统计
      */
     public DrgSimVO.SummaryListVO summaryList(Integer limit, Integer extraSkipped) {
-        List<Map<String, Object>> rows = simMapper.summaryList(limit == null ? 50 : limit);
+        List<DrgSummaryListRowVO> rows = simMapper.summaryList(limit == null ? 50 : limit);
         List<DrgSimVO.SummaryRow> list = rows.stream().map(m -> {
             DrgSimVO.SummaryRow r = new DrgSimVO.SummaryRow();
-            r.setSummaryId(((Number) m.get("summary_id")).longValue());
-            r.setPatientName(asStr(m.get("patient_name")));
-            r.setDeptName(asStr(m.get("dept_name")));
-            r.setDischargeTime((LocalDateTime) m.get("discharge_time"));
-            r.setMainDiagCode(asStr(m.get("main_diagnosis_code")));
-            r.setMainDiagName(asStr(m.get("main_diagnosis_name")));
-            r.setIsSurgery(asInt(m.get("is_surgery")));
-            r.setSimDrgCode(asStr(m.get("drg_code")));
-            r.setSimProfit(asDecimal(m.get("profit_amount")));
+            r.setSummaryId(m.getSummaryId());
+            r.setPatientName(m.getPatientName());
+            r.setDeptName(m.getDeptName());
+            r.setDischargeTime(m.getDischargeTime());
+            r.setMainDiagCode(m.getMainDiagnosisCode());
+            r.setMainDiagName(m.getMainDiagnosisName());
+            r.setIsSurgery(m.getIsSurgery());
+            r.setSimDrgCode(m.getDrgCode());
+            r.setSimProfit(money(m.getProfitAmount()));
             return r;
         }).collect(Collectors.toList());
 
@@ -212,16 +209,16 @@ public class DrgSimServiceImpl implements DrgSimService {
     public List<DrgSimVO.GroupRow> groupList() {
         return simMapper.groupList().stream().map(m -> {
             DrgSimVO.GroupRow r = new DrgSimVO.GroupRow();
-            r.setId(((Number) m.get("id")).longValue());
-            r.setDrgCode(asStr(m.get("drg_code")));
-            r.setDrgName(asStr(m.get("drg_name")));
-            r.setMdcCode(asStr(m.get("mdc_code")));
-            r.setAdrgCode(asStr(m.get("adrg_code")));
-            r.setWeight(asDecimal(m.get("weight")));
-            r.setPayStandard(asDecimal(m.get("pay_standard")));
-            r.setSource(asStr(m.get("source")));
-            r.setVersion(asStr(m.get("version")));
-            r.setStatus(asInt(m.get("status")));
+            r.setId(m.getId());
+            r.setDrgCode(m.getDrgCode());
+            r.setDrgName(m.getDrgName());
+            r.setMdcCode(m.getMdcCode());
+            r.setAdrgCode(m.getAdrgCode());
+            r.setWeight(money(m.getWeight()));
+            r.setPayStandard(money(m.getPayStandard()));
+            r.setSource(m.getSource());
+            r.setVersion(m.getVersion());
+            r.setStatus(m.getStatus());
             return r;
         }).collect(Collectors.toList());
     }
