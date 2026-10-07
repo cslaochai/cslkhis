@@ -55,7 +55,9 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
      */
     private static final String DUTY_REFERRAL_HOURS_KEY = "duty.coord.referral_pending_hours";
     private static final int DUTY_REFERRAL_HOURS_FALLBACK = 2;
+
     private final BizReferralMapper bizReferralMapper;
+
     private final DictCacheService dictCacheService;
     /**
      * 全院当天谁负责：转诊挂住没人接时的兜底收口人（sql/169）

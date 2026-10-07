@@ -68,11 +68,17 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     private static final int INSPECTOR_LIMIT = 200;
     private static final BigDecimal HUNDRED = BigDecimal.valueOf(100);
     private static final String REMARK_AUTO = "合格率与得分由检查明细求和生成（sql/168 口径 d）";
+
     private final DeptScopeProvider deptScopeProvider;
+
     private final BizNursingQcCheckMapper bizNursingQcCheckMapper;
+
     private final BizNursingQcCheckItemMapper bizNursingQcCheckItemMapper;
+
     private final SysNursingQcItemMapper sysNursingQcItemMapper;
+
     private final BizNursingQcIndicatorMapper bizNursingQcIndicatorMapper;
+
     private final DictCacheService dictCacheService;
 
     // 参照数据

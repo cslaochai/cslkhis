@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * 病理单状态枚举（码值口径 = biz_pathology_order.status 列注释）。
- *
- * <p>文案供后端拼提示用，页面渲染仍走字典 {@code DictCacheService.text}（his_pathology_status）。
  */
 @Getter
 public enum PathologyStatusEnum {

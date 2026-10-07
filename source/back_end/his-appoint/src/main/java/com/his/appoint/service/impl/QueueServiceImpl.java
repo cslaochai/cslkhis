@@ -70,7 +70,7 @@ public class QueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> impl
     private final SysMessageService sysMessageService;
     @Lazy
     private final ScheduleService scheduleService;
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     @Override
     public List<BizQueueListVO> getTodayQueueList(QueueTodayQueryDTO queueQueryDTO) {

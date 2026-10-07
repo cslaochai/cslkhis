@@ -72,7 +72,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
 
     private final OperationChargeBiller operationChargeBiller;
 
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     // 查询
 

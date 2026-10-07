@@ -98,7 +98,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
 
     private final BizOperationSafetyCheckMapper bizOperationSafetyCheckMapper;
 
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     // 查询
     private static String textOr(String value, String fallback) {

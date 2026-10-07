@@ -45,10 +45,14 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
     private static final String ANCHOR_ADMISSION = "ADMISSION";
     private static final String ANCHOR_EMERGENCY = "EMERGENCY";
     private static final String ANCHOR_PATIENT = "PATIENT";
+
     private final CdrMapper cdrMapper;
+
     private final BizPatientMapper bizPatientMapper;
+
     private final PatientIndexService patientIndexService;
-    private DictCacheService dictCacheService;
+
+    private final DictCacheService dictCacheService;
 
     /**
      * 事件金额的语义标签。金额不能只给一个数字，得说清这是"实收"还是"总额"

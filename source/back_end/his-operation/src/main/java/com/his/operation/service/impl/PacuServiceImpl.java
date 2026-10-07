@@ -60,7 +60,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     private final BizAnesthesiaRecordMapper bizAnesthesiaRecordMapper;
     private final BizOperationApplyMapper bizOperationApplyMapper;
     private final OperationChargeBiller operationChargeBiller;
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     @Override
     public IPage<PacuRecordVO> listPage(PacuQueryPageDTO query) {

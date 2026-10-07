@@ -42,9 +42,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SingleDiseaseServiceImpl extends ServiceImpl<BizSingleDiseaseCaseMapper, BizSingleDiseaseCase> implements SingleDiseaseService {
     private final SysSingleDiseaseMapper sysSingleDiseaseMapper;
+
     private final BizSingleDiseaseCaseMapper bizSingleDiseaseCaseMapper;
+
     private final RedisSequenceService redisSequenceService;
-    private DictCacheService dictCacheService;
+
+    private final DictCacheService dictCacheService;
 
     public List<SingleDiseaseVO.Disease> diseaseList() {
         List<SysSingleDisease> diseases = sysSingleDiseaseMapper.selectList(

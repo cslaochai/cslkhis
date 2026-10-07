@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.CheckResultEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.emr.dto.RuleCheckQueryPageDTO;
 import com.his.emr.entity.BizClinicalRuleCheck;
 import com.his.emr.enums.RuleCheckStatusEnum;
@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -30,7 +29,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ClinicalRuleCheckServiceImpl extends ServiceImpl<BizClinicalRuleCheckMapper, BizClinicalRuleCheck> implements ClinicalRuleCheckService {
 
-    private static final AtomicInteger SEQ = new AtomicInteger(0);
+    private final RedisSequenceService redisSequenceService;
 
     @Override
     public PageResult<BizClinicalRuleCheckVO> listPage(RuleCheckQueryPageDTO queryPageDTO) {
@@ -55,8 +54,7 @@ public class ClinicalRuleCheckServiceImpl extends ServiceImpl<BizClinicalRuleChe
     @Transactional(rollbackFor = Exception.class)
     public BizClinicalRuleCheckVO executeCheck(Long recordId, Integer ruleType, String checkBy) {
         BizClinicalRuleCheck check = new BizClinicalRuleCheck();
-        check.setCheckNo("RC" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%04d", SEQ.incrementAndGet() % 10000));
+        check.setCheckNo(redisSequenceService.generateRuleCheckNo());
         check.setRecordId(recordId);
         check.setRuleType(ruleType);
         check.setRuleName(ruleType == 1 ? "配伍禁忌检查" : ruleType == 2 ? "检验诊断关联性检查" : "用药合理性检查");

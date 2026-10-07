@@ -9,6 +9,11 @@ package com.his.common.service;
  * 跨天归零、多实例不撞号"。数据库自增满足不了"跨天归零"，进程内 {@code AtomicInteger}
  * 满足不了"多实例不撞号"（多副本部署时两实例会发同一个号）—— 只有 Redis 的原子
  * {@code INCR} + 按天分 key 能同时满足三条。
+ *
+ * <p><b>两层用法的分工：</b>{@link #next(String)} 是<b>发号原语</b>，只保证"某个 key 当天递增不重号"，
+ * 给非单号场景用（配置表主键、叫号队列位次）；业务单号一律走下面的 {@code generateXxxNo()}，
+ * 因为一个单号同时钉死四件事——Redis key 名、前缀、日期段、序号宽度。四件事写进调用点的实参里
+ * 就等于没有口径：换 key 名会让计数器归 1、与当天已发的号撞唯一索引，而这既不报错也看不出来。
  */
 public interface RedisSequenceService {
 
@@ -32,12 +37,12 @@ public interface RedisSequenceService {
     String generateRoleCode();
 
     /**
-     * 生成挂号单号：A + 年月日时分秒 + 4位流水号
+     * 生成挂号单号：A + 年月日 + 5位流水号
      */
     String generateAppointNo();
 
     /**
-     * 生成员工工号：A + 年月日时分秒 + 4位流水号
+     * 生成员工工号：E + 年月日 + 5位流水号
      */
     String generateEmployeeNo();
 
@@ -227,4 +232,94 @@ public interface RedisSequenceService {
      * 慢特病备案单号：MT + yyyyMMdd + 4 位序号
      */
     String generateChronicRegNo();
+
+    /**
+     * 临床规则校验编号：RC + yyyyMMdd + 4 位序号
+     */
+    String generateRuleCheckNo();
+
+    /**
+     * AI 药审校验编号：RCAI + yyyyMMdd + 4 位序号（与人工 RC 独立号段，原先是时间戳+6 位随机数）
+     */
+    String generateRuleCheckAiNo();
+
+    /**
+     * 慢病建档/认定编号：CHR + yyyyMMdd + 4 位序号
+     */
+    String generateChronicRecordNo();
+
+    /**
+     * 退费申请单号：RA + yyyyMMdd + 4 位序号
+     */
+    String generateRefundApplyNo();
+
+    /**
+     * 处方流转单号：RXF + yyyyMMdd + 4 位序号
+     */
+    String generateRxFlowNo();
+
+    /**
+     * 公卫上报单号：PH + yyyyMMdd + 4 位序号
+     */
+    String generatePublicHealthReportNo();
+
+    /**
+     * 处方号：RX + yyyyMMdd + 5 位序号（门诊处方日均上千，4 位一天能发满）
+     */
+    String generatePrescriptionNo();
+
+    /**
+     * 检查申请单号：INS + yyyyMMdd + 5 位序号
+     */
+    String generateInspectionApplyNo();
+
+    /**
+     * 检验申请单号：LAB + yyyyMMdd + 5 位序号
+     */
+    String generateLaboratoryApplyNo();
+
+    /**
+     * 门诊病历号：MR + yyyyMMdd + 5 位序号
+     */
+    String generateMedicalRecordNo();
+
+    /**
+     * 随访任务号：FT + yyyyMMdd + 4 位序号
+     */
+    String generateFollowupTaskNo();
+
+    /**
+     * 病案归档编号：MA + yyyyMMdd + 4 位序号（ARC 前缀已并入此口径）
+     */
+    String generateMedicalRecordArchiveNo();
+
+    /**
+     * 检查执行记录号：IR + yyyyMMdd + 5 位序号
+     */
+    String generateInspectionRecordNo();
+
+    /**
+     * 检验执行记录号：LR + yyyyMMdd + 5 位序号
+     */
+    String generateLaboratoryRecordNo();
+
+    /**
+     * 报告单号：RPT + yyyyMMdd + 5 位序号（检查/检验/心电/放射共用同一张报告表，共用一个号段）
+     */
+    String generateReportNo();
+
+    /**
+     * 心电波形号：ECG + yyyyMMdd + 4 位序号
+     */
+    String generateEcgWaveNo();
+
+    /**
+     * 消息编号：MSG + yyyyMMdd + 5 位序号（广播一次写多人，一人一号，量按人次算）
+     */
+    String generateMessageNo();
+
+    /**
+     * 病案统计上报单号：TJ + yyyyMMdd + 4 位序号（原先是时间戳+3 位随机数，同秒并发会撞号）
+     */
+    String generateStatReportNo();
 }

@@ -46,7 +46,7 @@ public class DeteriorationAlertCapabilityImpl implements DeteriorationAlertCapab
     private static final int ADVICE_MAX = 200;
     private final AiExecutionService aiExecutionService;
     private final InpatientNursingService inpatientNursingService;
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     @Override
     public List<DeteriorationScanVO> wardScan(Long wardId) {

@@ -761,7 +761,7 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
         patient.setGender(dto.getGender());
         patient.setIdCard(dto.getIdCard().toUpperCase());
         patient.setPhone(dto.getPhone());
-        patient.setPatientNo("P" + System.currentTimeMillis());
+        patient.setPatientNo(redisSequenceService.generatePatientNo());
         patient.setPatientType(1); // 1-自费
         patient.setStatus(1);
         LocalDate birth = parseBirthDate(dto.getIdCard());

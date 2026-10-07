@@ -11,6 +11,7 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.medicaltech.dto.*;
@@ -82,6 +83,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
     private final EcgWaveSimulator waveSimulator;
 
     private final RadioReportMapper radioReportMapper;
+    private final RedisSequenceService redisSequenceService;
 
     // 查询
 
@@ -150,7 +152,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
         String me = UserUtils.getCurrentUser().getRealName();
         if (wave == null) {
             wave = new BizEcgWaveform();
-            wave.setWaveNo("ECG" + System.currentTimeMillis());
+            wave.setWaveNo(redisSequenceService.generateEcgWaveNo());
             wave.setRecordId(record.getId());
             wave.setRecordNo(record.getRecordNo());
             wave.setApplyId(record.getApplyId());
@@ -538,7 +540,7 @@ public class EcgServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizIn
             return exists;
         }
         BizReport report = new BizReport();
-        report.setReportNo("RPT" + System.currentTimeMillis());
+        report.setReportNo(redisSequenceService.generateReportNo());
         report.setReportType(ReportTypeEnum.INSPECTION.getCode());
         report.setRecordId(record.getId());
         report.setRecordNo(record.getRecordNo());

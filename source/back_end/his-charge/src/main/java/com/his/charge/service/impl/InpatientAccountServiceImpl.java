@@ -96,7 +96,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     private final SettlementBillService settlementBillService;
     private final SysMessageService sysMessageService;
     private final SysEmployeeMapper sysEmployeeMapper;
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     // 预交金（L3 资金流水 + 住院资金账户）
 

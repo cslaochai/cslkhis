@@ -62,7 +62,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
      * 全部规则实现，Spring 自动注入
      */
     private final List<ComplianceRule> rules;
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     // 编码明细维护
     @Override

@@ -44,10 +44,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RecordQcFlowServiceImpl extends ServiceImpl<BizRecordQcFlowMapper, BizRecordQcFlow> implements RecordQcFlowService {
     private final BizRecordQcFlowMapper bizRecordQcFlowMapper;
+
     private final BizRecordQcFlowActionMapper bizRecordQcFlowActionMapper;
+
     private final BizMedicalRecordMapper bizMedicalRecordMapper;
+
     private final RedisSequenceService redisSequenceService;
-    private DictCacheService dictCacheService;
+
+    private final DictCacheService dictCacheService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)

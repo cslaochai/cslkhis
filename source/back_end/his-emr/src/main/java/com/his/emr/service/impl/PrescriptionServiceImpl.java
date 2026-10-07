@@ -34,7 +34,6 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -46,8 +45,6 @@ import java.util.stream.Collectors;
 public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedicalRecord> implements PrescriptionService {
 
     static final String[] HUIFANG_TYPE = {"糖尿病", "高血压", "冠心病"};
-    private static final AtomicInteger TASK_SEQ = new AtomicInteger(0);
-    private static final AtomicInteger SEQ = new AtomicInteger(0);
     private final BizPrescriptionMapper bizPrescriptionMapper;
     private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
     private final BizInspectionApplyMapper bizInspectionApplyMapper;

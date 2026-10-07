@@ -81,7 +81,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     private final SysMessageService sysMessageService;
 
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     /**
      * 质控类型归一。

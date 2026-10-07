@@ -56,17 +56,23 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
     private static final BigDecimal TARGET_PREVENT_RATE = new BigDecimal("90.00");
     private static final String PREFIX_PREVENT = "VP";
     private static final String PREFIX_EVENT = "VE";
+
     private final VteStatMapper vteStatMapper;
     private final BizVtePreventMapper bizVtePreventMapper;
-    private final BizVteEventMapper bizVteEventMapper;
-    private final BizVteStatsMapper bizVteStatsMapper;
-    private final BizAdmissionMapper bizAdmissionMapper;
-    private final BizPatientMapper bizPatientMapper;
-    private final BizNursingAssessmentMapper bizNursingAssessmentMapper;
-    private final SysBedMapper sysBedMapper;
-    private DictCacheService dictCacheService;
 
-    // 看板
+    private final BizVteEventMapper bizVteEventMapper;
+
+    private final BizVteStatsMapper bizVteStatsMapper;
+
+    private final BizAdmissionMapper bizAdmissionMapper;
+
+    private final BizPatientMapper bizPatientMapper;
+
+    private final BizNursingAssessmentMapper bizNursingAssessmentMapper;
+
+    private final SysBedMapper sysBedMapper;
+
+    private final DictCacheService dictCacheService;
 
     @Override
     public VteOverviewVO overview() {

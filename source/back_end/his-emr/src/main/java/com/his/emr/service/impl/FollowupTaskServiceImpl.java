@@ -12,6 +12,7 @@ import com.his.appoint.enums.VisitTypeEnum;
 import com.his.appoint.service.AppointService;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.*;
 import com.his.emr.dto.FollowupQueryDTO;
 import com.his.emr.dto.FollowupTaskDTO;
@@ -35,7 +36,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -78,6 +78,8 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
      * 患者触达（G-06）：站内信通道常通，微信订阅消息未启用时内部静默降级
      */
     private final com.his.system.service.SysMessageService sysMessageService;
+
+    private final RedisSequenceService redisSequenceService;
 
     /**
      * 电话外呼通道（G-15）：mock=人工登记待呼，真实线路接入前绝不假装已呼出
@@ -172,7 +174,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         BizFollowupTask task;
         if (dto.getId() == null) {
             task = new BizFollowupTask();
-            task.setTaskNo(nextTaskNo(null));
+            task.setTaskNo(redisSequenceService.generateFollowupTaskNo());
             task.setPatientId(dto.getPatientId());
             fillPatientSnapshot(task);
             task.setFollowupStatus(FollowupTaskStatusEnum.PENDING.getCode());
@@ -240,7 +242,7 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         int type = dto.getFollowupType() == null ? 1 : dto.getFollowupType();
 
         BizFollowupTask task = new BizFollowupTask();
-        task.setTaskNo(nextTaskNo(null));
+        task.setTaskNo(redisSequenceService.generateFollowupTaskNo());
         task.setPatientId(snap.getPatientId());
         task.setPatientNo(snap.getPatientNo());
         task.setPatientName(snap.getPatientName());
@@ -527,14 +529,6 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
         boolean open = Integer.valueOf(FollowupTaskStatusEnum.PENDING.getCode()).equals(status)
                 || Integer.valueOf(FollowupTaskStatusEnum.DOING.getCode()).equals(status);
         return open && task.getFollowupTime() != null && task.getFollowupTime().isBefore(LocalDateTime.now());
-    }
-
-    /**
-     * 手动新建：FUV+yyyyMMddHHmmss+3 位随机（task_no VARCHAR(32)：3+14+3=20，安全余量足够）
-     */
-    private String nextTaskNo(Long dischargeId) {
-        String ts = DateFormats.COMPACT_DATETIME.format(LocalDateTime.now());
-        return "FUV" + ts + ThreadLocalRandom.current().nextInt(100, 1000);
     }
 
     /**

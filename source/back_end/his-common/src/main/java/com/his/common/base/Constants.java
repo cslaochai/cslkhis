@@ -2,6 +2,24 @@ package com.his.common.base;
 
 public interface Constants {
 
+    /**
+     * <h2>两类"前缀"是一对，但落在完全不同的地方</h2>
+     *
+     * <ul>
+     *   <li>{@code XXX_NO_KEY_PREFIX} —— <b>Redis 计数器的 key 名</b>，只进 {@code next(module)}，
+     *       真实 key 是 {@code {KEY_PREFIX}:{yyyyMMdd}}（如 {@code EMPLOYEE:20261007}）。
+     *       它<em>不会</em>出现在任何单号里、也不落库。</li>
+     *   <li>{@code XXX_NO_PREFIX} —— <b>单号正文的头几个字母</b>，落进 {@code xxx_no} 列给人看
+     *       （如 {@code PATIENT_NO_PREFIX = "P"} → {@code P2026100700001}）。</li>
+     * </ul>
+     *
+     * 一对两个是因为「给人看的短前缀」和「机器用的长名字」诉求相反：单号要短要好认（P/AE/ICASE），
+     * key 要能一眼看出是哪个业务的号段（PATIENT/ADVERSE_EVENT/INFECTION_CASE）。
+     *
+     * <p><b>⚠ key 名的值是运行事实，不能改：</b>换 key 名 = 当天计数器从 1 重启 = 与当天已发出的号
+     * 撞 {@code uk_xxx_no} 唯一索引，而且零报错（现象是「保存失败/系统内部错误」，真因查不出来）。
+     * 要新号段就新增常量，别动老常量的值。
+     */
     String PATIENT_NO_KEY_PREFIX = "PATIENT";
     String APPOINT_NO_KEY_PREFIX = "APPOINT";
     String EMPLOYEE_NO_KEY_PREFIX = "EMPLOYEE";
@@ -26,6 +44,10 @@ public interface Constants {
      * 中药代煎单号（sql/139）
      */
     String TCM_DECOCT_NO_KEY_PREFIX = "TCM_DECOCT";
+    /**
+     * 三级质控流转单：本常量声明的 key 是 RECORD_QC_FLOW，但历史上这张单是按 "QCF"（前缀常量）取号的。
+     * 值不能就地纠正 —— 换 key = 当天序号归 1 = 与当天已发的 QCF 号撞唯一索引，见 generateRecordQcFlowNo
+     */
     String RECORD_QC_FLOW_NO_KEY_PREFIX = "RECORD_QC_FLOW";
     String EXAM_APPOINT_NO_KEY_PREFIX = "EXAM_APPOINT";
     String TREATMENT_APPLY_NO_KEY_PREFIX = "TREATMENT_APPLY";
@@ -83,6 +105,32 @@ public interface Constants {
      */
     String LEAVE_RECORD_NO_KEY_PREFIX = "INPATIENT_LEAVE";
 
+    /**
+     * 医生工作站/医技/消息侧单号（原先在各自 service 里用进程内 AtomicInteger + 秒级时间戳发号，
+     * 重启归零、多实例并存必撞各表的 xxx_no 唯一索引）
+     */
+    String RULE_CHECK_NO_KEY_PREFIX = "RULE_CHECK";
+    String CHRONIC_RECORD_NO_KEY_PREFIX = "CHRONIC_RECORD";
+    String REFUND_APPLY_NO_KEY_PREFIX = "REFUND_APPLY";
+    String RX_FLOW_NO_KEY_PREFIX = "RX_FLOW";
+    String PUBLIC_HEALTH_REPORT_NO_KEY_PREFIX = "PUBLIC_HEALTH_REPORT";
+    String PRESCRIPTION_NO_KEY_PREFIX = "PRESCRIPTION";
+    String INSPECTION_APPLY_NO_KEY_PREFIX = "INSPECTION_APPLY";
+    String LABORATORY_APPLY_NO_KEY_PREFIX = "LABORATORY_APPLY";
+    String MEDICAL_RECORD_NO_KEY_PREFIX = "MEDICAL_RECORD";
+    String FOLLOWUP_TASK_NO_KEY_PREFIX = "FOLLOWUP_TASK";
+    String MEDICAL_RECORD_ARCHIVE_NO_KEY_PREFIX = "MEDICAL_RECORD_ARCHIVE";
+    String INSPECTION_RECORD_NO_KEY_PREFIX = "INSPECTION_RECORD";
+    String LABORATORY_RECORD_NO_KEY_PREFIX = "LABORATORY_RECORD";
+    String REPORT_NO_KEY_PREFIX = "REPORT";
+    String ECG_WAVE_NO_KEY_PREFIX = "ECG_WAVE";
+    String MESSAGE_NO_KEY_PREFIX = "MESSAGE";
+    String STAT_REPORT_NO_KEY_PREFIX = "STAT_REPORT";
+    String RULE_CHECK_AI_NO_KEY_PREFIX = "RULE_CHECK_AI";
+
+    /**
+     * 单号正文前缀（落库给人看的那几个字母），与上面每组 KEY_PREFIX 一一配对，分工见类注释
+     */
     String PATIENT_NO_PREFIX = "P";
     String APPOINT_NO_PREFIX = "A";
     String DRUG_NO_PREFIX = "D";
@@ -231,4 +279,35 @@ public interface Constants {
      * 日间手术登记单号前缀：DA + yyyyMMdd + 4 位（Day-surgery Appointment）
      */
     String DAY_SURGERY_NO_PREFIX = "DA";
+
+    /**
+     * 单号宽度口径：日均量能上千的（处方、病历号、检查/检验申请与记录、报告、消息）用 5 位，
+     * 其余低频单据用 4 位。4 位一旦当天发满，第 10001 单会撞唯一索引（发号器不会自己报错）。
+     */
+    String RULE_CHECK_NO_PREFIX = "RC";
+    String CHRONIC_RECORD_NO_PREFIX = "CHR";
+    String REFUND_APPLY_NO_PREFIX = "RA";
+    String RX_FLOW_NO_PREFIX = "RXF";
+    String PUBLIC_HEALTH_REPORT_NO_PREFIX = "PH";
+    String PRESCRIPTION_NO_PREFIX = "RX";
+    String INSPECTION_APPLY_NO_PREFIX = "INS";
+    String LABORATORY_APPLY_NO_PREFIX = "LAB";
+    String MEDICAL_RECORD_NO_PREFIX = "MR";
+    String FOLLOWUP_TASK_NO_PREFIX = "FT";
+    /**
+     * 归档编号前缀：MA + yyyyMMdd + 4 位。原先两条归档路径一个写 MA 一个写 ARC，
+     * 同一张表的同一列长出两种格式，按号检索要猜前缀。统一成 MA。
+     */
+    String MEDICAL_RECORD_ARCHIVE_NO_PREFIX = "MA";
+    String INSPECTION_RECORD_NO_PREFIX = "IR";
+    String LABORATORY_RECORD_NO_PREFIX = "LR";
+    String REPORT_NO_PREFIX = "RPT";
+    String ECG_WAVE_NO_PREFIX = "ECG";
+    String MESSAGE_NO_PREFIX = "MSG";
+    String STAT_REPORT_NO_PREFIX = "TJ";
+    /**
+     * AI 药审写进校验表的单号：与人工校验的 RC 分前缀也分号段，
+     * 便于按前缀统计 AI 命中，且两张号段互不占用当天的序号
+     */
+    String RULE_CHECK_AI_NO_PREFIX = "RCAI";
 }

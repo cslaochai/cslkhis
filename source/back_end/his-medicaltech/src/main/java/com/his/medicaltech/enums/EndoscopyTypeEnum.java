@@ -4,9 +4,6 @@ import lombok.Getter;
 
 /**
  * 内镜检查类型枚举（码值口径 = 字典 his_endoscopy_type 中**代码里需要判定**的三个值）。
- *
- * <p>全量类型的文案权威在字典（页面渲染走 {@code DictCacheService.text}）；
- * 本枚举只收代码里要做业务判定/默认值的三类，desc 与字典对齐，勿在此扩全量清单。
  */
 @Getter
 public enum EndoscopyTypeEnum {

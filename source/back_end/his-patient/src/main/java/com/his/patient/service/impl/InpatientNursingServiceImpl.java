@@ -72,7 +72,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
     private final ObjectMapper objectMapper;
 
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     // 录入 / 修改
 

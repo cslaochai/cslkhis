@@ -11,6 +11,7 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.vo.SignatureVO;
 import com.his.medicaltech.dto.RadioReportAuditDTO;
@@ -70,6 +71,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
     private final DictCacheService dictCacheService;
     private final SysAuditLogService sysAuditLogService;
     private final SysMessageService sysMessageService;
+    private final RedisSequenceService redisSequenceService;
 
     // 查询
 
@@ -365,7 +367,7 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
             return exists;
         }
         BizReport report = new BizReport();
-        report.setReportNo("RPT" + System.currentTimeMillis());
+        report.setReportNo(redisSequenceService.generateReportNo());
         report.setReportType(ReportTypeEnum.INSPECTION.getCode());
         report.setRecordId(record.getId());
         report.setRecordNo(record.getRecordNo());

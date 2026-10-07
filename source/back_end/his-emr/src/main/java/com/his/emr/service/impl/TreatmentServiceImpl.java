@@ -69,15 +69,9 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
 
     private static final int AMOUNT_SCALE = 2;
     private static final String UNIT_TIMES = "次";
-    /**
-     * 开单/改期允许的日期窗口：往前 31 天（补开疗程），往后 365 天
-     */
     private static final int BACK_DAYS = 31;
     private static final int AHEAD_DAYS = 365;
 
-    /**
-     * 治疗站字典类型（原 TreatmentDictText 常量，文案统一走 DictCacheService.text）
-     */
     private static final String DICT_ITEM_TYPE = "his_treatment_item_type";
     private static final String DICT_APPLY_STATUS = "his_treatment_apply_status";
     private static final String DICT_RECORD_STATUS = "his_treatment_record_status";
@@ -85,16 +79,16 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
     private static final String DICT_CHARGE_STATUS = "his_treatment_charge_status";
 
     private final BizTreatmentApplyMapper bizTreatmentApplyMapper;
-    private final BizTreatmentRecordMapper bizTreatmentRecordMapper;
-    private final SysTreatmentItemMapper sysTreatmentItemMapper;
-    private final RedisSequenceService redisSequenceService;
-    private final DictCacheService dictCacheService;
-    /**
-     * 记账经 Invoker 走 REQUIRES_NEW 独立事务：记账失败不拖垮打卡，留痕与补记入口都在流水行上
-     */
-    private final TreatmentChargeInvoker chargeInvoker;
 
-    // 查询
+    private final BizTreatmentRecordMapper bizTreatmentRecordMapper;
+
+    private final SysTreatmentItemMapper sysTreatmentItemMapper;
+
+    private final RedisSequenceService redisSequenceService;
+
+    private final DictCacheService dictCacheService;
+
+    private final TreatmentChargeInvoker chargeInvoker;
 
     private static String str(Object o) {
         return o == null ? null : String.valueOf(o);

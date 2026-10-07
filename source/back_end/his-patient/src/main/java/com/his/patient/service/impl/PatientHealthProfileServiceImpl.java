@@ -50,12 +50,19 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     private static final String MIGRATED_NOTE = "由主档自由文本迁移生成";
 
     private final BizPatientMapper bizPatientMapper;
+
     private final BizPatientAllergyMapper bizPatientAllergyMapper;
+
     private final BizPatientPastDiseaseMapper bizPatientPastDiseaseMapper;
+
     private final BizPatientSurgeryHistoryMapper bizPatientSurgeryHistoryMapper;
+
     private final BizPatientFamilyHistoryMapper bizPatientFamilyHistoryMapper;
+
     private final BizPatientMedicationHistoryMapper bizPatientMedicationHistoryMapper;
+
     private final BizPatientContactMapper bizPatientContactMapper;
+
     private final DictCacheService dictCacheService;
 
     /* ==================== 读 ==================== */

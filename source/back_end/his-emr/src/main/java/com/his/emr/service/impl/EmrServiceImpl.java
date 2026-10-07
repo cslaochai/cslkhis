@@ -66,7 +66,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -77,8 +76,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedicalRecord> implements EmrService {
     static final String[] HUIFANG_TYPE = {"糖尿病", "高血压", "冠心病"};
-    private static final AtomicInteger TASK_SEQ = new AtomicInteger(0);
-    private static final AtomicInteger SEQ = new AtomicInteger(0);
     private final DeptScopeProvider deptScopeProvider;
     private final BizPrescriptionMapper bizPrescriptionMapper;
     private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
@@ -385,9 +382,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 .toList();
         antibioticService.assertCanPrescribe(prescription.getDoctorId(), abxDrugIds);
 
-        // 生成处方号
-        prescription.setPrescriptionNo("RX" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%04d", SEQ.incrementAndGet() % 10000));
+        prescription.setPrescriptionNo(redisSequenceService.generatePrescriptionNo());
         prescription.setPrescriptionStatus(PrescriptionStatusEnum.DRAFT.getCode());
 
         // 保存处方主表
@@ -486,9 +481,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean addInspectionApply(BizInspectionApply apply) {
-        // 生成申请单号
-        apply.setApplyNo("INS" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%04d", SEQ.incrementAndGet() % 10000));
+        apply.setApplyNo(redisSequenceService.generateInspectionApplyNo());
         apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode());
         apply.setSubmitTime(LocalDateTime.now());
         return bizInspectionApplyMapper.insert(apply) > 0;
@@ -507,9 +500,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean addLaboratoryApply(BizLaboratoryApply apply) {
-        // 生成申请单号
-        apply.setApplyNo("LAB" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%04d", SEQ.incrementAndGet() % 10000));
+        apply.setApplyNo(redisSequenceService.generateLaboratoryApplyNo());
         apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode()); // 1-已提交（未缴费）
         apply.setSubmitTime(LocalDateTime.now());
         return bizLaboratoryApplyMapper.insert(apply) > 0;
@@ -657,7 +648,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             requireApplyUnsigned(apply.getApplyNo(), apply.getSignStatus());
         } else {
             apply = new BizInspectionApply();
-            apply.setApplyNo(genApplyNo("INS"));
+            apply.setApplyNo(redisSequenceService.generateInspectionApplyNo());
             apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode());
             apply.setSubmitTime(LocalDateTime.now());
         }
@@ -705,7 +696,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             requireApplyUnsigned(apply.getApplyNo(), apply.getSignStatus());
         } else {
             apply = new BizLaboratoryApply();
-            apply.setApplyNo(genApplyNo("LAB"));
+            apply.setApplyNo(redisSequenceService.generateLaboratoryApplyNo());
             apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode());
             apply.setSubmitTime(LocalDateTime.now());
         }
@@ -903,11 +894,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         } catch (BusinessException e) {
             throw new BusinessException("检验申请开单失败（" + apply.getApplyNo() + "）：" + e.getMessage());
         }
-    }
-
-    private String genApplyNo(String prefix) {
-        return prefix + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%04d", SEQ.incrementAndGet() % 10000);
     }
 
     /**
@@ -1239,7 +1225,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 throw new BusinessException("检查项目不存在: " + dto.getItemId());
             }
             BizInspectionApply apply = new BizInspectionApply();
-            apply.setApplyNo(genApplyNo("INS"));
+            apply.setApplyNo(redisSequenceService.generateInspectionApplyNo());
             apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode());
             apply.setSubmitTime(LocalDateTime.now());
             fillInspectionApplySnapshot(apply, appoint, patient);
@@ -1276,7 +1262,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 throw new BusinessException("检验项目不存在: " + dto.getItemId());
             }
             BizLaboratoryApply apply = new BizLaboratoryApply();
-            apply.setApplyNo(genApplyNo("LAB"));
+            apply.setApplyNo(redisSequenceService.generateLaboratoryApplyNo());
             apply.setApplyStatus(ApplyStatusEnum.SUBMITTED.getCode());
             apply.setSubmitTime(LocalDateTime.now());
             fillLaboratoryApplySnapshot(apply, appoint, patient);
@@ -1328,8 +1314,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
         } else {
             // 新增病历
             bizMedicalRecord = new BizMedicalRecord();
-            bizMedicalRecord.setRecordNo("MR" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                    + String.format("%04d", SEQ.incrementAndGet() % 10000));
+            bizMedicalRecord.setRecordNo(redisSequenceService.generateMedicalRecordNo());
             bizMedicalRecord.setRecordStatus(RecordStatusEnum.DRAFT.getCode());
         }
 
@@ -1476,8 +1461,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
                 if (!returnedOld.isEmpty()) {
                     prescription.setReturnCount(inheritedReturnCount);
                 }
-                prescription.setPrescriptionNo("RX" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                        + String.format("%04d", SEQ.incrementAndGet() % 10000));
+                prescription.setPrescriptionNo(redisSequenceService.generatePrescriptionNo());
                 this.bizPrescriptionMapper.insert(prescription);
 
                 // L7 重提流水（只增）：仅当旧单里存在被退回的处方，本次保存才视为「退回后重提」
@@ -1630,8 +1614,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
             String diagnosis = recordSaveDTO.getDiagnosis();
             if (diagnosis != null && Arrays.stream(HUIFANG_TYPE).anyMatch(diagnosis::contains)) {
                 BizFollowupTask task = new BizFollowupTask();
-                task.setTaskNo("FT" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                        + String.format("%04d", TASK_SEQ.incrementAndGet() % 10000));
+                task.setTaskNo(redisSequenceService.generateFollowupTaskNo());
                 task.setPatientId(patientInfo.getId());
                 task.setPatientNo(patientInfo.getPatientNo());
                 task.setPatientName(patientInfo.getPatientName());
@@ -1647,8 +1630,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
 
             // 11. 生成病历归档记录
             BizMedicalRecordArchive archive = new BizMedicalRecordArchive();
-            archive.setArchiveNo("MA" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                    + String.format("%04d", TASK_SEQ.incrementAndGet() % 10000));
+            archive.setArchiveNo(redisSequenceService.generateMedicalRecordArchiveNo());
             archive.setRecordId(bizMedicalRecord.getId());
             archive.setRecordNo(bizMedicalRecord.getRecordNo());
             archive.setPatientId(patientInfo.getId());
@@ -2046,8 +2028,7 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
      */
     private void generateArchive(BizMedicalRecord record) {
         BizMedicalRecordArchive archive = new BizMedicalRecordArchive();
-        archive.setArchiveNo("ARC" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%04d", SEQ.incrementAndGet() % 10000));
+        archive.setArchiveNo(redisSequenceService.generateMedicalRecordArchiveNo());
         archive.setRecordId(record.getId());
         archive.setRecordNo(record.getRecordNo());
         archive.setPatientId(record.getPatientId());

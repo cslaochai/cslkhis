@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -31,8 +30,6 @@ import java.util.stream.Collectors;
 public class InspectionTemplServiceImpl implements InspectionTemplService {
 
     static final String[] HUIFANG_TYPE = {"糖尿病", "高血压", "冠心病"};
-    private static final AtomicInteger TASK_SEQ = new AtomicInteger(0);
-    private static final AtomicInteger SEQ = new AtomicInteger(0);
     private final BizInspectionTemplateMapper bizInspectionTemplateMapper;
     private final BizLaboratoryTemplateMapper bizLaboratoryTemplateMapper;
 

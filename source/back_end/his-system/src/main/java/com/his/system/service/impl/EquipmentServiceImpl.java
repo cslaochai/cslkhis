@@ -47,11 +47,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EquipmentServiceImpl implements EquipmentService {
     private final SysEquipmentMapper sysEquipmentMapper;
-    private final BizEquipmentMaintainMapper bizEquipmentMaintainMapper;
-    private final BizEquipmentMeteringMapper bizEquipmentMeteringMapper;
-    private DictCacheService dictCacheService;
 
-    // 设备台账
+    private final BizEquipmentMaintainMapper bizEquipmentMaintainMapper;
+
+    private final BizEquipmentMeteringMapper bizEquipmentMeteringMapper;
+
+    private final DictCacheService dictCacheService;
 
     public IPage<EquipmentVO> listPage(EquipmentQueryPageDTO q) {
         String kw = TextUtil.trim(q.getKeyword());

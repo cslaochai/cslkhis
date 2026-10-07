@@ -3,6 +3,7 @@ package com.his.miniapp.service.impl;
 import com.his.miniapp.entity.BizPayOrder;
 import com.his.miniapp.service.WxPayChannelService;
 import com.his.system.service.DictCacheService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -15,9 +16,10 @@ import org.springframework.stereotype.Service;
  * 直接返回"支付成功"，骨架与业务推进完全不变。真实对接 = 在本类内改走 V3 下单 + 平台证书验签。
  */
 @Slf4j
+@RequiredArgsConstructor
 @Service
 public class WxPayChannelServiceImpl implements WxPayChannelService {
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     /**
      * 统一下单。

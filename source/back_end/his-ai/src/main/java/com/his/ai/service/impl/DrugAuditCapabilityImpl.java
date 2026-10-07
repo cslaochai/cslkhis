@@ -14,8 +14,8 @@ import com.his.ai.vo.DrugAuditPromptVariablesVO;
 import com.his.ai.vo.DrugAuditResultVO;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.support.ClinicalTextMatcher;
-import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizClinicalRuleCheck;
 import com.his.emr.entity.BizMedicalRecord;
@@ -114,6 +114,8 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
     private final DrugHardRuleChecker drugHardRuleChecker;
 
     private final AiExecutionService aiExecutionService;
+
+    private final RedisSequenceService redisSequenceService;
 
     private static void appendIfMeaningful(StringBuilder builder, String text, String fieldLabel) {
         if (!StringUtils.hasText(text)) {
@@ -270,12 +272,6 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
 
     private static int levelOf(DrugAuditFindingVO finding) {
         return finding.getErrorLevel() == null ? 0 : finding.getErrorLevel();
-    }
-
-    private static String buildNo(String prefix) {
-        String timestamp = LocalDateTime.now().format(DateFormats.COMPACT_DATETIME);
-        String tail = String.format("%06d", (int) (Math.random() * 1_000_000));
-        return prefix + timestamp + tail;
     }
 
     /**
@@ -483,7 +479,7 @@ public class DrugAuditCapabilityImpl implements DrugAuditCapability {
             }
             String operator = operatorUser.getRealName();
             BizClinicalRuleCheck check = new BizClinicalRuleCheck();
-            check.setCheckNo(buildNo("RCAI"));
+            check.setCheckNo(redisSequenceService.generateRuleCheckAiNo());
             check.setRecordId(prescription.getRecordId());
             check.setPatientId(prescription.getPatientId());
             check.setRuleType(RULE_TYPE_MEDICATION);

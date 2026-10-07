@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.medicaltech.dto.StatReportDTO;
@@ -29,7 +30,6 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 病案统计上报服务（打印预留）。
@@ -44,7 +44,9 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
 
     private final ObjectMapper objectMapper;
 
-    private DictCacheService dictCacheService;
+    private final RedisSequenceService redisSequenceService;
+
+    private final DictCacheService dictCacheService;
 
     /**
      * selectPage 排除列后聚合结果可能为 null
@@ -236,7 +238,7 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
         }
 
         BizStatReport r = new BizStatReport();
-        r.setReportNo("TJ" + now.format(DateFormats.COMPACT_DATETIME) + ThreadLocalRandom.current().nextInt(100, 1000));
+        r.setReportNo(redisSequenceService.generateStatReportNo());
         r.setReportType(dto.getReportType());
         r.setPeriodType(dto.getPeriodType());
         r.setPeriodValue(period);

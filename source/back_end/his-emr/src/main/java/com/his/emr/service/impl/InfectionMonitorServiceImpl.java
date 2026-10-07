@@ -57,7 +57,7 @@ public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     private final BizInfectionMonitorDailyMapper bizInfectionMonitorDailyMapper;
     private final BizHandHygieneObsMapper bizHandHygieneObsMapper;
     private final RedisSequenceService redisSequenceService;
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     /**
      * 比率兜底：分母 0 给 0，不抛异常不猜 NaN

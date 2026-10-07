@@ -57,16 +57,19 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     private static final BigDecimal TARGET_OP_USAGE_RATE = new BigDecimal("20.00");
     private static final BigDecimal TARGET_IP_USAGE_RATE = new BigDecimal("60.00");
     private static final BigDecimal TARGET_MICRO_RATE = new BigDecimal("50.00");
-    private final AntibioticStatMapper antibioticStatMapper;
-    private final BizAntibioticStatsMapper bizAntibioticStatsMapper;
-    private final BizAntibioticIncisionReviewMapper bizAntibioticIncisionReviewMapper;
-    private final AntibioticCatalogMapper antibioticCatalogMapper;
-    private DictCacheService dictCacheService;
 
-    // 监测指标
+    private final AntibioticStatMapper antibioticStatMapper;
+
+    private final BizAntibioticStatsMapper bizAntibioticStatsMapper;
+
+    private final BizAntibioticIncisionReviewMapper bizAntibioticIncisionReviewMapper;
+
+    private final AntibioticCatalogMapper antibioticCatalogMapper;
+
+    private final DictCacheService dictCacheService;
 
     @Override
-    public PageResult<AntibioticStatsVO> statsListPage(AntibioticStatsQueryPageDTO query) {
+    public PageResult<AntibioticStatsVO> listPage(AntibioticStatsQueryPageDTO query) {
         LambdaQueryWrapper<BizAntibioticStats> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(StringUtils.hasText(query.getStatMonth()), BizAntibioticStats::getStatMonth, query.getStatMonth())
                 .eq(query.getScopeType() != null, BizAntibioticStats::getScopeType, query.getScopeType())

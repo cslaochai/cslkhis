@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.emr.dto.ChronicCancelDTO;
 import com.his.emr.dto.ChronicQueryPageDTO;
 import com.his.emr.dto.ChronicUpsertDTO;
@@ -23,7 +23,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 慢病建档/认定（M1，医生工作站）。
@@ -39,9 +38,8 @@ import java.util.concurrent.atomic.AtomicLong;
 @RequiredArgsConstructor
 public class ChronicRecordServiceImpl extends ServiceImpl<BizChronicRecordMapper, BizChronicRecord> implements ChronicRecordService {
 
-    private static final AtomicLong SEQ = new AtomicLong();
-
     private final BizChronicRecordMapper bizChronicRecordMapper;
+    private final RedisSequenceService redisSequenceService;
 
     @Override
     public ChronicRecordListVO upsert(ChronicUpsertDTO dto) {
@@ -55,8 +53,7 @@ public class ChronicRecordServiceImpl extends ServiceImpl<BizChronicRecordMapper
             throw new BusinessException("该患者已存在「" + dto.getDiseaseName() + "」的有效慢病档案，不可重复建档");
         }
         BizChronicRecord record = new BizChronicRecord();
-        record.setRecordNo("CHR" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%04d", SEQ.incrementAndGet() % 10000));
+        record.setRecordNo(redisSequenceService.generateChronicRecordNo());
         record.setPatientId(dto.getPatientId());
         record.setPatientNo(dto.getPatientNo());
         record.setPatientName(dto.getPatientName());

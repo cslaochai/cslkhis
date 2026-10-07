@@ -860,6 +860,14 @@
   不要为了避开重名而去写 `xxx2` / `subXxx`：那是把「重复注入」这个 bug 固化成命名。
 - **只管依赖，不管数据字段**：entity / DTO / VO 的业务字段名跟**列名**对齐（那是第 1 节的事），
   局部变量、`static final` 技术阈值常量不在本条范围内。
+- **`@RequiredArgsConstructor` 的类里，依赖字段必须带 `final`**：Lombok 只把 `final`（与 `@NonNull`）字段
+  放进构造器，非 `final` 字段既不在构造器里、又没有 `@Resource`/`@Autowired` 时**容器不会注入它** ——
+  编译通过、启动通过、**只有第一次调用到那个方法才 NPE**（2026-10-07 实测 22 个类全是同一个字段
+  `DictCacheService dictCacheService`，即字典翻译一被调到就 500「系统内部错误」，
+  而 `/xxx/listPage` 大多数行没有字典列，所以长期没被发现）。
+  要么 `private final Xxx xxx;`（走构造器，缺 bean 直接启动失败 = 早爆），要么显式 `@Resource`，不许裸写。
+  机械判据：`node workspace/_scan_uninjected_fields.mjs` 必须输出 `total = 0`
+  （它找的就是「组件类里 `private 类型 名;` 非 final、无注入注解、构造器里也没赋值」）。
 - 机械判据：`python workspace/_scan_dep_field_names.py` 必须输出 `total mismatches: 0`
   （脚本按 `@Resource/@Autowired/@Qualifier` + `@RequiredArgsConstructor` 的 final 字段收集，
   比对 `name == decap(type)`；`@ConfigurationProperties`/`@TableName` 类自身的字段自动跳过，

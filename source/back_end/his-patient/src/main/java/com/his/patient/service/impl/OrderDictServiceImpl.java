@@ -45,6 +45,7 @@ import java.util.*;
 public class OrderDictServiceImpl extends ServiceImpl<SysOrderDictDataMapper, SysOrderDictData> implements OrderDictService {
 
     private final SysOrderDictDataMapper sysOrderDictDataMapper;
+
     private final DictCacheService dictCacheService;
 
     @Override

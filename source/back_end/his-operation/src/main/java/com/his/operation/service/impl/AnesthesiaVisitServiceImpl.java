@@ -44,7 +44,7 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
 
     private final BizOperationApplyMapper bizOperationApplyMapper;
 
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     @Override
     public IPage<AnesthesiaVisitVO> listPage(AnesthesiaVisitQueryPageDTO query) {

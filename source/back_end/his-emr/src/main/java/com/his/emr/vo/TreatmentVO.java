@@ -12,17 +12,15 @@ import java.util.List;
 
 /**
  * 门诊治疗站出参。
- *
- * <p>状态文案由后端从字典数据取（{@code DictCacheService.text}），前端不再自造一份码表；
- * 但"进度""逾期""能否打卡"这类**派生判定**也在后端算好 —— 两处各算一遍必然给出不同答案，
- * 而页面上"能不能点"和后端"让不让写"必须是同一句话。
  */
 public class TreatmentVO {
 
     @Data
     public static class ApplyVO {
+
         @JsonSerialize(using = ToStringSerializer.class)
         private Long applyId;
+
         private String applyNo;
 
         /**
@@ -41,10 +39,12 @@ public class TreatmentVO {
 
         @JsonSerialize(using = ToStringSerializer.class)
         private Long registId;
+
         private String registNo;
 
         @JsonSerialize(using = ToStringSerializer.class)
         private Long treatmentItemId;
+
         private String itemCode;
         /**
          * 项目名称
@@ -61,6 +61,7 @@ public class TreatmentVO {
         private BigDecimal price;
 
         private Integer totalTimes;
+
         private Integer doneTimes;
         /**
          * 如「3/7」，页面直接显示
@@ -80,6 +81,7 @@ public class TreatmentVO {
          */
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate startDate;
+
         private Integer intervalDays;
 
         /**
@@ -91,8 +93,10 @@ public class TreatmentVO {
          * 科室名称
          */
         private String deptName;
+
         @JsonSerialize(using = ToStringSerializer.class)
         private Long execDeptId;
+
         private String execDeptName;
 
         /**
@@ -105,10 +109,12 @@ public class TreatmentVO {
          */
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime applyTime;
+
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         private LocalDateTime executeTime;
 
         private Integer applyStatus;
+
         private String applyStatusText;
         /**
          * 疗程是否已做完（doneTimes ≥ totalTimes）

@@ -18,7 +18,7 @@ import com.his.common.enums.BillStatusEnum;
 import com.his.common.enums.RefundApplyStatusEnum;
 import com.his.common.enums.TxnSourceEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
@@ -33,7 +33,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -51,7 +50,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, BizRefundApply> implements RefundApplyService {
 
-    private static final AtomicInteger SEQ = new AtomicInteger(0);
     /**
      * cancel_reason 列宽
      */
@@ -75,6 +73,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
      */
     private final FeeRecordService feeRecordService;
     private final SourceAdvanceService sourceAdvanceService;
+    private final RedisSequenceService redisSequenceService;
 
     private static String describeLines(List<RefundableLineVO> lines) {
         return lines.stream()
@@ -222,8 +221,7 @@ public class RefundApplyServiceImpl extends ServiceImpl<BizRefundApplyMapper, Bi
             throw new BusinessException("该账单已有退费申请（待审核 / 待执行），不能重复发起；"
                     + "金额或类型要改，请先作废那条申请");
         }
-        apply.setRefundApplyNo("RA" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%04d", SEQ.incrementAndGet() % 10000));
+        apply.setRefundApplyNo(redisSequenceService.generateRefundApplyNo());
         apply.setApplyStatus(RefundApplyStatusEnum.PENDING_AUDIT.getCode());
         apply.setApplyTime(LocalDateTime.now());
         // 申请人以服务端登录身份为准，前端传什么都不采信（避免冒名提交）

@@ -41,14 +41,10 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class CssdServiceImpl extends ServiceImpl<BizCssdPackMapper, BizCssdPack> implements CssdService {
     private final DictCacheService dictCacheService;
+
     private final BizCssdPackMapper bizCssdPackMapper;
+
     private final BizCssdTraceMapper bizCssdTraceMapper;
-
-    // 回收登记
-
-    // 流转
-
-    // 查询
 
     @Transactional(rollbackFor = Exception.class)
     public CssdPackVO receive(CssdDTO.Receive dto) {

@@ -38,7 +38,7 @@ public class AntibioticMonitorController {
     @PreAuthorize("hasAuthority('pharmacy:antibiotic:monitor')")
     @PostMapping("/statsListPage")
     public Result<PageResult<AntibioticStatsVO>> statsListPage(@Valid @RequestBody AntibioticStatsQueryPageDTO query) {
-        return Result.success(antibioticMonitorService.statsListPage(query));
+        return Result.success(antibioticMonitorService.listPage(query));
     }
 
     @Operation(summary = "实时试算（不落库；报数以快照为准）")

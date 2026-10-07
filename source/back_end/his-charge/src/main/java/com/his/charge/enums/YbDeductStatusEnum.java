@@ -2,10 +2,6 @@ package com.his.charge.enums;
 
 /**
  * 医保扣款状态码（与 sql/163 字典 his_yb_deduct_status 逐字对齐）。
- *
- * <p>字典给前端翻译名字；本枚举是服务端状态机的唯一事实来源 —— 两边以 163 为准。
- * 码值→文案的两个出口之一（另一个为 {@code DictCacheService.getDicDataLabel}），
- * 替代原 {@code support/YbDeductStatus} 的常量壳类（后者违反「support 类不得承载码值映射」）。
  */
 public enum YbDeductStatusEnum {
 

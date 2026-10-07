@@ -42,12 +42,14 @@ import java.util.List;
 public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper, BizAntibioticAlias> implements AntibioticService {
 
     private final DictCacheService dictCacheService;
-    private final AntibioticCatalogMapper antibioticCatalogMapper;
-    private final AntibioticEmployeeMapper antibioticEmployeeMapper;
-    private final BizAntibioticAuthMapper bizAntibioticAuthMapper;
-    private final BizAntibioticAliasMapper bizAntibioticAliasMapper;
 
-    // 分级目录
+    private final AntibioticCatalogMapper antibioticCatalogMapper;
+
+    private final AntibioticEmployeeMapper antibioticEmployeeMapper;
+
+    private final BizAntibioticAuthMapper bizAntibioticAuthMapper;
+
+    private final BizAntibioticAliasMapper bizAntibioticAliasMapper;
 
     @Override
     public PageResult<AntibioticCatalogVO> catalogListPage(AntibioticCatalogQueryPageDTO query) {

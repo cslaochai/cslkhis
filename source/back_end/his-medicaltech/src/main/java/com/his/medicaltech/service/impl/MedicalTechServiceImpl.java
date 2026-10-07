@@ -10,7 +10,7 @@ import com.his.common.enums.SignBizTypeEnum;
 import com.his.common.enums.SignSceneEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
-import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.vo.SignatureVO;
 import com.his.emr.entity.BizInspectionApply;
 import com.his.emr.entity.BizLaboratoryApply;
@@ -60,12 +60,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMapper, BizInspectionRecord> implements MedicalTechService {
 
-    /**
-     * 执行记录号自增序号（迁移自 his-charge 的 EXECUTION_SEQ）
-     */
-    private static final java.util.concurrent.atomic.AtomicInteger EXECUTION_SEQ =
-            new java.util.concurrent.atomic.AtomicInteger(0);
-
     private final BizInspectionRecordMapper bizInspectionRecordMapper;
     private final BizLaboratoryRecordMapper bizLaboratoryRecordMapper;
     private final BizLabResultMapper bizLabResultMapper;
@@ -76,6 +70,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
     private final LabReferenceRangeResolver labReferenceRangeResolver;
     private final CriticalValueService criticalValueService;
     private final EmrSignatureService emrSignatureService;
+    private final RedisSequenceService redisSequenceService;
     /**
      * 放射分岗（sql/138）：只有它知道某个检查项目是不是放射（检查项目字典的项目类型）
      */
@@ -218,7 +213,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
 
         // 创建检查报告记录
         BizReport report = new BizReport();
-        report.setReportNo("RPT" + System.currentTimeMillis());
+        report.setReportNo(redisSequenceService.generateReportNo());
         report.setReportType(ReportTypeEnum.INSPECTION.getCode()); // 检查报告
         report.setRecordId(recordId);
         report.setRecordNo(record.getRecordNo());
@@ -888,7 +883,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         }
 
         BizInspectionRecord record = new BizInspectionRecord();
-        record.setRecordNo(genNo("IR"));
+        record.setRecordNo(redisSequenceService.generateInspectionRecordNo());
         record.setApplyId(apply.getId());
         record.setApplyNo(apply.getApplyNo());
         record.setPatientId(apply.getPatientId());
@@ -954,7 +949,7 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
         }
 
         BizLaboratoryRecord record = new BizLaboratoryRecord();
-        record.setRecordNo(genNo("LR"));
+        record.setRecordNo(redisSequenceService.generateLaboratoryRecordNo());
         record.setApplyId(apply.getId());
         record.setApplyNo(apply.getApplyNo());
         record.setPatientId(apply.getPatientId());
@@ -1043,18 +1038,6 @@ public class MedicalTechServiceImpl extends ServiceImpl<BizInspectionRecordMappe
                 .set(BizLaboratoryRecord::getCancelTime, LocalDateTime.now())
                 .set(BizLaboratoryRecord::getCancelReason, reason));
         return true;
-    }
-
-    /**
-     * 生成执行记录号：前缀 + yyyyMMddHHmmss + 4 位进程内自增。
-     *
-     * <p>与 his-charge 原来的写法保持一致（迁移前是 IR/LR + 时间戳 + EXECUTION_SEQ），
-     * 只是把序号放在本模块，不再由收费模块持有。
-     */
-    private String genNo(String prefix) {
-        return prefix + LocalDateTime.now()
-                .format(DateFormats.COMPACT_DATETIME)
-                + String.format("%04d", EXECUTION_SEQ.incrementAndGet() % 10000);
     }
 
 }

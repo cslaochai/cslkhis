@@ -41,13 +41,9 @@ public class CssdTemplateServiceImpl extends ServiceImpl<BizCssdPackTemplateMapp
     private final DictCacheService dictCacheService;
 
     private final BizCssdPackTemplateMapper bizCssdPackTemplateMapper;
+
     private final BizCssdPackTemplateItemMapper bizCssdPackTemplateItemMapper;
 
-    // 查询
-
-    /**
-     * 回收登记下拉数据源：仅启用模板
-     */
     public List<CssdPackTemplateSelectListVO> selectList() {
         return bizCssdPackTemplateMapper.selectList(new LambdaQueryWrapper<BizCssdPackTemplate>()
                         .eq(BizCssdPackTemplate::getDelFlag, 0)

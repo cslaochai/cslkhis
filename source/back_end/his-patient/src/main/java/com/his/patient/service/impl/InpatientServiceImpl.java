@@ -69,44 +69,36 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper, BizInpatientSummary> implements InpatientService {
     private final DeptScopeProvider deptScopeProvider;
+
     private final BizAdmissionMapper bizAdmissionMapper;
+
     private final BizDischargeMapper bizDischargeMapper;
+
     private final SysBedMapper sysBedMapper;
+
     private final BedMapMapper bedMapMapper;
+
     private final BizPatientMapper bizPatientMapper;
+
     private final BizInpatientSummaryMapper bizInpatientSummaryMapper;
+
     private final BizInpatientDiagnosisMapper bizInpatientDiagnosisMapper;
+
     private final BizInpatientOperationMapper bizInpatientOperationMapper;
+
     private final BizVisitMapper bizVisitMapper;
-    /**
-     * 住院证服务：门诊转住院时用来取「可收治的证」并回填收治结果
-     */
+
     private final AdmissionOrderService admissionOrderService;
-    /**
-     * 出院结算闸门：出院前必须已结算（结清或欠费结算都算），由 his-charge 提供实现
-     */
+
     private final SettlementGate settlementGate;
-    /**
-     * 站内信服务：收治完成通知开证医生
-     */
+
     private final SysMessageService sysMessageService;
-    /**
-     * 死亡证明服务：办「死亡」离院前，若这张证明已经填好，出院时间必须等于证明的死亡时间
-     * （死亡时间在两处各编一个，法定文书与病历就对不上）。构造方向只有出院→证明一条，
-     * 证明侧读出院走裸 SQL，不反向依赖本服务，所以不成环。
-     */
+
     private final DeathCertificateService deathCertificateService;
-    /**
-     * 床位服务中心（等床队列）—— 收治后回填队列。
-     *
-     * <p><b>为什么是 ObjectProvider 而不是直接注入</b>：BedCenterService 依赖本服务来办入院，
-     * 本服务又要在收治成功时通知它，直接注入就是构造环（Spring 默认禁止循环引用，启动即失败）。
-     * ObjectProvider 惰性解析，构造期不取 Bean，环自然断掉；拿不到实现时（理论上不会）
-     * 降级为"不回填"，绝不让一次真实入院因为队列记账失败而被回滚。
-     */
+
     private final ObjectProvider<BedCenterService> bedCenterProvider;
 
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     /**
      * 时间精度统一到「秒」。

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.UserTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.patient.dto.GuardianBindDTO;
 import com.his.patient.dto.GuardianSendAddCodeDTO;
 import com.his.patient.dto.GuardianSendBindCodeDTO;
@@ -58,6 +59,7 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
     private final SysMessageService sysMessageService;
     private final SmsCodeService smsCodeService;
     private final SysAuditLogService sysAuditLogService;
+    private final RedisSequenceService redisSequenceService;
 
     private static String normalizeIdCard(String idCard) {
         String s = idCard == null ? "" : idCard.trim().toUpperCase();
@@ -273,7 +275,7 @@ public class PatientGuardianServiceImpl extends ServiceImpl<BizPatientGuardianMa
         patient.setGender(dto.getGender());
         patient.setIdCard(idCard);
         patient.setPhone(phone);
-        patient.setPatientNo("P" + System.currentTimeMillis());
+        patient.setPatientNo(redisSequenceService.generatePatientNo());
         patient.setPatientType(1); // 1-自费
         patient.setStatus(1);
         LocalDate birth = parseBirthDate(idCard);

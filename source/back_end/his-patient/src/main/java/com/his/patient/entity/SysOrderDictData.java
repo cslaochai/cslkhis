@@ -9,16 +9,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 医嘱基础字典行（给药途径 / 用药频次 / 剂量单位，落在通用字典表字典数据，sql/142）。
- *
- * <p><b>为什么 his-patient 自己有一份字典数据的实体</b>：
- * 医嘱字典的写权限是 {@code ipd:orderDict:*}（挂在住院业务菜单下，科室自己能维护途径/频次），
- * 而通用字典接口 {@code /system/dict/dataUpsert} 要的是 {@code system:dict:add} ——
- * 为了能在这页保存就把系统字典写权限发给医生，等于把全院所有字典的改写权一起交出去。
- * 所以这里用一张只认三种 dict_type 的窄口实体自己写库，写完主动刷 {@code DictCacheService} 的缓存，
- * 既不扩散权限，也不让医生站下拉读到 24 小时前的旧值。
- *
- * <p><b>字段与表完全对齐</b>（多一列就会让全表 select 变 500）：只映射字典数据真实存在的列。
+ * 医嘱基础字典
  */
 @Data
 @TableName("sys_dict_data")

@@ -21,7 +21,7 @@ import java.util.List;
 public interface AntibioticMonitorService {
 
     /** 已生成的监测指标分页 */
-    PageResult<AntibioticStatsVO> statsListPage(AntibioticStatsQueryPageDTO query);
+    PageResult<AntibioticStatsVO> listPage(AntibioticStatsQueryPageDTO query);
 
     /** 实时试算（不落库；页面顶部"当前试算"用） */
     AntibioticStatsVO previewStats(String statMonth);

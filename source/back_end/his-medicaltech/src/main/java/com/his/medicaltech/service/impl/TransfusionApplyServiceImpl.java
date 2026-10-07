@@ -108,7 +108,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
 
     private final InpatientRecordService inpatientRecordService;
 
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     // 查询
 

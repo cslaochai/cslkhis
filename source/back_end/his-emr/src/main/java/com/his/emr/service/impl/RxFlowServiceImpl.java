@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.emr.dto.RxFlowActionDTO;
 import com.his.emr.dto.RxFlowQueryPageDTO;
 import com.his.emr.dto.RxFlowUpsertDTO;
@@ -24,7 +24,6 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 处方流转单（M2，院外取药口子·打印桩形态）。
@@ -42,10 +41,9 @@ import java.util.concurrent.atomic.AtomicLong;
 @RequiredArgsConstructor
 public class RxFlowServiceImpl extends ServiceImpl<BizRxFlowMapper, BizRxFlow> implements RxFlowService {
 
-    private static final AtomicLong SEQ = new AtomicLong();
-
     private final BizRxFlowMapper bizRxFlowMapper;
     private final BizPrescriptionMapper bizPrescriptionMapper;
+    private final RedisSequenceService redisSequenceService;
 
     @Override
     public RxFlowListVO createFlow(RxFlowUpsertDTO dto) {
@@ -62,8 +60,7 @@ public class RxFlowServiceImpl extends ServiceImpl<BizRxFlowMapper, BizRxFlow> i
         }
         var current = UserUtils.getCurrentUser();
         BizRxFlow flow = new BizRxFlow();
-        flow.setFlowNo("RXF" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%04d", SEQ.incrementAndGet() % 10000));
+        flow.setFlowNo(redisSequenceService.generateRxFlowNo());
         flow.setPrescriptionId(prescription.getId());
         flow.setPrescriptionNo(prescription.getPrescriptionNo());
         flow.setPatientId(prescription.getPatientId());

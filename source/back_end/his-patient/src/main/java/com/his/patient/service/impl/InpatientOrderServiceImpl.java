@@ -92,7 +92,7 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
      */
     private final EmployeeTechAuthService employeeTechAuthService;
 
-    private DictCacheService dictCacheService;
+    private final DictCacheService dictCacheService;
 
     // 开立 / 修改
 

@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
+import com.his.common.service.RedisSequenceService;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import com.his.system.enums.BizTypeEnum;
@@ -44,6 +45,7 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
     private final MessagePushService messagePushService;
     private final WechatSubscribeSender wechatSubscribeSender;
     private final SysUserMapper sysUserMapper;
+    private final RedisSequenceService redisSequenceService;
 
     @Override
     public boolean sendSystemMessage(Long receiverId, String receiverName, String title, String content,
@@ -55,7 +57,7 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
     public boolean sendSystemMessage(Long receiverId, String receiverName, String title, String content,
                                      String bizType, Long bizId, String severity, String payload, Integer handleStatus) {
         SysMessage message = new SysMessage();
-        message.setMessageNo("MSG" + System.currentTimeMillis());
+        message.setMessageNo(redisSequenceService.generateMessageNo());
         message.setChannel(ChannelEnum.SYSTEM.getChannel());
         message.setReceiverId(receiverId);
         message.setReceiverName(receiverName);
@@ -92,7 +94,7 @@ public class SysMessageServiceImpl extends ServiceImpl<SysMessageMapper, SysMess
         String openid = receiver == null ? null : receiver.getOpenid();
 
         SysMessage message = new SysMessage();
-        message.setMessageNo("MSG" + System.currentTimeMillis());
+        message.setMessageNo(redisSequenceService.generateMessageNo());
         message.setChannel(ChannelEnum.WECHAT.getChannel());
         message.setReceiverId(receiverUserId);
         message.setReceiverName(receiverName);
