@@ -30,13 +30,15 @@ public class BizScheduleOverviewServiceImpl extends ServiceImpl<BizScheduleMappe
     private static final int WEEK_DAYS = 7;
 
     private final StaffScheduleService staffScheduleService;
+
     private final StaffPlanRuleService staffPlanRuleService;
+
     private final DutyRosterService dutyRosterService;
+
     private final BizScheduleMapper bizScheduleMapper;
 
     @Override
     public ScheduleOverviewVO overviewWeek(LocalDate beginDate) {
-        // 任意一天归一到 ISO 周一：with(DayOfWeek.MONDAY) 在 ISO 周制下就是回到本周一
         LocalDate begin = (beginDate != null ? beginDate : LocalDate.now()).with(DayOfWeek.MONDAY);
         LocalDate end = begin.plusDays(WEEK_DAYS - 1L);
 
@@ -114,7 +116,6 @@ public class BizScheduleOverviewServiceImpl extends ServiceImpl<BizScheduleMappe
                 vo.setShiftType(shift.getCode());
                 vo.setShiftTypeText(shift.getLabel());
                 vo.setFound(officer.getFound());
-                // officerOf 的解析口径本身就是「换班优先」：employeeName 已是实际值班人
                 vo.setActualEmpName(officer.getEmployeeName());
                 vo.setEmptyReason(officer.getEmptyReason());
                 vos.add(vo);

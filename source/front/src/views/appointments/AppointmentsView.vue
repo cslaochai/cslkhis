@@ -2741,9 +2741,6 @@ onUnmounted(() => {
 
               <div class="my-2 border-t border-slate-200"></div>
               <p class="mb-1.5 text-[11px] text-slate-400">{{ deskDay }} 概况</p>
-              <!-- 2×2 排布：四个数字竖着排要 130px，日历列因此高过右边的表（多出来的部分
-                   会把整个 flex 行撑高 → 主区溢出一条滚动条）。改成两行两列省一半高度，
-                   数值仍然 percentile 一个不少。 -->
               <div class="grid grid-cols-2 gap-1.5">
                 <div class="flex items-baseline justify-between rounded bg-white px-2 py-1">
                   <span class="text-[11px] text-slate-500">医生</span>
@@ -2812,25 +2809,10 @@ onUnmounted(() => {
                     看板默认只显示「我的科室」，把上方「科室」选成「全部科室」即可查看全院；也可以把日期翻到有排班的那天。
                   </p>
                 </div>
-                <!-- ⚠️ 必须 border-separate（不能 collapse）：collapse 下表头的格线画在表格层、
-                     不跟着吸顶层走，滚动时表体内容会从表头格线缝隙里透出来（现象是"表头上方
-                     有一截空白，能看到下面的表在动"）。separate 让每个吸顶单元格自带完整的
-                     不透明边框盒子，缝隙消失。代价是格线要自己拼：每个格子只画 右+下 两条边，
-                     首列画左… 首列靠容器边线，外框靠容器 border，拼出来仍是 1px 网格。
-                     （日视图列宽：w-max 让表贴内容而不是被 w-full 摊大；每列统一 `w-[300px]`（2026-10-08 老王：240 再放一档）
-                       —— 按内容分配会有宽有窄（实测空列 150 / 有卡片的列 230），扫表格时
-                       被拉宽的那列会把注意力抢走。所有医生列同宽，名字长只在格内换行） -->
                 <table v-else class="border-separate border-spacing-0 text-sm"
                        :class="deskViewMode === 'day' ? 'w-max min-w-[600px]' : 'w-full min-w-[960px]'">
                   <thead class="sticky top-0 z-20">
                   <tr>
-                    <!-- 行首列头跟着行变（日视图=时间段 / 周视图=班次）：
-                         表头写「班次」而行里是 08:00~08:30，读的人得自己猜这两者的关系 -->
-                    <!-- 日视图的网格线要看得见（slate-300 而不是周视图的 slate-100）：
-                         半小时一档的行多且密，线太淡时整张表糊成一片，扫不出哪一档有号 -->
-                    <!-- 行首列头跟着行变（日视图=时间段 / 周视图=医生）：
-                         表头写「班次」而行里是医生名，读的人得自己猜这两者的关系。
-                         周视图列宽放大到 150px：行首要容得下「医生名 + 本周已挂/剩余」两行 -->
                     <th class="sticky left-0 z-30 border-r border-b bg-slate-50 p-2 text-center font-medium text-slate-500"
                         :class="[deskViewMode === 'day' ? 'min-w-[96px] border-slate-300' : 'min-w-[150px] border-slate-100']">
                       {{ deskViewMode === 'day' ? '时间段' : '医生' }}
@@ -2878,17 +2860,7 @@ onUnmounted(() => {
                   </tr>
                   </thead>
                   <tbody>
-                  <!-- desk-row：整行 hover 的高亮挂在这一层（见文件末尾 <style scoped>）。
-                       两个视图的行都是"横着扫"的：日视图半小时一档十几行、周视图一位医生一行，
-                       没有行高亮时看到第 6 行就串行了 —— 底色是唯一的横向导轨。 -->
                   <tr v-for="(row, ri) in deskRows" :key="'row-' + row.key" class="desk-row" :data-row-key="row.key">
-                    <!-- 日视图行首 = 半小时档（08:00~08:30）。
-                         分组不再写「凌晨/上午/下午/晚上」字样：时间戳本身就含这个信息（08:00 就是上午），
-                         再挂一个文字标签等于同一件事说两遍，还挤占 96px 的行首列宽。
-                         段落改由**加粗分隔线**表达（`row.sep`）：跨组、以及刻度压缩掉的空档处各画一条。 -->
-                    <!-- 周视图行首 = 一位医生：名字 + 科室 + **本周合计**（已挂多少 / 还剩多少）。
-                         「这个医生有了多少个挂号患者、还剩余多少」这句问的是整周，
-                         写在行首才扫得出来；逐天的数字在右边七格里。 -->
                     <template v-if="deskViewMode === 'week'">
                       <td class="desk-row-head sticky left-0 z-10 border-r border-b border-slate-100 bg-slate-50 p-2 align-top">
                         <p data-testid="desk-row-doctor" :data-doctor-id="row.doctorId"
@@ -2909,13 +2881,6 @@ onUnmounted(() => {
                         </p>
                       </td>
                     </template>
-                    <!-- 日视图行首 = 半小时档（08:00~08:30）。
-                         分组不再写「凌晨/上午/下午/晚上」字样：时间戳本身就含这个信息（08:00 就是上午），
-                         再挂一个文字标签等于同一件事说两遍，还挤占 96px 的行首列宽。
-                         段落改由**加粗分隔线**表达（`row.sep`）：跨组、以及刻度压缩掉的空档处各画一条。 -->
-                    <!-- 分隔线（row.sep）画在**上一行**的底边上（border-b-2）：
-                         border-separate 下上一行的 border-b 与本行的上边缘是同一条线，
-                         若仍用 border-t 会和上一行的 border-b 叠成 3px。 -->
                     <td v-else
                         class="desk-row-head sticky left-0 z-10 border-r border-b bg-slate-50 p-2 text-center font-medium text-slate-600"
                         data-testid="desk-row-slot"
@@ -2923,13 +2888,6 @@ onUnmounted(() => {
                         :class="['border-slate-300', ri > 0 && deskRows[ri - 1].sep ? 'border-b-2 !border-b-slate-500' : '']">
                       <span class="font-mono text-xs">{{ row.label }}</span>
                     </td>
-                    <!-- 2026-09-22：格子本身不再绑单击（原来单击=弹号源明细）——
-                         周视图一行就是一位医生，横着扫表格时会频繁误触弹出模态。
-                         看明细的唯一入口是格子里的「余号」按钮。
-                         2026-10-08：双击开单也摘了（格子上有「预约」按钮，双击是纯误触源）——
-                         td 上不再绑任何事件。
-                         ⚠️ 这条注释不能挪进 td 的属性区：HTML 注释出现在标签内部会被当成属性值解析，
-                             编译器报的是 "Invalid Character `，`"，看着像语法错其实是注释位置错。 -->
                     <td v-for="col in deskColumns" :key="col.key + '-' + row.key"
                         data-testid="desk-cell" :data-col="col.key" :data-date="col.date"
                         :data-row="row.key" :data-shift="row.key"
@@ -2938,9 +2896,6 @@ onUnmounted(() => {
                                deskViewMode === 'day' ? 'w-[300px] p-1 border-slate-300' : 'min-w-[168px] p-1.5 border-slate-100',
                                ri > 0 && deskRows[ri - 1].sep ? 'border-b-2 !border-b-slate-500' : '',
                                isCellUnavailable(col, row.key) ? 'desk-cell-na' : '']">
-                      <!-- 没排班 ≠ 排了没人挂：前者要看排班表，后者要看余号，两种空态必须分得清。
-                           「未排班」还要再分一层：是本来就没排，还是被「隐藏已满/停诊」藏掉了 ——
-                           静默消失会让人误以为"这天上午没医生"。两个视图都适用（日视图同样会藏掉医生整个半天）。 -->
                       <template v-if="cellHiddenCountFor(col, row.key) > 0
                                     && !cellSchedulesFor(col, row.key).length">
                         <!-- 日视图行细到半小时后空行很多，空态压到 h-8：18 行 × 44px 光空行就一屏半 -->
@@ -2949,17 +2904,10 @@ onUnmounted(() => {
                           {{ cellAllFor(col, row.key).length }} 个班次已满/停诊（已隐藏）
                         </p>
                       </template>
-                      <!-- 「未排班」判据用 srcSchedules（覆盖这一档的排班），不用段投影：
-                           排班在但段没拉到时，段投影是空的 —— 那不是"没排班"，是"没段数据"，两回事 -->
-                      <!-- 空态用一个「-」：这一格本来就没有信息，写「未排班」三个字是把同一句话
-                           在几十个格子里重复刷屏，扫表格时眼睛读到的是一片字而不是号源。
-                           点不动由 td 上的 cursor: not-allowed 表达，不靠文案。 -->
                       <p v-else-if="isCellUnavailable(col, row.key)" data-testid="desk-cell-na"
                          :class="['flex items-center justify-center text-xs text-slate-400', deskViewMode === 'day' ? 'h-8' : 'h-11']">
                         -</p>
                       <template v-else>
-                        <!-- flex-wrap：列不够宽时右侧「余 N + 预约」整块换行，
-                             别让左侧「已挂 n / m」被压成逐字折行 -->
                         <div class="mb-1 flex flex-wrap items-center justify-between gap-x-1 gap-y-0.5 text-xs">
                         <span class="text-slate-500">
                           已挂 {{
@@ -2970,17 +2918,10 @@ onUnmounted(() => {
                           <span class="font-medium" :class="deskAvailClass(deskCell(col.key, row.key).schedules)">
                             {{ deskAvailText(deskCell(col.key, row.key).schedules) }}
                           </span>
-                            <!-- 「余号」按钮：周视图专供。
-                                 行已经是某一位医生了，格子里的「余 N」只给总数 —— 问"上午还剩多少、下午还剩多少"
-                                 得看明细，而这个按钮就在数字旁边，不用去点整个格子。
-                                 2026-09-22：取代格子底部那行「N 个班次 · 查看时段/余号」文字入口 ——
-                                 可点的事情要做成按钮，写一行小字让人去猜哪里能点。 -->
                           <button v-if="deskViewMode === 'week'" data-testid="desk-cell-avail"
                                   class="shrink-0 cursor-pointer rounded border border-slate-200 bg-white px-1 text-xs leading-4 text-slate-600 hover:bg-slate-50"
                                   title="查看这位医生当天的每个班次：时段 / 余号 / 挂号费"
                                   @click.stop="openCellDialog(col.date, row.key)">余号</button>
-                            <!-- 预约入口收口到格子：有排班才渲染（本行就在「有排班」分支里，未排班/已满停诊已隐藏的格子没有按钮）。
-                                 点击走 addFromCell：科室/日期/医生带全，格子里只有一条号源时直接选中，多条不猜留给窗口挑。 -->
                           <button data-testid="desk-cell-add"
                                   class="shrink-0 cursor-pointer rounded border border-blue-200 bg-white px-1 text-xs font-bold leading-4 text-blue-600 hover:bg-blue-50"
                                   title="新增预约：带入该时段的排班、医生、诊室、科室"
@@ -3039,8 +2980,6 @@ onUnmounted(() => {
                               </button>
                             </div>
                           </div>
-                          <!-- 日视图不再写「未挂号」：格子顶部已经写了「已挂 0 / 3 · 余 3」，
-                               半小时档一行一个"未挂号"会把整屏刷成同一句话 -->
                         </template>
                         <!-- 周视图：每格只铺前几张（一天 4 医生 × 20 号 = 80 张，全铺会把 DOM 拖死），其余下钻日视图 -->
                         <template v-else>
@@ -3070,22 +3009,13 @@ onUnmounted(() => {
                               deskCell(col.key, row.key).regs.filter(deskRegVisible).length - DESK_WEEK_CELL_MAX
                             }} 人 → 看当天
                           </p>
-                          <!-- 2026-09-22：「未挂号」这行字删掉了。
-                               一格空着就是"排了没人挂"，半天/全天格子里重复这仨字把页面刷成同一句话，
-                               还和隔壁「未排班」（=没号可挂）混着看 —— 两种空态必须有视觉差别，
-                               空白 vs 文字正好是差别本身。 -->
                         </template>
-                        <!-- 2026-09-22：周视图格子底部的「N 个班次 · 查看时段/余号」文字入口已去掉 ——
-                             同一个动作收口到格子顶部的「余号」按钮（紧挨着余号数字，可点性明确）。 -->
                       </template>
                     </td>
                   </tr>
                   </tbody>
                 </table>
               </div>
-
-              <!-- 周视图格子的医生号源明细已改成弹框（见下方 el-dialog）：
-                   内联表压在表格下面，看板本身就得为它让出半屏高度 —— 而它只在点开那一格时才有用。 -->
             </div>
           </div>
         </div>
@@ -3254,7 +3184,6 @@ onUnmounted(() => {
           </div>
         </div>
       </el-tab-pane>
-
     </el-tabs>
 
     <!-- 看板改约：换号源（后端原子释放旧号/扣新号，同步就诊日期与医生） -->
@@ -3309,8 +3238,6 @@ onUnmounted(() => {
       </template>
     </el-dialog>
 
-    <!-- 过期号的退费申请：挂号状态不动，只把钱走「申请 → 收费处审核 → 执行」链路。
-         这里只是发起口，审核/执行都在收费处「退费管理」页，所以按钮文案用「提交申请」而不是「确认退费」。 -->
     <el-dialog v-model="showRefundDialog" title="申请退费" width="520px" destroy-on-close>
       <el-form label-width="96px" class="space-y-2">
         <el-form-item label="患者">
@@ -3346,13 +3273,6 @@ onUnmounted(() => {
       </template>
     </el-dialog>
 
-    <!-- 周视图格子点开的「医生号源明细」。
-         为什么是弹框而不是内联表：内联表常驻在表格下面，看板高度要为它让出半屏
-         （实测挤掉 200+ px，日视图那张撑满窗口的表直接被压回"看半屏滚半屏"）；
-         而它只在"我想知道这一格还有谁能挂"那一刻才需要 —— 按需弹、用完关。 -->
-    <!-- 宽度给到 900px + 表格自带横向滚动：原来 720px 时列被挤到互相贴边，
-         「余号 / 总数」和「挂号费」连在一起读不出来 —— 弹框是要当收据看的，挤不得。
-         去掉「医生」列：标题里已经写了是哪位医生，占 110px 却只重复同一个名字。 -->
     <el-dialog v-model="showCellDialog" width="900px" destroy-on-close
                :title="selectedCell
                  ? `${selectedCell.date} · ${selectedCell.doctorName} 号源明细`
@@ -3560,8 +3480,6 @@ onUnmounted(() => {
             </el-form-item>
           </div>
           <el-form-item label="选择号源" required>
-            <!-- placeholder 必须动态：原来写死「请先选择科室和日期」，等科室日期都填好、号源也拉回来了，
-                 它还挂着那句话 —— 用户会以为是自己没填，回去反复点科室。空态提示要跟着真实状态走 -->
             <el-select v-model="newAppointment.scheduleId" :placeholder="schedulePlaceholder" class="w-full"
                        :disabled="!availableSchedules.length" @change="handleScheduleChange">
               <el-option
@@ -3584,8 +3502,6 @@ onUnmounted(() => {
                class="w-full text-xs text-slate-400 mt-1">该号源暂无时间段明细，将按整班次号源挂号</p>
           </el-form-item>
         </template>
-        <!-- 费用预估：与后端实收走同一个 decide，命中哪条策略、免了哪几项原样显示 ——
-             免钱这件事必须当场说得清，不能让收费员自己猜为什么这张号是 0 元 -->
         <div v-if="isRevisit && (revisitPreview || revisitPreviewLoading)"
              class="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
           <div class="flex items-center justify-between text-sm">
@@ -3767,7 +3683,6 @@ td.desk-cell-na {
   font-size: 11px;
 }
 
-/* 表格内 text-sm（卡片主体、周视图日期列头）14px → 16px */
 .desk-board table .text-sm {
   font-size: 16px;
 }
@@ -3777,7 +3692,6 @@ td.desk-cell-na {
   line-height: 1.55;
 }
 
-/* 灰色文字同步加深一档（slate-400 在 12px 下几乎不可读，放大后仍偏淡） */
 .desk-board .text-slate-300 {
   color: #94a3b8;
 }
@@ -3790,8 +3704,6 @@ td.desk-cell-na {
   color: #475569;
 }
 
-/* 例外：日历下方 2×2 概况的标签（11px）只放到 12px —— 左栏只有 220px 宽，
-   13px 时「总号源 / 237 个」折成三行，实测比小一号更难读。 */
 .desk-board aside .grid [class*="text-[11px]"] {
   font-size: 12px;
 }

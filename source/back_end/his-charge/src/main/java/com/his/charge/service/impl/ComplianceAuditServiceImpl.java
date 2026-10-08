@@ -20,9 +20,8 @@ import com.his.common.base.PageResult;
 import com.his.common.constant.DictType;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
-import com.his.common.util.TextUtil;
 import com.his.common.service.RedisSequenceService;
+import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysIcd10;
@@ -46,23 +45,35 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ComplianceAuditServiceImpl         implements ComplianceAuditService {
+public class ComplianceAuditServiceImpl implements ComplianceAuditService {
+
+    private final DictCacheService dictCacheService;
+
     private final RedisSequenceService redisSequenceService;
+
     private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
+
     private final AppointGateway appointGateway;
+
     private final SysIcd10Mapper sysIcd10Mapper;
+
     private final BizSettlementDiagnosisMapper bizSettlementDiagnosisMapper;
+
     private final BizSettlementOperationMapper bizSettlementOperationMapper;
+
     private final BizComplianceAuditMapper bizComplianceAuditMapper;
+
     private final BizComplianceAuditItemMapper bizComplianceAuditItemMapper;
+
     private final SysDrgGroupMapper sysDrgGroupMapper;
+
     private final SettlementEvidenceService settlementEvidenceService;
+
     private final ComplianceProperties complianceProperties;
     /**
      * 全部规则实现，Spring 自动注入
      */
     private final List<ComplianceRule> rules;
-    private final DictCacheService dictCacheService;
 
     // 编码明细维护
     @Override

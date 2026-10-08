@@ -29,6 +29,7 @@ public class ArrearsControlGateImpl implements ArrearsControlGate {
     private static final Set<Integer> NEVER_STOP_CLASSES = Set.of(1, 6, 7);
 
     private final BizArrearsPolicyMapper bizArrearsPolicyMapper;
+
     private final InpatientAccountService inpatientAccountService;
 
     @Override

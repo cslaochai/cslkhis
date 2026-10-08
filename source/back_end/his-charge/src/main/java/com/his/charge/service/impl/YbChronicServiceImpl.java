@@ -52,8 +52,11 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
     private static final int DISPLAY_EXPIRED = 4;
 
     private final BizYbChronicCatalogMapper bizYbChronicCatalogMapper;
+
     private final BizYbChronicRegMapper bizYbChronicRegMapper;
+
     private final PatientGateway patientGateway;
+
     private final RedisSequenceService redisSequenceService;
 
     @Override

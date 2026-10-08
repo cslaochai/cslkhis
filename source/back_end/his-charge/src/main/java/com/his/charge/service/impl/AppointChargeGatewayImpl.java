@@ -39,8 +39,11 @@ public class AppointChargeGatewayImpl implements AppointChargeGateway {
     private static final int CATALOG_DIAGNOSIS_FEE = 1;
 
     private final BizSettlementBillMapper bizSettlementBillMapper;
+
     private final FeeRecordService feeRecordService;
+
     private final SettlementBillService settlementBillService;
+
     private final PaymentService paymentService;
 
     @Override

@@ -53,25 +53,25 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
      */
     private static final long CASHIER_SYSTEM = 0L;
 
-    private static final int W_TXN_NO = 32;
-    private static final int W_BILL_NO = 32;
-    private static final int W_PATIENT_NO = 32;
-    private static final int W_PATIENT_NAME = 50;
+    /** 渠道流水号列宽：仅用于外部渠道回调报文截断 */
     private static final int W_CHANNEL_TXN_NO = 64;
-    private static final int W_CASHIER_NAME = 50;
-    private static final int W_REASON = 500;
-    private static final int W_APPLY_NO = 32;
-    private static final int W_RECEIPT_NO = 32;
-    private static final int W_REMARK = 500;
 
     private final SettlementBillService settlementBillService;
+
     private final FeeRecordService feeRecordService;
+
     private final SourceAdvanceService sourceAdvanceService;
+
     private final FundAccountService fundAccountService;
+
     private final BizFundAccountTxnMapper bizFundAccountTxnMapper;
+
     private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
+
     private final PayRefundService payRefundService;
+
     private final RedisSequenceService redisSequenceService;
+
     private final InsuranceSettlementService insuranceSettlementService;
 
     private static List<BizPaymentTxnVO> toVOList(List<BizPaymentTxn> txns) {
@@ -312,11 +312,11 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         }
         LocalDateTime txnTime = spec.txnTime() == null ? LocalDateTime.now() : spec.txnTime();
         BizPaymentTxn txn = new BizPaymentTxn();
-        txn.setTxnNo(TextUtil.cut(redisSequenceService.generatePayTxnNo(), W_TXN_NO));
+        txn.setTxnNo(redisSequenceService.generatePayTxnNo());
         // bill_id / bill_no 留空：这笔钱没有对应账单（为什么不为它造一张 0 元账单，见接口注释）
         txn.setPatientId(spec.patientId());
-        txn.setPatientNo(TextUtil.cut(spec.patientNo(), W_PATIENT_NO));
-        txn.setPatientName(TextUtil.cut(spec.patientName(), W_PATIENT_NAME));
+        txn.setPatientNo(spec.patientNo());
+        txn.setPatientName(spec.patientName());
         txn.setEncounterType(EncounterTypeEnum.INPATIENT.getCode());
         txn.setEncounterId(spec.admissionId());
         txn.setDirection(PayDirectionEnum.CHARGE.getCode());
@@ -326,11 +326,11 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         txn.setSourceType(TxnSourceEnum.PREPAY.getCode());
         txn.setChannelTxnNo(TextUtil.cut(channelNoOf(payMethod, null, spec.channelTxnNo(), txn), W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
-        txn.setCashierName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
+        txn.setCashierName(UserUtils.getCurrentUser().getRealName());
         txn.setTxnTime(txnTime);
         txn.setTxnDate(txnTime.toLocalDate());
-        txn.setReceiptNo(TextUtil.cut(spec.receiptNo(), W_RECEIPT_NO));
-        txn.setRemark(TextUtil.cut(spec.remark(), W_REMARK));
+        txn.setReceiptNo(spec.receiptNo());
+        txn.setRemark(spec.remark());
         this.save(txn);
 
         fundAccountService.apply(new FundAccountService.FundTxnSpec(
@@ -395,7 +395,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
 
     private BizPaymentTxn refundPrepayOne(PrepaySpec spec, BizPaymentTxn orig, BigDecimal amount, boolean toPatientWallet) {
         LocalDateTime txnTime = spec.txnTime() == null ? LocalDateTime.now() : spec.txnTime();
-        String txnNo = TextUtil.cut(redisSequenceService.generateRefundTxnNo(), W_TXN_NO);
+        String txnNo = redisSequenceService.generateRefundTxnNo();
         Integer origMethod = orig.getPayMethod();
         BizFundAccountTxn walletTxn = null;
         String channelRefundNo;
@@ -426,8 +426,8 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         BizPaymentTxn txn = new BizPaymentTxn();
         txn.setTxnNo(txnNo);
         txn.setPatientId(spec.patientId());
-        txn.setPatientNo(TextUtil.cut(spec.patientNo(), W_PATIENT_NO));
-        txn.setPatientName(TextUtil.cut(spec.patientName(), W_PATIENT_NAME));
+        txn.setPatientNo(spec.patientNo());
+        txn.setPatientName(spec.patientName());
         txn.setEncounterType(EncounterTypeEnum.INPATIENT.getCode());
         txn.setEncounterId(spec.admissionId());
         txn.setDirection(PayDirectionEnum.REFUND.getCode());
@@ -442,10 +442,10 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
                 : RefundMethodEnum.ofPayMethod(origMethod).getCode());
         txn.setChannelTxnNo(TextUtil.cut(channelRefundNo, W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
-        txn.setCashierName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
+        txn.setCashierName(UserUtils.getCurrentUser().getRealName());
         txn.setTxnTime(txnTime);
         txn.setTxnDate(txnTime.toLocalDate());
-        txn.setRemark(TextUtil.cut(spec.remark(), W_REMARK));
+        txn.setRemark(spec.remark());
         this.save(txn);
 
         fundAccountService.apply(new FundAccountService.FundTxnSpec(
@@ -495,7 +495,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         if (amount.signum() <= 0) {
             throw new BusinessException("收款金额必须大于 0");
         }
-        String txnNo = TextUtil.cut(redisSequenceService.generatePayTxnNo(), W_TXN_NO);
+        String txnNo = redisSequenceService.generatePayTxnNo();
         BizFundAccountTxn accountTxn = null;
         if (payMethod == PaymentMethodEnum.BALANCE) {
             accountTxn = deductBalance(bill, item, amount, txnNo);
@@ -504,10 +504,10 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         BizPaymentTxn txn = new BizPaymentTxn();
         txn.setTxnNo(txnNo);
         txn.setBillId(bill.getId());
-        txn.setBillNo(TextUtil.cut(bill.getBillNo(), W_BILL_NO));
+        txn.setBillNo(bill.getBillNo());
         txn.setPatientId(bill.getPatientId());
-        txn.setPatientNo(TextUtil.cut(bill.getPatientNo(), W_PATIENT_NO));
-        txn.setPatientName(TextUtil.cut(bill.getPatientName(), W_PATIENT_NAME));
+        txn.setPatientNo(bill.getPatientNo());
+        txn.setPatientName(bill.getPatientName());
         txn.setEncounterType(bill.getEncounterType());
         txn.setEncounterId(bill.getEncounterId());
         txn.setDirection(PayDirectionEnum.CHARGE.getCode());
@@ -517,11 +517,11 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         txn.setSourceType(source.getCode());
         txn.setChannelTxnNo(TextUtil.cut(channelNoOf(payMethod, accountTxn, item.getChannelTxnNo(), txn), W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
-        txn.setCashierName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
+        txn.setCashierName(UserUtils.getCurrentUser().getRealName());
         txn.setTxnTime(LocalDateTime.now());
         txn.setTxnDate(LocalDate.now());
         txn.setReason(null);
-        txn.setRemark(TextUtil.cut(item.getRemark(), W_REMARK));
+        txn.setRemark(item.getRemark());
         this.save(txn);
         if (accountTxn != null) {
             // 账户流水与支付流水互相指认：缺任何一条都是"钱动了账没动"，同事务里补上指针
@@ -608,7 +608,7 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         if (payMethod == null) {
             throw new BusinessException("原收款流水的支付方式无法识别，不能退费");
         }
-        String txnNo = TextUtil.cut(redisSequenceService.generateRefundTxnNo(), W_TXN_NO);
+        String txnNo = redisSequenceService.generateRefundTxnNo();
         RefundMethodEnum refundMethod = RefundMethodEnum.ofPayMethod(orig.getPayMethod());
 
         // 渠道请求放在落库之前：失败就整笔回滚，不允许出现"台账冲了、钱没退出去"
@@ -631,10 +631,10 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         BizPaymentTxn txn = new BizPaymentTxn();
         txn.setTxnNo(txnNo);
         txn.setBillId(bill.getId());
-        txn.setBillNo(TextUtil.cut(bill.getBillNo(), W_BILL_NO));
+        txn.setBillNo(bill.getBillNo());
         txn.setPatientId(bill.getPatientId());
-        txn.setPatientNo(TextUtil.cut(bill.getPatientNo(), W_PATIENT_NO));
-        txn.setPatientName(TextUtil.cut(bill.getPatientName(), W_PATIENT_NAME));
+        txn.setPatientNo(bill.getPatientNo());
+        txn.setPatientName(bill.getPatientName());
         txn.setEncounterType(bill.getEncounterType());
         txn.setEncounterId(bill.getEncounterId());
         txn.setDirection(PayDirectionEnum.REFUND.getCode());
@@ -646,12 +646,12 @@ public class PaymentServiceImpl extends ServiceImpl<BizPaymentTxnMapper, BizPaym
         txn.setRefundMethod(refundMethod.getCode());
         txn.setChannelTxnNo(TextUtil.cut(channelRefundNo, W_CHANNEL_TXN_NO));
         txn.setCashierId(currentCashier());
-        txn.setCashierName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_CASHIER_NAME));
+        txn.setCashierName(UserUtils.getCurrentUser().getRealName());
         txn.setTxnTime(LocalDateTime.now());
         txn.setTxnDate(LocalDate.now());
-        txn.setReason(TextUtil.cut(dto.getReason(), W_REASON));
+        txn.setReason(dto.getReason());
         txn.setApplyId(dto.getApplyId());
-        txn.setApplyNo(TextUtil.cut(dto.getApplyNo(), W_APPLY_NO));
+        txn.setApplyNo(dto.getApplyNo());
         this.save(txn);
         if (accountTxn != null) {
             accountTxn.setPaymentTxnId(txn.getId());

@@ -3,6 +3,7 @@ package com.his.charge.dto;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -27,12 +28,14 @@ public class FeeBookDTO {
     /**
      * 患者号
      */
+    @Size(max = 32, message = "患者号不能超过32个字符")
     private String patientNo;
 
     /**
      * 患者姓名
      */
     @NotBlank(message = "缺少患者姓名")
+    @Size(max = 50, message = "患者姓名不能超过50个字符")
     private String patientName;
 
     /**
@@ -50,6 +53,7 @@ public class FeeBookDTO {
     /**
      * 就诊标识单号
      */
+    @Size(max = 32, message = "就诊单号不能超过32个字符")
     private String encounterNo;
 
     /**
@@ -61,6 +65,7 @@ public class FeeBookDTO {
     /**
      * 科室名称
      */
+    @Size(max = 100, message = "科室名称不能超过100个字符")
     private String deptName;
 
     /**
@@ -71,6 +76,7 @@ public class FeeBookDTO {
     /**
      * 开单人姓名
      */
+    @Size(max = 50, message = "医生姓名不能超过50个字符")
     private String doctorName;
 
     /**
@@ -82,22 +88,26 @@ public class FeeBookDTO {
     /**
      * 项目/药品编码
      */
+    @Size(max = 32, message = "项目编码不能超过32个字符")
     private String itemCode;
 
     /**
      * 项目名称
      */
     @NotBlank(message = "缺少项目名称")
+    @Size(max = 200, message = "项目名称不能超过200个字符")
     private String itemName;
 
     /**
      * 规格
      */
+    @Size(max = 100, message = "规格不能超过100个字符")
     private String specification;
 
     /**
      * 单位
      */
+    @Size(max = 20, message = "单位不能超过20个字符")
     private String unit;
 
     /**
@@ -129,6 +139,7 @@ public class FeeBookDTO {
     /**
      * 来源单据号
      */
+    @Size(max = 64, message = "来源单号不能超过64个字符")
     private String sourceNo;
 
     /**
@@ -139,5 +150,6 @@ public class FeeBookDTO {
     /**
      * 备注
      */
+    @Size(max = 500, message = "备注不能超过500个字符")
     private String remark;
 }

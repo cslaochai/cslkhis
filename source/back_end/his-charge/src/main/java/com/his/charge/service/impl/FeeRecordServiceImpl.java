@@ -46,23 +46,6 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
 
     private static final int AMOUNT_SCALE = 2;
 
-    /**
-     * 列宽：写库文本一律先截，超长报 Data too long 会把"记不上账"升级成 500
-     */
-    private static final int W_FEE_NO = 32;
-    private static final int W_PATIENT_NO = 32;
-    private static final int W_PATIENT_NAME = 50;
-    private static final int W_ENCOUNTER_NO = 32;
-    private static final int W_DEPT_NAME = 100;
-    private static final int W_DOCTOR_NAME = 50;
-    private static final int W_ITEM_CODE = 32;
-    private static final int W_ITEM_NAME = 200;
-    private static final int W_SPEC = 100;
-    private static final int W_UNIT = 20;
-    private static final int W_SOURCE_NO = 64;
-    private static final int W_BOOK_BY_NAME = 64;
-    private static final int W_REMARK = 500;
-
     private final RedisSequenceService redisSequenceService;
 
     @Override
@@ -95,15 +78,15 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         }
 
         BizFeeRecord row = new BizFeeRecord();
-        row.setFeeNo(TextUtil.cut(redisSequenceService.generateFeeNo(), W_FEE_NO));
+        row.setFeeNo(redisSequenceService.generateFeeNo());
         applySnapshot(row, dto);
         // 金额由服务端现算：信调用方传来的金额等于把应收交给调用方定义
         row.setAmount(price.multiply(quantity).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP));
         row.setFeeStatus(FeeStatusEnum.PENDING.getCode());
         row.setBookTime(LocalDateTime.now());
         row.setBookById(UserUtils.getCurrentUser().getEmployeeId());
-        row.setBookByName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_BOOK_BY_NAME));
-        row.setRemark(TextUtil.cut(dto.getRemark(), W_REMARK));
+        row.setBookByName(UserUtils.getCurrentUser().getRealName());
+        row.setRemark(dto.getRemark());
         this.save(row);
         log.info("[记账] {} 患者 {} 项目 {} 数量 {} 金额 ¥{}", row.getFeeNo(), row.getPatientName(),
                 row.getItemName(), quantity.toPlainString(), row.getAmount().toPlainString());
@@ -258,7 +241,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         }
         for (BizFeeRecord row : baseMapper.selectBySource(sourceType, sourceId)) {
             boolean amountPositive = NumUtil.orZero(row.getAmount()).signum() > 0;
-            boolean sameItem = itemCode == null || Objects.equals(TextUtil.cut(row.getItemCode(), W_ITEM_CODE), TextUtil.cut(itemCode, W_ITEM_CODE));
+            boolean sameItem = itemCode == null || Objects.equals(row.getItemCode(), itemCode);
             if (sameItem && amountPositive && !FeeStatusEnum.REVERSED.getCode().equals(row.getFeeStatus())) {
                 return row;
             }
@@ -310,7 +293,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
             return null;
         }
         for (BizFeeRecord exist : baseMapper.selectBySource(dto.getSourceType(), dto.getSourceId())) {
-            boolean sameItem = Objects.equals(TextUtil.cut(exist.getItemCode(), W_ITEM_CODE), TextUtil.cut(dto.getItemCode(), W_ITEM_CODE));
+            boolean sameItem = Objects.equals(exist.getItemCode(), dto.getItemCode());
             if (sameItem && NumUtil.orZero(exist.getAmount()).signum() > 0
                     && !FeeStatusEnum.REVERSED.getCode().equals(exist.getFeeStatus())) {
                 return exist;
@@ -367,10 +350,10 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
                 : NumUtil.orZero(orig.getPrice()).multiply(quantity).setScale(AMOUNT_SCALE, RoundingMode.HALF_UP);
 
         BizFeeRecord neg = new BizFeeRecord();
-        neg.setFeeNo(TextUtil.cut(redisSequenceService.generateFeeNo(), W_FEE_NO));
+        neg.setFeeNo(redisSequenceService.generateFeeNo());
         neg.setPatientId(orig.getPatientId());
         neg.setPatientNo(orig.getPatientNo());
-        neg.setPatientName(TextUtil.cut(orig.getPatientName(), W_PATIENT_NAME));
+        neg.setPatientName(orig.getPatientName());
         neg.setEncounterType(orig.getEncounterType());
         neg.setEncounterId(orig.getEncounterId());
         neg.setEncounterNo(orig.getEncounterNo());
@@ -380,7 +363,7 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         neg.setDoctorName(orig.getDoctorName());
         neg.setItemType(orig.getItemType());
         neg.setItemCode(orig.getItemCode());
-        neg.setItemName(TextUtil.cut(orig.getItemName(), W_ITEM_NAME));
+        neg.setItemName(orig.getItemName());
         neg.setSpecification(orig.getSpecification());
         neg.setUnit(orig.getUnit());
         neg.setCatalogType(orig.getCatalogType());
@@ -395,8 +378,8 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
         neg.setOrigFeeId(orig.getId());
         neg.setBookTime(LocalDateTime.now());
         neg.setBookById(UserUtils.getCurrentUser().getEmployeeId());
-        neg.setBookByName(TextUtil.cut(UserUtils.getCurrentUser().getRealName(), W_BOOK_BY_NAME));
-        neg.setRemark(TextUtil.cut(reason, W_REMARK));
+        neg.setBookByName(UserUtils.getCurrentUser().getRealName());
+        neg.setRemark(reason);
         this.save(neg);
 
         if (full) {
@@ -436,26 +419,26 @@ public class FeeRecordServiceImpl extends ServiceImpl<BizFeeRecordMapper, BizFee
 
     private void applySnapshot(BizFeeRecord row, FeeBookDTO dto) {
         row.setPatientId(dto.getPatientId());
-        row.setPatientNo(TextUtil.cut(dto.getPatientNo(), W_PATIENT_NO));
-        row.setPatientName(TextUtil.cut(dto.getPatientName(), W_PATIENT_NAME));
+        row.setPatientNo(dto.getPatientNo());
+        row.setPatientName(dto.getPatientName());
         row.setEncounterType(dto.getEncounterType());
         row.setEncounterId(dto.getEncounterId());
-        row.setEncounterNo(TextUtil.cut(dto.getEncounterNo(), W_ENCOUNTER_NO));
+        row.setEncounterNo(dto.getEncounterNo());
         row.setDeptId(dto.getDeptId());
-        row.setDeptName(TextUtil.cut(dto.getDeptName(), W_DEPT_NAME));
+        row.setDeptName(dto.getDeptName());
         row.setDoctorId(dto.getDoctorId());
-        row.setDoctorName(TextUtil.cut(dto.getDoctorName(), W_DOCTOR_NAME));
+        row.setDoctorName(dto.getDoctorName());
         row.setItemType(dto.getItemType());
-        row.setItemCode(TextUtil.cut(dto.getItemCode(), W_ITEM_CODE));
-        row.setItemName(TextUtil.cut(dto.getItemName(), W_ITEM_NAME));
-        row.setSpecification(TextUtil.cut(dto.getSpecification(), W_SPEC));
-        row.setUnit(TextUtil.cut(dto.getUnit(), W_UNIT));
+        row.setItemCode(dto.getItemCode());
+        row.setItemName(dto.getItemName());
+        row.setSpecification(dto.getSpecification());
+        row.setUnit(dto.getUnit());
         row.setCatalogType(dto.getCatalogType() == null ? 0 : dto.getCatalogType());
         row.setPrice(dto.getPrice());
         row.setQuantity(dto.getQuantity());
         row.setSourceType(dto.getSourceType());
         row.setSourceId(dto.getSourceId());
-        row.setSourceNo(TextUtil.cut(dto.getSourceNo(), W_SOURCE_NO));
+        row.setSourceNo(dto.getSourceNo());
     }
 
     private List<Long> requireIds(List<Long> feeIds) {

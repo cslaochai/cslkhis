@@ -33,11 +33,17 @@ import java.util.List;
 public class SettlementEvidenceServiceImpl implements SettlementEvidenceService {
 
     private final AppointGateway appointGateway;
+
     private final PatientGateway patientGateway;
+
     private final MedicalTechGateway medicalTechGateway;
+
     private final EmrGateway emrGateway;
+
     private final BizSettlementBillMapper bizSettlementBillMapper;
+
     private final BizSettlementBillItemMapper bizSettlementBillItemMapper;
+
     private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
 
     private static <T> T first(List<T> list) {

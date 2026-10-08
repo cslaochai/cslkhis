@@ -33,6 +33,7 @@ import java.util.*;
 public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMapper, BizScheduleSlot> implements BizScheduleSlotService {
 
     private final BizScheduleSlotMapper bizScheduleSlotMapper;
+
     private final BizScheduleMapper bizScheduleMapper;
 
     @Override
@@ -112,8 +113,6 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
         }
 
         if (!sameWindow) {
-            // 时间窗变化：段边界是挂号快照（slot_start/slot_end）的语义来源，
-            // 有挂号时改窗等于篡改已挂号的时段事实，必须先退号。
             if (usedSum > 0) {
                 throw new BusinessException("该班次已有挂号记录，不能修改就诊时段；请先退号或另建排班");
             }
@@ -122,10 +121,6 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
             return;
         }
 
-        // 窗口没变：重摊号源。used 是事实（挂号的段分布），不能动——
-        // 先按均分+余数给前面分配，再把 used 超过分配值的段压到 used、差额向后面有空余的段顺延。
-        // Σ约束：主表已校验 newTotal ≥ Σused，顺延必然有解；解完后 Σ段可能大于入参 newTotal
-        // （used 保底挤压所致），Σ段写回主表为准——主表 total 以段的事实收口。
         int n = old.size();
         int total = newTotal == null ? 0 : newTotal;
         int appt = newAppointment == null ? 0 : newAppointment;

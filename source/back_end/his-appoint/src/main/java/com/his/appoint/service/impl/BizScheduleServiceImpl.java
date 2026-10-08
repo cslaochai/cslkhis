@@ -96,9 +96,6 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         } else if (deptScopeProvider.isScoped()) {
             wrapper.in(BizSchedule::getDeptId, deptScopeProvider.allowedDeptIds());
         }
-        // 号源下拉只认医生出诊排班（sql/195）：护士/技师/收费员这些岗位是**出勤排班**，
-        // 号源恒 0 且没有诊室，一旦混进这个下拉，挂号员能选到「张三（收费员）」并挂出一个没有号源的号。
-        // 这里硬编码 1-医生而不是透传入参：能挂号的只有医生，这不是筛选条件，是业务前提。
         wrapper.eq(BizSchedule::getStaffType, StaffTypeEnum.DOCTOR.getCode())
                 .eq(scheduleQueryDTO.getVisitDate() != null,
                         BizSchedule::getScheduleDate, scheduleQueryDTO.getVisitDate())
@@ -229,7 +226,6 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
     private void syncRoomToTodayWorklist(BizSchedule schedule) {
         LocalDate today = LocalDate.now();
         if (schedule.getScheduleDate() != null && !schedule.getScheduleDate().equals(today)) {
-            // 只动今天的班次：历史/未来日期的队列不该被追改
             return;
         }
         Long roomId = schedule.getRoomId();
@@ -438,13 +434,6 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
 
     /**
      * 排班日期不得早于今天：已过日期的班次一律只读。
-     *
-     * <p>过去的日期上患者已就诊完，改号源/换诊室/停诊都不会再影响任何真实就诊，
-     * 只会让「排班表」和「门诊日志」两个口径分家（历史以日志为准）；新增过去的日期
-     * 更等于往号源池里开一个「能挂历史号」的口子。所以新增、修改、停诊、删除走同一条线。
-     *
-     * <p>粒度只到<b>日期</b>，不到时刻：今天 08:00~12:00 这种"时段已过"的班次当天仍可停诊
-     * （医生临时走人必须当天停），所以放行今天。
      */
     private void assertNotPast(LocalDate date, String action) {
         if (date == null || date.compareTo(LocalDate.now()) >= 0) {
@@ -626,8 +615,6 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
 
     /**
      * 当日该科室全部有效排班（默认全岗位）。
-     * 与 getTodaySchedule 不是一回事：那个是「今日医生出诊名单」（硬编码 staff_type=1），
-     * 这里是「今日全部/某岗位的出勤表」，两者不能混用。
      */
     private List<BizSchedule> loadDaySchedule(Long deptId, LocalDate date, Integer staffType) {
         LambdaQueryWrapper<BizSchedule> wrapper = new LambdaQueryWrapper<>();
