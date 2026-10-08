@@ -8,7 +8,7 @@ import com.his.ai.service.AiExecutionService;
 import com.his.ai.service.Icd10Capability;
 import com.his.ai.service.Icd10RecallService;
 import com.his.ai.vo.Icd10PredictItemVO;
-import com.his.ai.vo.Icd10PredictVO;
+import com.his.ai.vo.Icd10PredictResultVO;
 import com.his.ai.vo.Icd10PromptVariablesVO;
 import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizMedicalRecord;
@@ -116,9 +116,9 @@ public class Icd10CapabilityImpl implements Icd10Capability {
     /**
      * 推荐 ICD-10 编码
      */
-    public Icd10PredictVO predict(Icd10PredictDTO dto) {
+    public Icd10PredictResultVO predict(Icd10PredictDTO dto) {
         long start = System.currentTimeMillis();
-        Icd10PredictVO vo = new Icd10PredictVO();
+        Icd10PredictResultVO vo = new Icd10PredictResultVO();
 
         NoteText note = resolveNoteText(dto);
 

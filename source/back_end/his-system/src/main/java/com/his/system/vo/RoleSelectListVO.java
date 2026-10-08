@@ -1,12 +1,31 @@
 package com.his.system.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
+
+import java.io.Serializable;
 
 /**
- * 角色下拉出参，字段口径同 {@link RoleVO}（角色字典只有编码/名称/状态在用，不单独裁剪）。
+ * 角色下拉出参：配岗位/配工作台时只用来认「哪个角色」。
+ *
+ * <p>数据范围、角色类型、排序号属角色管理页的列，下拉里带出去没有消费方。
  */
 @Data
-@EqualsAndHashCode(callSuper = true)
-public class RoleSelectListVO extends RoleVO {
+@Schema(name = "RoleSelectListVO", description = "角色下拉出参")
+public class RoleSelectListVO implements Serializable {
+
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long id;
+
+    /**
+     * 角色编码
+     */
+    private String roleCode;
+
+    /**
+     * 角色名称
+     */
+    private String roleName;
 }

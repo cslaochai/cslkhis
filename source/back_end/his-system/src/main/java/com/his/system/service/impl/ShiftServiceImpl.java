@@ -4,11 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
-import com.his.common.enums.EnableStatusEnum;
-import com.his.common.enums.ScheduleTypeEnum;
-import com.his.common.enums.ShiftUseScopeEnum;
-import com.his.common.enums.StaffTypeEnum;
-import com.his.common.enums.YesOrNoEnum;
+import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
@@ -19,7 +15,6 @@ import com.his.system.mapper.BizShiftMapper;
 import com.his.system.service.ShiftService;
 import com.his.system.vo.ShiftSelectListVO;
 import com.his.system.vo.ShiftVO;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -116,15 +111,15 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
     }
 
     /**
-     * 下拉出参单独收口到 ShiftSelectListVO，字段口径同 ShiftVO（toVO 已按 start_time 等逐字段填充）
+     * 下拉只出「认名字 + 带出上下班时间」四列，不借道 {@link #toVO} 把班次的全套规定（跨度分钟、
+     * 是否夜班、休息时长门槛…）先摊开再丢掉。
      */
     private ShiftSelectListVO toSelectVO(BizShift s) {
-        ShiftVO base = toVO(s);
-        if (base == null) {
-            return null;
-        }
         ShiftSelectListVO vo = new ShiftSelectListVO();
-        BeanUtils.copyProperties(base, vo);
+        vo.setId(s.getId());
+        vo.setShiftName(s.getShiftName());
+        vo.setStartTime(s.getStartTime());
+        vo.setEndTime(s.getEndTime());
         return vo;
     }
 

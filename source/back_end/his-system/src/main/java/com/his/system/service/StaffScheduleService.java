@@ -8,7 +8,6 @@ import com.his.system.dto.StaffScheduleQueryPageDTO;
 import com.his.system.dto.StaffScheduleSwapDTO;
 import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.entity.BizStaffSchedule;
-import com.his.system.vo.StaffOnDutyVO;
 import com.his.system.vo.StaffScheduleVO;
 import com.his.system.vo.StaffTypeDayWorkingVO;
 import com.his.system.vo.UnitDayWorkingVO;
@@ -109,7 +108,7 @@ public interface StaffScheduleService extends IService<BizStaffSchedule> {
      * @param orgId     单元ID（空=该类型全部单元）
      * @param staffType 岗位类别（空=全部岗位）
      */
-    List<StaffOnDutyVO> onDutyAt(LocalDateTime at, Integer orgType, Long orgId, Integer staffType);
+    List<StaffScheduleVO> onDutyAt(LocalDateTime at, Integer orgType, Long orgId, Integer staffType);
 
     /**
      * 某天的排班行（下游按实体取号源派生所需的字段，不重复查一次班次）。

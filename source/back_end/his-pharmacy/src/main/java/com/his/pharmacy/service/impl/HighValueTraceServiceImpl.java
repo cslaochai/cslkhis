@@ -29,7 +29,7 @@ import com.his.pharmacy.support.TraceChargeInvoker;
 import com.his.pharmacy.support.UdiParser;
 import com.his.pharmacy.vo.BizConsumableTraceVO;
 import com.his.pharmacy.vo.ConsumableTraceDetailVO;
-import com.his.pharmacy.vo.PatientBriefVO;
+import com.his.pharmacy.vo.TracePatientSnapshotVO;
 import com.his.pharmacy.vo.UdiScanVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -152,7 +152,7 @@ public class HighValueTraceServiceImpl extends ServiceImpl<BizConsumableTraceMap
         String patientNo = dto.getPatientNo();
         String patientName = dto.getPatientName();
         if (!TextUtil.hasText(patientNo) || !TextUtil.hasText(patientName)) {
-            PatientBriefVO snap = bizConsumableTraceMapper.selectPatientSnapshot(dto.getPatientId());
+            TracePatientSnapshotVO snap = bizConsumableTraceMapper.selectPatientSnapshot(dto.getPatientId());
             if (snap == null) {
                 throw new BusinessException("患者不存在，请重新选择");
             }

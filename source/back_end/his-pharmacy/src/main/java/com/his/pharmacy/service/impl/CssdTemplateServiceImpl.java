@@ -51,7 +51,9 @@ public class CssdTemplateServiceImpl extends ServiceImpl<BizCssdPackTemplateMapp
                         .orderByAsc(BizCssdPackTemplate::getTemplateCode))
                 .stream().map(t -> {
                     CssdPackTemplateSelectListVO vo = new CssdPackTemplateSelectListVO();
-                    BeanUtils.copyProperties(toVo(t, null), vo);
+                    vo.setId(t.getId());
+                    vo.setPackName(t.getPackName());
+                    vo.setSterilizeMethod(t.getSterilizeMethod());
                     return vo;
                 }).toList();
     }

@@ -1,4 +1,4 @@
-#  AI Agent 全局指令与项目规范 (AGENTS.md)
+# AI Agent 全局指令与项目规范 (AGENTS.md)
 
 > **️ 核心原则（Token 节省与输出约束）**
 > 1. **绝对精简**：禁止输出任何寒暄、解释、总结或“好的”、“没问题”等废话。直接输出代码或结构化数据。
@@ -6,13 +6,14 @@
 > 3. **结构化优先**：当需要传递多个参数时，优先使用 JSON 格式，禁止使用冗长的自然语言描述。
 > 4. **按需阅读**：不要一次性输出整个文件，除非明确要求。使用占位符（如 `// ... 现有代码 ...`）省略未修改的部分。
 
-## 1.  前后端交互与 RESTful 规范
+## 1. 前后端交互与 RESTful 规范
+
 - **架构风格**：只允许POST、GET、DELETE 方法。
 - **HTTP 动词**：
     - `GET`：仅用于获取资源，禁止在 GET 请求体中传递复杂参数。
     - `POST`：用于创建资源或执行复杂查询。
     - `DELETE`：用于删除资源。
-- **URL 命名**： 
+- **URL 命名**：
     - 1、总体使用驼峰命名
     - 2、如果是新增或者修改，采用 xxxUpsert的形式，例如：userUpsert
     - 3、如果是获取单条数据，则使用getById，如果是获取明细，除了获取当前表的还要获取其他扩展信息则用 getDetailById
@@ -25,7 +26,7 @@
     - 如果是新增和修改则使用xxxUpsertDTO
     - 如果是分页查询则使用xxxQueryPageDTO
     - 如果是分页查询则使用xxxQueryDTO
-  
+
     - 对于输出，如果是返回详细信息则为detailVO
     - 如果是返回列表数据则为listVO
     - 如果是返回下拉选择数据则为XXXXSelectListVO（与接口末段 `selectList` 同名口径，禁止再写 `XxxSelectVO`）
@@ -36,14 +37,15 @@
     - 对于很多可以做成枚举的东西直接做成枚举，例如 性别 1-男，2-女，3-未知，对于其他能存redis的东西，存redis，例如标签信息可以直接存储在redis，其他地方直接使用即可
 
 - **代码规范**：
-    -对于java代码中需要返回给前端的，就是在controller类里面要返回给前端的类，如果里面包含的是某个主键id，则需要使用序列化为字符串形式，避免精度丢失，例如
-     @JsonSerialize(using = ToStringSerializer.class)
-     private Long id;
-    -对于业务代码的处理请写在service中，并且在controller层不能直接依赖mapper的东西，必须是依赖service层，如果是A依赖B，则A不能直接调用B的Mapper，只能依赖B的service，B的service依赖B的mapper
+  -对于java代码中需要返回给前端的，就是在controller类里面要返回给前端的类，如果里面包含的是某个主键id，则需要使用序列化为字符串形式，避免精度丢失，例如
+  @JsonSerialize(using = ToStringSerializer.class)
+  private Long id;
+  -对于业务代码的处理请写在service中，并且在controller层不能直接依赖mapper的东西，必须是依赖service层，如果是A依赖B，则A不能直接调用B的Mapper，只能依赖B的service，B的service依赖B的mapper
 
 - **表/列注释只写"是什么"**：`COMMENT` = 名词头 +（必要时）码值枚举，例如 `状态（1-启用 0-停用）`、`手术间编码`。
   禁止写举例（`OR01、OR02…`）、跨表引用（`biz_xxx.id`）、口径说明、踩坑警告（`删除走物理删`）、幂等策略与实现细节 ——
-  这些放代码注释或本文件。建表 SQL 与库内注释同一口径；全库结构基线见 `docs/sql/`（按领域 23 个文件，由 `workspace/_gen_ddl_by_domain.mjs` 从 dev 库导出）。
+  这些放代码注释或本文件。建表 SQL 与库内注释同一口径；全库结构基线见 `docs/sql/`（按领域 23 个文件，由
+  `workspace/_gen_ddl_by_domain.mjs` 从 dev 库导出）。
 
 - **状态码规范**：
     - `200 OK`：请求成功。
@@ -61,38 +63,56 @@
   ```
 
 - **主键入参一律 `Long`，禁止手写 `parseId(String)` 转换层**（2026-10-07 全仓清掉 11 处）：
-  `ToStringSerializer` 是**出参**防 JS 丢精度，**入参**侧前端必然传字符串，而 Jackson 自己就能把 `"1857..."` 反序列化成 `Long` 字段 ——
+  `ToStringSerializer` 是**出参**防 JS 丢精度，**入参**侧前端必然传字符串，而 Jackson 自己就能把 `"1857..."` 反序列化成
+  `Long` 字段 ——
   多写这一层只有两个下场，都比不写更糟：
   ① 正则 `\d{1,20}` + `Long.parseLong`：转化不了返回 `null` **不报错** → 下游 `selectById(null)` 报「数据不存在」，
-     把「你传了个坏 ID」说成「数据没了」，真因被掩盖；
+  把「你传了个坏 ID」说成「数据没了」，真因被掩盖；
   ② **正则放行 20 位、`parseLong` 只吃 19 位**，两边不一致的那一格抛 `NumberFormatException` → 走 `GlobalExceptionHandler`
-     的 `Exception` 兜底 = **HTTP 500「系统内部错误」**，调用方传错一个字符，后端说自己崩了。
+  的 `Exception` 兜底 = **HTTP 500「系统内部错误」**，调用方传错一个字符，后端说自己崩了。
   正则 + 手写解析 = 双重真相，天然出裂缝。
-  - ✅ 正确形态：DTO `@NotNull private Long id`（`@NotBlank` 只对 String 有意义）+ Controller `@RequestParam Long id`。
-    非法值自动 400（`MethodArgumentTypeMismatchException` / `HttpMessageNotReadableException` 都已接住）。
-  - **出参一个都不动**（保持 `String id` 或 `Long + @JsonSerialize(ToStringSerializer)`）→ 前端零改动。
-  - 同族：主键用 `List<String>` + `IN (${ids})` 拼接的一律改 `List<Long>` + `<foreach>` 逐个 `#{}`，
-    「非数字白名单 for 循环」整个不需要（入参已是 Long，非数字进不来；拼 IN 反而是给自己开注入面）。
-  - 仅当解析的是**内部裸 SQL 行数据**（`Map` 里 CAST AS CHAR 的列）才留工具方法，名字写明 `parseRowId`。
-  - 机械判据：`grep -rn "parseId\|parseRowId\|\\\\d{1,20}" --include=*.java source/back_end` 只允许命中
-    内部行数据那一处，其余为 0。
+    - ✅ 正确形态：DTO `@NotNull private Long id`（`@NotBlank` 只对 String 有意义）+ Controller `@RequestParam Long id`。
+      非法值自动 400（`MethodArgumentTypeMismatchException` / `HttpMessageNotReadableException` 都已接住）。
+    - **出参一个都不动**（保持 `String id` 或 `Long + @JsonSerialize(ToStringSerializer)`）→ 前端零改动。
+    - 同族：主键用 `List<String>` + `IN (${ids})` 拼接的一律改 `List<Long>` + `<foreach>` 逐个 `#{}`，
+      「非数字白名单 for 循环」整个不需要（入参已是 Long，非数字进不来；拼 IN 反而是给自己开注入面）。
+    - 仅当解析的是**内部裸 SQL 行数据**（`Map` 里 CAST AS CHAR 的列）才留工具方法，名字写明 `parseRowId`。
+    - 机械判据：`grep -rn "parseId\|parseRowId\|\\\\d{1,20}" --include=*.java source/back_end` 只允许命中
+      内部行数据那一处，其余为 0。
 
 ## 2. 前端界面规范
 
-- **禁止使用 `src/components/his/ModulePage.vue`**。它是演示用的硬编码壳（`rows` / `stats` 写死在页面里，不接后端），**不允许新增引用、不允许在其上继续加功能**；存量引用页面（`views/**`，约 20 个）属待删除项，改造时直接换成真实接口驱动的页面，不要"顺手补两个字段"。
-- **页面必须是真实数据驱动的**：`src/api/xxx.js` 调后端 → 页面渲染 → 操作回写后端。禁止任何形式的 mock / 写死数组 / 前端自造统计数字。
-- **`el-dialog` 默认允许点遮罩关闭**：禁止写 `:close-on-click-modal="false"`（详情/查看类弹框点弹窗外必须能自动关闭，关不掉很反直觉）。只有表单填写类弹框在用户明确要求防误关时才可豁免，且需在代码注释里写明原因。
-- **表格行点击开详情时，操作列按钮必须 `@click.stop`**：否则点「编辑/删除」会同时触发行点击弹框（`el-table` 的 row-click 冒泡自单元格内按钮）。行详情弹框一律只读（`el-form :disabled` + 页脚无确定键），编辑走独立按钮入口。
-- 复用优先级：① `src/components/his/` 下已有骨架与业务组件（`Header` / `Sidebar` / `DashboardLayout` / `PatientSelect` / `InpatientOrderWorkspace` 等）
-  ② 同一表单/工作区出现第 2 次就抽成共用组件（带 `mode` 属性区分角色，如 `InpatientOrderWorkspace.vue` 的 `mode="doctor|nurse"`） ③ 最后才是页面内私有实现。
+- **禁止使用 `src/components/his/ModulePage.vue`**。它是演示用的硬编码壳（`rows` / `stats` 写死在页面里，不接后端），*
+  *不允许新增引用、不允许在其上继续加功能**；存量引用页面（`views/**`，约 20
+  个）属待删除项，改造时直接换成真实接口驱动的页面，不要"顺手补两个字段"。
+- **页面必须是真实数据驱动的**：`src/api/xxx.js` 调后端 → 页面渲染 → 操作回写后端。禁止任何形式的 mock / 写死数组 /
+  前端自造统计数字。
+- **`el-dialog` 默认允许点遮罩关闭**：禁止写 `:close-on-click-modal="false"`
+  （详情/查看类弹框点弹窗外必须能自动关闭，关不掉很反直觉）。只有表单填写类弹框在用户明确要求防误关时才可豁免，且需在代码注释里写明原因。
+- **表格行点击开详情时，操作列按钮必须 `@click.stop`**：否则点「编辑/删除」会同时触发行点击弹框（`el-table` 的 row-click
+  冒泡自单元格内按钮）。行详情弹框一律只读（`el-form :disabled` + 页脚无确定键），编辑走独立按钮入口。
+- 复用优先级：① `src/components/his/` 下已有骨架与业务组件（`Header` / `Sidebar` / `DashboardLayout` / `PatientSelect` /
+  `InpatientOrderWorkspace` 等）
+  ② 同一表单/工作区出现第 2 次就抽成共用组件（带 `mode` 属性区分角色，如 `InpatientOrderWorkspace.vue` 的
+  `mode="doctor|nurse"`） ③ 最后才是页面内私有实现。
 - **选患者一律用 `PatientSelect.vue`**（`v-model` + `@select`），禁止再手写 `el-select` + 搜索逻辑。
+- **筛选条件多于 3~4 个时用全局类 `.query-grid-wrap` + `.query-grid`（口径见 `style.css`
+  ，参照 `views/today-visits/TodayVisitsView.vue`）**：
+  标准 HIS 查询条的做法是**每个条件固定宽 240px（70 标签 + 170 控件）、按剩余宽度堆放换行**，
+  日期区间要放两个日期所以单独挂 `.is-daterange`（312px）。
+  **禁止用 `1fr` 等分栅格拉伸控件**：窗口一宽，「号别」这种两字下拉会撑到 250px 以上（用户 2026-10-08 判为「太宽」）；
+  反过来把控件写死成同一个 `!w-xx` 又会让日期区间显示被截断。列数交给宽度，**行首对齐交给固定格宽**。
+  查询/重置放在栅格外侧的 `.query-grid-ops`（`flex-shrink:0`），靠右并与首行对齐，不要挂在最后一个条件后面。
 - **分页查询只有两个旋钮，都在 `src/lib/pagination.js`**：`PAGE_SIZES = [10, 20, 50, 100]` 与 `DEFAULT_PAGE_SIZE = 10`。
   页面里禁止再写 `:page-sizes="[10, 20, 50]"` 这类字面量数组，也禁止再写 `pageSize: 20` 这类字面量默认值 ——
   一律 `:page-sizes="PAGE_SIZES"` + `pageSize: DEFAULT_PAGE_SIZE`，这样「某页 10 条太少」时只改一处就全站生效。
   **例外**：一次性抓全量/探总数用的 `pageSize`（下拉候选 `pageSize: 200`、统计 `100`、只要 total 的 `1`）不是分页查询，
   保持原值，因为它们不受用户翻页控制；小程序端另有自己的口径。
-- **弹层（popper）样式必须写全局 `src/style.css`**：`el-select`/`el-dropdown`/`el-date-picker` 的 popper teleport 到 body，组件 `<style scoped>` 里的 `:deep(.xxx)` 编译后带 `[data-v-x]` 前缀，body 下没有祖先命中 → 规则被**静默丢弃**（现象是"样式没写对"）。下拉加宽还要配 `:fit-input-width="false"`。
-- **行数不可控的可编辑表格必须分页 + 过滤**：一行配一个 `el-select`（科室下拉还要摊平上百个 option）时，整表渲染开销随行数线性炸掉 ——
+- **弹层（popper）样式必须写全局 `src/style.css`**：`el-select`/`el-dropdown`/`el-date-picker` 的 popper teleport 到
+  body，组件 `<style scoped>` 里的 `:deep(.xxx)` 编译后带 `[data-v-x]` 前缀，body 下没有祖先命中 → 规则被**静默丢弃**
+  （现象是"样式没写对"）。下拉加宽还要配 `:fit-input-width="false"`。
+- **行数不可控的可编辑表格必须分页 + 过滤**：一行配一个 `el-select`（科室下拉还要摊平上百个
+  option）时，整表渲染开销随行数线性炸掉 ——
   岗位配置表在演示账号上实测 **1692 行**（94 科室 × 18 角色），点「编辑」后主线程冻几十秒，现象与「后端挂了」完全一样
   （而 `/system/user/getById` 只花 30ms；排查时先用 node 直调接口测耗时再归因，别急着怀疑后端）。
   做法见 `components/his/EmployeePostTable.vue`：**分页**（`PAGE_SIZES`/`DEFAULT_PAGE_SIZE`）＋ 渲染上限；
@@ -102,11 +122,16 @@
   实测很反直觉；改成可自由勾选 + **保存前用 `lib/employeePost.js` 的 `checkPosts` 拦住「一条都没勾」**
   （后端 `replacePosts` 全 0 时兜底提第一条只是 API 直连的最后一道闸，不替代前端提示）。
   只读列表同样要截断渲染（顶栏「切换岗位」只渲染前 50 条并显示总数）。
-- **深色底上的 `el-icon` 不能用 Tailwind 透明度色**：Element Plus 的 `.el-icon{--color:inherit; color:var(--color)}` 与 `text-white/70` **同特异性但后加载**，会把工具类盖掉 → 图标退回继承的黑色。要么给容器兜 `color:#fff` + `:deep(svg){fill:#fff}`（见 `Header.vue` 的 `.breadcrumb-nav`），要么用不带 `/` 的纯色。
+- **深色底上的 `el-icon` 不能用 Tailwind 透明度色**：Element Plus 的 `.el-icon{--color:inherit; color:var(--color)}` 与
+  `text-white/70` **同特异性但后加载**，会把工具类盖掉 → 图标退回继承的黑色。要么给容器兜 `color:#fff` +
+  `:deep(svg){fill:#fff}`（见 `Header.vue` 的 `.breadcrumb-nav`），要么用不带 `/` 的纯色。
 - **API 层函数签名是前后端的稳定契约**：后端接口改造时只改 `src/api/*.js` 的内部实现，保持导出函数名与入参形状不变，视图层零改动。
 - `request.js` 强耦合 `{code,message,data}` → **SSE / 流式接口必须用原生 `fetch`**，不能复用该 axios 实例。
-- 主题只动 `src/style.css` + `src/components/his/` 三个骨架，**60 个业务页面不动**；主色 `#1269B5`、辅色青绿 `#0E9488`，风格基调"稳重克制"。
-- 前端验证用 playwright-core + Edge 真实浏览器，且**必须断言真实接口回来的数据**；禁止靠断言 ModulePage 的假数据通过验收。控制台零报错才算通过。
+- 主题只动 `src/style.css` + `src/components/his/` 三个骨架，**60 个业务页面不动**；主色 `#1269B5`、辅色青绿 `#0E9488`
+  ，风格基调"稳重克制"。
+- 前端验证用 playwright-core + Edge 真实浏览器，且**必须断言真实接口回来的数据**；禁止靠断言 ModulePage
+  的假数据通过验收。控制台零报错才算通过。
+
 ## 3. 后端数据格式化铁律（G12/G14 连踩两次，勿再犯）
 
 - **`LocalDateTime` / `LocalDate` 入参必须宽进**：DTO 字段加
@@ -148,7 +173,7 @@
   被兜成 500「系统内部错误」。而且**只在命中唯一键（走更新分支）时才报**：纯新增的月份跑得好好的，
   一到已入账的月份就炸，现象跟「业务闸门 SQL 写错」毫无相似之处。写 `IF(表名.col = 2, 表名.col, new.col)`。
 
-## 4.  鉴权与按钮级权限（G5b 已踩，勿再犯）
+## 4. 鉴权与按钮级权限（G5b 已踩，勿再犯）
 
 - **`@PreAuthorize` 不要挂在 Controller 类上，一律标到方法**：类级注解会**静默覆盖**所有
   没写自己注解的方法。`/system/menu/userMenus` 是**所有角色**画侧边栏的入口，被类级
@@ -158,15 +183,15 @@
   403 = 身份有效但当前角色碰不得 → **只弹提示，绝不清 token**（一个越权请求把人整个踢出登录是事故）。
 - **按钮级权限用全局指令 `v-perm`**（`main.js` 注册，数据源 `lib/perm.js` ← `/auth/info` 的
   `permissions`，即 `sys_menu.menu_type=3` 按钮码按当前角色算出的集合）：
-  - `v-perm="'opd:appointments:add'"` 或 `v-perm="['a:add','a:edit']"`（任一命中）；
-    tab/区块级显隐用 `v-if="hasPerm('x:y:add')"`（指令移除节点对 `el-tabs` 子组件不友好）。
-  - **码必须逐字取自 `sys_menu`**：`sys_menu` 里没有的码 = 任何角色都拿不到 = 按钮永久消失。
-    接线前先跑一次对齐核对（前端引用的码 100% 能在 `menu_type=3` 里找到才算完）。
-  - **新增/修改在后端是同一个 `xxxUpsert` 接口、同一个 `:add` 权限**（如 `system:role:add` 既管新增
-    又管修改），所以前端「编辑」按钮挂 `:add` 是**正确的**，不是凑合 —— 前端口径永远跟后端接口的
-    实际要求走，不要凭空造后端没有的 `:edit` 码。
-  - 集合还没到 / 拉取失败时 `v-perm` **放行不收敛**（宁可不隐藏），删掉的节点留注释占位符并订阅
-    集合变化 —— 切角色时落地页与当前页相同则组件实例不重建，真删掉的按钮再也回不来。
+    - `v-perm="'opd:appointments:add'"` 或 `v-perm="['a:add','a:edit']"`（任一命中）；
+      tab/区块级显隐用 `v-if="hasPerm('x:y:add')"`（指令移除节点对 `el-tabs` 子组件不友好）。
+    - **码必须逐字取自 `sys_menu`**：`sys_menu` 里没有的码 = 任何角色都拿不到 = 按钮永久消失。
+      接线前先跑一次对齐核对（前端引用的码 100% 能在 `menu_type=3` 里找到才算完）。
+    - **新增/修改在后端是同一个 `xxxUpsert` 接口、同一个 `:add` 权限**（如 `system:role:add` 既管新增
+      又管修改），所以前端「编辑」按钮挂 `:add` 是**正确的**，不是凑合 —— 前端口径永远跟后端接口的
+      实际要求走，不要凭空造后端没有的 `:edit` 码。
+    - 集合还没到 / 拉取失败时 `v-perm` **放行不收敛**（宁可不隐藏），删掉的节点留注释占位符并订阅
+      集合变化 —— 切角色时落地页与当前页相同则组件实例不重建，真删掉的按钮再也回不来。
 - **按钮码铺底见 `sql/100`**：规则是「凡被授某页面的角色，自动获该页面全部按钮码」，
   因此接线的当下对所有岗位**行为中性**（不会出现谁突然少了按钮）。真正的开关在
   「系统管理 → 角色管理 → 菜单权限」里取消勾选某个按钮，届时前端隐藏 + 后端 403 同时生效。
@@ -189,7 +214,7 @@
   组件里 `roleDict.value = res.data.roleNames`。判据：**只要某接口的唯一用途是「把我自己的
   编码翻译成名字」，它就该并进 `/auth/info`，而不是留在页面挂载时请求**。
 
-## 5.  敏感字段脱敏（手机号 / 身份证 / 邮箱 / 医保卡号）
+## 5. 敏感字段脱敏（手机号 / 身份证 / 邮箱 / 医保卡号）
 
 - **脱敏只能在后端做，前端不许有任何遮码实现**：只在前端 mask 等于没做 —— 明文仍在响应体里，抓包、日志采集、
   接口复用到第二个页面（忘记调 mask 的那个）都会漏。展示型接口出参时就打码，页面只渲染后端给的 `xxxMasked`。
@@ -210,6 +235,7 @@
   漏一处的现象是**整列变成空白**（不是显示明文），比没脱敏更难发现。
 
 ## 6. 岗位（角色 × 科室）= 身份的唯一口径（sql/107 起，勿再单边切）
+
 - **身份 = 一行岗位**（`sys_employee_post`：`employee_id` + `role_id` + `dept_id`，唯一键 `uk_emp_role_dept`）。
   「在骨科是医生」不代表「在康复科也是医生」，组合由管理端**分配岗位时**定死，界面只负责选。
   顶栏只有「切换岗位」一个入口；`/auth/switchRole`、`/auth/switchDept` 已删除，不要复活。
@@ -243,12 +269,12 @@
 日结只能按状态列反推、医保统筹借用"优惠金额"列、现金+医保+余额组合支付表达不出来、
 签到要读支付状态所以免收必须造 0 元单。
 
-| 层 | 表 | 只回答 | 唯一写入方 |
-|---|---|---|---|
-| L1 记账 | `biz_fee_record` | 谁该付多少钱、这笔从哪张临床单据来 | `FeeRecordService` |
-| L2 结算 | `biz_settlement_bill` + `_item` | 这批应收合计多少、优惠/医保 split/应缴各多少 | `SettlementBillService` |
-| L3 支付 | `biz_payment_txn`、`biz_fund_account` + `_txn` | 真金白银进出：几笔、走哪个渠道、流水号多少 | `PaymentService` / `FundAccountService` |
-| L4 票据与对账 | `biz_invoice`、`biz_cashier_settlement`、`biz_day_settlement`、`biz_pay_channel_bill` | 凭证与核对：账实是否相符 | `InvoiceService` / `FinanceSettlementService` |
+| 层        | 表                                                                                  | 只回答                        | 唯一写入方                                         |
+|----------|------------------------------------------------------------------------------------|----------------------------|-----------------------------------------------|
+| L1 记账    | `biz_fee_record`                                                                   | 谁该付多少钱、这笔从哪张临床单据来          | `FeeRecordService`                            |
+| L2 结算    | `biz_settlement_bill` + `_item`                                                    | 这批应收合计多少、优惠/医保 split/应缴各多少 | `SettlementBillService`                       |
+| L3 支付    | `biz_payment_txn`、`biz_fund_account` + `_txn`                                      | 真金白银进出：几笔、走哪个渠道、流水号多少      | `PaymentService` / `FundAccountService`       |
+| L4 票据与对账 | `biz_invoice`、`biz_cashier_settlement`、`biz_day_settlement`、`biz_pay_channel_bill` | 凭证与核对：账实是否相符               | `InvoiceService` / `FinanceSettlementService` |
 
 铁律（违反即回到老模型那几个已知缺陷）：
 
@@ -289,11 +315,11 @@
 药品原先只有一本 `biz_drug_stock` 流水账：发药有 `biz_drug_dispensing`、出库有 `biz_drug_outbound`，
 但**全链路没有任何反向单据** —— 退费四层已支持红冲，药却冲不掉，账实必然不符。现按三级链补齐：
 
-| 级 | 场景 | 单据 | 流水类型（`DrugStockChangeTypeEnum`） |
-|---|---|---|---|
-| ① | 患者退药 | `biz_drug_dispensing` 置 3-已退药（不另建表） | 3 退药回库（正，落药房） |
-| ② | 药房退回药库 / 药库下拨 | `biz_drug_transfer` + `_item` | 7 调拨出（负）+ 8 调拨入（正） |
-| ③ | 供应商退货 | `biz_drug_supplier_return` + `_item` | 9 退货出库（负） |
+| 级 | 场景            | 单据                                   | 流水类型（`DrugStockChangeTypeEnum`） |
+|---|---------------|--------------------------------------|---------------------------------|
+| ① | 患者退药          | `biz_drug_dispensing` 置 3-已退药（不另建表）  | 3 退药回库（正，落药房）                   |
+| ② | 药房退回药库 / 药库下拨 | `biz_drug_transfer` + `_item`        | 7 调拨出（负）+ 8 调拨入（正）              |
+| ③ | 供应商退货         | `biz_drug_supplier_return` + `_item` | 9 退货出库（负）                       |
 
 - **`biz_drug_stock.stock_room` 是库位的唯一事实来源**（1-药库 2-药房，`StockRoomEnum`，字典 `his_stock_room`）。
   发药/锁库/退药回库/FEFO **一律只在药房侧**；`biz_drug_stock_log` 表本身**不存 `stock_room`**，
@@ -314,7 +340,7 @@
   已发药(2)/已退药(3) 的行原样不动。不要为了"让退费跑通"去放宽这个闸或让退费自动回库 ——
   那等于把「钱退了、药还在患者手上」这个事实抹掉。
 
-## 9. 模块包结构：模块  → 分层（二级强制，路径唯一）
+## 9. 模块包结构：模块 → 分层（二级强制，路径唯一）
 
 - **路径恒为 `com.his.<模块>.<分层>[/impl].XxxYyy.java`，层级到此为止**：
   分层目录**必须**直接挂在模块根下（`com.his.pharmacy.controller` 是正确形态），
@@ -322,7 +348,8 @@
   （`com.his.emr.appoint.pathway.dto` 这类三层包是违规）。
 - **参照实现 = 任一模块**（全仓 16 个业务模块已按此形态收口），新代码照它落位。
 - **允许的分层目录（名字逐字用）**：
-  `controller` `entity` `dto` `vo` `mapper` `service`（实现类进 `service/impl`）`enums` `support` `config` `constant` `util`。
+  `controller` `entity` `dto` `vo` `mapper` `service`（实现类进 `service/impl`）`enums` `support` `config` `constant`
+  `util`。
   **一个模块每层只有一个目录**，分层目录之外不留任何技术角色包（见第 11 节黑名单）。
 - **service 一律「接口 + Impl」**：`XxxService` 接口在 `service/`，`XxxServiceImpl` 在 `service/impl/`，
   没有第三种形态 —— 既不允许只有具体类的 `XxxService`，也不允许找不到同名接口的 `XxxImpl`
@@ -374,7 +401,8 @@
 - **Controller 里禁止出现任何处理逻辑**：不写业务 if/else、不做状态兜底、不算统计、不拼多表结果、
   **不注入 Mapper**。方法体只允许「取 DTO → 调一个 service 方法 → 返回 Result」。
   机械判据：`grep -l "^import com\.his\..*\.mapper\." **/controller/*.java` 必须为空；
-  出现 `for`/`stream` 聚合、`new XxxEntity()`、`if (dto.getXxx() == null)` 这类判断，就是逻辑漏在了 Controller，搬到 service。
+  出现 `for`/`stream` 聚合、`new XxxEntity()`、`if (dto.getXxx() == null)` 这类判断，就是逻辑漏在了 Controller，搬到
+  service。
 - **跨模块只走 service**（重申第 1 节）：A 依赖 B 只能 `@Resource BService`，禁止 A 调 B 的 Mapper，
   也禁止 A 复用 B 的 entity/DTO 当自己的接口契约（各模块自带一套 DTO/VO）。
 - **入参校验的唯一归属地是 DTO 注解，service 里不写「不能为空」**（上条表格里 `dto` 那一行的展开）：
@@ -411,7 +439,8 @@
   但只用 `@Valid` 这一种写法，避免类级注解带来的隐式 AOP 校验。
   机械判据：`grep -rn "@Validated" --include=*Controller.java source/back_end` 为空。
 - **DTO 主键字段是 `String` 的，一律当 Bug 查**：这不是「防精度」的必要写法，而是第 1 节那条
-  「主键入参一律 `Long`」被写歪了（出参的精度要求漏到入参上）。`grep -rn "private String id;\|private String faqId;" --include=*DTO.java source/back_end`
+  「主键入参一律 `Long`」被写歪了（出参的精度要求漏到入参上）。
+  `grep -rn "private String id;\|private String faqId;" --include=*DTO.java source/back_end`
   应为空；命中就按第 1 节的形态改 `Long + @NotNull`，并删掉 service 里配套的
   `parseId` 与 `if (id == null) throw`。
   **豁免**：对接外部厂商 API 的响应体（字段由对方定义，如 `OpenAiChatResponseDTO.id` 是 OpenAI 的
@@ -422,12 +451,16 @@
   | 场景 | 唯一正确形态 |
   |---|---|
   | Mapper 裸 SQL 返回单行快照 | 行的列就是某表 → 直接用该表 entity；只取部分列 → 建 `XxxSnapshotVO` |
-  | Mapper 裸 SQL 返回 `List<Map>`（group by / 趋势 / TOP N） | 建 `XxxCountVO` / `XxxStatVO` / `XxxTrendVO`，**字段名写全**，禁止 `k`/`c`/`d`/`n` 缩写 |
+  | Mapper 裸 SQL 返回 `List<Map>`（group by / 趋势 / TOP N） | 建 `XxxCountVO` / `XxxStatVO` / `XxxTrendVO`，**字段名写全
+  **，禁止 `k`/`c`/`d`/`n` 缩写 |
   | `new LinkedHashMap<>(){{ put(..) }}` 双花括号拼 JSON | 建 `XxxPayloadVO`；**JSON 键名一字不改**（前端契约） |
-  | 外部报文（疾控报卡、医保 2304/2305、微信模板消息） | 建 VO；Java 关键字做字段名用 `@Alias("class")`（Hutool）/ `@JsonProperty`（Jackson） |
-  | service 里 `row.get("x")` 强转取值 | 随 Mapper 一起改成 `row.getX()`，**并删掉只服务 Map 的转换工具**（`toLong(Map,String)`/`asLong(Object)`/`nz(Map)`/`decimal(Object)`）—— 改完必零引用，属第 18 节零引用删除范围 |
+  | 外部报文（疾控报卡、医保 2304/2305、微信模板消息） | 建 VO；Java 关键字做字段名用 `@Alias("class")`（Hutool）/
+  `@JsonProperty`（Jackson） |
+  | service 里 `row.get("x")` 强转取值 | 随 Mapper 一起改成 `row.getX()`，**并删掉只服务 Map 的转换工具**（
+  `toLong(Map,String)`/`asLong(Object)`/`nz(Map)`/`decimal(Object)`）—— 改完必零引用，属第 18 节零引用删除范围 |
   | 局部 `Map<K,V>` 做分组聚合（`Map<Integer,Long> typeCount`）、JWT claims | **保留** —— 是真字典不是数据契约 |
-  | 跨模块 SPI 边界且对端按 key 动态索引（见下方豁免） | 实现方**内部出参全改有类型 VO**，只在 `return` 一行做 VO→Map 适配 |
+  | 跨模块 SPI 边界且对端按 key 动态索引（见下方豁免） | 实现方**内部出参全改有类型 VO**，只在 `return` 一行做 VO→Map
+  适配 |
 
   **两条配套铁律**：
   ① **SQL 列别名必须与 VO 字段名逐字一致**（MyBatis 按列名映射）。`AS k` 改成 `AS followupType` 后
@@ -448,7 +481,27 @@
 
   机械判据（排除 import 与注释行后应只剩上述豁免）：
   `grep -rn "Map<String, *Object>" --include=*.java source/back_end | grep -v "import \|:\s*\*\|:\s*//"`
-  Controller 层与 DTO 层必须**各为 0**：`grep -rln "Map<String, *Object>" --include=*.java source/back_end/*/src/main/java/*/controller/`。
+  Controller 层与 DTO 层必须**各为 0**：
+  `grep -rln "Map<String, *Object>" --include=*.java source/back_end/*/src/main/java/*/controller/`。
+
+- **合并 / 共用 VO 只并「类型」，绝不并「查询宽度」**（2026-10-08 用户口径）：「x 接口和 y 接口返回同一个 VO」
+  ≠「y 要把这个 VO 的字段全查出来」。**哪些字段该查，唯一依据是前端那一页实际渲染的列**，不是出参类的字段表。
+    - **合法形态 = 一个类、多个 mapper 方法**：每个接口用自己的私有 `toXxxVO(row, …)` 只填本页读的列。
+      参照 `StaffScheduleServiceImpl`：`onDutyAt` 走 `toOnDutyVO`（14 列，分诊台只显示 10 列），
+      `listPage` 仍走全量 `toVO`，**两边的查询与处理逻辑互不改动**。
+    - **禁止**为"共用一个类"去动另一侧的查询逻辑，也**禁止**往窄接口塞它不展示的字段 —— 窄列表被摊宽后
+      每次刷新都多载一倍正文，而**现象是零报错**，只有响应体和序列化开销掉下去。
+    - **合并后必自查逐行开销**：窄链路最容易经共用类把「逐行字典翻译 / 额外 JOIN」带进来。实锤：
+      `CssdTemplateServiceImpl.selectList` 原先 `BeanUtils.copyProperties(toVo(t, null), vo)`，
+      为一个前端不渲染的 `sterilizeMethodText` 每行跑一次 `dictCacheService.getDicDataLabel` → 改三个直接 setter。
+      **判据：下拉/列表接口的出参里有 `xxxText` 而页面不显示 = 一定在白跑查询。**
+    - **共用类之间搬字段禁用 `BeanUtils.copyProperties`**：属性拷贝把源类的宽度自动带过来，源 VO 将来加一列，
+      窄接口就无声变宽。显式 setter 才会让「谁填了哪些列」留在代码里。
+    - **验收 = 实测响应 key 集**（脚本按接口打 `Object.keys(data)` 并分区「有值 / 为 null」，见
+      `workspace/_verify_vo_narrow.mjs`），`clean install` 通过不代表宽度没变。
+    - 共用类让窄接口外泄一批 `null` key 时（本仓无全局 NON_NULL 约定，Jackson 照出 null 字段名），
+      **三个选项摆出来让用户定，不许自己拍**：(a) 接受（key 名多，值仍是本页列）
+      (b) 该 VO 加 `@JsonInclude(NON_NULL)`（会同时改掉其他接口的 key 契约）(c) 保留独立小 VO（等于放弃合并）。
 
 ## 11. 禁止 spi / gateway 等间接依赖：一律强制依赖，循环依赖加一层中间 Service
 
@@ -527,32 +580,32 @@
   （文案方法一律删掉、调用点直接走枚举 getText），且里面不得再写 `未知(code)` 兜底。
 - **枚举还是字典（落点选取口径）**：按"是否稳定、后端是否拿码值做逻辑判断"决定落点 ——
   ① **变化小、后端要用码值做判断**（状态机流转、权限/分支、计算口径）的封闭集合 → **枚举**
-     （全仓通用放 `his-common/enums`，否则放所属模块 `enums`）；
+  （全仓通用放 `his-common/enums`，否则放所属模块 `enums`）；
   ② **变化大、由操作员在后台字典维护**（机构自定的类型 / 项目 / 选项）的 → **字典**，走
-     `DictCacheService.getDicDataLabel(dictType, code)`，不进 Java 枚举；
+  `DictCacheService.getDicDataLabel(dictType, code)`，不进 Java 枚举；
   ③ 既有的"集中式大字典"壳类（`QcTexts` / `CdrStatusTexts` / `XxxLabels` 等）**已于 2026-10-05 全部删除**：
-     每个方法下沉到对应枚举（或字典）后删类，调用点直接调枚举方法。**禁止再建任何壳类。**
+  每个方法下沉到对应枚举（或字典）后删类，调用点直接调枚举方法。**禁止再建任何壳类。**
 - **双方法口径**：每个枚举提供两个静态翻译方法，语义严格区分（**展示口径的标准方法名是 `getText`**，
   2026-10-05 由 `labelOf` 全局更名而来，别再写 `labelOf`）：
-  - `getText(Integer|String)`——**展示用**：合法码值→`label`；`null` 或不在枚举内（脏数据）一律返回
-    空串 `""`（个别枚举可显式声明缺省文案，如 `SysGenderEnum.getText` 性别 null→「未知」，必须在 javadoc 写明），
-    不回落到某个合法文案、也不暴露「未知(n)」。**绝不返回 null**（返回 null 会把 NPE 风险甩给调用方，
-    而返回 `""` 是界面最安全的「无此文案」）。
-  - `labelOrUnknown(Integer)`——**异常 / 审计 / 合规用**：`null` 或不在枚举内返回「未知(n)」
-    （`null` 本身渲染成「未知」），**保留原始码值**以便排查脏数据。业务异常消息、审计日志、
-    合规报表里需要让人看到「到底是哪个脏值」时才用，绝不用它喂前端展示。
-  - 机械判据：`grep -rn "未知(" --include=*.java` 命中的，必须只是 `labelOrUnknown` / 少数显式声明
-    缺省文案的 `getText`（如 SysGenderEnum）的方法体、或显式 `Objects.toString(xxxEnum.getText(...), "未知(n)")`
-    这类手写等价物，以及 `DictCacheService` 内部翻译与纯注释；纯展示路径、service 内联 `switch`、
-    任何 `XxxLabels`/`XxxTexts` 壳类里出现「未知(code)」即违规。
-  - 迁移进度（2026-10-05 全量收口完成）：12 个文案壳类全部删除 ——
-    emr `QcTexts`、report `CdrStatusTexts`、patient `BedCenterLabels`/`InpatientLabels`/
-    `InpatientTransferLabels`/`InpatientOrderLabels`/`InpatientRecordLabels`/`ConsultationLabels`、
-    operation `AnesthesiaLabels`（改名 `AnesthesiaCalcs`，只剩纯计算）、`OperationApplyLabels`、
-    charge `InpatientAccountLabels`、medicaltech `TransfusionLabels`（改名 `TransfusionRules`）、
-    system `CodeText`；全仓 220 个枚举的 `labelOf` 已更名为 `getText` 并补 `isValid`；
-    service 层内联码值 switch（SysLog 四处、PayChannel、床位匹配级别、医技执行状态）已下沉枚举。
-    验收判据：`grep -rnE "class \w+(Labels|Texts)" --include=*.java source/back_end` 结果为 0。
+    - `getText(Integer|String)`——**展示用**：合法码值→`label`；`null` 或不在枚举内（脏数据）一律返回
+      空串 `""`（个别枚举可显式声明缺省文案，如 `SysGenderEnum.getText` 性别 null→「未知」，必须在 javadoc 写明），
+      不回落到某个合法文案、也不暴露「未知(n)」。**绝不返回 null**（返回 null 会把 NPE 风险甩给调用方，
+      而返回 `""` 是界面最安全的「无此文案」）。
+    - `labelOrUnknown(Integer)`——**异常 / 审计 / 合规用**：`null` 或不在枚举内返回「未知(n)」
+      （`null` 本身渲染成「未知」），**保留原始码值**以便排查脏数据。业务异常消息、审计日志、
+      合规报表里需要让人看到「到底是哪个脏值」时才用，绝不用它喂前端展示。
+    - 机械判据：`grep -rn "未知(" --include=*.java` 命中的，必须只是 `labelOrUnknown` / 少数显式声明
+      缺省文案的 `getText`（如 SysGenderEnum）的方法体、或显式 `Objects.toString(xxxEnum.getText(...), "未知(n)")`
+      这类手写等价物，以及 `DictCacheService` 内部翻译与纯注释；纯展示路径、service 内联 `switch`、
+      任何 `XxxLabels`/`XxxTexts` 壳类里出现「未知(code)」即违规。
+    - 迁移进度（2026-10-05 全量收口完成）：12 个文案壳类全部删除 ——
+      emr `QcTexts`、report `CdrStatusTexts`、patient `BedCenterLabels`/`InpatientLabels`/
+      `InpatientTransferLabels`/`InpatientOrderLabels`/`InpatientRecordLabels`/`ConsultationLabels`、
+      operation `AnesthesiaLabels`（改名 `AnesthesiaCalcs`，只剩纯计算）、`OperationApplyLabels`、
+      charge `InpatientAccountLabels`、medicaltech `TransfusionLabels`（改名 `TransfusionRules`）、
+      system `CodeText`；全仓 220 个枚举的 `labelOf` 已更名为 `getText` 并补 `isValid`；
+      service 层内联码值 switch（SysLog 四处、PayChannel、床位匹配级别、医技执行状态）已下沉枚举。
+      验收判据：`grep -rnE "class \w+(Labels|Texts)" --include=*.java source/back_end` 结果为 0。
 - **文案差异不产生新枚举**：码值相同、中文叫法不同时**复用枚举**（文案以枚举 `label` 为唯一来源），
   不同模块若确有不可调和的措辞差异，差异放在调用侧局部常量 / 方法，且仍调枚举 `getText` 做兜底；
   不许为一句话的措辞复制出一个枚举，也不许为改文案去动公共枚举的 `label`。
@@ -568,27 +621,28 @@
   Java 码值与库注释不一致时以 Java 现有值为准（改码值=改数据口径，属于独立的、要单独拍板的一步），
   并把冲突单独列出来修，不许在枚举化顺手「修正」。
 - **字典权威在 Java 枚举**（重申 §7）：新增/调整码值必须同步 `sql/xxx` 的字典段，两侧同码同义。
-  - **labelOrUnknown 必须真的查枚举**（2026-10-06 实锤过一批系统 bug）：批量补方法时最容易写出
-    ```java
-    public static String labelOrUnknown(Integer code) {
-        return code == null ? "未知" : "未知(" + code + ")";   // ← 任何合法码值都返回「未知」
-    }
-    ```
-    这种**空壳实现**：`getText` 是对的，`labelOrUnknown` 却对任何码值都输出「未知(n)」，
-    编译不报错、单测也测不出来（只要没有"合法码值应输出 label"的断言）。
-    **判据**：方法体里必须能看到它查了枚举（`XxxEnum item = fromCode(code)` + `item.label`）。
-    修法：`return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;`
-    2026-10-06 全仓扫出 **49 个这类空壳**（report 41 个 `Cdr*` + charge 3 + common 2
-    （`PaymentMethodEnum` / `SettlementModeEnum`）+ emr 1（`QcDimensionEnum`）+ `PaymentItemTypeEnum`
-    + `StatReportTypeEnum`（"未知类型"变体）），已全部修复。
-    **注意判据别写太死**：合法实现可能用 `item.label` / `item.getLabel()` / `item.desc` /
-    `item.text`（Lombok getter，变量名也可能是 `status`/`source`/`e` 而不是 `item`）——
-    判据要认「**方法体最终返回了枚举实例的文案字段**」，别只匹配一种写法，否则会误报成 bug。
+    - **labelOrUnknown 必须真的查枚举**（2026-10-06 实锤过一批系统 bug）：批量补方法时最容易写出
+      ```java
+      public static String labelOrUnknown(Integer code) {
+          return code == null ? "未知" : "未知(" + code + ")";   // ← 任何合法码值都返回「未知」
+      }
+      ```
+      这种**空壳实现**：`getText` 是对的，`labelOrUnknown` 却对任何码值都输出「未知(n)」，
+      编译不报错、单测也测不出来（只要没有"合法码值应输出 label"的断言）。
+      **判据**：方法体里必须能看到它查了枚举（`XxxEnum item = fromCode(code)` + `item.label`）。
+      修法：`return item == null ? (code == null ? "未知" : "未知(" + code + ")") : item.label;`
+      2026-10-06 全仓扫出 **49 个这类空壳**（report 41 个 `Cdr*` + charge 3 + common 2
+      （`PaymentMethodEnum` / `SettlementModeEnum`）+ emr 1（`QcDimensionEnum`）+ `PaymentItemTypeEnum`
+        + `StatReportTypeEnum`（"未知类型"变体）），已全部修复。
+          **注意判据别写太死**：合法实现可能用 `item.label` / `item.getLabel()` / `item.desc` /
+          `item.text`（Lombok getter，变量名也可能是 `status`/`source`/`e` 而不是 `item`）——
+          判据要认「**方法体最终返回了枚举实例的文案字段**」，别只匹配一种写法，否则会误报成 bug。
 - 机械判据：
   `grep -rn "static final int" --include=*.java source/back_end` 里只剩技术阈值常量（逐条核对，业务码值为 0）；
   `grep -rnE "set[A-Z]\w*\(\s*[0-9]+\s*\)|Objects\.equals\(\s*[0-9]+," --include=*.java source/back_end` 结果为 0。
 
 ## 14. 码值映射禁止用 static final Map 承载（枚举的Map 写法是同一条反模式）
+
 - **禁止** `private static final Map<Integer, String> XXX_TYPE = Map.of(1, "保养", 2, "维修", 3, "巡检");`
   这类把码值+文案写进 `Map` 常量的写法。它和 `XxxLabels` 壳类是同一个错误的两种皮：
   映射逻辑写在了枚举外面，编译期不校验、IDE 跳不过去、也没有 `isValid` 可供校验注解调用。
@@ -606,6 +660,7 @@
   验收判据：`grep -rn "static final Map<Integer, String>" --include=*.java source/back_end` 只剩上述注册表。
 
 ## 15. 分页 DTO 必须继承 PageParam，且必须是独立顶层类
+
 - **分页查询 DTO 一律 `extends com.his.common.base.PageParam`**，不再各自声明
   `private Integer pageNum = 1; private Integer pageSize = 10;`。
   `PageParam` 已有 `int pageNum = 1 / int pageSize = 10`，重复声明会造成两套默认值，
@@ -637,17 +692,17 @@
   public int getPageSize() { if (pageSize < 1) return DEFAULT_PAGE_SIZE;
                              return exportMode ? pageSize : Math.min(pageSize, MAX_PAGE_SIZE); }
   ```
-  - `MAX_PAGE_SIZE = 200`（与前端 `page-sizes` 最大档一致）、`DEFAULT_PAGE_SIZE = 10`。
-  - **用getter 夹取而不是 `@Min/@Max` 报 400**：前端本来就合法地传 200，导出还要一次拉 5000 行，
-    硬校验会把导出和超档请求一起打回。越界静默夹到上限，语义是「你要多少最多给你这么多」。
-  - **导出绕过通道**：`forExport(int maxRows)` 置 `exportMode`（`transient` + `@JsonIgnore`，
-    请求体传不进来、响应不外泄），固定第 1 页并放开上限。
-    改用它的两处：`RxReviewServiceImpl.itemExportCsv`、`SysLogServiceImpl.exportCsv`（原 `setPageSize(EXPORT_MAX)`）。
-    **新写导出必须走 `forExport`，别拿外部入参的 pageSize 当上限。**
-  - 原本在 service 里重复写的 `Math.max(1, …)` / `Math.min(…, 200)` 属重复造轮子，已删
-    （`LabPlainItemAdminServiceImpl.adminPage`）。
-  - ⚠️ **`pageSize/pageNum` 是原始 `int`，直接读字段拿不到夹取**——必须走 getter。
-    同理 8 个原本默认 20 的 DTO 迁移后默认变10，属预期统一。
+    - `MAX_PAGE_SIZE = 200`（与前端 `page-sizes` 最大档一致）、`DEFAULT_PAGE_SIZE = 10`。
+    - **用getter 夹取而不是 `@Min/@Max` 报 400**：前端本来就合法地传 200，导出还要一次拉 5000 行，
+      硬校验会把导出和超档请求一起打回。越界静默夹到上限，语义是「你要多少最多给你这么多」。
+    - **导出绕过通道**：`forExport(int maxRows)` 置 `exportMode`（`transient` + `@JsonIgnore`，
+      请求体传不进来、响应不外泄），固定第 1 页并放开上限。
+      改用它的两处：`RxReviewServiceImpl.itemExportCsv`、`SysLogServiceImpl.exportCsv`（原 `setPageSize(EXPORT_MAX)`）。
+      **新写导出必须走 `forExport`，别拿外部入参的 pageSize 当上限。**
+    - 原本在 service 里重复写的 `Math.max(1, …)` / `Math.min(…, 200)` 属重复造轮子，已删
+      （`LabPlainItemAdminServiceImpl.adminPage`）。
+    - ⚠️ **`pageSize/pageNum` 是原始 `int`，直接读字段拿不到夹取**——必须走 getter。
+      同理 8 个原本默认 20 的 DTO 迁移后默认变10，属预期统一。
 - ⚠️ **`Integer` → `int` 会让兜底代码编译失败（已踩，现象具有欺骗性）**：
   `PageParam.pageNum` 是原始 `int`，迁移前 DTO 声明的是 `Integer`，所以
   `dto.getPageNum() == null ? 1 : dto.getPageNum()`、`Integer::equals`、三元里混 `Integer`/`int`
@@ -656,6 +711,7 @@
   第 6 轮才炸出 4 处）——**分页 DTO 改造一律以 `clean install` 为准**。
 
 ## 16. 码值范围校验走 Bean Validation，禁止 service 里手写 containsKey 抛异常
+
 - **「这个码值合不合法」是入参约束，必须用 Bean Validation 声明在 DTO 字段上**，不要在 service 里
   `if (!XXX_MAP.containsKey(dto.getXxx())) throw new BusinessException("取值不合法（1-… 2-…）");`。
   手写版的三个问题：① 校验文案和枚举 `label` 是两处副本，枚举加一个码值这里就漏改；
@@ -663,20 +719,20 @@
   ③ 每个 Service 重复一遍，`GlobalExceptionHandler` 的 `MethodArgumentNotValidException`
   分支已经有了，统一走它错误码和文案才一致。
 - **用法**：
-  - 码值**区间连续**（如 1/2/3/4）→ 用 `@Min(1) @Max(3)`（jakarta.validation 自带，本仓已有 206 处在用）。
-  - 码值**不连续或来自枚举/字典** → 用 `@InEnum(XxxEnum.class)`（`his-common/validation/InEnum`），
-    反射调枚举的 `isValid(code)`。**这正是 §13 强制每个枚举提供 `isValid` 的原因** ——
-    枚举模板的 `isValid` 不再只是自测用，它是校验注解的落点。
-  - **为什么不能一律用 @Min/@Max`（实测数据，别凭感觉）**：全库 377 个带 int code 的枚举里，
+    - 码值**区间连续**（如 1/2/3/4）→ 用 `@Min(1) @Max(3)`（jakarta.validation 自带，本仓已有 206 处在用）。
+    - 码值**不连续或来自枚举/字典** → 用 `@InEnum(XxxEnum.class)`（`his-common/validation/InEnum`），
+      反射调枚举的 `isValid(code)`。**这正是 §13 强制每个枚举提供 `isValid` 的原因** ——
+      枚举模板的 `isValid` 不再只是自测用，它是校验注解的落点。
+    - **为什么不能一律用 @Min/@Max`（实测数据，别凭感觉）**：全库 377 个带 int code 的枚举里，
     **9 个码值不连续**，`@Min(min) @Max(max)` 会把这些码值全放行：
     `DeathPlaceEnum`/`DischargeWayEnum` 是 `1,2,3,4,5,9`（9 是"未指明/其他"的保留码，
     6/7/8 根本不存在，@Min(1)@Max(9) 会放过 6/7/8）；`SysGenderEnum`/`InpatientLeaveTypeEnum` 是 `1,2,9`；
     `TcmDecoctStatusEnum` 是 `1,2,3,9`；`EndoscopyTypeEnum` 是 `1,2,7`；`OpdLogStatusEnum` 是 `0,1,8`；
     `GuardianRelationEnum` 是 `1..16,99`；`QcSeverityEnum` 有重复的 0。
     这类集合**只能靠枚举 `isValid` 卡**。所以判断口径是：
-    **先看枚举码值连不连续，连续用 @Min/@Max，不连续用 @InEnum。**
-  - `@InEnum` 的 `null` 一律放行（是否必填交给 `@NotNull`），只管"填了之后合不合法"。
-  - 字符串码值枚举（血型、输血反应类型）用 `@InEnum(value = XxxEnum.class, type = InEnum.Type.TEXT)`。
+      **先看枚举码值连不连续，连续用 @Min/@Max，不连续用 @InEnum。**
+    - `@InEnum` 的 `null` 一律放行（是否必填交给 `@NotNull`），只管"填了之后合不合法"。
+    - 字符串码值枚举（血型、输血反应类型）用 `@InEnum(value = XxxEnum.class, type = InEnum.Type.TEXT)`。
 - **Service 层只保留跨字段业务规则**（"下次维保日期不能早于本次维保日期"、"有效期至不能早于计量日期"），
   这类规则确实没法用注解表达，留在 service 是对的；**单字段码值合法性一律上注解**。
 - 迁移进度（2026-10-06 全量收口完成）：`@InEnum` + `InEnumValidator` 建于 `his-common/validation`；
@@ -691,6 +747,7 @@
   `@Schema(description=...)` 里，不允许出现在 service impl 的方法体里。
 
 ## 17. 不自造时间截断工具方法：DATETIME(0) 的精度由库保证（签名/哈希场景才截秒）
+
 - **禁止**在 service 里写这类私有工具方法：
   ```java
   private static LocalDateTime nowSeconds() { return LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS); }
@@ -700,17 +757,17 @@
   本库实测：全库 1068 个 `datetime` 列**精度全部为 0**（`DATETIME_PRECISION = 0`），
   MySQL 存进去自动四舍五入到秒，**Java 侧再截一次是重复劳动**，且掩盖了实体没配自动填充的真问题。
 - **正确顺序**（遇到"更新时间要写但没写上"时按这个查）：
-  1. 先查实体有没有 `@TableField(fill = FieldFill.INSERT)` / `INSERT_UPDATE`。
-     本库 296 个 `update_time` 列里只有 60 个带 `on update CURRENT_TIMESTAMP`，
-     305 个 `create_time` 里只有 162 个带 `DEFAULT CURRENT_TIMESTAMP` —— **不能指望 DB 兜底**。
-     MP 的 `MetaObjectHandler`（`his-web/config/MyBatisPlusConfig`）是全库统一入口，
-     实体加注解即生效，**这才是正解**。
-  2. 加了注解后，service 里就不用再`setUpdateTime(...)`，让`strictUpdateFill` 自动填。
-  3. 实锤案例：`sys_equipment` 90 行里**89 行 `update_time` 是 NULL**，
-     因为 `SysEquipment` 实体没配 `fill`、DB 列又没 `on update` —— 当初只能靠手写
-     `setUpdateTime(nowSeconds())` 补洞，方法本身是**症状**，补 `fill` 才是**病因**。
-     2026-10-05 已给 `SysEquipment` / `BizEquipmentMaintain` / `BizEquipmentMetering`
-     三个实体补齐 `createTime`/`updateTime`/`delFlag` 的 `fill`，`nowSeconds()` 随之删除。
+    1. 先查实体有没有 `@TableField(fill = FieldFill.INSERT)` / `INSERT_UPDATE`。
+       本库 296 个 `update_time` 列里只有 60 个带 `on update CURRENT_TIMESTAMP`，
+       305 个 `create_time` 里只有 162 个带 `DEFAULT CURRENT_TIMESTAMP` —— **不能指望 DB 兜底**。
+       MP 的 `MetaObjectHandler`（`his-web/config/MyBatisPlusConfig`）是全库统一入口，
+       实体加注解即生效，**这才是正解**。
+    2. 加了注解后，service 里就不用再`setUpdateTime(...)`，让`strictUpdateFill` 自动填。
+    3. 实锤案例：`sys_equipment` 90 行里**89 行 `update_time` 是 NULL**，
+       因为 `SysEquipment` 实体没配 `fill`、DB 列又没 `on update` —— 当初只能靠手写
+       `setUpdateTime(nowSeconds())` 补洞，方法本身是**症状**，补 `fill` 才是**病因**。
+       2026-10-05 已给 `SysEquipment` / `BizEquipmentMaintain` / `BizEquipmentMetering`
+       三个实体补齐 `createTime`/`updateTime`/`delFlag` 的 `fill`，`nowSeconds()` 随之删除。
 - **唯一允许截秒的场景**：时间值参与**落库后回读比较 / 签名 / 哈希 / 防重放 / 幂等键**计算，
   这类必须保证"同一秒内重复计算结果一致"。**收口到 `com.his.common.util.TimeUtil`**
   （`TimeUtil.toSeconds(t)` 归一入参、`TimeUtil.nowSeconds()` 取当前秒），
@@ -721,11 +778,13 @@
   库会自动四舍五入（1068 个列全是 `DATETIME_PRECISION = 0`），且该配实体
   `@TableField(fill = ...)` 让 MP 统一填（`sys_equipment` 89/90 行 `update_time` 是 NULL 就是反例）。
 - 机械判据：
-  - `grep -rn "private \(static \)\?LocalDateTime \(toSeconds\|seconds\|nowSeconds\|nowSec\)" --include=*.java source/back_end`
+    -
+    `grep -rn "private \(static \)\?LocalDateTime \(toSeconds\|seconds\|nowSeconds\|nowSec\)" --include=*.java source/back_end`
     结果必须为 **0**（唯一实现在 `his-common/util/TimeUtil.java`）。
-  - `grep -rn "static final Map<Integer, String>" --include=*.java source/back_end` 只剩 §14 允许的注册表类。
+    - `grep -rn "static final Map<Integer, String>" --include=*.java source/back_end` 只剩 §14 允许的注册表类。
 
 ## 18. 零引用枚举必须删掉，不留"备着将来用"
+
 - **判据很简单**：一个 `*Enum.java` 文件名去掉后缀，在全后端 `.java`/`.xml` 里grep 不到任何
   `\bXxxEnum\b` 命中（排除自身文件），就是零引用，直接删。
   2026-10-06 扫出 **23 个零引用枚举已全删**（`ChargeStatusEnum` / `ChargeTypeEnum` /
@@ -747,10 +806,10 @@
 
 口径一句话：**「谁能拿这个口令登录系统」可入库；「能连上这台机器/这个中间件」不可入库。**
 
-| 类别 | 例子 | 落点 | 入库 |
-|---|---|---|---|
-| 系统登录账号 | `sys_user` 的 480 个账号（`admin` / `shennan` / `13899000001` …，口令统一 `123456`） | `docs/测试账号与凭据.md` | ✅ |
-| 环境凭据 | MySQL `xz_feng`、Redis `123456`、Gitea `laochai`、JWT secret、构建工具链口令 | `workspace/环境凭据.md` + `application-local.yml` | ❌ |
+| 类别     | 例子                                                                        | 落点                                            | 入库 |
+|--------|---------------------------------------------------------------------------|-----------------------------------------------|----|
+| 系统登录账号 | `sys_user` 的 480 个账号（`admin` / `shennan` / `13899000001` …，口令统一 `123456`） | `docs/测试账号与凭据.md`                             | ✅  |
+| 环境凭据   | MySQL `xz_feng`、Redis `123456`、Gitea `laochai`、JWT secret、构建工具链口令         | `workspace/环境凭据.md` + `application-local.yml` | ❌  |
 
 - **`application.yml` 只放占位**：`password: ${HIS_DB_PASSWORD:}` / `${HIS_REDIS_PASSWORD:}` / `${HIS_JWT_SECRET:}`。
   真值落 `application-local.yml`（`spring.config.import: optional:classpath:application-local.yml` 加载，
@@ -771,18 +830,31 @@
   才证明 DB 口令（登录）与 Redis 口令（缓存刷新）都真的读到了。
 
 ## 19. 无参构造一律用 Lombok 生成，禁止手写（2026-10-06 全量收口）
-- **本工程 Lombok 重度使用**（`@Data` 1988 处、`@NoArgsConstructor` 已用 17 处），手写 `public Xxx() {}` / `private Xxx() {}` 是非惯用法，统一由注解生成。全仓 **59 处**手写空构造已于 2026-10-06 全部替换（4 个 `public` + 55 个 `private`，覆盖 13 个模块）。
+
+- **本工程 Lombok 重度使用**（`@Data` 1988 处、`@NoArgsConstructor` 已用 17 处），手写 `public Xxx() {}` /
+  `private Xxx() {}` 是非惯用法，统一由注解生成。全仓 **59 处**手写空构造已于 2026-10-06 全部替换（4 个 `public` + 55 个
+  `private`，覆盖 13 个模块）。
 - **访问级规则（逐字节还原手写语义）**：
-  - 工具 / 常量 / support 类（`final class` + 全静态，防止实例化）：`private Xxx() {}` → `@NoArgsConstructor(access = AccessLevel.PRIVATE)`（需 `import lombok.AccessLevel;`）。
-  - 需要反序列化无参构造的 POJO / DTO / VO / Result（带 `@Data`）：`public Xxx() {}` → 普通 `@NoArgsConstructor`（默认 public，保留 `@Data`）。
-  - 嵌套类同理按所在类的访问级选注解——注解必须落在内层类上、缩进对齐内层类（如 `ArrearsControlGate.OrderCheck`）。
-- **禁止重复声明（已踩出真编译 bug）**：类上**已经**有 `@NoArgsConstructor` 时，再手写一个无参构造 = **重复构造**——Java 构造签名只看「类名 + 参数列表」，访问修饰符不参与区分，于是 `public` 注解构造与 `private` 手写构造签名相同 → 编译直接报错。修法：**删掉手写那个**，按访问级调注解。2026-10-06 的 `PemCodecUtil` 正是「`@NoArgsConstructor`(public) + 手写 `private PemCodec()`」双声明导致的编译阻塞，已修。
-- **`@Data` 与 `@NoArgsConstructor` 不冲突**：`@Data` 只在类有 `final` / `@NonNull` 字段时才生成无参构造；本仓核心类（`Result` / `PageResult` 等）无 `final` / `@NonNull` 字段，现在能编过就是证据，补 `@NoArgsConstructor` 不会与之撞。
+    - 工具 / 常量 / support 类（`final class` + 全静态，防止实例化）：`private Xxx() {}` →
+      `@NoArgsConstructor(access = AccessLevel.PRIVATE)`（需 `import lombok.AccessLevel;`）。
+    - 需要反序列化无参构造的 POJO / DTO / VO / Result（带 `@Data`）：`public Xxx() {}` → 普通 `@NoArgsConstructor`（默认
+      public，保留 `@Data`）。
+    - 嵌套类同理按所在类的访问级选注解——注解必须落在内层类上、缩进对齐内层类（如 `ArrearsControlGate.OrderCheck`）。
+- **禁止重复声明（已踩出真编译 bug）**：类上**已经**有 `@NoArgsConstructor` 时，再手写一个无参构造 = **重复构造**——Java
+  构造签名只看「类名 + 参数列表」，访问修饰符不参与区分，于是 `public` 注解构造与 `private` 手写构造签名相同 → 编译直接报错。修法：
+  **删掉手写那个**，按访问级调注解。2026-10-06 的 `PemCodecUtil` 正是「`@NoArgsConstructor`(public) + 手写
+  `private PemCodec()`」双声明导致的编译阻塞，已修。
+- **`@Data` 与 `@NoArgsConstructor` 不冲突**：`@Data` 只在类有 `final` / `@NonNull` 字段时才生成无参构造；本仓核心类（
+  `Result` / `PageResult` 等）无 `final` / `@NonNull` 字段，现在能编过就是证据，补 `@NoArgsConstructor` 不会与之撞。
 - **枚举构造不在此列**：枚举（隐式）无参构造不能由 `@NoArgsConstructor` 替代，枚举一律不要手写构造（本项目枚举均无参、无手写构造）。
-- **Spring Bean 不碰**：带 `@Component` / `@Service` / `@Configuration` / `@Repository` 的类由容器实例化，本就不该有手写无参构造（若见到，是误写，应删而非加注解）。
-- 机械判据：`grep -rnE "\b(private|protected|public)\s+[A-Z][\w$]*\s*\(\s*\)\s*\{\s*\}" --include=*.java source/back_end` 命中的，必须已是枚举（自然豁免，因其构造不带上述修饰符）或已配套 `@NoArgsConstructor`（手写体应删除）；新增代码一律不手写无参构造。改造脚本见 `workspace/_scan_empty_ctors.py` + `workspace/_apply_noargs.py`。
+- **Spring Bean 不碰**：带 `@Component` / `@Service` / `@Configuration` / `@Repository`
+  的类由容器实例化，本就不该有手写无参构造（若见到，是误写，应删而非加注解）。
+- 机械判据：`grep -rnE "\b(private|protected|public)\s+[A-Z][\w$]*\s*\(\s*\)\s*\{\s*\}" --include=*.java source/back_end`
+  命中的，必须已是枚举（自然豁免，因其构造不带上述修饰符）或已配套 `@NoArgsConstructor`（手写体应删除）；新增代码一律不手写无参构造。改造脚本见
+  `workspace/_scan_empty_ctors.py` + `workspace/_apply_noargs.py`。
 
 ## 20. 操作人取值：直接 `getCurrentUser().getRealName()`，严禁任何默认值（2026-10-06 全仓收口）
+
 - **`UserUtils` 只有一个方法 `getCurrentUser()`**。不要新增 `getCurrentEmployeeId()` / `getCurrentEmployeeName()` /
   `requireOperatorName()` 这类封装 —— 同一个语义出现两个出口就一定会漂移成两套口径（本次收口前正是如此：
   6 份私有 `currentOperator()` 副本各写各的兜底）。要操作人直接链式取字段：
@@ -793,15 +865,19 @@
 - **姓名口径只有 `CurrentUser.realName`**（即 `sys_user.real_name`，登录时 `UserDetailsServiceImpl` 无条件填充，
   缺员工档当场拒登录）。**禁止**回落 `employeeName` / `username` / `getUsername()`：
   `username` 是账号拼音（`user_name = real_name` 去符号小写全拼），拿它当人名会让库里操作人列出现两种格式，事后按人名检索直接漏。
-- **禁止塞默认值**：`"system"` / `"未知操作人"` / `"系统"` / `"系统操作"` / `String.valueOf(empId)` / `try-catch-return-null` 全部禁止。
+- **禁止塞默认值**：`"system"` / `"未知操作人"` / `"系统"` / `"系统操作"` / `String.valueOf(empId)` /
+  `try-catch-return-null` 全部禁止。
   取不到就是**报错**（NPE 由全局异常处理兜成 500，或自己抛 `BusinessException`），不是继续执行。
   塞假值的代价是「谁干的」被藏进库里，出事时查不出来，而且现象是零报错。
 - **三处定时任务豁免（唯一允许落系统值的地方，2026-10-06 逐个 cron 用调用图排查确定）**：
   | 位置 | 值 | 触发 |
   |---|---|---|
-  | `DayEndSettleServiceImpl.currentOperator()` | `system:dayEndSettle` | cron 每天 00:10 + 进页面懒触发（共用 `doSettle`） |
-  | `ExamAppointmentServiceImpl` | `system:examNoShow` | `ExamNoShowTrigger` 每 10 分钟（与人工改约/取消共用 `releaseOld`） |
-  | `FollowupTaskServiceImpl` | `system:autoFollowup` | `DischargeFollowupTrigger` 每 10 分钟（`autoCreateFromDischarge`） |
+  | `DayEndSettleServiceImpl.currentOperator()` | `system:dayEndSettle` | cron 每天 00:10 + 进页面懒触发（共用
+  `doSettle`） |
+  | `ExamAppointmentServiceImpl` | `system:examNoShow` | `ExamNoShowTrigger` 每 10 分钟（与人工改约/取消共用
+  `releaseOld`） |
+  | `FollowupTaskServiceImpl` | `system:autoFollowup` | `DischargeFollowupTrigger` 每 10 分钟（
+  `autoCreateFromDischarge`） |
   后两处的做法是**给方法加 operator 参数 / 重载，由调用方显式传**（`createFromDischarge(dto, operator)`），
   **不是**在方法内部判空回落 —— 内部回落出来的系统值在调用链上根本看不出来。
   ⚠ 改任何 cron 链路前，先用「花括号配平 + 方法调用图递归」查清它到底会不会取当前人，别凭方法名猜
@@ -819,6 +895,7 @@
   以及 `OperLogInterceptor.resolveTitle` 的 `return "系统"`（那是**操作模块标题**，不是操作人）。
 
 ## 21. 时间格式化只认 `DateFormats` 的常量，禁止任何地方 new formatter（2026-10-07 全仓收口）
+
 - **禁止**在业务代码里出现这两种写法（`import java.time.format.DateTimeFormatter` 也一并禁止）：
   ```java
   private static final DateTimeFormatter NO_DATE = DateTimeFormatter.ofPattern("yyyyMMdd");  // 私有常量副本
@@ -826,12 +903,12 @@
   ```
   一律改为引用 `com.his.common.util.DateFormats` 的常量：`DateFormats.COMPACT_DATE` / `DateFormats.DATETIME` / …
 - **为什么连 hutool 的 `DateUtil` 也不用**（老王原本提「要么抽 DateUtil，要么用 hutool 的 Formatter」，已否决）：
-  1. hutool 的 `DatePattern` 是 **`String` 常量**不是 `DateTimeFormatter`，写法是
-     `DateUtil.format(x, DatePattern.PURE_DATETIME_PATTERN)` —— pattern 字面量照样散在每个调用点，
-     「同一格式两处各写一遍、改一处漏一处」原样保留，只是把 `ofPattern` 换了层皮。
-  2. **覆盖不全**：本库要用的 `HH:mm`（hutool 只有 `HH:mm:ss`）和身份证的 `uuuuMMdd + ResolverStyle.STRICT` 都没有。
-  3. `DateUtil` 门面类型是 `java.util.Date`，本库全链路 `java.time`，引入它等于把旧时间类型引回业务代码。
-  4. hutool 只在 `his-common` / `his-emr` / `his-system` 三个 `pom.xml` 里声明了依赖，其余 9 个模块靠传递，不能当全库口径。
+    1. hutool 的 `DatePattern` 是 **`String` 常量**不是 `DateTimeFormatter`，写法是
+       `DateUtil.format(x, DatePattern.PURE_DATETIME_PATTERN)` —— pattern 字面量照样散在每个调用点，
+       「同一格式两处各写一遍、改一处漏一处」原样保留，只是把 `ofPattern` 换了层皮。
+    2. **覆盖不全**：本库要用的 `HH:mm`（hutool 只有 `HH:mm:ss`）和身份证的 `uuuuMMdd + ResolverStyle.STRICT` 都没有。
+    3. `DateUtil` 门面类型是 `java.util.Date`，本库全链路 `java.time`，引入它等于把旧时间类型引回业务代码。
+    4. hutool 只在 `his-common` / `his-emr` / `his-system` 三个 `pom.xml` 里声明了依赖，其余 9 个模块靠传递，不能当全库口径。
 - **9 个常量按用途分四组，不要新增第 10 个同名 pattern**（同一个 pattern 不许出现第二次；确属新形状才往里加）：
   | 分组 | 常量 | 形态 | 用途 |
   |---|---|---|---|
@@ -867,6 +944,7 @@
   连带把 `DateTimeFormatter.BASIC_ISO_DATE`（== `yyyyMMdd`）的私有字段 + 行内用法也一并收进 `COMPACT_DATE`。
 
 ## 22. 依赖字段名 = 被注入类型的首字母小写全称（2026-10-07 全仓收口 712 处 / 296 文件）
+
 - `@Resource` / `@Autowired` 注入的字段，以及 `@RequiredArgsConstructor` 的 `private final` 依赖字段，
   一律命名为**类型名的首字母小写全称**：`DictCacheService dictCacheService`、
   `BizExamFilmMapper bizExamFilmMapper`、`SysUserService sysUserService`。
@@ -895,12 +973,17 @@
   改完验收口径 = `mvn -o -DskipTests clean install` 通过 + 真启动 + 跨模块接口实测（本次 10 模块 26 个接口 200）。
 
 ## 23. 洗字符串/兜数值/归一时间的小工具只许有三个家（2026-10-07 全仓收口，现 185 文件 / 1835 处调用走三件套）
+
 - **三个收口点**（`his-common/util`，除此之外不许出现第四个同名工具）：
   | 类 | 只管这件事 | 方法 |
   |---|---|---|
-  | `TextUtil` | 空白清洗与截断、判空布尔 | `hasText(CharSequence)`（反向写 `!hasText`） / `trim` / `trimToNull` / `trimToEmpty` / `nullToEmpty` / `blankToDefault` / `cut(v,max)` / `cut(v,max,blank)` / `cutToNull` / `ellipsis` / `requireTrimmed` |
-  | `NumUtil` | null 兜底、金额舍入、数量文本 | `orZero(Integer/Long/BigDecimal)` / `orDefault` / `scale(v,位数)` / `plain(v)` |
-  | `TimeUtil` | 归一到秒与日边界、时长 | `toSeconds` / `nowSeconds` / `dayStart` / `dayEnd` / `minutesBetween` / `elapsedMinutes` / `elapsedHours` |
+  | `TextUtil` | 空白清洗与截断、判空布尔 | `hasText(CharSequence)`（反向写 `!hasText`） / `trim` / `trimToNull` /
+  `trimToEmpty` / `nullToEmpty` / `blankToDefault` / `cut(v,max)` / `cut(v,max,blank)` / `cutToNull` / `ellipsis` /
+  `requireTrimmed` |
+  | `NumUtil` | null 兜底、金额舍入、数量文本 | `orZero(Integer/Long/BigDecimal)` / `orDefault` / `scale(v,位数)` /
+  `plain(v)` |
+  | `TimeUtil` | 归一到秒与日边界、时长 | `toSeconds` / `nowSeconds` / `dayStart` / `dayEnd` / `minutesBetween` /
+  `elapsedMinutes` / `elapsedHours` |
 - **禁止在 service / support / controller / 接口里写私有副本**，方法名叫什么都算：
   `trimToNull` `tr` `trim` `safe` `defaultStr` `nullToDash` `nvl` `nz` `nzAmount` `nzInt` `cut` `clip` `truncate`
   `plain` `scale` `requireText` `now` `atStart` `atEnd` `dayStart` `dayEnd` `minutesBetween` `hoursBetween`。
@@ -976,7 +1059,8 @@
   第五条只允许 `TimeUtil.java` 的方法体。
   改造脚本：`workspace/_apply_helper_collapse.mjs`（先 dry 再 `--apply`，映射表在 `mapDef`）、
   `workspace/_apply_truncation_sweep.mjs`、`workspace/_inline_statustext_shells.mjs`、
-  `workspace/_collapse_blank_predicates.mjs`（判空谓词收口，`EXCLUDE` 里必须留着 `ClinicalTextMatcher` 的方法定义与 `TextUtil`）、
+  `workspace/_collapse_blank_predicates.mjs`（判空谓词收口，`EXCLUDE` 里必须留着 `ClinicalTextMatcher` 的方法定义与
+  `TextUtil`）、
   `workspace/_collapse_day_bounds.mjs`（日边界表达式收口）。
   ⚠ 引擎**必须跳过 `*/util/*` 目录**：否则 `TimeUtil` 自己会进流水线，删掉自己的方法并 import 自己
   （2026-10-07 真踩过：`toSeconds` 改成调 `toSeconds` 的无限递归）。
@@ -990,6 +1074,7 @@
   或 `BusinessException`(400 中文) 里改成另一种，是行为变更，必须先定口径再动，**不许照上面的脚本套路批量替换**。
 
 ## 24. 字典类型编码只有一个来源：`com.his.common.constant.DictType`（2026-10-07 全仓收口 202 处引用 / 79 个键）
+
 - **调用点禁止写字典类型字面量**，一律 `dictCacheService.getDicDataLabel(DictType.XXX, code)` /
   `getDictDataByType(DictType.XXX)`。私有 `private static final String DICT_XXX = "his_xxx";`（全仓曾有 37 个）也算散落，删掉。
 - **常量名 = 编码去掉 `his_`/`sys_` 前缀后大写**（`his_prepay_type` → `PREPAY_TYPE`），机械可逆，

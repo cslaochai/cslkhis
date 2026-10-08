@@ -1,10 +1,10 @@
 package com.his.miniapp.service;
 
 import com.his.appoint.dto.ScheduleSelectQueryDTO;
-import com.his.appoint.vo.ScheduleSelectListVO;
 import com.his.miniapp.vo.DeptSelectListVO;
 import com.his.miniapp.vo.DoctorSelectListVO;
-import com.his.miniapp.vo.PatientDetailVO;
+import com.his.miniapp.vo.MiniappScheduleSelectVO;
+import com.his.miniapp.vo.PatientProfileVO;
 
 import java.util.List;
 
@@ -17,10 +17,10 @@ public interface MiniappDirectoryService {
 
     List<DoctorSelectListVO> doctorsByDept(Long deptId);
 
-    List<ScheduleSelectListVO> schedules(ScheduleSelectQueryDTO queryDTO);
+    List<MiniappScheduleSelectVO> schedules(ScheduleSelectQueryDTO queryDTO);
 
     /**
      * 只允许访问当前账号绑定关系内的就诊人，越权直接拒绝。
      */
-    PatientDetailVO patientProfile(Long patientId);
+    PatientProfileVO patientProfile(Long patientId);
 }

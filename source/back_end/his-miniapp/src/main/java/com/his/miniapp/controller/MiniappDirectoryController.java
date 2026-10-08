@@ -1,12 +1,12 @@
 package com.his.miniapp.controller;
 
 import com.his.appoint.dto.ScheduleSelectQueryDTO;
-import com.his.appoint.vo.ScheduleSelectListVO;
 import com.his.common.base.Result;
 import com.his.miniapp.service.MiniappDirectoryService;
 import com.his.miniapp.vo.DeptSelectListVO;
 import com.his.miniapp.vo.DoctorSelectListVO;
-import com.his.miniapp.vo.PatientDetailVO;
+import com.his.miniapp.vo.MiniappScheduleSelectVO;
+import com.his.miniapp.vo.PatientProfileVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -42,13 +42,13 @@ public class MiniappDirectoryController {
 
     @Operation(summary = "可挂号源（复用排班域 service，患者端原样取数）")
     @PostMapping("/scheduleList")
-    public Result<List<ScheduleSelectListVO>> scheduleList(@Valid @RequestBody ScheduleSelectQueryDTO queryDTO) {
+    public Result<List<MiniappScheduleSelectVO>> scheduleList(@Valid @RequestBody ScheduleSelectQueryDTO queryDTO) {
         return Result.success(miniappDirectoryService.schedules(queryDTO));
     }
 
     @Operation(summary = "患者档案（只允许查绑定关系内的就诊人）")
     @GetMapping("/patient")
-    public Result<PatientDetailVO> patient(@RequestParam Long patientId) {
+    public Result<PatientProfileVO> patient(@RequestParam Long patientId) {
         return Result.success(miniappDirectoryService.patientProfile(patientId));
     }
 }

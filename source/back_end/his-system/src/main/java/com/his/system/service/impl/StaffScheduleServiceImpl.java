@@ -19,7 +19,10 @@ import com.his.system.service.ScheduleChangeLogService;
 import com.his.system.service.ShiftService;
 import com.his.system.service.StaffPlanRuleService;
 import com.his.system.service.StaffScheduleService;
-import com.his.system.vo.*;
+import com.his.system.vo.StaffScheduleVO;
+import com.his.system.vo.StaffTypeDayWorkingVO;
+import com.his.system.vo.StaffWorkingGroupVO;
+import com.his.system.vo.UnitDayWorkingVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -497,7 +500,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
     }
 
     @Override
-    public List<StaffOnDutyVO> onDutyAt(LocalDateTime at, Integer orgType, Long orgId, Integer staffType) {
+    public List<StaffScheduleVO> onDutyAt(LocalDateTime at, Integer orgType, Long orgId, Integer staffType) {
         LocalDate today = at.toLocalDate();
         LocalTime now = at.toLocalTime();
         // 跨零点班归开始日：凌晨两点在岗的人是「昨天夜班」的那一行，只查今天会查不到责任人
@@ -508,34 +511,39 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
                 .eq(orgId != null, BizStaffSchedule::getOrgId, orgId)
                 .eq(staffType != null, BizStaffSchedule::getStaffType, staffType)
                 .orderByAsc(BizStaffSchedule::getStartTime).orderByAsc(BizStaffSchedule::getId));
-        List<StaffOnDutyVO> vos = new ArrayList<>();
+        Map<Long, BizShift> shifts = shiftService.mapByIds(shiftIdsOf(rows));
+        List<StaffScheduleVO> vos = new ArrayList<>();
         for (BizStaffSchedule row : rows) {
             if (!ShiftCoverUtil.covers(now, row.getStartTime(), row.getEndTime())) {
                 continue;
             }
-            StaffOnDutyVO vo = new StaffOnDutyVO();
-            vo.setEmployeeId(row.getEmployeeId());
-            vo.setEmpCode(row.getEmpCode());
-            vo.setEmployeeName(row.getEmployeeName());
-            vo.setStaffType(row.getStaffType());
-            vo.setStaffTypeName(StaffTypeEnum.getText(row.getStaffType()));
-            vo.setOrgType(row.getOrgType());
-            vo.setOrgTypeText(OrgUnitTypeEnum.getText(row.getOrgType()));
-            vo.setOrgId(row.getOrgId());
-            vo.setOrgName(row.getOrgName());
-            vo.setDeptId(row.getDeptId());
-            vo.setDeptName(row.getDeptName());
-            vo.setShiftId(row.getShiftId());
-            vo.setStartTime(row.getStartTime());
-            vo.setEndTime(row.getEndTime());
-            vo.setAttendMode(row.getAttendMode());
-            vo.setAttendModeText(AttendModeEnum.getText(row.getAttendMode()));
-            vo.setClinicFlag(row.getClinicFlag());
-            vo.setScheduleDate(row.getScheduleDate() == null ? null : row.getScheduleDate().toString());
-            vos.add(vo);
+            vos.add(toOnDutyVO(row, shifts.get(row.getShiftId())));
         }
-        fillShiftNames(vos);
         return vos;
+    }
+
+    /**
+     * 与列表/详情共出 {@link StaffScheduleVO} 这一个类，但只填「此刻在岗」这一页真正渲染的列 ——
+     * 共用出参类不等于共用出参宽度，把 32 列一股脑塞给一个只显示 10 列的标签列表，
+     * 等于让分诊台每次刷新都多载两倍正文。
+     */
+    private StaffScheduleVO toOnDutyVO(BizStaffSchedule row, BizShift shift) {
+        StaffScheduleVO vo = new StaffScheduleVO();
+        vo.setEmployeeId(row.getEmployeeId());
+        vo.setEmployeeName(row.getEmployeeName());
+        vo.setStaffType(row.getStaffType());
+        vo.setStaffTypeName(StaffTypeEnum.getText(row.getStaffType()));
+        vo.setOrgId(row.getOrgId());
+        vo.setOrgName(row.getOrgName());
+        vo.setDeptId(row.getDeptId());
+        vo.setDeptName(row.getDeptName());
+        vo.setShiftId(row.getShiftId());
+        vo.setShiftName(shift == null ? null : shift.getShiftName());
+        vo.setStartTime(row.getStartTime());
+        vo.setEndTime(row.getEndTime());
+        vo.setAttendMode(row.getAttendMode());
+        vo.setAttendModeText(AttendModeEnum.getText(row.getAttendMode()));
+        return vo;
     }
 
     @Override
@@ -1007,20 +1015,6 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             }
         }
         return ids;
-    }
-
-    private void fillShiftNames(List<StaffOnDutyVO> vos) {
-        Set<Long> ids = new HashSet<>();
-        for (StaffOnDutyVO vo : vos) {
-            if (vo.getShiftId() != null && vo.getShiftId() != ID_NONE) {
-                ids.add(vo.getShiftId());
-            }
-        }
-        Map<Long, BizShift> shifts = shiftService.mapByIds(ids);
-        for (StaffOnDutyVO vo : vos) {
-            BizShift shift = shifts.get(vo.getShiftId());
-            vo.setShiftName(shift == null ? null : shift.getShiftName());
-        }
     }
 
     /**

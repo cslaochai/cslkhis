@@ -239,16 +239,15 @@ public class MiniappPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPay
     /**
      * his-charge 的账单明细 → 患者端明细行。
      *
-     * <p>入参用全限定名：his-charge 与本模块都有 {@code PendingBillItemVO}（字段同形但归属不同），
-     * 这里入参是收费域的、出参是患者端的，两边名字撞车时必须写全，否则 import 进来的
-     * 是本模块那个，编译能过但取的是空字段。
+     * <p>入参保持全限定名：它是收费域的账本形状，出参是患者端自己维护的展示契约，
+     * 两边字段同形但归属不同模块，各改各的。
      */
-    private List<PendingBillItemVO> toPendingBillItems(List<com.his.charge.vo.PendingBillItemVO> details) {
+    private List<MiniappPendingBillItemVO> toPendingBillItems(List<com.his.charge.vo.PendingBillItemVO> details) {
         if (details == null) {
             return List.of();
         }
         return details.stream().map(item -> {
-            PendingBillItemVO vo = new PendingBillItemVO();
+            MiniappPendingBillItemVO vo = new MiniappPendingBillItemVO();
             vo.setItemName(item.getItemName());
             vo.setAmount(item.getAmount());
             vo.setDeptName(item.getDeptName());

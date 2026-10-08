@@ -13,7 +13,7 @@ import java.io.Serializable;
  * 服务层再组装成 {@code Map<Long, String>} 回填（那个 Map 是本地字典，不是数据契约）。
  */
 @Data
-public class DeptSnapshotVO implements Serializable {
+public class DeptMapRowVO implements Serializable {
 
     /**
      * 科室ID

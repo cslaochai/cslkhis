@@ -106,11 +106,11 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
 
         List<AntibioticStatsVO> result = new ArrayList<>();
         if (dto.getScopeType() == BizAntibioticStats.SCOPE_DEPT) {
-            List<DeptCountRowVO> depts = antibioticStatMapper.selectDischargeDepts(from, to);
+            List<MonitorDeptRowVO> depts = antibioticStatMapper.selectDischargeDepts(from, to);
             if (CollectionUtils.isEmpty(depts)) {
                 throw new BusinessException(ym + " 没有出院患者，无法按科室生成监测指标");
             }
-            for (DeptCountRowVO dept : depts) {
+            for (MonitorDeptRowVO dept : depts) {
                 BizAntibioticStats row = compute(dto.getStatMonth(), from, to,
                         BizAntibioticStats.SCOPE_DEPT, dept.getDeptId(), dept.getDeptName());
                 result.add(toStatsVO(upsertRow(row, operator, dto.getRemark())));

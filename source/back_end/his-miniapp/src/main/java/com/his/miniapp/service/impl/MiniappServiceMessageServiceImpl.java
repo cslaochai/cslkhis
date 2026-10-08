@@ -17,7 +17,7 @@ import com.his.miniapp.mapper.MiniappServiceTicketLogMapper;
 import com.his.miniapp.service.MiniappDirectoryService;
 import com.his.miniapp.service.MiniappServiceMessageService;
 import com.his.miniapp.support.ServiceTicketStatus;
-import com.his.miniapp.vo.PatientDetailVO;
+import com.his.miniapp.vo.PatientProfileVO;
 import com.his.miniapp.vo.ServiceMessageListVO;
 import com.his.miniapp.vo.ServiceTicketDetailVO;
 import com.his.miniapp.vo.ServiceTicketLogVO;
@@ -285,7 +285,7 @@ public class MiniappServiceMessageServiceImpl extends ServiceImpl<MiniappService
         String phone = inputPhone;
         String name = null;
         try {
-            PatientDetailVO profile = miniappDirectoryService.patientProfile(patientId);
+            PatientProfileVO profile = miniappDirectoryService.patientProfile(patientId);
             if (profile != null) {
                 name = profile.getPatientName();
                 if (!TextUtil.hasText(phone)) {

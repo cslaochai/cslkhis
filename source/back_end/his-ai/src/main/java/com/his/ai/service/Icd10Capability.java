@@ -1,9 +1,9 @@
 package com.his.ai.service;
 
 import com.his.ai.dto.Icd10PredictDTO;
-import com.his.ai.vo.Icd10PredictVO;
+import com.his.ai.vo.Icd10PredictResultVO;
 
 public interface Icd10Capability {
 
-    Icd10PredictVO predict(Icd10PredictDTO dto);
+    Icd10PredictResultVO predict(Icd10PredictDTO dto);
 }

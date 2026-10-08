@@ -1,8 +1,8 @@
 package com.his.pharmacy.mapper;
 
-import com.his.pharmacy.vo.DeptCountRowVO;
 import com.his.pharmacy.vo.IncisionCandidateVO;
 import com.his.pharmacy.vo.IncisionDrugCandidateVO;
+import com.his.pharmacy.vo.MonitorDeptRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -42,7 +42,9 @@ public interface AntibioticStatMapper {
             """)
     long countOpRx(@Param("from") LocalDate from, @Param("to") LocalDate to, @Param("deptId") Long deptId);
 
-    /** 含抗菌药物的门急诊处方数（处方明细里有 antibiotic_level > 0 的药品） */
+    /**
+     * 含抗菌药物的门急诊处方数（处方明细里有 antibiotic_level > 0 的药品）
+     */
     @Select("""
             SELECT COUNT(DISTINCT p.id) FROM biz_prescription p
             WHERE p.del_flag = 0
@@ -56,7 +58,9 @@ public interface AntibioticStatMapper {
             """)
     long countOpAbxRx(@Param("from") LocalDate from, @Param("to") LocalDate to, @Param("deptId") Long deptId);
 
-    /** 同期出院患者数（按出院日期归月） */
+    /**
+     * 同期出院患者数（按出院日期归月）
+     */
     @Select("""
             SELECT COUNT(*) FROM biz_admission a
             WHERE a.del_flag = 0
@@ -66,7 +70,9 @@ public interface AntibioticStatMapper {
             """)
     long countIpDischarge(@Param("from") LocalDate from, @Param("to") LocalDate to, @Param("deptId") Long deptId);
 
-    /** 收治患者人天数（同期出院患者的住院天数之和；不足 1 天按 1 天计） */
+    /**
+     * 收治患者人天数（同期出院患者的住院天数之和；不足 1 天按 1 天计）
+     */
     @Select("""
             SELECT COALESCE(SUM(CASE WHEN DATEDIFF(a.discharge_time, a.admit_time) < 1
                                     THEN 1 ELSE DATEDIFF(a.discharge_time, a.admit_time) END), 0)
@@ -78,7 +84,9 @@ public interface AntibioticStatMapper {
             """)
     long sumPatientDays(@Param("from") LocalDate from, @Param("to") LocalDate to, @Param("deptId") Long deptId);
 
-    /** 出院患者中使用抗菌药物的人数（住院药品医嘱命中抗菌药物目录） */
+    /**
+     * 出院患者中使用抗菌药物的人数（住院药品医嘱命中抗菌药物目录）
+     */
     @Select("""
             SELECT COUNT(DISTINCT a.admission_id) FROM biz_admission a
             WHERE a.del_flag = 0
@@ -171,7 +179,9 @@ public interface AntibioticStatMapper {
             """)
     long countUnmatchedOrders(@Param("from") LocalDate from, @Param("to") LocalDate to, @Param("deptId") Long deptId);
 
-    /** 统计期内有出院患者的科室（scopeType=2 按科室生成时用） */
+    /**
+     * 统计期内有出院患者的科室（scopeType=2 按科室生成时用）
+     */
     @Select("""
             SELECT DISTINCT a.dept_id AS deptId,
                    COALESCE(dp.dept_name, CONCAT('科室', a.dept_id)) AS deptName
@@ -183,7 +193,7 @@ public interface AntibioticStatMapper {
               AND DATE(a.discharge_time) BETWEEN #{from} AND #{to}
             ORDER BY a.dept_id
             """)
-    List<DeptCountRowVO> selectDischargeDepts(@Param("from") LocalDate from, @Param("to") LocalDate to);
+    List<MonitorDeptRowVO> selectDischargeDepts(@Param("from") LocalDate from, @Param("to") LocalDate to);
 
     /**
      * 待点评的 I 类切口手术（已完成、切口等级 1、尚未建点评）。

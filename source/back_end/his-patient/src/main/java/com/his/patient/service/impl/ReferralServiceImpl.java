@@ -313,7 +313,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
     private Map<Long, String> loadDeptNames() {
         return bizReferralMapper.selectDeptMap().stream()
                 .filter(m -> m.getId() != null)
-                .collect(Collectors.toMap(DeptSnapshotVO::getId,
+                .collect(Collectors.toMap(DeptMapRowVO::getId,
                         m -> m.getDeptName() == null ? "" : m.getDeptName(),
                         (a, b) -> a));
     }

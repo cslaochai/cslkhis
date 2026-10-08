@@ -13,41 +13,65 @@ import java.math.BigDecimal;
  * 一遍界面上本该有的数。
  */
 @Data
-public class PendingBillItemVO implements Serializable {
+public class MiniappPendingBillItemVO implements Serializable {
 
-    /** 项目名称 */
+    /**
+     * 项目名称
+     */
     private String itemName;
 
-    /** 金额（元） */
+    /**
+     * 金额（元）
+     */
     private BigDecimal amount;
 
-    /** 开单科室名称 */
+    /**
+     * 开单科室名称
+     */
     private String deptName;
 
-    /** 规格（快照） */
+    /**
+     * 规格（快照）
+     */
     private String specification;
 
-    /** 单位（快照） */
+    /**
+     * 单位（快照）
+     */
     private String unit;
 
-    /** 单价（快照） */
+    /**
+     * 单价（快照）
+     */
     private BigDecimal price;
 
-    /** 数量（快照） */
+    /**
+     * 数量（快照）
+     */
     private BigDecimal quantity;
 
-    /** 行级医保统筹（元） */
+    /**
+     * 行级医保统筹（元）
+     */
     private BigDecimal poolAmount;
 
-    /** 行级医保个账（元） */
+    /**
+     * 行级医保个账（元）
+     */
     private BigDecimal accountAmount;
 
-    /** 行级个人自付（元） */
+    /**
+     * 行级个人自付（元）
+     */
     private BigDecimal selfAmount;
 
-    /** 医保目录类别（0-自费 1-甲类 2-乙类 3-丙类） */
+    /**
+     * 医保目录类别（0-自费 1-甲类 2-乙类 3-丙类）
+     */
     private Integer catalogType;
 
-    /** 医保目录类别文本（自费/甲类/乙类/丙类），后端算好，避免前端各写一套口径 */
+    /**
+     * 医保目录类别文本（自费/甲类/乙类/丙类），后端算好，避免前端各写一套口径
+     */
     private String catalogTypeText;
 }

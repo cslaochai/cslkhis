@@ -9,7 +9,6 @@ import com.his.system.dto.StaffScheduleUpsertDTO;
 import com.his.system.service.ScheduleChangeLogService;
 import com.his.system.service.StaffScheduleService;
 import com.his.system.vo.ScheduleChangeLogVO;
-import com.his.system.vo.StaffOnDutyVO;
 import com.his.system.vo.StaffScheduleVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -78,9 +77,9 @@ public class StaffScheduleController {
     @Operation(summary = "此刻在岗名单（跨零点班归开始日，按昨天+今天两天解析）")
     @PreAuthorize("isAuthenticated()")
     @GetMapping("/onDuty")
-    public Result<List<StaffOnDutyVO>> onDuty(@RequestParam(required = false) Integer orgType,
-                                              @RequestParam(required = false) Long orgId,
-                                              @RequestParam(required = false) Integer staffType) {
+    public Result<List<StaffScheduleVO>> onDuty(@RequestParam(required = false) Integer orgType,
+                                                @RequestParam(required = false) Long orgId,
+                                                @RequestParam(required = false) Integer staffType) {
         return Result.success(staffScheduleService.onDutyAt(LocalDateTime.now(), orgType, orgId, staffType));
     }
 

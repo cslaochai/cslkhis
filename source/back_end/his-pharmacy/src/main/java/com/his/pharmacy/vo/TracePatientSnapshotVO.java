@@ -15,7 +15,7 @@ import java.io.Serializable;
  * 也不带 balance/身份证等与「这个人是谁」无关的列。
  */
 @Data
-public class PatientBriefVO implements Serializable {
+public class TracePatientSnapshotVO implements Serializable {
 
     /**
      * 患者号
