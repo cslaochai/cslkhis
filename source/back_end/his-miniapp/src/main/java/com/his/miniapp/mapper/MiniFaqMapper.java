@@ -5,19 +5,12 @@ import com.his.miniapp.entity.SysFaq;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 /**
  * 患者端常见问题读侧。
  */
 @Mapper
 public interface MiniFaqMapper extends BaseMapper<SysFaq> {
-
-    /**
-     * 已有最大编号，用于新增时生成下一个（FAQ + 4 位序号）
-     */
-    @Select("SELECT MAX(faq_no) FROM sys_faq")
-    String maxFaqNo();
 
     /**
      * 物理删。

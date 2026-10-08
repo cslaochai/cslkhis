@@ -2,7 +2,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search, Edit, Delete, Refresh } from '@element-plus/icons-vue'
-import { getDepartmentList, getDepartmentDetail, createDepartment, updateDepartment, deleteDepartment, getDepartmentTree, getDictDataMapList } from '@/api/system'
+import { getDepartmentList, getDepartmentDetail, createDepartment, updateDepartment, deleteDepartment, getDepartmentTree, getDictDataMapList, getEmployeeList } from '@/api/system'
 import { dictLabelText } from '@/lib/utils'
 import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
 import { useTableMaxHeight } from '@/lib/useTableMaxHeight'
@@ -11,10 +11,12 @@ interface Department {
   id: number
   deptCode: string
   deptName: string
-  deptType: number
+  deptType: string | number  // 兼容单值和多值（逗号分隔）
   parentId: string
   sortOrder: number
   location: string
+  deptLeaderId?: number | null
+  deptLeaderName?: string
   contactPhone: string
   deptDesc: string
   status: number
@@ -23,7 +25,7 @@ interface Department {
 const loading = ref(false)
 const searchForm = reactive({
   deptName: '',
-  deptType: null,
+  deptType: null as number | null,  // 搜索仍用单选，传单个值给后端
 })
 const tableData = ref<Department[]>([])
 const pagination = ref({
@@ -41,15 +43,33 @@ const submitLoading = ref(false)
 const formRef = ref(null)
 const isEdit = ref(false)
 
-const formData = reactive({
+// 详情对话框
+const detailVisible = ref(false)
+const detailData = reactive({
   id: null,
   deptCode: '',
   deptName: '',
-  deptType: 1,
+  deptType: '',
   parentId: 0,
   sortOrder: 0,
   location: '',
   contactPhone: '',
+  deptLeaderId: null as number | null,
+  deptLeaderName: '',
+  deptDesc: '',
+  status: 1,
+})
+
+const formData = reactive({
+  id: null,
+  deptCode: '',
+  deptName: '',
+  deptType: [] as number[],  // 多选，提交时 join(',')
+  parentId: 0,
+  sortOrder: 0,
+  location: '',
+  contactPhone: '',
+  deptLeaderId: null as number | null,
   deptDesc: '',
   status: 1,
 })
@@ -69,6 +89,17 @@ const loadDeptTree = async () => {
     }
   } catch (error) {
     console.error('加载科室树失败:', error)
+  }
+}
+
+// 员工列表（用于科室负责人下拉）
+const employeeList = ref<any[]>([])
+const loadEmployeeList = async () => {
+  try {
+    const res = await getEmployeeList({})
+    employeeList.value = res.data || []
+  } catch (error) {
+    console.error('加载员工列表失败:', error)
   }
 }
 
@@ -102,16 +133,22 @@ onMounted(() => {
   loadData()
   loadDeptTree()
   loadDeptTypeDict()
+  loadEmployeeList()
 })
 
 const loadData = async () => {
   loading.value = true
   try {
-    const res = await getDepartmentList({
+    const params: any = {
       ...searchForm,
       pageNum: pagination.value.pageNum,
       pageSize: pagination.value.pageSize,
-    })
+    }
+    // 搜索时把单个值转成字符串传给后端（FIND_IN_SET 需要字符串）
+    if (searchForm.deptType !== null) {
+      params.deptType = String(searchForm.deptType)
+    }
+    const res = await getDepartmentList(params)
     if (res.code === 200) {
       tableData.value = res.data?.records || res.data || []
       pagination.value.total = res.data?.total || tableData.value.length
@@ -149,11 +186,12 @@ const resetForm = () => {
   formData.id = null
   formData.deptCode = ''
   formData.deptName = ''
-  formData.deptType = 1
+  formData.deptType = []
   formData.parentId = 0
   formData.sortOrder = 0
   formData.location = ''
   formData.contactPhone = ''
+  formData.deptLeaderId = null
   formData.deptDesc = ''
   formData.status = 1
 }
@@ -172,7 +210,12 @@ const handleEdit = async (row: Department) => {
   try {
     const res = await getDepartmentDetail(row.id)
     if (res.code === 200) {
-      Object.assign(formData, res.data)
+      // 兼容后端返回的逗号分隔字符串，转成数组给 checkbox-group
+      const deptTypeStr = res.data.deptType
+      formData.deptType = typeof deptTypeStr === 'string' 
+        ? deptTypeStr.split(',').map(Number).filter(n => !isNaN(n))
+        : [deptTypeStr]
+      Object.assign(formData, { ...res.data, deptType: formData.deptType })
     }
   } catch (error) {
     ElMessage.error(error.message || '获取科室信息失败')
@@ -191,11 +234,14 @@ const handleSubmit = async () => {
 
   submitLoading.value = true
   try {
+    // 提交前把数组转成逗号分隔字符串
+    const payload = { ...formData, deptType: formData.deptType.join(',') }
+    
     let res
     if (isEdit.value) {
-      res = await updateDepartment(formData)
+      res = await updateDepartment(payload)
     } else {
-      res = await createDepartment(formData)
+      res = await createDepartment(payload)
     }
 
     if (res.code === 200) {
@@ -232,7 +278,42 @@ const handleDelete = async (row: Department) => {
 }
 
 // 命中不到字典就出「未知(n)」—— 不回落成「其他」，否则脏值看起来像合法值（口径铁律）
-const getDeptTypeLabel = (type: number) => dictLabelText(deptTypeOptions.value, type)
+const getDeptTypeLabel = (type: number | string) => {
+  // 兼容逗号分隔的多值
+  if (typeof type === 'string' && type.includes(',')) {
+    return type.split(',').map(t => dictLabelText(deptTypeOptions.value, Number(t))).join('、')
+  }
+  return dictLabelText(deptTypeOptions.value, typeof type === 'string' ? Number(type) : type)
+}
+
+// 获取父级科室名称
+const getParentDeptName = (parentId: number | string) => {
+  const findParent = (nodes: any[], id: number | string): string => {
+    for (const node of nodes) {
+      if (String(node.id) === String(id)) return node.deptName
+      if (node.children?.length) {
+        const found = findParent(node.children, id)
+        if (found) return found
+      }
+    }
+    return ''
+  }
+  if (!parentId || parentId === 0) return '顶级科室'
+  return findParent(deptTree.value, parentId) || '未知'
+}
+
+// 单击行查看详情
+const handleRowClick = async (row: Department) => {
+  try {
+    const res = await getDepartmentDetail(row.id)
+    if (res.code === 200) {
+      Object.assign(detailData, res.data)
+      detailVisible.value = true
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '获取科室详情失败')
+  }
+}
 </script>
 
 <template>
@@ -267,7 +348,8 @@ const getDeptTypeLabel = (type: number) => dictLabelText(deptTypeOptions.value, 
 
     <!-- 表格区域 -->
     <el-card class="table-card" shadow="never">
-      <el-table :data="tableData" v-loading="loading" stripe :max-height="tableMaxHeight">
+      <el-table :data="tableData" v-loading="loading" stripe :max-height="tableMaxHeight"
+                @row-click="handleRowClick" highlight-current-row style="cursor: pointer">
         <el-table-column prop="deptCode" label="科室编码" width="120" />
         <el-table-column prop="deptName" label="科室名称" width="150" />
         <el-table-column prop="deptType" label="科室类型" width="120">
@@ -300,8 +382,8 @@ const getDeptTypeLabel = (type: number) => dictLabelText(deptTypeOptions.value, 
         </el-table-column>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
-            <el-button type="primary" link :icon="Edit" v-perm="'org:dept:add'" @click="handleEdit(row)">编辑</el-button>
-            <el-button type="danger" link :icon="Delete" v-perm="'org:dept:delete'" @click="handleDelete(row)">删除</el-button>
+            <el-button type="primary" link :icon="Edit" v-perm="'org:dept:add'" @click.stop="handleEdit(row)">编辑</el-button>
+            <el-button type="danger" link :icon="Delete" v-perm="'org:dept:delete'" @click.stop="handleDelete(row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -351,8 +433,10 @@ const getDeptTypeLabel = (type: number) => dictLabelText(deptTypeOptions.value, 
         </div>
         <div class="grid grid-cols-2 gap-4">
           <el-form-item label="科室类型" prop="deptType">
-            <el-select v-model="formData.deptType" placeholder="请选择科室类型" class="w-full">
-              <el-option v-for="d in deptTypeOptions" :key="d.dictValue" :label="d.dictLabel" :value="Number(d.dictValue)" />
+            <el-select v-model="formData.deptType" placeholder="请选择科室类型" multiple class="w-full"
+                       :fit-input-width="false">
+              <el-option v-for="d in deptTypeOptions" :key="d.dictValue" 
+                         :label="d.dictLabel" :value="Number(d.dictValue)" />
             </el-select>
           </el-form-item>
           <el-form-item label="排序号">
@@ -367,19 +451,75 @@ const getDeptTypeLabel = (type: number) => dictLabelText(deptTypeOptions.value, 
             <el-input v-model="formData.contactPhone" placeholder="请输入联系电话" />
           </el-form-item>
         </div>
+        <div class="grid grid-cols-2 gap-4">
+          <el-form-item label="科室负责人">
+            <el-select v-model="formData.deptLeaderId" placeholder="请选择科室负责人" clearable filterable class="w-full"
+                       :fit-input-width="false">
+              <el-option v-for="e in employeeList" :key="e.id" 
+                         :label="`${e.empName}（${e.title || '无职称'}）`" :value="e.id" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-radio-group v-model="formData.status">
+              <el-radio :value="1">正常</el-radio>
+              <el-radio :value="0">停用</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </div>
         <el-form-item label="科室简介">
           <el-input v-model="formData.deptDesc" type="textarea" :rows="3" placeholder="请输入科室简介" />
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-radio-group v-model="formData.status">
-            <el-radio :value="1">正常</el-radio>
-            <el-radio :value="0">停用</el-radio>
-          </el-radio-group>
         </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitLoading" v-perm="'org:dept:add'" @click="handleSubmit">确定</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 科室详情弹框（只读，无保存按钮） -->
+    <el-dialog v-model="detailVisible" title="科室详情" width="700px" destroy-on-close>
+      <el-form label-width="100px" disabled>
+        <div class="grid grid-cols-2 gap-4">
+          <el-form-item label="科室名称">
+            <el-input v-model="detailData.deptName" />
+          </el-form-item>
+          <el-form-item label="上级科室">
+            <el-input :value="getParentDeptName(detailData.parentId)" />
+          </el-form-item>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <el-form-item label="科室类型">
+            <el-input :value="getDeptTypeLabel(detailData.deptType)" />
+          </el-form-item>
+          <el-form-item label="排序号">
+            <el-input-number v-model="detailData.sortOrder" :min="0" class="w-full" />
+          </el-form-item>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <el-form-item label="位置">
+            <el-input v-model="detailData.location" />
+          </el-form-item>
+          <el-form-item label="联系电话">
+            <el-input v-model="detailData.contactPhone" />
+          </el-form-item>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <el-form-item label="科室负责人">
+            <el-input :value="detailData.deptLeaderName || '-'" />
+          </el-form-item>
+          <el-form-item label="状态">
+            <el-radio-group v-model="detailData.status">
+              <el-radio :value="1">正常</el-radio>
+              <el-radio :value="0">停用</el-radio>
+            </el-radio-group>
+          </el-form-item>
+        </div>
+        <el-form-item label="科室简介">
+          <el-input v-model="detailData.deptDesc" type="textarea" :rows="3" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="detailVisible = false">关闭</el-button>
       </template>
     </el-dialog>
   </div>

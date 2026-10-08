@@ -43,10 +43,15 @@ import java.util.*;
 @RequiredArgsConstructor
 public class InfectionMonitorServiceImpl implements InfectionMonitorService {
     private final BizInfectionCaseMapper bizInfectionCaseMapper;
+
     private final BizInfectionMonitorMapper bizInfectionMonitorMapper;
+
     private final BizInfectionMonitorDailyMapper bizInfectionMonitorDailyMapper;
+
     private final BizHandHygieneObsMapper bizHandHygieneObsMapper;
+
     private final RedisSequenceService redisSequenceService;
+
     private final DictCacheService dictCacheService;
 
     /**

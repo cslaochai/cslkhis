@@ -26,9 +26,9 @@ public class DepartmentUpsertDTO {
     private String deptName;
 
     /**
-     * 科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他）
+     * 科室类型（1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他），多个类型逗号分隔
      */
-    private Integer deptType;
+    private String deptType;
 
     /**
      * 上级科室ID，顶级科室为0
@@ -59,6 +59,12 @@ public class DepartmentUpsertDTO {
      * 地理位置/地址
      */
     private String location;
+
+    /**
+     * 科室负责人ID（sys_employee.id）
+     */
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long deptLeaderId;
 
     /**
      * 是否开放：0-否 1-是

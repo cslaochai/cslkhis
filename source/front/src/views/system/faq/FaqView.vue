@@ -199,7 +199,7 @@ const handleCurrentChange = (val) => {
 
     <el-card class="table-card" shadow="never">
       <el-table :data="tableData" v-loading="loading" stripe :max-height="tableMaxHeight">
-        <el-table-column prop="faqNo" label="编号" width="100" />
+        <el-table-column prop="faqNo" label="编号" width="160" />
         <el-table-column prop="categoryName" label="分类" width="110">
           <template #default="{ row }">
             {{ row.categoryName }}<span class="text-gray-400 text-xs">（{{ row.categoryCode }}）</span>

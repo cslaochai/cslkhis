@@ -10,7 +10,9 @@ import com.his.system.dto.DepartmentQueryDTO;
 import com.his.system.dto.DepartmentSelectDTO;
 import com.his.system.dto.DepartmentUpsertDTO;
 import com.his.system.entity.SysDepartment;
+import com.his.system.entity.SysEmployee;
 import com.his.system.mapper.SysDepartmentMapper;
+import com.his.system.mapper.SysEmployeeMapper;
 import com.his.system.provider.DeptScopeProvider;
 import com.his.system.service.SysDepartmentService;
 import com.his.system.vo.DepartmentSelectListVO;
@@ -20,7 +22,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -33,6 +37,7 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
     private static final String ROOT_DEPT_CODE = "1001";
     private final DeptScopeProvider deptScopeProvider;
     private final SysDepartmentMapper sysDepartmentMapper;
+    private final SysEmployeeMapper sysEmployeeMapper;
 
     @Override
     public List<DepartmentVO> tree() {
@@ -59,7 +64,8 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
     public List<DepartmentSelectListVO> selectList(DepartmentSelectDTO selectDTO) {
         LambdaQueryWrapper<SysDepartment> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(selectDTO.getDeptName()), SysDepartment::getDeptName, selectDTO.getDeptName())
-                .eq(selectDTO.getDeptType() != null, SysDepartment::getDeptType, selectDTO.getDeptType())
+                .apply(TextUtil.hasText(selectDTO.getDeptType()), 
+                       "FIND_IN_SET({0}, dept_type) > 0", selectDTO.getDeptType())
                 .orderByAsc(SysDepartment::getSortOrder)
                 // 唯一二级键：排序字段大量并列，缺主键兜底时列表顺序在不同请求间会漂
                 .orderByAsc(SysDepartment::getId);
@@ -74,7 +80,9 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
             }
         }
 
-        return sysDepartmentMapper.selectList(wrapper).stream().map(this::toSelectVO).collect(Collectors.toList());
+        List<SysDepartment> depts = sysDepartmentMapper.selectList(wrapper);
+        Map<Long, String> parentNameMap = buildParentNameMap(depts);
+        return depts.stream().map(d -> toSelectVO(d, parentNameMap)).collect(Collectors.toList());
     }
 
     @Override
@@ -126,7 +134,8 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
     private LambdaQueryWrapper<SysDepartment> buildWrapper(DepartmentQueryDTO queryDTO) {
         LambdaQueryWrapper<SysDepartment> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(TextUtil.hasText(queryDTO.getDeptName()), SysDepartment::getDeptName, queryDTO.getDeptName())
-                .eq(queryDTO.getDeptType() != null, SysDepartment::getDeptType, queryDTO.getDeptType())
+                .apply(TextUtil.hasText(queryDTO.getDeptType()), 
+                       "FIND_IN_SET({0}, dept_type) > 0", queryDTO.getDeptType())
                 .orderByAsc(SysDepartment::getSortOrder);
         return wrapper;
     }
@@ -138,13 +147,29 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         return "ALL".equalsIgnoreCase(scope);
     }
 
-    private DepartmentSelectListVO toSelectVO(SysDepartment dept) {
+    private DepartmentSelectListVO toSelectVO(SysDepartment dept, Map<Long, String> parentNameMap) {
         if (dept == null) {
             return null;
         }
         DepartmentSelectListVO vo = new DepartmentSelectListVO();
         BeanUtils.copyProperties(dept, vo);
+        vo.setParentDeptName(parentNameMap.get(dept.getParentId()));
         return vo;
+    }
+
+    /**
+     * 一次性查出所有涉及的父级科室名称，避免 N+1。
+     */
+    private Map<Long, String> buildParentNameMap(List<SysDepartment> depts) {
+        Set<Long> parentIds = depts.stream()
+                .map(SysDepartment::getParentId)
+                .filter(id -> id != null && id != 0L)
+                .collect(Collectors.toSet());
+        if (parentIds.isEmpty()) {
+            return new HashMap<>();
+        }
+        List<SysDepartment> parents = sysDepartmentMapper.selectBatchIds(parentIds);
+        return parents.stream().collect(Collectors.toMap(SysDepartment::getId, SysDepartment::getDeptName, (a, b) -> a));
     }
 
     private DepartmentVO toVO(SysDepartment dept) {
@@ -153,6 +178,13 @@ public class SysDepartmentServiceImpl extends ServiceImpl<SysDepartmentMapper, S
         }
         DepartmentVO vo = new DepartmentVO();
         BeanUtils.copyProperties(dept, vo);
+        // 填充负责人姓名
+        if (dept.getDeptLeaderId() != null) {
+            SysEmployee emp = sysEmployeeMapper.selectById(dept.getDeptLeaderId());
+            if (emp != null) {
+                vo.setDeptLeaderName(emp.getEmpName());
+            }
+        }
         return vo;
     }
 

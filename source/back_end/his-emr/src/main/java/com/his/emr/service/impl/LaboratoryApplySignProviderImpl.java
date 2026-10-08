@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * 检验申请单的签名内容提供者（业务类型=8）—— 开单医师签名。
+ * 检验申请单的签名内容提供者
  */
 @Slf4j
 @Component

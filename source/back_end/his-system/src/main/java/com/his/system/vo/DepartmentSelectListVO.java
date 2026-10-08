@@ -27,14 +27,19 @@ public class DepartmentSelectListVO {
     private String deptName;
 
     /**
-     * 科室类型：1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他
+     * 科室类型：1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他，多个类型逗号分隔
      * （口径见列注释与字典 {@code his_dept_type}）
      */
-    private Integer deptType;
+    private String deptType;
 
     /**
      * 上级科室ID，顶级为 0
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long parentId;
+
+    /**
+     * 上级科室名称（用于下拉展示层级关系）
+     */
+    private String parentDeptName;
 }

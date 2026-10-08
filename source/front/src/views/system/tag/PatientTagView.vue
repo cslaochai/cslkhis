@@ -1,15 +1,10 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Search, Edit, Delete, Refresh } from '@element-plus/icons-vue'
-import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
-import { useTableMaxHeight } from '@/lib/useTableMaxHeight'
-import {
-  getPatientTagList,
-  createPatientTag,
-  updatePatientTag,
-  deletePatientTag
-} from '@/api/system'
+import {onMounted, ref} from 'vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
+import {Delete, Edit, Plus, Refresh, Search} from '@element-plus/icons-vue'
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
+import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
+import {createPatientTag, deletePatientTag, getPatientTagList, updatePatientTag} from '@/api/system'
 
 const loading = ref(false)
 const searchForm = ref({
@@ -82,7 +77,7 @@ const handleAdd = () => {
 }
 
 const handleEdit = (row: any) => {
-  formData.value = { ...row }
+  formData.value = {...row}
   dialogTitle.value = '修改标签'
   dialogVisible.value = true
 }
@@ -147,7 +142,8 @@ onMounted(() => {
       <div class="flex items-start justify-between gap-4">
         <el-form :model="searchForm" inline>
           <el-form-item label="标签名称">
-            <el-input v-model="searchForm.tagName" placeholder="请输入标签名称" clearable class="!w-48" @keyup.enter="handleSearch"/>
+            <el-input v-model="searchForm.tagName" placeholder="请输入标签名称" clearable class="!w-48"
+                      @keyup.enter="handleSearch"/>
           </el-form-item>
           <el-form-item>
             <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
@@ -165,44 +161,45 @@ onMounted(() => {
     <el-card class="table-card" shadow="never">
       <el-table :data="tableData" v-loading="loading" stripe :max-height="tableMaxHeight" style="width: 100%">
         <el-table-column prop="tagId" label="ID" width="80"/>
-        <el-table-column prop="tagName" label="标签名称" width="150">
+        <el-table-column prop="tagName" label="标签名称" min-width="150" >
           <template #default="{ row }">
             <span
-              class="inline-block rounded px-2 py-0.5 text-xs font-medium text-white"
-              :style="{ backgroundColor: row.tagColor || '#409EFF' }"
+                class="inline-block rounded px-2 py-0.5 text-xs font-medium text-white"
+                :style="{ backgroundColor: row.tagColor || '#409EFF' }"
             >
               {{ row.tagName }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="shortName" label="缩写" width="100">
+        <el-table-column prop="shortName" label="缩写" width="150">
           <template #default="{ row }">
             <span
-              v-if="row.shortName"
-              class="inline-block rounded px-2 py-0.5 text-xs font-medium text-white"
-              :style="{ backgroundColor: row.tagColor || '#409EFF' }"
+                v-if="row.shortName"
+                class="inline-block rounded px-2 py-0.5 text-xs font-medium text-white"
+                :style="{ backgroundColor: row.tagColor || '#409EFF' }"
             >
               {{ row.shortName }}
             </span>
             <span v-else class="text-slate-400">-</span>
           </template>
         </el-table-column>
-        <el-table-column prop="tagColor" label="颜色" width="100">
+        <el-table-column prop="tagColor" label="颜色" width="150">
           <template #default="{ row }">
             <div class="flex items-center gap-2">
               <div
-                class="h-5 w-5 rounded"
-                :style="{ backgroundColor: row.tagColor || '#409EFF' }"
+                  class="h-5 w-5 rounded"
+                  :style="{ backgroundColor: row.tagColor || '#409EFF' }"
               ></div>
               <span class="text-xs text-slate-500">{{ row.tagColor }}</span>
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="createTime" label="创建时间" width="180"/>
+        <el-table-column prop="createTime" label="创建时间" width="200"/>
         <el-table-column label="操作" width="150" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link :icon="Edit" @click="handleEdit(row)">编辑</el-button>
-            <el-button v-perm="'patient:tag:delete'" type="danger" link :icon="Delete" @click="handleDelete(row)">删除</el-button>
+            <el-button v-perm="'patient:tag:delete'" type="danger" link :icon="Delete" @click="handleDelete(row)">删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -211,13 +208,13 @@ onMounted(() => {
       </div>
       <div ref="footerRef" class="list-footer flex items-center justify-end">
         <el-pagination
-          v-model:current-page="pagination.pageNum"
-          v-model:page-size="pagination.pageSize"
-          :page-sizes="PAGE_SIZES"
-          :total="pagination.total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handleCurrentChange"
+            v-model:current-page="pagination.pageNum"
+            v-model:page-size="pagination.pageSize"
+            :page-sizes="PAGE_SIZES"
+            :total="pagination.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
         />
       </div>
     </el-card>
@@ -225,10 +222,10 @@ onMounted(() => {
 
   <!-- 新增/编辑对话框 -->
   <el-dialog
-    v-model="dialogVisible"
-    :title="dialogTitle"
-    width="500px"
-    :close-on-click-modal="false"
+      v-model="dialogVisible"
+      :title="dialogTitle"
+      width="500px"
+      :close-on-click-modal="false"
   >
     <el-form label-width="80px">
       <el-form-item label="标签名称" required>
@@ -245,20 +242,20 @@ onMounted(() => {
           </div>
           <div class="flex flex-wrap gap-2">
             <div
-              v-for="color in presetColors"
-              :key="color"
-              class="h-6 w-6 cursor-pointer rounded border-2 transition-all hover:scale-110"
-              :class="formData.tagColor === color ? 'border-slate-800' : 'border-transparent'"
-              :style="{ backgroundColor: color }"
-              @click="formData.tagColor = color"
+                v-for="color in presetColors"
+                :key="color"
+                class="h-6 w-6 cursor-pointer rounded border-2 transition-all hover:scale-110"
+                :class="formData.tagColor === color ? 'border-slate-800' : 'border-transparent'"
+                :style="{ backgroundColor: color }"
+                @click="formData.tagColor = color"
             ></div>
           </div>
         </div>
       </el-form-item>
       <el-form-item label="预览">
         <span
-          class="inline-block rounded px-3 py-1 text-sm font-medium text-white"
-          :style="{ backgroundColor: formData.tagColor || '#409EFF' }"
+            class="inline-block rounded px-3 py-1 text-sm font-medium text-white"
+            :style="{ backgroundColor: formData.tagColor || '#409EFF' }"
         >
           {{ formData.tagName || '标签预览' }}
         </span>
@@ -266,7 +263,8 @@ onMounted(() => {
     </el-form>
     <template #footer>
       <el-button @click="dialogVisible = false">取消</el-button>
-      <el-button v-perm="'patient:tag:add'" type="primary" :loading="submitLoading" @click="handleSubmit">确定</el-button>
+      <el-button v-perm="'patient:tag:add'" type="primary" :loading="submitLoading" @click="handleSubmit">确定
+      </el-button>
     </template>
   </el-dialog>
 </template>

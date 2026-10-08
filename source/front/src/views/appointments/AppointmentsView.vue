@@ -1,48 +1,57 @@
 <script setup lang="ts">
-import {ref, computed, onMounted, onUnmounted, nextTick, watch} from 'vue'
-import {Search, Plus, Edit, Filter, Clock, CircleCheck, CircleClose, Timer, Refresh, ArrowLeft, ArrowRight} from '@element-plus/icons-vue'
+import {computed, nextTick, onMounted, onUnmounted, ref, watch} from 'vue'
+import {
+  ArrowLeft,
+  ArrowRight,
+  CircleCheck,
+  CircleClose,
+  Clock,
+  Edit,
+  Plus,
+  Refresh,
+  Search,
+  Timer
+} from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
 import {
-  getRegistrationList,
-  getAppointStatusCount,
-  getBoardRegistList,
-  createRegistration,
-  updateRegistration,
   cancelRegistration,
+  checkInByRegist,
+  createRegistration,
+  getAppointStatusCount,
   getAvailableSchedule,
+  getBoardRegistList,
+  getRegistrationList,
+  getRevisitRecordSelectList,
+  getScheduleList,
   getScheduleSlots,
   getScheduleSlotsBatch,
-  getScheduleList,
-  checkInByRegist,
-  getRevisitRecordSelectList,
-  previewRevisitFee
+  previewRevisitFee,
+  updateRegistration
 } from '@/api/appoint'
-import {payBill, getBillDetailById} from '@/api/settlementBill'
+import {getBillDetailById, payBill} from '@/api/settlementBill'
 import {submitRefundApply} from '@/api/refund'
 import {createPatient} from '@/api/patient'
 import {
-  PATIENT_GENDER_OPTIONS,
-  patientGenderSymbol,
-  patientGenderText,
-  patientAgeText,
-  isPatientGenderCollected,
-  isIdCardFormatLegal,
+  birthDateFromIdCard,
   isIdCardBirthDateLegal,
   isIdCardChecksumLegal,
+  isIdCardFormatLegal,
+  isPatientGenderCollected,
   isPhoneLegal,
-  birthDateFromIdCard
+  PATIENT_GENDER_OPTIONS,
+  patientAgeText,
+  patientGenderSymbol,
+  patientGenderText
 } from '@/lib/patientGender'
 import {PATIENT_TYPE_OPTIONS, patientTypeToSettlementType} from '@/lib/patientType'
 import PatientSelect from '@/components/his/PatientSelect.vue'
-import {getDepartmentSelectList, getEmployeeList, getDictDataList, getDictDataMapList, getUserInfo} from '@/api/system'
+import {getDepartmentSelectList, getDictDataList, getDictDataMapList, getEmployeeList, getUserInfo} from '@/api/system'
 import {DICT_TYPE} from '@/lib/dict-cache'
 import {VISIT_TYPE} from '@/lib/dict'
-// 号别（1 初诊 / 2 复诊）唯一口径：lib/statusColor.REVISIT_TYPE / revisitTypeOf
-// 挂号号别（普通号/专家号/急诊号/免费号）唯一口径：REGIST_TYPE，与字典 his_regist_type 同源
-import {revisitTypeOf, REGIST_TYPE, statusOf} from '@/lib/statusColor'
+import {REGIST_TYPE, revisitTypeOf, statusOf} from '@/lib/statusColor'
 import {SCHEDULE_TYPE_OPTIONS} from '@/lib/scheduleShift'
 import {REVISIT_SOURCE, revisitNeedsNoSchedule} from '@/lib/revisitPolicy'
-import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 
 const getThisWeekRange = () => {
   const now = new Date()
@@ -117,10 +126,6 @@ const appointments = ref<any[]>([])
 const departments = ref<any[]>([])
 const employeeList = ref<any[]>([])
 const availableSchedules = ref<any[]>([])
-
-// 新增挂号弹窗：患者来源切换（与急诊登记同一交互）
-// 两个 tab 只切换**患者输入区**，科室 / 日期 / 号源 / 时段 / 就诊类型 / 结算方式 是共享字段 ——
-// 所以「录入新患者」不用先建档再挂号两步走，一次提交即可（见 handleSubmit）。
 const addMode = ref<'existing' | 'new'>('existing')
 const addSubmitLoading = ref(false)
 
@@ -197,8 +202,6 @@ const statusMap: Record<string, string> = {
   '7': '爽约',
   '8': '未就诊',
 }
-
-// 号别配色已收口到 lib/statusColor.REVISIT_TYPE（原来这里还有一份 typeColors，已删）
 
 const newAppointment = ref({
   patientId: null as number | null,
@@ -317,15 +320,6 @@ const handlePatientSelect = (patient: any) => {
   }
 }
 
-// ========== 复诊（来源 + 原病历 + 费用预估，sql/121） ==========
-
-/**
- * 窗口放开的复诊来源：只有「当日回诊」和「医嘱复诊预约」。
- *
- * 3-患者自助复诊 的语义就是患者在小程序上自己发起，窗口代点会让「谁发起的」这条事实失真；
- * 4-随访计划复诊 必须由随访任务生成（那一边要把复诊号回写到任务上，两边才对得上）。
- * 字典 his_revisit_source 仍是四个值，这里只是本入口的口径收窄。
- */
 const WINDOW_REVISIT_SOURCES = [REVISIT_SOURCE.SAME_DAY_RETURN, REVISIT_SOURCE.DOCTOR_ORDERED]
 const revisitSourceDict = ref<any[]>([])
 const windowRevisitSourceOptions = computed(() =>
@@ -380,13 +374,6 @@ const loadRevisitRecords = async () => {
   }
 }
 
-/**
- * 费用预估：来源、原病历、（要占号源时）号源三者齐了才问。
- *
- * 齐了才问是因为金额由号源上的挂号费/诊查费再乘策略决定 —— 没选号源时预估出来的数
- * 与实收必然对不上，宁可先不显示，也不给一个会变来变去的数。
- * previewToken 掐掉过期响应：连点两次号源会并发两个请求，后到的旧响应不能覆盖新结果。
- */
 let previewToken = 0
 watch(
     () => [newAppointment.value.visitType, newAppointment.value.revisitSource,
@@ -824,7 +811,7 @@ const handleConfirmPayment = async () => {
   try {
     await payBill({
       billId: paymentInfo.value.billId,
-      items: [{ payMethod: 2, amount: Number(paymentInfo.value.amount) }], // 微信支付
+      items: [{payMethod: 2, amount: Number(paymentInfo.value.amount)}], // 微信支付
     })
     showPaymentDialog.value = false
     ElMessage.success('支付成功')
@@ -1139,7 +1126,7 @@ const ALL_DEPT = '__ALL__'
 const isAllDept = (v: any) => v === ALL_DEPT || v == null || v === ''
 const activeTab = ref('desk')
 /** 弹框里的「格子」：周视图下 = 某医生 × 某天（2026-09-22 起周视图的行就是医生，不再是班次） */
-const selectedCell = ref<{date: string; doctorId: any; doctorName: string} | null>(null)
+const selectedCell = ref<{ date: string; doctorId: any; doctorName: string } | null>(null)
 /** 周视图格子的「医生号源明细」弹框（原来是一张内联表，压在表格下面把看板挤出屏幕） */
 const showCellDialog = ref(false)
 // 弹框跟着「选中的格子」活：切视图 / 翻周 / 下钻都会清掉 selectedCell，
@@ -1197,7 +1184,7 @@ const calCells = computed(() => {
   const start = new Date(first)
   start.setDate(first.getDate() - (firstDow - 1))
   const mon = calMonth.value.slice(0, 7)
-  const cells: {date: string; day: number; inMonth: boolean; hasService: boolean; isToday: boolean}[] = []
+  const cells: { date: string; day: number; inMonth: boolean; hasService: boolean; isToday: boolean }[] = []
   for (let i = 0; i < 42; i++) {
     const d = new Date(start)
     d.setDate(start.getDate() + i)
@@ -1224,7 +1211,7 @@ const loadCalServiceDays = async () => {
   try {
     const start = calMonth.value
     const end = fmtDate(new Date(new Date(calMonth.value + 'T00:00:00').getFullYear(),
-                               new Date(calMonth.value + 'T00:00:00').getMonth() + 1, 0))
+        new Date(calMonth.value + 'T00:00:00').getMonth() + 1, 0))
     const params: any = {startDate: start, endDate: end}
     if (!isAllDept(deskDeptId.value)) params.deptId = deskDeptId.value
     if (deskDoctorId.value) params.doctorId = deskDoctorId.value
@@ -1330,13 +1317,13 @@ const deskSlots = ref<any[]>([])
 const DESK_WEEK_CELL_MAX = 10
 
 const deskWeekLabel = computed(() =>
-  deskDays.value.length ? `${deskDays.value[0]} ~ ${deskDays.value[6]}` : '')
+    deskDays.value.length ? `${deskDays.value[0]} ~ ${deskDays.value[6]}` : '')
 
 /** 工具栏中间的日期文案：日视图是「2026-09-21 周一」，周视图是「上周一 ~ 本周日」 */
 const deskRangeLabel = computed(() =>
-  deskViewMode.value === 'day'
-    ? `${deskDay.value} ${weekdayMap[new Date(deskDay.value + 'T00:00:00').getDay()]}`
-    : deskWeekLabel.value)
+    deskViewMode.value === 'day'
+        ? `${deskDay.value} ${weekdayMap[new Date(deskDay.value + 'T00:00:00').getDay()]}`
+        : deskWeekLabel.value)
 
 /**
  * 医生排序：**按 doctor_id 升序**。
@@ -1421,12 +1408,16 @@ const loadDesk = async () => {
     const scheds = schedRes.data?.records || schedRes.data || []
     deskSchedules.value = scheds
     const map: Record<string, any> = {}
-    scheds.forEach((s: any) => { map[s.id] = s })
+    scheds.forEach((s: any) => {
+      map[s.id] = s
+    })
     deskScheduleMap.value = map
 
     // 按就诊日归位：口径是 visit_date（就诊日），与「今日队列」一致，不是到院日
     const regs: Record<string, any[]> = {}
-    days.forEach(d => { regs[d] = [] })
+    days.forEach(d => {
+      regs[d] = []
+    })
     for (const r of ((regRes.data || []) as any[])) {
       const d = String(r?.visitDate || '').slice(0, 10)
       if (regs[d]) regs[d].push(r)
@@ -1494,13 +1485,13 @@ const loadWeekRoster = async () => {
     const res = await getEmployeeList(params)
     const list: any[] = res.data?.records || res.data || []
     weekRoster.value = list
-      .filter((e: any) => e.status === 1)
-      .map((e: any) => ({
-        doctorId: e.id,
-        doctorName: e.empName,
-        deptId: e.deptId,
-        deptName: e.deptName || departments.value.find((d: any) => String(d.id) === String(e.deptId))?.deptName || '',
-      }))
+        .filter((e: any) => e.status === 1)
+        .map((e: any) => ({
+          doctorId: e.id,
+          doctorName: e.empName,
+          deptId: e.deptId,
+          deptName: e.deptName || departments.value.find((d: any) => String(d.id) === String(e.deptId))?.deptName || '',
+        }))
     rosterDeptKey = key
   } catch (error) {
     // 失败不清空也不抛：拿不到名册时退化为「只有排班里的医生」，行会少，但绝不白屏
@@ -1583,15 +1574,10 @@ const scrollToFirstServiceRow = () => {
     el.scrollTop = 0
     return
   }
-  // 用 rect 差值而不是 offsetTop：tr 的 offsetParent 未必是滚动容器（中间没有任何定位元素时
-  // 会一路算到 body），届时 offsetTop 会把 Header 的高度也算进去，滚过头。
-  // ⚠️ 必须扣掉吸顶表头的高度：thead 是 sticky 的，滚完永远盖在容器顶部 ——
-  //    把首档滚到"距容器顶 8px"等于滚到表头**背后**，用户看到的第一行其实是下一档
-  //    （实测 08:00 被盖住、屏上从 08:30 开始）。落到表头下方 8px 才是真的可见。
   const thead = el.querySelector('thead')
   const headH = thead ? thead.getBoundingClientRect().height : 0
   el.scrollTop = Math.max(0,
-    tr.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop - headH - 8)
+      tr.getBoundingClientRect().top - el.getBoundingClientRect().top + el.scrollTop - headH - 8)
 }
 
 const onWinResize = () => calcDeskHeight()
@@ -1600,18 +1586,23 @@ const onWinResize = () => calcDeskHeight()
 
 /** 余号合计（余号口径 = bis_schedule.available_source，与号源面板一致） */
 const deskAvail = (schedules: any[]) =>
-  schedules.reduce((sum, s) => sum + (Number(s.availableSource) || 0), 0)
+    schedules.reduce((sum, s) => sum + (Number(s.availableSource) || 0), 0)
 
 /** 总号源合计 */
 const deskTotal = (schedules: any[]) =>
-  schedules.reduce((sum, s) => sum + (Number(s.totalSource) || 0), 0)
+    schedules.reduce((sum, s) => sum + (Number(s.totalSource) || 0), 0)
 
-/** 某组排班下的在板挂号：已退号不上板（历史在挂号记录 tab 查） */
+/** 某组排班下的在板挂号：**含已退号**（2026-10-08 起退号是否上板由左侧状态勾选框决定，
+ *  数据层不再硬滤；「已挂 N」这类计数口径仍排除退号，见 deskRegCount） */
 const deskRegsOfSchedules = (date: string, schedules: any[]) => {
   if (!schedules.length) return []
   const ids = new Set(schedules.map(s => s.id))
-  return (deskRegs.value[date] || []).filter(r => Number(r.registStatus) !== 5 && ids.has(r.scheduleId))
+  return (deskRegs.value[date] || []).filter(r => ids.has(r.scheduleId))
 }
+
+/** 计数口径：已挂 N 不算退号（号已经还回号池，把退号数进"已挂"会和余号对不上账） */
+const deskRegCount = (regs: any[]) =>
+    regs.filter((r: any) => Number(r.registStatus) !== 5).length
 
 /**
  * 周视图格子 = **某医生 × 某天**（跨当天全部班次合计）。
@@ -1620,15 +1611,15 @@ const deskRegsOfSchedules = (date: string, schedules: any[]) => {
  * 医生维度的问句（"张三这周还剩多少号"）根本问不出来 —— 现在它就是行，直接读一行即可。
  */
 const weekCellSchedules = (date: string, doctorId: any) =>
-  deskSchedules.value.filter(s =>
-    s.scheduleDate === date && String(s.doctorId) === String(doctorId))
+    deskSchedules.value.filter(s =>
+        s.scheduleDate === date && String(s.doctorId) === String(doctorId))
 
 const weekCellRegs = (date: string, doctorId: any) =>
-  deskRegsOfSchedules(date, weekCellSchedules(date, doctorId))
+    deskRegsOfSchedules(date, weekCellSchedules(date, doctorId))
 
 /** 日视图某医生当天的排班（按段定位用，不限于某班次） */
 const dayDoctorSchedsOf = (doctorId: any) =>
-  deskSchedules.value.filter(s => s.scheduleDate === deskDay.value && s.doctorId === doctorId)
+    deskSchedules.value.filter(s => s.scheduleDate === deskDay.value && s.doctorId === doctorId)
 
 /** 日视图格子：某医生 × 某半小时段 —— 覆盖这一段的排班（开单时要的是排班，不是段） */
 const daySlotCellSchedules = (doctorId: any, slotStart: string) => {
@@ -1651,7 +1642,7 @@ const daySlotCellSchedules = (doctorId: any, slotStart: string) => {
 const daySlotSegments = (scheds: any[], slotStart: string) => {
   const ids = new Set(scheds.map((s: any) => String(s.id)))
   const segs = deskSlots.value.filter((s: any) =>
-    ids.has(String(s.scheduleId)) && String(s.startTime).slice(0, 5) === slotStart)
+      ids.has(String(s.scheduleId)) && String(s.startTime).slice(0, 5) === slotStart)
   if (segs.length) return segs
   const m = toMin(slotStart)
   return scheds.filter((s: any) => {
@@ -1664,24 +1655,24 @@ const daySlotSegments = (scheds: any[], slotStart: string) => {
  * 日视图格子里的人：某医生 × 某半小时段的挂号。
  *
  * 挂号自带段快照（`slotStart`/`slotEnd`），直接按它归位 —— 不靠排班窗口去猜。
- * 没有段快照的历史挂号：不猜他挂的是哪一档，统一收到所属排班的第一段并标 `未选段`，
- * 数据不丢，也不假装知道。
+ * 没有段快照的挂号（改段功能上线前的历史数据，或任何没传 slotId 的入口）：
+ * 统一收到所属排班的第一段展示 —— 数据不丢；不再标「未选段」（2026-10-08 老王：看不懂这标签，
+ * 它是写给开发看的内部口径，不是给挂号员看的信息）。
  */
 const daySlotCellRegs = (doctorId: any, slotStart: string) => {
   const date = deskDay.value
   const ids = new Set(dayDoctorSchedsOf(doctorId).map((s: any) => s.id))
-  const all = (deskRegs.value[date] || []).filter((r: any) =>
-    Number(r.registStatus) !== 5 && ids.has(r.scheduleId))
+  const all = (deskRegs.value[date] || []).filter((r: any) => ids.has(r.scheduleId))
   const hit: any[] = []
   const fallback: any[] = []
   for (const r of all) {
     const head = String(r.slotStart || '').slice(0, 5)
     if (head === slotStart) {
       hit.push(r)
-    // 无快照的挂号：段表的第一段优先，段表查不到再退回排班窗口首档（见 fallbackSlotStartOf）。
-    // 两档都兜不住才真的丢 —— 那种情况下宁可也让它在首档出现，也不要静默不见。
+      // 无快照的挂号：段表的第一段优先，段表查不到再退回排班窗口首档（见 fallbackSlotStartOf）。
+      // 两档都兜不住才真的丢 —— 那种情况下宁可也让它在首档出现，也不要静默不见。
     } else if (!head && (fallbackSlotStartOf(r.scheduleId) ?? null) === slotStart) {
-      fallback.push({...r, __unslotted: true})
+      fallback.push(r)
     }
   }
   return [...hit, ...fallback]
@@ -1689,10 +1680,10 @@ const daySlotCellRegs = (doctorId: any, slotStart: string) => {
 
 /** 日视图格子：某医生 × 某班次（当天）—— 周视图的「隐藏已满」总账仍按班次口径算，保留 */
 const dayCellSchedules = (doctorId: any, type: number) =>
-  deskSchedules.value.filter(s => s.doctorId === doctorId && Number(s.scheduleType) === type)
+    deskSchedules.value.filter(s => s.doctorId === doctorId && Number(s.scheduleType) === type)
 
 const dayCellRegs = (doctorId: any, type: number) =>
-  deskRegsOfSchedules(deskDay.value, dayCellSchedules(doctorId, type))
+    deskRegsOfSchedules(deskDay.value, dayCellSchedules(doctorId, type))
 
 /**
  * 把一组排班去重成「医生集合」。
@@ -1723,8 +1714,8 @@ const doctorsOfSchedules = (scheds: any[]) => {
 
 /** 日视图的医生列：当天有排班的医生（同一医生多诊室多班次合成一列），按拼音序排 */
 const dayDoctors = computed(() =>
-  [...doctorsOfSchedules(deskSchedules.value.filter(s => s.scheduleDate === deskDay.value)).values()]
-    .sort(byDoctorId))
+    [...doctorsOfSchedules(deskSchedules.value.filter(s => s.scheduleDate === deskDay.value)).values()]
+        .sort(byDoctorId))
 
 /**
  * 周视图的行 = **医生**（2026-09-22：原为班次，行是半天粒度、格里塞满患者卡片，
@@ -1779,7 +1770,9 @@ const weekRowStat = (doctorId: any) => {
   let regs = 0
   if (scheds.length) {
     for (const d of deskDays.value) {
-      regs += deskRegsOfSchedules(d, scheds.filter(s => s.scheduleDate === d)).length
+      // 计数排除退号：deskRegsOfSchedules 现在返回全量（退号上不上板由勾选框管），
+      // 但"已挂 N"是容量数字，必须与余号对账
+      regs += deskRegCount(deskRegsOfSchedules(d, scheds.filter(s => s.scheduleDate === d)))
     }
   }
   return {total: deskTotal(scheds), avail: deskAvail(scheds), regs}
@@ -1814,14 +1807,14 @@ const toMin = (hhmm: any): number | null => {
 }
 
 const fmtMin = (m: number) =>
-  `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+    `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 
 /**
  * 时段分组（只用于行首的分组标签，不参与任何取数）。
  * 四档与 `biz_schedule.schedule_type` 对齐：4凌晨 / 1上午 / 2下午 / 晚上。
  */
 const slotGroupOf = (m: number) =>
-  m < 8 * 60 ? '凌晨' : m < 12 * 60 ? '上午' : m < 18 * 60 ? '下午' : '晚上'
+    m < 8 * 60 ? '凌晨' : m < 12 * 60 ? '上午' : m < 18 * 60 ? '下午' : '晚上'
 
 /** 某排班的段起点（无段返回 null）。**只用于判断"这条排班有没有段数据"**，别拿它给人归位 */
 const firstSlotStartOf = (scheduleId: any) => {
@@ -1865,7 +1858,7 @@ const fallbackSlotStartOf = (scheduleId: any) => {
  */
 const DAY_SLOT_STEP = 30
 const daySlotRows = computed(() => {
-  const rows: {key: string; label: string; group: string; sep: boolean; start: string}[] = []
+  const rows: { key: string; label: string; group: string; sep: boolean; start: string }[] = []
   if (deskViewMode.value !== 'day') return rows
   const doctors = dayDoctors.value
   // 压缩判据只看「有没有排班覆盖这一档」，不看号源是否已满：
@@ -1898,10 +1891,18 @@ const daySlotRows = computed(() => {
  * 两个视图共用同一张表，只有行的定义不同（与 `deskColumns` 列的定义同理），
  * 这样格子渲染 / 卡片 / 开单都只有一份实现。
  */
-const deskRows = computed<{key: any; label: string; group?: string; sep?: boolean; start?: string; doctorId?: any; deptName?: string}[]>(() =>
-  deskViewMode.value === 'day'
-    ? daySlotRows.value
-    : weekDoctorRows.value)
+const deskRows = computed<{
+  key: any;
+  label: string;
+  group?: string;
+  sep?: boolean;
+  start?: string;
+  doctorId?: any;
+  deptName?: string
+}[]>(() =>
+    deskViewMode.value === 'day'
+        ? daySlotRows.value
+        : weekDoctorRows.value)
 
 /** 余号文案：0 → 约满，1~4 → 少量余号（真实 HIS 排班大屏的提示口径） */
 const deskAvailText = (schedules: any[]) => {
@@ -1918,7 +1919,7 @@ const deskAvailClass = (schedules: any[]) => {
 
 /** 某医生当天的全部排班（列头余号用；同一排班只算一次） */
 const dayDoctorSchedules = (doctorId: any) =>
-  deskSchedules.value.filter(s => s.scheduleDate === deskDay.value && s.doctorId === doctorId)
+    deskSchedules.value.filter(s => s.scheduleDate === deskDay.value && s.doctorId === doctorId)
 
 /**
  * 这位医生在当前视图范围内**出的是不是专家号**（`biz_schedule.is_expert`）。
@@ -1933,8 +1934,8 @@ const dayDoctorSchedules = (doctorId: any) =>
  */
 const isExpertDoctor = (doctorId: any) => {
   const scope = deskViewMode.value === 'day'
-    ? deskSchedules.value.filter((s: any) => s.scheduleDate === deskDay.value)
-    : deskSchedules.value
+      ? deskSchedules.value.filter((s: any) => s.scheduleDate === deskDay.value)
+      : deskSchedules.value
   return scope.some((s: any) => String(s.doctorId) === String(doctorId) && Number(s.isExpert) === 1)
 }
 
@@ -1970,8 +1971,8 @@ const deskColumns = computed(() => {
  *
  * 周视图 21 格、日视图最多「医生数 × 3」格，每格都在模板里现算会把每次渲染变成 O(格子数 × 挂号数)。
  */
-const deskCellMap = computed<Record<string, {schedules: any[]; regs: any[]; srcSchedules: any[]}>>(() => {
-  const map: Record<string, {schedules: any[]; regs: any[]; srcSchedules: any[]}> = {}
+const deskCellMap = computed<Record<string, { schedules: any[]; regs: any[]; srcSchedules: any[] }>>(() => {
+  const map: Record<string, { schedules: any[]; regs: any[]; srcSchedules: any[] }> = {}
   for (const col of deskColumns.value) {
     for (const row of deskRows.value) {
       if (deskViewMode.value === 'day') {
@@ -1984,7 +1985,11 @@ const deskCellMap = computed<Record<string, {schedules: any[]; regs: any[]; srcS
         }
       } else {
         const schedules = weekCellSchedules(col.date, row.key)
-        map[`${col.key}|${row.key}`] = {schedules, srcSchedules: schedules, regs: deskRegsOfSchedules(col.date, schedules)}
+        map[`${col.key}|${row.key}`] = {
+          schedules,
+          srcSchedules: schedules,
+          regs: deskRegsOfSchedules(col.date, schedules)
+        }
       }
     }
   }
@@ -1995,7 +2000,7 @@ const deskCellMap = computed<Record<string, {schedules: any[]; regs: any[]; srcS
  * 取一格。行键在日视图是 `"08:30"`、周视图是班次数字(1/2/3/4)，同一视图内唯一、跨视图不混用。
  */
 const deskCell = (colKey: string, rowKey: any) =>
-  deskCellMap.value[`${colKey}|${rowKey}`] || {schedules: [], regs: [], srcSchedules: []}
+    deskCellMap.value[`${colKey}|${rowKey}`] || {schedules: [], regs: [], srcSchedules: []}
 
 /**
  * 这一格「没号可挂」= 压根**没有排班**（2026-09-22）。
@@ -2007,7 +2012,7 @@ const deskCell = (colKey: string, rowKey: any) =>
  * 两处各写一遍 `!…srcSchedules.length` 迟早会出现"字写着未排班、格子看着能点"。
  */
 const isCellUnavailable = (col: any, rowKey: any) =>
-  !deskCell(col.key, rowKey).srcSchedules.length
+    !deskCell(col.key, rowKey).srcSchedules.length
 
 const showRescheduleDialog = ref(false)
 const rescheduleLoading = ref(false)
@@ -2019,6 +2024,10 @@ const rescheduleForm = ref({
   scheduleId: null as number | null,
   // 新号源下的时间段（可选）：传了按段迁移（还旧段扣新段），不传只迁移主表号源
   slotId: null as number | null,
+  // ↓ 仅展示用（不提交）：打开弹窗时把这条预约**现在**挂的号源/时间段带出来，
+  //   否则改约的人对着一个空表单根本不知道自己正在从哪改到哪
+  currentSourceText: '',
+  currentSlotText: '',
 })
 const rescheduleSchedules = ref<any[]>([])
 const rescheduleSlots = ref<any[]>([])
@@ -2044,8 +2053,8 @@ const handleRescheduleScheduleChange = (scheduleId: any) => {
 const regStatusDot: Record<number, string> = {
   1: 'bg-blue-500',
   2: 'bg-cyan-500',
-  3: 'bg-purple-500',
-  4: 'bg-emerald-500',
+  3: 'bg-green-500',
+  4: 'bg-slate-400',
   5: 'bg-red-400',
   6: 'bg-orange-500',
   7: 'bg-rose-600',
@@ -2056,21 +2065,39 @@ const regStatusDot: Record<number, string> = {
  * 卡片状态标签：每个状态都有一句话说明，颜色与色点一致。
  *
  * 口径 = `AppointStatusEnum`（1已挂号 2已签到 3已接诊 4已就诊 5已退号 6已过号 7爽约 8未就诊）。
- * 「已退号(5)」不定义 —— 退号不上板（历史去挂号记录 tab 查）。
+ * 「已退号(5)」2026-10-08 起定义 —— 退号是否上板由左侧状态勾选框决定（默认勾选=展示），
+ *   原口径「退号不上板」随勾选框下线；未勾选时它不出现在板上，但数据仍整段全量加载。
  * 别把「已签到」写成「候诊中」：那是 `QueueStatusEnum` 的词，两套枚举不能互套。
+ *
+ * 2026-10-08 老王定色：就诊中=亮绿（还在诊室里，最该抢眼）、已就诊=灰（看完走人，退到背景），
+ * 已挂号保持蓝不变。名字颜色跟着走（>=4 灰名）。
  */
-const deskStatusChip: Record<number, { text: string; cls: string; dot: string }> = {
-  1: {text: '已挂号', cls: 'bg-blue-50 text-blue-600', dot: 'bg-blue-500'},
-  2: {text: '已签到', cls: 'bg-cyan-50 text-cyan-700', dot: 'bg-cyan-500'},
-  3: {text: '就诊中', cls: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500'},
-  4: {text: '已就诊', cls: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500'},
-  6: {text: '已过号', cls: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500'},
-  7: {text: '爽约', cls: 'bg-rose-100 text-rose-700', dot: 'bg-rose-600'},
-  8: {text: '未就诊', cls: 'bg-slate-100 text-slate-500', dot: 'bg-slate-400'},
+const deskStatusChip: Record<number, { text: string; cls: string; dot: string; bar: string }> = {
+  1: {text: '已挂号', cls: 'bg-blue-50 text-blue-600', dot: 'bg-blue-500', bar: 'bg-blue-500'},
+  2: {text: '已签到', cls: 'bg-cyan-50 text-cyan-700', dot: 'bg-cyan-500', bar: 'bg-cyan-500'},
+  3: {text: '就诊中', cls: 'bg-green-100 text-green-700', dot: 'bg-green-500', bar: 'bg-green-500'},
+  4: {text: '已就诊', cls: 'bg-slate-100 text-slate-500', dot: 'bg-slate-400', bar: 'bg-slate-400'},
+  5: {text: '已退号', cls: 'bg-red-50 text-red-500', dot: 'bg-red-400', bar: 'bg-red-400'},
+  6: {text: '已过号', cls: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500', bar: 'bg-orange-500'},
+  7: {text: '爽约', cls: 'bg-rose-100 text-rose-700', dot: 'bg-rose-600', bar: 'bg-rose-600'},
+  8: {text: '未就诊', cls: 'bg-slate-100 text-slate-500', dot: 'bg-slate-400', bar: 'bg-slate-400'},
 }
 
+const DESK_STATUS_OPTIONS = [
+  {value: 1, label: '已挂号'},
+  {value: 2, label: '已签到'},
+  {value: 3, label: '就诊中'},
+  {value: 4, label: '已就诊'},
+  {value: 5, label: '已退号'},
+  {value: 6, label: '已过号'},
+  {value: 7, label: '爽约'},
+  {value: 8, label: '未就诊'},
+]
+const deskStatusFilter = ref<number[]>(DESK_STATUS_OPTIONS.map(s => s.value))
+const deskRegVisible = (r: any) => deskStatusFilter.value.includes(Number(r.registStatus))
+
 const deskShiftLabel = (type: number) =>
-  boardShifts.find(s => s.type === type)?.label || ''
+    boardShifts.find(s => s.type === type)?.label || ''
 
 const handleDeskDeptChange = () => {
   // 换科室后原来选中的医生可能压根不在这个科室，必须清掉，否则看板会空得莫名其妙
@@ -2097,18 +2124,10 @@ const handleDeskAdd = () => {
   })
 }
 
-/** 视图切换：日视图翻天、周视图翻周（同一个工具栏按钮，语义随视图变） */
 const handleDeskViewChange = async () => {
-  // 明细表只属于周视图（它按「日期 × 医生」定位）；切走时留着会指向一个看不见的格子
   selectedCell.value = null
-  // 2026-09-22：周视图没有「隐藏已满/停诊」开关了（只在日视图左栏），
-  // 从日视图带着"已勾选"切过来会让周视图静默少掉几个班次、而开关还不在这一屏 —— 关不掉。
-  // 切到周视图一律复位：这一屏没有开关，就必须是未隐藏的全量。
   if (deskViewMode.value === 'week') deskHideFull.value = false
   await loadDesk()
-  // ⚠️ 切视图必须重算看板高度：日/周的工具栏内容不一样（周视图多一串「隐藏已满/停诊」开关），
-  //    容器一折行工具栏就多占 44px —— 而看板高度是首屏量好的常量，不会自己跟着长高，
-  //    结果就是主区冒出一条纵向滚动条（实测 week 溢出 44px / day 为 0）。重算一下把它收回去。
   await nextTick()
   calcDeskHeight()
 }
@@ -2125,12 +2144,6 @@ const handleDeskStep = (delta: number) => {
   loadDesk()
 }
 
-/**
- * 刷新：重刷**当前视图**（日视图 = 这一天，周视图 = 这一周），多余的一点都不动。
- *
- * 名册/月历圆点也一起刷新：新入职的医生要出现在周视图行里、新排的班要在月历上有点，
- * 只重拉排班会出现"板上有他、月历没点"。两个都是各自的按科室缓存，重复点不会打无效请求。
- */
 const handleDeskRefresh = async () => {
   selectedCell.value = null
   rosterDeptKey = null       // 强制重取名册：新入职/离职的人要反映到周视图的行上
@@ -2158,66 +2171,17 @@ const drillToDay = (date: string) => {
   loadDesk()
 }
 
-/**
- * 这笔挂号的钱收了没有 —— 已收费(2) / 部分退费(4) 都表示钱已经动过。
- *
- * 口径 = `biz_charge_info.charge_status`（his_charge_status 字典），
- * 由后端 `BizAppointInfoListVO.paymentStatus` 带出来。
- */
 const isRegistPaid = (r: any) => [2, 4].includes(Number(r?.paymentStatus))
 
-/**
- * 号源能不能改（改约 / 换号源）—— **只有「已挂号(1)」且这笔还没收钱**。
- *
- * 口径与后端 `AppointStatusEnum.isSourceChangeAllowed` 一致，真边界在 `updateRegist`。
- *
- * 为什么已签到(2) 也不给改：号源已经消耗、患者已经在队列里排着，
- * 换号源得连带把队列行搬走，那不是改约而是「先退再挂」。
- *
- * 为什么已收费(2/4) 不给改：收费单是挂在挂号单上的，挂号记录一改（科室/医生/日期/号别），
- * 收费单就与挂号事实对不上——财务对账、科室日报、医保对账全部错位，普通号↔专家号的价差也没人处理。
- * 手机端/网上预约付过款的尤其如此：钱已经在微信/支付宝里，挂号台把号源一换，没人能把这笔钱挪过去。
- * 真实窗口的做法就是这一条：已缴费患者换号走「退号退费（按原支付渠道退回）→ 重新挂号」。
- * 后端同样拦（`AppointServiceImpl#assertSourceChangeUnpaid`），前端这层只是别让人点了才被拒。
- */
 const canReschedule = (r: any) => Number(r?.registStatus) === 1 && !isRegistPaid(r) && !isVisitDatePast(r)
 
-/**
- * 就诊日是否已经过去（今天 09-26 看 09-25 的号 → true）。
- *
- * 状态闸门（1/2 可退）管不到日期：日终结转没跑的那天（夜里关机、停诊、导数据），
- * 昨天的号还停在「已挂号」，于是满屏退号/改约按钮 —— 而这两件事都不成立，
- * 号源属过去日期，退了也还不回池（见后端 DayEndSettleMapper 类注释）。
- *
- * 只到「日」不到「时段」：当天下午的号没来看、傍晚来窗口退钱是合理诉求。
- * 后端同口径在 `AppointServiceImpl#visitDatePastReason`，前端这层只是「不让点」。
- */
 const isVisitDatePast = (r: any) => {
   const d = String(r?.visitDate || '').slice(0, 10)
   return !!d && d < fmtDate(new Date())
 }
 
-/**
- * 能不能退号 —— **只有「已挂号(1)」「已签到(2)」，且就诊日还没过**。
- *
- * 与后端 `AppointStatusEnum.isCancelable` + `visitDatePastReason` 同一口径。前端这层只是「不让点」，边界在后端
- * `cancelRegist`（会再拦一次并给出原因）。其余状态都不给退：
- *   已接诊(3)/已就诊(4) 是诊疗事实；已过号(6)/爽约(7)/未就诊(8) 的号源属过去日期，
- *   退了也还不了池（见 DayEndSettleMapper）；已退号(5) 更没有重复退的道理。
- *
- * 已收费的**能退**：退号会联动退费（后端 `settleChargeOnRegistCancel` 走 SPI 到 his-charge），
- * 已收费→按原渠道退回，待收费→收费单作废。不给退反而会把患者困住 —— 钱退不回来才是真事故。
- */
 const canCancelRegist = (r: any) => [1, 2].includes(Number(r?.registStatus)) && !isVisitDatePast(r)
 
-/**
- * 能不能「申请退费」—— 人没来、日期已过、钱已收进账。
- *
- * 退号做不到的那一半（跨期退费）由它补上：挂号行保持「爽约/未就诊」不动（那是就诊事实），
- * 钱走「退费申请 → 收费处审核 → 执行」这条留痕链路，允许跨期。
- * 已退号(5) 排除：退号时已经联动退过费了，再申请就是重复退款。
- * 已接诊(3)/已就诊(4) 排除：人看完了病，挂号费不该退。
- */
 const canApplyRefund = (r: any) => !!r?.billId
     && isVisitDatePast(r)
     && isRegistPaid(r)
@@ -2233,17 +2197,17 @@ const sourceLockReason = (r: any) => {
   }
   switch (Number(r?.registStatus)) {
     case 3:
-      return '已接诊（就诊中）：诊疗已开始，不再允许调整或变更号源'
+      return '已接诊：诊疗已开始，不再允许调整或变更号源'
     case 4:
       return '已就诊：诊疗已结束，不再允许调整或变更号源'
     case 5:
-      return '已退号'
+      return '已退号：诊疗已结束，不再允许调整或变更号源'
     case 6:
-      return '已过号'
+      return '已过号：诊疗已结束，不再允许调整或变更号源'
     case 7:
-      return '爽约（日终结转收尾）：该号源属过去日期，不可变更'
+      return '爽约：诊疗已结束，不再允许调整或变更号源'
     case 8:
-      return '未就诊（日终结转收尾）：该号源属过去日期，不可变更'
+      return '未就诊：诊疗已结束，不再允许调整或变更号源'
     default:
       return ''
   }
@@ -2293,8 +2257,8 @@ const deskCardTitle = (r: any) => {
   const settlement = deskCardMetaLine(r)
   const info = [meta, visitNo, doctor, settlement].filter(Boolean).join(' · ')
   const extra = [info, r?.phone ? `电话 ${r.phone}` : '', r?.registNo ? `就诊号 ${r.registNo}` : '']
-    .filter(Boolean)
-    .join('　')
+      .filter(Boolean)
+      .join('　')
   return extra ? `${action}\n${extra}` : action
 }
 
@@ -2322,8 +2286,18 @@ const handleReschedule = (r: any) => {
     patientName: r.patientName,
     deptId: r.deptId,
     visitDate: r.visitDate,
-    scheduleId: null,
-    slotId: null,
+    scheduleId: r.scheduleId || null,
+    slotId: r.slotId || null,
+    // 当前号源 = 挂号挂的那条排班（deskScheduleMap 里是排班本体）；时间段优先用挂号
+    // 自带的段快照（精确到半小时档），没有段快照（历史挂号）就只展示排班窗口
+    currentSourceText: (() => {
+      const sched = deskScheduleMap.value[r.scheduleId]
+      if (!sched) return ''
+      return `${sched.scheduleDate || r.visitDate || ''} ${deskShiftLabel(Number(sched.scheduleType))} ${sched.startTime}-${sched.endTime}`.trim()
+    })(),
+    currentSlotText: r.slotStart
+        ? `${String(r.slotStart).slice(0, 5)}-${String(r.slotEnd).slice(0, 5)}`
+        : '',
   }
   rescheduleSchedules.value = []
   rescheduleSlots.value = []
@@ -2380,7 +2354,9 @@ const handleDeskCancel = async (r: any) => {
     await ElMessageBox.confirm(`确认为 ${r.patientName} 办理退号？`, '退号确认', {
       confirmButtonText: '退号', cancelButtonText: '取消', type: 'warning',
     })
-  } catch { return }
+  } catch {
+    return
+  }
   try {
     await cancelRegistration(r.id, '看板退号')
     ElMessage.success('退号成功')
@@ -2406,7 +2382,7 @@ const handleTabChange = (tab: any) => {
  * （给患者改推荐时间时，知道"上午满了"和"上午没班"是两回事）。
  */
 const cellAll = (date: string, doctorId: any) =>
-  weekCellSchedules(date, doctorId)
+    weekCellSchedules(date, doctorId)
 
 const cellSchedules = (date: string, doctorId: any) => {
   const all = cellAll(date, doctorId)
@@ -2416,7 +2392,7 @@ const cellSchedules = (date: string, doctorId: any) => {
 
 /** 该格被开关藏掉了几个班次（用于「已满/停诊已隐藏 N」提示，避免静默消失） */
 const cellHiddenCount = (date: string, doctorId: any) =>
-  cellAll(date, doctorId).length - cellSchedules(date, doctorId).length
+    cellAll(date, doctorId).length - cellSchedules(date, doctorId).length
 
 /**
  * 当前视图被藏掉的班次总数：开关打开时给一句总账，别让人以为号源凭空少了。
@@ -2425,8 +2401,8 @@ const cellHiddenCount = (date: string, doctorId: any) =>
  * 某个医生整个半天凭空消失，没有任何提示。
  */
 const deskHiddenTotal = computed(() =>
-  (deskColumns.value || []).reduce((sum: number, col: any) =>
-    sum + deskRows.value.reduce((s: number, row: any) => s + cellHiddenCountFor(col, row.key), 0), 0))
+    (deskColumns.value || []).reduce((sum: number, col: any) =>
+        sum + deskRows.value.reduce((s: number, row: any) => s + cellHiddenCountFor(col, row.key), 0), 0))
 
 /**
  * 周视图格子的明细**只由「余号」按钮触发**（2026-09-22）。
@@ -2435,7 +2411,8 @@ const deskHiddenTotal = computed(() =>
  * 任何一次误点（甚至只是想选中/瞄一眼）都会弹出一层模态 —— 而在挂号窗口这种
  * 手速场景下，弹框要比"多按一下"贵得多。可点的事情明确放在按钮上，误触成本就消失了。
  *
- * 双击仍然是开单：那是挂号员的肌肉记忆（点两下 = 给我挂上），与"按钮开明细"不冲突。
+ * 原实现还带「双击格子开单」，2026-10-08 按需求摘除：格子上已有「预约」按钮，
+ * 开单入口只留按钮，误触成本归零。
  */
 const openCellDialog = (date: string, doctorId: any) => {
   if (!cellSchedules(date, doctorId).length) return
@@ -2445,31 +2422,18 @@ const openCellDialog = (date: string, doctorId: any) => {
 }
 
 /**
- * 格子双击 = 开单 —— **只在日视图**（2026-09-22）。
- *
- * 周视图一格 = 一位医生一整天，双击落点不是"某个号源"而是"这一整天"，
- * 开出来的单子还得再挑一次号源；而且周视图是**横着扫**的（一行一位医生、一列一天），
- * 扫的过程中误触一次双击就弹开单窗，比"多按一下"贵得多。
- * 周视图要开单走格子里那个「预约」按钮 —— 意图明确、一次点击，不用赌手速。
- */
-const handleDeskCellDblclick = (col: any, rowKey: any) => {
-  if (deskViewMode.value !== 'day') return
-  addFromCell(col, rowKey)
-}
-
-/**
  * 按**列**取格子排班 —— 日视图列 = 医生、周视图列 = 日期，两种格子的定位维度不同。
  *
  * 上面那几个 `(date, doctorId)` 版函数是周视图专用（周视图列就是日期、行是医生）；
- * 双击开单要在两个视图都工作，所以这里再包一层按 `col` 定位的版本，
+ * 「预约」按钮在两个视图都要开单，所以这里再包一层按 `col` 定位的版本，
  * 让调用方只关心"这一格"，不关心当前是哪个视图。
  *
  * `all` = 全部排班，`visible` = 应用「隐藏已满/停诊」后的可见排班（与周视图口径一致）。
  */
 const cellAllFor = (col: any, rowKey: any) =>
-  deskViewMode.value === 'day'
-    ? daySlotCellSchedules(col.doctorId, String(rowKey))
-    : cellAll(col.date, rowKey)
+    deskViewMode.value === 'day'
+        ? daySlotCellSchedules(col.doctorId, String(rowKey))
+        : cellAll(col.date, rowKey)
 
 const cellSchedulesFor = (col: any, rowKey: any) => {
   const all = cellAllFor(col, rowKey)
@@ -2483,7 +2447,7 @@ const cellSchedulesFor = (col: any, rowKey: any) => {
 }
 
 const cellHiddenCountFor = (col: any, rowKey: any) =>
-  cellAllFor(col, rowKey).length - cellSchedulesFor(col, rowKey).length
+    cellAllFor(col, rowKey).length - cellSchedulesFor(col, rowKey).length
 
 /**
  * 日历下方的「当天概况」：医生数 / 总号源 / 已挂号 / 剩余号源。
@@ -2509,23 +2473,13 @@ const deskDayStat = computed(() => {
   const doctors = new Set(dayScheds.map(s => s.doctorId).filter(Boolean)).size
   const total = dayScheds.reduce((sum, s) => sum + (Number(s.totalSource) || 0), 0)
   const avail = dayScheds.reduce((sum, s) => sum + (Number(s.availableSource) || 0), 0)
-  const regs = deskRegsOfSchedules(date, dayScheds).length
+  const regs = deskRegCount(deskRegsOfSchedules(date, dayScheds))
   // 已用占比 = 已挂号 / 总号源（不是 1 - 余号/总数：两者在有"停用号源"时会不等，
   // 挂号员关心的是"发出去了多少号"，用实际挂号数更直白）
   const usedPct = total > 0 ? Math.min(100, Math.round((regs / total) * 100)) : 0
   return {doctors, total, avail, regs, usedPct}
 })
 
-/**
- * 从面板点「新增预约」进来时，号源怎么带出来。
- *
- * 默认 = 按面板当前的「科室 + 日期」**重新走接口**问一次最新号源，而不是沿用面板缓存：
- * 号源面板/看板是上一刻的快照，余号随时被别人抢走 —— 照缓存预填出「余号 3」，点确认时才报号源已满，
- * 是挂号窗口最难受的一类失败。
- *
- * 唯一例外：面板上明确点了某一位医生的号源（`preferScheduleId`），那本来就该挂这一条，
- * 仍按 snapshot 提示「这一条可能已变更」，但不用走接口猜他的号还在不在。
- */
 type AddSeed = {
   deptId?: any
   visitDate?: string
@@ -2533,7 +2487,7 @@ type AddSeed = {
   doctorId?: any
   // 时间片段ID（日视图点某一格进来时带上：这一格就是这一档，别让人再选一遍）
   slotId?: any
-  snapshot?: {scheduleDate: string; list: any[]}
+  snapshot?: { scheduleDate: string; list: any[] }
 }
 
 /** 号源被抢空 / 停诊后的兜底文案；返回 true 表示「该把号源下拉重置掉」 */
@@ -2547,8 +2501,6 @@ const warnSeedScheduleStale = (seedScheduleId: any) => {
 
 const fetchSchedulesForSeed = async (seed: AddSeed) => {
   const visitDate = seed.visitDate
-  // 科室可能是哨兵「全部科室」——挂号单必须落到一个具体科室（后端 @NotNull），
-  // 所以这种情况**不预填**，把选择权留给人，别猜。
   const deptId = isAllDept(seed.deptId) ? null : seed.deptId
   if (!deptId || !visitDate) return
   const snapshot = seed.snapshot
@@ -2569,19 +2521,6 @@ const fetchSchedulesForSeed = async (seed: AddSeed) => {
   await loadAvailableSchedules()
 }
 
-/**
- * 挂号弹窗的统一预填入口。
- *
- * 调用方有两个：看板格子的「预约」按钮 / 格子双击（addFromCell，带整格上下文），
- * 周视图号源明细的「去挂号」（goRegister，直接指定某一条号源）。
- * 原先的工具栏按钮 / 医生列头加号 / 明细面板按钮三处入口已按需求收口掉。
- *
- * 三条硬要求：
- *   ① 必须**带上当前上下文**（科室 + 日期）预填 —— 不然等于开一个空单，还得把科室日期重选一遍；
- *   ② 赋值必须在 `showAddDialog = true` **之前**：弹窗是 destroy-on-close + @closed 清表单，
- *      反过来的话这次赋值会被上一轮的 resetForm 冲掉；
- *   ③ 「全部科室」这种没有具体科室可带的情况，直接开空单不预填，不猜。
- */
 const openAddFromPanel = async (seed: AddSeed = {}) => {
   resetForm()
   newAppointment.value.deptId = isAllDept(seed.deptId) ? null : (seed.deptId ?? null)
@@ -2624,31 +2563,14 @@ const goRegister = (s: any) => {
   })
 }
 
-/**
- * 格子上的开单入口（两个触发姿势共用这一个函数）：
- *   · 点格子里的「预约」按钮（有排班的格子才有这个按钮）
- *   · 双击格子空白处（真实 HIS 挂号工作台的核心交互）
- *
- * 双击与周视图单击的分工（两者语义不同，不冲突）：周视图单击格子 = 弹该格的
- * 「医生号源明细」（回答"还有谁能挂"），双击/点按钮 = 直接开单（回答"给我挂上"）。
- * 所以这里只开单，不置「选中的格子」；双击到达时那边的单击定时器已被掐掉（见 handleDeskCellDblclick）。
- *
- * 科室取该格排班自己的科室，**不用工具栏的 deskDeptId**：工具栏选「全部科室」（= `__ALL__`）时，
- * 同一格会混着多个科室的排班，而挂号单必须落到一个具体科室 —— 用哨兵预填会让
- * `loadAvailableSchedules` 因缺科室直接 return，号源下拉 0 项且不报错（实测 3 条接口数据 / 0 个下拉项，
- * "看起来开了弹窗，其实挂了空单"）。格子里的排班自带 `deptId`，用它才是唯一无歧义的来源。
- *
- * 未排班 / 全被隐藏：不开窗（没有排班就没有号源，开出来是个空单，用户还得自己关掉）。
- * 给一次轻提示说明原因 —— 静默无反应会让人以为页面卡了。
- */
 const addFromCell = (col: any, rowKey: any) => {
   const cellScheds = cellSchedulesFor(col, rowKey)
   if (!cellScheds.length) {
     // 分清两种"没号源"：本来就没排班 vs 被「隐藏已满/停诊」开关藏掉了
     const hidden = cellHiddenCountFor(col, rowKey)
     ElMessage.info(hidden > 0
-      ? `该时段 ${hidden} 个班次已满/停诊（当前被「隐藏已满/停诊」开关隐藏），关掉开关可查看并开单`
-      : '该时段没有排班，无法新增预约')
+        ? `该时段 ${hidden} 个班次已满/停诊（当前被「隐藏已满/停诊」开关隐藏），关掉开关可查看并开单`
+        : '该时段没有排班，无法新增预约')
     return
   }
   // 日视图这一格 = 某医生的某半小时档 → 把这一档直接带上，挂号单不必再选一遍时间段
@@ -2656,7 +2578,7 @@ const addFromCell = (col: any, rowKey: any) => {
   if (deskViewMode.value === 'day') {
     const ids = new Set(cellScheds.map((s: any) => String(s.id)))
     const segs = deskSlots.value.filter((s: any) =>
-      ids.has(String(s.scheduleId)) && String(s.startTime).slice(0, 5) === String(rowKey))
+        ids.has(String(s.scheduleId)) && String(s.startTime).slice(0, 5) === String(rowKey))
     if (segs.length === 1) slotId = segs[0].id
   }
   // 多个号源（同医生多诊室 / 同格多医生）→ 不猜第一条，把 scheduleId 留空让人在下拉里选
@@ -2702,8 +2624,6 @@ onUnmounted(() => {
 
 <template>
   <div class="space-y-6">
-    <!-- 六卡口径 = 就诊日当天（统计查询只带 visitDate，不带挂号时间区间），
-         数值真值来自 /appoint/statusCount，验证脚本按 testid 取页面值与接口对账 -->
     <div class="grid grid-cols-3 gap-4 sm:grid-cols-6" data-testid="status-cards">
       <div v-for="item in [
         { label: '总挂号', value: statusCounts.total, color: 'text-slate-700' },
@@ -2713,15 +2633,13 @@ onUnmounted(() => {
         { label: '已退号', value: statusCounts.cancelled, color: 'text-red-500' },
         { label: '已过号', value: statusCounts.overdue, color: 'text-orange-500' },
       ]" :key="item.label" :data-testid="'status-card-' + item.label"
-         class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center shadow-sm">
+           class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-center shadow-sm">
         <p :class="['text-xl font-bold leading-6', item.color]">{{ item.value }}</p>
         <p class="text-xs text-slate-500">{{ item.label }}</p>
       </div>
     </div>
     <el-tabs v-model="activeTab" @tab-change="handleTabChange">
       <el-tab-pane label="预约看板" name="desk" lazy>
-        <!-- 日历已从「页面级左 rail」移入**日视图内部**（原 rail 200px、格子 24px 高，太小点不准）。
-             日视图 = 左日历 + 右「班次 × 医生」；周视图本身是一周三列，不再挂日历。 -->
         <div class="desk-board rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
           <div class="flex flex-wrap items-center gap-3">
             <!-- 日 / 周 视图切换：真实 HIS 挂号工作台的做法（同一张台子切视图），不是两个菜单 -->
@@ -2730,90 +2648,55 @@ onUnmounted(() => {
               <el-radio-button value="week">周视图</el-radio-button>
             </el-radio-group>
             <span class="text-sm font-medium text-slate-700">科室</span>
-            <el-select v-model="deskDeptId" data-testid="desk-dept-select" placeholder="全部科室" filterable
-                       class="!w-44" @change="handleDeskDeptChange">
-              <!-- 「全部科室」必须是**下拉里的一项**：placeholder 只在没值时显示，
-                   用户展开下拉是找不到「全部」的（原来靠 clearable 的 ✕ 表达"全部"，
-                   选完还看不到"我现在看的是全部"。显式选项 + 常驻不清理才说得清） -->
-              <el-option label="全部科室" :value="ALL_DEPT"/>
-              <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id ?? d.deptName"/>
+            <el-select v-model="deskDeptId" data-testid="desk-dept-select" placeholder="全部科室" filterable clearable
+                       class="!w-64" @change="handleDeskDeptChange">
+              <el-option v-for="d in departments" :key="d.id"
+                         :label="d.parentDeptName ? `${d.parentDeptName} / ${d.deptName}` : d.deptName"
+                         :value="d.id ?? d.deptName"/>
             </el-select>
             <span class="text-sm font-medium text-slate-700">医生</span>
-            <el-select v-model="deskDoctorId" data-testid="desk-doctor-select" placeholder="全部医生" clearable filterable
-                       class="!w-40" @change="handleDeskDoctorChange">
-              <!-- 专家标识也挂到下拉里：挑医生是按名册挑的，号别得在挑的时候就能看见
-                   （label 仍是纯姓名 —— 那是搜索比对用的，掺进标识会让人搜「专家」搜不到人） -->
+            <el-select v-model="deskDoctorId" data-testid="desk-doctor-select" placeholder="全部医生" clearable
+                       filterable
+                       class="!w-52" @change="handleDeskDoctorChange">
               <el-option v-for="doc in deskDoctorOptions" :key="doc.id" :label="doc.doctorName" :value="doc.id">
                 <span>{{ doc.doctorName }}</span>
                 <span v-if="isExpertDoctor(doc.id)"
                       class="ml-1 rounded bg-amber-50 px-1 text-[10px] font-medium text-amber-600 ring-1 ring-amber-200">专家</span>
               </el-option>
             </el-select>
-            <!-- 2026-09-22：周视图的「隐藏已满/停诊」开关整个去掉。
-                 周视图一格是一位医生一整天，藏着已满是"这位医生今天到底出不出诊"说不清，
-                 而日视图（半小时档）里满档很多、藏起来才有用 —— 开关只留在日视图左栏。
-                 ⚠️ 去掉开关 = 周视图永远看全量，切到周视图时 handleDeskViewChange 会复位 deskHideFull，
-                    否则从日视图带着勾选切过来会静默少掉几个班次还没处关。 -->
-            <!-- 日期导航：**只留周视图**。
-                 日视图的日期由左侧日历负责（点哪天加载哪天），工具栏再显示一遍"2026-09-21 周一"
-                 等于同一屏两个地方说同一个事实，而且"前一天/后一天"还得跟日历抢着改同一天 →
-                 日视图下这三个按钮整个不渲染，只留周视图的「上一周/下一周/回到今天」。 -->
-            <!-- 翻周用 ‹ › 图标按钮：文字按钮一排四个把工具栏撑得很宽，
-                 而"上一周/下一周"的语义靠箭头本身就够（与左侧月历的 ‹ › 同一个视觉语言） -->
             <div v-if="deskViewMode === 'week'" class="flex items-center gap-2">
               <el-button :icon="ArrowLeft" title="上一周" @click="handleDeskStep(-1)"/>
-              <span data-testid="desk-range" class="min-w-[210px] text-center text-base font-medium text-slate-600">{{ deskRangeLabel }}</span>
+              <span data-testid="desk-range"
+                    class="min-w-[210px] text-center text-base font-medium text-slate-600">{{ deskRangeLabel }}</span>
               <el-button :icon="ArrowRight" title="下一周" @click="handleDeskStep(1)"/>
               <el-button @click="handleDeskToday">回到本周</el-button>
             </div>
-            <!-- 「新增预约」放在筛选栏最右侧：看板就是挂号员的主工作台，
-                 开单入口必须在同一屏够得着（不用先切到「挂号记录」tab 才能开单）。
-                 预填当前看板的科室 + 日期（日视图=当前这天 / 周视图=本周第一天），
-                 开出来不是空单 —— 科室、日期不必再选一遍。 -->
-            <!-- 「新增预约」放在筛选栏最右侧：看板就是挂号员的主工作台，
-                 开单入口必须在同一屏够得着（不用先切到「挂号记录」tab 才能开单）。
-                 预填当前看板的科室 + 日期（日视图=当前这天 / 周视图=本周第一天），
-                 开出来不是空单 —— 科室、日期不必再选一遍。
-
-                 「刷新」放在它左边，两个视图都要有：余号是会被别人随时抢走的，
-                 板上的数字是上一刻的快照 —— 窗口收下一位患者之前必须先重看一眼，
-                 否则照着老数字推荐号源，点确认时报「号源已满」是最难受的一类失败。
-                 只重载看板本体（排班 + 挂号 + 段 + 医生名册/月历圆点），不动页面上方的统计卡
-                 （那些是"挂号记录"tab 的口径，跟看板不是同一张表，一起刷反而更慢也更乱）。 -->
             <div class="ml-auto flex items-center gap-2">
               <el-button data-testid="desk-refresh" :icon="Refresh" :loading="deskLoading"
-                         @click="handleDeskRefresh">刷新</el-button>
+                         @click="handleDeskRefresh">刷新
+              </el-button>
               <el-button v-perm="'opd:appointments:add'" type="primary" :icon="Plus" data-testid="desk-add-appoint"
-                         @click="handleDeskAdd">新增预约</el-button>
+                         @click="handleDeskAdd">新增预约
+              </el-button>
             </div>
           </div>
-          <!-- 2026-09-22：「隐藏已满/停诊」从顶部工具栏挪到看板**下方**（紧贴表格）——
-               它是看板的显示开关，跟着表走比挂在筛选行里更近；「隐藏 N 个」的总账提示随行。 -->
-          <!-- 日视图 = 左日历 + 右「班次 × 医生」。日历只属于日视图（周视图本身就是一周七列，
-               再放一个月份日历两边都在说"日期"，反而互相打岔），所以用 v-if 挂在日视图里。 -->
-          <!-- items-stretch：左栏拉满与右边表格同样的高度（2026-09-22 需求），
-               不再按内容自适应——内容不足时下方留白，整块边框对齐看板。 -->
           <div class="mt-3 flex items-stretch gap-4">
-            <!-- 日历：日视图的日期导航。收小到 220px —— 300px 抢了医生表的宽度，
-                 而日历只回答"哪天"，格子 32px 够点。 -->
-            <!-- 日历列同样按 deskMaxH 封顶：它比右侧时间表还高时（实测高 109px），
-                 撑高的是整个 flex 行 → 主区溢出多出一条滚动条。封顶 + 内部滚动，
-                 高度决策只有 deskMaxH 一个来源，不会出现左右各算一套。 -->
             <aside v-if="deskViewMode === 'day'" data-testid="desk-cal"
                    :style="{maxHeight: deskMaxH + 'px'}"
                    class="flex w-[220px] shrink-0 flex-col overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/50 p-2.5">
               <div class="mb-1.5 flex items-center justify-between">
                 <button data-testid="cal-prev"
                         class="rounded border border-slate-200 bg-white px-1.5 text-base leading-6 text-slate-600 hover:bg-slate-100"
-                        title="上一个月" @click="handleCalShift(-1)">&lsaquo;</button>
+                        title="上一个月" @click="handleCalShift(-1)">&lsaquo;
+                </button>
                 <span data-testid="cal-month" class="text-sm font-semibold text-slate-700">{{ calMonthLabel }}</span>
                 <button data-testid="cal-next"
                         class="rounded border border-slate-200 bg-white px-1.5 text-base leading-6 text-slate-600 hover:bg-slate-100"
-                        title="下一个月" @click="handleCalShift(1)">&rsaquo;</button>
+                        title="下一个月" @click="handleCalShift(1)">&rsaquo;
+                </button>
               </div>
-              <!-- 当前看的是哪天：日期导航从工具栏挪进日历后，这里必须有明确回显，
-                   否则"我今天看的是 21 号"只能靠格子里那点浅蓝去猜（今天/选中两个高亮要分清）。 -->
-              <p data-testid="cal-picked" class="mb-1.5 rounded bg-blue-50 px-2 py-1 text-center text-xs font-medium text-blue-700">
+              <p data-testid="cal-picked"
+                 class="mb-1.5 rounded bg-blue-50 px-2 py-1 text-center text-xs font-medium text-blue-700">
                 {{ deskDay }} {{ weekdayMap[new Date(deskDay + 'T00:00:00').getDay()] }}
                 <span v-if="deskDay === fmtDate(new Date())" class="ml-1 text-[10px] text-blue-400">今天</span>
               </p>
@@ -2837,9 +2720,6 @@ onUnmounted(() => {
                               : 'bg-white text-slate-700 hover:bg-slate-100'))"
                         @click="handleCalPick(c.date)">
                   {{ c.day }}
-                  <!-- 今天只标一个「今」字（蓝字 + 细蓝框），不再用实心蓝底：
-                       实心底是「我选中了哪天」的信号，被"今天"占掉之后，选中态反而只剩一层浅蓝底，
-                       两个状态抢同一个视觉通道 → 看不出当前看的是哪天 -->
                   <span v-if="c.isToday"
                         class="absolute right-0.5 top-0 text-[9px] font-normal leading-none"
                         :class="c.date === deskDay ? 'text-blue-100' : 'text-blue-500'">今</span>
@@ -2855,13 +2735,10 @@ onUnmounted(() => {
                   <span class="h-1 w-1 rounded-full bg-emerald-500"></span> 有排班
                 </span>
                 <button data-testid="cal-today" class="text-blue-600 hover:underline"
-                        @click="handleCalToday(); handleCalPick(fmtDate(new Date()))">回今天</button>
+                        @click="handleCalToday(); handleCalPick(fmtDate(new Date()))">回今天
+                </button>
               </div>
 
-              <!-- ===== 日历下方：当天容量概况 + 我的科室 =====
-                   为什么放"当天容量"：日历回答"哪天"，但挂号员接着要问的是"这天忙不忙、还能挂几个"。
-                   这数据格子本身就有（已挂数 / 余号就画在每个医生的格子里），但要点一遍每格才知道总数。
-                   这里直接用**已加载的 deskSchedules + deskRegs** 汇总，不新增任何接口。 -->
               <div class="my-2 border-t border-slate-200"></div>
               <p class="mb-1.5 text-[11px] text-slate-400">{{ deskDay }} 概况</p>
               <!-- 2×2 排布：四个数字竖着排要 130px，日历列因此高过右边的表（多出来的部分
@@ -2901,451 +2778,481 @@ onUnmounted(() => {
                      :style="{width: deskDayStat.usedPct + '%'}"></div>
               </div>
               <p class="text-center text-[11px] text-slate-400">已用 {{ deskDayStat.usedPct }}%</p>
-
-              <!-- 「隐藏已满/停诊」开关放在**概况下方**（自顶部工具栏挪来）：
-                   它管的是"这天看得到哪些号"，跟同一天的容量概况是一件事，
-                   比挂在筛选行里更靠近它影响的数字；藏掉 N 个的总账提示随行。
-                   2026-09-22：原「我的科室」快捷块整块移除（按钮 + 标题 + 提示语），
-                   切科室统一走上方「科室」下拉。 -->
               <div class="mt-2 border-t border-slate-200 pt-2">
                 <el-checkbox v-model="deskHideFull" data-testid="desk-hide-full">隐藏已满/停诊</el-checkbox>
                 <p v-if="deskHideFull && deskHiddenTotal > 0" data-testid="desk-hidden-tip"
                    class="mt-1 text-[11px] leading-4 text-amber-600">
                   已隐藏 {{ deskHiddenTotal }} 个已满/停诊班次（关掉开关即可看到）
                 </p>
+                <div class="mt-2 border-t border-slate-100 pt-2" data-testid="desk-status-filter">
+                  <el-checkbox-group v-model="deskStatusFilter" class="flex flex-wrap gap-x-1 gap-y-1">
+                    <el-checkbox v-for="s in DESK_STATUS_OPTIONS" :key="s.value" :value="s.value" class="!mr-0">
+                      {{ s.label }}
+                    </el-checkbox>
+                  </el-checkbox-group>
+                </div>
               </div>
             </aside>
 
             <!-- 右：班次 × 医生 / 班次 × 日期 表 -->
             <div class="min-w-0 flex-1">
-          <!-- 高度按视口算（撑满窗口）：日视图 18 行起步，写死高度等于强迫人一直滚 -->
-          <div ref="deskScrollEl" v-loading="deskLoading" data-testid="desk-scroll"
-               class="overflow-auto rounded border border-slate-200"
-               :style="{height: deskMaxH + 'px'}">
-            <!-- 空态要说清「是没排班还是筛掉了」：默认落在我的科室，门诊部/管理员选「全部科室」即可看全院 -->
-            <div v-if="!deskLoading && !deskColumns.length" data-testid="desk-empty"
-                 class="flex flex-col items-center justify-center gap-1 py-12 text-center">
-              <p class="text-base text-slate-500">
-                {{ isAllDept(deskDeptId) ? '当前时间窗口内没有任何排班（已含全部科室）' : '本科室当前时间窗口内没有排班' }}
-              </p>
-              <p class="text-sm text-slate-400">
-                看板默认只显示「我的科室」，把上方「科室」选成「全部科室」即可查看全院；也可以把日期翻到有排班的那天。
-              </p>
-            </div>
-            <table v-else class="w-full min-w-[960px] border-collapse text-sm">
-              <thead class="sticky top-0 z-20">
-                <tr>
-                  <!-- 行首列头跟着行变（日视图=时间段 / 周视图=班次）：
-                       表头写「班次」而行里是 08:00~08:30，读的人得自己猜这两者的关系 -->
-                  <!-- 日视图的网格线要看得见（slate-300 而不是周视图的 slate-100）：
-                       半小时一档的行多且密，线太淡时整张表糊成一片，扫不出哪一档有号 -->
-                  <!-- 行首列头跟着行变（日视图=时间段 / 周视图=医生）：
-                       表头写「班次」而行里是医生名，读的人得自己猜这两者的关系。
-                       周视图列宽放大到 150px：行首要容得下「医生名 + 本周已挂/剩余」两行 -->
-                  <th class="sticky left-0 z-30 border bg-slate-50 p-2 text-center font-medium text-slate-500"
-                      :class="[deskViewMode === 'day' ? 'w-[96px] border-slate-300' : 'w-[150px] border-slate-100']">
-                    {{ deskViewMode === 'day' ? '时间段' : '医生' }}
-                  </th>
-                  <th v-for="col in deskColumns" :key="col.key"
-                      class="border bg-slate-50 p-2 text-center align-top"
-                      :class="deskViewMode === 'day' ? 'border-slate-300' : 'border-slate-100'">
-                    <!-- 周视图：日期列头可点，下钻到当天日视图。可点性必须在静态态可见，不能只靠 hover tooltip -->
-                    <template v-if="deskViewMode === 'week'">
-                      <p data-testid="desk-date-head" :data-date="col.date"
-                         class="group inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-sm font-semibold
+              <!-- 高度按视口算（撑满窗口）：日视图 18 行起步，写死高度等于强迫人一直滚 -->
+              <div ref="deskScrollEl" v-loading="deskLoading" data-testid="desk-scroll"
+                   class="overflow-auto rounded border border-slate-200"
+                   :style="{height: deskMaxH + 'px'}">
+                <!-- 空态要说清「是没排班还是筛掉了」：默认落在我的科室，门诊部/管理员选「全部科室」即可看全院 -->
+                <div v-if="!deskLoading && !deskColumns.length" data-testid="desk-empty"
+                     class="flex flex-col items-center justify-center gap-1 py-12 text-center">
+                  <p class="text-base text-slate-500">
+                    {{
+                      isAllDept(deskDeptId) ? '当前时间窗口内没有任何排班（已含全部科室）' : '本科室当前时间窗口内没有排班'
+                    }}
+                  </p>
+                  <p class="text-sm text-slate-400">
+                    看板默认只显示「我的科室」，把上方「科室」选成「全部科室」即可查看全院；也可以把日期翻到有排班的那天。
+                  </p>
+                </div>
+                <!-- ⚠️ 必须 border-separate（不能 collapse）：collapse 下表头的格线画在表格层、
+                     不跟着吸顶层走，滚动时表体内容会从表头格线缝隙里透出来（现象是"表头上方
+                     有一截空白，能看到下面的表在动"）。separate 让每个吸顶单元格自带完整的
+                     不透明边框盒子，缝隙消失。代价是格线要自己拼：每个格子只画 右+下 两条边，
+                     首列画左… 首列靠容器边线，外框靠容器 border，拼出来仍是 1px 网格。
+                     （日视图列宽：w-max 让表贴内容而不是被 w-full 摊大；每列统一 `w-[300px]`（2026-10-08 老王：240 再放一档）
+                       —— 按内容分配会有宽有窄（实测空列 150 / 有卡片的列 230），扫表格时
+                       被拉宽的那列会把注意力抢走。所有医生列同宽，名字长只在格内换行） -->
+                <table v-else class="border-separate border-spacing-0 text-sm"
+                       :class="deskViewMode === 'day' ? 'w-max min-w-[600px]' : 'w-full min-w-[960px]'">
+                  <thead class="sticky top-0 z-20">
+                  <tr>
+                    <!-- 行首列头跟着行变（日视图=时间段 / 周视图=班次）：
+                         表头写「班次」而行里是 08:00~08:30，读的人得自己猜这两者的关系 -->
+                    <!-- 日视图的网格线要看得见（slate-300 而不是周视图的 slate-100）：
+                         半小时一档的行多且密，线太淡时整张表糊成一片，扫不出哪一档有号 -->
+                    <!-- 行首列头跟着行变（日视图=时间段 / 周视图=医生）：
+                         表头写「班次」而行里是医生名，读的人得自己猜这两者的关系。
+                         周视图列宽放大到 150px：行首要容得下「医生名 + 本周已挂/剩余」两行 -->
+                    <th class="sticky left-0 z-30 border-r border-b bg-slate-50 p-2 text-center font-medium text-slate-500"
+                        :class="[deskViewMode === 'day' ? 'min-w-[96px] border-slate-300' : 'min-w-[150px] border-slate-100']">
+                      {{ deskViewMode === 'day' ? '时间段' : '医生' }}
+                    </th>
+                    <th v-for="col in deskColumns" :key="col.key"
+                        class="border-r border-b bg-slate-50 p-2 text-center align-top"
+                        :class="deskViewMode === 'day' ? 'w-[300px] border-slate-300' : 'border-slate-100'">
+                      <!-- 周视图：日期列头可点，下钻到当天日视图。可点性必须在静态态可见，不能只靠 hover tooltip -->
+                      <template v-if="deskViewMode === 'week'">
+                        <p data-testid="desk-date-head" :data-date="col.date"
+                           class="group inline-flex cursor-pointer items-center gap-1 rounded px-1.5 py-0.5 text-sm font-semibold
                                 transition-colors hover:bg-blue-50"
-                         :class="col.date === fmtDate(new Date()) ? 'text-blue-600' : 'text-slate-700 hover:text-blue-600'"
-                         title="点击查看当天的日视图"
-                         @click="drillToDay(col.date)">
-                        <span class="underline decoration-dotted decoration-1 underline-offset-2">{{ col.title }}</span>
-                        <svg class="h-3 w-3 shrink-0 text-blue-500 opacity-60 transition-opacity group-hover:opacity-100"
-                             viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                          <path fill="currentColor" d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896m0 64a384 384 0 1 0 0 768 384 384 0 0 0 0-768m32 128v224h192v64H480V256z"/>
-                        </svg>
-                      </p>
-                      <p class="text-xs text-slate-400">{{ col.sub }}</p>
-                    </template>
-                    <!-- 日视图：医生列头 + 当天余号（0=约满 / <5=少量余号） -->
-                    <template v-else>
-                      <p data-testid="desk-doctor-head" :data-doctor-id="col.doctorId"
-                         class="flex items-center justify-center gap-1 text-sm font-semibold text-slate-700">
-                        <span>{{ col.title }}</span>
-                        <span v-if="isExpertDoctor(col.doctorId)" data-testid="desk-expert-badge"
-                              class="shrink-0 rounded bg-amber-50 px-1 text-[10px] font-medium leading-4 text-amber-600 ring-1 ring-amber-200"
-                              title="专家号">专家</span>
-                      </p>
-                      <p class="text-xs text-slate-400">{{ col.sub || '—' }}</p>
-                      <p data-testid="desk-doctor-avail"
-                         class="text-xs font-medium" :class="deskAvailClass(dayDoctorSchedules(col.doctorId))">
-                        总 {{ deskTotal(dayDoctorSchedules(col.doctorId)) }} ·
-                        {{ deskAvailText(dayDoctorSchedules(col.doctorId)) }}
-                      </p>
-                    </template>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <!-- desk-row：整行 hover 的高亮挂在这一层（见文件末尾 <style scoped>）。
-                     两个视图的行都是"横着扫"的：日视图半小时一档十几行、周视图一位医生一行，
-                     没有行高亮时看到第 6 行就串行了 —— 底色是唯一的横向导轨。 -->
-                <tr v-for="row in deskRows" :key="'row-' + row.key" class="desk-row" :data-row-key="row.key">
-                  <!-- 日视图行首 = 半小时档（08:00~08:30）。
-                       分组不再写「凌晨/上午/下午/晚上」字样：时间戳本身就含这个信息（08:00 就是上午），
-                       再挂一个文字标签等于同一件事说两遍，还挤占 96px 的行首列宽。
-                       段落改由**加粗分隔线**表达（`row.sep`）：跨组、以及刻度压缩掉的空档处各画一条。 -->
-                  <!-- 周视图行首 = 一位医生：名字 + 科室 + **本周合计**（已挂多少 / 还剩多少）。
-                       「这个医生有了多少个挂号患者、还剩余多少」这句问的是整周，
-                       写在行首才扫得出来；逐天的数字在右边七格里。 -->
-                  <template v-if="deskViewMode === 'week'">
-                    <td class="desk-row-head sticky left-0 z-10 border border-slate-100 bg-slate-50 p-2 align-top">
-                      <p data-testid="desk-row-doctor" :data-doctor-id="row.doctorId"
-                         class="flex items-center gap-1 text-sm font-semibold text-slate-700">
-                        <span>{{ row.label }}</span>
-                        <span v-if="isExpertDoctor(row.doctorId)" data-testid="desk-expert-badge"
-                              class="shrink-0 rounded bg-amber-50 px-1 text-[10px] font-medium leading-4 text-amber-600 ring-1 ring-amber-200"
-                              title="专家号">专家</span>
-                      </p>
-                      <p class="text-[11px] text-slate-400">{{ row.deptName || '—' }}</p>
-                      <p data-testid="desk-row-stat" class="mt-0.5 text-[11px] leading-4">
-                        <span class="text-blue-600">已挂 {{ weekRowStat(row.doctorId).regs }}</span>
-                        <span class="text-slate-300"> / </span>
-                        <span :class="deskAvailClass(deskSchedules.filter(s => String(s.doctorId) === String(row.doctorId)))">
+                           :class="col.date === fmtDate(new Date()) ? 'text-blue-600' : 'text-slate-700 hover:text-blue-600'"
+                           title="点击查看当天的日视图"
+                           @click="drillToDay(col.date)">
+                          <span class="underline decoration-dotted decoration-1 underline-offset-2">{{
+                              col.title
+                            }}</span>
+                          <svg
+                              class="h-3 w-3 shrink-0 text-blue-500 opacity-60 transition-opacity group-hover:opacity-100"
+                              viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path fill="currentColor"
+                                  d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896m0 64a384 384 0 1 0 0 768 384 384 0 0 0 0-768m32 128v224h192v64H480V256z"/>
+                          </svg>
+                        </p>
+                        <p class="text-xs text-slate-400">{{ col.sub }}</p>
+                      </template>
+                      <!-- 日视图：医生列头 + 当天余号（0=约满 / <5=少量余号） -->
+                      <template v-else>
+                        <p data-testid="desk-doctor-head" :data-doctor-id="col.doctorId"
+                           class="flex items-center justify-center gap-1 text-sm font-semibold text-slate-700">
+                          <span>{{ col.title }}</span>
+                          <span v-if="isExpertDoctor(col.doctorId)" data-testid="desk-expert-badge"
+                                class="shrink-0 rounded bg-amber-50 px-1 text-[10px] font-medium leading-4 text-amber-600 ring-1 ring-amber-200"
+                                title="专家号">专家</span>
+                        </p>
+                        <p class="text-xs text-slate-400">{{ col.sub || '—' }}</p>
+                        <p data-testid="desk-doctor-avail"
+                           class="text-xs font-medium" :class="deskAvailClass(dayDoctorSchedules(col.doctorId))">
+                          总 {{ deskTotal(dayDoctorSchedules(col.doctorId)) }} ·
+                          {{ deskAvailText(dayDoctorSchedules(col.doctorId)) }}
+                        </p>
+                      </template>
+                    </th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  <!-- desk-row：整行 hover 的高亮挂在这一层（见文件末尾 <style scoped>）。
+                       两个视图的行都是"横着扫"的：日视图半小时一档十几行、周视图一位医生一行，
+                       没有行高亮时看到第 6 行就串行了 —— 底色是唯一的横向导轨。 -->
+                  <tr v-for="(row, ri) in deskRows" :key="'row-' + row.key" class="desk-row" :data-row-key="row.key">
+                    <!-- 日视图行首 = 半小时档（08:00~08:30）。
+                         分组不再写「凌晨/上午/下午/晚上」字样：时间戳本身就含这个信息（08:00 就是上午），
+                         再挂一个文字标签等于同一件事说两遍，还挤占 96px 的行首列宽。
+                         段落改由**加粗分隔线**表达（`row.sep`）：跨组、以及刻度压缩掉的空档处各画一条。 -->
+                    <!-- 周视图行首 = 一位医生：名字 + 科室 + **本周合计**（已挂多少 / 还剩多少）。
+                         「这个医生有了多少个挂号患者、还剩余多少」这句问的是整周，
+                         写在行首才扫得出来；逐天的数字在右边七格里。 -->
+                    <template v-if="deskViewMode === 'week'">
+                      <td class="desk-row-head sticky left-0 z-10 border-r border-b border-slate-100 bg-slate-50 p-2 align-top">
+                        <p data-testid="desk-row-doctor" :data-doctor-id="row.doctorId"
+                           class="flex items-center gap-1 text-sm font-semibold text-slate-700">
+                          <span>{{ row.label }}</span>
+                          <span v-if="isExpertDoctor(row.doctorId)" data-testid="desk-expert-badge"
+                                class="shrink-0 rounded bg-amber-50 px-1 text-[10px] font-medium leading-4 text-amber-600 ring-1 ring-amber-200"
+                                title="专家号">专家</span>
+                        </p>
+                        <p class="text-[11px] text-slate-400">{{ row.deptName || '—' }}</p>
+                        <p data-testid="desk-row-stat" class="mt-0.5 text-[11px] leading-4">
+                          <span class="text-blue-600">已挂 {{ weekRowStat(row.doctorId).regs }}</span>
+                          <span class="text-slate-300"> / </span>
+                          <span
+                              :class="deskAvailClass(deskSchedules.filter(s => String(s.doctorId) === String(row.doctorId)))">
                           {{ weekRowStat(row.doctorId).avail > 0 ? '余 ' + weekRowStat(row.doctorId).avail : '约满' }}
                         </span>
-                      </p>
-                    </td>
-                  </template>
-                  <!-- 日视图行首 = 半小时档（08:00~08:30）。
-                       分组不再写「凌晨/上午/下午/晚上」字样：时间戳本身就含这个信息（08:00 就是上午），
-                       再挂一个文字标签等于同一件事说两遍，还挤占 96px 的行首列宽。
-                       段落改由**加粗分隔线**表达（`row.sep`）：跨组、以及刻度压缩掉的空档处各画一条。 -->
-                  <td v-else class="desk-row-head sticky left-0 z-10 border bg-slate-50 p-2 text-center font-medium text-slate-600"
-                      data-testid="desk-row-slot"
-                      :data-group="row.group"
-                      :class="['border-slate-300', row.sep ? 'border-t-2 !border-t-slate-500' : '']">
-                    <span class="font-mono text-xs">{{ row.label }}</span>
-                  </td>
-                      <!-- 2026-09-22：格子本身不再绑单击（原来单击=弹号源明细）——
-                           周视图一行就是一位医生，横着扫表格时会频繁误触弹出模态。
-                           看明细的唯一入口是格子里的「余号」按钮；双击格子 = 开单（挂号窗口的手速习惯保留）。
-                           ⚠️ 这条注释不能挪进 td 的属性区：HTML 注释出现在标签内部会被当成属性值解析，
-                               编译器报的是 "Invalid Character `，`"，看着像语法错其实是注释位置错。 -->
-                  <td v-for="col in deskColumns" :key="col.key + '-' + row.key"
-                      data-testid="desk-cell" :data-col="col.key" :data-date="col.date"
-                      :data-row="row.key" :data-shift="row.key"
-                      :data-na="isCellUnavailable(col, row.key) ? '1' : '0'"
-                      :class="['min-w-[168px] border align-top',
-                               deskViewMode === 'day' ? 'p-1 border-slate-300' : 'p-1.5 border-slate-100',
-                               row.sep ? 'border-t-2 !border-t-slate-500' : '',
-                               isCellUnavailable(col, row.key) ? 'desk-cell-na' : '']"
-                      @dblclick="handleDeskCellDblclick(col, row.key)">
-                    <!-- 没排班 ≠ 排了没人挂：前者要看排班表，后者要看余号，两种空态必须分得清。
-                         「未排班」还要再分一层：是本来就没排，还是被「隐藏已满/停诊」藏掉了 ——
-                         静默消失会让人误以为"这天上午没医生"。两个视图都适用（日视图同样会藏掉医生整个半天）。 -->
-                    <template v-if="cellHiddenCountFor(col, row.key) > 0
-                                    && !cellSchedulesFor(col, row.key).length">
-                      <!-- 日视图行细到半小时后空行很多，空态压到 h-8：18 行 × 44px 光空行就一屏半 -->
-                      <p data-testid="desk-cell-allhidden"
-                         :class="['flex items-center justify-center text-center text-xs text-amber-600', deskViewMode === 'day' ? 'h-8' : 'h-11']">
-                        {{ cellAllFor(col, row.key).length }} 个班次已满/停诊（已隐藏）
-                      </p>
+                        </p>
+                      </td>
                     </template>
-                    <!-- 「未排班」判据用 srcSchedules（覆盖这一档的排班），不用段投影：
-                         排班在但段没拉到时，段投影是空的 —— 那不是"没排班"，是"没段数据"，两回事 -->
-                    <!-- 空态用一个「-」：这一格本来就没有信息，写「未排班」三个字是把同一句话
-                         在几十个格子里重复刷屏，扫表格时眼睛读到的是一片字而不是号源。
-                         点不动由 td 上的 cursor: not-allowed 表达，不靠文案。 -->
-                    <p v-else-if="isCellUnavailable(col, row.key)" data-testid="desk-cell-na"
-                       :class="['flex items-center justify-center text-xs text-slate-400', deskViewMode === 'day' ? 'h-8' : 'h-11']">-</p>
-                    <template v-else>
-                      <div class="mb-1 flex items-center justify-between gap-1 text-xs">
+                    <!-- 日视图行首 = 半小时档（08:00~08:30）。
+                         分组不再写「凌晨/上午/下午/晚上」字样：时间戳本身就含这个信息（08:00 就是上午），
+                         再挂一个文字标签等于同一件事说两遍，还挤占 96px 的行首列宽。
+                         段落改由**加粗分隔线**表达（`row.sep`）：跨组、以及刻度压缩掉的空档处各画一条。 -->
+                    <!-- 分隔线（row.sep）画在**上一行**的底边上（border-b-2）：
+                         border-separate 下上一行的 border-b 与本行的上边缘是同一条线，
+                         若仍用 border-t 会和上一行的 border-b 叠成 3px。 -->
+                    <td v-else
+                        class="desk-row-head sticky left-0 z-10 border-r border-b bg-slate-50 p-2 text-center font-medium text-slate-600"
+                        data-testid="desk-row-slot"
+                        :data-group="row.group"
+                        :class="['border-slate-300', ri > 0 && deskRows[ri - 1].sep ? 'border-b-2 !border-b-slate-500' : '']">
+                      <span class="font-mono text-xs">{{ row.label }}</span>
+                    </td>
+                    <!-- 2026-09-22：格子本身不再绑单击（原来单击=弹号源明细）——
+                         周视图一行就是一位医生，横着扫表格时会频繁误触弹出模态。
+                         看明细的唯一入口是格子里的「余号」按钮。
+                         2026-10-08：双击开单也摘了（格子上有「预约」按钮，双击是纯误触源）——
+                         td 上不再绑任何事件。
+                         ⚠️ 这条注释不能挪进 td 的属性区：HTML 注释出现在标签内部会被当成属性值解析，
+                             编译器报的是 "Invalid Character `，`"，看着像语法错其实是注释位置错。 -->
+                    <td v-for="col in deskColumns" :key="col.key + '-' + row.key"
+                        data-testid="desk-cell" :data-col="col.key" :data-date="col.date"
+                        :data-row="row.key" :data-shift="row.key"
+                        :data-na="isCellUnavailable(col, row.key) ? '1' : '0'"
+                        :class="['align-top border-r border-b',
+                               deskViewMode === 'day' ? 'w-[300px] p-1 border-slate-300' : 'min-w-[168px] p-1.5 border-slate-100',
+                               ri > 0 && deskRows[ri - 1].sep ? 'border-b-2 !border-b-slate-500' : '',
+                               isCellUnavailable(col, row.key) ? 'desk-cell-na' : '']">
+                      <!-- 没排班 ≠ 排了没人挂：前者要看排班表，后者要看余号，两种空态必须分得清。
+                           「未排班」还要再分一层：是本来就没排，还是被「隐藏已满/停诊」藏掉了 ——
+                           静默消失会让人误以为"这天上午没医生"。两个视图都适用（日视图同样会藏掉医生整个半天）。 -->
+                      <template v-if="cellHiddenCountFor(col, row.key) > 0
+                                    && !cellSchedulesFor(col, row.key).length">
+                        <!-- 日视图行细到半小时后空行很多，空态压到 h-8：18 行 × 44px 光空行就一屏半 -->
+                        <p data-testid="desk-cell-allhidden"
+                           :class="['flex items-center justify-center text-center text-xs text-amber-600', deskViewMode === 'day' ? 'h-8' : 'h-11']">
+                          {{ cellAllFor(col, row.key).length }} 个班次已满/停诊（已隐藏）
+                        </p>
+                      </template>
+                      <!-- 「未排班」判据用 srcSchedules（覆盖这一档的排班），不用段投影：
+                           排班在但段没拉到时，段投影是空的 —— 那不是"没排班"，是"没段数据"，两回事 -->
+                      <!-- 空态用一个「-」：这一格本来就没有信息，写「未排班」三个字是把同一句话
+                           在几十个格子里重复刷屏，扫表格时眼睛读到的是一片字而不是号源。
+                           点不动由 td 上的 cursor: not-allowed 表达，不靠文案。 -->
+                      <p v-else-if="isCellUnavailable(col, row.key)" data-testid="desk-cell-na"
+                         :class="['flex items-center justify-center text-xs text-slate-400', deskViewMode === 'day' ? 'h-8' : 'h-11']">
+                        -</p>
+                      <template v-else>
+                        <!-- flex-wrap：列不够宽时右侧「余 N + 预约」整块换行，
+                             别让左侧「已挂 n / m」被压成逐字折行 -->
+                        <div class="mb-1 flex flex-wrap items-center justify-between gap-x-1 gap-y-0.5 text-xs">
                         <span class="text-slate-500">
-                          已挂 {{ deskCell(col.key, row.key).regs.length }} / {{ deskTotal(deskCell(col.key, row.key).schedules) }}
+                          已挂 {{
+                            deskRegCount(deskCell(col.key, row.key).regs)
+                          }} / {{ deskTotal(deskCell(col.key, row.key).schedules) }}
                         </span>
-                        <span class="flex shrink-0 items-center gap-1">
+                          <span class="flex shrink-0 items-center gap-1">
                           <span class="font-medium" :class="deskAvailClass(deskCell(col.key, row.key).schedules)">
                             {{ deskAvailText(deskCell(col.key, row.key).schedules) }}
                           </span>
-                          <!-- 「余号」按钮：周视图专供。
-                               行已经是某一位医生了，格子里的「余 N」只给总数 —— 问"上午还剩多少、下午还剩多少"
-                               得看明细，而这个按钮就在数字旁边，不用去点整个格子（点格子 = 双击的一半，容易误触发开单）。
-                               2026-09-22：取代格子底部那行「N 个班次 · 查看时段/余号」文字入口 ——
-                               可点的事情要做成按钮，写一行小字让人去猜哪里能点。 -->
+                            <!-- 「余号」按钮：周视图专供。
+                                 行已经是某一位医生了，格子里的「余 N」只给总数 —— 问"上午还剩多少、下午还剩多少"
+                                 得看明细，而这个按钮就在数字旁边，不用去点整个格子。
+                                 2026-09-22：取代格子底部那行「N 个班次 · 查看时段/余号」文字入口 ——
+                                 可点的事情要做成按钮，写一行小字让人去猜哪里能点。 -->
                           <button v-if="deskViewMode === 'week'" data-testid="desk-cell-avail"
                                   class="shrink-0 cursor-pointer rounded border border-slate-200 bg-white px-1 text-xs leading-4 text-slate-600 hover:bg-slate-50"
                                   title="查看这位医生当天的每个班次：时段 / 余号 / 挂号费"
-                                  @click.stop="openCellDialog(col.date, row.key)"
-                                  @dblclick.stop>余号</button>
-                          <!-- 预约入口收口到格子：有排班才渲染（本行就在「有排班」分支里，未排班/已满停诊已隐藏的格子没有按钮）。
-                               点击与双击开单共用同一份预填（addFromCell）：科室/日期/医生带全，
-                               格子里只有一条号源时直接选中，多条不猜留给窗口挑。dblclick.stop：别再冒泡到 td 上二次开单。 -->
+                                  @click.stop="openCellDialog(col.date, row.key)">余号</button>
+                            <!-- 预约入口收口到格子：有排班才渲染（本行就在「有排班」分支里，未排班/已满停诊已隐藏的格子没有按钮）。
+                                 点击走 addFromCell：科室/日期/医生带全，格子里只有一条号源时直接选中，多条不猜留给窗口挑。 -->
                           <button data-testid="desk-cell-add"
                                   class="shrink-0 cursor-pointer rounded border border-blue-200 bg-white px-1 text-xs font-bold leading-4 text-blue-600 hover:bg-blue-50"
                                   title="新增预约：带入该时段的排班、医生、诊室、科室"
-                                  @click.stop="addFromCell(col, row.key)"
-                                  @dblclick.stop>预约</button>
+                                  @click.stop="addFromCell(col, row.key)">预约</button>
                         </span>
-                      </div>
-                      <!-- 日视图：当天该医生该班次的患者全铺（单班次最多一个号源数，铺得下） -->
-                      <template v-if="deskViewMode === 'day'">
-                        <div v-for="r in deskCell(col.key, row.key).regs" :key="r.id"
-                             data-testid="desk-card"
-                             :data-regist-id="r.id"
-                             :data-regist-status="r.registStatus"
-                             class="group mb-1 rounded border px-2 py-1 text-sm leading-6"
-                             :class="canReschedule(r)
+                        </div>
+                        <!-- 日视图：当天该医生该班次的患者全铺（单班次最多一个号源数，铺得下） -->
+                        <template v-if="deskViewMode === 'day'">
+                          <div v-for="r in deskCell(col.key, row.key).regs.filter(deskRegVisible)" :key="r.id"
+                               data-testid="desk-card"
+                               :data-regist-id="r.id"
+                               :data-regist-status="r.registStatus"
+                               class="group relative mb-2 overflow-hidden rounded-lg border px-2 py-1 pl-4 text-sm leading-6"
+                               :class="canReschedule(r)
                                 ? 'cursor-pointer border-slate-200 bg-white hover:border-blue-300'
                                 : 'cursor-default border-slate-100 bg-slate-50 hover:border-slate-300'"
-                             :title="deskCardTitle(r)"
-                             @click="handleDeskCardClick(r)">
-                          <div class="flex items-center gap-1.5">
-                            <span :class="['h-2 w-2 shrink-0 rounded-full',
+                               :title="deskCardTitle(r)"
+                               @click="handleDeskCardClick(r)">
+                            <!-- 左侧状态色条：4px 宽，贯穿整个卡片高度 -->
+                            <span class="absolute left-0 top-0 h-full w-1.5"
+                                  :class="deskStatusChip[Number(r.registStatus)]?.bar || 'bg-slate-300'"></span>
+                            <div class="flex items-start gap-1.5">
+                            <span :class="['mt-1.5 h-2 w-2 shrink-0 rounded-full',
                               deskStatusChip[Number(r.registStatus)]?.dot || regStatusDot[Number(r.registStatus)] || 'bg-slate-300']"></span>
-                            <span class="truncate font-medium"
-                                  :class="Number(r.registStatus) >= 5 ? 'text-slate-400' : 'text-slate-700'">
+                              <span class="min-w-0 flex-1 break-all font-bold leading-5"
+                                    :class="Number(r.registStatus) >= 4 ? 'text-slate-400' : 'text-slate-700'">
                               {{ r.patientName }}
                             </span>
-                            <span v-if="deskPatientMeta(r)" class="shrink-0 text-xs text-slate-500 whitespace-nowrap">
-                              {{ deskPatientMeta(r) }}
-                            </span>
-                            <span v-if="deskCardVisitNo(r)" class="shrink-0 text-xs text-slate-500 whitespace-nowrap">
-                              {{ deskCardVisitNo(r) }}
-                            </span>
-                            <!-- 历史挂号没有段快照：不猜他挂的是哪一档，标出来让人知道这行是兜底归到首段的 -->
-                            <span v-if="r.__unslotted"
-                                  class="shrink-0 rounded bg-slate-100 px-1 py-0.5 text-[10px] text-slate-500">未选段</span>
-                            <span v-if="deskStatusChip[Number(r.registStatus)]"
-                                  class="ml-auto shrink-0 rounded px-1 py-0.5 text-xs font-medium whitespace-nowrap"
-                                  :class="deskStatusChip[Number(r.registStatus)].cls">
+                              <span v-if="deskStatusChip[Number(r.registStatus)]"
+                                    class="ml-auto shrink-0 rounded px-1 py-0.5 text-xs font-medium whitespace-nowrap"
+                                    :class="deskStatusChip[Number(r.registStatus)].cls">
                               {{ deskStatusChip[Number(r.registStatus)].text }}
                             </span>
-                          </div>
-                          <p class="truncate text-xs text-slate-500">
-                            {{ deskCardDoctorLine(r) }}
-                          </p>
-                          <div v-if="deskCardMetaLine(r) || isRegistPaid(r)" class="flex items-center gap-1">
-                            <p v-if="deskCardMetaLine(r)" class="truncate text-xs text-slate-500">
-                              {{ deskCardMetaLine(r) }}
+                            </div>
+                            <p v-if="deskPatientMeta(r) || deskCardVisitNo(r)" class="text-xs text-slate-500">
+                              {{ [deskPatientMeta(r), deskCardVisitNo(r)].filter(Boolean).join(' · ') }}
                             </p>
-                            <!-- 已收费 = 这笔钱已经在账上，改号源按钮因此不出现（后端同样拦） -->
-                            <span v-if="isRegistPaid(r)"
-                                  class="shrink-0 rounded bg-emerald-50 px-1 py-0.5 text-xs font-medium text-emerald-700">
+                            <p class="truncate text-xs text-slate-500">
+                              {{ deskCardDoctorLine(r) }}
+                            </p>
+                            <div v-if="deskCardMetaLine(r) || isRegistPaid(r)" class="flex items-center gap-1">
+                              <p v-if="deskCardMetaLine(r)" class="truncate text-xs text-slate-500">
+                                {{ deskCardMetaLine(r) }}
+                              </p>
+                              <!-- 已收费 = 这笔钱已经在账上，改号源按钮因此不出现（后端同样拦） -->
+                              <span v-if="isRegistPaid(r)"
+                                    class="shrink-0 rounded bg-emerald-50 px-1 py-0.5 text-xs font-medium text-emerald-700">
                               已收费
                             </span>
+                            </div>
+                            <!-- 只有「已挂号/已签到」才出现退号入口；按钮常驻，且是手型（能点就得像能点） -->
+                            <div v-if="canCancelRegist(r)" class="mt-1 flex justify-end">
+                              <button data-testid="desk-cancel"
+                                      class="cursor-pointer rounded border border-red-200 bg-white px-2 py-0.5 text-xs font-medium text-red-500 hover:bg-red-50"
+                                      @click.stop="handleDeskCancel(r)">退号
+                              </button>
+                            </div>
                           </div>
-                          <!-- 只有「已挂号/已签到」才出现退号入口；按钮常驻，且是手型（能点就得像能点） -->
-                          <div v-if="canCancelRegist(r)" class="mt-1 flex justify-end">
-                            <button data-testid="desk-cancel"
-                                    class="cursor-pointer rounded border border-red-200 bg-white px-2 py-0.5 text-xs font-medium text-red-500 hover:bg-red-50"
-                                    @click.stop="handleDeskCancel(r)">退号</button>
-                          </div>
-                        </div>
-                        <!-- 日视图不再写「未挂号」：格子顶部已经写了「已挂 0 / 3 · 余 3」，
-                             半小时档一行一个"未挂号"会把整屏刷成同一句话 -->
-                      </template>
-                      <!-- 周视图：每格只铺前几张（一天 4 医生 × 20 号 = 80 张，全铺会把 DOM 拖死），其余下钻日视图 -->
-                      <template v-else>
-                        <div v-for="r in deskCell(col.key, row.key).regs.slice(0, DESK_WEEK_CELL_MAX)"
-                             :key="r.id"
-                             data-testid="desk-week-card" :data-regist-id="r.id"
-                             class="flex items-center gap-1 leading-6"
-                             :title="`${r.patientName}｜${deskCardDoctorLine(r)}${sourceLockReason(r) ? '｜' + sourceLockReason(r) : ''}`">
+                          <!-- 日视图不再写「未挂号」：格子顶部已经写了「已挂 0 / 3 · 余 3」，
+                               半小时档一行一个"未挂号"会把整屏刷成同一句话 -->
+                        </template>
+                        <!-- 周视图：每格只铺前几张（一天 4 医生 × 20 号 = 80 张，全铺会把 DOM 拖死），其余下钻日视图 -->
+                        <template v-else>
+                          <div
+                              v-for="r in deskCell(col.key, row.key).regs.filter(deskRegVisible).slice(0, DESK_WEEK_CELL_MAX)"
+                              :key="r.id"
+                              data-testid="desk-week-card" :data-regist-id="r.id"
+                              class="flex items-center gap-1 leading-6"
+                              :title="`${r.patientName}｜${deskCardDoctorLine(r)}${sourceLockReason(r) ? '｜' + sourceLockReason(r) : ''}`">
                           <span :class="['h-1.5 w-1.5 shrink-0 rounded-full',
                             deskStatusChip[Number(r.registStatus)]?.dot || regStatusDot[Number(r.registStatus)] || 'bg-slate-300']"></span>
-                          <span class="truncate text-xs"
-                                :class="Number(r.registStatus) >= 5 ? 'text-slate-400' : 'text-slate-700'">
+                            <span class="truncate text-xs font-bold"
+                                  :class="Number(r.registStatus) >= 4 ? 'text-slate-400' : 'text-slate-700'">
                             {{ r.patientName }}
                           </span>
-                          <span v-if="deskStatusChip[Number(r.registStatus)]"
-                                class="ml-auto shrink-0 text-xs"
-                                :class="deskStatusChip[Number(r.registStatus)].cls.split(' ').filter((c: string) => c.startsWith('text-')).join(' ')">
+                            <span v-if="deskStatusChip[Number(r.registStatus)]"
+                                  class="ml-auto shrink-0 text-xs"
+                                  :class="deskStatusChip[Number(r.registStatus)].cls.split(' ').filter((c: string) => c.startsWith('text-')).join(' ')">
                             {{ deskStatusChip[Number(r.registStatus)].text }}
                           </span>
-                        </div>
-                        <p v-if="deskCell(col.key, row.key).regs.length > DESK_WEEK_CELL_MAX"
-                           data-testid="desk-cell-more"
-                           class="cursor-pointer text-xs text-blue-600 hover:underline"
-                           @click="drillToDay(col.date)">
-                          还有 {{ deskCell(col.key, row.key).regs.length - DESK_WEEK_CELL_MAX }} 人 → 看当天
-                        </p>
-                        <!-- 2026-09-22：「未挂号」这行字删掉了。
-                             一格空着就是"排了没人挂"，半天/全天格子里重复这仨字把页面刷成同一句话，
-                             还和隔壁「未排班」（=没号可挂）混着看 —— 两种空态必须有视觉差别，
-                             空白 vs 文字正好是差别本身。 -->
+                          </div>
+                          <p v-if="deskCell(col.key, row.key).regs.filter(deskRegVisible).length > DESK_WEEK_CELL_MAX"
+                             data-testid="desk-cell-more"
+                             class="cursor-pointer text-xs text-blue-600 hover:underline"
+                             @click="drillToDay(col.date)">
+                            还有 {{
+                              deskCell(col.key, row.key).regs.filter(deskRegVisible).length - DESK_WEEK_CELL_MAX
+                            }} 人 → 看当天
+                          </p>
+                          <!-- 2026-09-22：「未挂号」这行字删掉了。
+                               一格空着就是"排了没人挂"，半天/全天格子里重复这仨字把页面刷成同一句话，
+                               还和隔壁「未排班」（=没号可挂）混着看 —— 两种空态必须有视觉差别，
+                               空白 vs 文字正好是差别本身。 -->
+                        </template>
+                        <!-- 2026-09-22：周视图格子底部的「N 个班次 · 查看时段/余号」文字入口已去掉 ——
+                             同一个动作收口到格子顶部的「余号」按钮（紧挨着余号数字，可点性明确）。 -->
                       </template>
-                      <!-- 2026-09-22：周视图格子底部的「N 个班次 · 查看时段/余号」文字入口已去掉 ——
-                           同一个动作收口到格子顶部的「余号」按钮（紧挨着余号数字，可点性明确）。
-                           保留 @click 在 td 上：双击=开单，单击再/该格仍看得到这里的卡片，不需要多一层提示文字。 -->
-                    </template>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                    </td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
 
-          <!-- 周视图格子的医生号源明细已改成弹框（见下方 el-dialog）：
-               内联表压在表格下面，看板本身就得为它让出半屏高度 —— 而它只在点开那一格时才有用。 -->
+              <!-- 周视图格子的医生号源明细已改成弹框（见下方 el-dialog）：
+                   内联表压在表格下面，看板本身就得为它让出半屏高度 —— 而它只在点开那一格时才有用。 -->
             </div>
           </div>
         </div>
       </el-tab-pane>
 
       <el-tab-pane label="挂号记录" name="records">
-    <div>
-      <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <el-form inline>
-          <el-form-item label="患者">
-            <PatientSelect
-                v-model="searchForm.patientId"
-                placeholder="搜索患者"
-                width="192px"
-                :page-size="20"
-                size="small"
-            />
-          </el-form-item>
-          <el-form-item label="科室">
-            <el-select v-model="searchForm.deptId" placeholder="全部科室" filterable clearable class="!w-40">
-              <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id ?? d.deptName"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="就诊状态">
-            <el-select v-model="searchForm.registStatus" placeholder="全部" clearable class="!w-32">
-              <el-option v-for="(label, val) in statusMap" :key="val" :label="label" :value="Number(val)"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="就诊类型">
-            <el-select v-model="searchForm.visitType" placeholder="全部" clearable class="!w-32">
-              <el-option v-for="item in VISIT_TYPE" :key="item.value" :label="item.label" :value="item.value"/>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="就诊日期">
-            <el-date-picker
-                v-model="searchForm.visitDate"
-                type="date"
-                placeholder="全部日期"
-                value-format="YYYY-MM-DD"
-                clearable
-                class="!w-40"
-                @change="handleSearch"
-            />
-          </el-form-item>
-          <el-form-item label="挂号时间">
-            <el-date-picker
-                v-model="searchForm.registDateRange"
-                type="daterange"
-                range-separator="至"
-                start-placeholder="开始日期"
-                end-placeholder="结束日期"
-                value-format="YYYY-MM-DD"
-                class="!w-72"
-                :shortcuts="dateShortcuts"
-            />
-          </el-form-item>
-          <el-form-item class="ml-auto">
-            <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
-            <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-            <el-button v-perm="'opd:appointments:add'" type="primary" :icon="Plus" class="ml-2" @click="showAddDialog = true">新增挂号</el-button>
-          </el-form-item>
-        </el-form>
-      </div>
+        <div>
+          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <el-form inline>
+              <el-form-item label="患者">
+                <PatientSelect
+                    v-model="searchForm.patientId"
+                    placeholder="搜索患者"
+                    width="192px"
+                    :page-size="20"
+                    size="small"
+                />
+              </el-form-item>
+              <el-form-item label="科室">
+                <el-select v-model="searchForm.deptId" placeholder="全部科室" filterable clearable class="!w-56">
+                  <el-option v-for="d in departments" :key="d.id"
+                             :label="d.parentDeptName ? `${d.parentDeptName} / ${d.deptName}` : d.deptName"
+                             :value="d.id ?? d.deptName"/>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="就诊状态">
+                <el-select v-model="searchForm.registStatus" placeholder="全部" clearable class="!w-32">
+                  <el-option v-for="(label, val) in statusMap" :key="val" :label="label" :value="Number(val)"/>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="就诊类型">
+                <el-select v-model="searchForm.visitType" placeholder="全部" clearable class="!w-32">
+                  <el-option v-for="item in VISIT_TYPE" :key="item.value" :label="item.label" :value="item.value"/>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="就诊日期">
+                <el-date-picker
+                    v-model="searchForm.visitDate"
+                    type="date"
+                    placeholder="全部日期"
+                    value-format="YYYY-MM-DD"
+                    clearable
+                    class="!w-40"
+                    @change="handleSearch"
+                />
+              </el-form-item>
+              <el-form-item label="挂号时间">
+                <el-date-picker
+                    v-model="searchForm.registDateRange"
+                    type="daterange"
+                    range-separator="至"
+                    start-placeholder="开始日期"
+                    end-placeholder="结束日期"
+                    value-format="YYYY-MM-DD"
+                    class="!w-72"
+                    :shortcuts="dateShortcuts"
+                />
+              </el-form-item>
+              <el-form-item class="ml-auto">
+                <el-button type="primary" :icon="Search" @click="handleSearch">搜索</el-button>
+                <el-button :icon="Refresh" @click="handleReset">重置</el-button>
+                <el-button v-perm="'opd:appointments:add'" type="primary" :icon="Plus" class="ml-2"
+                           @click="showAddDialog = true">新增挂号
+                </el-button>
+              </el-form-item>
+            </el-form>
+          </div>
 
-      <div class="mt-4 rounded-lg border border-slate-200 bg-white shadow-sm">
-        <el-table :data="appointments" v-loading="loading" style="width: 100%">
-          <el-table-column label="就诊号" width="200">
-            <template #default="{ row }">
-              <span class="font-mono text-sm text-slate-600">{{ row.registNo || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="patientName" label="患者姓名" width="120"/>
-          <el-table-column prop="patientNo" label="患者编号" width="200"/>
-          <el-table-column label="就诊日期" width="110">
-            <template #default="{ row }">
-              <span class="font-mono text-xs text-slate-600">{{ row.visitDate || '-' }}</span>
-            </template>
-          </el-table-column>
-          <el-table-column prop="deptName" label="科室" width="120"/>
-          <el-table-column prop="doctorName" label="医生" width="120"/>
-          <el-table-column label="类型" width="150">
-            <template #default="{ row }">
-              <!-- 号别口径同 lib/statusColor：未知/未标注显「未标注」，不回落成初诊/复诊 -->
-              <el-tag :class="revisitTypeOf(row.visitType).color + ' border'" effect="plain"
-                      size="small">{{ revisitTypeOf(row.visitType).label }}
-              </el-tag>
-              <!-- 复诊来源决定这张号收没收费，账对不上时第一眼要看的就是它 -->
-              <span v-if="row.revisitSource" class="ml-1 text-xs text-slate-500">
+          <div class="mt-4 rounded-lg border border-slate-200 bg-white shadow-sm">
+            <el-table :data="appointments" v-loading="loading" style="width: 100%">
+              <el-table-column label="就诊号" width="200">
+                <template #default="{ row }">
+                  <span class="font-mono text-sm text-slate-600">{{ row.registNo || '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="patientName" label="患者姓名" width="120"/>
+              <el-table-column prop="patientNo" label="患者编号" width="200"/>
+              <el-table-column label="就诊日期" width="110">
+                <template #default="{ row }">
+                  <span class="font-mono text-xs text-slate-600">{{ row.visitDate || '-' }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="deptName" label="科室" width="120"/>
+              <el-table-column prop="doctorName" label="医生" width="120"/>
+              <el-table-column label="类型" width="150">
+                <template #default="{ row }">
+                  <!-- 号别口径同 lib/statusColor：未知/未标注显「未标注」，不回落成初诊/复诊 -->
+                  <el-tag :class="revisitTypeOf(row.visitType).color + ' border'" effect="plain"
+                          size="small">{{ revisitTypeOf(row.visitType).label }}
+                  </el-tag>
+                  <!-- 复诊来源决定这张号收没收费，账对不上时第一眼要看的就是它 -->
+                  <span v-if="row.revisitSource" class="ml-1 text-xs text-slate-500">
                 {{ revisitSourceText(row.revisitSource) }}
               </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="结算方式" width="120">
-            <template #default="{ row }">
+                </template>
+              </el-table-column>
+              <el-table-column label="结算方式" width="120">
+                <template #default="{ row }">
               <span
                   :class="['text-xs font-medium', settlementTypes.find(t => t.value === row.settlementType)?.color || 'text-slate-600']">
                 {{ settlementLabel(row.settlementType) }}
               </span>
-            </template>
-          </el-table-column>
-          <el-table-column label="医保卡号" width="200">
-            <template #default="{ row }">
+                </template>
+              </el-table-column>
+              <el-table-column label="医保卡号" width="200">
+                <template #default="{ row }">
               <span v-if="row.medicalInsuranceNo" class="font-mono text-xs text-slate-600">{{
                   row.medicalInsuranceNo
                 }}</span>
-              <span v-else class="text-xs text-slate-400">-</span>
-            </template>
-          </el-table-column>
-          <el-table-column label="状态" width="100">
-            <template #default="{ row }">
-              <el-tag :class="statusConfig[statusMap[row.registStatus]]?.color || null" effect="plain" size="small"
-                      class="border gap-1">
-                {{ statusMap[row.registStatus] }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="300" fixed="right">
-            <template #default="{ row }">
-              <el-button v-if="row.registStatus === 1" type="success" link size="small" @click="handleCheckIn(row)">
-                签到
-              </el-button>
-              <el-button v-if="row.registStatus === 1 && row.paymentStatus === 1" v-perm="'opd:appointments:edit'" type="primary" link :icon="Edit"
-                         size="small" @click="handleEdit(row)">
-                编辑
-              </el-button>
-              <el-button v-if="row.paymentStatus === 1" type="success" link size="small"
-                         @click="handleShowPayment(row)">
-                支付
-              </el-button>
-              <!-- 只有「已挂号(1)」「已签到(2)」才有退号入口，其余状态一律不出现（含灰色禁用态）：
-                   已接诊/已就诊是诊疗已经发生，已过号/爽约/未就诊的号源属过去日期、退了也还不了池
-                   （见 DayEndSettleMapper），已退号更没有重复退的道理。
-                   状态本身在左侧「状态」列已写明，不需要再摆一个点不动的按钮。 -->
-              <el-button v-if="canCancelRegist(row)" v-perm="'opd:appointments:delete'" type="danger" link size="small" @click="handleCancel(row)">
-                退号
-              </el-button>
-              <!-- 就诊日一过，退号入口消失，但「人昨天没来、今天要退钱」的诉求还在。
-                   这条出口走退费申请（挂号状态不动，钱由收费处审核执行），见脚本区同名注释。 -->
-              <el-button v-if="canApplyRefund(row)" v-perm="'finance:refund:add'" type="warning" link size="small"
-                         data-testid="apply-refund" @click="handleApplyRefund(row)">
-                申请退费
-              </el-button>
-            </template>
-          </el-table-column>
-        </el-table>
-        <div v-if="appointments.length === 0 && !loading" class="py-12 text-center text-sm text-slate-400">
-          暂无挂号记录
+                  <span v-else class="text-xs text-slate-400">-</span>
+                </template>
+              </el-table-column>
+              <el-table-column label="状态" width="100">
+                <template #default="{ row }">
+                  <el-tag :class="statusConfig[statusMap[row.registStatus]]?.color || null" effect="plain" size="small"
+                          class="border gap-1">
+                    {{ statusMap[row.registStatus] }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="操作" width="300" fixed="right">
+                <template #default="{ row }">
+                  <el-button v-if="row.registStatus === 1" type="success" link size="small" @click="handleCheckIn(row)">
+                    签到
+                  </el-button>
+                  <el-button v-if="row.registStatus === 1 && row.paymentStatus === 1" v-perm="'opd:appointments:edit'"
+                             type="primary" link :icon="Edit"
+                             size="small" @click="handleEdit(row)">
+                    编辑
+                  </el-button>
+                  <el-button v-if="row.paymentStatus === 1" type="success" link size="small"
+                             @click="handleShowPayment(row)">
+                    支付
+                  </el-button>
+                  <!-- 只有「已挂号(1)」「已签到(2)」才有退号入口，其余状态一律不出现（含灰色禁用态）：
+                       已接诊/已就诊是诊疗已经发生，已过号/爽约/未就诊的号源属过去日期、退了也还不了池
+                       （见 DayEndSettleMapper），已退号更没有重复退的道理。
+                       状态本身在左侧「状态」列已写明，不需要再摆一个点不动的按钮。 -->
+                  <el-button v-if="canCancelRegist(row)" v-perm="'opd:appointments:delete'" type="danger" link
+                             size="small" @click="handleCancel(row)">
+                    退号
+                  </el-button>
+                  <!-- 就诊日一过，退号入口消失，但「人昨天没来、今天要退钱」的诉求还在。
+                       这条出口走退费申请（挂号状态不动，钱由收费处审核执行），见脚本区同名注释。 -->
+                  <el-button v-if="canApplyRefund(row)" v-perm="'finance:refund:add'" type="warning" link size="small"
+                             data-testid="apply-refund" @click="handleApplyRefund(row)">
+                    申请退费
+                  </el-button>
+                </template>
+              </el-table-column>
+            </el-table>
+            <div v-if="appointments.length === 0 && !loading" class="py-12 text-center text-sm text-slate-400">
+              暂无挂号记录
+            </div>
+            <div class="mt-4 flex justify-end">
+              <el-pagination
+                  v-model:current-page="pagination.pageNum"
+                  v-model:page-size="pagination.pageSize"
+                  :page-sizes="PAGE_SIZES"
+                  :total="pagination.total"
+                  layout="total, sizes, prev, pager, next, jumper"
+                  @size-change="handleSizeChange"
+                  @current-change="handleCurrentChange"
+              />
+            </div>
+          </div>
         </div>
-        <div class="mt-4 flex justify-end">
-          <el-pagination
-              v-model:current-page="pagination.pageNum"
-              v-model:page-size="pagination.pageSize"
-              :page-sizes="PAGE_SIZES"
-              :total="pagination.total"
-              layout="total, sizes, prev, pager, next, jumper"
-              @size-change="handleSizeChange"
-              @current-change="handleCurrentChange"
-          />
-        </div>
-      </div>
-    </div>
       </el-tab-pane>
 
     </el-tabs>
@@ -3356,6 +3263,10 @@ onUnmounted(() => {
         <div class="rounded bg-slate-50 px-3 py-2 text-sm text-slate-600">
           为 <span class="font-semibold text-slate-800">{{ rescheduleForm.patientName }}</span> 改约
           （当前就诊日期：{{ rescheduleForm.visitDate || '-' }}）
+          <p v-if="rescheduleForm.currentSourceText" class="mt-1 text-xs text-slate-500">
+            当前号源：{{ rescheduleForm.currentSourceText }}
+            <template v-if="rescheduleForm.currentSlotText"> · 时间段 {{ rescheduleForm.currentSlotText }}</template>
+          </p>
         </div>
         <el-form label-width="76px">
           <el-form-item label="就诊日期">
@@ -3392,7 +3303,9 @@ onUnmounted(() => {
       </div>
       <template #footer>
         <el-button @click="showRescheduleDialog = false">取消</el-button>
-        <el-button v-perm="'opd:appointments:edit'" type="primary" :loading="rescheduleLoading" @click="handleConfirmReschedule">确认改约</el-button>
+        <el-button v-perm="'opd:appointments:edit'" type="primary" :loading="rescheduleLoading"
+                   @click="handleConfirmReschedule">确认改约
+        </el-button>
       </template>
     </el-dialog>
 
@@ -3416,10 +3329,13 @@ onUnmounted(() => {
         <el-form-item label="退费金额" required>
           <el-input-number v-model="refundForm.refundAmount" :min="0" :max="refundForm.refundableAmount" :precision="2"
                            :step="1" class="!w-full"/>
-          <p class="mt-1 text-xs text-slate-400">可退金额 ¥{{ refundForm.refundableAmount }}（实付扣掉已退部分），可改小做部分退费</p>
+          <p class="mt-1 text-xs text-slate-400">可退金额 ¥{{
+              refundForm.refundableAmount
+            }}（实付扣掉已退部分），可改小做部分退费</p>
         </el-form-item>
         <el-form-item label="退费原因" required>
-          <el-input v-model="refundForm.refundReason" type="textarea" :rows="3" placeholder="如：患者当日未到诊，申请退还挂号费"/>
+          <el-input v-model="refundForm.refundReason" type="textarea" :rows="3"
+                    placeholder="如：患者当日未到诊，申请退还挂号费"/>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -3479,7 +3395,8 @@ onUnmounted(() => {
           </el-table-column>
           <el-table-column label="操作" width="120">
             <template #default="{ row }">
-              <el-button v-perm="'opd:appointments:add'" type="primary" size="small" link :disabled="row.availableSource <= 0"
+              <el-button v-perm="'opd:appointments:add'" type="primary" size="small" link
+                         :disabled="row.availableSource <= 0"
                          @click="goRegister(row)">
                 去挂号
               </el-button>
@@ -3507,13 +3424,15 @@ onUnmounted(() => {
             class="flex-1 rounded-md py-2 text-sm font-medium transition-colors"
             :class="addMode === 'existing' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
             @click="switchPatientMode('existing')"
-        >选择已有患者</button>
+        >选择已有患者
+        </button>
         <button
             type="button"
             class="flex-1 rounded-md py-2 text-sm font-medium transition-colors"
             :class="addMode === 'new' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'"
             @click="switchPatientMode('new')"
-        >录入新患者</button>
+        >录入新患者
+        </button>
       </div>
 
       <el-form label-position="top" :model="newAppointment">
@@ -3623,7 +3542,9 @@ onUnmounted(() => {
             <el-form-item label="选择科室" required>
               <el-select v-model="newAppointment.deptId" filterable placeholder="选择科室" class="w-full"
                          @change="handleDeptChange">
-                <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id ?? d.deptName"/>
+                <el-option v-for="d in departments" :key="d.id"
+                           :label="d.parentDeptName ? `${d.parentDeptName} / ${d.deptName}` : d.deptName"
+                           :value="d.id ?? d.deptName"/>
               </el-select>
             </el-form-item>
             <el-form-item label="预约日期" required>
@@ -3705,7 +3626,9 @@ onUnmounted(() => {
       </el-form>
       <template #footer>
         <el-button @click="showAddDialog = false">取消</el-button>
-        <el-button v-perm="'opd:appointments:add'" type="primary" :loading="addSubmitLoading" @click="handleSubmit">确认挂号</el-button>
+        <el-button v-perm="'opd:appointments:add'" type="primary" :loading="addSubmitLoading" @click="handleSubmit">
+          确认挂号
+        </el-button>
       </template>
     </el-dialog>
 
@@ -3715,7 +3638,9 @@ onUnmounted(() => {
         <div class="grid grid-cols-2 gap-4">
           <el-form-item label="选择科室" required>
             <el-select v-model="editForm.deptId" placeholder="选择科室" class="w-full" @change="handleEditDeptChange">
-              <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="d.id ?? d.deptName"/>
+              <el-option v-for="d in departments" :key="d.id"
+                         :label="d.parentDeptName ? `${d.parentDeptName} / ${d.deptName}` : d.deptName"
+                         :value="d.id ?? d.deptName"/>
             </el-select>
           </el-form-item>
           <el-form-item label="选择医生">
@@ -3760,7 +3685,9 @@ onUnmounted(() => {
       </el-form>
       <template #footer>
         <el-button @click="showEditDialog = false">取消</el-button>
-        <el-button v-perm="'opd:appointments:edit'" type="primary" :loading="submitLoading" @click="handleEditSubmit">确认修改</el-button>
+        <el-button v-perm="'opd:appointments:edit'" type="primary" :loading="submitLoading" @click="handleEditSubmit">
+          确认修改
+        </el-button>
       </template>
     </el-dialog>
 
@@ -3810,14 +3737,6 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
-/* ===== 看板表格：行 hover 导轨 + 未排班格子的"不可点"态 =====
-   两条都是**表格级别**的视觉，落在 scoped 里而不是逐格写 class：
-   td 上已经挂了一串 tailwind 背景类（bg-slate-50 / bg-white），
-   用 CSS 特异性（tr.desk-row:hover > td）才盖得住；tailwind 的 group-hover
-   和 bg-* 同权重，谁生效取决于生成顺序 —— 那种靠运气的写法不能用。 */
-
-/* 行 hover：整行淡蓝 + 行首列再深一档（横着扫十几行时，底色是唯一的横向导轨）。
-   行首列必须一起变：它是 sticky 的，卡片区变了行首不变，眼睛会丢掉"这是哪一行"。 */
 tr.desk-row:hover > td {
   background-color: #e8f1fc;
 }
@@ -3826,40 +3745,56 @@ tr.desk-row:hover > td.desk-row-head {
   background-color: #d3e4f8;
 }
 
-/* 未排班：**只留禁止光标，不给底色**（2026-09-22 改）。
-   淡灰底的问题是一大片「未排班」连起来会变成一块视觉禁区 —— 扫表格时注意力被空格子抢走，
-   真正有号源的格子反而被淹掉。空态用一个「-」就够了，底色是重复表达。
-   光标必须留：这一格没有号源，点它不会有任何反应，得让人在按下去之前就知道。
-   ⚠️ 不再挡行 hover：未排班的格子也跟着整行变蓝，导轨才是一条整线（跳过格子 = 导轨断在中间）。 */
 td.desk-cell-na {
   cursor: not-allowed;
 }
 </style>
 
 <style>
-/* ===== 预约看板整体放大一档（2026-09-24 需求：字太小看不清） =====
-   看板（工具栏/日历栏/表格）整块用 .desk-board 圈住，这里按容器批量覆盖字号，
-   不逐处改 tailwind class（同一 utility 在文件里出现几十次，逐条改必漏）。
-   ⚠️ 必须放在**非 scoped** 块里：scoped 会给复合选择器最后一个元素加 [data-v-xxx]，
-      `.desk-board .text-xs[data-v-xxx]` 命不中子元素（utility 在组件模板上、没有该属性），
-      现象是"规则写了完全没生效"。
-   Tailwind v4 的 utility 在 @layer utilities 内，无层级样式恒定压制有层级样式，不用 !important。
-   弹框（el-dialog teleport 到 body）不在 .desk-board 内，零影响。 */
-.desk-board .text-xs { font-size: 14px; }
-.desk-board .text-\[11px\] { font-size: 13px; }
-.desk-board .text-\[10px\] { font-size: 12px; }
-.desk-board .text-\[9px\] { font-size: 11px; }
+.desk-board .text-xs {
+  font-size: 14px;
+}
+
+.desk-board .text-\[11px\] {
+  font-size: 13px;
+}
+
+.desk-board .text-\[10px\] {
+  font-size: 12px;
+}
+
+.desk-board .text-\[9px\] {
+  font-size: 11px;
+}
+
 /* 表格内 text-sm（卡片主体、周视图日期列头）14px → 16px */
-.desk-board table .text-sm { font-size: 16px; }
+.desk-board table .text-sm {
+  font-size: 16px;
+}
+
 .desk-board table td,
-.desk-board table th { line-height: 1.55; }
+.desk-board table th {
+  line-height: 1.55;
+}
+
 /* 灰色文字同步加深一档（slate-400 在 12px 下几乎不可读，放大后仍偏淡） */
-.desk-board .text-slate-300 { color: #94a3b8; }
-.desk-board .text-slate-400 { color: #64748b; }
-.desk-board .text-slate-500 { color: #475569; }
+.desk-board .text-slate-300 {
+  color: #94a3b8;
+}
+
+.desk-board .text-slate-400 {
+  color: #64748b;
+}
+
+.desk-board .text-slate-500 {
+  color: #475569;
+}
+
 /* 例外：日历下方 2×2 概况的标签（11px）只放到 12px —— 左栏只有 220px 宽，
    13px 时「总号源 / 237 个」折成三行，实测比小一号更难读。 */
-.desk-board aside .grid [class*="text-[11px]"] { font-size: 12px; }
+.desk-board aside .grid [class*="text-[11px]"] {
+  font-size: 12px;
+}
 </style>
 
 <style>

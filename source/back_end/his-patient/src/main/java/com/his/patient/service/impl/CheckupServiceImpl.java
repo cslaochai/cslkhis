@@ -32,15 +32,19 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizCheckupRecord> implements CheckupService {
 
-    private final SysCheckupPackageMapper sysCheckupPackageMapper;
-    private final SysCheckupPackageItemMapper sysCheckupPackageItemMapper;
-    private final BizCheckupRecordMapper bizCheckupRecordMapper;
-    private final BizCheckupResultMapper bizCheckupResultMapper;
-    private final BizPatientMapper bizPatientMapper;
     private final DictCacheService dictCacheService;
+
     private final RedisSequenceService redisSequenceService;
 
-    // 套餐
+    private final SysCheckupPackageMapper sysCheckupPackageMapper;
+
+    private final SysCheckupPackageItemMapper sysCheckupPackageItemMapper;
+
+    private final BizCheckupRecordMapper bizCheckupRecordMapper;
+
+    private final BizCheckupResultMapper bizCheckupResultMapper;
+
+    private final BizPatientMapper bizPatientMapper;
 
     @Transactional(rollbackFor = Exception.class)
     public CheckupVO.PackageVO savePackage(CheckupDTO.PackageSave dto) {

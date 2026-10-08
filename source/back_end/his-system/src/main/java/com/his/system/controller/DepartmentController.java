@@ -49,12 +49,6 @@ public class DepartmentController {
 
     /**
      * 科室下拉统一入口。
-     *
-     * <p><b>为什么用 GET 而不是 POST</b>：这是纯查询、无请求体业务语义，
-     * 且默认数据范围要走"不传就是安全默认值"，GET 的参数缺省最自然。
-     * 入参少且都是短标量，放 query string 不违和。
-     *
-     * <p>范围收口口径见 service：不传即按当前人过滤，只有显式索取全部才放开。
      */
     @Operation(summary = "科室下拉（scope 控制是否按当前人过滤，默认按当前人）")
     @GetMapping("/selectList")

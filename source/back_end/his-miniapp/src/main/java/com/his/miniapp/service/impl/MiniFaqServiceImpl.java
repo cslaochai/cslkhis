@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.miniapp.dto.FaqPageQueryDTO;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -33,6 +35,7 @@ public class MiniFaqServiceImpl extends ServiceImpl<MiniFaqMapper, SysFaq> imple
     private static final int MAX_HOT_LIMIT = 20;
 
     private final MiniFaqMapper miniFaqMapper;
+    private final RedisSequenceService redisSequenceService;
 
     private static MiniFaqListVO toAdminVO(SysFaq faq) {
         MiniFaqListVO vo = new MiniFaqListVO();
@@ -198,8 +201,6 @@ public class MiniFaqServiceImpl extends ServiceImpl<MiniFaqMapper, SysFaq> imple
         return toAdminVO(faq);
     }
 
-    // 私有
-
     @Override
     public String adminUpsert(FaqUpsertDTO dto) {
         boolean isNew = dto.getId() == null;
@@ -235,19 +236,15 @@ public class MiniFaqServiceImpl extends ServiceImpl<MiniFaqMapper, SysFaq> imple
     }
 
     /**
-     * 编号 FAQ + 4 位序号，取全表最大号 +1（faq_no 是全局唯一键，不能按天 count）
+     * 编号 FAQ + yyyyMMdd + 4 位序号，按天归零。
+     * <p>号里带日期，唯一性靠「日期 + 序号」复合（与 MSG / PX 那些号同理），
+     * 所以每天从 1 开始也不会撞到历史号。
+     * <p>存量 FAQ0001~FAQ0062 是改号段之前的老格式（4 位纯序号），长度与新号不同、
+     * 天然不冲突，不洗数据；软删的行仍占 {@code uk_faq_no}，删除走物理删。
      */
     private String nextFaqNo() {
-        String max = miniFaqMapper.maxFaqNo();
-        int seq = 1;
-        if (TextUtil.hasText(max) && max.length() > 3) {
-            try {
-                seq = Integer.parseInt(max.substring(3)) + 1;
-            } catch (NumberFormatException ex) {
-                seq = 1;
-            }
-        }
-        return "FAQ" + String.format("%04d", seq);
+        return "FAQ" + LocalDate.now().format(DateFormats.COMPACT_DATE)
+                + String.format("%04d", redisSequenceService.next("FAQ"));
     }
 
     private List<SysFaq> enabledFaqs() {

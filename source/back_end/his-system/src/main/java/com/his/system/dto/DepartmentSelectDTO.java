@@ -26,11 +26,11 @@ public class DepartmentSelectDTO {
     private String scope;
 
     /**
-     * 科室类型过滤：1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他。
+     * 科室类型过滤（支持单个值或逗号分隔的多个值）。
      * 口径见科室的科室类型列注释与字典 {@code his_dept_type}。
      */
     @Schema(description = "科室类型：1-门诊科室 2-医技科室 3-药房 4-住院科室 5-其他")
-    private Integer deptType;
+    private String deptType;
 
     /**
      * 科室名称，模糊匹配（下拉搜索用）
