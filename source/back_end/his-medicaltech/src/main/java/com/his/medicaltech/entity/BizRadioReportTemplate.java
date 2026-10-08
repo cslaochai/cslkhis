@@ -42,7 +42,7 @@ public class BizRadioReportTemplate extends BaseEntity {
     private String itemCode;
 
     /**
-     * 适用检查项目名称（快照）
+     * 适用检查项目名称
      */
     private String itemName;
 

@@ -8,7 +8,7 @@
 CREATE TABLE `biz_dept_cost_month` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_id` bigint NOT NULL COMMENT '科室ID',
-  `dept_name` varchar(100) NOT NULL COMMENT '科室名称（快照）',
+  `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
   `cost_month` char(7) NOT NULL COMMENT '核算月份',
   `labor_cost` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '人力成本（元）',
   `drug_cost` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '药品成本（元）',
@@ -32,7 +32,7 @@ CREATE TABLE `biz_dept_cost_month` (
 CREATE TABLE `biz_perf_result` (
   `id` bigint NOT NULL COMMENT '主键ID',
   `dept_id` bigint NOT NULL COMMENT '科室ID',
-  `dept_name` varchar(100) NOT NULL COMMENT '科室名称（快照）',
+  `dept_name` varchar(100) NOT NULL COMMENT '科室名称',
   `cost_month` char(7) NOT NULL COMMENT '核算月份',
   `revenue` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '科室收入',
   `drug_revenue` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '药品收入',

@@ -36,17 +36,17 @@ public class ArchiveBorrowVO {
     private Long archiveId;
 
     /**
-     * 病历号（快照）
+     * 病历号
      */
     private String recordNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 病历所属科室（快照）
+     * 病历所属科室
      */
     private String deptName;
 
@@ -57,7 +57,7 @@ public class ArchiveBorrowVO {
     private Long applicantId;
 
     /**
-     * 申请人姓名（快照）
+     * 申请人姓名
      */
     private String applicantName;
 
@@ -83,7 +83,7 @@ public class ArchiveBorrowVO {
     private Long auditById;
 
     /**
-     * 审核人姓名（快照）
+     * 审核人姓名
      */
     private String auditByName;
 

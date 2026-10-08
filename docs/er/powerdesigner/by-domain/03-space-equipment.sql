@@ -105,8 +105,8 @@ CREATE TABLE `sys_equipment` (
 CREATE TABLE `biz_equipment_maintain` (
   `id` bigint NOT NULL COMMENT '维保记录ID',
   `equipment_id` bigint NOT NULL COMMENT '设备ID',
-  `equipment_code` varchar(32) COMMENT '设备编码（快照）',
-  `equipment_name` varchar(200) COMMENT '设备名称（快照）',
+  `equipment_code` varchar(32) COMMENT '设备编码',
+  `equipment_name` varchar(200) COMMENT '设备名称',
   `maintain_type` tinyint NOT NULL COMMENT '维保类型（1-保养 2-维修 3-巡检）',
   `maintain_date` date NOT NULL COMMENT '维保日期',
   `next_maintain_date` date COMMENT '下次维保日期',
@@ -127,8 +127,8 @@ CREATE TABLE `biz_equipment_maintain` (
 CREATE TABLE `biz_equipment_metering` (
   `id` bigint NOT NULL COMMENT '计量记录ID',
   `equipment_id` bigint NOT NULL COMMENT '设备ID',
-  `equipment_code` varchar(32) COMMENT '设备编码（快照）',
-  `equipment_name` varchar(200) COMMENT '设备名称（快照）',
+  `equipment_code` varchar(32) COMMENT '设备编码',
+  `equipment_name` varchar(200) COMMENT '设备名称',
   `metering_type` tinyint NOT NULL COMMENT '计量类型（1-强检 2-校准）',
   `metering_date` date NOT NULL COMMENT '计量日期',
   `valid_until` date NOT NULL COMMENT '有效期至',

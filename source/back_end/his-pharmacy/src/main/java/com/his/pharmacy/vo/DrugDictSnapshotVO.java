@@ -28,37 +28,37 @@ public class DrugDictSnapshotVO implements Serializable {
     private Long id;
 
     /**
-     * 药品编码（快照）
+     * 药品编码
      */
     private String drugCode;
 
     /**
-     * 药品名称（快照）
+     * 药品名称
      */
     private String drugName;
 
     /**
-     * 通用名（快照）
+     * 通用名
      */
     private String genericName;
 
     /**
-     * 规格（快照）
+     * 规格
      */
     private String specification;
 
     /**
-     * 剂型（快照）
+     * 剂型
      */
     private String dosageForm;
 
     /**
-     * 单位（快照）
+     * 单位
      */
     private String unit;
 
     /**
-     * 生产企业（快照）
+     * 生产企业
      */
     private String manufacturer;
 

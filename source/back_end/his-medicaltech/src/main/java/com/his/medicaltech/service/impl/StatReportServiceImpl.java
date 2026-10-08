@@ -166,7 +166,7 @@ public class StatReportServiceImpl extends ServiceImpl<BizStatReportMapper, BizS
         periodInfo.setEnd(endStr);
 
         StatReportPayloadVO.Scope scope = new StatReportPayloadVO.Scope();
-        scope.setDeptId(deptId == null ? null : String.valueOf(deptId));
+        scope.setDeptId(deptId);
         scope.setDeptName(deptName == null ? "全院" : deptName);
 
         StatReportPayloadVO.Indicators indicators = new StatReportPayloadVO.Indicators();

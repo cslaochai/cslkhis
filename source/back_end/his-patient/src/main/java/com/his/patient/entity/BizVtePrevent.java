@@ -51,39 +51,39 @@ public class BizVtePrevent {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 科室ID（快照）
+     * 科室ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 
     /**
-     * 病区ID（快照）
+     * 病区ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
 
     /**
-     * 病区名称（快照）
+     * 病区名称
      */
     private String wardName;
 
     /**
-     * 床号（快照）
+     * 床号
      */
     private String bedNo;
 
@@ -99,7 +99,7 @@ public class BizVtePrevent {
     private Integer capriniScore;
 
     /**
-     * 风险等级（快照）（1-低 2-中 3-高 4-极高）
+     * 风险等级（1-低 2-中 3-高 4-极高）
      */
     private Integer riskLevel;
 

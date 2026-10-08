@@ -45,7 +45,7 @@ public class InpatientOrderTemplateListVO implements Serializable {
     private String remark;
 
     /**
-     * 医生姓名（快照）
+     * 医生姓名
      */
     private String doctorName;
 

@@ -40,19 +40,19 @@ public class BizDrugTrace extends BaseEntity {
     /** 药品ID（药品字典主键） */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long drugId;
-    /** 药品编码（快照） */
+    /** 药品编码 */
     private String drugCode;
-    /** 药品名称（快照） */
+    /** 药品名称 */
     private String drugName;
-    /** 通用名（快照） */
+    /** 通用名 */
     private String genericName;
-    /** 规格（快照） */
+    /** 规格 */
     private String specification;
-    /** 剂型（快照） */
+    /** 剂型 */
     private String dosageForm;
-    /** 单位（快照） */
+    /** 单位 */
     private String unit;
-    /** 生产厂家（快照） */
+    /** 生产厂家 */
     private String manufacturer;
     /** 批准文号（快照，医保上传必备） */
     private String approvalNumber;
@@ -60,11 +60,11 @@ public class BizDrugTrace extends BaseEntity {
     /** 采集挂靠批次ID（药品批次库存主键） */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long stockId;
-    /** 库存批号（快照） */
+    /** 库存批号 */
     private String stockBatchNo;
-    /** 供应商（快照） */
+    /** 供应商 */
     private String supplier;
-    /** 供应商ID（快照） */
+    /** 供应商ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long supplierId;
     /** 采集来源（1-入库采集 2-存量补采） */
@@ -72,7 +72,7 @@ public class BizDrugTrace extends BaseEntity {
     /** 来源入库单ID（药品入库单主键） */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long inboundId;
-    /** 来源入库单号（快照） */
+    /** 来源入库单号 */
     private String inboundNo;
 
     /** 码状态（1-在库 2-已发药核销 3-已作废：退药/报损/召回，不可再发） */
@@ -85,27 +85,27 @@ public class BizDrugTrace extends BaseEntity {
     /** 发药单ID（药品发药记录主键，跨模块快照） */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long dispensingId;
-    /** 发药单号（快照） */
+    /** 发药单号 */
     private String dispensingNo;
     /** 患者ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
-    /** 患者编号（快照） */
+    /** 患者编号 */
     private String patientNo;
-    /** 患者姓名（快照） */
+    /** 患者姓名 */
     private String patientName;
     /** 就诊类型（1-门诊 2-住院） */
     private Integer visitType;
-    /** 门诊挂号ID（快照） */
+    /** 门诊挂号ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long registId;
-    /** 住院ID（快照） */
+    /** 住院ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
-    /** 发药科室ID（快照） */
+    /** 发药科室ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
-    /** 发药科室名称（快照） */
+    /** 发药科室名称 */
     private String deptName;
     /** 发药核销时间 */
     private LocalDateTime dispenseTime;

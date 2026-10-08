@@ -100,7 +100,7 @@ public class WardNursingFactsVO implements Serializable {
         private String patientName;
 
         /**
-         * 床号（快照）
+         * 床号
          */
         private String bedNo;
 

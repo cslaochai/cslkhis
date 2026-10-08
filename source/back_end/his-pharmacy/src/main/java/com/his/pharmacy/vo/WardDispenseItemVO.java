@@ -35,7 +35,7 @@ public class WardDispenseItemVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long orderId;
 
-    /** 医嘱号（快照） */
+    /** 医嘱号 */
     private String orderNo;
 
     /** 入院ID（冗余） */
@@ -46,13 +46,13 @@ public class WardDispenseItemVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者编号（快照） */
+    /** 患者编号 */
     private String patientNo;
 
-    /** 患者姓名（快照） */
+    /** 患者姓名 */
     private String patientName;
 
-    /** 病区ID（快照） */
+    /** 病区ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
 
@@ -60,19 +60,19 @@ public class WardDispenseItemVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long drugId;
 
-    /** 药品名称（快照） */
+    /** 药品名称 */
     private String drugName;
 
-    /** 医嘱项目编码（快照） */
+    /** 医嘱项目编码 */
     private String itemCode;
 
-    /** 医嘱项目名称（快照） */
+    /** 医嘱项目名称 */
     private String itemName;
 
-    /** 规格（快照） */
+    /** 规格 */
     private String spec;
 
-    /** 单位（快照） */
+    /** 单位 */
     private String unit;
 
     /** 摆药数量 */

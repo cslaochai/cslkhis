@@ -43,7 +43,7 @@ public class BizNutritionStats {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 

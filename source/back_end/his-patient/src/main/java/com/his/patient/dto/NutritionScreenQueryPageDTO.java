@@ -24,10 +24,10 @@ public class NutritionScreenQueryPageDTO extends PageParam {
     /** 患者ID */
     private Long patientId;
 
-    /** 科室ID（快照） */
+    /** 科室ID */
     private Long deptId;
 
-    /** 病区ID（快照） */
+    /** 病区ID */
     private Long wardId;
 
     /** 在院状态：1-在院 0-已出院；空 = 全部 */

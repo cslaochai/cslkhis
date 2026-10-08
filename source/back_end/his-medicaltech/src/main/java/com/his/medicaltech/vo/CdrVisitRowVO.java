@@ -1,5 +1,7 @@
 package com.his.medicaltech.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -19,7 +21,8 @@ public class CdrVisitRowVO implements Serializable {
     /**
      * 就诊次ID（字符串，避免前端丢精度）
      */
-    private String visitId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long visitId;
 
     /**
      * 就诊次编号

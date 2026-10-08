@@ -42,7 +42,7 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
     private final ExternalCaChannelService externalCaChannelService;
 
     private static SignOptionVO opt(Integer code, String text) {
-        return new SignOptionVO(String.valueOf(code), text);
+        return new SignOptionVO(code == null ? null : code.longValue(), text);
     }
 
     private static void fillSigner(SignCommandDTO cmd, CurrentUser user) {

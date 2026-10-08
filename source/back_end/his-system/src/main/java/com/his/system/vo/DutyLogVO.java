@@ -52,7 +52,7 @@ public class DutyLogVO {
     private Long employeeId;
 
     /**
-     * 值班人姓名（快照）
+     * 值班人姓名
      */
     private String employeeName;
 
@@ -104,7 +104,7 @@ public class DutyLogVO {
     private Long handoverEmpId;
 
     /**
-     * 接班人姓名（快照）
+     * 接班人姓名
      */
     private String handoverEmpName;
 

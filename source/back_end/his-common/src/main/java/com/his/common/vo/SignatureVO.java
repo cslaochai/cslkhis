@@ -36,7 +36,7 @@ public class SignatureVO {
     private Long bizId;
 
     /**
-     * 对象单号（快照）
+     * 对象单号
      */
     private String bizNo;
 
@@ -47,11 +47,11 @@ public class SignatureVO {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
     /**
-     * 对象所属科室名称（快照）
+     * 对象所属科室名称
      */
     private String deptName;
 
@@ -78,11 +78,11 @@ public class SignatureVO {
     private Long signerId;
 
     /**
-     * 签名人姓名（快照）
+     * 签名人姓名
      */
     private String signerName;
     /**
-     * 签名人科室名称（快照）
+     * 签名人科室名称
      */
     private String signerDeptName;
     /**
@@ -97,7 +97,7 @@ public class SignatureVO {
     private Long certId;
 
     /**
-     * 所用证书编号（快照）
+     * 所用证书编号
      */
     private String certNo;
 

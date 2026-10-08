@@ -19,9 +19,9 @@ public class NursingAssessmentQueryPageDTO extends PageParam {
     /** 评估类型（1-压疮Braden 2-跌倒Morse 3-疼痛NRS） */
     private Integer assessType;
 
-    /** 病区ID（快照） */
+    /** 病区ID */
     private Long wardId;
 
-    /** 患者姓名（快照） */
+    /** 患者姓名 */
     private String patientName;
 }

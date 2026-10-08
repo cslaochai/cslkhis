@@ -40,7 +40,7 @@ public class AdverseEventVO {
     private Long occurDeptId;
 
     /**
-     * 发生科室名称（快照）
+     * 发生科室名称
      */
     private String occurDeptName;
 
@@ -51,7 +51,7 @@ public class AdverseEventVO {
     private Long occurWardId;
 
     /**
-     * 发生病区名称（快照）
+     * 发生病区名称
      */
     private String occurWardName;
 
@@ -104,7 +104,7 @@ public class AdverseEventVO {
     private Long reporterId;
 
     /**
-     * 上报人姓名（快照）
+     * 上报人姓名
      */
     private String reporterName;
 
@@ -119,7 +119,7 @@ public class AdverseEventVO {
     private Integer status;
 
     /**
-     * 处理人姓名（快照）
+     * 处理人姓名
      */
     private String handlerName;
 
@@ -134,7 +134,7 @@ public class AdverseEventVO {
     private LocalDateTime handleTime;
 
     /**
-     * 整改人姓名（快照）
+     * 整改人姓名
      */
     private String rectifyByName;
 
@@ -149,7 +149,7 @@ public class AdverseEventVO {
     private LocalDateTime rectifyTime;
 
     /**
-     * 结案人姓名（快照）
+     * 结案人姓名
      */
     private String closeByName;
 

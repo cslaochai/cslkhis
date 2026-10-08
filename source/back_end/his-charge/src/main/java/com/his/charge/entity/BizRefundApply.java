@@ -109,7 +109,7 @@ public class BizRefundApply {
     private LocalDateTime refundTime;
 
     /**
-     * 作废人姓名（快照）。
+     * 作废人姓名。
      *
      * <p>作废只作用于 1-待审核 / 2-审核通过：审核通过后才发现"金额落不到明细边界"或
      * "患者又回来要做检查了"，没有作废入口就只能来库里改状态 —— 判重会把这张收费单永久锁死。

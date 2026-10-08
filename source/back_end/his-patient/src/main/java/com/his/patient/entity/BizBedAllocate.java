@@ -30,18 +30,18 @@ public class BizBedAllocate extends BaseEntity {
     private Long bedId;
 
     /**
-     * 床位号（快照）
+     * 床位号
      */
     private String bedNo;
 
     /**
-     * 病区ID（快照）
+     * 病区ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
 
     /**
-     * 病区名称（快照）
+     * 病区名称
      */
     private String wardName;
 
@@ -52,7 +52,7 @@ public class BizBedAllocate extends BaseEntity {
     private Long ownDeptId;
 
     /**
-     * 床位归属科室名称（快照）
+     * 床位归属科室名称
      */
     private String ownDeptName;
 
@@ -63,7 +63,7 @@ public class BizBedAllocate extends BaseEntity {
     private Long useDeptId;
 
     /**
-     * 实际使用科室名称（快照）
+     * 实际使用科室名称
      */
     private String useDeptName;
 
@@ -80,7 +80,7 @@ public class BizBedAllocate extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -101,7 +101,7 @@ public class BizBedAllocate extends BaseEntity {
     private Long operatorId;
 
     /**
-     * 操作人姓名（快照）
+     * 操作人姓名
      */
     private String operatorName;
 

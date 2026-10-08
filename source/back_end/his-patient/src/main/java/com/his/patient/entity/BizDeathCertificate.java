@@ -56,7 +56,7 @@ public class BizDeathCertificate extends BaseEntity implements Serializable {
     private Long patientId;
 
     /**
-     * 死者姓名（快照）
+     * 死者姓名
      */
     private String patientName;
 
@@ -66,12 +66,12 @@ public class BizDeathCertificate extends BaseEntity implements Serializable {
     private Integer gender;
 
     /**
-     * 民族（快照）
+     * 民族
      */
     private String nation;
 
     /**
-     * 出生日期（快照）
+     * 出生日期
      */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthDate;
@@ -87,7 +87,7 @@ public class BizDeathCertificate extends BaseEntity implements Serializable {
     private String idCard;
 
     /**
-     * 职业（快照）
+     * 职业
      */
     private String occupation;
 
@@ -114,17 +114,17 @@ public class BizDeathCertificate extends BaseEntity implements Serializable {
     private Long deathDeptId;
 
     /**
-     * 死亡科室名称（快照）
+     * 死亡科室名称
      */
     private String deathDeptName;
 
     /**
-     * 死亡病区名称（快照）
+     * 死亡病区名称
      */
     private String deathWardName;
 
     /**
-     * 死亡床位号（快照）
+     * 死亡床位号
      */
     private String deathBedNo;
 
@@ -139,7 +139,7 @@ public class BizDeathCertificate extends BaseEntity implements Serializable {
     private String underlyingIcdCode;
 
     /**
-     * 根本死因名称（快照）
+     * 根本死因名称
      */
     private String underlyingIcdName;
 

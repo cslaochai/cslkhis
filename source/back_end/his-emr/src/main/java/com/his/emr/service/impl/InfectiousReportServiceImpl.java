@@ -101,7 +101,7 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
                 .last("LIMIT 50");
         return sysInfectiousDiseaseMapper.selectList(w).stream().map(d -> {
             InfectiousReportVO.DiseaseSelectListVO r = new InfectiousReportVO.DiseaseSelectListVO();
-            r.setId(String.valueOf(d.getId()));
+            r.setId(d.getId());
             r.setDiseaseCode(d.getDiseaseCode());
             r.setDiseaseName(d.getDiseaseName());
             r.setInfectiousClass(d.getInfectiousClass());
@@ -382,18 +382,18 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
 
     private InfectiousReportVO.Row toRow(BizInfectiousReport r) {
         InfectiousReportVO.Row vo = new InfectiousReportVO.Row();
-        vo.setId(String.valueOf(r.getId()));
+        vo.setId(r.getId());
         vo.setReportNo(r.getReportNo());
-        vo.setPatientId(String.valueOf(r.getPatientId()));
+        vo.setPatientId(r.getPatientId());
         vo.setPatientNo(r.getPatientNo());
         vo.setPatientName(r.getPatientName());
         vo.setGender(r.getGender());
         vo.setAge(r.getAge());
-        vo.setRegistId(r.getRegistId() == null ? null : String.valueOf(r.getRegistId()));
-        vo.setInpId(r.getInpId() == null ? null : String.valueOf(r.getInpId()));
-        vo.setVisitDeptId(r.getVisitDeptId() == null ? null : String.valueOf(r.getVisitDeptId()));
+        vo.setRegistId(r.getRegistId());
+        vo.setInpId(r.getInpId());
+        vo.setVisitDeptId(r.getVisitDeptId());
         vo.setVisitDeptName(r.getVisitDeptName());
-        vo.setDiseaseId(String.valueOf(r.getDiseaseId()));
+        vo.setDiseaseId(r.getDiseaseId());
         vo.setDiseaseCode(r.getDiseaseCode());
         vo.setDiseaseName(r.getDiseaseName());
         vo.setInfectiousClass(r.getInfectiousClass());

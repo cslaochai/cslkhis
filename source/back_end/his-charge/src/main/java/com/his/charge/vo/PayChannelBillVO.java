@@ -87,7 +87,7 @@ public class PayChannelBillVO {
     private Long matchedById;
 
     /**
-     * 勾对人姓名（快照）
+     * 勾对人姓名
      */
     private String matchedByName;
 

@@ -33,12 +33,12 @@ public class BizSettlementBillVO {
     private Long patientId;
 
     /**
-     * 患者号（快照）
+     * 患者号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -54,7 +54,7 @@ public class BizSettlementBillVO {
     private Long encounterId;
 
     /**
-     * 就诊标识单号（快照）
+     * 就诊标识单号
      */
     private String encounterNo;
 
@@ -142,7 +142,7 @@ public class BizSettlementBillVO {
     private Long billById;
 
     /**
-     * 结算人姓名（快照）
+     * 结算人姓名
      */
     private String billByName;
 
@@ -175,7 +175,7 @@ public class BizSettlementBillVO {
     private Long voidById;
 
     /**
-     * 作废操作人姓名（快照）
+     * 作废操作人姓名
      */
     private String voidByName;
 

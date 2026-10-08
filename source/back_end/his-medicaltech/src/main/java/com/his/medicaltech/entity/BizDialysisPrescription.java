@@ -30,7 +30,7 @@ public class BizDialysisPrescription extends BaseEntity implements Serializable 
     private Long archiveId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 

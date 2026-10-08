@@ -19,12 +19,12 @@ public class RxReviewItemPageDTO extends PageParam {
     private Long batchId;
 
     /**
-     * 处方号（快照）
+     * 处方号
      */
     private String prescriptionNo;
 
     /**
-     * 开方医生姓名（快照）
+     * 开方医生姓名
      */
     private String doctorName;
 

@@ -52,20 +52,20 @@ public class BizMealOrder {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
     /**
-     * 科室ID（快照）
+     * 科室ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
     /**
@@ -74,11 +74,11 @@ public class BizMealOrder {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
     /**
-     * 病区名称（快照）
+     * 病区名称
      */
     private String wardName;
     /**
-     * 床号（快照）
+     * 床号
      */
     private String bedNo;
 
@@ -92,7 +92,7 @@ public class BizMealOrder {
      */
     private String dietCode;
     /**
-     * 饮食名称（快照）
+     * 饮食名称
      */
     private String dietName;
 
@@ -135,7 +135,7 @@ public class BizMealOrder {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deliverById;
     /**
-     * 配送人姓名（快照）
+     * 配送人姓名
      */
     private String deliverByName;
     /**

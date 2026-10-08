@@ -21,7 +21,7 @@ public class EnrollQueryPageDTO extends PageParam implements Serializable {
     private Long pathwayId;
 
     /**
-     * 入院科室ID（快照）
+     * 入院科室ID
      */
     private Long deptId;
 
@@ -37,7 +37,7 @@ public class EnrollQueryPageDTO extends PageParam implements Serializable {
     private LocalDate enrollDate;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 }

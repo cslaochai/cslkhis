@@ -1,15 +1,12 @@
 package com.his.miniapp.mapper;
 
-import com.his.miniapp.vo.MiniappUserRowVO;
+import com.his.miniapp.vo.MiniUserRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 /**
- * 微信登录用用户只读 Mapper（裸 SQL，铁律：跨模块读异模块表用裸 SQL Mapper）。
- *
- * <p>只做「openid ↔ 患者账号」的查找；openid 绑定写操作走
- * his-patient 的 {@code PatientGuardianService.bindOpenid}（唯一性冲突语义已实现）。
+ * 微信登录
  */
 @Mapper
 public interface MiniappSysUserMapper {
@@ -20,5 +17,5 @@ public interface MiniappSysUserMapper {
             WHERE openid = #{openid} AND del_flag = 0
             LIMIT 1
             """)
-    MiniappUserRowVO selectByOpenid(@Param("openid") String openid);
+    MiniUserRowVO selectByOpenid(@Param("openid") String openid);
 }

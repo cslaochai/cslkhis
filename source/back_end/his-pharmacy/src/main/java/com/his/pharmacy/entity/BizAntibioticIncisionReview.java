@@ -43,31 +43,31 @@ public class BizAntibioticIncisionReview implements Serializable {
     /** 手术申请单ID（手术申请单的ID） */
     private Long operationApplyId;
 
-    /** 手术申请单号（快照） */
+    /** 手术申请单号 */
     private String applyNo;
 
-    /** 入院ID（快照） */
+    /** 入院ID */
     private Long admissionId;
 
     /** 患者ID */
     private Long patientId;
 
-    /** 患者姓名（快照） */
+    /** 患者姓名 */
     private String patientName;
 
-    /** 手术科室（快照） */
+    /** 手术科室 */
     private String deptName;
 
-    /** 手术名称（快照） */
+    /** 手术名称 */
     private String operationName;
 
-    /** 手术编码 ICD-9-CM-3（快照） */
+    /** 手术编码 ICD-9-CM-3 */
     private String operationCode;
 
     /** 手术开始时间（快照，判定给药时机的锚点） */
     private LocalDateTime operationTime;
 
-    /** 主刀医师（快照） */
+    /** 主刀医师 */
     private String surgeonName;
 
     /** 切口等级（固定 1-Ⅰ类） */
@@ -76,7 +76,7 @@ public class BizAntibioticIncisionReview implements Serializable {
     /** 预防用药药品ID */
     private Long drugId;
 
-    /** 预防用药名称（快照） */
+    /** 预防用药名称 */
     private String drugName;
 
     /** 预防用药分级（快照：1/2/3） */

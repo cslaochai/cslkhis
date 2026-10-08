@@ -44,7 +44,7 @@ public class TechAuthOverrideVO {
     private Long employeeId;
 
     /**
-     * 越权操作者姓名（快照）
+     * 越权操作者姓名
      */
     private String employeeName;
 

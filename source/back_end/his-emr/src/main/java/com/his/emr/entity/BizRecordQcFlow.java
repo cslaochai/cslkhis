@@ -62,7 +62,7 @@ public class BizRecordQcFlow {
     private Long deptId;
 
     /**
-     * 病历所属科室名称（快照）
+     * 病历所属科室名称
      */
     private String deptName;
 

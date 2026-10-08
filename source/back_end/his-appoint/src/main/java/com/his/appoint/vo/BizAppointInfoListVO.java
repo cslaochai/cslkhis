@@ -200,7 +200,7 @@ public class BizAppointInfoListVO {
     private Long billId;
 
     /**
-     * 账单号（快照）
+     * 账单号
      */
     private String billNo;
 

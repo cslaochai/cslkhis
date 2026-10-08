@@ -1,5 +1,7 @@
 package com.his.medicaltech.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -42,14 +44,16 @@ public class QualityIssueVO {
     private String tableName;
 
     @Schema(description = "记录ID（对应 tableName 的主键）")
-    private String recordId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long recordId;
 
     @Schema(description = "记录业务单号")
     private String recordNo;
 
     /** 患者ID */
     @Schema(description = "患者ID")
-    private String patientId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long patientId;
 
     /** 患者编号 */
     @Schema(description = "患者号")

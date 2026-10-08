@@ -41,12 +41,12 @@ public class TriageRecordVO {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 患者号（快照）
+     * 患者号
      */
     private String patientNo;
 

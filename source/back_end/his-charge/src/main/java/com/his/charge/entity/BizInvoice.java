@@ -52,7 +52,7 @@ public class BizInvoice {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long billId;
     /**
-     * 结算账单号（快照）
+     * 结算账单号
      */
     private String billNo;
 

@@ -18,10 +18,10 @@ public class AntibioticAliasVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long drugId;
 
-    /** 药品编码（快照） */
+    /** 药品编码 */
     private String drugCode;
 
-    /** 药品目录名（快照） */
+    /** 药品目录名 */
     private String drugName;
 
     /** 别名 */

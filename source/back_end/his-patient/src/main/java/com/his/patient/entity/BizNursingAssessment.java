@@ -50,28 +50,28 @@ public class BizNursingAssessment {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 病区ID（快照）
+     * 病区ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
 
     /**
-     * 病区名称（快照）
+     * 病区名称
      */
     private String wardName;
 
     /**
-     * 床号（快照）
+     * 床号
      */
     private String bedNo;
 

@@ -30,17 +30,17 @@ public class ArchiveCodeTaskVO {
     private Long archiveId;
 
     /**
-     * 病历号（快照）
+     * 病历号
      */
     private String recordNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 病历所属科室（快照）
+     * 病历所属科室
      */
     private String deptName;
 
@@ -61,7 +61,7 @@ public class ArchiveCodeTaskVO {
     private Long coderId;
 
     /**
-     * 编码员姓名（快照）
+     * 编码员姓名
      */
     private String coderName;
 
@@ -97,7 +97,7 @@ public class ArchiveCodeTaskVO {
     private Long auditById;
 
     /**
-     * 审核人姓名（快照）
+     * 审核人姓名
      */
     private String auditByName;
 

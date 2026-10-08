@@ -32,8 +32,6 @@ public class BizAdmissionOrder extends BaseEntity {
      */
     private String orderNo;
 
-    // 患者快照
-
     /**
      * 患者ID
      */
@@ -41,12 +39,12 @@ public class BizAdmissionOrder extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -56,17 +54,17 @@ public class BizAdmissionOrder extends BaseEntity {
     private Integer gender;
 
     /**
-     * 年龄（快照）
+     * 年龄
      */
     private Integer age;
 
     /**
-     * 联系电话（快照）
+     * 联系电话
      */
     private String phone;
 
     /**
-     * 身份证号（快照）
+     * 身份证号
      */
     private String idCard;
 
@@ -98,7 +96,7 @@ public class BizAdmissionOrder extends BaseEntity {
     private Long sourceDeptId;
 
     /**
-     * 开证科室名称（快照）
+     * 开证科室名称
      */
     private String sourceDeptName;
 
@@ -109,7 +107,7 @@ public class BizAdmissionOrder extends BaseEntity {
     private Long sourceDoctorId;
 
     /**
-     * 开证医生姓名（快照）
+     * 开证医生姓名
      */
     private String sourceDoctorName;
 
@@ -122,7 +120,7 @@ public class BizAdmissionOrder extends BaseEntity {
     private Long applyDeptId;
 
     /**
-     * 拟收治科室名称（快照）
+     * 拟收治科室名称
      */
     private String applyDeptName;
 

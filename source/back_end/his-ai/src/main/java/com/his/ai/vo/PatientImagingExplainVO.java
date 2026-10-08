@@ -1,5 +1,7 @@
 package com.his.ai.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -19,7 +21,8 @@ import java.time.LocalDateTime;
 public class PatientImagingExplainVO {
 
     @Schema(description = "报告ID（字符串，避免前端 Number 丢精度）")
-    private String reportId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long reportId;
 
     @Schema(description = "报告单号")
     private String reportNo;

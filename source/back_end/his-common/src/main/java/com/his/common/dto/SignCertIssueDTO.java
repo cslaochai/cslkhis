@@ -22,12 +22,12 @@ public class SignCertIssueDTO {
     private String empName;
 
     /**
-     * 所属科室ID（快照）
+     * 所属科室ID
      */
     private Long deptId;
 
     /**
-     * 所属科室名称（快照）
+     * 所属科室名称
      */
     private String deptName;
 

@@ -74,7 +74,7 @@ public class SysEmployeeTechAuth {
     private Long deptId;
 
     /**
-     * 所属科室名称（快照）
+     * 所属科室名称
      */
     @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String deptName;

@@ -45,17 +45,17 @@ public class BizSurveyAnswerItem extends BaseEntity {
     private Integer dimension;
 
     /**
-     * 题号（快照）
+     * 题号
      */
     private Integer seqNo;
 
     /**
-     * 题干（快照）
+     * 题干
      */
     private String title;
 
     /**
-     * 题型（快照）:1-量表 2-单选 3-多选 4-NPS 5-开放文本
+     * 题型:1-量表 2-单选 3-多选 4-NPS 5-开放文本
      */
     private Integer questionType;
 

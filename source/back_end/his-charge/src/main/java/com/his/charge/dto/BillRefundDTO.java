@@ -43,7 +43,7 @@ public class BillRefundDTO {
     private Long applyId;
 
     /**
-     * 来源退费申请号（快照）
+     * 来源退费申请号
      */
     private String applyNo;
 }

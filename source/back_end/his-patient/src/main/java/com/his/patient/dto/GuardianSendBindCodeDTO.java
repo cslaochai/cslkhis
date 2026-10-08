@@ -11,7 +11,7 @@ import java.io.Serializable;
 @Data
 public class GuardianSendBindCodeDTO implements Serializable {
 
-    /** 死者姓名（快照） */
+    /** 死者姓名 */
     @NotBlank(message = "请输入就诊人姓名")
     private String patientName;
 

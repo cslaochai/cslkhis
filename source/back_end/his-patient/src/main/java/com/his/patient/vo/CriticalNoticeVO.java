@@ -47,11 +47,11 @@ public class CriticalNoticeVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long patientId;
         /**
-         * 患者姓名（快照）
+         * 患者姓名
          */
         private String patientName;
         /**
-         * 住院号（快照）
+         * 住院号
          */
         private String admissionNo;
         /**
@@ -115,15 +115,15 @@ public class CriticalNoticeVO {
         @JsonFormat(pattern = TS)
         private LocalDateTime lastPrintTime;
         /**
-         * 开单科室名称（快照）
+         * 开单科室名称
          */
         private String deptName;
         /**
-         * 病区名称（快照）
+         * 病区名称
          */
         private String wardName;
         /**
-         * 床位号（快照）
+         * 床位号
          */
         private String bedNo;
         /**
@@ -166,11 +166,11 @@ public class CriticalNoticeVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long patientId;
         /**
-         * 患者姓名（快照）
+         * 患者姓名
          */
         private String patientName;
         /**
-         * 患者编号（快照）
+         * 患者编号
          */
         private String patientNo;
         /**
@@ -187,19 +187,19 @@ public class CriticalNoticeVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long deptId;
         /**
-         * 开单科室名称（快照）
+         * 开单科室名称
          */
         private String deptName;
         /**
-         * 病区名称（快照）
+         * 病区名称
          */
         private String wardName;
         /**
-         * 床位号（快照）
+         * 床位号
          */
         private String bedNo;
         /**
-         * 住院号（快照）
+         * 住院号
          */
         private String admissionNo;
         /**
@@ -346,7 +346,7 @@ public class CriticalNoticeVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long admissionId;
         /**
-         * 住院号（快照）
+         * 住院号
          */
         private String admissionNo;
         /**
@@ -355,11 +355,11 @@ public class CriticalNoticeVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long patientId;
         /**
-         * 患者编号（快照）
+         * 患者编号
          */
         private String patientNo;
         /**
-         * 患者姓名（快照）
+         * 患者姓名
          */
         private String patientName;
         /**
@@ -376,15 +376,15 @@ public class CriticalNoticeVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long deptId;
         /**
-         * 开单科室名称（快照）
+         * 开单科室名称
          */
         private String deptName;
         /**
-         * 病区名称（快照）
+         * 病区名称
          */
         private String wardName;
         /**
-         * 床位号（快照）
+         * 床位号
          */
         private String bedNo;
         /**
@@ -410,7 +410,7 @@ public class CriticalNoticeVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long admissionId;
         /**
-         * 住院号（快照）
+         * 住院号
          */
         private String admissionNo;
         /**
@@ -419,19 +419,19 @@ public class CriticalNoticeVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long patientId;
         /**
-         * 患者姓名（快照）
+         * 患者姓名
          */
         private String patientName;
         /**
-         * 开单科室名称（快照）
+         * 开单科室名称
          */
         private String deptName;
         /**
-         * 病区名称（快照）
+         * 病区名称
          */
         private String wardName;
         /**
-         * 床位号（快照）
+         * 床位号
          */
         private String bedNo;
         private Integer noticeCount;
@@ -446,7 +446,7 @@ public class CriticalNoticeVO {
         private Long employeeId;
         private String empName;
         /**
-         * 开单科室名称（快照）
+         * 开单科室名称
          */
         private String deptName;
     }

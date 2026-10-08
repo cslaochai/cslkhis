@@ -27,12 +27,12 @@ public class BizExamDeviceItem extends BaseEntity {
     private Long itemId;
 
     /**
-     * 项目编码（快照）
+     * 项目编码
      */
     private String itemCode;
 
     /**
-     * 项目名称（快照）
+     * 项目名称
      */
     private String itemName;
 

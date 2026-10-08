@@ -48,7 +48,7 @@ public class DutyOfficerVO {
     private Long deptId;
 
     /**
-     * 值班人原属科室名称（快照）
+     * 值班人原属科室名称
      */
     private String deptName;
 

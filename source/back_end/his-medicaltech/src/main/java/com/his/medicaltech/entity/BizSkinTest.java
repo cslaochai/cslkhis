@@ -33,7 +33,7 @@ public class BizSkinTest extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -72,7 +72,7 @@ public class BizSkinTest extends BaseEntity {
     private Long nurseId;
 
     /**
-     * 执行护士姓名（快照）
+     * 执行护士姓名
      */
     private String nurseName;
 }

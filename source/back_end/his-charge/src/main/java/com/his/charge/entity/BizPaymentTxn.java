@@ -50,12 +50,12 @@ public class BizPaymentTxn extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者号（快照）
+     * 患者号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -158,7 +158,7 @@ public class BizPaymentTxn extends BaseEntity {
     private Long applyId;
 
     /**
-     * 来源退费申请号（快照）
+     * 来源退费申请号
      */
     private String applyNo;
 

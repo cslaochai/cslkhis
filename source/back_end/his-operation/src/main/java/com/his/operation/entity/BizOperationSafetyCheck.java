@@ -37,7 +37,7 @@ public class BizOperationSafetyCheck extends BaseEntity {
     private Long applyId;
 
     /**
-     * 手术申请单号（快照）
+     * 手术申请单号
      */
     private String applyNo;
 
@@ -54,7 +54,7 @@ public class BizOperationSafetyCheck extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -64,7 +64,7 @@ public class BizOperationSafetyCheck extends BaseEntity {
     private String operationName;
 
     /**
-     * 手术间（快照）
+     * 手术间
      */
     private String operationRoom;
 
@@ -90,7 +90,7 @@ public class BizOperationSafetyCheck extends BaseEntity {
     private Long surgeonId;
 
     /**
-     * 手术医师姓名（快照）
+     * 手术医师姓名
      */
     private String surgeonName;
 
@@ -107,7 +107,7 @@ public class BizOperationSafetyCheck extends BaseEntity {
     private Long anesthetistId;
 
     /**
-     * 麻醉医师姓名（快照）
+     * 麻醉医师姓名
      */
     private String anesthetistName;
 
@@ -124,7 +124,7 @@ public class BizOperationSafetyCheck extends BaseEntity {
     private Long nurseId;
 
     /**
-     * 手术室护士姓名（快照）
+     * 手术室护士姓名
      */
     private String nurseName;
 
@@ -141,7 +141,7 @@ public class BizOperationSafetyCheck extends BaseEntity {
     private Long recorderId;
 
     /**
-     * 录入人姓名（快照）
+     * 录入人姓名
      */
     private String recorderName;
 

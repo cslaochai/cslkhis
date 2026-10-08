@@ -66,7 +66,7 @@ public class BizInpatientSummary extends BaseEntity {
     private Long admitDeptId;
 
     /**
-     * 入院科别名称（快照）
+     * 入院科别名称
      */
     private String admitDeptName;
 

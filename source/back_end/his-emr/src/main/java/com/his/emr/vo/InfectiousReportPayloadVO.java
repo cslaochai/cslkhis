@@ -113,8 +113,14 @@ public class InfectiousReportPayloadVO implements Serializable {
     @Data
     public static class Visit implements Serializable {
 
+        /**
+         * 门诊就诊ID（报文缺省给空串，不给 null —— 本类所有可选字段同一口径）
+         */
         private String registId;
 
+        /**
+         * 住院记录ID（同上）
+         */
         private String inpId;
 
         private String deptName;

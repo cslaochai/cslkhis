@@ -37,7 +37,7 @@ public class BizAnesthesiaPacu extends BaseEntity {
     private Long recordId;
 
     /**
-     * 麻醉记录单号（快照）
+     * 麻醉记录单号
      */
     private String recordNo;
 
@@ -60,17 +60,17 @@ public class BizAnesthesiaPacu extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 性别（快照）（1-男 2-女）
+     * 性别（1-男 2-女）
      */
     private Integer gender;
 
     /**
-     * 年龄（快照）
+     * 年龄
      */
     private Integer age;
 
@@ -93,7 +93,7 @@ public class BizAnesthesiaPacu extends BaseEntity {
     private Long nurseId;
 
     /**
-     * 复苏护士姓名（快照）
+     * 复苏护士姓名
      */
     private String nurseName;
 
@@ -104,7 +104,7 @@ public class BizAnesthesiaPacu extends BaseEntity {
     private Long anesthetistId;
 
     /**
-     * 负责麻醉医师姓名（快照）
+     * 负责麻醉医师姓名
      */
     private String anesthetistName;
 

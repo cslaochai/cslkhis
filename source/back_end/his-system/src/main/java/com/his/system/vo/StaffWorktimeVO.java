@@ -33,10 +33,12 @@ import java.time.LocalDateTime;
 public class StaffWorktimeVO {
 
     @Schema(description = "排班事实ID（无计划的出勤为 null）")
-    private String planId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long planId;
 
     @Schema(description = "出勤记录ID（尚未登记为 null）")
-    private String attendId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long attendId;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long employeeId;

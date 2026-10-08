@@ -45,7 +45,7 @@ public class BizAttendingRelation extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -56,7 +56,7 @@ public class BizAttendingRelation extends BaseEntity {
     private Long employeeId;
 
     /**
-     * 主管医生姓名（快照）
+     * 主管医生姓名
      */
     private String employeeName;
 
@@ -67,7 +67,7 @@ public class BizAttendingRelation extends BaseEntity {
     private Long deptId;
 
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 

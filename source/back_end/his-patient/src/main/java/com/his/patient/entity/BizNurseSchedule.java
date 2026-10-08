@@ -41,7 +41,7 @@ public class BizNurseSchedule extends BaseEntity {
      */
     private Long deptId;
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 
@@ -73,11 +73,11 @@ public class BizNurseSchedule extends BaseEntity {
      */
     private Long employeeId;
     /**
-     * 工号（快照）
+     * 工号
      */
     private String empCode;
     /**
-     * 护士姓名（快照）
+     * 护士姓名
      */
     private String nurseName;
     /**
@@ -90,15 +90,15 @@ public class BizNurseSchedule extends BaseEntity {
      */
     private Long shiftId;
     /**
-     * 班次名称（快照）
+     * 班次名称
      */
     private String shiftName;
     /**
-     * 开始时间 HH（快照）
+     * 开始时间 HH
      */
     private String startTime;
     /**
-     * 结束时间 HH（快照）
+     * 结束时间 HH
      */
     private String endTime;
     /**

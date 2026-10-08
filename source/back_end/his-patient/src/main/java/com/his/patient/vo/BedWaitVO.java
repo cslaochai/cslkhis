@@ -50,7 +50,7 @@ public class BedWaitVO {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
@@ -67,12 +67,12 @@ public class BedWaitVO {
     private String genderText;
 
     /**
-     * 年龄（快照）
+     * 年龄
      */
     private Integer age;
 
     /**
-     * 联系电话（快照）
+     * 联系电话
      */
     private String phone;
 
@@ -83,7 +83,7 @@ public class BedWaitVO {
     private Long applyDeptId;
 
     /**
-     * 拟收治科室名称（快照）
+     * 拟收治科室名称
      */
     private String applyDeptName;
 
@@ -126,7 +126,7 @@ public class BedWaitVO {
     private LocalDate expectAdmitDate;
 
     /**
-     * 拟诊名称（快照）
+     * 拟诊名称
      */
     private String diagnosisName;
 
@@ -170,7 +170,7 @@ public class BedWaitVO {
     private Long assignedBedId;
 
     /**
-     * 已安排床位号（快照）
+     * 已安排床位号
      */
     private String assignedBedNo;
 
@@ -181,7 +181,7 @@ public class BedWaitVO {
     private Long assignedWardId;
 
     /**
-     * 已安排病区名称（快照）
+     * 已安排病区名称
      */
     private String assignedWardName;
 
@@ -192,7 +192,7 @@ public class BedWaitVO {
     private Long assignedDeptId;
 
     /**
-     * 已安排床位所属科室名称（快照）
+     * 已安排床位所属科室名称
      */
     private String assignedDeptName;
 

@@ -34,7 +34,7 @@ public class BizNursingQcIndicator extends BaseEntity {
      */
     private Long wardId;
     /**
-     * 病区名称（快照）
+     * 病区名称
      */
     private String wardName;
     /**
@@ -42,7 +42,7 @@ public class BizNursingQcIndicator extends BaseEntity {
      */
     private Long deptId;
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
     /**
@@ -54,7 +54,7 @@ public class BizNursingQcIndicator extends BaseEntity {
      */
     private String indicatorCode;
     /**
-     * 指标名称（快照）
+     * 指标名称
      */
     private String indicatorName;
     /**

@@ -49,7 +49,7 @@ public class DeathRegisterVO {
         private Long patientId;
 
         /**
-         * 死者姓名（快照）
+         * 死者姓名
          */
         private String patientName;
 
@@ -60,12 +60,12 @@ public class DeathRegisterVO {
         private LocalDateTime deathTime;
 
         /**
-         * 死亡科室名称（快照）
+         * 死亡科室名称
          */
         private String deathDeptName;
 
         /**
-         * 死亡床位号（快照）
+         * 死亡床位号
          */
         private String deathBedNo;
 
@@ -247,7 +247,7 @@ public class DeathRegisterVO {
         private Long patientId;
 
         /**
-         * 死者姓名（快照）
+         * 死者姓名
          */
         private String patientName;
 
@@ -264,12 +264,12 @@ public class DeathRegisterVO {
         private Long deathDeptId;
 
         /**
-         * 死亡科室名称（快照）
+         * 死亡科室名称
          */
         private String deathDeptName;
 
         /**
-         * 死亡床位号（快照）
+         * 死亡床位号
          */
         private String deathBedNo;
 

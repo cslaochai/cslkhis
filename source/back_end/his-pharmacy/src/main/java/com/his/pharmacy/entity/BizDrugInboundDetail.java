@@ -33,16 +33,16 @@ public class BizDrugInboundDetail extends BaseEntity {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long drugId;
 
-    /** 药品编码（快照） */
+    /** 药品编码 */
     private String drugCode;
 
-    /** 药品名称（快照） */
+    /** 药品名称 */
     private String drugName;
 
-    /** 规格（快照） */
+    /** 规格 */
     private String specification;
 
-    /** 单位（快照） */
+    /** 单位 */
     private String unit;
 
     /** 批号 */

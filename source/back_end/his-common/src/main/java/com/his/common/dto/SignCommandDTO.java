@@ -35,15 +35,15 @@ public class SignCommandDTO {
     private Long signerId;
 
     /**
-     * 签名人姓名（快照）
+     * 签名人姓名
      */
     private String signerName;
     /**
-     * 签名人科室ID（快照）
+     * 签名人科室ID
      */
     private Long signerDeptId;
     /**
-     * 签名人科室名称（快照）
+     * 签名人科室名称
      */
     private String signerDeptName;
     /**

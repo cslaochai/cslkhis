@@ -10,7 +10,7 @@ CREATE TABLE `biz_triage_rule` (
   `symptom_name` varchar(100) NOT NULL COMMENT '症状名称',
   `keywords` varchar(500) DEFAULT NULL COMMENT '匹配关键词（顿号分隔）',
   `dept_id` bigint NOT NULL COMMENT '推荐科室ID',
-  `dept_name` varchar(100) DEFAULT NULL COMMENT '推荐科室名称（快照）',
+  `dept_name` varchar(100) DEFAULT NULL COMMENT '推荐科室名称',
   `weight` int DEFAULT '0' COMMENT '推荐权重（越大越靠前）',
   `urgent_flag` tinyint DEFAULT '0' COMMENT '急症信号（0-否 1-是）',
   `advice` varchar(500) DEFAULT NULL COMMENT '就诊提示',

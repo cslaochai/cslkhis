@@ -32,7 +32,7 @@ public class ExamFilmVO {
     private Long recordId;
 
     /**
-     * 检查记录号（快照）
+     * 检查记录号
      */
     private String recordNo;
 
@@ -43,7 +43,7 @@ public class ExamFilmVO {
     private Long applyId;
 
     /**
-     * 申请单号（快照）
+     * 申请单号
      */
     private String applyNo;
 
@@ -54,32 +54,32 @@ public class ExamFilmVO {
     private Long patientId;
 
     /**
-     * 患者号（快照）
+     * 患者号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 就诊日期（快照）
+     * 就诊日期
      */
     private LocalDate visitDate;
 
     /**
-     * 检查项目编码（快照）
+     * 检查项目编码
      */
     private String itemCode;
 
     /**
-     * 检查项目名称（快照）
+     * 检查项目名称
      */
     private String itemName;
 
     /**
-     * 检查部位（快照）
+     * 检查部位
      */
     private String bodyPart;
 
@@ -97,7 +97,7 @@ public class ExamFilmVO {
     private Long specId;
 
     /**
-     * 规格编码（快照）
+     * 规格编码
      */
     private String specCode;
 
@@ -112,7 +112,7 @@ public class ExamFilmVO {
     private BigDecimal unitPrice;
 
     /**
-     * 计价单位（快照）
+     * 计价单位
      */
     private String unit;
 
@@ -145,7 +145,7 @@ public class ExamFilmVO {
     private Long feeId;
 
     /**
-     * 记账流水号（快照）
+     * 记账流水号
      */
     private String feeNo;
 

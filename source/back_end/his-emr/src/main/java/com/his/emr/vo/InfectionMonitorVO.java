@@ -33,11 +33,11 @@ public class InfectionMonitorVO {
         private Long patientId;
 
         /**
-         * 患者编号（快照）
+         * 患者编号
          */
         private String patientNo;
         /**
-         * 患者姓名（快照）
+         * 患者姓名
          */
         private String patientName;
         /**
@@ -64,7 +64,7 @@ public class InfectionMonitorVO {
         private Long deptId;
 
         /**
-         * 监测科室（快照）
+         * 监测科室
          */
         private String deptName;
         private Integer caseSource;
@@ -140,11 +140,11 @@ public class InfectionMonitorVO {
         private Long patientId;
 
         /**
-         * 患者编号（快照）
+         * 患者编号
          */
         private String patientNo;
         /**
-         * 患者姓名（快照）
+         * 患者姓名
          */
         private String patientName;
         /**
@@ -160,7 +160,7 @@ public class InfectionMonitorVO {
         private Long deptId;
 
         /**
-         * 监测科室（快照）
+         * 监测科室
          */
         private String deptName;
 
@@ -293,7 +293,7 @@ public class InfectionMonitorVO {
         private Long deptId;
 
         /**
-         * 监测科室（快照）
+         * 监测科室
          */
         private String deptName;
         private Integer obsObject;

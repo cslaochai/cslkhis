@@ -32,7 +32,7 @@ public class EmergencyHandoverItemVO {
     private Long emergencyId;
 
     /**
-     * 急诊号（快照）
+     * 急诊号
      */
     private String emergencyNo;
 
@@ -43,7 +43,7 @@ public class EmergencyHandoverItemVO {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -74,7 +74,7 @@ public class EmergencyHandoverItemVO {
     private Long fromDoctorId;
 
     /**
-     * 交班时的负责医生姓名（快照）
+     * 交班时的负责医生姓名
      */
     private String fromDoctorName;
 
@@ -85,7 +85,7 @@ public class EmergencyHandoverItemVO {
     private Long takeDoctorId;
 
     /**
-     * 接续责任人姓名（快照）
+     * 接续责任人姓名
      */
     private String takeDoctorName;
 

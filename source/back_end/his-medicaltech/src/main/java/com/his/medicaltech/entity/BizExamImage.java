@@ -29,7 +29,7 @@ public class BizExamImage extends BaseEntity {
     private Long applyId;
 
     /**
-     * 申请单号（快照）
+     * 申请单号
      */
     private String applyNo;
 
@@ -39,17 +39,17 @@ public class BizExamImage extends BaseEntity {
     private Long recordId;
 
     /**
-     * 患者ID（快照）
+     * 患者ID
      */
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 检查/检验项目名称（快照）
+     * 检查/检验项目名称
      */
     private String itemName;
 

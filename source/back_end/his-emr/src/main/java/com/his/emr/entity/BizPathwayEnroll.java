@@ -35,22 +35,22 @@ public class BizPathwayEnroll extends BaseEntity implements Serializable {
     private Long pathwayId;
 
     /**
-     * 路径编码（快照）
+     * 路径编码
      */
     private String pathwayCode;
 
     /**
-     * 路径名称（快照）
+     * 路径名称
      */
     private String pathwayName;
 
     /**
-     * 版本号（快照）
+     * 版本号
      */
     private String version;
 
     /**
-     * 路径总日数（快照）
+     * 路径总日数
      */
     private Integer totalDays;
 
@@ -67,23 +67,23 @@ public class BizPathwayEnroll extends BaseEntity implements Serializable {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 入院科室ID（快照）
+     * 入院科室ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
     /**
-     * 入院科室名称（快照）
+     * 入院科室名称
      */
     private String deptName;
 

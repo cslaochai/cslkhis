@@ -28,12 +28,12 @@ public class FeeBookDTO {
     private Long patientId;
 
     /**
-     * 患者号（快照）
+     * 患者号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     @NotBlank(message = "缺少患者姓名")
     private String patientName;
@@ -62,7 +62,7 @@ public class FeeBookDTO {
     private Long deptId;
 
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 
@@ -72,7 +72,7 @@ public class FeeBookDTO {
     private Long doctorId;
 
     /**
-     * 开单人姓名（快照）
+     * 开单人姓名
      */
     private String doctorName;
 

@@ -27,7 +27,7 @@ public class DrugInboundCreateDTO {
     /** 来源采购订单ID（采购入库时必填） */
     private Long purchaseOrderId;
 
-    /** 来源采购订单号（快照） */
+    /** 来源采购订单号 */
     private String purchaseOrderNo;
 
     /** 供应商名称（文本快照） */

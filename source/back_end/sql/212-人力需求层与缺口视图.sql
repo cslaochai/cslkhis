@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS biz_staff_demand (
   demand_date     date         NOT NULL COMMENT '需求日期',
   org_type        tinyint      NOT NULL COMMENT '排班单元类型（1-科室 2-病区 3-全院）',
   org_id          bigint       NOT NULL DEFAULT 0 COMMENT '排班单元ID（全院级为0）',
-  org_name        varchar(128) NULL COMMENT '排班单元名称（快照）',
+  org_name        varchar(128) NULL COMMENT '排班单元名称',
   period_code     tinyint      NOT NULL DEFAULT 0 COMMENT '时段（0-全天 1-上午 2-下午 3-夜间）',
   shift_id        bigint       NOT NULL DEFAULT 0 COMMENT '班次ID（0-不限班次）',
   staff_type      tinyint      NOT NULL COMMENT '岗位类别（1-医生 2-护理 3-医技 4-药学 5-收费 6-行政）',

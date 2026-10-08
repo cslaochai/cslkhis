@@ -38,7 +38,7 @@ public class BizAnesthesiaRecord extends BaseEntity {
     private Long applyId;
 
     /**
-     * 手术申请单号（快照）
+     * 手术申请单号
      */
     private String applyNo;
 
@@ -55,17 +55,17 @@ public class BizAnesthesiaRecord extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 性别（快照）（1-男 2-女）
+     * 性别（1-男 2-女）
      */
     private Integer gender;
 
     /**
-     * 年龄（快照）
+     * 年龄
      */
     private Integer age;
 
@@ -92,7 +92,7 @@ public class BizAnesthesiaRecord extends BaseEntity {
     private Long anesthetistId;
 
     /**
-     * 麻醉医师姓名（快照）
+     * 麻醉医师姓名
      */
     private String anesthetistName;
 
@@ -219,7 +219,7 @@ public class BizAnesthesiaRecord extends BaseEntity {
     private Long submitDoctorId;
 
     /**
-     * 提交人姓名（快照）
+     * 提交人姓名
      */
     private String submitDoctorName;
 
@@ -236,7 +236,7 @@ public class BizAnesthesiaRecord extends BaseEntity {
     private Long auditDoctorId;
 
     /**
-     * 审核人姓名（快照）
+     * 审核人姓名
      */
     private String auditDoctorName;
 

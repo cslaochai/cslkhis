@@ -47,34 +47,34 @@ public class BizVteEvent {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 科室ID（快照）
+     * 科室ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 
     /**
-     * 病区ID（快照）
+     * 病区ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long wardId;
 
     /**
-     * 病区名称（快照）
+     * 病区名称
      */
     private String wardName;
 

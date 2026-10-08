@@ -1,5 +1,7 @@
 package com.his.medicaltech.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -33,7 +35,8 @@ public class CdrEventVO {
 
     /** 来源单据ID */
     @Schema(description = "来源记录主键（字符串，避免前端丢失精度）")
-    private String sourceId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long sourceId;
 
     @Schema(description = "事件时间 yyyy-MM-dd HH:mm:ss")
     private String eventTime;
@@ -78,10 +81,12 @@ public class CdrEventVO {
     private String anchorType;
 
     @Schema(description = "所属就诊次锚点ID（为空=未能归属到就诊次）")
-    private String anchorId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long anchorId;
 
     @Schema(description = "数据归属档案ID（EMPI 归并后可能不是主档）")
-    private String ownerPatientId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long ownerPatientId;
 
     @Schema(description = "数据归属档案的住院/挂号单号（影子档案的数据一眼可辨）")
     private String ownerArchiveNo;

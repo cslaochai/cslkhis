@@ -551,7 +551,7 @@ public class BizQueueServiceImpl extends ServiceImpl<BizQueueMapper, BizQueue> i
         vo.setCallCount(queue.getCallCount() != null ? queue.getCallCount() + 1 : 1);
         if (previous != null) {
             vo.setPreviousPatientName(previous.getPatientName());
-            vo.setPreviousQueueId(String.valueOf(previous.getId()));
+            vo.setPreviousQueueId(previous.getId());
         }
         return vo;
     }

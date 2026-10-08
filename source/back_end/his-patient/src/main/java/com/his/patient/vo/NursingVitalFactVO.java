@@ -29,12 +29,12 @@ public class NursingVitalFactVO implements Serializable {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 床号（快照）
+     * 床号
      */
     private String bedNo;
 
@@ -45,7 +45,7 @@ public class NursingVitalFactVO implements Serializable {
     private Long wardId;
 
     /**
-     * 病区名称（快照）
+     * 病区名称
      */
     private String wardName;
 

@@ -28,7 +28,7 @@ public class BizServiceMessage extends BaseEntity {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 就诊人姓名（快照） */
+    /** 就诊人姓名 */
     private String patientName;
 
     /** 联系电话 */

@@ -12,7 +12,7 @@ import lombok.EqualsAndHashCode;
 public class TechAuthOverrideQueryPageDTO extends PageParam {
 
     /**
-     * 越权操作者姓名（快照）
+     * 越权操作者姓名
      */
     private String employeeName;
 

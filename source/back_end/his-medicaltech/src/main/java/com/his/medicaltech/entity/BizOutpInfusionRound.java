@@ -47,7 +47,7 @@ public class BizOutpInfusionRound extends BaseEntity {
     private Long nurseId;
 
     /**
-     * 巡视护士姓名（快照）
+     * 巡视护士姓名
      */
     private String nurseName;
 }

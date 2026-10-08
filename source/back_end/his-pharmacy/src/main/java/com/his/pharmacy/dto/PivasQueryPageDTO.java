@@ -15,7 +15,7 @@ import java.time.LocalDate;
 @EqualsAndHashCode(callSuper = true)
 public class PivasQueryPageDTO extends PageParam implements Serializable {
 
-    /** 病区ID（快照） */
+    /** 病区ID */
     private Long wardId;
 
     /**

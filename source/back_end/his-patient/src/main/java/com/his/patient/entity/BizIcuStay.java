@@ -43,23 +43,23 @@ public class BizIcuStay extends BaseEntity implements Serializable {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 入科来源科室ID（快照）
+     * 入科来源科室ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long fromDeptId;
 
     /**
-     * 入科来源科室名称（快照）
+     * 入科来源科室名称
      */
     private String fromDeptName;
 
@@ -70,7 +70,7 @@ public class BizIcuStay extends BaseEntity implements Serializable {
     private Long wardId;
 
     /**
-     * ICU 病区名称（快照）
+     * ICU 病区名称
      */
     private String wardName;
 
@@ -81,7 +81,7 @@ public class BizIcuStay extends BaseEntity implements Serializable {
     private Long bedId;
 
     /**
-     * ICU 床位号（快照）
+     * ICU 床位号
      */
     private String bedNo;
 

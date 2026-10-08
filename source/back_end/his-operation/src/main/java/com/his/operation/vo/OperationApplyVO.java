@@ -41,7 +41,7 @@ public class OperationApplyVO implements Serializable {
     private Long admissionId;
 
     /**
-     * 入院号（快照）
+     * 入院号
      */
     private String admissionNo;
 
@@ -72,7 +72,7 @@ public class OperationApplyVO implements Serializable {
     private String patientName;
 
     /**
-     * 性别（快照）（1-男 2-女）
+     * 性别（1-男 2-女）
      */
     private Integer gender;
 
@@ -82,7 +82,7 @@ public class OperationApplyVO implements Serializable {
     private String genderText;
 
     /**
-     * 年龄（快照）
+     * 年龄
      */
     private Integer age;
 
@@ -93,17 +93,17 @@ public class OperationApplyVO implements Serializable {
     private Long applyDeptId;
 
     /**
-     * 申请科室名称（快照）
+     * 申请科室名称
      */
     private String applyDeptName;
 
     /**
-     * 申请时所在病区名称（快照）
+     * 申请时所在病区名称
      */
     private String applyWardName;
 
     /**
-     * 申请时床号（快照）
+     * 申请时床号
      */
     private String applyBedNo;
 
@@ -114,7 +114,7 @@ public class OperationApplyVO implements Serializable {
     private Long applyDoctorId;
 
     /**
-     * 申请医生姓名（快照）
+     * 申请医生姓名
      */
     private String applyDoctorName;
 
@@ -227,7 +227,7 @@ public class OperationApplyVO implements Serializable {
     private Long surgeonId;
 
     /**
-     * 主刀医师姓名（快照）
+     * 主刀医师姓名
      */
     private String surgeonName;
 
@@ -243,12 +243,12 @@ public class OperationApplyVO implements Serializable {
     private Long anesthetistId;
 
     /**
-     * 麻醉医师姓名（快照）
+     * 麻醉医师姓名
      */
     private String anesthetistName;
 
     /**
-     * 排台操作人姓名（快照）
+     * 排台操作人姓名
      */
     private String scheduleDoctorName;
 
@@ -281,7 +281,7 @@ public class OperationApplyVO implements Serializable {
     private String preopNote;
 
     /**
-     * 术前核对人姓名（快照）
+     * 术前核对人姓名
      */
     private String preopCheckDoctorName;
 
@@ -343,7 +343,7 @@ public class OperationApplyVO implements Serializable {
     // 完成 / 回写锚点
 
     /**
-     * 完成录入人姓名（快照）
+     * 完成录入人姓名
      */
     private String finishDoctorName;
 
@@ -386,7 +386,7 @@ public class OperationApplyVO implements Serializable {
     private String cancelReason;
 
     /**
-     * 取消人姓名（快照）
+     * 取消人姓名
      */
     private String cancelDoctorName;
 

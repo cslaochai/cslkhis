@@ -44,7 +44,7 @@ public class NurseScheduleVO {
         private Long wardId;
         private String wardCode;
         /**
-         * 病区名称（快照）
+         * 病区名称
          */
         private String wardName;
         /**
@@ -53,7 +53,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long deptId;
         /**
-         * 科室名称（快照）
+         * 科室名称
          */
         private String deptName;
         /**
@@ -74,11 +74,11 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long employeeId;
         /**
-         * 工号（快照）
+         * 工号
          */
         private String empCode;
         /**
-         * 护士姓名（快照）
+         * 护士姓名
          */
         private String nurseName;
         /**
@@ -91,7 +91,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long deptId;
         /**
-         * 科室名称（快照）
+         * 科室名称
          */
         private String deptName;
     }
@@ -108,15 +108,15 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long shiftId;
         /**
-         * 班次名称（快照）
+         * 班次名称
          */
         private String shiftName;
         /**
-         * 开始时间 HH（快照）
+         * 开始时间 HH
          */
         private String startTime;
         /**
-         * 结束时间 HH（快照）
+         * 结束时间 HH
          */
         private String endTime;
         private Integer durationMinutes;
@@ -156,15 +156,15 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long shiftId;
         /**
-         * 班次名称（快照）
+         * 班次名称
          */
         private String shiftName;
         /**
-         * 开始时间 HH（快照）
+         * 开始时间 HH
          */
         private String startTime;
         /**
-         * 结束时间 HH（快照）
+         * 结束时间 HH
          */
         private String endTime;
         /**
@@ -206,7 +206,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long wardId;
         /**
-         * 病区名称（快照）
+         * 病区名称
          */
         private String wardName;
         /**
@@ -215,7 +215,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long deptId;
         /**
-         * 科室名称（快照）
+         * 科室名称
          */
         private String deptName;
         /**
@@ -232,11 +232,11 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long employeeId;
         /**
-         * 工号（快照）
+         * 工号
          */
         private String empCode;
         /**
-         * 护士姓名（快照）
+         * 护士姓名
          */
         private String nurseName;
         /**
@@ -249,15 +249,15 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long shiftId;
         /**
-         * 班次名称（快照）
+         * 班次名称
          */
         private String shiftName;
         /**
-         * 开始时间 HH（快照）
+         * 开始时间 HH
          */
         private String startTime;
         /**
-         * 结束时间 HH（快照）
+         * 结束时间 HH
          */
         private String endTime;
         /**
@@ -291,7 +291,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long wardId;
         /**
-         * 病区名称（快照）
+         * 病区名称
          */
         private String wardName;
         /**
@@ -300,7 +300,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long deptId;
         /**
-         * 科室名称（快照）
+         * 科室名称
          */
         private String deptName;
         private String weekStart;
@@ -338,7 +338,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long shiftId;
         /**
-         * 班次名称（快照）
+         * 班次名称
          */
         private String shiftName;
         private Integer staffCount;
@@ -370,7 +370,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long shiftId;
         /**
-         * 班次名称（快照）
+         * 班次名称
          */
         private String shiftName;
         /**
@@ -379,7 +379,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long employeeId;
         /**
-         * 护士姓名（快照）
+         * 护士姓名
          */
         private String nurseName;
         private Integer actual;
@@ -402,7 +402,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long wardId;
         /**
-         * 病区名称（快照）
+         * 病区名称
          */
         private String wardName;
         /**
@@ -430,11 +430,11 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long employeeId;
         /**
-         * 工号（快照）
+         * 工号
          */
         private String empCode;
         /**
-         * 护士姓名（快照）
+         * 护士姓名
          */
         private String nurseName;
         /**
@@ -474,7 +474,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long wardId;
         /**
-         * 病区名称（快照）
+         * 病区名称
          */
         private String wardName;
         private String month;
@@ -506,7 +506,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long wardId;
         /**
-         * 病区名称（快照）
+         * 病区名称
          */
         private String wardName;
         /**
@@ -515,7 +515,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long shiftId;
         /**
-         * 班次名称（快照）
+         * 班次名称
          */
         private String shiftName;
         private Integer minStaff;
@@ -546,7 +546,7 @@ public class NurseScheduleVO {
          */
         private String scheduleDate;
         /**
-         * 班次名称（快照）
+         * 班次名称
          */
         private String shiftName;
         /**
@@ -583,7 +583,7 @@ public class NurseScheduleVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long id;
         /**
-         * 护士姓名（快照）
+         * 护士姓名
          */
         private String nurseName;
         /**

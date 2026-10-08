@@ -45,7 +45,7 @@ public class BizEmergencyHandover extends BaseEntity {
     private Long deptId;
 
     /**
-     * 交班科室名称（快照）
+     * 交班科室名称
      */
     private String deptName;
 
@@ -56,7 +56,7 @@ public class BizEmergencyHandover extends BaseEntity {
     private Long fromEmpId;
 
     /**
-     * 交出人姓名（快照）
+     * 交出人姓名
      */
     private String fromEmpName;
 

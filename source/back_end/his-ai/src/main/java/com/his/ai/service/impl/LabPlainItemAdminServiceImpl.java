@@ -41,7 +41,7 @@ public class LabPlainItemAdminServiceImpl extends ServiceImpl<SysLabPlainItemMap
 
     private static LabPlainItemAdminVO toVO(SysLabPlainItem e) {
         LabPlainItemAdminVO vo = new LabPlainItemAdminVO();
-        vo.setId(String.valueOf(e.getId()));
+        vo.setId(e.getId());
         vo.setGroupName(e.getGroupName());
         vo.setItemName(e.getItemName());
         vo.setPlainName(e.getPlainName());

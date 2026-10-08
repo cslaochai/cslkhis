@@ -1,5 +1,7 @@
 package com.his.emr.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -17,7 +19,8 @@ public class InfectiousReportVO {
         /**
          * 主键
          */
-        private String id;
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long id;
         /**
          * 报卡编号
          */
@@ -25,13 +28,14 @@ public class InfectiousReportVO {
         /**
          * 患者ID
          */
-        private String patientId;
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long patientId;
         /**
-         * 患者编号（快照）
+         * 患者编号
          */
         private String patientNo;
         /**
-         * 患者姓名（快照）
+         * 患者姓名
          */
         private String patientName;
         /**
@@ -39,35 +43,39 @@ public class InfectiousReportVO {
          */
         private Integer gender;
         /**
-         * 年龄（快照）
+         * 年龄
          */
         private Integer age;
         /**
          * 门诊就诊ID
          */
-        private String registId;
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long registId;
         /**
          * 住院记录ID
          */
-        private String inpId;
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long inpId;
         /**
-         * 发现/就诊科室ID（快照）
+         * 发现/就诊科室ID
          */
-        private String visitDeptId;
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long visitDeptId;
         /**
-         * 发现/就诊科室（快照）
+         * 发现/就诊科室
          */
         private String visitDeptName;
         /**
          * 病种ID
          */
-        private String diseaseId;
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long diseaseId;
         /**
-         * 病种编码（快照）
+         * 病种编码
          */
         private String diseaseCode;
         /**
-         * 病种名称（快照）
+         * 病种名称
          */
         private String diseaseName;
         /**
@@ -76,7 +84,7 @@ public class InfectiousReportVO {
         private Integer infectiousClass;
         private String infectiousClassText;
         /**
-         * ICD-10（快照）
+         * ICD-10
          */
         private String icd10;
         /**
@@ -97,7 +105,7 @@ public class InfectiousReportVO {
          */
         private Integer reportCount;
         /**
-         * 填卡医生姓名（快照）
+         * 填卡医生姓名
          */
         private String reportByName;
         /**
@@ -188,13 +196,14 @@ public class InfectiousReportVO {
         /**
          * 主键
          */
-        private String id;
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long id;
         /**
-         * 病种编码（快照）
+         * 病种编码
          */
         private String diseaseCode;
         /**
-         * 病种名称（快照）
+         * 病种名称
          */
         private String diseaseName;
         /**
@@ -204,7 +213,7 @@ public class InfectiousReportVO {
         private String infectiousClassText;
         private Integer deadlineHours;
         /**
-         * ICD-10（快照）
+         * ICD-10
          */
         private String icd10;
     }

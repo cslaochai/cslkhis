@@ -28,7 +28,7 @@ public class BizDrugSupplierReturn extends BaseEntity {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long supplierId;
 
-    /** 供应商名称（快照） */
+    /** 供应商名称 */
     private String supplierName;
 
     /** 退货原因（近效期 / 质量问题 / 冷链断链 / 采购让价退货…，必填） */

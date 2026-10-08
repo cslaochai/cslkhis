@@ -38,7 +38,7 @@ public class BizNursingQcCheck extends BaseEntity {
      */
     private Long wardId;
     /**
-     * 病区名称（快照）
+     * 病区名称
      */
     private String wardName;
     /**
@@ -46,7 +46,7 @@ public class BizNursingQcCheck extends BaseEntity {
      */
     private Long deptId;
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
     /**
@@ -66,7 +66,7 @@ public class BizNursingQcCheck extends BaseEntity {
      */
     private Long inspectorId;
     /**
-     * 检查人姓名（快照）
+     * 检查人姓名
      */
     private String inspectorName;
 

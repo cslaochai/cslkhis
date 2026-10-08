@@ -27,23 +27,23 @@ public class PathwayAdmissionVO implements Serializable {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 入院科室ID（快照）
+     * 入院科室ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
     /**
-     * 入院科室名称（快照）
+     * 入院科室名称
      */
     private String deptName;
 

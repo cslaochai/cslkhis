@@ -60,7 +60,7 @@ CREATE TABLE `biz_service_message` (
   `message_no` varchar(32) NOT NULL COMMENT '留言单号',
   `user_id` bigint DEFAULT NULL COMMENT '留言用户ID',
   `patient_id` bigint DEFAULT NULL COMMENT '就诊人ID',
-  `patient_name` varchar(64) DEFAULT NULL COMMENT '就诊人姓名（快照）',
+  `patient_name` varchar(64) DEFAULT NULL COMMENT '就诊人姓名',
   `contact_phone` varchar(20) DEFAULT NULL COMMENT '联系电话',
   `category_code` varchar(32) DEFAULT NULL COMMENT '留言分类（同 sys_faq.category_code）',
   `content` varchar(1000) NOT NULL COMMENT '留言内容',

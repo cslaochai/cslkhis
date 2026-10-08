@@ -100,7 +100,7 @@ public class FundAccountTxnListVO {
     private Long operatorId;
 
     /**
-     * 操作人姓名（快照）
+     * 操作人姓名
      */
     private String operatorName;
 

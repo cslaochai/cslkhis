@@ -22,7 +22,7 @@ public class SignatureQueryPageDTO extends PageParam {
     private Long bizId;
 
     /**
-     * 对象单号（快照）
+     * 对象单号
      */
     private String bizNo;
 

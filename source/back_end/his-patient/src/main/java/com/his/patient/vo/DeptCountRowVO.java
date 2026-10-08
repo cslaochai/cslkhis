@@ -17,7 +17,7 @@ public class DeptCountRowVO {
     private Long deptId;
 
     /**
-     * 开单科室名称（快照）
+     * 开单科室名称
      */
     private String deptName;
 

@@ -49,7 +49,7 @@ public class BizStaffDemand extends BaseEntity {
     private Long orgId;
 
     /**
-     * 排班单元名称（快照）
+     * 排班单元名称
      */
     private String orgName;
 

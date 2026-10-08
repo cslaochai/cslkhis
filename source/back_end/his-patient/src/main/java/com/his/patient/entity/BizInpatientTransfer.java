@@ -42,7 +42,7 @@ public class BizInpatientTransfer extends BaseEntity implements Serializable {
     private Long admissionId;
 
     /**
-     * 入院号（快照）
+     * 入院号
      */
     private String admissionNo;
 
@@ -53,7 +53,7 @@ public class BizInpatientTransfer extends BaseEntity implements Serializable {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -64,7 +64,7 @@ public class BizInpatientTransfer extends BaseEntity implements Serializable {
     private Long fromDeptId;
 
     /**
-     * 转出科室名称（快照）
+     * 转出科室名称
      */
     private String fromDeptName;
 
@@ -75,7 +75,7 @@ public class BizInpatientTransfer extends BaseEntity implements Serializable {
     private Long fromWardId;
 
     /**
-     * 转出病区名称（快照）
+     * 转出病区名称
      */
     private String fromWardName;
 
@@ -86,7 +86,7 @@ public class BizInpatientTransfer extends BaseEntity implements Serializable {
     private Long fromBedId;
 
     /**
-     * 转出床位号（快照）
+     * 转出床位号
      */
     private String fromBedNo;
 
@@ -97,7 +97,7 @@ public class BizInpatientTransfer extends BaseEntity implements Serializable {
     private Long toDeptId;
 
     /**
-     * 转入科室名称（快照）
+     * 转入科室名称
      */
     private String toDeptName;
 
@@ -108,7 +108,7 @@ public class BizInpatientTransfer extends BaseEntity implements Serializable {
     private Long toWardId;
 
     /**
-     * 转入病区名称（快照）
+     * 转入病区名称
      */
     private String toWardName;
 
@@ -119,7 +119,7 @@ public class BizInpatientTransfer extends BaseEntity implements Serializable {
     private Long toBedId;
 
     /**
-     * 转入床位号（快照）
+     * 转入床位号
      */
     private String toBedNo;
 
@@ -155,7 +155,7 @@ public class BizInpatientTransfer extends BaseEntity implements Serializable {
     private Long applyDoctorId;
 
     /**
-     * 转出方发起医生姓名（快照）
+     * 转出方发起医生姓名
      */
     private String applyDoctorName;
 
@@ -166,7 +166,7 @@ public class BizInpatientTransfer extends BaseEntity implements Serializable {
     private Long receiveDoctorId;
 
     /**
-     * 转入方接收医生姓名（快照）
+     * 转入方接收医生姓名
      */
     private String receiveDoctorName;
 

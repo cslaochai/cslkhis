@@ -27,20 +27,6 @@ import java.util.List;
 
 /**
  * 患者端用药说明实现。
- *
- * <p><b>刻意不接模型。</b>两个理由：
- * <ol>
- *   <li>剂量是这个能力里最不能出错的部分，它必须逐字来自处方医嘱。一旦让模型"组织语言"，
- *       它就有概率把「每次 1 片」写成「每次 2 片」，而这类错误在页面上完全看不出来。</li>
- *   <li>{@code PatientTextGuard} 的患者文案闸会拦掉任何含「服用/剂量/每次X片」的表述 ——
- *       也就是模型在这个场景下<b>根本没有合规的输出空间</b>，硬接只会得到"输出全部被丢弃"。</li>
- * </ol>
- * 所以它与智能导诊同级：<b>AI 能力集里的规则型能力</b>，事实全部由代码和字典给出，
- * 模型挂与不挂，患者拿到的内容完全一致。
- *
- * <p><b>剂量一律照抄医嘱，不换算。</b>医嘱写「1」就是每次 1（最小单位），
- * 系统不去补单位、不去折算克数 —— 患者拿到的剂量一旦和医生口头交代的不一致，
- * 被质疑的是医院。
  */
 @Slf4j
 @Service
@@ -237,7 +223,7 @@ public class PatientMedicationGuideCapabilityImpl implements PatientMedicationGu
         }
 
         PatientMedicationGuideVO vo = new PatientMedicationGuideVO();
-        vo.setPrescriptionId(String.valueOf(prescription.getId()));
+        vo.setPrescriptionId(prescription.getId());
         vo.setPrescriptionNo(prescription.getPrescriptionNo());
         vo.setVisitDate(prescription.getVisitDate());
         vo.setDeptName(prescription.getDeptName());

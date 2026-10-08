@@ -28,12 +28,12 @@ public class BizInfectionCase extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -43,7 +43,7 @@ public class BizInfectionCase extends BaseEntity {
     private Integer gender;
 
     /**
-     * 年龄（快照）
+     * 年龄
      */
     private Integer age;
 
@@ -63,12 +63,12 @@ public class BizInfectionCase extends BaseEntity {
     private Long inpId;
 
     /**
-     * 发现科室ID（快照）
+     * 发现科室ID
      */
     private Long deptId;
 
     /**
-     * 发现科室（快照）
+     * 发现科室
      */
     private String deptName;
 
@@ -118,7 +118,7 @@ public class BizInfectionCase extends BaseEntity {
     private Long reportBy;
 
     /**
-     * 上报人姓名（快照）
+     * 上报人姓名
      */
     private String reportName;
 

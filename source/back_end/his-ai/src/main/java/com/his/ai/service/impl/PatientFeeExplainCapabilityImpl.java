@@ -158,7 +158,7 @@ public class PatientFeeExplainCapabilityImpl implements PatientFeeExplainCapabil
         BizInsuranceSettlement insurance = loadInsurance(bill.getId());
 
         PatientFeeExplainVO vo = new PatientFeeExplainVO();
-        vo.setBillId(String.valueOf(bill.getId()));
+        vo.setBillId(bill.getId());
         vo.setBillNo(bill.getBillNo());
         vo.setPatientName(bill.getPatientName());
         vo.setBillDate(bill.getBillDate());

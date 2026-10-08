@@ -27,7 +27,7 @@ public class AntibioticStatsVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 科室名称（快照） */
+    /** 科室名称 */
     private String deptName;
 
     /** 门急诊处方总数（处方状态 3/4，源 1/2） */

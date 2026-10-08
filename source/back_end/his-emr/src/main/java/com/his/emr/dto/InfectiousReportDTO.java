@@ -57,7 +57,7 @@ public class InfectiousReportDTO {
         private Long reportBy;
 
         /**
-         * 填卡医生姓名（快照）
+         * 填卡医生姓名
          */
         private String reportByName;
 

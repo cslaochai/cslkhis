@@ -49,15 +49,15 @@ public class UdiScanVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long consumableId;
     /**
-     * 耗材编码（快照）
+     * 耗材编码
      */
     private String consumableCode;
     /**
-     * 耗材名称（快照）
+     * 耗材名称
      */
     private String consumableName;
     /**
-     * 规格（快照）
+     * 规格
      */
     private String specification;
     /**
@@ -66,7 +66,7 @@ public class UdiScanVO {
     private String unit;
     private String manufacturer;
     /**
-     * 注册证号（快照）
+     * 注册证号
      */
     private String regCertNo;
     /**
@@ -91,7 +91,7 @@ public class UdiScanVO {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long stockId;
         /**
-         * 批号（快照）
+         * 批号
          */
         private String batchNo;
         /**

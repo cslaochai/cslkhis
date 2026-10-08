@@ -33,7 +33,7 @@ public class BizInfectionMonitorDaily extends BaseEntity {
     private Long recorderId;
 
     /**
-     * 记录人姓名（快照）
+     * 记录人姓名
      */
     private String recorderName;
 

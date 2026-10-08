@@ -189,7 +189,7 @@ public class BizAppointInfo extends BaseEntity {
     private Long billId;
 
     /**
-     * 账单号（快照）
+     * 账单号
      */
     private String billNo;
 }

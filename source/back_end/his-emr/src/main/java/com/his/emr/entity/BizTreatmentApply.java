@@ -57,7 +57,7 @@ public class BizTreatmentApply implements Serializable {
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -85,7 +85,7 @@ public class BizTreatmentApply implements Serializable {
     private Long doctorId;
 
     /**
-     * 开单医生姓名（快照）
+     * 开单医生姓名
      */
     private String doctorName;
 
@@ -96,7 +96,7 @@ public class BizTreatmentApply implements Serializable {
     private Long deptId;
 
     /**
-     * 开单科室名称（快照）
+     * 开单科室名称
      */
     private String deptName;
 
@@ -118,12 +118,12 @@ public class BizTreatmentApply implements Serializable {
     private Long treatmentItemId;
 
     /**
-     * 治疗项目编码（快照）
+     * 治疗项目编码
      */
     private String itemCode;
 
     /**
-     * 治疗项目名称（快照）
+     * 治疗项目名称
      */
     private String itemName;
 

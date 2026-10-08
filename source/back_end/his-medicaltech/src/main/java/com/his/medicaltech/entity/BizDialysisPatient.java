@@ -34,12 +34,12 @@ public class BizDialysisPatient extends BaseEntity implements Serializable {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 

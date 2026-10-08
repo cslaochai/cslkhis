@@ -40,7 +40,7 @@ public class BizCheckupRecord {
     private Long patientId;
 
     /**
-     * 体检人姓名（快照）
+     * 体检人姓名
      */
     private String patientName;
 
@@ -55,7 +55,7 @@ public class BizCheckupRecord {
     private Integer age;
 
     /**
-     * 联系电话（快照）
+     * 联系电话
      */
     private String phone;
 
@@ -71,7 +71,7 @@ public class BizCheckupRecord {
     private Long packageId;
 
     /**
-     * 套餐名称（快照）
+     * 套餐名称
      */
     private String packageName;
 

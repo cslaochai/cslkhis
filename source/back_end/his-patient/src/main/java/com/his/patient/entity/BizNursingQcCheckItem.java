@@ -34,7 +34,7 @@ public class BizNursingQcCheckItem extends BaseEntity {
      */
     private Long itemId;
     /**
-     * 项目编码（快照）
+     * 项目编码
      */
     private String itemCode;
     /**
@@ -54,7 +54,7 @@ public class BizNursingQcCheckItem extends BaseEntity {
      */
     private Integer qualifiedNum;
     /**
-     * 本项应得分（快照）
+     * 本项应得分
      */
     private BigDecimal fullScore;
     /**

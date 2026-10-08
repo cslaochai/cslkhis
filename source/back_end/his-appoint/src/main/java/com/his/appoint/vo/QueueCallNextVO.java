@@ -1,5 +1,7 @@
 package com.his.appoint.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -30,7 +32,8 @@ public class QueueCallNextVO extends BizQueueListVO {
     /**
      * 被顺带结束的上一条队列ID
      */
-    private String previousQueueId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long previousQueueId;
 
     /**
      * 本次叫号是否为「回诊」—— 把被自动收口（叫下一位时置 4、病历并未结诊）的

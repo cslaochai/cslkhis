@@ -21,10 +21,10 @@ public class DietPlanQueryPageDTO extends PageParam {
     /** 入院ID */
     private Long admissionId;
 
-    /** 科室ID（快照） */
+    /** 科室ID */
     private Long deptId;
 
-    /** 病区ID（快照） */
+    /** 病区ID */
     private Long wardId;
 
     /** 来源（1-医嘱校对派生 2-营养师手工登记） */

@@ -37,12 +37,12 @@ public class BizOnlineConsult {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -53,7 +53,7 @@ public class BizOnlineConsult {
     private Long deptId;
 
     /**
-     * 接诊科室名称（快照）
+     * 接诊科室名称
      */
     private String deptName;
 

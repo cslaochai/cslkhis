@@ -38,27 +38,27 @@ public class VtePreventVO {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 
     /**
-     * 病区名称（快照）
+     * 病区名称
      */
     private String wardName;
 
     /**
-     * 床号（快照）
+     * 床号
      */
     private String bedNo;
 
@@ -74,7 +74,7 @@ public class VtePreventVO {
     private Integer capriniScore;
 
     /**
-     * 风险等级（快照）（1-低 2-中 3-高 4-极高）
+     * 风险等级（1-低 2-中 3-高 4-极高）
      */
     private Integer riskLevel;
 

@@ -78,7 +78,7 @@ public class RxFlowListVO {
     private LocalDateTime finishTime;
 
     /**
-     * 处方总金额（快照）
+     * 处方总金额
      */
     private BigDecimal totalAmount;
 

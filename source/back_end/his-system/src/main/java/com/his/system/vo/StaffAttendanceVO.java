@@ -49,7 +49,7 @@ public class StaffAttendanceVO implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long orgId;
 
-    @Schema(description = "单元名称（快照）")
+    @Schema(description = "单元名称")
     private String orgName;
 
     @Schema(description = "班次ID（0-无班次）")

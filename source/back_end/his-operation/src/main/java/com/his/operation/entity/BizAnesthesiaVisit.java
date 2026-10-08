@@ -54,37 +54,37 @@ public class BizAnesthesiaVisit extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 性别（快照）（1-男 2-女）
+     * 性别（1-男 2-女）
      */
     private Integer gender;
 
     /**
-     * 年龄（快照）
+     * 年龄
      */
     private Integer age;
 
     /**
-     * 术前诊断（快照）
+     * 术前诊断
      */
     private String diagnosis;
 
     /**
-     * 拟施手术编码（快照）
+     * 拟施手术编码
      */
     private String plannedOperationCode;
 
     /**
-     * 拟施手术名称（快照）
+     * 拟施手术名称
      */
     private String plannedOperationName;
 
     /**
-     * 手术级别（快照）1~4
+     * 手术级别1~4
      */
     private Integer operationLevel;
 
@@ -215,7 +215,7 @@ public class BizAnesthesiaVisit extends BaseEntity {
     private Long visitDoctorId;
 
     /**
-     * 访视麻醉医师姓名（快照）
+     * 访视麻醉医师姓名
      */
     private String visitDoctorName;
 

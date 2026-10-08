@@ -37,7 +37,7 @@ public class BizOperationCount extends BaseEntity {
     private Long applyId;
 
     /**
-     * 手术申请单号（快照）
+     * 手术申请单号
      */
     private String applyNo;
 
@@ -54,17 +54,17 @@ public class BizOperationCount extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 手术间（快照）
+     * 手术间
      */
     private String operationRoom;
 
     /**
-     * 手术名称（快照）
+     * 手术名称
      */
     private String plannedOperationName;
 
@@ -75,7 +75,7 @@ public class BizOperationCount extends BaseEntity {
     private Long instrumentNurseId;
 
     /**
-     * 器械护士姓名（快照）
+     * 器械护士姓名
      */
     private String instrumentNurseName;
 
@@ -86,7 +86,7 @@ public class BizOperationCount extends BaseEntity {
     private Long circulateNurseId;
 
     /**
-     * 巡回护士姓名（快照）
+     * 巡回护士姓名
      */
     private String circulateNurseName;
 
@@ -97,7 +97,7 @@ public class BizOperationCount extends BaseEntity {
     private Long beforeNurseId;
 
     /**
-     * 术前清点核对人姓名（快照）
+     * 术前清点核对人姓名
      */
     private String beforeNurseName;
 
@@ -119,7 +119,7 @@ public class BizOperationCount extends BaseEntity {
     private Long closureNurseId;
 
     /**
-     * 关体前核对人姓名（快照）
+     * 关体前核对人姓名
      */
     private String closureNurseName;
 
@@ -141,7 +141,7 @@ public class BizOperationCount extends BaseEntity {
     private Long finalNurseId;
 
     /**
-     * 关体后核对人姓名（快照）
+     * 关体后核对人姓名
      */
     private String finalNurseName;
 

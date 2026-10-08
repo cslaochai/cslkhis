@@ -57,7 +57,7 @@ public class BizStaffSchedule extends BaseEntity {
     private Long orgId;
 
     /**
-     * 排班单元名称（快照）
+     * 排班单元名称
      */
     private String orgName;
 
@@ -68,7 +68,7 @@ public class BizStaffSchedule extends BaseEntity {
     private Long deptId;
 
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 
@@ -79,12 +79,12 @@ public class BizStaffSchedule extends BaseEntity {
     private Long employeeId;
 
     /**
-     * 工号（快照）
+     * 工号
      */
     private String empCode;
 
     /**
-     * 姓名（快照）
+     * 姓名
      */
     private String employeeName;
 

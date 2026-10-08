@@ -30,17 +30,17 @@ public class SurveyAnswerItemVO implements Serializable {
     private Integer dimension;
 
     /**
-     * 题号（快照）
+     * 题号
      */
     private Integer seqNo;
 
     /**
-     * 题干（快照）
+     * 题干
      */
     private String title;
 
     /**
-     * 题型（快照）
+     * 题型
      */
     private Integer questionType;
 

@@ -37,12 +37,12 @@ public class BizTeleConsult {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -59,7 +59,7 @@ public class BizTeleConsult {
     private Long applyDeptId;
 
     /**
-     * 申请科室名称（快照）
+     * 申请科室名称
      */
     private String applyDeptName;
 

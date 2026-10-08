@@ -41,7 +41,7 @@ public class BizDaySurgeryItem {
     private Long deptId;
 
     /**
-     * 适用科室名称（快照）
+     * 适用科室名称
      */
     private String deptName;
 

@@ -1,5 +1,7 @@
 package com.his.medicaltech.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -27,7 +29,8 @@ public class CdrVisitNodeVO {
     private String nodeTypeText;
 
     @Schema(description = "锚点ID（就诊次/入院/急诊主键）")
-    private String anchorId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long anchorId;
 
     @Schema(description = "锚点业务号（挂号号 / 入院号 / 急诊号）")
     private String anchorNo;

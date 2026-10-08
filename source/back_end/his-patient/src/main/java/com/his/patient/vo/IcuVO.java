@@ -62,7 +62,7 @@ public class IcuVO {
         private Long wardId;
 
         /**
-         * 病区名称（快照）
+         * 病区名称
          */
         private String wardName;
 
@@ -235,7 +235,7 @@ public class IcuVO {
         private Long wardId;
 
         /**
-         * 病区名称（快照）
+         * 病区名称
          */
         private String wardName;
 

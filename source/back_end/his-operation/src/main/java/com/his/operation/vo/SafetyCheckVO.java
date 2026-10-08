@@ -34,12 +34,12 @@ public class SafetyCheckVO implements Serializable {
     private Long applyId;
 
     /**
-     * 手术申请单号（快照）
+     * 手术申请单号
      */
     private String applyNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -49,7 +49,7 @@ public class SafetyCheckVO implements Serializable {
     private String operationName;
 
     /**
-     * 手术间（快照）
+     * 手术间
      */
     private String operationRoom;
 
@@ -85,7 +85,7 @@ public class SafetyCheckVO implements Serializable {
     private Long surgeonId;
 
     /**
-     * 手术医师姓名（快照）
+     * 手术医师姓名
      */
     private String surgeonName;
 
@@ -96,7 +96,7 @@ public class SafetyCheckVO implements Serializable {
     private Long anesthetistId;
 
     /**
-     * 麻醉医师姓名（快照）
+     * 麻醉医师姓名
      */
     private String anesthetistName;
 
@@ -107,12 +107,12 @@ public class SafetyCheckVO implements Serializable {
     private Long nurseId;
 
     /**
-     * 手术室护士姓名（快照）
+     * 手术室护士姓名
      */
     private String nurseName;
 
     /**
-     * 录入人姓名（快照）
+     * 录入人姓名
      */
     private String recorderName;
 

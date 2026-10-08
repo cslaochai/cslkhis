@@ -27,12 +27,12 @@ public class BizInfectionMonitor extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -47,7 +47,7 @@ public class BizInfectionMonitor extends BaseEntity {
     private Long deptId;
 
     /**
-     * 监测科室（快照）
+     * 监测科室
      */
     private String deptName;
 

@@ -34,7 +34,7 @@ public class BedWaitUpsertDTO {
     @NotNull(message = "患者不能为空")
     private Long patientId;
 
-    /** 患者编号（快照） */
+    /** 患者编号 */
     private String patientNo;
 
     /** 患者姓名 */
@@ -44,16 +44,16 @@ public class BedWaitUpsertDTO {
     /** 性别字典口径：1-男 2-女 9-未知 */
     private Integer gender;
 
-    /** 年龄（快照） */
+    /** 年龄 */
     private Integer age;
 
-    /** 联系电话（快照） */
+    /** 联系电话 */
     private String phone;
 
     /** 拟收治科室（不传则取拟收治病区所属科室） */
     private Long applyDeptId;
 
-    /** 拟收治科室名称（快照） */
+    /** 拟收治科室名称 */
     private String applyDeptName;
 
     /** 期望病区ID */
@@ -77,7 +77,7 @@ public class BedWaitUpsertDTO {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate expectAdmitDate;
 
-    /** 拟诊名称（快照） */
+    /** 拟诊名称 */
     private String diagnosisName;
 
     /** 备注 */

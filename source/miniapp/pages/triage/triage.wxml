@@ -1,9 +1,4 @@
 <view class="triage-page">
-  <view class="banner">
-    <text class="banner-title">智能导诊</text>
-    <text class="banner-sub">描述您的不适，帮您判断该挂哪个科</text>
-  </view>
-
   <view class="card">
     <textarea
       class="desc-input"

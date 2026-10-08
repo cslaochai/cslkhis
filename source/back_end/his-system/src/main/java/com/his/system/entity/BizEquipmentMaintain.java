@@ -35,11 +35,11 @@ public class BizEquipmentMaintain {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long equipmentId;
     /**
-     * 设备编码（快照）
+     * 设备编码
      */
     private String equipmentCode;
     /**
-     * 设备名称（快照）
+     * 设备名称
      */
     private String equipmentName;
 

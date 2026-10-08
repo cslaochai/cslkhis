@@ -18,7 +18,8 @@ public class MiniAdmiSelectListVO implements Serializable {
      * 入院ID
      */
     @JsonProperty("admission_id")
-    private String admissionId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long admissionId;
 
     /**
      * 住院号
@@ -30,7 +31,8 @@ public class MiniAdmiSelectListVO implements Serializable {
      * 患者ID
      */
     @JsonProperty("patient_id")
-    private String patientId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long patientId;
 
     /**
      * 科室ID

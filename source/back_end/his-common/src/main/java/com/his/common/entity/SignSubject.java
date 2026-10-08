@@ -12,7 +12,7 @@ import com.his.common.util.SignCryptoUtil;
  * @param bizId            对象ID
  * @param bizNo            对象单号（快照，可为空）
  * @param patientId        患者ID（可为空）
- * @param patientName      患者姓名（快照）
+ * @param patientName      患者姓名
  * @param deptId           对象所属科室ID
  * @param deptName         对象所属科室名称
  * @param bizStatus        对象自身的业务状态码（如病历 record_status）

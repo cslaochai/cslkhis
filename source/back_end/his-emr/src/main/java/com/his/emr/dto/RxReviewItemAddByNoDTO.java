@@ -17,7 +17,7 @@ public class RxReviewItemAddByNoDTO {
     private Long batchId;
 
     /**
-     * 处方号（快照）
+     * 处方号
      */
     @NotBlank(message = "处方号不能为空")
     private String prescriptionNo;

@@ -50,13 +50,13 @@ public class BizAntibioticAuth implements Serializable {
     /** 医师ID（员工的ID，与处方/医嘱 doctor_id 同口径） */
     private Long doctorId;
 
-    /** 医师姓名（快照） */
+    /** 医师姓名 */
     private String doctorName;
 
-    /** 科室ID（快照） */
+    /** 科室ID */
     private Long deptId;
 
-    /** 科室名称（快照） */
+    /** 科室名称 */
     private String deptName;
 
     /** 职称（授权时的职称快照，判定依据） */

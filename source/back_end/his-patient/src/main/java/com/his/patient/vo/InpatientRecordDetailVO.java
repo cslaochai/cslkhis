@@ -44,17 +44,17 @@ public class InpatientRecordDetailVO implements Serializable {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 性别（快照）（1-男 2-女）
+     * 性别（1-男 2-女）
      */
     private Integer gender;
 
@@ -64,12 +64,12 @@ public class InpatientRecordDetailVO implements Serializable {
     private String genderText;
 
     /**
-     * 年龄（快照）
+     * 年龄
      */
     private Integer age;
 
     /**
-     * 年龄单位（快照）（1-岁 2-月 3-天）
+     * 年龄单位（1-岁 2-月 3-天）
      */
     private Integer ageUnit;
 
@@ -84,17 +84,17 @@ public class InpatientRecordDetailVO implements Serializable {
     private String ageText;
 
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 
     /**
-     * 病区名称（快照）
+     * 病区名称
      */
     private String wardName;
 
     /**
-     * 床号（快照）
+     * 床号
      */
     private String bedNo;
 

@@ -4,6 +4,7 @@ import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -12,15 +13,13 @@ import java.util.List;
 
 /**
  * 报告 PDF 打印（小程序二期·报告原文）。
- *
- * <p>不引入 PDF 依赖：手写一份最小合法 PDF（1.4，含正确 xref 偏移表），
- * 内容为单页 Helvetica 英文占位排版 —— 只保证「文件真实存在、可被 wx.openDocument 打开」，
- * 中文版式（医院抬头/红章/检验结果表格）等真对接时由专业 PDF 服务替换，接口形态不变。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class MiniappPdfStub {
 
-    /** 报告 PDF ：单页占位文档。 */
+    /**
+     * 报告 PDF ：单页占位文档。
+     */
     public static byte[] reportPdf(String reportNo, String patientName, String itemName,
                                    String deptName, String doctorName, LocalDateTime reportTime) {
         String time = reportTime == null
@@ -48,7 +47,9 @@ public final class MiniappPdfStub {
         return build(body.toString());
     }
 
-    /** 手工组包最小 PDF：对象偏移精确写入 xref，保证系统级 PDF 渲染器可开。 */
+    /**
+     * 手工组包最小 PDF：对象偏移精确写入 xref，保证系统级 PDF 渲染器可开。
+     */
     private static byte[] build(String contentStream) {
         List<String> objects = new ArrayList<>();
         objects.add("<< /Type /Catalog /Pages 2 0 R >>");

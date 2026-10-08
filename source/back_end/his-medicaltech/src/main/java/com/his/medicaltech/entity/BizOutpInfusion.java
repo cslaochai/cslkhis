@@ -39,22 +39,22 @@ public class BizOutpInfusion extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 性别（快照）
+     * 性别
      */
     private Integer gender;
 
     /**
-     * 年龄（快照）
+     * 年龄
      */
     private Integer age;
 
@@ -70,7 +70,7 @@ public class BizOutpInfusion extends BaseEntity {
     private Long seatId;
 
     /**
-     * 座位号（快照）
+     * 座位号
      */
     private String seatNo;
 
@@ -119,7 +119,7 @@ public class BizOutpInfusion extends BaseEntity {
     private Long nurseId;
 
     /**
-     * 责任护士姓名（快照）
+     * 责任护士姓名
      */
     private String nurseName;
 

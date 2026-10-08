@@ -431,7 +431,7 @@ public class BizScheduleServiceImpl extends ServiceImpl<BizScheduleMapper, BizSc
         vo.setUsedAppointmentSource(entity.getUsedAppointmentSource());
         vo.setStatus(entity.getStatus());
         vo.setConsultStatus(entity.getConsultStatus());
-        vo.setRoomId(entity.getRoomId() != null ? String.valueOf(entity.getRoomId()) : null);
+        vo.setRoomId(entity.getRoomId());
         vo.setRoomName(entity.getRoomName());
         return vo;
     }

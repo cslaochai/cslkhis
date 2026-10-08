@@ -54,15 +54,15 @@ public class BizConsumableConsumeVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long consumableId;
     /**
-     * 耗材名称（快照）
+     * 耗材名称
      */
     private String consumableName;
     /**
-     * 规格（快照）
+     * 规格
      */
     private String specification;
     /**
-     * 单位（快照）
+     * 单位
      */
     private String unit;
     /**
@@ -75,7 +75,7 @@ public class BizConsumableConsumeVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
     /**
-     * 领用科室名称（快照）
+     * 领用科室名称
      */
     private String deptName;
     /**

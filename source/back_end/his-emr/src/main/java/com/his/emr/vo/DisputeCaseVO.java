@@ -57,12 +57,12 @@ public class DisputeCaseVO implements Serializable {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -79,7 +79,7 @@ public class DisputeCaseVO implements Serializable {
     private Long deptId;
 
     /**
-     * 被投诉科室名称（快照）
+     * 被投诉科室名称
      */
     private String deptName;
 

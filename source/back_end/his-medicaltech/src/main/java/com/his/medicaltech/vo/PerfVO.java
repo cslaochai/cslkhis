@@ -19,7 +19,7 @@ public class PerfVO {
         /** 科室ID */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long deptId;
-        /** 科室名称（快照） */
+        /** 科室名称 */
         private String deptName;
         /** 核算月份 */
         private String costMonth;
@@ -45,7 +45,7 @@ public class PerfVO {
         /** 科室ID */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long deptId;
-        /** 科室名称（快照） */
+        /** 科室名称 */
         private String deptName;
         /** 核算月份 */
         private String costMonth;
@@ -77,7 +77,7 @@ public class PerfVO {
         /** 科室ID */
         @JsonSerialize(using = ToStringSerializer.class)
         private Long deptId;
-        /** 科室名称（快照） */
+        /** 科室名称 */
         private String deptName;
         /** 核算月份 */
         private String costMonth;

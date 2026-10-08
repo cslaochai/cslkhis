@@ -49,7 +49,7 @@ public class BizTransfusionApprove extends BaseEntity {
     private Long approverId;
 
     /**
-     * 审批人姓名（快照）
+     * 审批人姓名
      */
     private String approverName;
 

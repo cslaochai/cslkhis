@@ -432,7 +432,7 @@ public class SettlementBillServiceImpl extends ServiceImpl<BizSettlementBillMapp
         List<PendingBillVO> result = new ArrayList<>(bills.size());
         for (BizSettlementBill bill : bills) {
             PendingBillVO vo = new PendingBillVO();
-            vo.setId(String.valueOf(bill.getId()));
+            vo.setId(bill.getId());
             vo.setBillNo(bill.getBillNo());
             vo.setEncounterNo(bill.getEncounterNo());
             vo.setPayableAmount(bill.getPayableAmount());

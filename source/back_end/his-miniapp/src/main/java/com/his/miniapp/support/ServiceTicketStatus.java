@@ -1,4 +1,5 @@
 package com.his.miniapp.support;
+
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
@@ -12,16 +13,24 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ServiceTicketStatus {
 
-    /** 待受理：患者已提交，无人认领 */
+    /**
+     * 待受理：患者已提交，无人认领
+     */
     public static final int WAIT_ACCEPT = 0;
 
-    /** 处理中：客服已受理 */
+    /**
+     * 处理中：客服已受理
+     */
     public static final int HANDLING = 1;
 
-    /** 已办结：客服给了处理结果，等患者确认 */
+    /**
+     * 已办结：客服给了处理结果，等患者确认
+     */
     public static final int FINISHED = 2;
 
-    /** 已关闭：患者确认解决 / 患者撤单 / 客服关闭（终态） */
+    /**
+     * 已关闭：患者确认解决 / 患者撤单 / 客服关闭（终态）
+     */
     public static final int CLOSED = 3;
 
     // 流转动作
@@ -63,22 +72,30 @@ public final class ServiceTicketStatus {
         };
     }
 
-    /** 已关闭是终态，不能再动（患者想再问就重新提单） */
+    /**
+     * 已关闭是终态，不能再动（患者想再问就重新提单）
+     */
     public static boolean isClosed(Integer status) {
         return status != null && status == CLOSED;
     }
 
-    /** 患者还能补充留言：办结后补充等于"问题没解决"，会自动重开 */
+    /**
+     * 患者还能补充留言：办结后补充等于"问题没解决"，会自动重开
+     */
     public static boolean canAppend(Integer status) {
         return status != null && (status == WAIT_ACCEPT || status == HANDLING || status == FINISHED);
     }
 
-    /** 患者可撤单：还没办结的都能撤 */
+    /**
+     * 患者可撤单：还没办结的都能撤
+     */
     public static boolean canCancel(Integer status) {
         return status != null && (status == WAIT_ACCEPT || status == HANDLING);
     }
 
-    /** 患者可确认解决：只在办结态 */
+    /**
+     * 患者可确认解决：只在办结态
+     */
     public static boolean canConfirm(Integer status) {
         return status != null && status == FINISHED;
     }

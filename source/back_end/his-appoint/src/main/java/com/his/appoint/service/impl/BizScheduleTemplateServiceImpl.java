@@ -192,7 +192,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
         vo.setEndTime(t.getEndTime());
         vo.setShiftId(t.getShiftId());
         vo.setTotalSource(t.getTotalSource());
-        vo.setRoomId(t.getRoomId() != null ? String.valueOf(t.getRoomId()) : null);
+        vo.setRoomId(t.getRoomId());
         vo.setRoomName(t.getRoomName());
         vo.setRegistFee(t.getRegistFee());
         vo.setDiagnosisFee(t.getDiagnosisFee());

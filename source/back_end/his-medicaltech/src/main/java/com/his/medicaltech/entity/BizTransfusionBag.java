@@ -133,7 +133,7 @@ public class BizTransfusionBag extends BaseEntity {
     private Long crossmatchDoctorId;
 
     /**
-     * 配血人姓名（快照）
+     * 配血人姓名
      */
     private String crossmatchDoctorName;
 

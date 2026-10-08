@@ -39,7 +39,7 @@ public class BizNurseScheduleRule extends BaseEntity {
      */
     private Long wardId;
     /**
-     * 病区名称（快照）
+     * 病区名称
      */
     private String wardName;
     /**

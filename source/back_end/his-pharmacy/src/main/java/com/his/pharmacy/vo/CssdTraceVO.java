@@ -26,7 +26,7 @@ public class CssdTraceVO {
     private Long packId;
 
     /**
-     * 器械包条码（快照）
+     * 器械包条码
      */
     private String packNo;
 

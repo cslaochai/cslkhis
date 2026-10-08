@@ -33,7 +33,7 @@ public class RxReviewTalkVO {
     private String doctorName;
 
     /**
-     * 医师所在科室（快照）
+     * 医师所在科室
      */
     private String deptName;
 

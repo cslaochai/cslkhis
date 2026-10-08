@@ -106,7 +106,8 @@ public class ScheduleTemplateVO {
     /**
      * 诊室ID
      */
-    private String roomId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long roomId;
 
     /**
      * 诊室名称

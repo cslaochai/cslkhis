@@ -30,7 +30,7 @@ public class SignCertVO {
     private Long empId;
 
     /**
-     * 签名人姓名（快照）
+     * 签名人姓名
      */
     private String empName;
 
@@ -41,7 +41,7 @@ public class SignCertVO {
     private Long deptId;
 
     /**
-     * 所属科室名称（快照）
+     * 所属科室名称
      */
     private String deptName;
 

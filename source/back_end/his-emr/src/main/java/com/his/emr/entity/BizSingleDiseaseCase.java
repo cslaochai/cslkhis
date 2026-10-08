@@ -38,13 +38,13 @@ public class BizSingleDiseaseCase extends BaseEntity {
     private Long admissionId;
 
     /**
-     * 患者ID（快照）
+     * 患者ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 

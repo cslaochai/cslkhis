@@ -31,7 +31,7 @@ public class DialysisDTO {
         private String dialysisNo;
 
         /**
-         * 患者姓名（快照）
+         * 患者姓名
          */
         private String patientName;
 
@@ -110,22 +110,22 @@ public class DialysisDTO {
         private BigDecimal dryWeight;
 
         /**
-         * 处方透析时长分钟（快照）
+         * 处方透析时长分钟
          */
         private Integer durationMin;
 
         /**
-         * 处方血流量（快照）
+         * 处方血流量
          */
         private Integer bloodFlow;
 
         /**
-         * 透析器（快照）
+         * 透析器
          */
         private Integer dialyzer;
 
         /**
-         * 抗凝方式（快照）
+         * 抗凝方式
          */
         private Integer anticoagulant;
 
@@ -168,7 +168,7 @@ public class DialysisDTO {
         private Long id;
 
         /**
-         * 机位号（快照）
+         * 机位号
          */
         @NotBlank(message = "机位号不能为空")
         private String machineNo;
@@ -191,7 +191,7 @@ public class DialysisDTO {
     @EqualsAndHashCode(callSuper = true)
     public static class MachineQuery extends PageParam {
         /**
-         * 机位号（快照）
+         * 机位号
          */
         private String machineNo;
 
@@ -212,7 +212,7 @@ public class DialysisDTO {
         private String sessionNo;
 
         /**
-         * 患者姓名（快照）
+         * 患者姓名
          */
         private String patientName;
 

@@ -5,7 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 智能导诊常见症状（患者端快捷标签）。
+ * 智能导诊常见症状
  */
 @Data
 public class TriageSymptomVO implements Serializable {

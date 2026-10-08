@@ -12,7 +12,7 @@ public class VtePreventQueryPageDTO extends PageParam {
     /** 入院ID */
     private Long admissionId;
 
-    /** 病区ID（快照） */
+    /** 病区ID */
     private Long wardId;
 
     /** 落实状态（0-待落实 1-已落实 2-禁忌未用 3-患者拒绝） */

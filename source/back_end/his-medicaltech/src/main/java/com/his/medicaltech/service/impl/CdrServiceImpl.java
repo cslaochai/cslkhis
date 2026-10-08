@@ -94,15 +94,15 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
         return t == null ? null : t.format(DateFormats.DATETIME);
     }
 
-    private static List<String> splitIds(String v) {
-        List<String> out = new ArrayList<>();
+    private static List<Long> splitIds(String v) {
+        List<Long> out = new ArrayList<>();
         if (v == null) {
             return out;
         }
         for (String s : v.split(",")) {
             String t = s.trim();
             if (!t.isEmpty()) {
-                out.add(t);
+                out.add(Long.valueOf(t));
             }
         }
         return out;
@@ -154,20 +154,20 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
         }
 
         // 挂号ID → 节点键
-        Map<String, CdrRegistrationRowVO> regMap = new LinkedHashMap<>();
+        Map<Long, CdrRegistrationRowVO> regMap = new LinkedHashMap<>();
         for (CdrRegistrationRowVO r : registRows) {
-            regMap.put(str(r.getRegistId()), r);
+            regMap.put(r.getRegistId(), r);
         }
 
         Map<String, CdrVisitNodeVO> nodes = new LinkedHashMap<>();
         Map<String, List<CdrEventVO>> nodeEvents = new LinkedHashMap<>();
-        Map<String, String> registNode = new HashMap<>();
-        Map<String, String> admNode = new HashMap<>();
-        Map<String, String> emgNode = new HashMap<>();
+        Map<Long, String> registNode = new HashMap<>();
+        Map<Long, String> admNode = new HashMap<>();
+        Map<Long, String> emgNode = new HashMap<>();
 
         // 门诊就诊次（就诊次收录的挂号）
         for (CdrVisitRowVO v : visitRows) {
-            String vid = str(v.getVisitId());
+            Long vid = v.getVisitId();
             String key = "V:" + vid;
             CdrVisitNodeVO node = newNode(key, CdrNodeTypeEnum.OUTPATIENT);
             node.setAnchorId(vid);
@@ -179,16 +179,16 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
             node.setTitle(node.getNodeTypeText());
 
             // 本次就诊次包含的挂号：同时建立"挂号 → 就诊次"的映射
-            List<String> rids = splitIds(v.getRegistIds());
+            List<Long> rids = splitIds(v.getRegistIds());
             node.setSubtitle(rids.size() > 1 ? "含 " + rids.size() + " 张挂号单" : null);
-            for (String rid : rids) {
+            for (Long rid : rids) {
                 registNode.put(rid, key);
             }
             // 科室/医生取本次就诊次里最早的那张挂号
             String dept = null;
             String doctor = null;
             String owner = str(v.getOwnerPid());
-            for (String rid : rids) {
+            for (Long rid : rids) {
                 CdrRegistrationRowVO rr = regMap.get(rid);
                 if (rr == null) {
                     continue;
@@ -213,7 +213,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
 
         // 没有被任何就诊次收录的挂号：自己成一个节点（不丢）
         for (CdrRegistrationRowVO r : registRows) {
-            String rid = str(r.getRegistId());
+            Long rid = r.getRegistId();
             if (registNode.containsKey(rid)) {
                 continue;
             }
@@ -238,7 +238,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
 
         // 住院
         for (CdrAdmissionRowVO a : admRows) {
-            String aid = str(a.getAdmissionId());
+            Long aid = a.getAdmissionId();
             String key = "A:" + aid;
             admNode.put(aid, key);
             CdrVisitNodeVO node = newNode(key, CdrNodeTypeEnum.INPATIENT);
@@ -268,7 +268,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
 
         // 急诊
         for (CdrEmergencyRowVO e : emergencyRows) {
-            String eid = str(e.getEmergencyId());
+            Long eid = e.getEmergencyId();
             String key = "E:" + eid;
             emgNode.put(eid, key);
             CdrVisitNodeVO node = newNode(key, CdrNodeTypeEnum.EMERGENCY);
@@ -299,7 +299,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
                 unknownTypes.add(ev.getEventType());
             }
             String atype = ev.getAnchorType();
-            String aid = ev.getAnchorId();
+            Long aid = ev.getAnchorId();
             String key = null;
             if (aid != null) {
                 if (ANCHOR_REGIST.equals(atype)) {
@@ -319,7 +319,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
             }
             if (key.startsWith("P:") && !nodes.containsKey(key)) {
                 CdrVisitNodeVO node = newNode(key, CdrNodeTypeEnum.PATIENT);
-                node.setAnchorId(String.valueOf(pid));
+                node.setAnchorId(pid);
                 node.setTitle(node.getNodeTypeText());
                 node.setSubtitle("不属于某一次就诊的记录（危急值 / 质控 / 随访 / 转诊 / 上报）");
                 nodes.put(key, node);
@@ -465,14 +465,14 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
         ev.setEventType(etype);
         ev.setEventTypeText(type == null ? "未知事件(" + etype + ")" : type.getText());
         ev.setSourceTable(str(r.getSrcTable()));
-        ev.setSourceId(str(r.getSrcId()));
+        ev.setSourceId(r.getSrcId());
         ev.setEventTime(fmt(r.getEtime()));
         ev.setTitle(str(r.getTitle()));
         ev.setSummary(str(r.getSummary()));
         ev.setDeptName(str(r.getDeptName()));
         ev.setOperatorName(str(r.getOperatorName()));
         ev.setAnchorType(str(r.getAnchorType()));
-        ev.setAnchorId(str(r.getAnchorId()));
+        ev.setAnchorId(r.getAnchorId());
         ev.setAmount(r.getAmount());
         ev.setAmountLabel(amountLabel(etype));
         Integer status = r.getStatusCode();
@@ -486,8 +486,9 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
             ev.setSecondaryLabel(type.getSecondaryLabel());
         }
         String owner = str(r.getOwnerPid());
-        ev.setOwnerPatientId(owner);
-        if (owner != null && !owner.equals(String.valueOf(mainPid))) {
+        Long ownerPid = owner == null ? null : Long.valueOf(owner);
+        ev.setOwnerPatientId(ownerPid);
+        if (ownerPid != null && !ownerPid.equals(mainPid)) {
             ev.setOwnerArchiveNo(archiveNo.get(owner));
         }
         return ev;
@@ -558,12 +559,13 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
                 continue;
             }
             CdrProfileGroupVO.CdrProfileItemVO item = new CdrProfileGroupVO.CdrProfileItemVO();
-            item.setId(str(r.getSid()));
+            item.setId(parseRowId(r.getSid()));
             item.setTitle(str(r.getTitle()));
             item.setSummary(str(r.getSummary()));
             // 档案日期是 date 列（家族史与联系人天然为 null），补成零点让前端时间轴按同一格式渲染
             item.setTime(fmt(TimeUtil.dayStart(r.getTm())));
-            item.setOwnerPatientId(str(r.getOwnerPid()));
+            String itemOwner = str(r.getOwnerPid());
+            item.setOwnerPatientId(itemOwner == null ? null : Long.valueOf(itemOwner));
             grouped.get(key).add(item);
         }
         List<CdrProfileGroupVO> out = new ArrayList<>();

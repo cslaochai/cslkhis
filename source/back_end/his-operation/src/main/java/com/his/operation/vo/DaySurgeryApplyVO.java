@@ -42,12 +42,12 @@ public class DaySurgeryApplyVO implements Serializable {
     private Long itemId;
 
     /**
-     * 术式编码（快照）
+     * 术式编码
      */
     private String itemCode;
 
     /**
-     * 术式名称（快照）
+     * 术式名称
      */
     private String itemName;
 
@@ -63,12 +63,12 @@ public class DaySurgeryApplyVO implements Serializable {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -79,7 +79,7 @@ public class DaySurgeryApplyVO implements Serializable {
     private Long deptId;
 
     /**
-     * 手术科室名称（快照）
+     * 手术科室名称
      */
     private String deptName;
 

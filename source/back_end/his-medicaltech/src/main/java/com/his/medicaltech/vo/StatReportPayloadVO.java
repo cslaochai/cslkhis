@@ -1,5 +1,7 @@
 package com.his.medicaltech.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -153,7 +155,8 @@ public class StatReportPayloadVO implements Serializable {
         /**
          * 科室ID；全院口径为 null
          */
-        private String deptId;
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long deptId;
 
         /**
          * 科室名；全院口径固定为「全院」

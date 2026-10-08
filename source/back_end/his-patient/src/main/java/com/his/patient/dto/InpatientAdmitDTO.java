@@ -29,7 +29,7 @@ public class InpatientAdmitDTO {
     /** 来源挂号ID（无住院证时用来挂门诊线索；急诊入院也走挂号，所以有这个字段） */
     private Long registId;
 
-    /** 来源挂号号（快照） */
+    /** 来源挂号号 */
     private String registNo;
 
     /** 病区ID（必填） */

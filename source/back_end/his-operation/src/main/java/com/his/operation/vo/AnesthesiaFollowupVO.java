@@ -36,12 +36,12 @@ public class AnesthesiaFollowupVO implements Serializable {
     private Long recordId;
 
     /**
-     * 麻醉记录单号（快照）
+     * 麻醉记录单号
      */
     private String recordNo;
 
     /**
-     * 手术申请单ID（快照）
+     * 手术申请单ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long applyId;
@@ -64,19 +64,19 @@ public class AnesthesiaFollowupVO implements Serializable {
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 性别（快照）（1-男 2-女）
+     * 性别（1-男 2-女）
      */
     private Integer gender;
 
     private String genderText;
 
     /**
-     * 年龄（快照）
+     * 年龄
      */
     private Integer age;
 
@@ -142,7 +142,7 @@ public class AnesthesiaFollowupVO implements Serializable {
     private Long followupDoctorId;
 
     /**
-     * 随访麻醉医师姓名（快照）
+     * 随访麻醉医师姓名
      */
     private String followupDoctorName;
 

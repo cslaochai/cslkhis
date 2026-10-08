@@ -37,7 +37,7 @@ public class BizInvoiceVO {
     private Long billId;
 
     /**
-     * 结算账单号（快照）
+     * 结算账单号
      */
     private String billNo;
 

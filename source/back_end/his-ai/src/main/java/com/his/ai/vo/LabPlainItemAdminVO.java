@@ -1,5 +1,7 @@
 package com.his.ai.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -13,7 +15,8 @@ import lombok.Data;
 public class LabPlainItemAdminVO {
 
     @Schema(description = "主键（19 位雪花 ID，前端全程按字符串处理，按数字会丢精度）")
-    private String id;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long id;
 
     @Schema(description = "所属分组")
     private String groupName;

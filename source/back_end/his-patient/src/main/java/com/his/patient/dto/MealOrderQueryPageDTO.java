@@ -32,7 +32,7 @@ public class MealOrderQueryPageDTO extends PageParam {
     /** 病区ID */
     private Long wardId;
 
-    /** 科室ID（快照） */
+    /** 科室ID */
     private Long deptId;
 
     /** 入院ID */

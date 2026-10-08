@@ -46,12 +46,12 @@ public class BizPaymentTxnVO {
     private Long patientId;
 
     /**
-     * 患者号（快照）
+     * 患者号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -153,7 +153,7 @@ public class BizPaymentTxnVO {
     private Long applyId;
 
     /**
-     * 来源退费申请号（快照）
+     * 来源退费申请号
      */
     private String applyNo;
 

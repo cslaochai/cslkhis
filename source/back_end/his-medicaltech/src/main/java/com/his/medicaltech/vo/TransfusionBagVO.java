@@ -131,7 +131,7 @@ public class TransfusionBagVO implements Serializable {
     private LocalDateTime crossmatchTime;
 
     /**
-     * 配血人姓名（快照）
+     * 配血人姓名
      */
     private String crossmatchDoctorName;
 

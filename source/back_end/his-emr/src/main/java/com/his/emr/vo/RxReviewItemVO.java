@@ -39,28 +39,28 @@ public class RxReviewItemVO {
     private Long prescriptionId;
 
     /**
-     * 处方号（快照）
+     * 处方号
      */
     private String prescriptionNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 开方科室（快照）
+     * 开方科室
      */
     private String deptName;
 
     /**
-     * 开方医生ID（快照）
+     * 开方医生ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;
 
     /**
-     * 开方医生姓名（快照）
+     * 开方医生姓名
      */
     private String doctorName;
 
@@ -70,17 +70,17 @@ public class RxReviewItemVO {
     private LocalDate visitDate;
 
     /**
-     * 诊断（快照）
+     * 诊断
      */
     private String diagnosis;
 
     /**
-     * 药品数量（快照）
+     * 药品数量
      */
     private Integer drugCount;
 
     /**
-     * 处方金额（快照）
+     * 处方金额
      */
     private BigDecimal totalAmount;
 

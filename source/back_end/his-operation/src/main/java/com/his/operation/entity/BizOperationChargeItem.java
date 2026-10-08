@@ -31,7 +31,7 @@ public class BizOperationChargeItem extends BaseEntity {
     private Long applyId;
 
     /**
-     * 手术申请单号（快照）
+     * 手术申请单号
      */
     private String applyNo;
 
@@ -48,12 +48,12 @@ public class BizOperationChargeItem extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -69,7 +69,7 @@ public class BizOperationChargeItem extends BaseEntity {
     private Long sourceId;
 
     /**
-     * 来源单据号（快照）
+     * 来源单据号
      */
     private String sourceNo;
 
@@ -79,7 +79,7 @@ public class BizOperationChargeItem extends BaseEntity {
     private String itemCode;
 
     /**
-     * 收费项目名称（快照）
+     * 收费项目名称
      */
     private String itemName;
 

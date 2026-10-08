@@ -28,11 +28,11 @@ public class PatientMergeLogVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long masterId;
     /**
-     * 主档患者号（快照）
+     * 主档患者号
      */
     private String masterNo;
     /**
-     * 主档姓名（快照）
+     * 主档姓名
      */
     private String masterName;
 
@@ -42,11 +42,11 @@ public class PatientMergeLogVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long mergedId;
     /**
-     * 被并患者号（快照）
+     * 被并患者号
      */
     private String mergedNo;
     /**
-     * 被并姓名（快照）
+     * 被并姓名
      */
     private String mergedName;
 

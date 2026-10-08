@@ -47,7 +47,7 @@ public class BizAdmission implements Serializable {
     private Long registId;
 
     /**
-     * 来源挂号号（快照）
+     * 来源挂号号
      */
     private String registNo;
 

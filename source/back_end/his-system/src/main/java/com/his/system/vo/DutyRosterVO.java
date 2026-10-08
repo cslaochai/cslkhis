@@ -120,7 +120,7 @@ public class DutyRosterVO {
     private Long deptId;
 
     /**
-     * 值班人原属科室名称（快照）
+     * 值班人原属科室名称
      */
     private String deptName;
 
@@ -160,7 +160,7 @@ public class DutyRosterVO {
     private String actualPhone;
 
     /**
-     * 换班后实际值班人姓名（快照）
+     * 换班后实际值班人姓名
      */
     private String substituteEmpName;
 

@@ -101,7 +101,7 @@ public class DeathCertificateDTO {
         /** 根本死因ICD-10编码 */
         private String underlyingIcdCode;
 
-        /** 根本死因名称（快照） */
+        /** 根本死因名称 */
         private String underlyingIcdName;
 
         /** 既往病史 */

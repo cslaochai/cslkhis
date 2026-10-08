@@ -23,7 +23,7 @@ public class AttendingRelationVO {
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -31,7 +31,7 @@ public class AttendingRelationVO {
     private Long employeeId;
 
     /**
-     * 医生姓名（快照）
+     * 医生姓名
      */
     private String employeeName;
 

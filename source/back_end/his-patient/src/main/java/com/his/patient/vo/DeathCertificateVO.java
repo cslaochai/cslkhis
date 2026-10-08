@@ -54,7 +54,7 @@ public class DeathCertificateVO {
         private Long patientId;
 
         /**
-         * 死者姓名（快照）
+         * 死者姓名
          */
         private String patientName;
 
@@ -86,17 +86,17 @@ public class DeathCertificateVO {
         private Long deathDeptId;
 
         /**
-         * 死亡科室名称（快照）
+         * 死亡科室名称
          */
         private String deathDeptName;
 
         /**
-         * 死亡病区名称（快照）
+         * 死亡病区名称
          */
         private String deathWardName;
 
         /**
-         * 死亡床位号（快照）
+         * 死亡床位号
          */
         private String deathBedNo;
 
@@ -111,7 +111,7 @@ public class DeathCertificateVO {
         private String underlyingIcdCode;
 
         /**
-         * 根本死因名称（快照）
+         * 根本死因名称
          */
         private String underlyingIcdName;
 
@@ -314,7 +314,7 @@ public class DeathCertificateVO {
         private String patientNo;
 
         /**
-         * 死者姓名（快照）
+         * 死者姓名
          */
         private String patientName;
 
@@ -324,12 +324,12 @@ public class DeathCertificateVO {
         private Integer gender;
 
         /**
-         * 民族（快照）
+         * 民族
          */
         private String nation;
 
         /**
-         * 出生日期（快照）
+         * 出生日期
          */
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate birthDate;
@@ -345,7 +345,7 @@ public class DeathCertificateVO {
         private String idCard;
 
         /**
-         * 职业（快照）
+         * 职业
          */
         private String occupation;
 
@@ -372,17 +372,17 @@ public class DeathCertificateVO {
         private Long deathDeptId;
 
         /**
-         * 死亡科室名称（快照）
+         * 死亡科室名称
          */
         private String deathDeptName;
 
         /**
-         * 死亡病区名称（快照）
+         * 死亡病区名称
          */
         private String deathWardName;
 
         /**
-         * 死亡床位号（快照）
+         * 死亡床位号
          */
         private String deathBedNo;
 
@@ -397,7 +397,7 @@ public class DeathCertificateVO {
         private String underlyingIcdCode;
 
         /**
-         * 根本死因名称（快照）
+         * 根本死因名称
          */
         private String underlyingIcdName;
 
@@ -604,7 +604,7 @@ public class DeathCertificateVO {
         private Long patientId;
 
         /**
-         * 死者姓名（快照）
+         * 死者姓名
          */
         private String patientName;
 
@@ -699,7 +699,7 @@ public class DeathCertificateVO {
         private String patientNo;
 
         /**
-         * 死者姓名（快照）
+         * 死者姓名
          */
         private String patientName;
 
@@ -709,12 +709,12 @@ public class DeathCertificateVO {
         private Integer gender;
 
         /**
-         * 民族（快照）
+         * 民族
          */
         private String nation;
 
         /**
-         * 出生日期（快照）
+         * 出生日期
          */
         @JsonFormat(pattern = "yyyy-MM-dd")
         private LocalDate birthDate;
@@ -725,7 +725,7 @@ public class DeathCertificateVO {
         private String idCard;
 
         /**
-         * 职业（快照）
+         * 职业
          */
         private String occupation;
 

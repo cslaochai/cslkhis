@@ -46,7 +46,7 @@ public class BizAdverseEvent {
     private Long occurDeptId;
 
     /**
-     * 发生科室名称（快照）
+     * 发生科室名称
      */
     private String occurDeptName;
 
@@ -61,7 +61,7 @@ public class BizAdverseEvent {
     private Long occurWardId;
 
     /**
-     * 发生病区名称（快照）
+     * 发生病区名称
      */
     @TableField(updateStrategy = FieldStrategy.IGNORED)
     private String occurWardName;
@@ -115,7 +115,7 @@ public class BizAdverseEvent {
     private Long reporterId;
 
     /**
-     * 上报人姓名（快照）
+     * 上报人姓名
      */
     private String reporterName;
 
@@ -136,7 +136,7 @@ public class BizAdverseEvent {
     private Long handlerId;
 
     /**
-     * 处理人姓名（快照）
+     * 处理人姓名
      */
     private String handlerName;
 
@@ -157,7 +157,7 @@ public class BizAdverseEvent {
     private Long rectifyById;
 
     /**
-     * 整改人姓名（快照）
+     * 整改人姓名
      */
     private String rectifyByName;
 
@@ -178,7 +178,7 @@ public class BizAdverseEvent {
     private Long closeById;
 
     /**
-     * 结案人姓名（快照）
+     * 结案人姓名
      */
     private String closeByName;
 

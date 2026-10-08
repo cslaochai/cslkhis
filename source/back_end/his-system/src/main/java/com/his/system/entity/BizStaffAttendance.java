@@ -50,12 +50,12 @@ public class BizStaffAttendance extends BaseEntity {
     private Long employeeId;
 
     /**
-     * 姓名（快照）
+     * 姓名
      */
     private String employeeName;
 
     /**
-     * 工号（快照）
+     * 工号
      */
     private String empCode;
 
@@ -77,7 +77,7 @@ public class BizStaffAttendance extends BaseEntity {
     private Long orgId;
 
     /**
-     * 单元名称（快照）
+     * 单元名称
      */
     private String orgName;
 

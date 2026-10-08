@@ -39,33 +39,33 @@ public class BizTcmDecoct extends BaseEntity {
     private Long prescriptionId;
 
     /**
-     * 处方号（快照）
+     * 处方号
      */
     private String prescriptionNo;
 
     /**
-     * 患者ID（快照）
+     * 患者ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
     /**
-     * 患者号（快照）
+     * 患者号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 开方科室（快照）
+     * 开方科室
      */
     private String deptName;
 
     /**
-     * 开方医师（快照）
+     * 开方医师
      */
     private String doctorName;
 
@@ -101,7 +101,7 @@ public class BizTcmDecoct extends BaseEntity {
     private Long pharmacyId;
 
     /**
-     * 代煎药房名称（快照）
+     * 代煎药房名称
      */
     private String pharmacyName;
 
@@ -112,7 +112,7 @@ public class BizTcmDecoct extends BaseEntity {
     private Long operatorId;
 
     /**
-     * 最近一次状态操作人姓名（快照）
+     * 最近一次状态操作人姓名
      */
     private String operatorName;
 

@@ -72,7 +72,7 @@ public class BizConsultation implements Serializable {
     private Long applyDoctorId;
 
     /**
-     * 申请医生姓名（快照）
+     * 申请医生姓名
      */
     private String applyDoctorName;
 
@@ -141,7 +141,7 @@ public class BizConsultation implements Serializable {
     private Long acceptDoctorId;
 
     /**
-     * 接诊医生姓名（快照）
+     * 接诊医生姓名
      */
     private String acceptDoctorName;
 

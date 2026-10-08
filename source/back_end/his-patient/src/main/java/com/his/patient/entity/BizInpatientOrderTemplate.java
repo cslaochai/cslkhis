@@ -31,7 +31,7 @@ public class BizInpatientOrderTemplate extends BaseEntity implements Serializabl
     private Long doctorId;
 
     /**
-     * 医生姓名（快照）
+     * 医生姓名
      */
     private String doctorName;
 

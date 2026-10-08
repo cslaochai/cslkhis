@@ -1,5 +1,7 @@
 package com.his.medicaltech.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -33,7 +35,8 @@ public class CdrProfileGroupVO {
     public static class CdrProfileItemVO {
 
         @Schema(description = "主键（字符串）")
-        private String id;
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long id;
 
         @Schema(description = "标题，如过敏原 / 诊断名")
         private String title;
@@ -46,6 +49,7 @@ public class CdrProfileGroupVO {
         private String time;
 
         @Schema(description = "数据归属档案ID")
-        private String ownerPatientId;
+        @JsonSerialize(using = ToStringSerializer.class)
+        private Long ownerPatientId;
     }
 }

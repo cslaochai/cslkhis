@@ -29,17 +29,17 @@ public class RefundableLineVO {
     private String itemTypeText;
 
     /**
-     * 项目编码（快照）
+     * 项目编码
      */
     private String itemCode;
 
     /**
-     * 项目名称（快照）
+     * 项目名称
      */
     private String itemName;
 
     /**
-     * 规格（快照）
+     * 规格
      */
     private String specification;
 

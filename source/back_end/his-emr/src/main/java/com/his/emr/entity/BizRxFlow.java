@@ -79,7 +79,7 @@ public class BizRxFlow extends BaseEntity {
     private LocalDateTime finishTime;
 
     /**
-     * 处方总金额（快照）
+     * 处方总金额
      */
     private BigDecimal totalAmount;
 }

@@ -45,7 +45,7 @@ public class TransfusionApplyVO implements Serializable {
     private Long admissionId;
 
     /**
-     * 入院号（快照）
+     * 入院号
      */
     private String admissionNo;
 
@@ -66,7 +66,7 @@ public class TransfusionApplyVO implements Serializable {
     private Long patientId;
 
     /**
-     * 患者号（快照）
+     * 患者号
      */
     private String patientNo;
 
@@ -76,7 +76,7 @@ public class TransfusionApplyVO implements Serializable {
     private String patientName;
 
     /**
-     * 性别（快照）（1-男 2-女）
+     * 性别（1-男 2-女）
      */
     private Integer gender;
 
@@ -86,7 +86,7 @@ public class TransfusionApplyVO implements Serializable {
     private String genderText;
 
     /**
-     * 年龄（快照）
+     * 年龄
      */
     private Integer age;
 
@@ -99,17 +99,17 @@ public class TransfusionApplyVO implements Serializable {
     private Long applyDeptId;
 
     /**
-     * 申请科室名称（快照）
+     * 申请科室名称
      */
     private String applyDeptName;
 
     /**
-     * 申请时所在病区名称（快照）
+     * 申请时所在病区名称
      */
     private String applyWardName;
 
     /**
-     * 申请时床号（快照）
+     * 申请时床号
      */
     private String applyBedNo;
 
@@ -120,7 +120,7 @@ public class TransfusionApplyVO implements Serializable {
     private Long applyDoctorId;
 
     /**
-     * 申请医生姓名（快照）
+     * 申请医生姓名
      */
     private String applyDoctorName;
 
@@ -257,7 +257,7 @@ public class TransfusionApplyVO implements Serializable {
     private String crossmatchStatusText;
 
     /**
-     * 配血人姓名（快照）
+     * 配血人姓名
      */
     private String crossmatchDoctorName;
 
@@ -270,7 +270,7 @@ public class TransfusionApplyVO implements Serializable {
     // 发血
 
     /**
-     * 发血人姓名（快照）
+     * 发血人姓名
      */
     private String issueDoctorName;
 
@@ -298,12 +298,12 @@ public class TransfusionApplyVO implements Serializable {
     private String checkNote;
 
     /**
-     * 核对护士1 姓名（快照）
+     * 核对护士1 姓名
      */
     private String checkNurseName;
 
     /**
-     * 核对护士2 姓名（快照）
+     * 核对护士2 姓名
      */
     private String checkNurse2Name;
 
@@ -314,7 +314,7 @@ public class TransfusionApplyVO implements Serializable {
     private LocalDateTime checkTime;
 
     /**
-     * 输注执行护士姓名（快照）
+     * 输注执行护士姓名
      */
     private String infusionNurseName;
 
@@ -373,7 +373,7 @@ public class TransfusionApplyVO implements Serializable {
     private String reactionHandle;
 
     /**
-     * 上报人姓名（快照）
+     * 上报人姓名
      */
     private String reactionReporterName;
 
@@ -406,7 +406,7 @@ public class TransfusionApplyVO implements Serializable {
     private Integer postPlt;
 
     /**
-     * 完成录入人姓名（快照）
+     * 完成录入人姓名
      */
     private String finishDoctorName;
 
@@ -445,7 +445,7 @@ public class TransfusionApplyVO implements Serializable {
     private String cancelReason;
 
     /**
-     * 取消人姓名（快照）
+     * 取消人姓名
      */
     private String cancelDoctorName;
 
@@ -626,7 +626,7 @@ public class TransfusionApplyVO implements Serializable {
          */
         private String approverName;
         /**
-         * 审批人职称（快照）
+         * 审批人职称
          */
         private String approverTitle;
         /**

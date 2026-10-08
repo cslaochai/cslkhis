@@ -26,12 +26,12 @@ public class BizInfectiousReport extends BaseEntity {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -41,7 +41,7 @@ public class BizInfectiousReport extends BaseEntity {
     private Integer gender;
 
     /**
-     * 年龄（快照）
+     * 年龄
      */
     private Integer age;
 
@@ -56,12 +56,12 @@ public class BizInfectiousReport extends BaseEntity {
     private Long inpId;
 
     /**
-     * 发现/就诊科室ID（快照）
+     * 发现/就诊科室ID
      */
     private Long visitDeptId;
 
     /**
-     * 发现/就诊科室（快照）
+     * 发现/就诊科室
      */
     private String visitDeptName;
 
@@ -71,12 +71,12 @@ public class BizInfectiousReport extends BaseEntity {
     private Long diseaseId;
 
     /**
-     * 病种编码（快照）
+     * 病种编码
      */
     private String diseaseCode;
 
     /**
-     * 病种名称（快照）
+     * 病种名称
      */
     private String diseaseName;
 
@@ -86,7 +86,7 @@ public class BizInfectiousReport extends BaseEntity {
     private Integer infectiousClass;
 
     /**
-     * ICD-10（快照）
+     * ICD-10
      */
     private String icd10;
 
@@ -116,7 +116,7 @@ public class BizInfectiousReport extends BaseEntity {
     private Long reportBy;
 
     /**
-     * 填卡医生姓名（快照）
+     * 填卡医生姓名
      */
     private String reportByName;
 

@@ -1,5 +1,7 @@
 package com.his.medicaltech.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -34,7 +36,8 @@ public class CdrEventRowVO implements Serializable {
     /**
      * 来源记录主键（字符串，避免前端丢精度）
      */
-    private String srcId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long srcId;
 
     /**
      * 锚点类型：REGIST-挂号 / ADMISSION-住院 / EMERGENCY-急诊 / PATIENT-患者级
@@ -44,7 +47,8 @@ public class CdrEventRowVO implements Serializable {
     /**
      * 锚点ID（归属不到就诊次时为空，此事件会被单列到"未能归属"区）
      */
-    private String anchorId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long anchorId;
 
     /**
      * 事件时间（各分支已 COALESCE 兜底，不为 null 除非源数据本身全空）

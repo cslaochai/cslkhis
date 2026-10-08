@@ -48,7 +48,7 @@ public class BizDialysisSession extends BaseEntity implements Serializable {
     private Long machineId;
 
     /**
-     * 机位号（快照）
+     * 机位号
      */
     private String machineNo;
 
@@ -65,12 +65,12 @@ public class BizDialysisSession extends BaseEntity implements Serializable {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -86,22 +86,22 @@ public class BizDialysisSession extends BaseEntity implements Serializable {
     private BigDecimal dryWeight;
 
     /**
-     * 处方透析时长分钟（快照）
+     * 处方透析时长分钟
      */
     private Integer durationMin;
 
     /**
-     * 处方血流量（快照）
+     * 处方血流量
      */
     private Integer bloodFlow;
 
     /**
-     * 透析器（快照）
+     * 透析器
      */
     private Integer dialyzer;
 
     /**
-     * 抗凝方式（快照）
+     * 抗凝方式
      */
     private Integer anticoagulant;
 

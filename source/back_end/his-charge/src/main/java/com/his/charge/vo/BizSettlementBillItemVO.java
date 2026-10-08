@@ -27,7 +27,7 @@ public class BizSettlementBillItemVO {
     private Long billId;
 
     /**
-     * 账单号（快照）
+     * 账单号
      */
     private String billNo;
 
@@ -55,13 +55,13 @@ public class BizSettlementBillItemVO {
     private Long encounterId;
 
     /**
-     * 费用归属科室（快照）
+     * 费用归属科室
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 
@@ -71,32 +71,32 @@ public class BizSettlementBillItemVO {
     private Integer itemType;
 
     /**
-     * 项目编码（快照）
+     * 项目编码
      */
     private String itemCode;
 
     /**
-     * 项目名称（快照）
+     * 项目名称
      */
     private String itemName;
 
     /**
-     * 规格（快照）
+     * 规格
      */
     private String specification;
 
     /**
-     * 单位（快照）
+     * 单位
      */
     private String unit;
 
     /**
-     * 单价（快照）
+     * 单价
      */
     private BigDecimal price;
 
     /**
-     * 数量（快照）
+     * 数量
      */
     private BigDecimal quantity;
 

@@ -1,5 +1,7 @@
 package com.his.ai.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -24,7 +26,8 @@ import java.util.List;
 public class PatientFeeExplainVO {
 
     @Schema(description = "账单ID（字符串）")
-    private String billId;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long billId;
 
     @Schema(description = "账单号")
     private String billNo;

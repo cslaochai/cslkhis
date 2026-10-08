@@ -39,7 +39,7 @@ public class BizExamAppointment extends BaseEntity {
     private Long applyId;
 
     /**
-     * 申请单号（快照）
+     * 申请单号
      */
     private String applyNo;
 
@@ -100,17 +100,17 @@ public class BizExamAppointment extends BaseEntity {
     private Long itemId;
 
     /**
-     * 项目编码（快照）
+     * 项目编码
      */
     private String itemCode;
 
     /**
-     * 项目名称（快照）
+     * 项目名称
      */
     private String itemName;
 
     /**
-     * 检查部位（快照）
+     * 检查部位
      */
     private String bodyPart;
 
@@ -125,7 +125,7 @@ public class BizExamAppointment extends BaseEntity {
     private Long deviceId;
 
     /**
-     * 设备编码（快照）
+     * 设备编码
      */
     private String deviceCode;
 
@@ -135,17 +135,17 @@ public class BizExamAppointment extends BaseEntity {
     private String deviceName;
 
     /**
-     * 检查科室ID（快照）
+     * 检查科室ID
      */
     private Long examDeptId;
 
     /**
-     * 检查科室名称（快照）
+     * 检查科室名称
      */
     private String examDeptName;
 
     /**
-     * 检查室（快照）
+     * 检查室
      */
     private String roomName;
 

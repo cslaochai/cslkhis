@@ -30,33 +30,33 @@ public class StocktakeItemVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long drugId;
 
-    /** 药品编码（快照） */
+    /** 药品编码 */
     private String drugCode;
 
-    /** 药品名称（快照） */
+    /** 药品名称 */
     private String drugName;
 
-    /** 规格（快照） */
+    /** 规格 */
     private String specification;
 
-    /** 单位（快照） */
+    /** 单位 */
     private String unit;
 
-    /** 批号（快照） */
+    /** 批号 */
     private String batchNo;
 
-    /** 生产日期（快照） */
+    /** 生产日期 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate productionDate;
 
-    /** 有效期（快照） */
+    /** 有效期 */
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate expiryDate;
 
-    /** 库位（快照） */
+    /** 库位 */
     private String location;
 
-    /** 成本价（快照） */
+    /** 成本价 */
     private BigDecimal costPrice;
 
     /** 快照时已锁定数量 */

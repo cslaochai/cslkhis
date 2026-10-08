@@ -34,7 +34,7 @@ public class HighValueUseDTO {
      */
     private String patientNo;
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
     /**
@@ -46,7 +46,7 @@ public class HighValueUseDTO {
      */
     private Long registId;
     /**
-     * 门诊挂号单号（快照）
+     * 门诊挂号单号
      */
     private String registNo;
     /**

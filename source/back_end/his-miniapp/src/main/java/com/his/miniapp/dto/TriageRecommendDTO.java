@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 /**
- * 智能导诊入参：患者自己描述的主诉原文。
+ * 智能导诊
  */
 @Data
 public class TriageRecommendDTO {

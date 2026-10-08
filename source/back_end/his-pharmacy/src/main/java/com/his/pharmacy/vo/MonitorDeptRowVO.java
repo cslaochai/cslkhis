@@ -17,7 +17,7 @@ public class MonitorDeptRowVO {
     private Long deptId;
 
     /**
-     * 被投诉科室名称（快照）
+     * 被投诉科室名称
      */
     private String deptName;
 }

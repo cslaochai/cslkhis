@@ -40,7 +40,7 @@ public class SurveyDispatchVO implements Serializable {
     private String templateName;
 
     /**
-     * 适用场景（快照）
+     * 适用场景
      */
     private Integer scene;
 
@@ -62,12 +62,12 @@ public class SurveyDispatchVO implements Serializable {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -88,7 +88,7 @@ public class SurveyDispatchVO implements Serializable {
     private Long deptId;
 
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 

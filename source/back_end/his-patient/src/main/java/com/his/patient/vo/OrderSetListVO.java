@@ -51,7 +51,7 @@ public class OrderSetListVO implements Serializable {
     private Long doctorId;
 
     /**
-     * 医生姓名（快照）
+     * 医生姓名
      */
     private String doctorName;
 

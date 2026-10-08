@@ -31,7 +31,7 @@ public class BizDeptCostMonth {
     private Long deptId;
 
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 

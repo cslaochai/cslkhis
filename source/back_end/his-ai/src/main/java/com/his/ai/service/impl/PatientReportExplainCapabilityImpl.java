@@ -212,7 +212,7 @@ public class PatientReportExplainCapabilityImpl implements PatientReportExplainC
         Map<String, SysLabPlainItem> dict = loadDictionary();
 
         PatientReportExplainVO vo = new PatientReportExplainVO();
-        vo.setReportId(String.valueOf(report.getId()));
+        vo.setReportId(report.getId());
         vo.setReportNo(report.getReportNo());
         vo.setItemName(record.getLaboratoryItemName());
         vo.setReportTime(report.getPublishTime() == null ? record.getExecuteTime() : report.getPublishTime());

@@ -42,7 +42,7 @@ public class SurveyAnswerVO implements Serializable {
     private String templateName;
 
     /**
-     * 场景（快照）
+     * 场景
      */
     private Integer scene;
 
@@ -53,7 +53,7 @@ public class SurveyAnswerVO implements Serializable {
     private Long patientId;
 
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
 
@@ -69,7 +69,7 @@ public class SurveyAnswerVO implements Serializable {
     private Long deptId;
 
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 

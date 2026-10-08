@@ -60,7 +60,7 @@ public class RegistBriefVO {
     private Long deptId;
 
     /**
-     * 科室名称（快照）
+     * 科室名称
      */
     private String deptName;
 
@@ -71,7 +71,7 @@ public class RegistBriefVO {
     private Long doctorId;
 
     /**
-     * 医生姓名（快照）
+     * 医生姓名
      */
     private String doctorName;
 

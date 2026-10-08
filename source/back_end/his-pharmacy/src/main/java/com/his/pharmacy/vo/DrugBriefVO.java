@@ -13,13 +13,13 @@ public class DrugBriefVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
-    /** 药品编码（快照） */
+    /** 药品编码 */
     private String drugCode;
 
-    /** 药品名称（快照） */
+    /** 药品名称 */
     private String drugName;
 
-    /** 规格（快照） */
+    /** 规格 */
     private String specification;
 
     /** 单位 */

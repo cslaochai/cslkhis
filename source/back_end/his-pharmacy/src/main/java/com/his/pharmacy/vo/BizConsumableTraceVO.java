@@ -55,23 +55,23 @@ public class BizConsumableTraceVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long consumableId;
     /**
-     * 耗材编码（快照）
+     * 耗材编码
      */
     private String consumableCode;
     /**
-     * 耗材名称（快照）
+     * 耗材名称
      */
     private String consumableName;
     /**
-     * 规格（快照）
+     * 规格
      */
     private String specification;
     /**
-     * 单位（快照）
+     * 单位
      */
     private String unit;
     /**
-     * 注册证号（快照）
+     * 注册证号
      */
     private String regCertNo;
     /**
@@ -84,7 +84,7 @@ public class BizConsumableTraceVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long stockId;
     /**
-     * 批号（快照）
+     * 批号
      */
     private String batchNo;
     /**
@@ -97,11 +97,11 @@ public class BizConsumableTraceVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
     /**
-     * 患者编号（快照）
+     * 患者编号
      */
     private String patientNo;
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
     /**
@@ -124,7 +124,7 @@ public class BizConsumableTraceVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
     /**
-     * 使用科室名称（快照）
+     * 使用科室名称
      */
     private String deptName;
     /**

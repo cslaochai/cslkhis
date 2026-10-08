@@ -99,7 +99,7 @@ public class PatientImagingExplainCapabilityImpl implements PatientImagingExplai
         }
 
         PatientImagingExplainVO vo = new PatientImagingExplainVO();
-        vo.setReportId(String.valueOf(report.getId()));
+        vo.setReportId(report.getId());
         vo.setReportNo(report.getReportNo());
         vo.setItemName(report.getItemName());
         vo.setExamMethod(report.getExamMethod());

@@ -17,7 +17,7 @@ public class IcuStayQueryPageDTO extends PageParam {
     /** 入科单号 */
     private String stayNo;
 
-    /** 患者姓名（快照） */
+    /** 患者姓名 */
     private String patientName;
 
     /** 开始日期 */

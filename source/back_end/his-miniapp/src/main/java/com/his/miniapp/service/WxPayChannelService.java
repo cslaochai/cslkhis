@@ -1,9 +1,12 @@
 package com.his.miniapp.service;
 
 import com.his.miniapp.entity.BizPayOrder;
+
 import java.util.Map;
 
 public interface WxPayChannelService {
+
+    PayUnifiedResult unifiedOrder(BizPayOrder order);
 
     /**
      * 支付单结果。
@@ -21,6 +24,4 @@ public interface WxPayChannelService {
             return new PayUnifiedResult(false, null, errMsg);
         }
     }
-
-    PayUnifiedResult unifiedOrder(BizPayOrder order);
 }

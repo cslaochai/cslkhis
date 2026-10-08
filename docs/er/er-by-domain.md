@@ -85,7 +85,7 @@ erDiagram
     bigint id "主键ID"
     varchar cert_no "证书编号"
     bigint emp_id "签名人员工ID"
-    bigint dept_id "所属科室ID（快照）"
+    bigint dept_id "所属科室ID"
     bigint revoke_by "吊销操作人员工ID"
   }
   sys_tsa_server["时间戳服务注册 · sys_tsa_server"] {
@@ -750,7 +750,7 @@ erDiagram
     bigint id "主键"
     bigint batch_id "批次ID"
     bigint prescription_id "处方ID"
-    bigint doctor_id "开方医生ID（快照）"
+    bigint doctor_id "开方医生ID"
     bigint reviewer_id "点评人员工ID"
   }
   biz_rx_doctor_talk["医师约谈记录 · biz_rx_doctor_talk"] {
@@ -768,7 +768,7 @@ erDiagram
   biz_tcm_decoct["中药代煎单 · biz_tcm_decoct"] {
     bigint id "主键ID（雪花）"
     bigint prescription_id "处方ID"
-    bigint patient_id "患者ID（快照）"
+    bigint patient_id "患者ID"
     bigint pharmacy_id "代煎药房ID"
     bigint operator_id "最近一次状态操作人"
   }
@@ -1040,7 +1040,7 @@ erDiagram
     bigint id "主键ID"
     varchar allocate_no "调配单号"
     bigint bed_id "床位ID"
-    bigint ward_id "病区ID（快照）"
+    bigint ward_id "病区ID"
     bigint own_dept_id "床位归属科室ID"
     bigint use_dept_id "实际使用科室ID"
     bigint wait_id "来源等床记录ID"
@@ -1190,7 +1190,7 @@ erDiagram
     varchar assess_no "评估单号 AS+yyyyMMdd+4位"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint ward_id "病区ID（快照）"
+    bigint ward_id "病区ID"
     bigint assess_nurse_id "评估护士ID（员工ID）"
   }
   biz_nurse_schedule_rule["护理人力配置标准 · biz_nurse_schedule_rule"] {
@@ -1226,7 +1226,7 @@ erDiagram
   biz_nursing_qc_indicator["护理质控指标台账 · biz_nursing_qc_indicator"] {
     bigint id "主键ID（雪花）"
     bigint ward_id "病区ID"
-    bigint dept_id "科室ID（快照）"
+    bigint dept_id "科室ID"
     char stat_month "统计月份 yyyy-MM"
     varchar indicator_code "指标编码"
   }
@@ -1369,10 +1369,10 @@ erDiagram
     bigint id "主键ID"
     varchar sign_no "签名流水号"
     bigint patient_id "患者ID"
-    bigint dept_id "对象所属科室ID（快照）"
+    bigint dept_id "对象所属科室ID"
     bigint prev_sign_id "前一次签名ID"
     bigint signer_id "签名人员工ID"
-    bigint signer_dept_id "签名人科室ID（快照）"
+    bigint signer_dept_id "签名人科室ID"
     bigint cert_id "所用证书ID"
     bigint invalid_by "作废操作人员工ID"
   }
@@ -1665,13 +1665,13 @@ erDiagram
     bigint doctor_id "申请医生ID"
     bigint item_id "检查项目ID"
     bigint device_id "设备ID"
-    bigint exam_dept_id "检查科室ID（快照）"
+    bigint exam_dept_id "检查科室ID"
   }
   biz_exam_image["检查影像帧 · biz_exam_image"] {
     bigint id "主键ID（雪花）"
     bigint apply_id "申请单ID"
     bigint record_id "执行记录ID"
-    bigint patient_id "患者ID（快照）"
+    bigint patient_id "患者ID"
   }
   biz_exam_film["检查胶片用量 · biz_exam_film"] {
     bigint id "主键ID（雪花）"
@@ -1927,7 +1927,7 @@ erDiagram
     bigint id "主键ID（雪花）"
     varchar followup_no "随访单号"
     bigint record_id "麻醉记录ID"
-    bigint apply_id "手术申请单ID（快照）"
+    bigint apply_id "手术申请单ID"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
     bigint followup_doctor_id "随访麻醉医师ID（员工ID）"
@@ -2272,8 +2272,8 @@ erDiagram
     varchar dispense_no "摆药单号 WD+yyyyMMdd+4位"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint ward_id "病区ID（快照）"
-    bigint dept_id "入院科室ID（快照）"
+    bigint ward_id "病区ID"
+    bigint dept_id "入院科室ID"
   }
   biz_ward_dispense_item["住院摆药明细 · biz_ward_dispense_item"] {
     bigint id "主键ID（雪花）"
@@ -2283,7 +2283,7 @@ erDiagram
     bigint order_id "住院医嘱ID"
     bigint admission_id "入院ID（冗余）"
     bigint patient_id "患者ID（冗余）"
-    bigint ward_id "病区ID（快照）"
+    bigint ward_id "病区ID"
     bigint drug_id "药品ID"
     bigint fee_record_id "记账行ID"
     bigint dispenser_id "配药人ID"
@@ -2322,9 +2322,9 @@ erDiagram
     bigint inbound_id "来源入库单ID"
     bigint dispensing_id "发药单ID"
     bigint patient_id "患者ID"
-    bigint regist_id "门诊挂号ID（快照）"
-    bigint admission_id "住院ID（快照）"
-    bigint dept_id "发药科室ID（快照）"
+    bigint regist_id "门诊挂号ID"
+    bigint admission_id "住院ID"
+    bigint dept_id "发药科室ID"
   }
   biz_stocktake["药房盘点单 · biz_stocktake"] {
     bigint id "主键（雪花）"
@@ -2350,8 +2350,8 @@ erDiagram
     date admix_date "调配日期"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint ward_id "病区ID（快照）"
-    bigint dept_id "入院科室ID（快照）"
+    bigint ward_id "病区ID"
+    bigint dept_id "入院科室ID"
   }
   biz_pivas_item["静配中心调配明细 · biz_pivas_item"] {
     bigint id "主键ID（雪花）"
@@ -2361,7 +2361,7 @@ erDiagram
     bigint order_id "住院医嘱ID"
     bigint admission_id "入院ID（冗余）"
     bigint patient_id "患者ID（冗余）"
-    bigint ward_id "病区ID（快照）"
+    bigint ward_id "病区ID"
     bigint drug_id "药品ID"
     bigint auditor_id "审方药师ID（员工ID）"
     bigint compounder_id "调配人ID"
@@ -2747,7 +2747,7 @@ erDiagram
     bigint patient_id "患者ID"
     bigint regist_id "门诊就诊ID"
     bigint inp_id "住院记录ID"
-    bigint dept_id "发现科室ID（快照）"
+    bigint dept_id "发现科室ID"
     bigint report_by "上报人ID"
   }
   biz_infection_monitor["院感目标性监测登记 · biz_infection_monitor"] {
@@ -2772,7 +2772,7 @@ erDiagram
     bigint patient_id "患者ID"
     bigint regist_id "门诊就诊ID"
     bigint inp_id "住院记录ID"
-    bigint visit_dept_id "发现/就诊科室ID（快照）"
+    bigint visit_dept_id "发现/就诊科室ID"
     bigint disease_id "病种ID"
     bigint report_by "填卡医生ID"
   }
@@ -2938,7 +2938,7 @@ erDiagram
     bigint pathway_id "模板ID"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint dept_id "入院科室ID（快照）"
+    bigint dept_id "入院科室ID"
   }
   biz_pathway_variance["临床路径变异登记 · biz_pathway_variance"] {
     bigint id "主键ID（雪花）"
@@ -2959,7 +2959,7 @@ erDiagram
   biz_antibiotic_auth["抗菌药物处方权授权 · biz_antibiotic_auth"] {
     bigint id "主键"
     bigint doctor_id "医师ID"
-    bigint dept_id "科室ID（快照）"
+    bigint dept_id "科室ID"
     tinyint auth_level "授权级别（1-非限制使用级 2-限制使用级 3-特殊使用级）"
   }
   biz_antibiotic_stats["抗菌药物使用监测指标 · biz_antibiotic_stats"] {
@@ -2971,7 +2971,7 @@ erDiagram
   biz_antibiotic_incision_review["I 类切口预防用药点评 · biz_antibiotic_incision_review"] {
     bigint id "主键"
     bigint operation_apply_id "手术申请单ID"
-    bigint admission_id "入院ID（快照）"
+    bigint admission_id "入院ID"
     bigint patient_id "患者ID"
     bigint drug_id "预防用药药品ID"
     bigint reviewer_id "点评人员工ID"
@@ -2981,7 +2981,7 @@ erDiagram
     varchar case_no "病例编号"
     bigint disease_id "病种ID"
     bigint admission_id "住院ID"
-    bigint patient_id "患者ID（快照）"
+    bigint patient_id "患者ID"
   }
   biz_vte_stats["VTE 防控月度指标 · biz_vte_stats"] {
     bigint id "主键"
@@ -2993,8 +2993,8 @@ erDiagram
     bigint id "主键"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint dept_id "科室ID（快照）"
-    bigint ward_id "病区ID（快照）"
+    bigint dept_id "科室ID"
+    bigint ward_id "病区ID"
     bigint assessment_id "来源评估单ID"
     varchar measure_code "措施码"
     bigint executor_id "执行人（员工ID）"
@@ -3003,8 +3003,8 @@ erDiagram
     bigint id "主键"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint dept_id "科室ID（快照）"
-    bigint ward_id "病区ID（快照）"
+    bigint dept_id "科室ID"
+    bigint ward_id "病区ID"
     bigint reporter_id "登记人（员工ID）"
   }
   biz_nutrition_screen["营养风险筛查记录 · biz_nutrition_screen"] {
@@ -3012,8 +3012,8 @@ erDiagram
     varchar screen_no "筛查编号"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint dept_id "科室ID（快照）"
-    bigint ward_id "病区ID（快照）"
+    bigint dept_id "科室ID"
+    bigint ward_id "病区ID"
     bigint screener_id "筛查人（员工ID）"
   }
   biz_diet_plan["膳食方案 · biz_diet_plan"] {
@@ -3021,8 +3021,8 @@ erDiagram
     varchar diet_no "膳食方案编号"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint dept_id "科室ID（快照）"
-    bigint ward_id "病区ID（快照）"
+    bigint dept_id "科室ID"
+    bigint ward_id "病区ID"
     bigint order_id "来源医嘱ID"
     bigint confirmer_id "接收人"
   }
@@ -3031,7 +3031,7 @@ erDiagram
     varchar meal_no "订餐单号"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint dept_id "科室ID（快照）"
+    bigint dept_id "科室ID"
     bigint ward_id "病区ID"
     bigint diet_plan_id "来源膳食方案ID"
     date meal_date "就餐日期"
@@ -3084,7 +3084,7 @@ erDiagram
     varchar stay_no "入科单号"
     bigint admission_id "入院ID"
     bigint patient_id "患者ID"
-    bigint from_dept_id "入科来源科室ID（快照）"
+    bigint from_dept_id "入科来源科室ID"
     bigint ward_id "ICU 病区ID"
     bigint bed_id "ICU 床位ID"
   }

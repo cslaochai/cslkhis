@@ -28,7 +28,7 @@ public class BizTriageRule extends BaseEntity {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 推荐科室名称（快照） */
+    /** 推荐科室名称 */
     private String deptName;
 
     /** 推荐权重（越大越靠前） */

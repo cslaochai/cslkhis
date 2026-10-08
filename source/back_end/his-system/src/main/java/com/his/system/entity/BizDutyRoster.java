@@ -72,7 +72,7 @@ public class BizDutyRoster extends BaseEntity {
     private Long employeeId;
 
     /**
-     * 值班人姓名（快照）
+     * 值班人姓名
      */
     private String employeeName;
 
@@ -114,7 +114,7 @@ public class BizDutyRoster extends BaseEntity {
     private Long substituteEmpId;
 
     /**
-     * 换班后实际值班人姓名（快照）
+     * 换班后实际值班人姓名
      */
     private String substituteEmpName;
 

@@ -42,13 +42,13 @@ public class ExamImageVO {
     private Long recordId;
 
     /**
-     * 患者ID（快照）
+     * 患者ID
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
@@ -58,7 +58,7 @@ public class ExamImageVO {
     private String itemName;
 
     /**
-     * 检查部位（快照）
+     * 检查部位
      */
     private String bodyPart;
 

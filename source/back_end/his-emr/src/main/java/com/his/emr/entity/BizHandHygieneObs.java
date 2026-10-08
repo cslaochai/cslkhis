@@ -28,7 +28,7 @@ public class BizHandHygieneObs extends BaseEntity {
     private Long deptId;
 
     /**
-     * 被观察科室（快照）
+     * 被观察科室
      */
     private String deptName;
 
@@ -53,7 +53,7 @@ public class BizHandHygieneObs extends BaseEntity {
     private Long observerId;
 
     /**
-     * 观察人姓名（快照）
+     * 观察人姓名
      */
     private String observerName;
 

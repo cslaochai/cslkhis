@@ -31,17 +31,17 @@ public class DrgSimResult {
     private Long summaryId;
 
     /**
-     * 患者姓名（快照）
+     * 患者姓名
      */
     private String patientName;
 
     /**
-     * 分组时使用的主诊断编码（快照）
+     * 分组时使用的主诊断编码
      */
     private String mainDiagCode;
 
     /**
-     * 主诊断名称（快照）
+     * 主诊断名称
      */
     private String mainDiagName;
 

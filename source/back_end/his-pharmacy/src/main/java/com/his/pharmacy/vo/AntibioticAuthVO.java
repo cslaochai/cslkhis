@@ -22,14 +22,14 @@ public class AntibioticAuthVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;
 
-    /** 医师姓名（快照） */
+    /** 医师姓名 */
     private String doctorName;
 
-    /** 科室ID（快照） */
+    /** 科室ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
-    /** 科室名称（快照） */
+    /** 科室名称 */
     private String deptName;
 
     /** 职称 */

@@ -15,10 +15,10 @@ public class IncisionCandidateVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long operationApplyId;
 
-    /** 手术申请单号（快照） */
+    /** 手术申请单号 */
     private String applyNo;
 
-    /** 入院ID（快照） */
+    /** 入院ID */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
@@ -26,22 +26,22 @@ public class IncisionCandidateVO {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
-    /** 患者姓名（快照） */
+    /** 患者姓名 */
     private String patientName;
 
-    /** 手术科室（快照） */
+    /** 手术科室 */
     private String deptName;
 
-    /** 手术名称（快照） */
+    /** 手术名称 */
     private String operationName;
 
-    /** 手术编码 ICD-9-CM-3（快照） */
+    /** 手术编码 ICD-9-CM-3 */
     private String operationCode;
 
     /** 手术开始时间（切皮），判定给药时机的锚点 */
     private LocalDateTime operationTime;
 
-    /** 主刀医师（快照） */
+    /** 主刀医师 */
     private String surgeonName;
 
     /** 围手术期抗菌药物医嘱候选（手术前后 24h 内） */

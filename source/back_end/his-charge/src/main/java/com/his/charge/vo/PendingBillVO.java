@@ -1,5 +1,7 @@
 package com.his.charge.vo;
 
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -26,7 +28,8 @@ public class PendingBillVO implements Serializable {
     /**
      * 账单ID（BigINT，序列化成字符串避免前端精度丢失）
      */
-    private String id;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long id;
 
     /**
      * 账单号
