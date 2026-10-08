@@ -1,9 +1,7 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import {computed, onMounted, onUnmounted, reactive, ref, watch} from 'vue'
 import {useRoute} from 'vue-router'
-import {patientGenderText, patientAvatarTone} from '@/lib/patientGender'
-
-const GENDER_TONE_CLASS = { male: 'bg-blue-50 text-blue-600', female: 'bg-pink-50 text-pink-600', unknown: 'bg-slate-100 text-slate-500' }
+import {patientAvatarTone, patientGenderText} from '@/lib/patientGender'
 import {
   ArrowDown,
   ArrowLeft,
@@ -11,13 +9,11 @@ import {
   CircleCheck,
   Clock,
   Coin,
-  CopyDocument,
   Delete,
   Document,
   InfoFilled,
   Loading,
   MagicStick,
-  Monitor,
   Plus,
   Printer,
   Reading,
@@ -29,9 +25,7 @@ import {
   Warning
 } from '@element-plus/icons-vue'
 import {ElMessage, ElMessageBox} from 'element-plus'
-// 批次B：三栏同屏抽出的公共组件
 import PatientBriefBar from '@/components/his/PatientBriefBar.vue'
-import RevisitAppointDialog from '@/components/his/RevisitAppointDialog.vue'
 import {REVISIT_SOURCE} from '@/lib/revisitPolicy'
 import PatientDetailDialog from '@/components/his/PatientDetailDialog.vue'
 import {useCurrentPatientStore} from '@/stores/currentPatient'
@@ -60,14 +54,11 @@ import {
   searchInspectionItem,
   searchLaboratoryItem
 } from '@/api/system'
-import { DICT_TYPE } from '@/lib/dict-cache'
+import {DICT_TYPE} from '@/lib/dict-cache'
 import {getByRegistId, getEmrRecordList} from '@/api/emr'
 import {createAdmissionOrder} from '@/api/admissionOrder'
 import {draftEmrText, extractEmrText, transcribeVoice} from '@/api/ai'
 import {localDateStr, shortQueueNo} from '@/lib/utils'
-// 「号别」「队列状态」一律走 lib/statusColor 这一份口径：
-// 原来队列行只凭 `visitType` 各写一套兜底 —— 列表 `===1 ? 初诊 : 复诊`、患者条 `===2 ? 复诊 : 初诊`，
-// visitType 为 null（队列行没挂到挂号）时一处说「复诊」一处说「初诊」，同一条数据两个相反结论。
 import {QUEUE_STATUS, queueVisitBadgeOf} from '@/lib/statusColor'
 import {
   deleteDiagTemplate,
@@ -84,8 +75,8 @@ import {
   getInspectionTemplates,
   getLaboratoryApplyList,
   getLaboratoryTemplates,
-  getPrevisitByRegist,
   getPrescriptionList,
+  getPrevisitByRegist,
   getRxTemplateDetail,
   getRxTemplates,
   saveDiagTemplates,
@@ -103,20 +94,15 @@ import {addPatientTag, getPatientDetail, getPatientTags, removePatientTag} from 
 import {getInspectionDetail, getLaboratoryDetail, getLaboratoryRecordList} from '@/api/medicaltech'
 import {listItemsByPatient} from '@/api/settlementBill'
 
+const GENDER_TONE_CLASS = {
+  male: 'bg-blue-50 text-blue-600',
+  female: 'bg-pink-50 text-pink-600',
+  unknown: 'bg-slate-100 text-slate-500'
+}
 
-// ========== 状态 ==========
-// 队列状态口径统一到 lib/statusColor.QUEUE_STATUS（QueueStatusEnum 2/3/4/5/6）。
-// 原来本地这份把 4-已就诊 写成红色、5-已退号 写成绿色，与全站（也是 lib/statusColor）正好相反。
 const queueStatusMap: Record<number, { label: string; color: string }> = QUEUE_STATUS
 
 const loading = ref(false)
-/**
- * 批次E/F：「加载中」和「真的没有」必须分开。
- *
- * 选中患者后是 5 个并发请求（既往病历/处方/检查/检验/收费），原实现不看加载状态就渲染
- * 「暂无处方 / 暂无收费记录」—— 医生点开患者的一瞬间会被喂一句假话，等请求回来才自我更正。
- * 这里用一个在途计数把它们兜住：加载中显示「加载中…」，回来之后才有资格说「暂无」。
- */
 const patientDataPending = ref(0)
 const patientDataLoading = computed(() => patientDataPending.value > 0)
 const trackPatientLoad = (p: Promise<any>) => {
@@ -130,43 +116,13 @@ const departments = ref<any[]>([])
 const selectedDeptId = ref<number | null>(null)
 const queueList = ref<any[]>([])
 
-// ========== 顶部搜索切换当前患者 ==========
-// Header 在别处选中患者后会带 patientId 跳到这里（或本页直接选中）。这里决定「能不能接」：
-// 只有患者出现在今日候诊队列（即有当日挂号）才允许进入接诊流程 —— 开单要绑挂号单，
-// 主档行没有 registId。不在队列时不再让这次搜索落空：提示 + 把患者交回详情框看档案。
-//
-// 时序坑：从别的页面搜患者跳过来时，本组件 onMounted 早于队列接口返回，
-// 此刻 queueList 还是空的，不能立刻判定「不在队列」——先把患者挂起，等队列到了再判。
 const currentPatientStore = useCurrentPatientStore()
 const route = useRoute()
 const queueLoaded = ref(false)
-/** 已处理过的切换时间戳，避免 watch 与 onMounted 重复消费同一次切换 */
 let handledSwitchAt = 0
-/** 待判定患者（队列还没加载完时暂存） */
 let pendingSwitch: any = null
-
-/**
- * 本次进入医生站是「为某个特定患者而来」（顶部搜索跳转 / 刷新恢复 / URL 带 patientId）。
- * 为 true 时首次加载**不**自动选中队列里正在就诊的患者：医生是来找人的，
- * 先选中别人等于把「找人」变成「切换到别人」，而开单挂当前患者。
- * 由 onMounted 设置，applyPendingSwitch 落地后复位（不影响之后的手动操作）。
- */
 let enteredWithTarget = false
-
-/**
- * URL 上显式带了 patientId 且会话里没有当前患者（手输 URL / 外链进入）—— 这算一次「用户意图」，
- * 让 applyPendingSwitch 给反馈（提示 + 交回详情框）。
- * 与「切菜单重建」的区别：那种情况 store 里**有**患者（会话级持久化恢复的），不该重复提示。
- */
 let urlIntent = false
-
-/**
- * 队列优先级：就诊中 > 候诊中 > 已完成 > 已过号 > 已退号。
- *
- * 列表显示（filteredQueue）与「该接哪一条」（pickQueueRow）**必须共用这一份**：
- * 两处各写一套的后果是「列表把复诊排在第一位，顶栏搜索却选中了初诊那条」——
- * 医生按列表顺序理解，页面按另一套逻辑选人。
- */
 const QUEUE_STATUS_ORDER: Record<string, number> = {3: 0, 2: 1, 4: 2, 5: 3, 6: 4}
 
 /** 队列行比较器：先状态优先级，同状态按到达时间，再按序号（保证排序稳定） */
@@ -182,15 +138,6 @@ const compareQueueRow = (a: any, b: any) => {
   return (a.sequenceNo || 0) - (b.sequenceNo || 0)
 }
 
-/**
- * 同一个患者今天可能有多条队列记录（初诊 + 复诊 / 多次挂号），挑出「该接的那一条」。
- *
- * 不能直接 `find()`：后端 getTodayQueueList 是 `orderByAsc(sequence_no)`，
- * find 撞上的是**序号最小的那条 = 初诊那一条**，哪怕它已经就诊完成、而下午的复诊还在候诊。
- * 危害在于 selectPatient(row) 会把这条的 `registId` 写进 recordForm ——
- * 也就是**病历 / 医嘱挂在哪一次就诊上**：接错诊次 = 给已完成的那次继续写病历
- * （复诊自带 revisitRecordId 要求回原病历，口径更不能靠数组顺序碰运气）。
- */
 const pickQueueRow = (rows: any[]) => {
   if (!rows || !rows.length) return null
   return [...rows].sort(compareQueueRow)[0]
@@ -200,11 +147,6 @@ const applyPendingSwitch = () => {
   const p = pendingSwitch
   if (!p) return
   pendingSwitch = null
-  // 这次是不是「用户在顶栏主动选的人」？只有用户主动选人才给成功 / 警告提示。
-  // 切菜单会让本组件卸载重建，而 store 是会话级持久化的（患者还在），
-  // 靠组件自己的变量判断会把每次重建都当成一次新切换 —— 现象是每点一个菜单
-  // 弹一次「已切换接诊患者 xxx」。提示跟着「用户选人」与「手输 URL 的显式意图」，
-  // 不跟「组件重建」。
   const notify = currentPatientStore.consumeSwitchNotice() || urlIntent
   urlIntent = false
   // 同一患者今天多条队列时，挑「该接的那一条」而不是数组第一条（见 pickQueueRow）
@@ -220,32 +162,15 @@ const applyPendingSwitch = () => {
       ElMessage.warning(`${p.patientName || '该患者'} 不在您的今日候诊队列中，已改为展示患者档案`)
       currentPatientStore.requestDetail(p.id)
     }
-    // 不是用户主动选的（切菜单重建 / 会话恢复）且人已不在队列 → 静默收摊：
-    // 不弹档也不提示，否则跨天残留会让医生每点一次菜单就被弹一次档案。
-    // 顶栏那条无论哪种来源都要回滚 —— 条子说「当前患者是A」而页面没选中任何人，
-    // 在防开错人的场景里比不显示更危险。
-    // ⚠ 必须用 toStorePatient 映射：currentPatient 存的是**队列行**，它的 id 是队列号不是患者 id，
-    //   直接 syncPatient(currentPatient.value) 会让顶栏拿队列 id 去查患者主档（实测 500：
-    //   GET /patient/getById?patientId=2990000000000000903）。
-    // 用 syncPatient/syncClear：它们不动 switchedAt，不会把这次回滚又当成一次新切换。
     if (currentPatient.value) {
       currentPatientStore.syncPatient(toStorePatient(currentPatient.value))
     } else {
       currentPatientStore.syncClear()
     }
   }
-  // 本次「带目标进入」已落地（选中了 or 判定为不在队列），复位，
-  // 之后医生在页面里手动换人、叫号都不受这次进入的影响。
   enteredWithTarget = false
 }
 
-/**
- * 队列行 → 「当前患者」条所需的身份字段。
- *
- * 队列行的 `id` 是**队列号**（biz_queue.id），患者主档 id 在 `patientId` 上 —— 两者都是雪花 ID、
- * 长度一样，混用不会报类型错，只会拿队列号去查主档（查不到 → 500 或空白）。
- * 这个字段名差异踩过一次（见上），所以映射只留这一处，别在别处手写对象字面量。
- */
 const toStorePatient = (row: any) => ({
   id: String(row.patientId),
   patientName: row.patientName,
@@ -286,8 +211,6 @@ const filteredTodoList = computed(() => {
   )
 })
 
-// 当前叫号患者（同一患者/多位患者可能有多条 status=3，用 pickQueueRow 稳定取「最早该接的那条」，
-// 与列表排序同口径；直接 find 取的是后端序号最小的那条，不稳定）
 const currentCalledPatient = computed(() => {
   return pickQueueRow(queueList.value.filter((q: any) => q.queueStatus === 3))
 })
@@ -296,11 +219,6 @@ const waitingCount = computed(() => {
   return queueList.value.filter((q: any) => q.queueStatus === 2).length
 })
 
-/**
- * 叫号面板「下一位」预览：与后端 callNext 取号同口径
- * （IFNULL(triage_level,4) ASC, sequence_no ASC），医生点「接诊下一位」接到的就应该是这一条。
- * 排序写不一致的后果：面板预告 A、实际叫到 B，医生按面板理解现场。
- */
 const nextWaiting = computed(() => {
   const waiting = queueList.value.filter((q: any) => q.queueStatus === 2)
   if (!waiting.length) return null
@@ -472,8 +390,8 @@ const handleCopyLastExam = async () => {
     const res = await getEmrRecordList({patientId})
     // 后端按 createTime 倒序；排除本次病历（同一次挂号产生的记录）
     const last = (res.data || []).find((r: any) =>
-      String(r.registId) !== String(recordForm.registId ?? '')
-      && String(r.id) !== String(recordForm.id ?? ''))
+        String(r.registId) !== String(recordForm.registId ?? '')
+        && String(r.id) !== String(recordForm.id ?? ''))
     if (!last) {
       ElMessage.info('该患者没有可复制的既往查体')
       return
@@ -483,7 +401,9 @@ const handleCopyLastExam = async () => {
       ElMessage.info('上次病历未填写查体所见')
       return
     }
-    copied.forEach((k) => { recordForm[k] = last[k] })
+    copied.forEach((k) => {
+      recordForm[k] = last[k]
+    })
     examToggled.value = true
     ElMessage.success(`已复制 ${last.visitDate || '上次'} 的查体所见（${copied.length} 项），请核对修改`)
   } finally {
@@ -1501,7 +1421,8 @@ const applyAllExtractFields = () => {
   let count = 0
   rows.forEach((row: any) => {
     if (!canApplyField(row?.field)) return
-    ;(recordForm as any)[row.field] = row.value
+        ;
+    (recordForm as any)[row.field] = row.value
     if (!extractAppliedFields.value.includes(row.field)) {
       extractAppliedFields.value.push(row.field)
     }
@@ -1604,10 +1525,16 @@ const openVoiceDialog = () => {
 
 // 弹窗关闭/录音丢弃时统一回收：停计时器、断麦克风、弃录音块
 const closeVoiceDialog = () => {
-  if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null }
+  if (voiceTimer) {
+    clearInterval(voiceTimer);
+    voiceTimer = null
+  }
   if (voiceRecorder && voiceRecorder.state !== 'inactive') {
     voiceRecorder.onstop = null
-    try { voiceRecorder.stop() } catch (e) { /* 媒体流已释放 */ }
+    try {
+      voiceRecorder.stop()
+    } catch (e) { /* 媒体流已释放 */
+    }
   }
   voiceRecorder = null
   if (voiceStream) {
@@ -1624,16 +1551,18 @@ const startVoiceRecord = async () => {
     return
   }
   try {
-    voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    voiceStream = await navigator.mediaDevices.getUserMedia({audio: true})
   } catch (e) {
     ElMessage.error('无法访问麦克风，请检查浏览器权限设置')
     return
   }
   voiceMime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
-    .find(t => MediaRecorder.isTypeSupported(t)) || ''
+      .find(t => MediaRecorder.isTypeSupported(t)) || ''
   voiceChunks = []
-  voiceRecorder = new MediaRecorder(voiceStream, voiceMime ? { mimeType: voiceMime } : undefined)
-  voiceRecorder.ondataavailable = (e: any) => { if (e.data.size > 0) voiceChunks.push(e.data) }
+  voiceRecorder = new MediaRecorder(voiceStream, voiceMime ? {mimeType: voiceMime} : undefined)
+  voiceRecorder.ondataavailable = (e: any) => {
+    if (e.data.size > 0) voiceChunks.push(e.data)
+  }
   voiceRecorder.start()
   voiceRecording.value = true
   voiceSeconds.value = 0
@@ -1645,14 +1574,17 @@ const startVoiceRecord = async () => {
 
 const stopVoiceRecord = () => {
   if (!voiceRecorder || voiceRecorder.state === 'inactive') return
-  if (voiceTimer) { clearInterval(voiceTimer); voiceTimer = null }
+  if (voiceTimer) {
+    clearInterval(voiceTimer);
+    voiceTimer = null
+  }
   // 不在这里复位 voiceRecording：stop() 到 onstop 之间若把按钮恢复成「开始录音」，
   // 转写还没开始就出现可点按钮（再点一次会造出两段录音），转写中状态也会被吞掉；
   // 复位交给 onstop 里的 closeVoiceDialog，与 voiceTranscribing 同步块内切换，无中间态
   const duration = voiceSeconds.value
   const recorder = voiceRecorder
   recorder.onstop = async () => {
-    const blob = new Blob(voiceChunks, { type: voiceMime || 'audio/webm' })
+    const blob = new Blob(voiceChunks, {type: voiceMime || 'audio/webm'})
     closeVoiceDialog()
     if (blob.size > 0) await doTranscribe(blob, duration)
   }
@@ -1689,7 +1621,7 @@ const fillVoiceText = (): boolean => {
     return false
   }
   recordForm.presentIllness = recordForm.presentIllness
-    ? `${recordForm.presentIllness}\n${text}` : text
+      ? `${recordForm.presentIllness}\n${text}` : text
   return true
 }
 
@@ -2645,7 +2577,7 @@ const handleSaveRecord = async () => {
       presentIllness: recordForm.presentIllness,
       // G-10：仅当本会话用过 AI 草稿且终稿已与其不同才带草稿原文（后端据此算 diff 留痕）
       aiDraftPresentIllness: (aiDraftAppliedText.value && recordForm.presentIllness !== aiDraftAppliedText.value)
-        ? aiDraftAppliedText.value : undefined,
+          ? aiDraftAppliedText.value : undefined,
       allergyHistory: recordForm.allergyHistory,
       pastHistory: recordForm.pastHistory,
       personalHistory: recordForm.personalHistory,
@@ -3014,11 +2946,13 @@ const handleViewInspectionReport = async (item: any) => {
       ${examImagesHtml(data.images, '检查')}
       ${!report.reportNo && !record.resultConclusion
           ? '<div class="border-t pt-3 text-xs text-slate-400">该检查尚无报告内容（当前状态：'
-            + escapeHtml(item.execStatusText) + '）</div>' : ''}
+          + escapeHtml(item.execStatusText) + '）</div>' : ''}
     </div>`,
       '检查报告详情',
-      {dangerouslyUseHTMLString: true, confirmButtonText: '关闭',
-        customStyle: {'max-width': '70%', 'width': '70%'}}
+      {
+        dangerouslyUseHTMLString: true, confirmButtonText: '关闭',
+        customStyle: {'max-width': '70%', 'width': '70%'}
+      }
   )
 }
 
@@ -3056,8 +2990,8 @@ const handleViewLaboratoryReport = async (item: any) => {
         <div class="border-t pt-3">
           <div class="flex items-center justify-between mb-2">
             <p class="font-bold text-slate-700">检验结果明细（共 ${results.length} 项，异常 ${abnormalCount} 项${
-              unjudgedCount > 0 ? `，未判定 ${unjudgedCount} 项` : ''
-            }）</p>
+          unjudgedCount > 0 ? `，未判定 ${unjudgedCount} 项` : ''
+      }）</p>
           </div>
           <table class="w-full text-sm border-collapse">
             <thead>
@@ -3071,18 +3005,18 @@ const handleViewLaboratoryReport = async (item: any) => {
             </thead>
             <tbody>
               ${results.map((r: any) => {
-                // 一律用后端算好的 abnormalFlagText。
-                // 不要用 abnormalFlag 写三目判断：未判定时它也是 0，与「正常」同值，
-                // 非 1/2/3 就显示「正常」会把「不知道」当成「正常」给医生看。
-                const flagText = r.abnormalFlagText || '—'
-                const isAbnormal = flagText === '偏高' || flagText === '偏低' || flagText === '异常'
-                const isUnjudged = flagText === '未判定'
-                const tagClass = isAbnormal
-                    ? 'bg-red-100 text-red-600'
-                    : isUnjudged
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'bg-green-100 text-green-600'
-                return `
+        // 一律用后端算好的 abnormalFlagText。
+        // 不要用 abnormalFlag 写三目判断：未判定时它也是 0，与「正常」同值，
+        // 非 1/2/3 就显示「正常」会把「不知道」当成「正常」给医生看。
+        const flagText = r.abnormalFlagText || '—'
+        const isAbnormal = flagText === '偏高' || flagText === '偏低' || flagText === '异常'
+        const isUnjudged = flagText === '未判定'
+        const tagClass = isAbnormal
+            ? 'bg-red-100 text-red-600'
+            : isUnjudged
+                ? 'bg-amber-100 text-amber-700'
+                : 'bg-green-100 text-green-600'
+        return `
                 <tr class="${isAbnormal ? 'bg-red-50' : isUnjudged ? 'bg-amber-50' : ''}">
                   <td class="border border-slate-300 px-3 py-2">${r.laboratoryItemName}</td>
                   <td class="border border-slate-300 px-3 py-2 ${isAbnormal ? 'text-red-600 font-bold' : ''}">${r.resultValue || '-'}</td>
@@ -3093,7 +3027,8 @@ const handleViewLaboratoryReport = async (item: any) => {
                     ${isUnjudged && r.judgeNote ? `<div class="mt-0.5 text-[11px] text-slate-500">${r.judgeNote}</div>` : ''}
                   </td>
                 </tr>
-              `}).join('')}
+              `
+      }).join('')}
             </tbody>
           </table>
         </div>
@@ -3443,24 +3378,17 @@ const arriveText = computed(() => {
 
 <template>
   <div class="flex h-[var(--his-page-h)] gap-3">
-    <!-- 左栏：候诊队列 / 既往就诊（常驻窄列） -->
     <div class="flex w-[var(--his-queue-col-w)] shrink-0 flex-col gap-3">
-      <!--
-        当前叫号面板：按真实 HIS「诊室候诊大屏」的缩小版做，不是信息卡片。
-        口径：① 视觉主体是「号」——正在就诊的序号用特大号字砸出来，医生隔两米能瞟到；
-        ② 诊室灯（接诊中/暂离/空闲）独立成状态点，不混在按钮颜色里；
-        ③ 「下一位」预览与后端 callNext 取号同口径（见 nextWaiting），面板预告的人=点按键叫到的人。
-      -->
       <div class="call-board shrink-0 rounded-lg p-3.5 shadow-sm">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-1.5">
-            <span class="call-light"
-                  :class="doctorPaused ? 'is-away' : (currentCalledPatient ? 'is-busy' : 'is-idle')"></span>
-            <span class="text-xs font-bold tracking-wide text-sky-100">{{
+            <span :class="doctorPaused ? 'is-away' : (currentCalledPatient ? 'is-busy' : 'is-idle')"
+                  class="call-light"></span>
+            <span class="text-xs font-bold tracking-wide text-slate-700">{{
                 doctorPaused ? '暂离中' : (currentCalledPatient ? '接诊中' : '空闲')
               }}</span>
           </div>
-          <span class="rounded bg-white/10 px-1.5 py-0.5 text-xs font-medium text-sky-200">候诊 {{
+          <span class="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">候诊 {{
               waitingCount
             }} 人</span>
         </div>
@@ -3468,65 +3396,59 @@ const arriveText = computed(() => {
         <!-- 正在就诊：大号号码 + 姓名（窄列必须 truncate，否则名字挤成竖排） -->
         <div v-if="currentCalledPatient" class="mt-2">
           <div class="flex items-end gap-2">
-            <div class="call-no leading-none text-white">{{ shortQueueNo(currentCalledPatient.queueNo) || '—' }}</div>
+            <div class="call-no leading-none text-[#1269B5]">{{
+                shortQueueNo(currentCalledPatient.queueNo) || '—'
+              }}
+            </div>
             <div class="min-w-0 flex-1 pb-1">
-              <div class="truncate text-lg font-bold leading-tight text-white">
+              <div class="truncate text-lg font-bold leading-tight text-slate-900">
                 {{ currentCalledPatient.patientName }}
               </div>
-              <div class="mt-0.5 flex items-center gap-1 text-xs text-sky-200">
+              <div class="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
                 <span>{{ patientGenderText(currentCalledPatient.gender) }} {{ currentCalledPatient.age }}岁</span>
                 <span v-if="currentCalledPatient.registType === 3"
-                      class="rounded bg-red-500/90 px-1 font-bold text-white">急</span>
+                      class="rounded bg-red-500 px-1 font-bold text-white">急</span>
               </div>
             </div>
           </div>
-          <div class="mt-1.5 flex items-center justify-between text-xs text-sky-200">
+          <div class="mt-1.5 flex items-center justify-between text-xs text-slate-500">
             <span>已等待 {{ calcWaitMinutes(currentCalledPatient) }} 分钟</span>
-            <span class="min-w-0 truncate pl-2 text-sky-200/70">{{ currentCalledPatient.patientNo }}</span>
+            <span class="min-w-0 truncate pl-2 text-slate-400">{{ currentCalledPatient.patientNo }}</span>
           </div>
         </div>
         <div v-else class="mt-2 flex h-[74px] items-center">
-          <span class="text-sm leading-6 text-sky-200/70">{{
+          <span class="text-sm leading-6 text-slate-400">{{
               doctorPaused ? '已暂离，叫号将跳过本诊室' : '尚未叫号，点击下方「接诊下一位」开始'
             }}</span>
         </div>
 
         <!-- 下一位预览：排序口径 = 后端 callNext（危重级别优先 → 序号） -->
-        <div class="mt-2 flex items-center gap-2 rounded-md bg-white/5 px-2 py-1.5 text-xs">
-          <span class="shrink-0 font-medium text-sky-300/90">下一位</span>
+        <div class="mt-2 flex items-center gap-2 rounded-md bg-slate-50 px-2 py-1.5 text-xs">
+          <span class="shrink-0 font-medium text-slate-500">下一位</span>
           <template v-if="nextWaiting">
-            <span class="shrink-0 font-bold text-white">{{ shortQueueNo(nextWaiting.queueNo) }}</span>
-            <span class="min-w-0 truncate text-sky-100">{{ nextWaiting.patientName }}</span>
+            <span class="shrink-0 font-bold text-slate-900">{{ shortQueueNo(nextWaiting.queueNo) }}</span>
+            <span class="min-w-0 truncate text-slate-700">{{ nextWaiting.patientName }}</span>
             <span v-if="nextWaiting.triageLevel && nextWaiting.triageLevel <= 2"
-                  class="ml-auto shrink-0 rounded bg-red-500/80 px-1 text-[10px] font-bold text-white">
+                  class="ml-auto shrink-0 rounded bg-red-500 px-1 text-[10px] font-bold text-white">
               {{ nextWaiting.triageLevel }}级
             </span>
           </template>
-          <span v-else class="text-sky-200/50">队列已空</span>
+          <span v-else class="text-slate-400">队列已空</span>
         </div>
 
         <div class="mt-2.5 flex gap-2">
-          <el-button type="primary" class="!flex-1" :icon="VideoPlay"
-                     :disabled="doctorPaused || !waitingCount"
+          <el-button :disabled="doctorPaused || !waitingCount" :icon="VideoPlay" class="!flex-1"
+                     type="primary"
                      @click="handleCallNext">接诊下一位
           </el-button>
-          <el-button class="!ml-0 !px-4" :icon="RefreshRight" :disabled="!currentCalledPatient || doctorPaused"
+          <el-button :disabled="!currentCalledPatient || doctorPaused" :icon="RefreshRight" class="!ml-0 !px-4"
                      @click="handleRecallPatient">重呼
           </el-button>
         </div>
-        <el-button :type="doctorPaused ? 'success' : 'warning'" plain class="mt-2 !w-full" :icon="VideoPause"
+        <el-button :icon="VideoPause" :type="doctorPaused ? 'success' : 'warning'" class="mt-2 !w-full" plain
                    @click="handlePause">{{ doctorPaused ? '恢复接诊' : '暂离' }}
         </el-button>
       </div>
-      <!--
-        左栏只做一件事：今天的候诊队列。
-        「历史就诊」一度挂在这里当第二个页签，那是维度错了 ——
-        历史就诊是**患者级、跨就诊次**的纵向数据（这个人来过几次、每次做了什么），
-        而这一列是**诊次级**的今日队列，两者不同维度。塞进来的后果是：264px 放不下
-        （日期断行、科室名竖排），只能靠折叠遮掩；而且它只拉 recordStatus=3（已归档病历），
-        未归档的既往诊次根本看不到，本身就是残的。
-        已挪到患者条上的「历史就诊」入口：患者详情弹窗内嵌 CDR 全景时间轴（按就诊次组织）。
-      -->
       <div class="flex min-h-0 flex-1 flex-col rounded-lg border border-slate-200 bg-white shadow-sm">
         <div class="flex shrink-0 items-center gap-1 border-b border-slate-200 px-2 py-2">
           <span class="pl-1 text-sm font-bold text-slate-700">候诊 {{ waitingCount }}</span>
@@ -3534,25 +3456,25 @@ const arriveText = computed(() => {
         </div>
         <!-- 搜索框 -->
         <div class=" border-slate-100 px-4 py-2">
-          <el-input v-model="queueSearch" placeholder="搜索姓名、就诊号..." :prefix-icon="Search" size="small"
-                    clearable/>
+          <el-input v-model="queueSearch" :prefix-icon="Search" clearable placeholder="搜索姓名、就诊号..."
+                    size="small"/>
         </div>
         <!-- 过滤按钮 -->
         <div class="flex items-center gap-1 border-slate-100 px-4 py-2">
           <el-button
               v-for="f in [{ label: '全部', value: 'all' }, { label: '候诊', value: 'waiting' }, { label: '急诊', value: 'emergency' }]"
-              :key="f.value" size="small" class="!rounded-md"
-              :type="queueFilter === f.value ? 'primary' : ''"
-              :plain="queueFilter !== f.value"
+              :key="f.value" :plain="queueFilter !== f.value" :type="queueFilter === f.value ? 'primary' : ''"
+              class="!rounded-md"
+              size="small"
               @click="queueFilter = f.value"
           >{{ f.label }}
           </el-button>
         </div>
         <!-- 患者列表 -->
-        <div class="flex-1 overflow-y-auto" v-loading="loading">
+        <div v-loading="loading" class="flex-1 overflow-y-auto">
           <div v-for="row in filteredQueue" :key="row.id"
-               class="group cursor-pointer border-y border-slate-100 px-4 py-3 transition-colors hover:bg-slate-50"
                :class="{ 'bg-blue-50 border-l-2 border-l-blue-500': currentPatient?.id === row.id }"
+               class="group cursor-pointer border-y border-slate-100 px-4 py-3 transition-colors hover:bg-slate-50"
                @click="selectPatient(row)"
           >
             <div class="flex items-center justify-between">
@@ -3598,15 +3520,15 @@ const arriveText = computed(() => {
                   等待 {{ calcWaitMinutes(row) }}分钟
                 </span>
               </div>
-              <el-button type="primary" size="small" link v-if="row.queueStatus === 2"
-                         class="opacity-0 group-hover:opacity-100 transition-opacity"
+              <el-button v-if="row.queueStatus === 2" class="opacity-0 group-hover:opacity-100 transition-opacity" link size="small"
+                         type="primary"
                          @click.stop="handleCallSpecific(row)">
                 呼叫
               </el-button>
               <!-- 回诊：叫下一位时被自动收口（队列 4）但病历并未结诊提交（挂号单不是 4）的行，
                    允许本人重新叫回就诊中 —— 检查结果回来后看第二眼是门诊高频动作 -->
-              <el-button type="warning" size="small" link v-if="row.queueStatus === 4 && row.registStatus !== 4"
-                         class="opacity-0 group-hover:opacity-100 transition-opacity"
+              <el-button v-if="row.queueStatus === 4 && row.registStatus !== 4" class="opacity-0 group-hover:opacity-100 transition-opacity" link size="small"
+                         type="warning"
                          @click.stop="handleCallSpecific(row)">
                 回诊
               </el-button>
@@ -3618,9 +3540,11 @@ const arriveText = computed(() => {
       </div>
 
       <!-- 个人模板/套餐：低频入口，收成一个下拉，不再占常驻位 -->
-      <el-dropdown trigger="click" placement="top-start" class="shrink-0">
-        <el-button size="small" class="w-full">模板 / 套餐
-          <el-icon class="ml-1"><ArrowDown/></el-icon>
+      <el-dropdown class="shrink-0" placement="top-start" trigger="click">
+        <el-button class="w-full" size="small">模板 / 套餐
+          <el-icon class="ml-1">
+            <ArrowDown/>
+          </el-icon>
         </el-button>
         <template #dropdown>
           <el-dropdown-menu>
@@ -3641,25 +3565,27 @@ const arriveText = computed(() => {
         <Reading class="mb-4 h-16 w-16 opacity-30"/>
         <p class="text-lg font-medium">未开始叫号</p>
         <p class="mt-2 text-sm">
-          {{ waitingCount > 0
-            ? `今日候诊 ${waitingCount} 人，点击「接诊下一位」开始`
-            : '今日没有挂到本诊室的患者；新挂号会自动刷进队列，也可手动刷新' }}
+          {{
+            waitingCount > 0
+                ? `今日候诊 ${waitingCount} 人，点击「接诊下一位」开始`
+                : '今日没有挂到本诊室的患者；新挂号会自动刷进队列，也可手动刷新'
+          }}
         </p>
         <div class="mt-4 flex items-center gap-2">
-          <el-button type="primary" size="large" @click="handleCallNext">
+          <el-button size="large" type="primary" @click="handleCallNext">
             <el-icon class="mr-1">
               <VideoPlay/>
             </el-icon>
             接诊下一位
           </el-button>
-          <el-button size="large" :icon="RefreshRight" @click="loadData">刷新队列</el-button>
+          <el-button :icon="RefreshRight" size="large" @click="loadData">刷新队列</el-button>
         </div>
       </div>
 
       <template v-else>
         <!-- 患者条：压成 1 行。身份明细与标签都在「患者详情」弹窗里，条上只留动作按钮 -->
-        <PatientBriefBar :patient="currentPatient" :detail="patientDetail" :record="recordForm"
-                         :arrive-text="arriveText"
+        <PatientBriefBar :arrive-text="arriveText" :detail="patientDetail" :patient="currentPatient"
+                         :record="recordForm"
                          @open-charge="showChargeDrawer = true" @open-tags="handleOpenTagDialog"
                          @open-detail="showPatientDetail = true">
         </PatientBriefBar>
@@ -3667,15 +3593,15 @@ const arriveText = computed(() => {
         <div class="flex min-h-0 flex-1 gap-3">
           <!-- 次栏：病历（对调后的固定 520px 单列文书，真实 HIS 口径：模板化低频录入，不与医嘱抢宽度） -->
           <div :class="recordColCollapsed ? 'w-9' : 'w-[520px]'"
-              class="relative flex min-w-0 shrink-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200">
+               class="relative flex min-w-0 shrink-0 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-200">
             <!-- 标题行 = 折叠开关（只在 ≤1600px 可点，见脚本里的 COMPACT_BREAKPOINT）；宽屏退化为纯标题 -->
-            <button v-if="compactViewport" type="button"
-                    class="flex w-full shrink-0 cursor-pointer items-center justify-between gap-1 border-b border-slate-200 bg-slate-50 text-left transition-colors hover:bg-slate-100"
-                    :class="recordCollapsed ? 'flex-col px-1 py-2' : 'px-3 py-2'"
+            <button v-if="compactViewport" :class="recordCollapsed ? 'flex-col px-1 py-2' : 'px-3 py-2'"
                     :title="recordCollapsed ? '展开病历' : '收起病历面板'"
+                    class="flex w-full shrink-0 cursor-pointer items-center justify-between gap-1 border-b border-slate-200 bg-slate-50 text-left transition-colors hover:bg-slate-100"
+                    type="button"
                     @click="recordCollapsed = !recordCollapsed">
-              <span class="text-sm font-bold text-slate-700"
-                    :class="recordCollapsed ? '[writing-mode:vertical-rl] text-xs tracking-widest' : ''">病历</span>
+              <span :class="recordCollapsed ? '[writing-mode:vertical-rl] text-xs tracking-widest' : ''"
+                    class="text-sm font-bold text-slate-700">病历</span>
               <span v-if="!recordCollapsed" class="truncate text-xs text-slate-400">主诉 / 查体 / 诊断</span>
               <el-icon class="shrink-0 text-slate-400">
                 <ArrowRight v-if="recordCollapsed"/>
@@ -3695,7 +3621,7 @@ const arriveText = computed(() => {
                 <section>
                   <div class="mb-2 flex items-center justify-between">
                     <h3 class="text-base font-bold text-slate-800">主诉与病史</h3>
-                    <el-button type="primary" link @click="openExtractDialog">
+                    <el-button link type="primary" @click="openExtractDialog">
                       智能录入
                     </el-button>
                   </div>
@@ -3706,7 +3632,9 @@ const arriveText = computed(() => {
                         <span class="text-sm font-bold text-sky-800">预问诊报告</span>
                         <span class="text-xs text-slate-500">
                           {{ previsitSourceText(previsitInfo.summarySource) }}
-                          <template v-if="previsitInfo.createTime"> · {{ String(previsitInfo.createTime).slice(0, 16).replace('T', ' ') }}</template>
+                          <template v-if="previsitInfo.createTime"> · {{
+                              String(previsitInfo.createTime).slice(0, 16).replace('T', ' ')
+                            }}</template>
                         </span>
                       </div>
                       <div class="space-y-1.5 text-sm leading-6 text-slate-800">
@@ -3724,65 +3652,65 @@ const arriveText = computed(() => {
                     <div>
                       <label class="mb-1 block text-sm font-medium text-slate-600">主诉 <span
                           class="text-red-500">*</span></label>
-                      <el-input v-model="recordForm.chiefComplaint" type="textarea" :rows="2" placeholder="请输入主诉"/>
+                      <el-input v-model="recordForm.chiefComplaint" :rows="2" placeholder="请输入主诉" type="textarea"/>
                     </div>
                     <div>
                       <div class="mb-1 flex items-center justify-between">
                         <label class="text-sm font-medium text-slate-600">现病史 <span
                             class="text-red-500">*</span></label>
                         <div class="flex items-center gap-1">
-                          <el-button type="primary" link :loading="draftLoading" @click="runDraft">
+                          <el-button :loading="draftLoading" link type="primary" @click="runDraft">
                             AI 草拟
                           </el-button>
-                          <el-button type="primary" link @click="openVoiceDialog">
+                          <el-button link type="primary" @click="openVoiceDialog">
                             语音口述
                           </el-button>
-                          <el-button v-if="!recordForm.presentIllness" type="primary" link
+                          <el-button v-if="!recordForm.presentIllness" link type="primary"
                                      @click="recordForm.presentIllness = '无'">填写「无」
                           </el-button>
                         </div>
                       </div>
-                      <el-input v-model="recordForm.presentIllness" type="textarea" :rows="3"
-                                placeholder="请输入现病史"/>
+                      <el-input v-model="recordForm.presentIllness" :rows="3" placeholder="请输入现病史"
+                                type="textarea"/>
                     </div>
                     <div class="rounded-md border border-red-200 bg-red-50/50 p-3">
                       <div class="mb-1 flex items-center justify-between">
                         <label class="text-sm font-bold text-red-700">⚠ 过敏史 <span
                             class="text-red-500">*</span></label>
-                        <el-button v-if="!recordForm.allergyHistory" type="primary" link
+                        <el-button v-if="!recordForm.allergyHistory" link type="primary"
                                    @click="recordForm.allergyHistory = '无'">填写「无」
                         </el-button>
                       </div>
-                      <el-input v-model="recordForm.allergyHistory" type="textarea" :rows="2"
-                                placeholder="无过敏史请填写 无"/>
+                      <el-input v-model="recordForm.allergyHistory" :rows="2" placeholder="无过敏史请填写 无"
+                                type="textarea"/>
                     </div>
                     <div class="space-y-3">
                       <div>
                         <div class="mb-1 flex items-center justify-between">
                           <label class="text-sm font-medium text-slate-600">既往史</label>
-                          <el-button v-if="!recordForm.pastHistory" type="primary" link
+                          <el-button v-if="!recordForm.pastHistory" link type="primary"
                                      @click="recordForm.pastHistory = '无'">填写「无」
                           </el-button>
                         </div>
-                        <el-input v-model="recordForm.pastHistory" type="textarea" :rows="2" placeholder="既往病史"/>
+                        <el-input v-model="recordForm.pastHistory" :rows="2" placeholder="既往病史" type="textarea"/>
                       </div>
                       <div>
                         <div class="mb-1 flex items-center justify-between">
                           <label class="text-sm font-medium text-slate-600">个人史</label>
-                          <el-button v-if="!recordForm.personalHistory" type="primary" link
+                          <el-button v-if="!recordForm.personalHistory" link type="primary"
                                      @click="recordForm.personalHistory = '无'">填写「无」
                           </el-button>
                         </div>
-                        <el-input v-model="recordForm.personalHistory" type="textarea" :rows="2" placeholder="个人史"/>
+                        <el-input v-model="recordForm.personalHistory" :rows="2" placeholder="个人史" type="textarea"/>
                       </div>
                       <div>
                         <div class="mb-1 flex items-center justify-between">
                           <label class="text-sm font-medium text-slate-600">家族史</label>
-                          <el-button v-if="!recordForm.familyHistory" type="primary" link
+                          <el-button v-if="!recordForm.familyHistory" link type="primary"
                                      @click="recordForm.familyHistory = '无'">填写「无」
                           </el-button>
                         </div>
-                        <el-input v-model="recordForm.familyHistory" type="textarea" :rows="2" placeholder="家族史"/>
+                        <el-input v-model="recordForm.familyHistory" :rows="2" placeholder="家族史" type="textarea"/>
                       </div>
                     </div>
                   </div>
@@ -3792,143 +3720,144 @@ const arriveText = computed(() => {
 
                 <!-- 第二节：体格检查 —— 门诊多数患者不逐系统查体，默认折叠；任一项有内容自动展开 -->
                 <section>
-                  <button type="button"
-                          class="flex w-full cursor-pointer items-center justify-between rounded-md px-1 py-1 text-left transition-colors hover:bg-slate-50"
+                  <button class="flex w-full cursor-pointer items-center justify-between rounded-md px-1 py-1 text-left transition-colors hover:bg-slate-50"
+                          type="button"
                           @click="examToggled = !examVisible">
                     <span class="text-base font-bold text-slate-800">体格检查
                       <span v-if="!examVisible" class="ml-1 text-xs font-normal text-slate-400">未填 · 点击展开</span>
                     </span>
                     <span class="flex items-center gap-1 text-xs text-slate-400">
                       {{ examVisible ? '收起' : '展开' }}
-                      <el-icon class="transition-transform" :class="examVisible ? 'rotate-180' : ''">
+                      <el-icon :class="examVisible ? 'rotate-180' : ''" class="transition-transform">
                         <ArrowDown/>
                       </el-icon>
                     </span>
                   </button>
                   <div v-show="examVisible" class="mt-2 space-y-3">
-                  <div class="flex items-center justify-between">
-                    <span class="text-xs text-slate-400">生命体征为当次实测，不提供快捷填充</span>
-                    <el-button type="primary" link size="small" :loading="copyExamLoading"
-                               @click="handleCopyLastExam">复制上次查体</el-button>
-                  </div>
-                  <div>
-                    <div class="mb-1 flex items-center justify-between">
-                      <label class="text-sm font-medium text-slate-600">生命体征 <span
-                          class="text-red-500">*</span></label>
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs text-slate-400">生命体征为当次实测，不提供快捷填充</span>
+                      <el-button :loading="copyExamLoading" link size="small" type="primary"
+                                 @click="handleCopyLastExam">复制上次查体
+                      </el-button>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                      <el-input v-model="recordForm.temperature" placeholder="体温 ℃" size="small"/>
-                      <el-input v-model="recordForm.pulse" placeholder="脉搏 次/分" size="small"
+                    <div>
+                      <div class="mb-1 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-600">生命体征 <span
+                            class="text-red-500">*</span></label>
+                      </div>
+                      <div class="grid grid-cols-2 gap-2">
+                        <el-input v-model="recordForm.temperature" placeholder="体温 ℃" size="small"/>
+                        <el-input v-model="recordForm.pulse" placeholder="脉搏 次/分" size="small"
+                        />
+                        <el-input v-model="recordForm.respiration" placeholder="呼吸 次/分" size="small"
+                        />
+                        <el-input v-model="recordForm.systolicPressure" placeholder="收缩压 mmHg" size="small"
+                        />
+                      </div>
+                      <el-input v-model="recordForm.diastolicPressure" class="mt-2" placeholder="舒张压 mmHg"
+                                size="small"
                       />
-                      <el-input v-model="recordForm.respiration" placeholder="呼吸 次/分" size="small"
+                    </div>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-600">一般情况</label>
+                        <el-button v-if="!recordForm.generalCondition" link size="small" type="primary"
+                                   @click="recordForm.generalCondition = '正常'">填写「正常」
+                        </el-button>
+                      </div>
+                      <el-input v-model="recordForm.generalCondition" placeholder="发育、营养、神志等" size="small"
                       />
-                      <el-input v-model="recordForm.systolicPressure" placeholder="收缩压 mmHg" size="small"
+                    </div>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-600">皮肤黏膜</label>
+                        <el-button v-if="!recordForm.skinMucosa" link size="small" type="primary"
+                                   @click="recordForm.skinMucosa = '正常'">填写「正常」
+                        </el-button>
+                      </div>
+                      <el-input v-model="recordForm.skinMucosa" :autosize="{ minRows: 1, maxRows: 6 }" placeholder="皮肤颜色、湿度等"
+                                type="textarea"
                       />
                     </div>
-                    <el-input v-model="recordForm.diastolicPressure" placeholder="舒张压 mmHg" size="small"
-                              class="mt-2"
-                    />
-                  </div>
-                  <div>
-                    <div class="mb-1 flex items-center justify-between">
-                      <label class="text-sm font-medium text-slate-600">一般情况</label>
-                      <el-button v-if="!recordForm.generalCondition" type="primary" link size="small"
-                                 @click="recordForm.generalCondition = '正常'">填写「正常」
-                      </el-button>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-600">头颈部</label>
+                        <el-button v-if="!recordForm.headNeck" link size="small" type="primary"
+                                   @click="recordForm.headNeck = '正常'">填写「正常」
+                        </el-button>
+                      </div>
+                      <el-input v-model="recordForm.headNeck" :autosize="{ minRows: 1, maxRows: 6 }" placeholder="头颅、眼、耳等"
+                                type="textarea"
+                      />
                     </div>
-                    <el-input v-model="recordForm.generalCondition" placeholder="发育、营养、神志等" size="small"
-                    />
-                  </div>
-                  <div>
-                    <div class="mb-1 flex items-center justify-between">
-                      <label class="text-sm font-medium text-slate-600">皮肤黏膜</label>
-                      <el-button v-if="!recordForm.skinMucosa" type="primary" link size="small"
-                                 @click="recordForm.skinMucosa = '正常'">填写「正常」
-                      </el-button>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-600">胸肺</label>
+                        <el-button v-if="!recordForm.chestLung" link size="small" type="primary"
+                                   @click="recordForm.chestLung = '正常'">填写「正常」
+                        </el-button>
+                      </div>
+                      <el-input v-model="recordForm.chestLung" :autosize="{ minRows: 1, maxRows: 6 }" placeholder="胸廓、叩诊、听诊等"
+                                type="textarea"
+                      />
                     </div>
-                    <el-input v-model="recordForm.skinMucosa" type="textarea" :autosize="{ minRows: 1, maxRows: 6 }"
-                              placeholder="皮肤颜色、湿度等"
-                    />
-                  </div>
-                  <div>
-                    <div class="mb-1 flex items-center justify-between">
-                      <label class="text-sm font-medium text-slate-600">头颈部</label>
-                      <el-button v-if="!recordForm.headNeck" type="primary" link size="small"
-                                 @click="recordForm.headNeck = '正常'">填写「正常」
-                      </el-button>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-600">心脏</label>
+                        <el-button v-if="!recordForm.heart" link size="small" type="primary"
+                                   @click="recordForm.heart = '正常'">填写「正常」
+                        </el-button>
+                      </div>
+                      <el-input v-model="recordForm.heart" :autosize="{ minRows: 1, maxRows: 6 }" placeholder="心率、心律等"
+                                type="textarea"
+                      />
                     </div>
-                    <el-input v-model="recordForm.headNeck" type="textarea" :autosize="{ minRows: 1, maxRows: 6 }"
-                              placeholder="头颅、眼、耳等"
-                    />
-                  </div>
-                  <div>
-                    <div class="mb-1 flex items-center justify-between">
-                      <label class="text-sm font-medium text-slate-600">胸肺</label>
-                      <el-button v-if="!recordForm.chestLung" type="primary" link size="small"
-                                 @click="recordForm.chestLung = '正常'">填写「正常」
-                      </el-button>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-600">腹部</label>
+                        <el-button v-if="!recordForm.abdomen" link size="small" type="primary"
+                                   @click="recordForm.abdomen = '正常'">填写「正常」
+                        </el-button>
+                      </div>
+                      <el-input v-model="recordForm.abdomen" :autosize="{ minRows: 1, maxRows: 6 }" placeholder="压痛、肝脾等"
+                                type="textarea"
+                      />
                     </div>
-                    <el-input v-model="recordForm.chestLung" type="textarea" :autosize="{ minRows: 1, maxRows: 6 }"
-                              placeholder="胸廓、叩诊、听诊等"
-                    />
-                  </div>
-                  <div>
-                    <div class="mb-1 flex items-center justify-between">
-                      <label class="text-sm font-medium text-slate-600">心脏</label>
-                      <el-button v-if="!recordForm.heart" type="primary" link size="small"
-                                 @click="recordForm.heart = '正常'">填写「正常」
-                      </el-button>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-600">脊柱四肢</label>
+                        <el-button v-if="!recordForm.spineLimbs" link size="small" type="primary"
+                                   @click="recordForm.spineLimbs = '正常'">填写「正常」
+                        </el-button>
+                      </div>
+                      <el-input v-model="recordForm.spineLimbs" :autosize="{ minRows: 1, maxRows: 6 }" placeholder="脊柱、关节等"
+                                type="textarea"
+                      />
                     </div>
-                    <el-input v-model="recordForm.heart" type="textarea" :autosize="{ minRows: 1, maxRows: 6 }"
-                              placeholder="心率、心律等"
-                    />
-                  </div>
-                  <div>
-                    <div class="mb-1 flex items-center justify-between">
-                      <label class="text-sm font-medium text-slate-600">腹部</label>
-                      <el-button v-if="!recordForm.abdomen" type="primary" link size="small"
-                                 @click="recordForm.abdomen = '正常'">填写「正常」
-                      </el-button>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-600">神经系统</label>
+                        <el-button v-if="!recordForm.nervousSystem" link size="small" type="primary"
+                                   @click="recordForm.nervousSystem = '正常'">填写「正常」
+                        </el-button>
+                      </div>
+                      <el-input v-model="recordForm.nervousSystem" :autosize="{ minRows: 1, maxRows: 6 }"
+                                placeholder="生理反射等"
+                                type="textarea"
+                      />
                     </div>
-                    <el-input v-model="recordForm.abdomen" type="textarea" :autosize="{ minRows: 1, maxRows: 6 }"
-                              placeholder="压痛、肝脾等"
-                    />
-                  </div>
-                  <div>
-                    <div class="mb-1 flex items-center justify-between">
-                      <label class="text-sm font-medium text-slate-600">脊柱四肢</label>
-                      <el-button v-if="!recordForm.spineLimbs" type="primary" link size="small"
-                                 @click="recordForm.spineLimbs = '正常'">填写「正常」
-                      </el-button>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-600">专科检查</label>
+                        <el-button v-if="!recordForm.specialistExam" link size="small" type="primary"
+                                   @click="recordForm.specialistExam = '正常'">填写「正常」
+                        </el-button>
+                      </div>
+                      <el-input v-model="recordForm.specialistExam" :autosize="{ minRows: 1, maxRows: 6 }"
+                                placeholder="专科检查所见"
+                                type="textarea"
+                      />
                     </div>
-                    <el-input v-model="recordForm.spineLimbs" type="textarea" :autosize="{ minRows: 1, maxRows: 6 }"
-                              placeholder="脊柱、关节等"
-                    />
-                  </div>
-                  <div>
-                    <div class="mb-1 flex items-center justify-between">
-                      <label class="text-sm font-medium text-slate-600">神经系统</label>
-                      <el-button v-if="!recordForm.nervousSystem" type="primary" link size="small"
-                                 @click="recordForm.nervousSystem = '正常'">填写「正常」
-                      </el-button>
-                    </div>
-                    <el-input v-model="recordForm.nervousSystem" type="textarea"
-                              :autosize="{ minRows: 1, maxRows: 6 }"
-                              placeholder="生理反射等"
-                    />
-                  </div>
-                  <div>
-                    <div class="mb-1 flex items-center justify-between">
-                      <label class="text-sm font-medium text-slate-600">专科检查</label>
-                      <el-button v-if="!recordForm.specialistExam" type="primary" link size="small"
-                                 @click="recordForm.specialistExam = '正常'">填写「正常」
-                      </el-button>
-                    </div>
-                    <el-input v-model="recordForm.specialistExam" type="textarea"
-                              :autosize="{ minRows: 1, maxRows: 6 }"
-                              placeholder="专科检查所见"
-                    />
-                  </div>
                   </div>
                 </section>
 
@@ -3938,106 +3867,106 @@ const arriveText = computed(() => {
                 <section>
                   <div class="mb-2 text-base font-bold text-slate-800">诊断与治疗</div>
                   <div class="space-y-3">
-                  <div><label class="mb-1 block text-sm font-medium text-slate-600">诊断 <span
-                      class="text-red-500">*</span></label>
-                    <el-select v-model="recordForm.diagnosis" filterable remote reserve-keyword
-                               placeholder="输入疾病名称或编码搜索" :remote-method="handleIcd10Search"
-                               :loading="icd10Loading" class="w-full"
-                               @change="handleIcd10Select">
-                      <el-option v-for="item in icd10Results" :key="item.id"
-                                 :label="`${item.icdCode} - ${item.icdName}`" :value="item.icdName">
-                        <div class="flex items-center justify-between"><span class="font-mono text-sm text-blue-600">{{
-                            item.icdCode
-                          }}</span><span class="text-sm text-slate-700">{{ item.icdName }}</span></div>
-                        <div class="text-xs text-slate-400">{{ item.icdCategory }}</div>
-                      </el-option>
-                    </el-select>
-                    <!-- 常用诊断快捷选择 -->
-                    <div v-if="myDiagTemplates.length > 0" class="mt-2 flex flex-wrap gap-1.5">
-                      <span class="text-[10px] text-slate-400 leading-5">常用：</span>
-                      <span v-for="tpl in myDiagTemplates" :key="tpl.icdCode"
-                            class="cursor-pointer rounded bg-blue-50 px-1.5 py-0.5 text-[11px] text-blue-600 transition-colors hover:bg-blue-100"
-                            @click="handleQuickSelectDiag(tpl)">
+                    <div><label class="mb-1 block text-sm font-medium text-slate-600">诊断 <span
+                        class="text-red-500">*</span></label>
+                      <el-select v-model="recordForm.diagnosis" :loading="icd10Loading" :remote-method="handleIcd10Search" class="w-full"
+                                 filterable placeholder="输入疾病名称或编码搜索"
+                                 remote reserve-keyword
+                                 @change="handleIcd10Select">
+                        <el-option v-for="item in icd10Results" :key="item.id"
+                                   :label="`${item.icdCode} - ${item.icdName}`" :value="item.icdName">
+                          <div class="flex items-center justify-between"><span class="font-mono text-sm text-blue-600">{{
+                              item.icdCode
+                            }}</span><span class="text-sm text-slate-700">{{ item.icdName }}</span></div>
+                          <div class="text-xs text-slate-400">{{ item.icdCategory }}</div>
+                        </el-option>
+                      </el-select>
+                      <!-- 常用诊断快捷选择 -->
+                      <div v-if="myDiagTemplates.length > 0" class="mt-2 flex flex-wrap gap-1.5">
+                        <span class="text-[10px] text-slate-400 leading-5">常用：</span>
+                        <span v-for="tpl in myDiagTemplates" :key="tpl.icdCode"
+                              class="cursor-pointer rounded bg-blue-50 px-1.5 py-0.5 text-[11px] text-blue-600 transition-colors hover:bg-blue-100"
+                              @click="handleQuickSelectDiag(tpl)">
                         {{ tpl.icdName }}
                       </span>
-                    </div>
-                    <div v-if="recordForm.diagnosisCode" class="mt-1 flex items-center gap-2 text-xs text-slate-400">
-                      <span>编码：{{ recordForm.diagnosisCode }}</span>
-                      <el-button type="primary" link size="small" @click="handleAddDiagToTemplate">
+                      </div>
+                      <div v-if="recordForm.diagnosisCode" class="mt-1 flex items-center gap-2 text-xs text-slate-400">
+                        <span>编码：{{ recordForm.diagnosisCode }}</span>
+                        <el-button link size="small" type="primary" @click="handleAddDiagToTemplate">
+                          <el-icon class="mr-0.5">
+                            <Plus/>
+                          </el-icon>
+                          添加到常用
+                        </el-button>
+                      </div>
+                      <el-button :loading="icdPredictionLoading" class="mt-1" link size="small" type="primary"
+                                 @click="handlePredictIcd">
                         <el-icon class="mr-0.5">
-                          <Plus/>
+                          <MagicStick/>
                         </el-icon>
-                        添加到常用
+                        智能预测
                       </el-button>
                     </div>
-                    <el-button type="primary" link size="small" class="mt-1" :loading="icdPredictionLoading"
-                               @click="handlePredictIcd">
-                      <el-icon class="mr-0.5">
-                        <MagicStick/>
-                      </el-icon>
-                      智能预测
-                    </el-button>
-                  </div>
 
-                  <!-- ICD-10预测结果面板 -->
-                  <div v-if="showPrediction" class="rounded-lg border border-blue-200 bg-blue-50 p-2.5">
-                    <div class="mb-1.5 flex items-center justify-between">
+                    <!-- ICD-10预测结果面板 -->
+                    <div v-if="showPrediction" class="rounded-lg border border-blue-200 bg-blue-50 p-2.5">
+                      <div class="mb-1.5 flex items-center justify-between">
                       <span class="text-xs font-bold text-blue-700">
                         <el-icon class="mr-0.5"><MagicStick/></el-icon>预测结果
                       </span>
-                      <el-button type="primary" link size="small" @click="showPrediction = false">收起</el-button>
-                    </div>
-                    <div v-if="icdPredictionLoading" class="py-3 text-center text-xs text-blue-500">分析中...</div>
-                    <div v-else-if="icdPredictions.length === 0" class="py-3 text-center text-xs text-slate-400">
-                      未找到匹配编码
-                    </div>
-                    <div v-else class="max-h-48 space-y-1.5 overflow-y-auto">
-                      <div v-for="(item, idx) in icdPredictions" :key="item.icdCode"
-                           class="cursor-pointer rounded border border-slate-200 bg-white p-2 transition-colors hover:border-blue-300"
-                           @click="handleSelectPrediction(item)">
-                        <div class="flex items-center justify-between">
-                          <div class="flex items-center gap-1.5">
+                        <el-button link size="small" type="primary" @click="showPrediction = false">收起</el-button>
+                      </div>
+                      <div v-if="icdPredictionLoading" class="py-3 text-center text-xs text-blue-500">分析中...</div>
+                      <div v-else-if="icdPredictions.length === 0" class="py-3 text-center text-xs text-slate-400">
+                        未找到匹配编码
+                      </div>
+                      <div v-else class="max-h-48 space-y-1.5 overflow-y-auto">
+                        <div v-for="(item, idx) in icdPredictions" :key="item.icdCode"
+                             class="cursor-pointer rounded border border-slate-200 bg-white p-2 transition-colors hover:border-blue-300"
+                             @click="handleSelectPrediction(item)">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-1.5">
                             <span class="rounded bg-blue-100 px-1 py-0.5 text-[10px] font-bold text-blue-700">#{{
                                 idx + 1
                               }}</span>
-                            <span class="font-mono text-xs font-medium text-blue-600">{{ item.icdCode }}</span>
-                            <span class="text-xs font-medium text-slate-900">{{ item.icdName }}</span>
+                              <span class="font-mono text-xs font-medium text-blue-600">{{ item.icdCode }}</span>
+                              <span class="text-xs font-medium text-slate-900">{{ item.icdName }}</span>
+                            </div>
+                          </div>
+                          <div class="mt-1 flex items-center gap-3 text-[10px] text-slate-500">
+                            <span class="text-emerald-600">DRG {{ item.drgWeight }}</span>
+                            <span class="font-medium text-amber-600">¥{{ item.estimatedCost }}</span>
                           </div>
                         </div>
-                        <div class="mt-1 flex items-center gap-3 text-[10px] text-slate-500">
-                          <span class="text-emerald-600">DRG {{ item.drgWeight }}</span>
-                          <span class="font-medium text-amber-600">¥{{ item.estimatedCost }}</span>
-                        </div>
+                      </div>
+                      <div v-if="icdPredictions.length > 0"
+                           class="mt-1.5 rounded bg-amber-50 px-2 py-1 text-[10px] text-amber-700">
+                        ⚠ 低编结算不足，高编触发审核
                       </div>
                     </div>
-                    <div v-if="icdPredictions.length > 0"
-                         class="mt-1.5 rounded bg-amber-50 px-2 py-1 text-[10px] text-amber-700">
-                      ⚠ 低编结算不足，高编触发审核
-                    </div>
-                  </div>
 
-                  <div>
-                    <div class="mb-1 flex items-center justify-between">
-                      <label class="text-sm font-medium text-slate-600">辅助检查</label>
-                      <el-button v-if="!recordForm.auxiliaryExam" type="primary" link size="small"
-                                 @click="recordForm.auxiliaryExam = '暂无'">填写「暂无」
-                      </el-button>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-600">辅助检查</label>
+                        <el-button v-if="!recordForm.auxiliaryExam" link size="small" type="primary"
+                                   @click="recordForm.auxiliaryExam = '暂无'">填写「暂无」
+                        </el-button>
+                      </div>
+                      <el-input v-model="recordForm.auxiliaryExam" :autosize="{ minRows: 2, maxRows: 6 }"
+                                placeholder="实验室检查、影像学检查结果等"
+                                type="textarea"/>
                     </div>
-                    <el-input v-model="recordForm.auxiliaryExam" type="textarea"
-                              :autosize="{ minRows: 2, maxRows: 6 }"
-                              placeholder="实验室检查、影像学检查结果等"/>
-                  </div>
-                  <div>
-                    <div class="mb-1 flex items-center justify-between">
-                      <label class="text-sm font-medium text-slate-600">治疗方案</label>
-                      <el-button v-if="!recordForm.treatmentPlan" type="primary" link size="small"
-                                 @click="recordForm.treatmentPlan = '遵医嘱'">填写「遵医嘱」
-                      </el-button>
+                    <div>
+                      <div class="mb-1 flex items-center justify-between">
+                        <label class="text-sm font-medium text-slate-600">治疗方案</label>
+                        <el-button v-if="!recordForm.treatmentPlan" link size="small" type="primary"
+                                   @click="recordForm.treatmentPlan = '遵医嘱'">填写「遵医嘱」
+                        </el-button>
+                      </div>
+                      <el-input v-model="recordForm.treatmentPlan" :autosize="{ minRows: 3, maxRows: 8 }"
+                                placeholder="治疗方案、用药建议等"
+                                type="textarea"/>
                     </div>
-                    <el-input v-model="recordForm.treatmentPlan" type="textarea"
-                              :autosize="{ minRows: 3, maxRows: 8 }"
-                              placeholder="治疗方案、用药建议等"/>
-                  </div>
                   </div>
                 </section>
               </div>
@@ -4067,674 +3996,766 @@ const arriveText = computed(() => {
             边界只由这张卡给：内部各节只用一条分隔线（见 OrderPanel.vue），不再各自带边框。
             本栏常驻不可折叠；窄屏逃生门在病历栏上（见 COMPACT_BREAKPOINT）。
           -->
-          <div class="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div
+              class="flex min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
             <!-- 标题栏与左栏「病历」同构：bg-slate-50 + border-b + px-3 py-2 + 右侧一句话说明 -->
             <div
-                 class="flex w-full shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-2">
+                class="flex w-full shrink-0 items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-2">
               <span class="text-sm font-bold text-slate-700">医嘱</span>
               <span class="truncate text-xs text-slate-400">处方 / 检查申请 / 检验申请</span>
             </div>
             <!-- 内容区与左栏「病历」同构：p-3 + 分节之间 12px（那里是 gap-3，这里是 space-y-3） -->
             <div class="min-h-0 flex-1 space-y-3 overflow-y-auto p-3 custom-scrollbar">
-              <OrderPanel title="处方" :count-text="prescriptionList.length + ' 张'">
+              <OrderPanel :count-text="prescriptionList.length + ' 张'" title="处方">
                 <div>
-              <!-- 三个处方类型 tab -->
-              <el-tabs v-model="currentPrescriptionType" class="!mb-0">
-                <el-tab-pane label="西药" :name="1" />
-                <el-tab-pane label="中成药" :name="2" />
-                <el-tab-pane label="中药饮片" :name="3" />
-              </el-tabs>
-              <!-- 当前处方操作栏 -->
-              <div v-if="currentPatient.queueStatus === 3"
-                   class="mb-2 mt-2 flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
+                  <!-- 三个处方类型 tab -->
+                  <el-tabs v-model="currentPrescriptionType" class="!mb-0">
+                    <el-tab-pane :name="1" label="西药"/>
+                    <el-tab-pane :name="2" label="中成药"/>
+                    <el-tab-pane :name="3" label="中药饮片"/>
+                  </el-tabs>
+                  <!-- 当前处方操作栏 -->
+                  <div v-if="currentPatient.queueStatus === 3"
+                       class="mb-2 mt-2 flex items-center justify-between rounded-md bg-slate-50 px-3 py-2">
                 <span class="text-xs text-slate-500">
-                  {{ prescriptionTypeLabel(currentPrescriptionType) }}处方 · {{ prescriptionList.filter(p => p.prescriptionType === currentPrescriptionType).length > 0 ? prescriptionList.filter(p => p.prescriptionType === currentPrescriptionType)[0].details?.length || 0 : 0 }}种药品
+                  {{
+                    prescriptionTypeLabel(currentPrescriptionType)
+                  }}处方 · {{
+                    prescriptionList.filter(p => p.prescriptionType === currentPrescriptionType).length > 0 ? prescriptionList.filter(p => p.prescriptionType === currentPrescriptionType)[0].details?.length || 0 : 0
+                  }}种药品
                 </span>
-                <div class="flex items-center gap-2">
-                  <!-- 饮片方的剂数/煎服方式属于整张方（后端存 biz_prescription.dose_count/decoct_flag），
-                       放在处方级操作栏而不是每味药一行 —— 一剂药里 12 味不可能各开各的剂数 -->
-                  <template v-if="currentPrescriptionType === 3">
-                    <label class="text-xs text-slate-600" data-testid="ws-dose-label">剂数<span class="text-red-500">*</span></label>
-                    <el-input-number v-model="prescriptionForm.doseCount" :min="1" :max="30"
-                                     size="small" controls-position="right" style="width: 100px"
-                                     data-testid="ws-dose-count"/>
-                    <label class="text-xs text-slate-600">煎服<span class="text-red-500">*</span></label>
-                    <el-radio-group v-model="prescriptionForm.decoctFlag" size="small">
-                      <el-radio v-for="d in tcmDecoctFlagDict" :key="d.dictValue"
-                                :value="Number(d.dictValue)" :data-testid="`ws-decoct-${d.dictValue}`">
-                        {{ d.dictLabel }}
-                      </el-radio>
-                    </el-radio-group>
-                  </template>
-                  <el-button size="small" @click="showRxTemplateDialog = true">使用模板</el-button>
-                  <el-button v-perm="'opd:doctorWorkstation:add'" type="primary" size="small" :icon="Plus" @click="handleAddEmptyDrug">新增药品</el-button>
-                </div>
-              </div>
-              <div class="space-y-3 py-2">
-                <!-- 处方明细 -->
-                <div class="space-y-2">
-                  <!-- 可编辑列表 (queueStatus=3 结诊中) -->
-                  <template v-if="currentPatient.queueStatus === 3">
-                    <div v-for="(item, idx) in prescriptionForm.details" :key="idx"
-                         class="rounded-lg border border-slate-200 p-2">
-                      <div class="mb-1.5 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <!-- 饮片方的剂数/煎服方式属于整张方（后端存 biz_prescription.dose_count/decoct_flag），
+                           放在处方级操作栏而不是每味药一行 —— 一剂药里 12 味不可能各开各的剂数 -->
+                      <template v-if="currentPrescriptionType === 3">
+                        <label class="text-xs text-slate-600" data-testid="ws-dose-label">剂数<span
+                            class="text-red-500">*</span></label>
+                        <el-input-number v-model="prescriptionForm.doseCount" :max="30" :min="1"
+                                         controls-position="right" data-testid="ws-dose-count" size="small"
+                                         style="width: 100px"/>
+                        <label class="text-xs text-slate-600">煎服<span class="text-red-500">*</span></label>
+                        <el-radio-group v-model="prescriptionForm.decoctFlag" size="small">
+                          <el-radio v-for="d in tcmDecoctFlagDict" :key="d.dictValue"
+                                    :data-testid="`ws-decoct-${d.dictValue}`" :value="Number(d.dictValue)">
+                            {{ d.dictLabel }}
+                          </el-radio>
+                        </el-radio-group>
+                      </template>
+                      <el-button size="small" @click="showRxTemplateDialog = true">使用模板</el-button>
+                      <el-button v-perm="'opd:doctorWorkstation:add'" :icon="Plus" size="small" type="primary"
+                                 @click="handleAddEmptyDrug">新增药品
+                      </el-button>
+                    </div>
+                  </div>
+                  <div class="space-y-3 py-2">
+                    <!-- 处方明细 -->
+                    <div class="space-y-2">
+                      <!-- 可编辑列表 (queueStatus=3 结诊中) -->
+                      <template v-if="currentPatient.queueStatus === 3">
+                        <div v-for="(item, idx) in prescriptionForm.details" :key="idx"
+                             class="rounded-lg border border-slate-200 p-2">
+                          <div class="mb-1.5 flex items-center justify-between">
                           <span class="text-xs font-medium text-slate-700">
                             {{ item.drugName || '药品 #' + (idx + 1) }}
                             <template v-if="item.specification">({{ item.specification }})</template>
                           </span>
-                        <div class="flex items-center gap-2">
-                          <!-- 医嘱栏变宽后价格上卡头：饮片 price 已是每克价（选药时换算过），乘实发克数即小计 -->
-                          <span v-if="item.drugName" class="text-xs text-slate-500">
+                            <div class="flex items-center gap-2">
+                              <!-- 医嘱栏变宽后价格上卡头：饮片 price 已是每克价（选药时换算过），乘实发克数即小计 -->
+                              <span v-if="item.drugName" class="text-xs text-slate-500">
                             ¥{{ Number(item.price || 0).toFixed(currentPrescriptionType === 3 ? 3 : 2) }}<span
-                              class="text-slate-400">/{{ currentPrescriptionType === 3 ? 'g' : (item.unit || '盒') }}</span>
-                            · 小计 <span class="font-medium text-slate-800">¥{{ (Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2) }}</span>
+                                  class="text-slate-400">/{{
+                                  currentPrescriptionType === 3 ? 'g' : (item.unit || '盒')
+                                }}</span>
+                            · 小计 <span class="font-medium text-slate-800">¥{{
+                                  (Number(item.price || 0) * Number(item.quantity || 0)).toFixed(2)
+                                }}</span>
                           </span>
-                          <el-button v-perm="'opd:doctorWorkstation:delete'" type="danger" link size="small" @click="handleRemoveDrug(idx)">删除</el-button>
-                        </div>
-                      </div>
+                              <el-button v-perm="'opd:doctorWorkstation:delete'" link size="small" type="danger"
+                                         @click="handleRemoveDrug(idx)">删除
+                              </el-button>
+                            </div>
+                          </div>
 
-                      <!-- 西药处方 -->
-                      <template v-if="currentPrescriptionType === 1">
-                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">药品<span class="text-red-500">*</span></label>
-                            <el-select v-model="item.drugId" filterable style="width: 220px"
-                                       placeholder="搜索药品" :loading="drugLoading"
-                                       @change="(val: any) => handleDrugSelectForRecord(item, val)">
-                              <el-option v-for="drug in drugResults" :key="drug.id"
-                                         :label="`${drug.drugName} (${drug.specification})`" :value="drug.id">
-                                <div class="flex items-center justify-between">
-                                  <span class="text-sm font-medium text-slate-900">{{ drug.drugName }}</span>
-                                  <span class="text-xs text-slate-400">{{ drug.dosageForm || drug.specification }}</span>
-                                </div>
-                                <div class="text-xs text-slate-400">{{ drug.specification }} | ¥{{ drug.retailPrice }}/{{ drug.unit }}</div>
-                              </el-option>
-                            </el-select>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">单次用量<span class="text-red-500">*</span></label>
-                            <el-input v-model="item.singleDosage" style="width: 70px" placeholder="用量"/>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">频次<span class="text-red-500">*</span></label>
-                            <el-select v-model="item.frequency" style="width: 100px" placeholder="频次">
-                              <el-option label="一日一次" value="一日一次"/>
-                              <el-option label="一日两次" value="一日两次"/>
-                              <el-option label="一日三次" value="一日三次"/>
-                              <el-option label="需要时" value="需要时"/>
-                            </el-select>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">给药途径<span class="text-red-500">*</span></label>
-                            <el-select v-model="item.route" style="width: 100px" placeholder="途径">
-                              <el-option label="口服" value="口服"/>
-                              <el-option label="静脉注射" value="静脉注射"/>
-                              <el-option label="肌肉注射" value="肌肉注射"/>
-                              <el-option label="外用" value="外用"/>
-                            </el-select>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">总量<span class="text-red-500">*</span></label>
-                            <el-input-number v-model="item.quantity" :min="1" controls-position="right" style="width: 80px"/>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">天数<span class="text-red-500">*</span></label>
-                            <el-input-number v-model="item.duration" :min="1" :max="90" controls-position="right" style="width: 70px"/>
-                          </div>
-                        </div>
-                      </template>
+                          <!-- 西药处方 -->
+                          <template v-if="currentPrescriptionType === 1">
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">药品<span
+                                    class="text-red-500">*</span></label>
+                                <el-select v-model="item.drugId" :loading="drugLoading" filterable
+                                           placeholder="搜索药品" style="width: 220px"
+                                           @change="(val: any) => handleDrugSelectForRecord(item, val)">
+                                  <el-option v-for="drug in drugResults" :key="drug.id"
+                                             :label="`${drug.drugName} (${drug.specification})`" :value="drug.id">
+                                    <div class="flex items-center justify-between">
+                                      <span class="text-sm font-medium text-slate-900">{{ drug.drugName }}</span>
+                                      <span class="text-xs text-slate-400">{{
+                                          drug.dosageForm || drug.specification
+                                        }}</span>
+                                    </div>
+                                    <div class="text-xs text-slate-400">{{ drug.specification }} | ¥{{
+                                        drug.retailPrice
+                                      }}/{{ drug.unit }}
+                                    </div>
+                                  </el-option>
+                                </el-select>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">单次用量<span
+                                    class="text-red-500">*</span></label>
+                                <el-input v-model="item.singleDosage" placeholder="用量" style="width: 70px"/>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">频次<span
+                                    class="text-red-500">*</span></label>
+                                <el-select v-model="item.frequency" placeholder="频次" style="width: 100px">
+                                  <el-option label="一日一次" value="一日一次"/>
+                                  <el-option label="一日两次" value="一日两次"/>
+                                  <el-option label="一日三次" value="一日三次"/>
+                                  <el-option label="需要时" value="需要时"/>
+                                </el-select>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">给药途径<span
+                                    class="text-red-500">*</span></label>
+                                <el-select v-model="item.route" placeholder="途径" style="width: 100px">
+                                  <el-option label="口服" value="口服"/>
+                                  <el-option label="静脉注射" value="静脉注射"/>
+                                  <el-option label="肌肉注射" value="肌肉注射"/>
+                                  <el-option label="外用" value="外用"/>
+                                </el-select>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">总量<span
+                                    class="text-red-500">*</span></label>
+                                <el-input-number v-model="item.quantity" :min="1" controls-position="right"
+                                                 style="width: 80px"/>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">天数<span
+                                    class="text-red-500">*</span></label>
+                                <el-input-number v-model="item.duration" :max="90" :min="1" controls-position="right"
+                                                 style="width: 70px"/>
+                              </div>
+                            </div>
+                          </template>
 
-                      <!-- 中成药处方 -->
-                      <template v-else-if="currentPrescriptionType === 2">
-                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">药品<span class="text-red-500">*</span></label>
-                            <el-select v-model="item.drugId" filterable style="width: 220px"
-                                       placeholder="搜索中成药" :loading="drugLoading"
-                                       @change="(val: any) => handleDrugSelectForRecord(item, val)">
-                              <el-option v-for="drug in drugResults" :key="drug.id"
-                                         :label="`${drug.drugName} (${drug.specification})`" :value="drug.id">
-                                <div class="flex items-center justify-between">
-                                  <span class="text-sm font-medium text-slate-900">{{ drug.drugName }}</span>
-                                  <span class="text-xs text-slate-400">{{ drug.dosageForm || drug.specification }}</span>
-                                </div>
-                                <div class="text-xs text-slate-400">{{ drug.specification }} | ¥{{ drug.retailPrice }}/{{ drug.unit }}</div>
-                              </el-option>
-                            </el-select>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">用法<span class="text-red-500">*</span></label>
-                            <el-select v-model="item.route" style="width: 180px" placeholder="用法">
-                              <el-option label="口服" value="口服"/>
-                              <el-option label="含服" value="含服"/>
-                              <el-option label="外用" value="外用"/>
-                              <el-option label="嚼服" value="嚼服"/>
-                            </el-select>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">一次用量<span class="text-red-500">*</span></label>
-                            <el-input v-model="item.singleDosage" style="width: 80px" placeholder="如: 2粒"/>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">频次<span class="text-red-500">*</span></label>
-                            <el-select v-model="item.frequency" style="width: 100px" placeholder="频次">
-                              <el-option label="一日一次" value="一日一次"/>
-                              <el-option label="一日两次" value="一日两次"/>
-                              <el-option label="一日三次" value="一日三次"/>
-                            </el-select>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">总量<span class="text-red-500">*</span></label>
-                            <el-input-number v-model="item.quantity" :min="1" controls-position="right" style="width: 80px"/>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">天数<span class="text-red-500">*</span></label>
-                            <el-input-number v-model="item.duration" :min="1" :max="90" controls-position="right" style="width: 70px"/>
-                          </div>
-                        </div>
-                      </template>
+                          <!-- 中成药处方 -->
+                          <template v-else-if="currentPrescriptionType === 2">
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">药品<span
+                                    class="text-red-500">*</span></label>
+                                <el-select v-model="item.drugId" :loading="drugLoading" filterable
+                                           placeholder="搜索中成药" style="width: 220px"
+                                           @change="(val: any) => handleDrugSelectForRecord(item, val)">
+                                  <el-option v-for="drug in drugResults" :key="drug.id"
+                                             :label="`${drug.drugName} (${drug.specification})`" :value="drug.id">
+                                    <div class="flex items-center justify-between">
+                                      <span class="text-sm font-medium text-slate-900">{{ drug.drugName }}</span>
+                                      <span class="text-xs text-slate-400">{{
+                                          drug.dosageForm || drug.specification
+                                        }}</span>
+                                    </div>
+                                    <div class="text-xs text-slate-400">{{ drug.specification }} | ¥{{
+                                        drug.retailPrice
+                                      }}/{{ drug.unit }}
+                                    </div>
+                                  </el-option>
+                                </el-select>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">用法<span
+                                    class="text-red-500">*</span></label>
+                                <el-select v-model="item.route" placeholder="用法" style="width: 180px">
+                                  <el-option label="口服" value="口服"/>
+                                  <el-option label="含服" value="含服"/>
+                                  <el-option label="外用" value="外用"/>
+                                  <el-option label="嚼服" value="嚼服"/>
+                                </el-select>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">一次用量<span
+                                    class="text-red-500">*</span></label>
+                                <el-input v-model="item.singleDosage" placeholder="如: 2粒" style="width: 80px"/>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">频次<span
+                                    class="text-red-500">*</span></label>
+                                <el-select v-model="item.frequency" placeholder="频次" style="width: 100px">
+                                  <el-option label="一日一次" value="一日一次"/>
+                                  <el-option label="一日两次" value="一日两次"/>
+                                  <el-option label="一日三次" value="一日三次"/>
+                                </el-select>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">总量<span
+                                    class="text-red-500">*</span></label>
+                                <el-input-number v-model="item.quantity" :min="1" controls-position="right"
+                                                 style="width: 80px"/>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">天数<span
+                                    class="text-red-500">*</span></label>
+                                <el-input-number v-model="item.duration" :max="90" :min="1" controls-position="right"
+                                                 style="width: 70px"/>
+                              </div>
+                            </div>
+                          </template>
 
-                      <!-- 中药饮片处方 -->
-                      <template v-else-if="currentPrescriptionType === 3">
-                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">药名<span class="text-red-500">*</span></label>
-                            <el-select v-model="item.drugId" filterable style="width: 200px"
-                                       data-testid="ws-herb-drug"
-                                       placeholder="搜索中药饮片" :loading="drugLoading"
-                                       @change="(val: any) => handleDrugSelectForRecord(item, val)">
-                              <el-option v-for="drug in drugResults" :key="drug.id"
-                                         :label="drug.drugName" :value="drug.id">
-                                <div class="flex items-center justify-between">
-                                  <span class="text-sm font-medium text-slate-900">{{ drug.drugName }}</span>
-                                  <span class="text-xs text-slate-400">¥{{ drug.retailPrice }}/{{ drug.unit }}</span>
-                                </div>
-                                <div class="text-xs text-slate-400">{{ drug.specification }} | ¥{{ drug.retailPrice }}/{{ drug.unit }}<template v-if="drug.gramPerUnit"> ≈ ¥{{ tcmPerGramPrice(drug).toFixed(3) }}/g</template></div>
-                              </el-option>
-                            </el-select>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">每剂克数<span class="text-red-500">*</span></label>
-                            <el-input v-model="item.singleDosage" style="width: 70px" placeholder="如: 15"
-                                      data-testid="ws-herb-grams" @change="applyTcmGrams(item)"/>
-                            <span class="text-xs text-slate-400">g</span>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">实发</label>
-                            <!-- 总克数 = 每剂克数 × 剂数，只读；后端按同一口径重算并扣库 -->
-                            <span class="w-[70px] text-xs font-medium text-slate-800" data-testid="ws-herb-total">
+                          <!-- 中药饮片处方 -->
+                          <template v-else-if="currentPrescriptionType === 3">
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">药名<span
+                                    class="text-red-500">*</span></label>
+                                <el-select v-model="item.drugId" :loading="drugLoading" data-testid="ws-herb-drug"
+                                           filterable
+                                           placeholder="搜索中药饮片" style="width: 200px"
+                                           @change="(val: any) => handleDrugSelectForRecord(item, val)">
+                                  <el-option v-for="drug in drugResults" :key="drug.id"
+                                             :label="drug.drugName" :value="drug.id">
+                                    <div class="flex items-center justify-between">
+                                      <span class="text-sm font-medium text-slate-900">{{ drug.drugName }}</span>
+                                      <span class="text-xs text-slate-400">¥{{ drug.retailPrice }}/{{
+                                          drug.unit
+                                        }}</span>
+                                    </div>
+                                    <div class="text-xs text-slate-400">{{ drug.specification }} | ¥{{
+                                        drug.retailPrice
+                                      }}/{{ drug.unit }}
+                                      <template v-if="drug.gramPerUnit"> ≈ ¥{{
+                                          tcmPerGramPrice(drug).toFixed(3)
+                                        }}/g
+                                      </template>
+                                    </div>
+                                  </el-option>
+                                </el-select>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">每剂克数<span
+                                    class="text-red-500">*</span></label>
+                                <el-input v-model="item.singleDosage" data-testid="ws-herb-grams" placeholder="如: 15"
+                                          style="width: 70px" @change="applyTcmGrams(item)"/>
+                                <span class="text-xs text-slate-400">g</span>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">实发</label>
+                                <!-- 总克数 = 每剂克数 × 剂数，只读；后端按同一口径重算并扣库 -->
+                                <span class="w-[70px] text-xs font-medium text-slate-800" data-testid="ws-herb-total">
                               {{ item.quantity || 0 }} g
                             </span>
-                            <span class="text-xs text-slate-400" data-testid="ws-herb-amount">¥{{ Number(item.amount || 0).toFixed(2) }}</span>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">煎法<span class="text-red-500">*</span></label>
-                            <el-select v-model="item.route" style="width: 100px" data-testid="ws-herb-route" placeholder="煎法">
-                              <el-option v-for="d in tcmMethodDict" :key="d.dictValue" :label="d.dictLabel" :value="d.dictValue"/>
-                            </el-select>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">用法<span class="text-red-500">*</span></label>
-                            <el-select v-model="item.frequency" style="width: 180px" placeholder="用法">
-                              <el-option label="每日一剂" value="每日一剂"/>
-                              <el-option label="每日两剂" value="每日两剂"/>
-                              <el-option label="隔日一剂" value="隔日一剂"/>
-                            </el-select>
-                          </div>
-                        </div>
-                      </template>
+                                <span class="text-xs text-slate-400"
+                                      data-testid="ws-herb-amount">¥{{ Number(item.amount || 0).toFixed(2) }}</span>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">煎法<span
+                                    class="text-red-500">*</span></label>
+                                <el-select v-model="item.route" data-testid="ws-herb-route" placeholder="煎法"
+                                           style="width: 100px">
+                                  <el-option v-for="d in tcmMethodDict" :key="d.dictValue" :label="d.dictLabel"
+                                             :value="d.dictValue"/>
+                                </el-select>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">用法<span
+                                    class="text-red-500">*</span></label>
+                                <el-select v-model="item.frequency" placeholder="用法" style="width: 180px">
+                                  <el-option label="每日一剂" value="每日一剂"/>
+                                  <el-option label="每日两剂" value="每日两剂"/>
+                                  <el-option label="隔日一剂" value="隔日一剂"/>
+                                </el-select>
+                              </div>
+                            </div>
+                          </template>
 
-                      <!-- 常用药品快捷选择 -->
-                      <div v-if="myRxTemplates.length > 0" class="mt-2 border-t border-slate-100 pt-2">
-                        <div class="mb-1 text-[10px] font-medium text-slate-500">常用药品</div>
-                        <div class="flex flex-wrap gap-1">
+                          <!-- 常用药品快捷选择 -->
+                          <div v-if="myRxTemplates.length > 0" class="mt-2 border-t border-slate-100 pt-2">
+                            <div class="mb-1 text-[10px] font-medium text-slate-500">常用药品</div>
+                            <div class="flex flex-wrap gap-1">
                           <span v-for="tpl in myRxTemplates.slice(0, 5)" :key="tpl.id"
                                 class="cursor-pointer rounded bg-blue-50 px-1.5 py-0.5 text-[11px] text-blue-600 transition-colors hover:bg-blue-100"
                                 @click="handleApplyRxTemplateToRecord(item, tpl)">
                             {{ tpl.templateName }}
                           </span>
-                        </div>
-                      </div>
-                    </div>
-                  </template>
-                  <!-- 纯列表 (非结诊中) -->
-                  <template v-else>
-                    <div v-for="p in prescriptionList.filter(p => p.prescriptionType === currentPrescriptionType)" :key="p.id || p.prescriptionType">
-                      <div v-if="p.details && p.details.length > 0" class="mb-3">
-                        <div class="mb-2 text-xs text-slate-500">
-                          {{ prescriptionTypeLabel(p.prescriptionType) }}处方 · {{ p.details.length }}种药品
-                          <template v-if="p.prescriptionType === 3 && p.doseCount"> · {{ p.doseCount }}剂</template>
-                        </div>
-                        <!-- 医嘱栏对调成 flex-1 主工作区后（2026-09-26 方案A），表格按真实 HIS 处方全列铺开：
-                             药名/规格/厂家/单价/金额是医生开完方核对与患者费用解释要看的东西，
-                             原先 480px 装不下才砍掉。min-width 让列随栏宽弹性摊开，不留大片空白 -->
-                        <el-table :data="p.details" size="small" border>
-                          <el-table-column prop="drugName" label="药品名称" min-width="150" show-overflow-tooltip/>
-                          <el-table-column prop="specification" label="规格" min-width="110" show-overflow-tooltip/>
-                          <el-table-column prop="manufacturer" label="生产厂家" min-width="150" show-overflow-tooltip/>
-                          <el-table-column prop="quantity" label="数量" width="70" align="center"/>
-                          <el-table-column prop="unit" label="单位" width="56" align="center"/>
-                          <el-table-column label="单价" width="80" align="right">
-                            <template #default="{ row }">{{ Number(row.price || 0).toFixed(2) }}</template>
-                          </el-table-column>
-                          <el-table-column label="金额" width="86" align="right">
-                            <template #default="{ row }">
-                              <span class="font-medium text-slate-800">{{ Number(row.amount || 0).toFixed(2) }}</span>
-                            </template>
-                          </el-table-column>
-                          <el-table-column prop="singleDosage" label="单次用量" width="86"/>
-                          <el-table-column prop="frequency" label="频次" width="86"/>
-                          <el-table-column prop="route" label="途径" width="70"/>
-                          <el-table-column prop="duration" label="天数" width="56" align="center"/>
-                        </el-table>
-                      </div>
-                    </div>
-                    <div v-if="prescriptionList.filter(p => p.prescriptionType === currentPrescriptionType).length === 0 || prescriptionList.filter(p => p.prescriptionType === currentPrescriptionType).every(p => !p.details || p.details.length === 0)"
-                         class="py-8 text-center text-sm text-slate-400">
-                      {{ patientDataLoading ? '处方加载中…' : `暂无${prescriptionTypeLabel(currentPrescriptionType)}处方` }}
-                    </div>
-                  </template>
-                </div>
-              </div>
-                </div>
-              </OrderPanel>
-              <OrderPanel title="检查申请" :count-text="inspectionRecords.length + ' 项'">
-                <div class="relative">
-              <div v-if="currentPatient.queueStatus === 3"
-                   class="sticky top-0 z-10 flex justify-end py-2">
-                <el-button v-perm="'opd:doctorWorkstation:add'" type="primary" size="small" :icon="Plus" @click="handleAddEmptyInspection">新增检查
-                </el-button>
-              </div>
-              <div class="space-y-3 py-2">
-                <!-- 检查申请列表 -->
-                <div v-if="inspectionRecords.length > 0">
-                  <div class="space-y-2">
-                    <!-- 可编辑列表 (queueStatus=3 就诊中) -->
-                    <template v-if="currentPatient.queueStatus === 3">
-                      <div v-for="(item, idx) in inspectionRecords"
-                           :key="item.id || ('pending-inspection-' + item._pendingIdx)"
-                           class="rounded-lg border border-slate-200 p-2">
-                        <div class="mb-1.5 flex items-center justify-between">
-                          <div class="flex items-center gap-2">
-                            <span class="text-xs font-medium text-slate-700">检查申请 #{{ idx + 1 }}</span>
-                            <el-tag v-if="item.id" :type="applyTagType(item)" size="small">
-                              {{ item.execStatusText }}
-                            </el-tag>
-                            <el-tag v-else type="info" size="small">选项目后即时开单</el-tag>
-                            <el-tag v-if="item.critical" type="danger" size="small" effect="dark">危急值</el-tag>
-                            <el-tooltip v-if="item.signStatus === 1" :content="`开单医师 ${item.doctorName} · ${item.signedTime || ''}，签名即锁定`">
-                              <el-tag type="success" size="small" effect="plain" data-testid="p5-ins-sign-tag">已电子签名</el-tag>
-                            </el-tooltip>
-                            <el-tag v-else-if="item.signStatus === 2" type="warning" size="small" effect="plain">签名已作废</el-tag>
-                          </div>
-                          <div class="flex items-center gap-1">
-                            <el-button v-perm="'opd:doctorWorkstation:edit'" type="primary" link size="small" :disabled="!item.id"
-                                       @click="handleSaveInspectionRow(item)">
-                              保存修改
-                            </el-button>
-                            <el-button v-perm="'opd:doctorWorkstation:delete'" type="danger" link size="small"
-                                       @click="handleDeleteInspectionRecord(idx)">
-                              删除
-                            </el-button>
+                            </div>
                           </div>
                         </div>
-                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">检查项目</label>
-                            <el-select v-model="item.inspectionItemName" filterable
-                                       placeholder="搜索检查项目"
-                                       :loading="inspectionItemLoading" style="width: 180px"
-                                       @change="(val: any) => handleInspectionItemSelectForRecord(item, val)">
-                              <el-option v-for="opt in inspectionItemResults" :key="opt.id"
-                                         :label="`${opt.itemCode} - ${opt.itemName}`" :value="opt.id">
-                                <div class="flex items-center justify-between">
-                                  <span class="text-sm font-medium text-slate-900">{{ opt.itemName }}</span>
-                                  <span class="text-xs text-slate-400">¥{{ opt.price }}</span>
-                                </div>
-                                <div class="text-xs text-slate-400">{{ opt.itemCode }} · {{ opt.bodyPart }}</div>
-                              </el-option>
-                            </el-select>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">部位</label>
-                            <el-input v-model="item.bodyPart" style="width: 150px" placeholder="检查部位"/>
-                          </div>
-                          <div class="flex items-center gap-1.5">
-                            <el-switch v-model="item.isEmergency" :active-value="1" :inactive-value="0"
-                                       size="small" active-text="急诊"/>
-                          </div>
-                        </div>
-                        <div class="mt-1.5 flex items-start gap-1.5">
-                          <label class="mt-2 text-xs text-slate-600 whitespace-nowrap">注意事项</label>
-                          <el-input v-model="item.preparation" type="textarea" :rows="2" style="width: 400px"
-                                    placeholder="注意事项（可选）"/>
-                        </div>
-                        <div class="mt-1.5 flex items-center gap-1.5">
-                          <label class="text-xs text-slate-600 whitespace-nowrap">检查目的</label>
-                          <el-input v-model="item.inspectionPurpose" type="textarea" :rows="2" style="width: 400px"
-                                    placeholder="检查目的"/>
-                        </div>
-
-                        <!-- 常用检查申请快捷选择 -->
-                        <div v-if="myInspectionTemplates.length > 0" class="mt-2 border-t border-slate-100 pt-2">
-                          <div class="mb-1 text-[10px] font-medium text-slate-500">常用检查</div>
-                          <div class="flex flex-wrap gap-1">
-                            <el-button v-for="tpl in myInspectionTemplates" :key="tpl.id" size="small" link
-                                       type="primary" @click="handleApplyInspectionTemplateToRecord(item, tpl)">
-                              {{ tpl.templateName }}
-                            </el-button>
+                      </template>
+                      <!-- 纯列表 (非结诊中) -->
+                      <template v-else>
+                        <div v-for="p in prescriptionList.filter(p => p.prescriptionType === currentPrescriptionType)"
+                             :key="p.id || p.prescriptionType">
+                          <div v-if="p.details && p.details.length > 0" class="mb-3">
+                            <div class="mb-2 text-xs text-slate-500">
+                              {{ prescriptionTypeLabel(p.prescriptionType) }}处方 · {{ p.details.length }}种药品
+                              <template v-if="p.prescriptionType === 3 && p.doseCount"> · {{ p.doseCount }}剂</template>
+                            </div>
+                            <!-- 医嘱栏对调成 flex-1 主工作区后（2026-09-26 方案A），表格按真实 HIS 处方全列铺开：
+                                 药名/规格/厂家/单价/金额是医生开完方核对与患者费用解释要看的东西，
+                                 原先 480px 装不下才砍掉。min-width 让列随栏宽弹性摊开，不留大片空白 -->
+                            <el-table :data="p.details" border size="small">
+                              <el-table-column label="药品名称" min-width="150" prop="drugName" show-overflow-tooltip/>
+                              <el-table-column label="规格" min-width="110" prop="specification" show-overflow-tooltip/>
+                              <el-table-column label="生产厂家" min-width="150" prop="manufacturer"
+                                               show-overflow-tooltip/>
+                              <el-table-column align="center" label="数量" prop="quantity" width="70"/>
+                              <el-table-column align="center" label="单位" prop="unit" width="56"/>
+                              <el-table-column align="right" label="单价" width="80">
+                                <template #default="{ row }">{{ Number(row.price || 0).toFixed(2) }}</template>
+                              </el-table-column>
+                              <el-table-column align="right" label="金额" width="86">
+                                <template #default="{ row }">
+                                  <span class="font-medium text-slate-800">{{
+                                      Number(row.amount || 0).toFixed(2)
+                                    }}</span>
+                                </template>
+                              </el-table-column>
+                              <el-table-column label="单次用量" prop="singleDosage" width="86"/>
+                              <el-table-column label="频次" prop="frequency" width="86"/>
+                              <el-table-column label="途径" prop="route" width="70"/>
+                              <el-table-column align="center" label="天数" prop="duration" width="56"/>
+                            </el-table>
                           </div>
                         </div>
-                      </div>
-                    </template>
-                    <!-- 纯列表 (非就诊中) -->
-                    <template v-else>
-                      <div v-for="(item, idx) in inspectionRecords"
-                           :key="item.id || ('pending-inspection-' + item._pendingIdx)"
-                           :class="[
-                             'rounded-lg border p-3',
-                             item.critical
-                                 ? 'border-red-300 bg-red-50'
-                                 : (item.execStatusText === '待缴费' ? 'border-amber-200 bg-amber-50' : 'border-slate-200')
-                           ]">
-                        <div class="flex items-center justify-between">
-                          <div class="flex items-center gap-2">
-                            <span class="text-sm font-medium text-slate-900">{{ item.inspectionItemName }}</span>
-                            <el-tag :type="applyTagType(item)" size="small">{{ item.execStatusText }}</el-tag>
-                            <el-tag v-if="item.critical" type="danger" size="small" effect="dark">危急值</el-tag>
-                            <el-tag v-if="item.isEmergency === 1" type="warning" size="small">急诊</el-tag>
-                            <el-tag v-if="item.signStatus === 1" type="success" size="small" effect="plain">已电子签名·{{ item.doctorName }}</el-tag>
-                            <el-tag v-else-if="item.signStatus === 2" type="warning" size="small" effect="plain">签名已作废</el-tag>
-                          </div>
-                          <div class="flex items-center gap-2">
-                            <span class="text-xs text-slate-400">{{ item.createTime }}</span>
-                            <el-button v-if="item.execRecordId" type="primary" link size="small"
-                                       @click="handleViewInspectionReport(item)">
-                              查看报告
-                            </el-button>
-                            <!-- 批次E/E6：结果已回 → 一键建复诊（关联本次病历，免挂号费） -->
-                            <el-button v-if="canCreateRevisit(item)" type="warning" link size="small"
-                                       @click="handleCreateRevisit(item)">
-                              建复诊
-                            </el-button>
-                            <el-button v-if="item.canDelete" v-perm="'opd:doctorWorkstation:delete'" type="danger" link size="small"
-                                       @click="handleDeleteInspectionRecord(idx)">
-                              删除
-                            </el-button>
-                            <el-tooltip v-else-if="item.deleteBlockReason" :content="item.deleteBlockReason">
-                              <span class="cursor-help text-xs text-slate-300">删除</span>
-                            </el-tooltip>
-                          </div>
-                        </div>
-                        <div v-if="item.bodyPart" class="mt-1 text-xs text-slate-500">部位：{{ item.bodyPart }}</div>
-                        <div v-if="item.inspectionPurpose" class="mt-1 text-xs text-slate-500">
-                          目的：{{ item.inspectionPurpose }}
-                        </div>
-                        <div v-if="item.specialRequirements" class="mt-1 text-xs text-slate-500">
-                          注意事项：{{ item.specialRequirements }}
-                        </div>
-                        <div v-if="item.critical" class="mt-2 rounded bg-red-100 p-2 text-xs text-red-700">
-                          该检查/相关检验出现危急值，请优先处理并及时通知患者。
-                        </div>
-                      </div>
-                    </template>
-                  </div>
-                </div>
-                <!-- 批次E/F：检查面板原来空着一整块，医生分不清"没开"还是"没加载出来" -->
-                <div v-else class="py-8 text-center text-sm text-slate-400">
-                  {{ patientDataLoading ? '检查申请加载中…' : '本次就诊还没有检查申请' }}
-                </div>
-              </div>
-                </div>
-              </OrderPanel>
-              <OrderPanel title="检验申请" :count-text="laboratoryRecords.length + ' 项'">
-                <div class="relative">
-              <div v-if="currentPatient.queueStatus === 3"
-                   class="sticky top-0 z-10 flex justify-end py-2">
-                <el-button v-perm="'opd:doctorWorkstation:add'" type="primary" size="small" :icon="Plus" @click="handleAddEmptyLaboratory">新增检验
-                </el-button>
-              </div>
-              <div class="space-y-3 py-2">
-                <!-- 检验申请列表 -->
-                <div v-if="laboratoryRecords.length > 0">
-                  <div class="space-y-2">
-                    <!-- 可编辑列表 (queueStatus=3 结诊中) -->
-                    <template v-if="currentPatient.queueStatus === 3">
-                      <div v-for="(item, idx) in laboratoryRecords"
-                           :key="item.id || ('pending-laboratory-' + item._pendingIdx)"
-                           class="rounded-lg border border-slate-200 p-2">
-                        <div class="mb-1.5 flex items-center justify-between">
-                          <div class="flex items-center gap-2">
-                            <span class="text-xs font-medium text-slate-700">检验申请 #{{ idx + 1 }}</span>
-                            <el-tag v-if="item.id" :type="applyTagType(item)" size="small">
-                              {{ item.execStatusText }}
-                            </el-tag>
-                            <el-tag v-else type="info" size="small">选项目后即时开单</el-tag>
-                            <el-tag v-if="item.critical" type="danger" size="small" effect="dark">危急值</el-tag>
-                            <el-tooltip v-if="item.signStatus === 1" :content="`开单医师 ${item.doctorName} · ${item.signedTime || ''}，签名即锁定`">
-                              <el-tag type="success" size="small" effect="plain" data-testid="p5-lab-sign-tag">已电子签名</el-tag>
-                            </el-tooltip>
-                            <el-tag v-else-if="item.signStatus === 2" type="warning" size="small" effect="plain">签名已作废</el-tag>
-                          </div>
-                          <div class="flex items-center gap-1">
-                            <el-button v-perm="'opd:doctorWorkstation:edit'" type="primary" link size="small" :disabled="!item.id"
-                                       @click="handleSaveLaboratoryRow(item)">
-                              保存修改
-                            </el-button>
-                            <el-button v-perm="'opd:doctorWorkstation:delete'" type="danger" link size="small"
-                                       @click="handleDeleteLaboratoryRecord(idx)">
-                              删除
-                            </el-button>
-                          </div>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                          <div class="flex items-center gap-4">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">检验项目</label>
-                            <el-select v-model="item.laboratoryItemName" filterable
-                                       placeholder="搜索检验项目"
-                                       :loading="laboratoryItemLoading" style="width: 180px"
-                                       @change="(val: any) => handleLaboratoryItemSelectForRecord(item, val)">
-                              <el-option v-for="opt in laboratoryItemResults" :key="opt.id"
-                                         :label="`${opt.itemCode} - ${opt.itemName}`" :value="opt.id">
-                                <div class="flex items-center justify-between">
-                                  <span class="text-sm font-medium text-slate-900">{{ opt.itemName }}</span>
-                                  <span class="text-xs text-slate-400">¥{{ opt.price }}</span>
-                                </div>
-                                <div class="text-xs text-slate-400">{{ opt.itemCode }} · {{ opt.specimenType }}</div>
-                              </el-option>
-                            </el-select>
-                          </div>
-                          <div class="flex items-center gap-4">
-                            <label class="text-xs text-slate-600 whitespace-nowrap">标本</label>
-                            <el-select v-model="item.specimenType" style="width: 90px" placeholder="标本">
-                              <el-option label="血液" value="血液"/>
-                              <el-option label="尿液" value="尿液"/>
-                              <el-option label="粪便" value="粪便"/>
-                              <el-option label="体液" value="体液"/>
-                            </el-select>
-                          </div>
-                          <div class="mt-1.5 flex items-center gap-4">
-                            <el-switch v-model="item.isFasting" :active-value="1" :inactive-value="0"
-                                       size="small" active-text="空腹"/>
-                            <el-switch v-model="item.isEmergency" :active-value="1" :inactive-value="0"
-                                       size="small" active-text="急诊"/>
-                          </div>
-                        </div>
-                        <div class="mt-1.5 flex items-start gap-4">
-                          <label class="mt-2 text-xs text-slate-600 whitespace-nowrap">检验目的</label>
-                          <el-input v-model="item.laboratoryPurpose" type="textarea" :rows="2" style="width: 500px"
-                                    placeholder="检验目的（可选）"/>
-                        </div>
-
-                        <!-- 常用检验申请快捷选择 -->
-                        <div class="mt-2 border-t border-slate-100 pt-2">
-                          <div class="mb-1 text-[10px] font-medium text-slate-500">常用检验</div>
-                          <div class="flex flex-wrap gap-1">
-                            <el-button v-for="tpl in myLaboratoryTemplates" :key="tpl.id" size="small" link
-                                       type="primary" @click="handleApplyLaboratoryTemplateToRecord(item, tpl)">
-                              {{ tpl.templateName }}
-                            </el-button>
-                          </div>
-                        </div>
-                      </div>
-                    </template>
-                    <!-- 纯列表 (非就诊中) -->
-                    <template v-else>
-                      <div v-for="(item, idx) in laboratoryRecords"
-                           :key="item.id || ('pending-laboratory-' + item._pendingIdx)"
-                           :class="[
-                             'rounded-lg border p-3',
-                             item.critical
-                                 ? 'border-red-300 bg-red-50'
-                                 : (item.execStatusText === '待缴费' ? 'border-amber-200 bg-amber-50' : 'border-slate-200')
-                           ]">
-                        <div class="flex items-center justify-between">
-                          <div class="flex items-center gap-2">
-                            <span class="text-sm font-medium text-slate-900">{{ item.laboratoryItemName }}</span>
-                            <el-tag :type="applyTagType(item)" size="small">{{ item.execStatusText }}</el-tag>
-                            <el-tag v-if="item.critical" type="danger" size="small" effect="dark">危急值</el-tag>
-                            <el-tag v-if="item.isEmergency === 1" type="warning" size="small">急诊</el-tag>
-                            <el-tag v-if="item.isFasting === 1" type="info" size="small">空腹</el-tag>
-                            <el-tag v-if="item.signStatus === 1" type="success" size="small" effect="plain">已电子签名·{{ item.doctorName }}</el-tag>
-                            <el-tag v-else-if="item.signStatus === 2" type="warning" size="small" effect="plain">签名已作废</el-tag>
-                          </div>
-                          <div class="flex items-center gap-2">
-                            <span class="text-xs text-slate-400">{{ item.createTime }}</span>
-                            <el-button v-if="item.execRecordId" type="primary" link size="small"
-                                       @click="handleViewLaboratoryReport(item)">
-                              查看报告
-                            </el-button>
-                            <!-- 批次E/E6：结果已回 → 一键建复诊（关联本次病历，免挂号费） -->
-                            <el-button v-if="canCreateRevisit(item)" type="warning" link size="small"
-                                       @click="handleCreateRevisit(item)">
-                              建复诊
-                            </el-button>
-                            <el-button v-if="item.canDelete" v-perm="'opd:doctorWorkstation:delete'" type="danger" link size="small"
-                                       @click="handleDeleteLaboratoryRecord(idx)">
-                              删除
-                            </el-button>
-                            <el-tooltip v-else-if="item.deleteBlockReason" :content="item.deleteBlockReason">
-                              <span class="cursor-help text-xs text-slate-300">删除</span>
-                            </el-tooltip>
-                          </div>
-                        </div>
-                        <div v-if="item.specimenType" class="mt-1 text-xs text-slate-500">标本：{{
-                            item.specimenType
+                        <div
+                            v-if="prescriptionList.filter(p => p.prescriptionType === currentPrescriptionType).length === 0 || prescriptionList.filter(p => p.prescriptionType === currentPrescriptionType).every(p => !p.details || p.details.length === 0)"
+                            class="py-8 text-center text-sm text-slate-400">
+                          {{
+                            patientDataLoading ? '处方加载中…' : `暂无${prescriptionTypeLabel(currentPrescriptionType)}处方`
                           }}
                         </div>
-                        <div v-if="item.laboratoryPurpose" class="mt-1 text-xs text-slate-500">
-                          目的：{{ item.laboratoryPurpose }}
-                        </div>
-                        <div v-if="item.critical" class="mt-2 rounded bg-red-100 p-2 text-xs text-red-700">
-                          该检验出现危急值，请优先处理并及时通知患者。
-                        </div>
-                      </div>
-                    </template>
+                      </template>
+                    </div>
                   </div>
                 </div>
-                <!-- 批次E/F：同检查面板，空态要区分「没开」和「还在加载」 -->
-                <div v-else class="py-8 text-center text-sm text-slate-400">
-                  {{ patientDataLoading ? '检验申请加载中…' : '本次就诊还没有检验申请' }}
-                </div>
-              </div>
+              </OrderPanel>
+              <OrderPanel :count-text="inspectionRecords.length + ' 项'" title="检查申请">
+                <div class="relative">
+                  <div v-if="currentPatient.queueStatus === 3"
+                       class="sticky top-0 z-10 flex justify-end py-2">
+                    <el-button v-perm="'opd:doctorWorkstation:add'" :icon="Plus" size="small" type="primary"
+                               @click="handleAddEmptyInspection">新增检查
+                    </el-button>
+                  </div>
+                  <div class="space-y-3 py-2">
+                    <!-- 检查申请列表 -->
+                    <div v-if="inspectionRecords.length > 0">
+                      <div class="space-y-2">
+                        <!-- 可编辑列表 (queueStatus=3 就诊中) -->
+                        <template v-if="currentPatient.queueStatus === 3">
+                          <div v-for="(item, idx) in inspectionRecords"
+                               :key="item.id || ('pending-inspection-' + item._pendingIdx)"
+                               class="rounded-lg border border-slate-200 p-2">
+                            <div class="mb-1.5 flex items-center justify-between">
+                              <div class="flex items-center gap-2">
+                                <span class="text-xs font-medium text-slate-700">检查申请 #{{ idx + 1 }}</span>
+                                <el-tag v-if="item.id" :type="applyTagType(item)" size="small">
+                                  {{ item.execStatusText }}
+                                </el-tag>
+                                <el-tag v-else size="small" type="info">选项目后即时开单</el-tag>
+                                <el-tag v-if="item.critical" effect="dark" size="small" type="danger">危急值</el-tag>
+                                <el-tooltip v-if="item.signStatus === 1"
+                                            :content="`开单医师 ${item.doctorName} · ${item.signedTime || ''}，签名即锁定`">
+                                  <el-tag data-testid="p5-ins-sign-tag" effect="plain" size="small" type="success">
+                                    已电子签名
+                                  </el-tag>
+                                </el-tooltip>
+                                <el-tag v-else-if="item.signStatus === 2" effect="plain" size="small" type="warning">
+                                  签名已作废
+                                </el-tag>
+                              </div>
+                              <div class="flex items-center gap-1">
+                                <el-button v-perm="'opd:doctorWorkstation:edit'" :disabled="!item.id" link size="small"
+                                           type="primary"
+                                           @click="handleSaveInspectionRow(item)">
+                                  保存修改
+                                </el-button>
+                                <el-button v-perm="'opd:doctorWorkstation:delete'" link size="small" type="danger"
+                                           @click="handleDeleteInspectionRecord(idx)">
+                                  删除
+                                </el-button>
+                              </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">检查项目</label>
+                                <el-select v-model="item.inspectionItemName" :loading="inspectionItemLoading"
+                                           filterable
+                                           placeholder="搜索检查项目" style="width: 180px"
+                                           @change="(val: any) => handleInspectionItemSelectForRecord(item, val)">
+                                  <el-option v-for="opt in inspectionItemResults" :key="opt.id"
+                                             :label="`${opt.itemCode} - ${opt.itemName}`" :value="opt.id">
+                                    <div class="flex items-center justify-between">
+                                      <span class="text-sm font-medium text-slate-900">{{ opt.itemName }}</span>
+                                      <span class="text-xs text-slate-400">¥{{ opt.price }}</span>
+                                    </div>
+                                    <div class="text-xs text-slate-400">{{ opt.itemCode }} · {{ opt.bodyPart }}</div>
+                                  </el-option>
+                                </el-select>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">部位</label>
+                                <el-input v-model="item.bodyPart" placeholder="检查部位" style="width: 150px"/>
+                              </div>
+                              <div class="flex items-center gap-1.5">
+                                <el-switch v-model="item.isEmergency" :active-value="1" :inactive-value="0"
+                                           active-text="急诊" size="small"/>
+                              </div>
+                            </div>
+                            <div class="mt-1.5 flex items-start gap-1.5">
+                              <label class="mt-2 text-xs text-slate-600 whitespace-nowrap">注意事项</label>
+                              <el-input v-model="item.preparation" :rows="2" placeholder="注意事项（可选）" style="width: 400px"
+                                        type="textarea"/>
+                            </div>
+                            <div class="mt-1.5 flex items-center gap-1.5">
+                              <label class="text-xs text-slate-600 whitespace-nowrap">检查目的</label>
+                              <el-input v-model="item.inspectionPurpose" :rows="2" placeholder="检查目的" style="width: 400px"
+                                        type="textarea"/>
+                            </div>
+
+                            <!-- 常用检查申请快捷选择 -->
+                            <div v-if="myInspectionTemplates.length > 0" class="mt-2 border-t border-slate-100 pt-2">
+                              <div class="mb-1 text-[10px] font-medium text-slate-500">常用检查</div>
+                              <div class="flex flex-wrap gap-1">
+                                <el-button v-for="tpl in myInspectionTemplates" :key="tpl.id" link size="small"
+                                           type="primary" @click="handleApplyInspectionTemplateToRecord(item, tpl)">
+                                  {{ tpl.templateName }}
+                                </el-button>
+                              </div>
+                            </div>
+                          </div>
+                        </template>
+                        <!-- 纯列表 (非就诊中) -->
+                        <template v-else>
+                          <div v-for="(item, idx) in inspectionRecords"
+                               :key="item.id || ('pending-inspection-' + item._pendingIdx)"
+                               :class="[
+                             'rounded-lg border p-3',
+                             item.critical
+                                 ? 'border-red-300 bg-red-50'
+                                 : (item.execStatusText === '待缴费' ? 'border-amber-200 bg-amber-50' : 'border-slate-200')
+                           ]">
+                            <div class="flex items-center justify-between">
+                              <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium text-slate-900">{{ item.inspectionItemName }}</span>
+                                <el-tag :type="applyTagType(item)" size="small">{{ item.execStatusText }}</el-tag>
+                                <el-tag v-if="item.critical" effect="dark" size="small" type="danger">危急值</el-tag>
+                                <el-tag v-if="item.isEmergency === 1" size="small" type="warning">急诊</el-tag>
+                                <el-tag v-if="item.signStatus === 1" effect="plain" size="small" type="success">
+                                  已电子签名·{{ item.doctorName }}
+                                </el-tag>
+                                <el-tag v-else-if="item.signStatus === 2" effect="plain" size="small" type="warning">
+                                  签名已作废
+                                </el-tag>
+                              </div>
+                              <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-400">{{ item.createTime }}</span>
+                                <el-button v-if="item.execRecordId" link size="small" type="primary"
+                                           @click="handleViewInspectionReport(item)">
+                                  查看报告
+                                </el-button>
+                                <!-- 批次E/E6：结果已回 → 一键建复诊（关联本次病历，免挂号费） -->
+                                <el-button v-if="canCreateRevisit(item)" link size="small" type="warning"
+                                           @click="handleCreateRevisit(item)">
+                                  建复诊
+                                </el-button>
+                                <el-button v-if="item.canDelete" v-perm="'opd:doctorWorkstation:delete'" link
+                                           size="small" type="danger"
+                                           @click="handleDeleteInspectionRecord(idx)">
+                                  删除
+                                </el-button>
+                                <el-tooltip v-else-if="item.deleteBlockReason" :content="item.deleteBlockReason">
+                                  <span class="cursor-help text-xs text-slate-300">删除</span>
+                                </el-tooltip>
+                              </div>
+                            </div>
+                            <div v-if="item.bodyPart" class="mt-1 text-xs text-slate-500">部位：{{ item.bodyPart }}</div>
+                            <div v-if="item.inspectionPurpose" class="mt-1 text-xs text-slate-500">
+                              目的：{{ item.inspectionPurpose }}
+                            </div>
+                            <div v-if="item.specialRequirements" class="mt-1 text-xs text-slate-500">
+                              注意事项：{{ item.specialRequirements }}
+                            </div>
+                            <div v-if="item.critical" class="mt-2 rounded bg-red-100 p-2 text-xs text-red-700">
+                              该检查/相关检验出现危急值，请优先处理并及时通知患者。
+                            </div>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                    <!-- 批次E/F：检查面板原来空着一整块，医生分不清"没开"还是"没加载出来" -->
+                    <div v-else class="py-8 text-center text-sm text-slate-400">
+                      {{ patientDataLoading ? '检查申请加载中…' : '本次就诊还没有检查申请' }}
+                    </div>
+                  </div>
                 </div>
               </OrderPanel>
-      <!-- AI辅助诊疗：与检查/检验申请同级的子卡（形态对齐左栏病历里的三个子卡） -->
-      <div class="overflow-hidden rounded-lg border border-slate-200">
-        <div class="border-b border-slate-200 bg-slate-50 px-3 py-2">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div
-                  class="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-blue-500 to-purple-600">
-                <span class="text-[10px] font-bold text-white">AI</span>
-              </div>
-              <span class="text-sm font-bold text-slate-700">辅助诊疗</span>
-            </div>
-            <el-button type="primary" link size="small" @click="handleAiDiagnosis" :loading="aiDiagnosisLoading">
-              刷新推荐
-            </el-button>
-          </div>
-        </div>
-        <div class="p-3">
-          <!-- AI诊断推荐 -->
-          <div v-if="aiDiagnosisResults.length > 0">
-            <div v-if="aiDiagnosisDegraded"
-                 class="mb-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-700">
-              模型未参与，以下为码表规则匹配结果<span v-if="aiDiagnosisDegradeReason">（{{ aiDiagnosisDegradeReason }}）</span>
-            </div>
-            <div class="mb-2 text-xs text-slate-500">根据病历信息，系统推荐以下诊断：</div>
-            <div class="space-y-2">
-              <div v-for="(item, index) in aiDiagnosisResults" :key="index"
-                   class="rounded-lg border border-slate-100 p-2.5 transition-colors hover:border-blue-200 hover:bg-blue-50">
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
+              <OrderPanel :count-text="laboratoryRecords.length + ' 项'" title="检验申请">
+                <div class="relative">
+                  <div v-if="currentPatient.queueStatus === 3"
+                       class="sticky top-0 z-10 flex justify-end py-2">
+                    <el-button v-perm="'opd:doctorWorkstation:add'" :icon="Plus" size="small" type="primary"
+                               @click="handleAddEmptyLaboratory">新增检验
+                    </el-button>
+                  </div>
+                  <div class="space-y-3 py-2">
+                    <!-- 检验申请列表 -->
+                    <div v-if="laboratoryRecords.length > 0">
+                      <div class="space-y-2">
+                        <!-- 可编辑列表 (queueStatus=3 结诊中) -->
+                        <template v-if="currentPatient.queueStatus === 3">
+                          <div v-for="(item, idx) in laboratoryRecords"
+                               :key="item.id || ('pending-laboratory-' + item._pendingIdx)"
+                               class="rounded-lg border border-slate-200 p-2">
+                            <div class="mb-1.5 flex items-center justify-between">
+                              <div class="flex items-center gap-2">
+                                <span class="text-xs font-medium text-slate-700">检验申请 #{{ idx + 1 }}</span>
+                                <el-tag v-if="item.id" :type="applyTagType(item)" size="small">
+                                  {{ item.execStatusText }}
+                                </el-tag>
+                                <el-tag v-else size="small" type="info">选项目后即时开单</el-tag>
+                                <el-tag v-if="item.critical" effect="dark" size="small" type="danger">危急值</el-tag>
+                                <el-tooltip v-if="item.signStatus === 1"
+                                            :content="`开单医师 ${item.doctorName} · ${item.signedTime || ''}，签名即锁定`">
+                                  <el-tag data-testid="p5-lab-sign-tag" effect="plain" size="small" type="success">
+                                    已电子签名
+                                  </el-tag>
+                                </el-tooltip>
+                                <el-tag v-else-if="item.signStatus === 2" effect="plain" size="small" type="warning">
+                                  签名已作废
+                                </el-tag>
+                              </div>
+                              <div class="flex items-center gap-1">
+                                <el-button v-perm="'opd:doctorWorkstation:edit'" :disabled="!item.id" link size="small"
+                                           type="primary"
+                                           @click="handleSaveLaboratoryRow(item)">
+                                  保存修改
+                                </el-button>
+                                <el-button v-perm="'opd:doctorWorkstation:delete'" link size="small" type="danger"
+                                           @click="handleDeleteLaboratoryRecord(idx)">
+                                  删除
+                                </el-button>
+                              </div>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                              <div class="flex items-center gap-4">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">检验项目</label>
+                                <el-select v-model="item.laboratoryItemName" :loading="laboratoryItemLoading"
+                                           filterable
+                                           placeholder="搜索检验项目" style="width: 180px"
+                                           @change="(val: any) => handleLaboratoryItemSelectForRecord(item, val)">
+                                  <el-option v-for="opt in laboratoryItemResults" :key="opt.id"
+                                             :label="`${opt.itemCode} - ${opt.itemName}`" :value="opt.id">
+                                    <div class="flex items-center justify-between">
+                                      <span class="text-sm font-medium text-slate-900">{{ opt.itemName }}</span>
+                                      <span class="text-xs text-slate-400">¥{{ opt.price }}</span>
+                                    </div>
+                                    <div class="text-xs text-slate-400">{{ opt.itemCode }} · {{
+                                        opt.specimenType
+                                      }}
+                                    </div>
+                                  </el-option>
+                                </el-select>
+                              </div>
+                              <div class="flex items-center gap-4">
+                                <label class="text-xs text-slate-600 whitespace-nowrap">标本</label>
+                                <el-select v-model="item.specimenType" placeholder="标本" style="width: 90px">
+                                  <el-option label="血液" value="血液"/>
+                                  <el-option label="尿液" value="尿液"/>
+                                  <el-option label="粪便" value="粪便"/>
+                                  <el-option label="体液" value="体液"/>
+                                </el-select>
+                              </div>
+                              <div class="mt-1.5 flex items-center gap-4">
+                                <el-switch v-model="item.isFasting" :active-value="1" :inactive-value="0"
+                                           active-text="空腹" size="small"/>
+                                <el-switch v-model="item.isEmergency" :active-value="1" :inactive-value="0"
+                                           active-text="急诊" size="small"/>
+                              </div>
+                            </div>
+                            <div class="mt-1.5 flex items-start gap-4">
+                              <label class="mt-2 text-xs text-slate-600 whitespace-nowrap">检验目的</label>
+                              <el-input v-model="item.laboratoryPurpose" :rows="2" placeholder="检验目的（可选）" style="width: 500px"
+                                        type="textarea"/>
+                            </div>
+
+                            <!-- 常用检验申请快捷选择 -->
+                            <div class="mt-2 border-t border-slate-100 pt-2">
+                              <div class="mb-1 text-[10px] font-medium text-slate-500">常用检验</div>
+                              <div class="flex flex-wrap gap-1">
+                                <el-button v-for="tpl in myLaboratoryTemplates" :key="tpl.id" link size="small"
+                                           type="primary" @click="handleApplyLaboratoryTemplateToRecord(item, tpl)">
+                                  {{ tpl.templateName }}
+                                </el-button>
+                              </div>
+                            </div>
+                          </div>
+                        </template>
+                        <!-- 纯列表 (非就诊中) -->
+                        <template v-else>
+                          <div v-for="(item, idx) in laboratoryRecords"
+                               :key="item.id || ('pending-laboratory-' + item._pendingIdx)"
+                               :class="[
+                             'rounded-lg border p-3',
+                             item.critical
+                                 ? 'border-red-300 bg-red-50'
+                                 : (item.execStatusText === '待缴费' ? 'border-amber-200 bg-amber-50' : 'border-slate-200')
+                           ]">
+                            <div class="flex items-center justify-between">
+                              <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium text-slate-900">{{ item.laboratoryItemName }}</span>
+                                <el-tag :type="applyTagType(item)" size="small">{{ item.execStatusText }}</el-tag>
+                                <el-tag v-if="item.critical" effect="dark" size="small" type="danger">危急值</el-tag>
+                                <el-tag v-if="item.isEmergency === 1" size="small" type="warning">急诊</el-tag>
+                                <el-tag v-if="item.isFasting === 1" size="small" type="info">空腹</el-tag>
+                                <el-tag v-if="item.signStatus === 1" effect="plain" size="small" type="success">
+                                  已电子签名·{{ item.doctorName }}
+                                </el-tag>
+                                <el-tag v-else-if="item.signStatus === 2" effect="plain" size="small" type="warning">
+                                  签名已作废
+                                </el-tag>
+                              </div>
+                              <div class="flex items-center gap-2">
+                                <span class="text-xs text-slate-400">{{ item.createTime }}</span>
+                                <el-button v-if="item.execRecordId" link size="small" type="primary"
+                                           @click="handleViewLaboratoryReport(item)">
+                                  查看报告
+                                </el-button>
+                                <!-- 批次E/E6：结果已回 → 一键建复诊（关联本次病历，免挂号费） -->
+                                <el-button v-if="canCreateRevisit(item)" link size="small" type="warning"
+                                           @click="handleCreateRevisit(item)">
+                                  建复诊
+                                </el-button>
+                                <el-button v-if="item.canDelete" v-perm="'opd:doctorWorkstation:delete'" link
+                                           size="small" type="danger"
+                                           @click="handleDeleteLaboratoryRecord(idx)">
+                                  删除
+                                </el-button>
+                                <el-tooltip v-else-if="item.deleteBlockReason" :content="item.deleteBlockReason">
+                                  <span class="cursor-help text-xs text-slate-300">删除</span>
+                                </el-tooltip>
+                              </div>
+                            </div>
+                            <div v-if="item.specimenType" class="mt-1 text-xs text-slate-500">标本：{{
+                                item.specimenType
+                              }}
+                            </div>
+                            <div v-if="item.laboratoryPurpose" class="mt-1 text-xs text-slate-500">
+                              目的：{{ item.laboratoryPurpose }}
+                            </div>
+                            <div v-if="item.critical" class="mt-2 rounded bg-red-100 p-2 text-xs text-red-700">
+                              该检验出现危急值，请优先处理并及时通知患者。
+                            </div>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                    <!-- 批次E/F：同检查面板，空态要区分「没开」和「还在加载」 -->
+                    <div v-else class="py-8 text-center text-sm text-slate-400">
+                      {{ patientDataLoading ? '检验申请加载中…' : '本次就诊还没有检验申请' }}
+                    </div>
+                  </div>
+                </div>
+              </OrderPanel>
+              <!-- AI辅助诊疗：与检查/检验申请同级的子卡（形态对齐左栏病历里的三个子卡） -->
+              <div class="overflow-hidden rounded-lg border border-slate-200">
+                <div class="border-b border-slate-200 bg-slate-50 px-3 py-2">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <div
+                          class="flex h-5 w-5 items-center justify-center rounded bg-gradient-to-br from-blue-500 to-purple-600">
+                        <span class="text-[10px] font-bold text-white">AI</span>
+                      </div>
+                      <span class="text-sm font-bold text-slate-700">辅助诊疗</span>
+                    </div>
+                    <el-button :loading="aiDiagnosisLoading" link size="small" type="primary"
+                               @click="handleAiDiagnosis">
+                      刷新推荐
+                    </el-button>
+                  </div>
+                </div>
+                <div class="p-3">
+                  <!-- AI诊断推荐 -->
+                  <div v-if="aiDiagnosisResults.length > 0">
+                    <div v-if="aiDiagnosisDegraded"
+                         class="mb-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-700">
+                      模型未参与，以下为码表规则匹配结果<span
+                        v-if="aiDiagnosisDegradeReason">（{{ aiDiagnosisDegradeReason }}）</span>
+                    </div>
+                    <div class="mb-2 text-xs text-slate-500">根据病历信息，系统推荐以下诊断：</div>
+                    <div class="space-y-2">
+                      <div v-for="(item, index) in aiDiagnosisResults" :key="index"
+                           class="rounded-lg border border-slate-100 p-2.5 transition-colors hover:border-blue-200 hover:bg-blue-50">
+                        <div class="flex items-center justify-between">
+                          <div class="flex items-center gap-2">
                     <span
                         class="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-600">
                       {{ index + 1 }}
                     </span>
-                    <span class="text-sm font-medium text-slate-900">{{ item.icdName }}</span>
+                            <span class="text-sm font-medium text-slate-900">{{ item.icdName }}</span>
+                          </div>
+                          <el-tag v-if="item.confidence !== null"
+                                  :type="item.confidence >= 80 ? 'success' : item.confidence >= 60 ? 'warning' : 'info'"
+                                  size="small">
+                            {{ item.confidence }}%
+                          </el-tag>
+                          <el-tag v-else effect="plain" size="small" type="info">
+                            {{ item.source === 'rule' ? '规则匹配' : '未给分值' }}
+                          </el-tag>
+                        </div>
+                        <div class="mt-1.5 flex items-center gap-2">
+                          <span class="text-[10px] text-slate-400">{{ item.icdCode }}</span>
+                          <el-button link size="small" type="primary" @click="handleAdoptAiDiagnosis(item)">
+                            采纳
+                          </el-button>
+                          <el-button link size="small" type="info" @click="handleViewAiGuide(item)">
+                            查看指南
+                          </el-button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <el-tag v-if="item.confidence !== null"
-                          :type="item.confidence >= 80 ? 'success' : item.confidence >= 60 ? 'warning' : 'info'"
-                          size="small">
-                    {{ item.confidence }}%
-                  </el-tag>
-                  <el-tag v-else type="info" size="small" effect="plain">
-                    {{ item.source === 'rule' ? '规则匹配' : '未给分值' }}
-                  </el-tag>
-                </div>
-                <div class="mt-1.5 flex items-center gap-2">
-                  <span class="text-[10px] text-slate-400">{{ item.icdCode }}</span>
-                  <el-button type="primary" link size="small" @click="handleAdoptAiDiagnosis(item)">
-                    采纳
-                  </el-button>
-                  <el-button type="info" link size="small" @click="handleViewAiGuide(item)">
-                    查看指南
-                  </el-button>
+                  <div v-else-if="aiDiagnosisLoading" class="py-6 text-center">
+                    <el-icon class="mb-2 h-6 w-6 animate-spin text-blue-500">
+                      <Loading/>
+                    </el-icon>
+                    <div class="text-xs text-slate-500">AI正在分析病历信息...</div>
+                  </div>
+                  <div v-else class="py-4 text-center">
+                    <div class="text-xs text-slate-400">填写主诉或现病史后</div>
+                    <div class="text-xs text-slate-400">系统将自动推荐诊断</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
-          <div v-else-if="aiDiagnosisLoading" class="py-6 text-center">
-            <el-icon class="mb-2 h-6 w-6 animate-spin text-blue-500">
-              <Loading/>
-            </el-icon>
-            <div class="text-xs text-slate-500">AI正在分析病历信息...</div>
-          </div>
-          <div v-else class="py-4 text-center">
-            <div class="text-xs text-slate-400">填写主诉或现病史后</div>
-            <div class="text-xs text-slate-400">系统将自动推荐诊断</div>
-          </div>
-        </div>
-      </div>
-      <!-- 用药安全审查（处方提交后由药师审方 + 用药安全规则共同完成，此处只显示状态、不产结论） -->
-      <div class="overflow-hidden rounded-lg border border-slate-200">
-        <div class="border-b border-slate-200 bg-slate-50 px-3 py-2">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <el-icon class="text-slate-400">
-                <InfoFilled/>
-              </el-icon>
-              <span class="text-sm font-bold text-slate-700">用药安全审查</span>
-            </div>
-            <el-tag type="info" size="small" effect="plain">待处方提交</el-tag>
-          </div>
-        </div>
-        <div class="p-3">
-          <div v-if="prescriptionForm.details.length === 0" class="py-4 text-center">
-            <div class="text-xs text-slate-400">添加药品后，处方随病历提交进入审查</div>
-          </div>
-          <div v-else class="space-y-1.5">
-            <div class="text-xs text-slate-500">
-              已开 {{ prescriptionForm.details.length }} 项药品。处方审核按处方号由服务端回查明细，
-              提交病历（结诊）生成处方后才能出审查结论。
-            </div>
-            <div class="text-xs text-slate-400">
-              审查由药师审方与用药安全规则共同完成，结论见「处方」页签与审方工作台。
-            </div>
-          </div>
-        </div>
-      </div>
+              <!-- 用药安全审查（处方提交后由药师审方 + 用药安全规则共同完成，此处只显示状态、不产结论） -->
+              <div class="overflow-hidden rounded-lg border border-slate-200">
+                <div class="border-b border-slate-200 bg-slate-50 px-3 py-2">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <el-icon class="text-slate-400">
+                        <InfoFilled/>
+                      </el-icon>
+                      <span class="text-sm font-bold text-slate-700">用药安全审查</span>
+                    </div>
+                    <el-tag effect="plain" size="small" type="info">待处方提交</el-tag>
+                  </div>
+                </div>
+                <div class="p-3">
+                  <div v-if="prescriptionForm.details.length === 0" class="py-4 text-center">
+                    <div class="text-xs text-slate-400">添加药品后，处方随病历提交进入审查</div>
+                  </div>
+                  <div v-else class="space-y-1.5">
+                    <div class="text-xs text-slate-500">
+                      已开 {{ prescriptionForm.details.length }} 项药品。处方审核按处方号由服务端回查明细，
+                      提交病历（结诊）生成处方后才能出审查结论。
+                    </div>
+                    <div class="text-xs text-slate-400">
+                      审查由药师审方与用药安全规则共同完成，结论见「处方」页签与审方工作台。
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -4743,16 +4764,21 @@ const arriveText = computed(() => {
         <PageActionBar align="start">
           <!-- 结诊前：核心操作 -->
           <div v-if="!isVisitCompleted" class="flex items-center gap-3">
-            <el-button v-if="currentPatient.queueStatus == 3" v-perm="['opd:doctorWorkstation:add', 'opd:doctorWorkstation:edit']" type="primary" @click="handleSaveRecord">
+            <el-button v-if="currentPatient.queueStatus == 3"
+                       v-perm="['opd:doctorWorkstation:add', 'opd:doctorWorkstation:edit']" type="primary"
+                       @click="handleSaveRecord">
               临时保存
             </el-button>
-            <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:add'" type="success" plain :icon="Tickets" @click="openOrderDialog">
+            <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:add'" :icon="Tickets" plain
+                       type="success" @click="openOrderDialog">
               开住院证
             </el-button>
-            <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:add'" type="primary" plain @click="openRevisitAppoint">
+            <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:add'" plain type="primary"
+                       @click="openRevisitAppoint">
               预约复诊
             </el-button>
-            <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:edit'" type="warning" @click="handleComplete">
+            <el-button v-if="currentPatient.queueStatus == 3" v-perm="'opd:doctorWorkstation:edit'" type="warning"
+                       @click="handleComplete">
               结诊
             </el-button>
           </div>
@@ -4771,7 +4797,7 @@ const arriveText = computed(() => {
               打印处方
             </el-button>
             <!-- 结诊提交是原子动作：病历/处方签名失败会整体回滚，所以走到这里必然已签 -->
-            <el-tag type="success" effect="plain" data-testid="p5-done-sign-hint">
+            <el-tag data-testid="p5-done-sign-hint" effect="plain" type="success">
               病历 · 处方 · 申请单均已电子签名（签名中心可验签）
             </el-tag>
           </div>
@@ -4782,11 +4808,11 @@ const arriveText = computed(() => {
   </div>
 
   <!-- 历史就诊（患者级）：弹窗不打断接诊，内含 CDR 全景时间轴与「打开完整时间轴」 -->
-  <PatientDetailDialog v-model="showPatientDetail" :patient-id="currentPatient?.patientId"
-                       :patient="currentPatient"/>
+  <PatientDetailDialog v-model="showPatientDetail" :patient="currentPatient"
+                       :patient-id="currentPatient?.patientId"/>
 
   <!-- 费用与医保抽屉（原来常驻右栏 + 藏在一个 Tab 里，改为患者条「费用」按需展开） -->
-  <el-drawer v-model="showChargeDrawer" title="费用与医保" size="560px">
+  <el-drawer v-model="showChargeDrawer" size="560px" title="费用与医保">
     <div class="space-y-3">
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div class="mb-3 flex items-center gap-2">
@@ -4853,8 +4879,8 @@ const arriveText = computed(() => {
               <span class="text-slate-500">药品费用</span>
               <span class="font-medium text-slate-900">¥{{ drugTotalAmount.toFixed(2) }}</span>
             </div>
-            <el-progress :percentage="drugPercentage" :stroke-width="6" :color="'#3b82f6'"
-                         :show-text="false"/>
+            <el-progress :color="'#3b82f6'" :percentage="drugPercentage" :show-text="false"
+                         :stroke-width="6"/>
           </div>
           <!-- 检查费用 -->
           <div>
@@ -4862,8 +4888,8 @@ const arriveText = computed(() => {
               <span class="text-slate-500">检查费用</span>
               <span class="font-medium text-slate-900">¥{{ inspectionTotalAmount.toFixed(2) }}</span>
             </div>
-            <el-progress :percentage="inspectionPercentage" :stroke-width="6" :color="'#8b5cf6'"
-                         :show-text="false"/>
+            <el-progress :color="'#8b5cf6'" :percentage="inspectionPercentage" :show-text="false"
+                         :stroke-width="6"/>
           </div>
           <!-- 检验费用 -->
           <div>
@@ -4871,8 +4897,8 @@ const arriveText = computed(() => {
               <span class="text-slate-500">检验费用</span>
               <span class="font-medium text-slate-900">¥{{ laboratoryTotalAmount.toFixed(2) }}</span>
             </div>
-            <el-progress :percentage="laboratoryPercentage" :stroke-width="6" :color="'#f59e0b'"
-                         :show-text="false"/>
+            <el-progress :color="'#f59e0b'" :percentage="laboratoryPercentage" :show-text="false"
+                         :stroke-width="6"/>
           </div>
           <!-- 合计 -->
           <div class="border-t border-slate-100 pt-2.5">
@@ -4905,133 +4931,133 @@ const arriveText = computed(() => {
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <div class="mb-3 text-sm font-bold text-slate-700">收费明细</div>
         <div>
-              <div v-if="patientChargeItems.length" class="py-2">
-                <!-- 收费汇总（可折叠） -->
-                <el-collapse v-model="chargeCollapseActive">
-                  <el-collapse-item name="chargeInfo">
-                    <template #title>
-                      <div class="flex flex-1 items-center justify-between pr-4">
-                        <span class="font-bold text-slate-700">收费汇总</span>
-                        <el-tag
-                            :type="chargeSummary.total > 0 ? 'success' : 'info'"
-                            size="small">
-                          {{ chargeSummary.total > 0 ? '已收费' : '暂无收费' }}
-                        </el-tag>
+          <div v-if="patientChargeItems.length" class="py-2">
+            <!-- 收费汇总（可折叠） -->
+            <el-collapse v-model="chargeCollapseActive">
+              <el-collapse-item name="chargeInfo">
+                <template #title>
+                  <div class="flex flex-1 items-center justify-between pr-4">
+                    <span class="font-bold text-slate-700">收费汇总</span>
+                    <el-tag
+                        :type="chargeSummary.total > 0 ? 'success' : 'info'"
+                        size="small">
+                      {{ chargeSummary.total > 0 ? '已收费' : '暂无收费' }}
+                    </el-tag>
+                  </div>
+                </template>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span class="text-slate-500">总费用：</span>
+                    <span class="font-bold text-red-600">¥{{ chargeSummary.total.toFixed(2) }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500">统筹支付：</span>
+                    <span class="font-medium text-blue-600">¥{{ chargeSummary.insurance.toFixed(2) }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500">账户支付：</span>
+                    <span class="font-medium text-emerald-600">¥{{ chargeSummary.account.toFixed(2) }}</span>
+                  </div>
+                  <div>
+                    <span class="text-slate-500">个人自费：</span>
+                    <span class="font-medium text-orange-600">¥{{ chargeSummary.self.toFixed(2) }}</span>
+                  </div>
+                </div>
+              </el-collapse-item>
+
+              <!-- 收费明细（可折叠） -->
+              <el-collapse-item
+                  v-if="getChargeDetailsByType([2,3,4]).length || getChargeDetailsByType(5).length || getChargeDetailsByType(6).length"
+                  name="chargeDetails">
+                <template #title>
+                  <span class="font-bold text-slate-700">收费明细</span>
+                </template>
+
+                <!-- 按类型分组显示 -->
+                <div v-if="getChargeDetailsByType([2,3,4]).length > 0" class="mb-3">
+                  <div class="mb-1 flex items-center gap-2">
+                    <el-tag size="small" type="primary">药品</el-tag>
+                    <span class="text-xs text-slate-500">（{{ getChargeDetailsByType([2, 3, 4]).length }}项）</span>
+                  </div>
+                  <div class="space-y-1 pl-2">
+                    <div v-for="(item, index) in getChargeDetailsByType([2,3,4])" :key="index"
+                         class="flex items-center justify-between rounded bg-blue-50 px-2 py-1 text-xs">
+                      <div class="flex items-center gap-2">
+                        <span class="font-medium text-slate-700">{{ item.itemName }}</span>
+                        <span class="text-slate-400">{{ item.specification }}</span>
                       </div>
-                    </template>
-                    <div class="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <span class="text-slate-500">总费用：</span>
-                        <span class="font-bold text-red-600">¥{{ chargeSummary.total.toFixed(2) }}</span>
-                      </div>
-                      <div>
-                        <span class="text-slate-500">统筹支付：</span>
-                        <span class="font-medium text-blue-600">¥{{ chargeSummary.insurance.toFixed(2) }}</span>
-                      </div>
-                      <div>
-                        <span class="text-slate-500">账户支付：</span>
-                        <span class="font-medium text-emerald-600">¥{{ chargeSummary.account.toFixed(2) }}</span>
-                      </div>
-                      <div>
-                        <span class="text-slate-500">个人自费：</span>
-                        <span class="font-medium text-orange-600">¥{{ chargeSummary.self.toFixed(2) }}</span>
+                      <div class="flex items-center gap-3">
+                        <span>{{ item.quantity }}{{ item.unit }}</span>
+                        <span>× ¥{{ (item.price || 0).toFixed(2) }}</span>
+                        <span class="font-medium text-blue-600">= ¥{{ (item.amount || 0).toFixed(2) }}</span>
                       </div>
                     </div>
-                  </el-collapse-item>
+                  </div>
+                </div>
 
-                  <!-- 收费明细（可折叠） -->
-                  <el-collapse-item
-                      v-if="getChargeDetailsByType([2,3,4]).length || getChargeDetailsByType(5).length || getChargeDetailsByType(6).length"
-                      name="chargeDetails">
-                    <template #title>
-                      <span class="font-bold text-slate-700">收费明细</span>
-                    </template>
-
-                    <!-- 按类型分组显示 -->
-                    <div v-if="getChargeDetailsByType([2,3,4]).length > 0" class="mb-3">
-                      <div class="mb-1 flex items-center gap-2">
-                        <el-tag size="small" type="primary">药品</el-tag>
-                        <span class="text-xs text-slate-500">（{{ getChargeDetailsByType([2,3,4]).length }}项）</span>
+                <div v-if="getChargeDetailsByType(5).length > 0" class="mb-3">
+                  <div class="mb-1 flex items-center gap-2">
+                    <el-tag size="small" type="warning">检查</el-tag>
+                    <span class="text-xs text-slate-500">（{{ getChargeDetailsByType(5).length }}项）</span>
+                  </div>
+                  <div class="space-y-1 pl-2">
+                    <div v-for="(item, index) in getChargeDetailsByType(5)" :key="index"
+                         class="flex items-center justify-between rounded bg-amber-50 px-2 py-1 text-xs">
+                      <div class="flex items-center gap-2">
+                        <span class="text-slate-700">{{ item.itemName }}</span>
+                        <span class="text-slate-400">{{ item.specification }}</span>
                       </div>
-                      <div class="space-y-1 pl-2">
-                        <div v-for="(item, index) in getChargeDetailsByType([2,3,4])" :key="index"
-                             class="flex items-center justify-between rounded bg-blue-50 px-2 py-1 text-xs">
-                          <div class="flex items-center gap-2">
-                            <span class="font-medium text-slate-700">{{ item.itemName }}</span>
-                            <span class="text-slate-400">{{ item.specification }}</span>
-                          </div>
-                          <div class="flex items-center gap-3">
-                            <span>{{ item.quantity }}{{ item.unit }}</span>
-                            <span>× ¥{{ (item.price || 0).toFixed(2) }}</span>
-                            <span class="font-medium text-blue-600">= ¥{{ (item.amount || 0).toFixed(2) }}</span>
-                          </div>
-                        </div>
-                      </div>
+                      <span class="font-medium">¥{{ (item.amount || 0).toFixed(2) }}</span>
                     </div>
+                  </div>
+                </div>
 
-                    <div v-if="getChargeDetailsByType(5).length > 0" class="mb-3">
-                      <div class="mb-1 flex items-center gap-2">
-                        <el-tag size="small" type="warning">检查</el-tag>
-                        <span class="text-xs text-slate-500">（{{ getChargeDetailsByType(5).length }}项）</span>
+                <div v-if="getChargeDetailsByType(6).length > 0" class="mb-3">
+                  <div class="mb-1 flex items-center gap-2">
+                    <el-tag size="small" type="success">检验</el-tag>
+                    <span class="text-xs text-slate-500">（{{ getChargeDetailsByType(6).length }}项）</span>
+                  </div>
+                  <div class="space-y-1 pl-2">
+                    <div v-for="(item, index) in getChargeDetailsByType(6)" :key="index"
+                         class="flex items-center justify-between rounded bg-emerald-50 px-2 py-1 text-xs">
+                      <div class="flex items-center gap-2">
+                        <span class="text-slate-700">{{ item.itemName }}</span>
+                        <span class="text-slate-400">{{ item.specification }}</span>
                       </div>
-                      <div class="space-y-1 pl-2">
-                        <div v-for="(item, index) in getChargeDetailsByType(5)" :key="index"
-                             class="flex items-center justify-between rounded bg-amber-50 px-2 py-1 text-xs">
-                          <div class="flex items-center gap-2">
-                            <span class="text-slate-700">{{ item.itemName }}</span>
-                            <span class="text-slate-400">{{ item.specification }}</span>
-                          </div>
-                          <span class="font-medium">¥{{ (item.amount || 0).toFixed(2) }}</span>
-                        </div>
-                      </div>
+                      <span class="font-medium">¥{{ (item.amount || 0).toFixed(2) }}</span>
                     </div>
+                  </div>
+                </div>
 
-                    <div v-if="getChargeDetailsByType(6).length > 0" class="mb-3">
-                      <div class="mb-1 flex items-center gap-2">
-                        <el-tag size="small" type="success">检验</el-tag>
-                        <span class="text-xs text-slate-500">（{{ getChargeDetailsByType(6).length }}项）</span>
-                      </div>
-                      <div class="space-y-1 pl-2">
-                        <div v-for="(item, index) in getChargeDetailsByType(6)" :key="index"
-                             class="flex items-center justify-between rounded bg-emerald-50 px-2 py-1 text-xs">
-                          <div class="flex items-center gap-2">
-                            <span class="text-slate-700">{{ item.itemName }}</span>
-                            <span class="text-slate-400">{{ item.specification }}</span>
-                          </div>
-                          <span class="font-medium">¥{{ (item.amount || 0).toFixed(2) }}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- 费用汇总 -->
-                    <div class="border-t border-slate-200 pt-2 space-y-1">
-                      <div v-if="getChargeDetailsByType([2,3,4]).length > 0" class="flex justify-between text-xs">
-                        <span class="text-slate-500">药品小计</span>
-                        <span class="font-medium">¥{{ getTypeTotal([2,3,4]).toFixed(2) }}</span>
-                      </div>
-                      <div v-if="getChargeDetailsByType(5).length > 0" class="flex justify-between text-xs">
-                        <span class="text-slate-500">检查小计</span>
-                        <span class="font-medium">¥{{ getTypeTotal(5).toFixed(2) }}</span>
-                      </div>
-                      <div v-if="getChargeDetailsByType(6).length > 0" class="flex justify-between text-xs">
-                        <span class="text-slate-500">检验小计</span>
-                        <span class="font-medium">¥{{ getTypeTotal(6).toFixed(2) }}</span>
-                      </div>
-                      <div class="flex justify-between border-t border-slate-200 pt-1 text-sm font-bold">
-                        <span class="text-slate-700">合计</span>
-                        <span class="text-red-600">¥{{ chargeSummary.total.toFixed(2) }}</span>
-                      </div>
-                    </div>
-                  </el-collapse-item>
-                </el-collapse>
-              </div>
-              <div v-else-if="patientDataLoading" class="py-12 text-center text-sm text-slate-400">
-                <p>收费信息加载中…</p>
-              </div>
-              <div v-else class="py-12 text-center text-sm text-slate-400">
-                <Coin class="mx-auto mb-2 h-12 w-12 opacity-30"/>
-                <p>暂无收费信息</p>
-              </div>
+                <!-- 费用汇总 -->
+                <div class="border-t border-slate-200 pt-2 space-y-1">
+                  <div v-if="getChargeDetailsByType([2,3,4]).length > 0" class="flex justify-between text-xs">
+                    <span class="text-slate-500">药品小计</span>
+                    <span class="font-medium">¥{{ getTypeTotal([2, 3, 4]).toFixed(2) }}</span>
+                  </div>
+                  <div v-if="getChargeDetailsByType(5).length > 0" class="flex justify-between text-xs">
+                    <span class="text-slate-500">检查小计</span>
+                    <span class="font-medium">¥{{ getTypeTotal(5).toFixed(2) }}</span>
+                  </div>
+                  <div v-if="getChargeDetailsByType(6).length > 0" class="flex justify-between text-xs">
+                    <span class="text-slate-500">检验小计</span>
+                    <span class="font-medium">¥{{ getTypeTotal(6).toFixed(2) }}</span>
+                  </div>
+                  <div class="flex justify-between border-t border-slate-200 pt-1 text-sm font-bold">
+                    <span class="text-slate-700">合计</span>
+                    <span class="text-red-600">¥{{ chargeSummary.total.toFixed(2) }}</span>
+                  </div>
+                </div>
+              </el-collapse-item>
+            </el-collapse>
+          </div>
+          <div v-else-if="patientDataLoading" class="py-12 text-center text-sm text-slate-400">
+            <p>收费信息加载中…</p>
+          </div>
+          <div v-else class="py-12 text-center text-sm text-slate-400">
+            <Coin class="mx-auto mb-2 h-12 w-12 opacity-30"/>
+            <p>暂无收费信息</p>
+          </div>
         </div>
       </div>
     </div>
@@ -5040,9 +5066,9 @@ const arriveText = computed(() => {
   <!-- AI诊疗指南弹窗 -->
   <el-dialog
       v-model="aiGuideDialogVisible"
+      :close-on-click-modal="false"
       title="诊疗指南"
       width="700px"
-      :close-on-click-modal="false"
   >
     <div v-if="aiGuideData" class="space-y-4">
       <div class="rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 p-4">
@@ -5146,9 +5172,9 @@ const arriveText = computed(() => {
   <!-- 就诊指引单弹窗 -->
   <el-dialog
       v-model="showGuideSheetDialog"
+      :close-on-click-modal="false"
       title="就诊指引单"
       width="960px"
-      :close-on-click-modal="false"
   >
     <div class="min-h-[800px]">
       <div v-if="loadingGuide" class="flex items-center justify-center py-10 text-sm text-slate-500">加载中...</div>
@@ -5166,9 +5192,9 @@ const arriveText = computed(() => {
   <!-- 标签管理弹窗 -->
   <el-dialog
       v-model="showTagDialog"
+      :close-on-click-modal="false"
       title="患者标签管理"
       width="500px"
-      :close-on-click-modal="false"
   >
     <div v-if="currentPatient" class="space-y-4">
       <!-- 当前患者标签 -->
@@ -5176,8 +5202,8 @@ const arriveText = computed(() => {
         <h4 class="mb-2 text-sm font-medium text-slate-700">当前标签</h4>
         <div v-if="patientTags.length > 0" class="flex flex-wrap gap-2">
           <span v-for="tag in patientTags" :key="tag.tagId"
-                class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-white"
-                :style="{ backgroundColor: tag.tagColor || '#409EFF' }">
+                :style="{ backgroundColor: tag.tagColor || '#409EFF' }"
+                class="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-white">
             {{ tag.tagName }}
             <el-icon class="cursor-pointer hover:text-red-200" @click="handleRemoveTag(tag.tagId)">
               <Delete class="h-3 w-3"/>
@@ -5190,13 +5216,13 @@ const arriveText = computed(() => {
       <!-- 添加标签 -->
       <div>
         <h4 class="mb-2 text-sm font-medium text-slate-700">添加标签</h4>
-        <el-input v-model="tagSearchKeyword" placeholder="搜索标签..." :prefix-icon="Search" clearable class="mb-3"/>
+        <el-input v-model="tagSearchKeyword" :prefix-icon="Search" class="mb-3" clearable placeholder="搜索标签..."/>
         <div class="max-h-60 overflow-y-auto">
           <div class="flex flex-wrap gap-2">
             <span v-for="tag in filteredAllTags" :key="tag.tagId"
-                  class="inline-flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-all hover:scale-105"
                   :class="isTagAdded(tag.tagId) ? 'opacity-50 cursor-not-allowed' : 'text-white cursor-pointer'"
                   :style="{ backgroundColor: isTagAdded(tag.tagId) ? '#ccc' : (tag.tagColor || '#409EFF') }"
+                  class="inline-flex cursor-pointer items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-all hover:scale-105"
                   @click="!isTagAdded(tag.tagId) && handleAddTag(tag.tagId)">
               {{ tag.tagName }}
               <el-icon v-if="!isTagAdded(tag.tagId)" class="h-3 w-3"><Plus/></el-icon>
@@ -5208,14 +5234,14 @@ const arriveText = computed(() => {
   </el-dialog>
 
   <!-- 常用诊断维护 -->
-  <el-dialog v-model="showDiagTemplateDialog" title="常用诊断维护" width="600px" destroy-on-close
+  <el-dialog v-model="showDiagTemplateDialog" destroy-on-close title="常用诊断维护" width="600px"
              @open="loadDiagTemplates">
     <div class="space-y-3">
       <div class="text-xs text-slate-500">管理您常用的ICD-10诊断编码，开方时可快速选择。</div>
       <!-- 搜索添加 -->
       <div>
-        <el-input v-model="diagSearchKeyword" placeholder="输入诊断名称或编码搜索并添加" :prefix-icon="Search"
-                  clearable @input="handleDiagSearchInDialog" @clear="diagSearchResults = []"/>
+        <el-input v-model="diagSearchKeyword" :prefix-icon="Search" clearable
+                  placeholder="输入诊断名称或编码搜索并添加" @clear="diagSearchResults = []" @input="handleDiagSearchInDialog"/>
         <div v-if="diagSearchResults.length > 0"
              class="mt-2 max-h-40 space-y-1 overflow-y-auto rounded border border-slate-200 p-2">
           <div v-for="item in diagSearchResults" :key="item.icdCode"
@@ -5242,7 +5268,7 @@ const arriveText = computed(() => {
             <span class="font-mono text-xs font-medium text-blue-600">{{ item.icdCode }}</span>
             <span class="text-sm text-slate-900">{{ item.icdName }}</span>
           </div>
-          <el-button type="danger" link size="small" @click="handleDeleteDiagTemplate(idx)">删除</el-button>
+          <el-button link size="small" type="danger" @click="handleDeleteDiagTemplate(idx)">删除</el-button>
         </div>
       </div>
     </div>
@@ -5252,13 +5278,13 @@ const arriveText = computed(() => {
   </el-dialog>
 
   <!-- 处方模板管理 -->
-  <el-dialog v-model="showRxTemplateDialog" title="处方模板管理" width="700px" destroy-on-close
+  <el-dialog v-model="showRxTemplateDialog" destroy-on-close title="处方模板管理" width="700px"
              @open="loadRxTemplates">
     <div class="space-y-3">
       <div class="text-xs text-slate-500">按病种保存常用处方组合，开方时一键套用。</div>
       <div class="flex items-center gap-2">
-        <el-input v-model="newTemplateName" placeholder="模板名称，如：上呼吸道感染" class="flex-1"/>
-        <el-button type="primary" size="small" @click="handleAddRxTemplate">保存当前处方为模板</el-button>
+        <el-input v-model="newTemplateName" class="flex-1" placeholder="模板名称，如：上呼吸道感染"/>
+        <el-button size="small" type="primary" @click="handleAddRxTemplate">保存当前处方为模板</el-button>
       </div>
       <div v-if="myRxTemplates.length === 0" class="py-8 text-center text-sm text-slate-400">暂无处方模板</div>
       <div v-else class="space-y-2">
@@ -5267,8 +5293,8 @@ const arriveText = computed(() => {
           <div class="flex items-center justify-between">
             <span class="text-sm font-medium text-slate-900">{{ tpl.templateName }}</span>
             <div class="flex gap-2">
-              <el-button type="primary" link size="small" @click="handleApplyRxTemplate(tpl)">套用</el-button>
-              <el-button type="danger" link size="small" @click="handleDeleteRxTemplate(idx)">删除</el-button>
+              <el-button link size="small" type="primary" @click="handleApplyRxTemplate(tpl)">套用</el-button>
+              <el-button link size="small" type="danger" @click="handleDeleteRxTemplate(idx)">删除</el-button>
             </div>
           </div>
           <div class="mt-1 text-xs text-slate-500">{{ tpl.drugCount }}种药品，合计 ¥{{ tpl.totalAmount }}</div>
@@ -5281,11 +5307,11 @@ const arriveText = computed(() => {
   </el-dialog>
 
   <!-- 药品/耗材套餐 -->
-  <el-dialog v-model="showPackageDialog" title="药品/耗材套餐" width="700px" destroy-on-close
+  <el-dialog v-model="showPackageDialog" destroy-on-close title="药品/耗材套餐" width="700px"
              @open="loadDrugPackages">
     <div class="space-y-3">
       <div class="text-xs text-slate-500">将药品+检查+检验打包成治疗方案套餐，一键开立全套医嘱。</div>
-      <el-button type="primary" size="small" @click="showAddPackageDialog = true">
+      <el-button size="small" type="primary" @click="showAddPackageDialog = true">
         <el-icon class="mr-0.5">
           <Plus/>
         </el-icon>
@@ -5298,8 +5324,8 @@ const arriveText = computed(() => {
           <div class="flex items-center justify-between">
             <span class="text-sm font-medium text-slate-900">{{ pkg.packageName }}</span>
             <div class="flex gap-2">
-              <el-button type="primary" link size="small" @click="handleApplyPackage(pkg)">套用</el-button>
-              <el-button type="danger" link size="small" @click="handleDeletePackage(idx)">删除</el-button>
+              <el-button link size="small" type="primary" @click="handleApplyPackage(pkg)">套用</el-button>
+              <el-button link size="small" type="danger" @click="handleDeletePackage(idx)">删除</el-button>
             </div>
           </div>
         </div>
@@ -5311,7 +5337,7 @@ const arriveText = computed(() => {
   </el-dialog>
 
   <!-- 新增套餐弹窗 -->
-  <el-dialog v-model="showAddPackageDialog" title="保存为套餐" width="400px" destroy-on-close>
+  <el-dialog v-model="showAddPackageDialog" destroy-on-close title="保存为套餐" width="400px">
     <div class="space-y-3">
       <el-input v-model="newPackageName" placeholder="套餐名称，如：术前检查套餐"/>
       <div class="text-xs text-slate-500">
@@ -5325,11 +5351,11 @@ const arriveText = computed(() => {
   </el-dialog>
 
   <!-- 检查申请模板弹窗 -->
-  <el-dialog v-model="showInspectionTemplateDialog" title="检查申请模板" width="700px" destroy-on-close
+  <el-dialog v-model="showInspectionTemplateDialog" destroy-on-close title="检查申请模板" width="700px"
              @open="loadInspectionTemplates">
     <div class="space-y-3">
       <div class="text-xs text-slate-500">将常用检查项目保存为模板，一键套用。</div>
-      <el-button type="primary" size="small" @click="showAddInspectionTemplateDialog = true">
+      <el-button size="small" type="primary" @click="showAddInspectionTemplateDialog = true">
         <el-icon class="mr-0.5">
           <Plus/>
         </el-icon>
@@ -5343,8 +5369,8 @@ const arriveText = computed(() => {
             <div class="text-xs text-slate-400">{{ tpl.inspectionItemName }} · {{ tpl.bodyPart || '未指定部位' }}</div>
           </div>
           <div class="flex items-center gap-2">
-            <el-button type="primary" link size="small" @click="handleApplyInspectionTemplate(tpl)">套用</el-button>
-            <el-button type="danger" link size="small" @click="handleDeleteInspectionTemplate(idx)">删除</el-button>
+            <el-button link size="small" type="primary" @click="handleApplyInspectionTemplate(tpl)">套用</el-button>
+            <el-button link size="small" type="danger" @click="handleDeleteInspectionTemplate(idx)">删除</el-button>
           </div>
         </div>
         <div v-if="myInspectionTemplates.length === 0" class="py-8 text-center text-xs text-slate-400">
@@ -5358,12 +5384,12 @@ const arriveText = computed(() => {
   </el-dialog>
 
   <!-- 新增检查模板弹窗 -->
-  <el-dialog v-model="showAddInspectionTemplateDialog" title="保存检查申请模板" width="500px" destroy-on-close>
+  <el-dialog v-model="showAddInspectionTemplateDialog" destroy-on-close title="保存检查申请模板" width="500px">
     <div class="space-y-3">
       <el-input v-model="inspectionTemplateName" placeholder="模板名称，如：术前胸部检查"/>
-      <el-select v-model="inspectionTemplateForm.inspectionItemId" filterable remote reserve-keyword
-                 placeholder="搜索检查项目" :remote-method="handleInspectionTemplateItemSearch"
-                 :loading="inspectionTemplateItemLoading" class="w-full"
+      <el-select v-model="inspectionTemplateForm.inspectionItemId" :loading="inspectionTemplateItemLoading" :remote-method="handleInspectionTemplateItemSearch" class="w-full"
+                 filterable placeholder="搜索检查项目"
+                 remote reserve-keyword
                  @change="handleInspectionTemplateItemSelect">
         <el-option v-for="item in inspectionTemplateItemResults" :key="item.id"
                    :label="`${item.itemCode} - ${item.itemName}`" :value="item.id">
@@ -5385,11 +5411,11 @@ const arriveText = computed(() => {
   </el-dialog>
 
   <!-- 检验申请模板弹窗 -->
-  <el-dialog v-model="showLaboratoryTemplateDialog" title="检验申请模板" width="700px" destroy-on-close
+  <el-dialog v-model="showLaboratoryTemplateDialog" destroy-on-close title="检验申请模板" width="700px"
              @open="loadLaboratoryTemplates">
     <div class="space-y-3">
       <div class="text-xs text-slate-500">将常用检验项目保存为模板，一键套用。</div>
-      <el-button type="primary" size="small" @click="showAddLaboratoryTemplateDialog = true">
+      <el-button size="small" type="primary" @click="showAddLaboratoryTemplateDialog = true">
         <el-icon class="mr-0.5">
           <Plus/>
         </el-icon>
@@ -5406,8 +5432,8 @@ const arriveText = computed(() => {
             </div>
           </div>
           <div class="flex items-center gap-2">
-            <el-button type="primary" link size="small" @click="handleApplyLaboratoryTemplate(tpl)">套用</el-button>
-            <el-button type="danger" link size="small" @click="handleDeleteLaboratoryTemplate(idx)">删除</el-button>
+            <el-button link size="small" type="primary" @click="handleApplyLaboratoryTemplate(tpl)">套用</el-button>
+            <el-button link size="small" type="danger" @click="handleDeleteLaboratoryTemplate(idx)">删除</el-button>
           </div>
         </div>
         <div v-if="myLaboratoryTemplates.length === 0" class="py-8 text-center text-xs text-slate-400">
@@ -5421,12 +5447,12 @@ const arriveText = computed(() => {
   </el-dialog>
 
   <!-- 新增检验模板弹窗 -->
-  <el-dialog v-model="showAddLaboratoryTemplateDialog" title="保存检验申请模板" width="500px" destroy-on-close>
+  <el-dialog v-model="showAddLaboratoryTemplateDialog" destroy-on-close title="保存检验申请模板" width="500px">
     <div class="space-y-3">
       <el-input v-model="laboratoryTemplateName" placeholder="模板名称，如：术前血常规"/>
-      <el-select v-model="laboratoryTemplateForm.laboratoryItemId" filterable remote reserve-keyword
-                 placeholder="搜索检验项目" :remote-method="handleLaboratoryTemplateItemSearch"
-                 :loading="laboratoryTemplateItemLoading" class="w-full"
+      <el-select v-model="laboratoryTemplateForm.laboratoryItemId" :loading="laboratoryTemplateItemLoading" :remote-method="handleLaboratoryTemplateItemSearch" class="w-full"
+                 filterable placeholder="搜索检验项目"
+                 remote reserve-keyword
                  @change="handleLaboratoryTemplateItemSelect">
         <el-option v-for="item in laboratoryTemplateItemResults" :key="item.id"
                    :label="`${item.itemCode} - ${item.itemName}`" :value="item.id">
@@ -5448,8 +5474,8 @@ const arriveText = computed(() => {
   </el-dialog>
 
   <!-- 病历文本智能录入（P1-3 结构化抽取） -->
-  <el-dialog v-model="extractDialogVisible" title="智能录入「病史」" width="900px" destroy-on-close
-             :close-on-click-modal="false">
+  <el-dialog v-model="extractDialogVisible" :close-on-click-modal="false" destroy-on-close title="智能录入「病史」"
+             width="900px">
     <div class="space-y-3">
       <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
         把一段文字（自己手打的、从外院系统或上级医院病历粘贴的）贴进来，系统会拆分到对应字段。
@@ -5459,8 +5485,8 @@ const arriveText = computed(() => {
         </span>
       </div>
 
-      <el-input v-model="extractRawText" type="textarea" :rows="7"
-                placeholder="例：主诉：反复咳嗽3天&#10;现病史：3天前受凉后出现咳嗽，夜间为甚，咳白色粘痰，无发热&#10;既往史：高血压5年，规律服药&#10;T36.8℃ P82次/分 R18次/分 BP130/85mmHg"/>
+      <el-input v-model="extractRawText" :rows="7" placeholder="例：主诉：反复咳嗽3天&#10;现病史：3天前受凉后出现咳嗽，夜间为甚，咳白色粘痰，无发热&#10;既往史：高血压5年，规律服药&#10;T36.8℃ P82次/分 R18次/分 BP130/85mmHg"
+                type="textarea"/>
 
       <div class="flex items-center justify-between">
         <span class="text-xs text-slate-400">
@@ -5468,7 +5494,7 @@ const arriveText = computed(() => {
         </span>
         <div class="flex items-center gap-2">
           <el-button v-if="extractRawText" size="small" @click="extractRawText = ''">清空</el-button>
-          <el-button type="primary" size="small" :loading="extractLoading" @click="runExtract">
+          <el-button :loading="extractLoading" size="small" type="primary" @click="runExtract">
             解析
           </el-button>
         </div>
@@ -5495,12 +5521,12 @@ const arriveText = computed(() => {
           <span class="text-xs text-slate-500">
             共识别出 {{ extractResult.fieldCount }} 项（耗时 {{ extractResult.latencyMs }} ms）
           </span>
-          <el-button v-if="extractResult.fields?.length" type="primary" link size="small"
+          <el-button v-if="extractResult.fields?.length" link size="small" type="primary"
                      @click="applyAllExtractFields">全部填入
           </el-button>
         </div>
 
-        <el-table :data="extractResult.fields || []" size="small" max-height="320" border>
+        <el-table :data="extractResult.fields || []" border max-height="320" size="small">
           <el-table-column label="字段" width="100">
             <template #default="{ row }">
               <span class="text-xs font-medium text-slate-700">{{ row.fieldLabel }}</span>
@@ -5513,7 +5539,7 @@ const arriveText = computed(() => {
           </el-table-column>
           <el-table-column label="来源" width="96">
             <template #default="{ row }">
-              <el-tag :type="row.source === 'HARD_RULE' ? 'success' : 'info'" size="small" effect="plain">
+              <el-tag :type="row.source === 'HARD_RULE' ? 'success' : 'info'" effect="plain" size="small">
                 {{ row.source === 'HARD_RULE' ? '原文切分' : 'AI 搬运' }}
               </el-tag>
             </template>
@@ -5523,12 +5549,12 @@ const arriveText = computed(() => {
               <div class="whitespace-pre-wrap text-xs text-slate-400">{{ row.evidence || '—' }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="90" fixed="right">
+          <el-table-column fixed="right" label="操作" width="90">
             <template #default="{ row }">
-              <el-button v-if="extractAppliedFields.includes(row.field)" link size="small" disabled>
+              <el-button v-if="extractAppliedFields.includes(row.field)" disabled link size="small">
                 已填入
               </el-button>
-              <el-button v-else type="primary" link size="small" @click="applyExtractField(row)">
+              <el-button v-else link size="small" type="primary" @click="applyExtractField(row)">
                 填入
               </el-button>
             </template>
@@ -5548,8 +5574,8 @@ const arriveText = computed(() => {
   </el-dialog>
 
   <!-- 病历草拟（P1-3，只草拟现病史） -->
-  <el-dialog v-model="draftDialogVisible" title="AI 草拟现病史" width="700px" destroy-on-close
-             :close-on-click-modal="false">
+  <el-dialog v-model="draftDialogVisible" :close-on-click-modal="false" destroy-on-close title="AI 草拟现病史"
+             width="700px">
     <div v-if="draftLoading" class="py-10 text-center text-sm text-slate-500">
       正在根据主诉与查体整理草稿……
     </div>
@@ -5575,8 +5601,8 @@ const arriveText = computed(() => {
       <div v-if="draftResult.missingPoints?.length">
         <div class="mb-1 text-xs font-medium text-slate-500">还缺这些信息（补充后可重新草拟）</div>
         <div class="flex flex-wrap gap-2">
-          <el-tag v-for="(point, idx) in draftResult.missingPoints" :key="idx" type="warning" size="small"
-                  effect="plain">
+          <el-tag v-for="(point, idx) in draftResult.missingPoints" :key="idx" effect="plain" size="small"
+                  type="warning">
             {{ point }}
           </el-tag>
         </div>
@@ -5587,14 +5613,14 @@ const arriveText = computed(() => {
 
     <template #footer>
       <el-button @click="draftDialogVisible = false">关闭</el-button>
-      <el-button type="primary" :disabled="!draftResult?.presentIllness" @click="applyDraft">
+      <el-button :disabled="!draftResult?.presentIllness" type="primary" @click="applyDraft">
         填入现病史
       </el-button>
     </template>
   </el-dialog>
 
   <!-- 语音口述（G-14）：录音 → ASR 转写 → 可编辑 → 喂 emr_draft 整理 -->
-  <el-dialog v-model="voiceDialogVisible" title="语音口述现病史" width="560px" destroy-on-close
+  <el-dialog v-model="voiceDialogVisible" destroy-on-close title="语音口述现病史" width="560px"
              @closed="closeVoiceDialog">
     <div class="space-y-3">
       <div class="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
@@ -5602,7 +5628,7 @@ const arriveText = computed(() => {
         转写只是语音转文字，不会补写没说到的内容；最终现病史由医生逐字确认。
       </div>
       <div class="flex items-center gap-3">
-        <el-button v-if="!voiceRecording" type="danger" :disabled="voiceTranscribing" @click="startVoiceRecord">
+        <el-button v-if="!voiceRecording" :disabled="voiceTranscribing" type="danger" @click="startVoiceRecord">
           开始录音
         </el-button>
         <el-button v-else type="warning" @click="stopVoiceRecord">
@@ -5611,24 +5637,28 @@ const arriveText = computed(() => {
         <span v-if="voiceRecording" class="text-sm text-red-600">录音中…最长 {{ VOICE_MAX_SECONDS }} 秒</span>
         <span v-else-if="voiceTranscribing" class="text-sm text-slate-500">正在转写，请稍候…</span>
       </div>
-      <el-input v-model="voiceText" type="textarea" :rows="6" :disabled="voiceTranscribing"
-                placeholder="录音停止后转写文本显示在此，也可手动修改"/>
+      <el-input v-model="voiceText" :disabled="voiceTranscribing" :rows="6" placeholder="录音停止后转写文本显示在此，也可手动修改"
+                type="textarea"/>
     </div>
     <template #footer>
       <el-button @click="voiceDialogVisible = false">关闭</el-button>
-      <el-button plain :disabled="!voiceText.trim() || voiceTranscribing" @click="applyVoiceToField">
+      <el-button :disabled="!voiceText.trim() || voiceTranscribing" plain @click="applyVoiceToField">
         填入现病史
       </el-button>
-      <el-button type="primary" :disabled="!voiceText.trim() || voiceTranscribing" @click="draftFromVoice">
+      <el-button :disabled="!voiceText.trim() || voiceTranscribing" type="primary" @click="draftFromVoice">
         AI 整理为现病史
       </el-button>
     </template>
   </el-dialog>
 
   <!-- ================= 开住院证（门诊 → 住院的入口） ================= -->
-  <el-dialog v-model="orderDialogVisible" title="开住院证（入院通知单）" width="640px" destroy-on-close>
-    <div v-if="currentPatient" class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-slate-600">
-      <div class="font-semibold text-slate-800">患者：{{ currentPatient.patientName }}（{{ currentPatient.patientNo || '—' }}）</div>
+  <el-dialog v-model="orderDialogVisible" destroy-on-close title="开住院证（入院通知单）" width="640px">
+    <div v-if="currentPatient"
+         class="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-slate-600">
+      <div class="font-semibold text-slate-800">患者：{{ currentPatient.patientName }}（{{
+          currentPatient.patientNo || '—'
+        }}）
+      </div>
       <div class="mt-1">
         本次挂号：{{ currentPatient.registNo || '—' }} · 开证科室：{{ currentPatient.deptName || '—' }}
         · 开证医生：{{ currentPatient.doctorName || '—' }}
@@ -5639,33 +5669,34 @@ const arriveText = computed(() => {
     </div>
     <el-form :model="orderForm" label-width="110px">
       <el-form-item label="拟收治科室" required>
-        <el-select v-model="orderForm.applyDeptId" filterable placeholder="选择收治科室" class="!w-full">
-          <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="String(d.id)" />
+        <el-select v-model="orderForm.applyDeptId" class="!w-full" filterable placeholder="选择收治科室">
+          <el-option v-for="d in departments" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
         </el-select>
         <p class="mt-1 text-xs text-slate-400">住哪个科是临床决策；入院处收治时可以调科，调科会被系统标记出来</p>
       </el-form-item>
       <div class="grid grid-cols-2 gap-x-4">
         <el-form-item label="拟诊编码">
-          <el-input v-model="orderForm.diagnosisCode" placeholder="ICD-10，如 J18.9" />
+          <el-input v-model="orderForm.diagnosisCode" placeholder="ICD-10，如 J18.9"/>
         </el-form-item>
         <el-form-item label="拟诊名称" required>
-          <el-input v-model="orderForm.diagnosisName" placeholder="如 社区获得性肺炎" />
+          <el-input v-model="orderForm.diagnosisName" placeholder="如 社区获得性肺炎"/>
         </el-form-item>
       </div>
       <el-form-item label="预计入院时间">
         <el-date-picker
-          v-model="orderForm.expectAdmitTime"
-          type="datetime"
-          value-format="YYYY-MM-DD HH:mm:ss"
-          placeholder="不填表示由患者自行择期"
-          class="!w-full"
+            v-model="orderForm.expectAdmitTime"
+            class="!w-full"
+            placeholder="不填表示由患者自行择期"
+            type="datetime"
+            value-format="YYYY-MM-DD HH:mm:ss"
         />
       </el-form-item>
       <el-form-item label="收治说明">
-        <el-input v-model="orderForm.diagnosisNote" type="textarea" :rows="3" placeholder="病情摘要、收治理由、需注意的事项" />
+        <el-input v-model="orderForm.diagnosisNote" :rows="3" placeholder="病情摘要、收治理由、需注意的事项"
+                  type="textarea"/>
       </el-form-item>
       <el-form-item label="备注">
-        <el-input v-model="orderForm.remark" />
+        <el-input v-model="orderForm.remark"/>
       </el-form-item>
     </el-form>
     <div class="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
@@ -5674,16 +5705,18 @@ const arriveText = computed(() => {
     </div>
     <template #footer>
       <el-button @click="orderDialogVisible = false">取消</el-button>
-      <el-button v-perm="'opd:doctorWorkstation:add'" type="primary" :loading="orderSubmitting" @click="submitOrder">开具住院证</el-button>
+      <el-button v-perm="'opd:doctorWorkstation:add'" :loading="orderSubmitting" type="primary" @click="submitOrder">
+        开具住院证
+      </el-button>
     </template>
   </el-dialog>
 </template>
 
 <style scoped>
-/* 诊室叫号面板：深色大屏底（主色 #1269B5 压深），号码是这块的视觉主体 */
+/* 诊室叫号面板：白底卡片（与页面其余卡片同底），号码用主色做视觉主体 */
 .call-board {
-  background: linear-gradient(160deg, #0f2b46 0%, #144066 100%);
-  border: 1px solid #1e4a75;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
 }
 
 .call-no {
@@ -5691,7 +5724,6 @@ const arriveText = computed(() => {
   font-weight: 800;
   letter-spacing: 0.5px;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 /* 诊室灯：接诊中绿 / 暂离琥珀 / 空闲灰，带辉光模拟实体指示灯 */

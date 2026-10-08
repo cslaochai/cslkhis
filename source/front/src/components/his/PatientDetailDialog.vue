@@ -1,4 +1,4 @@
-<script setup lang="js">
+<script lang="js" setup>
 /**
  * 患者详情弹框 —— 全站唯一实现
  *
@@ -23,36 +23,36 @@
  *   - 请求失败必须显式提示并可重试，不静默吞掉；
  *   - 码值文案由后端或 `lib/` 唯一口径给（CDR 的状态/类型文案后端已翻译），前端不各写一套。
  */
-import { ref, computed, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { WarningFilled, Clock, Refresh, Document, Link, CopyDocument, FirstAidKit } from '@element-plus/icons-vue'
-import { getPatientFullDetail } from '@/api/patient'
-import { getPatientCdr } from '@/api/cdr'
-import { patientGenderText, patientAgeText, patientAvatarTone } from '@/lib/patientGender'
-import { patientTypeText } from '@/lib/patientType'
-import { copyText } from '@/lib/clipboard'
-import { loadPermissions, hasPermission } from '@/lib/permission'
-import { tagChipText, TAG_VISIBLE_LIMIT } from '@/lib/patientTag'
+import {computed, ref, watch} from 'vue'
+import {useRouter} from 'vue-router'
+import {ElMessage} from 'element-plus'
+import {Clock, CopyDocument, Document, FirstAidKit, Link, WarningFilled} from '@element-plus/icons-vue'
+import {getPatientFullDetail} from '@/api/patient'
+import {getPatientCdr} from '@/api/cdr'
+import {patientAgeText, patientAvatarTone, patientGenderText} from '@/lib/patientGender'
+import {patientTypeText} from '@/lib/patientType'
+import {copyText} from '@/lib/clipboard'
+import {hasPermission, loadPermissions} from '@/lib/permission'
+import {TAG_VISIBLE_LIMIT, tagChipText} from '@/lib/patientTag'
 import {
-  maritalStatusText,
   cardTypeText,
-  patientStatusText,
   freeText,
+  maritalStatusText,
   moneyText,
+  patientStatusText,
   timeToDate,
   timeToMinute,
 } from '@/lib/patientField'
 
 const props = defineProps({
   // v-model 控制显隐
-  modelValue: { type: Boolean, default: false },
+  modelValue: {type: Boolean, default: false},
   // 患者ID（雪花ID，务必传字符串，避免精度丢失）
-  patientId: { type: [String, Number], default: '' },
+  patientId: {type: [String, Number], default: ''},
   // 可选：列表行已有数据，先渲染头部避免弹框刚打开时一片空白
-  patient: { type: Object, default: null },
+  patient: {type: Object, default: null},
   // 是否显示「打开完整时间轴」入口
-  showTimelineEntry: { type: Boolean, default: true },
+  showTimelineEntry: {type: Boolean, default: true},
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -123,7 +123,7 @@ const loadCdr = async (id) => {
   cdrLoading.value = true
   cdrFailed.value = false
   try {
-    const res = await getPatientCdr({ patientId: String(id) })
+    const res = await getPatientCdr({patientId: String(id)})
     if (res?.code === 200 && res.data) {
       cdr.value = res.data
     } else {
@@ -151,10 +151,10 @@ const load = async () => {
 }
 
 watch(
-  () => props.modelValue,
-  (v) => {
-    if (v) load()
-  }
+    () => props.modelValue,
+    (v) => {
+      if (v) load()
+    }
 )
 
 const reloadAll = () => load()
@@ -245,7 +245,7 @@ const eventTypeOptions = computed(() => {
   }
   visits.value.forEach((v) => walk(v.events || []))
   walk(unresolvedEvents.value)
-  return Array.from(map, ([value, label]) => ({ value, label }))
+  return Array.from(map, ([value, label]) => ({value, label}))
 })
 
 const filterEvents = (events) => {
@@ -255,16 +255,16 @@ const filterEvents = (events) => {
 }
 
 const totalShownEvents = computed(() =>
-  visits.value.reduce((sum, v) => sum + filterEvents(v.events).length, 0) +
-  filterEvents(unresolvedEvents.value).length
+    visits.value.reduce((sum, v) => sum + filterEvents(v.events).length, 0) +
+    filterEvents(unresolvedEvents.value).length
 )
 
 /* ---------- 展示辅助（跟 CDR 页面同一套口径） ---------- */
 const nodeColor = (t) =>
-  t === 'INPATIENT' ? '#dc2626' : t === 'EMERGENCY' ? '#d97706' : t === 'OUTPATIENT' ? '#1269B5' : '#64748b'
+    t === 'INPATIENT' ? '#dc2626' : t === 'EMERGENCY' ? '#d97706' : t === 'OUTPATIENT' ? '#1269B5' : '#64748b'
 
 const nodeTypeTag = (t) =>
-  t === 'INPATIENT' ? 'danger' : t === 'EMERGENCY' ? 'warning' : t === 'OUTPATIENT' ? 'primary' : 'info'
+    t === 'INPATIENT' ? 'danger' : t === 'EMERGENCY' ? 'warning' : t === 'OUTPATIENT' ? 'primary' : 'info'
 
 const eventTag = (t) => {
   if (t === 'criticalValue') return 'danger'
@@ -285,55 +285,55 @@ const basicGroups = computed(() => {
     {
       title: '身份识别',
       items: [
-        { label: '患者号', value: freeText(d.patientNo), copy: d.patientNo ? String(d.patientNo) : '' },
-        { label: '姓名', value: freeText(d.patientName), copy: d.patientName ? String(d.patientName) : '' },
-        { label: '性别', value: patientGenderText(d.gender) },
-        { label: '年龄', value: patientAgeText(d.age) },
-        { label: '出生日期', value: freeText(d.birthDate) },
-        { label: '证件类型', value: cardTypeText(d.cardType) },
-        { label: '证件号码', value: freeText(d.cardNoMasked) },
-        { label: '身份证号', value: freeText(d.idCardMasked) },
+        {label: '患者号', value: freeText(d.patientNo), copy: d.patientNo ? String(d.patientNo) : ''},
+        {label: '姓名', value: freeText(d.patientName), copy: d.patientName ? String(d.patientName) : ''},
+        {label: '性别', value: patientGenderText(d.gender)},
+        {label: '年龄', value: patientAgeText(d.age)},
+        {label: '出生日期', value: freeText(d.birthDate)},
+        {label: '证件类型', value: cardTypeText(d.cardType)},
+        {label: '证件号码', value: freeText(d.cardNoMasked)},
+        {label: '身份证号', value: freeText(d.idCardMasked)},
       ],
     },
     {
       title: '联系方式',
       items: [
-        { label: '联系电话', value: freeText(d.phoneMasked) },
-        { label: '联系人', value: freeText(d.contactName) },
-        { label: '联系人电话', value: freeText(d.contactPhoneMasked) },
-        { label: '与患者关系', value: freeText(d.contactRelation) },
-        { label: '家庭住址', value: freeText(d.address) },
-        { label: '民族', value: freeText(d.nation) },
-        { label: '职业', value: freeText(d.occupation) },
-        { label: '婚姻状况', value: maritalStatusText(d.maritalStatus) },
+        {label: '联系电话', value: freeText(d.phoneMasked)},
+        {label: '联系人', value: freeText(d.contactName)},
+        {label: '联系人电话', value: freeText(d.contactPhoneMasked)},
+        {label: '与患者关系', value: freeText(d.contactRelation)},
+        {label: '家庭住址', value: freeText(d.address)},
+        {label: '民族', value: freeText(d.nation)},
+        {label: '职业', value: freeText(d.occupation)},
+        {label: '婚姻状况', value: maritalStatusText(d.maritalStatus)},
       ],
     },
     {
       title: '参保与账户',
       items: [
-        { label: '患者类型', value: patientTypeText(d.patientType) },
-        { label: '医保类型', value: freeText(d.medicalInsuranceType) },
-        { label: '医保卡号', value: freeText(d.medicalInsuranceNoMasked) },
-        { label: '账户余额', value: moneyText(d.balance) },
-        { label: '累计消费', value: moneyText(d.totalExpense) },
-        { label: '就诊次数', value: d.visitCount === null || d.visitCount === undefined ? '—' : `${d.visitCount} 次` },
-        { label: '最近就诊', value: freeText(d.lastVisitTime) },
-        { label: '档案状态', value: patientStatusText(d.status) },
+        {label: '患者类型', value: patientTypeText(d.patientType)},
+        {label: '医保类型', value: freeText(d.medicalInsuranceType)},
+        {label: '医保卡号', value: freeText(d.medicalInsuranceNoMasked)},
+        {label: '账户余额', value: moneyText(d.balance)},
+        {label: '累计消费', value: moneyText(d.totalExpense)},
+        {label: '就诊次数', value: d.visitCount === null || d.visitCount === undefined ? '—' : `${d.visitCount} 次`},
+        {label: '最近就诊', value: freeText(d.lastVisitTime)},
+        {label: '档案状态', value: patientStatusText(d.status)},
       ],
     },
     {
       title: '其他',
       items: [
-        { label: '血型', value: freeText(d.bloodType) },
+        {label: '血型', value: freeText(d.bloodType)},
         // 「自述既往史/过敏史」属临床内容：没有 patient:cdr:list 的岗位（收费/药房/前台），
         // 服务端根本不会返回这两个字段，照常渲染就会显示成「—」——
         // 那等于把"无权看"伪装成"该患者没有过敏史"，比不显示更危险。所以整行不渲染。
         ...(canViewClinical.value
-          ? [
-              { label: '既往病史（自述）', value: freeText(d.medicalHistory) },
-              { label: '过敏史（自述）', value: freeText(d.allergyHistory) },
+            ? [
+              {label: '既往病史（自述）', value: freeText(d.medicalHistory)},
+              {label: '过敏史（自述）', value: freeText(d.allergyHistory)},
             ]
-          : []),
+            : []),
       ],
     },
   ]
@@ -341,7 +341,7 @@ const basicGroups = computed(() => {
 
 const openFullTimeline = () => {
   visible.value = false
-  router.push({ path: '/cdr', query: { patientId: String(props.patientId) } })
+  router.push({path: '/cdr', query: {patientId: String(props.patientId)}})
 }
 
 /**
@@ -353,20 +353,20 @@ const openFullTimeline = () => {
  */
 const openHealthRecord = () => {
   visible.value = false
-  router.push({ path: '/health-record', query: { patientId: String(props.patientId) } })
+  router.push({path: '/health-record', query: {patientId: String(props.patientId)}})
 }
 
-defineExpose({ reload: reloadAll })
+defineExpose({reload: reloadAll})
 </script>
 
 <template>
   <el-dialog
       v-model="visible"
-      title="患者详情"
-      width="960px"
       class="patient-detail-dialog"
       destroy-on-close
+      title="患者详情"
       top="6vh"
+      width="960px"
   >
     <!-- patient-detail-shell / patient-detail-fixed 两个类配合全局 style.css 把高度链接通：
          shell 吃掉 body 剩余高度，fixed 的部分（身份卡/概览/警告）固定不压缩，
@@ -376,10 +376,10 @@ defineExpose({ reload: reloadAll })
       <div class="patient-detail-fixed mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
         <div class="flex items-start gap-4">
           <!-- 头像用姓名首字（性别符号换成首字：性别下方文字已给出，重复占位不如放姓名缩写）；
-               底色按性别走 lib/patientGender.patientAvatarTone，与搜索下拉项同一组色值 -->
+               底色与形状走全局 style.css 的 .patient-avatar-*，与搜索下拉项同一组色值、同一种圆角 -->
           <span
-              class="head-avatar flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white"
-              :class="'patient-avatar-' + patientAvatarTone(headPatient.gender)">
+              :class="'patient-avatar-' + patientAvatarTone(headPatient.gender)"
+              class="patient-avatar flex h-14 w-14 shrink-0 items-center justify-center text-xl font-bold text-white">
             {{ headAvatarText }}
           </span>
           <div class="min-w-0 flex-1">
@@ -432,13 +432,13 @@ defineExpose({ reload: reloadAll })
                 <span
                     v-for="t in visibleTags"
                     :key="t.tagId"
-                    class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-white"
                     :style="{ backgroundColor: t.tagColor || '#409EFF' }"
                     :title="t.tagName"
+                    class="inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium text-white"
                 >
                   {{ tagChipText(t) }}
                 </span>
-                <el-tooltip v-if="hiddenTags.length" placement="top" :show-after="120">
+                <el-tooltip v-if="hiddenTags.length" :show-after="120" placement="top">
                   <template #content>
                     <div class="space-y-0.5">
                       <div v-for="t in hiddenTags" :key="t.tagId">{{ t.tagName }}</div>
@@ -480,8 +480,8 @@ defineExpose({ reload: reloadAll })
         </div>
         <div class="rounded-lg border border-slate-200 p-3">
           <p class="text-xs text-slate-400">在院</p>
-          <p class="text-lg font-semibold"
-             :class="Number(summary.activeInpatientCount) > 0 ? 'text-red-600' : 'text-slate-900'">
+          <p :class="Number(summary.activeInpatientCount) > 0 ? 'text-red-600' : 'text-slate-900'"
+             class="text-lg font-semibold">
             {{ summary.activeInpatientCount ?? 0 }}
           </p>
           <p class="text-[11px] text-slate-400">未出院</p>
@@ -493,8 +493,8 @@ defineExpose({ reload: reloadAll })
         </div>
         <div class="rounded-lg border border-slate-200 p-3">
           <p class="text-xs text-slate-400">未归位</p>
-          <p class="text-lg font-semibold"
-             :class="Number(summary.unresolvedEventCount) > 0 ? 'text-amber-600' : 'text-slate-900'">
+          <p :class="Number(summary.unresolvedEventCount) > 0 ? 'text-amber-600' : 'text-slate-900'"
+             class="text-lg font-semibold">
             {{ summary.unresolvedEventCount ?? 0 }}
           </p>
           <p class="text-[11px] text-slate-400">归属不到就诊次</p>
@@ -513,9 +513,9 @@ defineExpose({ reload: reloadAll })
 
       <el-alert
           v-if="(cdr?.warnings || []).length"
-          type="warning"
           :closable="false"
           class="patient-detail-fixed mb-3"
+          type="warning"
       >
         <p v-for="(w, i) in cdr.warnings" :key="i" class="text-xs">{{ w }}</p>
       </el-alert>
@@ -530,14 +530,15 @@ defineExpose({ reload: reloadAll })
                 <h4 class="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
                   <span class="h-3.5 w-1 rounded bg-blue-500"></span>{{ group.title }}
                 </h4>
-                <div class="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 p-3 text-sm lg:grid-cols-4">
+                <div
+                    class="grid grid-cols-2 gap-x-4 gap-y-2 rounded-lg border border-slate-200 p-3 text-sm lg:grid-cols-4">
                   <div v-for="item in group.items" :key="item.label" class="flex items-center gap-1">
                     <span class="shrink-0 text-slate-400">{{ item.label }}：</span>
                     <span class="break-all font-medium text-slate-700">{{ item.value }}</span>
                     <button
                         v-if="item.copy"
-                        class="copy-btn"
                         :title="'复制' + item.label"
+                        class="copy-btn"
                         @click="handleCopy(item.copy, item.label)"
                     >
                       <CopyDocument class="h-3 w-3"/>
@@ -550,10 +551,10 @@ defineExpose({ reload: reloadAll })
                  否则用户只会觉得页面坏了 —— 收敛权限而不解释，等于制造一次误报障 -->
             <el-alert
                 v-if="detail && !canViewClinical"
-                type="info"
                 :closable="false"
-                show-icon
                 class="mt-1"
+                show-icon
+                type="info"
             >
               <template #title>当前岗位只能查看患者身份与费用信息</template>
               <div class="text-xs text-slate-500">
@@ -562,7 +563,7 @@ defineExpose({ reload: reloadAll })
             </el-alert>
             <div v-else-if="detailFailed && !detailLoading" class="py-14 text-center text-sm text-slate-400">
               基本信息加载失败
-              <el-button link type="primary" class="ml-2" @click="reloadAll">重新加载</el-button>
+              <el-button class="ml-2" link type="primary" @click="reloadAll">重新加载</el-button>
             </div>
           </div>
         </el-tab-pane>
@@ -572,7 +573,7 @@ defineExpose({ reload: reloadAll })
           <!-- 这一 tab 只读。改档案去 /health-record（六组需要完整界面，塞进弹框必然长成第二套实现） -->
           <div class="mb-2 flex items-center gap-2 rounded border border-slate-200 bg-slate-50 px-3 py-2">
             <span class="text-xs text-slate-500">此处只读。增删改请到健康档案页，六组共用同一份明细。</span>
-            <el-button link type="primary" size="small" :icon="FirstAidKit" @click="openHealthRecord">
+            <el-button :icon="FirstAidKit" link size="small" type="primary" @click="openHealthRecord">
               去维护
             </el-button>
           </div>
@@ -583,11 +584,11 @@ defineExpose({ reload: reloadAll })
                 <div
                     v-for="g in profileGroups"
                     :key="g.key"
-                    class="rounded-lg border p-3"
                     :class="g.key === 'allergy' && Number(g.count) > 0 ? 'border-red-200 bg-red-50' : 'border-slate-200'"
+                    class="rounded-lg border p-3"
                 >
-                  <p class="mb-1.5 text-xs font-medium"
-                     :class="g.key === 'allergy' && Number(g.count) > 0 ? 'text-red-700' : 'text-slate-500'">
+                  <p :class="g.key === 'allergy' && Number(g.count) > 0 ? 'text-red-700' : 'text-slate-500'"
+                     class="mb-1.5 text-xs font-medium">
                     {{ g.label }}（{{ g.count }}）
                   </p>
                   <ul v-if="Number(g.count) > 0" class="space-y-1">
@@ -606,7 +607,7 @@ defineExpose({ reload: reloadAll })
             </template>
             <div v-else-if="cdrFailed && !cdrLoading" class="py-14 text-center text-sm text-slate-400">
               健康档案加载失败
-              <el-button link type="primary" class="ml-2" @click="reloadAll">重新加载</el-button>
+              <el-button class="ml-2" link type="primary" @click="reloadAll">重新加载</el-button>
             </div>
           </div>
         </el-tab-pane>
@@ -623,8 +624,8 @@ defineExpose({ reload: reloadAll })
               <div v-if="eventTypeOptions.length" class="mb-3 flex flex-wrap items-center gap-2">
                 <span class="text-xs text-slate-400">按类型筛选：</span>
                 <el-tag
-                    :type="eventFilter === '' ? 'primary' : 'info'"
                     :effect="eventFilter === '' ? 'dark' : 'plain'"
+                    :type="eventFilter === '' ? 'primary' : 'info'"
                     class="cursor-pointer"
                     @click="eventFilter = ''"
                 >
@@ -633,8 +634,8 @@ defineExpose({ reload: reloadAll })
                 <el-tag
                     v-for="opt in eventTypeOptions"
                     :key="opt.value"
-                    :type="eventFilter === opt.value ? 'primary' : 'info'"
                     :effect="eventFilter === opt.value ? 'dark' : 'plain'"
+                    :type="eventFilter === opt.value ? 'primary' : 'info'"
                     class="cursor-pointer"
                     @click="eventFilter = opt.value"
                 >
@@ -664,7 +665,7 @@ defineExpose({ reload: reloadAll })
                       class="rounded-lg border border-slate-200 bg-slate-50/60"
                   >
                     <div class="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-2">
-                      <el-tag :type="nodeTypeTag(v.nodeType)" size="small" effect="dark">{{ v.nodeTypeText }}</el-tag>
+                      <el-tag :type="nodeTypeTag(v.nodeType)" effect="dark" size="small">{{ v.nodeTypeText }}</el-tag>
                       <span class="text-sm font-semibold text-slate-800">{{ v.title }}</span>
                       <span v-if="v.anchorNo" class="font-mono text-xs text-slate-500">{{ v.anchorNo }}</span>
                       <span v-if="v.fromShadow" class="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700">
@@ -679,7 +680,7 @@ defineExpose({ reload: reloadAll })
                     </div>
                     <div class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-1.5 text-xs text-slate-500">
                       <span class="flex items-center gap-1">
-                        <el-icon><Clock /></el-icon>{{ timeToMinute(v.startTime) }}
+                        <el-icon><Clock/></el-icon>{{ timeToMinute(v.startTime) }}
                         <template v-if="v.endTime"> ~ {{ timeToMinute(v.endTime) }}</template>
                       </span>
                       <span v-if="v.deptName">科室：{{ v.deptName }}</span>
@@ -690,7 +691,9 @@ defineExpose({ reload: reloadAll })
                         v-if="(v.gaps || []).length"
                         class="flex flex-wrap items-center gap-1 border-t border-amber-100 bg-amber-50 px-4 py-1.5 text-xs text-amber-700"
                     >
-                      <el-icon><WarningFilled /></el-icon>
+                      <el-icon>
+                        <WarningFilled/>
+                      </el-icon>
                       <span>病历完整性缺口：</span>
                       <span v-for="g in v.gaps" :key="g" class="rounded bg-amber-100 px-1.5 py-0.5">{{ g }}</span>
                     </div>
@@ -703,7 +706,7 @@ defineExpose({ reload: reloadAll })
                         <span class="w-24 shrink-0 font-mono text-xs text-slate-400">
                           {{ timeToMinute(e.eventTime).substring(5) }}
                         </span>
-                        <el-tag :type="eventTag(e.eventType)" size="small" effect="plain" class="shrink-0">
+                        <el-tag :type="eventTag(e.eventType)" class="shrink-0" effect="plain" size="small">
                           {{ e.eventTypeText || e.eventType }}
                         </el-tag>
                         <span class="text-sm font-medium text-slate-700">{{ freeText(e.title) }}</span>
@@ -723,7 +726,9 @@ defineExpose({ reload: reloadAll })
               <!-- 归属不到就诊次的记录：必须显示，藏起来等于数据丢了 -->
               <div v-if="filterEvents(unresolvedEvents).length" class="mt-4">
                 <p class="mb-2 flex items-center gap-1.5 text-sm font-semibold text-amber-700">
-                  <el-icon><WarningFilled /></el-icon>
+                  <el-icon>
+                    <WarningFilled/>
+                  </el-icon>
                   未归入就诊次的记录（{{ filterEvents(unresolvedEvents).length }}）—— 单据悬空，不是丢了
                 </p>
                 <div class="divide-y divide-slate-100 rounded-lg border border-amber-200 bg-amber-50/50">
@@ -733,7 +738,10 @@ defineExpose({ reload: reloadAll })
                       class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2"
                   >
                     <span class="font-mono text-xs text-slate-400">{{ timeToDate(e.eventTime) }}</span>
-                    <el-tag :type="eventTag(e.eventType)" size="small" effect="plain">{{ e.eventTypeText || e.eventType }}</el-tag>
+                    <el-tag :type="eventTag(e.eventType)" effect="plain" size="small">{{
+                        e.eventTypeText || e.eventType
+                      }}
+                    </el-tag>
                     <span class="text-sm font-medium text-slate-700">{{ freeText(e.title) }}</span>
                     <span v-if="e.summary" class="text-xs text-slate-500">{{ e.summary }}</span>
                   </div>
@@ -742,7 +750,7 @@ defineExpose({ reload: reloadAll })
             </template>
             <div v-else-if="cdrFailed && !cdrLoading" class="py-14 text-center text-sm text-slate-400">
               就诊脉络加载失败
-              <el-button link type="primary" class="ml-2" @click="reloadAll">重新加载</el-button>
+              <el-button class="ml-2" link type="primary" @click="reloadAll">重新加载</el-button>
             </div>
           </div>
         </el-tab-pane>
@@ -753,13 +761,17 @@ defineExpose({ reload: reloadAll })
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2 text-xs text-slate-400">
           <template v-if="cdr">
-            <el-icon><Link /></el-icon>
+            <el-icon>
+              <Link/>
+            </el-icon>
             数据按 EMPI 口径归并，含被并档案
           </template>
         </div>
         <div class="flex items-center gap-2">
           <el-button v-if="canViewClinical" :icon="FirstAidKit" @click="openHealthRecord">维护健康档案</el-button>
-          <el-button v-if="showTimelineEntry && canViewClinical" :icon="Document" @click="openFullTimeline">打开完整时间轴</el-button>
+          <el-button v-if="showTimelineEntry && canViewClinical" :icon="Document" @click="openFullTimeline">
+            打开完整时间轴
+          </el-button>
           <el-button type="primary" @click="visible = false">关闭</el-button>
         </div>
       </div>

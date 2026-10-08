@@ -1,36 +1,25 @@
-<script setup lang="ts">
-/**
- * 就诊总览（sql/131 正名；原名「门诊日志」→ 更早叫「今日就诊」）
- *
- * 正名原因：法规口径的「门诊日志」是**病历基表**的临床事件台账（新页 /outpatient-log），
- * 本页基表是挂号 —— 连没签到的挂号都在，是运营全景，不是日志。
- *
- * 与旧页面的三点本质差异：
- *  1) 基表是**挂号**（一次就诊=一条挂号），没签到的挂号也在日志里 —— 旧页面只查队列表，漏掉绝大多数未入队挂号；
- *  2) 筛选条件**全部下推后端**（旧页面把 keyword 拿当前页 list.filter，翻页后结果静默变少）；
- *  3) 状态口径用后端推导的 logStatus（挂号+队列两套口径合推），旧页面只看队列状态 → 未入队挂号显示「未知」。
- */
-import {ref, onMounted} from 'vue'
+<script lang="ts" setup>
+import {onMounted, ref} from 'vue'
 import {ElMessage} from 'element-plus'
-import {Search, Refresh, View, Document} from '@element-plus/icons-vue'
+import {Document, Refresh, Search, View} from '@element-plus/icons-vue'
 import {getOpdLogListPage, getOpdLogStats, runDayEndSettle} from '@/api/appoint'
 import {getByRegistId, getRecordDetail} from '@/api/emr'
 import {listItemsByPatient} from '@/api/settlementBill'
 import {getDepartmentSelectList, getEmployeeList} from '@/api/system'
 import {
-  statusOf,
-  unknownOf,
+  APPLY_STATUS,
   OPD_LOG_STATUS,
   OPD_LOG_STATUS_OPTIONS,
-  REGIST_TYPE,
   REGIST_SOURCE,
-  SETTLEMENT_TYPE,
+  REGIST_TYPE,
   REVISIT_TYPE,
-  APPLY_STATUS,
+  SETTLEMENT_TYPE,
+  statusOf,
+  unknownOf,
 } from '@/lib/statusColor'
 import {patientGenderText} from '@/lib/patientGender'
-import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
-import { useTableMaxHeight } from '@/lib/useTableMaxHeight'
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
+import {useTableMaxHeight} from '@/lib/useTableMaxHeight'
 import {shortQueueNo} from '@/lib/utils'
 
 // ========== 列表 ==========
@@ -73,19 +62,31 @@ const searchForm = ref({
 })
 
 const dateShortcuts = [
-  {text: '今日', value: () => { const t = new Date(); return [fmtDate(t), fmtDate(t)] }},
-  {text: '本周', value: () => {
-    const now = new Date(); const day = now.getDay() || 7
-    const mon = new Date(now); mon.setDate(now.getDate() - day + 1)
-    const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
-    return [fmtDate(mon), fmtDate(sun)]
-  }},
+  {
+    text: '今日', value: () => {
+      const t = new Date();
+      return [fmtDate(t), fmtDate(t)]
+    }
+  },
+  {
+    text: '本周', value: () => {
+      const now = new Date();
+      const day = now.getDay() || 7
+      const mon = new Date(now);
+      mon.setDate(now.getDate() - day + 1)
+      const sun = new Date(mon);
+      sun.setDate(mon.getDate() + 6)
+      return [fmtDate(mon), fmtDate(sun)]
+    }
+  },
   {text: '本月', value: () => thisMonth()},
-  {text: '近三月', value: () => {
-    const now = new Date()
-    const first = new Date(now.getFullYear(), now.getMonth() - 2, 1)
-    return [fmtDate(first), fmtDate(now)]
-  }},
+  {
+    text: '近三月', value: () => {
+      const now = new Date()
+      const first = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+      return [fmtDate(first), fmtDate(now)]
+    }
+  },
 ]
 
 // ========== 下拉数据源（科室 / 员工数组，全部走真实接口） ==========
@@ -112,7 +113,10 @@ const revisitOptions = optionOf(REVISIT_TYPE)
 const buildParams = () => {
   const p: any = {pageNum: pagination.value.pageNum, pageSize: pagination.value.pageSize}
   const f = searchForm.value
-  if (f.dateRange?.[0] && f.dateRange?.[1]) { p.startDate = f.dateRange[0]; p.endDate = f.dateRange[1] }
+  if (f.dateRange?.[0] && f.dateRange?.[1]) {
+    p.startDate = f.dateRange[0];
+    p.endDate = f.dateRange[1]
+  }
   if (f.deptIds.length) p.deptIds = f.deptIds
   if (f.doctorId) p.doctorId = f.doctorId
   if (f.statusCodes.length) p.statusCodes = f.statusCodes
@@ -139,7 +143,10 @@ const loadData = async () => {
   }
 }
 
-const handleSearch = () => { pagination.value.pageNum = 1; loadData() }
+const handleSearch = () => {
+  pagination.value.pageNum = 1;
+  loadData()
+}
 const handleReset = () => {
   searchForm.value = {
     dateRange: thisMonth(), deptIds: [], doctorId: null, statusCodes: [],
@@ -148,8 +155,15 @@ const handleReset = () => {
   pagination.value.pageNum = 1
   loadData()
 }
-const handleSizeChange = (v: number) => { pagination.value.pageSize = v; pagination.value.pageNum = 1; loadData() }
-const handleCurrentChange = (v: number) => { pagination.value.pageNum = v; loadData() }
+const handleSizeChange = (v: number) => {
+  pagination.value.pageSize = v;
+  pagination.value.pageNum = 1;
+  loadData()
+}
+const handleCurrentChange = (v: number) => {
+  pagination.value.pageNum = v;
+  loadData()
+}
 
 // ========== 视图辅助 ==========
 /** 就诊状态：优先后端推导的 logStatus；推导不出来时用 queueStatus 渲染「未知(n)」，绝不回落 */
@@ -232,7 +246,7 @@ const buildChargeCards = (items: any[]) => {
   for (const it of items || []) {
     const key = String(it.billId)
     if (!map.has(key)) {
-      map.set(key, { id: it.billId, billNo: it.billNo, items: [], totalAmount: 0 })
+      map.set(key, {id: it.billId, billNo: it.billNo, items: [], totalAmount: 0})
     }
     const card = map.get(key)
     card.items.push(it)
@@ -241,10 +255,6 @@ const buildChargeCards = (items: any[]) => {
   return Array.from(map.values())
 }
 
-// ========== 日终结转（手工重放） ==========
-// 后端每晚 00:10 自动跑一次，进门诊页面也会顺手补跑一次；这个按钮是给
-// 「停诊/导数据/改完库之后重放」以及「想当场验证结转有没有落下去」用的。
-// 可重入：只认还停在中间态的行，重复点第二次影响 0 条。
 const settleLoading = ref(false)
 const settleDialog = ref(false)
 const settleDate = ref<string | null>(null)
@@ -282,15 +292,15 @@ onMounted(() => {
           <p class="mt-0.5 text-xs text-slate-500">{{ c.label }}</p>
         </div>
       </div>
-      <div class="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
+      <div
+          class="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
         <span>平均候诊 <b class="text-slate-700">{{ statsLoaded ? stats.avgWaitMinutes : '—' }}</b> 分</span>
         <span>平均就诊 <b class="text-slate-700">{{ statsLoaded ? stats.avgVisitMinutes : '—' }}</b> 分</span>
         <span class="text-slate-400">（时长按「到达→开始 / 开始→结束」现算，跨天异常值已剔除）</span>
-        <el-button class="ml-auto" size="small" :icon="Refresh" @click="settleDialog = true">日终结转</el-button>
+        <el-button :icon="Refresh" class="ml-auto" size="small" @click="settleDialog = true">日终结转</el-button>
       </div>
     </div>
 
-    <!-- 日终结转：手工重放（每晚 00:10 会自动跑，这里用于补跑与当场核验） -->
     <el-dialog v-model="settleDialog" title="日终结转（给历史遗留的号收尾）" width="520px">
       <div class="space-y-2 text-sm text-slate-600">
         <p>把还停在中间态的挂号与队列收成终态：</p>
@@ -302,83 +312,83 @@ onMounted(() => {
         <p class="text-xs text-slate-400">
           不释放号源（过去的号不会变回可卖）；可重复执行，第二次影响 0 条。
         </p>
-        <el-form label-width="90px" class="pt-1">
+        <el-form class="pt-1" label-width="90px">
           <el-form-item label="就诊日">
-            <el-date-picker v-model="settleDate" type="date" value-format="YYYY-MM-DD"
-                            placeholder="留空 = 补跑最早遗留日到昨天" clearable class="!w-64"/>
+            <el-date-picker v-model="settleDate" class="!w-64" clearable
+                            placeholder="留空 = 补跑最早遗留日到昨天" type="date" value-format="YYYY-MM-DD"/>
           </el-form-item>
         </el-form>
       </div>
       <template #footer>
         <el-button :loading="settleLoading" @click="runSettle(true)">先试算</el-button>
-        <el-button type="primary" :loading="settleLoading" @click="runSettle(false)">执行结转</el-button>
+        <el-button :loading="settleLoading" type="primary" @click="runSettle(false)">执行结转</el-button>
       </template>
     </el-dialog>
 
     <!-- 筛选区：条件全部下推后端（两卡式列表页，口径参照 views/system/user/UserView.vue） -->
     <el-card ref="queryCardRef" class="query-card mb-3" shadow="never">
-      <el-form :inline="true" label-width="70px">
-        <el-form-item label="就诊日期">
-          <el-date-picker
-              v-model="searchForm.dateRange" type="daterange" range-separator="至"
-              start-placeholder="开始日期" end-placeholder="结束日期"
-              value-format="YYYY-MM-DD" class="!w-64" :shortcuts="dateShortcuts"/>
-        </el-form-item>
-        <el-form-item label="科室">
-          <el-select
-              v-model="searchForm.deptIds" multiple collapse-tags collapse-tags-tooltip
-              filterable placeholder="全部科室" class="!w-56" :fit-input-width="false">
-            <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="医生">
-          <el-select v-model="searchForm.doctorId" filterable clearable placeholder="全部医生"
-                     class="!w-44" :fit-input-width="false">
-            <el-option v-for="e in doctorOptions" :key="e.id" :label="e.empName" :value="String(e.id)"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="关键词">
-          <el-input v-model="searchForm.keyword" placeholder="姓名 / 就诊号 / 门诊号 / 排队号"
-                    :prefix-icon="Search" class="!w-60" clearable @keyup.enter="handleSearch"/>
-        </el-form-item>
-
-        <el-form-item label="就诊状态">
-          <el-select v-model="searchForm.statusCodes" multiple collapse-tags placeholder="全部状态" class="!w-48">
-            <el-option v-for="s in OPD_LOG_STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="号别">
-          <el-select v-model="searchForm.registType" clearable placeholder="全部" class="!w-28">
-            <el-option v-for="s in registTypeOptions" :key="s.value" :label="s.label" :value="s.value"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="结算方式">
-          <el-select v-model="searchForm.settlementType" clearable placeholder="全部" class="!w-32">
-            <el-option v-for="s in settlementOptions" :key="s.value" :label="s.label" :value="s.value"/>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="就诊类型">
-          <el-select v-model="searchForm.revisitType" clearable placeholder="全部" class="!w-28">
-            <el-option v-for="s in revisitOptions" :key="s.value" :label="s.label" :value="s.value"/>
-          </el-select>
-        </el-form-item>
-
-        <el-form-item>
-          <el-button type="primary" :icon="Search" @click="handleSearch">查询</el-button>
+      <div class="query-grid-wrap">
+        <el-form class="query-grid" label-width="70px">
+          <el-form-item class="is-daterange" label="就诊日期">
+            <el-date-picker
+                v-model="searchForm.dateRange" :shortcuts="dateShortcuts" end-placeholder="结束"
+                range-separator="至" start-placeholder="开始"
+                type="daterange" value-format="YYYY-MM-DD"/>
+          </el-form-item>
+          <el-form-item label="科室">
+            <el-select
+                v-model="searchForm.deptIds" :fit-input-width="false" collapse-tags collapse-tags-tooltip
+                filterable multiple placeholder="全部科室">
+              <el-option v-for="d in deptOptions" :key="d.id" :label="d.deptName" :value="String(d.id)"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="医生">
+            <el-select v-model="searchForm.doctorId" :fit-input-width="false" clearable filterable
+                       placeholder="全部医生">
+              <el-option v-for="e in doctorOptions" :key="e.id" :label="e.empName" :value="String(e.id)"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="关键词">
+            <el-input v-model="searchForm.keyword" :prefix-icon="Search"
+                      clearable placeholder="姓名 / 就诊号 / 门诊号 / 排队号" @keyup.enter="handleSearch"/>
+          </el-form-item>
+          <el-form-item label="就诊状态">
+            <el-select v-model="searchForm.statusCodes" collapse-tags multiple placeholder="全部状态">
+              <el-option v-for="s in OPD_LOG_STATUS_OPTIONS" :key="s.value" :label="s.label" :value="s.value"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="号别">
+            <el-select v-model="searchForm.registType" clearable placeholder="全部">
+              <el-option v-for="s in registTypeOptions" :key="s.value" :label="s.label" :value="s.value"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="结算方式">
+            <el-select v-model="searchForm.settlementType" clearable placeholder="全部">
+              <el-option v-for="s in settlementOptions" :key="s.value" :label="s.label" :value="s.value"/>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="就诊类型">
+            <el-select v-model="searchForm.revisitType" clearable placeholder="全部">
+              <el-option v-for="s in revisitOptions" :key="s.value" :label="s.label" :value="s.value"/>
+            </el-select>
+          </el-form-item>
+        </el-form>
+        <div class="query-grid-ops">
+          <el-button :icon="Search" type="primary" @click="handleSearch">查询</el-button>
           <el-button :icon="Refresh" @click="handleReset">重置</el-button>
-        </el-form-item>
-      </el-form>
+        </div>
+      </div>
     </el-card>
 
     <!-- 列表 -->
     <el-card class="table-card" shadow="never">
-      <el-table :data="rows" v-loading="loading" style="width: 100%" stripe :max-height="tableMaxHeight">
-        <el-table-column prop="registNo" label="就诊号" width="160" fixed="left">
+      <el-table v-loading="loading" :data="rows" :max-height="tableMaxHeight" stripe style="width: 100%">
+        <el-table-column fixed="left" label="就诊号" prop="registNo" width="160">
           <template #default="{ row }">
             <span class="font-mono font-bold text-blue-700">{{ row.registNo }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="患者" width="150" fixed="left">
+        <el-table-column fixed="left" label="患者" width="150">
           <template #default="{ row }">
             <div class="flex items-center gap-1.5">
               <span class="font-medium text-slate-800">{{ row.patientName }}</span>
@@ -387,33 +397,39 @@ onMounted(() => {
             <div class="font-mono text-slate-400">{{ row.patientNo }}</div>
           </template>
         </el-table-column>
-        <el-table-column prop="deptName" label="科室" width="120" show-overflow-tooltip/>
-        <el-table-column prop="doctorName" label="接诊医生" width="130" show-overflow-tooltip/>
-        <el-table-column label="号别" width="86" align="center">
+        <el-table-column label="科室" prop="deptName" show-overflow-tooltip width="120"/>
+        <el-table-column label="接诊医生" prop="doctorName" show-overflow-tooltip width="130"/>
+        <el-table-column align="center" label="号别" width="86">
           <template #default="{ row }">
             <el-tag v-if="row.registType != null" :type="statusOf(REGIST_TYPE, row.registType).tagType"
-                    effect="plain" size="small">{{ statusOf(REGIST_TYPE, row.registType).label }}</el-tag>
+                    effect="plain" size="small">{{ statusOf(REGIST_TYPE, row.registType).label }}
+            </el-tag>
             <span v-else class="text-slate-400">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="就诊类型" width="86" align="center">
+        <el-table-column align="center" label="就诊类型" width="86">
           <template #default="{ row }">
-            <span :class="['rounded px-1.5 py-0.5', row.revisitType != null ? 'bg-slate-100 text-slate-600' : 'text-slate-400']">
+            <span
+                :class="['rounded px-1.5 py-0.5', row.revisitType != null ? 'bg-slate-100 text-slate-600' : 'text-slate-400']">
               {{ row.revisitType != null ? statusOf(REVISIT_TYPE, row.revisitType).label : '未标注' }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="来源" width="76" align="center">
+        <el-table-column align="center" label="来源" width="76">
           <template #default="{ row }">
-            <span class="text-slate-500">{{ row.registSource != null ? statusOf(REGIST_SOURCE, row.registSource).label : '-' }}</span>
+            <span class="text-slate-500">{{
+                row.registSource != null ? statusOf(REGIST_SOURCE, row.registSource).label : '-'
+              }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="就诊日期" width="104" align="center">
+        <el-table-column align="center" label="就诊日期" width="104">
           <template #default="{ row }"><span class="text-slate-600">{{ row.visitDate || '-' }}</span></template>
         </el-table-column>
-        <el-table-column label="排队号" width="84" align="center">
+        <el-table-column align="center" label="排队号" width="84">
           <template #default="{ row }">
-            <span v-if="row.queueNo" class="rounded bg-blue-50 px-1.5 py-0.5 font-mono text-blue-700">{{ shortQueueNo(row.queueNo) }}</span>
+            <span v-if="row.queueNo" class="rounded bg-blue-50 px-1.5 py-0.5 font-mono text-blue-700">{{
+                shortQueueNo(row.queueNo)
+              }}</span>
             <span v-else class="text-slate-300">未签到</span>
           </template>
         </el-table-column>
@@ -426,27 +442,29 @@ onMounted(() => {
         <el-table-column label="结束" width="132">
           <template #default="{ row }"><span class="text-slate-600">{{ fmt(row.endTime) }}</span></template>
         </el-table-column>
-        <el-table-column label="候诊" width="70" align="center">
+        <el-table-column align="center" label="候诊" width="70">
           <template #default="{ row }"><span class="text-slate-600">{{ duration(row.waitMinutes) }}</span></template>
         </el-table-column>
-        <el-table-column label="就诊时长" width="76" align="center">
+        <el-table-column align="center" label="就诊时长" width="76">
           <template #default="{ row }"><span class="text-slate-600">{{ duration(row.visitMinutes) }}</span></template>
         </el-table-column>
-        <el-table-column label="结算" width="90" align="center">
+        <el-table-column align="center" label="结算" width="90">
           <template #default="{ row }">
-            <span class="text-slate-600">{{ row.settlementType != null ? statusOf(SETTLEMENT_TYPE, row.settlementType).label : '-' }}</span>
+            <span class="text-slate-600">{{
+                row.settlementType != null ? statusOf(SETTLEMENT_TYPE, row.settlementType).label : '-'
+              }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="96" fixed="right">
+        <el-table-column fixed="right" label="状态" width="96">
           <template #default="{ row }">
             <el-tag :type="logStatusStyle(row).tagType" effect="plain" size="small">
               {{ row.logStatusLabel || logStatusStyle(row).label }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="80" fixed="right">
+        <el-table-column fixed="right" label="操作" width="80">
           <template #default="{ row }">
-            <el-button type="primary" link size="small" :icon="View" @click="openDetail(row)">详情</el-button>
+            <el-button :icon="View" link size="small" type="primary" @click="openDetail(row)">详情</el-button>
           </template>
         </el-table-column>
         <template #empty>
@@ -467,29 +485,49 @@ onMounted(() => {
     </el-card>
 
     <!-- 就诊详情抽屉：六段 -->
-    <el-drawer v-model="drawer" title="就诊详情" size="62%" destroy-on-close>
+    <el-drawer v-model="drawer" destroy-on-close size="62%" title="就诊详情">
       <div v-loading="detailLoading" class="space-y-4">
         <template v-if="drawerRow">
           <!-- ① 挂号信息 -->
           <section class="rounded-lg border border-slate-200 p-3">
             <h4 class="mb-2 flex items-center gap-1.5 text-sm font-semibold text-slate-800">
-              <el-icon><Document/></el-icon>挂号信息
+              <el-icon>
+                <Document/>
+              </el-icon>
+              挂号信息
             </h4>
             <div class="grid grid-cols-4 gap-x-4 gap-y-2 text-xs">
-              <div><p class="text-slate-400">就诊号</p><p class="font-mono font-medium text-slate-800">{{ drawerRow.registNo }}</p></div>
-              <div><p class="text-slate-400">患者</p><p class="font-medium text-slate-800">{{ drawerRow.patientName }}（{{ drawerRow.patientNo }}）</p></div>
-              <div><p class="text-slate-400">性别 / 年龄</p><p class="text-slate-700">{{ patientGenderText(drawerRow.gender) }} / {{ drawerRow.age ?? '-' }} 岁</p></div>
-              <div><p class="text-slate-400">号别</p><p class="text-slate-700">{{ drawerRow.registType != null ? statusOf(REGIST_TYPE, drawerRow.registType).label : '-' }}</p></div>
-              <div><p class="text-slate-400">就诊日期</p><p class="text-slate-700">{{ drawerRow.visitDate || '-' }}</p></div>
-              <div><p class="text-slate-400">挂号时间</p><p class="text-slate-700">{{ fmt(drawerRow.registTime) }}</p></div>
-              <div><p class="text-slate-400">科室 / 医生</p><p class="text-slate-700">{{ drawerRow.deptName }} / {{ drawerRow.doctorName }}</p></div>
-              <div><p class="text-slate-400">来源 / 结算</p><p class="text-slate-700">
-                {{ drawerRow.registSource != null ? statusOf(REGIST_SOURCE, drawerRow.registSource).label : '-' }} /
-                {{ drawerRow.settlementType != null ? statusOf(SETTLEMENT_TYPE, drawerRow.settlementType).label : '-' }}
-              </p></div>
-              <div><p class="text-slate-400">就诊类型</p><p class="text-slate-700">{{ drawerRow.revisitType != null ? statusOf(REVISIT_TYPE, drawerRow.revisitType).label : '未标注' }}</p></div>
+              <div><p class="text-slate-400">就诊号</p>
+                <p class="font-mono font-medium text-slate-800">{{ drawerRow.registNo }}</p></div>
+              <div><p class="text-slate-400">患者</p>
+                <p class="font-medium text-slate-800">{{ drawerRow.patientName }}（{{ drawerRow.patientNo }}）</p></div>
+              <div><p class="text-slate-400">性别 / 年龄</p>
+                <p class="text-slate-700">{{ patientGenderText(drawerRow.gender) }} / {{ drawerRow.age ?? '-' }} 岁</p>
+              </div>
+              <div><p class="text-slate-400">号别</p>
+                <p class="text-slate-700">
+                  {{ drawerRow.registType != null ? statusOf(REGIST_TYPE, drawerRow.registType).label : '-' }}</p></div>
+              <div><p class="text-slate-400">就诊日期</p>
+                <p class="text-slate-700">{{ drawerRow.visitDate || '-' }}</p></div>
+              <div><p class="text-slate-400">挂号时间</p>
+                <p class="text-slate-700">{{ fmt(drawerRow.registTime) }}</p></div>
+              <div><p class="text-slate-400">科室 / 医生</p>
+                <p class="text-slate-700">{{ drawerRow.deptName }} / {{ drawerRow.doctorName }}</p></div>
+              <div><p class="text-slate-400">来源 / 结算</p>
+                <p class="text-slate-700">
+                  {{ drawerRow.registSource != null ? statusOf(REGIST_SOURCE, drawerRow.registSource).label : '-' }} /
+                  {{
+                    drawerRow.settlementType != null ? statusOf(SETTLEMENT_TYPE, drawerRow.settlementType).label : '-'
+                  }}
+                </p></div>
+              <div><p class="text-slate-400">就诊类型</p>
+                <p class="text-slate-700">{{
+                    drawerRow.revisitType != null ? statusOf(REVISIT_TYPE, drawerRow.revisitType).label : '未标注'
+                  }}</p></div>
               <div><p class="text-slate-400">当前状态</p>
-                <el-tag :type="logStatusStyle(drawerRow).tagType" effect="plain" size="small">{{ drawerRow.logStatusLabel || logStatusStyle(drawerRow).label }}</el-tag>
+                <el-tag :type="logStatusStyle(drawerRow).tagType" effect="plain" size="small">
+                  {{ drawerRow.logStatusLabel || logStatusStyle(drawerRow).label }}
+                </el-tag>
               </div>
             </div>
           </section>
@@ -498,16 +536,27 @@ onMounted(() => {
           <section class="rounded-lg border border-slate-200 p-3">
             <h4 class="mb-2 text-sm font-semibold text-slate-800">队列过程</h4>
             <div v-if="drawerRow.queueId" class="grid grid-cols-4 gap-x-4 gap-y-2 text-xs">
-              <div><p class="text-slate-400">排队号 / 序号</p><p class="font-mono text-slate-800">{{ shortQueueNo(drawerRow.queueNo) }} / {{ drawerRow.sequenceNo ?? '-' }}</p></div>
-              <div><p class="text-slate-400">签到到达</p><p class="text-slate-700">{{ fmt(drawerRow.arriveTime) }}</p></div>
-              <div><p class="text-slate-400">叫号</p><p class="text-slate-700">{{ fmt(drawerRow.callTime) }}（{{ drawerRow.callCount ?? 0 }} 次）</p></div>
-              <div><p class="text-slate-400">开始就诊</p><p class="text-slate-700">{{ fmt(drawerRow.startTime) }}</p></div>
-              <div><p class="text-slate-400">结束</p><p class="text-slate-700">{{ fmt(drawerRow.endTime) }}</p></div>
-              <div><p class="text-slate-400">候诊时长</p><p class="text-slate-700">{{ duration(drawerRow.waitMinutes) }}</p></div>
-              <div><p class="text-slate-400">就诊时长</p><p class="text-slate-700">{{ duration(drawerRow.visitMinutes) }}</p></div>
-              <div><p class="text-slate-400">过号</p><p class="text-slate-700">
-                {{ drawerRow.isOverdue === 1 ? `已过号 · ${fmt(drawerRow.overdueTime)}${drawerRow.overdueReason ? ' · ' + drawerRow.overdueReason : ''}` : '否' }}
-              </p></div>
+              <div><p class="text-slate-400">排队号 / 序号</p>
+                <p class="font-mono text-slate-800">{{ shortQueueNo(drawerRow.queueNo) }} /
+                  {{ drawerRow.sequenceNo ?? '-' }}</p></div>
+              <div><p class="text-slate-400">签到到达</p>
+                <p class="text-slate-700">{{ fmt(drawerRow.arriveTime) }}</p></div>
+              <div><p class="text-slate-400">叫号</p>
+                <p class="text-slate-700">{{ fmt(drawerRow.callTime) }}（{{ drawerRow.callCount ?? 0 }} 次）</p></div>
+              <div><p class="text-slate-400">开始就诊</p>
+                <p class="text-slate-700">{{ fmt(drawerRow.startTime) }}</p></div>
+              <div><p class="text-slate-400">结束</p>
+                <p class="text-slate-700">{{ fmt(drawerRow.endTime) }}</p></div>
+              <div><p class="text-slate-400">候诊时长</p>
+                <p class="text-slate-700">{{ duration(drawerRow.waitMinutes) }}</p></div>
+              <div><p class="text-slate-400">就诊时长</p>
+                <p class="text-slate-700">{{ duration(drawerRow.visitMinutes) }}</p></div>
+              <div><p class="text-slate-400">过号</p>
+                <p class="text-slate-700">
+                  {{
+                    drawerRow.isOverdue === 1 ? `已过号 · ${fmt(drawerRow.overdueTime)}${drawerRow.overdueReason ? ' · ' + drawerRow.overdueReason : ''}` : '否'
+                  }}
+                </p></div>
             </div>
             <div v-else class="py-3 text-xs text-slate-400">该挂号还未签到入队（无队列记录）</div>
           </section>
@@ -517,12 +566,20 @@ onMounted(() => {
             <h4 class="mb-2 text-sm font-semibold text-slate-800">病历摘要</h4>
             <div v-if="record()" class="space-y-2 text-xs">
               <div class="grid grid-cols-3 gap-x-4 gap-y-2">
-                <div><p class="text-slate-400">主诉</p><p class="whitespace-pre-wrap text-slate-700">{{ record().chiefComplaint || '-' }}</p></div>
-                <div><p class="text-slate-400">现病史</p><p class="whitespace-pre-wrap text-slate-700">{{ record().presentIllness || '-' }}</p></div>
-                <div><p class="text-slate-400">既往史</p><p class="whitespace-pre-wrap text-slate-700">{{ record().pastHistory || '-' }}</p></div>
-                <div><p class="text-slate-400">体格检查</p><p class="whitespace-pre-wrap text-slate-700">{{ record().physicalExamination || '-' }}</p></div>
-                <div><p class="text-slate-400">初步诊断</p><p class="whitespace-pre-wrap text-slate-700">{{ record().diagnosis || '-' }}</p></div>
-                <div><p class="text-slate-400">处理意见</p><p class="whitespace-pre-wrap text-slate-700">{{ record().treatmentPlan || record().advice || '-' }}</p></div>
+                <div><p class="text-slate-400">主诉</p>
+                  <p class="whitespace-pre-wrap text-slate-700">{{ record().chiefComplaint || '-' }}</p></div>
+                <div><p class="text-slate-400">现病史</p>
+                  <p class="whitespace-pre-wrap text-slate-700">{{ record().presentIllness || '-' }}</p></div>
+                <div><p class="text-slate-400">既往史</p>
+                  <p class="whitespace-pre-wrap text-slate-700">{{ record().pastHistory || '-' }}</p></div>
+                <div><p class="text-slate-400">体格检查</p>
+                  <p class="whitespace-pre-wrap text-slate-700">{{ record().physicalExamination || '-' }}</p></div>
+                <div><p class="text-slate-400">初步诊断</p>
+                  <p class="whitespace-pre-wrap text-slate-700">{{ record().diagnosis || '-' }}</p></div>
+                <div><p class="text-slate-400">处理意见</p>
+                  <p class="whitespace-pre-wrap text-slate-700">{{
+                      record().treatmentPlan || record().advice || '-'
+                    }}</p></div>
               </div>
               <div class="flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-100 pt-2 text-slate-500">
                 <span>病历号 <b class="font-mono text-slate-700">{{ record().recordNo || '-' }}</b></span>
@@ -543,19 +600,19 @@ onMounted(() => {
                   <span class="font-mono font-medium text-slate-800">{{ p.prescriptionNo }}</span>
                   <span>{{ p.diagnosis || '无诊断' }}</span>
                   <span>金额 <b class="text-slate-800">¥{{ money(p.totalAmount) }}</b></span>
-                  <el-tag size="small" effect="plain" :type="statusOf(APPLY_STATUS, p.prescriptionStatus).tagType">
+                  <el-tag :type="statusOf(APPLY_STATUS, p.prescriptionStatus).tagType" effect="plain" size="small">
                     {{ statusOf(APPLY_STATUS, p.prescriptionStatus).label }}
                   </el-tag>
                 </div>
-                <el-table :data="p.details || []" size="small" border>
-                  <el-table-column prop="drugName" label="药品" min-width="140"/>
-                  <el-table-column prop="specification" label="规格" width="110"/>
-                  <el-table-column prop="quantity" label="数量" width="70" align="center"/>
-                  <el-table-column prop="unit" label="单位" width="60" align="center"/>
-                  <el-table-column prop="singleDosage" label="单次剂量" width="90" align="center"/>
-                  <el-table-column prop="frequency" label="频次" width="80" align="center"/>
-                  <el-table-column prop="route" label="用法" width="80" align="center"/>
-                  <el-table-column label="金额" width="80" align="right">
+                <el-table :data="p.details || []" border size="small">
+                  <el-table-column label="药品" min-width="140" prop="drugName"/>
+                  <el-table-column label="规格" prop="specification" width="110"/>
+                  <el-table-column align="center" label="数量" prop="quantity" width="70"/>
+                  <el-table-column align="center" label="单位" prop="unit" width="60"/>
+                  <el-table-column align="center" label="单次剂量" prop="singleDosage" width="90"/>
+                  <el-table-column align="center" label="频次" prop="frequency" width="80"/>
+                  <el-table-column align="center" label="用法" prop="route" width="80"/>
+                  <el-table-column align="right" label="金额" width="80">
                     <template #default="{ row: d }">¥{{ money(d.amount) }}</template>
                   </el-table-column>
                 </el-table>
@@ -570,14 +627,14 @@ onMounted(() => {
             <div class="space-y-3">
               <div>
                 <p class="mb-1 text-xs font-medium text-slate-500">检查（{{ inspectionApplies().length }}）</p>
-                <el-table v-if="inspectionApplies().length" :data="inspectionApplies()" size="small" border>
-                  <el-table-column prop="applyNo" label="申请单号" width="150"/>
-                  <el-table-column prop="inspectionItemName" label="检查项目" min-width="140"/>
-                  <el-table-column prop="bodyPart" label="检查部位" width="100"/>
-                  <el-table-column prop="clinicalDiagnosis" label="临床诊断" min-width="120" show-overflow-tooltip/>
-                  <el-table-column label="状态" width="90" align="center">
+                <el-table v-if="inspectionApplies().length" :data="inspectionApplies()" border size="small">
+                  <el-table-column label="申请单号" prop="applyNo" width="150"/>
+                  <el-table-column label="检查项目" min-width="140" prop="inspectionItemName"/>
+                  <el-table-column label="检查部位" prop="bodyPart" width="100"/>
+                  <el-table-column label="临床诊断" min-width="120" prop="clinicalDiagnosis" show-overflow-tooltip/>
+                  <el-table-column align="center" label="状态" width="90">
                     <template #default="{ row: a }">
-                      <el-tag size="small" effect="plain" :type="statusOf(APPLY_STATUS, a.applyStatus).tagType">
+                      <el-tag :type="statusOf(APPLY_STATUS, a.applyStatus).tagType" effect="plain" size="small">
                         {{ statusOf(APPLY_STATUS, a.applyStatus).label }}
                       </el-tag>
                     </template>
@@ -587,14 +644,14 @@ onMounted(() => {
               </div>
               <div>
                 <p class="mb-1 text-xs font-medium text-slate-500">检验（{{ laboratoryApplies().length }}）</p>
-                <el-table v-if="laboratoryApplies().length" :data="laboratoryApplies()" size="small" border>
-                  <el-table-column prop="applyNo" label="申请单号" width="150"/>
-                  <el-table-column prop="laboratoryItemName" label="检验项目" min-width="140"/>
-                  <el-table-column prop="specimenType" label="标本" width="90"/>
-                  <el-table-column prop="clinicalDiagnosis" label="临床诊断" min-width="120" show-overflow-tooltip/>
-                  <el-table-column label="状态" width="90" align="center">
+                <el-table v-if="laboratoryApplies().length" :data="laboratoryApplies()" border size="small">
+                  <el-table-column label="申请单号" prop="applyNo" width="150"/>
+                  <el-table-column label="检验项目" min-width="140" prop="laboratoryItemName"/>
+                  <el-table-column label="标本" prop="specimenType" width="90"/>
+                  <el-table-column label="临床诊断" min-width="120" prop="clinicalDiagnosis" show-overflow-tooltip/>
+                  <el-table-column align="center" label="状态" width="90">
                     <template #default="{ row: a }">
-                      <el-tag size="small" effect="plain" :type="statusOf(APPLY_STATUS, a.applyStatus).tagType">
+                      <el-tag :type="statusOf(APPLY_STATUS, a.applyStatus).tagType" effect="plain" size="small">
                         {{ statusOf(APPLY_STATUS, a.applyStatus).label }}
                       </el-tag>
                     </template>
@@ -614,12 +671,12 @@ onMounted(() => {
                   <span class="font-mono font-medium text-slate-800">{{ c.billNo }}</span>
                   <span>总额 <b class="text-slate-800">¥{{ money(c.totalAmount) }}</b></span>
                 </div>
-                <el-table :data="c.items || []" size="small" border>
-                  <el-table-column prop="itemName" label="项目" min-width="140"/>
-                  <el-table-column prop="itemCode" label="编码" width="120"/>
-                  <el-table-column prop="specification" label="规格" width="110"/>
-                  <el-table-column prop="quantity" label="数量" width="70" align="center"/>
-                  <el-table-column label="金额" width="90" align="right">
+                <el-table :data="c.items || []" border size="small">
+                  <el-table-column label="项目" min-width="140" prop="itemName"/>
+                  <el-table-column label="编码" prop="itemCode" width="120"/>
+                  <el-table-column label="规格" prop="specification" width="110"/>
+                  <el-table-column align="center" label="数量" prop="quantity" width="70"/>
+                  <el-table-column align="right" label="金额" width="90">
                     <template #default="{ row: d }">¥{{ money(d.amount) }}</template>
                   </el-table-column>
                 </el-table>

@@ -1,8 +1,8 @@
-<script setup lang="js">
-import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Check } from '@element-plus/icons-vue'
-import { getHospitalConfig, saveHospitalConfig } from '../../../api/system'
+<script lang="js" setup>
+import {onMounted, ref} from 'vue'
+import {ElMessage} from 'element-plus'
+import {Check} from '@element-plus/icons-vue'
+import {getHospitalConfig, saveHospitalConfig} from '../../../api/system'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -16,9 +16,9 @@ const basicConfig = ref({
 })
 
 const rules = {
-  hospitalName: [{ required: true, message: '请输入医院名称', trigger: 'blur' }],
-  hospitalAddress: [{ required: true, message: '请输入医院地址', trigger: 'blur' }],
-  hospitalPhone: [{ required: true, message: '请输入联系电话', trigger: 'blur' }],
+  hospitalName: [{required: true, message: '请输入医院名称', trigger: 'blur'}],
+  hospitalAddress: [{required: true, message: '请输入医院地址', trigger: 'blur'}],
+  hospitalPhone: [{required: true, message: '请输入联系电话', trigger: 'blur'}],
 }
 
 const loadConfig = async () => {
@@ -26,7 +26,7 @@ const loadConfig = async () => {
   try {
     const res = await getHospitalConfig()
     if (res.code === 200 && res.data) {
-      basicConfig.value = { ...basicConfig.value, ...res.data }
+      basicConfig.value = {...basicConfig.value, ...res.data}
     }
   } finally {
     loading.value = false
@@ -51,29 +51,27 @@ onMounted(loadConfig)
 
 <template>
   <div class="p-6">
-    <div class="mb-6">
-      <h1 class="text-lg font-bold text-slate-800">参数设置</h1>
-    </div>
-
     <el-card v-loading="loading" shadow="never">
       <template #header>
         <span class="font-medium text-slate-700">基础配置</span>
       </template>
-      <el-form ref="formRef" :model="basicConfig" :rules="rules" label-width="120px" class="max-w-xl">
+      <el-form ref="formRef" :model="basicConfig" :rules="rules" class="max-w-xl" label-width="120px">
         <el-form-item label="医院名称" prop="hospitalName">
-          <el-input v-model="basicConfig.hospitalName" />
+          <el-input v-model="basicConfig.hospitalName"/>
         </el-form-item>
         <el-form-item label="医院地址" prop="hospitalAddress">
-          <el-input v-model="basicConfig.hospitalAddress" />
+          <el-input v-model="basicConfig.hospitalAddress"/>
         </el-form-item>
         <el-form-item label="联系电话" prop="hospitalPhone">
-          <el-input v-model="basicConfig.hospitalPhone" />
+          <el-input v-model="basicConfig.hospitalPhone"/>
         </el-form-item>
         <el-form-item label="邮箱" prop="hospitalEmail">
-          <el-input v-model="basicConfig.hospitalEmail" />
+          <el-input v-model="basicConfig.hospitalEmail"/>
         </el-form-item>
         <el-form-item>
-          <el-button v-perm="'system:config:add'" type="primary" :icon="Check" :loading="saving" @click="handleSaveBasic">保存配置</el-button>
+          <el-button v-perm="'system:config:add'" :icon="Check" :loading="saving" type="primary"
+                     @click="handleSaveBasic">保存配置
+          </el-button>
         </el-form-item>
       </el-form>
     </el-card>

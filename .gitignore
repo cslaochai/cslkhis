@@ -13,6 +13,9 @@
 !/AGENTS.md
 !/docs/
 
+# 放行：容器编排配置（compose / Dockerfile / nginx 站点，均无凭据）
+!/docker/
+
 # 放行：各级 .gitignore / .gitattributes（曾因穷举忽略规则被漏掉，属工程配置，应入库）
 !.gitignore
 !**/.gitignore
@@ -50,6 +53,10 @@ uploads/
 *.iws
 .env.local
 *.local
+
+# 容器部署真值（compose 的 env_file：库口令 / Redis 口令 / JWT / 签名主密钥 / AI 密钥）
+# 只留 docker/.env.example 入库，见 AGENTS.md 第 8 节「凭据分流」。
+docker/.env
 
 # ============ 敏感信息：严禁入库 ============
 # 口径：**系统登录账号密码**可入库（docs/测试账号与凭据.md，密码是 123456 测试口令）；

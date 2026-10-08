@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 /**
  * 电子签名与时间戳 · 签名中心（P5.5）
  *
@@ -17,28 +17,28 @@
  *      它们没有签名；覆盖率表把"未签名（存量）"单独列出来，显示为 0% 而不是藏起来。
  *      补签等于伪造，本系统不允许对历史归档文书补签。
  */
-import { ref, reactive, computed, onMounted } from 'vue'
-import { Refresh, Search, WarningFilled } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import {computed, onMounted, reactive, ref} from 'vue'
+import {Search, WarningFilled} from '@element-plus/icons-vue'
+import {ElMessage, ElMessageBox} from 'element-plus'
 import {
-  getSignatureList,
   getSignatureDetail,
-  getSignatureSummary,
+  getSignatureList,
   getSignatureQueryOptions,
-  verifySignature,
-  invalidateSignature,
-  getSignCertList,
+  getSignatureSummary,
   getSignCertDetail,
-  issueSignCert,
-  revokeSignCert,
+  getSignCertList,
   getTsaStatus,
   getTsaTokenList,
+  invalidateSignature,
+  issueSignCert,
+  revokeSignCert,
   updateTsaStatus,
   updateTsaTimeSource,
+  verifySignature,
   verifyTsaToken,
 } from '@/api/signature'
-import { getEmployeeList } from '@/api/system'
-import { PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/lib/pagination'
+import {getEmployeeList} from '@/api/system'
+import {DEFAULT_PAGE_SIZE, PAGE_SIZES} from '@/lib/pagination'
 
 // ---------------- 概览 ----------------
 const overviewLoading = ref(false)
@@ -93,12 +93,19 @@ const issueVisible = ref(false)
 const issuing = ref(false)
 const empOptions = ref<any[]>([])
 const empLoading = ref(false)
-const issueForm = reactive<any>({ empId: undefined, empName: '', deptId: undefined, deptName: '', validDays: undefined, remark: '' })
+const issueForm = reactive<any>({
+  empId: undefined,
+  empName: '',
+  deptId: undefined,
+  deptName: '',
+  validDays: undefined,
+  remark: ''
+})
 
 // 吊销证书
 const revokeVisible = ref(false)
 const revoking = ref(false)
-const revokeForm = reactive<any>({ certId: '', certNo: '', reason: '' })
+const revokeForm = reactive<any>({certId: '', certNo: '', reason: ''})
 
 // ---------------- 时间戳（TSA） ----------------
 const tsaStatus = ref<any>(null)
@@ -106,7 +113,7 @@ const tsaLoading = ref(false)
 const tsaTokenLoading = ref(false)
 const tsaTokenList = ref<any[]>([])
 const tsaTokenTotal = ref(0)
-const tsaTokenQuery = reactive<any>({ serial: '', pageNum: 1, pageSize: DEFAULT_PAGE_SIZE })
+const tsaTokenQuery = reactive<any>({serial: '', pageNum: 1, pageSize: DEFAULT_PAGE_SIZE})
 
 const loadTsaStatus = async () => {
   tsaLoading.value = true
@@ -124,7 +131,7 @@ const loadTsaStatus = async () => {
 const loadTsaTokenList = async () => {
   tsaTokenLoading.value = true
   try {
-    const params: any = { pageNum: tsaTokenQuery.pageNum, pageSize: tsaTokenQuery.pageSize }
+    const params: any = {pageNum: tsaTokenQuery.pageNum, pageSize: tsaTokenQuery.pageSize}
     if (tsaTokenQuery.serial) params.serial = tsaTokenQuery.serial.trim()
     const res = await getTsaTokenList(params)
     tsaTokenList.value = res.data?.records || []
@@ -153,8 +160,8 @@ const syncSourceDraft = () => {
 const onTimeSourceChange = async (val: number) => {
   const target = val === 3 ? '可信时间戳（TSA 盖章）' : '本机时钟'
   const warn = val === 3 && !tsaStatus.value?.available
-    ? '注意：TSA 服务当前不在线，配置会保存，但实际生效的仍是「本机时钟」（宁可承认不可信，也不谎报可信）。'
-    : ''
+      ? '注意：TSA 服务当前不在线，配置会保存，但实际生效的仍是「本机时钟」（宁可承认不可信，也不谎报可信）。'
+      : ''
   try {
     await ElMessageBox.confirm(`确认把签名时间来源切换为「${target}」？${warn}`, '切换时间来源', {
       type: 'warning', confirmButtonText: '确认切换', cancelButtonText: '取消',
@@ -180,13 +187,15 @@ const onTimeSourceChange = async (val: number) => {
 const onToggleTsa = async () => {
   const stop = !!tsaStatus.value?.available
   const msg = stop
-    ? '停用后 TSA 不再签发新令牌，新签名时间将降级为「本机时钟」；历史令牌凭已登记公钥仍可验证。确认停用？'
-    : '启用后，时间来源配为「可信时间戳」的新签名将重新由 TSA 盖章。确认启用？'
+      ? '停用后 TSA 不再签发新令牌，新签名时间将降级为「本机时钟」；历史令牌凭已登记公钥仍可验证。确认停用？'
+      : '启用后，时间来源配为「可信时间戳」的新签名将重新由 TSA 盖章。确认启用？'
   try {
     await ElMessageBox.confirm(msg, stop ? '停用 TSA 服务' : '启用 TSA 服务', {
       type: 'warning', confirmButtonText: '确认', cancelButtonText: '取消',
     })
-  } catch { return }
+  } catch {
+    return
+  }
   tsaOpsLoading.value = true
   try {
     const res = await updateTsaStatus(stop ? 0 : 1)
@@ -253,7 +262,7 @@ const loadOptions = async () => {
 const loadSignList = async () => {
   signLoading.value = true
   try {
-    const params: any = { pageNum: signQuery.pageNum, pageSize: signQuery.pageSize }
+    const params: any = {pageNum: signQuery.pageNum, pageSize: signQuery.pageSize}
     if (signQuery.bizType !== undefined && signQuery.bizType !== null) params.bizType = signQuery.bizType
     if (signQuery.signScene !== undefined && signQuery.signScene !== null) params.signScene = signQuery.signScene
     if (signQuery.signStatus !== undefined && signQuery.signStatus !== null) params.signStatus = signQuery.signStatus
@@ -275,7 +284,7 @@ const loadSignList = async () => {
 const loadCertList = async () => {
   certLoading.value = true
   try {
-    const params: any = { pageNum: certQuery.pageNum, pageSize: certQuery.pageSize }
+    const params: any = {pageNum: certQuery.pageNum, pageSize: certQuery.pageSize}
     if (certQuery.certStatus !== undefined && certQuery.certStatus !== null) params.certStatus = certQuery.certStatus
     if (certQuery.issuedMode !== undefined && certQuery.issuedMode !== null) params.issuedMode = certQuery.issuedMode
     if (certQuery.keyword) params.keyword = certQuery.keyword.trim()
@@ -376,7 +385,7 @@ const openCertDetail = async (row: any) => {
 const searchEmp = async (keyword: string) => {
   empLoading.value = true
   try {
-    const res = await getEmployeeList({ keyword: keyword || undefined })
+    const res = await getEmployeeList({keyword: keyword || undefined})
     empOptions.value = res.data || []
   } catch (e: any) {
     ElMessage.error(e?.message || '加载员工列表失败')
@@ -459,10 +468,10 @@ const num = (v: any) => Number(v ?? 0)
 const text = (v: any) => (v === null || v === undefined || v === '' ? '—' : String(v))
 const coverages = computed(() => overview.value?.coverages || [])
 const pendingTotal = computed(() =>
-  coverages.value.reduce((sum: number, c: any) => sum + num(c.pendingSign), 0),
+    coverages.value.reduce((sum: number, c: any) => sum + num(c.pendingSign), 0),
 )
 const invalidatedTotal = computed(() =>
-  coverages.value.reduce((sum: number, c: any) => sum + num(c.invalidated), 0),
+    coverages.value.reduce((sum: number, c: any) => sum + num(c.invalidated), 0),
 )
 // 覆盖率占位：分母为 0 时后端给的是「—（该类型还没有可统计的对象）」，不是 "0.0%" —— 别把它当比率渲染
 const isRatePlaceholder = (t: any) => !t || String(t).startsWith('—')
@@ -482,54 +491,47 @@ onMounted(async () => {
 
 <template>
   <div class="space-y-6">
-    <!-- 标题 -->
-    <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-      <div>
-        <h1 class="text-xl font-semibold text-slate-900">电子签名与时间戳</h1>
-        <p class="mt-1 max-w-4xl text-sm text-slate-500">
-          对病历文书与住院医嘱做数字签名并留存证据链：签名即锁定内容，改动可被验签发现。
-          本页同时管理院内签名证书，可随时核验任一签名的完整性与内容一致性。
-        </p>
-      </div>
-      <el-button :icon="Refresh" @click="refreshAll">刷新</el-button>
-    </div>
-
-    <!-- 口径说明 -->
-    <div class="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-6 text-slate-700">
-      <p><span class="font-medium text-slate-900">签名是证据，不是状态：</span>签名一经产生只增不改不删，作废也只是<b>追加</b>作废信息（作废人 / 时间 / 理由），历史签名值与被签内容快照全部保留。所以「已作废」不是异常，而是这几次签字动作真实发生过。</p>
-      <p><span class="font-medium text-slate-900">验签给两个独立结论，不是一个「通过 / 不通过」：</span><b>签名值校验</b>回答「这份证据本身有没有被换过」，<b>内容比对</b>回答「签名之后这份病历有没有被改过」。两者性质与处理方式完全不同，合成一个布尔值就把最关键的信息丢了。</p>
-      <p><span class="font-medium text-slate-900">时间戳来源自报：</span>本条签名的时间戳来自「本机时钟 / 院内授时 / TSA」，列表与详情里原样展示。已接入<b>本地内置 TSA</b>（令牌结构真实、可对抗本机时钟篡改），但信任根仍是院内 —— <b>非第三方 CA/TSA，不对外声称法律效力</b>；未接入 TSA 的签名时间取自本机时钟，不具备可信时间效力。</p>
-      <p><span class="font-medium text-slate-900">证书是院内托管的，不是 CA 签发的：</span>本系统自建签名证书体系（RSA-2048 + SHA-256），私钥以主口令加密后托管。信任级别低于第三方 CA，页面上的「信任说明」不要省略。自动签发的证书信任级别低于人工签发，单独标出。</p>
-      <p><span class="font-medium text-slate-900">存量病历的签名补不回来：</span>库里已归档病历都是签名能力上线之前产生的，它们没有签名。覆盖率表中「未签名」列显示的就是这批文书 —— 显示为 0% 是观测值，不是故障；<b>对历史归档文书补签等于伪造，系统不允许</b>。</p>
-    </div>
-
     <!-- 概览 -->
-    <div v-loading="overviewLoading" v-if="overview" data-testid="p5-sign-overview" class="grid grid-cols-2 gap-4 lg:grid-cols-5">
+    <div v-if="overview" v-loading="overviewLoading" class="grid grid-cols-2 gap-4 lg:grid-cols-5"
+         data-testid="p5-sign-overview">
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">有效签名</p>
-        <p class="mt-1 text-2xl font-semibold text-slate-900" data-testid="p5-sign-stat-valid">{{ overview.validSign }}</p>
-        <p class="mt-1 text-xs text-slate-400">今日新增 {{ overview.todaySign }} 条 · 最近 {{ text(overview.lastSignTime) }}</p>
+        <p class="mt-1 text-2xl font-semibold text-slate-900" data-testid="p5-sign-stat-valid">{{
+            overview.validSign
+          }}</p>
+        <p class="mt-1 text-xs text-slate-400">今日新增 {{ overview.todaySign }} 条 · 最近
+          {{ text(overview.lastSignTime) }}</p>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">已作废</p>
-        <p class="mt-1 text-2xl font-semibold text-amber-600" data-testid="p5-sign-stat-invalid">{{ overview.invalidSign }}</p>
+        <p class="mt-1 text-2xl font-semibold text-amber-600" data-testid="p5-sign-stat-invalid">{{
+            overview.invalidSign
+          }}</p>
         <p class="mt-1 text-xs text-slate-400">历史行保留，仅追加作废信息</p>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">未校验</p>
-        <p class="mt-1 text-2xl font-semibold text-slate-500" data-testid="p5-sign-stat-unchecked">{{ overview.verifyUnchecked }}</p>
+        <p class="mt-1 text-2xl font-semibold text-slate-500" data-testid="p5-sign-stat-unchecked">
+          {{ overview.verifyUnchecked }}</p>
         <p class="mt-1 text-xs text-slate-400">「没验过」不等于「验过了没问题」</p>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">验签失败</p>
-        <p class="mt-1 text-2xl font-semibold text-red-600" data-testid="p5-sign-stat-failed">{{ overview.verifyFailed }}</p>
-        <p class="mt-1 text-xs text-slate-400">{{ num(overview.verifyFailed) > 0 ? '必须逐条查明原因' : '当前无失败记录' }}</p>
+        <p class="mt-1 text-2xl font-semibold text-red-600" data-testid="p5-sign-stat-failed">{{
+            overview.verifyFailed
+          }}</p>
+        <p class="mt-1 text-xs text-slate-400">{{
+            num(overview.verifyFailed) > 0 ? '必须逐条查明原因' : '当前无失败记录'
+          }}</p>
       </div>
       <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
         <p class="text-xs text-slate-500">签名证书</p>
-        <p class="mt-1 text-2xl font-semibold text-slate-900" data-testid="p5-sign-stat-cert">{{ overview.certActive }}</p>
+        <p class="mt-1 text-2xl font-semibold text-slate-900" data-testid="p5-sign-stat-cert">{{
+            overview.certActive
+          }}</p>
         <p class="mt-1 text-xs text-slate-400">
-          共 {{ overview.certTotal }} 张 · 已吊销 {{ overview.certRevoked }} · 自动签发 {{ overview.certAutoIssued }} 张（信任级别低于人工）
+          共 {{ overview.certTotal }} 张 · 已吊销 {{ overview.certRevoked }} · 自动签发 {{ overview.certAutoIssued }}
+          张（信任级别低于人工）
         </p>
       </div>
     </div>
@@ -555,7 +557,7 @@ onMounted(async () => {
         </div>
       </div>
       <div class="p-4">
-        <el-table :data="coverages" size="small" border data-testid="p5-sign-coverage-table">
+        <el-table :data="coverages" border data-testid="p5-sign-coverage-table" size="small">
           <el-table-column label="业务对象" width="140">
             <template #default="{ row }">
               <span class="text-xs font-medium">{{ row.bizTypeText }}</span>
@@ -568,26 +570,29 @@ onMounted(async () => {
           </el-table-column>
           <el-table-column label="已签名" width="90">
             <template #default="{ row }">
-              <span class="text-xs font-medium text-emerald-600" :data-testid="`p5-sign-cov-signed-${row.bizType}`">{{ num(row.signed) }}</span>
+              <span :data-testid="`p5-sign-cov-signed-${row.bizType}`"
+                    class="text-xs font-medium text-emerald-600">{{ num(row.signed) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="未签名（存量）" width="140">
             <template #default="{ row }">
-              <span class="text-xs text-amber-600" :data-testid="`p5-sign-cov-pending-${row.bizType}`">{{ num(row.pendingSign) }}</span>
+              <span :data-testid="`p5-sign-cov-pending-${row.bizType}`"
+                    class="text-xs text-amber-600">{{ num(row.pendingSign) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="签名已失效" width="110">
             <template #default="{ row }">
-              <span class="text-xs text-slate-500" :data-testid="`p5-sign-cov-invalidated-${row.bizType}`">{{ num(row.invalidated) }}</span>
+              <span :data-testid="`p5-sign-cov-invalidated-${row.bizType}`"
+                    class="text-xs text-slate-500">{{ num(row.invalidated) }}</span>
             </template>
           </el-table-column>
           <el-table-column label="覆盖率" width="100">
             <template #default="{ row }">
               <!-- 分母为 0 时后端给的是「—（该类型还没有可统计的对象）」（不是 0%，也不是 100%）：没有对象可比，就不该给一个比率 -->
               <span
-                class="text-xs font-medium"
-                :class="isRatePlaceholder(row.signedRateText) ? 'text-slate-400' : 'text-slate-800'"
-                :data-testid="`p5-sign-cov-rate-${row.bizType}`"
+                  :class="isRatePlaceholder(row.signedRateText) ? 'text-slate-400' : 'text-slate-800'"
+                  :data-testid="`p5-sign-cov-rate-${row.bizType}`"
+                  class="text-xs font-medium"
               >{{ row.signedRateText }}</span>
             </template>
           </el-table-column>
@@ -598,7 +603,9 @@ onMounted(async () => {
                   未签名的 {{ num(row.pendingSign) }} 份是签名能力上线前的存量文书，按规范不可补签。
                 </template>
                 <template v-else-if="num(row.total) === 0">该类型暂无数据，覆盖率不适用。</template>
-                <template v-else>全部已签名{{ num(row.invalidated) > 0 ? '，其中 ' + num(row.invalidated) + ' 份签名已失效需处理' : '' }}。</template>
+                <template v-else>全部已签名{{
+                    num(row.invalidated) > 0 ? '，其中 ' + num(row.invalidated) + ' 份签名已失效需处理' : ''
+                  }}。</template>
               </span>
             </template>
           </el-table-column>
@@ -607,32 +614,39 @@ onMounted(async () => {
     </div>
 
     <!-- 信任与来源说明（后端给什么就显示什么，前端不自造文案） -->
-    <div v-if="overview" data-testid="p5-sign-trust-note" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-900">
+    <div v-if="overview" class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-6 text-amber-900"
+         data-testid="p5-sign-trust-note">
       <div class="flex items-start gap-2">
-        <el-icon class="mt-0.5"><WarningFilled /></el-icon>
+        <el-icon class="mt-0.5">
+          <WarningFilled/>
+        </el-icon>
         <div>
           <p class="font-medium">时间戳来源：{{ text(overview.timeSourceNote) }}</p>
           <p data-testid="g6-tsa-status">
-            时间戳服务：{{ tsaStatus ? (tsaStatus.available
-              ? `在线 · ${text(tsaStatus.tsaName)} · 配置 ${text(tsaStatus.configTimeSource)} / 生效「${text(tsaStatus.effectiveTimeSourceText)}」 · 令牌台账 ${num(tsaStatus.tokenCount)} 条`
-              : '不在线（签名时间生效「本机时钟」）') : '—' }}
+            时间戳服务：{{
+              tsaStatus ? (tsaStatus.available
+                  ? `在线 · ${text(tsaStatus.tsaName)} · 配置 ${text(tsaStatus.configTimeSource)} / 生效「${text(tsaStatus.effectiveTimeSourceText)}」 · 令牌台账 ${num(tsaStatus.tokenCount)} 条`
+                  : '不在线（签名时间生效「本机时钟」）') : '—'
+            }}
           </p>
           <p v-if="tsaStatus?.trustNote" data-testid="g6-tsa-trust">{{ tsaStatus.trustNote }}</p>
           <div class="mt-2 flex flex-wrap items-center gap-2" data-testid="g6b-tsa-ops">
             <span class="font-medium">时间来源切换：</span>
-            <el-radio-group v-model="tsaSourceDraft" :disabled="tsaOpsLoading" data-testid="g6b-time-source" @change="onTimeSourceChange">
+            <el-radio-group v-model="tsaSourceDraft" :disabled="tsaOpsLoading" data-testid="g6b-time-source"
+                            @change="onTimeSourceChange">
               <el-radio-button :value="1">本机时钟</el-radio-button>
               <el-radio-button :value="3">可信时间戳</el-radio-button>
             </el-radio-group>
             <el-button
-              size="small"
-              :type="tsaStatus?.available ? 'danger' : 'primary'"
-              :plain="!!tsaStatus?.available"
-              :loading="tsaOpsLoading"
-              data-testid="g6b-tsa-toggle"
-              v-perm="'sign:center:edit'"
-              @click="onToggleTsa"
-            >{{ tsaStatus?.available ? '停用 TSA' : '启用 TSA' }}</el-button>
+                v-perm="'sign:center:edit'"
+                :loading="tsaOpsLoading"
+                :plain="!!tsaStatus?.available"
+                :type="tsaStatus?.available ? 'danger' : 'primary'"
+                data-testid="g6b-tsa-toggle"
+                size="small"
+                @click="onToggleTsa"
+            >{{ tsaStatus?.available ? '停用 TSA' : '启用 TSA' }}
+            </el-button>
             <span class="text-slate-500">停用=不再签发新令牌，历史令牌仍可验证</span>
           </div>
           <p>证书信任级别：{{ text(overview.certTrustNote) }}</p>
@@ -646,40 +660,50 @@ onMounted(async () => {
       <el-tab-pane label="签名记录" name="sign">
         <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
           <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-3">
-            <el-select v-model="signQuery.bizType" placeholder="对象类型" clearable style="width: 130px" data-testid="p5-sign-f-biztype" @change="searchSign">
-              <el-option v-for="o in options.bizTypes || []" :key="o.id" :label="o.text" :value="Number(o.id)" />
+            <el-select v-model="signQuery.bizType" clearable data-testid="p5-sign-f-biztype" placeholder="对象类型"
+                       style="width: 130px" @change="searchSign">
+              <el-option v-for="o in options.bizTypes || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
             </el-select>
-            <el-select v-model="signQuery.signScene" placeholder="签名场景" clearable style="width: 120px" data-testid="p5-sign-f-scene" @change="searchSign">
-              <el-option v-for="o in options.scenes || []" :key="o.id" :label="o.text" :value="Number(o.id)" />
+            <el-select v-model="signQuery.signScene" clearable data-testid="p5-sign-f-scene" placeholder="签名场景"
+                       style="width: 120px" @change="searchSign">
+              <el-option v-for="o in options.scenes || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
             </el-select>
-            <el-select v-model="signQuery.signStatus" placeholder="签名状态" clearable style="width: 120px" data-testid="p5-sign-f-status" @change="searchSign">
-              <el-option v-for="o in options.signStatuses || []" :key="o.id" :label="o.text" :value="Number(o.id)" />
+            <el-select v-model="signQuery.signStatus" clearable data-testid="p5-sign-f-status" placeholder="签名状态"
+                       style="width: 120px" @change="searchSign">
+              <el-option v-for="o in options.signStatuses || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
             </el-select>
-            <el-select v-model="signQuery.verifyStatus" placeholder="验签结果" clearable style="width: 130px" data-testid="p5-sign-f-verify" @change="searchSign">
-              <el-option v-for="o in options.verifyStatuses || []" :key="o.id" :label="o.text" :value="Number(o.id)" />
+            <el-select v-model="signQuery.verifyStatus" clearable data-testid="p5-sign-f-verify" placeholder="验签结果"
+                       style="width: 130px" @change="searchSign">
+              <el-option v-for="o in options.verifyStatuses || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
             </el-select>
-            <el-select v-model="signQuery.timeSource" placeholder="时间来源" clearable style="width: 130px" data-testid="p5-sign-f-timesource" @change="searchSign">
-              <el-option v-for="o in options.timeSources || []" :key="o.id" :label="o.text" :value="Number(o.id)" />
+            <el-select v-model="signQuery.timeSource" clearable data-testid="p5-sign-f-timesource" placeholder="时间来源"
+                       style="width: 130px" @change="searchSign">
+              <el-option v-for="o in options.timeSources || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
             </el-select>
             <el-date-picker
-              v-model="timeRange"
-              type="datetimerange"
-              value-format="YYYY-MM-DD HH:mm:ss"
-              start-placeholder="签名起"
-              end-placeholder="签名止"
-              style="width: 330px"
-              data-testid="p5-sign-f-timerange"
-              @change="searchSign"
+                v-model="timeRange"
+                data-testid="p5-sign-f-timerange"
+                end-placeholder="签名止"
+                start-placeholder="签名起"
+                style="width: 330px"
+                type="datetimerange"
+                value-format="YYYY-MM-DD HH:mm:ss"
+                @change="searchSign"
             />
-            <el-input v-model="signQuery.keyword" placeholder="签名人 / 患者 / 对象单号" clearable style="width: 220px" data-testid="p5-sign-f-keyword" @keyup.enter="searchSign">
-              <template #prefix><el-icon><Search /></el-icon></template>
+            <el-input v-model="signQuery.keyword" clearable data-testid="p5-sign-f-keyword" placeholder="签名人 / 患者 / 对象单号"
+                      style="width: 220px" @keyup.enter="searchSign">
+              <template #prefix>
+                <el-icon>
+                  <Search/>
+                </el-icon>
+              </template>
             </el-input>
             <el-button type="primary" @click="searchSign">查询</el-button>
             <el-button @click="clearSignFilter">清除</el-button>
           </div>
 
           <div v-loading="signLoading" class="p-4">
-            <el-table :data="signList" size="small" border data-testid="p5-sign-table" @row-click="openDetail">
+            <el-table :data="signList" border data-testid="p5-sign-table" size="small" @row-click="openDetail">
               <el-table-column label="签名编号" width="170">
                 <template #default="{ row }">
                   <span class="text-xs font-medium text-slate-700">{{ row.signNo }}</span>
@@ -688,7 +712,8 @@ onMounted(async () => {
               <el-table-column label="对象" width="190">
                 <template #default="{ row }">
                   <div class="text-xs">{{ row.bizTypeText }} · {{ row.bizNo || '—' }}</div>
-                  <div class="text-xs text-slate-400">{{ row.patientName || '—' }}<span v-if="row.deptName"> · {{ row.deptName }}</span></div>
+                  <div class="text-xs text-slate-400">{{ row.patientName || '—' }}<span
+                      v-if="row.deptName"> · {{ row.deptName }}</span></div>
                 </template>
               </el-table-column>
               <el-table-column label="场景" width="80">
@@ -705,35 +730,42 @@ onMounted(async () => {
               </el-table-column>
               <el-table-column label="摘要" width="150">
                 <template #default="{ row }">
-                  <span class="font-mono text-xs text-slate-600" :data-testid="`p5-sign-row-digest-${row.signNo}`">{{ row.contentDigestShort || '—' }}</span>
+                  <span :data-testid="`p5-sign-row-digest-${row.signNo}`"
+                        class="font-mono text-xs text-slate-600">{{ row.contentDigestShort || '—' }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="签名时间" width="170">
                 <template #default="{ row }">
                   <div class="text-xs">{{ row.signedTime || '—' }}</div>
                   <div class="mt-0.5">
-                    <el-tag size="small" :type="timeSourceTag(row.timeSource)" :data-testid="`p5-sign-row-ts-${row.signNo}`">{{ row.timeSourceText || '未知' }}</el-tag>
+                    <el-tag :data-testid="`p5-sign-row-ts-${row.signNo}`" :type="timeSourceTag(row.timeSource)"
+                            size="small">{{ row.timeSourceText || '未知' }}
+                    </el-tag>
                   </div>
                 </template>
               </el-table-column>
               <el-table-column label="状态" width="90">
                 <template #default="{ row }">
-                  <el-tag size="small" :type="row.signStatus === 1 ? 'success' : 'info'" :data-testid="`p5-sign-row-status-${row.signNo}`">
+                  <el-tag :data-testid="`p5-sign-row-status-${row.signNo}`" :type="row.signStatus === 1 ? 'success' : 'info'"
+                          size="small">
                     {{ row.signStatusText }}
                   </el-tag>
                 </template>
               </el-table-column>
               <el-table-column label="验签" width="110">
                 <template #default="{ row }">
-                  <el-tag size="small" :type="verifyTag(row.verifyStatus)" :data-testid="`p5-sign-row-verify-${row.signNo}`">
+                  <el-tag :data-testid="`p5-sign-row-verify-${row.signNo}`" :type="verifyTag(row.verifyStatus)"
+                          size="small">
                     {{ row.verifyStatusText }}
                   </el-tag>
                   <div v-if="row.verifyTime" class="mt-0.5 text-xs text-slate-400">{{ row.verifyTime }}</div>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="80" fixed="right">
+              <el-table-column fixed="right" label="操作" width="80">
                 <template #default="{ row }">
-                  <el-button link type="primary" size="small" :data-testid="`p5-sign-open-${row.signNo}`" @click.stop="openDetail(row)">详情</el-button>
+                  <el-button :data-testid="`p5-sign-open-${row.signNo}`" link size="small" type="primary"
+                             @click.stop="openDetail(row)">详情
+                  </el-button>
                 </template>
               </el-table-column>
               <template #empty>
@@ -746,13 +778,13 @@ onMounted(async () => {
             <div class="mt-3 flex items-center justify-between">
               <p class="text-xs text-slate-500" data-testid="p5-sign-total">共 {{ signTotal }} 条签名记录（含已作废）</p>
               <el-pagination
-                v-model:current-page="signQuery.pageNum"
-                v-model:page-size="signQuery.pageSize"
-                :total="signTotal"
-                :page-sizes="PAGE_SIZES"
-                layout="sizes, prev, pager, next"
-                @current-change="loadSignList"
-                @size-change="() => { signQuery.pageNum = 1; loadSignList() }"
+                  v-model:current-page="signQuery.pageNum"
+                  v-model:page-size="signQuery.pageSize"
+                  :page-sizes="PAGE_SIZES"
+                  :total="signTotal"
+                  layout="sizes, prev, pager, next"
+                  @current-change="loadSignList"
+                  @size-change="() => { signQuery.pageNum = 1; loadSignList() }"
               />
             </div>
           </div>
@@ -763,21 +795,29 @@ onMounted(async () => {
       <el-tab-pane label="签名证书" name="cert">
         <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
           <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 px-4 py-3">
-            <el-select v-model="certQuery.certStatus" placeholder="证书状态" clearable style="width: 130px" data-testid="p5-sign-f-certstatus" @change="() => { certQuery.pageNum = 1; loadCertList() }">
-              <el-option v-for="o in options.certStatuses || []" :key="o.id" :label="o.text" :value="Number(o.id)" />
+            <el-select v-model="certQuery.certStatus" clearable data-testid="p5-sign-f-certstatus" placeholder="证书状态"
+                       style="width: 130px" @change="() => { certQuery.pageNum = 1; loadCertList() }">
+              <el-option v-for="o in options.certStatuses || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
             </el-select>
-            <el-select v-model="certQuery.issuedMode" placeholder="签发方式" clearable style="width: 130px" data-testid="p5-sign-f-issuedmode" @change="() => { certQuery.pageNum = 1; loadCertList() }">
-              <el-option v-for="o in options.issuedModes || []" :key="o.id" :label="o.text" :value="Number(o.id)" />
+            <el-select v-model="certQuery.issuedMode" clearable data-testid="p5-sign-f-issuedmode" placeholder="签发方式"
+                       style="width: 130px" @change="() => { certQuery.pageNum = 1; loadCertList() }">
+              <el-option v-for="o in options.issuedModes || []" :key="o.id" :label="o.text" :value="Number(o.id)"/>
             </el-select>
-            <el-input v-model="certQuery.keyword" placeholder="证书号 / 员工姓名 / 指纹" clearable style="width: 230px" data-testid="p5-sign-f-certkeyword" @keyup.enter="() => { certQuery.pageNum = 1; loadCertList() }">
-              <template #prefix><el-icon><Search /></el-icon></template>
+            <el-input v-model="certQuery.keyword" clearable data-testid="p5-sign-f-certkeyword" placeholder="证书号 / 员工姓名 / 指纹"
+                      style="width: 230px"
+                      @keyup.enter="() => { certQuery.pageNum = 1; loadCertList() }">
+              <template #prefix>
+                <el-icon>
+                  <Search/>
+                </el-icon>
+              </template>
             </el-input>
             <el-button type="primary" @click="() => { certQuery.pageNum = 1; loadCertList() }">查询</el-button>
-            <el-button type="primary" plain data-testid="p5-sign-issue-open" @click="openIssue">人工签发证书</el-button>
+            <el-button data-testid="p5-sign-issue-open" plain type="primary" @click="openIssue">人工签发证书</el-button>
           </div>
 
           <div v-loading="certLoading" class="p-4">
-            <el-table :data="certList" size="small" border data-testid="p5-sign-cert-table">
+            <el-table :data="certList" border data-testid="p5-sign-cert-table" size="small">
               <el-table-column label="证书编号" width="180">
                 <template #default="{ row }">
                   <span class="text-xs font-medium text-slate-700">{{ row.certNo }}</span>
@@ -791,26 +831,35 @@ onMounted(async () => {
               </el-table-column>
               <el-table-column label="算法" width="200">
                 <template #default="{ row }">
-                  <span class="text-xs text-slate-600">{{ row.keyAlgo }} / {{ row.digestAlgo }} / {{ row.signAlgo }}</span>
+                  <span class="text-xs text-slate-600">{{ row.keyAlgo }} / {{ row.digestAlgo }} / {{
+                      row.signAlgo
+                    }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="公钥指纹" width="200">
                 <template #default="{ row }">
-                  <span class="font-mono text-xs text-slate-600" :data-testid="`p5-sign-cert-fp-${row.certNo}`">{{ row.keyFingerprintGroups }}</span>
+                  <span :data-testid="`p5-sign-cert-fp-${row.certNo}`"
+                        class="font-mono text-xs text-slate-600">{{ row.keyFingerprintGroups }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="签发方式" width="100">
                 <template #default="{ row }">
-                  <el-tag size="small" :type="row.issuedMode === 1 ? 'success' : 'warning'" :data-testid="`p5-sign-cert-mode-${row.certNo}`">
+                  <el-tag :data-testid="`p5-sign-cert-mode-${row.certNo}`" :type="row.issuedMode === 1 ? 'success' : 'warning'"
+                          size="small">
                     {{ row.issuedModeText }}
                   </el-tag>
                 </template>
               </el-table-column>
               <el-table-column label="状态" width="120">
                 <template #default="{ row }">
-                  <el-tag size="small" :type="row.certStatus === 1 ? 'success' : 'info'">{{ row.certStatusText }}</el-tag>
+                  <el-tag :type="row.certStatus === 1 ? 'success' : 'info'" size="small">{{
+                      row.certStatusText
+                    }}
+                  </el-tag>
                   <!-- 状态"有效"但有效期已过：这是两个独立事实，必须分开提示 -->
-                  <div v-if="row.expired" class="mt-0.5 text-xs text-red-600" :data-testid="`p5-sign-cert-expired-${row.certNo}`">已过期</div>
+                  <div v-if="row.expired" :data-testid="`p5-sign-cert-expired-${row.certNo}`"
+                       class="mt-0.5 text-xs text-red-600">已过期
+                  </div>
                 </template>
               </el-table-column>
               <el-table-column label="有效期" width="190">
@@ -825,17 +874,18 @@ onMounted(async () => {
                   <div class="text-xs text-slate-400">{{ row.lastUsedTime || '未使用' }}</div>
                 </template>
               </el-table-column>
-              <el-table-column label="操作" width="130" fixed="right">
+              <el-table-column fixed="right" label="操作" width="130">
                 <template #default="{ row }">
-                  <el-button link type="primary" size="small" @click="openCertDetail(row)">详情</el-button>
+                  <el-button link size="small" type="primary" @click="openCertDetail(row)">详情</el-button>
                   <el-button
-                    v-if="row.canRevoke"
-                    link
-                    type="danger"
-                    size="small"
-                    :data-testid="`p5-sign-cert-revoke-${row.certNo}`"
-                    @click="openRevoke(row)"
-                  >吊销</el-button>
+                      v-if="row.canRevoke"
+                      :data-testid="`p5-sign-cert-revoke-${row.certNo}`"
+                      link
+                      size="small"
+                      type="danger"
+                      @click="openRevoke(row)"
+                  >吊销
+                  </el-button>
                 </template>
               </el-table-column>
               <template #empty>
@@ -846,13 +896,13 @@ onMounted(async () => {
             <div class="mt-3 flex items-center justify-between">
               <p class="text-xs text-slate-500" data-testid="p5-sign-cert-total">共 {{ certTotal }} 张证书</p>
               <el-pagination
-                v-model:current-page="certQuery.pageNum"
-                v-model:page-size="certQuery.pageSize"
-                :total="certTotal"
-                :page-sizes="PAGE_SIZES"
-                layout="sizes, prev, pager, next"
-                @current-change="loadCertList"
-                @size-change="() => { certQuery.pageNum = 1; loadCertList() }"
+                  v-model:current-page="certQuery.pageNum"
+                  v-model:page-size="certQuery.pageSize"
+                  :page-sizes="PAGE_SIZES"
+                  :total="certTotal"
+                  layout="sizes, prev, pager, next"
+                  @current-change="loadCertList"
+                  @size-change="() => { certQuery.pageNum = 1; loadCertList() }"
               />
             </div>
           </div>
@@ -869,23 +919,32 @@ onMounted(async () => {
                 TSA 每盖一次章落一行：序列号 + 内容摘要 + 授时时刻 + 令牌值（TSA 私钥签名）。
                 签名行上冗余一份令牌，两处比对可发现任何一方被删改。
               </p>
-              <p v-if="tsaStatus" class="mt-0.5 text-xs" :class="tsaStatus.available ? 'text-emerald-700' : 'text-amber-700'" data-testid="g6-tsa-token-status">
-                {{ tsaStatus.available
-                  ? `服务在线：${text(tsaStatus.tsaName)} · 公钥指纹 ${text(tsaStatus.keyFingerprintGroups)}`
-                  : '服务不在线：签名时间生效「本机时钟」，不会有新令牌产生' }}
+              <p v-if="tsaStatus" :class="tsaStatus.available ? 'text-emerald-700' : 'text-amber-700'"
+                 class="mt-0.5 text-xs" data-testid="g6-tsa-token-status">
+                {{
+                  tsaStatus.available
+                      ? `服务在线：${text(tsaStatus.tsaName)} · 公钥指纹 ${text(tsaStatus.keyFingerprintGroups)}`
+                      : '服务不在线：签名时间生效「本机时钟」，不会有新令牌产生'
+                }}
               </p>
             </div>
-            <el-input v-model="tsaTokenQuery.serial" placeholder="按序列号精确查" clearable style="width: 220px" data-testid="g6-tsa-f-serial" @keyup.enter="searchTsaToken" @clear="searchTsaToken">
-              <template #prefix><el-icon><Search /></el-icon></template>
+            <el-input v-model="tsaTokenQuery.serial" clearable data-testid="g6-tsa-f-serial" placeholder="按序列号精确查"
+                      style="width: 220px" @clear="searchTsaToken" @keyup.enter="searchTsaToken">
+              <template #prefix>
+                <el-icon>
+                  <Search/>
+                </el-icon>
+              </template>
             </el-input>
-            <el-button type="primary" data-testid="g6-tsa-search" @click="searchTsaToken">查询</el-button>
+            <el-button data-testid="g6-tsa-search" type="primary" @click="searchTsaToken">查询</el-button>
           </div>
 
           <div v-loading="tsaTokenLoading" class="p-4">
-            <el-table :data="tsaTokenList" size="small" border data-testid="g6-tsa-token-table">
+            <el-table :data="tsaTokenList" border data-testid="g6-tsa-token-table" size="small">
               <el-table-column label="序列号" width="190">
                 <template #default="{ row }">
-                  <span class="text-xs font-medium text-slate-700" :data-testid="`g6-tsa-token-row-${row.serial}`">{{ row.serial }}</span>
+                  <span :data-testid="`g6-tsa-token-row-${row.serial}`"
+                        class="text-xs font-medium text-slate-700">{{ row.serial }}</span>
                 </template>
               </el-table-column>
               <el-table-column label="内容摘要" width="240">
@@ -911,19 +970,20 @@ onMounted(async () => {
               <el-table-column label="复验" min-width="150">
                 <template #default="{ row }">
                   <el-button
-                    size="small"
-                    link
-                    type="primary"
-                    :loading="verifyingTokenId === String(row.id)"
-                    :data-testid="`g6b-verify-${row.serial}`"
-                    @click="onVerifyTsaToken(row)"
-                  >复验</el-button>
+                      :data-testid="`g6b-verify-${row.serial}`"
+                      :loading="verifyingTokenId === String(row.id)"
+                      link
+                      size="small"
+                      type="primary"
+                      @click="onVerifyTsaToken(row)"
+                  >复验
+                  </el-button>
                   <span
-                    v-if="tsaVerifyResult[row.id]"
-                    class="ml-1 text-xs font-medium"
-                    :class="tsaVerifyResult[row.id].valid ? 'text-emerald-700' : 'text-rose-700'"
-                    :title="tsaVerifyResult[row.id].failReason || ''"
-                    :data-testid="`g6b-verify-result-${row.serial}`"
+                      v-if="tsaVerifyResult[row.id]"
+                      :class="tsaVerifyResult[row.id].valid ? 'text-emerald-700' : 'text-rose-700'"
+                      :data-testid="`g6b-verify-result-${row.serial}`"
+                      :title="tsaVerifyResult[row.id].failReason || ''"
+                      class="ml-1 text-xs font-medium"
                   >{{ tsaVerifyResult[row.id].valid ? '✓ 通过' : '✗ 不通过' }}</span>
                 </template>
               </el-table-column>
@@ -937,13 +997,13 @@ onMounted(async () => {
             <div class="mt-3 flex items-center justify-between">
               <p class="text-xs text-slate-500" data-testid="g6-tsa-token-total">共 {{ tsaTokenTotal }} 枚令牌</p>
               <el-pagination
-                v-model:current-page="tsaTokenQuery.pageNum"
-                v-model:page-size="tsaTokenQuery.pageSize"
-                :total="tsaTokenTotal"
-                :page-sizes="PAGE_SIZES"
-                layout="sizes, prev, pager, next"
-                @current-change="loadTsaTokenList"
-                @size-change="() => { tsaTokenQuery.pageNum = 1; loadTsaTokenList() }"
+                  v-model:current-page="tsaTokenQuery.pageNum"
+                  v-model:page-size="tsaTokenQuery.pageSize"
+                  :page-sizes="PAGE_SIZES"
+                  :total="tsaTokenTotal"
+                  layout="sizes, prev, pager, next"
+                  @current-change="loadTsaTokenList"
+                  @size-change="() => { tsaTokenQuery.pageNum = 1; loadTsaTokenList() }"
               />
             </div>
           </div>
@@ -952,7 +1012,7 @@ onMounted(async () => {
     </el-tabs>
 
     <!-- ---------------- 签名详情抽屉 ---------------- -->
-    <el-drawer v-model="drawerVisible" title="签名详情与验签" size="60%">
+    <el-drawer v-model="drawerVisible" size="60%" title="签名详情与验签">
       <div v-loading="detailLoading">
         <template v-if="detail">
           <div class="flex flex-wrap items-center gap-4 text-sm">
@@ -965,7 +1025,8 @@ onMounted(async () => {
           <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-6">
               <p class="font-medium text-slate-900">签名人（不可否认性依据）</p>
-              <p>姓名：{{ text(detail.signerName) }}<span v-if="detail.signerTitle"> · {{ detail.signerTitle }}</span></p>
+              <p>姓名：{{ text(detail.signerName) }}<span v-if="detail.signerTitle"> · {{ detail.signerTitle }}</span>
+              </p>
               <p>科室：{{ text(detail.signerDeptName) }}</p>
               <p>证书：{{ text(detail.certNo) }}</p>
               <p>算法：{{ text(detail.signAlgo) }} / {{ text(detail.digestAlgo) }}</p>
@@ -975,7 +1036,9 @@ onMounted(async () => {
               <p data-testid="p5-sign-detail-signedtime">{{ text(detail.signedTime) }}</p>
               <p>
                 来源：
-                <el-tag size="small" :type="timeSourceTag(detail.timeSource)" data-testid="p5-sign-detail-timesource">{{ detail.timeSourceText }}</el-tag>
+                <el-tag :type="timeSourceTag(detail.timeSource)" data-testid="p5-sign-detail-timesource" size="small">
+                  {{ detail.timeSourceText }}
+                </el-tag>
               </p>
               <p class="text-amber-700">{{ text(detail.timeSourceNote) }}</p>
               <p v-if="detail.tsaSerial" data-testid="g6-detail-tsaserial">
@@ -987,53 +1050,65 @@ onMounted(async () => {
 
           <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs leading-6">
             <p class="font-medium text-slate-900">内容摘要（SHA-256）</p>
-            <p class="break-all font-mono text-slate-700" data-testid="p5-sign-detail-digest">{{ text(detail.contentDigest) }}</p>
+            <p class="break-all font-mono text-slate-700" data-testid="p5-sign-detail-digest">
+              {{ text(detail.contentDigest) }}</p>
             <p class="mt-1 text-slate-500">留存快照：{{ detail.hasSnapshot ? '是（可独立复算，不依赖业务表）' : '否' }}</p>
           </div>
 
           <!-- 验签：两个断言分开展示，绝不合成一个"通过/不通过" -->
           <div class="mt-4 rounded-lg border border-slate-200 bg-white p-4">
             <div class="flex flex-wrap items-center gap-3">
-              <el-button type="primary" size="small" :loading="verifying" data-testid="p5-sign-detail-verify" @click="doVerify">执行验签</el-button>
+              <el-button :loading="verifying" data-testid="p5-sign-detail-verify" size="small" type="primary"
+                         @click="doVerify">执行验签
+              </el-button>
               <span class="text-xs text-slate-500">验签结论会回写库中，列表里的「验签」列随之更新。</span>
             </div>
 
             <div v-if="verifyResult" class="mt-3 space-y-2" data-testid="p5-sign-verify-result">
               <div class="flex flex-wrap items-center gap-2 text-xs">
-                <el-tag size="small" :type="conclusionTag(verifyResult.conclusionLevel)" data-testid="p5-sign-verify-conclusion">
+                <el-tag :type="conclusionTag(verifyResult.conclusionLevel)" data-testid="p5-sign-verify-conclusion"
+                        size="small">
                   {{ verifyResult.conclusion }}
                 </el-tag>
                 <span class="text-slate-500">核查时刻 {{ text(verifyResult.checkedAt) }}</span>
               </div>
               <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                <div class="rounded border px-3 py-2 text-xs" :class="verifyResult.signatureValid ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'">
-                  <p class="font-medium" :data-testid="'p5-sign-verify-sigvalid'" :class="verifyResult.signatureValid ? 'text-emerald-700' : 'text-red-700'">
+                <div :class="verifyResult.signatureValid ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'"
+                     class="rounded border px-3 py-2 text-xs">
+                  <p :class="verifyResult.signatureValid ? 'text-emerald-700' : 'text-red-700'" :data-testid="'p5-sign-verify-sigvalid'"
+                     class="font-medium">
                     ① 签名值校验：{{ verifyResult.signatureValid ? '通过' : '不通过' }}
                   </p>
                   <p class="mt-1 text-slate-600">用证书公钥验签名值。不通过 = 这份<b>证据本身</b>被换过，性质最严重。</p>
                 </div>
-                <div class="rounded border px-3 py-2 text-xs" :class="verifyResult.contentMatched ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'">
-                  <p class="font-medium" :data-testid="'p5-sign-verify-contentmatched'" :class="verifyResult.contentMatched ? 'text-emerald-700' : 'text-amber-700'">
+                <div :class="verifyResult.contentMatched ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'"
+                     class="rounded border px-3 py-2 text-xs">
+                  <p :class="verifyResult.contentMatched ? 'text-emerald-700' : 'text-amber-700'" :data-testid="'p5-sign-verify-contentmatched'"
+                     class="font-medium">
                     ② 内容比对：{{ verifyResult.contentMatched ? '一致' : '已变更' }}
                   </p>
-                  <p class="mt-1 text-slate-600">重算当前内容摘要并与签名时摘要比对。不一致 = 签名之后这份<b>病历被改过</b>。</p>
+                  <p class="mt-1 text-slate-600">重算当前内容摘要并与签名时摘要比对。不一致 =
+                    签名之后这份<b>病历被改过</b>。</p>
                 </div>
               </div>
               <!-- ③ 可信时间戳：只有 time_source=3 的行有断言；失败不推翻①②，但"时间可信"不成立 -->
               <div
-                v-if="verifyResult.tsaValid !== null && verifyResult.tsaValid !== undefined"
-                class="rounded border px-3 py-2 text-xs"
-                :class="verifyResult.tsaValid ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'"
+                  v-if="verifyResult.tsaValid !== null && verifyResult.tsaValid !== undefined"
+                  :class="verifyResult.tsaValid ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'"
+                  class="rounded border px-3 py-2 text-xs"
               >
-                <p class="font-medium" data-testid="g6-verify-tsavalid" :class="verifyResult.tsaValid ? 'text-emerald-700' : 'text-amber-700'">
+                <p :class="verifyResult.tsaValid ? 'text-emerald-700' : 'text-amber-700'" class="font-medium"
+                   data-testid="g6-verify-tsavalid">
                   ③ 可信时间戳：{{ verifyResult.tsaValid ? '通过' : '不通过' }}
                 </p>
-                <p class="mt-1 text-slate-600">序列号 {{ text(verifyResult.tsaSerial) }} · 授时时刻 {{ text(verifyResult.tsaTime) }}</p>
+                <p class="mt-1 text-slate-600">序列号 {{ text(verifyResult.tsaSerial) }} · 授时时刻
+                  {{ text(verifyResult.tsaTime) }}</p>
                 <p v-if="verifyResult.tsaNote" class="mt-1 text-slate-600">{{ verifyResult.tsaNote }}</p>
               </div>
               <div class="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-6">
                 <p>签名时摘要：<span class="break-all font-mono">{{ text(verifyResult.digestAtSign) }}</span></p>
-                <p>当前重算：<span class="break-all font-mono" data-testid="p5-sign-verify-digestnow">{{ text(verifyResult.digestNow) }}</span></p>
+                <p>当前重算：<span class="break-all font-mono"
+                                  data-testid="p5-sign-verify-digestnow">{{ text(verifyResult.digestNow) }}</span></p>
               </div>
             </div>
           </div>
@@ -1041,7 +1116,10 @@ onMounted(async () => {
           <!-- 被签内容快照 -->
           <div class="mt-4 rounded-lg border border-slate-200 bg-white p-3">
             <p class="text-xs font-medium text-slate-900">被签内容快照（签名当时的原始内容）</p>
-            <pre data-testid="p5-sign-detail-snapshot" class="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 text-xs leading-6 text-slate-700">{{ detail.hasSnapshot ? detail.contentSnapshot : '本条签名未留存内容快照' }}</pre>
+            <pre class="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 text-xs leading-6 text-slate-700"
+                 data-testid="p5-sign-detail-snapshot">{{
+                detail.hasSnapshot ? detail.contentSnapshot : '本条签名未留存内容快照'
+              }}</pre>
           </div>
 
           <!-- 作废 -->
@@ -1051,13 +1129,18 @@ onMounted(async () => {
               作废不会删除任何历史记录：签名值、被签内容快照、签名时间全部保留，只追加作废人 / 时间 / 理由。
               作废后内容锁定解除，该文书可再次编辑并重新签名。理由必填 —— 事后要能回答「是谁撤了这份签名、为什么」。
             </p>
-            <el-input v-model="invalidReason" class="mt-2" placeholder="作废理由（必填）" data-testid="p5-sign-invalid-reason" />
-            <el-button type="danger" size="small" class="mt-3" :loading="invalidating" data-testid="p5-sign-invalid-submit" @click="doInvalidate">确认作废</el-button>
+            <el-input v-model="invalidReason" class="mt-2" data-testid="p5-sign-invalid-reason"
+                      placeholder="作废理由（必填）"/>
+            <el-button :loading="invalidating" class="mt-3" data-testid="p5-sign-invalid-submit" size="small"
+                       type="danger" @click="doInvalidate">确认作废
+            </el-button>
           </div>
-          <div v-else-if="detail.actionHint" class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
+          <div v-else-if="detail.actionHint"
+               class="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-500">
             {{ detail.actionHint }}
           </div>
-          <div v-if="detail.invalidTime" class="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-6 text-slate-600">
+          <div v-if="detail.invalidTime"
+               class="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs leading-6 text-slate-600">
             <p>作废人：{{ text(detail.invalidByName) }} · {{ text(detail.invalidTime) }}</p>
             <p>作废理由：{{ text(detail.invalidReason) }}</p>
           </div>
@@ -1066,7 +1149,7 @@ onMounted(async () => {
     </el-drawer>
 
     <!-- ---------------- 证书详情 ---------------- -->
-    <el-drawer v-model="certDetailVisible" title="签名证书详情" size="50%">
+    <el-drawer v-model="certDetailVisible" size="50%" title="签名证书详情">
       <template v-if="certDetail">
         <div class="text-sm">
           <p>证书编号：<b>{{ certDetail.certNo }}</b></p>
@@ -1074,11 +1157,15 @@ onMounted(async () => {
         </div>
         <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3 text-xs leading-6">
           <p>算法组合：{{ certDetail.keyAlgo }} / {{ certDetail.digestAlgo }} / {{ certDetail.signAlgo }}</p>
-          <p>签发方式：{{ certDetail.issuedModeText }}<span class="text-amber-700">（自动签发的信任级别低于人工签发）</span></p>
-          <p>状态：{{ certDetail.certStatusText }}<span v-if="certDetail.expired" class="text-red-600"> · 已过有效期</span></p>
+          <p>签发方式：{{ certDetail.issuedModeText }}<span
+              class="text-amber-700">（自动签发的信任级别低于人工签发）</span></p>
+          <p>状态：{{ certDetail.certStatusText }}<span v-if="certDetail.expired"
+                                                       class="text-red-600"> · 已过有效期</span></p>
           <p>有效期：{{ text(certDetail.validFrom) }} ~ {{ text(certDetail.validTo) }}</p>
           <p>累计签名：{{ num(certDetail.signCount) }} 次 · 最近使用 {{ text(certDetail.lastUsedTime) }}</p>
-          <p>公钥指纹：<span class="font-mono" data-testid="p5-sign-cert-detail-fp">{{ text(certDetail.keyFingerprint) }}</span></p>
+          <p>公钥指纹：<span class="font-mono" data-testid="p5-sign-cert-detail-fp">{{
+              text(certDetail.keyFingerprint)
+            }}</span></p>
           <template v-if="certDetail.revokeTime">
             <p class="text-red-700">吊销：{{ text(certDetail.revokeTime) }} · {{ text(certDetail.revokeByName) }}</p>
             <p class="text-red-700">理由：{{ text(certDetail.revokeReason) }}</p>
@@ -1086,7 +1173,10 @@ onMounted(async () => {
         </div>
         <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3">
           <p class="text-xs font-medium text-slate-900">公钥（PEM）</p>
-          <pre data-testid="p5-sign-cert-publickey" class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 font-mono text-xs leading-5 text-slate-700">{{ text(certDetail.publicKey) }}</pre>
+          <pre class="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-slate-50 p-3 font-mono text-xs leading-5 text-slate-700"
+               data-testid="p5-sign-cert-publickey">{{
+              text(certDetail.publicKey)
+            }}</pre>
           <p class="mt-2 text-xs text-slate-500">私钥以主口令加密后托管，任何接口都不会回显私钥。</p>
         </div>
       </template>
@@ -1097,25 +1187,27 @@ onMounted(async () => {
       <el-form label-width="90px">
         <el-form-item label="员工" required>
           <el-select
-            v-model="issueForm.empId"
-            filterable
-            remote
-            reserve-keyword
-            :remote-method="searchEmp"
-            :loading="empLoading"
-            placeholder="按姓名搜索员工"
-            style="width: 100%"
-            data-testid="p5-sign-issue-emp"
-            @change="onEmpChange"
+              v-model="issueForm.empId"
+              :loading="empLoading"
+              :remote-method="searchEmp"
+              data-testid="p5-sign-issue-emp"
+              filterable
+              placeholder="按姓名搜索员工"
+              remote
+              reserve-keyword
+              style="width: 100%"
+              @change="onEmpChange"
           >
-            <el-option v-for="e in empOptions" :key="e.id" :label="`${e.empName}（${e.deptName || '未分配科室'}）`" :value="e.id" />
+            <el-option v-for="e in empOptions" :key="e.id" :label="`${e.empName}（${e.deptName || '未分配科室'}）`"
+                       :value="e.id"/>
           </el-select>
         </el-form-item>
         <el-form-item label="有效期">
-          <el-input-number v-model="issueForm.validDays" :min="1" :max="3650" placeholder="留空取系统配置" style="width: 100%" data-testid="p5-sign-issue-days" />
+          <el-input-number v-model="issueForm.validDays" :max="3650" :min="1" data-testid="p5-sign-issue-days"
+                           placeholder="留空取系统配置" style="width: 100%"/>
         </el-form-item>
         <el-form-item label="备注">
-          <el-input v-model="issueForm.remark" placeholder="可空" data-testid="p5-sign-issue-remark" />
+          <el-input v-model="issueForm.remark" data-testid="p5-sign-issue-remark" placeholder="可空"/>
         </el-form-item>
       </el-form>
       <p class="text-xs leading-5 text-slate-500">
@@ -1123,7 +1215,8 @@ onMounted(async () => {
       </p>
       <template #footer>
         <el-button @click="issueVisible = false">取消</el-button>
-        <el-button type="primary" :loading="issuing" data-testid="p5-sign-issue-submit" @click="submitIssue">签发</el-button>
+        <el-button :loading="issuing" data-testid="p5-sign-issue-submit" type="primary" @click="submitIssue">签发
+        </el-button>
       </template>
     </el-dialog>
 
@@ -1133,10 +1226,13 @@ onMounted(async () => {
       <p class="mt-2 text-xs leading-5 text-slate-500">
         吊销只改状态，不删行 —— 该证书历史签过的签名仍然可以用它留下的公钥验签。吊销后该员工将无法再产生新签名。
       </p>
-      <el-input v-model="revokeForm.reason" class="mt-3" placeholder="吊销理由（必填）" data-testid="p5-sign-revoke-reason" />
+      <el-input v-model="revokeForm.reason" class="mt-3" data-testid="p5-sign-revoke-reason"
+                placeholder="吊销理由（必填）"/>
       <template #footer>
         <el-button @click="revokeVisible = false">取消</el-button>
-        <el-button type="danger" :loading="revoking" data-testid="p5-sign-revoke-submit" @click="submitRevoke">确认吊销</el-button>
+        <el-button :loading="revoking" data-testid="p5-sign-revoke-submit" type="danger" @click="submitRevoke">
+          确认吊销
+        </el-button>
       </template>
     </el-dialog>
   </div>

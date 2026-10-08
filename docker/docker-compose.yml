@@ -1,0 +1,46 @@
+services:
+  his-backend:
+    build:
+      context: ./backend
+    image: his-backend:local
+    container_name: his-backend
+    restart: unless-stopped
+    # 连接串与口令全部来自同目录 .env（该文件不入库），application-pro.yml 里只有 ${HIS_*:} 占位
+    env_file: .env
+    environment:
+      TZ: Asia/Shanghai
+      JAVA_OPTS: -Xms512m -Xmx2g -XX:+UseG1GC -Duser.timezone=Asia/Shanghai
+    ports:
+      - "8009:8080"
+    # MySQL / Redis 是宿主机上的进程（非容器），容器内用 host.docker.internal 回到宿主
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # 后端把影像/导诊单写在 ${user.dir}/uploads（WORKDIR=/app），落宿主目录避免镜像里堆文件、重建不丢
+      - ./uploads:/app/uploads
+    healthcheck:
+      test: [ "CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080" ]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 90s
+    networks:
+      - his
+
+  his-front:
+    build:
+      context: ./front
+    image: his-front:local
+    container_name: his-front
+    restart: unless-stopped
+    ports:
+      - "3100:80"
+    depends_on:
+      his-backend:
+        condition: service_healthy
+    networks:
+      - his
+
+networks:
+  his:
+    driver: bridge
