@@ -8,13 +8,16 @@ import com.his.system.entity.BizShift;
 import com.his.system.entity.BizStaffAttendance;
 import com.his.system.entity.BizStaffSchedule;
 import com.his.system.entity.CurrentUser;
+import com.his.system.enums.StaffAttendanceStatusEnum;
 import com.his.system.mapper.BizStaffAttendanceMapper;
 import com.his.system.service.StaffAttendanceService;
 import com.his.system.utils.UserUtils;
 import com.his.system.vo.CalibrationAdviceVO;
+import com.his.system.vo.StaffAttendanceVO;
 import com.his.system.vo.StaffWorktimeVO;
 import com.his.system.vo.WorktimeSummaryVO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -34,23 +37,12 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         implements StaffAttendanceService {
 
     /**
-     * 出勤状态
-     */
-    private static final int STATUS_NORMAL = 1;
-    private static final int STATUS_LATE = 2;
-    private static final int STATUS_EARLY_LEAVE = 3;
-    private static final int STATUS_ABSENT = 4;
-    private static final int STATUS_SUBSTITUTE = 5;
-    private static final int STATUS_OVERTIME = 6;
-    private static final int STATUS_SUPPORT = 7;
-
-    /**
      * 一次最多对照多少天（全量回溯没有意义，也拖不动）
      */
     private static final int MAX_QUERY_DAYS = 92;
 
     @Override
-    public BizStaffAttendance checkIn(AttendanceDTO dto) {
+    public StaffAttendanceVO checkIn(AttendanceDTO dto) {
         Long employeeId = requireEmployee(dto);
         LocalDate date = dto.getWorkDate() == null ? LocalDate.now() : dto.getWorkDate();
         LocalDateTime at = dto.getCheckIn() == null ? LocalDateTime.now() : dto.getCheckIn();
@@ -86,12 +78,12 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
                 orgType = dto.getOrgType();
                 orgId = dto.getOrgId();
                 orgName = null;
-                status = STATUS_SUPPORT;
+                status = StaffAttendanceStatusEnum.SUPPORT.getCode();
             } else {
                 orgType = plan.getOrgType();
                 orgId = plan.getOrgId();
                 orgName = plan.getOrgName();
-                status = STATUS_NORMAL;
+                status = StaffAttendanceStatusEnum.NORMAL.getCode();
             }
         } else {
             // 没排班却来上班：临时加班。这时必须说清人在哪儿干活 —— 没有计划可认，
@@ -103,16 +95,16 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
             orgType = requireValue(dto.getOrgType(), "没有排班计划的出勤（加班/支援）必须指定单元类型");
             orgId = requireValue(dto.getOrgId(), "没有排班计划的出勤（加班/支援）必须指定单元ID");
             orgName = null;
-            status = STATUS_OVERTIME;
+            status = StaffAttendanceStatusEnum.OVERTIME.getCode();
         }
         if (dto.getSubstituteFor() != null) {
-            status = STATUS_SUBSTITUTE;
+            status = StaffAttendanceStatusEnum.SUBSTITUTE.getCode();
         }
 
         BizStaffAttendance row = baseMapper.selectOneAttend(employeeId, date, orgType, orgId, shiftId);
         if (row != null && row.getCheckIn() != null) {
             // 幂等：重复刷卡不代表两个事实，也不该把迟到刷成准时（保留最早那次签到）
-            return row;
+            return toVO(row, checkInMessage(row.getAttendanceStatus()));
         }
         if (row == null) {
             row = new BizStaffAttendance();
@@ -145,11 +137,11 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
             // 以打卡事实把它扶正，而不是再插一条去撞唯一键。
             baseMapper.updateById(row);
         }
-        return row;
+        return toVO(row, checkInMessage(row.getAttendanceStatus()));
     }
 
     @Override
-    public BizStaffAttendance checkOut(AttendanceDTO dto) {
+    public StaffAttendanceVO checkOut(AttendanceDTO dto) {
         BizStaffAttendance row = locateRow(dto, true);
         if (row.getCheckIn() == null) {
             throw new BusinessException("这条出勤没有签到时间，算不出实际工时：没有打卡数据的日子请走「工时修正」由护士长补登");
@@ -170,11 +162,11 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
             row.setRemark(normalizeRemark(dto.getRemark()));
         }
         baseMapper.updateById(row);
-        return row;
+        return toVO(row, checkOutMessage(row));
     }
 
     @Override
-    public BizStaffAttendance markAbsent(AttendanceDTO dto) {
+    public StaffAttendanceVO markAbsent(AttendanceDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -216,7 +208,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         row.setActualMinutes(0);
         row.setOvertimeMinutes(0);
         row.setPlannedMinutes(nvlZero(plan.getWorkMinutes()));
-        row.setAttendanceStatus(STATUS_ABSENT);
+        row.setAttendanceStatus(StaffAttendanceStatusEnum.ABSENT.getCode());
         row.setDataSource(1);
         row.setConfirmStatus(1);
         row.setConfirmBy(operatorUser.getRealName());
@@ -227,11 +219,11 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         } else {
             baseMapper.updateById(row);
         }
-        return row;
+        return toVO(row, "已确认为缺勤");
     }
 
     @Override
-    public BizStaffAttendance adjust(AttendanceDTO dto) {
+    public StaffAttendanceVO adjust(AttendanceDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -273,7 +265,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         if (dto.getAttendanceStatus() != null) {
             row.setAttendanceStatus(dto.getAttendanceStatus());
         } else if (row.getAttendanceStatus() == null) {
-            row.setAttendanceStatus(plan == null ? STATUS_OVERTIME : STATUS_NORMAL);
+            row.setAttendanceStatus(plan == null ? StaffAttendanceStatusEnum.OVERTIME.getCode() : StaffAttendanceStatusEnum.NORMAL.getCode());
         }
         row.setSubstituteFor(dto.getSubstituteFor());
         row.setDataSource(1);
@@ -287,7 +279,7 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
         } else {
             baseMapper.updateById(row);
         }
-        return row;
+        return toVO(row, "工时已登记");
     }
 
     @Override
@@ -340,6 +332,37 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
     // 内部：判定与定位
     // -------------------------------------------------------------------------
 
+    private StaffAttendanceVO toVO(BizStaffAttendance row, String message) {
+        StaffAttendanceVO vo = new StaffAttendanceVO();
+        BeanUtils.copyProperties(row, vo);
+        vo.setAttendanceStatusText(StaffAttendanceStatusEnum.getText(row.getAttendanceStatus()));
+        vo.setMessage(message);
+        return vo;
+    }
+
+    /**
+     * 签到回执只点出「这次签到不是普通到岗」的那四种（迟到/替班/加班/支援）；
+     * 正常与早退照旧只报「已签到」—— 早退是签退那一刻才成立的事实，签到时说它属于抢跑结论。
+     */
+    private String checkInMessage(Integer status) {
+        StaffAttendanceStatusEnum item = StaffAttendanceStatusEnum.fromCode(status);
+        if (item == null) {
+            return "已签到";
+        }
+        return switch (item) {
+            case LATE -> "已签到（迟到）";
+            case SUBSTITUTE -> "已签到（替班）";
+            case OVERTIME -> "已签到（加班：当天没有排班计划）";
+            case SUPPORT -> "已签到（支援：实际出勤单元与计划不同）";
+            default -> "已签到";
+        };
+    }
+
+    private String checkOutMessage(BizStaffAttendance row) {
+        return row.getActualMinutes() == null
+                ? "已签退" : "已签退，实际工时 " + row.getActualMinutes() + " 分钟";
+    }
+
     /**
      * 迟到/早退判定。<b>与 sql/214 视图 {@code v_staff_worktime} 的 diff_type 是同一套口径</b>。
      *
@@ -348,24 +371,24 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
     private Integer judgeStatus(BizStaffAttendance row, BizStaffSchedule plan, LocalDate date) {
         Integer cur = row.getAttendanceStatus();
         // 替班/加班/支援是按业务性质定性的（替别人、没排班、跨单元），打卡时间改写不了它
-        if (cur != null && (cur == STATUS_SUBSTITUTE || cur == STATUS_OVERTIME || cur == STATUS_SUPPORT)) {
+        if (cur != null && (StaffAttendanceStatusEnum.SUBSTITUTE.is(cur) || StaffAttendanceStatusEnum.OVERTIME.is(cur) || StaffAttendanceStatusEnum.SUPPORT.is(cur))) {
             return cur;
         }
         // 缺勤是"人没来"的结论；只要签到时间还在，这条结论就被推翻，重新按时间判
         if (row.getCheckIn() == null) {
-            return cur == null ? STATUS_NORMAL : cur;
+            return cur == null ? StaffAttendanceStatusEnum.NORMAL.getCode() : cur;
         }
         if (plan == null || plan.getShiftId() == null || plan.getShiftId() <= 0) {
-            return STATUS_NORMAL;
+            return StaffAttendanceStatusEnum.NORMAL.getCode();
         }
         BizShift shift = baseMapper.selectShift(plan.getShiftId());
         if (shift == null || shift.getStartTime() == null) {
-            return STATUS_NORMAL;
+            return StaffAttendanceStatusEnum.NORMAL.getCode();
         }
         int grace = shift.getLateGraceMinutes() == null ? 0 : shift.getLateGraceMinutes();
         LocalDateTime shiftStart = LocalDateTime.of(date, LocalTime.parse(shift.getStartTime()));
         if (row.getCheckIn().isAfter(shiftStart.plusMinutes(grace))) {
-            return STATUS_LATE;
+            return StaffAttendanceStatusEnum.LATE.getCode();
         }
         if (row.getCheckOut() != null && shift.getEndTime() != null) {
             LocalDateTime shiftEnd = LocalDateTime.of(date, LocalTime.parse(shift.getEndTime()));
@@ -374,10 +397,10 @@ public class StaffAttendanceServiceImpl extends ServiceImpl<BizStaffAttendanceMa
                 shiftEnd = shiftEnd.plusDays(1);
             }
             if (row.getCheckOut().isBefore(shiftEnd)) {
-                return STATUS_EARLY_LEAVE;
+                return StaffAttendanceStatusEnum.EARLY_LEAVE.getCode();
             }
         }
-        return STATUS_NORMAL;
+        return StaffAttendanceStatusEnum.NORMAL.getCode();
     }
 
     /**

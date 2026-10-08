@@ -7,7 +7,7 @@ import com.his.pharmacy.vo.DrugDictSnapshotVO;
 import com.his.pharmacy.vo.DrugDispensingSnapshotVO;
 import com.his.pharmacy.vo.DrugInboundSnapshotVO;
 import com.his.pharmacy.vo.DrugStockOptionVO;
-import com.his.pharmacy.vo.DrugTraceStatVO;
+import com.his.pharmacy.vo.DrugTraceReconcileVO;
 import com.his.pharmacy.vo.DrugTraceVO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
@@ -133,7 +133,7 @@ public interface BizDrugTraceMapper extends BaseMapper<BizDrugTrace> {
             + "COALESCE(SUM(CASE WHEN t.upload_status = 2 THEN 1 ELSE 0 END), 0) AS uploadFailed, "
             + "COUNT(DISTINCT t.drug_id) AS drugKinds "
             + "FROM biz_drug_trace t WHERE t.del_flag = 0")
-    DrugTraceStatVO selectTraceStats();
+    DrugTraceReconcileVO selectTraceStats();
 
     /**
      * 近 30 天已发药但未核销追溯码的发药行数（医保稽核点："发药没扫码"）

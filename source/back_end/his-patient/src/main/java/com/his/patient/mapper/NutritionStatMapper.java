@@ -1,6 +1,6 @@
 package com.his.patient.mapper;
 
-import com.his.patient.vo.DeptStatRowVO;
+import com.his.patient.vo.DeptCountRowVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -172,7 +172,7 @@ public interface NutritionStatMapper {
              GROUP BY a.dept_id
              ORDER BY COUNT(*) DESC, a.dept_id
             """)
-    List<DeptStatRowVO> selectDischargeDepts(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    List<DeptCountRowVO> selectDischargeDepts(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     /**
      * 科室名（科室是 his-system 的表，裸 SQL 取，不建反向依赖）

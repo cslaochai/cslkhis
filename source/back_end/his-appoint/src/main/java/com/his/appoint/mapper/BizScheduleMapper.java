@@ -2,7 +2,7 @@ package com.his.appoint.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.appoint.entity.BizSchedule;
-import com.his.appoint.vo.ScheduleDaySummaryRowVO;
+import com.his.appoint.vo.OverviewClinicDayVO;
 import org.apache.ibatis.annotations.*;
 
 import java.time.LocalDate;
@@ -70,5 +70,5 @@ public interface BizScheduleMapper extends BaseMapper<BizSchedule> {
             + "FROM biz_schedule "
             + "WHERE del_flag = 0 AND schedule_date BETWEEN #{begin} AND #{end} "
             + "GROUP BY schedule_date")
-    List<ScheduleDaySummaryRowVO> summaryByDay(@Param("begin") LocalDate begin, @Param("end") LocalDate end);
+    List<OverviewClinicDayVO> summaryByDay(@Param("begin") LocalDate begin, @Param("end") LocalDate end);
 }

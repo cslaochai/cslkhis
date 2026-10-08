@@ -388,21 +388,14 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
     @Override
     public PatientIndexStatVO stats() {
         // 6 个标量子查询恒返回一行且 COUNT(*) 不会为 null，直接取值
-        PatientIndexCountVO raw = patientIndexMapper.selectIndexStats();
-        long total = raw.getPatientTotal();
-        long strongDup = raw.getStrongDupGroups();
-        long merged = raw.getMergedCount();
-        long idCardMissing = raw.getIdCardMissing();
-        long phoneMissing = raw.getPhoneMissing();
-        long allergyMissing = raw.getAllergyMissing();
+        PatientIndexStatVO vo = patientIndexMapper.selectIndexStats();
+        long total = vo.getPatientTotal();
+        long strongDup = vo.getStrongDupGroups();
+        long merged = vo.getMergedCount();
+        long idCardMissing = vo.getIdCardMissing();
+        long phoneMissing = vo.getPhoneMissing();
+        long allergyMissing = vo.getAllergyMissing();
 
-        PatientIndexStatVO vo = new PatientIndexStatVO();
-        vo.setPatientTotal(total);
-        vo.setMergedCount(merged);
-        vo.setStrongDupGroups(strongDup);
-        vo.setIdCardMissing(idCardMissing);
-        vo.setPhoneMissing(phoneMissing);
-        vo.setAllergyMissing(allergyMissing);
         // 唯一性：身份证重复组不超标才算过（口径见 Mapper 注释）
         vo.setUniqueRate(rate(total - strongDup, total));
         vo.setIdCardCompleteRate(rate(total - idCardMissing, total));

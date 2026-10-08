@@ -423,16 +423,7 @@ public class DrugTraceServiceImpl extends ServiceImpl<BizDrugTraceMapper, BizDru
 
     @Override
     public DrugTraceReconcileVO reconcileStats() {
-        DrugTraceStatVO s = bizDrugTraceMapper.selectTraceStats();
-        DrugTraceReconcileVO vo = new DrugTraceReconcileVO();
-        vo.setTotal(s.getTotal());
-        vo.setInStock(s.getInStock());
-        vo.setDispensed(s.getDispensed());
-        vo.setVoided(s.getVoided());
-        vo.setPendingUpload(s.getPendingUpload());
-        vo.setUploaded(s.getUploaded());
-        vo.setUploadFailed(s.getUploadFailed());
-        vo.setDrugKinds(s.getDrugKinds());
+        DrugTraceReconcileVO vo = bizDrugTraceMapper.selectTraceStats();
         vo.setUnTracedDispense(bizDrugTraceMapper.countUnTracedDispense());
         vo.setRequiredUnTracedDispense(bizDrugTraceMapper.countRequiredUnTracedDispense());
         vo.setRecentDispenseTotal(bizDrugTraceMapper.countRecentDispense());

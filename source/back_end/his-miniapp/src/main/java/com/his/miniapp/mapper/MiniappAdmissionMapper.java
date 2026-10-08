@@ -1,6 +1,6 @@
 package com.his.miniapp.mapper;
 
-import com.his.miniapp.vo.AdmissionRowVO;
+import com.his.miniapp.vo.AdmissionSelectListVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 
@@ -30,5 +30,5 @@ public interface MiniappAdmissionMapper {
             ORDER BY admit_time DESC
             LIMIT 10
             """)
-    List<AdmissionRowVO> selectByPatientId(Long patientId);
+    List<AdmissionSelectListVO> selectByPatientId(Long patientId);
 }

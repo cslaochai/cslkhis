@@ -3,6 +3,8 @@ package com.his.operation.vo;
 import lombok.Data;
 
 import java.io.Serializable;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 日间手术术式分布 TOP10 的一行（{@code BizDaySurgeryApplyMapper#countByItemTop} 的返回行）。
@@ -20,6 +22,7 @@ public class DaySurgeryItemTopRowVO implements Serializable {
     /**
      * 术式ID（可能为 NULL —— 历史单据没录术式）
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long itemId;
 
     /**

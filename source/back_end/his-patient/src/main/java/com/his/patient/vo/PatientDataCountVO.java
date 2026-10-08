@@ -3,6 +3,8 @@ package com.his.patient.vo;
 import lombok.Data;
 
 import java.io.Serializable;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 主索引「档案关联业务数据量」原始计数行（对应 {@code PatientIndexMapper.countDataByPatientIds} 的
@@ -31,6 +33,7 @@ public class PatientDataCountVO implements Serializable {
     /**
      * 患者ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
     /**

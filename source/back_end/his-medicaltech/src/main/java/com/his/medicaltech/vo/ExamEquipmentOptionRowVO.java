@@ -3,6 +3,8 @@ package com.his.medicaltech.vo;
 import lombok.Data;
 
 import java.io.Serializable;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 医疗设备台账候选项（{@code BizExamDeviceMapper#selectEquipmentOptions} 一行）。
@@ -17,6 +19,7 @@ public class ExamEquipmentOptionRowVO implements Serializable {
     /**
      * 台账主键
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**

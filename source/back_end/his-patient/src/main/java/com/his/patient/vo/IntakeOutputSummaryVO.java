@@ -4,6 +4,8 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.List;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 出入量小结出参：从护理文书（类型 1/3 的出入量字段）按日复算，**不是另存的统计表**——
@@ -15,6 +17,7 @@ public class IntakeOutputSummaryVO {
     /**
      * 入院ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
     /**

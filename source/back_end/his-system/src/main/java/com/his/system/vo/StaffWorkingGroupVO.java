@@ -4,6 +4,8 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 在岗人次聚合行（{@code BizStaffScheduleMapper#groupWorkingByUnitShift} 的返回行）。
@@ -36,6 +38,7 @@ public class StaffWorkingGroupVO implements Serializable {
     /**
      * 排班单元ID（全院固定为 0）
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long orgId;
 
     /**
@@ -46,6 +49,7 @@ public class StaffWorkingGroupVO implements Serializable {
     /**
      * 班次ID；0 表示全班次共用（人力缺口比对里按跨班次合计处理）
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long shiftId;
 
     /**

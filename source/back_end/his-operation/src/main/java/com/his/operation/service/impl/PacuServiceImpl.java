@@ -13,12 +13,7 @@ import com.his.operation.dto.*;
 import com.his.operation.entity.BizAnesthesiaPacu;
 import com.his.operation.entity.BizAnesthesiaRecord;
 import com.his.operation.entity.BizOperationApply;
-import com.his.operation.enums.AnesthesiaChargeStatusEnum;
-import com.his.operation.enums.AnesthesiaRecordStatusEnum;
-import com.his.operation.enums.AwarenessLevelEnum;
-import com.his.operation.enums.OperationAnesthesiaMethodEnum;
-import com.his.operation.enums.PacuDispositionEnum;
-import com.his.operation.enums.PacuStatusEnum;
+import com.his.operation.enums.*;
 import com.his.operation.mapper.BizAnesthesiaPacuMapper;
 import com.his.operation.mapper.BizAnesthesiaRecordMapper;
 import com.his.operation.mapper.BizOperationApplyMapper;
@@ -37,20 +32,7 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * PACU 麻醉后监测治疗服务实现（G15 第三环）。
- *
- * <p>本类固化了这些<b>至少踩过一次或一定会被追问</b>的点：
- *
- * <ol>
- *   <li><b>Aldrete 总分服务端逐项相加</b>，不接收前端传来的总分：
- *       可以自己填总分的评分，出室标准就是摆设。</li>
- *   <li><b>出室标准 Aldrete ≥ 9</b>；不达标出室必须写明原因，且去向不能是"回病房" ——
- *       事故复盘里最常说的一句话就是"当时评分没到就走了"。</li>
- *   <li><b>一次麻醉一段 PACU</b>：UNIQUE(record_id) 之外再做计数，为了给出人话错误。</li>
- *   <li><b>只有已提交/已审核的麻醉记录才允许入 PACU</b>：没有麻醉记录却有一段复苏停留，
- *       等于凭空出现一节监护。</li>
- *   <li><b>出室即联动计费</b>（按停留整小时）；失败不影响业务推进，但会标记并写明原因。</li>
- * </ol>
+ * PACU 麻醉后监测治疗服务实现
  */
 @Slf4j
 @Service
@@ -58,8 +40,11 @@ import java.util.Objects;
 public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAnesthesiaPacu> implements PacuService {
 
     private final BizAnesthesiaPacuMapper bizAnesthesiaPacuMapper;
+
     private final BizAnesthesiaRecordMapper bizAnesthesiaRecordMapper;
+
     private final BizOperationApplyMapper bizOperationApplyMapper;
+
     private final OperationChargeBiller operationChargeBiller;
 
     @Override

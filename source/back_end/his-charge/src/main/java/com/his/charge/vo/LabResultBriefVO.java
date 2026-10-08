@@ -3,6 +3,8 @@ package com.his.charge.vo;
 import com.his.charge.api.MedicalTechGateway;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 检验结果项跨域摘要（低编/高编稽核的证据来源）。
@@ -19,11 +21,13 @@ public class LabResultBriefVO {
     /**
      * 结果项ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**
      * 所属检验记录ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
     /**

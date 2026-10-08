@@ -598,6 +598,7 @@ public class TransfusionApplyVO implements Serializable {
         /**
          * 输血申请单ID
          */
+        @JsonSerialize(using = ToStringSerializer.class)
         private Long id;
         /**
          * 审批级别（1-上级医师 400-799ml）
@@ -618,6 +619,7 @@ public class TransfusionApplyVO implements Serializable {
         /**
          * 审批人ID
          */
+        @JsonSerialize(using = ToStringSerializer.class)
         private Long approverId;
         /**
          * 审批人姓名

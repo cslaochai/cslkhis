@@ -4,6 +4,8 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 预交金余额出参。
@@ -21,6 +23,7 @@ public class PrepayBalanceVO implements Serializable {
     /**
      * 入院ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
     /**

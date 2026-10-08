@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
 /**
- * 科室出院例数行（按科室生成快照时枚举科室用）
+ * 科室出院例数行（VTE / 营养指标快照按科室枚举时用）
  */
 @Data
 public class DeptCountRowVO {

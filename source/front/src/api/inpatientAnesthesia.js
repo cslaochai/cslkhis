@@ -1,28 +1,6 @@
 import request from './request'
 
-// ==================== 手术麻醉链（G15：术前访视 → 麻醉记录单 → 计费联动） ====================
-// 约定：查询一律 GET，写操作一律 POST。
-//
-// 八条必须记住的口径：
-// 1. 所有 ID 都是**字符串**：雪花ID 超过 JS 的 Number 安全整数范围，后端统一按字符串出参，
-//    前端不要 Number() 转换，否则会静默丢精度。
-// 2. 「能否改 / 能否提交 / 能否审核 / 能否入 PACU / 能否计费」由后端给的
-//    canSubmit / canAudit / canEditVitals / canOpenPacu / canCharge 决定，
-//    前端不按 recordStatus 自己 switch —— 本地判断会掩盖后端规则的失效。
-// 3. **未做术前访视不能开立麻醉记录**（急诊手术例外，但会一直标「待补访视」）。
-//    结论明确为「暂缓/需会诊」的，连急诊也越不过。
-// 4. **提交即锁死**：提交后不能再加生命体征和用药（术后补一条术中记载是伪造），
-//    所以提交按钮是"想清楚再点"的动作。
-// 5. **提交即联动计费**：麻醉费 + 麻醉监护（按小时）+ 气管插管一次性落到住院费用单；
-//    返回 OperationChargeSummary，successItems 与 failedItems **必须一起看**，
-//    只盯着总额会漏掉"其中监护费没计上"。
-// 6. 时间一律 `yyyy-MM-dd HH:mm:ss`（空格），带 T 的 ISO 串会被后端直接 400 且无堆栈。
-//    el-date-picker 用 value-format="YYYY-MM-DD HH:mm:ss"。
-// 7. Aldrete 总分由服务端逐项相加，前端只传五项，**不要传总分**。
-// 8. 生命体征的采样时刻在同一条麻醉记录里唯一：同一时刻两条会被后端拒绝。
-
 // ---------------- 术前访视 ----------------
-
 // 术前访视分页（admissionId / applyId / conclusion / unfinishedOnly / keyword）
 export function getAnesthesiaVisitListPage(params) {
     return request.get('/patient/inpatient/anesthesia/visitListPage', {params})

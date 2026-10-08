@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 挂号/就诊记录跨域摘要：收费域只读预约挂号信息的最小字段集。
@@ -22,6 +24,7 @@ public class RegistBriefVO {
     /**
      * 挂号ID（biz_appoint_info 主键）
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**
@@ -32,6 +35,7 @@ public class RegistBriefVO {
     /**
      * 患者ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
     /**
@@ -52,6 +56,7 @@ public class RegistBriefVO {
     /**
      * 科室ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
     /**
@@ -62,6 +67,7 @@ public class RegistBriefVO {
     /**
      * 医生ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;
 
     /**

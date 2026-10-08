@@ -6,6 +6,8 @@ import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 高值耗材溯源详情VO：字典→入库批次→使用患者→计费全链（正向按码查档案）
@@ -47,6 +49,7 @@ public class ConsumableTraceDetailVO extends BizConsumableTraceVO {
     /**
      * 记账行ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long feeRecordId;
     private BigDecimal chargeAmount;
 }

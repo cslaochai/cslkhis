@@ -92,6 +92,7 @@ public class PerfVO {
         /** 结余（成本未录时为收入全额） */
         private BigDecimal surplus;
         /** 成本记录 ID（未录时为空） */
+        @JsonSerialize(using = ToStringSerializer.class)
         private Long costId;
     }
 }

@@ -4,6 +4,8 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * DRG 分组模拟的输入行：病案首页 + 实际费用（{@code DrgSimMapper#selectSummary} /
@@ -19,6 +21,7 @@ public class DrgSummaryRowVO implements Serializable {
     /**
      * 病案首页ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long summaryId;
 
     /**

@@ -16,13 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 手术麻醉链端点（G15：术前访视 → 麻醉记录单 → 计费联动）。
- *
- * <p>路径与会诊/转科/输血保持同一套命名：查询一律 {@code GET} + 驼峰 URL，
- * 写操作一律 {@code POST}，只返回一个单号用 {@code Result<String>}。
- *
- * <p>PACU 单独挂 {@code /patient/inpatient/pacu}：它是独立的工作岗位（复苏室），
- * 混在一个前缀里会让"谁的按钮"这件事变模糊。
+ * 手术麻醉链端点（术前访视 → 麻醉记录单 → 计费联动）。
  */
 @Tag(name = "手术麻醉")
 @RestController

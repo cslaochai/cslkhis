@@ -1,8 +1,8 @@
 package com.his.system.service;
 
 import com.his.system.dto.AttendanceDTO;
-import com.his.system.entity.BizStaffAttendance;
 import com.his.system.vo.CalibrationAdviceVO;
+import com.his.system.vo.StaffAttendanceVO;
 import com.his.system.vo.StaffWorktimeVO;
 import com.his.system.vo.WorktimeSummaryVO;
 
@@ -33,27 +33,27 @@ public interface StaffAttendanceService {
      * 且<b>保留最早那次签到时间</b> —— 刷卡两次不该把迟到刷成准时。
      * <p>没排班也能签（记为加班）；排了病区却出现在别的单元（记为支援）。
      */
-    BizStaffAttendance checkIn(AttendanceDTO dto);
+    StaffAttendanceVO checkIn(AttendanceDTO dto);
 
     /**
      * 签退：算出实际工时、超时工时，并给出迟到/早退判定。
      * <p>迟到/早退按「班次日期 + 班次起止」构造完整时刻来比，
      * 跨零点的班（22:00→次日08:00）把结束时间顺延一天 —— 只比时刻会漏判。
      */
-    BizStaffAttendance checkOut(AttendanceDTO dto);
+    StaffAttendanceVO checkOut(AttendanceDTO dto);
 
     /**
      * 确认缺勤 —— <b>这是全系统唯一能产生"缺勤"的入口</b>。
      * <p>前提是该员工当天真有"上班"排班：没排班就谈不上缺勤。
      * 已经有签到记录的不给确认（先撤销出勤登记再说）。
      */
-    BizStaffAttendance markAbsent(AttendanceDTO dto);
+    StaffAttendanceVO markAbsent(AttendanceDTO dto);
 
     /**
      * 手工登记/修正工时（给没打卡的日子补账，由护士长操作）。
      * <p>写了 {@code confirmStatus = 1}：这一步本身就是人在确认，不必再确认一遍。
      */
-    BizStaffAttendance adjust(AttendanceDTO dto);
+    StaffAttendanceVO adjust(AttendanceDTO dto);
 
     /**
      * 科室确认（0-待确认 1-已确认 2-有异议）。

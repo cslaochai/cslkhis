@@ -3,6 +3,8 @@ package com.his.charge.vo;
 import com.his.charge.api.EmrGateway;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 处方跨域摘要：目前只用于判断"本次就诊开没开过处方"（入院适应证核查 C02）。
@@ -19,6 +21,7 @@ public class PrescriptionBriefVO {
     /**
      * 处方ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**

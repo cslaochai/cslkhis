@@ -2,7 +2,7 @@ package com.his.patient.mapper;
 
 import com.his.patient.entity.BizPatient;
 import com.his.patient.vo.PatientDataCountVO;
-import com.his.patient.vo.PatientIndexCountVO;
+import com.his.patient.vo.PatientIndexStatVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -104,5 +104,5 @@ public interface PatientIndexMapper {
             " (SELECT COUNT(*) FROM biz_patient WHERE del_flag = 0 AND (id_card IS NULL OR id_card = '')) AS idCardMissing, " +
             " (SELECT COUNT(*) FROM biz_patient WHERE del_flag = 0 AND (phone IS NULL OR phone = '')) AS phoneMissing, " +
             " (SELECT COUNT(*) FROM biz_patient WHERE del_flag = 0 AND (allergy_history IS NULL OR allergy_history = '')) AS allergyMissing")
-    PatientIndexCountVO selectIndexStats();
+    PatientIndexStatVO selectIndexStats();
 }

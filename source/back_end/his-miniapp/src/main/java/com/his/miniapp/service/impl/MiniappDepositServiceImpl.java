@@ -8,7 +8,6 @@ import com.his.charge.vo.PrepayVO;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniappAdmissionMapper;
 import com.his.miniapp.service.MiniappDepositService;
-import com.his.miniapp.vo.AdmissionRowVO;
 import com.his.miniapp.vo.AdmissionSelectListVO;
 import com.his.patient.service.PatientGuardianService;
 import com.his.system.utils.UserUtils;
@@ -31,7 +30,7 @@ public class MiniappDepositServiceImpl implements MiniappDepositService {
         if (!patientGuardianService.canAccessPatient(patientId)) {
             throw new BusinessException("无权查询该就诊人的住院记录");
         }
-        return toAdmissionList(miniappAdmissionMapper.selectByPatientId(patientId));
+        return miniappAdmissionMapper.selectByPatientId(patientId);
     }
 
     @Override
@@ -54,7 +53,7 @@ public class MiniappDepositServiceImpl implements MiniappDepositService {
         }
         Long patientId = UserUtils.getCurrentUser().getPatientId();
         // 归属从住院记录反查，不看前端传的是谁
-        List<AdmissionSelectListVO> mine = toAdmissionList(miniappAdmissionMapper.selectByPatientId(patientId));
+        List<AdmissionSelectListVO> mine = miniappAdmissionMapper.selectByPatientId(patientId);
         String target = String.valueOf(admissionId);
         boolean own = mine.stream().anyMatch(m -> Objects.equals(m.getAdmissionId(), target));
         if (!own) {
@@ -63,22 +62,4 @@ public class MiniappDepositServiceImpl implements MiniappDepositService {
         patientGuardianService.canAccessPatient(patientId);
     }
 
-    private List<AdmissionSelectListVO> toAdmissionList(List<AdmissionRowVO> rows) {
-        if (rows == null) {
-            return List.of();
-        }
-        return rows.stream().map(row -> {
-            AdmissionSelectListVO vo = new AdmissionSelectListVO();
-            vo.setAdmissionId(row.getAdmissionId());
-            vo.setAdmissionNo(row.getAdmissionNo());
-            vo.setPatientId(row.getPatientId());
-            vo.setDeptId(row.getDeptId());
-            vo.setBedId(row.getBedId());
-            vo.setAdmitTime(row.getAdmitTime());
-            vo.setDischargeTime(row.getDischargeTime());
-            vo.setAdmitStatus(row.getAdmitStatus());
-            vo.setDiagnosis(row.getDiagnosis());
-            return vo;
-        }).toList();
-    }
 }

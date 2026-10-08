@@ -1,6 +1,6 @@
 package com.his.miniapp.mapper;
 
-import com.his.miniapp.vo.MessageRowVO;
+import com.his.miniapp.vo.MessageListVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -38,7 +38,7 @@ public interface MiniappMessageMapper {
             ORDER BY send_time IS NULL ASC, send_time DESC, message_id DESC
             LIMIT #{offset}, #{size}
             """)
-    List<MessageRowVO> selectMyMessages(@Param("userId") Long userId,
+    List<MessageListVO> selectMyMessages(@Param("userId") Long userId,
                                         @Param("offset") int offset,
                                         @Param("size") int size);
 

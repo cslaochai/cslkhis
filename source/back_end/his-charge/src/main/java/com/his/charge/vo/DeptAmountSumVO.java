@@ -4,6 +4,8 @@ import lombok.Data;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 科室归集聚合（一个科室一行），对应
@@ -22,6 +24,7 @@ public class DeptAmountSumVO implements Serializable {
     /**
      * 科室ID（SQL 已过滤掉 NULL，无科室归属的行不进这里）
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
     /**

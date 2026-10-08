@@ -1,8 +1,8 @@
 package com.his.miniapp.mapper;
 
-import com.his.miniapp.vo.DoctorRowVO;
-import com.his.miniapp.vo.OpenDeptRowVO;
-import com.his.miniapp.vo.PatientRowVO;
+import com.his.miniapp.vo.DeptSelectListVO;
+import com.his.miniapp.vo.DoctorSelectListVO;
+import com.his.miniapp.vo.PatientDetailVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -25,7 +25,7 @@ public interface MiniappDirectoryMapper {
             WHERE del_flag = 0 AND is_open = 1 AND status = 1
             ORDER BY sort_order ASC, id ASC
             """)
-    List<OpenDeptRowVO> selectOpenDepartments();
+    List<DeptSelectListVO> selectOpenDepartments();
 
     /** 某科室的医生名册（挂号选医生，含职称/擅长/专家费展示；主键 CAST 防精度丢失） */
     @Select("""
@@ -35,7 +35,7 @@ public interface MiniappDirectoryMapper {
             WHERE del_flag = 0 AND status = 1 AND dept_id = #{deptId}
             ORDER BY id ASC
             """)
-    List<DoctorRowVO> selectDoctorsByDept(@Param("deptId") Long deptId);
+    List<DoctorSelectListVO> selectDoctorsByDept(@Param("deptId") Long deptId);
 
     /** 患者主档（档案页展示；主键 CAST 成字符串防 JS 端 BIGINT 精度丢失） */
     @Select("""
@@ -45,5 +45,5 @@ public interface MiniappDirectoryMapper {
             WHERE id = #{patientId} AND del_flag = 0
             LIMIT 1
             """)
-    PatientRowVO selectPatientById(@Param("patientId") Long patientId);
+    PatientDetailVO selectPatientById(@Param("patientId") Long patientId);
 }

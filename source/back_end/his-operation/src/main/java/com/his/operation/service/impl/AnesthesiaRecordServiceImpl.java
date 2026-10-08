@@ -13,11 +13,6 @@ import com.his.common.util.TimeUtil;
 import com.his.operation.dto.*;
 import com.his.operation.entity.*;
 import com.his.operation.enums.*;
-import com.his.operation.enums.AnesthesiaEffectEnum;
-import com.his.operation.enums.AnesthesiaMedPhaseEnum;
-import com.his.operation.enums.AnesthesiaMedRouteEnum;
-import com.his.operation.enums.PostopDispositionEnum;
-import com.his.operation.enums.VentilationModeEnum;
 import com.his.operation.mapper.*;
 import com.his.operation.service.AnesthesiaRecordService;
 import com.his.operation.service.AnesthesiaVisitService;
@@ -40,22 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 麻醉记录单服务实现（G15 核心）。
- *
- * <p>本类固化了这些<b>至少踩过一次或一定会被追问</b>的点：
- *
- * <ol>
- *   <li><b>术前访视闸门</b>：没有"可施行麻醉"结论的访视单，不许开立麻醉记录。
- *       急诊手术允许抢先麻醉但同时记 {@code visitPending=true} —— 事后补不出访视的那一台
- *       会在列表里一直标红，而不是随时间安静消失。</li>
- *   <li><b>已提交后锁死体征与用药</b>：术后补一条 8:15 的血压是伪造，
- *       与"术后补一条术前核对记录是伪造"同一条原则。</li>
- *   <li><b>提交门槛</b>：麻醉方式、麻醉起止时间、至少一条生命体征，缺一不可 ——
- *       一张没有体征的麻醉单等于"这台手术期间没有人在看着"。</li>
- *   <li><b>提交即联动计费</b>：麻醉费 / 监护费 / 插管费一次性落到住院费用单；
- *       计费失败不回滚业务（钱没计上 ≠ 麻醉没做），但状态会标记"计费异常"并写明原因。</li>
- *   <li><b>时间一律截到秒</b>：库表 DATETIME(0) 会四舍五入，不截就"写进去的 ≠ 读回来的"。</li>
- * </ol>
+ * 麻醉记录单服务实现
  */
 @Slf4j
 @Service
@@ -77,16 +57,9 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
 
     private final OperationChargeBiller operationChargeBiller;
 
-
-    // 查询
-
     private static <T> T pick(T existing, T incoming) {
         return incoming != null ? incoming : existing;
     }
-
-    // 开立 / 更新
-
-    // 生命体征 / 用药（只增不改，且仅"记录中"可增）
 
     @Override
     public IPage<AnesthesiaRecordVO> listPage(AnesthesiaRecordQueryPageDTO query) {
@@ -483,13 +456,8 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
         return entity;
     }
 
-    // 展示态
-
     /**
-     * 把 DTO 里非空的值拷进实体；ID / 状态 / 时间留痕列一概不拷。
-     *
-     * <p>不用 {@code BeanUtils.copyProperties} 直接覆盖：DTO 里没给的一律保持原值，
-     * 否则"只改出血量"会把别的字段擦成 null，而用户根本没意识到自己提交了那样的表单。
+     * 把 DTO 里非空的值拷进实体
      */
     private void copyNotNullIgnoring(AnesthesiaRecordUpdateUpsertDTO dto, BizAnesthesiaRecord entity) {
         if (dto.getAnesthesiaType() != null) {

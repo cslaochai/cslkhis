@@ -6,6 +6,11 @@ import java.io.Serializable;
 
 /**
  * 患者端消息中心列表行。
+ *
+ * <p>本类同时是 Mapper 的行承载：{@code messageId}/{@code receiverId}/{@code bizId} 由 SQL 侧
+ * {@code CAST(... AS CHAR)} 出字符串，BIGINT 直出会在 JS 端丢精度；{@code sendTime} 保持字符串
+ * （SQL 用 {@code DATE_FORMAT} 渲染成 {@code yyyy-MM-dd HH:mm:ss}），改成 LocalDateTime 会让小程序
+ * 拿到 ISO 的 {@code T} 分隔格式，属破坏出参契约。
  */
 @Data
 public class MessageListVO implements Serializable {

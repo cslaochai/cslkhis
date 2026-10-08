@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 检查记录跨域摘要。
@@ -18,11 +20,13 @@ public class InspectionRecordBriefVO {
     /**
      * 检查记录ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**
      * 患者ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
     /**

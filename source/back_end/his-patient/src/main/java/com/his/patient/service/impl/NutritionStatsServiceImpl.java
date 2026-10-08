@@ -15,7 +15,7 @@ import com.his.patient.mapper.BizNutritionStatsMapper;
 import com.his.patient.mapper.NutritionStatMapper;
 import com.his.patient.service.NutritionStatsService;
 import com.his.patient.support.NutritionRules;
-import com.his.patient.vo.DeptStatRowVO;
+import com.his.patient.vo.DeptCountRowVO;
 import com.his.patient.vo.NutritionOverviewVO;
 import com.his.patient.vo.NutritionStatsVO;
 import com.his.system.entity.CurrentUser;
@@ -101,11 +101,11 @@ public class NutritionStatsServiceImpl extends ServiceImpl<BizNutritionStatsMapp
 
         // scopeType 合法性由 DTO 的 @InEnum 把关（1-全院 2-科室），这里只分派
         if (Objects.equals(StatsScopeEnum.DEPT.getCode(), dto.getScopeType())) {
-            List<DeptStatRowVO> depts = nutritionStatMapper.selectDischargeDepts(from(ym), to(ym));
+            List<DeptCountRowVO> depts = nutritionStatMapper.selectDischargeDepts(from(ym), to(ym));
             if (CollectionUtils.isEmpty(depts)) {
                 throw new BusinessException(ym + " 没有已出院患者，无法按科室生成快照");
             }
-            for (DeptStatRowVO d : depts) {
+            for (DeptCountRowVO d : depts) {
                 result.add(toVO(upsertRow(compute(ym, dto.getStatMonth(), StatsScopeEnum.DEPT.getCode(),
                         d.getDeptId(), d.getDeptName()), operator)));
             }

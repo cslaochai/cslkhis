@@ -14,11 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 手术器械/敷料清点端点（G15 并行链）。
- *
- * <p>路径刻意叫 {@code operationCount} 而不是 {@code instrument}：
- * 这套动作覆盖的是"器械 + 敷料 + 缝针 + 刀片"四类东西的三次对数，
- * 叫 instrument 会让人以为只管器械。
+ * 手术器械/敷料清点端点
  */
 @Tag(name = "手术器械清点")
 @RestController

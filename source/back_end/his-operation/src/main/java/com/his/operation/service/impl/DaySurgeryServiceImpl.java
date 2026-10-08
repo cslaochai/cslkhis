@@ -41,17 +41,6 @@ import java.util.Objects;
 
 /**
  * 日间手术服务实现。
- *
- * <p>口径：
- * <ol>
- *   <li><b>准入是闸门</b>：只有启用中的目录术式能预约；停用只影响新预约，存量单照常推进。</li>
- *   <li>状态机单向：1待评估 → 2评估通过 → 3已安排 → 4术后观察 → 5已出院（终态）；
- *       未终态 → 6已取消（原因必填）；术后观察 → 7已转住院（住院号必填）。</li>
- *   <li><b>评估未通过不得安排、未安排不得登记完成</b> —— 评审必查的两道硬闸门。</li>
- *   <li>超期 / 随访时限是<b>服务端派生不落库</b>：滞留超 maxStayHours 判 overdue，
- *       离院 + 24h 为随访时限，过期且零随访判 followOverdue。</li>
- *   <li>转住院必须回填 admission_id —— 那是医保与病案口径的分界点。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -68,8 +57,6 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
      */
     private final EmployeeTechAuthService employeeTechAuthService;
 
-    // 准入目录
-
     private static LocalDate parseDate(String v) {
         String s = TextUtil.trimToNull(v);
         if (s == null) {
@@ -81,8 +68,6 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
             throw new BusinessException("日期格式不正确，应为 yyyy-MM-dd");
         }
     }
-
-    // 登记单
 
     private static LocalDateTime parseDateTime(String v) {
         String s = TextUtil.trimToNull(v);
@@ -280,8 +265,6 @@ public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper,
         bizDaySurgeryApplyMapper.updateById(entity);
         return requireApplyVo(entity.getId());
     }
-
-    // 内部
 
     @Override
     @Transactional(rollbackFor = Exception.class)

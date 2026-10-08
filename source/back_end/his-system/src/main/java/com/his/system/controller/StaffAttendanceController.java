@@ -2,9 +2,9 @@ package com.his.system.controller;
 
 import com.his.common.base.Result;
 import com.his.system.dto.AttendanceDTO;
-import com.his.system.entity.BizStaffAttendance;
 import com.his.system.service.StaffAttendanceService;
 import com.his.system.vo.CalibrationAdviceVO;
+import com.his.system.vo.StaffAttendanceVO;
 import com.his.system.vo.StaffWorktimeVO;
 import com.his.system.vo.WorktimeSummaryVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,32 +40,33 @@ public class StaffAttendanceController {
     @Operation(summary = "签到（幂等：重复刷卡不改写最早那次签到时间）")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/checkIn")
-    public Result<BizStaffAttendance> checkIn(@Valid @RequestBody AttendanceDTO dto) {
-        BizStaffAttendance row = staffAttendanceService.checkIn(dto);
-        return Result.success(say(row.getAttendanceStatus()), row);
+    public Result<StaffAttendanceVO> checkIn(@Valid @RequestBody AttendanceDTO dto) {
+        StaffAttendanceVO vo = staffAttendanceService.checkIn(dto);
+        return Result.success(vo.getMessage(), vo);
     }
 
     @Operation(summary = "签退（算实际工时/超时工时，给出迟到早退判定）")
     @PreAuthorize("isAuthenticated()")
     @PostMapping("/checkOut")
-    public Result<BizStaffAttendance> checkOut(@Valid @RequestBody AttendanceDTO dto) {
-        BizStaffAttendance row = staffAttendanceService.checkOut(dto);
-        return Result.success(row.getActualMinutes() != null
-                ? "已签退，实际工时 " + row.getActualMinutes() + " 分钟" : "已签退", row);
+    public Result<StaffAttendanceVO> checkOut(@Valid @RequestBody AttendanceDTO dto) {
+        StaffAttendanceVO vo = staffAttendanceService.checkOut(dto);
+        return Result.success(vo.getMessage(), vo);
     }
 
     @Operation(summary = "确认缺勤（全系统唯一能产生「缺勤」的入口，须科室确认）")
     @PreAuthorize("hasAuthority('org:schedule:edit')")
     @PostMapping("/markAbsent")
-    public Result<BizStaffAttendance> markAbsent(@Valid @RequestBody AttendanceDTO dto) {
-        return Result.success("已确认为缺勤", staffAttendanceService.markAbsent(dto));
+    public Result<StaffAttendanceVO> markAbsent(@Valid @RequestBody AttendanceDTO dto) {
+        StaffAttendanceVO vo = staffAttendanceService.markAbsent(dto);
+        return Result.success(vo.getMessage(), vo);
     }
 
     @Operation(summary = "手工登记/修正工时（没有打卡数据的日子由护士长补登）")
     @PreAuthorize("hasAuthority('org:schedule:edit')")
     @PostMapping("/adjust")
-    public Result<BizStaffAttendance> adjust(@Valid @RequestBody AttendanceDTO dto) {
-        return Result.success("工时已登记", staffAttendanceService.adjust(dto));
+    public Result<StaffAttendanceVO> adjust(@Valid @RequestBody AttendanceDTO dto) {
+        StaffAttendanceVO vo = staffAttendanceService.adjust(dto);
+        return Result.success(vo.getMessage(), vo);
     }
 
     @Operation(summary = "科室确认（0-待确认 1-已确认 2-有异议）")
@@ -117,15 +118,5 @@ public class StaffAttendanceController {
             @RequestParam(required = false) Long orgId,
             @RequestParam(required = false) Integer staffType) {
         return Result.success(staffAttendanceService.advice(orgType, orgId, staffType));
-    }
-
-    private String say(Integer status) {
-        return switch (status == null ? 1 : status) {
-            case 2 -> "已签到（迟到）";
-            case 5 -> "已签到（替班）";
-            case 6 -> "已签到（加班：当天没有排班计划）";
-            case 7 -> "已签到（支援：实际出勤单元与计划不同）";
-            default -> "已签到";
-        };
     }
 }

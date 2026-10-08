@@ -1,26 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<!--
-  门诊日志（跨科室查询分析页）。
-
-  这是本工程第一个 XML mapper，原因是「列表」与「统计条」必须共用同一套口径：
-  ① 同一段 WHERE（统计条的价值就在于跟着筛选走，条件写两份迟早漂移）；
-  ② 同一个「就诊状态」推导表达式（见 <sql id="logStatusExpr">）；
-  注解 @Select 没法共享片段。
-  （mybatis-plus.mapper-locations = classpath:mapper/**/*.xml 已配好）
-
-  两条设计要点，改动前务必先读：
-
-  1) 基表是 biz_appoint_info（原 biz_regist_info，2026-09-21 改名；一次就诊 = 一条挂号），队列行取 MAX(id) 后 1:1 关联。
-     不能直接 LEFT JOIN biz_queue：库里存在一个挂号挂 3 条队列行的数据，
-     直接 JOIN 会让同一就诊在列表里出现多行、统计条总数虚高。
-     LEFT JOIN 的关联条件必须写在 ON 里，写进 WHERE 会退化成 INNER JOIN，
-     「已挂号未签到」的行会整批消失。自定义 SQL 不受 @TableLogic 影响，del_flag 必须显式写。
-
-  2) 就诊状态以【挂号状态】为主干，队列状态只在「已签到入队」后才优先。
-     踩过的坑：只看「有没有队列行」的话，164 条 regist_status=5（已退号、退号未收费、
-     没有队列行）会被当成「待签到」——把已退号说成待签到，比显示未知更危险。
--->
 <mapper namespace="com.his.appoint.mapper.OpdLogMapper">
 
     <sql id="logBase">

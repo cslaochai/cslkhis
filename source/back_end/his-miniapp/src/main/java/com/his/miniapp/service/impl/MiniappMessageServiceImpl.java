@@ -6,7 +6,6 @@ import com.his.miniapp.dto.MessagePageDTO;
 import com.his.miniapp.mapper.MiniappMessageMapper;
 import com.his.miniapp.service.MiniappMessageService;
 import com.his.miniapp.vo.MessageListVO;
-import com.his.miniapp.vo.MessageRowVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -20,24 +19,6 @@ public class MiniappMessageServiceImpl implements MiniappMessageService {
 
     private final MiniappMessageMapper miniappMessageMapper;
 
-    private static MessageListVO toVO(MessageRowVO row) {
-        MessageListVO vo = new MessageListVO();
-        vo.setMessageId(row.getMessageId());
-        vo.setMessageNo(row.getMessageNo());
-        vo.setChannel(row.getChannel());
-        vo.setReceiverId(row.getReceiverId());
-        vo.setReceiverName(row.getReceiverName());
-        vo.setTitle(row.getTitle());
-        vo.setContent(row.getContent());
-        vo.setBizType(row.getBizType());
-        vo.setBizId(row.getBizId());
-        vo.setSeverity(row.getSeverity());
-        vo.setReadStatus(row.getReadStatus());
-        vo.setSendStatus(row.getSendStatus());
-        vo.setSendTime(row.getSendTime());
-        return vo;
-    }
-
     @Override
     public PageResult<MessageListVO> myPage(MessagePageDTO dto) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
@@ -47,9 +28,8 @@ public class MiniappMessageServiceImpl implements MiniappMessageService {
         Long userId = operatorUser.getUserId();
         int size = dto.getPageSize();
         int current = dto.getPageNum();
-        List<MessageRowVO> rows = miniappMessageMapper.selectMyMessages(userId, (current - 1) * size, size);
+        List<MessageListVO> records = miniappMessageMapper.selectMyMessages(userId, (current - 1) * size, size);
         long total = miniappMessageMapper.countMyMessages(userId);
-        List<MessageListVO> records = rows.stream().map(MiniappMessageServiceImpl::toVO).toList();
         return PageResult.of(total, current, size, (total + size - 1) / size, records);
     }
 

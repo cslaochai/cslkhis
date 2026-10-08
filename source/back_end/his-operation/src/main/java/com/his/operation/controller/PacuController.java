@@ -14,10 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * PACU 麻醉后监测治疗端点（G15 第三环）。
- *
- * <p>单独一个前缀是因为它是一个独立岗位：复苏护士只看自己的队列，
- * 把它塞进「麻醉记录单」那一页里，等于强迫护士在麻醉医师的工作台上干活。
+ * PACU 麻醉后监测治疗端点。
  */
 @Tag(name = "PACU 麻醉复苏")
 @RestController

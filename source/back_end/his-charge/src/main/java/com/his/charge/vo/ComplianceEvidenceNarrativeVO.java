@@ -4,6 +4,8 @@ import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.List;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 一次合规审核的「证据叙事包」：把依据包压平成模型可读的事实文本块。
@@ -16,6 +18,7 @@ public class ComplianceEvidenceNarrativeVO {
     /**
      * 结算清单ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long settlementId;
 
     /**

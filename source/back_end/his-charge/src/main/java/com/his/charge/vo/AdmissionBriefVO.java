@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 入院记录跨域摘要：收费域只读住院登记的最小字段集。
@@ -21,6 +23,7 @@ public class AdmissionBriefVO {
     /**
      * 入院ID（biz_admission 主键）
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;
 
     /**
@@ -31,6 +34,7 @@ public class AdmissionBriefVO {
     /**
      * 患者ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
     /**
@@ -41,6 +45,7 @@ public class AdmissionBriefVO {
     /**
      * 经治医生ID（科室收入归属按主管医生算时要用）
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long admitDoctorId;
 
     /**

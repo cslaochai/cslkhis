@@ -35,7 +35,7 @@ import java.time.LocalDate;
 import java.util.Objects;
 
 /**
- * 麻醉术前访视服务实现（G15 第一环）。
+ * 麻醉术前访视服务实现
  */
 @Slf4j
 @Service
@@ -45,7 +45,6 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
     private final BizAnesthesiaVisitMapper bizAnesthesiaVisitMapper;
 
     private final BizOperationApplyMapper bizOperationApplyMapper;
-
 
     @Override
     public IPage<AnesthesiaVisitVO> listPage(AnesthesiaVisitQueryPageDTO query) {
@@ -60,7 +59,6 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
 
     @Override
     public AnesthesiaVisitVO getDetailById(Long visitId) {
-        // C-非 DTO 入参：校验对象是 @RequestParam 标量参数，Bean Validation 不覆盖，保留
         if (visitId == null) {
             throw new BusinessException("访视单ID不能为空");
         }
@@ -74,7 +72,6 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
 
     @Override
     public AnesthesiaVisitVO getByApply(Long applyId) {
-        // C-非 DTO 入参：校验对象是 @RequestParam 标量参数，Bean Validation 不覆盖，保留
         if (applyId == null) {
             throw new BusinessException("手术申请单ID不能为空");
         }
@@ -219,8 +216,6 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
                 && Integer.valueOf(VisitConclusionEnum.OK.getCode()).equals(vo.getConclusion());
     }
 
-    // 展示态
-
     @Override
     public long countFinishedWithoutVisit() {
         return bizAnesthesiaVisitMapper.countFinishedWithoutVisit();
@@ -299,8 +294,4 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
         long seq = bizAnesthesiaVisitMapper.countByNoPrefix(prefix) + 1;
         return prefix + String.format("%04d", seq);
     }
-
-    /**
-     * 留痕一律用**员工ID**（不是用户的ID），与医嘱/站内信同一口径
-     */
 }

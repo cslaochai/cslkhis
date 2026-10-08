@@ -46,7 +46,7 @@ public class BizScheduleOverviewServiceImpl extends ServiceImpl<BizScheduleMappe
         vo.setDays(WEEK_DAYS);
         vo.setStaffTypeDays(toStaffTypeDays(staffScheduleService.listStaffTypeDayWorking(begin, end)));
         vo.setUnitDays(toUnitDays(staffScheduleService.listUnitDayWorking(begin, end)));
-        vo.setClinicDays(toClinicDays(bizScheduleMapper.summaryByDay(begin, end)));
+        vo.setClinicDays(bizScheduleMapper.summaryByDay(begin, end));
         vo.setShortfalls(toShortfalls(staffPlanRuleService.listShortfalls(begin, end)));
         vo.setDutyDays(dutyDays(begin));
         return vo;
@@ -73,20 +73,6 @@ public class BizScheduleOverviewServiceImpl extends ServiceImpl<BizScheduleMappe
             vo.setOrgName(row.getOrgName());
             vo.setScheduleDate(row.getScheduleDate());
             vo.setWorkingCount(row.getWorkingCount());
-            vos.add(vo);
-        }
-        return vos;
-    }
-
-    private List<OverviewClinicDayVO> toClinicDays(List<ScheduleDaySummaryRowVO> rows) {
-        List<OverviewClinicDayVO> vos = new ArrayList<>(rows.size());
-        for (ScheduleDaySummaryRowVO row : rows) {
-            OverviewClinicDayVO vo = new OverviewClinicDayVO();
-            vo.setScheduleDate(row.getScheduleDate());
-            vo.setShiftCount(row.getShiftCount());
-            vo.setTotalSource(row.getTotalSource());
-            vo.setUsedSource(row.getUsedSource());
-            vo.setStoppedCount(row.getStoppedCount());
             vos.add(vo);
         }
         return vos;

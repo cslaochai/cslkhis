@@ -1,6 +1,8 @@
 package com.his.system.vo;
 
 import lombok.Data;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 登录结果出参
@@ -16,6 +18,7 @@ public class LoginVO {
     /**
      * 用户ID
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 
     /**
@@ -36,6 +39,7 @@ public class LoginVO {
     /**
      * 关联患者ID（患者登录时返回，用于小程序端患者档案/挂号/报告等患者级查询）
      */
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
     /**
