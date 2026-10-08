@@ -79,6 +79,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
     @Override
     @Transactional(rollbackFor = Exception.class)
     public ExamImageVO upload(MultipartFile file, ExamImageUploadDTO uploadDTO) {
+        // D-业务规则：@RequestPart 已保证部件存在，这里拦的是零字节空文件，不是字段填没填，保留
         if (file == null || file.isEmpty()) {
             throw new BusinessException("请选择要上传的影像文件");
         }
@@ -190,7 +191,7 @@ public class ExamImageServiceImpl extends ServiceImpl<BizExamImageMapper, BizExa
         if (type == null) {
             throw new BusinessException("影像单据类型只能是 1-检查 或 2-检验");
         }
-        // C类：内部锚点解析的入参是主键参数而非请求 DTO，Bean Validation 够不到，保留
+        // C-非 web 入参：私有锚点解析被上传/查询多个入口复用，入参是主键标量而非请求 DTO，Bean Validation 不覆盖，保留
         if (applyId == null) {
             throw new BusinessException("申请单不能为空");
         }

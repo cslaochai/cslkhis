@@ -10,13 +10,13 @@ import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.*;
 import com.his.medicaltech.entity.BizTransfusionApply;
 import com.his.medicaltech.entity.BizTransfusionApprove;
 import com.his.medicaltech.entity.BizTransfusionBag;
 import com.his.medicaltech.enums.*;
-import com.his.medicaltech.enums.TransfusionApproveLevelEnum;
 import com.his.medicaltech.mapper.BizTransfusionApplyMapper;
 import com.his.medicaltech.mapper.BizTransfusionApproveMapper;
 import com.his.medicaltech.mapper.BizTransfusionBagMapper;
@@ -54,21 +54,9 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApplyMapper, BizTransfusionApply> implements TransfusionApplyService {
-    /**
-     * 入院状态：在院
-     */
     private static final int ADMITTED = 1;
-    /**
-     * 病历文书类型：11-输血记录（本闭环完成时由系统回写）
-     */
     private static final int RECORD_TYPE_TRANSFUSION = 11;
-    /**
-     * 文书状态：已提交（输血记录一落库就是正式文书，不留在草稿箱）
-     */
     private static final int RECORD_STATUS_SUBMITTED = 2;
-    /**
-     * 已配血/已发血后多久没往下走算"卡住"（查询时算，不落状态列）
-     */
     private static final long STALLED_HOURS = 24;
 
     private final BizTransfusionApplyMapper bizTransfusionApplyMapper;
@@ -83,8 +71,7 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
 
     private final InpatientRecordService inpatientRecordService;
 
-
-    // 查询
+    private final RedisSequenceService redisSequenceService;
 
     /**
      * 追加备注（不覆盖已有内容；超 500 截断，避免超长直接 SQL 报错）
@@ -153,14 +140,8 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         return page;
     }
 
-    // 一、申请（待配血）
-
     @Override
     public TransfusionApplyVO getDetailById(Long applyId) {
-        // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
-        if (applyId == null) {
-            throw new BusinessException("输血申请单ID不能为空");
-        }
         TransfusionApplyVO vo = bizTransfusionApplyMapper.selectApplyById(applyId);
         if (vo == null) {
             throw new BusinessException("输血申请单不存在");
@@ -170,14 +151,8 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         return vo;
     }
 
-    // 一·五、用血分级审批（sql/93：通过 / 驳回 / 流水 / 统计）
-
     @Override
     public List<TransfusionApplyVO> listByAdmission(Long admissionId) {
-        // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
-        if (admissionId == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         List<TransfusionApplyVO> list = bizTransfusionApplyMapper.selectByAdmission(admissionId);
         list.forEach(vo -> decorate(vo, false));
         return list;
@@ -210,14 +185,10 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         return list;
     }
 
-    // 三、发血（已配血 → 已发血）
-
     @Override
     public List<String> reactionTypes() {
         return TransfusionReactionTypeEnum.options();
     }
-
-    // 四、开始输注（已发血 → 输注中；双人核对）
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -226,12 +197,12 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
         }
-        // D类：码值合法性（空值与非 A/B/O/AB 一并拒绝），不是单纯「没填」，DTO 注解放不下
+        // D-业务规则：非空与码值合法性（A/B/O/AB）混写，不是单纯「没填」，DTO 注解无法表达，保留
         if (!BloodTypeEnum.isValidAbo(dto.getPatientAbo())) {
             throw new BusinessException("受血者 ABO 血型不能为空且必须是 A/B/O/AB 之一（当前="
                     + dto.getPatientAbo() + "）");
         }
-        // D类：码值合法性（阳/阴归一校验，空值与非法值同文案拒绝），DTO 注解放不下
+        // D-业务规则：非空与码值合法性（阳/阴）混写、同文案拒绝，DTO 注解无法表达，保留
         if (!RhTypeEnum.isValidRh(dto.getPatientRh())) {
             throw new BusinessException("受血者 Rh 血型不能为空（阳/阴）——Rh 阴性属稀有血型，直接决定备血方案");
         }
@@ -332,10 +303,6 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         entity.setPregnancyHistory(dto.getPregnancyHistory());
         entity.setIsEmergency(dto.getIsEmergency() == null ? 0 : dto.getIsEmergency());
 
-        // 用血分级审批（sql/93）：折算毫升 → 服务端推导级别 → 决定审批状态
-        // 修改重提的规则：已通过(1) 的单子，申请量变了必须重审（防"审的 400ml 发的 1200ml"）；
-        // 已驳回(2)的单子修改重提视为重新申请（清驳回原因、回到待审批）；
-        // 急诊单的初始/重置状态是"急诊待补审"(3) —— 可以先配血发血，事后必须补办手续。
         Integer amountMl = TransfusionRules.amountToMl(dto.getPlannedAmount(), dto.getAmountUnit());
         entity.setApproveLevel(TransfusionRules.approveLevelOf(amountMl));
         boolean emergency = Objects.equals(1, entity.getIsEmergency());
@@ -382,8 +349,6 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
             bizTransfusionApplyMapper.insert(entity);
         } else {
             bizTransfusionApplyMapper.updateById(entity);
-            // MP updateById 默认忽略 null 字段 —— "清空驳回原因/通过时间"落不进库，
-            // 必须用 UpdateWrapper 显式 set null（否则重提的单子还挂着旧驳回原因）
             boolean wasRejected = Objects.equals(TransfusionApproveStatusEnum.REJECTED.getCode(), oldApproveStatus);
             boolean reApproveNeeded = !wasRejected
                     && Objects.equals(TransfusionApproveStatusEnum.APPROVED.getCode(), oldApproveStatus)
@@ -402,8 +367,6 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                 entity.getBagCount(), entity.getIsEmergency(), operatorUser.getRealName());
         return entity.getApplyNo();
     }
-
-    // 五、完成（输注中 → 已完成；回写输血记录病历 + 首页标志）
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -465,11 +428,8 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         return entity.getApplyNo();
     }
 
-    // 六、输血反应上报（仅已完成且尚未上报；不回改历史状态）
-
     @Override
     public List<TransfusionApplyVO.ApproveRecord> approveListByApply(Long applyId) {
-        // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
         if (applyId == null) {
             throw new BusinessException("输血申请单ID不能为空");
         }
@@ -492,8 +452,6 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         }
         return rows;
     }
-
-    // 七、取消（仅待配血 / 已配血 / 已发血）
 
     @Override
     public TransfusionApplyVO.ApproveStats approveStats() {
@@ -524,8 +482,6 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         stats.setByLevel(byLevel);
         return stats;
     }
-
-    // 回写：输血记录病历
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -593,12 +549,10 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                         + "）与申请单（" + BloodComponentEnum.labelOrUnknown(entity.getBloodComponent())
                         + "）不一致，不允许发不同品种的血");
             }
-            // 一袋血只能给一个人（跨申请单校验）
             if (bizTransfusionBagMapper.countByBagNo(bagNo, entity.getId()) > 0) {
                 problems.add("血袋 " + bagNo + " 已挂在另一张输血单上（一袋血只能给一个人）");
                 continue;
             }
-            // **ABO / Rh 相容性硬拦**（本闭环最要紧的一条）
             String reason = TransfusionRules.incompatibleReason(
                     entity.getBloodComponent(), entity.getPatientAbo(), entity.getPatientRh(),
                     bagNo, bag.getBagAbo(), bag.getBagRh());
@@ -663,14 +617,6 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         long incompatible = bizTransfusionBagMapper.countIncompatible(entity.getId());
 
         if (incompatible > 0) {
-            // 有不合的袋：流程状态**保持待配血**（不许发血），但配血状态必须显性化。
-            //
-            // 注意这里**不抛异常**：全库只有这一种"部分成功"的场景。
-            // 「配血不合」不是一个失败的请求，而是一个**成功的业务结果**——
-            // 血袋确实配了、结果就是不合，这条事实必须留在库里（追溯与统计都要用它）。
-            // 抛异常会触发事务回滚，把刚录的血袋行一起抹掉，
-            // 于是"配了但不合"变成"看起来根本没配过"，安全隐患被自己藏起来。
-            // ABO/Rh 不相容则相反：那是操作错误，在入口整批回滚，不留痕。
             entity.setCrossmatchStatus(TransfusionCrossmatchStatusEnum.INCOMPATIBLE.getCode());
             if (TextUtil.hasText(dto.getCrossmatchNote())) {
                 entity.setRemark(mergeRemark(entity.getRemark(), dto.getCrossmatchNote()));
@@ -708,8 +654,6 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                 + " 袋相合，尚未配齐，继续配血后方可发血";
     }
 
-    // 展示态
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void issue(TransfusionIssueDTO dto) {
@@ -719,9 +663,6 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         }
         BizTransfusionApply entity = mustGet(dto.getApplyId());
         if (Objects.equals(TransfusionStatusEnum.PENDING_CROSSMATCH.getCode(), entity.getTransfusionStatus())) {
-            // 同是「待配血」，原因可能完全不同：一次都还没配 vs 配了但结论是不合。
-            // 对发血的人来说后者是更硬的结论（血源已经取来过、结果相斥），文案必须分开 ——
-            // 否则会让人以为"还没配，再等等就好"，而实际上这批血永远不能发给这个患者。
             if (Objects.equals(TransfusionCrossmatchStatusEnum.INCOMPATIBLE.getCode(), entity.getCrossmatchStatus())) {
                 throw new BusinessException("输血单 " + entity.getApplyNo()
                         + " 存在交叉配血不合的血袋，不能发血（血源与受血者相斥，"
@@ -908,8 +849,6 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                 end.format(DateFormats.DATETIME), dto.getActualAmount(), record.getRecordNo(), operatorUser.getRealName());
     }
 
-    // 工具
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void reportReaction(TransfusionReactionDTO dto) {
@@ -973,16 +912,6 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                 entity.getApplyNo(), dto.getCancelReason(), operatorUser.getRealName());
     }
 
-    /**
-     * 把这次输血回写成一份住院病历（类型=输血记录，状态直接「已提交」）。
-     *
-     * <p>签名的医生是<b>申请输血的经治医师</b>，不是录入人 —— 用"谁点的按钮"当签名，
-     * 会让病历里的医师签名与病案首页打架（同手术记录用主刀签名的道理）。
-     *
-     * <p>结构化要素按 {@code RecordStructuredFields.TRANSFUSION_ELEMENTS} 那三项写：
-     * 输血成分与量（remark）、输血经过（course_note）、疗效评估与反应处理（treatment_plan）。
-     * 这三项必然同时写下，所以系统回写的输血记录结构化率是 100% —— 这是事实，不是凑分。
-     */
     private BizInpatientRecord writeBackRecord(BizTransfusionApply entity, BizAdmission admission,
                                                TransfusionFinishDTO dto,
                                                LocalDateTime end, LocalDateTime now) {
@@ -1144,7 +1073,6 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
                 && Objects.equals(TransfusionCrossmatchStatusEnum.ALL_MATCHED.getCode(), vo.getCrossmatchStatus()));
         vo.setCanStart(issued);
         vo.setCanFinish(infusing);
-        // 输注中(3)与已完成(4)不可取消：血已经进入患者体内，取消它是销毁证据
         vo.setCanCancel(pending || crossmatched || issued);
         vo.setCanReportReaction(finished && !Objects.equals(1, vo.getHasReaction()));
 
@@ -1285,14 +1213,8 @@ public class TransfusionApplyServiceImpl extends ServiceImpl<BizTransfusionApply
         return TextUtil.hasText(name) ? name : "未知员工(ID=" + empId + ")";
     }
 
-    /**
-     * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
-     */
-
     private String nextApplyNo() {
-        String prefix = "SX" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizTransfusionApplyMapper.countByNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateTransfusionApplyNo();
     }
 
     /**

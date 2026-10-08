@@ -9,6 +9,7 @@ import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -45,6 +46,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultationMapper, BizConsultation> implements InpatientConsultationService {
+
+    private final RedisSequenceService redisSequenceService;
     /**
      * 申请时未指定会诊医生：既有列 doctor_id 是 NOT NULL，用 0 表示"未指定"
      */
@@ -576,15 +579,11 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
     }
 
     private String nextConsultationNo() {
-        String prefix = "HZ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizConsultationMapper.countByNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateConsultationNo();
     }
 
     private String nextRecordNo() {
-        String prefix = "BL" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizInpatientRecordMapper.countByRecordNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateInpatientRecordNo();
     }
 
     /**

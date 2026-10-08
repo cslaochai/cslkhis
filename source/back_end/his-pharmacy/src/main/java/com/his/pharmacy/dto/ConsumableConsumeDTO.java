@@ -1,7 +1,5 @@
 package com.his.pharmacy.dto;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -16,7 +14,6 @@ public class ConsumableConsumeDTO {
      * 耗材ID
      */
     @NotNull(message = "耗材ID不能为空")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long consumableId;
     /**
      * 领用数量（>0）
@@ -25,7 +22,6 @@ public class ConsumableConsumeDTO {
     /**
      * 领用科室ID
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
     /**
      * 用途

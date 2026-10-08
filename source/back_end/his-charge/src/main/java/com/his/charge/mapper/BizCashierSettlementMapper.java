@@ -73,9 +73,4 @@ public interface BizCashierSettlementMapper extends BaseMapper<BizCashierSettlem
             "                        AND t.cashier_settlement_id = #{settlementId})")
     InvoiceCountVO sumInvoiceBySettlement(@Param("settlementId") Long settlementId);
 
-    /**
-     * 当日已用交班单序号数（生成 JS+日期+序号用）。
-     */
-    @Select("SELECT COUNT(*) FROM biz_cashier_settlement WHERE settlement_no LIKE CONCAT(#{prefix}, '%')")
-    long countByNoPrefix(@Param("prefix") String prefix);
 }

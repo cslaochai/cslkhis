@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -48,6 +49,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWait> implements BedCenterService {
+
+    private final RedisSequenceService redisSequenceService;
     /**
      * 等待超时的最长天数；缺失或非法一律回落 7 天（不回落成"永不超时"）
      */
@@ -1183,13 +1186,11 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     }
 
     private String nextWaitNo() {
-        String prefix = "DC" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        return prefix + String.format("%03d", bizBedWaitMapper.countByWaitNoPrefix(prefix) + 1);
+        return redisSequenceService.generateBedWaitNo();
     }
 
     private String nextAllocateNo() {
-        String prefix = "TP" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        return prefix + String.format("%03d", bedCenterMapper.countByAllocateNoPrefix(prefix) + 1);
+        return redisSequenceService.generateBedAllocateNo();
     }
 
     /**

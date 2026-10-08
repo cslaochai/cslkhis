@@ -3,7 +3,7 @@ package com.his.medicaltech.enums;
 import lombok.Getter;
 
 /**
- * 超声测量值异常标志枚举（码值口径 = biz_ultrasound_measure.abnormal_flag 列注释）。
+ * 超声测量值异常标志枚举（码值口径 = 该异常标志列的库内注释）。
  */
 @Getter
 public enum UltrasoundAbnormalFlagEnum {

@@ -21,6 +21,7 @@ import com.his.operation.vo.AnesthesiaFollowupVO;
 import com.his.operation.vo.OperationApplyVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
+import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,6 +41,8 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFollowupMapper, BizAnesthesiaFollowup> implements AnesthesiaFollowupService {
+
+    private final RedisSequenceService redisSequenceService;
 
     /**
      * 麻醉记录状态：已提交
@@ -310,9 +313,7 @@ public class AnesthesiaFollowupServiceImpl extends ServiceImpl<BizAnesthesiaFoll
     }
 
     private String nextFollowupNo() {
-        String prefix = "MS" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizAnesthesiaFollowupMapper.countByNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateAnesthesiaFollowupNo();
     }
 
     /**

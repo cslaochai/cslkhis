@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.MealGenerateDTO;
@@ -44,7 +44,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMealOrder> implements MealOrderService {
-    private static final String PREFIX_MEAL = "MO";
+    private final RedisSequenceService redisSequenceService;
     private final DeptScopeProvider deptScopeProvider;
     private final BizMealOrderMapper bizMealOrderMapper;
     private final BizDietPlanMapper bizDietPlanMapper;
@@ -70,10 +70,6 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
 
     @Override
     public List<MealOrderVO> mealListByPlan(Long dietPlanId) {
-        // ②非web入口：service 方法参数判空，没有 DTO 字段可挂注解（HTTP 侧 @RequestParam 已必填）
-        if (dietPlanId == null) {
-            throw new BusinessException("膳食方案ID不能为空");
-        }
         List<MealOrderVO> rows = bizMealOrderMapper.selectByPlan(dietPlanId);
         rows.forEach(this::decorate);
         return rows;
@@ -98,10 +94,6 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
     @Override
     @Transactional(rollbackFor = Exception.class)
     public MealGenerateVO mealGenerate(MealGenerateDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了（mealDate 必填已收口到 DTO @NotNull + @Valid）
-        if (dto == null) {
-            throw new BusinessException("请选择就餐日期");
-        }
         LocalDate mealDate = dto.getMealDate();
         if (mealDate.isBefore(LocalDate.now())) {
             throw new BusinessException("不能为「" + mealDate + "」之前的日期生成餐单（食堂无法补送过去的餐）");
@@ -162,7 +154,6 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
             }
         }
 
-        long seq = bizMealOrderMapper.maxMealSeq(PREFIX_MEAL + mealDate.format(DateFormats.COMPACT_DATE));
         int generated = 0;
         // 同一个人可能同时有两条口服方案（如"糖尿病饮食 + 口服营养补充"），
         // 而 uk_meal_order 只认「人 + 日期 + 餐次」—— 批内必须去重，否则整批生成撞唯一键
@@ -182,9 +173,8 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
                 if (!overwrite && exists.contains(key)) {
                     continue;
                 }
-                seq++;
                 BizMealOrder row = new BizMealOrder();
-                row.setMealNo(PREFIX_MEAL + mealDate.format(DateFormats.COMPACT_DATE) + String.format("%04d", seq));
+                row.setMealNo(redisSequenceService.generateMealOrderNo());
                 row.setAdmissionId(plan.getAdmissionId());
                 row.setPatientId(plan.getPatientId());
                 row.setPatientNo(plan.getPatientNo());
@@ -223,10 +213,6 @@ public class MealOrderServiceImpl extends ServiceImpl<BizMealOrderMapper, BizMea
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int mealStatus(MealStatusDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了（ids 非空已由 DTO @NotEmpty + @Valid 收口）
-        if (dto == null) {
-            throw new BusinessException("请选择要处理的订餐");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");

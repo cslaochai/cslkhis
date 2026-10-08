@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.pharmacy.dto.AntibioticStatsGenerateDTO;
@@ -61,6 +62,8 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
     private final AntibioticCatalogMapper antibioticCatalogMapper;
 
     private final DictCacheService dictCacheService;
+
+    private final RedisSequenceService redisSequenceService;
 
     @Override
     public PageResult<AntibioticStatsVO> listPage(AntibioticStatsQueryPageDTO query) {
@@ -303,7 +306,7 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
                     .filter(c -> c.getOperationApplyId().equals(dto.getOperationApplyId()))
                     .findFirst().orElse(null);
             entity = new BizAntibioticIncisionReview();
-            entity.setReviewNo(nextReviewNo());
+            entity.setReviewNo(redisSequenceService.generateAntibioticReviewNo());
             entity.setOperationApplyId(dto.getOperationApplyId());
             if (candidate != null) {
                 entity.setApplyNo(candidate.getApplyNo());
@@ -374,20 +377,6 @@ public class AntibioticMonitorServiceImpl implements AntibioticMonitorService {
         } catch (Exception e) {
             throw new BusinessException("统计月份格式应为 yyyy-MM");
         }
-    }
-
-    private String nextReviewNo() {
-        String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
-        String max = bizAntibioticIncisionReviewMapper.selectMaxReviewNo(day);
-        int seq = 1;
-        if (TextUtil.hasText(max) && max.length() >= 4) {
-            try {
-                seq = Integer.parseInt(max.substring(max.length() - 4)) + 1;
-            } catch (NumberFormatException ignored) {
-                seq = 1;
-            }
-        }
-        return "KQI" + day + String.format("%04d", seq);
     }
 
     /**

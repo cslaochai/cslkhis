@@ -1,6 +1,7 @@
 package com.his.system.service.impl;
 
 import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysFieldChangeLog;
@@ -17,7 +18,6 @@ import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
-import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -32,7 +32,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class FieldChangeRecorderImpl implements FieldChangeRecorder {
+public class FieldChangeRecorderImpl         implements FieldChangeRecorder {
+
+    private final RedisSequenceService redisSequenceService;
 
     /**
      * 单次最多落多少条：防"整对象反射"式误用把表撑爆
@@ -43,8 +45,6 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
      * 值列宽（与表 VARCHAR(500) 对齐）
      */
     private static final int VALUE_MAX = 500;
-
-    private static final SecureRandom RANDOM = new SecureRandom();
 
     /**
      * 类 → (属性名 → getter)，反射一次缓存住，别每次保存都 Introspector 一遍
@@ -133,9 +133,8 @@ public class FieldChangeRecorderImpl implements FieldChangeRecorder {
     /**
      * 批次号：FC + 年月日时分秒 + 6 位随机 —— 同一毫秒内两次保存靠随机位区分，且人能念出来。
      */
-    private static String newBatchNo() {
-        return "FC" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%06d", RANDOM.nextInt(1_000_000));
+    private String newBatchNo() {
+        return redisSequenceService.generateFieldChangeBatchNo();
     }
 
     @Override

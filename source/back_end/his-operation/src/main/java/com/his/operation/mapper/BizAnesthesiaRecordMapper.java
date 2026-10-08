@@ -60,9 +60,4 @@ public interface BizAnesthesiaRecordMapper extends BaseMapper<BizAnesthesiaRecor
     @Select(PROJECTION + " WHERE r.del_flag = 0 AND r.apply_id = #{applyId}")
     AnesthesiaRecordVO selectVOByApply(@Param("applyId") Long applyId);
 
-    /**
-     * 当天已生成的麻醉记录单号条数（单号序号用）
-     */
-    @Select("SELECT COUNT(*) FROM biz_anesthesia_record WHERE del_flag = 0 AND record_no LIKE CONCAT(#{prefix}, '%')")
-    long countByNoPrefix(@Param("prefix") String prefix);
 }

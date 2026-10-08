@@ -11,7 +11,6 @@ import lombok.Data;
 @Data
 public class TechAuthOverrideConfirmDTO {
 
-    @JsonSerialize(using = ToStringSerializer.class)
     @NotNull(message = "越权登记不能为空")
     private Long id;
 

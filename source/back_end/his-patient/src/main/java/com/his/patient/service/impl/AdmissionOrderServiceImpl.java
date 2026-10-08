@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -41,35 +42,22 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapper, BizAdmissionOrder> implements AdmissionOrderService {
 
+    private final RedisSequenceService redisSequenceService;
+
     private static final String VALID_DAYS_CONFIG_KEY = "admission_order.valid_days";
 
-    /**
-     * 配置缺失时的兜底有效期（天）。宁可给一个保守值，也不让证永久有效。
-     */
     private static final int VALID_DAYS_FALLBACK = 7;
 
     private final BizAdmissionOrderMapper bizAdmissionOrderMapper;
+
     private final BizAdmissionMapper bizAdmissionMapper;
+
     private final BizPatientMapper bizPatientMapper;
+
     private final SysConfigMapper sysConfigMapper;
 
-    /**
-     * 床位服务中心（开证 → 自动进等床队列）。
-     *
-     * <p><b>为什么用 ObjectProvider 而不是直接注入</b>：BedCenterService 反过来依赖
-     * InpatientService（收治要走入院主流程），InpatientService 又依赖本服务（按证收治），
-     * 直接注入会形成 BedCenter → Inpatient → AdmissionOrder → BedCenter 的构造环，
-     * Spring Boot 默认禁止循环引用，启动即失败。ObjectProvider 是<b>惰性</b>的，
-     * 构造期不解析目标 Bean，环自然断掉；取不到实现时（理论上不会）降级为不入队，
-     * 绝不让一张证因为队列那边的任何问题而开不出来。
-     */
     private final ObjectProvider<BedCenterService> bedCenterProvider;
 
-    // 开证
-
-    /**
-     * 时间统一截到秒，保证「写进去的 = 读回来的」（库表是 DATETIME(0)，MySQL 会四舍五入）
-     */
     // 查询
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -85,7 +73,6 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
         }
 
         // 同一患者也不该同时拿两张「待收治」的证：患者拿着两张证到入院处，
-        // 入院处无从判断该收哪一科，最后只能打电话问医生。这里直接拦下来，并说清是哪张证挡着。
         BizAdmissionOrder pendingOfPatient = bizAdmissionOrderMapper.selectOne(new LambdaQueryWrapper<BizAdmissionOrder>()
                 .eq(BizAdmissionOrder::getPatientId, dto.getPatientId())
                 .eq(BizAdmissionOrder::getOrderStatus, AdmissionOrderStatusEnum.PENDING.getCode())
@@ -100,8 +87,6 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
                     + "），请先作废原证再开新证");
         }
 
-        // 已在院的患者不需要再开住院证（他已经在床上了）。不拦的话会出现
-        // "某人在院 + 同时手持一张待收治住院证"的怪状态，入院处查半天查不明白。
         if (bizAdmissionMapper.countInHospitalByPatient(dto.getPatientId()) > 0) {
             throw new BusinessException("该患者当前在院，无需再开住院证");
         }
@@ -192,14 +177,10 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
         return vo;
     }
 
-    // 作废
-
     @Override
     public long countPending() {
         return bizAdmissionOrderMapper.countPending();
     }
-
-    // 收治流程回调
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -235,6 +216,7 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
 
     @Override
     public BizAdmissionOrder requireAdmittable(Long orderId) {
+        // C-非 web 入参：InpatientServiceImpl#admit 服务间直调（admissionOrderId 来自内部构造的 DTO，不过绑定层），Bean Validation 不覆盖，保留
         if (orderId == null) {
             throw new BusinessException("住院证ID不能为空");
         }
@@ -323,8 +305,6 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
     }
 
     private String nextOrderNo() {
-        String prefix = "RZ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizAdmissionOrderMapper.countByOrderNoPrefix(prefix) + 1;
-        return prefix + String.format("%03d", seq);
+        return redisSequenceService.generateAdmissionOrderNo();
     }
 }

@@ -22,6 +22,7 @@ import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TimeUtil;
 import com.his.system.entity.CurrentUser;
 import com.his.system.entity.SysIcd10;
@@ -37,7 +38,6 @@ import org.springframework.util.CollectionUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -46,7 +46,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ComplianceAuditServiceImpl implements ComplianceAuditService {
+public class ComplianceAuditServiceImpl         implements ComplianceAuditService {
+    private final RedisSequenceService redisSequenceService;
     private final BizInsuranceSettlementMapper bizInsuranceSettlementMapper;
     private final AppointGateway appointGateway;
     private final SysIcd10Mapper sysIcd10Mapper;
@@ -615,8 +616,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     }
 
     private String nextAuditNo() {
-        return "CA" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%04d", ThreadLocalRandom.current().nextInt(10000));
+        return redisSequenceService.generateComplianceAuditNo();
     }
 
     private SettlementDiagnosisVO toDiagnosisVO(BizSettlementDiagnosis entity) {

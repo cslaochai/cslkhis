@@ -48,19 +48,6 @@ public interface BizInpatientOrderMapper extends BaseMapper<BizInpatientOrder> {
     IPage<InpatientOrderVO> selectOrderPage(IPage<InpatientOrderVO> page, @Param("q") InpatientOrderQueryPageDTO query);
 
     /**
-     * 当天已生成的医嘱号条数（用于医嘱号序号）
-     */
-    @Select("SELECT COUNT(*) FROM biz_inpatient_order WHERE del_flag = 0 AND order_no LIKE CONCAT(#{prefix}, '%')")
-    long countByOrderNoPrefix(@Param("prefix") String prefix);
-
-    /**
-     * 当天已用过的组套号个数（用于组套号序号；按 DISTINCT 计，避免一个组套多条医嘱把序号顶飞）
-     */
-    @Select("SELECT COUNT(DISTINCT order_group) FROM biz_inpatient_order "
-            + "WHERE del_flag = 0 AND order_group LIKE CONCAT(#{prefix}, '%')")
-    long countByOrderGroupPrefix(@Param("prefix") String prefix);
-
-    /**
      * 在院患者的有效医嘱条数（长期未停 + 临时未完成），医生站/护士站首页卡片用
      */
     @Select("""

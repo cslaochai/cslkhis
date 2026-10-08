@@ -13,7 +13,6 @@ import lombok.Data;
 public class RadioReportAuditDTO {
 
     @NotNull(message = "缺少报告")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long reportId;
 
     /**

@@ -18,7 +18,6 @@ public class EmployeeUpsertDTO {
     /**
      * 员工ID，新增时为空，修改时必填
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**

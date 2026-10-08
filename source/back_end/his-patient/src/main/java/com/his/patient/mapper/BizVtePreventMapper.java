@@ -27,13 +27,6 @@ public interface BizVtePreventMapper extends BaseMapper<BizVtePrevent> {
     @org.apache.ibatis.annotations.Delete("DELETE FROM biz_vte_prevent WHERE id = #{id}")
     int purgeById(@Param("id") Long id);
 
-    /**
-     * 单号前缀当日已用最大序号（VP+yyyyMMdd+4位）—— 按 MAX 不是 COUNT，删过一条也不会撞号
-     */
-    @Select("SELECT COALESCE(MAX(CAST(RIGHT(prevent_no, 4) AS UNSIGNED)), 0) "
-            + "FROM biz_vte_prevent WHERE prevent_no LIKE CONCAT(#{prefix}, '%')")
-    long maxPreventSeq(@Param("prefix") String prefix);
-
     @Select("""
             <script>
             SELECT v.*,

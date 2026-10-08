@@ -12,7 +12,6 @@ import lombok.Data;
 public class DrugTraceVoidDTO {
 
     @NotNull(message = "追溯码记录ID不能为空")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long traceId;
 
     /** 作废类型（1-退药 2-报损 3-召回） */

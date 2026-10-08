@@ -276,7 +276,7 @@ public class DisputeServiceImpl extends ServiceImpl<BizDisputeCaseMapper, BizDis
             throw new BusinessException("已结案/已撤销单据不可再撤销");
         }
         String reason = TextUtil.trimToNull(dto.getContent());
-        // B 类保留：动作 DTO 为受理/补封存/撤销共用，说明只有撤销必填，@NotBlank 一刀切会挡掉合法动作
+        // B-条件必填：动作 DTO 为受理/补封存/撤销共用，说明只有撤销必填，@NotBlank 一刀切会挡掉合法动作，DTO 注解无法表达，保留
         if (reason == null) {
             throw new BusinessException("撤销原因必填");
         }

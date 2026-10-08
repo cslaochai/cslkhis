@@ -17,8 +17,7 @@ public class ConsumableStockUpsertDTO {
     /**
      * 耗材ID（必填，从字典选择）
      */
-    @NotNull(message = "耗材ID不能为空，请从耗材字典选择")
-    @JsonSerialize(using = ToStringSerializer.class)
+    @NotNull(message = "耗材ID不能为空")
     private Long consumableId;
     /**
      * 批号（必填，同批号已存在则拒绝，走补货入库）

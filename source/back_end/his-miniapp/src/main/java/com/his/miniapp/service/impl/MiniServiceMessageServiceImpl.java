@@ -23,6 +23,7 @@ import com.his.miniapp.vo.MiniServiceDetailVO;
 import com.his.miniapp.vo.MiniServiceLogVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
+import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -40,8 +41,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessageMapper, BizServiceMessage> implements MiniServiceMessageService {
 
-    private static final String NO_PREFIX = "MSG";
-
     /**
      * 与 biz_service_message.content 列宽一致，写库前先截
      */
@@ -55,6 +54,7 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
     private final MiniServiceMessageMapper miniServiceMessageMapper;
     private final MiniServiceLogMapper miniServiceLogMapper;
     private final MiniDirectoryService miniDirectoryService;
+    private final RedisSequenceService redisSequenceService;
 
     private static List<String> patientActions(Integer status) {
         List<String> actions = new ArrayList<>();
@@ -257,21 +257,12 @@ public class MiniServiceMessageServiceImpl extends ServiceImpl<MiniServiceMessag
     }
 
     /**
-     * 单号 = MSG + 日期 + 当天最大序号 + 1。
-     * <p><b>绝不用「当天 count + 1」</b>：删掉一条之后 count 回退，下一个单号直接撞唯一键。
+     * 单号 = MSG + 日期 + 4 位 Redis 自增序号。
+     * <p><b>序号走 Redis 原子自增</b>：号段全局唯一，不依赖库里行数，删行也不会撞唯一键。
      */
     private String nextMessageNo() {
-        String prefix = NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        String max = miniServiceMessageMapper.maxMessageNo(prefix);
-        int seq = 1;
-        if (TextUtil.hasText(max) && max.length() > prefix.length()) {
-            try {
-                seq = Integer.parseInt(max.substring(prefix.length())) + 1;
-            } catch (NumberFormatException ex) {
-                log.warn("[患者工单] 单号序号解析失败，回落 1：{}", max);
-                seq = 1;
-            }
-        }
+        String prefix = "MSG" + LocalDate.now().format(DateFormats.COMPACT_DATE);
+        long seq = redisSequenceService.next("MSG");
         return prefix + String.format("%04d", seq);
     }
 

@@ -51,10 +51,6 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(OrderSetUpsertDTO dto) {
-        // 保留（类别②）：整个 DTO 为 null 不是字段校验，Bean Validation 覆盖不到
-        if (dto == null) {
-            throw new BusinessException("组套内容不能为空");
-        }
         Integer scope = dto.getScope();
 
         List<InpatientOrderItemDTO> items = new ArrayList<>();
@@ -238,8 +234,7 @@ public class InpatientOrderSetServiceImpl implements InpatientOrderSetService {
      * 取组套并校验可见（不可见的与不存在的回同一句话，避免泄露「这个 id 存在但你看不到」）
      */
     private BizInpatientOrderTemplate requireVisible(Long id) {
-        // 保留（类别②）：入参是普通 Long（GET @RequestParam / 修改路径复用同一私有校验），
-        // 无对应 request DTO 字段可挂注解
+        // C-非 web 入参：私有 requireXxx helper，GET 标量与 upsert 修改分支复用同一入口，Bean Validation 不覆盖内部路径，保留
         if (id == null) {
             throw new BusinessException("组套ID不能为空");
         }

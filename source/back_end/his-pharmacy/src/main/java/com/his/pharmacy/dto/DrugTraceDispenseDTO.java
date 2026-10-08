@@ -18,6 +18,5 @@ public class DrugTraceDispenseDTO {
 
     /** 发药单ID（药品发药记录主键，跨模块快照） */
     @NotNull(message = "必须选择发药记录")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long dispensingId;
 }

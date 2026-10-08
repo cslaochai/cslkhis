@@ -6,6 +6,7 @@ import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.ConsumableUpsertDTO;
 import com.his.pharmacy.entity.BizConsumableConsume;
@@ -28,14 +29,14 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 物资耗材服务实现
  */
 @Service
 @RequiredArgsConstructor
-public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, BizConsumableStock> implements SuppliesService {
+public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, BizConsumableStock>         implements SuppliesService {
+    private final RedisSequenceService redisSequenceService;
     private final DeptScopeProvider deptScopeProvider;
 
     private final SysConsumableMapper sysConsumableMapper;
@@ -307,7 +308,6 @@ public class SuppliesServiceImpl extends ServiceImpl<BizConsumableStockMapper, B
     }
 
     private String nextConsumeNo() {
-        return "LC" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
+        return redisSequenceService.generateConsumableStockLogNo();
     }
 }

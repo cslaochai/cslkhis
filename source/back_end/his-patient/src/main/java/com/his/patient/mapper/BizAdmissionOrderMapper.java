@@ -126,12 +126,6 @@ public interface BizAdmissionOrderMapper extends BaseMapper<BizAdmissionOrder> {
     AdmissionOrderVO selectOrderDetail(@Param("id") Long id);
 
     /**
-     * 当天已生成的住院证号条数（用于序号）
-     */
-    @Select("SELECT COUNT(*) FROM biz_admission_order WHERE del_flag = 0 AND order_no LIKE CONCAT(#{prefix}, '%')")
-    long countByOrderNoPrefix(@Param("prefix") String prefix);
-
-    /**
      * 该挂号是否已有「仍然有效」的住院证
      * <p>有效 = 已收治（2），或待收治（1）且未过有效期。
      * <b>已过期的待收治证不算有效</b>——不然患者拿着过期证来，入院处要他重新开证时会被

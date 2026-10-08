@@ -18,7 +18,6 @@ public class ReportQueryPageDTO extends PageParam {
      * 就诊人边界锚点（必填：不指定就诊人就无法判定能读谁的报告）
      */
     @NotNull(message = "patientId不能为空")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
     /**

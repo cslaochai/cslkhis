@@ -13,6 +13,7 @@ import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.support.ClinicalTextMatcher;
 import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.entity.BizQualityControl;
@@ -34,7 +35,9 @@ import java.util.function.Function;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class EmrQcCapabilityImpl implements EmrQcCapability {
+public class EmrQcCapabilityImpl         implements EmrQcCapability {
+
+    private final RedisSequenceService redisSequenceService;
 
     private static final String TEMPLATE_NAME = "emr-qc";
 
@@ -176,12 +179,6 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
         return issue.getSeverity() == null ? 0 : issue.getSeverity();
     }
 
-    private static String buildNo(String prefix) {
-        String timestamp = LocalDateTime.now().format(DateFormats.COMPACT_DATETIME);
-        String tail = String.format("%06d", (int) (Math.random() * 1_000_000));
-        return prefix + timestamp + tail;
-    }
-
     /**
      * 执行病历内涵质控
      */
@@ -305,7 +302,7 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
             }
             String operator = operatorUser.getRealName();
             BizQualityControl qc = new BizQualityControl();
-            qc.setQcNo(buildNo("QCAI"));
+            qc.setQcNo(redisSequenceService.generateEmrQcNo());
             qc.setRecordId(record.getId());
             qc.setPatientId(record.getPatientId());
             qc.setQcType(QC_TYPE_AI_INHERENT);

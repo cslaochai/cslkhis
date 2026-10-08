@@ -3,7 +3,7 @@ package com.his.pharmacy.enums;
 import lombok.Getter;
 
 /**
- * CSSD 处置结果枚举（码值口径 = biz_cssd_trace.result 列注释）。
+ * CSSD 处置结果枚举（码值口径 = CSSD 追溯记录处置结果字段的列注释）。
  */
 @Getter
 public enum CssdCheckResultEnum {

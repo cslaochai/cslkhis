@@ -13,12 +13,6 @@ import java.util.List;
 public interface BizAntibioticAuthMapper extends BaseMapper<BizAntibioticAuth> {
 
     /**
-     * 同日授权编号最大值（生成 KJ+yyyyMMdd+4位序号用）。
-     */
-    @Select("SELECT MAX(auth_no) FROM biz_antibiotic_auth WHERE auth_no LIKE CONCAT('KJ', #{day}, '%')")
-    String selectMaxAuthNo(@Param("day") String day);
-
-    /**
      * 取某医师<b>当前有效</b>的最高授权级别（开方闸唯一口径）。
      *
      * <p>"有效" = status=1 且 expire_date &gt;= 今天。暂停/取消/过期一律不算 —— 开方闸只认这里，

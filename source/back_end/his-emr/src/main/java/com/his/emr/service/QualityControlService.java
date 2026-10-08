@@ -6,7 +6,7 @@ import com.his.emr.dto.QcCandidateQueryPageDTO;
 import com.his.emr.dto.QcExecuteDTO;
 import com.his.emr.dto.QcQueryPageDTO;
 import com.his.emr.entity.BizQualityControl;
-import com.his.emr.support.QcIssue;
+import com.his.emr.vo.QcIssueVO;
 import com.his.emr.vo.*;
 
 import java.util.List;
@@ -54,7 +54,7 @@ public interface QualityControlService extends IService<BizQualityControl> {
     /**
      * 某质控单的问题明细
      */
-    List<QcIssue> listIssueByQc(Long qcId);
+    List<QcIssueVO> listIssueByQc(Long qcId);
 
     /**
      * 待质控病历候选分页

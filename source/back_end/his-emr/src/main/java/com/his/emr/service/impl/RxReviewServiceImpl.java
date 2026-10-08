@@ -9,6 +9,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.*;
 import com.his.emr.entity.*;
@@ -57,6 +58,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
     private final BizRxDoctorTalkMapper bizRxDoctorTalkMapper;
     private final BizPrescriptionMapper bizPrescriptionMapper;
     private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
+    private final RedisSequenceService redisSequenceService;
 
     // 批次
 
@@ -131,6 +133,8 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         if (special && !TextUtil.hasText(dto.getSpecialty())) {
             throw new BusinessException("专项点评必须填写专项主题");
         }
+        // B-条件必填：batchUpsert 的 id!=null 走改批次（只改名称/主题/备注）不传抽样数，
+        // 给 sampleCount 加 @NotNull 会把合法的改批次请求挡成 400，DTO 注解无法表达，保留
         if (dto.getSampleCount() == null || dto.getSampleCount() < 1) {
             throw new BusinessException("抽样数至少 1 张");
         }
@@ -142,7 +146,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         }
 
         BizRxReviewBatch batch = new BizRxReviewBatch();
-        batch.setBatchNo(nextBatchNo());
+        batch.setBatchNo(redisSequenceService.generateRxReviewBatchNo());
         batch.setBatchName(dto.getBatchName().trim());
         batch.setReviewType(dto.getReviewType());
         batch.setSpecialty(TextUtil.hasText(dto.getSpecialty()) ? dto.getSpecialty().trim() : null);
@@ -327,11 +331,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         if (batch.getStatus() == RxReviewBatchStatusEnum.DONE.getCode()) {
             throw new BusinessException("已完成的批次不可补录");
         }
-        String no = prescriptionNo == null ? "" : prescriptionNo.trim();
-        // C 类保留：入参是拆开直传的 String（Controller 解 DTO 后调用），Bean Validation 不经过这一层
-        if (!TextUtil.hasText(no)) {
-            throw new BusinessException("处方号不能为空");
-        }
+        String no = TextUtil.trimToEmpty(prescriptionNo);
         BizPrescription p = bizPrescriptionMapper.selectOne(new LambdaQueryWrapper<BizPrescription>()
                 .eq(BizPrescription::getPrescriptionNo, no));
         if (p == null) {
@@ -470,7 +470,7 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
         BizRxDoctorTalk talk;
         if (dto.getId() == null) {
             talk = new BizRxDoctorTalk();
-            talk.setTalkNo(nextTalkNo());
+            talk.setTalkNo(redisSequenceService.generateRxDoctorTalkNo());
             talk.setCreateBy(UserUtils.getCurrentUser().getRealName());
             talk.setDoctorConfirm(YesOrNoEnum.NO.getCode());
             talk.setRectifyStatus(dto.getRectifyStatus() == null
@@ -608,22 +608,6 @@ public class RxReviewServiceImpl extends ServiceImpl<BizRxReviewBatchMapper, Biz
                     .append(r.getPublicityTime() == null ? "" : r.getPublicityTime().format(DateFormats.DATETIME)).append('\n');
         }
         return sb.toString();
-    }
-
-    private String nextBatchNo() {
-        String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
-        String max = bizRxReviewBatchMapper.selectMaxBatchNo(day);
-        int seq = max == null ? 0 : Integer.parseInt(max.substring(max.length() - 4));
-        return "RXRB" + day + String.format("%04d", seq + 1);
-    }
-
-    // 组装
-
-    private String nextTalkNo() {
-        String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
-        String max = bizRxDoctorTalkMapper.selectMaxTalkNo(day);
-        int seq = max == null ? 0 : Integer.parseInt(max.substring(max.length() - 4));
-        return "YT" + day + String.format("%04d", seq + 1);
     }
 
     /**

@@ -737,7 +737,8 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
     }
 
     private BizTreatmentApply requireApply(Long applyId) {
-        // C 类保留：私有兜底被多个入口与内部流程共用，Bean Validation 覆盖不到这一层
+        // C-非 web 入参：除 web 入口外还被改期/执行/补记账用行记录上的 exec.getApplyId() 直调，
+        // 那是库里读出来的值不是 HTTP 绑定入参，Bean Validation 不覆盖，保留
         if (applyId == null) {
             throw new BusinessException("治疗申请单ID不能为空");
         }
@@ -749,10 +750,6 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
     }
 
     private BizTreatmentRecord requireExec(Long recordId) {
-        // C 类保留：私有兜底被多个入口与内部流程共用，Bean Validation 覆盖不到这一层
-        if (recordId == null) {
-            throw new BusinessException("执行流水ID不能为空");
-        }
         BizTreatmentRecord r = bizTreatmentRecordMapper.selectById(recordId);
         if (r == null) {
             throw new BusinessException("治疗执行流水不存在：" + recordId);
@@ -761,10 +758,6 @@ public class TreatmentServiceImpl extends ServiceImpl<BizTreatmentRecordMapper, 
     }
 
     private void checkDateWindow(LocalDate date, String label) {
-        // C 类保留：通用日期校验工具被多个字段/入口共用（label 动态拼接），注解挂不到私有方法上
-        if (date == null) {
-            throw new BusinessException(label + "不能为空");
-        }
         LocalDate today = LocalDate.now();
         if (date.isBefore(today.minusDays(BACK_DAYS))) {
             throw new BusinessException(label + "不得早于 " + today.minusDays(BACK_DAYS) + "（历史疗程不补开）");

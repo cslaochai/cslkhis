@@ -79,12 +79,6 @@ public interface BizConsultationMapper extends BaseMapper<BizConsultation> {
     long countUnfinished(@Param("toDeptId") Long toDeptId, @Param("admissionId") Long admissionId);
 
     /**
-     * 当天已生成的会诊号条数（会诊号序号用）
-     */
-    @Select("SELECT COUNT(*) FROM biz_consultation WHERE del_flag = 0 AND consultation_no LIKE CONCAT(#{prefix}, '%')")
-    long countByNoPrefix(@Param("prefix") String prefix);
-
-    /**
      * 科室名（取不到返回 null，由调用方决定怎么显示 —— 绝不编一个科室名）
      */
     @Select("SELECT dept_name FROM sys_department WHERE id = #{deptId} AND del_flag = 0")

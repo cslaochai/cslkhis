@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -38,6 +39,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMapper, BizInpatientRecord> implements InpatientRecordService {
+
+    private final RedisSequenceService redisSequenceService;
     private final DeptScopeProvider deptScopeProvider;
     private final BizInpatientRecordMapper bizInpatientRecordMapper;
     private final BizInpatientRecordLogMapper bizInpatientRecordLogMapper;
@@ -91,9 +94,6 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     @Override
     @Transactional(rollbackFor = Exception.class)
     public InpatientRecordDetailVO save(InpatientRecordUpsertDTO dto) {
-        if (dto == null) {
-            throw new BusinessException("入参不能为空");
-        }
         if (dto.getId() == null) {
             return create(dto);
         }
@@ -101,9 +101,11 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     }
 
     private InpatientRecordDetailVO create(InpatientRecordUpsertDTO dto) {
+        // B-条件必填：save 按 dto.id 分新增/修改，此项只在新增分支必填，挂 @NotNull 会把合法的修改请求挡成 400，保留
         if (dto.getAdmissionId() == null) {
             throw new BusinessException("入院ID不能为空");
         }
+        // B-条件必填：同上，文书类型只在新增分支必填，DTO 注解无法表达分支，保留
         if (dto.getRecordType() == null) {
             throw new BusinessException("文书类型不能为空");
         }
@@ -523,10 +525,6 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int submit(InpatientRecordSubmitDTO dto) {
-        // 保留（类别②）：整个 DTO 为 null 不是字段校验，Bean Validation 覆盖不到
-        if (dto == null) {
-            throw new BusinessException("请选择要提交的文书");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -579,10 +577,6 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int archive(InpatientRecordArchiveDTO dto) {
-        // 保留（类别②）：整个 DTO 为 null 不是字段校验，Bean Validation 覆盖不到
-        if (dto == null) {
-            throw new BusinessException("请选择要归档的文书");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -712,10 +706,6 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
 
     @Override
     public List<InpatientRecordLogVO> logList(Integer docType, Long recordId) {
-        // 保留（类别②）：入参是普通 Integer/Long（GET @RequestParam 绑定，非 request DTO 字段），注解无处安放
-        if (docType == null || recordId == null) {
-            throw new BusinessException("单据类型与单据ID不能为空");
-        }
         List<BizInpatientRecordLog> list = bizInpatientRecordLogMapper.selectByRecord(docType, recordId);
         List<InpatientRecordLogVO> rows = new ArrayList<>(list.size());
         for (BizInpatientRecordLog l : list) {
@@ -775,10 +765,6 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
 
     @Override
     public RecordQualityStatVO qualityStat(Long admissionId) {
-        // 保留（类别②）：入参是普通 Long（GET @RequestParam 绑定，非 request DTO 字段），注解无处安放
-        if (admissionId == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
@@ -1050,9 +1036,7 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     }
 
     private String nextRecordNo() {
-        String prefix = "BL" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizInpatientRecordMapper.countByRecordNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateInpatientRecordNo();
     }
 
     /**

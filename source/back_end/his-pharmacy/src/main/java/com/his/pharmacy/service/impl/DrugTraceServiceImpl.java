@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.pharmacy.dto.*;
@@ -26,7 +26,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 药品追溯码采集与核对实现。
@@ -35,6 +34,8 @@ import java.util.concurrent.ThreadLocalRandom;
 @Service
 @RequiredArgsConstructor
 public class DrugTraceServiceImpl extends ServiceImpl<BizDrugTraceMapper, BizDrugTrace> implements DrugTraceService {
+
+    private final RedisSequenceService redisSequenceService;
 
     /**
      * 采集场景 / 核销场景
@@ -54,7 +55,9 @@ public class DrugTraceServiceImpl extends ServiceImpl<BizDrugTraceMapper, BizDru
     private static final int MAX_UPLOAD_LIMIT = 500;
 
     private final BizDrugTraceMapper bizDrugTraceMapper;
+
     private final BizDrugStockMapper bizDrugStockMapper;
+
     private final DrugTraceUploadChannelService drugTraceUploadChannelService;
 
     private static String blankToNull(String v) {
@@ -481,12 +484,10 @@ public class DrugTraceServiceImpl extends ServiceImpl<BizDrugTraceMapper, BizDru
     }
 
     private String nextTraceNo() {
-        return "DR" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%03d", ThreadLocalRandom.current().nextInt(1000));
+        return redisSequenceService.generateDrugTraceNo();
     }
 
     private String nextUploadBatchNo() {
-        return "UP" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME)
-                + String.format("%02d", ThreadLocalRandom.current().nextInt(100));
+        return redisSequenceService.generateDrugUploadBatchNo();
     }
 }

@@ -3,7 +3,6 @@ package com.his.patient.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.his.patient.entity.BizBedWait;
 import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
@@ -13,9 +12,6 @@ import java.util.List;
  */
 @Mapper
 public interface BizBedWaitMapper extends BaseMapper<BizBedWait> {
-
-    @Select("SELECT COUNT(*) FROM biz_bed_wait WHERE del_flag = 0 AND wait_no LIKE CONCAT(#{prefix}, '%')")
-    long countByWaitNoPrefix(@Param("prefix") String prefix);
 
     /**
      * 等待中的记录：用于算全局排队位次（seq），不含分页

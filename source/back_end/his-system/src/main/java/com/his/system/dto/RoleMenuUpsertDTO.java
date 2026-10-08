@@ -17,7 +17,6 @@ public class RoleMenuUpsertDTO {
      * 角色ID
      */
     @NotNull(message = "角色ID不能为空")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long roleId;
 
     /**

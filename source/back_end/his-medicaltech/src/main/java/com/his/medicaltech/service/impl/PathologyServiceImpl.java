@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -48,6 +49,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
     private final BizPathologyOrderMapper bizPathologyOrderMapper;
     private final BizPathologyBlockMapper bizPathologyBlockMapper;
     private final DictCacheService dictCacheService;
+    private final RedisSequenceService redisSequenceService;
 
     // 查询
 
@@ -452,7 +454,7 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
     // 内部
 
     private BizPathologyOrder requireOrder(Long id) {
-        // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
+        // C-非 web 入参：私有 helper 按主键捞单，被多个入口（DTO 字段与标量参数）复用，Bean Validation 不覆盖，保留
         if (id == null) {
             throw new BusinessException("病理单ID不能为空");
         }
@@ -485,19 +487,14 @@ public class PathologyServiceImpl extends ServiceImpl<BizPathologyOrderMapper, B
                 .le(BizPathologyBlock::getStatus, maxStatus));
     }
 
+    /**
+     * 病理订单号：BL + 日期 + 3 位 Redis 自增序号。
+     * <p><b>走 Redis 原子自增</b>：取代「count 取起点 + 探活 20 次 + 时间戳兜底」。
+     */
     private String nextOrderNo(LocalDate date) {
         String day = date.format(DateFormats.COMPACT_DATE);
-        long base = bizPathologyOrderMapper.selectCount(new LambdaQueryWrapper<BizPathologyOrder>()
-                .ge(BizPathologyOrder::getCreateTime, TimeUtil.dayStart(date))
-                .lt(BizPathologyOrder::getCreateTime, TimeUtil.dayStart(date.plusDays(1)))) + 1;
-        for (int i = 0; i < 20; i++) {
-            String no = "BL" + day + String.format("%03d", base + i);
-            if (bizPathologyOrderMapper.selectCount(new LambdaQueryWrapper<BizPathologyOrder>()
-                    .eq(BizPathologyOrder::getOrderNo, no)) == 0) {
-                return no;
-            }
-        }
-        return "BL" + day + System.currentTimeMillis() % 100000;
+        long seq = redisSequenceService.next("PATHOLOGY");
+        return "BL" + day + String.format("%03d", seq);
     }
 
     /**

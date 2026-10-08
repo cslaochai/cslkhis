@@ -16,6 +16,7 @@ import com.his.operation.support.SafetyCheckItems;
 import com.his.operation.vo.SafetyCheckVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
+import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class OperationSafetyCheckServiceImpl extends ServiceImpl<BizOperationSafetyCheckMapper, BizOperationSafetyCheck> implements OperationSafetyCheckService {
+
+    private final RedisSequenceService redisSequenceService;
 
     private final BizOperationSafetyCheckMapper bizOperationSafetyCheckMapper;
     private final BizOperationApplyMapper bizOperationApplyMapper;
@@ -220,9 +223,7 @@ public class OperationSafetyCheckServiceImpl extends ServiceImpl<BizOperationSaf
     }
 
     private String nextCheckNo() {
-        String prefix = "HC" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizOperationSafetyCheckMapper.countByNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateOperationSafetyCheckNo();
     }
 
     private SafetyCheckVO toVO(BizOperationSafetyCheck row) {

@@ -51,9 +51,4 @@ public interface BizAnesthesiaPacuMapper extends BaseMapper<BizAnesthesiaPacu> {
     @Select(PROJECTION + " WHERE u.del_flag = 0 AND u.record_id = #{recordId}")
     PacuRecordVO selectVOByRecord(@Param("recordId") Long recordId);
 
-    /**
-     * 当天已生成的复苏单号条数（单号序号用）
-     */
-    @Select("SELECT COUNT(*) FROM biz_anesthesia_pacu WHERE del_flag = 0 AND pacu_no LIKE CONCAT(#{prefix}, '%')")
-    long countByNoPrefix(@Param("prefix") String prefix);
 }

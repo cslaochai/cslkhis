@@ -25,8 +25,6 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
         String key = module + ":" + LocalDate.now().format(DateFormats.COMPACT_DATE);
         Long seq = stringRedisTemplate.opsForValue().increment(key);
         if (seq == null) {
-            // 兜成 1 会发出一个与当天已有号重复的单号，撞唯一索引时报的是「数据重复」，
-            // 真因（没取到号）就查不出来了
             throw new BusinessException("发号服务未返回序号：" + module);
         }
         if (seq == 1L) {
@@ -337,5 +335,225 @@ public class RedisSequenceServiceImpl implements RedisSequenceService {
     @Override
     public String generateStatReportNo() {
         return no(BizCodeConstants.STAT_REPORT_NO_PREFIX, BizCodeConstants.STAT_REPORT_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateTransfusionApplyNo() {
+        return no(BizCodeConstants.TRANSFUSION_APPLY_NO_PREFIX, BizCodeConstants.TRANSFUSION_APPLY_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateCriticalValueNo() {
+        return no(BizCodeConstants.CRITICAL_VALUE_NO_PREFIX, BizCodeConstants.CRITICAL_VALUE_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateEmrQcNo() {
+        return no(BizCodeConstants.EMR_QC_NO_PREFIX, BizCodeConstants.EMR_QC_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateFieldChangeBatchNo() {
+        return no(BizCodeConstants.FIELD_CHANGE_NO_PREFIX, BizCodeConstants.FIELD_CHANGE_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateComplianceAuditNo() {
+        return no(BizCodeConstants.COMPLIANCE_AUDIT_NO_PREFIX, BizCodeConstants.COMPLIANCE_AUDIT_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateDrugTraceNo() {
+        return no(BizCodeConstants.DRUG_TRACE_NO_PREFIX, BizCodeConstants.DRUG_TRACE_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateDrugUploadBatchNo() {
+        return no(BizCodeConstants.DRUG_UPLOAD_BATCH_NO_PREFIX, BizCodeConstants.DRUG_UPLOAD_BATCH_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateHighValueTraceNo() {
+        return no(BizCodeConstants.HIGH_VALUE_TRACE_NO_PREFIX, BizCodeConstants.HIGH_VALUE_TRACE_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateConsumableStockLogNo() {
+        return no(BizCodeConstants.CONSUMABLE_STOCK_LOG_NO_PREFIX, BizCodeConstants.CONSUMABLE_STOCK_LOG_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateOperationApplyNo() {
+        return no(BizCodeConstants.OPERATION_APPLY_NO_PREFIX, BizCodeConstants.OPERATION_APPLY_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateOperationCountNo() {
+        return no(BizCodeConstants.OPERATION_COUNT_NO_PREFIX, BizCodeConstants.OPERATION_COUNT_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateAnesthesiaVisitNo() {
+        return no(BizCodeConstants.ANESTHESIA_VISIT_NO_PREFIX, BizCodeConstants.ANESTHESIA_VISIT_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateAnesthesiaRecordNo() {
+        return no(BizCodeConstants.ANESTHESIA_RECORD_NO_PREFIX, BizCodeConstants.ANESTHESIA_RECORD_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateAnesthesiaFollowupNo() {
+        return no(BizCodeConstants.ANESTHESIA_FOLLOWUP_NO_PREFIX, BizCodeConstants.ANESTHESIA_FOLLOWUP_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generatePacuNo() {
+        return no(BizCodeConstants.PACU_NO_PREFIX, BizCodeConstants.PACU_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateOperationSafetyCheckNo() {
+        return no(BizCodeConstants.OPERATION_SAFETY_CHECK_NO_PREFIX, BizCodeConstants.OPERATION_SAFETY_CHECK_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateAdmissionOrderNo() {
+        return no(BizCodeConstants.ADMISSION_ORDER_NO_PREFIX, BizCodeConstants.ADMISSION_ORDER_NO_KEY_PREFIX, 3);
+    }
+
+    @Override
+    public String generateBedWaitNo() {
+        return no(BizCodeConstants.BED_WAIT_NO_PREFIX, BizCodeConstants.BED_WAIT_NO_KEY_PREFIX, 3);
+    }
+
+    @Override
+    public String generateBedAllocateNo() {
+        return no(BizCodeConstants.BED_ALLOCATE_NO_PREFIX, BizCodeConstants.BED_ALLOCATE_NO_KEY_PREFIX, 3);
+    }
+
+    @Override
+    public String generateConsultationNo() {
+        return no(BizCodeConstants.CONSULTATION_NO_PREFIX, BizCodeConstants.CONSULTATION_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateInpatientRecordNo() {
+        return no(BizCodeConstants.INPATIENT_RECORD_NO_PREFIX, BizCodeConstants.INPATIENT_RECORD_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateNursingAssessNo() {
+        return no(BizCodeConstants.NURSING_ASSESS_NO_PREFIX, BizCodeConstants.NURSING_ASSESS_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateNursingRecordNo() {
+        return no(BizCodeConstants.NURSING_RECORD_NO_PREFIX, BizCodeConstants.NURSING_RECORD_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateAdmissionNo() {
+        return no(BizCodeConstants.ADMISSION_NO_PREFIX, BizCodeConstants.ADMISSION_NO_KEY_PREFIX, 3);
+    }
+
+    @Override
+    public String generateDischargeNo() {
+        return no(BizCodeConstants.DISCHARGE_NO_PREFIX, BizCodeConstants.DISCHARGE_NO_KEY_PREFIX, 3);
+    }
+
+    @Override
+    public String generateVisitNo() {
+        return no(BizCodeConstants.VISIT_NO_PREFIX, BizCodeConstants.VISIT_NO_KEY_PREFIX, 3);
+    }
+
+    @Override
+    public String generateInpatientOrderNo() {
+        return no(BizCodeConstants.INPATIENT_ORDER_NO_PREFIX, BizCodeConstants.INPATIENT_ORDER_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateOrderGroupNo() {
+        return no(BizCodeConstants.ORDER_GROUP_NO_PREFIX, BizCodeConstants.ORDER_GROUP_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateTransferNo() {
+        return no(BizCodeConstants.TRANSFER_NO_PREFIX, BizCodeConstants.TRANSFER_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generatePatientMergeNo() {
+        return no(BizCodeConstants.PATIENT_MERGE_NO_PREFIX, BizCodeConstants.PATIENT_MERGE_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateReferralNo() {
+        return no(BizCodeConstants.REFERRAL_NO_PREFIX, BizCodeConstants.REFERRAL_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateDischargeDrugNo() {
+        return no(BizCodeConstants.DISCHARGE_DRUG_NO_PREFIX, BizCodeConstants.DISCHARGE_DRUG_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateVtePreventNo() {
+        return no(BizCodeConstants.VTE_PREVENT_NO_PREFIX, BizCodeConstants.VTE_PREVENT_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateVteEventNo() {
+        return no(BizCodeConstants.VTE_EVENT_NO_PREFIX, BizCodeConstants.VTE_EVENT_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateDietPlanNo() {
+        return no(BizCodeConstants.DIET_PLAN_NO_PREFIX, BizCodeConstants.DIET_PLAN_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateNutritionScreenNo() {
+        return no(BizCodeConstants.NUTRITION_SCREEN_NO_PREFIX, BizCodeConstants.NUTRITION_SCREEN_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateMealOrderNo() {
+        return no(BizCodeConstants.MEAL_ORDER_NO_PREFIX, BizCodeConstants.MEAL_ORDER_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateCheckupRecordNo() {
+        return no(BizCodeConstants.CHECKUP_RECORD_NO_PREFIX, BizCodeConstants.CHECKUP_RECORD_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateAntibioticAuthNo() {
+        return no(BizCodeConstants.ANTIBIOTIC_AUTH_NO_PREFIX, BizCodeConstants.ANTIBIOTIC_AUTH_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateAntibioticReviewNo() {
+        return no(BizCodeConstants.ANTIBIOTIC_REVIEW_NO_PREFIX, BizCodeConstants.ANTIBIOTIC_REVIEW_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateQcStoreNo() {
+        return no(BizCodeConstants.QUALITY_CONTROL_NO_PREFIX, BizCodeConstants.QUALITY_CONTROL_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateRxReviewBatchNo() {
+        return no(BizCodeConstants.RX_REVIEW_BATCH_NO_PREFIX, BizCodeConstants.RX_REVIEW_BATCH_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateRxDoctorTalkNo() {
+        return no(BizCodeConstants.RX_DOCTOR_TALK_NO_PREFIX, BizCodeConstants.RX_DOCTOR_TALK_NO_KEY_PREFIX, 4);
+    }
+
+    @Override
+    public String generateNarcoticRegisterNo() {
+        return no(BizCodeConstants.NARCOTIC_REGISTER_NO_PREFIX, BizCodeConstants.NARCOTIC_REGISTER_NO_KEY_PREFIX, 4);
     }
 }

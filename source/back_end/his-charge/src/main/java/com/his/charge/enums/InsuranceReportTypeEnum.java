@@ -3,7 +3,7 @@ package com.his.charge.enums;
 import lombok.Getter;
 
 /**
- * 医保报盘报文类型（biz_insurance_report.report_type）。
+ * 医保报盘报文类型（码值口径见建表 SQL 的列注释）。
  */
 @Getter
 public enum InsuranceReportTypeEnum {

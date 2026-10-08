@@ -19,10 +19,8 @@ public class DrugTraceScanDTO {
     private Integer scene = 1;
 
     /** 发药单ID（scene=2 时必填，用于串码校验） */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long dispensingId;
 
     /** 人工指定药品ID（码识别不出药品时由窗口选药，采集时按这个药品挂靠） */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long drugId;
 }

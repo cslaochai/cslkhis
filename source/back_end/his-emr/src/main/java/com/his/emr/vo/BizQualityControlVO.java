@@ -3,7 +3,6 @@ package com.his.emr.vo;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.his.emr.support.QcIssue;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -204,5 +203,5 @@ public class BizQualityControlVO {
     /**
      * 问题明细；仅详情接口返回，列表接口为 null
      */
-    private List<QcIssue> issues;
+    private List<QcIssueVO> issues;
 }

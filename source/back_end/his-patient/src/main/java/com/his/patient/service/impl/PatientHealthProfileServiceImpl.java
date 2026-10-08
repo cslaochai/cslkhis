@@ -325,10 +325,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientFamilyHistoryVO saveFamilyHistory(PatientFamilyHistoryUpsertDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了
-        if (dto == null) {
-            throw new BusinessException("家族史内容不能为空");
-        }
         if (Integer.valueOf(0).equals(dto.getIsAlive()) && !TextUtil.hasText(dto.getCauseOfDeath())) {
             // ①条件必填：只有选了「已故」才必填死亡原因，@NotNull 一刀切会挡掉合法的在世提交
             throw new BusinessException("已故亲属必须填写死亡原因");
@@ -364,12 +360,8 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientMedicationHistoryVO saveMedication(PatientMedicationHistoryUpsertDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了
-        if (dto == null) {
-            throw new BusinessException("用药史内容不能为空");
-        }
         if (dto.getEndDate() != null && dto.getEndDate().isBefore(dto.getStartDate())) {
-            // ③业务规则：跨字段的临床时序约束，DTO 注解无处安放
+            // D-业务规则：跨字段的临床时序约束（停药不能早于开始），DTO 注解无处安放
             throw new BusinessException("停药日期不能早于开始用药日期");
         }
         requireInEnum("药物类型", dto.getDrugType(), HealthProfileEnums.DRUG_TYPE);
@@ -407,18 +399,14 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientContactVO saveContact(PatientContactUpsertDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了
-        if (dto == null) {
-            throw new BusinessException("联系人内容不能为空");
-        }
         // 码值必须命中字典：不校验的话「配偶」这种文案会被 MySQL 隐式转成 0 静默落库
         if (!relationCodes().contains(dto.getRelationship())) {
-            // ③业务规则：码值合法性，与"字段填没填"无关
+            // D-业务规则：码值合法性，与"字段填没填"无关
             throw new BusinessException("与患者关系取值不合法：" + dto.getRelationship()
                     + "（请用字典「与患者关系」的码值，如 2-配偶 3-父亲 99-其他）");
         }
         if (TextUtil.hasText(dto.getPhone()) && !PatientProfileValidator.isLegalPhone(dto.getPhone().trim())) {
-            // ③业务规则：电话是选填项，填了才校格式，不是"必填"判断
+            // D-业务规则：电话是选填项，填了才校格式，不是"必填"判断
             throw new BusinessException("联系人电话格式不正确：应为 11 位手机号（1 开头）");
         }
 
@@ -452,10 +440,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
 
     @Override
     public PatientContactVO getContact(Long contactId) {
-        // ②非web入口：service 方法参数没有 DTO 可挂注解，HTTP 侧 @RequestParam 已必填，此处兜内部直调
-        if (contactId == null) {
-            throw new BusinessException("联系人ID不能为空");
-        }
         BizPatientContact row = bizPatientContactMapper.selectById(contactId);
         if (row == null) {
             throw new BusinessException("联系人不存在或已删除");
@@ -620,8 +604,9 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     private Long resolvePatientId(Long id, Long paramPatientId, java.util.function.Function<Long, Long> ownerOf,
                                   String what) {
         if (id == null) {
+            // B-条件必填：只有新增（id==null）才必填 patientId，修改时以库中记录为准，
+            // @NotNull 会把合法修改挡成 400，DTO 注解无法表达，保留
             if (paramPatientId == null) {
-                // ①条件必填：只有新增（id==null）才必填 patientId，修改时以库中记录为准，@NotNull 会把合法修改挡成 400
                 throw new BusinessException("患者信息不能为空");
             }
             BizPatient patient = bizPatientMapper.selectById(paramPatientId);
@@ -640,10 +625,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     private <T> Long requireExistingPatientId(Long id, String what,
                                               java.util.function.Function<Long, T> loader,
                                               java.util.function.Function<T, Long> ownerOf) {
-        // ②非web入口：六个删除入口共用的 service 方法参数判空，没有 DTO 字段可挂注解
-        if (id == null) {
-            throw new BusinessException("ID 不能为空");
-        }
         T row = loader.apply(id);
         if (row == null) {
             throw new BusinessException("要删除的" + what + "不存在或已删除");

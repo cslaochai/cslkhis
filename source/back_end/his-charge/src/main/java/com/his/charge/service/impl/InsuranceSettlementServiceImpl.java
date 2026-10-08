@@ -38,7 +38,6 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -880,8 +879,14 @@ public class InsuranceSettlementServiceImpl
         return type == null ? null : type.getDesc();
     }
 
+    /**
+     * 商户流水号（发给医保 channel 的对账流水）：HIS + 日期 + 4 位 Redis 自增序号。
+     * <p><b>用 Redis 原子自增替代时间戳 + 随机数</b>：随机段必撞号，且对账流水要求全局唯一有序。
+     */
     private String nextTradeNo() {
-        return "HIS" + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME_MS) + ThreadLocalRandom.current().nextInt(100, 1000);
+        String prefix = "HIS" + LocalDate.now().format(DateFormats.COMPACT_DATE);
+        long seq = redisSequenceService.next("HIS");
+        return prefix + String.format("%04d", seq);
     }
 
     private String toPrettyJson(Object value) {

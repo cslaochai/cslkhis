@@ -21,7 +21,6 @@ public class ExamFilmQueryPageDTO extends PageParam {
     /**
      * 只看某一次检查的胶片
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
     /**

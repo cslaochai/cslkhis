@@ -125,11 +125,11 @@ public class RadiologyReportServiceImpl extends ServiceImpl<BizReportMapper, Biz
         rejectIfClosed(report);
 
         applyContent(record, report, dto);
-        // B类共用 DTO：该 DTO 同时服务 saveDraft（草稿允许空白），必填只在提交口生效，注解一刀切会挡掉存草稿
+        // D-业务规则：校验的是已落库的报告实体（同一 DTO 还服务 saveDraft，草稿允许空白），提交口必须有所见才能审核发出，DTO 注解无法表达，保留
         if (!TextUtil.hasText(report.getReportContent())) {
             throw new BusinessException("影像所见不能为空：没有所见的报告审不了，也不能发给临床");
         }
-        // B类共用 DTO：同上，诊断/印象只在提交口必填，存草稿允许空白
+        // D-业务规则：同上，诊断/印象只对已落库实体在提交口校验，存草稿允许空白，DTO 注解无法表达，保留
         if (!TextUtil.hasText(report.getConclusion())) {
             throw new BusinessException("影像诊断/印象不能为空");
         }

@@ -13,7 +13,6 @@ public class DepartmentUpsertDTO {
     /**
      * 科室ID，新增时为空，修改时必填
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**
@@ -34,7 +33,6 @@ public class DepartmentUpsertDTO {
     /**
      * 上级科室ID，顶级科室为0
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long parentId;
 
     /**

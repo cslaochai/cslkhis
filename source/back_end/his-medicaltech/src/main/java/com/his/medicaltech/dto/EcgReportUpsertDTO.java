@@ -15,20 +15,17 @@ public class EcgReportUpsertDTO {
     /**
      * 已有报告ID（改稿时传；新增为空）
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long reportId;
 
     /**
      * 检查记录ID（必填，报告的锚点）
      */
     @NotNull(message = "缺少检查记录")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
     /**
      * 使用的报告模板ID（可空；留痕）
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long templateId;
 
     /**

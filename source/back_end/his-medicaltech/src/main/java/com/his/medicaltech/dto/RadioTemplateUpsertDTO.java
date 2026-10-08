@@ -15,7 +15,6 @@ public class RadioTemplateUpsertDTO {
     /**
      * 模板ID（新增为空）
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**
@@ -77,7 +76,6 @@ public class RadioTemplateUpsertDTO {
     /**
      * 归属医生（isPublic=0 时必填）
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;
 
     /**

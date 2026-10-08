@@ -8,9 +8,9 @@ import com.his.common.constant.DictType;
 import com.his.common.enums.TechAuthCategoryEnum;
 import com.his.common.enums.TechOverrideSourceEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
-import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.EndoscopyDTO;
 import com.his.medicaltech.dto.PathologyDTO;
 import com.his.medicaltech.entity.BizEndoscopyRecord;
@@ -49,6 +49,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
     private final PathologyService pathologyService;
     private final DictCacheService dictCacheService;
     private final EmployeeTechAuthService employeeTechAuthService;
+    private final RedisSequenceService redisSequenceService;
 
     /**
      * ERCP=4 级；取活检=2 级；其余诊断性镜检=1 级
@@ -214,7 +215,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         if (dto.getBiopsyFlag() != null) {
             r.setBiopsyFlag(dto.getBiopsyFlag());
             if (Integer.valueOf(1).equals(dto.getBiopsyFlag())) {
-                // B类条件必填：仅勾选活检时部位必填，注解一刀切会挡掉未取活检的检查登记
+                // B-条件必填：仅勾选活检时部位必填，一刀切的 @NotBlank 会挡掉未取活检的检查登记，DTO 注解无法表达，保留
                 if (!TextUtil.hasText(dto.getBiopsyPart())) {
                     throw new BusinessException("勾选活检时活检部位必填");
                 }
@@ -351,7 +352,7 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
     }
 
     private BizEndoscopyRecord require(Long id) {
-        // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
+        // C-非 web 入参：私有 helper 按主键捞单，被多个入口（DTO 字段与标量参数）复用，Bean Validation 不覆盖，保留
         if (id == null) {
             throw new BusinessException("检查记录ID不能为空");
         }
@@ -368,19 +369,14 @@ public class EndoscopyServiceImpl extends ServiceImpl<BizEndoscopyRecordMapper, 
         }
     }
 
+    /**
+     * 内镜记录号：NJ + 日期 + 3 位 Redis 自增序号。
+     * <p><b>走 Redis 原子自增</b>：取代「count 取起点 + 探活 20 次 + 时间戳兜底」。
+     */
     private String nextRecordNo(LocalDate date) {
         String day = date.format(DateFormats.COMPACT_DATE);
-        long base = bizEndoscopyRecordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
-                .ge(BizEndoscopyRecord::getCreateTime, TimeUtil.dayStart(date))
-                .lt(BizEndoscopyRecord::getCreateTime, TimeUtil.dayStart(date.plusDays(1)))) + 1;
-        for (int i = 0; i < 20; i++) {
-            String no = "NJ" + day + String.format("%03d", base + i);
-            if (bizEndoscopyRecordMapper.selectCount(new LambdaQueryWrapper<BizEndoscopyRecord>()
-                    .eq(BizEndoscopyRecord::getRecordNo, no)) == 0) {
-                return no;
-            }
-        }
-        return "NJ" + day + System.currentTimeMillis() % 100000;
+        long seq = redisSequenceService.next("ENDOSCOPY");
+        return "NJ" + day + String.format("%03d", seq);
     }
 
     /**

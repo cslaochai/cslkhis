@@ -81,11 +81,6 @@ public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {
             """)
     List<OperationApplyVO> selectByAdmission(@Param("admissionId") Long admissionId);
 
-    /**
-     * 当天已生成的手术单号条数（单号序号用）
-     */
-    @Select("SELECT COUNT(*) FROM biz_operation_apply WHERE del_flag = 0 AND apply_no LIKE CONCAT(#{prefix}, '%')")
-    long countByNoPrefix(@Param("prefix") String prefix);
 
     /**
      * 未完成手术数（待排期 + 已排期 + 术前核对完成）：工作台角标用

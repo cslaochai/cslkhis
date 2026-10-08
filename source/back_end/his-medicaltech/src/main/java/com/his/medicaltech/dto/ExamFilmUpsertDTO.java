@@ -17,21 +17,18 @@ public class ExamFilmUpsertDTO {
     /**
      * 胶片行ID（新增为空；修改张数时传）
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**
      * 检查记录ID（必填：胶片挂在执行记录上）
      */
     @NotNull(message = "缺少检查记录")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
     /**
      * 胶片规格ID（必填，胶片规格价目的ID）
      */
     @NotNull(message = "请选择胶片规格")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long specId;
 
     /**

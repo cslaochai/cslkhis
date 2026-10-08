@@ -12,6 +12,5 @@ import lombok.Data;
 public class KnowledgeIdDTO {
 
     @NotNull(message = "ID 不能为空")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 }

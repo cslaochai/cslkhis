@@ -31,19 +31,19 @@ public class PatientImagingExplainVO {
     private LocalDateTime reportTime;
 
     /**
-     * 代码事实：来自 biz_report.positive_flag（PositiveFlagEnum），模型不得改写
+     * 代码事实：来自报告的阴阳性标记（PositiveFlagEnum），模型不得改写
      */
     @Schema(description = "阴阳性（未判定/阴性/阳性/未见异常），报告未判定时为 null")
     private String positiveText;
 
     /**
-     * 代码事实：来自 biz_report.is_critical，唯一允许「催促」的字段
+     * 代码事实：来自报告的危急值标记，唯一允许「催促」的字段
      */
     @Schema(description = "危急置顶提示；报告未标注危急时为 null")
     private String criticalAlert;
 
     /**
-     * 词典层：sys_imaging_plain_item 命中即给，模型挂了也照常
+     * 词典层：影像检查白话词典命中即给，模型挂了也照常
      */
     @Schema(description = "这项检查是查什么的（白话）；词典未收录且模型不可用时为 null")
     private String examIntro;

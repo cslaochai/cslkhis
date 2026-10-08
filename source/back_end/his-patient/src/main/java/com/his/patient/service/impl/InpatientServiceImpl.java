@@ -10,6 +10,7 @@ import com.his.charge.api.InpatientSettlementGateway;
 import com.his.common.constant.DictType;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -55,6 +56,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper, BizInpatientSummary> implements InpatientService {
+
+    private final RedisSequenceService redisSequenceService;
     private final DeptScopeProvider deptScopeProvider;
 
     private final BizAdmissionMapper bizAdmissionMapper;
@@ -156,11 +159,6 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
 
     @Override
     public InpatientDetailVO detail(Long admissionId) {
-        // 保留（类别②非 web 入口）：入参是普通 Long（GET @RequestParam 绑定），且病案首页保存直接复用本方法，
-        // 不是 request DTO 字段，注解无处挂载
-        if (admissionId == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         InpatientDetailVO.AdmissionInfo info = bizAdmissionMapper.selectAdmissionInfo(admissionId);
         if (info == null) {
             throw new BusinessException("入院记录不存在");
@@ -213,15 +211,19 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long admit(InpatientAdmitDTO dto) {
+        // C-非 web 入参：除 InpatientController 外还被 BedCenterServiceImpl:592、his-appoint BizEmergencyServiceImpl:495 以内部构造的 InpatientAdmitDTO 直调，Bean Validation 不覆盖，保留
         if (dto == null || dto.getPatientId() == null) {
             throw new BusinessException("患者不能为空");
         }
+        // C-非 web 入参：同上（病区）——非 web 直调路径无 @Valid，保留
         if (dto.getWardId() == null) {
             throw new BusinessException("病区不能为空");
         }
+        // C-非 web 入参：同上（床位）——非 web 直调路径无 @Valid，保留
         if (dto.getBedId() == null) {
             throw new BusinessException("床位不能为空");
         }
+        // C-非 web 入参：同上（入院医生）——非 web 直调路径无 @Valid，保留
         if (dto.getAdmitDoctorId() == null) {
             throw new BusinessException("入院医生不能为空");
         }
@@ -239,7 +241,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
                 log.warn("有住院证（门诊转住院）时忽略传入的入院途径 {}，强制为「门诊」", dto.getAdmitWay());
             }
         } else {
-            // 保留（类别①条件必填）：仅无住院证时才要求入院途径，DTO 上的 @NotNull 会把有证收治挡成 400
+            // B-条件必填：仅无住院证（直接入院）分支才要求入院途径；有证时途径由性质决定，DTO 上的 @NotNull 会把合法的有证收治挡成 400，保留
             if (dto.getAdmitWay() == null) {
                 throw new BusinessException("入院途径不能为空（病案首页必填项）");
             }
@@ -908,15 +910,11 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
     }
 
     private String nextAdmissionNo() {
-        String prefix = "ADM" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizAdmissionMapper.countByAdmissionNoPrefix(prefix) + 1;
-        return prefix + String.format("%03d", seq);
+        return redisSequenceService.generateAdmissionNo();
     }
 
     private String nextDischargeNo() {
-        String prefix = "DIS" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizDischargeMapper.countByDischargeNoPrefix(prefix) + 1;
-        return prefix + String.format("%03d", seq);
+        return redisSequenceService.generateDischargeNo();
     }
 
     /**
@@ -968,9 +966,7 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
     }
 
     private String nextVisitNo() {
-        String prefix = "VISIT" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizVisitMapper.countByVisitNoPrefix(prefix) + 1;
-        return prefix + String.format("%03d", seq);
+        return redisSequenceService.generateVisitNo();
     }
 
     /**

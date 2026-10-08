@@ -19,7 +19,6 @@ public class EmployeeQualificationUpsertDTO {
     /**
      * 证书ID，新增时为空，修改时必填
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**

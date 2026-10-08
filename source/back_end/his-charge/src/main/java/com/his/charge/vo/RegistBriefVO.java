@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 public class RegistBriefVO {
 
     /**
-     * 挂号ID（biz_appoint_info 主键）
+     * 挂号ID（预约挂号主键）
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;

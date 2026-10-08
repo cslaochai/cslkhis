@@ -3,7 +3,7 @@ package com.his.operation.enums;
 import lombok.Getter;
 
 /**
- * 麻醉随访状态枚举（码值口径 = biz_anesthesia_followup.followup_status 列注释）。
+ * 麻醉随访状态枚举（码值口径 = 麻醉随访单随访状态字段的列注释）。
  */
 @Getter
 public enum AnesthesiaFollowupStatusEnum {

@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.pharmacy.dto.*;
 import com.his.pharmacy.entity.BizAntibioticAlias;
@@ -46,6 +46,8 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
     private final BizAntibioticAuthMapper bizAntibioticAuthMapper;
 
     private final BizAntibioticAliasMapper bizAntibioticAliasMapper;
+
+    private final RedisSequenceService redisSequenceService;
 
     @Override
     public PageResult<AntibioticCatalogVO> catalogListPage(AntibioticCatalogQueryPageDTO query) {
@@ -218,7 +220,7 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
                         + "的授权记录（" + exist.getAuthNo() + "），请直接修改那条而不是重复新增");
             }
             auth = new BizAntibioticAuth();
-            auth.setAuthNo(nextAuthNo());
+            auth.setAuthNo(redisSequenceService.generateAntibioticAuthNo());
             auth.setDoctorId(dto.getDoctorId());
             auth.setAuthLevel(dto.getAuthLevel());
             auth.setCreateBy(UserUtils.getCurrentUser().getRealName());
@@ -308,20 +310,6 @@ public class AntibioticServiceImpl extends ServiceImpl<BizAntibioticAliasMapper,
     }
 
     // 内部
-
-    private String nextAuthNo() {
-        String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
-        String max = bizAntibioticAuthMapper.selectMaxAuthNo(day);
-        int seq = 1;
-        if (TextUtil.hasText(max) && max.length() >= 4) {
-            try {
-                seq = Integer.parseInt(max.substring(max.length() - 4)) + 1;
-            } catch (NumberFormatException ignored) {
-                seq = 1;
-            }
-        }
-        return "KJ" + day + String.format("%04d", seq);
-    }
 
     private void fillLevelText(AntibioticCatalogVO vo) {
         vo.setAntibioticLevelText(dictCacheService.getDicDataLabel(DictType.ANTIBIOTIC_LEVEL, vo.getAntibioticLevel()));

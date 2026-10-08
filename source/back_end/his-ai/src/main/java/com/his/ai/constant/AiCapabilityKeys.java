@@ -56,7 +56,7 @@ public final class AiCapabilityKeys {
      * lab_interpret 的读者是检验技师/医生，输出结论草稿；本能力的读者是患者本人，
      * 只允许输出「这项查什么 + 你的值 + 参考范围 + 高/低通常意味着什么」，
      * <b>禁止给诊断、禁止给用药建议、禁止给分级处置</b>。
-     * 事实层（哪些项异常、是否危急值）由代码算，白话层由 {@code sys_lab_plain_item} 词典给，
+     * 事实层（哪些项异常、是否危急值）由代码算，白话层由检验项目白话词典给，
      * 模型只负责把这两者串成一段通顺的话 —— 所以模型不可用时本能力照样可用。
      */
     public static final String PATIENT_REPORT_EXPLAIN = "patient_report_explain";
@@ -69,7 +69,7 @@ public final class AiCapabilityKeys {
      * 提示词与输出契约不共用（纪律 8）。
      * <p>
      * <b>NMPA 三类证红线：只解读、不做诊断结论</b>——阴阳性/危急值是代码事实，
-     * 检查介绍来自 {@code sys_imaging_plain_item} 词典（可穷举禁走模型），
+     * 检查介绍来自影像检查白话词典（可穷举禁走模型），
      * 模型只把描述/结论原文串成白话，逐段过 {@code PatientTextGuard}；
      * 模型不可用时白话段落缺位、词典与事实照常返回，绝不编白话。
      */
@@ -80,7 +80,7 @@ public final class AiCapabilityKeys {
      * <p>
      * 这是患者端<b>唯一允许模型参与的导诊环节</b>，位置由 {@code MiniappTriageServiceImpl}
      * 的注释点死：模型只做两件事 —— 把口语主诉归一成症状词、生成补充追问，
-     * <b>不得决定推荐哪个科室</b>。科室推荐始终由 {@code biz_triage_rule} 关键词规则给出。
+     * <b>不得决定推荐哪个科室</b>。科室推荐始终由分诊规则里的关键词规则给出。
      * <p>
      * 模型不可用时本能力返回原始主诉（{@code source=rule}），患者侧无感：
      * 关键词命中本来就是按原始文本走的，归一只是提高命中率的增益项。

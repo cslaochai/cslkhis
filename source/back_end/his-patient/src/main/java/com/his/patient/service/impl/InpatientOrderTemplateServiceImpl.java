@@ -52,11 +52,6 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(InpatientOrderTemplateUpsertDTO dto) {
-        // 保留（类别②）：整个 DTO 为 null 不是字段校验，Bean Validation 覆盖不到；
-        // 明细非空已由 DTO 的 @NotEmpty(message="模板至少包含一条医嘱明细") 在入参层拦截
-        if (dto == null) {
-            throw new BusinessException("模板至少包含一条医嘱明细");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -212,8 +207,7 @@ public class InpatientOrderTemplateServiceImpl implements InpatientOrderTemplate
      * 后者若回"模板不存在"以外的话，等于把别人的模板 id 是否有效泄露出去。
      */
     private BizInpatientOrderTemplate requireOwned(Long id, Long doctorId) {
-        // 保留（类别②）：入参是普通 Long（GET @RequestParam / 修改路径复用同一私有校验），
-        // 无对应 request DTO 字段可挂注解
+        // C-非 web 入参：私有 requireXxx helper，GET 标量与修改路径复用同一私有校验，Bean Validation 不覆盖内部路径，保留
         if (id == null) {
             throw new BusinessException("模板ID不能为空");
         }

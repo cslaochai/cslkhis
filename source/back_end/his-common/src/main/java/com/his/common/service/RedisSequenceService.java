@@ -310,4 +310,225 @@ public interface RedisSequenceService {
      * 病案统计上报单号：TJ + yyyyMMdd + 4 位序号（原先是时间戳+3 位随机数，同秒并发会撞号）
      */
     String generateStatReportNo();
+
+    /**
+     * 生成输血申请单号：SX + yyyyMMdd + 4 位序号
+     */
+    String generateTransfusionApplyNo();
+
+    /**
+     * 生成危急值编号：WJ + yyyyMMdd + 4 位序号
+     */
+    String generateCriticalValueNo();
+
+    /**
+     * 生成 AI 病历质控编号：QCAI + yyyyMMdd + 4 位序号
+     */
+    String generateEmrQcNo();
+
+    /**
+     * 生成字段变更批次号：FC + yyyyMMdd + 4 位序号
+     */
+    String generateFieldChangeBatchNo();
+
+    /**
+     * 生成医保合规审计号：CA + yyyyMMdd + 4 位序号
+     */
+    String generateComplianceAuditNo();
+
+    /**
+     * 生成药品追溯码：DR + yyyyMMdd + 4 位序号
+     */
+    String generateDrugTraceNo();
+
+    /**
+     * 生成药品追溯上传批次号：UP + yyyyMMdd + 4 位序号
+     */
+    String generateDrugUploadBatchNo();
+
+    /**
+     * 生成高值耗材追溯码：HV + yyyyMMdd + 4 位序号
+     */
+    String generateHighValueTraceNo();
+
+    /**
+     * 生成耗材出入库流水号：LC + yyyyMMdd + 4 位序号
+     */
+    String generateConsumableStockLogNo();
+
+    /**
+     * 生成手术申请单号：SS + yyyyMMdd + 4 位序号
+     */
+    String generateOperationApplyNo();
+
+    /**
+     * 生成手术清点单号：QD + yyyyMMdd + 4 位序号
+     */
+    String generateOperationCountNo();
+
+    /**
+     * 生成麻醉访视单号：MF + yyyyMMdd + 4 位序号
+     */
+    String generateAnesthesiaVisitNo();
+
+    /**
+     * 生成麻醉记录单号：MZ + yyyyMMdd + 4 位序号
+     */
+    String generateAnesthesiaRecordNo();
+
+    /**
+     * 生成麻醉随访单号：MS + yyyyMMdd + 4 位序号
+     */
+    String generateAnesthesiaFollowupNo();
+
+    /**
+     * 生成复苏室（PACU）记录单号：FS + yyyyMMdd + 4 位序号
+     */
+    String generatePacuNo();
+
+    /**
+     * 生成手术安全核查单号：HC + yyyyMMdd + 4 位序号
+     */
+    String generateOperationSafetyCheckNo();
+
+    /**
+     * 生成住院医嘱单号：RZ + yyyyMMdd + 3 位序号
+     */
+    String generateAdmissionOrderNo();
+
+    /**
+     * 生成待床登记号：DC + yyyyMMdd + 3 位序号
+     */
+    String generateBedWaitNo();
+
+    /**
+     * 生成床位分配号：TP + yyyyMMdd + 3 位序号
+     */
+    String generateBedAllocateNo();
+
+    /**
+     * 生成会诊单号：HZ + yyyyMMdd + 4 位序号
+     */
+    String generateConsultationNo();
+
+    /**
+     * 生成住院病历记录号：BL + yyyyMMdd + 4 位序号（住院病历/会诊记录/转诊记录共用一个 BL 号段）
+     */
+    String generateInpatientRecordNo();
+
+    /**
+     * 生成护理评估单号：AS + yyyyMMdd + 4 位序号
+     */
+    String generateNursingAssessNo();
+
+    /**
+     * 生成护理记录单号：HL + yyyyMMdd + 4 位序号
+     */
+    String generateNursingRecordNo();
+
+    /**
+     * 生成入院单号：ADM + yyyyMMdd + 3 位序号
+     */
+    String generateAdmissionNo();
+
+    /**
+     * 生成出院单号：DIS + yyyyMMdd + 3 位序号
+     */
+    String generateDischargeNo();
+
+    /**
+     * 生成就诊次号：VISIT + yyyyMMdd + 3 位序号
+     */
+    String generateVisitNo();
+
+    /**
+     * 生成住院医嘱单号：YZ + yyyyMMdd + 4 位序号
+     */
+    String generateInpatientOrderNo();
+
+    /**
+     * 生成医嘱分组号：G + yyyyMMdd + 4 位序号
+     */
+    String generateOrderGroupNo();
+
+    /**
+     * 生成转诊/转科单号：ZK + yyyyMMdd + 4 位序号
+     */
+    String generateTransferNo();
+
+    /**
+     * 生成患者合并号：HB + yyyyMMdd + 4 位序号
+     */
+    String generatePatientMergeNo();
+
+    /**
+     * 生成转诊单号：REF + yyyyMMdd + 4 位序号
+     */
+    String generateReferralNo();
+
+    /**
+     * 生成出院带药单号：DDA + yyyyMMdd + 4 位序号
+     */
+    String generateDischargeDrugNo();
+
+    /**
+     * 生成 VTE 预防措施单号：VP + yyyyMMdd + 4 位序号
+     */
+    String generateVtePreventNo();
+
+    /**
+     * 生成 VTE 事件单号：VE + yyyyMMdd + 4 位序号
+     */
+    String generateVteEventNo();
+
+    /**
+     * 生成膳食方案单号：DP + yyyyMMdd + 4 位序号
+     */
+    String generateDietPlanNo();
+
+    /**
+     * 生成营养风险筛查单号：NS + yyyyMMdd + 4 位序号
+     */
+    String generateNutritionScreenNo();
+
+    /**
+     * 生成订餐单号：MO + yyyyMMdd + 4 位序号
+     */
+    String generateMealOrderNo();
+
+    /**
+     * 生成体检登记记录号：CU + yyyyMMdd + 4 位序号
+     */
+    String generateCheckupRecordNo();
+
+    /**
+     * 生成抗菌药物处方权授权单号：KJ + yyyyMMdd + 4 位序号
+     */
+    String generateAntibioticAuthNo();
+
+    /**
+     * 生成抗菌药物 I 类切口点评单号：KQI + yyyyMMdd + 4 位序号
+     */
+    String generateAntibioticReviewNo();
+
+    /**
+     * 生成质控单号：QC + yyyyMMdd + 4 位序号
+     */
+    String generateQcStoreNo();
+
+    /**
+     * 生成处方点评批次号：RXRB + yyyyMMdd + 4 位序号
+     */
+    String generateRxReviewBatchNo();
+
+    /**
+     * 生成药师约谈编号：YT + yyyyMMdd + 4 位序号
+     */
+    String generateRxDoctorTalkNo();
+
+    /**
+     * 生成麻精药品专册登记号：NZ + yyyyMMdd + 4 位序号
+     */
+    String generateNarcoticRegisterNo();
+
 }

@@ -3,7 +3,7 @@ package com.his.pharmacy.enums;
 import lombok.Getter;
 
 /**
- * 药品盘点单状态枚举（码值口径 = biz_stocktake.status 列注释）。
+ * 药品盘点单状态枚举（码值口径 = 盘点单状态字段的列注释）。
  */
 @Getter
 public enum StocktakeStatusEnum {

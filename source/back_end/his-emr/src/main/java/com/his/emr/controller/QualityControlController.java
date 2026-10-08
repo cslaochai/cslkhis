@@ -4,7 +4,7 @@ import com.his.common.base.PageResult;
 import com.his.common.base.Result;
 import com.his.emr.dto.*;
 import com.his.emr.service.QualityControlService;
-import com.his.emr.support.QcIssue;
+import com.his.emr.vo.QcIssueVO;
 import com.his.emr.vo.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 病案质控（P5.4）。
+ * 病案质控
  */
 @Tag(name = "病案质控")
 @RestController
@@ -26,8 +26,6 @@ import java.util.List;
 public class QualityControlController {
 
     private final QualityControlService qualityControlService;
-
-    // 读
 
     @Operation(summary = "质控单分页（可按来源/类型/状态/结果/关键词过滤）")
     @PostMapping("/listPage")
@@ -55,7 +53,7 @@ public class QualityControlController {
 
     @Operation(summary = "质控单的问题明细")
     @GetMapping("/listIssueByQc")
-    public Result<List<QcIssue>> listIssueByQc(@RequestParam Long qcId) {
+    public Result<List<QcIssueVO>> listIssueByQc(@RequestParam Long qcId) {
         return Result.success(qualityControlService.listIssueByQc(qcId));
     }
 
@@ -76,8 +74,6 @@ public class QualityControlController {
     public Result<List<QcTypeSelectListVO>> qcTypeDict() {
         return Result.success(qualityControlService.qcTypeDict());
     }
-
-    // 写
 
     @PreAuthorize("hasAuthority('qc:recordQc:edit')")
     @Operation(summary = "执行质控（单份病历）")

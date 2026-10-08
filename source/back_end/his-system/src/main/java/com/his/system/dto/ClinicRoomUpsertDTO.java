@@ -13,7 +13,6 @@ public class ClinicRoomUpsertDTO {
     /**
      * 诊室ID，新增时为空，修改时必填
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**
@@ -34,7 +33,6 @@ public class ClinicRoomUpsertDTO {
     /**
      * 所属科室ID，关联科室表
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
     /**

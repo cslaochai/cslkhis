@@ -27,6 +27,7 @@ import com.his.operation.vo.CountItemVO;
 import com.his.operation.vo.OperationCountVO;
 import com.his.patient.entity.BizPatient;
 import com.his.patient.service.BizPatientService;
+import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -46,6 +47,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItemMapper, BizOperationCountItem> implements OperationCountService {
+
+    private final RedisSequenceService redisSequenceService;
 
 
     private final BizPatientService bizPatientService;
@@ -370,8 +373,6 @@ public class OperationCountServiceImpl extends ServiceImpl<BizOperationCountItem
     }
 
     private String nextCountNo() {
-        String prefix = "QD" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizOperationCountMapper.countByNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateOperationCountNo();
     }
 }

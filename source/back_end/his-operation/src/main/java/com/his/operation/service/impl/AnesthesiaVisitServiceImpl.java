@@ -24,6 +24,7 @@ import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.vo.AnesthesiaVisitVO;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
+import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMapper, BizAnesthesiaVisit> implements AnesthesiaVisitService {
+
+    private final RedisSequenceService redisSequenceService;
 
     private final BizAnesthesiaVisitMapper bizAnesthesiaVisitMapper;
 
@@ -288,8 +291,6 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
     }
 
     private String nextVisitNo() {
-        String prefix = "MF" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizAnesthesiaVisitMapper.countByNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateAnesthesiaVisitNo();
     }
 }

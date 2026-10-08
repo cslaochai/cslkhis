@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.SpecialDrugFlagEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.dto.AmpouleReturnDTO;
@@ -32,7 +32,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -85,20 +84,10 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
         CN_NUMBER = Collections.unmodifiableMap(cn);
     }
 
-    /**
-     * 专册登记号当日序号游标：key = 日期前缀（NZ+yyyyMMdd），value = 已用到的序号。
-     *
-     * <p>⚠ 这里**不能用"进程内自增从 0 开始"**（本项目其它地方生成单号是那么写的）。
-     * 专册的 {@code register_no} 有唯一索引 {@code uk_narco_register_no}，
-     * 而进程内计数器**服务一重启就归零** → 当天已经发过一单（NZ202609230001）之后重启，
-     * 下一单又生成 NZ202609230001 → 唯一键冲突 → **整个发药事务回滚**，
-     * 药师看到的是"发药失败"，库存、状态、专册全没动，且和麻精规则毫无关系 —— 极难排查。
-     * 所以起点一律从库里的当日已用条数取（{@code countByRegisterNoPrefix}）。
-     */
-    private final Map<String, Integer> registerSeqCache = new ConcurrentHashMap<>();
     private final NarcoticRegisterMapper narcoticRegisterMapper;
     private final BizPrescriptionMapper bizPrescriptionMapper;
     private final BizPrescriptionDetailMapper bizPrescriptionDetailMapper;
+    private final RedisSequenceService redisSequenceService;
 
     // 规则口径
 
@@ -223,7 +212,8 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
 
     @Override
     public List<NarcoticViolationVO> checkPrescription(Long prescriptionId, String overLimitReason) {
-        // C 类保留：入参是 Long（GET 直传 / 发药服务内部调用），Bean Validation 覆盖不到这一层
+        // C-非 web 入参：除 GET 直传外还被发药服务 DrugDispensingServiceImpl.assertPrescriptionQuota 直调，
+        // 那条路径不过 Bean Validation，保留
         if (prescriptionId == null) {
             throw new BusinessException("处方ID不能为空");
         }
@@ -416,6 +406,8 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
         if (row == null || !requiresDualCheck(row.getSpecialFlag())) {
             return null;
         }
+        // C-非 web 入参：只被发药服务 DrugDispensingServiceImpl 拆开 DTO 直调（普通药品行 checkerId 允许为空，
+        // 只有麻精行才必填），Bean Validation 不覆盖这一层，保留
         if (checkerId == null) {
             throw new BusinessException(String.format(
                     "「%s」为%s，调配必须双人复核：请选择复核药师后再发药", row.getDrugName(), flagText(row.getSpecialFlag())));
@@ -457,7 +449,7 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
 
         LocalDateTime now = TimeUtil.nowSeconds();
         BizNarcoticRegister entity = new BizNarcoticRegister();
-        entity.setRegisterNo(nextRegisterNo(now));
+        entity.setRegisterNo(redisSequenceService.generateNarcoticRegisterNo());
 
         entity.setPrescriptionId(dispensing.getPrescriptionId());
         entity.setPrescriptionNo(dispensing.getPrescriptionNo());
@@ -731,28 +723,6 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
             }
         }
         return result;
-    }
-
-    /**
-     * 生成专册登记号：NZ + yyyyMMdd + 4位序号。
-     *
-     * <p>起点从库里当日已用条数取，再逐个探测是否被占用（当日可能有手工补录/历史数据造成空洞），
-     * 命中空号就占用。{@code synchronized} 保证同一进程内不并发取到同一个号；
-     * 跨进程由 {@code uk_narco_register_no} 唯一索引兜底（真撞了会让发药整体回滚，所以这里宁可多查一次）。
-     */
-    private synchronized String nextRegisterNo(LocalDateTime now) {
-        String prefix = "NZ" + now.format(DateFormats.COMPACT_DATE);
-        int used = registerSeqCache.computeIfAbsent(prefix,
-                p -> (int) narcoticRegisterMapper.countByRegisterNoPrefix(p));
-        for (int i = 1; i <= 9999; i++) {
-            int seq = used + i;
-            String candidate = prefix + String.format("%04d", seq % 10000);
-            if (narcoticRegisterMapper.countByRegisterNo(candidate) == 0) {
-                registerSeqCache.put(prefix, seq);
-                return candidate;
-            }
-        }
-        throw new BusinessException("专册登记号生成失败：当日序号已用尽（前缀 " + prefix + "），请联系信息科");
     }
 
     private Map<Long, NarcoticRegisterMapper.DrugSpecialRow> loadDrugSpecial(List<BizPrescriptionDetail> details) {

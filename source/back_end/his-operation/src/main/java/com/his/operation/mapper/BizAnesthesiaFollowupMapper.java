@@ -56,15 +56,6 @@ public interface BizAnesthesiaFollowupMapper extends BaseMapper<BizAnesthesiaFol
             """)
     List<AnesthesiaFollowupVO> selectByRecord(@Param("recordId") Long recordId);
 
-    /**
-     * 当天已生成的随访单号条数（单号序号用）。
-     *
-     * <p>⚠ 刻意<b>不过滤 del_flag</b>：{@code uk_followup_no} 不含 del_flag，
-     * 草稿软删后行仍占号；若按 del_flag=0 计数，次日序号会撞回被删行的单号（Duplicate entry）。
-     * 宁可跳号，不可撞号。
-     */
-    @Select("SELECT COUNT(*) FROM biz_anesthesia_followup WHERE followup_no LIKE CONCAT(#{prefix}, '%')")
-    long countByNoPrefix(@Param("prefix") String prefix);
 
     /**
      * 某条麻醉记录已有的最大轮次（新随访 = max+1；无行返回 0）

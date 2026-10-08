@@ -12,7 +12,6 @@ import lombok.Data;
 @Data
 public class TechAuthRevokeDTO {
 
-    @JsonSerialize(using = ToStringSerializer.class)
     @NotNull(message = "授权记录不能为空")
     private Long id;
 

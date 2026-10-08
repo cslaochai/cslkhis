@@ -42,6 +42,7 @@ import com.his.system.entity.CurrentUser;
 import com.his.system.service.DictCacheService;
 import com.his.system.service.EmployeeTechAuthService;
 import com.his.system.utils.UserUtils;
+import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -61,6 +62,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapper, BizOperationApply> implements OperationApplyService {
+
+    private final RedisSequenceService redisSequenceService;
     /**
      * 术前核对完成后多久没结束算"卡住"（查询时算，不落状态列）
      */
@@ -893,9 +896,7 @@ public class OperationApplyServiceImpl extends ServiceImpl<BizOperationApplyMapp
     }
 
     private String nextApplyNo() {
-        String prefix = "SS" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizOperationApplyMapper.countByNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateOperationApplyNo();
     }
 
     /**

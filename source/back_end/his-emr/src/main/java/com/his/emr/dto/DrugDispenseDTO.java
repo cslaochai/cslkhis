@@ -18,7 +18,6 @@ public class DrugDispenseDTO {
     /**
      * 处方ID（整单发药时必填）
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long prescriptionId;
 
     /**

@@ -12,7 +12,7 @@ import lombok.Data;
 public class ScheduleSlotItemUpsertDTO {
 
     /**
-     * 段ID（biz_schedule_slot 的行，必须属于本次提交的排班）
+     * 段ID（排班时间段，必须属于本次提交的排班）
      */
     @NotNull(message = "时间段ID不能为空")
     private Long id;

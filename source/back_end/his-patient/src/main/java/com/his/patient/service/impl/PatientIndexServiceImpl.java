@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.his.common.base.PageResult;
 import com.his.common.enums.SysGenderEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -46,7 +47,7 @@ import java.util.*;
 @RequiredArgsConstructor
 public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> implements PatientIndexService {
 
-    private static final String NO_PREFIX = "HB";
+    private final RedisSequenceService redisSequenceService;
 
     private final BizPatientMapper bizPatientMapper;
     private final BizPatientMergeLogMapper bizPatientMergeLogMapper;
@@ -566,9 +567,7 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
     }
 
     private String nextMergeNo() {
-        String prefix = NO_PREFIX + LocalDateTime.now().format(DateFormats.COMPACT_DATE);
-        long n = bizPatientMergeLogMapper.countByNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", n % 10000);
+        return redisSequenceService.generatePatientMergeNo();
     }
 
     private PatientMergeLogVO toLogVO(BizPatientMergeLog e, boolean computeCanRevert) {

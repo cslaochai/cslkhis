@@ -19,12 +19,6 @@ import java.util.List;
 public interface BizNursingAssessmentMapper extends BaseMapper<BizNursingAssessment> {
 
     /**
-     * 单号前缀当日已用量（AS+yyyyMMdd+4位）
-     */
-    @Select("SELECT COUNT(*) FROM biz_nursing_assessment WHERE assess_no LIKE CONCAT(#{prefix}, '%')")
-    long countByAssessNoPrefix(@Param("prefix") String prefix);
-
-    /**
      * 分页查询（快照列冗余在表上，无需 JOIN）
      */
     @Select("""

@@ -12,7 +12,6 @@ import lombok.Data;
 public class EcgAuditDTO {
 
     @NotNull(message = "缺少报告ID")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long reportId;
 
     /**

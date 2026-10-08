@@ -9,6 +9,7 @@ import com.his.common.constant.DictType;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -40,6 +41,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InpatientNursingServiceImpl implements InpatientNursingService {
+
+    private final RedisSequenceService redisSequenceService;
     private static final BigDecimal MIN_TEMP = new BigDecimal("34");
     private static final BigDecimal MAX_TEMP = new BigDecimal("43");
 
@@ -108,9 +111,11 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
         if (dto.getAdmissionId() == null) {
             throw new BusinessException("入院ID不能为空");
         }
+        // B-条件必填：同上，护理文书类型仅新增分支必填，修改分支可省略，DTO 一刀切 @NotNull 会挡掉合法修改，保留
         if (dto.getNursingType() == null) {
             throw new BusinessException("护理文书类型不能为空");
         }
+        // B-条件必填：同上，测量/记录时间仅新增分支必填（三测单按时点唯一），修改分支可省略，保留
         if (dto.getMeasureTime() == null) {
             throw new BusinessException("测量/记录时间不能为空（三测单按时点唯一，时间是它的主键语义）");
         }
@@ -387,10 +392,10 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             if (!seen.add(row.getAdmissionId())) {
                 throw new BusinessException(at + "同一患者在本批中出现了两次（同一次测量同一个人只有一条）");
             }
+            // D-业务规则：跨字段「至少一个」约束（五列任缺其一都合法，单字段注解表达不了）
             if (row.getTemperature() == null && row.getPulse() == null && row.getRespiration() == null
                     && row.getSystolicPressure() == null && row.getDiastolicPressure() == null
                     && row.getSpo2() == null) {
-                // D-业务规则：跨字段「至少一个」约束（五列任缺其一都合法，单字段注解表达不了）
                 throw new BusinessException(at + "至少要录一个体征值");
             }
             BizAdmission admission = bizAdmissionMapper.selectById(row.getAdmissionId());
@@ -608,9 +613,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     // 跨模块事实面（只聚事实不判异常 —— 阈值口径留在消费方）
 
     private String nextAssessNo() {
-        String prefix = "AS" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizNursingAssessmentMapper.countByAssessNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateNursingAssessNo();
     }
 
     @Override
@@ -933,9 +936,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     }
 
     private String nextRecordNo() {
-        String prefix = "HL" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizNursingRecordMapper.countByRecordNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateNursingRecordNo();
     }
 
 }

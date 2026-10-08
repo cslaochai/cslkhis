@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -46,10 +47,11 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
      */
     private static final BigDecimal TARGET_ASSESS_RATE = new BigDecimal("90.00");
     private static final BigDecimal TARGET_PREVENT_RATE = new BigDecimal("90.00");
-    private static final String PREFIX_PREVENT = "VP";
-    private static final String PREFIX_EVENT = "VE";
 
     private final VteStatMapper vteStatMapper;
+
+    private final RedisSequenceService redisSequenceService;
+
     private final BizVtePreventMapper bizVtePreventMapper;
 
     private final BizVteEventMapper bizVteEventMapper;
@@ -221,7 +223,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         boolean insert;
         if (dto.getId() == null) {
             row = new BizVtePrevent();
-            row.setPreventNo(nextNo(PREFIX_PREVENT, bizVtePreventMapper.maxPreventSeq(PREFIX_PREVENT + LocalDate.now().format(DateFormats.COMPACT_DATE))));
+            row.setPreventNo(redisSequenceService.generateVtePreventNo());
             insert = true;
         } else {
             row = bizVtePreventMapper.selectById(dto.getId());
@@ -322,7 +324,7 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         boolean insert;
         if (dto.getId() == null) {
             row = new BizVteEvent();
-            row.setEventNo(nextNo(PREFIX_EVENT, bizVteEventMapper.maxEventSeq(PREFIX_EVENT + LocalDate.now().format(DateFormats.COMPACT_DATE))));
+            row.setEventNo(redisSequenceService.generateVteEventNo());
             insert = true;
         } else {
             row = bizVteEventMapper.selectById(dto.getId());
@@ -549,13 +551,6 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
         }
         return BigDecimal.valueOf(num).multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(den), 2, RoundingMode.HALF_UP);
-    }
-
-    /**
-     * 单号：前缀 + 当日已用最大序号 +1（不是 count+1 —— 删过一条序号会回退撞唯一键）
-     */
-    private String nextNo(String prefix, long maxSeq) {
-        return prefix + LocalDate.now().format(DateFormats.COMPACT_DATE) + String.format("%04d", maxSeq + 1);
     }
 
     private NursingAssessmentVO latestCaprini(Long admissionId) {

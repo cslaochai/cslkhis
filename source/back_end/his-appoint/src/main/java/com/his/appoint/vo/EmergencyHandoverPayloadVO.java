@@ -5,7 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 急诊交班接收提醒的站内信业务上下文（落 sys_message.payload）。
+ * 急诊交班接收提醒的站内信业务上下文（随站内信下发）。
  */
 @Data
 public class EmergencyHandoverPayloadVO implements Serializable {

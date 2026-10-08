@@ -77,12 +77,6 @@ public interface BizTransfusionApplyMapper extends BaseMapper<BizTransfusionAppl
     List<TransfusionApplyVO> selectByAdmission(@Param("admissionId") Long admissionId);
 
     /**
-     * 当天已生成的输血单号条数（单号序号用）
-     */
-    @Select("SELECT COUNT(*) FROM biz_transfusion_apply WHERE del_flag = 0 AND apply_no LIKE CONCAT(#{prefix}, '%')")
-    long countByNoPrefix(@Param("prefix") String prefix);
-
-    /**
      * 未完成输血数（待配血 + 已配血 + 已发血 + 输注中）：工作台角标用
      */
     @Select("""

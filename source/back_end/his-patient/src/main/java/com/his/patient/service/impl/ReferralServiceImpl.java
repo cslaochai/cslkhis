@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -34,7 +35,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -44,6 +44,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizReferral> implements ReferralService {
+
+    private final RedisSequenceService redisSequenceService;
 
     /**
      * 待确认多久就找总值班（系统参数：duty.coord.referral_pending_hours，缺失/非法回落 2 小时）
@@ -303,8 +305,7 @@ public class ReferralServiceImpl extends ServiceImpl<BizReferralMapper, BizRefer
      * 单号 REF + yyyyMMddHHmmss + 3 位随机，唯一索引兜底
      */
     private String nextReferralNo() {
-        return "REF" + DateFormats.COMPACT_DATETIME.format(LocalDateTime.now())
-                + ThreadLocalRandom.current().nextInt(100, 1000);
+        return redisSequenceService.generateReferralNo();
     }
 
     private Map<Long, String> loadDeptNames() {

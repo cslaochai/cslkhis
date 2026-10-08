@@ -23,6 +23,7 @@ import com.his.patient.entity.BizPatient;
 import com.his.patient.service.BizPatientService;
 import com.his.system.entity.CurrentUser;
 import com.his.system.utils.UserUtils;
+import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -41,6 +42,8 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecordMapper, BizAnesthesiaRecord> implements AnesthesiaRecordService {
+
+    private final RedisSequenceService redisSequenceService;
     private final BizAnesthesiaRecordMapper bizAnesthesiaRecordMapper;
 
     private final BizAnesthesiaVitalMapper bizAnesthesiaVitalMapper;
@@ -532,9 +535,7 @@ public class AnesthesiaRecordServiceImpl extends ServiceImpl<BizAnesthesiaRecord
     }
 
     private String nextRecordNo() {
-        String prefix = "MZ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizAnesthesiaRecordMapper.countByNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateAnesthesiaRecordNo();
     }
 
     private void decorate(AnesthesiaRecordVO vo) {

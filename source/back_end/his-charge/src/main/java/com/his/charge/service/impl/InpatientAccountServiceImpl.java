@@ -17,6 +17,7 @@ import com.his.charge.vo.*;
 import com.his.common.constant.DictType;
 import com.his.common.enums.*;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
@@ -62,6 +63,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     private static final String ALERT_ARREARS = "ARREARS";
     private final BizPaymentTxnMapper bizPaymentTxnMapper;
     private final BizAlertMapper bizAlertMapper;
+    private final RedisSequenceService redisSequenceService;
     private final PatientGateway patientGateway;
     private final PaymentService paymentService;
     private final FundAccountService fundAccountService;
@@ -521,9 +523,14 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
         }
     }
 
+    /**
+     * 欠费告警号：BJ + 日期 + 4 位 Redis 自增序号。
+     * <p><b>走 Redis 原子自增</b>：不依赖库里行数，删告警记录也不会撞唯一键。
+     */
     private String nextAlertNo() {
         String prefix = "BJ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        return prefix + String.format("%04d", bizAlertMapper.countByAlertNoPrefix(prefix) + 1);
+        long seq = redisSequenceService.next("ALERT");
+        return prefix + String.format("%04d", seq);
     }
 
     /**

@@ -1,9 +1,8 @@
 package com.his.emr.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.his.common.enums.CheckResultEnum;
 import com.his.common.enums.RecordQcTypeEnum;
-import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.emr.entity.BizQualityControl;
@@ -13,15 +12,14 @@ import com.his.emr.enums.RuleCheckStatusEnum;
 import com.his.emr.mapper.BizQualityControlIssueMapper;
 import com.his.emr.mapper.BizQualityControlMapper;
 import com.his.emr.service.QcStoreService;
-import com.his.emr.support.QcIssue;
-import com.his.emr.support.QcResult;
+import com.his.emr.vo.QcIssueVO;
+import com.his.emr.vo.QcResultVO;
 import com.his.emr.support.QcSnapshot;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -32,12 +30,6 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class QcStoreServiceImpl implements QcStoreService {
-
-    /**
-     * 单号前缀与既有数据不重叠：AI 内涵质控单号是 {@code QCAI...}，
-     * 旧实现是 QC + 14 位时间 + 4 位（共 20 位），本实现是 {@code QC + 8 + 4}（共 14 位）。
-     */
-    private static final String NO_PREFIX = "QC";
 
     /**
      * 问题明细条数上限。一份病历的问题不会超过规则总数（当前 20 条），
@@ -54,10 +46,12 @@ public class QcStoreServiceImpl implements QcStoreService {
 
     private final BizQualityControlIssueMapper bizQualityControlIssueMapper;
 
+    private final RedisSequenceService redisSequenceService;
+
     /**
      * 检查内容：跑的是哪几个维度由 qcType 决定，写成文字供列表页直接读
      */
-    private static String describe(Integer qcType, QcResult result) {
+    private static String describe(Integer qcType, QcResultVO result) {
         String label = RecordQcTypeEnum.getText(qcType == null ? 0 : qcType);
         String dimensions = result.getDimensions().stream()
                 .map(QcDimensionEnum::getText)
@@ -70,10 +64,10 @@ public class QcStoreServiceImpl implements QcStoreService {
      * 明细的可读摘要，供列表页与 CDR 时间轴使用。
      * 格式固定为「序号.[维度/严重度]字段：描述」，人可读且可枚举。
      */
-    private static String joinIssues(List<QcIssue> issues) {
+    private static String joinIssues(List<QcIssueVO> issues) {
         StringBuilder builder = new StringBuilder();
         int index = 1;
-        for (QcIssue issue : issues) {
+        for (QcIssueVO issue : issues) {
             builder.append(index++).append('.')
                     .append('[').append(issue.getDimensionText()).append('/').append(issue.getSeverityText()).append(']')
                     .append(issue.getFieldName()).append('：').append(issue.getErrorDetail()).append('；');
@@ -89,11 +83,11 @@ public class QcStoreServiceImpl implements QcStoreService {
      * 只落主单不落明细，会得到"error_count=8 但一条明细都查不到"这种自相矛盾的数据。
      */
     @Transactional(rollbackFor = Exception.class)
-    public BizQualityControl save(QcSnapshot snapshot, QcResult result, Integer qcType, String operator) {
+    public BizQualityControl save(QcSnapshot snapshot, QcResultVO result, Integer qcType, String operator) {
         LocalDateTime now = TimeUtil.nowSeconds();
 
         BizQualityControl qc = new BizQualityControl();
-        qc.setQcNo(nextQcNo());
+        qc.setQcNo(redisSequenceService.generateQcStoreNo());
         qc.setRecordId(snapshot.getRecordId());
         qc.setRecordSource(snapshot.getSource().getCode());
         qc.setPatientId(snapshot.getPatientId());
@@ -111,9 +105,9 @@ public class QcStoreServiceImpl implements QcStoreService {
         qc.setCreateTime(now);
         bizQualityControlMapper.insert(qc);
 
-        List<QcIssue> issues = result.getIssues();
+        List<QcIssueVO> issues = result.getIssues();
         int written = 0;
-        for (QcIssue issue : issues) {
+        for (QcIssueVO issue : issues) {
             if (written >= MAX_ISSUES) {
                 log.warn("[病案质控] 问题明细超过 {} 条，已截断（qcNo={}）", MAX_ISSUES, qc.getQcNo());
                 break;
@@ -140,32 +134,4 @@ public class QcStoreServiceImpl implements QcStoreService {
         return qc;
     }
 
-    /**
-     * 生成当日唯一单号。先取当日实测条数 +1，再显式查重，最多退 50 次；
-     * 仍然撞车就退到毫秒级 + 3 位随机，保证业务不会因为"序号用完了"而落不了库。
-     */
-    private String nextQcNo() {
-        String dayPrefix = NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long base = bizQualityControlMapper.countByQcNoPrefix(dayPrefix);
-        for (int offset = 1; offset <= 50; offset++) {
-            String candidate = dayPrefix + String.format("%04d", (base + offset) % 10000);
-            if (!exists(candidate)) {
-                return candidate;
-            }
-        }
-        for (int attempt = 0; attempt < 20; attempt++) {
-            String candidate = NO_PREFIX + LocalDateTime.now().format(DateFormats.COMPACT_DATETIME_MS)
-                    + String.format("%03d", (int) (Math.random() * 1000));
-            if (!exists(candidate)) {
-                return candidate;
-            }
-        }
-        // 走到这里说明唯一索引上已经有同秒同随机的记录，交给调用方重试
-        throw new IllegalStateException("无法生成不重复的质控单号，请重试");
-    }
-
-    private boolean exists(String qcNo) {
-        return bizQualityControlMapper.selectCount(
-                new LambdaQueryWrapper<BizQualityControl>().eq(BizQualityControl::getQcNo, qcNo)) > 0;
-    }
 }

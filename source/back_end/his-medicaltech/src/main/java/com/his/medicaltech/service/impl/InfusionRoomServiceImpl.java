@@ -334,7 +334,7 @@ public class InfusionRoomServiceImpl extends ServiceImpl<BizOutpInfusionMapper, 
         if (inf.getStatus() != InfusionStatusEnum.INFUSING.getCode()) {
             throw new BusinessException("输液单不在输注中（状态 " + inf.getStatus() + "）");
         }
-        // B类条件必填：仅 adverseFlag=1 时描述必填，DTO 注解一刀切会挡掉无不良反应的合法请求
+        // B-条件必填：仅 adverseFlag=1 时描述必填，一刀切的 @NotBlank 会挡掉无不良反应的合法请求，DTO 注解无法表达，保留
         if (dto.getAdverseFlag() == YesOrNoEnum.YES.getCode() && (!TextUtil.hasText(dto.getAdverseDesc()))) {
             throw new BusinessException("有不良反应时描述必填");
         }

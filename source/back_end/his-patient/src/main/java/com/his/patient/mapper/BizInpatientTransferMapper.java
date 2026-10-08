@@ -50,12 +50,6 @@ public interface BizInpatientTransferMapper extends BaseMapper<BizInpatientTrans
     List<BizInpatientTransfer> selectByAdmission(@Param("admissionId") Long admissionId);
 
     /**
-     * 当天已生成的转科单号条数（单号序号用）
-     */
-    @Select("SELECT COUNT(*) FROM biz_inpatient_transfer WHERE del_flag = 0 AND transfer_no LIKE CONCAT(#{prefix}, '%')")
-    long countByNoPrefix(@Param("prefix") String prefix);
-
-    /**
      * 待接收转科数（转入科室工作台角标用）
      */
     @Select("""

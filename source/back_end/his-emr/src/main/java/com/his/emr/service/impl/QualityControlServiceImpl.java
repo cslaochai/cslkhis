@@ -19,8 +19,8 @@ import com.his.emr.mapper.BizMedicalRecordMapper;
 import com.his.emr.mapper.BizQualityControlMapper;
 import com.his.emr.service.QcStoreService;
 import com.his.emr.service.QualityControlService;
-import com.his.emr.support.QcIssue;
-import com.his.emr.support.QcResult;
+import com.his.emr.vo.QcIssueVO;
+import com.his.emr.vo.QcResultVO;
 import com.his.emr.support.QcRuleEngine;
 import com.his.emr.support.QcSnapshot;
 import com.his.emr.vo.*;
@@ -42,7 +42,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 /**
- * 病案质控服务实现（P5.4）。
+ * 病案质控服务实现
  */
 @Slf4j
 @Service
@@ -115,10 +115,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     @Override
     public BizQualityControlVO getQcDetail(Long qcId) {
-        // C 类保留：入参是 Long（GET 直传），无 DTO 承载注解，此处是直调兜底
-        if (qcId == null) {
-            throw new BusinessException("质控单ID不能为空");
-        }
         BizQualityControlVO vo = baseMapper.selectQcById(qcId);
         if (vo == null) {
             throw new BusinessException("质控单不存在：" + qcId);
@@ -129,11 +125,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     }
 
     @Override
-    public List<QcIssue> listIssueByQc(Long qcId) {
-        // C 类保留：入参是 Long（GET 直传 + 内部复用），无 DTO 承载注解，此处是直调兜底
-        if (qcId == null) {
-            throw new BusinessException("质控单ID不能为空");
-        }
+    public List<QcIssueVO> listIssueByQc(Long qcId) {
         return enrich(baseMapper.listIssueByQc(qcId));
     }
 
@@ -207,7 +199,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     }
 
     // 执行质控
-
     @Override
     public PageResult<QcCandidateVO> listCandidatePage(QcCandidateQueryPageDTO query) {
         QcRecordSourceEnum source = QcRecordSourceEnum.parse(query.getRecordSource());
@@ -248,7 +239,8 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     @Override
     public BizQualityControlVO executeQc(QcExecuteDTO dto) {
-        // C 类保留：除 HTTP 入口外还被病历服务内部循环调用，Bean Validation 不经过内部调用
+        // C-非 web 入参：除 QualityControlController 的 HTTP 入口外，还被 EmrServiceImpl 病历保存链路
+        // new QcExecuteDTO() 后直调，Bean Validation 不覆盖内部调用，保留
         if (dto == null || dto.getRecordId() == null) {
             throw new BusinessException("病历ID不能为空");
         }
@@ -258,7 +250,7 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             throw new BusinessException("当前用户信息不存在");
         }
         QcSnapshot snapshot = loadSnapshot(QcRecordSourceEnum.parse(dto.getRecordSource()), dto.getRecordId());
-        QcResult result = qcRuleEngine.inspect(snapshot, qcType);
+        QcResultVO result = qcRuleEngine.inspect(snapshot, qcType);
 
         String operator = TextUtil.hasText(dto.getQcBy()) ? dto.getQcBy().trim() : operatorUser.getRealName();
         BizQualityControl saved = null;
@@ -274,8 +266,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
             throw new BusinessException("质控单号生成失败，请重试");
         }
 
-        // 回读一次，而不是把刚落库的实体搬成 VO：实体里没有病历号 / 患者 / 科室这些跨表快照，
-        // 直接搬的结果是"刚执行完的这张单患者姓名是空的，刷新一下又有"。
         BizQualityControlVO vo = baseMapper.selectQcById(saved.getId());
         if (vo == null) {
             throw new BusinessException("质控单落库后回读失败：" + saved.getQcNo());
@@ -289,15 +279,8 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     /**
      * emr-qc 发送方：质控发现问题（issueCount &gt; 0）→ 站内信通知病历书写医生。
-     *
-     * <p><b>通知型（handle_status=null），不是待办</b>：病历整改在系统内没有闭环动作
-     * （改病历重新质控即可），质控单的「处理」流转在质控员侧（handleQc）。
-     * 给医生挂一个永远关不掉的待办，只会让收件箱失去可信度。
-     *
-     * <p>严重度一律 warning：质控问题是管理提醒，urgent 是危急值专属（全站唯一），
-     * 不允许第二类消息把危急值的红顶掉。
      */
-    private void notifyDoctorOfQcIssues(QcSnapshot snapshot, QcResult result, BizQualityControl saved) {
+    private void notifyDoctorOfQcIssues(QcSnapshot snapshot, QcResultVO result, BizQualityControl saved) {
         if (result.getIssueCount() <= 0 || snapshot.getDoctorId() == null) {
             return;
         }
@@ -325,9 +308,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     @Override
     public List<BizQualityControlVO> executeQcBatch(String recordSource, List<Long> recordIds, Integer qcType) {
-        if (recordIds == null || recordIds.isEmpty()) {
-            throw new BusinessException("请至少选择一份病历");
-        }
         if (recordIds.size() > MAX_BATCH_SIZE) {
             throw new BusinessException("单次批量质控不得超过 " + MAX_BATCH_SIZE + " 份病历");
         }
@@ -365,7 +345,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
     }
 
     // 码值中文与等级换算
-
     private QcSnapshot loadSnapshot(QcRecordSourceEnum source, Long recordId) {
         if (source == QcRecordSourceEnum.OUTPATIENT) {
             BizMedicalRecord record = bizMedicalRecordMapper.selectById(recordId);
@@ -383,7 +362,6 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
 
     /**
      * 列表行补中文。未知码值由各枚举 {@code getText} 渲染成空串，不回落合法值。
-     * score 为空的旧版质控单 gradeText 保持 null —— 不猜等级。
      */
     private void enrich(BizQualityControlVO vo) {
         vo.setRecordSourceText(QcRecordSourceEnum.getText(vo.getRecordSource()));
@@ -409,11 +387,11 @@ public class QualityControlServiceImpl extends ServiceImpl<BizQualityControlMapp
      * 明细补中文与规则依据。basis 不在明细表里（它属于规则定义，会随规则版本变化），
      * 这里按 rule_code 反查枚举补上；反查不到就留 null，不去猜。
      */
-    private List<QcIssue> enrich(List<QcIssue> issues) {
+    private List<QcIssueVO> enrich(List<QcIssueVO> issues) {
         if (issues == null) {
             return new ArrayList<>();
         }
-        for (QcIssue issue : issues) {
+        for (QcIssueVO issue : issues) {
             issue.setDimensionText(QcDimensionEnum.getText(issue.getDimension()));
             issue.setSeverityText(QcSeverityEnum.textOf(issue.getSeverity()));
             QcRuleEnum rule = QcRuleEnum.ofCode(issue.getRuleCode());

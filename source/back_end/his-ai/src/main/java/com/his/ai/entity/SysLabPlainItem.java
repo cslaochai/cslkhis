@@ -19,7 +19,7 @@ public class SysLabPlainItem extends BaseEntity {
     private String groupName;
 
     /**
-     * 检验项目名称，与 biz_lab_result.laboratory_item_name 精确匹配
+     * 检验项目名称，与检验结果里的项目名称精确匹配
      */
     private String itemName;
 

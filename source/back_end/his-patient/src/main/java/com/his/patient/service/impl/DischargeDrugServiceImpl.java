@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -24,7 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -33,6 +33,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper, BizDischargeDrug> implements DischargeDrugService {
+
+    private final RedisSequenceService redisSequenceService;
 
 
     private final BizDischargeDrugMapper bizDischargeDrugMapper;
@@ -174,8 +176,7 @@ public class DischargeDrugServiceImpl extends ServiceImpl<BizDischargeDrugMapper
      * 单号 DDA + yyyyMMddHHmmss + 3 位随机，撞库概率忽略；唯一索引兜底
      */
     private String nextOrderNo() {
-        return "DDA" + DateFormats.COMPACT_DATETIME.format(LocalDateTime.now())
-                + ThreadLocalRandom.current().nextInt(100, 1000);
+        return redisSequenceService.generateDischargeDrugNo();
     }
 
     private DischargeDrugVO toVo(BizDischargeDrug d) {

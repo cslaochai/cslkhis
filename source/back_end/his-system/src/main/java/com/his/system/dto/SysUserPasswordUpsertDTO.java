@@ -13,6 +13,5 @@ public class SysUserPasswordUpsertDTO {
     /**
      * 用户ID
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 }

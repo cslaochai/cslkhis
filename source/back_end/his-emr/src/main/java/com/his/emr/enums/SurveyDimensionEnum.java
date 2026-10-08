@@ -3,7 +3,7 @@ package com.his.emr.enums;
 import lombok.Getter;
 
 /**
- * 满意度评价维度枚举（码值口径 = biz_survey_item.dimension 列注释 / 字典 his_survey_dimension）。
+ * 满意度评价维度枚举（码值口径 = 建表 SQL 的列注释 / 字典 his_survey_dimension）。
  */
 @Getter
 public enum SurveyDimensionEnum {

@@ -133,9 +133,6 @@ public interface BedCenterMapper extends BaseMapper<BizBedAllocate> {
             """)
     List<BedOverviewVO.DeptRow> selectDeptRows();
 
-    @Select("SELECT COUNT(*) FROM biz_bed_allocate WHERE del_flag = 0 AND allocate_no LIKE CONCAT(#{prefix}, '%')")
-    long countByAllocateNoPrefix(@Param("prefix") String prefix);
-
     /**
      * 科室名称（科室主键是 id，不是 dept_id —— 与床位的科室ID 的映射在这里做）
      */

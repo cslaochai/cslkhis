@@ -19,7 +19,6 @@ public class ExamFilmSpecUpsertDTO {
     /**
      * 规格ID（新增为空）
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**

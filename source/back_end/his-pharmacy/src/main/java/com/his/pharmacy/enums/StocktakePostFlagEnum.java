@@ -3,7 +3,7 @@ package com.his.pharmacy.enums;
 import lombok.Getter;
 
 /**
- * 盘点明细过账标记枚举（码值口径 = biz_stocktake_item.posted 列注释）。
+ * 盘点明细过账标记枚举（码值口径 = 盘点明细过账标记字段的列注释）。
  */
 @Getter
 public enum StocktakePostFlagEnum {

@@ -393,9 +393,6 @@ public class FollowupTaskServiceImpl extends ServiceImpl<BizFollowupTaskMapper, 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean replyFromPatient(Long taskId, Long patientId, String replyText) {
-        if (!TextUtil.hasText(replyText)) {
-            throw new BusinessException("反馈内容不能为空");
-        }
         BizFollowupTask task = this.getById(taskId);
         // 归属第一道闸：任务必须真的属于该患者，改 taskId 就能替别人写反馈是事故
         if (task == null || !Objects.equals(task.getPatientId(), patientId)) {

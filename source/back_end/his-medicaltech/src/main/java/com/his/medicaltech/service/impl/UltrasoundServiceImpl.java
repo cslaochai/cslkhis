@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -43,6 +44,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
     private final BizUltrasoundRecordMapper bizUltrasoundRecordMapper;
     private final BizUltrasoundMeasureMapper bizUltrasoundMeasureMapper;
     private final DictCacheService dictCacheService;
+    private final RedisSequenceService redisSequenceService;
 
     // 查询
 
@@ -319,7 +321,7 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
     // 内部
 
     private BizUltrasoundRecord require(Long id) {
-        // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
+        // C-非 web 入参：私有 helper 按主键捞单，被多个入口（DTO 字段与标量参数）复用，Bean Validation 不覆盖，保留
         if (id == null) {
             throw new BusinessException("检查记录ID不能为空");
         }
@@ -409,19 +411,14 @@ public class UltrasoundServiceImpl extends ServiceImpl<BizUltrasoundRecordMapper
         }
     }
 
+    /**
+     * 超声记录号：CS + 日期 + 3 位 Redis 自增序号。
+     * <p><b>走 Redis 原子自增</b>：取代「count 取起点 + 探活 20 次 + 时间戳兜底」。
+     */
     private String nextRecordNo(LocalDate date) {
         String day = date.format(DateFormats.COMPACT_DATE);
-        long base = bizUltrasoundRecordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
-                .ge(BizUltrasoundRecord::getCreateTime, TimeUtil.dayStart(date))
-                .lt(BizUltrasoundRecord::getCreateTime, TimeUtil.dayStart(date.plusDays(1)))) + 1;
-        for (int i = 0; i < 20; i++) {
-            String no = "CS" + day + String.format("%03d", base + i);
-            if (bizUltrasoundRecordMapper.selectCount(new LambdaQueryWrapper<BizUltrasoundRecord>()
-                    .eq(BizUltrasoundRecord::getRecordNo, no)) == 0) {
-                return no;
-            }
-        }
-        return "CS" + day + System.currentTimeMillis() % 100000;
+        long seq = redisSequenceService.next("ULTRASOUND");
+        return "CS" + day + String.format("%03d", seq);
     }
 
 }

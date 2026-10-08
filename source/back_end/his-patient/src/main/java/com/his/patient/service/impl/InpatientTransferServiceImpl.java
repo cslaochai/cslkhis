@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.enums.AdmitStatusEnum;
 import com.his.common.enums.RecordStatusEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -43,6 +44,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransferMapper, BizInpatientTransfer> implements InpatientTransferService {
+
+    private final RedisSequenceService redisSequenceService;
 
     // 转科状态
 
@@ -86,10 +89,6 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
 
     @Override
     public InpatientTransferVO getDetailById(Long transferId) {
-        // 保留（类别②）：入参是普通 Long（GET @RequestParam 绑定，非 request DTO 字段），注解无处安放
-        if (transferId == null) {
-            throw new BusinessException("转科记录ID不能为空");
-        }
         BizInpatientTransfer entity = bizInpatientTransferMapper.selectById(transferId);
         if (entity == null) {
             throw new BusinessException("转科记录不存在");
@@ -101,10 +100,6 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
 
     @Override
     public List<InpatientTransferVO> listByAdmission(Long admissionId) {
-        // 保留（类别②）：入参是普通 Long（GET @RequestParam 绑定，非 request DTO 字段），注解无处安放
-        if (admissionId == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         List<BizInpatientTransfer> list = bizInpatientTransferMapper.selectByAdmission(admissionId);
         if (list.isEmpty()) {
             return List.of();
@@ -519,15 +514,11 @@ public class InpatientTransferServiceImpl extends ServiceImpl<BizInpatientTransf
     // 内部：编号 / 时间 / 用户
 
     private String nextTransferNo() {
-        String prefix = "ZK" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizInpatientTransferMapper.countByNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateTransferNo();
     }
 
     private String nextRecordNo() {
-        String prefix = "BL" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizInpatientRecordMapper.countByRecordNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateInpatientRecordNo();
     }
 
     private int calcHospitalDays(LocalDateTime admitTime, LocalDateTime end) {

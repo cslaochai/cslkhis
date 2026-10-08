@@ -1,5 +1,6 @@
 package com.his.emr.dto;
 
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
 import java.util.List;
@@ -19,6 +20,7 @@ public class QcBatchExecuteDTO {
      * 病历ID列表。前端读接口时拿到的就是字符串（雪花ID字符串化），
      * 这里用 Long 接收由 Jackson 完成字符串→长整型转换，全程不经过 JS 的 Number。
      */
+    @NotEmpty(message = "请至少选择一份病历")
     private List<Long> recordIds;
 
     /**

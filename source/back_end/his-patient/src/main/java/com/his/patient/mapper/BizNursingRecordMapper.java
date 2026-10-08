@@ -87,9 +87,4 @@ public interface BizNursingRecordMapper extends BaseMapper<BizNursingRecord> {
             """)
     List<String> selectRecordNosByAdmission(@Param("admissionId") Long admissionId);
 
-    /**
-     * 当天已生成的文书号条数（文书号序号用）
-     */
-    @Select("SELECT COUNT(*) FROM biz_nursing_record WHERE del_flag = 0 AND record_no LIKE CONCAT(#{prefix}, '%')")
-    long countByRecordNoPrefix(@Param("prefix") String prefix);
 }

@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.base.PageResult;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.NutritionScreenQueryPageDTO;
@@ -41,7 +41,7 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMapper, BizNutritionScreen> implements NutritionScreenService {
-    private static final String PREFIX_SCREEN = "NS";
+    private final RedisSequenceService redisSequenceService;
     private final DeptScopeProvider deptScopeProvider;
     private final BizNutritionScreenMapper bizNutritionScreenMapper;
     private final BizAdmissionMapper bizAdmissionMapper;
@@ -63,10 +63,6 @@ public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMa
 
     @Override
     public List<NutritionScreenVO> screenListByAdmission(Long admissionId) {
-        // ②非web入口：service 入参守卫，GET 的 @RequestParam 没有 DTO 字段可挂注解（Spring 侧本身必填）
-        if (admissionId == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         return bizNutritionScreenMapper.selectByAdmission(admissionId);
     }
 
@@ -110,8 +106,7 @@ public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMa
         boolean insert = dto.getId() == null;
         if (insert) {
             row = new BizNutritionScreen();
-            row.setScreenNo(nextNo(PREFIX_SCREEN, bizNutritionScreenMapper.maxScreenSeq(PREFIX_SCREEN
-                    + (screenTime == null ? LocalDate.now() : screenTime.toLocalDate()).format(DateFormats.COMPACT_DATE))));
+            row.setScreenNo(redisSequenceService.generateNutritionScreenNo());
         } else {
             row = bizNutritionScreenMapper.selectById(dto.getId());
             if (row == null) {
@@ -211,7 +206,4 @@ public class NutritionScreenServiceImpl extends ServiceImpl<BizNutritionScreenMa
         return bed == null ? null : bed.getBedNo();
     }
 
-    private String nextNo(String prefix, long maxSeq) {
-        return prefix + LocalDate.now().format(DateFormats.COMPACT_DATE) + String.format("%04d", maxSeq + 1);
-    }
 }

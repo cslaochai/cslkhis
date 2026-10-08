@@ -90,10 +90,4 @@ public interface BizNutritionScreenMapper extends BaseMapper<BizNutritionScreen>
             """)
     NutritionScreenVO selectVoById(@Param("id") Long id);
 
-    /**
-     * 单号前缀当日已用最大序号（NS+yyyyMMdd+4位）—— 取 MAX 不取 COUNT，删过一条也不会撞号
-     */
-    @Select("SELECT COALESCE(MAX(CAST(RIGHT(screen_no, 4) AS UNSIGNED)), 0) "
-            + "FROM biz_nutrition_screen WHERE screen_no LIKE CONCAT(#{prefix}, '%')")
-    long maxScreenSeq(@Param("prefix") String prefix);
 }

@@ -43,13 +43,6 @@ public interface BizDietPlanMapper extends BaseMapper<BizDietPlan> {
     @Delete("DELETE FROM biz_diet_plan WHERE id = #{id}")
     int purgeById(@Param("id") Long id);
 
-    /**
-     * 单号前缀当日已用最大序号（DP+yyyyMMdd+4位）
-     */
-    @Select("SELECT COALESCE(MAX(CAST(RIGHT(diet_no, 4) AS UNSIGNED)), 0) "
-            + "FROM biz_diet_plan WHERE diet_no LIKE CONCAT(#{prefix}, '%')")
-    long maxDietSeq(@Param("prefix") String prefix);
-
     @Select(PROJECTION + """
              WHERE v.del_flag = 0
                AND (#{q.admissionId} IS NULL OR v.admission_id = #{q.admissionId})

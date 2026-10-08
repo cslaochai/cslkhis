@@ -5,7 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 急诊候诊超时催办的站内信业务上下文（落 sys_message.payload）。
+ * 急诊候诊超时催办的站内信业务上下文（随站内信下发）。
  */
 @Data
 public class EmergencyWaitTodoPayloadVO implements Serializable {

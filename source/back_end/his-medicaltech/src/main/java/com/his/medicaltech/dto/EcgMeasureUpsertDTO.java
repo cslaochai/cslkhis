@@ -16,7 +16,6 @@ public class EcgMeasureUpsertDTO {
      * 检查记录ID
      */
     @NotNull(message = "缺少检查记录")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
     /**

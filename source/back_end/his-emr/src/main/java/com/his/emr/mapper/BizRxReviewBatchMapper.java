@@ -34,12 +34,6 @@ public interface BizRxReviewBatchMapper extends BaseMapper<BizRxReviewBatch> {
                                               @Param("limit") int limit);
 
     /**
-     * 同日批次号最大值（生成 RXRB+yyyyMMdd+4 位序号用）
-     */
-    @Select("SELECT MAX(batch_no) FROM biz_rx_review_batch WHERE batch_no LIKE CONCAT('RXRB', #{day}, '%')")
-    String selectMaxBatchNo(@Param("day") String day);
-
-    /**
      * 已点评数原子 +1（读-改-写并发下会少计，直接 SQL 自增）
      */
     @Update("UPDATE biz_rx_review_batch SET reviewed_count = reviewed_count + 1 WHERE id = #{id}")

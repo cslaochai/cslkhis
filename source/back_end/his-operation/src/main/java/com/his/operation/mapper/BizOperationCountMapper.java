@@ -12,11 +12,6 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface BizOperationCountMapper extends BaseMapper<BizOperationCount> {
 
-    /**
-     * 当天已生成的清点单号条数（单号序号用）
-     */
-    @Select("SELECT COUNT(*) FROM biz_operation_count WHERE del_flag = 0 AND count_no LIKE CONCAT(#{prefix}, '%')")
-    long countByNoPrefix(@Param("prefix") String prefix);
 
     /**
      * 该手术是否存在“未完成/不一致”的清点单。

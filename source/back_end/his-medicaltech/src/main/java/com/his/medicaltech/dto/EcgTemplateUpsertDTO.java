@@ -15,7 +15,6 @@ public class EcgTemplateUpsertDTO {
     /**
      * 模板ID（修改时传；新增为空）
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**

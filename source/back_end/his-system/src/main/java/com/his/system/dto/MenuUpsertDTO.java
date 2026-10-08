@@ -13,7 +13,6 @@ public class MenuUpsertDTO {
     /**
      * 菜单ID，新增时为空，修改时必填
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**
@@ -24,7 +23,6 @@ public class MenuUpsertDTO {
     /**
      * 父菜单ID，顶级菜单为0
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long parentId;
 
     /**

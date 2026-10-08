@@ -13,7 +13,6 @@ public class SysRoleUpsertDTO {
     /**
      * 角色ID，新增时为空，修改时必填
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**

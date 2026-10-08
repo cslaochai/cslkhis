@@ -285,10 +285,6 @@ public class TcmDecoctServiceImpl extends ServiceImpl<BizTcmDecoctMapper, BizTcm
     }
 
     private BizTcmDecoct require(Long id) {
-        // C 类保留：私有兜底被推进/作废/打印等多个入口共用，Bean Validation 覆盖不到这一层
-        if (id == null) {
-            throw new BusinessException("代煎单ID不能为空");
-        }
         BizTcmDecoct row = this.getById(id);
         if (row == null) {
             throw new BusinessException("代煎单不存在");

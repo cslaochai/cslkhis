@@ -17,7 +17,6 @@ public class TechAuthUpsertDTO {
     /**
      * 授权ID，新增时为空，修改时必填
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     /**

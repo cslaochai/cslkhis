@@ -89,10 +89,6 @@ public class OrderDictServiceImpl extends ServiceImpl<SysOrderDictDataMapper, Sy
 
     @Override
     public Long upsert(OrderDictUpsertDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了
-        if (dto == null) {
-            throw new BusinessException("字典内容不能为空");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -109,7 +105,8 @@ public class OrderDictServiceImpl extends ServiceImpl<SysOrderDictDataMapper, Sy
         String operator = operatorUser.getRealName();
         if (dto.getId() == null) {
             String value = dto.getDictValue() == null ? null : dto.getDictValue().trim();
-            // ①条件必填：只有新增（id==null）才要求字典值，修改分支允许不传，@NotBlank 会把合法修改挡成 400
+            // B-条件必填：只有新增（id==null）才要求字典值，修改分支允许不传，
+            // @NotBlank 会把合法修改挡成 400，DTO 注解无法表达，保留
             if (!TextUtil.hasText(value)) {
                 throw new BusinessException("字典值不能为空");
             }
@@ -163,10 +160,6 @@ public class OrderDictServiceImpl extends ServiceImpl<SysOrderDictDataMapper, Sy
             throw new BusinessException("当前用户信息不存在");
         }
         String type = requireType(dictType);
-        // ②非web入口：service 方法参数判空，没有 DTO 字段可挂注解（HTTP 侧 @RequestParam 已必填）
-        if (id == null) {
-            throw new BusinessException("字典项ID不能为空");
-        }
         SysOrderDictData entity = sysOrderDictDataMapper.selectById(id);
         if (entity == null || !type.equals(entity.getDictType())) {
             throw new BusinessException("字典项不存在");

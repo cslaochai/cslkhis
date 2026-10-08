@@ -14,7 +14,6 @@ public class ConsumableStockChangeDTO {
     /**
      * 库存批次ID
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long stockId;
     /**
      * 数量（>0）

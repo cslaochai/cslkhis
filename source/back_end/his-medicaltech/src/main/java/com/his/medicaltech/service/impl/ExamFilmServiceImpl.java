@@ -12,6 +12,7 @@ import com.his.common.constant.DictType;
 import com.his.common.enums.FeeSourceTypeEnum;
 import com.his.common.enums.PaymentItemTypeEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizInspectionApply;
@@ -63,6 +64,7 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
     private final DictCacheService dictCacheService;
     private final SysAuditLogService sysAuditLogService;
     private final FeeRecordService feeRecordService;
+    private final RedisSequenceService redisSequenceService;
 
     // 查询
 
@@ -354,20 +356,14 @@ public class ExamFilmServiceImpl extends ServiceImpl<BizExamFilmMapper, BizExamF
     }
 
     /**
-     * 胶片单号：FM + yyyyMMdd + 5 位序号。
+     * 胶片单号：FM + yyyyMMdd + 5 位 Redis 自增序号。
      *
-     * <p><b>序号必须取当天「最大已用序号 + 1」，绝不能取「当天行数 + 1」</b>：
-     * 只要有人删掉一张片（或历史上作废行被清掉），行数就回退，下一个单号会撞上
-     * 现存记录 → {@code uk_film_no} 直接 Duplicate entry → 登记胶片 500，
-     * 表现是「前面登记得好好的，第二张就失败了」。单号是唯一键，不是计数器。
-     *
-     * <p>并发下仍可能撞（两个请求同时读到同一个 max），靠 uk_film_no 兜底：
-     * 撞了就抛错让人重试，好过静默生成两个同号胶片。
+     * <p><b>序号走 Redis 原子自增</b>：号段全局唯一，不依赖库里行数，
+     * 删行 / 清数据也不会撞 {@code uk_film_no}。并发安全，撞号风险交给 Redis 单点。
      */
     private String newFilmNo() {
-        String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
-        String prefix = "FM" + day;
-        long seq = bizExamFilmMapper.selectMaxSeqOfDay(prefix) + 1;
+        String prefix = "FM" + LocalDate.now().format(DateFormats.COMPACT_DATE);
+        long seq = redisSequenceService.next("FILM");
         return prefix + String.format("%05d", seq);
     }
 

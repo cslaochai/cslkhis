@@ -176,10 +176,6 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
 
     @Override
     public NurseScheduleVO.Matrix weekMatrix(NurseScheduleDTO.MatrixQuery query) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了（wardId 必填已收口到 DTO @NotNull + @Valid）
-        if (query == null) {
-            throw new BusinessException("请选择病区");
-        }
         NurseScheduleVO.Ward ward = requireUnit(query.getUnitType(), query.getWardId());
         LocalDate start = mondayOf(query.getWeekStart() == null ? LocalDate.now() : query.getWeekStart());
         LocalDate end = start.plusDays(6);
@@ -469,10 +465,6 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
 
     @Override
     public NurseScheduleVO.CheckResult check(NurseScheduleDTO.CheckQuery query) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了（wardId 必填已收口到 DTO @NotNull + @Valid）
-        if (query == null) {
-            throw new BusinessException("请选择病区");
-        }
         NurseScheduleVO.Ward ward = requireUnit(query.getUnitType(), query.getWardId());
         LocalDate start = query.getStartDate() != null ? query.getStartDate()
                 : mondayOf(query.getEndDate() == null ? LocalDate.now() : query.getEndDate());
@@ -984,6 +976,7 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
      */
     private NurseScheduleVO.Ward requireUnit(Integer unitType, Long unitId) {
         int type = unitType == null || unitType == 0 ? UNIT_WARD : unitType;
+        // C-非 web 入参：私有 helper，被本类多处排班流程直接以裸 unitId 调用，Bean Validation 不覆盖，保留
         if (unitId == null) {
             throw new BusinessException("请选择排班单元");
         }
@@ -1008,7 +1001,7 @@ public class NurseScheduleServiceImpl extends ServiceImpl<BizNurseScheduleMapper
     }
 
     private NurseScheduleVO.Ward requireWard(Long wardId) {
-        // ②非web入口：多个 service 方法共用的参数守卫，HTTP 必填已由各 DTO @NotNull + @Valid 收口
+        // C-非 web 入参：私有 helper，多个 service 方法共用的参数守卫，Bean Validation 不覆盖（HTTP 侧必填已由各 DTO @NotNull + @Valid 收口），保留
         if (wardId == null) {
             throw new BusinessException("请选择病区");
         }

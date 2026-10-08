@@ -110,12 +110,6 @@ public interface BizAdmissionMapper extends BaseMapper<BizAdmission> {
     long countInHospitalByPatient(@Param("patientId") Long patientId);
 
     /**
-     * 当天已生成的住院号条数（用于序号）
-     */
-    @Select("SELECT COUNT(*) FROM biz_admission WHERE del_flag = 0 AND admission_no LIKE CONCAT(#{prefix}, '%')")
-    long countByAdmissionNoPrefix(@Param("prefix") String prefix);
-
-    /**
      * 该患者 31 日内是否还有其他出院记录（再入院判定，DRG 绩效指标）
      */
     @Select("""

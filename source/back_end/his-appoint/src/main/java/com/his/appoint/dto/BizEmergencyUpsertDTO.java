@@ -19,7 +19,6 @@ public class BizEmergencyUpsertDTO {
     /**
      * 患者ID
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
     /**
@@ -80,7 +79,6 @@ public class BizEmergencyUpsertDTO {
      * 接诊科室ID
      */
     @NotNull(message = "患者信息不能为空")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long deptId;
 
     /**
@@ -91,7 +89,6 @@ public class BizEmergencyUpsertDTO {
     /**
      * 接诊医生ID
      */
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long doctorId;
 
     /**

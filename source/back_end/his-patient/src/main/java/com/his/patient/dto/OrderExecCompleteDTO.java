@@ -2,6 +2,7 @@ package com.his.patient.dto;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -17,6 +18,7 @@ public class OrderExecCompleteDTO implements Serializable {
     /**
      * 执行记录ID列表（≥1 条）
      */
+    @NotEmpty(message = "请选择要处理的执行记录")
     private List<Long> execIds;
 
     /**

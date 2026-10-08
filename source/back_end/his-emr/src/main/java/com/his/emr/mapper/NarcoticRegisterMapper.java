@@ -76,15 +76,6 @@ public interface NarcoticRegisterMapper extends BaseMapper<BizNarcoticRegister> 
      * <p>刻意不加 {@code del_flag = 0} —— 专册不做逻辑删除，且**已占用的登记号不能被复用**，
      * 所以统计口径是"物理存在的行"，删没删都要算。
      */
-    @Select("SELECT COUNT(*) FROM biz_narcotic_register WHERE register_no LIKE CONCAT(#{prefix}, '%')")
-    long countByRegisterNoPrefix(@Param("prefix") String prefix);
-
-    /**
-     * 该登记号是否已被占用（生成时探测，碰到占用就跳到下一个序号）
-     */
-    @Select("SELECT COUNT(*) FROM biz_narcotic_register WHERE register_no = #{registerNo}")
-    long countByRegisterNo(@Param("registerNo") String registerNo);
-
 /**
  * 药品管制分类行（跨模块读药品字典）
  */

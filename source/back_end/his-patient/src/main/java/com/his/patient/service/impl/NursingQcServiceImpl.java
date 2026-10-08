@@ -63,7 +63,7 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     // 参照数据
 
     private static String requireMonth(String month, String label) {
-        // ②非web入口：共用守卫，主要职责是 yyyy-MM 解析；HTTP 侧非空已由 DTO @NotNull + @Valid 收口
+        // C-非 web 入参：共用守卫 requireMonth，主要职责是 trim 清洗 + yyyy-MM 解析；HTTP 侧非空已由 DTO @NotNull + @Valid 收口，内部直调路径不覆盖，保留
         String value = TextUtil.trimToNull(month);
         if (value == null) {
             throw new BusinessException("请选择" + label);
@@ -377,10 +377,6 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
 
     @Override
     public List<NurseQcVO.Kpi> monthMetrics(NursingQcDTO.MonthQuery query) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了（统计月份必填已收口到 DTO @NotNull + @Valid）
-        if (query == null) {
-            throw new BusinessException("请选择统计月份");
-        }
         String statMonth = requireMonth(query.getStatMonth(), "统计月份");
         NurseQcVO.Ward ward = query.getWardId() == null ? null : requireVisibleWard(query.getWardId());
         Map<String, NurseQcVO.Kpi> byCode = new LinkedHashMap<>();
@@ -414,11 +410,10 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
 
     @Override
     public List<NurseQcVO.Kpi> trend(NursingQcDTO.TrendQuery query) {
-        // ②非web入口：整个入参对象的判空。此接口未加 @Valid：TrendQuery.indicatorCode 上挂着
-        // 错位的 yyyy-MM @Pattern（把指标码当月份校），一旦开校验任何合法指标都会被拒，故保持 service 兜底
-        if (query == null) {
-            throw new BusinessException("请选择统计指标");
-        }
+        // 入参对象判空已删：@RequestBody（required=true）保证非空。
+        // 待确认：TrendQuery.indicatorCode 上挂着错位的 yyyy-MM @Pattern（把指标码当月份校），
+        // 而 NursingQcController.trend 现已带 @Valid —— 任何合法指标码都会被拦成 400；
+        // 修 @Pattern 或摘 @Valid 均超出本轮范围，service 侧 requireIndicator 兜底保留
         NursingIndicatorEnum indicator = requireIndicator(query.getIndicatorCode());
         NurseQcVO.Ward ward = query.getWardId() == null ? null : requireVisibleWard(query.getWardId());
         String start = TextUtil.trimToNull(query.getStartMonth());
@@ -440,10 +435,6 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
 
     @Override
     public List<NurseQcVO.LedgerRow> wardCompare(NursingQcDTO.CompareQuery query) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了（月份+指标必填已收口到 DTO @NotNull + @Valid）
-        if (query == null) {
-            throw new BusinessException("请选择统计月份与指标");
-        }
         String statMonth = requireMonth(query.getStatMonth(), "统计月份");
         NursingIndicatorEnum indicator = requireIndicator(query.getIndicatorCode());
         List<NurseQcVO.LedgerRow> rows = bizNursingQcIndicatorMapper.selectWardCompare(statMonth, indicator.getCode(),
@@ -455,10 +446,6 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NurseQcVO.RecalcResult recalc(NursingQcDTO.RecalcCommand command) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了（月份必填已收口到 DTO @NotNull + @Valid）
-        if (command == null) {
-            throw new BusinessException("请选择要重算的月份");
-        }
         String statMonth = requireMonth(command.getStatMonth(), "统计月份");
         YearMonth month = parseMonth(statMonth);
         LocalDate monthStart = month.atDay(1);
@@ -519,10 +506,6 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NurseQcVO.ReportResult report(NursingQcDTO.ReportCommand command) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了（月份与状态必填已收口到 DTO @NotNull + @Valid）
-        if (command == null) {
-            throw new BusinessException("请选择统计月份");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -644,7 +627,8 @@ public class NursingQcServiceImpl extends ServiceImpl<BizNursingQcCheckMapper, B
     }
 
     private NurseQcVO.Ward requireWard(Long wardId) {
-        // ②非web入口：多个 service 方法共用的参数守卫，HTTP 必填已由各 DTO @NotNull + @Valid 收口
+        // C-非 web 入参：私有 requireXxx helper（守卫），除 DTO 入口外还被本类多个方法以实体派生的 wardId 复用（内部直调不过绑定层）；
+        // 另兜住 GET 标量参数路径，Bean Validation 不覆盖，保留
         if (wardId == null) {
             throw new BusinessException("请选择病区");
         }

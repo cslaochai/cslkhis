@@ -3,7 +3,7 @@ package com.his.pharmacy.enums;
 import lombok.Getter;
 
 /**
- * CSSD 消毒供应节点状态枚举（码值口径 = biz_cssd_pack.status / biz_cssd_trace.node_type 列注释）。
+ * CSSD 消毒供应节点状态枚举（码值口径 = 器械包状态字段与 CSSD 追溯记录节点字段的列注释）。
  */
 @Getter
 public enum CssdNodeStatusEnum {

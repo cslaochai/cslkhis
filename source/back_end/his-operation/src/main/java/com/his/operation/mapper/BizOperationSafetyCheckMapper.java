@@ -30,11 +30,6 @@ public interface BizOperationSafetyCheckMapper extends BaseMapper<BizOperationSa
     @Select("SELECT COUNT(DISTINCT phase) FROM biz_operation_safety_check WHERE del_flag = 0 AND apply_id = #{applyId}")
     long countPhases(@Param("applyId") Long applyId);
 
-    /**
-     * 当天已生成的核查单号条数（单号序号用）
-     */
-    @Select("SELECT COUNT(*) FROM biz_operation_safety_check WHERE del_flag = 0 AND check_no LIKE CONCAT(#{prefix}, '%')")
-    long countByNoPrefix(@Param("prefix") String prefix);
 
     /**
      * 员工姓名（三方签名一律服务端查名，不信任前端传来的姓名）

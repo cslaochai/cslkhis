@@ -14,7 +14,6 @@ import lombok.Data;
 public class EcgSimulateDTO {
 
     @NotNull(message = "缺少检查记录")
-    @JsonSerialize(using = ToStringSerializer.class)
     private Long recordId;
 
     /**

@@ -4,6 +4,8 @@ import com.his.common.enums.SysGenderEnum;
 import com.his.common.support.ClinicalTextMatcher;
 import com.his.common.util.TextUtil;
 import com.his.emr.enums.*;
+import com.his.emr.vo.QcIssueVO;
+import com.his.emr.vo.QcResultVO;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -108,13 +110,13 @@ public class QcRuleEngine {
         return score >= GRADE_B_SCORE ? "乙" : "丙";
     }
 
-    private static String summarize(QcResult result) {
+    private static String summarize(QcResultVO result) {
         if (result.getIssues().isEmpty()) {
             return String.format("未发现问题，得分 %d 分，质量等级甲级", result.getScore());
         }
         String fields = result.getIssues().stream()
                 .limit(3)
-                .map(QcIssue::getFieldName)
+                .map(QcIssueVO::getFieldName)
                 .distinct()
                 .reduce((a, b) -> a + "、" + b)
                 .orElse("");
@@ -207,9 +209,9 @@ public class QcRuleEngine {
      * @param qcType   质控类型：null 或 0 表示三个维度全跑；1/2/3 表示只跑对应维度
      * @return 质控结论（含问题明细）
      */
-    public QcResult inspect(QcSnapshot snapshot, Integer qcType) {
+    public QcResultVO inspect(QcSnapshot snapshot, Integer qcType) {
         QcDimensionEnum only = QcDimensionEnum.ofCode(qcType);
-        List<QcIssue> issues = new ArrayList<>();
+        List<QcIssueVO> issues = new ArrayList<>();
         Set<Integer> dimensions = new LinkedHashSet<>();
 
         for (QcRuleEnum rule : QcRuleEnum.values()) {
@@ -223,7 +225,7 @@ public class QcRuleEngine {
             check(rule, snapshot).ifPresent(issues::add);
         }
 
-        QcResult result = new QcResult();
+        QcResultVO result = new QcResultVO();
         result.setRecordSource(snapshot.getSource().getCode());
         result.setRecordId(snapshot.getRecordId());
         result.setRecordNo(snapshot.getRecordNo());
@@ -256,36 +258,36 @@ public class QcRuleEngine {
         return result;
     }
 
-    private Optional<QcIssue> check(QcRuleEnum rule, QcSnapshot s) {
+    private Optional<QcIssueVO> check(QcRuleEnum rule, QcSnapshot s) {
         return switch (rule) {
             case C01 -> missing(s.getChiefComplaint(),
                     ClinicalTextMatcher.isPlaceholderOnly(s.getChiefComplaint(), "主诉"), "主诉")
-                    .map(detail -> QcIssue.of(rule, detail, evidenceOf(s.getChiefComplaint())));
+                    .map(detail -> QcIssueVO.of(rule, detail, evidenceOf(s.getChiefComplaint())));
 
             case C02 -> missing(s.getPresentIllness(),
                     ClinicalTextMatcher.isPlaceholderOnly(s.getPresentIllness(), "现病史"), "现病史")
-                    .map(detail -> QcIssue.of(rule, detail, evidenceOf(s.getPresentIllness())));
+                    .map(detail -> QcIssueVO.of(rule, detail, evidenceOf(s.getPresentIllness())));
 
             // 既往史/过敏史：「无」是合法记录，只判"留空"与"模板残渣"
             case C03 -> missing(s.getPastHistory(),
                     ClinicalTextMatcher.isBlank(s.getPastHistory())
                             || ClinicalTextMatcher.isLabelRepeatOnly(s.getPastHistory(), "既往史"), "既往史")
-                    .map(detail -> QcIssue.of(rule, detail, evidenceOf(s.getPastHistory())));
+                    .map(detail -> QcIssueVO.of(rule, detail, evidenceOf(s.getPastHistory())));
 
             case C04 -> missing(s.getAllergyHistory(),
                     ClinicalTextMatcher.isBlank(s.getAllergyHistory())
                             || ClinicalTextMatcher.isLabelRepeatOnly(s.getAllergyHistory(), "过敏史"), "过敏史")
-                    .map(detail -> QcIssue.of(rule, detail, evidenceOf(s.getAllergyHistory())));
+                    .map(detail -> QcIssueVO.of(rule, detail, evidenceOf(s.getAllergyHistory())));
 
             case C05 -> missing(TextUtil.hasText(s.getDiagnosisText()) ? s.getDiagnosisText() : s.getDiagnosisCode(),
                     ClinicalTextMatcher.isPlaceholderOnly(s.getDiagnosisText(), "诊断"), "诊断")
-                    .map(detail -> QcIssue.of(rule, detail, evidenceOf(s.getDiagnosisText())));
+                    .map(detail -> QcIssueVO.of(rule, detail, evidenceOf(s.getDiagnosisText())));
 
             case C06 -> {
                 if (!TextUtil.hasText(s.getDiagnosisName()) || TextUtil.hasText(s.getDiagnosisCode())) {
                     yield Optional.empty();
                 }
-                yield Optional.of(QcIssue.of(rule,
+                yield Optional.of(QcIssueVO.of(rule,
                         String.format("诊断「%s」只有名称没有 ICD 编码，病案首页与 DRG 无法入组",
                                 TextUtil.ellipsis(s.getDiagnosisName(), 40)),
                         evidenceOf(s.getDiagnosisCode())));
@@ -295,18 +297,18 @@ public class QcRuleEngine {
                     ClinicalTextMatcher.isPlaceholderOnly(s.getTreatmentPlan())
                             || PLAN_LABELS.stream().anyMatch(label ->
                             ClinicalTextMatcher.isLabelRepeatOnly(s.getTreatmentPlan(), label)), "诊疗计划")
-                    .map(detail -> QcIssue.of(rule, detail, evidenceOf(s.getTreatmentPlan())));
+                    .map(detail -> QcIssueVO.of(rule, detail, evidenceOf(s.getTreatmentPlan())));
 
             case C08 -> {
                 if (s.getDoctorId() != null || TextUtil.hasText(s.getDoctorName())) {
                     yield Optional.empty();
                 }
-                yield Optional.of(QcIssue.of(rule, "「书写医生」未记录，无签名病历不得归档", "（空）"));
+                yield Optional.of(QcIssueVO.of(rule, "「书写医生」未记录，无签名病历不得归档", "（空）"));
             }
 
             case C09 -> missing(s.getCourseNote(),
                     ClinicalTextMatcher.isPlaceholderOnly(s.getCourseNote()), "正文")
-                    .map(detail -> QcIssue.of(rule,
+                    .map(detail -> QcIssueVO.of(rule,
                             String.format("%s未写正文：%s", s.recordTypeText(), detail),
                             evidenceOf(s.getCourseNote())));
 
@@ -317,7 +319,7 @@ public class QcRuleEngine {
                 if (DURATION_PATTERN.matcher(s.getChiefComplaint()).find()) {
                     yield Optional.empty();
                 }
-                yield Optional.of(QcIssue.of(rule,
+                yield Optional.of(QcIssueVO.of(rule,
                         String.format("主诉「%s」未写明症状持续时间", TextUtil.ellipsis(s.getChiefComplaint(), 30)),
                         evidenceOf(s.getChiefComplaint())));
             }
@@ -329,7 +331,7 @@ public class QcRuleEngine {
                 Optional<String> hit = DIAGNOSIS_HINTS.stream()
                         .filter(hint -> ClinicalTextMatcher.containsAffirmed(s.getChiefComplaint(), hint))
                         .findFirst();
-                yield hit.map(hint -> QcIssue.of(rule,
+                yield hit.map(hint -> QcIssueVO.of(rule,
                         String.format("主诉含诊断性结论用语「%s」，主诉只应写症状与体征", hint),
                         evidenceOf(s.getChiefComplaint())));
             }
@@ -342,7 +344,7 @@ public class QcRuleEngine {
                 if (length >= MIN_CHIEF_COMPLAINT_LENGTH) {
                     yield Optional.empty();
                 }
-                yield Optional.of(QcIssue.of(rule,
+                yield Optional.of(QcIssueVO.of(rule,
                         String.format("主诉有效长度仅 %d 字（要求 ≥%d 字），过于笼统",
                                 length, MIN_CHIEF_COMPLAINT_LENGTH),
                         evidenceOf(s.getChiefComplaint())));
@@ -352,7 +354,7 @@ public class QcRuleEngine {
                 if (TextUtil.hasText(s.getRecordTitle())) {
                     yield Optional.empty();
                 }
-                yield Optional.of(QcIssue.of(rule,
+                yield Optional.of(QcIssueVO.of(rule,
                         String.format("%s未填写文书标题", s.recordTypeText()), "（空）"));
             }
 
@@ -367,7 +369,7 @@ public class QcRuleEngine {
                 if (lacks.isEmpty()) {
                     yield Optional.empty();
                 }
-                yield Optional.of(QcIssue.of(rule,
+                yield Optional.of(QcIssueVO.of(rule,
                         String.format("门诊病历缺少%s，无法归集到科室质控统计", String.join("与", lacks)),
                         "（空）"));
             }
@@ -388,7 +390,7 @@ public class QcRuleEngine {
                 Optional<String> conflict = words.stream()
                         .filter(word -> ClinicalTextMatcher.containsAffirmed(s.getDiagnosisText(), word))
                         .findFirst();
-                yield conflict.map(word -> QcIssue.of(rule,
+                yield conflict.map(word -> QcIssueVO.of(rule,
                         String.format("患者性别为%s，诊断却出现%s专属表述「%s」",
                                 g == null ? "未知" : g.getLabel(), g == SysGenderEnum.MALE ? "男性" : (g == SysGenderEnum.FEMALE ? "女性" : "未知"), word),
                         evidenceOf(s.getDiagnosisText())));
@@ -422,7 +424,7 @@ public class QcRuleEngine {
                 if (outOfRange.isEmpty()) {
                     yield Optional.empty();
                 }
-                yield Optional.of(QcIssue.of(rule,
+                yield Optional.of(QcIssueVO.of(rule,
                         "生命体征数值超出医学可存活范围：" + String.join("；", outOfRange) + "，必为录入错误",
                         "（见描述）"));
             }
@@ -433,7 +435,7 @@ public class QcRuleEngine {
                 if (systolic == null || diastolic == null || systolic > diastolic) {
                     yield Optional.empty();
                 }
-                yield Optional.of(QcIssue.of(rule,
+                yield Optional.of(QcIssueVO.of(rule,
                         String.format("收缩压 %d 不高于舒张压 %d，该血压值不可能成立", systolic, diastolic),
                         "（见描述）"));
             }
@@ -443,7 +445,7 @@ public class QcRuleEngine {
                         || !s.getRecordTime().isAfter(s.getSubmitTime())) {
                     yield Optional.empty();
                 }
-                yield Optional.of(QcIssue.of(rule,
+                yield Optional.of(QcIssueVO.of(rule,
                         String.format("记录时间 %s 晚于提交时间 %s，该文书声称记录的内容在提交时尚未发生",
                                 s.getRecordTime(), s.getSubmitTime()),
                         "（见描述）"));
@@ -453,7 +455,7 @@ public class QcRuleEngine {
                 if (s.getRecordStatus() == null || s.getRecordStatus() != 3 || s.getSubmitTime() != null) {
                     yield Optional.empty();
                 }
-                yield Optional.of(QcIssue.of(rule,
+                yield Optional.of(QcIssueVO.of(rule,
                         String.format("%s状态为已归档，却没有提交时间记录", s.recordTypeText()), "（空）"));
             }
 
@@ -462,7 +464,7 @@ public class QcRuleEngine {
                         || !s.getArchiveTime().isBefore(s.getSubmitTime())) {
                     yield Optional.empty();
                 }
-                yield Optional.of(QcIssue.of(rule,
+                yield Optional.of(QcIssueVO.of(rule,
                         String.format("归档时间 %s 早于提交时间 %s", s.getArchiveTime(), s.getSubmitTime()),
                         "（见描述）"));
             }

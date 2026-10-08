@@ -268,8 +268,8 @@ public class NutritionStatsServiceImpl extends ServiceImpl<BizNutritionStatsMapp
     }
 
     private YearMonth requireMonth(String statMonth) {
-        // ②非web入口：两个入口共用的「取值+解析」守卫。POST 侧 statMonth 必填已收口到 DTO @NotBlank + @Valid，
-        // GET previewStats 用的是 @RequestParam（没有 DTO 字段可挂注解），故这里保留一句兜底
+        // C-非 web 入参：私有 requireXxx helper，除 DTO 入口外还被 previewStats 的 GET 标量参数复用
+        // （@RequestParam String 只保证「带了参数」，空串照样进来），Bean Validation 不覆盖，保留
         if (!TextUtil.hasText(statMonth)) {
             throw new BusinessException("统计月份不能为空");
         }

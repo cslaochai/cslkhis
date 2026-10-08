@@ -51,13 +51,6 @@ public interface BizMealOrderMapper extends BaseMapper<BizMealOrder> {
     int purgePendingByDate(@Param("mealDate") LocalDate mealDate,
                            @Param("admissionIds") List<Long> admissionIds);
 
-    /**
-     * 单号前缀当日已用最大序号（MO+yyyyMMdd+4位）
-     */
-    @Select("SELECT COALESCE(MAX(CAST(RIGHT(meal_no, 4) AS UNSIGNED)), 0) "
-            + "FROM biz_meal_order WHERE meal_no LIKE CONCAT(#{prefix}, '%')")
-    long maxMealSeq(@Param("prefix") String prefix);
-
     @Select(PROJECTION + """
              WHERE m.del_flag = 0
                AND (#{q.mealDate} IS NULL OR m.meal_date = #{q.mealDate})

@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 public class AdmissionBriefVO {
 
     /**
-     * 入院ID（biz_admission 主键）
+     * 入院ID（住院登记主键）
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long admissionId;

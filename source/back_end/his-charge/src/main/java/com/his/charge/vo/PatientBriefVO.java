@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 public class PatientBriefVO {
 
     /**
-     * 患者ID（biz_patient 主键）
+     * 患者ID（患者档案主键）
      */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long id;

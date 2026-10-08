@@ -28,9 +28,4 @@ public interface BizAlertMapper extends BaseMapper<BizAlert> {
                      @Param("keyword") String keyword,
                      @Param("since") LocalDateTime since);
 
-    /**
-     * 当天已生成的告警号条数（单号序号用）
-     */
-    @Select("SELECT COUNT(*) FROM biz_alert WHERE alert_no LIKE CONCAT(#{prefix}, '%')")
-    long countByAlertNoPrefix(@Param("prefix") String prefix);
 }

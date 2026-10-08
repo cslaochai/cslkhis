@@ -808,10 +808,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     private BizAppointInfo requireAppoint(Long registId) {
-        // C 类保留：私有兜底被多个申请单入口与内部流程共用，Bean Validation 覆盖不到这一层
-        if (registId == null) {
-            throw new BusinessException("挂号ID不能为空");
-        }
         BizAppointInfo appoint = bizAppointInfoMapper.selectById(registId);
         if (appoint == null) {
             throw new BusinessException("挂号记录不存在");
@@ -820,10 +816,6 @@ public class EmrServiceImpl extends ServiceImpl<BizMedicalRecordMapper, BizMedic
     }
 
     private BizPatient requirePatient(Long patientId) {
-        // C 类保留：私有兜底被多个入口与内部流程共用，Bean Validation 覆盖不到这一层
-        if (patientId == null) {
-            throw new BusinessException("患者ID不能为空");
-        }
         BizPatient patient = bizPatientMapper.selectById(patientId);
         if (patient == null) {
             throw new BusinessException("患者不存在");

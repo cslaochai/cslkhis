@@ -69,16 +69,4 @@ public interface BizExamFilmMapper extends BaseMapper<BizExamFilm> {
     ExamFilmVO.FilmStats selectStats(@Param("startDate") String startDate,
                                      @Param("endDate") String endDate);
 
-    /**
-     * 当天已用到的最大胶片单号序号（给 {@code newFilmNo()} 取号用）。
-     *
-     * <p>取 MAX 而不是 COUNT：删行 / 清数据后 COUNT 会回退，下一个号就撞 {@code uk_film_no}。
-     * 返回 0 表示今天还没有胶片，取号方 +1 后就是 00001。
-     */
-    @Select("""
-            SELECT COALESCE(MAX(CAST(RIGHT(film_no, 5) AS UNSIGNED)), 0)
-              FROM biz_exam_film
-             WHERE film_no LIKE CONCAT(#{prefix}, '%')
-            """)
-    long selectMaxSeqOfDay(@Param("prefix") String prefix);
 }

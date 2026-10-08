@@ -22,6 +22,7 @@ import com.his.operation.support.AnesthesiaCalcs;
 import com.his.operation.support.OperationChargeBiller;
 import com.his.operation.vo.OperationChargeSummaryVO;
 import com.his.operation.vo.PacuRecordVO;
+import com.his.common.service.RedisSequenceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -38,6 +39,8 @@ import java.util.Objects;
 @Service
 @RequiredArgsConstructor
 public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAnesthesiaPacu> implements PacuService {
+
+    private final RedisSequenceService redisSequenceService;
 
     private final BizAnesthesiaPacuMapper bizAnesthesiaPacuMapper;
 
@@ -298,9 +301,7 @@ public class PacuServiceImpl extends ServiceImpl<BizAnesthesiaPacuMapper, BizAne
     }
 
     private String nextPacuNo() {
-        String prefix = "FS" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizAnesthesiaPacuMapper.countByNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generatePacuNo();
     }
 
     private void decorate(PacuRecordVO vo) {

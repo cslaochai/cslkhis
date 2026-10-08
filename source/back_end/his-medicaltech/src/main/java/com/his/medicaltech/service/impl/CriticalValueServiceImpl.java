@@ -10,6 +10,7 @@ import com.his.common.exception.BusinessException;
 import com.his.common.support.EmpTitleCode;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TimeUtil;
 import com.his.medicaltech.dto.CriticalValueHandleDTO;
 import com.his.medicaltech.dto.CriticalValueQueryPageDTO;
@@ -58,9 +59,9 @@ import java.util.concurrent.atomic.AtomicLong;
 public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper, BizCriticalValue>
         implements CriticalValueService {
 
-    private static final String SOURCE_RULE = "RULE";
+    private final RedisSequenceService redisSequenceService;
 
-    private static final String NO_PREFIX = "WJ";
+    private static final String SOURCE_RULE = "RULE";
 
     private static final String DEADLINE_CONFIG_KEY = "lab.critical_value_deadline_minutes";
 
@@ -135,10 +136,8 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
 
     // 查询
 
-    private static String buildNo() {
-        String timestamp = LocalDateTime.now().format(DateFormats.COMPACT_DATETIME);
-        String tail = String.format("%04d", (int) (Math.random() * 10_000));
-        return NO_PREFIX + timestamp + tail;
+    private String buildNo() {
+        return redisSequenceService.generateCriticalValueNo();
     }
 
     @Override

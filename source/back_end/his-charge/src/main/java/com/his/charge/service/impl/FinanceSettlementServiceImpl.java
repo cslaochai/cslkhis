@@ -14,6 +14,7 @@ import com.his.charge.service.PaymentService;
 import com.his.charge.vo.*;
 import com.his.common.base.PageResult;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.NumUtil;
 import com.his.common.util.TextUtil;
@@ -61,6 +62,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
      * 日结不能靠"问 L3 要一个合计"，那样三条链就塌成一条，对账等于自查。
      */
     private final PaymentService paymentService;
+    private final RedisSequenceService redisSequenceService;
 
     // 班结（收费员交班）
 
@@ -724,12 +726,14 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
         return vo;
     }
 
+    /**
+     * 交班单号：JS + 日期 + 4 位 Redis 自增序号。
+     * <p><b>走 Redis 原子自增</b>：不依赖库里行数，服务重启也不会撞唯一索引。
+     */
     private String nextCashierNo() {
-        // 与 EmrServiceImpl 的取号同理：按"当天已用序号"取，不用进程内自增 ——
-        // 进程内自增在服务重启后当天第一单必然撞唯一索引。
         String prefix = "JS" + LocalDateTime.now().format(DateFormats.COMPACT_DATE);
-        long used = bizCashierSettlementMapper.countByNoPrefix(prefix);
-        return prefix + String.format("%04d", (used + 1) % 10000);
+        long seq = redisSequenceService.next("CASHIER");
+        return prefix + String.format("%04d", seq);
     }
 
     private long countCashier(int status) {

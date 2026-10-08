@@ -271,6 +271,185 @@ public interface BizCodeConstants {
      * SV答卷号
      */
     String SURVEY_ANSWER_NO_KEY_PREFIX = "SURVEY_ANSWER";
+    /**
+     * 输血申请单号（Redis 递增，24小时过期）
+     */
+    String TRANSFUSION_APPLY_NO_KEY_PREFIX = "TRANSFUSION_APPLY";
+    /**
+     * 危急值编号（WJ，Redis 递增，24小时过期）
+     */
+    String CRITICAL_VALUE_NO_KEY_PREFIX = "CRITICAL_VALUE";
+    /**
+     * AI 病历质控编号（QCAI，Redis 递增，24小时过期）
+     */
+    String EMR_QC_NO_KEY_PREFIX = "EMR_QC";
+    /**
+     * 字段变更批次号（FC，Redis 递增，24小时过期）
+     */
+    String FIELD_CHANGE_NO_KEY_PREFIX = "FIELD_CHANGE";
+    /**
+     * 医保合规审计号（CA，Redis 递增，24小时过期）
+     */
+    String COMPLIANCE_AUDIT_NO_KEY_PREFIX = "COMPLIANCE_AUDIT";
+    /**
+     * 药品追溯码（DR，Redis 递增，24小时过期）
+     */
+    String DRUG_TRACE_NO_KEY_PREFIX = "DRUG_TRACE";
+    /**
+     * 药品追溯上传批次号（UP，Redis 递增，24小时过期）
+     */
+    String DRUG_UPLOAD_BATCH_NO_KEY_PREFIX = "DRUG_UPLOAD_BATCH";
+    /**
+     * 高值耗材追溯码（HV，Redis 递增，24小时过期）
+     */
+    String HIGH_VALUE_TRACE_NO_KEY_PREFIX = "HIGH_VALUE_TRACE";
+    /**
+     * 耗材出入库流水号（LC，Redis 递增，24小时过期）
+     */
+    String CONSUMABLE_STOCK_LOG_NO_KEY_PREFIX = "CONSUMABLE_STOCK_LOG";
+    /**
+     * 手术申请单号（SS，Redis 递增，24小时过期）
+     */
+    String OPERATION_APPLY_NO_KEY_PREFIX = "OPERATION_APPLY";
+    /**
+     * 手术清点单号（QD，Redis 递增，24小时过期）
+     */
+    String OPERATION_COUNT_NO_KEY_PREFIX = "OPERATION_COUNT";
+    /**
+     * 麻醉访视单号（MF，Redis 递增，24小时过期）
+     */
+    String ANESTHESIA_VISIT_NO_KEY_PREFIX = "ANESTHESIA_VISIT";
+    /**
+     * 麻醉记录单号（MZ，Redis 递增，24小时过期）
+     */
+    String ANESTHESIA_RECORD_NO_KEY_PREFIX = "ANESTHESIA_RECORD";
+    /**
+     * 麻醉随访单号（MS，Redis 递增，24小时过期）
+     */
+    String ANESTHESIA_FOLLOWUP_NO_KEY_PREFIX = "ANESTHESIA_FOLLOWUP";
+    /**
+     * 复苏室（PACU）记录单号（FS，Redis 递增，24小时过期）
+     */
+    String PACU_NO_KEY_PREFIX = "PACU";
+    /**
+     * 手术安全核查单号（HC，Redis 递增，24小时过期）
+     */
+    String OPERATION_SAFETY_CHECK_NO_KEY_PREFIX = "OPERATION_SAFETY_CHECK";
+    /**
+     * 住院医嘱单号（RZ，Redis 递增，24小时过期）
+     */
+    String ADMISSION_ORDER_NO_KEY_PREFIX = "ADMISSION_ORDER";
+    /**
+     * 待床登记号（DC，Redis 递增，24小时过期）
+     */
+    String BED_WAIT_NO_KEY_PREFIX = "BED_WAIT";
+    /**
+     * 床位分配号（TP，Redis 递增，24小时过期）
+     */
+    String BED_ALLOCATE_NO_KEY_PREFIX = "BED_ALLOCATE";
+    /**
+     * 会诊单号（HZ，Redis 递增，24小时过期）
+     */
+    String CONSULTATION_NO_KEY_PREFIX = "CONSULTATION";
+    /**
+     * 住院病历记录号（BL，Redis 递增，24小时过期；住院病历/会诊记录/转诊记录共用一个 BL 号段）
+     */
+    String INPATIENT_RECORD_NO_KEY_PREFIX = "INPATIENT_RECORD";
+    /**
+     * 护理评估单号（AS，Redis 递增，24小时过期）
+     */
+    String NURSING_ASSESS_NO_KEY_PREFIX = "NURSING_ASSESS";
+    /**
+     * 护理记录单号（HL，Redis 递增，24小时过期）
+     */
+    String NURSING_RECORD_NO_KEY_PREFIX = "NURSING_RECORD";
+    /**
+     * 入院单号（ADM，Redis 递增，24小时过期）
+     */
+    String ADMISSION_NO_KEY_PREFIX = "ADMISSION";
+    /**
+     * 出院单号（DIS，Redis 递增，24小时过期）
+     */
+    String DISCHARGE_NO_KEY_PREFIX = "DISCHARGE";
+    /**
+     * 就诊次号（VISIT，Redis 递增，24小时过期）
+     */
+    String VISIT_NO_KEY_PREFIX = "VISIT";
+    /**
+     * 住院医嘱单号（YZ，Redis 递增，24小时过期）
+     */
+    String INPATIENT_ORDER_NO_KEY_PREFIX = "INPATIENT_ORDER";
+    /**
+     * 医嘱分组号（G，Redis 递增，24小时过期）
+     */
+    String ORDER_GROUP_NO_KEY_PREFIX = "ORDER_GROUP";
+    /**
+     * 转诊/转科单号（ZK，Redis 递增，24小时过期）
+     */
+    String TRANSFER_NO_KEY_PREFIX = "TRANSFER";
+    /**
+     * 患者合并号（HB，Redis 递增，24小时过期）
+     */
+    String PATIENT_MERGE_NO_KEY_PREFIX = "PATIENT_MERGE";
+    /**
+     * 转诊单号（REF，Redis 递增，24小时过期）
+     */
+    String REFERRAL_NO_KEY_PREFIX = "REFERRAL";
+    /**
+     * 出院带药单号（DDA，Redis 递增，24小时过期）
+     */
+    String DISCHARGE_DRUG_NO_KEY_PREFIX = "DISCHARGE_DRUG";
+
+    /**
+     * VTE 预防措施单号（VP，Redis 递增，24小时过期）
+     */
+    String VTE_PREVENT_NO_KEY_PREFIX = "VTE_PREVENT";
+    /**
+     * VTE 事件单号（VE，Redis 递增，24小时过期）
+     */
+    String VTE_EVENT_NO_KEY_PREFIX = "VTE_EVENT";
+    /**
+     * 膳食方案单号（DP，Redis 递增，24小时过期）
+     */
+    String DIET_PLAN_NO_KEY_PREFIX = "DIET_PLAN";
+    /**
+     * 营养风险筛查单号（NS，Redis 递增，24小时过期）
+     */
+    String NUTRITION_SCREEN_NO_KEY_PREFIX = "NUTRITION_SCREEN";
+    /**
+     * 订餐单号（MO，Redis 递增，24小时过期）
+     */
+    String MEAL_ORDER_NO_KEY_PREFIX = "MEAL_ORDER";
+    /**
+     * 体检登记记录号（CU，Redis 递增，24小时过期）
+     */
+    String CHECKUP_RECORD_NO_KEY_PREFIX = "CHECKUP_RECORD";
+
+    /**
+     * 抗菌药物处方权授权单号（KJ，Redis 递增，24小时过期）
+     */
+    String ANTIBIOTIC_AUTH_NO_KEY_PREFIX = "ANTIBIOTIC_AUTH";
+    /**
+     * 抗菌药物 I 类切口点评单号（KQI，Redis 递增，24小时过期）
+     */
+    String ANTIBIOTIC_REVIEW_NO_KEY_PREFIX = "ANTIBIOTIC_REVIEW";
+
+    /**
+     * 质控单号（QC，Redis 递增，24小时过期）
+     */
+    String QUALITY_CONTROL_NO_KEY_PREFIX = "QUALITY_CONTROL";
+    /**
+     * 处方点评批次号（RXRB，Redis 递增，24小时过期）
+     */
+    String RX_REVIEW_BATCH_NO_KEY_PREFIX = "RX_REVIEW_BATCH";
+    /**
+     * 药师约谈编号（YT，Redis 递增，24小时过期）
+     */
+    String RX_DOCTOR_TALK_NO_KEY_PREFIX = "RX_DOCTOR_TALK";
+    /**
+     * 麻精药品专册登记号（NZ，Redis 递增，24小时过期）
+     */
+    String NARCOTIC_REGISTER_NO_KEY_PREFIX = "NARCOTIC_REGISTER";
 
     /**
      * --------------------------------------------------------------------------------------编号前缀---------------------------------------------------------------------------------------------
@@ -557,4 +736,183 @@ public interface BizCodeConstants {
      * 便于按前缀统计 AI 命中，且两张号段互不占用当天的序号
      */
     String RULE_CHECK_AI_NO_PREFIX = "RCAI";
+    /**
+     * 输血申请单号前缀（SX = 输血）
+     */
+    String TRANSFUSION_APPLY_NO_PREFIX = "SX";
+    /**
+     * 危急值编号前缀（WJ）
+     */
+    String CRITICAL_VALUE_NO_PREFIX = "WJ";
+    /**
+     * AI 病历质控编号前缀（QCAI）
+     */
+    String EMR_QC_NO_PREFIX = "QCAI";
+    /**
+     * 字段变更批次号前缀（FC）
+     */
+    String FIELD_CHANGE_NO_PREFIX = "FC";
+    /**
+     * 医保合规审计号前缀（CA）
+     */
+    String COMPLIANCE_AUDIT_NO_PREFIX = "CA";
+    /**
+     * 药品追溯码前缀（DR）
+     */
+    String DRUG_TRACE_NO_PREFIX = "DR";
+    /**
+     * 药品追溯上传批次号前缀（UP）
+     */
+    String DRUG_UPLOAD_BATCH_NO_PREFIX = "UP";
+    /**
+     * 高值耗材追溯码前缀（HV）
+     */
+    String HIGH_VALUE_TRACE_NO_PREFIX = "HV";
+    /**
+     * 耗材出入库流水号前缀（LC）
+     */
+    String CONSUMABLE_STOCK_LOG_NO_PREFIX = "LC";
+    /**
+     * 手术申请单号前缀（SS）
+     */
+    String OPERATION_APPLY_NO_PREFIX = "SS";
+    /**
+     * 手术清点单号前缀（QD）
+     */
+    String OPERATION_COUNT_NO_PREFIX = "QD";
+    /**
+     * 麻醉访视单号前缀（MF）
+     */
+    String ANESTHESIA_VISIT_NO_PREFIX = "MF";
+    /**
+     * 麻醉记录单号前缀（MZ）
+     */
+    String ANESTHESIA_RECORD_NO_PREFIX = "MZ";
+    /**
+     * 麻醉随访单号前缀（MS）
+     */
+    String ANESTHESIA_FOLLOWUP_NO_PREFIX = "MS";
+    /**
+     * 复苏室记录单号前缀（FS）
+     */
+    String PACU_NO_PREFIX = "FS";
+    /**
+     * 手术安全核查单号前缀（HC）
+     */
+    String OPERATION_SAFETY_CHECK_NO_PREFIX = "HC";
+    /**
+     * 住院医嘱单号前缀（RZ）
+     */
+    String ADMISSION_ORDER_NO_PREFIX = "RZ";
+    /**
+     * 待床登记号前缀（DC）
+     */
+    String BED_WAIT_NO_PREFIX = "DC";
+    /**
+     * 床位分配号前缀（TP）
+     */
+    String BED_ALLOCATE_NO_PREFIX = "TP";
+    /**
+     * 会诊单号前缀（HZ）
+     */
+    String CONSULTATION_NO_PREFIX = "HZ";
+    /**
+     * 住院病历记录号前缀（BL）
+     */
+    String INPATIENT_RECORD_NO_PREFIX = "BL";
+    /**
+     * 护理评估单号前缀（AS）
+     */
+    String NURSING_ASSESS_NO_PREFIX = "AS";
+    /**
+     * 护理记录单号前缀（HL）
+     */
+    String NURSING_RECORD_NO_PREFIX = "HL";
+    /**
+     * 入院单号前缀（ADM）
+     */
+    String ADMISSION_NO_PREFIX = "ADM";
+    /**
+     * 出院单号前缀（DIS）
+     */
+    String DISCHARGE_NO_PREFIX = "DIS";
+    /**
+     * 就诊次号前缀（VISIT）
+     */
+    String VISIT_NO_PREFIX = "VISIT";
+    /**
+     * 住院医嘱单号前缀（YZ）
+     */
+    String INPATIENT_ORDER_NO_PREFIX = "YZ";
+    /**
+     * 医嘱分组号前缀（G）
+     */
+    String ORDER_GROUP_NO_PREFIX = "G";
+    /**
+     * 转诊/转科单号前缀（ZK）
+     */
+    String TRANSFER_NO_PREFIX = "ZK";
+    /**
+     * 患者合并号前缀（HB）
+     */
+    String PATIENT_MERGE_NO_PREFIX = "HB";
+    /**
+     * 转诊单号前缀（REF）
+     */
+    String REFERRAL_NO_PREFIX = "REF";
+    /**
+     * 出院带药单号前缀（DDA）
+     */
+    String DISCHARGE_DRUG_NO_PREFIX = "DDA";
+
+    /**
+     * VTE 预防措施单号前缀（VP）
+     */
+    String VTE_PREVENT_NO_PREFIX = "VP";
+    /**
+     * VTE 事件单号前缀（VE）
+     */
+    String VTE_EVENT_NO_PREFIX = "VE";
+    /**
+     * 膳食方案单号前缀（DP）
+     */
+    String DIET_PLAN_NO_PREFIX = "DP";
+    /**
+     * 营养风险筛查单号前缀（NS）
+     */
+    String NUTRITION_SCREEN_NO_PREFIX = "NS";
+    /**
+     * 订餐单号前缀（MO）
+     */
+    String MEAL_ORDER_NO_PREFIX = "MO";
+    /**
+     * 体检登记记录号前缀（CU）
+     */
+    String CHECKUP_RECORD_NO_PREFIX = "CU";
+
+    /**
+     * 抗菌药物处方权授权单号前缀（KJ）
+     */
+    String ANTIBIOTIC_AUTH_NO_PREFIX = "KJ";
+    /**
+     * 抗菌药物 I 类切口点评单号前缀（KQI）
+     */
+    String ANTIBIOTIC_REVIEW_NO_PREFIX = "KQI";
+
+    /**
+     * 质控单号前缀（QC）
+     */
+    String QUALITY_CONTROL_NO_PREFIX = "QC";
+    /**
+     * 处方点评批次号前缀（RXRB）
+     */
+    String RX_REVIEW_BATCH_NO_PREFIX = "RXRB";
+    /**
+     * 药师约谈编号前缀（YT）
+     */
+    String RX_DOCTOR_TALK_NO_PREFIX = "YT";
+    /**
+     * 麻精药品专册登记号前缀（NZ）
+     */
+    String NARCOTIC_REGISTER_NO_PREFIX = "NZ";
 }

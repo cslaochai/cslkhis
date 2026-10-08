@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.his.common.constant.DictType;
 import com.his.common.exception.BusinessException;
-import com.his.common.util.DateFormats;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
 import com.his.patient.dto.CheckupDTO;
@@ -21,10 +21,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -40,6 +38,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
     private final BizCheckupResultMapper bizCheckupResultMapper;
     private final BizPatientMapper bizPatientMapper;
     private final DictCacheService dictCacheService;
+    private final RedisSequenceService redisSequenceService;
 
     // 套餐
 
@@ -151,8 +150,7 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
             throw new BusinessException("套餐性别限制：该套餐仅适用于" + dictCacheService.getDicDataLabel(DictType.GENDER, p.getGenderLimit()));
         }
         BizCheckupRecord r = new BizCheckupRecord();
-        r.setRecordNo("CU" + DateFormats.COMPACT_DATETIME.format(LocalDateTime.now())
-                + ThreadLocalRandom.current().nextInt(100, 1000));
+        r.setRecordNo(redisSequenceService.generateCheckupRecordNo());
         r.setPatientId(patient.getId());
         r.setPatientName(patient.getPatientName());
         r.setGender(patient.getGender());

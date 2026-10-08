@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -14,5 +15,6 @@ public class InpatientOrderVerifyDTO implements Serializable {
     /**
      * 医嘱ID列表（≥1 条）
      */
+    @NotEmpty(message = "请选择要校对的医嘱")
     private List<Long> orderIds;
 }

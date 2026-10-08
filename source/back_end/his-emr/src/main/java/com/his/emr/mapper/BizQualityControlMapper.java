@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.emr.dto.QcCandidateQueryPageDTO;
 import com.his.emr.dto.QcQueryPageDTO;
 import com.his.emr.entity.BizQualityControl;
-import com.his.emr.support.QcIssue;
+import com.his.emr.vo.QcIssueVO;
 import com.his.emr.vo.BizQualityControlVO;
 import com.his.emr.vo.QcCandidateVO;
 import com.his.emr.vo.QcOverviewVO;
@@ -218,11 +218,6 @@ public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {
             WHERE qc_id = #{qcId}
             ORDER BY severity DESC, rule_code ASC, id ASC
             """)
-    List<QcIssue> listIssueByQc(@Param("qcId") Long qcId);
+    List<QcIssueVO> listIssueByQc(@Param("qcId") Long qcId);
 
-    /**
-     * 当天已生成的质控单号条数（单号序号用，与住院文书号同一套做法）
-     */
-    @Select("SELECT COUNT(*) FROM biz_quality_control WHERE del_flag = 0 AND qc_no LIKE CONCAT(#{prefix}, '%')")
-    long countByQcNoPrefix(@Param("prefix") String prefix);
 }

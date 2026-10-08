@@ -3,7 +3,7 @@ package com.his.medicaltech.enums;
 import lombok.Getter;
 
 /**
- * 病理单状态枚举（码值口径 = biz_pathology_order.status 列注释）。
+ * 病理单状态枚举（码值口径 = 病理申请单状态列的库内注释）。
  */
 @Getter
 public enum PathologyStatusEnum {

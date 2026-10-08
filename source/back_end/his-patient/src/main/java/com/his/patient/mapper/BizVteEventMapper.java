@@ -18,13 +18,6 @@ import java.util.List;
 @Mapper
 public interface BizVteEventMapper extends BaseMapper<BizVteEvent> {
 
-    /**
-     * 单号前缀当日已用最大序号（VE+yyyyMMdd+4位）
-     */
-    @Select("SELECT COALESCE(MAX(CAST(RIGHT(event_no, 4) AS UNSIGNED)), 0) "
-            + "FROM biz_vte_event WHERE event_no LIKE CONCAT(#{prefix}, '%')")
-    long maxEventSeq(@Param("prefix") String prefix);
-
     @Select("""
             <script>
             SELECT e.*,

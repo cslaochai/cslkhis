@@ -7,6 +7,7 @@ import com.his.common.base.PageResult;
 import com.his.common.constant.DictType;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -41,13 +42,14 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBloodInventory> implements BloodService {
 
-
     private final BizBloodInventoryMapper bizBloodInventoryMapper;
-    private final BizBloodCrossmatchMapper bizBloodCrossmatchMapper;
-    private final BizBloodStockLogMapper bizBloodStockLogMapper;
-    private final DictCacheService dictCacheService;
 
-    // 库存台账
+    private final BizBloodCrossmatchMapper bizBloodCrossmatchMapper;
+
+    private final BizBloodStockLogMapper bizBloodStockLogMapper;
+
+    private final DictCacheService dictCacheService;
+    private final RedisSequenceService redisSequenceService;
 
     @Transactional(rollbackFor = Exception.class)
     public BizBloodInventory inbound(BloodDTO.Inbound dto) {
@@ -168,8 +170,6 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         return vo;
     }
 
-    // 袋操作：预留 / 取消预留 / 发血 / 报废 / 退回
-
     @Transactional(rollbackFor = Exception.class)
     public void reserve(BloodDTO.BagAction dto) {
         BizBloodInventory b = requireBag(dto.getBagId());
@@ -257,8 +257,6 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         bizBloodInventoryMapper.updateById(b);
         writeLog(b.getBagNo(), BloodStockLogBizTypeEnum.RETURN.getCode(), from, BloodInventoryStatusEnum.RETURNED.getCode(), null, dto.getReason());
     }
-
-    // 交叉配血
 
     public PageResult<BloodVO.CrossmatchVO> crossmatchPage(BloodDTO.CrossmatchQuery q) {
         LambdaQueryWrapper<BizBloodCrossmatch> w = new LambdaQueryWrapper<>();
@@ -374,8 +372,6 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         bizBloodCrossmatchMapper.updateById(c);
     }
 
-    // 流水
-
     public PageResult<BloodVO.StockLogVO> logPage(BloodDTO.LogQuery q) {
         LambdaQueryWrapper<BizBloodStockLog> w = new LambdaQueryWrapper<>();
         w.eq(TextUtil.hasText(q.getBagNo()), BizBloodStockLog::getBagNo, TextUtil.trim(q.getBagNo()))
@@ -394,8 +390,6 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         }
         return PageResult.of(page.getTotal(), page.getCurrent(), page.getSize(), page.getPages(), vos);
     }
-
-    // 内部
 
     private void writeLog(String bagNo, int bizType, Integer from, Integer to, String applyNo, String reason) {
         CurrentUser operatorUser = UserUtils.getCurrentUser();
@@ -440,7 +434,6 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
     }
 
     private BizBloodInventory requireBag(Long id) {
-        // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
         if (id == null) {
             throw new BusinessException("血袋ID不能为空");
         }
@@ -452,7 +445,6 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
     }
 
     private BizBloodCrossmatch requireCm(Long id) {
-        // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
         if (id == null) {
             throw new BusinessException("配血单ID不能为空");
         }
@@ -463,18 +455,15 @@ public class BloodServiceImpl extends ServiceImpl<BizBloodInventoryMapper, BizBl
         return c;
     }
 
+    /**
+     * 配血单号：PX + 日期 + 3 位 Redis 自增序号。
+     * <p><b>走 Redis 原子自增</b>：取代「count 取起点 + 探活 20 次 + 时间戳兜底」，
+     * 并发下不再撞号，也不用为取一个号查 20 遍库。
+     */
     private String nextMatchNo() {
         String day = LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long base = bizBloodCrossmatchMapper.selectCount(new LambdaQueryWrapper<BizBloodCrossmatch>()
-                .ge(BizBloodCrossmatch::getCreateTime, TimeUtil.dayStart(LocalDate.now()))) + 1;
-        for (int i = 0; i < 20; i++) {
-            String no = "PX" + day + String.format("%03d", base + i);
-            if (bizBloodCrossmatchMapper.selectCount(new LambdaQueryWrapper<BizBloodCrossmatch>()
-                    .eq(BizBloodCrossmatch::getMatchNo, no)) == 0) {
-                return no;
-            }
-        }
-        return "PX" + day + System.currentTimeMillis() % 100000;
+        long seq = redisSequenceService.next("BLOOD_CROSSMATCH");
+        return "PX" + day + String.format("%03d", seq);
     }
 
 }

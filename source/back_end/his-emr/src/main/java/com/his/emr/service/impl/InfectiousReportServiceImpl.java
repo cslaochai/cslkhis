@@ -141,6 +141,8 @@ public class InfectiousReportServiceImpl extends ServiceImpl<BizInfectiousReport
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long upsert(InfectiousReportDTO.Upsert dto) {
+        // B-条件必填：门诊(registId)与住院(inpId)二选一，只填住院的合法报卡会被 @NotNull 一刀切挡成 400，
+        // DTO 注解无法表达「两个字段至少有一个」，保留
         if (dto.getRegistId() == null && dto.getInpId() == null) {
             throw new BusinessException("门诊就诊与住院记录至少填一项（报卡必须能追到具体就诊）");
         }

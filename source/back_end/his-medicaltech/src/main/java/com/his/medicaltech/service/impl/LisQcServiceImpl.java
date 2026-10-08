@@ -308,7 +308,7 @@ public class LisQcServiceImpl implements LisQcService {
     // 内部
 
     private BizLisQcPlan requirePlan(Long id) {
-        // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
+        // C-非 web 入参：私有 helper 按主键捞单，被多个入口（DTO 字段与标量参数）复用，Bean Validation 不覆盖，保留
         if (id == null) {
             throw new BusinessException("质控计划ID不能为空");
         }
@@ -320,7 +320,7 @@ public class LisQcServiceImpl implements LisQcService {
     }
 
     private BizLisQcRecord requireRecord(Long id) {
-        // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
+        // C-非 web 入参：私有 helper 按主键捞单，被多个入口（DTO 字段与标量参数）复用，Bean Validation 不覆盖，保留
         if (id == null) {
             throw new BusinessException("质控记录ID不能为空");
         }

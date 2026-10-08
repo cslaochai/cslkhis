@@ -217,10 +217,10 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         // 于是编辑草稿时这一格必然是空的。若照旧强校验，用户点「编辑」什么都不改直接保存会 400
         // —— 现象像「编辑功能坏了」。口径：编辑时留空＝沿用原值（电话是必填项，没有「清空」语义）；
         // 新建时留空＝参数错误。
+        // B-条件必填：编辑留空＝沿用原值，只有新建（原值也为空）才报错，DTO 注解表达不了这层分支，保留
         if (TextUtil.hasText(dto.getCompanionPhone())) {
             leave.setCompanionPhone(TextUtil.cut(dto.getCompanionPhone().trim(), PHONE_MAX));
         } else if (!TextUtil.hasText(leave.getCompanionPhone())) {
-            // B-条件必填：编辑留空＝沿用原值，只有新建（原值也为空）才报错，DTO 注解表达不了这层分支，保留
             throw new BusinessException("随行人联系电话不能为空");
         }
         leave.setExpectedLeaveTime(expectedLeave);
@@ -335,8 +335,8 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         }
         assertDeptAccessible(leave.getDeptId());
         // 患方承诺三要素缺一不可 —— 「回去出事责任界定」靠的就是这张签字
+        // D-业务规则：码值合法性（非空已由 DTO @NotNull 收口，这里挡的是选了非法码值的请求）
         if (!RELATIONS.contains(dto.getConfirmRelation())) {
-            // D-业务规则：码值合法性（非空已由 DTO @NotNull 收口，这里挡的是选了非法码值的请求）
             throw new BusinessException("确认人与患者的关系取值不合法（见字典 his_notice_relation，责任界定必填）");
         }
         String signature = TextUtil.trimToNull(dto.getConfirmSignature());

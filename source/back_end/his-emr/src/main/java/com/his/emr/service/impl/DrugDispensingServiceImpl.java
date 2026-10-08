@@ -100,7 +100,8 @@ public class DrugDispensingServiceImpl extends ServiceImpl<BizDrugDispensingMapp
     @Transactional(rollbackFor = Exception.class)
     public boolean dispenseByPrescription(Long prescriptionId, Long pharmacistId, String pharmacistName,
                                           Long checkerId, String overLimitReason) {
-        // C 类保留：入参是 Long（Controller 解 DTO 后拆开直传），Bean Validation 不经过这一层
+        // B-条件必填：DrugDispenseDTO 被单行发药（只传 id）与本接口（只传 prescriptionId）共用，
+        // 给 prescriptionId 加 @NotNull 会把合法的单行发药挡成 400，DTO 注解无法表达，保留
         if (prescriptionId == null) {
             throw new BusinessException("处方ID不能为空");
         }

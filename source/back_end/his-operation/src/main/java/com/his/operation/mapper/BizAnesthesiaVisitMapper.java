@@ -53,11 +53,6 @@ public interface BizAnesthesiaVisitMapper extends BaseMapper<BizAnesthesiaVisit>
     @Select(PROJECTION + " WHERE v.del_flag = 0 AND v.apply_id = #{applyId}")
     AnesthesiaVisitVO selectVOByApply(@Param("applyId") Long applyId);
 
-    /**
-     * 当天已生成的访视单号条数（单号序号用）
-     */
-    @Select("SELECT COUNT(*) FROM biz_anesthesia_visit WHERE del_flag = 0 AND visit_no LIKE CONCAT(#{prefix}, '%')")
-    long countByNoPrefix(@Param("prefix") String prefix);
 
     /**
      * 该手术申请是否已有访视单（UNIQUE apply_id 的第二道防线，用于给人类可读的错误文案）。

@@ -339,8 +339,8 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     }
 
     private String nextCertNo() {
-        String prefix = CERT_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        return prefix + String.format("%04d", sysSignCertMapper.countByCertNoPrefix(prefix) + 1);
+        return CERT_NO_PREFIX + LocalDate.now().format(DateFormats.COMPACT_DATE)
+                + String.format("%04d", redisSequenceService.next("CERT"));
     }
 
     private SignCertVO toVO(SysSignCert c, boolean withPublicKey) {

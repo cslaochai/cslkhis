@@ -14,6 +14,7 @@ import com.his.common.enums.*;
 import com.his.common.enums.YesOrNoEnum;
 import com.his.common.exception.BusinessException;
 import com.his.common.service.EmrSignatureService;
+import com.his.common.service.RedisSequenceService;
 import com.his.common.util.DateFormats;
 import com.his.common.util.TextUtil;
 import com.his.common.util.TimeUtil;
@@ -59,6 +60,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapper, BizInpatientOrder> implements InpatientOrderService {
+
+    private final RedisSequenceService redisSequenceService;
 
     private static final int BACKFILL_LIMIT = 500;
 
@@ -116,10 +119,6 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(InpatientOrderUpsertDTO dto) {
-        // 保留（类别②）：整个 DTO 为 null 不是字段校验，Bean Validation 覆盖不到
-        if (dto == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -394,9 +393,6 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int verify(InpatientOrderVerifyDTO dto) {
-        if (dto == null || dto.getOrderIds() == null || dto.getOrderIds().isEmpty()) {
-            throw new BusinessException("请选择要校对的医嘱");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -512,10 +508,11 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int stopLongOrders(Long admissionId, String reason) {
-        // 保留（类别②）：转科等内部调用直接传参，非 web 绑定入参，Bean Validation 不生效
+        // C-非 web 入参：InpatientTransferServiceImpl 转科流程 service 间直调（传实体派生值），Bean Validation 不覆盖，保留
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
+        // C-非 web 入参：同上，标量参数非 DTO 字段，注解无处挂载，内部调用不过绑定层，保留
         if (!TextUtil.hasText(reason)) {
             throw new BusinessException("停止原因不能为空（停止是一个医疗决定，必须有人负责）");
         }
@@ -561,11 +558,11 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int stop(InpatientOrderStopDTO dto) {
-        // 保留（类别②）：除 Controller 外还被 stopLongOrders 内部构造 DTO 直接调用，
-        // 注解校验只在 web 绑定跑，内部路径必须留下这道闸
+        // C-非 web 入参：除 Controller 外还被本类 stopLongOrders 内部 new DTO 直接调用，注解校验只在 web 绑定跑，内部路径必须留闸，保留
         if (dto == null || dto.getOrderId() == null) {
             throw new BusinessException("医嘱ID不能为空");
         }
+        // C-非 web 入参：同上，stopLongOrders 传入的内部 reason 不经 Bean Validation，保留
         if (!TextUtil.hasText(dto.getStopReason())) {
             throw new BusinessException("停止原因不能为空（停止是一个医疗决定，必须有人负责）");
         }
@@ -638,10 +635,6 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(InpatientOrderCancelDTO dto) {
-        // 保留（类别②）：整个 DTO 为 null 不是字段校验，Bean Validation 覆盖不到
-        if (dto == null) {
-            throw new BusinessException("医嘱ID不能为空");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -757,9 +750,6 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int execComplete(OrderExecCompleteDTO dto) {
-        if (dto == null || dto.getExecIds() == null || dto.getExecIds().isEmpty()) {
-            throw new BusinessException("请选择要处理的执行记录");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -1057,15 +1047,11 @@ public class InpatientOrderServiceImpl extends ServiceImpl<BizInpatientOrderMapp
     }
 
     private String nextOrderNo() {
-        String prefix = "YZ" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizInpatientOrderMapper.countByOrderNoPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateInpatientOrderNo();
     }
 
     private String nextOrderGroup() {
-        String prefix = "G" + LocalDate.now().format(DateFormats.COMPACT_DATE);
-        long seq = bizInpatientOrderMapper.countByOrderGroupPrefix(prefix) + 1;
-        return prefix + String.format("%04d", seq);
+        return redisSequenceService.generateOrderGroupNo();
     }
 
     /**
