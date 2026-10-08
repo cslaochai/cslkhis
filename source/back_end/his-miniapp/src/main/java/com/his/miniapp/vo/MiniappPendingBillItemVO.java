@@ -7,10 +7,6 @@ import java.math.BigDecimal;
 
 /**
  * 患者端待缴账单明细行。
- *
- * <p>医保拆分四列直接抄自 {@code biz_settlement_bill_item} 的行级快照：患者最常问的是
- * 「自付为什么这么多」，把统筹/个账/自付与甲乙丙类摊开就能自证，不必再让 AI 解释
- * 一遍界面上本该有的数。
  */
 @Data
 public class MiniappPendingBillItemVO implements Serializable {

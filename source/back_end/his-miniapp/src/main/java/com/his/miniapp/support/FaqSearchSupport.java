@@ -1,9 +1,9 @@
 package com.his.miniapp.support;
 
 import com.his.common.util.TextUtil;
+import com.his.miniapp.entity.SysFaq;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import com.his.miniapp.entity.SysFaq;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -11,30 +11,27 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 常见问题检索：把患者的口语提问切成检索词，再对条目打分。
- *
- * <p><b>为什么不用数据库 LIKE 一条了事</b>：患者打的是「报告多久出来啊」，
- * 库里的问题写的是「报告多久能出来」，整串 LIKE 命中不了，
- * 而患者只会得出一个结论 —— 这个客服什么都搜不到。
- * 所以要把输入切成 2~4 字的片段分别去撞，撞中的词越多排越前。
- *
- * <p><b>为什么不给答案也加权</b>：答案里出现「报告」两个字的条目很多，
- * 按答案匹配会把一堆不相关的排上来。权重是 keywords(3) > question(2) > answer(1)，
- * 答案命中只作兜底。
+ * 常见问题检索
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class FaqSearchSupport {
 
-    /** 疑问词与虚词：切词时剔掉，否则「怎么」「可以」会命中几乎所有条目 */
+    /**
+     * 疑问词与虚词：切词时剔掉，否则「怎么」「可以」会命中几乎所有条目
+     */
     private static final Set<String> STOP = Set.of(
             "怎么", "怎样", "如何", "什么", "为什么", "可以", "能不能", "能否", "是否",
             "需要", "要不要", "多少", "几个", "哪里", "哪儿", "请问", "麻烦", "一下",
             "我的", "我要", "我想", "怎么办", "多久", "哪些", "这个", "那个", "之后", "以后");
 
-    /** 单个检索词的最大长度（超过 4 字几乎撞不到东西） */
+    /**
+     * 单个检索词的最大长度（超过 4 字几乎撞不到东西）
+     */
     private static final int MAX_TERM_LENGTH = 4;
 
-    /** 检索词个数上限：患者贴一整段话进来时不能生成上百个词 */
+    /**
+     * 检索词个数上限：患者贴一整段话进来时不能生成上百个词
+     */
     private static final int MAX_TERMS = 8;
 
     /**

@@ -12,8 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 患者端慢病档案（M1，只读）：登录患者查看自己的慢病建档与认定状态。
- * 归属收口：patientId 取自登录态，不接收前端参数。
+ * 患者端慢病档案
  */
 @Tag(name = "患者端-慢病档案")
 @RestController

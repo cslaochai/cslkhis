@@ -1,8 +1,8 @@
 package com.his.miniapp.controller;
 
 import com.his.common.base.Result;
-import com.his.miniapp.dto.PayUpsertDTO;
 import com.his.miniapp.dto.PayRefundDTO;
+import com.his.miniapp.dto.PayUpsertDTO;
 import com.his.miniapp.service.MiniappPayService;
 import com.his.miniapp.vo.PayOrderListVO;
 import com.his.miniapp.vo.PayOrderVO;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 患者端统一支付（微信支付口子：患者端统一支付单落单 → 统一下单 → 桩模式直接推进/真模式返回收银台参数）。
+ * 患者端统一支付
  */
 @Tag(name = "患者端-支付")
 @RestController
@@ -28,7 +28,7 @@ public class MiniappPayController {
 
     private final MiniappPayService miniappPayService;
 
-    @Operation(summary = "下单支付（桩模式直接返回已支付；真收银台模式返回 payParams）")
+    @Operation(summary = "下单支付（模式直接返回已支付；真收银台模式返回 payParams）")
     @PostMapping("/createOrder")
     public Result<PayOrderVO> createOrder(@RequestBody @Valid PayUpsertDTO dto) {
         return Result.success("支付成功", miniappPayService.createOrder(dto));

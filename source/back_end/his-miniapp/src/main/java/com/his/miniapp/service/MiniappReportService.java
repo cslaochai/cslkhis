@@ -16,6 +16,6 @@ public interface MiniappReportService {
     /** 报告详情（含影像帧）；报告不存在时返回 null */
     BizReportVO myReportDetail(Long reportId);
 
-    /** 报告原文 PDF（打印桩） */
+    /** 报告原文 PDF（打印） */
     ReportPdfVO reportPdf(Long reportId);
 }

@@ -7,18 +7,26 @@ import lombok.Data;
  * 常见问题分类（带条数，用于客服页分类标签）。
  */
 @Data
-@Schema(name = "FaqCategoryVO", description = "常见问题分类")
-public class FaqCategoryVO {
+@Schema(name = "FaqCategoryListVO", description = "常见问题分类")
+public class FaqCategoryListVO {
 
-    /** 分类编码 */
+    /**
+     * 分类编码
+     */
     private String categoryCode;
 
-    /** 分类名称 */
+    /**
+     * 分类名称
+     */
     private String categoryName;
 
-    /** 该分类下启用条数 */
+    /**
+     * 该分类下启用条数
+     */
     private Integer count;
 
-    /** 排序号 */
+    /**
+     * 排序号
+     */
     private Integer sortOrder;
 }

@@ -27,13 +27,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 处方流转单（M2，院外取药口子·打印桩形态）。
+ * 处方流转单（M2，院外取药口子·打印形态）。
  *
  * <p>口径：
  * <ul>
  *   <li>一张处方同一时刻至多一张「已流转」有效单（重复流转拒绝）；</li>
  *   <li>状态机单向：1-已流转 → 2-已取药 / 3-已取消，2/3 为终态不可逆；</li>
- *   <li>取药完成走外联口子（打印桩：日志回执 [处方流转口子]，真对接=换外联网关）；</li>
+ *   <li>取药完成走外联口子（打印：日志回执 [处方流转口子]，真对接=换外联网关）；</li>
  *   <li>流转不改动处方自身状态——处方缴费/取药语义仍归收费/药房域。</li>
  * </ul>
  */
@@ -74,7 +74,7 @@ public class RxFlowServiceImpl extends ServiceImpl<BizRxFlowMapper, BizRxFlow> i
         flow.setTotalAmount(prescription.getTotalAmount());
         flow.setRemark(dto.getRemark());
         bizRxFlowMapper.insert(flow);
-        log.info("[处方流转口子] ===== 打印桩：处方流转单已创建（外发外联渠道，占位不真发） ===== flowNo={} prescriptionNo={} org={}",
+        log.info("[处方流转口子] ===== 打印：处方流转单已创建（外发外联渠道，占位不真发） ===== flowNo={} prescriptionNo={} org={}",
                 flow.getFlowNo(), flow.getPrescriptionNo(), flow.getOrgName());
         return toVO(flow);
     }
@@ -85,7 +85,7 @@ public class RxFlowServiceImpl extends ServiceImpl<BizRxFlowMapper, BizRxFlow> i
         flow.setFlowStatus(2);
         flow.setFinishTime(LocalDateTime.now());
         bizRxFlowMapper.updateById(flow);
-        log.info("[处方流转口子] ===== 打印桩：院外取药回执 ===== flowNo={} prescriptionNo={} org={}",
+        log.info("[处方流转口子] ===== 打印：院外取药回执 ===== flowNo={} prescriptionNo={} org={}",
                 flow.getFlowNo(), flow.getPrescriptionNo(), flow.getOrgName());
     }
 

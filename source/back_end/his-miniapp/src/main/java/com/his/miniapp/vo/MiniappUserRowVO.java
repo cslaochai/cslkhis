@@ -7,13 +7,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 微信登录命中的小程序用户行，对应 {@code MiniappSysUserMapper#selectByOpenid}。
- *
- * <p>只回答「这个 openid 绑的是谁、是不是患者账号、还能不能用」，
- * 不含密码、身份证等与登录判定无关的列。
- *
- * <p>本 VO 只在服务层内部流转（最终出参是 {@link WxLoginVO}），BIGINT 主键仍按全库铁律
- * 加 {@code ToStringSerializer}，以防后续被直接序列化时在 JS 端丢精度。
+ * 微信登录命中的小程序用户行
  */
 @Data
 public class MiniappUserRowVO implements Serializable {

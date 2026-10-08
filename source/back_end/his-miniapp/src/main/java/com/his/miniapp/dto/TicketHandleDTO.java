@@ -5,10 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * 院内处理工单：受理 / 回复 / 办结 / 关闭 / 内部备注。
- *
- * <p><b>操作人一律服务端取登录人</b>，DTO 里不收 operator ——
- * 收了就意味着前端能伪造"张三处理的"。
+ * 院内处理工单
  */
 @Data
 @Schema(description = "院内处理工单入参")

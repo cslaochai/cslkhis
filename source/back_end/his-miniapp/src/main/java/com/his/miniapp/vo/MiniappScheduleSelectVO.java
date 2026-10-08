@@ -11,9 +11,6 @@ import java.time.LocalDate;
 
 /**
  * 患者端号源下拉出参。
- *
- * <p>与后台排班下拉分开是有意的：小程序要按「科室 → 专家/普通号 → 可约号源」逐级筛选并展示费用明细，
- * 而后台排班下拉只要号源本身。两边共用一个类就会各自多带一倍用不上的列。
  */
 @Data
 @Schema(name = "MiniappScheduleSelectVO", description = "患者端号源下拉出参")

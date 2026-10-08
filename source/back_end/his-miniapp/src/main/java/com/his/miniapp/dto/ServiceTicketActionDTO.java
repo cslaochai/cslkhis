@@ -6,10 +6,6 @@ import lombok.Data;
 
 /**
  * 患者对工单的动作：撤单 / 确认解决 / 重开。
- *
- * <p>这三个动作患者都能在小程序上点，但每个动作都有前置状态
- * （见 {@link com.his.miniapp.support.ServiceTicketStatus#canCancel} 等），
- * 服务端校验，前端按钮只是"能不能点"的提示。
  */
 @Data
 @Schema(description = "患者工单动作入参")

@@ -52,7 +52,7 @@ public interface TcmDecoctService extends IService<BizTcmDecoct> {
     TcmDecoctDetailVO cancel(TcmDecoctCancelDTO dto);
 
     /**
-     * 打印回执（当前为控制台打印桩 + 审计留痕）
+     * 打印回执（当前为控制台打印 + 审计留痕）
      */
     TcmDecoctDetailVO printReceipt(Long id);
 

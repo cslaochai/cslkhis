@@ -6,7 +6,7 @@ import com.his.charge.vo.PrepayBalanceVO;
 import com.his.charge.vo.PrepayVO;
 import com.his.common.base.Result;
 import com.his.miniapp.service.MiniappDepositService;
-import com.his.miniapp.vo.AdmissionSelectListVO;
+import com.his.miniapp.vo.MiniAdmiSelectListVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 患者端住院押金（读预交金，充值走支付口子；形态同 M7 打印桩——不接银联/对公）。
+ * 患者端住院押金（读预交金，充值走支付口子；形态同 M7 打印——不接银联/对公）。
  */
 @Tag(name = "患者端-住院押金")
 @RestController
@@ -30,7 +30,7 @@ public class MiniappDepositController {
 
     @Operation(summary = "我的住院记录（押金页选择入院单用）")
     @GetMapping("/myAdmissions")
-    public Result<List<AdmissionSelectListVO>> myAdmissions(@RequestParam Long patientId) {
+    public Result<List<MiniAdmiSelectListVO>> myAdmissions(@RequestParam Long patientId) {
         return Result.success(miniappDepositService.myAdmissions(patientId));
     }
 

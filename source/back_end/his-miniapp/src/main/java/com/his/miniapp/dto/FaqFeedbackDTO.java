@@ -15,7 +15,9 @@ public class FaqFeedbackDTO {
     @Schema(description = "常见问题ID")
     private Long faqId;
 
-    /** 1-有帮助 0-没帮助 */
+    /**
+     * 1-有帮助 0-没帮助
+     */
     @Schema(description = "1-有帮助 0-没帮助")
     private Integer helpful;
 }

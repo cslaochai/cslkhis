@@ -2,14 +2,10 @@ package com.his.miniapp.dto;
 
 import com.his.common.base.PageParam;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.EqualsAndHashCode;
 import lombok.Data;
 
 /**
  * 院内工单列表检索条件。
- *
- * <p><b>客服首屏要的是「待受理」</b>：默认不筛状态时按待受理优先排序
- * （见 Impl 的 order by），不要让客服在一堆已办结里翻今天的新单。
  */
 @Data
 @Schema(description = "院内工单检索条件")

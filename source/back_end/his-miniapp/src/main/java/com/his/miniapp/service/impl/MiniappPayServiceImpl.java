@@ -42,18 +42,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 患者端聚合服务实现：微信登录口子 + 统一支付单。
- *
- * <p>支付推进语义（桩模式全部在本服务内闭环）：
- * <ul>
- *   <li>1-门诊缴费：{@code bizId} = <b>结算账单ID</b>（四层改造前是收费单ID），支付成功给该账单记一笔微信收款流水；</li>
- *   <li>2-挂号费：挂号时已出「1-挂号费结算」账单并把账单ID 回写挂号记录，
- *       签到读的是账单状态而不是收费单状态，所以线上付款成功后同样只记流水；</li>
- *   <li>3-住院押金：调预交金充值（payMethod=2 微信），余额口径与院内一致（流水累加）。</li>
- * </ul>
- *
- * <p>三类都走 {@code PaymentService.pay}，不在这里写金额状态：账单是否付清由
- * SUM(成功收款流水) 现算，患者端自己翻"已支付"等于凭空造一条资金事实。
+ * 患者端聚合服务实现
  */
 @Slf4j
 @Service
@@ -73,7 +62,6 @@ public class MiniappPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPay
     private final BizAppointService bizAppointService;
 
     // 微信登录口子
-
     @Override
     public WxLoginVO wxLogin(WxLoginDTO dto) {
         String openid = wxLoginChannelService.code2Session(dto.getCode());
@@ -107,7 +95,6 @@ public class MiniappPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPay
     }
 
     // 统一支付单
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PayOrderVO createOrder(PayUpsertDTO dto) {
@@ -141,7 +128,7 @@ public class MiniappPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPay
             throw new BusinessException("微信下单失败：" + unified.errMsg());
         }
         if (unified.mockPaid()) {
-            // 桩模式：后端直接推进支付成功（真收银台模式下这一步由 /miniapp/pay/notify 异步触发）
+            // 模式：后端直接推进支付成功（真收银台模式下这一步由 /miniapp/pay/notify 异步触发）
             handlePaySuccess(order.getPayNo(), "MOCK_" + System.currentTimeMillis());
             BizPayOrder paid = getByPayNo(order.getPayNo());
             return toVO(paid, null);
@@ -151,7 +138,7 @@ public class MiniappPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPay
     }
 
     /**
-     * 支付成功推进（真模式由 notify 端点调用；桩模式在下单事务内同步调用）。
+     * 支付成功推进（真模式由 notify 端点调用；模式在下单事务内同步调用）。
      * 幂等：已支付直接返回。
      */
     @Transactional(rollbackFor = Exception.class)
@@ -304,7 +291,6 @@ public class MiniappPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPay
     }
 
     // 私有
-
     private BigDecimal resolveAmount(PayUpsertDTO dto) {
         // 门诊缴费：金额一律以账单剩余应缴为准（前端传值忽略，防止单据与支付金额不一致）
         if (dto.getBizType() == 1) {
@@ -319,7 +305,6 @@ public class MiniappPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPay
             return unpaid.setScale(2, RoundingMode.HALF_UP);
         }
         // 挂号费/押金：以患者端传值为准
-        // B 类保留（条件必填）：门诊缴费的金额以账单应缴为准并忽略该字段，只有其余业务类型才必填
         if (dto.getAmount() == null || dto.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
             throw new BusinessException("支付金额必须大于0");
         }

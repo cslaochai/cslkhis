@@ -5,7 +5,7 @@ import com.his.common.base.Result;
 import com.his.miniapp.dto.FaqFeedbackDTO;
 import com.his.miniapp.dto.FaqPageQueryDTO;
 import com.his.miniapp.service.MiniappFaqService;
-import com.his.miniapp.vo.FaqCategoryVO;
+import com.his.miniapp.vo.FaqCategoryListVO;
 import com.his.miniapp.vo.FaqListVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,9 +18,6 @@ import java.util.List;
 
 /**
  * 患者端常见问题（客服台自助入口）。
- *
- * <p>答案是人工维护的固定文本，不走模型 —— 患者问「门诊几点上班」，
- * 需要一个确定且可追溯的答案，不是一段听起来合理的生成文本。
  */
 @Tag(name = "患者端-常见问题")
 @RestController
@@ -33,7 +30,7 @@ public class MiniappFaqController {
     @Operation(summary = "常见问题分类（带条数）")
     @GetMapping("/categories")
     @PreAuthorize("hasAuthority('PATIENT')")
-    public Result<List<FaqCategoryVO>> categories() {
+    public Result<List<FaqCategoryListVO>> categories() {
         return Result.success(miniappFaqService.categories());
     }
 

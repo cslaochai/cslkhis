@@ -63,7 +63,7 @@ public class MiniappReportServiceImpl implements MiniappReportService {
         if (!PUBLISHED.equals(report.getReportStatus())) {
             return ReportPdfVO.deny(400);
         }
-        log.info("[报告PDF口子] ===== 打印桩生成报告 PDF ===== reportNo={} patientId={}",
+        log.info("[报告PDF口子] ===== 打印生成报告 PDF ===== reportNo={} patientId={}",
                 report.getReportNo(), report.getPatientId());
         byte[] pdf = MiniappPdfStub.reportPdf(report.getReportNo(), report.getPatientName(),
                 report.getItemName(), report.getApplyDeptName(), report.getApplyDoctorName(),

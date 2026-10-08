@@ -13,7 +13,7 @@ import java.time.LocalDate;
 public class PatientProfileVO implements Serializable {
 
     /**
-     * 患者ID（字符串化防 BIGINT 精度丢失）
+     * 患者ID
      */
     private String id;
 

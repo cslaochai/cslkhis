@@ -160,7 +160,7 @@ public class SignatureCenterServiceImpl implements SignatureCenterService {
         status.setProviderName(externalCaChannelService.available() ? externalCaChannelService.name() : null);
         status.setAvailable(externalCaChannelService.available());
         status.setHint(externalCaChannelService.available()
-                ? "外部 CA 模式：证书签发会先本地生成密钥对、向适配器提交 CSR（当前为控制台打印桩，提交后中断签发，不回退自签）"
+                ? "外部 CA 模式：证书签发会先本地生成密钥对、向适配器提交 CSR（当前为控制台打印，提交后中断签发，不回退自签）"
                 : "内部自签模式（G6/G6b 形态）：证书由院内 KeyPairFactory 签发，信任根为院内，不对外声称法律效力");
         return status;
     }

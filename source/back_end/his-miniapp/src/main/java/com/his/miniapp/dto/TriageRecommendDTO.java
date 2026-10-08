@@ -9,7 +9,9 @@ import lombok.Data;
 @Data
 public class TriageRecommendDTO {
 
-    /** 主诉描述 */
+    /**
+     * 主诉描述
+     */
     @NotBlank(message = "请描述您的不适")
     private String description;
 }

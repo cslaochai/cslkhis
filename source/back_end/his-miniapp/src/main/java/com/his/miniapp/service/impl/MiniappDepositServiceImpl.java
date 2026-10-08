@@ -8,7 +8,7 @@ import com.his.charge.vo.PrepayVO;
 import com.his.common.exception.BusinessException;
 import com.his.miniapp.mapper.MiniappAdmissionMapper;
 import com.his.miniapp.service.MiniappDepositService;
-import com.his.miniapp.vo.AdmissionSelectListVO;
+import com.his.miniapp.vo.MiniAdmiSelectListVO;
 import com.his.patient.service.PatientGuardianService;
 import com.his.system.utils.UserUtils;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ public class MiniappDepositServiceImpl implements MiniappDepositService {
     private final PatientGuardianService patientGuardianService;
 
     @Override
-    public List<AdmissionSelectListVO> myAdmissions(Long patientId) {
+    public List<MiniAdmiSelectListVO> myAdmissions(Long patientId) {
         if (!patientGuardianService.canAccessPatient(patientId)) {
             throw new BusinessException("无权查询该就诊人的住院记录");
         }
@@ -53,7 +53,7 @@ public class MiniappDepositServiceImpl implements MiniappDepositService {
         }
         Long patientId = UserUtils.getCurrentUser().getPatientId();
         // 归属从住院记录反查，不看前端传的是谁
-        List<AdmissionSelectListVO> mine = miniappAdmissionMapper.selectByPatientId(patientId);
+        List<MiniAdmiSelectListVO> mine = miniappAdmissionMapper.selectByPatientId(patientId);
         String target = String.valueOf(admissionId);
         boolean own = mine.stream().anyMatch(m -> Objects.equals(m.getAdmissionId(), target));
         if (!own) {

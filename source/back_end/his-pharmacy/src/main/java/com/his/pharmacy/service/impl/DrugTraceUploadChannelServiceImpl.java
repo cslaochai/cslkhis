@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * 药品追溯码上传通道（对接国家医保局追溯码采集接口）。
  *
- * <p>当前未真对接医保局平台，所以是打印桩：把上传内容完整留到日志里，
+ * <p>当前未真对接医保局平台，所以是打印：把上传内容完整留到日志里，
  * 真对接时照着这份报文在本类内改适配层即可 —— 与微信/TSA 同一套路：
  * 外部系统不在线时业务照常闭环，只是"上传"这一环留痕为未上传，不把采集/核销动作卡死。
  *
@@ -42,7 +42,7 @@ public class DrugTraceUploadChannelServiceImpl implements DrugTraceUploadChannel
                 ack.setSuccess(true);
                 ack.setMessage("");
             }
-            log.info("[药品追溯码上传桩] eventType={} traceNo={} code={} drug={} batch={} patient={} result={}",
+            log.info("[药品追溯码上传] eventType={} traceNo={} code={} drug={} batch={} patient={} result={}",
                     line.getEventType(), line.getTraceNo(), line.getTraceCode(),
                     line.getDrugName(), line.getBatchNo(), line.getPatientName(), ack.isSuccess() ? "SUCCESS" : "FAIL");
             acks.add(ack);

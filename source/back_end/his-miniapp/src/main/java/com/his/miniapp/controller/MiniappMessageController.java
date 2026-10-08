@@ -15,8 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 /**
- * 患者端消息中心（小程序二期）。
- * 口径：只看发给当前登录患者的消息，站内信通道与微信场景留痕均可见。
+ * 患者端消息中心
  */
 @Tag(name = "患者端-消息中心")
 @RestController

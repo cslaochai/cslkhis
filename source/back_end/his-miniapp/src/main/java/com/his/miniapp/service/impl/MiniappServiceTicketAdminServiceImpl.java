@@ -30,10 +30,6 @@ import java.util.List;
 
 /**
  * 院内工单受理实现。
- *
- * <p><b>状态机在这里收口</b>：所有状态变更只走 {@link #handle}，
- * 每个动作都校验前置状态。散在各个 Controller 里改状态，迟早出现
- * 「已关闭的工单还能回复」这种说不清的账。
  */
 @Slf4j
 @Service

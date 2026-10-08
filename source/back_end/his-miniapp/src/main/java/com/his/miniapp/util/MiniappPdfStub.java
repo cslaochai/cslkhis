@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 报告 PDF 打印桩（小程序二期·报告原文）。
+ * 报告 PDF 打印（小程序二期·报告原文）。
  *
  * <p>不引入 PDF 依赖：手写一份最小合法 PDF（1.4，含正确 xref 偏移表），
  * 内容为单页 Helvetica 英文占位排版 —— 只保证「文件真实存在、可被 wx.openDocument 打开」，
@@ -20,7 +20,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class MiniappPdfStub {
 
-    /** 报告 PDF 桩：单页占位文档。 */
+    /** 报告 PDF ：单页占位文档。 */
     public static byte[] reportPdf(String reportNo, String patientName, String itemName,
                                    String deptName, String doctorName, LocalDateTime reportTime) {
         String time = reportTime == null

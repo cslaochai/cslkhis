@@ -45,7 +45,7 @@ public class BizPayOrder extends BaseEntity {
     /** 支付状态（0-待支付 1-已支付 2-已关闭 3-已退款） */
     private Integer payStatus;
 
-    /** 渠道交易号（微信 transaction_id，桩模式为 MOCK_ 前缀） */
+    /** 渠道交易号（微信 transaction_id，模式为 MOCK_ 前缀） */
     private String outTradeNo;
 
     /** 支付时间 */

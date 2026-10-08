@@ -10,9 +10,13 @@ import java.io.Serializable;
 @Data
 public class TriageSymptomVO implements Serializable {
 
-    /** 症状编码 */
+    /**
+     * 症状编码
+     */
     private String symptomCode;
 
-    /** 症状名称 */
+    /**
+     * 症状名称
+     */
     private String symptomName;
 }

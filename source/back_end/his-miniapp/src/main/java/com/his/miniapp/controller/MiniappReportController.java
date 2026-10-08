@@ -14,15 +14,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
- * 患者端检查/检验报告。就诊人边界与发布状态两道闸在服务层，见 {@code MiniappReportService}。
+ * 患者端检查/检验报告
  */
 @Tag(name = "患者端-报告")
 @RestController
@@ -45,7 +40,7 @@ public class MiniappReportController {
         return Result.success(miniappReportService.myReportDetail(reportId));
     }
 
-    @Operation(summary = "报告原文 PDF（打印桩：可打开的占位文档，真对接换 PDF 服务）")
+    @Operation(summary = "报告原文 PDF（打印：可打开的占位文档，真对接换 PDF 服务）")
     @GetMapping("/pdf")
     public ResponseEntity<byte[]> pdf(@RequestParam Long reportId) {
         ReportPdfVO file = miniappReportService.reportPdf(reportId);

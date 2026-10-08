@@ -13,8 +13,7 @@ import com.his.miniapp.entity.SysFaq;
 import com.his.miniapp.mapper.MiniappFaqMapper;
 import com.his.miniapp.service.MiniappFaqService;
 import com.his.miniapp.support.FaqSearchSupport;
-import com.his.miniapp.vo.FaqAdminVO;
-import com.his.miniapp.vo.FaqCategoryVO;
+import com.his.miniapp.vo.FaqCategoryListVO;
 import com.his.miniapp.vo.FaqListVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,10 +23,6 @@ import java.util.*;
 
 /**
  * 患者端常见问题实现。
- *
- * <p><b>刻意不做语义检索</b>：几十条人工语料用关键词打分就够，
- * 上向量检索只会多一个"为什么这条排在前面"说不清的黑盒。
- * 真出现搜不到的情况，正确动作是补关键词，不是换检索算法。
  */
 @Slf4j
 @Service
@@ -39,8 +34,8 @@ public class MiniappFaqServiceImpl extends ServiceImpl<MiniappFaqMapper, SysFaq>
 
     private final MiniappFaqMapper miniappFaqMapper;
 
-    private static FaqAdminVO toAdminVO(SysFaq faq) {
-        FaqAdminVO vo = new FaqAdminVO();
+    private static FaqListVO toAdminVO(SysFaq faq) {
+        FaqListVO vo = new FaqListVO();
         vo.setId(faq.getId());
         vo.setFaqNo(faq.getFaqNo());
         vo.setCategoryCode(faq.getCategoryCode());
@@ -72,11 +67,11 @@ public class MiniappFaqServiceImpl extends ServiceImpl<MiniappFaqMapper, SysFaq>
     }
 
     @Override
-    public List<FaqCategoryVO> categories() {
-        Map<String, FaqCategoryVO> map = new LinkedHashMap<>();
+    public List<FaqCategoryListVO> categories() {
+        Map<String, FaqCategoryListVO> map = new LinkedHashMap<>();
         for (SysFaq faq : enabledFaqs()) {
-            FaqCategoryVO vo = map.computeIfAbsent(faq.getCategoryCode(), code -> {
-                FaqCategoryVO item = new FaqCategoryVO();
+            FaqCategoryListVO vo = map.computeIfAbsent(faq.getCategoryCode(), code -> {
+                FaqCategoryListVO item = new FaqCategoryListVO();
                 item.setCategoryCode(code);
                 item.setCategoryName(faq.getCategoryName());
                 item.setCount(0);
@@ -171,7 +166,7 @@ public class MiniappFaqServiceImpl extends ServiceImpl<MiniappFaqMapper, SysFaq>
     }
 
     @Override
-    public PageResult<FaqAdminVO> adminPage(FaqPageQueryDTO dto) {
+    public PageResult<FaqListVO> adminPage(FaqPageQueryDTO dto) {
         List<SysFaq> all = miniappFaqMapper.selectList(new LambdaQueryWrapper<SysFaq>()
                 .orderByAsc(SysFaq::getSortOrder)
                 .orderByAsc(SysFaq::getId));
@@ -190,12 +185,12 @@ public class MiniappFaqServiceImpl extends ServiceImpl<MiniappFaqMapper, SysFaq>
         long total = all.size();
         int from = Math.min((current - 1) * size, all.size());
         int to = Math.min(from + size, all.size());
-        List<FaqAdminVO> records = all.subList(from, to).stream().map(MiniappFaqServiceImpl::toAdminVO).toList();
+        List<FaqListVO> records = all.subList(from, to).stream().map(MiniappFaqServiceImpl::toAdminVO).toList();
         return PageResult.of(total, current, size, (total + size - 1) / size, records);
     }
 
     @Override
-    public FaqAdminVO adminGetById(Long faqId) {
+    public FaqListVO adminGetById(Long faqId) {
         SysFaq faq = miniappFaqMapper.selectById(faqId);
         if (faq == null) {
             throw new BusinessException("常见问题不存在");

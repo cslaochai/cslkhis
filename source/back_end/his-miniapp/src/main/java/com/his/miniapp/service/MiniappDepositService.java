@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.his.charge.dto.PrepayQueryPageDTO;
 import com.his.charge.vo.PrepayBalanceVO;
 import com.his.charge.vo.PrepayVO;
-import com.his.miniapp.vo.AdmissionSelectListVO;
+import com.his.miniapp.vo.MiniAdmiSelectListVO;
 
 import java.util.List;
 
@@ -13,7 +13,7 @@ import java.util.List;
  */
 public interface MiniappDepositService {
 
-    List<AdmissionSelectListVO> myAdmissions(Long patientId);
+    List<MiniAdmiSelectListVO> myAdmissions(Long patientId);
 
     PrepayBalanceVO balance(Long admissionId);
 

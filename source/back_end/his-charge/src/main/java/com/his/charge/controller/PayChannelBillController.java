@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * 支付渠道对账（M7 留口子，四层口径）。
  *
- * <p>形态：渠道侧"对方账"来自 {@code PayChannelService}（当前控制台打印桩），
+ * <p>形态：渠道侧"对方账"来自 {@code PayChannelService}（当前控制台打印），
  * 台账/勾对/长短款是真实落库的真实流程；接真渠道只换网关实现，本控制器不动。
  */
 @RestController
@@ -41,7 +41,7 @@ public class PayChannelBillController {
     }
 
     /**
-     * 拉取渠道账单（M7 口子：控制台打印桩模拟商户平台拉取）
+     * 拉取渠道账单（M7 口子：控制台打印模拟商户平台拉取）
      */
     @PreAuthorize("hasAuthority('finance:payChannel:import')")
     @PostMapping("/importBill")

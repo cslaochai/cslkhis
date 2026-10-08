@@ -14,7 +14,7 @@ import java.util.List;
 public class PendingBillListVO implements Serializable {
 
     /**
-     * 账单ID（字符串化防 BIGINT 精度丢失）
+     * 账单ID
      */
     private String id;
 

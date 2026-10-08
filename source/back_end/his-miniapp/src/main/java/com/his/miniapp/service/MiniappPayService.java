@@ -23,7 +23,7 @@ public interface MiniappPayService {
     // 统一支付单
 
     /**
-     * 下单支付。桩模式直接推进支付成功并触发业务推进（门诊缴费走收费执行器、
+     * 下单支付。模式直接推进支付成功并触发业务推进（门诊缴费走收费执行器、
      * 押金走预交金充值、挂号费打印入账）；真收银台模式返回 payParams 由前端拉起。
      */
     PayOrderVO createOrder(PayUpsertDTO dto);

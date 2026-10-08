@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 处方流转单（M2，院外取药口子·打印桩形态）。
+ * 处方流转单（M2，院外取药口子·打印形态）。
  *
  * <p>状态机与防重闸门见 {@code RxFlowService}。
  */
@@ -40,7 +40,7 @@ public class RxFlowController {
         return Result.success(rxFlowService.createFlow(dto));
     }
 
-    @Operation(summary = "取药完成回写（外联口子打印桩：1→2）")
+    @Operation(summary = "取药完成回写（外联口子打印：1→2）")
     @PostMapping("/finish")
     public Result<Void> finish(@RequestBody @Valid RxFlowActionDTO dto) {
         rxFlowService.finish(dto);

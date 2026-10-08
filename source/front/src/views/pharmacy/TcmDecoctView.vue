@@ -171,7 +171,7 @@ const doCancel = async (row: any) => {
 const doPrint = async (row: any) => {
   const res: any = await tcmDecoctPrint(row.id).catch((e: any) => e)
   if (res && res.code === 200) {
-    ElMessage.success(res.message || '已发送到打印出口（学习阶段为控制台打印桩）')
+    ElMessage.success(res.message || '已发送到打印出口（学习阶段为控制台打印）')
   } else {
     ElMessage.error(res?.message || '打印失败')
   }

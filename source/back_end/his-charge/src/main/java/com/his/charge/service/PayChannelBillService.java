@@ -21,7 +21,7 @@ public interface PayChannelBillService {
     PageResult<PayChannelBillVO> selectPage(PayChannelQueryPageDTO query);
 
     /**
-     * 拉取渠道账单（当前为控制台打印桩）并落台账（幂等）
+     * 拉取渠道账单（当前为控制台打印）并落台账（幂等）
      */
     int importBill(PayChannelImportDTO dto);
 

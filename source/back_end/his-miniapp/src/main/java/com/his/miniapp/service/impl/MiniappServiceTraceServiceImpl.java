@@ -14,9 +14,6 @@ import org.springframework.stereotype.Service;
 
 /**
  * 客服页自助行为埋点。
- *
- * <p><b>失败一律吞掉</b>：埋点是给运营看的，不是患者要看的。
- * 写不进去最多是这条指标少一个样本，让患者看到「提交失败」才是真的事故。
  */
 @Slf4j
 @Service

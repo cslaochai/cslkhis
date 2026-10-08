@@ -2,8 +2,8 @@ package com.his.miniapp.controller;
 
 import com.his.common.base.Result;
 import com.his.miniapp.dto.WxLoginDTO;
-import com.his.miniapp.vo.WxLoginVO;
 import com.his.miniapp.service.MiniappPayService;
+import com.his.miniapp.vo.WxLoginVO;
 import com.his.patient.service.PatientGuardianService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

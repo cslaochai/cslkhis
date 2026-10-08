@@ -11,10 +11,14 @@ import lombok.Data;
 @Schema(name = "FaqSearchDTO", description = "常见问题查询")
 public class FaqPageQueryDTO extends PageParam {
 
-    /** 搜索关键词（口语提问即可，后端切词后匹配） */
+    /**
+     * 搜索关键词（口语提问即可，后端切词后匹配）
+     */
     private String keyword;
 
-    /** 分类编码（空 = 全部） */
+    /**
+     * 分类编码（空 = 全部）
+     */
     private String categoryCode;
 
 }

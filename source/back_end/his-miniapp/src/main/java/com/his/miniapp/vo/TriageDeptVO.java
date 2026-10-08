@@ -10,22 +10,34 @@ import java.io.Serializable;
 @Data
 public class TriageDeptVO implements Serializable {
 
-    /** 科室ID（字符串化防 BIGINT 精度丢失） */
+    /**
+     * 科室ID
+     */
     private String deptId;
 
-    /** 科室名称 */
+    /**
+     * 科室名称
+     */
     private String deptName;
 
-    /** 命中的症状名称（告诉患者「凭什么推荐这个科」） */
+    /**
+     * 命中的症状名称（告诉患者「凭什么推荐这个科」）
+     */
     private String symptomName;
 
-    /** 急症信号（0-否 1-是）：1 时前端必须置顶并加红提示 */
+    /**
+     * 急症信号（0-否 1-是）：1 时前端必须置顶并加红提示
+     */
     private Integer urgent;
 
-    /** 就诊提示 */
+    /**
+     * 就诊提示
+     */
     private String advice;
 
-    /** 推荐权重 */
+    /**
+     * 推荐权重
+     */
     private Integer weight;
 
     /**

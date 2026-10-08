@@ -15,11 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 患者端客服台：工单（原「留言」）与埋点。
- *
- * <p>sql/221 把留言升级成<b>可受理工单</b>：患者提单后能看到进展时间轴
- * （受理 / 回复 / 办结 / 患者确认），而不是只知道一个干巴巴的状态码。
- * 受理端在 {@code /miniapp/service/admin/**}（权限 {@code service:ticket:*}）。
+ * 患者端客服台
  */
 @Tag(name = "患者端-客服台")
 @RestController

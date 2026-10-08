@@ -69,7 +69,7 @@ public class TcmDecoctController {
         return Result.success("代煎单已作废", tcmDecoctService.cancel(dto));
     }
 
-    @Operation(summary = "打印代煎回执（当前为控制台打印桩 + 审计留痕）")
+    @Operation(summary = "打印代煎回执（当前为控制台打印 + 审计留痕）")
     @PostMapping("/print")
     @PreAuthorize("hasAuthority('pharmacy:tcmDecoct:print')")
     public Result<TcmDecoctDetailVO> print(@Valid @RequestBody TcmDecoctIdDTO dto) {

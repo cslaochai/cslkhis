@@ -40,7 +40,7 @@ public class ExternalCaChannelServiceImpl implements ExternalCaChannelService {
      * 通道名称（状态接口展示）
      */
     public String name() {
-        return "外部CA控制台打印桩（M8留口子，未接入真CA）";
+        return "外部CA控制台打印（M8留口子，未接入真CA）";
     }
 
     /**
@@ -64,7 +64,7 @@ public class ExternalCaChannelServiceImpl implements ExternalCaChannelService {
                 TextUtil.hasText(request.publicKeyPem()) ? SignCryptoUtil.fingerprint(request.publicKeyPem()) : "无");
         log.info("[M8真CA口子] 申请有效期 : {} 天", request.validDays());
         log.info("[M8真CA口子] （真实接入=在本方法内替换为对接 CA 厂商 SDK/REST 的外发与回执解析）");
-        // 桩不产证书：返回 null，调用方据此中断签发（绝不静默回退院内自签冒充真 CA）
+        // 不产证书：返回 null，调用方据此中断签发（绝不静默回退院内自签冒充真 CA）
         return null;
     }
 }

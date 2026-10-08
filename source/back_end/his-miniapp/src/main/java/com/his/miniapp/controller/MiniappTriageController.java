@@ -15,10 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 患者端智能导诊。
- *
- * <p>只回答一件事：「我这个情况该挂哪个科」。不诊断、不推荐用药 ——
- * 那是医生的事，模型说了也不算，出了事没人兜得住。
+ * 患者端智能导诊
  */
 @Tag(name = "患者端-智能导诊")
 @RestController

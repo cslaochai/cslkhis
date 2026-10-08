@@ -12,16 +12,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
- * 患者端预问诊（G-05）：挂号后、就诊前采集病史，报告写回医生站。
- * 题目结构由后端量表下发，前端不写死；归属校验按登录态绑定关系收窄。
+ * 患者端预问诊
  */
 @Tag(name = "患者端-预问诊")
 @RestController

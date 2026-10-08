@@ -10,12 +10,6 @@ import lombok.Data;
 @Data
 public class WxLoginVO {
 
-    /** 是否已绑定患者账号：false 时前端引导账密/短信注册登录后调 bindOpenid */
-    private Boolean bound;
-
-    /** JWT（bound=true 时返回） */
-    private String token;
-
     @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 
@@ -23,9 +17,21 @@ public class WxLoginVO {
 
     private String realName;
 
-    /** 患者ID */
+    /**
+     * 患者ID
+     */
     @JsonSerialize(using = ToStringSerializer.class)
     private Long patientId;
 
     private Integer userType;
+
+    /**
+     * 是否已绑定患者账号：false 时前端引导账密/短信注册登录后调 bindOpenid
+     */
+    private Boolean bound;
+
+    /**
+     * JWT（bound=true 时返回）
+     */
+    private String token;
 }

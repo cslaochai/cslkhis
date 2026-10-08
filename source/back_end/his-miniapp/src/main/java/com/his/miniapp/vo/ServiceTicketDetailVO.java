@@ -7,15 +7,14 @@ import java.util.List;
 
 /**
  * 工单详情（患者端 + 院内端共用，字段权限靠 Service 侧裁剪）。
- *
- * <p>患者端要的是「我的问题处理到哪了」，所以核心是 {@code logs} 时间轴；
- * 院内端要的是「我要拿这张单干什么」，所以核心是 {@code actions}。
  */
 @Data
 @Schema(name = "ServiceTicketDetailVO", description = "工单详情")
 public class ServiceTicketDetailVO {
 
-    /** 工单ID */
+    /**
+     * 工单ID
+     */
     @Schema(description = "工单ID（19 位，前端全程按字符串处理）")
     private String id;
 
@@ -43,7 +42,9 @@ public class ServiceTicketDetailVO {
 
     private String createTime;
 
-    /** 患者可执行动作 */
+    /**
+     * 患者可执行动作
+     */
     private List<String> actions;
 
     /**

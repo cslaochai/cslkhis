@@ -9,14 +9,20 @@ import lombok.Data;
 @Data
 public class PayRefundDTO {
 
-    /** 业务类型（1-门诊缴费 2-挂号费 3-住院押金） */
+    /**
+     * 业务类型（1-门诊缴费 2-挂号费 3-住院押金）
+     */
     @NotNull(message = "业务类型不能为空")
     private Integer bizType;
 
-    /** 业务单ID（收费单ID/挂号单ID/入院ID） */
+    /**
+     * 业务单ID（收费单ID/挂号单ID/入院ID）
+     */
     @NotNull(message = "业务单ID不能为空")
     private Long bizId;
 
-    /** 退款原因 */
+    /**
+     * 退款原因
+     */
     private String reason;
 }

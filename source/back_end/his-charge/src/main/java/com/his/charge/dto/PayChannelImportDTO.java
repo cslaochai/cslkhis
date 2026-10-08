@@ -7,7 +7,7 @@ import lombok.Data;
 import java.time.LocalDate;
 
 /**
- * 渠道账单拉取入参（M7 留口子：当前走控制台打印桩）
+ * 渠道账单拉取入参（M7 留口子：当前走控制台打印）
  */
 @Data
 public class PayChannelImportDTO {

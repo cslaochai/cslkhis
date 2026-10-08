@@ -9,12 +9,7 @@ import java.security.MessageDigest;
 import java.util.HexFormat;
 
 /**
- * 微信登录出口（小程序一期口子，同 M7/M8 打印桩形态）。
- *
- * <p>标准流程：小程序 {@code wx.login} 拿临时 code → 后端调微信
- * {@code jscode2session} 换 openid/session_key。当前为打印桩：不调微信服务器，
- * 按 code 确定性反造测试 openid，控制台打印换取动作。
- * 真实对接 = 在本类内配置 AppSecret 后走 jscode2session，调用方不动。
+ * 微信登录出口（小程序一期口子，同 M7/M8 打印形态）。
  */
 @Slf4j
 @Service

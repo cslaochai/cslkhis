@@ -7,15 +7,15 @@ import com.his.common.base.Result;
 import com.his.patient.service.PatientGuardianService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
-import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 /**
- * 患者端排队叫号（自 QueueController 迁入：患者端点集中在 /miniapp，不再共用院内权限码）。
+ * 患者端排队叫号
  */
 @Tag(name = "患者端-排队叫号")
 @RestController

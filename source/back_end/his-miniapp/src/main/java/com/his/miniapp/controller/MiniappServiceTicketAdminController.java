@@ -17,12 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 院内工单受理（客服工作台）。
- *
- * <p><b>为什么必须有这一端</b>：sql/216 只有患者能留言、没有受理端，
- * 那是半截闭环 —— 留言落库了，但没有人对它负责，患者也不知道有没有人看。
- * 这一端把「谁接了这张单、什么时候办的、办了什么」变成可追的记录。
- *
- * <p>鉴权与患者端分开：患者端只认 PATIENT，这里只认 {@code service:ticket:*}。
  */
 @Tag(name = "院内-工单受理")
 @RestController

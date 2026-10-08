@@ -120,7 +120,7 @@
                           style="width: 100%" data-testid="payc-import-date" />
         </el-form-item>
         <el-alert type="info" :closable="false"
-                  title="当前未接真实渠道：后端打印桩会在服务端控制台打印拉取动作，并按本地当日支付流水生成模拟账单（幂等，可重复拉取）" />
+                  title="当前未接真实渠道：后端打印会在服务端控制台打印拉取动作，并按本地当日支付流水生成模拟账单（幂等，可重复拉取）" />
       </el-form>
       <template #footer>
         <el-button @click="importVisible = false">取消</el-button>

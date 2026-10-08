@@ -135,7 +135,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
         keyProtectorUtil.requireSecret();
 
         // M8 留口子：外部 CA 模式下先本地生成密钥对、把 Subject+公钥交给 CA 适配器
-        //（PKCS#10 常规流程：私钥不出本地，CA 只签公钥）。当前适配器是控制台打印桩，
+        //（PKCS#10 常规流程：私钥不出本地，CA 只签公钥）。当前适配器是控制台打印，
         // 打印 CSR 后返回 null —— 中断签发，绝不静默回退院内自签（那等于伪造信任根）。
         if (externalCaChannelService.available()) {
             issueViaExternalCa(empName, deptName, validDays);
@@ -189,7 +189,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
 
     /**
      * 外部 CA 签发路径（M8 留口子）：本地生成密钥对 → 提交 CSR。
-     * 桩实现会在打印后返回 null → 抛异常中断；接入真 CA 后，在 TODO 处
+     * 实现会在打印后返回 null → 抛异常中断；接入真 CA 后，在 TODO 处
      * 用 {@code issued.certPem()} 替代自签公钥落库（私钥托管/签名链/验签均不变）。
      */
     private SysSignCert issueViaExternalCa(String empName, String deptName,
