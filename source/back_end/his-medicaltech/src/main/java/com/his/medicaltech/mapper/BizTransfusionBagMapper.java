@@ -10,11 +10,6 @@ import java.util.List;
 
 /**
  * 输血血袋明细 Mapper。
- *
- * <p>血袋的按单查询走 {@code BaseMapper.selectList(LambdaQueryWrapper)} 即可
- * （BaseMapper 的方法会自动带上 {@code @TableLogic} 的 {@code del_flag = 0}）。
- * 这里只放两个**必须绕开逻辑删除语义**的自定义查询：跨单的血袋号唯一性校验、
- * 以及按住院聚合的血袋汇总（追溯用）。
  */
 @Mapper
 public interface BizTransfusionBagMapper extends BaseMapper<BizTransfusionBag> {

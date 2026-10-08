@@ -8,10 +8,6 @@ import java.util.List;
 
 /**
  * 检验结果解读能力的模型输出结构（与 prompts/lab-interpret.md 的 JSON 契约一一对应）。
- * <p>
- * 注意 {@code conclusion} 与 {@code suggestions} 的定位：它们只是<b>草稿</b>，
- * 是否写回检验记录由调用方显式开关控制（默认不写）。
- * 检验结论是要进病历的文本，让模型直接落库等于让概率系统写病历。
  */
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)

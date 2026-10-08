@@ -9,10 +9,6 @@ import java.io.Serializable;
 
 /**
  * 完成术前访视（草稿 → 已完成）。
- *
- * <p>为什么要单独一个动作：访视结论一旦出账就是"麻醉科对这个病人的正式意见"，
- * 之后改它必须重新走完成（留新的时间与新的结论），而不是在某个编辑框里悄悄改。
- * 与"已提交的病历不再直接改同一行"是同一类有意摩擦。
  */
 @Data
 public class AnesthesiaVisitFinishDTO implements Serializable {

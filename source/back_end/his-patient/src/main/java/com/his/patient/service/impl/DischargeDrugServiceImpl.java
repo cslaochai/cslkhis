@@ -29,9 +29,6 @@ import java.util.stream.Collectors;
 
 /**
  * 出院带药服务。
- *
- * <p>状态机：1 待发药 →（药房发药）→ 2 已发药。只有待发药可改/可删；
- * 发药是单向动作，已发药单不可回退（发错了走备注纠错留痕，不改状态）。
  */
 @Service
 @RequiredArgsConstructor

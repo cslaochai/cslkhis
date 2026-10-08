@@ -5,8 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 登录口令传输加密配置（yml 的 {@code his.security.sm2.*} 段）。
- *
+ * 登录口令传输加密配置（yml 的 his.security.sm2.* 段）。
  */
 @Data
 @Component

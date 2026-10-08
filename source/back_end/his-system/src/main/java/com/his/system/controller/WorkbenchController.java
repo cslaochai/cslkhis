@@ -21,10 +21,6 @@ import java.util.List;
 
 /**
  * 门户工作台控制器。
- *
- * <p>{@code /config} 与 {@code /data} 是**所有角色**画首页的入口，只要求登录：
- * 挂上权限码会重演 G5b（非管理岗 403、首页开天窗）。真正的闸门在每张卡的
- * {@code permission} 上，由 Service 按当前角色的菜单授权过滤。
  */
 @Tag(name = "门户工作台")
 @RestController

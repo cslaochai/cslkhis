@@ -13,7 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 资金账户（L3）：门诊余额挂在「人」上、住院预交金挂在「这次入院」上，
- * 同一张表靠 {@link #ownerType} 区分，免得再开一张预交金表、余额口径各算一套。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

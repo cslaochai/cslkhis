@@ -8,9 +8,6 @@ import java.time.LocalDateTime;
 
 /**
  * ICU 入科登记/在科期间修改入参。
- *
- * <p>患者、来源科室信息由服务端按 admissionId 重查快照，前端只传 admissionId。
- * 说明类字段只在服务端截列宽，此处不挂 {@code @Size}（AGENTS.md 第 3 条）。
  */
 @Data
 public class IcuStayUpsertDTO {

@@ -8,13 +8,6 @@ import java.math.RoundingMode;
 
 /**
  * 数值空值兜底、金额舍入与数量文本（全库唯一收口点）。
- *
- * <p>2026-10-07 收口：原先 {@code nz} / {@code nvl} / {@code nzAmount} / {@code nzInt}
- * 在各 Service 里各写一份，同名重载还不同（{@code nz(Integer)} 返回 int 或 long、
- * {@code nvl(Integer, int)} 返回 Integer 或 int），聚合口径靠「这个文件恰好写了哪个重载」决定。
- *
- * <p><b>只兜 null，不做业务判断</b>：金额/数量列的可空来自「未发生」（未支付、未记账），
- * 聚合成 0 是正确口径；要区分「没值」和「值为 0」的场合不要用本类。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class NumUtil {

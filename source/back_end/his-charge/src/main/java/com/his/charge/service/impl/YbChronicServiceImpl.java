@@ -34,10 +34,6 @@ import java.util.Objects;
 
 /**
  * 门诊慢特病服务实现。
- *
- * <p>这张表存在的意义就是「谁办的备案」：registerEmpName 新建时由服务端取当前登录人回填，
- * 改成外部经办机构人员时姓名不再是本院员工（registerEmpId 置空），必须写明备注。
- * 有效期过期是展示态（前端提示续备），库里只有 reg_status，避免多出「日期已过、状态还没刷」的漂移窗口。
  */
 @Service
 @RequiredArgsConstructor
@@ -115,7 +111,7 @@ public class YbChronicServiceImpl extends ServiceImpl<BizYbChronicRegMapper, Biz
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void changeCatalogStatus(Long id, Integer status) {
-        // C/D 类保留：入参是 @RequestParam 拆开的 Long/Integer（无 DTO 承载），status 0/1 属码值合法性校验
+        // D-业务规则：id/status 必填与 status 0/1 码值合法性写在同一条件里，整条保留不拆（拆分会把一条 500 拆成 400+500 两条路径，收益为零）
         if (id == null || status == null || (status != 0 && status != 1)) {
             throw new BusinessException("参数不合法：id 与 status(0/1) 必填");
         }

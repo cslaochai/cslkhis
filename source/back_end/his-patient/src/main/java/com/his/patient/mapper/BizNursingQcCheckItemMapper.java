@@ -12,9 +12,6 @@ import java.util.List;
 
 /**
  * 护理质量检查单明细 Mapper（sql/168）。
- *
- * <p>明细是检查表的正文：逐项抽查数/合格数/得分 + 存在问题/原因分析/整改措施（PDCA 后两环）。
- * 主表六个汇总数字全部由这里求和上来，读侧不再重复聚合。
  */
 @Mapper
 public interface BizNursingQcCheckItemMapper extends BaseMapper<BizNursingQcCheckItem> {

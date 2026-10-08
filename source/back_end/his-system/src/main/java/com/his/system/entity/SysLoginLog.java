@@ -12,11 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 登录日志（登录日志，建表见 sql/10，查看页见 sql/158）。
- *
- * <p><b>成功失败都记</b>：等保三级要看的正是失败登录（口令爆破的入口就在这本账上），
- * 所以用户名不存在、口令错误、账号停用、无可用角色/岗位一律落一条 status=1。
- *
- * <p>本表只读，不提供删除接口。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

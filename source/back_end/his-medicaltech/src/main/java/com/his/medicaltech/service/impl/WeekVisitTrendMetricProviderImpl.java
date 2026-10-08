@@ -17,10 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 卡片 {@code weekVisitTrend}：近 7 天挂号趋势（全院口径）。
- *
- * <p>必须补零：SQL 只对"有数据的日期"分组，周末没人挂号就少一行，
- * 折线图会把它画成"漏了一天"而不是"0 人"。
+ * 卡片 weekVisitTrend：近 7 天挂号趋势（全院口径）。
  */
 @Service
 @RequiredArgsConstructor

@@ -35,16 +35,6 @@ import java.util.Objects;
 
 /**
  * 住院证服务实现
- *
- * <p>固化的业务规则（都是三甲真实流程里会被追问的点）：
- * <ol>
- *   <li><b>一张有效证只能对一次收治</b>：状态为「已收治」的证再收治必须被拒，不能静默覆盖。</li>
- *   <li><b>过期不落库</b>：有效期到了只是"查询时算出来"的展示态，不把时间流逝伪装成一次业务动作
- *       （同"危急值超时"的口径）。</li>
- *   <li><b>作废必须写原因</b>：让证消失得有人负责。</li>
- *   <li><b>已收治的证不能作废</b>：入院这件事已经发生了。</li>
- *   <li>未知码值一律渲染成「未知(码值)」，不回落成合法值。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -194,10 +184,6 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
 
     @Override
     public AdmissionOrderVO detail(Long id) {
-        // 保留（类别②）：入参是普通 Long（GET @RequestParam 绑定），不是 request DTO 字段，注解无处挂载
-        if (id == null) {
-            throw new BusinessException("住院证ID不能为空");
-        }
         AdmissionOrderVO vo = bizAdmissionOrderMapper.selectOrderDetail(id);
         if (vo == null) {
             throw new BusinessException("住院证不存在");
@@ -249,7 +235,6 @@ public class AdmissionOrderServiceImpl extends ServiceImpl<BizAdmissionOrderMapp
 
     @Override
     public BizAdmissionOrder requireAdmittable(Long orderId) {
-        // 保留（类别②非 web 入口）：按证收治时由住院主流程直接传参调用，不经 HTTP 参数绑定，注解跑不到这一层
         if (orderId == null) {
             throw new BusinessException("住院证ID不能为空");
         }

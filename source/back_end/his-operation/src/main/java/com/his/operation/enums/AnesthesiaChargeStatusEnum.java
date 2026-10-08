@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * 手术麻醉计费状态（0-未计费 1-已计费 2-计费失败）。
- *
- * <p>计费失败不回滚业务（钱没计上 ≠ 麻醉没做），但必须标记并写明原因。
  */
 @Getter
 public enum AnesthesiaChargeStatusEnum {

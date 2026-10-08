@@ -8,14 +8,6 @@ import java.time.LocalDateTime;
 
 /**
  * 检查申请单的预约侧写入口。
- *
- * <p>为什么自带一个 mapper 而不复用 his-emr 的 {@code BizInspectionApplyMapper.updateById}：
- * 取消预约要把 {@code appointment_time} 置回 NULL，而 MyBatis-Plus 的 updateById
- * 在 NOT_NULL 策略下会静默跳过 null 字段 —— 现象是"预约取消了，申请单上还挂着预约时间"，
- * 且不报错。写 NULL 必须显式 SQL。
- *
- * <p>表属 his-emr，但这里是"预约动作对申请单状态的影响"，与本模块的预约事实同源，
- * 因此按本模块的先例（{@code MedicalTechServiceImpl} 直接引用申请单）在本模块落地。
  */
 @Mapper
 public interface ExamApplyWriterMapper {

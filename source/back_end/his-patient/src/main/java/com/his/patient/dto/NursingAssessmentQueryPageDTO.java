@@ -6,8 +6,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 护理评估单分页查询。
- * admissionId / assessType 二选一或同传；不传 admissionId 时必须传 wardId（病区视角），
- * 否则等于全院捞评估单，超出了护士/质控的真实使用场景。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

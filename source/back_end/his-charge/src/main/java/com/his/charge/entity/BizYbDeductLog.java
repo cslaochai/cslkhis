@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 扣款处理留痕（只增表：物理上不删不改，审计要件）。
- *
- * <p>没有 del_flag，所以不继承 BaseEntity —— 一旦带上 @TableLogic，
- * 「按单据捞全过程」会被逻辑删过滤条件悄悄截断，审计就看不到完整链条。
  */
 @Data
 @TableName("biz_yb_deduct_log")

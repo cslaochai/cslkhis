@@ -19,12 +19,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 中药代煎台账（sql/139）。
- *
- * <p>代码长在 his-emr（要读处方与处方明细，模块依赖方向是 emr→pharmacy，反过来建不了单），
- * 但业务归属仍是药房，所以权限码用 {@code pharmacy:tcmDecoct:*}、菜单位于「药事管理」，
- * 与 {@code /charge/dispensing}（发药接口在 emr、权限码是 pharmacy:dispensing:*）同一口径。
- *
- * <p><b>没有新增、也没有删除</b>：单据由发药完成生成，停止流转只能作废。
  */
 @Tag(name = "中药代煎台账")
 @RestController

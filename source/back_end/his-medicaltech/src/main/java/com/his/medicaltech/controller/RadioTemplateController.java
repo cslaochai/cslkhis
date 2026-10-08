@@ -15,8 +15,6 @@ import java.util.List;
 
 /**
  * 放射报告模板（sql/138，菜单 414 下的「模板维护」按钮）。
- *
- * <p>可见性与过滤口径（个人模板只对本人可见）在 {@code RadiologyReportService} 里收口。
  */
 @Tag(name = "放射报告模板")
 @RestController

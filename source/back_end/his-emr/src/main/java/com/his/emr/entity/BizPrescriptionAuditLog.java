@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 处方审方动作流水（L7 审方退回重开闭环，只增不改）。
- *
- * <p>锚点设计：重提 = 医生站保存病历「先删后增」，处方 id 与处方号都会换，
- * 轮次关联靠记录ID（重提后不变）。
  */
 @Data
 @TableName("biz_prescription_audit_log")

@@ -5,12 +5,6 @@ import lombok.Data;
 
 /**
  * 病历文书生成（草稿）提示词变量。
- *
- * <p>对应 {@code prompts/emr-draft.md} 的全部占位符。
- * 字段名与模板里的 {{占位符}} 一一对应。
- *
- * <p>字段与 {@code EmrDraftDTO} 的体征项同构：都是「空值可空」的采集项，
- * 空的一律填「-」（见 nullToDash），不让模板里出现空占位。
  */
 @Data
 public class EmrDraftPromptVariablesVO implements PromptVariables {

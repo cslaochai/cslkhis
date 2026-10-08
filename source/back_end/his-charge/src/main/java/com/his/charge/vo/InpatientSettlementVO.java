@@ -10,18 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 住院出院结算出参（<b>读的是 L2 那张 {@code bill_type=4} 账单 + L3 的资金事实</b>）。
- *
- * <p>旧表住院结算单那份"结算台账"已退役：同一件事不许有两份记录，
- * 两份记录必然漂移，出院门禁就会读到过期那一份。所以这里没有一张"结算单表"，
- * 每张字段都能指回账单列或支付流水：
- * <ul>
- *   <li>{@code settlementNo} = 账单号；{@code totalAmount/poolAmount/payableAmount} = 账单列。</li>
- *   <li>{@code paidAmount} = 账单镜像（权威在流水），{@code balanceUsed}/{@code refundAmount}
- *       是按流水现算的两个资金事实（抵扣了多少、退差多少）。</li>
- *   <li>{@code settleStatus} 是<b>派生值</b>（{@code payable − paid} 是否为正），不落列、不刷状态。</li>
- * </ul>
- * 已作废的账单不出现在这里（"作废=这次结算撤销、要重结"，它不算结算）。
+ * 住院出院结算出参（读的是 L2 那张 bill_type=4 账单 + L3 的资金事实）。
  */
 @Data
 public class InpatientSettlementVO implements Serializable {

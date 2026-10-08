@@ -12,14 +12,6 @@ import java.util.List;
 
 /**
  * 日间手术登记单 VO。
- *
- * <p>三条派生字段一律服务端算、不落库（落库就会停在错误的值上）：
- * <ul>
- *   <li>overdue —— 术后观察超过该术式 maxStayHours 即超期；</li>
- *   <li>followDue —— 离院时间 + 24h（随访时限）；</li>
- *   <li>followOverdue —— 已过随访时限且随访次数为 0。</li>
- * </ul>
- * 按钮可用性 can* 同样服务端派生，前端不按 status 码值 switch。
  */
 @Data
 public class DaySurgeryApplyVO implements Serializable {

@@ -7,9 +7,6 @@ import java.util.Map;
 
 /**
  * 患者档案关键字段（P5.1 EMPI / P5.3 数据质量共用）。
- *
- * <p>码值→中文名的唯一出口（原 {@code PatientProfileFields} 的 {@code FIELDS} 映射已上移至此）。
- * 完整度只对诊疗必需字段算，并要能报出具体缺了哪几个。
  */
 @Getter
 public enum PatientProfileFieldEnum {

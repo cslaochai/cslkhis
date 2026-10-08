@@ -7,8 +7,6 @@ import java.io.Serializable;
 
 /**
  * 静配明细审方入参。
- *
- * <p>审方人一律服务端取当前登录人，不信前端传的身份。
  */
 @Data
 public class PivasAuditDTO implements Serializable {

@@ -11,11 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 病案质控问题明细实体（一条规则命中一行）。
- *
- * <p>为什么不把问题拼成字符串塞进质控检查记录.error_detail：
- * 病案室的真实问题是「这个月哪条规则扣分最多」「哪个科室问题最集中」，
- * 拼接串连 {@code GROUP BY} 都做不了。{@code error_detail} 保留为摘要，
- * 明细落在这里。
  */
 @Data
 @TableName("biz_quality_control_issue")

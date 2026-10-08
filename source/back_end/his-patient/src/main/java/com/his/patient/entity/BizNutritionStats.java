@@ -13,10 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 营养膳食月度指标（sql/168 §4）。
- *
- * <p>一行 = 一个月 + 一个统计范围（全院 / 某科室），唯一键 uk_nutrition_stats 不含 del_flag
- * 且表本身没有 del_flag 列 —— 重复生成就是覆盖同一行（upsert），不留历史版本。
- * 分子分母都存下来，率值只作展示：评审要的是"9/10"而不是"90%"。
  */
 @Data
 @TableName("biz_nutrition_stats")

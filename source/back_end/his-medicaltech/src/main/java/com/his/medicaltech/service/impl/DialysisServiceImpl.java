@@ -41,22 +41,6 @@ import java.util.*;
 
 /**
  * 血液净化（透析）中心服务。
- *
- * <p>口径：
- * <ol>
- *   <li>档案＝患者级唯一（uk_dp_patient）；患者姓名/编号/电话一律服务端按 patientId
- *       重查患者基本信息取快照，不信前端传值。暂停/退出必须填原因，且不能有未结束的透析单。</li>
- *   <li>处方＝档案级「同时只允许一张有效」。排班时把干体重/时长/血流速/透析器/抗凝整套快照进
- *       透析单，之后改处方不影响已排的单。</li>
- *   <li>排班＝日期+时段+机位，撞 uk_session_slot_machine 直接拒绝并指出占用者；机位维修/停用不可排。
- *       日期不允许是未来之后（最多今天）。</li>
- *   <li>单状态机：1已排班 →（上机：透前体重+通路评估）2透析中 →（下机：透后体重）3已完成；
- *       1 →（取消：原因）4已取消。超滤量 =（透前-透后）×1000、实际时长 = 下机-上机，均服务端回算。</li>
- *   <li>本域只出治疗过程记录与台账，不生成收费单、不扣耗材库存（计费走治疗医嘱主链，
- *       与 L12 PIVAS 同一口径，避免双计）。</li>
- *   <li>操作人取当前登录人；原因/描述类文本服务端截列宽。电话在展示接口出参脱敏，
- *       编辑回显（archiveGetById）保持明文。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -109,9 +93,6 @@ public class DialysisServiceImpl extends ServiceImpl<BizDialysisSessionMapper, B
 
     @Transactional(rollbackFor = Exception.class)
     public DialysisVO.ArchiveVO archiveUpsert(DialysisDTO.ArchiveUpsert dto) {
-        if (dto.getPatientId() == null) {
-            throw new BusinessException("请选择患者");
-        }
         DialysisVO.ArchiveVO snapshot = bizDialysisPatientMapper.selectPatientSnapshot(dto.getPatientId());
         if (snapshot == null) {
             throw new BusinessException("患者主档不存在，无法建立透析档案");

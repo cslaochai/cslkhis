@@ -14,28 +14,6 @@ import java.util.List;
 
 /**
  * 收费员交班单 Mapper。
- *
- * <p>跨表统计一律写在这里（不在 Service 里 selectList 再 stream 求和）：
- * 汇总要走数据库聚合，前端拿"当前页 list"去数就是只统计本页、翻页就变。
- *
- * <p><b>聚合源是支付资金流水（L3 支付流水），不是收费单状态列</b>：
- * 一个收银员一个班到底收进多少钱，唯一的事实是"他经手了几笔真金白银的进出"。
- * 一笔收几行费用、账单摊了几条明细都与点钞无关。口径三件事：
- * <ol>
- *   <li>{@code txn_status = 1}（成功）—— 已冲正（2）的流水不再是要点的钱；</li>
- *   <li>{@code direction} 1-收 2-退，收退分开口径（金额列收正退负，退费一律取绝对值），
- *       因为收费员面前既有"该交上去的钱"也有"该从抽屉拿出去的钱"；</li>
- *   <li><b>行集用归集指针 cashier_settlement_id = 本班ID，不用时段 {@code (begin, end]}
- *       现挑</b>。{@code period_begin/period_end} 只是凭证上的时间说明与滚动展示口径，
- *  不决定哪些流水算这个班的：时间与流水时间同为秒精度，"交班那一秒之后到达的收款"
- *   用时段挑必然两头落空（本班已聚合完、下一班的下界又把它排除在外），那笔钱会永久没人认领。
- *   交班时由 {@code claimForShift} 把未认领的流水一次登记给本班，此后班结快照与
- *   一级对账复算读的是同一个集合 —— 左右两侧不再是"各自按时间猜一遍"。</li>
- * </ol>
- *
- * <p><b>交班单没有"统筹"这一项</b>：收费员班结单的统筹金额是医保局后付给
- * 医院的钱，收银员既不经手也不点钞，硬塞进班结会让现金清点凭空多出一块说不来的差额。
- * 它只在院级日结出现（见 {@link BizDaySettlementMapper#sumPoolAmount}）。
  */
 @Mapper
 public interface BizCashierSettlementMapper extends BaseMapper<BizCashierSettlement> {

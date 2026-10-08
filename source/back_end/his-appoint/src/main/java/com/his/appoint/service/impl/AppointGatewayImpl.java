@@ -11,11 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * {@link AppointGateway} 在 his-appoint 侧的实现。
- *
- * <p>接口由收费域 his-charge 声明、这里负责实现：挂号域依赖收费域（挂号即结算、
- * 记账能力在 charge），收费域反过来不依赖挂号域。若接口留在本模块，
- * charge 就得依赖 appoint，而 appoint 又要依赖 charge，Maven 判定成环直接拒绝构建。
+ * AppointGateway 在 his-appoint 侧的实现。
  */
 @Service
 @RequiredArgsConstructor

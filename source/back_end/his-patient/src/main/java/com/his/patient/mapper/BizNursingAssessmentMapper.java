@@ -14,7 +14,6 @@ import java.util.List;
 
 /**
  * 护理评估单 Mapper。
- * <p>排序以 assess_time DESC, id DESC（同秒多条评估按插入序稳定回放，防翻页抖动）。
  */
 @Mapper
 public interface BizNursingAssessmentMapper extends BaseMapper<BizNursingAssessment> {

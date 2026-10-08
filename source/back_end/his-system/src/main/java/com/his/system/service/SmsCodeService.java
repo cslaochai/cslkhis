@@ -10,7 +10,7 @@ public interface SmsCodeService {
     public static final String SCENE_ADD = "add";
 
     /**
-     * 发码结果。{@code success=false} 时 message 为给用户看的失败原因。
+     * 发码结果。success=false 时 message 为给用户看的失败原因。
      */
     public record SendResult(boolean success, String message, String code) {
 

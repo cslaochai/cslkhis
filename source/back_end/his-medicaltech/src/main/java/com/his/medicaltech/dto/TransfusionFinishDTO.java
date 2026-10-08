@@ -11,11 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 输血完成入参：登记输注结束、实际输注量与疗效评估，并回写病历。
- *
- * <p>完成是<b>唯一</b>触发回写的动作（一个事务里写 record_type=11 输血记录 +
- * 病案首页 is_transfusion=1 + record_id 回填）。所以这里要求
- * 结束时间、实际输注量、输注后观察都必填 —— 一条"输完了但不知道输了多少、患者怎么样"的
- * 输血记录，比没有记录更危险（它看起来是完整的）。
  */
 @Data
 public class TransfusionFinishDTO implements Serializable {

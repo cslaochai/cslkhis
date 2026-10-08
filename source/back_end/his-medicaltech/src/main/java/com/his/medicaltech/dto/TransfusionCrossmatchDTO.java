@@ -17,18 +17,6 @@ import java.util.List;
 
 /**
  * 配血入参：输血科逐袋录入血型鉴定与交叉配血结果。
- *
- * <p><b>配血是按「袋」做的，不是按「次」</b>：一次申请 2 袋，每次提交 1~n 袋，
- * 可以分多批（血站分批到货是常态）。累计袋数不得超过申请袋数。
- *
- * <p>服务端在这一步做两道<b>硬拦</b>（这是整个输血闭环最要紧的校验）：
- * <ol>
- *   <li><b>ABO 相容性</b>：红细胞类按红细胞规则、血浆类按血浆规则（方向相反！），
- *       不相容直接拒 —— ABO 不相容输注是致死性医疗差错；</li>
- *   <li><b>Rh 相容性</b>：受血者 Rh 阴性时血袋必须 Rh 阴性（对所有品种生效）。</li>
- * </ol>
- * 另外校验：血袋号全局唯一（一袋血只能给一个人）、品种与申请单一致、
- * 有效期未过、袋数不超申请。
  */
 @Data
 public class TransfusionCrossmatchDTO implements Serializable {
@@ -53,9 +41,6 @@ public class TransfusionCrossmatchDTO implements Serializable {
 
     /**
      * 单袋配血明细。
-     *
-     * <p>{@code bagAbo} / {@code bagRh} / {@code crossmatchResult} 必填 ——
-     * 没有血型与配血结论的"已配血"记录，等于没配。
      */
     @Data
     public static class BagDTO implements Serializable {

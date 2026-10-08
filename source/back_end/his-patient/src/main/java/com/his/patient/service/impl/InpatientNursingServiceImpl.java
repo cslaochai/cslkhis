@@ -35,20 +35,6 @@ import java.util.*;
 
 /**
  * 护理文书服务实现（三测单 / 护理记录单 / 生命体征监测）。
- *
- * <p>本类固化这些**至少会被追问一次**的点：
- *
- * <ol>
- *   <li><b>三测单按时点唯一，靠唯一索引兜底而不是"先查后插"</b>：先查后插在并发下必然漏，
- *       而且漏了以后是"两条同点数据"这种最难发现的脏数据。这里捕
- *       {@code DuplicateKeyException} 转成可读提示。</li>
- *   <li><b>三测单 / 生命体征至少要有一个体征值</b>：一条"什么都没测"的记录会让体温曲线
- *       出现一个空点，也会让"缺测"被误读成"测了但没写"。</li>
- *   <li><b>护理记录单必须有正文</b>：护理记录单的全部意义就在正文。</li>
- *   <li><b>修改逐字段留痕</b>，口径与病历文书一致（{@code docType=2}）。</li>
- *   <li><b>三测单的时间点由后端排序</b>：按测量时间升序是三测单的语义（前端不能凭渲染顺序猜），
- *       而且曲线不能分页 —— 分一次页曲线就断一段。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -111,10 +97,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public NursingRecordVO save(NursingRecordUpsertDTO dto) {
-        // 保留（类别②）：整个 DTO 为 null 不是字段校验，Bean Validation 覆盖不到
-        if (dto == null) {
-            throw new BusinessException("入参不能为空");
-        }
         if (dto.getId() == null) {
             return create(dto);
         }
@@ -122,8 +104,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
     }
 
     private NursingRecordVO create(NursingRecordUpsertDTO dto) {
-        // 保留（类别①条件必填）：save 按 dto.id 分新增/修改，这三项只在新增分支必填，
-        // 修改分支可省略；挂 @NotNull 会把合法的修改请求挡成 400
+        // B-条件必填：save 按 dto.id 分新增/修改，这三项只在新增分支必填，修改分支可省略；挂 @NotNull 会把合法的修改请求挡成 400，保留
         if (dto.getAdmissionId() == null) {
             throw new BusinessException("入院ID不能为空");
         }
@@ -330,10 +311,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
     @Override
     public TempSheetVO tempSheet(Long admissionId, String beginDate, String endDate) {
-        // 保留（类别②）：入参是普通 Long（GET @RequestParam 绑定，非 request DTO 字段），注解无处安放
-        if (admissionId == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
@@ -413,6 +390,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
             if (row.getTemperature() == null && row.getPulse() == null && row.getRespiration() == null
                     && row.getSystolicPressure() == null && row.getDiastolicPressure() == null
                     && row.getSpo2() == null) {
+                // D-业务规则：跨字段「至少一个」约束（五列任缺其一都合法，单字段注解表达不了）
                 throw new BusinessException(at + "至少要录一个体征值");
             }
             BizAdmission admission = bizAdmissionMapper.selectById(row.getAdmissionId());
@@ -540,10 +518,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
      */
     @Override
     public List<NursingAssessmentVO> assessmentLatestByType(Long admissionId) {
-        // 保留（类别②）：入参是普通 Long（GET @RequestParam 绑定，非 request DTO 字段），注解无处安放
-        if (admissionId == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         return bizNursingAssessmentMapper.selectLatestByAdmission(admissionId);
     }
 
@@ -641,10 +615,6 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
     @Override
     public IntakeOutputSummaryVO intakeOutputSummary(Long admissionId, String beginDate, String endDate) {
-        // 保留（类别②）：入参是普通 Long（GET @RequestParam 绑定，非 request DTO 字段），注解无处安放
-        if (admissionId == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         BizAdmission admission = bizAdmissionMapper.selectById(admissionId);
         if (admission == null) {
             throw new BusinessException("入院记录不存在");
@@ -721,7 +691,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
     @Override
     public List<NursingVitalFactVO> latestVitalsByWard(Long wardId, LocalDateTime since) {
-        // 保留（类别②）：入参是普通 Long（跨模块 service 调用，不过 HTTP 绑定），注解无处安放
+        // C-非 web 入参：his-ai DeteriorationAlertCapabilityImpl 跨模块直调（内部派生 wardId），Bean Validation 不覆盖，保留
         if (wardId == null) {
             throw new BusinessException("病区ID不能为空");
         }
@@ -754,7 +724,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
     @Override
     public NursingVitalFactVO latestVitalByAdmission(Long admissionId, LocalDateTime since) {
-        // 保留（类别②）：同上，跨模块 service 调用
+        // C-非 web 入参：his-ai DeteriorationAlertCapabilityImpl 跨模块直调（内部派生 admissionId），Bean Validation 不覆盖，保留
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }
@@ -774,7 +744,7 @@ public class InpatientNursingServiceImpl implements InpatientNursingService {
 
     @Override
     public WardNursingFactsVO wardShiftFacts(Long wardId, LocalDateTime begin, LocalDateTime end, Integer shift) {
-        // 保留（类别②）：同上，跨模块 service 调用
+        // C-非 web 入参：his-ai NursingHandoverCapabilityImpl 跨模块直调（内部派生病区与时间窗），Bean Validation 不覆盖，保留
         if (wardId == null || begin == null || end == null) {
             throw new BusinessException("病区ID与时间窗不能为空");
         }

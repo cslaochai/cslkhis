@@ -13,8 +13,6 @@ import java.time.LocalDate;
 
 /**
  * 维保登记。
- *
- * <p>日期入参一律宽进：LocalDate 用 yyyy-MM-dd（AGENTS.md 日期格式铁律）。
  */
 @Data
 public class MaintainCreateDTO implements Serializable {

@@ -11,9 +11,6 @@ import java.time.LocalDate;
 
 /**
  * 点评批次 upsert 入参。
- *
- * <p>新建 = 建批并按日期范围随机抽样（抽样数即明细行数）；修改只允许改批次名称/专项主题/备注
- * —— 日期范围与抽样数决定了抽样口径，建批后不可改，否则台账回答不了"当时怎么抽的"。
  */
 @Data
 public class RxReviewBatchUpsertDTO {

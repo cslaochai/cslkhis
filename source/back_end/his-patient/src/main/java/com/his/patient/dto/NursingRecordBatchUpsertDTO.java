@@ -11,13 +11,6 @@ import java.util.List;
 
 /**
  * 体温单批量录入 DTO：**一次测量动作 × 多个在院患者**（护士拿体温计挨床测的真实场景）。
- *
- * <p>语义约束：
- * <ul>
- *   <li>同一批 rows 里不允许重复 admissionId —— 同一次测量同一个人只能有一条；</li>
- *   <li>整体事务：任何一个患者的行校验不过（缺体征值 / 唯一时点冲突 / 非在院），
- *       整批回滚并指出第一个问题行 —— 批量录入要么是「这次测量」的完整结果，要么不是。</li>
- * </ul>
  */
 @Data
 public class NursingRecordBatchUpsertDTO {

@@ -12,10 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医嘱执行记录出参（待执行队列与执行记录共用）。
- *
- * <p>`charged` 是从 `feeRecordId` 派生的显式布尔：护士站要能一眼看出"这条执行有没有计费"。
- * 执行成功但未计费是**必须可见**的状态（收费模块缺席时会走到这条路径），
- * 不能只在备注里写一句就让人去翻。
  */
 @Data
 public class InpatientOrderExecVO implements Serializable {

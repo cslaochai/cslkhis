@@ -7,10 +7,6 @@ import lombok.Data;
 
 /**
  * 药品追溯码扫码解析入参
- *
- * <p>{@code scene} 决定返回哪些校验结论：
- * 1-采集场景（入库验收/存量补采）看「能不能采」；2-核销场景（发药窗口）看「能不能销」，
- * 后者必须带 {@code dispensingId}，否则无从判断串码。
  */
 @Data
 public class DrugTraceScanDTO {

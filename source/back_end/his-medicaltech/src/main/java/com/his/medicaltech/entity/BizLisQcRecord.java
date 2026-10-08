@@ -13,9 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * LIS 室内质控结果与失控处理（室内质控记录）
- *
- * <p>status：1 在控 / 2 警告 / 3 失控（服务端按 Westgard 规则判定后写入，不接受前端传）。
- * handle_status：0 无需处理 / 1 待处理 / 2 已处理；失控记录生成时自动置 1 待处理。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

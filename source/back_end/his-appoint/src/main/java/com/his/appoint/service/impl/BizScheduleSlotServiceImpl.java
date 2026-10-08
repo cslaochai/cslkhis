@@ -27,9 +27,6 @@ import java.util.*;
 
 /**
  * 排班时间片段服务实现。
- *
- * <p>分配规则（设计定稿 2026-09-21）：均分，余数给前面的段
- * （23 个号切 8 段 → 前 7 段各 3、末段 2）；预约池同理，段内预留不得超过段号源。
  */
 @Service
 @RequiredArgsConstructor
@@ -386,7 +383,7 @@ public class BizScheduleSlotServiceImpl extends ServiceImpl<BizScheduleSlotMappe
      * "HH:mm" 定宽字符串可直接按字典序比较，这里转分钟算术避免跨小时进位错误。
      */
     private List<String[]> splitHalfHour(String startTime, String endTime) {
-        // C类（非 web 入口入参）：起止时间由调用方从排班实体带进来，不过 Bean Validation 这一层
+        // C-非 web 入参：起止时间由调用方从排班实体带进来，不过 Bean Validation 这一层，保留
         if (startTime == null || endTime == null || startTime.length() < 4 || endTime.length() < 4) {
             throw new BusinessException("排班开始/结束时间不能为空");
         }

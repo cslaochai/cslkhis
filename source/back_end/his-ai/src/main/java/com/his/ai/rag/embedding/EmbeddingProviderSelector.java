@@ -11,11 +11,6 @@ import java.util.Map;
 
 /**
  * 选择具体 embedding 实现。
- *
- * <p>所有 {@link EmbeddingProvider} 实现注册进同一份 registry，按「是否配置了远程 embedding 地址」路由：
- * {@code ai.rag.embed-base-url} 有值 → 用 {@code remote}（OpenAI 兼容语义向量）；
- * 未配 → 回落 {@code local-tf}（零依赖、必可用的本地哈希向量）。
- * 未知实现名回落 local-tf。
  */
 @Slf4j
 @Component

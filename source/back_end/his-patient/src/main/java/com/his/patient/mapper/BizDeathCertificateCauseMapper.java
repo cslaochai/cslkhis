@@ -12,10 +12,6 @@ import java.util.List;
 
 /**
  * 死因链明细 Mapper。
- *
- * <p>本表<b>没有 del_flag</b>，而唯一键 {@code uk_cert_part_seq(cert_id, part, seq_no)} 也不含 del_flag，
- * 所以「整体替换死因链」必须物理删（软删行继续占键，第二次保存同一行序必然 Duplicate entry，
- * AGENTS.md 第 3 条 L12 坑）。死因链没有留档价值，原证的追溯靠死亡医学证明书本身。
  */
 @Mapper
 public interface BizDeathCertificateCauseMapper extends BaseMapper<BizDeathCertificateCause> {

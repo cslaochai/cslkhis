@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 药品调拨单（药库 ↔ 药房，sql/154）
- *
- * <p>它回答的问题是「这批货现在在哪个库位」，不回答「谁该付钱」——调拨不动资金，
- * 所以在收费四层里没有它的位置，它是库存层（L1 之下）的单据。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

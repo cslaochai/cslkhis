@@ -9,11 +9,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
- * 可模拟病案首页列表一行（{@code DrgSimMapper#summaryList}）。
- *
- * <p>LEFT JOIN 已有模拟结果：模拟结果与首页是 1:1（uk_summary），所以 join 不会放大行；
- * 带出 {@code drgCode}/{@code profitAmount} 是为了让页面直接显示"这条模拟过了没有、
- * 盈亏多少"，不必为每行再查一次。
+ * 可模拟病案首页列表一行（DrgSimMapper#summaryList）。
  */
 @Data
 public class DrgSummaryListRowVO implements Serializable {

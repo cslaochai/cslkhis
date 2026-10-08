@@ -16,24 +16,6 @@ import java.util.List;
 
 /**
  * CDR 患者全景时间轴 Mapper（P5.2）。
- *
- * <p>为什么是一大坨 UNION ALL 而不是"一个事件源一个方法"：
- * 一次患者全景要拉 28 类事件，逐个方法查就是 28 次数据库往返（还要乘上归并后的档案数）。
- * 统一成"同一形状的行"一次性取回，Java 侧再按锚点分组 —— 这是 CDR 唯一能跑得动的取数方式。
- *
- * <p>三条必须说清的代价（表结构变了这里不会编译报错，只会静默少字段/空值）：
- * <ol>
- *   <li>每个分支只碰**已核过存在**的列，且时间列都有 COALESCE 兜底
- *       （否则 etime 为 null，事件会在时间轴上排到最后，看着像"数据丢了"）；</li>
- *   <li>没有删除标记的表（就诊次 / 治疗申请单）不加该条件，
- *       加了会直接报"Unknown column"，宁可先核一遍；</li>
- *   <li>凡是"经别的表才能找到就诊次"的事件（检验/检查报告、报告单），
- *       关联用**标量子查询**而不是 JOIN —— JOIN 一旦一对多就会把一条事件复制成多条，
- *       而重复事件在时间轴上是看不出来的。</li>
- * </ol>
- *
- * <p>另外：报告单用 NOT EXISTS 排掉已被检验/检查记录表表达过的同号记录，
- * 否则同一份报告会在时间轴上出现两次。
  */
 @Mapper
 public interface CdrMapper {
@@ -46,8 +28,8 @@ public interface CdrMapper {
      */
     String EVENT_SQL = """
             <script>
-            SELECT 'outpatientRecord' AS etype, 'biz_medical_record' AS srcTable, CAST(m.id AS CHAR) AS srcId,
-                   'REGIST' AS anchorType, CAST(m.regist_id AS CHAR) AS anchorId,
+            SELECT 'outpatientRecord' AS etype, 'biz_medical_record' AS srcTable, m.id AS srcId,
+                   'REGIST' AS anchorType, m.regist_id AS anchorId,
                    COALESCE(m.create_time, TIMESTAMP(m.visit_date)) AS etime,
                    CONCAT('门诊病历 ', m.record_no) AS title,
                    NULLIF(TRIM(CONCAT(COALESCE(LEFT(m.chief_complaint, 60), ''),
@@ -61,7 +43,7 @@ public interface CdrMapper {
                AND m.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'prescription', 'biz_prescription', CAST(p.id AS CHAR), 'REGIST', CAST(p.regist_id AS CHAR),
+            SELECT 'prescription', 'biz_prescription', p.id, 'REGIST', p.regist_id,
                    COALESCE(p.submit_time, p.create_time, TIMESTAMP(p.visit_date)),
                    CONCAT('处方 ', p.prescription_no),
                    NULLIF(TRIM(CONCAT(COALESCE(p.drug_count, 0), ' 种药品',
@@ -74,7 +56,7 @@ public interface CdrMapper {
                AND p.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'laboratoryApply', 'biz_laboratory_apply', CAST(a.id AS CHAR), 'REGIST', CAST(a.regist_id AS CHAR),
+            SELECT 'laboratoryApply', 'biz_laboratory_apply', a.id, 'REGIST', a.regist_id,
                    COALESCE(a.submit_time, a.create_time, TIMESTAMP(a.visit_date)),
                    CONCAT('检验申请 ', a.apply_no),
                    NULLIF(TRIM(CONCAT(COALESCE(a.laboratory_item_name, ''),
@@ -87,7 +69,7 @@ public interface CdrMapper {
                AND a.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'inspectionApply', 'biz_inspection_apply', CAST(a.id AS CHAR), 'REGIST', CAST(a.regist_id AS CHAR),
+            SELECT 'inspectionApply', 'biz_inspection_apply', a.id, 'REGIST', a.regist_id,
                    COALESCE(a.submit_time, a.appointment_time, a.create_time, TIMESTAMP(a.visit_date)),
                    CONCAT('检查申请 ', a.apply_no),
                    NULLIF(TRIM(CONCAT(COALESCE(a.inspection_item_name, ''),
@@ -100,7 +82,7 @@ public interface CdrMapper {
                AND a.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'treatmentApply', 'biz_treatment_apply', CAST(t.apply_id AS CHAR), 'REGIST', CAST(t.regist_id AS CHAR),
+            SELECT 'treatmentApply', 'biz_treatment_apply', t.apply_id, 'REGIST', t.regist_id,
                    COALESCE(t.execute_time, t.apply_time),
                    CONCAT('治疗单 ', t.apply_no),
                    NULLIF(LEFT(t.remark, 60), ''),
@@ -110,7 +92,7 @@ public interface CdrMapper {
              WHERE t.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'charge', 'biz_settlement_bill', CAST(s.id AS CHAR), 'REGIST', CAST(s.encounter_id AS CHAR),
+            SELECT 'charge', 'biz_settlement_bill', s.id, 'REGIST', s.encounter_id,
                    COALESCE(s.bill_time, s.create_time),
                    CONCAT('收费单 ', s.bill_no),
                    CONCAT('总额 ', COALESCE(s.total_amount, 0), '，实收 ', COALESCE(s.paid_amount, 0)),
@@ -121,7 +103,7 @@ public interface CdrMapper {
                AND s.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'insuranceSettlement', 'biz_insurance_settlement', CAST(s.id AS CHAR), 'REGIST', CAST(s.regist_id AS CHAR),
+            SELECT 'insuranceSettlement', 'biz_insurance_settlement', s.id, 'REGIST', s.regist_id,
                    COALESCE(s.upload_time, s.audit_time, s.create_time),
                    CONCAT('医保结算单 ', s.settlement_no),
                    CONCAT('总额 ', COALESCE(s.total_amount, 0), '，医保支付 ', COALESCE(s.insurance_pay, 0),
@@ -133,7 +115,7 @@ public interface CdrMapper {
                AND s.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'queue', 'biz_queue', CAST(q.id AS CHAR), 'REGIST', CAST(q.regist_id AS CHAR),
+            SELECT 'queue', 'biz_queue', q.id, 'REGIST', q.regist_id,
                    COALESCE(q.call_time, q.start_time, q.arrive_time, q.create_time),
                    CONCAT('候诊叫号 ', q.queue_no),
                    NULLIF(TRIM(CONCAT('序号 ', COALESCE(q.sequence_no, 0),
@@ -145,7 +127,7 @@ public interface CdrMapper {
                AND q.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'recordArchive', 'biz_medical_record_archive', CAST(x.id AS CHAR), 'REGIST', CAST(x.regist_id AS CHAR),
+            SELECT 'recordArchive', 'biz_medical_record_archive', x.id, 'REGIST', x.regist_id,
                    COALESCE(x.archive_time, x.create_time),
                    CONCAT('病案归档 ', x.archive_no),
                    NULLIF(LEFT(x.diagnosis, 60), ''),
@@ -156,9 +138,9 @@ public interface CdrMapper {
                AND x.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'laboratoryReport', 'biz_laboratory_record', CAST(r.id AS CHAR), 'REGIST',
-                   CAST((SELECT ap.regist_id FROM biz_laboratory_apply ap
-                          WHERE ap.apply_no = r.apply_no AND ap.del_flag = 0 LIMIT 1) AS CHAR),
+            SELECT 'laboratoryReport', 'biz_laboratory_record', r.id, 'REGIST',
+                   (SELECT ap.regist_id FROM biz_laboratory_apply ap
+                          WHERE ap.apply_no = r.apply_no AND ap.del_flag = 0 LIMIT 1),
                    COALESCE(r.report_time, r.audit_time, r.create_time, TIMESTAMP(r.visit_date)),
                    CONCAT('检验报告 ', r.record_no),
                    NULLIF(TRIM(CONCAT(COALESCE(r.laboratory_item_name, ''),
@@ -171,9 +153,9 @@ public interface CdrMapper {
                AND r.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'inspectionReport', 'biz_inspection_record', CAST(r.id AS CHAR), 'REGIST',
-                   CAST((SELECT ap.regist_id FROM biz_inspection_apply ap
-                          WHERE ap.apply_no = r.apply_no AND ap.del_flag = 0 LIMIT 1) AS CHAR),
+            SELECT 'inspectionReport', 'biz_inspection_record', r.id, 'REGIST',
+                   (SELECT ap.regist_id FROM biz_inspection_apply ap
+                          WHERE ap.apply_no = r.apply_no AND ap.del_flag = 0 LIMIT 1),
                    COALESCE(r.report_time, r.audit_time, r.create_time, TIMESTAMP(r.visit_date)),
                    CONCAT('检查报告 ', r.record_no),
                    NULLIF(TRIM(CONCAT(COALESCE(r.inspection_item_name, ''),
@@ -186,9 +168,9 @@ public interface CdrMapper {
                AND r.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'report', 'biz_report', CAST(rp.id AS CHAR), 'REGIST',
-                   CAST((SELECT m.regist_id FROM biz_medical_record m
-                          WHERE m.record_no = rp.record_no AND m.del_flag = 0 LIMIT 1) AS CHAR),
+            SELECT 'report', 'biz_report', rp.id, 'REGIST',
+                   (SELECT m.regist_id FROM biz_medical_record m
+                          WHERE m.record_no = rp.record_no AND m.del_flag = 0 LIMIT 1),
                    COALESCE(rp.publish_time, rp.audit_time, rp.create_time, TIMESTAMP(rp.visit_date)),
                    CONCAT('报告单 ', rp.report_no),
                    NULLIF(LEFT(COALESCE(NULLIF(rp.conclusion, ''), rp.report_content), 60), ''),
@@ -201,7 +183,7 @@ public interface CdrMapper {
                AND NOT EXISTS (SELECT 1 FROM biz_inspection_record ir WHERE ir.record_no = rp.record_no)
             
             UNION ALL
-            SELECT 'admission', 'biz_admission', CAST(a.admission_id AS CHAR), 'ADMISSION', CAST(a.admission_id AS CHAR),
+            SELECT 'admission', 'biz_admission', a.admission_id, 'ADMISSION', a.admission_id,
                    a.admit_time,
                    CONCAT('入院登记 ', a.admission_no),
                    NULLIF(TRIM(CONCAT(COALESCE(a.admit_diagnosis_name, a.diagnosis, ''),
@@ -215,7 +197,7 @@ public interface CdrMapper {
                AND a.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'inpatientRecord', 'biz_inpatient_record', CAST(r.id AS CHAR), 'ADMISSION', CAST(r.admission_id AS CHAR),
+            SELECT 'inpatientRecord', 'biz_inpatient_record', r.id, 'ADMISSION', r.admission_id,
                    COALESCE(r.record_time, r.create_time),
                    CONCAT(COALESCE(r.record_title, '住院文书'), ' ', r.record_no),
                    NULLIF(TRIM(CONCAT(COALESCE(LEFT(r.chief_complaint, 40), ''),
@@ -228,7 +210,7 @@ public interface CdrMapper {
                AND r.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'inpatientOrder', 'biz_inpatient_order', CAST(o.id AS CHAR), 'ADMISSION', CAST(o.admission_id AS CHAR),
+            SELECT 'inpatientOrder', 'biz_inpatient_order', o.id, 'ADMISSION', o.admission_id,
                    COALESCE(o.order_time, o.start_time, o.create_time),
                    COALESCE(o.item_name, '医嘱'),
                    NULLIF(TRIM(CONCAT('数量 ', COALESCE(o.quantity, 0), COALESCE(o.unit, ''),
@@ -241,7 +223,7 @@ public interface CdrMapper {
                AND o.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'inpatientDiagnosis', 'biz_inpatient_diagnosis', CAST(g.id AS CHAR), 'ADMISSION', CAST(g.admission_id AS CHAR),
+            SELECT 'inpatientDiagnosis', 'biz_inpatient_diagnosis', g.id, 'ADMISSION', g.admission_id,
                    g.create_time,
                    CONCAT('诊断 ', COALESCE(g.icd_name, '')),
                    NULLIF(TRIM(CONCAT('ICD ', COALESCE(g.icd_code, ''), ' / 入院病情 ',
@@ -257,7 +239,7 @@ public interface CdrMapper {
                                          AND a.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>)
             
             UNION ALL
-            SELECT 'inpatientSummary', 'biz_inpatient_summary', CAST(s.id AS CHAR), 'ADMISSION', CAST(s.admission_id AS CHAR),
+            SELECT 'inpatientSummary', 'biz_inpatient_summary', s.id, 'ADMISSION', s.admission_id,
                    COALESCE(s.discharge_time, s.admit_time, s.create_time),
                    CONCAT('病案首页 ', COALESCE(s.main_diagnosis_name, '未填主诊断')),
                    CONCAT('住院 ', COALESCE(s.inpatient_days, 0), ' 天 / 总费用 ', COALESCE(s.total_amount, 0)),
@@ -268,7 +250,7 @@ public interface CdrMapper {
                AND s.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'operationApply', 'biz_operation_apply', CAST(o.id AS CHAR), 'ADMISSION', CAST(o.admission_id AS CHAR),
+            SELECT 'operationApply', 'biz_operation_apply', o.id, 'ADMISSION', o.admission_id,
                    COALESCE(o.operation_end_time, o.operation_start_time, o.schedule_time, o.apply_time, o.create_time),
                    CONCAT('手术申请 ', COALESCE(o.actual_operation_name, o.planned_operation_name, o.apply_no)),
                    NULLIF(TRIM(CONCAT(COALESCE(o.apply_dept_name, ''),
@@ -283,7 +265,7 @@ public interface CdrMapper {
                AND o.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'inpatientOperation', 'biz_inpatient_operation', CAST(o.id AS CHAR), 'ADMISSION', CAST(o.admission_id AS CHAR),
+            SELECT 'inpatientOperation', 'biz_inpatient_operation', o.id, 'ADMISSION', o.admission_id,
                    COALESCE(o.operation_date, o.create_time),
                    CONCAT('手术记录 ', COALESCE(o.operation_name, '')),
                    NULLIF(TRIM(CONCAT('术者 ', COALESCE(o.surgeon_name, ''),
@@ -299,7 +281,7 @@ public interface CdrMapper {
                                          AND a.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>)
             
             UNION ALL
-            SELECT 'consultation', 'biz_consultation', CAST(c.consultation_id AS CHAR), 'ADMISSION', CAST(c.admission_id AS CHAR),
+            SELECT 'consultation', 'biz_consultation', c.consultation_id, 'ADMISSION', c.admission_id,
                    COALESCE(c.finish_time, c.consult_time, c.accept_time, c.apply_time, c.create_time),
                    CONCAT('会诊 ', c.consultation_no),
                    NULLIF(TRIM(CONCAT('事由：', COALESCE(LEFT(c.reason, 50), ''), CASE WHEN c.is_urgent = 1 THEN ' / 急会诊' ELSE '' END)), ''),
@@ -310,7 +292,7 @@ public interface CdrMapper {
                AND c.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'transfer', 'biz_inpatient_transfer', CAST(t.id AS CHAR), 'ADMISSION', CAST(t.admission_id AS CHAR),
+            SELECT 'transfer', 'biz_inpatient_transfer', t.id, 'ADMISSION', t.admission_id,
                    COALESCE(t.receive_time, t.apply_time, t.create_time),
                    CONCAT('转科 ', COALESCE(t.from_dept_name, '?'), ' → ', COALESCE(t.to_dept_name, '?')),
                    NULLIF(TRIM(CONCAT('原因：', COALESCE(LEFT(t.transfer_reason, 50), ''),
@@ -322,7 +304,7 @@ public interface CdrMapper {
                AND t.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'transfusion', 'biz_transfusion_apply', CAST(t.id AS CHAR), 'ADMISSION', CAST(t.admission_id AS CHAR),
+            SELECT 'transfusion', 'biz_transfusion_apply', t.id, 'ADMISSION', t.admission_id,
                    COALESCE(t.infusion_start_time, t.issue_time, t.apply_time, t.create_time),
                    CONCAT('输血 ', COALESCE(t.blood_component, '成分血')),
                    NULLIF(TRIM(CONCAT(COALESCE(t.patient_abo, ''), COALESCE(t.patient_rh, ''),
@@ -336,7 +318,7 @@ public interface CdrMapper {
                AND t.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'nursingRecord', 'biz_nursing_record', CAST(n.id AS CHAR), 'ADMISSION', CAST(n.admission_id AS CHAR),
+            SELECT 'nursingRecord', 'biz_nursing_record', n.id, 'ADMISSION', n.admission_id,
                    COALESCE(n.measure_time, n.create_time),
                    CONCAT('护理记录 ', n.record_no),
                    NULLIF(TRIM(CONCAT('体温 ', COALESCE(n.temperature, '-'), ' 脉搏 ', COALESCE(n.pulse, '-'),
@@ -349,7 +331,7 @@ public interface CdrMapper {
                AND n.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'prepay', 'biz_payment_txn', CAST(p.id AS CHAR), 'ADMISSION', CAST(p.encounter_id AS CHAR),
+            SELECT 'prepay', 'biz_payment_txn', p.id, 'ADMISSION', p.encounter_id,
                    COALESCE(p.txn_time, p.create_time),
                    CONCAT('预交金 ', p.txn_no),
                    CONCAT('金额 ', COALESCE(p.amount, 0),
@@ -362,7 +344,7 @@ public interface CdrMapper {
                AND p.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'discharge', 'biz_discharge', CAST(d.discharge_id AS CHAR), 'ADMISSION', CAST(d.admission_id AS CHAR),
+            SELECT 'discharge', 'biz_discharge', d.discharge_id, 'ADMISSION', d.admission_id,
                    COALESCE(d.discharge_time, d.create_time),
                    CONCAT('出院 ', d.discharge_no),
                    NULLIF(TRIM(CONCAT('出院诊断 ', COALESCE(LEFT(d.discharge_diagnosis, 50), ''),
@@ -374,7 +356,7 @@ public interface CdrMapper {
                AND d.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'inpatientSettlement', 'biz_settlement_bill', CAST(s.id AS CHAR), 'ADMISSION', CAST(s.encounter_id AS CHAR),
+            SELECT 'inpatientSettlement', 'biz_settlement_bill', s.id, 'ADMISSION', s.encounter_id,
                    COALESCE(s.bill_time, s.create_time),
                    CONCAT('住院结算 ', s.bill_no),
                    CONCAT('总额 ', COALESCE(s.total_amount, 0), ' / 统筹 ', COALESCE(s.pool_amount, 0),
@@ -387,7 +369,7 @@ public interface CdrMapper {
                AND s.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'charge', 'biz_settlement_bill', CAST(s.id AS CHAR), 'ADMISSION', CAST(s.encounter_id AS CHAR),
+            SELECT 'charge', 'biz_settlement_bill', s.id, 'ADMISSION', s.encounter_id,
                    COALESCE(s.bill_time, s.create_time),
                    CONCAT('住院收费单 ', s.bill_no),
                    CONCAT('总额 ', COALESCE(s.total_amount, 0), '，实收 ', COALESCE(s.paid_amount, 0)),
@@ -398,7 +380,7 @@ public interface CdrMapper {
                AND s.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'emergency', 'biz_emergency', CAST(e.id AS CHAR), 'EMERGENCY', CAST(e.id AS CHAR),
+            SELECT 'emergency', 'biz_emergency', e.id, 'EMERGENCY', e.id,
                    COALESCE(e.diagnosis_time, e.admission_time, e.create_time),
                    CONCAT('急诊 ', e.emergency_no),
                    NULLIF(TRIM(CONCAT(COALESCE(LEFT(e.chief_complaint, 50), ''),
@@ -411,7 +393,7 @@ public interface CdrMapper {
                AND e.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'criticalValue', 'biz_critical_value', CAST(v.id AS CHAR), 'PATIENT', CAST(v.patient_id AS CHAR),
+            SELECT 'criticalValue', 'biz_critical_value', v.id, 'PATIENT', v.patient_id,
                    COALESCE(v.report_time, v.create_time),
                    CONCAT('危急值 ', COALESCE(v.item_name, '')),
                    NULLIF(TRIM(CONCAT('结果 ', COALESCE(v.result_value, ''), COALESCE(v.result_unit, ''),
@@ -424,7 +406,7 @@ public interface CdrMapper {
                AND v.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'qualityControl', 'biz_quality_control', CAST(q.id AS CHAR), 'PATIENT', CAST(q.patient_id AS CHAR),
+            SELECT 'qualityControl', 'biz_quality_control', q.id, 'PATIENT', q.patient_id,
                    COALESCE(q.qc_time, q.create_time),
                    CONCAT('病案质控 ', q.qc_no),
                    NULLIF(TRIM(CONCAT('错误 ', COALESCE(q.error_count, 0), ' 处',
@@ -437,7 +419,7 @@ public interface CdrMapper {
                AND q.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'followupTask', 'biz_followup_task', CAST(f.id AS CHAR), 'PATIENT', CAST(f.patient_id AS CHAR),
+            SELECT 'followupTask', 'biz_followup_task', f.id, 'PATIENT', f.patient_id,
                    COALESCE(f.followup_time, f.execute_time, f.create_time),
                    CONCAT('随访 ', f.task_no),
                    NULLIF(LEFT(COALESCE(f.followup_content, f.diagnosis), 60), ''),
@@ -448,7 +430,7 @@ public interface CdrMapper {
                AND f.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'referral', 'biz_referral', CAST(r.referral_id AS CHAR), 'PATIENT', CAST(r.patient_id AS CHAR),
+            SELECT 'referral', 'biz_referral', r.referral_id, 'PATIENT', r.patient_id,
                    r.referral_time,
                    CONCAT('转诊 ', r.referral_no),
                    NULLIF(LEFT(r.reason, 60), ''),
@@ -458,7 +440,7 @@ public interface CdrMapper {
              WHERE r.patient_id IN <foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach>
             
             UNION ALL
-            SELECT 'publicHealthReport', 'biz_public_health_report', CAST(p.id AS CHAR), 'PATIENT', CAST(p.patient_id AS CHAR),
+            SELECT 'publicHealthReport', 'biz_public_health_report', p.id, 'PATIENT', p.patient_id,
                    COALESCE(p.report_time, p.create_time),
                    CONCAT('公卫上报 ', p.report_no),
                    NULLIF(TRIM(CONCAT(COALESCE(p.diagnosis, ''), CASE WHEN p.diagnosis_code IS NULL OR p.diagnosis_code = ''
@@ -547,7 +529,7 @@ public interface CdrMapper {
      */
     @Select("""
             <script>
-            SELECT CAST(a.admission_id AS CHAR) AS admissionId, a.admission_no AS admissionNo,
+            SELECT a.admission_id AS admissionId, a.admission_no AS admissionNo,
                    CAST(a.patient_id AS CHAR) AS ownerPid,
                    a.admit_time AS admitTime, a.discharge_time AS dischargeTime,
                    a.admit_status AS admitStatus, a.admit_way AS admitWay,
@@ -571,7 +553,7 @@ public interface CdrMapper {
      */
     @Select("""
             <script>
-            SELECT CAST(v.visit_id AS CHAR) AS visitId, v.visit_no AS visitNo,
+            SELECT v.visit_id AS visitId, v.visit_no AS visitNo,
                    CAST(v.patient_id AS CHAR) AS ownerPid,
                    v.start_time AS startTime, v.end_time AS endTime,
                    v.visit_status AS visitStatus, v.total_amount AS totalAmount,
@@ -587,7 +569,7 @@ public interface CdrMapper {
      */
     @Select("""
             <script>
-            SELECT CAST(r.id AS CHAR) AS registId, r.regist_no AS registNo,
+            SELECT r.id AS registId, r.regist_no AS registNo,
                    CAST(r.patient_id AS CHAR) AS ownerPid,
                    r.regist_time AS registTime, r.visit_date AS visitDate,
                    r.regist_status AS registStatus, r.dept_name AS deptName, r.doctor_name AS doctorName,
@@ -604,7 +586,7 @@ public interface CdrMapper {
      */
     @Select("""
             <script>
-            SELECT CAST(e.id AS CHAR) AS emergencyId, e.emergency_no AS emergencyNo,
+            SELECT e.id AS emergencyId, e.emergency_no AS emergencyNo,
                    CAST(e.patient_id AS CHAR) AS ownerPid,
                    e.admission_time AS admissionTime, e.finish_time AS finishTime,
                    e.emergency_status AS emergencyStatus, e.triage_level AS triageLevel, e.zone AS zone,

@@ -5,12 +5,6 @@ import lombok.Data;
 
 /**
  * 患者端影像报告白话解释提示词变量。
- *
- * <p>对应 {@code prompts/patient-imaging-explain.md} 的全部占位符。
- * 字段名与模板里的 {{占位符}} 一一对应。
- *
- * <p>{@code hasDictIntro} 告诉模型词典里有没有该项目介绍：
- * 有则直接引用院内已审过的说法，没有才让它自己写，避免两个口径打架。
  */
 @Data
 public class PatientImagingExplainPromptVariablesVO implements PromptVariables {

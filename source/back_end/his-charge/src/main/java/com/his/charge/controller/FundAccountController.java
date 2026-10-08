@@ -19,11 +19,6 @@ import java.util.List;
 
 /**
  * 资金账户台账（L3）：门诊余额与住院预交金的统一账本查询。
- *
- * <p>只读：账户与流水由充值/抵扣/退差各动作写入，这里不提供任何改账口子 ——
- * 余额永远等于 SUM(流水)，能直接改余额就等于账本作废。
- * 充值/退款动作在住院账户（{@code /charge/inpatient/account/prepay/save}）与
- * 收款链（余额抵扣）里，不在本控制器。
  */
 @Tag(name = "资金账户")
 @RestController

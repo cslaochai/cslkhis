@@ -14,14 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * AI 能力运维接口。
- * <p>
- * <b>healthCheck 刻意不发起模型调用</b>：这是运维每 10 秒可能要打一次的探针，
- * 每次真调一次大模型既烧钱又慢。它回答的问题是「配置齐不齐、能力开没开、熔断没有」，
- * 而不是「模型今天心情好不好」。
- * 想验证端到端连通性，直接调一次 {@code /ai/icd10/predict} 更实在。
- * <p>
- * <b>配置本体在 application.yml 的 {@code ai.*} 段</b>，启动时绑定、改值需重启，
- * 因此这里没有任何「刷新 AI 配置」的入口 —— 原因见 {@link AiHealthService#refreshCodeCache()}。
  */
 @Tag(name = "AI 能力-运维")
 @RestController

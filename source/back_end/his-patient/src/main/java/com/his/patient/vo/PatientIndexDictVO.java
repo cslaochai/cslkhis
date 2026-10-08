@@ -8,9 +8,6 @@ import java.util.Map;
 
 /**
  * EMPI 字典出参（匹配级别 + 档案关键字段清单）。
- *
- * <p>放服务端而不是前端硬编码：级别文案与关键字段清单必须与后端的完整度口径同源，
- * 前端各存一份必然漂移（改了口径页面还在显示老文案）。
  */
 @Data
 public class PatientIndexDictVO implements Serializable {

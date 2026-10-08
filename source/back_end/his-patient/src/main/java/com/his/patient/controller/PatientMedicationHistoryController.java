@@ -16,12 +16,6 @@ import java.util.List;
 
 /**
  * 患者既往用药史控制器
- *
- * <p><b>这个控制器是补出来的。</b>「用药史」是健康档案六组之一，
- * 但此前只有 CDR 时间轴的裸 SQL（{@code CdrMapper.PROFILE_SQL} 的 'medication' 分支）
- * 在既往用药史上做过查询 —— 没有实体、没有 Mapper、
- * 没有 Controller。也就是说这一组**能看不能维护**：页面上永远显示「暂无」，
- * 医生填了用药史也没地方落库。六组里唯独它没有入口，闭环无从谈起。
  */
 @Tag(name = "患者既往用药史")
 @RestController

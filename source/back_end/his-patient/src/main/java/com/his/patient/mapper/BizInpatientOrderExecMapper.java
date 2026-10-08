@@ -11,9 +11,6 @@ import org.apache.ibatis.annotations.Select;
 
 /**
  * 医嘱执行记录 Mapper。
- *
- * <p>待执行队列（`exec_status = 1`）按 `plan_time` 升序 —— 这是护士"先做哪床"的唯一依据。
- * 只返回**已校对/执行中**的医嘱，未校对的医嘱在护士站不可见（医嘱双人核对的最低要求）。
  */
 @Mapper
 public interface BizInpatientOrderExecMapper extends BaseMapper<BizInpatientOrderExec> {

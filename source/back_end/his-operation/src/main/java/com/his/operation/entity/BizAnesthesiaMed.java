@@ -14,12 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 麻醉用药记录—— 只增不改。
- *
- * <p>为什么不继承 {@code BaseEntity}：表里没有 remark 之外的-update 列，
- * 见 {@link BizAnesthesiaVital} 的同名注释。
- *
- * <p>用药是麻醉记录单里最能回答"这一刀到底怎么麻过来的"的部分：
- * 诱导给了什么、维持用什么泵、苏醒用了什么拮抗。缺了它，麻醉单就只剩下血压数字。
  */
 @Data
 @TableName("biz_anesthesia_med")

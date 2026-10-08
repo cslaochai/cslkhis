@@ -10,9 +10,6 @@ import java.util.List;
 
 /**
  * 膳食方案分页查询。
- *
- * <p>{@code confirmStatus=0} 是营养科工作台默认的"今天要接的方案"；
- * 来源区分医嘱派生与手工登记 —— 膳食医嘱执行率只该看 source=1 那批。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

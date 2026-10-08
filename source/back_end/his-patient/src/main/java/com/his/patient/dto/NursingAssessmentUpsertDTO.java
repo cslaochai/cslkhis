@@ -14,9 +14,6 @@ import java.util.List;
 
 /**
  * 护理评估单录入 DTO。
- *
- * <p>itemsJson 由前端按量表组装（项:得分），但 <b>totalScore 由后端对 items 求和重算</b>——
- * 前端传的总分只做展示参考，落库以重算为准，两边不一致直接拒绝（说明量表项有漏选）。
  */
 @Data
 public class NursingAssessmentUpsertDTO {

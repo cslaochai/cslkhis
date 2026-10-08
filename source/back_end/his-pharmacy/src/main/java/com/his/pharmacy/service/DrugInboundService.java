@@ -9,8 +9,6 @@ import com.his.pharmacy.vo.DrugInboundVO;
 
 /**
  * 药品入库单服务
- *
- * 状态机：1 待审核 →（审核）2 已审核 →（入库）3 已入库；1/2 可取消 → 4 已取消
  */
 public interface DrugInboundService {
 

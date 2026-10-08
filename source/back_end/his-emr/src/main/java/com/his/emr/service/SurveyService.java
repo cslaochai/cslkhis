@@ -9,14 +9,6 @@ import com.his.emr.vo.SurveyStatVO;
 
 /**
  * 满意度评价发放/回收与看板服务。
- *
- * <p>三层事实分开：<br>
- * ① 满意度发放台账发放台账 —— 回收率的分母，未回收也必须成行；<br>
- * ② 满意度答卷(+item) 答卷 —— 患者说了什么，题目快照防模板漂移；<br>
- * ③ {@link #stat} 看板 —— 服务端聚合，前端不数当前页。
- *
- * <p>低分卷自动转投诉（{@code DisputeService}）是本域的收口动作：
- * 调查不产生整改就只是打分，评审要的是「调查 → 短板 → 整改单」这条链。
  */
 public interface SurveyService {
 

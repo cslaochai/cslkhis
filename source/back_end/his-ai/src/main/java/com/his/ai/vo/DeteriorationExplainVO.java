@@ -9,8 +9,6 @@ import java.util.List;
 
 /**
  * 危重预警单患者明细（G-12）。
- * <p>评分与预警级是代码事实；{@code advice} 是模型观察建议（仅 alertLevel ≥1 才调模型），
- * 模型不可用时 {@code degraded=true}、{@code advice=null}，评分与预警级照常可见。</p>
  */
 @Data
 public class DeteriorationExplainVO {

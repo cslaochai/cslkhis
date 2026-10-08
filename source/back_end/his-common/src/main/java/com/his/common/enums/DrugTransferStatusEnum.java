@@ -4,9 +4,6 @@ import lombok.Getter;
 
 /**
  * 药品调拨单状态枚举（药品调拨单的状态列，sql/154）
- *
- * <p>发出与接收之间是<b>在途</b>：药既不在药房也不在药库。做成一步搬完省事，
- * 但那样就表达不出"车上那箱货此刻盘不到"，两边库管员也无法各自追责。
  */
 @Getter
 public enum DrugTransferStatusEnum {

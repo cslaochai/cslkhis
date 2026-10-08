@@ -14,9 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 双向转诊控制器。
- *
- * <p>流程：登记（0 待确认）→ 确认（1 已确认）→ 完成（2 已完成）；未完成前可取消（3）。
- * 上转=转往上级医院、下转=转回基层/社区，to_hospital 均必填；院内转诊走转科（住院转科轨迹），别混。
  */
 @Tag(name = "双向转诊")
 @RestController

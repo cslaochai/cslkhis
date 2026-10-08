@@ -8,9 +8,6 @@ import java.io.Serializable;
 
 /**
  * 取消转科入参（P4.2：仅「待接收」可取消）。
- *
- * <p>已接收的转科是**已经发生过的临床行为**，不允许用取消把它抹掉；
- * 要转回去就再发起一次，轨迹留两条 —— 这才是事实。
  */
 @Data
 public class InpatientTransferCancelDTO implements Serializable {

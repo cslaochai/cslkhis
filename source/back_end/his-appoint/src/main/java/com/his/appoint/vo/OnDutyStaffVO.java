@@ -6,9 +6,6 @@ import lombok.Data;
 
 /**
  * 在岗人员 VO（排班的下游产出）。
- *
- * <p>字段刻意不写「医生」字样：{@code staffId} 就是排班信息的医师ID，
- * 语义是「排班人员」，可能是医生也可能是护士/技师/收费员，看 {@code staffType}。
  */
 @Data
 public class OnDutyStaffVO {

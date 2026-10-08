@@ -9,9 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * 麻醉术前访视单出参。
- *
- * <p>{@code can*} 一组由后端判定，<b>前端不要按 visitStatus/结论自己 switch</b>：
- * "能不能改、能不能作为麻醉依据"只有服务端知道（尤其是急诊超前麻醉的场景）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

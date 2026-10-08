@@ -6,8 +6,6 @@ import java.io.Serializable;
 
 /**
  * 匹配级别字典项（供前端渲染筛选项与"能不能直接合并"的判断）。
- *
- * <p>{@code minReasonLength} 跟着级别走：强依据只需一句说明，仅同名必须写清是谁核实的。
  */
 @Data
 public class PatientMatchLevelSelectListVO implements Serializable {

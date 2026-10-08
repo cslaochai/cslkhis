@@ -18,8 +18,6 @@ import java.util.List;
 
 /**
  * 满意度问卷模板（定义「问什么」，sql/164）。
- *
- * <p>@PreAuthorize 一律标到方法（类级注解会静默覆盖未标注的方法）。
  */
 @Tag(name = "满意度问卷模板")
 @RestController

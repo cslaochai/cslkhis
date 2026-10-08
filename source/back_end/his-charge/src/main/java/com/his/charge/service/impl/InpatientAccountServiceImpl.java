@@ -42,30 +42,6 @@ import java.util.TreeMap;
 
 /**
  * 住院账务服务实现（P3，四层口径）。
- *
- * <p>本类固化这些"至少会被追问一次"的点：
- *
- * <ol>
- *   <li><b>预交金是一段没有账单锚的资金流水</b>（sql/140）：充值/退款写进 L3
- *       支付资金流水（{@code bill_id IS NULL} + {@code source_type=3}，收正退负），
- *       额度同步进资金账户（主体=这次住院）。余额永远是账户那边 {@code SUM} 出来的，
- *       {@code balance_after} 只是抽查对账用的快照。旧表旧预交金那套自己的
- *       单号/余额/支付方式已停写 —— 同一件事实不许有两份记录。</li>
- *   <li><b>退款先判余额、再动渠道</b>：先发起渠道退款再回本地账，失败时就成了
- *       "钱退了、账没冲"的长款。而 FIFO 摊到具体原充值流水是必需的 ——
- *       微信收的钱只能退回微信（见 {@code PaymentService#prepayRefund}）。</li>
- *   <li><b>日清单读 L1 记账行</b>：正行与红冲负行一起出，合计天然等于应收净额；
- *       不再去旧收费明细上减退费金额（那是在第二张表里猜净额）。</li>
- *   <li><b>结算只有一套算法</b>：试算与出账共用 {@code SettlementBillService} 的同一份草稿，
- *       本类只加"账户里有多少钱"这一段（抵扣/退差/欠费）。住院结算出现第二套算法，
- *       小票就和结算单对不上。</li>
- *   <li><b>出院结算 = 一张 {@code bill_type=4} 的账单</b>：本类不再维护"结算台账"，
- *       {@code #settlementDetail} 与出院门禁读同一张账单，欠费额由应缴与已收现算。</li>
- *   <li><b>欠费不阻断诊疗</b>：{@code #summary} 只回答"欠不欠、欠多少"并留一条预警记录，
- *       真正的拦截只有一处在出院侧（没付清不让出院）—— 急救被欠费卡住是医疗事故，不是财务纪律。
- *       公式只有 {@code #arrearsView} 一处，欠费管控 gate 与概览共用它，
- *       各抄一份就会出现"前台说欠 800、医生开医嘱却说不欠"。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -321,10 +297,6 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
 
     @Override
     public InpatientSettlementVO settlementDetail(Long admissionId) {
-        // C 类保留：入参是 Long（GET 参数直传），没有 DTO 承载注解；@RequestParam 已 required，此处是直调兜底
-        if (admissionId == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         BizSettlementBill bill = settlementBillService.latestDischargeBill(admissionId);
         if (bill == null) {
             return null;
@@ -451,7 +423,7 @@ public class InpatientAccountServiceImpl extends ServiceImpl<BizAlertMapper, Biz
     }
 
     private AdmissionBriefVO requireAdmission(Long admissionId) {
-        // C 类保留：私有兜底被多个入口与内部流程共用，Bean Validation 覆盖不到这一层
+        // C-非 web 入参：私有兜底被多个入口与内部流程共用（含 dto.getAdmissionId() 派生值），Bean Validation 不覆盖，保留
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }

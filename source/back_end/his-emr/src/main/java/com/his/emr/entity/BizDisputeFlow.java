@@ -9,9 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医疗纠纷 / 投诉处理跟踪台账（追加式，不承载状态）。
- *
- * <p>状态只在主单医疗纠纷投诉主单的状态，流水只回答「谁在什么时候做了什么」，
- * 避免"流水里有结论、主单里没有"的双口径。
  */
 @Data
 @TableName("biz_dispute_flow")

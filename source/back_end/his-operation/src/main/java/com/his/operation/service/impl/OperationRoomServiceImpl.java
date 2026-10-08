@@ -18,10 +18,6 @@ import java.util.Objects;
 
 /**
  * 手术间主数据服务实现。
- *
- * <p>删除是物理删（{@code purgeById}）：{@code uk_room_code}/{@code uk_room_name} 不含
- * del_flag，软删行继续占键，"删了再建同一个间"必然 500（L12 铁律）。
- * 手术间没有留档价值——历史手术单快照的是 operation_room 文本列，删主数据改不了历史。
  */
 @Slf4j
 @Service
@@ -31,15 +27,6 @@ public class OperationRoomServiceImpl extends ServiceImpl<SysOperationRoomMapper
     private static final int STATUS_ENABLED = 1;
 
     private final SysOperationRoomMapper sysOperationRoomMapper;
-
-    // C-非 DTO 字段校验：既校验必填又做 trim 归一化，返回值参与编码/名称唯一性比对与落库，
-    // 若下沉为纯 @NotBlank 会丢失 trim，保留（@Valid 已挡 null，此处负责归一化）
-    private static String trimRequired(String value, String message) {
-        if (!TextUtil.hasText(value)) {
-            throw new BusinessException(message);
-        }
-        return value.trim();
-    }
 
     @Override
     public List<OperationRoomVO> listAll() {
@@ -60,12 +47,9 @@ public class OperationRoomServiceImpl extends ServiceImpl<SysOperationRoomMapper
 
     @Override
     public String upsert(OperationRoomUpsertDTO dto) {
-        // C-非 DTO 字段校验：dto 整体是否为空由 @RequestBody 绑定保证，Bean Validation 不覆盖 null 请求体，保留
-        if (dto == null) {
-            throw new BusinessException("请求体不能为空");
-        }
-        String code = trimRequired(dto.getRoomCode(), "手术间编码不能为空");
-        String name = trimRequired(dto.getRoomName(), "手术间名称不能为空");
+        // 必填归 DTO 注解（roomCode/roomName 带 @NotBlank），这里只留归一化：trim 后的值参与编码/名称唯一性比对与落库
+        String code = TextUtil.trim(dto.getRoomCode());
+        String name = TextUtil.trim(dto.getRoomName());
         Integer status = dto.getStatus() == null ? STATUS_ENABLED : dto.getStatus();
         if (!Objects.equals(STATUS_ENABLED, status) && !Objects.equals(0, status)) {
             throw new BusinessException("状态只允许 1-启用 0-停用，当前=" + status);

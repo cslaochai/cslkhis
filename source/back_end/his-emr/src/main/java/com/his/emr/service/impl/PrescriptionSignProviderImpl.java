@@ -26,18 +26,6 @@ import java.util.Objects;
 
 /**
  * 处方的签名内容提供者（业务类型=4）——**双签**。
- *
- * <p>《处方管理办法》要求处方审核由药师完成，**审方与发药是两道手**：
- * <ul>
- *   <li>{@link SignSceneEnum#RX_CREATE} → 写医师签名ID（开方医师）</li>
- *   <li>{@link SignSceneEnum#RX_AUDIT}  → 写审核签名ID（审方药师）</li>
- * </ul>
- * 第二环（审方）的签名内容带上第一环的摘要，于是"审方之后又改了处方内容"会同时打断
- * 第二环的验签 —— 否则两次签名各自绑同一份内容，改谁都验得过去，双签就成了摆设。
- *
- * <p><b>规范化里绝不能出现 {@code prescription_status / payment_status / submit_time /
- * audit_time / dispense_time} 这类流程字段</b>：它们会随流程变，
- * 放进去等于"一审方，开方签名当场失效"。
  */
 @Slf4j
 @Component

@@ -9,11 +9,6 @@ import java.util.List;
 
 /**
  * ASR 同步转写请求体（OpenAI 兼容 chat/completions 形态，qwen3-asr-flash 专用）。
- * <p>
- * 与文本 {@link OpenAiChatRequestDTO} 分开建契约：语音消息的 content 是
- * {@code [{type:"input_audio", input_audio:{data,format}}]} 数组，文本消息是字符串 ——
- * 两种形态硬凑同一个 DTO 会让两边都带着「永远为 null」的尾巴。
- * 响应体复用 {@link OpenAiChatResponseDTO}（FAIL_ON_UNKNOWN_PROPERTIES 已关）。
  */
 @Data
 @Builder

@@ -17,10 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 费用记账台账（L1）。
- *
- * <p>只提供「查 + 补记账 + 红冲」：金额列没有任何编辑口子，改错必须走红冲留痕。
- * 临床单据（处方、医嘱、发药…）的计费由各模块的计费器直接调 {@code FeeRecordService.book}，
- * 不走这个 HTTP 入口。
  */
 @Tag(name = "费用记账")
 @RestController

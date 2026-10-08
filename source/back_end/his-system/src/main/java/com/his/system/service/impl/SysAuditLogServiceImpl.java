@@ -14,9 +14,6 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
  * 操作审计日志落库服务（审计日志）。
- *
- * <p><b>旁路写入：</b>审计失败只记 error 日志，绝不让业务操作跟着失败 ——
- * 但也不静默吞，出问题时日志里能看出来。</p>
  */
 @Slf4j
 @Service

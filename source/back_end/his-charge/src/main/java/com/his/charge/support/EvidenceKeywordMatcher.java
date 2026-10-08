@@ -8,14 +8,6 @@ import java.util.List;
 
 /**
  * 医疗文本关键词匹配（带否定语义保护）。
- *
- * <p><b>为什么不直接用 String.contains：</b>病历里「否认手术史」「无手术」「未见吻合口」这类否定表述
- * 会让裸 contains 把「没有依据」误判成「有依据」，方向正好相反 —— 审核结论会偏松，而这正是
- * 医保飞检要抓的。所以匹配前先看关键词前面若干字符内有没有否定词。</p>
- *
- * <p><b>为什么这里自带一份而不是复用 his-ai 的 ClinicalTextMatcher：</b>
- * 项目依赖方向硬约束「业务模块不得依赖 his-ai」，his-charge 引用不到它。
- * 两份实现语义必须保持一致；若要根治，应把匹配器上移到 his-common 供两侧共用。</p>
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EvidenceKeywordMatcher {

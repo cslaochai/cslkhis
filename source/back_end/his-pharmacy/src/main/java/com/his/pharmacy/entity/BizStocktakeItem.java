@@ -12,8 +12,6 @@ import java.time.LocalDate;
 
 /**
  * 药房盘点明细（一行一批次）
- * <p>药品名/规格/批号/成本价在建单时从字典与批次快照写入，不靠联表回显：
- * 盘点单是账实差异的凭证，事后改名不能改变当时的记载。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 出院办理入参
- * <p>{@code dischargeWay}（离院方式）必填——它是病案首页的必填项，也是 DRG 分组与再入院判定的输入。
- * 死亡病例必须满足 {@code deathFlag=1} 且 {@code dischargeWay=5}，两者不一致直接拒绝。
  */
 @Data
 public class InpatientDischargeDTO {

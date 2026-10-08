@@ -12,9 +12,6 @@ import java.time.LocalDate;
 
 /**
  * 药品供应商退货明细（一行一个库存批次）
- *
- * <p>库位与供应商都快照在行上：退货单要能对到「当时是哪个人、从哪个库位、按什么进价退的」，
- * 事后批次被改名或供应商档案调整都不能改变这张凭证的记载。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

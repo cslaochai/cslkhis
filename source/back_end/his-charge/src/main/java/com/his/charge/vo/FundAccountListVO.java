@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 资金账户出参（L3 台账列表）。
- *
- * <p>余额只做展示：权威值永远是流水 SUM，本列是并发受控的缓存，两者对不上以流水为准。
  */
 @Data
 public class FundAccountListVO {

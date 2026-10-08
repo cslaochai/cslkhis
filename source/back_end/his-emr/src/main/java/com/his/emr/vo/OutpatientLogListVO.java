@@ -6,12 +6,6 @@ import lombok.Data;
 
 /**
  * 门诊日志（法规台账）行。
- *
- * <p>一行 = 一次已提交/已归档的门诊病历（有诊断事实的接诊）。
- * 「可报/已报」不是新造的状态列，而是现算：诊断 ICD 命中法定传染病字典=可报，
- * 该挂号存在报告卡=已报；事实的唯一样本仍是传染病报告卡。
- *
- * <p>电话只在后端脱敏（{@code SensitiveMaskUtils}），出参只有 {@code phoneMasked}。
  */
 @Data
 public class OutpatientLogListVO {

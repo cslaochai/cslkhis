@@ -8,8 +8,6 @@ import java.io.Serializable;
 
 /**
  * 设备台账分页查询。
- *
- * <p>分页字段继承 {@link PageParam}，不在本类重复定义（AGENTS.md 分页 DTO 铁律）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

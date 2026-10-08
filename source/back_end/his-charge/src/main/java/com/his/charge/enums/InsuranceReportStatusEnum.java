@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * 医保报盘报文状态（biz_insurance_report.status）。
- *
- * <p>0-初始（刚生成，未外发）；1-回执成功；2-回执失败；3-已撤销（被 2305 撤销报文撤销）。</p>
  */
 @Getter
 public enum InsuranceReportStatusEnum {

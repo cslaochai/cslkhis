@@ -15,10 +15,6 @@ import java.util.List;
 
 /**
  * 膳食方案服务（sql/168 §2）。
- *
- * <p>方案有两条来路：① orderClass=10 的住院医嘱<b>校对通过时同事务派生</b>
- * （{@link #deriveFromOrder}），停嘱/作废同步跟随；② 营养师手工登记。
- * 订餐与营养科工作台都只读这一张表 —— 医嘱侧和膳食侧各存一份口径必然漂移。
  */
 public interface DietPlanService {
 

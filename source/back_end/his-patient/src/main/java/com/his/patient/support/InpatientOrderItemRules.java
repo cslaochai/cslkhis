@@ -9,10 +9,6 @@ import com.his.patient.enums.OrderClassEnum;
 
 /**
  * 住院医嘱明细行的硬规则（开立医嘱与「保存为模板」共用同一份）。
- *
- * <p><b>为什么模板保存也要跑这套校验</b>：模板是医嘱的半成品，如果允许存一条缺途径的药品明细，
- * 模板就成了绕过硬规则的后门 —— 错误只是从「保存时」推迟到「套用时」，而且那时医生已经点了提交，
- * 现场更难解释。校验口径必须单点，否则两处规则一旦漂移，就会出现"模板里合法、开立时被拒"。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class InpatientOrderItemRules {

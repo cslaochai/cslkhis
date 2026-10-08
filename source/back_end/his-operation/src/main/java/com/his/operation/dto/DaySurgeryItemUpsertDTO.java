@@ -11,9 +11,6 @@ import java.math.BigDecimal;
 
 /**
  * 日间手术准入目录新增 / 修改入参。
- *
- * <p>maxStayHours 默认 48：日间手术的命脉是"24~48 小时内离院"，
- * 不填就按 48 小时判超期，不让它静默变成 0（0 会让每一床都判超期）。
  */
 @Data
 public class DaySurgeryItemUpsertDTO implements Serializable {

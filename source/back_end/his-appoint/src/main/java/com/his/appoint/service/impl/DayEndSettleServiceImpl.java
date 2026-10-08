@@ -18,14 +18,6 @@ import java.time.temporal.ChronoUnit;
 
 /**
  * 日终结转实现。
- *
- * <p>口径与取舍见 {@link DayEndSettleService} 接口注释；这里只说两处容易改错的细节：
- *
- * <p>1）<b>操作人取登录态</b>，不信前端。定时任务没有登录态，落 {@code system:dayEndSettle}。
- * 这样「谁把这批号收掉的」在库里查得到。
- *
- * <p>2）<b>不许结转今天</b>。今天的门诊可能还在进行（还有患者候诊、还有医生在看），
- * 把今天收成「未就诊」等于把在诊患者判死。要碰今天，只能等它变成昨天。
  */
 @Slf4j
 @Service

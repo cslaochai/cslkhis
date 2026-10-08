@@ -12,8 +12,6 @@ import java.util.List;
 
 /**
  * 费用记账行 Mapper。
- *
- * <p>自定义 {@code @Select} 不受 {@code @TableLogic} 影响 → 显式写 {@code del_flag = 0}。
  */
 @Mapper
 public interface BizFeeRecordMapper extends BaseMapper<BizFeeRecord> {

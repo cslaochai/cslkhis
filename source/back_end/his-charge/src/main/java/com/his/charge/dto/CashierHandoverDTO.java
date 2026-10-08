@@ -7,10 +7,6 @@ import java.math.BigDecimal;
 
 /**
  * 收费员交班入参（G8 班结）。
- *
- * <p>⚠ <b>不带 cashierId</b>：收费员身份由服务端从登录态取
- * （{@code UserUtils.getCurrentUser().getEmployeeId()}）。
- * 前端传"我是谁"等于让班结单可以随便挂到别人名下 —— 交班是签名性质的动作。
  */
 @Data
 public class CashierHandoverDTO {

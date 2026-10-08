@@ -9,9 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * 结案入参。
- *
- * <p>结案必须收口三件事：处理途径 + 责任认定 + 赔偿金额（无赔偿填 0），
- * 缺一项不结案 —— 否则「赔了多少、谁的责任」永远查不到，台账就白建了。
  */
 @Data
 public class DisputeCloseDTO implements Serializable {

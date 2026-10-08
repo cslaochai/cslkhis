@@ -17,10 +17,6 @@ import java.util.List;
 
 /**
  * 抗菌药物分级目录 + 医师处方权授权。
- *
- * <p>本模块的"硬"落点只有一个：{@link #checkAuthority(Long, List)} —— 开方时
- * 医师授权级别必须 ≥ 药品分级。目录和授权表本身只是台账，闸不住的话评审一句
- * "系统里谁能开限制级"就答不上来。
  */
 public interface AntibioticService {
 

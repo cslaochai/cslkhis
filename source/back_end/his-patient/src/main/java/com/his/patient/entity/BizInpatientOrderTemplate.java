@@ -13,11 +13,6 @@ import java.util.List;
 
 /**
  * 住院医嘱模板主表（sql/103，sql/142 加共享范围）。
- *
- * <p>一份模板要么属于某个医生（{@code doctorId}，员工ID，与医嘱行医师ID 同一口径），
- * 要么属于一个科室（{@code deptId}），要么属于全院 —— 由 {@code scope} 决定，三者互斥。
- * 「全院组套模板」与「医生个人模板」共用这张表与同一张明细表，
- * 不另起一套模板表：两套明细字段必然漂移，漂移一次就是一次收费对不上。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

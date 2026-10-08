@@ -11,14 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 抗菌药物处方权授权（《抗菌药物临床应用管理办法》：三级管理，按职称授予处方权）。
- *
- * <p>一位医师一个级别只一条记录（uk_antibiotic_auth_doctor），变更走 status 或重新授权，
- * 不留历史行 —— 授权表只回答"现在谁能开什么"，历史在审计日志。
- *
- * <p>暂停(status=2)/取消(status=3)/过期(expire_date &lt; 今天) 一律视为无授权，
- * 由 {@code AntibioticService.maxAuthLevel} 单点判定，开方闸只认这一个口径。
- *
- * <p>无 del_flag，删除走物理删（唯一键不含 del_flag）。
  */
 @Data
 @TableName("biz_antibiotic_auth")

@@ -10,12 +10,6 @@ import java.util.List;
 
 /**
  * 住院出院结算试算（L2 账单口径 + L3 余额抵扣）。
- *
- * <p><b>钱一律来自 {@code SettlementBillService.previewSettlement}</b>，本类只是把
- * "这次住院还剩多少没结" 与 "住院账户里有多少钱" 两个事实摆在一起，
- * 再算出抵扣/退差/欠费三个数：结算出账走同一份草稿，所以这里说的数与账单开出的数必然一致。
- * 旧实现逐张收费单调 {@code calcSettlementPreview} 再汇总、出账时 L2 又算一遍，
- * 两套算法一漂移，患者手里的小票就和结算单对不上。
  */
 @Data
 public class InpatientSettlementPreviewVO implements Serializable {

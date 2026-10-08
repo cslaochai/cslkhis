@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * 器械清点阶段（0-未开始 1-术前清点完成 2-关体前清点完成 3-关体后清点完成）。
- *
- * <p>三阶段必须按顺序推进，跳过 = 关体后才第一次数，那就晚了。
  */
 @Getter
 public enum CountPhaseEnum {

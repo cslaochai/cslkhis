@@ -13,10 +13,6 @@ import java.util.List;
 
 /**
  * 住院请假单 Mapper（sql/162）。
- *
- * <p>入院记录 / 患者基本信息 / 电子签名证据归其他子域，按项目规范不跨域调
- * 它们的 Mapper，这里走裸 SQL 只读（JOIN 侧手工 AND del_flag=0，@TableLogic 不覆盖自定义 SQL）。
- * 列名已对 information_schema（入院记录主键是 admission_id）。
  */
 @Mapper
 public interface BizInpatientLeaveMapper extends BaseMapper<BizInpatientLeave> {

@@ -27,15 +27,6 @@ import java.util.stream.Collectors;
 
 /**
  * 岗位（角色 × 科室）的实现 —— 「以什么身份在哪个科室执业」的唯一判定点。
- *
- * <p><b>为什么必须成对校验</b>：改造前 /auth/switchRole 只查角色在不在
- * 旧员工角色表、/auth/switchDept 只查科室在不在员工岗位，
- * 两张表互不相干，于是先切到药剂师再切到骨科就能拿到「药剂师·骨科」的 token ——
- * 菜单按药剂师画、数据按骨科取，两边都不报错，但没有任何一个真实岗位长这样。
- * 现在只认员工岗位里确实存在的那一行。
- *
- * <p><b>校验不过一律不发 token</b>（fail-closed）：宁可让用户切不过去并告诉他原因，
- * 也不能签出一个身份与科室错配的 token。
  */
 @Service
 @RequiredArgsConstructor

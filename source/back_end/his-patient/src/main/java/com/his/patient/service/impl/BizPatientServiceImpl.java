@@ -721,9 +721,6 @@ public class BizPatientServiceImpl extends ServiceImpl<BizPatientMapper, BizPati
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientRegisterVO register(PatientRegisterDTO dto) {
-        if (!TextUtil.hasText(dto.getPatientName())) {
-            throw new BusinessException("请输入姓名");
-        }
         if (dto.getIdCard() == null || !dto.getIdCard().matches("^\\d{17}[\\dXx]$")) {
             throw new BusinessException("身份证号格式不正确");
         }

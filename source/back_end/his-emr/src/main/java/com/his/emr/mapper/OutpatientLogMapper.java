@@ -9,7 +9,6 @@ import org.apache.ibatis.annotations.Param;
 
 /**
  * 门诊日志（法规台账）只读查询。列表与统计共用 XML 里的同一段 WHERE/推导片段，
- * 所以走 XML mapper（注解 @Select 没法共享 sql 片段）。
  */
 @Mapper
 public interface OutpatientLogMapper {

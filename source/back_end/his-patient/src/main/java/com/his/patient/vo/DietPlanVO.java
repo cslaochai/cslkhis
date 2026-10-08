@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 膳食方案出参。
- *
- * <p>{@code confirmStatus} 是本页的主角：待接收 = 医生已经开了膳食医嘱但食堂还不知道，
- * 列表默认按它排在最前。
  */
 @Data
 public class DietPlanVO implements Serializable {

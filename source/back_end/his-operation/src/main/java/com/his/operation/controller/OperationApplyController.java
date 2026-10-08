@@ -16,14 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 住院手术闭环端点（P4.3）。
- *
- * <p>路径与会诊/转科保持同一套命名：查询一律 {@code GET} + 驼峰 URL，
- * 写操作一律 {@code POST}，只返回一个 ID 用 {@code Result<String>}（雪花 ID 超 JS 精度）。
- *
- * <p>路径刻意用 {@code operationApply} 而不是 {@code operation}：既有的
- * 病案首页手术明细是**病案首页手术明细**（表单侧），
- * 本控制器管的是**手术闭环主单**（申请→排台→核对→完成）。两个概念不能共用一个路径前缀。
+ * 住院手术闭环端点
  */
 @Tag(name = "住院手术闭环")
 @RestController

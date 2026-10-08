@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 药品发药管理控制器
- * 发药闭环：审方闸门 + 麻精限量/双人复核闸门 + FEFO 扣库存（落流水）+ 麻精写专册 + 处方状态联动（发完置 4 / 退药置 6）。
  */
 @Tag(name = "药品发药管理")
 @RestController

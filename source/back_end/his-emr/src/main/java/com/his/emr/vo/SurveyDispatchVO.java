@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 满意度发放/回收台账行（列表与详情共用）。
- *
- * <p>手机号只出 {@code phoneMasked}：本表是展示型出参，明文留在响应体里等于没脱敏
- * （编辑回显走 {@code /survey/dispatch/getById}，那条才给明文，否则保存时会把星号写回库）。
  */
 @Data
 public class SurveyDispatchVO implements Serializable {

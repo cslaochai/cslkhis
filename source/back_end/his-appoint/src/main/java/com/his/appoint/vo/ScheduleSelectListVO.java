@@ -11,9 +11,6 @@ import java.time.LocalDate;
 
 /**
  * 排班下拉出参：挂号/复诊页选号源时真正要比对的列。
- *
- * <p>字段口径以页面实际读取为准，不跟 {@link ScheduleDetailVO}（列表/今日排班要带的
- * 科室、岗位、班次名、号源总数已用、诊查费、诊室 ID、停诊状态等在这里都用不上）。
  */
 @Data
 @Schema(name = "ScheduleSelectListVO", description = "排班下拉出参")

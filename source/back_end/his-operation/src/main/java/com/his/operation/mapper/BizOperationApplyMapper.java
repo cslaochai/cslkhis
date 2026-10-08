@@ -14,19 +14,6 @@ import java.util.List;
 
 /**
  * 住院手术申请单 Mapper。
- *
- * <p>自定义 {@code @Select} 不受 {@code @TableLogic} 影响 → JOIN 里必须显式写 {@code del_flag = 0}。
- *
- * <p>三处刻意的做法：
- * <ol>
- *   <li><b>患者姓名/床号/科室名用主表快照，不再 JOIN 取</b>：转科、换床、科室改名之后，
- *       历史手术单上的"当时在哪个科、哪张床"不能被改写 —— 那正是手术单要证明的事。</li>
- *   <li><b>未完成排在前面用 FIELD() 显式指定顺序</b>：状态码是 0-待排期 / 1-已排期 /
- *       2-术前核对完成 / 3-已完成 / 4-已取消，按码值升序刚好可用，但仍显式写出来 ——
- *       以后加码值（如 5-停手术待审）时不会悄悄把顺序搞乱。</li>
- *   <li><b>排台冲突用"区间重叠"判定</b>（{@code start < other_end AND end > other_start}），
- *       不是"同一天同房间就算冲突" —— 后者会把上午下午两台正常手术判成冲突。</li>
- * </ol>
  */
 @Mapper
 public interface BizOperationApplyMapper extends BaseMapper<BizOperationApply> {

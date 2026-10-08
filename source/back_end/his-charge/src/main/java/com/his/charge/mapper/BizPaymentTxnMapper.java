@@ -14,9 +14,6 @@ import java.util.List;
 
 /**
  * 支付资金流水 Mapper。
- *
- * <p>账单是否付清由这里的 SUM 现算，不读任何状态列；{@code txn_status=2}（已冲正）的行
- * 永远排除在聚合之外，但行本身留在表里供追溯。
  */
 @Mapper
 public interface BizPaymentTxnMapper extends BaseMapper<BizPaymentTxn> {

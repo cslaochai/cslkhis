@@ -10,15 +10,6 @@ import java.util.List;
 
 /**
  * VTE 防控的口径常量（措施项 / 推荐矩阵 / 枚举文案）—— 前后端唯一事实源，
- * 前端 {@code src/lib/vte.js} 与之逐字对齐，改一边必须改另一边。
- *
- * <p><b>推荐矩阵为什么按风险等级分档</b>：Caprini 0~2 分的低危患者做药物预防是过度医疗
- * （出血风险大于血栓获益）；高危/极高危只做基础预防等于没防。分档是临床指南的硬要求，
- * 不是"可选勾选项"。
- *
- * <p><b>码值 → 文案一律走枚举</b>：调用侧直接调对应枚举的 {@code getText}（展示）或
- * {@code labelOrUnknown}（异常 / 审计），本类不再承担任何文案渲染 —— 不内联 switch、
- * 不自己写「未知(xxx)」兜底（见 AGENTS.md §13）。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class VteRules {

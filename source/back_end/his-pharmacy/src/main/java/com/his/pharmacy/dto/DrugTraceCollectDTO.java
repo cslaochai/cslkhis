@@ -8,10 +8,6 @@ import lombok.Data;
 
 /**
  * 药品追溯码采集入参（入库验收扫码 / 存量补采）
- *
- * <p>{@code drugId} 允许为空：码能解析出产品标识并命中字典时由服务端定药品；
- * 解析不出来又不给 drugId 直接拒绝 —— 没有一个确定的药品，这个码就是废数据。
- * {@code stockId} 必填：追溯码必须挂到具体批次，否则批号/效期/供应商全都无从追溯。
  */
 @Data
 public class DrugTraceCollectDTO {

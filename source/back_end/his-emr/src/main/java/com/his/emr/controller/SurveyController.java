@@ -16,10 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 满意度评价发放/回收与看板（sql/164）。
- *
- * <p>三层事实各自的入口：发放台账（回收率的分母）、答卷（患者说了什么）、看板（服务端聚合）。
- *
- * <p>@PreAuthorize 一律标到方法；按钮可用性取后端 VO 的 can* 字段，前端不按码值 switch。
  */
 @Tag(name = "满意度评价发放与回收")
 @RestController

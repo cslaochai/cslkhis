@@ -8,9 +8,6 @@ import java.util.List;
 
 /**
  * 病历文本结构化抽取的模型输出结构（与 prompts/emr-extract.md 的 JSON 契约一一对应）。
- * <p>
- * 刻意**不含体征字段**：体温/脉搏/呼吸/血压由 {@code EmrFieldCatalog} 的正则提取，
- * 不让模型经手 —— 数值一旦被模型"顺"一下，就是一条错误记录。
  */
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)

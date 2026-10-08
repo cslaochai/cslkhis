@@ -14,10 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 静配中心主单（PIVAS）。
- *
- * <p>粒度「一次住院 × 一个调配日」一张，同入院同日复用、明细追加（与住院摆药同口径）。
- * 主单 status 是聚合派生值，随明细状态实时回算（见 PivasServiceImpl#applyAggregatedStatus）：
- * 1-待审方 2-待排队 3-待调配 4-待核对 5-已完成 6-全拒配。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

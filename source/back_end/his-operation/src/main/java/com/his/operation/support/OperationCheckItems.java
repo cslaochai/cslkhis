@@ -13,14 +13,6 @@ import java.util.Set;
 
 /**
  * 术前核对要点（手术安全核查单的可核对部分）。
- *
- * <p>为什么要有"必核项"而不是一个自由文本框：
- * 术前核对的价值在于<b>逐项确认</b>——"患者身份/手术部位/术式/知情同意/过敏史"这四项
- * 少核任何一项，都会在飞检时变成"该核未核"。写成一段自由文本，
- * 就变成"看起来核过了"，与"模型说没事"是同一种不可审计的证据。
- *
- * <p>因此：核对结果是<b>码值集合</b>（如 {@code 1,2,3,4}），必核项缺失直接拒绝提交，
- * 前端按 {@link #all()} 渲染勾选框。码值→文案见 {@link OperationPreCheckItemEnum}。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OperationCheckItems {

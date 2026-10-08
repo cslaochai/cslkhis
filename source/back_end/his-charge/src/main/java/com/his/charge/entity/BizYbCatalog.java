@@ -7,9 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 国家医保目录（本地模拟目录库：正式对接时由前置机下载导入，表结构不变）。
- *
- * <p>铁律：唯一键 uk_yb_code 不含 del_flag → 本表<b>不提供删除，只做启停</b>，
- * 保证已对照行的追溯链完整（143 脚本头有说明）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

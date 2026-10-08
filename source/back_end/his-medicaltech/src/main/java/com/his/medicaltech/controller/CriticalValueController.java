@@ -17,9 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 医技管理 - 检验危急值控制器。
- * <p>
- * 补的是前端 {@code CriticalValueView} 长期没有的后端：该页面此前展示的是
- * {@code WJ-2026-0901} 这类硬编码演示数据，没有任何接口。
  */
 @Tag(name = "医技管理-危急值")
 @RestController

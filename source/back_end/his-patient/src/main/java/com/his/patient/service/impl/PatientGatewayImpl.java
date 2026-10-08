@@ -16,20 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * {@link PatientGateway} 在 his-patient 侧的实现。
- *
- * <p>接口由收费域 his-charge 声明、这里负责实现，是为了让依赖方向单一：
- * 患者域依赖收费域（记账能力在 charge），收费域反过来不依赖患者域。
- * 若把接口放在本模块，charge 就得依赖 patient，而 patient 又要依赖 charge 记账，
- * Maven reactor 判定成环，直接拒绝构建。
- *
- * <p>实体 → 摘要的映射只在这里发生：charge 拿到的是 {@link PatientBriefVO} /
- * {@link AdmissionBriefVO}，看不到 {@link BizPatient} / {@link BizAdmission}，
- * 对方实体加字段、改字段名都不会传导成收费域的编译错误。
- *
- * <p>走 Mapper 而非 Service：这两个方法只是单行主键查询，
- * 走 {@code PatientService} 会把整个住院域 service 拖进 charge 的编译依赖里。
- * 本模块内部怎么取数是本模块自己的事，端口只对外面暴露只读语义。
+ * PatientGateway 在 his-patient 侧的实现。
  */
 @Service
 @RequiredArgsConstructor

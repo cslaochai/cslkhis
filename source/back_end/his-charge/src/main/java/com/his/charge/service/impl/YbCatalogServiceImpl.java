@@ -27,9 +27,6 @@ import java.util.Objects;
 
 /**
  * 国家医保目录服务实现。
- *
- * <p>口径：目录只启停不删除（uk_yb_code 不含 del_flag，物理删会断追溯链，
- * 软删会占键——143 脚本头铁律）。文本入库前按列宽截断，防 Data too long。
  */
 @Service
 @RequiredArgsConstructor
@@ -127,7 +124,7 @@ public class YbCatalogServiceImpl extends ServiceImpl<BizYbCatalogMapper, BizYbC
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void changeStatus(Long id, Integer status) {
-        // C/D 类保留：入参是 @RequestParam 拆开的 Long/Integer（无 DTO 承载），status 0/1 属码值合法性校验
+        // D-业务规则：id/status 必填与 status 0/1 码值合法性写在同一条件里，整条保留不拆（拆分会把一条 500 拆成 400+500 两条路径，收益为零）
         if (id == null || status == null || (status != 0 && status != 1)) {
             throw new BusinessException("参数不合法：id 与 status(0/1) 必填");
         }

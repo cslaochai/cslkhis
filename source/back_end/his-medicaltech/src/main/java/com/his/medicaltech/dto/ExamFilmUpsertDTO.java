@@ -10,8 +10,6 @@ import lombok.Data;
 
 /**
  * 胶片用量登记入参（sql/138）。
- *
- * <p>没有金额：金额一律服务端单价 × 张数现算。
  */
 @Data
 public class ExamFilmUpsertDTO {

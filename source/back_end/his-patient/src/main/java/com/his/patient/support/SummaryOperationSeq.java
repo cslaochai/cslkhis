@@ -13,18 +13,6 @@ import java.util.Objects;
 
 /**
  * 病案首页手术明细的序号重排。
- *
- * <p>为什么需要它：首页手术明细的序号不是随便排的 —— <b>主要手术恒为第 1 条</b>
- * （国家首页口径，也是"主要手术"这个格子取数的地方）。
- * 而这张表的写入方有<b>两个</b>：
- * <ol>
- *   <li>手术闭环完成时回写（手术申请单.finish）；</li>
- *   <li>病案首页表单保存（{@code /patient/inpatient/summary/save}）。</li>
- * </ol>
- * 两边各自 delete+insert/insert 之后，序号必然对不上（闭环插了第 n+1 条，
- * 而表单又从 1 开始排）。所以两边都在写完之后调用这里统一重排 ——
- * <b>同一份数据有两个写入方，排序规则就必须只有一处实现</b>，否则迟早出现
- * "首页主要手术指向序号 2"这种没人能一眼看懂的错。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SummaryOperationSeq {

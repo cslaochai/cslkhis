@@ -11,10 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院医嘱出参。
- *
- * <p>文案（`orderTypeText`/`orderClassText`/`orderStatusText`）与操作可行性（`canVerify`/`canCancel`/`canStop`）
- * **一律由后端给**：前端自己 switch 码值，一旦新增码值就会静默渲染成"看着正常"的错文案，
- * 而医嘱状态文案错了会直接影响四核对结论（同 `InpatientOrderStatusEnum` 的铁律）。
  */
 @Data
 public class InpatientOrderVO implements Serializable {

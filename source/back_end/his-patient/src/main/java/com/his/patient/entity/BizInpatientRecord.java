@@ -14,18 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院病历文书（P2：结构化要素的载体）。
- *
- * <p>字段与住院病历文书 **一一对应**（多一个库里没有的列 → 全表 select 直接 500）。
- *
- * <p>三条与门诊病历的关键差异，写代码时必须记住：
- * <ol>
- *   <li>锚点是 {@code admissionId}（一次住院），不是 {@code registId}（一次挂号）。</li>
- *   <li><b>生命体征是数值列</b>（{@code temperature} 是 {@code BigDecimal}、{@code pulse} 是 {@code Integer}），
- *       门诊病历把它们写成 {@code VARCHAR(10)} —— 那样永远做不了"体温 > 39 度"这类判定。</li>
- *   <li>主诉/现病史/既往史/家族史/过敏史 + 体格检查 8 个系统 <b>各自独立成列</b>，
- *       不合成一个"体格检查 TEXT"。结构化率的分母就来自这份列清单，见
- *       {@link com.his.patient.support.RecordStructuredFields}。</li>
- * </ol>
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

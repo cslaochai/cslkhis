@@ -7,33 +7,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.ResolverStyle;
 
 /**
- * 时间格式化 pattern 全库唯一收口点（与 {@link TimeUtil} 同族：那边管"归一到秒"，这里管"渲染成什么形状"）。
- *
- * <p><b>为什么需要它</b>：2026-10-07 收口前，全后端 90 个文件里有 128 处
- * {@code DateTimeFormatter.ofPattern(...)}：95 处是各写各的
- * {@code private static final DateTimeFormatter XXX}（同一 pattern 复制 95 份、起了 32 个不同名字：
- * {@code NO_DATE} / {@code DAY_FMT} / {@code TS} / {@code TIME} / {@code FMT} … 指的就那么 4 种格式），
- * 剩下 33 处干脆写在方法体里 {@code now().format(DateTimeFormatter.ofPattern(...))}，
- * 每次调用新建一个 formatter 对象，且都落在"生成业务单号"这类热路径上。
- *
- * <p><b>为什么不用 hutool 的 DatePattern</b>：
- * <ul>
- *   <li>hutool 的 {@code DatePattern} 是 {@code String} 常量，调用形态是
- *       {@code DateUtil.format(x, DatePattern.PURE_DATETIME_PATTERN)} —— pattern 字面量依然散在每个调用点，
- *       收不掉"同一格式两处各写一遍、改一处漏一处"的问题；</li>
- *   <li>覆盖不全：本库用到的 {@code HH:mm}（只到分钟的时刻）hutool 没有对应常量，
- *       身份证出生日期要的 {@code uuuuMMdd + ResolverStyle.STRICT} 也没有；</li>
- *   <li>{@code DateUtil} 的门面类型是 {@code java.util.Date}，本库全链路是 {@code java.time}，
- *       引入它等于把旧时间类型引回业务代码。</li>
- * </ul>
- *
- * <p><b>怎么用</b>：直接引用常量调JDK 原生方法，别再在本类之外 new formatter ——
- * {@code DateFormats.DATETIME.format(localDateTime)}、{@code DateFormats.COMPACT_DATE.format(localDate)}。
- * 新增 pattern 时先看这里有没有同义项，确属新的形状再往里加（同一个 pattern 不许出现第二次）。
- *
- * <p><b>口径约束</b>：这些常量只管"渲染形状"，不管<b>入参解析</b>。
- * DTO 上 {@code @JsonFormat} 与 {@code LocalDateTime.parse} 的 pattern 由 AGENTS.md §3 单独规定
- * （空格分隔 vs ISO {@code T}），两者必须对齐，不要因为这里有 {@link #ISO_DATETIME} 就改 DTO 上的 pattern。
+ * 时间格式化 pattern 全库唯一收口点（与 TimeUtil 同族：那边管"归一到秒"，这里管"渲染成什么形状"）。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DateFormats {

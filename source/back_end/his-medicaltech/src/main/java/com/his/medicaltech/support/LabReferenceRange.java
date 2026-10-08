@@ -5,23 +5,6 @@ import java.util.Set;
 
 /**
  * 解析后的检验参考区间（值对象）。
- * <p>
- * <b>为什么要专门解析，而不是直接字符串比较：</b>
- * 库里的 {@code reference_range} 是人工维护的自由文本，实测存在至少 6 种写法：
- * <pre>
- *   4-10                     双侧区间
- *   男120-160/女110-150      按性别分支（斜杠分隔）
- *   男:0-15, 女:0-20         按性别分支（冒号 + 逗号分隔）
- *   &lt;5.2 / &gt;30             单侧
- *   阴性 / 阴性/阳性定性结果
- *   0-5/HP                  带单位后缀
- *   根据实验室标准根本无法判定
- * </pre>
- * 直接 {@code equals} 或 {@code contains} 只会得到「永远不异常」或「永远异常」两种结果，
- * 而这两种错误都不会报错 —— 参见 {@link LabAbnormalJudge} 的类注释。
- * <p>
- * {@link Kind#UNPARSABLE} 是<b>刻意保留</b>的一等公民：解析不出来时必须如实说
- * 「不知道」，由调用方决定保守行为，而不是猜一个区间出来。
  */
 public record LabReferenceRange(Kind kind,
                                 Double lower,

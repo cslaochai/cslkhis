@@ -18,11 +18,6 @@ import java.util.stream.Collectors;
 
 /**
  * A 组：编码依据一致性。
- *
- * <p>高编高套的本质是「编了没有依据的编码」，所以这一组是主力：
- * A01~A05 查编码本身是否齐备、是否在目录内、是否与病历一致；
- * A06/A07 查手术编码有没有依据、有手术费有没有编码；
- * A08 反过来查「有依据却没编码」——这就是低编入组。</p>
  */
 @Component
 public class CodingEvidenceRule implements ComplianceRule {

@@ -10,7 +10,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * {@link InEnum} 校验器：反射调目标枚举的 {@code isValid}。
+ * InEnum 校验器：反射调目标枚举的 isValid。
  */
 public class InEnumValidator implements ConstraintValidator<InEnum, Object> {
 

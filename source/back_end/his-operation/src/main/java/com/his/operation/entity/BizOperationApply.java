@@ -12,23 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院手术申请单—— 手术闭环的主单。
- *
- * <p>字段与表 <b>一一对应</b>（多一个库里没有的列 → 全表 select 直接 500）。
- *
- * <p>这条链要回答的问题，按发生顺序：
- * <ol>
- *   <li>谁、什么时候、为什么决定开这一刀 → {@code applyDoctorId / applyTime / operationReason}；</li>
- *   <li>手术室把它排在哪个房间、哪个时段、谁主刀 → {@code operationRoom / plannedStartTime / surgeonId}；</li>
- *   <li>术前谁核对了哪几项 → {@code preopCheckItems / preopCheckDoctorId / preopCheckTime}；</li>
- *   <li>实际做了什么（与拟施可能不同）、什么时候开什么时候关 → {@code actualOperationName / operationStartTime / operationEndTime}；</li>
- *   <li>结果落到哪两份正式文书上 → {@code operationId}（病案首页手术明细）、{@code recordId}（record_type=5 手术记录）。</li>
- * </ol>
- *
- * <p><b>{@code isMain} 是"主要手术"标记，同一次住院只允许一条</b>：
- * 首页主要手术只能有 1 条，这与"主要诊断必须且只能 1 条"是同一条口径。
- *
- * <p>{@code operationId} / {@code recordId} 是**链是否断了的唯一证据**：
- * 状态是"已完成"但这两个是空的，就是"说做了、却没有下文"，属于必须拦住的假数据。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

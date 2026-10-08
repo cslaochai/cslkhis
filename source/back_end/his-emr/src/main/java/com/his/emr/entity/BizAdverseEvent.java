@@ -9,9 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 不良事件实体（全院上报 + PDCA 四态留痕）
- * <p>
- * 状态机：1 已上报待处理 → 2 处理中 → 3 已整改 → 4 已结案（不可逆）。
- * 状态 ≥2 后上报内容与删除均被锁定（留痕完整性是评审底线）。
  */
 @Data
 @TableName("biz_adverse_event")

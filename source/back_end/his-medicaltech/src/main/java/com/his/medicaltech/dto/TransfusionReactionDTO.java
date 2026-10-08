@@ -10,14 +10,6 @@ import java.io.Serializable;
 
 /**
  * 输血反应上报入参。
- *
- * <p>反应可能在输注中、也可能在输注后数小时才发现，所以它<b>独立于流程状态</b>：
- * 只在"已完成"的单子上补登记（{@code has_reaction} 从 0 置 1），
- * <b>不回改历史状态</b> —— 把一条已完成的输血单改回"输注中"来记反应，
- * 就是在改历史，而且会破坏"完成=已回写病历"的一致性。
- *
- * <p>{@code reactionType} 走受控字典（{@code TransfusionReactionTypeEnum.options()}），
- * 不接受自由文本：写成"发热"和"发热反应"两种，统计时永远凑不到一起。
  */
 @Data
 public class TransfusionReactionDTO implements Serializable {

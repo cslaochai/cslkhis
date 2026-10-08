@@ -13,7 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 剂量文本解析（单次给药量 / 规格单件含量 / 频次每日次数），统一折算成 <b>mg</b>
+ * 剂量文本解析（单次给药量 / 规格单件含量 / 频次每日次数），统一折算成 mg
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DosageTextParser {

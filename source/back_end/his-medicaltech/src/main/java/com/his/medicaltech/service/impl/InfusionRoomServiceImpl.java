@@ -41,10 +41,6 @@ import java.util.stream.Collectors;
 
 /**
  * 门诊输液室服务（M10）。
- *
- * <p>流程：入座（建单+占座）→【需皮试：打皮试 → ≥15 分钟观察窗 → 判读】→ 开始（滴速）
- * → N 次巡视 → 结束（不良反应）。结束/取消释放座位。
- * 座位是全院物理资源，不收科室数据权限（与 M6 床位口径一致）。
  */
 @Service
 @RequiredArgsConstructor

@@ -10,9 +10,6 @@ import java.time.LocalDate;
 
 /**
  * 技术授权新增/修改入参（只作用于「待审批」状态的记录，见 sql/155）。
- *
- * <p>长度类字段不挂 {@code @Size}：入参层的 400 会抢在服务端截断之前，
- * 把「粘贴了一长段授权依据」变成请求失败（AGENTS §3）。
  */
 @Data
 public class TechAuthUpsertDTO {

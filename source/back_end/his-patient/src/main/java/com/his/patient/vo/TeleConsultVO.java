@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 远程会诊 VO。
- *
- * <p>按钮可用性（canEdit/canArrange/canComplete/canCancel/canDelete）一律服务端派生，
- * 前端不按 status 码值 switch。
  */
 @Data
 public class TeleConsultVO implements Serializable {

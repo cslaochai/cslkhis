@@ -9,9 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * 医保目录新增/修改（id 空=新增，非空=修改；yb_code 全局唯一）。
- *
- * <p>长度靠服务端截断兜底（铁律：不在 DTO 上加 @Size 抢在截断前 400），
- * 这里只对 yb_code/yb_name 给必填校验。
  */
 @Data
 public class YbCatalogUpsertDTO {

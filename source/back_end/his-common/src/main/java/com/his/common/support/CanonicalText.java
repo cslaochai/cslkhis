@@ -9,30 +9,6 @@ import java.util.Map;
 
 /**
  * 被签内容的**规范化文本**组装器。电子签名能不能验得出来，全看这个类。
- *
- * <p>规范化必须满足"同一份业务内容永远得到同一个字符串"，否则会出现
- * 「医生什么都没改，验签却失败」这种把整套签名废掉的假警报。为此定死四条：
- *
- * <ol>
- *   <li><b>字段顺序固定</b>（按调用方 put 的顺序，用 LinkedHashMap），不依赖反射/数据库列序。
- *       反射取字段顺序在 JDK 之间都不保证稳定，用它做摘要等于埋雷。</li>
- *   <li><b>null 与空串等价</b>：都序列化成 {@code key=}。否则"没填"和"填了空白"
- *       会算出两个摘要，而这两种在业务上是同一个事实。</li>
- *   <li><b>值首尾去空白，值内换行转义成字面 {@code \n}</b>。
- *       去首尾空白是为了让前端多带一个空格不触发"内容已变更"；
- *       换行转义是为了保证"每行一个字段"这个结构不被病历正文里的换行破坏
- *       （否则两个不同字段可能拼出同一段文本，摘要就失去分辨力）。</li>
- *   <li><b>带格式版本号</b>（{@link #FORMAT_VERSION}）。将来规范化规则变了，
- *       旧签名的摘要必然对不上；有版本号才能一眼看出"是格式升级，不是内容被改"。</li>
- * </ol>
- *
- * <p>用法：
- * <pre>
- * String text = CanonicalText.create("INPATIENT_RECORD")
- *         .put("recordNo", r.getRecordNo())
- *         .put("chiefComplaint", r.getChiefComplaint())
- *         .build();
- * </pre>
  */
 public final class CanonicalText {
 

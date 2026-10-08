@@ -6,11 +6,6 @@ import java.io.Serializable;
 
 /**
  * 患者「今日就诊」概览。
- *
- * <p>用于全局患者搜索：把今天真的在就诊的患者排到最前并标注状态，
- * 避免医生按姓名搜出来一堆「最近建档但跟今天无关」的档案。
- *
- * <p>由就诊域（his-appoint）实现 {@link PatientTodayVisitProvider} 后回填。
  */
 @Data
 public class PatientTodayVisit implements Serializable {

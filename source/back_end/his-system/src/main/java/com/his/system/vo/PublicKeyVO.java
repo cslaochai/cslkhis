@@ -4,9 +4,6 @@ import lombok.Data;
 
 /**
  * 登录口令加密公钥出参。
- *
- * <p>匿名可取（走登录白名单）：公钥本来就是公开信息，它的作用是让口令在离开浏览器前就变成密文。
- * 私钥永远不出后端，见 {@code his.security.sm2}。
  */
 @Data
 public class PublicKeyVO {

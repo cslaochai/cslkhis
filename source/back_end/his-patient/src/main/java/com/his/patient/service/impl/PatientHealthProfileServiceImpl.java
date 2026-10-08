@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 患者健康档案六组业务闭环（详见 {@link PatientHealthProfileService} 的口径说明）。
+ * 患者健康档案六组业务闭环（详见 PatientHealthProfileService 的口径说明）。
  */
 @Service
 @Slf4j
@@ -69,7 +69,8 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
 
     @Override
     public PatientHealthProfileVO getProfile(Long patientId) {
-        // ②非web入口：该方法还被其它 service 直调，Bean Validation 只在 HTTP 参数绑定时跑
+        // C-非 web 入参：BizPatientServiceImpl#getPatientDetail 直调本方法（service 间调用不过 HTTP 参数绑定），
+        // Bean Validation 不覆盖，保留
         if (patientId == null) {
             throw new BusinessException("患者信息不能为空");
         }
@@ -187,10 +188,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientAllergyVO saveAllergy(PatientAllergyUpsertDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了
-        if (dto == null) {
-            throw new BusinessException("过敏史内容不能为空");
-        }
         // allergy_type / allergy_severity / allergy_symptoms 三列都是 NOT NULL：
         // 少拦一个，用户"没选类型"就会拿到 500「系统内部错误」而不是可读提示。
         // 类型**必填**（表列注释的取值就是药物/食物/其他，没有"未知"档，
@@ -254,10 +251,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientPastDiseaseVO savePastDisease(PatientPastDiseaseUpsertDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了
-        if (dto == null) {
-            throw new BusinessException("既往疾病史内容不能为空");
-        }
         requireInEnum("控制情况", dto.getCurrentStatus(), HealthProfileEnums.DISEASE_CURRENT_STATUS);
 
         BizPatientPastDisease entity = new BizPatientPastDisease();
@@ -302,10 +295,6 @@ public class PatientHealthProfileServiceImpl extends ServiceImpl<BizPatientConta
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PatientSurgeryHistoryVO saveSurgeryHistory(PatientSurgeryHistoryUpsertDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了
-        if (dto == null) {
-            throw new BusinessException("手术外伤史内容不能为空");
-        }
         requireInEnum("手术类型", dto.getSurgeryType(), HealthProfileEnums.SURGERY_TYPE);
         requireInEnum("恢复情况", dto.getRecoveryStatus(), HealthProfileEnums.RECOVERY_STATUS);
 

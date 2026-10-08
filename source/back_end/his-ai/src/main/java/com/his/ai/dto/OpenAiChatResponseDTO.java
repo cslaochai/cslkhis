@@ -8,8 +8,6 @@ import java.util.List;
 
 /**
  * OpenAI 兼容协议的响应体
- * <p>
- * 各厂商会额外返回自己的字段，统一用 ignoreUnknown 忽略，避免因厂商差异解析失败。
  */
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)

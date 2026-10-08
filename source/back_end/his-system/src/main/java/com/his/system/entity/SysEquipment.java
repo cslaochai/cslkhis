@@ -15,8 +15,6 @@ import java.time.LocalDateTime;
 
 /**
  * 设备档案实体 —— 对齐既有医疗设备台账表（49-06 铺底，90 行真实档案），本次不改其结构。
- *
- * <p>维保到期口径：最后维保日期 + 维保周期天数 = 下次维保日期（VO 里现算，不落库）。
  */
 @Data
 @TableName("sys_equipment")

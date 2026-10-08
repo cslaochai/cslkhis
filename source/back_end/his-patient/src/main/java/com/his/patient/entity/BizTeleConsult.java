@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 远程会诊（院际 / 跨院专家会诊）。
- *
- * <p>状态机：1待安排 → 2已安排 → 3已完成（会诊意见必填，终态）；非终态 → 4已取消（原因必填，终态）。
- * 已安排才允许出意见 —— 没安排过的会诊不能出意见。
  */
 @Data
 @TableName("biz_tele_consult")

@@ -7,14 +7,6 @@ import lombok.Data;
 
 /**
  * 一条可定位的数据质量问题（P5.3）。
- *
- * <p>这个 VO 的全部设计目标只有一个：<b>拿到它的人不用再问"你说的是哪一条"</b>。
- * 所以每条问题都带 {@code tableName + recordId}（精确定位到行）、
- * {@code patientNo/patientName}（定位到人）、{@code deptName/doctorName}（定位到责任科室）、
- * {@code checkedTotal}（这个分母下命中的，便于判断影响面）。
- *
- * <p>ID 一律用字符串：库主键是雪花算法 BIGINT（19 位），用 JSON number 传到前端
- * 会被 JS 的 Number 精度截断，末几位变 0，于是"打开 A 却显示了 B"。
  */
 @Data
 @Schema(description = "数据质量问题明细（可定位）")

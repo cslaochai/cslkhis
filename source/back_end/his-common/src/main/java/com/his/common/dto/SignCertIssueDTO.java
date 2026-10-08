@@ -5,7 +5,6 @@ import lombok.Data;
 
 /**
  * 人工签发证书入参。员工信息由调用方（可访问员工表的模块）填好传入，
- * his-common 不依赖员工实体 —— 这是"能力层不认识业务实体"的一致做法。
  */
 @Data
 public class SignCertIssueDTO {

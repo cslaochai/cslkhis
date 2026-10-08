@@ -14,12 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 营养风险筛查/评定登记。
- *
- * <p><b>前端传分项，不传判定</b>：NRS2002 的总分与「有无营养风险」由服务端按
- * {@link com.his.patient.support.NutritionRules} 现算，PG-SGA/MNA 才允许直接提交总分 ——
- * 判定决定要不要上膳食医嘱和营养会诊，交给浏览器等于谁都能给自己判个"无风险"。
- *
- * <p>体检项（身高体重）也在这里收：BMI 服务端算，避免"身高 170 体重 70 BMI 26.9"这种前端自算漂移。
  */
 @Data
 public class NutritionScreenUpsertDTO {

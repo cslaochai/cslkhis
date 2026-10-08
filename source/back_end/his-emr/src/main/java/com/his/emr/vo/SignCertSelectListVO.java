@@ -9,9 +9,6 @@ import java.io.Serializable;
 
 /**
  * 签名证书下拉出参：只回答「这是谁的哪本证书、还能不能用」。
- *
- * <p>公钥、指纹、签发方式、吊销原因等列属证书详情（{@code SignCertVO}），
- * 下拉里既不展示也不参与选择，整本证书正文跟着候选列表下发没有必要。
  */
 @Data
 @Schema(name = "SignCertSelectListVO", description = "签名证书下拉出参")

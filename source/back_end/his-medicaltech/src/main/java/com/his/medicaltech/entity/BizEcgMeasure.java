@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 心电测量参数（心电测量参数，sql/173）。
- *
- * <p>一条检查记录一行（upsert 同波形口径）。间期/电轴允许为 NULL ——
- * 测量不到就是测不到，不造 0 值污染统计。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

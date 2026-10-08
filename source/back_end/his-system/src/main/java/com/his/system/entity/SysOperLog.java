@@ -12,13 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 操作日志（操作日志，建表见 sql/10，查看页见 sql/158）。
- *
- * <p><b>只记写动作</b>：POST/DELETE 里排除 listPage / selectList / getById 这类约定命名的读接口
- * （{@code OperLogInterceptor} 的读动作死表），其余一律留痕。
- * 读病历这类敏感查阅由业务模块自己写审计日志，两本账不重复。
- *
- * <p>本表<b>只读</b>：不提供删除接口（等保三级要求审计记录不得被未预期删除），
- * 归档走 DBA 按 oper_time 分区/转储，不在应用侧开口子。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

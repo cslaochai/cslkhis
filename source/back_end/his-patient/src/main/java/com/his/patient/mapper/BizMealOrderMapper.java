@@ -16,11 +16,6 @@ import java.util.List;
 
 /**
  * 订餐配送 Mapper。
- *
- * <p><b>重生成必须物理删</b>：唯一键 {@code uk_meal_order(admission_id, meal_date, meal_type)} 不含
- * del_flag，软删旧行再插同一天同一餐次会 {@code Duplicate entry}。而且"删了再插"只允许发生在
- * <b>还没配送</b>（0-待配餐 / 1-已配餐）的行上 —— 已配送、已签收的餐是既成事实，
- * 一次点击就把它抹掉，等于让这个人当天没饭吃且查不到原因。
  */
 @Mapper
 public interface BizMealOrderMapper extends BaseMapper<BizMealOrder> {

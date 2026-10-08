@@ -15,13 +15,12 @@ import java.time.LocalDateTime;
 
 /**
  * 病危重通知入参（外层空壳 + 内部静态类，同 DeathCertificateDTO 组织方式）。
- *
- * <p>时间入参一律宽进空格格式（AGENTS §3），前端 value-format 同口径传
- * {@code yyyy-MM-dd HH:mm:ss}，不许传 ISO T 分隔。
  */
 public class CriticalNoticeDTO {
 
-    /** 分页查询 */
+    /**
+     * 分页查询
+     */
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class QueryPage extends PageParam {
@@ -39,7 +38,9 @@ public class CriticalNoticeDTO {
         private LocalDate endDate;
     }
 
-    /** 填写/修改草稿（一般项目由服务端按住院重查快照） */
+    /**
+     * 填写/修改草稿（一般项目由服务端按住院重查快照）
+     */
     @Data
     public static class Upsert {
         /** 主键（雪花ID） */
@@ -81,7 +82,9 @@ public class CriticalNoticeDTO {
         private String remark;
     }
 
-    /** 签发（医师电子签名锁定） */
+    /**
+     * 签发（医师电子签名锁定）
+     */
     @Data
     public static class Issue {
         /** 主键（雪花ID） */
@@ -91,7 +94,9 @@ public class CriticalNoticeDTO {
         private String clientIp;
     }
 
-    /** 签收（家属手写签名 + 法定关系） */
+    /**
+     * 签收（家属手写签名 + 法定关系）
+     */
     @Data
     public static class Acknowledge {
         /** 主键（雪花ID） */
@@ -115,7 +120,9 @@ public class CriticalNoticeDTO {
         private String signerSignature;
     }
 
-    /** 作废 */
+    /**
+     * 作废
+     */
     @Data
     public static class VoidNotice {
         /** 主键（雪花ID） */
@@ -126,7 +133,9 @@ public class CriticalNoticeDTO {
         private String voidReason;
     }
 
-    /** 打印回执计数 */
+    /**
+     * 打印回执计数
+     */
     @Data
     public static class Print {
         /** 主键（雪花ID） */

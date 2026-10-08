@@ -11,14 +11,6 @@ import java.util.List;
 
 /**
  * VTE 防控指标复算（全部裸 SQL）。
- *
- * <p><b>为什么全是裸 SQL</b>：指标要跨入院记录 / 护理评估单（his-patient）、
- * 患者基本信息（his-patient）、科室 / 病区（his-system）多张表，
- * 而且要取"每次住院最新一条评估"这种窗口函数 —— 走实体关联会把分页插件、逻辑删除、
- * 快照过滤搅在一起，口径难以一眼看全；裸 SQL 把口径摊在明面上，改口径只改这一处。
- *
- * <p><b>分母口径</b>：同期出院患者（discharge_time 落在统计月内），与抗菌药物监测 sql/161
- * 的"按出院归月"保持一致，避免全院两套分母对不上账。
  */
 @Mapper
 public interface VteStatMapper {

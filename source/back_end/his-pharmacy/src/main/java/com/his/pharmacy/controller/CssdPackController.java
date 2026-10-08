@@ -14,9 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * CSSD 消毒供应追溯控制器。
- *
- * <p>流程：回收登记（建包+回收节点）→ 清洗 → 打包 → 灭菌（必填锅次/批次）→ 储存（不合格退回清洗）→ 发放。
- * 追溯节点只增不改。
  */
 @Tag(name = "CSSD消毒供应追溯")
 @RestController

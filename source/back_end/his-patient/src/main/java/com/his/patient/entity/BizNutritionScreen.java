@@ -15,14 +15,6 @@ import java.time.LocalDateTime;
 
 /**
  * 营养风险筛查与评定记录（sql/168 §1）。
- *
- * <p>两条铁律：
- * <ul>
- *   <li><b>总分与风险判定由服务端算</b>（NutritionRules.totalScore/riskFlag）：NRS2002 存的是
- *       受损、严重度、年龄三个分项，前端传分项不传判定 —— 判定决定要不要开膳食医嘱与会诊。</li>
- *   <li><b>NRS2002 &lt;3 分必须留复筛日期</b>：营养风险是动态的，入院时 2 分不代表出院时还是 2 分，
- *       "每周复筛"不落成一行日期就没人执行。</li>
- * </ul>
  */
 @Data
 @TableName("biz_nutrition_screen")

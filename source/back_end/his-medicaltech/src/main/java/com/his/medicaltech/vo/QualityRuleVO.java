@@ -7,10 +7,6 @@ import java.math.BigDecimal;
 
 /**
  * 单条规则的检查结果（P5.3）。
- *
- * <p>{@code checkedTotal} 与 {@code issueCount} 是一对，缺一不可：
- * 只说 issueCount=0 无法区分"查了 49 条全干净"和"一条都没查"。
- * 所以 {@code empty}（分母为 0）单独标出来，前端必须显式提示规则未生效。
  */
 @Data
 @Schema(description = "数据质量规则执行结果")

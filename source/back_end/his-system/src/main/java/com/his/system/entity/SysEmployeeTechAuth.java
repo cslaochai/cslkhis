@@ -11,12 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医疗技术临床应用授权台账实体：一行 = 一个人在一个类别上的一条授权。
- *
- * <p>见 {@code sql/155}。{@code techLevel} 是**级别上限**（授权 3 级即可做 1/2/3 级），
- * 不是每个级别一行 —— 否则「他最高能做到几级」要靠聚合算，闸门每次查询都得 SUM。
- *
- * <p>本表没有 del_flag（与员工资格证书同做法），delete 即物理删，
- * 不会留下占着 {@code uk_emp_cat_from} 的软删行。生效授权只能收回不能改。
  */
 @Data
 @TableName("sys_employee_tech_auth")

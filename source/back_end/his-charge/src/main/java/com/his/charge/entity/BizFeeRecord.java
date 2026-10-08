@@ -13,9 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 费用记账行（L1 应收的唯一来源）。
- *
- * <p>本表金额列一经写入不再 UPDATE：错账走红冲（{@link #origFeeId} 指向的负数行），
- * 否则"这笔费用历史上是多少"就查不出来了，医保核查与退费追溯也失去依据。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

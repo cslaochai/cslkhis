@@ -9,10 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * AI 调用审计记录。
- * <p>
- * 医疗场景的价值在于「可追溯」：这条记录要能回答「某医生某次开方，
- * 系统当时到底给了什么建议、模型是哪个版本、提示词是哪一版」。
- * 所以输入输出都留摘要，并记录 promptVersion。
  */
 @Data
 @Schema(description = "AI 调用审计记录")

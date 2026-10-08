@@ -10,18 +10,6 @@ import java.util.List;
 
 /**
  * 麻精药品专册 Mapper。
- *
- * <p><b>为什么这里有几条裸 SQL {@code @Select} 去读别的模块的表</b>：
- * 本模块（his-emr）需要三份"主数据"来做麻精判定与登记 ——
- * 药品的管制分类（药品字典，属 his-system）、
- * 患者实名信息（患者基本信息，属 his-patient）、
- * FEFO 实际扣减批次（药品库存流水，属 his-pharmacy）。
- * 按本工程约定「A 不得直接调 B 的 Mapper」，跨模块读表统一走**本模块自建的裸 SQL Mapper**，
- * 只取需要的列，不引入对方实体。
- *
- * <p>⚠ 裸 SQL 不受 {@code @TableLogic} 约束 → 每一条都必须显式写 {@code del_flag = 0}，
- * 漏写会把已删数据当成有效数据（本仓已踩过：挂号单改名后裸 SQL 写死旧表名，
- * 编译不报错、运行 500）。
  */
 @Mapper
 public interface NarcoticRegisterMapper extends BaseMapper<BizNarcoticRegister> {
@@ -97,9 +85,9 @@ public interface NarcoticRegisterMapper extends BaseMapper<BizNarcoticRegister> 
     @Select("SELECT COUNT(*) FROM biz_narcotic_register WHERE register_no = #{registerNo}")
     long countByRegisterNo(@Param("registerNo") String registerNo);
 
-    /**
-     * 药品管制分类行（跨模块读药品字典）
-     */
+/**
+ * 药品管制分类行（跨模块读药品字典）
+ */
     class DrugSpecialRow {
         private Long drugId;
         private String drugCode;

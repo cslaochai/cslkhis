@@ -12,8 +12,6 @@ import java.util.List;
 
 /**
  * 病区×班次窗的护理事实聚合（交接班摘要的数据面）。
- * <p><b>只聚事实不判异常</b>：体征是否越阈、评估是否算高风险由消费方（AI 能力层）按自己的口径判，
- * 本聚合不做业务判定，避免同一套阈值散落两处。</p>
  */
 @Data
 public class WardNursingFactsVO implements Serializable {

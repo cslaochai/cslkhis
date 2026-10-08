@@ -43,16 +43,6 @@ import com.his.emr.enums.QcStatusEnum;
 
 /**
  * CDR 时间轴上的**事件类型**表。
- *
- * <p>一个枚举 = 一类临床事件，同时声明：中文名、归属的就诊形态、状态码怎么翻译、
- * 以及"副码"（文书类型 / 医嘱类别 / 诊断类型…）怎么翻译。
- *
- * <p>为什么码值翻译不写在 SQL 里：写进 SQL 的 CASE 没人维护，码值一变就静默错。
- * 翻译一律引用各枚举的 {@code getText}（展示口径：null / 脏码值 → 空串），
- * 唯一出口在枚举，这里只做注册表，不承载映射。
- *
- * <p>归类规律：门诊事件挂挂号（REGIST/visit），住院事件挂入院（ADMISSION），
- * 危急值/质控/随访这类**跨就诊**的事挂患者（PATIENT）。
  */
 public enum CdrEventTypeEnum {
 

@@ -1,5 +1,6 @@
 package com.his.patient.dto;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -11,6 +12,7 @@ import java.io.Serializable;
 public class PatientRegisterDTO implements Serializable {
 
     /** 患者姓名 */
+    @NotBlank(message = "请输入姓名")
     private String patientName;
 
     /**

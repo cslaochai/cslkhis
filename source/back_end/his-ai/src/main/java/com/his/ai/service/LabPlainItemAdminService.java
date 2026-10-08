@@ -10,9 +10,6 @@ import java.util.List;
 
 /**
  * 检验项目白话词典 · 院内维护。
- *
- * <p>患者端报告解读的白话全靠这张表。表建完不维护就会烂：
- * 检验科一加新项目，患者端就多一个「只给数值、不给解释」的条目。
  */
 public interface LabPlainItemAdminService {
 

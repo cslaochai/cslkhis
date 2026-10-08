@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 慢特病备案行。
- *
- * <p>regStatus 是库里的事实状态，displayStatus 是给前台看的口径（有效但已过终止日 → 已过期），
- * 由服务端按当天现算，不落列，避免「日期已过、状态还没刷」的漂移窗口。
  */
 @Data
 public class ChronicRegListVO {

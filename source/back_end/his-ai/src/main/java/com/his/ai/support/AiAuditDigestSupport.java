@@ -12,16 +12,7 @@ import java.util.Collection;
 import java.util.Map;
 
 /**
- * 审计输出摘要组装器（G-11 口径）：模型输出 <b>不落原文</b>。
- * <p>
- * 摘要形态（按 DTO 字段声明顺序，分号拼接）：
- * <ul>
- *   <li>{@link AiAuditPlain} 标注的字段：过 {@link AiMaskUtils#mask} 后明文 —— 码值/判定结果，排障锚点</li>
- *   <li>未标注的 String 字段：{@code 字段名=SHA-256 前 12 位} —— 不可逆，但可核对「两次输出是否相同」</li>
- *   <li>集合字段：递归一层拼 POJO 元素（如 judgments 的每条判定），元素内字段按上述同规则；深度封顶防失控</li>
- *   <li>未标注的其他类型（数字/布尔）：直接取值</li>
- * </ul>
- * 非法反射访问、组装中途任何异常都按「返回空摘要」兜底 —— 审计失败不能反过来打断业务调用。
+ * 审计输出摘要组装器（G-11 口径）：模型输出 不落原文。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AiAuditDigestSupport {

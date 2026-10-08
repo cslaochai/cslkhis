@@ -13,26 +13,7 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * 工作台卡片取数 Mapper（一期 A 复用旧 {@code DashboardMapper} 的六段 SQL）。
- *
- * <p>全部用 {@code @Select} 直查表、不 import 任何业务模块的实体 —— his-report 只管"聚合查询"，
- * 返回类型是本模块的行 VO，字段名以 SQL 里的别名（驼峰）为准，Provider 侧按 getter 取值。
- * 这些字段名同时是前端契约（{@code front/src/lib/workbench-widgets.js} 的 METRIC_SPECS），
- * 改别名等于让工作台对应那张卡的数字变「—」。
- *
- * <p>为什么这些卡先挂在 his-report 而不是各自的业务域：口径与旧首页完全一致地迁过来，
- * 一期 B 再按域拆给 his-appoint/his-patient（工作台卡片注册表的接口标识
- * 与卡片 remark 里都记了这笔债，拆走时同步改）。
- *
- * <p>两条必须记住的代价（表结构变了这里不会编译报错，只会静默少值/空值）：
- * <ol>
- *   <li>消息通知 / 病区没有删除标记列，一律不加该条件；</li>
- *   <li>床位/在院只认床位的床位状态与入院记录的入院状态，
- *       病区上的已占床位数 / 床位总数是演示假数据，禁止作依据。</li>
- * </ol>
- *
- * <p>收费口径按四层走（sql/125 起）：收入看 L3 实收流水（收正退负，净额），
- * 欠费看 L1 记账净额对 L3 已收。旧表旧收费单 / 旧预交金已停写，
+ * 工作台卡片取数 Mapper（一期 A 复用旧 DashboardMapper 的六段 SQL）。
  */
 @Mapper
 public interface WorkbenchMetricMapper {

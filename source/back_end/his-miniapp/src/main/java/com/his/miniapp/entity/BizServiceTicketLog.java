@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 工单流转记录（建表见 {@code sql/221}）。
+ * 工单流转记录（建表见 sql/221）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

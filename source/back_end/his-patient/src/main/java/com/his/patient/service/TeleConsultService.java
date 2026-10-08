@@ -8,8 +8,6 @@ import com.his.patient.vo.TeleConsultVO;
 
 /**
  * 互联网医院 / 远程会诊服务。
- *
- * <p>两条线：远程会诊（申请→安排→出意见→完成/取消）与线上问诊（发起→接诊→回复→完成/退诊）。
  */
 public interface TeleConsultService {
 

@@ -4,7 +4,9 @@ import com.his.common.base.PageParam;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/** 营养膳食月度指标快照分页查询 */
+/**
+ * 营养膳食月度指标快照分页查询
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class NutritionStatsQueryPageDTO extends PageParam {

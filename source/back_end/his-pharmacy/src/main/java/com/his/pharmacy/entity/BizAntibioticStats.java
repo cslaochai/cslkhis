@@ -11,13 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 抗菌药物使用监测指标（月度快照：使用率 / 使用强度 AUD / 微生物送检率）。
- *
- * <p><b>为什么落表不实时算</b>：监测指标要对上报数与评审取证，报出去的数必须能复现。
- * 实时查询会随基础数据补录而漂移 —— "上个月报的 AUD 是 38，这个月再查变成 41" 在评审现场是致命的。
- * 因此生成时把分子分母一起存下来（xxx_count 系列），随时可核对。
- *
- * <p>重复生成同月同覆盖同一行（uk_antibiotic_stats），不做版本堆叠。
- * 无 del_flag，删除走物理删。
  */
 @Data
 @TableName("biz_antibiotic_stats")

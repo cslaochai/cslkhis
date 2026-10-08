@@ -10,16 +10,6 @@ import java.util.List;
 
 /**
  * 报表统计聚合 Mapper（跨模块只读，全部裸 SQL，一处收口；列名已按 information_schema 逐字核对）。
- *
- * <p>公共口径：
- * <ul>
- *   <li>start/end 为 'yyyy-MM-dd' 字符串，datetime 列比较时右侧补 ' 00:00:00'/' 23:59:59' 全天边界；</li>
- *   <li>出院队列 = discharge_time 非空且落区间、排除 7-医嘱取消入院（dev 库有"有出院时间但状态未流转"脏行，
- *       不以 admit_status 判出院，与 StatReportAggMapper 同源）；</li>
- *   <li>收入净额 = L1 记账行带符号合计（记账金额求和，红冲写负行、金额不再 UPDATE）；</li>
- *   <li>支付构成与退费一律取 L3 流水支付资金流水（收正退负，txn_status=1）；</li>
- *   <li>注解值必须是编译期常量，用 + 拼接。</li>
- * </ul>
  */
 @Mapper
 public interface StatsMapper {

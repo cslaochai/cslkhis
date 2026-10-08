@@ -13,19 +13,6 @@ import java.util.List;
 
 /**
  * 住院输血申请单 Mapper。
- *
- * <p>自定义 {@code @Select} 不受 {@code @TableLogic} 影响 → 必须显式写 {@code del_flag = 0}。
- *
- * <p>两处刻意的做法：
- * <ol>
- *   <li><b>投影里只 JOIN "主表没有快照"的两样</b>（入院在院状态、回写病历号）。
- *       患者号/患者姓名/床号/科室名主表都已有快照列，**再 JOIN 一次会得到两个同名列**
- *       （患者编号等），取到哪一个取决于驱动 —— 属于会静默出错的那类写法。
- *       快照本身就是这张单要证明的事：转科、换床、科室改名之后不能被改写。</li>
- *   <li><b>排序用 FIELD() 显式指定</b>：0-待配血 → 1-已配血 → 2-已发血 → 3-输注中 → 4-已完成 → 5-已取消。
- *       按码值升序刚好等于流程顺序，但仍显式写出来 —— 以后插码值（如 6-配血不合待处理）
- *       时不会悄悄把顺序搞乱。</li>
- * </ol>
  */
 @Mapper
 public interface BizTransfusionApplyMapper extends BaseMapper<BizTransfusionApply> {

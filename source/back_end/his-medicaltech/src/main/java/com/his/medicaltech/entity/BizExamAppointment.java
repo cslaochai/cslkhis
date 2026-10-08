@@ -12,9 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 检查预约单—— 分时段占号的凭证。
- *
- * <p>患者/项目/设备全部快照落库：预约单是拿去当班执行的凭证，
- * 不能因为字典改了项目名、设备挪了检查室而跟着漂移。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

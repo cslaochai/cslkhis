@@ -9,11 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 病危重通知出参。
- *
- * <p>所有 Long 主键/外键一律字符串序列化（雪花 19 位，前端 Number 会丢精度）。
- * 所有 LocalDateTime 一律空格格式（项目无全局 JSR-310 格式化配置，漏写字段就出 ISO 的 T 分隔，
- * 前端 slice(0,19) 会渲染成 '2026-09-27T19:22:48'）。
- * 身份证/电话等敏感列只在 SQL 出参层做后端脱敏（AGENTS §5），页面不渲染明文。
  */
 public class CriticalNoticeVO {
 

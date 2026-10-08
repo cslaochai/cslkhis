@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 药房盘点（第 1 期：账面快照 → 实盘录入 → 差异 → 复核过账）
- * <p>约定：查询一律 GET，写操作一律 POST，路径驼峰；鉴权只标方法（AGENTS §4，类级会静默覆盖）。
  */
 @Tag(name = "药房盘点")
 @RestController

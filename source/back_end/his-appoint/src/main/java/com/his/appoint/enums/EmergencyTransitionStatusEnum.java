@@ -3,14 +3,7 @@ package com.his.appoint.enums;
 import lombok.Getter;
 
 /**
- * 急诊状态可流转目标枚举（{@code /emergency/updateStatus} 的合法入参集合）。
- *
- * <p>与 {@code com.his.common.enums.EmergencyStatusEnum}（急诊状态全量业务码值口径 1-6）的区别：
- * 后者回答「这条急诊记录现在处于哪个状态」，本枚举回答「这个接口允许把记录推成哪个状态」。
- * 两者不是同一个含义 —— 1候诊是登记后的初态、4转住院必须走 {@code /emergency/admit} 落真实入院登记，
- * 都不在本接口的可写集合里，所以不能直接拿全量枚举做入参校验（否则 1/4 会被放行）。
- *
- * <p>码值不连续（4 被跳过），故校验落 {@code @InEnum} 而非 {@code @Min/@Max}。
+ * 急诊状态可流转目标枚举（/emergency/updateStatus 的合法入参集合）。
  */
 @Getter
 public enum EmergencyTransitionStatusEnum {

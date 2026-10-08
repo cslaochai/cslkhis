@@ -28,11 +28,6 @@ import java.util.List;
 
 /**
  * 医保目录对照服务实现。
- *
- * <p>自动对照口径：院内项目名称与启用目录名称<b>精确相等</b>且唯一命中才落
- * match_type=1；0 条=noMatch、多条=ambiguous（留人工，宁缺勿错）。
- * 候选范围随院内类型走：药品 drug_type 1西药/2中成药→目录1、3饮片→目录2，
- * 诊疗/检验→目录3，耗材→目录4。
  */
 @Service
 @RequiredArgsConstructor

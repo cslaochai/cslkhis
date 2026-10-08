@@ -686,6 +686,21 @@
   `MarkReadDTO` 提成独立 DTO 文件（同时违反 §10 分层与 §15）。
   验收判据：`grep -rln "private Integer pageNum\|private int pageNum" --include=*.java source/back_end`
   的每个文件（除 `his-common/base/PageParam.java` 本身）都要能在同文件里grep 到 `extends PageParam`。
+- **`@Data`/`@EqualsAndHashCode` 落在有父类的类型上必须带 `callSuper = true`（2026-10-08 全仓清零 7 处）**：
+  否则 javac 出告警「Generating equals/hashCode implementation but without a call to superclass」，
+  而 `callSuper = false` 是最坏的写法 —— 它把告警闭嘴了，同时让 `pageNum/pageSize`（或父类那批公共列）
+  **不参与 equals/hashCode**，等于声明「两个不同页的相同查询条件是同一个对象」。
+  判据是跑 `node workspace/_scan_eq_call_super.mjs` 必须输出 `total = 0`
+  （它按「声明上的 @Data/@Value/@EqualsAndHashCode + `extends 非 Object` + 无 callSuper=true」配对，
+  嵌套 static class 也算 —— `XxxVO.Detail extends XxxVO.Row` 这类同文件继承最容易漏）。
+- **主键入参写成 `String` 的 DTO 是静默 bug，编译器不报（同一条被 2026-10-08 又抓到 6 处）**：
+  `selectById(Serializable)` 照收字符串，MySQL 再把 BIGINT 列隐式转换比较 —— 传 `"abc"` 不报 400，
+  而是落进「数据不存在」（实测旧链路 `POST /ai/patient/feeExplain {billId:"abc"}` → **500「账单不存在：abc」**，
+  真因「你传了个坏 ID」被完全掩盖）。改成 `Long` 后同一请求 = **400「请求体格式不正确，无法解析」**，
+  空串 = 400「billId不能为空」，而 19 位雪花 ID 以字符串传入仍精确命中（实测 `8900000000002200001` → 200）。
+  判据：`grep -rnE "private String [a-zA-Z]*[iI]d;" --include=*DTO.java source/back_end`
+  只允许命中第 1 节列出的对接外部报文/非我方主键那几处（`OpenAiChatResponseDTO.id`、`openid`、
+  前端自取的 `sessionId`、跨表审计标识 `targetId`）。
 - **✅ `PageParam` 已加越界夹取（2026-10-06 老王拍板落地）**，全部 75+ 分页 DTO 一处生效：
   ```java
   public int getPageNum()  { return pageNum < 1 ? 1 : pageNum; }

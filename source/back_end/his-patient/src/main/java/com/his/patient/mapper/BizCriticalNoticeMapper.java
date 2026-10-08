@@ -13,10 +13,6 @@ import java.util.List;
 
 /**
  * 病危重通知 Mapper（sql/161）。
- *
- * <p>入院记录 / 患者基本信息 / 电子签名证据归其他子域，按项目规范不跨域调
- * 它们的 Mapper，这里走裸 SQL 只读。列名已对过 information_schema
- * （入院记录主键是 admission_id，不是 id；电子签名证据主键才是 id）。
  */
 @Mapper
 public interface BizCriticalNoticeMapper extends BaseMapper<BizCriticalNotice> {

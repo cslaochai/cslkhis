@@ -11,8 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 出院办理（出院记录）
- * <p>既有表，主键出院ID，不继承 BaseEntity。
- * {@code discharge_way}（离院方式）是病案首页必填项，也是 DRG 分组与再入院判定的输入。
  */
 @Data
 @TableName("biz_discharge")

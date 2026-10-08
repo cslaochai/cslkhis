@@ -73,15 +73,7 @@ public class StaffDemandServiceImpl extends ServiceImpl<BizStaffDemandMapper, Bi
     @Override
     public void adjust(LocalDate demandDate, Integer orgType, Long orgId, Integer staffType,
                        Integer requiredCount, String remark) {
-        if (demandDate == null) {
-            throw new BusinessException("请选择要调整的日期");
-        }
-        if (orgType == null || orgId == null) {
-            throw new BusinessException("请选择要调整的排班单元（并带上单元类型）");
-        }
-        if (staffType == null) {
-            throw new BusinessException("请选择岗位类别");
-        }
+        // D-业务规则：非空与值域（至少 1 人）混写在一个条件里，标量参数不许挂约束注解，DTO 注解无法表达，保留
         if (requiredCount == null || requiredCount < 1) {
             throw new BusinessException("需求人数至少 1 人");
         }
@@ -125,6 +117,7 @@ public class StaffDemandServiceImpl extends ServiceImpl<BizStaffDemandMapper, Bi
     }
 
     private void requireRange(LocalDate startDate, LocalDate endDate) {
+        // C-非 web 入参：私有日期区间守卫，被 gapList/recalc 等多个入口共用（与跨字段规则混在同一段），Bean Validation 不覆盖内部调用，保留
         if (startDate == null || endDate == null) {
             throw new BusinessException("请选择日期区间");
         }

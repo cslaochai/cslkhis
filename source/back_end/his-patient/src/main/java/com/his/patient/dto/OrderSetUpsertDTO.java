@@ -15,12 +15,6 @@ import java.util.List;
 
 /**
  * 医嘱组套模板新增/修改入参（命名遵循 AGENTS.md：新增和修改用 `xxxUpsertDTO`）。
- *
- * <p>与个人模板（{@link InpatientOrderTemplateUpsertDTO}）的差别只有 {@code scope}：
- * 明细类型、校验规则、先删后插的落库方式全部共用，避免两套口径漂移。
- *
- * <p>{@code doctorId} / {@code deptId} 都不放进 DTO —— 归属一律服务端按当前登录人/科室覆盖，
- * 否则改个字段就能把别人的组套挂到自己名下。
  */
 @Data
 public class OrderSetUpsertDTO implements Serializable {

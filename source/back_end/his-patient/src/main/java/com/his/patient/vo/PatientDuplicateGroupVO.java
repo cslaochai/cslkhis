@@ -6,10 +6,6 @@ import java.util.List;
 
 /**
  * 疑似重复档案组（P5.1 EMPI）
- *
- * <p>一组 = 被同一依据串起来的若干份档案。**这不是"应该合并"的结论**，
- * 而是"值得人看一眼"的提示 —— 库里 44 个患者中真正的重复是 0，
- * 所有同名的都是不同的人，所以组的价值在提示、不在定论。
  */
 @Data
 public class PatientDuplicateGroupVO {

@@ -7,11 +7,6 @@ import lombok.NoArgsConstructor;
 
 /**
  * 从 HTTP 请求里解析 IP / 浏览器 / 操作系统等环境信息。
- *
- * <p><b>登录日志与操作日志共用这一套口径</b>：两边都从这里取 IP、判内外网。
- * 否则同一台机器在两本账里一个记"内网"一个记"外网"，事后对账根本对不上。
- *
- * <p>纯静态解析，不落库、不依赖 Spring 容器 —— 可以被任意拦截器/服务直接调。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class RequestInfoUtils {

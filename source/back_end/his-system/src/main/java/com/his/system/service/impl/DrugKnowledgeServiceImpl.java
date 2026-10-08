@@ -177,6 +177,7 @@ public class DrugKnowledgeServiceImpl implements DrugKnowledgeService {
             // 建表带 chk_dose_unit_unit，服务端先拦是为了给出人话，而不是让 CHECK 兜成 500
             throw new BusinessException("剂量单位只支持 g/mg/ug（IU、ml、片 无法与极量比较，见 sql/130 文件头第四条）");
         }
+        // B-条件必填：单次最大量与每日最大量二选一至少填一项，跨字段或式条件，DTO 注解无法表达，保留
         if (upsertDTO.getMaxSingleDose() == null && upsertDTO.getMaxDailyDose() == null) {
             throw new BusinessException("单次最大量与每日最大量至少填一项，否则这条知识什么都不判");
         }

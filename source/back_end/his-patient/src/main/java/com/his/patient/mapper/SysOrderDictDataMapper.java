@@ -11,11 +11,6 @@ import java.util.List;
 
 /**
  * 医嘱基础字典（字典数据的窄口访问，只允许三种 dict_type，sql/142）。
- *
- * <p>跨模块写字典表用本地 Mapper 而不是 his-system 的 SysDictDataMapper：
- * 后者是通用字典的口子，让业务模块直接拿到它，权限边界就形同虚设
- * （谁能改医嘱途径，谁就能改「患者性别」「收费项目类别」）。
- * 这里只做单表读写，且每次调用前由服务层校验 dictType 在白名单内。
  */
 @Mapper
 public interface SysOrderDictDataMapper extends BaseMapper<SysOrderDictData> {

@@ -9,10 +9,6 @@ import java.time.LocalDate;
 
 /**
  * 岗位入参：一行 = 「以某角色在某科室执业」。
- *
- * <p>管理端配置员工的角色与科室时必须成对给出，理由见
- * {@code com.his.system.service.impl.EmployeePostServiceImpl}：
- * 角色表与科室表各配一份，就能拼出「医生 · 药房」这种不存在的身份。
  */
 @Data
 public class EmployeePostDTO {

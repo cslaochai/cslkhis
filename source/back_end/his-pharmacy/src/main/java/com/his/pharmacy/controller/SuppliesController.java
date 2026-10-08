@@ -20,7 +20,6 @@ import java.util.List;
 
 /**
  * 物资耗材控制器
- * 耗材域独立于药品域：字典 + 批次库存 + 出入库流水 + 科室领用（领用即扣库存）。
  */
 @Tag(name = "物资耗材管理")
 @RestController

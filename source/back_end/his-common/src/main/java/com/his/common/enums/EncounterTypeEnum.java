@@ -1,10 +1,7 @@
 package com.his.common.enums;
 
 /**
- * 收费域就诊类型（字典 {@code his_encounter_type}，落在费用记账流水的就诊类型列等）。
- *
- * <p>与 {@code VisitTypeEnum}（初诊/复诊）、就诊次表不是一回事，
- * 三者同叫 visit 会漂移，所以收费四层统一用 encounter 这个词表达"这次费用挂在谁身上"。
+ * 收费域就诊类型（字典 his_encounter_type，落在费用记账流水的就诊类型列等）。
  */
 public enum EncounterTypeEnum {
 

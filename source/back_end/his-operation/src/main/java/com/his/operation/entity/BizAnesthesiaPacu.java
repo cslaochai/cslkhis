@@ -13,12 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * PACU 麻醉后监测治疗记录（PACU 复苏记录）—— 一次麻醉一段停留。
- *
- * <p><b>Aldrete 总分由服务端逐项相加</b>，不接收前端传来的总分：
- * 前端传总分 = 我可以随便写一个 10 分然后出室，出室标准就成了摆设
- * （同"评审一定能过"的口径：能自己填结论的评分不算评分）。
- *
- * <p>出室标准 {@code aldreteTotal >= 9}；不达标出室必须写明原因，且去向不能是"回病房"。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -14,12 +14,6 @@ import java.io.IOException;
 
 /**
  * 为操作日志缓存请求体。
- *
- * <p>{@code HttpServletRequest} 的 body 只能读一次，拦截器直接读会把 {@code @RequestBody} 饿死
- * （现象是接口突然全部"请求体为空"）。所以在这里先把请求包成 {@link ContentCachingRequestWrapper}，
- * 拦截器在 {@code afterCompletion} 时读缓存 —— 那时 body 已被 Controller 消费完，缓存里是完整的。
- *
- * <p><b>只包 JSON 的 POST/DELETE</b>：multipart 上传、文件导出不包，避免把整个文件读进内存。
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)

@@ -8,9 +8,6 @@ import java.io.Serializable;
 
 /**
  * 手术间主数据入参（新增 / 修改）。
- *
- * <p>手术间是排台总表的台位来源，编码与名称必填；名称在总表与申请单快照里都会露出，
- * 所以名称唯一由服务端校验（表上也有 uk_room_name 兜底）。
  */
 @Data
 public class OperationRoomUpsertDTO implements Serializable {

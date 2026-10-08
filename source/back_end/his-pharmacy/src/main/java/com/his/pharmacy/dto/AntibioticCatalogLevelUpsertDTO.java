@@ -9,9 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * 维护药品的抗菌药物分级与 DDD 值。
- *
- * <p>纳入目录（level 1/2/3）时 DDD 值与单位含药量必须同时给 —— 没有 DDD 值的抗菌药
- * 进不了使用强度统计，等于"在目录里但算不进指标"，比不标更糟（看起来覆盖了实际没覆盖）。
  */
 @Data
 public class AntibioticCatalogLevelUpsertDTO {

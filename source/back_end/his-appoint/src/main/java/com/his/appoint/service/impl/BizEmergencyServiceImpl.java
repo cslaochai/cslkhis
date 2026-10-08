@@ -1417,7 +1417,7 @@ public class BizEmergencyServiceImpl extends ServiceImpl<BizEmergencyMapper, Biz
     }
 
     private SysEmployee requireActiveEmployee(Long empId, String label) {
-        // ② 非 web 入口的入参：整单接班人与明细推导出的接续医生共用此工具，后者不是 HTTP 参数绑定，Bean Validation 跑不到
+        // C-非 web 入参：整单接班人与明细推导出的接续医生共用此工具，后者不是 HTTP 参数绑定，Bean Validation 不覆盖，保留
         if (empId == null) {
             throw new BusinessException(label + "不能为空");
         }

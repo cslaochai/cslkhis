@@ -13,16 +13,6 @@ import java.util.List;
 
 /**
  * 床位服务中心聚合 Mapper（列名已按 information_schema 逐表核对）。
- *
- * <p><b>病区.total_beds / occupied_beds 不参与任何计算</b>（演示数据）：
- * 全院床位池与科室排行一律从床位实时 COUNT。
- *
- * <p><b>预留床为什么看得见</b>：床位池 LEFT JOIN 一张 alloc_status=1 的调配单，
- * 带出"这张床被谁预定走了"。没有这一步，跨科借出去的床在其他科室眼里是"空闲"，
- * 两个科室会把同一张床安排给两个患者。
- *
- * <p>{@code @Select} 里 <b>必须自己带 del_flag = 0</b>：{@code @TableLogic} 只作用于
- * MyBatis-Plus 生成的 SQL，自定义 SQL 完全不受影响。
  */
 @Mapper
 public interface BedCenterMapper extends BaseMapper<BizBedAllocate> {

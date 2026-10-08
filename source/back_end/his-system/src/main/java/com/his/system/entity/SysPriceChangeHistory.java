@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 价格变更历史表
- *
- * <p>药品、耗材、检查、检验、治疗五类价表的调价留痕统一写这张表，
- * 原来的药品价格变动史只覆盖药品，保留不动。</p>
  */
 @Data
 @TableName("sys_price_change_history")

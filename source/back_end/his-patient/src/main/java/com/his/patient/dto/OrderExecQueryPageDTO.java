@@ -9,8 +9,6 @@ import java.time.LocalDate;
 
 /**
  * 医嘱执行队列 / 执行记录查询入参（命名遵循 AGENTS.md：分页查询用 `xxxQueryPageDTO`）。
- *
- * <p>待执行队列（`execPendingList`）只认 `execStatus=1`，执行记录（`execList`）则按状态筛。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

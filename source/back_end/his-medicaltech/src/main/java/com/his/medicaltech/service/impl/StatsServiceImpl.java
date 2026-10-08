@@ -16,8 +16,6 @@ import java.time.LocalDate;
 
 /**
  * 报表统计服务：全部聚合下推 SQL，服务层只做窗口兜底与比率现算。
- *
- * <p>窗口缺省 = 截至今天的近 30 天；单边缺省按另一边对齐。
  */
 @Service
 @RequiredArgsConstructor

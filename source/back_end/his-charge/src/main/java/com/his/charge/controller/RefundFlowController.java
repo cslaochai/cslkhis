@@ -16,9 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 退费流水台账（M7）。
- *
- * <p>只读：台账由冲正入口（{@code ChargeService.refund / refundByApply}）在同事务里写入，
- * 这里不提供任何编辑口子 —— 能改台账就等于能对不上渠道。
  */
 @Tag(name = "退费流水")
 @RestController

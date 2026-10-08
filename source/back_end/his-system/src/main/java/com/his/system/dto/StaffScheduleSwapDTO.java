@@ -6,10 +6,6 @@ import lombok.Data;
 
 /**
  * 换班/代班入参。
- *
- * <p>两种形态由 {@code toScheduleId} 是否给值区分：给了就是<b>互换</b>（两条排班对调排班对象），
- * 不给就是<b>代班</b>（这一班改由 {@code substituteEmployeeId} 承接）。
- * 日期与单元都取自排班行本身，不在入参里重复一遍（重复就会出现两条互相矛盾的口径）。
  */
 @Data
 public class StaffScheduleSwapDTO {

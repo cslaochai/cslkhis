@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 医生接诊状态缓存服务
- * 使用Redis缓存医生当天的接诊状态
  */
 @Slf4j
 @Service

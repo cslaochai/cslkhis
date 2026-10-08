@@ -8,9 +8,6 @@ import java.time.LocalDate;
 
 /**
  * 按周期复制排班入参（把「上一周」整周搬到「下一周」）。
- *
- * <p>只按<b>星期</b>对齐：源区间长度必须与目标区间长度相同（7 天=整周搬运），
- * 否则「周一的班」落到目标区间里会随机错位，复制一次就要人工核对一整周。
  */
 @Data
 public class StaffScheduleCopyDTO {

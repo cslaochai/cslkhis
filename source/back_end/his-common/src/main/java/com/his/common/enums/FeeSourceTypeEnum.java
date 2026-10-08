@@ -1,10 +1,7 @@
 package com.his.common.enums;
 
 /**
- * 费用来源单据（字典 {@code his_fee_source_type}，落在费用记账流水的来源单据类型列）。
- *
- * <p>记账行必须说清"这笔费用是哪张临床单据产生的"：退费、医技回报、追溯都顺这条线回到源头，
- * 只写金额不写来源等于把应收变成一笔无主账。
+ * 费用来源单据（字典 his_fee_source_type，落在费用记账流水的来源单据类型列）。
  */
 public enum FeeSourceTypeEnum {
 

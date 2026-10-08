@@ -6,10 +6,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 门诊日志（法规台账）查询入参。
- *
- * <p>与 {@code OpdLogQueryDTO}（挂号+叫号运营全景，已改名「就诊总览」）刻意分开：
- * 本口径的基表是**门诊病历**，一行 = 一次有诊断事实的接诊，服务传染病漏报筛查；
- * 总览口径的基表是挂号，连没看病的行都在。混用会把「应上报未报」统计分母搞错。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

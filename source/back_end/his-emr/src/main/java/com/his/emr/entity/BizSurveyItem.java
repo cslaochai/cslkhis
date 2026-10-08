@@ -11,10 +11,6 @@ import java.math.BigDecimal;
 
 /**
  * 满意度问卷题目（sql/164）。
- *
- * <p>整卷覆盖保存：先 {@code purgeItemsByTemplate} 物理删再插 ——
- * 唯一键 uk_survey_item(template_id,seq_no) 不含 del_flag，软删留下的行还占着键，
- * 第二步插同一题号必然 Duplicate entry。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

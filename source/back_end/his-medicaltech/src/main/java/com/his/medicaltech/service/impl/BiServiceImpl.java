@@ -17,7 +17,6 @@ import java.util.Map;
 
 /**
  * BI 驾驶舱服务：只读聚合，口径注释在 SQL 上（药费=item_type 2/3/4；净额=收入-退款抵扣）。
- * 国考四指标（M5）口径见 {@link BiNationalVO} 类注释。
  */
 @Service
 @RequiredArgsConstructor

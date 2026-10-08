@@ -5,10 +5,6 @@ import lombok.Data;
 
 /**
  * 住院出院结算入参。
- *
- * <p><b>只允许传"这次结算的口径"，不允许传钱</b>：应收、统筹、应缴一律由 L2 按选中的记账行现算，
- * 医保类型也不在这里传（由患者档案的参保号推出，见 {@code SettlementBillService}），
- * 否则前端传什么就结算什么，小票与账单必然对不上。
  */
 @Data
 public class InpatientSettlementUpsertDTO {

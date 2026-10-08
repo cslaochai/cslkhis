@@ -13,9 +13,6 @@ import java.util.List;
 
 /**
  * 住院医嘱开立 / 修改入参（命名遵循 AGENTS.md：新增和修改用 `xxxUpsertDTO`）。
- *
- * <p>一次提交 = 一个「组套」（可只含 1 条医嘱）。同一 `orderGroup` 内必须**同起同停**，
- * 所以时间、类型这类"整组共享"的字段放在主单上，明细里只放与项目相关的字段。
  */
 @Data
 public class InpatientOrderUpsertDTO implements Serializable {

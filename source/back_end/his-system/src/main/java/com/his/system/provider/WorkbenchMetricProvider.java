@@ -6,44 +6,6 @@ import java.util.Map;
 
 /**
  * 「工作台上某一张卡的数字由谁算」的提供方（SPI）。
- *
- * <p><b>为什么需要它</b>：首页要一次画出 8~12 张卡。若前端逐卡发请求，登录后的第一屏
- * 就是 10+ 个 HTTP；若把这些统计 SQL 全塞进 {@code his-report} 的一张 DashboardMapper，
- * 就又回到「一个模块跨域查二十张表」的老路（表结构一改就静默少值，且没人说得清哪个数字归谁）。
- * 所以定这条：<b>谁的数据谁出</b> —— 挂号的卡由 his-appoint 算，药房的卡由 his-pharmacy 算，
- * 工作台只按 {@code widgetCode} 找 bean 取值。
- *
- * <p><b>为什么放在 his-system</b>：工作台卡片的聚合方 {@code WorkbenchServiceImpl}（在 his-system）
- * 用 {@code ObjectProvider<WorkbenchMetricProvider>} 收集各域实现的卡片；his-system 是
- * his-report / his-patient 等域共同的下游依赖，接口放这里既能被所有域 {@code implements}，
- * 又不会让安全代码反向依赖高层业务模块。本接口原先独立成模块（现已并入 his-system），只是套用了 RolePermissionProvider
- * 的先例；如今安全模块已整体并入 his-system，本接口与 RolePermissionProvider、JwtAuthenticationFilter
- * 等同处 his-system，无需再跨模块引用。
- *
- * <p><b>实现方必须遵守三条</b>：
- * <ol>
- *   <li>{@link #widgetCode()} 与工作台卡片注册表里登记的卡片编码 <b>一字不差</b>
- *       —— 对不上的后果不是报错，是那张卡永远不出数（静默失灵）；</li>
- *   <li>以聚合数字（{@code COUNT}/{@code SUM}）为主。只有待办/通知这类"列表卡"允许带回
- *       前 N 条（N≤10，且必须自己 {@code LIMIT}），禁止把整张表捞进首页 —— 首页不是列表页，
- *       点"查看全部"走各自的列表接口；</li>
- *   <li>自己收敛数据范围（{@code CurrentUser#getDeptId()} / DeptScopeProvider /
- *       {@code CurrentUser#getEmployeeId()}），不要指望调用方传过滤条件。</li>
- * </ol>
- *
- * <p>抛异常是安全的：{@code WorkbenchService} 对每个 provider 单独 try-catch，
- * 一张卡取数失败只让那张卡显示「—」，不会把整屏打成 500。
- *
- * <p><b>{@code summary()} 为什么返回 {@code Map<String, Object>} 而不是 VO</b>：
- * 这是跨模块 SPI，实现方散落在 his-system / his-appoint / his-medicaltech 等模块；
- * 聚合方 {@code WorkbenchServiceImpl} 把返回值<b>原样</b>塞进 {@code WorkbenchDataVO.data}
- * （类型就是 {@code Map<String, Object>}），前端再按 {@code data.xxx} 取键，而键名与
- * 前端 {@code workbench-widgets.js} 里该卡的 METRIC_SPECS 一一对应。卡片注册表可增删卡片，
- * 键集合是动态的，改这个签名要同时动所有实现方与前端。
- *
- * <p>因此各实现方应把出参先收进<b>有类型的 VO</b>（{@code com.his.<模块>.vo.XxxVO}），
- * 只在这条 SPI 边界上做一次 VO → Map 适配（用字段名做键），
- * 而不是让 {@code LinkedHashMap} 一路拼到底。
  */
 public interface WorkbenchMetricProvider {
 

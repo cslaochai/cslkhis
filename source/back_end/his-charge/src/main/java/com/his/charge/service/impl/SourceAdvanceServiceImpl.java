@@ -26,10 +26,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 来源单据推进实现：把记账行的 {@code source_type + source_id} 翻译成"该动哪张临床单据"。
- *
- * <p>分派只看 source_type（记账时由开单方写死），不再像旧代码那样用 item_type 猜：
- * 同一类项目可以从不同单据来（手工补记的药品费用就没有处方锚点），用类型猜会去改一张没交钱的单子。
+ * 来源单据推进实现：把记账行的 source_type + source_id 翻译成"该动哪张临床单据"。
  */
 @Slf4j
 @Service

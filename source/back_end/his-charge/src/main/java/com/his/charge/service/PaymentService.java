@@ -15,12 +15,6 @@ import java.util.List;
 
 /**
  * 支付资金流水服务（L3）：真金白银进出的唯一事实。
- *
- * <p><b>一笔钱一行、收退同表带符号</b>：{@code direction} 1-收 2-退，金额收正退负，
- * 日结 {@code SUM(amount)} 即净额。流水一旦写入，<b>资金事实</b>（金额、方向、渠道、状态）
- * 永不就地改写；收错钱了不就地删行，而是翻 txn_status=2-已冲正并另起一笔反向流水。
- * 账单是否付清由这里的 SUM 现算，不允许"点一下按钮翻支付状态"。
- * 唯一的例外是 {@link #claimForShift} 写的归集指针 —— 它登记"哪个班认领了这笔钱"，不碰钱。
  */
 public interface PaymentService extends IService<BizPaymentTxn> {
 
@@ -118,19 +112,9 @@ public interface PaymentService extends IService<BizPaymentTxn> {
      */
     int claimForShift(Long cashierId, LocalDateTime periodEnd, Long settlementId);
 
-    /**
-     * 住院预交金的一笔收/退（充值与退款共用同一份参数，方向由方法决定）。
-     *
-     * <p>患者信息必须由调用方带进来：L3 不认识"入院"这个临床概念，它只登记
-     * 「这笔钱挂在哪个主体上」（{@code owner_type=2} + {@code ownerId=admissionId}）。
-     *
-     * @param amount       金额，一律正数；方向由调的方法决定，绝不允许传负数"表示退款"
-     * @param payMethod    支付方式（字典 {@code his_pay_method}）；退款原路退回时以原充值流水为准
-     * @param receiptNo    柜面纸质收据号，可与流水勾对（患者端自助充值无纸票，留空）
-     * @param channelTxnNo 渠道真实交易号（患者端支付回调带回）；柜面扫码留空由服务端造模拟号
-     * @param txnTime      交易时间（不传取当前；小程序回调要按回调时间落账，否则班结时段对不上）
-     * @param remark       备注（退款写清原因）
-     */
+/**
+ * 住院预交金的一笔收/退（充值与退款共用同一份参数，方向由方法决定）。
+ */
     record PrepaySpec(Long admissionId, Long patientId, String patientNo, String patientName,
                       BigDecimal amount, Integer payMethod, String receiptNo, String channelTxnNo,
                       LocalDateTime txnTime, String remark) implements Serializable {

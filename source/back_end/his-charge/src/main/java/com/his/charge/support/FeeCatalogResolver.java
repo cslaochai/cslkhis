@@ -5,14 +5,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 /**
- * 记账行的<b>医保目录类别</b>推定（0-自费 1-甲类 2-乙类 3-丙类）。
- *
- * <p>本系统没有院内医保目录表（学习阶段不做真实外部对接），所以目录类别只能按项目类型推定，
- * 口径与旧收费实现完全一致（{@code ChargeServiceImpl} 当年在结算时贴标：药品乙类、其余甲类），
- * 只是把它挪回<b>记账</b>这一刻：目录类别是项目的属性，不该由"这个患者报销比例是多少"倒推。
- *
- * <p>接进真目录表之后，只需让各来源在 {@code FeeBookDTO.catalogType} 里传真实码值，
- * 本类推定退化为兜底。
+ * 记账行的医保目录类别推定（0-自费 1-甲类 2-乙类 3-丙类）。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class FeeCatalogResolver {

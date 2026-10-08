@@ -11,10 +11,6 @@ import java.util.List;
 
 /**
  * 检验项目白话词典。his-ai 自己的表，直接走 MP。
- *
- * <p><b>删除必须是物理删</b>：{@code uk_item_name} 唯一键不含 {@code del_flag}，
- * 删掉「血红蛋白」再新增同名条目会撞唯一键（BaseEntity 的 delFlag 带 @TableLogic，
- * {@code deleteById} 走的是软删）。见仓库铁律：唯一键不含 del_flag 的表，整表替换必须物理删。
  */
 @Mapper
 public interface SysLabPlainItemMapper extends BaseMapper<SysLabPlainItem> {

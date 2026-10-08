@@ -9,11 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 开住院证入参（门诊医生站调用）
- *
- * <p>患者信息由前端**快照**传入而不是后端反查：门诊医生站屏幕上就有这些值，
- * 传过来既省一次跨模块查询，也符合"证面写的是什么就是什么"的业务语义。
- *
- * <p>{@code registId} 是本字段组里唯一真正重要的外键——它是"这张证是哪次门诊开的"的凭据。
  */
 @Data
 public class AdmissionOrderUpsertDTO {

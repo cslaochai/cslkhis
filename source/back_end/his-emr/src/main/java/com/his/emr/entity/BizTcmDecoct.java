@@ -14,13 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 中药代煎服务单（sql/139）。
- *
- * <p>定位是<b>服务台账</b>，不是第二份收费单据：药已发出去才生成，
- * 一张处方最多一张（{@code uk_prescription}），所以本表**没有删除路径**，
- * 只能作废（status=9）并留原因。
- *
- * <p>患者/剂量等字段全是<b>快照</b>：煎药室手上那张回执要能独立成立，
- * 不能因为处方后来被改、患者被合并就看不出这单煎的是谁。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

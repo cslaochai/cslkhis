@@ -40,26 +40,6 @@ import java.util.Objects;
 
 /**
  * 住院会诊服务实现（P4.1）。
- *
- * <p>除接口注释里那条状态机（申请 → 应答 → 完成 → 回写病历）之外，本类固化了这些
- * <b>至少踩过一次或一定会被追问</b>的点：
- *
- * <ol>
- *   <li><b>未应答不可完成</b>：与"医嘱未校对不可执行"同源。会诊方没接诊就出结论，
- *       等于替会诊科室编造了一次它没参与的会诊。</li>
- *   <li><b>取消只允许「待应答」</b>：一旦接诊，这条记录就必须走完成 ——
- *       取消它是在销毁"已经发生过的临床行为"。</li>
- *   <li><b>申请字段服务端推导</b>：申请科室取入院科室、申请医生取当前登录用户（员工ID）、
- *       患者取入院记录的患者。前端只给"给谁、请哪个科、为什么"。</li>
- *   <li><b>同一住院 + 同一会诊科室不允许并存两条未完成会诊</b>：这就是四核对里
- *       "重复"那一类（两次=重复）。要再请，先把上一条完成或取消。</li>
- *   <li><b>完成即回写病历</b>（record_type=9 会诊记录，直接"已提交"），并把病历ID回填
- *       记录ID：四核对里"病历有医嘱没记"这一侧必须能查到这次会诊。
- *       回写失败整笔事务回滚 —— 不允许出现"会诊说完成了、病历里查不到"。</li>
- *   <li><b>急会诊超时是查询时算的</b>：不落状态列、不起定时任务，
- *       与"危急值超时是查询时算的"同一口径。</li>
- *   <li><b>时间一律截到秒</b>：库表 DATETIME(0) 会四舍五入，不截就"写进去的 ≠ 读回来的"。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -114,10 +94,6 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String save(ConsultationUpsertDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了
-        if (dto == null) {
-            throw new BusinessException("入院ID不能为空（会诊必须挂在一次住院上）");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -309,10 +285,6 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void accept(ConsultationAcceptDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了
-        if (dto == null) {
-            throw new BusinessException("会诊ID不能为空");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -360,10 +332,6 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String finish(ConsultationFinishDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了
-        if (dto == null) {
-            throw new BusinessException("会诊ID不能为空");
-        }
         BizConsultation entity = mustGet(dto.getConsultationId());
 
         // ★ 铁律：未应答不可完成（= 医嘱未校对不可执行）
@@ -472,10 +440,6 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void cancel(ConsultationCancelDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了
-        if (dto == null) {
-            throw new BusinessException("会诊ID不能为空");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");
@@ -530,10 +494,6 @@ public class InpatientConsultationServiceImpl extends ServiceImpl<BizConsultatio
 
     @Override
     public ConsultationVO getDetailById(Long consultationId) {
-        // ②非web入口：service 方法参数判空，没有 DTO 字段可挂注解（HTTP 侧 @RequestParam 已必填）
-        if (consultationId == null) {
-            throw new BusinessException("会诊ID不能为空");
-        }
         ConsultationVO vo = bizConsultationMapper.selectConsultationById(consultationId);
         if (vo == null) {
             throw new BusinessException("会诊记录不存在");

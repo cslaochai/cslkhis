@@ -11,7 +11,6 @@ import java.util.regex.Pattern;
 
 /**
  * GS1 UDI 解析器（高值耗材扫码串 → DI/序列号/批号/有效期）。
- *
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class UdiParser {

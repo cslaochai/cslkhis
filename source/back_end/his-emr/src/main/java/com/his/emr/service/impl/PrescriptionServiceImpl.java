@@ -269,16 +269,16 @@ public class PrescriptionServiceImpl extends ServiceImpl<BizMedicalRecordMapper,
                 continue;
             }
             DrugRationalGroupDTO group = new DrugRationalGroupDTO();
-            group.setGroupId(String.valueOf(id));
+            group.setGroupId(id);
             group.setItems(details.stream().map(this::toRationalItem).toList());
             groups.add(group);
         }
 
-        Map<String, DrugRationalGroupVO> checked = drugRationalCheckService.checkGroups(groups).stream()
+        Map<Long, DrugRationalGroupVO> checked = drugRationalCheckService.checkGroups(groups).stream()
                 .collect(Collectors.toMap(DrugRationalGroupVO::getGroupId, g -> g, (a, b) -> a));
         List<PrescriptionRationalVO> results = new ArrayList<>(ids.size());
         for (Long id : ids) {
-            DrugRationalGroupVO group = checked.get(String.valueOf(id));
+            DrugRationalGroupVO group = checked.get(id);
             PrescriptionRationalVO vo = new PrescriptionRationalVO();
             vo.setPrescriptionId(id);
             vo.setHits(group == null || group.getHits() == null ? Collections.emptyList() : group.getHits());

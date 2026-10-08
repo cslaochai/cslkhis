@@ -12,16 +12,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 参考区间解析器：把人工维护的自由文本区间解析为 {@link LabReferenceRange}。
- * <p>
- * <b>设计原则：宁可不判定，不可猜。</b>
- * 解析失败一律返回 {@link LabReferenceRange.Kind#UNPARSABLE}。
- * 一个「猜出来的」参考区间比没有区间危险得多 —— 它会让系统自信地报出错误结论，
- * 而且不会留下任何异常痕迹（详见 {@link LabAbnormalJudge} 类注释里的同款教训）。
- * <p>
- * 另一个刻意的行为：区间带性别分支（男120-160/女110-150）而患者性别未知时，
- * 同样返回 UNPARSABLE。<b>取男取女都是错的</b>，血红蛋白按男性标准判女性患者的贫血
- * 是会漏诊的。
+ * 参考区间解析器：把人工维护的自由文本区间解析为 LabReferenceRange。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class LabReferenceRangeParser {

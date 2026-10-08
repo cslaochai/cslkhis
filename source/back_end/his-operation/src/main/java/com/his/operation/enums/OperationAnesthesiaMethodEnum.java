@@ -4,12 +4,6 @@ import lombok.Getter;
 
 /**
  * 麻醉方式（1-全麻 2-椎管内 3-神经阻滞 4-局麻 5-其他）。
- *
- * <p>麻醉方式属于手术侧口径，刻意与给药途径等码表保持独立，不要图省事复用别的码表。
- *
- * <p>每个码值带一个 {@code chargeItemCode}（该方式对应的麻醉费项目编码）：
- * 计费项目是由麻醉方式唯一决定的收费口径，与码值同生共死，
- * 所以挂在枚举上而不是留在计费类里当一张码值→编码的映射表。
  */
 @Getter
 public enum OperationAnesthesiaMethodEnum {

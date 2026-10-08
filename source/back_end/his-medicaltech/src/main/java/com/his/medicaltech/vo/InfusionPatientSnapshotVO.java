@@ -7,10 +7,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 门诊输液患者快照（{@code BizOutpInfusionMapper#selectPatientSnapshot}）。
- *
- * <p>服务端重查，<b>不信任前端传来的姓名/性别/年龄</b>：输液单是要打印出来贴在床头的，
- * 上面写着别人的姓名就是医疗事故，不是显示问题。
+ * 门诊输液患者快照（BizOutpInfusionMapper#selectPatientSnapshot）。
  */
 @Data
 public class InfusionPatientSnapshotVO implements Serializable {

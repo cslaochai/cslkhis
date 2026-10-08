@@ -14,8 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 入院登记 Mapper
- * <p>自定义 SQL 不受 {@code @TableLogic} 影响，所有 JOIN 必须显式带 {@code del_flag = 0}。
- * <p>注意病区没有 del_flag 列，不要给它加条件。
  */
 @Mapper
 public interface BizAdmissionMapper extends BaseMapper<BizAdmission> {

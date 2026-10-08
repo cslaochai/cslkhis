@@ -11,9 +11,6 @@ import java.time.LocalDate;
 
 /**
  * 入库单明细入参
- *
- * 药品编码/名称/规格/单位由服务端在生成时从药品字典**快照**写入，
- * 前端传了也不采信（否则可以伪造一张写着别的药名的入库凭证）。
  */
 @Data
 public class DrugInboundItemDTO {

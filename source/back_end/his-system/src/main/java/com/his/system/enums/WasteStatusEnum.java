@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * 医疗废物状态枚举（码值口径 = biz_medical_waste.status 列注释）。
- *
- * <p>文案供后端拼提示与 VO 回填用（本码值无字典表，后端即唯一文案口径）。
  */
 @Getter
 public enum WasteStatusEnum {

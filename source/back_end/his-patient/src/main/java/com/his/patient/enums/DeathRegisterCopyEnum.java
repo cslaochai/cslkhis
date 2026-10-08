@@ -5,13 +5,6 @@ import lombok.Getter;
 
 /**
  * 死亡证明领取联次枚举（码值口径 = biz_death_registration.received_copies 列注释）。
- *
- * <p>该列是<b>逗号分隔的复数字段</b>（如 "1,3"表示同时领取记录联与殡葬联），不是单值列，
- * 所以校验注解 {@code @InEnum} 表达不了（注解只能校验单值）——
- * 逐个值 split 后调 {@link #fromCode(String)} 判定，写在
- * {@code DeathRegistrationServiceImpl#normalizeCopies}。
- *
- * <p>code 用 String 而非 int：列里存的就是 "1" / "2" 这种字符串，拆出来的片段天然是字符串。
  */
 @Getter
 public enum DeathRegisterCopyEnum {

@@ -8,9 +8,6 @@ import java.util.List;
 
 /**
  * 批量上传结果VO（总数 / 成功 / 失败 + 失败明细）
- *
- * <p>失败明细必须回前端：医保平台拒收的原因（码不存在 / 批号不符 / 重复上传）要能落到具体哪一行，
- * 否则窗口只能看到"3 条失败"却不知道是哪 3 条。
  */
 @Data
 public class DrugTraceUploadResultVO {

@@ -18,19 +18,6 @@ import java.util.List;
 
 /**
  * 心电工作站（sql/173，菜单 417）。
- *
- * <p>权限口径与「分岗」直接对应（与放射 sql/138 同款）：
- * <ul>
- *   <li>进页面（listPage/getDetail）→ {@code medtech:ecg:list}；</li>
- *   <li>签到/波形采集（checkIn/collectWave/simulateWave）→ {@code medtech:ecg:collect}
- *       —— 采集是技师岗；</li>
- *   <li>测量/Holter 分析/写报告（saveMeasure/saveHolter/saveDraft/submit）→ {@code medtech:ecg:write}
- *       —— 测量参数与 Holter 分析是报告的证据链，随报告权限一并放给书写岗；</li>
- *   <li>审核/退回（audit/reject）→ {@code medtech:ecg:audit}；</li>
- *   <li>发布（publish）→ {@code medtech:ecg:publish}。</li>
- * </ul>
- * 按钮码只是第一道门，服务端另有硬闸门（item_type=3 / 波形存在 / Holter 已分析 /
- * 不能自审 / 发布必须已审核），见 {@code EcgServiceImpl}。
  */
 @Tag(name = "心电工作站")
 @RestController

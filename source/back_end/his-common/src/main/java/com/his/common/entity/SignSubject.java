@@ -4,20 +4,6 @@ import com.his.common.util.SignCryptoUtil;
 
 /**
  * 被签对象在"签名这一刻"的投影。
- *
- * <p>由业务模块的 {@link SignableContentProvider} 组装。刻意做成一份**扁平快照**而不是
- * 直接把实体交出去：his-common 不认识任何业务实体，签名层也只有这份快照可用，
- * 于是"签名层顺手改了业务字段"这种事在结构上就不可能发生。
- *
- * @param bizId            对象ID
- * @param bizNo            对象单号（快照，可为空）
- * @param patientId        患者ID（可为空）
- * @param patientName      患者姓名
- * @param deptId           对象所属科室ID
- * @param deptName         对象所属科室名称
- * @param bizStatus        对象自身的业务状态码（如病历 record_status）
- * @param bizStatusText    对象业务状态文案（由业务侧翻译好，未知码值要渲染成"未知(n)"）
- * @param canonicalContent **规范化后的被签内容全文**（由 {@code CanonicalText} 生成）
  */
 public record SignSubject(
         Long bizId,

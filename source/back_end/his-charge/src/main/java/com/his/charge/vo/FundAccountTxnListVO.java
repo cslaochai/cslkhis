@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 资金账户流水出参（L3 台账）：金额带符号，入账为正、扣用为负。
- *
- * <p>本笔后余额是审计快照，不是余额来源；账户详情弹框一次拿全，不再分页反查。
  */
 @Data
 public class FundAccountTxnListVO {

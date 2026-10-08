@@ -12,8 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医疗废物登记实体（86 号脚本新增）。
- *
- * <p>三态：1已登记 → 2已交接 → 3已处置。已交接后禁删（交接单是对外凭证）。
  */
 @Data
 @TableName("biz_medical_waste")

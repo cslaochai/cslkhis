@@ -9,22 +9,6 @@ import java.time.LocalDate;
 
 /**
  * 日终结转用的裸 SQL。
- *
- * <p>为什么单开一个 Mapper 而不是加进 {@code BizAppointInfoMapper}：
- * 这几条 UPDATE 是「按天批量改状态」，跟挂号单的日常读写不是一类操作；
- * 更要紧的是它们<b>不动号源池</b>（跟 cancelRegist 有本质区别，见下），
- * 放在一起容易被人顺手改成「释放号源」，所以隔离开。
- *
- * <p><b>为什么不释放号源</b>：号源池（排班信息.used_source/available_source）
- * 表达的是「那天这个班次卖出去几张号」，是<b>历史事实</b>。昨天的号不会因为患者没来
- * 就变回可卖的（日期已经过去），把 used_source 减回去只会让历史报表失真。
- * 号源回收只在<b>当天</b>的退号里做（见 {@code AppointServiceImpl#cancelRegist}）。
- *
- * <p><b>「爽约」的判据是「有没有队列行」，不是「regist_status 是不是 1」</b>。
- * 这点是拿数据验出来的：急诊直录建档时会同时写 regist_status=1(已挂号) 和一条
- * 候诊中的队列行（急诊不签到，直接进队列）。只看 regist_status 会把这批「明明已经到院」
- * 的急诊患者判成爽约 —— 患者下次来会看到自己「上次爽约」。
- * 所以：<b>有队列行 = 到过院；没队列行 = 真没来。</b>
  */
 @Mapper
 public interface DayEndSettleMapper {

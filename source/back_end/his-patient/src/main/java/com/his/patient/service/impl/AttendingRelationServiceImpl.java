@@ -52,6 +52,7 @@ public class AttendingRelationServiceImpl
 
     @Override
     public List<AttendingRelationVO> listByAdmission(Long admissionId, Integer status) {
+        // C-非 web 入参：全仓暂无 Controller 注入本服务（无 web 入口可核），Bean Validation 覆盖不到，保留
         if (admissionId == null) {
             throw new BusinessException("住院登记ID不能为空");
         }
@@ -65,6 +66,7 @@ public class AttendingRelationServiceImpl
 
     @Override
     public List<AttendingRelationVO> listByEmployee(Long employeeId, Integer status) {
+        // C-非 web 入参：全仓暂无 Controller 注入本服务（无 web 入口可核），Bean Validation 覆盖不到，保留
         if (employeeId == null) {
             throw new BusinessException("医生ID不能为空");
         }

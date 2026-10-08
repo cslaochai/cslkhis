@@ -7,9 +7,6 @@ import java.math.BigDecimal;
 
 /**
  * 日清单 / 结算试算里的单条费用行（一行 = 一条 L1 记账行，红冲负行同样是一行）。
- *
- * <p>金额直接就是记账行金额（负行为负），不做任何"取绝对值再猜方向"的处理：
- * 清单合计永远等于 SUM(记账行)，也就是这次住院的应收净额。
  */
 @Data
 public class DailyBillItemVO implements Serializable {

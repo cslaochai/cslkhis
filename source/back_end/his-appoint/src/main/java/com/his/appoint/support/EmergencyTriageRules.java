@@ -13,18 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 急诊分诊硬规则（纯代码，<b>绝不交给模型判断</b>）。
- * <p>
- * <b>为什么这里必须硬编码：</b> 分诊级别关系到「谁先被抢救」。生命体征达到红线
- * （SpO2 &lt; 90、SBP &lt; 90、GCS ≤ 8 …）时，级别是确定性的医学事实，
- * 不是需要「理解语义」的问题。把它交给概率模型，漏掉一次就是一条命。
- * <p>
- * 模型的用武之地在另一头：主诉文本里的语义线索（「压榨性胸痛伴大汗」→ 胸痛中心），
- * 以及体征没到红线但组合起来可疑的情况。所以本类只负责<b>确定性的下限</b>，
- * 模型可以在此基础上建议更严，但不能更松 —— 见
- * {@code EmergencyTriageCapability} 的「只升不降」合并逻辑。
- * <p>
- * <b>本类只产出「建议」，不写库、不覆盖人工分级。</b>
+ * 急诊分诊硬规则（纯代码，绝不交给模型判断）。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EmergencyTriageRules {
@@ -408,12 +397,7 @@ public final class EmergencyTriageRules {
     }
 
     /**
-     * 红旗征象。<b>每条红旗都自带处置建议</b>，而不是只报一个级别 ——
-     * 分诊护士真正需要的是「接下来做什么」，只给级别的提示几乎不会被采纳。
-     *
-     * @param label    征象描述
-     * @param minLevel 该征象对应的最低严重级别（数值越小越严重）
-     * @param action   对应的处置建议
+     * 红旗征象。每条红旗都自带处置建议，而不是只报一个级别 ——
      */
     public record RedFlag(String label, int minLevel, String action) {
     }

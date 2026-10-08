@@ -8,10 +8,6 @@ import com.his.common.vo.TsaTokenVerifyVO;
 
 /**
  * 可信时间戳（TSA）运维：状态、令牌台账与运维操作（G6b）。
- *
- * <p>盖章/验签能力在 {@code TsaChannelService}，本接口管"给页面用的能力"：
- * 状态与台账分页（只读），以及三个运维操作——服务启停、时间来源切换、令牌复验。
- * 每个写操作都返回操作后的最新 {@link TsaStatusVO}，界面一次往返就能刷新。
  */
 public interface TsaService {
 

@@ -86,9 +86,6 @@ public class FollowupTaskDTO {
 
     /**
      * 由随访任务生成复诊号（复诊来源 4-随访计划复诊）
-     *
-     * <p>原病历要单独传：任务表只记了患者与随访内容，没有「哪一次就诊」，
-     * 而收费策略与间隔天数全部以原病历的就诊日/科室/医生为基准 —— 缺它判不出价。
      */
     @Data
     public static class CreateRevisit implements Serializable {

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,7 +14,9 @@ import java.time.LocalDateTime;
  */
 public class StatReportVO {
 
-    /** 台账列表行（不含 payload 大字段） */
+    /**
+     * 台账列表行（不含 payload 大字段）
+     */
     @Data
     public static class Row {
         /** 主键ID */
@@ -64,8 +67,11 @@ public class StatReportVO {
         private String remark;
     }
 
-    /** 明细（含报文原文，前端预览/打印用） */
+    /**
+     * 明细（含报文原文，前端预览/打印用）
+     */
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class Detail extends Row {
         /** 上报报文 */
         private String payload;

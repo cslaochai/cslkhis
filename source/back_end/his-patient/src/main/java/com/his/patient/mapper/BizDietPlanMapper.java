@@ -15,13 +15,6 @@ import java.util.List;
 
 /**
  * 膳食方案 Mapper。
- *
- * <p><b>物理删除</b>：唯一键 {@code uk_diet_plan_order(order_id)} 不含 del_flag，
- * 软删行会占住这条医嘱的键位 —— 医嘱重新校对（或撤停后重开）时派生第二次 insert 直接
- * {@code Duplicate entry}，现象是"停嘱再开就 500"。删除一律走 {@link #purgeById}。
- *
- * <p>排序 {@code confirm_status ASC, start_time DESC, id DESC}：待接收的排最前，
- * 营养科一进门看到的就是今天要接的单。
  */
 @Mapper
 public interface BizDietPlanMapper extends BaseMapper<BizDietPlan> {

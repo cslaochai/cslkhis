@@ -5,11 +5,6 @@ import lombok.Getter;
 
 /**
  * 急诊派单方式枚举
- * <p>
- * 存在的理由：急诊登记不选医生就落进"共享池"，而原先系统里事后无法区分
- * 「医生自己没填」和「系统查不到在岗医生」——两者都表现为 doctor_id 为 NULL，
- * 于是超时追办不知道该找谁，兜底也无从下手。这一列把派单来源变成事实。
- * 码值同步 sql/145 的 assign_type 列注释。
  */
 @Getter
 @AllArgsConstructor

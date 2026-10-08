@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * 绩效成本 Mapper：科室收入从 L1 费用记账流水聚合（跨模块裸 SQL，一处收口）。
- * 注解值必须是编译期常量，用 + 拼接（不能用 formatted()）。
  */
 @Mapper
 public interface PerfMapper {

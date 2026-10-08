@@ -18,9 +18,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 药品采购订单控制器
- * <p>
- * 链路：建单（含明细）→ 审批 → 入库（按明细建/加药品批次 + 写库存流水）
- * 状态机与金额口径见 {@link com.his.pharmacy.service.impl.PurchaseOrderServiceImpl} 类注释。
  */
 @Tag(name = "药品采购")
 @RestController

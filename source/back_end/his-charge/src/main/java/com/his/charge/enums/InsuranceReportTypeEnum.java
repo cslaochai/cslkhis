@@ -4,9 +4,6 @@ import lombok.Getter;
 
 /**
  * 医保报盘报文类型（biz_insurance_report.report_type）。
- *
- * <p>注意：与 biz_report.report_type（检查/检验）语义<b>不同</b>，这里是<b>报文维度</b>（上报/撤销），
- * 不要混用 {@code com.his.medicaltech.enums.ReportTypeEnum}。</p>
  */
 @Getter
 public enum InsuranceReportTypeEnum {

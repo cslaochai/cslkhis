@@ -11,10 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 待办/通知两张卡共用的出参装配。
- *
- * <p>刻意不直接吐 {@code SysMessage} 实体：Map/实体经 Jackson 出来时，雪花 ID 是数字，
- * JS 侧 {@code Number} 只有 53 位精度，19 位的 {@code messageId} 会被静默四舍五入
- * （点"处理"就打不开原消息）。这里统一转成字符串，时间格式也固定成前端可直接渲染的文本。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class MessageMetricSupport {
@@ -48,7 +44,9 @@ public final class MessageMetricSupport {
         return time == null ? null : DateFormats.DATETIME_MINUTE.format(time);
     }
 
-    /** 卡片里的一条消息（字段与 {@code lib/messageCatalog.js} 的 bizType 对齐，展示名由前端查表） */
+    /**
+     * 卡片里的一条消息（字段与 lib/messageCatalog.js 的 bizType 对齐，展示名由前端查表）
+     */
     @Data
     public static class Item {
         /** 已是字符串：雪花 ID 出 Map 会被 JS 丢精度，见类注释 */

@@ -13,12 +13,6 @@ import java.util.List;
 
 /**
  * 住院病历文书列表行 VO。
- *
- * <p>刻意**不带大 TEXT 字段**（现病史/体格检查正文等只在详情里给）：
- * 列表里放一堆长文本会让前端渲染慢、也让"列表看着有值、其实没查"这种误会没有发生的余地。
- *
- * <p>按钮可用性（{@code canEdit/canSubmit/canArchive}）一律由后端给，前端不自己判状态码
- * —— 与 P1 医嘱工作区同一口径，避免第二套状态机。
  */
 @Data
 public class InpatientRecordVO implements Serializable {

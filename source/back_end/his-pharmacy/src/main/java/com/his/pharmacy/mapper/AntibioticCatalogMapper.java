@@ -12,11 +12,6 @@ import java.util.List;
 
 /**
  * 抗菌药物分级目录（裸 SQL 读写药品字典）。
- *
- * <p>药品字典在 his-system 模块 —— 跨模块写药品主数据一律走本 Mapper 的裸 SQL，
- * 不让 his-emr 反向依赖 his-system 的实体（AGENTS 铁律：跨模块读异模块表用裸 SQL Mapper）。
- *
- * <p>分页必须补唯一二级键 id：MySQL 在同值排序下行序不稳定，翻页会重复/丢行。
  */
 @Mapper
 public interface AntibioticCatalogMapper {

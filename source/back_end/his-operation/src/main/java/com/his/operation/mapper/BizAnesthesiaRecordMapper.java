@@ -11,9 +11,6 @@ import org.apache.ibatis.annotations.Select;
 
 /**
  * 麻醉记录单 Mapper。
- *
- * <p>列表 JOIN 患者表只取患者编号（主表没存这一列），
- * 姓名/性别/年龄一律用主表快照 —— 否则 ResultSet 里两个同名列，取到哪一个取决于驱动。
  */
 @Mapper
 public interface BizAnesthesiaRecordMapper extends BaseMapper<BizAnesthesiaRecord> {

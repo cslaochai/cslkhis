@@ -12,10 +12,6 @@ import java.util.List;
 
 /**
  * 住院病历文书详情 VO（含全部结构化要素）。
- *
- * <p>与列表 VO 分成两个类是**故意的**：列表不带长文本，详情带全。
- * 如果一个类两用，就会出现"列表接口也返回现病史全文"的浪费，
- * 或者更糟 —— "列表里现病史是空的"被当成 bug 反复排查。
  */
 @Data
 public class InpatientRecordDetailVO implements Serializable {

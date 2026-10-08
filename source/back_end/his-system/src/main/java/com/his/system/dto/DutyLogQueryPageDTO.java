@@ -9,9 +9,6 @@ import java.time.LocalDate;
 
 /**
  * 值班日志分页查询。
- *
- * <p>默认「近 7 天」而不是全部：交班本是流水账，翻三个月前的记录没有意义，
- * 而默认带出当天和前一天是必须的 —— 接班人一进页面就要看到昨夜留了什么。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

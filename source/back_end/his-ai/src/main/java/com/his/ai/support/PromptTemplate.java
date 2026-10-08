@@ -19,21 +19,6 @@ import java.util.regex.Pattern;
 
 /**
  * 提示词模板渲染器。
- * <p>
- * 模板放 {@code his-ai/src/main/resources/prompts/*.md}，好处是：
- * 调提示词不需要改 Java 代码、不需要重新编译；出问题时能精确定位是哪一版产生的坏结果。
- * <p>
- * 文件格式：
- * <pre>
- * version: 1.0.0
- * updated_at: 2026-09-17
- * （system 段：角色 + 规则 + 输出 JSON 结构，可含 {{变量}}）
- *
- * &lt;!-- user --&gt;
- * （user 段：本次数据，可含 {{变量}}）
- * </pre>
- * 模板按文件名缓存，首次渲染时加载；如需热更新改完文件重启即可（演示环境够用，
- * 生产可改为带 TTL 的缓存）。
  */
 @Slf4j
 @Component

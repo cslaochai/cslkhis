@@ -6,11 +6,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
- * 患者端待缴账单的摊行明细（{@link PendingBillVO#getDetails()} 的元素）。
- *
- * <p>字段与 {@code BizSettlementBillItem} 同构，但<b>只带患者端要显示的列</b>：
- * 不含 billId/feeRecordId 等内部关联键，也不含 delFlag —— 这些是账务内部事实，
- * 患者端看见它们没有意义，还容易被误当成"能点进去的入口"。
+ * 患者端待缴账单的摊行明细（PendingBillVO#getDetails() 的元素）。
  */
 @Data
 public class PendingBillItemVO implements Serializable {

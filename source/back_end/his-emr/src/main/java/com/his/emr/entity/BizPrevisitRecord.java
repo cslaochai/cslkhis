@@ -9,11 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 患者端预问诊记录（G-05）。
- *
- * <p>一次挂号一份问卷（regist_id 唯一，重复提交覆盖更新）；患者提交后由 AI 环节
- * 把结构化答案凝成一段就诊用病史摘要（模型不可用时规则模板兜底），
- * 医生站接诊时读报告作参考。量表结构在 {@code PrevisitQuestionnaireSupport}
- * 版本化，answers_json 只存题目与作答的回显数据。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

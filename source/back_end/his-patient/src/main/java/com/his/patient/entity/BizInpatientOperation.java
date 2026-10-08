@@ -12,8 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院手术操作明细（病案首页手术明细）—— 病案首页的手术侧
- * <p>手术操作编码用 ICD-9-CM-3。高编高套最常见的手法之一就是「只做了探查却编切除术」，
- * 因此 {@code operation_basis} 必须记录手术记录中的支持性描述，供四核对使用。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

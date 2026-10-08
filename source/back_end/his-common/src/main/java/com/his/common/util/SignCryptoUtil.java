@@ -12,18 +12,6 @@ import java.util.HexFormat;
 
 /**
  * 摘要与签名/验签的**唯一实现点**。
- *
- * <p>三个铁律：
- * <ol>
- *   <li>摘要算法固定 SHA-256（十六进制小写，64 字符），签名算法固定 SHA256withRSA。
- *       摘要值会被写进库、被印在页面上、被人工比对 —— 大小写不统一会让"看着一样其实不一样"。</li>
- *   <li>被签内容一律按 UTF-8 编码。**不允许调用方传字节数组**，
- *       避免"一边按 UTF-8、一边按平台默认编码"这种只在中文内容上暴露的坑。</li>
- *   <li>验签失败（{@code false}）与验签异常（抛错）都必须能被区分：
- *       前者是"证据不对"，后者是"密钥/算法坏了"。本类把异常一律收敛成
- *       {@link SignException} 抛出，绝不 swallow 成 {@code false} ——
- *       把"密钥解析不了"报成"签名不匹配"会让人去查错方向。</li>
- * </ol>
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SignCryptoUtil {

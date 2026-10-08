@@ -6,9 +6,6 @@ import org.apache.ibatis.annotations.Select;
 
 /**
  * 药品字典只读查询（用药说明用）。
- *
- * <p>只按药品ID/编码取单条，不做任何写操作；查不到返回 null，
- * 调用方按「无说明书信息」处理（用药说明的事实层来自处方医嘱，说明书只是补充）。
  */
 public interface SysDrugGuideMapper extends BaseMapper<SysDrugGuide> {
 

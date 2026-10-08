@@ -6,10 +6,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 清点明细出参。
- *
- * <p>{@code consistent} 是"关体后是否与术前一致"的机器比较结果：
- * 数值相等就一致，任一列为 null 就是<b>还没数</b>，返回 null 而不是 false ——
- * 没数 ≠ 不一致，这与"未判定 ≠ 异常"是同一条铁律。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

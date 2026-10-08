@@ -11,10 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 病理蜡块与切片明细（病理蜡块与切片）
- *
- * <p>状态机：1 待取材 → 2 已取材 → 3 已包埋 → 4 已切片（单向推进）。
- * 主单进入「已制片(4)」的前置条件是至少有一块已取材（status >= 2），
- * 这条规则在 PathologyService 收口 —— 没有蜡块就说"制片完成"是数据造假。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

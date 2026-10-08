@@ -9,10 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 出院记录快照（跨模块裸 SQL：出院记录 + 入院记录 + 患者档案 + 科室）。
- *
- * <p>随访问卷要用它建单，所以出院时间给 {@link LocalDateTime} 而不是文本：
- * 早先为了绕开「裸 Map 取 DATETIME 拿到日期对象强转炸掉」统一 DATE_FORMAT 成字符串，
- * 代价是每个消费方都要再 parse 一次；换成有类型的类之后 MyBatis 自己会映射。
  */
 @Data
 public class DischargeSnapshotVO implements Serializable {

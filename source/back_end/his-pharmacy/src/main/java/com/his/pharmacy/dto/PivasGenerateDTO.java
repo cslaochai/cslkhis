@@ -9,8 +9,6 @@ import java.time.LocalDate;
 
 /**
  * 生成静配单入参。
- *
- * <p>按「病区 + 调配日期」捞该病区在院患者的静脉用药医嘱；admissionId 可选，传了只排这一个患者。
  */
 @Data
 public class PivasGenerateDTO implements Serializable {

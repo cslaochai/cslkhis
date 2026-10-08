@@ -9,9 +9,6 @@ import java.io.Serializable;
 
 /**
  * 新增就诊人入参（建档并自动绑定当前账号，不建登录账号）。
- *
- * <p>手机号必填且需短信验证 —— 验证码发往该号，证明操作人控制一个
- * 运营商实名手机号，降低拿他人身份证盲建档的风险。
  */
 @Data
 public class GuardianUpsertDTO implements Serializable {

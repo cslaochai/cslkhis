@@ -22,11 +22,7 @@ import java.math.BigDecimal;
 import java.util.*;
 
 /**
- * 挂号侧收费能力 SPI 实现，落在 his-charge（四层模型口径，见 {@link AppointChargeGateway}）。
- *
- * <p>挂号是「记账即结算」：两张应收（挂号费、诊查费）先进 L1，紧接着锁成一张
- * {@code bill_type=1} 的账单，窗口收钱只写 L3 流水。所以本类不产生任何"收费单"，
- * 挂号表上挂的也是 <b>账单ID</b>。
+ * 挂号侧收费能力 SPI 实现，落在 his-charge（四层模型口径，见 AppointChargeGateway）。
  */
 @Slf4j
 @Service

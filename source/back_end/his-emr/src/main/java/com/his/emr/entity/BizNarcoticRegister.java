@@ -12,17 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 麻精药品专册（台账）实体。
- *
- * <p><b>性质：这是证据，不是流程状态。</b>
- * 与电子签名证据同一思路 —— 一行登记落库后，
- * 业务字段（患者/药品/数量/批号/双人姓名）**永不被 UPDATE 覆盖**，
- * 只允许两类受控补记：
- * <ol>
- *   <li>空安瓿回收（{@code ampouleReturned} / {@code ampouleDestroyed} / {@code returnBy} / {@code returnTime}）</li>
- *   <li>备注</li>
- * </ol>
- * 这条约束由 {@code NarcoticControlServiceImpl.updateAmpouleReturn} 保证（只 set 那几个字段后 updateById），
- * 不提供任何"编辑专册"的通用入口。评审查的就是这一点：专册能不能被改。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

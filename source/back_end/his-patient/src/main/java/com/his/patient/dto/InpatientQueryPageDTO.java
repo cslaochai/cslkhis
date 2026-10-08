@@ -6,7 +6,9 @@ import lombok.EqualsAndHashCode;
 
 import java.util.List;
 
-/** 住院列表查询入参 */
+/**
+ * 住院列表查询入参
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class InpatientQueryPageDTO extends PageParam {

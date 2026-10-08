@@ -26,11 +26,6 @@ import java.math.RoundingMode;
 
 /**
  * 绩效成本核算服务。
- *
- * <p>口径：收入 = L1 费用记账流水月度净额（收正退负 SUM 现算，按记账行所属科室归属，
- * 账务归属月取 book_time）；
- * 药占比 = 药品收入/总收入；结余 = 收入 - 成本；绩效 = max(0, 结余) × 提成系数。
- * 成本同科室同月唯一（重复录入拒绝）；核算结果同科室同月唯一（重算覆盖）。
  */
 @Service
 @RequiredArgsConstructor

@@ -6,11 +6,6 @@ import lombok.NoArgsConstructor;
 
 /**
  * 病历记录跨域摘要：清单与病历的诊断一致性比对只读这 6 个字段。
- *
- * <p>「清单主诊断与病历诊断是否一致」是医保审核的硬规则之一，所以收费域必须能看到
- * 病历的诊断编码 —— 但它不需要病历正文，也不需要开单医师、科室这些字段。
- *
- * @see EmrGateway
  */
 @Data
 @NoArgsConstructor

@@ -13,9 +13,6 @@ import java.time.LocalDate;
 
 /**
  * 门诊治疗站入参（治疗申请 / 按次流水）。
- *
- * <p>日期入参用空格/短横分隔的 pattern 宽进（AGENTS §3）：LocalDate 只认 yyyy-MM-dd，
- * 前端 el-date-picker 的 value-format 必须与之一致。
  */
 public class TreatmentDTO {
 

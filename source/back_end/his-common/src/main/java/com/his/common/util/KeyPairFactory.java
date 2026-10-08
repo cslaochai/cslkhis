@@ -9,7 +9,6 @@ import java.security.SecureRandom;
 
 /**
  * RSA 密钥对生成。密钥长度固定 2048 —— 不再提供"可配置长度"，
- * 因为 1024 位在电子签名场景已经不达标，留一个开关只会有人把它关掉。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class KeyPairFactory {

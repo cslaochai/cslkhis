@@ -8,8 +8,6 @@ import java.io.Serializable;
 
 /**
  * 医嘱基础字典分页查询入参（管理页按「途径 / 频次 / 剂量单位」分 Tab 查）。
- *
- * <p>{@code dictType} 必填：三种字典共表，不指定类型就会把途径和频次混在一页里。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

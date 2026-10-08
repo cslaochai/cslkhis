@@ -7,9 +7,6 @@ import java.io.Serializable;
 
 /**
  * PACU Aldrete 评分入参（五项各 0~2 分）。
- *
- * <p><b>不接收总分</b>：总分由服务端逐项相加。让前端填总分意味着
- * "我可以写一个 10 分然后出室"，出室标准就成了摆设。
  */
 @Data
 public class PacuScoreDTO implements Serializable {

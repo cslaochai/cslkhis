@@ -6,9 +6,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 患者主索引查询入参（P5.1 EMPI）
- *
- * <p>列表与重复检测共用：重复检测只需要 keyword 用来过滤某个姓名/证件，
- * 不需要再定义一个几乎相同的 DTO（两个近似 DTO 会各自漂移）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

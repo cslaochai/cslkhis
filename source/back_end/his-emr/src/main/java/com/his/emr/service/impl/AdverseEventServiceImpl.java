@@ -29,9 +29,6 @@ import java.util.Objects;
 
 /**
  * 不良事件服务实现
- * <p>
- * 状态机：1 已上报待处理 → 2 处理中 → 3 已整改 → 4 已结案（不可逆）。
- * 每一步流转都留「操作人 id + 姓名 + 意见 + 时间」，这是三甲评审要看的痕迹链。
  */
 @Service
 @RequiredArgsConstructor

@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 患者端「我的排队」出参（小程序排队页专用）。
- *
- * <p>与分诊台视角的 BizQueueListVO 分开：那边给护士看的是整条队列，
- * 这边给患者看的只有"我" —— 位次、前方等待人数、当前叫号。
  */
 @Data
 public class PatientQueueVO implements Serializable {

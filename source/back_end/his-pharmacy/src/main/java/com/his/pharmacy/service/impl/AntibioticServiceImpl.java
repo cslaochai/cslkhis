@@ -32,11 +32,6 @@ import java.util.List;
 
 /**
  * 抗菌药物分级目录与处方权授权。
- *
- * <p>口径见 sql/161 头注释与 {@link AntibioticService} 接口注释；这里只写实现层面的要点：
- * ① 分级文案唯一出口是 {@link AntibioticLevelEnum}，前端不自己翻译；
- * ② 开方闸 {@link #assertCanPrescribe} 抛异常让整张处方回滚，而不是返回错误码让调用方忘判；
- * ③ 授权唯一键 (doctor_id, auth_level) 撞了要给人话提示，不能抛出 Duplicat entry 让用户看不懂。
  */
 @Service
 @RequiredArgsConstructor

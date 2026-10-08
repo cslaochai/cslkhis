@@ -32,7 +32,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 物资耗材服务实现
- * 口径：库存一切增减落流水；领用即扣库存（FEFO）并落台账；缺字典/缺批号/超库存一律 BusinessException。
  */
 @Service
 @RequiredArgsConstructor

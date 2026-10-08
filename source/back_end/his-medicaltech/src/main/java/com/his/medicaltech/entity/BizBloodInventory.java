@@ -10,10 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 血库血袋库存台账（血库血袋库存）
- *
- * <p>status：1 在库 / 2 已预留 / 3 已发血 / 4 已报废 / 5 已退回。
- * bag_no 全局唯一；每一次状态变化都必须同步写血库出入库流水——
- * 台账是事实、流水是痕迹，两者不允许单向推导（查账时两边互证）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

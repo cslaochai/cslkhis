@@ -8,11 +8,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * CDR 住院节点行（{@code CdrMapper#selectAdmissions} 一行）。
- *
- * <p>入院记录本身只存ID，科室/病区/床位名靠标量子查询补出来 —— 用子查询而不是 JOIN，
- * 因为sys_ward / sys_bed 与入院记录是 1:1，JOIN 虽不会放大行，但任一侧被逻辑删除时
- * JOIN 会把整行带走（子查询只让那一列为 null，"查不到名字"和"没有名字"因此仍可区分）。
+ * CDR 住院节点行（CdrMapper#selectAdmissions 一行）。
  */
 @Data
 public class CdrAdmissionRowVO implements Serializable {

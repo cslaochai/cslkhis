@@ -5,13 +5,6 @@ import lombok.Data;
 
 /**
  * 检验结果解读提示词变量。
- *
- * <p>对应 {@code prompts/lab-interpret.md} 的全部占位符。
- * 字段名与模板里的 {{占位符}} 一一对应。
- *
- * <p>把结果按「正常 / 异常 / 危急 / 未判定」四段切开摆给模型：
- * 异常判定本身由 {@code LabAbnormalJudge} 用参考区间算完（事实层代码算），
- * 模型只负责把已判定的异常讲成人话。
  */
 @Data
 public class LabInterpretPromptVariablesVO implements PromptVariables {

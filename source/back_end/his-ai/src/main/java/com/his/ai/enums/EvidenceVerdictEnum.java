@@ -5,8 +5,6 @@ import lombok.Getter;
 
 /**
  * 医保审核证据判定结论（G-07）。
- * <p>判的是「证据与规则怀疑的关系」，不是违规裁决；
- * {@link #getText(Integer)} 对不在枚举内的码值返回 null，脏数据由调用侧决定兜底，不许回落合法文案。</p>
  */
 @Getter
 public enum EvidenceVerdictEnum {

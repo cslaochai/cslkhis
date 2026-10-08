@@ -11,8 +11,6 @@ import java.io.Serializable;
 
 /**
  * 临床路径步骤。
- *
- * <p>路径日 × 诊疗项目：「该做什么」的文书记录，不生成医嘱、不计费（避免与医嘱链双轨）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

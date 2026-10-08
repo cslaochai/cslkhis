@@ -8,9 +8,6 @@ import java.util.List;
 
 /**
  * 病历草拟的模型输出结构（与 prompts/emr-draft.md 的 JSON 契约一一对应）。
- * <p>
- * 只有现病史一个正文产出，刻意不含诊断与处理意见 —— 见
- * {@code EmrDraftCapability} 的类注释。
  */
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)

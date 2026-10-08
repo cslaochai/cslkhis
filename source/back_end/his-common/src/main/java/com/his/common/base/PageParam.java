@@ -5,9 +5,6 @@ import lombok.Data;
 
 /**
  * 分页查询基类。
- *
- * <p>越界用getter 夹取（不抛异常）而不是 @Min/@Max 报 400：前端本来就合法地传 200，
- * 导出还要一次拉几千行，硬校验会把导出和超档请求一起打回。越界静默夹到上限。
  */
 @Data
 public class PageParam {

@@ -8,11 +8,6 @@ import java.util.List;
 
 /**
  * 急诊分诊建议能力的模型输出结构（与 prompts/emergency-triage.md 的 JSON 契约一一对应）。
- * <p>
- * <b>本契约里没有「最终分诊级别」这个概念</b>，只有 {@code suggestLevel}（建议值）。
- * 最终级别始终由分诊护士确认，且能力层强制「只升不降」——
- * 模型说 IV 级而护士已经选了 II 级时，系统不会把级别降下来。
- * 生命体征类的硬性红旗（如 SpO2 &lt; 90%）由代码判定，不依赖模型。
  */
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)

@@ -13,12 +13,6 @@ import java.util.Base64;
 
 /**
  * PEM 编解码。只支持 JDK 原生生成的两种格式：
- * <ul>
- *   <li>公钥：{@code -----BEGIN PUBLIC KEY-----}（X.509 SubjectPublicKeyInfo）</li>
- *   <li>私钥：{@code -----BEGIN PRIVATE KEY-----}（PKCS#8）</li>
- * </ul>
- * 刻意**不支持加密私钥 PEM**（{@code BEGIN ENCRYPTED PRIVATE KEY}）——
- * 私钥的静态保护统一由 {@link KeyProtectorUtil} 负责，两条路并存只会让人搞不清密钥到底怎么护的。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 

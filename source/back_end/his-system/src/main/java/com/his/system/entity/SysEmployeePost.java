@@ -11,13 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 员工岗位实体：一行 = 一个人在一个科室以某个角色执业（角色 × 科室）。
- *
- * <p>见 sql/107-岗位模型.sql：改造前本表只有人-科室，角色另在旧员工角色表
- * （该镜像表已于 sql/118 删除，鉴权 join 直读本表），
- * 两张表自由组合能拼出「医生 · 药房」这种不存在的身份，顶栏切角色/切科室各切各的即源于此。
- *
- * <p>本表没有 del_flag（实体不带该列），MyBatis-Plus 的 delete 即物理删，
- * 不会留下占着 {@code uk_emp_role_dept} 的软删行。
  */
 @Data
 @TableName("sys_employee_post")

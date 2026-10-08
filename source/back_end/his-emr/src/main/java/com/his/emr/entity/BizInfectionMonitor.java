@@ -9,7 +9,6 @@ import java.time.LocalDate;
 
 /**
  * 院感目标性监测登记（导管相关三类型）。
- * 感染确认（infectionFlag）与在管状态（status）独立：感染确认不改在管，导管日统计才完整。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

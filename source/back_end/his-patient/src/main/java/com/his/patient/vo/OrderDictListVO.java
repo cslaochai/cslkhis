@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医嘱基础字典行出参（管理页）。
- *
- * <p>{@code usageCount} 是当前库里引用了这个值的医嘱行数 —— 列表上直接告诉维护人
- * 「这个值有多少条医嘱在用」，避免停用/改名时凭感觉决定。停用不删数据，历史医嘱照样渲染得出文案。
  */
 @Data
 public class OrderDictListVO implements Serializable {

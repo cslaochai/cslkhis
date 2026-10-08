@@ -9,8 +9,6 @@ import java.util.List;
 
 /**
  * 病区危重预警扫描行（G-12）。
- * <p>wardScan 是<b>纯代码评分，无模型调用、无 degraded 语义、不出审计行</b>（同 G-08 裁撤口径）；
- * 每行是「一个在院患者的最新体征 + MEWS 评分」。无体征数据的患者不出现在结果里。</p>
  */
 @Data
 public class DeteriorationScanVO {

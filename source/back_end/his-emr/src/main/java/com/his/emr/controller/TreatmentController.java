@@ -16,11 +16,6 @@ import java.util.List;
 
 /**
  * 门诊治疗站（G19）：治疗申请（疗程）→ 排期 → 按次打卡 → 按次计费。
- *
- * <p>URL 前缀 {@code /emr/treatment}。这里只做参数绑定与提示语，一律不写业务：
- * 能不能打卡、计费失败怎么留痕，全在 {@link TreatmentService} 里，
- * 页面按钮的显隐依据（canExecute / canRetryCharge）也来自同一个方法，
- * 避免「前端允许点、后端拒绝写」这种两边各算一遍的分裂。
  */
 @Tag(name = "门诊治疗站")
 @RestController

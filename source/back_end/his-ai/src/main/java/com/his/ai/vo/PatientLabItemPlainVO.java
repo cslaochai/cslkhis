@@ -5,13 +5,6 @@ import lombok.Data;
 
 /**
  * 患者端报告解读 · 单项结果。
- * <p>
- * 每一项都由三部分组成，缺一不可：
- * <ol>
- *   <li><b>事实</b>（resultValue / referenceRange / status）—— 代码算，模型不许改</li>
- *   <li><b>白话</b>（plainName / whatIsIt / plainText）—— 词典给，词典没有就只能说「建议请医生看看」</li>
- *   <li><b>边界</b>（critical）—— 危急值单独置顶，不受白话文本影响</li>
- * </ol>
  */
 @Data
 @Schema(description = "患者端报告解读-单项结果")

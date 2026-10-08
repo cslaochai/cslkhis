@@ -6,9 +6,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 预交金流水分页查询入参
- *
- * <p>查询一律 GET，分页 DTO 必须继承 {@link PageParam} 且 {@code callSuper = true}
- * （否则 admissionId 等条件不参与 {@code equals}，MyBatis 的缓存键会串）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

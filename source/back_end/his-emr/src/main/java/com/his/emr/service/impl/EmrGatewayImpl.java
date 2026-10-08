@@ -17,13 +17,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * {@link EmrGateway} 在 his-emr 侧的实现。
- *
- * <p>写方法整体委托本域 {@link SourcePaidAdvanceService}，判定逻辑（处方能不能推进、
- * 申请单能不能撤、药有没有退）原样留在病历域，端口层一行判定都不加。
- *
- * <p>读方法只把「最近一条」的排序与限条收在域内，收费域拿到的是结果不是查询条件 ——
- * 它不该知道病历是按 create_time 倒序取第一条。
+ * EmrGateway 在 his-emr 侧的实现。
  */
 @Service
 @RequiredArgsConstructor

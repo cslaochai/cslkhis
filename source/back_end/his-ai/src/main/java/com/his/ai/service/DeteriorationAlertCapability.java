@@ -7,7 +7,6 @@ import java.util.List;
 
 /**
  * 危重预警·病情恶化评分（G-12）。
- * <p>评分与预警级是代码事实；模型只在预警触发后补一段观察建议。</p>
  */
 public interface DeteriorationAlertCapability {
 

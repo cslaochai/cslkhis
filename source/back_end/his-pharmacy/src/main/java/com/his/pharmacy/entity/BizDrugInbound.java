@@ -13,14 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 药品入库单
- *
- * 这张表在 sql/7 就建好了、字典 his_inbound_status / his_drug_inbound_type 也是为它铺的，
- * 但后端从未实现过 —— 采购链的正确落点是它：**采购只决定买什么，入库单记录到货验收并产生批次库存**。
- *
- * 状态机（字典 his_inbound_status）：
- *   1 待审核 →（审核）2 已审核 →（入库）3 已入库
- *   1/2 状态可取消 → 4 已取消（3 已入库不可取消：批次与流水已生成，要冲销得走退货入库）
- * 「审核」与「入库」分开两个动作两个人，是药库的岗位分离要求（验收人 ≠ 记账人）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

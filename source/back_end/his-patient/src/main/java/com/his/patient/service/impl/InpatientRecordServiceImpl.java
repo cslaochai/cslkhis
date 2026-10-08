@@ -33,22 +33,6 @@ import java.util.*;
 
 /**
  * 住院病历文书服务实现（P2）。
- *
- * <p>本类固化这些**至少会被追问一次**的点：
- *
- * <ol>
- *   <li><b>结构化率只有一个口径</b>：要素清单在 {@link RecordStructuredFields} 定义一次，
- *       统计 / 缺项定位 / 详情页的要素明细全走它。分母按文书类型算（病程才有病程正文），
- *       否则入院记录的"永远差一项"会逼医生填废话凑分。</li>
- *   <li><b>数值 0 不是"没填"</b>：大便 0 次、尿量 0ml 是合法观测值。
- *       把 0 当空值，三测单统计就永远差几条 —— 与「未判定 ≠ 正常」同一条线。</li>
- *   <li><b>修改 = 传什么覆盖什么 + 逐字段 diff 留痕</b>：只有值真的变了才写日志行。
- *       "每次保存写全字段快照"会让日志表膨胀到无法回答"这句话是谁改的"。</li>
- *   <li><b>批量动作先全量校验再写</b>：批量归档里有一份还是草稿就整批拒绝，
- *       并指名是哪一份。部分成功会让病案室不知道哪些生效了。</li>
- *   <li><b>入院记录的必填要素由服务层强制</b>（主诉/现病史/既往史/过敏史/诊断 + 五项体征）：
- *       这是三甲评审的硬口径，放前端"提醒"等于没有约束。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -107,7 +91,6 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     @Override
     @Transactional(rollbackFor = Exception.class)
     public InpatientRecordDetailVO save(InpatientRecordUpsertDTO dto) {
-        // 保留（类别②）：整个 DTO 为 null 不是字段校验，Bean Validation 覆盖不到
         if (dto == null) {
             throw new BusinessException("入参不能为空");
         }
@@ -118,16 +101,12 @@ public class InpatientRecordServiceImpl extends ServiceImpl<BizInpatientRecordMa
     }
 
     private InpatientRecordDetailVO create(InpatientRecordUpsertDTO dto) {
-        // 保留（类别①条件必填）：save 按 dto.id 分新增/修改，这两项只在新增分支必填，
-        // 修改分支可省略；挂 @NotNull 会把合法的修改请求挡成 400
         if (dto.getAdmissionId() == null) {
             throw new BusinessException("入院ID不能为空");
         }
         if (dto.getRecordType() == null) {
             throw new BusinessException("文书类型不能为空");
         }
-        // 9-会诊记录 / 10-转科记录是**系统文书**（由各自闭环完成时回写）：单独给出可执行的提示，
-        // 而不是笼统地说"类型不合法" —— 类型字典里有这两个码，说它们不合法会把人绕晕。
         if (InpatientRecordTypeEnum.isConsultRecord(dto.getRecordType())) {
             throw new BusinessException("会诊记录由会诊完成时自动回写，不支持手工新增；"
                     + "请在「住院会诊」里申请并由会诊科室完成");

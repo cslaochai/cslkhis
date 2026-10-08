@@ -39,17 +39,6 @@ import java.util.stream.Collectors;
 
 /**
  * 麻精药品特殊管理服务实现。
- *
- * <p>限量口径与法条依据全部写在 {@link NarcoticControlService} 的类注释里，
- * 这里只强调实现上的三个"宁严不宽"取舍：
- * <ol>
- *   <li><b>处方天数核不出来 = 拦</b>。缺疗程、频次写不出每日次数的，一律不允许发药。
- *       理由是举证责任在开方侧：麻精场景下"无法证明不超限"不能按不超限放过。
- *       这是刻意的严格，不是漏写兜底。</li>
- *   <li><b>天数向上取整</b>。算出来 2.3 日按 3 日判，避免卡在边界上靠小数蒙过去。</li>
- *   <li><b>二类精神超 7 日的放行必须有理由</b>（《处方管理办法》第 24 条要求医师注明理由），
- *       理由落进专册备注，事后可查。麻醉/一类精神**没有**这个口子。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -664,10 +653,6 @@ public class NarcoticControlServiceImpl extends ServiceImpl<NarcoticRegisterMapp
 
     @Override
     public NarcoticPrecheckVO precheck(Long prescriptionId, String overLimitReason) {
-        // C 类保留：入参是 Long（GET 直传），Bean Validation 覆盖不到这一层
-        if (prescriptionId == null) {
-            throw new BusinessException("处方ID不能为空");
-        }
         BizPrescription rx = bizPrescriptionMapper.selectById(prescriptionId);
         if (rx == null) {
             throw new BusinessException("处方不存在（处方ID：" + prescriptionId + "）");

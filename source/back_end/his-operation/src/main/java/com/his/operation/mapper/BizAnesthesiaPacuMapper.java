@@ -11,9 +11,6 @@ import org.apache.ibatis.annotations.Select;
 
 /**
  * PACU 复苏记录 Mapper。
- *
- * <p>列表带了麻醉记录的麻醉方式与 ASA —— 复苏护士看列表时要知道"这台是全麻还是腰硬"，
- * 否则 Aldrete 评分的语境就丢了（局麻患者本来就四肢能动，评分会虚高）。
  */
 @Mapper
 public interface BizAnesthesiaPacuMapper extends BaseMapper<BizAnesthesiaPacu> {

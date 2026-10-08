@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 随访外呼通道配置（{@code followup.*}），对应 {@code config/domain/his-followup.yml}。
+ * 随访外呼通道配置（followup.*），对应 config/domain/his-followup.yml。
  */
 @Data
 @Component

@@ -10,10 +10,6 @@ import java.util.List;
 
 /**
  * 住院日清单（按天汇总）。
- *
- * <p><b>口径必须与旧收费单完全一致</b>：已收费（charge_status=2）、
- * 未退费（is_refund=0）、未删除（del_flag=0）的明细才进清单。
- * 不允许在清单里另算一套金额 —— 日清单与结算金额对不上是最常见的一线投诉。
  */
 @Data
 public class DailyBillVO implements Serializable {

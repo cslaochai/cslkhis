@@ -43,8 +43,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * 高值耗材 UDI 扫码溯源实现。
- * 铁律：台账一行=一件耗材=批次±1件；计费只在独立事务里尝试，任何失败都写进 charge_fail_reason，
- * 登记不因记账失败而回滚（这件东西用在谁身上是事实，钱没到账是账务问题）。
  */
 @Slf4j
 @Service

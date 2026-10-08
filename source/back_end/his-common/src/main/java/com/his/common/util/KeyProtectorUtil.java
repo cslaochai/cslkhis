@@ -15,16 +15,6 @@ import java.util.Base64;
 
 /**
  * 私钥静态保护：PBKDF2-HMAC-SHA256 派生 + AES-256-GCM 加密。
- *
- * <p>三条约定：
- * <ol>
- *   <li>口令来自环境变量 {@code HIS_SIGN_SECRET}（经 {@link SignProperties} 注入）。
- *       没有口令时**拒绝签发证书**，绝不"没口令就用明文存"。</li>
- *   <li>每个证书独立盐（16 字节随机）+ 独立 IV（12 字节随机），迭代次数写进证书行，
- *       于是以后调大迭代次数不会让老证书解不开。</li>
- *   <li>密文格式 {@code Base64(iv || ciphertext||tag)}。IV 长度是固定常量（12），
- *       不单独存一列 —— 存了就要回答"IV 列和密文不匹配怎么办"。</li>
- * </ol>
  */
 @Component
 public class KeyProtectorUtil {

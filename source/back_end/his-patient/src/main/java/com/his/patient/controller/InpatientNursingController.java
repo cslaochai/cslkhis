@@ -16,9 +16,6 @@ import java.util.List;
 
 /**
  * 护理文书（三测单 / 护理记录单 / 生命体征监测）。
- *
- * <p><b>三测单同一时点只能有一条</b>：唯一索引 {@code uk_nr_admission_type_time} 兜底，
- * 重复录入会收到明确报错，不是静默覆盖 —— 同一次测量录两条，曲线上就是两个点，护士不知道该信哪个。
  */
 @Tag(name = "住院护理文书")
 @RestController

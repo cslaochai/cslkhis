@@ -23,10 +23,6 @@ import java.util.stream.Collectors;
 
 /**
  * 报表服务实现
- *
- * <p>旧首页「按角色返回 admin/doctor/nurse 三视角」的 getDashboardStats 已随门户工作台一期 A
- * 下线（在 Service 里按 role_code 分支决定给谁看什么，正是门户工作台要消灭的东西）。
- * 那六段聚合 SQL 原样迁到工作台卡片的 provider，由各卡片各取所需。
  */
 @Service
 @RequiredArgsConstructor

@@ -10,9 +10,6 @@ import java.util.List;
 
 /**
  * 患者主索引服务（P5.1 EMPI）
- *
- * <p>EMPI 的职责只有一句话：**知道哪几份档案是同一个人**。
- * 它不搬数据、不改业务记录，只维护"影子档案 → 主档"这个指向。
  */
 public interface PatientIndexService {
 

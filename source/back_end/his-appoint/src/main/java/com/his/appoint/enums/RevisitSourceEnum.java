@@ -5,9 +5,6 @@ import lombok.Getter;
 
 /**
  * 复诊来源枚举 —— 回答「这是哪一种复诊」，决定占不占号源、按哪条策略收费。
- *
- * <p>与 visit_type（1 初诊 / 2 复诊）是从属关系：只有复诊才有来源；
- * 与 regist_type（号别 1 普通 / 2 专家 / 3 急诊 / 4 免费）仍是两个正交维度。
  */
 @Getter
 @AllArgsConstructor

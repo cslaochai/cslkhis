@@ -9,14 +9,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * 急诊留观时限（sql/153）。
- *
- * <p><b>两档而不是一个阈值</b>：72 小时是急诊留观的通行上限（到点必须定去向：转住院或离院），
- * 48 小时是院内预警档 —— 真到 72 小时才动手往往已经来不及（等床位、等家属签字、等检查结果），
- * 所以榜上分「超预警」和「超上限」两档，催办只催超上限的那一档（48 小时就发信会和 72 小时
- * 重复催同一个人，把收敛链拉长一倍）。
- *
- * <p><b>判定不落列</b>（同 {@link EmergencyWaitPolicy}）：留观时长是 {@code observation_start_time}
- * 与当下时刻的函数，写成一列就会出现"定时任务没跑 → 列说没超时、事实已超时"的漂移。
  */
 @Component
 @RequiredArgsConstructor

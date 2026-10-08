@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * ASA 麻醉分级（1-Ⅰ 2-Ⅱ 3-Ⅲ 4-Ⅳ 5-Ⅴ；Ⅴ 级 = 濒死、不接受手术基本活不过 24 小时）。
- *
- * <p>医生在麻醉单上逐项打分的临床口径，不是给人维护的字典，故不建字典。
  */
 @Getter
 public enum AsaGradeEnum {

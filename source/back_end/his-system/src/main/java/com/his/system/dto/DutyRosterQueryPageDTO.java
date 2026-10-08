@@ -9,9 +9,6 @@ import java.time.LocalDate;
 
 /**
  * 总值班排班分页查询。
- *
- * <p>默认只查「今天起往后 30 天 + 昨天」：历史排班一年几百行，翻看过去没有意义，
- * 昨天的夜班必须带出来 —— 凌晨 0~8 点解析的就是它。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

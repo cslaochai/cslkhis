@@ -7,20 +7,6 @@ import org.springframework.util.StringUtils;
 
 /**
  * 字符串清洗与截断（全库唯一收口点）。
- *
- * <p>2026-10-07 收口：原先各 Service/Support 里自写私有
- * {@code trimToNull} / {@code tr} / {@code trim} / {@code cut} / {@code clip} / {@code truncate} /
- * {@code safe} / {@code nullToDash} / {@code defaultStr}，共 190 余处定义、同名不同实现，
- * 同一个入参洗完后到底存 {@code null}、{@code ""} 还是原样，取决于落在哪个文件里。
- *
- * <p><b>为什么不用 hutool 的 {@code StrUtil}</b>：hutool 只在 his-common/his-emr/his-system 的
- * pom 里显式声明，其余模块靠传递依赖，不能当全库口径（见 AGENTS.md §21 同条理由）。
- *
- * <p><b>为什么不在 Web 层统一 trim</b>：Spring 的 {@code StringTrimmerEditor} 只作用于
- * 表单/查询参数绑定（{@code @ModelAttribute}/{@code @RequestParam}），本仓 DTO 绝大多数走
- * {@code @RequestBody} JSON，Jackson 不查 PropertyEditor，注册了也不生效；
- * 而 {@code emptyAsNull=true} 会让「传空串清空某字段」变成传 null →
- * {@code updateById} 跳过该列，等于静默改变更新语义。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TextUtil {

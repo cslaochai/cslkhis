@@ -7,9 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 复诊收费策略实体（复诊收费策略）
- *
- * <p>复诊号收哪几项费的<b>唯一依据</b>。改造前是写死的一句 {@code waived = revisit}，
- * 于是「患者隔两周自己来复诊」也被免掉，属于漏收入；改成按来源匹配策略。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -2,8 +2,6 @@ package com.his.common.enums;
 
 /**
  * 签名场景：说明"这一次签名是因为什么业务动作产生的"。
- *
- * <p>同一个对象可以有多次签名（医嘱双签、作废后补签），靠场景区分是谁在哪个环节签的。
  */
 public enum SignSceneEnum {
 

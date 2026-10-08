@@ -50,20 +50,6 @@ import java.util.stream.Collectors;
 
 /**
  * 住院管理实现（第 1 期）
- *
- * <p>本类固化的业务规则（都是医保飞检会真的看的点）：
- * <ol>
- *   <li>入院必须分床：床位不存在 / 非空闲 / 不属于所选病区 / 科室不一致，一律拒绝。</li>
- *   <li>同一患者不允许同时有两条在院记录。</li>
- *   <li>出院必须给「离院方式」（病案首页必填）；死亡病例必须 deathFlag=1 且 dischargeWay=5，反之亦然。</li>
- *   <li>出院时间不得早于入院时间；同一入院不允许两条出院记录。</li>
- *   <li>床位的占用/释放与病区.occupied_beds 同步，且容量判断只认床位。</li>
- *   <li>病案首页：主要诊断必须且只能 1 条；主要手术最多 1 条；归档后禁止修改。</li>
- *   <li>31 日再入院在出院时自动判定（DRG 绩效指标），不靠人工填。</li>
- *   <li><b>出院前必须已办理住院结算</b>（结清或欠费结算都算已结算，P3）：没结算单就出院，
- *       财务侧永远追不到这笔账。校验走 SPI（{@link SettlementGate}），
- *       收费模块缺席时<b>放行但必须在出院备注里写明"未校验"</b>。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -227,21 +213,15 @@ public class InpatientServiceImpl extends ServiceImpl<BizInpatientSummaryMapper,
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long admit(InpatientAdmitDTO dto) {
-        // 保留（类别②非 web 入口）：床位中心收治与急诊转住院都是在别的 service 里现构造入参对象直接调本方法
-        // （不经 HTTP 参数绑定，Bean Validation 一层都不过），
-        // 所以必填闸必须留在这里，字段注解挡不住内部调用。
         if (dto == null || dto.getPatientId() == null) {
             throw new BusinessException("患者不能为空");
         }
-        // 保留（类别②非 web 入口）：同上，入院必须分床，内部调用同样不允许传空病区
         if (dto.getWardId() == null) {
             throw new BusinessException("病区不能为空");
         }
-        // 保留（类别②非 web 入口）：同上，内部调用同样不允许传空床位
         if (dto.getBedId() == null) {
             throw new BusinessException("床位不能为空");
         }
-        // 保留（类别②非 web 入口）：同上，入院医生必须由调用方给明（谁办的入院要有人负责）
         if (dto.getAdmitDoctorId() == null) {
             throw new BusinessException("入院医生不能为空");
         }

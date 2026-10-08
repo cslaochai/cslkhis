@@ -8,9 +8,6 @@ import java.math.BigDecimal;
 
 /**
  * PACU 复苏记录出参。
- *
- * <p>{@code aldreteTotal} 由服务端逐项相加写入，前端只做展示：
- * 允许前端改总分，出室标准就形同不存在。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

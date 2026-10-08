@@ -15,8 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 医保政策配置控制器
- *
- * <p>维护医保政策配置：门诊/住院结算时「统筹比例、乙类自付比例」的依据。</p>
  */
 @Tag(name = "医保政策配置")
 @RestController

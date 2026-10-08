@@ -9,18 +9,6 @@ import java.util.regex.Pattern;
 
 /**
  * 本地 TF 向量 embedding（零外部依赖，开发环境默认，可直接跑通 RAG 全链路）。
- *
- * <p>分词策略：
- * <ul>
- *   <li>英文 / 数字：按 {@code [a-zA-Z0-9]+} 整词提取（小写）；</li>
- *   <li>中文：按字符 unigram（{@code zh:字}）+ 相邻 bigram（{@code zh2:字词}），覆盖「血常规」「空腹」等短语；</li>
- * </ul>
- * 词频（TF）经<b>特征哈希（hashing trick）</b>落到固定 {@link #DIM} 维 float 数组，再 L2 归一。
- * 这样输出是定长稠密向量，与远程 embedding 同构，内存库 / 将来 Milvus 都能直接用。
- *
- * <p><b>局限（刻意的）：</b>哈希碰撞会让「字面相近」的召回足够用，但<b>不是语义召回</b>——
- * 同义词（「发烧」vs「发热」）不会自动对齐。需要语义对齐的（药品别名、同义词缩写）走结构化知识表，不靠向量。
- * 真正要语义检索时，配置 {@code ai.rag.embed-base-url} 即自动走 {@code remote}。
  */
 @Component
 public class LocalTfEmbeddingProvider implements EmbeddingProvider {

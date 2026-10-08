@@ -6,7 +6,9 @@ import jakarta.validation.constraints.Min;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/** I 类切口预防用药点评分页入参 */
+/**
+ * I 类切口预防用药点评分页入参
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class IncisionReviewQueryPageDTO extends PageParam {

@@ -9,10 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 手术清点明细。
- *
- * <p>一行 = 一件名称，三个数量列分别对应术前 / 关体前 / 关体后。
- * 之所以把三个数字摊在同一行而不是拆成三张明细表：清点的<b>比对对象就是同一件东西</b>，
- * 拆成三张表要靠 item_name 去 JOIN —— 名字改了、字打错了，对不上的账会显示成对上了。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

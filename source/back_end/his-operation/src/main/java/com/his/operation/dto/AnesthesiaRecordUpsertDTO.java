@@ -9,10 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 开立麻醉记录单入参。
- *
- * <p><b>麻醉方式可以不传</b>：不传就取手术申请单上登记的 {@code anesthesia_type}。
- * 允许不同是因为"排了腰硬、上台后发现要改全麻"是真实且常见的事 ——
- * 申请单上是计划，记录单上是事实，<b>以记录单为准</b>（与首页手术明细取"实际做的"同一口径）。
  */
 @Data
 public class AnesthesiaRecordUpsertDTO implements Serializable {

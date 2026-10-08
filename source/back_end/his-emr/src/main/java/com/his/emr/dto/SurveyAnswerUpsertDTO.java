@@ -10,10 +10,6 @@ import java.util.List;
 
 /**
  * 答卷回收（录入/重填）入参 —— 一次发放一张答卷。
- *
- * <p>重填是「同一张答卷覆盖明细」（逐题物理删再写），不是新建一张：
- * uk_survey_answer_dispatch(dispatch_id) 也拦着一发放一答卷。
- * <b>已转出投诉的答卷禁止再改</b> —— 改分数把投诉的由来改掉，等于销毁整改证据链。
  */
 @Data
 public class SurveyAnswerUpsertDTO implements Serializable {

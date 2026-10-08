@@ -16,20 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 膳食医嘱执行与订餐配送（sql/168，菜单 425、426）。
- *
- * <p>权限：方案页读 {@code ipd:diet:plan}，登记/修改/停餐/删除 {@code ipd:diet:edit}、
- * 接收/退回 {@code ipd:diet:confirm}；订餐页读 {@code ipd:meal:list}，批量生成 {@code ipd:meal:generate}、
- * 配餐/配送/签收/退订/删除 {@code ipd:meal:status}。
- *
- * <p>两条不在这里但必须知道的口径：
- * <ol>
- *   <li>膳食方案的<b>主来源是医嘱校对</b>：orderClass=10 的医嘱被护士校对（1→2）时同事务派生，
- *       停医嘱/作废医嘱同步停/作废方案（见 InpatientOrderServiceImpl）。本控制器的 planUpsert 只服务
- *       营养科手工登记（source=2）与改目标量。</li>
- *   <li><b>订餐只收口服途径</b>（route=1）：管饲制剂由营养科发放、肠外营养走静配与医嘱执行链，
- *       给肠外营养的患者配一份"饭"是错的。</li>
- * </ol>
+ * 膳食医嘱执行与订餐配送
  */
 @Tag(name = "膳食医嘱与订餐配送")
 @RestController

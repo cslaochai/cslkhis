@@ -10,9 +10,6 @@ import java.math.BigDecimal;
 
 /**
  * 出院带药下拉出参：选「发哪一行药」需要的列（药名 + 规格 + 用法用量 + 摆药状态）。
- *
- * <p>不带患者与就诊主键：本接口按 admissionId 取数，调用方本来就知道是哪个患者；
- * 也不带发药人/发药时间/创建人 —— 那些是台账列，走分页列表看。
  */
 @Data
 @Schema(name = "DischargeDrugSelectListVO", description = "出院带药下拉出参")

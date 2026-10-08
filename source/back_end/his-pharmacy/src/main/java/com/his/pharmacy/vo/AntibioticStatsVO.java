@@ -7,7 +7,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/** 抗菌药物监测指标行（月度快照，分子分母一并带出供复核） */
+/**
+ * 抗菌药物监测指标行（月度快照，分子分母一并带出供复核）
+ */
 @Data
 public class AntibioticStatsVO {
 

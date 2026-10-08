@@ -12,9 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 门诊输液单（M10）。
- *
- * <p>状态机：1-待皮试 → 2-待输注 → 3-输液中 → 4-已完成；1/2/3 任意态可置 5-已取消。
- * 需皮试的药物判读阴性后才可开始（阳性直接取消）；结束/取消释放座位。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

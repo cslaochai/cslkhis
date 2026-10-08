@@ -11,13 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 患者主索引合并审计（P5.1 EMPI）
- *
- * <p>一行 = 一次"把 mergedId 并入 masterId"的动作。
- * <p>撤销**不改这一行**，只把 {@code logStatus} 置 2 并留撤销人/时间/理由
- * —— 审计记录不允许被抹掉（同"医嘱执行记录永不物理删除"）。
- *
- * <p>为什么两档都要存快照：合并之后被并档在册状态失效、主档可能被人工补全字段，
- * 一旦并错要回退，"原来长什么样"只能靠快照，不能靠猜。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

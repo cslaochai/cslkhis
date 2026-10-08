@@ -7,10 +7,6 @@ import java.math.BigDecimal;
 
 /**
  * 剂量上限知识新增/修改入参（id 为空=新增）
- * <p>
- * 单位只接受 g/mg/ug 三值（字典 his_dose_unit）。为什么不放 IU：
- * 胰岛素笔的规格写着 300IU/支，但单据上的「1」是旋出来的刻度数而不是 300IU，
- * 放进去会批量造出假超量 —— 校验放在服务端而不是前端，因为 API 直连同样要拦得住。
  */
 @Data
 public class DoseLimitUpsertDTO {

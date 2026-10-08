@@ -9,8 +9,6 @@ import java.io.Serializable;
 
 /**
  * 器械包模板下拉出参：回收登记「选包带出默认灭菌方式」用的三列。
- *
- * <p>组成清单不在这里给 —— 选中后前端拿 id 再取一次详情，避免每个候选包都摊平一份明细行。
  */
 @Data
 @Schema(name = "CssdPackTemplateSelectListVO", description = "器械包模板下拉出参")

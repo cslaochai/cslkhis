@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 值班日志列表/详情出参。
- *
- * <p>{@code canAck} 由后端算好给前端：接班人只在这一条的交班对象是自己、且还没签收时才能签收，
- * 这个判断放在前端做，迟早会和后端的不一致（AGENTS.md：接口字段名与前端读取名对不上 → 面板恒空且不报错）。
  */
 @Data
 public class DutyLogVO {

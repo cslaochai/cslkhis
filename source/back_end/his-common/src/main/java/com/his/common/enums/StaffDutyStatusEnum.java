@@ -3,15 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 出勤状态枚举（sql/200，字典 {@code his_duty_status}）
- *
- * <p><b>与号源状态是两件事，不能挤进同一列</b>：出诊计划的状态说的是「这批号还能不能挂」
- * （停诊/已满/过期），出勤状态说的是「这个人今天来不来」。
- * 原先只有前者，于是「今日在岗」只能靠号源状态猜，休息和请假根本没有地方存。
- *
- * <p><b>非上班也要写成一行</b>：只有把休息/请假/培训落成事实，周矩阵才看得出一个人的走向，
- * 「连上六天不休息」「请假还排了班」这类校验才有依据。
- * <br>{@link #WORK} 是唯一计入工时与在岗人数、也只有它能带班次。
+ * 出勤状态枚举（sql/200，字典 his_duty_status）
  */
 @Getter
 public enum StaffDutyStatusEnum {

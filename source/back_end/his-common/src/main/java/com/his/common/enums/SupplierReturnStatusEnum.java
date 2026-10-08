@@ -4,9 +4,6 @@ import lombok.Getter;
 
 /**
  * 药品供应商退货单状态枚举（药品供应商退货单的状态列，sql/154）
- *
- * <p>与调拨单不同，退货只有「扣一次库存」这一个动作（药离开医院，没有院内接收方），
- * 所以没有待接收这一态。码值与 {@code his_supplier_return_status} 字典一致。
  */
 @Getter
 public enum SupplierReturnStatusEnum {

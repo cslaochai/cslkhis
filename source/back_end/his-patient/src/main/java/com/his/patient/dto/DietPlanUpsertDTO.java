@@ -8,11 +8,6 @@ import java.time.LocalDateTime;
 
 /**
  * 膳食方案登记/修改（营养师手工登记，或修正医嘱派生方案的饮食类型）。
- *
- * <p><b>饮食类别、给食途径、默认餐次一律由服务端按 dietCode 从 {@code NutritionRules.DIETS} 带出</b>，
- * DTO 里没有这三个字段 —— 让前端传"糖尿病饮食 + 静脉途径"这种组合，订餐与静配就会互相甩锅。
- * 热量/蛋白/液体目标允许覆盖（同一种饮食按体重分级是临床常态），餐次也允许覆盖
- * （糖尿病饮食加餐、造影饮食只发两餐）。
  */
 @Data
 public class DietPlanUpsertDTO {

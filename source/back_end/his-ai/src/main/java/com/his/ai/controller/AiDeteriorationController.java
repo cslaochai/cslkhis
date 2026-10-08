@@ -17,8 +17,6 @@ import java.util.List;
 
 /**
  * 危重预警·病情恶化评分（G-12）。
- * <p>评分只提示不写库；消费端是护士站与床位中心的床位图（共用 BedMapWorkspace），
- * 权限沿用两个页面各自的入口码（菜单 303 / 317），不新增按钮码。</p>
  */
 @Tag(name = "危重预警·病情恶化评分")
 @RestController

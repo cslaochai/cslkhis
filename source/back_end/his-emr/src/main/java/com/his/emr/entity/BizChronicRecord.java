@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 慢病建档/认定实体（M1）。
- *
- * <p>状态机：建档即已认定（1，认定医生=建档医生）；作废置 2（单向，可重新建档）。
- * 长处方开方资格以「存在 confirm_status=1 的有效档案」为准。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

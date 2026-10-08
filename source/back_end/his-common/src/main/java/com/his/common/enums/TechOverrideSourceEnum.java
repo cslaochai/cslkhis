@@ -4,9 +4,6 @@ import lombok.Getter;
 
 /**
  * 技术越权登记的来源单据类型（sql/155，落在越权授权事后登记单的来源类型列）。
- *
- * <p>越权必须挂在具体单据上，否则「他越过权」这句话无法回查到是哪台手术。
- * <br>字典权威在本枚举，码值改动必须同步 {@code sql/155} 的 {@code his_tech_override_source} 段。
  */
 @Getter
 public enum TechOverrideSourceEnum {

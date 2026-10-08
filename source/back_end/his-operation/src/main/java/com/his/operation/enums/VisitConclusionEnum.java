@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * 麻醉术前访视结论（1-可施行麻醉 2-暂缓手术 3-需会诊/进一步评估）。
- *
- * <p>访视结论一旦出账就是麻醉科的正式意见，是开立麻醉记录的闸门依据。
  */
 @Getter
 public enum VisitConclusionEnum {

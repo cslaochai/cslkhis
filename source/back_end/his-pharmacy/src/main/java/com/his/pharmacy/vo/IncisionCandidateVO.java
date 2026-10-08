@@ -7,7 +7,9 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
 
-/** 待点评的 I 类切口手术（含围手术期抗菌药物医嘱候选） */
+/**
+ * 待点评的 I 类切口手术（含围手术期抗菌药物医嘱候选）
+ */
 @Data
 public class IncisionCandidateVO {
 

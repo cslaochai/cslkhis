@@ -10,8 +10,6 @@ import java.math.BigDecimal;
 
 /**
  * 欠费管控策略保存入参（单行）。
- *
- * <p>预警线/停费线允许为空（空=未设置），但一旦填写不允许为负。
  */
 @Data
 public class ArrearsPolicyUpsertDTO {

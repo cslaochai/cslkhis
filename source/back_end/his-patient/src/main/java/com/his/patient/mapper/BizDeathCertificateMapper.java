@@ -14,10 +14,6 @@ import java.util.List;
 
 /**
  * 死亡证明 Mapper。
- *
- * <p>入院记录 / 出院记录 / 患者基本信息 / 住院病案首页 / 科室归
- * 住院与患者其他子域，按项目规范不跨域调它们的 Mapper，这里走裸 SQL 只读。
- * 列名一律先对过 information_schema（入院记录主键是 admission_id，不是 id）。
  */
 @Mapper
 public interface BizDeathCertificateMapper extends BaseMapper<BizDeathCertificate> {

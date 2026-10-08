@@ -14,9 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 结算账单（L2）：把若干条记账行锁定成"这一笔该收多少、怎么分"。
- *
- * <p>账单一旦生成不改金额，要改走作废重结；是否付清由 SUM(成功收款流水) 与
- * {@link #payableAmount} 比出来，不由谁点一下按钮翻状态。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

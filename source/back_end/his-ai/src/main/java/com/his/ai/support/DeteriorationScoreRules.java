@@ -15,11 +15,6 @@ import java.util.List;
 
 /**
  * 病情恶化评分规则（MEWS 主体 + NEWS 的 SpO2 分档，G-12）。
- * <p>
- * <b>评分是事实层，全部代码算</b>：分档表固化如下，预警级只由总分决定，模型无权改。
- * MEWS 标准五参数里的「意识（AVPU）」没有结构化字段，本实现不含该项 ——
- * 宁可少评一项也不猜意识状态，注释留痕防止后人"补全"成拍脑袋分档。
- * </p>
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DeteriorationScoreRules {

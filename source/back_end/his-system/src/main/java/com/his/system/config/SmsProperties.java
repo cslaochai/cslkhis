@@ -5,11 +5,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 短信验证码配置（yml 的 {@code sms.code.*} 段）。
- *
- * <p>与 {@code wechat.miniapp.*} 同一口径：部署期配置随代码走，网关密钥只从环境变量取。
- * 本仓库没有接真实短信网关，{@code mock=true} 时验证码写日志并随响应回显，供联调使用；
- * 关掉 mock 而未配网关 = 明确发送失败，不会假装"已发送"。
+ * 短信验证码配置（yml 的 sms.code.* 段）。
  */
 @Data
 @Component

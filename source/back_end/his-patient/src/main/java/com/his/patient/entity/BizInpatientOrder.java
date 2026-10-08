@@ -14,15 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院医嘱（长期 / 临时合一）。
- *
- * <p>字段与住院医嘱主表 **一一对应**（多一个库里没有的列 → 全表 select 直接 500）。
- *
- * <p>三条容易写错的约定：
- * <ol>
- *   <li>金额字段是 {@code BigDecimal}，时间字段落库前必须 truncate 到秒（库表是 DATETIME(0)，会四舍五入）。</li>
- *   <li>{@code orderGroup} 是组套号，同一组的医嘱**必须同起同停**（服务层强制）。</li>
- *   <li>{@code orderStatus} 见 {@link com.his.patient.enums.InpatientOrderStatusEnum}，未知码值一律渲染空串。</li>
- * </ol>
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

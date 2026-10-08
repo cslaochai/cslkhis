@@ -11,26 +11,6 @@ import java.time.temporal.ChronoUnit;
 
 /**
  * 时间工具：秒级归一 + 日边界 + 时长（全库唯一收口点）。
- *
- * <p><b>为什么需要它</b>：本库 1068 个 {@code datetime} 列精度全部为 0（{@code DATETIME_PRECISION = 0}），
- * MySQL 存进去会**四舍五入**到秒；而 Java 的 {@code LocalDateTime.now()} 带纳秒。
- * 于是"刚生成的对象内存值"与"回读到的库值"可能差 1 秒，
- * 凡是要**落库后立刻回读比较**（幂等键、防重放、签名摘要）就必须先归一。
- *
- * <p><b>什么时候不该用</b>：单纯"记个时间"（createTime / updateTime / 操作日志时间）
- * 直接用 {@code LocalDateTime.now()}，库会自动四舍五入，且更该配实体
- * {@code @TableField(fill = ...)} 让 MP 统一填（见 AGENTS.md §17）。
- *
- * <p>2026-10-06 收口：原先 26 个 service 各写一份私有
- * {@code nowSeconds()} / {@code toSeconds()} / {@code seconds()}，共 283 处调用，
- * 同一语义复制 26 份——这不叫收口，且各自改名导致无法统一调整。
- *
- * <p>2026-10-07 收口：并入「日边界」与「时长」两族，同样是各 service 自写私有副本漂移出来的结果
- * （{@code atStart}/{@code atEnd}/{@code dayStart}/{@code dayEnd} 8 份、
- * {@code minutesBetween}/{@code hoursBetween} 5 份，且负时长有的返回 null 有的返回负数）。
- * <b>时长口径按调用意图分两个方法，不要凭手气挑</b>：
- * 计费/时长统计只认「已发生」的区间用 {@link #elapsedMinutes}；
- * 需要如实反映时间倒挂（如「已等待分钟」把未来时间显示成负数）用 {@link #minutesBetween}。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TimeUtil {

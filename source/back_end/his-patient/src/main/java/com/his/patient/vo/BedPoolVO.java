@@ -8,10 +8,6 @@ import java.util.List;
 
 /**
  * 全院床位池（一行一床）
- *
- * <p><b>{@code reservedPatientName / useDeptName} 是"这张床被谁预定了"</b>：
- * 跨科调配把 A 科的床借给 B 科患者之后，这张床在 A 科眼里必须是"已预留"，
- * 否则两个科室会把同一张空床安排给两个不同的人。
  */
 @Data
 public class BedPoolVO {

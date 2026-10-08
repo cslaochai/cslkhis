@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 订餐配送出参（食堂配送单/签收台）。
- *
- * <p>{@code canAdvance / canCancel / nextStatusText} 由服务层按状态机现算 —— 按钮可用性是业务规则，
- * 让前端自己判就会出现"点得动、后端拒"的错位。
  */
 @Data
 public class MealOrderVO implements Serializable {

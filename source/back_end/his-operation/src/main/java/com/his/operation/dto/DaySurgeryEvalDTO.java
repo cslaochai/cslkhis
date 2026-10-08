@@ -8,9 +8,6 @@ import java.io.Serializable;
 
 /**
  * 日间手术术前评估入参。
- *
- * <p>评估不通过（evalResult=2）时状态仍留在「待评估」可重评 —— 直接推到终态会让
- * 「换个麻醉方式再评估一次」这种真实场景无处落单；但**不通过一律不得安排手术**。
  */
 @Data
 public class DaySurgeryEvalDTO implements Serializable {

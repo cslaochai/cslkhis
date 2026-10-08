@@ -6,15 +6,6 @@ import lombok.Data;
 
 /**
  * 检验项目白话词典 · 新增或修改。
- *
- * <p><b>为什么文案不给校验长度而靠入库截断</b>：字段宽 200 字，超限返回
- * {@code Data too long} 会把业务失败升级成 500。这里按仓库约定在 Service 侧先截列宽。
- *
- * <p><b>为什么不在这里做医疗合规校验</b>：种子脚本 {@code _gen_lab_plain_seed.mjs} 的硬断言
- * 只在造种子时跑，运营在页面上写「建议服用铁剂」不会被它拦住 ——
- * 所以 Service 侧复用 {@link com.his.ai.support.PatientTextGuard} 兜底，
- * 但注意：白话词典是<b>院内人工维护</b>的，写的人是检验科的人，不是模型。
- * 闸门只拦「确诊 / 用药 / 剂量」这类明确越界词，不拦专业表述。
  */
 @Data
 @Schema(description = "白话词典新增或修改入参")

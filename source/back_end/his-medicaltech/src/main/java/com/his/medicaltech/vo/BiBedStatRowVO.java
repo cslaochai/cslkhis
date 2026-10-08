@@ -5,10 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 床位构成（{@code BiMapper#bedStat}）。
- *
- * <p>"可用床位"不在这里算：它是 {@code total - repair}，属业务判断，
- * 由服务层收口（BI 总览与国考指标都要用，口径必须一致）。
+ * 床位构成（BiMapper#bedStat）。
  */
 @Data
 public class BiBedStatRowVO implements Serializable {

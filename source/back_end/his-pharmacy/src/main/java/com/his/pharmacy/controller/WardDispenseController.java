@@ -21,9 +21,6 @@ import java.util.List;
 
 /**
  * 住院摆药（G13）。
- *
- * <p>链路：候选预览/生成 → 药房 FEFO 配药+计费 → 病区核对 → 退药回库+负冲账。
- * 操作人一律服务端取当前登录人；创建类接口回 VO 不回裸 id。
  */
 @Tag(name = "住院摆药")
 @RestController

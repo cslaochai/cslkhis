@@ -13,12 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * ICU 入出科登记（ICU 入出科登记）。
- *
- * <p>一次住院同时只允许一条在科记录，一张 ICU 床同时只允许一名在科患者（服务层校验）。
- * 患者、来源科室、病区床位全部快照，出科后不改写。
- *
- * <p>本表不反向改写床位的占用状态：ICU 床位归属以入科记录为准，
- * 避免与「转科/换床」两套账互相覆盖（见 sql/108 设计要点 3）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -29,20 +29,6 @@ import java.util.regex.Pattern;
 
 /**
  * 操作日志拦截器（操作日志）。
- *
- * <p><b>口径：只记写动作。</b>POST/DELETE 里把约定命名的读接口（listPage / selectList /
- * getById / getDetailById …）挡掉，其余一律留痕。理由：读病历这类敏感查阅由业务模块自己写
- * 审计日志（有明确的"谁看了谁的病历"语义），操作日志若把每次翻页都记下来，
- * 真正的写操作会被淹没在噪音里，等保检查时反而拿不出东西。
- *
- * <p><b>旁路：</b>落库失败只打 error 日志，绝不让业务操作跟着失败；
- * 但也绝不静默吞 —— 出问题在日志里能查到。
- *
- * <p><b>登录不在这儿记：</b>/auth/login 等由 {@link com.his.system.service.SysLoginLogService} 单独记登录日志，两本账不重复。
- *
- * <p><b>失败判定：</b>业务异常被 {@code GlobalExceptionHandler} 兜成 HTTP 200 + code=500，
- * 拦截面上的 {@code ex} 会是 null —— 所以配了 {@link OperLogExceptionResolver} 把异常挂到请求属性上，
- * 这里读它才是准的（读不到再退回 HTTP 状态码 >= 400）。
  */
 @Slf4j
 @Component

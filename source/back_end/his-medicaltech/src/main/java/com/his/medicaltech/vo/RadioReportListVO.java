@@ -8,12 +8,6 @@ import java.time.LocalDateTime;
 
 /**
  * 放射诊断工作台列表行（sql/138）。
- *
- * <p><b>一行 = 一次检查 + 它那份报告（可能还没有）</b>：
- * 报告台的主视角是「还有谁的片子没人写报告」，如果列表只查报告单，
- * 那么还没写报告的那些检查在工作台上根本看不见 —— 诊断医师得先去别处知道有这个检查，
- * 再回来写，等于没有工作台。所以这里以检查记录为主表 LEFT JOIN 报告，
- * {@code reportId == null} 就是「待书写」。
  */
 @Data
 public class RadioReportListVO {

@@ -5,9 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 跨科床位调配协调待办载荷（对应 {@code BedCenterServiceImpl#notifyDutyCrossDept}）。
- *
- * <p>bizId 用调配单而不是等床单，等床超时催办也走 duty-coord，两条事件共用一个 bizId 会被判重互相吃掉。
+ * 跨科床位调配协调待办载荷（对应 BedCenterServiceImpl#notifyDutyCrossDept）。
  */
 @Data
 public class BedCrossDeptNotifyPayloadVO implements Serializable {

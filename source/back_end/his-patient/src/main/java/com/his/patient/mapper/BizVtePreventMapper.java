@@ -16,8 +16,6 @@ import java.util.List;
 
 /**
  * VTE 预防措施 Mapper。
- *
- * <p>排序统一 {@code plan_date DESC, id DESC}（同日多条按登记序稳定回放，防翻页抖动）。
  */
 @Mapper
 public interface BizVtePreventMapper extends BaseMapper<BizVtePrevent> {

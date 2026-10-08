@@ -10,10 +10,6 @@ import java.util.List;
 
 /**
  * 放射报告详情（写报告时一屏要有的东西，sql/138）。
- *
- * <p>影像帧 {@code images} 直接随详情出参：诊断医师打开一条检查就是为了看图，
- * 让他先等报告回来再发第二个请求取影像，等于每次开单都多一次往返，
- * 而且中间那瞬间的空白会被当成「没有片子」。
  */
 @Data
 public class RadioReportDetailVO {

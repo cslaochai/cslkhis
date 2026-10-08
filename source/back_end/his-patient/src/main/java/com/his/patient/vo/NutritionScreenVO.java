@@ -12,9 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 营养风险筛查记录出参（列表/详情共用）。
- *
- * <p>码值文案全部由 SQL 的 CASE 给出，与 {@code NutritionRules} 逐字对齐；
- * 前端只渲染 {@code xxxText}，不许自己判分数区间。
  */
 @Data
 public class NutritionScreenVO implements Serializable {

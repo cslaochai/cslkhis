@@ -13,11 +13,6 @@ import java.util.List;
 
 /**
  * 住院医嘱模板新增/修改入参（命名遵循 AGENTS.md：新增和修改用 `xxxUpsertDTO`）。
- *
- * <p>明细直接复用开立医嘱的 {@link InpatientOrderItemDTO}：模板就是"没填病人的医嘱半成品"，
- * 造第二个明细类型必然出现两套字段漂移。排序按提交顺序由服务端写排序号，前端不传。
- *
- * <p>{@code doctorId} 不放进来 —— 归属一律服务端按当前登录人覆盖，否则改个字段就能读写别人的模板。
  */
 @Data
 public class InpatientOrderTemplateUpsertDTO implements Serializable {

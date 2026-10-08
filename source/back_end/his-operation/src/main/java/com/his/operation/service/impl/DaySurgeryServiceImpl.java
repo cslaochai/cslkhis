@@ -48,13 +48,15 @@ import java.util.Objects;
 public class DaySurgeryServiceImpl extends ServiceImpl<BizDaySurgeryApplyMapper, BizDaySurgeryApply> implements DaySurgeryService {
 
     private final BizDaySurgeryItemMapper bizDaySurgeryItemMapper;
+
     private final BizDaySurgeryApplyMapper bizDaySurgeryApplyMapper;
+
     private final BizDaySurgeryFollowMapper bizDaySurgeryFollowMapper;
+
     private final BizPatientService bizPatientService;
+
     private final RedisSequenceService redisSequenceService;
-    /**
-     * 手术分级授权闸门（G21）：his-system 提供，择期手术不够级别直接拒单
-     */
+
     private final EmployeeTechAuthService employeeTechAuthService;
 
     private static LocalDate parseDate(String v) {

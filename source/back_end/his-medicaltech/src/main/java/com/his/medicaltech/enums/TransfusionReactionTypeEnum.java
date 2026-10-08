@@ -8,8 +8,6 @@ import java.util.List;
 
 /**
  * 输血反应类型枚举（受控集合：禁止自由文本，否则「发热」与「发热反应」统计不到一起）。
- *
- * <p>列里存的就是中文名本身（受控词表而非自增码），所以 code 与 label 同值。
  */
 @Getter
 public enum TransfusionReactionTypeEnum {

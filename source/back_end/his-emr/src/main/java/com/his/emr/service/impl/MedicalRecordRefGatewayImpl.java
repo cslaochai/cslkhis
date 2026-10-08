@@ -12,12 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * {@link MedicalRecordRefGateway} 的 his-emr 侧实现（批次E/E6）。
- * <p>
- * 接口定义在调用方 his-appoint，实现在提供病历数据的 his-emr ——
- * 依赖方向 his-emr → his-appoint，单向，无环。
- * <p>
- * 只读：按ID取简要信息、按患者取最近就诊，不改任何数据（原病历一律不改）。
+ * MedicalRecordRefGateway 的 his-emr 侧实现（批次E/E6）。
  */
 @Component
 @RequiredArgsConstructor

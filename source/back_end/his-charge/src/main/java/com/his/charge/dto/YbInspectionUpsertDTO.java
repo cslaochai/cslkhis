@@ -9,8 +9,6 @@ import java.time.LocalDate;
 
 /**
  * 飞检批次新增/修改（id 空=新增；单号由服务端生成，前端不传）。
- *
- * <p>长度靠服务端截断兜底，不在 DTO 上加 @Size 抢在截断前把用户输入变成 400。
  */
 @Data
 public class YbInspectionUpsertDTO {

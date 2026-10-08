@@ -15,19 +15,6 @@ import java.time.LocalDateTime;
 
 /**
  * 门诊治疗申请（治疗申请单）—— 一次「疗程」，可含多次执行。
- *
- * <p>本表主键列名是申请ID 且不叫 id，因此**不继承 BaseEntity**；
- * 同时它**没有 del_flag / create_by**（sql/11 建表就没有，his-report 的 CDR 裸 SQL 与
- * his-patient 的患者索引都按"这表没有 del_flag"写的）—— 取消用 {@code apply_status=2} 表达。
- *
- * <p>三处口径：
- * <ol>
- *   <li>{@code applyStatus} 只有 0-待执行 / 1-已执行 / 2-已取消三档（字典没变），
- *       疗程做到第几次看 {@code doneTimes}/{@code totalTimes}，**不新增"执行中"中间态**。
- *       规则：doneTimes=0 → 0；doneTimes&gt;0 且未取消 → 1。</li>
- *   <li>单价与项目/患者/科室同为**开单时快照**：疗程中途价表调价不能让已打的卡跟着变。</li>
- *   <li>{@code executeTime} 沿用老列语义，写"最近一次执行时间"（不是首次），与老铺底数据一致。</li>
- * </ol>
  */
 @Data
 @TableName("biz_treatment_apply")

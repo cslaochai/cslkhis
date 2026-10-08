@@ -15,19 +15,12 @@ import java.time.LocalDateTime;
 
 /**
  * 住院请假单入参（外层空壳 + 内部静态类，同 CriticalNoticeDTO 组织方式）。
- *
- * <p>时间入参一律宽进空格格式（AGENTS §3），前端 value-format 同口径传
- * {@code yyyy-MM-dd HH:mm:ss}，不许传 ISO T 分隔。
- *
- * <p>长度口径（AGENTS §3「必填靠 @NotNull，长度靠服务端截断」）：
- * <b>自由文本</b>（事由/去向/医师意见/拒绝理由/各类备注）不在入参层卡长度 ——
- * 服务端 cut(x, 列宽) 兜底截断，写太长是「写得啰嗦」不是「请求非法」，
- * 被 400 弹回会让用户重填一大段；
- * <b>结构化短字段</b>（姓名/电话）保留 max —— 电话被截成半个号码不如直接提示重填。
  */
 public class InpatientLeaveDTO {
 
-    /** 分页查询 */
+    /**
+     * 分页查询
+     */
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class QueryPage extends PageParam {
@@ -47,7 +40,9 @@ public class InpatientLeaveDTO {
         private LocalDate endDate;
     }
 
-    /** 填写/修改申请单（一般项目由服务端按住院重查快照；审批医师不由前端指定） */
+    /**
+     * 填写/修改申请单（一般项目由服务端按住院重查快照；审批医师不由前端指定）
+     */
     @Data
     public static class Upsert {
         /** 主键（雪花ID） */
@@ -91,7 +86,9 @@ public class InpatientLeaveDTO {
         private String remark;
     }
 
-    /** 审批（allow=true 批准并电子签名锁定；allow=false 拒绝必填理由） */
+    /**
+     * 审批（allow=true 批准并电子签名锁定；allow=false 拒绝必填理由）
+     */
     @Data
     public static class Approve {
         /** 主键（雪花ID） */
@@ -107,7 +104,9 @@ public class InpatientLeaveDTO {
         private String clientIp;
     }
 
-    /** 登记离院 = 患方签署「离院风险告知与责任承诺书」三要素 + 实际离院时间 */
+    /**
+     * 登记离院 = 患方签署「离院风险告知与责任承诺书」三要素 + 实际离院时间
+     */
     @Data
     public static class Confirm {
         /** 主键（雪花ID） */
@@ -132,7 +131,9 @@ public class InpatientLeaveDTO {
         private LocalDateTime actualLeaveTime;
     }
 
-    /** 返回销假 */
+    /**
+     * 返回销假
+     */
     @Data
     public static class Back {
         /** 主键（雪花ID） */
@@ -142,7 +143,9 @@ public class InpatientLeaveDTO {
         private String returnNote;
     }
 
-    /** 取消（仅待审批/已批准；必填原因） */
+    /**
+     * 取消（仅待审批/已批准；必填原因）
+     */
     @Data
     public static class Cancel {
         /** 主键（雪花ID） */
@@ -153,7 +156,9 @@ public class InpatientLeaveDTO {
         private String cancelReason;
     }
 
-    /** 超期处置记录（仅已离院且超期的单可记） */
+    /**
+     * 超期处置记录（仅已离院且超期的单可记）
+     */
     @Data
     public static class Contact {
         /** 主键（雪花ID） */
@@ -167,7 +172,9 @@ public class InpatientLeaveDTO {
         private Integer reportTo;
     }
 
-    /** 打印承诺书计数 */
+    /**
+     * 打印承诺书计数
+     */
     @Data
     public static class Print {
         /** 主键（雪花ID） */

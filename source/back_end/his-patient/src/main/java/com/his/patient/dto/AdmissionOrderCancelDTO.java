@@ -4,7 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-/** 作废住院证入参 */
+/**
+ * 作废住院证入参
+ */
 @Data
 public class AdmissionOrderCancelDTO {
 

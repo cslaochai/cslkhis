@@ -10,7 +10,6 @@ import java.util.List;
 
 /**
  * 患者端消息中心读侧（消息通知属 his-system，跨模块用裸 SQL）。
- * 注意：message_id/receiver_id 为 BIGINT，Mapper 行不经 ToStringSerializer，一律 CAST AS CHAR。
  */
 @Mapper
 public interface MiniMessageMapper {

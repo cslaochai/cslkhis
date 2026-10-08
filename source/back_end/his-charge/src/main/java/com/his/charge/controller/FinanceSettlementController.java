@@ -17,16 +17,6 @@ import java.util.List;
 
 /**
  * 财务班结 / 日结 / 三级对账（G8）。
- *
- * <p>⚠ 与 {@code /appoint/dayEndSettle} 无关：那个做的是门诊号源状态结转（把昨天的"候诊中"
- * 收成未就诊），属门诊号源域；这里是**财务结账**。两者同叫"日结"但没有任何关系。
- *
- * <p>⚠ 鉴权口径：本工程 {@code SecurityConfig} 仅 {@code anyRequest().authenticated()}，
- * 菜单上的 {@code finance:settlement:list} 只控可见性，不构成写权限。
- * 写接口的操作人一律服务端从登录态取（{@code UserUtils}），不信前端传的身份。
- *
- * <p>出参一律 VO：实体里有 {@code Long id}（雪花 19 位），前端 JS 的 Number 只有 53 位精度，
- * 裸实体出去前端拿到的 ID 是错值且不报错。
  */
 @Tag(name = "财务班结日结")
 @RestController

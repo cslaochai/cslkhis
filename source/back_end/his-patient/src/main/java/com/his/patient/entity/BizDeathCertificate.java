@@ -14,18 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 居民死亡医学证明（推断）书（死亡医学证明书，sql/157）。
- *
- * <p>口径：
- * <ol>
- *   <li>一次住院同时只允许一张<b>有效</b>证明（草稿/已审核/已开具都算占用）；改错走
- *       「作废原证 + 另起新证」，新证 {@code origCertId} 指向原证，原证内容永不修改
- *       （法定文书留痕，同收费四层红冲口径）。</li>
- *   <li>一般项目全是<b>快照</b>：证明是对外法定凭证（户籍注销、殡葬火化），必须能脱离患者档案独立回看。</li>
- *   <li>{@code idCard} / {@code relativePhone} 明文入库，展示位一律由 VO 出参脱敏，
- *       只有编辑回显（getDetailById）保持明文（AGENTS.md 第 5 条）。</li>
- *   <li>{@code reportPayload} 是死因监测上报报文（当前不对接外部平台，落库即留痕）；
- *       已上报的证明连同报文一起冻结。</li>
- * </ol>
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

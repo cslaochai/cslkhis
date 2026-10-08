@@ -11,8 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医保报盘报文台账出参。
- *
- * <p>分页出参不带报文全文（那一列动辄几十 KB），单条查询才带回。
  */
 @Data
 public class BizInsuranceReportVO {

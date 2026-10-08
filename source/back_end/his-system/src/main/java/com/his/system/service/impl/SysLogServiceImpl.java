@@ -34,10 +34,6 @@ import java.util.List;
 
 /**
  * 日志审计服务实现（sql/158）。
- *
- * <p>三张表都是<b>只增不删</b>的业务留痕表，所以这里没有任何写方法 ——
- * 写入分别在 {@code OperLogInterceptor}（操作日志）、{@code SysLoginLogService}（登录日志）、
- * {@code SysAuditLogService}（审计日志，业务模块显式调用）。
  */
 @Slf4j
 @Service
@@ -170,10 +166,6 @@ public class SysLogServiceImpl implements SysLogService {
 
     @Override
     public OperLogDetailVO operLogDetail(Long id) {
-        // C 类保留：入参是 GET @RequestParam 标量而非 request DTO，Bean Validation 注解无处安放
-        if (id == null) {
-            throw new BusinessException("日志ID不能为空");
-        }
         SysOperLog row = sysOperLogMapper.selectById(id);
         if (row == null || (row.getDelFlag() != null && row.getDelFlag() == 1)) {
             throw new BusinessException("操作日志不存在：" + id);
@@ -263,10 +255,6 @@ public class SysLogServiceImpl implements SysLogService {
 
     @Override
     public AuditLogVO auditLogDetail(Long id) {
-        // C 类保留：入参是 GET @RequestParam 标量而非 request DTO，Bean Validation 注解无处安放
-        if (id == null) {
-            throw new BusinessException("日志ID不能为空");
-        }
         SysAuditLog row = sysAuditLogMapper.selectById(id);
         if (row == null || (row.getDelFlag() != null && row.getDelFlag() == 1)) {
             throw new BusinessException("审计日志不存在：" + id);
@@ -312,7 +300,7 @@ public class SysLogServiceImpl implements SysLogService {
 
     @Override
     public List<FieldChangeVO> fieldChangeBatch(String batchNo) {
-        // C 类保留：入参是 GET @RequestParam 标量（纯空格也进得来）而非 request DTO，Bean Validation 注解无处安放
+        // D-业务规则：@RequestParam 只挡「缺参」不挡空串/纯空格，非空与取值合法性混写且标量参数不许挂约束注解，DTO 注解无法表达，保留
         if (!TextUtil.hasText(batchNo)) {
             throw new BusinessException("批次号不能为空");
         }

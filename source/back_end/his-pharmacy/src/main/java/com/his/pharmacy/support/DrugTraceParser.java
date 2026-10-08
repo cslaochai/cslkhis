@@ -11,15 +11,6 @@ import java.util.regex.Pattern;
 
 /**
  * 药品追溯码解析器（扫码串 → 码制 / 产品标识 / 序列号 / 批号 / 有效期）。
- *
- * <p>支持两类合规码制：
- * <ol>
- *   <li><b>GS1 码</b>（药盒上的 GS1-128 / 二维码，扫码枪输出 HRI 括号串）：
- *       {@code (01)06901234560001(17)290301(10)LOT20260301(21)SN000000000001}；
- *       (01)=GTIN-14 产品标识、(10)=批号、(17)=有效期、(21)=序列号。</li>
- *   <li><b>中国药品追溯码（20 位数字）</b>：{@code 81000001000000000001}，
- *       前 8 位 = 药品本体码（国家药监分配）、后 12 位 = 生产序列号。</li>
- * </ol>
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DrugTraceParser {

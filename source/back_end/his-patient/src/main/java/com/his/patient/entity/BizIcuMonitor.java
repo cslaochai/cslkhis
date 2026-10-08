@@ -15,10 +15,6 @@ import java.time.LocalDateTime;
 
 /**
  * ICU 监护记录单（ICU 监护记录单）：一条 = 一个时刻的床边记录。
- *
- * <p>只补 ICU 专有内容（GCS 分项、瞳孔、CVP、呼吸机参数、五类导管、出入量），
- * 普通病区三测仍走护理文书，两表不重复登记。
- * 唯一键 uk(stay_id, record_time) 挡住同一时刻写两条；出科后禁止再写。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

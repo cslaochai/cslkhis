@@ -18,9 +18,6 @@ import java.util.List;
 
 /**
  * 患者标签关联控制器
- *
- * <p>负责「患者 ↔ 标签」的绑定关系。标签本身的定义（增删改查）在 his-system 的
- * {@code /system/patientTag} 下，由 {@code com.his.system.controller.PatientTagController} 提供。
  */
 @Tag(name = "患者标签关联")
 @RestController

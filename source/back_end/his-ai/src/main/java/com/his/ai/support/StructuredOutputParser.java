@@ -9,13 +9,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * 结构化输出解析器。
- * <p>
- * 模型即使被要求「只输出 JSON」，也常见三种情况需要容错：
- * 用 ```json 代码块包起来、前后加一句解释、字段多返回几个。
- * 这里统一处理，让上层能力代码只面对强类型对象。
- * <p>
- * 注意最后一道闸在能力层：ICD 编码必须校验存在于候选集内。本类只保证「能解析」，
- * 不保证「内容正确」。
  */
 @Component
 @RequiredArgsConstructor

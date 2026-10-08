@@ -5,10 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 按状态分组的检查预约单数（{@code BizExamAppointmentMapper#countGroupByStatus} 一行）。
- *
- * <p>deviceId / slotDate 传 null 表示该维度不限（用 {@code jdbcType} 显式声明，
- * 否则 MyBatis 会把null 当成字面量拼进 SQL）。
+ * 按状态分组的检查预约单数（BizExamAppointmentMapper#countGroupByStatus 一行）。
  */
 @Data
 public class ExamApptStatusCountRowVO implements Serializable {

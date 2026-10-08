@@ -10,9 +10,6 @@ import java.util.List;
 
 /**
  * 手术清点明细 Mapper。
- *
- * <p>行号序号编号由服务端按当前最大行号 +1 生成：
- * 清点单上的顺序是护士实际报数的顺序，打岔、回头改名都不改变它。
  */
 @Mapper
 public interface BizOperationCountItemMapper extends BaseMapper<BizOperationCountItem> {

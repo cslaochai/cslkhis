@@ -6,10 +6,6 @@ import com.his.ai.exception.LlmException;
 
 /**
  * 大模型接入层。
- * <p>
- * 抽成接口的目的：把「用不用 Spring AI / 换不换厂商」这个决策隔离在实现类里。
- * 将来引入 Spring AI 时，只需新增一个实现类替换当前的
- * {@link RestClientLlmClient}，业务代码（各 capability）零改动。
  */
 public interface LlmClient {
 

@@ -13,16 +13,6 @@ import java.util.List;
 
 /**
  * 放射诊断报告书写台（sql/138）。
- *
- * <p>报告状态机（报告单的报告状态 + 检查记录的记录状态联动）：
- * <pre>
- *   拍片完成（技师）        → record 4 已出结果，报告还不存在
- *   保存草稿（医师）        → report 0 草稿
- *   提交审核（医师）        → report 1 待审核 + 报告医师签名
- *   审核通过（上级医师）    → report 3 已审核 + 审核医师签名，record 5 已审核
- *   退回重写（上级医师）    → report 0 草稿 + version+1 + 清签名指针，record 退回 4
- *   发布（医师）            → report 4 已发布，record 6 已发布
- * </pre>
  */
 public interface RadiologyReportService {
 

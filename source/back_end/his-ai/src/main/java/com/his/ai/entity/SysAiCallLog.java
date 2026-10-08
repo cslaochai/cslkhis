@@ -9,10 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * AI 调用审计日志。
- * <p>
- * 医疗场景下这不是「可观测性优化」，是强制要求 —— 病历质控结论要被医务科追溯、
- * 处方审核意见要能应对药事委员会质询，必须能回答「这条结论是哪一版提示词、
- * 哪个模型、什么时候产出的」。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

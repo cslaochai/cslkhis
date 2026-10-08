@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * 药品盘点单状态枚举（码值口径 = biz_stocktake.status 列注释）。
- *
- * <p>文案供后端拼提示用，页面渲染仍走字典。
  */
 @Getter
 public enum StocktakeStatusEnum {

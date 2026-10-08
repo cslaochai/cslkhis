@@ -17,7 +17,9 @@ import java.util.List;
  */
 public class DischargeDrugDTO {
 
-    /** 开单 / 修改（id 为空=新增；仅「待发药」可改） */
+    /**
+     * 开单 / 修改（id 为空=新增；仅「待发药」可改）
+     */
     @Data
     public static class Upsert implements Serializable {
 
@@ -59,7 +61,9 @@ public class DischargeDrugDTO {
         private String remark;
     }
 
-    /** 分页查询 */
+    /**
+     * 分页查询
+     */
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class QueryPage extends PageParam implements Serializable {
@@ -77,7 +81,9 @@ public class DischargeDrugDTO {
         private Integer dispenseStatus;
     }
 
-    /** 批量发药 */
+    /**
+     * 批量发药
+     */
     @Data
     public static class Dispense implements Serializable {
 
@@ -89,7 +95,9 @@ public class DischargeDrugDTO {
         private String remark;
     }
 
-    /** 删除（仅待发药） */
+    /**
+     * 删除（仅待发药）
+     */
     @Data
     public static class Delete implements Serializable {
 

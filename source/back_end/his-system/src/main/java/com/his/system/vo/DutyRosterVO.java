@@ -10,10 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 总值班排班列表出参。
- *
- * <p>{@code actual*} 三列是「此刻真正该找的人」：有换班就指向换班后的人，
- * 没有就指向原值班人。列表与「当前总值班」解析必须用同一套取值，
- * 否则界面上写着张三、系统却把待办发给李四。
  */
 @Data
 public class DutyRosterVO {

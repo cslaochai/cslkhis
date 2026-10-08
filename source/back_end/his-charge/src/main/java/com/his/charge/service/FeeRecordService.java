@@ -15,13 +15,6 @@ import java.util.List;
 
 /**
  * 费用记账服务（L1）：应收的唯一来源。
- *
- * <p><b>本层铁律：记账行一经写入，金额列不再 UPDATE。</b>
- * 记错了不改成，而是"红冲"——写一条负数行把原行冲掉（两行用 {@code orig_fee_id} 互指）。
- * 之所以不许就地改数：应收是医保核查、退费追溯、科室收入统计的共同依据，
- * 就地 update 等于销毁"这笔费用历史上是多少"，事后谁也拿不出证据。
- *
- * <p>部分冲减只写负行、不改原行，净额靠 SUM 现算，不靠某一行的镜像列。
  */
 public interface FeeRecordService extends IService<BizFeeRecord> {
 

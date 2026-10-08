@@ -9,14 +9,6 @@ import java.time.LocalDate;
 
 /**
  * 患者信息新增/修改入参
- *
- * <p>姓名 / 性别 / 身份证号三项必填 —— 它们既是 EMPI 去重的匹配键，
- * 也是下游性别判断与实名核验的依据；其余字段（民族、职业、婚姻、血型、
- * 联系人、医保等）允许先建档后补录。
- *
- * <p>手机号<b>不</b>在此强制：老年患者没有手机号是常态，硬拦只会逼出乱填的号码，
- * 而手机号是 EMPI 匹配键之一 —— 编出来的号比空号危害大。填了则必须合法
- * （由 {@code PatientProfileValidator} 校验）。
  */
 @Data
 public class PatientUpsertDTO {

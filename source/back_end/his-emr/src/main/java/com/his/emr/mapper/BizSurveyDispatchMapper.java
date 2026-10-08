@@ -14,9 +14,6 @@ import java.util.List;
 
 /**
  * 满意度发放/回收台账 Mapper。
- *
- * <p>裸 SQL 一律自带 {@code del_flag = 0}（@Select 不走 MP 的逻辑删除拦截），
- * 日期上界一律补 ' 23:59:59'（DATETIME 与 'yyyy-MM-dd' 直接比会把当天全滤掉）。
  */
 @Mapper
 public interface BizSurveyDispatchMapper extends BaseMapper<BizSurveyDispatch> {

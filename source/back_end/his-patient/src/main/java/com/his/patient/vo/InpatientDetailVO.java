@@ -11,7 +11,6 @@ import java.util.List;
 
 /**
  * 住院详情 VO
- * <p>一次返回「入院信息 + 病案首页 + 诊断明细 + 手术明细」，避免前端串 4 个请求。
  */
 @Data
 public class InpatientDetailVO {

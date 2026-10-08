@@ -32,13 +32,6 @@ import java.util.stream.Collectors;
 
 /**
  * 患者全景时间轴实现（P5.2）。
- *
- * <p>取数只有 7 次数据库往返（事件 1 次 + 节点 4 次 + 档案 1 次 + 关系 1 次），
- * 其余全在内存里按锚点归位 —— 一个患者几十次就诊、上千条事件也不会变成查询风暴。
- *
- * <p>三个"不做就会错"的点，代码里都标了注释：
- * ① 患者ID必须经 EMPI 归并；② 码值翻译只走枚举的 getText；
- * ③ 归属不到就诊次的事件单列，不丢。
  */
 @Service
 @RequiredArgsConstructor
@@ -115,6 +108,7 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
      * 不是 HTTP 入参 —— HTTP 入参一律走 DTO 的 Long 字段，让 Jackson 在绑定层就报 400。
      */
     private static Long parseRowId(String v) {
+        // C-非 web 入参：解析的是内部裸 SQL 行里的字符串列，不是 HTTP 参数绑定，Bean Validation 不覆盖，保留
         if (!TextUtil.hasText(v)) {
             throw new BusinessException("患者ID不能为空");
         }
@@ -127,9 +121,6 @@ public class CdrServiceImpl extends ServiceImpl<BizPatientMapper, BizPatient> im
 
     @Override
     public CdrTimelineVO getTimeline(CdrQueryDTO dto) {
-        if (dto == null || dto.getPatientId() == null) {
-            throw new BusinessException("患者ID不能为空");
-        }
         Long pid = dto.getPatientId();
         BizPatient main = bizPatientMapper.selectById(pid);
         if (main == null) {

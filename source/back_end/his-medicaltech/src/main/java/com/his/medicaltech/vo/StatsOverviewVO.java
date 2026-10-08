@@ -7,11 +7,6 @@ import java.util.List;
 
 /**
  * 报表统计总览 VO（一次返回四个页签全部聚合结果，页面不再二次拼装）。
- *
- * <p>口径速查：
- * 门诊量 = visit_date 落在区间内且 regist_status&lt;&gt;5（5-已退号）的挂号记录；
- * 收入净额 = 旧收费明细按 is_refund 正负抵扣（与 BI 驾驶舱同源）；
- * 出院队列 = discharge_time 非空且落区间、排除 7-医嘱取消入院（不以 admit_status 判出院，dev 有脏行）。
  */
 @Data
 public class StatsOverviewVO {

@@ -11,9 +11,6 @@ import java.util.List;
 
 /**
  * 账单收款入参（L3）：一次提交可以带多笔、多渠道（现金 30 + 余额 50 + 医保个账 20）。
- *
- * <p>一笔钱一行流水，绝不允许"合并成一笔收款"：合并后既表达不了组合支付，
- * 退费时无从知道该退回哪个渠道，日结也无从按渠道清点。
  */
 @Data
 public class BillPayDTO {
@@ -39,8 +36,6 @@ public class BillPayDTO {
 
     /**
      * 一笔收款：支付方式（字典 his_pay_method）、金额（必须大于 0）、渠道流水号
-     * （患者端回调回填真实号，柜面扫码留空由服务端造模拟号）、
-     * 账户主体ID（pay_method=5 必填：门诊=患者ID，住院=入院ID）。
      */
     @Data
     public static class PayItem {

@@ -11,11 +11,6 @@ import java.util.*;
 
 /**
  * 患者档案关键字段清单与完整度评分（P5.1 EMPI / P5.3 数据质量共用）
- *
- * <p>为什么要有这么一张"关键字段清单"：数据质量的**完整性**维度不能被理解成
- * "整行没有 null 就行"——`photo`、`balance` 这类字段空着完全不影响诊疗，
- * 而 `idCard`、`birthDate` 空着直接导致无法去重、无法判断用药禁忌。
- * 所以完整度必须只对**诊疗必需字段**算，且要能报出**具体缺了哪几个**（不达标要能定位）。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class PatientProfileFields {
@@ -121,10 +116,6 @@ public final class PatientProfileFields {
 
     /**
      * 评分结果。
-     *
-     * @param completeCount 已填字段数
-     * @param totalCount    关键字段总数
-     * @param missingFields 缺失字段的**中文名**列表（直接给页面显示与定位用）
      */
     public record ProfileScore(int completeCount, int totalCount, List<String> missingFields) {
 

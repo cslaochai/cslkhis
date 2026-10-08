@@ -9,9 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * 医嘱模板明细行出参。
- *
- * <p>单价明确是**参考价**：套用时前端按 {@code itemCode} 回查字典现价覆盖它，
- * 回查不到（字典已下架 / 手输类项目）才沿用此值并提示医生确认。
  */
 @Data
 public class InpatientOrderTemplateItemVO implements Serializable {

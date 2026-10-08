@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 目标性监测每日打卡（导管日留痕）。
- * 只增禁删禁改：质控留痕，service 内含软删行查重防重复打卡。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

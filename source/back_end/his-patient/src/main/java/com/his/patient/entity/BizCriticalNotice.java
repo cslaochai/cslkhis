@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 病危/病重通知单（病危重通知回执，sql/161）。
- *
- * <p>一次告知一张单：签发即医师电子签名（业务类型=9）并锁定内容，
- * 签收落家属手写签名与关系；改错只能作废重开，法定文书不留修改痕迹的机会。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

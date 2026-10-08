@@ -14,13 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院医嘱执行记录。
- *
- * <p><b>本表只允许改状态，任何情况下都不删除</b>（执行留痕是飞检要件）。
- * 护士"跳过"也留一行（{@code execStatus=3} + {@code execNote} 必填），不做物理删除。
- *
- * <p>计划行在「护士校对通过」时按天生成，并在查询待执行队列时补当天
- * （同「危急值超时是查询时算的」口径：不靠定时任务把状态"跑"出来）。
- * {@code (order_id, plan_date)} 上有唯一索引，保证同医嘱同日只生成一条计划。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -21,7 +21,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 数据字典Redis缓存服务
- * 系统启动时加载所有字典数据到Redis，查询时优先从缓存获取
  */
 @Slf4j
 @Service

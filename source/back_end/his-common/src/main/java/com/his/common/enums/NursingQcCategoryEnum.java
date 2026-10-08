@@ -4,14 +4,6 @@ import lombok.Getter;
 
 /**
  * 护理质量检查类别枚举（sql/168，落在护理质控检查项目录的检查类别列）
- *
- * <p>一次现场检查按类别开单（一张单 = 病区 × 月份 × 类别），因为护理部的排班是
- * 「单周基础护理、双周专科、每月安全和文书」轮着查，混在一张单里就没法算各自的目标值。
- *
- * <p>只有 {@link #BASIC_NURSING} 与 {@link #DOC} 挂台账指标
- * （{@link NursingIndicatorEnum#BASIC_NURSING} / {@link NursingIndicatorEnum#NURSING_DOC}），
- * 其余三类是检查表内容 + 得分率，不单独出月度指标。
- * <br>字典权威在本枚举，码值改动必须同步 {@code sql/168} 的 {@code his_nursing_qc_category} 段。
  */
 @Getter
 public enum NursingQcCategoryEnum {

@@ -6,12 +6,6 @@ import com.his.patient.vo.ConsultationVO;
 
 /**
  * 住院会诊服务（P4.1：申请 → 应答 → 会诊记录 → 完成 → 回写病历）。
- *
- * <p>状态机（不可跳步）：
- * <pre>
- *   0 待应答 --accept--> 3 已应答 --finish--> 1 已完成（同时回写住院病历）
- *      \--cancel--> 2 已取消        （仅 0 可取消；3 之后必须走完成）
- * </pre>
  */
 public interface InpatientConsultationService {
 

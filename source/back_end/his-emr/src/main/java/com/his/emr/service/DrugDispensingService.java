@@ -8,13 +8,6 @@ import com.his.emr.vo.DrugDispensingCountVO;
 
 /**
  * 药品发药服务接口
- * 闭环口径：发药 = 审方闸门校验 + **麻精限量闸门** + **麻精双人复核** + FEFO 扣库存（落流水）
- * + 明细状态 + 处方状态联动 + **麻精自动写专册**；
- * 退药 = 回库存（落流水）+ 明细置 3 + 处方置 6。
- *
- * <p>麻精相关的三道闸门由 {@link NarcoticControlService} 提供，顺序是：
- * ① 限量（按处方整体判一次，超限整单不发）→ ② 双人复核（按药品判）→ ③ 发药成功后写专册。
- * 顺序不能换：先扣库存再校验，校验失败要回滚库存，白白制造一次流水。
  */
 public interface DrugDispensingService extends IService<BizDrugDispensing> {
 

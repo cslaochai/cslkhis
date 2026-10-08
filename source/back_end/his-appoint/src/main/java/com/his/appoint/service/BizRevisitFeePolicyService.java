@@ -11,15 +11,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 复诊收费策略服务：既是配置页的 CRUD 出口，也是<b>「复诊号收多少钱」的唯一判定入口</b>。
- *
- * <p>为什么要有这个服务：改造前 {@code AppointServiceImpl} 里写死
- * {@code boolean waived = revisit;}，只要 visit_type=2 就整单免 ——
- * 当日拿结果回来复看确实该免（同一次就诊），但患者隔两周自己来复诊是新的一次就诊，
- * 免掉就是漏收入，而且医保侧要求「为什么没收钱」必须留得下凭证。
- *
- * <p>匹配口径：来源 → 同医生/同科室三态 → 间隔天数上限，按 priority 升序、id 升序取第一条；
- * <b>匹配不到任何策略 = 全额收费</b>。
+ * 复诊收费策略服务：既是配置页的 CRUD 出口，也是「复诊号收多少钱」的唯一判定入口。
  */
 public interface BizRevisitFeePolicyService extends IService<BizRevisitFeePolicy> {
 
@@ -51,9 +43,9 @@ public interface BizRevisitFeePolicyService extends IService<BizRevisitFeePolicy
      */
     void deleteById(Long id);
 
-    /**
-     * 判定上下文
-     */
+/**
+ * 判定上下文
+ */
     @Data
     class RevisitFeeContext {
         /**
@@ -82,9 +74,9 @@ public interface BizRevisitFeePolicyService extends IService<BizRevisitFeePolicy
         private BigDecimal diagnosisFee;
     }
 
-    /**
-     * 收费决定
-     */
+/**
+ * 收费决定
+ */
     @Data
     class RevisitFeeDecision {
         /**

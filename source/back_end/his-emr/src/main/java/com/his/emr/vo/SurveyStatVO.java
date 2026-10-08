@@ -8,8 +8,6 @@ import java.util.List;
 
 /**
  * 满意度看板统计（服务端 group by 出）。
- *
- * <p>绝不让前端拿「当前页 list」去数 —— 那等于只统计了本页，翻页就变（与纠纷统计同一口径）。
  */
 @Data
 public class SurveyStatVO implements Serializable {

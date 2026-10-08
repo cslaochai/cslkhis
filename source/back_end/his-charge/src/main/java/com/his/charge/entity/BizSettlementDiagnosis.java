@@ -9,10 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 结算清单诊断明细（编码依据链）
- *
- * <p>与 `医保结算清单.diagnosis`（一个字符串）的区别：
- * 那条字符串只能用来展示，无法回答「主诊断是谁、编码对不对、有没有 CC/MCC 升级」，
- * 而医保查高编高套查的正是这三件事。所以编码必须结构化落库才能被审计。</p>
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

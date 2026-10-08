@@ -11,10 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 室间质评批次
- *
- * <p>一次考核 = 一条。status 由 Service 单向推进（1 待收样 → 2 检测中 → 3 已上报 →
- * 4 已回报 → 5 已归档），不接受前端传值，避免台账状态被绕过去的界面改花。
- * pt_score / pass_flag / fail_count 全是服务端算完写死的 —— EQA 的成绩不允许"人工调"。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

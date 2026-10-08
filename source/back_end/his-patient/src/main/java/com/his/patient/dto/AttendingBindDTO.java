@@ -5,9 +5,6 @@ import lombok.Data;
 
 /**
  * 建立/转交管床关系入参。
- *
- * <p><b>生效时间不传＝当前时间</b>：转交场景里「上一手什么时候交出去」必须精确，
- * 所以留了 {@code effectiveTime} 让人显式指定（补录历史关系也靠它）。
  */
 @Data
 public class AttendingBindDTO {

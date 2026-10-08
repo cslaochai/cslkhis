@@ -18,9 +18,6 @@ import java.util.List;
 
 /**
  * 日间手术（准入目录 → 预约 → 术前评估 → 安排 → 完成 → 出院 / 转住院 → 24h 随访）。
- *
- * <p>按项目规范 @PreAuthorize 全部标到方法；按钮可用性与超期判定由后端 VO 给，
- * 前端不按 status 码值 switch、也不自己算时间差。
  */
 @Tag(name = "日间手术")
 @RestController

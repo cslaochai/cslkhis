@@ -8,18 +8,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * 质量单位枚举（码值口径 = 字典 {@code his_dose_unit} 的 g/mg/ug，另认中文与同义写法）。
- *
- * <p><b>为什么必须有这个枚举</b>：单位写法共 8 种（mcg/μg/ug/mg/g/微克/毫克/克），改前这 8 个在两处各手写一遍——
- * {@code DosageTextParser.MASS} 正则与 {@code DosageTextParser.toMg} 的 switch。加一个新单位若只改一处：
- * 只改正则 → 抽得出值但换算返回 null；只改 switch → 正则根本匹配不到。
- * 两种都是<b>静默漏判</b>（返回 null 上层当作「这条不判」，不报错），所以单位清单必须只有这一个出口。
- *
- * <p><b>为什么不放 IU</b>：胰岛素笔规格写着 300IU/支，但单据上的「1」是旋出来的刻度数而不是 300IU，
- * 放进来会批量造出假超量（见 {@code DoseLimitUpsertDTO} 同源说明）。
- *
- * <p><b>别名顺序是硬约束</b>：{@link #massAlternation()} 按别名<b>长度降序</b>拼，
- * 否则 {@code 0.5mg} 会被 {@code g} 抢走前半段，解析出 0.5 克。
+ * 质量单位枚举（码值口径 = 字典 his_dose_unit 的 g/mg/ug，另认中文与同义写法）。
  */
 public enum MassUnitEnum {
 

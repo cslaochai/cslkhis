@@ -10,15 +10,6 @@ import java.util.regex.Pattern;
 
 /**
  * 病历字段白名单（P1-3 结构化抽取的反幻觉底座）。
- * <p>
- * <b>为什么必须有这张表</b>：抽取的产出最终会被填进门诊病历的正式字段。
- * 如果字段名由模型自由发挥（返回个「月经史」「家族遗传病」），前端既不知道怎么渲染，
- * 也压根没有对应的列可写 —— 这和 ICD 编码必须落在候选集内是同一类约束。
- * 因此：<b>模型只能从本表给出的 key 里选，白名单外的字段一律丢弃并计数</b>。
- * <p>
- * 别名表同时被硬规则层用来做「标签切分」：医生粘贴的文本常常本身就是
- * 主诉：咳嗽3天这种带标签的格式（从其他系统/模板抄来的），
- * 这类内容用规则逐字切分比让模型改写更准 —— 也顺带成为模型不可用时的兜底路径。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class EmrFieldCatalog {
@@ -226,26 +217,12 @@ public final class EmrFieldCatalog {
 
     /**
      * 文本类病历字段
-     *
-     * @param key     与 {@code BizMedicalRecord} 的字段名一致，前端据此写表单
-     * @param label   中文名，用于展示与提示词
-     * @param aliases 行首标签别名（用于硬规则切分），按长度降序匹配
      */
     public record TextField(String key, String label, List<String> aliases) {
     }
 
     /**
      * 体征字段（数值 + 单位）
-     * <p>
-     * 体征用正则抽比用模型抽可靠得多，且误匹配可以用取值范围兜住，
-     * 所以这一组<b>只走硬规则，不交给模型</b>。
-     *
-     * @param key     与 {@code BizMedicalRecord} 的字段名一致
-     * @param label   中文名
-     * @param unit    单位
-     * @param pattern 提取正则，第 1 个捕获组为数值
-     * @param min     合理下限（含），用于挡掉误匹配
-     * @param max     合理上限（含）
      */
     public record VitalField(String key, String label, String unit,
                              Pattern pattern, double min, double max) {

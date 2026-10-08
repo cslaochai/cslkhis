@@ -14,14 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 支付渠道对账流水台账（M7 渠道侧"对方账"）。
- *
- * <p>幂等键 (channel, channel_trade_no)：同一渠道同一笔流水只落一次，
- * 重复导入由唯一键兜底跳过。勾对是人工动作：渠道流水 → 本地<b>支付流水号</b>
- * （local_txn_no ↔ 支付资金流水的流水编号，唯一键 ux_bill_txn 挡住一笔流水被两条台账勾走），
- * 金额不符由人登记长款/短款，系统不自动定性质。
- *
- * <p>为什么勾流水而不是勾收费单（AGENTS §7）：渠道退了一笔钱，本地事实是「一笔负数流水」，
- * 与收费单不是一对一；且收费四层下 billing 单已退役，勾单号的口径没有右值可查。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

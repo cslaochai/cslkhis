@@ -6,10 +6,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 全院床位池查询入参
- *
- * <p>所有参数都只用于<b>收窄</b>范围。床位中心本身就是院级职能
- * （它的存在意义就是"本科室没床时去别科找"），所以这里<b>不做科室数据权限收口</b>，
- * 边界由 {@code ipd:bedCenter:list} 的授权控制 —— 能进这个页面的人就是被授权看到全院的。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

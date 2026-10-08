@@ -4,7 +4,9 @@ import com.his.common.base.PageParam;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/** VTE 防控月度指标快照分页查询 */
+/**
+ * VTE 防控月度指标快照分页查询
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class VteStatsQueryPageDTO extends PageParam {

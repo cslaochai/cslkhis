@@ -10,8 +10,6 @@ import java.time.LocalDate;
 
 /**
  * 入径登记入参（enrollUpsert：id 为空新增，非空仅允许在径状态改入径日期）。
- *
- * <p>患者/科室/诊断等快照一律服务端按 admissionId 取，不信前端传值。
  */
 @Data
 public class EnrollUpsertDTO implements Serializable {

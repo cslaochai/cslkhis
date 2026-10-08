@@ -51,20 +51,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 检验危急值闭环服务实现。
- * <p>
- * <b>为什么「超时」不落库而实时算：</b> 超时是「当前时间 &gt; 处置时限」这个随时间变化的事实，
- * 一旦存成状态位，就必须有人定时去改它；没人改就会出现「明明超时了还显示未超时」。
- * 显示态一律由查询时计算，只把固定的 {@code deadline_time} 落库。
- * <p>
- * <b>本服务不做的事</b>：不阻断检验结果录入、不修改结果值、不调用任何模型。
- * 危急值上报失败（例如站内信发不出去）绝不能让人白录一遍结果，
- * 所以通知失败只标记 {@code notifyStatus=0} 并记日志，事务不回滚。
- * <p>
- * <b>通知去向必须留痕</b>：申请医师ID 为空的检验单是合法存在的
- * （外部导入、无开单医生的补录结果），此时绝不能只写一行日志就丢掉通知 ——
- * 日志没人看，而 {@code notifyStatus=0} 又说不清原因。处理办法是：
- * 先落到 {@code lab.critical_value_fallback_receiver} 配置的兜底接收人，
- * 连兜底都没有时把原因写进备注，让「没通知到人」在列表页看得见。
  */
 @Slf4j
 @Service
@@ -376,10 +362,6 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
 
     @Override
     public BizCriticalValueVO getById(Long criticalValueId) {
-        // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
-        if (criticalValueId == null) {
-            throw new BusinessException("危急值ID不能为空");
-        }
         BizCriticalValue entity = super.getById(criticalValueId);
         if (entity == null) {
             throw new BusinessException("危急值记录不存在：" + criticalValueId);
@@ -661,15 +643,11 @@ public class CriticalValueServiceImpl extends ServiceImpl<BizCriticalValueMapper
 
     @Override
     public boolean deleteById(Long criticalValueId) {
-        // C类：入参是主键参数而非请求 DTO，Bean Validation 只在 HTTP DTO 绑定时生效，无法下沉
-        if (criticalValueId == null) {
-            throw new BusinessException("危急值ID不能为空");
-        }
         return removeById(criticalValueId);
     }
 
     private BizCriticalValue require(Long criticalValueId) {
-        // C类：内部按主键捞单的公共闸口，入参非请求 DTO，Bean Validation 够不到，保留
+        // C-非 web 入参：私有 helper 由 receive/handle 复用（入参是 DTO 里的主键字段，不是标量绑定），Bean Validation 不覆盖，保留
         if (criticalValueId == null) {
             throw new BusinessException("危急值ID不能为空");
         }

@@ -8,11 +8,6 @@ import java.util.List;
 
 /**
  * 数据质量总览（P5.3）。
- *
- * <p>刻意同时给出 {@code issueCount}（问题条数）与 {@code dirtyRuleCount}（命中规则数）：
- * 前者说明"要改多少条数据"，后者说明"有几个环节出了问题"。
- * 实际整改时这两个数决定完全不同的动作 —— 1000 条同类问题改脚本，
- * 3 条不同类问题要分别查根因。
  */
 @Data
 @Schema(description = "数据质量总览")

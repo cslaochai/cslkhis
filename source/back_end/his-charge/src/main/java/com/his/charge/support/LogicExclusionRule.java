@@ -13,10 +13,6 @@ import java.util.Map;
 
 /**
  * B 组：逻辑排他。
- *
- * <p>这一组不依赖病历，只看编码自身的内部矛盾 —— 男患者编妊娠、成人编新生儿黄疸、
- * 同一 ICD 重复上报、入院病情「无」却当主诊断。这类问题**证据要求极低、误报率极低**，
- * 所以在医保飞检里属于一查一个准的项目，也最适合做结算前自动拦截。</p>
  */
 @Component
 public class LogicExclusionRule implements ComplianceRule {

@@ -9,9 +9,6 @@ import lombok.Data;
 
 /**
  * 生成抗菌药物监测指标入参。
- *
- * <p>scopeType=1 生成全院一条；scopeType=2 按科室逐条生成（统计期内有出院患者的科室）。
- * 同月同范围重复生成覆盖同一行 —— 指标是对外报数，只留最新一次复算的结果。
  */
 @Data
 public class AntibioticStatsGenerateDTO {

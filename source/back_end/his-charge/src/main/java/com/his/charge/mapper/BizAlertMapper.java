@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 告警 Mapper（P3 用它记住院欠费提醒）。
- *
- * <p>预警记录是既有表，<b>没有 del_flag / create_time 列</b> ——
- * 实体也没有继承 {@code BaseEntity}，别顺手加，否则全表 select 直接 500。
  */
 @Mapper
 public interface BizAlertMapper extends BaseMapper<BizAlert> {

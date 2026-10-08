@@ -9,9 +9,6 @@ import java.util.List;
 
 /**
  * 手术安全核查单出参（一时段一行）。
- *
- * <p>约定与手术/麻醉链其他 VO 一致：ID 字符串化、码值带后端文案；
- * 某一阶段是否可签（canSignPhase）由手术状态与时段顺序共同决定，规则在服务端。
  */
 @Data
 public class SafetyCheckVO implements Serializable {

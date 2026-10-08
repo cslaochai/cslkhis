@@ -9,15 +9,6 @@ import java.util.List;
 
 /**
  * 医嘱基础字典的三类口径（sql/142）：给药途径 / 用药频次 / 剂量单位。
- *
- * <p>单点定义的目的：值域、中文名、以及「这个字典落在医嘱表的哪一列」三件事必须一起定义 ——
- * 分开写就会出现「字典加了值、使用量统计却查错列」这种静默失效（统计永远 0，页面看不出毛病）。
- *
- * <p><b>值域口径（不要各写一份）</b>：
- * 途径存中文（历史医嘱 route 列就是中文，改成码会让存量数据渲染成「未知」），
- * 频次存英文缩写（qd/bid…，与医嘱单书写习惯一致），剂量单位是字面单位（g/mg/ml/片…）。
- *
- * <p>码值→中文名见 {@link OrderDictTypeEnum}。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OrderDictTypes {

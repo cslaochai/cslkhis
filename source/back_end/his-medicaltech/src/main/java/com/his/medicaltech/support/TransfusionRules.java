@@ -12,17 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 输血闭环的<b>临床判定与计算口径</b>：ABO/Rh 相容性、用血量折算、审批闸门、时长文案。
- *
- * <p><b>码值 → 文案不在这里</b>：一律走对应枚举（{@link TransfusionStatusEnum} /
- * {@link TransfusionApproveStatusEnum} / {@link BloodComponentEnum} /
- * {@link BloodTypeEnum} / {@link RhTypeEnum} 等）的 {@code getText}，
- * 需要保留原始脏值时走它们的 {@code labelOrUnknown}。
- *
- * <p>本类里<b>最不能出错的一段</b>是 {@link #isAboCompatible} / {@link #isRhCompatible}：
- * ABO 不相容输注是<b>致死性</b>医疗差错，一旦放过，后果不是「数据不好看」。
- * 因此按「宁严不宽」实现：血型取不到 / 品种不认识 → 一律判<b>不相容</b>，
- * 由调用方给出「为什么被拒」的文案。宽进严出的反例在这里是致命的。
+ * 输血闭环的临床判定与计算口径：ABO/Rh 相容性、用血量折算、审批闸门、时长文案。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class TransfusionRules {

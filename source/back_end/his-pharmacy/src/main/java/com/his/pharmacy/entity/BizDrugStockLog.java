@@ -11,7 +11,6 @@ import java.math.BigDecimal;
 
 /**
  * 药品库存出入库流水
- * 库存的一切增减（入库/发药出库/退药回库/其他出库）都落此表，金额可追。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

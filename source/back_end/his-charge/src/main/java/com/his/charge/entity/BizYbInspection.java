@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医保飞检/专项审核批次任务头。
- *
- * <p>状态机 1-进行中 → 2-已结项 / 3-已作废；结项必填结论，名下有扣款通知时禁作废
- * （问题已入账不能蒸发）。作废是状态不是删除，本表不提供物理删。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

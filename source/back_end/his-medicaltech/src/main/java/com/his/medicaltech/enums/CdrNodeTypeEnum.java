@@ -2,9 +2,6 @@ package com.his.medicaltech.enums;
 
 /**
  * CDR 时间轴的**节点类型**：患者一次来院的三种形态。
- *
- * <p>为什么节点只有三种：CDR 的组织维度是"就诊次"，不是"表"。一次门诊、
- * 一次住院、一次急诊留观，各自是一条独立的轴；把它们混在一起看，临床上是没有意义的。
  */
 public enum CdrNodeTypeEnum {
 

@@ -1,11 +1,7 @@
 package com.his.common.enums;
 
 /**
- * 退费申请状态枚举（字典 {@code his_refund_apply_status}，落在退费申请单的申请状态列）。
- *
- * <p>5-已作废是本轮补的：审核通过(2) 的申请在执行前发现退不动（金额落不到明细边界、
- * 明细已被别的退费吃掉），原先既退不回去也删不掉，而判重又拦着这张收费单
- * —— 一笔钱就此永久卡在"待执行"上，只能来库里改状态。
+ * 退费申请状态枚举（字典 his_refund_apply_status，落在退费申请单的申请状态列）。
  */
 public enum RefundApplyStatusEnum {
 

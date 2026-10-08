@@ -8,9 +8,6 @@ import java.io.Serializable;
 
 /**
  * 患者基本信息快照（跨模块裸 SQL 读患者档案）。
- *
- * <p>报卡/病例/随访单都要把当时的患者信息冻进单据里：档案改名后历史单据必须还写旧名，
- * 否则「这张卡是哪年报的」追不回来。
  */
 @Data
 public class PatientSnapshotVO implements Serializable {

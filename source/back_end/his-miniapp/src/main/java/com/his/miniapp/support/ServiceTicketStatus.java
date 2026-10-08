@@ -4,11 +4,7 @@ import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 
 /**
- * 工单状态与流转动作的<b>唯一口径</b>（建表见 {@code sql/221}）。
- *
- * <p><b>为什么单独拎一个类</b>：这张表原来就有 status（0待处理/1已处理/2已关闭），
- * 工单化后语义变了（1 从"已处理"变成"处理中"）。口径散在 Service 和前端各写一份，
- * 必然出现"后端认为在处理中、前端显示已处理"。这里改一次，两边都跟着改。
+ * 工单状态与流转动作的唯一口径（建表见 sql/221）。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ServiceTicketStatus {

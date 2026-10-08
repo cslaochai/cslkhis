@@ -9,11 +9,6 @@ import com.his.miniapp.vo.MiniTicketStatsVO;
 
 /**
  * 院内工单受理（客服工作台）。
- *
- * <p>患者端提交的是「留言」，这里把它当工单处理：受理 → 回复 → 办结 → 患者确认。
- * 每一步都写 {@code biz_service_ticket_log}，患者端能看见进展。
- *
- * <p><b>操作人一律服务端取登录人</b>：受理人是谁不能由前端说了算。
  */
 public interface MiniServiceTicketAdminService {
 

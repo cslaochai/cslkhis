@@ -12,11 +12,6 @@ import java.util.stream.Collectors;
 
 /**
  * C 组：住院指征（低编入组 / 低标入院 / 分解住院）。
- *
- * <p><b>必须说清楚的边界</b>：本系统<b>没有住院管理模块</b>（`ward` 只是病区字典，
- * 挂号表里没有入院/出院时间），所以「住院天数」在数据上根本不存在。
- * 缺数据时 C01 一律返回「不适用」并写明原因，绝不按 0 天默认成「不达标」或默认成「达标」——
- * 前者会满屏误报，后者会把真正的低标入院放过去。</p>
  */
 @Component
 public class AdmissionIndicationRule implements ComplianceRule {

@@ -55,7 +55,7 @@ public class WechatSubscribeSendPayloadVO implements Serializable {
     private Map<String, WechatSubscribeFieldVO> data;
 
     /**
-     * 微信订阅消息的单个模板字段值（微信要求包成 {@code {"value": "..."}}）。
+     * 微信订阅消息的单个模板字段值（微信要求包成 {"value": "..."}）。
      */
     @Data
     public static class WechatSubscribeFieldVO implements Serializable {

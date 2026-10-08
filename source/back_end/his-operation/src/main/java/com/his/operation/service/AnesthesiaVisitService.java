@@ -8,9 +8,6 @@ import com.his.operation.vo.AnesthesiaVisitVO;
 
 /**
  * 麻醉术前访视服务。
- *
- * <p>链上的位置：<b>麻醉记录单的前置闸门</b>。
- * 没有"可施行麻醉"结论的访视单，就不允许开立麻醉记录（急诊例外，且必须标红待补）。
  */
 public interface AnesthesiaVisitService {
 

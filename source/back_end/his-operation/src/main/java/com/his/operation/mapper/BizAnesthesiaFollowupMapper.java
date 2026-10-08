@@ -13,8 +13,6 @@ import java.util.List;
 
 /**
  * 麻醉术后随访 Mapper。
- *
- * <p>自定义 {@code @Select} 不受 {@code @TableLogic} 影响 → 必须显式写 {@code del_flag = 0}。
  */
 @Mapper
 public interface BizAnesthesiaFollowupMapper extends BaseMapper<BizAnesthesiaFollowup> {

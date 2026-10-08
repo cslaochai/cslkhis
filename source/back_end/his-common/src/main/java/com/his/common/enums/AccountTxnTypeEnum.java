@@ -1,11 +1,7 @@
 package com.his.common.enums;
 
 /**
- * 资金账户流水类型（字典 {@code his_account_txn_type}，落在资金账户流水的流水类型列）。
- *
- * <p>账户只回答"这里有多少钱"，账单只回答"该收多少"，两者靠支付流水相连：
- * 余额抵扣在账户这边是一条扣减流水、在支付那边是一笔 pay_method=5 的收款流水，
- * 两条记录同一时刻同事务落库，缺一对不上就是事故。
+ * 资金账户流水类型（字典 his_account_txn_type，落在资金账户流水的流水类型列）。
  */
 public enum AccountTxnTypeEnum {
 

@@ -2,9 +2,6 @@ package com.his.common.enums;
 
 /**
  * 签名记录自身的状态。
- *
- * <p>只有两个值，且**2 不能删行**：作废的签名仍要能被追到，
- * 否则"这份病历当时是谁签的、后来为什么作废"就没有答案了。
  */
 public enum SignStatusEnum {
 

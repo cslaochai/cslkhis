@@ -16,13 +16,6 @@ import java.util.List;
 
 /**
  * 病区护理排班（菜单 331 / 路径 /nurse-schedule）。
- *
- * <p>与门诊医生排班 {@code /shift}+{@code /schedule}（org.schedule）是两套东西：
- * 那套按「科室 × 时段」放号源，这套按「人 × 自然日」定班次，权限码也各走 {@code nursing:schedule:*}。
- *
- * <p>按项目规范 {@code @PreAuthorize} 全部标到方法，类上不挂（类级会静默覆盖未标注的方法）。
- * 病区和护士下拉是跨岗位参照数据，只要求登录；点格排班与复制上周走 {@code :add}，
- * 人力标准维护走 {@code :edit}，删格走 {@code :delete}。
  */
 @Tag(name = "病区护理排班")
 @RestController

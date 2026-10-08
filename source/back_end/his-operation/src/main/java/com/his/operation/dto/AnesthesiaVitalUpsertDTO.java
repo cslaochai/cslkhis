@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 追加一条麻醉生命体征采样。
- *
- * <p><b>采样时刻必填且必须精确到秒</b>：同一时刻插两条会在 UNIQUE 上直接失败，
- * 服务端也会先查重给出人话错误 —— 时间轴上一个点只能有一个真值。
  */
 @Data
 public class AnesthesiaVitalUpsertDTO implements Serializable {

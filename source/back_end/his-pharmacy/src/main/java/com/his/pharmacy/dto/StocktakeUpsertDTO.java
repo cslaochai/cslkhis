@@ -8,8 +8,6 @@ import lombok.Data;
 
 /**
  * 盘点单建单/改单入参
- * <p>id 为空 = 新建（按范围抓账面快照）；id 非空 = 改主题或改范围（仅盘点中允许，
- * 改范围会重抓快照并清空已录入的实盘数）。
  */
 @Data
 public class StocktakeUpsertDTO {

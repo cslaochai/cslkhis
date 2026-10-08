@@ -20,9 +20,6 @@ import java.util.List;
 
 /**
  * 药房管理控制器
- * 口径：字典归药品字典，库存查询一律联表带出药品信息；
- * 发药/退药已迁至 his-emr 的 /charge/dispensing/*（现行药品发药记录，含审方闸门/扣库存/处方状态联动）。
- * 旧发药死表时代的端点已删除（该表已下线，数据备份于 workspace/backup-biz-dispensing-*.json）。
  */
 @Tag(name = "药房管理")
 @RestController

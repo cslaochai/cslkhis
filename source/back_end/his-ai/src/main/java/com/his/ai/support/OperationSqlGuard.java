@@ -9,15 +9,6 @@ import java.util.regex.Pattern;
 
 /**
  * 运营问数的安全闸门：模型生成的 SQL 必须逐条通过这里的检查才能执行。
- * <p>
- * 闸门清单与验收口径见 docs/AI能力施工手册.md §6.2。两层防线各司其职：
- * 本类做文本层校验（拒绝 + LIMIT 规范化），执行层的连接超时、行数上限、
- * 只读语义由能力实现里的独立查询模板兜底 —— 两层缺一不可。
- * <p>
- * desc / explain / replace 不进关键词黑名单：这三个词的语句形态（DESC 表名、
- * EXPLAIN SELECT、REPLACE INTO）都以非 SELECT 开头，被「必须 SELECT 开头」闸拦住；
- * 而它们在合法 SELECT 里真实存在（ORDER BY 降序、REPLACE 清洗函数），
- * 进黑名单只会误杀正常分析语句。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OperationSqlGuard {

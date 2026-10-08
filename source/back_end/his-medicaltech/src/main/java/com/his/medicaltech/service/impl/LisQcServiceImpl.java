@@ -31,14 +31,6 @@ import java.util.List;
 
 /**
  * LIS 室内质控服务
- *
- * <p>核心铁律：**判定只在服务端做**。Z 值与 Westgard 规则命中由
- * {@link WestgardRuleEngine} 单点计算，status / violatedRules 落库后回给前端，
- * 前端任何「自己判在控/失控」的行为都是口径外泄。
- *
- * <p>失控闭环：失控记录自动置 handle_status=1（待处理）→ 处理（原因+措施）→
- * 复核（复核人不得与处理人同一人）。没闭环完的失控点，说明这个项目出的报告
- * 在质控意义上不可信——所以待处理数必须一眼可见。
  */
 @Service
 @RequiredArgsConstructor

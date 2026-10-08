@@ -1,10 +1,7 @@
 package com.his.common.enums;
 
 /**
- * 发票状态（字典 {@code his_invoice_status}，落在发票的发票状态列）。
- *
- * <p>票据层是 L4，只对账单不碰钱：账单退了钱，票不能就地改金额，只能作废或红冲换开
- * （{@code orig_invoice_id} 指着被冲的那张）。"点一下就改状态"在财政序列号上是伪造票据。
+ * 发票状态（字典 his_invoice_status，落在发票的发票状态列）。
  */
 public enum InvoiceStatusEnum {
 

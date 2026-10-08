@@ -16,8 +16,6 @@ import java.util.List;
 
 /**
  * 医生工作站 - 检验申请控制器
- *
- * <p>改造要点同 {@link DoctorInsController}（批次E：开单即落库 / 删除保护 / 结果回显）。
  */
 @Tag(name = "检验申请")
 @RestController

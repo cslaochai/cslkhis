@@ -2,6 +2,7 @@ package com.his.patient.dto;
 
 import com.his.common.base.PageParam;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -15,7 +16,9 @@ import java.util.List;
  */
 public class CheckupDTO {
 
-    /** 套餐保存（含项目明细，整单替换） */
+    /**
+     * 套餐保存（含项目明细，整单替换）
+     */
     @Data
     public static class PackageSave {
         /** 更新必传 */
@@ -31,6 +34,7 @@ public class CheckupDTO {
         /** 备注 */
         private String remark;
         /** 明细项集合 */
+        @NotEmpty(message = "套餐至少要有一个项目")
         private List<Item> items;
 
         @Data
@@ -45,7 +49,9 @@ public class CheckupDTO {
         }
     }
 
-    /** 套餐分页 */
+    /**
+     * 套餐分页
+     */
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class PackageQuery extends PageParam {
@@ -54,7 +60,9 @@ public class CheckupDTO {
         private Integer status;
     }
 
-    /** 体检登记 */
+    /**
+     * 体检登记
+     */
     @Data
     public static class RecordCreate {
         /** 患者ID */
@@ -70,7 +78,9 @@ public class CheckupDTO {
         private String remark;
     }
 
-    /** 登记分页 */
+    /**
+     * 登记分页
+     */
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class RecordQuery extends PageParam {
@@ -81,7 +91,9 @@ public class CheckupDTO {
         private LocalDate checkupDate;
     }
 
-    /** 单项结果录入 */
+    /**
+     * 单项结果录入
+     */
     @Data
     public static class ResultSave {
         @NotNull(message = "结果行不能为空")
@@ -93,7 +105,9 @@ public class CheckupDTO {
         private String checkerName;
     }
 
-    /** 总检出报告 */
+    /**
+     * 总检出报告
+     */
     @Data
     public static class Conclusion {
         @NotNull(message = "体检登记不能为空")

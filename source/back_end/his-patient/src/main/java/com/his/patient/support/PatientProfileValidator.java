@@ -11,8 +11,7 @@ import java.time.LocalDate;
 import java.util.Set;
 
 /**
- * 患者主档建档 / 修改的<b>写入口校验</b>。
- *
+ * 患者主档建档 / 修改的写入口校验。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class PatientProfileValidator {

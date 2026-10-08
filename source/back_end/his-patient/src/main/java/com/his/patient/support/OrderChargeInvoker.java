@@ -12,21 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 医嘱执行记账调用器 —— 让"记账失败"不会把"医嘱执行"一起拖回滚。
- *
- * <p><b>为什么需要这个类</b>：医嘱执行与记账必须在同一个业务动作里做，但两者的
- * "失败代价"完全不同 —— 护士打针这件事**已经发生了**（执行记录必须留下），
- * 而记账失败只是账没记上。如果把它们放在同一个事务里，记账抛异常会连执行记录一起回滚，
- * 结果就是"护士做了，系统说没做"。
- *
- * <p>Spring 的默认传播（REQUIRED）下，内层抛 RuntimeException 会把**共享事务标记为
- * rollback-only**，外层即便 catch 住也无法提交（提交时抛 UnexpectedRollbackException）——
- * 所以这里必须用 {@code REQUIRES_NEW} 开一个独立事务：内层失败只回滚内层。
- *
- * <p>独立成 Bean 是必须的：Spring 的 {@code @Transactional} 基于代理，
- * **同一个类内部自调用注解不生效**。
- *
- * <p>定位信息取不到时<b>返回 {@code null} 而不是抛异常</b>：抛出来会把"护士已经执行过了"
- * 一起回滚成 500，而"这笔钱先记不上"是允许的状态 —— 执行行会写明未记账原因，留出补记入口。
  */
 @Slf4j
 @Component

@@ -7,11 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 检查/检验影像帧（检查影像帧，sql/137）
- *
- * <p>锚点是<b>申请单</b>（bizType + applyId），不是记录也不是报告：影像在物理上属于这一次申请，
- * 而报告是从记录派生的（report → record.apply_id）。口径详见 sql/137 文件头。
- *
- * <p>删除为<b>物理删</b> + 审计日志留痕，del_flag 恒 0。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

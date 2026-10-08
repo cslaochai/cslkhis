@@ -6,9 +6,6 @@ import java.io.Serializable;
 
 /**
  * EMPI 概览指标（P5.1）。
- *
- * <p>唯一性只统计"身份证相同形成的重复组"，完整度按关键字段缺项计；
- * 三个率都是百分数（一位小数），分母为 0 时给 0 而不是 null，前端不需要再判空。
  */
 @Data
 public class PatientIndexStatVO implements Serializable {

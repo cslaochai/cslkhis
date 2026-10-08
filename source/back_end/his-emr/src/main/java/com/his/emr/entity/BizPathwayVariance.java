@@ -14,8 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 临床路径变异登记（临床路径变异登记）。
- *
- * <p>追加式台账：实际诊疗偏离路径要求。有变异不挡「完成」，偏离大走「退径」。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

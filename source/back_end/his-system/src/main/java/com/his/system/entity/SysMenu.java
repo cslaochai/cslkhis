@@ -12,18 +12,6 @@ import java.util.List;
 
 /**
  * 菜单实体（表菜单）
- *
- * <p>菜单是「侧边栏 / 路由 / 权限标识」三者的公共来源：</p>
- * <ul>
- *   <li>一级目录（{@code menuType=1}）对应侧边栏的一个可折叠分组，本身不指向页面；</li>
- *   <li>二级菜单（{@code menuType=2}）对应一个真实页面，路径是前端路由地址；</li>
- *   <li>按钮（{@code menuType=3}）只承载 {@code permission} 权限标识，不出现在菜单树里。</li>
- * </ul>
- *
- * <p><b>注意</b>：{@code uk_menu_key} 是唯一索引且<b>不包含 del_flag</b>，
- * 所以删除菜单必须物理删除，置 {@code del_flag=1} 会让 menu_key 一直被占用。</p>
- *
- * <p>数据口径与初始化脚本见 sql/52-菜单表重建.sql。</p>
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

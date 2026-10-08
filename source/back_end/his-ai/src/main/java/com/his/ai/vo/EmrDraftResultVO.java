@@ -8,8 +8,6 @@ import java.util.List;
 
 /**
  * 病历草拟结果。
- * <p>
- * {@code draft} 恒为 true，用来提醒前端：**这是草稿，必须由医生确认后才进病历**。
  */
 @Data
 @Schema(description = "病历草拟结果")

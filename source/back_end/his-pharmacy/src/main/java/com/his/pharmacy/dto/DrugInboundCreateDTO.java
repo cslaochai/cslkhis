@@ -12,8 +12,6 @@ import java.util.List;
 
 /**
  * 入库单生成入参
- *
- * ⚠ 金额不从这里收：明细 amount 与单头 total_amount / total_quantity 一律服务端重算。
  */
 @Data
 public class DrugInboundCreateDTO {

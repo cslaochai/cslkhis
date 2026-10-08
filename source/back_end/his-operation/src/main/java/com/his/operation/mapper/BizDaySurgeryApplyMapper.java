@@ -14,9 +14,6 @@ import java.util.List;
 
 /**
  * 日间手术登记单 Mapper。
- *
- * <p>「超期」在 SQL 里判：术后观察滞留小时数 &gt; 该术式 max_stay_hours。
- * 不落库 —— 落库就会停在错误的值上，翻页时又不会更新。
  */
 @Mapper
 public interface BizDaySurgeryApplyMapper extends BaseMapper<BizDaySurgeryApply> {

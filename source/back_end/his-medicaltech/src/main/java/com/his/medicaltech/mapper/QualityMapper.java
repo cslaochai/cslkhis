@@ -9,18 +9,6 @@ import java.util.List;
 
 /**
  * 数据质量取数（P5.3）。
- *
- * <p><b>三条写法约定，别改</b>：
- * <ol>
- *   <li>可空定位字段用 {@code ''} 而不是 {@code NULL}：UNION ALL 里
- *       {@code CAST(NULL AS CHAR)} 的 collation 取自连接配置，会与表列的
- *       utf8mb4_0900_ai_ci 撞成 "Illegal mix of collations"（CDR 那轮踩过）。
- *       空串既避开这个坑，前端也不用处理 null。</li>
- *   <li>重复类规则用 {@code ROW_NUMBER()} 只输出"多余的那些行"（rn &gt; 1），
- *       保证 <b>明细行数 == 命中数</b>，页面上"共 N 条"与列表条数天然对得上。</li>
- *   <li>每条规则的方法名与 {@code QualityRule} 枚举一一对应，数量对不上会在
- *       服务启动时炸掉（见 QualityServiceImpl 的注册表自检）。</li>
- * </ol>
  */
 @Mapper
 public interface QualityMapper {
@@ -162,9 +150,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'PT-IDENTITY-MISS'   AS ruleCode,
                    'biz_patient'        AS tableName,
-                   CAST(p.id AS CHAR)   AS recordId,
+                   p.id   AS recordId,
                    p.patient_no         AS recordNo,
-                   CAST(p.id AS CHAR)   AS patientId,
+                   p.id   AS patientId,
                    p.patient_no         AS patientNo,
                    p.patient_name       AS patientName,
                    ''                   AS deptName,
@@ -184,9 +172,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'IPR-ADMIT-DOC-MISS'  AS ruleCode,
                    'biz_admission'       AS tableName,
-                   CAST(a.admission_id AS CHAR) AS recordId,
+                   a.admission_id AS recordId,
                    a.admission_no        AS recordNo,
-                   CAST(a.patient_id AS CHAR)   AS patientId,
+                   a.patient_id   AS patientId,
                    ''                    AS patientNo,
                    (SELECT p.patient_name FROM biz_patient p WHERE p.id = a.patient_id) AS patientName,
                    ''                    AS deptName,
@@ -206,9 +194,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'ADM-DISCHARGE-DOC-MISS' AS ruleCode,
                    'biz_admission'          AS tableName,
-                   CAST(a.admission_id AS CHAR) AS recordId,
+                   a.admission_id AS recordId,
                    a.admission_no           AS recordNo,
-                   CAST(a.patient_id AS CHAR)   AS patientId,
+                   a.patient_id   AS patientId,
                    ''                       AS patientNo,
                    (SELECT p.patient_name FROM biz_patient p WHERE p.id = a.patient_id) AS patientName,
                    ''                    AS deptName,
@@ -228,9 +216,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'RX-DETAIL-MISS'        AS ruleCode,
                    'biz_prescription'      AS tableName,
-                   CAST(p.id AS CHAR)      AS recordId,
+                   p.id      AS recordId,
                    p.prescription_no       AS recordNo,
-                   CAST(p.patient_id AS CHAR) AS patientId,
+                   p.patient_id AS patientId,
                    p.patient_no            AS patientNo,
                    p.patient_name          AS patientName,
                    p.dept_name             AS deptName,
@@ -249,9 +237,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'LAB-APPLY-REC-MISS'    AS ruleCode,
                    'biz_laboratory_apply'  AS tableName,
-                   CAST(a.id AS CHAR)      AS recordId,
+                   a.id      AS recordId,
                    a.apply_no              AS recordNo,
-                   CAST(a.patient_id AS CHAR) AS patientId,
+                   a.patient_id AS patientId,
                    a.patient_no            AS patientNo,
                    a.patient_name          AS patientName,
                    a.dept_name             AS deptName,
@@ -269,9 +257,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'MR-DIAG-CODE-MISS'     AS ruleCode,
                    'biz_medical_record'    AS tableName,
-                   CAST(m.id AS CHAR)      AS recordId,
+                   m.id      AS recordId,
                    m.record_no             AS recordNo,
-                   CAST(m.patient_id AS CHAR) AS patientId,
+                   m.patient_id AS patientId,
                    m.patient_no            AS patientNo,
                    m.patient_name          AS patientName,
                    m.dept_name             AS deptName,
@@ -288,9 +276,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'CHARGE-DISCOUNT-ALLOC-MISS' AS ruleCode,
                    'biz_settlement_bill'        AS tableName,
-                   CAST(sb.id AS CHAR)          AS recordId,
+                   sb.id          AS recordId,
                    sb.bill_no                   AS recordNo,
-                   CAST(sb.patient_id AS CHAR)  AS patientId,
+                   sb.patient_id  AS patientId,
                    sb.patient_no                AS patientNo,
                    sb.patient_name              AS patientName,
                    ''                           AS deptName,
@@ -311,9 +299,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'ALLERGY-DUAL-MISS'     AS ruleCode,
                    'biz_patient'           AS tableName,
-                   CAST(p.id AS CHAR)      AS recordId,
+                   p.id      AS recordId,
                    p.patient_no            AS recordNo,
-                   CAST(p.id AS CHAR)      AS patientId,
+                   p.id      AS patientId,
                    p.patient_no            AS patientNo,
                    p.patient_name          AS patientName,
                    ''                      AS deptName,
@@ -336,9 +324,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'CHARGE-SUM-MISMATCH'   AS ruleCode,
                    'biz_settlement_bill'   AS tableName,
-                   CAST(sb.id AS CHAR)     AS recordId,
+                   sb.id     AS recordId,
                    sb.bill_no              AS recordNo,
-                   CAST(sb.patient_id AS CHAR) AS patientId,
+                   sb.patient_id AS patientId,
                    sb.patient_no           AS patientNo,
                    sb.patient_name         AS patientName,
                    ''                      AS deptName,
@@ -368,9 +356,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'CRITICAL-OVERDUE-HANDLE' AS ruleCode,
                    'biz_critical_value'      AS tableName,
-                   CAST(c.id AS CHAR)        AS recordId,
+                   c.id        AS recordId,
                    c.critical_no             AS recordNo,
-                   CAST(c.patient_id AS CHAR) AS patientId,
+                   c.patient_id AS patientId,
                    c.patient_no              AS patientNo,
                    c.patient_name            AS patientName,
                    IFNULL(c.report_dept_name, '') AS deptName,
@@ -390,9 +378,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'CRITICAL-NOTIFY-MISS'  AS ruleCode,
                    'biz_critical_value'    AS tableName,
-                   CAST(c.id AS CHAR)      AS recordId,
+                   c.id      AS recordId,
                    c.critical_no           AS recordNo,
-                   CAST(c.patient_id AS CHAR) AS patientId,
+                   c.patient_id AS patientId,
                    c.patient_no            AS patientNo,
                    c.patient_name          AS patientName,
                    IFNULL(c.report_dept_name, '') AS deptName,
@@ -412,9 +400,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'ADM-DOC-LATE'          AS ruleCode,
                    'biz_admission'         AS tableName,
-                   CAST(a.admission_id AS CHAR) AS recordId,
+                   a.admission_id AS recordId,
                    a.admission_no          AS recordNo,
-                   CAST(a.patient_id AS CHAR)   AS patientId,
+                   a.patient_id   AS patientId,
                    ''                      AS patientNo,
                    (SELECT p.patient_name FROM biz_patient p WHERE p.id = a.patient_id) AS patientName,
                    ''                    AS deptName,
@@ -434,9 +422,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'DISCHARGE-ARCHIVE-LATE' AS ruleCode,
                    'biz_admission'          AS tableName,
-                   CAST(a.admission_id AS CHAR) AS recordId,
+                   a.admission_id AS recordId,
                    a.admission_no           AS recordNo,
-                   CAST(a.patient_id AS CHAR)   AS patientId,
+                   a.patient_id   AS patientId,
                    ''                       AS patientNo,
                    (SELECT p.patient_name FROM biz_patient p WHERE p.id = a.patient_id) AS patientName,
                    ''                    AS deptName,
@@ -456,9 +444,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'LAB-AUDIT-LATE'        AS ruleCode,
                    'biz_laboratory_record' AS tableName,
-                   CAST(r.id AS CHAR)      AS recordId,
+                   r.id      AS recordId,
                    r.record_no             AS recordNo,
-                   CAST(r.patient_id AS CHAR) AS patientId,
+                   r.patient_id AS patientId,
                    r.patient_no            AS patientNo,
                    r.patient_name          AS patientName,
                    r.apply_dept_name       AS deptName,
@@ -479,9 +467,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'IPR-KEY-DOC-DUP'       AS ruleCode,
                    'biz_inpatient_record'  AS tableName,
-                   CAST(x.id AS CHAR)      AS recordId,
+                   x.id      AS recordId,
                    x.record_no             AS recordNo,
-                   CAST(x.patient_id AS CHAR) AS patientId,
+                   x.patient_id AS patientId,
                    IFNULL(x.patient_no, '') AS patientNo,
                    IFNULL(x.patient_name, '') AS patientName,
                    IFNULL(x.dept_name, '') AS deptName,
@@ -506,7 +494,7 @@ public interface QualityMapper {
     @Select("""
             SELECT 'LAB-RESULT-DUP'        AS ruleCode,
                    'biz_lab_result'        AS tableName,
-                   CAST(x.id AS CHAR)      AS recordId,
+                   x.id      AS recordId,
                    IFNULL(x.record_no, '') AS recordNo,
                    ''                      AS patientId,
                    ''                      AS patientNo,
@@ -532,9 +520,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'PT-IDCARD-DUP'         AS ruleCode,
                    'biz_patient'           AS tableName,
-                   CAST(x.id AS CHAR)      AS recordId,
+                   x.id      AS recordId,
                    x.patient_no            AS recordNo,
-                   CAST(x.id AS CHAR)      AS patientId,
+                   x.id      AS patientId,
                    x.patient_no            AS patientNo,
                    x.patient_name          AS patientName,
                    ''                      AS deptName,
@@ -556,9 +544,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'REGIST-DUP-SAME-DAY'   AS ruleCode,
                    'biz_appoint_info'       AS tableName,
-                   CAST(x.id AS CHAR)      AS recordId,
+                   x.id      AS recordId,
                    x.regist_no             AS recordNo,
-                   CAST(x.patient_id AS CHAR) AS patientId,
+                   x.patient_id AS patientId,
                    x.patient_no            AS patientNo,
                    x.patient_name          AS patientName,
                    x.dept_name             AS deptName,
@@ -582,9 +570,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'GENDER-IDCARD-CONFLICT' AS ruleCode,
                    'biz_patient'           AS tableName,
-                   CAST(p.id AS CHAR)      AS recordId,
+                   p.id      AS recordId,
                    p.patient_no            AS recordNo,
-                   CAST(p.id AS CHAR)      AS patientId,
+                   p.id      AS patientId,
                    p.patient_no            AS patientNo,
                    p.patient_name          AS patientName,
                    ''                      AS deptName,
@@ -604,9 +592,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'IDCARD-FORMAT-INVALID' AS ruleCode,
                    'biz_patient'           AS tableName,
-                   CAST(p.id AS CHAR)      AS recordId,
+                   p.id      AS recordId,
                    p.patient_no            AS recordNo,
-                   CAST(p.id AS CHAR)      AS patientId,
+                   p.id      AS patientId,
                    p.patient_no            AS patientNo,
                    p.patient_name          AS patientName,
                    ''                      AS deptName,
@@ -624,9 +612,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'CODE-VALUE-INVALID' AS ruleCode,
                    'biz_patient'        AS tableName,
-                   CAST(p.id AS CHAR)   AS recordId,
+                   p.id   AS recordId,
                    p.patient_no         AS recordNo,
-                   CAST(p.id AS CHAR)   AS patientId,
+                   p.id   AS patientId,
                    p.patient_no         AS patientNo,
                    p.patient_name       AS patientName,
                    ''                   AS deptName,
@@ -638,7 +626,7 @@ public interface QualityMapper {
             WHERE p.del_flag = 0 AND p.gender NOT IN (1, 2, 3)
             UNION ALL
             SELECT 'CODE-VALUE-INVALID', 'biz_inpatient_record',
-                   CAST(r.id AS CHAR), r.record_no, CAST(r.patient_id AS CHAR), IFNULL(r.patient_no, ''),
+                   r.id, r.record_no, r.patient_id, IFNULL(r.patient_no, ''),
                    IFNULL(r.patient_name, ''), IFNULL(r.dept_name, ''), IFNULL(r.doctor_name, ''),
                    CONCAT('住院文书类型码 = ', r.record_type,
                        '，不在字典 {1-入院记录 … 11-输血记录} 内，前端会渲染为「未知(', r.record_type, ')」'),
@@ -647,7 +635,7 @@ public interface QualityMapper {
             WHERE r.del_flag = 0 AND r.record_type NOT IN (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
             UNION ALL
             SELECT 'CODE-VALUE-INVALID', 'biz_emergency',
-                   CAST(e.id AS CHAR), e.emergency_no, CAST(e.patient_id AS CHAR), IFNULL(e.patient_no, ''),
+                   e.id, e.emergency_no, e.patient_id, IFNULL(e.patient_no, ''),
                    IFNULL(e.patient_name, ''), IFNULL(e.dept_name, ''), IFNULL(e.doctor_name, ''),
                    CONCAT('急诊分诊级别码 = ', IFNULL(e.triage_level, 'NULL'),
                        '，不在字典 {1-Ⅰ级濒危 2-Ⅱ级危重 3-Ⅲ级急症 4-Ⅳ级非急症} 内'),
@@ -656,7 +644,7 @@ public interface QualityMapper {
             WHERE e.del_flag = 0 AND (e.triage_level IS NULL OR e.triage_level NOT BETWEEN 1 AND 4)
             UNION ALL
             SELECT 'CODE-VALUE-INVALID', 'biz_settlement_bill',
-                   CAST(s.id AS CHAR), s.bill_no, CAST(s.patient_id AS CHAR), IFNULL(s.patient_no, ''),
+                   s.id, s.bill_no, s.patient_id, IFNULL(s.patient_no, ''),
                    IFNULL(s.patient_name, ''), '', '',
                    CONCAT('账单状态码 = ', s.bill_status, '，不在字典 {1-待支付 2-部分支付 3-已支付 4-已作废 5-已退费} 内'),
                    IFNULL(DATE_FORMAT(s.bill_time, '%Y-%m-%d %H:%i:%s'), '')
@@ -669,9 +657,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'DATE-REVERSE'          AS ruleCode,
                    'biz_admission'         AS tableName,
-                   CAST(a.admission_id AS CHAR) AS recordId,
+                   a.admission_id AS recordId,
                    a.admission_no          AS recordNo,
-                   CAST(a.patient_id AS CHAR)   AS patientId,
+                   a.patient_id   AS patientId,
                    ''                      AS patientNo,
                    (SELECT p.patient_name FROM biz_patient p WHERE p.id = a.patient_id) AS patientName,
                    ''                    AS deptName,
@@ -692,9 +680,9 @@ public interface QualityMapper {
     @Select("""
             SELECT 'AMOUNT-INVALID'        AS ruleCode,
                    'biz_fee_record'        AS tableName,
-                   CAST(f.id AS CHAR)      AS recordId,
+                   f.id      AS recordId,
                    f.fee_no                AS recordNo,
-                   CAST(f.patient_id AS CHAR) AS patientId,
+                   f.patient_id AS patientId,
                    IFNULL(f.patient_no, '')   AS patientNo,
                    IFNULL(f.patient_name, '') AS patientName,
                    IFNULL(f.dept_name, '')    AS deptName,

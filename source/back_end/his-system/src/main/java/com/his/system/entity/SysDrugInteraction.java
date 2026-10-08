@@ -7,10 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 药物相互作用知识条目
- * <p>
- * 按<b>成分关键字</b>配对（药品名称/通用名包含即命中），不按 drug_id ——
- * 字典 546 条里 379 条 generic_name 为空，且药品名带盐型/剂型后缀，
- * 按全名或通用名比对会静默漏报。口径的完整论证见 {@code sql/130} 头注。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

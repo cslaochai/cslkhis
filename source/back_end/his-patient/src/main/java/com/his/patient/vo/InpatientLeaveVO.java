@@ -8,10 +8,6 @@ import java.io.Serializable;
 
 /**
  * 住院请假单出参（内层静态类组织同 CriticalNoticeVO）。
- *
- * <p><b>所有 Long 主键/外键一律字符串序列化</b>（雪花 19 位，前端 Number 会丢精度 —— 19 位数字
- * 超过 Number.MAX_SAFE_INTEGER，形如 2104147887607775234 会被读成 …7775200，
- * 前端拿它回查就是「请假单不存在」）。
  */
 public class InpatientLeaveVO {
 

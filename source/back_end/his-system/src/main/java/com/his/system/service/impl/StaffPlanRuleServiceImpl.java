@@ -431,6 +431,7 @@ public class StaffPlanRuleServiceImpl extends ServiceImpl<BizStaffPlanRuleMapper
         if (OrgUnitTypeEnum.HOSPITAL.getCode() == orgType) {
             return OrgUnitTypeEnum.HOSPITAL.getLabel();
         }
+        // D-业务规则：非空与取值合法性（0 是全院占位值）混写在一个条件里，且仅当单元类型非全院才必填，DTO 注解无法表达，保留
         if (orgId == null || orgId == 0L) {
             throw new BusinessException("请选择" + OrgUnitTypeEnum.getText(orgType));
         }

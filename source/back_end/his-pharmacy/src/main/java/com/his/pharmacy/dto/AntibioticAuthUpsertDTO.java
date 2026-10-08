@@ -10,9 +10,6 @@ import java.time.LocalDate;
 
 /**
  * 抗菌药物处方权授权入参。
- *
- * <p>id 为空 = 新授权；非空 = 改有效期/依据/状态（不换医师、不换级别 —— 换级别要另立一条，
- * 因为"某人被取消了限制级授权又重新取得"是两条不同的证据，覆盖掉就查不到中间那次取消）。
  */
 @Data
 public class AntibioticAuthUpsertDTO {

@@ -17,9 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 欠费管控控制器。
- *
- * <p>欠费安全底线：预警只提示、停费只拦择期类（检查/检验/治疗），药品/手术/急救永不拦截；
- * 出院前结算由 SettlementGate 兜底（欠费也留结算单，不允许没结算就出院）。
  */
 @Tag(name = "住院欠费管控")
 @RestController

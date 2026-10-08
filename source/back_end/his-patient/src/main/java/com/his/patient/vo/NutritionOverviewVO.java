@@ -6,10 +6,6 @@ import java.math.BigDecimal;
 
 /**
  * 营养膳食看板（"今天该干什么"）—— 筛查页与订餐页顶部卡的数据源。
- *
- * <p>回答四个问题：在院的人有多少还没筛（missedScreenCount）、筛出来有风险的有多少
- * （inHospitalRiskCount）、其中多少到期该复筛（reScreenDueCount）、
- * 今天的餐配了没有送完没有（todayMealPendingCount / todayMealSignRate）。
  */
 @Data
 public class NutritionOverviewVO {

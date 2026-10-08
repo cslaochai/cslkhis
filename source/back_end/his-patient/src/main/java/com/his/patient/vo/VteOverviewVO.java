@@ -6,9 +6,6 @@ import java.math.BigDecimal;
 
 /**
  * VTE 防控看板（"今天该干什么"）—— 名单页顶部四张卡的数据源。
- *
- * <p>看板只回答三个问题：在院的有多少人该防（inHospitalHighRisk）、
- * 其中多少人还没落实（highRiskPendingCount）、这个月已经发生了几例院内 VTE（monthVteEventCount）。
  */
 @Data
 public class VteOverviewVO {

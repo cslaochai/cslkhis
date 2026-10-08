@@ -39,18 +39,6 @@ import java.util.Set;
 
 /**
  * 膳食方案实现。
- *
- * <p>四条口径：
- * <ol>
- *   <li><b>医嘱校对即派生</b>：{@link #deriveFromOrder} 由护士校对事务内调用，
- *       同一 orderId 幂等（重放不会多出一条方案）；</li>
- *   <li><b>认不出饮食类型落 TO_DETERMINE</b>：占位方案照样进待接收队列，但不许被"接收"，
- *       必须先改成真实饮食类型 —— 静默跳过等于让这条膳食医嘱凭空消失；</li>
- *   <li><b>停嘱/作废同步停/废方案，并把未送出的未来餐退订</b>：停嘱后食堂继续送饭是错的，
- *       而已配送、已签收的餐是既成事实，一行都不许改；</li>
- *   <li><b>手工登记的方案直接算已接收</b>：营养师自己就是执行方，"自己接自己的单"没有意义；
- *       膳食医嘱执行率的分子是 1-已接收，两类都计。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -122,10 +110,6 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
 
     @Override
     public List<DietPlanVO> planListByAdmission(Long admissionId) {
-        // ②非web入口：service 方法参数判空，没有 DTO 字段可挂注解（HTTP 侧 @RequestParam 已必填）
-        if (admissionId == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         List<DietPlanVO> rows = bizDietPlanMapper.selectByAdmission(admissionId);
         rows.forEach(this::decorate);
         return rows;
@@ -241,10 +225,6 @@ public class DietPlanServiceImpl extends ServiceImpl<BizDietPlanMapper, BizDietP
     @Override
     @Transactional(rollbackFor = Exception.class)
     public int planConfirm(DietConfirmDTO dto) {
-        // ②非web入口：整个入参对象的判空，DTO 字段注解表达不了（ids 非空已由 DTO @NotEmpty + @Valid 收口）
-        if (dto == null) {
-            throw new BusinessException("请选择要处理的膳食方案");
-        }
         CurrentUser operatorUser = UserUtils.getCurrentUser();
         if (operatorUser == null) {
             throw new BusinessException("当前用户信息不存在");

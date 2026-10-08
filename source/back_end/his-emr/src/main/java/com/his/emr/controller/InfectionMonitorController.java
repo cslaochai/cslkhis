@@ -16,7 +16,6 @@ import java.util.List;
 
 /**
  * 院感监测控制器（L10：病例报告卡 / 目标性监测 / 手卫生依从性）。
- * 漏报调查 = 补报建卡（leakFlag=1）+ 统计口径，不设独立状态机。
  */
 @Tag(name = "院感监测")
 @RestController

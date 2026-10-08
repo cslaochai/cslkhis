@@ -30,19 +30,6 @@ import java.util.function.Function;
 
 /**
  * 病历内涵质控能力（P0-3）。
- * <p>
- * <b>「内涵质控」与「形式质控」的分工</b>：
- * 形式质控（字段填没填、格式对不对）用规则就够了，不需要模型；
- * 内涵质控要判断的是「现病史写了但没写清楚」「诊断与查体对不上」这类问题，
- * 这是规则写不完的领域，才是模型的价值所在。
- * <p>
- * 但本能力仍然保留了一层<b>必填项硬规则</b>，原因不是为了省 token，
- * 而是为了<b>降级可用</b>：模型不可用时，质控不能变成一片空白。
- * 演示库里「主诉 *」「主诉」「现病史 *」这类套模板没替换内容的病历大量存在，
- * 硬规则单独就能抓出来 —— 这正是「降级不等于失效」的具体体现。
- * <p>
- * <b>本能力绝不做的事</b>：不修改病历、不阻断结诊、不给病历打不合格标记。
- * 质控意见只是「提示人工复核」，修改权与判断权始终在质控员手里。
  */
 @Slf4j
 @Service
@@ -343,10 +330,6 @@ public class EmrQcCapabilityImpl implements EmrQcCapability {
 
     /**
      * 必填项规则定义
-     *
-     * @param fieldName 字段中文名，同时用于识别「把字段名抄一遍」的伪填写
-     * @param getter    字段取值器
-     * @param severity  缺失时的严重程度
      */
     private record RequiredFieldRule(String fieldName,
                                      Function<BizMedicalRecord, String> getter,

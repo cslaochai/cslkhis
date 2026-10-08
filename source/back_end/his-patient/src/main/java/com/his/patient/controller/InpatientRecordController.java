@@ -16,16 +16,6 @@ import java.util.List;
 
 /**
  * 住院病历文书（P2：结构化率 80% 的载体）。
- *
- * <p>约定：查询一律 GET（驼峰 URL + 查询参数），写操作一律 POST，分页 {@code listPage}。
- *
- * <p>两条要记住的口径：
- * <ol>
- *   <li>{@code /save} 是<u>传什么覆盖什么</u>（不传 = 置空），配合逐字段 diff 留痕；
- *       这跟"只更新非空字段"是相反的语义，前端必须把编辑态完整回传。</li>
- *   <li>{@code /qualityStat} 的分母<b>按文书类型分别算</b>（病程才有病程正文），
- *       所以它的 {@code elementTotal} ≠ 份数 × 26 —— 这不是 bug。</li>
- * </ol>
  */
 @Tag(name = "住院病历文书")
 @RestController

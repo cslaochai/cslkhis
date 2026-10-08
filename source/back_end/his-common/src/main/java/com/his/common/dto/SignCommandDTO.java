@@ -6,10 +6,6 @@ import lombok.Data;
 
 /**
  * 签名命令（服务层入参）。
- *
- * <p>签名人信息**必须由调用方传入**：his-common 是能力层，不认识 {@code CurrentUser}，
- * 也不该去读 Spring Security 上下文。好处是签名服务可以在定时任务、批处理里被调用
- * （那时没有登录态），代价是业务侧必须认真填 —— 所以 {@code signerId} 在服务层会做非空校验。
  */
 @Data
 public class SignCommandDTO {

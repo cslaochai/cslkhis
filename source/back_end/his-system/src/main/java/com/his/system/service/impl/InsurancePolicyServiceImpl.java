@@ -24,8 +24,6 @@ import java.util.stream.Collectors;
 
 /**
  * 医保政策服务实现
- *
- * <p>本表没有逻辑删除标记，删除为物理删除。</p>
  */
 @Slf4j
 @Service

@@ -13,10 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * VTE 事件登记（DVT / 肺栓塞 / 预防相关出血）。
- *
- * <p><b>onset_type 是这张表的灵魂</b>：入院时已存在的 DVT（onset_type=2）是"带入"不是"院内获得"，
- * 混进分子会把院内 VTE 发生率虚高 —— 评审问"你们院内 VTE 发生率多少"，
- * 把带入病例算进去的答案经不起复核。
  */
 @Data
 @TableName("biz_vte_event")

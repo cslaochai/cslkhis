@@ -11,10 +11,6 @@ import java.io.Serializable;
 
 /**
  * 医嘱基础字典新增/修改入参。
- *
- * <p><b>值（{@code dictValue}）一旦被医嘱引用就不该再改</b>：给药途径存的是中文、频次存的是缩写，
- * 存量医嘱行里就是这串值；改它等于让历史医嘱渲染成「未知(xxx)」。
- * 所以修改只允许改显示名、排序、启用状态与备注 —— 要换值就停用旧的、新增一条。
  */
 @Data
 public class OrderDictUpsertDTO implements Serializable {

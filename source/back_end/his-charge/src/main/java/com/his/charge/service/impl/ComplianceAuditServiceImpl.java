@@ -42,8 +42,6 @@ import java.util.stream.Collectors;
 
 /**
  * 医保合规审核服务实现。
- *
- * <p>一次审核 = 聚合依据 → 跑全部规则 → 三态统计 → 落库留痕 → 回写诊断/手术的依据核对结果。</p>
  */
 @Slf4j
 @Service
@@ -605,7 +603,7 @@ public class ComplianceAuditServiceImpl implements ComplianceAuditService {
     }
 
     private BizInsuranceSettlement requireSettlement(Long settlementId) {
-        // C 类保留：私有兜底被多个入口共用（含 @RequestParam 与非 web 调用），Bean Validation 覆盖不到这一层
+        // C-非 web 入参：私有兜底被多个入口共用（含 dto/entity 派生的 settlementId 与非 web 调用），Bean Validation 不覆盖，保留
         if (settlementId == null) {
             throw new BusinessException("结算清单ID不能为空");
         }

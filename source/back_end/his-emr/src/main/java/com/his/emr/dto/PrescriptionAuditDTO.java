@@ -5,9 +5,6 @@ import lombok.Data;
 
 /**
  * 处方审核入参。
- *
- * <p>审核人**不从入参取**，由后端从登录态（{@code CurrentUser.employeeId}）取 ——
- * 让调用方传"审核人"等于把签名人的选择权交出去，签名的不可否认性就没有了。
  */
 @Data
 public class PrescriptionAuditDTO {

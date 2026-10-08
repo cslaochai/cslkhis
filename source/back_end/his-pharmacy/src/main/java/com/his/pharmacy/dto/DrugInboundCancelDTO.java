@@ -7,8 +7,6 @@ import lombok.Data;
 
 /**
  * 入库单取消入参
- *
- * 取消原因必填：入库单是凭证，作废必须写清为什么（谁取消、为什么取消要能追溯到）。
  */
 @Data
 public class DrugInboundCancelDTO {

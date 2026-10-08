@@ -6,7 +6,9 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 
-/** 抗菌药物分级目录行（药品字典快照） */
+/**
+ * 抗菌药物分级目录行（药品字典快照）
+ */
 @Data
 public class AntibioticCatalogVO {
 

@@ -12,9 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 发票实体（L4 票据）。
- *
- * <p>四层口径下一张票对一张结算账单（{@code billId}），票面金额 = 开票时该账单的净已收。
- * {@code chargeId} 是旧模型遗留，只有历史票有值，新票一律为空。
  */
 @Data
 @TableName("biz_invoice")

@@ -24,22 +24,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 
 /**
- * 急诊智能分诊建议能力（P1-2）—— <b>本模块风险等级最高的一项</b>。
- * <p>
- * 分诊错误直接危及生命，因此这里的约束比其它能力严格得多：
- * <ol>
- *   <li><b>只升不降</b>。最终建议级别取「硬规则级别、模型建议、人工已选级别」三者中最严重的一个。
- *       系统永远不会把护士选的分级降下来 —— 最坏情况是提示「建议升级」，
- *       而护士可以不理它。这个方向的不对称是刻意的：建议升级最多浪费一次评估，
- *       建议降级可能让危重患者排在后面。</li>
- *   <li><b>生命体征红旗由代码判定</b>（{@link EmergencyTriageRules}），不经模型。
- *       SpO2 &lt; 90%、GCS ≤ 8 这类事实不需要「理解」。</li>
- *   <li><b>不写库</b>。{@code triage_level / zone / green_channel} 永远由护士确认后写入。
- *       本能力只返回建议值与依据。</li>
- *   <li><b>缺生命体征必须明示</b>（{@code vitalSignsMissing}）。实测库里 {@code vital_signs}
- *       为 null —— 只看主诉做分诊的可信度远低于完整输入，UI 上必须让人看出来，
- *       而不是让一串建议显得同样权威。</li>
- * </ol>
+ * 急诊智能分诊建议能力（P1-2）—— 本模块风险等级最高的一项。
  */
 @Slf4j
 @Service
@@ -199,6 +184,7 @@ public class EmergencyTriageCapabilityImpl implements EmergencyTriageCapability 
                 ? dto.getChiefComplaint() : (entity == null ? null : entity.getChiefComplaint());
         String rawVitalSigns = TextUtil.hasText(dto.getVitalSigns())
                 ? dto.getVitalSigns() : (entity == null ? null : entity.getVitalSigns());
+        // B-条件必填：主诉与生命体征各自都可空（试算只填其一、或只靠库中值补齐），二者至少其一才成立，DTO 注解无法表达，保留
         if (!TextUtil.hasText(chiefComplaint) && !TextUtil.hasText(rawVitalSigns)) {
             throw new BusinessException("主诉与生命体征至少需要提供一项，否则无法给出分诊建议");
         }

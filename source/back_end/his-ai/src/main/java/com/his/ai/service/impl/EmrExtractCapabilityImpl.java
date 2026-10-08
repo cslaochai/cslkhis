@@ -13,7 +13,6 @@ import com.his.ai.vo.EmrExtractFieldVO;
 import com.his.ai.vo.EmrExtractPromptVariablesVO;
 import com.his.ai.vo.EmrExtractResultVO;
 import com.his.common.enums.SysGenderEnum;
-import com.his.common.exception.BusinessException;
 import com.his.common.util.TextUtil;
 import com.his.emr.entity.BizMedicalRecord;
 import com.his.emr.mapper.BizMedicalRecordMapper;
@@ -27,36 +26,6 @@ import java.util.regex.Pattern;
 
 /**
  * 病历文本结构化抽取（P1-3）。
- * <p>
- * 把一段自由文本拆进病历的各个字段。文本的三个来源：医生手打、从外院系统/上级医院病历粘贴、
- * 以及后续语音转写的输出 —— <b>这也是语音输入电子病历能成立的前提</b>：
- * 口述转成文字之后，得有东西把流水账接住并落到字段上，否则转写只是多了一段没人用的文本。
- * <p>
- * <b>三层防幻觉，缺一不可</b>（这是本能力能不能用的关键，改之前先把这三条读一遍）：
- * <ol>
- *   <li><b>字段白名单</b>：模型只能用 {@link EmrFieldCatalog} 里列出的 key。
- *       模型返回自定义字段名（「月经史」「遗传病史」）一律丢弃 ——
- *       前端不知道怎么渲染，库里也没有对应的列，和白名单外的 ICD 编码一样必须挡掉。</li>
- *   <li><b>原文依据校验（本能力的核心）</b>：每条结果必须给出 evidence，代码把 evidence
- *       做空白与标点归一后回原文做<b>子串比对</b>，查不到就整条丢弃并计入 rejectedCount。
- *       没有这一层，模型会非常自然地"顺"出「无发热」「否认药物过敏史」这类阴性描述 ——
- *       而病历上凭空多一句阴性描述，等于伪造了医生的问诊记录，比字段空着危险得多。</li>
- *   <li><b>规则优先</b>：原文本身就是主诉：… 这种带标签格式时，按标签逐字切分的
- *       结果<b>优于</b>模型的改写版本。病历是法律文书，逐字原文永远比转述可信。</li>
- *   <li><b>诊疗决策不接受模型生成</b>：{@code diagnosis} / {@code treatmentPlan} 这两个字段
- *       是医生的判断与法律文书，模型给它们的产出整条丢弃（见
- *       {@link EmrFieldCatalog#isLlmWritable}）—— 原文带标签时仍可由硬规则层逐字搬运。</li>
- *   <li><b>数值幻觉校验</b>：值里出现的每一段数字都必须在依据里找得到。
- *       文字上的增补还能靠医生过目发现，数值上的增补（「高血压」→「高血压10年」）
- *       读起来完全通顺，而病历里的每个数字都是临床事实，必须单独查。</li>
- * </ol>
- * <p>
- * <b>本能力绝不做的事</b>：不写回病历、不落库、不自动采纳。
- * 产出只是一组候选值，医生在前端逐字段点「填入」后才进表单 ——
- * 与病历内涵质控"只提示、不修改"的口径一致。
- * <p>
- * <b>体征（体温/脉搏/呼吸/血压）不交给模型</b>，走正则 + 取值范围校验：数值一旦被模型
- * "顺"一下就是一条错误记录。抽出来的体征同样只是候选值。
  */
 @Slf4j
 @Service
@@ -315,10 +284,7 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
     public EmrExtractResultVO execute(EmrExtractDTO dto) {
         long start = System.currentTimeMillis();
 
-        String rawText = dto.getRawText() == null ? "" : dto.getRawText().trim();
-        if (!TextUtil.hasText(rawText)) {
-            throw new BusinessException("待抽取的文本不能为空");
-        }
+        String rawText = TextUtil.trimToEmpty(dto.getRawText());
 
         EmrExtractResultVO vo = new EmrExtractResultVO();
         if (rawText.length() > MAX_INPUT_LENGTH) {
@@ -389,9 +355,6 @@ public class EmrExtractCapabilityImpl implements EmrExtractCapability {
 
     /**
      * 模型输出的净化结果。
-     * <p>
-     * {@code rejectedCount} 与 {@code notes} 必须分开：notes 有 5 条上限（只是样本），
-     * 计数则是全量 —— 否则「丢了 12 条」会被显示成「丢了 5 条」。
      */
     private record LlmIndex(Map<String, EmrExtractLlmOutputDTO.Field> fields,
                             int rejectedCount,

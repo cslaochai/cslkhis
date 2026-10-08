@@ -14,13 +14,12 @@ import java.time.LocalDateTime;
 
 /**
  * 死亡登记簿（住院死亡登记簿）入参集合。
- *
- * <p>死者姓名/死亡时间/科室床位不接收前端值：服务端按住院+证明重查快照，
- * 避免登记与证明两处各存一套还互相漂移。
  */
 public class DeathRegistrationDTO {
 
-    /** 分页查询 */
+    /**
+     * 分页查询
+     */
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class QueryPage extends PageParam {
@@ -48,7 +47,9 @@ public class DeathRegistrationDTO {
         private LocalDate endDate;
     }
 
-    /** 填写/修改登记（草稿可改；已登记后只能作废重登） */
+    /**
+     * 填写/修改登记（草稿可改；已登记后只能作废重登）
+     */
     @Data
     public static class Upsert {
         /** 主键（雪花ID） */
@@ -118,7 +119,9 @@ public class DeathRegistrationDTO {
         private String remark;
     }
 
-    /** 确认登记（1→2）：非疾病死亡/死因不明必须已报公安 */
+    /**
+     * 确认登记（1→2）：非疾病死亡/死因不明必须已报公安
+     */
     @Data
     public static class Confirm {
         /** 主键（雪花ID） */
@@ -126,7 +129,9 @@ public class DeathRegistrationDTO {
         private Long id;
     }
 
-    /** 作废（1/2→3）：作废后可对同一次住院重登 */
+    /**
+     * 作废（1/2→3）：作废后可对同一次住院重登
+     */
     @Data
     public static class VoidRegister {
         /** 主键（雪花ID） */

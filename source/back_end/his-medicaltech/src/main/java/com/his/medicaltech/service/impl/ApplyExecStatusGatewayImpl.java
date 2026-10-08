@@ -18,10 +18,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * {@link ApplyExecStatusGateway} 的实现（批次E/E5：结果回显到医生站）。
- *
- * <p>放在 his-medicaltech 是因为「执行进度」是本模块的事实；
- * 接口定义在 his-emr 是为了让依赖方向保持 his-medicaltech -&gt; his-emr 单向。
+ * ApplyExecStatusGateway 的实现（批次E/E5：结果回显到医生站）。
  */
 @Service
 @RequiredArgsConstructor

@@ -8,9 +8,6 @@ import java.io.Serializable;
 
 /**
  * 处理跟踪登记入参（追加一条流水，可同时推进状态）。
- *
- * <p>toStatus 由前端传「推进到哪一档」，服务端只接受 2调查中 / 3处理中两个合法目标，
- * 不接受直接跳 4已结案（结案必须走 close，要收口赔偿与责任认定）。
  */
 @Data
 public class DisputeFollowDTO implements Serializable {

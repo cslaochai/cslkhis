@@ -11,8 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * CSSD 器械包模板组成明细实体（99 号脚本新增）。
- *
- * <p>无软删列：模板 upsert 时物理删旧重插。
  */
 @Data
 @TableName("biz_cssd_pack_template_item")

@@ -11,9 +11,6 @@ import java.util.List;
 
 /**
  * 医生站开单偏离预检出参。
- *
- * <p>软约束口径：只报偏离不拦截。comparable=false 表示模板全部是自由文本步骤
- * （纯文书模板），前端不做偏离提示。
  */
 @Data
 public class OrderCheckVO implements Serializable {

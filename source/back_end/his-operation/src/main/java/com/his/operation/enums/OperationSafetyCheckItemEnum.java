@@ -9,10 +9,6 @@ import java.util.Map;
 
 /**
  * 手术安全核查单核查项（三方 × 三时段）。
- *
- * <p>码值→文案的唯一出口（原 {@code SafetyCheckItems} 的 {@code PHASE_ITEMS} 映射已上移至此）。
- * 与术前核对（{@link OperationPreCheckItemEnum}）不同：安全核查是手术医师 / 麻醉医师 / 护士三方
- * 在三个时点当面共同核对并各自签名，结果同样是码值集合，必核项缺失直接拒收。
  */
 @Getter
 public enum OperationSafetyCheckItemEnum {

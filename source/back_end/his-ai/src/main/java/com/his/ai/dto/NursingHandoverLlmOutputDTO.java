@@ -6,8 +6,6 @@ import java.util.List;
 
 /**
  * 护理交接班摘要模型输出（G-13）。
- * <p>契约见 prompts/nursing-handover.md：summary 是 SBAR 式交班草稿（临床文本，审计落指纹）；
- * focus 是重点关注条目码（床号或序号引用，无隐私），审计可明文。</p>
  */
 @Data
 public class NursingHandoverLlmOutputDTO {

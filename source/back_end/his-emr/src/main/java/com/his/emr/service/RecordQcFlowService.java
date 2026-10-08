@@ -9,9 +9,6 @@ import java.util.List;
 
 /**
  * 病历三级质控流转服务
- * <p>
- * 状态机：1 科级待审 → 2 病案室待审 → 3 医务处待审 → 4 终审通过；
- * 任一审核级可退回 → 5 整改中（return_level 记退回级），整改提交 → 回到 return_level 待审。
  */
 public interface RecordQcFlowService {
 

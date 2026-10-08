@@ -11,16 +11,6 @@ import java.io.Serializable;
 
 /**
  * 住院文书修改留痕（病历文书 + 护理文书共用）。
- *
- * <p>字段与住院文书修改日志 **一一对应**。
- *
- * <p>为什么单独建表而不是复用门诊病历修改日志：那张表的记录ID
- * 语义是"门诊病历ID"、且没有单据类型列，护理文书混写进去后"这条日志属于谁"要靠猜。
- * 这里用 {@code docType} + {@code recordType} 两个码值把"哪类单据、哪种文书"说清楚。
- *
- * <p>写入策略：**只在字段值真的变了时写一行**（{@code fieldName/oldValue/newValue}）。
- * 不做"每次保存写全字段快照"——否则日志表会膨胀到无法回答"这句话是谁改的"。
- * 创建/提交/归档这类动作只写 {@code operation}、不写字段三件套。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

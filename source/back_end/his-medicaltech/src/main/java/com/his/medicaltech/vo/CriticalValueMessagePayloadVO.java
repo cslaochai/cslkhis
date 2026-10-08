@@ -6,15 +6,6 @@ import java.io.Serializable;
 
 /**
  * 危急值站内信的业务上下文载荷（上报催办与超时升级两条消息共用）。
- *
- * <p><b>字段名是前后端契约</b>：前端 {@code src/lib/messageCatalog.js} 的
- * {@code PAYLOAD_KEYS} 白名单里 {@code patientName / itemName / criticalNo} 会被渲染成
- * 摘要 chip，改名 = 消息中心少显示一个字段。
- *
- * <p>两条消息字段不完全一样（升级那条多 {@code escalate}/{@code toLeader}），
- * 用同一个类的理由是它们描述的是<b>同一个危急值</b>：芯片区展示的事实相同，
- * 差别只在"这条是首次催办还是升级催办、催的是本人还是上级"。
- * 未用的字段留 null（序列化时为 null 的键不输出）。
  */
 @Data
 public class CriticalValueMessagePayloadVO implements Serializable {

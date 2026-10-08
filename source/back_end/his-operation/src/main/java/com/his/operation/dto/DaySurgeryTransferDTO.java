@@ -7,9 +7,6 @@ import java.io.Serializable;
 
 /**
  * 日间手术转住院入参（术后观察 → 已转住院，终态）。
- *
- * <p>转住院必须回填 admission_id：没有住院号就无法证明"这次住院从哪天算起"，
- * 病案与医保口径全断在这里。
  */
 @Data
 public class DaySurgeryTransferDTO implements Serializable {

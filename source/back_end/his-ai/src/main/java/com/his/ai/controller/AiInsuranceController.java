@@ -16,8 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 医保审核证据判定（G-07）。
- * <p>判定是只读计算：不改写规则结论、不落库；权限沿用合规审核台账入口码
- * {@code finance:complianceAudit:list}（菜单 1012 本页面独有业务数据，非通用参照）。</p>
  */
 @Tag(name = "医保审核证据判定")
 @RestController

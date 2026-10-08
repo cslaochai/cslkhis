@@ -8,10 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 /**
- * 门诊日志 Mapper（SQL 在 {@code resources/mapper/OpdLogMapper.xml}）。
- *
- * <p>单独一个 Mapper 而不是挂在 {@code BizAppointInfoMapper} 上：这一组查询的
- * 返回类型不是实体，而且列表与统计共用 WHERE 片段，用 XML 更清楚。
+ * 门诊日志 Mapper（SQL 在 resources/mapper/OpdLogMapper.xml）。
  */
 @Mapper
 public interface OpdLogMapper {

@@ -1,11 +1,7 @@
 package com.his.common.enums;
 
 /**
- * 退费方式枚举（字典 {@code his_refund_method}，落在退费记录单的退费方式列）。
- *
- * <p>"原路退回"不是随手写的描述，而是由**原支付方式**唯一决定的，映射只写在这一处
- * （{@link #ofPayMethod}）：各处再抄一份 switch 迟早漂移，漂移的结果是把微信收的钱退成现金，
- * 渠道侧长款、日结平不上，且没有任何地方会报错。
+ * 退费方式枚举（字典 his_refund_method，落在退费记录单的退费方式列）。
  */
 public enum RefundMethodEnum {
 

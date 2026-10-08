@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 护理体征事实（一行护理文书的体征快照）。
- * <p>供跨模块消费（危重预警评分、交接班聚合），只携带事实不携带行为。</p>
  */
 @Data
 public class NursingVitalFactVO implements Serializable {

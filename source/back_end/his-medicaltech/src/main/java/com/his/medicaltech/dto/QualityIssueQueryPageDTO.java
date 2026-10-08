@@ -7,10 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 数据质量问题清单查询条件（P5.3）。
- *
- * <p>{@code dimension} 与 {@code ruleCode} 都不传时会跑全部规则 —— 在造数环境
- * （几十条主数据）没问题，但生产环境建议至少指定一个维度，
- * 因为这个接口是"按规则逐条查明细再合并"，属于慢查询。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

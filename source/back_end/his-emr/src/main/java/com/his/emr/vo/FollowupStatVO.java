@@ -12,9 +12,6 @@ import java.util.List;
 
 /**
  * 出院随访任务看板（服务端聚合，前端不数当前页）。
- *
- * <p>看板要回答的是「今天该打多少电话、欠了多少」，所以逾期与今日应随访按
- * followup_time 现算，而不是数某个状态列 —— 状态列没人翻，数出来永远偏小。
  */
 @Data
 public class FollowupStatVO implements Serializable {

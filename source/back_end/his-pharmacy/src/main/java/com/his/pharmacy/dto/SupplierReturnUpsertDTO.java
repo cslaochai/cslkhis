@@ -11,9 +11,6 @@ import java.util.List;
 
 /**
  * 药品供应商退货单建单/改单入参（sql/154 ③级）
- *
- * <p>id 为空 = 新建；id 非空 = 整单替换明细（仅「待退货」允许）。
- * <p>⚠ 退货金额不从这里收：服务端按批次成本价 × 数量重算，供应商名称也按 supplier_id 现查快照。
  */
 @Data
 public class SupplierReturnUpsertDTO {

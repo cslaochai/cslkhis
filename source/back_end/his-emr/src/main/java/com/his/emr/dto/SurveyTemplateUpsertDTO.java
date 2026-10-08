@@ -15,9 +15,6 @@ import java.util.List;
 
 /**
  * 问卷模板新增/修改入参（整卷覆盖：题目全删再插）。
- *
- * <p>题目按「整卷」提交而不是逐题 upsert：卷内题号唯一（uk_survey_item），
- * 逐题改会出现「先把 2 号改成 3 号、再把 3 号改成 4 号」这种中间态撞键。
  */
 @Data
 public class SurveyTemplateUpsertDTO implements Serializable {

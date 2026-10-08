@@ -12,8 +12,6 @@ import java.util.List;
 
 /**
  * 临床路径模板 Mapper。
- *
- * <p>跨模块读（科室）按仓库约定走裸 SQL，不引入模块依赖。
  */
 @Mapper
 public interface BizPathwayMapper extends BaseMapper<BizPathway> {

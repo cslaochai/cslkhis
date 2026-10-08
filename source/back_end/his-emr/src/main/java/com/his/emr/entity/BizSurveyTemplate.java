@@ -7,9 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 满意度问卷模板（sql/164）。
- *
- * <p>模板只回答「问什么」；「问谁、收没收回来」在满意度发放台账，
- * 「收回来的答案」在满意度答卷。三层不混，否则回收率无从算起。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -12,9 +12,6 @@ import java.time.LocalDate;
 
 /**
  * 药品调拨明细（一行一个发出方批次）
- *
- * <p>药品名/批号/效期/成本在建单时全部快照，接收方落位也按这份快照找同批号批次：
- * 调拨单是「货在两个库位之间搬」的凭证，事后改字典不能改变当时的记载。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

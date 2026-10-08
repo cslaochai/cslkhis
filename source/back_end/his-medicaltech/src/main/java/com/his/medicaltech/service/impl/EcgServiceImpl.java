@@ -44,15 +44,6 @@ import java.util.stream.Collectors;
 
 /**
  * 心电工作站（sql/173）。
- *
- * <p>「波形成文」的服务端闸门都在本类：
- * <ul>
- *   <li>报告提交必须已有波形（没有波形的报告没有临床证据）；</li>
- *   <li>ecg_type=2（Holter）的提交必须已有分析结果（Holter 动态心电）；</li>
- *   <li>不能自审（用员工ID比，不用姓名比）；</li>
- *   <li>发布必须先审核（跳过审核 = 一个人既写又审又发）。</li>
- * </ul>
- * 与放射（sql/138）同款：报告进报告单，检查记录强制校验 item_type=3。
  */
 @Slf4j
 @Service

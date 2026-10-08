@@ -10,9 +10,6 @@ import java.util.List;
 
 /**
  * 订餐配送分页查询。
- *
- * <p>食堂侧按「日期 + 病区」出配送单，所以 mealDate 与 wardId 是主筛；
- * {@code deliverStatus=0,1} 就是"今天还没送完的餐"。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

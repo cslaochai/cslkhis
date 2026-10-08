@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 转诊（双向转诊）实体 —— 对齐既有转诊表（11 号建表 + 85 号扩列，PK=referral_id）。
- *
- * <p>状态机（表注释既有口径）：0 待确认 → 1 已确认 → 2 已完成；0/1 → 3 已取消。
- * direction 区分双向：1-上转（转往上级医院）2-下转（转回基层/社区）。
  */
 @Data
 @TableName("biz_referral")

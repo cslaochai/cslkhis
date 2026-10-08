@@ -9,20 +9,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 病案统计上报报文（落库到 {@code biz_stat_report.payload}，也是前端预览/打印的数据源）。
- *
- * <p><b>字段名是前后端契约，不能随手改</b>：前端 {@code StatReportView.vue} 按
- * {@code reportKind / reportName / org.* / period.* / scope.* / indicators.*}
- * 与 {@code operationLevels[].levelLabel / insuranceTypes[].type / topDiagnoses[].code /
- * cases[].admissionNo} 这些路径取值，还原成纸质报表。改一个键名 = 预览表格整列空白，
- * 而且不会报错。
- *
- * <p>曾用 {@code LinkedHashMap<String, Object>} 双花括号匿名子类拼这个报文 ——
- * 键名是纯字符串字面量，编译器一个字都不管；而这份 payload 落库后就是<b>对外承诺的内容</b>
- * （可回看、可打印、真实对接时直接换 http 上报），拼错字段名要等疾控侧返回错误报文才发现。
- *
- * <p>各嵌套段（org / period / scope / indicators / 各级明细列表）各自建类，
- * 不用嵌套 Map —— 嵌套 Map 的键名编译器不管，改错了要等对接才发现。
+ * 病案统计上报报文（落库到 biz_stat_report.payload，也是前端预览/打印的数据源）。
  */
 @Data
 public class StatReportPayloadVO implements Serializable {

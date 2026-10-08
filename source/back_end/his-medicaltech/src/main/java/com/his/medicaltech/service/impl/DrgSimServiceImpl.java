@@ -29,9 +29,6 @@ import java.util.stream.Collectors;
 
 /**
  * DRG 分组模拟服务。
- *
- * <p>分组器为院内简化模拟（DrgGrouper 单点），组表 DRG 分组与权重为 CHS-DRG 1.1 模拟种子；
- * 每个首页一条模拟结果（uk_summary），重跑覆盖；实际费用取结算单，结算缺失按 0 计（首页 total_amount 兜底）。
  */
 @Service
 @RequiredArgsConstructor

@@ -10,11 +10,6 @@ import java.util.List;
 
 /**
  * 患者主索引条目（P5.1 EMPI）
- *
- * <p>比普通患者 VO 多三块信息，都是"判断这两份档案要不要合并"必须看的：
- * ① 主档归属（masterId / mergeStatus / 名下的影子数）；
- * ② 档案完整度（缺哪几个关键字段）；
- * ③ 关联业务数据量（合掉它意味着多少条数据会归到主档名下）。
  */
 @Data
 public class PatientIndexVO {

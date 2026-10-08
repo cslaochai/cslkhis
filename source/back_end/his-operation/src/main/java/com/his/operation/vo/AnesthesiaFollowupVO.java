@@ -11,9 +11,6 @@ import java.util.List;
 
 /**
  * 麻醉随访出参。
- *
- * <p>惯例同 {@link OperationApplyVO}：ID 字符串化、码值带 xxxText、
- * 按钮可用性（canEdit/canFinish/canDelete）由服务端按状态算。
  */
 @Data
 public class AnesthesiaFollowupVO implements Serializable {

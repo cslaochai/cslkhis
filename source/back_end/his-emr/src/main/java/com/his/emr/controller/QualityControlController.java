@@ -17,14 +17,6 @@ import java.util.List;
 
 /**
  * 病案质控（P5.4）。
- *
- * <p><b>路径从 {@code /charge/qualityControl} 改为 {@code /emr/qualityControl}</b>：
- * 质控属于病历管理（his-emr），原来的 /charge 前缀是错的 —— 它让所有人以为质控是收费模块的功能，
- * 前端 api 层也因此一直指向一个语义错误的位置。本控制器不在 his-charge 里，
- * 所以改路径不会与收费模块的任何一个 Bean 冲突。
- *
- * <p>读取类接口一律 GET（可被看板轮询、可直接用浏览器打开核对数字）；
- * 只有"执行质控 / 处理质控"这类确实改变状态的用 POST。
  */
 @Tag(name = "病案质控")
 @RestController

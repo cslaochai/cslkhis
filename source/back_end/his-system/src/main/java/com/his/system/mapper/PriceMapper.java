@@ -11,12 +11,6 @@ import java.math.BigDecimal;
 
 /**
  * 跨价表统一查询 Mapper
- *
- * <p>5 张价表（药品字典 / 耗材字典 / 检查项目字典 / 检验项目字典 /
- * 治疗项目字典）列名不统一，且耗材字典的实体在 his-supplies 模块、
- * 治疗项目字典没有实体 —— 所以统一走原生 SQL，不引入跨模块实体依赖。</p>
- *
- * <p>SQL 里空字段用「不查这一列」，不用 CAST(NULL AS CHAR) 之类的假值填充。</p>
  */
 @Mapper
 public interface PriceMapper {

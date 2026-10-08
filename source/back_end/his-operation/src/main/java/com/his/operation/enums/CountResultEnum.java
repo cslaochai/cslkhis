@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * 单阶段清点结果（1-一致 2-不一致）。
- *
- * <p>一致性判定基准是术前基线，不是上一段（连续两次都少一块纱布时，"与上段一致"会显示通过）。
  */
 @Getter
 public enum CountResultEnum {

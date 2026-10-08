@@ -15,10 +15,6 @@ import java.time.LocalDateTime;
 
 /**
  * 供应商主表
- *
- * ⚠ 主键列名是 `supplier_id` 而不是 `id`，所以本实体**不继承 BaseEntity**：
- *   父类的 @TableId 字段名固定为 `id`，继承过来会让 MP 去 select 一个不存在的列 → 全表查 500。
- *   审计字段在此显式声明，语义与 BaseEntity 相同（`@TableLogic` 逻辑删除 + 时间自动填充）。
  */
 @Data
 @TableName("sys_supplier")

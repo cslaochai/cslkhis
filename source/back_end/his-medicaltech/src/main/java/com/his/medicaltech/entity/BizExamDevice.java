@@ -7,9 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 检查预约设备档位（检查设备档位）
- *
- * <p>与医疗设备台账的分工：那边是资产台账（G22 的档案/维保/计量），这边是「可预约的运行资源」档位
- * （开放时段、号源粒度、并行数）。equipment_id 只是挂接，台账缺行时留空 —— 预约域不依赖台账能否跑。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

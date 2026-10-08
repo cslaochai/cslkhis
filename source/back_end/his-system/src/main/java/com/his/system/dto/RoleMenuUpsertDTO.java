@@ -9,9 +9,6 @@ import java.util.List;
 
 /**
  * 角色菜单权限保存入参
- *
- * <p>整表替换语义：以传入的 menuIds 作为该角色最终的菜单权限集合，
- * 为空表示收回全部菜单（系统管理员角色除外，后端会拒绝）。</p>
  */
 @Data
 public class RoleMenuUpsertDTO {

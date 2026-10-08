@@ -9,10 +9,6 @@ import java.util.List;
 
 /**
  * 病区护理排班服务（sql/166）。
- *
- * <p>三件事：周矩阵读写、人力标准（规则）维护、规则校验。
- * 校验一律<b>告警不拦截</b> —— 急诊抽调、临时加床都会造成合理缺口，
- * 拦住保存只会逼人把班表排成「好看但没有货」的样子。
  */
 public interface NurseScheduleService {
 

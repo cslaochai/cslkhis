@@ -9,8 +9,6 @@ import java.time.LocalDate;
 
 /**
  * 生成住院摆药单入参。
- *
- * <p>按「病区 + 摆药日期」捞该病区在院患者的药品医嘱；admissionId 可选，传了只摆这一个患者。
  */
 @Data
 public class WardDispenseGenerateDTO implements Serializable {

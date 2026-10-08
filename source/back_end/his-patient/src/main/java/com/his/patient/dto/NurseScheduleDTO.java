@@ -12,16 +12,12 @@ import java.time.LocalDate;
 
 /**
  * 病区护理排班入参（外层空壳 + 内部静态类，同 InpatientLeaveDTO）。
- *
- * <p>时间入参：日期用 {@code yyyy-MM-dd}（LocalDate），与前端 el-date-picker 的
- * {@code value-format} 同口径，不接收 ISO T 分隔（AGENTS §3 宽进严出）。
- *
- * <p>长度口径：自由文本（备注/请假事由）不在入参层卡长度，服务端 {@code cut(x, 500)} 兜底截断；
- * 结构化字段（月份、HH:mm）保留格式校验，格式错是请求非法不是写得啰嗦。
  */
 public class NurseScheduleDTO {
 
-    /** 周矩阵取数：wardId 必填，weekStart 空=本周（周一为界） */
+    /**
+     * 周矩阵取数：wardId 必填，weekStart 空=本周（周一为界）
+     */
     @Data
     public static class MatrixQuery {
         /** 排班单元类型（1-病区 2-门诊科室；空按 1-病区） */
@@ -33,7 +29,9 @@ public class NurseScheduleDTO {
         private LocalDate weekStart;
     }
 
-    /** 点格排班/改格（一人一天一条，撞唯一键即覆盖原走向） */
+    /**
+     * 点格排班/改格（一人一天一条，撞唯一键即覆盖原走向）
+     */
     @Data
     public static class CellUpsert {
         /** 排班单元类型（1-病区 2-门诊科室；空按 1-病区） */
@@ -57,7 +55,9 @@ public class NurseScheduleDTO {
         private String remark;
     }
 
-    /** 复制上周：只填目标周的空缺格，已排的一律不覆盖 */
+    /**
+     * 复制上周：只填目标周的空缺格，已排的一律不覆盖
+     */
     @Data
     public static class CopyWeek {
         /** 排班单元类型（1-病区 2-门诊科室；空按 1-病区） */
@@ -73,7 +73,9 @@ public class NurseScheduleDTO {
         private LocalDate targetWeekStart;
     }
 
-    /** 规则校验（区间默认周矩阵那一周） */
+    /**
+     * 规则校验（区间默认周矩阵那一周）
+     */
     @Data
     public static class CheckQuery {
         /** 排班单元类型（1-病区 2-门诊科室；空按 1-病区） */
@@ -89,7 +91,9 @@ public class NurseScheduleDTO {
         private LocalDate endDate;
     }
 
-    /** 月度工时统计 */
+    /**
+     * 月度工时统计
+     */
     @Data
     public static class WorkloadQuery {
         /** 排班单元类型（1-病区 2-门诊科室；空按 1-病区） */
@@ -101,7 +105,9 @@ public class NurseScheduleDTO {
         private String month;
     }
 
-    /** 台账分页（跨病区，护理部查排班历史用） */
+    /**
+     * 台账分页（跨病区，护理部查排班历史用）
+     */
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class QueryPage extends PageParam {
@@ -121,7 +127,9 @@ public class NurseScheduleDTO {
         private Integer scheduleStatus;
     }
 
-    /** 人力配置标准保存（shiftId=0 的病区级行只认工时/连班/总人数，班次行只认人数） */
+    /**
+     * 人力配置标准保存（shiftId=0 的病区级行只认工时/连班/总人数，班次行只认人数）
+     */
     @Data
     public static class RuleUpsert {
         /** 主键ID */

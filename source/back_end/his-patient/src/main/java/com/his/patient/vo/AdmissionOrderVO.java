@@ -9,10 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院证展示 VO
- *
- * <p>{@code orderStatusText} / {@code genderText} 由后端统一给文案，前端不再自己拼——
- * 一旦两边各拼一次，"未知码值"就可能在某一侧被渲染成合法值（本项目已踩过这个坑：
- * 检验「未判定」被当成「正常」）。
  */
 @Data
 public class AdmissionOrderVO {

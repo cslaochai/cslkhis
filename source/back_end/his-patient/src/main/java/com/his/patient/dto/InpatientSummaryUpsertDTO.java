@@ -12,8 +12,6 @@ import java.util.List;
 
 /**
  * 病案首页保存入参（整份保存）
- * <p>诊断 / 手术明细按<b>整表替换</b>语义提交：传什么就是什么，不传即清空。
- * 这样前端的编辑态与库内状态天然一致，不需要逐行 diff。
  */
 @Data
 public class InpatientSummaryUpsertDTO {
@@ -84,7 +82,9 @@ public class InpatientSummaryUpsertDTO {
     @Valid
     private List<OperationItem> operations;
 
-    /** 诊断明细项 */
+    /**
+     * 诊断明细项
+     */
     @Data
     public static class DiagnosisItem {
 
@@ -108,7 +108,9 @@ public class InpatientSummaryUpsertDTO {
         private String diagnosisBasis;
     }
 
-    /** 手术操作明细项 */
+    /**
+     * 手术操作明细项
+     */
     @Data
     public static class OperationItem {
 

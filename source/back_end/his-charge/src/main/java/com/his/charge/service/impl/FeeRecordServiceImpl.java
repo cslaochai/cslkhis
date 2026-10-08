@@ -38,10 +38,6 @@ import java.util.Objects;
 
 /**
  * 费用记账实现（L1）。
- *
- * <p>本类是唯一能写费用记账流水金额与状态的地方：结算层要锁定/结清/解锁
- * 记账行，也只能通过 {@link #lockToBill}/{@link #markSettled}/{@link #releaseFromBill}
- * 这三个口子，不许自己 UPDATE —— 否则"谁能把待结算改成已锁定"没有唯一答案。
  */
 @Slf4j
 @Service

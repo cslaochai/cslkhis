@@ -10,13 +10,6 @@ import java.util.List;
 
 /**
  * 人力需求 Mapper。
- *
- * <p>派生逻辑写在这里（而不是 Java 里循环算）的原因：需求是「一批单元 × 一批日期」的集合运算，
- * 一条 INSERT ... SELECT 就能算完，拉到内存里算既慢又容易和 SQL 迁移脚本算出两套数 ——
- * 这里的 SQL 与 {@code sql/212} 逐字对齐，跑脚本和点界面重算得到的是同一份结果。
- *
- * <p><b>唯一键不含 del_flag，所以派生行必须物理删</b>（与 biz_staff_schedule 同样的坑）：
- * 软删留下的行继续占键，下次重算必然撞重复键。
  */
 @Mapper
 public interface BizStaffDemandMapper extends BaseMapper<BizStaffDemand> {

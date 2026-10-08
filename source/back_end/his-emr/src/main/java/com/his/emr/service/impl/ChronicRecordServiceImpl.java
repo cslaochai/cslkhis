@@ -27,13 +27,6 @@ import java.util.List;
 
 /**
  * 慢病建档/认定（M1，医生工作站）。
- *
- * <p>口径：
- * <ul>
- *   <li>建档即认定（确认状态=1），认定医生=当前登录医生；作废置 2（单向），可重新建档；</li>
- *   <li>同一患者同一慢病编码只允许一条有效档案；</li>
- *   <li>长处方开方资格 = 存在已认定的有效档案（开方侧校验，见 EmrServiceImpl）。</li>
- * </ul>
  */
 @Service
 @RequiredArgsConstructor

@@ -5,12 +5,6 @@ import lombok.Data;
 
 /**
  * 医保合规证据判定提示词变量。
- *
- * <p>对应 {@code prompts/insurance-evidence.md} 的全部占位符。
- * 字段名与模板里的 {{占位符}} 一一对应。
- *
- * <p>{@code hitItemsText} 摆的是<b>已由代码判定命中的合规审核项</b>（含规则码与判定依据），
- * 模型只在这些规则范围内组织「证据是否充分」的说明，不许发明规则码。
  */
 @Data
 public class InsuranceEvidencePromptVariablesVO implements PromptVariables {

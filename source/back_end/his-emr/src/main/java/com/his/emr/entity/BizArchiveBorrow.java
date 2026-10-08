@@ -12,9 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 病案借阅/复印实体
- * <p>
- * 状态机：1 待审核 → 2 已借出 → 3 已归还；拒绝 → 4；复印审核通过直接 → 5 已复印。
- * 借阅只能借「已归档」病历原件；封存病历只开放复印（法律封存态，原件一律不外借）。
  */
 @Data
 @TableName("biz_archive_borrow")

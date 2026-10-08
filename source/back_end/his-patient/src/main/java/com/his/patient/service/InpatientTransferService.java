@@ -11,9 +11,6 @@ import java.util.List;
 
 /**
  * 住院转科（P4.2：发起 → 转入科室接收 → 停原医嘱 + 换科室换床 + 回写病历）。
- *
- * <p>与「换床」的分工：换床是 {@link InpatientService#transfer}（同科室内部），
- * 本服务只处理**跨科室**转科；同科室发起转科会被直接拒绝，避免把换床包装成转科记录。
  */
 public interface InpatientTransferService {
 

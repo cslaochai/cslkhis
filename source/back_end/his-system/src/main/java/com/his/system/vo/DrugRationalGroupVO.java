@@ -13,7 +13,7 @@ public class DrugRationalGroupVO {
     /**
      * 与入参 groupId 原样回传，调用方据此贴回自己的行
      */
-    private String groupId;
+    private Long groupId;
 
     /**
      * 本组是否存在应当拦截审方通过的命中（只有相互作用禁忌级为 true）

@@ -17,9 +17,6 @@ import java.util.List;
 
 /**
  * 支付资金流水台账（L3）。
- *
- * <p>只读：流水由各收退款动作写入，这里不提供任何编辑口子 —— 能改流水就等于能对不上渠道。
- * 冲正一笔收款走 {@code /charge/settlementBill/refund}，不是在这里删行。
  */
 @Tag(name = "支付流水")
 @RestController

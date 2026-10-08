@@ -8,7 +8,7 @@ import lombok.EqualsAndHashCode;
  * 三级质控流转单分页查询 DTO
  */
 @Data
-@EqualsAndHashCode(callSuper = false)
+@EqualsAndHashCode(callSuper = true)
 public class RecordQcFlowQueryPageDTO extends PageParam {
 
     /**

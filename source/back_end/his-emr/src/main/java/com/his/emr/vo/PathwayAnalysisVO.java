@@ -9,8 +9,6 @@ import java.util.List;
 
 /**
  * 临床路径变异分析 VO：按模板聚合 + 类型分布 + 原因 TOP。
- *
- * <p>完成率 = 完成数 / 入径数（退径不计入分子），百分数保留 1 位小数。
  */
 @Data
 public class PathwayAnalysisVO implements Serializable {

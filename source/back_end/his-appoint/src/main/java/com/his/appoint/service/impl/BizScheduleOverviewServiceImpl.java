@@ -22,7 +22,6 @@ import java.util.List;
 
 /**
  * 排班周总览实现：跨模块只读 his-system 的 service（事实层 / 人力标准 / 总值班），
- * 号源聚合读本模块表。总览不写任何事实，也不在此处做范围收口以外的业务判断。
  */
 @Service
 @RequiredArgsConstructor

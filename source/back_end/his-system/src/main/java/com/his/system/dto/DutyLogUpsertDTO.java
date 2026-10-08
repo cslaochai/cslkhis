@@ -13,12 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 值班日志新增/修改入参。
- *
- * <p>{@code employeeId} 留空 = 「记在我自己头上」：取当前时刻的总值班。
- * 代记/补记时才显式传别人 —— 于是"谁值班"和"谁写的"分成两列（{@code employeeId} / {@code createBy}）。
- *
- * <p><b>不接受直接传 status=2/3</b>：已交班、已签收只能由交班/签收动作推进，
- * 让登记接口能直接写"已签收"，等于可以自己给自己签字交接，交班本就成了摆设。
  */
 @Data
 public class DutyLogUpsertDTO {

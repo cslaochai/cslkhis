@@ -14,8 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 体检控制器（套餐 / 登记 / 结果 / 总检）。
- *
- * <p>状态机：1 已登记 → 2 检查中 → 3 已完成 → 4 已出报告，单向流转；4 为终态禁改禁删。
  */
 @Tag(name = "体检管理")
 @RestController

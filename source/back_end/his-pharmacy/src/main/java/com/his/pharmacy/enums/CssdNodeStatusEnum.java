@@ -4,9 +4,6 @@ import lombok.Getter;
 
 /**
  * CSSD 消毒供应节点状态枚举（码值口径 = biz_cssd_pack.status / biz_cssd_trace.node_type 列注释）。
- *
- * <p>同一码值在包裹上是状态（「已回收」），在流转轨迹上是动作（「回收」），
- * 用 {@link #getLabel()} 与 {@link #getActionLabel()} 两个文案区分，避免两套 Map 各说各话。
  */
 @Getter
 public enum CssdNodeStatusEnum {

@@ -10,11 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 排台入参：手术室把申请单落到"哪个手术间 + 哪个时段 + 谁主刀"。
- *
- * <p>四样必填（手术间、起止时间、主刀医师），因为它们构成了一台手术**对外承诺的资源**：
- * 少了任何一样，"已排期"这个状态就是空的 —— 后面术前核对要核的就是这几样。
- *
- * <p>排台时间与排台人由服务端取当前时间与当前登录用户，前端传不了。
  */
 @Data
 public class OperationScheduleDTO implements Serializable {

@@ -9,7 +9,6 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 出入量小结出参：从护理文书（类型 1/3 的出入量字段）按日复算，**不是另存的统计表**——
- * 小结必须能从原始测量行推出来，否则原始行修改后小结就是死的。
  */
 @Data
 public class IntakeOutputSummaryVO {

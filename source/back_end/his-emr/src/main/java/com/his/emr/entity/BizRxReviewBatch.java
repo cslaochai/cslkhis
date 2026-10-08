@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 处方点评批次（卫医管发〔2010〕28号，事后专项点评；评审必查台账）。
- *
- * <p>建批抽样 → 药师逐张点评 → 完成/手动关闭归档。无 del_flag，删除走物理删
- * （uk_batch_no 不含 del_flag，软删行会占键）。
  */
 @Data
 @TableName("biz_rx_review_batch")

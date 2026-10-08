@@ -5,10 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 转诊待确认超时催办载荷（对应 {@code ReferralServiceImpl#escalatePendingToDuty}）。
- *
- * <p>与 {@code ReferralNotifyPayloadVO} 分开建类而不是共用：登记通知关心"去向与事由"，
- * 超时催办关心"挂了多久"，字段集合本就不同，塞一个类里必然有一半字段长期为 null。
+ * 转诊待确认超时催办载荷（对应 ReferralServiceImpl#escalatePendingToDuty）。
  */
 @Data
 public class ReferralEscalatePayloadVO implements Serializable {

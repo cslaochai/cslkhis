@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 
 /**
  * 欠费管控 Gate 实现（SPI：接口在 his-patient，本类是 his-charge 侧实现）。
- *
  */
 @Slf4j
 @Component

@@ -10,16 +10,6 @@ import java.io.Serializable;
 
 /**
  * 手术申请入参（新增 / 修改「待排期」的申请）。
- *
- * <p><b>刻意不接收患者ID、申请科室、申请医生、申请床号</b>：这些一律由服务端从入院记录
- * 与当前登录用户推导。前端能传的"事实"只有：给谁住院申请（admissionId）、
- * 拟做什么手术、为什么做（operationReason）、术前诊断、以及级别/切口/麻醉/急诊这些术式属性。
- *
- * <p>让前端传申请科室，就一定会出现"申请科室"与入院科室打架的记录（同会诊的坑）。
- *
- * <p>同样的道理，<b>排台信息（手术间/时间/主刀/麻醉医师）不在这个 DTO 里</b> ——
- * 那是手术室的动作，走 {@link OperationScheduleDTO}。申请与排台混在一个入口，
- * 结果就是病区能把手术间和主刀一起"顺手填上"，手术室失去排台权。
  */
 @Data
 public class OperationApplyUpsertDTO implements Serializable {

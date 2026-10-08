@@ -8,9 +8,6 @@ import lombok.Data;
 
 /**
  * 心电报告书写入参（保存草稿 / 提交审核共用，sql/173）。
- *
- * <p>与 sql/138 放射报告同款口径：定位键是 {@code recordId}（检查记录），
- * 报告从记录派生，第一次写报告时报告还不存在。
  */
 @Data
 public class EcgReportUpsertDTO {

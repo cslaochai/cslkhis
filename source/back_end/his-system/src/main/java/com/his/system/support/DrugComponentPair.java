@@ -9,8 +9,6 @@ import java.util.List;
 
 /**
  * 成分对的归一化键
- * 「华法林 × 阿司匹林」和「阿司匹林 × 华法林」是同一条知识，书写顺序不该由录入者决定，
- * 所以入库前把两个关键字按<b>二进制序</b>排序后用 {@code &} 连接，唯一键建在这个键上。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class DrugComponentPair {

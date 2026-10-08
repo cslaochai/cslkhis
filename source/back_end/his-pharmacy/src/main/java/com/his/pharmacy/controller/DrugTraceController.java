@@ -20,11 +20,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 药品追溯码采集与核对控制器
- *
- * <p>医保局口径：入库扫码采集、发药扫码核销，两个动作都要上传。
- * 三个页面共用一套接口：采集窗口（scan+collect）、发药窗口（scan+verifyDispense）、
- * 上传与对账（upload+reconcileStats）。
- * <br>操作人一律服务端取登录态（铁律：不信任前端传的姓名）。
  */
 @Tag(name = "药品追溯码")
 @RestController

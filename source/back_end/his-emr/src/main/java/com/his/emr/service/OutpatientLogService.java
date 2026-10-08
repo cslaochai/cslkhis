@@ -6,8 +6,7 @@ import com.his.emr.vo.OutpatientLogListVO;
 import com.his.emr.vo.OutpatientLogStatsVO;
 
 /**
- * 门诊日志（法规台账）。只读：报卡写动作一律走 {@code InfectiousReportService}，
- * 本服务不建第二套上报状态。
+ * 门诊日志（法规台账）。只读：报卡写动作一律走 InfectiousReportService，
  */
 public interface OutpatientLogService {
 

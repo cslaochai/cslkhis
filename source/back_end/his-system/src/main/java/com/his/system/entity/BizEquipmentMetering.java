@@ -14,8 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 设备计量记录实体（86 号脚本新增）。
- *
- * <p>计量类型：1-强检 2-校准。有效期至（valid_until）是强检合规的判定口径，过期即台账亮红。
  */
 @Data
 @TableName("biz_equipment_metering")

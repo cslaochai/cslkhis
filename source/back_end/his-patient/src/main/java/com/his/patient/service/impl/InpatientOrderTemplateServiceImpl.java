@@ -35,18 +35,6 @@ import java.util.Objects;
 
 /**
  * 住院医嘱模板服务实现。
- *
- * <p>四条必须守住的口径：
- * <ol>
- *   <li><b>归属只认当前登录人</b>：{@code doctorId} 一律服务端覆盖，且 {@code getById}/{@code upsert}/
- *       {@code deleteById} 都要校验模板属于本人 —— 前端传谁的 id 都读不到别人的模板。
- *       （门诊 {@code DoctorTemplateController} 的 {@code getRxById}/{@code deleteRxById} 没做这层，
- *       那是既有缺口，不要照着抄。）</li>
- *   <li><b>明细先删后插</b>：一次提交就是这份模板的全量，逐条 diff 换来的复杂度没有对应收益。</li>
- *   <li><b>保存即校验</b>：明细走 {@link InpatientOrderItemRules}（与开立医嘱同一份硬规则）。
- *       放过一条缺途径的药品明细，模板就成了绕过硬规则的后门。</li>
- *   <li><b>不存开始时间与加急</b>：那是当次临床决定；{@code orderType} 存的是默认值，套用后仍可改。</li>
- * </ol>
  */
 @Slf4j
 @Service

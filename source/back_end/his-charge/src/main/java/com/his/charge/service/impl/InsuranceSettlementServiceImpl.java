@@ -44,11 +44,6 @@ import java.util.stream.Collectors;
 
 /**
  * 医保结算清单实现（L2 账单的报盘出口）。
- *
- * <p>清单的三个数各有唯一来源，谁都不许估：
- * 统筹抄账单统筹金额（L2 逐行 split 的结果），个账与自付从本账单的
- * <b>成功收款流水</b>现算（{@code pay_method=4} 是刷参保人卡的真钱，其余是现金类）。
- * 旧实现在这里写死了「自付超过 100 就当他刷了 100 个账」，报出去的数与金库无关。
  */
 @Slf4j
 @Service
@@ -924,7 +919,7 @@ public class InsuranceSettlementServiceImpl
     }
 
     /**
-     * 清单三个数 + 总费用的现算结果：{@code total = pool + account + cash}（仅在账单已付清时成立）
+     * 清单三个数 + 总费用的现算结果：total = pool + account + cash（仅在账单已付清时成立）
      */
     private record FundSplit(BigDecimal total, BigDecimal pool, BigDecimal account, BigDecimal cash) {
     }

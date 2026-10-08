@@ -7,9 +7,6 @@ import java.util.List;
 
 /**
  * 患者端导诊口语归一结果。
- *
- * <p>前端拿到 {@code searchText} 后去调 {@code /miniapp/triage/recommend}，
- * 科室仍然是规则表给的。{@code followUps} 展示在结果下方，患者补一句可以再查一次。
  */
 @Data
 @Schema(description = "患者端导诊口语归一结果")

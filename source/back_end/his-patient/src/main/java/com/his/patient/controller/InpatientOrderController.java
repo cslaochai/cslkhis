@@ -15,12 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 住院医嘱（P1：医嘱 → 校对 → 执行 → 计费）
- *
- * <p>约定：查询一律 GET，写操作一律 POST，路径驼峰。
- *
- * <p><b>注意 {@code /execPendingList} 是 GET 但会写库</b>：它会为"该有今天这次执行"的长期医嘱
- * 补当天计划行（幂等）。这是刻意的设计——见 {@code InpatientOrderServiceImpl#backfillTodayPlans}，
- * 目的是不引入定时任务，避免"服务停机那天全院长期医嘱计划集体缺失"这种静默故障。
  */
 @Tag(name = "住院医嘱")
 @RestController

@@ -16,9 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 小程序端短信验证码控制器。
- *
- * <p>匿名可访问（在 {@code SecurityConfig} 白名单内），因此场景码固定为 REGISTER，
- * 频次由 {@link SmsCodeService} 的 Redis 限流兜住。
  */
 @Tag(name = "短信验证码")
 @RestController

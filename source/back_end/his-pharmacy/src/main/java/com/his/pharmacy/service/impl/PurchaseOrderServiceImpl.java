@@ -37,13 +37,6 @@ import java.util.Set;
 
 /**
  * 采购订单服务实现
- * <p>
- * 状态机（两个状态各自独立）：
- * approval_status 0待审批 → 1已通过 / 2已驳回；只有 0 可审批；已通过不可改（要先驳回）
- * inbound_status  0未入库 → 1已入库；入库前置 = 审批通过且未入库；入库后不可再入、不可删
- * <p>
- * 金额口径：明细 amount = 数量 × 单价，订单 total_amount = Σ明细 amount，**全部服务端重算**，
- * 前端传来的 amount / totalAmount 一律不采信（否则前端能把总额改成任意值）。
  */
 @Service
 @RequiredArgsConstructor

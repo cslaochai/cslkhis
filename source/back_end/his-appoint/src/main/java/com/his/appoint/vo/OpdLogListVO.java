@@ -10,13 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 门诊日志列表行。
- *
- * <p>基表是<b>挂号</b>（一次就诊 = 一条挂号），LEFT JOIN 队列 —— 所以
- * 「已挂号但还没签到」的挂号也会出现在日志里（{@code queueId} 为空），
- * 这正是真实 HIS 门诊日志的样子。
- *
- * <p>时长字段一律由时间戳<b>现算</b>，不读候诊队列.wait_duration：
- * 库里那一列存在把「就诊时长」写进去的行（实测有 959 的值），来源不可信。
  */
 @Data
 public class OpdLogListVO {

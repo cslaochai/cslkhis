@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 日间手术准入目录（术式准入 + 最长滞留小时数）。
- *
- * <p>停用走状态位而非删除：历史登记单要能查到术式名。
  */
 @Data
 @TableName("biz_day_surgery_item")

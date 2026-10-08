@@ -10,18 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * AI 运行时配置，由 {@code application.yml} 的 {@code ai.*} 段绑定（见 §AI 能力配置注释）。
- * <p>
- * <b>为什么从系统参数迁到 yml：</b> 这些是「部署期配置」而非「运营配置」——
- * 服务地址、模型名、超时、熔断阈值、密钥来源在不同环境本就不同，应当作为配置即代码
- * 跟代码一起评审、随发布走；而且密钥不能落库（DB 被导出即泄露）。
- * 代价是改值需重启，不再支持在线热改。
- * <p>
- * <b>设计约束：</b>任何业务代码都不要直接读这里的字段做判断分支，
- * 统一走 {@link AiConfigProvider} 的语义化方法（isCapabilityEnabled / timeoutOf / modelOf）。
- * 直接读字段会让「开关关掉了但某处没判断」这种漏网之鱼无从排查。
- * <p>
- * 这是启动时绑定一次的单例，运行期不会变；想改配置请改 yml 并重启。
+ * AI 运行时配置，由 application.yml 的 ai.* 段绑定（见 §AI 能力配置注释）。
  */
 @Data
 @Component

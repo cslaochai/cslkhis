@@ -9,12 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 放射报告模板（放射报告模板，sql/138）。
- *
- * <p>为什么不用检查项目字典的报告模板（一个 TEXT 列）：
- * 一份放射报告是**三段**（检查方法 / 影像所见 / 印象），且要按模态和部位分流
- * （头颅 CT 和胸部 DR 不可能共用一份）。单列文本只能整段覆盖，医生用起来等于没模板。
- *
- * <p>{@code modality} 允许为 NULL = 通用模板（任何模态都能选）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

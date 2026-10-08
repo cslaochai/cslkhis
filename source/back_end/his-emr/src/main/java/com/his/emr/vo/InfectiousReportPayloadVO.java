@@ -7,11 +7,6 @@ import java.io.Serializable;
 
 /**
  * 传染病报卡报文（直报疾控平台）。
- *
- * <p><b>报文即契约</b>：字段名是疾控接口规范定的，对接真实平台时按规范替换本类，
- * 外层报卡流程（建卡 → 审核 → 报送）不变。嵌套的 patient / disease / visit
- * 三段各自建类，不用嵌套 Map —— 嵌套 Map 的键名编译器不管，改错了要等
- * 疾控侧返回错误报文才发现。
  */
 @Data
 public class InfectiousReportPayloadVO implements Serializable {

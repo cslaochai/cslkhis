@@ -11,13 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 满意度评价发放与回收台账（sql/164）——「评价回收这张脸」。
- *
- * <p><b>回收率的分母永远是本表行数</b>，不是答卷行数。所以未回收必须显式存在
- * （1-待推送 / 2-已推送待回收 / 4-已过期 / 5-已拒答），而不是「没有这条记录」——
- * 后者会让任何渠道的回收率都算成 100%。
- *
- * <p>⚠ 唯一键 uk_survey_dispatch_source(source_type,source_id,template_id) 不含 del_flag：
- * 本表删除走物理删（{@code purgeById}），软删留下的行仍占键，补发同一条来源必然撞键。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

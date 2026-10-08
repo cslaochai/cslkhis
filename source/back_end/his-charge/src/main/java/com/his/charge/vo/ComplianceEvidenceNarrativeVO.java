@@ -9,8 +9,6 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 一次合规审核的「证据叙事包」：把依据包压平成模型可读的事实文本块。
- * <p>只读产物，仅供 AI 证据判定（G-07）拼提示词用，不写库、不改规则结论；
- * 患者标识只到「性别 + 年龄」，姓名与证件号不出模块。</p>
  */
 @Data
 public class ComplianceEvidenceNarrativeVO {

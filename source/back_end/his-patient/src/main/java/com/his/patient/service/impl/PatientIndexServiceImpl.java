@@ -40,8 +40,6 @@ import java.util.*;
 
 /**
  * 患者主索引服务实现（P5.1 EMPI）
- *
- * <p>三条铁律的落地处：**不自动合并、不搬业务数据、可撤销**。
  */
 @Slf4j
 @Service
@@ -241,8 +239,8 @@ public class PatientIndexServiceImpl extends ServiceImpl<BizPatientMapper, BizPa
                     dto.getMatchType(), level, master.getPatientNo(), merged.getPatientNo());
         }
         int minLen = PatientMatchLevelEnum.minReasonLength(level);
-        // 保留（类别①条件必填）：合并理由的最小字数由服务端判级动态决定（级别越弱要求越长），
-        // 阈值不在入参里，@Size 写不出来
+        // B-条件必填：合并理由的最小字数由服务端判级现算（minReasonLength(level)），阈值不在入参里，
+        // DTO 注解无法表达，保留
         if (!TextUtil.hasText(dto.getReason()) || dto.getReason().trim().length() < minLen) {
             throw new BusinessException("合并理由至少 " + minLen + " 个字（当前级别："
                     + PatientMatchLevelEnum.text(level) + "）。级别越弱，越要写清是谁、依据什么核实的");

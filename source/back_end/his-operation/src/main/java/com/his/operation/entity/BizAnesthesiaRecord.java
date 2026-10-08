@@ -13,13 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 麻醉记录单—— 一台手术一份（UNIQUE apply_id）。
- *
- * <p>这张单要回答的是"手术这一段时间内，患者的生命维持是谁怎么管过来的"，核心是
- * <b>一条时间轴</b>（入室 → 麻醉开始 → 切皮 → 关腹 → 麻醉结束 → 出室）；
- * 生命体征与用药分别落在 {@link BizAnesthesiaVital} / {@link BizAnesthesiaMed} 只增不改。
- *
- * <p><b>提交（record_status=1）后不可再改体征与用药</b>：术后补一条 8:15 的血压是伪造，
- * 与"术后补一条术前核对记录是伪造"同一条原则。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

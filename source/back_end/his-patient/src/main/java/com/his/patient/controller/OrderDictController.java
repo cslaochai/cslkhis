@@ -17,15 +17,6 @@ import java.util.List;
 
 /**
  * 医嘱基础字典：给药途径 / 用药频次 / 剂量单位（sql/142）。
- *
- * <p>约定：查询 GET、写操作 POST、路径驼峰。
- *
- * <p><b>为什么不复用 {@code /system/dict/dataUpsert}</b>：那个口子要 {@code system:dict:add}，
- * 而医嘱字典挂在住院业务菜单下（{@code ipd:orderDict:*}）—— 为了在这页能保存就把系统字典的
- * 写权限发给医生，等于把「患者性别」「收费项目类别」的改写权一起交出去。
- * 这里另开一个只认三种 dictType 的窄口，权限与数据边界都收在自己手里。
- *
- * <p><b>{@code @PreAuthorize} 全部标在方法上，不标类</b>：类级注解会静默覆盖所有没写自己注解的方法（G5b）。
  */
 @Tag(name = "医嘱基础字典")
 @RestController

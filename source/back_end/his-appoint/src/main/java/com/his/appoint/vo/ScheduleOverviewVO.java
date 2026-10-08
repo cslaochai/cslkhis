@@ -8,8 +8,6 @@ import java.util.List;
 
 /**
  * 排班周总览（只读驾驶舱）：门诊号源、在岗人次、人力缺口、总值班一屏聚合。
- * 数据全部来自既有事实层（biz_staff_schedule / biz_schedule / biz_duty_roster / biz_staff_plan_rule），
- * 这里只做聚合与装配，不产生任何新事实。
  */
 @Data
 public class ScheduleOverviewVO {

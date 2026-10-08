@@ -14,10 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 手术间主数据端点（sql/134）。
- *
- * <p>鉴权口径（AGENTS §4）：注解只标方法不标类；{@code selectList} 是排台下拉的
- * 通用参照数据，只要求登录，不挂页面权限码（否则非管理岗一进排台弹窗下拉就 403）。
+ * 手术间主数据端点
  */
 @Tag(name = "手术间主数据")
 @RestController

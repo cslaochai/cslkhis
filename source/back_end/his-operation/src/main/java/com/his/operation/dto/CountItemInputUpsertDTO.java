@@ -10,11 +10,6 @@ import java.io.Serializable;
 
 /**
  * 清点明细输入行。
- *
- * <p>{@code beforeQty} 在新建清点单时是"术前基数"；
- * 后续阶段的数量在 {@code CountPhaseDTO} 里按阶段填写 ——
- * 分两个 DTO 是因为两者发生的时间与签字人都不同，混在一个形状里必然出现
- * "改关体前数量时不小心覆盖了术前基数"这种错。
  */
 @Data
 public class CountItemInputUpsertDTO implements Serializable {

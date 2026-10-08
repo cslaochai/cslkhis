@@ -10,12 +10,6 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 挂号/就诊记录跨域摘要：收费域只读预约挂号信息的最小字段集。
- *
- * <p>结算证据、医保结算清单、合规稽核都要引用挂号信息（就诊类型、就诊日期、
- * 科室、医生、医保身份），但不该看见 {@code biz_appoint_info} 的全宽实体 ——
- * 映射由 his-appoint 在实现端口时完成。
- *
- * @see AppointGateway
  */
 @Data
 @NoArgsConstructor

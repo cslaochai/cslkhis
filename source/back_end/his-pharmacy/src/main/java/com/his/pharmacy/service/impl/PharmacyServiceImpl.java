@@ -32,7 +32,6 @@ import java.util.List;
 
 /**
  * 药房服务实现
- * 口径：库存的一切增减都落药品库存流水；发药出库走 FEFO（先过期先出）。
  */
 @Service
 @RequiredArgsConstructor

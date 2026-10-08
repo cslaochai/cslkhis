@@ -6,8 +6,6 @@ import lombok.Data;
 
 /**
  * 检验申请开单入参（医生站开单那一刻就落库）。
- *
- * <p>同 {@link InspectionApplyUpsertDTO}：价格与项目编码由后端按字典补全，前端不传。
  */
 @Data
 @Schema(description = "检验申请开单入参")

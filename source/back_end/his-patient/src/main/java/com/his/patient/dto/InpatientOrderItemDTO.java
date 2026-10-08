@@ -7,10 +7,6 @@ import java.math.BigDecimal;
 
 /**
  * 住院医嘱明细项（一个组套里的一条项目）。
- *
- * <p>`price` 由开立方从字典带出（本项目没有统一价表），服务端会**快照进医嘱行**：
- * 执行时用的是开立当时的价，不再回查字典 —— 否则调价后账单与医嘱会对不上，
- * 四核对里"收费项目 ≠ 医嘱项目"就会出现假阳性。
  */
 @Data
 public class InpatientOrderItemDTO implements Serializable {

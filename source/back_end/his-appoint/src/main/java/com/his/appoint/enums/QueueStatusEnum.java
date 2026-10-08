@@ -3,16 +3,7 @@ package com.his.appoint.enums;
 import lombok.Getter;
 
 /**
- * 排队状态枚举 —— 候诊队列.queue_status 的<b>唯一权威码值</b>。
- *
- * <p>字典 {@code his_queue_status}、前端 {@code lib/statusColor.ts} 的 QUEUE_STATUS、
- * 门诊日志的 {@link OpdLogStatusEnum} 都必须与这里逐字一致。
- * 历史上字典那套（1候诊中/2已叫号/4已过号/5已就诊/6已退号）整套错位，
- * 全靠「没有任何报表读它」才没炸 —— 现已由 sql/59 按本枚举对齐，改这里的码值要同步改字典与前端。
- *
- * <p>为什么单列一个 7「已失效」而不是复用 6「已过号」：
- * 6 的语义是「叫了没来」，而日终结转要收的是「昨天签到了但一整天没人给他看上」——
- * 患者从没被叫过，标成过号是冤枉他，且会让「过号率」这类统计失真。
+ * 排队状态枚举 —— 候诊队列.queue_status 的唯一权威码值。
  */
 @Getter
 public enum QueueStatusEnum {

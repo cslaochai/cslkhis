@@ -12,10 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 预防措施登记/落实。
- *
- * <p>measureCode 由前端传（BASIC/PHYSICAL/DRUG），但<b>风险等级与措施类别由服务端按码补全</b>：
- * 风险等级取该住院最新 Caprini 评估，不信任前端 —— 护士可以登记错措施的说明，
- * 但不能把"低危患者"登记成"极高危药物预防"去凑落实率。
  */
 @Data
 public class VtePreventUpsertDTO {

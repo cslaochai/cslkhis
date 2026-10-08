@@ -35,15 +35,6 @@ import java.util.*;
 
 /**
  * VTE 防控服务实现。
- *
- * <p>固化的口径（改任何一条都要同步 sql/167 注释、前端 lib/vte.js 与页面文案）：
- * <ol>
- *   <li><b>风险来自每次住院最新一条 Caprini 评估</b>，前端不传等级 —— 护士可以登记错说明，
- *       但不能把低危患者登记成极高危去凑落实率；</li>
- *   <li><b>禁忌/拒绝不算落实</b>，reason 必填但只作说明，落实率分子只数 execute_status=1；</li>
- *   <li><b>指标计算在 {@link #compute} 一处</b>，试算与落库共用 —— 试算对不上快照就是 bug；</li>
- *   <li><b>院内 VTE 发生率分子按人不按例次</b>，且只数 onset_type=1（入院带入不算院内获得）。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -162,10 +153,6 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
 
     @Override
     public List<VtePreventVO> preventListByAdmission(Long admissionId) {
-        // 保留（类别②）：入参是普通 Long（GET @RequestParam 绑定，非 request DTO 字段），注解无处安放
-        if (admissionId == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         return bizVtePreventMapper.selectByAdmission(admissionId);
     }
 
@@ -306,10 +293,6 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
 
     @Override
     public List<VteEventVO> eventListByAdmission(Long admissionId) {
-        // 保留（类别②）：入参是普通 Long（GET @RequestParam 绑定，非 request DTO 字段），注解无处安放
-        if (admissionId == null) {
-            throw new BusinessException("入院ID不能为空");
-        }
         return bizVteEventMapper.selectByAdmission(admissionId);
     }
 
@@ -545,8 +528,8 @@ public class VteServiceImpl extends ServiceImpl<BizVteEventMapper, BizVteEvent> 
     // 工具
 
     private YearMonth requireMonth(String statMonth) {
-        // 保留（类别②）：这个工具同时服务实时试算入口（入参是普通 String，GET @RequestParam 绑定），
-        // 空串在那条路径上仍然要拦
+        // C-非 web 入参：私有 requireXxx helper，除 DTO 入口外还被 previewStats 的 GET 标量参数复用
+        // （@RequestParam String 只保证「带了参数」，空串照样进来），Bean Validation 不覆盖，保留
         if (!TextUtil.hasText(statMonth)) {
             throw new BusinessException("统计月份不能为空");
         }

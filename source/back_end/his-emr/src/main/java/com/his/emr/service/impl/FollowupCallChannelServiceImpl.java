@@ -9,9 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * 外呼通道实现：{@code followup.call-channel=mock}（默认）走人工 —— 只登记「待外呼」，
- * 电话由护士自己拨；配了其他值说明运营上期望自动外呼，但线路没接入，
- * fail-fast 报错，绝不把「没拨出去」记成「已呼出」。
+ * 外呼通道实现：followup.call-channel=mock（默认）走人工 —— 只登记「待外呼」，
  */
 @Service
 @RequiredArgsConstructor

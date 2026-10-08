@@ -8,10 +8,6 @@ import org.apache.ibatis.annotations.Select;
 
 /**
  * 手术器械清点主单 Mapper。
- *
- * <p>{@code countBlocking()} 是这条链<b>唯一真正的价值</b>：
- * 手术登记完成之前问一句"这台手术的器械清点到底是干净还是没做"，
- * 只要存在"三轮没走完"或"三轮走完但不一致"的清点单，就锁死 {@code finish()}。
  */
 @Mapper
 public interface BizOperationCountMapper extends BaseMapper<BizOperationCount> {

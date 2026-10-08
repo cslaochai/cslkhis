@@ -19,12 +19,6 @@ import java.util.Objects;
 
 /**
  * 门诊病历的签名内容提供者（业务类型=2）。
- *
- * <p>与住院病历同一套规则（见 {@code InpatientRecordSignProvider} 的类注释）：
- * 规范化文本只含**病历内容**，绝不含 {@code record_status / review_status / submit_time}
- * 这类会随流程变化的字段 —— 放进去的话，"结诊提交"这一刻签名就当场失效。
- *
- * <p>门诊特殊之处：记录状态有第 4 态「已作废」，已作废的病历不允许签名。
  */
 @Slf4j
 @Component

@@ -7,9 +7,6 @@ import java.io.Serializable;
 
 /**
  * 人工补发评价入参（仍必须挂在一条随访任务上）。
- *
- * <p>不允许「无来源发放」：回收率的分母一旦可以是凭空创建的发放单，
- * 「发得多回收得少」就能靠多发把比率做上去，指标当场失去意义。
  */
 @Data
 public class SurveyDispatchIssueDTO implements Serializable {

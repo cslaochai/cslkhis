@@ -3,7 +3,7 @@ package com.his.patient.enums;
 import lombok.Getter;
 
 /**
- * VTE 事件类型枚举（文案与前端 {@code src/lib/vte.js} 逐字对齐，改这边必须改那边）
+ * VTE 事件类型枚举（文案与前端 src/lib/vte.js 逐字对齐，改这边必须改那边）
  */
 @Getter
 public enum VteEventTypeEnum {

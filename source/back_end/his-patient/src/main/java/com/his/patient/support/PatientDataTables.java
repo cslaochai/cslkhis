@@ -9,9 +9,6 @@ import java.util.Map;
 
 /**
  * EMPI 统计业务数据量时涉及的源表（标识 → 中文名）
- *
- * <p>标识必须与 {@code PatientIndexMapper.countDataByPatientIds} 里 UNION ALL 的
- * 第一列常量严格一致；改一处必须改另一处，否则页面会显示成"未知(regist)"。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class PatientDataTables {

@@ -71,7 +71,9 @@ public class PerfVO {
         private LocalDateTime updateTime;
     }
 
-    /** 执行核算的输入回显（收入聚合结果） */
+    /**
+     * 执行核算的输入回显（收入聚合结果）
+     */
     @Data
     public static class RevenueInfo {
         /** 科室ID */

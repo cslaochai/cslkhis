@@ -5,14 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 工作台数字卡「全院异常告警」（{@code WorkbenchMetricMapper#hospitalAlertStats}）。
- *
- * <p>与 {@link WorkbenchHospitalCoreRowVO} 分开两个方法而不是一次查完：
- * 两段口径差别太大（概况是"今天怎么样"，告警是"还欠着多少"），
- * 合成一段 SQL 会让"告警"跟着"今日"的时间窗走 —— 欠费患者是存量，按日窗算就永远只显示当天的。
- *
- * <p>字段名同为前端契约（{@code METRIC_SPECS.hospitalToday} 第二组）。
- * 这四项前端都标了 {@code danger: true}（值 > 0 标红），是"待处理类积压"。
+ * 工作台数字卡「全院异常告警」（WorkbenchMetricMapper#hospitalAlertStats）。
  */
 @Data
 public class WorkbenchHospitalAlertRowVO implements Serializable {

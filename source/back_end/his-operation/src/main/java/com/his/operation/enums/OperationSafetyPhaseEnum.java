@@ -7,9 +7,6 @@ import java.util.Map;
 
 /**
  * 手术安全核查单时段（三方 × 三时段）。
- *
- * <p>码值→文案的唯一出口（原 {@code SafetyCheckItems} 的 {@code PHASE_LABELS} 映射已上移至此）。
- * 1-麻醉诱导前(Sign In) 2-手术开始前(Time Out) 3-患者离开手术室前(Sign Out)。
  */
 @Getter
 public enum OperationSafetyPhaseEnum {

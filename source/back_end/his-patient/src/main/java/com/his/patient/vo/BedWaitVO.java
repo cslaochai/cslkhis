@@ -10,13 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 等床队列条目（列表与详情共用）
- *
- * <p><b>序号是服务端算出来的排队位次，不落库</b>：优先级随时可能被改，
- * 位次跟着重排，落库的序号在改完优先级那一刻就是脏的。
- * 排序口径 = priority DESC → register_time ASC → id ASC。
- *
- * <p><b>操作可用性全部后端给</b>（canXxx）：前端自己拼状态机的话，
- * 「已安排床位」能不能改派就得在两边各写一遍判断，然后两边各自漂移。
  */
 @Data
 public class BedWaitVO {

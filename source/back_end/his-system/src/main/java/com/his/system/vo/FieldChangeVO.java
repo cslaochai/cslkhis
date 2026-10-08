@@ -9,9 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 字段级修改日志出参（字段级修改日志，sql/159）。
- *
- * <p>一行 = 一个字段的一次变化。「改了 5 个字段」会落 5 行，靠 {@code batchNo} 归成一组 ——
- * 审计员要的是"这一刀改了什么"，不是"这个字段被改过"。
  */
 @Data
 public class FieldChangeVO {

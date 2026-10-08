@@ -20,8 +20,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 处方流转单（M2，院外取药口子·打印形态）。
- *
- * <p>状态机与防重闸门见 {@code RxFlowService}。
  */
 @Slf4j
 @Tag(name = "处方流转")

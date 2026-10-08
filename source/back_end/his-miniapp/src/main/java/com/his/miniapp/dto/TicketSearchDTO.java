@@ -3,11 +3,13 @@ package com.his.miniapp.dto;
 import com.his.common.base.PageParam;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 院内工单列表检索条件。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Schema(description = "院内工单检索条件")
 public class TicketSearchDTO extends PageParam {
 

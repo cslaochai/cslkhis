@@ -8,9 +8,6 @@ import java.util.List;
 
 /**
  * 日清单里的一天。
- *
- * <p>{@code dayTotal} 由服务端按"当天明细金额之和"算出，前端不许再累加一遍 ——
- * 前端累加会漏掉退费行，日清单就成了第二套算法。
  */
 @Data
 public class DailyBillDayVO implements Serializable {

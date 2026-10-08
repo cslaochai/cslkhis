@@ -16,9 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 处方合理性审核接口。
- * <p>
- * 接口只接收处方 ID，不接收处方内容。审核对象由服务端按 ID 回查，
- * 这样「前端传什么就审什么」的绕过路径不存在 —— 审核结论的可信度取决于此。
  */
 @Tag(name = "AI 能力-处方合理性审核")
 @RestController

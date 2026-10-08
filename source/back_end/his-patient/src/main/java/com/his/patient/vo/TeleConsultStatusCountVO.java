@@ -5,9 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 远程会诊按状态计数行（对应 {@code BizTeleConsultMapper.countByStatus}）。
- *
- * <p>status 原样透传枚举码，由 service 侧按状态分派到各自的统计字段。
+ * 远程会诊按状态计数行（对应 BizTeleConsultMapper.countByStatus）。
  */
 @Data
 public class TeleConsultStatusCountVO implements Serializable {

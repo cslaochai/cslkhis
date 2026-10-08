@@ -22,9 +22,6 @@ import java.util.List;
 
 /**
  * 全院岗位排班（谁 · 哪天 · 在哪个单元 · 什么班 · 出不出勤）。
- *
- * <p>{@code /onDuty} 与 {@code /changeLogList} 只要求登录：「此刻谁在岗」是分诊、急诊、
- * 收费处都要拿来打电话的公共信息，按菜单权限收口等于让人半夜找不到人（AGENTS.md §4）。
  */
 @Tag(name = "全院岗位排班")
 @RestController

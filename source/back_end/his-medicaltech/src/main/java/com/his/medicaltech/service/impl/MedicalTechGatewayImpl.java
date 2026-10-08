@@ -19,16 +19,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * {@link MedicalTechGateway} 在 his-medicaltech 侧的实现。
- *
- * <p>读：把「记录 → 结果项」两段查询收在这里对外平铺 —— 父子关系是医技域的内部结构，
- * 收费域不该知道 {@code biz_lab_result.record_id} 这层关系。
- *
- * <p>写：直接委托本域 {@link MedicalTechService} 的既有实现，判定逻辑（能不能开工、
- * 能不能撤销）原样保留在医技域，不在端口层另写一套。
- *
- * <p>接口返回 void 而领域方法返回 Long/boolean 是有意的：调用方是收费域，
- * 它只关心"动作发出去了"，不消费记录ID与成败标志 —— 后者是医技域自己的事。
+ * MedicalTechGateway 在 his-medicaltech 侧的实现。
  */
 @Service
 @RequiredArgsConstructor

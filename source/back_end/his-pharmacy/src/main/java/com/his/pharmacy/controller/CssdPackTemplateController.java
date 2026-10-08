@@ -18,8 +18,6 @@ import java.util.List;
 
 /**
  * CSSD 器械包模板目录控制器。
- *
- * <p>回收登记的器械包下拉数据源；权限沿用 CSSD 追溯菜单的 asset:cssd:list。
  */
 @Tag(name = "CSSD器械包模板目录")
 @RestController

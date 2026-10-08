@@ -15,8 +15,6 @@ import java.time.LocalDateTime;
 
 /**
  * 设备维保记录实体（86 号脚本新增）。
- *
- * <p>维保类型：1-保养 2-维修 3-巡检。登记成功后回写医疗设备台账的最后维保日期。
  */
 @Data
 @TableName("biz_equipment_maintain")

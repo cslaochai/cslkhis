@@ -34,9 +34,6 @@ import java.util.stream.Collectors;
 
 /**
  * 飞检批次服务实现。
- *
- * <p>批次是「问题从哪来」的唯一抓手：扣款通知挂批次号，飞检结束后能反查这个批次一共扣了多少、
- * 处理到哪一步。作废闸门（名下有扣款通知就不许作废）就是为了让问题不会蒸发。
  */
 @Service
 @RequiredArgsConstructor

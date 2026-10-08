@@ -3,17 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 值班层级枚举（sql/202，字典 {@code his_duty_level}）
- *
- * <p><b>它回答的是「一件事升级到谁手上」，跟班内主副（{@link DutyRoleTypeEnum}）是两回事</b>：
- * 主班/副班是「同一个位上谁顶着」，层级是「一线处理不了就升二线，二线处理不了升三线」的责任档位。
- * 一个点位的 role_type 恒为主班，但 duty_level 可以是一线也可以是三线 —— 两者语义正交，不能合并。
- *
- * <p><b>0-不适用必须存在</b>：行政总值班、急诊总值班这些老点位没有层级概念，
- * 建表时给了默认值 0。字典里缺 0，老点位在页面上就会显示成「未知(0)」。
- *
- * <p><b>层级决定响应形态</b>，但不互相替代：一线是留院值班（人在医院），
- * 二线三线是听班（在家待命，叫了才到）。见 {@link AttendModeEnum}。
+ * 值班层级枚举（sql/202，字典 his_duty_level）
  */
 @Getter
 public enum DutyLevelEnum {

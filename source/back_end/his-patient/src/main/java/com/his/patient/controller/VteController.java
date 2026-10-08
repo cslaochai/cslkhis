@@ -16,13 +16,6 @@ import java.util.List;
 
 /**
  * VTE 防控（sql/167，菜单 332 风险防控 / 333 院内监测）。
- *
- * <p>权限：风险防控页读 {@code nursing:vte:prevent}，措施登记 {@code :preventEdit}、
- * 删除 {@code :preventDelete}；监测页读 {@code nursing:vte:monitor}，事件登记 {@code :eventEdit}、
- * 生成快照 {@code :statGenerate}、导出 {@code :statExport}。
- *
- * <p>所有"等级/类别/比率"一律服务端算：前端只传措施码与落实状态，
- * 风险等级取自每次住院最新一条 Caprini 评估 —— 落实率是可以被凑出来的指标，必须防这一手。
  */
 @Tag(name = "VTE 防控")
 @RestController

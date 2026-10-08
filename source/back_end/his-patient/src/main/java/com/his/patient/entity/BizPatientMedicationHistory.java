@@ -11,10 +11,6 @@ import java.time.LocalDate;
 
 /**
  * 既往用药史实体（既往用药史）
- *
- * <p>这张表此前只有 CDR 的裸 SQL 在读（{@code CdrMapper.PROFILE_SQL} 的 'medication' 分支），
- * 没有实体、没有 Mapper、没有 Controller —— 也就是说**能看不能维护**，写入口压根不存在。
- * 六组健康档案里唯独这一组是「只读摆设」，本类补上的就是这条链路。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

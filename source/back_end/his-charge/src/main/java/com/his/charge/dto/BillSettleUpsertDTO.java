@@ -9,9 +9,6 @@ import java.util.List;
 
 /**
  * 结算入参（L2）：把一批待结算记账行锁成一张账单。
- *
- * <p>应收金额不在入参里：账单合计一律由服务端按选中的记账行现算，
- * 调用方只能决定"哪些行进这张账单"和"优惠多少"。
  */
 @Data
 public class BillSettleUpsertDTO {

@@ -8,14 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 病例明细行（{@code StatReportAggMapper#cohortCases} 一行，报文明细段）。
- *
- * <p>500 条封顶：报文一旦无上限就会把整个payload 撑到几百 KB 落库，
- * 台账表体积和打印页数都会失控。
- *
- * <p>入出院时间用 {@link LocalDateTime} 接收、由 {@link JsonFormat} 定输出格式，
- * 而不是 SQL 里 {@code DATE_FORMAT} 成字符串 —— 换VO 后格式这件事归VO 管，
- * 不用改 SQL；输出仍是 {@code yyyy-MM-dd HH:mm}，前端打印与页面表格不变。
+ * 病例明细行（StatReportAggMapper#cohortCases 一行，报文明细段）。
  */
 @Data
 public class StatCohortCaseRowVO implements Serializable {

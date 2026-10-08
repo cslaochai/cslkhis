@@ -8,11 +8,6 @@ import org.apache.ibatis.annotations.Param;
 
 /**
  * 角色工作台卡片配置 Mapper。
- *
- * <p>这里的删除一律用<b>物理</b>删除，不走删除标记软删：表上有
- * {@code UNIQUE KEY uk_workbench_role_widget (role_id, widget_id)}，唯一键不含 del_flag，
- * 软删后「整表替换」的第二步 INSERT 必然撞唯一键，配置保存变成必现 500
- * （验证脚本 A23 第一次跑就踩到了）。这两张表是纯配置数据，没有留档价值。
  */
 @Mapper
 public interface SysWorkbenchRoleMapper extends BaseMapper<SysWorkbenchRole> {

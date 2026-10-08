@@ -8,12 +8,6 @@ import com.his.pharmacy.vo.SupplierReturnVO;
 
 /**
  * 药品供应商退货服务（sql/154 ③级：药离开医院）
- *
- * <p>单据流：建单（校验批次归属该供应商）【待退货】→（确认退货，扣批次库存并落 type=9 流水）【已退货】；
- * 未确认前可作废【已作废】或删除。
- *
- * <p>与调拨的差别只有一处但很关键：<b>没有接收方</b>。所以退货是一步动作，
- * 也所以批次必须挂着 supplier_id —— 不知道退给谁，这张单就没有对手方，退款无从主张。
  */
 public interface SupplierReturnService {
 

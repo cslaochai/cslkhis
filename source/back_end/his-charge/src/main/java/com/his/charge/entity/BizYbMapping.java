@@ -9,10 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医保目录对照表（院内项目 ↔ 国家医保编码，一对一）。
- *
- * <p>铁律：唯一键 uk_item(item_type, item_id) 不含 del_flag →
- * 解对照必须<b>物理删</b>（{@code BizYbMappingMapper#purgeByItem}），
- * 绝不能走 {@code deleteById} 软删——软删行仍占唯一键，重新对照必撞 Duplicate entry。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -5,11 +5,6 @@ import lombok.Data;
 
 /**
  * 护理交接班提示词变量。
- *
- * <p>对应 {@code prompts/nursing-handover.md} 的全部占位符。
- * 字段名与模板里的 {{占位符}} 一一对应。
- *
- * <p>病区级调用（无单一患者），因此变量里没有患者标识，只有病区/班次/时间窗与事实清单。
  */
 @Data
 public class NursingHandoverPromptVariablesVO implements PromptVariables {

@@ -40,22 +40,6 @@ import java.util.Set;
 
 /**
  * 住院请假/离院服务实现（sql/162）。
- *
- * <p>口径：
- * <ol>
- *   <li><b>申请/审批/离院登记都要求患者在院</b>（admit_status=1）：人已出院再补请假单是编造事实；
- *       返回销假不校验在院（人回来销假与出院办理的时间先后都是真实场景）。</li>
- *   <li><b>未批准不可登记离院</b>：医师没评估病情就放人走，等于医院主动放弃抗辩证据。</li>
- *   <li><b>离院登记 = 患方签署承诺书三要素</b>：确认人姓名 + 与患者关系 + 手写签名缺一不可
- *       —— 「回去出事责任界定」靠的就是这张签字；签字那一刻登记实际离院时间。</li>
- *   <li><b>在途唯一</b>：同一住院同时只允许一条进行中（待审批/已批准/已离院）请假单。</li>
- *   <li><b>单次请假时长上限</b>（系统参数 inpatient.leave.max_hours，默认 72 小时）：
- *       「请假外出」不能变成「变相出院」。</li>
- *   <li><b>已离院的单不可取消/不可修改</b>：人已经出去了，事实不能蒸发，只能等返回销假。</li>
- *   <li><b>批准即医师电子签名</b>（业务类型=10，LEAVE_APPROVE）：签名失败随审批事务回滚；
- *       签名即锁定，此后内容不许改。审批医师 = 当前登录员工，不接受前端冒充。</li>
- *   <li><b>超期未归是查询时算的展示态</b>，不落状态列；超期处置是护士的动作，落主表字段留痕。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -236,7 +220,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         if (TextUtil.hasText(dto.getCompanionPhone())) {
             leave.setCompanionPhone(TextUtil.cut(dto.getCompanionPhone().trim(), PHONE_MAX));
         } else if (!TextUtil.hasText(leave.getCompanionPhone())) {
-            // ①条件必填：编辑留空＝沿用原值，只有新建（原值也为空）才报错，DTO 注解表达不了这层分支
+            // B-条件必填：编辑留空＝沿用原值，只有新建（原值也为空）才报错，DTO 注解表达不了这层分支，保留
             throw new BusinessException("随行人联系电话不能为空");
         }
         leave.setExpectedLeaveTime(expectedLeave);
@@ -352,7 +336,7 @@ public class InpatientLeaveServiceImpl extends ServiceImpl<BizInpatientLeaveMapp
         assertDeptAccessible(leave.getDeptId());
         // 患方承诺三要素缺一不可 —— 「回去出事责任界定」靠的就是这张签字
         if (!RELATIONS.contains(dto.getConfirmRelation())) {
-            // ③业务规则：码值合法性（非空已由 DTO @NotNull 收口）
+            // D-业务规则：码值合法性（非空已由 DTO @NotNull 收口，这里挡的是选了非法码值的请求）
             throw new BusinessException("确认人与患者的关系取值不合法（见字典 his_notice_relation，责任界定必填）");
         }
         String signature = TextUtil.trimToNull(dto.getConfirmSignature());

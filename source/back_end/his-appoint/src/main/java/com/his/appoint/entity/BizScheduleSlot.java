@@ -10,13 +10,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 排班时间片段实体（半小时一档）。
- *
- * <p>时间片段化改造（2026-09-21）后，号源与占用的事实都在段上：
- * 现场扣段（不许吃段内预约池剩余）、线上从段池内扣、退号按段释放；
- * 排班信息上的 6 个号源字段退化为 Σ段汇总冗余，写路径同事务双写。
- *
- * <p>uk_slot(schedule_id, start_time) 不含 del_flag（铁律：唯一索引不含 del_flag），
- * 段的删除一律物理删（{@link BizScheduleSlotMapper#physicalDeleteByScheduleId}）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

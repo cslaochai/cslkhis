@@ -5,11 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 转诊单患者快照（对应 {@code BizReferralMapper.selectPatientSnapshot}）。
- *
- * <p>转诊单要带出患者号/姓名/电话；admissionId 非空时再带住院号与诊断。
- * 全部列都属本域（患者基本信息 / 入院记录），但只取这 5 列、不开实体，
- * 避免把整张 biz_patient / biz_admission 挂到出参上。
+ * 转诊单患者快照（对应 BizReferralMapper.selectPatientSnapshot）。
  */
 @Data
 public class ReferralPatientSnapshotVO implements Serializable {

@@ -4,10 +4,6 @@ import lombok.Data;
 
 /**
  * 门诊日志统计条（跟随筛选条件，逐项与列表同一套 WHERE）。
- *
- * <p>口径必须自洽：{@code total = unpaid + waitCheckIn + waiting + consulting
- * + completed + cancelled + overdue + unvisited + noShow + unrecognized}，
- * 用一条 SQL 出全部数字，不要分开 count 后再相加（分开算迟早在某次改动后对不上）。
  */
 @Data
 public class OpdLogStatsVO {

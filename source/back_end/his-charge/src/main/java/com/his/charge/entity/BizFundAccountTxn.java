@@ -13,8 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 资金账户流水（L3）：账户只回答"这里有多少钱"，账单只回答"该收多少"，
- * 两者靠支付流水相连 —— 余额抵扣在账户这边是一条扣减流水、在支付那边是一笔
- * {@code pay_method=5} 的收款流水，同事务成对落库，缺一即对不上。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

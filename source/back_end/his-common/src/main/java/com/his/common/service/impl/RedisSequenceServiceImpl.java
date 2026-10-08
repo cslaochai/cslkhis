@@ -12,10 +12,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 
 /**
- * {@link RedisSequenceService} 的 Redis 实现。
- *
- * <p>单号的四件事（key、前缀、日期段、序号宽度）只在 {@link #no(String, String, int)} 拼装一次，
- * 每个 {@code generateXxxNo()} 只声明"用哪个前缀、哪个 key、几位"。
+ * RedisSequenceService 的 Redis 实现。
  */
 @Service
 @RequiredArgsConstructor

@@ -10,10 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医嘱组套模板列表行（全院组套模板管理页）。
- *
- * <p>文案类字段（{@code scopeText} / {@code orderTypeText}）一律服务端出，前端不自己 switch 码值。
- * {@code deptName} 由服务端回查科室带出：管理页上一眼要能看出「这个组套是哪个科室的」，
- * 只给一个 deptId 让前端再查一次，多一次往返还容易查错口径。
  */
 @Data
 public class OrderSetListVO implements Serializable {

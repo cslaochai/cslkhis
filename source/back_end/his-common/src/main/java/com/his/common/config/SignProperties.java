@@ -6,16 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * 签名能力配置（{@code his.sign.*}）。
- *
- * <p><b>口令的来源</b>：优先取配置项（约定写成 {@code ${HIS_SIGN_SECRET:...}}，
- * 于是环境变量能覆盖）。类里额外提供 {@link #effectiveSecret()} 做一次
- * "环境变量直读"兜底 —— 因为运维习惯直接 export 环境变量而不改 yml，
- * 少了这层兜底就会出现"我明明设了变量却还是报没配口令"，排查成本极高。
- *
- * <p><b>配置项 vs 系统参数表的分工</b>：口令与算法这类"改了要重启、且绝不能进库"的走本类；
- * 有效期天数、是否自动发证这类运维随时要调的走系统参数（表里已有
- * {@code sign.cert.valid_days} / {@code sign.cert.auto_issue} / {@code sign.time_source}）。
+ * 签名能力配置（his.sign.*）。
  */
 @Data
 @Component

@@ -9,16 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * CDR 时间轴上的一个**事件**（挂号、处方、检验申请、病程、手术、结算……）
- *
- * <p>设计口径：
- * <ul>
- *   <li>{@code eventTime} 是**字符串**（{@code yyyy-MM-dd HH:mm:ss}），不是 LocalDateTime。
- *       时间轴要能被前端直接排序/展示，不做二次格式化比什么都稳。</li>
- *   <li>状态、副码（文书类型/医嘱类别…）都在服务端翻译好，前端只负责显示
- *       —— 码值口径不允许前端各写一份。</li>
- *   <li>{@code anchorId} 为空表示这条事件**没能归属到任何就诊次**（如报告单找不到对应申请）。
- *       这种事件不会被丢掉，会挂在"未能归属"区里显式暴露出来。</li>
- * </ul>
  */
 @Data
 @Schema(description = "CDR 事件")

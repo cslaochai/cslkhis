@@ -11,9 +11,6 @@ import java.io.Serializable;
 
 /**
  * 系统参数配置
- * <p>
- * 注意：系统参数表没有 create_time / update_time / del_flag 列，
- * 因此不能继承 BaseEntity（否则逻辑删除会拼出 del_flag = 0 导致 SQL 报错）。
  */
 @Data
 @TableName("sys_config")

@@ -7,15 +7,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * 急诊候诊超时升级的三条触发路径之一：<b>定时扫描</b>。
- *
- * <p>设计参照 {@code CriticalValueEscalateTrigger} 的「定时 + 手工补跑」双路径。
- * 与危急值不同的是这里<b>不加 escalate_status 列</b>：超时本身是
- * 入院时间与 NOW() 的函数，每轮重算即可；重复投递由
- * {@code receiverIdsOfBiz} 判重（一条急诊对同一收件人只催一次），
- * 所以 5 分钟一轮的扫描绝大多数轮次影响 0 条，不会把收件箱刷满。
- *
- * <p>扫描间隔 5 分钟：Ⅱ级危重的时限是 10 分钟，再密的扫描也只是空转。
+ * 急诊候诊超时升级的三条触发路径之一：定时扫描。
  */
 @Slf4j
 @Component

@@ -31,9 +31,6 @@ import java.util.stream.Collectors;
 
 /**
  * CSSD 器械包模板目录服务。
- *
- * <p>目录是"活数据"：编码/名称仅在启用行（del_flag=0）范围内做唯一校验；
- * 明细整删整插不做差量。追溯表存的是包名快照，模板改名/停用不影响历史包。
  */
 @Service
 @RequiredArgsConstructor

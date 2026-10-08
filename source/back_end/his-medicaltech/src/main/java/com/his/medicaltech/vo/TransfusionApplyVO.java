@@ -12,17 +12,6 @@ import java.util.List;
 
 /**
  * 住院输血申请出参。
- *
- * <p>三条约定（与会诊/转科/手术 VO 一致）：
- * <ol>
- *   <li>所有 ID 走 {@code ToStringSerializer}：雪花 ID 超 JS 精度，截断后会变成"记录不存在"的假象。</li>
- *   <li>码值一律带 {@code xxxText} 文案，且由后端给 —— 前端不自己判状态、不自己拼中文。</li>
- *   <li>{@code canXxx} 由后端按状态算好：按钮可用性属于业务规则，不属于前端。</li>
- * </ol>
- *
- * <p>特别注意 {@code crossmatchStatusText} 与 {@code transfusionStatusText} 是<b>两个</b>状态：
- * 前者是"血配好没、合不合"，后者是"流程走到哪一步"。配血不合时流程停在「待配血」，
- * 但配血状态必须显示「存在配血不合」—— 否则已经发生的安全隐患被显示成"还没开始"。
  */
 @Data
 public class TransfusionApplyVO implements Serializable {

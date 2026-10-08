@@ -5,10 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 死亡证明逾期未上报催报载荷（对应 {@code DeathCertificateServiceImpl#notifyOverdue}）。
- *
- * <p>催报正文已经把关键信息写成自然语言，payload 只带结构化字段供收件箱摘要/后续跳转取用；
- * 字段名与原 Map 的键一致。
+ * 死亡证明逾期未上报催报载荷（对应 DeathCertificateServiceImpl#notifyOverdue）。
  */
 @Data
 public class DeathCertOverdueNotifyPayloadVO implements Serializable {

@@ -17,9 +17,6 @@ import java.util.List;
 
 /**
  * 满意度答卷 Mapper（列表 + 看板聚合）。
- *
- * <p>所有聚合只认 {@code answer_status = 1}（有效卷）：作废卷必须留在表里做审计，
- * 但绝不能继续混在均分里 —— 混了之后「谁把某个月的分数拉高了」无从解释。
  */
 @Mapper
 public interface BizSurveyAnswerMapper extends BaseMapper<BizSurveyAnswer> {

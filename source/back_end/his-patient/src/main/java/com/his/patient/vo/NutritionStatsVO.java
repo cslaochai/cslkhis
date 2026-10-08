@@ -9,8 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 营养膳食月度指标行。
- *
- * <p>分子分母一并带出：评审核查要的是"9/10"，不是一个孤零零的 90.00%。
  */
 @Data
 public class NutritionStatsVO {

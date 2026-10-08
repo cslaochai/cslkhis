@@ -11,10 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 麻醉记录单更新入参（时间轴 + 出入量 + 效果 + 去向）。
- *
- * <p><b>已提交后不可再改</b>：一旦 {@code record_status=1}，这条接口只接待 submit 之后的审核动作，
- * 改内容会被拒。理由是"术后回头改一条术中记载"本身就是伪造，
- * 与"术后补一条术前核对记录是伪造"同一条原则。
  */
 @Data
 public class AnesthesiaRecordUpdateUpsertDTO implements Serializable {

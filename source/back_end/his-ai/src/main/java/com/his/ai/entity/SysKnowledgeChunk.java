@@ -7,8 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 知识库切块。
- *
- * <p>content 是切分后的原文片段，向量由 embedding 提供方在内存中计算，不落库。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

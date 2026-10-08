@@ -43,25 +43,6 @@ import java.util.stream.Collectors;
 
 /**
  * 床位服务中心实现
- *
- * <p><b>本类固化的业务规则</b>（每条都对应一个真实的排 incons 场景）：
- * <ol>
- *   <li><b>排序 = priority DESC → register_time ASC → id ASC</b>。不是先到先得：
- *       危重症排在普通患者前面是这个域的规矩本身，一旦能被人从外面调参数排序，队列就没意义了。</li>
- *   <li><b>安排床位 = 锁定 + 挂患者</b>（床位置 3 并写 patient_id）。不锁，
- *       两个不同的排队记录会被安排到同一张床上，而双方看到的都是"这张床是我的"。</li>
- *   <li><b>释放床位必须用 UpdateWrapper 显式 set(patientId, null)</b>：
- *       updateById 的 NOT_NULL 策略会跳过 null 字段，结果是床变空闲了但患者还挂在床上，
- *       <b>不报错</b>，只是数据脏 —— 这是本项目最典型的静默错误。</li>
- *   <li><b>已收治的排队记录不可取消、不可改需求</b>：人已经躺在医院里了，
- *       回过头改"当初排队的优先级"既不改变任何事实，也让台账失去可信度。</li>
- *   <li><b>等待超时是查询时算的</b>（{@code expired}），不改状态、不起定时任务 ——
- *       把时间流逝伪装成一次业务动作就没法区分"过期"与"被人取消"了（同住院证的口径）。</li>
- *   <li><b>普通床位需求不给 ICU / VIP 床</b>：的心血管重症资源被普通择期占用是完全不用等的代价。
- *       反过来需求 VIP 时给普通床是可以的（降级），但要在候选上标明档位。</li>
- *   <li><b>床位中心的估算不使用病区.total_beds / occupied_beds</b>（演示数据），
- *       一律 realtime COUNT 床位。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -202,10 +183,6 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long upsertWait(BedWaitUpsertDTO dto) {
-        // 保留（类别②）：整个 DTO 为 null 不是字段校验，Bean Validation 覆盖不到
-        if (dto == null) {
-            throw new BusinessException("登记内容不能为空");
-        }
         BizPatient patient = bizPatientMapper.selectById(dto.getPatientId());
         if (patient == null) {
             throw new BusinessException("患者不存在");
@@ -561,8 +538,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         if (Objects.equals(BedWaitStatusEnum.CANCELLED.getCode(), wait.getWaitStatus())) {
             throw new BusinessException("该排队记录已取消，无需重复操作");
         }
-        // 保留（类别①条件必填）：同一 DTO 被「退回队列」接口复用，那里原因是选填（服务端兜默认值），
-        // 字段上加 @NotBlank 会把那条合法请求一起挡成 400
+        // B-条件必填：同一 DTO 被「退回队列」接口复用，那里原因是选填（服务端兜默认值），字段加 @NotBlank 会把那条合法请求挡成 400，DTO 注解无法表达，保留
         if (!TextUtil.hasText(dto.getReason())) {
             throw new BusinessException("取消原因不能为空（患者去了别的医院还是转为门诊随访，对床位周转的解释完全不同）");
         }
@@ -590,8 +566,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
         if (wait.getAssignedBedId() == null || wait.getAssignedWardId() == null) {
             throw new BusinessException("该排队记录没有已安排的床位，请先在床位池安排床位");
         }
-        // 保留（类别①条件必填）：有住院证时途径由服务端强制为门诊，DTO 上的 @NotNull 会把这类合法请求挡成 400
-        // 有证 = 门诊转住院（途径由 InpatientService 强制为 1）；无证必须有途径（病案首页必填）
+        // B-条件必填：有住院证时途径由服务端强制为门诊（无证才必须有途径，病案首页必填），DTO 上的 @NotNull 会把有证收治挡成 400，保留
         if (wait.getAdmissionOrderId() == null && dto.getAdmitWay() == null) {
             throw new BusinessException("入院途径不能为空（病案首页必填项）");
         }
@@ -1082,8 +1057,7 @@ public class BedCenterServiceImpl extends ServiceImpl<BizBedWaitMapper, BizBedWa
     }
 
     private BizBedWait requireWait(Long waitId) {
-        // 保留（类别②非 web 入口）：私有方法被本类多个动作入口复用（GET 标量参数与 DTO 字段都从这里取值），
-        // 不经 HTTP 参数绑定，Bean Validation 不生效
+        // C-非 web 入参：私有 requireXxx helper，被本类 GET 标量参数与多处内部派生值复用，Bean Validation 不覆盖，保留
         if (waitId == null) {
             throw new BusinessException("排队记录ID不能为空");
         }

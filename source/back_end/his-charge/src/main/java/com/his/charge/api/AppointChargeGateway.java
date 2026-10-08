@@ -44,9 +44,9 @@ public interface AppointChargeGateway {
      */
     boolean cancelRegistCharge(CancelCommand command);
 
-    /**
-     * 账单撤销命令
-     */
+/**
+ * 账单撤销命令
+ */
     @Data
     class CancelCommand {
         /**
@@ -63,9 +63,9 @@ public interface AppointChargeGateway {
         private String operator;
     }
 
-    /**
-     * 账单简要信息。
-     */
+/**
+ * 账单简要信息。
+ */
     @Data
     class BillBrief {
         private Long billId;
@@ -84,9 +84,9 @@ public interface AppointChargeGateway {
         private BigDecimal paidAmount;
     }
 
-    /**
-     * 挂号费记账出账命令
-     */
+/**
+ * 挂号费记账出账命令
+ */
     @Data
     class RegistChargeCommand {
         private Long registId;

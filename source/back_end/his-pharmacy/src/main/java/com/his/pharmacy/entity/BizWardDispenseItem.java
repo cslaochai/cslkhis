@@ -15,12 +15,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院摆药明细（G13）。
- *
- * <p>状态机：1-待配药 →（药房 FEFO 配药+计费）→ 2-已配药 →（病区核对）→ 3-已核对；
- * 2/3 可退药 → 4-已退药（回库 + 负冲账），**不可逆**。
- *
- * <p>{@code (order_id, dispense_date)} 唯一索引：同一医嘱同日只允许一条**有效**摆药明细，
- * 已退药（4）后允许重新生成（生成排除条件只看未退状态）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

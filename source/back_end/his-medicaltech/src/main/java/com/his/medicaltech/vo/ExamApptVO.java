@@ -3,6 +3,7 @@ package com.his.medicaltech.vo;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -33,6 +34,8 @@ public class ExamApptVO {
          */
         private Integer deviceType;
         private String deviceTypeText;
+
+
         @JsonSerialize(using = ToStringSerializer.class)
         private Long equipmentId;
         private String equipmentName;
@@ -153,9 +156,10 @@ public class ExamApptVO {
     }
 
     /**
-     * 检查项目候选下拉出参，字段口径同 {@link DeviceItemVO}
+     * 检查项目候选下拉出参，字段口径同 DeviceItemVO
      */
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class ItemSelectListVO extends DeviceItemVO {
     }
 
@@ -430,6 +434,7 @@ public class ExamApptVO {
     }
 
     @Data
+    @EqualsAndHashCode(callSuper = true)
     public static class ApptDetailVO extends ApptVO {
         private String applyNoSnapshot;
         private String prevApplyStatusText;

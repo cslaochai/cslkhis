@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 院感病例报告卡：临床报卡 → 感控办核实（确认/排除）。
- * 漏报调查发现的应报未报病例走补报建卡（leakFlag=1）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

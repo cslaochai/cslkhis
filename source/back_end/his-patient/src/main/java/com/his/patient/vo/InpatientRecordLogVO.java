@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院文书修改日志 VO。
- *
- * <p>飞检问的是"这句话是谁什么时候改的、原来写的是什么" —— 所以 {@code oldValue/newValue}
- * 原样给出，不做截断与美化。
  */
 @Data
 public class InpatientRecordLogVO implements Serializable {

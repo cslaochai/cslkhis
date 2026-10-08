@@ -5,12 +5,6 @@ import lombok.Data;
 
 /**
  * 病历质控提示词变量。
- *
- * <p>对应 {@code prompts/emr-qc.md} 的全部占位符。
- * 字段名与模板里的 {{占位符}} 一一对应。
- *
- * <p>比 {@link EmrDraftPromptVariablesVO} 多三项（个人史、家族史、诊断、治疗方案），
- * 因为质控要检查的是「该写的有没有写」，必须把家庭史这类易漏项摆进模板。
  */
 @Data
 public class EmrQcPromptVariablesVO implements PromptVariables {

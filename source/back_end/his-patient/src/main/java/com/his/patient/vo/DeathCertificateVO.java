@@ -11,11 +11,6 @@ import java.util.List;
 
 /**
  * 死亡证明出参集合。
- *
- * <p>脱敏口径（AGENTS.md 第 5 条）：{@link Row} 是列表/台账用的展示行，<b>不选身份证列</b>
- * （台账渲染的是姓名/性别/年龄/死因，页面不渲染的敏感列不出参）；
- * {@link Detail} 是编辑回显（前端 {@code Object.assign(form, res.data)} 后整对象回写 upsert），
- * 必须保持明文，否则一次保存就把证明上的身份证号洗成星号。
  */
 public class DeathCertificateVO {
 
@@ -673,9 +668,6 @@ public class DeathCertificateVO {
 
     /**
      * 住院/患者快照（写库前服务端重查，不信前端传来的死者一般项目）。
-     *
-     * <p>科室/病区/床位优先取<b>病案首页</b>（住院病案首页，出院后床位已释放，
-     * 首页是死亡时点所在科室的留档快照），首页没有再退回入院记录现值。
      */
     @Data
     public static class PatientSnapshot {

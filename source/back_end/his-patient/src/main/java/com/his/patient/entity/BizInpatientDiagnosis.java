@@ -9,9 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 住院诊断明细（病案首页诊断明细）—— 病案首页的诊断侧
- * <p>与结算清单诊断明细的区别（不是重复表）：
- * 本表是<b>病历侧原始依据</b>；医保结算清单上的诊断是<b>申报口径</b>，由本表带过去后可能微调。
- * <p>{@code diagnosis_basis} 是四核对里「病历」一侧的落点：诊断必须能在病历中找到支持性描述。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

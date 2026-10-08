@@ -10,9 +10,6 @@ import java.util.List;
 
 /**
  * 营养风险筛查记录分页查询。
- *
- * <p>日期区间按 {@code screen_time} 收敛；{@code scopeDeptIds} 由服务端从登录态填入，
- * 前端不传（数据范围不许由请求体决定）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

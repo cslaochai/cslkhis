@@ -13,16 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 膳食方案（sql/168 §2，膳食医嘱的执行侧）。
- *
- * <p>三条铁律：
- * <ul>
- *   <li><b>order_id 唯一</b>：一条 orderClass=10 的住院医嘱只派生一个方案，重复校对/重放不会多出第二条；
- *       该唯一键不含 del_flag，所以删除走物理删（Mapper.purgeById）。</li>
- *   <li><b>confirm_status 才是"执行"</b>：医生开了膳食医嘱而营养科没接收，患者就是没吃上治疗饮食。
- *       膳食医嘱执行率的分子只数 1-已接收，2-已退回必须填原因并让医师重开。</li>
- *   <li><b>只有 route=1-口服才进订餐</b>：管饲制剂由营养科发放、肠外营养走静配，
- *       给肠外营养的患者订一份食堂餐是错的。</li>
- * </ul>
  */
 @Data
 @TableName("biz_diet_plan")

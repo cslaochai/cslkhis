@@ -13,17 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院转科轨迹（P4.2：发起 → 转入科室接收 → 停原医嘱 + 换科室换床 + 回写病历）。
- *
- * <p><b>为什么不把转科信息塞进入院记录</b>：一次住院可以转多次（A→B→C），
- * 轨迹是 1:N，admission 上的几个字段只能记住"最后一次"。而且科室改名、床位重排之后，
- * 历史转科单必须仍然是当时的样子 —— 所以科室名/病区名/床号一律是<b>快照</b>。
- *
- * <p>字段与住院转科轨迹 <b>一一对应</b>（多一个库里没有的列 → 全表 select 直接 500）。
- * 本表主键是 {@code id}，故继承 {@link BaseEntity}；注意 BaseEntity 固定映射备注 /
- * 删除标记等列，建表脚本里必须有它们。
- *
- * <p>时间字段落库前必须 truncate 到秒（库表是 DATETIME(0)，MySQL 会四舍五入 →
- * "写进去的 ≠ 读回来的"）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

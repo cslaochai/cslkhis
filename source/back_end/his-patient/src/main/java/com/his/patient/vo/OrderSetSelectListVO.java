@@ -8,12 +8,6 @@ import java.io.Serializable;
 
 /**
  * 组套模板下拉候选（医嘱开立弹窗「套用组套」用，命名遵循 AGENTS.md：下拉出参用 `xxxSelectListVO`）。
- *
- * <p>刻意带 {@code scopeText} 与 {@code itemCount}：医生在下拉里要一眼分清
- * 「这个组套是我自己的、科室的、还是全院的」，以及它有几条 —— 只给名字他得点开才知道。
- *
- * <p>{@code templateName} 保持原名不拼前缀：名字拼接会让「另存为」时把前缀又存回库里一次。
- * 来源标识交给 {@code scopeText} 单独一列渲染。
  */
 @Data
 public class OrderSetSelectListVO implements Serializable {

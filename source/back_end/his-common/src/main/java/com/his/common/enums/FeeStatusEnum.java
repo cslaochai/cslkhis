@@ -1,10 +1,7 @@
 package com.his.common.enums;
 
 /**
- * 费用记账状态（字典 {@code his_fee_status}，落在费用记账流水的记账状态列）。
- *
- * <p>本层是应收的唯一来源，金额列一经写入不再 UPDATE：错账不就地改数，
- * 只写一条负数红冲行并把原行置为 {@link #REVERSED}，所以没有"已修改"这个态。
+ * 费用记账状态（字典 his_fee_status，落在费用记账流水的记账状态列）。
  */
 public enum FeeStatusEnum {
 

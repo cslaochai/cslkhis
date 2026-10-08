@@ -9,9 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * 满意度：科室短板 TOP10（百分制均分升序 —— 评审要的是短板榜，不是光荣榜）。
- *
- * <p>科室名以科室表为准、答卷快照兜底：撤科或快照缺失时不要把「有科室但查不到名字」
- * 和「根本没科室」混成一行。
  */
 @Data
 public class SurveyDeptScoreVO implements Serializable {

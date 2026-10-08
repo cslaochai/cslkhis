@@ -12,14 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 护理评估单（G14：压疮 Braden / 跌倒 Morse / 疼痛 NRS）。
- *
- * <p>两条铁律：
- * <ul>
- *   <li><b>risk_level 由后端按量表分数段算</b>，不信任前端传值 —— 评估单是护理质控依据，
- *       风险分级错了，级别护理与防跌倒措施就全错位。</li>
- *   <li><b>评估是动态的</b>：入院、转科、术后、病情变化都要重评，同一患者同一类型允许多条，
- *       以 assess_time 降序看变化趋势 —— 所以表上没有「同类型唯一」这种索引。</li>
- * </ul>
  */
 @Data
 @TableName("biz_nursing_assessment")

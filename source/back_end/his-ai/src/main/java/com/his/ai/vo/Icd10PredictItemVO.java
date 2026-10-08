@@ -5,10 +5,6 @@ import lombok.Data;
 
 /**
  * ICD-10 推荐结果条目。
- * <p>
- * {@code icdName} 与 {@code icdCategory} 一律取自字典表，<b>不采用模型返回的名称</b>。
- * 模型只负责「选哪个编码」，不负责「编码叫什么名字」—— 名称错一个字，
- * 医生就会对系统失去信任。
  */
 @Data
 @Schema(description = "ICD-10 推荐结果条目")

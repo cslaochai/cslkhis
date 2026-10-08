@@ -37,16 +37,6 @@ import java.util.Objects;
 
 /**
  * 技术授权台账与准入闸实现。
- *
- * <p>三条不能破坏的规矩：
- * <ul>
- *   <li><b>已生效的授权不可改字段</b>，只能收回后重新授权 —— 台账要能回答
- *       「这台手术当天他到底有没有权限」，就地改级别等于销毁历史；</li>
- *   <li><b>同一人同类别只允许一条生效授权</b>，否则闸门取哪一条不确定，
- *       级别上限会随查询顺序漂移；</li>
- *   <li><b>闸门 fail-closed</b>：判不出授权就拒单，宁可让医生去找管理员补授权，
- *       也不能让没准入的人把刀开了。</li>
- * </ul>
  */
 @Slf4j
 @Service
@@ -438,7 +428,7 @@ public class EmployeeTechAuthServiceImpl extends ServiceImpl<SysEmployeeTechAuth
     }
 
     private SysEmployeeTechAuth mustGet(Long id) {
-        // C 类保留：id 由 GET @RequestParam 标量与多个审批 DTO 共用同一守卫，非本接口 request DTO 字段，注解无处安放
+        // C-非 web 入参：私有守卫，除 GET 标量参数外还被多个审批 DTO 的内部调用共用（传 dto.getId()），Bean Validation 不覆盖，保留
         if (id == null) {
             throw new BusinessException("授权记录ID不能为空");
         }

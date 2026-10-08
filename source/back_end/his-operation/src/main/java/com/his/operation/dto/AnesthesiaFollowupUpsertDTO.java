@@ -12,13 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 麻醉随访新增/修改入参（id 为空 = 新增草稿；不为空 = 修改，仅允许「草稿」）。
- *
- * <p><b>刻意不接收</b>：轮次（服务端按该麻醉记录现有最大轮次 +1）、患者/住院/麻醉记录单号
- * 快照（一律从麻醉记录带出）、随访医师（当前登录人）、状态（完成走独立 finish 口子）。
- * 让前端传轮次，就一定会出现两个"第 1 轮"。
- *
- * <p>并发症描述/处理措施<b>不加 {@code @Size}</b>（L13 口径）：入参层 400 会抢在服务端截断之前，
- * 把"粘贴了一长段经过"变成请求失败；长度由服务端按列宽 1000 截断。
  */
 @Data
 public class AnesthesiaFollowupUpsertDTO implements Serializable {

@@ -16,14 +16,12 @@ import java.util.List;
 
 /**
  * 死亡证明（死亡医学证明书）入参集合。
- *
- * <p>说明类字段（诊断、审核意见、作废原因、纠纷情况）一律不在入参层挂 {@code @Size}：
- * 服务端按列宽截断，让「用户粘贴了一长段说明」变成请求 400 是错的（AGENTS.md 第 3 条）。
- * 一般项目（姓名/性别/民族/出生日期/身份证/职业/婚姻）不接收前端值，一律服务端按住院重查快照。
  */
 public class DeathCertificateDTO {
 
-    /** 分页查询（证明台账 + 上报台账共用） */
+    /**
+     * 分页查询（证明台账 + 上报台账共用）
+     */
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class QueryPage extends PageParam {
@@ -54,7 +52,9 @@ public class DeathCertificateDTO {
         private Integer overdue;
     }
 
-    /** 死因链行（Ⅰ部分按 seqNo 顺序即 a→b→c→d，链尾为根本死因；Ⅱ部分其他疾病） */
+    /**
+     * 死因链行（Ⅰ部分按 seqNo 顺序即 a→b→c→d，链尾为根本死因；Ⅱ部分其他疾病）
+     */
     @Data
     public static class CauseRow {
         private Integer part;
@@ -71,7 +71,9 @@ public class DeathCertificateDTO {
         private String intervalText;
     }
 
-    /** 填写/修改证明（草稿与已审核可改；已开具禁改，只能作废重开） */
+    /**
+     * 填写/修改证明（草稿与已审核可改；已开具禁改，只能作废重开）
+     */
     @Data
     public static class Upsert {
         /** 主键（雪花ID） */
@@ -140,7 +142,9 @@ public class DeathCertificateDTO {
         private String remark;
     }
 
-    /** 审核（1→2） */
+    /**
+     * 审核（1→2）
+     */
     @Data
     public static class Audit {
         /** 主键（雪花ID） */
@@ -150,7 +154,9 @@ public class DeathCertificateDTO {
         private String opinion;
     }
 
-    /** 签发（2→3）：审核通过 + 该住院已办「死亡」离院 + 死因链完整，三者齐了才是对外凭证 */
+    /**
+     * 签发（2→3）：审核通过 + 该住院已办「死亡」离院 + 死因链完整，三者齐了才是对外凭证
+     */
     @Data
     public static class Issue {
         /** 主键（雪花ID） */
@@ -158,7 +164,9 @@ public class DeathCertificateDTO {
         private Long id;
     }
 
-    /** 作废（1/2/3→4）：必填原因，之后才能重开新证 */
+    /**
+     * 作废（1/2/3→4）：必填原因，之后才能重开新证
+     */
     @Data
     public static class VoidCert {
         /** 主键（雪花ID） */
@@ -170,7 +178,9 @@ public class DeathCertificateDTO {
         private String reason;
     }
 
-    /** 打印回执（四联打印一次计数一次，法定文书打印留痕） */
+    /**
+     * 打印回执（四联打印一次计数一次，法定文书打印留痕）
+     */
     @Data
     public static class Print {
         /** 主键（雪花ID） */

@@ -15,14 +15,10 @@ import java.util.List;
  */
 public interface MiniPayService {
 
-    // 微信登录口子
-
     /**
      * wx.login code 换 openid 登录：已绑定 → 发 token；未绑定 → bound=false
      */
     MiniWxLoginVO wxLogin(WxLoginDTO dto);
-
-    // 统一支付单
 
     /**
      * 下单支付。模式直接推进支付成功并触发业务推进（门诊缴费走收费执行器、

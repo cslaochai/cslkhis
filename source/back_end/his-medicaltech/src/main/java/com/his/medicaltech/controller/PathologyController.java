@@ -14,10 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 病理亚专业接口
- *
- * <p>URL 前缀 {@code /medicaltech/pathology}。所有状态流转校验在 PathologyService，
- * 这里只做入参校验与 VO 装配；操作人一律服务端取 {@code UserUtils.getCurrentUser()}，
- * **不接受前端传操作人姓名**（传了就等于谁都能替别人签名）。
  */
 @Tag(name = "病理管理")
 @RestController

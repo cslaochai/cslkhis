@@ -4,14 +4,6 @@ import lombok.Data;
 
 /**
  * 急诊分诊建议入参
- * <p>
- * 支持两种用法：
- * <ul>
- *   <li><b>分诊台实时试算</b>：只传 {@code chiefComplaint} + {@code vitalSigns}，还没建档</li>
- *   <li><b>已建档患者</b>：传 {@code emergencyId}，其余字段留空即取库中数据，
- *       显式传入的字段会覆盖库中值（便于「改一个体征再试算」）</li>
- * </ul>
- * 两者至少要有一个，否则抛业务异常。
  */
 @Data
 public class EmergencyTriageDTO {

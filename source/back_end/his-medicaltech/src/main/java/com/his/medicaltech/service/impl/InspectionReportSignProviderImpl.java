@@ -19,17 +19,6 @@ import java.util.Objects;
 
 /**
  * 检查报告的签名内容提供者（业务类型=5）——**双签**。
- *
- * <p>报告是两级签发，出结果的人与签发的人通常不是同一个：
- * <ul>
- *   <li>{@link SignSceneEnum#REPORT_ISSUE} → 写报告签名ID（报告医师，出结果那一刻）</li>
- *   <li>{@link SignSceneEnum#REPORT_AUDIT} → 写审核签名ID（审核医师，签发那一刻）</li>
- * </ul>
- * 第二环带上第一环摘要（签名链）：审核之后又改了检查描述/结论，第二环验签当场断 ——
- * 这正是"报告发出去之后还能改"这类事故唯一能被发现的路径。
- *
- * <p><b>规范化里只放内容，不放流程</b>：{@code record_status / execute_by / audit_by /
- * report_by / *_time} 一律不进摘要，否则"一审核，报告医师的签名就失效"。
  */
 @Slf4j
 @Component

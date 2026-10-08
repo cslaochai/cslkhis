@@ -9,10 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 心电工作台详情（sql/173）：检查记录 + 波形（含采样 JSON）+ 测量参数 + Holter 分析 + 报告。
- *
- * <p>{@code waveData} 是 12 导联采样 JSON 字符串（约 200KB/次），前端 JSON.parse 后
- * 交给 EcgWavePanel 渲染；这里不再二次包装成对象 —— 波形结构属于设备对接契约，
- * 前端渲染层直接消费原始 JSON，中间不转换。
  */
 @Data
 public class EcgDetailVO {

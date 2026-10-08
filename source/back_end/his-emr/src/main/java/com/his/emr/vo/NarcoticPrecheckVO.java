@@ -8,15 +8,6 @@ import java.util.List;
 
 /**
  * 处方麻精预检结论（G10）——发药窗口点「发药」之前问一次"这单能不能发、要哪些手续"。
- *
- * <p><b>为什么要预检而不是只靠发药接口拦</b>：
- * 发药接口也会拦，但拦在"药师已经点过一次按钮之后"——
- * 他只会收到一句报错，然后要自己猜是缺诊断、超限量、还是没选复核人。
- * 预检把三件事一次说清：能不能发（{@code canDispense}）、
- * 要不要选复核药师（{@code requiresDualCheck}）、每个管制品种的限量是多少。
- *
- * <p>结论留在服务端算：前端那份 {@code lib/drugSpecialFlag.js} 只是同一口径的镜像，
- * 用于表格标签；判定一律以本 VO 为准。
  */
 @Data
 public class NarcoticPrecheckVO {

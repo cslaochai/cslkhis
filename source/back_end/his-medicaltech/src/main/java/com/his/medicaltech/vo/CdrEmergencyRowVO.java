@@ -8,10 +8,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * CDR 急诊节点行（{@code CdrMapper#selectEmergencies} 一行）。
- *
- * <p>急诊单既不挂挂号也不挂住院，它自己就是一次就诊 —— 所以锚点是它自己的ID
- * （{@code anchor_type = EMERGENCY}），事件挂在它下面。
+ * CDR 急诊节点行（CdrMapper#selectEmergencies 一行）。
  */
 @Data
 public class CdrEmergencyRowVO implements Serializable {

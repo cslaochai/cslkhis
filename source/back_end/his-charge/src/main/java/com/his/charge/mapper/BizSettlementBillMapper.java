@@ -15,8 +15,6 @@ import java.util.List;
 
 /**
  * 结算账单 Mapper。
- *
- * <p>自定义 {@code @Select} 不受 {@code @TableLogic} 影响 → 显式写 {@code del_flag = 0}。
  */
 @Mapper
 public interface BizSettlementBillMapper extends BaseMapper<BizSettlementBill> {

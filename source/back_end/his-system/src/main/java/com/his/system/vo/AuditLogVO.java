@@ -8,8 +8,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 审计日志行（审计日志：业务模块显式调用 {@code SysAuditLogService} 写的那本账，
- * 语义是"谁对哪个对象做了什么"，与操作日志的"谁调了哪个接口"互补）。
+ * 审计日志行（审计日志：业务模块显式调用 SysAuditLogService 写的那本账，
  */
 @Data
 public class AuditLogVO {

@@ -25,10 +25,6 @@ import java.util.*;
 
 /**
  * 白话词典维护实现。
- *
- * <p><b>维护的是患者会当作医嘱来读的文本</b>：所以保存前过一遍 {@link PatientTextGuard}。
- * 但这里与模型输出不同 —— 词典是院内检验科的人写的，专业表述（「携氧细胞」「免疫细胞」）要放行，
- * 闸门只拦「确诊 / 服用 / 剂量 / 建议吃」这类明确越界的措辞。
  */
 @Slf4j
 @Service
@@ -112,9 +108,6 @@ public class LabPlainItemAdminServiceImpl extends ServiceImpl<SysLabPlainItemMap
     @Override
     public String adminUpsert(LabPlainItemUpsertDTO dto) {
         String itemName = TextUtil.trim(dto.getItemName());
-        if (!TextUtil.hasText(itemName)) {
-            throw new BusinessException("检验项目名称不能为空");
-        }
         checkPatientText(itemName, dto.getWhatIsIt());
         checkPatientText(itemName, dto.getHighText());
         checkPatientText(itemName, dto.getLowText());

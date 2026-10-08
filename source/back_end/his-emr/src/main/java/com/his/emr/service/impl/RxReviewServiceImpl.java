@@ -32,10 +32,6 @@ import java.util.stream.Collectors;
 
 /**
  * 处方点评实现。
- *
- * <p>关键口径（写在 sql/160 头注释与各方法上，这里不复述）：
- * 公示只增不可撤、已公示禁改、约谈医师确认后禁改禁删、
- * 一张处方只进一个批次、抽样对象为已审核/已发药处方。
  */
 @Service
 @RequiredArgsConstructor

@@ -10,8 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 患者端门诊病历（列表只填头部字段，详情再填正文）。
- *
- * <p>刻意不含审核意见、签名锚点、PDF 路径等院内质控字段 —— 患者看的是病历文书本身。
  */
 @Data
 public class MyMedicalRecordVO {

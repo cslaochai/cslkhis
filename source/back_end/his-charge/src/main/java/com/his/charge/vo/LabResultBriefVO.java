@@ -8,11 +8,6 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 检验结果项跨域摘要（低编/高编稽核的证据来源）。
- *
- * <p>收费域只读「项目名 + 结果值 + 单位 + 异常描述 + 判读意见」这几个字段，
- * 用来拼证据文本与做诊断依据匹配，不需要检验域的整张结果表。
- *
- * @see MedicalTechGateway
  */
 @Data
 @NoArgsConstructor

@@ -18,10 +18,6 @@ import java.time.LocalDateTime;
 
 /**
  * 登录日志落库实现。
- *
- * <p>IP / 浏览器 / 操作系统的解析统一走 {@link RequestInfoUtils}，与操作日志同源同口径。
- * <b>写库的文本一律先截到列宽</b>：UA 这类字段超长会报 {@code Data too long}，
- * 结果是"记一条登录失败日志"升级成 500，用户连失败原因都看不到。
  */
 @Slf4j
 @Service

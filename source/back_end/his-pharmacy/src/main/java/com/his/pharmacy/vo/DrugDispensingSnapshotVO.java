@@ -9,14 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 发药单快照（his-emr 的 {@code biz_drug_dispensing}，跨模块裸 SQL 只读）。
- *
- * <p>对应 {@code BizDrugTraceMapper#selectDispensingSnapshot}：核销追溯码时按发药记录 ID 取一次，
- * 用来回答「这个码核销到哪一次发药上」。
- *
- * <p><b>核销时必须逐字段比对而不是只看 drugId</b>：串码（把 A 药的码核到 B 药的发药记录上）
- * 是医保稽核里最常见也最致命的一类差错，只比药品 ID 还能漏掉「同药不同批次」，
- * 所以患者名、药名、数量一并留在快照里供服务层做提示文案与人工复核。
+ * 发药单快照（his-emr 的 biz_drug_dispensing，跨模块裸 SQL 只读）。
  */
 @Data
 public class DrugDispensingSnapshotVO implements Serializable {

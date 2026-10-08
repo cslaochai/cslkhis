@@ -8,9 +8,6 @@ import java.time.LocalDateTime;
 
 /**
  * 时间戳令牌复验结果（G6b 运维）。
- *
- * <p>{@code valid} 是唯一结论：令牌签名值可用 TSA 公钥验证、且与台账摘要一致。
- * 失败时 {@code failReason} 给出人话原因（令牌不存在 / 摘要不一致 / 服务未配置 / 签名不匹配）。
  */
 @Data
 public class TsaTokenVerifyVO {

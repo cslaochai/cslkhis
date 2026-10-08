@@ -1,11 +1,7 @@
 package com.his.common.enums;
 
 /**
- * 资金账户主体（字典 {@code his_account_owner_type}，落在资金账户的主体类型列）。
- *
- * <p>门诊余额挂在"人"上（今天能抵下次挂号费），住院预交金挂在"这次入院"上
- * （欠费管控、出院退差都按入院算）。两种账户共用一张表，靠主体类型区分，
- * 免得再开一张预交金表、余额口径各算一套。
+ * 资金账户主体（字典 his_account_owner_type，落在资金账户的主体类型列）。
  */
 public enum AccountOwnerTypeEnum {
 

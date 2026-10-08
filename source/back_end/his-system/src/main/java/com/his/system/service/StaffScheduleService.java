@@ -18,9 +18,6 @@ import java.util.List;
 
 /**
  * 全院岗位排班服务 —— 排班事实的唯一写入口。
- *
- * <p>出诊计划与号源、值班责任位都是它的<b>下游</b>：下游不得自己造「人与时间」，
- * 只能由这里的行派生。这样「同一个人被排到两个重叠时段」才有一个地方能拦住。
  */
 public interface StaffScheduleService extends IService<BizStaffSchedule> {
 

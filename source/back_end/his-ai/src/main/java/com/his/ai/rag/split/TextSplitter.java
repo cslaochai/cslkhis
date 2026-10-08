@@ -7,11 +7,6 @@ import java.util.List;
 
 /**
  * 文本切块（滑动窗口，带重叠）。
- *
- * <p>开发环境方案：不依赖语义切分，按固定窗口切，保证每块长度可控、且相邻块有重叠
- * 以避免跨块语义被切断。中文为主，按字符计长。
- *
- * <p>单块大小 {@code chunkSize} 与重叠 {@code overlap} 来自 {@code application.yml: ai.rag.*}。
  */
 @Component
 public class TextSplitter {

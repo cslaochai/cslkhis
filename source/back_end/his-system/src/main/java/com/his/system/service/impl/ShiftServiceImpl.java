@@ -148,7 +148,7 @@ public class ShiftServiceImpl extends ServiceImpl<BizShiftMapper, BizShift> impl
 
     @Override
     public BizShift resolveForScheduling(Long shiftId, Long deptId, Integer staffType) {
-        // C类（非 web 入口入参）：由排班/模板的 service 用实体字段直接调用，不经请求体绑定
+        // C-非 web 入参：由排班/模板的 service 用实体字段直接调用，不经请求体绑定，Bean Validation 不覆盖，保留
         if (shiftId == null) {
             throw new BusinessException("请选择班次：排班的时间段与班别都由班次带出，不够用到「班次字典」先建一条");
         }

@@ -12,11 +12,6 @@ import java.util.List;
 
 /**
  * 排班时间片段服务。
- *
- * <p>号源与占用的事实都在段上（半小时一档），本服务负责段的生命周期：
- * 生成（自动切分/按模板）、重算（改号源/改时间窗）、摊加号、Σ段写回主表。
- * 所有方法都假定调用方已有事务（挂号/排班写路径均在 @Transactional 内），
- * 段与主表的双写靠同一事务保证一致。
  */
 public interface BizScheduleSlotService extends IService<BizScheduleSlot> {
 

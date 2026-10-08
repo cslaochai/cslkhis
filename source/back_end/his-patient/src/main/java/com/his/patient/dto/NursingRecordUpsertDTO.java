@@ -10,16 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 护理文书录入 / 修改入参。
- *
- * <p>{@code id} 为空 = 新增（同一患者 + 同类型 + 同一测量时点已存在则由服务层拒绝，不静默覆盖）；
- * 不为空 = 修改（草稿/已提交可改，已归档拒改）。
- *
- * <p>取值约束由服务层校验：
- * <ul>
- *   <li>三测单/生命体征监测至少要有一个体征值（体温/脉搏/呼吸/血压/SpO2 之一），
- *       否则"录了一条什么都没有的记录"，曲线与统计都会被污染；</li>
- *   <li>护理记录单必须有 {@code nursingContent}（护理记录单的正文就是它的全部意义）。</li>
- * </ul>
  */
 @Data
 public class NursingRecordUpsertDTO implements Serializable {

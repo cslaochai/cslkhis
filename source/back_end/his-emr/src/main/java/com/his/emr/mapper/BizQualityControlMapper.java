@@ -18,12 +18,6 @@ import java.util.List;
 
 /**
  * 质控检查记录Mapper
- *
- * <p>自定义 {@code @Select} 不受 {@code @TableLogic} 影响 → 所有查询必须显式写 {@code del_flag = 0}。
- * （{@code BizQualityControl.delFlag} 本来也没打 {@code @TableLogic}，显式写是唯一保险。）
- *
- * <p>SUM(布尔表达式) 依赖 MySQL 把 true/false 当 1/0 —— 这是 MySQL 的行为，
- * 换数据库要改，但本项目就是 MySQL。
  */
 @Mapper
 public interface BizQualityControlMapper extends BaseMapper<BizQualityControl> {

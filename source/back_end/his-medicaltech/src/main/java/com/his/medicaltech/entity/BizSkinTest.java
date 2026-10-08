@@ -12,9 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 门诊皮试记录（M10）。
- *
- * <p>判读观察窗：判读时间距皮试时间不足 15 分钟拒绝判读（服务端校验）。
- * 皮试阳性 → 关联输液单取消，座位释放。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

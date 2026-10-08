@@ -231,6 +231,7 @@ public class DutyPostServiceImpl extends ServiceImpl<BizDutyPostMapper, BizDutyP
             post.setOrgId(0L);
             return;
         }
+        // D-业务规则：非空与取值合法性（0 是全院占位值）混写在一个条件里，且仅当单元类型非全院才必填，DTO 注解无法表达，保留
         if (post.getOrgId() == null || post.getOrgId() == 0L) {
             throw new BusinessException("请选择值守点位所属的" + OrgUnitTypeEnum.getText(post.getOrgType()));
         }

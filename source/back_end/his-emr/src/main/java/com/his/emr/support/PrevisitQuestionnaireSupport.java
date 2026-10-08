@@ -8,10 +8,6 @@ import java.util.Map;
 
 /**
  * 预问诊量表（G-05）。
- *
- * <p>追问树是「词典 + 长尾」档（施工手册 §8.5）：量表先行、结构固定，模型只吃提交后
- * 的长尾凝练。量表版本化在代码里随接口下发，改动量表只动这一处；
- * 患者提交的 answers_json 只存回显数据，不存题目版本，避免两侧结构漂移。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class PrevisitQuestionnaireSupport {

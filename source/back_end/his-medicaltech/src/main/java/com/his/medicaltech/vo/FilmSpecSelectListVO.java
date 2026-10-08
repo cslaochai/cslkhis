@@ -8,9 +8,6 @@ import java.math.BigDecimal;
 
 /**
  * 胶片规格下拉（sql/138）。
- *
- * <p>下拉里必须带单价：登记员选规格的时候就要知道这张片多少钱，
- * 等提交完再跳到别处看价格，等于让人先做决定再告诉他代价。
  */
 @Data
 public class FilmSpecSelectListVO {

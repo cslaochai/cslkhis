@@ -7,9 +7,6 @@ import java.util.Map;
 
 /**
  * 血液品种枚举（输血申请单 / 血袋的品种列，1~6）。
- *
- * <p>「红细胞类 / 血浆类」的分组判定也放在这里：ABO 相容表对两类方向相反
- * （红细胞 O 型是万能供者、血浆 O 型只能给 O 型），品种归错类就等于把相容表用反。
  */
 @Getter
 public enum BloodComponentEnum {

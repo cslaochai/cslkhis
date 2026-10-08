@@ -10,9 +10,6 @@ import java.util.List;
 
 /**
  * VTE 风险名单行（中高危名单 / 全院风险一览）。
- *
- * <p>preventStatus 是名单最有用的一个字段：护士扫一眼就知道"这个人还没落实"，
- * 而不是点进去翻三条措施记录自己数。0-未登记 1-部分落实 2-已落实。
  */
 @Data
 public class VteRiskListVO {

@@ -7,9 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 知识库文档。
- *
- * <p>文本落库、向量不落库（向量在内存，由 {@code InMemoryVectorStore} 启动时从 chunk 表重建）。
- * 本表只用于读与维护，不做医疗判定。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

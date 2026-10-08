@@ -7,9 +7,6 @@ import java.io.Serializable;
 
 /**
  * 远程会诊安排入参（待安排 → 已安排）。
- *
- * <p>planTime 用字符串 'yyyy-MM-dd HH:mm:ss'：前端 el-date-picker 默认空格分隔，
- * 一旦在 DTO 上声明 @JsonFormat 就只认空格格式，两侧必须对齐（G12/G14 连踩两次的坑）。
  */
 @Data
 public class TeleArrangeDTO implements Serializable {

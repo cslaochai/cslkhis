@@ -6,9 +6,6 @@ import lombok.Data;
 
 /**
  * 交班明细入参（一条 = 一个「这个人现在归你」）。
- *
- * <p>两个文本字段都<b>不带</b> {@code @Size}：长度由服务端截到列宽，
- * 入参层拦 400 等于把"多写了几句交代"变成请求失败（AGENTS.md §3 铁律）。
  */
 @Data
 public class EmergencyHandoverItemDTO {

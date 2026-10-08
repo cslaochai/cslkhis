@@ -14,9 +14,6 @@ import java.util.List;
 
 /**
  * 临床路径入径记录 Mapper。
- *
- * <p>候选跨模块读（入院记录/患者基本信息归 his-patient）走裸 SQL；
- * 入院记录无 patient_name 列，姓名必须 JOIN 患者基本信息取。
  */
 @Mapper
 public interface BizPathwayEnrollMapper extends BaseMapper<BizPathwayEnroll> {

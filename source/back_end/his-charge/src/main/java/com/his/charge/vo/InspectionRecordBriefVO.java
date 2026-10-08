@@ -10,8 +10,6 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 检查记录跨域摘要。
- *
- * @see MedicalTechGateway
  */
 @Data
 @NoArgsConstructor

@@ -14,8 +14,6 @@ import java.util.List;
 
 /**
  * 营养膳食月度指标 Mapper。
- *
- * <p>本表无 del_flag（快照覆盖式），删除只用于"重算前清空某月"，走 {@code DELETE}。
  */
 @Mapper
 public interface BizNutritionStatsMapper extends BaseMapper<BizNutritionStats> {

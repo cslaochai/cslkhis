@@ -9,12 +9,6 @@ import java.util.List;
 
 /**
  * 急诊分诊建议出参
- * <p>
- * <b>本对象只承载「建议」，没有「最终级别」的语义。</b>
- * 落库的 {@code triage_level} 永远由分诊护士确认后写入，AI 不写库。
- * <p>
- * {@code currentLevel} 与 {@code suggestedLevel} 同时给出的原因：
- * 分诊护士需要看到「系统建议比我选的更严」这个对比，而不是被系统悄悄改掉分级。
  */
 @Data
 public class EmergencyTriageResultVO {

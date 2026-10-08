@@ -8,9 +8,6 @@ import java.math.BigDecimal;
 
 /**
  * 价格项目出参（跨价表统一结构）
- *
- * <p>5 张价表列名不统一，统一映射到这里：药品取 price、耗材取 retail_price、
- * 检查/检验/治疗取 price。各表没有的字段留空，不做假值。</p>
  */
 @Data
 public class PriceItemVO {

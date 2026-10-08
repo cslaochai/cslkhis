@@ -3,14 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 排班变更类型枚举（sql/200，字典 {@code his_schedule_change_type}）
- *
- * <p>变更留痕统一收在这里，取代原先两种土办法：值班侧在换班字段里存「原定谁 + 实际谁」，
- * 门诊侧把加减号写进备注字符串。两种都查不了「这个人这个月换过几次班」。
- *
- * <p>{@link #SUBSTITUTE}（代班）与 {@link #SWAP}（换班）的区别是<b>单向还是双向</b>：
- * 换班是 A 的班给 B、B 的班给 A（两行互改），代班是 A 的班临时换人而 A 原本休息（只写一行）。
- * 混用会让「谁欠谁一个班」算不出来。
+ * 排班变更类型枚举（sql/200，字典 his_schedule_change_type）
  */
 @Getter
 public enum ScheduleChangeTypeEnum {

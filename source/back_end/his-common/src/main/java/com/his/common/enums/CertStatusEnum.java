@@ -2,9 +2,6 @@ package com.his.common.enums;
 
 /**
  * 员工签名证书状态。
- *
- * <p>吊销的行**必须保留**：历史签名里存的是证书编号，
- * 删掉证书就等于让那批签名变成无法验证的孤儿（"当时用的哪把公钥"永久丢失）。
  */
 public enum CertStatusEnum {
 

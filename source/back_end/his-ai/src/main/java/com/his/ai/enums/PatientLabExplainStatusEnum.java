@@ -3,12 +3,7 @@ package com.his.ai.enums;
 import lombok.Getter;
 
 /**
- * 患者端检验报告解读的单项状态（暴露在 {@code PatientLabItemPlainVO.status}，前端按此渲染箭头与文案）。
- *
- * <p>码值：1-正常 2-偏高 3-偏低 4-待核对(参考区间不可用/未判定) 5-异常(方向不明确)。</p>
- *
- * <p>与 {@code biz_lab_result.abnormal_flag} 不同：本状态是<b>患者端展示用的派生状态</b>，
- * 在异常方向之外额外合并了「待核对」(UNJUDGED)，不要把两者混用。</p>
+ * 患者端检验报告解读的单项状态（暴露在 PatientLabItemPlainVO.status，前端按此渲染箭头与文案）。
  */
 @Getter
 public enum PatientLabExplainStatusEnum {

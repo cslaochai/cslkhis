@@ -24,10 +24,6 @@ import java.util.stream.Collectors;
 
 /**
  * AI 调用审计查询。
- * <p>
- * 只读服务：审计日志的写入由 {@link AiAuditService} 负责，
- * 且写入必须是「永不抛异常」的旁路 —— 审计失败不能影响业务。
- * 查出来给人看，所以状态码要翻译成中文，别把 1/2/3 直接甩给医务科。
  */
 @Service
 @RequiredArgsConstructor

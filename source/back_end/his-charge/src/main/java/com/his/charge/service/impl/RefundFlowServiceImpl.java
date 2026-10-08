@@ -24,9 +24,6 @@ import java.util.stream.Collectors;
 
 /**
  * 退费流水台账实现（只读，数据源为四层支付流水支付资金流水 direction=2）。
- *
- * <p>详见 {@link RefundFlowService} 类注释：M7 的旧退费单/旧退费明细
- * 双写台账已并入 L3 支付流水，本服务不再写任何表，只把 {@code direction=2} 的流水投影成台账 VO。
  */
 @Service
 @RequiredArgsConstructor

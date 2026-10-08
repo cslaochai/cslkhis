@@ -9,9 +9,6 @@ import java.util.Map;
 
 /**
  * 输血前双人核对要点（输血安全核查单的可核对部分）。
- *
- * <p>码值→文案的唯一出口（原 {@code TransfusionCheckItems} 的 {@code LABELS} 映射已上移至此）。
- * 输血是唯一要求双人核对的护理操作，核对结果是码值集合，必核项（1~6）缺失直接拒绝输注。
  */
 @Getter
 public enum TransfusionCheckItemEnum {

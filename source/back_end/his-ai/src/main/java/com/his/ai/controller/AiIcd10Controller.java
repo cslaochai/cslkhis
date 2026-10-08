@@ -21,20 +21,6 @@ import java.util.List;
 
 /**
  * ICD-10 智能编码接口。
- * <p>
- * <b>与 {@code /system/icd10/predict} 的关系 —— 刻意共存，不是重复建设</b>：
- * 既有接口是纯关键词打分版本（候选集之外还会顺手给出 DRG 权重与费用估算，
- * 这两项是按 ICD 大类硬编码估算的，不是真实分组结果）。
- * 本接口把「选哪个编码」这一步升级为「码表封闭集合内的大模型重排」，
- * 但<b>不删除</b>旧接口：
- * <ul>
- *   <li>旧接口行为不变，未接入 AI 的调用方零改动；</li>
- *   <li>新接口的降级路径就是旧的规则算法，所以迁移没有功能倒退风险；</li>
- *   <li>his-system 不能反过来依赖 his-ai（会形成循环依赖），
- *       因此只能并存，不能把旧接口改成转发。</li>
- * </ul>
- * 前端迁移建议：优先调 {@code /ai/icd10/predict}，当返回 {@code degraded=true}
- * 且 {@code predictions} 为空时再回落旧接口。
  */
 @Tag(name = "AI 能力-ICD10 智能编码")
 @RestController

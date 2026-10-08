@@ -34,16 +34,6 @@ import java.util.*;
 
 /**
  * 全院岗位排班服务实现 —— 排班事实的唯一写入口。
- *
- * <p><b>三条铁律</b>：
- * <ol>
- *   <li><b>时间只由班次带出</b>：前端传的起止时间一律不认，休息/请假/培训/停班必须无班次、无时间、无工时；</li>
- *   <li><b>同一个人同一天不能有两个重叠的班</b>：跨零点班归开始日，所以重叠判定要按
- *       「昨天夜里延伸进来的那段 + 今天 + 明天凌晨被延伸到的那段」三个自然日一起算，
- *       只比日期会把「昨晚上到今早 8 点」与「今早 6 点到 10 点」判成不冲突；</li>
- *   <li><b>岗位类别由人事岗位派生</b>：不是前端选一个类别就存一个类别，
- *       否则「这个人到底以什么身份在岗」会有两套答案。</li>
- * </ol>
  */
 @Service
 @RequiredArgsConstructor
@@ -375,6 +365,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
                     || !StaffDutyStatusEnum.isWorking(to.getDutyStatus())) {
                 throw new BusinessException("换班只能在两条上班排班之间进行；休息/请假请直接改那条记录的出勤状态");
             }
+            // D-业务规则：互换换班要求同日或同班，是跨字段约束而非「字段填没填」，DTO 注解无法表达，保留
             if (!Objects.equals(from.getScheduleDate(), to.getScheduleDate())
                     && !Objects.equals(from.getShiftId(), to.getShiftId())) {
                 // 不同日互换要各自重算星期与工时快照，跨日又不同班会让「谁欠谁一个班」算不清
@@ -406,6 +397,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             return;
         }
 
+        // C-非 web 入参：swap 还被 DutyRosterServiceImpl 用内部构造的 StaffScheduleSwapDTO 直接调用（代班路径），Bean Validation 不覆盖，保留
         if (dto.getSubstituteEmployeeId() == null) {
             throw new BusinessException("代班请选择承接的人");
         }
@@ -439,6 +431,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             throw new BusinessException("目标区间与来源区间重叠，复制会把同一批班排两遍");
         }
         Long orgId = unitType == OrgUnitTypeEnum.HOSPITAL ? ID_NONE : dto.getOrgId();
+        // B-条件必填：单元类型非「全院」时才必填 orgId（全院固定落 0），按请求内容分支，DTO 注解无法表达，保留
         if (unitType != OrgUnitTypeEnum.HOSPITAL && (orgId == null || orgId == ID_NONE)) {
             throw new BusinessException("请选择" + unitType.getLabel());
         }
@@ -639,6 +632,7 @@ public class StaffScheduleServiceImpl extends ServiceImpl<BizStaffScheduleMapper
             schedule.setDeptName(unitType.getLabel());
             return;
         }
+        // D-业务规则：非空与取值合法性（0 是全院占位值）混写在一个条件里，且仅当单元类型非全院才必填，DTO 注解无法表达，保留
         if (orgId == null || orgId == ID_NONE) {
             throw new BusinessException("请选择" + unitType.getLabel());
         }

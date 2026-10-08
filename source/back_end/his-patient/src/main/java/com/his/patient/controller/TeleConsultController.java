@@ -16,9 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 互联网医院 / 远程会诊。
- *
- * <p>两条线共一个控制器：远程会诊（院际/跨院专家）与线上问诊（互联网复诊）。
- * 按项目规范 @PreAuthorize 全部标到方法；按钮可用性由后端 VO 的 can* 字段给。
  */
 @Tag(name = "互联网医院与远程会诊")
 @RestController

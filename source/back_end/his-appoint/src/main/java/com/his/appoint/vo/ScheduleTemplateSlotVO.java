@@ -6,7 +6,6 @@ import lombok.Data;
 
 /**
  * 模板段级号源配置 VO（模板详情/列表回显用）；
- * 保存侧保证 Σ段=模板主表号源，无段配置=生成排班时按半小时均分。
  */
 @Data
 public class ScheduleTemplateSlotVO {

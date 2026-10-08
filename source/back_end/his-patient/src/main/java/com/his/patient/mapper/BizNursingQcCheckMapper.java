@@ -13,13 +13,6 @@ import java.util.List;
 
 /**
  * 护理质量检查单 Mapper（sql/168）。
- *
- * <p>病区与检查人取自病区/员工，它们归系统域，按项目规范不跨域调
- * 它们的 Mapper，这里走裸 SQL 只读。<b>病区没有 del_flag 列</b>，别给它加条件
- * （加了直接 Unknown column 报 500）。
- *
- * <p>自定义 SQL 不受 {@code @TableLogic} 覆盖，凡读护理质量检查单都要手写
- * {@code del_flag = 0}。
  */
 @Mapper
 public interface BizNursingQcCheckMapper extends BaseMapper<BizNursingQcCheck> {

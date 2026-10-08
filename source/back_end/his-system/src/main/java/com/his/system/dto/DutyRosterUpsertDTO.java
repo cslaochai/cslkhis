@@ -10,15 +10,6 @@ import java.time.LocalDate;
 
 /**
  * 值班排班新增/修改入参（全院总值班 + 科室医师值班共用）。
- *
- * <p><b>查重口径分两条</b>（sql/202 起）：
- * <ul>
- *   <li><b>传了 {@code postId}</b>：按「日期 + 点位」改。{@code uk_duty_post_date} 保证
- *       一个位一天只能排一个人 —— 8 个临床科室各有一线/二线/三线白班位，
- *       同一天同班次同角色有十几行，按老键查重会 LIMIT 1 抓到别的科室的行改掉
- *       （想排内科结果把外科那行改了）。</li>
- *   <li><b>没传 {@code postId}</b>：维持老语义＝全院总值班，只落「全院行政」点位。</li>
- * </ul>
  */
 @Data
 public class DutyRosterUpsertDTO {

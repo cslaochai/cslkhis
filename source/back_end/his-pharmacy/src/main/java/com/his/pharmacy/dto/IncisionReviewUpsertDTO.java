@@ -8,13 +8,6 @@ import lombok.Data;
 
 /**
  * I 类切口预防用药点评入参。
- *
- * <p>operationApplyId 非空 = 针对某台手术建点评（一台手术一条）；
- * id 非空 = 改已有点评（重评）。
- *
- * <p>合理性由药师下结论，但<b>服务端仍做一致性校验</b>：
- * 结论=2（不合理）必须有问题码和意见；联合用药必须写理由；
- * 用了特殊使用级（antibioticLevel=3）而 consultFlag=0 时，问题码必须包含 47（无会诊）。
  */
 @Data
 public class IncisionReviewUpsertDTO {

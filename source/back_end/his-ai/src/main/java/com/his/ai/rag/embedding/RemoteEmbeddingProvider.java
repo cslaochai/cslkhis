@@ -15,7 +15,6 @@ import org.springframework.web.client.RestTemplate;
 
 /**
  * 远程 embedding 实现
- *
  */
 @Slf4j
 @Component

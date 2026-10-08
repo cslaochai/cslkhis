@@ -6,9 +6,6 @@ import java.util.List;
 
 /**
  * 病区×班次交接班摘要（G-13）。
- * <p>事实列表（census/异常事件/高风险评估）是代码聚合；{@code summary} 是模型 SBAR 草稿，
- * <b>护士编辑终审后自行使用，不写库</b>。模型不可用时 {@code source=rule}（规则模板拼接）、
- * {@code degraded=true} + 原因，摘要不缺位。</p>
  */
 @Data
 public class WardHandoverVO {

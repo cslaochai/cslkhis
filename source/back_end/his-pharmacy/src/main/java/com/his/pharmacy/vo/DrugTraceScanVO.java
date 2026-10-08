@@ -11,13 +11,6 @@ import java.util.List;
 
 /**
  * 药品追溯码扫码解析结果VO（解析段 + 字典命中 + 批次候选 + 场景校验结论）
- *
- * <p>校验结论分两个场景，前端据此决定能不能提交：
- * <ul>
- *   <li>{@code canCollect}：入库采集闸门（码未重复 + 药品命中且启用 + 有挂靠批次）</li>
- *   <li>{@code canDispense}：发药核销闸门（码已采集且在库 + 品种一致，未采集/已核销/串码一律拒绝）</li>
- * </ul>
- * 任一闸门不过都必须在 {@code tip} 里说清原因，不留"按钮灰了但不知道为什么"。
  */
 @Data
 public class DrugTraceScanVO {

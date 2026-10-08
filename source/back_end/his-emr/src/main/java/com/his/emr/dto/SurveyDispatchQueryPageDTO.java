@@ -9,8 +9,6 @@ import java.util.List;
 
 /**
  * 发放/回收台账分页入参。
- *
- * <p>{@code scopeDeptIds} 由服务端按登录岗位写入，前端传什么都不认（数据范围必须后端强制）。
  */
 @EqualsAndHashCode(callSuper = true)
 @Data

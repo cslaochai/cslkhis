@@ -8,9 +8,6 @@ import java.util.List;
 
 /**
  * 输液执行闭环（G14）：开始（滴速）→ N 次巡视 → 结束（不良反应）。
- *
- * <p>为什么挂在执行行而不是医嘱上：长期医嘱一天可能输多袋，每袋是执行行里独立的一次
- * 执行（各自计费），闭环的粒度必须是「这袋液」。
  */
 public interface InpatientInfusionService {
 

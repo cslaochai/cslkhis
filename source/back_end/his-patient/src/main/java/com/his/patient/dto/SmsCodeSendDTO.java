@@ -8,8 +8,6 @@ import java.io.Serializable;
 
 /**
  * 短信验证码发送入参（小程序端）。
- *
- * <p>场景码由服务端固定写死，不接受前端传入，避免匿名接口被用来发其他业务的码。
  */
 @Data
 public class SmsCodeSendDTO implements Serializable {

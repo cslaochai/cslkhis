@@ -9,8 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * 病案首页取数快照（单病种纳入时服务端重查）。
- *
- * <p>无首页返回 null → 拒绝纳入：没有首页的住院段算不出单病种相关指标。
  */
 @Data
 public class InpatientSummarySnapshotVO implements Serializable {

@@ -11,10 +11,6 @@ import java.io.Serializable;
 
 /**
  * 会诊申请入参（新增 / 修改「待应答」的申请）。
- *
- * <p><b>刻意不接收患者ID、申请科室、申请医生</b>：这些一律由服务端从入院记录与当前登录用户推导。
- * 前端能传的"事实"只有：给谁住院申请（admissionId）、请哪个科室（toDeptId）、什么范围与紧急度、
- * 为什么请（reason）。让前端传申请科室，就一定会出现"申请科室"与入院科室打架的记录。
  */
 @Data
 public class ConsultationUpsertDTO implements Serializable {

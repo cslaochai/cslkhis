@@ -13,15 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 质控对象快照 —— 把门诊病历与住院文书归一成同一套被检查字段。
- *
- * <p><b>为什么要有这一层</b>：两张表字段名差不多但并不相同
- * （门诊用 {@code diagnosis} 存诊断文本、血压是 varchar；
- * 住院用 {@code diagnosis_name}、血压是 int）。规则如果直接吃两套实体，
- * 每条规则都要写两遍分支，迟早出现"门诊加了新规则、住院那半边忘了改"。
- *
- * <p><b>数值字段一律宽松解析</b>：门诊的 {@code pulse}/{@code systolic_pressure} 是
- * {@code varchar(10)}，里面可能写「72」也可能写「72次/分」。解析不了就视为"未记录"
- * 而不是 0 —— 把无法解析的值当成越界去报缺陷，是典型的假警报。
  */
 @Data
 public class QcSnapshot {

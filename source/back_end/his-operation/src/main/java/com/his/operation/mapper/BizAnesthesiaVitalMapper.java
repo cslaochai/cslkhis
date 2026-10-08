@@ -8,9 +8,6 @@ import org.apache.ibatis.annotations.Select;
 
 /**
  * 麻醉生命体征 Mapper（只增不改）。
- *
- * <p>存在性的唯一判定是 {@code (record_id, sample_time)}：
- * 同一时刻再插一条会得到不同的自增值，靠 id 判重等于没判 —— 必须用业务键计数。
  */
 @Mapper
 public interface BizAnesthesiaVitalMapper extends BaseMapper<BizAnesthesiaVital> {

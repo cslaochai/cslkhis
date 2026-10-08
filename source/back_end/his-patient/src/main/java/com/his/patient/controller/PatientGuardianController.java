@@ -16,10 +16,6 @@ import java.util.List;
 
 /**
  * 就诊人绑定控制器（患者端小程序）。
- *
- * <p>身份收口在 service（requirePatientUser）：仅 user_type=3 的患者账号可操作，
- * 且所有写动作只作用于**当前登录账号自己**的绑定 —— 入参里不存在 userId，
- * 前端无法替别人绑人。
  */
 @Tag(name = "就诊人绑定（小程序）")
 @RestController

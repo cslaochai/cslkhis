@@ -6,10 +6,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 待质控病历候选查询入参。
- *
- * <p>门诊病历与住院文书是两张结构完全不同的表，凑成一张列表要 UNION ALL，
- * 而 UNION 之后的字符串列很容易踩排序规则的坑。所以这里**要求先选来源**：
- * 质控员的实际工作流本来就是"今天质控住院病案 / 今天质控门诊病历"，不混着看。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

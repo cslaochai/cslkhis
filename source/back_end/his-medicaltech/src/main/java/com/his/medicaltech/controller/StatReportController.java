@@ -14,9 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 病案统计上报控制器（L9 打印预留）。
- *
- * <p>generate 从住院数据聚合卫统风格 JSON 报文落库留痕；submit 即"上报埋点"——
- * 现在只冻结留痕并支持打印，真实对接时把这一步换成 http 上报。
  */
 @Tag(name = "病案统计上报（打印预留）")
 @RestController

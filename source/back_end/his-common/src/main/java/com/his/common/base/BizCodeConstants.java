@@ -1,15 +1,7 @@
 package com.his.common.base;
 
 /**
- * <h2>两类"前缀"是一对，但落在完全不同的地方</h2>
- *
- * <ul>
- *   <li>{@code XXX_NO_KEY_PREFIX} —— <b>Redis 计数器的 key 名</b>，只进 {@code next(module)}，
- *       真实 key 是 {@code {KEY_PREFIX}:{yyyyMMdd}}（如 {@code EMPLOYEE:20261007}）。
- *       它<em>不会</em>出现在任何单号里、也不落库。</li>
- *   <li>{@code XXX_NO_PREFIX} —— <b>单号正文的头几个字母</b>，落进 {@code xxx_no} 列给人看
- *       （如 {@code PATIENT_NO_PREFIX = "P"} → {@code P2026100700001}）。</li>
- * </ul>
+ * 两类"前缀"是一对，但落在完全不同的地方
  */
 public interface BizCodeConstants {
 

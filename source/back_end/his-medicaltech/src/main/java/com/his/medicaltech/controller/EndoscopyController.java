@@ -14,8 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 内镜亚专业接口（URL 前缀 /medicaltech/endoscopy）
- *
- * <p>操作人一律服务端取当前登录人，不接受前端传姓名。
  */
 @Tag(name = "内镜管理")
 @RestController

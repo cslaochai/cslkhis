@@ -11,12 +11,6 @@ import java.util.List;
 
 /**
  * 麻醉记录单出参。
- *
- * <p>三个"多久"一律由<b>服务端按时间轴算</b>（诱导时长 / 麻醉时长 / 手术时长）：
- * 前端自己拿两个字符串相减会在时区、秒级截断上各错一次，
- * 且与库里 DATETIME(0) 的四舍五入混在一起时"差一分钟"会变成偶发。
- *
- * <p>{@code can*} 由后端判定，前端不要按 recordStatus 自己 switch。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -4,12 +4,6 @@ import org.apache.ibatis.annotations.*;
 
 /**
  * 签名模块读取系统参数表的运维参数。
- *
- * <p>刻意用裸 SQL 而不是 {@code SysConfig} 实体：那个实体属于 his-system，
- * his-common 复制一份定义会在"两处实体不一致"时静默读错列。
- * 这里只取一个字符串值，不承担 CRUD。
- *
- * <p>表里没有删除标记，所以不加过滤条件。
  */
 @Mapper
 public interface SignConfigMapper {

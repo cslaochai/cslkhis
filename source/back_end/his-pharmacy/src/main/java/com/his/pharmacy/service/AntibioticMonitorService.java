@@ -13,10 +13,6 @@ import java.util.List;
 
 /**
  * 抗菌药物使用监测（使用率 / 使用强度 AUD / 微生物送检率）+ I 类切口预防用药点评。
- *
- * <p>指标全部按"月度快照"落抗菌药物使用监测指标：对外报数与评审取证的数必须能复现，
- * 实时查询会随基础数据补录漂移（sql/161 §5 已写明理由）。
- * 实时试算另给 {@link #previewStats(String)}，只用于"这个月现在大概是多少"，不写库。
  */
 public interface AntibioticMonitorService {
 

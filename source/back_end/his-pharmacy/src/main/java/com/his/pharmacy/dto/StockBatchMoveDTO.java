@@ -7,10 +7,6 @@ import java.time.LocalDate;
 
 /**
  * 批次库存移动指令（内部参数对象，不给前端）
- *
- * <p>调拨发出、调拨接收、供应商退货三处都要把"哪个批次、动多少、因为哪张单"说清楚，
- * 位置参数已经排到 11 个，再靠顺序传参会传错（costPrice 和 quantity 同为 BigDecimal，
- * 传反了不报错，只会把库存金额算飞）。
  */
 @Data
 public class StockBatchMoveDTO {

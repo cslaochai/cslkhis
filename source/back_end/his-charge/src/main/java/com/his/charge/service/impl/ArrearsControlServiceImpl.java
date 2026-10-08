@@ -22,11 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 欠费管控服务：策略（单行）读写 + 在院欠费患者榜。
- *
- * <p>口径铁律：榜单数字与 {@code InpatientAccountService.arrearsView} 必须逐项对应
- * （已发生 = L1 应收净额，已收 = 净预交 + 账单直收），SQL 写在
- * {@code BizArrearsPolicyMapper.selectArrearsBoard} 注释里钉死了，改口径两边一起改。
- * 这里用批量 SQL 而不是逐行调服务：欠费榜一页 10 个人，按人现算就是 30 次查询。
  */
 @Service
 @RequiredArgsConstructor

@@ -9,10 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * CDR 挂号行（{@code CdrMapper#selectRegistrations} 一行）。
- *
- * <p>它同时是"门诊节点的锚点"和"没有被任何就诊次收录的挂号"的兜底来源 ——
- * 后者必须自己成节点，否则那部分挂号会凭空消失（"挂号存在但时间轴上找不到"）。
+ * CDR 挂号行（CdrMapper#selectRegistrations 一行）。
  */
 @Data
 public class CdrRegistrationRowVO implements Serializable {

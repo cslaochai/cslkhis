@@ -8,12 +8,6 @@ import java.util.List;
 
 /**
  * 门诊日志查询入参。
- *
- * <p>与 {@link QueueQueryDTO} 分开而不是扩它：{@code QueueQueryDTO} 是分诊台的取数口径
- * （被 <b>当前登录用户科室</b> 强制收窄），而门诊日志是跨科室的查询分析页。
- * 两个口径塞进一个 DTO，迟早有人把「日志能看到全院」当成「分诊台也能看到全院」。
- *
- * <p>筛选条件一律由前端传、后端下推，禁止前端拿当前页做切片过滤。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

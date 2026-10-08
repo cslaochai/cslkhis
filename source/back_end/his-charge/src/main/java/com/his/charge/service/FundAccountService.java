@@ -14,11 +14,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 资金账户服务（L3）：门诊余额与住院预交金统一建模，差别只在 {@code owner_type}。
- *
- * <p><b>本层是"钱存在院内"这件事的唯一账本</b>：余额不是患者口袋里的现金，
- * 是医院欠患者的可退款项，所以它的进出必须逐笔留痕（资金账户流水），
- * 余额永远 {@code SUM(amount)} 得出来，资金账户.balance 只是行锁保护下的缓存。
+ * 资金账户服务（L3）：门诊余额与住院预交金统一建模，差别只在 owner_type。
  */
 public interface FundAccountService extends IService<BizFundAccount> {
 
@@ -59,14 +55,9 @@ public interface FundAccountService extends IService<BizFundAccount> {
      */
     BizFundAccountTxn apply(FundTxnSpec spec);
 
-    /**
-     * 一笔账户变动。
-     *
-     * @param txnType      流水类型（字典 {@code his_account_txn_type}，决定金额符号）
-     * @param amount       变动绝对额（手工调整允许自带正负）
-     * @param billId       余额抵扣/退差入账时关联的账单
-     * @param paymentTxnId 与该笔账户流水配对的支付流水ID（余额支付场景，两者必须同时存在）
-     */
+/**
+ * 一笔账户变动。
+ */
     record FundTxnSpec(Integer ownerType, Long ownerId, Long patientId, String patientNo, String patientName,
                        Integer txnType, BigDecimal amount, Long admissionId, Long billId, Long paymentTxnId,
                        Integer payMethod, String channelTxnNo, String reason) implements Serializable {

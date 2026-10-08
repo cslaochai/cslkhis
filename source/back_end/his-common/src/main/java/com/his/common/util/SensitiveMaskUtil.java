@@ -4,13 +4,6 @@ import lombok.NoArgsConstructor;
 
 /**
  * 敏感字段脱敏 —— 手机号 / 证件号 / 邮箱。
- *
- * <p>口径与前端 {@code src/lib/patientField.js} 的 maskMiddle 完全一致：保留前 head 后 tail，
- * 中间补 {@code *}，星数等于被遮位数（总长度不变），便于一眼看出是「同一串被打码」。
- *
- * <p>为什么放在后端：脱敏规则只在前端做等于没做 —— 明文仍在响应体里，
- * 抓包、浏览器插件、日志采集都能拿到；接口一旦复用到第二个页面，
- * 忘记调 mask 的那个页面就漏了。展示型接口出参时打码，前端只负责渲染。
  */
 
 @NoArgsConstructor

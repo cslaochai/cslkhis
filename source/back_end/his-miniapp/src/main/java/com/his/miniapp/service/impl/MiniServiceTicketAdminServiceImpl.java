@@ -160,6 +160,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
                 writeLog(ticket, ServiceTicketStatus.ACT_ACCEPT, operatorName + " 受理了这张工单", 1, operator, operatorName);
             }
             case "reply" -> {
+                // B-条件必填：content 只在 reply/finish/close/note 动作分支必填，受理动作可为空，@NotBlank 一刀切会挡掉受理，DTO 注解无法表达，保留
                 if (!TextUtil.hasText(content)) {
                     throw new BusinessException("回复内容不能为空");
                 }
@@ -181,6 +182,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
                 writeLog(ticket, ServiceTicketStatus.ACT_REPLY, content, visible, operator, operatorName);
             }
             case "finish" -> {
+                // B-条件必填：同上，办结动作才要求处理结果，DTO 注解无法表达，保留
                 if (!TextUtil.hasText(content)) {
                     throw new BusinessException("办结必须写处理结果，否则患者不知道你做了什么");
                 }
@@ -196,6 +198,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
                 writeLog(ticket, ServiceTicketStatus.ACT_FINISH, content, 1, operator, operatorName);
             }
             case "close" -> {
+                // B-条件必填：同上，关闭动作才要求原因，DTO 注解无法表达，保留
                 if (!TextUtil.hasText(content)) {
                     throw new BusinessException("关闭必须写原因");
                 }
@@ -210,6 +213,7 @@ public class MiniServiceTicketAdminServiceImpl extends ServiceImpl<MiniServiceMe
                 writeLog(ticket, ServiceTicketStatus.ACT_CLOSE, content, 1, operator, operatorName);
             }
             case "note" -> {
+                // B-条件必填：同上，内部备注动作才要求内容，DTO 注解无法表达，保留
                 if (!TextUtil.hasText(content)) {
                     throw new BusinessException("备注内容不能为空");
                 }

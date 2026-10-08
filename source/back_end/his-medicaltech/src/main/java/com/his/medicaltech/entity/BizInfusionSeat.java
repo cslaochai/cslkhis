@@ -7,8 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 门诊输液室座位（M10）。
- *
- * <p>座位是全院物理资源：不收科室数据权限（与 M6 的床位口径一致）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

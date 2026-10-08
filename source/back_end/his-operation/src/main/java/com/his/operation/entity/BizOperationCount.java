@@ -12,13 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 手术器械/敷料清点主单（手术清点主单）—— 一台手术一份（UNIQUE apply_id）。
- *
- * <p>清点为什么存在：<b>异物遗留发生在体腔关闭之前</b>，而唯一能发现它的机制就是
- * "术前基数 vs 关腔前 vs 关腔后"三次对数。三次都过了才允许这台手术走进"完成"，
- * 这条闸门落在 {@code OperationApplyServiceImpl#finish()}。
- *
- * <p>三阶段必须<b>顺序推进</b>（术前 → 关体前 → 关体后），且每个阶段的核对人都要留名 ——
- * 出事后要能回答"当时是谁数的"。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

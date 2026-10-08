@@ -13,10 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 门诊分诊记录。
- *
- * <p><b>只增不改</b>：同一患者重测体温或重新定级时追加新行，保留每一次分诊留痕。
- * 候诊队列上的 {@code triage_*} 是「当前生效值」的快照，本表是完整历史 ——
- * 谁在什么时候把患者从 4 级改成 2 级，必须查得到。所以本表不提供 update 入口。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

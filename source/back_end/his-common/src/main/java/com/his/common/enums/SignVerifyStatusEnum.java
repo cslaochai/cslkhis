@@ -2,9 +2,6 @@ package com.his.common.enums;
 
 /**
  * 最近一次验签的结果。
- *
- * <p>0-未校验是一个**真实且常见**的状态（签完从没验过），
- * 不允许被读成"验签通过"，也不允许被读成"失败"。三态各有各的处置动作。
  */
 public enum SignVerifyStatusEnum {
 

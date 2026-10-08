@@ -8,16 +8,6 @@ import java.time.LocalDateTime;
 
 /**
  * 验签结果。
- *
- * <p>刻意把结论拆成**两个独立断言**，而不是给一个 {@code pass} 布尔值：
- * <ul>
- *   <li>{@link #signatureValid}：拿证书公钥去验 {@code content_snapshot} + {@code sign_value}。
- *       回答"这份签名值是不是这把私钥对这份快照签的"（= 证据本身有没有被换）。</li>
- *   <li>{@link #contentMatched}：拿**当前业务内容**重算摘要，与 {@code content_digest} 比对。
- *       回答"这份病历自签名之后有没有被改过"。</li>
- * </ul>
- * 合成一个布尔值就会丢掉最关键的信息：签名值坏掉（证据被篡改，性质严重）与
- * 内容变了（文书被改，可能是正常补录也可能是篡改）是两件事，处理方式完全不同。
  */
 @Data
 public class SignVerifyVO {

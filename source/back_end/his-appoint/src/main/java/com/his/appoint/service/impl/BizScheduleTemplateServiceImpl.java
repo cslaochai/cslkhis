@@ -42,7 +42,6 @@ import java.util.stream.Collectors;
 
 /**
  * 排班模板服务实现
- * 铁律：模板是长期资产，排班是按周生成的产物——临时调整排班不影响模板。
  */
 @Slf4j
 @Service
@@ -258,6 +257,7 @@ public class BizScheduleTemplateServiceImpl extends ServiceImpl<BizScheduleTempl
     private void applyStaffType(BizScheduleTemplate template) {
         StaffTypeEnum.assertValid(template.getStaffType());
         if (StaffTypeEnum.hasSource(template.getStaffType())) {
+            // D-业务规则：非空与值域（至少 1）混写，且只在「有号源岗位」分支下成立，不是字段填没填，DTO 注解无法表达，保留
             if (template.getTotalSource() == null || template.getTotalSource() < 1) {
                 throw new BusinessException("医生模板的号源数量至少为1");
             }

@@ -17,11 +17,6 @@ import java.util.List;
 
 /**
  * 实际出勤 Mapper。
- *
- * <p>本类里几条 {@code @Select} 会直接读 {@code biz_staff_schedule}（计划）与
- * {@code biz_shift}（班次），是<b>刻意的只读跨层访问</b>：出勤层的核心职责就是
- * 「拿实际去对照计划」，把对照所需的读口放在这里，读和被读在同一处看得见。
- * 反过来写操作一律不跨层 —— 实际不会去改计划。
  */
 @Mapper
 public interface BizStaffAttendanceMapper extends BaseMapper<BizStaffAttendance> {

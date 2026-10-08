@@ -655,7 +655,7 @@ public class BizAppointServiceImpl extends ServiceImpl<BizAppointInfoMapper, Biz
             vo.setDoctorId(currentUser.getEmployeeId());
             vo.setDoctorName(currentUser.getRealName());
         } else {
-            // B类（条件必填）：仅「当日回诊」不占号源可免填，必填性取决于同一请求的复诊来源
+            // B-条件必填：仅「当日回诊」不占号源可免填，必填性取决于同一请求的复诊来源，DTO 注解无法表达，保留
             if (previewDTO.getScheduleId() == null) {
                 throw new BusinessException("请选择号源");
             }

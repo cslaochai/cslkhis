@@ -12,8 +12,6 @@ import java.util.List;
 
 /**
  * 静配中心主单 Mapper。
- *
- * <p>跨模块读（病区）按仓库约定走裸 SQL，不引入对 his-patient 的模块依赖。
  */
 @Mapper
 public interface BizPivasBatchMapper extends BaseMapper<BizPivasBatch> {

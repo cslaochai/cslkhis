@@ -12,11 +12,6 @@ import java.util.List;
 
 /**
  * 就诊人绑定服务（患者端小程序「多就诊人」基座）。
- *
- * <p>口径：一个 user_type=3 的登录账号可绑多个患者基本信息；
- * 注册时落的用户的患者ID 视为「本人」绑定（relation=1），
- * 两者共同构成该账号的<b>可访问患者集合</b> —— 患者端所有带 patientId 的
- * 读写接口都必须先过 {@link #accessiblePatientIds} 校验。
  */
 public interface PatientGuardianService {
 

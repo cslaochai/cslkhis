@@ -4,9 +4,6 @@ import lombok.Getter;
 
 /**
  * 输血流程状态枚举（码值口径 = sql/39 列注释，前端筛选值必须逐一对齐）。
- *
- * <p>取代原壳类里的 {@code ST_*} int 常量；文案单点在本枚举的
- * {@code getText}（未知码值返回空串，绝不回落成合法值）。
  */
 @Getter
 public enum TransfusionStatusEnum {

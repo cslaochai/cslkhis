@@ -6,8 +6,6 @@ import lombok.Data;
 
 /**
  * 病区 VO
- * <p>{@code totalBeds/freeBeds/occupiedBeds/brokenBeds} 全部实时统计自床位，
- * <b>不是</b> 病区上那两个演示字段（它们与实际床位行数不符）。
  */
 @Data
 public class WardVO {

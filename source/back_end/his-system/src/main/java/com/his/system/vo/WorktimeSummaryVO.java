@@ -10,17 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * 单元 × 日 的执行汇总（对应视图 {@code v_staff_worktime_summary}）。
- *
- * <p>这几个"人数"口径是<b>故意分成四个字段</b>的，合成一个大字段一定会被误读：
- * <pre>
- *   planHead        排了多少人上班
- *   presentHead     实际到岗（不含缺勤确认与未回填）
- *   unrecordedHead  排了、日子过了、一条出勤记录都没有 —— <b>该催的清单</b>
- *   absentHead      科室已确认的缺勤
- *   extraHead       没排班却来上班的
- * </pre>
- * 注意 presentHead + unrecordedHead + absentHead = planHead，缺勤和"没数"互不吞并。
+ * 单元 × 日 的执行汇总（对应视图 v_staff_worktime_summary）。
  */
 @Data
 @Schema(description = "单元 × 日 执行汇总")

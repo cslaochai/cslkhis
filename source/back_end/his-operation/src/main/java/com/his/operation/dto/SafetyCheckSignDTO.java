@@ -9,9 +9,6 @@ import java.io.Serializable;
 
 /**
  * 三方安全核查签单入参（一个时段一次提交，提交即生效、不可改）。
- *
- * <p>三方员工ID全部必填且必须互为不同的人 —— "谁签的"就是这张单的全部证据。
- * 患者快照、单号、签名时间一律服务端取，前端传不了。
  */
 @Data
 public class SafetyCheckSignDTO implements Serializable {

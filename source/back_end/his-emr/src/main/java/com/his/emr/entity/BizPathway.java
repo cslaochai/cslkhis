@@ -13,9 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 临床路径模板定义（临床路径模板）。
- *
- * <p>编码+版本一张单：同 pathway_code 只允许一张「使用中」（服务层校验），
- * 升版本 = 新草稿再发布。状态机 1草稿（可编辑）→ 2使用中（锁定、可入径）→ 3已停用。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

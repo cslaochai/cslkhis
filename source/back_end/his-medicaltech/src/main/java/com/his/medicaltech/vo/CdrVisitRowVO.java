@@ -9,11 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * CDR 门诊就诊次行（{@code CdrMapper#selectVisits} 一行）。
- *
- * <p>{@code registIds} 是**逗号分隔的多个挂号ID**，不是 JSON 数组也不是子表：
- * 就诊次与其挂号是 1:N，但页面只需要"这次就诊含几张挂号单"和"取最早那张的科室/医生"，
- * 为这点展示需求建关联表不值当。服务层按逗号切分后建"挂号ID → 就诊次"映射。
+ * CDR 门诊就诊次行（CdrMapper#selectVisits 一行）。
  */
 @Data
 public class CdrVisitRowVO implements Serializable {

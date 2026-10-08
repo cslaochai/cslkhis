@@ -6,7 +6,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** 抗菌药物别名行 */
+/**
+ * 抗菌药物别名行
+ */
 @Data
 public class AntibioticAliasVO {
 

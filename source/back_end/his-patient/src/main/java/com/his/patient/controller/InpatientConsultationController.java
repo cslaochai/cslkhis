@@ -15,11 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 住院会诊（P4.1：申请 → 应答 → 会诊记录 → 完成 → 回写病历）
- *
- * <p>约定：查询一律 GET，写操作一律 POST，路径驼峰。
- *
- * <p>按钮可用性（canAccept / canFinish / canCancel / canEdit）由后端在列表与详情里给出，
- * 前端不自己判状态 —— 状态机只有一处实现，才不会出现"界面允许点、后端拒绝"的错位。
  */
 @Tag(name = "住院会诊")
 @RestController

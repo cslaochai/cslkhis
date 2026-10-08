@@ -9,9 +9,6 @@ import java.util.Map;
 
 /**
  * 术前核对要点（手术安全核查单的可核对部分）。
- *
- * <p>码值→文案的唯一出口（原 {@code OperationCheckItems} 的 {@code LABELS} 映射已上移至此）。
- * 核对结果是码值集合，必核项（{@link #requiredCodes()}）缺失直接拒绝提交。
  */
 @Getter
 public enum OperationPreCheckItemEnum {

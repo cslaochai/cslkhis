@@ -9,9 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * DRG 分组与权重表（接入医保局的接口面）
- *
- * <p>把当地 CHS-DRG / DIP 分组方案导进来即可启用 D 组规则（费用倍率、高套点数）。
- * 在它为空时，D 组规则一律返回「不适用」并写明原因，绝不硬编码权重估算。</p>
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

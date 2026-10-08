@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 手卫生依从性观察记录（只增不改）：一次观察一行，聚合统计走后端。
- * 依从率 = SUM(comply_count) / SUM(opportunity_count)。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

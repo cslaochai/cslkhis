@@ -12,14 +12,6 @@ import java.util.List;
 
 /**
  * 工作台卡片注册表 Mapper。
- *
- * <p>三条查询共用同一段「角色是否真的持有该卡权限码」的 EXISTS：卡片的 permission 存的是
- * 菜单里 menu_type=2 的页面码（权限集合由 {@code SysUserMapper}
- * 查出且**不筛 menu_type**，所以页面码本身就是有效权限码）。闸门必须与菜单授权同源，
- * 否则会出现「卡片配给了拿不到权限的角色 = 数据接口 403 = 卡片永久消失」这类静默失灵。
- *
- * <p>刻意不做跨模块取数：本 Mapper 只碰工作台配置* / 菜单 / 角色 / 角色菜单关联，
- * 业务数字由各域的 {@code WorkbenchMetricProvider} 自己出。
  */
 @Mapper
 public interface SysWorkbenchWidgetMapper extends BaseMapper<SysWorkbenchWidget> {

@@ -7,7 +7,9 @@ import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 
-/** VTE 事件分页查询 */
+/**
+ * VTE 事件分页查询
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class VteEventQueryPageDTO extends PageParam {

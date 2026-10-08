@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * 麻醉随访轮次（1-术后即刻 2-术后24h 3-术后48h；其余轮次按「第N轮·追加随访」兜底）。
- *
- * <p>码值→文案的唯一出口（原 {@code FollowupAdverseItems#roundText} 已上移至此）。
  */
 @Getter
 public enum AnesthesiaFollowupRoundEnum {

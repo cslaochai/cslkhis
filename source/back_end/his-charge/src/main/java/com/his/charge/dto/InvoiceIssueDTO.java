@@ -5,9 +5,6 @@ import lombok.Data;
 
 /**
  * 出票入参（L4）。
- *
- * <p>只给账单ID：票面金额、患者、金额构成一律服务端从账单与支付流水现取，
- * 信前端传来的金额开票等于允许开出一张对不上钱的票。
  */
 @Data
 public class InvoiceIssueDTO {

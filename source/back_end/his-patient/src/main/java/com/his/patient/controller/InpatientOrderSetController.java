@@ -19,16 +19,6 @@ import java.util.List;
 
 /**
  * 医嘱组套模板（个人 / 科室 / 全院三级共享，sql/142）。
- *
- * <p>约定：查询 GET、写操作 POST、路径驼峰。
- *
- * <p><b>{@code @PreAuthorize} 全部标在方法上，不标类</b>：类级注解会静默覆盖所有没写自己注解的方法，
- * 之前就是这么把医生/药剂师挡在公共接口外面的（G5b）。
- *
- * <p>与个人模板（{@code /patient/inpatient/order/template}）分开是<b>故意的</b>：
- * 个人模板是医生在开立弹窗里顺手「另存为」的私人物件（权限码 ipd:order:*），
- * 组套是要被一个科室乃至全院复用的公共口径（ipd:orderSet:*）——
- * 谁有资格动全院组套、谁只能动自己的，必须在权限码上分得开。
  */
 @Tag(name = "医嘱组套模板")
 @RestController

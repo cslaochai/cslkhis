@@ -19,13 +19,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 卡片 {@code myNotice}：我未读的通知型站内信。
- *
- * <p>与 {@link MyTodoMetricProvider} 分两张卡、不合并成一个数字：通知型 {@code handle_status}
- * 为 NULL、靠 {@code read_status} 闭环，两类混在一起计数会让数字失去意义。
- *
- * <p>口径与顶栏未读数的差异（刻意）：{@code /system/message/unread/count} 统计所有
- * {@code read_status=0}（含待办型），本卡只统计通知型，所以本卡数字通常小于顶栏角标。
+ * 卡片 myNotice：我未读的通知型站内信。
  */
 @Service
 @RequiredArgsConstructor

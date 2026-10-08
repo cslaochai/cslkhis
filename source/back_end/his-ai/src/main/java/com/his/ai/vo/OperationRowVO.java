@@ -8,7 +8,6 @@ import java.util.List;
 
 /**
  * 问数结果的一行数据。列头由问题动态决定（交叉表形态），
- * 因此行用「按列下标对齐的值数组」表达，而不是无类型的键值 Map。
  */
 @Data
 @Schema(description = "问数结果行，cells 与 columns 按下标一一对应")

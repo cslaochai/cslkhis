@@ -16,13 +16,6 @@ import java.util.List;
 
 /**
  * 医生工作站 - 检查申请控制器
- *
- * <p><b>批次E 改造要点</b>：
- * <ul>
- *   <li>开单不再等「保存病历」，{@link #applyUpsert} 一调即落库（E1）；</li>
- *   <li>删除走 {@link #deleteById}，带缴费/执行/收费引用三重保护（E2）；</li>
- *   <li>列表按 <b>挂号</b> 取本次就诊，并带上执行进度与危急值（E5）。</li>
- * </ul>
  */
 @Tag(name = "检查申请")
 @RestController

@@ -15,11 +15,6 @@ import java.util.List;
 
 /**
  * 病案统计上报聚合 Mapper（跨模块裸 SQL 一处收口，列名已按 information_schema 核对）。
- *
- * <p>出院队列口径：discharge_time 非空且落在期间内、排除 7-医嘱取消入院；
- * dev 库存在"有出院时间但状态未流转"的脏数据，故不以 admit_status 判出院。
- * deptId 约定 0=全院（服务层把 null 归一为 0，避免裸 SQL 传 NULL 的类型歧义）。
- * 注解值必须是编译期常量，用 + 拼接。
  */
 @Mapper
 public interface StatReportAggMapper {

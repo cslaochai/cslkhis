@@ -17,11 +17,6 @@ import java.util.stream.Collectors;
 
 /**
  * 麻醉随访并发症要点字典（P134.3）+ 恢复情况/状态/轮次文案单点。
- *
- * <p>与 {@link SafetyCheckItems} 同口径：<b>不建字典</b>，后端枚举与前端各自单点。
- * 未知码值一律返回空串，绝不回落成某个看起来合法的值。
- * 码值→文案见 {@link AnesthesiaFollowupAdverseEnum} / {@link AnesthesiaFollowupRecoveryEnum} /
- * {@link AnesthesiaFollowupStatusEnum} / {@link AnesthesiaFollowupRoundEnum}。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class FollowupAdverseItems {

@@ -32,12 +32,6 @@ import java.util.List;
 
 /**
  * 病历三级质控流转服务实现
- * <p>
- * 状态机（收口在本类，Controller 不碰状态）：
- * 1 科级待审 →（approve）→ 2 病案室待审 →（approve）→ 3 医务处待审 →（finalApprove）→ 4 终审通过；
- * 1/2/3 任一级（returnForRework）→ 5 整改中，current_level 保持为退回发生级；
- * 5（resubmit）→ 回到 current_level 对应待审状态。
- * 所有动作写质控流转动作时间线时间线，只增不改。
  */
 @Slf4j
 @Service

@@ -10,10 +10,6 @@ import java.util.stream.Collectors;
 
 /**
  * 运营问数的可查询表目录 —— 白名单的唯一事实源。
- * <p>
- * 三处消费同源：提示词的表结构文本、/schema 接口的「可查询数据域」展示、
- * 安全闸门的表名校验。新增可查询表只改这里，三处自动同步；
- * 列清单同时是给模型的「允许使用的列」边界，因此只收录实测核对过列名的列。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OperationSchemaCatalog {
@@ -75,11 +71,7 @@ public final class OperationSchemaCatalog {
         return text.toString().trim();
     }
 
-    /**
-     * @param tableName 表名（白名单判定的键）
-     * @param usage     用途说明（人读）
-     * @param columns   可用列与码值口径（模型读，列名必须与库一致）
-     */
+
     public record TableDef(String tableName, String usage, String columns) {
     }
 }

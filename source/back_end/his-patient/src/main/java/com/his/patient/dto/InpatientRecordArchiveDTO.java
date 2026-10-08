@@ -9,9 +9,6 @@ import java.util.List;
 
 /**
  * 病历文书归档入参（支持批量）。
- *
- * <p><b>归档是单向门</b>：归档后禁止任何修改（服务层直接拒绝），所以这里要求
- * 必须写备注（归档说明/送病案室批次），让"谁在什么时候把这份病历封了"有据可查。
  */
 @Data
 public class InpatientRecordArchiveDTO implements Serializable {

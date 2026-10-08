@@ -20,9 +20,6 @@ import java.util.Objects;
 
 /**
  * 检验申请单的签名内容提供者（业务类型=8）—— 开单医师签名。
- *
- * <p>与检查申请单同一套规则（见 {@link InspectionApplySignProvider} 类注释）：
- * 开单即签、签名即锁定；规范化文本不含 record_id/record_no 等结诊回填与流程字段。
  */
 @Slf4j
 @Component

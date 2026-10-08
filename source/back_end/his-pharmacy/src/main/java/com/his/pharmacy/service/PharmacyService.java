@@ -14,7 +14,6 @@ import java.util.List;
 
 /**
  * 药房服务接口
- * 口径：字典归药品字典（药品信息联表带出）；库存一切增减落药品库存流水。
  */
 public interface PharmacyService extends IService<BizDrugStock> {
 

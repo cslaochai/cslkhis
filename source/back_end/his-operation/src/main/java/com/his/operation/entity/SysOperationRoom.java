@@ -7,13 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 手术间主数据（手术间）—— 排台总表的"台"。
- *
- * <p>在 sql/134 之前，手术间只是手术申请单.operation_room 的一列自由文本，
- * 下拉候选靠 distinct 历史值 —— 全院有几个手术间、开没开，没有任何地方回答得了。
- *
- * <p>⚠ 唯一键（room_code / room_name）不含 del_flag，且本表删除走<b>物理删</b>
- * （{@code SysOperationRoomMapper.purgeById}）：软删留下的行会继续占键，
- * 同码重建必然 Duplicate entry。停用请用 status=0，不要删。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

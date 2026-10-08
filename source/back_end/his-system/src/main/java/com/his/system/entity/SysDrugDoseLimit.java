@@ -9,10 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * 药品剂量上限知识条目（一行一个成分）
- * <p>
- * 命中只出提示、不拦审方：同一成分在不同人群（老年/肾功能不全/儿科）极量不同，
- * 系统拿不到体重与肌酐清除率，不能代替人判断。可比口径的边界见 {@code sql/130} 头注第四条
- * —— 只支持 g/mg/ug，IU 类与按周给药的药物一律不铺本表。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

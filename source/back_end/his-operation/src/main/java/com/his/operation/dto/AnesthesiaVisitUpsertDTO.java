@@ -10,13 +10,6 @@ import java.math.BigDecimal;
 
 /**
  * 麻醉术前访视单保存入参（新增 / 修改草稿）。
- *
- * <p><b>结论不是必填</b>：访视可以分两次做（先记评估、最后下结论），
- * 所以 {@code conclusion} 允许为空 —— 但空结论的访视单**不能作为麻醉记录的依据**，
- * 这条闸门在 {@code AnesthesiaRecordService#create} 里，不在这里。
- *
- * <p>时间统一用 {@code yyyy-MM-dd HH:mm:ss} 且中间必须是空格（AGENTS.md §3）：
- * 带 {@code T} 的 ISO 串会被 Jackson 直接拒绝，且报不出有用的错。
  */
 @Data
 public class AnesthesiaVisitUpsertDTO implements Serializable {

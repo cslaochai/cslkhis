@@ -4,9 +4,6 @@ import lombok.Data;
 
 /**
  * 财务日结各状态计数（一次查全，供页面卡片用）。
- *
- * <p>为什么不复用两个 list 接口在前端数：前端拿到的是**当前页**，
- * 翻页数字就变；计数必须后端 group by。
  */
 @Data
 public class SettlementStatusCountVO {

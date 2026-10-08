@@ -6,7 +6,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** I 类切口预防用药点评行 */
+/**
+ * I 类切口预防用药点评行
+ */
 @Data
 public class IncisionReviewVO {
 

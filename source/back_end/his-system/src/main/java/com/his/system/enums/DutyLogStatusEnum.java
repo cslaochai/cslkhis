@@ -4,9 +4,6 @@ import lombok.Getter;
 
 /**
  * 值班日志/交班本状态枚举（码值口径 = biz_duty_log.status 列注释）。
- *
- * <p>取代原 {@code DutyLogService.ST_*} 接口常量；登记写入口只允许 PENDING/DONE
- * （交班/签收由闭环推进，见 DutyLogServiceImpl）。
  */
 @Getter
 public enum DutyLogStatusEnum {

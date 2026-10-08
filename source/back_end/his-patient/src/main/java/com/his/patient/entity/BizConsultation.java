@@ -11,19 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院会诊（P4.1：申请 → 应答 → 会诊记录 → 完成 → 回写病历）。
- *
- * <p>字段与会诊申请记录 <b>一一对应</b>（多一个库里没有的列 → 全表 select 直接 500）。
- *
- * <p>三处容易踩的点：
- * <ol>
- *   <li>本表主键列名是 {@code consultation_id}，<b>不叫 id</b>，因此**不继承 BaseEntity**
- *       （BaseEntity 的 {@code @TableId} 固定映射 id）。它早于"新表 PK 一律叫 id"的约定，
- *       主键不许改，所以这里显式声明主键与审计字段。</li>
- *   <li>{@code doctorId} 是 NOT NULL 的"会诊医生"列：**申请时未指定写 0**（0 = 未指定，
- *       等会诊科室自己认领），不写 NULL 也不借别的医生ID占位。</li>
- *   <li>时间字段落库前必须 truncate 到秒（库表是 DATETIME(0)，MySQL 会四舍五入 →
- *       "写进去的 ≠ 读回来的"）。</li>
- * </ol>
  */
 @Data
 @TableName("biz_consultation")

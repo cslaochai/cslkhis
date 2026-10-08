@@ -5,12 +5,6 @@ import lombok.Data;
 
 /**
  * 病情恶化预警提示词变量。
- *
- * <p>对应 {@code prompts/deterioration-alert.md} 的全部占位符。
- * 字段名与模板里的 {{占位符}} 一一对应，改提示词加占位符时必须同步加字段。
- *
- * <p>数据全部是「事实层代码算」出来的文本（见 DeteriorationScoreRules），
- * 这里只负责把已算好的事实摆进模板，不做二次判断。
  */
 @Data
 public class DeteriorationAlertPromptVariablesVO implements PromptVariables {

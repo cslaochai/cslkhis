@@ -11,9 +11,6 @@ import java.time.LocalDate;
 
 /**
  * 住院摆药单主单 Mapper。
- *
- * <p>跨模块读（入院记录 / 住院医嘱 / 病区）按仓库约定走裸 SQL，
- * 不引入对 his-patient 的模块依赖。
  */
 @Mapper
 public interface BizWardDispenseMapper extends BaseMapper<BizWardDispense> {

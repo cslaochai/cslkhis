@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 操作日志列表行（列表不带 operParam / jsonResult —— 请求体动辄几 KB，一页 100 行就把带宽吃没了，
- * 要看内容点开详情）。
  */
 @Data
 public class OperLogListVO {

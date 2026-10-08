@@ -12,34 +12,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * 院级日结单（G8）。一天一张，{@code settleDate} 唯一。
- *
- * <p><b>本单的金额来自三条互相独立的链，三级对账才有判别力</b>（详见
- * {@link BizDaySettlementMapper}）：
- * <ol>
- *   <li><b>资金链（L3 支付流水）</b>—— {@code chargeAmount}/{@code refundAmount}/各渠道分桶/
- *       {@code billCount} 全部现算自支付资金流水。这是"今天到底进了多少钱"的唯一事实。</li>
- *   <li><b>凭证链（L4 班结单）</b>—— {@code detailAmount} = 当日各交班单定格金额之和。
- *       它落后于资金链就说明<b>有人没收了钱不交班</b>。</li>
- *   <li><b>账单链（L2 账单 + 摊行）</b>—— {@code deptAmount}/{@code unattributedAmount} 按科室归集
- *       当日收讫账单的明细摊行，与单头应收合计互校。</li>
- * </ol>
- * 三级对账因此是：一级逐张班结 ↔ 该时段流水复算；二级 Σ班结 ↔ 全院流水实收；
- * 三级 Σ摊行（含无归属）↔ Σ账单单头。任何一级自己等于自己都毫无意义，所以左右必须来自不同的表或不同的取数路径。
- *
- * <p><b>统筹（{@link #poolAmount}）只在本院出现</b>：它是医保局后付给医院的钱，
- * 收银员不经手、不进现金清点、也不参与 {@link #netAmount}，单列出来与医保报盘台账核对。
- *
- * <p>二级和三级必须同时成立才算"平"。只对一级的话，"某个收费员忘了交班"永远查不出来
- * —— 所以另有 {@link #unassignedCount}/{@link #unassignedAmount} 专门装这类流水。
- *
- * <p><b>科室维度</b>：{@link #deptAmount} 是已归到科室的摊行金额，{@link #unattributedAmount}
- * 是**科室锚点缺失**的摊行金额。两者之和才等于摊行总额 —— 无归属的绝不并进科室统计，
- * 否则科室收入表会凭空多出一块来路不明的钱。新数据（记账时就带科室）应当 100% 有归属，
- * 这个字段是给缺陷留的观察窗。
- *
- * <p><b>可重算但不可改</b>：{@code settleStatus=1}（待审核）时允许重新汇总覆盖（当天数据还在变），
- * 一经审核（2）即锁定 —— 防止"白天对完账、晚上偷偷改数"。
+ * 院级日结单（G8）。一天一张，settleDate 唯一。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

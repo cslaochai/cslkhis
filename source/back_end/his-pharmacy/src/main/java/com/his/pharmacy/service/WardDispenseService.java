@@ -13,9 +13,6 @@ import java.util.List;
 
 /**
  * 住院摆药服务（G13）。
- *
- * <p>链路：生成摆药单（按病区/日期捞药品医嘱）→ 药房 FEFO 配药 + 计费进住院费用单
- * → 病区核对 → 退药回库 + 负冲账。
  */
 public interface WardDispenseService {
 

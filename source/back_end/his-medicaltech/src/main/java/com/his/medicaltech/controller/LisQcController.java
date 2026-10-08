@@ -14,8 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * LIS 室内质控接口（URL 前缀 /medicaltech/lisQc）
- *
- * <p>判定结果（status / violatedRules / zScore）全部服务端算好落库，前端只读。
  */
 @Tag(name = "LIS室内质控")
 @RestController

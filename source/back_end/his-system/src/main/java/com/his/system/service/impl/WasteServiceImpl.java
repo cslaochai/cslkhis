@@ -26,9 +26,6 @@ import java.util.Objects;
 
 /**
  * 医疗废物登记服务。
- *
- * <p>三态：1已登记 → 2已交接 → 3已处置，不可逆。
- * 已交接/已处置的记录禁删——交接单是与处置公司的对外凭证，删了台账对不上。
  */
 @Service
 @RequiredArgsConstructor
@@ -40,7 +37,7 @@ public class WasteServiceImpl extends ServiceImpl<BizMedicalWasteMapper, BizMedi
 
     @Transactional(rollbackFor = Exception.class)
     public WasteVO create(WasteDTO.Create dto) {
-        // ① 条件必填：科室ID与科室名称二选一即可（前端可只传名称），单字段加 @NotNull 会把合法请求挡成 400
+        // B-条件必填：科室ID与科室名称二选一即可（前端可只传名称），单字段加 @NotNull 会把合法请求挡成 400，DTO 注解无法表达，保留
         if (dto.getDeptId() == null && !TextUtil.hasText(dto.getDeptName())) {
             throw new BusinessException("产生科室不能为空");
         }

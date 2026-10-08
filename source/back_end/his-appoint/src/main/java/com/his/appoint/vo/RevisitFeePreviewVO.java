@@ -10,10 +10,6 @@ import java.time.LocalDate;
 
 /**
  * 复诊费用预估出参
- *
- * <p>除了金额，还把「命中了哪条策略、免了哪几项」原样带出去 ——
- * 前台和患者都能看到"为什么这张号是 0 元 / 为什么还要交 12 元"，
- * 免钱这件事不能只由系统内部悄悄决定。
  */
 @Data
 public class RevisitFeePreviewVO {

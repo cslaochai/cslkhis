@@ -5,9 +5,6 @@ import lombok.Data;
 
 /**
  * 患者档案合并入参（P5.1 EMPI）
- *
- * <p>一次只并一份（不是批量）：合并是"把一个人从档案库里抹掉"的动作，
- * 批量接口会让人一次点掉一批而没有逐个确认的机会。审计表也因此天然是一行一档。
  */
 @Data
 public class PatientMergeDTO {

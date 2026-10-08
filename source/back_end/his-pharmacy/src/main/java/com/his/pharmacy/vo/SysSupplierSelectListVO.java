@@ -9,7 +9,6 @@ import java.io.Serializable;
 
 /**
  * 供应商下拉出参：采购单/退货单选供应商只认「哪一家」，
- * 证照号、有效期、评分、联系人属台账列，走供应商分页与详情看。
  */
 @Data
 @Schema(name = "SysSupplierSelectListVO", description = "供应商下拉出参")

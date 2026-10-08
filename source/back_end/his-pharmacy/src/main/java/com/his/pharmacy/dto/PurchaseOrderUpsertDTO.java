@@ -11,9 +11,6 @@ import java.util.List;
 
 /**
  * 采购订单新增/修改入参（orderId 为空=新增，非空=修改）
- *
- * ⚠ 金额不从这里收：明细的 amount 与订单的 total_amount 一律由服务端按
- *   数量 × 单价重算，前端传了也不采信（否则前端可以把总额改成任意值）。
  */
 @Data
 public class PurchaseOrderUpsertDTO {

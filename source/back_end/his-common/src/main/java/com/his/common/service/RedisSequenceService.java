@@ -2,18 +2,6 @@ package com.his.common.service;
 
 /**
  * 基于 Redis 的分布式序列号 / 业务单号生成服务。
- *
- * <p>key 格式：{@code {module}:{yyyyMMdd}}，过期时间 24 小时。
- *
- * <p><b>为什么单号不走数据库自增：</b>业务单号（患者号、结算单号、发票号…）要求"当天连续、
- * 跨天归零、多实例不撞号"。数据库自增满足不了"跨天归零"，进程内 {@code AtomicInteger}
- * 满足不了"多实例不撞号"（多副本部署时两实例会发同一个号）—— 只有 Redis 的原子
- * {@code INCR} + 按天分 key 能同时满足三条。
- *
- * <p><b>两层用法的分工：</b>{@link #next(String)} 是<b>发号原语</b>，只保证"某个 key 当天递增不重号"，
- * 给非单号场景用（配置表主键、叫号队列位次）；业务单号一律走下面的 {@code generateXxxNo()}，
- * 因为一个单号同时钉死四件事——Redis key 名、前缀、日期段、序号宽度。四件事写进调用点的实参里
- * 就等于没有口径：换 key 名会让计数器归 1、与当天已发的号撞唯一索引，而这既不报错也看不出来。
  */
 public interface RedisSequenceService {
 

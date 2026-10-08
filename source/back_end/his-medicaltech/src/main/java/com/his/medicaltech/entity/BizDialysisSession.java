@@ -15,10 +15,6 @@ import java.time.LocalDateTime;
 
 /**
  * 透析单：排班 + 治疗记录一体，一次治疗单元一单。
- *
- * <p>状态机：1 已排班 →（上机）2 透析中 →（下机）3 已完成；1 →（取消）4 已取消。
- * 机位占用由唯一键 uk(dialysis_date, time_slot, machine_id, del_flag) 在库里兜底，
- * 取消走软删以外的状态位，因此同机位同时段重排要先取消旧单。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -8,10 +8,6 @@ import java.util.List;
 
 /**
  * ICD-10 推荐结果。
- * <p>
- * {@code degraded = true} 表示本次没有走模型（未配置密钥 / 超时 / 熔断），
- * 结果是关键词规则给出的。前端必须把这个状态显示出来 ——
- * 医生有权知道「这是 AI 给的」还是「这只是关键词匹配」。
  */
 @Data
 @Schema(description = "ICD-10 推荐结果")

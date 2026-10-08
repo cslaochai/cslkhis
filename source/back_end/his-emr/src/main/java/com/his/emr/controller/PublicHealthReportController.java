@@ -16,10 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 公卫上报控制器（菜单 618 /public-health）。
- *
- * <p>状态口径以 <b>列注释公卫上报表的报告状态</b> 为准（出现冲突时列注释最高）：
- * <b>1-待审核 2-审核通过 3-审核驳回</b>，与字典 his_ph_report_status 一致。
- * 注意 VO/DTO 上旧注释写的是「待上报/已上报/已审核」，属错口径，已按列注释纠正。
  */
 @Tag(name = "公卫上报")
 @RestController

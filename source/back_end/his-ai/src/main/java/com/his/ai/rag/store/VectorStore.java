@@ -4,10 +4,6 @@ import java.util.List;
 
 /**
  * 向量库接口。
- *
- * <p>开发环境实现 {@link InMemoryVectorStore}（内存 + 启动时从 chunk 表重建）。
- * 向量形态是定长稠密 float[]，因此将来接 Milvus（存 {@code FloatVector}）只需新增一个实现，
- * {@link com.his.ai.rag.embedding.EmbeddingProvider} 与检索调用方完全不变。
  */
 public interface VectorStore {
 

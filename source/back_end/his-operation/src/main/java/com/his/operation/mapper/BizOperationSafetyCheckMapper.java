@@ -10,9 +10,6 @@ import java.util.List;
 
 /**
  * 手术安全核查 Mapper。
- *
- * <p>只增不改不删：本接口没有 UPDATE/DELETE 自定义语句，
- * 唯一键 {@code uk_check_apply_phase} 兜住"同一时段签两次"。
  */
 @Mapper
 public interface BizOperationSafetyCheckMapper extends BaseMapper<BizOperationSafetyCheck> {

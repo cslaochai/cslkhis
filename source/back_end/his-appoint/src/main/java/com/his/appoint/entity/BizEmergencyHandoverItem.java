@@ -9,12 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 急诊交班明细（sql/153）——「逐条点名」这一事实的载体。
- *
- * <p>一行 = 一次"这个人现在归你"。患者姓名、负责医生、候诊时长、留观小时数、超时档位
- * 全部是<b>交班时刻的快照</b>：事后病历怎么变都不影响"当时交出去的是什么"。
- *
- * <p>{@code fromDoctorId} 为 NULL 是这张表最有价值的一行：它说明这条在交班前
- * 谁都不负责（在待派单池里），是"上一班没人管"的直接证据。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

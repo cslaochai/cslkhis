@@ -8,9 +8,6 @@ import java.util.List;
 
 /**
  * CDR 概览：时间轴的"目录级"数字。
- *
- * <p>{@code eventCounts} 是**与源表对账**用的：每个数都能用一条独立 SQL 复核，
- * 所以"时间轴漏了数据"这件事是可以被证伪的，而不是只能靠肉眼。
  */
 @Data
 @Schema(description = "CDR 概览")

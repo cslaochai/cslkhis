@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
-/** 医师下拉（抗菌药物处方权授权选人用） */
+/**
+ * 医师下拉（抗菌药物处方权授权选人用）
+ */
 @Data
 public class AntibioticDoctorSelectListVO {
 

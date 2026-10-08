@@ -14,9 +14,6 @@ import java.util.List;
 
 /**
  * ICU 入出科 Mapper。
- *
- * <p>入院记录 / 床位 / 病区归 his-patient 其他子域与系统域，按项目规范
- * 不跨域调它们的 Mapper，这里走裸 SQL 读。ICU 床位以床位的床位类型='ICU' 为准。
  */
 @Mapper
 public interface BizIcuStayMapper extends BaseMapper<BizIcuStay> {

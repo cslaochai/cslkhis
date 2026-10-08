@@ -11,16 +11,6 @@ import java.util.List;
 
 /**
  * 住院账务服务（P3）：预交金 / 日清单 / 出院结算 / 欠费提示。
- *
- * <p>四层之后本服务<b>自己不持有任何事实表</b>，只是把三层的口径按住院的场景拼起来：
- * <ol>
- *   <li>预交金 = L3 那段没有账单锚的资金流水（{@code bill_id IS NULL + source_type=3}）
- *       + L3 的住院资金账户额度，钱与额度同一事务。</li>
- *   <li>日清单 = L1 记账行净额（含红冲负行），不另算一套金额。</li>
- *   <li>出院结算 = L2 出账（与门诊同一份试算草稿）+ L3 余额抵扣与退差；
- *       "结算单"就是那张 {@code bill_type=4} 的账单，没有第二张台账。</li>
- *   <li>欠费只提示不阻断（急救不允许被钱卡住），真正拦人的是出院结算校验。</li>
- * </ol>
  */
 public interface InpatientAccountService {
 
@@ -78,12 +68,7 @@ public interface InpatientAccountService {
      */
     ArrearsView arrearsView(Long admissionId);
 
-    /**
-     * @param chargedNet    已发生费用：L1 应收净额（含红冲负行）
-     * @param collected     已收：净预交（充值 − 柜面退款）+ 在账单上直接收的钱
-     * @param prepayBalance 住院资金账户余额
-     * @param arrearsAmount max(0, chargedNet − collected)
-     */
+
     record ArrearsView(BigDecimal chargedNet, BigDecimal collected,
                        BigDecimal prepayBalance, BigDecimal arrearsAmount) {
     }

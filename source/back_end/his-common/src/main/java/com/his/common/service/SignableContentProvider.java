@@ -8,16 +8,6 @@ import java.time.LocalDateTime;
 
 /**
  * 「什么内容可签、签完把锚点写到哪」的业务侧扩展点。
- *
- * <p>实现者的三条硬约束：
- * <ol>
- *   <li>{@link #load} 必须返回**确定性**内容：同一份业务数据重复调用必须得到同一串文本。
- *       任何"取当前时间""取随机数""依赖 HashMap 遍历顺序"的写法都会让验签无意义。</li>
- *   <li>{@link #blockReason} 必须给出**人能照着做**的拒绝理由，且不许把"已签名"和
- *       "草稿不能签"混成一句话 —— 前者要引导去作废，后者要引导去提交。</li>
- *   <li>{@link #applySignAnchor} 与 {@link #revokeSignAnchor} 必须能重复执行而不出错
- *       （幂等），因为签名服务允许在唯一索引冲突时重试。</li>
- * </ol>
  */
 public interface SignableContentProvider {
 

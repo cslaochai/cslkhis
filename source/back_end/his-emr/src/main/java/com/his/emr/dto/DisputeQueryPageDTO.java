@@ -8,9 +8,6 @@ import java.io.Serializable;
 
 /**
  * 纠纷/投诉分页查询入参（listPage 为 POST）。
- *
- * <p>dateFrom/dateTo 用 'yyyy-MM-dd' 字符串：登记时间跨度查询，服务端补 23:59:59 上界，
- * 不传 LocalDateTime（EP 空格分隔与 ISO T 分隔两套格式会互相 400）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

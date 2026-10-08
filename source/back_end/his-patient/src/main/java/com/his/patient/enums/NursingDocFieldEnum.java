@@ -4,10 +4,6 @@ import lombok.Getter;
 
 /**
  * 护理文书字段中文名枚举（变更日志 fieldLabel 用，码 = biz_nursing_record 库列名）。
- *
- * <p>与通用码值枚举的差别（<b>显式声明缺省口径</b>）：日志里出现枚举外的列名时
- * {@link #getText} <b>原样返回列名，不猜</b> —— 猜错一个列名，飞检时会变成
- * "日志里写了一个不存在的字段"；null 返回「—」占位。
  */
 @Getter
 public enum NursingDocFieldEnum {

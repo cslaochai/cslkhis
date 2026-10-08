@@ -7,16 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 叫号回执 VO。
- *
- * <p>为什么必须有它：{@code /queue/callNext} 原先返回 {@code Result<Void>}，
- * 前端只能「叫完号 → 等 500ms → 重新拉列表 → 从 queueStatus=3 的行里猜刚落座的是谁」。
- * 500ms 窗口里分诊台再动一次队列（插队/退号/呼叫），猜到的行和实际接到的行就不是同一个人，
- * 屏幕显示与病历挂的诊次会不一致。叫号是「谁被叫进来」这个事实的唯一定义点，
- * 必须由服务端把结果原样回给前端。
- *
- * <p>继承 {@link BizQueueListVO}：接诊动作要落地成「当前患者」，前端 selectPatient(row)
- * 需要的字段（patientId / registId / visitType / revisitRecordId ...）与列表行完全一致，
- * 继承可以保证两份形状不会再漂移。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

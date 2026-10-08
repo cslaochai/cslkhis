@@ -3,13 +3,13 @@ package com.his.ai.dto;
 import com.his.common.base.PageParam;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 /**
  * 检验项目白话词典 · 后台检索条件。
- *
- * <p>与患者端无关，这里要能查出<b>停用</b>的条目（运营要靠它把停用的改回来）。
  */
 @Data
+@EqualsAndHashCode(callSuper = true)
 @Schema(description = "白话词典检索条件")
 public class LabPlainItemSearchDTO extends PageParam {
 

@@ -9,9 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * 记账入参（L1）。
- *
- * <p>金额不在入参里：金额一律由服务端按单价 × 数量现算，
- * 信前端传来的金额等于把应收交给调用方定义。
  */
 @Data
 public class FeeBookDTO {

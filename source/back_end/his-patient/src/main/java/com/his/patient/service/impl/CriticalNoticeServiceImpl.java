@@ -36,20 +36,6 @@ import java.util.Set;
 
 /**
  * 病危重通知服务实现（sql/161）。
- *
- * <p>口径：
- * <ol>
- *   <li><b>签发即电子签名</b>：通知是法定告知凭证，落款人（签名主体）必须是当前登录职工，
- *       医师名只能由系统带出、不接受前端冒充；签名失败随签发事务一起回滚，
- *       不允许「发出去但没签名」的中间态。</li>
- *   <li><b>签收三要素缺一不可</b>：签收人姓名 + 与患者关系（法定必填） + 手写签名图；
- *       关系不在字典码表内直接拒 —— 「家属」两个字在诉讼里不等于被授权的人。</li>
- *   <li><b>已签收不许作废</b>：患方签字的告知事实不能事后蒸发，登记错误走备注/重开新单纠偏；
- *       已签发且有有效签名的作废须先在签名中心作废签名（作废留痕之后再作废单据）。</li>
- *   <li>患者一般项目全部服务端按住院重查快照，不采信前端字符串。</li>
- *   <li>在院事实是签发前提（admit_status=1）：人已出院再签发病危通知是编造告知。</li>
- *   <li>同一患者多次病情变化可开多张通知（不设「一住院一张」闸），待签收口径由统计卡呈现。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -275,7 +261,7 @@ public class CriticalNoticeServiceImpl extends ServiceImpl<BizCriticalNoticeMapp
                     + BizCriticalNotice.statusText(notice.getNoticeStatus()) + "」");
         }
         assertDeptAccessible(notice.getDeptId());
-        // 保留（类别③）：关系码值必须命中字典（null 只是「没选」的一种），注解只能管到非空
+        // D-业务规则：关系码值合法性（null 只是「没选」的一种，非空与合法性混写一条，整条保留不拆）
         if (dto.getSignerRelation() == null || !RELATIONS.contains(dto.getSignerRelation())) {
             throw new BusinessException("签收人与患者的关系取值不合法（见字典 his_notice_relation，法定必填）");
         }

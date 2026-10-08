@@ -12,10 +12,6 @@ import com.his.emr.vo.TcmDecoctVO;
 
 /**
  * 中药代煎台账（sql/139）。
- *
- * <p>单据由「发药完成」这一个动作生成，界面不提供新增入口 ——
- * 代煎的前提是药已经调剂出去，医生或药师手工造一张"还没发药就要煎"的单子，
- * 后面退药时没人知道该把它怎么办。
  */
 public interface TcmDecoctService extends IService<BizTcmDecoct> {
 

@@ -11,20 +11,6 @@ import java.util.List;
 
 /**
  * 护理质量指标月度台账 Mapper（sql/168）。
- *
- * <p><b>台账是算出来的，不是录进去的</b>：本 Mapper 里的四条取数 SQL（床日数、事件例数）
- * 与 {@code sql/168} 第 13 节铺底的表达式<b>必须逐字一致</b>，改一处要改两处，
- * 否则「重算」按钮一按，铺底数就会漂（自检 T14~T16 专门盯这条）。口径原文写在 168 文件头：
- * <ul>
- *   <li>实际占用床日数 = Σ 每段住院在该月内的天数，入院当日计、出院当日计，同日出入计 1 天，
- *       统计末日 = LEAST(月末, CURDATE())（所以当月是「至今为止」的活数）；</li>
- *   <li>千床日率 = 分子 / 床日 × 1000；跌倒与院内压疮共用同一个床日分母；</li>
- *   <li>压疮分子只认 acquired_flag = 1-院内获得，入院带入的留档但不进分子。</li>
- * </ul>
- *
- * <p>跨域只读：入院记录（住院事实）、不良事件上报（不良事件）
- * 分属本域外/其他模块，按项目规范不注入它们的 Mapper，这里走裸 SQL。
- * 这两张表都<b>没有 create_by 列</b>（adverse_event 尤其注意），别在条件里引用。
  */
 @Mapper
 public interface BizNursingQcIndicatorMapper extends BaseMapper<BizNursingQcIndicator> {

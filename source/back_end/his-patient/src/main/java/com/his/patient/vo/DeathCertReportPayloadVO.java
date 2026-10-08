@@ -6,17 +6,7 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * 死因监测上报报文（对应 {@code DeathCertificateServiceImpl#buildReportPayload}）。
- *
- * <p><b>报文即契约</b>：字段名按《居民死亡医学证明（推断）书》调查记录逐项对齐，
- * 死因链按 Ⅰ(a~d)/Ⅱ 分组带上，回执侧要的就是这一份。真实对接疾控平台时，
- * 按平台规范替换本类即可，上报流程（建卡 → 审核 → 报送）不变。
- *
- * <p>三段嵌套（underlyingCause / causeChainPartI+II / relative）各自建类而不用嵌套 Map：
- * 嵌套 Map 的键名编译器不管，写错要等疾控侧返回错误报文才发现。
- *
- * <p>时间字段保持 String：报文侧要的是 {@code yyyy-MM-dd HH:mm:ss} 文本，
- * 且这份 JSON 已落库（report_payload），改形状会让历史报文与新报文对不上。
+ * 死因监测上报报文（对应 DeathCertificateServiceImpl#buildReportPayload）。
  */
 @Data
 public class DeathCertReportPayloadVO implements Serializable {

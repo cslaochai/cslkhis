@@ -4,10 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * 急诊状态枚举 —— 急诊就诊状态的<b>唯一权威码值</b>（1-6）。
- *
- * <p>{@link #UNKNOWN} 是 {@link #fromCode} 的解析兜底，<b>不是可落库的业务码值</b>，
- * 因此 {@link #getText} 与 {@link #isValid} 都把它排除在外（脏值一律出空串、判为非法）。
+ * 急诊状态枚举 —— 急诊就诊状态的唯一权威码值（1-6）。
  */
 @Getter
 @AllArgsConstructor

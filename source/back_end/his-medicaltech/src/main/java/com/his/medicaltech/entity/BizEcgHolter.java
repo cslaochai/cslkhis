@@ -11,10 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * Holter 动态心电分析（Holter 动态心电，sql/173）。
- *
- * <p>24 小时分析的结论字段 —— 每一项都是 Holter 报告单上的固定栏位，
- * 拆成列而不是塞一坨文本，统计（房颤检出率/长间歇人数）才有得算。
- * ecg_type=2 的检查提交报告前必须先有这一行（服务端闸门）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

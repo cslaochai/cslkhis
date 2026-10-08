@@ -7,10 +7,6 @@ import java.time.LocalDateTime;
 
 /**
  * TSA 服务状态（签名中心「时间戳」区块与运维排障用）。
- *
- * <p><b>available / configured / effective 三个值必须同屏</b>：
- * 配置了 time_source=3 但适配器不在线时，实际生效的是「本机时钟」——
- * 只显示配置值就是谎报；三个值一起给，降级一目了然。
  */
 @Data
 public class TsaStatusVO {

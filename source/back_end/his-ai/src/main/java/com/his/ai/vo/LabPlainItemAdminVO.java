@@ -7,8 +7,6 @@ import lombok.Data;
 
 /**
  * 检验项目白话词典 · 后台列表行。
- *
- * <p>比患者端多两个字段：{@code status}（运营要看停用态）、{@code sortOrder}（排序要能改）。
  */
 @Data
 @Schema(description = "白话词典维护行")

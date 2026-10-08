@@ -10,10 +10,6 @@ import java.time.LocalDate;
 
 /**
  * LIS 室内质控计划
- *
- * <p>一条计划 = 一个（检验项目 × 仪器 × 质控水平）组合的靶值与 SD。
- * 靶值/SD 是判定的基准，必须由计划提供 —— 没有靶值就没法算 Z，
- * 也就谈不上在控/失控。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

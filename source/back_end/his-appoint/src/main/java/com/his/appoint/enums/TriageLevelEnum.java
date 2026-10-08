@@ -4,11 +4,6 @@ import lombok.Getter;
 
 /**
  * 门诊分诊等级（区别于急诊 I~IV 级）。
- *
- * <p>数字越小越优先，{@code callNext} 按 {@code triage_level ASC, sequence_no ASC} 取号。
- * <p><b>默认 4（非急）</b>：患者签到入队时后端就写入 4 级，因此「未分诊」不再阻塞接诊。
- * 分诊台的职责是把 1/2/3 级<b>提上来</b>，而不是给 4 级患者放行 —— 唯一保留的硬约束是
- * 「队列里还有 1/2 级未接诊时，{@code callSpecific} 不允许跳过他们」。
  */
 @Getter
 public enum TriageLevelEnum {

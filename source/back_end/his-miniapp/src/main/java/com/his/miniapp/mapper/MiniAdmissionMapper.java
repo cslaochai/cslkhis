@@ -8,10 +8,6 @@ import java.util.List;
 
 /**
  * 住院登记跨模块只读 Mapper（裸 SQL，铁律：跨模块读异模块表用裸 SQL Mapper，
- * 不直接注入 his-patient 的 BizAdmissionMapper）。
- *
- * <p>患者端押金页只读少量展示列；写入（预交金充值/退款）全部走
- * his-charge 的 {@code InpatientAccountService}，不在这里碰。
  */
 @Mapper
 public interface MiniAdmissionMapper {

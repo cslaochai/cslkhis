@@ -9,12 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * 治疗项目快照（项目本身 + 能解析出来的执行科室名）。
- *
- * <p>科室名一律 LEFT JOIN 科室现算：老字典里科室ID 只有 101/105 两个值且在科室表中
- * **不存在**（孤儿引用），直接快照字典里的科室会写进一个根本不存在的科室。
- * 查不到就返回 null，页面显示「未指定」，不兜底。
- *
- * <p>跨模块只读一张字典表、不引 his-system 的实体依赖。
  */
 @Data
 public class TreatmentItemSnapshotVO implements Serializable {

@@ -5,9 +5,6 @@ import lombok.Data;
 
 /**
  * 渲染完成的提示词。
- * <p>
- * 一个模板文件里同时承载 system 与 user 两段：
- * 分隔符之前是 system（角色、规则、输出 JSON 结构），分隔符之后是 user（本次数据）。
  */
 @Data
 @AllArgsConstructor

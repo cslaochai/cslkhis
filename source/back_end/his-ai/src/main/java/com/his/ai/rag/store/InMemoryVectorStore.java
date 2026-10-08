@@ -10,13 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 内存向量库（开发环境方案）。
- *
- * <p>向量不落库：服务启动时由 {@code KnowledgeStoreService.rebuild()} 从
- * {@code sys_knowledge_chunk} 全量读出、调用 {@link com.his.ai.rag.embedding.EmbeddingProvider}
- * 算向量后灌入本库。重启自动重建，零外部依赖。
- *
- * <p>向量为定长稠密 float[]（已 L2 归一），检索直接算点积（= 余弦）。语料在开发/演示量级
- * （千块以内）时线性遍历足够；将来量级上来再换 Milvus。
  */
 @Component
 public class InMemoryVectorStore implements VectorStore {

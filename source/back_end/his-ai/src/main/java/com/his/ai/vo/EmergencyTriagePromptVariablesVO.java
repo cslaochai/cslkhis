@@ -5,12 +5,6 @@ import lombok.Data;
 
 /**
  * 急诊分诊提示词变量。
- *
- * <p>对应 {@code prompts/emergency-triage.md} 的全部占位符。
- * 字段名与模板里的 {{占位符}} 一一对应。
- *
- * <p>{@code currentLevel}/{@code hardLevel} 是代码算出的分级结论，
- * 模型只能在同级别内调整表述，不得跨级（分诊只升不降的纪律由代码兜底）。
  */
 @Data
 public class EmergencyTriagePromptVariablesVO implements PromptVariables {

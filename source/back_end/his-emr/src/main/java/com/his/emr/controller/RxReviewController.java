@@ -17,11 +17,6 @@ import java.util.List;
 
 /**
  * 处方点评（事后专项点评 + 超常处方公示 + 医师约谈）。
- *
- * <p>权限：页面读 {@code pharmacy:rxReview:list}；写动作 {@code :add}；公示单独
- * {@code :publicity}（把不合理处方带出院内是高敏动作，能单独收权）；约谈 {@code :talk}；
- * 删除 {@code :delete}；导出 {@code :export}；公示页只读 {@code pharmacy:rxPublicity:list}。
- * 权限码与菜单 510/511、按钮 2602~2606 一一对应（sql/160）。
  */
 @Tag(name = "处方点评")
 @RestController

@@ -4,14 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * 预约/就诊状态枚举 —— 挂号信息的挂号状态的<b>唯一权威码值</b>。
- *
- * <p>两个「终态补充」（7/8）是日终结转（{@code DayEndSettleService}）落下来的，
- * 用来堵住「昨天的号没人收尾」：以前未签到、已签到未接诊的挂号会永久停在 1/2，
- * 于是「按今天筛」的每个查询都要各自兜一遍，迟早漏。
- *
- * <p>注意别把 7/8 与队列状态混用：7 在 {@link QueueStatusEnum} 里是「已失效」，
- * 在 {@link OpdLogStatusEnum} 里是「未就诊」，三个枚举各自独立成域。
+ * 预约/就诊状态枚举 —— 挂号信息的挂号状态的唯一权威码值。
  */
 @Getter
 @AllArgsConstructor

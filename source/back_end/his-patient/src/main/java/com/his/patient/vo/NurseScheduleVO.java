@@ -10,12 +10,6 @@ import java.util.List;
 
 /**
  * 病区护理排班出参（内层静态类组织，同 InpatientLeaveVO）。
- *
- * <p><b>所有 Long 主键/外键一律字符串序列化</b>：雪花 19 位超出 JS Number.MAX_SAFE_INTEGER，
- * 裸数字回前端会丢精度，拿丢过的值回查就是「排班行不存在」。
- *
- * <p>日期与时间在 SQL 侧用 DATE_FORMAT/直接取 CHAR 别名字符串化，
- * 不在 Java 侧靠 Jackson 默认格式碰运气（AGENTS §3）。
  */
 public class NurseScheduleVO {
 
@@ -25,11 +19,6 @@ public class NurseScheduleVO {
     @Data
     /**
      * 护理排班单元（sql/209 起不止病区一种）。
-     *
-     * <p>{@code unitType} 决定 {@code wardId} 这一列装的是谁的 id：
-     * 1-病区 → {@code sys_ward.ward_id}；2-门诊科室 → {@code sys_department.id}。
-     * 字段名沿用 wardId 是为了不让存量 1680 行和现有页面一起改一轮，
-     * <b>判定一律以 unitType 为准</b>。
      */
     public static class Ward implements Serializable {
         private static final long serialVersionUID = 1L;

@@ -9,13 +9,6 @@ import java.util.List;
 
 /**
  * 按膳食方案批量生成订餐（营养科/食堂侧）。
- *
- * <p>生成规则全部在服务端：只取 plan_status=1-执行中且 route=1-口服的方案，
- * 按方案 meal_types 拆成一日多餐；管饲与肠外营养不进订餐。
- *
- * <p>{@code overwrite}：uk_meal_order(admission_id, meal_date, meal_type) 不含 del_flag，
- * 重生成必须先物理删旧行 —— 但只删「还没配送」的行（0-待配餐/1-已配餐），
- * 已配送/已签收的餐是既成事实，不许被一次点击抹掉，那些患者当天就跳过不重生成。
  */
 @Data
 public class MealGenerateDTO {

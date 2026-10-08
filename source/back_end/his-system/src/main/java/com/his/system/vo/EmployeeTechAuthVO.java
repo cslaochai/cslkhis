@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 技术授权台账出参。
- *
- * <p>{@code effective} 与 {@code canX} 一律服务端现算（不落列）：
- * 授权是否生效=状态已授权 + 有效期覆盖今天，存成列就会出现「日期已过、状态还没刷」的漂移窗口。
  */
 @Data
 public class EmployeeTechAuthVO {

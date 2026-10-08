@@ -9,10 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 超声结构化测量值（超声测量值）
- *
- * <p>为什么单独一张表而不是塞进 findings 文本：测量值要能统计、能比对复查趋势，
- * 埋在自由文本里就只能靠人眼读。异常标志 abnormal_flag 由服务端按参考范围判定，
- * 前端不做判定。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

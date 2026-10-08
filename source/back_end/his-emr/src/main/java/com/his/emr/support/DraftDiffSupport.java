@@ -8,10 +8,6 @@ import java.util.List;
 
 /**
  * 草稿 → 终稿字符级差异分段（LCS）。
- *
- * <p>产出的分段 JSON 供 AI 管理台渲染（红删绿增），也是后续把「修改行为」
- * 换算成 SFT 监督信号的原料。字符级对中文病历足够：医生改的是措辞和数字，
- * 不存在英文单词那种分词需求。
  */
 @Component
 public class DraftDiffSupport {

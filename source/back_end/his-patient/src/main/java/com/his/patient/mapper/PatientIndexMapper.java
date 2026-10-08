@@ -12,15 +12,6 @@ import java.util.List;
 
 /**
  * 患者主索引统计 Mapper（P5.1 EMPI）
- *
- * <p>为什么要跨模块裸 SQL：这些表分属 his-appoint（挂号）、his-charge（收费）、
- * his-medicaltech（检查/检验）、his-emr（病历）等模块，而 his-patient 只依赖 common/system。
- * 为一个计数引入跨模块实体依赖得不偿失 —— 与 {@code BizPatientMapper.countRegistByPatientIds}
- * 同一路数：**只取聚合结果，不引实体**。
- *
- * <p>代价要说清：表结构变了这里不会编译报错，只会静默算错。所以
- * ① 只用 patient_id / del_flag / 计数，不碰业务字段；
- * ② 每张表的 del_flag 情况逐个核过（就诊次、治疗申请单没有 del_flag）。
  */
 @Mapper
 public interface PatientIndexMapper {

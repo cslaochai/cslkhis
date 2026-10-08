@@ -7,7 +7,9 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/** 已生成的抗菌药物监测指标分页入参 */
+/**
+ * 已生成的抗菌药物监测指标分页入参
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class AntibioticStatsQueryPageDTO extends PageParam {

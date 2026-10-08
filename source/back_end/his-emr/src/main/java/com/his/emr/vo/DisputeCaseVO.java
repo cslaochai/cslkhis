@@ -12,14 +12,6 @@ import java.util.List;
 
 /**
  * 纠纷/投诉主单 VO。
- *
- * <p>三条口径：
- * <ol>
- *   <li><b>按钮可用性由后端给</b>（canEdit / canAccept / canFollow / canClose / canRevoke / canSeal），
- *       前端不按 status 码值 switch —— 后端加一档状态，前端 switch 会静默渲染成"看着正常"的错按钮。</li>
- *   <li>投诉人电话出参<b>脱敏</b>（库里存明文，出参中间四位打星）。</li>
- *   <li>码值文案一律走字典（his_dispute_*），VO 不重复造中文，避免两套说法。</li>
- * </ol>
  */
 @Data
 public class DisputeCaseVO implements Serializable {

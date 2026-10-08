@@ -5,7 +5,6 @@ import lombok.Data;
 
 /**
  * 作废签名入参。作废**必须写理由** —— 一条没有理由的作废，
- * 事后无法回答"是谁把这份病历的签名撤了、为什么"。
  */
 @Data
 public class SignatureInvalidateDTO {

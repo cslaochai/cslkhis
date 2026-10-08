@@ -29,7 +29,7 @@ import java.security.SecureRandom;
 import java.util.regex.Pattern;
 
 /**
- * 登录口令<b>传输加密</b>的唯一实现点：SM2 国密（C1C3C2），负责把前端密文还原成明文口令。
+ * 登录口令传输加密的唯一实现点：SM2 国密（C1C3C2），负责把前端密文还原成明文口令。
  */
 @Slf4j
 @Component

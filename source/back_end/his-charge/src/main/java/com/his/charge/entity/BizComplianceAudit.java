@@ -13,11 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医保合规审核主表
- *
- * <p>每次审核留一条，不覆盖历史 —— 医保申诉要能拿出「当时审过什么、结论是什么」。
- * DRG 相关字段（drg_code / drg_weight / pay_standard / cost_ratio）在
- * `DRG 分组与权重` 为空时**一律留空**，绝不用硬编码权重算一个看起来专业的假倍率：
- * 权重错一位，整个倍率审计就是错的，假数据比没有更危险。</p>
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

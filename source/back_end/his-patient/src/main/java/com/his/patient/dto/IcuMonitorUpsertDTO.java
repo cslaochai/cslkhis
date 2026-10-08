@@ -9,9 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * ICU 监护记录入参（一条 = 一个时刻的床边记录）
- *
- * <p>GCS 总分与液体平衡由服务端回算，前端传了也不认；
- * 出入量、体温等留空表示该时刻未测，不补 0。
  */
 @Data
 public class IcuMonitorUpsertDTO {

@@ -7,9 +7,6 @@ import java.util.List;
 
 /**
  * 住院管床关系服务（sql/202）。
- *
- * <p>本服务管的是「谁对这位在院患者负责」这条<b>带时效的归属关系</b>，不是排班。
- * 排班回答「今天谁上班」，管床回答「这个患者归谁」—— 医生休息的那天，他的患者仍然归他管。
  */
 public interface AttendingRelationService {
 

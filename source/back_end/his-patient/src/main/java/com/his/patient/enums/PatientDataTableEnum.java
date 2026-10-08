@@ -7,9 +7,6 @@ import java.util.Map;
 
 /**
  * EMPI 统计业务数据量涉及的源表（标识 → 中文名）。
- *
- * <p>码值→文案的唯一出口（原 {@code PatientDataTables} 的 {@code LABELS} 映射已上移至此）。
- * 标识必须与 {@code PatientIndexMapper.countDataByPatientIds} 里 UNION ALL 的第一列常量严格一致。
  */
 @Getter
 public enum PatientDataTableEnum {

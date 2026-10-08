@@ -35,28 +35,6 @@ import java.util.Objects;
 
 /**
  * 财务班结 / 日结 / 三级对账实现。
- *
- * <p>四层后本类的定位是<b>只读聚合 + 定格凭证</b>：一分钱都不在这里产生，
- * 全部事实来自 L3 支付资金流水（钱）与 L2 结算账单，
- * 本层只负责"把某个时刻看到的数钉死成凭证"并"拿三条链互相对"。
- *
- * <p>三级对账不是三次相同的检查，每一级都有**不同的判别力**（左右必须来自不同的表或不同取数路径，
- * 自己等于自己的断言不叫对账）：
- * <ul>
- *   <li><b>一级班结 ↔ 该班认领的流水（逐张复算）</b>：按交班单上的归集指针回 L3 现算一遍。
- *       交班后有流水被冲正、或班结单被直接改过，都会在这里露出来。</li>
- *   <li><b>二级 Σ班结 ↔ 全院流水实收</b>：班结是"有人认领的钱"，全院流水是"实际进的钱"，
- *       差额单列成 {@code unassignedCount/Amount} —— 忘交班的、交完班又收钱的、
- *       患者端自助缴费没人交班的，全在这一级显形。</li>
- *   <li><b>三级 Σ摊行（含无科室归属）↔ Σ账单单头</b>：同一批当日收讫账单，
- *       明细摊行合计与单头应收合计互校，抓的是"摊行漏写/多写"这类 L2 内部不一致。</li>
- *   <li><b>科室归集的完整性</b>由 {@code unattributedCount/Amount} 单列保证：无归属的钱
- *       绝不并进科室统计，新数据（记账时就带科室）应当 100% 有归属。</li>
- * </ul>
- *
- * <p><b>统筹不进现金侧的任何一环</b>：收费员班结单根本没有可用列，
- * 日结单的 {@code poolAmount} 只从当日<b>收讫账单</b>聚合，且不参与 {@code netAmount} 与各级差额
- * —— 它是医保局后付的钱，把它掺进"收银台收到的钱"里，两边就再也对不上了。
  */
 @Service
 @RequiredArgsConstructor
@@ -123,7 +101,7 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
     // 日结
 
     private static LocalDate parseDate(String s) {
-        // C 类保留：日期解析工具被多个入口共用（@RequestParam 与非 web 调用），空值兜底留在原地，注解挂不到私有方法上
+        // C-非 web 入参：私有日期解析被多个入口共用（@RequestParam 与非 web 调用），是 LocalDate.parse 的前置守卫，注解挂不到私有方法，Bean Validation 不覆盖，保留
         if (!TextUtil.hasText(s)) {
             throw new BusinessException("日期不能为空");
         }
@@ -284,10 +262,6 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
 
     @Override
     public CashierSettlementVO getCashierById(Long id) {
-        // C 类保留：入参是 Long（GET 参数直传），没有 DTO 承载注解；@RequestParam 已 required，此处是直调兜底
-        if (id == null) {
-            throw new BusinessException("交班单ID不能为空");
-        }
         BizCashierSettlement row = bizCashierSettlementMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("交班单不存在");
@@ -423,10 +397,6 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
 
     @Override
     public DaySettlementDetailVO getDayDetailById(Long id) {
-        // C 类保留：入参是 Long（GET 参数直传），没有 DTO 承载注解；@RequestParam 已 required，此处是直调兜底
-        if (id == null) {
-            throw new BusinessException("日结单ID不能为空");
-        }
         BizDaySettlement row = bizDaySettlementMapper.selectById(id);
         if (row == null) {
             throw new BusinessException("日结单不存在");
@@ -774,12 +744,6 @@ public class FinanceSettlementServiceImpl extends ServiceImpl<BizCashierSettleme
 
     /**
      * 支付渠道分桶（班结、日结共用同一份口径）。
-     *
-     * <p>之所以抽出来：这两处要是各写一遍 {@code switch}，改渠道时必然漏一处，
-     * 而漏掉的那一处**不报错**，只是某个渠道的钱凭空少一截、{@code unknownPay} 多一截。
-     *
-     * <p>{@code unknownPay} 是恒等式现金+微信+支付宝+个账+余额+未知 = amount 的补数：
-     * 支付方式缺失，以及 6-银行卡 / 7-转账（本层没有对应列）都归它，绝不并进别的渠道。
      */
     private static class PayBuckets {
         BigDecimal cash = BigDecimal.ZERO;

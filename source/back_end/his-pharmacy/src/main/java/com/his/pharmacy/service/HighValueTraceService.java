@@ -9,8 +9,6 @@ import com.his.pharmacy.vo.UdiScanVO;
 
 /**
  * 高值耗材 UDI 扫码溯源服务（L11）。
- * 口径：一物一行台账；使用登记扣批次 1 件（流水 type=7）并尝试计费（独立事务、失败留痕可补记）；
- * 作废仅限未计费记录，且把 1 件退回批次（流水 type=3）。
  */
 public interface HighValueTraceService {
 

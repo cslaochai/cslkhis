@@ -16,8 +16,6 @@ import java.util.List;
 
 /**
  * ICD-10 编码管理
- *
- * <p>控制器只做入参/出参转换，检索排序与打分逻辑都在 {@link Icd10Service}。</p>
  */
 @Tag(name = "ICD-10编码管理")
 @RestController

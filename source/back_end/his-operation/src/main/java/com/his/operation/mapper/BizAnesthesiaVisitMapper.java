@@ -11,8 +11,6 @@ import org.apache.ibatis.annotations.Select;
 
 /**
  * 麻醉术前访视单 Mapper。
- *
- * <p>自定义 {@code @Select} 不受 {@code @TableLogic} 影响 → 必须显式写 {@code del_flag = 0}。
  */
 @Mapper
 public interface BizAnesthesiaVisitMapper extends BaseMapper<BizAnesthesiaVisit> {

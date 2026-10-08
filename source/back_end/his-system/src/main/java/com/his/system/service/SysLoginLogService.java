@@ -4,12 +4,6 @@ import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 登录日志服务：登录成功 / 失败 / 登出的统一落库入口。
- *
- * <p>与操作日志（{@code SysLogService}）是两本账，不重复记：
- * 操作日志由 {@code OperLogInterceptor} 按接口调用自动落，登录这一路由
- * {@code OperLogInterceptor} 明确跳过，改由本服务单独记 —— 否则一次登录会写两行。
- *
- * <p><b>旁路语义：</b>落库失败只记 error 日志，绝不让登录/登出跟着失败。
  */
 public interface SysLoginLogService {
 

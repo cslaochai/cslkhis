@@ -11,9 +11,6 @@ import java.util.List;
 
 /**
  * 设备档案 VO（台账行 + 详情）。
- *
- * <p>nextMaintainDate = lastMaintainDate + maintainCycleDays（现算不落库）；
- * meteringValidUntil 取该设备最近一次计量的有效期至；meteringExpired = 已过期。
  */
 @Data
 public class EquipmentVO {

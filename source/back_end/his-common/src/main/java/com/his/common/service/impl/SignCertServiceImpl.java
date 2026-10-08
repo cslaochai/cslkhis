@@ -34,17 +34,6 @@ import java.util.Objects;
 
 /**
  * 签名证书服务实现。
- *
- * <p>三条不能破的约定：
- * <ol>
- *   <li><b>私钥只以密文形态落库</b>，{@link #privatePemOf} 是**唯一的解密出口**，
- *       且只允许签名服务调用（不给任何 Controller 端点）。</li>
- *   <li><b>吊销不删行</b>：历史签名上存着证书编号，删证书会让那些签名
- *       永远无法验证（"当时用哪把公钥"丢失）。</li>
- *   <li><b>同一员工同时刻只有一张有效证书</b>，但**不做唯一索引** ——
- *       并发自动签发可能瞬时造出两张，靠"过期作废 + 取最新一张"消化，
- *       用唯一索引会在签名请求里直接抛 DuplicateKey，把留痕动作变成业务中断。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -85,7 +74,7 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SysSignCert ensureActiveCert(Long empId, String empName, Long deptId, String deptName) {
-        // C 类保留：签名服务在签发证书前直接调本方法（标量形参，无登录态时也会被调），不经 HTTP 绑定，注解跑不到
+        // C-非 web 入参：EmrSignatureServiceImpl.sign 签发前直接调用（标量形参 empId，无登录态的批处理也会调），Bean Validation 不覆盖，保留
         if (empId == null) {
             throw new BusinessException("签名人不能为空（未取到当前登录用户的员工ID）；"
                     + "签名留痕必须落到员工，不能落成系统账号");
@@ -108,8 +97,8 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SignCertVO issue(SignCertIssueDTO dto, Long operatorId, String operatorName) {
-        // C 类保留：本方法是能力层 API，只被签名中心的 service 转发调用（操作人由登录态在层外补），
-        // 要下沉就得在别的模块的 Controller 上补 @Valid，超出本模块边界；姓名是签发时写入证书的快照，必填性归这里判
+        // C-非 web 入参：SignCertService.issue 是能力层 API，由 his-emr 的 SignatureCenterServiceImpl 转调（操作人在层外补），
+        // 注解只能挂他模块 Controller，本层拿不到绑定校验，Bean Validation 不覆盖，保留
         if (dto == null || dto.getEmpId() == null) {
             throw new BusinessException("员工ID不能为空");
         }
@@ -212,8 +201,8 @@ public class SignCertServiceImpl extends ServiceImpl<SysSignCertMapper, SysSignC
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SignCertVO revoke(SignCertRevokeDTO dto, Long operatorId, String operatorName) {
-        // C 类保留：同 issue —— 由他模块的 service 直接调用，注解与 @Valid 挂在那一侧的接口上，本层拿不到绑定时的校验；
-        // 吊销理由是废止签名能力的留痕依据，任何调用路径都必须带上
+        // C-非 web 入参：同 issue —— his-emr 的 SignatureCenterServiceImpl 直接调用，注解与 @Valid 挂那侧接口，本层拿不到绑定校验；
+        // 吊销理由是废止签名能力的留痕依据，任何调用路径都必须带上，Bean Validation 不覆盖，保留
         if (dto == null || dto.getCertId() == null) {
             throw new BusinessException("证书ID不能为空");
         }

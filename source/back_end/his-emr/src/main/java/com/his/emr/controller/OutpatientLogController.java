@@ -17,10 +17,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 门诊日志（法规台账）——《门诊日志管理规定》口径：以病历为基表的接诊事实台账，
- * 服务传染病"应报未报"核查。**只读**；报卡（写）走 {@code /emr/infectious}。
- *
- * <p>与「就诊总览」（原挂号口径门诊日志，{@code /queue/opdLogListPage}）刻意两套口径：
- * 这里一行必须是一次有诊断的接诊，那边连没签到的挂号都在。
  */
 @RestController
 @RequestMapping("/emr/outpatientLog")

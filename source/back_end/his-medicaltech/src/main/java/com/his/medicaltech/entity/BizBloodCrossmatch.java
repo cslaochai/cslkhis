@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 血库交叉配血记录
- *
- * <p>status：1 待配血 / 2 已配血 / 3 已复核 / 4 已作废。
- * 复核人不得与配血人同一人；配血相合的复核通过后血袋自动置「已预留」。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

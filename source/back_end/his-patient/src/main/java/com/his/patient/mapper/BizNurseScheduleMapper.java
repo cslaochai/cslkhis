@@ -14,13 +14,6 @@ import java.util.List;
 
 /**
  * 病区护理排班 Mapper（sql/166）。
- *
- * <p>病区 / 员工 / 班次字典归系统域与其他子域，按项目规范不跨域调它们的 Mapper，
- * 这里走裸 SQL 只读。<b>班次字典只认 use_scope=2</b>（病区护理那一册），
- * 门诊班次混进护理班表就是「给病区排了个上午门诊」。
- *
- * <p>病区没有 del_flag 列，别给它加条件；员工/班次字典有，
- * 自定义 SQL 不受 {@code @TableLogic} 覆盖，必须手写 {@code del_flag = 0}。
  */
 @Mapper
 public interface BizNurseScheduleMapper extends BaseMapper<BizNurseSchedule> {

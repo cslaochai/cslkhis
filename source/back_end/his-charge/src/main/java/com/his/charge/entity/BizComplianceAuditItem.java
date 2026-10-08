@@ -9,10 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 医保合规审核命中明细（逐条留痕）
- *
- * <p>result 刻意做成**三态**（1-命中 / 2-通过 / 3-不适用），理由与检验的
- * 「未判定 ≠ 正常」完全相同：把「没评估」渲染成「通过」，会让审核报告整体偏乐观，
- * 而这正是医保飞检抓的地方。凡 result=3，evidence 或 remark 必须写明缺什么依据。</p>
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

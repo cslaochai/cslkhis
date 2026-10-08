@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 住院证（入院通知单）—— 门诊转住院闭环的入口
- * <p>约定：查询一律 GET，写操作一律 POST，路径驼峰。
  */
 @Tag(name = "住院证（门诊转住院）")
 @RestController

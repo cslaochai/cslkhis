@@ -5,8 +5,6 @@ import lombok.Data;
 
 /**
  * 换床入参
- * <p>第 1 期只支持<b>同一科室内部</b>换床（含同科室不同病区）。跨科室属「转科」，
- * 会改变入院科室与主诊医师，需要转科流程（后续期次），此处直接拒绝，避免把转科记录伪装成换床。
  */
 @Data
 public class InpatientTransferDTO {

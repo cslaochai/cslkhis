@@ -7,9 +7,6 @@ import java.time.LocalDate;
 
 /**
  * 日终结转结果。
- *
- * <p>条数用 {@code long} 而不是 {@code int}：BIGINT 出参走 LONG，且这个 VO 只做统计展示，
- * 不会参与前端精确计算（真要精确前端也用字符串接）。
  */
 @Data
 @Schema(description = "日终结转结果")

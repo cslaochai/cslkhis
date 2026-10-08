@@ -9,26 +9,6 @@ import java.util.Set;
 
 /**
  * 临床文本匹配工具 —— 处理「否定语义」与「空描述」这两件小事。
- * <p>
- * 看起来是个小工具，实际是医疗 NLP 最容易翻车的地方：
- * 病历写「无青霉素过敏史」、写「否认溃疡病史」，规则如果只做
- * contains("青霉素")，就会把「明确否认」读成「明确阳性」，
- * 然后给医生弹一个严重级别 3 的假警报。假警报多了，医生就会关掉提醒，
- * 整套系统随之失效。
- * <p>
- * 所以所有基于字面的规则匹配都必须走这里，禁止直接 {@code String.contains}。
- *
- * <p><b>为什么放在 his-common（2026-09-19 从 his-ai 下移）</b>：
- * 业务模块不允许依赖 his-ai（循环依赖），于是任何业务模块想用否定语义保护，
- * 都只能自己复制一份。his-charge 已经这么干了一次
- * （{@code com.his.charge.support.EvidenceKeywordMatcher}）。
- * 同一个医学语义存在多份实现，是最典型的「改一处、另一处静默失效」温床，
- * 而它保护的恰恰是「不要误报」这件事 —— 所以下移到公共模块，全库共用一份。
- *
- * <p><b>尚未收口的重复实现</b>：his-charge 的 {@code EvidenceKeywordMatcher}
- * 仍在独立维护，且与本类**语义并不相同**（否定窗口 4 vs 本类 6，否定词表也略有出入）。
- * 合并会改变医保合规审核的命中结论，属于行为变更，需要重跑合规验证后再做 ——
- * 不要顺手替换。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class ClinicalTextMatcher {

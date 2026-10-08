@@ -8,9 +8,6 @@ import java.util.Map;
 
 /**
  * AI 运行时状态（只读配置快照，不产生模型调用费用）。
- * <p>
- * 特意把 {@code apiKeyConfigured} 做成布尔值而不是回显密钥 ——
- * 运维需要知道「配了没有」，不需要知道「配的是什么」。
  */
 @Data
 @Schema(description = "AI 运行时状态")

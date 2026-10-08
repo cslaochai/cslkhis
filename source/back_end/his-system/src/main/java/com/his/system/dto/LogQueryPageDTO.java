@@ -6,10 +6,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 日志查询入参（操作/登录/审计三本账共用，各页签只填自己关心的字段）。
- *
- * <p>时间一律传 {@code yyyy-MM-dd}：<b>不用 LocalDateTime 入参</b>是为了绕开
- * 「Jackson 只认 ISO T 分隔 / Element Plus 默认空格分隔」的格式互坑（G12/G14 已踩两次），
- * 上界 23:59:59 由服务端补（直接拿日期字符串比大小会把当天全部时点滤掉）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

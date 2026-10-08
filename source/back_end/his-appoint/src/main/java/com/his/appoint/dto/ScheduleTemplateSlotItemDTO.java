@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 /**
- * 模板段级号源配置项（跟随 {@link ScheduleTemplateUpsertDTO} 整批提交）。
+ * 模板段级号源配置项（跟随 ScheduleTemplateUpsertDTO 整批提交）。
  */
 @Data
 public class ScheduleTemplateSlotItemDTO {

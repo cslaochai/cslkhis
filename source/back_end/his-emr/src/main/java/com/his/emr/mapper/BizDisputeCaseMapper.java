@@ -15,9 +15,6 @@ import java.util.List;
 
 /**
  * 纠纷/投诉主单 Mapper。
- *
- * <p>跨模块读（科室 / 患者基本信息 / 入院记录 / 病历归档）
- * 按仓库约定走裸 SQL，不引入模块依赖；列名以 information_schema 实查为准。
  */
 @Mapper
 public interface BizDisputeCaseMapper extends BaseMapper<BizDisputeCase> {

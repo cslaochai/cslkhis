@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * 麻醉记录单状态（0-记录中 1-已提交 2-已审核）。
- *
- * <p>已提交/已审核即固化：不允许术后改记载（术后补一条记载属于伪造）。
  */
 @Getter
 public enum AnesthesiaRecordStatusEnum {

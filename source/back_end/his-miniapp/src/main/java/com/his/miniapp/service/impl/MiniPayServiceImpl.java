@@ -197,7 +197,7 @@ public class MiniPayServiceImpl extends ServiceImpl<BizPayOrderMapper, BizPayOrd
                     vo.setId(o.getId());
                     vo.setPayNo(o.getPayNo());
                     vo.setBizType(o.getBizType());
-                    vo.setBizId(String.valueOf(o.getBizId()));
+                    vo.setBizId(o.getBizId());
                     vo.setAmount(o.getAmount());
                     vo.setPayStatus(o.getPayStatus());
                     vo.setPayTime(o.getPayTime());

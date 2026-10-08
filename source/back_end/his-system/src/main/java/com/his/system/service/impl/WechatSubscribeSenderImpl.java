@@ -18,12 +18,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 微信订阅消息发送器（患者端小程序出站通知通道骨架）。
- *
- * <p><b>失败绝不外抛：</b>通知只是「让用户更快知道」，发送失败不能让挂号/发报告的业务回滚，
- * 调用方拿到的返回值是 null（成功）或已截断的失败原因（自行决定落 send_status=2）。
- *
- * <p><b>未配置即静默降级：</b>{@code wechat.miniapp.enabled=false} 或缺 appid/secret 时
- * 直接返回「未启用」，不打外网请求 —— dev 环境没有密钥是常态，通道要能空转。
  */
 @Slf4j
 @Service

@@ -8,9 +8,6 @@ import java.util.Map;
 
 /**
  * 医嘱基础字典的三类口径（sql/142）：给药途径 / 用药频次 / 剂量单位。
- *
- * <p>码值→中文名的唯一出口（原 {@code OrderDictTypes} 的 {@code NAME} 映射已上移至此）。
- * 值域、中文名、以及「字典落在医嘱表的哪一列」三件事一起定义，避免统计查错列。
  */
 @Getter
 public enum OrderDictTypeEnum {

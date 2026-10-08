@@ -10,8 +10,6 @@ import org.apache.ibatis.annotations.Select;
 
 /**
  * 传染病报卡 Mapper。
- *
- * <p>跨模块读（患者档案 / 挂号单）走裸 SQL，不引入模块依赖；列名以 information_schema 实查为准。
  */
 @Mapper
 public interface BizInfectiousReportMapper extends BaseMapper<BizInfectiousReport> {

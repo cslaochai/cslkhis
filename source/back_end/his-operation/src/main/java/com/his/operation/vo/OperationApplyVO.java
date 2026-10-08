@@ -11,14 +11,6 @@ import java.util.List;
 
 /**
  * 住院手术申请出参。
- *
- * <p>三条约定（与会诊/转科 VO 一致）：
- * <ol>
- *   <li>所有 ID 走 {@code ToStringSerializer}：雪花 ID 超 JS 精度，截断后会变成"记录不存在"的假象。</li>
- *   <li>码值一律带 {@code xxxText} 文案，且由后端给 —— 前端不自己判状态、不自己拼中文。</li>
- *   <li>{@code canSchedule / canPreopCheck / canFinish / canCancel / canEdit} 由后端按状态算好：
- *       按钮可用性属于业务规则，不属于前端。前端自判状态一定会和状态机跑偏。</li>
- * </ol>
  */
 @Data
 public class OperationApplyVO implements Serializable {

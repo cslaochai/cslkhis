@@ -9,12 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 满意度逐题答案（sql/164）。
- *
- * <p><b>dimension/seqNo/title 是题目快照</b>：模板改题干、换维度，历史答卷若只存 item_id，
- * 去年的分数就在新维度名下查不到 —— 等于把历史统计洗没了，而报表不会报错。
- *
- * <p>uk_survey_answer_item(answer_id,item_id) 不含 del_flag：重算只能整卷作废重填，
- * 若确需覆盖本题答案，走 {@code purgeByAnswer} 物理删明细再写。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

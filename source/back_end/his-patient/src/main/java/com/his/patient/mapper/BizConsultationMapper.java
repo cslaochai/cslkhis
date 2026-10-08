@@ -11,18 +11,6 @@ import org.apache.ibatis.annotations.Select;
 
 /**
  * 住院会诊 Mapper。
- *
- * <p>自定义 {@code @Select} 不受 {@code @TableLogic} 影响 → JOIN 里必须显式写 {@code del_flag = 0}。
- *
- * <p>两处刻意的做法：
- * <ol>
- *   <li><b>科室名用 JOIN 取，不写快照列</b>：申请/会诊科室ID 都是真实科室主键，
- *       JOIN 不到就显示空 —— 存量 6 行演示数据的科室ID 在科室里不存在，
- *       宁可显示空，也不替它们猜一个科室名。</li>
- *   <li><b>未完成排在前面用 FIELD() 显式指定顺序</b>：状态码是 0-待应答 / 1-已完成 / 2-已取消 /
- *       3-已应答，按码值升序会把"已应答（会诊中）"排到最后 —— 那正是最该被看见的那批。
- *       顺序必须是「待应答 → 已应答 → 已完成 → 已取消」。</li>
- * </ol>
  */
 @Mapper
 public interface BizConsultationMapper extends BaseMapper<BizConsultation> {

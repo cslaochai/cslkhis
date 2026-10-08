@@ -8,8 +8,6 @@ import java.util.List;
 
 /**
  * 日间手术统计（服务端 group by 出，不让前端数当前页）。
- *
- * <p>三率：日间手术占择期手术比、48h 内离院率、非计划再入院率 —— 评审口径。
  */
 @Data
 public class DaySurgeryStatVO implements Serializable {

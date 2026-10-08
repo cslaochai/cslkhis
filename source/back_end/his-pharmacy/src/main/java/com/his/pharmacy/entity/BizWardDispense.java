@@ -14,10 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院摆药单主单（G13）。
- *
- * <p>粒度是「一次住院 × 一天」一张：药房按病区/日期生成，同入院的同日主单**复用**、明细追加。
- * 主单状态是**聚合派生值**，随明细状态实时回算（见 WardDispenseServiceImpl#applyAggregatedStatus），
- * 不单独维护状态机 —— 明细状态才是事实源。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -7,9 +7,6 @@ import lombok.Data;
 
 /**
  * 一条规则在一个对象上的判定结论。
- *
- * <p>每条规则至少产出一条 finding —— 判定不了就产一条 {@link AuditResultStateEnum#NOT_APPLICABLE}，
- * 并带上原因。这样「规则没评估」永远在明细里可见，不会被统计口径吃掉。</p>
  */
 @Data
 public class RuleFinding {

@@ -9,16 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * CDR 时间轴事件行（{@code CdrMapper#EVENT_SQL} 一行）。
- *
- * <p>对应那条 28 分支 UNION ALL 的统一行形状：每个分支只填自己有的列，
- * 时间列一律COALESCE 兜底（否则 etime 为 null，事件会排到时间轴最后，看着像"数据丢了"）。
- *
- * <p>为什么单独建行 VO 而不是直接复用 {@link CdrEventVO}：事件行是**数据库形状**
- * （含 srcTable/ownerPid 这类只服务追溯与EMPI 归并的列，且没翻译过码值）；
- * {@link CdrEventVO} 是**接口形状**（码值已翻译成文案、不再暴露来源表）。
- * 两者混用会让"库里存什么"和"页面显示什么"绑死在一起 —— 页面加一个展示字段就
- * 得改SQL 别名，SQL 改一个别名又会让页面静默少字段。
+ * CDR 时间轴事件行（CdrMapper#EVENT_SQL 一行）。
  */
 @Data
 public class CdrEventRowVO implements Serializable {

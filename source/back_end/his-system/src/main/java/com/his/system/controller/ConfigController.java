@@ -17,9 +17,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 
 /**
  * 系统参数配置控制器
- *
- * <p>目前仅承载「医院基础信息」（系统参数中 hospital.* 键），
- * 供 Web 端参数设置页与小程序主页展示。</p>
  */
 @Tag(name = "系统参数配置")
 @RestController

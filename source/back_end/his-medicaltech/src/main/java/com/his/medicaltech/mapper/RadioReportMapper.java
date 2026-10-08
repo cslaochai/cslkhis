@@ -8,11 +8,6 @@ import org.apache.ibatis.annotations.Select;
 
 /**
  * 放射诊断工作台查询（裸 SQL，sql/138）。
- *
- * <p>为什么必须裸 SQL：列表要按「是不是放射项目」过滤，而这条口径在
- * 检查项目字典的项目类型上 —— 那是 his-system 的表，
- * 检查记录里只有 {@code inspection_item_code} 这个字符串外键（没有物理外键）。
- * 跨模块读异模块表一律裸 SQL 快照，不建外键、不反向依赖（AGENTS 口径）。
  */
 @Mapper
 public interface RadioReportMapper {

@@ -12,10 +12,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * 住院病历文书的签名覆盖率（数的是业务表，所以实现在这里而不是 his-common）。
- *
- * <p>三种状态分别计数、**互不回落**：未签名 / 已签名 / 签名已失效。
- * 存量文书（本能力上线前归档的）会全部落在"未签名"里 —— 这是事实，不是 bug，
- * 把它们藏起来才是问题。
  */
 @Component
 @RequiredArgsConstructor

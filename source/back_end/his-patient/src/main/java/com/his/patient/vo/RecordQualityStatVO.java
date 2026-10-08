@@ -10,17 +10,6 @@ import java.util.List;
 
 /**
  * 住院病历结构化率统计 VO。
- *
- * <p>三个层次一起给，是因为"结构化率 76%"本身不可行动：
- * <ul>
- *   <li><b>总体</b>：{@code elementFilled / elementTotal} —— 报表口径；</li>
- *   <li><b>分组</b>：病史 / 生命体征 / 体格检查 / 诊疗结论 —— 定位"是缺在查体还是缺在病史"；</li>
- *   <li><b>逐条要素 + 逐份文书</b>：{@code elements} 与 {@code records[].missingLabels}
- *       —— 定位到"哪一份病历缺腹部查体"。P5 数据质量报表要的就是这一层（不达标必须能落到具体记录）。</li>
- * </ul>
- *
- * <p>{@code elementTotal} 是**按每份文书自己的类型分别累加**得到的（病程里才有病程正文），
- * 所以它不等于 {@code recordCount × 26}。
  */
 @Data
 public class RecordQualityStatVO implements Serializable {

@@ -18,11 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 死亡证明与死亡登记（住院业务法定文书，菜单 318 / 路径 /death-certificate）。
- *
- * <p>上报外发段依赖区域死因监测系统，当前「上报＝报文组装落库留痕」，
- * {@code DeathCertificateServiceImpl.report} 单点即未来替换位（学习阶段不对接外部平台）。
- * 按项目规范 {@code @PreAuthorize} 全部标到方法，类上不挂（类级会静默覆盖未标注的方法）。
+ * 死亡证明与死亡登记
  */
 @Tag(name = "死亡证明与死亡登记")
 @RestController

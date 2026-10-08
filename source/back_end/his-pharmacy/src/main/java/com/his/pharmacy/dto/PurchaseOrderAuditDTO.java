@@ -8,9 +8,6 @@ import lombok.Data;
 
 /**
  * 采购订单审批入参
- *
- * 结论只允许 1（通过）/ 2（驳回）；「回到待审批」没有接口 —— 状态只能向前走，
- * 需要改单就先驳回（2），修改后重新提交会回到待审批。
  */
 @Data
 public class PurchaseOrderAuditDTO {

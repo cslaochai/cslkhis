@@ -8,10 +8,6 @@ import java.io.Serializable;
 
 /**
  * 作废医嘱入参。
- *
- * <p>**只允许作废「待校对」的医嘱**（医生刚开错、护士还没看到）。
- * 已校对/已执行的医嘱只能"停止"—— 否则相当于把护理已经做过的事从记录里抹掉，
- * 而执行记录是飞检要件，抹不掉也不该抹。
  */
 @Data
 public class InpatientOrderCancelDTO implements Serializable {

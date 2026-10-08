@@ -7,12 +7,6 @@ import java.util.List;
 
 /**
  * 挂号侧引用"病历"能力的 SPI（批次E/E6 复诊关联原病历）。
- * <p>
- * 接口定义在调用方模块 his-appoint，实现放在 his-emr（his-emr → his-appoint 单向依赖），
- * 规避 appoint ↔ emr 的双向依赖。
- * <p>
- * 用途：复诊挂号时传入 {@code revisitRecordId}，必须校验该病历真实存在 **且属于同一患者**，
- * 否则会挂出一张指向别人病历的复诊号。实现缺失（未引入 his-emr）时调用方需自行降级。
  */
 public interface MedicalRecordRefGateway {
 
@@ -36,9 +30,9 @@ public interface MedicalRecordRefGateway {
      */
     List<RecordBrief> listRecentByPatient(Long patientId, int limit);
 
-    /**
-     * 病历简要信息
-     */
+/**
+ * 病历简要信息
+ */
     @Data
     class RecordBrief {
         private Long id;

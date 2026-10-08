@@ -8,8 +8,6 @@ import lombok.Data;
 
 /**
  * 心电测量参数入参（sql/173）。
- *
- * <p>各测量值允许为 NULL（测量不到不造 0）；至少填一项才有保存的意义。
  */
 @Data
 public class EcgMeasureUpsertDTO {

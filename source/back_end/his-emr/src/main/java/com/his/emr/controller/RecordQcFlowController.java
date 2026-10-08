@@ -17,8 +17,6 @@ import java.util.List;
 
 /**
  * 病历三级质控流转控制器
- * <p>
- * 状态机全部收口在 RecordQcFlowServiceImpl，本类不做状态判断。
  */
 @Tag(name = "病历三级质控流转")
 @RestController

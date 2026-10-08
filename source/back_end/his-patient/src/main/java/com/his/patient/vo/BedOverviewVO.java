@@ -9,9 +9,6 @@ import java.util.List;
 
 /**
  * 全院床位总览
- *
- * <p><b>使用率的分母是可用床（总数 - 维修 - 停用），不是总床数</b>：
- * 把维修床算进分母，病区一报修就"使用率下降"，等于奖励不修床。
  */
 @Data
 public class BedOverviewVO {

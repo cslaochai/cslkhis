@@ -12,10 +12,6 @@ import java.time.LocalDate;
 
 /**
  * VTE 事件登记。
- *
- * <p>onset_type 由登记人判断（院内发生 / 入院时已存在），服务端<b>不自动判定</b>：
- * 是"入院 48 小时后新发"还是"入院时就有"，需要看入院记录与影像报告，
- * 系统猜不出来；但选了 2 就不进发生率分子 —— 这个闸必须服务端把住。
  */
 @Data
 public class VteEventUpsertDTO {

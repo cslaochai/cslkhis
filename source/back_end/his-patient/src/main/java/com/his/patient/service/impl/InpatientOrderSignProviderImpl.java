@@ -19,18 +19,6 @@ import java.util.Objects;
 
 /**
  * 住院医嘱的签名内容提供者（业务类型=3）——**双签**。
- *
- * <p>医嘱是"医生开立 + 护士校对"两道手，两道都要有人负责，所以是两次独立签名：
- * <ul>
- *   <li>{@link SignSceneEnum#ORDER_CREATE} → 写医师签名ID</li>
- *   <li>{@link SignSceneEnum#ORDER_VERIFY} → 写护士签名ID</li>
- * </ul>
- * 第二次签名的内容里会带上第一次的摘要（签名链，见 {@code SignSubject.contentWithPrev}），
- * 于是"护士校对之后医生又改了这条医嘱"会同时打断第二环的验签 ——
- * 否则两次签名各自绑同一份内容，改了谁都验得过去，双签就成了摆设。
- *
- * <p><b>规范化里绝不能出现 {@code order_status / verify_time / stop_time} 这类流程字段</b>：
- * 它们会随流程变，放进去等于"一校对，开立签名当场失效"。
  */
 @Slf4j
 @Component

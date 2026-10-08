@@ -6,9 +6,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * VTE 中高危名单查询。
- *
- * <p>风险来源固定为「每次住院<b>最新一条</b> Caprini 评估」，查询条件只过滤不重算分数 ——
- * 分数与等级由评估单落库时后端算定，名单页改条件不会让同一个人换个等级。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

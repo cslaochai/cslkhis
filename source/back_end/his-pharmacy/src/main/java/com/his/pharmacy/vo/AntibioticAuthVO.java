@@ -7,7 +7,9 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** 抗菌药物处方权授权行 */
+/**
+ * 抗菌药物处方权授权行
+ */
 @Data
 public class AntibioticAuthVO {
 

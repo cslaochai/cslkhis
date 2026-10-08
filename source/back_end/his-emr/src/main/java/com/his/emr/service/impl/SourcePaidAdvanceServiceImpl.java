@@ -22,14 +22,6 @@ import java.util.List;
 
 /**
  * 来源单据缴费推进实现（见接口注释的容错口径）。
- *
- * <p>三处与旧 {@code ChargeController.markSourcesPaid} 不同的地方，都是它原来的缺陷：
- * <ol>
- *   <li><b>主表只在全部明细缴清后才置已缴费</b>。旧代码一张方三味药，收到第一味药的钱就把整张方
- *       标成已缴费，发药窗口按方发药会把没收钱的药一起发出去；</li>
- *   <li><b>pay_amount 写处方合计</b>而不是最后一条明细的金额（旧代码逐条覆盖，多明细方只剩最后一行的数）；</li>
- *   <li><b>发药记录按 prescription_detail_id 判重</b>，重复推进不再叠加一张待发药单。</li>
- * </ol>
  */
 @Slf4j
 @Service

@@ -11,10 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * CSSD 器械包实体（86 号脚本新增）。
- *
- * <p>状态机（status 恒等于「最近完成的追溯节点」）：
- * 1已回收 → 2清洗中 → 3已打包 → 4灭菌中 → 5待发放 → 6已发放。
- * 灭菌完成（节点5）判不合格时包退回清洗（status 回 2），留痕完整不删。
  */
 @Data
 @TableName("biz_cssd_pack")

@@ -5,12 +5,6 @@ import lombok.Data;
 
 /**
  * 处方审核提示词变量。
- *
- * <p>对应 {@code prompts/drug-audit.md} 的全部占位符。
- * 字段名与模板里的 {{占位符}} 一一对应。
- *
- * <p>结构性审查（重复用药、相互作用、禁忌）由代码规则先算出
- * {@code hardRuleHints}，模型只负责补充规则没覆盖的表述层问题。
  */
 @Data
 public class DrugAuditPromptVariablesVO implements PromptVariables {

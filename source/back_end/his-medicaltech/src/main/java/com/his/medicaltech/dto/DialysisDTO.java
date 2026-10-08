@@ -16,9 +16,6 @@ import java.time.LocalDateTime;
 
 /**
  * 血液净化（透析）入参。
- *
- * <p>原因/描述类字段只在服务端截列宽（见 DialysisService），此处不再挂 {@code @Size}，
- * 否则入参层 400 会抢在服务端截断之前（AGENTS.md 第 3 条）。
  */
 public class DialysisDTO {
 

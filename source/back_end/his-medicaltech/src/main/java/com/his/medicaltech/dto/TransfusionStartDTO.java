@@ -8,14 +8,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 开始输注入参（含<b>双人核对</b>）。
- *
- * <p>输血是<b>唯一</b>要求双人核对的护理操作，所以这个 DTO 里
- * {@code checkNurseId} 与 {@code checkNurse2Id} <b>两个护士都必须有，且不能是同一个人</b>；
- * {@code checkItems} 的 1~6 项必核项一项不能缺（见 {@code TransfusionCheckItems}）。
- *
- * <p>核对项写成码值集合而不是一段自由文本：一段"已核对无误"的话，
- * 在飞检时无法回答"到底核了哪几项"，与"模型说没事"是同一种不可审计的证据。
+ * 开始输注入参（含双人核对）。
  */
 @Data
 public class TransfusionStartDTO implements Serializable {

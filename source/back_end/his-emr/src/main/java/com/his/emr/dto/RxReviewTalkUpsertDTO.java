@@ -12,9 +12,6 @@ import java.util.List;
 
 /**
  * 医师约谈 upsert 入参。
- *
- * <p>关联点评明细（relatedReviewIds）必须同属一位医师且结论为不合理（2/3/4）；
- * doctorId/科室从明细推出。约谈人缺省取当前登录人。医师确认后禁改。
  */
 @Data
 public class RxReviewTalkUpsertDTO {

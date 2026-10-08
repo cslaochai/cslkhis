@@ -6,13 +6,7 @@ import java.io.Serializable;
 import java.time.LocalDate;
 
 /**
- * CDR 健康档案行（{@code CdrMapper#PROFILE_SQL} 一行）。
- *
- * <p>患者级信息（过敏史/既往史/手术史/家族史/用药史/联系人），不属于任何一次就诊，
- * 所以不上时间轴，单列在身份卡后面。六个分支用 {@code pkey} 区分来源表。
- *
- * <p>{@code tm} 各分支列语义不同但**都是 date**（过敏发生日/诊断日/手术日/开始用药日），
- * 家族史与联系人天然没有日期（SQL 里CAST 成 NULL AS DATE）。
+ * CDR 健康档案行（CdrMapper#PROFILE_SQL 一行）。
  */
 @Data
 public class CdrProfileRowVO implements Serializable {

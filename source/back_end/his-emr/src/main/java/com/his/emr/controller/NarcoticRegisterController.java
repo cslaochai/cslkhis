@@ -20,14 +20,6 @@ import java.util.List;
 
 /**
  * 麻精药品专册控制器（G10）。
- *
- * <p>⚠ 鉴权口径：本工程 SecurityConfig 仅 {@code anyRequest().authenticated()}，
- * 菜单 504 的 {@code pharmacy:narcotic:list} 只控菜单可见性。
- * 也就是说**本控制器的接口任何登录用户都能调** —— 这是当前工程级缺口（规划里列为 G5），
- * 不是这里可以单独补的。别把菜单授权当成"只有药师能看专册"的凭据。
- *
- * <p>刻意**不提供**「修改专册」「删除专册」接口：专册是证据，
- * 对外只有「追加回收信息」这一个受控写入口（{@code ampouleReturn}）。
  */
 @Tag(name = "麻精药品专册")
 @RestController

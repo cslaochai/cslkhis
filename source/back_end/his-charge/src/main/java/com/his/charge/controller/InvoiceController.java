@@ -17,10 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 发票管理控制器（L4 票据）。
- *
- * <p>出票口子原先内嵌在 {@code /charge/processPay} 里（收完钱顺手造一张票），
- * 那是旧模型一体的产物；四层之后票据独立成一层，收讫与出票是两步，
- * 而且必须两步 —— 收银员收款与发票号段的发放是两个人、两本账。
  */
 @Tag(name = "发票管理")
 @RestController

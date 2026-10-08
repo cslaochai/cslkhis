@@ -5,10 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 手术级别构成（{@code StatReportAggMapper#operationLevelDist} 一行）。
- *
- * <p>{@code level} 是 0 而不是 null 表示"未录级别" —— 手术台次必须都落在某一档里，
- * 漏掉未录的那批会让各级台次之和对不上总台次，评审一眼就能看出数字对不上。
+ * 手术级别构成（StatReportAggMapper#operationLevelDist 一行）。
  */
 @Data
 public class StatOperationLevelRowVO implements Serializable {

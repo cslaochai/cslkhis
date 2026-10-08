@@ -4,9 +4,6 @@ import lombok.Getter;
 
 /**
  * 出勤状态（1-正常 2-迟到 3-早退 4-缺勤 5-替班 6-加班 7-支援）。
- *
- * <p>缺勤只能由人在「确认缺勤」里定，系统永不自动判；替班/加班/支援是按业务性质定性的，
- * 打卡时间改写不了它们（见判定逻辑里的保留分支）。
  */
 @Getter
 public enum StaffAttendanceStatusEnum {

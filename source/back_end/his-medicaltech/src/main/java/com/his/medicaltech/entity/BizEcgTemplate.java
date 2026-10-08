@@ -7,11 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 心电报告模板（心电报告模板，sql/173）。
- *
- * <p>与放射模板（sql/138）同构：报告三段（所见/诊断/建议）各一个模板段，
- * 按心电类型分流（常规 vs Holter）。{@code ecgType} 允许为 NULL = 通用模板。
- *
- * <p>template_code 唯一键不含 del_flag → 删除走物理删（见 BizEcgTemplateMapper.purgeById）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

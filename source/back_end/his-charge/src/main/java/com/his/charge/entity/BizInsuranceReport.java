@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医保报盘报文台账实体：每一次发给医保的数据（上传/撤销）都在这里留痕。
- * payload 即"发送给医保的数据到底长啥样"的全文；对账以本表 + bill_date 为口径。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

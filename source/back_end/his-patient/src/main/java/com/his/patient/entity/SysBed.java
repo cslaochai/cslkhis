@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 床位
- * <p>既有表，主键床位ID，不继承 BaseEntity。
- * <p><b>床位占用状态以本表为准</b>：病区.occupied_beds 与 {@code total_beds} 是演示数据
- * （实测 1 号病区写 30 床/占用 22，而本表该病区只有 4 条床位），禁止作为判断依据。
  */
 @Data
 @TableName("sys_bed")

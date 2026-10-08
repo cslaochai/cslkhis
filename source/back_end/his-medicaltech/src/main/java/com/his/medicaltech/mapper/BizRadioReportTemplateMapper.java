@@ -5,9 +5,6 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * 放射报告模板 Mapper。
- *
- * <p>uk_template_code 不含 del_flag（sql/138）→ 删除走**物理删**，
- * 模板是配置数据没有留档价值，软删留下的行会一直占着编码。
  */
 @Mapper
 public interface BizRadioReportTemplateMapper extends BaseMapper<com.his.medicaltech.entity.BizRadioReportTemplate> {

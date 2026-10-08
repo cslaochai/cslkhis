@@ -5,8 +5,6 @@ import lombok.Data;
 
 /**
  * 盘点复核入参
- * <p>pass=true → 差异过账（落库存流水，改批次余额），单据转「已过账」；
- * <br>pass=false → 退回「盘点中」重录实盘数，过账不发生。
  */
 @Data
 public class StocktakeAuditDTO {

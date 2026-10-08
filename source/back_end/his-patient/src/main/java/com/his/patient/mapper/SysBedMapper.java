@@ -13,8 +13,6 @@ import java.util.List;
 
 /**
  * 床位 Mapper
- * <p><b>床位占用一律以床位为准</b>：病区.total_beds/occupied_beds 是演示数据，
- * 与实际床位行数不符，只允许作为参考展示，禁止用于容量判断。
  */
 @Mapper
 public interface SysBedMapper extends BaseMapper<SysBed> {

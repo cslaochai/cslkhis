@@ -19,9 +19,9 @@ public interface ArrearsControlGate {
      */
     CheckResult checkNewOrder(OrderCheck command);
 
-    /**
-     * 校验入参。
-     */
+/**
+ * 校验入参。
+ */
     @Data
     @NoArgsConstructor
     class OrderCheck implements Serializable {
@@ -42,9 +42,9 @@ public interface ArrearsControlGate {
         }
     }
 
-    /**
-     * 校验结果。
-     */
+/**
+ * 校验结果。
+ */
     @Data
     class CheckResult implements Serializable {
 

@@ -7,7 +7,7 @@ import lombok.EqualsAndHashCode;
 import java.io.Serializable;
 
 /**
- * 转科记录分页查询入参（命名遵循 AGENTS.md：分页查询用 {@code xxxQueryPageDTO}）。
+ * 转科记录分页查询入参（命名遵循 AGENTS.md：分页查询用 xxxQueryPageDTO）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

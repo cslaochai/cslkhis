@@ -13,9 +13,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 短信验证码服务（发码 + 校验，Redis 存储）。
- *
- * <p><b>失败关闭：</b>未开启 mock 且未接网关时发码直接失败，不假装「已发送」。
- * 发码失败绝不让注册接口变成 500，调用方拿 {@link SendResult} 自行决定文案。
  */
 @Slf4j
 @Service

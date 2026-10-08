@@ -4,12 +4,6 @@ import lombok.NoArgsConstructor;
 
 /**
  * AI 能力标识。
- * <p>
- * 这些常量由业务代码显式传给执行器，<b>绝不允许由模型输出来决定调用哪个能力</b>。
- * 一旦改成模型自主选择，系统就从「工作流」退化成了「Agent」，
- * 可审计性与延迟预算同时失效（详见 docs/AI能力施工手册.md §1.2）。
- * <p>
- * 命名需与 application.yml 的 {@code ai.features.<key>}、{@code ai.timeouts.<key>} 保持一致。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AiCapabilityKeys {

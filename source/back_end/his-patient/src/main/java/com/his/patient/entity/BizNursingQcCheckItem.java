@@ -9,16 +9,6 @@ import java.math.BigDecimal;
 
 /**
  * 护理质量检查单明细（护理质量检查明细，sql/168）。
- *
- * <p>一行 = 一张检查单里的一个检查项：抽查例数、合格例数、应得分、实得分，
- * 外加 PDCA 的后两环 —— 存在问题 / 原因分析 / 整改措施。
- * 只记「合格与否」不记原因，检查表就退化成打分表，护理部月度通报里写不出「为什么跌了」。
- *
- * <p>项目名与应得分<b>是快照</b>（项目名称/{@code full_score}）：
- * 标准目录护理质控检查项目录会随评审细则改版调整分值，改版不能把去年的检查单重算成新的分数。
- *
- * <p>{@code uk_check_item(check_id, item_id)} 不含 del_flag ⇒ <b>删除走物理删</b>：
- * 整单重存是「先清明细再插明细」，软删留下的行还占着键，第二步必然 Duplicate entry。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

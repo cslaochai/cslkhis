@@ -14,13 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 护理文书（三测单 / 护理记录单 / 生命体征监测）。
- *
- * <p>字段与护理文书 **一一对应**。
- *
- * <p>关键约定：唯一索引 {@code uk_nr_admission_type_time (admission_id, nursing_type, measure_time)}
- * —— <b>同一患者、同一种文书、同一测量时点只允许一条</b>。三测单是"按时点发生的事实记录"，
- * 同一时点两条会让体温曲线出现两个点，护士自己都不知道该信哪条。服务层靠捕 {@code DuplicateKeyException}
- * 给出可读提示，而不是靠先查后插（先查后插在并发下必然漏）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

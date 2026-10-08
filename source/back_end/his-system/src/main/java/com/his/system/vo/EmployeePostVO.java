@@ -9,9 +9,6 @@ import java.time.LocalDate;
 
 /**
  * 员工岗位VO：一个人在一个科室以某个角色执业。
- *
- * <p>顶栏「切换岗位」与角色/科室的授权集合都出自这一份，不再分别取角色列表和科室列表 ——
- * 分开的两份数据能被拼成「医生 · 药房」这种现实中不存在的组合。
  */
 @Data
 public class EmployeePostVO {

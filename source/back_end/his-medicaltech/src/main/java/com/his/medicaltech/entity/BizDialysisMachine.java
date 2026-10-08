@@ -9,9 +9,6 @@ import java.io.Serializable;
 
 /**
  * 透析机位台账。
- *
- * <p>机位是透析室专有资源，不复用床位（住院床位有病区/占用语义，混用会把透析排班
- * 和住院分床搅在一起）。机位号唯一，维修/停用不可排班。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

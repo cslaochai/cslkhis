@@ -61,7 +61,7 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
             updateById(existing);
             return;
         }
-        // B 类保留（条件必填）：配置行已存在时允许提交空值清空，只有首次建档才必填，注解会把清空挡成 400
+        // B-条件必填：配置行已存在时允许提交空值清空，只有首次建档才必填，DTO 注解无法表达，保留
         if (!TextUtil.hasText(configValue)) {
             throw new BusinessException(configName + "不能为空");
         }

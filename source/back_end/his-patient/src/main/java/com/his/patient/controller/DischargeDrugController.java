@@ -17,8 +17,6 @@ import java.util.List;
 
 /**
  * 出院带药控制器。
- *
- * <p>流程：医生/护士在出院办理前开带药单（挂入院次）→ 药房批量发药 → 已发药留痕不可改删。
  */
 @Tag(name = "出院带药")
 @RestController

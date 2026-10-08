@@ -6,9 +6,6 @@ import lombok.Data;
 
 /**
  * 切换岗位结果出参。
- *
- * <p>角色与科室一起返回：岗位是成对切换的，前端拿一次就能把顶栏两个标签都更新掉，
- * 不用切换后再请求一次 /auth/info。
  */
 @Data
 public class SwitchPostVO {

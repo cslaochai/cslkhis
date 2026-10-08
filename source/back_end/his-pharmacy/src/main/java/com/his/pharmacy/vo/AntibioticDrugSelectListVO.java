@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
 
-/** 抗菌药物下拉选项（selectList 口径，与接口末段同名） */
+/**
+ * 抗菌药物下拉选项（selectList 口径，与接口末段同名）
+ */
 @Data
 public class AntibioticDrugSelectListVO {
 

@@ -12,9 +12,6 @@ import java.util.List;
 
 /**
  * 检查预约中心入参（设备档位 / 号源 / 预约单）
- *
- * <p>日期时间入参按项目惯例用空格分隔的 pattern 宽进（AGENTS §3）；
- * 检查日期用 LocalDate（yyyy-MM-dd），时段用 char(5) 的 "HH:mm" 字符串。
  */
 public class ExamApptDTO {
 

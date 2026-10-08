@@ -5,13 +5,6 @@ import lombok.Data;
 
 /**
  * ICD-10 编码推荐入参。
- * <p>
- * 两种用法：
- * <ol>
- *   <li>传 recordId —— 服务端从病历表取文本（推荐，前端不用拼字段）</li>
- *   <li>不传 recordId、直接传文本 —— 供尚未保存草稿的病历实时推荐</li>
- * </ol>
- * 两者同时存在时以入参文本为准（医生可能刚改过还没保存）。
  */
 @Data
 @Schema(description = "ICD-10 编码推荐入参")

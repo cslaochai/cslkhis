@@ -17,10 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 价格管理控制器
- *
- * <p>药品、耗材、检查、检验、治疗五类价表的统一价格查询与调价留痕。
- * 各类型的维护入口仍在各自模块（药品=DrugController、检查/检验=MedicalItemController），
- * 这里只做跨表统一视图 + 调价。</p>
  */
 @Tag(name = "价格管理")
 @RestController

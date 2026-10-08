@@ -15,11 +15,6 @@ import java.util.Map;
 
 /**
  * 结算账单服务（L2）：把一批记账行锁成"这笔该收多少、怎么分"。
- *
- * <p>账单只回答<b>应收与分摊</b>，不回答钱到没到：{@code paid_amount} 是支付流水的冗余镜像，
- * 权威永远在支付资金流水，每次流水后由 {@link #refreshFromTxns} 重算。
- * 优惠与医保 split 分列（{@code discount_amount} 只放院内优惠/抹零，统筹走统筹金额），
- * 混写一列等于让真优惠无处安放、现金清点多出一块说不清的差额。
  */
 public interface SettlementBillService extends IService<BizSettlementBill> {
 

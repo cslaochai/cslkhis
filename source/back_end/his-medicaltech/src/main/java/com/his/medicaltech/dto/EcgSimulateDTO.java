@@ -9,9 +9,6 @@ import lombok.Data;
 
 /**
  * 模拟采出入参（sql/173）：设备对接就位前的联调/演示入口。
- *
- * <p>服务端按 {@code rhythmCode} 合成一段典型节律的 12 导联波形并直接落库
- * （等价于设备推送了一次采集），返回工作台详情供前端直接渲染波形。
  */
 @Data
 public class EcgSimulateDTO {

@@ -19,9 +19,6 @@ import java.util.List;
 
 /**
  * 消息通知控制器
- * <p>
- * 收件人口径（站内信存的是员工身份，不是用户身份）在 {@link SysMessageService} 一处实现，
- * 本控制器不传身份。
  */
 @Tag(name = "消息通知")
 @RestController

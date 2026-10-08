@@ -11,8 +11,6 @@ import java.util.List;
 
 /**
  * 资金账户流水 Mapper。
- *
- * <p>余额永远 SUM 流水，不读 {@code balance_after} 快照（那是审计用的，写错一次就永久错）。
  */
 @Mapper
 public interface BizFundAccountTxnMapper extends BaseMapper<BizFundAccountTxn> {

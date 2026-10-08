@@ -18,12 +18,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 患者主档控制器
- *
- * <p>仅负责患者基本信息（建档、查询、修改、删除）与患者完整信息聚合。
- * 患者标签关联、过敏史、既往疾病史、手术外伤史、家族史、联系人已按业务域拆分为独立控制器：
- * {@link PatientTagRelationController}、{@link PatientAllergyController}、
- * {@link PatientPastDiseaseController}、{@link PatientSurgeryHistoryController}、
- * {@link PatientFamilyHistoryController}、{@link PatientContactController}。
  */
 @Tag(name = "患者管理")
 @RestController

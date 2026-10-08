@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医保扣款通知单（申诉 → 确认追责 → 缴回闭环）。
- *
- * <p>状态机：1-待确认 →（申诉）2-申诉中 →（结果）3-申诉成功 / 4-维持扣款待缴 →（缴回）5-已缴回；
- * 1 →（直接确认）4；1 →（作废）6。超期是展示态（handle_deadline 早于今天且状态 1/2），不落列。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

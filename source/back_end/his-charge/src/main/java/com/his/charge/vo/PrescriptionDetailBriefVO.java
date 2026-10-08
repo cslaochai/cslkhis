@@ -8,8 +8,6 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 处方明细跨域摘要：诊断依据匹配只用到药名。
- *
- * @see EmrGateway
  */
 @Data
 @NoArgsConstructor

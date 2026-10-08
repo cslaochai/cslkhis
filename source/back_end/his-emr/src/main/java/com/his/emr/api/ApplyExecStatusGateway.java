@@ -6,14 +6,6 @@ import java.util.List;
 
 /**
  * 申请单执行进度查询扩展点（由 his-medicaltech 模块提供实现）。
- *
- * <p>医生站右栏要显示的「结果」角标（待缴费 / 已缴费待执行 / 检查中 / 已出结果 / 已审核）
- * 需要把**申请单**（检查申请单 / 检验申请单，属 his-emr）
- * 与**执行记录**（检查记录 / 检验记录，属 his-medicaltech）
- * 拼在一起 —— 而 his-medicaltech 依赖 his-emr，反向依赖会形成环。
- *
- * <p>做法：接口定义在调用方（his-emr），实现在被依赖方（his-medicaltech），Spring 运行期注入。
- * 依赖方向保持 his-medicaltech --&gt; his-emr 单向。
  */
 public interface ApplyExecStatusGateway {
 
@@ -33,9 +25,9 @@ public interface ApplyExecStatusGateway {
      */
     List<ExecStatus> listLaboratoryExecStatus(List<Long> applyIds);
 
-    /**
-     * 单张申请单的执行进度。
-     */
+/**
+ * 单张申请单的执行进度。
+ */
     @Data
     class ExecStatus {
         /**

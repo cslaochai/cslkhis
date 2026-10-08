@@ -10,11 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 门诊慢特病人员备案（谁办的备案 = register_emp_name，服务端默认回填当前登录人）。
- *
- * <p>validEndKey 是唯一键 uk_chronic_active 的辅助列 = COALESCE(valid_end,'9999-12-31')，
- * 由服务端与 validEnd 同步维护：过期的行不再占位，允许续备。
- * 过期是展示态（reg_status=1 且 validEnd 早于今天 → 前端提示续备），不落状态列。
- * 注销/驳回是终态不可逆，所以本表不提供删除接口。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

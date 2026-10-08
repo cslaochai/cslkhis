@@ -35,13 +35,6 @@ import java.util.stream.Collectors;
 
 /**
  * 设备档案/维保/计量服务。
- *
- * <p>台账口径：nextMaintainDate = lastMaintainDate + maintainCycleDays（现算不落库）；
- * 维保登记成功后回写医疗设备台账的最后维保日期（档案与记录双写一致性）；
- * 维保记录删除（录错）后按剩余记录重算最近维保日期，无剩余记录时保留原值不猜。
- *
- * <p>码值口径全部走 {@code com.his.system.equipment.enums}，码值合法性由DTO 上的 {@code @InEnum} 校验，
- * 本层不再手写containsKey 抛异常（AGENTS.md §13/§14）。
  */
 @Service
 @RequiredArgsConstructor

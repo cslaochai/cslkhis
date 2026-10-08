@@ -14,16 +14,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 手术安全核查单（三方 × 三时段）的核查项口径（sql/134）。
- *
- * <p>与 {@link OperationCheckItems}（申请单上的术前核对，单人一次勾选）不是一回事：
- * 手术安全核查制度的事实是<b>手术医师 / 麻醉医师 / 手术室护士三方</b>在
- * <b>麻醉诱导前（Sign In）→ 手术开始前（Time Out）→ 患者离开手术室前（Sign Out）</b>
- * 三个时点当面共同核对并各自签名。飞检查的是"哪一方、哪个时段没签"。
- *
- * <p>核查结果同样是<b>码值集合</b>（逗号分隔），必核项缺失直接拒收 ——
- * 与"术前核对 4 项必核"同一条原则：逐项确认才是核对，一段自由文本只是"看起来核过了"。
- * 码值→文案见 {@link OperationSafetyPhaseEnum} 与 {@link OperationSafetyCheckItemEnum}。
+ * 手术安全核查单（三方 × 三时段）的核查项口径
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class SafetyCheckItems {

@@ -7,9 +7,6 @@ import java.io.Serializable;
 
 /**
  * 日间手术离院登记入参（术后观察 → 已出院）。
- *
- * <p>离院方式只收 1按时离院 / 3非计划再入院；2转普通住院走独立动作
- * （必须回填住院号 admission_id，那是医保与病案口径的分界点）。
  */
 @Data
 public class DaySurgeryDischargeDTO implements Serializable {

@@ -8,8 +8,6 @@ import java.util.List;
 
 /**
  * 纠纷/投诉统计（服务端 group by 出）。
- *
- * <p>绝不让前端拿「当前页 list」去数 —— 那等于只统计了本页，翻页就变。
  */
 @Data
 public class DisputeStatVO implements Serializable {

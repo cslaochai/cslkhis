@@ -10,16 +10,6 @@ import java.util.*;
 
 /**
  * 营养膳食口径（sql/168）。前端 lib/nutrition.js 与本类逐字对齐，页面不得另写一份映射。
- *
- * <p>三条不可让的口径：
- * <ol>
- *   <li><b>NRS2002 总分与「有无营养风险」由本类算</b>：总分 = 受损(0~3) + 严重度(0~3) + 年龄≥70 加 1，
- *       <b>≥3 判为有营养风险</b>（CSPEN 口径）。分数是能凑的，判定不能交给浏览器。</li>
- *   <li><b>膳食类型目录只在这里有一份</b>：热量/蛋白目标、供应餐次、是否走食堂订餐，
- *       都从 {@link Diet} 带出，营养师可改目标量但改不了 routeNeedsMeal 这条规则。</li>
- *   <li><b>只有口服（route=1）才进订餐</b>：管饲制剂由营养科发放、肠外营养走静配与医嘱执行链，
- *       两者都不该出现在食堂配送单上 —— 给肠外营养的患者订一份"饭"是错的。</li>
- * </ol>
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class NutritionRules {
@@ -275,15 +265,6 @@ public final class NutritionRules {
 
     /**
      * 饮食类型。
-     *
-     * @param code      饮食码（字典 his_diet_type）
-     * @param name      饮食名称
-     * @param category  饮食类别（1-基本 2-治疗 3-诊断试验 4-营养支持）
-     * @param route     默认给食途径（1-口服 2-管饲 3-静脉）
-     * @param calorie   默认每日热量目标 kcal
-     * @param protein   默认每日蛋白目标 g
-     * @param mealTypes 默认供应餐次（his_meal_type 值，逗号分隔；null 表示不走订餐）
-     * @param desc      配方/适用说明
      */
     public record Diet(String code, String name, int category, int route, Integer calorie, Integer protein,
                        String mealTypes, String desc) {

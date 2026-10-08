@@ -7,18 +7,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 医保 2304 上传报文（{@code InsuranceSettlementServiceImpl#buildUploadPayload}）。
- *
- * <p>为什么拆成 5 个嵌套结构：医保要<b>按项目核费用</b>，整单报一个总金额过不去，
- * 所以报文体是「账单头（patient/visit）+ 金额分组（fees/fund）+ 逐行 items」三段。
- * 用嵌套静态类而不是嵌套 {@code Map}，是为了让"这一段有哪些字段"在编译期就定死。
- *
- * <p>金额一律 BigDecimal：报文的 {@code fees}/{@code fund} 两段全是钱，
- * 经过一次 double 就会在对账时差几分钱，而医保局不会接受"四舍五入到分"的解释。
- *
- * <p>本类是 G7 样例报文（真实对接时按医保前置机 2304 规范做字段映射，
- * 替换 {@code InsuranceChannelService} 即可）。<b>字段声明顺序即 JSON 键顺序，
- * 键名是对外契约，不得改动。</b>
+ * 医保 2304 上传报文（InsuranceSettlementServiceImpl#buildUploadPayload）。
  */
 @Data
 public class InsuranceUploadPayloadVO implements Serializable {

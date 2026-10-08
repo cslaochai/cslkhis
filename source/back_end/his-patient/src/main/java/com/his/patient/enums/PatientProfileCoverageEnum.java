@@ -7,9 +7,6 @@ import java.util.Map;
 
 /**
  * 患者档案分组覆盖键（同时有两份存储的字段：过敏史 / 既往病史 / 联系人）。
- *
- * <p>码值→中文名的唯一出口（原 {@code PatientProfileFields} 的 {@code PROFILE_KEY_TO_LABEL} 映射已上移至此）。
- * 用于以结构化表的实际数据修正完整度缺失判据。
  */
 @Getter
 public enum PatientProfileCoverageEnum {

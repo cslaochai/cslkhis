@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 登录日志 Mapper（写入由 {@code SysLoginLogService} 旁路落库，读取走日志查看页）。
+ * 登录日志 Mapper（写入由 SysLoginLogService 旁路落库，读取走日志查看页）。
  */
 @Mapper
 public interface SysLoginLogMapper extends BaseMapper<SysLoginLog> {

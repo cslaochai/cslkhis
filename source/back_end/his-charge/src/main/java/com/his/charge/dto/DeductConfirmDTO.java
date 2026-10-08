@@ -7,7 +7,6 @@ import java.math.BigDecimal;
 
 /**
  * 确认扣款并追责（三要素：责任科室 + 损失承担方式 + 分摊金额；
- * 科室+个人共担时两者之和 ≤ 扣款金额，差额视为院方承担，不强制凑满）。
  */
 @Data
 public class DeductConfirmDTO {

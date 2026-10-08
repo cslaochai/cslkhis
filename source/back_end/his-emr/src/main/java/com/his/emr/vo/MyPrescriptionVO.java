@@ -12,9 +12,6 @@ import java.util.List;
 
 /**
  * 患者端「我的处方/取药」列表项。
- *
- * <p>与院内 BizPrescriptionVO 分开：那边带审方签名、退费、作废原因等院内字段，
- * 患者只需要「哪张方、什么状态、有哪些药、怎么吃」。
  */
 @Data
 public class MyPrescriptionVO {

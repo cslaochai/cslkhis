@@ -7,10 +7,6 @@ import java.util.List;
 
 /**
  * 医保审核证据判定模型输出（G-07）。
- * <p>契约见 prompts/insurance-evidence.md：judgments 逐条对应命中规则码，
- * verdict 只允许 supported / refuted / insufficient；模型编造的规则码与非法 verdict 由能力层丢弃。</p>
- * <p>审计口径（G-11）：规则码/verdict 是无隐私码值，标 {@link AiAuditPlain} 落审计明文作排障锚点；
- * overall/reason/quote 是临床文本，落指纹。</p>
  */
 @Data
 public class InsuranceEvidenceLlmOutputDTO {

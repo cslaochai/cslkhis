@@ -4,9 +4,6 @@ import com.his.common.enums.SignBizTypeEnum;
 
 /**
  * 「这类对象一共有多少、签了多少」的统计扩展点。
- *
- * <p>放在业务侧实现的原因和 {@link SignableContentProvider} 一样：
- * 签名概览里的"覆盖率"必须数业务表，而 his-common 不认识任何业务表。
  */
 public interface SignCoverageProvider {
 
@@ -19,14 +16,7 @@ public interface SignCoverageProvider {
      */
     SignCoverage coverage();
 
-    /**
-     * @param bizType     对象类型
-     * @param bizTypeText 对象类型文案
-     * @param total       对象总数
-     * @param signed      已签名（锚点状态为"已签名"）
-     * @param pendingSign 未签名
-     * @param invalidated 签名已失效
-     */
+
     record SignCoverage(int bizType, String bizTypeText,
                         long total, long signed, long pendingSign, long invalidated) {
     }

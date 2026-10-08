@@ -12,10 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 病历三级质控流转单实体
- * <p>
- * 状态机：1 科级待审 →（科级通过）→ 2 病案室待审 →（病案室通过）→ 3 医务处待审 →（终审）→ 4 终审通过；
- * 任一审核级可（退回）→ 5 整改中（return_level 记录退回发生级），科室（整改提交）→ 回到 return_level 待审。
- * 状态码值唯一口径：RecordQcFlowStatusEnum / RecordQcLevelEnum / RecordQcActionEnum，前端 lib/recordQcFlow.js 同源对齐。
  */
 @Data
 @TableName("biz_record_qc_flow")

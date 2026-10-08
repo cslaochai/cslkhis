@@ -11,12 +11,6 @@ import java.util.List;
 
 /**
  * 护理质控检查项标准目录 Mapper（sql/168）。
- *
- * <p>本表是全院一份的打分依据，页面<b>只读</b>：目录要随评审细则改版走数据库变更（sql 文件），
- * 不做界面维护 —— 一旦允许在页面上改应得分，「每类合计 100」这条不变量就没有守门人了
- * （自检 T2 盯的是数据库里的合计，运行时改就绕过了它）。
- *
- * <p>只列 {@code status=1}：停用的项不再作为新检查单的候选，历史检查单靠自己的明细快照渲染。
  */
 @Mapper
 public interface SysNursingQcItemMapper extends BaseMapper<SysNursingQcItem> {

@@ -1,12 +1,7 @@
 package com.his.common.enums;
 
 /**
- * 医保结算清单状态（字典 {@code his_ins_settlement_status}，落在医保结算清单的结算状态列）。
- *
- * <p>清单是 L2 出账的产物：账单结算时生成（待结算），钱收齐后由院内结算算出统筹/个账/自付三个真数，
- * 再报盘给医保（已上传），医保侧审核（已审核）。
- * {@link #VOIDED} 是本次补的：账单作废或整单退费后清单必须跟着作废，否则它会永远留在
- * 「待结算」列表里，等着被人点一次结算、报一张已经不存在账单的 2304。
+ * 医保结算清单状态（字典 his_ins_settlement_status，落在医保结算清单的结算状态列）。
  */
 public enum InsuranceSettlementStatusEnum {
 

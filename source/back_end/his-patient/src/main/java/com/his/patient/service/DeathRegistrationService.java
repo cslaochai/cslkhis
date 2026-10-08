@@ -8,8 +8,6 @@ import java.util.List;
 
 /**
  * 住院死亡登记簿：死亡类型判定、报公安留痕、遗体去向、家属领取联次、纠纷登记。
- *
- * <p>与证明的分工：证明回答「死因是什么」（对外法定凭证），登记回答「这个人死了之后院内怎么处理的」。
  */
 public interface DeathRegistrationService {
 

@@ -11,10 +11,6 @@ import org.apache.ibatis.annotations.Select;
 
 /**
  * 住院医嘱 Mapper。
- *
- * <p>自定义 {@code @Select} 不受 {@code @TableLogic} 影响 → JOIN 里必须显式写 {@code del_flag = 0}。
- * 医嘱行本身已经把患者/科室/病区/床位做成快照，所以列表**不需要 JOIN 患者表**，
- * 唯一要补的是"今日已执行次数"（队列与列表都要看）。
  */
 @Mapper
 public interface BizInpatientOrderMapper extends BaseMapper<BizInpatientOrder> {

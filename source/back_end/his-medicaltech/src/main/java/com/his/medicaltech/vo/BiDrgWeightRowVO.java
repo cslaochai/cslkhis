@@ -6,10 +6,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
- * DRG 组权重一行（{@code BiMapper#drgWeights}）。
- *
- * <p>组表一次查全后内存建 code → weight 映射：CMI 要逐条分组，
- * 每条再查一次组表就是 N+1 次数据库往返。
+ * DRG 组权重一行（BiMapper#drgWeights）。
  */
 @Data
 public class BiDrgWeightRowVO implements Serializable {

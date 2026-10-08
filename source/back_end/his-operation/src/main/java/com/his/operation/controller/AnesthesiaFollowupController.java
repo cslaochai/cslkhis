@@ -17,12 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 麻醉术后随访端点（P134.3）。
- *
- * <p>独立前缀：随访是麻醉医师术后的另一个动作队列（欠账角标驱动），
- * 塞进麻醉记录单页里就没有"哪些麻醉还没随访"的入口了。
- *
- * <p>权限全部标到方法（AGENTS §4：类级注解会静默罩住没写注解的方法）。
+ * 麻醉术后随访端点
  */
 @Tag(name = "麻醉术后随访")
 @RestController

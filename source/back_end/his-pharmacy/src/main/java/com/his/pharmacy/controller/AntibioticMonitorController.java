@@ -21,10 +21,6 @@ import java.util.List;
 
 /**
  * 抗菌药物使用监测（使用率 / 使用强度 AUD / 微生物送检率）+ I 类切口预防用药点评。
- *
- * <p>权限：监测页读 {@code pharmacy:antibiotic:monitor}；生成快照 {@code :statGenerate}；
- * 导出 {@code :statExport}；I类切口点评页读 {@code pharmacy:antibiotic:incision}；
- * 提交结论 {@code :incisionReview}。
  */
 @Tag(name = "抗菌药物使用监测与I类切口点评")
 @RestController

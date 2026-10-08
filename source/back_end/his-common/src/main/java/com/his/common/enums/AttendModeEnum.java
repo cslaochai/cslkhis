@@ -3,15 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 响应形态枚举（sql/200，字典 {@code his_attend_mode}）
- *
- * <p><b>它回答的是「叫得动人叫不动」，出勤状态回答不了</b>：同样是「今天有班」，
- * 坐班的人就在单元里干活；听班的人在家待命，来电话才到岗；留院值班的人住在医院但不在门诊。
- * 这三档在派单、催班、急诊升级里的处置完全不同，所以是独立一维，不塞进入职状态里。
- *
- * <p><b>听班不放号</b>：听班 + 不出诊的组合不能生成号源——
- * 挂号系统给一个「在家待命、可能下午才到」的医生放号，患者到了没人看，
- * 是投诉而不是数据问题。判定走 {@link #releasesSource}。
+ * 响应形态枚举（sql/200，字典 his_attend_mode）
  */
 @Getter
 public enum AttendModeEnum {

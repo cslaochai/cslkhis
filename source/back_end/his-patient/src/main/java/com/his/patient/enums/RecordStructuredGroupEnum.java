@@ -7,8 +7,6 @@ import java.util.Map;
 
 /**
  * 住院病历结构化要素分组（病史 / 生命体征 / 体格检查 / 诊疗过程与结论 / 会诊 / 转科 / 手术 / 输血）。
- *
- * <p>码值→文案的唯一出口（原 {@code RecordStructuredFields} 的 {@code GROUP_LABELS} 映射已上移至此）。
  */
 @Getter
 public enum RecordStructuredGroupEnum {

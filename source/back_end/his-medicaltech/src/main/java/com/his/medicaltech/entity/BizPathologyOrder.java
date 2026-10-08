@@ -10,10 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 病理检查主单
- *
- * <p>状态机：1 已登记 → 2 已接收标本 → 3 已取材 → 4 已制片 → 5 已初诊 → 6 已审核 → 7 已发布；
- * 8 已取消（终态，仅在发布前可取消）。流转校验一律在 PathologyService 收口，
- * 前端只做按钮显隐。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

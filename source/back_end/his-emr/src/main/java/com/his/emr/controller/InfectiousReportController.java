@@ -17,7 +17,6 @@ import java.util.List;
 
 /**
  * 传染病报告卡控制器（G11）。
- * 直报外发段依赖疾控网络，当前「直报=报文组装落库留痕」，service 单点即未来替换位。
  */
 @Tag(name = "传染病报告卡")
 @RestController

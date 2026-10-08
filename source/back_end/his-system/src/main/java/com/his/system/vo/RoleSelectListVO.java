@@ -9,8 +9,6 @@ import java.io.Serializable;
 
 /**
  * 角色下拉出参：配岗位/配工作台时只用来认「哪个角色」。
- *
- * <p>数据范围、角色类型、排序号属角色管理页的列，下拉里带出去没有消费方。
  */
 @Data
 @Schema(name = "RoleSelectListVO", description = "角色下拉出参")

@@ -13,9 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 追加一条麻醉用药记录。
- *
- * <p>药品名称必填、编码可空：麻醉中临时加药时来不及查字典是常态，
- * 但"不知道给的什么药"是不能接受的 —— 名称这条底线必须留。
  */
 @Data
 public class AnesthesiaMedUpsertDTO implements Serializable {

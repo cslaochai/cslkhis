@@ -9,9 +9,6 @@ import java.time.LocalDate;
 
 /**
  * 慢特病备案新增/修改（id 空=新增；仅「有效」可改，单号由服务端生成）。
- *
- * <p>registerEmpName 不传时服务端回填当前登录人姓名 —— 谁点保存就是谁办的备案；
- * 改成外部经办机构人员时必须在 remark 写明原因。
  */
 @Data
 public class ChronicRegUpsertDTO {

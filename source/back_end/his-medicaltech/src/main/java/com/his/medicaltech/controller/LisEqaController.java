@@ -14,12 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * LIS 室间质评（EQA）接口（URL 前缀 /medicaltech/lisEqa）
- *
- * <p>一句话区别于室内质控（/medicaltech/lisQc）：室内质控的靶值是本室自己定的，
- * EQA 的靶值要从组织方回报回来才有 —— 所以判定口发生在「成绩回报」这一步，而不是检测录入。
- *
- * <p>SDI / 偏倚 / PT 得分 / 互差全部服务端算好落库，前端只显示。
- * 每个方法单独标 @PreAuthorize（类级注解会静默覆盖所有没写注解的方法，G5b 已踩过）。
  */
 @Tag(name = "LIS室间质评EQA")
 @RestController

@@ -4,7 +4,6 @@ import lombok.Getter;
 
 /**
  * AI 调用状态。区分「超时」与「失败」是因为排查方向完全不同：
- * 超时看网络与超时配置，失败看密钥与协议。
  */
 @Getter
 public enum AiCallStatusEnum {

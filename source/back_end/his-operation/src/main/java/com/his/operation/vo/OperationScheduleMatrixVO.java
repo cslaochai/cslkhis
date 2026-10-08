@@ -9,17 +9,6 @@ import java.util.List;
 
 /**
  * 手术室排台总表出参（P134.1）：一天 × 手术间的矩阵。
- *
- * <p>三个桶把当天所有手术安置完，<b>不漏一台</b>是这张表的底线：
- * <ol>
- *   <li>{@code rooms}：每个启用手术间一列，列内按计划开始时间升序；</li>
- *   <li>{@code others}：排到了「未登记手术间」（主数据里没有、或历史自由文本）的手术 ——
- *       不丢，但也不假装它是某个正规手术间；</li>
- *   <li>{@code unscheduled}：待排期申请（急诊在前），拖进列里才算排台。</li>
- * </ol>
- *
- * <p>行内的 {@code ops} 复用 {@link OperationApplyVO}（已 decorate），并额外回填
- * {@code safetyCheckPhases}（三方核查轮数，只在这里批量查一次，列表接口不查避免 N+1）。
  */
 @Data
 public class OperationScheduleMatrixVO implements Serializable {

@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 药品调拨（药库 ↔ 药房，sql/154 ②级）
- * <p>约定：查询 GET、写操作 POST、路径驼峰；鉴权只标方法（AGENTS §4，类级会静默覆盖）。
  */
 @Tag(name = "药品调拨")
 @RestController

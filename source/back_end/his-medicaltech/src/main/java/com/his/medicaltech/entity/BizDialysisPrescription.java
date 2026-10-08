@@ -14,9 +14,6 @@ import java.time.LocalDate;
 
 /**
  * 透析处方。
- *
- * <p>同一档案同时只允许一张有效处方（服务层校验）：排班时把处方参数快照进透析单，
- * 之后改处方不影响已排的单。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

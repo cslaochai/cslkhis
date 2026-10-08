@@ -8,8 +8,6 @@ import java.math.BigDecimal;
 
 /**
  * 记账行红冲入参（L1 唯一的"改错"出口）。
- *
- * <p>数量为空 = 整行红冲；给了数量 = 部分红冲，只写一条负行，原行金额不动。
  */
 @Data
 public class FeeReverseDTO {

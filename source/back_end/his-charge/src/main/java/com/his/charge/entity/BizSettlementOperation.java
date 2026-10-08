@@ -11,10 +11,6 @@ import java.time.LocalDate;
 
 /**
  * 结算清单手术操作明细
- *
- * <p>DRG 分组的另一半输入（诊断定 ADRG，手术决定外科组）。
- * 缺这张表，「高套手术操作」和「有手术收费却无手术编码」都查不出来 ——
- * 而后者是医保飞检最常见的扣分项。</p>
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

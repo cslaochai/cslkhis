@@ -16,14 +16,6 @@ import java.util.List;
 
 /**
  * 患者联系人控制器
- *
- * <p>一个患者可有多个联系人（患者联系方式）。建档时若填写了紧急联系人，
- * 由患者主档保存流程自动落成一条「主要联系人」（isPrimary=1）；本控制器负责后续的
- * 查询、新增、修改与删除。
- *
- * <p>⚠ {@code relationship} 是 {&#64;code 患者关系字典} 的**码值**，出参另带
- * {@code relationshipText} 文案。此前 DTO 把它声明成 String 并注明「如：父亲、配偶」，
- * 于是「配偶」被 MySQL 隐式转成 0 静默落库 —— 现在类型上就写不进这种值了。
  */
 @Tag(name = "患者联系人")
 @RestController

@@ -3,11 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 值守责任范围枚举（sql/200，字典 {@code his_duty_scope}）
- *
- * <p>「总值班」不是一个岗，是一组位：行政总值班管全院协调，急诊总值班管抢救调配，
- * 感染/总务/信息各自有自己的夜间责任人。分范围是为了<b>派单能找到对的那一位</b>——
- * 网络断了打给行政总值班，他既没权限也没口令。
+ * 值守责任范围枚举（sql/200，字典 his_duty_scope）
  */
 @Getter
 public enum DutyScopeEnum {

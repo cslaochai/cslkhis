@@ -14,10 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 卡片 {@code deptVisitRank}：今日科室就诊排行（top 6，全院口径）。
- *
- * <p>它挂在 {@code report:stats:list} 下，是给统计岗/院领导看的全院数字，
- * 不是"我本科室"—— 需要按科室收敛的卡请另开一张，别往这里加参数。
+ * 卡片 deptVisitRank：今日科室就诊排行（top 6，全院口径）。
  */
 @Service
 @RequiredArgsConstructor

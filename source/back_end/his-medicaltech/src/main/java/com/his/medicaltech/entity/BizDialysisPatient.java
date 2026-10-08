@@ -13,9 +13,6 @@ import java.time.LocalDate;
 
 /**
  * 透析患者档案。
- *
- * <p>患者级唯一（uk patient_id+del_flag）：一个人只能有一份透析档案，
- * 换中心/退出后重新入透走「重新启用」而不是新建第二份。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

@@ -8,9 +8,6 @@ import java.time.LocalDateTime;
 
 /**
  * 危急值出参
- * <p>
- * 在实体字段之外补三类<b>给前端直接用</b>的派生字段：中文状态、超时标志、带箭头的结果文本。
- * 放在后端算的原因：超时判定依赖服务器时间，前端算会因为客户端时钟不准而漂移。
  */
 @Data
 public class BizCriticalValueVO {

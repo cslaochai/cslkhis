@@ -2,10 +2,6 @@ package com.his.common.enums;
 
 /**
  * 签名对象类型。
- *
- * <p>与电子签名证据的业务类型列同值；每个类型对应一个
- * {@link com.his.common.service.SignableContentProvider} 实现，
- * 由实现方（业务模块）负责"内容怎么规范化"与"锚点写哪张表"。
  */
 public enum SignBizTypeEnum {
 

@@ -10,9 +10,6 @@ import java.util.List;
 
 /**
  * 病历保存入参（临时保存 / 结诊共用）
- *
- * <p>用于医生工作站「临时保存」与「结诊提交」两个动作，一次提交完整的病历正文、
- * 处方、检查申请与检验申请。</p>
  */
 @Data
 public class MedicalRecordSaveDTO {

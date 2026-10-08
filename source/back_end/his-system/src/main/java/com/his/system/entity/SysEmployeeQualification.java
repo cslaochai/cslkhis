@@ -11,11 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 员工资格证书实体：一行 = 一个人的一本证（一人多证）。
- *
- * <p>见 sql/112-员工资格证书.sql。与 sql/42 的电子签名证书（电子签名 CA 证书）无关。
- *
- * <p>本表没有 del_flag（不继承 BaseEntity），MyBatis-Plus 的 delete 即物理删，
- * 不会留下占着 {@code uk_emp_cert_type_no} 的软删行。
  */
 @Data
 @TableName("sys_employee_qualification")

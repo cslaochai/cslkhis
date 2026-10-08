@@ -16,10 +16,6 @@ import java.util.List;
 
 /**
  * 患者过敏史控制器
- *
- * <p>写操作全部走 {@link PatientHealthProfileService}：校验、操作人、主档文本投影回算
- * 都在服务层收口。控制器此前直接调 Mapper —— 于是「过敏反应表现」这一列（NOT NULL）
- * 传空值会直接 500，录入人只看到一句 SQL 报错。
  */
 @Tag(name = "患者过敏史")
 @RestController

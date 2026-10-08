@@ -6,9 +6,6 @@ import lombok.Data;
 
 /**
  * 药物相互作用知识新增/修改入参（id 为空=新增）
- * <p>
- * 长度类字段不在这里用 {@code @Size} 拦（AGENTS §3：入参层的 400 会抢在服务端截断之前，
- * 等于把「粘贴了一大段说明书原文」变成请求失败），超长由服务端截到列宽。
  */
 @Data
 public class DrugInteractionUpsertDTO {

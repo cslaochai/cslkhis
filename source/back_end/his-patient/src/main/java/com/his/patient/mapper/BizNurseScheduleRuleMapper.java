@@ -12,9 +12,6 @@ import java.util.List;
 
 /**
  * 病区护理人力配置标准 Mapper（sql/166）。
- *
- * <p>规则行是排班校验的依据，也是护理部「这个病区每天至少要几个后夜班」的书面口径。
- * 自定义 SQL 不受 {@code @TableLogic} 覆盖，需要 {@code del_flag = 0} 的自行加。
  */
 @Mapper
 public interface BizNurseScheduleRuleMapper extends BaseMapper<BizNurseScheduleRule> {

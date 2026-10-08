@@ -8,9 +8,6 @@ import java.time.LocalDateTime;
 
 /**
  * 居民死亡医学证明（推断）书：填写 → 审核 → 签发 → 打印 → 死因监测上报，错证只能作废重开。
- *
- * <p>死亡事实的唯一来源仍是出院办理（出院记录的死亡标记=1）：本服务不写出院，
- * 但<b>签发</b>这一对外动作必须以「该住院已办死亡离院」为前提，且死亡时间与出院时间是同一时点。
  */
 public interface DeathCertificateService {
 

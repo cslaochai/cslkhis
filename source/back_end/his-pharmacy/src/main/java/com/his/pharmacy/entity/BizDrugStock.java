@@ -10,7 +10,9 @@ import lombok.EqualsAndHashCode;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-/** 药品批次库存 */
+/**
+ * 药品批次库存
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TableName("biz_drug_stock")

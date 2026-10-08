@@ -6,7 +6,9 @@ import jakarta.validation.constraints.Min;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/** 抗菌药物处方权授权分页入参 */
+/**
+ * 抗菌药物处方权授权分页入参
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class AntibioticAuthQueryPageDTO extends PageParam {

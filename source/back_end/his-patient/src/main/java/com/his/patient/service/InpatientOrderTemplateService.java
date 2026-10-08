@@ -11,10 +11,6 @@ import java.util.List;
 
 /**
  * 住院医嘱模板服务（医生个人模板：开立弹窗「套用模板 / 另存为模板」）。
- *
- * <p><b>模板不落库到医嘱表</b>：套用只是把明细回填到开立表单，医生改完仍走
- * {@code /patient/inpatient/order/save}。这样医嘱的双签、组套同起同停、欠费管控、
- * 执行计划与计费快照全部零改动 —— 模板不另开一条写医嘱的路。
  */
 public interface InpatientOrderTemplateService {
 

@@ -3,11 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 排班生成来源枚举（sql/200，字典 {@code his_staff_schedule_source}）
- *
- * <p>「这一行是谁弄出来的」必须留痕，否则批量操作没法撤销也没法解释：
- * 手工排的、周模板铺的、从上周整周复制的、换班换出来的，四者混在一起后
- * 「模板改了下周会不会跟着变」这种问题无从回答。
+ * 排班生成来源枚举（sql/200，字典 his_staff_schedule_source）
  */
 @Getter
 public enum StaffScheduleSourceEnum {

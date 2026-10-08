@@ -13,13 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 满意度答卷主表（sql/164）——一次回收一条。
- *
- * <p>uk_survey_answer_dispatch(dispatch_id) 是**重复回收的最后一道闸**：
- * 电话里患者改主意重说一遍是常态，没有这条键，同一次发放能落两张答卷，均分当场被灌水。
- *
- * <p>作废（answer_status=2）不删行、也不新起一行 —— 本表唯一键是 dispatch_id，一张发放单永远只有一行答卷，
- * 所以「作废」是**待重填的瞬时态**而不是历史台账：重填会覆盖同一行（remark 与 dispute_case_id 一起被改写）。
- * 已转投诉的那次低分不因覆盖而失踪 —— 分数、最低维度、患者原话都写进了投诉单 content，追溯以投诉台账为准。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

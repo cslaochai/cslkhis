@@ -10,10 +10,6 @@ import java.util.List;
 
 /**
  * 手术麻醉链的纯业务计算口径（Aldrete 总分 / 记账折算 / 失败原因截断 / 时长格式化）。
- *
- * <p>本类<b>只承载临床判定与计算口径，不承载任何码值 → 文案映射</b>：
- * 展示文案一律走 {@code com.his.operation.enums} 下各枚举的 {@code getText}（展示）
- * / {@code labelOrUnknown}（异常 / 审计），本类里不得出现「未知(code)」兜底。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class AnesthesiaCalcs {

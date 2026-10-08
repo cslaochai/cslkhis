@@ -11,10 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 支付单（患者端小程序统一支付凭证，微信支付口子的落库形态）。
- *
- * <p>一笔业务单（收费单/挂号单/入院单）一次有效支付单；支付成功后按
- * bizType 推进对应业务。pay_status 状态机：0-待支付 → 1-已支付 → 3-已退款；
- * 0 → 2-已关闭（超时未付/业务单已终结）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

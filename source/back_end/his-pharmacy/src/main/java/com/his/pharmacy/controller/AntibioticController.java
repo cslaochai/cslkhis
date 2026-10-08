@@ -17,10 +17,6 @@ import java.util.List;
 
 /**
  * 抗菌药物分级目录 + 医师处方权授权。
- *
- * <p>权限：页面读 {@code pharmacy:antibiotic:catalog}；目录/别名维护 {@code :catalogEdit}；
- * 授权 {@code :authEdit}。开方前的越权自检 {@code /checkAuthority} 对医生站开放
- * （医生站要能在开方前就知道"这药我能不能开"，而不是等提交才报错）。
  */
 @Tag(name = "抗菌药物分级目录与处方权")
 @RestController

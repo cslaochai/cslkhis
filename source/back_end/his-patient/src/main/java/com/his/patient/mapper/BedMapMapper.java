@@ -9,14 +9,6 @@ import java.util.List;
 
 /**
  * 病区床位图聚合 Mapper（列名已按 information_schema 逐表核对）。
- *
- * <p><b>占用者为什么不 JOIN</b>：dev 库一张床挂着多条 {@code admit_status=1} 的记录
- * （历史验证夹具残留，如「全科 02 床」6 条），直接 join 会让一张床渲染出六张卡，
- * 卡片数也再对不上该科床位总数。这里用相关子查询取「床位上记的那个患者优先、
- * 否则最近入院的一条」，保证<b>一床一行</b>。
- *
- * <p>科室ID/病区ID 用 {@code IS NULL} 表达"不收口"，与本模块
- * {@code selectBedList} 同口径；服务层永远传非空 deptId，不受限账号也会先落到主岗位科室。
  */
 @Mapper
 public interface BedMapMapper {

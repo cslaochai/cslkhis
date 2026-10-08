@@ -11,10 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * PACU 出室入参。
- *
- * <p><b>Aldrete &lt; 9 出室必须写明原因，且去向不能是「回病房」</b>：
- * 不达标回病房就是把"还没醒的人"当成"醒了的人"交出去，
- * 这类事故复盘时最常说的一句话就是"当时评分没到就走了"。
  */
 @Data
 public class PacuLeaveDTO implements Serializable {

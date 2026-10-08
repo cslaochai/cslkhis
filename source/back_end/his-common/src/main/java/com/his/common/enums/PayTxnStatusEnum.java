@@ -1,10 +1,7 @@
 package com.his.common.enums;
 
 /**
- * 支付流水状态（字典 {@code his_pay_txn_status}，落在支付资金流水的流水状态列）。
- *
- * <p>流水错了不删也不改金额：置 REVERSED 并另起一笔反向流水，两边用 {@code orig_txn_id} 互指。
- * 删流水等于把"收过钱"这个事实抹掉，钱货两讫的追溯链就断了。
+ * 支付流水状态（字典 his_pay_txn_status，落在支付资金流水的流水状态列）。
  */
 public enum PayTxnStatusEnum {
 

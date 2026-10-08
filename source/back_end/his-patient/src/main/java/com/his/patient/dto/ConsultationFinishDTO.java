@@ -9,9 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 会诊完成入参：给出结论并回写住院病历。
- *
- * <p>结论不可为空（= 医嘱"执行必须有记录"）：「会诊已完成」而没有结论，
- * 在病历上等于什么都没发生，四核对里"病历有医嘱没记"这一类缺陷反而会多出来。
  */
 @Data
 public class ConsultationFinishDTO implements Serializable {

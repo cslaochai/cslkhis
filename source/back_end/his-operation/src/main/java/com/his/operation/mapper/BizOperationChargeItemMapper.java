@@ -11,11 +11,6 @@ import java.util.List;
 
 /**
  * 手术麻醉计费明细 Mapper。
- *
- * <p>{@code selectTreatmentItem} 是一条<b>跨模块裸 SQL</b>：
- * 治疗项目字典属 his-system，his-patient 依赖不了它，
- * 而"取价"必须在开票动作里同步完成。这里只读三列、不过 entity，
- * 返回 {@code null} 表示项目不存在（调用方判定为计费失败，不猜价格）。
  */
 @Mapper
 public interface BizOperationChargeItemMapper extends BaseMapper<BizOperationChargeItem> {

@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 传染病报告卡分页查询。
- * <p>分页字段继承 {@link PageParam}，越界夹取在基类统一做。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

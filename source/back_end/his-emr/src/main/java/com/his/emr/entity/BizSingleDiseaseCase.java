@@ -12,8 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * 单病种质控病例（M4）。病案首页取数快照；{@code (disease_id, admission_id)} 唯一
- * —— 一份病历对同一病种只纳入一次。纳入不可删（留质控底账），错纳入用质控异常标记。
+ * 单病种质控病例（M4）。病案首页取数快照；(disease_id, admission_id) 唯一
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

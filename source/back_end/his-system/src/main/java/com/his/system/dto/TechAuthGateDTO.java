@@ -8,10 +8,6 @@ import java.time.LocalDate;
 
 /**
  * 技术授权准入闸入参（跨模块调用：his-patient 开手术单/排台、his-medicaltech 执行内镜时提交）。
- *
- * <p>为什么闸门做成「一句调用」而不是让调用方自己判：判完还要写越权登记，
- * 四个入口各写一遍分支必然漂移（有的忘了登记、有的把择期也放行了）。
- * 授权判定与越权留痕必须收在同一个方法里。
  */
 @Data
 @NoArgsConstructor

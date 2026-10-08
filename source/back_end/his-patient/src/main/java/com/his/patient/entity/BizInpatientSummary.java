@@ -14,8 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院病案首页
- * <p>与入院记录 1:1。它是 <b>DRG/DIP 分组的唯一输入</b>，也是医保结算清单的上游依据。
- * <p>字段划分参考《医疗保障基金结算清单》与住院病案首页填写规范：基本信息 / 住院过程 / 离院信息 / 费用信息。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

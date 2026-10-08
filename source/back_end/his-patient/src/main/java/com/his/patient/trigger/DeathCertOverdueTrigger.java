@@ -8,12 +8,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * 死亡证明逾期未上报催报的触发器（death-cert 发送方）。
- *
- * <p>参照病案借阅超期的「定时 + 手工补跑」双路径：{@code notifyOverdue()} 按天幂等
- * （靠死亡医学证明书.notify_time 当日不重发），手工端点
- * {@code POST /patient/death/cert/notifyOverdue} 供验证与运维即时补跑。
- *
- * <p>每天 09:00 扫一次：上报时限以「天」为粒度（死亡时间 + 院内口径天数），扫得更密只是空转。
  */
 @Slf4j
 @Component

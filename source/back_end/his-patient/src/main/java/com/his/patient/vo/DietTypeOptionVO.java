@@ -6,9 +6,6 @@ import java.io.Serializable;
 
 /**
  * 饮食类型目录下拉（营养师登记方案时的选项）。
- *
- * <p>热量/蛋白目标、餐次、是否走食堂订餐都从目录带出并在前端显示，
- * 但<b>落库值由服务端按 code 重算</b> —— 下拉里的默认值是"建议"，不是"事实"。
  */
 @Data
 public class DietTypeOptionVO implements Serializable {

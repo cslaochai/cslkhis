@@ -15,8 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 人力配置标准（一个单元 × 一个班次 × 一个岗位类别该配多少人）。
- *
- * <p>它是排班写入时的闸门依据，不是报表：低于最低在岗会拦住保存，高于上限只提示。
  */
 @Tag(name = "人力配置标准")
 @RestController

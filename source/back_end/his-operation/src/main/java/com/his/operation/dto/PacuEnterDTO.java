@@ -7,9 +7,6 @@ import java.io.Serializable;
 
 /**
  * 入 PACU 登记入参。
- *
- * <p>必须先有已提交/已审核的麻醉记录：PACU 是"麻醉的一段延续"，
- * 没有麻醉记录却有一段 PACU 停留，等于凭空出现一节监护。
  */
 @Data
 public class PacuEnterDTO implements Serializable {

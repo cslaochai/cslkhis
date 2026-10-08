@@ -9,14 +9,6 @@ import java.util.List;
 
 /**
  * 护理文书服务（三测单 / 护理记录单 / 生命体征监测）。
- *
- * <p>两条不可破的业务铁律：
- * <ol>
- *   <li><b>三测单按时点唯一</b>：同一患者、同类型、同一测量时点只允许一条
- *       （库唯一索引 {@code uk_nr_admission_type_time} 兜底）。同一次测量录两条，
- *       曲线就会出现两个点，护士不知道该信哪条 —— 这不是"允许重复但以后去重"能补救的。</li>
- *   <li><b>归档后禁止修改</b>，修改留痕口径与病历文书一致。</li>
- * </ol>
  */
 public interface InpatientNursingService {
 

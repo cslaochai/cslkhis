@@ -10,10 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医疗纠纷 / 投诉登记主单。
- *
- * <p>字段与医疗纠纷投诉主单完全对齐（实体多一列 → 全表 select 500）。
- *
- * <p>状态机单向：1待受理 → 2调查中 → 3处理中 → 4已结案（终态）；未结案 → 5已撤销（终态）。
  */
 @Data
 @TableName("biz_dispute_case")

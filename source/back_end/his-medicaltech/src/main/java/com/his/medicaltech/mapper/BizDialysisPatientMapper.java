@@ -13,9 +13,6 @@ import java.util.List;
 
 /**
  * 透析患者档案 Mapper。
- *
- * <p>跨模块读患者基本信息（归 his-patient）走裸 SQL；档案列表把「当前有效处方」与
- * 例次统计一并带出，避免前端为一行数据再发 N 次请求。
  */
 @Mapper
 public interface BizDialysisPatientMapper extends BaseMapper<BizDialysisPatient> {

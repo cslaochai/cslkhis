@@ -39,15 +39,6 @@ import java.util.List;
 
 /**
  * 内镜亚专业服务
- *
- * <p>状态机：1 已登记 → 2 已签到 → 3 检查中 → 4 已出报告 → 5 已审核 → 6 已发布；7 已取消。
- *
- * <p>两条硬规则：
- * <ol>
- *   <li>活检送病理走「同模块内 PathologyService.createFromEndoscopy」生成病理单并回填病理号，
- *       **同一内镜单重复送检直接拒绝**（否则一份活检出两份病理单，临床会拿到互相矛盾的诊断）；</li>
- *   <li>审核人不得是报告人本人。</li>
- * </ol>
  */
 @Service
 @RequiredArgsConstructor

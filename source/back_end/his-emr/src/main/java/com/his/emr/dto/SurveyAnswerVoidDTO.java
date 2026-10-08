@@ -8,8 +8,6 @@ import java.io.Serializable;
 
 /**
  * 答卷作废入参（填错/重复时用它，而不是删除）。
- *
- * <p>作废保留行：答卷是「患者说过什么」的事实，删除后无法证明当初为什么转了投诉。
  */
 @Data
 public class SurveyAnswerVoidDTO implements Serializable {

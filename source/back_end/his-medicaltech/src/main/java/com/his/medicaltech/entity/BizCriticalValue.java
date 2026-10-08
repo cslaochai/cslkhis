@@ -11,13 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 检验危急值闭环记录实体。
- * <p>
- * 前端 {@code CriticalValueView} 页面此前是纯演示数据（WJ-2026-0901 之类的假单号），
- * 后端<b>完全没有这张表</b>，也就是「危急值管理」这个页面从来就没有真实数据来源。
- * 本实体是补齐该闭环的第一步。
- * <p>
- * 来源字段刻意保留且恒为 {@code RULE}：危急值只能由硬规则判定，
- * 留下这个字段是为了将来如果真有人想接模型，能在数据里一眼看出「这是模型给的」。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

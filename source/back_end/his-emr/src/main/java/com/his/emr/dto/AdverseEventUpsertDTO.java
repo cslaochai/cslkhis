@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 不良事件上报/修改入参
- * <p>
- * 修改仅允许状态=1（已上报待处理）且本人上报的单；
- * reporterId / eventNo / status 由服务端控制，前端传了也忽略。
  */
 @Data
 public class AdverseEventUpsertDTO {

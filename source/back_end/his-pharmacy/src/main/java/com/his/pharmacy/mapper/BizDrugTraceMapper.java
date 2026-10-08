@@ -18,14 +18,6 @@ import java.util.List;
 
 /**
  * 药品追溯码台账Mapper
- *
- * <p>两条跨模块口径（都是<b>裸 SQL 只读快照</b>，his-pharmacy 不依赖 his-emr / his-system 的实体）：
- * <ul>
- *   <li>药品字典在 his-system，按追溯标识反查药品只取快照列，不建外键。</li>
- *   <li>药品发药记录在 his-emr，核销时按 id 取一次快照写进台账。</li>
- * </ul>
- * 追溯码原文的唯一键不含删除标记，删除必须走 {@link #purgeById} 物理删
- * （误采的码软删会占着唯一键，下次再扫这个码就插不进了）。
  */
 @Mapper
 public interface BizDrugTraceMapper extends BaseMapper<BizDrugTrace> {

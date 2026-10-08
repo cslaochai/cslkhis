@@ -9,8 +9,6 @@ import java.util.List;
 
 /**
  * 医保审核证据判定出参（G-07）。
- * <p>只读产物不落库：规则结论照旧，本 VO 只是叠加一层「证据与怀疑的关系」提示人工复核；
- * degraded=true 表示模型未产出判定（items 为空），规则的判定依据与整改建议照常在页面上。</p>
  */
 @Data
 public class InsuranceEvidenceVO {

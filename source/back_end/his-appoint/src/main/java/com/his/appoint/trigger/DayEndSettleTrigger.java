@@ -11,7 +11,7 @@ import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * 日终结转的三条触发路径之一：<b>进页面顺手补跑</b>。
+ * 日终结转的三条触发路径之一：进页面顺手补跑。
  */
 @Slf4j
 @Component

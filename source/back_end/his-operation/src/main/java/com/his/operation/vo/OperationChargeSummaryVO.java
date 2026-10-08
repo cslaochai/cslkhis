@@ -9,10 +9,6 @@ import java.util.List;
 
 /**
  * 一次计费动作的汇总结果（走到收费之后给调用方的答复）。
- *
- * <p>刻意带上 {@code failed}-一族字段：<b>"成功了几项"必须和"失败了几项"一起给</b>。
- * 只回一个总额，等于把"其中监护费没计上"这件事藏起来 ——
- * 与"发送方 status=1 只证明我发过"是同一条原则：**不能自称成功**。
  */
 @Data
 public class OperationChargeSummaryVO implements Serializable {

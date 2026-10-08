@@ -25,9 +25,6 @@ import java.util.Optional;
 
 /**
  * 危重预警实现（G-12）。
- * <p><b>评分是事实层</b>（{@link DeteriorationScoreRules} 全代码）；wardScan 纯代码无模型调用、
- * 不出审计行；explain 只在 alertLevel ≥1 时才调模型要观察建议（纪律 2：模型只解释事实），
- * 模型不可用时评分照常返回、{@code degraded=true}。</p>
  */
 @Slf4j
 @Service

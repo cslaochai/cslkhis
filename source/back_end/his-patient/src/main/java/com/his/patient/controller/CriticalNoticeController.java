@@ -16,10 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 病危/病重通知与告知书签收回执（住院业务法定告知单据，菜单 319 / 路径 /critical-notice）。
- *
- * <p>按项目规范 {@code @PreAuthorize} 全部标到方法，类上不挂（类级会静默覆盖未标注的方法）。
- * 新增/修改共用 :add（同一 upsert），签发/签收/作废是状态动作用 :edit，回执打印单独收权。
+ * 病危/病重通知与告知书签收回执
  */
 @Tag(name = "病危重通知与签收回执")
 @RestController

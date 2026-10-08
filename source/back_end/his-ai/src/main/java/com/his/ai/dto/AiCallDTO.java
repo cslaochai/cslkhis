@@ -9,9 +9,6 @@ import lombok.NoArgsConstructor;
 
 /**
  * 一次 AI 能力调用的描述（由业务代码构造）。
- * <p>
- * {@code capabilityKey} 必须来自 {@link AiCapabilityKeys} 的常量，
- * <b>不允许由模型输出来决定</b> —— 这是「工作流」与「Agent」的分界线。
  */
 @Data
 @Builder

@@ -29,9 +29,6 @@ import java.util.stream.Collectors;
 
 /**
  * 体检服务（套餐 / 登记 / 结果 / 总检）。
- *
- * <p>状态机：1 已登记 → 2 检查中 → 3 已完成 → 4 已出报告，单向流转，4 为终态（禁改禁删）。
- * 登记时按套餐项目预生成结果空行；出报告要求全部明细已录 + 总检结论必填。
  */
 @Service
 @RequiredArgsConstructor
@@ -52,9 +49,6 @@ public class CheckupServiceImpl extends ServiceImpl<BizCheckupRecordMapper, BizC
         Long dupId = sysCheckupPackageMapper.selectIdByNameIncludeDeleted(name);
         if (dupId != null && !Objects.equals(dupId, dto.getId())) {
             throw new BusinessException("套餐名称已存在：" + name);
-        }
-        if (dto.getItems() == null || dto.getItems().isEmpty()) {
-            throw new BusinessException("套餐至少要有一个项目");
         }
         SysCheckupPackage p;
         boolean update = dto.getId() != null;

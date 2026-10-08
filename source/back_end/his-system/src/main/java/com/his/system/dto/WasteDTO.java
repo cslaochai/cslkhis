@@ -16,8 +16,6 @@ import java.time.LocalDateTime;
 
 /**
  * 医废登记 DTO 集合。
- *
- * <p>collectTime 按 yyyy-MM-dd HH:mm:ss 宽进（AGENTS.md 日期格式铁律）。
  */
 public class WasteDTO {
 

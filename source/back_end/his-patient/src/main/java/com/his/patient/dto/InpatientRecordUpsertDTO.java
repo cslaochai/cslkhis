@@ -11,12 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院病历文书新增 / 修改入参（命名遵循 AGENTS.md：增改用 `xxxUpsertDTO`）。
- *
- * <p>{@code id} 为空 = 新增；不为空 = 修改（仅「草稿」可改，归档后拒改）。
- *
- * <p><b>修改语义 = 传什么覆盖什么</b>（与前端的编辑态天然一致）：
- * 前端必须把编辑表单里的完整内容回传，未回传的字段会被置空 —— 这是刻意的，
- * 否则"医生把主诉删掉了"这个动作在库里留不下来。服务层会逐字段 diff 后写修改日志。
  */
 @Data
 public class InpatientRecordUpsertDTO implements Serializable {

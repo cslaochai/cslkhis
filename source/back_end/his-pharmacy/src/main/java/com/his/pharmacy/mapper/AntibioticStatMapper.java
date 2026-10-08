@@ -14,16 +14,6 @@ import java.util.List;
 
 /**
  * 抗菌药物监测的复算查询（全部裸 SQL）。
- *
- * <p><b>为什么全是裸 SQL 而不是实体关联</b>：
- * 统计要跨药品字典（his-system）、入院记录 / 住院医嘱主表（his-patient）、
- * 处方主表（his-emr）、检验申请单（his-emr）四张不同模块的表。
- * 跨模块读异模块表一律裸 SQL 快照，不建外键、不让模块反向依赖（AGENTS 铁律）。
- *
- * <p><b>药品解析三级匹配（一处定义，全文复用）</b>：
- * drug_code = 医嘱 item_code → 抗菌药物品名别名.alias_name = 医嘱 item_name →
- * drug_name/generic_name = 医嘱 item_name。三级都命中不了就不计入 —— 宁可漏算，不可错算；
- * 漏掉的条数进 unmatched_order_count，提示去维护目录或别名。
  */
 @Mapper
 public interface AntibioticStatMapper {

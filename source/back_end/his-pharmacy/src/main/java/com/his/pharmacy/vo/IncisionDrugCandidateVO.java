@@ -7,7 +7,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/** 围手术期抗菌药物医嘱候选（给药证据，供点评人判定时机） */
+/**
+ * 围手术期抗菌药物医嘱候选（给药证据，供点评人判定时机）
+ */
 @Data
 public class IncisionDrugCandidateVO {
 

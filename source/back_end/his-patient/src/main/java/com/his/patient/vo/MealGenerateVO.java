@@ -7,9 +7,6 @@ import java.time.LocalDate;
 
 /**
  * 批量生成订餐的结果。
- *
- * <p>必须回"跳过多少"：食堂按病区生成明日餐单时，如果只说"成功"，
- * 那些"今天已经配送过所以没重生成"的患者就会静默漏餐。
  */
 @Data
 public class MealGenerateVO {

@@ -9,12 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 用血分级审批流水（sql/93）。
- *
- * <p><b>只增不改</b>：审批被谁通过/驳回、什么意见，是追溯的唯一抓手；
- * 主单上的 {@code approve_status} 只是当前结论的派生摘要，历史结论在这里。
- * 驳回后修改重提会产生新记录，旧记录不删不改。
- *
- * <p>id/createBy/createTime/updateBy/updateTime/delFlag/remark 由 {@link BaseEntity} 承载。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

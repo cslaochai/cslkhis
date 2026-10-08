@@ -3,11 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 班内角色枚举（值守点位与值班排班共用，字典 {@code his_duty_role}）
- *
- * <p>一个点位一天一位一人，但同一班次下要分主副：<b>主班是第一个责任人，副班是顶上的人</b>
- * （主班查无、电话催不动、或被抽调时由副班承接）。
- * 只有「主/副」两档，因为再细分就需要额外的顺序语义，而升级链路只用到「找不着主班就叫副班」。
+ * 班内角色枚举（值守点位与值班排班共用，字典 his_duty_role）
  */
 @Getter
 public enum DutyRoleTypeEnum {

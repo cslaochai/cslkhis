@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 室间质评出参
- *
- * <p>凡是带 Text 后缀的字段都由后端从字典数据回填，前端不自己拼中文；
- * sdi / biasRate / resultStatus 这类<b>结论字段</b>前端只读不改。
  */
 public class LisEqaVO {
 

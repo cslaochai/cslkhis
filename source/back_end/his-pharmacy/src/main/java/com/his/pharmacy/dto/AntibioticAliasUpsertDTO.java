@@ -4,7 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-/** 抗菌药物别名维护（住院医嘱名 → 药品目录的精确匹配键） */
+/**
+ * 抗菌药物别名维护（住院医嘱名 → 药品目录的精确匹配键）
+ */
 @Data
 public class AntibioticAliasUpsertDTO {
 

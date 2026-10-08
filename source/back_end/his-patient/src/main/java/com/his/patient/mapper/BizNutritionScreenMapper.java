@@ -14,16 +14,6 @@ import java.util.List;
 
 /**
  * 营养风险筛查 Mapper。
- *
- * <p>两处刻意的做法：
- * <ol>
- *   <li><b>住院号/性别/年龄/在院状态 JOIN 取</b>：筛查表只存登记时的患者快照，
- *       在院状态是入院记录的实时事实，冗余进来就会漂移（"出院了还在筛"）。</li>
- *   <li><b>到期复筛现算不落列</b>：{@code re_screen_due} 由 next_screen_date 与 CURDATE() 现比 ——
- *       加一个状态列就要配一个定时任务，而"日期已过、标志没刷"的窗口正是这类提醒最容易被误信的地方。</li>
- * </ol>
- *
- * <p>排序 {@code screen_time DESC, id DESC}：同日多条按录入序稳定回放，防翻页抖动。
  */
 @Mapper
 public interface BizNutritionScreenMapper extends BaseMapper<BizNutritionScreen> {

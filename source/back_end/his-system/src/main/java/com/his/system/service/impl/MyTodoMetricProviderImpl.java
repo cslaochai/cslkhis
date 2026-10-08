@@ -18,7 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 卡片 {@code myTodo}：我当前未办结的站内信（待办型）。
+ * 卡片 myTodo：我当前未办结的站内信（待办型）。
  */
 @Service
 @RequiredArgsConstructor

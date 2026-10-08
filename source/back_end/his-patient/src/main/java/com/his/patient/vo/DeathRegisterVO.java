@@ -228,7 +228,6 @@ public class DeathRegisterVO {
 
     /**
      * 登记底稿（服务端按住院重查，不信前端传来的死者信息）：
-     * 姓名/死亡时间/科室床位来自「死亡出院 + 病案首页留档」，有有效证明时一并带出证明摘要。
      */
     @Data
     public static class Base {

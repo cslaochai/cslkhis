@@ -9,16 +9,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * 护理质控出参（外层空壳 + 内层静态类，同 {@code NurseScheduleVO}）。
- *
- * <p><b>所有 Long 主键/外键一律字符串序列化</b>：雪花 19 位超出 JS {@code Number.MAX_SAFE_INTEGER}，
- * 裸数字回前端会丢精度，拿丢过的值去改单就是「检查单不存在」。
- *
- * <p>日期时间在 SQL 侧用 {@code DATE_FORMAT} 别名输出字符串（AGENTS §3），月份本来就是 CHAR(7)，
- * 所以本类没有任何 {@code LocalDate}/{@code LocalDateTime} 字段，序列化行为完全可预测。
- *
- * <p>状态/类别/达标/上报这些码值的中文一律由服务端翻译好放进 {@code xxxText} 字段：
- * 台账与检查表都在护理部通报里被截图，前端再抄一份码表迟早和字典漂移。
+ * 护理质控出参（外层空壳 + 内层静态类，同 NurseScheduleVO）。
  */
 public class NurseQcVO {
 

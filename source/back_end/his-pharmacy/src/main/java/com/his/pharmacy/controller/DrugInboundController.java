@@ -16,9 +16,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 药品入库单控制器
- * <p>
- * 链路：采购订单审批通过 →（生成）入库单【待审核】→（审核）【已审核】→（入库）【已入库，动库存】
- * 生成入库单的入口在采购订单侧（/purchase/generateInbound），本控制器负责入库单自身的流转。
  */
 @Tag(name = "药品入库")
 @RestController

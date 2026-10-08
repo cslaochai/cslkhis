@@ -13,14 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * VTE 预防措施记录（一次住院 × 一个措施码一条）。
- *
- * <p>两条铁律：
- * <ul>
- *   <li><b>落实是有时间点、有执行人的动作</b>：不是"打三个勾"——质控抽查问"什么时候做的、谁做的"，
- *       系统必须答得出来，所以每条措施独立成行、带 execute_time / executor_name。</li>
- *   <li><b>禁忌(2)/拒绝(3) 不算落实</b>：reason 必填，但落实率的分子只数 execute_status=1 的患者 ——
- *       "写一句禁忌理由就算落实"是自欺欺人，落实率要的是措施真做了。</li>
- * </ul>
  */
 @Data
 @TableName("biz_vte_prevent")

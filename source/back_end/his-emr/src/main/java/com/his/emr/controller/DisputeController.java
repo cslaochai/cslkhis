@@ -15,9 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 医疗纠纷 / 投诉登记（登记 → 受理 → 调查处理 → 结案 / 撤销，病历封存联动）。
- *
- * <p>按项目规范 @PreAuthorize 全部标到方法（类级注解会静默覆盖未标注方法）；
- * 按钮可用性由后端 VO 的 can* 字段给，前端不按 status 码值 switch。
  */
 @Tag(name = "医疗纠纷与投诉登记")
 @RestController

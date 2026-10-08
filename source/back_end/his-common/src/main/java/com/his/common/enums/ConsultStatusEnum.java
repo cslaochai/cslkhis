@@ -4,10 +4,6 @@ import lombok.Getter;
 
 /**
  * 出诊计划的就诊状态枚举（这个班次此刻接不接患者，与停诊状态不是一件事）
- *
- * <p>停诊（{@link ScheduleStatusEnum#STOPPED}）说的是「号源池放不放号」；
- * 就诊状态说的是「已经开出的这个班，诊室里的接诊进行到哪一步」——
- * 停诊中的班次就诊状态必然停在待开始，但接诊中的班次仍可能被临时停诊（不再放新号）。
  */
 @Getter
 public enum ConsultStatusEnum {

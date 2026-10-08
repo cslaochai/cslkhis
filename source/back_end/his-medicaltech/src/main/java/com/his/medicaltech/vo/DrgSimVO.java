@@ -13,7 +13,9 @@ import java.util.List;
  */
 public class DrgSimVO {
 
-    /** 单条/批量模拟结果 */
+    /**
+     * 单条/批量模拟结果
+     */
     @Data
     public static class SimResult {
         /** 病案首页ID */
@@ -47,7 +49,9 @@ public class DrgSimVO {
         private String ruleNote;
     }
 
-    /** 已模拟结果分页行 */
+    /**
+     * 已模拟结果分页行
+     */
     @Data
     public static class ResultRow {
         @JsonSerialize(using = ToStringSerializer.class)
@@ -84,7 +88,9 @@ public class DrgSimVO {
         private LocalDateTime updateTime;
     }
 
-    /** 可模拟首页行 */
+    /**
+     * 可模拟首页行
+     */
     @Data
     public static class SummaryRow {
         /** 病案首页ID */
@@ -105,7 +111,9 @@ public class DrgSimVO {
         private BigDecimal simProfit;
     }
 
-    /** 汇总卡 */
+    /**
+     * 汇总卡
+     */
     @Data
     public static class SimStat {
         /** 总条数 */
@@ -135,7 +143,9 @@ public class DrgSimVO {
         private Integer status;
     }
 
-    /** 列表包装 */
+    /**
+     * 列表包装
+     */
     @Data
     public static class SummaryListVO {
         private List<SummaryRow> rows;

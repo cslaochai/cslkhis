@@ -6,10 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * 麻醉随访并发症要点（P134.3）。
- *
- * <p>码值→文案的唯一出口（原 {@code FollowupAdverseItems} 的 {@code ALL} 映射已上移至此）。
- * 不建字典，后端本枚举与前端各自单点；未知码值一律返回空串，绝不回落成某个合法值。
+ * 麻醉随访并发症要点
  */
 @Getter
 public enum AnesthesiaFollowupAdverseEnum {

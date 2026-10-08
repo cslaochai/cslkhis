@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * 麻醉随访恢复情况（1-良好 2-一般 3-差）。
- *
- * <p>码值→文案的唯一出口（原 {@code FollowupAdverseItems#recoveryText} 已上移至此）。
  */
 @Getter
 public enum AnesthesiaFollowupRecoveryEnum {

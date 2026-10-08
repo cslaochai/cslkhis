@@ -7,12 +7,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 /**
- * 收费台首屏的一行 = <b>一次就诊</b>（不是一个患者、也不是一张收费单）。
- *
- * <p>四层之后"欠多少"由两层各自回答，所以这里两列并存、各说各的：
- * {@code pendingFeeAmount} 是 L1 里还没出账的应收净额（开完单没结算的部分），
- * {@code unpaidBillAmount} 是 L2 里已出账但钱没收齐的账单差额。
- * 合成一个数字就会看不出"该先出账还是该收钱"。
+ * 收费台首屏的一行 = 一次就诊（不是一个患者、也不是一张收费单）。
  */
 @Data
 public class PendingEncounterVO {

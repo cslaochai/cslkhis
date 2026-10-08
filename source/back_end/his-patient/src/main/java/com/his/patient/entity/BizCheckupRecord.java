@@ -13,9 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 体检登记实体（体检登记）。
- *
- * <p>状态机：1 已登记 → 2 检查中 → 3 已完成 → 4 已出报告（4 为终态）。
- * 单向流转：出报告要求全部明细已录且总检结论必填；出报告后禁改禁删。
  */
 @Data
 @TableName("biz_checkup_record")

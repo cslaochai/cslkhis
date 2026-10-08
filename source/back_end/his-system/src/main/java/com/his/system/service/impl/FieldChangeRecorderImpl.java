@@ -27,10 +27,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * {@link FieldChangeRecorder} 的实现：反射读两个快照、按 {@link FieldSpec} 渲染打码、批量落库。
- *
- * <p><b>打码顺序不能反</b>：先翻成人话再打码（见 {@link #render}），否则打码的是 1/2/3 而不是"男/女"。
- * <b>操作人一律服务端取</b>（{@code UserUtils.getCurrentUser()}），不接受调用方传 —— 传进来的可以被伪造，等于没有审计。
+ * FieldChangeRecorder 的实现：反射读两个快照、按 FieldSpec 渲染打码、批量落库。
  */
 @Slf4j
 @Service

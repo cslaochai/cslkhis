@@ -10,11 +10,6 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
  * 入院记录跨域摘要：收费域只读住院登记的最小字段集。
- *
- * <p>住院预交金、住院结算、欠费管控都只需要知道「这次住院挂在哪、谁管的、什么诊断」，
- * 不需要也不该知道对方实体的其余几十个字段。映射责任在 his-patient。
- *
- * @see PatientGateway
  */
 @Data
 @NoArgsConstructor

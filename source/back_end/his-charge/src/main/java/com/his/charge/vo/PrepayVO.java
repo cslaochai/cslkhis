@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 预交金流水出参。
- *
- * <p>金额带符号（充值正、退款负），前端展示时不要取绝对值再猜方向 ——
- * 方向已经在这里了，猜就会出"退款显示成充值"的账。
  */
 @Data
 public class PrepayVO implements Serializable {

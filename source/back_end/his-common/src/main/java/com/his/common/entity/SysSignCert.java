@@ -9,8 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 员工电子签名证书。
- *
- * <p>字段与表**完全对齐**（多一列 → 全表 select 直接 500）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

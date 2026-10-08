@@ -7,14 +7,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 同一主档下的其他档案（详情页「这一串是一个人」列表，对应 {@code PatientIndexServiceImpl#briefOf}）。
- *
- * <p><b>为什么它不是动态结构</b>：原实现是 {@code Map<String,Object>}，但从头到尾 put 的
- * 就是这 8 个固定键，值全部来自 {@code BizPatient} 单一实体，没有任何"前端按数据决定列"的成分
- * —— 前端 {@code PatientIndexView.vue} 也是按 {@code s.patientNo / s.patientName / s.genderText /
- * s.idCard / s.mergeTime} 逐字段取，不是遍历键。所以判定为聚合结果，拆成有类型的 VO。
- *
- * <p>字段名与原 Map 的键逐一对齐，出参 JSON 结构不变。
+ * 同一主档下的其他档案（详情页「这一串是一个人」列表，对应 PatientIndexServiceImpl#briefOf）。
  */
 @Data
 public class PatientSiblingVO implements Serializable {

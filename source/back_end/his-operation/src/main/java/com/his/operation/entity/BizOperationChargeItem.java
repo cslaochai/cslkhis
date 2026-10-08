@@ -10,14 +10,7 @@ import lombok.EqualsAndHashCode;
 import java.math.BigDecimal;
 
 /**
- * 手术麻醉计费明细（手术麻醉计费明细）—— 计费联动的<b>唯一证据</b>。
- *
- * <p>为什么不用"调用一次收费服务就完事"：调用成功但没留痕，等于"我说我计费了"。
- * 这张表把"每一项该收多少钱、最后有没有落到费用记账流水、没落的原因是什么"
- * 逐行写死 —— 缺任何一列都没法回答"这 80 块钱从哪来、有没有真的进账"。
- *
- * <p><b>幂等靠唯一键 {@code (source_type, source_id, item_code)}</b>：
- * 重复点击"计费"不会产生第二笔费用（同一来源同一项目只能有一行）。
+ * 手术麻醉计费明细（手术麻醉计费明细）—— 计费联动的唯一证据。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

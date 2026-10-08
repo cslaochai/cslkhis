@@ -10,22 +10,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * 危急值硬规则（纯代码，<b>绝不由模型判断</b>）。
- * <p>
- * 危急值（critical value）是「不及时处置会在短时间内危及生命」的结果，
- * 必须走确定性规则 + 强制通知闭环。让大模型来判断危急值是不可接受的：
- * 漏报一次就是一条命，而模型是概率系统。
- * <p>
- * <b>规则表的两条硬约束</b>：
- * <ol>
- *   <li><b>必须校验单位</b>。同名的「白细胞」在血常规里是 10^9/L（危急值 &lt;1.5），
- *       在尿常规里是「/HP」（0-5 个/高倍视野，完全不同的量纲）。
- *       只按项目名匹配会把「尿白细胞 0 个/HP」报成危急值 —— 这就是典型的告警疲劳来源。</li>
- *   <li><b>阈值取自临床通用标准</b>，不追求覆盖全部项目。覆盖不全只是少报，
- *       阈值定错会乱报；乱报会让人关掉提醒，最终连真危急值也一起被忽略。</li>
- * </ol>
- * 规则表后续建议迁移到检验项目组套明细增加危急值上下限两列，
- * 由检验科自行维护；当前写在代码里是因为库里没有这两列。
+ * 危急值硬规则（纯代码，绝不由模型判断）。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class LabCriticalValueRules {
@@ -123,8 +108,7 @@ public final class LabCriticalValueRules {
     }
 
     /**
-     * 项目规则。编码精确匹配（大写），{@code nameKeyword} 为项目名包含匹配。
-     * 二者命中其一即可，但单位必须与结果单位一致。
+     * 项目规则。编码精确匹配（大写），nameKeyword 为项目名包含匹配。
      */
     private record Rule(String code,
                         String nameKeyword,
@@ -136,13 +120,6 @@ public final class LabCriticalValueRules {
 
     /**
      * 危急值命中结果
-     *
-     * @param type        1-偏低 2-偏高
-     * @param itemLabel   项目规范名
-     * @param value       数值
-     * @param unit        单位
-     * @param threshold   阈值文本
-     * @param description 给医生看的描述
      */
     public record Hit(int type, String itemLabel, double value, String unit,
                       String threshold, String description) {

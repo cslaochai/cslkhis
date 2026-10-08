@@ -5,12 +5,6 @@ import lombok.Data;
 
 /**
  * 科室下拉选择入参 —— 所有「科室下拉」的统一入口。
- *
- * <p><b>为什么要有这个 DTO</b>：此前各页面取科室下拉的路子有三条
- * （{@code /system/department/list}、{@code /system/department/tree}、
- * {@code /supplies/deptSelectList}），返回结构一个 {@code deptName}、一个科室名称，
- * 且**全都不做数据权限**。同一语义三处实现，权限一改就得改三遍，必然漏。
- * 收成一个 {@code /system/department/selectList} 后，权限只在服务端一处收口。
  */
 @Data
 public class DepartmentSelectDTO {

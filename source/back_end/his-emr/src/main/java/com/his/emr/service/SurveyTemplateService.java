@@ -10,9 +10,6 @@ import java.util.List;
 
 /**
  * 满意度问卷模板服务（定义「问什么」）。
- *
- * <p>与发放/答卷服务分开：模板是低频配置，答卷是高频流水，
- * 混在一个 Service 里会让「改题」和「回收」两种权限、两套事务边界搅在一起。
  */
 public interface SurveyTemplateService {
 

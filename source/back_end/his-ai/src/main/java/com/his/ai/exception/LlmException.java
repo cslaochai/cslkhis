@@ -4,9 +4,6 @@ import lombok.Getter;
 
 /**
  * 模型调用异常。
- * <p>
- * 单独区分「超时」而不是笼统的失败，是因为审计日志要把超时记成 status=3、
- * 其它失败记 status=2 —— 两者的排查方向完全不同（超时看网络与超时配置，失败看密钥与协议）。
  */
 @Getter
 public class LlmException extends RuntimeException {

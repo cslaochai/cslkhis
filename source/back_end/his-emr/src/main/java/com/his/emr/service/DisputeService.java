@@ -7,9 +7,6 @@ import com.his.emr.vo.DisputeStatVO;
 
 /**
  * 医疗纠纷 / 投诉登记服务。
- *
- * <p>闭环：登记（待受理）→ 受理（调查中，按需封存病历）→ 调查/处理跟踪（处理中）
- * → 结案（终态，收口途径/责任/赔偿）或撤销（终态，原因必填）。
  */
 public interface DisputeService {
 

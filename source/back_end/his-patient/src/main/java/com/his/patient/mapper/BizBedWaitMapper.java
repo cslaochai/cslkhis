@@ -10,9 +10,6 @@ import java.util.List;
 
 /**
  * 等床队列 Mapper
- *
- * <p><b>排序口径在 Java 侧（Wrapper orderBy）维护</b>：priority DESC → register_time ASC → id ASC。
- * 分页必须带二级键 id —— 同一个 (priority, register_time) 组合下只有 id 能保证翻页不重不漏。
  */
 @Mapper
 public interface BizBedWaitMapper extends BaseMapper<BizBedWait> {

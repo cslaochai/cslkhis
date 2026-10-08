@@ -10,8 +10,6 @@ import java.util.List;
 
 /**
  * 日间手术服务。
- *
- * <p>闭环：准入目录 → 预约登记 → 术前评估 → 手术安排 → 术后观察 → 出院 / 转住院 → 24h 随访。
  */
 public interface DaySurgeryService {
 

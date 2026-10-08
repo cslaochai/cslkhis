@@ -11,10 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 心电波形采集（心电波形采集，sql/173）。
- *
- * <p>「波形成文」的事实表：一条检查记录业务上只有一行当前波形，重采覆盖
- * （upsert 走"查到就改"），所以表上没有 UNIQUE KEY，也没有物理删语义。
- * wave_data 是 12 导联采样 JSON（设备对接后由设备推送；联调走 EcgWaveSimulator 合成）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

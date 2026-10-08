@@ -33,9 +33,6 @@ public interface Icd10RecallService {
 
     /**
      * 一次召回命中
-     *
-     * @param code  ICD 编码
-     * @param score 字面重合得分，0 表示与本次病历文本无字面关联
      */
     public record RecallHit(SysIcd10 code, int score) {
     }

@@ -12,10 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 输血血袋出参。
- *
- * <p>三条与会诊/手术 VO 一致的约定：ID 走 {@code ToStringSerializer}（雪花 ID 超 JS 精度）、
- * 码值一律带 {@code xxxText} 文案由后端给、按钮可用性由后端算。
- * 血袋本身没有"按钮"，所以这里只有前两条。
  */
 @Data
 public class TransfusionBagVO implements Serializable {

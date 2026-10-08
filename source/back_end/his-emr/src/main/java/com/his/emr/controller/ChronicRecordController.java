@@ -18,11 +18,6 @@ import java.util.List;
 
 /**
  * 慢病建档/认定（M1，医生工作站）。
- *
- * <p>建档即认定、唯一有效档案、终态单向等闸门见 {@code ChronicRecordService}。
- *
- * <p>权限口径（菜单 2051 /chronic-record）：整个模块自有 <b>opd:chronicRecord:*</b>，
- * 不再借 opd:doctorWorkstation:edit —— 慢病认定是独立台账,放开仅查询的角色也能看。
  */
 @Tag(name = "慢病建档/认定")
 @RestController

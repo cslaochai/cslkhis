@@ -6,9 +6,6 @@ import java.io.Serializable;
 
 /**
  * 处方点评：月度点评原始计数（按明细快照 visit_date 聚合）。
- *
- * <p>点评率的分母（同期已审核/已发药处方总数）不在这里 —— 它数的是处方表，
- * 不是点评明细表，两张表的口径差在别的 SQL 里。
  */
 @Data
 public class RxReviewMonthStatVO implements Serializable {

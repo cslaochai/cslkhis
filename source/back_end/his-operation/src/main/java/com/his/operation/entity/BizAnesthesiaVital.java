@@ -14,13 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 麻醉期间生命体征采样（麻醉期间生命体征）—— 只增不改。
- *
- * <p><b>不继承 {@code BaseEntity}</b>：这张表没有 remark/update_by/update_time 列
- * （见 sql/83），多一列 Jackson 无关但 MyBatis-Plus 全表 select 会直接 500 ——
- * 跟"实体字段与表完全对齐"那条铁律是同一件事。
- *
- * <p>业务唯一键是 {@code (record_id, sample_time)}：同一时刻两组不同的血压是<b>数据错误</b>，
- * 不是"备注里说明一下就行" —— 麻醉单上的每个时间点只能有一个真值。
  */
 @Data
 @TableName("biz_anesthesia_vital")

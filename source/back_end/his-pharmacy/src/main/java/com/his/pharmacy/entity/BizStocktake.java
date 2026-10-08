@@ -12,8 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 药房盘点单
- * <p>差异以建单时的账面快照为基准，过账把差量加减到当前批次余额上（不是覆盖），
- * 见 sql/127 头注。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

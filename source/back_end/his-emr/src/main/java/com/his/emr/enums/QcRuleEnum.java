@@ -5,25 +5,6 @@ import com.his.emr.support.QcRuleEngine;
 
 /**
  * 病历形式质控规则清单。
- *
- * <p><b>本枚举是"规则存在性"的唯一权威</b>：{@link QcRuleEngine} 必须为每一条规则给出实现，
- * 启动时自检（{@link QcRuleEngine#selfCheck()}），少一条直接启动失败。
- * 宁可起不来，也不要"规则静默消失、报表看着是干净的"——
- * 一个不报错的空规则比没有规则更危险。
- *
- * <p><b>严重度的分配口径</b>（改动即改变甲级率，不可随意调）：
- * <ul>
- *   <li>{@link QcSeverityEnum#FATAL}（否决项）= 病历不成立：缺主诉 / 缺现病史 / 缺诊断 /
- *       缺过敏史 / 记录类文书无正文 / 性别与诊断矛盾 / 生命体征越界 / 已归档未提交。</li>
- *   <li>{@link QcSeverityEnum#MAJOR}（重要）= 影响诊疗安全或后续 DRG 入组：缺既往史 / 缺诊断编码 /
- *       缺诊疗计划 / 无书写医生 / 主诉无持续时间 / 记录时间晚于提交时间。</li>
- *   <li>{@link QcSeverityEnum#MINOR}（提示）= 不规范但可接受：主诉过短 / 文书标题缺失 / 就诊信息缺失。</li>
- * </ul>
- *
- * <p><b>字段是否"没写"的判断不能用同一个口径</b>：「既往史：无」「过敏史：无」是合法记录，
- * 所以 {@link #C03}、{@link #C04} 走 {@link QcRuleEngine} 里的「史类」判定，
- * 不能直接套 {@code isPlaceholderOnly}（它会判「无」为占位）。
- * 详见 {@code ClinicalTextMatcher#isBlank} 的注释。
  */
 public enum QcRuleEnum {
 

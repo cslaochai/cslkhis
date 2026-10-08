@@ -14,14 +14,6 @@ import java.util.stream.Collectors;
 
 /**
  * 一次就诊的「依据包」。
- *
- * <p>审核要回答的唯一问题是：<b>清单上这条编码，有没有东西支撑它？</b>
- * 支撑它的东西散落在四个模块里 —— 病历（his-emr）、处方（his-emr）、
- * 检查检验（his-medicaltech）、结算账单行（his-charge）——
- * 而它们的共同锚点是 <b>regist_id</b>。这个类就是把锚点上的东西一次捞齐。</p>
- *
- * <p>费用依据取 L2 账单行而不是账单头：规则问的是「有没有收过某个项目」，
- * 只有行上带项目名与类型；账单头只用来兜底算总费用。</p>
  */
 @Data
 public class SettlementEvidence {

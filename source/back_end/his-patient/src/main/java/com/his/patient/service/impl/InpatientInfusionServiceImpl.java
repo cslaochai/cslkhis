@@ -28,16 +28,6 @@ import java.util.Objects;
 
 /**
  * 输液执行闭环实现（G14）。
- *
- * <p>状态约束（全部后端校验，前端只负责入口显隐）：
- * <ol>
- *   <li><b>闭环必须发生在「已执行」的执行行上</b>：还没打针就开始巡视，是编造记录。</li>
- *   <li><b>只有静脉类给药才有闭环</b>（静滴/静注/静推/泵入）：肌注、口服没有"滴速与巡视"语义。</li>
- *   <li><b>开始一次、结束一次</b>：infusion_start_time / infusion_end_time 非空即拦截 ——
- *       开始时间被覆盖，巡视与结束的时间序就全乱了。</li>
- *   <li><b>巡视时间必须落在开始与结束之间</b>：落在外面的巡视是补造的假观察。</li>
- *   <li><b>护士留痕一律服务端取当前人</b>（员工ID），不信前端传的姓名。</li>
- * </ol>
  */
 @Slf4j
 @Service
@@ -163,10 +153,6 @@ public class InpatientInfusionServiceImpl extends ServiceImpl<BizInpatientOrderE
 
     @Override
     public List<InfusionRoundVO> rounds(Long execId) {
-        // ②非web入口：service 方法参数判空，没有 DTO 字段可挂注解（HTTP 侧 @RequestParam 已必填）
-        if (execId == null) {
-            throw new BusinessException("执行行ID不能为空");
-        }
         return bizInfusionRoundMapper.selectRoundsByExecId(execId);
     }
 

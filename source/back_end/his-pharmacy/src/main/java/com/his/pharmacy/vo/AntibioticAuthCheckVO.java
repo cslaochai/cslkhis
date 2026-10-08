@@ -6,9 +6,6 @@ import java.util.List;
 
 /**
  * 抗菌药物处方权校验结果（开方闸与前端提示共用同一份判定）。
- *
- * <p>allowed=false 时 blockedDrugs 列出被闸住的药（药品名 + 分级 + 需要什么级别），
- * 前端只负责把这段文案显示出来，不自己算权限。
  */
 @Data
 public class AntibioticAuthCheckVO {

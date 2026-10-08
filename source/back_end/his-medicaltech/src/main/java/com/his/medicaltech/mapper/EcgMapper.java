@@ -10,10 +10,6 @@ import java.util.List;
 
 /**
  * 心电工作台查询（裸 SQL，sql/173）。
- *
- * <p>与 sql/138 放射工作台同款口径：列表要按「是不是心电项目」过滤，而这条口径在
- * 检查项目字典的项目类型（3=心电图）上 —— 那是 his-system 的表，
- * 检查记录里只有 {@code inspection_item_code} 字符串外键，跨模块读一律裸 SQL 快照。
  */
 @Mapper
 public interface EcgMapper {

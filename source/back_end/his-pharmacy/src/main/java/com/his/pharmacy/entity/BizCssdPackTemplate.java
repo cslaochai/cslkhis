@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * CSSD 器械包模板目录实体（99 号脚本新增）。
- *
- * <p>回收登记的器械包名称从这里选，选定后带出默认灭菌方式与组成清单。
- * template_code 仅普通索引，启用行内唯一由服务层校验（软删行不挡重号）。
  */
 @Data
 @TableName("biz_cssd_pack_template")

@@ -10,9 +10,6 @@ import java.util.List;
 
 /**
  * 财务班结 / 日结 / 三级对账（G8）。
- *
- * <p>三级对账的定义见 {@link BizDaySettlement} 类注释。
- * 一句话：**班结 ↔ 单据、日结 ↔ 班结、日结 ↔ 明细**，三级都平才算平。
  */
 public interface FinanceSettlementService {
 

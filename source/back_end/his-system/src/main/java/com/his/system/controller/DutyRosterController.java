@@ -19,13 +19,6 @@ import java.util.List;
 
 /**
  * 全院总值班排班（sql/169，菜单 806）。
- *
- * <p><b>{@code /current} 只要求登录</b>，不挂 {@code org:duty:list}：
- * 「今天全院谁负责」是贴在急诊墙上的公共信息 —— 急诊护士、分诊台、收费处都要能一眼看到，
- * 按菜单权限收口等于让人半夜到处打电话问总值班是谁。排/改/删才要 {@code org:duty:*}。
- *
- * <p>权限注解一律标在方法上（类级 {@code @PreAuthorize} 会静默覆盖没写注解的方法，
- * 见 AGENTS.md §4）。
  */
 @Tag(name = "全院总值班排班")
 @RestController

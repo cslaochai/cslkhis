@@ -6,9 +6,6 @@ import lombok.Data;
 
 /**
  * 总值班临时换班入参。
- *
- * <p>换班<b>不改原值班人</b>：写 substitute_* 四列，解析时以换班后的人为准。
- * 排班表上"原本排的是谁"是追责依据，覆盖掉就等于把唯一证据删了。
  */
 @Data
 public class DutySubstituteDTO {

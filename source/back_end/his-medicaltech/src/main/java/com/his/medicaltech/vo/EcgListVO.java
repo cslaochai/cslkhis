@@ -9,10 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 心电工作台列表行（sql/173）。
- *
- * <p>一行 = 一次心电检查 + 它的波形 / Holter 分析 / 报告（后三者可能还没有）。
- * 以检查记录为主表 LEFT JOIN，{@code waveId == null} 就是待采集、
- * {@code reportId == null} 就是待书写。
  */
 @Data
 public class EcgListVO {

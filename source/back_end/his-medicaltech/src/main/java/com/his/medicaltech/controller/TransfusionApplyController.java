@@ -17,13 +17,6 @@ import java.util.List;
 
 /**
  * 住院输血闭环端点（P4.4）。
- *
- * <p>路径与会诊/转科/手术保持同一套命名：查询一律 {@code GET} + 驼峰 URL，
- * 写操作一律 {@code POST}，只返回一个 ID 用 {@code Result<String>}（雪花 ID 超 JS 精度）。
- *
- * <p>路径用 {@code transfusionApply}：本控制器管的是**用血闭环主单**
- * （申请→配血→发血→输注→完成→反应），不是在库血袋台账，
- * 也不是病案首页的输血信息 —— 三个概念不能共用一个路径前缀。
  */
 @Tag(name = "住院输血闭环")
 @RestController

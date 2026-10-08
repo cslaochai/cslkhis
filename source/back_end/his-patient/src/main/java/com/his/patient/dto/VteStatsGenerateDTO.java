@@ -6,7 +6,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-/** 生成月度 VTE 防控指标快照 */
+/**
+ * 生成月度 VTE 防控指标快照
+ */
 @Data
 public class VteStatsGenerateDTO {
 

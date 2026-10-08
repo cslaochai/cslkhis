@@ -23,18 +23,6 @@ import java.util.List;
 
 /**
  * 营养风险筛查 / 营养会诊 / 营养指标监测（sql/168，菜单 424、427、428）。
- *
- * <p>权限：筛查页读 {@code ipd:nutrition:screen}，登记 {@code :screenEdit}、删除 {@code :screenDelete}；
- * 会诊页读 {@code ipd:nutrition:consult}，发起 {@code :consultApply}、应答/完成/取消 {@code :consultEdit}；
- * 指标页读 {@code ipd:nutrition:stats}，生成 {@code :statGenerate}、导出 {@code :statExport}。
- *
- * <p><b>为什么营养会诊要在这里另开一套接口</b>：闭环（申请→应答→完成/取消）确实是复用
- * {@link InpatientConsultationService}，但它挂在 {@code ipd:consultation:*} 上，营养师岗位没有这些码 ——
- * 直接让营养会诊页调老接口，营养师一进页面就 403。这里用营养自己的按钮码包一层，
- * 并把 {@code consultCategory} 钉死为 2：类别决定这单在哪个工作台出现，不能让请求体自选。
- *
- * <p>总分与"有无营养风险"一律服务端算（见 {@link com.his.patient.support.NutritionRules}）：
- * 前端只提交分项，判定决定要不要开膳食医嘱与发起会诊，是能凑指标的那一手。
  */
 @Tag(name = "营养风险筛查与会诊")
 @RestController

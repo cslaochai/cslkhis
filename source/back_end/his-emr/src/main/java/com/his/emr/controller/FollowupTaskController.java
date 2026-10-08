@@ -15,12 +15,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 随访任务控制器。
- *
- * <p>@PreAuthorize 全部标到方法：类级注解会静默覆盖没写自己注解的方法，
- * 曾经把 /userMenus 一罩，非管理岗一进就被踢回登录页。
- *
- * <p>手机号：列表只出 phoneMasked，明文仅 getById（编辑回显）返回 ——
- * 前端 Object.assign 后整对象回写，回显给星号就等于把真号洗成星号（不可逆）。
  */
 @Tag(name = "随访任务")
 @RestController

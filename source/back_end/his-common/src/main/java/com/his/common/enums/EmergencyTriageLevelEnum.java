@@ -4,14 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * 急诊分诊级别（I~IV 级）—— 分诊级别列的<b>唯一权威码值</b>，数字越小越优先。
- *
- * <p>与门诊分诊等级 {@code TriageLevelEnum}（1-危重 2-急症 3-亚急 4-非急）是<b>两个不同含义</b>，
- * 码值重合但叫法不同，不许互相替换。
- *
- * <p>{@link #getText(Integer)} 的缺省文案「未定级」是刻意声明的例外：还没分诊是这一列的真实语义
- * （患者到达时先登记、分诊台随后定级），与 {@code SysGenderEnum} 的 null→「未知」同例；
- * 而<b>不在 1-4 内的脏值返回空串</b>，不冒充任何合法级别。
+ * 急诊分诊级别（I~IV 级）—— 分诊级别列的唯一权威码值，数字越小越优先。
  */
 @Getter
 @AllArgsConstructor

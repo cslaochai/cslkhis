@@ -36,14 +36,6 @@ import java.util.stream.Collectors;
 
 /**
  * 退费申请服务实现（审批台账，不是资金事实）。
- *
- * <p>四层模型下这张单子只回答三件事：<b>要退哪张账单（L2）的哪一类钱、退多少、谁批的</b>。
- * 钱怎么出去的一律由 {@link PaymentService#refund} 写 L3 退款流水并红冲 L1 记账行，
- * 本服务不再自己碰旧收费单那套状态列 —— 旧实现里"申请单说已退费、
- * 收费单还挂着已收费"的两本账，就是因为两边各写了一套。
- *
- * <p>发起与执行用<b>同一份</b>可退清单判金额（{@link SettlementBillService#refundableLines}），
- * 否则窗口说能退、收费处点执行才被打回。
  */
 @Service
 @RequiredArgsConstructor

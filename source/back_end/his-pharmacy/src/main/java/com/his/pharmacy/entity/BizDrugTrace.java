@@ -12,10 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 药品追溯码台账（一码一行：入库扫码采集 → 发药扫码核销 → 医保上传）
- *
- * <p>医保局口径：入库采集、发药核销两个动作都要扫码上传。
- * 本表是这两件事的唯一留痕，与耗材 UDI 台账是两套码制两套台账，
- * 不要互相冒充：药品追溯码是 20 位/GS1 的产品级追溯，UDI 是医疗器械一物一码。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

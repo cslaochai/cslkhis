@@ -18,11 +18,6 @@ import java.util.List;
 
 /**
  * 值班日志 / 交班本（sql/170，挂在菜单 806「总值班排班」的第二个 Tab）。
- *
- * <p>权限全部标在方法上（类级 {@code @PreAuthorize} 会静默覆盖没写注解的方法，见 AGENTS.md §4）。
- *
- * <p>{@code /pendingMine} 只要求登录：接班人要能一眼看到"昨夜留了什么事给我"，
- * 这不是院办专属信息 —— 按菜单权限收口，等于让人第二天自己翻页面撞运气。
  */
 @Tag(name = "全院总值班值班日志")
 @RestController

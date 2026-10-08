@@ -7,9 +7,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 设备可开展项目（设备可开展项目）—— 预约路由的唯一事实源。
- *
- * <p>不用检查项目字典的科室ID 路由：实测该列 105 行全是孤儿引用
- * （值 101~106，科室里没有这些 id），且设备与项目本来就是多对多。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

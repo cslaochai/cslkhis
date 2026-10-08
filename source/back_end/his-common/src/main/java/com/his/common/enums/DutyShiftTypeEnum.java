@@ -3,12 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 值守班段枚举（字典 {@code his_duty_shift}）
- *
- * <p>它只回答「这一班是白段还是夜段」，具体起止时刻由值守册的班次带出
- * （夜段就是那条跨零点的 18:00~次日 08:00，白段是同日起止的那条）。
- * 分成两档而不是直接用车间时刻，是因为「今天谁负责」的升级链路要按段找人：
- * 凌晨 2 点的责任人写在<b>昨天</b>的夜段上，按时刻查会查出一个刚上班的人。
+ * 值守班段枚举（字典 his_duty_shift）
  */
 @Getter
 public enum DutyShiftTypeEnum {

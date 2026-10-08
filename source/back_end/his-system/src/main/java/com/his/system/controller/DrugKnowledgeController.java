@@ -18,10 +18,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 合理用药知识库（药物相互作用 × 剂量上限）维护
- * <p>
- * 权限码逐字取自 sql/130 的菜单：页面 {@code system:drugKnowledge:list}、
- * 写操作 {@code :add}（新增/修改/启停同一个 xxxUpsert）、删除 {@code :delete}。
- * 每个方法各自标注 —— 类级注解会静默罩住所有没写自己注解的方法（AGENTS §4）。
  */
 @Tag(name = "合理用药知识库")
 @RestController

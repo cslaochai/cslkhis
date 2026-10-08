@@ -8,9 +8,6 @@ import java.time.LocalDateTime;
 
 /**
  * 签名记录展示对象。
- *
- * <p>{@code contentSnapshot} 只在**详情**接口里回填 —— 列表页带上全文快照会让
- * 一页 20 条变成几百 KB 的无用流量。
  */
 @Data
 public class SignatureVO {

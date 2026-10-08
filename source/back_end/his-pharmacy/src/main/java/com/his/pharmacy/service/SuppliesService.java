@@ -11,8 +11,6 @@ import java.util.List;
 
 /**
  * 物资耗材服务接口
- * 口径：字典归耗材字典；库存一切增减落耗材出入库流水；
- * 领用即扣库存（FEFO 先过期先出）并落耗材科室领用台账。
  */
 public interface SuppliesService extends IService<BizConsumableStock> {
 

@@ -9,8 +9,6 @@ import org.apache.ibatis.annotations.Select;
 
 /**
  * 目标性监测（导管/呼吸机等）Mapper。
- *
- * <p>跨模块读（科室）走裸 SQL，不引入模块依赖；列名以 information_schema 实查为准。
  */
 @Mapper
 public interface BizInfectionMonitorMapper extends BaseMapper<BizInfectionMonitor> {

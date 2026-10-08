@@ -12,11 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 
 /**
- * 卡片 {@code myClinicalToday}：我（医生）的今日诊疗（迁移自旧首页的 doctor 分支）。
- *
- * <p>收口在SQL 里按 {@code employeeId} 过滤，不接受前端传参 —— 否则"工作台看全院、
- * 点进去只有本科室"。{@code todoConsultationCount} 里的 {@code to_dept_id} 是唯一
- * 按科室收敛的一项（会诊单可以发给科室而非个人），所以 deptId 也必须带上。
+ * 卡片 myClinicalToday：我（医生）的今日诊疗（迁移自旧首页的 doctor 分支）。
  */
 @Service
 @RequiredArgsConstructor

@@ -16,11 +16,6 @@ import java.util.List;
 
 /**
  * 医保目录对照 Mapper。
- *
- * <p>院内目录四张表（药品字典 / 治疗项目字典 / 检验项目字典 /
- * 耗材字典）分属 pharmacy / medicaltech / supplies 模块 ——
- * 按项目铁律跨模块<b>不 import 异模块 Service/Mapper，一律裸 SQL 直查</b>；
- * 列名已对 information_schema.COLUMNS 核对（143 交付时验证）。
  */
 @Mapper
 public interface BizYbMappingMapper extends BaseMapper<BizYbMapping> {

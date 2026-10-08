@@ -16,8 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * AI 护理交接班摘要（G-13）。
- * <p>病区×班次事实聚合 + 模型拟 SBAR 摘要草稿，护士编辑终审、不写库；
- * 消费端是护士工作站（菜单 303），权限沿用入口码，不新增按钮码。</p>
  */
 @Tag(name = "AI 护理交接班摘要")
 @RestController

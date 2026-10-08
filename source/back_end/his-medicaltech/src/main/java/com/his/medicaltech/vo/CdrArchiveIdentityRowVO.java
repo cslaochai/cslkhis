@@ -6,11 +6,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * CDR 归并进来的档案身份行（{@code CdrMapper#selectArchiveIdentities} 一行）。
- *
- * <p>用途只有一个：把"这条数据其实挂在别的档案号下"这件事说清楚。
- * EMPI 归并只合并**查询范围**，不做数据搬迁 —— 影子档案下的历史记录仍在原档案号里，
- * 页面必须显式告诉看的人"你看到的这条数据属于哪个档案号"，否则追溯时会怀疑数据串了。
+ * CDR 归并进来的档案身份行（CdrMapper#selectArchiveIdentities 一行）。
  */
 @Data
 public class CdrArchiveIdentityRowVO implements Serializable {

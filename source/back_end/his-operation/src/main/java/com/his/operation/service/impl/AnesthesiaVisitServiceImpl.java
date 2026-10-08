@@ -59,9 +59,6 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
 
     @Override
     public AnesthesiaVisitVO getDetailById(Long visitId) {
-        if (visitId == null) {
-            throw new BusinessException("访视单ID不能为空");
-        }
         AnesthesiaVisitVO vo = bizAnesthesiaVisitMapper.selectVOById(visitId);
         if (vo == null) {
             throw new BusinessException("麻醉术前访视单不存在");
@@ -72,6 +69,7 @@ public class AnesthesiaVisitServiceImpl extends ServiceImpl<BizAnesthesiaVisitMa
 
     @Override
     public AnesthesiaVisitVO getByApply(Long applyId) {
+        // C-非 web 入参：除 Controller 标量参数外还被 AnesthesiaRecordServiceImpl 直接调用（传库里申请单ID），Bean Validation 不覆盖，保留
         if (applyId == null) {
             throw new BusinessException("手术申请单ID不能为空");
         }

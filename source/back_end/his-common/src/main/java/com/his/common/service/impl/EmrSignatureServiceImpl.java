@@ -38,21 +38,6 @@ import java.util.Objects;
 
 /**
  * 电子签名服务实现（his-common 通用层）。
- *
- * <p><b>签名一次的完整链条</b>（任何一步断了都不许"签成功"）：
- * <pre>
- *   找 provider → 加载被签对象 → 业务侧放行判断 → 取签名人有效证书
- *   → 拼规范化内容（含签名链上一环摘要）→ SHA-256 → 私钥签名
- *   → 落签名行 + 回写业务锚点 + 证书使用计数（同一事务）
- * </pre>
- *
- * <p><b>验签为什么是两个断言而不是一个布尔值</b>：
- * {@code signatureValid}（用快照 + 签名值验公钥）回答"证据本身有没有被换"，
- * {@code contentMatched}（用当前业务内容重算摘要）回答"病历签名后被改过没有"。
- * 合成一个值就会丢掉最关键的信息 —— 假签名与真签名下的内容篡改，处理方式完全不同。
- *
- * <p><b>本类不做的事</b>：不改业务状态、不查业务表、不认识 {@code CurrentUser}。
- * 签名人由调用方传入，于是同样的能力可以在定时任务/批处理里使用。
  */
 @Slf4j
 @Service
@@ -225,7 +210,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
 
     @Override
     public SignVerifyVO verify(Long signId) {
-        // C 类保留：能力层的对外 API 用标量形参承载入参（各业务模块的 service 也直接调），注解只能挂在他模块 DTO 上，这里跑不到校验
+        // C-非 web 入参：EmrSignatureService.verify 是能力层对外 API，标量形参 Long 无 DTO 承载注解（现由 EmrSignatureController 转调，其他模块 service 可直接调），Bean Validation 不覆盖，保留
         if (signId == null) {
             throw new BusinessException("签名ID不能为空");
         }
@@ -375,7 +360,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
 
     @Override
     public List<SignVerifyVO> verifyByBiz(Integer bizType, Long bizId) {
-        // C 类保留：标量形参的跨模块 API，不经 HTTP 参数绑定，Bean Validation 不生效
+        // C-非 web 入参：标量形参的跨模块能力 API（EmrSignatureController 转调，其他 service 可直接调），不经 HTTP 参数绑定，Bean Validation 不覆盖，保留
         if (bizType == null || bizId == null) {
             throw new BusinessException("签名对象类型与对象ID不能为空");
         }
@@ -388,8 +373,8 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
 
     @Override
     public SignatureVO invalidate(Long signId, String reason, Long operatorId, String operatorName) {
-        // C 类保留：本方法既被签名中心的 service 转发（reason 来自他模块 DTO），也被医嘱作废等内部流程直接调用，
-        // 后者根本不过 HTTP 绑定层，必填只能在这里兜
+        // C-非 web 入参：SignatureCenterServiceImpl 转发 + InpatientOrderServiceImpl 等内部流程直接调用（标量与 reason 均非 HTTP 绑定），
+        // Bean Validation 不覆盖，保留
         if (signId == null) {
             throw new BusinessException("签名ID不能为空");
         }
@@ -646,7 +631,7 @@ public class EmrSignatureServiceImpl implements EmrSignatureService {
         return ts.getCode();
     }
 
-    // C 类保留：签名指令由各业务模块的 service 现场构造（定时任务/批处理里也调），从不经 HTTP 参数绑定，注解一句都不生效
+    // C-非 web 入参：SignCommandDTO 由 EmrServiceImpl/PrescriptionServiceImpl/SignatureCenterServiceImpl(his-emr)、InpatientRecordServiceImpl/InpatientOrderServiceImpl/InpatientLeaveServiceImpl/CriticalNoticeServiceImpl(his-patient)、RadiologyReportServiceImpl/MedicalTechServiceImpl/EcgServiceImpl(his-medicaltech) 现场构造并直调，Bean Validation 不覆盖，保留
     private void validateCommand(SignCommandDTO cmd) {
         if (cmd == null) {
             throw new BusinessException("签名入参不能为空");

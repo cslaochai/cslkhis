@@ -8,10 +8,6 @@ import java.io.Serializable;
 
 /**
  * 随访看板：科室待办（未完成口径 = 待随访 + 随访中）。
- *
- * <p>科室名以科室表为准、任务快照兜底：只信快照名的话，dept_id 指向已撤科室
- * 或快照没回填的行会和「根本没科室」挤成同一个「未指定科室」，两个榜并列在屏幕上
- * 却互不相干 —— 前者要人去补科室，后者是历史遗留，看板必须分得开。
  */
 @Data
 public class FollowupDeptPendingVO implements Serializable {

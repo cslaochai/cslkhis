@@ -8,10 +8,6 @@ import java.util.List;
 
 /**
  * 住院患者请假/离院登记（sql/162，菜单 320）。
- *
- * <p>状态机：1-待审批 →(approve allow=1，电子签名) 2-已批准 →(leave：患方承诺三要素)
- * 3-已离院 →(back) 4-已返回；1 →(allow=0) 5-已拒绝；1/2 →(cancel) 6-已取消。
- * 超期未归是查询时算的展示态，不落状态列。
  */
 public interface InpatientLeaveService {
 

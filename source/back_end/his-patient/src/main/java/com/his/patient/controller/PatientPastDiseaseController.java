@@ -16,10 +16,6 @@ import java.util.List;
 
 /**
  * 患者既往疾病史控制器
- *
- * <p>补齐了两处此前缺的：① 查询路径统一成 {@code POST /list}（同一组档案原先是
- * 过敏史走 POST、既往史走 GET，前端 API 层索性一行都没写 —— 这一组于是长期没有入口）；
- * ② 新增 {@code DELETE /deleteById}，此前只能加不能删。
  */
 @Tag(name = "患者既往疾病史")
 @RestController

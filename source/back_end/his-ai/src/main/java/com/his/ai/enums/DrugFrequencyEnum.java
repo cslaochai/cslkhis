@@ -7,9 +7,6 @@ import java.util.Map;
 
 /**
  * 用药频次白话化词典（qd→每天 1 次 …）。
- *
- * <p>码值→文案的唯一出口（原 {@code PatientMedicationGuideCapabilityImpl} 的 {@code FREQUENCY_DICT}
- * 映射已上移至此）。只做同义改写与汉字数字转阿拉伯数字，查不到就原样返回，绝不猜测频次。
  */
 @Getter
 public enum DrugFrequencyEnum {

@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * 内镜检查记录
- *
- * <p>状态机：1 已登记 → 2 已签到 → 3 检查中 → 4 已出报告 → 5 已审核 → 6 已发布；7 已取消。
- * 与超声共用字典 his_endous_status。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

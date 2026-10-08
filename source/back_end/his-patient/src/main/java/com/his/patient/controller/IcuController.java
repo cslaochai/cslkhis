@@ -18,9 +18,6 @@ import java.util.List;
 
 /**
  * ICU 专科监护：入出科登记 + 床边监护记录单 + 床位看板与科室指标。
- *
- * <p>床位复用床位（bed_type='ICU'）；生命体征只在监护单上记 ICU 专有项，
- * 普通病区三测仍走护理记录，不双轨。按项目规范 @PreAuthorize 全部标到方法。
  */
 @Tag(name = "ICU 专科监护")
 @RestController

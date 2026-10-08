@@ -9,16 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * 可挂靠库存批次行（本模块 {@code biz_drug_stock} 的只读子集）。
- *
- * <p>对应 {@code BizDrugTraceMapper#selectStockOptions}：采集追溯码时选批次用，
- * SQL 已按 {@code stock_room ASC, expiry_date ASC, id ASC} 排好 —— 即 FEFO
- * （先到期先出），且药库(1) 排在药房(2) 前面，所以前端拿到列表直接选第一个即可，
- * 不用也不该在浏览器里再排一次序。
- *
- * <p>与出参 {@code DrugTraceScanVO.BatchOption} 分开：那个是给小程序/前端看的
- * （带 {@code @JsonFormat}/{@code @JsonSerialize} 注解），这个是 Mapper 的行承载，
- * 两者字段有意保持同形，便于逐字段搬。
+ * 可挂靠库存批次行（本模块 biz_drug_stock 的只读子集）。
  */
 @Data
 public class DrugStockOptionVO implements Serializable {

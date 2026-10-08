@@ -13,29 +13,6 @@ import java.time.LocalDateTime;
 
 /**
  * 住院输血申请单—— 输血闭环的主单。
- *
- * <p>字段与表 <b>一一对应</b>（多一个库里没有的列 → 全表 select 直接 500）。
- *
- * <p>这条链要回答的问题，按发生顺序：
- * <ol>
- *   <li>谁、什么时候、为什么输 → {@code applyDoctorId / applyTime / indication / transfusionPurpose}；</li>
- *   <li>受血者是什么血型（本次鉴定结果）→ {@code patientAbo / patientRh}；</li>
- *   <li>配了哪几袋、相不相合 → {@code crossmatchStatus} + 子表输血血袋明细；</li>
- *   <li>谁发的血 → {@code issueDoctorId / issueTime}；</li>
- *   <li>谁和谁双人核对、核对项是什么、什么时候开始输什么时候输完 → {@code checkNurseId / checkNurse2Id / checkItems / infusionStartTime / infusionEndTime}；</li>
- *   <li>有没有反应、怎么处理的 → {@code hasReaction / reactionType / reactionHandle}；</li>
- *   <li>结果落到哪份正式文书上 → {@code recordId}（record_type=11 输血记录）。</li>
- * </ol>
- *
- * <p><b>{@code patientAbo} / {@code patientRh} 是 NOT NULL</b>：没有受血者血型，
- * 后面所有的"配血相合"都是空话。Rh 必须单独记 —— 患者档案的
- * 患者基本信息.blood_type 只有 A/B/O/AB，**没有 Rh 维度**，
- * 而 Rh 阴性是稀有血型、直接影响备血方案。
- *
- * <p>{@code crossmatchStatus} 与 {@code transfusionStatus} <b>不是一回事</b>，不能合并：
- * 前者回答"血配好了没、合不合"，后者回答"流程走到哪一步"。
- * 配血不合时流程状态会停在 0（待配血），但 {@code crossmatchStatus=3} 必须能看见 ——
- * 否则"配了、但不合"会被显示成"还没配"，把已经发生的安全隐患抹掉。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

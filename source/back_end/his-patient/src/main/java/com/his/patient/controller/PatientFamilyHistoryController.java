@@ -16,10 +16,6 @@ import java.util.List;
 
 /**
  * 患者家族史控制器
- *
- * <p>⚠ {@code relationship} 这一列存的是**亲属称谓文案**（父亲/母亲/伯父）不是数字码值 ——
- * 与联系人那一组患者联系方式.relationship（字典患者关系字典的 tinyint 码值）
- * 恰好相反。两组字段名一样、口径相反，改造时最容易把一边的写法套到另一边。
  */
 @Tag(name = "患者家族史")
 @RestController

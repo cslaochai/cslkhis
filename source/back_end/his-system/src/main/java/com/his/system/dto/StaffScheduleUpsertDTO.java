@@ -8,9 +8,6 @@ import java.time.LocalDate;
 
 /**
  * 全院岗位排班新增/修改入参。
- *
- * <p>星期、岗位类别、起止时间、工时、单元名称都由服务端按日期/岗位/班次重查带出，
- * 所以这些都不在入参里 —— 前端传什么都不认。
  */
 @Data
 public class StaffScheduleUpsertDTO {

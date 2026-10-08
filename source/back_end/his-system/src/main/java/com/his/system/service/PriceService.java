@@ -9,8 +9,6 @@ import com.his.system.vo.PriceItemVO;
 
 /**
  * 价格管理服务
- *
- * <p>跨 5 张价表（药品/耗材/检查/检验/治疗）的统一查询与调价。</p>
  */
 public interface PriceService {
 

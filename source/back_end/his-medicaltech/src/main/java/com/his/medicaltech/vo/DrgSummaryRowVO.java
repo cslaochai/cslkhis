@@ -8,12 +8,7 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 /**
- * DRG 分组模拟的输入行：病案首页 + 实际费用（{@code DrgSimMapper#selectSummary} /
- * {@code selectSummaries} 一行，单条模拟与批量模拟共用同一形状）。
- *
- * <p>费用用标量子查询而不是 LEFT JOIN 结算账单表：一次住院除了出院结算还可能有中途结算账单，
- * join 会把一行首页放大成多行，DRG 模拟就凭空多出几个病例。首页快照优先，
- * 没有再看出院结算账单，都取不到按 0 计。
+ * DRG 分组模拟的输入行：病案首页 + 实际费用（DrgSimMapper#selectSummary /
  */
 @Data
 public class DrgSummaryRowVO implements Serializable {

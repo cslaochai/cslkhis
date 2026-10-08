@@ -9,9 +9,6 @@ import java.util.List;
 
 /**
  * 营养风险筛查与评定服务（sql/168 §1）。
- *
- * <p>口径：NRS2002 总分 = 营养状态受损(0~3) + 疾病严重程度(0~3) + 年龄(≥70 岁 1 分)，
- * <b>总分 ≥3 判为有营养风险</b>；判阴性者自动留下 7 天后的复筛日期。
  */
 public interface NutritionScreenService {
 

@@ -46,6 +46,8 @@ public class MiniDepositServiceImpl implements MiniDepositService {
     }
 
     private void requireOwnAdmission(Long admissionId) {
+        // C-非 web 入参：私有 helper 被 balance（@RequestParam）与 prepayListPage 共用，后者的分页 DTO 属收费模块、
+        // admissionId 对全院流水查询是可空的公共条件，加注解会挡掉那边的合法请求，Bean Validation 也覆盖不到本入口，保留
         if (admissionId == null) {
             throw new BusinessException("入院ID不能为空");
         }

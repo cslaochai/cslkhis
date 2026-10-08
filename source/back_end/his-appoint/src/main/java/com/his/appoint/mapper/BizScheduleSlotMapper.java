@@ -9,9 +9,6 @@ import org.apache.ibatis.annotations.Update;
 
 /**
  * 排班时间片段Mapper。
- *
- * <p>扣减/释放语义与 {@link BizScheduleMapper} 逐条镜像（号源事实在段上，
- * 主表是 Σ段冗余，两条 UPDATE 在挂号/退号的同一个事务里先后执行，提交后必然一致）。
  */
 @Mapper
 public interface BizScheduleSlotMapper extends BaseMapper<BizScheduleSlot> {

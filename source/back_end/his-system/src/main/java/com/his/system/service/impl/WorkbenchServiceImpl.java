@@ -34,10 +34,6 @@ import java.util.stream.Collectors;
 
 /**
  * 门户工作台 Service。
- *
- * <p>两份职责：{@code getConfig / getData} 服务首页外壳（只要登录），
- * {@code widgetXxx / roleConfigXxx} 服务「系统管理 → 工作台配置」（管理员）。
- * 全类**没有任何角色码分支** —— 谁看什么卡，答案只在角色工作台配置里。
  */
 @Slf4j
 @Service

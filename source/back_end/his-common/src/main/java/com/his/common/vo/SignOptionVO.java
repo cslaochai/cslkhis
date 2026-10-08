@@ -7,7 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 下拉选项（id 出参由 {@code ToStringSerializer} 字符串化，雪花 ID 不给前端留 Number 精度坑）。
+ * 下拉选项（id 出参由 ToStringSerializer 字符串化，雪花 ID 不给前端留 Number 精度坑）。
  */
 @Data
 @NoArgsConstructor

@@ -9,10 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 病历草稿 AI 留痕（草稿 → 终稿差异）。
- *
- * <p>只增不改不删：每一行就是一次「AI 草稿被医生终审」的独立样本，
- * 是未来 SFT 微调的训练原料（docs/AI能力施工手册.md G-10 数据飞轮）。
- * 同一病历多次「填草稿 → 保存」各留一行，无唯一键。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

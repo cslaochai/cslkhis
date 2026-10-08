@@ -9,13 +9,13 @@ import java.time.LocalDateTime;
 
 /**
  * 入院登记入参
- * <p>{@code wardId} 与 {@code bedId} 都必填：入院记录的 ward_id / bed_id 是 NOT NULL，
- * 真实业务也不允许「先登记后分床」的中间状态。
  */
 @Data
 public class InpatientAdmitDTO {
 
-    /** 患者ID（必填） */
+    /**
+     * 患者ID（必填）
+     */
     private Long patientId;
 
     /**
@@ -26,41 +26,65 @@ public class InpatientAdmitDTO {
      */
     private Long admissionOrderId;
 
-    /** 来源挂号ID（无住院证时用来挂门诊线索；急诊入院也走挂号，所以有这个字段） */
+    /**
+     * 来源挂号ID（无住院证时用来挂门诊线索；急诊入院也走挂号，所以有这个字段）
+     */
     private Long registId;
 
-    /** 来源挂号号 */
+    /**
+     * 来源挂号号
+     */
     private String registNo;
 
-    /** 病区ID（必填） */
+    /**
+     * 病区ID（必填）
+     */
     private Long wardId;
 
-    /** 床位ID（必填，必须空闲） */
+    /**
+     * 床位ID（必填，必须空闲）
+     */
     private Long bedId;
 
-    /** 入院科室ID（不传则按病区推导） */
+    /**
+     * 入院科室ID（不传则按病区推导）
+     */
     private Long deptId;
 
-    /** 入院医生ID（必填） */
+    /**
+     * 入院医生ID（必填）
+     */
     private Long admitDoctorId;
 
-    /** 入院时间（不传取当前时间） */
+    /**
+     * 入院时间（不传取当前时间）
+     */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime admitTime;
 
-    /** 入院途径：1-门诊 2-急诊 3-转院 4-其他（必填，病案首页字段） */
+    /**
+     * 入院途径：1-门诊 2-急诊 3-转院 4-其他（必填，病案首页字段）
+     */
     @InEnum(value = AdmitWayEnum.class, message = "入院途径取值不合法（应为 1-门诊 2-急诊 3-转院 4-其他）")
     private Integer admitWay;
 
-    /** 入院诊断（文本） */
+    /**
+     * 入院诊断（文本）
+     */
     private String diagnosis;
 
-    /** 入院诊断ICD编码 */
+    /**
+     * 入院诊断ICD编码
+     */
     private String admitDiagnosisCode;
 
-    /** 入院诊断名称 */
+    /**
+     * 入院诊断名称
+     */
     private String admitDiagnosisName;
 
-    /** 备注 */
+    /**
+     * 备注
+     */
     private String remark;
 }

@@ -17,17 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 放射诊断工作站 · 报告书写台（sql/138，菜单 414）。
- *
- * <p>权限口径与「分岗」直接对应：
- * <ul>
- *   <li>进页面（list/getDetail）→ {@code medtech:radioDiagnosis:list}：检查技师没有这个码，
- *       所以他在侧边栏根本看不到这个页面；</li>
- *   <li>写报告（saveDraft/submit）→ {@code medtech:radioDiagnosis:write}；</li>
- *   <li>审核/退回（audit/reject）→ {@code medtech:radioDiagnosis:audit}；</li>
- *   <li>发布（publish）→ {@code medtech:radioDiagnosis:publish}。</li>
- * </ul>
- * 按钮码只是第一道门，服务端另有三道硬闸门（是不是放射项目 / 报告是否已发布 / 不能自审），
- * 见 {@code RadiologyReportServiceImpl} —— 光靠前端藏按钮的分岗不是分岗。
  */
 @Tag(name = "放射诊断工作站")
 @RestController

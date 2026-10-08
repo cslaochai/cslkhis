@@ -28,9 +28,6 @@ import java.util.List;
 
 /**
  * 签名中心出参与命令装配。
- *
- * <p>签名人一律取当前登录用户，不从入参接收 —— 允许前端指定签名人，
- * 等于把"谁签的"交给前端填，签名的不可否认性当场归零。
  */
 @Service
 @RequiredArgsConstructor

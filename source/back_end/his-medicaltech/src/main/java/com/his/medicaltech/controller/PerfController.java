@@ -14,9 +14,6 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * 绩效成本核算控制器。
- *
- * <p>口径：收入=收费明细月度净额；药占比=药费/收入；结余=收入-成本；
- * 绩效=max(0,结余)×提成系数。成本同科室同月唯一（拒绝重复录入），核算结果重算覆盖。
  */
 @Tag(name = "绩效与成本核算")
 @RestController

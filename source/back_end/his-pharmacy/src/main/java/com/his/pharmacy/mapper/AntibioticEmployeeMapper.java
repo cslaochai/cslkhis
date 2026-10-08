@@ -9,9 +9,6 @@ import java.util.List;
 
 /**
  * 医师主数据只读（裸 SQL 读员工）。
- *
- * <p>his-emr 虽然 Maven 上依赖了 his-system，但按 AGENTS 铁律「跨模块读异模块表用裸 SQL Mapper」，
- * 这里不引入 SysEmployee 实体 —— 授权表只需要"这个医师叫什么、哪个科、什么职称"这三个快照字段。
  */
 @Mapper
 public interface AntibioticEmployeeMapper {

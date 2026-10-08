@@ -16,7 +16,6 @@ import java.util.List;
 
 /**
  * 住院管理（第 1 期：入出院闭环 + 病案首页）
- * <p>约定：查询一律 GET，写操作一律 POST，路径驼峰。
  */
 @Tag(name = "住院管理")
 @RestController

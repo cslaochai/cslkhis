@@ -8,10 +8,6 @@ import lombok.Data;
 
 /**
  * 放射报告书写入参（保存草稿 / 提交审核共用，sql/138）。
- *
- * <p>定位键是 {@code recordId}（检查记录）而不是 reportId：
- * 报告是从记录派生出来的，第一次写报告时报告还不存在，前端手上只有记录 ID。
- * {@code reportId} 只在「改已有报告」时由前端回传（草稿二次编辑），可空。
  */
 @Data
 public class RadioReportUpsertDTO {

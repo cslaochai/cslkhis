@@ -14,9 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 临床路径入径记录（临床路径入径记录）。
- *
- * <p>一次住院同时只允许一条在径（服务层校验）。患者/科室/模板信息全部快照，
- * 模板停用或改版本不影响存量入径推进。路径日 currentDay 为派生值不落库。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

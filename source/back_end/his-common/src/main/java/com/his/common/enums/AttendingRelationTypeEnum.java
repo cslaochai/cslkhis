@@ -3,16 +3,7 @@ package com.his.common.enums;
 import lombok.Getter;
 
 /**
- * 住院管床关系类型枚举（sql/202，字典 {@code his_attending_relation_type}）
- *
- * <p>真实医院里一个患者身上同时挂着好几层医生关系，混成一个「主管」字段会丢信息：
- * <ul>
- *   <li><b>主管（管床）</b>：日常负责，写病历、开医嘱、跟家属谈话，一个患者只有一个；</li>
- *   <li><b>主诊组长</b>：对这一组的医疗质量负责，不一定是管床那个人；</li>
- *   <li><b>协作</b>：会诊后参与治疗的其他医生，可以有多个。</li>
- * </ul>
- * 唯一键 {@code (admission_id, relation_type, employee_id)} 用的是「一次住院 × 一个类型 × 一个医生」：
- * 主管天然唯一（一个患者只有一个主管），协作允许多人。
+ * 住院管床关系类型枚举（sql/202，字典 his_attending_relation_type）
  */
 @Getter
 public enum AttendingRelationTypeEnum {

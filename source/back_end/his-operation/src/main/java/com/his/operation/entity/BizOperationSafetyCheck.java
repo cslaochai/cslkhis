@@ -12,13 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 手术安全核查单（手术安全核查单）—— 三方 × 三时段，一时段一行。
- *
- * <p><b>只增不改不删</b>：核查记录的价值是"当时当刻三方都签了"，
- * 允许事后修改等于允许伪造，所以本实体没有任何 update/delete 端点，
- * {@code uk_check_apply_phase} 就是这条纪律的数据库兜底。
- *
- * <p>三方（{@code surgeonId}/{@code anesthetistId}/{@code nurseId}）必须是三个互不相同的人 ——
- * 一个人包签三方 = 没有核查。签名时间统一为提交时刻（当面共同核查、一次性录入）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

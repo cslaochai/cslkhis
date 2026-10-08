@@ -1,10 +1,7 @@
 package com.his.common.enums;
 
 /**
- * 结算账单类型（字典 {@code his_bill_type}，落在结算账单的账单类型列）。
- *
- * <p>区分"中途结算"与"出院结算"是住院侧的关键：中途结算把已发生的记账行锁定收钱，
- * 出院结算要连预交金账户一起结清（退差/补欠），两者动作与票据都不同。
+ * 结算账单类型（字典 his_bill_type，落在结算账单的账单类型列）。
  */
 public enum BillTypeEnum {
 

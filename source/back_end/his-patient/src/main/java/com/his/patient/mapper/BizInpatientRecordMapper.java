@@ -12,12 +12,6 @@ import java.util.List;
 
 /**
  * 住院病历文书 Mapper。
- *
- * <p>分页查询**返回实体**而不是 VO：结构化率的计算口径在 Java 侧
- * （{@code RecordStructuredFields}），SQL 里算不出来。如果这里直接出 VO，
- * 就得在 SQL 里再实现一套要素清单 —— 那就成了两个口径。
- *
- * <p>自定义 {@code @Select} 不受 {@code @TableLogic} 影响 → 必须显式写 {@code del_flag = 0}。
  */
 @Mapper
 public interface BizInpatientRecordMapper extends BaseMapper<BizInpatientRecord> {

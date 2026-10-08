@@ -2,8 +2,6 @@ package com.his.common.enums;
 
 /**
  * 医保类型枚举
- * <p>settlementType 与医保政策配置的结算方式保持一致：
- * 2-城镇职工医保 3-城乡居民医保 4-公费医疗</p>
  */
 public enum MedicalInsuranceTypeEnum {
 

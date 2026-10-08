@@ -7,8 +7,6 @@ import lombok.Data;
 
 /**
  * CDR 里出现的"另一份档案"（EMPI 影子档案）。
- *
- * <p>用于告诉看页面的人：这条时间轴里有一部分数据其实挂在另一份档案号下。
  */
 @Data
 @Schema(description = "CDR 关联档案（影子）")

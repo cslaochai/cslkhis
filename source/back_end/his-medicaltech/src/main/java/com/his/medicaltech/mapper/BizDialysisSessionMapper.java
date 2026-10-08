@@ -13,9 +13,6 @@ import java.util.List;
 
 /**
  * 透析单 Mapper。
- *
- * <p>机位时段的唯一性由 uk_session_slot_machine 在库里兜底，本处只提供排班前的
- * 友好预检（把「谁占了这台机」读出来），撞键异常仍在服务层兜住。
  */
 @Mapper
 public interface BizDialysisSessionMapper extends BaseMapper<BizDialysisSession> {

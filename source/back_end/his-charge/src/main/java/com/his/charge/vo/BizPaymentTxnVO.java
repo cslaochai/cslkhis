@@ -11,8 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 支付资金流水出参（L3 台账）。
- *
- * <p>金额带符号：收款为正、退款为负，日结与班结直接 {@code SUM(amount)} 即净额。
  */
 @Data
 public class BizPaymentTxnVO {

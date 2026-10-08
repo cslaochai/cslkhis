@@ -28,15 +28,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 基于 Spring Boot 3.2 自带 {@code RestClient} 的模型客户端。
- * <p>
- * 为什么不用 Spring AI / Spring AI Alibaba：
- * <ol>
- *   <li>两者都要求 Spring Boot 3.4+/3.5+，本项目是 3.2.5，引入即启动失败；</li>
- *   <li>Spring AI Alibaba 的核心增量是 Graph 多智能体编排，而本方案明确定调不做 Agent 编排；</li>
- *   <li>裸调 OpenAI 兼容协议可以一套代码切换 DeepSeek / 通义 / 内网 vLLM，不被 SDK 绑定。</li>
- * </ol>
- * 详见 docs/AI能力施工手册.md §2.1。
+ * 基于 Spring Boot 3.2 自带 RestClient 的模型客户端。
  */
 @Slf4j
 @Component

@@ -4,10 +4,6 @@ import lombok.Getter;
 
 /**
  * 药品库存地点枚举（sql/154）
- *
- * <p>库存分两层是"退回"这件事成立的前提：只有药库和药房两个地点，
- * 才谈得上"药房把药退回药库"。历史上的单层库存里这句话无处落地（退给谁？回到哪一行？）。
- * <br>字典权威在本枚举，码值改动必须同步 {@code sql/154} 的 {@code his_stock_room} 段。
  */
 @Getter
 public enum StockRoomEnum {

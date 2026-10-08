@@ -9,12 +9,6 @@ import java.time.LocalDateTime;
 
 /**
  * 患者端影像报告解读结果。读者是患者本人，不是医生。
- * <p>
- * 与检验解读的分层差异：影像报告的「描述/结论」本身就是专业事实，
- * 白话化只有模型一条路（词典改写只会丢信息——P1 结论），所以
- * <b>模型不可用时 findingsPlain/conclusionsPlain/advicePlain 为空是设计内行为</b>：
- * 词典的检查介绍、阴阳性、危急置顶、报告原文引导照常返回，缺的只是白话串讲。
- * 降级可见（degraded + degradeReason），原文与「咨询接诊医生」引导兜底，绝不编白话。
  */
 @Data
 @Schema(description = "患者端影像报告解读结果")

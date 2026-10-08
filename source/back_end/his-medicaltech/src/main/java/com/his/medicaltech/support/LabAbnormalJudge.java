@@ -8,20 +8,6 @@ import java.util.Set;
 
 /**
  * 检验结果异常判定（纯函数，无外部依赖）。
- * <p>
- * <b>这个类的存在本身就是一个 Bug 修复记录。</b> 此前 {@code abnormalFlag} 完全依赖前端传入、
- * 缺省为 0，后台从不判定 —— 实测库里 71 条结果中异常的 7 条全靠人工标，
- * 而「白细胞计数 = 1（参考 4-10）」这种明显偏低的结果 {@code abnormal_flag} 仍是 0。
- * 也就是说：<b>后台从来没有能力发现异常结果</b>，而这不会有任何报错。
- * <p>
- * 判定规则刻意保守，三种情况一律<b>不判定</b>：
- * <ol>
- *   <li>参考区间无法解析（{@link LabReferenceRange.Kind#UNPARSABLE}）</li>
- *   <li>结果值不是数值（文字描述类结果）</li>
- *   <li>结果值为空</li>
- * </ol>
- * 不判定时返回 {@code judged=false} 并把原因写进说明，
- * 由调用方保留前端传入的原值 —— <b>绝不把「不知道」写成「正常」</b>。
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class LabAbnormalJudge {
@@ -153,11 +139,6 @@ public final class LabAbnormalJudge {
 
     /**
      * 判定结论
-     *
-     * @param flag        异常标志，取值见本类常量
-     * @param description 异常描述，正常或未判定时为空串
-     * @param judged      是否真的做了判定
-     * @param note        未判定的原因（带 {@link LabAbnormalJudge#NOTE_UNJUDGED_PREFIX} 前缀），判定成功时为 null
      */
     public record Verdict(int flag, String description, boolean judged, String note) {
 

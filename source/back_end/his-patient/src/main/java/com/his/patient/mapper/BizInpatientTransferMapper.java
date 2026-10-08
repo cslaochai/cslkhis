@@ -12,8 +12,6 @@ import java.util.List;
 
 /**
  * 住院转科轨迹 Mapper。
- *
- * <p>自定义 {@code @Select} 不受 {@code @TableLogic} 影响 → 必须显式写 {@code del_flag = 0}。
  */
 @Mapper
 public interface BizInpatientTransferMapper extends BaseMapper<BizInpatientTransfer> {

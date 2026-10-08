@@ -12,8 +12,6 @@ import java.util.List;
 
 /**
  * 药品库存流水Mapper
- * 口径（sql/45 起，sql/154 沿用）：库存的一切增减都必须同事务落一行流水，
- * source_type + source_id + source_no 三元组就是"这笔变动由哪张单据造成"的抓手。
  */
 @Mapper
 public interface BizDrugStockLogMapper extends BaseMapper<BizDrugStockLog> {

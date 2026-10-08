@@ -10,10 +10,6 @@ import com.his.pharmacy.vo.StocktakeVO;
 
 /**
  * 药房盘点服务
- *
- * <p>单据流：建单（抓账面快照）【盘点中】→（录实盘，可反复）→（提交）
- * 有差异【待复核】/ 无差异【已关单】→（复核通过）【已过账，差异落库存流水】，
- * 复核不通过退回【盘点中】。
  */
 public interface StocktakeService {
 

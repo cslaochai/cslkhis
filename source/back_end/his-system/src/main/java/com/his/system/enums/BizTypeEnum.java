@@ -4,17 +4,6 @@ import lombok.Getter;
 
 /**
  * 站内信业务类型（消息通知.业务类型唯一口径）
- * <p>
- * 三条铁律：
- * <ol>
- *   <li><b>新增码值必须同步 {@code sql/} 下的消息通知.业务类型列注释</b>——
- *       列注释是三方证据之一（数据 / 列注释 / 渲染实现），漏改就是口径不一致（本枚举曾漏 critical）。</li>
- *   <li><b>desc 用「危急值」不是「危机值」</b>，与 his-medicaltech 危急值模块口径一致。</li>
- *   <li>每个码值上线前先定「触发点 + 收件人（employeeId）+ 通知型/待办型」，
- *       没有发送方的码值不上（枚举占位 ≠ 有功能）。</li>
- * </ol>
- * 前端展示口径（label / 紧急度 / 图标 / 跳转 / 权限码）单点在
- * {@code front/src/lib/messageCatalog.js}，页面禁止各写映射。
  */
 @Getter
 public enum BizTypeEnum {

@@ -14,16 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 订餐配送（sql/168 §3，院内工作站侧，不含金额）。
- *
- * <p>三条铁律：
- * <ul>
- *   <li><b>一人一天一餐只有一条</b>：唯一键 uk_meal_order(admission_id, meal_date, meal_type) 不含
- *       del_flag，所以"按膳食方案重新生成明日餐单"必须先物理清掉旧行（Mapper.purgeByPlanAndDate），
- *       软删会占住键位让第二次生成直接 Duplicate entry。</li>
- *   <li><b>本表刻意没有任何金额列</b>：餐费属于收费四层 L1（费用记账流水），要接收费只能由
- *       FeeRecordService 写记账行，不能在这里加 price/amount 字段绕开结算链。</li>
- *   <li><b>只有口服方案才会生成餐单</b>：管饲/肠外营养的患者出现在食堂配送单上是错的。</li>
- * </ul>
  */
 @Data
 @TableName("biz_meal_order")

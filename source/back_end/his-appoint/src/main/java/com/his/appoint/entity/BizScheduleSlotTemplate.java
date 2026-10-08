@@ -9,9 +9,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 排班模板时间片段实体（模板下的半小时段配额）。
- *
- * <p>模板生成排班时按此配置初始化段的号源与预约池；
- * 模板未配置片段时，生成侧走「按半小时自动切分均分」兜底（与手工排班同一规则）。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

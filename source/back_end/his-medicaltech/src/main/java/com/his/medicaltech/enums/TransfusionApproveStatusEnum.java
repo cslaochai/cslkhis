@@ -4,8 +4,6 @@ import lombok.Getter;
 
 /**
  * 用血分级审批状态枚举（sql/93；《医疗机构临床用血管理办法》）。
- *
- * <p>审批级别（上级医师 / 科主任 / 医务科）由申请量折算，见 {@code TransfusionApproveLevelEnum}。
  */
 @Getter
 public enum TransfusionApproveStatusEnum {

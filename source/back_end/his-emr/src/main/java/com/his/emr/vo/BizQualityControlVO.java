@@ -11,10 +11,6 @@ import java.util.List;
 
 /**
  * 质控检查记录出参。
- *
- * <p>除实体字段外，附带 {@code recordNo/patientName/deptName} 这些**跨表快照**，
- * 以及各类码值的中文（{@code qcTypeText} 等）—— 中文一律由后端给，
- * 前端不再自己维护一份码值表：两份码表一定会有一份先过期。
  */
 @Data
 public class BizQualityControlVO {

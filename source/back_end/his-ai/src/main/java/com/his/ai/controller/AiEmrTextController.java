@@ -19,14 +19,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 病历文本辅助接口（P1-3）。
- * <p>
- * 两个动作刻意都<b>不写库</b>：
- * <ul>
- *   <li>{@code extract} 的产出是「待医生逐字段采纳的候选值」；</li>
- *   <li>{@code draft} 的产出是「必须医生确认的草稿」。</li>
- * </ul>
- * 采纳动作在前端完成（点「填入」写进表单），最终由病历保存流程统一落库 ——
- * 这样"AI 有没有改过病历"这个问题的答案永远是"没有"。
  */
 @Tag(name = "AI 能力-病历文本")
 @RestController

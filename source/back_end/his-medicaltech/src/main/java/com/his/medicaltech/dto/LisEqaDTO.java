@@ -13,9 +13,6 @@ import java.util.List;
 
 /**
  * 室间质评入参
- *
- * <p>通例：<b>状态、成绩、判定一律不进 DTO</b>。DTO 里只装"人填的东西"
- * ——组织方叫什么、样品第几号、本室测出来多少 —— 剩下全是服务端算。
  */
 public class LisEqaDTO {
 
@@ -164,7 +161,6 @@ public class LisEqaDTO {
 
     /**
      * 批量生成盲样台账骨架：样品序号 × 项目 × 仪器笛卡尔积。
-     * 已经存在的组合跳过（不覆盖 —— 已录过检测值的行被覆盖等于抹掉检测记录）。
      */
     @Data
     public static class SampleGenerate {

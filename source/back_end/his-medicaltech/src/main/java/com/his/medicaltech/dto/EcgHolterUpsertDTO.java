@@ -10,9 +10,6 @@ import java.time.LocalDateTime;
 
 /**
  * Holter 动态心电分析入参（sql/173）。
- *
- * <p>日期入参一律空格分隔 pattern（AGENTS 铁律）：声明了 pattern 后 Jackson 只认
- * "yyyy-MM-dd HH:mm:ss"，前端 value-format 必须对齐，传 ISO T 分隔会直接 400。
  */
 @Data
 public class EcgHolterUpsertDTO {

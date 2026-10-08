@@ -12,10 +12,6 @@ import java.time.LocalDateTime;
 
 /**
  * 治疗项目字典。
- *
- * <p>这张表**没有 unit / spec / 频次 / 剂量**列（AGENTS 里记过：裸 SQL 猜列名会运行时炸），
- * 所以治疗费只能按「次」计：数量恒为 1、单价取单价、单位写死「次」。
- * {@code deptId} 老库里只有 101/105 两个值且在科室中不存在，只能当"建议执行科室"留档。
  */
 @Data
 @TableName("sys_treatment_item")

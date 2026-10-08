@@ -9,7 +9,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 微信小程序运行时配置（yml 的 {@code his.wechat.miniapp.*} 段）。
+ * 微信小程序运行时配置（yml 的 his.wechat.miniapp.* 段）。
  */
 @Data
 @Component

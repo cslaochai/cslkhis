@@ -11,9 +11,6 @@ import java.time.LocalDateTime;
 
 /**
  * 病案编码任务实体
- * <p>
- * 状态机：1 待编码 →（提交编码）→ 2 已提交 →（审核）→ 3 已完成 / 4 已退修；
- * 已退修可再次提交（→2），每次退修 return_count+1 留痕。
  */
 @Data
 @TableName("biz_archive_code_task")

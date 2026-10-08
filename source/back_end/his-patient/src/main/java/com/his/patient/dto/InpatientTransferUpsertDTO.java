@@ -10,10 +10,6 @@ import java.io.Serializable;
 
 /**
  * 发起转科入参（P4.2）。
- *
- * <p>发起**不等于**转科生效：这一步只留下一张待接收的转科单，
- * 床位不占、科室不改、医嘱不停。真正生效发生在转入科室 {@code accept} 的那一刻
- * —— 否则转入科室还没排床，患者就已经被算到它头上了。
  */
 @Data
 public class InpatientTransferUpsertDTO implements Serializable {

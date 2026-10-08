@@ -15,7 +15,9 @@ import java.io.Serializable;
  */
 public class ReferralDTO {
 
-    /** 转诊登记（新建） */
+    /**
+     * 转诊登记（新建）
+     */
     @Data
     public static class Create implements Serializable {
 
@@ -57,7 +59,9 @@ public class ReferralDTO {
         private String remark;
     }
 
-    /** 分页查询 */
+    /**
+     * 分页查询
+     */
     @Data
     @EqualsAndHashCode(callSuper = true)
     public static class QueryPage extends PageParam implements Serializable {
@@ -75,7 +79,9 @@ public class ReferralDTO {
         private String toHospital;
     }
 
-    /** 确认（0→1） */
+    /**
+     * 确认（0→1）
+     */
     @Data
     public static class Audit implements Serializable {
 
@@ -90,7 +96,9 @@ public class ReferralDTO {
         private String auditRemark;
     }
 
-    /** 完成（1→2） */
+    /**
+     * 完成（1→2）
+     */
     @Data
     public static class Finish implements Serializable {
 
@@ -102,7 +110,9 @@ public class ReferralDTO {
         private String finishRemark;
     }
 
-    /** 取消（0/1→3） */
+    /**
+     * 取消（0/1→3）
+     */
     @Data
     public static class Cancel implements Serializable {
 

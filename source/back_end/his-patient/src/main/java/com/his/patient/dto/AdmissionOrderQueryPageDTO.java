@@ -6,10 +6,6 @@ import lombok.EqualsAndHashCode;
 
 /**
  * 住院证查询入参
- *
- * <p>日期区间刻意用 String（yyyy-MM-dd）而不是 LocalDateTime：GET 请求绑定 LocalDateTime
- * 对格式极其敏感，前端少补一个秒就会 400，而 400 又容易被兜底成 500「系统内部错误」，
- * 排查方向会被带偏。字符串在后端显式解析，报错文案可控。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

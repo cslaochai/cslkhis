@@ -13,10 +13,6 @@ import java.util.List;
 
 /**
  * 病案质控服务接口。
- *
- * <p><b>质控单是留痕，不是状态</b>：同一份病历可以被反复质控，每次生成一张新单，
- * 旧单不删不改。理由很实际 —— 质控员需要回答"这份病历整改前后各扣了多少分"，
- * 覆盖式更新会把这个能力直接删掉。
  */
 public interface QualityControlService extends IService<BizQualityControl> {
 

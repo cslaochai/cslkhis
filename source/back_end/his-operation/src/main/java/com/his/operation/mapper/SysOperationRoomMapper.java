@@ -8,10 +8,6 @@ import org.apache.ibatis.annotations.Param;
 
 /**
  * 手术间主数据 Mapper。
- *
- * <p>{@code uk_room_code}/{@code uk_room_name} 均不含 del_flag，而 BaseMapper 的
- * {@code deleteById} 因 {@code @TableLogic} 是软删 → 软删行继续占唯一键，
- * 同码重建必 Duplicate entry（L12 同款坑）。本表删除一律走下面的物理删。
  */
 @Mapper
 public interface SysOperationRoomMapper extends BaseMapper<SysOperationRoom> {

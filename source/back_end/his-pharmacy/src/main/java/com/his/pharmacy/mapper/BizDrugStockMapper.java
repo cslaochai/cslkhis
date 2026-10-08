@@ -12,9 +12,6 @@ import java.util.List;
 
 /**
  * 药品库存Mapper
- * 口径：字典归药品字典，库存表只留药品ID关联，药品信息一律联表带出。
- * <br>sql/154 起库存分两个库位（1-药库 2-药房）：发药/锁库/退药回库一律只在<b>药房</b>侧发生，
- * 由调用方显式传 {@code StockRoomEnum.PHARMACY}；跨库位的移动走药品调拨单。
  */
 @Mapper
 public interface BizDrugStockMapper extends BaseMapper<BizDrugStock> {

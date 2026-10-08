@@ -52,11 +52,6 @@ import java.util.stream.Collectors;
 
 /**
  * 放射诊断报告书写台（sql/138）。
- *
- * <p><b>本类存在的全部理由是「拍片的人不能下诊断」</b>：
- * 改造前 {@code executeInspection()} 一次调用把「写结果 + 建报告 + 报告签名」全干了，
- * 技师和诊断医师在系统里是同一个人。现在技师那条路只到「拍片完成」（见
- * {@code MedicalTechServiceImpl.finishShoot}），诊断结论只能从这里产生。
  */
 @Slf4j
 @Service

@@ -172,7 +172,7 @@ public class PriceServiceImpl extends ServiceImpl<SysPriceChangeHistoryMapper, S
     }
 
     private String normalizeType(String itemType) {
-        // D 类保留：必填性与码值白名单在同一段归一化里，且列表接口必填、历史查询把它当可选筛选条件，注解无法一刀切
+        // D-业务规则：非空与码值白名单混在同一段归一化里，且列表接口必填、历史查询把它当可选筛选条件，DTO 注解无法一刀切，保留
         if (!TextUtil.hasText(itemType)) {
             throw new BusinessException("项目类型不能为空");
         }

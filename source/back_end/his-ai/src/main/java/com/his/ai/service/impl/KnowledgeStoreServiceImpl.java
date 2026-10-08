@@ -31,12 +31,6 @@ import java.util.List;
 
 /**
  * 知识库存储服务实现。
- *
- * <p><b>启动钩子：</b> {@link #init()} 在 bean 初始化时先 {@link #rebuild()} 载入已有切块，
- * 再 {@link #seedIfEmpty()} 灌内置语料（库空且开启自动种子时）。
- * 整段 try-catch 包裹——若表尚未创建（首次部署忘了跑 SQL），只告警不阻断启动，符合「降级不阻断」。
- *
- * <p><b>向量不落库：</b>索引只在内存，重启自动从 chunk 表重建，零外部依赖。
  */
 @Slf4j
 @Service

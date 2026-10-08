@@ -19,7 +19,6 @@ import java.util.List;
 
 /**
  * 检验项目白话词典 · 院内维护入口。
- *
  */
 @Tag(name = "院内-检验项目白话词典维护")
 @RestController

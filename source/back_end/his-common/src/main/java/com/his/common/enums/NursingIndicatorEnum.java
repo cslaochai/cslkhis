@@ -7,19 +7,6 @@ import java.math.RoundingMode;
 
 /**
  * 护理质量指标枚举（sql/168）
- *
- * <p>护理部要的四个数分两类，**分母来源完全不同**，所以不能塞进一个「合格率」列里：
- * <ul>
- *   <li>合格率类（{@code multiplier=100}）：分母是抽查例数，事实来自护理质量检查单；</li>
- *   <li>千床日率类（{@code multiplier=1000}）：分母是实际占用床日数，事实来自
- *       不良事件上报（分子）+ 入院记录（分母），
- *       压疮只算 {@link AdverseAcquiredEnum#HOSPITAL_ACQUIRED}，入院带入的压疮计入留档但不计入发生率。</li>
- * </ul>
- *
- * <p>千床日类<b>故意不设目标值</b>：院内发生率的目标要按床位类型、收治结构分级定标
- * （三级医院评审看的是趋势与同比，不是一个拍出来的常数），台账 {@code target_value} 留空，
- * {@code reached_flag} 随之为 NULL，页面上显示「—」而不是「未达标」。
- * <br>字典权威在本枚举，码值改动必须同步 {@code sql/168} 的 {@code his_nursing_indicator} 段。
  */
 @Getter
 public enum NursingIndicatorEnum {

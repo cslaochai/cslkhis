@@ -4,7 +4,9 @@ import com.his.common.base.PageParam;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-/** 预防措施记录分页查询（按住院或按病区看落实情况） */
+/**
+ * 预防措施记录分页查询（按住院或按病区看落实情况）
+ */
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class VtePreventQueryPageDTO extends PageParam {

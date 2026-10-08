@@ -14,9 +14,6 @@ import java.util.List;
 
 /**
  * 医保结算清单详情 VO
- * <p>
- * 结算清单表本身只存了冗余快照，很多字段为空，这里按 patientId / registId / billId
- * 关联患者、挂号、病历与结算账单（含账单行），补齐清单所需的完整信息。
  */
 @Data
 public class InsuranceSettlementDetailVO implements Serializable {

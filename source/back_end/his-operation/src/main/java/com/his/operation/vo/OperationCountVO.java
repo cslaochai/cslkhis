@@ -9,10 +9,6 @@ import java.util.List;
 
 /**
  * 手术清点单出参。
- *
- * <p>{@code can*} 由后端判定：三阶段的推进顺序是硬规则，
- * 前端只负责把按钮显出来，不在本地写"phase 小于某个值就禁用"这类判断 ——
- * 本地判断会掩盖后端规则的失效：真正的规则只有一处说了算。
  */
 @Data
 @EqualsAndHashCode(callSuper = true)

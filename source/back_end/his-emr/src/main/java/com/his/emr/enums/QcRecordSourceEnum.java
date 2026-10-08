@@ -6,11 +6,6 @@ import lombok.Getter;
 
 /**
  * 质控对象来自哪张表。
- *
- * <p>质控检查记录的记录ID 原先是一个"看运气才知道 JOIN 哪张表"的裸 ID：
- * 门诊病历、住院文书、病案归档表的 ID 混在一列里（实测库里三种都有）。
- * 所以新增记录来源明确来源，并把旧的默认值定为 OUTPATIENT ——
- * 历史上真正可用的那几行确实指向门诊病历。
  */
 @Getter
 public enum QcRecordSourceEnum {

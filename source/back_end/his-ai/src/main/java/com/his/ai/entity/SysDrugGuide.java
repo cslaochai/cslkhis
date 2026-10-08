@@ -7,11 +7,6 @@ import lombok.Data;
 
 /**
  * 药品字典的只读视图（his-ai 侧）。
- *
- * <p><b>为什么另建一个而不是复用 his-pharmacy 的实体：</b>用药说明只需要这几列，
- * 而 his-ai 不依赖 his-pharmacy 模块。跨模块读表在本仓的既定做法是
- * 「读侧自建只读实体 + 自己模块的 Mapper」，不是把对方模块拉进来。
- * <b>这个实体只用于读，不要拿它做写操作。</b>
  */
 @Data
 @TableName("sys_drug")

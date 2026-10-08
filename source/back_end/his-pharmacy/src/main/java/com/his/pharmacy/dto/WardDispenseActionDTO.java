@@ -7,8 +7,6 @@ import java.io.Serializable;
 
 /**
  * 摆药明细操作入参（配药 / 核对 / 退药）。
- *
- * <p>操作人一律服务端取 {@code UserUtils.getCurrentUser()}，不信前端传的身份。
  */
 @Data
 public class WardDispenseActionDTO implements Serializable {

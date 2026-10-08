@@ -16,10 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 病历内涵质控接口。
- * <p>
- * 与既有的 {@code /charge/qualityControl/executeQc} 关系同 ICD：并存而非替换。
- * 既有接口的 {@code executeQc} 只落一条「默认通过」的记录，没有实质检查逻辑；
- * 本接口补齐实质内容，并把结论写回同一份质控检查记录，复用已有列表页。
  */
 @Tag(name = "AI 能力-病历内涵质控")
 @RestController

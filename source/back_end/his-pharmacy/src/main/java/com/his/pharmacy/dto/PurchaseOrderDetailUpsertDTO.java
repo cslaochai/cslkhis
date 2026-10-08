@@ -11,9 +11,6 @@ import java.time.LocalDate;
 
 /**
  * 采购订单明细入参
- *
- * 明细必须带批号与有效期：入库时按「药品+批号」建/找批次，有效期缺失就无法建批次
- * （药品批次库存的有效期是必填列），采购链会在最后一步断掉。
  */
 @Data
 public class PurchaseOrderDetailUpsertDTO {

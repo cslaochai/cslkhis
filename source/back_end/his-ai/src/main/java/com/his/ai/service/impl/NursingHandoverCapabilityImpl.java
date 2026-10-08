@@ -27,10 +27,6 @@ import java.util.Optional;
 
 /**
  * 护理交接班摘要实现（G-13）。
- * <p>事实聚合（在院/新入/出院、体征越阈、高风险评估）全部由代码完成
- * （聚合面 {@code InpatientNursingService.wardShiftFacts} + 阈值 {@link DeteriorationScoreRules#abnormalEvents}），
- * 模型只把事实凝成 SBAR 摘要草稿；模型不可用时按同一份事实拼规则模板
- * （{@code source=rule, degraded=true}），摘要不缺位。产物不写库，护士编辑终审。</p>
  */
 @Slf4j
 @Service
